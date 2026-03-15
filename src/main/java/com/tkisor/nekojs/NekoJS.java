@@ -1,0 +1,164 @@
+package com.tkisor.nekojs;
+
+import com.mojang.logging.LogUtils;
+import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.bindings.event.RegisterJSTypeAdaptersEvent;
+import com.tkisor.nekojs.bindings.event.RegisterNekoJSPluginEvent;
+import com.tkisor.nekojs.bindings.event.RegistryEvents;
+import com.tkisor.nekojs.command.NekoJSCommands;
+import com.tkisor.nekojs.core.NekoJSScriptManager;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.js.type_adapter.IngredientAdapter;
+import com.tkisor.nekojs.js.type_adapter.ItemStackAdapter;
+import com.tkisor.nekojs.js.type_adapter.IdentifierAdapter;
+import com.tkisor.nekojs.js.type_adapter.ItemStackWrapperAdapter;
+import com.tkisor.nekojs.script.ScriptBootstrap;
+import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.utils.ReflectionUtils;
+import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
+import org.slf4j.Logger;
+
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
+
+@Mod(NekoJS.MODID)
+public class NekoJS {
+    public static final String MODID = "nekojs";
+    public static final Logger LOGGER = LogUtils.getLogger();
+    public static IEventBus modEventBus;
+
+    public static NekoJSScriptManager SCRIPT_MANAGER;
+
+    public static final List<NekoJSPlugin> PLUGINS = new ArrayList<>();
+
+    public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
+        NekoJS.modEventBus = modEventBus;
+
+        registerEventListeners();
+
+        SCRIPT_MANAGER = new NekoJSScriptManager();
+        NekoJSPaths.initFoldersOnly();
+        ScriptBootstrap.generateDefaultScripts();
+
+        registerPlugins();
+
+        LOGGER.info("[NekoJS] 正在执行 STARTUP 与 COMMON 脚本...");
+        SCRIPT_MANAGER.discoverScripts();
+        try {
+            SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
+            SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);
+        } catch (Exception _) {
+        }
+    }
+
+    private void registerEventListeners() {
+        modEventBus.addListener(this::registerAdapters);
+        modEventBus.addListener(this::onCommonSetup);
+        modEventBus.addListener(this::plugin);
+
+        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
+        NeoForge.EVENT_BUS.addListener(this::onServerResourceReload);
+
+        NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
+        modEventBus.addListener(this::onRegister);
+    }
+
+    private void registerPlugins() {
+        modEventBus.post(new RegisterNekoJSPluginEvent());
+    }
+
+    /**
+     * 注册 NekoJS 插件
+     * 扫描并注册所有实现了 NekoJSPlugin 接口的类
+     */
+    public void plugin(RegisterNekoJSPluginEvent event) {
+        PLUGINS.clear();
+
+        ReflectionUtils.findAnnotationClasses(
+                RegisterNekoJSPlugin.class,
+                null,
+                clazz -> {
+                    if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
+                        LOGGER.error("[NekoJS] Plugin {} does not implement NekoJSPlugin", clazz.getName());
+                        return;
+                    }
+
+                    int mod = clazz.getModifiers();
+                    if (clazz.isInterface() || Modifier.isAbstract(mod)) {
+                        LOGGER.error("[NekoJS] Plugin {} is not a concrete class", clazz.getName());
+                        return;
+                    }
+
+                    try {
+                        NekoJSPlugin plugin =
+                                (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
+                        PLUGINS.add(plugin);
+                        event.register(plugin);
+                        LOGGER.info("[NekoJS] Registered plugin: {}", clazz.getName());
+                    } catch (Throwable t) {
+                        LOGGER.error("[NekoJS] Failed to instantiate plugin {}", clazz.getName(), t);
+                    }
+                },
+                () -> LOGGER.info("[NekoJS] Plugin scan finished")
+        );
+    }
+
+    private void onCommonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(NekoJSPaths::createWorkspaceConfig);
+    }
+
+    private void onServerStarting(ServerStartingEvent event) {
+        LOGGER.info("[NekoJS] 服务器启动，正在加载 SERVER 脚本...");
+//        SCRIPT_MANAGER.loadScripts(ScriptType.SERVER);
+    }
+
+    private void onServerResourceReload(AddServerReloadListenersEvent event) {
+        try {
+            NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void onRegister(RegisterEvent event) {
+        if (event.getRegistryKey().equals(Registries.BLOCK)) {
+            BlockRegistryEventJS eventJS = new BlockRegistryEventJS(event);
+            RegistryEvents.BLOCK.post(eventJS);
+        } else if (event.getRegistryKey().equals(Registries.ITEM)) {
+            ItemRegistryEventJS eventJS = new ItemRegistryEventJS(event);
+            RegistryEvents.ITEM.post(eventJS);
+
+            BlockRegistryEventJS.PENDING_BLOCK_ITEMS.forEach((location, block) -> {
+                event.register(Registries.ITEM, location, () -> {
+                    ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, location);
+                    Item.Properties props = new Item.Properties().setId(key);
+
+                    return new BlockItem(block, props);
+                });
+            });
+            BlockRegistryEventJS.PENDING_BLOCK_ITEMS.clear();
+        }
+    }
+
+    private void registerAdapters(RegisterJSTypeAdaptersEvent event) {
+        event.register(new ItemStackAdapter());
+        event.register(new ItemStackWrapperAdapter());
+        event.register(new IngredientAdapter());
+        event.register(new IdentifierAdapter());
+    }
+}
