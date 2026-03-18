@@ -3,9 +3,9 @@ package com.tkisor.nekojs;
 import com.mojang.logging.LogUtils;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.bindings.event.RegisterJSTypeAdaptersEvent;
 import com.tkisor.nekojs.bindings.event.RegisterNekoJSPluginEvent;
 import com.tkisor.nekojs.bindings.event.RegistryEvents;
+import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -19,10 +19,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
@@ -30,8 +32,6 @@ import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
 
 @Mod(NekoJS.MODID)
 public class NekoJS {
@@ -41,7 +41,6 @@ public class NekoJS {
 
     public static NekoJSScriptManager SCRIPT_MANAGER;
 
-    public static final List<NekoJSPlugin> PLUGINS = new ArrayList<>();
 
     public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
         NekoJS.modEventBus = modEventBus;
@@ -56,15 +55,15 @@ public class NekoJS {
 
         LOGGER.info("[NekoJS] 正在执行 STARTUP 与 COMMON 脚本...");
         SCRIPT_MANAGER.discoverScripts();
-        try {
-            SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
-            SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);
-        } catch (Exception _) {
+        SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
+        SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);
+
+        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            NekoJSClient.register(modEventBus);
         }
     }
 
     private void registerEventListeners() {
-        modEventBus.addListener(this::registerAdapters);
         modEventBus.addListener(this::onCommonSetup);
         modEventBus.addListener(this::plugin);
 
@@ -84,8 +83,6 @@ public class NekoJS {
      * 扫描并注册所有实现了 NekoJSPlugin 接口的类
      */
     public void plugin(RegisterNekoJSPluginEvent event) {
-        PLUGINS.clear();
-
         ReflectionUtils.findAnnotationClasses(
                 RegisterNekoJSPlugin.class,
                 null,
@@ -104,7 +101,6 @@ public class NekoJS {
                     try {
                         NekoJSPlugin plugin =
                                 (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
-                        PLUGINS.add(plugin);
                         event.register(plugin);
                         LOGGER.info("[NekoJS] Registered plugin: {}", clazz.getName());
                     } catch (Throwable t) {
@@ -152,11 +148,4 @@ public class NekoJS {
         }
     }
 
-    private void registerAdapters(RegisterJSTypeAdaptersEvent event) {
-        event.register(new ItemStackAdapter());
-        event.register(new ItemStackWrapperAdapter());
-        event.register(new IngredientAdapter());
-        event.register(new IdentifierAdapter());
-        event.register(new RecipeFilterAdapter());
-    }
 }

@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.js.event;
 
-import com.tkisor.nekojs.api.EventGroup;
+import com.tkisor.nekojs.api.data.EventGroup;
 import com.tkisor.nekojs.api.event.NekoJSEventBus; // ⚡ 确保导入的是这个带 J 的总线
 import com.tkisor.nekojs.script.ScriptType;
 import org.graalvm.polyglot.Value;

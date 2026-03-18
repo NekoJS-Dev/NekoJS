@@ -1,16 +1,17 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.EventGroup;
-import com.tkisor.nekojs.api.NekoEventGroups;
+import com.tkisor.nekojs.api.data.EventGroup;
+import com.tkisor.nekojs.api.data.NekoBindings;
+import com.tkisor.nekojs.api.data.NekoEventGroups;
 import com.tkisor.nekojs.api.event.NekoJSEventBus;
+import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.js.event.StrictEventProxy;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import org.graalvm.polyglot.Context;
 
-import javax.script.ScriptException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,7 +51,7 @@ public final class NekoJSScriptManager {
     /**
      * 加载并顺序执行所有脚本
      */
-    public void loadScripts(ScriptType type) throws Exception {
+    public void loadScripts(ScriptType type) {
         List<ScriptContainer> typeScripts = scripts.get(type);
         if (typeScripts == null || typeScripts.isEmpty()) return;
 
@@ -73,27 +74,29 @@ public final class NekoJSScriptManager {
             bindings.putMember(group.name(), new StrictEventProxy(group, type));
         }
 
-        NekoJS.PLUGINS.forEach(plugin -> {
-            plugin.registerBindings(bindings::putMember);
-        });
+        NekoBindings.all().forEach(bindings::putMember);
 
         return ctx;
     }
 
-    private void runScript(Context ctx, ScriptContainer script) throws Exception {
+    private void runScript(Context ctx, ScriptContainer script) {
         try {
             Path relativePath = NekoJSPaths.ROOT.relativize(script.path);
-
             String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
             ctx.eval("js", "require").execute(requirePath);
+
+            NekoErrorTracker.clear(script.id);
+            script.disabled = false;
+            script.lastError = null;
 
         } catch (Throwable t) {
             script.disabled = true;
             script.lastError = t;
 
-            script.type.logger().error("加载脚本失败: {}", NekoJSPaths.ROOT.relativize(script.path), t);
-            throw t;
+            NekoErrorTracker.record(script, t);
+
+            script.type.logger().error("脚本执行失败: {}", script.id.toString(), t);
         }
     }
 
@@ -106,7 +109,7 @@ public final class NekoJSScriptManager {
      * 
      * @param type 要重载的脚本类型
      */
-    public void reloadScripts(ScriptType type) throws Exception {
+    public void reloadScripts(ScriptType type) {
         type.logger().info("正在重载 {} 脚本...", type.name());
 
         NekoJSEventBus.clearByType(type);

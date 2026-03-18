@@ -1,5 +1,9 @@
 package com.tkisor.nekojs.api;
 
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
+import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.EventGroupRegistry;
+
 /**
  * NekoJS 插件接口。<p>
  * 插件类必须实现此接口，才能在 NekoJS 初始化时被自动注册。<p>
@@ -22,5 +26,5 @@ public interface NekoJSPlugin {
      * 暂时没做好
      * @param registry
      */
-    default void registerAdapters(AdapterRegister registry) {}
+    default void registerAdapters(JSTypeAdapterRegister registry) {}
 }

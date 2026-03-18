@@ -1,14 +1,16 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.AdapterRegister;
-import com.tkisor.nekojs.api.BindingsRegister;
-import com.tkisor.nekojs.api.EventGroupRegistry;
-import com.tkisor.nekojs.api.NekoJSPlugin;
+import com.tkisor.nekojs.api.*;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
+import com.tkisor.nekojs.api.data.Binding;
+import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.EventGroupRegistry;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.static_access.IngredientJS;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
-import com.tkisor.nekojs.js.type_adapter.ItemStackAdapter;
+import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
+import com.tkisor.nekojs.js.type_adapter.*;
 
 @RegisterNekoJSPlugin
 public class NekoJSCorePlugin implements NekoJSPlugin {
@@ -25,12 +27,19 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerBindings(BindingsRegister registry) {
-        registry.register("Item", new ItemJS());
-        registry.register("Ingredient", new IngredientJS());
+        registry.register(Binding.of("Item", new ItemJS()));
+        registry.register(Binding.of("Ingredient", new IngredientJS()));
+
+        registry.register(Binding.of("NativeEvents", new NativeEventsJS()));
     }
 
     @Override
-    public void registerAdapters(AdapterRegister registry) {
+    public void registerAdapters(JSTypeAdapterRegister registry) {
         registry.register(new ItemStackAdapter());
+        registry.register(new ItemStackWrapperAdapter());
+        registry.register(new IngredientAdapter());
+        registry.register(new IdentifierAdapter());
+        registry.register(new RecipeFilterAdapter());
+        registry.register(new JsonObjectAdapter());
     }
 }

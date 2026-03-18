@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.api;
+package com.tkisor.nekojs.api.data;
 
 import com.tkisor.nekojs.api.event.EventHandler;
 import com.tkisor.nekojs.api.event.IScriptHandler;

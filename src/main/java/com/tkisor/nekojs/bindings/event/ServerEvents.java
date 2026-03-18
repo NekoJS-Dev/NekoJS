@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.bindings.event;
 
-import com.tkisor.nekojs.api.EventGroup;
+import com.tkisor.nekojs.api.data.EventGroup;
 import com.tkisor.nekojs.api.event.EventHandler;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;

@@ -1,4 +1,6 @@
-package com.tkisor.nekojs.api;
+package com.tkisor.nekojs.api.data;
+
+import com.tkisor.nekojs.api.JSTypeAdapter;
 
 /**
  * JS类型适配器注册接口
@@ -10,7 +12,7 @@ package com.tkisor.nekojs.api;
  * @since 1.0
  */
 @FunctionalInterface
-public interface AdapterRegister {
+public interface JSTypeAdapterRegister {
     /**
      * 注册JS类型适配器
      * 

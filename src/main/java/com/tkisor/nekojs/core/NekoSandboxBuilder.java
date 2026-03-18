@@ -1,8 +1,7 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.bindings.event.RegisterJSTypeAdaptersEvent;
+import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.log.LoggerStream;
@@ -88,11 +87,7 @@ public final class NekoSandboxBuilder {
     public static Context build(ScriptType type) {
         HostAccess.Builder hostBuilder = HostAccess.newBuilder(HostAccess.ALL);
 
-        RegisterJSTypeAdaptersEvent adaptersEvent = new RegisterJSTypeAdaptersEvent();
-        NekoJS.modEventBus.post(adaptersEvent);
-        for (JSTypeAdapter<?> adapter : adaptersEvent.getAdapters()) {
-            registerTypeAdapter(hostBuilder, adapter);
-        }
+        NekoJSTypeAdapters.all().forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
 
         Logger logger = type.logger();
         OutputStream outStream = new LoggerStream(logger, false);

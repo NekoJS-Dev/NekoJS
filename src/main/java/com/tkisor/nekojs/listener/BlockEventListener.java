@@ -3,6 +3,7 @@ package com.tkisor.nekojs.listener;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.wrapper.event.block.BlockBreakEventJS;
+import com.tkisor.nekojs.wrapper.event.block.BlockLeftClickedEventJS;
 import com.tkisor.nekojs.wrapper.event.block.BlockPlaceEventJS;
 import com.tkisor.nekojs.wrapper.event.block.BlockRightClickEventJS;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -22,6 +23,12 @@ public class BlockEventListener {
     public static void onBlockRightClick(PlayerInteractEvent.RightClickBlock event) {
         BlockRightClickEventJS eventJS = new BlockRightClickEventJS(event);
         BlockEvents.RIGHT_CLICKED.post(eventJS.getBlockId(), eventJS);
+    }
+
+    @SubscribeEvent
+    public static void onBlockLeftClicked(PlayerInteractEvent.LeftClickBlock event) {
+        BlockLeftClickedEventJS eventJS = new BlockLeftClickedEventJS(event);
+        BlockEvents.LEFT_CLICKED.post(eventJS.getBlockId(), new BlockLeftClickedEventJS(event));
     }
 
     @SubscribeEvent
