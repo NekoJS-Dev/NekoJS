@@ -1,9 +1,6 @@
 package com.tkisor.nekojs.utils.event.impl;
 
-import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.utils.event.EventBus;
-import org.graalvm.polyglot.PolyglotException;
 
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -20,14 +17,7 @@ public final class EventBusImpl<E> extends EventBusBase<E, Consumer<E>> implemen
 
     @Override
     public boolean post(E event) {
-        // 临时的错误捕获方案，也许后续需要继续优化
-        try {
-            getBuilt(EventBusImpl::compile).accept(event);
-        } catch (PolyglotException e) {
-            NekoErrorTracker.recordEventError(e);
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("EventBus执行异常: {}", e.getMessage(), e);
-        }
+        getBuilt(EventBusImpl::compile).accept(event);
         return false;
     }
 
