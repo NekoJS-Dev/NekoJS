@@ -1,8 +1,11 @@
 package com.tkisor.nekojs.utils.event.impl;
 
+import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.utils.event.CancellableEventBus;
 import com.tkisor.nekojs.utils.event.CommonPriority;
 import com.tkisor.nekojs.utils.event.EventListenerToken;
+import org.graalvm.polyglot.PolyglotException;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -30,7 +33,16 @@ public final class CancellableEventBusImpl<E>
 
     @Override
     public boolean post(E event) {
-        return getBuilt(CancellableEventBusImpl::compile).test(event);
+        // 临时的错误捕获方案，也许后续需要继续优化
+        try {
+            return getBuilt(CancellableEventBusImpl::compile).test(event);
+        } catch (PolyglotException e) {
+            NekoErrorTracker.recordEventError(e);
+            return false;
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("CancellableEventBus执行异常: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     private static <E> Predicate<E> compile(Stream<Predicate<E>> predicateStream) {
