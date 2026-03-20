@@ -1,13 +1,11 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.data.EventGroup;
 import com.tkisor.nekojs.api.data.NekoBindings;
-import com.tkisor.nekojs.api.data.NekoEventGroups;
-import com.tkisor.nekojs.api.event.NekoJSEventBus;
+import com.tkisor.nekojs.api.event.NekoEventGroups;
+import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.js.event.StrictEventProxy;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import org.graalvm.polyglot.Context;
@@ -68,10 +66,10 @@ public final class NekoJSScriptManager {
         Context ctx = NekoSandboxBuilder.build(type);
 
         var bindings = ctx.getBindings("js");
-        Collection<EventGroup> values = NekoEventGroups.all().values();
+        var values = NekoEventGroups.all().values();
         NekoJS.LOGGER.info("正在注册 {} 个事件组...", values.size());
-        for (EventGroup group : values) {
-            bindings.putMember(group.name(), new StrictEventProxy(group, type));
+        for (var group : values) {
+            bindings.putMember(group.name(), new EventGroupJS(group, type));
         }
 
         NekoBindings.all().forEach(bindings::putMember);
@@ -112,7 +110,9 @@ public final class NekoJSScriptManager {
     public void reloadScripts(ScriptType type) {
         type.logger().info("正在重载 {} 脚本...", type.name());
 
-        NekoJSEventBus.clearByType(type);
+        for (var group : NekoEventGroups.all().values()) {
+            group.clearListeners();
+        }
 
         Context oldContext = contexts.remove(type);
         if (oldContext != null) {

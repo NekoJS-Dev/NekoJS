@@ -5,7 +5,7 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingsRegister;
-import com.tkisor.nekojs.api.data.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.static_access.IngredientJS;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;

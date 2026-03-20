@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.api.data;
+package com.tkisor.nekojs.api.event;
 
 @FunctionalInterface
 public interface EventGroupRegistry {

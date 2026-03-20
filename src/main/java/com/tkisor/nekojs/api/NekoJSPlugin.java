@@ -2,7 +2,7 @@ package com.tkisor.nekojs.api;
 
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.BindingsRegister;
-import com.tkisor.nekojs.api.data.EventGroupRegistry;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
 
 /**
  * NekoJS 插件接口。<p>

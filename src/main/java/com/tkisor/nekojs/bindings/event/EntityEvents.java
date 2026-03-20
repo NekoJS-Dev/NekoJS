@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.bindings.event;
 
-import com.tkisor.nekojs.api.data.EventGroup;
-import com.tkisor.nekojs.api.event.EventHandler;
-import com.tkisor.nekojs.api.event.TargetedEventHandler;
+import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import com.tkisor.nekojs.wrapper.event.entity.EntityDeathEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.EntityHurtPostEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.EntityHurtPreEventJS;
@@ -11,14 +11,14 @@ import com.tkisor.nekojs.wrapper.event.entity.EntitySpawnedEventJS;
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
-    TargetedEventHandler<EntityHurtPreEventJS> HURT_PRE =
-            GROUP.targetedServer("hurtPre", () -> EntityHurtPreEventJS.class);
+    EventBusJS<EntityHurtPreEventJS, String> HURT_PRE =
+            GROUP.server("hurtPre", EntityHurtPreEventJS.class, DispatchKey.string());
 
-    TargetedEventHandler<EntityHurtPostEventJS> HURT_POST =
-            GROUP.targetedServer("hurtPost", () -> EntityHurtPostEventJS.class);
+    EventBusJS<EntityHurtPostEventJS, String> HURT_POST =
+            GROUP.server("hurtPost", EntityHurtPostEventJS.class, DispatchKey.string());
 
-    TargetedEventHandler<EntityDeathEventJS> DEATH =
-            GROUP.targetedServer("death", () -> EntityDeathEventJS.class);
-    EventHandler<EntitySpawnedEventJS> SPAWNED =
-            GROUP.server("spawned", () -> EntitySpawnedEventJS.class);
+    EventBusJS<EntityDeathEventJS, String> DEATH =
+            GROUP.server("death", EntityDeathEventJS.class, DispatchKey.string());
+    EventBusJS<EntitySpawnedEventJS, Void> SPAWNED =
+            GROUP.server("spawned", EntitySpawnedEventJS.class);
 }

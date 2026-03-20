@@ -16,24 +16,24 @@ public class BlockEventListener {
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
         BlockBreakEventJS eventJS = new BlockBreakEventJS(event);
-        BlockEvents.BROKEN.post(eventJS.getBlockId(), eventJS);
+        BlockEvents.BROKEN.post(eventJS, eventJS.getBlockId());
     }
 
     @SubscribeEvent
     public static void onBlockRightClick(PlayerInteractEvent.RightClickBlock event) {
         BlockRightClickEventJS eventJS = new BlockRightClickEventJS(event);
-        BlockEvents.RIGHT_CLICKED.post(eventJS.getBlockId(), eventJS);
+        BlockEvents.RIGHT_CLICKED.post(eventJS, eventJS.getBlockId());
     }
 
     @SubscribeEvent
     public static void onBlockLeftClicked(PlayerInteractEvent.LeftClickBlock event) {
         BlockLeftClickedEventJS eventJS = new BlockLeftClickedEventJS(event);
-        BlockEvents.LEFT_CLICKED.post(eventJS.getBlockId(), new BlockLeftClickedEventJS(event));
+        BlockEvents.LEFT_CLICKED.post(eventJS, eventJS.getBlockId());
     }
 
     @SubscribeEvent
     public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
         BlockPlaceEventJS eventJS = new BlockPlaceEventJS(event);
-        BlockEvents.PLACED.post(eventJS.getBlockId(), eventJS);
+        BlockEvents.PLACED.post(eventJS, eventJS.getBlockId());
     }
 }

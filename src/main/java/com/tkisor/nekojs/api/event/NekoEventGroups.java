@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.api.data;
+package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.core.NekoJSPluginManager;
 import java.util.Collections;

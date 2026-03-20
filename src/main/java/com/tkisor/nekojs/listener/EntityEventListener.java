@@ -15,13 +15,13 @@ public class EntityEventListener {
     @SubscribeEvent
     public static void onEntityHurtPre(LivingDamageEvent.Pre event) {
         EntityHurtPreEventJS eventJS = new EntityHurtPreEventJS(event);
-        EntityEvents.HURT_PRE.post(eventJS.getEntityId(), eventJS);
+        EntityEvents.HURT_PRE.post(eventJS, eventJS.getEntityId());
     }
 
     @SubscribeEvent
     public static void onEntityHurtPost(LivingDamageEvent.Post event) {
         EntityHurtPostEventJS eventJS = new EntityHurtPostEventJS(event);
-        EntityEvents.HURT_POST.post(eventJS.getEntityId(), eventJS);
+        EntityEvents.HURT_POST.post(eventJS, eventJS.getEntityId());
     }
 
     @SubscribeEvent
