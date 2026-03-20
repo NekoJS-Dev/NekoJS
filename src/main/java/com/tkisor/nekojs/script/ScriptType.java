@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Executor;
 
-public enum ScriptType {
+public enum ScriptType implements ScriptTypeFilter {
     COMMON("common", "NekoJS Common", NekoJSPaths.COMMON_SCRIPTS),
     STARTUP("startup", "NekoJS Startup", NekoJSPaths.STARTUP_SCRIPTS),
     SERVER("server", "NekoJS Server", NekoJSPaths.SERVER_SCRIPTS),
@@ -86,5 +86,10 @@ public enum ScriptType {
 
     public boolean isStartup() {
         return this == STARTUP;
+    }
+
+    @Override
+    public boolean test(ScriptType scriptType) {
+        return scriptType == this;
     }
 }
