@@ -13,9 +13,9 @@ public record DispatchKeyImpl<E, K>(
     Function<E, K> toKey
 ) implements DispatchKey<E, K> {
 
-    public DispatchKeyImpl(Class<K> keyType, Function<E, K> toKey) {
-        this.keyType = Objects.requireNonNull(keyType);
-        this.toKey = Objects.requireNonNull(toKey);
+    public DispatchKeyImpl {
+        Objects.requireNonNull(keyType);
+        Objects.requireNonNull(toKey);
     }
 
     @Override

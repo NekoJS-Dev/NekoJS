@@ -22,7 +22,7 @@ public class EventGroupJS implements ProxyObject {
         if (handler == null) {
             throw new IllegalArgumentException(String.format("No such event bus: %s.%s", group.name(), key));
         }
-        if (group.isHandlerValidFor(key, currentEnv)) {
+        if (!group.isHandlerValidFor(key, currentEnv)) {
             throw new IllegalArgumentException(String.format("Event '%s.%s' not available in %s", group.name(), key, currentEnv));
         }
 
