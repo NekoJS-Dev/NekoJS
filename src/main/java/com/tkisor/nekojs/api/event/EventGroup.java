@@ -90,6 +90,20 @@ public class EventGroup {
         }
     }
 
+    // 清理指定类型的监听器，用于reload scripts，但由于新的eventbus还未熟悉，也许后续会需要调整
+    public void clearListeners(ScriptType type) {
+        for (var entry : buses.entrySet()) {
+            String busName = entry.getKey();
+            EventBusJS<?, ?> busJS = entry.getValue();
+
+            ScriptType busType = targetScriptType.get(busName);
+
+            if (busType == type || type == ScriptType.COMMON) {
+                clearBus(busJS);
+            }
+        }
+    }
+
     /// using a separate method to avoid problematic generic check
     private static <E> void clearBus(EventBusJS<E, ?> bus) {
         for (var token : bus.tokens()) {

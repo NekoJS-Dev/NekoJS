@@ -111,7 +111,8 @@ public final class NekoJSScriptManager {
         type.logger().info("正在重载 {} 脚本...", type.name());
 
         for (var group : NekoEventGroups.all().values()) {
-            group.clearListeners();
+            // 清理全部会导致某些情况其他类型的监听器被清除
+            group.clearListeners(type);
         }
 
         Context oldContext = contexts.remove(type);
