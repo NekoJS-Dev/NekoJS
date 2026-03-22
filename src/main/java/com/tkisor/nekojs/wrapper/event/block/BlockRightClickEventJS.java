@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.wrapper.event.block;
 
+import com.tkisor.nekojs.api.event.NekoCancellableEvent;
 import com.tkisor.nekojs.bindings.event.NekoEvent;
 import com.tkisor.nekojs.wrapper.block.BlockWrapper;
 import com.tkisor.nekojs.wrapper.entity.PlayerWrapper;
@@ -10,7 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class BlockRightClickEventJS implements NekoEvent {
+public class BlockRightClickEventJS implements NekoCancellableEvent {
     private final PlayerInteractEvent.RightClickBlock rawEvent;
 
     @Getter
@@ -47,11 +48,4 @@ public class BlockRightClickEventJS implements NekoEvent {
         return rawEvent.getHand().name();
     }
 
-    public void cancel() {
-        rawEvent.setCanceled(true);
-    }
-
-    public boolean isCanceled() {
-        return rawEvent.isCanceled();
-    }
 }

@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.bindings.entity;
 
-import net.minecraft.world.entity.LivingEntity;
+import com.tkisor.nekojs.wrapper.entity.LivingEntityWrapper;
 
 public interface NekoLivingEntityEvent extends NekoEntityEvent {
     @Override
-    LivingEntity getEntity();
+    LivingEntityWrapper getEntity();
 }

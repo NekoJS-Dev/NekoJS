@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.wrapper.event.entity;
 
-import com.tkisor.nekojs.bindings.event.NekoEvent;
+import com.tkisor.nekojs.api.event.NekoCancellableEvent;
 import com.tkisor.nekojs.wrapper.entity.EntityWrapper;
 import lombok.Getter;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 
-public class EntityDeathEventJS implements NekoEvent {
+public class EntityDeathEventJS implements NekoCancellableEvent {
     private final LivingDeathEvent rawEvent;
 
     @Getter
@@ -14,9 +14,6 @@ public class EntityDeathEventJS implements NekoEvent {
 
     @Getter
     private final EntityWrapper attacker;
-
-    @Getter
-    private boolean cancelled;
 
     public EntityDeathEventJS(LivingDeathEvent rawEvent) {
         this.rawEvent = rawEvent;
@@ -34,8 +31,4 @@ public class EntityDeathEventJS implements NekoEvent {
         return rawEvent.getSource().type().msgId();
     }
 
-    public void cancel() {
-        rawEvent.setCanceled(true);
-        this.cancelled = true;
-    }
 }

@@ -9,6 +9,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -72,7 +73,15 @@ public final class NekoJSScriptManager {
             bindings.putMember(group.name(), new EventGroupJS(group, type));
         }
 
-        NekoBindings.all().forEach(bindings::putMember);
+        Map<String, Object> allBindings = NekoBindings.all();
+        allBindings.forEach((name, obj) -> {
+            if (obj instanceof Class<?> clazz) {
+                Value javaType = bindings.getMember("Java").invokeMember("type", clazz.getName());
+                bindings.putMember(name, javaType);
+            } else {
+                bindings.putMember(name, obj);
+            }
+        });
 
         return ctx;
     }

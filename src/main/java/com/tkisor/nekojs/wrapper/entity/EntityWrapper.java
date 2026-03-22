@@ -3,10 +3,12 @@ package com.tkisor.nekojs.wrapper.entity;
 import com.tkisor.nekojs.wrapper.NekoWrapper;
 import lombok.Getter;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Set;
@@ -26,6 +28,14 @@ public class EntityWrapper implements NekoWrapper<Entity> {
             case LivingEntity le -> new LivingEntityWrapper(le);
             default -> new EntityWrapper(entity);
         };
+    }
+
+    public Level level() {
+        return raw.level();
+    }
+
+    public MinecraftServer getServer() {
+        return raw.level().getServer();
     }
 
     public String getId() {

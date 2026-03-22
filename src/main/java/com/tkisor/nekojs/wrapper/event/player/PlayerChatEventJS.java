@@ -1,11 +1,12 @@
 package com.tkisor.nekojs.wrapper.event.player;
 
 import com.tkisor.nekojs.api.event.NekoCancellableEvent;
+import com.tkisor.nekojs.bindings.player.NekoPlayerEvent;
 import com.tkisor.nekojs.wrapper.entity.PlayerWrapper;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.event.ServerChatEvent;
 
-public class PlayerChatEventJS implements NekoCancellableEvent {
+public class PlayerChatEventJS implements NekoCancellableEvent, NekoPlayerEvent {
 
     private final ServerChatEvent rawEvent;
 
@@ -13,12 +14,22 @@ public class PlayerChatEventJS implements NekoCancellableEvent {
         this.rawEvent = rawEvent;
     }
 
+    @Override
+    public PlayerWrapper getEntity() {
+        return getPlayer();
+    }
+
     /**
      * 获取发送消息的玩家
      * JS 侧调用: event.player 或 event.getPlayer()
      */
+    @Override
     public PlayerWrapper getPlayer() {
         return new PlayerWrapper(rawEvent.getPlayer());
+    }
+
+    public String getUsername() {
+        return this.rawEvent.getUsername();
     }
 
     /**
@@ -33,8 +44,8 @@ public class PlayerChatEventJS implements NekoCancellableEvent {
      * 篡改玩家发送的消息
      * JS 侧调用: event.setMessage("被篡改的消息")
      */
-    public void setMessage(String newMessage) {
-        rawEvent.setMessage(Component.literal(newMessage));
+    public void setMessage(Component newMessage) {
+        rawEvent.setMessage(newMessage);
     }
 
 }

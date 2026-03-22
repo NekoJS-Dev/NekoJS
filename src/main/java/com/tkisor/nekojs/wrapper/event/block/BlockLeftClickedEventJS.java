@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.wrapper.event.block;
 
-import com.tkisor.nekojs.bindings.event.NekoEvent;
+import com.tkisor.nekojs.api.event.NekoCancellableEvent;
 import com.tkisor.nekojs.wrapper.block.BlockWrapper;
 import com.tkisor.nekojs.wrapper.entity.PlayerWrapper;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
-public class BlockLeftClickedEventJS implements NekoEvent {
+public class BlockLeftClickedEventJS implements NekoCancellableEvent {
 
     private final PlayerInteractEvent.LeftClickBlock rawEvent;
     /**
@@ -58,15 +58,4 @@ public class BlockLeftClickedEventJS implements NekoEvent {
         return rawEvent.getFace();
     }
 
-    /**
-     * 拦截挖掘动作
-     * JS 侧: event.cancel()
-     */
-    public void cancel() {
-        rawEvent.setCanceled(true);
-    }
-
-    public boolean isCanceled() {
-        return rawEvent.isCanceled();
-    }
 }

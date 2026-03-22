@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.wrapper.event.block;
 
+import com.tkisor.nekojs.api.event.NekoCancellableEvent;
 import com.tkisor.nekojs.bindings.event.NekoEvent;
 import com.tkisor.nekojs.wrapper.block.BlockWrapper;
 import com.tkisor.nekojs.wrapper.entity.EntityWrapper;
@@ -8,7 +9,7 @@ import lombok.Getter;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
-public class BlockPlaceEventJS implements NekoEvent {
+public class BlockPlaceEventJS implements NekoCancellableEvent {
     private final BlockEvent.EntityPlaceEvent rawEvent;
 
     @Getter
@@ -41,11 +42,4 @@ public class BlockPlaceEventJS implements NekoEvent {
         return entity instanceof PlayerWrapper pw ? pw : null;
     }
 
-    public void cancel() {
-        rawEvent.setCanceled(true);
-    }
-
-    public boolean isCanceled() {
-        return rawEvent.isCanceled();
-    }
 }

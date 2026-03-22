@@ -1,18 +1,16 @@
 package com.tkisor.nekojs.wrapper.event.entity;
 
-import com.tkisor.nekojs.bindings.event.NekoEvent;
 import com.tkisor.nekojs.wrapper.entity.EntityWrapper;
 import com.tkisor.nekojs.wrapper.entity.LivingEntityWrapper;
 import lombok.Getter;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 
-public class EntityHurtPreEventJS implements NekoEvent {
+public class EntityHurtPreEventJS {
     private final LivingDamageEvent.Pre rawEvent;
 
     @Getter private final LivingEntityWrapper entity;
     @Getter private final EntityWrapper attacker;
-    @Getter private boolean cancelled;
 
     public EntityHurtPreEventJS(LivingDamageEvent.Pre rawEvent) {
         this.rawEvent = rawEvent;

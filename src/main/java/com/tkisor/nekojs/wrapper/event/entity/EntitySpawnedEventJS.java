@@ -1,11 +1,11 @@
 package com.tkisor.nekojs.wrapper.event.entity;
 
-import com.tkisor.nekojs.bindings.event.NekoEvent;
+import com.tkisor.nekojs.api.event.NekoCancellableEvent;
 import com.tkisor.nekojs.wrapper.entity.EntityWrapper;
 import com.tkisor.nekojs.wrapper.level.LevelWrapper;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 
-public class EntitySpawnedEventJS implements NekoEvent {
+public class EntitySpawnedEventJS implements NekoCancellableEvent {
 
     private final EntityJoinLevelEvent rawEvent;
 
@@ -29,15 +29,4 @@ public class EntitySpawnedEventJS implements NekoEvent {
         return new LevelWrapper(rawEvent.getLevel());
     }
 
-    /**
-     * 取消生成 (例如禁止某种怪物生成)
-     * JS 侧: event.cancel()
-     */
-    public void cancel() {
-        rawEvent.setCanceled(true);
-    }
-
-    public boolean isCanceled() {
-        return rawEvent.isCanceled();
-    }
 }

@@ -10,7 +10,6 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.tkisor.nekojs.bindings.event.NekoEvent;
 import com.tkisor.nekojs.wrapper.command.CommandContextJS;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -18,7 +17,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.function.Consumer;
 
-public class CommandRegisterEventJS implements NekoEvent {
+public class CommandRegisterEventJS {
     private final RegisterCommandsEvent rawEvent;
     private final CommandDispatcher<CommandSourceStack> dispatcher;
 

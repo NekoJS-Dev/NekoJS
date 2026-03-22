@@ -5,13 +5,9 @@ import com.tkisor.nekojs.bindings.event.ItemEvents;
 import com.tkisor.nekojs.bindings.event.PlayerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.wrapper.event.item.ItemCraftedEventJS;
 import com.tkisor.nekojs.wrapper.event.item.ItemRightClickEventJS;
-import com.tkisor.nekojs.wrapper.event.player.PlayerChatEventJS;
-import com.tkisor.nekojs.wrapper.event.player.PlayerLoggedInEventJS;
-import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
-import com.tkisor.nekojs.wrapper.event.player.PlayerTickEventJS;
+import com.tkisor.nekojs.wrapper.event.player.*;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -73,8 +69,13 @@ public class PlayerEventListener {
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        PlayerEvents.TICK.post(new PlayerTickEventJS(event));
+    public static void onPlayerPostTick(PlayerTickEvent.Post event) {
+        PlayerEvents.TICK_POST.post(new PlayerTickPostEventJS(event));
+    }
+
+    @SubscribeEvent
+    public static void onPlayerPreTick(PlayerTickEvent.Pre event) {
+        PlayerEvents.TICK_PRE.post(new PlayerTickPreEventJS(event));
     }
 
     @SubscribeEvent

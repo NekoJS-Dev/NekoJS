@@ -1,15 +1,22 @@
 package com.tkisor.nekojs.wrapper.event.player;
 
+import com.tkisor.nekojs.bindings.player.NekoPlayerEvent;
 import com.tkisor.nekojs.wrapper.entity.PlayerWrapper;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
-public class PlayerRespawnEventJS {
+public class PlayerRespawnEventJS implements NekoPlayerEvent {
     private final PlayerEvent.PlayerRespawnEvent rawEvent;
 
     public PlayerRespawnEventJS(PlayerEvent.PlayerRespawnEvent rawEvent) {
         this.rawEvent = rawEvent;
     }
 
+    @Override
+    public PlayerWrapper getEntity() {
+        return getPlayer();
+    }
+
+    @Override
     public PlayerWrapper getPlayer() {
         return new PlayerWrapper(rawEvent.getEntity());
     }

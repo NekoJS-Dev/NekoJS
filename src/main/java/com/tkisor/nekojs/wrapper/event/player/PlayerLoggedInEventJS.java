@@ -1,11 +1,12 @@
 package com.tkisor.nekojs.wrapper.event.player;
 
+import com.tkisor.nekojs.bindings.player.NekoPlayerEvent;
 import com.tkisor.nekojs.wrapper.entity.PlayerWrapper;
 import lombok.Getter;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
-public class PlayerLoggedInEventJS {
+public class PlayerLoggedInEventJS implements NekoPlayerEvent {
 
     private final PlayerEvent.PlayerLoggedInEvent rawEvent;
 
@@ -17,7 +18,8 @@ public class PlayerLoggedInEventJS {
         this.player = new PlayerWrapper(rawEvent.getEntity());
     }
 
-    public MinecraftServer getServer() {
-        return rawEvent.getEntity().level().getServer();
+    @Override
+    public PlayerWrapper getEntity() {
+        return player;
     }
 }

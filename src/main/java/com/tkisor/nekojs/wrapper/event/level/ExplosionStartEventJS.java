@@ -1,8 +1,9 @@
 package com.tkisor.nekojs.wrapper.event.level;
 
+import com.tkisor.nekojs.api.event.NekoCancellableEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
 
-public class ExplosionStartEventJS {
+public class ExplosionStartEventJS implements NekoCancellableEvent {
     private final ExplosionEvent.Start rawEvent;
 
     public ExplosionStartEventJS(ExplosionEvent.Start rawEvent) {
@@ -21,11 +22,4 @@ public class ExplosionStartEventJS {
         return rawEvent.getExplosion().center().z;
     }
 
-    /**
-     * 取消爆炸
-     * JS 侧调用: event.cancel()
-     */
-    public void cancel() {
-        rawEvent.setCanceled(true);
-    }
 }

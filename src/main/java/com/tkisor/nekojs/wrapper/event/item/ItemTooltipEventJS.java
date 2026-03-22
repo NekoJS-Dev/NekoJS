@@ -1,7 +1,8 @@
 package com.tkisor.nekojs.wrapper.event.item;
 
-import com.tkisor.nekojs.wrapper.entity.PlayerWrapper;
+import com.tkisor.nekojs.wrapper.entity.client.LocalPlayerWrapper;
 import com.tkisor.nekojs.wrapper.item.ItemStackWrapper;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -29,9 +30,9 @@ public class ItemTooltipEventJS {
      * 获取当前查看提示框的玩家
      * JS 侧调用: event.player
      */
-    public PlayerWrapper getPlayer() {
+    public LocalPlayerWrapper getPlayer() {
         Player player = rawEvent.getEntity();
-        return player != null ? new PlayerWrapper(player) : null;
+        return player != null ? new LocalPlayerWrapper((LocalPlayer) player) : null;
     }
 
     public void add(Component text) {
