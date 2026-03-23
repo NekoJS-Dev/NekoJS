@@ -17,7 +17,7 @@ jobs:
         run: |
           COMMIT_MSG="${{ github.event.head_commit.message }}"
           
-          # 修复 1：将正则表达式存入变量，完美避开空格解析问题
+          # 将正则表达式存入变量，完美避开空格解析问题
           REGEX="update ([0-9a-zA-Z.-]+)"
           
           if [[ "$COMMIT_MSG" =~ $REGEX ]]; then
@@ -40,29 +40,57 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # 🌟 修复 4：极其重要！设为 0 表示拉取所有提交历史和 Tag，否则无法对比日志！
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '25' # 没问题，既然使用较新环境，Java 25 是合适的
+          java-version: '25'
           distribution: 'temurin'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Make gradlew executable
-        # 修复 2：赋予 gradle 脚本执行权限，防止 Windows 环境提交导致的权限丢失
         run: chmod +x ./gradlew
 
       - name: Build Mod
         run: ./gradlew build
+
+      # 🌟 新增步骤：自动生成更新日志
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # 尝试获取上一个版本的 Tag，如果找不到（比如这是第一次发版），就返回空
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "First release detected. Getting all commits."
+            # 第一次发版，获取所有历史提交
+            COMMITS=$(git log --pretty=format:"* %s (%h)")
+          else
+            echo "Previous release tag: $PREVIOUS_TAG"
+            # 获取上一个 Tag 到当前 HEAD 的所有提交记录
+            COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s (%h)")
+          fi
+          
+          # GitHub Actions 传递多行变量的标准写法 (使用随机定界符防止内容截断)
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "notes<<$EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.check-commit.outputs.version }}
           name: NekoJS v${{ needs.check-commit.outputs.version }}
-          body: "Automated release triggered by commit.\n\nCommit Message: ${{ github.event.head_commit.message }}"
-          # 修复 3：规避 sources.jar 等附属文件（假设你的主 jar 叫 nekojs-...）
-          # 如果你确实想上传所有 jar，可以改回 build/libs/*.jar
+          # 🌟 修复 5：拼接自动生成的 Changelog 到发版说明中
+          body: |
+            Automated release triggered by commit.
+            
+            ### 📝 更新日志 (Changelog)
+            ${{ steps.changelog.outputs.notes }}
           files: build/libs/*.jar

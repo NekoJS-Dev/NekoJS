@@ -82,7 +82,8 @@ public final class NekoSandboxBuilder {
             })();
             """;
 
-    private NekoSandboxBuilder() {}
+    private NekoSandboxBuilder() {
+    }
 
     public static Context build(ScriptType type) {
         HostAccess.Builder hostBuilder = HostAccess.newBuilder(HostAccess.ALL)
@@ -115,12 +116,12 @@ public final class NekoSandboxBuilder {
         ctx.eval("js", "Java.loadClass = Java.type;");
         try {
             ctx.eval("js", """
-                if (typeof require !== 'undefined' && require.extensions) {
-                    require.extensions['.ts'] = require.extensions['.js'];
-                    require.extensions['.tsx'] = require.extensions['.js'];
-                    require.extensions['.jsx'] = require.extensions['.js'];
-                }
-            """);
+                        if (typeof require !== 'undefined' && require.extensions) {
+                            require.extensions['.ts'] = require.extensions['.js'];
+                            require.extensions['.tsx'] = require.extensions['.js'];
+                            require.extensions['.jsx'] = require.extensions['.js'];
+                        }
+                    """);
         } catch (Exception e) {
             type.logger().warn("注入 require 扩展名补丁失败", e);
         }
@@ -134,10 +135,12 @@ public final class NekoSandboxBuilder {
      */
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
         builder.targetTypeMapping(
-                Value.class,
-                adapter.getTargetClass(),
-                adapter::canConvert,
-                adapter::convert
-        );
+                        Value.class,
+                        adapter.getTargetClass(),
+                        adapter::canConvert,
+                        adapter::convert
+                )
+                .targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue)
+                .targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
     }
 }

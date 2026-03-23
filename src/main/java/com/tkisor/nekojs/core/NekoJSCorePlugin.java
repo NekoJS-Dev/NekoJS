@@ -6,7 +6,9 @@ import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingsRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
+import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.IngredientJS;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
@@ -45,5 +47,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new ComponentAdapter());
         registry.register(new EntityTypeAdapter());
         registry.register(new BlockAdapter());
+    }
+
+    @Override
+    public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
+        registry.register("minecraft", MinecraftRecipeHandler::new);
     }
 }

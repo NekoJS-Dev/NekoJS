@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.BindingsRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 
 /**
  * NekoJS 插件接口。<p>
@@ -23,8 +24,10 @@ public interface NekoJSPlugin {
     default void registerBindings(BindingsRegister registry) {}
 
     /**
-     * 暂时没做好
+     * 注册JS全局类型适配器
      * @param registry
      */
     default void registerAdapters(JSTypeAdapterRegister registry) {}
+
+    default void registerRecipeNamespaces(RecipeNamespaceRegister registry) {}
 }

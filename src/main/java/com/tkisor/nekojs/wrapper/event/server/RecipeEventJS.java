@@ -4,14 +4,18 @@ import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
+import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
+import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import com.tkisor.nekojs.wrapper.item.ItemStackWrapper;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import org.graalvm.polyglot.Value;
 
@@ -20,6 +24,7 @@ import java.util.stream.Collectors;
 
 public class RecipeEventJS {
 
+    private final RecipeRegistryProxy recipesProxy;
     private final Map<Identifier, JsonElement> jsons;
     private final HolderLookup.Provider registries;
     private int recipeCounter = 0;
@@ -27,17 +32,18 @@ public class RecipeEventJS {
     public RecipeEventJS(Map<Identifier, JsonElement> originalJsons, HolderLookup.Provider registries) {
         this.jsons = new HashMap<>(originalJsons);
         this.registries = registries;
+        this.recipesProxy = new RecipeRegistryProxy(this);
     }
 
     public Map<Identifier, JsonElement> getFinalJsons() {
         return this.jsons;
     }
 
-    private JsonElement serializeResult(ItemStackWrapper wrapper) {
-        return ItemStack.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), wrapper.unwrap()).getOrThrow(JsonParseException::new);
+    public JsonElement serializeResult(ItemStack stack) {
+        return ItemStack.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), stack).getOrThrow(JsonParseException::new);
     }
 
-    private JsonElement serializeIngredient(Ingredient ingredient) {
+    public JsonElement serializeIngredient(Ingredient ingredient) {
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
 
@@ -121,7 +127,7 @@ public class RecipeEventJS {
         }
     }
 
-    public void replaceOutput(RecipeFilter filter, Ingredient match, ItemStackWrapper replacement) {
+    public void replaceOutput(RecipeFilter filter, Ingredient match, ItemStack replacement) {
         if (match == null || replacement == null) return;
         JsonElement replacementJson = serializeResult(replacement);
         int replaced = 0;
@@ -144,8 +150,8 @@ public class RecipeEventJS {
                     if (resultNode.isJsonPrimitive() && resultNode.getAsJsonPrimitive().isString()) {
                         Identifier loc = Identifier.tryParse(resultNode.getAsString());
                         if (loc != null) {
-                            net.minecraft.world.item.Item item = BuiltInRegistries.ITEM.getValue(loc);
-                            if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                            Item item = BuiltInRegistries.ITEM.getValue(loc);
+                            if (item != null && item != Items.AIR) {
                                 if (match.test(new ItemStack(item))) {
                                     jsonObj.add("result", replacementJson);
                                     replaced++;
@@ -181,7 +187,7 @@ public class RecipeEventJS {
         }
     }
 
-    public void shaped(ItemStackWrapper result, Value pattern, Value keys) {
+    public void shaped(ItemStack result, Value pattern, Value keys) {
         JsonObject json = new JsonObject();
         json.addProperty("type", "minecraft:crafting_shaped");
         JsonArray patternArray = new JsonArray();
@@ -195,7 +201,7 @@ public class RecipeEventJS {
         register(json, "shaped");
     }
 
-    public void shapeless(ItemStackWrapper result, List<Ingredient> ingredients) {
+    public void shapeless(ItemStack result, List<Ingredient> ingredients) {
         JsonObject json = new JsonObject();
         json.addProperty("type", "minecraft:crafting_shapeless");
         JsonArray ingredientsArray = new JsonArray();
@@ -205,7 +211,7 @@ public class RecipeEventJS {
         register(json, "shapeless");
     }
 
-    private void createCookingRecipe(String type, ItemStackWrapper result, Ingredient ingredient, float xp, int cookTime, String prefix) {
+    private void createCookingRecipe(String type, ItemStack result, Ingredient ingredient, float xp, int cookTime, String prefix) {
         JsonObject json = new JsonObject();
         json.addProperty("type", type);
         json.add("ingredient", serializeIngredient(ingredient));
@@ -215,27 +221,27 @@ public class RecipeEventJS {
         register(json, prefix);
     }
 
-    public void smelting(ItemStackWrapper result, Ingredient ingredient) {
+    public void smelting(ItemStack result, Ingredient ingredient) {
         createCookingRecipe("minecraft:smelting", result, ingredient, 0.1f, 200, "smelting");
     }
 
-    public void smelting(ItemStackWrapper result, Ingredient ingredient, float xp, int cookTime) {
+    public void smelting(ItemStack result, Ingredient ingredient, float xp, int cookTime) {
         createCookingRecipe("minecraft:smelting", result, ingredient, xp, cookTime, "smelting");
     }
 
-    public void blasting(ItemStackWrapper result, Ingredient ingredient) {
+    public void blasting(ItemStack result, Ingredient ingredient) {
         createCookingRecipe("minecraft:blasting", result, ingredient, 0.1f, 100, "blasting");
     }
 
-    public void blasting(ItemStackWrapper result, Ingredient ingredient, float xp, int cookTime) {
+    public void blasting(ItemStack result, Ingredient ingredient, float xp, int cookTime) {
         createCookingRecipe("minecraft:blasting", result, ingredient, xp, cookTime, "blasting");
     }
 
-    public void smoking(ItemStackWrapper result, Ingredient ingredient) {
+    public void smoking(ItemStack result, Ingredient ingredient) {
         createCookingRecipe("minecraft:smoking", result, ingredient, 0.1f, 100, "smoking");
     }
 
-    public void campfireCooking(ItemStackWrapper result, Ingredient ingredient) {
+    public void campfireCooking(ItemStack result, Ingredient ingredient) {
         createCookingRecipe("minecraft:campfire_cooking", result, ingredient, 0.1f, 600, "campfire");
     }
 
@@ -258,5 +264,13 @@ public class RecipeEventJS {
         if (recipe instanceof SingleItemRecipe single) return List.of(single.input());
         if (recipe instanceof AbstractCookingRecipe cooking) return List.of(cooking.input());
         return List.of();
+    }
+
+    public RecipeRegistryProxy getRecipes() {
+        return this.recipesProxy;
+    }
+
+    public RecipeJsonBuilder builder(String type) {
+        return new RecipeJsonBuilder(this, type);
     }
 }
