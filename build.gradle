@@ -27,6 +27,9 @@ neoForge {
         client {
             client()
 
+            jvmArguments.add('-Dfml.earlydisplay=false')
+            environment.put('XDG_SESSION_TYPE', 'x11')
+
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 

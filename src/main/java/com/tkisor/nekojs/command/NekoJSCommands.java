@@ -4,7 +4,9 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
+import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.ShowErrorScreenPacket;
+import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
 import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -17,6 +19,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.List;
 
 public final class NekoJSCommands {
 
@@ -85,10 +89,41 @@ public final class NekoJSCommands {
                                         })
                                 )
                         )
+                        .then(Commands.literal("view_all_errors")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    if (NekoErrorTracker.hasErrors()) {
+                                        ServerPlayer player = source.getPlayerOrException();
+
+                                        // 将 Tracker 里的数据转换为 DTO
+                                        List<ErrorSummaryDTO> dtoList = NekoErrorTracker.getAllErrors().stream()
+                                                .map(err -> new ErrorSummaryDTO(
+                                                        err.getErrorId().toString(),
+                                                        err.getDisplayPath(),
+                                                        err.getLineNumber(),
+                                                        err.getOccurrenceCount(),
+                                                        err.getErrorMessage(),
+                                                        err.getFullDetailText()
+                                                )).toList();
+
+                                        // 发送列表包
+                                        PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(dtoList));
+                                    } else {
+                                        source.sendSuccess(() -> Component.literal("§a[NekoJS] ✔ 当前没有脚本错误！"), false);
+                                    }
+                                    return 1;
+                                })
+                        )
         );
     }
 
     private static void printErrorsToSource(CommandSourceStack source) {
+        source.sendSystemMessage(Component.literal("§a[点击此处打开错误大盘 UI]")
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("在全屏列表中查看所有错误")))
+                ));
+
         for (ScriptError error : NekoErrorTracker.getAllErrors()) {
             String idStr = error.getErrorId().toString();
             String pathStr = error.getDisplayPath();

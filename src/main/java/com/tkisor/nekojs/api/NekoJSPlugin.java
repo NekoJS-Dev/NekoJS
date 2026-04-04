@@ -18,6 +18,8 @@ public interface NekoJSPlugin {
     default void registerEvents(EventGroupRegistry registry) {
     }
 
+    default void registerClientEvents(EventGroupRegistry registry) {}
+
     /**
      * 注册全局静态对象绑定
      */

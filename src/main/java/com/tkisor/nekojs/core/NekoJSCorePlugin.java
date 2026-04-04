@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
@@ -13,6 +14,7 @@ import com.tkisor.nekojs.bindings.static_access.IngredientJS;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.js.type_adapter.*;
+import net.minecraft.client.Minecraft;
 import net.minecraft.util.TriState;
 
 @RegisterNekoJSPlugin
@@ -37,6 +39,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(Binding.of("NativeEvents", new NativeEventsJS()));
 
         registry.register(Binding.of("TriState", TriState.class));
+
+        registry.register(Binding.of("Minecraft", Minecraft.class));
     }
 
     @Override

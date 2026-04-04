@@ -26,27 +26,27 @@ public class PlayerEventListener {
 
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        // 1. 触发暴露给 JS 端的登录事件（保持你的原样）
         PlayerLoggedInEventJS eventJS = new PlayerLoggedInEventJS(event);
         PlayerEvents.LOGGED_IN.post(eventJS);
 
+        // 2. OP 进服的错误拦截提醒
         if (event.getEntity() instanceof ServerPlayer player) {
             if (Commands.LEVEL_GAMEMASTERS.check(player.permissions()) && NekoErrorTracker.hasErrors()) {
 
-                player.sendSystemMessage(Component.literal("§c[NekoJS] ⚠ 警告：当前环境存在 " + NekoErrorTracker.getAllErrors().size() + " 个脚本运行错误！"));
+                int errorCount = NekoErrorTracker.getAllErrors().size();
 
-                for (ScriptError error : NekoErrorTracker.getAllErrors()) {
-                    String idStr = error.getErrorId().toString();
-                    String pathStr = error.getDisplayPath();
+                // 发送一条主警告，告诉他有几个错误
+                player.sendSystemMessage(Component.literal("§c[NekoJS] ⚠ 警告：引擎目前存在 " + errorCount + " 个脚本运行错误。"));
 
-                    String countBadge = error.getOccurrenceCount() > 1 ? " §6[x" + error.getOccurrenceCount() + "]" : "";
+                // 🌟 核心改造：只发一个用来打开 Dashboard 的高亮按钮，不再循环刷屏！
+                MutableComponent dashboardLink = Component.literal("  §a▶ §n[点击此处打开错误大盘 UI]")
+                        .withStyle(style -> style
+                                .withHoverEvent(new HoverEvent.ShowText(Component.literal("§e在全屏列表中统一查看和管理错误")))
+                                .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors")) // 调用我们刚才写的看大盘指令
+                        );
 
-                    MutableComponent link = Component.literal("  §4▶ §c" + pathStr + " §8(第 " + error.getLineNumber() + " 行)" + countBadge)
-                            .withStyle(style -> style
-                                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("§c" + error.getErrorMessage() + "\n§e点击在全屏 UI 中查看堆栈详情")))
-                                    .withClickEvent(new ClickEvent.RunCommand("/nekojs view_error " + idStr))
-                            );
-                    player.sendSystemMessage(link);
-                }
+                player.sendSystemMessage(dashboardLink);
             }
         }
     }
