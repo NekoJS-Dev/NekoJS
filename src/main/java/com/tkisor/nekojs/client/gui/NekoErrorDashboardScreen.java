@@ -1,12 +1,10 @@
 package com.tkisor.nekojs.client.gui;
 
-import com.tkisor.nekojs.client.gui.components.NekoContextMenu;
-import com.tkisor.nekojs.client.gui.components.TextLinkWidget;
+import com.tkisor.nekojs.client.gui.components.NekoCodeEditor;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -14,8 +12,11 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 public class NekoErrorDashboardScreen extends Screen {
@@ -24,8 +25,7 @@ public class NekoErrorDashboardScreen extends Screen {
     private ErrorListWidget listWidget;
     private EditBox searchBox;
     private StackTraceList stackList;
-    private MultiLineEditBox editorBox;
-    private NekoContextMenu activeContextMenu = null;
+    private ContextMenu activeContextMenu = null;
 
     private ErrorSummaryDTO selectedError = null;
     private FilterType currentFilter = FilterType.ALL;
@@ -33,13 +33,9 @@ public class NekoErrorDashboardScreen extends Screen {
     private boolean isMaximized = false;
     private boolean isEditing = false;
 
-    // 智能折行与高亮核心
-    private int selectedEditorLine = -1;
-    private final List<Integer> visualToRealLineMap = new ArrayList<>();
-    private String lastMappedText = null;
-    private final int GUTTER_WIDTH = 32;
+    private NekoCodeEditor codeEditor;
 
-    private int rightX, rightW, contentY, contentH;
+    private int layoutRightX, layoutRightW, layoutContentY, layoutContentH;
     private String toastMessage = "";
     private long toastTime = 0;
     private long openTime;
@@ -61,116 +57,53 @@ public class NekoErrorDashboardScreen extends Screen {
     protected void init() {
         super.init();
         this.openTime = System.currentTimeMillis();
-
-        // 🌟 初始化持久化组件 (不再反复 clearWidgets)
-        this.searchBox = new EditBox(this.font, 0, 0, 0, 12, Component.empty());
-        this.searchBox.setHint(Component.literal("§8过滤路径..."));
-        this.searchBox.setResponder(s -> this.refreshList());
-        this.addRenderableWidget(this.searchBox);
-
-        this.listWidget = new ErrorListWidget(this.minecraft, 0, 0, 0, 36);
-        this.addRenderableWidget(this.listWidget);
-
-        this.stackList = new StackTraceList(this.minecraft, 0, 0, 0, 12);
-        this.addRenderableWidget(this.stackList);
-
-        this.editorBox = MultiLineEditBox.builder().setShowBackground(false).build(this.font, 0, 0, Component.empty());
-        this.addRenderableWidget(this.editorBox);
-
-        this.refreshList();
-        this.refreshStackView();
-
-        this.updateLayout();
+        this.buildDashboardLayout();
     }
 
-    // 🌟 动态计算并更新所有组件的边界
-    private void updateLayout() {
+    private void buildDashboardLayout() {
+        String oldSearch = this.searchBox != null ? this.searchBox.getValue() : "";
+        double oldScroll = this.listWidget != null ? this.listWidget.scrollAmount() : 0;
+        this.clearWidgets();
+
         int margin = 15;
-        int leftW = isMaximized ? 0 : Math.max(160, (int) (this.width * 0.35));
-
-        this.rightX = isMaximized ? margin : leftW + margin * 2;
-        this.rightW = this.width - rightX - margin;
-        this.contentY = 55;
-        this.contentH = this.height - contentY - margin;
-
-        this.searchBox.visible = !isMaximized;
-        this.listWidget.visible = !isMaximized;
-        this.stackList.visible = !isEditing;
-        this.editorBox.visible = isEditing;
+        int leftW = isMaximized ? 0 : Math.max(160, (int)(this.width * 0.35));
+        this.layoutRightX = isMaximized ? margin : leftW + margin * 2;
+        this.layoutRightW = this.width - layoutRightX - margin;
+        this.layoutContentY = 55;
+        this.layoutContentH = this.height - layoutContentY - margin;
 
         if (!isMaximized) {
-            this.searchBox.setX(margin); this.searchBox.setY(8); this.searchBox.setWidth(leftW);
-            this.listWidget.setX(margin); this.listWidget.setY(contentY); this.listWidget.setWidth(leftW); this.listWidget.setHeight(contentH);
+            this.searchBox = new EditBox(this.font, margin, 8, leftW, 12, Component.literal("搜索..."));
+            this.searchBox.setHint(Component.literal("§8过滤路径..."));
+            this.searchBox.setValue(oldSearch);
+            this.searchBox.setResponder(s -> this.refreshList());
+            this.addRenderableWidget(this.searchBox);
+
+            this.listWidget = new ErrorListWidget(this.minecraft, leftW, layoutContentH, layoutContentY, 36);
+            this.listWidget.setX(margin);
+            this.refreshList();
+            this.listWidget.setScrollAmount(oldScroll);
+            this.addRenderableWidget(this.listWidget);
         }
 
-        this.stackList.setX(rightX + 1); this.stackList.setY(contentY + 2); this.stackList.setWidth(rightW - 2); this.stackList.setHeight(contentH - 4);
-
-        this.editorBox.setX(rightX + GUTTER_WIDTH + 2); this.editorBox.setY(contentY + 4);
-        this.editorBox.setWidth(rightW - GUTTER_WIDTH - 6); this.editorBox.setHeight(contentH - 8);
-
-        rebuildHeaderButtons();
-    }
-
-    private void rebuildHeaderButtons() {
-        this.children().removeIf(w -> w instanceof TextLinkWidget);
-        this.renderables.removeIf(w -> w instanceof TextLinkWidget);
-
-        if (selectedError == null) return;
-
-        int curX = rightX + rightW - 10;
-
-        if (isEditing) {
-            curX = addLinkBtn("§c[取消]", curX, () -> { this.isEditing = false; this.selectedEditorLine = -1; this.updateLayout(); });
-            addLinkBtn("§a[保存]", curX, this::actionSave);
+        if (!isEditing) {
+            this.stackList = new StackTraceList(this.minecraft, layoutRightW - 2, layoutContentH - 2, layoutContentY + 2, 12);
+            this.stackList.setX(layoutRightX + 1);
+            this.refreshStackView();
+            this.addRenderableWidget(this.stackList);
+            this.codeEditor = null;
         } else {
-            curX = addLinkBtn("§7[复制]", curX, () -> { NekoDashboardActions.copyToClipboard(selectedError.fullDetails()); showToast("§a✔ 已复制"); });
-            curX = addLinkBtn("§b[日志]", curX, () -> { NekoDashboardActions.openLog(); showToast("§a✔ 打开日志"); });
-            curX = addLinkBtn("§e[定位]", curX, () -> { NekoDashboardActions.locateScript(selectedError.path()); showToast("§a✔ 尝试定位"); });
-            addLinkBtn("§a[编辑]", curX, () -> {
-                this.isEditing = true;
-                this.selectedEditorLine = -1;
-                this.editorBox.setValue(NekoDashboardActions.readScript(selectedError.path()));
-                this.lastMappedText = null;
-                this.updateLayout();
-                this.setFocused(this.editorBox);
-            });
-        }
-    }
+            String initialText = "";
+            try {
+                Path path = new File(Minecraft.getInstance().gameDirectory, "nekojs/" + selectedError.path()).toPath();
+                if (Files.exists(path)) initialText = Files.readString(path);
+            } catch (Exception e) {
+                initialText = "// 读取失败: " + e.getMessage();
+            }
 
-    private int addLinkBtn(String text, int rightAlignX, Runnable action) {
-        int w = this.font.width(text);
-        int targetX = rightAlignX - w - 5;
-        this.addRenderableWidget(new TextLinkWidget(targetX, 32, Component.literal(text), this.font, 0xFFCCCCCC, 0xFFFFFFFF, action));
-        return targetX;
-    }
-
-    private void actionSave() {
-        if (NekoDashboardActions.saveScript(selectedError.path(), this.editorBox.getValue())) {
-            showToast("§a✔ 已保存修改");
-            this.isEditing = false;
-            this.selectedEditorLine = -1;
-            this.updateLayout();
-        } else {
-            showToast("§c✖ 保存失败");
-        }
-    }
-
-    private void showToast(String msg) { this.toastMessage = msg; this.toastTime = System.currentTimeMillis() + 2000; }
-
-    private void updateLineMap() {
-        if (editorBox == null || !editorBox.visible) return;
-        String text = editorBox.getValue();
-        if (text.equals(lastMappedText)) return;
-        lastMappedText = text;
-        visualToRealLineMap.clear();
-
-        int innerWidth = editorBox.getWidth() - 8;
-        String[] realLines = text.split("\n", -1);
-
-        for (int i = 0; i < realLines.length; i++) {
-            int wrappedCount = this.font.getSplitter().splitLines(realLines[i], innerWidth, net.minecraft.network.chat.Style.EMPTY).size();
-            if (wrappedCount == 0) wrappedCount = 1;
-            for (int j = 0; j < wrappedCount; j++) visualToRealLineMap.add(i + 1);
+            this.codeEditor = new NekoCodeEditor(this.font, layoutRightX, layoutContentY, layoutRightW, layoutContentH, initialText);
+            this.addRenderableWidget(this.codeEditor.getWidget());
+            this.setFocused(this.codeEditor.getWidget());
         }
     }
 
@@ -196,11 +129,37 @@ public class NekoErrorDashboardScreen extends Screen {
 
     private void selectError(ErrorSummaryDTO dto) {
         this.selectedError = dto;
-        if (this.isEditing) {
-            this.isEditing = false; this.selectedEditorLine = -1; this.updateLayout();
-        } else {
-            this.refreshStackView();
-        }
+        if (this.isEditing) { this.isEditing = false; this.buildDashboardLayout(); }
+        else { this.refreshStackView(); }
+    }
+
+    private void actionLocate() {
+        if (selectedError == null) return;
+        Util.getPlatform().openFile(new File(Minecraft.getInstance().gameDirectory, "nekojs/" + selectedError.path()));
+        showToast("§a✔ 尝试打开文件");
+    }
+    private void actionLog() {
+        Util.getPlatform().openFile(new File(Minecraft.getInstance().gameDirectory, "logs/latest.log"));
+        showToast("§a✔ 打开 latest.log");
+    }
+    private void actionCopy() {
+        if (selectedError == null) return;
+        Minecraft.getInstance().keyboardHandler.setClipboard(selectedError.fullDetails());
+        showToast("§a✔ 已存入剪贴板");
+    }
+    private void actionSave() {
+        if (selectedError == null || codeEditor == null) return;
+        try {
+            Path path = new File(Minecraft.getInstance().gameDirectory, "nekojs/" + selectedError.path()).toPath();
+            Files.writeString(path, this.codeEditor.getValue());
+            showToast("§a✔ 已保存修改");
+            this.isEditing = false; this.buildDashboardLayout();
+        } catch (Exception e) { showToast("§c✖ 保存失败: " + e.getMessage()); }
+    }
+
+    private void showToast(String msg) {
+        this.toastMessage = msg;
+        this.toastTime = System.currentTimeMillis() + 2000;
     }
 
     private FilterType judgeErrorType(ErrorSummaryDTO dto) {
@@ -209,7 +168,6 @@ public class NekoErrorDashboardScreen extends Screen {
         if (msg.contains("null") || msg.contains("undefined") || msg.contains("error")) return FilterType.RUNTIME;
         return FilterType.OTHER;
     }
-
     private int getCount(FilterType type) {
         if (type == FilterType.ALL) return errors.size();
         return (int) errors.stream().filter(e -> judgeErrorType(e) == type).count();
@@ -233,36 +191,29 @@ public class NekoErrorDashboardScreen extends Screen {
                 String lbl = type.label + " §8" + getCount(type);
                 int lw = this.font.width(lbl);
                 boolean isCur = currentFilter == type;
-                if (isCur) graphics.fill(tabX, tabY + 12, tabX + lw, tabY + 13, type.color);
+                if (isCur) {
+                    graphics.fill(tabX - 4, tabY - 2, tabX + lw + 4, tabY + 12, 0x20FFFFFF);
+                    graphics.fill(tabX - 4, tabY + 11, tabX + lw + 4, tabY + 12, type.color);
+                }
                 graphics.text(this.font, lbl, tabX, tabY, isCur ? -1 : 0xFF666666);
                 tabX += lw + 12;
             }
-
-            String clearBtn = "§7[ 清空记录 ]";
-            int clearX = rightX - this.font.width(clearBtn) - 15;
-            boolean clearHover = mouseX >= clearX && mouseX <= clearX + this.font.width(clearBtn) && mouseY >= 11 && mouseY <= 20;
-            graphics.text(this.font, clearHover ? "§f§n[ 清空记录 ]" : clearBtn, clearX, 11, -1);
         }
 
-        if (selectedError != null) {
-            String title = isEditing ? "§8编辑: §a" + selectedError.path() : "§8目标: §e" + selectedError.path();
-            graphics.text(this.font, title, rightX, 32, -1);
+        if (isEditing && codeEditor != null) {
+            codeEditor.renderUnderlay(graphics);
+        } else {
+            graphics.fill(layoutRightX, layoutContentY, layoutRightX + layoutRightW, layoutContentY + layoutContentH, 0xFF1E1E1E);
         }
-
-        int closeX = this.width - 25;
-        graphics.text(this.font, (mouseX >= closeX && mouseX <= closeX + 10 && mouseY >= 8 && mouseY <= 20) ? "§c✖" : "§7✖", closeX, 10, -1);
-        int maxX = closeX - 25;
-        graphics.text(this.font, (mouseX >= maxX && mouseX <= maxX + 10 && mouseY >= 8 && mouseY <= 20) ? "§f" + (isMaximized ? "🗗" : "⛶") : "§7" + (isMaximized ? "🗗" : "⛶"), maxX, 10, -1);
-
-        graphics.fill(rightX, contentY, rightX + rightW, contentY + contentH, 0xFF1E1E1E);
-
-        if (isEditing) renderEditorExtensions(graphics);
 
         super.extractRenderState(graphics, activeContextMenu != null ? -999 : mouseX, activeContextMenu != null ? -999 : mouseY, partialTick);
 
-        int decorColor = isEditing ? 0xFF44FF44 : (selectedError != null ? judgeErrorType(selectedError).color : 0xFF333333);
-        graphics.fill(rightX, contentY, rightX + 2, contentY + contentH, decorColor);
-        graphics.outline(rightX, contentY, rightW, contentH, 0xFF333333);
+        renderHeaderButtons(graphics, mouseX, mouseY);
+
+        boolean isDirty = isEditing && codeEditor != null && codeEditor.isDirty();
+        int decorColor = isEditing ? (isDirty ? 0xFFFFDD00 : 0xFF44FF44) : (selectedError != null ? judgeErrorType(selectedError).color : 0xFF333333);
+        graphics.fill(layoutRightX, layoutContentY, layoutRightX + 2, layoutContentY + layoutContentH, decorColor);
+        graphics.outline(layoutRightX, layoutContentY, layoutRightW, layoutContentH, 0xFF333333);
 
         if (System.currentTimeMillis() < toastTime) {
             float yAnim = Mth.clamp((2000f - (toastTime - System.currentTimeMillis())) / 150f, 0, 1);
@@ -276,45 +227,41 @@ public class NekoErrorDashboardScreen extends Screen {
         if (this.activeContextMenu != null) this.activeContextMenu.render(graphics, mouseX, mouseY);
     }
 
-    private void renderEditorExtensions(GuiGraphicsExtractor g) {
-        updateLineMap();
-        int totalVisualLines = visualToRealLineMap.size();
+    private void renderHeaderButtons(GuiGraphicsExtractor g, int mx, int my) {
+        if (selectedError == null) return;
+        boolean isDirty = isEditing && codeEditor != null && codeEditor.isDirty();
 
-        int innerX = rightX + 2;
-        int innerY = contentY + 2;
-        int innerH = contentH - 4;
+        String title = isEditing ? "§8编辑: §a" + selectedError.path() : "§8目标: §e" + selectedError.path();
+        if (isDirty) title += " §e(未保存)";
 
-        g.fill(innerX, innerY, innerX + GUTTER_WIDTH, innerY + innerH, 0xFF181818);
+        g.text(this.font, title, layoutRightX + 5, 32, -1);
 
-        int fontHeight = 9;
-        double scroll = editorBox.scrollAmount();
-        int startLine = (int) (scroll / fontHeight);
-        int maxVisibleLines = innerH / fontHeight + 1;
-        int textStartY = contentY + 8;
+        int curX = layoutRightX + layoutRightW - 10;
+        int closeX = this.width - 25;
+        g.text(this.font, (mx >= closeX && mx <= closeX + 10 && my >= 10 && my <= 20) ? "§c✖" : "§7✖", closeX, 10, -1);
+        int maxX = closeX - 25;
+        g.text(this.font, (mx >= maxX && mx <= maxX + 10 && my >= 10 && my <= 20) ? "§f" + (isMaximized ? "🗗" : "⛶") : "§7" + (isMaximized ? "🗗" : "⛶"), maxX, 10, -1);
 
-        for (int i = 0; i <= maxVisibleLines; i++) {
-            int visualIdx = startLine + i;
-            if (visualIdx >= totalVisualLines) break;
-
-            int realLineNum = visualToRealLineMap.get(visualIdx);
-            int y = textStartY + (i * fontHeight) - (int) (scroll % fontHeight);
-
-            if (y < innerY || y > innerY + innerH - fontHeight) continue;
-
-            boolean isCurrentLine = (realLineNum - 1 == selectedEditorLine);
-
-            if (isCurrentLine) {
-                g.fill(innerX, y, rightX + rightW - 2, y + fontHeight, 0x1AFFFFFF);
-                g.fill(innerX + GUTTER_WIDTH, y, rightX + rightW - 2, y + fontHeight, 0x15FFFFFF);
-            }
-
-            if (visualIdx > 0 && visualToRealLineMap.get(visualIdx - 1) == realLineNum) continue;
-
-            String numStr = String.valueOf(realLineNum);
-            int numW = this.font.width(numStr);
-            int numColor = isCurrentLine ? 0xFFDDDDDD : 0xFF555555;
-            g.text(this.font, numStr, innerX + GUTTER_WIDTH - 4 - numW, y, numColor);
+        if (isEditing) {
+            curX = renderLink(g, "§c[取消]", curX, mx, my);
+            curX = renderLink(g, isDirty ? "§e[保存*]" : "§a[保存]", curX, mx, my);
+        } else {
+            curX = renderLink(g, "§7[复制]", curX, mx, my);
+            curX = renderLink(g, "§b[日志]", curX, mx, my);
+            curX = renderLink(g, "§e[定位]", curX, mx, my);
+            curX = renderLink(g, "§a[编辑]", curX, mx, my);
         }
+    }
+
+    private int renderLink(GuiGraphicsExtractor g, String text, int x, int mx, int my) {
+        int w = this.font.width(text);
+        int targetX = x - w - 5;
+        boolean hov = mx >= targetX && mx <= targetX + w && my >= 32 && my <= 42;
+
+        g.text(this.font, text, targetX, 32, -1);
+        if (hov) g.fill(targetX, 32 + this.font.lineHeight, targetX + w, 32 + this.font.lineHeight + 1, 0xFFFFFFFF);
+
+        return targetX;
     }
 
     @Override
@@ -323,7 +270,7 @@ public class NekoErrorDashboardScreen extends Screen {
             this.activeContextMenu = null; return true;
         }
         if (this.isEditing && event.isEscape()) {
-            this.isEditing = false; this.selectedEditorLine = -1; this.updateLayout(); return true;
+            this.isEditing = false; this.buildDashboardLayout(); return true;
         }
         return super.keyPressed(event);
     }
@@ -338,19 +285,48 @@ public class NekoErrorDashboardScreen extends Screen {
         int closeX = this.width - 25;
         if (event.x() >= closeX && event.x() <= closeX + 10 && event.y() >= 8 && event.y() <= 20) { this.onClose(); return true; }
         int maxX = closeX - 25;
-        if (event.x() >= maxX && event.x() <= maxX + 10 && event.y() >= 8 && event.y() <= 20) { this.isMaximized = !this.isMaximized; this.updateLayout(); return true; }
+        if (event.x() >= maxX && event.x() <= maxX + 10 && event.y() >= 8 && event.y() <= 20) { this.isMaximized = !this.isMaximized; this.buildDashboardLayout(); return true; }
 
-        if (isEditing && editorBox != null) {
-            if (event.x() >= rightX + GUTTER_WIDTH && event.x() <= rightX + rightW && event.y() >= contentY && event.y() <= contentY + contentH) {
-                double relativeY = event.y() - (contentY + 8) + editorBox.scrollAmount();
-                if (relativeY >= 0) {
-                    int visualLine = (int) (relativeY / 9);
-                    updateLineMap();
-                    if (visualLine >= 0 && visualLine < visualToRealLineMap.size()) {
-                        selectedEditorLine = visualToRealLineMap.get(visualLine) - 1;
-                    } else selectedEditorLine = -1;
-                } else selectedEditorLine = -1;
+        if (selectedError != null && event.y() >= 32 && event.y() <= 42) {
+            int curX = layoutRightX + layoutRightW - 10;
+
+            if (isEditing) {
+                String cancelBtn = "§c[取消]";
+                int cw = this.font.width(cancelBtn);
+                curX = curX - cw - 5;
+                if (event.x() >= curX && event.x() <= curX + cw) { this.isEditing = false; buildDashboardLayout(); return true; }
+
+                boolean isDirty = codeEditor != null && codeEditor.isDirty();
+                String saveBtn = isDirty ? "§e[保存*]" : "§a[保存]";
+                int sw = this.font.width(saveBtn);
+                curX = curX - sw - 5;
+                if (event.x() >= curX && event.x() <= curX + sw) { actionSave(); return true; }
+            } else {
+                String copyBtn = "§7[复制]";
+                int cw1 = this.font.width(copyBtn);
+                curX = curX - cw1 - 5;
+                if (event.x() >= curX && event.x() <= curX + cw1) { actionCopy(); return true; }
+
+                String logBtn = "§b[日志]";
+                int cw2 = this.font.width(logBtn);
+                curX = curX - cw2 - 5;
+                if (event.x() >= curX && event.x() <= curX + cw2) { actionLog(); return true; }
+
+                String locBtn = "§e[定位]";
+                int cw3 = this.font.width(locBtn);
+                curX = curX - cw3 - 5;
+                if (event.x() >= curX && event.x() <= curX + cw3) { actionLocate(); return true; }
+
+                String editBtn = "§a[编辑]";
+                int cw4 = this.font.width(editBtn);
+                curX = curX - cw4 - 5;
+                if (event.x() >= curX && event.x() <= curX + cw4) { this.isEditing = true; buildDashboardLayout(); return true; }
             }
+        }
+
+        // 委派点击事件给编辑器（用于选择行）
+        if (isEditing && codeEditor != null) {
+            codeEditor.mouseClicked(event.x(), event.y(), event.button());
         }
 
         if (!isMaximized) {
@@ -362,18 +338,12 @@ public class NekoErrorDashboardScreen extends Screen {
                 }
                 tabX += lw + 12;
             }
-            String clearBtn = "[ 清空记录 ]";
-            int clearX = rightX - this.font.width(clearBtn) - 15;
-            if (event.x() >= clearX && event.x() <= rightX - 15 && event.y() >= 11 && event.y() <= 20) {
-                this.errors.clear(); this.selectedError = null; this.isEditing = false;
-                this.refreshList(); this.updateLayout(); showToast("§a✔ 记录已清理"); return true;
-            }
         }
 
         return super.mouseClicked(event, doubleClick);
     }
 
-    // ================= 内部类：左侧列表 =================
+    // ================= 内部类 =================
     private class ErrorListWidget extends ObjectSelectionList<ErrorEntry> {
         public ErrorListWidget(Minecraft mc, int w, int h, int y, int ih) { super(mc, w, h, y, ih); }
         public void add(ErrorEntry entry) { this.addEntry(entry); }
@@ -391,8 +361,10 @@ public class NekoErrorDashboardScreen extends Screen {
             boolean isSelected = selectedError != null && selectedError.id().equals(dto.id());
             boolean hov = (NekoErrorDashboardScreen.this.activeContextMenu == null) && isHovered;
             int x = this.getX(), y = this.getY(), w = this.getWidth(), h = this.getHeight() - 4;
+
             g.fill(x, y, x + w, y + h, isSelected ? 0x30FFFFFF : (hov ? 0x15FFFFFF : 0x08FFFFFF));
             g.fill(x + 2, y + 4, x + 4, y + h - 4, judgeErrorType(dto).color);
+
             g.text(NekoErrorDashboardScreen.this.font, (isSelected ? "§e" : "§f") + dto.path(), x + 8, y + 6, -1);
             g.text(NekoErrorDashboardScreen.this.font, "§7" + NekoErrorDashboardScreen.this.font.plainSubstrByWidth(dto.message(), w - 20), x + 8, y + 18, -1);
         }
@@ -400,15 +372,11 @@ public class NekoErrorDashboardScreen extends Screen {
         public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
             if (NekoErrorDashboardScreen.this.activeContextMenu != null) return false;
             if (event.button() == 0) {
-                selectError(dto);
-                if (doubleClick) { isMaximized = true; updateLayout(); }
-                return true;
+                selectError(dto); if (doubleClick) { isMaximized = true; buildDashboardLayout(); } return true;
             } else if (event.button() == 1) {
-                NekoErrorDashboardScreen.this.activeContextMenu = new NekoContextMenu(
-                        NekoErrorDashboardScreen.this.width, NekoErrorDashboardScreen.this.height,
-                        (int)event.x(), (int)event.y(), NekoErrorDashboardScreen.this.font, List.of(
-                        new NekoContextMenu.MenuItem("⛶ 全屏查看", () -> { selectError(dto); isMaximized = true; updateLayout(); }),
-                        new NekoContextMenu.MenuItem("📂 打开脚本", () -> { NekoDashboardActions.locateScript(dto.path()); showToast("§a✔ 指令已发送"); })
+                NekoErrorDashboardScreen.this.activeContextMenu = new ContextMenu((int)event.x(), (int)event.y(), List.of(
+                        new MenuItem("⛶ 全屏查看", () -> { selectError(dto); isMaximized = true; buildDashboardLayout(); }),
+                        new MenuItem("📂 打开脚本", () -> { Util.getPlatform().openFile(new File(Minecraft.getInstance().gameDirectory, "nekojs/" + dto.path())); showToast("§a✔ 指令已发送"); })
                 ));
                 return true;
             }
@@ -417,7 +385,6 @@ public class NekoErrorDashboardScreen extends Screen {
         @Override public Component getNarration() { return Component.literal(dto.path()); }
     }
 
-    // ================= 内部类：右侧堆栈列表 =================
     private class StackTraceList extends ObjectSelectionList<TextLineEntry> {
         public StackTraceList(Minecraft mc, int w, int h, int y, int ih) { super(mc, w, h, y, ih); }
         @Override public int getRowWidth() { return this.width - 20; }
@@ -437,4 +404,26 @@ public class NekoErrorDashboardScreen extends Screen {
         }
         @Override public Component getNarration() { return Component.empty(); }
     }
+
+    private class ContextMenu {
+        int x, y, width = 120, height; List<MenuItem> items;
+        public ContextMenu(int sx, int sy, List<MenuItem> items) {
+            this.items = items; this.height = items.size() * 18 + 6;
+            this.x = Math.min(sx, NekoErrorDashboardScreen.this.width - width - 5); this.y = Math.min(sy, NekoErrorDashboardScreen.this.height - height - 5);
+        }
+        public void render(GuiGraphicsExtractor g, int mx, int my) {
+            g.fill(x, y, x+width, y+height, 0xFF18181B); g.outline(x, y, width, height, 0xFF3F3F46);
+            for (int i = 0; i < items.size(); i++) {
+                int iy = y + 3 + i * 18; boolean h = mx >= x && mx <= x+width && my >= iy && my < iy+18;
+                if (h) g.fill(x+2, iy, x+width-2, iy+18, 0xFF27272A);
+                g.text(NekoErrorDashboardScreen.this.font, items.get(i).label, x+8, iy+5, h ? -1 : 0xFFA1A1AA);
+            }
+        }
+        public boolean mouseClicked(double mx, double my, int b) {
+            if (b == 0 && mx >= x && mx <= x+width && my >= y && my <= y+height) {
+                int index = ((int)my - y - 3) / 18; if (index >= 0 && index < items.size()) items.get(index).action.run(); return true;
+            } return false;
+        }
+    }
+    private record MenuItem(String label, Runnable action) {}
 }
