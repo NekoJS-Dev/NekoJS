@@ -7,7 +7,6 @@ import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
-import com.tkisor.nekojs.utils.NekoConditionEvaluator;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -21,6 +20,7 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeMap;
+import net.neoforged.neoforge.common.conditions.ICondition;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -61,7 +61,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
     @Override
     public void nekojs$applyScripts() {
         int beforeCount = this.nekojs$rawJsons.size();
-        this.nekojs$rawJsons.entrySet().removeIf(entry -> !NekoConditionEvaluator.test(entry.getValue()));
+        this.nekojs$rawJsons.entrySet().removeIf(entry -> !ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue()));
         int afterCount = this.nekojs$rawJsons.size();
         NekoJS.LOGGER.info("[NekoJS] 经过底层的条件求值，剔除了 {} 个未满足前置的配方。", beforeCount - afterCount);
 
