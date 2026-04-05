@@ -10,7 +10,7 @@ import java.util.function.Function;
  */
 public record DispatchKeyImpl<E, K>(
     Class<K> keyType,
-    Function<E, K> toKey
+    Function<? super E, K> toKey
 ) implements DispatchKey<E, K> {
 
     public DispatchKeyImpl {

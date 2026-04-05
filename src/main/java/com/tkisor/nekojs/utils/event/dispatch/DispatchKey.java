@@ -8,11 +8,11 @@ import java.util.function.Function;
  * @author ZZZank
  */
 public interface DispatchKey<E, K> {
-    static <E, K> DispatchKey<E, K> of(Class<K> keyType, Function<E, K> toKey) {
-        return new DispatchKeyImpl<>(keyType, toKey);
+    static <E, K> DispatchKey<E, K> of(Class<? super K> keyType, Function<? super E, K> toKey) {
+        return new DispatchKeyImpl<>((Class<K>) keyType, toKey);
     }
 
-    static <E, K> DispatchKey<E, K> of(Class<K> keyType) {
+    static <E, K> DispatchKey<E, K> of(Class<? super K> keyType) {
         return of(keyType, (ignored) -> null);
     }
 
