@@ -6,6 +6,9 @@
   "mixins": [
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
+    "inject.MixinEntity",
+    "inject.MixinLivingEntity",
+    "inject.MixinMutableComponent",
     "inject.MixinPlayer"
   ],
   "client": [
