@@ -2,10 +2,7 @@ package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.BlockEvents;
-import com.tkisor.nekojs.wrapper.event.block.BlockBreakEventJS;
-import com.tkisor.nekojs.wrapper.event.block.BlockLeftClickedEventJS;
-import com.tkisor.nekojs.wrapper.event.block.BlockPlaceEventJS;
-import com.tkisor.nekojs.wrapper.event.block.BlockRightClickEventJS;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -15,25 +12,24 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 public class BlockEventListener {
     @SubscribeEvent
     public static void onBlockBreak(BlockEvent.BreakEvent event) {
-        BlockBreakEventJS eventJS = new BlockBreakEventJS(event);
-        BlockEvents.BROKEN.post(eventJS, eventJS.getBlockId());
+        BlockState blockState = event.getState();
+        BlockEvents.BROKEN.post(event, blockState.getBlock().neko$getId());
     }
 
     @SubscribeEvent
     public static void onBlockRightClick(PlayerInteractEvent.RightClickBlock event) {
-        BlockRightClickEventJS eventJS = new BlockRightClickEventJS(event);
-        BlockEvents.RIGHT_CLICKED.post(eventJS, eventJS.getBlockId());
+        BlockState blockState = event.getLevel().getBlockState(event.getPos());
+        BlockEvents.RIGHT_CLICKED.post(event, blockState.getBlock().neko$getId());
     }
 
     @SubscribeEvent
     public static void onBlockLeftClicked(PlayerInteractEvent.LeftClickBlock event) {
-        BlockLeftClickedEventJS eventJS = new BlockLeftClickedEventJS(event);
-        BlockEvents.LEFT_CLICKED.post(eventJS, eventJS.getBlockId());
+        BlockState blockState = event.getLevel().getBlockState(event.getPos());
+        BlockEvents.LEFT_CLICKED.post(event, blockState.getBlock().neko$getId());
     }
 
     @SubscribeEvent
     public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
-        BlockPlaceEventJS eventJS = new BlockPlaceEventJS(event);
-        BlockEvents.PLACED.post(eventJS, eventJS.getBlockId());
+        BlockEvents.PLACED.post(event, event.getPlacedBlock().getBlock().neko$getId());
     }
 }

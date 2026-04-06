@@ -147,4 +147,8 @@ public final class NekoJSScriptManager {
 
         type.logger().info("{} 脚本重载完毕。", type.name());
     }
+
+    public boolean hasScripts(ScriptType type) {
+        return !scripts.get(type).isEmpty();
+    }
 }

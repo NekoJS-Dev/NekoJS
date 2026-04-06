@@ -7,12 +7,16 @@ import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
+import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Unit;
@@ -23,6 +27,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeMap;
 import net.neoforged.neoforge.common.conditions.ConditionalOps;
 import net.neoforged.neoforge.common.conditions.ICondition;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -33,6 +38,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.Reader;
 import java.util.*;
+import java.util.List;
 
 @Mixin(RecipeManager.class)
 public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
@@ -89,6 +95,16 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         this.recipes = RecipeMap.create(newHolders);
         this.nekojs$rawJsons.clear();
 
-        NekoJS.LOGGER.info("[NekoJS] 脚本执行完毕，当前配方总数: {}", this.recipes.values().size());
+//        NekoJS.LOGGER.info("[NekoJS] 脚本执行完毕，当前配方总数: {}", this.recipes.values().size());
+        ScriptType.SERVER.logger().info("[NekoJS] 脚本执行完毕，当前配方总数: {}", this.recipes.values().size());
+        List<ServerPlayer> players = null;
+        if (ServerLifecycleHooks.getCurrentServer() != null) {
+            players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();
+            players.forEach(player -> {
+                if (Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
+                    player.sendSystemMessage(Component.literal("§a[NekoJS] ✔ 脚本完美重载！"));
+                }
+            });
+        }
     }
 }

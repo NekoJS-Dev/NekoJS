@@ -18,6 +18,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import org.graalvm.polyglot.Value;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -34,9 +35,7 @@ public class RecipeEventJS {
         this.recipesProxy = new RecipeRegistryProxy(this);
     }
 
-    public Map<Identifier, JsonElement> getFinalJsons() {
-        return this.jsons;
-    }
+    public Map<Identifier, JsonElement> getFinalJsons() { return this.jsons; }
 
     public JsonElement serializeResult(ItemStack stack) {
         return ItemStack.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), stack).getOrThrow(JsonParseException::new);
@@ -46,32 +45,30 @@ public class RecipeEventJS {
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
 
-    private void register(JsonObject json, String prefix) {
-        Identifier loc = Identifier.fromNamespaceAndPath("nekojs", prefix + "_" + (recipeCounter++));
-        jsons.put(loc, json);
+    public Identifier generateRecipeId(String prefix) {
+        String baseString = prefix + "_" + (recipeCounter++);
+
+        String randomSuffix = UUID.nameUUIDFromBytes(baseString.getBytes(StandardCharsets.UTF_8))
+                .toString().replace("-", "").substring(0, 8);
+
+        return Identifier.fromNamespaceAndPath("nekojs", prefix + "_" + randomSuffix);
     }
 
     public void replaceInput(RecipeFilter filter, Ingredient match, Ingredient replacement) {
         if (match == null || replacement == null) return;
         JsonElement replacementJson = serializeIngredient(replacement);
         int replaced = 0;
-
         for (Map.Entry<Identifier, JsonElement> entry : jsons.entrySet()) {
             if (!entry.getValue().isJsonObject()) continue;
             JsonObject jsonObj = entry.getValue().getAsJsonObject();
-
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
-
-            if (replaceInputInJson(jsonObj, match, replacementJson)) {
-                replaced++;
-            }
+            if (replaceInputInJson(jsonObj, match, replacementJson)) replaced++;
         }
         NekoJS.LOGGER.info("[NekoJS] 成功拦截 JSON 树并替换了 {} 个配方的输入材料", replaced);
     }
 
     private boolean replaceInputInJson(JsonObject recipeJson, Ingredient match, JsonElement replacementJson) {
         boolean modified = false;
-
         if (recipeJson.has("ingredient") && testIngredientNode(recipeJson.get("ingredient"), match)) {
             recipeJson.add("ingredient", replacementJson);
             modified = true;
@@ -97,24 +94,6 @@ public class RecipeEventJS {
         return modified;
     }
 
-    public void custom(JsonObject recipeJson) {
-        if (recipeJson == null) {
-            NekoJS.LOGGER.error("[NekoJS] custom 配方注册失败：传入的参数不是有效的对象！");
-            return;
-        }
-
-        if (!recipeJson.has("type") || !recipeJson.get("type").isJsonPrimitive()) {
-            NekoJS.LOGGER.error("[NekoJS] custom 配方注册失败：缺少必要的 'type' 字段！");
-            return;
-        }
-
-        try {
-            register(recipeJson, "custom");
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] custom 配方解析失败: ", e);
-        }
-    }
-
     private boolean testIngredientNode(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
@@ -130,13 +109,10 @@ public class RecipeEventJS {
         if (match == null || replacement == null) return;
         JsonElement replacementJson = serializeResult(replacement);
         int replaced = 0;
-
         for (Map.Entry<Identifier, JsonElement> entry : jsons.entrySet()) {
             if (!entry.getValue().isJsonObject()) continue;
             JsonObject jsonObj = entry.getValue().getAsJsonObject();
-
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
-
             if (jsonObj.has("result")) {
                 JsonElement resultNode = jsonObj.get("result");
                 try {
@@ -150,11 +126,9 @@ public class RecipeEventJS {
                         Identifier loc = Identifier.tryParse(resultNode.getAsString());
                         if (loc != null) {
                             Item item = BuiltInRegistries.ITEM.getValue(loc);
-                            if (item != null && item != Items.AIR) {
-                                if (match.test(new ItemStack(item))) {
-                                    jsonObj.add("result", replacementJson);
-                                    replaced++;
-                                }
+                            if (item != null && item != Items.AIR && match.test(new ItemStack(item))) {
+                                jsonObj.add("result", replacementJson);
+                                replaced++;
                             }
                         }
                     }
@@ -177,16 +151,23 @@ public class RecipeEventJS {
     private boolean passFilter(Identifier id, JsonObject jsonObj, RecipeFilter filter) {
         try {
             Recipe<?> tempRecipe = Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), jsonObj).getOrThrow();
-
             ResourceKey<Recipe<?>> recipeKey = ResourceKey.create(Registries.RECIPE, id);
-
             return filter.test(new RecipeHolder<>(recipeKey, tempRecipe), registries);
         } catch (Exception e) {
             return false;
         }
     }
 
-    public void shaped(ItemStack result, Value pattern, Value keys) {
+    // ========== 基础创建方法 (改为返回 Builder) ==========
+    public RecipeJsonBuilder custom(JsonObject recipeJson) {
+        if (recipeJson == null || !recipeJson.has("type") || !recipeJson.get("type").isJsonPrimitive()) {
+            NekoJS.LOGGER.error("[NekoJS] custom 配方注册失败：缺少必要的 'type' 字段！");
+            return null;
+        }
+        return new RecipeJsonBuilder(this, recipeJson, "custom");
+    }
+
+    public RecipeJsonBuilder shaped(ItemStack result, Value pattern, Value keys) {
         JsonObject json = new JsonObject();
         json.addProperty("type", "minecraft:crafting_shaped");
         JsonArray patternArray = new JsonArray();
@@ -197,51 +178,51 @@ public class RecipeEventJS {
             keyObj.add(key, serializeIngredient(keys.getMember(key).as(Ingredient.class)));
         json.add("key", keyObj);
         json.add("result", serializeResult(result));
-        register(json, "shaped");
+        return new RecipeJsonBuilder(this, json, "shaped");
     }
 
-    public void shapeless(ItemStack result, List<Ingredient> ingredients) {
+    public RecipeJsonBuilder shapeless(ItemStack result, List<Ingredient> ingredients) {
         JsonObject json = new JsonObject();
         json.addProperty("type", "minecraft:crafting_shapeless");
         JsonArray ingredientsArray = new JsonArray();
         if (ingredients != null) for (Ingredient ing : ingredients) ingredientsArray.add(serializeIngredient(ing));
         json.add("ingredients", ingredientsArray);
         json.add("result", serializeResult(result));
-        register(json, "shapeless");
+        return new RecipeJsonBuilder(this, json, "shapeless");
     }
 
-    private void createCookingRecipe(String type, ItemStack result, Ingredient ingredient, float xp, int cookTime, String prefix) {
+    private RecipeJsonBuilder createCookingRecipe(String type, ItemStack result, Ingredient ingredient, float xp, int cookTime, String prefix) {
         JsonObject json = new JsonObject();
         json.addProperty("type", type);
         json.add("ingredient", serializeIngredient(ingredient));
         json.add("result", serializeResult(result));
         json.addProperty("experience", xp);
         json.addProperty("cookingtime", cookTime);
-        register(json, prefix);
+        return new RecipeJsonBuilder(this, json, prefix);
     }
 
-    public void smelting(ItemStack result, Ingredient ingredient) {
-        createCookingRecipe("minecraft:smelting", result, ingredient, 0.1f, 200, "smelting");
+    public RecipeJsonBuilder smelting(ItemStack result, Ingredient ingredient) {
+        return createCookingRecipe("minecraft:smelting", result, ingredient, 0.1f, 200, "smelting");
     }
 
-    public void smelting(ItemStack result, Ingredient ingredient, float xp, int cookTime) {
-        createCookingRecipe("minecraft:smelting", result, ingredient, xp, cookTime, "smelting");
+    public RecipeJsonBuilder smelting(ItemStack result, Ingredient ingredient, float xp, int cookTime) {
+        return createCookingRecipe("minecraft:smelting", result, ingredient, xp, cookTime, "smelting");
     }
 
-    public void blasting(ItemStack result, Ingredient ingredient) {
-        createCookingRecipe("minecraft:blasting", result, ingredient, 0.1f, 100, "blasting");
+    public RecipeJsonBuilder blasting(ItemStack result, Ingredient ingredient) {
+        return createCookingRecipe("minecraft:blasting", result, ingredient, 0.1f, 100, "blasting");
     }
 
-    public void blasting(ItemStack result, Ingredient ingredient, float xp, int cookTime) {
-        createCookingRecipe("minecraft:blasting", result, ingredient, xp, cookTime, "blasting");
+    public RecipeJsonBuilder blasting(ItemStack result, Ingredient ingredient, float xp, int cookTime) {
+        return createCookingRecipe("minecraft:blasting", result, ingredient, xp, cookTime, "blasting");
     }
 
-    public void smoking(ItemStack result, Ingredient ingredient) {
-        createCookingRecipe("minecraft:smoking", result, ingredient, 0.1f, 100, "smoking");
+    public RecipeJsonBuilder smoking(ItemStack result, Ingredient ingredient) {
+        return createCookingRecipe("minecraft:smoking", result, ingredient, 0.1f, 100, "smoking");
     }
 
-    public void campfireCooking(ItemStack result, Ingredient ingredient) {
-        createCookingRecipe("minecraft:campfire_cooking", result, ingredient, 0.1f, 600, "campfire");
+    public RecipeJsonBuilder campfireCooking(ItemStack result, Ingredient ingredient) {
+        return createCookingRecipe("minecraft:campfire_cooking", result, ingredient, 0.1f, 600, "campfire");
     }
 
     public static String getRecipeOutputId(Recipe<?> recipe) {
@@ -270,6 +251,7 @@ public class RecipeEventJS {
     }
 
     public RecipeJsonBuilder builder(String type) {
-        return new RecipeJsonBuilder(this, type);
+        String prefix = type.contains(":") ? type.split(":")[1] : "custom";
+        return new RecipeJsonBuilder(this, type, prefix);
     }
 }

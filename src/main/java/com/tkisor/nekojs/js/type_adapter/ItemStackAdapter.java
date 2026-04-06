@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.wrapper.item.ItemStackJS;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -28,7 +27,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
         }
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-            return obj instanceof ItemStackJS || obj instanceof ItemStack;
+            return obj instanceof ItemStack;
         }
         return false;
     }
@@ -45,10 +44,6 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-
-            if (obj instanceof ItemStackJS wrapper) {
-                return wrapper.unwrap();
-            }
 
             if (obj instanceof ItemStack stack) {
                 return stack;

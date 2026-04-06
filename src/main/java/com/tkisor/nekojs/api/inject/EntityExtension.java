@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
@@ -25,5 +26,9 @@ public interface EntityExtension {
             return true;
         }
         return false;
+    }
+
+    default String neko$getId() {
+        return BuiltInRegistries.ENTITY_TYPE.getKey(self().getType()).toString();
     }
 }

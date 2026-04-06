@@ -38,7 +38,7 @@ public class NekoJSNetwork {
         registrar.playToServer(SaveScriptPacket.TYPE, SaveScriptPacket.STREAM_CODEC, NekoJSNetwork::handleSaveScriptOnServer);
         registrar.playToClient(FetchScriptResponsePacket.TYPE, FetchScriptResponsePacket.STREAM_CODEC, NekoJSNetwork::handleFetchResponseOnClient);
 
-        // 🌟 新增：通用回执包 (替换了原来的 SaveScriptSuccessPacket)
+        // 通用回执包
         registrar.playToClient(SyncFeedbackPacket.TYPE, SyncFeedbackPacket.STREAM_CODEC, NekoJSNetwork::handleSyncFeedbackOnClient);
 
         // 批量同步包
@@ -46,7 +46,7 @@ public class NekoJSNetwork {
         registrar.playToServer(UploadAllScriptsPacket.TYPE, UploadAllScriptsPacket.STREAM_CODEC, NekoJSNetwork::handleUploadAllOnServer);
         registrar.playToClient(DownloadAllScriptsPacket.TYPE, DownloadAllScriptsPacket.STREAM_CODEC, NekoJSNetwork::handleDownloadAllOnClient);
 
-        // 新增：打开工作区包
+        // 打开工作区包
         registrar.playToClient(OpenWorkspacePacket.TYPE, OpenWorkspacePacket.STREAM_CODEC, NekoJSNetwork::handleOpenWorkspaceOnClient);
     }
 
@@ -79,7 +79,7 @@ public class NekoJSNetwork {
         context.enqueueWork(() -> ClientHandler.receiveServerScript(data.content()));
     }
 
-    // 🌟 客户端接收通用回执
+    // 客户端接收通用回执
     private static void handleSyncFeedbackOnClient(SyncFeedbackPacket data, IPayloadContext context) {
         context.enqueueWork(() -> ClientHandler.processFeedback(data.success(), data.message()));
     }
@@ -103,7 +103,7 @@ public class NekoJSNetwork {
             }
         }
 
-        // 🌟 将回执分发给 GUI 面板，如果面板关了就在公屏提示
+        // 将回执分发给 GUI 面板，如果面板关了就在公屏提示
         private static void processFeedback(boolean success, String message) {
             if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
                 screen.onSyncFeedback(success, message);
@@ -170,7 +170,7 @@ public class NekoJSNetwork {
                 Path targetPath = NekoJSPaths.verifyInsideGameDir(NekoJSPaths.ROOT.resolve(data.path()));
                 Files.createDirectories(targetPath.getParent());
                 Files.writeString(targetPath, data.content());
-                // 🌟 返回成功回执
+                // 返回成功回执
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "保存成功！"));
             } catch (Exception e) {
                 NekoJS.LOGGER.error("Failed to save script from client", e);
@@ -204,7 +204,7 @@ public class NekoJSNetwork {
                     Files.createDirectories(targetPath.getParent());
                     Files.writeString(targetPath, entry.getValue());
                 }
-                // 🌟 返回成功回执
+                // 返回成功回执
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "成功接收并覆盖了 " + data.files().size() + " 个脚本文件！(请使用 /reload 生效)"));
             } catch (Exception e) {
                 NekoJS.LOGGER.error("批量同步失败", e);

@@ -4,8 +4,6 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ItemEvents;
 import com.tkisor.nekojs.bindings.event.PlayerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
-import com.tkisor.nekojs.wrapper.event.item.ItemCraftedEventJS;
-import com.tkisor.nekojs.wrapper.event.item.ItemRightClickEventJS;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -46,8 +44,7 @@ public class PlayerEventListener {
 
     @SubscribeEvent
     public static void onItemRightClick(PlayerInteractEvent.RightClickItem event) {
-        ItemRightClickEventJS eventJS = new ItemRightClickEventJS(event);
-        ItemEvents.RIGHT_CLICKED.post(eventJS, eventJS.getItem().getId());
+        ItemEvents.RIGHT_CLICKED.post(event, event.getItemStack().getItem().toString());
     }
 
     @SubscribeEvent
@@ -57,7 +54,7 @@ public class PlayerEventListener {
 
     @SubscribeEvent
     public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
-        ItemEvents.CRAFTED.post(new ItemCraftedEventJS(event));
+        ItemEvents.CRAFTED.post(event);
     }
 
     @SubscribeEvent

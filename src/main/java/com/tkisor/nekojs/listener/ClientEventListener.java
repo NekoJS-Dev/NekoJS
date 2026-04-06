@@ -2,7 +2,6 @@ package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ItemEvents;
-import com.tkisor.nekojs.wrapper.event.item.ItemTooltipEventJS;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -17,7 +16,6 @@ public class ClientEventListener {
             return;
         }
 
-        ItemTooltipEventJS eventJS = new ItemTooltipEventJS(event);
-        ItemEvents.TOOLTIP.post(eventJS);
+        ItemEvents.TOOLTIP.post(event);
     }
 }

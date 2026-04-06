@@ -130,7 +130,7 @@ public class NekoJS {
         try {
             NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
         } catch (Exception e) {
-//            throw new RuntimeException(e);
+            ScriptType.SERVER.logger().error("[NekoJS] 脚本重载失败: ", e);
         }
     }
 

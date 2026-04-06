@@ -6,6 +6,7 @@
   "mixins": [
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
+    "inject.MixinBlock",
     "inject.MixinEntity",
     "inject.MixinItemStack",
     "inject.MixinLevel",

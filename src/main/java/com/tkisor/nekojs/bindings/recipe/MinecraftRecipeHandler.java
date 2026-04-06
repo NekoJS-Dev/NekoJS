@@ -3,6 +3,7 @@ package com.tkisor.nekojs.bindings.recipe;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -18,16 +19,15 @@ public class MinecraftRecipeHandler {
         this.event = event;
     }
 
-    public void smelting(Ingredient input, ItemStack output, float xp, int cookTime) {
-        event.builder("minecraft:smelting")
+    public RecipeJsonBuilder smelting(Ingredient input, ItemStack output, float xp, int cookTime) {
+        return event.builder("minecraft:smelting")
                 .input("ingredient", input)
                 .output("result", output)
                 .property("experience", xp)
-                .property("cookingtime", cookTime)
-                .register();
+                .property("cookingtime", cookTime);
     }
 
-    public void shaped(ItemStack result, List<String> pattern, Map<String, Ingredient> keys) {
+    public RecipeJsonBuilder shaped(ItemStack result, List<String> pattern, Map<String, Ingredient> keys) {
         JsonArray patternArray = new JsonArray();
         for (String row : pattern) {
             patternArray.add(row);
@@ -38,14 +38,13 @@ public class MinecraftRecipeHandler {
             keyObj.add(entry.getKey(), event.serializeIngredient(entry.getValue()));
         }
 
-        event.builder("minecraft:crafting_shaped")
+        return event.builder("minecraft:crafting_shaped")
                 .property("pattern", patternArray)
                 .property("key", keyObj)
-                .output("result", result)
-                .register();
+                .output("result", result);
     }
 
-    public void shaped(ItemStack result, List<List<Ingredient>> inlinePattern) {
+    public RecipeJsonBuilder shaped(ItemStack result, List<List<Ingredient>> inlinePattern) {
         JsonArray patternArray = new JsonArray();
         JsonObject keyObj = new JsonObject();
 
@@ -75,14 +74,13 @@ public class MinecraftRecipeHandler {
             patternArray.add(rowBuilder.toString());
         }
 
-        event.builder("minecraft:crafting_shaped")
+        return event.builder("minecraft:crafting_shaped")
                 .property("pattern", patternArray)
                 .property("key", keyObj)
-                .output("result", result)
-                .register();
+                .output("result", result);
     }
 
-    public void shapeless(ItemStack result, List<Ingredient> ingredients) {
+    public RecipeJsonBuilder shapeless(ItemStack result, List<Ingredient> ingredients) {
         JsonArray ingredientsArray = new JsonArray();
         for (Ingredient ing : ingredients) {
             if (ing != null && !ing.isEmpty()) {
@@ -90,9 +88,8 @@ public class MinecraftRecipeHandler {
             }
         }
 
-        event.builder("minecraft:crafting_shapeless")
+        return event.builder("minecraft:crafting_shapeless")
                 .property("ingredients", ingredientsArray)
-                .output("result", result)
-                .register();
+                .output("result", result);
     }
 }

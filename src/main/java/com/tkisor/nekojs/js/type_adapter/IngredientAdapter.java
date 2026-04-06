@@ -3,7 +3,6 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.wrapper.item.IngredientJS;
-import com.tkisor.nekojs.wrapper.item.ItemStackJS;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -33,7 +32,7 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
         if (value.hasArrayElements()) return true;
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-            return obj instanceof IngredientJS || obj instanceof Ingredient || obj instanceof ItemStack || obj instanceof ItemStackJS;
+            return obj instanceof IngredientJS || obj instanceof Ingredient || obj instanceof ItemStack;
         }
         return false;
     }
@@ -49,7 +48,6 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
             if (obj instanceof IngredientJS wrapper) return wrapper.unwrap();
             if (obj instanceof Ingredient ing) return ing;
             if (obj instanceof ItemStack stack) return Ingredient.of(stack.getItem());
-            if (obj instanceof ItemStackJS wrapper) return Ingredient.of(wrapper.unwrap().getItem());
         }
 
         try {

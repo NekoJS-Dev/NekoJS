@@ -1,50 +1,51 @@
-name: Auto Build and Publish
+name: NekoJS CI/CD Pipeline
 
 on:
   push:
-    branches: [ "master" ] # 确认你的主分支是 master 还是 main
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
-  # 阶段 1：检测 Commit 记录
-  check-commit:
+  # 阶段 1：分析 Commit 信息，决定是“开发构建”还是“正式发版”
+  analyze-commit:
     runs-on: ubuntu-latest
     outputs:
-      should_publish: ${{ steps.match.outputs.should_publish }}
+      is_release: ${{ steps.match.outputs.is_release }}
       version: ${{ steps.match.outputs.version }}
     steps:
       - name: Extract version from commit message
         id: match
         run: |
+          # 注意：如果是 pull_request，head_commit 可能是空的，正则会自动匹配失败，走向 dev 分支
           COMMIT_MSG="${{ github.event.head_commit.message }}"
-          
-          # 将正则表达式存入变量，完美避开空格解析问题
           REGEX="update ([0-9a-zA-Z.-]+)"
           
           if [[ "$COMMIT_MSG" =~ $REGEX ]]; then
-            echo "Matched version: ${BASH_REMATCH[1]}"
-            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "Matched version: ${BASH_REMATCH[1]} -> Going for RELEASE"
+            echo "is_release=true" >> $GITHUB_OUTPUT
             echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
           else
-            echo "No 'update' pattern found. Skipping build."
-            echo "should_publish=false" >> $GITHUB_OUTPUT
+            echo "No 'update' pattern found -> Going for DEV BUILD"
+            echo "is_release=false" >> $GITHUB_OUTPUT
           fi
 
-  # 阶段 2：编译 Mod 并发布 Release
-  build-and-release:
-    needs: check-commit
-    if: needs.check-commit.outputs.should_publish == 'true'
+  # 阶段 2：执行构建与分发
+  build-and-distribute:
+    needs: analyze-commit
     runs-on: ubuntu-latest
+    # 给 Release 写入权限
     permissions:
       contents: write
 
     steps:
+      # --- 下面这部分是公共流程（无论发版还是开发都要走） ---
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # 🌟 修复 4：极其重要！设为 0 表示拉取所有提交历史和 Tag，否则无法对比日志！
-          fetch-depth: 0
+          fetch-depth: 0 # 获取完整历史以生成 Changelog
 
-      - name: Set up JDK
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           java-version: '25'
@@ -59,35 +60,61 @@ jobs:
       - name: Build Mod
         run: ./gradlew build
 
-      # 🌟 新增步骤：自动生成更新日志
+      # 重命名：智能判断加后缀
+      - name: Rename Artifacts
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          IS_RELEASE="${{ needs.analyze-commit.outputs.is_release }}"
+          
+          cd build/libs
+          for f in *.jar; do
+            if [[ $f != *"-sources.jar"* && $f != *"-dev.jar"* && $f != *"-plain.jar"* ]]; then
+              if [ "$IS_RELEASE" == "true" ]; ]; then
+                # 正式发版的包名格式：NekoJS-1.0.0-abcd123.jar
+                new_name="${f%.jar}-${SHORT_SHA}.jar"
+              else
+                # 开发版的包名格式：NekoJS-1.0.0-dev-abcd123.jar
+                new_name="${f%.jar}-dev-${SHORT_SHA}.jar"
+              fi
+              mv "$f" "$new_name"
+            fi
+          done
+
+      # --- 下面是【仅限开发版】走的流程 ---
+      - name: Upload Dev Artifact
+        # 仅当 is_release 为 false 时执行
+        if: needs.analyze-commit.outputs.is_release == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NekoJS-Dev-Build
+          path: build/libs/*.jar
+          retention-days: 14
+
+      # --- 下面是【仅限发版】走的流程 ---
       - name: Generate Changelog
+        # 仅当 is_release 为 true 时执行
+        if: needs.analyze-commit.outputs.is_release == 'true'
         id: changelog
         run: |
-          # 尝试获取上一个版本的 Tag，如果找不到（比如这是第一次发版），就返回空
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           
           if [ -z "$PREVIOUS_TAG" ]; then
-            echo "First release detected. Getting all commits."
-            # 第一次发版，获取所有历史提交
             COMMITS=$(git log --pretty=format:"* %s (%h)")
           else
-            echo "Previous release tag: $PREVIOUS_TAG"
-            # 获取上一个 Tag 到当前 HEAD 的所有提交记录
             COMMITS=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s (%h)")
           fi
           
-          # GitHub Actions 传递多行变量的标准写法 (使用随机定界符防止内容截断)
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "notes<<$EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
+        if: needs.analyze-commit.outputs.is_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.check-commit.outputs.version }}
-          name: NekoJS v${{ needs.check-commit.outputs.version }}
-          # 🌟 修复 5：拼接自动生成的 Changelog 到发版说明中
+          tag_name: v${{ needs.analyze-commit.outputs.version }}
+          name: NekoJS v${{ needs.analyze-commit.outputs.version }}
           body: |
             Automated release triggered by commit.
             

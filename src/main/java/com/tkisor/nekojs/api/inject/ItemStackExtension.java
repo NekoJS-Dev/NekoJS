@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Unit;
 import net.minecraft.world.item.ItemStack;
@@ -55,5 +56,9 @@ public interface ItemStackExtension {
         } else {
             self().remove(DataComponents.UNBREAKABLE);
         }
+    }
+
+    default String neko$getId() {
+        return self().getItem().toString();
     }
 }
