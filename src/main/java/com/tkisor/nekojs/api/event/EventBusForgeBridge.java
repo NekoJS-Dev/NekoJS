@@ -1,11 +1,14 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.utils.event.CancellableEventBus;
 import com.tkisor.nekojs.utils.event.EventBus;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
+import org.graalvm.polyglot.PolyglotException;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -30,12 +33,27 @@ public class EventBusForgeBridge {
         // bus cancellable and event cancellable
         if (bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(bus.eventType())) {
             listener = event -> {
-                if (bus.post(event)) {
-                    ((ICancellableEvent) event).setCanceled(true);
+                // 拦截错误，防止事件监听器执行异常导致服务器崩溃
+                try {
+                    if (bus.post(event)) {
+                        ((ICancellableEvent) event).setCanceled(true);
+                    }
+                } catch (PolyglotException t) {
+                    NekoErrorTracker.recordEventError(t);
+                } catch (Throwable t) {
+                    NekoJS.LOGGER.error("bind CancellableEventBus listener error: {}", t.getMessage(), t);
                 }
             };
         } else {
-            listener = bus::post;
+            listener = event -> {
+                try {
+                    bus.post(event);
+                } catch (PolyglotException t) {
+                    NekoErrorTracker.recordEventError(t);
+                } catch (Throwable t) {
+                    NekoJS.LOGGER.error("bind EventBus listener error: {}", t.getMessage(), t);
+                }
+            };
         }
         return bindImpl(bus.eventType(), listener, priority, receiveCancelled);
     }

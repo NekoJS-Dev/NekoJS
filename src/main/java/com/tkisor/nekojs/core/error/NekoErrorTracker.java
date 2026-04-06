@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
+import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.resources.Identifier;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
@@ -31,7 +32,7 @@ public class NekoErrorTracker {
                     try {
                         pathStr = NekoJSPaths.ROOT.relativize(Path.of(source.getPath())).toString().replace('\\', '/');
                     } catch (Exception ex) {
-                        pathStr = source.getPath().replace('\\', '/'); // 兜底
+                        pathStr = source.getPath().replace('\\', '/');
                     }
                 }
                 else if (source.getURI() != null) {
@@ -42,6 +43,18 @@ public class NekoErrorTracker {
                 }
             }
         }
+
+        // 根据路径动态推断环境并打印到对应 log 文件
+        ScriptType targetType = ScriptType.COMMON;
+        String lowerPath = pathStr.toLowerCase();
+        for (ScriptType type : ScriptType.values()) {
+            if (lowerPath.contains(type.name + "_scripts")) {
+                targetType = type;
+                break;
+            }
+        }
+
+        targetType.logger().error("事件监听器执行异常于 [{}]: {}", pathStr, e.getMessage(), e);
 
         String uniqueHashInput = pathStr + "_" + line + "_" + e.getMessage();
         String safeHash = Integer.toHexString(uniqueHashInput.hashCode());

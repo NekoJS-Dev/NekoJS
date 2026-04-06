@@ -140,7 +140,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
         var bus = (CancellableEventBus<EVENT>) this.bus;
-        return bus.listen((Predicate<EVENT>) listener.as(Predicate.class));
+        return bus.listen(event -> {
+            if (listener.canExecute()) {
+                Value result = listener.execute(event);
+                // 如果脚本没有 return 值，或者返回了其他类型，默认视为 false (不取消)
+                if (result != null && result.isBoolean()) {
+                    return result.asBoolean();
+                }
+            }
+            return false;
+        });
     }
 
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
