@@ -144,9 +144,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             if (listener.canExecute()) {
                 Value result = listener.execute(event);
                 // 如果脚本没有 return 值，或者返回了其他类型，默认视为 false (不取消)
-                if (result != null && result.isBoolean()) {
-                    return result.asBoolean();
-                }
+                return result.isBoolean() && result.asBoolean();
             }
             return false;
         });
@@ -164,7 +162,14 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
         return bus.listen(
             key.as(bus.dispatchKey().keyType()),
-            (Predicate<EVENT>) listener.as(Predicate.class)
+                // 也许这也可能有问题？
+                event -> {
+                    if (listener.canExecute()) {
+                        Value result = listener.execute(event);
+                        return result.isBoolean() && result.asBoolean();
+                    }
+                    return false;
+                }
         );
     }
 }
