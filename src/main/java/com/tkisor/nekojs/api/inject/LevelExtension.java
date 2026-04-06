@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -11,6 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * @author ZZZank
  */
+@RemapByPrefix("neko$")
 public interface LevelExtension {
 
     private Level self() {

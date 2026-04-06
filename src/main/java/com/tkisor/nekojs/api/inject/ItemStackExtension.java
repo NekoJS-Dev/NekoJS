@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Unit;
@@ -12,6 +13,7 @@ import java.util.List;
  * @see ItemStack
  * @author ZZZank
  */
+@RemapByPrefix("neko$")
 public interface ItemStackExtension {
 
     private ItemStack self() {

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
@@ -7,6 +8,7 @@ import net.minecraft.world.entity.Entity;
  * @see Entity
  * @author ZZZank
  */
+@RemapByPrefix("neko$")
 public interface EntityExtension {
 
     private Entity self() {

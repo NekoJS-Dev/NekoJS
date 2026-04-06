@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.*;
 import net.minecraft.world.entity.Entity;
@@ -13,6 +14,7 @@ import java.net.URI;
  * @author ZZZank
  */
 @SuppressWarnings("unused")
+@RemapByPrefix("neko$")
 public interface MutableComponentExtension extends Component {
 
     // --- to be implemented ---

@@ -10,6 +10,18 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
+    repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    url "https://cursemaven.com"
+                }
+            }
+            filter {
+                includeGroup "curse.maven"
+            }
+        }
+    }
 }
 
 base {
@@ -72,8 +84,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 jarJar.enabled = true
 dependencies {
-    implementation files('libs/GraalJS-25.0.1-neoforge.jar')
-//    jarJar(files('libs/GraalJS-25.0.1-neoforge.jar'))
+    // 25.0.1.1
+    implementation("curse.maven:graal-1504336:7884547")
 
     compileOnly 'org.projectlombok:lombok:1.18.44'
     annotationProcessor 'org.projectlombok:lombok:1.18.44'

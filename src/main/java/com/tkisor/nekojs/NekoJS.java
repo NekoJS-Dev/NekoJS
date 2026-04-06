@@ -7,6 +7,7 @@ import com.tkisor.nekojs.bindings.event.RegisterNekoJSPluginEvent;
 import com.tkisor.nekojs.bindings.event.RegistryEvents;
 import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
+import com.tkisor.nekojs.core.NekoJSMemberRemapper;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.js.type_adapter.*;
@@ -32,6 +33,7 @@ import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
+import zank.mods.graalmc.api.MemberRemapper;
 
 import java.lang.reflect.Modifier;
 
@@ -45,6 +47,8 @@ public class NekoJS {
 
 
     public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
+        MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
+
         NekoJS.modEventBus = modEventBus;
 
         registerEventListeners();

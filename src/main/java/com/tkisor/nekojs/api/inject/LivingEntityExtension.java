@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -11,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
  * @see LivingEntity
  * @author ZZZank
  */
+@RemapByPrefix("neko$")
 public interface LivingEntityExtension {
 
     private LivingEntity self() {
