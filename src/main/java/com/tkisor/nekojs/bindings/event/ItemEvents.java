@@ -5,9 +5,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import com.tkisor.nekojs.wrapper.event.item.*;
-import com.tkisor.nekojs.wrapper.event.player.PlayerChatEventJS;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 public interface ItemEvents {

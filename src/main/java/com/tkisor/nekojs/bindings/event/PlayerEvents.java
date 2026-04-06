@@ -3,24 +3,29 @@ package com.tkisor.nekojs.bindings.event;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.wrapper.event.player.*;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 public interface PlayerEvents {
     EventGroup GROUP = EventGroup.of("PlayerEvents");
 
-    EventBusJS<PlayerLoggedInEventJS, Void> LOGGED_IN =
-            GROUP.server("loggedIn", PlayerLoggedInEventJS.class);
-    EventBusJS<PlayerChatEventJS, Void> CHAT =
-            GROUP.server("chat", PlayerChatEventJS.class);
-    EventBusJS<PlayerTickPostEventJS, Void> TICK_POST =
-            GROUP.server("tickPost", PlayerTickPostEventJS.class);
-    EventBusJS<PlayerTickPreEventJS, Void> TICK_PRE =
-            GROUP.server("tickPre", PlayerTickPreEventJS.class);
-    EventBusJS<PlayerRespawnEventJS, Void> RESPAWNED =
-            GROUP.server("respawned", PlayerRespawnEventJS.class);
+    EventBusJS<PlayerEvent.PlayerLoggedInEvent, Void> LOGGED_IN =
+            GROUP.server("loggedIn", PlayerEvent.PlayerLoggedInEvent.class);
+    EventBusJS<ServerChatEvent, Void> CHAT =
+            GROUP.server("chat", ServerChatEvent.class);
+    EventBusJS<PlayerTickEvent.Post, Void> TICK_POST =
+            GROUP.server("tickPost", PlayerTickEvent.Post.class);
+    EventBusJS<PlayerTickEvent.Pre, Void> TICK_PRE =
+            GROUP.server("tickPre", PlayerTickEvent.Pre.class);
+    EventBusJS<PlayerEvent.PlayerRespawnEvent, Void> RESPAWNED =
+            GROUP.server("respawned", PlayerEvent.PlayerRespawnEvent.class);
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-            .bindTransformed(CHAT, PlayerChatEventJS::new, ServerChatEvent.class);
+            .bind(LOGGED_IN)
+            .bind(CHAT)
+            .bind(TICK_POST)
+            .bind(TICK_PRE)
+            .bind(RESPAWNED);
 }

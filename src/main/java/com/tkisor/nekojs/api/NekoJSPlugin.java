@@ -18,6 +18,9 @@ public interface NekoJSPlugin {
     default void registerEvents(EventGroupRegistry registry) {
     }
 
+    /**
+     * 注册客户端事件组
+     */
     default void registerClientEvents(EventGroupRegistry registry) {}
 
     /**
@@ -26,10 +29,18 @@ public interface NekoJSPlugin {
     default void registerBindings(BindingsRegister registry) {}
 
     /**
+     * 注册客户端全局静态对象绑定
+     */
+    default void registerClientBindings(BindingsRegister registry) {}
+
+    /**
      * 注册JS全局类型适配器
      * @param registry
      */
     default void registerAdapters(JSTypeAdapterRegister registry) {}
 
+    /**
+     * 注册配方命名空间，如 {@code event.recipes.minecraft}
+     */
     default void registerRecipeNamespaces(RecipeNamespaceRegister registry) {}
 }

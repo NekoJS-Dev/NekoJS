@@ -4,10 +4,8 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ItemEvents;
 import com.tkisor.nekojs.bindings.event.PlayerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
-import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.wrapper.event.item.ItemCraftedEventJS;
 import com.tkisor.nekojs.wrapper.event.item.ItemRightClickEventJS;
-import com.tkisor.nekojs.wrapper.event.player.*;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -26,24 +24,19 @@ public class PlayerEventListener {
 
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        // 1. 触发暴露给 JS 端的登录事件（保持你的原样）
-        PlayerLoggedInEventJS eventJS = new PlayerLoggedInEventJS(event);
-        PlayerEvents.LOGGED_IN.post(eventJS);
+        PlayerEvents.LOGGED_IN.post(event);
 
-        // 2. OP 进服的错误拦截提醒
         if (event.getEntity() instanceof ServerPlayer player) {
             if (Commands.LEVEL_GAMEMASTERS.check(player.permissions()) && NekoErrorTracker.hasErrors()) {
 
                 int errorCount = NekoErrorTracker.getAllErrors().size();
 
-                // 发送一条主警告，告诉他有几个错误
                 player.sendSystemMessage(Component.literal("§c[NekoJS] ⚠ 警告：引擎目前存在 " + errorCount + " 个脚本运行错误。"));
 
-                // 🌟 核心改造：只发一个用来打开 Dashboard 的高亮按钮，不再循环刷屏！
-                MutableComponent dashboardLink = Component.literal("  §a▶ §n[点击此处打开错误大盘 UI]")
+                MutableComponent dashboardLink = Component.literal("  §a▶ §n[点击此处打开错误列表]")
                         .withStyle(style -> style
                                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("§e在全屏列表中统一查看和管理错误")))
-                                .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors")) // 调用我们刚才写的看大盘指令
+                                .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
                         );
 
                 player.sendSystemMessage(dashboardLink);
@@ -59,8 +52,7 @@ public class PlayerEventListener {
 
     @SubscribeEvent
     public static void onPlayerChat(ServerChatEvent event) {
-        PlayerChatEventJS eventJS = new PlayerChatEventJS(event);
-        PlayerEvents.CHAT.post(eventJS);
+        PlayerEvents.CHAT.post(event);
     }
 
     @SubscribeEvent
@@ -70,16 +62,16 @@ public class PlayerEventListener {
 
     @SubscribeEvent
     public static void onPlayerPostTick(PlayerTickEvent.Post event) {
-        PlayerEvents.TICK_POST.post(new PlayerTickPostEventJS(event));
+        PlayerEvents.TICK_POST.post(event);
     }
 
     @SubscribeEvent
     public static void onPlayerPreTick(PlayerTickEvent.Pre event) {
-        PlayerEvents.TICK_PRE.post(new PlayerTickPreEventJS(event));
+        PlayerEvents.TICK_PRE.post(event);
     }
 
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        PlayerEvents.RESPAWNED.post(new PlayerRespawnEventJS(event));
+        PlayerEvents.RESPAWNED.post(event);
     }
 }

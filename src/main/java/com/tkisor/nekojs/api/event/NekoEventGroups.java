@@ -15,7 +15,14 @@ public final class NekoEventGroups {
     private NekoEventGroups() {}
 
     static void register(EventGroup group) {
-        GROUPS.put(group.name(), group);
+        EventGroup existing = GROUPS.get(group.name());
+        if (existing != null) {
+            // 如果已经有了，就把新来的 group 里的事件合并进去
+            existing.merge(group);
+        } else {
+            // 没有的话就正常放进去
+            GROUPS.put(group.name(), group);
+        }
     }
 
     public static synchronized Map<String, EventGroup> all() {

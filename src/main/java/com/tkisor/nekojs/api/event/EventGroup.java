@@ -84,6 +84,16 @@ public class EventGroup {
         return bus;
     }
 
+    public void merge(EventGroup other) {
+        if (!this.name.equals(other.name)) {
+            return;
+        }
+        other.buses.forEach((busName, bus) -> {
+            ScriptType type = other.targetScriptType.get(busName);
+            this.add(busName, type, bus);
+        });
+    }
+
     public void clearListeners() {
         for (var busJS : buses.values()) {
             clearBus(busJS);

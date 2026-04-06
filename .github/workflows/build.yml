@@ -1,0 +1,51 @@
+name: Auto Build (Dev)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    # 跳过带有 update 前缀的提交，把这种提交让给 publish.yml 去处理
+    if: "!(contains(github.event.head_commit.message, 'update '))"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build Mod
+        run: ./gradlew build
+
+      # 重命名产物，追加 -hash
+      - name: Rename Artifacts with Hash
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          cd build/libs
+          for f in *.jar; do
+            if [[ $f != *"-sources.jar"* && $f != *"-dev.jar"* && $f != *"-plain.jar"* ]]; then
+              new_name="${f%.jar}-${SHORT_SHA}.jar"
+              mv "$f" "$new_name"
+            fi
+          done
+
+      - name: Upload Dev Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NekoJS-Dev-Build
+          path: build/libs/*.jar
+          retention-days: 14

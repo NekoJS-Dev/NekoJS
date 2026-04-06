@@ -14,6 +14,9 @@ public final class NekoRecipeNamespaces {
     private NekoRecipeNamespaces() {}
 
     static void register(String namespace, Function<RecipeEventJS, Object> factory) {
+        if (NAMESPACES.containsKey(namespace)) {
+            throw new IllegalArgumentException("Recipe Namespace 命名空间 '" + namespace + "' 已被注册！请检查是否有插件冲突。");
+        }
         NAMESPACES.put(namespace, factory);
     }
 
