@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /// @author ZZZank
 public final class ScriptTypedValue<T> {
@@ -83,6 +84,11 @@ public final class ScriptTypedValue<T> {
 
     public boolean acceptsNull() {
         return internal.length > LENGTH;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Stream<T> viewExisted() {
+        return (Stream<T>) Arrays.stream(internal).filter(Objects::nonNull);
     }
 
     @Override
