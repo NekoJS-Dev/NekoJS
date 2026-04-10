@@ -1,20 +1,21 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.utils.event.CancellableEventBus;
-import com.tkisor.nekojs.utils.event.EventBus;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
-import org.graalvm.polyglot.PolyglotException;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
+ * 用于将 {@link IEventBus} 与 {@link EventBusJS} 接驳在一起。
+ * <p>
+ * 在调用 {@code .bind(...)} 或 {@code .bindTransformed(...)} 时，{@code EventBusJS} 自身会作为一个事件监听注册到
+ * {@link #create(IEventBus) 创建实例}时提供的 EventBus 中。因此调用 {@code .bind(...)} 之后 不 需 要 额外手动把事件发布到 EventBusJS
+ *
  * @author ZZZank
  */
 public class EventBusForgeBridge {
