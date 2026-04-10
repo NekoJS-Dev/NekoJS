@@ -1,11 +1,9 @@
 package com.tkisor.nekojs.bindings.event;
 
-import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
@@ -20,12 +18,4 @@ public interface BlockEvents {
             GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, DispatchKey.block());
     EventBusJS<PlayerInteractEvent.LeftClickBlock, Block> LEFT_CLICKED =
             GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class, DispatchKey.block());
-
-
-    EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-            .bind(BROKEN)
-            .bind(RIGHT_CLICKED)
-            .bind(PLACED)
-            .bind(LEFT_CLICKED);
-
 }

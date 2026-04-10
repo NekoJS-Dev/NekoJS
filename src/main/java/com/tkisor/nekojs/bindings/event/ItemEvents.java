@@ -19,20 +19,24 @@ public interface ItemEvents {
     EventGroup GROUP = EventGroup.of("ItemEvents");
 
     EventBusJS<PlayerInteractEvent.RightClickItem, ItemStack> RIGHT_CLICKED =
-            GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, DispatchKey.itemStack());
+            GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, dispatchByStack(PlayerInteractEvent::getItemStack));
     EventBusJS<ItemTooltipEvent, ItemStack> TOOLTIP =
-            GROUP.client("tooltip", ItemTooltipEvent.class, DispatchKey.itemStack());
+            GROUP.client("tooltip", ItemTooltipEvent.class, dispatchByStack(ItemTooltipEvent::getItemStack));
 
     EventBusJS<PlayerEvent.ItemCraftedEvent, ItemStack> CRAFTED =
-            GROUP.server("crafted", PlayerEvent.ItemCraftedEvent.class, DispatchKey.itemStack());
+            GROUP.server("crafted", PlayerEvent.ItemCraftedEvent.class, dispatchByStack(PlayerEvent.ItemCraftedEvent::getCrafting));
 
 
     EventBusJS<LivingEntityUseItemEvent.Start, ItemStack> USE_START =
-            GROUP.server("useStarted", LivingEntityUseItemEvent.Start.class, DispatchKey.itemStack());
+            GROUP.server("useStarted", LivingEntityUseItemEvent.Start.class, dispatchByStack(LivingEntityUseItemEvent::getItem));
     EventBusJS<LivingEntityUseItemEvent.Stop, ItemStack> USE_STOP =
-            GROUP.server("useStopped", LivingEntityUseItemEvent.Stop.class, DispatchKey.itemStack());
+            GROUP.server("useStopped", LivingEntityUseItemEvent.Stop.class, dispatchByStack(LivingEntityUseItemEvent::getItem));
     EventBusJS<LivingEntityUseItemEvent.Finish, ItemStack> USE_FINISHED =
-            GROUP.server("useFinished", LivingEntityUseItemEvent.Finish.class, DispatchKey.itemStack());
+            GROUP.server("useFinished", LivingEntityUseItemEvent.Finish.class, dispatchByStack(LivingEntityUseItemEvent::getItem));
+
+    private static <T> DispatchKey<T, ItemStack> dispatchByStack(Function<T, ItemStack> toKey) {
+        return DispatchKey.of(ItemStack.class, toKey);
+    }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(RIGHT_CLICKED)
