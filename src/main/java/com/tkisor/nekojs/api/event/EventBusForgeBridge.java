@@ -28,34 +28,23 @@ public class EventBusForgeBridge {
         this.forgeBus = Objects.requireNonNull(forgeBus);
     }
 
-    public <E extends Event> EventBusForgeBridge bind(EventBus<E> bus, EventPriority priority, boolean receiveCancelled) {
+    public <E extends Event> EventBusForgeBridge bind(EventBusJS<E, ?> busJS, EventPriority priority, boolean receiveCancelled) {
+        var bus = busJS.bus();
+        var eventType = bus.eventType();
+
         Consumer<E> listener;
-        // bus cancellable and event cancellable
-        if (bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(bus.eventType())) {
+        if (bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(eventType)) {
+            // bus cancellable and event cancellable
             listener = event -> {
-                // 拦截错误，防止事件监听器执行异常导致服务器崩溃
-                try {
-                    if (bus.post(event)) {
-                        ((ICancellableEvent) event).setCanceled(true);
-                    }
-                } catch (PolyglotException t) {
-                    NekoErrorTracker.recordEventError(t);
-                } catch (Throwable t) {
-                    NekoJS.LOGGER.error("bind CancellableEventBus listener error: {}", t.getMessage(), t);
+                if (busJS.post(event)) {
+                    ((ICancellableEvent) event).setCanceled(true);
                 }
             };
         } else {
-            listener = event -> {
-                try {
-                    bus.post(event);
-                } catch (PolyglotException t) {
-                    NekoErrorTracker.recordEventError(t);
-                } catch (Throwable t) {
-                    NekoJS.LOGGER.error("bind EventBus listener error: {}", t.getMessage(), t);
-                }
-            };
+            listener = busJS::post;
         }
-        return bindImpl(bus.eventType(), listener, priority, receiveCancelled);
+
+        return bindImpl(eventType, listener, priority, receiveCancelled);
     }
 
     private <E extends Event> EventBusForgeBridge bindImpl(
@@ -68,43 +57,33 @@ public class EventBusForgeBridge {
         return this;
     }
 
-    public <E extends Event> EventBusForgeBridge bind(EventBus<E> bus) {
+    public <E extends Event> EventBusForgeBridge bind(EventBusJS<E, ?> bus) {
         return bind(bus, EventPriority.NORMAL, false);
     }
 
-    public <E extends Event> EventBusForgeBridge bind(EventBusJS<E, ?> bus) {
-        return bind(bus.bus(), EventPriority.NORMAL, false);
-    }
-
     public <E, E_FORGE extends Event> EventBusForgeBridge bindTransformed(
-        EventBus<E> bus,
+        EventBusJS<E, ?> busJS,
         Function<E_FORGE, E> transformer,
         Class<E_FORGE> eventType,
         EventPriority priority,
         boolean receiveCancelled
     ) {
-        Objects.requireNonNull(bus, "EventBus<E> bus == null");
+        Objects.requireNonNull(busJS, "EventBusJS<E, ?> busJS == null");
         Objects.requireNonNull(transformer, "Function<E_FORGE, E> transformer == null");
+        var bus = busJS.bus();
+
         Consumer<E_FORGE> listener;
-        // 这个方法看起来是用来将NekoJS事件转换为Forge事件的？isAssignableFrom(bus.eventType())无法正确拦截事件
         if (bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(eventType)) {
             listener = e -> {
-                if (bus.post(transformer.apply(e))) {
+                if (busJS.post(transformer.apply(e))) {
                     ((ICancellableEvent) e).setCanceled(true);
                 }
             };
         } else {
-            listener = e -> bus.post(transformer.apply(e));
+            listener = e -> busJS.post(transformer.apply(e));
         }
-        return bindImpl(eventType, listener, priority, receiveCancelled);
-    }
 
-    public <E, E_FORGE extends Event> EventBusForgeBridge bindTransformed(
-        EventBus<E> bus,
-        Function<E_FORGE, E> transformer,
-        Class<E_FORGE> eventType
-    ) {
-        return bindTransformed(bus, transformer, eventType, EventPriority.NORMAL, false);
+        return bindImpl(eventType, listener, priority, receiveCancelled);
     }
 
     public <E, E_FORGE extends Event> EventBusForgeBridge bindTransformed(
@@ -112,6 +91,6 @@ public class EventBusForgeBridge {
         Function<E_FORGE, E> transformer,
         Class<E_FORGE> eventType
     ) {
-        return bindTransformed(bus.bus(), transformer, eventType);
+        return bindTransformed(bus, transformer, eventType, EventPriority.NORMAL, false);
     }
 }
