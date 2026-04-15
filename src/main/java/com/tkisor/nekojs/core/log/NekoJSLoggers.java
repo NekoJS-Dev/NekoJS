@@ -28,7 +28,7 @@ public final class NekoJSLoggers {
         return CACHE.computeIfAbsent(name, NekoJSLoggers::createLogger);
     }
 
-    private static Logger createLogger(String name) {
+    public static Logger createLogger(String name) {
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration cfg = ctx.getConfiguration();
 
