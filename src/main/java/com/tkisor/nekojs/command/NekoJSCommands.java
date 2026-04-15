@@ -28,49 +28,45 @@ public final class NekoJSCommands {
                         .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
 
                         .then(Commands.literal("reload")
-                                .executes(context -> {
-                                    CommandSourceStack source = context.getSource();
-                                    source.sendSystemMessage(Component.literal("§e[NekoJS] 正在重载脚本..."));
+                        .executes(context -> {
+                            CommandSourceStack source = context.getSource();
+                            source.sendSystemMessage(Component.translatable("nekojs.command.reloading"));
 
-                                    try {
-                                        NekoErrorTracker.clearAll();
+                            try {
+                                NekoErrorTracker.clearAll();
+                                NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
 
-//                                        NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.COMMON);
-                                        NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
-
-                                        if (NekoErrorTracker.hasErrors()) {
-                                            source.sendFailure(NekoErrorTracker.getErrorComponent());
-                                            // 复用输出逻辑
-//                                            printErrorsToSource(source);
-                                        } else {
-                                            source.sendSuccess(NekoErrorTracker::getSuccessComponent, true);
-                                        }
-                                    } catch (Exception e) {
-                                        source.sendFailure(Component.literal("§c[NekoJS] ✖ 重载发生致命崩溃！请查看后台日志。"));
-                                    }
-                                    return 1;
-                                })
-                        )
+                                if (NekoErrorTracker.hasErrors()) {
+                                    source.sendFailure(NekoErrorTracker.getErrorComponent());
+                                } else {
+                                    source.sendSuccess(NekoErrorTracker::getSuccessComponent, true);
+                                }
+                            } catch (Exception e) {
+                                NekoJS.LOGGER.error("Reloading scripts failed fatally", e);
+                                source.sendFailure(Component.translatable("nekojs.command.reload.fatal"));
+                            }
+                            return 1;
+                        })
+                )
 
                         .then(Commands.literal("error")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-
                                     if (NekoErrorTracker.hasErrors()) {
                                         source.sendFailure(NekoErrorTracker.getErrorComponent());
                                     } else {
-                                        source.sendSuccess(() -> Component.literal("§a[NekoJS] ✔ 当前运行环境非常健康，没有任何脚本错误！"), false);
+                                        source.sendSuccess(() -> Component.translatable("nekojs.command.error.healthy"), false);
                                     }
                                     return 1;
                                 })
                         )
+
                         .then(Commands.literal("view_all_errors")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
                                     if (NekoErrorTracker.hasErrors()) {
                                         ServerPlayer player = source.getPlayerOrException();
 
-                                        // 将 Tracker 里的数据转换为 DTO
                                         List<ErrorSummaryDTO> dtoList = NekoErrorTracker.getAllErrors().stream()
                                                 .map(err -> new ErrorSummaryDTO(
                                                         err.getErrorId().toString(),
@@ -81,20 +77,18 @@ public final class NekoJSCommands {
                                                         err.getFullDetailText()
                                                 )).toList();
 
-                                        // 发送列表包
                                         PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(dtoList));
                                     } else {
-                                        source.sendSuccess(() -> Component.literal("§a[NekoJS] ✔ 当前没有脚本错误！"), false);
+                                        source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
                                     }
                                     return 1;
                                 })
                         )
+
                         .then(Commands.literal("editor")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
                                     ServerPlayer player = source.getPlayerOrException();
-
-                                    // 发送打开工作区的包给客户端
                                     PacketDistributor.sendToPlayer(player, new OpenWorkspacePacket());
                                     return 1;
                                 })

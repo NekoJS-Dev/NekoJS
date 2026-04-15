@@ -6,6 +6,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.resources.language.I18n;
 import org.lwjgl.glfw.GLFW;
 import java.util.function.Consumer;
 
@@ -84,17 +85,17 @@ public class NekoModal {
             this.input.extractRenderState(graphics, mouseX, mouseY, partialTick);
         } else if (type == 1) {
             graphics.centeredText(this.font, title, screenW / 2, my + 14, 0xFFFFFFFF);
-            graphics.centeredText(this.font, "§c此操作无法撤销！", screenW / 2, my + 32, 0xFFFFFFFF);
+            graphics.centeredText(this.font, Component.translatable("nekojs.gui.modal.warning.irreversible"), screenW / 2, my + 32, 0xFFFFFFFF);
         }
 
         int btnY = my + 55;
         boolean hovC = mouseX >= mx + mw - 110 && mouseX <= mx + mw - 60 && mouseY >= btnY && mouseY <= btnY + 16;
         graphics.fill(mx + mw - 110, btnY, mx + mw - 60, btnY + 16, hovC ? 0xFF007ACC : 0xFF094771);
-        graphics.centeredText(this.font, "确定", mx + mw - 85, btnY + 4, 0xFFFFFFFF);
+        graphics.centeredText(this.font, Component.translatable("nekojs.gui.modal.button.confirm"), mx + mw - 85, btnY + 4, 0xFFFFFFFF);
 
         boolean hovX = mouseX >= mx + mw - 55 && mouseX <= mx + mw - 10 && mouseY >= btnY && mouseY <= btnY + 16;
         graphics.fill(mx + mw - 55, btnY, mx + mw - 10, btnY + 16, hovX ? 0xFF555555 : 0xFF333333);
-        graphics.centeredText(this.font, "取消", mx + mw - 32, btnY + 4, 0xFFFFFFFF);
+        graphics.centeredText(this.font, Component.translatable("nekojs.gui.modal.button.cancel"), mx + mw - 32, btnY + 4, 0xFFFFFFFF);
     }
 
     public boolean mouseClicked(MouseButtonEvent event, int screenW, int screenH) {

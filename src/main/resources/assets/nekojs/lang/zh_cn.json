@@ -1,0 +1,102 @@
+{
+  "nekojs.gui.modal.warning.irreversible": "§c此操作无法撤销！",
+  "nekojs.gui.modal.button.confirm": "确定",
+  "nekojs.gui.modal.button.cancel": "取消",
+
+  "nekojs.gui.dashboard.title": "NekoJS 控制台",
+  "nekojs.gui.workspace.title": "NekoJS 工作区",
+
+  "nekojs.gui.search.placeholder": "搜索...",
+  "nekojs.gui.search.hint": "§8过滤路径...",
+  "nekojs.gui.replace.placeholder": "替换",
+  "nekojs.gui.replace.hint": "§8替换为...",
+
+  "nekojs.gui.filter.all": "全部",
+  "nekojs.gui.filter.runtime": "运行",
+  "nekojs.gui.filter.syntax": "语法",
+  "nekojs.gui.filter.other": "其他",
+
+  "nekojs.gui.menu.file": "文件",
+  "nekojs.gui.menu.file.save": "💾 保存当前修改 (Ctrl+S)",
+  "nekojs.gui.menu.file.open_external": "📂 在外部资源管理器中打开",
+  "nekojs.gui.menu.file.exit": "❌ 退出面板",
+
+  "nekojs.gui.menu.view": "视图",
+  "nekojs.gui.menu.view.refresh": "🔄 刷新本地文件缓存",
+
+  "nekojs.gui.menu.sync": "云端同步 (Sync)",
+  "nekojs.gui.menu.sync.push_current": "↑ 将当前脚本推送到服务端",
+  "nekojs.gui.menu.sync.pull_current": "↓ 从服务端拉取覆盖当前脚本",
+  "nekojs.gui.menu.sync.push_all": "⇈ 强制推送所有本地脚本 (危险)",
+  "nekojs.gui.menu.sync.pull_all": "⇊ 强制拉取服务端所有脚本 (危险)",
+
+  "nekojs.gui.dashboard.target": "§8目标: §e%s",
+  "nekojs.gui.dashboard.btn.exit_edit": "§c[退出编辑]",
+  "nekojs.gui.dashboard.btn.save_dirty": "§e[保存当前*]",
+  "nekojs.gui.dashboard.btn.save": "§a[保存当前]",
+  "nekojs.gui.dashboard.btn.copy": "§7[复制]",
+  "nekojs.gui.dashboard.btn.log": "§b[日志]",
+  "nekojs.gui.dashboard.btn.locate": "§e[定位]",
+  "nekojs.gui.dashboard.btn.edit": "§a[编辑]",
+
+  "nekojs.gui.context.fullscreen": "⛶ 全屏查看",
+  "nekojs.gui.context.open_tab": "📝 在标签页打开",
+  "nekojs.gui.context.open_external": "📂 使用系统外部应用打开",
+  "nekojs.gui.context.new_file": "📄 新建文件",
+  "nekojs.gui.context.new_dir": "📁 新建文件夹",
+  "nekojs.gui.context.refresh": "🔄 刷新列表",
+  "nekojs.gui.context.delete": "🗑 删除 %s",
+
+  "nekojs.gui.workspace.explorer": "资源管理器",
+  "nekojs.gui.workspace.search_replace": "搜索与替换",
+  "nekojs.gui.workspace.empty_tip": "§7从左侧选择文件以开始编辑 (双击打开)",
+  "nekojs.gui.workspace.root_dir": "根目录",
+
+  "nekojs.gui.workspace.tooltip.match_case": "区分大小写",
+  "nekojs.gui.workspace.tooltip.match_word": "全字匹配",
+  "nekojs.gui.workspace.tooltip.regex": "使用正则表达式",
+  "nekojs.gui.workspace.tooltip.preserve_case": "保留大小写",
+  "nekojs.gui.workspace.tooltip.replace_all": "全部替换",
+
+  "nekojs.gui.modal.new_file.root": "新建文件 (根目录)",
+  "nekojs.gui.modal.new_dir.root": "新建文件夹 (根目录)",
+  "nekojs.gui.modal.new_file.dir": "新建文件 (%s)",
+  "nekojs.gui.modal.new_dir.dir": "新建文件夹 (%s)",
+  "nekojs.gui.modal.delete_confirm": "确定要删除 %s 吗？",
+
+  "nekojs.gui.toast.cmd_sent": "§a✔ 指令已发送",
+  "nekojs.gui.toast.locate_success": "§a✔ 尝试打开文件",
+  "nekojs.gui.toast.log_success": "§a✔ 打开 latest.log",
+  "nekojs.gui.toast.copy_success": "§a✔ 已存入剪贴板",
+  "nekojs.gui.toast.save_success": "§a✔ 已保存 %s",
+  "nekojs.gui.toast.save_fail": "§c✖ 保存失败: %s",
+  "nekojs.gui.toast.pull_success": "§a✔ 已成功从服务端拉取代码",
+  "nekojs.gui.toast.refresh_success": "§a✔ 刷新成功",
+  "nekojs.gui.toast.create_success": "§a✔ 创建成功: %s",
+  "nekojs.gui.toast.create_fail": "§c✖ 创建失败: %s",
+  "nekojs.gui.toast.delete_success": "§a✔ 已删除 %s",
+  "nekojs.gui.toast.delete_fail": "§c✖ 删除失败: %s",
+  "nekojs.gui.toast.replace_success": "§a✔ 在 %s 个文件中替换了 %s 处内容",
+
+  "nekojs.gui.toast.pushing_current": "§e[↑] 正在推送到服务端...",
+  "nekojs.gui.toast.pulling_current": "§b[↓] 正在请求拉取代码...",
+  "nekojs.gui.toast.pushing_all": "§e[↑↑] 正在扫描本地文件并推送...",
+  "nekojs.gui.toast.pulling_all": "§b[↓↓] 正在请求拉取所有服务端代码...",
+
+  "nekojs.gui.toast.error.not_editing": "§c❌ 错误：请先进入 [编辑] 模式！",
+  "nekojs.gui.toast.error.empty_dir": "§c✖ 本地 nekojs 目录为空或不存在 js 文件！",
+  "nekojs.gui.toast.error.no_file_open": "§c❌ 请先打开一个文件",
+  "nekojs.gui.toast.error.invalid_regex": "§c✖ 搜索内容为空或正则错误",
+  "nekojs.gui.toast.error.replace_fail": "§c✖ 替换文件失败: %s",
+  "nekojs.gui.toast.error.read_fail": "§c✖ 无法读取文件: %s",
+
+  "nekojs.command.reloading": "§e[NekoJS] 正在重载脚本...",
+  "nekojs.command.reload.fatal": "§c[NekoJS] ✖ 重载发生致命崩溃！请查看后台日志。",
+  "nekojs.command.error.healthy": "§a[NekoJS] ✔ 当前运行环境非常健康，没有任何脚本错误！",
+  "nekojs.command.error.none": "§a[NekoJS] ✔ 当前没有脚本错误！",
+
+  "nekojs.error.tracker.warning": "§c[NekoJS] ⚠ 警告：引擎目前存在 %s 个脚本运行错误。",
+  "nekojs.error.tracker.open_list": "  §a▶ §n[点击此处打开错误列表]",
+  "nekojs.error.tracker.hover_hint": "§e在全屏列表中统一查看和管理错误",
+  "nekojs.error.tracker.success": "§a[NekoJS] ✔ 脚本完美重载！"
+}

@@ -103,6 +103,9 @@ public final class NekoSandboxBuilder {
                 .option("js.ecmascript-version", "latest")
                 .option("js.commonjs-require", "true")
                 .option("js.commonjs-require-cwd", NekoJSPaths.ROOT.toAbsolutePath().toString())
+                .option("js.interop-complete-promises", "true")
+                .option("js.strict", "true")
+                .option("js.v8-compat", "true")
                 .build();
 
         ctx.eval("js", CONSOLE_PATCH_JS);

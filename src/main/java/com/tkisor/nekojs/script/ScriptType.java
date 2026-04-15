@@ -17,8 +17,10 @@ public enum ScriptType {
     SERVER("server", "NekoJS Server", NekoJSPaths.SERVER_SCRIPTS),
     CLIENT("client", "NekoJS Client", NekoJSPaths.CLIENT_SCRIPTS);
 
-    private static final ScriptTypedValue<Logger> LOGGERS =
-        ScriptTypedValue.of(type -> NekoJSLoggers.createLogger(type.name));
+    private static class LoggerHolder {
+        private static final ScriptTypedValue<Logger> LOGGERS =
+                ScriptTypedValue.of(type -> NekoJSLoggers.createLogger(type.name));
+    }
 
     public final String name;
     public final String cname;
@@ -31,7 +33,9 @@ public enum ScriptType {
     }
 
     public Logger logger() {
-        return LOGGERS.at(this);
+        // 当你第一次调用 type.logger() 时，LoggerHolder 才会被 JVM 加载！
+        // 此时 ScriptType 和 ScriptTypedValue 早就已经安安全全地加载完了，LENGTH 绝对是 4！
+        return LoggerHolder.LOGGERS.at(this);
     }
 
     public Path getLogFile() {

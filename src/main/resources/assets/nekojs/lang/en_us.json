@@ -1,5 +1,102 @@
 {
-  "itemGroup.nekojs": "Example Mod Tab",
-  "block.nekojs.example_block": "Example Block",
-  "item.nekojs.example_item": "Example Item"
+  "nekojs.gui.modal.warning.irreversible": "§cThis action cannot be undone!",
+  "nekojs.gui.modal.button.confirm": "Confirm",
+  "nekojs.gui.modal.button.cancel": "Cancel",
+
+  "nekojs.gui.dashboard.title": "NekoJS Dashboard",
+  "nekojs.gui.workspace.title": "NekoJS Workspace",
+
+  "nekojs.gui.search.placeholder": "Search...",
+  "nekojs.gui.search.hint": "§8Filter path...",
+  "nekojs.gui.replace.placeholder": "Replace",
+  "nekojs.gui.replace.hint": "§8Replace with...",
+
+  "nekojs.gui.filter.all": "All",
+  "nekojs.gui.filter.runtime": "Runtime",
+  "nekojs.gui.filter.syntax": "Syntax",
+  "nekojs.gui.filter.other": "Other",
+
+  "nekojs.gui.menu.file": "File",
+  "nekojs.gui.menu.file.save": "💾 Save Current (Ctrl+S)",
+  "nekojs.gui.menu.file.open_external": "📂 Open in File Explorer",
+  "nekojs.gui.menu.file.exit": "❌ Exit Panel",
+
+  "nekojs.gui.menu.view": "View",
+  "nekojs.gui.menu.view.refresh": "🔄 Refresh Local Cache",
+
+  "nekojs.gui.menu.sync": "Cloud Sync",
+  "nekojs.gui.menu.sync.push_current": "↑ Push current script to Server",
+  "nekojs.gui.menu.sync.pull_current": "↓ Pull & overwrite from Server",
+  "nekojs.gui.menu.sync.push_all": "⇈ Force Push ALL scripts (Danger)",
+  "nekojs.gui.menu.sync.pull_all": "⇊ Force Pull ALL scripts (Danger)",
+
+  "nekojs.gui.dashboard.target": "§8Target: §e%s",
+  "nekojs.gui.dashboard.btn.exit_edit": "§c[Exit Edit]",
+  "nekojs.gui.dashboard.btn.save_dirty": "§e[Save*]",
+  "nekojs.gui.dashboard.btn.save": "§a[Save]",
+  "nekojs.gui.dashboard.btn.copy": "§7[Copy]",
+  "nekojs.gui.dashboard.btn.log": "§b[Logs]",
+  "nekojs.gui.dashboard.btn.locate": "§e[Locate]",
+  "nekojs.gui.dashboard.btn.edit": "§a[Edit]",
+
+  "nekojs.gui.context.fullscreen": "⛶ View Fullscreen",
+  "nekojs.gui.context.open_tab": "📝 Open in Tab",
+  "nekojs.gui.context.open_external": "📂 Open with System App",
+  "nekojs.gui.context.new_file": "📄 New File",
+  "nekojs.gui.context.new_dir": "📁 New Folder",
+  "nekojs.gui.context.refresh": "🔄 Refresh List",
+  "nekojs.gui.context.delete": "🗑 Delete %s",
+
+  "nekojs.gui.workspace.explorer": "Explorer",
+  "nekojs.gui.workspace.search_replace": "Search & Replace",
+  "nekojs.gui.workspace.empty_tip": "§7Select a file from the left to edit (Double click)",
+  "nekojs.gui.workspace.root_dir": "Root",
+
+  "nekojs.gui.workspace.tooltip.match_case": "Match Case",
+  "nekojs.gui.workspace.tooltip.match_word": "Match Whole Word",
+  "nekojs.gui.workspace.tooltip.regex": "Use Regular Expression",
+  "nekojs.gui.workspace.tooltip.preserve_case": "Preserve Case",
+  "nekojs.gui.workspace.tooltip.replace_all": "Replace All",
+
+  "nekojs.gui.modal.new_file.root": "New File (Root)",
+  "nekojs.gui.modal.new_dir.root": "New Folder (Root)",
+  "nekojs.gui.modal.new_file.dir": "New File (%s)",
+  "nekojs.gui.modal.new_dir.dir": "New Folder (%s)",
+  "nekojs.gui.modal.delete_confirm": "Are you sure you want to delete %s?",
+
+  "nekojs.gui.toast.cmd_sent": "§a✔ Command sent",
+  "nekojs.gui.toast.locate_success": "§a✔ Attempting to open file",
+  "nekojs.gui.toast.log_success": "§a✔ Opening latest.log",
+  "nekojs.gui.toast.copy_success": "§a✔ Copied to clipboard",
+  "nekojs.gui.toast.save_success": "§a✔ Saved %s",
+  "nekojs.gui.toast.save_fail": "§c✖ Failed to save: %s",
+  "nekojs.gui.toast.pull_success": "§a✔ Code pulled from server",
+  "nekojs.gui.toast.refresh_success": "§a✔ Refresh successful",
+  "nekojs.gui.toast.create_success": "§a✔ Created: %s",
+  "nekojs.gui.toast.create_fail": "§c✖ Failed to create: %s",
+  "nekojs.gui.toast.delete_success": "§a✔ Deleted %s",
+  "nekojs.gui.toast.delete_fail": "§c✖ Failed to delete: %s",
+  "nekojs.gui.toast.replace_success": "§a✔ Replaced %s occurrences in %s files",
+
+  "nekojs.gui.toast.pushing_current": "§e[↑] Pushing to server...",
+  "nekojs.gui.toast.pulling_current": "§b[↓] Requesting code pull...",
+  "nekojs.gui.toast.pushing_all": "§e[↑↑] Scanning & pushing local files...",
+  "nekojs.gui.toast.pulling_all": "§b[↓↓] Requesting ALL server scripts...",
+
+  "nekojs.gui.toast.error.not_editing": "§c❌ Error: Enter [Edit] mode first!",
+  "nekojs.gui.toast.error.empty_dir": "§c✖ Local nekojs dir is empty or has no js files!",
+  "nekojs.gui.toast.error.no_file_open": "§c❌ Open a file first",
+  "nekojs.gui.toast.error.invalid_regex": "§c✖ Empty search or invalid regex",
+  "nekojs.gui.toast.error.replace_fail": "§c✖ Failed to replace file: %s",
+  "nekojs.gui.toast.error.read_fail": "§c✖ Failed to read file: %s",
+
+  "nekojs.command.reloading": "§e[NekoJS] Reloading scripts...",
+  "nekojs.command.reload.fatal": "§c[NekoJS] ✖ A fatal error occurred during reload! Check the console logs.",
+  "nekojs.command.error.healthy": "§a[NekoJS] ✔ The runtime environment is healthy. No script errors found!",
+  "nekojs.command.error.none": "§a[NekoJS] ✔ No script errors at the moment!",
+
+  "nekojs.error.tracker.warning": "§c[NekoJS] ⚠ Warning: The engine currently has %s active script error(s).",
+  "nekojs.error.tracker.open_list": "  §a▶ §n[Click here to open Error Dashboard]",
+  "nekojs.error.tracker.hover_hint": "§eOpen the fullscreen dashboard to manage all errors",
+  "nekojs.error.tracker.success": "§a[NekoJS] ✔ Scripts reloaded perfectly!"
 }

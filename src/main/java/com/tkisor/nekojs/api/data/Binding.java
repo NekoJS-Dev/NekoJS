@@ -1,9 +1,10 @@
 package com.tkisor.nekojs.api.data;
 
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.WithScriptType;
 import lombok.Getter;
 
-public class Binding {
+public class Binding implements WithScriptType {
     @Getter
     private final String name;
 
@@ -16,7 +17,6 @@ public class Binding {
     @Getter
     private final boolean isStaticClass;
 
-    @Getter
     private final ScriptType targetType;
 
     private Binding(String name, Object object, boolean isStaticClass, ScriptType targetType) {
@@ -27,11 +27,9 @@ public class Binding {
         this.targetType = targetType;
     }
 
-    /**
-     * 判断该绑定是否允许注入到指定的脚本环境中
-     */
-    public boolean isValidFor(ScriptType envType) {
-        return this.targetType == ScriptType.COMMON || this.targetType == envType;
+    @Override
+    public ScriptType scriptType() {
+        return targetType;
     }
 
     // ================= 默认通用环境 (COMMON) =================

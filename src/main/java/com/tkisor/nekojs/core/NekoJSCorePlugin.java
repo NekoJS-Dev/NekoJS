@@ -41,6 +41,7 @@ import net.minecraft.world.phys.Vec3;
 
 @RegisterNekoJSPlugin
 public class NekoJSCorePlugin implements NekoJSPlugin {
+
     @Override
     public void registerEvents(EventGroupRegistry registry) {
         registry.register(PlayerEvents.GROUP);
@@ -56,9 +57,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerBindings(BindingsRegister registry) {
         registry.register(Binding.of("Ingredient", new IngredientJS()));
-
         registry.register(Binding.of("NativeEvents", new NativeEventsJS()));
-
         registry.register(Binding.of("TriState", TriState.class));
         registry.register(Binding.of("Network", NetworkJS.class));
         registry.register(Binding.of("ItemStack", ItemStack.class));
@@ -80,14 +79,15 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(Binding.of("MobEffectInstance", MobEffectInstance.class));
         registry.register(Binding.of("DamageTypes", DamageTypes.class));
 
+
     }
 
     @Override
     public void registerClientBindings(BindingsRegister registry) {
-        registry.register(Binding.of(ScriptType.CLIENT,"Minecraft", Minecraft.class));
-        registry.register(Binding.of(ScriptType.CLIENT,"Screen", Screen.class));
-        registry.register(Binding.of(ScriptType.CLIENT,"Window", Window.class));
-        registry.register(Binding.of(ScriptType.CLIENT,"KeyMapping", KeyMapping.class));
+        registry.register(Binding.of(ScriptType.CLIENT, "Minecraft", Minecraft.class));
+        registry.register(Binding.of(ScriptType.CLIENT, "Screen", Screen.class));
+        registry.register(Binding.of(ScriptType.CLIENT, "Window", Window.class));
+        registry.register(Binding.of(ScriptType.CLIENT, "KeyMapping", KeyMapping.class));
         registry.register(Binding.of(ScriptType.CLIENT, "InputConstants", InputConstants.class));
     }
 

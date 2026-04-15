@@ -14,6 +14,7 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
@@ -49,30 +50,32 @@ public class NekoErrorDashboardScreen extends Screen {
     private NekoContextMenu activeContextMenu = null;
 
     private enum FilterType {
-        ALL("全部", 0xFFFFFFFF), RUNTIME("运行", 0xFFE5534B),
-        SYNTAX("语法", 0xFFF2A134), OTHER("其他", 0xFF748394);
-        final String label; final int color;
-        FilterType(String label, int color) { this.label = label; this.color = color; }
+        ALL("nekojs.gui.filter.all", 0xFFFFFFFF),
+        RUNTIME("nekojs.gui.filter.runtime", 0xFFE5534B),
+        SYNTAX("nekojs.gui.filter.syntax", 0xFFF2A134),
+        OTHER("nekojs.gui.filter.other", 0xFF748394);
+        final String key; final int color;
+        FilterType(String key, int color) { this.key = key; this.color = color; }
         public static final FilterType[] VALUES = values();
     }
 
     private record MenuCategory(String name, List<NekoContextMenu.MenuItem> items) {}
     private final List<MenuCategory> menuCategories = List.of(
-            new MenuCategory("文件", List.of(
-                    new NekoContextMenu.MenuItem("[S] 保存当前修改 (Ctrl+S)", this::actionSaveActiveTab),
-                    new NekoContextMenu.MenuItem("[D] 在外部资源管理器中打开", this::actionLocate),
-                    new NekoContextMenu.MenuItem("[X] 退出面板", this::onClose)
+            new MenuCategory(I18n.get("nekojs.gui.menu.file"), List.of(
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.save"), this::actionSaveActiveTab),
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.open_external"), this::actionLocate),
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.exit"), this::onClose)
             )),
-            new MenuCategory("云端同步 (Sync)", List.of(
-                    new NekoContextMenu.MenuItem("[↑] 将当前脚本推送到服务端", this::actionSyncUploadCurrent),
-                    new NekoContextMenu.MenuItem("[↓] 从服务端拉取覆盖当前脚本", this::actionSyncDownloadCurrent),
-                    new NekoContextMenu.MenuItem("[↑↑] 强制推送所有本地脚本 (危险)", this::actionSyncUploadAll),
-                    new NekoContextMenu.MenuItem("[↓↓] 强制拉取服务端所有脚本 (危险)", this::actionSyncDownloadAll)
+            new MenuCategory(I18n.get("nekojs.gui.menu.sync"), List.of(
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.push_current"), this::actionSyncUploadCurrent),
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.pull_current"), this::actionSyncDownloadCurrent),
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.push_all"), this::actionSyncUploadAll),
+                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.pull_all"), this::actionSyncDownloadAll)
             ))
     );
 
     public NekoErrorDashboardScreen(List<ErrorSummaryDTO> errors) {
-        super(Component.literal("NekoJS Dashboard"));
+        super(Component.translatable("nekojs.gui.dashboard.title"));
         this.errors = errors;
         if (!errors.isEmpty()) this.selectedError = errors.get(0);
 
@@ -81,7 +84,7 @@ public class NekoErrorDashboardScreen extends Screen {
             filterCounts[judgeErrorType(dto).ordinal()]++;
         }
         for (FilterType type : FilterType.VALUES) {
-            filterLabels[type.ordinal()] = type.label + " §8" + filterCounts[type.ordinal()];
+            filterLabels[type.ordinal()] = I18n.get(type.key) + " §8" + filterCounts[type.ordinal()];
         }
     }
 
@@ -110,8 +113,8 @@ public class NekoErrorDashboardScreen extends Screen {
         this.layoutContentH = this.height - layoutContentY - margin;
 
         if (!isMaximized) {
-            this.searchBox = new EditBox(this.font, margin, 18, leftW, 12, Component.literal("搜索..."));
-            this.searchBox.setHint(Component.literal("§8过滤路径..."));
+            this.searchBox = new EditBox(this.font, margin, 18, leftW, 12, Component.translatable("nekojs.gui.search.placeholder"));
+            this.searchBox.setHint(Component.translatable("nekojs.gui.search.hint"));
             this.searchBox.setValue(oldSearch);
             this.searchBox.setResponder(s -> this.refreshList());
             this.addRenderableWidget(this.searchBox);
@@ -155,7 +158,7 @@ public class NekoErrorDashboardScreen extends Screen {
         try {
             Path p = NekoJSPaths.ROOT.resolve(targetPath);
             if (Files.exists(p)) return Files.readString(p);
-        } catch (Exception e) { return "// 读取失败: " + e.getMessage(); }
+        } catch (Exception e) { return "// " + I18n.get("nekojs.gui.toast.error.read_fail", e.getMessage()); }
         return "";
     }
 
@@ -208,18 +211,18 @@ public class NekoErrorDashboardScreen extends Screen {
     private void actionLocate() {
         if (selectedError == null) return;
         Util.getPlatform().openFile(NekoJSPaths.ROOT.resolve(selectedError.path()).toFile());
-        toast.show("§a✔ 尝试打开文件");
+        toast.show(I18n.get("nekojs.gui.toast.locate_success"));
     }
 
     private void actionLog() {
         Util.getPlatform().openFile(NekoJSPaths.GAME_DIR.resolve("logs/latest.log").toFile());
-        toast.show("§a✔ 打开 latest.log");
+        toast.show(I18n.get("nekojs.gui.toast.log_success"));
     }
 
     private void actionCopy() {
         if (selectedError == null) return;
         Minecraft.getInstance().keyboardHandler.setClipboard(selectedError.fullDetails());
-        toast.show("§a✔ 已存入剪贴板");
+        toast.show(I18n.get("nekojs.gui.toast.copy_success"));
     }
 
     private void actionSaveActiveTab() {
@@ -233,50 +236,50 @@ public class NekoErrorDashboardScreen extends Screen {
         try {
             Path path = NekoJSPaths.ROOT.resolve(tab.path);
             Files.writeString(path, tab.editor.getValue());
-            toast.show("§a✔ 已保存 " + tab.path);
+            toast.show(I18n.get("nekojs.gui.toast.save_success", tab.path));
             tab.editor.markSaved();
-        } catch (Exception e) { toast.show("§c✖ 保存失败: " + e.getMessage()); }
+        } catch (Exception e) { toast.show(I18n.get("nekojs.gui.toast.save_fail", e.getMessage())); }
     }
 
     public void loadServerScript(String content) {
         if (isEditing && tabbedEditor != null && tabbedEditor.getActiveTab() != null) {
             tabbedEditor.getActiveTab().editor.getWidget().setValue(content);
             tabbedEditor.getActiveTab().editor.markSaved();
-            this.toast.show("§a✔ 已成功从服务端拉取代码");
+            this.toast.show(I18n.get("nekojs.gui.toast.pull_success"));
         }
     }
 
     private void actionSyncUploadCurrent() {
         if (!this.isEditing || tabbedEditor == null || tabbedEditor.getActiveTab() == null) {
-            this.toast.show("§c❌ 错误：请先进入 [编辑] 模式！");
+            this.toast.show(I18n.get("nekojs.gui.toast.error.not_editing"));
             return;
         }
         ClientPacketDistributor.sendToServer(new SaveScriptPacket(tabbedEditor.getActiveTab().path, tabbedEditor.getActiveTab().editor.getValue()));
-        toast.show("§e[↑] 正在推送到服务端...");
+        toast.show(I18n.get("nekojs.gui.toast.pushing_current"));
     }
 
     private void actionSyncDownloadCurrent() {
         if (!this.isEditing || tabbedEditor == null || tabbedEditor.getActiveTab() == null) {
-            this.toast.show("§c❌ 错误：请先进入 [编辑] 模式！");
+            this.toast.show(I18n.get("nekojs.gui.toast.error.not_editing"));
             return;
         }
         ClientPacketDistributor.sendToServer(new FetchScriptRequestPacket(tabbedEditor.getActiveTab().path));
-        toast.show("§b[↓] 正在请求拉取代码...");
+        toast.show(I18n.get("nekojs.gui.toast.pulling_current"));
     }
 
     private void actionSyncUploadAll() {
-        toast.show("§e[↑↑] 正在扫描本地文件并推送...");
+        toast.show(I18n.get("nekojs.gui.toast.pushing_all"));
         Map<String, String> localFiles = NekoJSNetwork.collectAllValidScripts(NekoJSPaths.ROOT);
 
         if (localFiles.isEmpty()) {
-            toast.show("§c✖ 本地 nekojs 目录为空或不存在 js 文件！");
+            toast.show(I18n.get("nekojs.gui.toast.error.empty_dir"));
             return;
         }
         ClientPacketDistributor.sendToServer(new UploadAllScriptsPacket(localFiles));
     }
 
     private void actionSyncDownloadAll() {
-        toast.show("§b[↓↓] 正在请求拉取所有服务端代码...");
+        toast.show(I18n.get("nekojs.gui.toast.pulling_all"));
         ClientPacketDistributor.sendToServer(new FetchAllScriptsRequestPacket());
     }
 
@@ -358,7 +361,7 @@ public class NekoErrorDashboardScreen extends Screen {
         this.modal.render(graphics, mouseX, mouseY, partialTick, this.width, this.height);
     }
 
-    private boolean handleHeaderButton(GuiGraphicsExtractor g, String text, int x, int mx, int my, boolean isClickAction) {
+    private boolean handleHeaderButton(GuiGraphicsExtractor g, Component text, int x, int mx, int my, boolean isClickAction) {
         int w = this.font.width(text);
         int targetX = x - w - 5;
         boolean hov = mx >= targetX && mx <= targetX + w && my >= 38 && my <= 48;
@@ -374,7 +377,7 @@ public class NekoErrorDashboardScreen extends Screen {
         boolean isDirty = isEditing && tabbedEditor != null && tabbedEditor.getActiveTab() != null && tabbedEditor.getActiveTab().editor.isDirty();
 
         if (!isEditing) {
-            g.text(this.font, "§8目标: §e" + selectedError.path(), layoutRightX + 5, 38, -1);
+            g.text(this.font, I18n.get("nekojs.gui.dashboard.target", selectedError.path()), layoutRightX + 5, 38, -1);
         }
 
         int closeX = this.width - 25;
@@ -384,17 +387,17 @@ public class NekoErrorDashboardScreen extends Screen {
 
         int curX = layoutRightX + layoutRightW - 10;
         if (isEditing) {
-            handleHeaderButton(g, "§c[退出编辑]", curX, mx, my, false);
-            curX -= this.font.width("§c[退出编辑]") + 5;
-            handleHeaderButton(g, isDirty ? "§e[保存当前*]" : "§a[保存当前]", curX, mx, my, false);
+            handleHeaderButton(g, Component.translatable("nekojs.gui.dashboard.btn.exit_edit"), curX, mx, my, false);
+            curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.exit_edit")) + 5;
+            handleHeaderButton(g, Component.translatable(isDirty ? "nekojs.gui.dashboard.btn.save_dirty" : "nekojs.gui.dashboard.btn.save"), curX, mx, my, false);
         } else {
-            handleHeaderButton(g, "§7[复制]", curX, mx, my, false);
-            curX -= this.font.width("§7[复制]") + 5;
-            handleHeaderButton(g, "§b[日志]", curX, mx, my, false);
-            curX -= this.font.width("§b[日志]") + 5;
-            handleHeaderButton(g, "§e[定位]", curX, mx, my, false);
-            curX -= this.font.width("§e[定位]") + 5;
-            handleHeaderButton(g, "§a[编辑]", curX, mx, my, false);
+            handleHeaderButton(g, Component.translatable("nekojs.gui.dashboard.btn.copy"), curX, mx, my, false);
+            curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.copy")) + 5;
+            handleHeaderButton(g, Component.translatable("nekojs.gui.dashboard.btn.log"), curX, mx, my, false);
+            curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.log")) + 5;
+            handleHeaderButton(g, Component.translatable("nekojs.gui.dashboard.btn.locate"), curX, mx, my, false);
+            curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.locate")) + 5;
+            handleHeaderButton(g, Component.translatable("nekojs.gui.dashboard.btn.edit"), curX, mx, my, false);
         }
     }
 
@@ -477,26 +480,26 @@ public class NekoErrorDashboardScreen extends Screen {
             int my = (int) event.y();
 
             if (isEditing) {
-                if (handleHeaderButton(null, "§c[退出编辑]", curX, mx, my, true)) {
+                if (handleHeaderButton(null, Component.translatable("nekojs.gui.dashboard.btn.exit_edit"), curX, mx, my, true)) {
                     this.isEditing = false; buildDashboardLayout(); return true;
                 }
-                curX -= this.font.width("§c[退出编辑]") + 5;
+                curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.exit_edit")) + 5;
 
                 boolean isDirty = tabbedEditor != null && tabbedEditor.getActiveTab() != null && tabbedEditor.getActiveTab().editor.isDirty();
-                if (handleHeaderButton(null, isDirty ? "§e[保存当前*]" : "§a[保存当前]", curX, mx, my, true)) {
+                if (handleHeaderButton(null, Component.translatable(isDirty ? "nekojs.gui.dashboard.btn.save_dirty" : "nekojs.gui.dashboard.btn.save"), curX, mx, my, true)) {
                     actionSaveActiveTab(); return true;
                 }
             } else {
-                if (handleHeaderButton(null, "§7[复制]", curX, mx, my, true)) { actionCopy(); return true; }
-                curX -= this.font.width("§7[复制]") + 5;
+                if (handleHeaderButton(null, Component.translatable("nekojs.gui.dashboard.btn.copy"), curX, mx, my, true)) { actionCopy(); return true; }
+                curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.copy")) + 5;
 
-                if (handleHeaderButton(null, "§b[日志]", curX, mx, my, true)) { actionLog(); return true; }
-                curX -= this.font.width("§b[日志]") + 5;
+                if (handleHeaderButton(null, Component.translatable("nekojs.gui.dashboard.btn.log"), curX, mx, my, true)) { actionLog(); return true; }
+                curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.log")) + 5;
 
-                if (handleHeaderButton(null, "§e[定位]", curX, mx, my, true)) { actionLocate(); return true; }
-                curX -= this.font.width("§e[定位]") + 5;
+                if (handleHeaderButton(null, Component.translatable("nekojs.gui.dashboard.btn.locate"), curX, mx, my, true)) { actionLocate(); return true; }
+                curX -= this.font.width(I18n.get("nekojs.gui.dashboard.btn.locate")) + 5;
 
-                if (handleHeaderButton(null, "§a[编辑]", curX, mx, my, true)) { openTab(selectedError.path()); return true; }
+                if (handleHeaderButton(null, Component.translatable("nekojs.gui.dashboard.btn.edit"), curX, mx, my, true)) { openTab(selectedError.path()); return true; }
             }
         }
 
@@ -551,9 +554,9 @@ public class NekoErrorDashboardScreen extends Screen {
             } else if (event.button() == 1) {
                 selectError(dto);
                 NekoErrorDashboardScreen.this.activeContextMenu = new NekoContextMenu(NekoErrorDashboardScreen.this.font, (int)event.x(), (int)event.y(), NekoErrorDashboardScreen.this.width, NekoErrorDashboardScreen.this.height, List.of(
-                        new NekoContextMenu.MenuItem("⛶ 全屏查看", () -> { isMaximized = true; buildDashboardLayout(); }),
-                        new NekoContextMenu.MenuItem("📝 在标签页打开", () -> { NekoErrorDashboardScreen.this.openTab(dto.path()); }),
-                        new NekoContextMenu.MenuItem("📂 使用系统外部应用打开", () -> { Util.getPlatform().openFile(NekoJSPaths.ROOT.resolve(dto.path()).toFile()); toast.show("§a✔ 指令已发送"); })
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.fullscreen"), () -> { isMaximized = true; buildDashboardLayout(); }),
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.open_tab"), () -> { NekoErrorDashboardScreen.this.openTab(dto.path()); }),
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.open_external"), () -> { Util.getPlatform().openFile(NekoJSPaths.ROOT.resolve(dto.path()).toFile()); toast.show(I18n.get("nekojs.gui.toast.cmd_sent")); })
                 ));
                 return true;
             }

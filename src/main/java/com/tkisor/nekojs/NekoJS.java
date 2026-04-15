@@ -58,7 +58,7 @@ public class NekoJS {
 
         registerPlugins();
 
-        LOGGER.info("[NekoJS] 正在执行 STARTUP 与 COMMON 脚本...");
+        LOGGER.info("[NekoJS] 正在执行 STARTUP 脚本...");
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
 //        SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);

@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.client.resources.language.I18n;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 
@@ -30,7 +31,6 @@ public class NekoErrorTracker {
         if (e.getSourceLocation() != null) {
             line = e.getSourceLocation().getStartLine();
             Source source = e.getSourceLocation().getSource();
-
             if (source != null) {
                 if (source.getPath() != null) {
                     try {
@@ -38,17 +38,14 @@ public class NekoErrorTracker {
                     } catch (Exception ex) {
                         pathStr = source.getPath().replace('\\', '/');
                     }
-                }
-                else if (source.getURI() != null) {
+                } else if (source.getURI() != null) {
                     pathStr = source.getURI().toString().replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
-                }
-                else {
+                } else {
                     pathStr = source.getName();
                 }
             }
         }
 
-        // 根据路径动态推断环境并打印到对应 log 文件
         ScriptType targetType = ScriptType.SERVER;
         String lowerPath = pathStr.toLowerCase();
         for (ScriptType type : ScriptType.all()) {
@@ -83,28 +80,27 @@ public class NekoErrorTracker {
         return !ERRORS.isEmpty();
     }
 
-    public static ScriptError getError(Identifier scriptId) {
-        return ERRORS.get(scriptId);
-    }
-
     public static Collection<ScriptError> getAllErrors() {
         return ERRORS.values();
     }
 
+    /**
+     * 生成带有可点击链接的错误报告组件
+     */
     public static Component getErrorComponent() {
         int errorCount = ERRORS.size();
-        MutableComponent literal = Component.literal("§c[NekoJS] ⚠ 警告：引擎目前存在 " + errorCount + " 个脚本运行错误。");
-        literal.append(Component.literal("\n"));
-        MutableComponent dashboardLink = Component.literal("  §a▶ §n[点击此处打开错误列表]")
+        MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);
+
+        MutableComponent link = Component.translatable("nekojs.error.tracker.open_list")
                 .withStyle(style -> style
-                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("§e在全屏列表中统一查看和管理错误")))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
                         .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
                 );
-        literal.append(dashboardLink);
-        return literal;
+
+        return Component.empty().append(main).append("\n").append(link);
     }
 
     public static Component getSuccessComponent() {
-        return Component.literal("§a[NekoJS] ✔ 脚本完美重载！");
+        return Component.translatable("nekojs.error.tracker.success");
     }
 }

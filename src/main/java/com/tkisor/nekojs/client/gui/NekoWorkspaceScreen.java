@@ -13,6 +13,7 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
@@ -62,7 +63,7 @@ public class NekoWorkspaceScreen extends Screen {
     private NekoContextMenu activeContextMenu = null;
 
     public NekoWorkspaceScreen() {
-        super(Component.literal("NekoJS Workspace"));
+        super(Component.translatable("nekojs.gui.workspace.title"));
     }
 
     private static boolean hasShiftDown() {
@@ -110,15 +111,15 @@ public class NekoWorkspaceScreen extends Screen {
             } else if (activeActivity == 1) {
                 int inputWidth = sidebarW - 12 - 50;
 
-                this.searchBox = new EditBox(this.font, actBarW + 6, topY + 24, inputWidth, 18, Component.literal("搜索"));
-                this.searchBox.setHint(Component.literal("§8搜索..."));
+                this.searchBox = new EditBox(this.font, actBarW + 6, topY + 24, inputWidth, 18, Component.translatable("nekojs.gui.search.placeholder"));
+                this.searchBox.setHint(Component.translatable("nekojs.gui.search.hint"));
                 this.searchBox.setValue(oldSearch);
                 this.searchBox.setTextColor(0xFFFFFFFF);
                 this.searchBox.setResponder(s -> { buildSearchTree(); refreshFileList(); });
                 this.addRenderableWidget(this.searchBox);
 
-                this.replaceBox = new EditBox(this.font, actBarW + 6, topY + 46, inputWidth, 18, Component.literal("替换"));
-                this.replaceBox.setHint(Component.literal("§8替换为..."));
+                this.replaceBox = new EditBox(this.font, actBarW + 6, topY + 46, inputWidth, 18, Component.translatable("nekojs.gui.replace.placeholder"));
+                this.replaceBox.setHint(Component.translatable("nekojs.gui.replace.hint"));
                 this.replaceBox.setValue(oldReplace);
                 this.replaceBox.setTextColor(0xFFFFFFFF);
                 this.addRenderableWidget(this.replaceBox);
@@ -360,7 +361,7 @@ public class NekoWorkspaceScreen extends Screen {
         String replacement = replaceBox.getValue();
 
         Pattern pattern = getSearchPattern(query);
-        if (pattern == null) { toast.show("§c✖ 搜索内容为空或正则错误"); return; }
+        if (pattern == null) { toast.show(I18n.get("nekojs.gui.toast.error.invalid_regex")); return; }
 
         int affectedFiles = 0;
         int totalReplaced = 0;
@@ -398,13 +399,13 @@ public class NekoWorkspaceScreen extends Screen {
                         fileContentCache.put(path, newContent);
                         affectedFiles++;
                         if (tabbedEditor != null) tabbedEditor.openTab(path, newContent);
-                    } catch (Exception e) { toast.show("§c✖ 替换文件失败: " + path); }
+                    } catch (Exception e) { toast.show(I18n.get("nekojs.gui.toast.error.replace_fail", path)); }
                 }
             }
         }
         buildSearchTree();
         refreshFileList();
-        toast.show("§a✔ 在 " + affectedFiles + " 个文件中替换了 " + totalReplaced + " 处内容");
+        toast.show(I18n.get("nekojs.gui.toast.replace_success", affectedFiles, totalReplaced));
     }
 
     private void sortTree(FileNode node) { node.children.sort((a, b) -> { if (a.isDir != b.isDir) return a.isDir ? -1 : 1; return a.name.compareToIgnoreCase(b.name); }); for (FileNode c : node.children) { if (c.isDir) sortTree(c); } }
@@ -423,8 +424,8 @@ public class NekoWorkspaceScreen extends Screen {
             scanLocalFiles();
             if (!targetDir.isEmpty()) { expandNodeByPath(treeRoot, targetDir); }
             refreshFileList();
-            toast.show("§a✔ 创建成功: " + name);
-        } catch (Exception e) { toast.show("§c✖ 创建失败: " + e.getMessage()); }
+            toast.show(I18n.get("nekojs.gui.toast.create_success", name));
+        } catch (Exception e) { toast.show(I18n.get("nekojs.gui.toast.create_fail", e.getMessage())); }
     }
 
     private void expandNodeByPath(FileNode root, String path) { if (path == null || path.isEmpty()) return; String[] parts = path.split("/"); FileNode current = root; for (String part : parts) { for (FileNode child : current.children) { if (child.name.equals(part)) { child.isExpanded = true; current = child; break; } } } }
@@ -436,14 +437,14 @@ public class NekoWorkspaceScreen extends Screen {
                 if (Files.isDirectory(target)) {
                     try (Stream<Path> walk = Files.walk(target)) { walk.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete); }
                 } else {
-                    Files.delete(target);
+                    if (!Files.isDirectory(target)) Files.delete(target);
                 }
             }
             if (selectedFilePath != null && selectedFilePath.startsWith(path)) { selectedFilePath = null; }
             scanLocalFiles();
             refreshFileList();
-            toast.show("§a✔ 已删除 " + path);
-        } catch (Exception e) { toast.show("§c✖ 删除失败: " + e.getMessage()); }
+            toast.show(I18n.get("nekojs.gui.toast.delete_success", path));
+        } catch (Exception e) { toast.show(I18n.get("nekojs.gui.toast.delete_fail", e.getMessage())); }
     }
 
     private String getParentDir(String path) { int idx = path.lastIndexOf('/'); return (idx == -1) ? "" : path.substring(0, idx); }
@@ -464,7 +465,7 @@ public class NekoWorkspaceScreen extends Screen {
                     tabbedEditor.getActiveTab().editor.setHighlightAndScroll(selectionStart, selectionEnd);
                 }
             }
-        } catch (Exception e) { toast.show("§c✖ 无法读取文件: " + e.getMessage()); }
+        } catch (Exception e) { toast.show(I18n.get("nekojs.gui.toast.error.read_fail", e.getMessage())); }
     }
 
     public void onSyncFeedback(boolean success, String message) { String prefix = success ? "§a✔ " : "§c✖ "; this.toast.show(prefix + message); if (success && tabbedEditor != null && tabbedEditor.getActiveTab() != null) { tabbedEditor.getActiveTab().editor.markSaved(); } }
@@ -477,7 +478,7 @@ public class NekoWorkspaceScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         graphics.fill(0, 0, this.width, topY, 0xFF333333);
-        graphics.text(this.font, "§cNEKO§fJS §8Workspace", 10, 6, -1);
+        graphics.text(this.font, "§cNEKO§fJS §8" + I18n.get("nekojs.gui.workspace.title"), 10, 6, -1);
         int closeX = this.width - 20;
         graphics.text(this.font, (mouseX >= closeX && mouseX <= closeX + 10 && mouseY >= 4 && mouseY <= 16) ? "§c✖" : "§7✖", closeX, 6, -1);
 
@@ -495,8 +496,8 @@ public class NekoWorkspaceScreen extends Screen {
 
         if (isSidebarOpen) {
             graphics.fill(actBarW, topY, leftW, this.height, 0xFF252526);
-            if (activeActivity == 0) graphics.text(this.font, "资源管理器", actBarW + 10, topY + 10, 0xFFBBBBBB);
-            else if (activeActivity == 1) graphics.text(this.font, "搜索与替换", actBarW + 10, topY + 10, 0xFFBBBBBB);
+            if (activeActivity == 0) graphics.text(this.font, I18n.get("nekojs.gui.workspace.explorer"), actBarW + 10, topY + 10, 0xFFBBBBBB);
+            else if (activeActivity == 1) graphics.text(this.font, I18n.get("nekojs.gui.workspace.search_replace"), actBarW + 10, topY + 10, 0xFFBBBBBB);
 
             if (fileListWidget != null) {
                 int visibleW = sidebarW - 12;
@@ -515,7 +516,7 @@ public class NekoWorkspaceScreen extends Screen {
         }
 
         graphics.fill(leftW, topY, rightX, this.height, 0xFF1E1E1E);
-        if (tabbedEditor != null && !tabbedEditor.isEmpty()) { tabbedEditor.renderUnderlay(graphics, mouseX, mouseY); } else { graphics.fill(rightX, topY, this.width, this.height, 0xFF1E1E1E); graphics.centeredText(this.font, "§7从左侧选择文件以开始编辑 (双击打开)", rightX + (this.width - rightX) / 2, this.height / 2, -1); }
+        if (tabbedEditor != null && !tabbedEditor.isEmpty()) { tabbedEditor.renderUnderlay(graphics, mouseX, mouseY); } else { graphics.fill(rightX, topY, this.width, this.height, 0xFF1E1E1E); graphics.centeredText(this.font, Component.translatable("nekojs.gui.workspace.empty_tip"), rightX + (this.width - rightX) / 2, this.height / 2, -1); }
 
         boolean blockEditorHover = modal.isOpen() || (activeContextMenu != null) || menuBar.isMenuOpen() || (tabbedEditor != null && tabbedEditor.isHoveringDropdown(mouseX, mouseY));
         super.extractRenderState(graphics, blockEditorHover ? -999 : mouseX, blockEditorHover ? -999 : mouseY, partialTick);
@@ -529,13 +530,13 @@ public class NekoWorkspaceScreen extends Screen {
             int iconStartX = actBarW + 6 + inputWidth + 4;
 
             int sy = topY + 24;
-            activeTooltip = drawToggleIcon(graphics, "Aa", iconStartX, sy, isMatchCase, mouseX, mouseY, activeTooltip, "区分大小写");
-            activeTooltip = drawToggleIcon(graphics, "\"\"", iconStartX + 16, sy, isMatchWord, mouseX, mouseY, activeTooltip, "全字匹配");
-            activeTooltip = drawToggleIcon(graphics, ".*", iconStartX + 32, sy, isRegex, mouseX, mouseY, activeTooltip, "使用正则表达式");
+            activeTooltip = drawToggleIcon(graphics, "Aa", iconStartX, sy, isMatchCase, mouseX, mouseY, activeTooltip, I18n.get("nekojs.gui.workspace.tooltip.match_case"));
+            activeTooltip = drawToggleIcon(graphics, "\"\"", iconStartX + 16, sy, isMatchWord, mouseX, mouseY, activeTooltip, I18n.get("nekojs.gui.workspace.tooltip.match_word"));
+            activeTooltip = drawToggleIcon(graphics, ".*", iconStartX + 32, sy, isRegex, mouseX, mouseY, activeTooltip, I18n.get("nekojs.gui.workspace.tooltip.regex"));
 
             int ry = topY + 46;
-            activeTooltip = drawToggleIcon(graphics, "AB", iconStartX, ry, isPreserveCase, mouseX, mouseY, activeTooltip, "保留大小写");
-            activeTooltip = drawToggleIcon(graphics, "ALL", iconStartX + 20, ry, false, mouseX, mouseY, activeTooltip, "全部替换");
+            activeTooltip = drawToggleIcon(graphics, "AB", iconStartX, ry, isPreserveCase, mouseX, mouseY, activeTooltip, I18n.get("nekojs.gui.workspace.tooltip.preserve_case"));
+            activeTooltip = drawToggleIcon(graphics, "ALL", iconStartX + 20, ry, false, mouseX, mouseY, activeTooltip, I18n.get("nekojs.gui.workspace.tooltip.replace_all"));
         }
 
         int titleW = this.font.width("NEKOJS Workspace") + 30;
@@ -606,9 +607,9 @@ public class NekoWorkspaceScreen extends Screen {
         if (!handled && event.button() == 1 && isSidebarOpen && activeActivity == 0) {
             if (event.x() > actBarW && event.x() < leftW && event.y() > topY) {
                 List<NekoContextMenu.MenuItem> items = List.of(
-                        new NekoContextMenu.MenuItem("📄 新建文件", () -> modal.openInput("新建文件 (根目录)", name -> createNewItem("", name, false))),
-                        new NekoContextMenu.MenuItem("📁 新建文件夹", () -> modal.openInput("新建文件夹 (根目录)", name -> createNewItem("", name, true))),
-                        new NekoContextMenu.MenuItem("🔄 刷新列表", () -> { scanLocalFiles(); refreshFileList(); toast.show("§a刷新成功"); })
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.new_file"), () -> modal.openInput(I18n.get("nekojs.gui.modal.new_file.root"), name -> createNewItem("", name, false))),
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.new_dir"), () -> modal.openInput(I18n.get("nekojs.gui.modal.new_dir.root"), name -> createNewItem("", name, true))),
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.refresh"), () -> { scanLocalFiles(); refreshFileList(); toast.show(I18n.get("nekojs.gui.toast.refresh_success")); })
                 );
                 this.activeContextMenu = new NekoContextMenu(this.font, (int)event.x(), (int)event.y(), this.width, this.height, items);
                 return true;
@@ -726,7 +727,7 @@ public class NekoWorkspaceScreen extends Screen {
                         xOffset += NekoWorkspaceScreen.this.font.width(pre);
                     }
                     if (safeHl1 > safeHl0) {
-                        String hi = text.substring(safeHl0, safeHl1);
+                        String hi = hi = text.substring(safeHl0, safeHl1);
                         g.fill(xOffset, yOffset - 1, xOffset + NekoWorkspaceScreen.this.font.width(hi), yOffset + NekoWorkspaceScreen.this.font.lineHeight, 0x66FFAA00);
                         g.text(NekoWorkspaceScreen.this.font, hi, xOffset, yOffset, 0xFFFFCC00);
                         xOffset += NekoWorkspaceScreen.this.font.width(hi);
@@ -789,11 +790,11 @@ public class NekoWorkspaceScreen extends Screen {
                 }
             } else if (event.button() == 1) {
                 String targetDir = node.isDir ? node.path : getParentDir(node.path);
-                String displayDir = targetDir.isEmpty() ? "根目录" : targetDir;
+                String displayDir = targetDir.isEmpty() ? I18n.get("nekojs.gui.workspace.root_dir") : targetDir;
                 List<NekoContextMenu.MenuItem> items = List.of(
-                        new NekoContextMenu.MenuItem("📄 新建文件", () -> modal.openInput("新建文件 (" + displayDir + ")", name -> NekoWorkspaceScreen.this.createNewItem(targetDir, name, false))),
-                        new NekoContextMenu.MenuItem("📁 新建文件夹", () -> modal.openInput("新建文件夹 (" + displayDir + ")", name -> NekoWorkspaceScreen.this.createNewItem(targetDir, name, true))),
-                        new NekoContextMenu.MenuItem("🗑 删除 " + node.name, () -> modal.openConfirm("确定要删除 " + node.name + " 吗？", () -> NekoWorkspaceScreen.this.deleteItem(node.path)))
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.new_file"), () -> modal.openInput(I18n.get("nekojs.gui.modal.new_file.dir", displayDir), name -> NekoWorkspaceScreen.this.createNewItem(targetDir, name, false))),
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.new_dir"), () -> modal.openInput(I18n.get("nekojs.gui.modal.new_dir.dir", displayDir), name -> NekoWorkspaceScreen.this.createNewItem(targetDir, name, true))),
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.delete", node.name), () -> modal.openConfirm(I18n.get("nekojs.gui.modal.delete_confirm", node.name), () -> NekoWorkspaceScreen.this.deleteItem(node.path)))
                 );
                 NekoWorkspaceScreen.this.activeContextMenu = new NekoContextMenu(NekoWorkspaceScreen.this.font, (int)event.x(), (int)event.y(), NekoWorkspaceScreen.this.width, NekoWorkspaceScreen.this.height, items);
                 return true;

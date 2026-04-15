@@ -86,7 +86,8 @@ jarJar.enabled = true
 dependencies {
     // 25.0.1.1
     implementation("curse.maven:graal-1504336:7884547")
-    runtimeOnly("curse.maven:jei-238222:7884734")
+    // 29.5.0.26 for NeoForge 26.1.2
+    implementation "curse.maven:jei-238222:7920926"
 
     compileOnly 'org.projectlombok:lombok:1.18.44'
     annotationProcessor 'org.projectlombok:lombok:1.18.44'

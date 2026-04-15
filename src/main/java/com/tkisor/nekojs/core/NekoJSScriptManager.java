@@ -9,31 +9,29 @@ import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypedValue;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * NekoJS 脚本引擎核心生命周期调度器
  */
 public final class NekoJSScriptManager {
 
-    private final Map<ScriptType, Context> contexts = new ConcurrentHashMap<>();
-    private final Map<ScriptType, List<ScriptContainer>> scripts = new ConcurrentHashMap<>();
+    private final ScriptTypedValue<Context> contexts = ScriptTypedValue.ofNullable(this::initContext);
+
+    private final ScriptTypedValue<List<ScriptContainer>> scripts = ScriptTypedValue.of(type -> new ArrayList<>());
 
     private static final Map<Context, ScriptType> CONTEXT_TYPE_MAP = Collections.synchronizedMap(new WeakHashMap<>());
 
     public NekoJSScriptManager() {
-        for (ScriptType type : ScriptType.all()) {
-            scripts.put(type, new ArrayList<>());
-        }
     }
 
     /**
-     * 一次性扫描并发现所有环境类型 (STARTUP, SERVER, CLIENT, COMMON) 的脚本文件
+     * 一次性扫描并发现所有环境类型 (STARTUP, SERVER, CLIENT) 的脚本文件
      */
     public void discoverScripts() {
         for (ScriptType type : ScriptType.all()) {
@@ -46,7 +44,7 @@ public final class NekoJSScriptManager {
      */
     public void discoverScripts(ScriptType type) {
         List<ScriptContainer> discovered = ScriptLocator.discover(type);
-        scripts.put(type, discovered);
+        scripts.set(type, discovered);
         type.logger().info("发现了 {} 个 {} 脚本。", discovered.size(), type.name());
     }
 
@@ -54,10 +52,10 @@ public final class NekoJSScriptManager {
      * 加载并顺序执行所有脚本
      */
     public void loadScripts(ScriptType type) {
-        List<ScriptContainer> typeScripts = scripts.get(type);
+        List<ScriptContainer> typeScripts = scripts.at(type);
         if (typeScripts == null || typeScripts.isEmpty()) return;
 
-        Context ctx = contexts.computeIfAbsent(type, this::initContext);
+        Context ctx = contexts.at(type);
 
         for (ScriptContainer script : typeScripts) {
             if (!script.disabled) {
@@ -78,20 +76,18 @@ public final class NekoJSScriptManager {
             bindings.putMember(group.name(), new EventGroupJS(group, type));
         }
 
-        Map<String, Binding> allBindings = NekoBindings.all();
+        Map<String, Binding> environmentBindings = NekoBindings.getFor(type);
 
-        allBindings.forEach((name, binding) -> {
-            if (binding.isValidFor(type)) {
+        environmentBindings.forEach((name, binding) -> {
+            Object obj = binding.getObject();
 
-                Object obj = binding.getObject();
-
-                if (binding.isStaticClass()) {
-                    Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
-                    bindings.putMember(name, javaType);
-                } else {
-                    bindings.putMember(name, obj);
-                }
-
+            if (binding.isStaticClass()) {
+                // 如果是静态类，利用 Java.type 包装暴露给 JS
+                Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
+                bindings.putMember(name, javaType);
+            } else {
+                // 普通对象直接注入
+                bindings.putMember(name, obj);
             }
         });
 
@@ -121,22 +117,15 @@ public final class NekoJSScriptManager {
 
     /**
      * 重载指定类型的脚本
-     * <p>
-     * 该方法会清理指定脚本类型的事件总线，关闭旧的执行上下文，
-     * 然后重新发现并加载该类型的所有脚本
-     * </p>
-     * 
-     * @param type 要重载的脚本类型
      */
     public void reloadScripts(ScriptType type) {
         type.logger().info("正在重载 {} 脚本...", type.name());
 
         for (var group : NekoEventGroups.all().values()) {
-            // 清理全部会导致某些情况其他类型的监听器被清除
             group.clearListeners(type);
         }
 
-        Context oldContext = contexts.remove(type);
+        Context oldContext = contexts.set(type, null);
         if (oldContext != null) {
             try {
                 oldContext.close();
@@ -152,7 +141,8 @@ public final class NekoJSScriptManager {
     }
 
     public boolean hasScripts(ScriptType type) {
-        return !scripts.get(type).isEmpty();
+        List<ScriptContainer> typeScripts = scripts.at(type);
+        return typeScripts != null && !typeScripts.isEmpty();
     }
 
     /**
