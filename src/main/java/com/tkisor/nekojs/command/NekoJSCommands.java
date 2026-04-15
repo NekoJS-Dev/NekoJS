@@ -9,9 +9,7 @@ import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
 import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -60,8 +58,6 @@ public final class NekoJSCommands {
 
                                     if (NekoErrorTracker.hasErrors()) {
                                         source.sendFailure(NekoErrorTracker.getErrorComponent());
-                                        // 复用输出逻辑
-//                                        printErrorsToSource(source);
                                     } else {
                                         source.sendSuccess(() -> Component.literal("§a[NekoJS] ✔ 当前运行环境非常健康，没有任何脚本错误！"), false);
                                     }
@@ -104,13 +100,5 @@ public final class NekoJSCommands {
                                 })
                         )
         );
-    }
-
-    private static void printErrorsToSource(CommandSourceStack source) {
-        source.sendSystemMessage(Component.literal("§a[点击此处打开错误大盘 UI]")
-                .withStyle(style -> style
-                        .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
-                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("在全屏列表中查看所有错误")))
-                ));
     }
 }

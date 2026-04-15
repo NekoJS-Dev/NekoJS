@@ -32,8 +32,8 @@ public final class NekoJSLoggers {
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration cfg = ctx.getConfiguration();
 
-        String fileAppenderName = "NekoJS-File-" + name;   // 底层干苦力的写入器
-        String asyncAppenderName = "NekoJS-Async-" + name; // 前台接客的异步队列
+        String fileAppenderName = "NekoJS-File-" + name;
+        String asyncAppenderName = "NekoJS-Async-" + name;
         String loggerName = "nekojs." + name;
 
         if (cfg.getAppenders().containsKey(asyncAppenderName)) {
@@ -80,7 +80,7 @@ public final class NekoJSLoggers {
                 .setName(asyncAppenderName)
                 .setConfiguration(cfg)
                 .setAppenderRefs(new AppenderRef[]{appenderRef})
-                .setBufferSize(2048) // 内存队列大小，防止瞬间高并发日志冲爆内存
+                .setBufferSize(2048)
                 .build();
 
         asyncAppender.start();

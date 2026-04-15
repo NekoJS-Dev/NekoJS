@@ -3,8 +3,6 @@ package com.tkisor.nekojs.bindings.event;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;

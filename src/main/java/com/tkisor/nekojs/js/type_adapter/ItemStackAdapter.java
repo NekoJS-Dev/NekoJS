@@ -1,14 +1,12 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.graalvm.polyglot.Value;
-
-import java.util.Optional;
 
 public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
@@ -74,9 +72,20 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
         }
 
         Identifier id = Identifier.tryParse(str);
-        Optional<Holder.Reference<Item>> item = BuiltInRegistries.ITEM.get(id);
-        if (item.isEmpty()) throw new IllegalArgumentException("Not found item: " + str);
+        if (id == null) {
+            return ItemStack.EMPTY;
+        }
 
-        return new ItemStack(item.get(), count);
+        Item item = BuiltInRegistries.ITEM.getValue(id);
+
+        if (item == Items.AIR && !id.getPath().equals("air")) {
+            return ItemStack.EMPTY;
+        }
+
+        try {
+            return new ItemStack(item, count);
+        } catch (Exception e) {
+            return ItemStack.EMPTY;
+        }
     }
 }
