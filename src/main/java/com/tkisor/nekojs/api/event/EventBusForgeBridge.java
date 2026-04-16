@@ -5,6 +5,7 @@ import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -36,13 +37,9 @@ public class EventBusForgeBridge {
         Consumer<E> listener;
         if (bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(eventType)) {
             // bus cancellable and event cancellable
-            listener = event -> {
-                if (busJS.post(event)) {
-                    ((ICancellableEvent) event).setCanceled(true);
-                }
-            };
+            listener = new CancellableListener<>(busJS);
         } else {
-            listener = busJS::post;
+            listener = new Listener<>(busJS);
         }
 
         return bindImpl(eventType, listener, priority, receiveCancelled);
@@ -75,13 +72,9 @@ public class EventBusForgeBridge {
 
         Consumer<E_FORGE> listener;
         if (bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(eventType)) {
-            listener = e -> {
-                if (busJS.post(transformer.apply(e))) {
-                    ((ICancellableEvent) e).setCanceled(true);
-                }
-            };
+            listener = new CancellableTransformedListener<>(busJS, transformer, eventType);
         } else {
-            listener = e -> busJS.post(transformer.apply(e));
+            listener = new TransformedListener<>(busJS, transformer, eventType);
         }
 
         return bindImpl(eventType, listener, priority, receiveCancelled);
@@ -93,5 +86,69 @@ public class EventBusForgeBridge {
         Class<E_FORGE> eventType
     ) {
         return bindTransformed(bus, transformer, eventType, EventPriority.NORMAL, false);
+    }
+
+    private record CancellableListener<E extends Event>(EventBusJS<E, ?> busJS) implements Consumer<E> {
+
+        @Override
+        public void accept(E event) {
+            if (busJS.post(event)) {
+                ((ICancellableEvent) event).setCanceled(true);
+            }
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return String.format("CancellableListener(%s)", busJS.bus().eventType().getName());
+        }
+    }
+
+    private record Listener<E extends Event>(EventBusJS<E, ?> busJS) implements Consumer<E> {
+
+        @Override
+        public void accept(E event) {
+            busJS.post(event);
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return String.format("Listener(%s)", busJS.bus().eventType().getName());
+        }
+    }
+
+    private record CancellableTransformedListener<E, E_FORGE extends Event>(
+        EventBusJS<E, ?> busJS,
+        Function<E_FORGE, E> transformer,
+        Class<E_FORGE> eventType
+    ) implements Consumer<E_FORGE> {
+
+        @Override
+        public void accept(E_FORGE e) {
+            if (busJS.post(transformer.apply(e))) {
+                ((ICancellableEvent) e).setCanceled(true);
+            }
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return String.format("CancellableListener(%s->%s)", busJS.bus().eventType().getName(), eventType.getName());
+        }
+    }
+
+    private record TransformedListener<E, E_FORGE extends Event>(
+        EventBusJS<E, ?> busJS,
+        Function<E_FORGE, E> transformer,
+        Class<E_FORGE> eventType
+    ) implements Consumer<E_FORGE> {
+
+        @Override
+        public void accept(E_FORGE e) {
+            busJS.post(transformer.apply(e));
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return String.format("Listener(%s->%s)", busJS.bus().eventType().getName(), eventType.getName());
+        }
     }
 }
