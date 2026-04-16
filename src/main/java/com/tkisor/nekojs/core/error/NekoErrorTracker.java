@@ -9,8 +9,8 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.resources.language.I18n;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Source;
+import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.Source;
 
 import java.nio.file.Path;
 import java.util.Collection;

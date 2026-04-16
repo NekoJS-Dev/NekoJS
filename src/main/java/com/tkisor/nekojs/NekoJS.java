@@ -31,7 +31,7 @@ import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
-import zank.mods.graalmc.api.MemberRemapper;
+import graal.mod.api.MemberRemapper;
 
 import java.lang.reflect.Modifier;
 

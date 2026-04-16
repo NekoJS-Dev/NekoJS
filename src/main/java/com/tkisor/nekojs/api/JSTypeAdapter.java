@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api;
 
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 /**
  * JS 类型适配器接口。<p>

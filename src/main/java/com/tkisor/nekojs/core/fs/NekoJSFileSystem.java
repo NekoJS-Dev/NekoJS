@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.api.compiler.IScriptCompiler;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import org.graalvm.polyglot.io.FileSystem;
+import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;

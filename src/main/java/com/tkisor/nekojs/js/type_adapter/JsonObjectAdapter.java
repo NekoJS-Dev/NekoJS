@@ -6,7 +6,7 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public final class JsonObjectAdapter implements JSTypeAdapter<JsonObject> {
 

@@ -6,7 +6,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 

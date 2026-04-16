@@ -9,9 +9,9 @@ import com.tkisor.nekojs.utils.event.dispatch.DispatchCancellableEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import net.neoforged.bus.api.ICancellableEvent;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyExecutable;
+import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;

@@ -10,8 +10,8 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.Value;
 
 import java.nio.file.Path;
 import java.util.*;

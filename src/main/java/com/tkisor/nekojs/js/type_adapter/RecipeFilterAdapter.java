@@ -2,7 +2,7 @@ package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 import java.util.ArrayList;
 import java.util.List;

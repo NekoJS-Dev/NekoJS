@@ -4,7 +4,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public class EntityTypeAdapter implements JSTypeAdapter<EntityType> {
 

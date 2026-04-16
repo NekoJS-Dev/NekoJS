@@ -5,7 +5,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public class BlockAdapter implements JSTypeAdapter<Block> {
 

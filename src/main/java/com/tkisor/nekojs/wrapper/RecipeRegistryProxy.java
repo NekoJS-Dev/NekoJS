@@ -2,8 +2,8 @@ package com.tkisor.nekojs.wrapper;
 
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyObject;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.proxy.ProxyObject;
 
 public class RecipeRegistryProxy implements ProxyObject {
     private final RecipeEventJS event;

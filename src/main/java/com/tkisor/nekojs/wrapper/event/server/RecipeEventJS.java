@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;

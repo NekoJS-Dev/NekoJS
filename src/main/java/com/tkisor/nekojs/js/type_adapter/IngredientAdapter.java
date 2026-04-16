@@ -15,7 +15,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 import java.util.ArrayList;
 import java.util.List;

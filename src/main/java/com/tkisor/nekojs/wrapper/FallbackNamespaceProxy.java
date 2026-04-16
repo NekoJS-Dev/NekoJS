@@ -4,10 +4,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyExecutable;
-import org.graalvm.polyglot.proxy.ProxyObject;
+import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.proxy.ProxyExecutable;
+import graal.graalvm.polyglot.proxy.ProxyObject;
 
 public class FallbackNamespaceProxy implements ProxyObject {
     private final RecipeEventJS event;

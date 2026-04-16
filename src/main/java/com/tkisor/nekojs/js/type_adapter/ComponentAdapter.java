@@ -2,7 +2,7 @@ package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import net.minecraft.network.chat.Component;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public class ComponentAdapter implements JSTypeAdapter<Component> {
     @Override

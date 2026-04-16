@@ -4,8 +4,8 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import lombok.Getter;
 import net.minecraft.resources.Identifier;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.SourceSection;
+import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.SourceSection;
 
 public class ScriptError {
     @Getter
