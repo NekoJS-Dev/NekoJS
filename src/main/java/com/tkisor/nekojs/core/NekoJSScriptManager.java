@@ -6,11 +6,13 @@ import com.tkisor.nekojs.api.data.NekoBindings;
 import com.tkisor.nekojs.api.event.NekoEventGroups;
 import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
 
 import java.nio.file.Path;
@@ -109,9 +111,13 @@ public final class NekoJSScriptManager {
             script.disabled = true;
             script.lastError = t;
 
-            NekoErrorTracker.record(script, t);
-
-            script.type.logger().error("脚本执行失败: {}", script.id.toString(), t);
+            if (t instanceof PolyglotException pe) {
+                String mappedTrace = NekoErrorTracker.getMappedStackTrace(pe);
+                NekoErrorTracker.record(script, t);
+                script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), mappedTrace);
+            } else {
+                script.type.logger().error("脚本执行失败: {}", script.id.toString(), t);
+            }
         }
     }
 
@@ -120,6 +126,9 @@ public final class NekoJSScriptManager {
      */
     public void reloadScripts(ScriptType type) {
         type.logger().info("正在重载 {} 脚本...", type.name());
+
+        SourceMapRegistry.clearByType(type);
+        NekoErrorTracker.clearByType(type);
 
         for (var group : NekoEventGroups.all().values()) {
             group.clearListeners(type);

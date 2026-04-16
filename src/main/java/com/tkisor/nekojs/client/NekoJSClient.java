@@ -6,6 +6,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 
 public class NekoJSClient {
@@ -15,14 +16,12 @@ public class NekoJSClient {
         modEventBus.addListener(NekoJSClient::onClientResourceReload);
     }
 
-    private static void onClientSetup(FMLClientSetupEvent event) {
+    /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
+    private static void onClientSetup(FMLConstructModEvent event) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.info("[NekoJS] 客户端环境就绪，正在加载 CLIENT 脚本...");
-            try {
-                NekoJS.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
-            } catch (Exception e) {
-                NekoJS.LOGGER.error("[NekoJS] ❌ CLIENT 脚本初次加载失败", e);
-            }
+            NekoJS.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
+            ScriptType.CLIENT.logger().info("正在进行早期脚本注入...");
         });
     }
 

@@ -6,6 +6,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import org.graalvm.polyglot.Value;
 
+import java.util.NoSuchElementException;
+
 public class EntityTypeAdapter implements JSTypeAdapter<EntityType> {
 
     @Override
@@ -31,6 +33,9 @@ public class EntityTypeAdapter implements JSTypeAdapter<EntityType> {
             return null;
         }
 
-        return BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElse(null);
+        String finalIdStr = idStr;
+        return BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElseThrow(() ->
+                new NoSuchElementException("Could not find EntityType with ID: " + finalIdStr)
+        );
     }
 }

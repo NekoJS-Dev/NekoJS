@@ -26,6 +26,29 @@ public class NekoJSFileSystem implements FileSystem {
         this.currentWorkingDirectory = initialWorkingDirectory;
     }
 
+    private Path resolveVirtualScript(Path originalPath) {
+        if (Files.exists(originalPath)) {
+            return originalPath;
+        }
+
+        String fileName = originalPath.getFileName().toString();
+        if (fileName.endsWith(".js")) {
+            String baseName = fileName.substring(0, fileName.length() - 3);
+            Path parent = originalPath.getParent();
+
+            if (parent != null) {
+                String[] virtualExtensions = {".ts", ".tsx", ".jsx"};
+                for (String ext : virtualExtensions) {
+                    Path virtualPath = parent.resolve(baseName + ext);
+                    if (Files.exists(virtualPath)) {
+                        return virtualPath;
+                    }
+                }
+            }
+        }
+        return originalPath;
+    }
+
     @Override
     public Path parsePath(URI uri) {
         return delegate.getPath(uri.getPath());
@@ -43,7 +66,8 @@ public class NekoJSFileSystem implements FileSystem {
     @Override
     public void checkAccess(Path path, Set<? extends AccessMode> modes, LinkOption... linkOptions) throws IOException {
         Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
-        
+        verifiedPath = resolveVirtualScript(verifiedPath);
+
         if (modes.contains(AccessMode.READ)) {
             if (!Files.exists(verifiedPath)) {
                 throw new NoSuchFileException(verifiedPath.toString());
@@ -81,6 +105,7 @@ public class NekoJSFileSystem implements FileSystem {
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        verifiedPath = resolveVirtualScript(verifiedPath);
 
         if (!options.contains(StandardOpenOption.WRITE) && !options.contains(StandardOpenOption.APPEND)) {
             String fileName = verifiedPath.getFileName().toString();
@@ -93,11 +118,8 @@ public class NekoJSFileSystem implements FileSystem {
                 if (compiler != null) {
                     try {
                         String rawCode = Files.readString(verifiedPath);
-
                         String compiledJs = compiler.compile(verifiedPath, rawCode);
-
                         byte[] bytes = compiledJs.getBytes(StandardCharsets.UTF_8);
-
                         return new ReadOnlyMemoryByteChannel(bytes);
 
                     } catch (Exception e) {
@@ -108,6 +130,20 @@ public class NekoJSFileSystem implements FileSystem {
         }
 
         return Files.newByteChannel(verifiedPath, options, attrs);
+    }
+
+    @Override
+    public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
+        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        verifiedPath = resolveVirtualScript(verifiedPath);
+        return Files.readAttributes(verifiedPath, attributes, options);
+    }
+
+    @Override
+    public Path toRealPath(Path path, LinkOption... linkOptions) throws IOException {
+        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        verifiedPath = resolveVirtualScript(verifiedPath);
+        return verifiedPath.toRealPath(linkOptions);
     }
 
     private static class ReadOnlyMemoryByteChannel implements SeekableByteChannel {
@@ -170,7 +206,6 @@ public class NekoJSFileSystem implements FileSystem {
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
         Path verifiedPath = NekoJSPaths.verifyInsideGameDir(dir);
-        
         DirectoryStream<Path> delegateStream = Files.newDirectoryStream(verifiedPath);
         return new FilteredDirectoryStream(delegateStream, filter);
     }
@@ -185,18 +220,6 @@ public class NekoJSFileSystem implements FileSystem {
     @Override
     public Path toAbsolutePath(Path path) {
         return resolvePath(path).toAbsolutePath();
-    }
-
-    @Override
-    public Path toRealPath(Path path, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
-        return verifiedPath.toRealPath(linkOptions);
-    }
-
-    @Override
-    public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
-        return Files.readAttributes(verifiedPath, attributes, options);
     }
 
     @Override
