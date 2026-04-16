@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.BindingsRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
+import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 /**
  * NekoJS 插件接口。<p>
@@ -43,4 +44,6 @@ public interface NekoJSPlugin {
      * 注册配方命名空间，如 {@code event.recipes.minecraft}
      */
     default void registerRecipeNamespaces(RecipeNamespaceRegister registry) {}
+
+    default void registerScriptProperty(ScriptPropertyRegistry registry) {}
 }

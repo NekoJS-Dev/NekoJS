@@ -15,6 +15,8 @@ import com.tkisor.nekojs.bindings.static_access.IngredientJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.prop.ScriptProperty;
+import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -109,5 +111,13 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
         registry.register("minecraft", MinecraftRecipeHandler::new);
+    }
+
+    @Override
+    public void registerScriptProperty(ScriptPropertyRegistry registry) {
+        registry.register(ScriptProperty.AFTER);
+        registry.register(ScriptProperty.MODLOADED);
+        registry.register(ScriptProperty.DISABLE);
+        registry.register(ScriptProperty.PRIORITY);
     }
 }

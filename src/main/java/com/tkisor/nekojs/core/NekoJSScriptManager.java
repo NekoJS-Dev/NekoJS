@@ -10,6 +10,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
+import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
@@ -22,12 +23,18 @@ import java.util.*;
 public final class NekoJSScriptManager {
 
     private final ScriptTypedValue<Context> contexts = ScriptTypedValue.ofNullable(this::initContext);
-
     private final ScriptTypedValue<List<ScriptContainer>> scripts = ScriptTypedValue.of(type -> new ArrayList<>());
+    private final ScriptPropertyRegistry scriptPropertyRegistry = new ScriptPropertyRegistry.Impl();
 
     private static final Map<Context, ScriptType> CONTEXT_TYPE_MAP = Collections.synchronizedMap(new WeakHashMap<>());
 
     public NekoJSScriptManager() {
+    }
+
+    public void registerScriptProperty() {
+        for (var plugin : NekoJSPluginManager.getPlugins()) {
+            plugin.registerScriptProperty(scriptPropertyRegistry);
+        }
     }
 
     /**
