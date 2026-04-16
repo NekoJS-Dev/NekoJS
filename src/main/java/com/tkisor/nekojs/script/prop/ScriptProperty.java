@@ -26,11 +26,11 @@ public final class ScriptProperty<T> {
             .toList()
     );
     /// ```
-    /// // disable
+    /// // disable:
     /// or
     /// // disable: anything here, we don't care about the content
     /// ```
-    public static final ScriptProperty<Boolean> DISABLE = new ScriptProperty<>("disable", true, s -> true);
+    public static final ScriptProperty<Boolean> DISABLE = new ScriptProperty<>("disable", false, s -> true);
     /// ```
     /// runs after <root>/aaa/bbb.js
     /// // after: aaa/bbb.js

@@ -67,7 +67,7 @@ public final class NekoJSScriptManager {
         }
 
         for (ScriptContainer script : scripts) {
-            if (!script.disabled) {
+            if (script.shouldRun()) {
                 runScript(ctx, script);
             }
         }

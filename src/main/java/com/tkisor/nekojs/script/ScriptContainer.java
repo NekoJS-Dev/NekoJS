@@ -4,6 +4,7 @@ import com.tkisor.nekojs.script.prop.ScriptProperties;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import net.minecraft.resources.Identifier;
+import net.neoforged.fml.ModList;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,6 +27,12 @@ public final class ScriptContainer {
 
     public boolean isType(ScriptType type) {
         return this.type == type;
+    }
+
+    public boolean shouldRun() {
+        return !disabled
+            && !properties.getOrDefault(ScriptProperty.DISABLE)
+            && properties.getOrDefault(ScriptProperty.MODLOADED).stream().allMatch(ModList.get()::isLoaded);
     }
 
     public void preload() {
