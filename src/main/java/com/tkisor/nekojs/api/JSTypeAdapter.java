@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api;
 
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 /**
  * JS 类型适配器接口。<p>
@@ -16,7 +16,7 @@ public interface JSTypeAdapter<T> {
      */
     boolean canConvert(Value value);
     /**
-     * 将 JS 值转换为目标类型
+     * 将 JS 值转换为目标类型，如果无法转换应直接抛出异常更为稳妥，而非返回null
      */
     T convert(Value value);
 }

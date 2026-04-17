@@ -3,14 +3,14 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
+import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.Source;
+import graal.graalvm.polyglot.SourceSection;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
-import net.minecraft.client.resources.language.I18n;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Source;
 
 import java.nio.file.Path;
 import java.util.Collection;
@@ -20,51 +20,115 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NekoErrorTracker {
     private static final Map<Identifier, ScriptError> ERRORS = new ConcurrentHashMap<>();
 
+    private static final String[] HOST_FRAME_BLACKLIST = {
+            "org.graalvm.",
+            "com.oracle.truffle.",
+            "jdk.internal.reflect.",
+            "net.neoforged.bus.",
+            "com.tkisor.nekojs.utils.event.",
+            "com.tkisor.nekojs.api.event.EventBus",
+    };
+
     public static void record(ScriptContainer script, Throwable error) {
         ERRORS.put(script.id, new ScriptError(script, error));
     }
 
-    public static void recordEventError(PolyglotException e) {
-        String pathStr = "null_script";
-        int line = -1;
+    public static void recordEventError(ScriptType currentType, PolyglotException e) {
+        String pathStr = "Unknown";
+        int mappedLine = -1;
 
-        if (e.getSourceLocation() != null) {
-            line = e.getSourceLocation().getStartLine();
-            Source source = e.getSourceLocation().getSource();
+        SourceSection loc = getBestSourceLocation(e);
+
+        if (loc != null) {
+            Source source = loc.getSource();
             if (source != null) {
-                if (source.getPath() != null) {
-                    try {
-                        pathStr = NekoJSPaths.ROOT.relativize(Path.of(source.getPath())).toString().replace('\\', '/');
-                    } catch (Exception ex) {
-                        pathStr = source.getPath().replace('\\', '/');
-                    }
-                } else if (source.getURI() != null) {
-                    pathStr = source.getURI().toString().replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
-                } else {
-                    pathStr = source.getName();
-                }
+                pathStr = extractRelativePath(source);
             }
+            mappedLine = SourceMapRegistry.getMappedLine(pathStr, loc.getStartLine());
         }
 
-        ScriptType targetType = ScriptType.SERVER;
-        String lowerPath = pathStr.toLowerCase();
-        for (ScriptType type : ScriptType.all()) {
-            if (lowerPath.contains(type.name + "_scripts")) {
-                targetType = type;
-                break;
-            }
-        }
+        String cleanTrace = getMappedStackTrace(e);
+        currentType.logger().error("脚本事件触发异常:\n{}", cleanTrace);
 
-        targetType.logger().error("[{}]: {}", pathStr, e.getMessage(), e);
-
-        String uniqueHashInput = pathStr + "_" + line + "_" + e.getMessage();
+        String uniqueHashInput = currentType.name() + "_" + pathStr + "_" + mappedLine + "_" + e.getMessage();
         String safeHash = Integer.toHexString(uniqueHashInput.hashCode());
         Identifier runtimeId = Identifier.fromNamespaceAndPath("nekojs", "rt_" + safeHash);
 
         if (ERRORS.containsKey(runtimeId)) {
             ERRORS.get(runtimeId).incrementOccurrence();
         } else {
-            ERRORS.put(runtimeId, new ScriptError(runtimeId, pathStr, e));
+            ERRORS.put(runtimeId, new ScriptError(currentType, runtimeId, pathStr, e));
+        }
+    }
+
+    public static SourceSection getBestSourceLocation(PolyglotException e) {
+        if (e.getSourceLocation() != null) {
+            return e.getSourceLocation();
+        }
+        for (PolyglotException.StackFrame frame : e.getPolyglotStackTrace()) {
+            if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
+                return frame.getSourceLocation();
+            }
+        }
+        return null;
+    }
+
+    public static String getMappedStackTrace(PolyglotException e) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(e.getMessage()).append("\n");
+
+        for (PolyglotException.StackFrame frame : e.getPolyglotStackTrace()) {
+            if (frame.isGuestFrame()) {
+                SourceSection loc = frame.getSourceLocation();
+                if (loc != null && loc.getSource() != null) {
+                    String pathStr = extractRelativePath(loc.getSource());
+                    int rawLine = loc.getStartLine();
+
+                    int mappedLine = SourceMapRegistry.getMappedLine(pathStr, rawLine);
+
+                    String rootName = frame.getRootName();
+                    if (rootName == null || rootName.isEmpty() || rootName.equals(":program")) {
+                        rootName = "<anonymous>";
+                    }
+
+                    // 输出格式:    at functionName (path/to/file.ts:line)
+                    sb.append("    at ").append(rootName)
+                            .append(" (").append(pathStr).append(":").append(mappedLine).append(")\n");
+                } else {
+                    String rootName = frame.getRootName() != null && !frame.getRootName().isEmpty() ? frame.getRootName() : "<anonymous>";
+                    sb.append("    at ").append(rootName).append(" (Unknown Source)\n");
+                }
+            } else if (frame.isHostFrame()) {
+                String hostStr = frame.toHostFrame().toString();
+
+                boolean isNoise = false;
+                for (String blacklisted : HOST_FRAME_BLACKLIST) {
+                    if (hostStr.contains(blacklisted)) {
+                        isNoise = true;
+                        break;
+                    }
+                }
+
+                if (!isNoise) {
+                    sb.append("    at [Java] ").append(hostStr).append("\n");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String extractRelativePath(Source source) {
+        if (source.getPath() != null) {
+            try {
+                return NekoJSPaths.ROOT.relativize(Path.of(source.getPath())).toString().replace('\\', '/');
+            } catch (Exception ex) {
+                return source.getPath().replace('\\', '/');
+            }
+        } else if (source.getURI() != null) {
+            return source.getURI().toString().replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
+        } else {
+            return source.getName();
         }
     }
 
@@ -76,6 +140,15 @@ public class NekoErrorTracker {
         ERRORS.clear();
     }
 
+    public static void clearByType(ScriptType type) {
+        if (type == null) return;
+
+        ERRORS.entrySet().removeIf(entry -> {
+            ScriptError error = entry.getValue();
+            return error.getScriptType() == type;
+        });
+    }
+
     public static boolean hasErrors() {
         return !ERRORS.isEmpty();
     }
@@ -84,9 +157,6 @@ public class NekoErrorTracker {
         return ERRORS.values();
     }
 
-    /**
-     * 生成带有可点击链接的错误报告组件
-     */
     public static Component getErrorComponent() {
         int errorCount = ERRORS.size();
         MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);

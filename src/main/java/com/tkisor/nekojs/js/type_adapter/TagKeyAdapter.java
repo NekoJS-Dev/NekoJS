@@ -5,7 +5,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 import java.util.HashMap;
 import java.util.Map;

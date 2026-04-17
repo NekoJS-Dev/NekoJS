@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.script.ScriptType;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyObject;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.proxy.ProxyObject;
 
 /**
  * @author ZZZank

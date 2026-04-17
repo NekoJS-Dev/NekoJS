@@ -1,7 +1,9 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.CancellableEventBus;
 import com.tkisor.nekojs.utils.event.EventBus;
 import com.tkisor.nekojs.utils.event.EventListenerToken;
@@ -9,9 +11,9 @@ import com.tkisor.nekojs.utils.event.dispatch.DispatchCancellableEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import net.neoforged.bus.api.ICancellableEvent;
-import org.graalvm.polyglot.PolyglotException;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.proxy.ProxyExecutable;
+import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -83,9 +85,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         // 临时的错误捕获方案，也许后续需要继续优化
         try {
             return this.bus.post(event);
-        } catch (PolyglotException e) {
-            NekoErrorTracker.recordEventError(e);
-            return false;
+//        } catch (PolyglotException e) {
+//            NekoErrorTracker.recordEventError(e);
+//            return false;
         } catch (Exception e) {
             NekoJS.LOGGER.error("CancellableEventBus执行异常: {}", e.getMessage(), e);
             return false;
@@ -97,8 +99,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             // 临时的错误捕获方案，也许后续需要继续优化
             try {
                 return ((DispatchEventBus<EVENT, KEY>) bus).post(event, key);
-            } catch (PolyglotException e) {
-                NekoErrorTracker.recordEventError(e);
+//            } catch (PolyglotException e) {
+//                NekoErrorTracker.recordEventError(e);
             } catch (Exception e) {
                 NekoJS.LOGGER.error("EventBus执行异常: {}", e.getMessage(), e);
             }
@@ -134,41 +136,70 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> register(Value listener) {
-        var bus = this.bus;
-        return bus.listen((Consumer<EVENT>) listener.as(Consumer.class));
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
+
+        return this.bus.listen(event -> {
+            try {
+                if (listener.canExecute()) {
+                    listener.executeVoid(event);
+                }
+            } catch (PolyglotException e) {
+                NekoErrorTracker.recordEventError(type, e);
+            }
+        });
     }
 
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
         var bus = (CancellableEventBus<EVENT>) this.bus;
+
         return bus.listen(event -> {
-            if (listener.canExecute()) {
-                Value result = listener.execute(event);
-                // 如果脚本没有 return 值，或者返回了其他类型，默认视为 false (不取消)
-                return result.isBoolean() && result.asBoolean();
+            try {
+                if (listener.canExecute()) {
+                    Value result = listener.execute(event);
+                    return result.isBoolean() && result.asBoolean();
+                }
+            } catch (PolyglotException e) {
+                NekoErrorTracker.recordEventError(type, e);
             }
-            return false;
+            return false; // 出错时默认不取消事件
         });
     }
 
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
         var bus = (DispatchEventBus<EVENT, KEY>) this.bus;
+
         return bus.listen(
-            key.as(bus.dispatchKey().keyType()),
-            (Consumer<EVENT>) listener.as(Consumer.class)
+                key.as(bus.dispatchKey().keyType()),
+                event -> {
+                    try {
+                        if (listener.canExecute()) {
+                            listener.executeVoid(event);
+                        }
+                    } catch (PolyglotException e) {
+                        NekoErrorTracker.recordEventError(type, e);
+                    }
+                }
         );
     }
 
     private EventListenerToken<EVENT> registerDispatchCancellable(Value listener, Value key) {
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
+
         return bus.listen(
-            key.as(bus.dispatchKey().keyType()),
-                // 也许这也可能有问题？
+                key.as(bus.dispatchKey().keyType()),
                 event -> {
-                    if (listener.canExecute()) {
-                        Value result = listener.execute(event);
-                        return result.isBoolean() && result.asBoolean();
+                    try {
+                        if (listener.canExecute()) {
+                            Value result = listener.execute(event);
+                            return result.isBoolean() && result.asBoolean();
+                        }
+                    } catch (PolyglotException e) {
+                        NekoErrorTracker.recordEventError(type, e);
                     }
-                    return false;
+                    return false; // 出错时默认不取消事件
                 }
         );
     }

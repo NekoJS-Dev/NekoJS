@@ -7,7 +7,7 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public class PersistentDataJS {
     private final ItemStack rawStack;

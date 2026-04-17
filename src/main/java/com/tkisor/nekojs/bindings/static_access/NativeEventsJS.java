@@ -4,7 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.common.NeoForge;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 import java.util.ArrayList;
 import java.util.List;

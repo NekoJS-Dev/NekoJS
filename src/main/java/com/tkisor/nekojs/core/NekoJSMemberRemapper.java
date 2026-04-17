@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
-import zank.mods.graalmc.api.MemberRemapper;
+import graal.mod.api.MemberRemapper;
 
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;

@@ -6,11 +6,11 @@ import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.script.ScriptType;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.io.IOAccess;
+import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.Engine;
+import graal.graalvm.polyglot.HostAccess;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 
 import java.io.OutputStream;
@@ -39,7 +39,7 @@ public final class NekoSandboxBuilder {
             "java.io", "java.nio", "java.net", "java.util.jar", "java.util.zip",
             "sun", "com.sun", "org.objectweb.asm", "org.spongepowered.asm",
             "io.netty", "org.openjdk.nashorn", "jdk.nashorn", "org.lwjgl.system",
-            "javax.script", "org.graalvm.polyglot",
+            "javax.script", "graal.graalvm.polyglot",
             "net.neoforged.fml", "net.neoforged.accesstransformer", "net.neoforged.coremod",
             "cpw.mods.modlauncher", "cpw.mods.gross"
     );

@@ -7,7 +7,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import org.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.Value;
 
 public class ItemAdapter implements JSTypeAdapter<Item> {
     @Override

@@ -33,7 +33,6 @@ public final class NekoJSCommands {
                             source.sendSystemMessage(Component.translatable("nekojs.command.reloading"));
 
                             try {
-                                NekoErrorTracker.clearAll();
                                 NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
 
                                 if (NekoErrorTracker.hasErrors()) {
