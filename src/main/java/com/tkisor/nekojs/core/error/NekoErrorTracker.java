@@ -52,7 +52,7 @@ public class NekoErrorTracker {
         }
 
         String cleanTrace = getMappedStackTrace(e);
-        currentType.logger().error("脚本事件触发异常:\n{}", cleanTrace);
+        currentType.logger().debug("Script event trigger exception:\n{}", cleanTrace);
 
         String uniqueHashInput = currentType.name() + "_" + pathStr + "_" + mappedLine + "_" + e.getMessage();
         String safeHash = Integer.toHexString(uniqueHashInput.hashCode());
@@ -78,7 +78,7 @@ public class NekoErrorTracker {
     }
 
     /**
-     * 核心新增：智能修正行号，遇到注释或空行自动向下找
+     * 修正行号，遇到注释或空行自动向下找
      */
     public static int getRealCodeLine(String pathStr, int mappedLine) {
         if (mappedLine <= 0) return mappedLine;

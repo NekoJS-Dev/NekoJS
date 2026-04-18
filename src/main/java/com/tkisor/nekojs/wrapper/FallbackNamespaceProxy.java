@@ -33,10 +33,10 @@ public class FallbackNamespaceProxy implements ProxyObject {
                     event.custom(json);
 
                 } catch (Exception e) {
-                    NekoJS.LOGGER.error("[NekoJS] Fallback JSON 解析失败: ", e);
+                    NekoJS.LOGGER.debug("Failed to parse fallback JSON: ", e);
                 }
             } else {
-                NekoJS.LOGGER.error("[NekoJS] 找不到 {}:{} 处理器，且参数非标准 JSON 对象。", namespace, recipeType);
+                NekoJS.LOGGER.debug("Handler {}:{} not found, and arguments are not a valid JSON object.", namespace, recipeType);
             }
             return null;
         };

@@ -36,10 +36,10 @@ public final class NekoBindings {
                     String existingClassPath = existing.getType().getName();
 
                     throw new IllegalArgumentException(
-                            "Binding 变量冲突: '" + name + "'\n" +
-                                    " -> 试图注册到 [" + type.name() + "] 环境 (类路径: " + newClassPath + ")\n" +
-                                    " -> 但该变量名已被 [" + existingType.name() + "] 环境占用 (类路径: " + existingClassPath + ")！\n" +
-                                    "请检查代码或排查是否有插件冲突。"
+                            "Duplicate binding name: '" + name + "'\n" +
+                                    " -> New: [" + type.name() + "] (" + newClassPath + ")\n" +
+                                    " -> Existing: [" + existingType.name() + "] (" + existingClassPath + ")\n" +
+                                    "Possible plugin conflict or duplicate registration."
                     );
                 }
             }

@@ -50,7 +50,6 @@ public class NekoJSNetwork {
         registrar.playToClient(OpenWorkspacePacket.TYPE, OpenWorkspacePacket.STREAM_CODEC, NekoJSNetwork::handleOpenWorkspaceOnClient);
     }
 
-    /* ================= 核心工具方法：扫描并过滤脚本 ================= */
     public static Map<String, String> collectAllValidScripts(Path rootDir) {
         Map<String, String> files = new HashMap<>();
         if (!Files.exists(rootDir) || !Files.isDirectory(rootDir)) return files;
@@ -79,7 +78,6 @@ public class NekoJSNetwork {
         context.enqueueWork(() -> ClientHandler.receiveServerScript(data.content()));
     }
 
-    // 客户端接收通用回执
     private static void handleSyncFeedbackOnClient(SyncFeedbackPacket data, IPayloadContext context) {
         context.enqueueWork(() -> ClientHandler.processFeedback(data.success(), data.message()));
     }
@@ -103,7 +101,6 @@ public class NekoJSNetwork {
             }
         }
 
-        // 将回执分发给 GUI 面板，如果面板关了就在公屏提示
         private static void processFeedback(boolean success, String message) {
             if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
                 screen.onSyncFeedback(success, message);
@@ -204,10 +201,9 @@ public class NekoJSNetwork {
                     Files.createDirectories(targetPath.getParent());
                     Files.writeString(targetPath, entry.getValue());
                 }
-                // 返回成功回执
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "成功接收并覆盖了 " + data.files().size() + " 个脚本文件！(请使用 /reload 生效)"));
             } catch (Exception e) {
-                NekoJS.LOGGER.error("批量同步失败", e);
+                NekoJS.LOGGER.debug("Failed to sync scripts from client", e);
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "批量同步失败: " + e.getMessage()));
             }
         });

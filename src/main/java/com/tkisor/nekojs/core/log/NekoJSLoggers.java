@@ -49,7 +49,7 @@ public final class NekoJSLoggers {
     private static final List<CollapsingAppender> APPENDERS = new CopyOnWriteArrayList<>();
 
     static {
-        // 每 1000 毫秒（1秒）执行一次批量刷写
+        // 每 1000 毫秒批量刷写
         FLUSHER.scheduleAtFixedRate(() -> {
             for (CollapsingAppender appender : APPENDERS) {
                 appender.flush();
@@ -93,8 +93,7 @@ public final class NekoJSLoggers {
                 Files.move(file, backupFile, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
-            System.err.println("[NekoJS] 无法为脚本创建日志文件或备份: " + file);
-            NekoJS.LOGGER.error("[NekoJS] 无法为脚本创建日志文件或备份: {}", file, e);
+            NekoJS.LOGGER.error("[NekoJS] Failed to create or backup log file for script: {}", file, e);
         }
 
         PatternLayout layout = PatternLayout.newBuilder()
@@ -177,7 +176,7 @@ public final class NekoJSLoggers {
             if (lastEvent != null) {
                 String newMsg = lastEvent.getMessage().getFormattedMessage();
                 if (duplicateCount > 1) {
-                    newMsg += " (重复 x" + duplicateCount + ")";
+                    newMsg += " (x" + duplicateCount + ")";
                 }
 
                 LogEvent modified = new Log4jLogEvent.Builder(lastEvent)

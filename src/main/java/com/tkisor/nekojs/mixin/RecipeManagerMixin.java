@@ -74,13 +74,13 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         this.nekojs$rawJsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
 
         int afterCount = this.nekojs$rawJsons.size();
-        NekoJS.LOGGER.info("[NekoJS] 经过底层的条件求值，剔除了 {} 个未满足前置的配方。", beforeCount - afterCount);
+        NekoJS.LOGGER.debug("[NekoJS] Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries);
         try {
             ServerEvents.RECIPES.post(eventJS);
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] 配方脚本执行崩溃: ", e);
+            NekoJS.LOGGER.error("[NekoJS] Recipe script execution crashed:", e);
         }
 
         List<RecipeHolder<?>> newHolders = new ArrayList<>();
@@ -89,15 +89,14 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 Recipe<?> recipe = Recipe.CODEC.parse(this.registries.createSerializationContext(JsonOps.INSTANCE), entry.getValue()).getOrThrow(JsonParseException::new);
                 newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
             } catch (Exception e) {
-                NekoJS.LOGGER.error("[NekoJS] 配方不合法 {}: {}", entry.getKey(), e.getMessage());
+                NekoJS.LOGGER.debug("[NekoJS] Invalid recipe {}: {}", entry.getKey(), e.getMessage());
             }
         }
 
         this.recipes = RecipeMap.create(newHolders);
         this.nekojs$rawJsons.clear();
 
-//        NekoJS.LOGGER.info("[NekoJS] 脚本执行完毕，当前配方总数: {}", this.recipes.values().size());
-        ScriptType.SERVER.logger().info("[NekoJS] 脚本执行完毕，当前配方总数: {}", this.recipes.values().size());
+        ScriptType.SERVER.logger().debug("[NekoJS] Script execution completed, total recipes: {}", this.recipes.values().size());
         List<ServerPlayer> players = null;
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();

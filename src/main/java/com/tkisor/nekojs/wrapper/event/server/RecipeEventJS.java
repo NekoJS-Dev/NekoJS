@@ -64,7 +64,7 @@ public class RecipeEventJS {
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
             if (replaceInputInJson(jsonObj, match, replacementJson)) replaced++;
         }
-        NekoJS.LOGGER.info("[NekoJS] 成功拦截 JSON 树并替换了 {} 个配方的输入材料", replaced);
+        NekoJS.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced input ingredients in {} recipes", replaced);
     }
 
     private boolean replaceInputInJson(JsonObject recipeJson, Ingredient match, JsonElement replacementJson) {
@@ -135,7 +135,7 @@ public class RecipeEventJS {
                 }
             }
         }
-        NekoJS.LOGGER.info("[NekoJS] 成功拦截 JSON 树并篡改了 {} 个配方的输出产物", replaced);
+        NekoJS.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced outputs in {} recipes", replaced);
     }
 
     public void remove(RecipeFilter filter) {
@@ -145,7 +145,7 @@ public class RecipeEventJS {
             if (!entry.getValue().isJsonObject()) return false;
             return passFilter(entry.getKey(), entry.getValue().getAsJsonObject(), filter);
         });
-        NekoJS.LOGGER.info("[NekoJS] 过滤器匹配并移除了 {} 个配方", before - jsons.size());
+        NekoJS.LOGGER.debug("[NekoJS] Removed {} recipes matching the filter", before - jsons.size());
     }
 
     private boolean passFilter(Identifier id, JsonObject jsonObj, RecipeFilter filter) {
@@ -158,10 +158,9 @@ public class RecipeEventJS {
         }
     }
 
-    // ========== 基础创建方法 (改为返回 Builder) ==========
     public RecipeJsonBuilder custom(JsonObject recipeJson) {
         if (recipeJson == null || !recipeJson.has("type") || !recipeJson.get("type").isJsonPrimitive()) {
-            NekoJS.LOGGER.error("[NekoJS] custom 配方注册失败：缺少必要的 'type' 字段！");
+            NekoJS.LOGGER.debug("[NekoJS] Failed to register custom recipe: missing required 'type' field!");
             return null;
         }
         return new RecipeJsonBuilder(this, recipeJson, "custom");

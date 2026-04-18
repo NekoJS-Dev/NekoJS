@@ -65,7 +65,7 @@ public class NekoHostIdentifier {
             }
             return hexString.toString();
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] SHA-256 生成失败", e);
+            NekoJS.LOGGER.debug("[NekoJS] SHA-256 generation failed", e);
             // 极端情况兜底
             return String.valueOf(input.hashCode());
         }
@@ -81,7 +81,7 @@ public class NekoHostIdentifier {
                 return savedCode.equals(generateHostCode());
             }
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] 无法读取主机码文件", e);
+            NekoJS.LOGGER.debug("[NekoJS] Failed to read host code file", e);
         }
         return false;
     }
@@ -92,9 +92,9 @@ public class NekoHostIdentifier {
     public static void saveHostCode() {
         try {
             Files.writeString(HOST_CODE_FILE, generateHostCode());
-            NekoJS.LOGGER.debug("[NekoJS] 已保存机器硬件指纹: {}", HOST_CODE_FILE.toAbsolutePath());
+            NekoJS.LOGGER.debug("[NekoJS] Host code saved to: {}", HOST_CODE_FILE.toAbsolutePath());
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] 无法保存主机码文件", e);
+            NekoJS.LOGGER.debug("[NekoJS] Failed to save host code file", e);
         }
     }
 }

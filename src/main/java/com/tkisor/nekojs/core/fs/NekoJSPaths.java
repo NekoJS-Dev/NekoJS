@@ -59,7 +59,7 @@ public final class NekoJSPaths {
         try {
             Files.createDirectories(dir);
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] 无法创建目录: {}", dir, e);
+            NekoJS.LOGGER.error("[NekoJS] Failed to create directory: {}", dir, e);
         }
     }
 
@@ -78,9 +78,9 @@ public final class NekoJSPaths {
                             "# WARNING: Setting disableStrictSandbox to true will allow scripts to access dangerous Java classes (e.g., IO, Reflection).");
                 }
             }
-            NekoJS.LOGGER.info("[NekoJS] 引擎配置加载完毕。沙盒禁用状态: {}", disableStrictSandbox);
+            NekoJS.LOGGER.info("[NekoJS] Engine config loaded. Sandbox disabled status: {}", disableStrictSandbox);
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] 无法加载 engine.properties", e);
+            NekoJS.LOGGER.error("[NekoJS] Failed to load engine.properties", e);
         }
     }
 
@@ -102,14 +102,14 @@ public final class NekoJSPaths {
         if (Files.notExists(README)) {
             try {
                 Files.writeString(README, """
-                      === NekoJS 脚本目录说明 ===
-                      - startup_scripts: 游戏启动时加载，用于注册物品、方块。修改后需要重启游戏。
-                      - server_scripts: 存档/服务器加载时运行，用于配方、事件监听。可使用 /reload 重载。
-                      - client_scripts: 仅在客户端运行，用于 GUI、按键绑定等。
-                      - 提示: 自动生成的类型声明文件 (.d.ts) 位于游戏根目录的 .probe 文件夹中，请勿手动修改。
-                      """.trim());
+                        === NekoJS Script Directory Guide ===
+                        - startup_scripts: Loaded during game startup. Used for registering items and blocks. Changes require a full game restart.
+                        - server_scripts: Executed when the world/server loads. Used for recipes and event handling. Can be reloaded with /reload.
+                        - client_scripts: Runs on the client only. Used for GUI, key bindings, etc.
+                        - Note: Automatically generated type declaration files (.d.ts) are located in the .probe folder in the game root directory. Do not modify them manually.
+                        """.trim());
             } catch (Exception ex) {
-                NekoJS.LOGGER.error("[NekoJS] 无法创建 README.txt 文件", ex);
+                NekoJS.LOGGER.error("[NekoJS] Failed to create README.txt", ex);
             }
         }
     }
@@ -145,10 +145,11 @@ public final class NekoJSPaths {
                 String jsonContent = GSON.toJson(event.getModel());
                 Files.writeString(configPath, jsonContent);
             } catch (Exception e) {
-                NekoJS.LOGGER.error("[NekoJS] 无法创建配置文件: {}", configPath, e);
+                NekoJS.LOGGER.error("[NekoJS] Failed to create config file: {}", configPath, e);
             }
         }
     }
 
-    private NekoJSPaths() {}
+    private NekoJSPaths() {
+    }
 }

@@ -29,11 +29,10 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
     @Override
     public boolean canConvert(Value value) {
-        // 1. 支持纯字符串: "#minecraft:logs" 或 "block|minecraft:logs"
         if (value.isString()) {
             return true;
         }
-        // 2. 支持 JS 对象: { registry: "block", tag: "minecraft:logs" }
+        // { registry: "block", tag: "minecraft:logs" }
         if (value.hasMembers() && value.hasMember("tag")) {
             return true;
         }
@@ -43,14 +42,13 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public TagKey convert(Value value) {
-        String registryName = "item"; // 默认假设为物品标签
+        String registryName = "item";
         String tagPath = "";
 
-        // === 解析字符串 ===
         if (value.isString()) {
             String str = value.asString();
             if (str.startsWith("#")) {
-                str = str.substring(1); // 自动忽略 # 前缀
+                str = str.substring(1); // 忽略 # 前缀
             }
 
             // 检查是否包含注册表前缀，例如 "block|minecraft:logs"

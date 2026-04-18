@@ -43,6 +43,8 @@ public class NekoJS {
 
     public static NekoJSScriptManager SCRIPT_MANAGER;
 
+    public static final boolean DEBUG = true;
+
 
     public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
         MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
@@ -60,7 +62,7 @@ public class NekoJS {
 
         SCRIPT_MANAGER.registerScriptProperty();
 
-        LOGGER.info("[NekoJS] 正在执行 STARTUP 脚本...");
+//        LOGGER.info("[NekoJS] 正在执行 STARTUP 脚本...");
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
 //        SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);
@@ -109,12 +111,12 @@ public class NekoJS {
                         NekoJSPlugin plugin =
                                 (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
                         event.register(plugin);
-                        LOGGER.info("[NekoJS] Registered plugin: {}", clazz.getName());
+                        LOGGER.debug("[NekoJS] Registered plugin: {}", clazz.getName());
                     } catch (Throwable t) {
                         LOGGER.error("[NekoJS] Failed to instantiate plugin {}", clazz.getName(), t);
                     }
                 },
-                () -> LOGGER.info("[NekoJS] Plugin scan finished")
+                () -> LOGGER.debug("[NekoJS] Plugin scan finished")
         );
     }
 
@@ -130,7 +132,7 @@ public class NekoJS {
         try {
             NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
         } catch (Exception e) {
-            ScriptType.SERVER.logger().error("[NekoJS] 脚本重载失败: ", e);
+            ScriptType.SERVER.logger().error("Script overload failed: ", e);
         }
     }
 

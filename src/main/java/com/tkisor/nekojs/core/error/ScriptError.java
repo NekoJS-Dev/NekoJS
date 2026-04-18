@@ -32,7 +32,7 @@ public class ScriptError {
     @Getter
     private String sourceCodeSnippet = "";
 
-    private String fallbackPath = "未知位置";
+    private String fallbackPath = "Unknown location";
 
     @Getter
     private int occurrenceCount = 1;
@@ -114,7 +114,7 @@ public class ScriptError {
         this.occurrenceCount++;
     }
 
-    public String getErrorMessage() { return errorMessage != null ? errorMessage : "未知错误"; }
+    public String getErrorMessage() { return errorMessage != null ? errorMessage : "Unknown error"; }
 
     public String getDisplayPath() {
         if (script != null) {

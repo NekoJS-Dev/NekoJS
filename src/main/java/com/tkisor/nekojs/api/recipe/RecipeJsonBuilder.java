@@ -43,7 +43,7 @@ public class RecipeJsonBuilder {
         }
 
         if (parsedId == null) {
-            NekoJS.LOGGER.error("[NekoJS] 非法配方 ID: {}", newId);
+            NekoJS.LOGGER.debug("[NekoJS] Invalid recipe ID: {}", newId);
             parsedId = this.currentId;
         }
 

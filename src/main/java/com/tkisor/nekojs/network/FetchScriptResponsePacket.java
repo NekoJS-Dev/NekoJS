@@ -13,7 +13,6 @@ public record FetchScriptResponsePacket(String path, String content) implements 
     );
 
     public FetchScriptResponsePacket(FriendlyByteBuf buf) {
-        // 允许传输最大 1MB 的单文件代码
         this(buf.readUtf(1024), buf.readUtf(1048576));
     }
     public void write(FriendlyByteBuf buf) {

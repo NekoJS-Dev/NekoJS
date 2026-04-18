@@ -15,7 +15,7 @@ public final class NekoRecipeNamespaces {
 
     static void register(String namespace, Function<RecipeEventJS, Object> factory) {
         if (NAMESPACES.containsKey(namespace)) {
-            throw new IllegalArgumentException("Recipe Namespace 命名空间 '" + namespace + "' 已被注册！请检查是否有插件冲突。");
+            throw new IllegalArgumentException("Recipe namespace '" + namespace + "' is already registered. Possible plugin conflict.");
         }
         NAMESPACES.put(namespace, factory);
     }

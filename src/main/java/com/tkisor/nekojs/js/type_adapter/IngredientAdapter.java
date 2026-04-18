@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.js.type_adapter;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.script.ScriptType;
@@ -45,7 +44,6 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
             return null; // 配方系统通常用 null 表示“空槽位”
         }
 
-        // 1. Java 对象快速通道
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
             if (obj instanceof IngredientJS wrapper) return wrapper.unwrap();
@@ -54,12 +52,11 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
         }
 
         try {
-            // 2. 单一字符串（占比 95% 以上的最常见情况）
             if (value.isString()) {
                 return resolveSingle(value.asString());
             }
 
-            // 3. 数组混合模式 (例如 ["minecraft:apple", "#minecraft:logs"])
+            // ["minecraft:apple", "#minecraft:logs"])
             if (value.hasArrayElements()) {
                 List<Holder<Item>> holders = new ArrayList<>();
                 for (long i = 0; i < value.getArraySize(); i++) {
@@ -75,7 +72,7 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
         } catch (Exception e) {
             ScriptType type = NekoJSScriptManager.getTypeFromContext(value.getContext());
-            type.logger().error("材料转换失败: {}", e.getMessage());
+            type.logger().debug("Ingredient conversion failed: {}", e.getMessage());
         }
 
         return fallback();

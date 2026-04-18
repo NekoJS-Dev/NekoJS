@@ -45,9 +45,9 @@ public class Binding implements WithScriptType {
     // ================= 指定环境 (SERVER, CLIENT, STARTUP 等) =================
 
     public static Binding of(ScriptType targetType, String name, Object object) {
-        if (object instanceof Class<?>) {
-            throw new IllegalArgumentException("请使用 Binding.of(targetType, name, Class) 来绑定静态类");
-        }
+//        if (object instanceof Class<?>) {
+//            throw new IllegalArgumentException("请使用 Binding.of(targetType, name, Class) 来绑定静态类");
+//        }
         return new Binding(name, object, false, targetType);
     }
 

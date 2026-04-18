@@ -33,8 +33,6 @@ public enum ScriptType {
     }
 
     public Logger logger() {
-        // 当你第一次调用 type.logger() 时，LoggerHolder 才会被 JVM 加载！
-        // 此时 ScriptType 和 ScriptTypedValue 早就已经安安全全地加载完了，LENGTH 绝对是 4！
         return LoggerHolder.LOGGERS.at(this);
     }
 

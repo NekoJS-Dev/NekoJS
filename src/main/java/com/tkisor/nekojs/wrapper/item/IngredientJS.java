@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.wrapper.item;
 
-import com.tkisor.nekojs.NekoJS; // 假设你有这个主类用于输出日志
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.NekoWrapper;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -40,7 +40,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
 
     private String formatId(String inputStr) {
         if (inputStr == null || inputStr.isBlank()) {
-            throw new IllegalArgumentException("[NekoJS] 材料 ID 不能为空！");
+            throw new IllegalArgumentException("[NekoJS] Ingredient ID cannot be empty!");
         }
         if (inputStr.startsWith("#")) {
             return inputStr.contains(":") ? inputStr : "#minecraft:" + inputStr.substring(1);
@@ -61,7 +61,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
             Identifier loc = Identifier.tryParse(cleanId);
 
             if (loc == null) {
-                NekoJS.LOGGER.warn("[IngredientJS] 无法解析的材料 ID 格式: {}", rawId);
+                NekoJS.LOGGER.debug("[IngredientJS] Invalid ingredient ID format: {}", rawId);
                 continue;
             }
 
@@ -72,20 +72,20 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
                 if (tagHolders.isPresent()) {
                     tagHolders.get().forEach(allHolders::add);
                 } else {
-                    NekoJS.LOGGER.warn("[IngredientJS] 找不到物品标签: {}，请检查是否拼写错误！", rawId);
+                    NekoJS.LOGGER.debug("[IngredientJS] Item tag not found: {}. Please check for typos!", rawId);
                 }
             } else {
                 Item item = BuiltInRegistries.ITEM.getValue(loc);
                 if (item != Items.AIR) {
                     allHolders.add(item.builtInRegistryHolder());
                 } else {
-                    NekoJS.LOGGER.warn("[IngredientJS] 找不到物品: {}，请检查是否拼写错误！", rawId);
+                    NekoJS.LOGGER.debug("[IngredientJS] Item not found: {}. Please check for typos!", rawId);
                 }
             }
         }
 
         if (allHolders.isEmpty()) {
-            NekoJS.LOGGER.warn("[IngredientJS] 该材料对象最终为空，将使用屏障(Barrier)代替。");
+            NekoJS.LOGGER.debug("[IngredientJS] Ingredient is empty, using Barrier as fallback.");
             return Ingredient.of(Items.BARRIER);
         }
 

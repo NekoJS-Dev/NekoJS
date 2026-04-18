@@ -89,7 +89,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 //            NekoErrorTracker.recordEventError(e);
 //            return false;
         } catch (Exception e) {
-            NekoJS.LOGGER.error("CancellableEventBus执行异常: {}", e.getMessage(), e);
+            NekoJS.LOGGER.error("Error during CancellableEventBus execution", e);
             return false;
         }
     }
@@ -102,7 +102,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 //            } catch (PolyglotException e) {
 //                NekoErrorTracker.recordEventError(e);
             } catch (Exception e) {
-                NekoJS.LOGGER.error("EventBus执行异常: {}", e.getMessage(), e);
+                NekoJS.LOGGER.error("Error during EventBus execution", e);
             }
             return false;
         }
