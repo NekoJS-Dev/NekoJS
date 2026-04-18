@@ -31,12 +31,12 @@ public interface BlockEvents {
     EventBusJS<BlockEvent.BlockToolModificationEvent, Block> TOOL_TOOL_MODIFICATION =
             GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock());
 
-    EventBusJS<PlayerInteractEvent.RightClickBlock, Void> RIGHT_CLICKED =
-            GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class);
+    EventBusJS<PlayerInteractEvent.RightClickBlock, Block> RIGHT_CLICKED =
+            GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class, dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
     EventBusJS<BlockEvent.EntityPlaceEvent, Block> PLACED =
             GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
-    EventBusJS<PlayerInteractEvent.LeftClickBlock, Void> LEFT_CLICKED =
-            GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class);
+    EventBusJS<PlayerInteractEvent.LeftClickBlock, Block> LEFT_CLICKED =
+            GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class, dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
 
 
     private static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
