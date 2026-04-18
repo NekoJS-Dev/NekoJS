@@ -15,32 +15,36 @@ public interface BlockEvents {
     EventGroup GROUP = EventGroup.of("BlockEvents");
 
     EventBusJS<BlockEvent.BreakEvent, Block> BROKEN =
-            GROUP.server("broken", BlockEvent.BreakEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("broken", BlockEvent.BreakEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.EntityPlaceEvent, Block> ENTITY_PLACED =
-            GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.EntityMultiPlaceEvent, Block> ENTITY_MULTI_PLACED =
-            GROUP.server("entityMultiPlaced", BlockEvent.EntityMultiPlaceEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("entityMultiPlaced", BlockEvent.EntityMultiPlaceEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.NeighborNotifyEvent, Block> NEIGHBOR_NOTIFY =
-            GROUP.server("neighborNotify", BlockEvent.NeighborNotifyEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("neighborNotify", BlockEvent.NeighborNotifyEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.FluidPlaceBlockEvent, Block> FLUID_PLACED =
-            GROUP.server("fluidPlaced", BlockEvent.FluidPlaceBlockEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("fluidPlaced", BlockEvent.FluidPlaceBlockEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.FarmlandTrampleEvent, Block> FARMLAND_TRAMPLE =
-            GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.PortalSpawnEvent, Block> PORTAL_SPAWN =
-            GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.BlockToolModificationEvent, Block> TOOL_TOOL_MODIFICATION =
-            GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
+            GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock());
 
-    EventBusJS<PlayerInteractEvent.RightClickBlock, Void> RIGHT_CLICKED =
-            GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class);
+    EventBusJS<PlayerInteractEvent.RightClickBlock, Block> RIGHT_CLICKED =
+            GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class, dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
     EventBusJS<BlockEvent.EntityPlaceEvent, Block> PLACED =
-            GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, dispatchByBlock(t -> t.getState().getBlock()));
-    EventBusJS<PlayerInteractEvent.LeftClickBlock, Void> LEFT_CLICKED =
-            GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class);
+            GROUP.server("placed", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
+    EventBusJS<PlayerInteractEvent.LeftClickBlock, Block> LEFT_CLICKED =
+            GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class, dispatchByBlock(e -> e.getLevel().getBlockState(e.getPos()).getBlock()));
 
 
     private static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
         return DispatchKey.of(Block.class, toKey);
+    }
+
+    private static <T extends BlockEvent> DispatchKey<T, Block> dispatchByBlock() {
+        return dispatchByBlock(event -> event.getState().getBlock());
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
