@@ -12,8 +12,10 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -44,7 +46,9 @@ public class NekoErrorTracker {
             if (source != null) {
                 pathStr = extractRelativePath(source);
             }
-            mappedLine = SourceMapRegistry.getMappedLine(pathStr, loc.getStartLine());
+
+            SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(pathStr, loc.getStartLine(), loc.getStartColumn());
+            mappedLine = getRealCodeLine(pathStr, pos.line);
         }
 
         String cleanTrace = getMappedStackTrace(e);
@@ -73,6 +77,29 @@ public class NekoErrorTracker {
         return null;
     }
 
+    /**
+     * 核心新增：智能修正行号，遇到注释或空行自动向下找
+     */
+    public static int getRealCodeLine(String pathStr, int mappedLine) {
+        if (mappedLine <= 0) return mappedLine;
+        try {
+            Path sourcePath = NekoJSPaths.ROOT.resolve(pathStr);
+            if (Files.exists(sourcePath)) {
+                List<String> allLines = Files.readAllLines(sourcePath);
+                int lineIndex = mappedLine - 1;
+                while (lineIndex >= 0 && lineIndex < allLines.size()) {
+                    String line = allLines.get(lineIndex).trim();
+                    if (line.startsWith("//") || line.startsWith("/*") || line.startsWith("*") || line.isEmpty()) {
+                        lineIndex++;
+                    } else {
+                        return lineIndex + 1;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return mappedLine;
+    }
+
     public static String getMappedStackTrace(PolyglotException e) {
         StringBuilder sb = new StringBuilder();
 
@@ -84,17 +111,22 @@ public class NekoErrorTracker {
                 if (loc != null && loc.getSource() != null) {
                     String pathStr = extractRelativePath(loc.getSource());
                     int rawLine = loc.getStartLine();
+                    int rawColumn = loc.getStartColumn();
 
-                    int mappedLine = SourceMapRegistry.getMappedLine(pathStr, rawLine);
+                    SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(pathStr, rawLine, rawColumn);
+
+                    int realLine = getRealCodeLine(pathStr, pos.line);
 
                     String rootName = frame.getRootName();
-                    if (rootName == null || rootName.isEmpty() || rootName.equals(":program")) {
+
+                    if (pos.name != null && !pos.name.isEmpty()) {
+                        rootName = pos.name;
+                    } else if (rootName == null || rootName.isEmpty() || rootName.equals(":program")) {
                         rootName = "<anonymous>";
                     }
 
-                    // 输出格式:    at functionName (path/to/file.ts:line)
                     sb.append("    at ").append(rootName)
-                            .append(" (").append(pathStr).append(":").append(mappedLine).append(")\n");
+                            .append(" (").append(pathStr).append(":").append(realLine).append(")\n");
                 } else {
                     String rootName = frame.getRootName() != null && !frame.getRootName().isEmpty() ? frame.getRootName() : "<anonymous>";
                     sb.append("    at ").append(rootName).append(" (Unknown Source)\n");
@@ -132,45 +164,26 @@ public class NekoErrorTracker {
         }
     }
 
-    public static void clear(Identifier scriptId) {
-        ERRORS.remove(scriptId);
-    }
-
-    public static void clearAll() {
-        ERRORS.clear();
-    }
-
+    public static void clear(Identifier scriptId) { ERRORS.remove(scriptId); }
+    public static void clearAll() { ERRORS.clear(); }
     public static void clearByType(ScriptType type) {
         if (type == null) return;
-
         ERRORS.entrySet().removeIf(entry -> {
             ScriptError error = entry.getValue();
             return error.getScriptType() == type;
         });
     }
-
-    public static boolean hasErrors() {
-        return !ERRORS.isEmpty();
-    }
-
-    public static Collection<ScriptError> getAllErrors() {
-        return ERRORS.values();
-    }
-
+    public static boolean hasErrors() { return !ERRORS.isEmpty(); }
+    public static Collection<ScriptError> getAllErrors() { return ERRORS.values(); }
     public static Component getErrorComponent() {
         int errorCount = ERRORS.size();
         MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);
-
         MutableComponent link = Component.translatable("nekojs.error.tracker.open_list")
                 .withStyle(style -> style
                         .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
                         .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
                 );
-
         return Component.empty().append(main).append("\n").append(link);
     }
-
-    public static Component getSuccessComponent() {
-        return Component.translatable("nekojs.error.tracker.success");
-    }
+    public static Component getSuccessComponent() { return Component.translatable("nekojs.error.tracker.success"); }
 }

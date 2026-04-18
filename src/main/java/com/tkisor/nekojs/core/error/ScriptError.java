@@ -8,6 +8,10 @@ import net.minecraft.resources.Identifier;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.SourceSection;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
 public class ScriptError {
     @Getter
     private final Identifier errorId;
@@ -23,6 +27,8 @@ public class ScriptError {
     private int lineNumber = -1;
     @Getter
     private int columnNumber = -1;
+    @Getter
+    private String originalSymbolName = null;
     @Getter
     private String sourceCodeSnippet = "";
 
@@ -64,11 +70,40 @@ public class ScriptError {
 
             if (sourceLocation != null) {
                 int rawLine = sourceLocation.getStartLine();
-                this.columnNumber = sourceLocation.getStartColumn();
+                int rawColumn = sourceLocation.getStartColumn();
                 CharSequence chars = sourceLocation.getCharacters();
-                this.sourceCodeSnippet = chars != null ? chars.toString().trim() : "";
+                String jsSnippet = chars != null ? chars.toString().trim() : "";
 
-                this.lineNumber = SourceMapRegistry.getMappedLine(getDisplayPath(), rawLine);
+                SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(getDisplayPath(), rawLine, rawColumn);
+                this.lineNumber = pos.line;
+                this.columnNumber = pos.column;
+                this.originalSymbolName = pos.name;
+
+                String finalSnippet = jsSnippet;
+                try {
+                    Path sourcePath = NekoJSPaths.ROOT.resolve(getDisplayPath());
+                    if (Files.exists(sourcePath) && this.lineNumber > 0) {
+                        List<String> allLines = Files.readAllLines(sourcePath);
+                        int lineIndex = this.lineNumber - 1; // 1-based 转 0-based
+
+                        if (lineIndex >= 0 && lineIndex < allLines.size()) {
+                            finalSnippet = allLines.get(lineIndex).trim();
+
+                            int offset = 0;
+                            while ((finalSnippet.startsWith("//") || finalSnippet.startsWith("/*") || finalSnippet.startsWith("*") || finalSnippet.isEmpty())
+                                    && (lineIndex + 1) < allLines.size()) {
+                                lineIndex++;
+                                offset++;
+                                finalSnippet = allLines.get(lineIndex).trim();
+                            }
+
+                            this.lineNumber += offset;
+                        }
+                    }
+                } catch (Exception e) {
+                }
+
+                this.sourceCodeSnippet = finalSnippet;
             }
         } else {
             this.errorMessage = rawException.toString();
@@ -98,7 +133,13 @@ public class ScriptError {
         }
 
         if (lineNumber != -1 && !sourceCodeSnippet.isEmpty()) {
-            sb.append("\n>> 异常代码片段 (行 ").append(lineNumber).append("):\n");
+            sb.append("\n>> 异常代码片段 (");
+            if (originalSymbolName != null) {
+                sb.append("于方法 `").append(originalSymbolName).append("` 行 ").append(lineNumber);
+            } else {
+                sb.append("行 ").append(lineNumber);
+            }
+            sb.append("):\n");
             sb.append(sourceCodeSnippet).append("\n");
         }
 

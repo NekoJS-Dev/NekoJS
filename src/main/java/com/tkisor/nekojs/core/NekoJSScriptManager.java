@@ -12,6 +12,7 @@ import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 
 import java.nio.file.Path;
@@ -123,7 +124,13 @@ public final class NekoJSScriptManager {
 
             NekoErrorTracker.record(script, t);
 
-            script.type.logger().error("脚本执行失败: {}", script.id.toString(), t);
+            if (t instanceof PolyglotException polyglotException) {
+                String cleanTrace = NekoErrorTracker.getMappedStackTrace(polyglotException);
+
+                script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), cleanTrace);
+            } else {
+                script.type.logger().error("脚本内部环境崩溃: {}", script.id.toString(), t);
+            }
         }
     }
 
