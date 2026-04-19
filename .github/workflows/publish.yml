@@ -64,32 +64,25 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # 【关键修复】加入 clean，彻底清空可能被误提交的旧 jar
       - name: Build Mod
-        run: ./gradlew build
+        run: ./gradlew clean build
 
-      # 重命名：智能判断是否加 -dev-hash 后缀
-      - name: Rename Artifacts
+      # --- 【仅限开发版】重命名：追加 -dev-hash ---
+      # 【关键修复】此步骤独立，发版时完全不执行，杜绝误改名
+      - name: Rename Dev Artifacts
+        if: needs.analyze-commit.outputs.is_release == 'false'
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
-          IS_RELEASE="${{ needs.analyze-commit.outputs.is_release }}"
-          
           cd build/libs
           for f in *.jar; do
-            if [[ $f != *"-sources.jar"* && $f != *"-dev.jar"* && $f != *"-plain.jar"* ]]; then
-              if [ "$IS_RELEASE" == "true" ]; then
-                # 正式发版：直接保持 Gradle 默认产出的名字 (例如 nekojs-26.1.2-1.0.7.jar)
-                echo "Release build, keeping original name: $f"
-              else
-                # 开发版：追加 -dev-hash (例如 nekojs-26.1.2-1.0.7-dev-abcd123.jar)
-                new_name="${f%.jar}-dev-${SHORT_SHA}.jar"
-                mv "$f" "$new_name"
-              fi
+            if [[ $f != *"-sources.jar"* && $f != *"-dev"* && $f != *"-plain.jar"* ]]; then
+              mv "$f" "${f%.jar}-dev-${SHORT_SHA}.jar"
             fi
           done
 
-      # --- 下面是【仅限开发版】走的流程 ---
+      # --- 【仅限开发版】上传产物 ---
       - name: Upload Dev Artifact
-        # 仅当 is_release 为 false 时执行
         if: needs.analyze-commit.outputs.is_release == 'false'
         uses: actions/upload-artifact@v4
         with:
@@ -97,9 +90,8 @@ jobs:
           path: build/libs/*.jar
           retention-days: 14
 
-      # --- 下面是【仅限发版】走的流程 ---
+      # --- 【仅限发版】生成更新日志 ---
       - name: Generate Changelog
-        # 仅当 is_release 为 true 时执行
         if: needs.analyze-commit.outputs.is_release == 'true'
         id: changelog
         run: |
@@ -117,6 +109,7 @@ jobs:
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "$EOF" >> $GITHUB_OUTPUT
 
+      # --- 【仅限发版】创建 GitHub Release ---
       - name: Create GitHub Release
         if: needs.analyze-commit.outputs.is_release == 'true'
         uses: softprops/action-gh-release@v2
@@ -126,9 +119,12 @@ jobs:
           body: |
             ### 📝 更新日志 (Changelog)
             ${{ steps.changelog.outputs.notes }}
-          files: build/libs/*.jar
+          # 【关键修复】明确排除带 dev 的文件，防止任何意外
+          files: |
+            build/libs/*.jar
+            !build/libs/*-dev-*.jar
 
-      # 自动推送至 CurseForge / Modrinth
+      # --- 【仅限发版】自动推送至 CurseForge / Modrinth ---
       - name: Publish to Mod Platforms
         if: needs.analyze-commit.outputs.is_release == 'true'
         env:
