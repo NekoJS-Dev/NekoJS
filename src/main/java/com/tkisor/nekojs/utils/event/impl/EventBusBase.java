@@ -29,6 +29,10 @@ public abstract class EventBusBase<EVENT, LISTENER> {
         return eventType;
     }
 
+    public final boolean isEmpty() {
+        return tokens.isEmpty();
+    }
+
     public final EventListenerToken<EVENT> listen(LISTENER listener) {
         return listen(CommonPriority.NORMAL, listener);
     }

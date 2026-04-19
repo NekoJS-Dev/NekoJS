@@ -70,7 +70,11 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
         var key = (KEY) impl.key().get();
 
         var bus = this.dispatched.get(key);
-        return bus != null && bus.unregister(token);
+        var result = bus != null && bus.unregister(token);
+        if (result && bus.isEmpty()) {
+            this.dispatched.remove(key);
+        }
+        return result;
     }
 
     public boolean post(EVENT event, KEY key) {
