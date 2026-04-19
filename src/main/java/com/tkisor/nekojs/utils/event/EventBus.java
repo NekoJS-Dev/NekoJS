@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 public interface EventBus<E> {
 
     static <E> EventBus<E> create(Class<E> eventType) {
-        return new EventBusImpl<>(eventType);
+        return new EventBusImpl<>(eventType, null);
     }
 
     Class<E> eventType();

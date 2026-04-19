@@ -11,8 +11,8 @@ import java.util.stream.Stream;
  */
 public final class EventBusImpl<E> extends EventBusBase<E, Consumer<E>> implements EventBus<E> {
 
-    public EventBusImpl(Class<E> eventType) {
-        super(eventType);
+    public EventBusImpl(Class<E> eventType, Object key) {
+        super(eventType, key);
     }
 
     @Override
@@ -21,7 +21,7 @@ public final class EventBusImpl<E> extends EventBusBase<E, Consumer<E>> implemen
         return false;
     }
 
-    private static <E> Consumer<E> compile(Stream<Consumer<E>> consumerStream) {
+    static <E> Consumer<E> compile(Stream<Consumer<E>> consumerStream) {
         var arr = consumerStream.toArray((IntFunction<Consumer<E>[]>) Consumer[]::new);
         switch (arr.length) {
             case 0:

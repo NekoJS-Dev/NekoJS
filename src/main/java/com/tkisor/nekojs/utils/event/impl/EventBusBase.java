@@ -3,6 +3,7 @@ package com.tkisor.nekojs.utils.event.impl;
 import com.tkisor.nekojs.utils.event.CommonPriority;
 import com.tkisor.nekojs.utils.event.EventListenerToken;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -15,10 +16,12 @@ import java.util.stream.Stream;
 public abstract class EventBusBase<EVENT, LISTENER> {
     private final Class<EVENT> eventType;
     private final List<EventListenerTokenImpl<EVENT, LISTENER>> tokens;
+    private final Object key;
     private volatile LISTENER built;
 
-    protected EventBusBase(Class<EVENT> eventType) {
+    protected EventBusBase(Class<EVENT> eventType, Object key) {
         this.eventType = Objects.requireNonNull(eventType);
+        this.key = key;
         this.tokens = new ArrayList<>();
     }
 
@@ -32,7 +35,7 @@ public abstract class EventBusBase<EVENT, LISTENER> {
 
     public final EventListenerToken<EVENT> listen(byte priority, LISTENER listener) {
         built = null;
-        var token = new EventListenerTokenImpl<>(eventType, priority, listener);
+        var token = new EventListenerTokenImpl<>(eventType, priority, listener, new WeakReference<>(key));
         tokens.add(token);
         return token;
     }

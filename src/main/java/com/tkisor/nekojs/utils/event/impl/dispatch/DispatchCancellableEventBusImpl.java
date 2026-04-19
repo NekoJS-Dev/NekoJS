@@ -1,10 +1,10 @@
 package com.tkisor.nekojs.utils.event.impl.dispatch;
 
-import com.tkisor.nekojs.utils.event.CancellableEventBus;
 import com.tkisor.nekojs.utils.event.CommonPriority;
 import com.tkisor.nekojs.utils.event.EventListenerToken;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchCancellableEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
+import com.tkisor.nekojs.utils.event.impl.CancellableEventBusImpl;
 
 import java.util.Map;
 import java.util.function.Predicate;
@@ -12,20 +12,20 @@ import java.util.function.Predicate;
 /**
  * @author ZZZank
  */
-public final class DispatchCancellableEventBusImpl<E, K> extends DispatchEventBusBase<E, K, CancellableEventBus<E>>
+public final class DispatchCancellableEventBusImpl<E, K> extends DispatchEventBusBase<E, K, CancellableEventBusImpl<E>>
     implements DispatchCancellableEventBus<E, K> {
 
     public DispatchCancellableEventBusImpl(
         Class<E> eventType,
         DispatchKey<E, K> dispatchKey,
-        Map<K, CancellableEventBus<E>> dispatched
+        Map<K, CancellableEventBusImpl<E>> dispatched
     ) {
         super(eventType, dispatchKey, dispatched);
     }
 
     @Override
-    protected CancellableEventBus<E> createBus(Class<E> eventType) {
-        return CancellableEventBus.create(eventType);
+    protected CancellableEventBusImpl<E> createBus(Class<E> eventType, K key) {
+        return new CancellableEventBusImpl<>(eventType, key);
     }
 
     @Override
@@ -34,7 +34,7 @@ public final class DispatchCancellableEventBusImpl<E, K> extends DispatchEventBu
             return mainBus.listen(priority, listener);
         }
         return this.dispatched
-            .computeIfAbsent(key, ignored -> this.createBus(this.eventType()))
+            .computeIfAbsent(key, k -> this.createBus(this.eventType(), k))
             .listen(priority, listener);
     }
 

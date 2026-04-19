@@ -10,12 +10,16 @@ import java.util.function.Predicate;
 public interface CancellableEventBus<E> extends EventBus<E> {
 
     static <E> CancellableEventBus<E> create(Class<E> eventType) {
-        return new CancellableEventBusImpl<>(eventType);
+        return new CancellableEventBusImpl<>(eventType, null);
     }
 
     EventListenerToken<E> listen(Predicate<E> listener);
 
     EventListenerToken<E> listen(byte priority, Predicate<E> listener);
+
+    /// @return `true` if there's listener that returns `true`, `false` otherwise
+    @Override
+    boolean post(E event);
 
     @Override
     default <E_ extends E> CancellableEventBus<E_> cast() {
