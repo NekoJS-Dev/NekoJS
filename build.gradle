@@ -3,7 +3,10 @@ plugins {
     id 'maven-publish'
     id 'idea'
     id 'net.neoforged.moddev' version '2.0.140'
+    id "me.shedaniel.unified-publishing" version "0.1.+"
 }
+
+var ENV = System.getenv()
 
 version = mod_version
 group = mod_group_id
@@ -42,10 +45,8 @@ neoForge {
     runs {
         client {
             client()
-
             jvmArguments.add('-Dfml.earlydisplay=false')
             environment.put('XDG_SESSION_TYPE', 'x11')
-
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
@@ -62,13 +63,11 @@ neoForge {
 
         data {
             clientData()
-
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
         }
 
         configureEach {
             systemProperty 'forge.logging.markers', 'REGISTRIES'
-
             logLevel = org.slf4j.event.Level.DEBUG
         }
     }
@@ -93,7 +92,6 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.44'
     testCompileOnly 'org.projectlombok:lombok:1.18.44'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.44'
-
 }
 
 tasks.withType(Jar).configureEach {
@@ -139,6 +137,52 @@ publishing {
     repositories {
         maven {
             url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+// 配置自动发布到 CurseForge 和 Modrinth
+unifiedPublishing {
+    project {
+        // 显示在网页上的文件名
+        displayName = "${mod_name} NeoForge ${minecraft_version}-${mod_version}"
+        // 发布类型 (release, beta, alpha)。通常由环境变量控制，默认为 release
+        releaseType = ENV.RELEASE_TYPE ?: "release"
+        // 你的 Mod 适用的游戏版本，通常在 gradle.properties 中定义
+        gameVersions = [minecraft_version]
+        // 适用的加载器
+        gameLoaders = ["neoforge"]
+
+        // 指定你要上传的构建产物 (这里是默认的 jar)
+        mainPublication tasks.jar
+
+        // (可选) 如果你从环境变量获取更新日志，或者直接读取本地文件
+        changelog = ENV.CHANGELOG ?: "A new update for ${mod_name}!"
+
+        // 依赖关系 (如果有的话，比如依赖 JEI 或某些前置)
+         relations {
+             depends {
+                 curseforge = "graal" // 填入对方的 slug
+             }
+         }
+
+        // 配置 CurseForge 发布
+        if (ENV.CURSEFORGE_KEY) {
+            curseforge {
+                token = ENV.CURSEFORGE_KEY
+                // 你的项目 ID (数字)，需要在 gradle.properties 中添加 `curseforge_id=xxxxxx`
+                id = project.curseforge_id
+            }
+        }
+
+        // 配置 Modrinth 发布 (顺便帮你写好，不需要可以删掉)
+        if (ENV.MODRINTH_TOKEN) {
+            modrinth {
+                token = ENV.MODRINTH_TOKEN
+                // 你的项目 ID (字符串)，需要在 gradle.properties 中添加 `modrinth_id=xxxxxx`
+                id = project.modrinth_id
+                version = "${minecraft_version}-${mod_version}"
+            }
         }
     }
 }
