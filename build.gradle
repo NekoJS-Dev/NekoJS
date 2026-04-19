@@ -92,6 +92,9 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.44'
     testCompileOnly 'org.projectlombok:lombok:1.18.44'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.44'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.withType(Jar).configureEach {
@@ -127,6 +130,19 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
+
+test {
+    useJUnitPlatform()
+}
+
+neoForge {
+    unitTest {
+        enable()
+        // Configure which mod is being tested.
+        // This allows NeoForge to load the test/ classes and resources as belonging to the mod.
+        testedMod = mods."${mod_id}" // <mod name> must match the name in the mods { } block.
+    }
+}
 
 publishing {
     publications {
