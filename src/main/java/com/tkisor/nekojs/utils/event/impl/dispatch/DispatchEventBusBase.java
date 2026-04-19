@@ -81,6 +81,10 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBus<EVENT>> {
     }
 
     public boolean post(EVENT event) {
+        if (this.dispatched.isEmpty()) {
+            // skip dispatching if there's no registered dispatched listener
+            return mainBus.post(event);
+        }
         return post(event, this.dispatchKey.eventToKey(event));
     }
 }
