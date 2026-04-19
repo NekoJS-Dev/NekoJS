@@ -94,7 +94,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.44'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
-    testImplementation 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.withType(Jar).configureEach {
