@@ -83,8 +83,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 jarJar.enabled = true
 dependencies {
-    // 25.0.2.1
-    implementation("curse.maven:graal-1504336:7905970")
+    // 25.0.2.2
+    implementation("curse.maven:graal-1504336:7951071")
     // 29.5.0.26 for NeoForge 26.1.2
     implementation "curse.maven:jei-238222:7920926"
 
