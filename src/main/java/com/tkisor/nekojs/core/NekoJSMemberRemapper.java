@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core;
 
+import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import graal.mod.api.MemberRemapper;
@@ -25,6 +26,10 @@ public class NekoJSMemberRemapper implements MemberRemapper {
     }
 
     private static <T extends AccessibleObject & Member> String remapImpl(T member) {
+        if (member.isAnnotationPresent(HideFromJS.class) || member.getDeclaringClass().isAnnotationPresent(HideFromJS.class)) {
+            return MemberRemapper.HIDE_MEMBER;
+        }
+
         var remap = member.getAnnotation(Remap.class);
         if (remap != null) {
             return remap.value();
