@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.WithScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 
 import java.util.Collections;
@@ -16,27 +17,24 @@ public class EventGroup {
         return new EventGroup(name);
     }
 
-    final String name;
-    final Map<String, EventBusJS<?, ?>> buses;
-    final Map<String, ScriptType> targetScriptType;
+    private final String name;
+    private final Map<String, RegisteredBus> buses;
 
     private EventGroup(String name) {
         this.name = Objects.requireNonNull(name);
         this.buses = new HashMap<>();
-        this.targetScriptType = new HashMap<>();
     }
 
     public String name() {
         return name;
     }
 
-    public Map<String, EventBusJS<?, ?>> viewBuses() {
+    public Map<String, BusHolder> viewBuses() {
         return Collections.unmodifiableMap(buses);
     }
 
-    public boolean isHandlerValidFor(String busName, ScriptType type) {
-        var scriptType = targetScriptType.get(busName);
-        return scriptType != null && (scriptType == ScriptType.COMMON || scriptType == type);
+    public BusHolder getBusHolder(String busName) {
+        return this.buses.get(busName);
     }
 
     public <E> EventBusJS<E, Void> server(String name, Class<E> type) {
@@ -72,15 +70,14 @@ public class EventGroup {
     }
 
     public <BUS extends EventBusJS<?, ?>> BUS add(String name, ScriptType scriptType, BUS bus) {
-        if (name == null) {
-            throw new IllegalArgumentException("name == null");
-        } else if (this.buses.containsKey(name)) {
+        Objects.requireNonNull(name, "name == null");
+        Objects.requireNonNull(scriptType, "scriptType == null");
+        Objects.requireNonNull(bus, "bus == null");
+        if (this.buses.containsKey(name)) {
             throw new IllegalArgumentException(String.format("A bus with name '%s' has already been registered", name));
-        } else if (scriptType == null) {
-            throw new IllegalArgumentException("scriptType == null");
         }
-        this.buses.put(name, bus);
-        this.targetScriptType.put(name, scriptType);
+
+        this.buses.put(name, new RegisteredBus(bus, scriptType));
         return bus;
     }
 
@@ -88,28 +85,16 @@ public class EventGroup {
         if (!this.name.equals(other.name)) {
             return;
         }
-        other.buses.forEach((busName, bus) -> {
-            ScriptType type = other.targetScriptType.get(busName);
-            this.add(busName, type, bus);
-        });
-    }
-
-    public void clearListeners() {
-        for (var busJS : buses.values()) {
-            clearBus(busJS);
-        }
+        other.buses.forEach((busName, registered) -> this.add(busName, registered.scriptType, registered.bus));
     }
 
     // 清理指定类型的监听器，用于reload scripts，但由于新的eventbus还未熟悉，也许后续会需要调整
     public void clearListeners(ScriptType type) {
         for (var entry : buses.entrySet()) {
-            String busName = entry.getKey();
-            EventBusJS<?, ?> busJS = entry.getValue();
+            var registered = entry.getValue();
 
-            ScriptType busType = targetScriptType.get(busName);
-
-            if (busType == type || type == ScriptType.COMMON) {
-                clearBus(busJS);
+            if (registered.canApplyOn(type)) {
+                clearBus(registered.bus);
             }
         }
     }
@@ -118,6 +103,19 @@ public class EventGroup {
     private static <E> void clearBus(EventBusJS<E, ?> bus) {
         for (var token : bus.tokens()) {
             bus.bus().unregister(token);
+        }
+    }
+
+    public interface BusHolder extends WithScriptType {
+
+        EventBusJS<?, ?> getBus(ScriptType targetEnv);
+    }
+
+    private record RegisteredBus(EventBusJS<?, ?> bus, ScriptType scriptType) implements BusHolder {
+
+        @Override
+        public EventBusJS<?, ?> getBus(ScriptType targetEnv) {
+            return canApplyOn(targetEnv) ? bus : null;
         }
     }
 }
