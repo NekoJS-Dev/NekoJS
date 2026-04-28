@@ -2,35 +2,32 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    // 统一使用你 26.1 原本使用的高版本插件
     id 'net.neoforged.moddev' version '2.0.140'
     id "me.shedaniel.unified-publishing" version "0.1.+"
 }
 
-// 变量从根项目 properties 自动读取
 version = mod_version
 group = mod_group_id
-var neo_version = "26.1.2.10-beta"
-var ENV = System.getenv()
+def neo_version = "26.1.2.10-beta"
+def minecraft_version= "26.1.2"
+def minecraft_version_range= "[26.1,26.2)"
+def neo_version_range= "[26,)"
+def ENV = System.getenv()
+def loader_version_range= "[4,)"
 
 base {
-    // 输出文件名：nekojs-neoforge-1.21.1-26.1.jar
     archivesName = "${mod_id}-neoforge-${minecraft_version}"
 }
 
-// 1.21.1 必须使用 Java 21+ (你之前设置的是 25，保持一致)
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 sourceSets {
     main {
         java {
-            // 合并 common 源码
             srcDir project(':common').file('src/main/java')
         }
         resources {
-            // 合并 common 资源
             srcDir project(':common').file('src/main/resources')
-            // 包含生成的资源
             srcDir 'src/generated/resources'
         }
     }
@@ -57,7 +54,6 @@ neoForge {
 
     accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
 
-    // 如果接口注入配置在 common，请修改路径指向 common
     interfaceInjectionData {
         it.from(project.files('src/main/resources/nekojs.interface_injection.json'))
     }
@@ -98,10 +94,8 @@ neoForge {
 }
 
 dependencies {
-    // 依赖 common 模块的编译产物
     implementation project(':common')
 
-    // 复制你原本 26.1 的所有依赖
     implementation("curse.maven:graal-1504336:7951071")
     implementation "curse.maven:jei-238222:7920926"
 
@@ -112,7 +106,6 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-// 自动填充 mods.toml 里的变量
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
@@ -129,15 +122,13 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     ]
     inputs.properties replaceProperties
     expand replaceProperties
-    from "src/main/templates" // 建议在子模块里放一份针对 1.21.1 的模板
+    from "src/main/templates"
     into "build/generated/sources/modMetadata"
 }
 
-// 将生成的元数据加入资源集
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
 
-// 保持你原本的 Jar 命名逻辑
 tasks.withType(Jar).configureEach {
     archiveBaseName.set("${mod_id}-neoforge")
     archiveVersion.set("${minecraft_version}-${mod_version}")
@@ -156,25 +147,17 @@ publishing {
     }
 }
 
-// 配置自动发布到 CurseForge 和 Modrinth
 unifiedPublishing {
     project {
-        // 显示在网页上的文件名
         displayName = "${mod_name} NeoForge ${minecraft_version}-${mod_version}"
-        // 发布类型 (release, beta, alpha)。通常由环境变量控制，默认为 release
         releaseType = ENV.RELEASE_TYPE ?: "release"
-        // 你的 Mod 适用的游戏版本，通常在 gradle.properties 中定义
         gameVersions = [minecraft_version]
-        // 适用的加载器
         gameLoaders = ["neoforge"]
 
-        // 指定你要上传的构建产物 (这里是默认的 jar)
         mainPublication tasks.jar
 
-        // (可选) 如果你从环境变量获取更新日志，或者直接读取本地文件
         changelog = ENV.CHANGELOG ?: "A new update for ${mod_name}!"
 
-        // 依赖关系 (如果有的话，比如依赖 JEI 或某些前置)
         relations {
             depends {
                 curseforge = "graal"
@@ -190,7 +173,7 @@ unifiedPublishing {
             }
         }
 
-        // 配置 Modrinth 发布 (顺便帮你写好，不需要可以删掉)
+        // 配置 Modrinth 发布
         if (ENV.MODRINTH_TOKEN) {
             modrinth {
                 token = ENV.MODRINTH_TOKEN

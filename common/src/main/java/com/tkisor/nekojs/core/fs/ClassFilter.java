@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSCommon;
 
 import java.util.Set;
 import java.util.function.Predicate;
@@ -37,12 +37,11 @@ public class ClassFilter implements Predicate<String> {
 
     @Override
     public boolean test(String className) {
+        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
+        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
+        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
+        if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
         return true;
-//        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
-//        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
-//        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
-//        if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
-//        return true;
     }
 
     private boolean matchesGroup(String className, Set<String> group) {
@@ -53,7 +52,7 @@ public class ClassFilter implements Predicate<String> {
         return allowThreads || allowReflection || allowAsm;
     }
 
-    protected static void loadEngineConfig() {
+    public static void loadEngineConfig() {
         try (CommentedFileConfig config = CommentedFileConfig.builder(ENGINE_CONFIG)
                 .sync()
                 .preserveInsertionOrder()
@@ -75,13 +74,13 @@ public class ClassFilter implements Predicate<String> {
             ClassFilter.allowReflection = config.get("allowReflection");
             ClassFilter.allowAsm = config.get("allowAsm");
 
-            NekoJS.LOGGER.info(
+            NekoJSCommon.LOGGER.info(
                     "[NekoJS] Engine config loaded. Unsafe features enabled: {}",
                     ClassFilter.isAnyUnsafeFeatureEnabled()
             );
 
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] Failed to load engine.toml", e);
+            NekoJSCommon.LOGGER.error("[NekoJS] Failed to load engine.toml", e);
         }
     }
 

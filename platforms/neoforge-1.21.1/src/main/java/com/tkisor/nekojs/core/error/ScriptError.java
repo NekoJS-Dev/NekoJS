@@ -4,7 +4,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import lombok.Getter;
-import net.minecraft.resources.ResourceLocation;
+import com.tkisor.nekojs.api.data.ScriptId;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.SourceSection;
 
@@ -14,7 +14,7 @@ import java.util.List;
 
 public class ScriptError {
     @Getter
-    private final ResourceLocation errorId;
+    private final ScriptId errorId;
     @Getter
     private final ScriptContainer script;
     @Getter
@@ -45,7 +45,7 @@ public class ScriptError {
         parseException();
     }
 
-    public ScriptError(ScriptType scriptType, ResourceLocation errorId, String fallbackPath, Throwable rawException) {
+    public ScriptError(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException) {
         this.errorId = errorId;
         this.script = null;
         this.scriptType = scriptType;

@@ -1,16 +1,16 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.data.ScriptId;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.prop.ScriptProperties;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.fml.ModList;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 public final class ScriptContainer {
-    public final ResourceLocation id;
+    public final ScriptId id;
     public final ScriptType type;
     public final Path path;
     public final ScriptProperties properties;
@@ -18,7 +18,7 @@ public final class ScriptContainer {
     public boolean disabled = false;
     public Throwable lastError;
 
-    public ScriptContainer(ResourceLocation id, ScriptType type, Path path, ScriptPropertyRegistry propertyRegistry) {
+    public ScriptContainer(ScriptId id, ScriptType type, Path path, ScriptPropertyRegistry propertyRegistry) {
         this.id = id;
         this.type = type;
         this.path = path;
@@ -32,7 +32,7 @@ public final class ScriptContainer {
     public boolean shouldRun() {
         return !disabled
             && !properties.getOrDefault(ScriptProperty.DISABLE)
-            && properties.getOrDefault(ScriptProperty.MODLOADED).stream().allMatch(ModList.get()::isLoaded);
+            && properties.getOrDefault(ScriptProperty.MODLOADED).stream().allMatch(Platform::isLoaded);
     }
 
     public void preload() {

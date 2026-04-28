@@ -59,7 +59,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerBindings(BindingsRegister registry) {
         registry.register(Binding.of("Ingredient", new IngredientJS()));
-        registry.register(Binding.of("NativeEvents", new NativeEventsJS()));
+        registry.register(Binding.of(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS()));
         registry.register(Binding.of("Network", NetworkJS.class));
         registry.register(Binding.of("ItemStack", ItemStack.class));
         registry.register(Binding.of("Items", Items.class));

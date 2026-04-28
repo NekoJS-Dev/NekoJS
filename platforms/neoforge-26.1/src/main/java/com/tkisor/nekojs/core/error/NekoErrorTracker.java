@@ -10,7 +10,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
+import com.tkisor.nekojs.api.data.ScriptId;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NekoErrorTracker {
-    private static final Map<Identifier, ScriptError> ERRORS = new ConcurrentHashMap<>();
+    private static final Map<ScriptId, ScriptError> ERRORS = new ConcurrentHashMap<>();
 
     private static final String[] HOST_FRAME_BLACKLIST = {
             "org.graalvm.",
@@ -56,7 +56,7 @@ public class NekoErrorTracker {
 
         String uniqueHashInput = currentType.name() + "_" + pathStr + "_" + mappedLine + "_" + e.getMessage();
         String safeHash = Integer.toHexString(uniqueHashInput.hashCode());
-        Identifier runtimeId = Identifier.fromNamespaceAndPath("nekojs", "rt_" + safeHash);
+        ScriptId runtimeId = new ScriptId("nekojs", "rt_" + safeHash);
 
         if (ERRORS.containsKey(runtimeId)) {
             ERRORS.get(runtimeId).incrementOccurrence();
@@ -164,7 +164,7 @@ public class NekoErrorTracker {
         }
     }
 
-    public static void clear(Identifier scriptId) { ERRORS.remove(scriptId); }
+    public static void clear(ScriptId scriptId) { ERRORS.remove(scriptId); }
     public static void clearAll() { ERRORS.clear(); }
     public static void clearByType(ScriptType type) {
         if (type == null) return;

@@ -1,9 +1,9 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.log.NekoJSLoggers;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.fml.loading.FMLPaths;
+import com.tkisor.nekojs.platform.Platform;
 import org.slf4j.Logger;
 
 import java.nio.file.Files;
@@ -36,7 +36,7 @@ public enum ScriptType {
     }
 
     public Path getLogFile() {
-        var dir = FMLPaths.GAMEDIR.get().resolve("logs/nekojs");
+        var dir = Platform.getGameDir().resolve("logs/nekojs");
         var file = dir.resolve(name + ".log");
 
         try {
@@ -61,13 +61,14 @@ public enum ScriptType {
     }
 
     /**
-     * 根据脚本文件路径创建资源定位符
-     * @param file 脚本文件路径
-     * @return 对应的资源定位符
+     * 根据脚本文件路径创建平台无关的标识符
+     * @param file 脚本文件绝对路径
+     * @return 对应的脚本 ID
      */
-    public ResourceLocation makeId(Path file) {
-        String fileName = file.getFileName().toString();
-        return ResourceLocation.fromNamespaceAndPath("nekojs", name + "/" + fileName);
+    public ScriptId makeId(Path file) {
+        Path relativePath = this.path.relativize(file);
+        String cleanPath = relativePath.toString().replace('\\', '/');
+        return ScriptId.of("nekojs", this.name + "/" + cleanPath);
     }
 
     public String defaultMainScript() {

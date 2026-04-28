@@ -10,8 +10,11 @@ import com.tkisor.nekojs.core.NekoJSMemberRemapper;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.js.type_adapter.*;
+import com.tkisor.nekojs.platform.NeoForgePlatform;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.WorkspaceGenerator;
 import com.tkisor.nekojs.utils.ReflectionUtils;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
@@ -41,23 +44,25 @@ public class NekoJS extends NekoJSCommon {
     public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
         MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
 
+        Platform.init(new NeoForgePlatform());
+
         NekoJS.modEventBus = modEventBus;
 
         registerEventListeners();
 
         SCRIPT_MANAGER = new NekoJSScriptManager();
-        NekoJSPaths.initFoldersOnly();
+        NekoJSPaths.initFolders();
         ScriptBootstrap.generateDefaultScripts();
-        NekoJSPaths.initFoldersOnly();
+        NekoJSPaths.initFolders();
+
+        WorkspaceGenerator.setupWorkspace();
 
         registerPlugins();
 
         SCRIPT_MANAGER.registerScriptProperty();
 
-//        LOGGER.info("[NekoJS] 正在执行 STARTUP 脚本...");
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
-//        SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
             NekoJSClient.register(modEventBus);
@@ -67,9 +72,6 @@ public class NekoJS extends NekoJSCommon {
     private void registerEventListeners() {
         modEventBus.addListener(this::onCommonSetup);
         modEventBus.addListener(this::plugin);
-
-        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
-        NeoForge.EVENT_BUS.addListener(this::onServerResourceReload);
 
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         modEventBus.addListener(this::onRegister);
@@ -113,20 +115,7 @@ public class NekoJS extends NekoJSCommon {
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(NekoJSPaths::createWorkspaceConfigs);
-    }
-
-    private void onServerStarting(ServerStartingEvent event) {
-//        LOGGER.info("[NekoJS] 服务器启动，正在加载 SERVER 脚本...");
-    }
-
-    // 1.21.1: 替换为 AddReloadListenerEvent
-    private void onServerResourceReload(AddReloadListenerEvent event) {
-        try {
-            NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
-        } catch (Exception e) {
-            ScriptType.SERVER.logger().error("Script overload failed: ", e);
-        }
+        event.enqueueWork(WorkspaceGenerator::createWorkspaceConfigs);
     }
 
     private void onRegister(RegisterEvent event) {
@@ -145,13 +134,10 @@ public class NekoJS extends NekoJSCommon {
             eventJS.registerAll();
 
             BlockRegistryEventJS.PENDING_BLOCK_ITEMS.forEach((location, block) -> {
-                // 确保泛型 T 被正确推断为 Item
-                event.<Item>register(Registries.ITEM, location, () -> {
-                    // 1.21.1: 直接使用 new Item.Properties()，不需要 setId()
+                event.register(Registries.ITEM, location, () -> {
                     Item.Properties props = new Item.Properties();
 
-                    // 向上转型为 Item，解决 Supplier 泛型严格匹配问题
-                    return (Item) new BlockItem(block, props);
+                    return new BlockItem(block, props);
                 });
             });
 

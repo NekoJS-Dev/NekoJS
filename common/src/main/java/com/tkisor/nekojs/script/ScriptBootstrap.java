@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.script;
 
-import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSCommon;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,7 +29,7 @@ public final class ScriptBootstrap {
                     type.logger().info("已初始化环境入口: {}", mainFile);
                 }
             } catch (IOException e) {
-                NekoJS.LOGGER.error("无法初始化环境目录 [{}]: {}", type.name(), e.getMessage());
+                NekoJSCommon.LOGGER.error("无法初始化环境目录 [{}]: {}", type.name(), e.getMessage());
             }
         }
     }

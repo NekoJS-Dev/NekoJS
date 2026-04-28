@@ -10,8 +10,11 @@ import com.tkisor.nekojs.core.NekoJSMemberRemapper;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.js.type_adapter.*;
+import com.tkisor.nekojs.platform.NeoForgePlatform;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.WorkspaceGenerator;
 import com.tkisor.nekojs.utils.ReflectionUtils;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
@@ -26,8 +29,6 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import graal.mod.api.MemberRemapper;
 
@@ -42,23 +43,25 @@ public class NekoJS extends NekoJSCommon {
     public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
         MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
 
+        Platform.init(new NeoForgePlatform());
+
         NekoJS.modEventBus = modEventBus;
 
         registerEventListeners();
 
         SCRIPT_MANAGER = new NekoJSScriptManager();
-        NekoJSPaths.initFoldersOnly();
+        NekoJSPaths.initFolders();
         ScriptBootstrap.generateDefaultScripts();
-        NekoJSPaths.initFoldersOnly();
+        NekoJSPaths.initFolders();
+
+        WorkspaceGenerator.setupWorkspace();
 
         registerPlugins();
 
         SCRIPT_MANAGER.registerScriptProperty();
 
-//        LOGGER.info("[NekoJS] 正在执行 STARTUP 脚本...");
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
-//        SCRIPT_MANAGER.loadScripts(ScriptType.COMMON);
 
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             NekoJSClient.register(modEventBus);
@@ -68,9 +71,6 @@ public class NekoJS extends NekoJSCommon {
     private void registerEventListeners() {
         modEventBus.addListener(this::onCommonSetup);
         modEventBus.addListener(this::plugin);
-
-        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
-        NeoForge.EVENT_BUS.addListener(this::onServerResourceReload);
 
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         modEventBus.addListener(this::onRegister);
@@ -114,19 +114,7 @@ public class NekoJS extends NekoJSCommon {
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(NekoJSPaths::createWorkspaceConfigs);
-    }
-
-    private void onServerStarting(ServerStartingEvent event) {
-//        LOGGER.info("[NekoJS] 服务器启动，正在加载 SERVER 脚本...");
-    }
-
-    private void onServerResourceReload(AddServerReloadListenersEvent event) {
-        try {
-            NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
-        } catch (Exception e) {
-            ScriptType.SERVER.logger().error("Script overload failed: ", e);
-        }
+        event.enqueueWork(WorkspaceGenerator::createWorkspaceConfigs);
     }
 
     private void onRegister(RegisterEvent event) {

@@ -3,8 +3,6 @@ package com.tkisor.nekojs.api.data;
 import com.tkisor.nekojs.core.NekoJSPluginManager;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.util.*;
 
@@ -59,7 +57,7 @@ public final class NekoBindings {
 
         plugins.forEach(plugin -> plugin.registerBindings(NekoBindings::register));
 
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (com.tkisor.nekojs.platform.Platform.isClient()) {
             plugins.forEach(plugin -> plugin.registerClientBindings(NekoBindings::register));
         }
 
