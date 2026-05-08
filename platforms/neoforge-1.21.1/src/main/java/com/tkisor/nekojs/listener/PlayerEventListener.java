@@ -2,6 +2,7 @@ package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -21,7 +22,7 @@ public class PlayerEventListener {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (player.hasPermissions(2) && NekoErrorTracker.hasErrors()) {
 
-                player.sendSystemMessage(NekoErrorTracker.getErrorComponent());
+                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent());
             }
         }
     }

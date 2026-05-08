@@ -3,6 +3,7 @@ package com.tkisor.nekojs.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
@@ -36,9 +37,9 @@ public final class NekoJSCommands {
                                 NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
 
                                 if (NekoErrorTracker.hasErrors()) {
-                                    source.sendFailure(NekoErrorTracker.getErrorComponent());
+                                    source.sendFailure(NekoErrorUIHelper.getErrorComponent());
                                 } else {
-                                    source.sendSuccess(NekoErrorTracker::getSuccessComponent, true);
+                                    source.sendSuccess(NekoErrorUIHelper::getSuccessComponent, true);
                                 }
                             } catch (Exception e) {
                                 NekoJS.LOGGER.error("Reloading scripts failed fatally", e);
@@ -52,7 +53,7 @@ public final class NekoJSCommands {
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
                                     if (NekoErrorTracker.hasErrors()) {
-                                        source.sendFailure(NekoErrorTracker.getErrorComponent());
+                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent());
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.healthy"), false);
                                     }

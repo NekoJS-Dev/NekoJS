@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.NekoJSPluginManager;
 import net.neoforged.bus.api.Event;
 import net.neoforged.fml.event.IModBusEvent;
 
+@Deprecated(since = "1.0.8", forRemoval = true)
 public class RegisterNekoJSPluginEvent extends Event implements IModBusEvent {
     public void register(NekoJSPlugin plugin) {
         NekoJSPluginManager.register(plugin);

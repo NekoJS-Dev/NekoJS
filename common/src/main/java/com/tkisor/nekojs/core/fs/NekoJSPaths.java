@@ -30,6 +30,10 @@ public final class NekoJSPaths {
     public static final Path README = ROOT.resolve("README.txt");
     public static final Path ENGINE_CONFIG = CONFIG.resolve("engine.toml");
 
+    // 资源
+    public static final Path ASSETS = ROOT.resolve("assets");
+    public static final Path DATA   = ROOT.resolve("data");
+
     /**
      * 仅初始化物理文件夹，不涉及具体文件内容生成
      */
@@ -41,6 +45,9 @@ public final class NekoJSPaths {
         ensureDir(CONFIG);
         ensureDir(PROBE_DIR);
         ensureDir(NODE_MODULES);
+        ensureDir(ASSETS);
+        ensureDir(DATA);
+
     }
 
     public static void ensureDir(Path dir) {

@@ -8,7 +8,7 @@ plugins {
 
 version = mod_version
 group = mod_group_id
-def neo_version = "26.1.2.10-beta"
+def neo_version = "26.1.2.36-beta"
 def minecraft_version= "26.1.2"
 def minecraft_version_range= "[26.1,26.2)"
 def neo_version_range= "[26,)"
@@ -35,17 +35,11 @@ sourceSets {
 
 repositories {
     mavenCentral()
-    repositories {
-        exclusiveContent {
-            forRepository {
-                maven {
-                    url "https://cursemaven.com"
-                }
-            }
-            filter {
-                includeGroup "curse.maven"
-            }
+    exclusiveContent {
+        forRepository {
+            maven { url "https://cursemaven.com" }
         }
+        filter { includeGroup "curse.maven" }
     }
 }
 

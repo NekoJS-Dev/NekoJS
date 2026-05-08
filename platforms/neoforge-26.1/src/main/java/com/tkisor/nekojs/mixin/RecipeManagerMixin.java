@@ -7,6 +7,7 @@ import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
@@ -103,9 +104,9 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             players.forEach(player -> {
                 if (Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
                     if (!NekoErrorTracker.hasErrors()) {
-                        player.sendSystemMessage(NekoErrorTracker.getSuccessComponent());
+                        player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
                     } else {
-                        player.sendSystemMessage(NekoErrorTracker.getErrorComponent());
+                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent());
                     }
                 }
             });

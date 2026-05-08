@@ -8,14 +8,15 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 import java.util.function.Function;
 
 public interface BlockEvents {
     EventGroup GROUP = EventGroup.of("BlockEvents");
 
-    EventBusJS<BlockEvent.BreakEvent, Block> BROKEN =
-            GROUP.server("broken", BlockEvent.BreakEvent.class, dispatchByBlock());
+    EventBusJS<BreakBlockEvent, Block> BROKEN =
+            GROUP.server("broken", BreakBlockEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.EntityPlaceEvent, Block> ENTITY_PLACED =
             GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.EntityMultiPlaceEvent, Block> ENTITY_MULTI_PLACED =

@@ -3,33 +3,31 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.data.ScriptId;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
 import graal.graalvm.polyglot.SourceSection;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.MutableComponent;
-import com.tkisor.nekojs.api.data.ScriptId;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class NekoErrorTracker {
     private static final Map<ScriptId, ScriptError> ERRORS = new ConcurrentHashMap<>();
 
-    private static final String[] HOST_FRAME_BLACKLIST = {
+    private static final Set<String> HOST_FRAME_BLACKLIST = new CopyOnWriteArraySet<>(List.of(
             "org.graalvm.",
             "com.oracle.truffle.",
             "jdk.internal.reflect.",
             "net.neoforged.bus.",
             "com.tkisor.nekojs.utils.event.",
-            "com.tkisor.nekojs.api.event.EventBus",
-    };
+            "com.tkisor.nekojs.api.event.EventBus"
+    ));
 
     public static void record(ScriptContainer script, Throwable error) {
         ERRORS.put(script.id, new ScriptError(script, error));
@@ -77,9 +75,6 @@ public class NekoErrorTracker {
         return null;
     }
 
-    /**
-     * 修正行号，遇到注释或空行自动向下找
-     */
     public static int getRealCodeLine(String pathStr, int mappedLine) {
         if (mappedLine <= 0) return mappedLine;
         try {
@@ -102,7 +97,6 @@ public class NekoErrorTracker {
 
     public static String getMappedStackTrace(PolyglotException e) {
         StringBuilder sb = new StringBuilder();
-
         sb.append(e.getMessage()).append("\n");
 
         for (PolyglotException.StackFrame frame : e.getPolyglotStackTrace()) {
@@ -114,9 +108,7 @@ public class NekoErrorTracker {
                     int rawColumn = loc.getStartColumn();
 
                     SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(pathStr, rawLine, rawColumn);
-
                     int realLine = getRealCodeLine(pathStr, pos.line);
-
                     String rootName = frame.getRootName();
 
                     if (pos.name != null && !pos.name.isEmpty()) {
@@ -168,22 +160,11 @@ public class NekoErrorTracker {
     public static void clearAll() { ERRORS.clear(); }
     public static void clearByType(ScriptType type) {
         if (type == null) return;
-        ERRORS.entrySet().removeIf(entry -> {
-            ScriptError error = entry.getValue();
-            return error.getScriptType() == type;
-        });
+        ERRORS.entrySet().removeIf(entry -> entry.getValue().getScriptType() == type);
     }
+
+    // 暴露核心数据状态，代替直接返回 Component
     public static boolean hasErrors() { return !ERRORS.isEmpty(); }
+    public static int getErrorCount() { return ERRORS.size(); }
     public static Collection<ScriptError> getAllErrors() { return ERRORS.values(); }
-    public static Component getErrorComponent() {
-        int errorCount = ERRORS.size();
-        MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);
-        MutableComponent link = Component.translatable("nekojs.error.tracker.open_list")
-                .withStyle(style -> style
-                        .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
-                        .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors"))
-                );
-        return Component.empty().append(main).append("\n").append(link);
-    }
-    public static Component getSuccessComponent() { return Component.translatable("nekojs.error.tracker.success"); }
 }
