@@ -109,6 +109,13 @@ public interface RecipeFilter {
         }
     }
 
+    record ByGroup(String group) implements RecipeFilter {
+        @Override
+        public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
+            return holder.value().getGroup().equals(group);
+        }
+    }
+
     record ById(String recipeId, ResourceLocation target) implements RecipeFilter {
         public ById(String recipeId) {
             this(recipeId, ResourceLocation.tryParse(recipeId.contains(":") ? recipeId : "minecraft:" + recipeId));
@@ -118,6 +125,27 @@ public interface RecipeFilter {
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
             // 1.21.1: id() 直接就是 ResourceLocation
             return target != null && holder.id().equals(target);
+        }
+    }
+
+    record ByIdStartsWith(String prefix) implements RecipeFilter {
+        @Override
+        public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
+            return holder.id().toString().startsWith(prefix);
+        }
+    }
+
+    record ByIdEndsWith(String suffix) implements RecipeFilter {
+        @Override
+        public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
+            return holder.id().toString().endsWith(suffix);
+        }
+    }
+
+    record ByIdContains(String text) implements RecipeFilter {
+        @Override
+        public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
+            return holder.id().toString().contains(text);
         }
     }
 

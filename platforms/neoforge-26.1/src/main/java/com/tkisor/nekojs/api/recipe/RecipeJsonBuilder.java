@@ -37,15 +37,23 @@ public class RecipeJsonBuilder {
         this.event.getFinalJsons().put(this.currentId, this.json);
     }
 
+    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, Identifier currentId) {
+        this.event = event;
+        this.json = prebuiltJson;
+        this.currentId = currentId;
+    }
+
+    public static Identifier parseId(String id) {
+        if (id.contains(":")) {
+            return Identifier.tryParse(id);
+        }
+        return Identifier.fromNamespaceAndPath("nekojs", id);
+    }
+
     public RecipeJsonBuilder id(String newId) {
         event.getFinalJsons().remove(this.currentId);
 
-        Identifier parsedId;
-        if (newId.contains(":")) {
-            parsedId = Identifier.tryParse(newId);
-        } else {
-            parsedId = Identifier.fromNamespaceAndPath("nekojs", newId);
-        }
+        Identifier parsedId = parseId(newId);
 
         if (parsedId == null) {
             NekoJS.LOGGER.debug("[NekoJS] Invalid recipe ID: {}", newId);
@@ -60,6 +68,35 @@ public class RecipeJsonBuilder {
 
     public RecipeJsonBuilder group(String group) {
         return property("group", group);
+    }
+
+    public RecipeJsonBuilder validate() {
+        event.validateRecipe(currentId, json);
+        return this;
+    }
+
+    public JsonObject json() {
+        return json;
+    }
+
+    public RecipeJsonBuilder removeProperty(String key) {
+        json.remove(key);
+        return this;
+    }
+
+    public RecipeJsonBuilder merge(JsonObject value) {
+        for (Map.Entry<String, JsonElement> entry : value.entrySet()) {
+            json.add(entry.getKey(), entry.getValue());
+        }
+        return this;
+    }
+
+    public RecipeJsonBuilder merge(Map<String, ?> value) {
+        JsonElement element = convertToJsonElement(value);
+        if (element.isJsonObject()) {
+            return merge(element.getAsJsonObject());
+        }
+        return this;
     }
 
     public RecipeJsonBuilder input(String key, Ingredient ingredient) {

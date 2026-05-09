@@ -40,6 +40,16 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
             if (sub != null) andFilters.add(new RecipeFilter.Not(sub));
         }
 
+        if (value.hasMember("and")) {
+            RecipeFilter sub = convert(value.getMember("and"));
+            if (sub != null) andFilters.add(sub);
+        }
+
+        if (value.hasMember("or")) {
+            RecipeFilter sub = convert(value.getMember("or"));
+            if (sub != null) andFilters.add(sub);
+        }
+
         if (value.hasMember("output")) {
             andFilters.add(new RecipeFilter.ByOutput(value.getMember("output").asString()));
         }
@@ -52,8 +62,24 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
             andFilters.add(new RecipeFilter.ByMod(value.getMember("mod").asString()));
         }
 
+        if (value.hasMember("group")) {
+            andFilters.add(new RecipeFilter.ByGroup(value.getMember("group").asString()));
+        }
+
         if (value.hasMember("id")) {
             andFilters.add(new RecipeFilter.ById(value.getMember("id").asString()));
+        }
+
+        if (value.hasMember("idStartsWith")) {
+            andFilters.add(new RecipeFilter.ByIdStartsWith(value.getMember("idStartsWith").asString()));
+        }
+
+        if (value.hasMember("idEndsWith")) {
+            andFilters.add(new RecipeFilter.ByIdEndsWith(value.getMember("idEndsWith").asString()));
+        }
+
+        if (value.hasMember("idContains")) {
+            andFilters.add(new RecipeFilter.ByIdContains(value.getMember("idContains").asString()));
         }
 
         if (value.hasMember("type")) {

@@ -30,7 +30,7 @@ public class FallbackNamespaceProxy implements ProxyObject {
 
                     json.addProperty("type", namespace + ":" + recipeType);
 
-                    event.custom(json);
+                    return event.custom(json);
 
                 } catch (Exception e) {
                     NekoJSCommon.LOGGER.debug("Failed to parse fallback JSON: ", e);

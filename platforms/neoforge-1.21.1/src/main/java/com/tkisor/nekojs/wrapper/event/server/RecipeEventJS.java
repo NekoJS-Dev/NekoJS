@@ -3,6 +3,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
@@ -20,6 +21,7 @@ import graal.graalvm.polyglot.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class RecipeEventJS {
 
@@ -79,30 +81,44 @@ public class RecipeEventJS {
     }
 
     private boolean replaceInputInJson(JsonObject recipeJson, Ingredient match, JsonElement replacementJson) {
-        boolean modified = false;
-        if (recipeJson.has("ingredient") && testIngredientNode(recipeJson.get("ingredient"), match)) {
-            recipeJson.add("ingredient", replacementJson);
-            modified = true;
-        }
-        if (recipeJson.has("ingredients")) {
-            JsonArray arr = recipeJson.getAsJsonArray("ingredients");
-            for (int i = 0; i < arr.size(); i++) {
-                if (testIngredientNode(arr.get(i), match)) {
-                    arr.set(i, replacementJson);
+        return replaceInputInJson(recipeJson, match, replacementJson, false);
+    }
+
+    private boolean replaceInputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean inputContext) {
+        if (element == null || element.isJsonNull()) return false;
+        if (element.isJsonArray()) {
+            boolean modified = false;
+            JsonArray array = element.getAsJsonArray();
+            for (int i = 0; i < array.size(); i++) {
+                JsonElement child = array.get(i);
+                if (inputContext && testIngredientNode(child, match)) {
+                    array.set(i, replacementJson.deepCopy());
+                    modified = true;
+                } else if (replaceInputInJson(child, match, replacementJson, inputContext)) {
                     modified = true;
                 }
             }
+            return modified;
         }
-        if (recipeJson.has("key")) {
-            JsonObject keyObj = recipeJson.getAsJsonObject("key");
-            for (String k : keyObj.keySet()) {
-                if (testIngredientNode(keyObj.get(k), match)) {
-                    keyObj.add(k, replacementJson);
-                    modified = true;
-                }
+        if (!element.isJsonObject()) return false;
+
+        boolean modified = false;
+        JsonObject object = element.getAsJsonObject();
+        for (String key : new ArrayList<>(object.keySet())) {
+            JsonElement child = object.get(key);
+            boolean childInputContext = inputContext || isInputKey(key);
+            if (childInputContext && testIngredientNode(child, match)) {
+                object.add(key, replacementJson.deepCopy());
+                modified = true;
+            } else if (replaceInputInJson(child, match, replacementJson, childInputContext)) {
+                modified = true;
             }
         }
         return modified;
+    }
+
+    private static boolean isInputKey(String key) {
+        return key.equals("ingredient") || key.equals("ingredients") || key.equals("input") || key.equals("inputs") || key.equals("key");
     }
 
     private boolean testIngredientNode(JsonElement node, Ingredient match) {
@@ -124,29 +140,63 @@ public class RecipeEventJS {
             if (!entry.getValue().isJsonObject()) continue;
             JsonObject jsonObj = entry.getValue().getAsJsonObject();
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
-            if (jsonObj.has("result")) {
-                JsonElement resultNode = jsonObj.get("result");
-                try {
-                    ItemStack outputStack = ItemStack.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), resultNode).getOrThrow();
-                    if (!outputStack.isEmpty() && match.test(outputStack)) {
-                        jsonObj.add("result", replacementJson);
-                        replaced++;
-                    }
-                } catch (Exception e) {
-                    if (resultNode.isJsonPrimitive() && resultNode.getAsJsonPrimitive().isString()) {
-                        ResourceLocation loc = ResourceLocation.tryParse(resultNode.getAsString());
-                        if (loc != null) {
-                            Item item = BuiltInRegistries.ITEM.get(loc);
-                            if (item != Items.AIR && match.test(new ItemStack(item))) {
-                                jsonObj.add("result", replacementJson);
-                                replaced++;
-                            }
-                        }
-                    }
-                }
-            }
+            if (replaceOutputInJson(jsonObj, match, replacementJson, false)) replaced++;
         }
         NekoJSCommon.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced outputs in {} recipes", replaced);
+    }
+
+    private boolean replaceOutputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean outputContext) {
+        if (element == null || element.isJsonNull()) return false;
+        if (element.isJsonArray()) {
+            boolean modified = false;
+            JsonArray array = element.getAsJsonArray();
+            for (int i = 0; i < array.size(); i++) {
+                JsonElement child = array.get(i);
+                if (outputContext && testOutputNode(child, match)) {
+                    array.set(i, replacementJson.deepCopy());
+                    modified = true;
+                } else if (replaceOutputInJson(child, match, replacementJson, outputContext)) {
+                    modified = true;
+                }
+            }
+            return modified;
+        }
+        if (!element.isJsonObject()) return false;
+
+        boolean modified = false;
+        JsonObject object = element.getAsJsonObject();
+        for (String key : new ArrayList<>(object.keySet())) {
+            JsonElement child = object.get(key);
+            boolean childOutputContext = outputContext || isOutputKey(key);
+            if (childOutputContext && testOutputNode(child, match)) {
+                object.add(key, replacementJson.deepCopy());
+                modified = true;
+            } else if (replaceOutputInJson(child, match, replacementJson, childOutputContext)) {
+                modified = true;
+            }
+        }
+        return modified;
+    }
+
+    private static boolean isOutputKey(String key) {
+        return key.equals("result") || key.equals("results") || key.equals("output") || key.equals("outputs");
+    }
+
+    private boolean testOutputNode(JsonElement node, Ingredient match) {
+        try {
+            ItemStack outputStack = ItemStack.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
+            return !outputStack.isEmpty() && match.test(outputStack);
+        } catch (Exception e) {
+            if (node.isJsonPrimitive() && node.getAsJsonPrimitive().isString()) {
+                ResourceLocation id = ResourceLocation.tryParse(node.getAsString());
+                return id != null && testOutputId(id, match);
+            }
+            return false;
+        }
+    }
+
+    private boolean testOutputId(ResourceLocation id, Ingredient match) {
+        return Arrays.stream(match.getItems()).anyMatch(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(id));
     }
 
     public void remove(RecipeFilter filter) {
@@ -159,6 +209,65 @@ public class RecipeEventJS {
         NekoJSCommon.LOGGER.debug("[NekoJS] Removed {} recipes matching the filter", before - jsons.size());
     }
 
+    public List<RecipeEntryJS> all() {
+        List<RecipeEntryJS> recipes = new ArrayList<>();
+        for (Map.Entry<ResourceLocation, JsonElement> entry : jsons.entrySet()) {
+            if (entry.getValue().isJsonObject()) {
+                recipes.add(new RecipeEntryJS(this, entry.getKey(), entry.getValue().getAsJsonObject()));
+            }
+        }
+        return recipes;
+    }
+
+    public RecipeEntryJS get(String id) {
+        ResourceLocation parsedId = RecipeJsonBuilder.parseId(id);
+        if (parsedId == null) return null;
+        JsonElement json = jsons.get(parsedId);
+        if (json == null || !json.isJsonObject()) return null;
+        return new RecipeEntryJS(this, parsedId, json.getAsJsonObject());
+    }
+
+    public int count() {
+        return all().size();
+    }
+
+    public int count(RecipeFilter filter) {
+        return find(filter).size();
+    }
+
+    public boolean exists(String id) {
+        return get(id) != null;
+    }
+
+    public boolean exists(RecipeFilter filter) {
+        return !find(filter).isEmpty();
+    }
+
+    public List<RecipeEntryJS> find(RecipeFilter filter) {
+        List<RecipeEntryJS> recipes = new ArrayList<>();
+        if (filter == null) return recipes;
+        for (Map.Entry<ResourceLocation, JsonElement> entry : jsons.entrySet()) {
+            if (!entry.getValue().isJsonObject()) continue;
+            JsonObject json = entry.getValue().getAsJsonObject();
+            if (passFilter(entry.getKey(), json, filter)) {
+                recipes.add(new RecipeEntryJS(this, entry.getKey(), json));
+            }
+        }
+        return recipes;
+    }
+
+    public void forEach(RecipeFilter filter, Consumer<RecipeEntryJS> callback) {
+        for (RecipeEntryJS recipe : find(filter)) {
+            callback.accept(recipe);
+        }
+    }
+
+    public void forEach(Consumer<RecipeEntryJS> callback) {
+        for (RecipeEntryJS recipe : all()) {
+            callback.accept(recipe);
+        }
+    }
+
     private boolean passFilter(ResourceLocation id, JsonObject jsonObj, RecipeFilter filter) {
         try {
             Recipe<?> tempRecipe = Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), jsonObj).getOrThrow();
@@ -166,6 +275,22 @@ public class RecipeEventJS {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public void validateRecipe(ResourceLocation id, JsonObject json) {
+        try {
+            Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), json).getOrThrow(JsonParseException::new);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid recipe " + id + ": " + e.getMessage(), e);
+        }
+    }
+
+    public RecipeJsonBuilder custom(String type, JsonObject recipeJson) {
+        if (recipeJson == null) {
+            throw new IllegalArgumentException("Custom recipe JSON cannot be null");
+        }
+        recipeJson.addProperty("type", type);
+        return custom(recipeJson);
     }
 
     public RecipeJsonBuilder custom(JsonObject recipeJson) {

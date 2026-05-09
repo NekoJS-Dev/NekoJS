@@ -19,12 +19,65 @@ public class MinecraftRecipeHandler {
         this.event = event;
     }
 
+    public RecipeJsonBuilder smelting(Ingredient input, ItemStack output) {
+        return smelting(input, output, 0.1f, 200);
+    }
+
     public RecipeJsonBuilder smelting(Ingredient input, ItemStack output, float xp, int cookTime) {
-        return event.builder("minecraft:smelting")
+        return cooking("minecraft:smelting", input, output, xp, cookTime);
+    }
+
+    public RecipeJsonBuilder blasting(Ingredient input, ItemStack output) {
+        return blasting(input, output, 0.1f, 100);
+    }
+
+    public RecipeJsonBuilder blasting(Ingredient input, ItemStack output, float xp, int cookTime) {
+        return cooking("minecraft:blasting", input, output, xp, cookTime);
+    }
+
+    public RecipeJsonBuilder smoking(Ingredient input, ItemStack output) {
+        return smoking(input, output, 0.1f, 100);
+    }
+
+    public RecipeJsonBuilder smoking(Ingredient input, ItemStack output, float xp, int cookTime) {
+        return cooking("minecraft:smoking", input, output, xp, cookTime);
+    }
+
+    public RecipeJsonBuilder campfireCooking(Ingredient input, ItemStack output) {
+        return campfireCooking(input, output, 0.1f, 600);
+    }
+
+    public RecipeJsonBuilder campfireCooking(Ingredient input, ItemStack output, float xp, int cookTime) {
+        return cooking("minecraft:campfire_cooking", input, output, xp, cookTime);
+    }
+
+    private RecipeJsonBuilder cooking(String type, Ingredient input, ItemStack output, float xp, int cookTime) {
+        return event.builder(type)
                 .input("ingredient", input)
                 .output("result", output)
                 .property("experience", xp)
                 .property("cookingtime", cookTime);
+    }
+
+    public RecipeJsonBuilder stonecutting(Ingredient input, ItemStack output) {
+        return event.builder("minecraft:stonecutting")
+                .input("ingredient", input)
+                .output("result", output);
+    }
+
+    public RecipeJsonBuilder smithingTransform(Ingredient template, Ingredient base, Ingredient addition, ItemStack result) {
+        return event.builder("minecraft:smithing_transform")
+                .input("template", template)
+                .input("base", base)
+                .input("addition", addition)
+                .output("result", result);
+    }
+
+    public RecipeJsonBuilder smithingTrim(Ingredient template, Ingredient base, Ingredient addition) {
+        return event.builder("minecraft:smithing_trim")
+                .input("template", template)
+                .input("base", base)
+                .input("addition", addition);
     }
 
     public RecipeJsonBuilder shaped(ItemStack result, List<String> pattern, Map<String, Ingredient> keys) {
