@@ -1,13 +1,14 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.NekoId;
+import graal.graalvm.polyglot.Value;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import graal.graalvm.polyglot.Value;
 
 public class ItemAdapter implements JSTypeAdapter<Item> {
     @Override
@@ -22,7 +23,7 @@ public class ItemAdapter implements JSTypeAdapter<Item> {
         }
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-            return obj instanceof Item || obj instanceof ItemStack || obj instanceof Block;
+            return obj instanceof Item || obj instanceof ItemStack || obj instanceof Block || obj instanceof NekoId;
         }
         return false;
     }
@@ -37,33 +38,28 @@ public class ItemAdapter implements JSTypeAdapter<Item> {
             Object obj = value.asHostObject();
             if (obj instanceof Item item) return item;
             if (obj instanceof ItemStack stack) return stack.getItem();
-            // 1.21.1: 方块转物品应该使用 block.asItem()
             if (obj instanceof Block block) return block.asItem();
+            if (obj instanceof NekoId id) return itemFromId(ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path()));
         }
 
         if (value.isString()) {
-            String rawId = value.asString();
-
-            if (rawId == null || rawId.trim().isEmpty() || rawId.startsWith("#")) {
-                return Items.AIR;
-            }
-
-            String id = formatId(rawId);
-            ResourceLocation loc = ResourceLocation.tryParse(id);
-
-            if (loc != null) {
-                // 1.21.1: getValue() 重命名为了 get()，并且如果找不到会自动返回 Items.AIR
-                return BuiltInRegistries.ITEM.get(loc);
-            }
+            return itemFromId(parseId(value.asString()));
         }
 
-        return Items.AIR;
+        throw new IllegalArgumentException("Unsupported item value: " + value);
     }
 
-    private String formatId(String inputStr) {
-        if (inputStr.indexOf(':') != -1) {
-            return inputStr;
-        }
-        return "minecraft:" + inputStr;
+    private Item itemFromId(ResourceLocation id) {
+        return BuiltInRegistries.ITEM.getOptional(id).orElseThrow(() -> new IllegalArgumentException("Item not found: " + id));
+    }
+
+    private ResourceLocation parseId(String rawId) {
+        if (rawId == null || rawId.isBlank()) return ResourceLocation.withDefaultNamespace("air");
+        String id = rawId.trim();
+        if (id.startsWith("#")) throw new IllegalArgumentException("Expected item id but got tag id: " + rawId);
+        if (!id.contains(":")) id = "minecraft:" + id;
+        ResourceLocation location = ResourceLocation.tryParse(id);
+        if (location == null) throw new IllegalArgumentException("Invalid item id: " + rawId);
+        return location;
     }
 }

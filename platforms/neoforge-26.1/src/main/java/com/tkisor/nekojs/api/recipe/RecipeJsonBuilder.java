@@ -3,9 +3,14 @@ package com.tkisor.nekojs.api.recipe;
 import com.google.gson.*;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
+import com.tkisor.nekojs.wrapper.item.IngredientJS;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
+import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
 import java.util.List;
 import java.util.Map;
@@ -64,6 +69,21 @@ public class RecipeJsonBuilder {
 
     public RecipeJsonBuilder output(String key, ItemStack result) {
         if (result != null) json.add(key, event.serializeResult(result));
+        return this;
+    }
+
+    public RecipeJsonBuilder fluid(String key, FluidStack stack) {
+        if (stack != null) json.add(key, event.serializeFluidStack(stack));
+        return this;
+    }
+
+    public RecipeJsonBuilder fluidIngredient(String key, FluidIngredient ingredient) {
+        if (ingredient != null) json.add(key, event.serializeFluidIngredient(ingredient));
+        return this;
+    }
+
+    public RecipeJsonBuilder sizedFluidIngredient(String key, SizedFluidIngredient ingredient) {
+        if (ingredient != null) json.add(key, event.serializeSizedFluidIngredient(ingredient));
         return this;
     }
 
@@ -127,8 +147,23 @@ public class RecipeJsonBuilder {
             case Character c -> {
                 return new JsonPrimitive(c);
             }
+            case IngredientJS ing -> {
+                return event.serializeIngredient(ing.unwrap());
+            }
             case Ingredient ing -> {
                 return event.serializeIngredient(ing);
+            }
+            case FluidIngredientJS ing -> {
+                return event.serializeFluidIngredient(ing.unwrap());
+            }
+            case FluidIngredient ing -> {
+                return event.serializeFluidIngredient(ing);
+            }
+            case SizedFluidIngredient ing -> {
+                return event.serializeSizedFluidIngredient(ing);
+            }
+            case FluidStack stack -> {
+                return event.serializeFluidStack(stack);
             }
             case ItemStack stack -> {
                 return event.serializeResult(stack);

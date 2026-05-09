@@ -13,17 +13,23 @@ import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
+import com.tkisor.nekojs.bindings.static_access.ColorJS;
+import com.tkisor.nekojs.bindings.static_access.FluidJS;
+import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
 import com.tkisor.nekojs.bindings.static_access.IDJS;
 import com.tkisor.nekojs.bindings.static_access.IngredientJS;
+import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.bindings.static_access.StringUtilsJS;
 import com.tkisor.nekojs.bindings.static_access.TimeJS;
 import com.tkisor.nekojs.bindings.static_access.UUIDJS;
 import com.tkisor.nekojs.bindings.static_access.UtilsJS;
 import com.tkisor.nekojs.js.type_adapter.*;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
+import com.tkisor.nekojs.wrapper.fluid.FluidAmounts;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -41,6 +47,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.material.Fluids;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -66,7 +74,15 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerBindings(BindingsRegister registry) {
         registry.register(Binding.of("Ingredient", new IngredientJS()));
+        registry.register(Binding.of("Fluid", new FluidJS()));
+        registry.register(Binding.of("FluidIngredient", new FluidIngredientJS()));
+        registry.register(Binding.of("FluidAmounts", FluidAmounts.class));
+        registry.register(Binding.of("Fluids", Fluids.class));
+        registry.register(Binding.of("FluidStack", FluidStack.class));
+        registry.register(Binding.of("ItemJS", new ItemJS()));
         registry.register(Binding.of("ID", new IDJS()));
+        registry.register(Binding.of("Color", new ColorJS()));
+        registry.register(Binding.of("Platform", Platform.class));
         registry.register(Binding.of("UUID", new UUIDJS()));
         registry.register(Binding.of("StringUtils", new StringUtilsJS()));
         registry.register(Binding.of("Time", new TimeJS()));
@@ -109,6 +125,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     public void registerAdapters(JSTypeAdapterRegister registry) {
         registry.register(new ItemStackAdapter());
         registry.register(new IngredientAdapter());
+        registry.register(new FluidStackAdapter());
+        registry.register(new FluidIngredientAdapter());
+        registry.register(new SizedFluidIngredientAdapter());
         registry.register(new IdentifierAdapter());
         registry.register(new RecipeFilterAdapter());
         registry.register(new JsonObjectAdapter());

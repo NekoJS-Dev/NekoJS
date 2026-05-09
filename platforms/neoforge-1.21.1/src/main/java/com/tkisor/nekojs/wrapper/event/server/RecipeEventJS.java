@@ -13,6 +13,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
+import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 import graal.graalvm.polyglot.Value;
 
 import java.nio.charset.StandardCharsets;
@@ -39,6 +42,18 @@ public class RecipeEventJS {
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
+    }
+
+    public JsonElement serializeFluidStack(FluidStack stack) {
+        return FluidStack.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), stack).getOrThrow(JsonParseException::new);
+    }
+
+    public JsonElement serializeFluidIngredient(FluidIngredient ingredient) {
+        return FluidIngredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
+    }
+
+    public JsonElement serializeSizedFluidIngredient(SizedFluidIngredient ingredient) {
+        return SizedFluidIngredient.FLAT_CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
 
     public ResourceLocation generateRecipeId(String prefix) {

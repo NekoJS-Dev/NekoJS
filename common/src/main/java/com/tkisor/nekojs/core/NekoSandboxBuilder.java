@@ -114,7 +114,8 @@ public final class NekoSandboxBuilder {
                         Value.class,
                         adapter.getTargetClass(),
                         adapter::canConvert,
-                        adapter::convert
+                        adapter::convert,
+                        adapter.getPrecedence()
                 )
                 .targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue)
                 .targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);

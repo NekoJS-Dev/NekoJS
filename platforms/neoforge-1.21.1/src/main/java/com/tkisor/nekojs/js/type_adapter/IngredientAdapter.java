@@ -1,22 +1,13 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.core.NekoJSScriptManager;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.item.IngredientJS;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
+import com.tkisor.nekojs.wrapper.item.IngredientResolver;
+import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import graal.graalvm.polyglot.Value;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
@@ -27,119 +18,18 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
     @Override
     public boolean canConvert(Value value) {
-        if (value.isNull() || value.isString() || value.hasArrayElements()) {
+        if (value.isNull() || value.isString() || value.hasArrayElements() || value.hasMembers()) {
             return true;
         }
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-            return obj instanceof IngredientJS || obj instanceof Ingredient || obj instanceof ItemStack;
+            return obj instanceof IngredientJS || obj instanceof Ingredient || obj instanceof ItemStack || obj instanceof Item || obj instanceof NekoId;
         }
         return false;
     }
 
     @Override
     public Ingredient convert(Value value) {
-        if (value.isNull()) {
-            return null; // 配方系统通常用 null 表示“空槽位”
-        }
-
-        if (value.isHostObject()) {
-            Object obj = value.asHostObject();
-            if (obj instanceof IngredientJS wrapper) return wrapper.unwrap();
-            if (obj instanceof Ingredient ing) return ing;
-            if (obj instanceof ItemStack stack) return Ingredient.of(stack.getItem());
-        }
-
-        try {
-            if (value.isString()) {
-                return resolveSingle(value.asString());
-            }
-
-            // ["minecraft:apple", "#minecraft:logs"])
-            if (value.hasArrayElements()) {
-                List<Holder<Item>> holders = new ArrayList<>();
-                for (long i = 0; i < value.getArraySize(); i++) {
-                    Value elem = value.getArrayElement(i);
-                    if (elem.isString()) {
-                        resolveToHolders(elem.asString(), holders);
-                    }
-                }
-                if (!holders.isEmpty()) {
-                    // 1.21.1: 转为 Item 数组传入
-                    return Ingredient.of(holders.stream().map(Holder::value).toArray(Item[]::new));
-                }
-            }
-
-        } catch (Exception e) {
-            ScriptType type = NekoJSScriptManager.getTypeFromContext(value.getContext());
-            type.logger().debug("Ingredient conversion failed: {}", e.getMessage());
-        }
-
-        return fallback();
-    }
-
-    /**
-     * 如果是 Tag，解析该标签下的所有物品
-     */
-    private Ingredient resolveSingle(String rawId) {
-        if (rawId == null || rawId.trim().isEmpty()) return fallback();
-
-        String id = formatId(rawId);
-        ResourceLocation loc = ResourceLocation.tryParse(id.startsWith("#") ? id.substring(1) : id);
-        if (loc == null) return fallback();
-
-        if (id.startsWith("#")) {
-            TagKey<Item> tagKey = TagKey.create(Registries.ITEM, loc);
-            // 1.21.1: get() -> getTag()
-            var tagSet = BuiltInRegistries.ITEM.getTag(tagKey);
-
-            return tagSet.map(set -> Ingredient.of(set.stream().map(Holder::value).toArray(Item[]::new))).orElseGet(this::fallback);
-        } else {
-            // 1.21.1: getValue() -> get()
-            Item item = BuiltInRegistries.ITEM.get(loc);
-            if (item != null && item != Items.AIR) {
-                return Ingredient.of(item);
-            }
-        }
-        return fallback();
-    }
-
-    /**
-     * 数组情况下的备用解析：解包加入收集列表中
-     */
-    private void resolveToHolders(String rawId, List<Holder<Item>> out) {
-        if (rawId == null || rawId.trim().isEmpty()) return;
-
-        String id = formatId(rawId);
-        ResourceLocation loc = ResourceLocation.tryParse(id.startsWith("#") ? id.substring(1) : id);
-        if (loc == null) return;
-
-        if (id.startsWith("#")) {
-            TagKey<Item> tagKey = TagKey.create(Registries.ITEM, loc);
-            // 1.21.1: get() -> getTag()
-            BuiltInRegistries.ITEM.getTag(tagKey).ifPresent(holders -> {
-                for (Holder<Item> h : holders) {
-                    out.add(h);
-                }
-            });
-        } else {
-            // 1.21.1: getValue() -> get()
-            Item item = BuiltInRegistries.ITEM.get(loc);
-            if (item != null && item != Items.AIR) {
-                out.add(item.builtInRegistryHolder());
-            }
-        }
-    }
-
-    private String formatId(String inputStr) {
-        if (inputStr.indexOf(':') != -1) {
-            return inputStr; // 已经包含命名空间，直接返回
-        }
-        // 如果没有冒号，自动补充 minecraft 命名空间
-        return inputStr.startsWith("#") ? "#minecraft:" + inputStr.substring(1) : "minecraft:" + inputStr;
-    }
-
-    private Ingredient fallback() {
-        return Ingredient.of(Items.BARRIER);
+        return IngredientResolver.fromValue(value);
     }
 }

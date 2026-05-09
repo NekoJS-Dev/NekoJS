@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api;
 
+import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
 /**
@@ -8,10 +9,16 @@ import graal.graalvm.polyglot.Value;
  */
 public interface JSTypeAdapter<T> {
     Class<T> getTargetClass();
+
+    default HostAccess.TargetMappingPrecedence getPrecedence() {
+        return HostAccess.TargetMappingPrecedence.LOWEST;
+    }
+
     /**
      * 判断 JS 值是否可以转换为目标类型
      */
     boolean canConvert(Value value);
+
     /**
      * 将 JS 值转换为目标类型，如果无法转换应直接抛出异常更为稳妥，而非返回null
      */

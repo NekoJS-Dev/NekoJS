@@ -2,8 +2,9 @@ package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import net.minecraft.resources.ResourceLocation;
+import com.tkisor.nekojs.api.data.NekoId;
 import graal.graalvm.polyglot.Value;
+import net.minecraft.resources.ResourceLocation;
 
 public class ResourceLocationAdapter implements JSTypeAdapter<ResourceLocation> {
 
@@ -16,17 +17,19 @@ public class ResourceLocationAdapter implements JSTypeAdapter<ResourceLocation> 
 
     @Override
     public boolean canConvert(Value value) {
-        return value.isString();
+        return value.isString() || value.isHostObject() && value.asHostObject() instanceof NekoId;
     }
 
     @Override
     public ResourceLocation convert(Value value) {
-        String id = value.asString();
+        if (value.isHostObject() && value.asHostObject() instanceof NekoId id) {
+            return ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path());
+        }
 
+        String id = value.asString();
         if (id.contains(":")) {
             return ResourceLocation.parse(id);
-        } else {
-            return ResourceLocation.fromNamespaceAndPath(DEFAULT_NAMESPACE, id);
         }
+        return ResourceLocation.fromNamespaceAndPath(DEFAULT_NAMESPACE, id);
     }
 }

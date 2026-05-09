@@ -9,6 +9,7 @@
     "inject.MixinBlock",
     "inject.MixinBlockState",
     "inject.MixinEntity",
+    "inject.MixinItem",
     "inject.MixinItemStack",
     "inject.MixinLevel",
     "inject.MixinLivingEntity",

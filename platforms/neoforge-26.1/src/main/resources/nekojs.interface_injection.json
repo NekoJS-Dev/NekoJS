@@ -5,6 +5,9 @@
   "net/minecraft/world/entity/Entity": [
     "com/tkisor/nekojs/api/inject/EntityExtension"
   ],
+  "net/minecraft/world/item/Item": [
+    "com/tkisor/nekojs/api/inject/ItemExtension"
+  ],
   "net/minecraft/world/item/ItemStack": [
     "com/tkisor/nekojs/api/inject/ItemStackExtension"
   ],

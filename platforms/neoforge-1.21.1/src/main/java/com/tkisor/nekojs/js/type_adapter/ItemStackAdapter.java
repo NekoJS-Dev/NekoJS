@@ -1,12 +1,14 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.NekoId;
+import graal.graalvm.polyglot.HostAccess;
+import graal.graalvm.polyglot.Value;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import graal.graalvm.polyglot.Value;
 
 import java.util.Optional;
 
@@ -18,23 +20,25 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
     }
 
     @Override
+    public HostAccess.TargetMappingPrecedence getPrecedence() {
+        return HostAccess.TargetMappingPrecedence.LOW;
+    }
+
+    @Override
     public boolean canConvert(Value value) {
-        if (value.isNull()) {
-            return true;
-        }
-        if (value.isString()) {
+        if (value == null || value.isNull() || value.isString()) {
             return true;
         }
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-            return obj instanceof ItemStack;
+            return obj instanceof ItemStack || obj instanceof Item || obj instanceof NekoId;
         }
-        return false;
+        return value.hasMembers() && (value.hasMember("item") || value.hasMember("id") || value.hasMember("tag"));
     }
 
     @Override
     public ItemStack convert(Value value) {
-        if (value.isNull()) {
+        if (value == null || value.isNull()) {
             return ItemStack.EMPTY;
         }
 
@@ -44,56 +48,113 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
-
-            if (obj instanceof ItemStack stack) {
-                return stack;
-            }
+            if (obj instanceof ItemStack stack) return stack.copy();
+            if (obj instanceof Item item) return item.getDefaultInstance();
+            if (obj instanceof NekoId id) return idToItemStack(ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path()), 1);
         }
 
-        return ItemStack.EMPTY;
+        if (value.hasMembers()) {
+            return objectToItemStack(value);
+        }
+
+        throw new IllegalArgumentException("Unsupported item stack value: " + value);
     }
 
-    /**
-     * 将字符串转换为 ItemStack。
-     * 支持 "Nx item_id" 格式（例如 "2x minecraft:stick"），默认数量为 1。
-     */
-    static ItemStack stringToItemStack(String str) {
-        if (str == null || str.trim().isEmpty()) return ItemStack.EMPTY;
+    public static ItemStack stringToItemStack(String raw) {
+        if (isEmptyStackString(raw)) return ItemStack.EMPTY;
 
+        String idText = raw.trim();
         int count = 1;
-        str = str.trim();
-
-        if (str.matches("^(\\d+)x\\s+(\\S+)$")) {
-            int xIndex = str.indexOf('x');
-            try {
-                count = Integer.parseInt(str.substring(0, xIndex).trim());
-                str = str.substring(xIndex + 1).trim();
-            } catch (NumberFormatException e) {
-                count = 1;
-            }
+        if (idText.matches("^(\\d+)x\\s+(\\S+)$")) {
+            int xIndex = idText.indexOf('x');
+            count = parsePositiveCount(idText.substring(0, xIndex).trim());
+            idText = idText.substring(xIndex + 1).trim();
         }
 
-        // 容错：如果没有冒号，自动补全 minecraft: 命名空间
-        if (!str.contains(":")) {
-            str = "minecraft:" + str;
+        if (idText.startsWith("#")) {
+            throw new IllegalArgumentException("ItemStack cannot be created from a tag: " + raw);
+        }
+        if (!idText.contains(":")) {
+            idText = "minecraft:" + idText;
         }
 
-        ResourceLocation id = ResourceLocation.tryParse(str);
+        ResourceLocation id = ResourceLocation.tryParse(idText);
         if (id == null) {
-            return ItemStack.EMPTY;
+            throw new IllegalArgumentException("Invalid item id: " + raw);
+        }
+        return idToItemStack(id, count);
+    }
+
+    private static ItemStack objectToItemStack(Value value) {
+        if (value.hasMember("tag")) {
+            throw new IllegalArgumentException("ItemStack cannot be created from a tag");
+        }
+        if (value.hasMember("item") && value.hasMember("id")) {
+            throw new IllegalArgumentException("ItemStack object cannot contain both 'item' and 'id'");
         }
 
-        // 1.21.1: getValue() 已经被替换为 getOptional() 或 get()
+        Value itemValue;
+        if (value.hasMember("item")) {
+            itemValue = value.getMember("item");
+        } else if (value.hasMember("id")) {
+            itemValue = value.getMember("id");
+        } else {
+            throw new IllegalArgumentException("ItemStack object must contain 'item' or 'id'");
+        }
+
+        ItemStack stack = new ItemStackAdapter().convert(itemValue);
+        if (value.hasMember("count")) {
+            return withCount(stack, parsePositiveInt(value.getMember("count"), "count"));
+        }
+        return stack;
+    }
+
+    private static ItemStack idToItemStack(ResourceLocation id, int count) {
+        if (id.getPath().equals("air")) return ItemStack.EMPTY;
         Optional<Item> itemOpt = BuiltInRegistries.ITEM.getOptional(id);
-
-        if (itemOpt.isEmpty() && !id.getPath().equals("air")) {
-            return ItemStack.EMPTY;
+        if (itemOpt.isEmpty()) {
+            throw new IllegalArgumentException("Item not found: " + id);
         }
+        ItemStack stack = itemOpt.orElse(Items.AIR).getDefaultInstance();
+        stack.setCount(count);
+        return stack;
+    }
 
+    public static ItemStack withCount(ItemStack stack, int count) {
+        parsePositiveCount(count);
+        if (stack.isEmpty()) return ItemStack.EMPTY;
+        ItemStack copy = stack.copy();
+        copy.setCount(count);
+        return copy;
+    }
+
+    private static int parsePositiveInt(Value value, String name) {
+        if (!value.isNumber() || !value.fitsInInt()) {
+            throw new IllegalArgumentException("ItemStack " + name + " must be an integer");
+        }
+        return parsePositiveCount(value.asInt());
+    }
+
+    private static int parsePositiveCount(String raw) {
         try {
-            return new ItemStack(itemOpt.orElse(Items.AIR), count);
-        } catch (Exception e) {
-            return ItemStack.EMPTY;
+            return parsePositiveCount(Integer.parseInt(raw));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("ItemStack count must be an integer: " + raw, e);
         }
+    }
+
+    private static int parsePositiveCount(int count) {
+        if (count <= 0) {
+            throw new IllegalArgumentException("ItemStack count must be positive: " + count);
+        }
+        return count;
+    }
+
+    private static boolean isEmptyStackString(String raw) {
+        if (raw == null) return true;
+        return switch (raw.trim()) {
+            case "", "-", "empty", "minecraft:empty", "air", "minecraft:air" -> true;
+            default -> false;
+        };
     }
 }
