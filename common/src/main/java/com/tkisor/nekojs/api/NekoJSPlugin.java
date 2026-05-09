@@ -9,7 +9,7 @@ import org.jetbrains.annotations.ApiStatus;
  * 插件类必须实现此接口，才能在 NekoJS 初始化时被自动注册。<p>
  * 插件类可以在 {@link #registerEvents(EventGroupRegistry)} 方法中注册事件。
  */
-@ApiStatus.Internal
+@ApiStatus.Experimental
 public interface NekoJSPlugin extends NekoJSBasePlugin {
     /**
      * 注册事件组。<p>
@@ -26,5 +26,6 @@ public interface NekoJSPlugin extends NekoJSBasePlugin {
     /**
      * 注册配方命名空间，如 {@code event.recipes.minecraft}
      */
+    @SuppressWarnings("rawtypes")
     default void registerRecipeNamespaces(RecipeNamespaceRegister registry) {}
 }

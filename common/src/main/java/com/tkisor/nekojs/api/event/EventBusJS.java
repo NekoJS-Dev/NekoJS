@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSCommon;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.script.ScriptType;
@@ -13,17 +13,23 @@ import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
-import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /**
  * @author ZZZank
  */
 public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
+    private static Predicate<Class<?>> externalCancellabilityPredicate = c -> false;
+
+    public static void setExternalCancellabilityPredicate(Predicate<Class<?>> predicate) {
+        externalCancellabilityPredicate = predicate == null ? c -> false : predicate;
+    }
+
     public static <E, K> EventBusJS<E, K> of(Class<E> eventType) {
         return of(eventType, eventCancellability(eventType));
     }
@@ -50,9 +56,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return new EventBusJS<>(bus);
     }
 
-    /// [NekoCancellableEvent] for custom event, [ICancellableEvent] for redirected forge event
     public static boolean eventCancellability(Class<?> c) {
-        return NekoCancellableEvent.class.isAssignableFrom(c) || ICancellableEvent.class.isAssignableFrom(c);
+        return NekoCancellableEvent.class.isAssignableFrom(c) || externalCancellabilityPredicate.test(c);
     }
 
     private final EventBus<EVENT> bus;
@@ -87,7 +92,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 //            NekoErrorTracker.recordEventError(e);
 //            return false;
         } catch (Exception e) {
-            NekoJS.LOGGER.error("Error during CancellableEventBus execution", e);
+            NekoJSCommon.LOGGER.error("Error during CancellableEventBus execution", e);
             return false;
         }
     }
@@ -100,7 +105,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 //            } catch (PolyglotException e) {
 //                NekoErrorTracker.recordEventError(e);
             } catch (Exception e) {
-                NekoJS.LOGGER.error("Error during EventBus execution", e);
+                NekoJSCommon.LOGGER.error("Error during EventBus execution", e);
             }
             return false;
         }

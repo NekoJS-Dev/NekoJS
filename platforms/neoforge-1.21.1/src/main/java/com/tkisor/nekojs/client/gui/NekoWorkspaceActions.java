@@ -46,7 +46,7 @@ public class NekoWorkspaceActions {
             toast.show(I18n.get("nekojs.gui.toast.error.no_file_open")); return;
         }
         try {
-            Path path = NekoJSPaths.ROOT.resolve(tab.path);
+            Path path = NekoJSPaths.verifyScriptSyncPath(tab.path);
             Files.writeString(path, tab.editor.getValue());
             toast.show(I18n.get("nekojs.gui.toast.save_success", tab.path));
             tab.editor.markSaved();
@@ -75,7 +75,7 @@ public class NekoWorkspaceActions {
 
     public static void syncUploadAll(NekoToast toast) {
         toast.show(I18n.get("nekojs.gui.toast.pushing_all"));
-        Map<String, String> localFiles = NekoJSNetwork.collectAllValidScripts(NekoJSPaths.ROOT);
+        Map<String, String> localFiles = ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.ROOT);
         if (localFiles.isEmpty()) {
             toast.show(I18n.get("nekojs.gui.toast.error.empty_dir")); return;
         }

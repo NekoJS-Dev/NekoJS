@@ -4,12 +4,14 @@ import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.NekoBindings;
 import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.api.event.NekoEventGroups;
-import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.script.ScriptType;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * NekoJS 上下文全景快照。
@@ -28,6 +30,7 @@ import java.util.*;
  * }</pre>
  */
 public final class NekoContextSnapshot {
+    private static NekoContextSnapshotProvider provider = NekoContextSnapshotProvider.EMPTY;
 
     private final ScriptType scriptType;
     private final Map<String, Binding> bindings;
@@ -49,6 +52,10 @@ public final class NekoContextSnapshot {
         this.typeAdapterTargets = Collections.unmodifiableSet(typeAdapterTargets);
     }
 
+    public static void setProvider(NekoContextSnapshotProvider provider) {
+        NekoContextSnapshot.provider = provider == null ? NekoContextSnapshotProvider.EMPTY : provider;
+    }
+
     /**
      * 获取指定 {@link ScriptType} 的上下文快照。
      */
@@ -57,7 +64,7 @@ public final class NekoContextSnapshot {
         Map<String, Binding> bindings = NekoBindings.getFor(scriptType);
 
         // 2. 事件组（只保留对该 ScriptType 可用的事件总线）
-        Map<String, EventGroup> rawGroups = NekoEventGroups.all();
+        Map<String, EventGroup> rawGroups = provider.eventGroups();
         Map<String, EventGroup> filteredGroups = new LinkedHashMap<>();
         for (Map.Entry<String, EventGroup> entry : rawGroups.entrySet()) {
             EventGroup group = entry.getValue();
@@ -76,7 +83,7 @@ public final class NekoContextSnapshot {
         }
 
         // 3. 配方命名空间
-        Set<String> recipeNamespaces = NekoRecipeNamespaces.getNamespaces();
+        Set<String> recipeNamespaces = provider.recipeNamespaces();
 
         // 4. 类型适配器目标类
         Set<Class<?>> adapterTargets = new LinkedHashSet<>();
@@ -138,6 +145,6 @@ public final class NekoContextSnapshot {
      * @return handler 的 Java 类；未注册时返回 {@code null}
      */
     public static @Nullable Class<?> getHandlerClassForNamespace(String namespace) {
-        return NekoRecipeNamespaces.getHandlerClass(namespace);
+        return provider.recipeHandlerClass(namespace);
     }
 }

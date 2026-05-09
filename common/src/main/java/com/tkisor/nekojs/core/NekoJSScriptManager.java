@@ -1,10 +1,7 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.NekoBindings;
-import com.tkisor.nekojs.api.event.NekoEventGroups;
-import com.tkisor.nekojs.api.event.EventGroupJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
@@ -17,12 +14,17 @@ import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * NekoJS 脚本引擎核心生命周期调度器
  */
 public final class NekoJSScriptManager {
+    private static ScriptEventBridge eventBridge = ScriptEventBridge.EMPTY;
 
     private final ScriptTypedValue<Context> contexts = ScriptTypedValue.ofNullable(this::initContext);
 
@@ -35,8 +37,12 @@ public final class NekoJSScriptManager {
     public NekoJSScriptManager() {
     }
 
+    public static void setEventBridge(ScriptEventBridge bridge) {
+        eventBridge = bridge == null ? ScriptEventBridge.EMPTY : bridge;
+    }
+
     public void registerScriptProperty() {
-        for (var plugin : NekoJSPluginManager.getPlugins()) {
+        for (var plugin : NekoJSBasePluginManager.getPlugins()) {
             plugin.registerScriptProperty(scriptPropertyRegistry);
         }
     }
@@ -91,11 +97,7 @@ public final class NekoJSScriptManager {
 
         var bindings = ctx.getBindings("js");
 
-        var values = NekoEventGroups.all().values();
-        NekoJS.LOGGER.info("正在为 {} 注册 {} 个事件组...", type.name(), values.size());
-        for (var group : values) {
-            bindings.putMember(group.name(), new EventGroupJS(group, type));
-        }
+        eventBridge.bindEvents(bindings, type);
 
         Map<String, Binding> environmentBindings = NekoBindings.getFor(type);
 
@@ -148,9 +150,7 @@ public final class NekoJSScriptManager {
     public void reloadScripts(ScriptType type) {
         type.logger().info("正在重载 {} 脚本...", type.name());
 
-        for (var group : NekoEventGroups.all().values()) {
-            group.clearListeners(type);
-        }
+        eventBridge.clearListeners(type);
 
         Context oldContext = contexts.set(type, null);
         if (oldContext != null) {

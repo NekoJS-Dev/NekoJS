@@ -3,7 +3,6 @@ package com.tkisor.nekojs.network;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen;
 import com.tkisor.nekojs.client.gui.NekoWorkspaceScreen;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
@@ -17,17 +16,11 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class NekoJSNetwork {
-
     @SubscribeEvent
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1");
@@ -48,25 +41,6 @@ public class NekoJSNetwork {
 
         // 打开工作区包
         registrar.playToClient(OpenWorkspacePacket.TYPE, OpenWorkspacePacket.STREAM_CODEC, NekoJSNetwork::handleOpenWorkspaceOnClient);
-    }
-
-    public static Map<String, String> collectAllValidScripts(Path rootDir) {
-        Map<String, String> files = new HashMap<>();
-        if (!Files.exists(rootDir) || !Files.isDirectory(rootDir)) return files;
-
-        try (Stream<Path> stream = Files.walk(rootDir)) {
-            stream.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".js"))
-                    .forEach(p -> {
-                        String relPath = rootDir.relativize(p).toString().replace('\\', '/');
-                        if (!relPath.startsWith("assets/") && !relPath.startsWith("data/") && !relPath.startsWith("node_modules/")) {
-                            try { files.put(relPath, Files.readString(p)); } catch (Exception ignored) {}
-                        }
-                    });
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("Failed to collect scripts from " + rootDir, e);
-        }
-        return files;
     }
 
     /* ================= Client Handlers ================= */
@@ -113,15 +87,8 @@ public class NekoJSNetwork {
         }
 
         private static void receiveAllScripts(Map<String, String> files) {
-            Path nekojsDir = new File(Minecraft.getInstance().gameDirectory, "nekojs").toPath();
-            int count = 0;
             try {
-                for (Map.Entry<String, String> entry : files.entrySet()) {
-                    Path target = nekojsDir.resolve(entry.getKey());
-                    Files.createDirectories(target.getParent());
-                    Files.writeString(target, entry.getValue());
-                    count++;
-                }
+                int count = ScriptSyncService.writeBatch(files);
                 processFeedback(true, "成功从服务端强制拉取了 " + count + " 个文件！");
             } catch (Exception e) {
                 processFeedback(false, "批量写入本地失败: " + e.getMessage());
@@ -142,9 +109,8 @@ public class NekoJSNetwork {
                 return;
             }
             try {
-                Path targetPath = NekoJSPaths.verifyInsideGameDir(NekoJSPaths.ROOT.resolve(data.path()));
-                if (Files.exists(targetPath)) {
-                    String content = Files.readString(targetPath);
+                String content = ScriptSyncService.readScript(data.path());
+                if (content != null) {
                     PacketDistributor.sendToPlayer((ServerPlayer) player, new FetchScriptResponsePacket(data.path(), content));
                 } else {
                     PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "服务端找不到该文件: " + data.path()));
@@ -164,10 +130,7 @@ public class NekoJSNetwork {
                 return;
             }
             try {
-                Path targetPath = NekoJSPaths.verifyInsideGameDir(NekoJSPaths.ROOT.resolve(data.path()));
-                Files.createDirectories(targetPath.getParent());
-                Files.writeString(targetPath, data.content());
-                // 返回成功回执
+                ScriptSyncService.saveScript(data.path(), data.content());
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "保存成功！"));
             } catch (Exception e) {
                 NekoJS.LOGGER.error("Failed to save script from client", e);
@@ -183,7 +146,7 @@ public class NekoJSNetwork {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "权限不足！"));
                 return;
             }
-            Map<String, String> files = collectAllValidScripts(NekoJSPaths.ROOT);
+            Map<String, String> files = ScriptSyncService.collectAllScripts();
             PacketDistributor.sendToPlayer((ServerPlayer) player, new DownloadAllScriptsPacket(files));
         });
     }
@@ -196,16 +159,13 @@ public class NekoJSNetwork {
                 return;
             }
             try {
-                for (Map.Entry<String, String> entry : data.files().entrySet()) {
-                    Path targetPath = NekoJSPaths.verifyInsideGameDir(NekoJSPaths.ROOT.resolve(entry.getKey()));
-                    Files.createDirectories(targetPath.getParent());
-                    Files.writeString(targetPath, entry.getValue());
-                }
-                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "成功接收并覆盖了 " + data.files().size() + " 个脚本文件！(请使用 /reload 生效)"));
+                int count = ScriptSyncService.writeBatch(data.files());
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "成功接收并覆盖了 " + count + " 个脚本文件！(请使用 /reload 生效)"));
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("Failed to sync scripts from client", e);
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "批量同步失败: " + e.getMessage()));
             }
         });
     }
+
 }

@@ -79,7 +79,7 @@ public final class NekoSandboxBuilder {
                 .err(errStream)
                 .allowHostAccess(SHARED_HOST_ACCESS)
                 .allowIO(SHARED_IO_ACCESS)
-                .allowCreateThread(true)
+                .allowCreateThread(ClassFilter.allowThreads)
                 .allowHostClassLookup(ClassFilter.INSTANCE)
                 .option("js.foreign-object-prototype", "true")
                 .option("js.nashorn-compat", "true")

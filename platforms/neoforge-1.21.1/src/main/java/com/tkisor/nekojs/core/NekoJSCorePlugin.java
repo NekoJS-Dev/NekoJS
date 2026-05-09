@@ -12,8 +12,13 @@ import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
+import com.tkisor.nekojs.bindings.static_access.IDJS;
 import com.tkisor.nekojs.bindings.static_access.IngredientJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
+import com.tkisor.nekojs.bindings.static_access.StringUtilsJS;
+import com.tkisor.nekojs.bindings.static_access.TimeJS;
+import com.tkisor.nekojs.bindings.static_access.UUIDJS;
+import com.tkisor.nekojs.bindings.static_access.UtilsJS;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
@@ -59,6 +64,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerBindings(BindingsRegister registry) {
         registry.register(Binding.of("Ingredient", new IngredientJS()));
+        registry.register(Binding.of("ID", new IDJS()));
+        registry.register(Binding.of("UUID", new UUIDJS()));
+        registry.register(Binding.of("StringUtils", new StringUtilsJS()));
+        registry.register(Binding.of("Time", new TimeJS()));
+        registry.register(Binding.of("Utils", new UtilsJS()));
         registry.register(Binding.of(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS()));
         registry.register(Binding.of("Network", NetworkJS.class));
         registry.register(Binding.of("ItemStack", ItemStack.class));

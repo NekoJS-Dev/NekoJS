@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 平台层 NekoJSPlugin 管理器。
+ * NekoJSPlugin 管理器。
  * <p>
  * 注册插件时会同时向 common 层的 {@link NekoJSBasePluginManager} 注册。
- * {@link #getPlugins()} 返回的是平台层强类型的 {@link NekoJSPlugin} 列表。
+ * {@link #getPlugins()} 返回的是完整的 {@link NekoJSPlugin} 列表。
  * </p>
  */
 public final class NekoJSPluginManager {

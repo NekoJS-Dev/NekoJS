@@ -6,6 +6,7 @@ import com.tkisor.nekojs.platform.Platform;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 /**
  * 负责定义模组用到的所有文件路径及基础目录初始化
@@ -33,6 +34,9 @@ public final class NekoJSPaths {
     // 资源
     public static final Path ASSETS = ROOT.resolve("assets");
     public static final Path DATA   = ROOT.resolve("data");
+
+    public static final Set<String> SCRIPT_EXTENSIONS = Set.of("js", "ts", "jsx", "tsx");
+    private static final Set<Path> SCRIPT_ROOTS = Set.of(STARTUP_SCRIPTS, SERVER_SCRIPTS, CLIENT_SCRIPTS);
 
     /**
      * 仅初始化物理文件夹，不涉及具体文件内容生成
@@ -73,6 +77,38 @@ public final class NekoJSPaths {
             }
         }
         return normalized;
+    }
+
+    public static Path verifyScriptSyncPath(String relativePath) throws IOException {
+        Path parsed = Path.of(relativePath).normalize();
+        if (parsed.isAbsolute() || parsed.startsWith("..")) {
+            throw new IOException("Invalid script path: " + relativePath);
+        }
+
+        Path target = verifyInsideGameDir(ROOT.resolve(parsed));
+        if (!target.startsWith(ROOT.toAbsolutePath().normalize())) {
+            throw new IOException("Access outside NekoJS workspace is forbidden: " + relativePath);
+        }
+        if (!isSupportedScriptFile(target)) {
+            throw new IOException("Unsupported script file type: " + relativePath);
+        }
+        if (!isInsideScriptRoot(target)) {
+            throw new IOException("Script sync is only allowed inside startup_scripts, server_scripts, or client_scripts: " + relativePath);
+        }
+        return target;
+    }
+
+    public static boolean isSupportedScriptFile(Path path) {
+        String fileName = path.getFileName().toString();
+        int dotIndex = fileName.lastIndexOf('.');
+        return dotIndex >= 0 && SCRIPT_EXTENSIONS.contains(fileName.substring(dotIndex + 1));
+    }
+
+    public static boolean isInsideScriptRoot(Path path) {
+        Path normalized = path.normalize().toAbsolutePath();
+        return SCRIPT_ROOTS.stream()
+                .map(root -> root.normalize().toAbsolutePath())
+                .anyMatch(normalized::startsWith);
     }
 
     private NekoJSPaths() {}

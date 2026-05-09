@@ -1,12 +1,15 @@
 package com.tkisor.nekojs.api.data;
 
-import com.tkisor.nekojs.core.NekoJSPluginManager;
+import com.tkisor.nekojs.core.NekoJSBasePluginManager;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public final class NekoBindings {
     private static final List<Binding> RAW_BINDINGS = new ArrayList<>();
@@ -55,11 +58,11 @@ public final class NekoBindings {
     }
 
     private static void initialize() {
-        var plugins = NekoJSPluginManager.getPlugins();
+        var plugins = NekoJSBasePluginManager.getPlugins();
 
         plugins.forEach(plugin -> plugin.registerBindings(NekoBindings::register));
 
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        if (Platform.isClient()) {
             plugins.forEach(plugin -> plugin.registerClientBindings(NekoBindings::register));
         }
 

@@ -1,15 +1,21 @@
 package com.tkisor.nekojs;
 
+import com.tkisor.nekojs.api.NekoContextSnapshot;
+import com.tkisor.nekojs.api.NeoForgeNekoContextSnapshotProvider;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.bindings.event.RegisterNekoJSPluginEvent;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.bindings.event.RegistryEvents;
 import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
+import com.tkisor.nekojs.core.NeoForgeScriptEventBridge;
 import com.tkisor.nekojs.core.NekoJSMemberRemapper;
+import com.tkisor.nekojs.core.NekoJSPluginManager;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.js.type_adapter.*;
+import com.tkisor.nekojs.platform.NekoIdCompat;
+import com.tkisor.nekojs.platform.NeoForgeIdCompat;
 import com.tkisor.nekojs.platform.NeoForgePlatform;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptBootstrap;
@@ -22,6 +28,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -45,6 +52,10 @@ public class NekoJS extends NekoJSCommon {
         MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
 
         Platform.init(new NeoForgePlatform());
+        NekoIdCompat.init(new NeoForgeIdCompat());
+        NekoContextSnapshot.setProvider(new NeoForgeNekoContextSnapshotProvider());
+        EventBusJS.setExternalCancellabilityPredicate(ICancellableEvent.class::isAssignableFrom);
+        NekoJSScriptManager.setEventBridge(new NeoForgeScriptEventBridge());
 
         NekoJS.modEventBus = modEventBus;
 
@@ -71,21 +82,12 @@ public class NekoJS extends NekoJSCommon {
 
     private void registerEventListeners() {
         modEventBus.addListener(this::onCommonSetup);
-        modEventBus.addListener(this::plugin);
 
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         modEventBus.addListener(this::onRegister);
     }
 
     private void registerPlugins() {
-        modEventBus.post(new RegisterNekoJSPluginEvent());
-    }
-
-    /**
-     * 注册 NekoJS 插件
-     * 扫描并注册所有实现了 NekoJSPlugin 接口的类
-     */
-    public void plugin(RegisterNekoJSPluginEvent event) {
         ReflectionUtils.findAnnotationClasses(
                 RegisterNekoJSPlugin.class,
                 null,
@@ -104,7 +106,7 @@ public class NekoJS extends NekoJSCommon {
                     try {
                         NekoJSPlugin plugin =
                                 (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
-                        event.register(plugin);
+                        NekoJSPluginManager.register(plugin);
                         LOGGER.debug("[NekoJS] Registered plugin: {}", clazz.getName());
                     } catch (Throwable t) {
                         LOGGER.error("[NekoJS] Failed to instantiate plugin {}", clazz.getName(), t);

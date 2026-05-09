@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.api.recipe;
 
-import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-
 import java.util.function.Function;
 
 /**
@@ -11,14 +9,14 @@ import java.util.function.Function;
  * @param factory      handler constructor factory (e.g. {@code Handler::new})
  * @param handlerClass handler Java type (e.g. {@code Handler.class}), for external mods to query
  */
-public record RecipeNamespaceEntry(
+public record RecipeNamespaceEntry<C>(
         String namespace,
-        Function<RecipeEventJS, Object> factory,
+        Function<C, Object> factory,
         Class<?> handlerClass
 ) {
-    public static RecipeNamespaceEntry of(String namespace,
-                                          Function<RecipeEventJS, Object> factory,
-                                          Class<?> handlerClass) {
-        return new RecipeNamespaceEntry(namespace, factory, handlerClass);
+    public static <C> RecipeNamespaceEntry<C> of(String namespace,
+                                                 Function<C, Object> factory,
+                                                 Class<?> handlerClass) {
+        return new RecipeNamespaceEntry<>(namespace, factory, handlerClass);
     }
 }

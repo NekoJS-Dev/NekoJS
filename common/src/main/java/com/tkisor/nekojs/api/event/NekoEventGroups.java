@@ -1,8 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.core.NekoJSPluginManager;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
+import com.tkisor.nekojs.platform.Platform;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -35,7 +34,7 @@ public final class NekoEventGroups {
     private static void initialize() {
         var plugins = NekoJSPluginManager.getPlugins();
         plugins.forEach(plugin -> plugin.registerEvents(NekoEventGroups::register));
-        if (FMLEnvironment.dist == Dist.CLIENT) {
+        if (Platform.isClient()) {
             plugins.forEach(plugin -> plugin.registerClientEvents(NekoEventGroups::register));
         }
         initialized = true;
