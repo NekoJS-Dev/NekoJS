@@ -16,6 +16,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
@@ -70,7 +71,20 @@ public class RecipeEventJS {
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
         if (ingredient == null || ingredient.isEmpty()) return new JsonArray();
+        JsonElement tagJson = serializeTagIngredient(ingredient);
+        if (tagJson != null) return tagJson;
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
+    }
+
+    private JsonElement serializeTagIngredient(Ingredient ingredient) {
+        var unwrapped = ingredient.values.unwrap();
+        if (unwrapped.left().isPresent()) {
+            var key = unwrapped.left().get();
+            if (key.registry().equals(Registries.ITEM)) {
+                return new JsonPrimitive("#" + key.location());
+            }
+        }
+        return null;
     }
 
     public JsonElement serializeFluidStack(FluidStack stack) {

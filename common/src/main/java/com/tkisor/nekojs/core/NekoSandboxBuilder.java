@@ -81,6 +81,8 @@ public final class NekoSandboxBuilder {
                 .allowIO(SHARED_IO_ACCESS)
                 .allowCreateThread(ClassFilter.allowThreads)
                 .allowHostClassLookup(ClassFilter.INSTANCE)
+                .allowCreateProcess(false)
+                .allowValueSharing(true)
                 .option("js.foreign-object-prototype", "true")
                 .option("js.nashorn-compat", "true")
                 .option("js.ecmascript-version", "latest")

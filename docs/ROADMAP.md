@@ -141,6 +141,39 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [ ] 不把 VSCode 扩展连接作为第一阶段必需能力，先保证纯 `.d.ts` 可用。
 - [x] 不把脚本 API 改回大量 `Object` / `Value` 入口；`RecipeJsonBuilder` / `RecipeEventJS.custom` 已使用 `RecipeJsonValue` 中间类型收敛任意 JS JSON 输入。
 
+## 下一阶段脚本能力规划
+
+### PData typed API 与自动同步
+
+- [x] 提供通用 `PersistentDataJS` 链式 wrapper，封装 `CompoundTag` 的 typed get/put/remove/merge/copy/replace API。
+- [x] 为实体/玩家暴露 `pdata()`，脚本侧直接得到 `PersistentDataJS`，不需要直接操作裸 `CompoundTag`；底层使用实体原生 `getPersistentData()` 的 `NekoJSPersistentData` 子 tag。
+- [x] 为 `PersistentDataJS` 补 server authoritative 自动同步 MVP：dirty tracking、`PDataSyncPacket`、服务端 tick 批量 full-tag sync、客户端只读 mirror。
+- [x] 将 pdata 同步目标从全体在线玩家优化为 tracking/self，并增加 revision、每 tick 同步数量上限和 tag size 上限，避免旧包覆盖和基础网络压力。
+- [x] 为 26.1 增加 runnable server/client smoke 测试，覆盖 player pdata 服务端写入、tick dirty、立即 sync、客户端 mirror 读取和客户端只读拒绝写入。
+- [ ] 为 1.21.1 增加 runnable / client-server smoke 测试，覆盖实体/player pdata 持久化和同步。
+
+### Painter API 与 client render events
+
+- [ ] 增加 client-only `PainterJS` 链式 API；1.21.1 包装 `GuiGraphics`，26.1 包装 `GuiGraphicsExtractor` / render state API。
+- [ ] 增加 `ClientEvents.hud` / screen render 事件，事件对象携带 `PainterJS`、尺寸、鼠标等上下文。
+- [ ] MVP 绘制能力：`color/resetColor`、`rect/fill`、`outline`、`gradient`、`text/centerText`、`texture`、`item`、`push/pop/translate`、`scissor`。
+- [ ] 确认 dedicated server 不加载 painter/client class。
+
+### 原生 EntityType 与 Goal 注册
+
+- [ ] 扩展 `RegistryEvents` / `RegistryEventListener`，增加 startup-only `entityType` registry builder。
+- [ ] 增加 `EntityTypeBuilderJS`，支持 category、size、tracking、update interval、fire immune、no save/no summon、attributes。
+- [ ] 增加属性注册与可选客户端 renderer / spawn egg 子阶段。
+- [ ] 增加 Goal 注册：先提供 vanilla goal factory，再提供 functional-interface backed script goal。
+- [ ] 对已有实体追加 goal 时使用 join-level 注入并做 marker 去重。
+
+### PowerfulJS-like Capability 集成
+
+- [ ] 设计轻量 `Capabilities` startup binding，不复制 PowerfulJS/KubeJS 完整能力系统。
+- [ ] 第一版只支持标准 energy/item/fluid capability，使用 AttachmentType 或平台原生 backing storage 保存状态。
+- [ ] 在 `RegisterCapabilitiesEvent` 中为 entity/item/block/block entity 注册 provider；暂不做任意 Java interface capability 生成。
+- [ ] 将 pdata 作为脚本业务数据层，capability 作为 NeoForge 生态访问层，两者可复用 NBT 工具但不共用同一个 tag。
+
 ## 长期方向
 
 - [ ] 定义稳定的 NekoJS API 版本和破坏性变更迁移策略。

@@ -4,6 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen;
 import com.tkisor.nekojs.client.gui.NekoWorkspaceScreen;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
+import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -40,6 +41,9 @@ public class NekoJSNetwork {
 
         // 打开工作区包
         registrar.playToClient(OpenWorkspacePacket.TYPE, OpenWorkspacePacket.STREAM_CODEC, NekoJSNetwork::handleOpenWorkspaceOnClient);
+
+        // PData 同步包
+        registrar.playToClient(PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC, NekoJSNetwork::handlePDataSyncOnClient);
     }
 
     /* ================= Client Handlers ================= */
@@ -61,6 +65,10 @@ public class NekoJSNetwork {
 
     private static void handleOpenWorkspaceOnClient(OpenWorkspacePacket data, IPayloadContext context) {
         context.enqueueWork(ClientHandler::openWorkspace);
+    }
+
+    private static void handlePDataSyncOnClient(PDataSyncPacket data, IPayloadContext context) {
+        context.enqueueWork(() -> PDataSyncService.acceptClientSync(data));
     }
 
     private static class ClientHandler {

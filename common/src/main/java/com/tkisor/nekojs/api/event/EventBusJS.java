@@ -10,6 +10,7 @@ import com.tkisor.nekojs.utils.event.EventListenerToken;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchCancellableEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
+import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
@@ -139,11 +140,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> register(Value listener) {
-        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
+        Context context = listener.getContext();
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
 
         return this.bus.listen(event -> {
             try {
-                if (listener.canExecute()) {
+                synchronized (context) {
                     listener.executeVoid(event);
                 }
             } catch (PolyglotException e) {
@@ -153,12 +155,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
-        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
+        Context context = listener.getContext();
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
         return bus.listen(event -> {
             try {
-                if (listener.canExecute()) {
+                synchronized (context) {
                     Value result = listener.execute(event);
                     return result.isBoolean() && result.asBoolean();
                 }

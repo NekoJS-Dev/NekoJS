@@ -131,6 +131,7 @@ public interface ItemStackExtension {
     }
 
     default Ingredient neko$asIngredient() {
+        if (self().isEmpty()) return Ingredient.of();
         if (self().getComponentsPatch().isEmpty()) {
             return Ingredient.of(HolderSet.direct(self().getItem().builtInRegistryHolder()));
         }
