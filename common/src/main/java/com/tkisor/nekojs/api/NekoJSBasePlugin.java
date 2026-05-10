@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api;
 
+import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.data.BindingsRegister;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -32,5 +33,10 @@ public interface NekoJSBasePlugin {
      * 注册客户端全局静态对象绑定
      */
     default void registerClientBindings(BindingsRegister registry) {}
+
+    /**
+     * 注册 NekoProbe 类型说明、人工声明和示例元数据
+     */
+    default void registerTypeDocs(TypeDocsRegister registry) {}
 
 }

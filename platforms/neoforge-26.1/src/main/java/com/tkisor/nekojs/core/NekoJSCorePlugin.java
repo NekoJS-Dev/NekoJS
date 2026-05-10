@@ -4,13 +4,15 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.tkisor.nekojs.api.*;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
+import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingsRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
-import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
@@ -55,6 +57,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
 
 @RegisterNekoJSPlugin
 public class NekoJSCorePlugin implements NekoJSPlugin {
@@ -136,7 +140,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new ComponentAdapter());
         registry.register(new EntityTypeAdapter());
         registry.register(new BlockAdapter());
-        registry.register(new CompoundTagTypeAdapter());
+        registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
     }
@@ -152,5 +156,20 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(ScriptProperty.MODLOADED);
         registry.register(ScriptProperty.DISABLE);
         registry.register(ScriptProperty.PRIORITY);
+    }
+
+    @Override
+    public void registerTypeDocs(TypeDocsRegister registry) {
+        registry.register(TypeDocCatalogEntry.binding("ItemJS", "NekoItemHelper", "Script-friendly ItemStack factory and helpers.", List.of("ItemJS.of('minecraft:stone')", "ItemJS.empty()")));
+        registry.register(TypeDocCatalogEntry.binding("Ingredient", "NekoIngredientHelper", "Script-friendly Ingredient and IngredientJS helper.", List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')")));
+        registry.register(TypeDocCatalogEntry.binding("Fluid", "NekoFluidHelper", "Script-friendly FluidStack helper.", List.of("Fluid.of('minecraft:water', FluidAmounts.BUCKET)", "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
+        registry.register(TypeDocCatalogEntry.binding("FluidIngredient", "NekoFluidIngredientHelper", "Script-friendly FluidIngredient and SizedFluidIngredient helper.", List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.sized('minecraft:water', 250)")));
+        registry.register(TypeDocCatalogEntry.binding("ServerEvents", null, "Server-side event group, including recipe editing.", List.of("ServerEvents.recipes(event => { })")));
+        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null, "Startup-side native NeoForge event bridge.", List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
+
+        registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of("nekojs.recipe-json-value", "type RecipeJsonValue = null | boolean | number | string | JsonObject | JsonArray | IngredientJS | SizedIngredientJS | ItemStack | FluidStack | FluidIngredientJS | SizedFluidIngredient;", "RecipeJsonValue boundary accepted by recipe builder/custom/path APIs.", List.of("builder.property('ingredients', [Ingredient.of('minecraft:stone')])")));
+        registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of("nekojs.recipe-filter", "type RecipeFilterInput = string | RecipeFilterInput[] | { mod?: string; type?: string; group?: string; id?: string; input?: unknown; output?: unknown; and?: RecipeFilterInput[]; or?: RecipeFilterInput[]; not?: RecipeFilterInput; idStartsWith?: string; idEndsWith?: string; idContains?: string; };", "Recipe filter input accepted by query/remove/replace/dump APIs.", List.of("event.remove({ output: 'minecraft:stick' })")));
+        registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of("nekojs.ingredient-js", "interface IngredientJS { or(ingredient: IngredientInput): IngredientJS; and(ingredient: IngredientInput): IngredientJS; except(ingredient: IngredientInput): IngredientJS; matches(value: unknown): boolean; first(): ItemStack; stacks(): ItemStack[]; withCount(count: number): SizedIngredientJS; unwrap(): Ingredient; }", "Script wrapper returned by Ingredient helper methods.", List.of("Ingredient.of('minecraft:stone').withCount(3)")));
+        registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of("nekojs.recipe-json-builder", "interface RecipeJsonBuilder { id(id: string): RecipeJsonBuilder; property(key: string, value: RecipeJsonValue): RecipeJsonBuilder; setPath(path: string, value: RecipeJsonValue): RecipeJsonBuilder; setPaths(values: Record<string, RecipeJsonValue>): RecipeJsonBuilder; removePath(path: string): RecipeJsonBuilder; removePaths(paths: string[]): RecipeJsonBuilder; validate(): RecipeJsonBuilder; }", "JSON-first recipe builder with RecipeJsonValue boundary.", List.of("event.builder('minecraft:crafting_shapeless').property('ingredients', [Ingredient.of('minecraft:stone')])")));
     }
 }

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.api.recipe.RecipeCreationContext;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
@@ -28,6 +29,7 @@ public class RecipeEventJS {
 
     private final RecipeRegistryProxy recipesProxy;
     private final Map<ResourceLocation, JsonElement> jsons;
+    private final Map<ResourceLocation, RecipeCreationContext> contexts = new HashMap<>();
     private final HolderLookup.Provider registries;
     private int recipeCounter = 0;
 
@@ -39,11 +41,31 @@ public class RecipeEventJS {
 
     public Map<ResourceLocation, JsonElement> getFinalJsons() { return this.jsons; }
 
+    public void setRecipeContext(ResourceLocation id, RecipeCreationContext context) {
+        if (id != null && context != null) contexts.put(id, context);
+    }
+
+    public RecipeCreationContext getRecipeContext(ResourceLocation id) {
+        return contexts.get(id);
+    }
+
+    public void removeRecipeContext(ResourceLocation id) {
+        contexts.remove(id);
+    }
+
+    public String describeRecipe(ResourceLocation id, JsonObject json) {
+        RecipeCreationContext context = contexts.get(id);
+        if (context != null) return context.describe(id.toString());
+        String type = json != null && json.has("type") && json.get("type").isJsonPrimitive() ? json.get("type").getAsString() : "unknown";
+        return "id=" + id + ", type=" + type + ", api=datapack, prefix=existing";
+    }
+
     public JsonElement serializeResult(ItemStack stack) {
         return ItemStack.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), stack).getOrThrow(JsonParseException::new);
     }
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
+        if (ingredient == null || ingredient.isEmpty()) return new JsonArray();
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
 
@@ -205,9 +227,35 @@ public class RecipeEventJS {
         int before = jsons.size();
         jsons.entrySet().removeIf(entry -> {
             if (!entry.getValue().isJsonObject()) return false;
-            return passFilter(entry.getKey(), entry.getValue().getAsJsonObject(), filter);
+            boolean remove = passFilter(entry.getKey(), entry.getValue().getAsJsonObject(), filter);
+            if (remove) contexts.remove(entry.getKey());
+            return remove;
         });
         NekoJSCommon.LOGGER.debug("[NekoJS] Removed {} recipes matching the filter", before - jsons.size());
+    }
+
+    public String dump(RecipeFilter filter) {
+        List<RecipeEntryJS> recipes = filter == null ? all() : find(filter);
+        JsonObject dump = new JsonObject();
+        for (RecipeEntryJS recipe : recipes) {
+            dump.add(recipe.id(), recipe.json().deepCopy());
+        }
+        return dump.toString();
+    }
+
+    public String dump() {
+        return dump(null);
+    }
+
+    public void print(RecipeFilter filter) {
+        List<RecipeEntryJS> recipes = filter == null ? all() : find(filter);
+        for (RecipeEntryJS recipe : recipes) {
+            NekoJSCommon.LOGGER.info("[NekoJS] Recipe dump {}: {}", recipe.id(), recipe.json());
+        }
+    }
+
+    public void print() {
+        print(null);
     }
 
     public List<RecipeEntryJS> all() {
@@ -282,8 +330,12 @@ public class RecipeEventJS {
         try {
             Recipe.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), json).getOrThrow(JsonParseException::new);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Invalid recipe " + id + ": " + e.getMessage(), e);
+            throw new IllegalArgumentException(formatRecipeError("Invalid recipe", id, json, e), e);
         }
+    }
+
+    public String formatRecipeError(String prefix, ResourceLocation id, JsonObject json, Exception e) {
+        return prefix + " (" + describeRecipe(id, json) + "): " + e.getMessage() + "\nJSON: " + json;
     }
 
     public RecipeJsonBuilder custom(String type, RecipeJsonValue value) {

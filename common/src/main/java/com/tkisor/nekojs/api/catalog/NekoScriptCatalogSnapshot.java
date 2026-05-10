@@ -12,6 +12,8 @@ public record NekoScriptCatalogSnapshot(
         List<RecipeNamespaceCatalogEntry> recipeNamespaces,
         List<HostExtensionCatalogEntry> hostExtensions,
         List<SnippetCatalogEntry> snippets,
+        List<TypeDocCatalogEntry> typeDocs,
+        List<ManualDeclarationCatalogEntry> manualDeclarations,
         TypeOutputLayout outputLayout
 ) {
 }

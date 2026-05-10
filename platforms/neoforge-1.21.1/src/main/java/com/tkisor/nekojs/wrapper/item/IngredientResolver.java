@@ -48,6 +48,7 @@ public final class IngredientResolver {
     }
 
     public static Ingredient fromStack(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return Ingredient.of();
         return ((ItemStackExtension) (Object) stack).neko$asIngredient();
     }
 
@@ -61,7 +62,7 @@ public final class IngredientResolver {
 
     public static Ingredient fromValue(Value value) {
         if (value == null || value.isNull()) {
-            throw new IllegalArgumentException("Ingredient value cannot be null");
+            return Ingredient.of();
         }
 
         if (value.isString()) {
@@ -75,13 +76,14 @@ public final class IngredientResolver {
             if (obj instanceof ItemStack stack) return fromStack(stack);
             if (obj instanceof Item item) return fromItem(item);
             if (obj instanceof NekoId id) return fromNekoId(id);
+            if (obj == null) return Ingredient.of();
         }
 
         if (value.hasArrayElements()) {
             List<Ingredient> ingredients = new ArrayList<>();
             for (long i = 0; i < value.getArraySize(); i++) {
                 Ingredient ingredient = fromValue(value.getArrayElement(i));
-                if (ingredient != null) ingredients.add(ingredient);
+                if (ingredient != null && !ingredient.isEmpty()) ingredients.add(ingredient);
             }
             return combine(ingredients);
         }
@@ -100,24 +102,19 @@ public final class IngredientResolver {
     }
 
     public static Ingredient combine(List<Ingredient> alternatives) {
-        if (alternatives.isEmpty()) {
-            throw new IllegalArgumentException("Ingredient cannot be empty");
-        }
-        if (alternatives.size() == 1) {
-            return alternatives.getFirst();
-        }
+        List<Ingredient> present = alternatives.stream().filter(ingredient -> ingredient != null && !ingredient.isEmpty()).toList();
+        if (present.isEmpty()) return Ingredient.of();
+        if (present.size() == 1) return present.getFirst();
 
         List<Item> items = new ArrayList<>();
-        for (Ingredient ingredient : alternatives) {
+        for (Ingredient ingredient : present) {
             for (ItemStack stack : ingredient.getItems()) {
                 if (!stack.isEmpty()) {
                     items.add(stack.getItem());
                 }
             }
         }
-        if (items.isEmpty()) {
-            throw new IllegalArgumentException("Ingredient cannot be empty");
-        }
+        if (items.isEmpty()) return Ingredient.of();
         return Ingredient.of(items.toArray(Item[]::new));
     }
 

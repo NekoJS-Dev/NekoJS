@@ -16,29 +16,48 @@ import java.util.Map;
 public class RecipeJsonBuilder {
     private final JsonObject json;
     private final RecipeEventJS event;
+    private final RecipeCreationContext context;
     private Identifier currentId;
 
     public RecipeJsonBuilder(RecipeEventJS event, String type, String prefix) {
+        this(event, type, prefix, RecipeCreationContext.of("event.builder", type, prefix));
+    }
+
+    public RecipeJsonBuilder(RecipeEventJS event, String type, String prefix, RecipeCreationContext context) {
         this.event = event;
         this.json = new JsonObject();
         this.json.addProperty("type", type);
+        this.context = context;
 
         this.currentId = event.generateRecipeId(prefix);
         this.event.getFinalJsons().put(this.currentId, this.json);
+        this.event.setRecipeContext(this.currentId, this.context);
     }
 
     public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, String prefix) {
+        this(event, prebuiltJson, prefix, RecipeCreationContext.of("event.custom", recipeType(prebuiltJson), prefix));
+    }
+
+    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, String prefix, RecipeCreationContext context) {
         this.event = event;
         this.json = prebuiltJson;
+        this.context = context;
 
         this.currentId = event.generateRecipeId(prefix);
         this.event.getFinalJsons().put(this.currentId, this.json);
+        this.event.setRecipeContext(this.currentId, this.context);
     }
 
     public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, Identifier currentId) {
+        this(event, prebuiltJson, currentId, event.getRecipeContext(currentId));
+    }
+
+    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, Identifier currentId, RecipeCreationContext context) {
         this.event = event;
         this.json = prebuiltJson;
         this.currentId = currentId;
+        this.context = context != null ? context : RecipeCreationContext.of("existing", recipeType(prebuiltJson), "existing");
+        this.event.setRecipeContext(this.currentId, this.context);
     }
 
     public static Identifier parseId(String id) {
@@ -50,6 +69,7 @@ public class RecipeJsonBuilder {
 
     public RecipeJsonBuilder id(String newId) {
         event.getFinalJsons().remove(this.currentId);
+        event.removeRecipeContext(this.currentId);
 
         Identifier parsedId = parseId(newId);
 
@@ -60,6 +80,7 @@ public class RecipeJsonBuilder {
 
         this.currentId = parsedId;
         event.getFinalJsons().put(this.currentId, this.json);
+        event.setRecipeContext(this.currentId, this.context);
 
         return this;
     }
@@ -80,6 +101,38 @@ public class RecipeJsonBuilder {
 
     public RecipeJsonBuilder removeProperty(String key) {
         json.remove(key);
+        return this;
+    }
+
+    public RecipeJsonBuilder setPath(String path, RecipeJsonValue value) {
+        RecipeJsonPath.set(json, path, RecipeJsonValueConverter.toJson(event, value));
+        return this;
+    }
+
+    public RecipeJsonBuilder setPaths(RecipeJsonValue values) {
+        JsonElement element = RecipeJsonValueConverter.toJson(event, values);
+        if (!element.isJsonObject()) {
+            throw new IllegalArgumentException("Recipe JSON batch path values must be an object");
+        }
+        for (Map.Entry<String, JsonElement> entry : element.getAsJsonObject().entrySet()) {
+            RecipeJsonPath.set(json, entry.getKey(), entry.getValue());
+        }
+        return this;
+    }
+
+    public RecipeJsonBuilder removePath(String path) {
+        RecipeJsonPath.remove(json, path);
+        return this;
+    }
+
+    public RecipeJsonBuilder removePaths(RecipeJsonValue paths) {
+        JsonElement element = RecipeJsonValueConverter.toJson(event, paths);
+        if (!element.isJsonArray()) {
+            throw new IllegalArgumentException("Recipe JSON batch remove paths must be an array");
+        }
+        for (JsonElement path : element.getAsJsonArray()) {
+            removePath(path.getAsString());
+        }
         return this;
     }
 
@@ -146,5 +199,16 @@ public class RecipeJsonBuilder {
     public RecipeJsonBuilder jsonProperty(String key, Boolean value) {
         json.addProperty(key, value);
         return this;
+    }
+
+    public RecipeCreationContext context() {
+        return context;
+    }
+
+    private static String recipeType(JsonObject json) {
+        if (json != null && json.has("type") && json.get("type").isJsonPrimitive()) {
+            return json.get("type").getAsString();
+        }
+        return "unknown";
     }
 }

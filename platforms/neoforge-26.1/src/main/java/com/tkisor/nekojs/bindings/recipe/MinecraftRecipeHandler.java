@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
+import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -78,6 +79,14 @@ public class MinecraftRecipeHandler {
                 .input("template", template)
                 .input("base", base)
                 .input("addition", addition);
+    }
+
+    public RecipeJsonBuilder crafting_shaped(RecipeJsonValue json) {
+        return event.custom("minecraft:crafting_shaped", json);
+    }
+
+    public RecipeJsonBuilder crafting_shapeless(RecipeJsonValue json) {
+        return event.custom("minecraft:crafting_shapeless", json);
     }
 
     public RecipeJsonBuilder shaped(ItemStack result, List<String> pattern, Map<String, Ingredient> keys) {

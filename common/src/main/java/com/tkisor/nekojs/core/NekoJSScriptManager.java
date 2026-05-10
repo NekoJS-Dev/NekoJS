@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core;
 
+import com.tkisor.nekojs.api.catalog.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.NekoBindings;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
@@ -39,6 +40,10 @@ public final class NekoJSScriptManager {
 
     public static void setEventBridge(ScriptEventBridge bridge) {
         eventBridge = bridge == null ? ScriptEventBridge.EMPTY : bridge;
+    }
+
+    public static void setJavaClassLoadTelemetrySink(JavaClassLoadTelemetrySink sink) {
+        JavaClassLoadTelemetry.setSink(sink);
     }
 
     public void registerScriptProperty() {
@@ -114,7 +119,33 @@ public final class NekoJSScriptManager {
             }
         });
 
+        installJavaClassLoadTelemetry(ctx, type);
+
         return ctx;
+    }
+
+    private void installJavaClassLoadTelemetry(Context ctx, ScriptType type) {
+        if (!JavaClassLoadTelemetry.isEnabled()) return;
+
+        var bindings = ctx.getBindings("js");
+        bindings.putMember("__nekoJavaClassLoadTelemetry", new JavaClassLoadTelemetry());
+        bindings.putMember("__nekoScriptType", type.name());
+        bindings.putMember("__nekoCurrentScriptId", null);
+        ctx.eval("js", """
+                (function() {
+                    if (Java.__nekoTypeTelemetryInstalled) return;
+                    const rawType = Java.type.bind(Java);
+                    Java.type = function(className) {
+                        const result = rawType(className);
+                        if (typeof __nekoCurrentScriptId === 'string') {
+                            __nekoJavaClassLoadTelemetry.recordLoad(__nekoScriptType, __nekoCurrentScriptId, String(className));
+                        }
+                        return result;
+                    };
+                    Java.loadClass = Java.type;
+                    Object.defineProperty(Java, '__nekoTypeTelemetryInstalled', { value: true, enumerable: false });
+                })();
+                """);
     }
 
     private void runScript(Context ctx, ScriptContainer script) {
@@ -122,6 +153,8 @@ public final class NekoJSScriptManager {
             Path relativePath = NekoJSPaths.ROOT.relativize(script.path);
             String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
+            JavaClassLoadTelemetry.enter(script.type, script.id.toString());
+            ctx.getBindings("js").putMember("__nekoCurrentScriptId", script.id.toString());
             ctx.eval("js", "require").execute(requirePath);
 
             NekoErrorTracker.clear(script.id);
@@ -141,6 +174,9 @@ public final class NekoJSScriptManager {
             } else {
                 script.type.logger().error("脚本内部环境崩溃: {}", script.id.toString(), t);
             }
+        } finally {
+            ctx.getBindings("js").putMember("__nekoCurrentScriptId", null);
+            JavaClassLoadTelemetry.exit();
         }
     }
 

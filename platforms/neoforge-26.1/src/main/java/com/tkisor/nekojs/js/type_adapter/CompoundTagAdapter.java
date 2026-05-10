@@ -4,7 +4,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import net.minecraft.nbt.*;
 import graal.graalvm.polyglot.Value;
 
-public final class CompoundTagTypeAdapter implements JSTypeAdapter<CompoundTag> {
+public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
 
     @Override
     public Class<CompoundTag> getTargetClass() {

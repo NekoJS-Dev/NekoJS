@@ -28,8 +28,11 @@ public class RecipeEntryJS {
             throw new IllegalArgumentException("Invalid recipe ID: " + newId);
         }
         event.getFinalJsons().remove(id);
+        RecipeCreationContext context = event.getRecipeContext(id);
+        event.removeRecipeContext(id);
         id = parsedId;
         event.getFinalJsons().put(id, json);
+        event.setRecipeContext(id, context);
         return this;
     }
 
@@ -58,6 +61,26 @@ public class RecipeEntryJS {
         return this;
     }
 
+    public RecipeEntryJS setPath(String path, RecipeJsonValue value) {
+        builder().setPath(path, value);
+        return this;
+    }
+
+    public RecipeEntryJS setPaths(RecipeJsonValue values) {
+        builder().setPaths(values);
+        return this;
+    }
+
+    public RecipeEntryJS removePath(String path) {
+        builder().removePath(path);
+        return this;
+    }
+
+    public RecipeEntryJS removePaths(RecipeJsonValue paths) {
+        builder().removePaths(paths);
+        return this;
+    }
+
     public RecipeEntryJS merge(JsonObject value) {
         for (Map.Entry<String, JsonElement> entry : value.entrySet()) {
             json.add(entry.getKey(), entry.getValue());
@@ -79,11 +102,15 @@ public class RecipeEntryJS {
     }
 
     public RecipeJsonBuilder copy(String newId) {
-        RecipeJsonBuilder builder = new RecipeJsonBuilder(event, json.deepCopy(), "copy");
+        RecipeCreationContext context = event.getRecipeContext(id);
+        String type = type().isEmpty() ? "unknown" : type();
+        RecipeCreationContext copyContext = RecipeCreationContext.of("recipe.copy", type, context != null ? context.prefix() : "copy");
+        RecipeJsonBuilder builder = new RecipeJsonBuilder(event, json.deepCopy(), "copy", copyContext);
         return builder.id(newId);
     }
 
     public void remove() {
         event.getFinalJsons().remove(id);
+        event.removeRecipeContext(id);
     }
 }

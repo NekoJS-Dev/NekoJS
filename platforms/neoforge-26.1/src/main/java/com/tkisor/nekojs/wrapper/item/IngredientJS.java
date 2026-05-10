@@ -43,18 +43,17 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     }
 
     public IngredientJS or(ItemStack stack) {
-        this.alternatives.add(IngredientResolver.fromStack(stack));
-        return this;
+        return or(IngredientResolver.fromStack(stack));
     }
 
     public IngredientJS or(Ingredient ingredient) {
-        this.alternatives.add(IngredientResolver.fromIngredient(ingredient));
+        Ingredient resolved = IngredientResolver.fromIngredient(ingredient);
+        if (resolved != null && !resolved.isEmpty()) this.alternatives.add(resolved);
         return this;
     }
 
     public IngredientJS or(IngredientJS other) {
-        this.alternatives.add(other.unwrap());
-        return this;
+        return or(other.unwrap());
     }
 
     public IngredientJS and(Ingredient ingredient) {

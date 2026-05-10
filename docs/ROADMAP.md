@@ -73,13 +73,17 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 
 ## 短期任务
 
-- [ ] 收敛 adapter / resolver 边界语义：null/undefined、对象/数组、无效 ID、count/amount 覆盖、EMPTY、可变 stack copy。
-- [ ] 为 26.1 优先补 adapter / resolver 回归测试，覆盖 Graal `Value` object/array 输入与错误路径。
-- [ ] 为 `RecipeJsonValue` / `RecipeJsonValueConverter` 补 26.1 runnable 测试，覆盖 nested JS object/array、`IngredientJS`、`SizedIngredientJS`、`ItemStack`、fluid wrapper、fallback namespace 和 invalid shape。
-- [ ] 继续增强 recipe 错误上下文：在现有 JS 行列/片段基础上记录 builder 来源、recipe id、type、创建 API，并在最终 codec 失败时输出清晰错误。
-- [ ] 增加 recipe path 操作：`setPath`、`removePath`、按 JSON path 修改/删除字段。
-- [ ] 增加 recipe dump/print 调试工具：`event.dump(filter)`、`event.print(filter)`。
-- [ ] 保持 README、`docs/ROADMAP.md`、`ai_docs/` 与当前实现同步；非平凡任务完成后应同步整理相关文档。
+- [x] 初步收敛 adapter / resolver 边界语义：已通过 26.1 runnable 测试覆盖 null、数组/对象、无效 ID、非正 count、可变 stack copy 等关键路径。
+- [x] 为 26.1 优先补 adapter / resolver 回归测试，覆盖 Graal `Value` object/array 输入与错误路径。
+- [x] 继续收敛 adapter / resolver 边界语义：已覆盖 null/EMPTY、数组/对象、fluid amount 覆盖、host object copy、无效 shape，并修复 26.1 recipe reload 阶段 tag wrapper 的 registry owner 安全序列化。
+- [x] 为 `RecipeJsonValue` / `RecipeJsonValueConverter` 补 26.1 runnable 测试，已覆盖 nested JS object/array、`IngredientJS` tag wrapper、`SizedIngredientJS`、`ItemStack`、fluid wrapper、fallback namespace，并提供默认禁用的 invalid-shape 手动测试。
+- [x] 增强 recipe 错误上下文：记录 builder/custom/copy 来源、recipe id、type、创建 API、prefix，并在最终 codec 失败时输出上下文和 JSON。
+- [x] 增加 recipe path 操作：`setPath`、`removePath`，支持按 `ingredients.0` / `result.count` 这类 JSON path 修改/删除字段。
+- [x] 细化 recipe path 操作：支持自动创建中间 object/array、反斜杠转义点号字段名。
+- [x] 继续细化 recipe path 操作：支持批量路径编辑 `setPaths` / `removePaths`，以及点分、数组下标、反斜杠转义点号、括号/引号字段语法。
+- [x] 增加 recipe dump/print 调试工具：`event.dump(filter)`、`event.print(filter)`。
+- [x] 为 `event.recipes.minecraft` 增加 datapack type 名 raw JSON alias：`crafting_shaped(json)`、`crafting_shapeless(json)`。
+- [x] 保持 README、`docs/ROADMAP.md`、`ai_docs/` 与当前实现同步；本轮短期任务已同步整理相关文档。
 
 ## 中期任务
 
@@ -105,13 +109,13 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 建立 mixin extension manifest 基础：平台 provider 显式列出 target class / extension interface，catalog 复用 `MemberVisibilityQuery` 得到 JS 暴露名。
 - [x] 解耦 `WorkspaceGenerator` 对 `.probe/{env}/probe-types` 的硬编码，改为读取 `NekoScriptCatalog.outputLayout()`。
 - [x] 将默认类型输出根从 `.probe/` 改为 `.neko_probe/`，避免与 ProbeJS 冲突。
-- [ ] 增加 `registerTypeDocs` / catalog contribution 一类轻量插件钩子，让 NekoJS 插件能显式贡献富声明数据；旧 `api.probe.NekoProbeMetadataProvider` 已废弃，不要作为事实来源继续扩展。
-- [ ] 为 `BindingCatalogEntry` 补声明元数据：是否 host class 的人工修正、人工类型覆盖、文档、示例。
+- [x] 增加 `registerTypeDocs` / catalog contribution 轻量插件钩子，让 NekoJS 插件能显式贡献富声明数据；旧 `api.probe.NekoProbeMetadataProvider` 已废弃，不要作为事实来源继续扩展。
+- [x] 为 `BindingCatalogEntry` 补声明元数据：是否 host class 的人工修正、人工类型覆盖、文档、示例。
 - [x] 为 `EventCatalogEntry` 提供基础 snippet 模板。
 - [x] 为 `AdapterCatalogEntry` 提供常见 adapter input shape、错误策略与示例。
 - [x] 为 `RecipeNamespaceCatalogEntry` 提供 fallbackSupported 与初始 examples。
-- [ ] 为 wrapper/helper 提供人工声明补充，例如 `IngredientJS`、`RecipeJsonBuilder`、`RecipeEntryJS`、`RecipeJsonValue`、recipe filter、fluid/item helper 的链式返回和 union 输入类型。
-- [ ] 增加可选 Java class-load telemetry / `Java.loadClass` 等价 hook，供 NekoProbe 收集用户脚本实际加载过的类；不要通过 mixin 拦截内部 wrapper。
+- [x] 为 wrapper/helper 提供人工声明补充，例如 `IngredientJS`、`RecipeJsonBuilder`、`RecipeJsonValue`、recipe filter、fluid/item helper 的链式返回和 union 输入类型。
+- [x] 增加可选 Java class-load telemetry / `Java.loadClass` 等价 hook，供 NekoProbe 收集用户脚本实际加载过的类；通过用户脚本层 `Java.type` / `Java.loadClass` wrapper 记录成功加载，并由 `ClassFilter` 记录 lookup attempt，不通过 mixin 拦截内部 wrapper。
 
 ### NekoProbe 类型生成核心
 

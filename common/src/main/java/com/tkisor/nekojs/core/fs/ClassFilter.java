@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.fs;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 
 import java.util.Set;
 import java.util.function.Predicate;
@@ -37,6 +38,12 @@ public class ClassFilter implements Predicate<String> {
 
     @Override
     public boolean test(String className) {
+        boolean allowed = isAllowed(className);
+        JavaClassLoadTelemetry.recordAttempt(className, allowed);
+        return allowed;
+    }
+
+    private boolean isAllowed(String className) {
         if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
         if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
         if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;

@@ -32,6 +32,8 @@ public final class NekoScriptCatalog {
                 List.copyOf(platformProvider.recipeNamespaces()),
                 hostExtensions(),
                 List.copyOf(platformProvider.snippets()),
+                NekoTypeDocs.typeDocs(),
+                NekoTypeDocs.manualDeclarations(),
                 platformProvider.outputLayout()
         );
     }
@@ -45,6 +47,8 @@ public final class NekoScriptCatalog {
                 List.copyOf(platformProvider.recipeNamespaces()),
                 hostExtensions(scriptType),
                 snippets(scriptType),
+                NekoTypeDocs.typeDocs(scriptType),
+                NekoTypeDocs.manualDeclarations(scriptType),
                 platformProvider.outputLayout()
         );
     }
@@ -63,8 +67,17 @@ public final class NekoScriptCatalog {
 
     public static List<BindingCatalogEntry> bindings(ScriptType scriptType) {
         List<BindingCatalogEntry> entries = new ArrayList<>();
+        List<TypeDocCatalogEntry> docs = NekoTypeDocs.typeDocs(scriptType).stream()
+                .filter(doc -> doc.kind().equals("binding"))
+                .toList();
         for (Binding binding : NekoBindings.getFor(scriptType).values()) {
-            entries.add(BindingCatalogEntry.of(binding.getName(), scriptType, binding.getType(), binding.isStaticClass()));
+            BindingCatalogEntry entry = BindingCatalogEntry.of(binding.getName(), scriptType, binding.getType(), binding.isStaticClass());
+            for (TypeDocCatalogEntry doc : docs) {
+                if (doc.target().equals(binding.getName())) {
+                    entry = entry.withDoc(doc);
+                }
+            }
+            entries.add(entry);
         }
         return List.copyOf(entries);
     }

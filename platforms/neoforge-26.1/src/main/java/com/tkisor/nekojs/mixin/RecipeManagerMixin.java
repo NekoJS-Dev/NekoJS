@@ -93,7 +93,11 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 Recipe<?> recipe = Recipe.CODEC.parse(this.registries.createSerializationContext(JsonOps.INSTANCE), entry.getValue()).getOrThrow(JsonParseException::new);
                 newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
             } catch (Exception e) {
-                NekoJS.LOGGER.debug("[NekoJS] Invalid recipe {}: {}", entry.getKey(), e.getMessage());
+                if (entry.getValue().isJsonObject()) {
+                    NekoJS.LOGGER.error("[NekoJS] {}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
+                } else {
+                    NekoJS.LOGGER.error("[NekoJS] Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
+                }
             }
         }
 
