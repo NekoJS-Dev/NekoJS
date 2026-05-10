@@ -122,6 +122,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     public void registerAdapters(JSTypeAdapterRegister registry) {
         registry.register(new ItemStackAdapter());
         registry.register(new IngredientAdapter());
+        registry.register(new SizedIngredientAdapter());
         registry.register(new FluidStackAdapter());
         registry.register(new FluidIngredientAdapter());
         registry.register(new SizedFluidIngredientAdapter());

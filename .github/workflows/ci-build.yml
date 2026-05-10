@@ -1,0 +1,189 @@
+name: NekoJS CI Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - mult
+  pull_request:
+    branches:
+      - main
+      - master
+      - mult
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze build metadata
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.meta.outputs.is_release }}
+      version: ${{ steps.meta.outputs.version }}
+      title: ${{ steps.meta.outputs.title }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+    steps:
+      - name: Checkout metadata
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract commit title and release version
+        id: meta
+        shell: bash
+        env:
+          RAW_COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || github.event_name }}
+        run: |
+          set -euo pipefail
+          shopt -s nocasematch
+
+          TITLE="$(printf '%s' "$RAW_COMMIT_MSG" | sed -n '1p')"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          REGEX='^update[[:space:]]+([0-9A-Za-z][0-9A-Za-z._-]*)$'
+
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TITLE" =~ $REGEX ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "Release build detected from commit title: $TITLE"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "Development build detected from commit title: $TITLE"
+          fi
+
+  build:
+    name: Build platform modules
+    needs: analyze
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Compile Java
+        run: ./gradlew :platforms:neoforge-1.21.1:compileJava :platforms:neoforge-26.1:compileJava --console=plain
+
+      - name: Build jars
+        run: ./gradlew :platforms:neoforge-1.21.1:build :platforms:neoforge-26.1:build --console=plain
+
+      - name: Prepare artifacts
+        shell: bash
+        env:
+          IS_RELEASE: ${{ needs.analyze.outputs.is_release }}
+          SHORT_SHA: ${{ needs.analyze.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          while IFS= read -r jar; do
+            name="$(basename "$jar")"
+            case "$name" in
+              *-sources.jar|*-javadoc.jar|*-dev.jar|*-plain.jar) continue ;;
+            esac
+
+            if [[ "$IS_RELEASE" == "true" ]]; then
+              cp "$jar" "artifacts/$name"
+            else
+              cp "$jar" "artifacts/${name%.jar}-dev-${SHORT_SHA}.jar"
+            fi
+          done < <(find platforms -path '*/build/libs/*.jar' -type f | sort)
+
+          if ! compgen -G 'artifacts/*.jar' > /dev/null; then
+            echo "No jar artifacts were produced" >&2
+            exit 1
+          fi
+
+          ls -lh artifacts
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.analyze.outputs.is_release == 'true' && 'NekoJS-Release-Jars' || 'NekoJS-Dev-Jars' }}
+          path: artifacts/*.jar
+          if-no-files-found: error
+          retention-days: ${{ needs.analyze.outputs.is_release == 'true' && 90 || 14 }}
+
+  release:
+    name: Create GitHub release
+    needs:
+      - analyze
+      - build
+    if: github.event_name == 'push' && needs.analyze.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release jars
+        uses: actions/download-artifact@v4
+        with:
+          name: NekoJS-Release-Jars
+          path: artifacts
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        env:
+          COMMIT_TITLE: ${{ needs.analyze.outputs.title }}
+        run: |
+          set -euo pipefail
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          fi
+
+          NOTES="$(git log "$RANGE" --pretty=format:'* %s (%h)' | sed '/^$/d')"
+          if [[ -z "$NOTES" ]]; then
+            NOTES="* ${COMMIT_TITLE}"
+          fi
+
+          EOF_MARKER="CHANGELOG_$(date +%s)_$RANDOM"
+          echo "notes<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.analyze.outputs.version }}
+          name: NekoJS v${{ needs.analyze.outputs.version }}
+          body: |
+            ## Summary
+            ${{ needs.analyze.outputs.title }}
+
+            ## Changelog
+            ${{ steps.changelog.outputs.notes }}
+          files: artifacts/*.jar
+          fail_on_unmatched_files: true

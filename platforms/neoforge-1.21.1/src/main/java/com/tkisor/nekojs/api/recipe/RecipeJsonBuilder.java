@@ -5,10 +5,12 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
 import com.tkisor.nekojs.wrapper.item.IngredientJS;
+import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
@@ -190,6 +192,12 @@ public class RecipeJsonBuilder {
             case Ingredient ing -> {
                 return event.serializeIngredient(ing);
             }
+            case SizedIngredientJS ing -> {
+                return sizedIngredientToJson(ing.unwrap());
+            }
+            case SizedIngredient ing -> {
+                return sizedIngredientToJson(ing);
+            }
             case FluidIngredientJS ing -> {
                 return event.serializeFluidIngredient(ing.unwrap());
             }
@@ -222,5 +230,12 @@ public class RecipeJsonBuilder {
         }
 
         return new JsonPrimitive(obj.toString());
+    }
+
+    private JsonElement sizedIngredientToJson(SizedIngredient ingredient) {
+        JsonObject json = new JsonObject();
+        json.add("ingredient", event.serializeIngredient(ingredient.ingredient()));
+        json.addProperty("count", ingredient.count());
+        return json;
     }
 }

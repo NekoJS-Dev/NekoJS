@@ -5,14 +5,14 @@ import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
 public final class NekoRecipeNamespaces {
-    private static final Map<String, Function<RecipeEventJS, Object>> NAMESPACES = new HashMap<>();
-    private static final Map<String, Class<?>> HANDLER_CLASSES = new HashMap<>();
+    private static final Map<String, Function<RecipeEventJS, Object>> NAMESPACES = new LinkedHashMap<>();
+    private static final Map<String, Class<?>> HANDLER_CLASSES = new LinkedHashMap<>();
     private static boolean initialized = false;
 
     private NekoRecipeNamespaces() {}
@@ -51,6 +51,13 @@ public final class NekoRecipeNamespaces {
             initialize();
         }
         return HANDLER_CLASSES.get(namespace);
+    }
+
+    public static synchronized Map<String, Class<?>> getHandlerClasses() {
+        if (!initialized) {
+            initialize();
+        }
+        return Collections.unmodifiableMap(HANDLER_CLASSES);
     }
 
     private static void initialize() {

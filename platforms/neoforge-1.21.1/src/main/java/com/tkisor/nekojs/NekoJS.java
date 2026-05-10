@@ -1,150 +1,67 @@
 package com.tkisor.nekojs;
 
-import com.tkisor.nekojs.api.NekoContextSnapshot;
-import com.tkisor.nekojs.api.NeoForgeNekoContextSnapshotProvider;
-import com.tkisor.nekojs.api.NekoJSPlugin;
-import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.event.EventBusJS;
-import com.tkisor.nekojs.bindings.event.RegistryEvents;
 import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
-import com.tkisor.nekojs.core.NeoForgeScriptEventBridge;
-import com.tkisor.nekojs.core.NekoJSMemberRemapper;
-import com.tkisor.nekojs.core.NekoJSPluginManager;
+import com.tkisor.nekojs.core.NeoForgePluginLoader;
+import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.js.type_adapter.*;
-import com.tkisor.nekojs.platform.NekoIdCompat;
-import com.tkisor.nekojs.platform.NeoForgeIdCompat;
-import com.tkisor.nekojs.platform.NeoForgePlatform;
-import com.tkisor.nekojs.platform.Platform;
+import com.tkisor.nekojs.listener.RegistryEventListener;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
-import com.tkisor.nekojs.utils.ReflectionUtils;
-import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
-import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.AddReloadListenerEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.registries.RegisterEvent;
-import graal.mod.api.MemberRemapper;
-
-import java.lang.reflect.Modifier;
 
 @Mod(NekoJSCommon.MODID)
 public class NekoJS extends NekoJSCommon {
     public static IEventBus modEventBus;
-
     public static NekoJSScriptManager SCRIPT_MANAGER;
 
     public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
-        MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
-
-        Platform.init(new NeoForgePlatform());
-        NekoIdCompat.init(new NeoForgeIdCompat());
-        NekoContextSnapshot.setProvider(new NeoForgeNekoContextSnapshotProvider());
-        EventBusJS.setExternalCancellabilityPredicate(ICancellableEvent.class::isAssignableFrom);
-        NekoJSScriptManager.setEventBridge(new NeoForgeScriptEventBridge());
-
+        NeoForgeRuntimeBootstrap.setup();
         NekoJS.modEventBus = modEventBus;
 
-        registerEventListeners();
+        registerEventListeners(modEventBus);
+        initializeWorkspace();
+        initializeScripts();
+        registerClient(modEventBus);
+    }
 
-        SCRIPT_MANAGER = new NekoJSScriptManager();
+    private static void registerEventListeners(IEventBus modEventBus) {
+        modEventBus.addListener(NekoJS::onCommonSetup);
+        modEventBus.addListener(RegistryEventListener::onRegister);
+        NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
+    }
+
+    private static void initializeWorkspace() {
         NekoJSPaths.initFolders();
         ScriptBootstrap.generateDefaultScripts();
         NekoJSPaths.initFolders();
-
         WorkspaceGenerator.setupWorkspace();
+    }
 
-        registerPlugins();
+    private static void initializeScripts() {
+        NeoForgePluginLoader.loadAnnotatedPlugins();
 
+        SCRIPT_MANAGER = new NekoJSScriptManager();
         SCRIPT_MANAGER.registerScriptProperty();
-
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
+    }
 
+    private static void registerClient(IEventBus modEventBus) {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             NekoJSClient.register(modEventBus);
         }
     }
 
-    private void registerEventListeners() {
-        modEventBus.addListener(this::onCommonSetup);
-
-        NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
-        modEventBus.addListener(this::onRegister);
-    }
-
-    private void registerPlugins() {
-        ReflectionUtils.findAnnotationClasses(
-                RegisterNekoJSPlugin.class,
-                null,
-                clazz -> {
-                    if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
-                        LOGGER.error("[NekoJS] Plugin {} does not implement NekoJSPlugin", clazz.getName());
-                        return;
-                    }
-
-                    int mod = clazz.getModifiers();
-                    if (clazz.isInterface() || Modifier.isAbstract(mod)) {
-                        LOGGER.error("[NekoJS] Plugin {} is not a concrete class", clazz.getName());
-                        return;
-                    }
-
-                    try {
-                        NekoJSPlugin plugin =
-                                (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
-                        NekoJSPluginManager.register(plugin);
-                        LOGGER.debug("[NekoJS] Registered plugin: {}", clazz.getName());
-                    } catch (Throwable t) {
-                        LOGGER.error("[NekoJS] Failed to instantiate plugin {}", clazz.getName(), t);
-                    }
-                },
-                () -> LOGGER.debug("[NekoJS] Plugin scan finished")
-        );
-    }
-
-    private void onCommonSetup(FMLCommonSetupEvent event) {
+    private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(WorkspaceGenerator::createWorkspaceConfigs);
     }
-
-    private void onRegister(RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.BLOCK)) {
-            BlockRegistryEventJS eventJS = new BlockRegistryEventJS(event);
-
-            RegistryEvents.BLOCK.post(eventJS);
-
-            eventJS.registerAll();
-
-        } else if (event.getRegistryKey().equals(Registries.ITEM)) {
-            ItemRegistryEventJS eventJS = new ItemRegistryEventJS(event);
-
-            RegistryEvents.ITEM.post(eventJS);
-
-            eventJS.registerAll();
-
-            BlockRegistryEventJS.PENDING_BLOCK_ITEMS.forEach((location, block) -> {
-                event.register(Registries.ITEM, location, () -> {
-                    Item.Properties props = new Item.Properties();
-
-                    return new BlockItem(block, props);
-                });
-            });
-
-            BlockRegistryEventJS.PENDING_BLOCK_ITEMS.clear();
-        }
-    }
-
 }

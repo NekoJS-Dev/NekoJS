@@ -3,6 +3,7 @@ package com.tkisor.nekojs.script;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.bindings.event.ModifyWorkspaceConfigEvent;
 import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -51,7 +52,7 @@ public final class WorkspaceGenerator {
     private static void createConfigForEnv(String envName, Path scriptDir) {
         JSConfigModel model = new JSConfigModel();
 
-        String relativeProbePath = "../../" + NekoJSPaths.PROBE_DIR.getFileName() + "/" + envName + "/probe-types";
+        String relativeProbePath = scriptDir.relativize(NekoScriptCatalog.outputLayout().typeRoot(scriptType(envName))).toString().replace('\\', '/');
 
         model.compilerOptions.typeRoots = List.of(
                 relativeProbePath,
@@ -71,6 +72,15 @@ public final class WorkspaceGenerator {
                 NekoJSCommon.LOGGER.error("[NekoJS] Failed to create config file: {}", configPath, e);
             }
         }
+    }
+
+    private static ScriptType scriptType(String envName) {
+        return switch (envName) {
+            case "startup" -> ScriptType.STARTUP;
+            case "server" -> ScriptType.SERVER;
+            case "client" -> ScriptType.CLIENT;
+            default -> throw new IllegalArgumentException("Unknown script environment: " + envName);
+        };
     }
 
     private WorkspaceGenerator() {}
