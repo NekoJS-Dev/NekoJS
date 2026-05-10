@@ -5,6 +5,9 @@ import com.tkisor.nekojs.wrapper.NekoWrapper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.neoforged.neoforge.common.crafting.CompoundIngredient;
+import net.neoforged.neoforge.common.crafting.DifferenceIngredient;
+import net.neoforged.neoforge.common.crafting.IntersectionIngredient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +55,62 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     public IngredientJS or(IngredientJS other) {
         this.alternatives.add(other.unwrap());
         return this;
+    }
+
+    public IngredientJS and(Ingredient ingredient) {
+        return new IngredientJS(IntersectionIngredient.of(unwrap(), ingredient));
+    }
+
+    public IngredientJS intersect(Ingredient ingredient) {
+        return and(ingredient);
+    }
+
+    public IngredientJS except(Ingredient ingredient) {
+        return new IngredientJS(DifferenceIngredient.of(unwrap(), ingredient));
+    }
+
+    public IngredientJS subtract(Ingredient ingredient) {
+        return except(ingredient);
+    }
+
+    public IngredientJS asIngredient() {
+        return this;
+    }
+
+    public SizedIngredientJS asStack() {
+        return withCount(1);
+    }
+
+    public SizedIngredientJS withCount(int count) {
+        return new SizedIngredientJS(unwrap(), count);
+    }
+
+    public boolean matches(ItemStack stack) {
+        return unwrap().test(stack);
+    }
+
+    public boolean test(ItemStack stack) {
+        return matches(stack);
+    }
+
+    public boolean matches(Ingredient ingredient) {
+        for (ItemStack stack : stacks()) {
+            if (ingredient.test(stack)) return true;
+        }
+        return false;
+    }
+
+    public ItemStack first() {
+        List<ItemStack> stacks = stacks();
+        return stacks.isEmpty() ? ItemStack.EMPTY : stacks.getFirst();
+    }
+
+    public List<ItemStack> stacks() {
+        return List.of(unwrap().getItems());
+    }
+
+    public List<ItemStack> displayStacks() {
+        return stacks();
     }
 
     public boolean isEmpty() {

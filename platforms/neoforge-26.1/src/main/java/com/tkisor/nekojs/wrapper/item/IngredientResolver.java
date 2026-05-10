@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper.item;
 
 import com.tkisor.nekojs.api.data.NekoId;
+import com.tkisor.nekojs.api.inject.ItemStackExtension;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -48,7 +49,7 @@ public final class IngredientResolver {
     }
 
     public static Ingredient fromStack(ItemStack stack) {
-        return Ingredient.of(stack.getItem());
+        return ((ItemStackExtension) (Object) stack).neko$asIngredient();
     }
 
     public static Ingredient fromIngredient(Ingredient ingredient) {
