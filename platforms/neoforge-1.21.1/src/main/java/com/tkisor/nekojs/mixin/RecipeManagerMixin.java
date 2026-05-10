@@ -11,6 +11,7 @@ import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import graal.graalvm.polyglot.PolyglotException;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
@@ -38,9 +39,6 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
     @Shadow private Multimap<RecipeType<?>, RecipeHolder<?>> byType;
 
     @Shadow public abstract void replaceRecipes(Iterable<RecipeHolder<?>> p_44025_);
-
-    // 【修改点 1】: 直接删除了 @Shadow protected abstract RegistryOps<JsonElement> makeConditionalOps();
-    // 避免 IDEA 和 Mixin 编译报错。
 
     @Unique
     private final Map<ResourceLocation, JsonElement> nekojs$rawJsons = new HashMap<>();
@@ -77,8 +75,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries);
         try {
             ServerEvents.RECIPES.post(eventJS);
+        } catch (PolyglotException e) {
+            NekoErrorTracker.recordEventError(ScriptType.SERVER, e);
         } catch (Exception e) {
-            NekoJSCommon.LOGGER.error("[NekoJS] Recipe script execution crashed:", e);
+            ScriptType.SERVER.logger().error("Recipe script execution crashed", e);
         }
 
         List<RecipeHolder<?>> newHolders = new ArrayList<>();

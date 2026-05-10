@@ -11,6 +11,7 @@ import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import graal.graalvm.polyglot.PolyglotException;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -80,8 +81,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries);
         try {
             ServerEvents.RECIPES.post(eventJS);
+        } catch (PolyglotException e) {
+            NekoErrorTracker.recordEventError(ScriptType.SERVER, e);
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] Recipe script execution crashed:", e);
+            ScriptType.SERVER.logger().error("Recipe script execution crashed", e);
         }
 
         List<RecipeHolder<?>> newHolders = new ArrayList<>();

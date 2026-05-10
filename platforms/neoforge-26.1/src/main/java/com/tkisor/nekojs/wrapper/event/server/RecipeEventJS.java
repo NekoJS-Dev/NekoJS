@@ -6,6 +6,8 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
+import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
+import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -20,7 +22,6 @@ import net.minecraft.world.item.crafting.*;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
-import graal.graalvm.polyglot.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -290,12 +291,14 @@ public class RecipeEventJS {
         }
     }
 
-    public RecipeJsonBuilder custom(String type, JsonObject recipeJson) {
-        if (recipeJson == null) {
-            throw new IllegalArgumentException("Custom recipe JSON cannot be null");
-        }
+    public RecipeJsonBuilder custom(String type, RecipeJsonValue value) {
+        JsonObject recipeJson = requireJsonObject(value, "Custom recipe JSON");
         recipeJson.addProperty("type", type);
         return custom(recipeJson);
+    }
+
+    public RecipeJsonBuilder custom(RecipeJsonValue value) {
+        return custom(requireJsonObject(value, "Custom recipe JSON"));
     }
 
     public RecipeJsonBuilder custom(JsonObject recipeJson) {
@@ -306,18 +309,27 @@ public class RecipeEventJS {
         return new RecipeJsonBuilder(this, recipeJson, "custom");
     }
 
-    public RecipeJsonBuilder shaped(ItemStack result, Value pattern, Value keys) {
+    public RecipeJsonBuilder shaped(ItemStack result, List<String> pattern, Map<String, Ingredient> keys) {
         JsonObject json = new JsonObject();
         json.addProperty("type", "minecraft:crafting_shaped");
         JsonArray patternArray = new JsonArray();
-        for (int i = 0; i < pattern.getArraySize(); i++) patternArray.add(pattern.getArrayElement(i).asString());
+        for (String row : pattern) patternArray.add(row);
         json.add("pattern", patternArray);
         JsonObject keyObj = new JsonObject();
-        for (String key : keys.getMemberKeys())
-            keyObj.add(key, serializeIngredient(keys.getMember(key).as(Ingredient.class)));
+        for (Map.Entry<String, Ingredient> entry : keys.entrySet()) {
+            keyObj.add(entry.getKey(), serializeIngredient(entry.getValue()));
+        }
         json.add("key", keyObj);
         json.add("result", serializeResult(result));
         return new RecipeJsonBuilder(this, json, "shaped");
+    }
+
+    private JsonObject requireJsonObject(RecipeJsonValue value, String name) {
+        JsonElement json = RecipeJsonValueConverter.toJson(this, value);
+        if (!json.isJsonObject()) {
+            throw new IllegalArgumentException(name + " must be an object");
+        }
+        return json.getAsJsonObject();
     }
 
     public RecipeJsonBuilder shapeless(ItemStack result, List<Ingredient> ingredients) {

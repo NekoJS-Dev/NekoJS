@@ -6,7 +6,7 @@
 
 NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft JavaScript 脚本运行时。它面向整合包作者和模组开发者，目标是在 Minecraft 中提供接近现代前端工程化的脚本开发体验。
 
-**前置需要 [GraalJS](https://github.com/Tki-sor/GraalJS-MC)。请以当前发布页面标注的 Minecraft / NeoForge 版本为准。**
+**前置需要 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)。请以当前发布页面标注的 Minecraft / NeoForge 版本为准。**
 
 （部分代码使用 Gemini/ChatGPT 生成，看板娘图像由 ChatGPT 生成）
 
@@ -26,10 +26,10 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 首次启动安装了 NekoJS 的游戏后，游戏根目录下会自动生成 `nekojs` 文件夹：
 
 ```text
-.probe/                # NekoProbe 类型声明库：存放自动生成的 .d.ts 文件（与 nekojs 目录同级）
+.neko_probe/                # NekoProbe 类型声明库：存放自动生成的 .d.ts 文件（与 nekojs 目录同级）
 nekojs/
 ├── startup_scripts/   # 游戏启动脚本：用于注册物品、方块等核心组件（修改需重启游戏）
-│   └── tsconfig.json  # 编辑器配置文件：自动关联根目录 .probe 类型库
+│   └── tsconfig.json  # 编辑器配置文件：自动关联根目录 .neko_probe 类型库
 ├── server_scripts/    # 服务端脚本：负责配方修改、事件监听，支持 /nekojs reload
 │   └── tsconfig.json
 ├── client_scripts/    # 客户端脚本：负责 GUI 渲染、粒子效果、按键绑定等视觉逻辑

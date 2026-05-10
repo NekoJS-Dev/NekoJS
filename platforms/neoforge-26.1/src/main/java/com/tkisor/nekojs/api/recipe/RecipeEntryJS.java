@@ -65,7 +65,7 @@ public class RecipeEntryJS {
         return this;
     }
 
-    public RecipeEntryJS merge(Map<String, ?> value) {
+    public RecipeEntryJS merge(RecipeJsonValue value) {
         builder().merge(value);
         return this;
     }

@@ -74,40 +74,45 @@ public class ScriptError {
                 CharSequence chars = sourceLocation.getCharacters();
                 String jsSnippet = chars != null ? chars.toString().trim() : "";
 
-                SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(getDisplayPath(), rawLine, rawColumn);
+                String displayPath = script != null ? getDisplayPath() : extractRelativePath(sourceLocation);
+                SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(displayPath, rawLine, rawColumn);
                 this.lineNumber = pos.line;
                 this.columnNumber = pos.column;
                 this.originalSymbolName = pos.name;
-
-                String finalSnippet = jsSnippet;
-                try {
-                    Path sourcePath = NekoJSPaths.ROOT.resolve(getDisplayPath());
-                    if (Files.exists(sourcePath) && this.lineNumber > 0) {
-                        List<String> allLines = Files.readAllLines(sourcePath);
-                        int lineIndex = this.lineNumber - 1; // 1-based 转 0-based
-
-                        if (lineIndex >= 0 && lineIndex < allLines.size()) {
-                            finalSnippet = allLines.get(lineIndex).trim();
-
-                            int offset = 0;
-                            while ((finalSnippet.startsWith("//") || finalSnippet.startsWith("/*") || finalSnippet.startsWith("*") || finalSnippet.isEmpty())
-                                    && (lineIndex + 1) < allLines.size()) {
-                                lineIndex++;
-                                offset++;
-                                finalSnippet = allLines.get(lineIndex).trim();
-                            }
-
-                            this.lineNumber += offset;
-                        }
-                    }
-                } catch (Exception e) {
-                }
-
-                this.sourceCodeSnippet = finalSnippet;
+                this.sourceCodeSnippet = buildSourceSnippet(displayPath, jsSnippet);
             }
         } else {
             this.errorMessage = rawException.toString();
         }
+    }
+
+    private String buildSourceSnippet(String displayPath, String fallbackSnippet) {
+        try {
+            Path sourcePath = NekoJSPaths.ROOT.resolve(displayPath);
+            if (Files.exists(sourcePath) && this.lineNumber > 0) {
+                List<String> allLines = Files.readAllLines(sourcePath);
+                int lineIndex = this.lineNumber - 1;
+                if (lineIndex >= 0 && lineIndex < allLines.size()) {
+                    int start = Math.max(0, lineIndex - 2);
+                    int end = Math.min(allLines.size() - 1, lineIndex + 2);
+                    StringBuilder snippet = new StringBuilder();
+
+                    for (int i = start; i <= end; i++) {
+                        int displayLine = i + 1;
+                        snippet.append(displayLine == this.lineNumber ? " > " : "   ");
+                        snippet.append(displayLine).append(" | ").append(allLines.get(i)).append("\n");
+
+                        if (displayLine == this.lineNumber && this.columnNumber > 0) {
+                            snippet.append("     | ").append(" ".repeat(Math.max(0, this.columnNumber - 1))).append("^\n");
+                        }
+                    }
+
+                    return snippet.toString().stripTrailing();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return fallbackSnippet;
     }
 
     public void incrementOccurrence() {
@@ -121,6 +126,22 @@ public class ScriptError {
             return NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/');
         }
         return fallbackPath;
+    }
+
+    private static String extractRelativePath(SourceSection sourceLocation) {
+        if (sourceLocation == null || sourceLocation.getSource() == null) return "Unknown location";
+        var source = sourceLocation.getSource();
+        if (source.getPath() != null) {
+            try {
+                return NekoJSPaths.ROOT.relativize(Path.of(source.getPath())).toString().replace('\\', '/');
+            } catch (Exception ignored) {
+                return source.getPath().replace('\\', '/');
+            }
+        }
+        if (source.getURI() != null) {
+            return source.getURI().toString().replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
+        }
+        return source.getName();
     }
 
     public String getFullDetailText() {
@@ -138,6 +159,9 @@ public class ScriptError {
                 sb.append("于方法 `").append(originalSymbolName).append("` 行 ").append(lineNumber);
             } else {
                 sb.append("行 ").append(lineNumber);
+            }
+            if (columnNumber > 0) {
+                sb.append(", 列 ").append(columnNumber);
             }
             sb.append("):\n");
             sb.append(sourceCodeSnippet).append("\n");

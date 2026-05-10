@@ -1,10 +1,10 @@
 package com.tkisor.nekojs.wrapper;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
@@ -23,11 +23,12 @@ public class FallbackNamespaceProxy implements ProxyObject {
         return (ProxyExecutable) arguments -> {
             if (arguments.length == 1 && arguments[0].hasMembers()) {
                 try {
-                    Value jsGlobalJSON = Context.getCurrent().getBindings("js").getMember("JSON");
-                    String jsonString = jsGlobalJSON.invokeMember("stringify", arguments[0]).asString();
+                    JsonElement converted = RecipeJsonValueConverter.toJson(event, arguments[0]);
+                    if (!converted.isJsonObject()) {
+                        throw new IllegalArgumentException("Fallback recipe JSON must be an object");
+                    }
 
-                    JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
-
+                    JsonObject json = converted.getAsJsonObject();
                     json.addProperty("type", namespace + ":" + recipeType);
 
                     return event.custom(json);

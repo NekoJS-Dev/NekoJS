@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.error;
 
+import com.tkisor.nekojs.NekoJSCommon;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
@@ -49,18 +50,22 @@ public class NekoErrorTracker {
             mappedLine = getRealCodeLine(pathStr, pos.line);
         }
 
-        String cleanTrace = getMappedStackTrace(e);
-        currentType.logger().debug("Script event trigger exception:\n{}", cleanTrace);
-
         String uniqueHashInput = currentType.name() + "_" + pathStr + "_" + mappedLine + "_" + e.getMessage();
         String safeHash = Integer.toHexString(uniqueHashInput.hashCode());
         ScriptId runtimeId = new ScriptId("nekojs", "rt_" + safeHash);
 
+        ScriptError scriptError;
         if (ERRORS.containsKey(runtimeId)) {
-            ERRORS.get(runtimeId).incrementOccurrence();
+            scriptError = ERRORS.get(runtimeId);
+            scriptError.incrementOccurrence();
         } else {
-            ERRORS.put(runtimeId, new ScriptError(currentType, runtimeId, pathStr, e));
+            scriptError = new ScriptError(currentType, runtimeId, pathStr, e);
+            ERRORS.put(runtimeId, scriptError);
         }
+
+        String detail = scriptError.getFullDetailText();
+        currentType.logger().error("Script event trigger exception:\n{}", detail);
+        NekoJSCommon.LOGGER.error("[NekoJS] Script event trigger exception:\n{}", detail);
     }
 
     public static SourceSection getBestSourceLocation(PolyglotException e) {

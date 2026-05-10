@@ -21,6 +21,6 @@ public record EventCatalogEntry(
             boolean cancellable,
             boolean dispatchable
     ) {
-        return new EventCatalogEntry(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable, null);
+        return new EventCatalogEntry(group, name, scriptType, eventType, dispatchKeyType, cancellable, dispatchable, group + "." + name + "(event => {\n  $0\n})");
     }
 }

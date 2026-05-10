@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.probe;
 import java.util.Collection;
 import java.util.List;
 
+@Deprecated(forRemoval = true)
 public interface NekoProbeMetadataProvider {
     default Collection<ProbeBindingDoc> bindings() {
         return List.of();

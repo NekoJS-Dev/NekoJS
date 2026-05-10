@@ -3,18 +3,13 @@ package com.tkisor.nekojs.api.recipe;
 import com.google.gson.*;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
-import com.tkisor.nekojs.wrapper.item.IngredientJS;
-import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
-import java.util.List;
 import java.util.Map;
 
 public class RecipeJsonBuilder {
@@ -69,7 +64,8 @@ public class RecipeJsonBuilder {
     }
 
     public RecipeJsonBuilder group(String group) {
-        return property("group", group);
+        json.addProperty("group", group);
+        return this;
     }
 
     public RecipeJsonBuilder validate() {
@@ -93,8 +89,8 @@ public class RecipeJsonBuilder {
         return this;
     }
 
-    public RecipeJsonBuilder merge(Map<String, ?> value) {
-        JsonElement element = convertToJsonElement(value);
+    public RecipeJsonBuilder merge(RecipeJsonValue value) {
+        JsonElement element = RecipeJsonValueConverter.toJson(event, value);
         if (element.isJsonObject()) {
             return merge(element.getAsJsonObject());
         }
@@ -126,116 +122,28 @@ public class RecipeJsonBuilder {
         return this;
     }
 
-    public RecipeJsonBuilder property(String key, Number value) {
-        json.addProperty(key, value);
+    public RecipeJsonBuilder property(String key, RecipeJsonValue value) {
+        json.add(key, RecipeJsonValueConverter.toJson(event, value));
         return this;
     }
 
-    public RecipeJsonBuilder property(String key, String value) {
-        json.addProperty(key, value);
-        return this;
-    }
-
-    public RecipeJsonBuilder property(String key, Boolean value) {
-        json.addProperty(key, value);
-        return this;
-    }
-
-    public RecipeJsonBuilder property(String key, JsonObject value) {
+    public RecipeJsonBuilder jsonProperty(String key, JsonElement value) {
         json.add(key, value);
         return this;
     }
 
-    public RecipeJsonBuilder property(String key, JsonArray value) {
-        json.add(key, value);
+    public RecipeJsonBuilder jsonProperty(String key, Number value) {
+        json.addProperty(key, value);
         return this;
     }
 
-    public RecipeJsonBuilder property(String key, List<?> value) {
-        json.add(key, convertToJsonElement(value));
+    public RecipeJsonBuilder jsonProperty(String key, String value) {
+        json.addProperty(key, value);
         return this;
     }
 
-    public RecipeJsonBuilder property(String key, Map<String, ?> value) {
-        json.add(key, convertToJsonElement(value));
+    public RecipeJsonBuilder jsonProperty(String key, Boolean value) {
+        json.addProperty(key, value);
         return this;
-    }
-
-    public RecipeJsonBuilder property(String key, Object value) {
-        json.add(key, convertToJsonElement(value));
-        return this;
-    }
-
-    private JsonElement convertToJsonElement(Object obj) {
-        switch (obj) {
-            case null -> {
-                return JsonNull.INSTANCE;
-            }
-            case JsonElement je -> {
-                return je;
-            }
-            case Number n -> {
-                return new JsonPrimitive(n);
-            }
-            case String s -> {
-                return new JsonPrimitive(s);
-            }
-            case Boolean b -> {
-                return new JsonPrimitive(b);
-            }
-            case Character c -> {
-                return new JsonPrimitive(c);
-            }
-            case IngredientJS ing -> {
-                return event.serializeIngredient(ing.unwrap());
-            }
-            case Ingredient ing -> {
-                return event.serializeIngredient(ing);
-            }
-            case SizedIngredientJS ing -> {
-                return sizedIngredientToJson(ing.unwrap());
-            }
-            case SizedIngredient ing -> {
-                return sizedIngredientToJson(ing);
-            }
-            case FluidIngredientJS ing -> {
-                return event.serializeFluidIngredient(ing.unwrap());
-            }
-            case FluidIngredient ing -> {
-                return event.serializeFluidIngredient(ing);
-            }
-            case SizedFluidIngredient ing -> {
-                return event.serializeSizedFluidIngredient(ing);
-            }
-            case FluidStack stack -> {
-                return event.serializeFluidStack(stack);
-            }
-            case ItemStack stack -> {
-                return event.serializeResult(stack);
-            }
-            case List<?> list -> {
-                JsonArray array = new JsonArray();
-                for (Object item : list) array.add(convertToJsonElement(item));
-                return array;
-            }
-            case Map<?, ?> map -> {
-                JsonObject jsonObj = new JsonObject();
-                for (Map.Entry<?, ?> entry : map.entrySet()) {
-                    jsonObj.add(String.valueOf(entry.getKey()), convertToJsonElement(entry.getValue()));
-                }
-                return jsonObj;
-            }
-            default -> {
-            }
-        }
-
-        return new JsonPrimitive(obj.toString());
-    }
-
-    private JsonElement sizedIngredientToJson(SizedIngredient ingredient) {
-        JsonObject json = new JsonObject();
-        json.add("ingredient", event.serializeIngredient(ingredient.ingredient()));
-        json.addProperty("count", ingredient.count());
-        return json;
     }
 }

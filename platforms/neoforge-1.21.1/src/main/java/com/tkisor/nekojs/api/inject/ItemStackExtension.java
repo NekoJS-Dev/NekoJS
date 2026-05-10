@@ -65,10 +65,6 @@ public interface ItemStackExtension {
         return self().isEmpty();
     }
 
-    default int neko$getCount() {
-        return self().getCount();
-    }
-
     default ItemStack neko$setCount(int count) {
         self().setCount(count);
         return self();

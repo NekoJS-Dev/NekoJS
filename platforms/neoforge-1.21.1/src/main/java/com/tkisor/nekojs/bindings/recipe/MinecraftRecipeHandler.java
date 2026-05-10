@@ -55,8 +55,8 @@ public class MinecraftRecipeHandler {
         return event.builder(type)
                 .input("ingredient", input)
                 .output("result", output)
-                .property("experience", xp)
-                .property("cookingtime", cookTime);
+                .jsonProperty("experience", xp)
+                .jsonProperty("cookingtime", cookTime);
     }
 
     public RecipeJsonBuilder stonecutting(Ingredient input, ItemStack output) {
@@ -92,8 +92,8 @@ public class MinecraftRecipeHandler {
         }
 
         return event.builder("minecraft:crafting_shaped")
-                .property("pattern", patternArray)
-                .property("key", keyObj)
+                .jsonProperty("pattern", patternArray)
+                .jsonProperty("key", keyObj)
                 .output("result", result);
     }
 
@@ -128,8 +128,8 @@ public class MinecraftRecipeHandler {
         }
 
         return event.builder("minecraft:crafting_shaped")
-                .property("pattern", patternArray)
-                .property("key", keyObj)
+                .jsonProperty("pattern", patternArray)
+                .jsonProperty("key", keyObj)
                 .output("result", result);
     }
 
@@ -142,7 +142,7 @@ public class MinecraftRecipeHandler {
         }
 
         return event.builder("minecraft:crafting_shapeless")
-                .property("ingredients", ingredientsArray)
+                .jsonProperty("ingredients", ingredientsArray)
                 .output("result", result);
     }
 }

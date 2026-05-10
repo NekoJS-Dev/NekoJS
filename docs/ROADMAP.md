@@ -1,0 +1,147 @@
+# NekoJS 路线图
+
+NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 Minecraft JavaScript 脚本运行时。当前方向是保持轻量、JSON-first、贴近 Minecraft / NeoForge 原生类型，同时吸收 KubeJS 中能明显改善脚本体验的 helper、wrapper、adapter 和调试能力。
+
+## 当前设计原则
+
+- [x] 保持 datapack JSON-first 的 recipe 设计，不迁移 KubeJS 完整 `RecipeSchema` / `RecipeComponent` / 自动 builder 生成系统。
+- [x] 保留 vanilla Java 类名绑定，例如 `Item`、`ItemStack`、`Items`、`Ingredient`、`FluidStack`。
+- [x] 额外能力优先通过 `ItemJS`、`Ingredient`、`Fluid`、mixin extension 和轻量 wrapper 提供。
+- [x] 避免把 Graal `Value` 暴露为常规脚本 API 参数，优先使用 Java 类型或函数式接口。
+- [x] 平台相关验证优先编译两个平台模块，不单独编译 `common`。
+
+## 已完成的基础能力
+
+- [x] 独立 GraalJS Context + 共享 Graal Engine 的脚本运行基础。
+- [x] `startup_scripts/`、`server_scripts/`、`client_scripts/` 脚本目录。
+- [x] `.js` 直接执行；`.ts`、`.jsx`、`.tsx` 由 NekoSWC 或注册编译器支持。
+- [x] 核心事件组、绑定注册、脚本属性和插件注册机制。
+- [x] 工作区生成、游戏内工作区 UI、脚本同步和基础编辑体验。
+- [x] `NekoId` 稳定脚本侧 ID 类型，替代 `IDJS.of` 返回 `Object` 的旧设计。
+- [x] `JSTypeAdapter.getPrecedence()`，降低宽泛 adapter 参与 Graal overload resolution 时的歧义。
+- [x] 26.1 早期 reload 阶段的 `ItemStack` 安全构造，避免 `Components not bound yet`。
+- [x] CI Build workflow：编译/构建两个平台模块，区分 dev/release artifacts，并用 commit 首行提取 release version / summary。
+- [x] `RecipeJsonValue` 边界类型：recipe builder/custom 的任意 JS JSON 输入收敛到 adapter/converter 层，builder 不直接暴露 Graal `Value` / 宽泛 `Object`。
+- [x] 脚本事件错误日志增强：recipe/event 错误同时写 script logger 与主 NekoJS logger，并显示 JS 行列、上下文和列指针。
+
+## 已完成的 KubeJS-lite API 迁移
+
+- [x] `ItemJS.of(...)` 返回 `ItemStack`，支持脚本友好的物品栈创建。
+- [x] `ItemStack` mixin extension：`withCount`、`copy`、`getId`、`getMod`、`getBlock`、`enchant`、`hasEnchantment`、`matches`、`asIngredient`、`weakNBT`、`strictNBT` 等。
+- [x] `Ingredient` helper：`of`、`item`、`tag`、`any`，并明确暂不支持 `not` 的假语义。
+- [x] `IngredientJS` wrapper：`or`、`and`、`intersect`、`except`、`subtract`、`matches`、`first`、`stacks`、`displayStacks`、`withCount`。
+- [x] `SizedIngredientJS` 与 `SizedIngredientAdapter`。
+- [x] `Fluid` / `FluidIngredient` / `SizedFluidIngredient` 相关 helper、wrapper 和 adapter MVP。
+- [x] recipe JSON builder、recipe entry wrapper、filter、递归 `replaceInput` / `replaceOutput`。
+- [x] `RecipeJsonValueAdapter` / `RecipeJsonValueConverter`，支持 JS object/array 内嵌 `IngredientJS`、`ItemStack`、fluid wrapper 等 recipe-aware JSON 序列化。
+- [x] `event.recipes.minecraft` 常用 vanilla recipe helper。
+- [x] `event.forEach(...)` 使用 `Consumer<RecipeEntryJS>`，不把 `Value callback` 作为常规 API。
+
+## common 迁移状态
+
+### 已迁移或已经在 common 的能力
+
+- [x] 事件基础设施：事件组、事件总线、脚本事件桥接所需的 common 抽象。
+- [x] 脚本管理基础：`NekoJSScriptManager` 相关可共享逻辑。
+- [x] 绑定聚合：`NekoBindings`。
+- [x] 脚本同步通用逻辑：`ScriptSyncService`、`ScriptSyncFiles`、`ErrorSummaryDTO`。
+- [x] 静态基础 helper：`IDJS`、`ColorJS`、`UUIDJS`、`StringUtilsJS`、`TimeJS`、`UtilsJS`。
+- [x] `JSTypeAdapter` 和 `NekoSandboxBuilder` 的共享 adapter 注册机制。
+
+### 可优先迁移到 common 的候选
+
+- [ ] 事件声明类：`CommandEvents`、`EntityEvents`、`ItemEvents`、`LevelEvents`、`PlayerEvents`、`RegistryEvents`、`ServerEvents`。
+- [ ] 纯 helper / static access：`ItemJS`、`FluidJS`、`FluidIngredientJS`、`NativeEventsJS`。
+- [ ] 低版本差异 adapter：`JsonObjectAdapter`、`ComponentAdapter`、`CompoundTagTypeAdapter`、`IngredientAdapter`、`FluidStackAdapter`、`FluidIngredientAdapter`、`SizedFluidIngredientAdapter`、`SizedIngredientAdapter`、`RecipeFilterAdapter`。
+- [ ] 低版本差异 wrapper：`NekoWrapper`、`RecipeRegistryProxy`、`FluidAmounts`、`FluidIngredientJS`、`SizedIngredientJS`。
+- [ ] `MinecraftRecipeHandler`：先确认两个平台 recipe JSON 字段和 serializer helper 是否保持一致，再迁移。
+
+### 需要 compat 层后再迁移的候选
+
+- [ ] `ResourceLocationAdapter` / `IdentifierAdapter`：需要统一 `ResourceLocation` 与 `Identifier` 差异。
+- [ ] recipe 核心类：`RecipeEventJS`、`RecipeEntryJS`、`RecipeJsonBuilder`、`RecipeFilter`、`RecipeJsonValue`、`RecipeJsonValueConverter`、`FallbackNamespaceProxy`。
+- [ ] 物品/方块/实体/tag adapter：`ItemAdapter`、`BlockAdapter`、`ItemStackAdapter`、`EntityTypeAdapter`、`TagKeyAdapter`。
+- [ ] `IngredientJS` / `IngredientResolver`：需要隔离 `Ingredient` 展开、holder、component ingredient 的版本差异。
+- [ ] 网络 packet record 与 `NekoJSNetwork`：需要先抽象 payload / channel 注册差异。
+
+### 暂不建议迁移的内容
+
+- [ ] registry builder、registry event 和 food builder 等强平台 API 绑定代码。
+- [ ] mixin、injected extension API 和需要直接改写 Minecraft 类的代码。
+- [ ] GUI screen 和客户端渲染代码，除非先拆出纯数据/工具层。
+- [ ] `EventBusForgeBridge` 这类直接依赖平台事件总线的桥接类。
+
+## 短期任务
+
+- [ ] 收敛 adapter / resolver 边界语义：null/undefined、对象/数组、无效 ID、count/amount 覆盖、EMPTY、可变 stack copy。
+- [ ] 为 26.1 优先补 adapter / resolver 回归测试，覆盖 Graal `Value` object/array 输入与错误路径。
+- [ ] 为 `RecipeJsonValue` / `RecipeJsonValueConverter` 补 26.1 runnable 测试，覆盖 nested JS object/array、`IngredientJS`、`SizedIngredientJS`、`ItemStack`、fluid wrapper、fallback namespace 和 invalid shape。
+- [ ] 继续增强 recipe 错误上下文：在现有 JS 行列/片段基础上记录 builder 来源、recipe id、type、创建 API，并在最终 codec 失败时输出清晰错误。
+- [ ] 增加 recipe path 操作：`setPath`、`removePath`、按 JSON path 修改/删除字段。
+- [ ] 增加 recipe dump/print 调试工具：`event.dump(filter)`、`event.print(filter)`。
+- [ ] 保持 README、`docs/ROADMAP.md`、`ai_docs/` 与当前实现同步；非平凡任务完成后应同步整理相关文档。
+
+## 中期任务
+
+- [ ] 按“低版本差异、无平台副作用、可编译验证”的顺序推进 common 迁移。
+- [ ] 为 Create 等常见 mod 增加轻量 JSON helper，例如 mixing、crushing、pressing，但不引入 schema 系统。
+- [ ] 扩展脚本同步安全校验：路径穿越、绝对路径、扩展名、文件数量、批量大小。
+- [ ] 添加受控调度器：延迟任务、重复任务、reload 自动取消旧任务。
+- [x] 添加 CI，至少构建两个受支持平台模块。
+- [ ] 为路径校验、脚本发现、事件总线、adapter 和 recipe filter 增加聚焦测试。
+
+## NekoProbe / ProbeJS-like 类型生成计划
+
+目标是实现类似 ProbeJS 的编辑器类型、补全和片段生成能力，但不绑定 KubeJS / Rhino / `kubejs` 目录结构。NekoJS 应输出纯 TypeScript artifacts，并把 VSCode 配置、snippet、未来实时扩展作为可选增强。
+
+### 先在 NekoJS 侧补齐的前置能力
+
+这些能力应优先在 NekoJS core / common 契约中完成，避免 NekoProbe 以后像 ProbeJS 那样必须扫描运行时 scope、mixin hook 或依赖内部实现。
+
+- [x] 建立统一 catalog snapshot API：`NekoScriptCatalog.snapshot()` / `snapshot(side)`，聚合 bindings、events、adapters、recipe namespaces、host extensions、snippets、output layout。
+- [x] 建立中立 catalog DTO：`BindingCatalogEntry`、`EventCatalogEntry`、`AdapterCatalogEntry`、`RecipeNamespaceCatalogEntry`、`HostExtensionCatalogEntry`、`SnippetCatalogEntry`、`TypeOutputLayout`。
+- [x] 建立平台 catalog provider：平台显式贡献 recipe namespace、host extension manifest 和 output layout。
+- [x] 让 recipe namespace 注册可被枚举；`NekoRecipeNamespaces` 提供有序 handler class view。
+- [x] 建立 mixin extension manifest 基础：平台 provider 显式列出 target class / extension interface，catalog 复用 `MemberVisibilityQuery` 得到 JS 暴露名。
+- [x] 解耦 `WorkspaceGenerator` 对 `.probe/{env}/probe-types` 的硬编码，改为读取 `NekoScriptCatalog.outputLayout()`。
+- [x] 将默认类型输出根从 `.probe/` 改为 `.neko_probe/`，避免与 ProbeJS 冲突。
+- [ ] 增加 `registerTypeDocs` / catalog contribution 一类轻量插件钩子，让 NekoJS 插件能显式贡献富声明数据；旧 `api.probe.NekoProbeMetadataProvider` 已废弃，不要作为事实来源继续扩展。
+- [ ] 为 `BindingCatalogEntry` 补声明元数据：是否 host class 的人工修正、人工类型覆盖、文档、示例。
+- [x] 为 `EventCatalogEntry` 提供基础 snippet 模板。
+- [x] 为 `AdapterCatalogEntry` 提供常见 adapter input shape、错误策略与示例。
+- [x] 为 `RecipeNamespaceCatalogEntry` 提供 fallbackSupported 与初始 examples。
+- [ ] 为 wrapper/helper 提供人工声明补充，例如 `IngredientJS`、`RecipeJsonBuilder`、`RecipeEntryJS`、`RecipeJsonValue`、recipe filter、fluid/item helper 的链式返回和 union 输入类型。
+- [ ] 增加可选 Java class-load telemetry / `Java.loadClass` 等价 hook，供 NekoProbe 收集用户脚本实际加载过的类；不要通过 mixin 拦截内部 wrapper。
+
+### NekoProbe 类型生成核心
+
+- [ ] 建立 NekoJS 自己的类型生成插件 API，支持优先级、class discovery、alias、special docs、side docs、snippet 注入。
+- [ ] 先生成中间 metadata graph / IR，再从 IR 输出 `.d.ts`、snippet 和 workspace config，避免 emitter 直接依赖运行时对象。
+- [ ] 建立 Java class registry：从绑定、事件参数、wrapper、adapter target、人工 seed 中发现类，并递归发现字段、方法、构造器、泛型和引用类型。
+- [ ] 建立安全的 class discovery 策略：默认 seed-based，JAR 扫描作为可配置高级功能，避免无边界扫描所有 mod 类。
+- [ ] 实现 TypeScript emitter，生成 Java package declarations、全局绑定、side-specific declarations、special aliases 和 index 文件。
+- [ ] 支持 `startup`、`server`、`client` 三类脚本 side 的独立 `.d.ts` 输出和 `jsconfig.json` / `tsconfig.json` path 配置。
+- [x] `TypeOutputLayout` 默认类型输出根使用 `.neko_probe/`；workspace 生成器只读取 output layout，不硬编码具体目录。
+
+### 编辑器体验
+
+- [ ] 从 `SnippetCatalogEntry` 生成 VSCode snippets；当前 catalog 已提供 server started、recipe event、shapeless recipe、recipe builder 的初始片段。
+- [ ] 为工作区生成或更新 per-script-dir `jsconfig.json`，让 `startup_scripts`、`server_scripts`、`client_scripts` 获得对应 side 类型。
+- [ ] 提供 `/nekojs probe` 或工作区 UI 按钮触发 dump，并显示生成进度与错误摘要。
+- [ ] 将未来 live editor bridge 作为独立增强，不作为类型生成核心依赖。
+
+### 明确不照搬 ProbeJS 的部分
+
+- [ ] 不依赖 KubeJS plugin、KubeJSPaths、Rhino wrapper 或 `Java.loadClass` mixin hook。
+- [ ] 不为了类型生成迁移 KubeJS 完整 recipe schema / component 系统。
+- [ ] 不把 VSCode 扩展连接作为第一阶段必需能力，先保证纯 `.d.ts` 可用。
+- [x] 不把脚本 API 改回大量 `Object` / `Value` 入口；`RecipeJsonBuilder` / `RecipeEventJS.custom` 已使用 `RecipeJsonValue` 中间类型收敛任意 JS JSON 输入。
+
+## 长期方向
+
+- [ ] 定义稳定的 NekoJS API 版本和破坏性变更迁移策略。
+- [ ] 从统一元数据生成 `.d.ts`、NekoProbe 类型输出和 API 文档。
+- [ ] 逐步收紧 HostAccess，区分可信本地开发模式与更安全的服务器运行模式。
+- [ ] 增加性能诊断：reload 耗时、脚本执行耗时、慢事件监听器和热点统计。
+- [ ] 维护 NekoJS、GraalJS、NekoSWC、NekoProbe、Minecraft、Java、NeoForge 兼容矩阵。
+- [ ] 只有在两个平台都能稳定表达 AnyHolderSet / wildcard ingredient 后，再考虑 `Ingredient.all()` / `Ingredient.not(...)`。

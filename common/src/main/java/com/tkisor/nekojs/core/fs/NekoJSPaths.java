@@ -23,7 +23,7 @@ public final class NekoJSPaths {
     public static final Path CLIENT_SCRIPTS  = ROOT.resolve("client_scripts");
 
     // 自动补全用的类型定义目录
-    public static final Path PROBE_DIR = GAME_DIR.resolve(".probe");
+    public static final Path PROBE_DIR = GAME_DIR.resolve(".neko_probe");
     public static final Path NODE_MODULES = ROOT.resolve("node_modules");
 
     /* ================= 配置与辅助文件 ================= */
