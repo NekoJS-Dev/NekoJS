@@ -6,6 +6,8 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.log.LoggerStream;
+import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
+import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Engine;
@@ -67,7 +69,13 @@ public final class NekoSandboxBuilder {
         return hostBuilder.build();
     }
 
+    public record Sandbox(Context context, NekoNodeRuntime nodeRuntime) {}
+
     public static Context build(ScriptType type) {
+        return buildSandbox(type).context();
+    }
+
+    public static Sandbox buildSandbox(ScriptType type) {
         Logger logger = type.logger();
         OutputStream outStream = new LoggerStream(logger, false);
         OutputStream errStream = new LoggerStream(logger, true);
@@ -95,6 +103,7 @@ public final class NekoSandboxBuilder {
 
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
+        NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type);
 
         try {
             ctx.eval("js", """
@@ -108,7 +117,7 @@ public final class NekoSandboxBuilder {
             type.logger().warn("注入 require 扩展名补丁失败", e);
         }
 
-        return ctx;
+        return new Sandbox(ctx, nodeRuntime);
     }
 
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {

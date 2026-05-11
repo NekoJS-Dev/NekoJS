@@ -173,7 +173,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
-        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
+        Context context = listener.getContext();
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
         var bus = (DispatchEventBus<EVENT, KEY>) this.bus;
 
         return bus.listen(
@@ -181,7 +182,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 event -> {
                     try {
                         if (listener.canExecute()) {
-                            listener.executeVoid(event);
+                            synchronized (context) {
+                                listener.executeVoid(event);
+                            }
                         }
                     } catch (PolyglotException e) {
                         NekoErrorTracker.recordEventError(type, e);
@@ -191,7 +194,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> registerDispatchCancellable(Value listener, Value key) {
-        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
+        Context context = listener.getContext();
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
 
         return bus.listen(
@@ -199,8 +203,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 event -> {
                     try {
                         if (listener.canExecute()) {
-                            Value result = listener.execute(event);
-                            return result.isBoolean() && result.asBoolean();
+                            synchronized (context) {
+                                Value result = listener.execute(event);
+                                return result.isBoolean() && result.asBoolean();
+                            }
                         }
                     } catch (PolyglotException e) {
                         NekoErrorTracker.recordEventError(type, e);

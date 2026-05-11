@@ -13,8 +13,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-import java.util.function.Function;
-
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
@@ -34,7 +32,7 @@ public interface EntityEvents {
     EventBusJS<EntityLeaveLevelEvent, EntityType<?>> LEAVE_LEVEL =
             GROUP.server("leaveLevel", EntityLeaveLevelEvent.class, dispatchByEntityType());
 
-    private static  <T extends EntityEvent> DispatchKey<T, EntityType<?>> dispatchByEntityType() {
+    private static <T extends EntityEvent> DispatchKey<T, EntityType<?>> dispatchByEntityType() {
         return DispatchKey.of(EntityType.class, e -> e.getEntity().getType());
     }
 

@@ -109,12 +109,12 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 建立 mixin extension manifest 基础：平台 provider 显式列出 target class / extension interface，catalog 复用 `MemberVisibilityQuery` 得到 JS 暴露名。
 - [x] 解耦 `WorkspaceGenerator` 对 `.probe/{env}/probe-types` 的硬编码，改为读取 `NekoScriptCatalog.outputLayout()`。
 - [x] 将默认类型输出根从 `.probe/` 改为 `.neko_probe/`，避免与 ProbeJS 冲突。
-- [x] 增加 `registerTypeDocs` / catalog contribution 轻量插件钩子，让 NekoJS 插件能显式贡献富声明数据；旧 `api.probe.NekoProbeMetadataProvider` 已废弃，不要作为事实来源继续扩展。
+- [x] 增加 `registerTypeDocs` / catalog contribution 轻量插件钩子，让 NekoJS 插件能显式贡献富声明数据；旧 `api.probe` facade、`Probe*Doc` DTO、`NekoProbeMetadataProvider` 和 `NekoContextSnapshot` 已删除，统一改用 `api.catalog.NekoScriptCatalog`。
 - [x] 为 `BindingCatalogEntry` 补声明元数据：是否 host class 的人工修正、人工类型覆盖、文档、示例。
 - [x] 为 `EventCatalogEntry` 提供基础 snippet 模板。
 - [x] 为 `AdapterCatalogEntry` 提供常见 adapter input shape、错误策略与示例。
 - [x] 为 `RecipeNamespaceCatalogEntry` 提供 fallbackSupported 与初始 examples。
-- [x] 为 wrapper/helper 提供人工声明补充，例如 `IngredientJS`、`RecipeJsonBuilder`、`RecipeJsonValue`、recipe filter、fluid/item helper 的链式返回和 union 输入类型。
+- [x] 为 wrapper/helper 提供人工声明补充，例如 `IngredientJS`、`RecipeJsonBuilder`、`RecipeJsonValue`、recipe filter、fluid/item helper、`PersistentDataJS`、EntityType/Goal 注册 API 的链式返回和 union 输入类型。
 - [x] 增加可选 Java class-load telemetry / `Java.loadClass` 等价 hook，供 NekoProbe 收集用户脚本实际加载过的类；通过用户脚本层 `Java.type` / `Java.loadClass` wrapper 记录成功加载，并由 `ClassFilter` 记录 lookup attempt，不通过 mixin 拦截内部 wrapper。
 
 ### NekoProbe 类型生成核心
@@ -152,6 +152,29 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 为 26.1 增加 runnable server/client smoke 测试，覆盖 player pdata 服务端写入、tick dirty、立即 sync、客户端 mirror 读取和客户端只读拒绝写入。
 - [ ] 为 1.21.1 增加 runnable / client-server smoke 测试，覆盖实体/player pdata 持久化和同步。
 
+### Node-compatible API 与 VFS
+
+目标是在不引入完整 Node runtime 的前提下，为脚本提供尽量贴近 Node.js 的基础内置模块：`require('fs')`、`require('path')`、`require('util')`、`require('timers')`、`require('buffer')`、`require('process')`、`require('events')`，并支持 `node:` 前缀别名。所有真实文件访问必须通过 NekoJS VFS，最多只能访问 game root / `.minecraft` 目录内的内容。
+
+- [x] 增加 26.1 runnable 探测脚本 `server_scripts/src/test_node_api_probe.js`，先记录当前 `require('fs')`、`path`、`util`、`timers`、`buffer`、`process`、`events` 可用性和 VFS 越界行为，不让缺失模块中断 reload。
+- [x] 加强 VFS 路径校验：统一 `resolveGamePath` / `resolveNekoWritePath`，对相对路径、绝对路径、符号链接、创建新文件时的父目录 real path 做一致校验。
+- [x] 明确默认访问策略：读路径限制在 `.minecraft` 内；写/删除默认限制在 `.minecraft/nekojs`，后续如需写全 game root 再通过 engine config 显式开启。
+- [x] 收紧 `NekoJSFileSystem` 的危险入口：默认禁用 `createSymbolicLink`，避免脚本通过 symlink 创建外部访问通道。
+- [x] 在 CommonJS `require` 外层安装 core module shim：保留现有相对路径/`node_modules` 解析，只拦截 `fs`、`node:fs` 等内置模块名。
+- [x] 将 Node shim JS 从 Java text block 拆到 classpath resources：`common/src/main/resources/nekojs/node/modules.list` 按顺序加载 `internal/define.js`、各 builtin module 和 `bootstrap.js`，避免依赖 jar 内目录扫描。
+- [x] 实现 `fs` 同步基础 API：`existsSync`、`readFileSync`、`writeFileSync`、`appendFileSync`、`mkdirSync`、`rmSync`、`unlinkSync`、`readdirSync`、`statSync`、`lstatSync`、`renameSync`、`copyFileSync`、`realpathSync`、`readlinkSync`。
+- [x] 实现 `fs` callback API：`readFile`、`writeFile`、`appendFile`、`mkdir`、`rm`、`unlink`、`readdir`、`stat`、`lstat`、`rename`、`copyFile`、`realpath`，错误优先 callback 行为尽量贴近 Node。
+- [x] 实现 `fs/promises`：`readFile`、`writeFile`、`appendFile`、`mkdir`、`rm`、`unlink`、`readdir`、`stat`、`lstat`、`rename`、`copyFile`、`realpath`。
+- [x] 实现 `path`：`join`、`resolve`、`normalize`、`dirname`、`basename`、`extname`、`relative`、`isAbsolute`、`parse`、`format`、`sep`、`delimiter`、`posix`、`win32`；该模块只做字符串处理，不做权限判断。
+- [x] 实现轻量 `Buffer` / `node:buffer`：`Buffer.from`、`Buffer.alloc`、`Buffer.isBuffer`、`byteLength`、`concat`、`toString`、`length`、基础下标访问；保证 `fs.readFileSync(path)` 未传 encoding 时返回 Buffer-like 对象。
+- [x] 实现轻量 `process` / `node:process`：`cwd`、受 VFS 限制的 `chdir`、`platform`、`versions`、只读 `env`、`nextTick`。
+- [x] 实现 `timers` / `node:timers` 与 `timers/promises`：`setTimeout`、`clearTimeout`、`setInterval`、`clearInterval`、`setImmediate`、`clearImmediate`；reload/Context close 时取消旧任务，避免脚本重载后定时器泄漏。
+- [x] timer 回调按脚本 side 安全 flush：`server_scripts` 在 `ServerTickEvent.Post` 执行，`client_scripts` 在 `ClientTickEvent.Post` 执行；`startup_scripts` 只允许 immediate/0ms timer 并在 startup load 结束后 flush 一次。
+- [x] 实现 `util`：`format`、`inspect`、`promisify`、`callbackify`、`types` 中常用判断函数。
+- [x] 实现 `events`：轻量 `EventEmitter`、`once`、`on`，满足常见 npm 小模块依赖。
+- [ ] 为 Node-compatible API 补 NekoProbe manual declarations，让 `require('fs')` / `require('node:fs')` 等返回准确类型。
+- [ ] 为两个平台添加 runnable smoke test，覆盖 `.minecraft` 内读写、越界拒绝、symlink 逃逸拒绝、Buffer 返回、timer reload 清理。
+
 ### Painter API 与 client render events
 
 - [ ] 增加 client-only `PainterJS` 链式 API；1.21.1 包装 `GuiGraphics`，26.1 包装 `GuiGraphicsExtractor` / render state API。
@@ -161,11 +184,14 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 
 ### 原生 EntityType 与 Goal 注册
 
-- [ ] 扩展 `RegistryEvents` / `RegistryEventListener`，增加 startup-only `entityType` registry builder。
-- [ ] 增加 `EntityTypeBuilderJS`，支持 category、size、tracking、update interval、fire immune、no save/no summon、attributes。
-- [ ] 增加属性注册与可选客户端 renderer / spawn egg 子阶段。
-- [ ] 增加 Goal 注册：先提供 vanilla goal factory，再提供 functional-interface backed script goal。
-- [ ] 对已有实体追加 goal 时使用 join-level 注入并做 marker 去重。
+- [x] 扩展 `RegistryEvents` / `RegistryEventListener`，增加 startup-only `entityType` registry builder。
+- [x] 增加 `EntityTypeBuilderJS`，支持 category、size、tracking、update interval、fire immune、no save/no summon、attributes。
+- [x] 增加属性注册和客户端 no-op renderer，保证默认脚本实体可被服务端生成且客户端不会因缺 renderer 崩溃。
+- [x] 增加 Goal 注册 MVP：`floatInWater`、`panic`、`randomStroll`、`meleeAttack` vanilla goal factory。
+- [x] 对已有实体追加 goal 时使用 join-level 注入并做 identity marker 去重。
+- [ ] 增加 spawn egg 子阶段。
+- [ ] 增加 target/look/avoid 等更多 vanilla goal factory，并评估按 `EntityType` 映射目标 class 的脚本 API。
+- [ ] 增加 functional-interface backed script goal，内部捕获脚本异常并限流日志。
 
 ### PowerfulJS-like Capability 集成
 

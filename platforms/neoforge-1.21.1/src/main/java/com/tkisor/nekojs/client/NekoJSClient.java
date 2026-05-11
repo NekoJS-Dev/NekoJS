@@ -1,18 +1,25 @@
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
+import com.tkisor.nekojs.NekoJSCommon;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
-import com.tkisor.nekojs.NekoJSCommon;
+import net.neoforged.neoforge.common.NeoForge;
 
 public class NekoJSClient {
 
     public static void register(IEventBus modEventBus) {
         modEventBus.addListener(NekoJSClient::onClientSetup);
         modEventBus.addListener(NekoJSClient::onClientResourceReload);
+        modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);
+        NeoForge.EVENT_BUS.addListener(NekoJSClient::onClientTickPost);
     }
 
     /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
@@ -22,6 +29,14 @@ public class NekoJSClient {
             NekoJS.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
             ScriptType.CLIENT.logger().debug("Early script injection...");
         });
+    }
+
+    private static void onRegisterEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        EntityTypeRegistryEventJS.registeredEntityTypes().forEach(type -> event.registerEntityRenderer(type, NekoNoopEntityRenderer::new));
+    }
+
+    private static void onClientTickPost(ClientTickEvent.Post event) {
+        NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 
     // 1.21.1: 事件名改为 RegisterClientReloadListenersEvent

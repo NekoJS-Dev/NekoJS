@@ -19,6 +19,25 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 public class NekoJSFileSystem implements FileSystem {
+    private static final String NODE_BUILTIN_REQUIRE_PATCH = """
+            ;(function() {
+              if (typeof require !== 'function' || !globalThis.__nekoNodeBuiltins) return;
+              if (require.__nekoNodeBuiltinPatched) return;
+              const nativeRequire = require;
+              const builtins = globalThis.__nekoNodeBuiltins;
+              function nekoRequire(id) {
+                id = String(id);
+                if (Object.prototype.hasOwnProperty.call(builtins, id)) return builtins[id];
+                return nativeRequire.apply(this, arguments);
+              }
+              for (const key of Object.getOwnPropertyNames(nativeRequire)) {
+                try { nekoRequire[key] = nativeRequire[key]; } catch (_) {}
+              }
+              Object.defineProperty(nekoRequire, '__nekoNodeBuiltinPatched', { value: true });
+              require = nekoRequire;
+            })();
+            """;
+
     private final java.nio.file.FileSystem delegate = FileSystems.getDefault();
     private Path currentWorkingDirectory;
 
@@ -92,7 +111,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(dir);
+        Path verifiedPath = NekoJSPaths.verifyInsideGameDirForCreate(dir);
         Files.createDirectory(verifiedPath, attrs);
     }
 
@@ -104,7 +123,11 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        boolean writing = options.contains(StandardOpenOption.WRITE)
+                || options.contains(StandardOpenOption.APPEND)
+                || options.contains(StandardOpenOption.CREATE)
+                || options.contains(StandardOpenOption.CREATE_NEW);
+        Path verifiedPath = writing ? NekoJSPaths.verifyInsideGameDirForCreate(path) : NekoJSPaths.verifyInsideGameDir(path);
         verifiedPath = resolveVirtualScript(verifiedPath);
 
         if (!options.contains(StandardOpenOption.WRITE) && !options.contains(StandardOpenOption.APPEND)) {
@@ -118,7 +141,7 @@ public class NekoJSFileSystem implements FileSystem {
                 if (compiler != null) {
                     try {
                         String rawCode = Files.readString(verifiedPath);
-                        String compiledJs = compiler.compile(verifiedPath, rawCode);
+                        String compiledJs = NODE_BUILTIN_REQUIRE_PATCH + compiler.compile(verifiedPath, rawCode);
                         byte[] bytes = compiledJs.getBytes(StandardCharsets.UTF_8);
                         return new ReadOnlyMemoryByteChannel(bytes);
 
@@ -127,6 +150,11 @@ public class NekoJSFileSystem implements FileSystem {
                     }
                 }
             }
+        }
+
+        if (!writing && verifiedPath.getFileName() != null && verifiedPath.getFileName().toString().endsWith(".js")) {
+            byte[] bytes = (NODE_BUILTIN_REQUIRE_PATCH + Files.readString(verifiedPath)).getBytes(StandardCharsets.UTF_8);
+            return new ReadOnlyMemoryByteChannel(bytes);
         }
 
         return Files.newByteChannel(verifiedPath, options, attrs);
@@ -224,7 +252,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createLink(Path link, Path existing) throws IOException {
-        Path verifiedLink = NekoJSPaths.verifyInsideGameDir(link);
+        Path verifiedLink = NekoJSPaths.verifyInsideGameDirForCreate(link);
         Path verifiedExisting = NekoJSPaths.verifyInsideGameDir(existing);
         Files.createLink(verifiedLink, verifiedExisting);
     }
@@ -237,8 +265,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createSymbolicLink(Path link, Path target, FileAttribute<?>... attrs) throws IOException {
-        Path verifiedLink = NekoJSPaths.verifyInsideGameDir(link);
-        Files.createSymbolicLink(verifiedLink, target, attrs);
+        throw new AccessDeniedException("Creating symbolic links from NekoJS scripts is forbidden");
     }
 
     @Override

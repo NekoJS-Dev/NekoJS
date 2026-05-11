@@ -1,5 +1,6 @@
 package com.tkisor.nekojs;
 
+import com.tkisor.nekojs.bindings.event.GoalEvents;
 import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NeoForgePluginLoader;
@@ -36,7 +37,9 @@ public class NekoJS extends NekoJSCommon {
     private static void registerEventListeners(IEventBus modEventBus) {
         modEventBus.addListener(NekoJS::onCommonSetup);
         modEventBus.addListener(RegistryEventListener::onRegister);
+        modEventBus.addListener(RegistryEventListener::onEntityAttributeCreation);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
+        NeoForge.EVENT_BUS.addListener(RegistryEventListener::onEntityJoinLevel);
     }
 
     private static void initializeWorkspace() {
@@ -53,6 +56,7 @@ public class NekoJS extends NekoJSCommon {
         SCRIPT_MANAGER.registerScriptProperty();
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
+        GoalEvents.postRegister();
     }
 
     private static void registerClient(IEventBus modEventBus) {

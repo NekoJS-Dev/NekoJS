@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.NekoBindings;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
@@ -28,6 +29,8 @@ public final class NekoJSScriptManager {
     private static ScriptEventBridge eventBridge = ScriptEventBridge.EMPTY;
 
     private final ScriptTypedValue<Context> contexts = ScriptTypedValue.ofNullable(this::initContext);
+
+    private final ScriptTypedValue<NekoNodeRuntime> nodeRuntimes = ScriptTypedValue.ofNullable(type -> null);
 
     private final ScriptTypedValue<List<ScriptContainer>> scripts = ScriptTypedValue.of(type -> new ArrayList<>());
 
@@ -94,10 +97,16 @@ public final class NekoJSScriptManager {
                 runScript(ctx, script);
             }
         }
+
+        if (type == ScriptType.STARTUP) {
+            flushReadyNodeTimers(type);
+        }
     }
 
     private Context initContext(ScriptType type) {
-        Context ctx = NekoSandboxBuilder.build(type);
+        NekoSandboxBuilder.Sandbox sandbox = NekoSandboxBuilder.buildSandbox(type);
+        Context ctx = sandbox.context();
+        nodeRuntimes.set(type, sandbox.nodeRuntime());
         CONTEXT_TYPE_MAP.put(ctx, type);
 
         var bindings = ctx.getBindings("js");
@@ -189,6 +198,14 @@ public final class NekoJSScriptManager {
         eventBridge.clearListeners(type);
 
         Context oldContext = contexts.set(type, null);
+        NekoNodeRuntime oldRuntime = nodeRuntimes.set(type, null);
+        if (oldRuntime != null) {
+            try {
+                oldRuntime.close();
+            } catch (Exception e) {
+                type.logger().warn("关闭旧 Node runtime 时发生异常", e);
+            }
+        }
         if (oldContext != null) {
             try {
                 oldContext.close();
@@ -206,6 +223,13 @@ public final class NekoJSScriptManager {
     public boolean hasScripts(ScriptType type) {
         List<ScriptContainer> typeScripts = scripts.at(type);
         return typeScripts != null && !typeScripts.isEmpty();
+    }
+
+    public void flushReadyNodeTimers(ScriptType type) {
+        NekoNodeRuntime runtime = nodeRuntimes.at(type);
+        if (runtime != null) {
+            runtime.flushReadyTimers();
+        }
     }
 
     /**

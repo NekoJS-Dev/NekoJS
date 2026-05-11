@@ -66,17 +66,83 @@ public final class NekoJSPaths {
      * 校验路径是否在游戏目录内，防止符号链接越权访问
      */
     public static Path verifyInsideGameDir(Path path) throws IOException {
+        return verifyInsideRoot(path, GAME_DIR);
+    }
+
+    public static Path verifyInsideGameDirForCreate(Path path) throws IOException {
+        return verifyInsideRootForCreate(path, GAME_DIR);
+    }
+
+    public static Path verifyInsideNekoRoot(Path path) throws IOException {
+        return verifyInsideRoot(path, ROOT);
+    }
+
+    public static Path verifyInsideNekoRootForCreate(Path path) throws IOException {
+        return verifyInsideRootForCreate(path, ROOT);
+    }
+
+    public static Path resolveGamePath(String path, Path currentWorkingDirectory) throws IOException {
+        return verifyInsideGameDir(resolveAgainstWorkingDirectory(path, currentWorkingDirectory));
+    }
+
+    public static Path resolveGamePathForCreate(String path, Path currentWorkingDirectory) throws IOException {
+        return verifyInsideGameDirForCreate(resolveAgainstWorkingDirectory(path, currentWorkingDirectory));
+    }
+
+    public static Path resolveNekoWritePath(String path, Path currentWorkingDirectory) throws IOException {
+        return verifyInsideNekoRoot(resolveAgainstWorkingDirectory(path, currentWorkingDirectory));
+    }
+
+    public static Path resolveNekoWritePathForCreate(String path, Path currentWorkingDirectory) throws IOException {
+        return verifyInsideNekoRootForCreate(resolveAgainstWorkingDirectory(path, currentWorkingDirectory));
+    }
+
+    private static Path resolveAgainstWorkingDirectory(String path, Path currentWorkingDirectory) {
+        Path parsed = Path.of(path);
+        if (parsed.isAbsolute()) {
+            return parsed;
+        }
+        Path base = currentWorkingDirectory == null ? GAME_DIR : currentWorkingDirectory;
+        return base.resolve(parsed);
+    }
+
+    private static Path verifyInsideRoot(Path path, Path root) throws IOException {
+        Path normalizedRoot = root.normalize().toAbsolutePath();
         Path normalized = path.normalize().toAbsolutePath();
-        if (!normalized.startsWith(GAME_DIR)) {
-            throw new IOException("Access outside game directory is forbidden: " + normalized);
+        if (!normalized.startsWith(normalizedRoot)) {
+            throw new IOException("Access outside allowed root is forbidden: " + normalized);
         }
         if (Files.exists(normalized)) {
             Path realPath = normalized.toRealPath();
-            if (!realPath.startsWith(GAME_DIR)) {
+            if (!realPath.startsWith(normalizedRoot)) {
                 throw new IOException("Symlink escape detected: " + realPath);
             }
         }
         return normalized;
+    }
+
+    private static Path verifyInsideRootForCreate(Path path, Path root) throws IOException {
+        Path normalizedRoot = root.normalize().toAbsolutePath();
+        Path normalized = verifyInsideRoot(path, root);
+        Path existingParent = nearestExistingParent(normalized);
+        if (existingParent != null) {
+            Path realParent = existingParent.toRealPath();
+            if (!realParent.startsWith(normalizedRoot)) {
+                throw new IOException("Symlink parent escape detected: " + realParent);
+            }
+        }
+        return normalized;
+    }
+
+    private static Path nearestExistingParent(Path path) {
+        Path current = path.getParent();
+        while (current != null) {
+            if (Files.exists(current)) {
+                return current;
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 
     public static Path verifyScriptSyncPath(String relativePath) throws IOException {
