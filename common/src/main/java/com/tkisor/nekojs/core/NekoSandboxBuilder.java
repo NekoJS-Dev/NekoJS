@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -10,9 +8,6 @@ import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
-import graal.graalvm.polyglot.Engine;
-import graal.graalvm.polyglot.HostAccess;
-import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 
@@ -23,13 +18,6 @@ import java.io.OutputStream;
  * 共享引擎以降低内存占用
  */
 public final class NekoSandboxBuilder {
-    private static final Engine SHARED_ENGINE = Engine.newBuilder("js")
-            .allowExperimentalOptions(true)
-            .option("engine.WarnInterpreterOnly", "false")
-            .build();
-
-    private static final HostAccess SHARED_HOST_ACCESS = createSharedHostAccess();
-
     private static final IOAccess SHARED_IO_ACCESS = IOAccess.newBuilder()
             .fileSystem(new NekoJSFileSystem(NekoJSPaths.ROOT))
             .build();
@@ -60,15 +48,6 @@ public final class NekoSandboxBuilder {
 
     private NekoSandboxBuilder() {}
 
-    private static HostAccess createSharedHostAccess() {
-        HostAccess.Builder hostBuilder = HostAccess.newBuilder(HostAccess.ALL)
-                .allowAllClassImplementations(true)
-                .allowAllImplementations(true);
-
-        NekoJSTypeAdapters.all().forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
-        return hostBuilder.build();
-    }
-
     public record Sandbox(Context context, NekoNodeRuntime nodeRuntime) {}
 
     public static Context build(ScriptType type) {
@@ -81,11 +60,11 @@ public final class NekoSandboxBuilder {
         OutputStream errStream = new LoggerStream(logger, true);
 
         Context ctx = Context.newBuilder("js")
-                .engine(SHARED_ENGINE)
+                .engine(NekoSharedEngine.get())
                 .allowExperimentalOptions(true)
                 .out(outStream)
                 .err(errStream)
-                .allowHostAccess(SHARED_HOST_ACCESS)
+                .allowHostAccess(NekoSharedHostAccess.get())
                 .allowIO(SHARED_IO_ACCESS)
                 .allowCreateThread(ClassFilter.allowThreads)
                 .allowHostClassLookup(ClassFilter.INSTANCE)
@@ -118,17 +97,5 @@ public final class NekoSandboxBuilder {
         }
 
         return new Sandbox(ctx, nodeRuntime);
-    }
-
-    private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
-        builder.targetTypeMapping(
-                        Value.class,
-                        adapter.getTargetClass(),
-                        adapter::canConvert,
-                        adapter::convert,
-                        adapter.getPrecedence()
-                )
-                .targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue)
-                .targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
     }
 }

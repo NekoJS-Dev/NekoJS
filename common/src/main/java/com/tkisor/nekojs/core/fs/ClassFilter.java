@@ -19,6 +19,7 @@ public class ClassFilter implements Predicate<String> {
     public static boolean allowThreads = false;
     public static boolean allowReflection = false;
     public static boolean allowAsm = false;
+    public static boolean allowFsWriteOutsideNekojs = false;
 
     private static final Set<String> THREAD_GROUP = Set.of("java.lang.Thread", "java.lang.ThreadGroup");
     private static final Set<String> REFLECT_GROUP = Set.of("java.lang.reflect", "java.lang.invoke.MethodHandles");
@@ -77,9 +78,13 @@ public class ClassFilter implements Predicate<String> {
             setupConfigEntry(config, "allowAsm", false,
                     " Allows scripts to directly manipulate Java bytecode. Incorrect usage may cause severe crashes.");
 
+            setupConfigEntry(config, "allowFsWriteOutsideNekojs", false,
+                    " Allows Node fs write/delete operations anywhere under the game directory instead of only under nekojs/. Still blocks paths outside .minecraft.");
+
             ClassFilter.allowThreads = config.get("allowThreads");
             ClassFilter.allowReflection = config.get("allowReflection");
             ClassFilter.allowAsm = config.get("allowAsm");
+            ClassFilter.allowFsWriteOutsideNekojs = config.get("allowFsWriteOutsideNekojs");
 
             NekoJSCommon.LOGGER.info(
                     "[NekoJS] Engine config loaded. Unsafe features enabled: {}",

@@ -35,7 +35,7 @@ public final class NekoJSPaths {
     public static final Path ASSETS = ROOT.resolve("assets");
     public static final Path DATA   = ROOT.resolve("data");
 
-    public static final Set<String> SCRIPT_EXTENSIONS = Set.of("js", "ts", "jsx", "tsx");
+    public static final Set<String> SCRIPT_EXTENSIONS = Set.of("js", "mjs", "cjs", "ts", "jsx", "tsx");
     private static final Set<Path> SCRIPT_ROOTS = Set.of(STARTUP_SCRIPTS, SERVER_SCRIPTS, CLIENT_SCRIPTS);
 
     /**

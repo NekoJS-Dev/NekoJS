@@ -11,4 +11,8 @@ public interface IScriptCompiler {
 
     /// 接收原始文件和源码，返回编译后的 JS 字符串
     String compile(Path file, String sourceCode) throws Exception;
+
+    default ScriptCompileResult compileDetailed(Path file, String sourceCode) throws Exception {
+        return ScriptCompileResult.codeOnly(compile(file, sourceCode));
+    }
 }

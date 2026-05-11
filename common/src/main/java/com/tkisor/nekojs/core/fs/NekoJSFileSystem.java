@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.core.fs;
 
-import com.tkisor.nekojs.api.compiler.IScriptCompiler;
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,25 +18,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 public class NekoJSFileSystem implements FileSystem {
-    private static final String NODE_BUILTIN_REQUIRE_PATCH = """
-            ;(function() {
-              if (typeof require !== 'function' || !globalThis.__nekoNodeBuiltins) return;
-              if (require.__nekoNodeBuiltinPatched) return;
-              const nativeRequire = require;
-              const builtins = globalThis.__nekoNodeBuiltins;
-              function nekoRequire(id) {
-                id = String(id);
-                if (Object.prototype.hasOwnProperty.call(builtins, id)) return builtins[id];
-                return nativeRequire.apply(this, arguments);
-              }
-              for (const key of Object.getOwnPropertyNames(nativeRequire)) {
-                try { nekoRequire[key] = nativeRequire[key]; } catch (_) {}
-              }
-              Object.defineProperty(nekoRequire, '__nekoNodeBuiltinPatched', { value: true });
-              require = nekoRequire;
-            })();
-            """;
-
     private final java.nio.file.FileSystem delegate = FileSystems.getDefault();
     private Path currentWorkingDirectory;
 
@@ -56,7 +36,7 @@ public class NekoJSFileSystem implements FileSystem {
             Path parent = originalPath.getParent();
 
             if (parent != null) {
-                String[] virtualExtensions = {".ts", ".tsx", ".jsx"};
+                String[] virtualExtensions = {".mjs", ".cjs", ".ts", ".tsx", ".jsx"};
                 for (String ext : virtualExtensions) {
                     Path virtualPath = parent.resolve(baseName + ext);
                     if (Files.exists(virtualPath)) {
@@ -130,34 +110,29 @@ public class NekoJSFileSystem implements FileSystem {
         Path verifiedPath = writing ? NekoJSPaths.verifyInsideGameDirForCreate(path) : NekoJSPaths.verifyInsideGameDir(path);
         verifiedPath = resolveVirtualScript(verifiedPath);
 
-        if (!options.contains(StandardOpenOption.WRITE) && !options.contains(StandardOpenOption.APPEND)) {
-            String fileName = verifiedPath.getFileName().toString();
-            int dotIndex = fileName.lastIndexOf('.');
-
-            if (dotIndex > 0) {
-                String ext = fileName.substring(dotIndex);
-                IScriptCompiler compiler = ScriptCompilerRegistry.getCompiler(ext);
-
-                if (compiler != null) {
-                    try {
-                        String rawCode = Files.readString(verifiedPath);
-                        String compiledJs = NODE_BUILTIN_REQUIRE_PATCH + compiler.compile(verifiedPath, rawCode);
-                        byte[] bytes = compiledJs.getBytes(StandardCharsets.UTF_8);
-                        return new ReadOnlyMemoryByteChannel(bytes);
-
-                    } catch (Exception e) {
-                        throw new IOException("[NekoJSFileSystem] 转译脚本拦截失败: " + verifiedPath, e);
-                    }
-                }
+        if (!writing && verifiedPath.getFileName() != null && NekoJSPaths.isSupportedScriptFile(verifiedPath)) {
+            try {
+                String rawCode = Files.readString(verifiedPath);
+                byte[] bytes = NekoModulePipeline.transform(verifiedPath, rawCode).code().getBytes(StandardCharsets.UTF_8);
+                return new ReadOnlyMemoryByteChannel(bytes);
+            } catch (Exception e) {
+                throw new IOException("[NekoJSFileSystem] 脚本模块转换失败: " + verifiedPath + ": " + rootMessage(e), e);
             }
         }
 
-        if (!writing && verifiedPath.getFileName() != null && verifiedPath.getFileName().toString().endsWith(".js")) {
-            byte[] bytes = (NODE_BUILTIN_REQUIRE_PATCH + Files.readString(verifiedPath)).getBytes(StandardCharsets.UTF_8);
-            return new ReadOnlyMemoryByteChannel(bytes);
-        }
-
         return Files.newByteChannel(verifiedPath, options, attrs);
+    }
+
+    private static String rootMessage(Throwable throwable) {
+        Throwable root = throwable;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String message = root.getMessage();
+        if (message == null || message.isBlank()) {
+            message = root.toString();
+        }
+        return message;
     }
 
     @Override

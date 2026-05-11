@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.io.IOException;
@@ -44,7 +45,7 @@ public final class NekoNodeFS {
         Path target = resolveWrite(path);
         Path parent = target.getParent();
         if (parent != null) {
-            Files.createDirectories(NekoJSPaths.verifyInsideNekoRootForCreate(parent));
+            Files.createDirectories(verifyWriteParentForCreate(parent));
         }
         Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding));
     }
@@ -53,7 +54,7 @@ public final class NekoNodeFS {
         Path target = resolveWrite(path);
         Path parent = target.getParent();
         if (parent != null) {
-            Files.createDirectories(NekoJSPaths.verifyInsideNekoRootForCreate(parent));
+            Files.createDirectories(verifyWriteParentForCreate(parent));
         }
         Files.write(target, data == null ? new byte[0] : data.bytes());
     }
@@ -62,7 +63,7 @@ public final class NekoNodeFS {
         Path target = resolveWrite(path);
         Path parent = target.getParent();
         if (parent != null) {
-            Files.createDirectories(NekoJSPaths.verifyInsideNekoRootForCreate(parent));
+            Files.createDirectories(verifyWriteParentForCreate(parent));
         }
         Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
@@ -149,10 +150,23 @@ public final class NekoNodeFS {
     }
 
     private Path resolveWrite(String path) throws IOException {
+        if (ClassFilter.allowFsWriteOutsideNekojs) {
+            return NekoJSPaths.resolveGamePathForCreate(String.valueOf(path), currentWorkingDirectory);
+        }
         return NekoJSPaths.resolveNekoWritePathForCreate(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path resolveWriteExisting(String path) throws IOException {
+        if (ClassFilter.allowFsWriteOutsideNekojs) {
+            return NekoJSPaths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        }
         return NekoJSPaths.resolveNekoWritePath(String.valueOf(path), currentWorkingDirectory);
+    }
+
+    private Path verifyWriteParentForCreate(Path path) throws IOException {
+        if (ClassFilter.allowFsWriteOutsideNekojs) {
+            return NekoJSPaths.verifyInsideGameDirForCreate(path);
+        }
+        return NekoJSPaths.verifyInsideNekoRootForCreate(path);
     }
 }
