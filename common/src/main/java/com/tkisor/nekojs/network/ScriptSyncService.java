@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.network;
 
+import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.script.ScriptType;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,6 +26,7 @@ public final class ScriptSyncService {
         Path targetPath = NekoJSPaths.verifyScriptSyncPath(relativePath);
         Files.createDirectories(targetPath.getParent());
         Files.writeString(targetPath, content);
+        clearErrorsFor(relativePath);
     }
 
     public static Map<String, String> collectAllScripts() {
@@ -37,8 +40,19 @@ public final class ScriptSyncService {
             Path targetPath = targets.get(entry.getKey());
             Files.createDirectories(targetPath.getParent());
             Files.writeString(targetPath, entry.getValue());
+            clearErrorsFor(entry.getKey());
             count++;
         }
         return count;
+    }
+
+    private static void clearErrorsFor(String relativePath) {
+        String normalized = relativePath.replace('\\', '/');
+        for (ScriptType type : ScriptType.all()) {
+            if (normalized.startsWith(type.path.getFileName().toString() + "/")) {
+                NekoErrorTracker.clearByScriptPath(type, normalized);
+                return;
+            }
+        }
     }
 }

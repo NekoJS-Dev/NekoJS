@@ -186,7 +186,7 @@ public final class NekoScriptCatalog {
     public static List<HostExtensionCatalogEntry> hostExtensions(ScriptType scriptType) {
         List<HostExtensionCatalogEntry> entries = new ArrayList<>();
         for (HostExtensionSource source : platformProvider.hostExtensions()) {
-            if (source.scriptType() != ScriptType.COMMON && source.scriptType() != scriptType) continue;
+            if (!source.canApplyOn(scriptType)) continue;
 
             for (var binding : MemberVisibilityQuery.getVisibleMethods(source.extensionInterface()).values()) {
                 entries.add(new HostExtensionCatalogEntry(
@@ -206,7 +206,7 @@ public final class NekoScriptCatalog {
     public static List<SnippetCatalogEntry> snippets(ScriptType scriptType) {
         List<SnippetCatalogEntry> entries = new ArrayList<>();
         for (SnippetCatalogEntry snippet : platformProvider.snippets()) {
-            if (snippet.scriptType() == ScriptType.COMMON || snippet.scriptType() == scriptType) {
+            if (snippet.canApplyOn(scriptType)) {
                 entries.add(snippet);
             }
         }

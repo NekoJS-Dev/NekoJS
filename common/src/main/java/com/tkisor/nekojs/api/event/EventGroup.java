@@ -94,14 +94,14 @@ public class EventGroup {
             var registered = entry.getValue();
 
             if (registered.canApplyOn(type)) {
-                clearBus(registered.bus);
+                clearBus(registered.bus, type);
             }
         }
     }
 
     /// using a separate method to avoid problematic generic check
-    private static <E> void clearBus(EventBusJS<E, ?> bus) {
-        for (var token : bus.tokens()) {
+    private static <E> void clearBus(EventBusJS<E, ?> bus, ScriptType type) {
+        for (var token : bus.tokens(type)) {
             bus.bus().unregister(token);
         }
     }

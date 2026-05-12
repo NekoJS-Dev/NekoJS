@@ -16,7 +16,7 @@ public final class ScriptBootstrap {
      * 路径：nekojs/[type]_scripts/src/main.js
      */
     public static void generateDefaultScripts() {
-        for (ScriptType type : ScriptType.all()) {
+        for (ScriptType type : ScriptType.autoLoadTypes()) {
             Path rootDir = type.path;
             Path srcDir = rootDir.resolve("src");
             Path mainFile = srcDir.resolve("main.js");

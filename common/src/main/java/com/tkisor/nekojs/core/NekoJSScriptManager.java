@@ -59,7 +59,7 @@ public final class NekoJSScriptManager {
      * 一次性扫描并发现所有环境类型 (STARTUP, SERVER, CLIENT) 的脚本文件
      */
     public void discoverScripts() {
-        for (ScriptType type : ScriptType.all()) {
+        for (ScriptType type : ScriptType.autoLoadTypes()) {
             discoverScripts(type);
         }
     }
@@ -166,7 +166,7 @@ public final class NekoJSScriptManager {
             ctx.getBindings("js").putMember("__nekoCurrentScriptId", script.id.toString());
             ctx.eval("js", "require").execute(requirePath);
 
-            NekoErrorTracker.clear(script.id);
+            NekoErrorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
             script.disabled = false;
             script.lastError = null;
 
@@ -195,7 +195,44 @@ public final class NekoJSScriptManager {
     public void reloadScripts(ScriptType type) {
         type.logger().info("正在重载 {} 脚本...", type.name());
 
+        resetEnvironment(type);
+
+        discoverScripts(type);
+        loadScripts(type);
+
+        type.logger().info("{} 脚本重载完毕。", type.name());
+    }
+
+    public void runTestScripts() {
+        ScriptType type = ScriptType.TEST;
+        type.logger().info("正在运行 TEST 脚本...");
+
+        resetEnvironment(type);
+        discoverScripts(type);
+        loadScripts(type);
+        flushTestTimers();
+
+        type.logger().info("TEST 脚本运行完毕。");
+    }
+
+    private void flushTestTimers() {
+        NekoNodeRuntime runtime = nodeRuntimes.at(ScriptType.TEST);
+        if (runtime == null) return;
+        for (int i = 0; i < 20 && runtime.hasPendingTimers(); i++) {
+            runtime.flushReadyTimers();
+            try {
+                Thread.sleep(1L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        runtime.flushReadyTimers();
+    }
+
+    private void resetEnvironment(ScriptType type) {
         eventBridge.clearListeners(type);
+        NekoErrorTracker.clearByType(type);
 
         Context oldContext = contexts.set(type, null);
         NekoNodeRuntime oldRuntime = nodeRuntimes.set(type, null);
@@ -213,11 +250,6 @@ public final class NekoJSScriptManager {
                 type.logger().warn("关闭旧上下文时发生异常", e);
             }
         }
-
-        discoverScripts(type);
-        loadScripts(type);
-
-        type.logger().info("{} 脚本重载完毕。", type.name());
     }
 
     public boolean hasScripts(ScriptType type) {

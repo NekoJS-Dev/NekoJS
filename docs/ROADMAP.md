@@ -22,7 +22,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 26.1 早期 reload 阶段的 `ItemStack` 安全构造，避免 `Components not bound yet`。
 - [x] CI Build workflow：编译/构建两个平台模块，区分 dev/release artifacts，并用 commit 首行提取 release version / summary。
 - [x] `RecipeJsonValue` 边界类型：recipe builder/custom 的任意 JS JSON 输入收敛到 adapter/converter 层，builder 不直接暴露 Graal `Value` / 宽泛 `Object`。
-- [x] 脚本事件错误日志增强：recipe/event 错误同时写 script logger 与主 NekoJS logger，并显示 JS 行列、上下文和列指针。
+- [x] 脚本事件错误日志增强：recipe/event 错误同时写 script logger 与主 NekoJS logger，并显示 JS 行列、上下文和列指针；错误追踪按脚本路径替换/清理，避免同一文件修改或重跑后 stale error 累积。
 
 ## 已完成的 KubeJS-lite API 迁移
 
@@ -150,6 +150,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 为 `PersistentDataJS` 补 server authoritative 自动同步 MVP：dirty tracking、`PDataSyncPacket`、服务端 tick 批量 full-tag sync、客户端只读 mirror。
 - [x] 将 pdata 同步目标从全体在线玩家优化为 tracking/self，并增加 revision、每 tick 同步数量上限和 tag size 上限，避免旧包覆盖和基础网络压力。
 - [x] 为 26.1 增加 runnable server/client smoke 测试，覆盖 player pdata 服务端写入、tick dirty、立即 sync、客户端 mirror 读取和客户端只读拒绝写入。
+- [x] 增加 `test_scripts/` 脚本类型，用于显式运行 smoke/regression 脚本；默认不参与 startup/server/client 自动加载，第一版作为 server-like 测试环境，可复用 server binding/event，事件监听和 timer 生命周期按 TEST 自身隔离，并提供 TEST-only `Test` 断言 helper。
 - [ ] 为 1.21.1 增加 runnable / client-server smoke 测试，覆盖实体/player pdata 持久化和同步。
 
 ### Node-compatible API 与 VFS
@@ -172,6 +173,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] timer 回调按脚本 side 安全 flush：`server_scripts` 在 `ServerTickEvent.Post` 执行，`client_scripts` 在 `ClientTickEvent.Post` 执行；`startup_scripts` 只允许 immediate/0ms timer 并在 startup load 结束后 flush 一次。
 - [x] 实现 `util`：`format`、`inspect`、`promisify`、`callbackify`、`types` 中常用判断函数。
 - [x] 实现 `events`：轻量 `EventEmitter`、`once`、`on`，满足常见 npm 小模块依赖。
+- [x] 实现轻量 `assert` / `node:assert` 与 `test` / `node:test` shim；`node:test` 仅在 `test_scripts` 可用，当前支持基础 runner、`describe` / `it`、`before` / `after` / `beforeEach` / `afterEach`、子测试、skip/todo 与 Promise 测试，复用 TEST-only `Test` helper 输出 section/pass，适合 smoke/regression 脚本。
 - [ ] 为 Node-compatible API 补 NekoProbe manual declarations，让 `require('fs')` / `require('node:fs')` 等返回准确类型。
 - [ ] 为两个平台添加 runnable smoke test，覆盖 `.minecraft` 内读写、越界拒绝、symlink 逃逸拒绝、Buffer 返回、timer reload 清理。
 
@@ -186,6 +188,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [ ] 建立 sourcemap chain：`TS/TSX/JSX -> JS` 的输入 map 传给 ESM→CJS transformer，最终注册 `final CJS -> original source` 的 map，避免 require patch 或多段 transform 破坏报错行列。
 - [x] 内置本体级 ESM→CJS transformer，不使用 swc4j；当前 resources 内置由 `tools/build-esm-transformer.mjs` 生成的最小 Babel bundle，只打包 ESM→CJS 所需 Babel core / modules-commonjs / dynamic-import 能力，通过独立 `NekoSharedEngine` holder 复用共享 Graal Engine，并按 Graal 共享 Engine 要求共用 `NekoSharedHostAccess`，但 transformer Context 仍禁用 HostClassLookup / IO / 线程 / 进程创建。
 - [ ] ESM 检测策略：`.mjs` 强制 ESM，`.cjs` 强制 CJS，`.js/.ts/.tsx/.jsx` 用 parser 的 `sourceType: 'unambiguous'` / AST 检测，避免 regex 误判。
+- [ ] 长期实现 NekoJS 自有 ESM→CJS transformer：优先覆盖静态 import/export、re-export、namespace/default/named import、side-effect import 与 sourcemap 位置偏移；Babel bundle 保留为实验/兼容 fallback，可通过 `engine.toml` 开关选择或禁用。
 - [ ] 支持常见 ESM 语义：default import、namespace import、named import、side-effect import、named/default export、re-export、`export *`、builtin import（`fs` / `node:fs`）和相对 import。
 - [ ] 明确第一版不支持 top-level await；遇到 TLA 输出清晰错误，建议把异步逻辑放到 event callback 或 timer 中。
 - [ ] 增加 `.mjs` / `.cjs` 脚本扩展支持，并定义 `.js` auto、`.mjs` ESM、`.cjs` CJS 的行为。

@@ -21,6 +21,7 @@ public final class NekoJSPaths {
     public static final Path STARTUP_SCRIPTS = ROOT.resolve("startup_scripts");
     public static final Path SERVER_SCRIPTS  = ROOT.resolve("server_scripts");
     public static final Path CLIENT_SCRIPTS  = ROOT.resolve("client_scripts");
+    public static final Path TEST_SCRIPTS    = ROOT.resolve("test_scripts");
 
     // 自动补全用的类型定义目录
     public static final Path PROBE_DIR = GAME_DIR.resolve(".neko_probe");
@@ -36,7 +37,7 @@ public final class NekoJSPaths {
     public static final Path DATA   = ROOT.resolve("data");
 
     public static final Set<String> SCRIPT_EXTENSIONS = Set.of("js", "mjs", "cjs", "ts", "jsx", "tsx");
-    private static final Set<Path> SCRIPT_ROOTS = Set.of(STARTUP_SCRIPTS, SERVER_SCRIPTS, CLIENT_SCRIPTS);
+    private static final Set<Path> SCRIPT_ROOTS = Set.of(STARTUP_SCRIPTS, SERVER_SCRIPTS, CLIENT_SCRIPTS, TEST_SCRIPTS);
 
     /**
      * 仅初始化物理文件夹，不涉及具体文件内容生成
@@ -46,6 +47,7 @@ public final class NekoJSPaths {
         ensureDir(STARTUP_SCRIPTS);
         ensureDir(SERVER_SCRIPTS);
         ensureDir(CLIENT_SCRIPTS);
+        ensureDir(TEST_SCRIPTS);
         ensureDir(CONFIG);
         ensureDir(PROBE_DIR);
         ensureDir(NODE_MODULES);
@@ -159,7 +161,7 @@ public final class NekoJSPaths {
             throw new IOException("Unsupported script file type: " + relativePath);
         }
         if (!isInsideScriptRoot(target)) {
-            throw new IOException("Script sync is only allowed inside startup_scripts, server_scripts, or client_scripts: " + relativePath);
+            throw new IOException("Script sync is only allowed inside startup_scripts, server_scripts, client_scripts, or test_scripts: " + relativePath);
         }
         return target;
     }

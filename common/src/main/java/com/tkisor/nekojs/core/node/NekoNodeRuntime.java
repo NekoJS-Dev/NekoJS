@@ -58,6 +58,10 @@ public final class NekoNodeRuntime implements AutoCloseable {
         timers.flushReadyCallbacks();
     }
 
+    public boolean hasPendingTimers() {
+        return timers.hasPendingCallbacks();
+    }
+
     @Override
     public void close() {
         timers.close();

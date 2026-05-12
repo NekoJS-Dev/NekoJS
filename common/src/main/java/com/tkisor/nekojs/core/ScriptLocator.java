@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core;
 
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -16,7 +17,7 @@ import java.util.stream.Stream;
  */
 public final class ScriptLocator {
 
-    private static final Set<String> VALID_SUFFIXES = Set.of("js", "ts", "jsx", "tsx");
+    private static final Set<String> VALID_SUFFIXES = NekoJSPaths.SCRIPT_EXTENSIONS;
 
     private ScriptLocator() {}
 

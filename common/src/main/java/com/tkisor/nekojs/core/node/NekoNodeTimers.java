@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.node;
 
-import com.tkisor.nekojs.api.annotation.HideFromJS;import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.annotation.HideFromJS;
+import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 
@@ -27,7 +28,7 @@ public final class NekoNodeTimers implements AutoCloseable {
     public int setTimeout(Value callback, long delayMillis, Object... args) {
         rejectStartupTimer(delayMillis);
         int id = ids.getAndIncrement();
-        ScheduledFuture<?> future = scheduler.schedule(() -> ready.add(new TimerCallback(callback, args)), Math.max(0L, delayMillis), TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future = scheduler.schedule(() -> ready.add(new TimerCallback(id, false, callback, args)), Math.max(0L, delayMillis), TimeUnit.MILLISECONDS);
         tasks.put(id, future);
         return id;
     }
@@ -42,7 +43,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         }
         int id = ids.getAndIncrement();
         long delay = Math.max(1L, delayMillis);
-        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> ready.add(new TimerCallback(callback, args)), delay, delay, TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> ready.add(new TimerCallback(id, true, callback, args)), delay, delay, TimeUnit.MILLISECONDS);
         tasks.put(id, future);
         return id;
     }
@@ -73,8 +74,17 @@ public final class NekoNodeTimers implements AutoCloseable {
     public void flushReadyCallbacks() {
         TimerCallback callback;
         while ((callback = ready.poll()) != null) {
+            ScheduledFuture<?> future = tasks.get(callback.id);
+            if (future == null) continue;
+            if (!callback.repeating) {
+                tasks.remove(callback.id);
+            }
             execute(callback.callback, callback.args);
         }
+    }
+
+    public boolean hasPendingCallbacks() {
+        return !ready.isEmpty() || tasks.values().stream().anyMatch(future -> !future.isDone() && !future.isCancelled());
     }
 
     @Override
@@ -102,5 +112,5 @@ public final class NekoNodeTimers implements AutoCloseable {
         }
     }
 
-    private record TimerCallback(Value callback, Object[] args) {}
+    private record TimerCallback(int id, boolean repeating, Value callback, Object[] args) {}
 }

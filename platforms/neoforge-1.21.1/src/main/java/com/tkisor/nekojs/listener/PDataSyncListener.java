@@ -14,6 +14,7 @@ public final class PDataSyncListener {
     @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
         NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.SERVER);
+        NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
         PDataSyncService.flush(event.getServer());
     }
 }

@@ -10,11 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-public enum ScriptType {
+public enum ScriptType implements ScriptTypePredicate {
     COMMON("common", "NekoJS Common", null),
     STARTUP("startup", "NekoJS Startup", NekoJSPaths.STARTUP_SCRIPTS),
     SERVER("server", "NekoJS Server", NekoJSPaths.SERVER_SCRIPTS),
-    CLIENT("client", "NekoJS Client", NekoJSPaths.CLIENT_SCRIPTS);
+    CLIENT("client", "NekoJS Client", NekoJSPaths.CLIENT_SCRIPTS),
+    TEST("test", "NekoJS Test", NekoJSPaths.TEST_SCRIPTS);
 
     private static class LoggerHolder {
         private static final ScriptTypedValue<Logger> LOGGERS =
@@ -94,12 +95,37 @@ public enum ScriptType {
         return this == STARTUP;
     }
 
-    private static final List<ScriptType> EXECUTABLE_TYPES = List.of(STARTUP, SERVER, CLIENT);
+    public boolean isTest() {
+        return this == TEST;
+    }
+
+    public boolean acceptsServerApis() {
+        return this == STARTUP || this == SERVER || this == TEST;
+    }
+
+    public boolean acceptsClientApis() {
+        return this == STARTUP || this == CLIENT;
+    }
+
+    @Override
+    public boolean test(ScriptType type) {
+        if (this == COMMON) return true;
+        if (this == SERVER) return type.acceptsServerApis();
+        if (this == CLIENT) return type.acceptsClientApis();
+        return this == type;
+    }
+
+    private static final List<ScriptType> EXECUTABLE_TYPES = List.of(STARTUP, SERVER, CLIENT, TEST);
+    private static final List<ScriptType> AUTO_LOAD_TYPES = List.of(STARTUP, SERVER, CLIENT);
 
     /**
      * 获取所有需要被动态加载执行的脚本类型（已排除 COMMON）
      */
     public static List<ScriptType> all() {
         return EXECUTABLE_TYPES;
+    }
+
+    public static List<ScriptType> autoLoadTypes() {
+        return AUTO_LOAD_TYPES;
     }
 }

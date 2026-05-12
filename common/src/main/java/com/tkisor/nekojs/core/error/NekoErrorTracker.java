@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -31,12 +32,12 @@ public class NekoErrorTracker {
     ));
 
     public static void record(ScriptContainer script, Throwable error) {
+        clearByScriptPath(script.type, NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/'));
         ERRORS.put(script.id, new ScriptError(script, error));
     }
 
     public static void recordEventError(ScriptType currentType, PolyglotException e) {
         String pathStr = "Unknown";
-        int mappedLine = -1;
 
         SourceSection loc = getBestSourceLocation(e);
 
@@ -45,23 +46,19 @@ public class NekoErrorTracker {
             if (source != null) {
                 pathStr = extractRelativePath(source);
             }
-
-            SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(pathStr, loc.getStartLine(), loc.getStartColumn());
-            mappedLine = getRealCodeLine(pathStr, pos.line);
         }
 
-        String uniqueHashInput = currentType.name() + "_" + pathStr + "_" + mappedLine + "_" + e.getMessage();
-        String safeHash = Integer.toHexString(uniqueHashInput.hashCode());
-        ScriptId runtimeId = new ScriptId("nekojs", "rt_" + safeHash);
+        String eventPath = pathStr;
+        ScriptId runtimeId = eventErrorId(currentType, eventPath);
+        ERRORS.compute(runtimeId, (ignored, previous) -> {
+            ScriptError next = new ScriptError(currentType, runtimeId, eventPath, e);
+            if (previous != null && sameEventError(previous, next)) {
+                next.setOccurrenceCount(previous.getOccurrenceCount() + 1);
+            }
+            return next;
+        });
 
-        ScriptError scriptError;
-        if (ERRORS.containsKey(runtimeId)) {
-            scriptError = ERRORS.get(runtimeId);
-            scriptError.incrementOccurrence();
-        } else {
-            scriptError = new ScriptError(currentType, runtimeId, pathStr, e);
-            ERRORS.put(runtimeId, scriptError);
-        }
+        ScriptError scriptError = ERRORS.get(runtimeId);
 
         String detail = scriptError.getFullDetailText();
         currentType.logger().error("Script event trigger exception:\n{}", detail);
@@ -161,7 +158,24 @@ public class NekoErrorTracker {
         }
     }
 
+    private static ScriptId eventErrorId(ScriptType type, String pathStr) {
+        return new ScriptId("nekojs", "rt/" + type.name() + "/" + pathStr.replace(':', '_'));
+    }
+
+    private static boolean sameEventError(ScriptError previous, ScriptError next) {
+        return Objects.equals(previous.getErrorMessage(), next.getErrorMessage())
+                && previous.getLineNumber() == next.getLineNumber()
+                && previous.getColumnNumber() == next.getColumnNumber();
+    }
+
     public static void clear(ScriptId scriptId) { ERRORS.remove(scriptId); }
+    public static void clearByScriptPath(ScriptType type, String relativePath) {
+        if (type == null || relativePath == null) return;
+        ERRORS.entrySet().removeIf(entry -> {
+            ScriptError error = entry.getValue();
+            return error.getScriptType() == type && relativePath.equals(error.getDisplayPath());
+        });
+    }
     public static void clearAll() { ERRORS.clear(); }
     public static void clearByType(ScriptType type) {
         if (type == null) return;

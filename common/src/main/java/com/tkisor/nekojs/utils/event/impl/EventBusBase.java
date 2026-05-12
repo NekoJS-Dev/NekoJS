@@ -39,7 +39,8 @@ public abstract class EventBusBase<EVENT, LISTENER> {
 
     public final EventListenerToken<EVENT> listen(byte priority, LISTENER listener) {
         built = null;
-        var token = new EventListenerTokenImpl<>(eventType, priority, listener, new WeakReference<>(key));
+        var keyReference = key == null ? null : new WeakReference<>(key);
+        var token = new EventListenerTokenImpl<>(eventType, priority, listener, keyReference);
         tokens.add(token);
         return token;
     }

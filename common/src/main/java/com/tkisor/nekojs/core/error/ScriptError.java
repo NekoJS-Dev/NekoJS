@@ -119,6 +119,10 @@ public class ScriptError {
         this.occurrenceCount++;
     }
 
+    public void setOccurrenceCount(int occurrenceCount) {
+        this.occurrenceCount = occurrenceCount;
+    }
+
     public String getErrorMessage() { return errorMessage != null ? errorMessage : "Unknown error"; }
 
     public String getDisplayPath() {

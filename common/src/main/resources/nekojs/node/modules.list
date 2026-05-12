@@ -3,6 +3,8 @@ modules/buffer.js
 modules/fs.js
 modules/path.js
 modules/util.js
+modules/assert.js
+modules/test.js
 modules/timers.js
 modules/process.js
 modules/events.js

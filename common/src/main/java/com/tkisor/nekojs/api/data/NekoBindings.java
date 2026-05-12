@@ -29,7 +29,7 @@ public final class NekoBindings {
             if (existing.getName().equals(name)) {
                 ScriptType existingType = existing.scriptType();
 
-                if (type == ScriptType.COMMON || existingType == ScriptType.COMMON || type == existingType) {
+                if (binding.canApplyOn(existingType) || existing.canApplyOn(type)) {
 
                     String newClassPath = binding.getType().getName();
                     String existingClassPath = existing.getType().getName();
@@ -69,7 +69,7 @@ public final class NekoBindings {
         for (Binding binding : RAW_BINDINGS) {
             for (ScriptType envType : ScriptType.all()) {
                 if (binding.canApplyOn(envType)) {
-                    ENVIRONMENT_BINDINGS.at(envType).put(binding.getName(), binding);
+                    ENVIRONMENT_BINDINGS.at(envType).putIfAbsent(binding.getName(), binding);
                 }
             }
         }

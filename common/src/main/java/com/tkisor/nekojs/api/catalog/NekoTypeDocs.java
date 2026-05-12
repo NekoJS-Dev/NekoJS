@@ -56,6 +56,6 @@ public final class NekoTypeDocs {
     }
 
     private static boolean appliesTo(ScriptType source, ScriptType target) {
-        return source == ScriptType.COMMON || source == target;
+        return source.test(target);
     }
 }

@@ -68,6 +68,9 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
 
         @SuppressWarnings("unchecked")
         var key = (KEY) impl.key().get();
+        if (key == null) {
+            return mainBus.unregister(impl);
+        }
 
         var bus = this.dispatched.get(key);
         var result = bus != null && bus.unregister(token);

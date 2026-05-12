@@ -17,7 +17,9 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -62,11 +64,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private final EventBus<EVENT> bus;
-    private final List<EventListenerToken<EVENT>> tokens;
+    private final Map<ScriptType, List<EventListenerToken<EVENT>>> tokensByType;
 
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
-        this.tokens = new ArrayList<>();
+        this.tokensByType = new EnumMap<>(ScriptType.class);
     }
 
     public boolean canCancel() {
@@ -81,8 +83,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return bus;
     }
 
-    public List<EventListenerToken<EVENT>> tokens() {
-        return tokens;
+    public List<EventListenerToken<EVENT>> tokens(ScriptType type) {
+        return tokensByType.getOrDefault(type, List.of());
     }
 
     public boolean post(EVENT event) {
@@ -119,6 +121,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             throw new IllegalArgumentException("EventBus requires at least one arg");
         }
         EventListenerToken<EVENT> token;
+        Value listener = args.length > 1 && canDispatch() ? args[1] : args[0];
         if (canDispatch()) {
             if (canCancel()) {
                 token = args.length > 1
@@ -136,7 +139,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 token = register(args[0]); // listen((e) => {})
             }
         }
-        return this.tokens.add(token);
+        ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
+        tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(token);
+        return true;
     }
 
     private EventListenerToken<EVENT> register(Value listener) {

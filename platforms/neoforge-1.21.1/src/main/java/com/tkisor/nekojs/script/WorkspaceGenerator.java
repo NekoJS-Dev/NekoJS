@@ -34,6 +34,7 @@ public final class WorkspaceGenerator {
                     - startup_scripts: Loaded during game startup. Used for registering items and blocks. Changes require a full game restart.
                     - server_scripts: Executed when the world/server loads. Used for recipes and event handling. Can be reloaded with /reload.
                     - client_scripts: Runs on the client only. Used for GUI, key bindings, etc.
+                    - test_scripts: Explicit smoke/regression scripts. Run with /nekojs test; they are not loaded by normal startup or reload.
                     - Note: Automatically generated type declaration files (.d.ts) are located in the %s folder. Do not modify them manually.
                     """.formatted(NekoJSPaths.PROBE_DIR.getFileName()).trim();
                 Files.writeString(NekoJSPaths.README, content);
@@ -44,15 +45,16 @@ public final class WorkspaceGenerator {
     }
 
     public static void createWorkspaceConfigs() {
-        createConfigForEnv("server", NekoJSPaths.SERVER_SCRIPTS);
-        createConfigForEnv("client", NekoJSPaths.CLIENT_SCRIPTS);
-        createConfigForEnv("startup", NekoJSPaths.STARTUP_SCRIPTS);
+        createConfigForEnv(ScriptType.SERVER, NekoJSPaths.SERVER_SCRIPTS);
+        createConfigForEnv(ScriptType.CLIENT, NekoJSPaths.CLIENT_SCRIPTS);
+        createConfigForEnv(ScriptType.STARTUP, NekoJSPaths.STARTUP_SCRIPTS);
+        createConfigForEnv(ScriptType.TEST, NekoJSPaths.TEST_SCRIPTS);
     }
 
-    private static void createConfigForEnv(String envName, Path scriptDir) {
+    private static void createConfigForEnv(ScriptType scriptType, Path scriptDir) {
         JSConfigModel model = new JSConfigModel();
 
-        String relativeProbePath = scriptDir.relativize(NekoScriptCatalog.outputLayout().typeRoot(scriptType(envName))).toString().replace('\\', '/');
+        String relativeProbePath = scriptDir.relativize(NekoScriptCatalog.outputLayout().typeRoot(scriptType)).toString().replace('\\', '/');
 
         model.compilerOptions.typeRoots = List.of(
                 relativeProbePath,
@@ -61,7 +63,7 @@ public final class WorkspaceGenerator {
         model.compilerOptions.moduleResolution = "node";
         model.compilerOptions.baseUrl = relativeProbePath;
 
-        ModifyWorkspaceConfigEvent event = new ModifyWorkspaceConfigEvent(model, envName);
+        ModifyWorkspaceConfigEvent event = new ModifyWorkspaceConfigEvent(model, scriptType.name);
         NeoForge.EVENT_BUS.post(event);
 
         Path configPath = scriptDir.resolve(event.getFileName());
@@ -72,15 +74,6 @@ public final class WorkspaceGenerator {
                 NekoJSCommon.LOGGER.error("[NekoJS] Failed to create config file: {}", configPath, e);
             }
         }
-    }
-
-    private static ScriptType scriptType(String envName) {
-        return switch (envName) {
-            case "startup" -> ScriptType.STARTUP;
-            case "server" -> ScriptType.SERVER;
-            case "client" -> ScriptType.CLIENT;
-            default -> throw new IllegalArgumentException("Unknown script environment: " + envName);
-        };
     }
 
     private WorkspaceGenerator() {}

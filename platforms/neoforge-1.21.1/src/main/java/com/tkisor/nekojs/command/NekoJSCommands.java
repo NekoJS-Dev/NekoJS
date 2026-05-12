@@ -49,6 +49,27 @@ public final class NekoJSCommands {
                         })
                 )
 
+                        .then(Commands.literal("test")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
+
+                                    try {
+                                        NekoJS.SCRIPT_MANAGER.runTestScripts();
+
+                                        if (NekoErrorTracker.hasErrors()) {
+                                            source.sendFailure(NekoErrorUIHelper.getErrorComponent());
+                                        } else {
+                                            source.sendSuccess(() -> Component.literal("NekoJS test scripts completed."), true);
+                                        }
+                                    } catch (Exception e) {
+                                        NekoJS.LOGGER.error("Running test scripts failed fatally", e);
+                                        source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
+                                    }
+                                    return 1;
+                                })
+                        )
+
                         .then(Commands.literal("error")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
