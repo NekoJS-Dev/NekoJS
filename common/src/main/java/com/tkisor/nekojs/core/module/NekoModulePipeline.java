@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 public final class NekoModulePipeline {
-    private static final String REQUIRE_PATCH = readResource("nekojs/node/internal/require-patch.js") + "\n";
+    private static final String REQUIRE_PATCH = minifySingleLine(readResource("nekojs/node/internal/require-patch.js")) + "\n";
     private static final Object ESM_TRANSFORMER_LOCK = new Object();
     private static volatile NekoEsmToCjsTransformer esmToCjsTransformer;
     private static volatile boolean esmTransformerDisabled;
@@ -30,7 +30,7 @@ public final class NekoModulePipeline {
         ScriptCompileResult compiled = compileLanguage(file, rawSource, extension);
         NekoModuleMode requestedMode = requestedMode(extension);
         NekoModuleTransformResult moduleResult = transformModule(file, compiled.code(), compiled.sourceMap(), requestedMode);
-        return new NekoModuleTransformResult(REQUIRE_PATCH + moduleResult.code(), moduleResult.sourceMap(), moduleResult.mode());
+        return new NekoModuleTransformResult(REQUIRE_PATCH + moduleResult.code(), moduleResult.sourceMap(), moduleResult.mode(), 1);
     }
 
     private static ScriptCompileResult compileLanguage(Path file, String rawSource, String extension) throws Exception {
@@ -97,6 +97,10 @@ public final class NekoModulePipeline {
         String fileName = file.getFileName().toString();
         int dot = fileName.lastIndexOf('.');
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
+    }
+
+    private static String minifySingleLine(String source) {
+        return source.replace("\r", "").replace("\n", " ");
     }
 
     private static String readResource(String path) {

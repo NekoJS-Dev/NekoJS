@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.script.ScriptType;
+
+import java.util.Map;
 
 public final class NekoNodeRuntime implements AutoCloseable {
     private final ScriptType scriptType;
@@ -60,6 +63,15 @@ public final class NekoNodeRuntime implements AutoCloseable {
 
     public boolean hasPendingTimers() {
         return timers.hasPendingCallbacks();
+    }
+
+    public Map<String, Object> mapStackLine(String path, int line, int column) {
+        SourceMapRegistry.OriginalPosition mapped = SourceMapRegistry.getMappedPosition(path, line, column);
+        return Map.of(
+                "path", path,
+                "line", mapped.line,
+                "column", mapped.column
+        );
     }
 
     @Override

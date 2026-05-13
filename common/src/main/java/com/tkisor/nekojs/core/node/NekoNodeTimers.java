@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
+import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -101,14 +102,15 @@ public final class NekoNodeTimers implements AutoCloseable {
         }
     }
 
-    private static void execute(Value callback, Object[] args) {
+    private void execute(Value callback, Object[] args) {
         if (callback == null || !callback.canExecute()) return;
         Context context = callback.getContext();
         try {
             synchronized (context) {
                 callback.executeVoid(args == null ? new Object[0] : args);
             }
-        } catch (Throwable ignored) {
+        } catch (Throwable e) {
+            NekoErrorTracker.recordCallbackError(scriptType, "timer", e);
         }
     }
 

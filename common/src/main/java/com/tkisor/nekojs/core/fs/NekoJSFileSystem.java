@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.core.fs;
 
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModuleTransformResult;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
@@ -113,7 +115,9 @@ public class NekoJSFileSystem implements FileSystem {
         if (!writing && verifiedPath.getFileName() != null && NekoJSPaths.isSupportedScriptFile(verifiedPath)) {
             try {
                 String rawCode = Files.readString(verifiedPath);
-                byte[] bytes = NekoModulePipeline.transform(verifiedPath, rawCode).code().getBytes(StandardCharsets.UTF_8);
+                NekoModuleTransformResult result = NekoModulePipeline.transform(verifiedPath, rawCode);
+                registerSourceMap(verifiedPath, result.sourceMap(), result.prependedLineCount());
+                byte[] bytes = result.code().getBytes(StandardCharsets.UTF_8);
                 return new ReadOnlyMemoryByteChannel(bytes);
             } catch (Exception e) {
                 throw new IOException("[NekoJSFileSystem] 脚本模块转换失败: " + verifiedPath + ": " + rootMessage(e), e);
@@ -121,6 +125,14 @@ public class NekoJSFileSystem implements FileSystem {
         }
 
         return Files.newByteChannel(verifiedPath, options, attrs);
+    }
+
+    private static void registerSourceMap(Path path, String sourceMap, int prependedLineCount) {
+        try {
+            String relativePath = NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/');
+            SourceMapRegistry.register(relativePath, sourceMap, prependedLineCount);
+        } catch (Exception ignored) {
+        }
     }
 
     private static String rootMessage(Throwable throwable) {

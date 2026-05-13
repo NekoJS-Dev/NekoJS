@@ -34,7 +34,8 @@ public final class NekoScriptCatalog {
                 List.copyOf(platformProvider.snippets()),
                 NekoTypeDocs.typeDocs(),
                 NekoTypeDocs.manualDeclarations(),
-                platformProvider.outputLayout()
+                platformProvider.outputLayout(),
+                JavaModuleImportPolicy.nekoDefault()
         );
     }
 
@@ -49,7 +50,8 @@ public final class NekoScriptCatalog {
                 snippets(scriptType),
                 NekoTypeDocs.typeDocs(scriptType),
                 NekoTypeDocs.manualDeclarations(scriptType),
-                platformProvider.outputLayout()
+                platformProvider.outputLayout(),
+                JavaModuleImportPolicy.nekoDefault()
         );
     }
 

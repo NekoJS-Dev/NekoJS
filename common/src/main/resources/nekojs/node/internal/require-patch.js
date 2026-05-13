@@ -1,11 +1,13 @@
 ;(function() {
-  if (typeof require !== 'function' || !globalThis.__nekoNodeBuiltins) return
+  if (typeof require !== 'function') return
   if (require.__nekoNodeBuiltinPatched) return
   const nativeRequire = require
-  const builtins = globalThis.__nekoNodeBuiltins
+  const resolveSpecialModule = globalThis.__nekoNodeResolve
+  const noModule = globalThis.__nekoNodeNoModule
   function nekoRequire(id) {
     id = String(id)
-    if (Object.prototype.hasOwnProperty.call(builtins, id)) return builtins[id]
+    const resolved = typeof resolveSpecialModule === 'function' ? resolveSpecialModule(id) : noModule
+    if (resolved !== noModule) return resolved
     return nativeRequire.apply(this, arguments)
   }
   for (const key of Object.getOwnPropertyNames(nativeRequire)) {

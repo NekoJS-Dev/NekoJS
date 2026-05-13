@@ -54,10 +54,24 @@
     else info(`[NekoJS Test][PASS] ${name}`)
   }
 
+  function mapStackLine(line) {
+    const match = /^(\s*at\s+.*\()([^()]+\.\w+):(\d+)(?::(\d+))?(\).*)$/.exec(line)
+    if (!match || !globalThis.__nekoNodeRuntime || typeof globalThis.__nekoNodeRuntime.mapStackLine !== 'function') {
+      return line
+    }
+    const mapped = globalThis.__nekoNodeRuntime.mapStackLine(match[2], Number(match[3]), match[4] ? Number(match[4]) : 1)
+    if (!mapped || !mapped.line) return line
+    return `${match[1]}${mapped.path || match[2]}:${mapped.line}${mapped.column ? ':' + mapped.column : ''}${match[5]}`
+  }
+
+  function formatError(error) {
+    const message = error && error.stack ? error.stack : (error && error.message ? error.message : String(error))
+    return String(message).split('\n').map(mapStackLine).join('\n')
+  }
+
   function logFail(name, error) {
     state.failed++
-    const message = error && error.stack ? error.stack : (error && error.message ? error.message : String(error))
-    info(`[NekoJS Test][FAIL] ${name}: ${message}`)
+    info(`[NekoJS Test][FAIL] ${name}: ${formatError(error)}`)
   }
 
   function logSkip(name, reason) {

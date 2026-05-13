@@ -37,21 +37,28 @@ public class NekoErrorTracker {
     }
 
     public static void recordEventError(ScriptType currentType, PolyglotException e) {
-        String pathStr = "Unknown";
+        recordCallbackError(currentType, "event", e);
+    }
 
-        SourceSection loc = getBestSourceLocation(e);
+    public static void recordCallbackError(ScriptType currentType, String callbackKind, Throwable throwable) {
+        String pathStr = callbackKind == null || callbackKind.isBlank() ? "Unknown" : callbackKind;
 
-        if (loc != null) {
-            Source source = loc.getSource();
-            if (source != null) {
-                pathStr = extractRelativePath(source);
+        if (throwable instanceof PolyglotException polyglotException) {
+            SourceSection loc = getBestSourceLocation(polyglotException);
+            if (loc != null) {
+                Source source = loc.getSource();
+                if (source != null) {
+                    pathStr = extractRelativePath(source);
+                }
             }
+        } else {
+            pathStr = pathStr + "/" + Integer.toHexString(Objects.hash(throwable.getClass().getName(), throwable.getMessage()));
         }
 
         String eventPath = pathStr;
         ScriptId runtimeId = eventErrorId(currentType, eventPath);
         ERRORS.compute(runtimeId, (ignored, previous) -> {
-            ScriptError next = new ScriptError(currentType, runtimeId, eventPath, e);
+            ScriptError next = new ScriptError(currentType, runtimeId, eventPath, throwable);
             if (previous != null && sameEventError(previous, next)) {
                 next.setOccurrenceCount(previous.getOccurrenceCount() + 1);
             }
@@ -61,8 +68,11 @@ public class NekoErrorTracker {
         ScriptError scriptError = ERRORS.get(runtimeId);
 
         String detail = scriptError.getFullDetailText();
-        currentType.logger().error("Script event trigger exception:\n{}", detail);
-        NekoJSCommon.LOGGER.error("[NekoJS] Script event trigger exception:\n{}", detail);
+        String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
+        if (currentType != null) {
+            currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
+        }
+        NekoJSCommon.LOGGER.error("[NekoJS] Script {} callback exception:\n{}", kind, detail);
     }
 
     public static SourceSection getBestSourceLocation(PolyglotException e) {
@@ -182,7 +192,6 @@ public class NekoErrorTracker {
         ERRORS.entrySet().removeIf(entry -> entry.getValue().getScriptType() == type);
     }
 
-    // 暴露核心数据状态，代替直接返回 Component
     public static boolean hasErrors() { return !ERRORS.isEmpty(); }
     public static int getErrorCount() { return ERRORS.size(); }
     public static Collection<ScriptError> getAllErrors() { return ERRORS.values(); }

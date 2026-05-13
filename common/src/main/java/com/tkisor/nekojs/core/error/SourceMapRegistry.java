@@ -25,37 +25,44 @@ public class SourceMapRegistry {
      * 注册 SourceMap（传入完整的 sourceMapJson）
      */
     public static void register(String scriptPath, String sourceMapJson) {
-        if (sourceMapJson == null || sourceMapJson.isEmpty() || scriptPath == null) return;
+        register(scriptPath, sourceMapJson, 0);
+    }
+
+    public static void register(String scriptPath, String sourceMapJson, int prependedLineCount) {
+        if (scriptPath == null) return;
 
         try {
+            String normalizedPath = scriptPath.replace('\\', '/');
             String mappings = "";
-            Matcher mapMatcher = MAPPINGS_PATTERN.matcher(sourceMapJson);
-            if (mapMatcher.find()) mappings = mapMatcher.group(1);
-
             String[] names = new String[0];
-            Matcher nameMatcher = NAMES_PATTERN.matcher(sourceMapJson);
-            if (nameMatcher.find()) {
-                String namesStr = nameMatcher.group(1);
-                if (!namesStr.trim().isEmpty()) {
-                    String[] rawNames = namesStr.split(",");
-                    names = new String[rawNames.length];
-                    for (int i = 0; i < rawNames.length; i++) {
-                        names[i] = rawNames[i].trim().replaceAll("^\"|\"$", "");
+
+            if (sourceMapJson != null && !sourceMapJson.isEmpty()) {
+                Matcher mapMatcher = MAPPINGS_PATTERN.matcher(sourceMapJson);
+                if (mapMatcher.find()) mappings = mapMatcher.group(1);
+
+                Matcher nameMatcher = NAMES_PATTERN.matcher(sourceMapJson);
+                if (nameMatcher.find()) {
+                    String namesStr = nameMatcher.group(1);
+                    if (!namesStr.trim().isEmpty()) {
+                        String[] rawNames = namesStr.split(",");
+                        names = new String[rawNames.length];
+                        for (int i = 0; i < rawNames.length; i++) {
+                            names[i] = rawNames[i].trim().replaceAll("^\"|\"$", "");
+                        }
                     }
                 }
             }
 
-            if (!mappings.isEmpty()) {
-                String normalizedPath = scriptPath.replace('\\', '/');
-                ScriptMapping mapping = parseMappings(mappings, names);
-                MAPPINGS_MAP.put(normalizedPath, mapping);
-            }
+            ScriptMapping mapping = mappings.isEmpty()
+                    ? new ScriptMapping(List.of(), prependedLineCount)
+                    : parseMappings(mappings, names, prependedLineCount);
+            MAPPINGS_MAP.put(normalizedPath, mapping);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static ScriptMapping parseMappings(String mappings, String[] names) {
+    private static ScriptMapping parseMappings(String mappings, String[] names, int prependedLineCount) {
         String[] jsLines = mappings.split(";", -1);
         List<List<MappingEntry>> lineMappings = new ArrayList<>(jsLines.length);
 
@@ -92,7 +99,7 @@ public class SourceMapRegistry {
                 }
             }
         }
-        return new ScriptMapping(lineMappings);
+        return new ScriptMapping(lineMappings, prependedLineCount);
     }
 
     /**
@@ -119,10 +126,12 @@ public class SourceMapRegistry {
         }
 
         if (mapping != null) {
-            int lineIndex = jsLine - 1;
+            int adjustedLine = jsLine - mapping.prependedLineCount;
+            OriginalPosition adjustedFallback = new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
+            int lineIndex = adjustedLine - 1;
             if (lineIndex >= 0 && lineIndex < mapping.lineMappings.size()) {
                 List<MappingEntry> entries = mapping.lineMappings.get(lineIndex);
-                if (entries == null || entries.isEmpty()) return fallback;
+                if (entries == null || entries.isEmpty()) return adjustedFallback;
 
                 int targetCol = jsColumn - 1;
                 MappingEntry bestMatch = entries.get(0);
@@ -136,6 +145,7 @@ public class SourceMapRegistry {
                 }
                 return new OriginalPosition(bestMatch.tsLine + 1, bestMatch.tsColumn + 1, bestMatch.name);
             }
+            return adjustedFallback;
         }
         return fallback;
     }
@@ -172,9 +182,11 @@ public class SourceMapRegistry {
 
     private static class ScriptMapping {
         final List<List<MappingEntry>> lineMappings;
+        final int prependedLineCount;
 
-        ScriptMapping(List<List<MappingEntry>> lineMappings) {
+        ScriptMapping(List<List<MappingEntry>> lineMappings, int prependedLineCount) {
             this.lineMappings = lineMappings;
+            this.prependedLineCount = Math.max(0, prependedLineCount);
         }
     }
 

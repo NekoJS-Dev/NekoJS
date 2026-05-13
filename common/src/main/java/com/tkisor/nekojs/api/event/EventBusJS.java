@@ -11,7 +11,6 @@ import com.tkisor.nekojs.utils.event.dispatch.DispatchCancellableEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
 import graal.graalvm.polyglot.Context;
-import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
@@ -88,12 +87,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     public boolean post(EVENT event) {
-        // 临时的错误捕获方案，也许后续需要继续优化
         try {
             return this.bus.post(event);
-//        } catch (PolyglotException e) {
-//            NekoErrorTracker.recordEventError(e);
-//            return false;
         } catch (Exception e) {
             NekoJSCommon.LOGGER.error("Error during CancellableEventBus execution", e);
             return false;
@@ -102,11 +97,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     public boolean post(EVENT event, KEY key) {
         if (canDispatch()) {
-            // 临时的错误捕获方案，也许后续需要继续优化
             try {
                 return ((DispatchEventBus<EVENT, KEY>) bus).post(event, key);
-//            } catch (PolyglotException e) {
-//                NekoErrorTracker.recordEventError(e);
             } catch (Exception e) {
                 NekoJSCommon.LOGGER.error("Error during EventBus execution", e);
             }
@@ -153,8 +145,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 synchronized (context) {
                     listener.executeVoid(event);
                 }
-            } catch (PolyglotException e) {
-                NekoErrorTracker.recordEventError(type, e);
+            } catch (Throwable e) {
+                NekoErrorTracker.recordCallbackError(type, "event", e);
             }
         });
     }
@@ -170,8 +162,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     Value result = listener.execute(event);
                     return result.isBoolean() && result.asBoolean();
                 }
-            } catch (PolyglotException e) {
-                NekoErrorTracker.recordEventError(type, e);
+            } catch (Throwable e) {
+                NekoErrorTracker.recordCallbackError(type, "event", e);
             }
             return false; // 出错时默认不取消事件
         });
@@ -191,8 +183,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                                 listener.executeVoid(event);
                             }
                         }
-                    } catch (PolyglotException e) {
-                        NekoErrorTracker.recordEventError(type, e);
+                    } catch (Throwable e) {
+                        NekoErrorTracker.recordCallbackError(type, "event", e);
                     }
                 }
         );
@@ -213,8 +205,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                                 return result.isBoolean() && result.asBoolean();
                             }
                         }
-                    } catch (PolyglotException e) {
-                        NekoErrorTracker.recordEventError(type, e);
+                    } catch (Throwable e) {
+                        NekoErrorTracker.recordCallbackError(type, "event", e);
                     }
                     return false; // 出错时默认不取消事件
                 }
