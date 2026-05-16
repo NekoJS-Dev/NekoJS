@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.platform.Platform;
 
 import java.io.IOException;
@@ -36,7 +37,6 @@ public final class NekoJSPaths {
     public static final Path ASSETS = ROOT.resolve("assets");
     public static final Path DATA   = ROOT.resolve("data");
 
-    public static final Set<String> SCRIPT_EXTENSIONS = Set.of("js", "mjs", "cjs", "ts", "jsx", "tsx");
     private static final Set<Path> SCRIPT_ROOTS = Set.of(STARTUP_SCRIPTS, SERVER_SCRIPTS, CLIENT_SCRIPTS, TEST_SCRIPTS);
 
     /**
@@ -167,9 +167,7 @@ public final class NekoJSPaths {
     }
 
     public static boolean isSupportedScriptFile(Path path) {
-        String fileName = path.getFileName().toString();
-        int dotIndex = fileName.lastIndexOf('.');
-        return dotIndex >= 0 && SCRIPT_EXTENSIONS.contains(fileName.substring(dotIndex + 1));
+        return ScriptCompilerRegistry.isSupportedScriptFile(path);
     }
 
     public static boolean isInsideScriptRoot(Path path) {

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -17,6 +18,7 @@ public final class NekoNodeModuleInstaller {
     public static NekoNodeRuntime install(Context context, ScriptType scriptType) {
         NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
+        context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", new NekoScriptModuleLoaderHost(context));
         loadManifest(context);
         return runtime;
     }

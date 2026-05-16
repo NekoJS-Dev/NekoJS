@@ -20,6 +20,8 @@ public class ClassFilter implements Predicate<String> {
     public static boolean allowReflection = false;
     public static boolean allowAsm = false;
     public static boolean allowFsWriteOutsideNekojs = false;
+    public static boolean enableEsmAuthoring = true;
+    public static boolean conciseScriptErrorLogs = true;
 
     private static final Set<String> THREAD_GROUP = Set.of("java.lang.Thread", "java.lang.ThreadGroup");
     private static final Set<String> REFLECT_GROUP = Set.of("java.lang.reflect", "java.lang.invoke.MethodHandles");
@@ -45,10 +47,10 @@ public class ClassFilter implements Predicate<String> {
     }
 
     private boolean isAllowed(String className) {
-        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
-        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
-        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
-        if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
+//        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
+//        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
+//        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
+//        if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
         return true;
     }
 
@@ -81,10 +83,22 @@ public class ClassFilter implements Predicate<String> {
             setupConfigEntry(config, "allowFsWriteOutsideNekojs", false,
                     " Allows Node fs write/delete operations anywhere under the game directory instead of only under nekojs/. Still blocks paths outside .minecraft.");
 
+            removeConfigEntry(config, "prependRequirePatch");
+            removeConfigEntry(config, "useNekoScriptLoader");
+            removeConfigEntry(config, "useNativeEsmLoader");
+
+            setupConfigEntry(config, "enableEsmAuthoring", true,
+                    " Enables ESM authoring support for .js/.mjs/.ts/.jsx/.tsx scripts. When enabled, NekoJS parses each module and transforms ESM syntax into the unified script runtime. Disable only if you need pure CommonJS require compatibility.");
+
+            setupConfigEntry(config, "conciseScriptErrorLogs", true,
+                    " Emits direct source-focused script errors by default. Set false to log full verbose diagnostics and stack traces for analysis.");
+
             ClassFilter.allowThreads = config.get("allowThreads");
             ClassFilter.allowReflection = config.get("allowReflection");
             ClassFilter.allowAsm = config.get("allowAsm");
             ClassFilter.allowFsWriteOutsideNekojs = config.get("allowFsWriteOutsideNekojs");
+            ClassFilter.enableEsmAuthoring = config.get("enableEsmAuthoring");
+            ClassFilter.conciseScriptErrorLogs = config.get("conciseScriptErrorLogs");
 
             NekoJSCommon.LOGGER.info(
                     "[NekoJS] Engine config loaded. Unsafe features enabled: {}",
@@ -100,6 +114,13 @@ public class ClassFilter implements Predicate<String> {
         if (!config.contains(path)) {
             config.set(path, defaultValue);
             config.setComment(path, comment);
+        }
+    }
+
+    private static void removeConfigEntry(CommentedFileConfig config, String path) {
+        if (config.contains(path)) {
+            config.remove(path);
+            config.setComment(path, null);
         }
     }
 }

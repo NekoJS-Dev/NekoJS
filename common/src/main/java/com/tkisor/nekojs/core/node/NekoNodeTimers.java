@@ -1,11 +1,13 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
+import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.*;
@@ -20,6 +22,8 @@ public final class NekoNodeTimers implements AutoCloseable {
     });
     private final AtomicInteger ids = new AtomicInteger(1);
     private final Map<Integer, ScheduledFuture<?>> tasks = new ConcurrentHashMap<>();
+    private final Map<Integer, String> scriptIds = new ConcurrentHashMap<>();
+    private final Map<Context, String> activeScriptIds = new ConcurrentHashMap<>();
     private final Queue<TimerCallback> ready = new ConcurrentLinkedQueue<>();
 
     public NekoNodeTimers(ScriptType scriptType) {
@@ -31,6 +35,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         int id = ids.getAndIncrement();
         ScheduledFuture<?> future = scheduler.schedule(() -> ready.add(new TimerCallback(id, false, callback, args)), Math.max(0L, delayMillis), TimeUnit.MILLISECONDS);
         tasks.put(id, future);
+        recordScriptId(id, callback);
         return id;
     }
 
@@ -46,6 +51,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         long delay = Math.max(1L, delayMillis);
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> ready.add(new TimerCallback(id, true, callback, args)), delay, delay, TimeUnit.MILLISECONDS);
         tasks.put(id, future);
+        recordScriptId(id, callback);
         return id;
     }
 
@@ -70,6 +76,18 @@ public final class NekoNodeTimers implements AutoCloseable {
     public void cancelAll() {
         tasks.keySet().forEach(this::cancel);
         ready.clear();
+        scriptIds.clear();
+        activeScriptIds.clear();
+    }
+
+    public void cancelScript(String scriptId) {
+        if (scriptId == null || scriptId.isBlank()) return;
+        List<Integer> idsToCancel = List.copyOf(scriptIds.entrySet()).stream()
+                .filter(entry -> scriptId.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .toList();
+        ready.removeIf(callback -> idsToCancel.contains(callback.id));
+        idsToCancel.forEach(this::cancel);
     }
 
     public void flushReadyCallbacks() {
@@ -79,8 +97,9 @@ public final class NekoNodeTimers implements AutoCloseable {
             if (future == null) continue;
             if (!callback.repeating) {
                 tasks.remove(callback.id);
+                scriptIds.remove(callback.id);
             }
-            execute(callback.callback, callback.args);
+            execute(callback.id, callback.callback, callback.args);
         }
     }
 
@@ -97,17 +116,42 @@ public final class NekoNodeTimers implements AutoCloseable {
 
     private void cancel(int id) {
         ScheduledFuture<?> future = tasks.remove(id);
+        scriptIds.remove(id);
         if (future != null) {
             future.cancel(false);
         }
     }
 
-    private void execute(Value callback, Object[] args) {
+    private void recordScriptId(int id, Value callback) {
+        if (callback == null) return;
+        Context context = callback.getContext();
+        String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
+        if (scriptId == null || scriptId.isBlank()) {
+            scriptId = activeScriptIds.get(context);
+        }
+        if (scriptId != null && !scriptId.isBlank()) {
+            scriptIds.put(id, scriptId);
+        }
+    }
+
+    private void execute(int id, Value callback, Object[] args) {
         if (callback == null || !callback.canExecute()) return;
         Context context = callback.getContext();
+        String scriptId = scriptIds.get(id);
         try {
             synchronized (context) {
-                callback.executeVoid(args == null ? new Object[0] : args);
+                String previousScriptId = NekoJSScriptManager.switchCurrentScriptId(context, scriptId);
+                if (scriptId != null && !scriptId.isBlank()) {
+                    activeScriptIds.put(context, scriptId);
+                }
+                try {
+                    callback.executeVoid(args == null ? new Object[0] : args);
+                } finally {
+                    if (scriptId != null && !scriptId.isBlank()) {
+                        activeScriptIds.remove(context);
+                    }
+                    NekoJSScriptManager.restoreCurrentScriptId(context, previousScriptId);
+                }
             }
         } catch (Throwable e) {
             NekoErrorTracker.recordCallbackError(scriptType, "timer", e);

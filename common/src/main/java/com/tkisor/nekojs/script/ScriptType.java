@@ -125,6 +125,10 @@ public enum ScriptType implements ScriptTypePredicate {
         return EXECUTABLE_TYPES;
     }
 
+    public static boolean isExecutableTypeName(String name) {
+        return EXECUTABLE_TYPES.stream().anyMatch(type -> type.name.equals(name));
+    }
+
     public static List<ScriptType> autoLoadTypes() {
         return AUTO_LOAD_TYPES;
     }

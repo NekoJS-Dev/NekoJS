@@ -4,7 +4,10 @@ import com.tkisor.nekojs.api.catalog.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.NekoBindings;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.core.error.ScriptError;
+import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
@@ -12,14 +15,16 @@ import com.tkisor.nekojs.script.ScriptTypedValue;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
-import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Value;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.WeakHashMap;
 
 /**
@@ -37,6 +42,8 @@ public final class NekoJSScriptManager {
     private final ScriptPropertyRegistry scriptPropertyRegistry = new ScriptPropertyRegistry.Impl();
 
     private static final Map<Context, ScriptType> CONTEXT_TYPE_MAP = Collections.synchronizedMap(new WeakHashMap<>());
+
+    private static final Map<Context, String> CONTEXT_SCRIPT_ID_MAP = Collections.synchronizedMap(new WeakHashMap<>());
 
     public NekoJSScriptManager() {
     }
@@ -163,9 +170,10 @@ public final class NekoJSScriptManager {
             String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
             JavaClassLoadTelemetry.enter(script.type, script.id.toString());
-            ctx.getBindings("js").putMember("__nekoCurrentScriptId", script.id.toString());
-            ctx.eval("js", "require").execute(requirePath);
+            setCurrentScriptId(ctx, script.id.toString());
+            ctx.eval("js", "globalThis.__nekoScriptLoader.loadEntry").execute(requirePath);
 
+            NekoErrorTracker.clear(script.id);
             NekoErrorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
             script.disabled = false;
             script.lastError = null;
@@ -174,17 +182,10 @@ public final class NekoJSScriptManager {
             script.disabled = true;
             script.lastError = t;
 
-            NekoErrorTracker.record(script, t);
-
-            if (t instanceof PolyglotException polyglotException) {
-                String cleanTrace = NekoErrorTracker.getMappedStackTrace(polyglotException);
-
-                script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), cleanTrace);
-            } else {
-                script.type.logger().error("脚本内部环境崩溃: {}", script.id.toString(), t);
-            }
+            ScriptError scriptError = NekoErrorTracker.record(script, t);
+            script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs));
         } finally {
-            ctx.getBindings("js").putMember("__nekoCurrentScriptId", null);
+            setCurrentScriptId(ctx, null);
             JavaClassLoadTelemetry.exit();
         }
     }
@@ -201,6 +202,102 @@ public final class NekoJSScriptManager {
         loadScripts(type);
 
         type.logger().info("{} 脚本重载完毕。", type.name());
+    }
+
+    public List<ScriptContainer> reloadScriptFile(ScriptType type, String filePath) throws IOException {
+        discoverScripts(type);
+        Path target = resolveScriptPath(type, filePath);
+        List<ScriptContainer> targets = reloadTargets(type, target);
+        if (targets.isEmpty()) {
+            throw new IOException("No loaded entry depends on " + displayScriptPath(type, target) + ". Reload the whole " + type.name() + " environment first if this dependency has not been loaded yet.");
+        }
+        type.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", type.name(), displayScriptPath(type, target), targets.size());
+
+        NekoModulePreparationCache.invalidate(target);
+        Context ctx = contexts.at(type);
+        String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
+        ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
+
+        for (ScriptContainer script : targets) {
+            reloadEntryScript(type, ctx, script);
+        }
+
+        type.logger().info("{} 脚本文件 {} 重载完毕。", type.name(), displayScriptPath(type, target));
+        return targets;
+    }
+
+    public Optional<ScriptContainer> resolveScriptFile(ScriptType type, String filePath) throws IOException {
+        discoverScripts(type);
+        Path target = resolveScriptPath(type, filePath);
+        return scripts.at(type).stream()
+                .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
+                .findFirst();
+    }
+
+    private List<ScriptContainer> reloadTargets(ScriptType type, Path target) {
+        Optional<ScriptContainer> directEntry = scripts.at(type).stream()
+                .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
+                .findFirst();
+        if (directEntry.isPresent()) {
+            return List.of(directEntry.get());
+        }
+        Context ctx = contexts.at(type);
+        String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
+        Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
+        List<String> affectedIds = new ArrayList<>();
+        if (affected.hasArrayElements()) {
+            for (long i = 0; i < affected.getArraySize(); i++) {
+                affectedIds.add(affected.getArrayElement(i).asString());
+            }
+        }
+        return scripts.at(type).stream()
+                .filter(script -> affectedIds.contains(NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/')))
+                .toList();
+    }
+
+    private void reloadEntryScript(ScriptType type, Context ctx, ScriptContainer script) {
+        eventBridge.clearListeners(type, script.id.toString());
+        NekoNodeRuntime runtime = nodeRuntimes.at(type);
+        if (runtime != null) {
+            runtime.timers().cancelScript(script.id.toString());
+        }
+        NekoErrorTracker.clear(script.id);
+        NekoErrorTracker.clearByScriptPath(type, NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/'));
+        script.preload();
+        if (script.shouldRun()) {
+            runScript(ctx, script);
+        }
+    }
+
+    private Path resolveScriptPath(ScriptType type, String filePath) throws IOException {
+        if (type.path == null) {
+            throw new IOException("Script type has no script directory: " + type.name());
+        }
+        if (filePath == null || filePath.isBlank()) {
+            throw new IOException("Script file path is empty.");
+        }
+        String normalizedText = filePath.replace('\\', '/');
+        String rootPrefix = type.name + "/";
+        if (normalizedText.startsWith(rootPrefix)) {
+            normalizedText = normalizedText.substring(rootPrefix.length());
+        }
+        Path relative = Path.of(normalizedText).normalize();
+        if (relative.isAbsolute() || relative.startsWith("..")) {
+            throw new IOException("Invalid script file path: " + filePath);
+        }
+        Path target = type.path.resolve(relative).normalize().toAbsolutePath();
+        Path root = type.path.normalize().toAbsolutePath();
+        if (!target.startsWith(root)) {
+            throw new IOException("Script file is outside " + type.name() + " scripts: " + filePath);
+        }
+        if (!Files.isRegularFile(target) || !NekoJSPaths.isSupportedScriptFile(target)) {
+            throw new IOException("Unsupported or missing script file: " + filePath);
+        }
+        return target;
+    }
+
+    private String displayScriptPath(ScriptType type, Path path) {
+        return type.name + "/" + type.path.relativize(path).toString().replace('\\', '/');
     }
 
     public void runTestScripts() {
@@ -244,6 +341,8 @@ public final class NekoJSScriptManager {
             }
         }
         if (oldContext != null) {
+            CONTEXT_TYPE_MAP.remove(oldContext);
+            CONTEXT_SCRIPT_ID_MAP.remove(oldContext);
             try {
                 oldContext.close();
             } catch (Exception e) {
@@ -271,5 +370,30 @@ public final class NekoJSScriptManager {
      */
     public static ScriptType getTypeFromContext(Context context) {
         return CONTEXT_TYPE_MAP.get(context);
+    }
+
+    public static String switchCurrentScriptId(Context context, String scriptId) {
+        String previous = CONTEXT_SCRIPT_ID_MAP.get(context);
+        setCurrentScriptId(context, scriptId);
+        return previous;
+    }
+
+    public static void restoreCurrentScriptId(Context context, String scriptId) {
+        setCurrentScriptId(context, scriptId);
+    }
+
+    public static String getCurrentScriptId(Context context) {
+        return CONTEXT_SCRIPT_ID_MAP.get(context);
+    }
+
+    private static void setCurrentScriptId(Context context, String scriptId) {
+        if (context == null) return;
+        if (scriptId == null || scriptId.isBlank()) {
+            CONTEXT_SCRIPT_ID_MAP.remove(context);
+            context.getBindings("js").putMember("__nekoCurrentScriptId", null);
+        } else {
+            CONTEXT_SCRIPT_ID_MAP.put(context, scriptId);
+            context.getBindings("js").putMember("__nekoCurrentScriptId", scriptId);
+        }
     }
 }

@@ -17,6 +17,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -63,7 +64,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private final EventBus<EVENT> bus;
-    private final Map<ScriptType, List<EventListenerToken<EVENT>>> tokensByType;
+    private final Map<ScriptType, List<ScriptEventListenerToken<EVENT>>> tokensByType;
 
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
@@ -83,7 +84,32 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     public List<EventListenerToken<EVENT>> tokens(ScriptType type) {
-        return tokensByType.getOrDefault(type, List.of());
+        return tokensByType.getOrDefault(type, List.of()).stream().map(ScriptEventListenerToken::token).toList();
+    }
+
+    public void clearTokens(ScriptType type) {
+        List<ScriptEventListenerToken<EVENT>> tokens = tokensByType.remove(type);
+        if (tokens == null) return;
+        for (var token : tokens) {
+            bus.unregister(token.token());
+        }
+    }
+
+    public void clearTokens(ScriptType type, String scriptId) {
+        if (scriptId == null || scriptId.isBlank()) return;
+        List<ScriptEventListenerToken<EVENT>> tokens = tokensByType.get(type);
+        if (tokens == null) return;
+        Iterator<ScriptEventListenerToken<EVENT>> iterator = tokens.iterator();
+        while (iterator.hasNext()) {
+            ScriptEventListenerToken<EVENT> token = iterator.next();
+            if (scriptId.equals(token.scriptId())) {
+                bus.unregister(token.token());
+                iterator.remove();
+            }
+        }
+        if (tokens.isEmpty()) {
+            tokensByType.remove(type);
+        }
     }
 
     public boolean post(EVENT event) {
@@ -132,18 +158,25 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             }
         }
         ScriptType type = NekoJSScriptManager.getTypeFromContext(listener.getContext());
-        tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(token);
+        String scriptId = NekoJSScriptManager.getCurrentScriptId(listener.getContext());
+        tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
         return true;
     }
 
     private EventListenerToken<EVENT> register(Value listener) {
         Context context = listener.getContext();
         ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
+        String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
 
         return this.bus.listen(event -> {
             try {
                 synchronized (context) {
-                    listener.executeVoid(event);
+                    String previousScriptId = NekoJSScriptManager.switchCurrentScriptId(context, scriptId);
+                    try {
+                        listener.executeVoid(event);
+                    } finally {
+                        NekoJSScriptManager.restoreCurrentScriptId(context, previousScriptId);
+                    }
                 }
             } catch (Throwable e) {
                 NekoErrorTracker.recordCallbackError(type, "event", e);
@@ -154,13 +187,19 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
         Context context = listener.getContext();
         ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
+        String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
         return bus.listen(event -> {
             try {
                 synchronized (context) {
-                    Value result = listener.execute(event);
-                    return result.isBoolean() && result.asBoolean();
+                    String previousScriptId = NekoJSScriptManager.switchCurrentScriptId(context, scriptId);
+                    try {
+                        Value result = listener.execute(event);
+                        return result.isBoolean() && result.asBoolean();
+                    } finally {
+                        NekoJSScriptManager.restoreCurrentScriptId(context, previousScriptId);
+                    }
                 }
             } catch (Throwable e) {
                 NekoErrorTracker.recordCallbackError(type, "event", e);
@@ -172,15 +211,21 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
         Context context = listener.getContext();
         ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
+        String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
         var bus = (DispatchEventBus<EVENT, KEY>) this.bus;
 
         return bus.listen(
                 key.as(bus.dispatchKey().keyType()),
                 event -> {
                     try {
-                        if (listener.canExecute()) {
-                            synchronized (context) {
-                                listener.executeVoid(event);
+                        synchronized (context) {
+                            String previousScriptId = NekoJSScriptManager.switchCurrentScriptId(context, scriptId);
+                            try {
+                                if (listener.canExecute()) {
+                                    listener.executeVoid(event);
+                                }
+                            } finally {
+                                NekoJSScriptManager.restoreCurrentScriptId(context, previousScriptId);
                             }
                         }
                     } catch (Throwable e) {
@@ -193,16 +238,22 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private EventListenerToken<EVENT> registerDispatchCancellable(Value listener, Value key) {
         Context context = listener.getContext();
         ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
+        String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
 
         return bus.listen(
                 key.as(bus.dispatchKey().keyType()),
                 event -> {
                     try {
-                        if (listener.canExecute()) {
-                            synchronized (context) {
-                                Value result = listener.execute(event);
-                                return result.isBoolean() && result.asBoolean();
+                        synchronized (context) {
+                            String previousScriptId = NekoJSScriptManager.switchCurrentScriptId(context, scriptId);
+                            try {
+                                if (listener.canExecute()) {
+                                    Value result = listener.execute(event);
+                                    return result.isBoolean() && result.asBoolean();
+                                }
+                            } finally {
+                                NekoJSScriptManager.restoreCurrentScriptId(context, previousScriptId);
                             }
                         }
                     } catch (Throwable e) {
@@ -212,4 +263,6 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 }
         );
     }
+
+    private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId) {}
 }

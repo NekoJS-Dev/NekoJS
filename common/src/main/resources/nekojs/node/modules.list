@@ -8,4 +8,6 @@ modules/test.js
 modules/timers.js
 modules/process.js
 modules/events.js
+modules/module.js
+internal/script-loader.js
 bootstrap.js

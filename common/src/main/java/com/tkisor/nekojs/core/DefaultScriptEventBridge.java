@@ -6,7 +6,7 @@ import com.tkisor.nekojs.api.event.NekoEventGroups;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Value;
 
-public class NeoForgeScriptEventBridge implements ScriptEventBridge {
+public class DefaultScriptEventBridge implements ScriptEventBridge {
     @Override
     public void bindEvents(Value bindings, ScriptType type) {
         var values = NekoEventGroups.all().values();
@@ -20,6 +20,13 @@ public class NeoForgeScriptEventBridge implements ScriptEventBridge {
     public void clearListeners(ScriptType type) {
         for (var group : NekoEventGroups.all().values()) {
             group.clearListeners(type);
+        }
+    }
+
+    @Override
+    public void clearListeners(ScriptType type, String scriptId) {
+        for (var group : NekoEventGroups.all().values()) {
+            group.clearListeners(type, scriptId);
         }
     }
 }

@@ -1,8 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.module.NekoModuleTransformResult;
+import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
@@ -11,7 +10,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.channels.SeekableByteChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Iterator;
@@ -28,6 +26,9 @@ public class NekoJSFileSystem implements FileSystem {
     }
 
     private Path resolveVirtualScript(Path originalPath) {
+        if (NekoEsmVirtualModuleRegistry.isVirtualModule(originalPath)) {
+            return originalPath;
+        }
         if (Files.exists(originalPath)) {
             return originalPath;
         }
@@ -38,9 +39,11 @@ public class NekoJSFileSystem implements FileSystem {
             Path parent = originalPath.getParent();
 
             if (parent != null) {
-                String[] virtualExtensions = {".mjs", ".cjs", ".ts", ".tsx", ".jsx"};
-                for (String ext : virtualExtensions) {
-                    Path virtualPath = parent.resolve(baseName + ext);
+                for (String extension : ScriptCompilerRegistry.supportedExtensionsInOrder()) {
+                    if (".js".equals(extension)) {
+                        continue;
+                    }
+                    Path virtualPath = parent.resolve(baseName + extension);
                     if (Files.exists(virtualPath)) {
                         return virtualPath;
                     }
@@ -52,11 +55,17 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Path parsePath(URI uri) {
+        if (uri != null && "file".equalsIgnoreCase(uri.getScheme())) {
+            return Path.of(uri);
+        }
         return delegate.getPath(uri.getPath());
     }
 
     @Override
     public Path parsePath(String path) {
+        if (path != null && path.startsWith("file:")) {
+            return Path.of(URI.create(path));
+        }
         Path parsedPath = delegate.getPath(path);
         if (parsedPath.isAbsolute()) {
             return parsedPath;
@@ -66,8 +75,18 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void checkAccess(Path path, Set<? extends AccessMode> modes, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.verifyInsideGameDir(path);
         verifiedPath = resolveVirtualScript(verifiedPath);
+
+        if (NekoEsmVirtualModuleRegistry.isVirtualPath(verifiedPath)) {
+            if (modes.contains(AccessMode.WRITE) || modes.contains(AccessMode.EXECUTE)) {
+                throw new AccessDeniedException(verifiedPath.toString());
+            }
+            if (!NekoEsmVirtualModuleRegistry.isVirtualDirectory(verifiedPath) && !NekoEsmVirtualModuleRegistry.isVirtualModule(verifiedPath)) {
+                throw new NoSuchFileException(verifiedPath.toString());
+            }
+            return;
+        }
 
         if (modes.contains(AccessMode.READ)) {
             if (!Files.exists(verifiedPath)) {
@@ -109,55 +128,59 @@ public class NekoJSFileSystem implements FileSystem {
                 || options.contains(StandardOpenOption.APPEND)
                 || options.contains(StandardOpenOption.CREATE)
                 || options.contains(StandardOpenOption.CREATE_NEW);
-        Path verifiedPath = writing ? NekoJSPaths.verifyInsideGameDirForCreate(path) : NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path)
+                ? path.normalize().toAbsolutePath()
+                : writing ? NekoJSPaths.verifyInsideGameDirForCreate(path) : NekoJSPaths.verifyInsideGameDir(path);
         verifiedPath = resolveVirtualScript(verifiedPath);
 
-        if (!writing && verifiedPath.getFileName() != null && NekoJSPaths.isSupportedScriptFile(verifiedPath)) {
-            try {
-                String rawCode = Files.readString(verifiedPath);
-                NekoModuleTransformResult result = NekoModulePipeline.transform(verifiedPath, rawCode);
-                registerSourceMap(verifiedPath, result.sourceMap(), result.prependedLineCount());
-                byte[] bytes = result.code().getBytes(StandardCharsets.UTF_8);
-                return new ReadOnlyMemoryByteChannel(bytes);
-            } catch (Exception e) {
-                throw new IOException("[NekoJSFileSystem] 脚本模块转换失败: " + verifiedPath + ": " + rootMessage(e), e);
+        String virtualSource = NekoEsmVirtualModuleRegistry.source(verifiedPath);
+        if (virtualSource != null) {
+            if (writing) {
+                throw new AccessDeniedException(verifiedPath.toString());
             }
+            return new ReadOnlyMemoryByteChannel(virtualSource.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+
+        if (!writing && verifiedPath.getFileName() != null && NekoJSPaths.isSupportedScriptFile(verifiedPath)) {
+            return new ReadOnlyMemoryByteChannel(NekoModuleReadService.readTransformedModule(verifiedPath));
         }
 
         return Files.newByteChannel(verifiedPath, options, attrs);
     }
 
-    private static void registerSourceMap(Path path, String sourceMap, int prependedLineCount) {
-        try {
-            String relativePath = NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/');
-            SourceMapRegistry.register(relativePath, sourceMap, prependedLineCount);
-        } catch (Exception ignored) {
-        }
-    }
-
-    private static String rootMessage(Throwable throwable) {
-        Throwable root = throwable;
-        while (root.getCause() != null) {
-            root = root.getCause();
-        }
-        String message = root.getMessage();
-        if (message == null || message.isBlank()) {
-            message = root.toString();
-        }
-        return message;
-    }
-
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.verifyInsideGameDir(path);
         verifiedPath = resolveVirtualScript(verifiedPath);
+        if (NekoEsmVirtualModuleRegistry.isVirtualDirectory(verifiedPath)) {
+            return Map.of(
+                    "isRegularFile", false,
+                    "isDirectory", true,
+                    "isSymbolicLink", false,
+                    "isOther", false,
+                    "size", 0L
+            );
+        }
+        if (NekoEsmVirtualModuleRegistry.isVirtualModule(verifiedPath)) {
+            String source = NekoEsmVirtualModuleRegistry.source(verifiedPath);
+            return Map.of(
+                    "isRegularFile", true,
+                    "isDirectory", false,
+                    "isSymbolicLink", false,
+                    "isOther", false,
+                    "size", source == null ? 0L : (long) source.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+            );
+        }
         return Files.readAttributes(verifiedPath, attributes, options);
     }
 
     @Override
     public Path toRealPath(Path path, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.verifyInsideGameDir(path);
         verifiedPath = resolveVirtualScript(verifiedPath);
+        if (NekoEsmVirtualModuleRegistry.isVirtualPath(verifiedPath)) {
+            return verifiedPath;
+        }
         return verifiedPath.toRealPath(linkOptions);
     }
 

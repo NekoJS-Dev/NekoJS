@@ -1,40 +1,35 @@
 package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
+import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
-import lombok.Getter;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.SourceSection;
 import com.tkisor.nekojs.api.data.ScriptId;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ScriptError {
-    @Getter
     private final ScriptId errorId;
-    @Getter
     private final ScriptContainer script;
-    @Getter
     private final ScriptType scriptType;
-    @Getter
     private final Throwable rawException;
 
     private String errorMessage;
-    @Getter
     private int lineNumber = -1;
-    @Getter
     private int columnNumber = -1;
-    @Getter
     private String originalSymbolName = null;
-    @Getter
     private String sourceCodeSnippet = "";
+    private String errorPath = null;
 
     private String fallbackPath = "Unknown location";
 
-    @Getter
     private int occurrenceCount = 1;
 
     public ScriptError(ScriptContainer script, Throwable rawException) {
@@ -55,35 +50,46 @@ public class ScriptError {
     }
 
     private void parseException() {
-        if (rawException instanceof PolyglotException polyglotException) {
-            this.errorMessage = polyglotException.getMessage();
+        Throwable primary = primaryCause(rawException);
+        if (primary instanceof NekoEsmLinkException linkException) {
+            parseEsmDiagnostic(linkException.diagnostic());
+            this.errorMessage = linkException.diagnostic().message();
+            return;
+        }
+        PolyglotException polyglotException = findPolyglotException(rawException);
+        if (polyglotException != null) {
+            this.errorMessage = bestMessage(primary);
 
-            SourceSection sourceLocation = polyglotException.getSourceLocation();
-            if (sourceLocation == null) {
-                for (PolyglotException.StackFrame frame : polyglotException.getPolyglotStackTrace()) {
-                    if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
-                        sourceLocation = frame.getSourceLocation();
-                        break;
-                    }
-                }
-            }
-
+            SourceSection sourceLocation = NekoErrorTracker.getBestSourceLocation(polyglotException);
             if (sourceLocation != null) {
                 int rawLine = sourceLocation.getStartLine();
                 int rawColumn = sourceLocation.getStartColumn();
                 CharSequence chars = sourceLocation.getCharacters();
                 String jsSnippet = chars != null ? chars.toString().trim() : "";
 
-                String displayPath = script != null ? getDisplayPath() : extractRelativePath(sourceLocation);
+                String displayPath = extractRelativePath(sourceLocation);
+                this.errorPath = displayPath;
                 SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(displayPath, rawLine, rawColumn);
                 this.lineNumber = pos.line;
                 this.columnNumber = pos.column;
                 this.originalSymbolName = pos.name;
-                this.sourceCodeSnippet = buildSourceSnippet(displayPath, jsSnippet);
+                this.sourceCodeSnippet = buildSourceSnippet(displayPath, usefulFallbackSnippet(jsSnippet));
             }
         } else {
-            this.errorMessage = rawException.toString();
+            this.errorMessage = bestMessage(primary);
         }
+    }
+
+    private void parseEsmDiagnostic(NekoEsmDiagnostic diagnostic) {
+        if (diagnostic == null) {
+            return;
+        }
+        if (diagnostic.file() != null) {
+            this.errorPath = pathToDisplay(diagnostic.file());
+        }
+        this.lineNumber = diagnostic.line();
+        this.columnNumber = diagnostic.column();
+        this.sourceCodeSnippet = buildSourceSnippet(getDisplayPath(), "");
     }
 
     private String buildSourceSnippet(String displayPath, String fallbackSnippet) {
@@ -123,29 +129,186 @@ public class ScriptError {
         this.occurrenceCount = occurrenceCount;
     }
 
+    public ScriptId getErrorId() { return errorId; }
+
+    public ScriptContainer getScript() { return script; }
+
+    public ScriptType getScriptType() { return scriptType; }
+
+    public Throwable getRawException() { return rawException; }
+
+    public int getLineNumber() { return lineNumber; }
+
+    public int getColumnNumber() { return columnNumber; }
+
+    public String getOriginalSymbolName() { return originalSymbolName; }
+
+    public String getSourceCodeSnippet() { return sourceCodeSnippet; }
+
+    public int getOccurrenceCount() { return occurrenceCount; }
+
     public String getErrorMessage() { return errorMessage != null ? errorMessage : "Unknown error"; }
 
     public String getDisplayPath() {
+        if (errorPath != null && !errorPath.isBlank()) {
+            return errorPath;
+        }
         if (script != null) {
-            return NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/');
+            return pathToDisplay(script.path);
         }
         return fallbackPath;
     }
 
     private static String extractRelativePath(SourceSection sourceLocation) {
         if (sourceLocation == null || sourceLocation.getSource() == null) return "Unknown location";
-        var source = sourceLocation.getSource();
-        if (source.getPath() != null) {
-            try {
-                return NekoJSPaths.ROOT.relativize(Path.of(source.getPath())).toString().replace('\\', '/');
-            } catch (Exception ignored) {
-                return source.getPath().replace('\\', '/');
+        return NekoErrorTracker.extractRelativePath(sourceLocation.getSource());
+    }
+
+    private static String pathToDisplay(Path path) {
+        if (path == null) {
+            return "Unknown location";
+        }
+        try {
+            return NekoJSPaths.ROOT.relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');
+        } catch (Exception ignored) {
+            return path.toString().replace('\\', '/');
+        }
+    }
+
+    public String getLogDetailText(boolean concise) {
+        return concise ? getConciseDetailText() : getFullDetailText();
+    }
+
+    public String getConciseDetailText() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("环境: ").append(scriptType != null ? scriptType.name() : "未知").append("\n");
+        sb.append("位置: ").append(getDisplayPath());
+        if (lineNumber > 0) {
+            sb.append(":").append(lineNumber);
+            if (columnNumber > 0) {
+                sb.append(":").append(columnNumber);
             }
         }
-        if (source.getURI() != null) {
-            return source.getURI().toString().replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
+        sb.append("\n");
+        sb.append("原因: ").append(conciseMessage(getErrorMessage())).append("\n");
+        if (occurrenceCount > 1) {
+            sb.append("频次: 连续发生了 ").append(occurrenceCount).append(" 次\n");
         }
-        return source.getName();
+        if (!sourceCodeSnippet.isEmpty()) {
+            sb.append("\n").append(sourceCodeSnippet).append("\n");
+        }
+        PolyglotException polyglotException = findPolyglotException(rawException);
+        if (polyglotException != null) {
+            String trace = firstGuestFrame(polyglotException);
+            if (!trace.isEmpty()) {
+                sb.append("\n").append(trace);
+            }
+        }
+        return sb.toString().stripTrailing();
+    }
+
+    private static String conciseMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return "Unknown error";
+        }
+        String normalized = message.strip();
+        int syntaxStart = normalized.indexOf("SyntaxError:");
+        if (syntaxStart >= 0) {
+            int lineBreak = normalized.indexOf('\n', syntaxStart);
+            return lineBreak >= 0 ? normalized.substring(syntaxStart, lineBreak).strip() : normalized.substring(syntaxStart).strip();
+        }
+        int causedBy = normalized.lastIndexOf(": ");
+        if (causedBy > 0 && causedBy + 2 < normalized.length()) {
+            String tail = normalized.substring(causedBy + 2).strip();
+            if (!tail.isBlank()) {
+                return tail;
+            }
+        }
+        return normalized;
+    }
+
+    private static String usefulFallbackSnippet(String snippet) {
+        if (snippet == null) {
+            return "";
+        }
+        String trimmed = snippet.trim();
+        return trimmed.length() <= 1 ? "" : trimmed;
+    }
+
+    private static PolyglotException findPolyglotException(Throwable throwable) {
+        Throwable current = throwable;
+        Set<Throwable> seen = new HashSet<>();
+        while (current != null && seen.add(current)) {
+            if (current instanceof PolyglotException polyglotException) {
+                return polyglotException;
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+
+    private static Throwable primaryCause(Throwable throwable) {
+        Throwable current = throwable;
+        Throwable best = throwable;
+        Set<Throwable> seen = new HashSet<>();
+        while (current != null && seen.add(current)) {
+            if (current instanceof NekoEsmLinkException) {
+                return current;
+            }
+            if (current instanceof PolyglotException) {
+                best = current;
+            } else if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                best = current;
+            }
+            current = current.getCause();
+        }
+        return best == null ? throwable : best;
+    }
+
+    private static String bestMessage(Throwable throwable) {
+        if (throwable == null) {
+            return "Unknown error";
+        }
+        String message = throwable.getMessage();
+        if (message != null && !message.isBlank()) {
+            return message;
+        }
+        return throwable.toString();
+    }
+
+    private static boolean isInternalFrame(String path) {
+        if (path == null || path.isBlank()) {
+            return true;
+        }
+        String normalized = path.replace('\\', '/');
+        return normalized.contains("/nekojs/node/internal/")
+                || normalized.contains("/nekojs/node/modules/")
+                || normalized.startsWith("nekojs/node/internal/")
+                || normalized.startsWith("nekojs/node/modules/")
+                || normalized.startsWith("truffle:") && normalized.contains("/nekojs/node/");
+    }
+
+    private static String firstGuestFrame(PolyglotException exception) {
+        for (PolyglotException.StackFrame frame : exception.getPolyglotStackTrace()) {
+            if (!frame.isGuestFrame()) {
+                continue;
+            }
+            SourceSection loc = frame.getSourceLocation();
+            if (loc == null || loc.getSource() == null) {
+                continue;
+            }
+            String path = NekoErrorTracker.extractRelativePath(loc.getSource());
+            if (isInternalFrame(path)) {
+                continue;
+            }
+            int line = loc.getStartLine();
+            String rootName = frame.getRootName();
+            if (rootName == null || rootName.isEmpty() || rootName.equals(":program")) {
+                rootName = "<module>";
+            }
+            return "堆栈: at " + rootName + " (" + path + ":" + line + ")";
+        }
+        return "";
     }
 
     public String getFullDetailText() {
@@ -172,8 +335,9 @@ public class ScriptError {
         }
 
         sb.append("\n");
-        if (rawException instanceof PolyglotException pe) {
-            sb.append(NekoErrorTracker.getMappedStackTrace(pe));
+        PolyglotException polyglotException = findPolyglotException(rawException);
+        if (polyglotException != null) {
+            sb.append(NekoErrorTracker.getMappedStackTrace(polyglotException));
         } else {
             sb.append(getErrorMessage()).append("\n");
         }

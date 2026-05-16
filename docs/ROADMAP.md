@@ -84,6 +84,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 增加 recipe dump/print 调试工具：`event.dump(filter)`、`event.print(filter)`。
 - [x] 为 `event.recipes.minecraft` 增加 datapack type 名 raw JSON alias：`crafting_shaped(json)`、`crafting_shapeless(json)`。
 - [x] 保持 README、`docs/ROADMAP.md`、`ai_docs/` 与当前实现同步；本轮短期任务已同步整理相关文档。
+- [ ] 低风险 Java 清理：不改名 `NekoJSScriptManager`，保留其 Context 创建职责；不调整 `EventBusJS`；不删除 `ScriptType.getLogFile()`。第一步只做平台无关命名清理（`NeoForgeScriptEventBridge` 改为通用默认 bridge）和 `NekoJSFileSystem` 内模块读取/转换逻辑抽取，行为不变并用双平台 compile 验证。
 
 ## 中期任务
 
@@ -170,7 +171,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 实现 `path`：`join`、`resolve`、`normalize`、`dirname`、`basename`、`extname`、`relative`、`isAbsolute`、`parse`、`format`、`sep`、`delimiter`、`posix`、`win32`；该模块只做字符串处理，不做权限判断。
 - [x] 实现轻量 `Buffer` / `node:buffer`：`Buffer.from`、`Buffer.alloc`、`Buffer.isBuffer`、`byteLength`、`concat`、`toString`、`length`、基础下标访问；保证 `fs.readFileSync(path)` 未传 encoding 时返回 Buffer-like 对象。
 - [x] 实现轻量 `process` / `node:process`：`cwd`、受 VFS 限制的 `chdir`、`platform`、`versions`、只读 `env`、`nextTick`。
-- [x] 实现 `timers` / `node:timers` 与 `timers/promises`：`setTimeout`、`clearTimeout`、`setInterval`、`clearInterval`、`setImmediate`、`clearImmediate`；reload/Context close 时取消旧任务，避免脚本重载后定时器泄漏。
+- [x] 实现 `timers` / `node:timers` 与 `timers/promises`：`setTimeout`、`clearTimeout`、`setInterval`、`clearInterval`、`setImmediate`、`clearImmediate`；type reload/Context close 时取消旧任务，单文件 reload 会取消目标入口脚本直接注册的旧 timer，避免脚本重载后定时器泄漏。
 - [x] timer 回调按脚本 side 安全 flush：`server_scripts` 在 `ServerTickEvent.Post` 执行，`client_scripts` 在 `ClientTickEvent.Post` 执行；`startup_scripts` 只允许 immediate/0ms timer 并在 startup load 结束后 flush 一次。
 - [x] 实现 `util`：`format`、`inspect`、`promisify`、`callbackify`、`types` 中常用判断函数。
 - [x] 实现 `events`：轻量 `EventEmitter`、`once`、`on`，满足常见 npm 小模块依赖。
@@ -178,24 +179,45 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [ ] 为 Node-compatible API 补 NekoProbe manual declarations，让 `require('fs')` / `require('node:fs')` 等返回准确类型。
 - [ ] 为两个平台添加 runnable smoke test，覆盖 `.minecraft` 内读写、越界拒绝、symlink 逃逸拒绝、Buffer 返回、timer reload 清理。
 
-### ESM authoring 到 CommonJS runtime 转换
+### 原生 ESM runtime 与后续 CJS runtime
 
-目标是不把 NekoJS runtime 整体切成 native ESM，而是在 NekoJS 本体内提供稳定的 ESM authoring 支持：用户可以写 `import` / `export`，NekoJS 在模块加载管线中转成 Graal CommonJS 可执行的 CJS。NekoSWC 只负责 TS/TSX/JSX 等语言语法转 JS 与 sourcemap，不负责模块系统转换。
+目标是实现 NekoJS 自有的 native ESM module runtime，而不是把 ESM 降级转换成 `require` / CommonJS。ESM 应由 Java 侧 lexer/parser/AST/IR 构建模块记录，执行层按 ESM 的 parse / instantiate(link) / evaluate 思路处理 import/export binding、live binding、循环依赖、`import.meta` 和 dynamic import。JS glue 只用于 Graal 执行边界必要的最小包装，不作为 Babel/SWC 这类模块转换器，也不把 CJS 当作 ESM 的最终执行模型。
 
-- [ ] 重构脚本编译接口：删除旧 `IScriptCompiler.compile(...) -> String` 设计，改为 `ScriptCompileResult(code, sourceMap)`，让 NekoSWC/其他编译器能返回 sourcemap。
-- [ ] 新增 `NekoModulePipeline`，作为 VFS 唯一脚本转换入口：语言编译、ESM 检测、ESM→CJS、require patch、sourcemap 注册都收口到 pipeline，`NekoJSFileSystem` 不再直接拼接转换细节。
-- [ ] 将当前 VFS 内的 module-local require patch 移到 classpath resource，例如 `nekojs/node/internal/require-patch.js`，由 pipeline 统一 prepend，并对 sourcemap 做明确行偏移。
+NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模型：普通脚本入口继续由 NekoJS 从 `startup_scripts/`、`server_scripts/`、`client_scripts/`、`test_scripts/` 独立发现并加载；`import` 主要用于导入特定值、helper、JSON、Node/`node:` 模块、Node ESM-style module 或 `java:` 包级模块。入口发现不依赖 `package.json main`，也不依赖某个 root import graph 才决定哪些脚本会运行。CJS 后续也要实现，但应作为 NekoJS 自有兼容模块格式，与 native ESM 互操作，而不是让 ESM 永久转成 CJS。
+
+实现路线更新为：Babel / Babel bundle / transformer 构建工具 / npm 依赖保持移除；现有 Java ESM→CJS transformer 只能视为临时原型和 parser 探路，不作为最终方向继续扩展。后续应把 `NekoEsmParser` 继续推进成稳定 AST/IR 前端，并替换执行层为 native ESM module graph/runtime。
+
+当前 ESM 已可覆盖常用 authoring 路径，但后续优先级应保持明确：先补 ESM/CJS interop 规则和测试；再完善 parser/binding table 与 diagnostics；随后重做 sourcemap chain；最后推进 TLA、真正模块实例级热替换和完整自有 evaluator。这样先解决用户混用 `import` / `require` 的高频问题，避免过早投入复杂 evaluator。
+
+- [x] 重构脚本编译接口：新增 `IScriptCompiler.compileDetailed(...) -> ScriptCompileResult(code, sourceMap)`，让 NekoSWC/其他编译器能返回 sourcemap；旧 `compile(...) -> String` 暂作为兼容默认入口保留。
+- [x] 新增 shared prepared module cache：`NekoModulePreparationCache` 作为 loader/linker/rewriter/VFS 的统一准备入口，按 canonical path 的 mtime/size 缓存 compiled source、source map、AST 和 mode，并集中注册 source map；后续本体 TS/JSX/TSX 编译器应接入这一层。
+- [x] 建立插件式脚本语言前端 seam：`ScriptCompilerRegistry` 统一管理可加载脚本扩展，`NekoJSBasePlugin.registerScriptCompilers(...)` 可注册 compiler/extension；script discovery、resolver extension probing 和 VFS `.js` fallback 已改为 registry-driven，为后续不依赖 NekoSWC 的 TS/JSX/TSX 支持做准备。
+- [ ] 继续重构 `NekoModulePipeline`：语言编译、ESM/CJS 格式检测、AST/IR 解析、module record 构建和 sourcemap 注册都收口到 pipeline/cache，`NekoJSFileSystem` 不再直接拼接转换细节。
+- [x] 实现 NekoJS 自有脚本 loader 第一版实验路径：由 `NekoScriptModuleLoaderHost` + `internal/script-loader.js` 执行入口和相对模块，支持稳定局部 `require`、相对模块、模块缓存、JSON 模块、目录 `index`、扩展候选解析、Node builtin / `node:` alias 和 `java:` 包级特殊模块。
+- [x] 将脚本执行入口切到统一 NekoJS loader：`NekoJSScriptManager` 不再按旧实验 flags 或 Graal CommonJS 三路径分流，统一由 `NekoScriptModuleLoaderHost` 进入自有 resolver/runtime。
+- [x] 移除旧 native GraalJS ESM 实验分流和 `.js -> .mjs` alias 方向；后续稳定路线不是路径伪装或 regex import rewrite，而是 NekoJS 自有 AST/IR-backed native ESM runtime。
+- [x] 移除 per-module `require-patch` prepend：Node builtins、`node:` alias、`java:` 包级模块和相对模块解析由自有 loader/runtime 处理，避免污染用户模块行号。
+- [x] 增加可配置脚本错误日志格式：`engine.toml` 默认 `conciseScriptErrorLogs = true`，script/test/event 错误优先输出原因、用户脚本路径、行列号和代码片段；设为 `false` 时输出完整 verbose diagnostics/stack，便于调试分析。
 - [ ] 重做 `SourceMapRegistry`：删除 regex 解析方案，改为 JSON parser + `SourceMapData` 模型，支持 `sources`、`sourcesContent`、`names`、`sourceRoot` 和最终执行路径到原始源码位置映射。
-- [ ] 建立 sourcemap chain：`TS/TSX/JSX -> JS` 的输入 map 传给 ESM→CJS transformer，最终注册 `final CJS -> original source` 的 map，避免 require patch 或多段 transform 破坏报错行列。
-- [x] 内置本体级 ESM→CJS transformer，不使用 swc4j；当前 resources 内置由 `tools/build-esm-transformer.mjs` 生成的最小 Babel bundle，只打包 ESM→CJS 所需 Babel core / modules-commonjs / dynamic-import 能力，通过独立 `NekoSharedEngine` holder 复用共享 Graal Engine，并按 Graal 共享 Engine 要求共用 `NekoSharedHostAccess`，但 transformer Context 仍禁用 HostClassLookup / IO / 线程 / 进程创建。
-- [ ] ESM 检测策略：`.mjs` 强制 ESM，`.cjs` 强制 CJS，`.js/.ts/.tsx/.jsx` 用 parser 的 `sourceType: 'unambiguous'` / AST 检测，避免 regex 误判。
-- [ ] 长期实现 NekoJS 自有 Java ESM→CJS transformer，替代当前过渡期使用的最小 Babel bundle：优先覆盖静态 import/export、re-export、namespace/default/named import、side-effect import 与 sourcemap 位置偏移；Babel bundle 仅保留为实验/兼容 fallback，可通过 `engine.toml` 开关选择或禁用，默认方向是逐步迁到 Java 实现。
-- [ ] 支持常见 ESM 语义：default import、namespace import、named import、side-effect import、named/default export、re-export、`export *`、builtin import（`fs` / `node:fs`）和相对 import。
-- [ ] 明确第一版不支持 top-level await；遇到 TLA 输出清晰错误，建议把异步逻辑放到 event callback 或 timer 中。
-- [ ] 增加 `.mjs` / `.cjs` 脚本扩展支持，并定义 `.js` auto、`.mjs` ESM、`.cjs` CJS 的行为。
-- [ ] 增加转换缓存：以 real path、lastModified、size、compiler/transformer version、transform mode 为 key，避免每次 require 重复转换。
-- [ ] 增加 runnable 测试：builtin import、relative import、default/named export、namespace import、side-effect import、re-export、CJS/ESM 互操作、TS sourcemap 报错映射。当前 26.1 已有基础 ESM smoke，覆盖 builtin import、relative import、default/named export、namespace import、`java:` import，以及 CJS require transformed ESM。
-- [ ] 为 ESM authoring 更新 NekoProbe 类型和 workspace 配置，让编辑器按现代 JS/TS 模块语法提示。
+- [ ] 建立 sourcemap chain：`TS/TSX/JSX -> JS` 的输入 map 继续传入 native ESM/CJS pipeline，最终注册执行代码到原始源码的映射，避免多段处理破坏报错行列。
+- [x] 完全移除 Babel 路线：已删除 Babel transformer Java wrapper、generated bundle、transformer build tools 和仅服务于 Babel transformer 的 npm package 文件；运行时不保留 Babel fallback。
+- [x] 建立 NekoJS 自有 Java AST/IR parser 初版：`.mjs` 强制 ESM，`.cjs` 强制 CJS，`.js/.ts/.tsx/.jsx` 通过 Java lexer/parser 检测真实 top-level import/export，避免 regex/contains 误判。
+- [x] 将当前 Java ESM→CJS transformer 降级并停止作为目标扩展：默认 ESM 路径已改为 native ESM module record / linker / evaluator，运行时不再把 ESM 降级到 `require` / CommonJS。
+- [x] 设计 ESM AST/IR 初版：显式表达 import declaration、export declaration、re-export、runtime expressions、dependency table、source spans 和初始 diagnostics，不用零散字符串替换作为核心语义；当前 parser 已记录 import/export/顶层声明/解构声明形成的本地 binding table，并能诊断 `export { missing }` 和重复 explicit export；后续继续补默认值/rest/destructuring 边界、star export 冲突和更完整 source span。
+- [x] 实现 native ESM module record 初版：记录 module id/path、prepared source/AST、link metadata、status、namespace 和 failure；后续继续补 dfs index、async/TLA 状态、evaluation promise 和完整 binding 表。
+- [x] 实现 ESM linker 初版：按 NekoJS resolver 解析静态依赖，生成 dependency/local export/indirect export/star export metadata，并对可静态确认的 ESM/JSON dependency 缺失导出提前给出文件行列 diagnostic；module graph 只用于依赖链接，不用于决定脚本目录入口发现。
+- [x] 实现 ESM live binding 与 cycle 语义初版：入口和依赖通过 canonical virtual URI 交给 Graal native ESM evaluation，测试覆盖 live binding 与 ESM↔ESM cycle；后续 Java module record 仍需补完整 binding 表和冲突诊断。
+- [x] 实现 ESM evaluator 初版：Java module record 管理 resolver/link/cache/diagnostics，Graal 以 `application/javascript+module` 执行模块并提供 native ESM namespace/live binding 语义；后续继续收敛 source rewrite 边界和 async/TLA 状态。
+- [x] 支持 native `import.meta.url/filename/dirname/resolve` 和 dynamic `import(specifier)` 初版；字面量 dynamic import 在 rewrite 阶段解析为 NekoJS resolver URI，非字面量表达式运行时调用 resolver 后仍交给 Graal 原生 `import()` 返回 namespace，并支持动态导入 Node builtin / `node:` / `java:` special module 的 default/namespace synthetic module。物理 ESM source 通过 module-id 稳定 virtual URI 注册，入口和依赖共享同一模块身份，并用 reserve/register 处理 ESM cycle 的递归展开风险；virtual module 同时记录用户可读展示路径，供默认简洁错误日志隐藏 `.native_esm_modules/<hash>.mjs`。loader cache clear 会同步清理 prepared module cache 和 virtual registry，避免 reload 后旧 source/path 残留。后续继续补完整 module cache/link/evaluate 集成。
+- [ ] 明确 top-level await 路线：第一阶段可以清晰报错；后续按 async module evaluation 模型实现，而不是靠 CJS Promise 包装模拟。
+- [x] 增加 `.mjs` / `.cjs` 脚本扩展支持，并定义 `.js` auto、`.mjs` ESM、`.cjs` CJS 的行为：pipeline/resolver 均按该规则分类，script language registry 也内置这些扩展。
+- [ ] 实现 CJS runtime 第二阶段：Java AST/IR-backed CJS parser/loader，支持 `require`、`module.exports`、`exports`、`__filename`、`__dirname`、JSON、Node builtin、`java:`，并与 native ESM 建立互操作规则。
+- [x] 定义 ESM/CJS interop 第一阶段：ESM import CJS 的 default/namespace/named 读取 `module.exports`，CJS require 已支持的同步 ESM 返回 namespace；测试覆盖 default/namespace/named import CJS 和 CJS require ESM。后续仍需补 CJS↔ESM cycles、TLA ESM 被 require 时的错误语义和更完整 CJS runtime。
+- [x] 增加命令级依赖索引 reload：`/nekojs reload <server|client|startup|test> [file]` 支持按 type 整体重载、重跑指定入口，或在指定 helper module 时通过 runtime dependency graph 反向找到已加载的受影响入口并重跑；目标入口会清理自身 event listener、timer、错误记录，并按受影响模块切片失效 CJS cache、ESM module record、prepared cache 和 virtual ESM source。virtual ESM URI 现在带 module generation，reload 后会生成新 URI，避免 Graal 继续复用旧 native ESM module instance，同时避免每次 helper reload 都清空整个 runtime module cache。
+- [ ] 增加真正模块实例级热替换：以 real path、lastModified、size、可选内容 hash、compiler/parser/runtime version、module format 为 key，拆分 source/compile/AST/link/evaluate 缓存；维护 generation/module instance，helper module 变更时只 invalid/relink/re-evaluate 受影响图切片而不是重跑入口，并隔离失败 reload。
+- [ ] 增加 native ESM runnable 测试：builtin import、relative import、default/named export、namespace import、side-effect import、re-export、`export *`、cycles、dynamic import、`import.meta`、JSON import、Node builtin / `node:` import、`java:` named import、TLA 清晰错误/后续 TLA、ESM/CJS interop、TS sourcemap 报错映射。
+- [ ] 为 native ESM/CJS 更新 NekoProbe 类型和 workspace 配置，让编辑器按现代 JS/TS 模块语法提示。
+- [ ] 规划 NekoJS 内置纯 Java TS/TSX/JSX 编译器：在 native ESM/CJS AST/IR 稳定后，逐步替代外部/JS 编译链，让 `.ts`、`.tsx`、`.jsx` 的语言语法转换也由 NekoJS 自己维护，并共享 AST/IR、sourcemap chain 和 NekoProbe 类型输出基础。
 
 ### Painter API 与 client render events
 

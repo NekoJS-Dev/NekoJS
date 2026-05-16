@@ -16,8 +16,7 @@
     "inject.MixinMutableComponent",
     "inject.MixinPlayer"
   ],
-  "client": [
-  ],
+  "client": [],
   "injectors": {
     "defaultRequire": 1
   },

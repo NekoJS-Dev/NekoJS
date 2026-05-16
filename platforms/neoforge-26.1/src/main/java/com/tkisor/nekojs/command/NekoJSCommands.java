@@ -1,12 +1,18 @@
 package com.tkisor.nekojs.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -16,6 +22,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public final class NekoJSCommands {
 
@@ -28,26 +35,7 @@ public final class NekoJSCommands {
                 Commands.literal("nekojs")
                         .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
 
-                        .then(Commands.literal("reload")
-                        .executes(context -> {
-                            CommandSourceStack source = context.getSource();
-                            source.sendSystemMessage(Component.translatable("nekojs.command.reloading"));
-
-                            try {
-                                NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
-
-                                if (NekoErrorTracker.hasErrors()) {
-                                    source.sendFailure(NekoErrorUIHelper.getErrorComponent());
-                                } else {
-                                    source.sendSuccess(NekoErrorUIHelper::getSuccessComponent, true);
-                                }
-                            } catch (Exception e) {
-                                NekoJS.LOGGER.error("Reloading scripts failed fatally", e);
-                                source.sendFailure(Component.translatable("nekojs.command.reload.fatal"));
-                            }
-                            return 1;
-                        })
-                )
+                        .then(reloadCommand())
 
                         .then(Commands.literal("test")
                                 .executes(context -> {
@@ -56,12 +44,7 @@ public final class NekoJSCommands {
 
                                     try {
                                         NekoJS.SCRIPT_MANAGER.runTestScripts();
-
-                                        if (NekoErrorTracker.hasErrors()) {
-                                            source.sendFailure(NekoErrorUIHelper.getErrorComponent());
-                                        } else {
-                                            source.sendSuccess(() -> Component.literal("NekoJS test scripts completed."), true);
-                                        }
+                                        sendReloadResult(source, "NekoJS test scripts completed.");
                                     } catch (Exception e) {
                                         NekoJS.LOGGER.error("Running test scripts failed fatally", e);
                                         source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
@@ -115,5 +98,88 @@ public final class NekoJSCommands {
                                 })
                         )
         );
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand() {
+        LiteralArgumentBuilder<CommandSourceStack> reload = Commands.literal("reload")
+                .executes(context -> reloadType(context.getSource(), ScriptType.SERVER));
+        for (ScriptType type : ScriptType.all()) {
+            addReloadType(reload, type);
+        }
+        return reload;
+    }
+
+    private static void addReloadType(LiteralArgumentBuilder<CommandSourceStack> reload, ScriptType type) {
+        reload.then(Commands.literal(type.name)
+                .executes(context -> reloadType(context.getSource(), type))
+                .then(Commands.argument("file", StringArgumentType.greedyString())
+                        .suggests((context, builder) -> suggestReloadFiles(type, builder))
+                        .executes(context -> reloadFile(context.getSource(), type, StringArgumentType.getString(context, "file")))));
+    }
+
+    private static CompletableFuture<Suggestions> suggestReloadFiles(ScriptType type, SuggestionsBuilder builder) {
+        String prefix = "nekojs reload " + type.name + " ";
+        String input = builder.getInput();
+        int commandStart = input.startsWith("/") ? 1 : 0;
+        int fileStart = input.startsWith(prefix, commandStart) ? commandStart + prefix.length() : builder.getStart();
+        String fileInput = input.substring(Math.min(fileStart, input.length())).replace('\\', '/');
+        SuggestionsBuilder pathBuilder = builder.createOffset(fileStart);
+        for (String suggestion : ScriptLocator.suggestScriptFiles(type, fileInput)) {
+            pathBuilder.suggest(suggestion);
+        }
+        return pathBuilder.buildFuture();
+    }
+
+    private static int reloadType(CommandSourceStack source, ScriptType type) {
+        if (!canReloadHere(source, type)) {
+            return 0;
+        }
+        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
+        try {
+            if (type == ScriptType.TEST) {
+                NekoJS.SCRIPT_MANAGER.runTestScripts();
+            } else {
+                NekoJS.SCRIPT_MANAGER.reloadScripts(type);
+            }
+            sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
+            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
+        }
+        return 1;
+    }
+
+    private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath) {
+        if (!canReloadHere(source, type)) {
+            return 0;
+        }
+        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
+        try {
+            int affectedEntries = NekoJS.SCRIPT_MANAGER.reloadScriptFile(type, filePath).size();
+            if (type == ScriptType.TEST) {
+                NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
+            }
+            sendReloadResult(source, "NekoJS " + type.name + " script " + filePath + " reloaded (" + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", type.name, filePath, e);
+            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + " failed: " + e.getMessage()));
+        }
+        return 1;
+    }
+
+    private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
+        if (type == ScriptType.CLIENT && !Platform.isClient()) {
+            source.sendFailure(Component.literal("Client script reload is only available in an integrated client runtime."));
+            return false;
+        }
+        return true;
+    }
+
+    private static void sendReloadResult(CommandSourceStack source, String successMessage) {
+        if (NekoErrorTracker.hasErrors()) {
+            source.sendFailure(NekoErrorUIHelper.getErrorComponent());
+        } else {
+            source.sendSuccess(() -> Component.literal(successMessage), true);
+        }
     }
 }

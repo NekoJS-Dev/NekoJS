@@ -99,11 +99,23 @@ public class EventGroup {
         }
     }
 
+    public void clearListeners(ScriptType type, String scriptId) {
+        for (var entry : buses.entrySet()) {
+            var registered = entry.getValue();
+
+            if (registered.canApplyOn(type)) {
+                clearBus(registered.bus, type, scriptId);
+            }
+        }
+    }
+
     /// using a separate method to avoid problematic generic check
     private static <E> void clearBus(EventBusJS<E, ?> bus, ScriptType type) {
-        for (var token : bus.tokens(type)) {
-            bus.bus().unregister(token);
-        }
+        bus.clearTokens(type);
+    }
+
+    private static <E> void clearBus(EventBusJS<E, ?> bus, ScriptType type, String scriptId) {
+        bus.clearTokens(type, scriptId);
     }
 
     public interface BusHolder extends WithScriptType {

@@ -59,9 +59,9 @@ public interface ItemStackExtension {
         return self().copy();
     }
 
-    default boolean neko$isEmpty() {
-        return self().isEmpty();
-    }
+//    default boolean neko$isEmpty() {
+//        return self().isEmpty();
+//    }
 
     default ItemStack neko$setCount(int count) {
         self().setCount(count);

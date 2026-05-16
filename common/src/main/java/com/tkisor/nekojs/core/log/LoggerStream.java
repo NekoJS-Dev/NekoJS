@@ -4,6 +4,10 @@ import org.slf4j.Logger;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 
 public class LoggerStream extends OutputStream {
@@ -30,7 +34,7 @@ public class LoggerStream extends OutputStream {
 
     public void flush() {
         if (buffer.size() > 0) {
-            String msg = buffer.toString(StandardCharsets.UTF_8);
+            String msg = decode(buffer.toByteArray());
 
             if (isErrorPipe) {
                 if (msg.startsWith(WARN_TAG)) {
@@ -47,6 +51,18 @@ public class LoggerStream extends OutputStream {
             }
 
             buffer.reset();
+        }
+    }
+
+    private static String decode(byte[] bytes) {
+        try {
+            return StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+        } catch (CharacterCodingException ignored) {
+            return new String(bytes, Charset.defaultCharset());
         }
     }
 }

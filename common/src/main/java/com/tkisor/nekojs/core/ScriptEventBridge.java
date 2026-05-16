@@ -17,4 +17,8 @@ public interface ScriptEventBridge {
     void bindEvents(Value bindings, ScriptType type);
 
     void clearListeners(ScriptType type);
+
+    default void clearListeners(ScriptType type, String scriptId) {
+        clearListeners(type);
+    }
 }

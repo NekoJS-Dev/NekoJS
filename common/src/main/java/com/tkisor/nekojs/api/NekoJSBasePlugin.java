@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api;
 
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
+import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.BindingsRegister;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -23,6 +24,11 @@ public interface NekoJSBasePlugin {
      * 注册脚本属性（如 priority, after, disable 等）
      */
     default void registerScriptProperty(ScriptPropertyRegistry registry) {}
+
+    /**
+     * 注册脚本语言编译器（如 ts/jsx/tsx 等）
+     */
+    default void registerScriptCompilers(ScriptCompilerRegistry registry) {}
 
     /**
      * 注册全局静态对象绑定

@@ -1,7 +1,9 @@
 package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.api.data.ScriptId;
@@ -31,9 +33,12 @@ public class NekoErrorTracker {
             "com.tkisor.nekojs.api.event.EventBus"
     ));
 
-    public static void record(ScriptContainer script, Throwable error) {
+    public static ScriptError record(ScriptContainer script, Throwable error) {
+        clear(script.id);
         clearByScriptPath(script.type, NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/'));
-        ERRORS.put(script.id, new ScriptError(script, error));
+        ScriptError scriptError = new ScriptError(script, error);
+        ERRORS.put(script.id, scriptError);
+        return scriptError;
     }
 
     public static void recordEventError(ScriptType currentType, PolyglotException e) {
@@ -67,7 +72,7 @@ public class NekoErrorTracker {
 
         ScriptError scriptError = ERRORS.get(runtimeId);
 
-        String detail = scriptError.getFullDetailText();
+        String detail = scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs);
         String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
         if (currentType != null) {
             currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
@@ -154,15 +159,38 @@ public class NekoErrorTracker {
         return sb.toString();
     }
 
-    private static String extractRelativePath(Source source) {
+    public static String extractRelativePath(Source source) {
         if (source.getPath() != null) {
+            String pathText = source.getPath();
+            String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(pathText);
+            if (virtualDisplayPath != null) {
+                return virtualDisplayPath;
+            }
             try {
-                return NekoJSPaths.ROOT.relativize(Path.of(source.getPath())).toString().replace('\\', '/');
+                Path path = Path.of(pathText);
+                virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+                if (virtualDisplayPath != null) {
+                    return virtualDisplayPath;
+                }
+                return NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/');
             } catch (Exception ex) {
-                return source.getPath().replace('\\', '/');
+                return pathText.replace('\\', '/');
             }
         } else if (source.getURI() != null) {
-            return source.getURI().toString().replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
+            String uriText = source.getURI().toString();
+            try {
+                Path path = Path.of(source.getURI());
+                String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+                if (virtualDisplayPath != null) {
+                    return virtualDisplayPath;
+                }
+            } catch (Exception ignored) {
+            }
+            String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(uriText);
+            if (virtualDisplayPath != null) {
+                return virtualDisplayPath;
+            }
+            return uriText.replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
         } else {
             return source.getName();
         }
@@ -179,6 +207,7 @@ public class NekoErrorTracker {
     }
 
     public static void clear(ScriptId scriptId) { ERRORS.remove(scriptId); }
+    public static ScriptError get(ScriptId scriptId) { return ERRORS.get(scriptId); }
     public static void clearByScriptPath(ScriptType type, String relativePath) {
         if (type == null || relativePath == null) return;
         ERRORS.entrySet().removeIf(entry -> {

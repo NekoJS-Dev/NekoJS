@@ -19,6 +19,6 @@ public final class NeoForgeRuntimeBootstrap {
         NekoIdCompat.init(new NeoForgeIdCompat());
         NekoScriptCatalog.setPlatformProvider(new NeoForgeCatalogPlatformProvider());
         EventBusJS.setExternalCancellabilityPredicate(ICancellableEvent.class::isAssignableFrom);
-        NekoJSScriptManager.setEventBridge(new NeoForgeScriptEventBridge());
+        NekoJSScriptManager.setEventBridge(new DefaultScriptEventBridge());
     }
 }
