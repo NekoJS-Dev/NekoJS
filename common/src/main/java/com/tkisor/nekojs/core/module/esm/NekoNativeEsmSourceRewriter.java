@@ -75,7 +75,7 @@ public final class NekoNativeEsmSourceRewriter {
                 if (specifier == null) {
                     continue;
                 }
-                NekoEsmSpan literalSpan = moduleSpecifierLiteralSpan(statement, specifier);
+                NekoEsmSpan literalSpan = specifierLiteralSpan(statement);
                 replacements.add(new Replacement(literalSpan.start(), literalSpan.end(), jsString(rewrittenSpecifier(statement, specifier))));
             }
             for (NekoEsmRuntimeExpression expression : ast.runtimeExpressions()) {
@@ -136,23 +136,14 @@ public final class NekoNativeEsmSourceRewriter {
             return null;
         }
 
-        private NekoEsmSpan moduleSpecifierLiteralSpan(NekoEsmStatement statement, String specifier) {
-            NekoEsmSpan span = statement.span();
-            String raw = code.substring(span.start(), span.end());
-            int single = raw.lastIndexOf("'" + specifier + "'");
-            int doubleQuote = raw.lastIndexOf("\"" + specifier + "\"");
-            int start;
-            int end;
-            if (single >= 0 && single > doubleQuote) {
-                start = span.start() + single;
-                end = start + specifier.length() + 2;
-            } else if (doubleQuote >= 0) {
-                start = span.start() + doubleQuote;
-                end = start + specifier.length() + 2;
-            } else {
-                throw new IllegalArgumentException("Failed to locate ESM module specifier " + specifier + " in " + file + ": " + oneLine(raw));
+        private NekoEsmSpan specifierLiteralSpan(NekoEsmStatement statement) {
+            if (statement instanceof NekoEsmImportDecl importDecl && importDecl.specifierSpan() != null) {
+                return importDecl.specifierSpan();
             }
-            return new NekoEsmSpan(start, end);
+            if (statement instanceof NekoEsmExportDecl exportDecl && exportDecl.specifierSpan() != null) {
+                return exportDecl.specifierSpan();
+            }
+            throw new IllegalArgumentException("Missing ESM module specifier span in " + file + ": " + oneLine(code.substring(statement.span().start(), statement.span().end())));
         }
 
         private java.net.URI syntheticObjectModule(NekoEsmStatement statement, String specifier) {
@@ -178,7 +169,7 @@ public final class NekoNativeEsmSourceRewriter {
                     + "export default __neko_exports;\n"
                     + "export const namespace = __neko_exports;\n");
             for (String name : requestedExportNames(statement)) {
-                if (isIdentifier(name)) {
+                if (isIdentifier(name) && !"default".equals(name) && !"namespace".equals(name)) {
                     source.append("export const ").append(name).append(" = __neko_exports[").append(jsString(name)).append("];\n");
                 }
             }

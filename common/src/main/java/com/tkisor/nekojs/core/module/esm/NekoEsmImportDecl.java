@@ -6,6 +6,7 @@ public record NekoEsmImportDecl(
         NekoEsmSpan span,
         String raw,
         String specifier,
+        NekoEsmSpan specifierSpan,
         String defaultName,
         String namespaceName,
         List<NekoEsmBinding> namedBindings,

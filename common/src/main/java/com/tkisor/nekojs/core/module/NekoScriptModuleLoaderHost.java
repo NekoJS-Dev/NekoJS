@@ -40,6 +40,13 @@ public final class NekoScriptModuleLoaderHost {
         this.jsonParser = jsonParser;
     }
 
+    public void captureEsmNamespace(String moduleId, Value namespace) {
+        NekoEsmModuleRecord record = esmModuleCache.get(moduleId);
+        if (record != null) {
+            record.namespace(namespace);
+        }
+    }
+
     public Object loadEntry(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
         dependencyGraph.markEntry(resolved.id(), resolved.id());
@@ -188,12 +195,10 @@ public final class NekoScriptModuleLoaderHost {
             var sourceUri = esmRewriter.registerModule(resolved.path(), resolved.id(), prepared);
             record.state(NekoEsmModuleState.LINKED);
             record.state(NekoEsmModuleState.EVALUATING);
-            Value module = context.eval(Source.newBuilder("js", NekoEsmVirtualModuleRegistry.source(java.nio.file.Path.of(sourceUri)), sourceUri.toString())
-                    .mimeType("application/javascript+module")
-                    .build());
-            record.namespace(module);
+            Value namespace = captureNamespace(resolved.id(), sourceUri);
+            record.namespace(namespace);
             record.state(NekoEsmModuleState.EVALUATED);
-            return module;
+            return namespace;
         } catch (IOException | RuntimeException | Error e) {
             record.failure(e);
             esmModuleCache.remove(resolved.id());
@@ -203,6 +208,20 @@ public final class NekoScriptModuleLoaderHost {
             esmModuleCache.remove(resolved.id());
             throw new IOException("Failed to evaluate native ESM module: " + resolved.id(), throwable);
         }
+    }
+
+    private Value captureNamespace(String moduleId, java.net.URI sourceUri) throws IOException {
+        String source = "import * as __neko_namespace from " + jsString(sourceUri.toString()) + ";\n"
+                + "globalThis.__nekoScriptModuleLoaderHost.captureEsmNamespace(" + jsString(moduleId) + ", __neko_namespace);\n";
+        java.net.URI captureUri = NekoEsmVirtualModuleRegistry.register(moduleId + "#namespace-capture:" + sourceUri, source);
+        context.eval(Source.newBuilder("js", source, captureUri.toString())
+                .mimeType("application/javascript+module")
+                .build());
+        NekoEsmModuleRecord record = esmModuleCache.get(moduleId);
+        if (record == null || record.namespace() == null) {
+            throw new IOException("Failed to capture native ESM namespace: " + moduleId);
+        }
+        return record.namespace();
     }
 
     private NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException {
@@ -249,6 +268,10 @@ public final class NekoScriptModuleLoaderHost {
             throw new IOException("JSON parser is unavailable for NekoJS script loader.");
         }
         return jsonParser.execute(rawJson);
+    }
+
+    private static String jsString(String value) {
+        return "'" + value.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r") + "'";
     }
 
     private record ModuleState(String filename, Value value) {

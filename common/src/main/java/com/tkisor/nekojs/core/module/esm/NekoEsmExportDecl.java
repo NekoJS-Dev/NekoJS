@@ -7,6 +7,7 @@ public record NekoEsmExportDecl(
         String raw,
         NekoEsmExportKind kind,
         String specifier,
+        NekoEsmSpan specifierSpan,
         String declarationKind,
         String localName,
         String namespaceName,

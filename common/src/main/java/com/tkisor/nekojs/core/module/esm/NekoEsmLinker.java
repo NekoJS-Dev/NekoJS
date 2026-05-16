@@ -27,11 +27,55 @@ public final class NekoEsmLinker {
             return new NekoEsmLinkMetadata(List.of(), Set.of(), Set.of(), List.of());
         }
 
+        validateDuplicateLocalBindings(path, prepared.code(), ast);
         validateLocalExports(path, prepared.code(), ast);
         validateDuplicateExports(path, prepared.code(), ast);
         List<NekoEsmResolvedDependency> dependencies = resolveDependencies(moduleId, ast);
         validateDependencyExports(path, prepared.code(), dependencies);
         return new NekoEsmLinkMetadata(dependencies, localExports(ast), indirectExports(ast), starExports(ast));
+    }
+
+    private void validateDuplicateLocalBindings(Path path, String source, NekoEsmModuleAst ast) throws NekoEsmLinkException {
+        Map<Integer, NekoEsmScope> scopes = scopesById(ast);
+        Map<Integer, Map<String, NekoEsmLocalBinding>> lexicalScopes = new LinkedHashMap<>();
+        for (NekoEsmLocalBinding binding : ast.localBindings()) {
+            if (binding == null || !duplicateChecked(binding)) {
+                continue;
+            }
+            int scopeId = normalizedDuplicateScopeId(binding, scopes);
+            Map<String, NekoEsmLocalBinding> seen = lexicalScopes.computeIfAbsent(scopeId, ignored -> new LinkedHashMap<>());
+            NekoEsmLocalBinding previous = seen.putIfAbsent(binding.name(), binding);
+            if (previous != null) {
+                throw diagnostic(path, source, binding.span(), "Duplicate local ESM binding '" + binding.name() + "'");
+            }
+        }
+    }
+
+    private int normalizedDuplicateScopeId(NekoEsmLocalBinding binding, Map<Integer, NekoEsmScope> scopes) {
+        if ("var".equals(binding.kind())) {
+            int scopeId = binding.scopeId();
+            while (true) {
+                NekoEsmScope scope = scopes.get(scopeId);
+                if (scope == null || scope.kind() == NekoEsmScopeKind.MODULE || scope.kind() == NekoEsmScopeKind.FUNCTION) {
+                    return scopeId;
+                }
+                scopeId = scope.parentId();
+            }
+        }
+        return binding.scopeId();
+    }
+
+    private Map<Integer, NekoEsmScope> scopesById(NekoEsmModuleAst ast) {
+        Map<Integer, NekoEsmScope> scopes = new LinkedHashMap<>();
+        for (NekoEsmScope scope : ast.scopes()) {
+            scopes.put(scope.id(), scope);
+        }
+        return scopes;
+    }
+
+    private boolean duplicateChecked(NekoEsmLocalBinding binding) {
+        String kind = binding.kind();
+        return "import".equals(kind) || "const".equals(kind) || "let".equals(kind) || "var".equals(kind) || "class".equals(kind) || kind != null && kind.contains("function");
     }
 
     private void validateLocalExports(Path path, String source, NekoEsmModuleAst ast) throws NekoEsmLinkException {
@@ -40,8 +84,8 @@ public final class NekoEsmLinker {
                 continue;
             }
             for (NekoEsmBinding binding : exportDecl.bindings()) {
-                if (!ast.hasLocalBinding(binding.local())) {
-                    throw diagnostic(path, source, exportDecl.span(), "Missing local ESM binding '" + binding.local() + "'");
+                if (!ast.hasLocalBinding(binding.imported())) {
+                    throw diagnostic(path, source, bindingSpan(source, exportDecl.span(), binding.imported()), "Missing local ESM binding '" + binding.imported() + "'");
                 }
             }
         }
@@ -51,9 +95,10 @@ public final class NekoEsmLinker {
         Map<String, NekoEsmSpan> seen = new LinkedHashMap<>();
         for (NekoEsmExportDecl exportDecl : ast.exports()) {
             for (String exportName : explicitExportNames(exportDecl)) {
-                NekoEsmSpan previous = seen.putIfAbsent(exportName, exportDecl.span());
+                NekoEsmSpan span = bindingSpan(source, exportDecl.span(), exportName);
+                NekoEsmSpan previous = seen.putIfAbsent(exportName, span);
                 if (previous != null) {
-                    throw diagnostic(path, source, exportDecl.span(), "Duplicate ESM export '" + exportName + "'");
+                    throw diagnostic(path, source, span, "Duplicate ESM export '" + exportName + "'");
                 }
             }
         }
@@ -63,7 +108,7 @@ public final class NekoEsmLinker {
         Set<String> names = new LinkedHashSet<>();
         switch (exportDecl.kind()) {
             case DEFAULT_EXPRESSION, DEFAULT_NAMED_DECLARATION, DEFAULT_ANONYMOUS_DECLARATION -> names.add("default");
-            case DECLARATION -> names.add(exportDecl.localName());
+            case DECLARATION -> addDeclarationExportNames(names, exportDecl);
             case LIST, RE_EXPORT_LIST -> {
                 for (NekoEsmBinding binding : exportDecl.bindings()) {
                     names.add(binding.local());
@@ -75,6 +120,16 @@ public final class NekoEsmLinker {
         }
         names.remove(null);
         return names;
+    }
+
+    private void addDeclarationExportNames(Set<String> names, NekoEsmExportDecl exportDecl) {
+        if (!exportDecl.bindings().isEmpty()) {
+            for (NekoEsmBinding binding : exportDecl.bindings()) {
+                names.add(binding.local());
+            }
+            return;
+        }
+        names.add(exportDecl.localName());
     }
 
     private List<NekoEsmResolvedDependency> resolveDependencies(String moduleId, NekoEsmModuleAst ast) throws IOException {
@@ -117,6 +172,9 @@ public final class NekoEsmLinker {
     }
 
     private void requireExport(Path path, String source, NekoEsmSpan span, ExportShape exports, String exportName) throws NekoEsmLinkException {
+        if (exports.ambiguous(exportName)) {
+            throw diagnostic(path, source, span, "Ambiguous ESM star export '" + exportName + "'");
+        }
         if (!exports.has(exportName)) {
             throw diagnostic(path, source, span, "Missing ESM export '" + exportName + "'");
         }
@@ -144,20 +202,29 @@ public final class NekoEsmLinker {
     }
 
     private ExportShape exportShape(String moduleId, NekoEsmModuleAst ast, Set<String> visiting) throws IOException {
-        Set<String> exports = new LinkedHashSet<>(localExports(ast));
-        exports.addAll(indirectExports(ast));
+        Set<String> explicitExports = new LinkedHashSet<>(localExports(ast));
+        explicitExports.addAll(indirectExports(ast));
+        Set<String> exports = new LinkedHashSet<>(explicitExports);
+        Set<String> ambiguous = new LinkedHashSet<>();
+        Set<String> starProvided = new LinkedHashSet<>();
         for (NekoEsmExportDecl exportDecl : starExports(ast)) {
             ExportShape dependencyExports = exportShape(resolver.resolve(moduleId, exportDecl.specifier()), visiting);
             if (dependencyExports.unknown()) {
                 return ExportShape.unresolved();
             }
             for (String name : dependencyExports.names()) {
-                if (!"default".equals(name)) {
+                if ("default".equals(name) || explicitExports.contains(name)) {
+                    continue;
+                }
+                if (!starProvided.add(name)) {
+                    ambiguous.add(name);
+                    exports.remove(name);
+                } else if (!ambiguous.contains(name)) {
                     exports.add(name);
                 }
             }
         }
-        return ExportShape.of(exports);
+        return ExportShape.of(exports, ambiguous);
     }
 
     private NekoPreparedModule prepare(Path path) throws IOException {
@@ -169,7 +236,7 @@ public final class NekoEsmLinker {
         for (NekoEsmExportDecl exportDecl : ast.exports()) {
             switch (exportDecl.kind()) {
                 case DEFAULT_EXPRESSION, DEFAULT_NAMED_DECLARATION, DEFAULT_ANONYMOUS_DECLARATION -> exports.add("default");
-                case DECLARATION -> exports.add(exportDecl.localName());
+                case DECLARATION -> addDeclarationExportNames(exports, exportDecl);
                 case LIST -> {
                     for (NekoEsmBinding binding : exportDecl.bindings()) {
                         exports.add(binding.local());
@@ -216,21 +283,50 @@ public final class NekoEsmLinker {
         return null;
     }
 
+    private NekoEsmSpan bindingSpan(String source, NekoEsmSpan fallback, String name) {
+        if (source == null || fallback == null || name == null || name.isBlank()) {
+            return fallback;
+        }
+        int start = Math.max(0, fallback.start());
+        int end = Math.min(source.length(), fallback.end());
+        int index = source.indexOf(name, start);
+        while (index >= 0 && index < end) {
+            int after = index + name.length();
+            if ((index == 0 || !isIdentifierPart(source.charAt(index - 1))) && (after >= source.length() || !isIdentifierPart(source.charAt(after)))) {
+                return new NekoEsmSpan(index, after);
+            }
+            index = source.indexOf(name, after);
+        }
+        return fallback;
+    }
+
+    private boolean isIdentifierPart(char c) {
+        return c == '_' || c == '$' || Character.isLetterOrDigit(c);
+    }
+
     private NekoEsmLinkException diagnostic(Path path, String source, NekoEsmSpan span, String message) {
         return new NekoEsmLinkException(NekoEsmDiagnostic.fromSource(path, source, span, message));
     }
 
-    private record ExportShape(Set<String> names, boolean unknown) {
+    private record ExportShape(Set<String> names, Set<String> ambiguous, boolean unknown) {
         private static ExportShape of(Set<String> names) {
-            return new ExportShape(names == null ? Set.of() : Set.copyOf(names), false);
+            return of(names, Set.of());
+        }
+
+        private static ExportShape of(Set<String> names, Set<String> ambiguous) {
+            return new ExportShape(names == null ? Set.of() : Set.copyOf(names), ambiguous == null ? Set.of() : Set.copyOf(ambiguous), false);
         }
 
         private static ExportShape unresolved() {
-            return new ExportShape(Set.of(), true);
+            return new ExportShape(Set.of(), Set.of(), true);
         }
 
         private boolean has(String name) {
             return unknown || names.contains(name);
+        }
+
+        private boolean ambiguous(String name) {
+            return !unknown && ambiguous.contains(name);
         }
     }
 }

@@ -10,12 +10,14 @@ public record NekoEsmModuleAst(
         boolean topLevelAwait,
         List<NekoEsmStatement> statements,
         List<NekoEsmRuntimeExpression> runtimeExpressions,
-        List<NekoEsmLocalBinding> localBindings
+        List<NekoEsmLocalBinding> localBindings,
+        List<NekoEsmScope> scopes
 ) {
     public NekoEsmModuleAst {
         statements = statements == null ? List.of() : List.copyOf(statements);
         runtimeExpressions = runtimeExpressions == null ? List.of() : List.copyOf(runtimeExpressions);
         localBindings = localBindings == null ? List.of() : List.copyOf(localBindings);
+        scopes = scopes == null ? List.of() : List.copyOf(scopes);
     }
 
     public List<NekoEsmImportDecl> imports() {
@@ -41,7 +43,7 @@ public record NekoEsmModuleAst(
     public boolean hasLocalBinding(String name) {
         if (name == null || name.isBlank()) return false;
         for (NekoEsmLocalBinding binding : localBindings) {
-            if (name.equals(binding.name())) {
+            if (binding.scopeId() == 0 && name.equals(binding.name())) {
                 return true;
             }
         }
