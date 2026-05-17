@@ -4,5 +4,10 @@ public record NekoEsmScope(
         int id,
         int parentId,
         NekoEsmScopeKind kind,
-        NekoEsmSpan span
-) {}
+        NekoEsmSpan span,
+        boolean classBody
+) {
+    public NekoEsmScope(int id, int parentId, NekoEsmScopeKind kind, NekoEsmSpan span) {
+        this(id, parentId, kind, span, false);
+    }
+}

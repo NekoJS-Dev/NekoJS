@@ -16,9 +16,10 @@ public final class NekoNodeModuleInstaller {
     private NekoNodeModuleInstaller() {}
 
     public static NekoNodeRuntime install(Context context, ScriptType scriptType) {
-        NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType);
+        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context);
+        NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
-        context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", new NekoScriptModuleLoaderHost(context));
+        context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
         loadManifest(context);
         return runtime;
     }

@@ -26,8 +26,11 @@ public final class NekoModulePipeline {
     }
 
     private static ScriptCompileResult compileLanguage(Path file, String rawSource, String extension) throws Exception {
-        IScriptCompiler compiler = ScriptCompilerRegistry.getCompiler(extension);
+        IScriptCompiler compiler = ScriptCompilerRegistry.current().getCompiler(extension);
         if (compiler == null) {
+            if (!ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
+                throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
+            }
             return ScriptCompileResult.codeOnly(rawSource);
         }
         return compiler.compileDetailed(file, rawSource);
@@ -41,9 +44,6 @@ public final class NekoModulePipeline {
         NekoEsmModuleAst ast = parseEsm(file, code);
         if (requestedMode == NekoModuleMode.AUTO && !ast.module()) {
             return NekoPreparedModule.commonJs(code, sourceMap);
-        }
-        if (ast.topLevelAwait()) {
-            throw new IllegalArgumentException("Top-level await is not supported in NekoJS native ESM yet: " + file + ". Put async logic inside an event callback or timer until async module evaluation is implemented.");
         }
         return NekoPreparedModule.esm(code, sourceMap, ast);
     }

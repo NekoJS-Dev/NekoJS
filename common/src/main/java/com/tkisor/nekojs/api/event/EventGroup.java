@@ -77,6 +77,7 @@ public class EventGroup {
             throw new IllegalArgumentException(String.format("A bus with name '%s' has already been registered", name));
         }
 
+        bus.scriptType(scriptType);
         this.buses.put(name, new RegisteredBus(bus, scriptType));
         return bus;
     }

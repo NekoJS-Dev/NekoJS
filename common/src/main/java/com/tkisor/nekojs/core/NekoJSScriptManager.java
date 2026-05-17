@@ -26,6 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * NekoJS 脚本引擎核心生命周期调度器
@@ -39,13 +43,18 @@ public final class NekoJSScriptManager {
 
     private final ScriptTypedValue<List<ScriptContainer>> scripts = ScriptTypedValue.of(type -> new ArrayList<>());
 
-    private final ScriptPropertyRegistry scriptPropertyRegistry = new ScriptPropertyRegistry.Impl();
+    private final ScriptPropertyRegistry scriptPropertyRegistry;
 
     private static final Map<Context, ScriptType> CONTEXT_TYPE_MAP = Collections.synchronizedMap(new WeakHashMap<>());
 
     private static final Map<Context, String> CONTEXT_SCRIPT_ID_MAP = Collections.synchronizedMap(new WeakHashMap<>());
 
     public NekoJSScriptManager() {
+        this(new ScriptPropertyRegistry.Impl());
+    }
+
+    public NekoJSScriptManager(ScriptPropertyRegistry scriptPropertyRegistry) {
+        this.scriptPropertyRegistry = scriptPropertyRegistry == null ? new ScriptPropertyRegistry.Impl() : scriptPropertyRegistry;
     }
 
     public static void setEventBridge(ScriptEventBridge bridge) {
@@ -54,12 +63,6 @@ public final class NekoJSScriptManager {
 
     public static void setJavaClassLoadTelemetrySink(JavaClassLoadTelemetrySink sink) {
         JavaClassLoadTelemetry.setSink(sink);
-    }
-
-    public void registerScriptProperty() {
-        for (var plugin : NekoJSBasePluginManager.getPlugins()) {
-            plugin.registerScriptProperty(scriptPropertyRegistry);
-        }
     }
 
     /**
@@ -166,28 +169,72 @@ public final class NekoJSScriptManager {
 
     private void runScript(Context ctx, ScriptContainer script) {
         try {
-            Path relativePath = NekoJSPaths.ROOT.relativize(script.path);
-            String requirePath = "./" + relativePath.toString().replace("\\", "/");
+            synchronized (ctx) {
+                Path relativePath = NekoJSPaths.ROOT.relativize(script.path);
+                String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
-            JavaClassLoadTelemetry.enter(script.type, script.id.toString());
-            setCurrentScriptId(ctx, script.id.toString());
-            ctx.eval("js", "globalThis.__nekoScriptLoader.loadEntry").execute(requirePath);
+                JavaClassLoadTelemetry.enter(script.type, script.id.toString());
+                setCurrentScriptId(ctx, script.id.toString());
+                try {
+                    waitForEntryModule(ctx, script, requirePath);
+                } finally {
+                    setCurrentScriptId(ctx, null);
+                    JavaClassLoadTelemetry.exit();
+                }
 
-            NekoErrorTracker.clear(script.id);
-            NekoErrorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
-            script.disabled = false;
-            script.lastError = null;
-
+                NekoErrorTracker.clear(script.id);
+                NekoErrorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
+                script.disabled = false;
+                script.lastError = null;
+            }
         } catch (Throwable t) {
             script.disabled = true;
             script.lastError = t;
 
             ScriptError scriptError = NekoErrorTracker.record(script, t);
             script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs));
-        } finally {
-            setCurrentScriptId(ctx, null);
-            JavaClassLoadTelemetry.exit();
         }
+    }
+
+    private void waitForEntryModule(Context ctx, ScriptContainer script, String requirePath) throws Exception {
+        NekoNodeRuntime runtime = nodeRuntimes.at(script.type);
+        if (runtime == null || runtime.moduleLoaderHost() == null) {
+            ctx.eval("js", "globalThis.__nekoScriptLoader.loadEntry").execute(requirePath);
+            return;
+        }
+        CompletableFuture<?> evaluation = runtime.moduleLoaderHost().loadEntryAsync(requirePath);
+        waitForEvaluation(evaluation, runtime);
+    }
+
+    private void waitForEvaluation(CompletableFuture<?> evaluation, NekoNodeRuntime runtime) throws Exception {
+        while (!evaluation.isDone()) {
+            runtime.flushReadyTimers();
+            try {
+                evaluation.get(1L, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException ignored) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (ExecutionException e) {
+                throw unwrapExecutionException(e);
+            }
+        }
+        try {
+            evaluation.get();
+        } catch (ExecutionException e) {
+            throw unwrapExecutionException(e);
+        }
+    }
+
+    private Exception unwrapExecutionException(ExecutionException e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof Exception exception) {
+            return exception;
+        }
+        if (cause instanceof Error error) {
+            throw error;
+        }
+        return new RuntimeException(cause);
     }
 
     /**
@@ -216,7 +263,9 @@ public final class NekoJSScriptManager {
         NekoModulePreparationCache.invalidate(target);
         Context ctx = contexts.at(type);
         String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
-        ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
+        synchronized (ctx) {
+            ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
+        }
 
         for (ScriptContainer script : targets) {
             reloadEntryScript(type, ctx, script);
@@ -243,11 +292,13 @@ public final class NekoJSScriptManager {
         }
         Context ctx = contexts.at(type);
         String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
-        Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
         List<String> affectedIds = new ArrayList<>();
-        if (affected.hasArrayElements()) {
-            for (long i = 0; i < affected.getArraySize(); i++) {
-                affectedIds.add(affected.getArrayElement(i).asString());
+        synchronized (ctx) {
+            Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
+            if (affected.hasArrayElements()) {
+                for (long i = 0; i < affected.getArraySize(); i++) {
+                    affectedIds.add(affected.getArrayElement(i).asString());
+                }
             }
         }
         return scripts.at(type).stream()
@@ -314,9 +365,12 @@ public final class NekoJSScriptManager {
 
     private void flushTestTimers() {
         NekoNodeRuntime runtime = nodeRuntimes.at(ScriptType.TEST);
-        if (runtime == null) return;
+        Context context = contexts.at(ScriptType.TEST);
+        if (runtime == null || context == null) return;
         for (int i = 0; i < 20 && runtime.hasPendingTimers(); i++) {
-            runtime.flushReadyTimers();
+            synchronized (context) {
+                runtime.flushReadyTimers();
+            }
             try {
                 Thread.sleep(1L);
             } catch (InterruptedException e) {
@@ -324,7 +378,9 @@ public final class NekoJSScriptManager {
                 return;
             }
         }
-        runtime.flushReadyTimers();
+        synchronized (context) {
+            runtime.flushReadyTimers();
+        }
     }
 
     private void resetEnvironment(ScriptType type) {
@@ -358,8 +414,11 @@ public final class NekoJSScriptManager {
 
     public void flushReadyNodeTimers(ScriptType type) {
         NekoNodeRuntime runtime = nodeRuntimes.at(type);
-        if (runtime != null) {
-            runtime.flushReadyTimers();
+        Context context = contexts.at(type);
+        if (runtime != null && context != null) {
+            synchronized (context) {
+                runtime.flushReadyTimers();
+            }
         }
     }
 

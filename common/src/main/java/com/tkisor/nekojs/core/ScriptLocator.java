@@ -60,7 +60,7 @@ public final class ScriptLocator {
         try (Stream<Path> stream = Files.walk(dir)) {
             stream.filter(Files::isRegularFile)
                     .filter(p -> !p.toString().contains("node_modules"))
-                    .filter(ScriptCompilerRegistry::isSupportedScriptFile)
+                    .filter(ScriptCompilerRegistry.current()::isSupportedScriptFile)
                     .sorted()
                     .forEach(files::add);
         } catch (Exception e) {

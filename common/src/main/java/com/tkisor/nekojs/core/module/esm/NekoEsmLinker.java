@@ -24,7 +24,7 @@ public final class NekoEsmLinker {
     public NekoEsmLinkMetadata link(String moduleId, Path path, NekoPreparedModule prepared) throws IOException {
         NekoEsmModuleAst ast = prepared.esmAst();
         if (ast == null) {
-            return new NekoEsmLinkMetadata(List.of(), Set.of(), Set.of(), List.of());
+            return new NekoEsmLinkMetadata(List.of(), Set.of(), Set.of(), List.of(), NekoEsmExportShape.unresolved());
         }
 
         validateDuplicateLocalBindings(path, prepared.code(), ast);
@@ -32,7 +32,7 @@ public final class NekoEsmLinker {
         validateDuplicateExports(path, prepared.code(), ast);
         List<NekoEsmResolvedDependency> dependencies = resolveDependencies(moduleId, ast);
         validateDependencyExports(path, prepared.code(), dependencies);
-        return new NekoEsmLinkMetadata(dependencies, localExports(ast), indirectExports(ast), starExports(ast));
+        return new NekoEsmLinkMetadata(dependencies, localExports(ast), indirectExports(ast), starExports(ast), exportShape(moduleId, ast, new LinkedHashSet<>()));
     }
 
     private void validateDuplicateLocalBindings(Path path, String source, NekoEsmModuleAst ast) throws NekoEsmLinkException {
@@ -42,7 +42,7 @@ public final class NekoEsmLinker {
             if (binding == null || !duplicateChecked(binding)) {
                 continue;
             }
-            int scopeId = normalizedDuplicateScopeId(binding, scopes);
+            int scopeId = normalizedDuplicateScopeId(source, binding, scopes);
             Map<String, NekoEsmLocalBinding> seen = lexicalScopes.computeIfAbsent(scopeId, ignored -> new LinkedHashMap<>());
             NekoEsmLocalBinding previous = seen.putIfAbsent(binding.name(), binding);
             if (previous != null) {
@@ -51,18 +51,34 @@ public final class NekoEsmLinker {
         }
     }
 
-    private int normalizedDuplicateScopeId(NekoEsmLocalBinding binding, Map<Integer, NekoEsmScope> scopes) {
+    private int normalizedDuplicateScopeId(String source, NekoEsmLocalBinding binding, Map<Integer, NekoEsmScope> scopes) {
         if ("var".equals(binding.kind())) {
             int scopeId = binding.scopeId();
             while (true) {
                 NekoEsmScope scope = scopes.get(scopeId);
-                if (scope == null || scope.kind() == NekoEsmScopeKind.MODULE || scope.kind() == NekoEsmScopeKind.FUNCTION) {
+                if (scope == null || scope.kind() == NekoEsmScopeKind.MODULE || scope.kind() == NekoEsmScopeKind.FUNCTION || staticBlockScope(source, scope)) {
                     return scopeId;
                 }
                 scopeId = scope.parentId();
             }
         }
         return binding.scopeId();
+    }
+
+    private boolean staticBlockScope(String source, NekoEsmScope scope) {
+        if (source == null || scope.kind() != NekoEsmScopeKind.BLOCK) {
+            return false;
+        }
+        int previous = previousNonWhitespace(source, scope.span().start() - 1);
+        int end = previous + 1;
+        while (previous >= 0 && isIdentifierPart(source.charAt(previous))) previous--;
+        return "static".equals(source.substring(previous + 1, end));
+    }
+
+    private int previousNonWhitespace(String source, int index) {
+        int i = index;
+        while (i >= 0 && Character.isWhitespace(source.charAt(i))) i--;
+        return i;
     }
 
     private Map<Integer, NekoEsmScope> scopesById(NekoEsmModuleAst ast) {
@@ -143,7 +159,7 @@ public final class NekoEsmLinker {
 
     private void validateDependencyExports(Path path, String source, List<NekoEsmResolvedDependency> dependencies) throws IOException {
         for (NekoEsmResolvedDependency dependency : dependencies) {
-            ExportShape exports = exportShape(dependency.resolved(), new LinkedHashSet<>());
+            NekoEsmExportShape exports = exportShape(dependency.resolved(), new LinkedHashSet<>());
             NekoEsmStatement statement = dependency.statement();
             if (statement instanceof NekoEsmImportDecl importDecl) {
                 validateImport(path, source, importDecl, exports);
@@ -153,25 +169,25 @@ public final class NekoEsmLinker {
         }
     }
 
-    private void validateImport(Path path, String source, NekoEsmImportDecl importDecl, ExportShape exports) throws NekoEsmLinkException {
+    private void validateImport(Path path, String source, NekoEsmImportDecl importDecl, NekoEsmExportShape exports) throws NekoEsmLinkException {
         if (importDecl.defaultName() != null) {
-            requireExport(path, source, importDecl.span(), exports, "default");
+            requireExport(path, source, bindingSpan(source, importDecl.span(), importDecl.defaultName()), exports, "default");
         }
         for (NekoEsmBinding binding : importDecl.namedBindings()) {
-            requireExport(path, source, importDecl.span(), exports, binding.imported());
+            requireExport(path, source, bindingSpan(source, importDecl.span(), binding.imported()), exports, binding.imported());
         }
     }
 
-    private void validateReExport(Path path, String source, NekoEsmExportDecl exportDecl, ExportShape exports) throws NekoEsmLinkException {
+    private void validateReExport(Path path, String source, NekoEsmExportDecl exportDecl, NekoEsmExportShape exports) throws NekoEsmLinkException {
         if (exportDecl.kind() != NekoEsmExportKind.RE_EXPORT_LIST) {
             return;
         }
         for (NekoEsmBinding binding : exportDecl.bindings()) {
-            requireExport(path, source, exportDecl.span(), exports, binding.imported());
+            requireExport(path, source, bindingSpan(source, exportDecl.span(), binding.imported()), exports, binding.imported());
         }
     }
 
-    private void requireExport(Path path, String source, NekoEsmSpan span, ExportShape exports, String exportName) throws NekoEsmLinkException {
+    private void requireExport(Path path, String source, NekoEsmSpan span, NekoEsmExportShape exports, String exportName) throws NekoEsmLinkException {
         if (exports.ambiguous(exportName)) {
             throw diagnostic(path, source, span, "Ambiguous ESM star export '" + exportName + "'");
         }
@@ -180,20 +196,20 @@ public final class NekoEsmLinker {
         }
     }
 
-    private ExportShape exportShape(NekoResolvedModule resolved, Set<String> visiting) throws IOException {
+    private NekoEsmExportShape exportShape(NekoResolvedModule resolved, Set<String> visiting) throws IOException {
         if (resolved.special()) {
-            return ExportShape.unresolved();
+            return NekoEsmExportShape.unresolved();
         }
         if (resolved.json()) {
-            return ExportShape.of(Set.of("default"));
+            return NekoEsmExportShape.of(Set.of("default"));
         }
         if (!visiting.add(resolved.id())) {
-            return ExportShape.unresolved();
+            return NekoEsmExportShape.unresolved();
         }
         try {
             NekoPreparedModule prepared = prepare(resolved.path());
             if (prepared.mode() != NekoModuleMode.ESM || prepared.esmAst() == null) {
-                return ExportShape.unresolved();
+                return NekoEsmExportShape.unresolved();
             }
             return exportShape(resolved.id(), prepared.esmAst(), visiting);
         } finally {
@@ -201,16 +217,16 @@ public final class NekoEsmLinker {
         }
     }
 
-    private ExportShape exportShape(String moduleId, NekoEsmModuleAst ast, Set<String> visiting) throws IOException {
+    private NekoEsmExportShape exportShape(String moduleId, NekoEsmModuleAst ast, Set<String> visiting) throws IOException {
         Set<String> explicitExports = new LinkedHashSet<>(localExports(ast));
         explicitExports.addAll(indirectExports(ast));
         Set<String> exports = new LinkedHashSet<>(explicitExports);
         Set<String> ambiguous = new LinkedHashSet<>();
         Set<String> starProvided = new LinkedHashSet<>();
         for (NekoEsmExportDecl exportDecl : starExports(ast)) {
-            ExportShape dependencyExports = exportShape(resolver.resolve(moduleId, exportDecl.specifier()), visiting);
+            NekoEsmExportShape dependencyExports = exportShape(resolver.resolve(moduleId, exportDecl.specifier()), visiting);
             if (dependencyExports.unknown()) {
-                return ExportShape.unresolved();
+                return NekoEsmExportShape.unresolved();
             }
             for (String name : dependencyExports.names()) {
                 if ("default".equals(name) || explicitExports.contains(name)) {
@@ -224,7 +240,7 @@ public final class NekoEsmLinker {
                 }
             }
         }
-        return ExportShape.of(exports, ambiguous);
+        return NekoEsmExportShape.of(exports, ambiguous);
     }
 
     private NekoPreparedModule prepare(Path path) throws IOException {
@@ -308,25 +324,4 @@ public final class NekoEsmLinker {
         return new NekoEsmLinkException(NekoEsmDiagnostic.fromSource(path, source, span, message));
     }
 
-    private record ExportShape(Set<String> names, Set<String> ambiguous, boolean unknown) {
-        private static ExportShape of(Set<String> names) {
-            return of(names, Set.of());
-        }
-
-        private static ExportShape of(Set<String> names, Set<String> ambiguous) {
-            return new ExportShape(names == null ? Set.of() : Set.copyOf(names), ambiguous == null ? Set.of() : Set.copyOf(ambiguous), false);
-        }
-
-        private static ExportShape unresolved() {
-            return new ExportShape(Set.of(), Set.of(), true);
-        }
-
-        private boolean has(String name) {
-            return unknown || names.contains(name);
-        }
-
-        private boolean ambiguous(String name) {
-            return !unknown && ambiguous.contains(name);
-        }
-    }
 }

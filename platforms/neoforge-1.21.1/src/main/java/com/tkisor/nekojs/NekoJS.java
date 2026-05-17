@@ -7,6 +7,7 @@ import com.tkisor.nekojs.core.NeoForgePluginLoader;
 import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.listener.RegistryEventListener;
 import com.tkisor.nekojs.script.ScriptBootstrap;
@@ -52,10 +53,9 @@ public class NekoJS extends NekoJSCommon {
 
     private static void initializeScripts() {
         NeoForgePluginLoader.loadAnnotatedPlugins();
-        NekoJSBasePluginManager.registerScriptCompilers();
+        NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins());
 
-        SCRIPT_MANAGER = new NekoJSScriptManager();
-        SCRIPT_MANAGER.registerScriptProperty();
+        SCRIPT_MANAGER = new NekoJSScriptManager(pluginRuntime.scriptProperties());
         SCRIPT_MANAGER.discoverScripts();
         SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
         GoalEvents.postRegister();

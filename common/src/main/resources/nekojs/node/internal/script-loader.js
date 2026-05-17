@@ -33,12 +33,15 @@
   requireHost().configure(executeModule, createModule, resolveSpecial, JSON.parse.bind(JSON))
 
   globalThis.__nekoNativeImport = function nativeImport(parentPath, specifier) {
-    return Promise.resolve(requireHost().nativeImport(String(parentPath), String(specifier)))
+    return Promise.resolve(requireHost().nativeImportAsync(String(parentPath), String(specifier)))
   }
 
   globalThis.__nekoScriptLoader = {
     loadEntry(entryPath) {
       return requireHost().loadEntry(String(entryPath))
+    },
+    loadEntryAsync(entryPath) {
+      return Promise.resolve(requireHost().loadEntryAsync(String(entryPath)))
     },
     requireFrom(parentPath, specifier) {
       return requireHost().requireFrom(String(parentPath), String(specifier))

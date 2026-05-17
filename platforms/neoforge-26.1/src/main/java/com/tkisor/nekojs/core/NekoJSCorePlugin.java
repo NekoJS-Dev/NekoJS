@@ -7,9 +7,10 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
-import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
+import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
@@ -27,11 +28,13 @@ import com.tkisor.nekojs.bindings.static_access.TestJS;
 import com.tkisor.nekojs.bindings.static_access.TimeJS;
 import com.tkisor.nekojs.bindings.static_access.UUIDJS;
 import com.tkisor.nekojs.bindings.static_access.UtilsJS;
+import com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
+import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.fluid.FluidAmounts;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
 import net.minecraft.client.KeyMapping;
@@ -50,19 +53,25 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.level.material.Fluids;
-import net.neoforged.neoforge.fluids.FluidStack;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.List;
+import java.util.Set;
 
 @RegisterNekoJSPlugin
 public class NekoJSCorePlugin implements NekoJSPlugin {
+
+    @Override
+    public void registerScriptCompilers(ScriptCompilerRegistry registry) {
+        registry.registerLanguage("typescript", Set.of(".ts"), new NekoTypeScriptCompiler());
+    }
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {
@@ -115,8 +124,6 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(Binding.of("MobEffects", MobEffects.class));
         registry.register(Binding.of("MobEffectInstance", MobEffectInstance.class));
         registry.register(Binding.of("DamageTypes", DamageTypes.class));
-
-
     }
 
     @Override

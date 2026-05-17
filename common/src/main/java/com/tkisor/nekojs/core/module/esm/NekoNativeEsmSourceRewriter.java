@@ -84,7 +84,7 @@ public final class NekoNativeEsmSourceRewriter {
                     case IMPORT_META_URL -> replacements.add(new Replacement(span.start(), span.end(), jsString(file.toUri().toString())));
                     case IMPORT_META_FILENAME -> replacements.add(new Replacement(span.start(), span.end(), jsString(file.toAbsolutePath().normalize().toString().replace('\\', '/'))));
                     case IMPORT_META_DIRNAME -> replacements.add(new Replacement(span.start(), span.end(), jsString(file.toAbsolutePath().normalize().getParent().toString().replace('\\', '/'))));
-                    case IMPORT_META_RESOLVE -> replacements.add(new Replacement(span.start(), span.end(), "(specifier => globalThis.__nekoScriptModuleLoaderHost.resolveToString(" + jsString(moduleId) + ", String(specifier)))"));
+                    case IMPORT_META_RESOLVE -> replacements.add(new Replacement(span.start(), span.end(), "(specifier => globalThis.__nekoScriptModuleLoaderHost.resolveImportMeta(" + jsString(moduleId) + ", String(specifier)))"));
                     case DYNAMIC_IMPORT -> {
                         if (expression.specifier() != null && expression.specifierLiteralSpan() != null) {
                             NekoEsmSpan literalSpan = expression.specifierLiteralSpan();

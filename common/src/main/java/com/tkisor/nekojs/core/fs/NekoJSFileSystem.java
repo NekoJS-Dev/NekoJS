@@ -39,7 +39,7 @@ public class NekoJSFileSystem implements FileSystem {
             Path parent = originalPath.getParent();
 
             if (parent != null) {
-                for (String extension : ScriptCompilerRegistry.supportedExtensionsInOrder()) {
+                for (String extension : ScriptCompilerRegistry.current().supportedExtensionsInOrder()) {
                     if (".js".equals(extension)) {
                         continue;
                     }

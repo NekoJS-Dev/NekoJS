@@ -1,24 +1,31 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.script.ScriptType;
 
 import java.util.Map;
 
 public final class NekoNodeRuntime implements AutoCloseable {
     private final ScriptType scriptType;
+    private final NekoScriptModuleLoaderHost moduleLoaderHost;
     private final NekoNodeFS fs = new NekoNodeFS();
     private final NekoNodePath path = new NekoNodePath();
     private final NekoNodeTimers timers;
     private final NekoNodeProcess process = new NekoNodeProcess(fs);
 
-    public NekoNodeRuntime(ScriptType scriptType) {
+    public NekoNodeRuntime(ScriptType scriptType, NekoScriptModuleLoaderHost moduleLoaderHost) {
         this.scriptType = scriptType;
+        this.moduleLoaderHost = moduleLoaderHost;
         this.timers = new NekoNodeTimers(scriptType);
     }
 
     public ScriptType scriptType() {
         return scriptType;
+    }
+
+    public NekoScriptModuleLoaderHost moduleLoaderHost() {
+        return moduleLoaderHost;
     }
 
     public NekoNodeFS fs() {

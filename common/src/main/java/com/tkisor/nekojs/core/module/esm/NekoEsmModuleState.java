@@ -6,5 +6,7 @@ public enum NekoEsmModuleState {
     LINKED,
     EVALUATING,
     EVALUATED,
+    EVALUATING_ASYNC,
+    EVALUATED_ASYNC,
     FAILED
 }

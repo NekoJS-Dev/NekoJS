@@ -69,7 +69,7 @@ public final class NekoModuleResolver {
     }
 
     private List<String> extensionsForCandidates() {
-        List<String> extensions = new ArrayList<>(ScriptCompilerRegistry.supportedExtensionsInOrder());
+        List<String> extensions = new ArrayList<>(ScriptCompilerRegistry.current().supportedExtensionsInOrder());
         extensions.add(".json");
         return extensions;
     }

@@ -49,9 +49,7 @@
   }
 
   function logPass(name) {
-    const test = helper()
-    if (test && typeof test.pass === 'function') test.pass(name)
-    else info(`[NekoJS Test][PASS] ${name}`)
+    info(`[NekoJS Test][PASS] ${name}`)
   }
 
   function mapStackLine(line) {
@@ -85,9 +83,7 @@
   }
 
   function logSection(name) {
-    const test = helper()
-    if (test && typeof test.section === 'function') test.section(name)
-    else info(`[NekoJS Test][SECTION] ${name}`)
+    info(`[NekoJS Test][SECTION] ${name}`)
   }
 
   function normalizeArgs(name, options, fn) {

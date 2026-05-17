@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.recipe;
 
-import com.tkisor.nekojs.core.NekoJSPluginManager;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,57 +11,30 @@ import java.util.Set;
 import java.util.function.Function;
 
 public final class NekoRecipeNamespaces {
-    private static final Map<String, Function<RecipeEventJS, Object>> NAMESPACES = new LinkedHashMap<>();
-    private static final Map<String, Class<?>> HANDLER_CLASSES = new LinkedHashMap<>();
-    private static boolean initialized = false;
-
     private NekoRecipeNamespaces() {}
 
-    static void registerEntry(RecipeNamespaceEntry<RecipeEventJS> entry) {
-        if (NAMESPACES.containsKey(entry.namespace())) {
-            throw new IllegalArgumentException("Recipe namespace '" + entry.namespace() + "' is already registered. Possible plugin conflict.");
+    public static Object createHandler(String namespace, RecipeEventJS event) {
+        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        if (entry == null) {
+            return null;
         }
-        NAMESPACES.put(entry.namespace(), entry.factory());
-        HANDLER_CLASSES.put(entry.namespace(), entry.handlerClass());
+        @SuppressWarnings("unchecked")
+        Function<RecipeEventJS, Object> factory = (Function<RecipeEventJS, Object>) entry.factory();
+        return factory.apply(event);
     }
 
-    public static synchronized Object createHandler(String namespace, RecipeEventJS event) {
-        if (!initialized) {
-            initialize();
-        }
-        Function<RecipeEventJS, Object> factory = NAMESPACES.get(namespace);
-        return factory != null ? factory.apply(event) : null;
+    public static Set<String> getNamespaces() {
+        return NekoPluginRuntime.current().recipeNamespaces().keySet();
     }
 
-    /**
-     * Returns an immutable set of all registered recipe namespaces.
-     */
-    public static synchronized Set<String> getNamespaces() {
-        if (!initialized) {
-            initialize();
-        }
-        return Collections.unmodifiableSet(NAMESPACES.keySet());
+    public static @Nullable Class<?> getHandlerClass(String namespace) {
+        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        return entry == null ? null : entry.handlerClass();
     }
 
-    /**
-     * Returns the handler class for the given namespace.
-     */
-    public static synchronized @Nullable Class<?> getHandlerClass(String namespace) {
-        if (!initialized) {
-            initialize();
-        }
-        return HANDLER_CLASSES.get(namespace);
-    }
-
-    public static synchronized Map<String, Class<?>> getHandlerClasses() {
-        if (!initialized) {
-            initialize();
-        }
-        return Collections.unmodifiableMap(HANDLER_CLASSES);
-    }
-
-    private static void initialize() {
-        NekoJSPluginManager.getPlugins().forEach(plugin -> plugin.registerRecipeNamespaces(NekoRecipeNamespaces::registerEntry));
-        initialized = true;
+    public static Map<String, Class<?>> getHandlerClasses() {
+        Map<String, Class<?>> handlerClasses = new LinkedHashMap<>();
+        NekoPluginRuntime.current().recipeNamespaces().forEach((namespace, entry) -> handlerClasses.put(namespace, entry.handlerClass()));
+        return Collections.unmodifiableMap(handlerClasses);
     }
 }

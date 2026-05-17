@@ -167,7 +167,7 @@ public final class NekoJSPaths {
     }
 
     public static boolean isSupportedScriptFile(Path path) {
-        return ScriptCompilerRegistry.isSupportedScriptFile(path);
+        return ScriptCompilerRegistry.current().isSupportedScriptFile(path);
     }
 
     public static boolean isInsideScriptRoot(Path path) {

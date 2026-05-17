@@ -65,6 +65,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private final EventBus<EVENT> bus;
     private final Map<ScriptType, List<ScriptEventListenerToken<EVENT>>> tokensByType;
+    private ScriptType scriptType;
 
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
@@ -81,6 +82,17 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     public EventBus<EVENT> bus() {
         return bus;
+    }
+
+    public ScriptType scriptType() {
+        return scriptType;
+    }
+
+    public void scriptType(ScriptType scriptType) {
+        if (this.scriptType != null && this.scriptType != scriptType) {
+            throw new IllegalStateException("Event bus script type is already " + this.scriptType + ": " + bus.eventType().getName());
+        }
+        this.scriptType = Objects.requireNonNull(scriptType, "scriptType");
     }
 
     public List<EventListenerToken<EVENT>> tokens(ScriptType type) {
@@ -179,7 +191,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     }
                 }
             } catch (Throwable e) {
-                NekoErrorTracker.recordCallbackError(type, "event", e);
+                recordListenerError(type, scriptId, "normal", null, event, e);
             }
         });
     }
@@ -202,7 +214,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     }
                 }
             } catch (Throwable e) {
-                NekoErrorTracker.recordCallbackError(type, "event", e);
+                recordListenerError(type, scriptId, "cancellable", null, event, e);
             }
             return false; // 出错时默认不取消事件
         });
@@ -213,9 +225,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
         String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
         var bus = (DispatchEventBus<EVENT, KEY>) this.bus;
+        KEY dispatchKey = key.as(bus.dispatchKey().keyType());
 
         return bus.listen(
-                key.as(bus.dispatchKey().keyType()),
+                dispatchKey,
                 event -> {
                     try {
                         synchronized (context) {
@@ -229,7 +242,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                             }
                         }
                     } catch (Throwable e) {
-                        NekoErrorTracker.recordCallbackError(type, "event", e);
+                        recordListenerError(type, scriptId, "dispatch", dispatchKey, event, e);
                     }
                 }
         );
@@ -240,9 +253,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         ScriptType type = NekoJSScriptManager.getTypeFromContext(context);
         String scriptId = NekoJSScriptManager.getCurrentScriptId(context);
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
+        KEY dispatchKey = key.as(bus.dispatchKey().keyType());
 
         return bus.listen(
-                key.as(bus.dispatchKey().keyType()),
+                dispatchKey,
                 event -> {
                     try {
                         synchronized (context) {
@@ -257,11 +271,23 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                             }
                         }
                     } catch (Throwable e) {
-                        NekoErrorTracker.recordCallbackError(type, "event", e);
+                        recordListenerError(type, scriptId, "dispatchCancellable", dispatchKey, event, e);
                     }
                     return false; // 出错时默认不取消事件
                 }
         );
+    }
+
+    private void recordListenerError(ScriptType type, String scriptId, String mode, Object dispatchKey, EVENT event, Throwable throwable) {
+        String eventClass = event == null ? "null" : event.getClass().getName();
+        String keyText = dispatchKey == null ? "" : " key=" + dispatchKey;
+        String kind = "event mode=" + mode
+                + " bus=" + bus.eventType().getName()
+                + " event=" + eventClass
+                + " script=" + (scriptId == null || scriptId.isBlank() ? "unknown" : scriptId)
+                + " thread=" + Thread.currentThread().getName()
+                + keyText;
+        NekoErrorTracker.recordCallbackError(type, kind, throwable);
     }
 
     private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId) {}

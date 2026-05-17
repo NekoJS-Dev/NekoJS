@@ -16,6 +16,16 @@ public final class NekoSharedHostAccess {
 
     private static HostAccess create() {
         HostAccess.Builder hostBuilder = HostAccess.newBuilder(HostAccess.ALL)
+                .allowPublicAccess(true)
+
+                .allowArrayAccess(true)
+                .allowListAccess(true)
+                .allowMapAccess(true)
+
+                .allowIterableAccess(true)
+                .allowIteratorAccess(true)
+                .allowBufferAccess(true)
+
                 .allowAllClassImplementations(true)
                 .allowAllImplementations(true);
 

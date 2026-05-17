@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.bindings.static_access;
 
+import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Value;
 
 import java.util.Objects;
@@ -73,6 +74,6 @@ public final class TestJS {
     }
 
     private static void log(String level, String message) {
-        System.out.println("[NekoJS Test][" + level + "] " + (message == null ? "" : message));
+        ScriptType.TEST.logger().info("[NekoJS Test][{}] {}", level, message == null ? "" : message);
     }
 }

@@ -7,12 +7,14 @@ public record NekoEsmLinkMetadata(
         List<NekoEsmResolvedDependency> dependencies,
         Set<String> localExports,
         Set<String> indirectExports,
-        List<NekoEsmExportDecl> starExports
+        List<NekoEsmExportDecl> starExports,
+        NekoEsmExportShape exportShape
 ) {
     public NekoEsmLinkMetadata {
         dependencies = dependencies == null ? List.of() : List.copyOf(dependencies);
         localExports = localExports == null ? Set.of() : Set.copyOf(localExports);
         indirectExports = indirectExports == null ? Set.of() : Set.copyOf(indirectExports);
         starExports = starExports == null ? List.of() : List.copyOf(starExports);
+        exportShape = exportShape == null ? NekoEsmExportShape.unresolved() : exportShape;
     }
 }

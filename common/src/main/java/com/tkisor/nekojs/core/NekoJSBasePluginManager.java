@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.api.NekoJSBasePlugin;
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 
 import java.util.Collections;
 import java.util.List;
@@ -17,12 +16,6 @@ public final class NekoJSBasePluginManager {
 
     public static void register(NekoJSBasePlugin plugin) {
         PLUGINS.add(plugin);
-    }
-
-    public static void registerScriptCompilers() {
-        for (NekoJSBasePlugin plugin : PLUGINS) {
-            plugin.registerScriptCompilers(ScriptCompilerRegistry.INSTANCE);
-        }
     }
 
     public static List<NekoJSBasePlugin> getPlugins() {

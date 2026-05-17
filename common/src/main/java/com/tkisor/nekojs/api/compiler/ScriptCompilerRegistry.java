@@ -8,34 +8,82 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class ScriptCompilerRegistry {
-    private static final Set<String> BUILTIN_EXTENSIONS = Set.of(".js", ".mjs", ".cjs", ".ts", ".jsx", ".tsx");
-    private static final List<IScriptCompiler> COMPILERS = new ArrayList<>();
-    private static final Set<String> REGISTERED_EXTENSIONS = new LinkedHashSet<>(BUILTIN_EXTENSIONS);
+    private static final List<String> NATIVE_EXTENSIONS_IN_ORDER = List.of(".js", ".mjs", ".cjs");
+    private static final Set<String> NATIVE_EXTENSIONS = Set.copyOf(NATIVE_EXTENSIONS_IN_ORDER);
 
-    public static final ScriptCompilerRegistry INSTANCE = new ScriptCompilerRegistry();
+    public static final ScriptCompilerRegistry INSTANCE = createRuntimeRegistry();
+
+    private static volatile ScriptCompilerRegistry current = INSTANCE;
+
+    private final List<IScriptCompiler> compilers = new ArrayList<>();
+    private final List<NekoScriptLanguage> languages = new ArrayList<>();
+    private final Set<String> extraExtensions = new LinkedHashSet<>();
+    private boolean frozen;
 
     private ScriptCompilerRegistry() {}
 
-    public static void register(IScriptCompiler compiler) {
+    public static ScriptCompilerRegistry createRuntimeRegistry() {
+        return new ScriptCompilerRegistry();
+    }
+
+    public static ScriptCompilerRegistry current() {
+        return current;
+    }
+
+    public static void useRuntime(ScriptCompilerRegistry registry) {
+        current = registry == null ? INSTANCE : registry;
+    }
+
+    public void register(IScriptCompiler compiler) {
+        requireMutable();
         if (compiler != null) {
-            COMPILERS.add(compiler);
+            compilers.add(compiler);
         }
     }
 
-    public static void register(String extension, IScriptCompiler compiler) {
-        String normalized = normalizeExtension(extension);
-        REGISTERED_EXTENSIONS.add(normalized);
+    public void register(String extension, IScriptCompiler compiler) {
+        requireMutable();
+        extraExtensions.add(normalizeExtension(extension));
         register(compiler);
     }
 
-    public static void registerExtension(String extension) {
-        REGISTERED_EXTENSIONS.add(normalizeExtension(extension));
+    public void register(NekoScriptLanguage language) {
+        requireMutable();
+        if (language == null) return;
+        languages.add(normalizedLanguage(language));
+        register(language.compiler());
     }
 
-    public static IScriptCompiler getCompiler(String extension) {
+    public void registerLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
+        register(new NekoScriptLanguage(id, extensions, compiler));
+    }
+
+    public void replaceLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
+        requireMutable();
+        List<NekoScriptLanguage> removed = new ArrayList<>();
+        languages.removeIf(language -> {
+            boolean matches = language.id().equals(id);
+            if (matches) {
+                removed.add(language);
+            }
+            return matches;
+        });
+        for (NekoScriptLanguage language : removed) {
+            compilers.remove(language.compiler());
+        }
+        registerLanguage(id, extensions, compiler);
+    }
+
+    public void registerExtension(String extension) {
+        requireMutable();
+        extraExtensions.add(normalizeExtension(extension));
+    }
+
+    public IScriptCompiler getCompiler(String extension) {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);
-        for (IScriptCompiler compiler : COMPILERS) {
+        for (int i = compilers.size() - 1; i >= 0; i--) {
+            IScriptCompiler compiler = compilers.get(i);
             if (compiler.canCompile(dotted) || compiler.canCompile(bare)) {
                 return compiler;
             }
@@ -43,19 +91,24 @@ public final class ScriptCompilerRegistry {
         return null;
     }
 
-    public static Set<String> supportedExtensions() {
-        return Set.copyOf(REGISTERED_EXTENSIONS);
+    public Set<String> supportedExtensions() {
+        return Set.copyOf(registeredExtensionsInOrder());
     }
 
-    public static List<String> supportedExtensionsInOrder() {
-        return List.copyOf(REGISTERED_EXTENSIONS);
+    public List<String> supportedExtensionsInOrder() {
+        return List.copyOf(registeredExtensionsInOrder());
     }
 
-    public static boolean isSupportedScriptExtension(String extension) {
-        return REGISTERED_EXTENSIONS.contains(normalizeExtension(extension));
+    public List<NekoScriptLanguage> languages() {
+        return List.copyOf(languages);
     }
 
-    public static boolean isSupportedScriptFile(Path path) {
+    public boolean isSupportedScriptExtension(String extension) {
+        String normalized = normalizeExtension(extension);
+        return NATIVE_EXTENSIONS.contains(normalized) || getCompiler(normalized) != null || registeredExtensionsInOrder().contains(normalized);
+    }
+
+    public boolean isSupportedScriptFile(Path path) {
         if (path == null || path.getFileName() == null) {
             return false;
         }
@@ -64,11 +117,48 @@ public final class ScriptCompilerRegistry {
         return dotIndex >= 0 && isSupportedScriptExtension(fileName.substring(dotIndex));
     }
 
-    private static String normalizeExtension(String extension) {
+    public void freeze() {
+        frozen = true;
+    }
+
+    public boolean frozen() {
+        return frozen;
+    }
+
+    public static boolean isNativeScriptExtension(String extension) {
+        return NATIVE_EXTENSIONS.contains(normalizeExtension(extension));
+    }
+
+    public static String normalizeExtension(String extension) {
         if (extension == null || extension.isBlank()) {
             throw new IllegalArgumentException("Script extension must not be blank");
         }
         String normalized = extension.toLowerCase(Locale.ROOT).trim();
         return normalized.startsWith(".") ? normalized : "." + normalized;
+    }
+
+    private NekoScriptLanguage normalizedLanguage(NekoScriptLanguage language) {
+        Set<String> extensions = new LinkedHashSet<>();
+        for (String extension : language.extensions()) {
+            extensions.add(normalizeExtension(extension));
+        }
+        return new NekoScriptLanguage(language.id(), extensions, language.compiler());
+    }
+
+    private List<String> registeredExtensionsInOrder() {
+        LinkedHashSet<String> extensions = new LinkedHashSet<>(NATIVE_EXTENSIONS_IN_ORDER);
+        extensions.addAll(extraExtensions);
+        for (NekoScriptLanguage language : languages) {
+            for (String extension : language.extensions()) {
+                extensions.add(normalizeExtension(extension));
+            }
+        }
+        return List.copyOf(extensions);
+    }
+
+    private void requireMutable() {
+        if (frozen) {
+            throw new IllegalStateException("Script compiler registry is frozen after plugin bootstrap");
+        }
     }
 }
