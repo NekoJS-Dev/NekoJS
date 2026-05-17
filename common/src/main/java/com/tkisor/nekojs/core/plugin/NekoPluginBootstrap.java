@@ -16,6 +16,8 @@ import com.tkisor.nekojs.api.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionPoint;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionProvider;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionRegistry;
+import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
+import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.platform.Platform;
@@ -30,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public final class NekoPluginBootstrap {
     private static final List<NekoPluginExtensionPoint<?>> BUILT_IN_EXTENSION_POINTS = List.of(
@@ -41,7 +44,8 @@ public final class NekoPluginBootstrap {
             base("nekojs:type_docs", (plugin, context) -> plugin.registerTypeDocs(context.typeDocs())),
             platform("nekojs:events", (plugin, context) -> plugin.registerEvents(context.events())),
             clientPlatform("nekojs:client_events", (plugin, context) -> plugin.registerClientEvents(context.events())),
-            platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces()))
+            platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces())),
+            platform("nekojs:recipe_lifecycle", (plugin, context) -> plugin.registerRecipeLifecycleHooks(context.recipeLifecycle()))
     );
 
     private NekoPluginBootstrap() {}
@@ -112,6 +116,8 @@ public final class NekoPluginBootstrap {
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
         private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces = new LinkedHashMap<>();
+        private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
+        private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
 
         BootstrapState(boolean client) {
             this.client = client;
@@ -157,6 +163,21 @@ public final class NekoPluginBootstrap {
             return this::registerRecipeNamespace;
         }
 
+        @Override
+        public RecipeLifecycleRegister recipeLifecycle() {
+            return new RecipeLifecycleRegister() {
+                @Override
+                public void beforeRecipeLoading(Consumer<RecipeLifecycleContext> hook) {
+                    beforeRecipeLoadingHooks.add(hook);
+                }
+
+                @Override
+                public void afterRecipes(Consumer<RecipeLifecycleContext> hook) {
+                    afterRecipesHooks.add(hook);
+                }
+            };
+        }
+
         void freeze() {
             scriptCompilers.freeze();
         }
@@ -170,7 +191,9 @@ public final class NekoPluginBootstrap {
                     eventGroupsSnapshot(),
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
-                    recipeNamespacesSnapshot()
+                    recipeNamespacesSnapshot(),
+                    beforeRecipeLoadingHooksSnapshot(),
+                    afterRecipesHooksSnapshot()
             );
         }
 
@@ -265,6 +288,14 @@ public final class NekoPluginBootstrap {
 
         Map<String, RecipeNamespaceEntry<?>> recipeNamespacesSnapshot() {
             return Collections.unmodifiableMap(new LinkedHashMap<>(recipeNamespaces));
+        }
+
+        List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooksSnapshot() {
+            return List.copyOf(beforeRecipeLoadingHooks);
+        }
+
+        List<Consumer<RecipeLifecycleContext>> afterRecipesHooksSnapshot() {
+            return List.copyOf(afterRecipesHooks);
         }
     }
 }

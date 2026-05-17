@@ -7,12 +7,14 @@ import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public final class NekoPluginRuntime {
     private static NekoPluginRuntime current;
@@ -25,6 +27,8 @@ public final class NekoPluginRuntime {
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
     private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces;
+    private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks;
+    private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks;
 
     private NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
                               ScriptPropertyRegistry scriptProperties,
@@ -33,7 +37,9 @@ public final class NekoPluginRuntime {
                               Map<String, EventGroup> eventGroups,
                               List<TypeDocCatalogEntry> typeDocs,
                               List<ManualDeclarationCatalogEntry> manualDeclarations,
-                              Map<String, RecipeNamespaceEntry<?>> recipeNamespaces) {
+                              Map<String, RecipeNamespaceEntry<?>> recipeNamespaces,
+                              List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
+                              List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
         this.scriptCompilers = scriptCompilers;
         this.scriptProperties = scriptProperties;
         this.bindings = bindings;
@@ -42,6 +48,8 @@ public final class NekoPluginRuntime {
         this.typeDocs = typeDocs;
         this.manualDeclarations = manualDeclarations;
         this.recipeNamespaces = recipeNamespaces;
+        this.beforeRecipeLoadingHooks = beforeRecipeLoadingHooks;
+        this.afterRecipesHooks = afterRecipesHooks;
     }
 
     public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins) {
@@ -65,8 +73,10 @@ public final class NekoPluginRuntime {
                                     Map<String, EventGroup> eventGroups,
                                     List<TypeDocCatalogEntry> typeDocs,
                                     List<ManualDeclarationCatalogEntry> manualDeclarations,
-                                    Map<String, RecipeNamespaceEntry<?>> recipeNamespaces) {
-        return new NekoPluginRuntime(scriptCompilers, scriptProperties, bindings, adapters, eventGroups, typeDocs, manualDeclarations, recipeNamespaces);
+                                    Map<String, RecipeNamespaceEntry<?>> recipeNamespaces,
+                                    List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
+                                    List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
+        return new NekoPluginRuntime(scriptCompilers, scriptProperties, bindings, adapters, eventGroups, typeDocs, manualDeclarations, recipeNamespaces, beforeRecipeLoadingHooks, afterRecipesHooks);
     }
 
     public ScriptCompilerRegistry scriptCompilers() {
@@ -99,6 +109,28 @@ public final class NekoPluginRuntime {
 
     public Map<String, RecipeNamespaceEntry<?>> recipeNamespaces() {
         return recipeNamespaces;
+    }
+
+    public List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks() {
+        return beforeRecipeLoadingHooks;
+    }
+
+    public List<Consumer<RecipeLifecycleContext>> afterRecipesHooks() {
+        return afterRecipesHooks;
+    }
+
+    public void beforeRecipeLoading(RecipeLifecycleContext context) {
+        runRecipeHooks(beforeRecipeLoadingHooks, context);
+    }
+
+    public void afterRecipes(RecipeLifecycleContext context) {
+        runRecipeHooks(afterRecipesHooks, context);
+    }
+
+    private void runRecipeHooks(List<Consumer<RecipeLifecycleContext>> hooks, RecipeLifecycleContext context) {
+        for (Consumer<RecipeLifecycleContext> hook : hooks) {
+            hook.accept(context);
+        }
     }
 
 }

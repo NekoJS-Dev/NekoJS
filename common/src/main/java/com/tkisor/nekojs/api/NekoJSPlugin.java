@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api;
 
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -14,4 +15,6 @@ public interface NekoJSPlugin extends NekoJSBasePlugin {
     default void registerClientEvents(EventGroupRegistry registry) {}
 
     default void registerRecipeNamespaces(RecipeNamespaceRegister registry) {}
+
+    default void registerRecipeLifecycleHooks(RecipeLifecycleRegister registry) {}
 }

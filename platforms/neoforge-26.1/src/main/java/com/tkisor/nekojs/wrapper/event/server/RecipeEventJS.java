@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.recipe.RecipeCreationContext;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
+import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
@@ -30,7 +31,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class RecipeEventJS {
+public class RecipeEventJS implements RecipeLifecycleContext {
 
     private final RecipeRegistryProxy recipesProxy;
     private final Map<Identifier, JsonElement> jsons;
@@ -45,6 +46,37 @@ public class RecipeEventJS {
     }
 
     public Map<Identifier, JsonElement> getFinalJsons() { return this.jsons; }
+
+    @Override
+    public Set<String> ids() {
+        return jsons.keySet().stream().map(Identifier::toString).collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    @Override
+    public String getJson(String id) {
+        Identifier parsedId = RecipeJsonBuilder.parseId(id);
+        if (parsedId == null) return null;
+        JsonElement json = jsons.get(parsedId);
+        return json == null ? null : json.toString();
+    }
+
+    @Override
+    public void setJson(String id, String json) {
+        Identifier parsedId = RecipeJsonBuilder.parseId(id);
+        if (parsedId == null) {
+            throw new IllegalArgumentException("Invalid recipe id: " + id);
+        }
+        jsons.put(parsedId, JsonParser.parseString(json));
+        contexts.remove(parsedId);
+    }
+
+    @Override
+    public void removeById(String id) {
+        Identifier parsedId = RecipeJsonBuilder.parseId(id);
+        if (parsedId == null) return;
+        jsons.remove(parsedId);
+        contexts.remove(parsedId);
+    }
 
     public void setRecipeContext(Identifier id, RecipeCreationContext context) {
         if (id != null && context != null) contexts.put(id, context);

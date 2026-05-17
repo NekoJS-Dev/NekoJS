@@ -50,28 +50,51 @@ public final class ScriptCompilerRegistry {
     public void register(NekoScriptLanguage language) {
         requireMutable();
         if (language == null) return;
-        languages.add(normalizedLanguage(language));
-        register(language.compiler());
+        NekoScriptLanguage normalized = normalizedLanguage(language);
+        languages.add(normalized);
+        if (normalized.compiler() != null) {
+            compilers.add(normalized.compiler());
+        }
+    }
+
+    public void register(NekoLanguagePlugin plugin) {
+        if (plugin == null) return;
+        register(new NekoScriptLanguage(plugin.id(), plugin.extensions(), plugin));
     }
 
     public void registerLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
         register(new NekoScriptLanguage(id, extensions, compiler));
     }
 
+    public void registerLanguage(String id, Set<String> extensions, NekoLanguagePlugin plugin) {
+        register(new NekoScriptLanguage(id, extensions, plugin));
+    }
+
     public void replaceLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
+        replaceLanguage(new NekoScriptLanguage(id, extensions, compiler));
+    }
+
+    public void replaceLanguage(String id, Set<String> extensions, NekoLanguagePlugin plugin) {
+        replaceLanguage(new NekoScriptLanguage(id, extensions, plugin));
+    }
+
+    public void replaceLanguage(NekoScriptLanguage replacement) {
         requireMutable();
+        NekoScriptLanguage normalizedReplacement = normalizedLanguage(replacement);
         List<NekoScriptLanguage> removed = new ArrayList<>();
         languages.removeIf(language -> {
-            boolean matches = language.id().equals(id);
+            boolean matches = language.id().equals(normalizedReplacement.id());
             if (matches) {
                 removed.add(language);
             }
             return matches;
         });
         for (NekoScriptLanguage language : removed) {
-            compilers.remove(language.compiler());
+            if (language.compiler() != null) {
+                compilers.remove(language.compiler());
+            }
         }
-        registerLanguage(id, extensions, compiler);
+        register(normalizedReplacement);
     }
 
     public void registerExtension(String extension) {
@@ -91,6 +114,27 @@ public final class ScriptCompilerRegistry {
         return null;
     }
 
+    public NekoScriptLanguage getLanguage(String extension) {
+        String dotted = normalizeExtension(extension);
+        String bare = dotted.substring(1);
+        for (int i = languages.size() - 1; i >= 0; i--) {
+            NekoScriptLanguage language = languages.get(i);
+            if (language.extensions().contains(dotted)) {
+                return language;
+            }
+            IScriptCompiler compiler = language.compiler();
+            if (compiler != null && (compiler.canCompile(dotted) || compiler.canCompile(bare))) {
+                return language;
+            }
+        }
+        return null;
+    }
+
+    public NekoLanguagePlugin getLanguagePlugin(String extension) {
+        NekoScriptLanguage language = getLanguage(extension);
+        return language == null ? null : language.plugin();
+    }
+
     public Set<String> supportedExtensions() {
         return Set.copyOf(registeredExtensionsInOrder());
     }
@@ -105,7 +149,7 @@ public final class ScriptCompilerRegistry {
 
     public boolean isSupportedScriptExtension(String extension) {
         String normalized = normalizeExtension(extension);
-        return NATIVE_EXTENSIONS.contains(normalized) || getCompiler(normalized) != null || registeredExtensionsInOrder().contains(normalized);
+        return NATIVE_EXTENSIONS.contains(normalized) || getLanguage(normalized) != null || getCompiler(normalized) != null || registeredExtensionsInOrder().contains(normalized);
     }
 
     public boolean isSupportedScriptFile(Path path) {
@@ -142,7 +186,7 @@ public final class ScriptCompilerRegistry {
         for (String extension : language.extensions()) {
             extensions.add(normalizeExtension(extension));
         }
-        return new NekoScriptLanguage(language.id(), extensions, language.compiler());
+        return new NekoScriptLanguage(language.id(), extensions, language.compiler(), language.plugin());
     }
 
     private List<String> registeredExtensionsInOrder() {

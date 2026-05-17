@@ -205,6 +205,10 @@ public final class NekoScriptCatalog {
         return List.copyOf(entries);
     }
 
+    public static List<SnippetCatalogEntry> snippets() {
+        return List.copyOf(platformProvider.snippets());
+    }
+
     public static List<SnippetCatalogEntry> snippets(ScriptType scriptType) {
         List<SnippetCatalogEntry> entries = new ArrayList<>();
         for (SnippetCatalogEntry snippet : platformProvider.snippets()) {

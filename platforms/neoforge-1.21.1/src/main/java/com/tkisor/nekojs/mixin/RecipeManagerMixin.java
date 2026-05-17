@@ -8,6 +8,7 @@ import com.tkisor.nekojs.NekoJSCommon;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
@@ -74,7 +75,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries);
         try {
+            NekoPluginRuntime.current().beforeRecipeLoading(eventJS);
             ServerEvents.RECIPES.post(eventJS);
+            ServerEvents.AFTER_RECIPES.post(eventJS);
+            NekoPluginRuntime.current().afterRecipes(eventJS);
         } catch (PolyglotException e) {
             NekoErrorTracker.recordEventError(ScriptType.SERVER, e);
         } catch (Exception e) {
