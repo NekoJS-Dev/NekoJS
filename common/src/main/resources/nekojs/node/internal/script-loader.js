@@ -55,6 +55,9 @@
     invalidateAffectedModules(modulePath) {
       requireHost().invalidateAffectedModules(String(modulePath))
     },
+    invalidateModuleTree(modulePath) {
+      requireHost().invalidateModuleTree(String(modulePath))
+    },
     affectedEntries(modulePath) {
       return requireHost().affectedEntries(String(modulePath))
     }

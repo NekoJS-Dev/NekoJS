@@ -65,7 +65,7 @@ public final class NekoModuleResolver {
         Path verified = verifyModulePath(path);
         Path canonical = verified.toRealPath();
         NekoModuleKind kind = isJson(canonical) ? NekoModuleKind.JSON : NekoModuleKind.SCRIPT;
-        return new NekoResolvedModule(canonical, loaderPath(canonical), loaderPath(canonical.getParent()), null, kind, requestedMode(canonical));
+        return new NekoResolvedModule(canonical, loaderPath(canonical), loaderPath(canonical.getParent()), null, kind, NekoModuleMode.fromPath(canonical));
     }
 
     private List<String> extensionsForCandidates() {
@@ -105,9 +105,9 @@ public final class NekoModuleResolver {
         if (isFileSpecifier(specifier)) {
             return null;
         }
-        if (specifier.startsWith("java:")) {
-            validateJavaPackageSpecifier(specifier);
-            return NekoModuleKind.JAVA_PACKAGE;
+        if (isJavaSpecifier(specifier)) {
+            validateJavaSpecifier(specifier);
+            return NekoModuleKind.JAVA_MODULE;
         }
         if (specifier.startsWith("node:") || isBuiltinSpecifier(specifier)) {
             return NekoModuleKind.BUILTIN;
@@ -115,15 +115,21 @@ public final class NekoModuleResolver {
         return NekoModuleKind.SPECIAL;
     }
 
-    private void validateJavaPackageSpecifier(String specifier) throws IOException {
-        String body = specifier.substring("java:".length());
+    private boolean isJavaSpecifier(String specifier) {
+        return specifier.startsWith("java:") || specifier.startsWith("java.") || specifier.startsWith("java/");
+    }
+
+    private void validateJavaSpecifier(String specifier) throws IOException {
+        String body = specifier.startsWith("java:") ? specifier.substring("java:".length()) : specifier;
+        body = body.replace('\\', '/').trim();
         if (body.isBlank()) {
-            throw new IOException("Java module package must not be blank");
+            throw new IOException("Java module specifier must not be blank");
         }
-        int dot = body.lastIndexOf('.');
-        String lastSegment = dot < 0 ? body : body.substring(dot + 1);
-        if (!lastSegment.isEmpty() && Character.isUpperCase(lastSegment.charAt(0))) {
-            throw new IOException("Invalid java: package module specifier: " + specifier + ". Use package-level modules like java:java.lang and named imports such as import { Integer } from 'java:java.lang'.");
+        if (body.startsWith(".") || body.startsWith("/") || body.endsWith("/") || body.contains("..")) {
+            throw new IOException("Invalid Java module specifier: " + specifier);
+        }
+        if (!body.matches("[A-Za-z_$][A-Za-z0-9_$]*([./][A-Za-z_$][A-Za-z0-9_$]*)*")) {
+            throw new IOException("Invalid Java module specifier: " + specifier);
         }
     }
 
@@ -161,21 +167,6 @@ public final class NekoModuleResolver {
     private boolean isJson(Path path) {
         Path fileNamePath = path.getFileName();
         return fileNamePath != null && fileNamePath.toString().toLowerCase(Locale.ROOT).endsWith(".json");
-    }
-
-    private NekoModuleMode requestedMode(Path path) {
-        Path fileNamePath = path.getFileName();
-        if (fileNamePath == null) {
-            return NekoModuleMode.AUTO;
-        }
-        String fileName = fileNamePath.toString().toLowerCase(Locale.ROOT);
-        if (fileName.endsWith(".mjs")) {
-            return NekoModuleMode.ESM;
-        }
-        if (fileName.endsWith(".cjs")) {
-            return NekoModuleMode.COMMONJS;
-        }
-        return NekoModuleMode.AUTO;
     }
 
     private String loaderPath(Path path) {

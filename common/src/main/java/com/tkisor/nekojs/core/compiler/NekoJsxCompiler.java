@@ -1,0 +1,602 @@
+package com.tkisor.nekojs.core.compiler;
+
+import com.tkisor.nekojs.api.compiler.ScriptCompileResult;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+public final class NekoJsxCompiler {
+    private NekoJsxCompiler() {}
+
+    public static ScriptCompileResult compileJsx(Path file, String source) {
+        return ScriptCompileResult.codeOnly(new Transpiler(file, source == null ? "" : source).transpile());
+    }
+
+    public static ScriptCompileResult compileTsx(Path file, String source) {
+        String lowered = new Transpiler(file, source == null ? "" : source).transpile();
+        return ScriptCompileResult.codeOnly(NekoTypeScriptCompiler.erase(file, lowered));
+    }
+
+    private static final class Transpiler {
+        private final Path file;
+        private final String source;
+        private final int length;
+
+        private Transpiler(Path file, String source) {
+            this.file = file;
+            this.source = source == null ? "" : source;
+            this.length = this.source.length();
+        }
+
+        private String transpile() {
+            StringBuilder output = new StringBuilder(length);
+            int index = 0;
+            int last = 0;
+            while (index < length) {
+                char c = source.charAt(index);
+                if (c == '\'' || c == '"') {
+                    index = skipString(index, c);
+                    continue;
+                }
+                if (c == '`') {
+                    index = skipTemplate(index);
+                    continue;
+                }
+                if (c == '/') {
+                    int skipped = skipSlash(index);
+                    if (skipped != index) {
+                        index = skipped;
+                        continue;
+                    }
+                }
+                if (c == '<' && looksLikeJsxStart(index)) {
+                    output.append(source, last, index);
+                    ParseResult parsed = parseJsx(index);
+                    output.append(parsed.text());
+                    index = parsed.nextIndex();
+                    last = index;
+                    continue;
+                }
+                index++;
+            }
+            output.append(source, last, length);
+            return output.toString();
+        }
+
+        private ParseResult parseJsx(int start) {
+            if (peek(start + 1) == '>') {
+                return parseFragment(start);
+            }
+
+            int nameStart = skipWhitespace(start + 1);
+            int nameEnd = readJsxNameEnd(nameStart);
+            if (nameEnd <= nameStart) {
+                throw jsxError("Missing JSX element name", start);
+            }
+
+            String tagName = source.substring(nameStart, nameEnd);
+            int index = nameEnd;
+            List<String> props = new ArrayList<>();
+            boolean selfClosing = false;
+
+            while (index < length) {
+                index = skipWhitespace(index);
+                if (index >= length) {
+                    throw jsxError("Unterminated JSX element", start);
+                }
+                if (source.startsWith("/>", index)) {
+                    selfClosing = true;
+                    index += 2;
+                    break;
+                }
+                if (source.charAt(index) == '>') {
+                    index++;
+                    break;
+                }
+                AttributeResult attribute = parseAttribute(index);
+                props.add(attribute.text());
+                index = attribute.nextIndex();
+            }
+
+            String typeExpression = jsxTagExpression(tagName);
+            String propsExpression = props.isEmpty() ? "null" : "{" + String.join(", ", props) + "}";
+            if (selfClosing) {
+                return new ParseResult(factoryCall(typeExpression, propsExpression, List.of()), index);
+            }
+
+            List<String> children = new ArrayList<>();
+            index = parseChildren(index, tagName, children);
+            return new ParseResult(factoryCall(typeExpression, propsExpression, children), index);
+        }
+
+        private ParseResult parseFragment(int start) {
+            int index = start + 2;
+            List<String> children = new ArrayList<>();
+            index = parseChildren(index, "", children);
+            return new ParseResult(fragmentCall(children), index);
+        }
+
+        private int parseChildren(int index, String closingTagName, List<String> children) {
+            int i = index;
+            int textStart = i;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '{') {
+                    flushText(textStart, i, children);
+                    ExpressionResult expression = parseExpressionChild(i);
+                    if (expression != null) {
+                        children.add(expression.text());
+                        i = expression.nextIndex();
+                    } else {
+                        i = findMatchingBrace(i) + 1;
+                    }
+                    textStart = i;
+                    continue;
+                }
+                if (c == '<') {
+                    if (peek(i + 1) == '/') {
+                        flushText(textStart, i, children);
+                        return parseClosingTag(i, closingTagName);
+                    }
+                    if (looksLikeJsxStart(i)) {
+                        flushText(textStart, i, children);
+                        ParseResult nested = parseJsx(i);
+                        children.add(nested.text());
+                        i = nested.nextIndex();
+                        textStart = i;
+                        continue;
+                    }
+                }
+                i++;
+            }
+            throw jsxError("Unterminated JSX element", index);
+        }
+
+        private int parseClosingTag(int start, String closingTagName) {
+            int index = skipWhitespace(start + 2);
+            int nameStart = index;
+            int nameEnd = readJsxNameEnd(nameStart);
+            String actualClosingTag = source.substring(nameStart, nameEnd);
+            index = skipWhitespace(nameEnd);
+            if (index >= length || source.charAt(index) != '>') {
+                throw jsxError("Malformed JSX closing tag", start);
+            }
+            index++;
+            if (!closingTagName.equals(actualClosingTag)) {
+                throw jsxError("Mismatched JSX closing tag '</" + actualClosingTag + ">' expected '</" + closingTagName + ">'", start);
+            }
+            return index;
+        }
+
+        private ExpressionResult parseExpressionChild(int start) {
+            int end = findMatchingBrace(start);
+            String inner = source.substring(start + 1, end);
+            if (isIgnorableExpression(inner)) {
+                return null;
+            }
+            String transformed = transform(inner);
+            return new ExpressionResult("(" + transformed + ")", end + 1);
+        }
+
+        private AttributeResult parseAttribute(int start) {
+            if (source.charAt(start) == '{') {
+                int end = findMatchingBrace(start);
+                String inner = source.substring(start + 1, end).trim();
+                if (!inner.startsWith("...")) {
+                    throw jsxError("Only spread attributes are allowed inside JSX attribute braces", start);
+                }
+                String spreadExpression = transform(inner.substring(3).trim());
+                if (spreadExpression.isBlank()) {
+                    throw jsxError("Missing spread expression in JSX attribute", start);
+                }
+                return new AttributeResult("..." + spreadExpression, end + 1);
+            }
+
+            int nameEnd = readAttributeNameEnd(start);
+            if (nameEnd <= start) {
+                throw jsxError("Missing JSX attribute name", start);
+            }
+            String name = source.substring(start, nameEnd);
+            int index = skipWhitespace(nameEnd);
+            if (index >= length || source.charAt(index) != '=') {
+                return new AttributeResult(attributeKey(name) + ": true", nameEnd);
+            }
+
+            index = skipWhitespace(index + 1);
+            if (index >= length) {
+                throw jsxError("Missing JSX attribute value", start);
+            }
+            char valueStart = source.charAt(index);
+            if (valueStart == '\'' || valueStart == '"') {
+                int valueEnd = skipString(index, valueStart);
+                return new AttributeResult(attributeKey(name) + ": " + source.substring(index, valueEnd), valueEnd);
+            }
+            if (valueStart == '{') {
+                int valueEnd = findMatchingBrace(index);
+                String transformed = transform(source.substring(index + 1, valueEnd));
+                if (transformed.isBlank()) {
+                    throw jsxError("Missing JSX attribute expression", start);
+                }
+                return new AttributeResult(attributeKey(name) + ": (" + transformed + ")", valueEnd + 1);
+            }
+            throw jsxError("JSX attribute values must be string literals or expressions", index);
+        }
+
+        private void flushText(int start, int end, List<String> children) {
+            if (end <= start) {
+                return;
+            }
+            String normalized = normalizeText(source.substring(start, end));
+            if (normalized != null) {
+                children.add(stringLiteral(normalized));
+            }
+        }
+
+        private String transform(String innerSource) {
+            if (innerSource == null || innerSource.isBlank()) {
+                return innerSource == null ? "" : innerSource;
+            }
+            return new Transpiler(file, innerSource).transpile();
+        }
+
+        private String normalizeText(String raw) {
+            if (raw == null) {
+                return null;
+            }
+            String normalized = raw.replace('\r', ' ');
+            normalized = normalized.replaceAll("\\s+", " ").trim();
+            return normalized.isEmpty() ? null : normalized;
+        }
+
+        private String jsxTagExpression(String tagName) {
+            if (tagName.indexOf('.') >= 0 || tagName.indexOf('[') >= 0 || tagName.indexOf('(') >= 0) {
+                return tagName;
+            }
+            if (!tagName.isEmpty()) {
+                char first = tagName.charAt(0);
+                if (Character.isUpperCase(first) || first == '_' || first == '$') {
+                    return tagName;
+                }
+            }
+            return stringLiteral(tagName);
+        }
+
+        private String attributeKey(String name) {
+            if (!name.isEmpty() && isIdentifierStart(name.charAt(0))) {
+                boolean valid = true;
+                for (int i = 1; i < name.length(); i++) {
+                    if (!isIdentifierPart(name.charAt(i))) {
+                        valid = false;
+                        break;
+                    }
+                }
+                if (valid) {
+                    return name;
+                }
+            }
+            return stringLiteral(name);
+        }
+
+        private int readJsxNameEnd(int start) {
+            int i = start;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (Character.isWhitespace(c) || c == '/' || c == '>' || c == '{' || c == '=') {
+                    break;
+                }
+                i++;
+            }
+            return i;
+        }
+
+        private int readAttributeNameEnd(int start) {
+            int i = start;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (Character.isWhitespace(c) || c == '/' || c == '>' || c == '=' || c == '{') {
+                    break;
+                }
+                i++;
+            }
+            return i;
+        }
+
+        private boolean looksLikeJsxStart(int index) {
+            int next = skipWhitespace(index + 1);
+            if (next >= length) {
+                return false;
+            }
+            char first = source.charAt(next);
+            if (first == '/' || first == '>') {
+                return true;
+            }
+            if (!isIdentifierStart(first) && first != '.' && first != '(' && first != '_') {
+                return false;
+            }
+
+            int previous = previousNonWhitespace(index - 1);
+            if (previous < 0) {
+                return true;
+            }
+            char previousChar = source.charAt(previous);
+            if ("=(:,[!&|?;{}<>+-*/%".indexOf(previousChar) >= 0) {
+                return true;
+            }
+            if (isIdentifierPart(previousChar)) {
+                int wordStart = previous;
+                while (wordStart >= 0 && isIdentifierPart(source.charAt(wordStart))) {
+                    wordStart--;
+                }
+                String word = source.substring(wordStart + 1, previous + 1);
+                return "return".equals(word)
+                        || "throw".equals(word)
+                        || "case".equals(word)
+                        || "default".equals(word)
+                        || "new".equals(word)
+                        || "typeof".equals(word)
+                        || "delete".equals(word)
+                        || "void".equals(word)
+                        || "await".equals(word);
+            }
+            return false;
+        }
+
+        private boolean isIgnorableExpression(String inner) {
+            int i = 0;
+            while (i < inner.length()) {
+                char c = inner.charAt(i);
+                if (Character.isWhitespace(c)) {
+                    i++;
+                    continue;
+                }
+                if (c == '/' && i + 1 < inner.length()) {
+                    char next = inner.charAt(i + 1);
+                    if (next == '/') {
+                        i = skipLineComment(inner, i + 2);
+                        continue;
+                    }
+                    if (next == '*') {
+                        i = skipBlockComment(inner, i + 2);
+                        continue;
+                    }
+                }
+                return false;
+            }
+            return true;
+        }
+
+        private int findMatchingBrace(int openBrace) {
+            int depth = 0;
+            int i = openBrace;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') {
+                    i = skipString(i, c);
+                    continue;
+                }
+                if (c == '`') {
+                    i = skipTemplate(i);
+                    continue;
+                }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) {
+                        i = skipped;
+                        continue;
+                    }
+                }
+                if (c == '{') {
+                    depth++;
+                } else if (c == '}') {
+                    depth--;
+                    if (depth == 0) {
+                        return i;
+                    }
+                }
+                i++;
+            }
+            throw jsxError("Unterminated JSX expression", openBrace);
+        }
+
+        private int skipWhitespace(int index) {
+            int i = index;
+            while (i < length && Character.isWhitespace(source.charAt(i))) {
+                i++;
+            }
+            return i;
+        }
+
+        private char peek(int index) {
+            return index >= 0 && index < length ? source.charAt(index) : '\0';
+        }
+
+        private int skipSlash(int slash) {
+            if (slash + 1 >= length) {
+                return slash;
+            }
+            char next = source.charAt(slash + 1);
+            if (next == '/') {
+                return skipLineComment(slash + 2);
+            }
+            if (next == '*') {
+                return skipBlockComment(slash + 2);
+            }
+            if (looksLikeRegexStart(slash)) {
+                return skipRegex(slash + 1);
+            }
+            return slash;
+        }
+
+        private int skipString(int start, char quote) {
+            int i = start + 1;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\\') {
+                    i += 2;
+                    continue;
+                }
+                if (c == quote) {
+                    return i + 1;
+                }
+                i++;
+            }
+            return length;
+        }
+
+        private int skipTemplate(int start) {
+            int i = start + 1;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\\') {
+                    i += 2;
+                    continue;
+                }
+                if (c == '`') {
+                    return i + 1;
+                }
+                i++;
+            }
+            return length;
+        }
+
+        private int skipLineComment(int start) {
+            int i = start;
+            while (i < length && source.charAt(i) != '\n' && source.charAt(i) != '\r') {
+                i++;
+            }
+            return i;
+        }
+
+        private int skipLineComment(String text, int start) {
+            int i = start;
+            while (i < text.length() && text.charAt(i) != '\n' && text.charAt(i) != '\r') {
+                i++;
+            }
+            return i;
+        }
+
+        private int skipBlockComment(int start) {
+            int i = start;
+            while (i + 1 < length) {
+                if (source.charAt(i) == '*' && source.charAt(i + 1) == '/') {
+                    return i + 2;
+                }
+                i++;
+            }
+            return length;
+        }
+
+        private int skipBlockComment(String text, int start) {
+            int i = start;
+            while (i + 1 < text.length()) {
+                if (text.charAt(i) == '*' && text.charAt(i + 1) == '/') {
+                    return i + 2;
+                }
+                i++;
+            }
+            return text.length();
+        }
+
+        private int skipRegex(int start) {
+            int i = start;
+            boolean inClass = false;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\\') {
+                    i += 2;
+                    continue;
+                }
+                if (c == '[') {
+                    inClass = true;
+                } else if (c == ']') {
+                    inClass = false;
+                } else if (c == '/' && !inClass) {
+                    i++;
+                    while (i < length && isIdentifierPart(source.charAt(i))) {
+                        i++;
+                    }
+                    return i;
+                }
+                i++;
+            }
+            return length;
+        }
+
+        private boolean looksLikeRegexStart(int slash) {
+            int previous = previousNonWhitespace(slash - 1);
+            if (previous < 0) {
+                return true;
+            }
+            char c = source.charAt(previous);
+            return "=(:,[!&|?;{}\n\r".indexOf(c) >= 0;
+        }
+
+        private int previousNonWhitespace(int index) {
+            int i = Math.min(index, length - 1);
+            while (i >= 0 && Character.isWhitespace(source.charAt(i))) {
+                i--;
+            }
+            return i;
+        }
+
+        private boolean isIdentifierStart(char c) {
+            return Character.isUnicodeIdentifierStart(c) || c == '$' || c == '_';
+        }
+
+        private boolean isIdentifierPart(char c) {
+            return Character.isUnicodeIdentifierPart(c) || c == '$' || c == '_';
+        }
+
+        private String factoryCall(String typeExpression, String propsExpression, List<String> children) {
+            StringBuilder call = new StringBuilder("globalThis.__nekoJsxFactory(")
+                    .append(typeExpression)
+                    .append(", ")
+                    .append(propsExpression);
+            for (String child : children) {
+                call.append(", ").append(child);
+            }
+            return call.append(')').toString();
+        }
+
+        private String fragmentCall(List<String> children) {
+            StringBuilder call = new StringBuilder("globalThis.__nekoJsxFragment(");
+            for (int i = 0; i < children.size(); i++) {
+                if (i > 0) {
+                    call.append(", ");
+                }
+                call.append(children.get(i));
+            }
+            return call.append(')').toString();
+        }
+
+        private String stringLiteral(String value) {
+            if (value == null) {
+                return "''";
+            }
+            return "'" + value.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r") + "'";
+        }
+
+        private IllegalArgumentException jsxError(String message, int index) {
+            return new IllegalArgumentException(message + " in " + file + " at " + position(index));
+        }
+
+        private String position(int index) {
+            int line = 1;
+            int column = 1;
+            for (int i = 0; i < index && i < length; i++) {
+                if (source.charAt(i) == '\n') {
+                    line++;
+                    column = 1;
+                } else {
+                    column++;
+                }
+            }
+            return line + ":" + column;
+        }
+    }
+
+    private record ParseResult(String text, int nextIndex) {}
+    private record ExpressionResult(String text, int nextIndex) {}
+    private record AttributeResult(String text, int nextIndex) {}
+}

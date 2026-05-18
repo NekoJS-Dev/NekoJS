@@ -14,8 +14,7 @@ public record NekoIRProgram(
         List<NekoIRImport> imports,
         List<NekoIRExport> exports,
         List<NekoIRBinding> bindings,
-        List<NekoIRScope> scopes,
-        Object nativeAst
+        List<NekoIRScope> scopes
 ) implements NekoIRNode {
     public NekoIRProgram {
         languageId = languageId == null || languageId.isBlank() ? "unknown" : languageId;

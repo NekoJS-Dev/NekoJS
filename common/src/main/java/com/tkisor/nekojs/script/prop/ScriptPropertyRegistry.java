@@ -18,14 +18,22 @@ public interface ScriptPropertyRegistry {
     @ApiStatus.Internal
     class Impl implements ScriptPropertyRegistry {
         private final Map<String, ScriptProperty<?>> all = new LinkedHashMap<>();
+        private boolean frozen;
 
         @Override
         public void register(ScriptProperty<?> property) {
+            if (frozen) {
+                throw new IllegalStateException("Script property registry is frozen after plugin bootstrap");
+            }
             if (all.containsKey(property.name)) {
                 throw new IllegalArgumentException(String.format("property '%s' already registered", property.name));
             }
             property.ordinal = all.size();
             all.put(property.name, property);
+        }
+
+        public void freeze() {
+            frozen = true;
         }
 
         @Override

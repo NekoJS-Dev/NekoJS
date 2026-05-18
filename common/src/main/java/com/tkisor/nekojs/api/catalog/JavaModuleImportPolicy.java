@@ -7,6 +7,6 @@ public record JavaModuleImportPolicy(
         boolean classModules
 ) {
     public static JavaModuleImportPolicy nekoDefault() {
-        return new JavaModuleImportPolicy("java:", true, true, false);
+        return new JavaModuleImportPolicy("java:", false, true, true);
     }
 }

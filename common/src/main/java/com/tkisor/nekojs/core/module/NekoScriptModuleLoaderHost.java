@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkMetadata;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -119,15 +121,12 @@ public final class NekoScriptModuleLoaderHost {
 
     public void invalidateAffectedModules(String modulePath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
-        for (String moduleId : dependencyGraph.affectedModules(resolved.id())) {
-            moduleCache.remove(moduleId);
-            esmModuleCache.remove(moduleId);
-            dependencyGraph.clearDependencies(moduleId);
-            NekoEsmVirtualModuleRegistry.invalidate(moduleId);
-        }
-        if (!resolved.special()) {
-            NekoModulePreparationCache.invalidate(resolved.path());
-        }
+        invalidateModules(dependencyGraph.affectedModules(resolved.id()));
+    }
+
+    public void invalidateModuleTree(String modulePath) throws IOException {
+        NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
+        invalidateModules(dependencyGraph.dependencyModules(resolved.id()));
     }
 
     public Object nativeImport(String parentPath, String specifier) throws IOException {
@@ -159,6 +158,16 @@ public final class NekoScriptModuleLoaderHost {
             return esmRewriter.registerModule(resolved.path(), resolved.id(), prepared).toString();
         }
         return esmRewriter.syntheticCjsModuleUri(resolved.id(), parentPath, specifier).toString();
+    }
+
+    private void invalidateModules(List<String> moduleIds) {
+        for (String moduleId : moduleIds) {
+            moduleCache.remove(moduleId);
+            esmModuleCache.remove(moduleId);
+            dependencyGraph.removeModule(moduleId);
+            NekoEsmVirtualModuleRegistry.invalidate(moduleId);
+            NekoModulePreparationCache.invalidate(NekoJSPaths.ROOT.resolve(moduleId));
+        }
     }
 
     private Object loadResolved(NekoResolvedModule resolved) throws IOException {

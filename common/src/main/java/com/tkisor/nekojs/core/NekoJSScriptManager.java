@@ -264,6 +264,10 @@ public final class NekoJSScriptManager {
         Context ctx = contexts.at(type);
         String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
         synchronized (ctx) {
+            for (ScriptContainer script : targets) {
+                String entryPath = "./" + NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/');
+                ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
+            }
             ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
         }
 

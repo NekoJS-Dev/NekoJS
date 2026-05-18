@@ -212,7 +212,30 @@ public final class NekoTypeScriptCompiler implements IScriptCompiler {
             int previousToken = previousNonWhitespace(beforeProperty);
             if (previousToken < 0) return false;
             char c = source.charAt(previousToken);
-            return c == '{' || c == ',';
+            if (c != '{' && c != ',') return false;
+            int objectStart = enclosingOpenBrace(previousToken);
+            return objectStart >= 0 && objectLiteralContext(objectStart);
+        }
+
+        private int enclosingOpenBrace(int before) {
+            int depth = 0;
+            for (int i = before; i >= 0; i--) {
+                char c = source.charAt(i);
+                if (c == '}') {
+                    depth++;
+                } else if (c == '{') {
+                    if (depth == 0) return i;
+                    depth--;
+                }
+            }
+            return -1;
+        }
+
+        private boolean objectLiteralContext(int openBrace) {
+            int previous = previousNonWhitespace(openBrace - 1);
+            if (previous < 0) return true;
+            char c = source.charAt(previous);
+            return "=(:,[!&|?;{}<>+-*/%".indexOf(c) >= 0;
         }
 
         private int propertyStart(int endInclusive) {

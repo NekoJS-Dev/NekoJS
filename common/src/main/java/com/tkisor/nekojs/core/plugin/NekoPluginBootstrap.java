@@ -31,6 +31,7 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -108,7 +109,7 @@ public final class NekoPluginBootstrap {
 
     private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        private final ScriptPropertyRegistry scriptProperties = new ScriptPropertyRegistry.Impl();
+        private final ScriptPropertyRegistry.Impl scriptProperties = new ScriptPropertyRegistry.Impl();
         private final boolean client;
         private final List<Binding> bindings = new ArrayList<>();
         private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
@@ -118,6 +119,7 @@ public final class NekoPluginBootstrap {
         private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces = new LinkedHashMap<>();
         private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
         private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
+        private boolean frozen;
 
         BootstrapState(boolean client) {
             this.client = client;
@@ -168,18 +170,22 @@ public final class NekoPluginBootstrap {
             return new RecipeLifecycleRegister() {
                 @Override
                 public void beforeRecipeLoading(Consumer<RecipeLifecycleContext> hook) {
-                    beforeRecipeLoadingHooks.add(hook);
+                    requireMutable("recipe lifecycle hooks");
+                    beforeRecipeLoadingHooks.add(Objects.requireNonNull(hook, "hook"));
                 }
 
                 @Override
                 public void afterRecipes(Consumer<RecipeLifecycleContext> hook) {
-                    afterRecipesHooks.add(hook);
+                    requireMutable("recipe lifecycle hooks");
+                    afterRecipesHooks.add(Objects.requireNonNull(hook, "hook"));
                 }
             };
         }
 
         void freeze() {
+            frozen = true;
             scriptCompilers.freeze();
+            scriptProperties.freeze();
         }
 
         NekoPluginRuntime createRuntime() {
@@ -198,6 +204,8 @@ public final class NekoPluginBootstrap {
         }
 
         void registerBinding(Binding binding) {
+            requireMutable("bindings");
+            Objects.requireNonNull(binding, "binding");
             String name = binding.getName();
             ScriptType type = binding.scriptType();
             for (Binding existing : bindings) {
@@ -220,10 +228,13 @@ public final class NekoPluginBootstrap {
         }
 
         <T> void registerAdapter(JSTypeAdapter<T> adapter) {
-            adapters.add(adapter);
+            requireMutable("adapters");
+            adapters.add(Objects.requireNonNull(adapter, "adapter"));
         }
 
         void registerEvent(EventGroup group) {
+            requireMutable("events");
+            Objects.requireNonNull(group, "group");
             EventGroup existing = eventGroups.get(group.name());
             if (existing != null) {
                 existing.merge(group);
@@ -234,15 +245,19 @@ public final class NekoPluginBootstrap {
 
         @Override
         public void register(TypeDocCatalogEntry entry) {
-            typeDocs.add(entry);
+            requireMutable("type docs");
+            typeDocs.add(Objects.requireNonNull(entry, "entry"));
         }
 
         @Override
         public void registerManualDeclaration(ManualDeclarationCatalogEntry entry) {
-            manualDeclarations.add(entry);
+            requireMutable("manual declarations");
+            manualDeclarations.add(Objects.requireNonNull(entry, "entry"));
         }
 
         <C> void registerRecipeNamespace(RecipeNamespaceEntry<C> entry) {
+            requireMutable("recipe namespaces");
+            Objects.requireNonNull(entry, "entry");
             if (recipeNamespaces.containsKey(entry.namespace())) {
                 throw new IllegalArgumentException("Recipe namespace '" + entry.namespace() + "' is already registered. Possible plugin conflict.");
             }
@@ -296,6 +311,12 @@ public final class NekoPluginBootstrap {
 
         List<Consumer<RecipeLifecycleContext>> afterRecipesHooksSnapshot() {
             return List.copyOf(afterRecipesHooks);
+        }
+
+        private void requireMutable(String registryName) {
+            if (frozen) {
+                throw new IllegalStateException("Plugin " + registryName + " registry is frozen after bootstrap");
+            }
         }
     }
 }

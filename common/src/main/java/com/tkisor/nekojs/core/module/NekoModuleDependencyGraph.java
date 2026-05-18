@@ -51,6 +51,31 @@ public final class NekoModuleDependencyGraph {
     }
 
     public List<String> affectedModules(String moduleId) {
+        return collect(moduleId, parentsByDependency);
+    }
+
+    public List<String> dependencyModules(String moduleId) {
+        return collect(moduleId, dependenciesByParent);
+    }
+
+    public void removeModule(String moduleId) {
+        if (moduleId == null || moduleId.isBlank()) return;
+        entryModules.remove(moduleId);
+        clearDependencies(moduleId);
+        Set<String> parents = parentsByDependency.remove(moduleId);
+        if (parents == null) return;
+        for (String parent : parents) {
+            Set<String> children = dependenciesByParent.get(parent);
+            if (children != null) {
+                children.remove(moduleId);
+                if (children.isEmpty()) {
+                    dependenciesByParent.remove(parent);
+                }
+            }
+        }
+    }
+
+    private List<String> collect(String moduleId, Map<String, Set<String>> graph) {
         if (moduleId == null || moduleId.isBlank()) return List.of();
         Set<String> modules = new LinkedHashSet<>();
         ArrayDeque<String> queue = new ArrayDeque<>();
@@ -60,8 +85,8 @@ public final class NekoModuleDependencyGraph {
             if (!modules.add(current)) {
                 continue;
             }
-            Set<String> parents = parentsByDependency.getOrDefault(current, Collections.emptySet());
-            queue.addAll(parents);
+            Set<String> next = graph.getOrDefault(current, Collections.emptySet());
+            queue.addAll(next);
         }
         return new ArrayList<>(modules);
     }

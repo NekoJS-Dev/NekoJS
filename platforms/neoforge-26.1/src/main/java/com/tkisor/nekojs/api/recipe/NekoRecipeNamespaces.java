@@ -10,10 +10,13 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class NekoRecipeNamespaces {
+    private static final Map<Class<?>, Set<String>> RECIPE_TYPES_BY_HANDLER = new ConcurrentHashMap<>();
+
     private NekoRecipeNamespaces() {}
 
     public static Object createHandler(String namespace, RecipeEventJS event) {
@@ -37,13 +40,14 @@ public final class NekoRecipeNamespaces {
 
     public static Set<String> getRecipeTypes(String namespace) {
         Class<?> handlerClass = getHandlerClass(namespace);
+        return handlerClass == null ? Set.of() : getRecipeTypes(handlerClass);
+    }
+
+    public static Set<String> getRecipeTypes(Class<?> handlerClass) {
         if (handlerClass == null) {
             return Set.of();
         }
-        return MemberVisibilityQuery.getVisibleMethods(handlerClass).entrySet().stream()
-                .filter(entry -> Modifier.isPublic(entry.getValue().member().getModifiers()))
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        return RECIPE_TYPES_BY_HANDLER.computeIfAbsent(handlerClass, NekoRecipeNamespaces::recipeTypesForHandler);
     }
 
     public static boolean hasRecipeType(String namespace, String recipeType) {
@@ -54,5 +58,13 @@ public final class NekoRecipeNamespaces {
         Map<String, Class<?>> handlerClasses = new LinkedHashMap<>();
         NekoPluginRuntime.current().recipeNamespaces().forEach((namespace, entry) -> handlerClasses.put(namespace, entry.handlerClass()));
         return Collections.unmodifiableMap(handlerClasses);
+    }
+
+    private static Set<String> recipeTypesForHandler(Class<?> handlerClass) {
+        Set<String> recipeTypes = MemberVisibilityQuery.getVisibleMethods(handlerClass).entrySet().stream()
+                .filter(entry -> Modifier.isPublic(entry.getValue().member().getModifiers()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        return Collections.unmodifiableSet(recipeTypes);
     }
 }

@@ -4,6 +4,6 @@ public enum NekoModuleKind {
     SCRIPT,
     JSON,
     BUILTIN,
-    JAVA_PACKAGE,
+    JAVA_MODULE,
     SPECIAL
 }

@@ -2,11 +2,9 @@ package com.tkisor.nekojs.script;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.tkisor.nekojs.NekoJSCommon;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
-import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
+import com.tkisor.nekojs.api.catalog.NekoSnippetJson;
 import com.tkisor.nekojs.bindings.event.ModifyWorkspaceConfigEvent;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.JSConfigModel;
@@ -84,30 +82,10 @@ public final class WorkspaceGenerator {
         Path snippetsPath = NekoScriptCatalog.outputLayout().snippetsPath();
         try {
             Files.createDirectories(snippetsPath.getParent());
-            Files.writeString(snippetsPath, GSON.toJson(snippetJson()));
+            Files.writeString(snippetsPath, GSON.toJson(NekoSnippetJson.vscodeSnippets()));
         } catch (IOException e) {
             NekoJSCommon.LOGGER.error("[NekoJS] Failed to create snippets file: {}", snippetsPath, e);
         }
-    }
-
-    private static JsonObject snippetJson() {
-        JsonObject root = new JsonObject();
-        for (SnippetCatalogEntry snippet : NekoScriptCatalog.snippets()) {
-            JsonObject entry = new JsonObject();
-            entry.addProperty("prefix", snippet.prefix());
-            entry.add("body", snippetBody(snippet.body()));
-            entry.addProperty("description", snippet.description());
-            root.add(snippet.name(), entry);
-        }
-        return root;
-    }
-
-    private static JsonArray snippetBody(String body) {
-        JsonArray lines = new JsonArray();
-        for (String line : body.split("\\R", -1)) {
-            lines.add(line);
-        }
-        return lines;
     }
 
     private WorkspaceGenerator() {}

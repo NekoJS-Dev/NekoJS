@@ -17,7 +17,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
@@ -327,7 +326,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public int count() {
-        return all().size();
+        return jsons.size();
     }
 
     public int count(RecipeFilter filter) {
@@ -335,7 +334,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public boolean exists(String id) {
-        return get(id) != null;
+        Identifier parsedId = RecipeJsonBuilder.parseId(id);
+        return parsedId != null && jsons.containsKey(parsedId);
     }
 
     public boolean exists(RecipeFilter filter) {

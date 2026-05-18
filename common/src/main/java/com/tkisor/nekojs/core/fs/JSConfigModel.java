@@ -8,7 +8,11 @@ public class JSConfigModel {
 
     public List<String> include = Arrays.asList(
             "./**/*.js",
-            "./**/*.ts"
+            "./**/*.mjs",
+            "./**/*.cjs",
+            "./**/*.ts",
+            "./**/*.jsx",
+            "./**/*.tsx"
     );
 
     public static class CompilerOptions {
@@ -18,9 +22,9 @@ public class JSConfigModel {
         public String moduleDetection = "force";
 
         public String moduleResolution = null;
-        public String jsx = null;
-        public String jsxFactory = null;
-        public String jsxFragmentFactory = null;
+        public String jsx = "react";
+        public String jsxFactory = "__nekoJsxFactory";
+        public String jsxFragmentFactory = "__nekoJsxFragment";
 
         public List<String> lib = List.of("ESNext");
         public boolean allowJs = true;

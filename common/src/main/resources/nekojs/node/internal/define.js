@@ -3,6 +3,7 @@
   const modules = globalThis.__nekoNodeBuiltins || Object.create(null)
   const NO_MODULE = globalThis.__nekoNodeNoModule || Symbol('neko.node.no-module')
   const javaNamespaceCache = new Map()
+  const javaClassModuleCache = new Map()
   const javaTypeCache = new Map()
 
   function asError(error) {
@@ -51,10 +52,57 @@
     return value
   }
 
-  function isPackageSpecifier(target) {
-    if (!/^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(target)) return false
-    const segments = target.split('.')
-    return segments.every(segment => /^[a-z_]/.test(segment))
+  function normalizeJsxChildren(children) {
+    const normalized = []
+    for (const child of children) {
+      if (Array.isArray(child)) {
+        normalized.push(...normalizeJsxChildren(child))
+      } else if (child !== null && child !== undefined && child !== false && child !== true) {
+        normalized.push(child)
+      }
+    }
+    return normalized
+  }
+
+  function createJsxElement(type, props, ...children) {
+    const normalizedChildren = normalizeJsxChildren(children)
+    const normalizedProps = props == null ? {} : { ...props }
+    if (normalizedChildren.length === 1) {
+      normalizedProps.children = normalizedChildren[0]
+    } else if (normalizedChildren.length > 1) {
+      normalizedProps.children = normalizedChildren
+    }
+    return { tag: type, props: normalizedProps, children: normalizedChildren }
+  }
+
+  function createJsxFragment(...children) {
+    return createJsxElement(Symbol.for('nekojs.jsx.fragment'), null, ...children)
+  }
+
+  globalThis.__nekoJsxFactory = globalThis.__nekoJsxFactory || createJsxElement
+  globalThis.__nekoJsxFragment = globalThis.__nekoJsxFragment || createJsxFragment
+
+  function normalizeJavaSpecifier(id) {
+    if (typeof id !== 'string') return undefined
+    const raw = id.startsWith('java:') ? id.slice(5) : id
+    const body = raw.trim().replace(/\\/g, '/')
+    if (!body || body.startsWith('.') || body.startsWith('/') || body.endsWith('/') || body.includes('..')) return undefined
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:[./][A-Za-z_$][A-Za-z0-9_$]*)*$/.test(body)) return undefined
+    return body.replace(/\//g, '.')
+  }
+
+  function isJavaSpecifier(id) {
+    if (typeof id !== 'string') return false
+    return id.startsWith('java:') || id.startsWith('java.') || id.startsWith('java/')
+  }
+
+  function isJavaPackageName(name) {
+    return name.split('.').every(segment => /^[a-z_]/.test(segment))
+  }
+
+  function javaClassSimpleName(className) {
+    const index = className.lastIndexOf('.')
+    return index < 0 ? className : className.slice(index + 1)
   }
 
   function loadJavaType(className) {
@@ -67,6 +115,31 @@
     const type = globalThis.Java.type(className)
     javaTypeCache.set(className, type)
     return type
+  }
+
+  function createJavaClassModule(className) {
+    const cached = javaClassModuleCache.get(className)
+    if (cached) return cached
+
+    const type = loadJavaType(className)
+    const simpleName = javaClassSimpleName(className)
+    const prefixedName = `$${simpleName}`
+    const module = new Proxy(type, {
+      get(target, prop, receiver) {
+        if (prop === '__esModule') return true
+        if (prop === 'default' || prop === prefixedName) return target
+        if (prop === 'then') return undefined
+        if (prop === Symbol.toStringTag) return 'NekoJavaClassModule'
+        if (prop === 'toString') return () => `[object NekoJavaClassModule ${className}]`
+        return Reflect.get(target, prop, receiver)
+      },
+      has(target, prop) {
+        return prop === '__esModule' || prop === 'default' || prop === prefixedName || Reflect.has(target, prop)
+      }
+    })
+
+    javaClassModuleCache.set(className, module)
+    return module
   }
 
   function createJavaNamespace(prefix) {
@@ -84,7 +157,12 @@
         if (typeof prop !== 'string') return Reflect.get(cache, prop, receiver)
         if (Object.prototype.hasOwnProperty.call(cache, prop)) return cache[prop]
 
-        const qualifiedName = prefix ? `${prefix}.${prop}` : prop
+        let qualifiedName
+        if (prop.startsWith('$') && prop.length > 1) {
+          qualifiedName = `${prefix}.${prop.slice(1)}`
+        } else {
+          qualifiedName = prefix ? `${prefix}.${prop}` : prop
+        }
         try {
           const type = loadJavaType(qualifiedName)
           cache[prop] = type
@@ -117,19 +195,17 @@
   }
 
   function resolveJavaModule(id) {
-    if (typeof id !== 'string' || !id.startsWith('java:')) {
-      return NO_MODULE
-    }
+    if (!isJavaSpecifier(id)) return NO_MODULE
 
-    const target = id.slice(5).trim()
+    const target = normalizeJavaSpecifier(id)
     if (!target) {
-      throw new TypeError(`Invalid java: module specifier: ${id}`)
+      throw new TypeError(`Invalid Java module specifier: ${id}`)
     }
 
-    if (!isPackageSpecifier(target)) {
-      throw new TypeError(`Invalid java: package module specifier: ${id}. Use package-level modules like java:java.lang and named imports such as import { Integer } from 'java:java.lang'.`)
+    if (isJavaPackageName(target)) {
+      return createJavaNamespace(target)
     }
-    return createJavaNamespace(target)
+    return createJavaClassModule(target)
   }
 
   function resolveSpecialModule(id) {

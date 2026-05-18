@@ -118,7 +118,7 @@ public final class NekoEsmVirtualModuleRegistry {
             return "<native-esm>";
         }
         String normalized = moduleId.replace('\\', '/');
-        if (normalized.startsWith("java:") || normalized.startsWith("node:")) {
+        if (normalized.startsWith("java:") || normalized.startsWith("java.") || normalized.startsWith("java/") || normalized.startsWith("node:")) {
             return normalized;
         }
         try {

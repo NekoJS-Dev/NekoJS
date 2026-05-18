@@ -310,7 +310,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public int count() {
-        return all().size();
+        return jsons.size();
     }
 
     public int count(RecipeFilter filter) {
@@ -318,7 +318,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public boolean exists(String id) {
-        return get(id) != null;
+        ResourceLocation parsedId = RecipeJsonBuilder.parseId(id);
+        return parsedId != null && jsons.containsKey(parsedId);
     }
 
     public boolean exists(RecipeFilter filter) {

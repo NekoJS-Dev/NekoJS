@@ -12,6 +12,7 @@ import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
+import com.tkisor.nekojs.core.module.esm.NekoEsmParser;
 
 import java.nio.file.Path;
 import java.util.Locale;
@@ -29,7 +30,7 @@ public final class NekoModulePipeline {
 
     public static NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         String extension = extension(file);
-        NekoModuleMode requestedMode = requestedMode(extension);
+        NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
         NekoLanguagePlugin language = languagePlugin(file, extension);
 
         if (!ClassFilter.enableEsmAuthoring || requestedMode == NekoModuleMode.COMMONJS) {
@@ -53,9 +54,7 @@ public final class NekoModulePipeline {
         if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
             return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
         }
-        if (!(ir.nativeAst() instanceof NekoEsmModuleAst ast)) {
-            return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
-        }
+        NekoEsmModuleAst ast = new NekoEsmParser(null, compiled.code()).parse();
         return NekoPreparedModule.esm(compiled.code(), compiled.sourceMap(), ast);
     }
 
@@ -78,14 +77,6 @@ public final class NekoModulePipeline {
             throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
         }
         return NekoJavaScriptLanguagePlugin.INSTANCE;
-    }
-
-    private static NekoModuleMode requestedMode(String extension) {
-        return switch (extension) {
-            case ".mjs" -> NekoModuleMode.ESM;
-            case ".cjs" -> NekoModuleMode.COMMONJS;
-            default -> NekoModuleMode.AUTO;
-        };
     }
 
     private static String extension(Path file) {
