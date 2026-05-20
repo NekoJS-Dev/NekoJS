@@ -15,6 +15,7 @@ import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
+import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
@@ -85,6 +86,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(CommandEvents.GROUP);
         registry.register(RegistryEvents.GROUP);
         registry.register(LevelEvents.GROUP);
+    }
+
+    @Override
+    public void registerClientEvents(EventGroupRegistry registry) {
+        registry.register(ClientEvents.GROUP);
     }
 
     @Override

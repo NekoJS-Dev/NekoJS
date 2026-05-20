@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
@@ -21,6 +22,7 @@ public class NekoJSClient {
         modEventBus.addListener(NekoJSClient::onClientResourceReload);
         modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onClientTickPost);
+        ClientEvents.bindModBus(modEventBus);
     }
 
     /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent

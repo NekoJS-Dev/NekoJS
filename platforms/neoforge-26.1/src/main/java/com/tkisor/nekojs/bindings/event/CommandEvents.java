@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 public interface CommandEvents {
@@ -11,6 +12,10 @@ public interface CommandEvents {
 
     EventBusJS<RegisterCommandsEvent, Void> REGISTER =
             GROUP.server("register", RegisterCommandsEvent.class);
+    EventBusJS<CommandEvent, Void> COMMAND =
+            GROUP.server("command", CommandEvent.class);
+
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-            .bind(REGISTER);
+            .bind(REGISTER)
+            .bind(COMMAND);
 }

@@ -167,7 +167,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 明确默认访问策略：读路径限制在 `.minecraft` 内；写/删除默认限制在 `.minecraft/nekojs`；用户可在 `nekojs/config/engine.toml` 设置 `allowFsWriteOutsideNekojs = true` 允许写/删整个 `.minecraft`，但仍禁止越过 game root。
 - [x] 收紧 `NekoJSFileSystem` 的危险入口：默认禁用 `createSymbolicLink`，避免脚本通过 symlink 创建外部访问通道。
 - [x] 在 CommonJS `require` 外层安装 core module shim：保留现有相对路径/`node_modules` 解析，只拦截 `fs`、`node:fs` 等内置模块名。
-- [x] 增加 issue #23 Java module import 解析：`require('java:java/lang')` / `import { $Integer } from 'java:java/lang'` 通过懒加载 namespace proxy 按 `$Class` 解析 Java 类型；`java:java/lang/Integer` class-level module 会直接返回 Java class 并暴露 `$Integer`/default，CJS 兼容 `java.lang`、`java/lang`、`java:java.lang` 和 `java:java/lang`。`JavaModuleImportPolicy` 允许类型生成器在 package module 与 class module 之间切换。
+- [x] 增加 issue #23 Java module import 解析：`require('java:java/lang')` / `import { $Integer } from 'java:java/lang'` 通过懒加载 namespace proxy 按 `$Class` 解析 Java 类型；`java:java/lang/Integer` class-level module 会直接返回 Java class 并暴露 `$Integer`/default。`JavaModuleImportPolicy` 允许类型生成器在 package module 与 class module 之间切换。
 - [x] 将 Node shim JS 从 Java text block 拆到 classpath resources：`common/src/main/resources/nekojs/node/modules.list` 按顺序加载 `internal/define.js`、各 builtin module 和 `bootstrap.js`，避免依赖 jar 内目录扫描。
 - [x] 实现 `fs` 同步基础 API：`existsSync`、`readFileSync`、`writeFileSync`、`appendFileSync`、`mkdirSync`、`rmSync`、`unlinkSync`、`readdirSync`、`statSync`、`lstatSync`、`renameSync`、`copyFileSync`、`realpathSync`、`readlinkSync`。
 - [x] 实现 `fs` callback API：`readFile`、`writeFile`、`appendFile`、`mkdir`、`rm`、`unlink`、`readdir`、`stat`、`lstat`、`rename`、`copyFile`、`realpath`，错误优先 callback 行为尽量贴近 Node。
