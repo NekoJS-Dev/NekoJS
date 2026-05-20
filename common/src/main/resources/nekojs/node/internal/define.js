@@ -83,21 +83,20 @@
   globalThis.__nekoJsxFragment = globalThis.__nekoJsxFragment || createJsxFragment
 
   function normalizeJavaSpecifier(id) {
-    if (typeof id !== 'string') return undefined
-    const raw = id.startsWith('java:') ? id.slice(5) : id
-    const body = raw.trim().replace(/\\/g, '/')
-    if (!body || body.startsWith('.') || body.startsWith('/') || body.endsWith('/') || body.includes('..')) return undefined
-    if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:[./][A-Za-z_$][A-Za-z0-9_$]*)*$/.test(body)) return undefined
+    if (typeof id !== 'string' || !id.startsWith('java:')) return undefined
+    const body = id.slice(5).trim().replace(/\\/g, '/')
+    if (!body || body.startsWith('/') || body.endsWith('/') || body.includes('..') || body.includes('.')) return undefined
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*(?:\/[A-Za-z_$][A-Za-z0-9_$]*)*$/.test(body)) return undefined
     return body.replace(/\//g, '.')
   }
 
   function isJavaSpecifier(id) {
     if (typeof id !== 'string') return false
-    return id.startsWith('java:') || id.startsWith('java.') || id.startsWith('java/')
+    return id.startsWith('java:')
   }
 
   function isJavaPackageName(name) {
-    return name.split('.').every(segment => /^[a-z_]/.test(segment))
+    return name.includes('.') && name.split('.').every(segment => /^[a-z_]/.test(segment))
   }
 
   function javaClassSimpleName(className) {

@@ -44,6 +44,38 @@ nekojs/
 
 ---
 
+## Java 模块导入
+
+NekoJS 把 Java 包/类当成 `java:` 特殊模块处理。ESM 会把 Java 导入重写成 synthetic module；CJS 的 `require()` 直接返回 Java namespace / class proxy。
+
+### 包级模块
+
+```ts
+import { Integer, $Integer, Math as JavaMath } from 'java:java/lang'
+const { Integer, $Integer, Math: JavaMath } = require('java:java/lang')
+```
+
+- 包级模块是懒加载 namespace proxy：普通名字按属性查找，`$Class` 会直接映射到 `Java.type('java.lang.Class')`。
+- 因此 `Integer`、`$Integer`、`Math` / `JavaMath` 这类写法都能用。
+
+### 类级模块
+
+```ts
+import IntegerClass, { $Integer } from 'java:java/lang/Integer'
+const IntegerClass3 = require('java:java/lang/Integer')
+```
+
+- 类级模块会直接返回 Java class proxy，并额外暴露 `default` / `$Class`。
+- 如果只想拿一个明确的 Java 类，这种写法最直接。
+
+### 兼容边界
+
+- 现在只接受 `java:` 前缀。
+- 现在只接受斜杠分隔路径：`java:java/lang`、`java:java/lang/Integer`。
+- `import('java:java/lang')` / `import('java:java/lang/Integer')` 会得到带 `default` / `namespace` 的 synthetic ESM module。
+- ESM static import / dynamic import 推荐优先使用 `java:` 斜杠形式。
+- 类型生成器优先输出 `java:package/path` + `$Class`，再按需补 `java:package/path/Class` 的类级模块。
+
 ## 快速开始
 
 ### 1. 编写模块库 (`utils.ts`)

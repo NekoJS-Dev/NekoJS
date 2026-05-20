@@ -116,19 +116,18 @@ public final class NekoModuleResolver {
     }
 
     private boolean isJavaSpecifier(String specifier) {
-        return specifier.startsWith("java:") || specifier.startsWith("java.") || specifier.startsWith("java/");
+        return specifier.startsWith("java:");
     }
 
     private void validateJavaSpecifier(String specifier) throws IOException {
-        String body = specifier.startsWith("java:") ? specifier.substring("java:".length()) : specifier;
-        body = body.replace('\\', '/').trim();
+        String body = specifier.substring("java:".length()).replace('\\', '/').trim();
         if (body.isBlank()) {
             throw new IOException("Java module specifier must not be blank");
         }
-        if (body.startsWith(".") || body.startsWith("/") || body.endsWith("/") || body.contains("..")) {
+        if (body.startsWith("/") || body.endsWith("/") || body.contains("..") || body.contains(".")) {
             throw new IOException("Invalid Java module specifier: " + specifier);
         }
-        if (!body.matches("[A-Za-z_$][A-Za-z0-9_$]*([./][A-Za-z_$][A-Za-z0-9_$]*)*")) {
+        if (!body.matches("[A-Za-z_$][A-Za-z0-9_$]*(/[A-Za-z_$][A-Za-z0-9_$]*)*")) {
             throw new IOException("Invalid Java module specifier: " + specifier);
         }
     }
