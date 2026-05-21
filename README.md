@@ -143,7 +143,7 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 
 public interface StartupBindingsPlugin extends NekoJSPlugin {
-    void registerBinding(BindingRegistry registry);
+    void registerStartupBinding(BindingRegistry registry);
 }
 ```
 
@@ -164,7 +164,7 @@ public final class MyExtensionPointPlugin implements NekoJSPlugin, NekoPluginExt
         registry.register(NekoPluginExtensionPoint.of(
                 "mymod:startup_bindings",
                 StartupBindingsPlugin.class,
-                (plugin, context) -> plugin.registerStartupBindings(context.bindings(ScriptType.STARTUP))
+                (plugin, context) -> plugin.registerStartupBinding(context.bindings().at(ScriptType.STARTUP))
         ));
     }
 }
@@ -179,10 +179,10 @@ import com.tkisor.nekojs.api.data.BindingRegistry;
 @RegisterNekoJSPlugin
 public final class MyStartupApiPlugin implements StartupBindingsPlugin {
     @Override
-    public void registerBinding(BindingRegistry registry) {
+    public void registerStartupBinding(BindingRegistry registry) {
         registry.register("MyStartupApi", MyStartupApi.class);
-        if (registry.canApplyOn(ScriptType.CLIENT)) {
-            registry.register("ClientOnly", new ClientOnlyValue());
+        if (registry.scriptType() != ScriptType.STARTUP) { // always false, see extension point registry
+            registry.register("NotStartup", new NotStartupValue());
         }
     }
 }
