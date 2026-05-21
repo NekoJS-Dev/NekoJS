@@ -12,36 +12,36 @@ import java.util.Map;
  */
 public interface BindingRegistry {
 
-    boolean register(Binding2 binding);
+    boolean register(Binding binding);
 
     default boolean register(String name, Object value) {
-        return register(Binding2.of(name, value));
+        return register(Binding.of(name, value));
     }
 
     default boolean register(ScriptType targetType, String name, Object value) {
         return targetType == scriptType() && register(name, value);
     }
 
-    Map<String, Binding2> viewRegistered();
+    Map<String, Binding> viewRegistered();
 
     ScriptType scriptType();
 
     @VisibleForTesting
     final class BindingRegistryImpl implements BindingRegistry {
         private final ScriptType scriptType;
-        private final Map<String, Binding2> bindings = new LinkedHashMap<>();
+        private final Map<String, Binding> bindings = new LinkedHashMap<>();
 
         public BindingRegistryImpl(ScriptType scriptType) {
             this.scriptType = scriptType;
         }
 
         @Override
-        public boolean register(Binding2 binding) {
+        public boolean register(Binding binding) {
             return bindings.put(binding.name(), binding) == null;
         }
 
         @Override
-        public Map<String, Binding2> viewRegistered() {
+        public Map<String, Binding> viewRegistered() {
             return Collections.unmodifiableMap(bindings);
         }
 

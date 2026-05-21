@@ -7,7 +7,7 @@ import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.api.data.Binding2;
+import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.event.EventGroup;
@@ -23,7 +23,6 @@ import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
-import com.tkisor.nekojs.script.WithScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.util.ArrayList;
@@ -238,7 +237,7 @@ public final class NekoPluginBootstrap {
             recipeNamespaces.put(entry.namespace(), entry);
         }
 
-        Map<ScriptType, Map<String, Binding2>> bindingsByScriptType() {
+        Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
             return this.bindingRegistries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
         }

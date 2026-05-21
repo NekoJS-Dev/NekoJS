@@ -5,7 +5,7 @@ import com.tkisor.nekojs.api.NekoJSBasePlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.api.data.Binding2;
+import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
@@ -21,7 +21,7 @@ public final class NekoPluginRuntime {
 
     private final ScriptCompilerRegistry scriptCompilers;
     private final ScriptPropertyRegistry scriptProperties;
-    private final Map<ScriptType, Map<String, Binding2>> bindings;
+    private final Map<ScriptType, Map<String, Binding>> bindings;
     private final List<JSTypeAdapter<?>> adapters;
     private final Map<String, EventGroup> eventGroups;
     private final List<TypeDocCatalogEntry> typeDocs;
@@ -32,7 +32,7 @@ public final class NekoPluginRuntime {
 
     private NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
                               ScriptPropertyRegistry scriptProperties,
-                              Map<ScriptType, Map<String, Binding2>> bindings,
+                              Map<ScriptType, Map<String, Binding>> bindings,
                               List<JSTypeAdapter<?>> adapters,
                               Map<String, EventGroup> eventGroups,
                               List<TypeDocCatalogEntry> typeDocs,
@@ -68,7 +68,7 @@ public final class NekoPluginRuntime {
 
     static NekoPluginRuntime create(ScriptCompilerRegistry scriptCompilers,
                                     ScriptPropertyRegistry scriptProperties,
-                                    Map<ScriptType, Map<String, Binding2>> bindings,
+                                    Map<ScriptType, Map<String, Binding>> bindings,
                                     List<JSTypeAdapter<?>> adapters,
                                     Map<String, EventGroup> eventGroups,
                                     List<TypeDocCatalogEntry> typeDocs,
@@ -87,7 +87,7 @@ public final class NekoPluginRuntime {
         return scriptProperties;
     }
 
-    public Map<String, Binding2> bindings(ScriptType type) {
+    public Map<String, Binding> bindings(ScriptType type) {
         return bindings.getOrDefault(type, Map.of());
     }
 

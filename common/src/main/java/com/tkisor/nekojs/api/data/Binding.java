@@ -3,8 +3,8 @@ package com.tkisor.nekojs.api.data;
 import java.util.Objects;
 
 /// @author ZZZank
-public interface Binding2 {
-    static Binding2 of(String name, Object value) {
+public interface Binding {
+    static Binding of(String name, Object value) {
         return new SimpleBinding(name, value);
     }
 
@@ -21,7 +21,7 @@ public interface Binding2 {
     default void close() {
     }
 
-    record SimpleBinding(String name, Object value) implements Binding2 {
+    record SimpleBinding(String name, Object value) implements Binding {
         public SimpleBinding {
             Objects.requireNonNull(name, "name == null");
         }
