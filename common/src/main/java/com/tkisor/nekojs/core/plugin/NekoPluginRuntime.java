@@ -30,7 +30,7 @@ public final class NekoPluginRuntime {
     private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks;
     private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks;
 
-    private NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
+    NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
                               ScriptPropertyRegistry scriptProperties,
                               Map<ScriptType, Map<String, Binding>> bindings,
                               List<JSTypeAdapter<?>> adapters,
@@ -64,19 +64,6 @@ public final class NekoPluginRuntime {
             throw new IllegalStateException("NekoPluginRuntime has not been bootstrapped yet");
         }
         return current;
-    }
-
-    static NekoPluginRuntime create(ScriptCompilerRegistry scriptCompilers,
-                                    ScriptPropertyRegistry scriptProperties,
-                                    Map<ScriptType, Map<String, Binding>> bindings,
-                                    List<JSTypeAdapter<?>> adapters,
-                                    Map<String, EventGroup> eventGroups,
-                                    List<TypeDocCatalogEntry> typeDocs,
-                                    List<ManualDeclarationCatalogEntry> manualDeclarations,
-                                    Map<String, RecipeNamespaceEntry<?>> recipeNamespaces,
-                                    List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
-                                    List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
-        return new NekoPluginRuntime(scriptCompilers, scriptProperties, bindings, adapters, eventGroups, typeDocs, manualDeclarations, recipeNamespaces, beforeRecipeLoadingHooks, afterRecipesHooks);
     }
 
     public ScriptCompilerRegistry scriptCompilers() {

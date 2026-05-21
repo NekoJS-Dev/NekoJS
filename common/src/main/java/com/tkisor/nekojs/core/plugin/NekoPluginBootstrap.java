@@ -22,6 +22,7 @@ import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypePredicate;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
@@ -40,7 +41,13 @@ public final class NekoPluginBootstrap {
     private static final List<NekoPluginExtensionPoint<?>> BUILT_IN_EXTENSION_POINTS = List.of(
             base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
             base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(context.scriptProperties())),
-            base("nekojs:bindings", (plugin, context) -> context.bindings().stream().forEach(plugin::registerBinding)),
+            base("nekojs:bindings", (plugin, context) -> {
+                    var predicate = context.client()
+                        ? ScriptTypePredicate.exact(ScriptType.CLIENT).negate()
+                        : ScriptTypePredicate.any();
+                    predicate.streamMatched().map(context.bindings()::at).forEach(plugin::registerBinding);
+                }
+            ),
             base("nekojs:adapters", (plugin, context) -> plugin.registerAdapters(context.adapters())),
             base("nekojs:type_docs", (plugin, context) -> plugin.registerTypeDocs(context.typeDocs())),
             platform("nekojs:events", (plugin, context) -> plugin.registerEvents(context.events())),
@@ -106,7 +113,6 @@ public final class NekoPluginBootstrap {
     private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptPropertyRegistry.Impl scriptProperties = new ScriptPropertyRegistry.Impl();
-        // TODO: global binding registry is a bad idea, make it per-ScriptType
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
         private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
@@ -186,7 +192,7 @@ public final class NekoPluginBootstrap {
         }
 
         NekoPluginRuntime createRuntime() {
-            return NekoPluginRuntime.create(
+            return new NekoPluginRuntime(
                     scriptCompilers,
                     scriptProperties,
                     bindingsByScriptType(),
@@ -238,6 +244,7 @@ public final class NekoPluginBootstrap {
         }
 
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
+            requireMutable("binding");
             return this.bindingRegistries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
         }
