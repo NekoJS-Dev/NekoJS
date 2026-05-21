@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.api.data;
 
+import com.tkisor.nekojs.script.ScriptType;
+
 import java.util.Objects;
 
 /// @author ZZZank
@@ -18,7 +20,7 @@ public interface Binding {
     }
 
     /// Invoked when reloading script, and old binding is being removed
-    default void close() {
+    default void close(ScriptType scriptType) {
     }
 
     record SimpleBinding(String name, Object value) implements Binding {

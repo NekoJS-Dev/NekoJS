@@ -387,8 +387,12 @@ public final class NekoJSScriptManager {
     }
 
     private void resetEnvironment(ScriptType type) {
+        // TODO: make EventGroupJS a binding, utilize `binding.close(type)` instead of bridge
         eventBridge.clearListeners(type);
         NekoErrorTracker.clearByType(type);
+        for (var binding : NekoPluginRuntime.current().bindings(type).values()) {
+            binding.close(type);
+        }
 
         Context oldContext = contexts.set(type, null);
         NekoNodeRuntime oldRuntime = nodeRuntimes.set(type, null);
