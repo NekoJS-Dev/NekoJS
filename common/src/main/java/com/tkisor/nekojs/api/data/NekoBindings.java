@@ -8,7 +8,4 @@ import java.util.Map;
 public final class NekoBindings {
     private NekoBindings() {}
 
-    public static Map<String, Binding> getFor(ScriptType type) {
-        return NekoPluginRuntime.current().bindings(type);
-    }
 }

@@ -7,8 +7,8 @@ import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.Binding2;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
@@ -22,25 +22,26 @@ import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypedValue;
+import com.tkisor.nekojs.script.WithScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class NekoPluginBootstrap {
     private static final List<NekoPluginExtensionPoint<?>> BUILT_IN_EXTENSION_POINTS = List.of(
             base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
             base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(context.scriptProperties())),
-            base("nekojs:bindings", (plugin, context) -> plugin.registerBindings(context.bindings())),
-            clientBase("nekojs:client_bindings", (plugin, context) -> plugin.registerClientBindings(context.bindings())),
+            base("nekojs:bindings", (plugin, context) -> context.bindings().stream().forEach(plugin::registerBinding)),
             base("nekojs:adapters", (plugin, context) -> plugin.registerAdapters(context.adapters())),
             base("nekojs:type_docs", (plugin, context) -> plugin.registerTypeDocs(context.typeDocs())),
             platform("nekojs:events", (plugin, context) -> plugin.registerEvents(context.events())),
@@ -72,10 +73,6 @@ public final class NekoPluginBootstrap {
 
     private static NekoPluginExtensionPoint<NekoJSBasePlugin> base(String id, BiConsumer<NekoJSBasePlugin, NekoPluginExtensionContext> collector) {
         return NekoPluginExtensionPoint.of(id, NekoJSBasePlugin.class, collector);
-    }
-
-    private static NekoPluginExtensionPoint<NekoJSBasePlugin> clientBase(String id, BiConsumer<NekoJSBasePlugin, NekoPluginExtensionContext> collector) {
-        return NekoPluginExtensionPoint.clientOnly(id, NekoJSBasePlugin.class, collector);
     }
 
     private static NekoPluginExtensionPoint<NekoJSPlugin> platform(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
@@ -110,8 +107,9 @@ public final class NekoPluginBootstrap {
     private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptPropertyRegistry.Impl scriptProperties = new ScriptPropertyRegistry.Impl();
+        // TODO: global binding registry is a bad idea, make it per-ScriptType
+        private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
-        private final List<Binding> bindings = new ArrayList<>();
         private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
         private final Map<String, EventGroup> eventGroups = new LinkedHashMap<>();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
@@ -141,8 +139,8 @@ public final class NekoPluginBootstrap {
         }
 
         @Override
-        public BindingsRegister bindings() {
-            return this::registerBinding;
+        public ScriptTypedValue<BindingRegistry> bindings() {
+            return bindingRegistries;
         }
 
         @Override
@@ -203,30 +201,6 @@ public final class NekoPluginBootstrap {
             );
         }
 
-        void registerBinding(Binding binding) {
-            requireMutable("bindings");
-            Objects.requireNonNull(binding, "binding");
-            String name = binding.getName();
-            ScriptType type = binding.scriptType();
-            for (Binding existing : bindings) {
-                if (!existing.getName().equals(name)) {
-                    continue;
-                }
-                ScriptType existingType = existing.scriptType();
-                if (binding.canApplyOn(existingType) || existing.canApplyOn(type)) {
-                    String newClassPath = binding.getType().getName();
-                    String existingClassPath = existing.getType().getName();
-                    throw new IllegalArgumentException(
-                            "Duplicate binding name: '" + name + "'\n" +
-                                    " -> New: [" + type.name() + "] (" + newClassPath + ")\n" +
-                                    " -> Existing: [" + existingType.name() + "] (" + existingClassPath + ")\n" +
-                                    "Possible plugin conflict or duplicate registration."
-                    );
-                }
-            }
-            bindings.add(binding);
-        }
-
         <T> void registerAdapter(JSTypeAdapter<T> adapter) {
             requireMutable("adapters");
             adapters.add(Objects.requireNonNull(adapter, "adapter"));
@@ -264,21 +238,9 @@ public final class NekoPluginBootstrap {
             recipeNamespaces.put(entry.namespace(), entry);
         }
 
-        Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
-            EnumMap<ScriptType, Map<String, Binding>> result = new EnumMap<>(ScriptType.class);
-            for (ScriptType type : ScriptType.values()) {
-                result.put(type, new LinkedHashMap<>());
-            }
-            for (Binding binding : bindings) {
-                for (ScriptType envType : ScriptType.all()) {
-                    if (binding.canApplyOn(envType)) {
-                        result.get(envType).putIfAbsent(binding.getName(), binding);
-                    }
-                }
-            }
-            EnumMap<ScriptType, Map<String, Binding>> frozen = new EnumMap<>(ScriptType.class);
-            result.forEach((type, values) -> frozen.put(type, Collections.unmodifiableMap(new LinkedHashMap<>(values))));
-            return Collections.unmodifiableMap(frozen);
+        Map<ScriptType, Map<String, Binding2>> bindingsByScriptType() {
+            return this.bindingRegistries.stream()
+                .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
         }
 
         List<JSTypeAdapter<?>> adaptersSnapshot() {

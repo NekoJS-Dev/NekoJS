@@ -140,10 +140,10 @@ NekoJS 插件默认通过多入口 typed hooks 注册能力，例如 `registerBi
 
 ```java
 import com.tkisor.nekojs.api.NekoJSPlugin;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 
 public interface StartupBindingsPlugin extends NekoJSPlugin {
-    void registerStartupBindings(BindingsRegister registry);
+    void registerBinding(BindingRegistry registry);
 }
 ```
 
@@ -174,14 +174,16 @@ public final class MyExtensionPointPlugin implements NekoJSPlugin, NekoPluginExt
 
 ```java
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 
 @RegisterNekoJSPlugin
 public final class MyStartupApiPlugin implements StartupBindingsPlugin {
     @Override
-    public void registerStartupBindings(BindingsRegister registry) {
-        registry.register(Binding.of("MyStartupApi", MyStartupApi.class));
+    public void registerBinding(BindingRegistry registry) {
+        registry.register("MyStartupApi", MyStartupApi.class);
+        if (registry.canApplyOn(ScriptType.CLIENT)) {
+            registry.register("ClientOnly", new ClientOnlyValue());
+        }
     }
 }
 ```

@@ -8,8 +8,7 @@ import com.tkisor.nekojs.api.catalog.NekoCommonManualDeclarations;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
@@ -36,7 +35,6 @@ import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
-import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.fluid.FluidAmounts;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
 import net.minecraft.client.KeyMapping;
@@ -94,52 +92,51 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     }
 
     @Override
-    public void registerBindings(BindingsRegister registry) {
-        registry.register(Binding.of("Ingredient", new IngredientJS()));
-        registry.register(Binding.of("Fluid", new FluidJS()));
-        registry.register(Binding.of("FluidIngredient", new FluidIngredientJS()));
-        registry.register(Binding.of("FluidAmounts", FluidAmounts.class));
-        registry.register(Binding.of("Fluids", Fluids.class));
-        registry.register(Binding.of("FluidStack", FluidStack.class));
-        registry.register(Binding.of("ItemJS", new ItemJS()));
-        registry.register(Binding.of("ID", new IDJS()));
-        registry.register(Binding.of("Color", new ColorJS()));
-        registry.register(Binding.of("Platform", Platform.class));
-        registry.register(Binding.of("UUID", new UUIDJS()));
-        registry.register(Binding.of("StringUtils", new StringUtilsJS()));
-        registry.register(Binding.of("Time", new TimeJS()));
-        registry.register(Binding.of("Utils", new UtilsJS()));
-        registry.register(Binding.of(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS()));
-        registry.register(Binding.of(ScriptType.TEST, "Test", new TestJS()));
-        registry.register(Binding.of("TriState", TriState.class));
-        registry.register(Binding.of("Network", NetworkJS.class));
-        registry.register(Binding.of("ItemStack", ItemStack.class));
-        registry.register(Binding.of("Items", Items.class));
-        registry.register(Binding.of("Item", Item.class));
-        registry.register(Binding.of("BlockPos", BlockPos.class));
-        registry.register(Binding.of("Direction", Direction.class));
-        registry.register(Binding.of("Vec3", Vec3.class));
-        registry.register(Binding.of("AABB", AABB.class));
-        registry.register(Binding.of("MutableComponent", MutableComponent.class));
-        registry.register(Binding.of("DyeColor", DyeColor.class));
-        registry.register(Binding.of("SoundEvents", SoundEvents.class));
-        registry.register(Binding.of("ParticleTypes", ParticleTypes.class));
-        registry.register(Binding.of("Blocks", Blocks.class));
-        registry.register(Binding.of("EntityType", EntityType.class));
-        registry.register(Binding.of("CompoundTag", CompoundTag.class));
-        registry.register(Binding.of("Identifier", Identifier.class));
-        registry.register(Binding.of("MobEffects", MobEffects.class));
-        registry.register(Binding.of("MobEffectInstance", MobEffectInstance.class));
-        registry.register(Binding.of("DamageTypes", DamageTypes.class));
-    }
+    public void registerBinding(BindingRegistry registry) {
+        registry.register("Ingredient", new IngredientJS());
+        registry.register("Fluid", new FluidJS());
+        registry.register("FluidIngredient", new FluidIngredientJS());
+        registry.register("FluidAmounts", FluidAmounts.class);
+        registry.register("Fluids", Fluids.class);
+        registry.register("FluidStack", FluidStack.class);
+        registry.register("ItemJS", new ItemJS());
+        registry.register("ID", new IDJS());
+        registry.register("Color", new ColorJS());
+        registry.register("Platform", Platform.class);
+        registry.register("UUID", new UUIDJS());
+        registry.register("StringUtils", new StringUtilsJS());
+        registry.register("Time", new TimeJS());
+        registry.register("Utils", new UtilsJS());
+        registry.register(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS());
+        registry.register(ScriptType.TEST, "Test", new TestJS());
+        registry.register("TriState", TriState.class);
+        registry.register("Network", NetworkJS.class);
+        registry.register("ItemStack", ItemStack.class);
+        registry.register("Items", Items.class);
+        registry.register("Item", Item.class);
+        registry.register("BlockPos", BlockPos.class);
+        registry.register("Direction", Direction.class);
+        registry.register("Vec3", Vec3.class);
+        registry.register("AABB", AABB.class);
+        registry.register("MutableComponent", MutableComponent.class);
+        registry.register("DyeColor", DyeColor.class);
+        registry.register("SoundEvents", SoundEvents.class);
+        registry.register("ParticleTypes", ParticleTypes.class);
+        registry.register("Blocks", Blocks.class);
+        registry.register("EntityType", EntityType.class);
+        registry.register("CompoundTag", CompoundTag.class);
+        registry.register("Identifier", Identifier.class);
+        registry.register("MobEffects", MobEffects.class);
+        registry.register("MobEffectInstance", MobEffectInstance.class);
+        registry.register("DamageTypes", DamageTypes.class);
 
-    @Override
-    public void registerClientBindings(BindingsRegister registry) {
-        registry.register(Binding.of(ScriptType.CLIENT, "Minecraft", Minecraft.class));
-        registry.register(Binding.of(ScriptType.CLIENT, "Screen", Screen.class));
-        registry.register(Binding.of(ScriptType.CLIENT, "Window", Window.class));
-        registry.register(Binding.of(ScriptType.CLIENT, "KeyMapping", KeyMapping.class));
-        registry.register(Binding.of(ScriptType.CLIENT, "InputConstants", InputConstants.class));
+        if (registry.scriptType() == ScriptType.CLIENT) {
+            registry.register(ScriptType.CLIENT, "Minecraft", Minecraft.class);
+            registry.register(ScriptType.CLIENT, "Screen", Screen.class);
+            registry.register(ScriptType.CLIENT, "Window", Window.class);
+            registry.register(ScriptType.CLIENT, "KeyMapping", KeyMapping.class);
+            registry.register(ScriptType.CLIENT, "InputConstants", InputConstants.class);
+        }
     }
 
     @Override

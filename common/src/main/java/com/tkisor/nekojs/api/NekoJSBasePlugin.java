@@ -2,7 +2,7 @@ package com.tkisor.nekojs.api;
 
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
@@ -18,9 +18,7 @@ public interface NekoJSBasePlugin {
 
     default void registerScriptProperty(ScriptPropertyRegistry registry) {}
 
-    default void registerBindings(BindingsRegister registry) {}
-
-    default void registerClientBindings(BindingsRegister registry) {}
+    default void registerBinding(BindingRegistry registry) {}
 
     default void registerAdapters(JSTypeAdapterRegister registry) {}
 
