@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core;
 import com.tkisor.nekojs.api.NeoForgeCatalogPlatformProvider;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.platform.NekoIdCompat;
 import com.tkisor.nekojs.platform.NeoForgeIdCompat;
 import com.tkisor.nekojs.platform.NeoForgePlatform;
@@ -19,6 +20,7 @@ public final class NeoForgeRuntimeBootstrap {
         NekoIdCompat.init(new NeoForgeIdCompat());
         NekoScriptCatalog.setPlatformProvider(new NeoForgeCatalogPlatformProvider());
         EventBusJS.setExternalCancellabilityPredicate(ICancellableEvent.class::isAssignableFrom);
+        DefaultScriptEventBridge.setScriptEventRegistrar(new ScriptEventsJS());
         NekoJSScriptManager.setEventBridge(new DefaultScriptEventBridge());
     }
 }

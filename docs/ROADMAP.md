@@ -23,6 +23,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] CI Build workflow：编译/构建两个平台模块，区分 dev/release artifacts，并用 commit 首行提取 release version / summary。
 - [x] `RecipeJsonValue` 边界类型：recipe builder/custom 的任意 JS JSON 输入收敛到 adapter/converter 层，builder 不直接暴露 Graal `Value` / 宽泛 `Object`。
 - [x] 脚本事件错误日志增强：recipe/event/timer callback 错误同时写 script logger 与主 NekoJS logger，并显示 JS 行列、上下文和列指针；错误追踪按脚本路径替换/清理，避免同一文件修改或重跑后 stale error 累积。
+- [x] `ScriptEvents` startup API：startup scripts 可把 NeoForge 原生事件注册成 server/client/common 脚本侧事件方法，并接入 reload listener 清理。
 
 ## 已完成的 KubeJS-lite API 迁移
 
@@ -168,6 +169,7 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 收紧 `NekoJSFileSystem` 的危险入口：默认禁用 `createSymbolicLink`，避免脚本通过 symlink 创建外部访问通道。
 - [x] 在 CommonJS `require` 外层安装 core module shim：保留现有相对路径/`node_modules` 解析，只拦截 `fs`、`node:fs` 等内置模块名。
 - [x] 增加 issue #23 Java module import 解析：`require('java:java/lang')` / `import { $Integer } from 'java:java/lang'` 通过懒加载 namespace proxy 按 `$Class` 解析 Java 类型；`java:java/lang/Integer` class-level module 会直接返回 Java class 并暴露 `$Integer`/default。`JavaModuleImportPolicy` 允许类型生成器在 package module 与 class module 之间切换。
+- [x] 增加轻量 data-driven recipe type definition：数据包可通过 `data/<namespace>/nekojs/recipe_types/<type>.json` 声明 `event.recipes.<namespace>.<type>(...)` 的 constructors、fields 和 JSON path 映射；静态 Java handler 仍优先，未知 namespace/type 继续 raw JSON fallback。
 - [x] 将 Node shim JS 从 Java text block 拆到 classpath resources：`common/src/main/resources/nekojs/node/modules.list` 按顺序加载 `internal/define.js`、各 builtin module 和 `bootstrap.js`，避免依赖 jar 内目录扫描。
 - [x] 实现 `fs` 同步基础 API：`existsSync`、`readFileSync`、`writeFileSync`、`appendFileSync`、`mkdirSync`、`rmSync`、`unlinkSync`、`readdirSync`、`statSync`、`lstatSync`、`renameSync`、`copyFileSync`、`realpathSync`、`readlinkSync`。
 - [x] 实现 `fs` callback API：`readFile`、`writeFile`、`appendFile`、`mkdir`、`rm`、`unlink`、`readdir`、`stat`、`lstat`、`rename`、`copyFile`、`realpath`，错误优先 callback 行为尽量贴近 Node。

@@ -4,3 +4,4 @@ build/
 .idea/
 run/
 node_modules/
+ai_docs/

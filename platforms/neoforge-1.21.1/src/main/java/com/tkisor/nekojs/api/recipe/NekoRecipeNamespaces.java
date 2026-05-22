@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import org.jetbrains.annotations.Nullable;
@@ -8,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +35,16 @@ public final class NekoRecipeNamespaces {
         return NekoPluginRuntime.current().recipeNamespaces().keySet();
     }
 
+    public static Set<String> getNamespaces(RecipeTypeDefinitionRegistry definitions) {
+        Set<String> namespaces = new LinkedHashSet<>(getNamespaces());
+        if (definitions != null) namespaces.addAll(definitions.namespaces());
+        return Collections.unmodifiableSet(namespaces);
+    }
+
+    public static boolean hasNamespace(String namespace, RecipeTypeDefinitionRegistry definitions) {
+        return getHandlerClass(namespace) != null || definitions != null && definitions.hasNamespace(namespace);
+    }
+
     public static @Nullable Class<?> getHandlerClass(String namespace) {
         RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
         return entry == null ? null : entry.handlerClass();
@@ -41,6 +53,12 @@ public final class NekoRecipeNamespaces {
     public static Set<String> getRecipeTypes(String namespace) {
         Class<?> handlerClass = getHandlerClass(namespace);
         return handlerClass == null ? Set.of() : getRecipeTypes(handlerClass);
+    }
+
+    public static Set<String> getRecipeTypes(String namespace, RecipeTypeDefinitionRegistry definitions) {
+        Set<String> types = new LinkedHashSet<>(getRecipeTypes(namespace));
+        if (definitions != null) types.addAll(definitions.types(namespace));
+        return Collections.unmodifiableSet(types);
     }
 
     public static Set<String> getRecipeTypes(Class<?> handlerClass) {
@@ -52,6 +70,10 @@ public final class NekoRecipeNamespaces {
 
     public static boolean hasRecipeType(String namespace, String recipeType) {
         return getRecipeTypes(namespace).contains(recipeType);
+    }
+
+    public static boolean hasRecipeType(String namespace, String recipeType, RecipeTypeDefinitionRegistry definitions) {
+        return getRecipeTypes(namespace, definitions).contains(recipeType);
     }
 
     public static Map<String, Class<?>> getHandlerClasses() {
