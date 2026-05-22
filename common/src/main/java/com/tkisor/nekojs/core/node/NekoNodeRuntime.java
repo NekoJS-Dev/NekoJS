@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptType;
 
 import java.util.Map;
@@ -73,9 +74,13 @@ public final class NekoNodeRuntime implements AutoCloseable {
     }
 
     public Map<String, Object> mapStackLine(String path, int line, int column) {
-        SourceMapRegistry.OriginalPosition mapped = SourceMapRegistry.getMappedPosition(path, line, column);
+        String displayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+        if (displayPath == null) {
+            displayPath = path;
+        }
+        SourceMapRegistry.OriginalPosition mapped = SourceMapRegistry.getMappedPosition(displayPath, line, column);
         return Map.of(
-                "path", path,
+                "path", displayPath,
                 "line", mapped.line,
                 "column", mapped.column
         );

@@ -84,6 +84,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         try {
             NekoPluginRuntime.current().beforeRecipeLoading(eventJS);
             ServerEvents.RECIPES.post(eventJS);
+            ServerEvents.AFTER_RECIPES.post(eventJS);
             NekoPluginRuntime.current().afterRecipes(eventJS);
         } catch (PolyglotException e) {
             NekoErrorTracker.recordEventError(ScriptType.SERVER, e);

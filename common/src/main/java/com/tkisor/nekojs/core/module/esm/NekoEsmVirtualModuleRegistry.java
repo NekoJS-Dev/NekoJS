@@ -81,6 +81,14 @@ public final class NekoEsmVirtualModuleRegistry {
         String normalized = pathOrUri.replace('\\', '/');
         int slash = normalized.lastIndexOf('/');
         String fileName = slash >= 0 ? normalized.substring(slash + 1) : normalized;
+        int query = fileName.indexOf('?');
+        if (query >= 0) {
+            fileName = fileName.substring(0, query);
+        }
+        int fragment = fileName.indexOf('#');
+        if (fragment >= 0) {
+            fileName = fileName.substring(0, fragment);
+        }
         return DISPLAY_PATHS_BY_FILE_NAME.get(fileName);
     }
 

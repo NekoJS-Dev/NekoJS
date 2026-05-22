@@ -162,6 +162,10 @@ public class NekoErrorTracker {
     public static String extractRelativePath(Source source) {
         if (source.getPath() != null) {
             String pathText = source.getPath();
+            String scriptDisplayPath = extractScriptDisplayPath(pathText);
+            if (scriptDisplayPath != null) {
+                return scriptDisplayPath;
+            }
             String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(pathText);
             if (virtualDisplayPath != null) {
                 return virtualDisplayPath;
@@ -178,6 +182,10 @@ public class NekoErrorTracker {
             }
         } else if (source.getURI() != null) {
             String uriText = source.getURI().toString();
+            String scriptDisplayPath = extractScriptDisplayPath(uriText);
+            if (scriptDisplayPath != null) {
+                return scriptDisplayPath;
+            }
             try {
                 Path path = Path.of(source.getURI());
                 String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
@@ -192,8 +200,24 @@ public class NekoErrorTracker {
             }
             return uriText.replace(NekoJSPaths.ROOT.toUri().toString(), "").replace('\\', '/');
         } else {
-            return source.getName();
+            String scriptDisplayPath = extractScriptDisplayPath(source.getName());
+            return scriptDisplayPath != null ? scriptDisplayPath : source.getName();
         }
+    }
+
+    private static String extractScriptDisplayPath(String pathText) {
+        if (pathText == null || pathText.isBlank()) {
+            return null;
+        }
+        String normalized = pathText.replace('\\', '/');
+        for (ScriptType type : ScriptType.all()) {
+            String marker = type.name + "_scripts/";
+            int index = normalized.indexOf(marker);
+            if (index >= 0) {
+                return normalized.substring(index);
+            }
+        }
+        return null;
     }
 
     private static ScriptId eventErrorId(ScriptType type, String pathStr) {

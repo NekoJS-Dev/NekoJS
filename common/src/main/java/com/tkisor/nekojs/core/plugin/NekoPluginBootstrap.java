@@ -244,7 +244,6 @@ public final class NekoPluginBootstrap {
         }
 
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
-            requireMutable("binding");
             return this.bindingRegistries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
         }

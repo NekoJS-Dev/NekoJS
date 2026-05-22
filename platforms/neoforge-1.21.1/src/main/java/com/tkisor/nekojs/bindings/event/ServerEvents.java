@@ -24,6 +24,7 @@ public interface ServerEvents {
             GROUP.server("tickPost", ServerTickEvent.Post.class);
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
+    EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
 
     EventBusJS<ServerAboutToStartEvent, Void> ABOUT_TO_START =
         GROUP.server("aboutToStart", ServerAboutToStartEvent.class);
