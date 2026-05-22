@@ -140,10 +140,10 @@ NekoJS 插件默认通过多入口 typed hooks 注册能力，例如 `registerBi
 
 ```java
 import com.tkisor.nekojs.api.NekoJSPlugin;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 
 public interface StartupBindingsPlugin extends NekoJSPlugin {
-    void registerStartupBindings(BindingsRegister registry);
+    void registerStartupBinding(BindingRegistry registry);
 }
 ```
 
@@ -164,7 +164,7 @@ public final class MyExtensionPointPlugin implements NekoJSPlugin, NekoPluginExt
         registry.register(NekoPluginExtensionPoint.of(
                 "mymod:startup_bindings",
                 StartupBindingsPlugin.class,
-                (plugin, context) -> plugin.registerStartupBindings(context.bindings(ScriptType.STARTUP))
+                (plugin, context) -> plugin.registerStartupBinding(context.bindings().at(ScriptType.STARTUP))
         ));
     }
 }
@@ -174,14 +174,16 @@ public final class MyExtensionPointPlugin implements NekoJSPlugin, NekoPluginExt
 
 ```java
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 
 @RegisterNekoJSPlugin
 public final class MyStartupApiPlugin implements StartupBindingsPlugin {
     @Override
-    public void registerStartupBindings(BindingsRegister registry) {
-        registry.register(Binding.of("MyStartupApi", MyStartupApi.class));
+    public void registerStartupBinding(BindingRegistry registry) {
+        registry.register("MyStartupApi", MyStartupApi.class);
+        if (registry.scriptType() != ScriptType.STARTUP) { // always false, see extension point registry
+            registry.register("NotStartup", new NotStartupValue());
+        }
     }
 }
 ```

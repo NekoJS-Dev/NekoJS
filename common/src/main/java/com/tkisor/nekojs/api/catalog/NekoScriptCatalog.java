@@ -2,11 +2,10 @@ package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
-import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.data.NekoBindings;
 import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.NekoEventGroups;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import graal.graalvm.polyglot.HostAccess;
@@ -72,10 +71,10 @@ public final class NekoScriptCatalog {
         List<TypeDocCatalogEntry> docs = NekoTypeDocs.typeDocs(scriptType).stream()
                 .filter(doc -> doc.kind().equals("binding"))
                 .toList();
-        for (Binding binding : NekoBindings.getFor(scriptType).values()) {
-            BindingCatalogEntry entry = BindingCatalogEntry.of(binding.getName(), scriptType, binding.getType(), binding.isStaticClass());
+        for (var binding : NekoPluginRuntime.current().bindings(scriptType).values()) {
+            BindingCatalogEntry entry = BindingCatalogEntry.of(binding.name(), scriptType, binding.valueType(), binding.value() instanceof Class<?>);
             for (TypeDocCatalogEntry doc : docs) {
-                if (doc.target().equals(binding.getName())) {
+                if (doc.target().equals(binding.name())) {
                     entry = entry.withDoc(doc);
                 }
             }

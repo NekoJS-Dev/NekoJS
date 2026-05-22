@@ -2,13 +2,12 @@ package com.tkisor.nekojs.api.plugin;
 
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.api.data.BindingsRegister;
+import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypedValue;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 public interface NekoPluginExtensionContext {
@@ -18,11 +17,7 @@ public interface NekoPluginExtensionContext {
 
     ScriptPropertyRegistry scriptProperties();
 
-    BindingsRegister bindings();
-
-    default BindingsRegister bindings(ScriptType type) {
-        return binding -> bindings().register(copyBinding(type, binding));
-    }
+    ScriptTypedValue<BindingRegistry> bindings();
 
     JSTypeAdapterRegister adapters();
 
@@ -33,11 +28,4 @@ public interface NekoPluginExtensionContext {
     RecipeNamespaceRegister recipeNamespaces();
 
     RecipeLifecycleRegister recipeLifecycle();
-
-    private static Binding copyBinding(ScriptType type, Binding binding) {
-        if (binding.isStaticClass()) {
-            return Binding.of(type, binding.getName(), binding.getType());
-        }
-        return Binding.of(type, binding.getName(), binding.getObject());
-    }
 }

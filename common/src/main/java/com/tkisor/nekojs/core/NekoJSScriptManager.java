@@ -11,6 +11,7 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypedValue;
@@ -126,12 +127,12 @@ public final class NekoJSScriptManager {
 
         eventBridge.bindEvents(bindings, type);
 
-        Map<String, Binding> environmentBindings = NekoBindings.getFor(type);
+        var environmentBindings = NekoPluginRuntime.current().bindings(type);
 
         environmentBindings.forEach((name, binding) -> {
-            Object obj = binding.getObject();
+            Object obj = binding.value();
 
-            if (binding.isStaticClass()) {
+            if (obj instanceof Class<?>) {
                 // 如果是静态类，利用 Java.type 包装暴露给 JS
                 Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
                 bindings.putMember(name, javaType);
@@ -391,8 +392,12 @@ public final class NekoJSScriptManager {
     }
 
     private void resetEnvironment(ScriptType type) {
+        // TODO: make EventGroupJS a binding, utilize `binding.close(type)` instead of bridge
         eventBridge.clearListeners(type);
         NekoErrorTracker.clearByType(type);
+        for (var binding : NekoPluginRuntime.current().bindings(type).values()) {
+            binding.close(type);
+        }
 
         Context oldContext = contexts.set(type, null);
         NekoNodeRuntime oldRuntime = nodeRuntimes.set(type, null);

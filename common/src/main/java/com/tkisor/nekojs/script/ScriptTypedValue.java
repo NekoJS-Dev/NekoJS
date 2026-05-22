@@ -91,6 +91,10 @@ public final class ScriptTypedValue<T> {
         return (Stream<T>) Arrays.stream(internal).filter(Objects::nonNull);
     }
 
+    public Stream<T> stream() {
+        return Arrays.stream(ScriptType.values()).map(this::at);
+    }
+
     @Override
     public String toString() {
         return "ScriptTypedValue" + Arrays.toString(internal);

@@ -1,54 +1,31 @@
 package com.tkisor.nekojs.api.data;
 
 import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.script.WithScriptType;
-import lombok.Getter;
 
-public class Binding implements WithScriptType {
-    @Getter
-    private final String name;
+import java.util.Objects;
 
-    @Getter
-    private final Object object;
-
-    @Getter
-    private final Class<?> type;
-
-    @Getter
-    private final boolean isStaticClass;
-
-    private final ScriptType targetType;
-
-    private Binding(String name, Object object, boolean isStaticClass, ScriptType targetType) {
-        this.name = name;
-        this.object = object;
-        this.type = isStaticClass ? (Class<?>) object : object.getClass();
-        this.isStaticClass = isStaticClass;
-        this.targetType = targetType;
+/// @author ZZZank
+public interface Binding {
+    static Binding of(String name, Object value) {
+        return new SimpleBinding(name, value);
     }
 
-    @Override
-    public ScriptType scriptType() {
-        return targetType;
+    String name();
+
+    Object value();
+
+    default Class<?> valueType() {
+        var value = value();
+        return value == null ? Void.class : value instanceof Class<?> c ? c : value.getClass();
     }
 
-    // ================= 默认通用环境 (COMMON) =================
-
-    public static Binding of(String name, Object object) {
-        return of(ScriptType.COMMON, name, object);
+    /// Invoked when reloading script, and old binding is being removed
+    default void close(ScriptType scriptType) {
     }
 
-    public static Binding of(String name, Class<?> type) {
-        return of(ScriptType.COMMON, name, type);
-    }
-
-    // ================= 指定环境 (SERVER, CLIENT, STARTUP 等) =================
-
-    public static Binding of(ScriptType targetType, String name, Object object) {
-        return new Binding(name, object, false, targetType);
-    }
-
-    public static Binding of(ScriptType targetType, String name, Class<?> type) {
-        return new Binding(name, type, true, targetType);
+    record SimpleBinding(String name, Object value) implements Binding {
+        public SimpleBinding {
+            Objects.requireNonNull(name, "name == null");
+        }
     }
 }
