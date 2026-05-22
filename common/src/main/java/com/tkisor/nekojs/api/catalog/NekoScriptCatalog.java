@@ -196,7 +196,7 @@ public final class NekoScriptCatalog {
                         binding.member().getName(),
                         binding.jsName(),
                         binding.member(),
-                        scriptType,
+                        source.scriptType(),
                         false
                 ));
             }

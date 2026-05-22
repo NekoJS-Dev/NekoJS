@@ -1,11 +1,11 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypePredicate;
 
 public record EventCatalogEntry(
         String group,
         String name,
-        ScriptType scriptType,
+        ScriptTypePredicate scriptType,
         Class<?> eventType,
         Class<?> dispatchKeyType,
         boolean cancellable,
@@ -15,7 +15,7 @@ public record EventCatalogEntry(
     public static EventCatalogEntry of(
             String group,
             String name,
-            ScriptType scriptType,
+            ScriptTypePredicate scriptType,
             Class<?> eventType,
             Class<?> dispatchKeyType,
             boolean cancellable,

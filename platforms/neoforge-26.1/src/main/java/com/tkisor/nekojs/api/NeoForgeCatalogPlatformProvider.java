@@ -40,15 +40,15 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
     @Override
     public Collection<HostExtensionSource> hostExtensions() {
         return List.of(
-                HostExtensionSource.common(ItemStack.class, ItemStackExtension.class),
-                HostExtensionSource.common(Item.class, ItemExtension.class),
-                HostExtensionSource.common(Block.class, BlockExtension.class),
-                HostExtensionSource.common(BlockState.class, BlockStateExtension.class),
-                HostExtensionSource.common(Entity.class, EntityExtension.class),
-                HostExtensionSource.common(LivingEntity.class, LivingEntityExtension.class),
-                HostExtensionSource.common(Player.class, PlayerExtension.class),
-                HostExtensionSource.common(Level.class, LevelExtension.class),
-                HostExtensionSource.common(MutableComponent.class, MutableComponentExtension.class)
+                HostExtensionSource.any(ItemStack.class, ItemStackExtension.class),
+                HostExtensionSource.any(Item.class, ItemExtension.class),
+                HostExtensionSource.any(Block.class, BlockExtension.class),
+                HostExtensionSource.any(BlockState.class, BlockStateExtension.class),
+                HostExtensionSource.any(Entity.class, EntityExtension.class),
+                HostExtensionSource.any(LivingEntity.class, LivingEntityExtension.class),
+                HostExtensionSource.any(Player.class, PlayerExtension.class),
+                HostExtensionSource.any(Level.class, LevelExtension.class),
+                HostExtensionSource.any(MutableComponent.class, MutableComponentExtension.class)
         );
     }
 

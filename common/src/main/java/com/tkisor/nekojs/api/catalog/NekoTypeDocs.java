@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypePredicate;
 
 import java.util.List;
 
@@ -28,7 +29,7 @@ public final class NekoTypeDocs {
                 .toList();
     }
 
-    private static boolean appliesTo(ScriptType source, ScriptType target) {
+    private static boolean appliesTo(ScriptTypePredicate source, ScriptType target) {
         return source.test(target);
     }
 }

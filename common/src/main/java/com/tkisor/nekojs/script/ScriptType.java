@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.List;
 
 public enum ScriptType implements ScriptTypePredicate {
-    COMMON("common", "NekoJS Common", null),
     STARTUP("startup", "NekoJS Startup", NekoJSPaths.STARTUP_SCRIPTS),
     SERVER("server", "NekoJS Server", NekoJSPaths.SERVER_SCRIPTS),
     CLIENT("client", "NekoJS Client", NekoJSPaths.CLIENT_SCRIPTS),
@@ -79,10 +78,6 @@ public enum ScriptType implements ScriptTypePredicate {
                 """.formatted(name, name);
     }
 
-    public boolean isCommon() {
-        return this == COMMON;
-    }
-
     public boolean isClient() {
         return this == CLIENT;
     }
@@ -109,7 +104,6 @@ public enum ScriptType implements ScriptTypePredicate {
 
     @Override
     public boolean test(ScriptType type) {
-        if (this == COMMON) return true;
         if (this == SERVER) return type.acceptsServerApis();
         if (this == CLIENT) return type.acceptsClientApis();
         return this == type;
@@ -119,7 +113,7 @@ public enum ScriptType implements ScriptTypePredicate {
     private static final List<ScriptType> AUTO_LOAD_TYPES = List.of(STARTUP, SERVER, CLIENT);
 
     /**
-     * 获取所有需要被动态加载执行的脚本类型（已排除 COMMON）
+     * 获取所有需要被动态加载执行的脚本类型。
      */
     public static List<ScriptType> all() {
         return EXECUTABLE_TYPES;

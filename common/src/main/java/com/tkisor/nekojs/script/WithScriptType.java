@@ -5,7 +5,7 @@ package com.tkisor.nekojs.script;
  */
 public interface WithScriptType {
 
-    ScriptType scriptType();
+    ScriptTypePredicate scriptType();
 
     default boolean canApplyOn(ScriptType type) {
         return scriptType().test(type);

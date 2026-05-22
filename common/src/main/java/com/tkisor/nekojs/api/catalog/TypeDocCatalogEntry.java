@@ -1,13 +1,13 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypePredicate;
 
 import java.util.List;
 
 public record TypeDocCatalogEntry(
         String kind,
         String target,
-        ScriptType scriptType,
+        ScriptTypePredicate scriptType,
         String typeOverride,
         String description,
         List<String> examples,
@@ -18,10 +18,10 @@ public record TypeDocCatalogEntry(
     }
 
     public static TypeDocCatalogEntry binding(String name, String typeOverride, String description, List<String> examples) {
-        return new TypeDocCatalogEntry("binding", name, ScriptType.COMMON, typeOverride, description, examples, 0);
+        return new TypeDocCatalogEntry("binding", name, ScriptTypePredicate.any(), typeOverride, description, examples, 0);
     }
 
-    public static TypeDocCatalogEntry binding(ScriptType scriptType, String name, String typeOverride, String description, List<String> examples) {
+    public static TypeDocCatalogEntry binding(ScriptTypePredicate scriptType, String name, String typeOverride, String description, List<String> examples) {
         return new TypeDocCatalogEntry("binding", name, scriptType, typeOverride, description, examples, 0);
     }
 }

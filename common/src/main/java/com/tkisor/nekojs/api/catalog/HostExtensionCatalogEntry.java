@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptTypePredicate;
 
 import java.lang.reflect.Method;
 
@@ -10,7 +10,7 @@ public record HostExtensionCatalogEntry(
         String javaName,
         String jsName,
         Method method,
-        ScriptType scriptType,
+        ScriptTypePredicate scriptType,
         boolean hidden
 ) {
 }
