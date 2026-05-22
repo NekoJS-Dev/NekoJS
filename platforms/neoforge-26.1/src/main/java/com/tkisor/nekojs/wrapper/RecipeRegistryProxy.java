@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper;
 
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class RecipeRegistryProxy implements ProxyObject {
     private static final String NAMESPACES = "namespaces";
@@ -37,24 +39,25 @@ public class RecipeRegistryProxy implements ProxyObject {
     }
 
     public List<String> namespaces() {
-        return new ArrayList<>(NekoRecipeNamespaces.getNamespaces());
+        Set<String> namespaces = NekoRecipeNamespaces.getNamespaces(event.getRecipeTypeDefinitions());
+        return new ArrayList<>(namespaces);
     }
 
     public List<String> types(String namespace) {
-        return new ArrayList<>(NekoRecipeNamespaces.getRecipeTypes(namespace));
+        return new ArrayList<>(NekoRecipeNamespaces.getRecipeTypes(namespace, event.getRecipeTypeDefinitions()));
     }
 
     public boolean hasNamespace(String namespace) {
-        return NekoRecipeNamespaces.getHandlerClass(namespace) != null;
+        return NekoRecipeNamespaces.hasNamespace(namespace, event.getRecipeTypeDefinitions());
     }
 
     public boolean hasType(String namespace, String type) {
-        return NekoRecipeNamespaces.hasRecipeType(namespace, type);
+        return NekoRecipeNamespaces.hasRecipeType(namespace, type, event.getRecipeTypeDefinitions());
     }
 
     @Override
     public Object getMemberKeys() {
-        List<String> keys = new ArrayList<>(NekoRecipeNamespaces.getNamespaces());
+        List<String> keys = new ArrayList<>(NekoRecipeNamespaces.getNamespaces(event.getRecipeTypeDefinitions()));
         keys.addAll(HELPER_KEYS);
         return keys.toArray(String[]::new);
     }
@@ -69,7 +72,10 @@ public class RecipeRegistryProxy implements ProxyObject {
 
     private Object namespaceMember(String namespace) {
         Object handler = NekoRecipeNamespaces.createHandler(namespace, event);
-        return handler == null ? new FallbackNamespaceProxy(event, namespace) : handler;
+        if (handler != null) return handler;
+        RecipeTypeDefinitionRegistry definitions = event.getRecipeTypeDefinitions();
+        if (definitions.hasNamespace(namespace)) return new DataDrivenRecipeNamespaceProxy(event, namespace, definitions);
+        return new FallbackNamespaceProxy(event, namespace);
     }
 
     private static String stringArgument(Value[] arguments, int index, String name) {

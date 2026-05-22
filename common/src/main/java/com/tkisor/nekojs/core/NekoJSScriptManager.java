@@ -3,6 +3,8 @@ package com.tkisor.nekojs.core;
 import com.tkisor.nekojs.api.catalog.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.NekoBindings;
+import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
+import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.ClassFilter;
@@ -110,6 +112,7 @@ public final class NekoJSScriptManager {
 
         if (type == ScriptType.STARTUP) {
             flushReadyNodeTimers(type);
+            ScriptEvents.post(getScriptEventRegistrar());
         }
     }
 
@@ -414,6 +417,10 @@ public final class NekoJSScriptManager {
     public boolean hasScripts(ScriptType type) {
         List<ScriptContainer> typeScripts = scripts.at(type);
         return typeScripts != null && !typeScripts.isEmpty();
+    }
+
+    private ScriptEventRegistrar getScriptEventRegistrar() {
+        return eventBridge.scriptEventRegistrar();
     }
 
     public void flushReadyNodeTimers(ScriptType type) {

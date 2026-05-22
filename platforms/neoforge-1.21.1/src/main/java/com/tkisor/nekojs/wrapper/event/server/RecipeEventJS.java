@@ -10,6 +10,7 @@ import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -33,15 +34,23 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     private final Map<ResourceLocation, JsonElement> jsons;
     private final Map<ResourceLocation, RecipeCreationContext> contexts = new HashMap<>();
     private final HolderLookup.Provider registries;
+    private final RecipeTypeDefinitionRegistry recipeTypeDefinitions;
     private int recipeCounter = 0;
 
     public RecipeEventJS(Map<ResourceLocation, JsonElement> originalJsons, HolderLookup.Provider registries) {
+        this(originalJsons, registries, RecipeTypeDefinitionRegistry.EMPTY);
+    }
+
+    public RecipeEventJS(Map<ResourceLocation, JsonElement> originalJsons, HolderLookup.Provider registries, RecipeTypeDefinitionRegistry recipeTypeDefinitions) {
         this.jsons = new HashMap<>(originalJsons);
         this.registries = registries;
+        this.recipeTypeDefinitions = recipeTypeDefinitions == null ? RecipeTypeDefinitionRegistry.EMPTY : recipeTypeDefinitions;
         this.recipesProxy = new RecipeRegistryProxy(this);
     }
 
     public Map<ResourceLocation, JsonElement> getFinalJsons() { return this.jsons; }
+
+    public RecipeTypeDefinitionRegistry getRecipeTypeDefinitions() { return this.recipeTypeDefinitions; }
 
     @Override
     public Set<String> ids() {

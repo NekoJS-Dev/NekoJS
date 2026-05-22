@@ -190,6 +190,38 @@ public final class MyStartupApiPlugin implements StartupBindingsPlugin {
 
 Recipe lifecycle 也是同一套 typed hook：外部插件可以实现 `RecipeLifecyclePlugin`，或在 `registerRecipeLifecycleHooks` 中注册 `beforeRecipeLoading` / `afterRecipes`。这两个 hook 分别运行在 server recipe 脚本事件前后，操作的是受控 `RecipeLifecycleContext`，不会暴露 recipe manager 的内部 mutable map。
 
+### 数据驱动配方方法
+
+NekoJS 支持用数据包资源给 `event.recipes.<namespace>.<type>(...)` 增加轻量方法定义，路径为：
+
+```text
+data/<namespace>/nekojs/recipe_types/<type>.json
+```
+
+例如：
+
+```json
+{
+  "type": "create:mixing",
+  "constructors": [["result", "ingredients"]],
+  "fields": {
+    "result": { "path": "results", "kind": "item_stack", "array": true },
+    "ingredients": { "path": "ingredients", "kind": "ingredient", "array": true }
+  }
+}
+```
+
+脚本侧即可写：
+
+```js
+event.recipes.create.mixing('create:brass_ingot', [
+  'minecraft:copper_ingot',
+  'create:zinc_ingot'
+])
+```
+
+这只是 JSON-first 的轻量 facade：字段通过 JSON path 写入，`kind` 负责把脚本值转成 datapack JSON；未知 namespace/type 仍可使用 raw JSON fallback。
+
 ### NekoProbe
 
 NekoProbe 是 NekoJS 的类型生成模组，用于提供 IDE 智能提示与代码补全。
@@ -263,6 +295,39 @@ EntityEvents.hurtPre(event => {
     console.log(`实体 ${entity.type} 即将受到 ${damage} 点伤害`);
 });
 ```
+
+### Startup 自定义事件方法
+
+`startup_scripts` 可以用 `ScriptEvents` 把 NeoForge 原生事件注册成更友好的 server/client 事件方法：
+
+```js
+// startup_scripts/src/events.js
+ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', 'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))
+ScriptEvents.client(event => event.register('CustomClientEvents', 'screenOpening', 'net.neoforged.neoforge.client.event.ScreenEvent.Opening'))
+```
+
+随后在对应环境监听：
+
+```js
+// server_scripts/src/main.js
+CustomServerEvents.playerTick(event => {
+  console.info(`player tick: ${event.getEntity().getName().getString()}`)
+})
+```
+
+对象形式可设置优先级和是否接收已取消事件：
+
+```js
+ScriptEvents.server(event => event.register({
+  group: 'CustomServerEvents',
+  name: 'rightClickBlock',
+  event: 'net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock',
+  priority: 'normal',
+  receiveCancelled: false
+}))
+```
+
+自定义事件不会写入插件 bootstrap 的静态事件表；startup reload 会刷新事件定义，server/client reload 会清理对应脚本 listener，避免重复回调。
 
 ---
 
