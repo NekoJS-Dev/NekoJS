@@ -9,6 +9,7 @@ public enum NekoTypeScriptLexer implements NekoLexer {
 
     @Override
     public NekoTokenStream tokenize(NekoSourceFile source) {
-        return new NekoTypeScriptTokenStream(source, NekoTypeScriptCompiler.erase(source.path(), source.source()), null);
+        NekoTypeScriptCompiler.TypeScriptTransformResult result = NekoTypeScriptCompiler.eraseDetailed(source.path(), source.source());
+        return new NekoTypeScriptTokenStream(source, result.code(), result.sourceMap());
     }
 }

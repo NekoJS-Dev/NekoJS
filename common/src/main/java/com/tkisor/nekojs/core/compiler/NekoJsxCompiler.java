@@ -10,12 +10,13 @@ public final class NekoJsxCompiler {
     private NekoJsxCompiler() {}
 
     public static ScriptCompileResult compileJsx(Path file, String source) {
-        return ScriptCompileResult.codeOnly(new Transpiler(file, source == null ? "" : source).transpile());
+        JsxTransformResult result = new Transpiler(file, source == null ? "" : source).transpileDetailed();
+        return new ScriptCompileResult(result.code(), result.sourceMap());
     }
 
     public static ScriptCompileResult compileTsx(Path file, String source) {
-        String lowered = new Transpiler(file, source == null ? "" : source).transpile();
-        return ScriptCompileResult.codeOnly(NekoTypeScriptCompiler.erase(file, lowered));
+        JsxTransformResult lowered = new Transpiler(file, source == null ? "" : source).transpileDetailed();
+        return new ScriptCompileResult(NekoTypeScriptCompiler.erase(file, lowered.code()), lowered.sourceMap());
     }
 
     private static final class Transpiler {
@@ -30,7 +31,11 @@ public final class NekoJsxCompiler {
         }
 
         private String transpile() {
-            StringBuilder output = new StringBuilder(length);
+            return transpileDetailed().code();
+        }
+
+        private JsxTransformResult transpileDetailed() {
+            NekoSourceMapBuilder.Emitter output = NekoSourceMapBuilder.emitter(file, source);
             int index = 0;
             int last = 0;
             while (index < length) {
@@ -51,17 +56,17 @@ public final class NekoJsxCompiler {
                     }
                 }
                 if (c == '<' && looksLikeJsxStart(index)) {
-                    output.append(source, last, index);
+                    output.appendOriginalRange(last, index);
                     ParseResult parsed = parseJsx(index);
-                    output.append(parsed.text());
+                    output.appendMapped(parsed.text(), parsed.mappings());
                     index = parsed.nextIndex();
                     last = index;
                     continue;
                 }
                 index++;
             }
-            output.append(source, last, length);
-            return output.toString();
+            output.appendOriginalRange(last, length);
+            return new JsxTransformResult(output.code(), output.sourceMap());
         }
 
         private ParseResult parseJsx(int start) {
@@ -77,7 +82,7 @@ public final class NekoJsxCompiler {
 
             String tagName = source.substring(nameStart, nameEnd);
             int index = nameEnd;
-            List<String> props = new ArrayList<>();
+            List<GeneratedPart> props = new ArrayList<>();
             boolean selfClosing = false;
 
             while (index < length) {
@@ -95,29 +100,29 @@ public final class NekoJsxCompiler {
                     break;
                 }
                 AttributeResult attribute = parseAttribute(index);
-                props.add(attribute.text());
+                props.add(attribute.part());
                 index = attribute.nextIndex();
             }
 
-            String typeExpression = jsxTagExpression(tagName);
-            String propsExpression = props.isEmpty() ? "null" : "{" + String.join(", ", props) + "}";
+            GeneratedPart typeExpression = new GeneratedPart(jsxTagExpression(tagName), List.of(new NekoSourceMapBuilder.MappingPoint(0, nameStart)));
+            GeneratedPart propsExpression = props.isEmpty() ? GeneratedPart.unmapped("null") : objectPart(props);
             if (selfClosing) {
-                return new ParseResult(factoryCall(typeExpression, propsExpression, List.of()), index);
+                return factoryCall(start, typeExpression, propsExpression, List.of(), index);
             }
 
-            List<String> children = new ArrayList<>();
+            List<GeneratedPart> children = new ArrayList<>();
             index = parseChildren(index, tagName, children);
-            return new ParseResult(factoryCall(typeExpression, propsExpression, children), index);
+            return factoryCall(start, typeExpression, propsExpression, children, index);
         }
 
         private ParseResult parseFragment(int start) {
             int index = start + 2;
-            List<String> children = new ArrayList<>();
+            List<GeneratedPart> children = new ArrayList<>();
             index = parseChildren(index, "", children);
-            return new ParseResult(fragmentCall(children), index);
+            return fragmentCall(start, children, index);
         }
 
-        private int parseChildren(int index, String closingTagName, List<String> children) {
+        private int parseChildren(int index, String closingTagName, List<GeneratedPart> children) {
             int i = index;
             int textStart = i;
             while (i < length) {
@@ -126,7 +131,7 @@ public final class NekoJsxCompiler {
                     flushText(textStart, i, children);
                     ExpressionResult expression = parseExpressionChild(i);
                     if (expression != null) {
-                        children.add(expression.text());
+                        children.add(expression.part());
                         i = expression.nextIndex();
                     } else {
                         i = findMatchingBrace(i) + 1;
@@ -142,7 +147,7 @@ public final class NekoJsxCompiler {
                     if (looksLikeJsxStart(i)) {
                         flushText(textStart, i, children);
                         ParseResult nested = parseJsx(i);
-                        children.add(nested.text());
+                        children.add(new GeneratedPart(nested.text(), nested.mappings()));
                         i = nested.nextIndex();
                         textStart = i;
                         continue;
@@ -176,7 +181,7 @@ public final class NekoJsxCompiler {
                 return null;
             }
             String transformed = transform(inner);
-            return new ExpressionResult("(" + transformed + ")", end + 1);
+            return new ExpressionResult(new GeneratedPart("(" + transformed + ")", List.of(new NekoSourceMapBuilder.MappingPoint(1, start + 1))), end + 1);
         }
 
         private AttributeResult parseAttribute(int start) {
@@ -190,7 +195,7 @@ public final class NekoJsxCompiler {
                 if (spreadExpression.isBlank()) {
                     throw jsxError("Missing spread expression in JSX attribute", start);
                 }
-                return new AttributeResult("..." + spreadExpression, end + 1);
+                return new AttributeResult(new GeneratedPart("..." + spreadExpression, List.of(new NekoSourceMapBuilder.MappingPoint(3, start + 1))), end + 1);
             }
 
             int nameEnd = readAttributeNameEnd(start);
@@ -200,7 +205,7 @@ public final class NekoJsxCompiler {
             String name = source.substring(start, nameEnd);
             int index = skipWhitespace(nameEnd);
             if (index >= length || source.charAt(index) != '=') {
-                return new AttributeResult(attributeKey(name) + ": true", nameEnd);
+                return new AttributeResult(new GeneratedPart(attributeKey(name) + ": true", List.of(new NekoSourceMapBuilder.MappingPoint(0, start))), nameEnd);
             }
 
             index = skipWhitespace(index + 1);
@@ -210,7 +215,11 @@ public final class NekoJsxCompiler {
             char valueStart = source.charAt(index);
             if (valueStart == '\'' || valueStart == '"') {
                 int valueEnd = skipString(index, valueStart);
-                return new AttributeResult(attributeKey(name) + ": " + source.substring(index, valueEnd), valueEnd);
+                String text = attributeKey(name) + ": " + source.substring(index, valueEnd);
+                return new AttributeResult(new GeneratedPart(text, List.of(
+                        new NekoSourceMapBuilder.MappingPoint(0, start),
+                        new NekoSourceMapBuilder.MappingPoint(text.indexOf(source.charAt(index)), index)
+                )), valueEnd);
             }
             if (valueStart == '{') {
                 int valueEnd = findMatchingBrace(index);
@@ -218,18 +227,22 @@ public final class NekoJsxCompiler {
                 if (transformed.isBlank()) {
                     throw jsxError("Missing JSX attribute expression", start);
                 }
-                return new AttributeResult(attributeKey(name) + ": (" + transformed + ")", valueEnd + 1);
+                String text = attributeKey(name) + ": (" + transformed + ")";
+                return new AttributeResult(new GeneratedPart(text, List.of(
+                        new NekoSourceMapBuilder.MappingPoint(0, start),
+                        new NekoSourceMapBuilder.MappingPoint(text.indexOf('(') + 1, index + 1)
+                )), valueEnd + 1);
             }
             throw jsxError("JSX attribute values must be string literals or expressions", index);
         }
 
-        private void flushText(int start, int end, List<String> children) {
+        private void flushText(int start, int end, List<GeneratedPart> children) {
             if (end <= start) {
                 return;
             }
             String normalized = normalizeText(source.substring(start, end));
             if (normalized != null) {
-                children.add(stringLiteral(normalized));
+                children.add(new GeneratedPart(stringLiteral(normalized), List.of(new NekoSourceMapBuilder.MappingPoint(0, start))));
             }
         }
 
@@ -548,26 +561,41 @@ public final class NekoJsxCompiler {
             return Character.isUnicodeIdentifierPart(c) || c == '$' || c == '_';
         }
 
-        private String factoryCall(String typeExpression, String propsExpression, List<String> children) {
-            StringBuilder call = new StringBuilder("globalThis.__nekoJsxFactory(")
-                    .append(typeExpression)
-                    .append(", ")
-                    .append(propsExpression);
-            for (String child : children) {
-                call.append(", ").append(child);
+        private ParseResult factoryCall(int originalStart, GeneratedPart typeExpression, GeneratedPart propsExpression, List<GeneratedPart> children, int nextIndex) {
+            GeneratedAssembler call = new GeneratedAssembler("globalThis.__nekoJsxFactory(", originalStart);
+            call.append(typeExpression);
+            call.append(", ");
+            call.append(propsExpression);
+            for (GeneratedPart child : children) {
+                call.append(", ");
+                call.append(child);
             }
-            return call.append(')').toString();
+            call.append(")");
+            return new ParseResult(call.text(), call.mappings(), nextIndex);
         }
 
-        private String fragmentCall(List<String> children) {
-            StringBuilder call = new StringBuilder("globalThis.__nekoJsxFragment(");
+        private ParseResult fragmentCall(int originalStart, List<GeneratedPart> children, int nextIndex) {
+            GeneratedAssembler call = new GeneratedAssembler("globalThis.__nekoJsxFragment(", originalStart);
             for (int i = 0; i < children.size(); i++) {
                 if (i > 0) {
                     call.append(", ");
                 }
                 call.append(children.get(i));
             }
-            return call.append(')').toString();
+            call.append(")");
+            return new ParseResult(call.text(), call.mappings(), nextIndex);
+        }
+
+        private GeneratedPart objectPart(List<GeneratedPart> props) {
+            GeneratedAssembler object = new GeneratedAssembler("{", -1);
+            for (int i = 0; i < props.size(); i++) {
+                if (i > 0) {
+                    object.append(", ");
+                }
+                object.append(props.get(i));
+            }
+            object.append("}");
+            return new GeneratedPart(object.text(), object.mappings());
         }
 
         private String stringLiteral(String value) {
@@ -596,7 +624,45 @@ public final class NekoJsxCompiler {
         }
     }
 
-    private record ParseResult(String text, int nextIndex) {}
-    private record ExpressionResult(String text, int nextIndex) {}
-    private record AttributeResult(String text, int nextIndex) {}
+    private static final class GeneratedAssembler {
+        private final StringBuilder text = new StringBuilder();
+        private final List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
+
+        private GeneratedAssembler(String prefix, int originalOffset) {
+            if (originalOffset >= 0) {
+                mappings.add(new NekoSourceMapBuilder.MappingPoint(0, originalOffset));
+            }
+            text.append(prefix);
+        }
+
+        private void append(String value) {
+            text.append(value);
+        }
+
+        private void append(GeneratedPart part) {
+            int offset = text.length();
+            text.append(part.text());
+            for (NekoSourceMapBuilder.MappingPoint mapping : part.mappings()) {
+                mappings.add(new NekoSourceMapBuilder.MappingPoint(offset + mapping.generatedOffset(), mapping.originalOffset()));
+            }
+        }
+
+        private String text() {
+            return text.toString();
+        }
+
+        private List<NekoSourceMapBuilder.MappingPoint> mappings() {
+            return mappings;
+        }
+    }
+
+    private record JsxTransformResult(String code, String sourceMap) {}
+    private record GeneratedPart(String text, List<NekoSourceMapBuilder.MappingPoint> mappings) {
+        private static GeneratedPart unmapped(String text) {
+            return new GeneratedPart(text, List.of());
+        }
+    }
+    private record ParseResult(String text, List<NekoSourceMapBuilder.MappingPoint> mappings, int nextIndex) {}
+    private record ExpressionResult(GeneratedPart part, int nextIndex) {}
+    private record AttributeResult(GeneratedPart part, int nextIndex) {}
 }

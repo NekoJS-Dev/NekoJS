@@ -21,12 +21,21 @@ public final class NekoTypeScriptCompiler implements IScriptCompiler {
 
     @Override
     public ScriptCompileResult compileDetailed(Path file, String sourceCode) throws Exception {
-        return ScriptCompileResult.codeOnly(erase(file, sourceCode));
+        TypeScriptTransformResult result = eraseDetailed(file, sourceCode);
+        return new ScriptCompileResult(result.code(), result.sourceMap());
     }
 
     static String erase(Path file, String source) {
-        return new Eraser(file, source == null ? "" : source).erase();
+        return eraseDetailed(file, source).code();
     }
+
+    static TypeScriptTransformResult eraseDetailed(Path file, String source) {
+        String original = source == null ? "" : source;
+        String erased = new Eraser(file, original).erase();
+        return new TypeScriptTransformResult(erased, NekoSourceMapBuilder.identity(file, original, erased));
+    }
+
+    record TypeScriptTransformResult(String code, String sourceMap) {}
 
     private static final class Eraser {
         private final Path file;
