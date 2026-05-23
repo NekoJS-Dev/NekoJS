@@ -68,12 +68,12 @@ public class ScriptError {
                 String jsSnippet = chars != null ? chars.toString().trim() : "";
 
                 String displayPath = extractRelativePath(sourceLocation);
-                this.errorPath = displayPath;
                 SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(displayPath, rawLine, rawColumn);
+                this.errorPath = pos.path != null && !pos.path.isBlank() ? pos.path : displayPath;
                 this.lineNumber = pos.line;
                 this.columnNumber = pos.column;
                 this.originalSymbolName = pos.name;
-                this.sourceCodeSnippet = buildSourceSnippet(displayPath, usefulFallbackSnippet(jsSnippet));
+                this.sourceCodeSnippet = buildSourceSnippet(this.errorPath, pos.sourceContent, usefulFallbackSnippet(jsSnippet));
             }
         } else {
             this.errorMessage = bestMessage(primary);
@@ -93,32 +93,45 @@ public class ScriptError {
     }
 
     private String buildSourceSnippet(String displayPath, String fallbackSnippet) {
+        return buildSourceSnippet(displayPath, null, fallbackSnippet);
+    }
+
+    private String buildSourceSnippet(String displayPath, String sourceContent, String fallbackSnippet) {
+        List<String> sourceLines = null;
         try {
-            Path sourcePath = NekoJSPaths.ROOT.resolve(displayPath);
-            if (Files.exists(sourcePath) && this.lineNumber > 0) {
-                List<String> allLines = Files.readAllLines(sourcePath);
-                int lineIndex = this.lineNumber - 1;
-                if (lineIndex >= 0 && lineIndex < allLines.size()) {
-                    int start = Math.max(0, lineIndex - 2);
-                    int end = Math.min(allLines.size() - 1, lineIndex + 2);
-                    StringBuilder snippet = new StringBuilder();
-
-                    for (int i = start; i <= end; i++) {
-                        int displayLine = i + 1;
-                        snippet.append(displayLine == this.lineNumber ? " > " : "   ");
-                        snippet.append(displayLine).append(" | ").append(allLines.get(i)).append("\n");
-
-                        if (displayLine == this.lineNumber && this.columnNumber > 0) {
-                            snippet.append("     | ").append(" ".repeat(Math.max(0, this.columnNumber - 1))).append("^\n");
-                        }
-                    }
-
-                    return snippet.toString().stripTrailing();
-                }
+            Path sourcePath = NekoJSPaths.ROOT.resolve(displayPath).normalize().toAbsolutePath();
+            Path root = NekoJSPaths.ROOT.normalize().toAbsolutePath();
+            if (sourcePath.startsWith(root) && Files.exists(sourcePath) && this.lineNumber > 0) {
+                sourceLines = Files.readAllLines(sourcePath);
             }
         } catch (Exception ignored) {
         }
-        return fallbackSnippet;
+        if ((sourceLines == null || sourceLines.isEmpty()) && sourceContent != null && !sourceContent.isEmpty()) {
+            sourceLines = sourceContent.lines().toList();
+        }
+        if (sourceLines == null || this.lineNumber <= 0) {
+            return fallbackSnippet;
+        }
+
+        int lineIndex = this.lineNumber - 1;
+        if (lineIndex < 0 || lineIndex >= sourceLines.size()) {
+            return fallbackSnippet;
+        }
+        int start = Math.max(0, lineIndex - 2);
+        int end = Math.min(sourceLines.size() - 1, lineIndex + 2);
+        StringBuilder snippet = new StringBuilder();
+
+        for (int i = start; i <= end; i++) {
+            int displayLine = i + 1;
+            snippet.append(displayLine == this.lineNumber ? " > " : "   ");
+            snippet.append(displayLine).append(" | ").append(sourceLines.get(i)).append("\n");
+
+            if (displayLine == this.lineNumber && this.columnNumber > 0) {
+                snippet.append("     | ").append(" ".repeat(Math.max(0, this.columnNumber - 1))).append("^\n");
+            }
+        }
+
+        return snippet.toString().stripTrailing();
     }
 
     public void incrementOccurrence() {
@@ -301,12 +314,15 @@ public class ScriptError {
             if (isInternalFrame(path)) {
                 continue;
             }
-            int line = loc.getStartLine();
+            SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(path, loc.getStartLine(), loc.getStartColumn());
+            String mappedPath = pos.path != null && !pos.path.isBlank() ? pos.path : path;
             String rootName = frame.getRootName();
-            if (rootName == null || rootName.isEmpty() || rootName.equals(":program")) {
+            if (pos.name != null && !pos.name.isEmpty()) {
+                rootName = pos.name;
+            } else if (rootName == null || rootName.isEmpty() || rootName.equals(":program")) {
                 rootName = "<module>";
             }
-            return "堆栈: at " + rootName + " (" + path + ":" + line + ")";
+            return "堆栈: at " + rootName + " (" + mappedPath + ":" + pos.line + ")";
         }
         return "";
     }

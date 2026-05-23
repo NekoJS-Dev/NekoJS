@@ -1,123 +1,45 @@
 package com.tkisor.nekojs.core.error;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+
+import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-/**
- * VLQ SourceMap 映射注册表。
- * <p>
- * 纯算法类，负责解析 SourceMap JSON 中的 VLQ 编码映射，
- * 将编译后 JavaScript 的行列号映射回原始 TypeScript 源码位置。
- * </p>
- */
 public class SourceMapRegistry {
+    private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    private static final Map<String, NormalizedSourceMap> MAPPINGS_MAP = new ConcurrentHashMap<>();
 
-    private static final Pattern MAPPINGS_PATTERN = Pattern.compile("\"mappings\"\\s*:\\s*\"([^\"]+)\"");
-    private static final Pattern NAMES_PATTERN = Pattern.compile("\"names\"\\s*:\\s*\\[(.*?)\\]");
-
-    private static final Map<String, ScriptMapping> MAPPINGS_MAP = new ConcurrentHashMap<>();
-
-    /**
-     * 注册 SourceMap（传入完整的 sourceMapJson）
-     */
     public static void register(String scriptPath, String sourceMapJson) {
         register(scriptPath, sourceMapJson, 0);
     }
 
     public static void register(String scriptPath, String sourceMapJson, int prependedLineCount) {
         if (scriptPath == null) return;
-
-        try {
-            String normalizedPath = scriptPath.replace('\\', '/');
-            String mappings = "";
-            String[] names = new String[0];
-
-            if (sourceMapJson != null && !sourceMapJson.isEmpty()) {
-                Matcher mapMatcher = MAPPINGS_PATTERN.matcher(sourceMapJson);
-                if (mapMatcher.find()) mappings = mapMatcher.group(1);
-
-                Matcher nameMatcher = NAMES_PATTERN.matcher(sourceMapJson);
-                if (nameMatcher.find()) {
-                    String namesStr = nameMatcher.group(1);
-                    if (!namesStr.trim().isEmpty()) {
-                        String[] rawNames = namesStr.split(",");
-                        names = new String[rawNames.length];
-                        for (int i = 0; i < rawNames.length; i++) {
-                            names[i] = rawNames[i].trim().replaceAll("^\"|\"$", "");
-                        }
-                    }
-                }
-            }
-
-            ScriptMapping mapping = mappings.isEmpty()
-                    ? new ScriptMapping(List.of(), prependedLineCount)
-                    : parseMappings(mappings, names, prependedLineCount);
-            MAPPINGS_MAP.put(normalizedPath, mapping);
-        } catch (Exception e) {
-            e.printStackTrace();
+        String generatedPath = normalizeLookupPath(scriptPath);
+        NormalizedSourceMap sourceMap = parse(generatedPath, sourceMapJson, prependedLineCount);
+        MAPPINGS_MAP.put(generatedPath, sourceMap);
+        if (sourceMap.file != null && !sourceMap.file.isBlank()) {
+            MAPPINGS_MAP.put(sourceMap.file, sourceMap);
         }
     }
 
-    private static ScriptMapping parseMappings(String mappings, String[] names, int prependedLineCount) {
-        String[] jsLines = mappings.split(";", -1);
-        List<List<MappingEntry>> lineMappings = new ArrayList<>(jsLines.length);
-
-        int sourceLine = 0;
-        int sourceColumn = 0;
-        int nameIndex = 0;
-
-        for (String jsLineStr : jsLines) {
-            List<MappingEntry> currentLineEntries = new ArrayList<>();
-            lineMappings.add(currentLineEntries);
-
-            if (jsLineStr.isEmpty()) continue;
-
-            int jsColumn = 0;
-            String[] segments = jsLineStr.split(",");
-            for (String segment : segments) {
-                if (segment.isEmpty()) continue;
-                List<Integer> vals = decodeVlq(segment);
-
-                jsColumn += vals.get(0);
-
-                if (vals.size() >= 4) {
-                    sourceLine += vals.get(2);
-                    sourceColumn += vals.get(3);
-
-                    String symbolName = null;
-                    if (vals.size() >= 5) {
-                        nameIndex += vals.get(4);
-                        if (nameIndex >= 0 && nameIndex < names.length) {
-                            symbolName = names[nameIndex];
-                        }
-                    }
-                    currentLineEntries.add(new MappingEntry(jsColumn, sourceLine, sourceColumn, symbolName));
-                }
-            }
-        }
-        return new ScriptMapping(lineMappings, prependedLineCount);
-    }
-
-    /**
-     * 获取映射信息（需要传入 JS 报错的行号和列号）
-     *
-     * @param jsLine   1-based
-     * @param jsColumn 1-based
-     * @return 返回原始位置信息，如果没找到则返回带原始请求的兜底对象
-     */
     public static OriginalPosition getMappedPosition(String scriptPath, int jsLine, int jsColumn) {
         OriginalPosition fallback = new OriginalPosition(jsLine, jsColumn, null);
         if (scriptPath == null || MAPPINGS_MAP.isEmpty()) return fallback;
 
-        String query = scriptPath.replace('\\', '/');
-        ScriptMapping mapping = MAPPINGS_MAP.get(query);
+        String query = normalizeLookupPath(scriptPath);
+        NormalizedSourceMap mapping = MAPPINGS_MAP.get(query);
 
         if (mapping == null) {
-            for (Map.Entry<String, ScriptMapping> entry : MAPPINGS_MAP.entrySet()) {
+            for (Map.Entry<String, NormalizedSourceMap> entry : MAPPINGS_MAP.entrySet()) {
                 if (entry.getKey().endsWith(query) || query.endsWith(entry.getKey())) {
                     mapping = entry.getValue();
                     break;
@@ -125,48 +47,115 @@ public class SourceMapRegistry {
             }
         }
 
-        if (mapping != null) {
-            int adjustedLine = jsLine - mapping.prependedLineCount;
-            OriginalPosition adjustedFallback = new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
-            int lineIndex = adjustedLine - 1;
-            if (lineIndex >= 0 && lineIndex < mapping.lineMappings.size()) {
-                List<MappingEntry> entries = mapping.lineMappings.get(lineIndex);
-                if (entries == null || entries.isEmpty()) return adjustedFallback;
-
-                int targetCol = jsColumn - 1;
-                MappingEntry bestMatch = entries.get(0);
-
-                for (MappingEntry entry : entries) {
-                    if (entry.jsColumn <= targetCol) {
-                        bestMatch = entry;
-                    } else {
-                        break;
-                    }
-                }
-                return new OriginalPosition(bestMatch.tsLine + 1, bestMatch.tsColumn + 1, bestMatch.name);
-            }
-            return adjustedFallback;
-        }
-        return fallback;
+        return mapping == null ? fallback : mapping.map(jsLine, jsColumn);
     }
 
-    /**
-     * 根据路径前缀清除映射（用于按脚本类型批量清除）。
-     * 平台层通过 {@code SourceMapRegistryPlatformBridge.clearByType} 桥接调用。
-     */
+    public static void clear() {
+        MAPPINGS_MAP.clear();
+    }
+
+    public static void clear(String scriptPath) {
+        if (scriptPath == null) return;
+        String query = normalizeLookupPath(scriptPath);
+        MAPPINGS_MAP.entrySet().removeIf(entry -> entry.getKey().equals(query) || entry.getValue().matchesGeneratedPath(query));
+    }
+
     public static void clearByPathPrefix(String pathPrefix) {
         if (pathPrefix == null) return;
-        String lower = pathPrefix.toLowerCase();
-        MAPPINGS_MAP.keySet().removeIf(path -> path.toLowerCase().contains(lower));
+        String lower = normalizeLookupPath(pathPrefix).toLowerCase();
+        MAPPINGS_MAP.entrySet().removeIf(entry -> entry.getKey().toLowerCase().contains(lower)
+                || entry.getValue().generatedPath.toLowerCase().contains(lower));
     }
 
-    // VLQ Base64 解码器
+    private static NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {
+        if (sourceMapJson == null || sourceMapJson.isBlank()) {
+            return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
+        }
+        try {
+            JsonElement rootElement = JsonParser.parseString(sourceMapJson);
+            if (!rootElement.isJsonObject()) {
+                return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
+            }
+            JsonObject root = rootElement.getAsJsonObject();
+            if (root.has("sections")) {
+                return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
+            }
+
+            String file = normalizeSourcePath(generatedPath, null, stringMember(root, "file"));
+            String sourceRoot = stringMember(root, "sourceRoot");
+            List<String> sources = stringArray(root, "sources").stream()
+                    .map(source -> normalizeSourcePath(generatedPath, sourceRoot, source))
+                    .toList();
+            List<String> sourcesContent = nullableStringArray(root, "sourcesContent");
+            List<String> names = stringArray(root, "names");
+            String mappings = stringMember(root, "mappings");
+
+            if (mappings == null || mappings.isEmpty()) {
+                return new NormalizedSourceMap(generatedPath, file, prependedLineCount, List.of(), sources, sourcesContent, names);
+            }
+            return new NormalizedSourceMap(generatedPath, file, prependedLineCount, parseMappings(mappings, sources.size(), names.size()), sources, sourcesContent, names);
+        } catch (Exception ignored) {
+            return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
+        }
+    }
+
+    private static List<List<MappingEntry>> parseMappings(String mappings, int sourceCount, int nameCount) {
+        String[] generatedLines = mappings.split(";", -1);
+        List<List<MappingEntry>> lineMappings = new ArrayList<>(generatedLines.length);
+
+        int sourceIndex = 0;
+        int originalLine = 0;
+        int originalColumn = 0;
+        int nameIndex = 0;
+
+        for (String generatedLine : generatedLines) {
+            List<MappingEntry> entries = new ArrayList<>();
+            lineMappings.add(entries);
+            if (generatedLine.isEmpty()) {
+                continue;
+            }
+
+            int generatedColumn = 0;
+            for (String segment : generatedLine.split(",")) {
+                if (segment.isEmpty()) continue;
+                List<Integer> values = decodeVlq(segment);
+                if (values.isEmpty()) continue;
+
+                generatedColumn += values.get(0);
+                if (values.size() < 4) {
+                    continue;
+                }
+
+                sourceIndex += values.get(1);
+                originalLine += values.get(2);
+                originalColumn += values.get(3);
+
+                int entryNameIndex = -1;
+                if (values.size() >= 5) {
+                    nameIndex += values.get(4);
+                    if (nameIndex >= 0 && nameIndex < nameCount) {
+                        entryNameIndex = nameIndex;
+                    }
+                }
+
+                if (sourceIndex >= 0 && sourceIndex < sourceCount && originalLine >= 0 && originalColumn >= 0) {
+                    entries.add(new MappingEntry(generatedColumn, sourceIndex, originalLine, originalColumn, entryNameIndex));
+                }
+            }
+        }
+        return lineMappings;
+    }
+
     private static List<Integer> decodeVlq(String str) {
         List<Integer> result = new ArrayList<>();
-        int value = 0, shift = 0;
+        int value = 0;
+        int shift = 0;
         for (int i = 0; i < str.length(); i++) {
-            int c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".indexOf(str.charAt(i));
-            if (c < 0) continue;
+            int c = VLQ_CHARS.indexOf(str.charAt(i));
+            if (c < 0) {
+                result.clear();
+                return result;
+            }
             value |= (c & 31) << shift;
             if ((c & 32) == 0) {
                 int decoded = value >> 1;
@@ -180,45 +169,218 @@ public class SourceMapRegistry {
         return result;
     }
 
-    private static class ScriptMapping {
-        final List<List<MappingEntry>> lineMappings;
-        final int prependedLineCount;
+    private static String stringMember(JsonObject object, String member) {
+        JsonElement value = object.get(member);
+        return value == null || value.isJsonNull() || !value.isJsonPrimitive() ? null : value.getAsString();
+    }
 
-        ScriptMapping(List<List<MappingEntry>> lineMappings, int prependedLineCount) {
-            this.lineMappings = lineMappings;
-            this.prependedLineCount = Math.max(0, prependedLineCount);
+    private static List<String> stringArray(JsonObject object, String member) {
+        JsonElement value = object.get(member);
+        if (value == null || !value.isJsonArray()) return List.of();
+        List<String> result = new ArrayList<>();
+        JsonArray array = value.getAsJsonArray();
+        for (JsonElement element : array) {
+            if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+                result.add(element.getAsString());
+            }
+        }
+        return result;
+    }
+
+    private static List<String> nullableStringArray(JsonObject object, String member) {
+        JsonElement value = object.get(member);
+        if (value == null || !value.isJsonArray()) return List.of();
+        List<String> result = new ArrayList<>();
+        JsonArray array = value.getAsJsonArray();
+        for (JsonElement element : array) {
+            result.add(element == null || element.isJsonNull() || !element.isJsonPrimitive() ? null : element.getAsString());
+        }
+        return result;
+    }
+
+    private static String normalizeLookupPath(String path) {
+        String normalized = path.replace('\\', '/');
+        String rootUri = NekoJSPaths.ROOT.toUri().toString();
+        if (normalized.startsWith(rootUri)) {
+            normalized = normalized.substring(rootUri.length());
+        }
+        return trimLeadingSlash(normalized);
+    }
+
+    private static String normalizeSourcePath(String generatedPath, String sourceRoot, String source) {
+        if (source == null || source.isBlank()) {
+            return null;
+        }
+        String sourceText = source.replace('\\', '/');
+        if (sourceRoot != null && !sourceRoot.isBlank() && !isAbsoluteOrUri(sourceText)) {
+            sourceText = trimTrailingSlash(sourceRoot.replace('\\', '/')) + "/" + sourceText;
+        }
+
+        String pathFromUri = normalizeFileUri(sourceText);
+        if (pathFromUri != null) {
+            return pathFromUri;
+        }
+
+        if (isAbsolutePath(sourceText)) {
+            return normalizeAbsolutePath(sourceText);
+        }
+
+        String normalized = sourceText;
+        try {
+            Path sourcePath = Path.of(sourceText).normalize();
+            normalized = sourcePath.toString().replace('\\', '/');
+        } catch (Exception ignored) {
+        }
+
+        if (isRootRelative(normalized)) {
+            return normalized;
+        }
+
+        String generatedDir = generatedDirectory(generatedPath);
+        if (!generatedDir.isBlank()) {
+            try {
+                String resolved = Path.of(generatedDir).resolve(normalized).normalize().toString().replace('\\', '/');
+                if (!resolved.startsWith("../") && !resolved.equals("..")) {
+                    return trimLeadingSlash(resolved);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return normalized.startsWith("../") || normalized.equals("..") ? null : trimLeadingSlash(normalized);
+    }
+
+    private static String normalizeFileUri(String sourceText) {
+        if (!sourceText.startsWith("file:")) {
+            return null;
+        }
+        try {
+            return normalizeAbsolutePath(Path.of(URI.create(sourceText)).toString().replace('\\', '/'));
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
-    private static class MappingEntry {
-        final int jsColumn;
-        final int tsLine;
-        final int tsColumn;
-        final String name;
-
-        MappingEntry(int jsColumn, int tsLine, int tsColumn, String name) {
-            this.jsColumn = jsColumn;
-            this.tsLine = tsLine;
-            this.tsColumn = tsColumn;
-            this.name = name;
+    private static String normalizeAbsolutePath(String sourceText) {
+        try {
+            Path path = Path.of(sourceText).normalize().toAbsolutePath();
+            Path root = NekoJSPaths.ROOT.normalize().toAbsolutePath();
+            if (path.startsWith(root)) {
+                return root.relativize(path).toString().replace('\\', '/');
+            }
+            return path.toString().replace('\\', '/');
+        } catch (Exception ignored) {
+            return sourceText.replace('\\', '/');
         }
     }
+
+    private static boolean isAbsoluteOrUri(String path) {
+        return path.contains("://") || path.startsWith("file:") || isAbsolutePath(path);
+    }
+
+    private static boolean isAbsolutePath(String path) {
+        return path.startsWith("/") || path.matches("^[A-Za-z]:/.*");
+    }
+
+    private static boolean isRootRelative(String path) {
+        return path.startsWith("startup_scripts/")
+                || path.startsWith("server_scripts/")
+                || path.startsWith("client_scripts/")
+                || path.startsWith("test_scripts/");
+    }
+
+    private static String generatedDirectory(String generatedPath) {
+        if (generatedPath == null) return "";
+        int slash = generatedPath.lastIndexOf('/');
+        return slash < 0 ? "" : generatedPath.substring(0, slash);
+    }
+
+    private static String trimLeadingSlash(String value) {
+        while (value.startsWith("/")) {
+            value = value.substring(1);
+        }
+        return value;
+    }
+
+    private static String trimTrailingSlash(String value) {
+        while (value.endsWith("/")) {
+            value = value.substring(0, value.length() - 1);
+        }
+        return value;
+    }
+
+    private record NormalizedSourceMap(
+            String generatedPath,
+            String file,
+            int prependedLineCount,
+            List<List<MappingEntry>> lineMappings,
+            List<String> sources,
+            List<String> sourcesContent,
+            List<String> names
+    ) {
+        static NormalizedSourceMap empty(String generatedPath, int prependedLineCount) {
+            return new NormalizedSourceMap(generatedPath, null, prependedLineCount, List.of(), List.of(), List.of(), List.of());
+        }
+
+        boolean matchesGeneratedPath(String path) {
+            return generatedPath.equals(path) || (file != null && file.equals(path));
+        }
+
+        OriginalPosition map(int jsLine, int jsColumn) {
+            int adjustedLine = jsLine - Math.max(0, prependedLineCount);
+            OriginalPosition adjustedFallback = new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
+            int lineIndex = adjustedLine - 1;
+            if (lineIndex < 0 || lineIndex >= lineMappings.size()) {
+                return adjustedFallback;
+            }
+
+            List<MappingEntry> entries = lineMappings.get(lineIndex);
+            if (entries == null || entries.isEmpty()) {
+                return adjustedFallback;
+            }
+
+            int targetColumn = Math.max(0, jsColumn - 1);
+            MappingEntry bestMatch = entries.get(0);
+            for (MappingEntry entry : entries) {
+                if (entry.generatedColumn <= targetColumn) {
+                    bestMatch = entry;
+                } else {
+                    break;
+                }
+            }
+
+            String path = bestMatch.sourceIndex >= 0 && bestMatch.sourceIndex < sources.size() ? sources.get(bestMatch.sourceIndex) : null;
+            String sourceContent = bestMatch.sourceIndex >= 0 && bestMatch.sourceIndex < sourcesContent.size() ? sourcesContent.get(bestMatch.sourceIndex) : null;
+            String name = bestMatch.nameIndex >= 0 && bestMatch.nameIndex < names.size() ? names.get(bestMatch.nameIndex) : null;
+            return new OriginalPosition(path, bestMatch.originalLine + 1, bestMatch.originalColumn + 1, name, sourceContent);
+        }
+    }
+
+    private record MappingEntry(int generatedColumn, int sourceIndex, int originalLine, int originalColumn, int nameIndex) {}
 
     public static class OriginalPosition {
+        public final String path;
         public final int line;
         public final int column;
         public final String name;
+        public final String sourceContent;
 
         public OriginalPosition(int line, int column, String name) {
+            this(null, line, column, name, null);
+        }
+
+        public OriginalPosition(String path, int line, int column, String name, String sourceContent) {
+            this.path = path;
             this.line = line;
             this.column = column;
             this.name = name;
+            this.sourceContent = sourceContent;
         }
 
         @Override
         public String toString() {
-            if (name != null) return name + " (" + line + ":" + column + ")";
-            return line + ":" + column;
+            String position = (path == null || path.isBlank() ? "" : path + ":") + line + ":" + column;
+            if (name != null) return name + " (" + position + ")";
+            return position;
         }
     }
 }

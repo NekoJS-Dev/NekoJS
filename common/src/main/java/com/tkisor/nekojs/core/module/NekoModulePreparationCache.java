@@ -35,19 +35,26 @@ public final class NekoModulePreparationCache {
 
     public static void clear() {
         CACHE.clear();
+        SourceMapRegistry.clear();
     }
 
     public static void invalidate(Path path) {
         if (path != null) {
-            CACHE.remove(path.normalize().toAbsolutePath());
+            Path key = path.normalize().toAbsolutePath();
+            CACHE.remove(key);
+            relativePath(key).ifPresent(SourceMapRegistry::clear);
         }
     }
 
     private static void registerSourceMap(Path path, String sourceMap, int prependedLineCount) {
+        relativePath(path).ifPresent(relativePath -> SourceMapRegistry.register(relativePath, sourceMap, prependedLineCount));
+    }
+
+    private static java.util.Optional<String> relativePath(Path path) {
         try {
-            String relativePath = NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/');
-            SourceMapRegistry.register(relativePath, sourceMap, prependedLineCount);
+            return java.util.Optional.of(NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/'));
         } catch (Exception ignored) {
+            return java.util.Optional.empty();
         }
     }
 

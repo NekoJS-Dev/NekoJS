@@ -125,7 +125,8 @@ public class NekoErrorTracker {
                     int rawColumn = loc.getStartColumn();
 
                     SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(pathStr, rawLine, rawColumn);
-                    int realLine = getRealCodeLine(pathStr, pos.line);
+                    String mappedPath = pos.path != null && !pos.path.isBlank() ? pos.path : pathStr;
+                    int realLine = getRealCodeLine(mappedPath, pos.line);
                     String rootName = frame.getRootName();
 
                     if (pos.name != null && !pos.name.isEmpty()) {
@@ -135,7 +136,7 @@ public class NekoErrorTracker {
                     }
 
                     sb.append("    at ").append(rootName)
-                            .append(" (").append(pathStr).append(":").append(realLine).append(")\n");
+                            .append(" (").append(mappedPath).append(":").append(realLine).append(")\n");
                 } else {
                     String rootName = frame.getRootName() != null && !frame.getRootName().isEmpty() ? frame.getRootName() : "<anonymous>";
                     sb.append("    at ").append(rootName).append(" (Unknown Source)\n");

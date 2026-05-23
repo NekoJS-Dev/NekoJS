@@ -79,8 +79,9 @@ public final class NekoNodeRuntime implements AutoCloseable {
             displayPath = path;
         }
         SourceMapRegistry.OriginalPosition mapped = SourceMapRegistry.getMappedPosition(displayPath, line, column);
+        String mappedPath = mapped.path != null && !mapped.path.isBlank() ? mapped.path : displayPath;
         return Map.of(
-                "path", displayPath,
+                "path", mappedPath,
                 "line", mapped.line,
                 "column", mapped.column
         );

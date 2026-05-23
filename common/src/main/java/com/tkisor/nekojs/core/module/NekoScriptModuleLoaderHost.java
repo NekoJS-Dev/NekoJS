@@ -494,8 +494,9 @@ public final class NekoScriptModuleLoaderHost {
             int lineNumber = Integer.parseInt(matcher.group(3));
             int columnNumber = matcher.group(4) == null ? 1 : Integer.parseInt(matcher.group(4));
             SourceMapRegistry.OriginalPosition position = SourceMapRegistry.getMappedPosition(displayPath, lineNumber, columnNumber);
+            String mappedPath = position.path != null && !position.path.isBlank() ? position.path : displayPath;
             String columnSuffix = matcher.group(4) == null ? "" : ":" + position.column;
-            matcher.appendReplacement(mapped, Matcher.quoteReplacement(matcher.group(1) + displayPath + ":" + position.line + columnSuffix + matcher.group(5)));
+            matcher.appendReplacement(mapped, Matcher.quoteReplacement(matcher.group(1) + mappedPath + ":" + position.line + columnSuffix + matcher.group(5)));
         }
         matcher.appendTail(mapped);
         return mapped.toString();
