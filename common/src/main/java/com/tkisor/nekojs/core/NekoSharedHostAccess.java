@@ -30,6 +30,8 @@ public final class NekoSharedHostAccess {
                 .allowAllImplementations(true);
 
         NekoJSTypeAdapters.all().forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
+        hostBuilder.targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue);
+        hostBuilder.targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
         return hostBuilder.build();
     }
 
@@ -40,8 +42,6 @@ public final class NekoSharedHostAccess {
                         adapter::canConvert,
                         adapter::convert,
                         adapter.getPrecedence()
-                )
-                .targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue)
-                .targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
+                );
     }
 }
