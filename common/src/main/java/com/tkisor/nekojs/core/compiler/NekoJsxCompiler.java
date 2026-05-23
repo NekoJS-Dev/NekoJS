@@ -16,7 +16,8 @@ public final class NekoJsxCompiler {
 
     public static ScriptCompileResult compileTsx(Path file, String source) {
         JsxTransformResult lowered = new Transpiler(file, source == null ? "" : source).transpileDetailed();
-        return new ScriptCompileResult(NekoTypeScriptCompiler.erase(file, lowered.code()), lowered.sourceMap());
+        NekoTypeScriptCompiler.TypeScriptTransformResult erased = NekoTypeScriptCompiler.erasePreservingSourceMap(file, lowered.code(), lowered.sourceMap());
+        return new ScriptCompileResult(erased.code(), erased.sourceMap());
     }
 
     private static final class Transpiler {
@@ -181,7 +182,7 @@ public final class NekoJsxCompiler {
                 return null;
             }
             String transformed = transform(inner);
-            return new ExpressionResult(new GeneratedPart("(" + transformed + ")", List.of(new NekoSourceMapBuilder.MappingPoint(1, start + 1))), end + 1);
+            return new ExpressionResult(new GeneratedPart("(" + transformed + ")", expressionMappings(transformed, 1, start + 1)), end + 1);
         }
 
         private AttributeResult parseAttribute(int start) {
@@ -228,10 +229,10 @@ public final class NekoJsxCompiler {
                     throw jsxError("Missing JSX attribute expression", start);
                 }
                 String text = attributeKey(name) + ": (" + transformed + ")";
-                return new AttributeResult(new GeneratedPart(text, List.of(
-                        new NekoSourceMapBuilder.MappingPoint(0, start),
-                        new NekoSourceMapBuilder.MappingPoint(text.indexOf('(') + 1, index + 1)
-                )), valueEnd + 1);
+                List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
+                mappings.add(new NekoSourceMapBuilder.MappingPoint(0, start));
+                mappings.addAll(expressionMappings(transformed, text.indexOf('(') + 1, index + 1));
+                return new AttributeResult(new GeneratedPart(text, mappings), valueEnd + 1);
             }
             throw jsxError("JSX attribute values must be string literals or expressions", index);
         }
@@ -251,6 +252,17 @@ public final class NekoJsxCompiler {
                 return innerSource == null ? "" : innerSource;
             }
             return new Transpiler(file, innerSource).transpile();
+        }
+
+        private List<NekoSourceMapBuilder.MappingPoint> expressionMappings(String transformed, int generatedStart, int originalStart) {
+            List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
+            mappings.add(new NekoSourceMapBuilder.MappingPoint(generatedStart, originalStart));
+            for (int i = 0; i < transformed.length(); i++) {
+                if (transformed.charAt(i) == '\n' && i + 1 < transformed.length()) {
+                    mappings.add(new NekoSourceMapBuilder.MappingPoint(generatedStart + i + 1, originalStart + i + 1));
+                }
+            }
+            return mappings;
         }
 
         private String normalizeText(String raw) {

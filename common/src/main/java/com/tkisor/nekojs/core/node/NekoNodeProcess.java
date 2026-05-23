@@ -38,4 +38,8 @@ public final class NekoNodeProcess {
     public Map<String, String> env() {
         return Map.of();
     }
+
+    public long pid() {
+        return ProcessHandle.current().pid();
+    }
 }

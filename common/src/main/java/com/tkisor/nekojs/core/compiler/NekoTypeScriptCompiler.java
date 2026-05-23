@@ -29,6 +29,11 @@ public final class NekoTypeScriptCompiler implements IScriptCompiler {
         return eraseDetailed(file, source).code();
     }
 
+    static TypeScriptTransformResult erasePreservingSourceMap(Path file, String source, String sourceMap) {
+        String original = source == null ? "" : source;
+        return new TypeScriptTransformResult(new Eraser(file, original).erase(), sourceMap);
+    }
+
     static TypeScriptTransformResult eraseDetailed(Path file, String source) {
         String original = source == null ? "" : source;
         String erased = new Eraser(file, original).erase();

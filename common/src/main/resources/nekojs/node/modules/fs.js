@@ -18,7 +18,12 @@
   }
 
   const fs = {
+    F_OK: 0,
+    R_OK: 4,
+    W_OK: 2,
+    X_OK: 1,
     existsSync(path) { return runtime.fs().existsSync(String(path)) },
+    accessSync(path, mode) { runtime.fs().stat(String(path)) },
     readFileSync(path, options) {
       const encoding = encodingFromOptions(options)
       return encoding ? String(runtime.fs().readFileString(String(path), encoding)) : wrapBuffer(runtime.fs().readFileBuffer(String(path)))
@@ -41,7 +46,7 @@
     readlinkSync(path) { return String(runtime.fs().readlink(String(path))) }
   }
 
-  for (const name of ['readFile', 'writeFile', 'appendFile', 'mkdir', 'rm', 'unlink', 'readdir', 'stat', 'lstat', 'rename', 'copyFile', 'realpath']) {
+  for (const name of ['readFile', 'writeFile', 'appendFile', 'mkdir', 'rm', 'unlink', 'readdir', 'stat', 'lstat', 'rename', 'copyFile', 'realpath', 'access']) {
     fs[name] = function (...args) {
       const callback = args.at(-1)
       callbackResult(typeof callback === 'function' ? callback : undefined, () => fs[name + 'Sync'](...args.slice(0, typeof callback === 'function' ? -1 : undefined)))
@@ -60,7 +65,8 @@
     lstat: path => promiseResult(() => fs.lstatSync(path)),
     rename: (oldPath, newPath) => promiseResult(() => fs.renameSync(oldPath, newPath)),
     copyFile: (source, destination) => promiseResult(() => fs.copyFileSync(source, destination)),
-    realpath: path => promiseResult(() => fs.realpathSync(path))
+    realpath: path => promiseResult(() => fs.realpathSync(path)),
+    access: (path, mode) => promiseResult(() => fs.accessSync(path, mode))
   }
 
   globalThis.__nekoNodeDefine(['fs', 'node:fs'], fs)

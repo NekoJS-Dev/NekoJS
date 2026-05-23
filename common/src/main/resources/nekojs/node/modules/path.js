@@ -14,9 +14,13 @@
     isAbsolute: value => runtime.path().isAbsolute(String(value)),
     parse: value => runtime.path().parse(String(value)),
     format: value => String(runtime.path().format(value)),
+    toNamespacedPath: value => String(value),
     posix: runtime.path().posix(),
     win32: runtime.path().win32()
   }
+
+  try { path.posix.toNamespacedPath = value => String(value) } catch (_) {}
+  try { path.win32.toNamespacedPath = value => String(value) } catch (_) {}
 
   globalThis.__nekoNodeDefine(['path', 'node:path'], path)
 })()

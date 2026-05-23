@@ -58,8 +58,12 @@
     return wrapBuffer(runtime.bufferFromString(String(value ?? ''), encoding || 'utf8'))
   }
   Buffer.alloc = function (size) { return wrapBuffer(runtime.bufferAlloc(Number(size) || 0)) }
+  Buffer.allocUnsafe = function (size) { return Buffer.alloc(size) }
   Buffer.isBuffer = function (value) { return !!unwrapBuffer(value) }
   Buffer.byteLength = function (value, encoding) { return runtime.bufferByteLength(String(value ?? ''), encoding || 'utf8') }
+  Buffer.isEncoding = function (encoding) {
+    return ['utf8', 'utf-8', 'utf16le', 'utf-16le', 'ucs2', 'ucs-2', 'ascii', 'latin1', 'binary', 'base64', 'hex'].includes(String(encoding).toLowerCase())
+  }
   Buffer.concat = function (values) { return wrapBuffer(runtime.bufferConcat((values || []).map(unwrapBuffer).filter(Boolean))) }
 
   globalThis.__nekoNodeBuffer = { Buffer, Blob, wrapBuffer, unwrapBuffer }

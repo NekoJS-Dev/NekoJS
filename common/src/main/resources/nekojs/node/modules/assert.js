@@ -150,6 +150,16 @@
     return true
   }
 
+  function match(value, regexp, message) {
+    if (!(regexp instanceof RegExp)) fail(regexp, 'RegExp', message, 'match')
+    if (!regexp.test(String(value))) fail(String(value), regexp, message, 'match')
+  }
+
+  function doesNotMatch(value, regexp, message) {
+    if (!(regexp instanceof RegExp)) fail(regexp, 'RegExp', message, 'doesNotMatch')
+    if (regexp.test(String(value))) fail(String(value), regexp, message, 'doesNotMatch')
+  }
+
   function ifError(value) {
     if (value) throw value
   }
@@ -171,6 +181,8 @@
     doesNotThrow,
     rejects,
     doesNotReject,
+    match,
+    doesNotMatch,
     ifError
   })
   assert.default = assert

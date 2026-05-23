@@ -5,8 +5,6 @@ import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptType;
 
-import java.util.Map;
-
 public final class NekoNodeRuntime implements AutoCloseable {
     private final ScriptType scriptType;
     private final NekoScriptModuleLoaderHost moduleLoaderHost;
@@ -73,19 +71,17 @@ public final class NekoNodeRuntime implements AutoCloseable {
         return timers.hasPendingCallbacks();
     }
 
-    public Map<String, Object> mapStackLine(String path, int line, int column) {
+    public MappedStackLine mapStackLine(String path, int line, int column) {
         String displayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
         if (displayPath == null) {
             displayPath = path;
         }
         SourceMapRegistry.OriginalPosition mapped = SourceMapRegistry.getMappedPosition(displayPath, line, column);
         String mappedPath = mapped.path != null && !mapped.path.isBlank() ? mapped.path : displayPath;
-        return Map.of(
-                "path", mappedPath,
-                "line", mapped.line,
-                "column", mapped.column
-        );
+        return new MappedStackLine(mappedPath, mapped.line, mapped.column);
     }
+
+    public record MappedStackLine(String path, int line, int column) {}
 
     @Override
     public void close() {

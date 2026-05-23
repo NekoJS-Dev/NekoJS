@@ -13,7 +13,30 @@
   const timerPromises = {
     setTimeout: (delay, value) => new Promise(resolve => timers.setTimeout(() => resolve(value), delay)),
     setImmediate: value => new Promise(resolve => timers.setImmediate(() => resolve(value))),
-    setInterval: async function * () { throw new Error('timers/promises.setInterval is not implemented yet') }
+    setInterval: async function * (delay, value) {
+      let queue = []
+      let resume
+      const id = timers.setInterval(() => {
+        if (resume) {
+          const next = resume
+          resume = undefined
+          next(value)
+        } else {
+          queue.push(value)
+        }
+      }, delay)
+      try {
+        while (true) {
+          if (queue.length > 0) {
+            yield queue.shift()
+          } else {
+            yield await new Promise(resolve => { resume = resolve })
+          }
+        }
+      } finally {
+        timers.clearInterval(id)
+      }
+    }
   }
 
   globalThis.__nekoNodeTimers = timers

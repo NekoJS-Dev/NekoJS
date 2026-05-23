@@ -57,9 +57,27 @@
     if (!match || !globalThis.__nekoNodeRuntime || typeof globalThis.__nekoNodeRuntime.mapStackLine !== 'function') {
       return line
     }
-    const mapped = globalThis.__nekoNodeRuntime.mapStackLine(match[2], Number(match[3]), match[4] ? Number(match[4]) : 1)
+    const mapped = normalizeMappedStackLine(globalThis.__nekoNodeRuntime.mapStackLine(match[2], Number(match[3]), match[4] ? Number(match[4]) : 1))
     if (!mapped || !mapped.line) return line
     return `${match[1]}${mapped.path || match[2]}:${mapped.line}${mapped.column ? ':' + mapped.column : ''}${match[5]}`
+  }
+
+  function normalizeMappedStackLine(mapped) {
+    if (!mapped) return null
+    const path = mappedValue(mapped, 'path')
+    const line = mappedValue(mapped, 'line')
+    const column = mappedValue(mapped, 'column')
+    return { path, line: Number(line) || 0, column: Number(column) || 0 }
+  }
+
+  function mappedValue(mapped, key) {
+    const value = mapped[key]
+    if (typeof value !== 'function') return value
+    try {
+      return value.call(mapped)
+    } catch (_) {
+      return typeof mapped.get === 'function' ? mapped.get(key) : undefined
+    }
   }
 
   function formatError(error) {
@@ -305,6 +323,8 @@
   test.describe = describe
   test.it = test
   test.run = runAll
+  test.mapStackLine = mapStackLine
+  test.formatError = formatError
   test.default = test
 
   describe.only = describe
