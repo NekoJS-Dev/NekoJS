@@ -14,7 +14,7 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value == null || value.isNull()) return false;
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -24,7 +24,7 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
     }
 
     @Override
-    public SizedIngredient convert(Value value) {
+    public SizedIngredient apply(Value value) {
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
             if (obj instanceof SizedIngredient sized) return sized;

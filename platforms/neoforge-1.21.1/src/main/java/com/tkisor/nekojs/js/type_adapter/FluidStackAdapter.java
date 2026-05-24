@@ -20,7 +20,7 @@ public final class FluidStackAdapter implements JSTypeAdapter<FluidStack> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isNull() || value.isString() || value.hasMembers()) return true;
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -30,7 +30,7 @@ public final class FluidStackAdapter implements JSTypeAdapter<FluidStack> {
     }
 
     @Override
-    public FluidStack convert(Value value) {
+    public FluidStack apply(Value value) {
         return FluidResolver.stackFromValue(value);
     }
 }

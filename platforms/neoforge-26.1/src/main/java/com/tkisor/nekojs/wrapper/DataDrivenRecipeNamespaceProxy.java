@@ -126,7 +126,7 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
             case NUMBER -> new JsonPrimitive(value.asDouble());
             case BOOLEAN -> new JsonPrimitive(value.asBoolean());
             case INGREDIENT -> event.serializeIngredient(IngredientResolver.fromValue(value));
-            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().convert(value));
+            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().apply(value));
             case FLUID_STACK -> event.serializeFluidStack(FluidResolver.stackFromValue(value));
             case FLUID_INGREDIENT -> event.serializeFluidIngredient(FluidResolver.ingredientFromValue(value));
             case SIZED_FLUID_INGREDIENT -> event.serializeSizedFluidIngredient(FluidResolver.sizedFromValue(value));

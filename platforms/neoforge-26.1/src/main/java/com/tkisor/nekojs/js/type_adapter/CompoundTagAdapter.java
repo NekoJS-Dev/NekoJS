@@ -12,12 +12,12 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         return value.isNull() || value.hasMembers() || (value.isHostObject() && value.asHostObject() instanceof CompoundTag);
     }
 
     @Override
-    public CompoundTag convert(Value value) {
+    public CompoundTag apply(Value value) {
         if (value.isNull()) return new CompoundTag();
         if (value.isHostObject() && value.asHostObject() instanceof CompoundTag tag) return tag;
 
@@ -50,7 +50,7 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
 
         // 如果遇到嵌套对象：递归转成 CompoundTag
         if (val.hasMembers()) {
-            return convert(val);
+            return apply(val);
         }
 
         return StringTag.valueOf(val.toString());

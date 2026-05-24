@@ -36,12 +36,12 @@ public interface JSTypeAdapterRegistry {
             }
 
             @Override
-            public boolean canConvert(Value value) {
+            public boolean test(Value value) {
                 return filter.test(value);
             }
 
             @Override
-            public T convert(Value value) {
+            public T apply(Value value) {
                 return converter.apply(value);
             }
         }

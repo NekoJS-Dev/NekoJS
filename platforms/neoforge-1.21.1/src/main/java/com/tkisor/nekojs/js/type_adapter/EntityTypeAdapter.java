@@ -17,7 +17,7 @@ public class EntityTypeAdapter implements JSTypeAdapter<EntityType> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isString()) {
             return true;
         }
@@ -25,7 +25,7 @@ public class EntityTypeAdapter implements JSTypeAdapter<EntityType> {
     }
 
     @Override
-    public EntityType<?> convert(Value value) {
+    public EntityType<?> apply(Value value) {
         ResourceLocation id;
         if (value.isHostObject() && value.asHostObject() instanceof NekoId nekoId) {
             id = ResourceLocation.fromNamespaceAndPath(nekoId.namespace(), nekoId.path());

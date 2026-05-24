@@ -28,7 +28,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isString()) {
             return true;
         }
@@ -41,7 +41,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public TagKey convert(Value value) {
+    public TagKey apply(Value value) {
         String registryName = "item";
         String tagPath = "";
 

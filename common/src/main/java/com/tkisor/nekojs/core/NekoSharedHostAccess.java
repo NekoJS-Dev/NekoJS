@@ -36,12 +36,6 @@ public final class NekoSharedHostAccess {
     }
 
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
-        builder.targetTypeMapping(
-                        Value.class,
-                        adapter.getTargetClass(),
-                        adapter::canConvert,
-                        adapter::convert,
-                        adapter.getPrecedence()
-                );
+        builder.targetTypeMapping(Value.class, adapter.getTargetClass(), adapter, adapter, adapter.getPrecedence());
     }
 }

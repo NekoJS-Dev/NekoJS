@@ -12,12 +12,12 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
     public Class<RecipeFilter> getTargetClass() { return RecipeFilter.class; }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         return value != null && (value.isString() || value.hasMembers() || value.hasArrayElements());
     }
 
     @Override
-    public RecipeFilter convert(Value value) {
+    public RecipeFilter apply(Value value) {
         if (value == null || value.isNull()) return null;
 
         if (value.isString()) {
@@ -27,7 +27,7 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
         if (value.hasArrayElements()) {
             List<RecipeFilter> list = new ArrayList<>();
             for (long i = 0; i < value.getArraySize(); i++) {
-                RecipeFilter sub = convert(value.getArrayElement(i));
+                RecipeFilter sub = apply(value.getArrayElement(i));
                 if (sub != null) list.add(sub);
             }
             return new RecipeFilter.Or(list);
@@ -36,17 +36,17 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
         List<RecipeFilter> andFilters = new ArrayList<>();
 
         if (value.hasMember("not")) {
-            RecipeFilter sub = convert(value.getMember("not"));
+            RecipeFilter sub = apply(value.getMember("not"));
             if (sub != null) andFilters.add(new RecipeFilter.Not(sub));
         }
 
         if (value.hasMember("and")) {
-            RecipeFilter sub = convert(value.getMember("and"));
+            RecipeFilter sub = apply(value.getMember("and"));
             if (sub != null) andFilters.add(sub);
         }
 
         if (value.hasMember("or")) {
-            RecipeFilter sub = convert(value.getMember("or"));
+            RecipeFilter sub = apply(value.getMember("or"));
             if (sub != null) andFilters.add(sub);
         }
 

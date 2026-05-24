@@ -16,12 +16,12 @@ public class IdentifierAdapter implements JSTypeAdapter<Identifier> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         return value.isString() || value.isHostObject() && value.asHostObject() instanceof NekoId;
     }
 
     @Override
-    public Identifier convert(Value value) {
+    public Identifier apply(Value value) {
         if (value.isHostObject() && value.asHostObject() instanceof NekoId id) {
             return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
         }

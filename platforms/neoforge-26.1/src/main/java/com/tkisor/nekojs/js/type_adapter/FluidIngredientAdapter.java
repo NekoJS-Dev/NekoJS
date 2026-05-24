@@ -17,7 +17,7 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isString() || value.hasArrayElements() || value.hasMembers()) return true;
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -27,7 +27,7 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
     }
 
     @Override
-    public FluidIngredient convert(Value value) {
+    public FluidIngredient apply(Value value) {
         return FluidResolver.ingredientFromValue(value);
     }
 }

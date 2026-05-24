@@ -19,12 +19,12 @@ public final class RecipeJsonValueAdapter implements JSTypeAdapter<RecipeJsonVal
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         return true;
     }
 
     @Override
-    public RecipeJsonValue convert(Value value) {
+    public RecipeJsonValue apply(Value value) {
         return RecipeJsonValueConverter.wrap(value);
     }
 }

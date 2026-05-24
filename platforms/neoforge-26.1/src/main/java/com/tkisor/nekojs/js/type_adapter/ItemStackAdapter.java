@@ -5,7 +5,6 @@ import com.tkisor.nekojs.api.data.NekoId;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -27,7 +26,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value == null || value.isNull() || value.isString()) {
             return true;
         }
@@ -39,7 +38,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
     }
 
     @Override
-    public ItemStack convert(Value value) {
+    public ItemStack apply(Value value) {
         if (value == null || value.isNull()) {
             return ItemStack.EMPTY;
         }
@@ -104,7 +103,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
             throw new IllegalArgumentException("ItemStack object must contain 'item' or 'id'");
         }
 
-        ItemStack stack = new ItemStackAdapter().convert(itemValue);
+        ItemStack stack = new ItemStackAdapter().apply(itemValue);
         if (value.hasMember("count")) {
             return withCount(stack, parsePositiveInt(value.getMember("count"), "count"));
         }
