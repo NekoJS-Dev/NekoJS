@@ -9,7 +9,7 @@ import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
-import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionContext;
@@ -115,7 +115,7 @@ public final class NekoPluginBootstrap {
         private final ScriptPropertyRegistry.Impl scriptProperties = new ScriptPropertyRegistry.Impl();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
-        private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
+        private final JSTypeAdapterRegistry adapters = new JSTypeAdapterRegistry.Impl();
         private final Map<String, EventGroup> eventGroups = new LinkedHashMap<>();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
@@ -149,8 +149,8 @@ public final class NekoPluginBootstrap {
         }
 
         @Override
-        public JSTypeAdapterRegister adapters() {
-            return this::registerAdapter;
+        public JSTypeAdapterRegistry adapters() {
+            return adapters;
         }
 
         @Override
@@ -196,7 +196,7 @@ public final class NekoPluginBootstrap {
                     scriptCompilers,
                     scriptProperties,
                     bindingsByScriptType(),
-                    adaptersSnapshot(),
+                    List.copyOf(adapters().view()),
                     eventGroupsSnapshot(),
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
@@ -204,11 +204,6 @@ public final class NekoPluginBootstrap {
                     beforeRecipeLoadingHooksSnapshot(),
                     afterRecipesHooksSnapshot()
             );
-        }
-
-        <T> void registerAdapter(JSTypeAdapter<T> adapter) {
-            requireMutable("adapters");
-            adapters.add(Objects.requireNonNull(adapter, "adapter"));
         }
 
         void registerEvent(EventGroup group) {
@@ -246,10 +241,6 @@ public final class NekoPluginBootstrap {
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
             return this.bindingRegistries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
-        }
-
-        List<JSTypeAdapter<?>> adaptersSnapshot() {
-            return List.copyOf(adapters);
         }
 
         Map<String, EventGroup> eventGroupsSnapshot() {

@@ -3,27 +3,19 @@ package com.tkisor.nekojs.api.data;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import graal.graalvm.polyglot.Value;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * JS类型适配器注册接口
- * <p>
- * 用于注册自定义的JavaScript类型适配器，实现Java类型与JavaScript类型之间的转换
- * </p>
- * 
- * @author tkisor
- * @since 1.0
+ * @author ZZZank
  */
-@FunctionalInterface
-public interface JSTypeAdapterRegister {
-    /**
-     * 注册JS类型适配器
-     * 
-     * @param <T> 要适配的Java类型
-     * @param adapter JS类型适配器实例
-     */
+public interface JSTypeAdapterRegistry {
+
     <T> void register(JSTypeAdapter<T> adapter);
 
     default <T> void register(Class<T> target, Predicate<Value> filter, Function<Value, T> converter) {
@@ -55,5 +47,21 @@ public interface JSTypeAdapterRegister {
         }
 
         register(new LambdaJSTypeAdapter<>(target, filter, converter));
+    }
+
+    Collection<JSTypeAdapter<?>> view();
+
+    final class Impl implements JSTypeAdapterRegistry {
+        private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
+
+        @Override
+        public <T> void register(JSTypeAdapter<T> adapter) {
+            adapters.add(Objects.requireNonNull(adapter, "adapter"));
+        }
+
+        @Override
+        public Collection<JSTypeAdapter<?>> view() {
+            return Collections.unmodifiableList(adapters);
+        }
     }
 }
