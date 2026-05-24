@@ -91,7 +91,7 @@ public final class NekoEsmLinker {
 
     private boolean duplicateChecked(NekoEsmLocalBinding binding) {
         String kind = binding.kind();
-        return "import".equals(kind) || "const".equals(kind) || "let".equals(kind) || "var".equals(kind) || "class".equals(kind) || kind != null && kind.contains("function");
+        return "import".equals(kind) || "const".equals(kind) || "let".equals(kind) || "var".equals(kind) || "class".equals(kind) || "param".equals(kind) || "catch".equals(kind) || kind != null && kind.contains("function");
     }
 
     private void validateLocalExports(Path path, String source, NekoEsmModuleAst ast) throws NekoEsmLinkException {

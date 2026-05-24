@@ -60,7 +60,7 @@ public class ScriptError {
         if (polyglotException != null) {
             this.errorMessage = bestMessage(primary);
 
-            SourceSection sourceLocation = NekoErrorTracker.getBestSourceLocation(polyglotException);
+            SourceSection sourceLocation = bestUserSourceLocation(polyglotException);
             if (sourceLocation != null) {
                 int rawLine = sourceLocation.getStartLine();
                 int rawColumn = sourceLocation.getStartColumn();
@@ -246,6 +246,26 @@ public class ScriptError {
         }
         String trimmed = snippet.trim();
         return trimmed.length() <= 1 ? "" : trimmed;
+    }
+
+    private SourceSection bestUserSourceLocation(PolyglotException exception) {
+        SourceSection fallback = NekoErrorTracker.getBestSourceLocation(exception);
+        if (fallback != null && !isInternalFrame(extractRelativePath(fallback))) {
+            return fallback;
+        }
+        for (PolyglotException.StackFrame frame : exception.getPolyglotStackTrace()) {
+            if (!frame.isGuestFrame()) {
+                continue;
+            }
+            SourceSection loc = frame.getSourceLocation();
+            if (loc == null || loc.getSource() == null) {
+                continue;
+            }
+            if (!isInternalFrame(extractRelativePath(loc))) {
+                return loc;
+            }
+        }
+        return fallback != null && script == null ? fallback : null;
     }
 
     private static PolyglotException findPolyglotException(Throwable throwable) {

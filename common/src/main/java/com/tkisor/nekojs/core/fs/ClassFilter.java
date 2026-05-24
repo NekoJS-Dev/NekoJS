@@ -47,10 +47,10 @@ public class ClassFilter implements Predicate<String> {
     }
 
     private boolean isAllowed(String className) {
-//        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
-//        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
-//        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
-//        if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
+        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
+        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
+        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
+        if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
         return true;
     }
 
