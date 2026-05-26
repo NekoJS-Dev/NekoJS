@@ -27,14 +27,6 @@ public final class NekoEsmModuleRecord {
         return id;
     }
 
-    public Path path() {
-        return path;
-    }
-
-    public NekoPreparedModule prepared() {
-        return prepared;
-    }
-
     public NekoEsmModuleState state() {
         return state;
     }
@@ -50,10 +42,6 @@ public final class NekoEsmModuleRecord {
 
     public NekoEsmLinkMetadata linkMetadata() {
         return linkMetadata;
-    }
-
-    public void linkMetadata(NekoEsmLinkMetadata linkMetadata) {
-        this.linkMetadata = linkMetadata;
     }
 
     public boolean topLevelAwait() {
@@ -91,10 +79,6 @@ public final class NekoEsmModuleRecord {
 
     public boolean asyncEvaluation() {
         return asyncEvaluation;
-    }
-
-    public boolean evaluating() {
-        return state == NekoEsmModuleState.EVALUATING || state == NekoEsmModuleState.EVALUATING_ASYNC;
     }
 
     public boolean evaluated() {

@@ -143,13 +143,13 @@ public final class NekoScriptCatalog {
         String name = targetType.getSimpleName();
         return switch (name) {
             case "ItemStack" -> List.of("ItemStack", "Item", "item id string", "{ item|id, count?, components? }");
-            case "Ingredient" -> List.of("Ingredient", "IngredientJS", "ItemStack", "Item", "item id string", "tag id string", "array", "{ item|tag|ingredient }");
-            case "SizedIngredient" -> List.of("SizedIngredient", "SizedIngredientJS", "Ingredient", "IngredientJS", "item id string", "tag id string", "array", "{ ingredient|item|tag, count }");
+            case "Ingredient" -> List.of("Ingredient", "IngredientFactory", "ItemStack", "Item", "item id string", "tag id string", "array", "{ item|tag|ingredient }");
+            case "SizedIngredient" -> List.of("SizedIngredient", "SizedIngredientJS", "Ingredient", "IngredientFactory", "item id string", "tag id string", "array", "{ ingredient|item|tag, count }");
             case "FluidStack" -> List.of("FluidStack", "fluid id string", "{ fluid|id, amount? }");
             case "FluidIngredient" -> List.of("FluidIngredient", "FluidIngredientJS", "fluid id string", "tag id string", "array", "{ fluid|tag|ingredient }");
             case "SizedFluidIngredient" -> List.of("SizedFluidIngredient", "FluidIngredient", "FluidIngredientJS", "fluid id string", "tag id string", "{ ingredient|fluid|tag, amount }");
             case "RecipeFilter" -> List.of("recipe id string", "array of filters", "{ mod?, type?, group?, id?, input?, output?, and?, or?, not?, idStartsWith?, idEndsWith?, idContains? }");
-            case "RecipeJsonValue" -> List.of("primitive", "JS object", "JS array", "JsonElement", "IngredientJS", "Ingredient", "SizedIngredientJS", "SizedIngredient", "ItemStack", "FluidIngredientJS", "FluidIngredient", "SizedFluidIngredient", "FluidStack");
+            case "RecipeJsonValue" -> List.of("primitive", "JS object", "JS array", "JsonElement", "IngredientFactory", "Ingredient", "SizedIngredientJS", "SizedIngredient", "ItemStack", "FluidIngredientJS", "FluidIngredient", "SizedFluidIngredient", "FluidStack");
             case "JsonObject" -> List.of("JS object");
             default -> List.of();
         };

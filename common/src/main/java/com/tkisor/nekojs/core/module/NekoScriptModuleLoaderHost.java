@@ -81,13 +81,13 @@ public final class NekoScriptModuleLoaderHost {
 
     public Object loadEntry(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
-        dependencyGraph.markEntry(resolved.id(), resolved.id());
+        dependencyGraph.markEntry(resolved.id());
         return loadResolved(resolved);
     }
 
     public CompletableFuture<?> loadEntryAsync(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
-        dependencyGraph.markEntry(resolved.id(), resolved.id());
+        dependencyGraph.markEntry(resolved.id());
         return loadResolvedAsync(resolved);
     }
 

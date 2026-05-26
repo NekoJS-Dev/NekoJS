@@ -18,10 +18,6 @@ public final class NekoEsmModuleRecordCache {
         return records.computeIfAbsent(new Key(moduleId, revision), ignored -> new NekoEsmModuleRecord(moduleId, path, prepared));
     }
 
-    public void remove(String moduleId, long revision) {
-        records.remove(new Key(moduleId, revision));
-    }
-
     public void removeAll(String moduleId) {
         records.keySet().removeIf(key -> key.moduleId().equals(moduleId));
     }

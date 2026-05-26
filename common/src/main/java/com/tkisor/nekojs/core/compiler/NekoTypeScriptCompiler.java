@@ -1,33 +1,9 @@
 package com.tkisor.nekojs.core.compiler;
 
-import com.tkisor.nekojs.api.compiler.IScriptCompiler;
-import com.tkisor.nekojs.api.compiler.ScriptCompileResult;
-
 import java.nio.file.Path;
-import java.util.Locale;
 
-public final class NekoTypeScriptCompiler implements IScriptCompiler {
-    @Override
-    public boolean canCompile(String extension) {
-        if (extension == null) return false;
-        String normalized = extension.toLowerCase(Locale.ROOT).trim();
-        return ".ts".equals(normalized) || "ts".equals(normalized);
-    }
-
-    @Override
-    public String compile(Path file, String sourceCode) throws Exception {
-        return compileDetailed(file, sourceCode).code();
-    }
-
-    @Override
-    public ScriptCompileResult compileDetailed(Path file, String sourceCode) throws Exception {
-        TypeScriptTransformResult result = eraseDetailed(file, sourceCode);
-        return new ScriptCompileResult(result.code(), result.sourceMap());
-    }
-
-    static String erase(Path file, String source) {
-        return eraseDetailed(file, source).code();
-    }
+public final class NekoTypeScriptCompiler {
+    private NekoTypeScriptCompiler() {}
 
     static TypeScriptTransformResult erasePreservingSourceMap(Path file, String source, String sourceMap) {
         String original = source == null ? "" : source;

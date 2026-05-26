@@ -20,8 +20,8 @@ public final class NekoModuleDependencyGraph {
         parentsByDependency.clear();
     }
 
-    public void markEntry(String entryId, String moduleId) {
-        if (entryId == null || entryId.isBlank() || moduleId == null || moduleId.isBlank()) return;
+    public void markEntry(String moduleId) {
+        if (moduleId == null || moduleId.isBlank()) return;
         entryModules.add(moduleId);
     }
 

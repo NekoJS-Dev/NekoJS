@@ -19,14 +19,9 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class NekoModulePipeline {
-    private static final NekoCompilationPipeline COMPILATION_PIPELINE = new NekoCompilationPipeline(null);
+    private static final NekoCompilationPipeline COMPILATION_PIPELINE = new NekoCompilationPipeline();
 
     private NekoModulePipeline() {}
-
-    public static NekoModuleTransformResult transform(Path file, String rawSource) throws Exception {
-        NekoPreparedModule prepared = prepare(file, rawSource);
-        return new NekoModuleTransformResult(prepared.code(), prepared.sourceMap(), prepared.mode(), prepared.prependedLineCount());
-    }
 
     public static NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         String extension = extension(file);
@@ -54,7 +49,10 @@ public final class NekoModulePipeline {
         if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
             return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
         }
-        NekoEsmModuleAst ast = new NekoEsmParser(null, compiled.code()).parse();
+        NekoEsmModuleAst ast = compiled.esmAst();
+        if (ast == null) {
+            ast = new NekoEsmParser(null, compiled.code()).parse();
+        }
         return NekoPreparedModule.esm(compiled.code(), compiled.sourceMap(), ast);
     }
 

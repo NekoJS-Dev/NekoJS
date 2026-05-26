@@ -21,7 +21,7 @@ import com.tkisor.nekojs.bindings.static_access.ColorJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
 import com.tkisor.nekojs.bindings.static_access.IDJS;
-import com.tkisor.nekojs.bindings.static_access.IngredientJS;
+import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.bindings.static_access.StringUtilsJS;
@@ -95,7 +95,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerBinding(BindingRegistry registry) {
-        registry.register("Ingredient", new IngredientJS());
+        registry.register("Ingredient", new IngredientFactory());
         registry.register("Fluid", new FluidJS());
         registry.register("FluidIngredient", new FluidIngredientJS());
         registry.register("FluidAmounts", FluidAmounts.class);

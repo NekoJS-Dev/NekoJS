@@ -1,11 +1,16 @@
 package com.tkisor.nekojs.api.compiler;
 
+import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
+
 import java.util.Objects;
 
-public record NekoCompileOutput(String code, NekoUnifiedIR ir) {
+public record NekoCompileOutput(NekoUnifiedIR ir, NekoEsmModuleAst esmAst) {
     public NekoCompileOutput {
-        code = code == null ? "" : code;
         ir = Objects.requireNonNull(ir, "ir");
+    }
+
+    public String code() {
+        return ir.program().code();
     }
 
     public NekoIRProgram program() {
@@ -13,6 +18,6 @@ public record NekoCompileOutput(String code, NekoUnifiedIR ir) {
     }
 
     public String sourceMap() {
-        return program().sourceMap();
+        return ir.program().sourceMap();
     }
 }

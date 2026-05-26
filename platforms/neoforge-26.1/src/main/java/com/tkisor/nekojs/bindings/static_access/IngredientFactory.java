@@ -4,7 +4,7 @@ import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.crafting.Ingredient;
 
-public class IngredientJS {
+public class IngredientFactory {
     public com.tkisor.nekojs.wrapper.item.IngredientJS of(Value... values) {
         com.tkisor.nekojs.wrapper.item.IngredientJS wrapper = new com.tkisor.nekojs.wrapper.item.IngredientJS();
         if (values != null) {
