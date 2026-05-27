@@ -60,6 +60,9 @@
     },
     affectedEntries(modulePath) {
       return requireHost().affectedEntries(String(modulePath))
+    },
+    hotReloadModule(modulePath) {
+      return requireHost().hotReloadModule(String(modulePath))
     }
   }
 })()

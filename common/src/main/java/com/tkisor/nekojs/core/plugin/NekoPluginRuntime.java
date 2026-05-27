@@ -116,7 +116,11 @@ public final class NekoPluginRuntime {
 
     private void runRecipeHooks(List<Consumer<RecipeLifecycleContext>> hooks, RecipeLifecycleContext context) {
         for (Consumer<RecipeLifecycleContext> hook : hooks) {
-            hook.accept(context);
+            try {
+                hook.accept(context);
+            } catch (Exception e) {
+                ScriptType.SERVER.logger().error("[NekoJS] Recipe lifecycle hook failed", e);
+            }
         }
     }
 

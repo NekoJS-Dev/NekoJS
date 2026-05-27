@@ -120,7 +120,7 @@ public final class NekoNodePath {
         public String dirname(String path) { String value = normalize(path); int index = value.lastIndexOf('\\'); return index < 0 ? "." : value.substring(0, index); }
         public String basename(String path) { String value = normalize(path); int index = value.lastIndexOf('\\'); return index < 0 ? value : value.substring(index + 1); }
         public String extname(String path) { String base = basename(path); int dot = base.lastIndexOf('.'); return dot <= 0 ? "" : base.substring(dot); }
-        public boolean isAbsolute(String path) { return path != null && (path.startsWith("\\") || path.matches("^[A-Za-z]:.*")); }
+        public boolean isAbsolute(String path) { return path != null && (path.startsWith("\\") || path.matches("^[A-Za-z]:[/\\\\].*")); }
     }
 
     private static String[] clean(String[] parts) {

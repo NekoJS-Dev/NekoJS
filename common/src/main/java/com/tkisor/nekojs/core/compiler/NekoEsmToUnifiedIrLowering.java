@@ -1,14 +1,14 @@
 package com.tkisor.nekojs.core.compiler;
 
 import com.tkisor.nekojs.api.compiler.NekoAstLowering;
+import com.tkisor.nekojs.api.compiler.NekoIRProgram;
 import com.tkisor.nekojs.api.compiler.NekoSourceAst;
-import com.tkisor.nekojs.api.compiler.NekoUnifiedIR;
 
 public enum NekoEsmToUnifiedIrLowering implements NekoAstLowering {
     INSTANCE;
 
     @Override
-    public NekoUnifiedIR lower(NekoSourceAst ast) {
+    public NekoIRProgram lower(NekoSourceAst ast) {
         if (!(ast instanceof NekoEsmSourceAst esmAst)) {
             throw new IllegalArgumentException("Expected ESM source AST for unified IR lowering");
         }

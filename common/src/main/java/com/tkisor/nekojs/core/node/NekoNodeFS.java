@@ -119,6 +119,22 @@ public final class NekoNodeFS {
         return result;
     }
 
+    public synchronized void access(String path, int mode) throws IOException {
+        Path target = resolveRead(path);
+        if (!Files.exists(target)) {
+            throw new NoSuchFileException(target.toString());
+        }
+        if ((mode & 4) != 0 && !Files.isReadable(target)) {
+            throw new AccessDeniedException(target.toString());
+        }
+        if ((mode & 2) != 0 && !Files.isWritable(target)) {
+            throw new AccessDeniedException(target.toString());
+        }
+        if ((mode & 1) != 0 && !Files.isExecutable(target)) {
+            throw new AccessDeniedException(target.toString());
+        }
+    }
+
     public synchronized NekoNodeStats stat(String path) throws IOException {
         return new NekoNodeStats(resolveRead(path), true);
     }

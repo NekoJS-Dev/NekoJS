@@ -23,6 +23,7 @@ public final class NekoModulePipelineCache {
             SourceSnapshot source = readSource(key);
             PreparedEntry cached = PREPARED_CACHE.get(key);
             if (cached != null && cached.stamp().equals(source.stamp())) {
+                publishSourceMap(key, cached.prepared());
                 return cached.prepared();
             }
             NekoPreparedModule prepared = prepareSource(key, source);

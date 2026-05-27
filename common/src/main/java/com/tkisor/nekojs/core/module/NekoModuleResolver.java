@@ -65,7 +65,7 @@ public final class NekoModuleResolver {
         Path verified = verifyModulePath(path);
         Path canonical = verified.toRealPath();
         NekoModuleKind kind = isJson(canonical) ? NekoModuleKind.JSON : NekoModuleKind.SCRIPT;
-        return new NekoResolvedModule(canonical, loaderPath(canonical), loaderPath(canonical.getParent()), null, kind, NekoModuleMode.fromPath(canonical));
+        return new NekoResolvedModule(canonical, loaderPath(canonical), loaderPath(canonical.getParent()), null, kind);
     }
 
     private List<String> extensionsForCandidates() {

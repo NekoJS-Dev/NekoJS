@@ -10,6 +10,7 @@ import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
+import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContainer;
@@ -267,6 +268,30 @@ public final class NekoJSScriptManager {
         NekoModulePreparationCache.invalidate(target);
         Context ctx = contexts.at(type);
         String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
+
+        // Try hot-reload for dependency changes (not direct entry edits)
+        boolean directEntry = scripts.at(type).stream()
+                .anyMatch(script -> script.path.normalize().toAbsolutePath().equals(target));
+        if (!directEntry) {
+            NekoNodeRuntime runtime = nodeRuntimes.at(type);
+            if (runtime != null && runtime.moduleLoaderHost() != null) {
+                try {
+                    NekoScriptModuleLoaderHost.HotReloadResult result = runtime.moduleLoaderHost().hotReloadModule(modulePath);
+                    if (result.success()) {
+                        type.logger().info("{} hot-reloaded module {} ({} relinked, {} failed)",
+                                type.name(), displayScriptPath(type, target),
+                                result.relinked().size(), result.failed().size());
+                        return List.of();
+                    }
+                    type.logger().warn("Hot-reload rolled back for {}, falling back to entry re-run. Failed: {}",
+                            modulePath, result.failed());
+                } catch (Exception e) {
+                    type.logger().warn("Hot-reload failed for {}, falling back to entry re-run: {}",
+                            modulePath, e.getMessage());
+                }
+            }
+        }
+
         synchronized (ctx) {
             for (ScriptContainer script : targets) {
                 String entryPath = "./" + NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/');

@@ -23,10 +23,6 @@ public final class NekoNativeEsmSourceRewriter {
         this.resolver = resolver;
     }
 
-    public String rewrite(Path file, String moduleId, NekoPreparedModule prepared) throws IOException {
-        return rewrite(file, moduleId, prepared, new HashSet<>());
-    }
-
     public java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared) throws IOException {
         return registerModule(file, moduleId, prepared, new HashSet<>());
     }

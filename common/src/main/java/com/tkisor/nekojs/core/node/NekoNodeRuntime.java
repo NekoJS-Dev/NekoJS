@@ -10,6 +10,7 @@ public final class NekoNodeRuntime implements AutoCloseable {
     private final NekoScriptModuleLoaderHost moduleLoaderHost;
     private final NekoNodeFS fs = new NekoNodeFS();
     private final NekoNodePath path = new NekoNodePath();
+    private final NekoNodeOS os = new NekoNodeOS();
     private final NekoNodeTimers timers;
     private final NekoNodeProcess process = new NekoNodeProcess(fs);
 
@@ -39,6 +40,10 @@ public final class NekoNodeRuntime implements AutoCloseable {
         return timers;
     }
 
+    public NekoNodeOS os() {
+        return os;
+    }
+
     public NekoNodeProcess process() {
         return process;
     }
@@ -57,10 +62,6 @@ public final class NekoNodeRuntime implements AutoCloseable {
 
     public int bufferByteLength(String value, String encoding) {
         return NekoNodeBuffer.byteLength(value, encoding);
-    }
-
-    public boolean isBuffer(Object value) {
-        return value instanceof NekoNodeBuffer;
     }
 
     public void flushReadyTimers() {

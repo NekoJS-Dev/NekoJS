@@ -37,7 +37,7 @@ public final class NekoModulePipeline {
                 return NekoPreparedModule.commonJs(rawSource, null);
             }
             NekoCompileOutput compiled = COMPILATION_PIPELINE.compile(file, rawSource, extension, language);
-            return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
+            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
         }
 
         NekoCompileOutput compiled = COMPILATION_PIPELINE.compile(file, rawSource, extension, language);
@@ -47,13 +47,13 @@ public final class NekoModulePipeline {
     private static NekoPreparedModule prepareModule(NekoCompileOutput compiled) {
         NekoIRProgram ir = compiled.program();
         if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
-            return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
+            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
         }
         NekoEsmModuleAst ast = compiled.esmAst();
         if (ast == null) {
             ast = new NekoEsmParser(null, compiled.code()).parse();
         }
-        return NekoPreparedModule.esm(compiled.code(), compiled.sourceMap(), ast);
+        return NekoPreparedModule.esm(compiled.code(), compiled.program().sourceMap(), ast);
     }
 
     private static NekoLanguagePlugin languagePlugin(Path file, String extension) {

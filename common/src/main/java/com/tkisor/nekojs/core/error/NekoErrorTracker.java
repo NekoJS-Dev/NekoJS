@@ -62,15 +62,13 @@ public class NekoErrorTracker {
 
         String eventPath = pathStr;
         ScriptId runtimeId = eventErrorId(currentType, eventPath);
-        ERRORS.compute(runtimeId, (ignored, previous) -> {
+        ScriptError scriptError = ERRORS.compute(runtimeId, (ignored, previous) -> {
             ScriptError next = new ScriptError(currentType, runtimeId, eventPath, throwable);
             if (previous != null && sameEventError(previous, next)) {
                 next.setOccurrenceCount(previous.getOccurrenceCount() + 1);
             }
             return next;
         });
-
-        ScriptError scriptError = ERRORS.get(runtimeId);
 
         String detail = scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs);
         String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;

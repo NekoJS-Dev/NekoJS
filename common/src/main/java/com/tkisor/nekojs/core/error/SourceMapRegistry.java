@@ -94,7 +94,7 @@ public class SourceMapRegistry {
                 return new NormalizedSourceMap(generatedPath, file, prependedLineCount, List.of(), sources, sourcesContent, names);
             }
             return new NormalizedSourceMap(generatedPath, file, prependedLineCount, parseMappings(mappings, sources.size(), names.size()), sources, sourcesContent, names);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
             return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
         }
     }

@@ -12,8 +12,4 @@ public final class RecipeTypeDefinitionStorage {
     public static void replace(RecipeTypeDefinitionRegistry registry) {
         current = registry == null ? RecipeTypeDefinitionRegistry.EMPTY : registry;
     }
-
-    public static void clear() {
-        current = RecipeTypeDefinitionRegistry.EMPTY;
-    }
 }

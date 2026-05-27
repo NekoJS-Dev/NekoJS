@@ -7,11 +7,10 @@ public record NekoResolvedModule(
         String id,
         String dirname,
         String specifier,
-        NekoModuleKind kind,
-        NekoModuleMode requestedMode
+        NekoModuleKind kind
 ) {
     public static NekoResolvedModule special(String specifier, NekoModuleKind kind) {
-        return new NekoResolvedModule(null, null, null, specifier, kind, NekoModuleMode.AUTO);
+        return new NekoResolvedModule(null, null, null, specifier, kind);
     }
 
     public boolean special() {

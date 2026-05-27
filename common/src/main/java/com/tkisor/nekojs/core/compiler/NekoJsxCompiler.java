@@ -454,73 +454,27 @@ public final class NekoJsxCompiler {
         }
 
         private int skipString(int start, char quote) {
-            int i = start + 1;
-            while (i < length) {
-                char c = source.charAt(i);
-                if (c == '\\') {
-                    i += 2;
-                    continue;
-                }
-                if (c == quote) {
-                    return i + 1;
-                }
-                i++;
-            }
-            return length;
+            return NekoSourceLexerBase.skipString(source, length, start, quote);
         }
 
         private int skipTemplate(int start) {
-            int i = start + 1;
-            while (i < length) {
-                char c = source.charAt(i);
-                if (c == '\\') {
-                    i += 2;
-                    continue;
-                }
-                if (c == '`') {
-                    return i + 1;
-                }
-                i++;
-            }
-            return length;
+            return NekoSourceLexerBase.skipTemplate(source, length, start);
         }
 
         private int skipLineComment(int start) {
-            int i = start;
-            while (i < length && source.charAt(i) != '\n' && source.charAt(i) != '\r') {
-                i++;
-            }
-            return i;
+            return NekoSourceLexerBase.skipLineComment(source, length, start);
         }
 
         private int skipLineComment(String text, int start) {
-            int i = start;
-            while (i < text.length() && text.charAt(i) != '\n' && text.charAt(i) != '\r') {
-                i++;
-            }
-            return i;
+            return NekoSourceLexerBase.skipLineComment(text, text.length(), start);
         }
 
         private int skipBlockComment(int start) {
-            int i = start;
-            while (i + 1 < length) {
-                if (source.charAt(i) == '*' && source.charAt(i + 1) == '/') {
-                    return i + 2;
-                }
-                i++;
-            }
-            return length;
+            return NekoSourceLexerBase.skipBlockComment(source, length, start);
         }
 
         private int skipBlockComment(String text, int start) {
-            int i = start;
-            while (i + 1 < text.length()) {
-                if (text.charAt(i) == '*' && text.charAt(i + 1) == '/') {
-                    return i + 2;
-                }
-                i++;
-            }
-            return text.length();
+            return NekoSourceLexerBase.skipBlockComment(text, text.length(), start);
         }
 
         private int skipRegex(int start) {
@@ -566,11 +520,11 @@ public final class NekoJsxCompiler {
         }
 
         private boolean isIdentifierStart(char c) {
-            return Character.isUnicodeIdentifierStart(c) || c == '$' || c == '_';
+            return NekoSourceLexerBase.isIdentifierStart(c);
         }
 
         private boolean isIdentifierPart(char c) {
-            return Character.isUnicodeIdentifierPart(c) || c == '$' || c == '_';
+            return NekoSourceLexerBase.isIdentifierPart(c);
         }
 
         private ParseResult factoryCall(int originalStart, GeneratedPart typeExpression, GeneratedPart propsExpression, List<GeneratedPart> children, int nextIndex) {

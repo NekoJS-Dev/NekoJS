@@ -18,6 +18,7 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ public final class NekoScriptModuleLoaderHost {
     private final NekoEsmModuleRecordCache esmRecordCache = new NekoEsmModuleRecordCache();
     private final NekoNativeEsmSourceRewriter esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
     private final NekoModuleDependencyGraph dependencyGraph = new NekoModuleDependencyGraph();
+    private final ModuleSliceRelinker sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link, this::captureNamespaceForRelink);
     private final Map<String, ModuleState> moduleCache = new ConcurrentHashMap<>();
     private final Map<String, Long> moduleRevisions = new ConcurrentHashMap<>();
     private Value executor;
@@ -48,12 +50,18 @@ public final class NekoScriptModuleLoaderHost {
         this.context = context;
     }
 
+    // ---- JS bridge: internal/script-loader.js 通过 GraalVM interop 调用 ----
+
     public void configure(Value executor, Value moduleFactory, Value specialResolver, Value jsonParser) {
         this.executor = executor;
         this.moduleFactory = moduleFactory;
         this.specialResolver = specialResolver;
         this.jsonParser = jsonParser;
     }
+
+    // ---- ESM namespace 回调: 由 captureNamespaceSync/Async 中动态拼接的 JS 字符串调用 ----
+    // 这些方法的调用者不在 .java 或 .js 文件中，而是在 context.eval() 时动态生成的代码：
+    //   "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(...)"
 
     public void captureEsmNamespace(String moduleId, Value namespace) {
         captureEsmNamespace(moduleId, revision(moduleId), namespace);
@@ -79,6 +87,8 @@ public final class NekoScriptModuleLoaderHost {
         esmRecordCache.failNamespace(moduleId, revision, toThrowable(failure));
     }
 
+    // ---- 入口加载: JS bridge 调用，也由 NekoJSScriptManager 通过 Java 间接调用 ----
+
     public Object loadEntry(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
         dependencyGraph.markEntry(resolved.id());
@@ -102,9 +112,13 @@ public final class NekoScriptModuleLoaderHost {
         return resolved.special() ? resolved.specifier() : resolved.id();
     }
 
+    // ---- import.meta 解析: NekoNativeEsmSourceRewriter 生成替换代码时引用 ----
+
     public String resolveImportMeta(String parentPath, String specifier) throws IOException {
         return resolveNativeImport(parentPath, specifier);
     }
+
+    // ---- 缓存与依赖管理: JS bridge + Java 调用 ----
 
     public void clearCache() {
         moduleCache.clear();
@@ -140,6 +154,63 @@ public final class NekoScriptModuleLoaderHost {
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
     }
 
+    // ---- 模块热替换: NekoJSScriptManager.reloadScriptFile() 调用，尝试不重跑入口的依赖切片热更新 ----
+
+    public HotReloadResult hotReloadModule(String modulePath) throws IOException {
+        NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
+        String moduleId = resolved.id();
+
+        // Invalidate: bump revision, clear old caches
+        long newRevision = bumpRevision(moduleId);
+        moduleCache.remove(moduleId);
+        esmRecordCache.removeAll(moduleId);
+        esmLinkCache.remove(moduleId, newRevision);
+        NekoModulePreparationCache.invalidate(resolved.path());
+
+        // Re-prepare the changed module
+        NekoPreparedModule prepared = prepare(resolved);
+
+        // Relink the affected dependency slice
+        ModuleSliceRelinker.SliceResult sliceResult = sliceRelinker.tryRelinkSlice(moduleId, newRevision);
+
+        if (sliceResult.rolledBack()) {
+            return new HotReloadResult(moduleId, sliceResult.relinked(), sliceResult.failed(), false);
+        }
+
+        // Re-evaluate the affected modules
+        List<String> reevaluated = new ArrayList<>();
+        for (String relinkedId : sliceResult.relinked()) {
+            NekoEsmModuleRecord record = esmRecordCache.get(relinkedId, newRevision);
+            if (record != null && record.linkMetadata() != null) {
+                try {
+                    if (record.topLevelAwait() && record.evaluation() != null) {
+                        record.evaluation().join();
+                    }
+                    reevaluated.add(relinkedId);
+                } catch (Exception e) {
+                    sliceResult.failed().add(relinkedId);
+                }
+            }
+        }
+
+        return new HotReloadResult(moduleId, reevaluated, sliceResult.failed(), true);
+    }
+
+    private Value captureNamespaceForRelink(NekoEsmModuleRecord record) throws IOException {
+        if (record.evaluation() != null && record.evaluation().isDone() && !record.evaluation().isCompletedExceptionally()) {
+            try {
+                return record.evaluation().get();
+            } catch (Exception e) {
+                throw new IOException("Failed to capture namespace for relink: " + record.id(), e);
+            }
+        }
+        return null;
+    }
+
+    public record HotReloadResult(String changedModuleId, List<String> relinked, List<String> failed, boolean success) {}
+
+    // ---- Native ESM import/export: JS bridge __nekoNativeImport 和 NekoNativeEsmSourceRewriter 生成代码调用 ----
+
     public Object nativeImport(String parentPath, String specifier) throws IOException {
         NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
         recordDependency(parentPath, resolved);
@@ -170,6 +241,8 @@ public final class NekoScriptModuleLoaderHost {
         }
         return esmRewriter.syntheticCjsModuleUri(resolved.id(), parentPath, specifier).toString();
     }
+
+    // ======== 以下为私有实现 ========
 
     private void invalidateModules(List<String> moduleIds, boolean removeGraphNodes) {
         for (String moduleId : moduleIds) {
@@ -237,10 +310,10 @@ public final class NekoScriptModuleLoaderHost {
         }
 
         ModuleState module = newModuleState(resolved.id());
-        moduleCache.put(resolved.id(), module);
         try {
             module.exports(parseJson(Files.readString(resolved.path())));
             module.loaded(true);
+            moduleCache.put(resolved.id(), module);
             return module.exports();
         } catch (IOException | RuntimeException | Error e) {
             moduleCache.remove(resolved.id());
@@ -258,10 +331,10 @@ public final class NekoScriptModuleLoaderHost {
         }
 
         ModuleState module = newModuleState(resolved.id());
-        moduleCache.put(resolved.id(), module);
         try {
             executeScriptModule(resolved, module, prepared);
             module.loaded(true);
+            moduleCache.put(resolved.id(), module);
             return module.exports();
         } catch (IOException | RuntimeException | Error e) {
             moduleCache.remove(resolved.id());
@@ -447,10 +520,20 @@ public final class NekoScriptModuleLoaderHost {
             }
         }
         NekoEsmModuleRecord record = cached == null ? esmRecordCache.getOrCreate(resolved.id(), revision, resolved.path(), prepared) : cached;
-        record.beginLinking();
-        record.linked(esmLinkCache.link(resolved.id(), revision, resolved.path(), prepared));
-        recordStaticDependencies(resolved.id(), record.linkMetadata());
-        return record;
+        try {
+            record.beginLinking();
+            record.linked(esmLinkCache.link(resolved.id(), revision, resolved.path(), prepared));
+            recordStaticDependencies(resolved.id(), record.linkMetadata());
+            return record;
+        } catch (IOException | RuntimeException | Error e) {
+            record.failure(e);
+            esmRecordCache.removeAll(resolved.id());
+            throw e;
+        } catch (Throwable throwable) {
+            record.failure(throwable);
+            esmRecordCache.removeAll(resolved.id());
+            throw new IOException("Failed to link native ESM module: " + resolved.id(), throwable);
+        }
     }
 
     private IOException asyncEsmRequireError(NekoResolvedModule resolved) {

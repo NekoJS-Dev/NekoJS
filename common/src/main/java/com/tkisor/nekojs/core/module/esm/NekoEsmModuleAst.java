@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.core.module.esm;
 
-import com.tkisor.nekojs.core.module.jsast.NekoJsProgram;
-
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -13,8 +11,7 @@ public record NekoEsmModuleAst(
         List<NekoEsmStatement> statements,
         List<NekoEsmRuntimeExpression> runtimeExpressions,
         List<NekoEsmLocalBinding> localBindings,
-        List<NekoEsmScope> scopes,
-        NekoJsProgram program
+        List<NekoEsmScope> scopes
 ) {
     public NekoEsmModuleAst {
         statements = statements == null ? List.of() : List.copyOf(statements);

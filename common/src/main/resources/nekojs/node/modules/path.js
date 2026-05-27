@@ -19,8 +19,22 @@
     win32: runtime.path().win32()
   }
 
-  try { path.posix.toNamespacedPath = value => String(value) } catch (_) {}
-  try { path.win32.toNamespacedPath = value => String(value) } catch (_) {}
+  try {
+    path.posix.toNamespacedPath = value => String(value)
+    path.posix.format = value => path.format(value)
+    path.posix.parse = value => path.parse(value)
+    path.posix.resolve = (...parts) => path.resolve(...parts)
+    path.posix.relative = (from, to) => path.relative(from, to)
+    path.posix.isAbsolute = value => String(value).startsWith('/')
+  } catch (_) {}
+  try {
+    path.win32.toNamespacedPath = value => String(value)
+    path.win32.format = value => path.format(value)
+    path.win32.parse = value => path.parse(value)
+    path.win32.resolve = (...parts) => path.resolve(...parts)
+    path.win32.relative = (from, to) => path.relative(from, to)
+    path.win32.isAbsolute = value => /^[A-Za-z]:[/\\]/.test(String(value)) || String(value).startsWith('\\')
+  } catch (_) {}
 
   globalThis.__nekoNodeDefine(['path', 'node:path'], path)
 })()

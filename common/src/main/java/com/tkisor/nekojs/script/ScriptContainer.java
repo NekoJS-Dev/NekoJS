@@ -59,7 +59,11 @@ public final class ScriptContainer {
                 @SuppressWarnings("unchecked")
                 var prop = (ScriptProperty<Object>) propertyMap.get(parts[0].trim());
                 if (prop != null) {
-                    properties.put(prop, prop.read(parts[1].trim()));
+                    try {
+                        properties.put(prop, prop.read(parts[1].trim()));
+                    } catch (Exception e) {
+                        type.logger().warn("[NekoJS] Failed to parse script property '{}' in {}: {}", parts[0].trim(), path, e.getMessage());
+                    }
                 }
             }
         } catch (Exception e) {

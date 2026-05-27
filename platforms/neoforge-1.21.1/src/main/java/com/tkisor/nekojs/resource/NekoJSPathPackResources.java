@@ -40,7 +40,7 @@ public class NekoJSPathPackResources extends PathPackResources {
                     "description": "NekoJS Resources"
                   }
                 }
-                """.formatted(format, format);
+                """.formatted(format);
 
         this.meta = json.getBytes(StandardCharsets.UTF_8);
     }

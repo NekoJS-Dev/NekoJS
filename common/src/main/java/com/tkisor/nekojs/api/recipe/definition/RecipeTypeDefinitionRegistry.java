@@ -2,7 +2,6 @@ package com.tkisor.nekojs.api.recipe.definition;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -58,10 +57,6 @@ public final class RecipeTypeDefinitionRegistry {
 
         public RecipeTypeDefinitionRegistry build() {
             return new RecipeTypeDefinitionRegistry(definitions);
-        }
-
-        public Set<String> namespaces() {
-            return new LinkedHashSet<>(definitions.keySet());
         }
     }
 }

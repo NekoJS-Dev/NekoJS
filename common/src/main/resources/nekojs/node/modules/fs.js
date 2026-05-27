@@ -5,14 +5,27 @@
 
   function wrapStats(stats) {
     return {
+      dev: Number(stats.dev()),
+      ino: Number(stats.ino()),
+      mode: Number(stats.mode()),
+      nlink: Number(stats.nlink()),
+      uid: Number(stats.uid()),
+      gid: Number(stats.gid()),
+      rdev: Number(stats.rdev()),
       size: Number(stats.size()),
+      blksize: Number(stats.blksize()),
+      blocks: Number(stats.blocks()),
+      atimeMs: Number(stats.atimeMs()),
       mtimeMs: Number(stats.mtimeMs()),
       ctimeMs: Number(stats.ctimeMs()),
-      atimeMs: Number(stats.atimeMs()),
       birthtimeMs: Number(stats.birthtimeMs()),
       isFile: () => stats.isFile(),
       isDirectory: () => stats.isDirectory(),
       isSymbolicLink: () => stats.isSymbolicLink(),
+      isBlockDevice: () => stats.isBlockDevice(),
+      isCharacterDevice: () => stats.isCharacterDevice(),
+      isFIFO: () => stats.isFIFO(),
+      isSocket: () => stats.isSocket(),
       isOther: () => stats.isOther()
     }
   }
@@ -23,7 +36,7 @@
     W_OK: 2,
     X_OK: 1,
     existsSync(path) { return runtime.fs().existsSync(String(path)) },
-    accessSync(path, mode) { runtime.fs().stat(String(path)) },
+    accessSync(path, mode) { runtime.fs().access(String(path), Number(mode) || 0) },
     readFileSync(path, options) {
       const encoding = encodingFromOptions(options)
       return encoding ? String(runtime.fs().readFileString(String(path), encoding)) : wrapBuffer(runtime.fs().readFileBuffer(String(path)))

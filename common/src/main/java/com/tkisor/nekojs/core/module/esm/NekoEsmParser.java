@@ -148,7 +148,7 @@ public final class NekoEsmParser {
         while (scopeStack.size() > 1) {
             closeScope(length);
         }
-        return new NekoEsmModuleAst(module, topLevelAwait, statements, runtimeExpressions, localBindings, scopes, toJsProgram());
+        return new NekoEsmModuleAst(module, topLevelAwait, statements, runtimeExpressions, localBindings, scopes);
     }
 
     private void recordLocalDeclaration(int start, String word) {

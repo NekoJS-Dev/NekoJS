@@ -9,5 +9,6 @@ modules/timers.js
 modules/process.js
 modules/events.js
 modules/module.js
+modules/os.js
 internal/script-loader.js
 bootstrap.js

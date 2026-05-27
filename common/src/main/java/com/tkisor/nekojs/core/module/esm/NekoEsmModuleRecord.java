@@ -40,8 +40,24 @@ public final class NekoEsmModuleRecord {
         this.state = NekoEsmModuleState.LINKED;
     }
 
+    public void relink(NekoEsmLinkMetadata linkMetadata) {
+        this.linkMetadata = linkMetadata;
+        this.evaluation = null;
+        this.namespace = null;
+        this.failure = null;
+        this.state = NekoEsmModuleState.LINKED;
+    }
+
     public NekoEsmLinkMetadata linkMetadata() {
         return linkMetadata;
+    }
+
+    public Path path() {
+        return path;
+    }
+
+    public NekoPreparedModule preparedModule() {
+        return prepared;
     }
 
     public boolean topLevelAwait() {
