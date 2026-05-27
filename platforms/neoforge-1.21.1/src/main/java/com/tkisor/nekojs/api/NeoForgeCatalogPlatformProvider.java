@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
 import com.tkisor.nekojs.api.inject.*;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.script.ScriptType;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -33,7 +34,7 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
                 "event.recipes.minecraft.smelting(Ingredient.of('minecraft:iron_ore'), ItemJS.of('minecraft:iron_ingot'))",
                 "event.builder('minecraft:crafting_shapeless').property('ingredients', [Ingredient.of('minecraft:stone')]).output('result', ItemJS.of('minecraft:stone_button'))"
         ) : List.of("event.recipes." + namespace + ".<recipeType>({ type: '" + namespace + ":<recipeType>' })");
-        return new RecipeNamespaceCatalogEntry(namespace, handlerClass, List.copyOf(NekoRecipeNamespaces.getRecipeTypes(handlerClass)), true, examples);
+        return RecipeNamespaceCatalogEntry.withHandlerMethods(namespace, handlerClass, List.copyOf(NekoRecipeNamespaces.getRecipeTypes(handlerClass)), true, examples);
     }
 
     @Override
@@ -46,7 +47,8 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
                 HostExtensionSource.any(Entity.class, EntityExtension.class),
                 HostExtensionSource.any(LivingEntity.class, LivingEntityExtension.class),
                 HostExtensionSource.any(Player.class, PlayerExtension.class),
-                HostExtensionSource.any(Level.class, LevelExtension.class)
+                HostExtensionSource.any(Level.class, LevelExtension.class),
+                HostExtensionSource.any(MutableComponent.class, MutableComponentExtension.class)
         );
     }
 

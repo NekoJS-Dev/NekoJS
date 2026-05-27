@@ -20,6 +20,8 @@ import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
+import com.tkisor.nekojs.api.recipe.RecipeSchemaRegister;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypePredicate;
@@ -53,6 +55,7 @@ public final class NekoPluginBootstrap {
             platform("nekojs:events", (plugin, context) -> plugin.registerEvents(context.events())),
             clientPlatform("nekojs:client_events", (plugin, context) -> plugin.registerClientEvents(context.events())),
             platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces())),
+            platform("nekojs:recipe_schemas", (plugin, context) -> plugin.registerRecipeSchemas(context.recipeSchemas())),
             platform("nekojs:recipe_lifecycle", (plugin, context) -> plugin.registerRecipeLifecycleHooks(context.recipeLifecycle()))
     );
 
@@ -120,6 +123,7 @@ public final class NekoPluginBootstrap {
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
         private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces = new LinkedHashMap<>();
+        private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides = new LinkedHashMap<>();
         private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
         private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
         private boolean frozen;
@@ -169,6 +173,14 @@ public final class NekoPluginBootstrap {
         }
 
         @Override
+        public RecipeSchemaRegister recipeSchemas() {
+            return (namespace, type, schema) -> {
+                requireMutable("recipe schema overrides");
+                recipeSchemaOverrides.computeIfAbsent(namespace, ignored -> new LinkedHashMap<>()).put(type, schema);
+            };
+        }
+
+        @Override
         public RecipeLifecycleRegister recipeLifecycle() {
             return new RecipeLifecycleRegister() {
                 @Override
@@ -201,9 +213,18 @@ public final class NekoPluginBootstrap {
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
                     recipeNamespacesSnapshot(),
+                    recipeSchemaOverridesSnapshot(),
                     beforeRecipeLoadingHooksSnapshot(),
                     afterRecipesHooksSnapshot()
             );
+        }
+
+        Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverridesSnapshot() {
+            Map<String, Map<String, RecipeTypeDefinition>> copy = new LinkedHashMap<>();
+            for (var entry : recipeSchemaOverrides.entrySet()) {
+                copy.put(entry.getKey(), Map.copyOf(entry.getValue()));
+            }
+            return Collections.unmodifiableMap(copy);
         }
 
         <T> void registerAdapter(JSTypeAdapter<T> adapter) {

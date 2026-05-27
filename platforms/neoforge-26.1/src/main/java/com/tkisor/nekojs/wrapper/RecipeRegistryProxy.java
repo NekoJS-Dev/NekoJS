@@ -9,6 +9,7 @@ import graal.graalvm.polyglot.proxy.ProxyObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +19,8 @@ public class RecipeRegistryProxy implements ProxyObject {
     private static final String TYPES = "types";
     private static final String HAS_NAMESPACE = "hasNamespace";
     private static final String HAS_TYPE = "hasType";
-    private static final List<String> HELPER_KEYS = List.of(NAMESPACES, TYPES, HAS_NAMESPACE, HAS_TYPE);
+    private static final String DESCRIBE = "describeType";
+    private static final List<String> HELPER_KEYS = List.of(NAMESPACES, TYPES, HAS_NAMESPACE, HAS_TYPE, DESCRIBE);
 
     private final RecipeEventJS event;
     private final Map<String, Object> members = new HashMap<>();
@@ -34,6 +36,7 @@ public class RecipeRegistryProxy implements ProxyObject {
             case TYPES -> (ProxyExecutable) arguments -> types(stringArgument(arguments, 0, "namespace"));
             case HAS_NAMESPACE -> (ProxyExecutable) arguments -> hasNamespace(stringArgument(arguments, 0, "namespace"));
             case HAS_TYPE -> (ProxyExecutable) arguments -> hasType(stringArgument(arguments, 0, "namespace"), stringArgument(arguments, 1, "type"));
+            case DESCRIBE -> (ProxyExecutable) arguments -> describeType(stringArgument(arguments, 0, "namespace"), stringArgument(arguments, 1, "type"));
             default -> members.computeIfAbsent(namespace, this::namespaceMember);
         };
     }
@@ -55,6 +58,36 @@ public class RecipeRegistryProxy implements ProxyObject {
         return NekoRecipeNamespaces.hasRecipeType(namespace, type, event.getRecipeTypeDefinitions());
     }
 
+    public Map<String, Object> describeType(String namespace, String type) {
+        var def = event.getRecipeTypeDefinitions().get(namespace, type);
+        if (def == null) {
+            return Map.of("exists", false, "namespace", namespace, "type", type);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("exists", true);
+        result.put("type", def.type());
+        result.put("idPrefix", def.prefix());
+
+        List<Map<String, Object>> fieldList = new ArrayList<>();
+        for (var field : def.fields().values()) {
+            Map<String, Object> f = new LinkedHashMap<>();
+            f.put("name", field.name());
+            f.put("kind", field.kind().name());
+            f.put("required", field.required());
+            f.put("array", field.array());
+            f.put("path", field.path());
+            fieldList.add(f);
+        }
+        result.put("fields", fieldList);
+
+        List<List<String>> constructors = new ArrayList<>();
+        for (var c : def.constructors()) {
+            constructors.add(List.copyOf(c));
+        }
+        result.put("constructors", constructors);
+        return result;
+    }
+
     @Override
     public Object getMemberKeys() {
         List<String> keys = new ArrayList<>(NekoRecipeNamespaces.getNamespaces(event.getRecipeTypeDefinitions()));
@@ -72,10 +105,17 @@ public class RecipeRegistryProxy implements ProxyObject {
 
     private Object namespaceMember(String namespace) {
         Object handler = NekoRecipeNamespaces.createHandler(namespace, event);
-        if (handler != null) return handler;
         RecipeTypeDefinitionRegistry definitions = event.getRecipeTypeDefinitions();
-        if (definitions.hasNamespace(namespace)) return new DataDrivenRecipeNamespaceProxy(event, namespace, definitions);
-        return new FallbackNamespaceProxy(event, namespace);
+        boolean hasDefinitions = definitions.hasNamespace(namespace);
+
+        if (handler == null) {
+            if (hasDefinitions) return new DataDrivenRecipeNamespaceProxy(event, namespace, definitions);
+            return new FallbackNamespaceProxy(event, namespace);
+        }
+
+        // 复合代理：handler 优先，未知 type fallback 到 schema
+        Object schemaFallback = hasDefinitions ? new DataDrivenRecipeNamespaceProxy(event, namespace, definitions) : new FallbackNamespaceProxy(event, namespace);
+        return new HandlerWithSchemaProxy(handler, (ProxyObject) schemaFallback);
     }
 
     private static String stringArgument(Value[] arguments, int index, String name) {

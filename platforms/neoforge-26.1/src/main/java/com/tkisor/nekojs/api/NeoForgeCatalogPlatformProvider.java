@@ -34,7 +34,7 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
                 "event.recipes.minecraft.smelting(Ingredient.of('minecraft:iron_ore'), ItemJS.of('minecraft:iron_ingot'))",
                 "event.builder('minecraft:crafting_shapeless').property('ingredients', [Ingredient.of('minecraft:stone')]).output('result', ItemJS.of('minecraft:stone_button'))"
         ) : List.of("event.recipes." + namespace + ".<recipeType>({ type: '" + namespace + ":<recipeType>' })");
-        return new RecipeNamespaceCatalogEntry(namespace, handlerClass, List.copyOf(NekoRecipeNamespaces.getRecipeTypes(handlerClass)), true, examples);
+        return RecipeNamespaceCatalogEntry.withHandlerMethods(namespace, handlerClass, List.copyOf(NekoRecipeNamespaces.getRecipeTypes(handlerClass)), true, examples);
     }
 
     @Override

@@ -4,6 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.api.recipe.definition.MinecraftRecipeSchemaScanner;
+import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
@@ -21,8 +23,19 @@ import java.util.Map;
 
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class ServerEventListener {
+    private static volatile boolean schemaAutoDiscovered;
+
     @SubscribeEvent
     public static void onServerResourceReload(AddReloadListenerEvent event) {
+        if (!schemaAutoDiscovered) {
+            try {
+                RecipeSchemaAutoDiscovery.DiscoveredRecipeTypes discovered = MinecraftRecipeSchemaScanner.scan();
+                RecipeTypeDefinitionStorage.setAutoDiscovered(RecipeSchemaAutoDiscovery.discover(() -> discovered));
+            } catch (Exception e) {
+                NekoJSCommon.LOGGER.warn("[NekoJS] Failed to auto-discover recipe schemas: {}", e.getMessage());
+            }
+            schemaAutoDiscovered = true;
+        }
         event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
             NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);

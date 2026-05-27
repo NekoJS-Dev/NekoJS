@@ -5,13 +5,17 @@ import com.tkisor.nekojs.api.MemberVisibilityQuery;
 import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.NekoEventGroups;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import graal.graalvm.polyglot.HostAccess;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class NekoScriptCatalog {
     private static NekoCatalogPlatformProvider platformProvider = NekoCatalogPlatformProvider.EMPTY;
@@ -28,7 +32,7 @@ public final class NekoScriptCatalog {
                 bindings(),
                 events(),
                 adapters(),
-                List.copyOf(platformProvider.recipeNamespaces()),
+                recipeNamespaces(),
                 hostExtensions(),
                 List.copyOf(platformProvider.snippets()),
                 NekoTypeDocs.typeDocs(),
@@ -44,7 +48,7 @@ public final class NekoScriptCatalog {
                 bindings(scriptType),
                 events(scriptType),
                 adapters(),
-                List.copyOf(platformProvider.recipeNamespaces()),
+                recipeNamespaces(),
                 hostExtensions(scriptType),
                 snippets(scriptType),
                 NekoTypeDocs.typeDocs(scriptType),
@@ -54,9 +58,34 @@ public final class NekoScriptCatalog {
         );
     }
 
+    /** Merged recipe namespace entries: handler methods + schema types. */
+    public static List<RecipeNamespaceCatalogEntry> recipeNamespaces() {
+        Map<String, RecipeNamespaceCatalogEntry> map = new LinkedHashMap<>();
+        for (var entry : platformProvider.recipeNamespaces()) {
+            map.put(entry.namespace(), entry);
+        }
+        RecipeTypeDefinitionRegistry schemas = RecipeTypeDefinitionStorage.current();
+        for (String ns : schemas.namespaces()) {
+            List<RecipeSchemaTypeEntry> schemaTypes = new ArrayList<>();
+            for (String type : schemas.types(ns)) {
+                var def = schemas.get(ns, type);
+                if (def != null) schemaTypes.add(RecipeSchemaTypeEntry.from(def));
+            }
+            map.compute(ns, (k, existing) -> {
+                if (existing != null) return existing.withSchemaTypes(schemaTypes);
+                return new RecipeNamespaceCatalogEntry(ns, null, new ArrayList<>(schemas.types(ns)),
+                        true, List.of(), List.of(), schemaTypes);
+            });
+        }
+        return List.copyOf(map.values());
+    }
+
     public static TypeOutputLayout outputLayout() {
         return platformProvider.outputLayout();
     }
+
+    // ... (bindings/events/adapters methods unchanged, omitted for brevity)
+    // The rest of the file is the same as before
 
     public static List<BindingCatalogEntry> bindings() {
         List<BindingCatalogEntry> entries = new ArrayList<>();
@@ -97,23 +126,14 @@ public final class NekoScriptCatalog {
             for (var entry : group.viewBuses().entrySet()) {
                 EventGroup.BusHolder holder = entry.getValue();
                 if (!holder.canApplyOn(scriptType)) continue;
-
                 var bus = holder.getBus(scriptType);
                 if (bus == null) continue;
-
                 Class<?> dispatchKeyType = bus.bus() instanceof DispatchEventBus<?, ?> dispatchBus
                         ? dispatchBus.dispatchKey().keyType()
                         : null;
-
                 entries.add(EventCatalogEntry.of(
-                        group.name(),
-                        entry.getKey(),
-                        scriptType,
-                        bus.bus().eventType(),
-                        dispatchKeyType,
-                        bus.canCancel(),
-                        bus.canDispatch()
-                ));
+                        group.name(), entry.getKey(), scriptType,
+                        bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch()));
             }
         }
         return List.copyOf(entries);
@@ -129,19 +149,13 @@ public final class NekoScriptCatalog {
 
     private static AdapterCatalogEntry adapterEntry(JSTypeAdapter<?> adapter) {
         Class<?> targetType = adapter.getTargetClass();
-        return new AdapterCatalogEntry(
-                targetType,
-                targetType.getSimpleName(),
-                inputShapesFor(targetType),
-                adapter.getPrecedence(),
-                errorPolicyFor(adapter.getPrecedence()),
-                examplesFor(targetType)
-        );
+        return new AdapterCatalogEntry(targetType, targetType.getSimpleName(),
+                inputShapesFor(targetType), adapter.getPrecedence(),
+                errorPolicyFor(adapter.getPrecedence()), examplesFor(targetType));
     }
 
     private static List<String> inputShapesFor(Class<?> targetType) {
-        String name = targetType.getSimpleName();
-        return switch (name) {
+        return switch (targetType.getSimpleName()) {
             case "ItemStack" -> List.of("ItemStack", "Item", "item id string", "{ item|id, count?, components? }");
             case "Ingredient" -> List.of("Ingredient", "IngredientFactory", "ItemStack", "Item", "item id string", "tag id string", "array", "{ item|tag|ingredient }");
             case "SizedIngredient" -> List.of("SizedIngredient", "SizedIngredientJS", "Ingredient", "IngredientFactory", "item id string", "tag id string", "array", "{ ingredient|item|tag, count }");
@@ -162,8 +176,7 @@ public final class NekoScriptCatalog {
     }
 
     private static List<String> examplesFor(Class<?> targetType) {
-        String name = targetType.getSimpleName();
-        return switch (name) {
+        return switch (targetType.getSimpleName()) {
             case "ItemStack" -> List.of("ItemJS.of('minecraft:stone')", "ItemJS.of('minecraft:stone').withCount(4)");
             case "Ingredient" -> List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')");
             case "SizedIngredient" -> List.of("Ingredient.of('minecraft:stone').withCount(3)", "{ ingredient: 'minecraft:stone', count: 3 }");
@@ -178,9 +191,7 @@ public final class NekoScriptCatalog {
 
     public static List<HostExtensionCatalogEntry> hostExtensions() {
         List<HostExtensionCatalogEntry> entries = new ArrayList<>();
-        for (ScriptType type : ScriptType.all()) {
-            entries.addAll(hostExtensions(type));
-        }
+        for (ScriptType type : ScriptType.all()) entries.addAll(hostExtensions(type));
         return List.copyOf(entries);
     }
 
@@ -188,33 +199,21 @@ public final class NekoScriptCatalog {
         List<HostExtensionCatalogEntry> entries = new ArrayList<>();
         for (HostExtensionSource source : platformProvider.hostExtensions()) {
             if (!source.canApplyOn(scriptType)) continue;
-
             for (var binding : MemberVisibilityQuery.getVisibleMethods(source.extensionInterface()).values()) {
-                entries.add(new HostExtensionCatalogEntry(
-                        source.targetClass(),
-                        source.extensionInterface(),
-                        binding.member().getName(),
-                        binding.jsName(),
-                        binding.member(),
-                        source.scriptType(),
-                        false
-                ));
+                entries.add(new HostExtensionCatalogEntry(source.targetClass(),
+                        source.extensionInterface(), binding.member().getName(),
+                        binding.jsName(), binding.member(), source.scriptType(), false));
             }
         }
         return List.copyOf(entries);
     }
 
-    public static List<SnippetCatalogEntry> snippets() {
-        return List.copyOf(platformProvider.snippets());
-    }
+    public static List<SnippetCatalogEntry> snippets() { return List.copyOf(platformProvider.snippets()); }
 
     public static List<SnippetCatalogEntry> snippets(ScriptType scriptType) {
         List<SnippetCatalogEntry> entries = new ArrayList<>();
-        for (SnippetCatalogEntry snippet : platformProvider.snippets()) {
-            if (snippet.canApplyOn(scriptType)) {
-                entries.add(snippet);
-            }
-        }
+        for (SnippetCatalogEntry snippet : platformProvider.snippets())
+            if (snippet.canApplyOn(scriptType)) entries.add(snippet);
         return List.copyOf(entries);
     }
 }

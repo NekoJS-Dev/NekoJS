@@ -9,6 +9,9 @@ import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
@@ -27,6 +30,7 @@ public final class NekoPluginRuntime {
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
     private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces;
+    private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides;
     private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks;
     private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks;
 
@@ -38,6 +42,7 @@ public final class NekoPluginRuntime {
                               List<TypeDocCatalogEntry> typeDocs,
                               List<ManualDeclarationCatalogEntry> manualDeclarations,
                               Map<String, RecipeNamespaceEntry<?>> recipeNamespaces,
+                              Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides,
                               List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
                               List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
         this.scriptCompilers = scriptCompilers;
@@ -48,8 +53,21 @@ public final class NekoPluginRuntime {
         this.typeDocs = typeDocs;
         this.manualDeclarations = manualDeclarations;
         this.recipeNamespaces = recipeNamespaces;
+        this.recipeSchemaOverrides = recipeSchemaOverrides;
         this.beforeRecipeLoadingHooks = beforeRecipeLoadingHooks;
         this.afterRecipesHooks = afterRecipesHooks;
+        publishRecipeSchemaOverrides();
+    }
+
+    private void publishRecipeSchemaOverrides() {
+        if (recipeSchemaOverrides.isEmpty()) return;
+        RecipeTypeDefinitionRegistry.Builder builder = RecipeTypeDefinitionRegistry.builder();
+        for (var nsEntry : recipeSchemaOverrides.entrySet()) {
+            for (var typeEntry : nsEntry.getValue().entrySet()) {
+                builder.add(typeEntry.getValue());
+            }
+        }
+        RecipeTypeDefinitionStorage.setPluginOverrides(builder.build());
     }
 
     public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins) {

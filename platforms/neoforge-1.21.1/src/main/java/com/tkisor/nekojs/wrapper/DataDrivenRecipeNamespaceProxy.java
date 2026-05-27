@@ -91,7 +91,13 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
                 return values;
             }
         }
-        throw new IllegalArgumentException("No constructor for " + definition.key() + " accepts " + arguments.length + " arguments");
+        StringBuilder msg = new StringBuilder("No constructor for " + definition.key() + " accepts " + arguments.length + " arguments.\n");
+        msg.append("Available constructors:\n");
+        for (List<String> c : definition.constructors()) {
+            msg.append("  ").append(c.size()).append(" args: ").append(String.join(", ", c)).append("\n");
+        }
+        msg.append("Or use named arguments: { ").append(String.join(", ", definition.fields().keySet())).append(" }");
+        throw new IllegalArgumentException(msg.toString());
     }
 
     private boolean hasDefinitionField(RecipeTypeDefinition definition, Value value) {

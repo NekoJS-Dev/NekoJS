@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
+import com.tkisor.nekojs.api.recipe.RecipeSchemaRegister;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
@@ -26,6 +27,8 @@ public interface NekoPluginExtensionContext {
     TypeDocsRegister typeDocs();
 
     RecipeNamespaceRegister recipeNamespaces();
+
+    RecipeSchemaRegister recipeSchemas();
 
     RecipeLifecycleRegister recipeLifecycle();
 }
