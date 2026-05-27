@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.plugin;
 
-import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.NekoJSBasePlugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
@@ -10,7 +9,6 @@ import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
-import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionPoint;
@@ -116,7 +114,7 @@ public final class NekoPluginBootstrap {
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
         private final JSTypeAdapterRegistry adapters = new JSTypeAdapterRegistry.Impl();
-        private final Map<String, EventGroup> eventGroups = new LinkedHashMap<>();
+        private final EventGroupRegistry eventGroups = new EventGroupRegistry.Impl();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
         private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces = new LinkedHashMap<>();
@@ -155,7 +153,7 @@ public final class NekoPluginBootstrap {
 
         @Override
         public EventGroupRegistry events() {
-            return this::registerEvent;
+            return eventGroups;
         }
 
         @Override
@@ -197,24 +195,13 @@ public final class NekoPluginBootstrap {
                     scriptProperties,
                     bindingsByScriptType(),
                     List.copyOf(adapters().view()),
-                    eventGroupsSnapshot(),
+                    Map.copyOf(eventGroups.view()),
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
                     recipeNamespacesSnapshot(),
                     beforeRecipeLoadingHooksSnapshot(),
                     afterRecipesHooksSnapshot()
             );
-        }
-
-        void registerEvent(EventGroup group) {
-            requireMutable("events");
-            Objects.requireNonNull(group, "group");
-            EventGroup existing = eventGroups.get(group.name());
-            if (existing != null) {
-                existing.merge(group);
-            } else {
-                eventGroups.put(group.name(), group);
-            }
         }
 
         @Override
@@ -241,10 +228,6 @@ public final class NekoPluginBootstrap {
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
             return this.bindingRegistries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
-        }
-
-        Map<String, EventGroup> eventGroupsSnapshot() {
-            return Collections.unmodifiableMap(new LinkedHashMap<>(eventGroups));
         }
 
         List<TypeDocCatalogEntry> typeDocsSnapshot() {
