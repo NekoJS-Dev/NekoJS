@@ -3,7 +3,6 @@ package com.tkisor.nekojs.api.catalog;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.api.event.NekoEventGroups;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
@@ -92,7 +91,7 @@ public final class NekoScriptCatalog {
 
     public static List<EventCatalogEntry> events(ScriptType scriptType) {
         List<EventCatalogEntry> entries = new ArrayList<>();
-        for (EventGroup group : NekoEventGroups.all().values()) {
+        for (EventGroup group : NekoPluginRuntime.current().eventGroups().values()) {
             for (var entry : group.viewBuses().entrySet()) {
                 EventGroup.BusHolder holder = entry.getValue();
                 if (!holder.canApplyOn(scriptType)) continue;
