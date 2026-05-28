@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.bindings;
 
+import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
-import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
@@ -24,7 +24,7 @@ public class RecipeSchemaBinding {
     public List<String> types(String namespace) {
         // 合并 handler 方法名和 schema type 名
         List<String> all = new ArrayList<>(current().types(namespace));
-        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
         if (entry != null) {
             // handler 的方法名也算 type
             for (var method : entry.handlerClass().getMethods()) {
@@ -86,76 +86,48 @@ public class RecipeSchemaBinding {
         return result;
     }
 
+    // Handler 方法收集委托给 RecipeNamespaceCatalogEntry（共享实现，避免重复反射逻辑）
     private static void collectHandlerMethods(String namespace, String type, List<Map<String, Object>> handlerFields, List<List<String>> constructorOpts) {
-        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
         if (entry == null) return;
-        for (var method : entry.handlerClass().getMethods()) {
-            if (method.getDeclaringClass() == Object.class || !method.getName().equals(type)) continue;
+        var handlerMethods = RecipeNamespaceCatalogEntry.collectHandlerMethods(entry.handlerClass());
+        for (var hm : handlerMethods) {
+            if (!hm.methodName().equals(type)) continue;
             List<String> params = new ArrayList<>();
-            java.lang.reflect.Type[] genericTypes = method.getGenericParameterTypes();
-            java.lang.reflect.Parameter[] javaParams = method.getParameters();
-            for (int i = 0; i < javaParams.length; i++) {
-                var param = javaParams[i];
-                Class<?> rawType = method.getParameterTypes()[i];
-                boolean optional = rawType == java.util.Optional.class;
-                // 对 Optional<T>，提取内层 T 的类型名
-                Class<?> displayType = rawType;
-                if (optional && genericTypes[i] instanceof java.lang.reflect.ParameterizedType pt) {
-                    var arg = pt.getActualTypeArguments()[0];
-                    if (arg instanceof Class<?> c) displayType = c;
-                }
-                String pName = param.getName();
-                if (pName.equals("arg0") || pName.equals("arg1") || pName.startsWith("arg")) {
-                    pName = simpleName(displayType);
-                }
-                params.add(pName + (optional ? "?" : ""));
+            for (var p : hm.params()) {
+                params.add(typeName(p.type()) + (p.optional() ? "?" : ""));
             }
             constructorOpts.add(params);
-            // 为每个 handler 方法收集字段（取第一个来命名）
             if (handlerFields.isEmpty()) {
-                for (int i = 0; i < javaParams.length; i++) {
-                    Class<?> rawType = method.getParameterTypes()[i];
-                    boolean opt = rawType == java.util.Optional.class;
-                    Class<?> displayType = rawType;
-                    if (opt && genericTypes[i] instanceof java.lang.reflect.ParameterizedType pt) {
-                        var arg = pt.getActualTypeArguments()[0];
-                        if (arg instanceof Class<?> c) displayType = c;
-                    }
+                for (var p : hm.params()) {
                     Map<String, Object> fm = new LinkedHashMap<>();
-                    fm.put("name", simpleName(displayType));
-                    fm.put("kind", kindName(displayType));
-                    fm.put("required", !opt);
+                    fm.put("name", p.name());
+                    fm.put("kind", toFieldKind(p.type()));
+                    fm.put("required", !p.optional());
                     handlerFields.add(fm);
                 }
             }
         }
     }
 
-    private static String simpleName(Class<?> cls) {
-        String name = cls.getSimpleName();
-        if (name.equals("RecipeJsonValue")) return "json";
-        if (name.equals("ItemStack")) return "ItemStack";
-        if (name.equals("Ingredient")) return "Ingredient";
-        if (name.equals("String")) return "String";
-        if (name.equals("int") || name.equals("float") || name.equals("double")) return name;
-        if (name.equals("List")) return "List";
-        if (name.equals("Map")) return "Map";
-        return name;
+    private static String typeName(String type) {
+        return switch (type) {
+            case "string" -> "String";
+            case "number" -> "Number";
+            default -> type;
+        };
     }
 
-    private static String kindName(Class<?> cls) {
-        String name = cls.getSimpleName();
-        if (name.equals("ItemStack")) return "ITEM_STACK";
-        if (name.equals("Ingredient")) return "INGREDIENT";
-        if (name.equals("RecipeJsonValue")) return "JSON";
-        if (name.equals("String")) return "STRING";
-        if (name.equals("List") || name.equals("Map")) return "JSON";
-        if (name.equals("int") || name.equals("float") || name.equals("double")) return "NUMBER";
-        return "JSON";
+    private static String toFieldKind(String type) {
+        return switch (type) {
+            case "ItemStack" -> "ITEM_STACK";
+            case "Ingredient" -> "INGREDIENT";
+            default -> "JSON";
+        };
     }
 
     private static boolean hasHandlerMethod(String namespace, String type) {
-        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
         if (entry == null) return false;
         for (var method : entry.handlerClass().getMethods()) {
             if (method.getDeclaringClass() != Object.class && method.getName().equals(type)) {

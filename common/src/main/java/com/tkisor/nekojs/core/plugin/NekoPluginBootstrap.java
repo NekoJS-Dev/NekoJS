@@ -122,7 +122,7 @@ public final class NekoPluginBootstrap {
         private final Map<String, EventGroup> eventGroups = new LinkedHashMap<>();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
-        private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces = new LinkedHashMap<>();
+        private final Map<String, RecipeNamespaceEntry> recipeNamespaces = new LinkedHashMap<>();
         private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides = new LinkedHashMap<>();
         private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
         private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
@@ -255,7 +255,7 @@ public final class NekoPluginBootstrap {
             manualDeclarations.add(Objects.requireNonNull(entry, "entry"));
         }
 
-        <C> void registerRecipeNamespace(RecipeNamespaceEntry<C> entry) {
+        void registerRecipeNamespace(RecipeNamespaceEntry entry) {
             requireMutable("recipe namespaces");
             Objects.requireNonNull(entry, "entry");
             if (recipeNamespaces.containsKey(entry.namespace())) {
@@ -289,7 +289,7 @@ public final class NekoPluginBootstrap {
                     .toList();
         }
 
-        Map<String, RecipeNamespaceEntry<?>> recipeNamespacesSnapshot() {
+        Map<String, RecipeNamespaceEntry> recipeNamespacesSnapshot() {
             return Collections.unmodifiableMap(new LinkedHashMap<>(recipeNamespaces));
         }
 

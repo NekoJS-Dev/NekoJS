@@ -166,7 +166,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
-        registry.register(RecipeNamespaceEntry.<RecipeEventJS>of("minecraft", MinecraftRecipeHandler::new, MinecraftRecipeHandler.class));
+        registry.register(new RecipeNamespaceEntry("minecraft", event -> new MinecraftRecipeHandler((RecipeEventJS) event), MinecraftRecipeHandler.class));
     }
 
     @Override

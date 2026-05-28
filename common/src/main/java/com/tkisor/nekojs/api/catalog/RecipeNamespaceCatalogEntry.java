@@ -60,7 +60,7 @@ public record RecipeNamespaceCatalogEntry(
                 fallbackSupported, examples, handlerMethods, types);
     }
 
-    private static List<RecipeHandlerMethodEntry> collectHandlerMethods(Class<?> handlerClass) {
+    public static List<RecipeHandlerMethodEntry> collectHandlerMethods(Class<?> handlerClass) {
         if (handlerClass == null) return List.of();
         List<RecipeHandlerMethodEntry> entries = new ArrayList<>();
         var grouped = new java.util.LinkedHashMap<String, List<Method>>();

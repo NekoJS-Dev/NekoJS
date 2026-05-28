@@ -15,6 +15,23 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+/**
+ * Filter for querying/removing recipes. Supports nested logical combinators.
+ *
+ * <h2>JS usage</h2>
+ * <pre>
+ * { mod: "minecraft" }                          — match by mod ID
+ * { type: "minecraft:crafting_shaped" }         — match by recipe type
+ * { output: "minecraft:stick" }                 — match by output item
+ * { input: "#minecraft:planks" }                — match by input ingredient
+ * { and: [{mod:"minecraft"}, {output:"stick"}] }— logical AND
+ * { or: [...] }                                  — logical OR
+ * { not: {...} }                                 — logical NOT
+ * { idStartsWith: "minecraft:chest" }           — ID prefix match
+ * </pre>
+ *
+ * <p>Filters are created from JS objects by {@link RecipeFilterAdapter}.
+ */
 public interface RecipeFilter {
 
     boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries);

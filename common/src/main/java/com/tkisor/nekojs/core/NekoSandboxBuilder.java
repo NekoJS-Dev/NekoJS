@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core;
 
+import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -12,16 +13,33 @@ import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 
 import java.io.OutputStream;
+import java.util.Set;
 
 /**
- * 专门负责构建安全 GraalVM 沙盒的工厂类
- * 共享引擎以降低内存占用
+ * Builds a sandboxed GraalVM {@link Context} per {@link ScriptType}.
+ * All contexts share a single engine ({@link NekoSharedEngine}) to reduce memory.
+ *
+ * <h2>Security</h2>
+ * <ul>
+ *   <li>{@code allowCreateProcess(false)} — no shell/process access from scripts</li>
+ *   <li>{@code allowHostClassLookup(ClassFilter.INSTANCE)} — restricts which Java classes
+ *        are visible via {@code Java.type()}; blacklists {@code java.io}, {@code java.nio},
+ *        {@code java.net}, {@code java.lang.System}, etc.</li>
+ *   <li>{@link NekoJSFileSystem} — restricts file I/O to the game directory;
+ *        writes default to {@code .minecraft/nekojs/} unless overridden in config</li>
+ *   <li>{@code allowValueSharing(true)} — enables sharing host objects between
+ *        contexts on the same engine. Combined with the permissive
+ *        {@link NekoSharedHostAccess#get} (built on {@code HostAccess.ALL}),
+ *        the primary gate is {@link ClassFilter}.</li>
+ * </ul>
  */
 public final class NekoSandboxBuilder {
     private static final IOAccess SHARED_IO_ACCESS = IOAccess.newBuilder()
             .fileSystem(new NekoJSFileSystem(NekoJSPaths.ROOT))
             .build();
 
+    // Prefix console.warn with [NekoJS_WARN] and console.debug with [NekoJS_DEBUG]
+    // for easy grep-filtering of script output in server logs.
     private static final String CONSOLE_PATCH_JS = """
             (function() {
                 const originalWarn = console.warn;
@@ -78,22 +96,35 @@ public final class NekoSandboxBuilder {
                 .option("js.interop-complete-promises", "true")
                 .option("js.strict", "true")
                 .option("js.v8-compat", "true")
+                .option("js.unhandled-rejections", "throw")
                 .build();
 
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
         NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type);
 
-        try {
-            ctx.eval("js", """
-                        if (typeof require !== 'undefined' && require.extensions) {
-                            require.extensions['.ts'] = require.extensions['.js'];
-                            require.extensions['.tsx'] = require.extensions['.js'];
-                            require.extensions['.jsx'] = require.extensions['.js'];
-                        }
-                    """);
-        } catch (Exception e) {
-            type.logger().warn("注入 require 扩展名补丁失败", e);
+        // Register all known non-native extensions with CommonJS require().
+        // GraalVM's native require only handles .js / .mjs / .cjs by default.
+        // Every language plugin registered via ScriptCompilerRegistry gets its
+        // extensions aliased to the .js handler so `require('./helper.ts')` works.
+        Set<String> registeredExtensions = new java.util.LinkedHashSet<>(
+                ScriptCompilerRegistry.current().supportedExtensions());
+        // Remove native GraalVM extensions — they're already handled
+        registeredExtensions.remove(".js");
+        registeredExtensions.remove(".mjs");
+        registeredExtensions.remove(".cjs");
+
+        if (!registeredExtensions.isEmpty()) {
+            StringBuilder js = new StringBuilder("if(typeof require!=='undefined'&&require.extensions){");
+            for (String ext : registeredExtensions) {
+                js.append("require.extensions['").append(ext).append("']=require.extensions['.js'];");
+            }
+            js.append('}');
+            try {
+                ctx.eval("js", js.toString());
+            } catch (Exception e) {
+                type.logger().warn("Failed to register require extension aliases: {}", registeredExtensions, e);
+            }
         }
 
         return new Sandbox(ctx, nodeRuntime);

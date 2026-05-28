@@ -35,22 +35,51 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
+
 /**
- * NekoJS 脚本引擎核心生命周期调度器
+ * Central script lifecycle manager. One per mod instance, shared via {@code NekoJS.SCRIPT_MANAGER}.
+ *
+ * <h2>Lifecycle</h2>
+ * <ol>
+ *   <li>{@link #discoverScripts()} — scan {@code startup_scripts/}, {@code server_scripts/},
+ *        {@code client_scripts/}, {@code test_scripts/} directories for supported script files</li>
+ *   <li>{@link #loadScripts(ScriptType)} — preload properties, sort by priority, execute scripts
+ *        sequentially in a GraalVM {@link Context} synchronised on the context</li>
+ *   <li>{@link #reloadScripts(ScriptType)} — close old Context+Runtime, re-discover, re-load</li>
+ *   <li>{@link #reloadScriptFile(ScriptType, String)} — single-file hot-reload (tries dependency-slice
+ *        re-link via {@link NekoScriptModuleLoaderHost#hotReloadModule} before falling back to entry re-run)</li>
+ *   <li>{@link #runTestScripts()} — special lifecycle for test_scripts (no auto-load, triggered by
+ *        {@code /nekojs test} command)</li>
+ * </ol>
+ *
+ * <h2>Callers</h2>
+ * <table>
+ *   <tr><td>{@code NekoJS / NekoJSClient}</td><td>mod init → discoverScripts + loadScripts</td></tr>
+ *   <tr><td>{@code ServerEventListener / NekoJSClient}</td><td>server resource reload → reloadScripts</td></tr>
+ *   <tr><td>{@code NekoJSCommands}</td><td>{@code /nekojs reload} → reloadScripts / reloadScriptFile / runTestScripts</td></tr>
+ *   <tr><td>{@code NekoNodeTimers}</td><td>tick flush → {@link #flushReadyNodeTimers}</td></tr>
+ * </table>
+ *
+ * <h2>Key invariants</h2>
+ * <ul>
+ *   <li>Each {@link ScriptType} has at most one active {@link Context} and one {@link NekoNodeRuntime}</li>
+ *   <li>{@code CONTEXT_TYPE_MAP} / {@code CONTEXT_SCRIPT_ID_MAP} use {@link WeakHashMap} so
+ *        entries are auto-cleaned when contexts are GC'd</li>
+ *   <li>TIMER callbacks record their owning script via {@link #switchCurrentScriptId} /
+ *        {@link #restoreCurrentScriptId}, enabling per-script timer cancellation on reload</li>
+ * </ul>
  */
 public final class NekoJSScriptManager {
     private static ScriptEventBridge eventBridge = ScriptEventBridge.EMPTY;
 
     private final ScriptTypedValue<Context> contexts = ScriptTypedValue.ofNullable(this::initContext);
-
     private final ScriptTypedValue<NekoNodeRuntime> nodeRuntimes = ScriptTypedValue.ofNullable(type -> null);
-
     private final ScriptTypedValue<List<ScriptContainer>> scripts = ScriptTypedValue.of(type -> new ArrayList<>());
-
     private final ScriptPropertyRegistry scriptPropertyRegistry;
 
+    /** Weak maps for Context → metadata: entries auto-evict when context is GC'd. */
     private static final Map<Context, ScriptType> CONTEXT_TYPE_MAP = Collections.synchronizedMap(new WeakHashMap<>());
-
     private static final Map<Context, String> CONTEXT_SCRIPT_ID_MAP = Collections.synchronizedMap(new WeakHashMap<>());
 
     public NekoJSScriptManager() {
@@ -69,27 +98,21 @@ public final class NekoJSScriptManager {
         JavaClassLoadTelemetry.setSink(sink);
     }
 
-    /**
-     * 一次性扫描并发现所有环境类型 (STARTUP, SERVER, CLIENT) 的脚本文件
-     */
+    /** Scan all auto-load script directories (startup, server, client) and discover script files. */
     public void discoverScripts() {
         for (ScriptType type : ScriptType.autoLoadTypes()) {
             discoverScripts(type);
         }
     }
 
-    /**
-     * 发现并准备环境，但不执行
-     */
+    /** Discover scripts for one type. Does not execute them. */
     public void discoverScripts(ScriptType type) {
         List<ScriptContainer> discovered = ScriptLocator.discover(type, scriptPropertyRegistry);
         scripts.set(type, discovered);
-        type.logger().info("发现了 {} 个 {} 脚本。", discovered.size(), type.name());
+        type.logger().info("Discovered {} {} scripts.", discovered.size(), type.name());
     }
 
-    /**
-     * 加载并顺序执行所有脚本
-     */
+    /** Preload properties, sort by priority, execute all scripts for the given type. */
     public void loadScripts(ScriptType type) {
         List<ScriptContainer> scripts = this.scripts.at(type);
 
@@ -134,11 +157,11 @@ public final class NekoJSScriptManager {
             Object obj = binding.value();
 
             if (obj instanceof Class<?>) {
-                // 如果是静态类，利用 Java.type 包装暴露给 JS
+                // Static classes: wrap via Java.type for JS exposure
                 Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
                 bindings.putMember(name, javaType);
             } else {
-                // 普通对象直接注入
+                // Instance objects: inject directly
                 bindings.putMember(name, obj);
             }
         });
@@ -197,7 +220,7 @@ public final class NekoJSScriptManager {
             script.lastError = t;
 
             ScriptError scriptError = NekoErrorTracker.record(script, t);
-            script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs));
+            script.type.logger().error("Script execution failed: {}\n{}", script.id.toString(), scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs));
         }
     }
 
@@ -242,18 +265,16 @@ public final class NekoJSScriptManager {
         return new RuntimeException(cause);
     }
 
-    /**
-     * 重载指定类型的脚本
-     */
+    /** Full reload: close old Context+Runtime, re-discover, re-load. */
     public void reloadScripts(ScriptType type) {
-        type.logger().info("正在重载 {} 脚本...", type.name());
+        type.logger().info("Reloading {} scripts...", type.name());
 
         resetEnvironment(type);
 
         discoverScripts(type);
         loadScripts(type);
 
-        type.logger().info("{} 脚本重载完毕。", type.name());
+        type.logger().info("{} scripts reloaded.", type.name());
     }
 
     public List<ScriptContainer> reloadScriptFile(ScriptType type, String filePath) throws IOException {
@@ -263,7 +284,7 @@ public final class NekoJSScriptManager {
         if (targets.isEmpty()) {
             throw new IOException("No loaded entry depends on " + displayScriptPath(type, target) + ". Reload the whole " + type.name() + " environment first if this dependency has not been loaded yet.");
         }
-        type.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", type.name(), displayScriptPath(type, target), targets.size());
+        type.logger().info("Reloading {} script file {}, {} affected entries...", type.name(), displayScriptPath(type, target), targets.size());
 
         NekoModulePreparationCache.invalidate(target);
         Context ctx = contexts.at(type);
@@ -304,7 +325,7 @@ public final class NekoJSScriptManager {
             reloadEntryScript(type, ctx, script);
         }
 
-        type.logger().info("{} 脚本文件 {} 重载完毕。", type.name(), displayScriptPath(type, target));
+        type.logger().info("{} script file {} reload complete.", type.name(), displayScriptPath(type, target));
         return targets;
     }
 
@@ -386,14 +407,14 @@ public final class NekoJSScriptManager {
 
     public void runTestScripts() {
         ScriptType type = ScriptType.TEST;
-        type.logger().info("正在运行 TEST 脚本...");
+        type.logger().info("Running TEST scripts...");
 
         resetEnvironment(type);
         discoverScripts(type);
         loadScripts(type);
         flushTestTimers();
 
-        type.logger().info("TEST 脚本运行完毕。");
+        type.logger().info("TEST scripts completed.");
     }
 
     private void flushTestTimers() {
@@ -417,7 +438,7 @@ public final class NekoJSScriptManager {
     }
 
     private void resetEnvironment(ScriptType type) {
-        // TODO: make EventGroupJS a binding, utilize `binding.close(type)` instead of bridge
+        // TODO: make EventGroupJS a binding, use `binding.close(type)` instead of the bridge
         eventBridge.clearListeners(type);
         NekoErrorTracker.clearByType(type);
         for (var binding : NekoPluginRuntime.current().bindings(type).values()) {
@@ -463,25 +484,28 @@ public final class NekoJSScriptManager {
         }
     }
 
-    /**
-     * 从上下文获取对应的脚本类型
-     * @param context 执行上下文
-     * @return 对应的脚本类型
-     */
+        // ---- Context → ScriptType / ScriptId mapping ----
+    // Called by NekoNodeTimers.execute() before/after timer callbacks,
+    // ensuring __nekoCurrentScriptId is set during callback execution.
+
+    @CalledByDynamicCode
     public static ScriptType getTypeFromContext(Context context) {
         return CONTEXT_TYPE_MAP.get(context);
     }
 
+    @CalledByDynamicCode
     public static String switchCurrentScriptId(Context context, String scriptId) {
         String previous = CONTEXT_SCRIPT_ID_MAP.get(context);
         setCurrentScriptId(context, scriptId);
         return previous;
     }
 
+    @CalledByDynamicCode
     public static void restoreCurrentScriptId(Context context, String scriptId) {
         setCurrentScriptId(context, scriptId);
     }
 
+    @CalledByDynamicCode
     public static String getCurrentScriptId(Context context) {
         return CONTEXT_SCRIPT_ID_MAP.get(context);
     }

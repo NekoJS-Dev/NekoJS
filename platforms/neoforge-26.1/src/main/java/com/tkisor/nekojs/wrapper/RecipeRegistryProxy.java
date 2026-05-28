@@ -14,6 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Top-level {@code event.recipes} proxy. Route namespace access ({@code event.recipes.minecraft})
+ * to a {@link RecipeNamespaceProxy} that resolves individual recipe types.
+ *
+ * <p>Also provides introspection methods: {@code namespaces()}, {@code types(ns)},
+ * {@code hasNamespace(ns)}, {@code hasType(ns, type)}, {@code describeType(ns, type)}.
+ */
 public class RecipeRegistryProxy implements ProxyObject {
     private static final String NAMESPACES = "namespaces";
     private static final String TYPES = "types";
@@ -104,18 +111,9 @@ public class RecipeRegistryProxy implements ProxyObject {
     }
 
     private Object namespaceMember(String namespace) {
-        Object handler = NekoRecipeNamespaces.createHandler(namespace, event);
-        RecipeTypeDefinitionRegistry definitions = event.getRecipeTypeDefinitions();
-        boolean hasDefinitions = definitions.hasNamespace(namespace);
-
-        if (handler == null) {
-            if (hasDefinitions) return new DataDrivenRecipeNamespaceProxy(event, namespace, definitions);
-            return new FallbackNamespaceProxy(event, namespace);
-        }
-
-        // 复合代理：handler 优先，未知 type fallback 到 schema
-        Object schemaFallback = hasDefinitions ? new DataDrivenRecipeNamespaceProxy(event, namespace, definitions) : new FallbackNamespaceProxy(event, namespace);
-        return new HandlerWithSchemaProxy(handler, (ProxyObject) schemaFallback);
+        return new RecipeNamespaceProxy(event, namespace,
+                NekoRecipeNamespaces.createHandler(namespace, event),
+                event.getRecipeTypeDefinitions());
     }
 
     private static String stringArgument(Value[] arguments, int index, String name) {

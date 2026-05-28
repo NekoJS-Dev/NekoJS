@@ -4,8 +4,8 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmLinkMetadata;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
-import graal.graalvm.polyglot.Value;
 
+import graal.graalvm.polyglot.Value;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,20 +14,26 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Dependency-aware hot-reloader for ESM modules.
+ *
+ * <p>When a helper module changes, finds all modules transitively depending on it,
+ * snapshot their current state, and re-link them in topological order (dependencies first).
+ * If any link fails, all previously re-linked modules are rolled back to their snapshots.
+ *
+ * <p>This avoids re-running entire entry scripts when a dependency file changes.
+ */
 final class ModuleSliceRelinker {
     private final NekoModuleDependencyGraph dependencyGraph;
     private final NekoEsmModuleRecordCache recordCache;
     private final LinkFunction linker;
-    private final EvaluateFunction evaluator;
 
     ModuleSliceRelinker(NekoModuleDependencyGraph dependencyGraph,
                         NekoEsmModuleRecordCache recordCache,
-                        LinkFunction linker,
-                        EvaluateFunction evaluator) {
+                        LinkFunction linker) {
         this.dependencyGraph = dependencyGraph;
         this.recordCache = recordCache;
         this.linker = linker;
-        this.evaluator = evaluator;
     }
 
     SliceResult tryRelinkSlice(String changedModuleId, long newRevision) throws IOException {
@@ -100,10 +106,6 @@ final class ModuleSliceRelinker {
 
     interface LinkFunction {
         NekoEsmLinkMetadata link(String moduleId, long revision, Path path, NekoPreparedModule prepared) throws IOException;
-    }
-
-    interface EvaluateFunction {
-        Value evaluate(NekoEsmModuleRecord record) throws IOException;
     }
 
     record SliceResult(List<String> relinked, List<String> failed, boolean rolledBack) {}

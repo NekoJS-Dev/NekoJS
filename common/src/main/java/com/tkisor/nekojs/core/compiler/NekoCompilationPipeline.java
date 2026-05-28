@@ -18,6 +18,6 @@ public final class NekoCompilationPipeline {
         NekoSourceAst ast = language.parser().parse(tokens);
         NekoIRProgram program = language.lowering().lower(ast);
         NekoEsmModuleAst esmAst = ast instanceof NekoEsmSourceAst esm ? esm.esmAst() : null;
-        return NekoIdentityJSBackend.INSTANCE.emit(program, esmAst);
+        return new NekoCompileOutput(program, esmAst);
     }
 }
