@@ -1,16 +1,18 @@
 package com.tkisor.nekojs;
 
 import com.tkisor.nekojs.bindings.event.GoalEvents;
+import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NeoForgePluginLoader;
 import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
-import com.tkisor.nekojs.core.NekoJSScriptManager;
+import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.listener.RegistryEventListener;
 import com.tkisor.nekojs.script.ScriptBootstrap;
+import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
 import net.neoforged.api.distmarker.Dist;
@@ -24,12 +26,13 @@ import net.neoforged.neoforge.common.NeoForge;
 @Mod(NekoJS.MODID)
 public class NekoJSMod extends NekoJS {
     public static IEventBus modEventBus;
-    public static NekoJSScriptManager SCRIPT_MANAGER;
 
     public NekoJSMod(IEventBus modEventBus, ModContainer modContainer) {
-        NeoForgeRuntimeBootstrap.setup();
+        super(new DefaultScriptEventBridge(new ScriptEventsJS()));
+        NekoJS.COMMON = this;
         NekoJSMod.modEventBus = modEventBus;
 
+        NeoForgeRuntimeBootstrap.setup();
         registerEventListeners(modEventBus);
         initializeWorkspace();
         initializeScripts();
@@ -51,13 +54,22 @@ public class NekoJSMod extends NekoJS {
         WorkspaceGenerator.setupWorkspace();
     }
 
-    private static void initializeScripts() {
+    private void initializeScripts() {
         NeoForgePluginLoader.loadAnnotatedPlugins();
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins());
 
-        SCRIPT_MANAGER = new NekoJSScriptManager(pluginRuntime.scriptProperties());
-        SCRIPT_MANAGER.discoverScripts();
-        SCRIPT_MANAGER.loadScripts(ScriptType.STARTUP);
+        // Update parent's ScriptPropertyRegistry with plugin bootstrapped one
+        this.scriptProperties = pluginRuntime.scriptProperties();
+
+        // 为每种自动加载的脚本类型创建 ScriptManager
+        for (ScriptType type : ScriptType.autoLoadTypes()) {
+            var manager = new ScriptManager(this, type);
+            this.scriptManagers.set(type, manager);
+            manager.discoverScripts();
+        }
+
+        // 只加载 STARTUP 类型
+        this.scriptManagers.at(ScriptType.STARTUP).loadScripts();
         GoalEvents.postRegister();
     }
 

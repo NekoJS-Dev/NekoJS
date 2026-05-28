@@ -87,7 +87,7 @@ public final class NekoScriptModuleLoaderHost {
         esmRecordCache.failNamespace(moduleId, revision, toThrowable(failure));
     }
 
-    // ---- 入口加载: JS bridge 调用，也由 NekoJSScriptManager 通过 Java 间接调用 ----
+    // ---- 入口加载: JS bridge 调用，也由 ScriptManager 通过 Java 间接调用 ----
 
     public Object loadEntry(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
@@ -154,7 +154,7 @@ public final class NekoScriptModuleLoaderHost {
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
     }
 
-    // ---- 模块热替换: NekoJSScriptManager.reloadScriptFile() 调用，尝试不重跑入口的依赖切片热更新 ----
+    // ---- 模块热替换: ScriptManager.reloadScriptFile() 调用，尝试不重跑入口的依赖切片热更新 ----
 
     public HotReloadResult hotReloadModule(String modulePath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);

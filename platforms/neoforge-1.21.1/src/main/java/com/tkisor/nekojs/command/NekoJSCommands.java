@@ -6,8 +6,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.core.ScriptLocator;
+import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
@@ -44,7 +44,12 @@ public final class NekoJSCommands {
                                     source.sendSystemMessage(Component.literal("Running NekoJStest scripts..."));
 
                                     try {
-                                        NekoJSMod.SCRIPT_MANAGER.runTestScripts();
+                                        var testSm = NekoJS.COMMON.scriptManagers.at(ScriptType.TEST);
+                                        if (testSm == null) {
+                                            testSm = new ScriptManager(NekoJS.COMMON, ScriptType.TEST);
+                                            NekoJS.COMMON.scriptManagers.set(ScriptType.TEST, testSm);
+                                        }
+                                        testSm.runTestScripts();
                                         sendReloadResult(source, "NekoJStest scripts completed.");
                                     } catch (Exception e) {
                                         NekoJS.LOGGER.error("Running test scripts failed fatally", e);
@@ -138,9 +143,14 @@ public final class NekoJSCommands {
         source.sendSystemMessage(Component.literal("Reloading NekoJS" + type.name + " scripts..."));
         try {
             if (type == ScriptType.TEST) {
-                NekoJSMod.SCRIPT_MANAGER.runTestScripts();
+                var testSm = NekoJS.COMMON.scriptManagers.at(ScriptType.TEST);
+                if (testSm == null) {
+                    testSm = new ScriptManager(NekoJS.COMMON, ScriptType.TEST);
+                    NekoJS.COMMON.scriptManagers.set(ScriptType.TEST, testSm);
+                }
+                testSm.runTestScripts();
             } else {
-                NekoJSMod.SCRIPT_MANAGER.reloadScripts(type);
+                NekoJS.COMMON.scriptManagers.at(type).reloadScripts();
             }
             sendReloadResult(source, "NekoJS" + type.name + " scripts reloaded.");
         } catch (Exception e) {
@@ -156,9 +166,12 @@ public final class NekoJSCommands {
         }
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
-            int affectedEntries = NekoJSMod.SCRIPT_MANAGER.reloadScriptFile(type, filePath).size();
+            int affectedEntries = NekoJS.COMMON.scriptManagers.at(type).reloadScriptFile(filePath).size();
             if (type == ScriptType.TEST) {
-                NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
+                var testSm = NekoJS.COMMON.scriptManagers.at(ScriptType.TEST);
+                if (testSm != null) {
+                    testSm.flushReadyNodeTimers();
+                }
             }
             sendReloadResult(source, "NekoJS " + type.name + " script " + filePath + " reloaded (" + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
         } catch (Exception e) {

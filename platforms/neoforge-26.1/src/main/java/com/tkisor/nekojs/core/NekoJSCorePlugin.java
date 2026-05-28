@@ -135,11 +135,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("DamageTypes", DamageTypes.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
-            registry.register(ScriptType.CLIENT, "Minecraft", Minecraft.class);
-            registry.register(ScriptType.CLIENT, "Screen", Screen.class);
-            registry.register(ScriptType.CLIENT, "Window", Window.class);
-            registry.register(ScriptType.CLIENT, "KeyMapping", KeyMapping.class);
-            registry.register(ScriptType.CLIENT, "InputConstants", InputConstants.class);
+            registry.register("Minecraft", Minecraft.class);
+            registry.register("Screen", Screen.class);
+            registry.register("Window", Window.class);
+            registry.register("KeyMapping", KeyMapping.class);
+            registry.register("InputConstants", InputConstants.class);
         }
     }
 

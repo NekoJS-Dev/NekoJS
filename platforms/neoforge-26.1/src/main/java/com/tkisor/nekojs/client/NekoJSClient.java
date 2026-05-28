@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.script.ScriptType;
@@ -29,7 +28,7 @@ public class NekoJSClient {
     private static void onClientSetup(FMLConstructModEvent event) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
-            NekoJSMod.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
+            NekoJS.COMMON.scriptManagers.at(ScriptType.CLIENT).loadScripts();
             ScriptType.CLIENT.logger().debug("Early script injection...");
         });
     }
@@ -39,7 +38,7 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event) {
-        NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.CLIENT);
+        NekoJS.COMMON.scriptManagers.at(ScriptType.CLIENT).flushReadyNodeTimers();
     }
 
     private static void onClientResourceReload(AddClientReloadListenersEvent event) {
@@ -48,7 +47,7 @@ public class NekoJSClient {
         event.addListener(listenerId, (ResourceManagerReloadListener) resourceManager -> {
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
-                NekoJSMod.SCRIPT_MANAGER.reloadScripts(ScriptType.CLIENT);
+                NekoJS.COMMON.scriptManagers.at(ScriptType.CLIENT).reloadScripts();
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("CLIENT script reload failed", e);
             }

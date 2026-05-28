@@ -10,10 +10,10 @@ import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Value;
 
 public class DefaultScriptEventBridge implements ScriptEventBridge {
-    private static ScriptEventRegistrar scriptEventRegistrar;
+    private final ScriptEventRegistrar scriptEventRegistrar;
 
-    public static void setScriptEventRegistrar(ScriptEventRegistrar registrar) {
-        scriptEventRegistrar = registrar;
+    public DefaultScriptEventBridge(ScriptEventRegistrar scriptEventRegistrar) {
+        this.scriptEventRegistrar = scriptEventRegistrar;
     }
 
     @Override
