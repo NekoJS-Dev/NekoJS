@@ -21,7 +21,6 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -202,7 +201,7 @@ final class RecipeNamespaceProxy implements ProxyObject {
             case NUMBER -> new JsonPrimitive(value.asDouble());
             case BOOLEAN -> new JsonPrimitive(value.asBoolean());
             case INGREDIENT -> event.serializeIngredient(IngredientResolver.fromValue(value));
-            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().convert(value));
+            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().apply(value));
             case FLUID_STACK -> event.serializeFluidStack(FluidResolver.stackFromValue(value));
             case FLUID_INGREDIENT -> event.serializeFluidIngredient(FluidResolver.ingredientFromValue(value));
             case SIZED_FLUID_INGREDIENT -> event.serializeSizedFluidIngredient(FluidResolver.sizedFromValue(value));

@@ -3,7 +3,6 @@ package com.tkisor.nekojs.api.catalog;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.api.event.NekoEventGroups;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;

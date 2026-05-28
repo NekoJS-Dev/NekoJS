@@ -16,12 +16,12 @@ public final class JsonObjectAdapter implements JSTypeAdapter<JsonObject> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         return value.hasMembers();
     }
 
     @Override
-    public JsonObject convert(Value value) {
+    public JsonObject apply(Value value) {
         return convertValueToJsonObject(value);
     }
 
