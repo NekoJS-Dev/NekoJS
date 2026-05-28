@@ -32,7 +32,7 @@ public class ServerEventListener {
                 RecipeSchemaAutoDiscovery.DiscoveredRecipeTypes discovered = MinecraftRecipeSchemaScanner.scan();
                 RecipeTypeDefinitionStorage.setAutoDiscovered(RecipeSchemaAutoDiscovery.discover(() -> discovered));
             } catch (Exception e) {
-                NekoJS.LOGGER.warn("[NekoJS] Failed to auto-discover recipe schemas: {}", e.getMessage());
+                NekoJS.LOGGER.warn("Failed to auto-discover recipe schemas: {}", e.getMessage());
             }
             schemaAutoDiscovered = true;
         }
@@ -58,7 +58,7 @@ public class ServerEventListener {
                 }
                 builder.add(RecipeTypeDefinitionJsonLoader.parse(resourceId.getNamespace(), typeName, json.getAsJsonObject()));
             } catch (Exception e) {
-                NekoJS.LOGGER.error("[NekoJS] Failed to load recipe type definition {}", resourceId, e);
+                NekoJS.LOGGER.error("Failed to load recipe type definition {}", resourceId, e);
             }
         }
         RecipeTypeDefinitionStorage.replace(builder.build());

@@ -27,7 +27,7 @@ public class NekoJSClient {
     /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
     private static void onClientSetup(FMLConstructModEvent event) {
         event.enqueueWork(() -> {
-            NekoJS.LOGGER.debug("[NekoJS] Client environment ready, loading CLIENT scripts...");
+            NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
             NekoJSMod.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
             ScriptType.CLIENT.logger().debug("Early script injection...");
         });
@@ -45,11 +45,11 @@ public class NekoJSClient {
     private static void onClientResourceReload(RegisterClientReloadListenersEvent event) {
         // 1.21.1: NeoForge 注册重载监听器不需要手动指定 ID，直接 registerReloadListener 即可
         event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> {
-            NekoJS.LOGGER.debug("[NekoJS] Detected client resource reload (F3 + T), reloading CLIENT scripts...");
+            NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
                 NekoJSMod.SCRIPT_MANAGER.reloadScripts(ScriptType.CLIENT);
             } catch (Exception e) {
-                NekoJS.LOGGER.debug("[NekoJS] CLIENT script reload failed", e);
+                NekoJS.LOGGER.debug("CLIENT script reload failed", e);
             }
         });
     }

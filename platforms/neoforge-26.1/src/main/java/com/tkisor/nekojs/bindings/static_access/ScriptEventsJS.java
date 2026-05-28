@@ -48,7 +48,7 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
                 bus,
                 () -> NeoForge.EVENT_BUS.unregister(listener)
         ));
-        NekoJS.LOGGER.debug("[NekoJS] Script event registered: {}.{} -> {}", groupName, eventName, eventClass.getName());
+        NekoJS.LOGGER.debug("Script event registered: {}.{} -> {}", groupName, eventName, eventClass.getName());
     }
 
     private static void validateName(String field, String value) {

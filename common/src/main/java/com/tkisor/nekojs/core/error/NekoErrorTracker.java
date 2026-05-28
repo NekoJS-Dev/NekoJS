@@ -75,7 +75,7 @@ public class NekoErrorTracker {
         if (currentType != null) {
             currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
         }
-        NekoJS.LOGGER.error("[NekoJS] Script {} callback exception:\n{}", kind, detail);
+        NekoJS.LOGGER.error("Script {} callback exception:\n{}", kind, detail);
     }
 
     public static SourceSection getBestSourceLocation(PolyglotException e) {

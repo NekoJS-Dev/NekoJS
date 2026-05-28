@@ -101,12 +101,12 @@ public class ClassFilter implements Predicate<String> {
             ClassFilter.conciseScriptErrorLogs = config.get("conciseScriptErrorLogs");
 
             NekoJS.LOGGER.info(
-                    "[NekoJS] Engine config loaded. Unsafe features enabled: {}",
+                    "Engine config loaded. Unsafe features enabled: {}",
                     ClassFilter.isAnyUnsafeFeatureEnabled()
             );
 
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] Failed to load engine.toml", e);
+            NekoJS.LOGGER.error("Failed to load engine.toml", e);
         }
     }
 

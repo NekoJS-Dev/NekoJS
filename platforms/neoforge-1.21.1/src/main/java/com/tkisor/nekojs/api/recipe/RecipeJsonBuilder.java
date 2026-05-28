@@ -74,7 +74,7 @@ public class RecipeJsonBuilder {
         ResourceLocation parsedId = parseId(newId);
 
         if (parsedId == null) {
-            NekoJS.LOGGER.debug("[NekoJS] Invalid recipe ID: {}", newId);
+            NekoJS.LOGGER.debug("Invalid recipe ID: {}", newId);
             parsedId = this.currentId;
         }
 

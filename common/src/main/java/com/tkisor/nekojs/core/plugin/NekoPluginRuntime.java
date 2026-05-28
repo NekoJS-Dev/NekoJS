@@ -137,7 +137,7 @@ public final class NekoPluginRuntime {
             try {
                 hook.accept(context);
             } catch (Exception e) {
-                ScriptType.SERVER.logger().error("[NekoJS] Recipe lifecycle hook failed", e);
+                ScriptType.SERVER.logger().error("Recipe lifecycle hook failed", e);
             }
         }
     }

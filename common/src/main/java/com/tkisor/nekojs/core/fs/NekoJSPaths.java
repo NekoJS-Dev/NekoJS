@@ -60,7 +60,7 @@ public final class NekoJSPaths {
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
-            NekoJS.LOGGER.error("[NekoJS] Failed to create directory: {}", dir, e);
+            NekoJS.LOGGER.error("Failed to create directory: {}", dir, e);
         }
     }
 

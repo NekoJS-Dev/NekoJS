@@ -40,7 +40,7 @@ public final class WorkspaceGenerator {
                     """.formatted(NekoJSPaths.PROBE_DIR.getFileName()).trim();
                 Files.writeString(NekoJSPaths.README, content);
             } catch (IOException ex) {
-                NekoJS.LOGGER.error("[NekoJS] Failed to create README.txt", ex);
+                NekoJS.LOGGER.error("Failed to create README.txt", ex);
             }
         }
     }
@@ -73,7 +73,7 @@ public final class WorkspaceGenerator {
             try {
                 Files.writeString(configPath, GSON.toJson(event.getModel()));
             } catch (IOException e) {
-                NekoJS.LOGGER.error("[NekoJS] Failed to create config file: {}", configPath, e);
+                NekoJS.LOGGER.error("Failed to create config file: {}", configPath, e);
             }
         }
     }
@@ -84,7 +84,7 @@ public final class WorkspaceGenerator {
             Files.createDirectories(snippetsPath.getParent());
             Files.writeString(snippetsPath, GSON.toJson(NekoSnippetJson.vscodeSnippets()));
         } catch (IOException e) {
-            NekoJS.LOGGER.error("[NekoJS] Failed to create snippets file: {}", snippetsPath, e);
+            NekoJS.LOGGER.error("Failed to create snippets file: {}", snippetsPath, e);
         }
     }
 

@@ -78,7 +78,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         this.nekojs$rawJsons.entrySet().removeIf(entry -> ICondition.getWithConditionalCodec(conditionalCodec, JsonOps.INSTANCE, entry.getValue()).isEmpty());
 
         int afterCount = this.nekojs$rawJsons.size();
-        NekoJS.LOGGER.debug("[NekoJS] Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
+        NekoJS.LOGGER.debug("Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
         try {
@@ -99,9 +99,9 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 newHolders.add(new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, entry.getKey()), recipe));
             } catch (Exception e) {
                 if (entry.getValue().isJsonObject()) {
-                    NekoJS.LOGGER.error("[NekoJS] {}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
+                    NekoJS.LOGGER.error("{}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
                 } else {
-                    NekoJS.LOGGER.error("[NekoJS] Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
+                    NekoJS.LOGGER.error("Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
                 }
             }
         }
@@ -109,7 +109,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         this.recipes = RecipeMap.create(newHolders);
         this.nekojs$rawJsons.clear();
 
-        ScriptType.SERVER.logger().debug("[NekoJS] Script execution completed, total recipes: {}", this.recipes.values().size());
+        ScriptType.SERVER.logger().debug("Script execution completed, total recipes: {}", this.recipes.values().size());
         List<ServerPlayer> players = null;
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();

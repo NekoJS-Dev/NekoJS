@@ -15,28 +15,28 @@ public final class NeoForgePluginLoader {
                 RegisterNekoJSPlugin.class,
                 null,
                 NeoForgePluginLoader::registerPluginClass,
-                () -> NekoJS.LOGGER.debug("[NekoJS] Plugin scan finished")
+                () -> NekoJS.LOGGER.debug("Plugin scan finished")
         );
     }
 
     private static void registerPluginClass(Class<?> clazz) {
         if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
-            NekoJS.LOGGER.error("[NekoJS] Plugin {} does not implement NekoJSPlugin", clazz.getName());
+            NekoJS.LOGGER.error("Plugin {} does not implement NekoJSPlugin", clazz.getName());
             return;
         }
 
         int mod = clazz.getModifiers();
         if (clazz.isInterface() || Modifier.isAbstract(mod)) {
-            NekoJS.LOGGER.error("[NekoJS] Plugin {} is not a concrete class", clazz.getName());
+            NekoJS.LOGGER.error("Plugin {} is not a concrete class", clazz.getName());
             return;
         }
 
         try {
             NekoJSPlugin plugin = (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
             NekoJSPluginManager.register(plugin);
-            NekoJS.LOGGER.debug("[NekoJS] Registered plugin: {}", clazz.getName());
+            NekoJS.LOGGER.debug("Registered plugin: {}", clazz.getName());
         } catch (Throwable t) {
-            NekoJS.LOGGER.error("[NekoJS] Failed to instantiate plugin {}", clazz.getName(), t);
+            NekoJS.LOGGER.error("Failed to instantiate plugin {}", clazz.getName(), t);
         }
     }
 }

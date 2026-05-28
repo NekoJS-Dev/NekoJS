@@ -93,7 +93,7 @@ public final class NekoJSLoggers {
                 Files.move(file, backupFile, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
-            NekoJS.LOGGER.error("[NekoJS] Failed to create or backup log file for script: {}", file, e);
+            NekoJS.LOGGER.error("Failed to create or backup log file for script: {}", file, e);
         }
 
         PatternLayout layout = PatternLayout.newBuilder()

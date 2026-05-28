@@ -62,7 +62,7 @@ public final class ScriptContainer {
                     try {
                         properties.put(prop, prop.read(parts[1].trim()));
                     } catch (Exception e) {
-                        type.logger().warn("[NekoJS] Failed to parse script property '{}' in {}: {}", parts[0].trim(), path, e.getMessage());
+                        type.logger().warn("Failed to parse script property '{}' in {}: {}", parts[0].trim(), path, e.getMessage());
                     }
                 }
             }

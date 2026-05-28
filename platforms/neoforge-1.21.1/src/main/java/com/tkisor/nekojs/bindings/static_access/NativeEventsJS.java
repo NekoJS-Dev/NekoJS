@@ -59,14 +59,14 @@ public class NativeEventsJS {
             try {
                 handler.executeVoid(event);
             } catch (Exception e) {
-                NekoJS.LOGGER.debug("[NekoJS] NativeEvent execution exception (" + eventClass.getSimpleName() + "): ", e);
+                NekoJS.LOGGER.debug("NativeEvent execution exception (" + eventClass.getSimpleName() + "): ", e);
             }
         };
 
         NeoForge.EVENT_BUS.addListener(priority, receiveCancelled, (Class) eventClass, consumer);
 
         REGISTERED_LISTENERS.add(consumer);
-        NekoJS.LOGGER.debug("[NekoJS] Native event registered successfully: {}", eventClass.getSimpleName());
+        NekoJS.LOGGER.debug("Native event registered successfully: {}", eventClass.getSimpleName());
     }
 
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
@@ -92,7 +92,7 @@ public class NativeEventsJS {
             default -> {
             }
         }
-        NekoJS.LOGGER.debug("[NekoJS] Failed to resolve class type: {}", obj);
+        NekoJS.LOGGER.debug("Failed to resolve class type: {}", obj);
         return null;
     }
 
@@ -112,7 +112,7 @@ public class NativeEventsJS {
             } catch (ClassNotFoundException e) {
                 int lastDotIndex = currentName.lastIndexOf('.');
                 if (lastDotIndex == -1) {
-                    NekoJS.LOGGER.debug("[NekoJS] Class not found, please check the spelling of the class name: {}", className);
+                    NekoJS.LOGGER.debug("Class not found, please check the spelling of the class name: {}", className);
                     return null;
                 }
                 currentName = currentName.substring(0, lastDotIndex) + '$' + currentName.substring(lastDotIndex + 1);
@@ -126,7 +126,7 @@ public class NativeEventsJS {
         if (clazz != null && Event.class.isAssignableFrom(clazz)) {
             return (Class<? extends Event>) clazz;
         }
-        NekoJS.LOGGER.error("[NekoJS] Target is not a valid NeoForge event: {}", obj);
+        NekoJS.LOGGER.error("Target is not a valid NeoForge event: {}", obj);
         return null;
     }
 
@@ -134,7 +134,7 @@ public class NativeEventsJS {
         if (obj instanceof EventPriority p) return p;
         if (obj instanceof String s) {
             try { return EventPriority.valueOf(s.toUpperCase()); }
-            catch (Exception e) { NekoJS.LOGGER.debug("[NekoJS] Unknown priority value: {}", s); }
+            catch (Exception e) { NekoJS.LOGGER.debug("Unknown priority value: {}", s); }
         }
         if (obj instanceof Value v && v.isString()) return resolvePriority(v.asString());
         return EventPriority.NORMAL;
