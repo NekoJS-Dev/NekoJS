@@ -31,6 +31,25 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * Server-side recipe modification event. Wraps the raw datapack recipe JSON map
+ * and provides query/modify/remove/replace operations.
+ *
+ * <h2>JS API</h2>
+ * <pre>
+ * ServerEvents.recipes(event {@code ->} {
+ *   event.remove({ mod: "minecraft", output: "minecraft:stick" });
+ *   event.forEach({ type: "minecraft:crafting_shaped" }, recipe {@code ->} recipe.setPath("result.count", 4));
+ *   event.recipes.minecraft.smelting(Ingredient.of("iron_ore"), ItemJS.of("iron_ingot"));
+ *   event.dump({ mod: "create" });  // dump recipes to log
+ * });
+ * </pre>
+ *
+ * <h2>Internal</h2>
+ * Recipe JSON is stored in a {@code Map<Identifier, JsonElement>} and
+ * modifications happen in-place. The mixin {@code RecipeManagerMixin} reads
+ * modified JSON during the final CODEC parse phase.
+ */
 public class RecipeEventJS implements RecipeLifecycleContext {
 
     private final RecipeRegistryProxy recipesProxy;
@@ -172,7 +191,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             JsonArray array = element.getAsJsonArray();
             for (int i = 0; i < array.size(); i++) {
                 JsonElement child = array.get(i);
-                if (inputContext && testIngredientNode(child, match)) {
+                // Schema-aware: in INPUT context, try individual element matching via Codec
+                // (handles partial replacement of compound ingredients like [#planks, #stones])
+                if (inputContext && testSingleIngredient(child, match)) {
                     array.set(i, replacementJson.deepCopy());
                     modified = true;
                 } else if (replaceInputInJson(child, match, replacementJson, inputContext)) {
@@ -196,6 +217,17 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             }
         }
         return modified;
+    }
+
+    /** Parse single element through Ingredient.CODEC — works for individual items in arrays. */
+    private boolean testSingleIngredient(JsonElement node, Ingredient match) {
+        try {
+            Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
+            // For single-element matching: the node must contain the match, not be exactly equal
+            return !nodeIng.isEmpty() && nodeIng.items().anyMatch(h -> match.test(new ItemStack(h)));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean isInputKey(String key) {

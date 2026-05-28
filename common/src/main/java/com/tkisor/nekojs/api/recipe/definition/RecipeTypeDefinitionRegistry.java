@@ -20,6 +20,14 @@ public final class RecipeTypeDefinitionRegistry {
         return new Builder();
     }
 
+    public RecipeTypeDefinitionRegistry merge(RecipeTypeDefinitionRegistry other) {
+        Map<String, Map<String, RecipeTypeDefinition>> merged = new LinkedHashMap<>(definitions);
+        for (var entry : other.definitions.entrySet()) {
+            merged.computeIfAbsent(entry.getKey(), ignored -> new LinkedHashMap<>()).putAll(entry.getValue());
+        }
+        return new RecipeTypeDefinitionRegistry(merged);
+    }
+
     public Set<String> namespaces() {
         return definitions.keySet();
     }

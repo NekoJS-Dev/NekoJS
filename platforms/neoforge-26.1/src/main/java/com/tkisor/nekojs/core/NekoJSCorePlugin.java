@@ -21,6 +21,7 @@ import com.tkisor.nekojs.bindings.static_access.ColorJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
 import com.tkisor.nekojs.bindings.static_access.IDJS;
+import com.tkisor.nekojs.bindings.RecipeSchemaBinding;
 import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
@@ -96,6 +97,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerBinding(BindingRegistry registry) {
         registry.register("Ingredient", new IngredientFactory());
+        registry.register("RecipeSchema", new RecipeSchemaBinding());
         registry.register("Fluid", new FluidJS());
         registry.register("FluidIngredient", new FluidIngredientJS());
         registry.register("FluidAmounts", FluidAmounts.class);
@@ -163,7 +165,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
-        registry.register(RecipeNamespaceEntry.of("minecraft", MinecraftRecipeHandler::new, MinecraftRecipeHandler.class));
+//        registry.registerSchema();
+        registry.register(new RecipeNamespaceEntry("minecraft", e -> new MinecraftRecipeHandler((com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e), MinecraftRecipeHandler.class));
     }
 
     @Override

@@ -6,9 +6,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 标记一个类为 NekoJS 插件。<p>
- * 插件类必须实现 {NekoJSPlugin} 接口。<p>
- * 插件类会在 NekoJS 初始化时被自动注册。
+ * Marks a class as a NekoJS plugin for auto-discovery.
+ * The annotated class must implement {@link com.tkisor.nekojs.api.NekoJSPlugin}.
+ *
+ * <p>Plugins are discovered via {@code NeoForgePluginLoader.loadAnnotatedPlugins()}
+ * during mod initialization and registered with the plugin bootstrap system.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

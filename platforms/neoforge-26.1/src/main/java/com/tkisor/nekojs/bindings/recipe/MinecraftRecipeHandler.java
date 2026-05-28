@@ -1,10 +1,8 @@
 package com.tkisor.nekojs.bindings.recipe;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
-import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -16,142 +14,49 @@ import java.util.Map;
 public class MinecraftRecipeHandler {
     private final RecipeEventJS event;
 
-    public MinecraftRecipeHandler(RecipeEventJS event) {
-        this.event = event;
-    }
+    public MinecraftRecipeHandler(RecipeEventJS event) { this.event = event; }
 
-    public RecipeJsonBuilder smelting(Ingredient input, ItemStack output) {
-        return smelting(input, output, 0.1f, 200);
-    }
+    // ========== crafting_shaped ==========
 
-    public RecipeJsonBuilder smelting(Ingredient input, ItemStack output, float xp, int cookTime) {
-        return cooking("minecraft:smelting", input, output, xp, cookTime);
-    }
-
-    public RecipeJsonBuilder blasting(Ingredient input, ItemStack output) {
-        return blasting(input, output, 0.1f, 100);
-    }
-
-    public RecipeJsonBuilder blasting(Ingredient input, ItemStack output, float xp, int cookTime) {
-        return cooking("minecraft:blasting", input, output, xp, cookTime);
-    }
-
-    public RecipeJsonBuilder smoking(Ingredient input, ItemStack output) {
-        return smoking(input, output, 0.1f, 100);
-    }
-
-    public RecipeJsonBuilder smoking(Ingredient input, ItemStack output, float xp, int cookTime) {
-        return cooking("minecraft:smoking", input, output, xp, cookTime);
-    }
-
-    public RecipeJsonBuilder campfireCooking(Ingredient input, ItemStack output) {
-        return campfireCooking(input, output, 0.1f, 600);
-    }
-
-    public RecipeJsonBuilder campfireCooking(Ingredient input, ItemStack output, float xp, int cookTime) {
-        return cooking("minecraft:campfire_cooking", input, output, xp, cookTime);
-    }
-
-    private RecipeJsonBuilder cooking(String type, Ingredient input, ItemStack output, float xp, int cookTime) {
-        return event.builder(type)
-                .input("ingredient", input)
-                .output("result", output)
-                .jsonProperty("experience", xp)
-                .jsonProperty("cookingtime", cookTime);
-    }
-
-    public RecipeJsonBuilder stonecutting(Ingredient input, ItemStack output) {
-        return event.builder("minecraft:stonecutting")
-                .input("ingredient", input)
-                .output("result", output);
-    }
-
-    public RecipeJsonBuilder smithingTransform(Ingredient template, Ingredient base, Ingredient addition, ItemStack result) {
-        return event.builder("minecraft:smithing_transform")
-                .input("template", template)
-                .input("base", base)
-                .input("addition", addition)
-                .output("result", result);
-    }
-
-    public RecipeJsonBuilder smithingTrim(Ingredient template, Ingredient base, Ingredient addition) {
-        return event.builder("minecraft:smithing_trim")
-                .input("template", template)
-                .input("base", base)
-                .input("addition", addition);
-    }
-
-    public RecipeJsonBuilder crafting_shaped(RecipeJsonValue json) {
-        return event.custom("minecraft:crafting_shaped", json);
-    }
-
-    public RecipeJsonBuilder crafting_shapeless(RecipeJsonValue json) {
-        return event.custom("minecraft:crafting_shapeless", json);
-    }
-
-    public RecipeJsonBuilder shaped(ItemStack result, List<String> pattern, Map<String, Ingredient> keys) {
+    public RecipeJsonBuilder crafting_shaped(ItemStack result, List<String> pattern,
+                                             Map<String, Ingredient> keys) {
         JsonArray patternArray = new JsonArray();
-        for (String row : pattern) {
-            patternArray.add(row);
-        }
-
+        for (String row : pattern) patternArray.add(row);
         JsonObject keyObj = new JsonObject();
-        for (Map.Entry<String, Ingredient> entry : keys.entrySet()) {
+        for (var entry : keys.entrySet())
             keyObj.add(entry.getKey(), event.serializeIngredient(entry.getValue()));
-        }
-
-        return event.builder("minecraft:crafting_shaped")
-                .jsonProperty("pattern", patternArray)
-                .jsonProperty("key", keyObj)
-                .output("result", result);
+        RecipeJsonBuilder builder = event.builder("minecraft:crafting_shaped")
+                .jsonProperty("pattern", patternArray).jsonProperty("key", keyObj).output("result", result);
+        return builder;
     }
 
-    public RecipeJsonBuilder shaped(ItemStack result, List<List<Ingredient>> inlinePattern) {
+    public RecipeJsonBuilder crafting_shaped(ItemStack result, List<List<Ingredient>> inlinePattern) {
         JsonArray patternArray = new JsonArray();
         JsonObject keyObj = new JsonObject();
-
-        Map<String, Character> uniquenessMap = new HashMap<>();
-        char nextChar = 'A';
-
-        for (List<Ingredient> row : inlinePattern) {
-            StringBuilder rowBuilder = new StringBuilder();
-
+        Map<String, Character> seen = new HashMap<>();
+        char next = 'A';
+        for (var row : inlinePattern) {
+            StringBuilder sb = new StringBuilder();
             for (Ingredient ing : row) {
-                if (ing == null || ing.isEmpty()) {
-                    rowBuilder.append(' ');
-                    continue;
-                }
-
-                JsonElement serializedIng = event.serializeIngredient(ing);
-                String hash = serializedIng.toString();
-
-                Character c = uniquenessMap.get(hash);
-                if (c == null) {
-                    c = nextChar++;
-                    uniquenessMap.put(hash, c);
-                    keyObj.add(String.valueOf(c), serializedIng);
-                }
-                rowBuilder.append(c);
+                if (ing == null || ing.isEmpty()) { sb.append(' '); continue; }
+                String hash = event.serializeIngredient(ing).toString();
+                Character c = seen.get(hash);
+                if (c == null) { c = next++; seen.put(hash, c); keyObj.add(String.valueOf(c), event.serializeIngredient(ing)); }
+                sb.append(c);
             }
-            patternArray.add(rowBuilder.toString());
+            patternArray.add(sb.toString());
         }
-
-        return event.builder("minecraft:crafting_shaped")
-                .jsonProperty("pattern", patternArray)
-                .jsonProperty("key", keyObj)
-                .output("result", result);
+        RecipeJsonBuilder builder = event.builder("minecraft:crafting_shaped")
+                .jsonProperty("pattern", patternArray).jsonProperty("key", keyObj).output("result", result);
+        return builder;
     }
 
-    public RecipeJsonBuilder shapeless(ItemStack result, List<Ingredient> ingredients) {
-        JsonArray ingredientsArray = new JsonArray();
-        for (Ingredient ing : ingredients) {
-            if (ing != null && !ing.isEmpty()) {
-                ingredientsArray.add(event.serializeIngredient(ing));
-            }
-        }
-
-        return event.builder("minecraft:crafting_shapeless")
-                .jsonProperty("ingredients", ingredientsArray)
-                .output("result", result);
+    public RecipeJsonBuilder crafting_shapeless(ItemStack result, List<Ingredient> ingredients) {
+        JsonArray arr = new JsonArray();
+        for (Ingredient ing : ingredients)
+            if (ing != null && !ing.isEmpty()) arr.add(event.serializeIngredient(ing));
+        RecipeJsonBuilder builder = event.builder("minecraft:crafting_shapeless")
+                .jsonProperty("ingredients", arr).output("result", result);
+        return builder;
     }
 }
