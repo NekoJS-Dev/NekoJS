@@ -13,7 +13,6 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +22,6 @@ public final class NekoPluginRuntime {
     private static NekoPluginRuntime current;
 
     private final ScriptCompilerRegistry scriptCompilers;
-    private final ScriptPropertyRegistry scriptProperties;
     private final Map<ScriptType, Map<String, Binding>> bindings;
     private final List<JSTypeAdapter<?>> adapters;
     private final Map<String, EventGroup> eventGroups;
@@ -35,7 +33,6 @@ public final class NekoPluginRuntime {
     private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks;
 
     NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
-                              ScriptPropertyRegistry scriptProperties,
                               Map<ScriptType, Map<String, Binding>> bindings,
                               List<JSTypeAdapter<?>> adapters,
                               Map<String, EventGroup> eventGroups,
@@ -46,7 +43,6 @@ public final class NekoPluginRuntime {
                               List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
                               List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
         this.scriptCompilers = scriptCompilers;
-        this.scriptProperties = scriptProperties;
         this.bindings = bindings;
         this.adapters = adapters;
         this.eventGroups = eventGroups;
@@ -86,10 +82,6 @@ public final class NekoPluginRuntime {
 
     public ScriptCompilerRegistry scriptCompilers() {
         return scriptCompilers;
-    }
-
-    public ScriptPropertyRegistry scriptProperties() {
-        return scriptProperties;
     }
 
     public Map<String, Binding> bindings(ScriptType type) {

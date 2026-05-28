@@ -57,9 +57,6 @@ public class NekoJSMod extends NekoJS {
     private void initializeScripts() {
         NeoForgePluginLoader.loadAnnotatedPlugins();
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins());
-        
-        // Update parent's ScriptPropertyRegistry with plugin bootstrapped one
-        this.scriptProperties = pluginRuntime.scriptProperties();
 
         // 为每种自动加载的脚本类型创建 ScriptManager
         for (ScriptType type : ScriptType.autoLoadTypes()) {

@@ -14,7 +14,7 @@ public class NekoJS {
 
     public static NekoJS COMMON;
 
-    public ScriptPropertyRegistry scriptProperties = new ScriptPropertyRegistry.Impl();
+    public final ScriptPropertyRegistry scriptProperties = new ScriptPropertyRegistry.Impl();
     public final ScriptTypedValue<ScriptManager> scriptManagers = ScriptTypedValue.of();
     public final ScriptEventBridge scriptEventBridge;
 

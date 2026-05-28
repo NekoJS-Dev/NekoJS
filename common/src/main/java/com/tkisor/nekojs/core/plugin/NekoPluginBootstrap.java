@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.plugin;
 
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.NekoJSBasePlugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
@@ -26,7 +27,6 @@ import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypePredicate;
 import com.tkisor.nekojs.script.ScriptTypedValue;
-import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 public final class NekoPluginBootstrap {
     private static final List<NekoPluginExtensionPoint<?>> BUILT_IN_EXTENSION_POINTS = List.of(
             base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
-            base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(context.scriptProperties())),
+            base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(NekoJS.COMMON.scriptProperties)),
             base("nekojs:bindings", (plugin, context) -> {
                     var predicate = context.client()
                         ? ScriptTypePredicate.exact(ScriptType.CLIENT).negate()
@@ -115,7 +115,6 @@ public final class NekoPluginBootstrap {
 
     private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        private final ScriptPropertyRegistry.Impl scriptProperties = new ScriptPropertyRegistry.Impl();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
         private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
@@ -140,11 +139,6 @@ public final class NekoPluginBootstrap {
         @Override
         public ScriptCompilerRegistry scriptCompilers() {
             return scriptCompilers;
-        }
-
-        @Override
-        public ScriptPropertyRegistry scriptProperties() {
-            return scriptProperties;
         }
 
         @Override
@@ -200,13 +194,11 @@ public final class NekoPluginBootstrap {
         void freeze() {
             frozen = true;
             scriptCompilers.freeze();
-            scriptProperties.freeze();
         }
 
         NekoPluginRuntime createRuntime() {
             return new NekoPluginRuntime(
                     scriptCompilers,
-                    scriptProperties,
                     bindingsByScriptType(),
                     adaptersSnapshot(),
                     eventGroupsSnapshot(),
