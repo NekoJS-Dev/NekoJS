@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
@@ -40,14 +41,14 @@ public final class NekoJSCommands {
                         .then(Commands.literal("test")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-                                    source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
+                                    source.sendSystemMessage(Component.literal("Running NekoJStest scripts..."));
 
                                     try {
-                                        NekoJS.SCRIPT_MANAGER.runTestScripts();
-                                        sendReloadResult(source, "NekoJS test scripts completed.");
+                                        NekoJSMod.SCRIPT_MANAGER.runTestScripts();
+                                        sendReloadResult(source, "NekoJStest scripts completed.");
                                     } catch (Exception e) {
                                         NekoJS.LOGGER.error("Running test scripts failed fatally", e);
-                                        source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
+                                        source.sendFailure(Component.literal("Running NekoJStest scripts failed fatally."));
                                     }
                                     return 1;
                                 })
@@ -134,14 +135,14 @@ public final class NekoJSCommands {
         if (!canReloadHere(source, type)) {
             return 0;
         }
-        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
+        source.sendSystemMessage(Component.literal("Reloading NekoJS" + type.name + " scripts..."));
         try {
             if (type == ScriptType.TEST) {
-                NekoJS.SCRIPT_MANAGER.runTestScripts();
+                NekoJSMod.SCRIPT_MANAGER.runTestScripts();
             } else {
-                NekoJS.SCRIPT_MANAGER.reloadScripts(type);
+                NekoJSMod.SCRIPT_MANAGER.reloadScripts(type);
             }
-            sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
+            sendReloadResult(source, "NekoJS" + type.name + " scripts reloaded.");
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
@@ -155,9 +156,9 @@ public final class NekoJSCommands {
         }
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
-            int affectedEntries = NekoJS.SCRIPT_MANAGER.reloadScriptFile(type, filePath).size();
+            int affectedEntries = NekoJSMod.SCRIPT_MANAGER.reloadScriptFile(type, filePath).size();
             if (type == ScriptType.TEST) {
-                NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
+                NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
             }
             sendReloadResult(source, "NekoJS " + type.name + " script " + filePath + " reloaded (" + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
         } catch (Exception e) {

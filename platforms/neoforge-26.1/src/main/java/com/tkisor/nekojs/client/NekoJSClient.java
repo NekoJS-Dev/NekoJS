@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.script.ScriptType;
@@ -8,7 +9,6 @@ import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -29,7 +29,7 @@ public class NekoJSClient {
     private static void onClientSetup(FMLConstructModEvent event) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("[NekoJS] Client environment ready, loading CLIENT scripts...");
-            NekoJS.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
+            NekoJSMod.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
             ScriptType.CLIENT.logger().debug("Early script injection...");
         });
     }
@@ -39,7 +39,7 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event) {
-        NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.CLIENT);
+        NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 
     private static void onClientResourceReload(AddClientReloadListenersEvent event) {
@@ -48,7 +48,7 @@ public class NekoJSClient {
         event.addListener(listenerId, (ResourceManagerReloadListener) resourceManager -> {
             NekoJS.LOGGER.debug("[NekoJS] Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
-                NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.CLIENT);
+                NekoJSMod.SCRIPT_MANAGER.reloadScripts(ScriptType.CLIENT);
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("[NekoJS] CLIENT script reload failed", e);
             }

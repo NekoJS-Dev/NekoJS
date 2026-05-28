@@ -7,7 +7,7 @@ import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 
 public class FallbackNamespaceProxy implements ProxyObject {
     private final RecipeEventJS event;
@@ -34,10 +34,10 @@ public class FallbackNamespaceProxy implements ProxyObject {
                     return event.custom(json);
 
                 } catch (Exception e) {
-                    NekoJSCommon.LOGGER.debug("Failed to parse fallback JSON: ", e);
+                    NekoJS.LOGGER.debug("Failed to parse fallback JSON: ", e);
                 }
             } else {
-                NekoJSCommon.LOGGER.debug("Handler {}:{} not found, and arguments are not a valid JSON object.", namespace, recipeType);
+                NekoJS.LOGGER.debug("Handler {}:{} not found, and arguments are not a valid JSON object.", namespace, recipeType);
             }
             return null;
         };

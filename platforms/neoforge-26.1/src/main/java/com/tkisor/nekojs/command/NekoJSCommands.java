@@ -6,6 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
@@ -43,7 +44,7 @@ public final class NekoJSCommands {
                                     source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
 
                                     try {
-                                        NekoJS.SCRIPT_MANAGER.runTestScripts();
+                                        NekoJSMod.SCRIPT_MANAGER.runTestScripts();
                                         sendReloadResult(source, "NekoJS test scripts completed.");
                                     } catch (Exception e) {
                                         NekoJS.LOGGER.error("Running test scripts failed fatally", e);
@@ -137,9 +138,9 @@ public final class NekoJSCommands {
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
         try {
             if (type == ScriptType.TEST) {
-                NekoJS.SCRIPT_MANAGER.runTestScripts();
+                NekoJSMod.SCRIPT_MANAGER.runTestScripts();
             } else {
-                NekoJS.SCRIPT_MANAGER.reloadScripts(type);
+                NekoJSMod.SCRIPT_MANAGER.reloadScripts(type);
             }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
         } catch (Exception e) {
@@ -155,9 +156,9 @@ public final class NekoJSCommands {
         }
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
-            int affectedEntries = NekoJS.SCRIPT_MANAGER.reloadScriptFile(type, filePath).size();
+            int affectedEntries = NekoJSMod.SCRIPT_MANAGER.reloadScriptFile(type, filePath).size();
             if (type == ScriptType.TEST) {
-                NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
+                NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
             }
             sendReloadResult(source, "NekoJS " + type.name + " script " + filePath + " reloaded (" + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
         } catch (Exception e) {

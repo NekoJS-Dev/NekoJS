@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.error;
 
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -75,7 +75,7 @@ public class NekoErrorTracker {
         if (currentType != null) {
             currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
         }
-        NekoJSCommon.LOGGER.error("[NekoJS] Script {} callback exception:\n{}", kind, detail);
+        NekoJS.LOGGER.error("[NekoJS] Script {} callback exception:\n{}", kind, detail);
     }
 
     public static SourceSection getBestSourceLocation(PolyglotException e) {

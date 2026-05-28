@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.fs;
 
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.platform.Platform;
 
@@ -60,7 +60,7 @@ public final class NekoJSPaths {
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
-            NekoJSCommon.LOGGER.error("[NekoJS] Failed to create directory: {}", dir, e);
+            NekoJS.LOGGER.error("[NekoJS] Failed to create directory: {}", dir, e);
         }
     }
 

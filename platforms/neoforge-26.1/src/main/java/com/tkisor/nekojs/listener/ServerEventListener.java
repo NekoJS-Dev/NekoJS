@@ -3,6 +3,8 @@ package com.tkisor.nekojs.listener;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.recipe.definition.MinecraftRecipeSchemaScanner;
 import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
@@ -37,7 +39,7 @@ public class ServerEventListener {
         }
         event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
-            NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
+            NekoJSMod.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("Script overload failed: ", e);
         }

@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.NekoJSScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.script.ScriptType;
@@ -128,7 +128,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         try {
             return this.bus.post(event);
         } catch (Exception e) {
-            NekoJSCommon.LOGGER.error("Error during CancellableEventBus execution", e);
+            NekoJS.LOGGER.error("Error during CancellableEventBus execution", e);
             return false;
         }
     }
@@ -138,7 +138,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             try {
                 return ((DispatchEventBus<EVENT, KEY>) bus).post(event, key);
             } catch (Exception e) {
-                NekoJSCommon.LOGGER.error("Error during EventBus execution", e);
+                NekoJS.LOGGER.error("Error during EventBus execution", e);
             }
             return false;
         }

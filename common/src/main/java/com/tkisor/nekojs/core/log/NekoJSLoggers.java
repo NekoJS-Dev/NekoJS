@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.log;
 
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -93,7 +93,7 @@ public final class NekoJSLoggers {
                 Files.move(file, backupFile, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (Exception e) {
-            NekoJSCommon.LOGGER.error("[NekoJS] Failed to create or backup log file for script: {}", file, e);
+            NekoJS.LOGGER.error("[NekoJS] Failed to create or backup log file for script: {}", file, e);
         }
 
         PatternLayout layout = PatternLayout.newBuilder()
@@ -191,13 +191,13 @@ public final class NekoJSLoggers {
                 Throwable t = lastEvent.getThrown();
 
                 if (level == Level.ERROR || level == Level.FATAL) {
-                    NekoJSCommon.LOGGER.error(consoleMsg, t);
+                    NekoJS.LOGGER.error(consoleMsg, t);
                 } else if (level == Level.WARN) {
-                    NekoJSCommon.LOGGER.warn(consoleMsg, t);
+                    NekoJS.LOGGER.warn(consoleMsg, t);
                 } else if (level == Level.DEBUG) {
-                    NekoJSCommon.LOGGER.debug(consoleMsg, t);
+                    NekoJS.LOGGER.debug(consoleMsg, t);
                 } else {
-                    NekoJSCommon.LOGGER.info(consoleMsg, t);
+                    NekoJS.LOGGER.info(consoleMsg, t);
                 }
 
                 lastEvent = null;

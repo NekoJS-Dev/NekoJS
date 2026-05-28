@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -13,8 +14,8 @@ public final class PDataSyncListener {
 
     @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
-        NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.SERVER);
-        NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
+        NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.SERVER);
+        NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.TEST);
         PDataSyncService.flush(event.getServer());
     }
 }

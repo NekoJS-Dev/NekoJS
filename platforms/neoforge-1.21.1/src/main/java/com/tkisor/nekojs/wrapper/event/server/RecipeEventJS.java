@@ -2,7 +2,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.RecipeCreationContext;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
@@ -15,9 +15,7 @@ import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
@@ -142,7 +140,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
             if (replaceInputInJson(jsonObj, match, replacementJson)) replaced++;
         }
-        NekoJSCommon.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced input ingredients in {} recipes", replaced);
+        NekoJS.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced input ingredients in {} recipes", replaced);
     }
 
     private boolean replaceInputInJson(JsonObject recipeJson, Ingredient match, JsonElement replacementJson) {
@@ -207,7 +205,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
             if (replaceOutputInJson(jsonObj, match, replacementJson, false)) replaced++;
         }
-        NekoJSCommon.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced outputs in {} recipes", replaced);
+        NekoJS.LOGGER.debug("[NekoJS] Successfully intercepted JSON tree and replaced outputs in {} recipes", replaced);
     }
 
     private boolean replaceOutputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean outputContext) {
@@ -273,7 +271,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             if (remove) contexts.remove(entry.getKey());
             return remove;
         });
-        NekoJSCommon.LOGGER.debug("[NekoJS] Removed {} recipes matching the filter", before - jsons.size());
+        NekoJS.LOGGER.debug("[NekoJS] Removed {} recipes matching the filter", before - jsons.size());
     }
 
     public String dump(RecipeFilter filter) {
@@ -292,7 +290,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     public void print(RecipeFilter filter) {
         List<RecipeEntryJS> recipes = filter == null ? all() : find(filter);
         for (RecipeEntryJS recipe : recipes) {
-            NekoJSCommon.LOGGER.info("[NekoJS] Recipe dump {}: {}", recipe.id(), recipe.json());
+            NekoJS.LOGGER.info("[NekoJS] Recipe dump {}: {}", recipe.id(), recipe.json());
         }
     }
 
@@ -393,7 +391,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public RecipeJsonBuilder custom(JsonObject recipeJson) {
         if (recipeJson == null || !recipeJson.has("type") || !recipeJson.get("type").isJsonPrimitive()) {
-            NekoJSCommon.LOGGER.debug("[NekoJS] Failed to register custom recipe: missing required 'type' field!");
+            NekoJS.LOGGER.debug("[NekoJS] Failed to register custom recipe: missing required 'type' field!");
             return null;
         }
         return new RecipeJsonBuilder(this, recipeJson, "custom");

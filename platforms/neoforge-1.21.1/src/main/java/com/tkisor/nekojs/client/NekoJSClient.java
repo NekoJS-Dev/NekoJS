@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import com.tkisor.nekojs.NekoJSCommon;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -27,8 +27,8 @@ public class NekoJSClient {
     /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
     private static void onClientSetup(FMLConstructModEvent event) {
         event.enqueueWork(() -> {
-            NekoJSCommon.LOGGER.debug("[NekoJS] Client environment ready, loading CLIENT scripts...");
-            NekoJS.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
+            NekoJS.LOGGER.debug("[NekoJS] Client environment ready, loading CLIENT scripts...");
+            NekoJSMod.SCRIPT_MANAGER.loadScripts(ScriptType.CLIENT);
             ScriptType.CLIENT.logger().debug("Early script injection...");
         });
     }
@@ -38,18 +38,18 @@ public class NekoJSClient {
     }
 
     private static void onClientTickPost(ClientTickEvent.Post event) {
-        NekoJS.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.CLIENT);
+        NekoJSMod.SCRIPT_MANAGER.flushReadyNodeTimers(ScriptType.CLIENT);
     }
 
     // 1.21.1: 事件名改为 RegisterClientReloadListenersEvent
     private static void onClientResourceReload(RegisterClientReloadListenersEvent event) {
         // 1.21.1: NeoForge 注册重载监听器不需要手动指定 ID，直接 registerReloadListener 即可
         event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> {
-            NekoJSCommon.LOGGER.debug("[NekoJS] Detected client resource reload (F3 + T), reloading CLIENT scripts...");
+            NekoJS.LOGGER.debug("[NekoJS] Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
-                NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.CLIENT);
+                NekoJSMod.SCRIPT_MANAGER.reloadScripts(ScriptType.CLIENT);
             } catch (Exception e) {
-                NekoJSCommon.LOGGER.debug("[NekoJS] CLIENT script reload failed", e);
+                NekoJS.LOGGER.debug("[NekoJS] CLIENT script reload failed", e);
             }
         });
     }

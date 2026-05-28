@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.data;
 
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 
 public record NekoId(String namespace, String path) {
     public NekoId {
@@ -17,7 +17,7 @@ public record NekoId(String namespace, String path) {
         if (separator >= 0) {
             return new NekoId(value.substring(0, separator), value.substring(separator + 1));
         }
-        return new NekoId(NekoJSCommon.MODID, value);
+        return new NekoId(NekoJS.MODID, value);
     }
 
     public static NekoId of(String namespace, String path) {

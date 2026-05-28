@@ -3,7 +3,7 @@ package com.tkisor.nekojs.listener;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.recipe.definition.MinecraftRecipeSchemaScanner;
 import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
@@ -32,13 +32,13 @@ public class ServerEventListener {
                 RecipeSchemaAutoDiscovery.DiscoveredRecipeTypes discovered = MinecraftRecipeSchemaScanner.scan();
                 RecipeTypeDefinitionStorage.setAutoDiscovered(RecipeSchemaAutoDiscovery.discover(() -> discovered));
             } catch (Exception e) {
-                NekoJSCommon.LOGGER.warn("[NekoJS] Failed to auto-discover recipe schemas: {}", e.getMessage());
+                NekoJS.LOGGER.warn("[NekoJS] Failed to auto-discover recipe schemas: {}", e.getMessage());
             }
             schemaAutoDiscovered = true;
         }
         event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
-            NekoJS.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
+            NekoJSMod.SCRIPT_MANAGER.reloadScripts(ScriptType.SERVER);
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("Script overload failed: ", e);
         }
@@ -58,7 +58,7 @@ public class ServerEventListener {
                 }
                 builder.add(RecipeTypeDefinitionJsonLoader.parse(resourceId.getNamespace(), typeName, json.getAsJsonObject()));
             } catch (Exception e) {
-                NekoJSCommon.LOGGER.error("[NekoJS] Failed to load recipe type definition {}", resourceId, e);
+                NekoJS.LOGGER.error("[NekoJS] Failed to load recipe type definition {}", resourceId, e);
             }
         }
         RecipeTypeDefinitionStorage.replace(builder.build());

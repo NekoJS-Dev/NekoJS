@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 
 import java.util.Set;
@@ -100,13 +100,13 @@ public class ClassFilter implements Predicate<String> {
             ClassFilter.enableEsmAuthoring = config.get("enableEsmAuthoring");
             ClassFilter.conciseScriptErrorLogs = config.get("conciseScriptErrorLogs");
 
-            NekoJSCommon.LOGGER.info(
+            NekoJS.LOGGER.info(
                     "[NekoJS] Engine config loaded. Unsafe features enabled: {}",
                     ClassFilter.isAnyUnsafeFeatureEnabled()
             );
 
         } catch (Exception e) {
-            NekoJSCommon.LOGGER.error("[NekoJS] Failed to load engine.toml", e);
+            NekoJS.LOGGER.error("[NekoJS] Failed to load engine.toml", e);
         }
     }
 

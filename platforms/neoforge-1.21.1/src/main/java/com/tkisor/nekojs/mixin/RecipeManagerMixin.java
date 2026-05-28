@@ -4,7 +4,7 @@ import com.google.common.collect.Multimap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.mojang.serialization.JsonOps;
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
@@ -72,7 +72,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         });
 
         int afterCount = this.nekojs$rawJsons.size();
-        NekoJSCommon.LOGGER.debug("[NekoJS] Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
+        NekoJS.LOGGER.debug("[NekoJS] Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
         try {
@@ -94,9 +94,9 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                 newHolders.add(new RecipeHolder<>(entry.getKey(), recipe));
             } catch (Exception e) {
                 if (entry.getValue().isJsonObject()) {
-                    NekoJSCommon.LOGGER.error("[NekoJS] {}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
+                    NekoJS.LOGGER.error("[NekoJS] {}", eventJS.formatRecipeError("Invalid recipe after script processing", entry.getKey(), entry.getValue().getAsJsonObject(), e));
                 } else {
-                    NekoJSCommon.LOGGER.error("[NekoJS] Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
+                    NekoJS.LOGGER.error("[NekoJS] Invalid recipe after script processing (id={}): {}", entry.getKey(), e.getMessage());
                 }
             }
         }

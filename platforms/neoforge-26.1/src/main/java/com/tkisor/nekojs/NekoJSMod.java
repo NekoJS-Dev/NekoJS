@@ -21,14 +21,14 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 
-@Mod(NekoJSCommon.MODID)
-public class NekoJS extends NekoJSCommon {
+@Mod(NekoJS.MODID)
+public class NekoJSMod extends NekoJS {
     public static IEventBus modEventBus;
     public static NekoJSScriptManager SCRIPT_MANAGER;
 
-    public NekoJS(IEventBus modEventBus, ModContainer modContainer) {
+    public NekoJSMod(IEventBus modEventBus, ModContainer modContainer) {
         NeoForgeRuntimeBootstrap.setup();
-        NekoJS.modEventBus = modEventBus;
+        NekoJSMod.modEventBus = modEventBus;
 
         registerEventListeners(modEventBus);
         initializeWorkspace();
@@ -37,7 +37,7 @@ public class NekoJS extends NekoJSCommon {
     }
 
     private static void registerEventListeners(IEventBus modEventBus) {
-        modEventBus.addListener(NekoJS::onCommonSetup);
+        modEventBus.addListener(NekoJSMod::onCommonSetup);
         modEventBus.addListener(RegistryEventListener::onRegister);
         modEventBus.addListener(RegistryEventListener::onEntityAttributeCreation);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);

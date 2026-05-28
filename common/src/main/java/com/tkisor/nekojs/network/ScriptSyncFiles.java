@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.network;
 
-import com.tkisor.nekojs.NekoJSCommon;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.nio.charset.StandardCharsets;
@@ -27,7 +27,7 @@ public final class ScriptSyncFiles {
                         } catch (Exception ignored) {}
                     });
         } catch (Exception e) {
-            NekoJSCommon.LOGGER.error("Failed to collect scripts from " + rootDir, e);
+            NekoJS.LOGGER.error("Failed to collect scripts from " + rootDir, e);
         }
         return files;
     }
