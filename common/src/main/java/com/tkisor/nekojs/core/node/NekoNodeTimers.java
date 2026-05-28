@@ -125,7 +125,7 @@ public final class NekoNodeTimers implements AutoCloseable {
     private void recordScriptId(int id, Value callback) {
         if (callback == null) return;
         Context context = callback.getContext();
-        String scriptId = ScriptManager.from(context).getCurrentScriptId(context);
+        String scriptId = ScriptManager.getCurrentScriptId(context);
         if (scriptId == null || scriptId.isBlank()) {
             scriptId = activeScriptIds.get(context);
         }
@@ -140,8 +140,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         String scriptId = scriptIds.get(id);
         try {
             synchronized (context) {
-                ScriptManager manager = ScriptManager.from(context);
-                String previousScriptId = manager.switchCurrentScriptId(context, scriptId);
+                String previousScriptId = ScriptManager.switchCurrentScriptId(context, scriptId);
                 if (scriptId != null && !scriptId.isBlank()) {
                     activeScriptIds.put(context, scriptId);
                 }
@@ -151,7 +150,7 @@ public final class NekoNodeTimers implements AutoCloseable {
                     if (scriptId != null && !scriptId.isBlank()) {
                         activeScriptIds.remove(context);
                     }
-                    manager.restoreCurrentScriptId(context, previousScriptId);
+                    ScriptManager.restoreCurrentScriptId(context, previousScriptId);
                 }
             }
         } catch (Throwable e) {

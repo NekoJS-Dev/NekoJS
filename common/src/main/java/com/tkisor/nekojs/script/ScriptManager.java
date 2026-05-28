@@ -61,6 +61,10 @@ public final class ScriptManager {
         return sm;
     }
 
+    // ---- 全局：Context → ScriptId 映射（跨 ScriptType 共享） ----
+    private static final Map<Context, String> CONTEXT_SCRIPT_ID_MAP =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
     // ---- 实例字段 ----
 
     /**
@@ -77,8 +81,6 @@ public final class ScriptManager {
     private Context context;
     private NekoNodeRuntime nodeRuntime;
     private List<ScriptContainer> scripts;
-
-    private final Map<Context, String> contextScriptIdMap = Collections.synchronizedMap(new WeakHashMap<>());
 
     // ---- 构造函数 ----
 
@@ -105,6 +107,7 @@ public final class ScriptManager {
             this.context = sandbox.context();
             this.nodeRuntime = sandbox.nodeRuntime();
             CONTEXT_TO_MANAGER.put(context, this);
+            context.getBindings("js").putMember("__nekoCurrentScriptId", null);
 
             var bindings = context.getBindings("js");
             parent.scriptEventBridge.bindEvents(bindings, scriptType);
@@ -459,7 +462,7 @@ public final class ScriptManager {
             }
         }
         if (oldContext != null) {
-            contextScriptIdMap.remove(oldContext);
+            CONTEXT_SCRIPT_ID_MAP.remove(oldContext);
             CONTEXT_TO_MANAGER.remove(oldContext);
             try {
                 oldContext.close();
@@ -487,7 +490,7 @@ public final class ScriptManager {
         }
     }
 
-    // ---- Context 身份管理 ----
+    // ---- Context 身份管理（全局，跨 ScriptType 共享） ----
 
     /**
      * 从上下文获取对应的脚本类型
@@ -496,27 +499,27 @@ public final class ScriptManager {
         return scriptType;
     }
 
-    public String switchCurrentScriptId(Context context, String scriptId) {
-        String previous = contextScriptIdMap.get(context);
+    public static String switchCurrentScriptId(Context context, String scriptId) {
+        String previous = CONTEXT_SCRIPT_ID_MAP.get(context);
         setCurrentScriptId(context, scriptId);
         return previous;
     }
 
-    public void restoreCurrentScriptId(Context context, String scriptId) {
+    public static void restoreCurrentScriptId(Context context, String scriptId) {
         setCurrentScriptId(context, scriptId);
     }
 
-    public String getCurrentScriptId(Context context) {
-        return contextScriptIdMap.get(context);
+    public static String getCurrentScriptId(Context context) {
+        return CONTEXT_SCRIPT_ID_MAP.get(context);
     }
 
-    private void setCurrentScriptId(Context context, String scriptId) {
+    private static void setCurrentScriptId(Context context, String scriptId) {
         if (context == null) return;
         if (scriptId == null || scriptId.isBlank()) {
-            contextScriptIdMap.remove(context);
+            CONTEXT_SCRIPT_ID_MAP.remove(context);
             context.getBindings("js").putMember("__nekoCurrentScriptId", null);
         } else {
-            contextScriptIdMap.put(context, scriptId);
+            CONTEXT_SCRIPT_ID_MAP.put(context, scriptId);
             context.getBindings("js").putMember("__nekoCurrentScriptId", scriptId);
         }
     }

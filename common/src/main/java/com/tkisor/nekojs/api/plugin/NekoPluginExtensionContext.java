@@ -9,14 +9,11 @@ import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
 import com.tkisor.nekojs.api.recipe.RecipeSchemaRegister;
 import com.tkisor.nekojs.script.ScriptTypedValue;
-import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 public interface NekoPluginExtensionContext {
     boolean client();
 
     ScriptCompilerRegistry scriptCompilers();
-
-    ScriptPropertyRegistry scriptProperties();
 
     ScriptTypedValue<BindingRegistry> bindings();
 
