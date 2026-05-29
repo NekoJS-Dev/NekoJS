@@ -495,8 +495,8 @@ public final class ScriptManager {
     /**
      * 从上下文获取对应的脚本类型
      */
-    public ScriptType getTypeFromContext(Context ignored) {
-        return scriptType;
+    public static ScriptType getTypeFromContext(Context context) {
+        return CONTEXT_TO_MANAGER.get(context).scriptType;
     }
 
     public static String switchCurrentScriptId(Context context, String scriptId) {

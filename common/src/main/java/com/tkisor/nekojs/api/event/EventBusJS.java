@@ -169,7 +169,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 token = register(args[0]); // listen((e) => {})
             }
         }
-        ScriptType type = ScriptManager.from(listener.getContext()).getTypeFromContext(listener.getContext());
+        ScriptType type = ScriptManager.getTypeFromContext(listener.getContext());
         String scriptId = ScriptManager.getCurrentScriptId(listener.getContext());
         tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
         return true;
@@ -177,7 +177,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> register(Value listener) {
         Context context = listener.getContext();
-        ScriptType type = ScriptManager.from(context).getTypeFromContext(context);
+        ScriptType type = ScriptManager.getTypeFromContext(context);
         String scriptId = ScriptManager.getCurrentScriptId(context);
 
         return this.bus.listen(event -> {
@@ -198,7 +198,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
         Context context = listener.getContext();
-        ScriptType type = ScriptManager.from(context).getTypeFromContext(context);
+        ScriptType type = ScriptManager.getTypeFromContext(context);
         String scriptId = ScriptManager.getCurrentScriptId(context);
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
@@ -222,7 +222,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
         Context context = listener.getContext();
-        ScriptType type = ScriptManager.from(context).getTypeFromContext(context);
+        ScriptType type = ScriptManager.getTypeFromContext(context);
         String scriptId = ScriptManager.getCurrentScriptId(context);
         var bus = (DispatchEventBus<EVENT, KEY>) this.bus;
         KEY dispatchKey = key.as(bus.dispatchKey().keyType());
@@ -250,7 +250,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerDispatchCancellable(Value listener, Value key) {
         Context context = listener.getContext();
-        ScriptType type = ScriptManager.from(context).getTypeFromContext(context);
+        ScriptType type = ScriptManager.getTypeFromContext(context);
         String scriptId = ScriptManager.getCurrentScriptId(context);
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
         KEY dispatchKey = key.as(bus.dispatchKey().keyType());
