@@ -13,12 +13,12 @@ import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
-import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -182,7 +182,7 @@ public final class NekoJSCommands {
     }
 
     private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
-        if (type == ScriptType.CLIENT && !Platform.isClient()) {
+        if (type == ScriptType.CLIENT && !FMLLoader.getDist().isClient()) {
             source.sendFailure(Component.literal("Client script reload is only available in an integrated client runtime."));
             return false;
         }

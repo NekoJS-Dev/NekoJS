@@ -46,6 +46,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
@@ -133,6 +134,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("MobEffects", MobEffects.class);
         registry.register("MobEffectInstance", MobEffectInstance.class);
         registry.register("DamageTypes", DamageTypes.class);
+        registry.register("Component", Component.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
             registry.register("Minecraft", Minecraft.class);

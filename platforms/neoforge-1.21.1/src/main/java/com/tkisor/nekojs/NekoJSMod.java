@@ -6,6 +6,10 @@ import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NeoForgePluginLoader;
 import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
+import com.tkisor.nekojs.platform.NekoIdCompat;
+import com.tkisor.nekojs.platform.NeoForgeIdCompat;
+import com.tkisor.nekojs.platform.NeoForgePlatform;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
@@ -26,6 +30,11 @@ import net.neoforged.neoforge.common.NeoForge;
 @Mod(NekoJS.MODID)
 public class NekoJSMod extends NekoJS {
     public static IEventBus modEventBus;
+
+    static {
+        Platform.init(new NeoForgePlatform());
+        NekoIdCompat.init(new NeoForgeIdCompat());
+    }
 
     public NekoJSMod(IEventBus modEventBus, ModContainer modContainer) {
         super(new DefaultScriptEventBridge(new ScriptEventsJS()));

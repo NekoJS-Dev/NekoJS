@@ -133,7 +133,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("MobEffects", MobEffects.class);
         registry.register("MobEffectInstance", MobEffectInstance.class);
         registry.register("DamageTypes", DamageTypes.class);
-        registry.register("Comp", Component.class);
+        registry.register("Component", Component.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
             registry.register("Minecraft", Minecraft.class);
