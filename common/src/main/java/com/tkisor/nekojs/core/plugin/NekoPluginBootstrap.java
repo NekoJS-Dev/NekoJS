@@ -10,8 +10,7 @@ import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
-import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
-import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionPoint;
@@ -117,11 +116,11 @@ public final class NekoPluginBootstrap {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
-        private final List<JSTypeAdapter<?>> adapters = new ArrayList<>();
-        private final Map<String, EventGroup> eventGroups = new LinkedHashMap<>();
+        private final JSTypeAdapterRegistry adapters = new JSTypeAdapterRegistry.Impl();
+        private final EventGroupRegistry eventGroups = new EventGroupRegistry.Impl();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
-        private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces = new LinkedHashMap<>();
+        private final Map<String, RecipeNamespaceEntry> recipeNamespaces = new LinkedHashMap<>();
         private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides = new LinkedHashMap<>();
         private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
         private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
@@ -147,13 +146,13 @@ public final class NekoPluginBootstrap {
         }
 
         @Override
-        public JSTypeAdapterRegister adapters() {
-            return this::registerAdapter;
+        public JSTypeAdapterRegistry adapters() {
+            return adapters;
         }
 
         @Override
         public EventGroupRegistry events() {
-            return this::registerEvent;
+            return eventGroups;
         }
 
         @Override
@@ -200,8 +199,8 @@ public final class NekoPluginBootstrap {
             return new NekoPluginRuntime(
                     scriptCompilers,
                     bindingsByScriptType(),
-                    adaptersSnapshot(),
-                    eventGroupsSnapshot(),
+                    List.copyOf(adapters().view()),
+                    Map.copyOf(eventGroups.view()),
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
                     recipeNamespacesSnapshot(),
@@ -219,22 +218,6 @@ public final class NekoPluginBootstrap {
             return Collections.unmodifiableMap(copy);
         }
 
-        <T> void registerAdapter(JSTypeAdapter<T> adapter) {
-            requireMutable("adapters");
-            adapters.add(Objects.requireNonNull(adapter, "adapter"));
-        }
-
-        void registerEvent(EventGroup group) {
-            requireMutable("events");
-            Objects.requireNonNull(group, "group");
-            EventGroup existing = eventGroups.get(group.name());
-            if (existing != null) {
-                existing.merge(group);
-            } else {
-                eventGroups.put(group.name(), group);
-            }
-        }
-
         @Override
         public void register(TypeDocCatalogEntry entry) {
             requireMutable("type docs");
@@ -247,7 +230,7 @@ public final class NekoPluginBootstrap {
             manualDeclarations.add(Objects.requireNonNull(entry, "entry"));
         }
 
-        <C> void registerRecipeNamespace(RecipeNamespaceEntry<C> entry) {
+        void registerRecipeNamespace(RecipeNamespaceEntry entry) {
             requireMutable("recipe namespaces");
             Objects.requireNonNull(entry, "entry");
             if (recipeNamespaces.containsKey(entry.namespace())) {
@@ -259,14 +242,6 @@ public final class NekoPluginBootstrap {
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
             return this.bindingRegistries.stream()
                 .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
-        }
-
-        List<JSTypeAdapter<?>> adaptersSnapshot() {
-            return List.copyOf(adapters);
-        }
-
-        Map<String, EventGroup> eventGroupsSnapshot() {
-            return Collections.unmodifiableMap(new LinkedHashMap<>(eventGroups));
         }
 
         List<TypeDocCatalogEntry> typeDocsSnapshot() {
@@ -281,7 +256,7 @@ public final class NekoPluginBootstrap {
                     .toList();
         }
 
-        Map<String, RecipeNamespaceEntry<?>> recipeNamespacesSnapshot() {
+        Map<String, RecipeNamespaceEntry> recipeNamespacesSnapshot() {
             return Collections.unmodifiableMap(new LinkedHashMap<>(recipeNamespaces));
         }
 

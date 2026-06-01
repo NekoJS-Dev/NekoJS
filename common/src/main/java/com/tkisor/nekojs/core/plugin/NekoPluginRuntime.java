@@ -27,7 +27,7 @@ public final class NekoPluginRuntime {
     private final Map<String, EventGroup> eventGroups;
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
-    private final Map<String, RecipeNamespaceEntry<?>> recipeNamespaces;
+    private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
     private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides;
     private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks;
     private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks;
@@ -38,7 +38,7 @@ public final class NekoPluginRuntime {
                               Map<String, EventGroup> eventGroups,
                               List<TypeDocCatalogEntry> typeDocs,
                               List<ManualDeclarationCatalogEntry> manualDeclarations,
-                              Map<String, RecipeNamespaceEntry<?>> recipeNamespaces,
+                              Map<String, RecipeNamespaceEntry> recipeNamespaces,
                               Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides,
                               List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
                               List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
@@ -104,7 +104,7 @@ public final class NekoPluginRuntime {
         return manualDeclarations;
     }
 
-    public Map<String, RecipeNamespaceEntry<?>> recipeNamespaces() {
+    public Map<String, RecipeNamespaceEntry> recipeNamespaces() {
         return recipeNamespaces;
     }
 

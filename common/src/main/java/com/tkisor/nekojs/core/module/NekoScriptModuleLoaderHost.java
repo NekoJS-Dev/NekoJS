@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
@@ -17,7 +18,6 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,7 +38,7 @@ public final class NekoScriptModuleLoaderHost {
     private final NekoEsmModuleRecordCache esmRecordCache = new NekoEsmModuleRecordCache();
     private final NekoNativeEsmSourceRewriter esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
     private final NekoModuleDependencyGraph dependencyGraph = new NekoModuleDependencyGraph();
-    private final ModuleSliceRelinker sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link, this::captureNamespaceForRelink);
+    private final ModuleSliceRelinker sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link);
     private final Map<String, ModuleState> moduleCache = new ConcurrentHashMap<>();
     private final Map<String, Long> moduleRevisions = new ConcurrentHashMap<>();
     private Value executor;
@@ -52,6 +52,7 @@ public final class NekoScriptModuleLoaderHost {
 
     // ---- JS bridge: internal/script-loader.js 通过 GraalVM interop 调用 ----
 
+    @CalledByDynamicCode
     public void configure(Value executor, Value moduleFactory, Value specialResolver, Value jsonParser) {
         this.executor = executor;
         this.moduleFactory = moduleFactory;
@@ -60,35 +61,42 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     // ---- ESM namespace 回调: 由 captureNamespaceSync/Async 中动态拼接的 JS 字符串调用 ----
-    // 这些方法的调用者不在 .java 或 .js 文件中，而是在 context.eval() 时动态生成的代码：
-    //   "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(...)"
+    // 调用代码如: "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(...)"
+    // 见 captureNamespaceSync/Async 方法中的 context.eval() 字符串拼接。
 
+    @CalledByDynamicCode
     public void captureEsmNamespace(String moduleId, Value namespace) {
         captureEsmNamespace(moduleId, revision(moduleId), namespace);
     }
 
+    @CalledByDynamicCode
     public void captureEsmNamespace(String moduleId, long revision, Value namespace) {
         esmRecordCache.captureNamespace(moduleId, revision, namespace);
     }
 
+    @CalledByDynamicCode
     public void completeEsmNamespace(String moduleId, Value namespace) {
         completeEsmNamespace(moduleId, revision(moduleId), namespace);
     }
 
+    @CalledByDynamicCode
     public void completeEsmNamespace(String moduleId, long revision, Value namespace) {
         esmRecordCache.completeNamespace(moduleId, revision, namespace);
     }
 
+    @CalledByDynamicCode
     public void failEsmNamespace(String moduleId, Object failure) {
         failEsmNamespace(moduleId, revision(moduleId), failure);
     }
 
+    @CalledByDynamicCode
     public void failEsmNamespace(String moduleId, long revision, Object failure) {
         esmRecordCache.failNamespace(moduleId, revision, toThrowable(failure));
     }
 
     // ---- 入口加载: JS bridge 调用，也由 ScriptManager 通过 Java 间接调用 ----
 
+    @CalledByDynamicCode
     public Object loadEntry(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
         dependencyGraph.markEntry(resolved.id());
@@ -114,12 +122,14 @@ public final class NekoScriptModuleLoaderHost {
 
     // ---- import.meta 解析: NekoNativeEsmSourceRewriter 生成替换代码时引用 ----
 
+    @CalledByDynamicCode
     public String resolveImportMeta(String parentPath, String specifier) throws IOException {
         return resolveNativeImport(parentPath, specifier);
     }
 
     // ---- 缓存与依赖管理: JS bridge + Java 调用 ----
 
+    @CalledByDynamicCode
     public void clearCache() {
         moduleCache.clear();
         esmRecordCache.clear();
@@ -130,6 +140,7 @@ public final class NekoScriptModuleLoaderHost {
         NekoEsmVirtualModuleRegistry.clear();
     }
 
+    @CalledByDynamicCode
     public void clearRuntimeCache() {
         moduleCache.clear();
         esmRecordCache.clear();
@@ -139,16 +150,19 @@ public final class NekoScriptModuleLoaderHost {
         NekoEsmVirtualModuleRegistry.clear();
     }
 
+    @CalledByDynamicCode
     public java.util.List<String> affectedEntries(String modulePath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
         return dependencyGraph.affectedEntries(resolved.id());
     }
 
+    @CalledByDynamicCode
     public void invalidateAffectedModules(String modulePath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
         invalidateModules(dependencyGraph.affectedModules(resolved.id()), false);
     }
 
+    @CalledByDynamicCode
     public void invalidateModuleTree(String modulePath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
@@ -196,27 +210,18 @@ public final class NekoScriptModuleLoaderHost {
         return new HotReloadResult(moduleId, reevaluated, sliceResult.failed(), true);
     }
 
-    private Value captureNamespaceForRelink(NekoEsmModuleRecord record) throws IOException {
-        if (record.evaluation() != null && record.evaluation().isDone() && !record.evaluation().isCompletedExceptionally()) {
-            try {
-                return record.evaluation().get();
-            } catch (Exception e) {
-                throw new IOException("Failed to capture namespace for relink: " + record.id(), e);
-            }
-        }
-        return null;
-    }
-
     public record HotReloadResult(String changedModuleId, List<String> relinked, List<String> failed, boolean success) {}
 
     // ---- Native ESM import/export: JS bridge __nekoNativeImport 和 NekoNativeEsmSourceRewriter 生成代码调用 ----
 
+    @CalledByDynamicCode
     public Object nativeImport(String parentPath, String specifier) throws IOException {
         NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
         recordDependency(parentPath, resolved);
         return loadResolved(resolved);
     }
 
+    @CalledByDynamicCode
     public CompletableFuture<?> nativeImportAsync(String parentPath, String specifier) throws IOException {
         NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
         recordDependency(parentPath, resolved);

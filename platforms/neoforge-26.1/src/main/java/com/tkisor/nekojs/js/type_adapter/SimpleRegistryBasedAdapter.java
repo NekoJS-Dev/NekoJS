@@ -17,7 +17,7 @@ public record SimpleRegistryBasedAdapter<T>(Registry<T> registry, Class<T> targe
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isString()) {
             return true;
         }
@@ -29,7 +29,7 @@ public record SimpleRegistryBasedAdapter<T>(Registry<T> registry, Class<T> targe
     }
 
     @Override
-    public T convert(Value value) {
+    public T apply(Value value) {
         if (value.isString()) {
             return getFromRegistry(value, Identifier.parse(value.asString()));
         }

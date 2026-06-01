@@ -104,17 +104,9 @@ public class RecipeRegistryProxy implements ProxyObject {
     }
 
     private Object namespaceMember(String namespace) {
-        Object handler = NekoRecipeNamespaces.createHandler(namespace, event);
-        RecipeTypeDefinitionRegistry definitions = event.getRecipeTypeDefinitions();
-        boolean hasDefinitions = definitions.hasNamespace(namespace);
-
-        if (handler == null) {
-            if (hasDefinitions) return new DataDrivenRecipeNamespaceProxy(event, namespace, definitions);
-            return new FallbackNamespaceProxy(event, namespace);
-        }
-
-        Object schemaFallback = hasDefinitions ? new DataDrivenRecipeNamespaceProxy(event, namespace, definitions) : new FallbackNamespaceProxy(event, namespace);
-        return new HandlerWithSchemaProxy(handler, (ProxyObject) schemaFallback);
+        return new RecipeNamespaceProxy(event, namespace,
+                NekoRecipeNamespaces.createHandler(namespace, event),
+                event.getRecipeTypeDefinitions());
     }
 
     private static String stringArgument(Value[] arguments, int index, String name) {

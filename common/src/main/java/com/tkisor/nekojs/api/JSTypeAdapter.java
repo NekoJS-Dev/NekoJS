@@ -3,11 +3,14 @@ package com.tkisor.nekojs.api;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 /**
  * JS 类型适配器接口。<p>
  * 插件类可以实现此接口，以提供自定义的类型转换。
  */
-public interface JSTypeAdapter<T> {
+public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
     Class<T> getTargetClass();
 
     default HostAccess.TargetMappingPrecedence getPrecedence() {
@@ -17,10 +20,12 @@ public interface JSTypeAdapter<T> {
     /**
      * 判断 JS 值是否可以转换为目标类型
      */
-    boolean canConvert(Value value);
+    @Override
+    boolean test(Value value);
 
     /**
      * 将 JS 值转换为目标类型，如果无法转换应直接抛出异常更为稳妥，而非返回null
      */
-    T convert(Value value);
+    @Override
+    T apply(Value value);
 }

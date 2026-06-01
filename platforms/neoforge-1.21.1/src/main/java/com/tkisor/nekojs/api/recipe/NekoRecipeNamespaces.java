@@ -13,7 +13,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public final class NekoRecipeNamespaces {
@@ -22,13 +21,8 @@ public final class NekoRecipeNamespaces {
     private NekoRecipeNamespaces() {}
 
     public static Object createHandler(String namespace, RecipeEventJS event) {
-        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
-        if (entry == null) {
-            return null;
-        }
-        @SuppressWarnings("unchecked")
-        Function<RecipeEventJS, Object> factory = (Function<RecipeEventJS, Object>) entry.factory();
-        return factory.apply(event);
+        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        return entry == null ? null : entry.factory().apply(event);
     }
 
     public static Set<String> getNamespaces() {
@@ -46,7 +40,7 @@ public final class NekoRecipeNamespaces {
     }
 
     public static @Nullable Class<?> getHandlerClass(String namespace) {
-        RecipeNamespaceEntry<?> entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
         return entry == null ? null : entry.handlerClass();
     }
 

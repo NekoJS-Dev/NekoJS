@@ -34,6 +34,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
+
 /**
  * NekoJS 脚本引擎核心生命周期调度器。
  * <p>

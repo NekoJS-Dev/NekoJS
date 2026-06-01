@@ -3,7 +3,7 @@ package com.tkisor.nekojs.api.plugin;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.BindingRegistry;
-import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
@@ -17,7 +17,7 @@ public interface NekoPluginExtensionContext {
 
     ScriptTypedValue<BindingRegistry> bindings();
 
-    JSTypeAdapterRegister adapters();
+    JSTypeAdapterRegistry adapters();
 
     EventGroupRegistry events();
 

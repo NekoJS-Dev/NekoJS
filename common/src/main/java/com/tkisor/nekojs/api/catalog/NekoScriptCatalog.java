@@ -2,9 +2,7 @@ package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
-import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.api.event.NekoEventGroups;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
@@ -122,7 +120,7 @@ public final class NekoScriptCatalog {
 
     public static List<EventCatalogEntry> events(ScriptType scriptType) {
         List<EventCatalogEntry> entries = new ArrayList<>();
-        for (EventGroup group : NekoEventGroups.all().values()) {
+        for (EventGroup group : NekoPluginRuntime.current().eventGroups().values()) {
             for (var entry : group.viewBuses().entrySet()) {
                 EventGroup.BusHolder holder = entry.getValue();
                 if (!holder.canApplyOn(scriptType)) continue;
@@ -141,7 +139,7 @@ public final class NekoScriptCatalog {
 
     public static List<AdapterCatalogEntry> adapters() {
         List<AdapterCatalogEntry> entries = new ArrayList<>();
-        for (var adapter : NekoJSTypeAdapters.all()) {
+        for (var adapter : NekoPluginRuntime.current().adapters()) {
             entries.add(adapterEntry(adapter));
         }
         return List.copyOf(entries);

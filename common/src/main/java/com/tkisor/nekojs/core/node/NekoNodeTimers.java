@@ -13,6 +13,16 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Node-compatible timer backend: setTimeout, setInterval, setImmediate.
+ *
+ * <p>Uses a daemon-thread {@link ScheduledExecutorService}. Callbacks are queued
+ * to a {@code ConcurrentLinkedQueue} and flushed synchronously on each tick
+ * (server tick for server_scripts, client tick for client_scripts).
+ *
+ * <p>STARTUP scripts reject delayed timers and setInterval entirely.
+ * Reload cancels all timers registered by the old script.
+ */
 public final class NekoNodeTimers implements AutoCloseable {
     private final ScriptType scriptType;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(task -> {

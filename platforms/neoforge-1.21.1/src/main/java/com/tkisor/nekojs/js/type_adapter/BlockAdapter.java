@@ -18,7 +18,7 @@ public class BlockAdapter implements JSTypeAdapter<Block> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isNull() || value.isString()) {
             return true;
         }
@@ -30,7 +30,7 @@ public class BlockAdapter implements JSTypeAdapter<Block> {
     }
 
     @Override
-    public Block convert(Value value) {
+    public Block apply(Value value) {
         if (value.isNull()) {
             return Blocks.AIR;
         }

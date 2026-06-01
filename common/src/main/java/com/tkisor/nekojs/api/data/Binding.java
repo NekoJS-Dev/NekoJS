@@ -19,7 +19,7 @@ public interface Binding {
         return value == null ? Void.class : value instanceof Class<?> c ? c : value.getClass();
     }
 
-    /// Invoked when reloading script, and old binding is being removed
+    /// Invoked when reloading script
     default void close(ScriptType scriptType) {
     }
 

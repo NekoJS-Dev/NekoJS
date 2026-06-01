@@ -73,7 +73,6 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
     }
 
     private Map<String, Value> values(RecipeTypeDefinition definition, Value[] arguments) {
-        // Mode 1: 单对象参数（命名参数）
         if (arguments.length == 1 && arguments[0].hasMembers() && hasDefinitionField(definition, arguments[0])) {
             Map<String, Value> values = new LinkedHashMap<>();
             for (String field : definition.fields().keySet()) {
@@ -83,7 +82,6 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
             }
             return values;
         }
-        // Mode 2: 位置参数（匹配构造器顺序）
         for (List<String> constructor : definition.constructors()) {
             if (constructor.size() == arguments.length) {
                 Map<String, Value> values = new LinkedHashMap<>();
@@ -93,14 +91,7 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
                 return values;
             }
         }
-        // 没有匹配：生成有用的错误信息
-        StringBuilder msg = new StringBuilder("No constructor for " + definition.key() + " accepts " + arguments.length + " arguments.\n");
-        msg.append("Available constructors:\n");
-        for (List<String> c : definition.constructors()) {
-            msg.append("  ").append(c.size()).append(" args: ").append(String.join(", ", c)).append("\n");
-        }
-        msg.append("Or use named arguments: { ").append(String.join(", ", definition.fields().keySet())).append(" }");
-        throw new IllegalArgumentException(msg.toString());
+        throw new IllegalArgumentException("No constructor for " + definition.key() + " accepts " + arguments.length + " arguments");
     }
 
     private boolean hasDefinitionField(RecipeTypeDefinition definition, Value value) {
@@ -135,7 +126,7 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
             case NUMBER -> new JsonPrimitive(value.asDouble());
             case BOOLEAN -> new JsonPrimitive(value.asBoolean());
             case INGREDIENT -> event.serializeIngredient(IngredientResolver.fromValue(value));
-            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().convert(value));
+            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().apply(value));
             case FLUID_STACK -> event.serializeFluidStack(FluidResolver.stackFromValue(value));
             case FLUID_INGREDIENT -> event.serializeFluidIngredient(FluidResolver.ingredientFromValue(value));
             case SIZED_FLUID_INGREDIENT -> event.serializeSizedFluidIngredient(FluidResolver.sizedFromValue(value));

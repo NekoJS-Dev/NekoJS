@@ -3,6 +3,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.google.gson.*;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.api.recipe.RecipeCreationContext;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
@@ -26,6 +27,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@CalledByDynamicCode
 public class RecipeEventJS implements RecipeLifecycleContext {
 
     private final RecipeRegistryProxy recipesProxy;
@@ -154,7 +156,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             JsonArray array = element.getAsJsonArray();
             for (int i = 0; i < array.size(); i++) {
                 JsonElement child = array.get(i);
-                if (inputContext && testIngredientNode(child, match)) {
+                if (inputContext && testSingleIngredient(child, match)) {
                     array.set(i, replacementJson.deepCopy());
                     modified = true;
                 } else if (replaceInputInJson(child, match, replacementJson, inputContext)) {
@@ -178,6 +180,15 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             }
         }
         return modified;
+    }
+
+    private boolean testSingleIngredient(JsonElement node, Ingredient match) {
+        try {
+            Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
+            return !nodeIng.isEmpty() && java.util.Arrays.stream(nodeIng.getItems()).anyMatch(h -> match.test(h));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean isInputKey(String key) {

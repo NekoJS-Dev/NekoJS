@@ -17,7 +17,7 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isNull() || value.isString() || value.hasArrayElements() || value.hasMembers()) {
             return true;
         }
@@ -29,7 +29,7 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
     }
 
     @Override
-    public Ingredient convert(Value value) {
+    public Ingredient apply(Value value) {
         return IngredientResolver.fromValue(value);
     }
 }

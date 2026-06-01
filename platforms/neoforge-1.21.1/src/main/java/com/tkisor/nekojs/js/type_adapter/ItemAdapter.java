@@ -17,7 +17,7 @@ public class ItemAdapter implements JSTypeAdapter<Item> {
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isNull() || value.isString()) {
             return true;
         }
@@ -29,7 +29,7 @@ public class ItemAdapter implements JSTypeAdapter<Item> {
     }
 
     @Override
-    public Item convert(Value value) {
+    public Item apply(Value value) {
         if (value.isNull()) {
             return Items.AIR;
         }

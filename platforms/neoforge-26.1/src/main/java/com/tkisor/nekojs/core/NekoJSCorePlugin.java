@@ -9,7 +9,7 @@ import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.BindingRegistry;
-import com.tkisor.nekojs.api.data.JSTypeAdapterRegister;
+import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
@@ -144,7 +144,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     }
 
     @Override
-    public void registerAdapters(JSTypeAdapterRegister registry) {
+    public void registerAdapters(JSTypeAdapterRegistry registry) {
         registry.register(new ItemStackAdapter());
         registry.register(new IngredientAdapter());
         registry.register(new SizedIngredientAdapter());
@@ -166,7 +166,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
 //        registry.registerSchema();
-        registry.register(RecipeNamespaceEntry.of("minecraft", MinecraftRecipeHandler::new, MinecraftRecipeHandler.class));
+        registry.register(new RecipeNamespaceEntry("minecraft", e -> new MinecraftRecipeHandler((com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e), MinecraftRecipeHandler.class));
     }
 
     @Override

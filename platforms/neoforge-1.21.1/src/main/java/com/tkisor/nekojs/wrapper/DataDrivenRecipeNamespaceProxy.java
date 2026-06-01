@@ -91,13 +91,7 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
                 return values;
             }
         }
-        StringBuilder msg = new StringBuilder("No constructor for " + definition.key() + " accepts " + arguments.length + " arguments.\n");
-        msg.append("Available constructors:\n");
-        for (List<String> c : definition.constructors()) {
-            msg.append("  ").append(c.size()).append(" args: ").append(String.join(", ", c)).append("\n");
-        }
-        msg.append("Or use named arguments: { ").append(String.join(", ", definition.fields().keySet())).append(" }");
-        throw new IllegalArgumentException(msg.toString());
+        throw new IllegalArgumentException("No constructor for " + definition.key() + " accepts " + arguments.length + " arguments");
     }
 
     private boolean hasDefinitionField(RecipeTypeDefinition definition, Value value) {
@@ -132,7 +126,7 @@ public final class DataDrivenRecipeNamespaceProxy implements ProxyObject {
             case NUMBER -> new JsonPrimitive(value.asDouble());
             case BOOLEAN -> new JsonPrimitive(value.asBoolean());
             case INGREDIENT -> event.serializeIngredient(IngredientResolver.fromValue(value));
-            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().convert(value));
+            case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().apply(value));
             case FLUID_STACK -> event.serializeFluidStack(FluidResolver.stackFromValue(value));
             case FLUID_INGREDIENT -> event.serializeFluidIngredient(FluidResolver.ingredientFromValue(value));
             case SIZED_FLUID_INGREDIENT -> event.serializeSizedFluidIngredient(FluidResolver.sizedFromValue(value));

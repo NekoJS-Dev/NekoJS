@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.api.data.NekoJSTypeAdapters;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
@@ -29,19 +29,13 @@ public final class NekoSharedHostAccess {
                 .allowAllClassImplementations(true)
                 .allowAllImplementations(true);
 
-        NekoJSTypeAdapters.all().forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
+        NekoPluginRuntime.current().adapters().forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
+        hostBuilder.targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue);
+        hostBuilder.targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
         return hostBuilder.build();
     }
 
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
-        builder.targetTypeMapping(
-                        Value.class,
-                        adapter.getTargetClass(),
-                        adapter::canConvert,
-                        adapter::convert,
-                        adapter.getPrecedence()
-                )
-                .targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue)
-                .targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
+        builder.targetTypeMapping(Value.class, adapter.getTargetClass(), adapter, adapter, adapter.getPrecedence());
     }
 }

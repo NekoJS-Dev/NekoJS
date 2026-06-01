@@ -16,12 +16,12 @@ public class ResourceLocationAdapter implements JSTypeAdapter<ResourceLocation> 
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         return value.isString() || value.isHostObject() && value.asHostObject() instanceof NekoId;
     }
 
     @Override
-    public ResourceLocation convert(Value value) {
+    public ResourceLocation apply(Value value) {
         if (value.isHostObject() && value.asHostObject() instanceof NekoId id) {
             return ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path());
         }

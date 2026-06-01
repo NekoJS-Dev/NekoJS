@@ -5,6 +5,14 @@ import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptType;
 
+/**
+ * Per-context Node.js compatibility runtime.
+ * Holds all Node-compatible subsystems and the module loader host.
+ *
+ * <p>Created once per {@link com.tkisor.nekojs.script.ScriptType} context
+ * during {@link com.tkisor.nekojs.core.node.NekoNodeModuleInstaller#install install()}.
+ * Exposed to JS as {@code __nekoNodeRuntime}.
+ */
 public final class NekoNodeRuntime implements AutoCloseable {
     private final ScriptType scriptType;
     private final NekoScriptModuleLoaderHost moduleLoaderHost;

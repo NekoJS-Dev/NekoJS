@@ -17,7 +17,7 @@ public final class SizedFluidIngredientAdapter implements JSTypeAdapter<SizedFlu
     }
 
     @Override
-    public boolean canConvert(Value value) {
+    public boolean test(Value value) {
         if (value.isString() || value.hasMembers()) return true;
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -27,7 +27,7 @@ public final class SizedFluidIngredientAdapter implements JSTypeAdapter<SizedFlu
     }
 
     @Override
-    public SizedFluidIngredient convert(Value value) {
+    public SizedFluidIngredient apply(Value value) {
         return FluidResolver.sizedFromValue(value);
     }
 }

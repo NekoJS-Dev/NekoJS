@@ -108,6 +108,8 @@ RecipeTypeDefinition {
 - [ ] `IngredientFactory` / `IngredientResolver`：需要隔离 `Ingredient` 展开、holder、component ingredient 的版本差异。
 - [ ] 网络 packet record 与 `NekoJSNetwork`：需要先抽象 payload / channel 注册差异。
 
+- [x] **common→platform 跨模块类型消除**: 尝试抽取 `RecipeEventContext` 接口到 common，但 handler 方法需要调用的 `RecipeJsonBuilder` / `serializeIngredient` 都是平台类型，common 无法引用。当前 `Function<Object,Object>` + `NekoJSCorePlugin` 中一处 cast 是现实约束下的最简方案。
+
 ### 暂不建议迁移的内容
 
 - [ ] registry builder、registry event 和 food builder 等强平台 API 绑定代码。
