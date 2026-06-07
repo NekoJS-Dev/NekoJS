@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.compiler.IScriptCompiler;
 import com.tkisor.nekojs.api.compiler.NekoCompileOutput;
 import com.tkisor.nekojs.api.compiler.NekoIRProgram;
 import com.tkisor.nekojs.api.compiler.NekoLanguagePlugin;
+import com.tkisor.nekojs.api.compiler.NekoModuleMode;
 import com.tkisor.nekojs.api.compiler.NekoScriptLanguage;
 import com.tkisor.nekojs.api.compiler.ScriptCompileResult;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;

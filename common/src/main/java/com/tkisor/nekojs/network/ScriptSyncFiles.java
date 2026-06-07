@@ -24,7 +24,7 @@ public final class ScriptSyncFiles {
                         try {
                             NekoJSPaths.verifyScriptSyncPath(relPath);
                             files.put(relPath, Files.readString(path));
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {} // invalid sync path → skip this file
                     });
         } catch (Exception e) {
             NekoJS.LOGGER.error("Failed to collect scripts from " + rootDir, e);

@@ -229,7 +229,7 @@ public class SourceMapRegistry {
         try {
             Path sourcePath = Path.of(sourceText).normalize();
             normalized = sourcePath.toString().replace('\\', '/');
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // Path.of parse may fail for non-path source text; keep raw
         }
 
         if (isRootRelative(normalized)) {
@@ -243,7 +243,7 @@ public class SourceMapRegistry {
                 if (!resolved.startsWith("../") && !resolved.equals("..")) {
                     return trimLeadingSlash(resolved);
                 }
-            } catch (Exception ignored) {
+            } catch (Exception ignored) { // resolve may fail for unresolvable relative paths; skip
             }
         }
         return normalized.startsWith("../") || normalized.equals("..") ? null : trimLeadingSlash(normalized);
@@ -255,7 +255,7 @@ public class SourceMapRegistry {
         }
         try {
             return normalizeAbsolutePath(Path.of(URI.create(sourceText)).toString().replace('\\', '/'));
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // URI.create fails for non-file-URI source texts
             return null;
         }
     }
@@ -268,7 +268,7 @@ public class SourceMapRegistry {
                 return root.relativize(path).toString().replace('\\', '/');
             }
             return path.toString().replace('\\', '/');
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // Path.of may fail for non-path strings; fallback to simple replace
             return sourceText.replace('\\', '/');
         }
     }

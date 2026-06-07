@@ -98,7 +98,7 @@ public class NekoJSNetwork {
                 int count = ScriptSyncService.writeBatch(files);
                 processFeedback(true, "成功从服务端强制拉取了 " + count + " 个文件！");
             } catch (Exception e) {
-                processFeedback(false, "批量写入本地失败: " + e.getMessage());
+                processFeedback(false, "批量写入本地失败，请检查日志");
             }
         }
 
@@ -124,7 +124,7 @@ public class NekoJSNetwork {
                 }
             } catch (Exception e) {
                 NekoJS.LOGGER.error("Failed to read script for client", e);
-                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "读取失败: " + e.getMessage()));
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "读取文件失败，请检查服务端日志"));
             }
         });
     }
@@ -141,7 +141,7 @@ public class NekoJSNetwork {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "保存成功！"));
             } catch (Exception e) {
                 NekoJS.LOGGER.error("Failed to save script from client", e);
-                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "保存失败: " + e.getMessage()));
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "保存文件失败，请检查服务端日志"));
             }
         });
     }
@@ -170,7 +170,7 @@ public class NekoJSNetwork {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(true, "成功接收并覆盖了 " + count + " 个脚本文件！(请使用 /reload 生效)"));
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("Failed to sync scripts from client", e);
-                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "批量同步失败: " + e.getMessage()));
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "批量同步失败，请检查服务端日志"));
             }
         });
     }

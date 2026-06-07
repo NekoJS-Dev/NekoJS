@@ -70,7 +70,7 @@ public final class NekoModulePipelineCache {
     private static Optional<String> relativePath(Path path) {
         try {
             return Optional.of(NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/'));
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // relative path computation fails → cache miss
             return Optional.empty();
         }
     }

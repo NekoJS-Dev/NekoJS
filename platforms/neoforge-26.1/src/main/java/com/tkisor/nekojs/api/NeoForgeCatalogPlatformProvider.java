@@ -4,8 +4,10 @@ import com.tkisor.nekojs.api.catalog.HostExtensionSource;
 import com.tkisor.nekojs.api.catalog.NekoCatalogPlatformProvider;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
+import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.inject.*;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.Entity;
@@ -62,6 +64,14 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
                 new SnippetCatalogEntry("Fallback recipe namespace", ScriptType.SERVER, "recipe-fallback", "ServerEvents.recipes(event => {\n  event.recipes.${1:mymod}.${2:custom_type}({\n    ${3:key}: ${4:value}\n  })\n  $0\n})", "Create raw JSON for a namespace without a typed handler method"),
                 new SnippetCatalogEntry("Shapeless recipe", ScriptType.SERVER, "recipe-shapeless", "event.recipes.minecraft.shapeless(ItemJS.of('${1:minecraft:stick}'), [Ingredient.of('${2:#minecraft:planks}')])", "Create a minecraft shapeless recipe"),
                 new SnippetCatalogEntry("Recipe JSON builder", ScriptType.SERVER, "recipe-builder", "event.builder('${1:minecraft:crafting_shapeless}')\n  .id('${2:nekojs:example}')\n  .property('ingredients', [Ingredient.of('${3:minecraft:stone}')])\n  .output('result', ItemJS.of('${4:minecraft:stone_button}'))", "Create a raw JSON-first recipe builder")
+        );
+    }
+
+    @Override
+    public TypeOutputLayout outputLayout() {
+        return new TypeOutputLayout(
+                NekoJSPaths.PROBE_DIR,
+                NekoJSPaths.GAME_DIR.resolve(".vscode").resolve("nekojs.code-snippets")
         );
     }
 }

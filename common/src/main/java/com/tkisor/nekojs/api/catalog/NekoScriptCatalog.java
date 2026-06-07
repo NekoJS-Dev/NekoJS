@@ -5,7 +5,7 @@ import com.tkisor.nekojs.api.MemberVisibilityQuery;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import graal.graalvm.polyglot.HostAccess;
@@ -98,7 +98,7 @@ public final class NekoScriptCatalog {
         List<TypeDocCatalogEntry> docs = NekoTypeDocs.typeDocs(scriptType).stream()
                 .filter(doc -> doc.kind().equals("binding"))
                 .toList();
-        for (var binding : NekoPluginRuntime.current().bindings(scriptType).values()) {
+        for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
             BindingCatalogEntry entry = BindingCatalogEntry.of(binding.name(), scriptType, binding.valueType(), binding.value() instanceof Class<?>);
             for (TypeDocCatalogEntry doc : docs) {
                 if (doc.target().equals(binding.name())) {
@@ -120,7 +120,7 @@ public final class NekoScriptCatalog {
 
     public static List<EventCatalogEntry> events(ScriptType scriptType) {
         List<EventCatalogEntry> entries = new ArrayList<>();
-        for (EventGroup group : NekoPluginRuntime.current().eventGroups().values()) {
+        for (EventGroup group : NekoRuntimeAccess.get().eventGroups().values()) {
             for (var entry : group.viewBuses().entrySet()) {
                 EventGroup.BusHolder holder = entry.getValue();
                 if (!holder.canApplyOn(scriptType)) continue;
@@ -139,7 +139,7 @@ public final class NekoScriptCatalog {
 
     public static List<AdapterCatalogEntry> adapters() {
         List<AdapterCatalogEntry> entries = new ArrayList<>();
-        for (var adapter : NekoPluginRuntime.current().adapters()) {
+        for (var adapter : NekoRuntimeAccess.get().adapters()) {
             entries.add(adapterEntry(adapter));
         }
         return List.copyOf(entries);

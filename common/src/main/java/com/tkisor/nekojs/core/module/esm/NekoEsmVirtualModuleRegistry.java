@@ -133,7 +133,7 @@ public final class NekoEsmVirtualModuleRegistry {
             Path parsed = Path.of(normalized);
             Path path = parsed.isAbsolute() ? parsed.normalize().toAbsolutePath() : NekoJSPaths.ROOT.resolve(parsed).normalize().toAbsolutePath();
             return NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/');
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // path resolution fails → return raw normalized string
             return normalized;
         }
     }

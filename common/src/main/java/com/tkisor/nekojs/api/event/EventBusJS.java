@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.CancellableEventBus;
@@ -287,7 +286,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 + " script=" + (scriptId == null || scriptId.isBlank() ? "unknown" : scriptId)
                 + " thread=" + Thread.currentThread().getName()
                 + keyText;
-        NekoErrorTracker.recordCallbackError(type, kind, throwable);
+        ScriptErrorReporter.recordCallbackError(type, kind, throwable);
     }
 
     private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId) {}

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.platform.Platform;
 
 import java.lang.management.ManagementFactory;
@@ -30,7 +31,7 @@ public final class NekoNodeProcess {
 
     public Map<String, String> versions() {
         Map<String, String> versions = new LinkedHashMap<>();
-        versions.put("nekojs", "1.0.7");
+        versions.put("nekojs", NekoJS.VERSION);
         versions.put("minecraft", Platform.getMcVersion());
         versions.put("java", System.getProperty("java.version", "unknown"));
         versions.put("node", "22.0.0");

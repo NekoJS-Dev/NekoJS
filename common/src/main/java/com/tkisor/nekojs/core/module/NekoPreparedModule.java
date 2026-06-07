@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.api.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 
 public record NekoPreparedModule(

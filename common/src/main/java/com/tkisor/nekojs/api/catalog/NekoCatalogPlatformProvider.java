@@ -19,6 +19,6 @@ public interface NekoCatalogPlatformProvider {
     }
 
     default TypeOutputLayout outputLayout() {
-        return TypeOutputLayout.defaults();
+        return null;
     }
 }

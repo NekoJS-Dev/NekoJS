@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.module.esm;
 
-import com.tkisor.nekojs.core.module.NekoModuleMode;
+import com.tkisor.nekojs.api.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;

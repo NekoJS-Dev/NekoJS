@@ -104,7 +104,7 @@ public class ScriptError {
             if (sourcePath.startsWith(root) && Files.exists(sourcePath) && this.lineNumber > 0) {
                 sourceLines = Files.readAllLines(sourcePath);
             }
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // source file unreadable → use embedded source content fallback
         }
         if ((sourceLines == null || sourceLines.isEmpty()) && sourceContent != null && !sourceContent.isEmpty()) {
             sourceLines = sourceContent.lines().toList();
@@ -183,7 +183,7 @@ public class ScriptError {
         }
         try {
             return NekoJSPaths.ROOT.relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // path relativize fails (different filesystem) → return absolute path
             return path.toString().replace('\\', '/');
         }
     }

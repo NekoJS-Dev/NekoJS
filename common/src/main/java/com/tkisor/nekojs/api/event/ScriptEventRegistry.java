@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.script.ScriptType;
 
 import java.util.ArrayList;
@@ -15,11 +15,11 @@ public final class ScriptEventRegistry {
     private ScriptEventRegistry() {}
 
     public static synchronized void validateAvailable(ScriptType targetType, String groupName, String eventName) {
-        if (NekoPluginRuntime.current().eventGroups().containsKey(groupName)) {
+        if (NekoRuntimeAccess.get().eventGroups().containsKey(groupName)) {
             throw new IllegalArgumentException("Script event group conflicts with built-in event group: " + groupName);
         }
         for (ScriptType type : ScriptType.all()) {
-            if (NekoPluginRuntime.current().bindings(type).containsKey(groupName)) {
+            if (NekoRuntimeAccess.get().bindings(type).containsKey(groupName)) {
                 throw new IllegalArgumentException("Script event group conflicts with built-in binding: " + groupName);
             }
         }

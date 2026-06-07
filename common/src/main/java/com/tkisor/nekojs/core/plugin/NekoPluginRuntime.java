@@ -7,6 +7,8 @@ import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.plugin.IPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
@@ -18,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public final class NekoPluginRuntime {
+public final class NekoPluginRuntime implements IPluginRuntime {
     private static NekoPluginRuntime current;
 
     private final ScriptCompilerRegistry scriptCompilers;
@@ -69,6 +71,7 @@ public final class NekoPluginRuntime {
     public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins) {
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(plugins);
         current = runtime;
+        NekoRuntimeAccess.set(runtime);
         ScriptCompilerRegistry.useRuntime(runtime.scriptCompilers());
         return runtime;
     }

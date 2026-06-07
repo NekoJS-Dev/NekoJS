@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.ScriptTypePredicate;
 
@@ -10,7 +10,7 @@ public final class NekoTypeDocs {
     private NekoTypeDocs() {}
 
     public static List<TypeDocCatalogEntry> typeDocs() {
-        return NekoPluginRuntime.current().typeDocs();
+        return NekoRuntimeAccess.get().typeDocs();
     }
 
     public static List<TypeDocCatalogEntry> typeDocs(ScriptType scriptType) {
@@ -20,7 +20,7 @@ public final class NekoTypeDocs {
     }
 
     public static List<ManualDeclarationCatalogEntry> manualDeclarations() {
-        return NekoPluginRuntime.current().manualDeclarations();
+        return NekoRuntimeAccess.get().manualDeclarations();
     }
 
     public static List<ManualDeclarationCatalogEntry> manualDeclarations(ScriptType scriptType) {

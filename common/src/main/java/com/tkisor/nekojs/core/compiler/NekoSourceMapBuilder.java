@@ -130,7 +130,7 @@ final class NekoSourceMapBuilder {
         }
         try {
             return NekoJSPaths.ROOT.relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');
-        } catch (Exception ignored) {
+        } catch (Exception ignored) { // path relativize fails → fallback to absolute path string
             return path.toString().replace('\\', '/');
         }
     }

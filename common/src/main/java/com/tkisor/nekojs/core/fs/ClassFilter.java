@@ -27,7 +27,7 @@ public class ClassFilter implements Predicate<String> {
     private static final Set<String> REFLECT_GROUP = Set.of("java.lang.reflect", "java.lang.invoke.MethodHandles");
     private static final Set<String> ASM_GROUP = Set.of("org.objectweb.asm", "org.spongepowered.asm");
     private static final Set<String> GENERAL_BLACKLIST = Set.of(
-            "java.lang.Runtime", "java.lang.Process", "java.lang.ProcessBuilder",
+            "java.lang.Class", "java.lang.Runtime", "java.lang.Process", "java.lang.ProcessBuilder",
             "java.lang.ClassLoader", "java.lang.System",
             "java.io", "java.nio", "java.net", "java.util.jar", "java.util.zip",
             "sun", "com.sun",

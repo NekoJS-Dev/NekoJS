@@ -32,7 +32,7 @@ public final class NekoNodeOS {
             try {
                 var osBean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
                 speed = osBean.getProcessCpuLoad() > 0 ? 1000 : 2000; // rough estimate
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {} // OS bean unavailable → use default speed estimate
             var times = new CpuTimes(0, 0, 0, 0);
             list.add(new CpuInfo(model, speed, times));
         }

@@ -73,6 +73,7 @@ public final class NekoSandboxBuilder {
     }
 
     public static Sandbox buildSandbox(ScriptType type) {
+        long t0 = System.nanoTime();
         Logger logger = type.logger();
         OutputStream outStream = new LoggerStream(logger, false);
         OutputStream errStream = new LoggerStream(logger, true);
@@ -98,10 +99,13 @@ public final class NekoSandboxBuilder {
                 .option("js.v8-compat", "true")
                 .option("js.unhandled-rejections", "throw")
                 .build();
+        long t1 = System.nanoTime();
 
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
+        long t2 = System.nanoTime();
         NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type);
+        long t3 = System.nanoTime();
 
         // Register all known non-native extensions with CommonJS require().
         // GraalVM's native require only handles .js / .mjs / .cjs by default.
@@ -127,6 +131,11 @@ public final class NekoSandboxBuilder {
             }
         }
 
+        long t4 = System.nanoTime();
+        logger.info("Sandbox build: context={}ms console={}ms node_modules={}ms extensions={}ms total={}ms",
+                (t1 - t0) / 1_000_000, (t2 - t1) / 1_000_000,
+                (t3 - t2) / 1_000_000, (t4 - t3) / 1_000_000,
+                (t4 - t0) / 1_000_000);
         return new Sandbox(ctx, nodeRuntime);
     }
 }

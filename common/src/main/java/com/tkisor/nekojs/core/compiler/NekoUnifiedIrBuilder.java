@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.compiler;
 
 import com.tkisor.nekojs.api.compiler.NekoIRProgram;
-import com.tkisor.nekojs.core.module.NekoModuleMode;
+import com.tkisor.nekojs.api.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 
 final class NekoUnifiedIrBuilder {

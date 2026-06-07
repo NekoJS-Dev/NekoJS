@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -22,6 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 public class NekoErrorTracker {
+    static {
+        ScriptErrorReporter.set(NekoErrorTracker::recordCallbackError);
+    }
+
     private static final Map<ScriptId, ScriptError> ERRORS = new ConcurrentHashMap<>();
 
     private static final Set<String> HOST_FRAME_BLACKLIST = new CopyOnWriteArraySet<>(List.of(
@@ -106,7 +111,7 @@ public class NekoErrorTracker {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {} // file read error → return approximate mapped line
         return mappedLine;
     }
 
@@ -191,7 +196,7 @@ public class NekoErrorTracker {
                 if (virtualDisplayPath != null) {
                     return virtualDisplayPath;
                 }
-            } catch (Exception ignored) {
+            } catch (Exception ignored) { // URI parse failed → try alternate virtual path resolution
             }
             String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(uriText);
             if (virtualDisplayPath != null) {

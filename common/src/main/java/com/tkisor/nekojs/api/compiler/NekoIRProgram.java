@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.api.compiler;
 
-import com.tkisor.nekojs.core.module.NekoModuleMode;
 
 public record NekoIRProgram(
         String languageId,
