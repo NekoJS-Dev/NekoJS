@@ -1,0 +1,144 @@
+ext.architectureScanRoots = [
+        'common/src',
+        'platforms/neoforge-26.1/src',
+        'platforms/neoforge-1.21.1/src'
+]
+
+ext.architectureLegacyPatterns = [
+        [key: 'NekoJS.COMMON', display: 'NekoJS.COMMON', regex: java.util.regex.Pattern.compile(/\bNekoJS\.COMMON\b/)],
+        [key: 'NekoPluginRuntime.current', display: 'NekoPluginRuntime.current()', regex: java.util.regex.Pattern.compile(/\bNekoPluginRuntime\.current\s*\(/)],
+        [key: 'NekoRuntimeAccess.get', display: 'NekoRuntimeAccess.get()', regex: java.util.regex.Pattern.compile(/\bNekoRuntimeAccess\.get\s*\(/)],
+        [key: 'ScriptCompilerRegistry.current', display: 'ScriptCompilerRegistry.current()', regex: java.util.regex.Pattern.compile(/\bScriptCompilerRegistry\.current\s*\(/)],
+        [key: 'ClassFilter.INSTANCE', display: 'ClassFilter.INSTANCE', regex: java.util.regex.Pattern.compile(/\bClassFilter\.INSTANCE\b/)],
+        [key: 'ClassFilter.staticConfig', display: 'ClassFilter.allow*/enableEsmAuthoring/conciseScriptErrorLogs', regex: java.util.regex.Pattern.compile(/\bClassFilter\.(?:allow[A-Za-z0-9_]*|enableEsmAuthoring|conciseScriptErrorLogs)\b/)],
+        [key: 'NekoJSPaths.static', display: 'NekoJSPaths.*', regex: java.util.regex.Pattern.compile(/\bNekoJSPaths\.[A-Za-z_][A-Za-z0-9_]*\b/)],
+        [key: 'NekoErrorTracker.static', display: 'NekoErrorTracker.*', regex: java.util.regex.Pattern.compile(/\bNekoErrorTracker\.(?!bindLegacy\b|legacyInstance\b)[A-Za-z_][A-Za-z0-9_]*\b/)],
+        [key: 'PublicStaticMutable', display: 'public static mutable Map/List/Set/boolean', regex: java.util.regex.Pattern.compile(/public\s+static\s+(?!final\b)(?:[\w<>, ?]+\s+)*(?:Map|List|Set|boolean|Boolean)\s+\w+/)]
+]
+
+ext.scanArchitectureLegacyUsage = {
+    def results = project.ext.architectureLegacyPatterns.collectEntries { pattern ->
+        [(pattern.key): [display: pattern.display, count: 0, matches: []]]
+    }
+
+    project.ext.architectureScanRoots
+            .collect { project.file(it) }
+            .findAll { it.exists() }
+            .each { root ->
+                project.fileTree(root) {
+                    include '**/*.java'
+                    include '**/*.kt'
+                    include '**/*.groovy'
+                }.files.each { sourceFile ->
+                    String text = sourceFile.getText('UTF-8')
+                    List<String> lines = text.readLines()
+
+                    project.ext.architectureLegacyPatterns.each { pattern ->
+                        int fileCount = 0
+                        def fileMatcher = pattern.regex.matcher(text)
+                        while (fileMatcher.find()) {
+                            fileCount++
+                        }
+                        if (fileCount > 0) {
+                            results[pattern.key].count += fileCount
+                            lines.eachWithIndex { line, index ->
+                                int lineCount = 0
+                                def lineMatcher = pattern.regex.matcher(line)
+                                while (lineMatcher.find()) {
+                                    lineCount++
+                                }
+                                if (lineCount > 0) {
+                                    results[pattern.key].matches << [path: project.relativePath(sourceFile), line: index + 1, count: lineCount]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+    return results
+}
+
+ext.loadArchitectureBaseline = {
+    File baselineFile = project.file('ai_arch/legacy-baseline.properties')
+    Properties baseline = new Properties()
+    if (baselineFile.exists()) {
+        baselineFile.withInputStream { baseline.load(it) }
+    }
+    return baseline
+}
+
+ext.writeArchitectureReport = { Map results ->
+    File reportFile = project.file("${project.buildDir}/reports/architecture/legacy-usage.md")
+    reportFile.parentFile.mkdirs()
+
+    StringBuilder report = new StringBuilder()
+    report << '# Architecture legacy usage report\n\n'
+    report << 'This report tracks known global/static runtime access while the architecture migration is in progress.\n\n'
+    report << '| Pattern | Count |\n'
+    report << '|---|---:|\n'
+    results.each { key, data ->
+        report << "| ${data.display} | ${data.count} |\n"
+    }
+
+    report << '\n## Match locations\n\n'
+    results.each { key, data ->
+        report << "### ${data.display}\n\n"
+        if (data.matches.isEmpty()) {
+            report << '_No matches._\n\n'
+        } else {
+            data.matches.each { match ->
+                report << "- `${match.path}:${match.line}` (${match.count})\n"
+            }
+            report << '\n'
+        }
+    }
+
+    reportFile.text = report.toString()
+    return reportFile
+}
+
+tasks.register('architectureReport') {
+    group = 'verification'
+    description = 'Reports current legacy global/static architecture usage.'
+
+    doLast {
+        Map results = project.ext.scanArchitectureLegacyUsage()
+        File reportFile = project.ext.writeArchitectureReport(results)
+
+        println 'Architecture legacy usage:'
+        results.each { key, data ->
+            println String.format('  %-34s %5d', data.display, data.count)
+        }
+        println "Report written to ${project.relativePath(reportFile)}"
+    }
+}
+
+tasks.register('architectureCheck') {
+    group = 'verification'
+    description = 'Fails when legacy global/static architecture usage increases beyond the recorded baseline.'
+
+    doLast {
+        Properties baseline = project.ext.loadArchitectureBaseline()
+        if (baseline.isEmpty()) {
+            throw new GradleException('Missing ai_arch/legacy-baseline.properties. Run architectureReport and record the current baseline first.')
+        }
+
+        Map results = project.ext.scanArchitectureLegacyUsage()
+        File reportFile = project.ext.writeArchitectureReport(results)
+        List<String> failures = []
+
+        results.each { key, data ->
+            int allowed = Integer.parseInt(baseline.getProperty(key, '0'))
+            if (data.count > allowed) {
+                failures << "${data.display}: ${data.count} > baseline ${allowed}"
+            }
+        }
+
+        if (!failures.isEmpty()) {
+            throw new GradleException("Architecture legacy usage increased:\n - ${failures.join('\n - ')}\nSee ${project.relativePath(reportFile)}")
+        }
+
+        println "Architecture check passed. Report written to ${project.relativePath(reportFile)}"
+    }
+}

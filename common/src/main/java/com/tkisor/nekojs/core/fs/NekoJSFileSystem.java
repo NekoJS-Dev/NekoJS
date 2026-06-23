@@ -46,7 +46,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void checkAccess(Path path, Set<? extends AccessMode> modes, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.legacy().verifyInsideGameDir(path);
         verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
 
         if (NekoEsmVirtualModuleRegistry.isVirtualPath(verifiedPath)) {
@@ -83,13 +83,13 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDirForCreate(dir);
+        Path verifiedPath = NekoJSPaths.legacy().verifyInsideGameDirForCreate(dir);
         Files.createDirectory(verifiedPath, attrs);
     }
 
     @Override
     public void delete(Path path) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoJSPaths.legacy().verifyInsideGameDir(path);
         Files.delete(verifiedPath);
     }
 
@@ -101,7 +101,7 @@ public class NekoJSFileSystem implements FileSystem {
                 || options.contains(StandardOpenOption.CREATE_NEW);
         Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path)
                 ? path.normalize().toAbsolutePath()
-                : writing ? NekoJSPaths.verifyInsideGameDirForCreate(path) : NekoJSPaths.verifyInsideGameDir(path);
+                : writing ? NekoJSPaths.legacy().verifyInsideGameDirForCreate(path) : NekoJSPaths.legacy().verifyInsideGameDir(path);
         verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
 
         var preparedBytes = NekoModuleReadService.readPreparedBytes(verifiedPath);
@@ -117,7 +117,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.legacy().verifyInsideGameDir(path);
         verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
         var virtualAttributes = NekoModuleReadService.virtualAttributes(verifiedPath);
         if (virtualAttributes.isPresent()) {
@@ -128,7 +128,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Path toRealPath(Path path, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : NekoJSPaths.legacy().verifyInsideGameDir(path);
         verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
         if (NekoEsmVirtualModuleRegistry.isVirtualPath(verifiedPath)) {
             return verifiedPath;
@@ -195,7 +195,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(dir);
+        Path verifiedPath = NekoJSPaths.legacy().verifyInsideGameDir(dir);
         DirectoryStream<Path> delegateStream = Files.newDirectoryStream(verifiedPath);
         return new FilteredDirectoryStream(delegateStream, filter);
     }
@@ -214,14 +214,14 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createLink(Path link, Path existing) throws IOException {
-        Path verifiedLink = NekoJSPaths.verifyInsideGameDirForCreate(link);
-        Path verifiedExisting = NekoJSPaths.verifyInsideGameDir(existing);
+        Path verifiedLink = NekoJSPaths.legacy().verifyInsideGameDirForCreate(link);
+        Path verifiedExisting = NekoJSPaths.legacy().verifyInsideGameDir(existing);
         Files.createLink(verifiedLink, verifiedExisting);
     }
 
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        Path verifiedPath = NekoJSPaths.verifyInsideGameDir(path);
+        Path verifiedPath = NekoJSPaths.legacy().verifyInsideGameDir(path);
         Files.setAttribute(verifiedPath, attribute, value, options);
     }
 
@@ -232,7 +232,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Path readSymbolicLink(Path link) throws IOException {
-        Path verifiedLink = NekoJSPaths.verifyInsideGameDir(link);
+        Path verifiedLink = NekoJSPaths.legacy().verifyInsideGameDir(link);
         return Files.readSymbolicLink(verifiedLink);
     }
 
@@ -276,7 +276,7 @@ public class NekoJSFileSystem implements FileSystem {
                     while (delegateIterator.hasNext()) {
                         Path path = delegateIterator.next();
                         try {
-                            NekoJSPaths.verifyInsideGameDir(path);
+                            NekoJSPaths.legacy().verifyInsideGameDir(path);
                             if (filter == null || filter.accept(path)) {
                                 nextPath = path;
                                 return true;

@@ -40,7 +40,7 @@ public final class NekoSandboxBuilder {
 
     // Prefix console.warn with [NekoJS_WARN] and console.debug with [NekoJS_DEBUG]
     // for easy grep-filtering of script output in server logs.
-    private static final String CONSOLE_PATCH_JS = """
+    static final String CONSOLE_PATCH_JS = """
             (function() {
                 const originalWarn = console.warn;
                 console.warn = function(...args) {
@@ -66,6 +66,16 @@ public final class NekoSandboxBuilder {
 
     private NekoSandboxBuilder() {}
 
+    private static volatile NekoSandboxFactory LEGACY_FACTORY;
+
+    public static void bindLegacyFactory(NekoSandboxFactory factory) {
+        LEGACY_FACTORY = factory;
+    }
+
+    public static NekoSandboxFactory legacyFactory() {
+        return LEGACY_FACTORY;
+    }
+
     public record Sandbox(Context context, NekoNodeRuntime nodeRuntime) {}
 
     public static Context build(ScriptType type) {
@@ -73,6 +83,14 @@ public final class NekoSandboxBuilder {
     }
 
     public static Sandbox buildSandbox(ScriptType type) {
+        NekoSandboxFactory factory = LEGACY_FACTORY;
+        if (factory != null) {
+            return factory.build(type);
+        }
+        return legacyBuildSandbox(type);
+    }
+
+    private static Sandbox legacyBuildSandbox(ScriptType type) {
         long t0 = System.nanoTime();
         Logger logger = type.logger();
         OutputStream outStream = new LoggerStream(logger, false);
@@ -85,7 +103,7 @@ public final class NekoSandboxBuilder {
                 .err(errStream)
                 .allowHostAccess(NekoSharedHostAccess.get())
                 .allowIO(SHARED_IO_ACCESS)
-                .allowCreateThread(ClassFilter.allowThreads)
+                .allowCreateThread(ClassFilter.isAllowThreads())
                 .allowHostClassLookup(ClassFilter.INSTANCE)
                 .allowCreateProcess(false)
                 .allowValueSharing(true)

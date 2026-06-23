@@ -108,7 +108,7 @@ public final class NekoNodeFS {
         List<String> result = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
-                NekoJSPaths.verifyInsideGameDir(entry);
+                NekoJSPaths.legacy().verifyInsideGameDir(entry);
                 Path fileName = entry.getFileName();
                 if (fileName != null) {
                     result.add(fileName.toString());
@@ -140,7 +140,7 @@ public final class NekoNodeFS {
     }
 
     public synchronized NekoNodeStats lstat(String path) throws IOException {
-        Path target = NekoJSPaths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        Path target = NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
         return new NekoNodeStats(target, false);
     }
 
@@ -157,32 +157,32 @@ public final class NekoNodeFS {
     }
 
     public synchronized String readlink(String path) throws IOException {
-        Path link = NekoJSPaths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        Path link = NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
         return Files.readSymbolicLink(link).toString();
     }
 
     private Path resolveRead(String path) throws IOException {
-        return NekoJSPaths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        return NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path resolveWrite(String path) throws IOException {
-        if (ClassFilter.allowFsWriteOutsideNekojs) {
-            return NekoJSPaths.resolveGamePathForCreate(String.valueOf(path), currentWorkingDirectory);
+        if (ClassFilter.isAllowFsWriteOutsideNekojs()) {
+            return NekoJSPaths.legacy().resolveGamePathForCreate(String.valueOf(path), currentWorkingDirectory);
         }
-        return NekoJSPaths.resolveNekoWritePathForCreate(String.valueOf(path), currentWorkingDirectory);
+        return NekoJSPaths.legacy().resolveNekoWritePathForCreate(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path resolveWriteExisting(String path) throws IOException {
-        if (ClassFilter.allowFsWriteOutsideNekojs) {
-            return NekoJSPaths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        if (ClassFilter.isAllowFsWriteOutsideNekojs()) {
+            return NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
         }
-        return NekoJSPaths.resolveNekoWritePath(String.valueOf(path), currentWorkingDirectory);
+        return NekoJSPaths.legacy().resolveNekoWritePath(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path verifyWriteParentForCreate(Path path) throws IOException {
-        if (ClassFilter.allowFsWriteOutsideNekojs) {
-            return NekoJSPaths.verifyInsideGameDirForCreate(path);
+        if (ClassFilter.isAllowFsWriteOutsideNekojs()) {
+            return NekoJSPaths.legacy().verifyInsideGameDirForCreate(path);
         }
-        return NekoJSPaths.verifyInsideNekoRootForCreate(path);
+        return NekoJSPaths.legacy().verifyInsideNekoRootForCreate(path);
     }
 }

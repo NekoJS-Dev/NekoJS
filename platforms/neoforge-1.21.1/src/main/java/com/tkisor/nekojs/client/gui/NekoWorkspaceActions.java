@@ -46,7 +46,7 @@ public class NekoWorkspaceActions {
             toast.show(I18n.get("nekojs.gui.toast.error.no_file_open")); return;
         }
         try {
-            Path path = NekoJSPaths.verifyScriptSyncPath(tab.path);
+            Path path = NekoJSPaths.legacy().verifyScriptSyncPath(tab.path);
             Files.writeString(path, tab.editor.getValue());
             toast.show(I18n.get("nekojs.gui.toast.save_success", tab.path));
             tab.editor.markSaved();

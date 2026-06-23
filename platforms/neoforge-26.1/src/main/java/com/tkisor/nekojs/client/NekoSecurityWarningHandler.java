@@ -81,21 +81,21 @@ public class NekoSecurityWarningHandler {
     private static Component getDetailedWarningText() {
         MutableComponent text = Component.translatable("nekojs.security.detail.header").append(Component.literal("\n\n"));
 
-        if (ClassFilter.allowThreads) {
+        if (ClassFilter.isAllowThreads()) {
             text.append(Component.translatable("nekojs.security.detail.threads.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.threads.desc").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal("\n\n"));
         }
 
-        if (ClassFilter.allowReflection) {
+        if (ClassFilter.isAllowReflection()) {
             text.append(Component.translatable("nekojs.security.detail.reflection.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.reflection.desc").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal("\n\n"));
         }
 
-        if (ClassFilter.allowAsm) {
+        if (ClassFilter.isAllowAsm()) {
             text.append(Component.translatable("nekojs.security.detail.asm.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE));

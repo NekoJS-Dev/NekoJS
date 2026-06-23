@@ -11,7 +11,7 @@ import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
-import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 import com.tkisor.nekojs.core.module.esm.NekoEsmParser;
 
@@ -19,17 +19,43 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Set;
 
+/**
+ * 实例化模块编译管线：构造器接收 {@link NekoCompilationPipeline}、{@link ScriptCompilerRegistry}、
+ * {@link SandboxConfig}，不再调用 {@code ScriptCompilerRegistry.current()} 或
+ * {@code ClassFilter.isEnableEsmAuthoring()}。
+ *
+ * <p>旧 static {@code prepare(...)} 保留为 legacy delegate，委托 bootstrap 绑定的默认实例，
+ * 供尚未迁移的 {@code NekoModulePipelineCache} / {@code NekoModulePreparationCache} 调用点使用，
+ * 后续 Phase 3D / 6 删除。
+ */
 public final class NekoModulePipeline {
-    private static final NekoCompilationPipeline COMPILATION_PIPELINE = new NekoCompilationPipeline();
+    private static final NekoCompilationPipeline SHARED_COMPILATION_PIPELINE = new NekoCompilationPipeline();
+    private static volatile NekoModulePipeline LEGACY_INSTANCE;
 
-    private NekoModulePipeline() {}
+    private final NekoCompilationPipeline compilationPipeline;
+    private final ScriptCompilerRegistry compilers;
+    private final SandboxConfig config;
 
-    public static NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
+    public NekoModulePipeline(NekoCompilationPipeline compilationPipeline, ScriptCompilerRegistry compilers, SandboxConfig config) {
+        this.compilationPipeline = compilationPipeline;
+        this.compilers = compilers;
+        this.config = config;
+    }
+
+    public static void bindLegacyInstance(NekoModulePipeline pipeline) {
+        LEGACY_INSTANCE = pipeline;
+    }
+
+    public static NekoModulePipeline legacyInstance() {
+        return LEGACY_INSTANCE;
+    }
+
+    public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         String extension = extension(file);
         NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
         NekoLanguagePlugin language = languagePlugin(file, extension);
 
-        if (!ClassFilter.enableEsmAuthoring || requestedMode == NekoModuleMode.COMMONJS) {
+        if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
             if (language instanceof NekoLegacyLanguagePlugin legacyLanguage) {
                 ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
                 return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
@@ -37,15 +63,15 @@ public final class NekoModulePipeline {
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
                 return NekoPreparedModule.commonJs(rawSource, null);
             }
-            NekoCompileOutput compiled = COMPILATION_PIPELINE.compile(file, rawSource, extension, language);
+            NekoCompileOutput compiled = compilationPipeline.compile(file, rawSource, extension, language);
             return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
         }
 
-        NekoCompileOutput compiled = COMPILATION_PIPELINE.compile(file, rawSource, extension, language);
+        NekoCompileOutput compiled = compilationPipeline.compile(file, rawSource, extension, language);
         return prepareModule(compiled);
     }
 
-    private static NekoPreparedModule prepareModule(NekoCompileOutput compiled) {
+    private NekoPreparedModule prepareModule(NekoCompileOutput compiled) {
         NekoIRProgram ir = compiled.program();
         if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
             return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
@@ -57,9 +83,8 @@ public final class NekoModulePipeline {
         return NekoPreparedModule.esm(compiled.code(), compiled.program().sourceMap(), ast);
     }
 
-    private static NekoLanguagePlugin languagePlugin(Path file, String extension) {
-        ScriptCompilerRegistry registry = ScriptCompilerRegistry.current();
-        NekoScriptLanguage language = registry.getLanguage(extension);
+    private NekoLanguagePlugin languagePlugin(Path file, String extension) {
+        NekoScriptLanguage language = compilers.getLanguage(extension);
         if (language != null) {
             if (language.plugin() != null) {
                 return language.plugin();
@@ -68,7 +93,7 @@ public final class NekoModulePipeline {
                 return new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler());
             }
         }
-        IScriptCompiler compiler = registry.getCompiler(extension);
+        IScriptCompiler compiler = compilers.getCompiler(extension);
         if (compiler != null) {
             return new NekoLegacyLanguagePlugin("legacy:" + extension.substring(1), Set.of(extension), compiler);
         }
@@ -78,10 +103,24 @@ public final class NekoModulePipeline {
         return NekoJavaScriptLanguagePlugin.INSTANCE;
     }
 
-    private static String extension(Path file) {
+    private String extension(Path file) {
         String fileName = file.getFileName().toString();
         int dot = fileName.lastIndexOf('.');
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
     }
 
+    /* ================= Legacy static facade（后续 Phase 3D / 6 删除） ================= */
+
+    public static NekoPreparedModule legacyPrepare(Path file, String rawSource) throws Exception {
+        NekoModulePipeline instance = LEGACY_INSTANCE;
+        if (instance != null) {
+            return instance.prepare(file, rawSource);
+        }
+        return legacyPrepareFallback(file, rawSource);
+    }
+
+    private static NekoPreparedModule legacyPrepareFallback(Path file, String rawSource) throws Exception {
+        return new NekoModulePipeline(SHARED_COMPILATION_PIPELINE, ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig())
+                .prepare(file, rawSource);
+    }
 }

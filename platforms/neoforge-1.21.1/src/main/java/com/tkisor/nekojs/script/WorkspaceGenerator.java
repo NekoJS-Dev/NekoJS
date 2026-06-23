@@ -6,6 +6,9 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.catalog.NekoSnippetJson;
 import com.tkisor.nekojs.bindings.event.ModifyWorkspaceConfigEvent;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -24,7 +27,8 @@ public final class WorkspaceGenerator {
 
     public static void setupWorkspace() {
         createReadme();
-        ClassFilter.loadEngineConfig();
+        SandboxConfig config = ClassFilter.loadEngineConfig();
+        NekoErrorTracker.bindLegacy(new DefaultErrorTracker(NekoJSPaths.legacy(), config));
     }
 
     private static void createReadme() {

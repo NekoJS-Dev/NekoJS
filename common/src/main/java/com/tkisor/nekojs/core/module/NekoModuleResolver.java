@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.io.IOException;
@@ -11,7 +12,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * 实例化模块解析器：构造器接收 {@link NekoJSPaths} 和 {@link ScriptFilePolicy}，
+ * 不再调用 {@code ScriptCompilerRegistry.current()} 或 {@code NekoJSPaths.*} static。
+ *
+ * <p>旧无参构造器保留为 legacy delegate，使用 {@code NekoJSPaths.legacy()} + {@code ScriptFilePolicy.legacyRuntime()}
+ * + {@code ScriptCompilerRegistry.current()} 创建过渡实例，供尚未迁移的
+ * {@code NekoScriptModuleLoaderHost} 调用点使用，后续 Phase 3F / 6 删除。
+ */
 public final class NekoModuleResolver {
+    private final NekoJSPaths paths;
+    private final ScriptFilePolicy filePolicy;
+    private final ScriptCompilerRegistry compilers;
+
+    public NekoModuleResolver(NekoJSPaths paths, ScriptFilePolicy filePolicy, ScriptCompilerRegistry compilers) {
+        this.paths = paths;
+        this.filePolicy = filePolicy;
+        this.compilers = compilers;
+    }
+
+    public NekoModuleResolver() {
+        this(NekoJSPaths.legacy(), ScriptFilePolicy.legacyRuntime(), ScriptCompilerRegistry.current());
+    }
+
     public NekoResolvedModule resolveEntry(String entryPath) throws IOException {
         return resolveFileModule(pathFromLoaderPath(entryPath));
     }
@@ -27,7 +50,7 @@ public final class NekoModuleResolver {
         Path parent = pathFromLoaderPath(parentPath);
         Path baseDirectory = Files.isDirectory(parent) ? parent : parent.getParent();
         if (baseDirectory == null) {
-            baseDirectory = NekoJSPaths.ROOT;
+            baseDirectory = paths.root();
         }
         return resolveFileModule(baseDirectory.resolve(specifier).normalize());
     }
@@ -69,16 +92,14 @@ public final class NekoModuleResolver {
     }
 
     private List<String> extensionsForCandidates() {
-        List<String> extensions = new ArrayList<>(ScriptCompilerRegistry.current().supportedExtensionsInOrder());
-        extensions.add(".json");
-        return extensions;
+        return filePolicy.candidateExtensionsWithJson();
     }
 
     private Path verifyModulePath(Path path) throws IOException {
-        Path verified = NekoJSPaths.verifyInsideGameDir(path);
+        Path verified = paths.verifyInsideGameDir(path);
         if (Files.exists(verified)) {
             Path realPath = verified.toRealPath();
-            if (!realPath.startsWith(NekoJSPaths.GAME_DIR.normalize().toAbsolutePath())) {
+            if (!realPath.startsWith(paths.gameDir().normalize().toAbsolutePath())) {
                 throw new IOException("Symlink escape detected: " + realPath);
             }
         }
@@ -97,7 +118,7 @@ public final class NekoModuleResolver {
             normalized = normalized.substring(2);
         }
         Path parsed = Path.of(normalized);
-        Path resolved = parsed.isAbsolute() ? parsed : NekoJSPaths.ROOT.resolve(parsed);
+        Path resolved = parsed.isAbsolute() ? parsed : paths.root().resolve(parsed);
         return verifyModulePath(resolved.normalize());
     }
 
@@ -160,7 +181,7 @@ public final class NekoModuleResolver {
     }
 
     private boolean isLoadableModule(Path path) {
-        return isJson(path) || NekoJSPaths.isSupportedScriptFile(path);
+        return isJson(path) || filePolicy.isSupportedScriptFile(path);
     }
 
     private boolean isJson(Path path) {
@@ -174,7 +195,7 @@ public final class NekoModuleResolver {
         }
         Path absolute = path.normalize().toAbsolutePath();
         try {
-            return NekoJSPaths.ROOT.relativize(absolute).toString().replace('\\', '/');
+            return paths.root().relativize(absolute).toString().replace('\\', '/');
         } catch (IllegalArgumentException ignored) {
             return absolute.toString().replace('\\', '/');
         }

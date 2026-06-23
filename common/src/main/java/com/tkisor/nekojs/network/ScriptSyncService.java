@@ -17,13 +17,13 @@ public final class ScriptSyncService {
     private ScriptSyncService() {}
 
     public static String readScript(String relativePath) throws Exception {
-        Path targetPath = NekoJSPaths.verifyScriptSyncPath(relativePath);
+        Path targetPath = NekoJSPaths.legacy().verifyScriptSyncPath(relativePath);
         return Files.exists(targetPath) ? Files.readString(targetPath) : null;
     }
 
     public static void saveScript(String relativePath, String content) throws Exception {
         ScriptSyncFiles.validateContentSize(content, MAX_SINGLE_SCRIPT_SIZE);
-        Path targetPath = NekoJSPaths.verifyScriptSyncPath(relativePath);
+        Path targetPath = NekoJSPaths.legacy().verifyScriptSyncPath(relativePath);
         Files.createDirectories(targetPath.getParent());
         Files.writeString(targetPath, content);
         clearErrorsFor(relativePath);

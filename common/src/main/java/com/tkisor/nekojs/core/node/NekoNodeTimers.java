@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
-import com.tkisor.nekojs.script.ScriptManager;
+import com.tkisor.nekojs.script.context.ScriptContextSeam;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -135,7 +135,7 @@ public final class NekoNodeTimers implements AutoCloseable {
     private void recordScriptId(int id, Value callback) {
         if (callback == null) return;
         Context context = callback.getContext();
-        String scriptId = ScriptManager.getCurrentScriptId(context);
+        String scriptId = ScriptContextSeam.currentScriptIdOf(context);
         if (scriptId == null || scriptId.isBlank()) {
             scriptId = activeScriptIds.get(context);
         }
@@ -150,7 +150,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         String scriptId = scriptIds.get(id);
         try {
             synchronized (context) {
-                String previousScriptId = ScriptManager.switchCurrentScriptId(context, scriptId);
+                String previousScriptId = ScriptContextSeam.switchCurrentScriptId(context, scriptId);
                 if (scriptId != null && !scriptId.isBlank()) {
                     activeScriptIds.put(context, scriptId);
                 }
@@ -160,7 +160,7 @@ public final class NekoNodeTimers implements AutoCloseable {
                     if (scriptId != null && !scriptId.isBlank()) {
                         activeScriptIds.remove(context);
                     }
-                    ScriptManager.restoreCurrentScriptId(context, previousScriptId);
+                    ScriptContextSeam.restoreCurrentScriptId(context, previousScriptId);
                 }
             }
         } catch (Throwable e) {

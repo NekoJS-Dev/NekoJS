@@ -7,7 +7,10 @@ import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.NekoSandboxBuilder;
 import com.tkisor.nekojs.core.ScriptEventBridge;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.ScriptLocator;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.ClassFilter;
@@ -16,7 +19,10 @@ import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.script.context.ScriptContextRegistry;
+import com.tkisor.nekojs.script.context.ScriptContextSeam;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
+import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 
@@ -63,17 +69,21 @@ public final class ScriptManager {
         return sm;
     }
 
-    // ---- 全局：Context → ScriptId 映射（跨 ScriptType 共享） ----
-    private static final Map<Context, String> CONTEXT_SCRIPT_ID_MAP =
-            Collections.synchronizedMap(new WeakHashMap<>());
-
     // ---- 实例字段 ----
 
     /**
-     * 拥有此 ScriptManager 的 NekoJS 实例。
-     * 通过 parent 访问 scriptEventBridge、scriptProperties 等全局对象。
+     * 拥有此 ScriptManager 的 NekoJS 实例（legacy 过渡）。
+     * Phase 4E 后通过 {@link #scriptEventBridge} / {@link #scriptProperties} / {@link #errorTracker} 访问具体协作者。
+     * Phase 6 删除。
      */
+    @Deprecated
     public final NekoJS parent;
+
+    private final ScriptEventBridge scriptEventBridge;
+    private final ScriptPropertyRegistry scriptProperties;
+    private final ErrorTracker errorTracker;
+    private final NekoJSPaths paths;
+    private final SandboxConfig sandboxConfig;
 
     /**
      * 本实例管理的脚本类型
@@ -89,10 +99,27 @@ public final class ScriptManager {
     /**
      * @param parent    拥有此 manager 的 NekoJS 实例
      * @param scriptType 本实例管理的脚本类型
+     * @deprecated 使用 {@link #ScriptManager(ScriptType, ScriptEventBridge, ScriptPropertyRegistry, ErrorTracker, NekoJSPaths)}
      */
+    @Deprecated
     public ScriptManager(NekoJS parent, ScriptType scriptType) {
         this.parent = parent;
         this.scriptType = scriptType;
+        this.scriptEventBridge = parent.scriptEventBridge;
+        this.scriptProperties = parent.scriptProperties;
+        this.errorTracker = NekoErrorTracker.legacyInstance();
+        this.paths = NekoJSPaths.legacy();
+        this.sandboxConfig = ClassFilter.INSTANCE.config();
+    }
+
+    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig) {
+        this.parent = null;
+        this.scriptType = scriptType;
+        this.scriptEventBridge = scriptEventBridge;
+        this.scriptProperties = scriptProperties;
+        this.errorTracker = errorTracker;
+        this.paths = paths;
+        this.sandboxConfig = sandboxConfig;
     }
 
     // ---- 配置 ----
@@ -109,10 +136,11 @@ public final class ScriptManager {
             this.context = sandbox.context();
             this.nodeRuntime = sandbox.nodeRuntime();
             CONTEXT_TO_MANAGER.put(context, this);
+            ScriptContextSeam.bind(context, scriptType);
             context.getBindings("js").putMember("__nekoCurrentScriptId", null);
 
             var bindings = context.getBindings("js");
-            parent.scriptEventBridge.bindEvents(bindings, scriptType);
+            scriptEventBridge.bindEvents(bindings, scriptType);
 
             var environmentBindings = NekoPluginRuntime.current().bindings(scriptType);
             environmentBindings.forEach((name, binding) -> {
@@ -160,7 +188,7 @@ public final class ScriptManager {
      * 发现本类型对应的脚本文件
      */
     public void discoverScripts() {
-        List<ScriptContainer> discovered = ScriptLocator.discover(scriptType, parent.scriptProperties);
+        List<ScriptContainer> discovered = ScriptLocator.discover(scriptType, scriptProperties);
         this.scripts = discovered;
         scriptType.logger().info("发现了 {} 个 {} 脚本。", discovered.size(), scriptType.name());
     }
@@ -203,20 +231,20 @@ public final class ScriptManager {
     private void runScript(Context ctx, ScriptContainer script) {
         try {
             synchronized (ctx) {
-                Path relativePath = NekoJSPaths.ROOT.relativize(script.path);
+                Path relativePath = paths.root().relativize(script.path);
                 String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
                 JavaClassLoadTelemetry.enter(script.type, script.id.toString());
-                setCurrentScriptId(ctx, script.id.toString());
+                ScriptContextSeam.switchCurrentScriptId(ctx, script.id.toString());
                 try {
                     waitForEntryModule(ctx, script, requirePath);
                 } finally {
-                    setCurrentScriptId(ctx, null);
+                    ScriptContextSeam.switchCurrentScriptId(ctx, null);
                     JavaClassLoadTelemetry.exit();
                 }
 
-                NekoErrorTracker.clear(script.id);
-                NekoErrorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
+                errorTracker.clear(script.id);
+                errorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
                 script.disabled = false;
                 script.lastError = null;
             }
@@ -224,8 +252,8 @@ public final class ScriptManager {
             script.disabled = true;
             script.lastError = t;
 
-            ScriptError scriptError = NekoErrorTracker.record(script, t);
-            script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(ClassFilter.conciseScriptErrorLogs));
+            ScriptError scriptError = errorTracker.record(script, t);
+            script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
         }
     }
 
@@ -292,7 +320,7 @@ public final class ScriptManager {
 
         NekoModulePreparationCache.invalidate(target);
         Context ctx = getOrCreateContext();
-        String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
+        String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
 
         boolean directEntry = scripts.stream()
                 .anyMatch(s -> s.path.normalize().toAbsolutePath().equals(target));
@@ -317,7 +345,7 @@ public final class ScriptManager {
 
         synchronized (ctx) {
             for (ScriptContainer script : targets) {
-                String entryPath = "./" + NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/');
+                String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
                 ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
             }
             ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
@@ -347,7 +375,7 @@ public final class ScriptManager {
             return List.of(directEntry.get());
         }
         Context ctx = getOrCreateContext();
-        String modulePath = "./" + NekoJSPaths.ROOT.relativize(target).toString().replace('\\', '/');
+        String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
         List<String> affectedIds = new ArrayList<>();
         synchronized (ctx) {
             Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
@@ -358,17 +386,17 @@ public final class ScriptManager {
             }
         }
         return scripts.stream()
-                .filter(script -> affectedIds.contains(NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/')))
+                .filter(script -> affectedIds.contains(paths.root().relativize(script.path).toString().replace('\\', '/')))
                 .toList();
     }
 
     private void reloadEntryScript(Context ctx, ScriptContainer script) {
-        parent.scriptEventBridge.clearListeners(scriptType, script.id.toString());
+        scriptEventBridge.clearListeners(scriptType, script.id.toString());
         if (nodeRuntime != null) {
             nodeRuntime.timers().cancelScript(script.id.toString());
         }
-        NekoErrorTracker.clear(script.id);
-        NekoErrorTracker.clearByScriptPath(scriptType, NekoJSPaths.ROOT.relativize(script.path).toString().replace('\\', '/'));
+        errorTracker.clear(script.id);
+        errorTracker.clearByScriptPath(scriptType, paths.root().relativize(script.path).toString().replace('\\', '/'));
         script.preload();
         if (script.shouldRun()) {
             runScript(ctx, script);
@@ -398,7 +426,7 @@ public final class ScriptManager {
         if (!target.startsWith(root)) {
             throw new IOException("Script file is outside " + scriptType.name() + " scripts: " + filePath);
         }
-        if (!Files.isRegularFile(target) || !NekoJSPaths.isSupportedScriptFile(target)) {
+        if (!Files.isRegularFile(target) || !ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(target)) {
             throw new IOException("Unsupported or missing script file: " + filePath);
         }
         return target;
@@ -445,8 +473,8 @@ public final class ScriptManager {
     // ---- 环境重置 ----
 
     private void resetEnvironment() {
-        parent.scriptEventBridge.clearListeners(scriptType);
-        NekoErrorTracker.clearByType(scriptType);
+        scriptEventBridge.clearListeners(scriptType);
+        errorTracker.clearByType(scriptType);
         for (var binding : NekoPluginRuntime.current().bindings(scriptType).values()) {
             binding.close(scriptType);
         }
@@ -464,7 +492,7 @@ public final class ScriptManager {
             }
         }
         if (oldContext != null) {
-            CONTEXT_SCRIPT_ID_MAP.remove(oldContext);
+            ScriptContextSeam.unbind(oldContext);
             CONTEXT_TO_MANAGER.remove(oldContext);
             try {
                 oldContext.close();
@@ -481,7 +509,7 @@ public final class ScriptManager {
     }
 
     private ScriptEventRegistrar getScriptEventRegistrar() {
-        return parent.scriptEventBridge.scriptEventRegistrar();
+        return scriptEventBridge.scriptEventRegistrar();
     }
 
     public void flushReadyNodeTimers() {
@@ -492,37 +520,24 @@ public final class ScriptManager {
         }
     }
 
-    // ---- Context 身份管理（全局，跨 ScriptType 共享） ----
+    // ---- Context 身份管理（委托 ScriptContextSeam，Phase 4B 后由 ScriptEnvironmentFactory 持有 registry） ----
 
     /**
      * 从上下文获取对应的脚本类型
      */
     public static ScriptType getTypeFromContext(Context context) {
-        return CONTEXT_TO_MANAGER.get(context).scriptType;
+        return ScriptContextSeam.scriptTypeOf(context);
     }
 
     public static String switchCurrentScriptId(Context context, String scriptId) {
-        String previous = CONTEXT_SCRIPT_ID_MAP.get(context);
-        setCurrentScriptId(context, scriptId);
-        return previous;
+        return ScriptContextSeam.switchCurrentScriptId(context, scriptId);
     }
 
     public static void restoreCurrentScriptId(Context context, String scriptId) {
-        setCurrentScriptId(context, scriptId);
+        ScriptContextSeam.restoreCurrentScriptId(context, scriptId);
     }
 
     public static String getCurrentScriptId(Context context) {
-        return CONTEXT_SCRIPT_ID_MAP.get(context);
-    }
-
-    private static void setCurrentScriptId(Context context, String scriptId) {
-        if (context == null) return;
-        if (scriptId == null || scriptId.isBlank()) {
-            CONTEXT_SCRIPT_ID_MAP.remove(context);
-            context.getBindings("js").putMember("__nekoCurrentScriptId", null);
-        } else {
-            CONTEXT_SCRIPT_ID_MAP.put(context, scriptId);
-            context.getBindings("js").putMember("__nekoCurrentScriptId", scriptId);
-        }
+        return ScriptContextSeam.currentScriptIdOf(context);
     }
 }

@@ -1,27 +1,28 @@
 package com.tkisor.nekojs.core.fs;
 
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.config.SandboxConfigLoader;
 
 import java.util.Set;
 import java.util.function.Predicate;
-
-import static com.tkisor.nekojs.core.fs.NekoJSPaths.ENGINE_CONFIG;
 
 /**
  * 负责过滤 GraalVM 沙盒中的 Java 类访问权限，支持细粒度权限控制
  */
 public class ClassFilter implements Predicate<String> {
 
-    public static final ClassFilter INSTANCE = new ClassFilter();
+    public static final ClassFilter INSTANCE = new ClassFilter(SandboxConfig.defaultConfig());
 
-    public static boolean allowThreads = false;
-    public static boolean allowReflection = false;
-    public static boolean allowAsm = false;
-    public static boolean allowFsWriteOutsideNekojs = false;
-    public static boolean enableEsmAuthoring = true;
-    public static boolean conciseScriptErrorLogs = true;
+    private static boolean allowThreads = false;
+    private static boolean allowReflection = false;
+    private static boolean allowAsm = false;
+    private static boolean allowFsWriteOutsideNekojs = false;
+    private static boolean enableEsmAuthoring = true;
+    private static boolean conciseScriptErrorLogs = true;
+
+    private volatile SandboxConfig config;
 
     private static final Set<String> THREAD_GROUP = Set.of("java.lang.Thread", "java.lang.ThreadGroup");
     private static final Set<String> REFLECT_GROUP = Set.of("java.lang.reflect", "java.lang.invoke.MethodHandles");
@@ -37,7 +38,13 @@ public class ClassFilter implements Predicate<String> {
             "cpw.mods.modlauncher", "cpw.mods.gross"
     );
 
-    private ClassFilter() {}
+    public ClassFilter(SandboxConfig config) {
+        this.config = config;
+    }
+
+    public SandboxConfig config() {
+        return config;
+    }
 
     @Override
     public boolean test(String className) {
@@ -47,9 +54,9 @@ public class ClassFilter implements Predicate<String> {
     }
 
     private boolean isAllowed(String className) {
-        if (!allowThreads && matchesGroup(className, THREAD_GROUP)) return false;
-        if (!allowReflection && matchesGroup(className, REFLECT_GROUP)) return false;
-        if (!allowAsm && matchesGroup(className, ASM_GROUP)) return false;
+        if (!config.allowThreads() && matchesGroup(className, THREAD_GROUP)) return false;
+        if (!config.allowReflection() && matchesGroup(className, REFLECT_GROUP)) return false;
+        if (!config.allowAsm() && matchesGroup(className, ASM_GROUP)) return false;
         if (matchesGroup(className, GENERAL_BLACKLIST)) return false;
         return true;
     }
@@ -62,65 +69,51 @@ public class ClassFilter implements Predicate<String> {
         return allowThreads || allowReflection || allowAsm;
     }
 
-    public static void loadEngineConfig() {
-        try (CommentedFileConfig config = CommentedFileConfig.builder(ENGINE_CONFIG)
-                .sync()
-                .preserveInsertionOrder()
-                .autosave()
-                .build()) {
-
-            config.load();
-
-            setupConfigEntry(config, "allowThreads", false,
-                    " Allows scripts to create unmanaged background threads. May cause lag or resource leaks.");
-
-            setupConfigEntry(config, "allowReflection", false,
-                    " Allows scripts to bypass access controls via reflection and modify private Java data.");
-
-            setupConfigEntry(config, "allowAsm", false,
-                    " Allows scripts to directly manipulate Java bytecode. Incorrect usage may cause severe crashes.");
-
-            setupConfigEntry(config, "allowFsWriteOutsideNekojs", false,
-                    " Allows Node fs write/delete operations anywhere under the game directory instead of only under nekojs/. Still blocks paths outside .minecraft.");
-
-            removeConfigEntry(config, "prependRequirePatch");
-            removeConfigEntry(config, "useNekoScriptLoader");
-            removeConfigEntry(config, "useNativeEsmLoader");
-
-            setupConfigEntry(config, "enableEsmAuthoring", true,
-                    " Enables ESM authoring support for .js/.mjs/.ts/.jsx/.tsx scripts. When enabled, NekoJS parses each module and transforms ESM syntax into the unified script runtime. Disable only if you need pure CommonJS require compatibility.");
-
-            setupConfigEntry(config, "conciseScriptErrorLogs", true,
-                    " Emits direct source-focused script errors by default. Set false to log full verbose diagnostics and stack traces for analysis.");
-
-            ClassFilter.allowThreads = config.get("allowThreads");
-            ClassFilter.allowReflection = config.get("allowReflection");
-            ClassFilter.allowAsm = config.get("allowAsm");
-            ClassFilter.allowFsWriteOutsideNekojs = config.get("allowFsWriteOutsideNekojs");
-            ClassFilter.enableEsmAuthoring = config.get("enableEsmAuthoring");
-            ClassFilter.conciseScriptErrorLogs = config.get("conciseScriptErrorLogs");
-
-            NekoJS.LOGGER.info(
-                    "Engine config loaded. Unsafe features enabled: {}",
-                    ClassFilter.isAnyUnsafeFeatureEnabled()
-            );
-
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("Failed to load engine.toml", e);
-        }
+    public static boolean isAllowThreads() {
+        return allowThreads;
     }
 
-    private static void setupConfigEntry(CommentedFileConfig config, String path, Object defaultValue, String comment) {
-        if (!config.contains(path)) {
-            config.set(path, defaultValue);
-            config.setComment(path, comment);
-        }
+    public static boolean isAllowReflection() {
+        return allowReflection;
     }
 
-    private static void removeConfigEntry(CommentedFileConfig config, String path) {
-        if (config.contains(path)) {
-            config.remove(path);
-            config.setComment(path, null);
-        }
+    public static boolean isAllowAsm() {
+        return allowAsm;
+    }
+
+    public static boolean isAllowFsWriteOutsideNekojs() {
+        return allowFsWriteOutsideNekojs;
+    }
+
+    public static boolean isEnableEsmAuthoring() {
+        return enableEsmAuthoring;
+    }
+
+    public static boolean isConciseScriptErrorLogs() {
+        return conciseScriptErrorLogs;
+    }
+
+    public static SandboxConfig loadEngineConfig() {
+        return loadEngineConfig(NekoJSPaths.ENGINE_CONFIG);
+    }
+
+    public static SandboxConfig loadEngineConfig(java.nio.file.Path engineConfig) {
+        SandboxConfig config = new SandboxConfigLoader().load(engineConfig);
+        syncLegacyConfig(config);
+        NekoJS.LOGGER.info(
+                "Engine config loaded. Unsafe features enabled: {}",
+                config.anyUnsafeFeatureEnabled()
+        );
+        return config;
+    }
+
+    public static void syncLegacyConfig(SandboxConfig config) {
+        INSTANCE.config = config;
+        allowThreads = config.allowThreads();
+        allowReflection = config.allowReflection();
+        allowAsm = config.allowAsm();
+        allowFsWriteOutsideNekojs = config.allowFsWriteOutsideNekojs();
+        enableEsmAuthoring = config.enableEsmAuthoring();
+        conciseScriptErrorLogs = config.conciseScriptErrorLogs();
     }
 }

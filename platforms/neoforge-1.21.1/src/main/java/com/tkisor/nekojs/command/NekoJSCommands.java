@@ -6,10 +6,12 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
@@ -44,10 +46,11 @@ public final class NekoJSCommands {
                                     source.sendSystemMessage(Component.literal("Running NekoJStest scripts..."));
 
                                     try {
-                                        var testSm = NekoJS.COMMON.scriptManagers.at(ScriptType.TEST);
+                                        NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+                                        ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                                         if (testSm == null) {
-                                            testSm = new ScriptManager(NekoJS.COMMON, ScriptType.TEST);
-                                            NekoJS.COMMON.scriptManagers.set(ScriptType.TEST, testSm);
+                                            testSm = NekoJSMod.RUNTIME_ROOT.createScriptManager(ScriptType.TEST);
+                                            root.registerScriptManager(ScriptType.TEST, testSm);
                                         }
                                         testSm.runTestScripts();
                                         sendReloadResult(source, "NekoJStest scripts completed.");
@@ -142,15 +145,16 @@ public final class NekoJSCommands {
         }
         source.sendSystemMessage(Component.literal("Reloading NekoJS" + type.name + " scripts..."));
         try {
+            NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
             if (type == ScriptType.TEST) {
-                var testSm = NekoJS.COMMON.scriptManagers.at(ScriptType.TEST);
+                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                 if (testSm == null) {
-                    testSm = new ScriptManager(NekoJS.COMMON, ScriptType.TEST);
-                    NekoJS.COMMON.scriptManagers.set(ScriptType.TEST, testSm);
+                    testSm = NekoJSMod.RUNTIME_ROOT.createScriptManager(ScriptType.TEST);
+                    root.registerScriptManager(ScriptType.TEST, testSm);
                 }
                 testSm.runTestScripts();
             } else {
-                NekoJS.COMMON.scriptManagers.at(type).reloadScripts();
+                root.reload(type);
             }
             sendReloadResult(source, "NekoJS" + type.name + " scripts reloaded.");
         } catch (Exception e) {
@@ -166,9 +170,10 @@ public final class NekoJSCommands {
         }
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
-            int affectedEntries = NekoJS.COMMON.scriptManagers.at(type).reloadScriptFile(filePath).size();
+            NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            int affectedEntries = root.scriptManagerOf(type).reloadScriptFile(filePath).size();
             if (type == ScriptType.TEST) {
-                var testSm = NekoJS.COMMON.scriptManagers.at(ScriptType.TEST);
+                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                 if (testSm != null) {
                     testSm.flushReadyNodeTimers();
                 }
