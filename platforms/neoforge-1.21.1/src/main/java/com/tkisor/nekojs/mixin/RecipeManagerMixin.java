@@ -5,11 +5,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
@@ -76,12 +76,12 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
         try {
-            NekoPluginRuntime.current().beforeRecipeLoading(eventJS);
+            NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
             ServerEvents.RECIPES.post(eventJS);
             ServerEvents.AFTER_RECIPES.post(eventJS);
-            NekoPluginRuntime.current().afterRecipes(eventJS);
+            NekoRuntimeAccess.get().afterRecipes(eventJS);
         } catch (PolyglotException e) {
-            NekoErrorTracker.recordEventError(ScriptType.SERVER, e);
+            NekoJSMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("Recipe script execution crashed", e);
         }
@@ -110,7 +110,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             List<ServerPlayer> players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();
             players.forEach(player -> {
                 if (player.hasPermissions(2)) {
-                    if (!NekoErrorTracker.hasErrors()) {
+                    if (!NekoJSMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
                         player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
                     } else {
                         player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent());

@@ -13,12 +13,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 模块准备缓存：持有 prepared module cache 为 static map（过渡），但 prepare 委托
- * bootstrap 绑定的 {@link NekoModulePipeline} 实例（{@link NekoModulePipeline#legacyInstance()}），
- * 不再直接调用 static {@code NekoModulePipeline.prepare}。
- *
- * <p>路径 relativize 仍走 {@code NekoJSPaths.legacy()}（过渡），后续 Phase 3F / 6 随 loader host
- * 注入实例 paths 后改为实例字段。
+ * 模块准备缓存：持有 prepared module cache 和 source map cache。
+ * prepare 逻辑委托给 {@link NekoModulePipeline} 实例。
  */
 public final class NekoModulePipelineCache {
     private static final Map<Path, PreparedEntry> PREPARED_CACHE = new ConcurrentHashMap<>();
@@ -81,7 +77,7 @@ public final class NekoModulePipelineCache {
 
     private static Optional<String> relativePath(Path path) {
         try {
-            return Optional.of(NekoJSPaths.legacy().root().relativize(path).toString().replace('\\', '/'));
+            return Optional.of(NekoJSPaths.get().root().relativize(path).toString().replace('\\', '/'));
         } catch (Exception ignored) { // relative path computation fails → cache miss
             return Optional.empty();
         }

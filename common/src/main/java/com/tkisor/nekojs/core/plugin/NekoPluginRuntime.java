@@ -68,8 +68,8 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         RecipeTypeDefinitionStorage.setPluginOverrides(builder.build());
     }
 
-    public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins) {
-        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(plugins);
+    public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
+        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(plugins, scriptProperties);
         current = runtime;
         NekoRuntimeAccess.set(runtime);
         ScriptCompilerRegistry.useRuntime(runtime.scriptCompilers());

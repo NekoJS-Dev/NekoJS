@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 
 import java.util.ArrayList;
@@ -14,12 +14,13 @@ public final class ScriptEventRegistry {
 
     private ScriptEventRegistry() {}
 
-    public static synchronized void validateAvailable(ScriptType targetType, String groupName, String eventName) {
-        if (NekoRuntimeAccess.get().eventGroups().containsKey(groupName)) {
+    public static synchronized void validateAvailable(IPluginRuntime runtime, ScriptType targetType, String groupName, String eventName) {
+        Objects.requireNonNull(runtime, "runtime");
+        if (runtime.eventGroups().containsKey(groupName)) {
             throw new IllegalArgumentException("Script event group conflicts with built-in event group: " + groupName);
         }
         for (ScriptType type : ScriptType.all()) {
-            if (NekoRuntimeAccess.get().bindings(type).containsKey(groupName)) {
+            if (runtime.bindings(type).containsKey(groupName)) {
                 throw new IllegalArgumentException("Script event group conflicts with built-in binding: " + groupName);
             }
         }
@@ -28,9 +29,9 @@ public final class ScriptEventRegistry {
         }
     }
 
-    public static synchronized void register(ScriptEventDefinition definition) {
+    public static synchronized void register(IPluginRuntime runtime, ScriptEventDefinition definition) {
         Objects.requireNonNull(definition, "definition");
-        validateAvailable(definition.targetType(), definition.groupName(), definition.eventName());
+        validateAvailable(runtime, definition.targetType(), definition.groupName(), definition.eventName());
         DEFINITIONS.put(key(definition.targetType(), definition.groupName(), definition.eventName()), definition);
     }
 

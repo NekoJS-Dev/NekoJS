@@ -27,7 +27,7 @@ public class NekoSecurityWarningHandler {
     private static void checkHostOnce() {
         if (!checkedHost) {
             checkedHost = true;
-            if (ClassFilter.isAnyUnsafeFeatureEnabled()) {
+            if (ClassFilter.INSTANCE.config().anyUnsafeFeatureEnabled()) {
                 if (!NekoHostIdentifier.isHostAcknowledged()) {
                     needsWarningThisSession = true;
                     NekoHostIdentifier.saveHostCode();
@@ -81,21 +81,21 @@ public class NekoSecurityWarningHandler {
     private static Component getDetailedWarningText() {
         MutableComponent text = Component.translatable("nekojs.security.detail.header").append(Component.literal("\n\n"));
 
-        if (ClassFilter.isAllowThreads()) {
+        if (ClassFilter.INSTANCE.config().allowThreads()) {
             text.append(Component.translatable("nekojs.security.detail.threads.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.threads.desc").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal("\n\n"));
         }
 
-        if (ClassFilter.isAllowReflection()) {
+        if (ClassFilter.INSTANCE.config().allowReflection()) {
             text.append(Component.translatable("nekojs.security.detail.reflection.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.reflection.desc").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal("\n\n"));
         }
 
-        if (ClassFilter.isAllowAsm()) {
+        if (ClassFilter.INSTANCE.config().allowAsm()) {
             text.append(Component.translatable("nekojs.security.detail.asm.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE));

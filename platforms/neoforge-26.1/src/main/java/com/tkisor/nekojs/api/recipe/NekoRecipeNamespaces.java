@@ -2,7 +2,7 @@ package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,12 +21,12 @@ public final class NekoRecipeNamespaces {
     private NekoRecipeNamespaces() {}
 
     public static Object createHandler(String namespace, RecipeEventJS event) {
-        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         return entry == null ? null : entry.factory().apply(event);
     }
 
     public static Set<String> getNamespaces() {
-        return NekoPluginRuntime.current().recipeNamespaces().keySet();
+        return NekoRuntimeAccess.get().recipeNamespaces().keySet();
     }
 
     public static Set<String> getNamespaces(RecipeTypeDefinitionRegistry definitions) {
@@ -40,7 +40,7 @@ public final class NekoRecipeNamespaces {
     }
 
     public static @Nullable Class<?> getHandlerClass(String namespace) {
-        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         return entry == null ? null : entry.handlerClass();
     }
 
@@ -72,7 +72,7 @@ public final class NekoRecipeNamespaces {
 
     public static Map<String, Class<?>> getHandlerClasses() {
         Map<String, Class<?>> handlerClasses = new LinkedHashMap<>();
-        NekoPluginRuntime.current().recipeNamespaces().forEach((namespace, entry) -> handlerClasses.put(namespace, entry.handlerClass()));
+        NekoRuntimeAccess.get().recipeNamespaces().forEach((namespace, entry) -> handlerClasses.put(namespace, entry.handlerClass()));
         return Collections.unmodifiableMap(handlerClasses);
     }
 

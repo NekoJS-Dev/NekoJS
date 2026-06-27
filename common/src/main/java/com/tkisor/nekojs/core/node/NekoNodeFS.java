@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.node;
 
-import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.io.IOException;
@@ -11,7 +11,15 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class NekoNodeFS {
-    private Path currentWorkingDirectory = NekoJSPaths.GAME_DIR;
+    private final NekoJSPaths paths;
+    private final SandboxConfig sandboxConfig;
+    private Path currentWorkingDirectory;
+
+    public NekoNodeFS(SandboxConfig sandboxConfig) {
+        this.paths = NekoJSPaths.get();
+        this.sandboxConfig = sandboxConfig;
+        this.currentWorkingDirectory = paths.gameDir();
+    }
 
     public synchronized String cwd() {
         return currentWorkingDirectory.toString();
@@ -108,7 +116,7 @@ public final class NekoNodeFS {
         List<String> result = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path entry : stream) {
-                NekoJSPaths.legacy().verifyInsideGameDir(entry);
+                paths.verifyInsideGameDir(entry);
                 Path fileName = entry.getFileName();
                 if (fileName != null) {
                     result.add(fileName.toString());
@@ -140,7 +148,7 @@ public final class NekoNodeFS {
     }
 
     public synchronized NekoNodeStats lstat(String path) throws IOException {
-        Path target = NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        Path target = paths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
         return new NekoNodeStats(target, false);
     }
 
@@ -157,32 +165,32 @@ public final class NekoNodeFS {
     }
 
     public synchronized String readlink(String path) throws IOException {
-        Path link = NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        Path link = paths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
         return Files.readSymbolicLink(link).toString();
     }
 
     private Path resolveRead(String path) throws IOException {
-        return NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        return paths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path resolveWrite(String path) throws IOException {
-        if (ClassFilter.isAllowFsWriteOutsideNekojs()) {
-            return NekoJSPaths.legacy().resolveGamePathForCreate(String.valueOf(path), currentWorkingDirectory);
+        if (sandboxConfig.allowFsWriteOutsideNekojs()) {
+            return paths.resolveGamePathForCreate(String.valueOf(path), currentWorkingDirectory);
         }
-        return NekoJSPaths.legacy().resolveNekoWritePathForCreate(String.valueOf(path), currentWorkingDirectory);
+        return paths.resolveNekoWritePathForCreate(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path resolveWriteExisting(String path) throws IOException {
-        if (ClassFilter.isAllowFsWriteOutsideNekojs()) {
-            return NekoJSPaths.legacy().resolveGamePath(String.valueOf(path), currentWorkingDirectory);
+        if (sandboxConfig.allowFsWriteOutsideNekojs()) {
+            return paths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
         }
-        return NekoJSPaths.legacy().resolveNekoWritePath(String.valueOf(path), currentWorkingDirectory);
+        return paths.resolveNekoWritePath(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path verifyWriteParentForCreate(Path path) throws IOException {
-        if (ClassFilter.isAllowFsWriteOutsideNekojs()) {
-            return NekoJSPaths.legacy().verifyInsideGameDirForCreate(path);
+        if (sandboxConfig.allowFsWriteOutsideNekojs()) {
+            return paths.verifyInsideGameDirForCreate(path);
         }
-        return NekoJSPaths.legacy().verifyInsideNekoRootForCreate(path);
+        return paths.verifyInsideNekoRootForCreate(path);
     }
 }

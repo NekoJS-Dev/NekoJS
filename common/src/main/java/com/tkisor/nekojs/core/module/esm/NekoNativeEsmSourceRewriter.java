@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.module.esm;
 
 import com.tkisor.nekojs.api.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
+import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;
@@ -119,7 +119,7 @@ public final class NekoNativeEsmSourceRewriter {
         }
 
         private NekoPreparedModule prepareResolvedModule(Path path) throws IOException {
-            return NekoModulePreparationCache.prepare(path);
+            return NekoModulePipelineCache.prepare(path);
         }
 
         private String specifier(NekoEsmStatement statement) {
@@ -230,7 +230,7 @@ public final class NekoNativeEsmSourceRewriter {
     private static String moduleId(Path path) {
         Path absolute = path.normalize().toAbsolutePath();
         try {
-            return com.tkisor.nekojs.core.fs.NekoJSPaths.ROOT.relativize(absolute).toString().replace('\\', '/');
+            return com.tkisor.nekojs.core.fs.NekoJSPaths.get().root().relativize(absolute).toString().replace('\\', '/');
         } catch (IllegalArgumentException ignored) {
             return absolute.toString().replace('\\', '/');
         }

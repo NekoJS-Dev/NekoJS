@@ -2,9 +2,13 @@ package com.tkisor.nekojs.core.lifecycle;
 
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
+import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.context.NekoCoreContext;
+import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -19,22 +23,15 @@ import java.util.Map;
  *
  * <p>内部持有完整对象图，但默认对 platform 暴露 lifecycle API，而不是暴露宽对象图 getter。
  * 公开 surface 优先是 {@link #reload(ScriptType)}、{@link #reloadFile(ScriptType, Path)}、
- * {@link #runTests()}、{@link #errors()}、{@link #close()} 这类命令式 lifecycle API；
- * 不要让 platform 调用点重新拼装业务流程。
+ * {@link #runTests()}、{@link #errors()}、{@link #close()} 这类命令式 lifecycle API。
  *
- * <p>约束（见 {@code ai_arch/architecture.md} §4.2 与 {@code plan.md} Phase 2.3）：
  * <ul>
  *   <li>不提供全局 {@code get()} / {@code current()}。</li>
  *   <li>只由 platform mod entry、command/reload/shutdown lifecycle 边界持有。</li>
- *   <li>不传入 {@code ScriptManager}、sandbox factory、module loader、catalog provider 等普通业务服务——
- *       script managers 由 root 内部按 {@link ScriptType} 持有，不在构造器外部注入。</li>
- *   <li>不要把 root 继续往下传。</li>
- *   <li>内部对象图字段默认不生成 public getter；确实需要 getter 时必须限制在 platform lifecycle /
- *       bootstrap 边界，并在 allowlist 中记录原因。</li>
+ *   <li>不要把 root 继续往下传给普通业务类。</li>
  * </ul>
  *
- * <p>{@link #close()} 顺序（ownership 表）：script managers → event bridge / listeners →
- * module/runtime resources → core-level resources。
+ * <p>{@link #close()} 顺序：script managers → event bridge / listeners → resources。
  */
 public final class NekoRuntimeRoot implements AutoCloseable {
 
@@ -43,6 +40,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final ScriptCompilerRegistry compilers;
     private final ScriptEventBridge eventBridge;
     private final ScriptPropertyRegistry scriptProperties;
+    private final ScriptEnvironmentFactory environmentFactory;
     private final Map<ScriptType, ScriptManager> scriptManagers;
     private final ResourceTracker resources;
 
@@ -51,19 +49,17 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             IPluginRuntime pluginRuntime,
             ScriptCompilerRegistry compilers,
             ScriptEventBridge eventBridge,
-            ScriptPropertyRegistry scriptProperties
+            ScriptPropertyRegistry scriptProperties,
+            NekoSandboxFactory sandboxFactory
     ) {
         this.core = core;
         this.pluginRuntime = pluginRuntime;
         this.compilers = compilers;
         this.eventBridge = eventBridge;
         this.scriptProperties = scriptProperties;
+        this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);
         this.scriptManagers = new EnumMap<>(ScriptType.class);
         this.resources = new ResourceTracker();
-    }
-
-    public void registerScriptManager(ScriptType type, ScriptManager manager) {
-        scriptManagers.put(type, manager);
     }
 
     public ScriptManager scriptManagerOf(ScriptType type) {
@@ -79,7 +75,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public ScriptManager createScriptManager(ScriptType type) {
-        return new ScriptManager(type, eventBridge, scriptProperties, core.errorTracker(), core.paths(), core.sandboxConfig());
+        ScriptManager manager = new ScriptManager(type, eventBridge, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory);
+        scriptManagers.put(type, manager);
+        return manager;
     }
 
     public ReloadResult reload(ScriptType type) {
@@ -109,6 +107,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
     public ErrorSnapshot errors() {
         return ErrorSnapshot.of(core.errorTracker());
+    }
+
+    public ErrorTracker errorTracker() {
+        return core.errorTracker();
     }
 
     @Override
@@ -154,6 +156,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             manager.flushReadyNodeTimers();
         } catch (Throwable ignored) {
         }
+        manager.close();
     }
 
     public record ReloadResult(ScriptType type, boolean success, Throwable error) {

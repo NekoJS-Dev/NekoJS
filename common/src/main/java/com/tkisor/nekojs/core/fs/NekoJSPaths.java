@@ -10,37 +10,21 @@ import java.nio.file.Path;
 import java.util.Set;
 
 /**
- * 负责定义模组用到的所有文件路径及基础目录初始化。
+ * NekoJS 文件路径单例：通过 {@link #get()} 获取全局实例。
  *
- * <p>实例类：通过 {@link #fromGameDir(Path)} 创建，常用路径通过实例 getter 获取，
- * 路径校验通过实例方法执行。旧 {@code public static final Path} 字段保留为过渡 facade，
- * 供尚未迁移到实例依赖的调用点使用；{@link #legacy()} 是 bootstrap 同步的专用 framework seam，
- * 返回由 {@link #fromGameDir(Path)} 创建的过渡实例。两者均在后续 Phase 删除。
+ * <p>不可变——创建后所有路径不变。实例方法获取路径，静态方法执行校验。
  */
 public final class NekoJSPaths {
 
-    /* ================= Legacy static field facade（后续 Phase 删除） ================= */
-    public static final Path GAME_DIR = Platform.getGameDir();
-    public static final Path ROOT = GAME_DIR.resolve("nekojs");
+    private static volatile NekoJSPaths INSTANCE;
 
-    /* ================= 脚本目录 ================= */
-    public static final Path STARTUP_SCRIPTS = ROOT.resolve("startup_scripts");
-    public static final Path SERVER_SCRIPTS  = ROOT.resolve("server_scripts");
-    public static final Path CLIENT_SCRIPTS  = ROOT.resolve("client_scripts");
-    public static final Path TEST_SCRIPTS    = ROOT.resolve("test_scripts");
-
-    public static final Path PROBE_DIR = GAME_DIR.resolve(".neko_probe");
-    public static final Path NODE_MODULES = ROOT.resolve("node_modules");
-
-    /* ================= 配置与辅助文件 ================= */
-    public static final Path CONFIG = ROOT.resolve("config");
-    public static final Path README = ROOT.resolve("README.txt");
-    public static final Path ENGINE_CONFIG = CONFIG.resolve("engine.toml");
-
-    public static final Path ASSETS = ROOT.resolve("assets");
-    public static final Path DATA   = ROOT.resolve("data");
-
-    private static final NekoJSPaths LEGACY = fromGameDir(GAME_DIR);
+    public static NekoJSPaths get() {
+        NekoJSPaths inst = INSTANCE;
+        if (inst == null) {
+            INSTANCE = new NekoJSPaths(Platform.getGameDir());
+        }
+        return INSTANCE;
+    }
 
     /* ================= 实例状态 ================= */
     private final Path gameDir;
@@ -75,14 +59,6 @@ public final class NekoJSPaths {
         this.scriptRoots = Set.of(startupScripts, serverScripts, clientScripts, testScripts);
     }
 
-    public static NekoJSPaths fromGameDir(Path gameDir) {
-        return new NekoJSPaths(gameDir);
-    }
-
-    public static NekoJSPaths legacy() {
-        return LEGACY;
-    }
-
     /* ================= 实例 getter ================= */
     public Path gameDir() { return gameDir; }
     public Path root() { return root; }
@@ -98,7 +74,7 @@ public final class NekoJSPaths {
     public Path assets() { return assets; }
     public Path data() { return data; }
 
-    /* ================= 实例路径校验与初始化 ================= */
+    /* ================= 实例路径初始化 ================= */
     public void initFolders() {
         ensureDir(root);
         ensureDir(startupScripts);
@@ -112,6 +88,7 @@ public final class NekoJSPaths {
         ensureDir(data);
     }
 
+    /* ================= 路径校验（实例方法） ================= */
     public Path verifyInsideGameDir(Path path) throws IOException {
         return verifyInsideRoot(path, gameDir);
     }
@@ -170,6 +147,11 @@ public final class NekoJSPaths {
                 .anyMatch(normalized::startsWith);
     }
 
+    public boolean isSupportedScriptFile(Path path) {
+        return ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path);
+    }
+
+    /* ================= 内部工具 ================= */
     private Path resolveAgainstWorkingDirectory(String path, Path currentWorkingDirectory) {
         Path parsed = Path.of(path);
         if (parsed.isAbsolute()) {
@@ -218,16 +200,11 @@ public final class NekoJSPaths {
         return null;
     }
 
-    /* ================= Legacy static facade 方法（后续 Phase 删除） ================= */
-    public static void ensureDir(Path dir) {
+    private static void ensureDir(Path dir) {
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {
             NekoJS.LOGGER.error("Failed to create directory: {}", dir, e);
         }
-    }
-
-    public static boolean isSupportedScriptFile(Path path) {
-        return ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path);
     }
 }

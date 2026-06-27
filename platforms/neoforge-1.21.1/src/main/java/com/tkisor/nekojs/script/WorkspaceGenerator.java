@@ -8,7 +8,6 @@ import com.tkisor.nekojs.api.catalog.NekoSnippetJson;
 import com.tkisor.nekojs.bindings.event.ModifyWorkspaceConfigEvent;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -28,11 +27,10 @@ public final class WorkspaceGenerator {
     public static void setupWorkspace() {
         createReadme();
         SandboxConfig config = ClassFilter.loadEngineConfig();
-        NekoErrorTracker.bindLegacy(new DefaultErrorTracker(NekoJSPaths.legacy(), config));
     }
 
     private static void createReadme() {
-        if (Files.notExists(NekoJSPaths.README)) {
+        if (Files.notExists(NekoJSPaths.get().readme())) {
             try {
                 String content = """
                     === NekoJS Script Directory Guide ===
@@ -41,8 +39,8 @@ public final class WorkspaceGenerator {
                     - client_scripts: Runs on the client only. Used for GUI, key bindings, etc.
                     - test_scripts: Explicit smoke/regression scripts. Run with /nekojs test; they are not loaded by normal startup or reload.
                     - Note: Automatically generated type declaration files (.d.ts) are located in the %s folder. Do not modify them manually.
-                    """.formatted(NekoJSPaths.PROBE_DIR.getFileName()).trim();
-                Files.writeString(NekoJSPaths.README, content);
+                    """.formatted(NekoJSPaths.get().probeDir().getFileName()).trim();
+                Files.writeString(NekoJSPaths.get().readme(), content);
             } catch (IOException ex) {
                 NekoJS.LOGGER.error("Failed to create README.txt", ex);
             }
@@ -50,10 +48,10 @@ public final class WorkspaceGenerator {
     }
 
     public static void createWorkspaceConfigs() {
-        createConfigForEnv(ScriptType.SERVER, NekoJSPaths.SERVER_SCRIPTS);
-        createConfigForEnv(ScriptType.CLIENT, NekoJSPaths.CLIENT_SCRIPTS);
-        createConfigForEnv(ScriptType.STARTUP, NekoJSPaths.STARTUP_SCRIPTS);
-        createConfigForEnv(ScriptType.TEST, NekoJSPaths.TEST_SCRIPTS);
+        createConfigForEnv(ScriptType.SERVER, NekoJSPaths.get().serverScripts());
+        createConfigForEnv(ScriptType.CLIENT, NekoJSPaths.get().clientScripts());
+        createConfigForEnv(ScriptType.STARTUP, NekoJSPaths.get().startupScripts());
+        createConfigForEnv(ScriptType.TEST, NekoJSPaths.get().testScripts());
         createSnippets();
     }
 

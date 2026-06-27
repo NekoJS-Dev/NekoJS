@@ -200,7 +200,7 @@ public class SourceMapRegistry {
 
     private static String normalizeLookupPath(String path) {
         String normalized = path.replace('\\', '/');
-        String rootUri = NekoJSPaths.ROOT.toUri().toString();
+        String rootUri = NekoJSPaths.get().root().toUri().toString();
         if (normalized.startsWith(rootUri)) {
             normalized = normalized.substring(rootUri.length());
         }
@@ -263,7 +263,7 @@ public class SourceMapRegistry {
     private static String normalizeAbsolutePath(String sourceText) {
         try {
             Path path = Path.of(sourceText).normalize().toAbsolutePath();
-            Path root = NekoJSPaths.ROOT.normalize().toAbsolutePath();
+            Path root = NekoJSPaths.get().root().normalize().toAbsolutePath();
             if (path.startsWith(root)) {
                 return root.relativize(path).toString().replace('\\', '/');
             }

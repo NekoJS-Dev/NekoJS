@@ -9,18 +9,17 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.script.ScriptManager;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -43,20 +42,19 @@ public final class NekoJSCommands {
                         .then(Commands.literal("test")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-                                    source.sendSystemMessage(Component.literal("Running NekoJStest scripts..."));
+                                    source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
 
                                     try {
                                         NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
                                         ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                                         if (testSm == null) {
-                                            testSm = NekoJSMod.RUNTIME_ROOT.createScriptManager(ScriptType.TEST);
-                                            root.registerScriptManager(ScriptType.TEST, testSm);
+                                            testSm = root.createScriptManager(ScriptType.TEST);
                                         }
                                         testSm.runTestScripts();
-                                        sendReloadResult(source, "NekoJStest scripts completed.");
+                                        sendReloadResult(source, "NekoJS test scripts completed.");
                                     } catch (Exception e) {
                                         NekoJS.LOGGER.error("Running test scripts failed fatally", e);
-                                        source.sendFailure(Component.literal("Running NekoJStest scripts failed fatally."));
+                                        source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
                                     }
                                     return 1;
                                 })
@@ -65,7 +63,7 @@ public final class NekoJSCommands {
                         .then(Commands.literal("error")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-                                    if (NekoErrorTracker.hasErrors()) {
+                                    if (NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
                                         source.sendFailure(NekoErrorUIHelper.getErrorComponent());
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.healthy"), false);
@@ -77,20 +75,10 @@ public final class NekoJSCommands {
                         .then(Commands.literal("view_all_errors")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-                                    if (NekoErrorTracker.hasErrors()) {
+                                    if (NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
                                         ServerPlayer player = source.getPlayerOrException();
 
-                                        List<ErrorSummaryDTO> dtoList = NekoErrorTracker.getAllErrors().stream()
-                                                .map(err -> new ErrorSummaryDTO(
-                                                        err.getErrorId().toString(),
-                                                        err.getDisplayPath(),
-                                                        err.getLineNumber(),
-                                                        err.getOccurrenceCount(),
-                                                        err.getErrorMessage(),
-                                                        err.getFullDetailText()
-                                                )).toList();
-
-                                        PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(dtoList));
+                                        PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot()));
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
                                     }
@@ -143,20 +131,19 @@ public final class NekoJSCommands {
         if (!canReloadHere(source, type)) {
             return 0;
         }
-        source.sendSystemMessage(Component.literal("Reloading NekoJS" + type.name + " scripts..."));
+//        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
         try {
             NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
             if (type == ScriptType.TEST) {
                 ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                 if (testSm == null) {
-                    testSm = NekoJSMod.RUNTIME_ROOT.createScriptManager(ScriptType.TEST);
-                    root.registerScriptManager(ScriptType.TEST, testSm);
+                    testSm = root.createScriptManager(ScriptType.TEST);
                 }
                 testSm.runTestScripts();
             } else {
                 root.reload(type);
             }
-            sendReloadResult(source, "NekoJS" + type.name + " scripts reloaded.");
+            sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
@@ -187,18 +174,39 @@ public final class NekoJSCommands {
     }
 
     private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
-        if (type == ScriptType.CLIENT && !FMLLoader.getDist().isClient()) {
+        if (type == ScriptType.CLIENT && !Platform.isClient()) {
             source.sendFailure(Component.literal("Client script reload is only available in an integrated client runtime."));
             return false;
         }
         return true;
     }
 
+    private static List<ErrorSummaryDTO> errorSnapshot() {
+        return NekoJSMod.RUNTIME_ROOT.errors().errors().stream()
+                .map(err -> new ErrorSummaryDTO(
+                        err.getErrorId().toString(),
+                        err.getDisplayPath(),
+                        err.getLineNumber(),
+                        err.getOccurrenceCount(),
+                        err.getErrorMessage(),
+                        err.getFullDetailText()
+                )).toList();
+    }
+
+    private static void refreshOpenErrorDashboard(CommandSourceStack source) {
+        if (source.getEntity() instanceof ServerPlayer player) {
+            PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(), false));
+        }
+    }
+
     private static void sendReloadResult(CommandSourceStack source, String successMessage) {
-        if (NekoErrorTracker.hasErrors()) {
+        refreshOpenErrorDashboard(source);
+        int count = NekoJSMod.RUNTIME_ROOT.errors().count();
+        if (count > 0) {
+            source.sendSuccess(() -> Component.literal(successMessage + " (" + count + " error(s) remain)"), false);
             source.sendFailure(NekoErrorUIHelper.getErrorComponent());
         } else {
-            source.sendSuccess(() -> Component.literal(successMessage), true);
+            source.sendSuccess(() -> Component.literal(successMessage + " - no errors."), false);
         }
     }
 }

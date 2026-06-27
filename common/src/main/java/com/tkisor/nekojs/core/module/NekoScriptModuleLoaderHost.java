@@ -2,15 +2,14 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.api.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkMetadata;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.module.esm.NekoNativeEsmSourceRewriter;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -26,38 +25,64 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class NekoScriptModuleLoaderHost {
-    private static final Pattern STACK_LOCATION = Pattern.compile("(\\()([^()\\s]+):(\\d+)(?::(\\d+))?(\\))");
 
     private final Context context;
-    private final NekoModuleResolver resolver = new NekoModuleResolver();
-    private final NekoEsmLinker esmLinker = new NekoEsmLinker(resolver);
-    private final NekoEsmLinkCache esmLinkCache = new NekoEsmLinkCache(esmLinker);
-    private final NekoEsmModuleRecordCache esmRecordCache = new NekoEsmModuleRecordCache();
-    private final NekoNativeEsmSourceRewriter esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
-    private final NekoModuleDependencyGraph dependencyGraph = new NekoModuleDependencyGraph();
-    private final ModuleSliceRelinker sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link);
-    private final Map<String, ModuleState> moduleCache = new ConcurrentHashMap<>();
-    private final Map<String, Long> moduleRevisions = new ConcurrentHashMap<>();
+    private final NekoModuleResolver resolver;
+    private final NekoEsmLinker esmLinker;
+    private final NekoEsmLinkCache esmLinkCache;
+    private final NekoEsmModuleRecordCache esmRecordCache;
+    private final NekoNativeEsmSourceRewriter esmRewriter;
+    private final NekoModuleDependencyGraph dependencyGraph;
+    private final ModuleSliceRelinker sliceRelinker;
+    private final Map<String, ModuleState> moduleCache;
+    private final Map<String, Long> moduleRevisions;
+    private final ModuleReloadCoordinator reloadCoordinator;
+    private final EsmModuleLifecycle esmLifecycle;
     private Value executor;
-    private Value moduleFactory;
     private Value specialResolver;
+    private Value moduleFactory;
     private Value jsonParser;
 
     public NekoScriptModuleLoaderHost(Context context) {
         this.context = context;
+        this.resolver = new NekoModuleResolver();
+        this.esmLinker = new NekoEsmLinker(resolver);
+        this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
+        this.esmRecordCache = new NekoEsmModuleRecordCache();
+        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
+        this.dependencyGraph = new NekoModuleDependencyGraph();
+        this.sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link);
+        this.moduleCache = new ConcurrentHashMap<>();
+        this.moduleRevisions = new ConcurrentHashMap<>();
+        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
+        this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter, context, reloadCoordinator::revision, this::prepare);
     }
 
-    // ---- JS bridge: internal/script-loader.js 通过 GraalVM interop 调用 ----
+    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths) {
+        this.context = context;
+        this.resolver = resolver;
+        this.esmLinker = new NekoEsmLinker(resolver);
+        this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
+        this.esmRecordCache = new NekoEsmModuleRecordCache();
+        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
+        this.dependencyGraph = new NekoModuleDependencyGraph();
+        this.sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link);
+        this.moduleCache = new ConcurrentHashMap<>();
+        this.moduleRevisions = new ConcurrentHashMap<>();
+        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
+        this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter, context, reloadCoordinator::revision, this::prepare);
+    }
+
+    // ======== Graal interop shell：@CalledByDynamicCode 方法供 internal/script-loader.js 通过 GraalVM interop 调用 ========
+    // 这些是 interop shell 入口，内部委托给协作者（EsmModuleLifecycle / CjsModuleLoader）。
 
     @CalledByDynamicCode
     public void configure(Value executor, Value moduleFactory, Value specialResolver, Value jsonParser) {
         this.executor = executor;
-        this.moduleFactory = moduleFactory;
         this.specialResolver = specialResolver;
+        this.moduleFactory = moduleFactory;
         this.jsonParser = jsonParser;
     }
 
@@ -132,23 +157,12 @@ public final class NekoScriptModuleLoaderHost {
 
     @CalledByDynamicCode
     public void clearCache() {
-        moduleCache.clear();
-        esmRecordCache.clear();
-        esmLinkCache.clear();
-        moduleRevisions.clear();
-        dependencyGraph.clear();
-        NekoModulePreparationCache.clear();
-        NekoEsmVirtualModuleRegistry.clear();
+        reloadCoordinator.clearAll();
     }
 
     @CalledByDynamicCode
     public void clearRuntimeCache() {
-        moduleCache.clear();
-        esmRecordCache.clear();
-        esmLinkCache.clear();
-        moduleRevisions.clear();
-        NekoModulePreparationCache.clear();
-        NekoEsmVirtualModuleRegistry.clear();
+        reloadCoordinator.clearRuntimeCache();
     }
 
     @CalledByDynamicCode
@@ -169,31 +183,27 @@ public final class NekoScriptModuleLoaderHost {
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
     }
 
-    // ---- 模块热替换: ScriptManager.reloadScriptFile() 调用，尝试不重跑入口的依赖切片热更新 ----
+    // ======== 热重载：revision bump → cache invalidation → re-prepare → relink → re-evaluate ========
 
     public HotReloadResult hotReloadModule(String modulePath) throws IOException {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
         String moduleId = resolved.id();
 
-        // Invalidate: bump revision, clear old caches
-        long newRevision = bumpRevision(moduleId);
+        long newRevision = reloadCoordinator.bumpRevision(moduleId);
         moduleCache.remove(moduleId);
         esmRecordCache.removeAll(moduleId);
         esmLinkCache.remove(moduleId, newRevision);
-        NekoModulePreparationCache.invalidate(resolved.path());
+        NekoModulePipelineCache.invalidate(resolved.path());
 
-        // Re-prepare the changed module
         NekoPreparedModule prepared = prepare(resolved);
 
-        // Relink the affected dependency slice
         ModuleSliceRelinker.SliceResult sliceResult = sliceRelinker.tryRelinkSlice(moduleId, newRevision);
 
         if (sliceResult.rolledBack()) {
             return new HotReloadResult(moduleId, sliceResult.relinked(), sliceResult.failed(), false);
         }
 
-        // Re-evaluate the affected modules
-        List<String> reevaluated = new ArrayList<>();
+        List<String> reevaluated = new java.util.ArrayList<>();
         for (String relinkedId : sliceResult.relinked()) {
             NekoEsmModuleRecord record = esmRecordCache.get(relinkedId, newRevision);
             if (record != null && record.linkMetadata() != null) {
@@ -251,25 +261,15 @@ public final class NekoScriptModuleLoaderHost {
     // ======== 以下为私有实现 ========
 
     private void invalidateModules(List<String> moduleIds, boolean removeGraphNodes) {
-        for (String moduleId : moduleIds) {
-            bumpRevision(moduleId);
-            moduleCache.remove(moduleId);
-            esmRecordCache.removeAll(moduleId);
-            esmLinkCache.removeAll(moduleId);
-            if (removeGraphNodes) {
-                dependencyGraph.removeModule(moduleId);
-            }
-            NekoEsmVirtualModuleRegistry.invalidate(moduleId);
-            NekoModulePreparationCache.invalidate(NekoJSPaths.ROOT.resolve(moduleId));
-        }
+        reloadCoordinator.invalidateModules(moduleIds, removeGraphNodes);
     }
 
     private long revision(String moduleId) {
-        return moduleRevisions.getOrDefault(moduleId, 0L);
+        return reloadCoordinator.revision(moduleId);
     }
 
     private long bumpRevision(String moduleId) {
-        return moduleRevisions.merge(moduleId, 1L, Long::sum);
+        return reloadCoordinator.bumpRevision(moduleId);
     }
 
     private Object loadResolved(NekoResolvedModule resolved) throws IOException {
@@ -314,7 +314,6 @@ public final class NekoScriptModuleLoaderHost {
         if (cached != null) {
             return cached.exports();
         }
-
         ModuleState module = newModuleState(resolved.id());
         try {
             module.exports(parseJson(Files.readString(resolved.path())));
@@ -335,7 +334,6 @@ public final class NekoScriptModuleLoaderHost {
         if (cached != null) {
             return cached.exports();
         }
-
         ModuleState module = newModuleState(resolved.id());
         try {
             executeScriptModule(resolved, module, prepared);
@@ -358,6 +356,13 @@ public final class NekoScriptModuleLoaderHost {
         return new ModuleState(filename, moduleFactory.execute(filename));
     }
 
+    private Object parseJson(String rawJson) throws IOException {
+        if (jsonParser == null || !jsonParser.canExecute()) {
+            throw new IOException("JSON parser is unavailable for NekoJS script loader.");
+        }
+        return jsonParser.execute(rawJson);
+    }
+
     private void executeScriptModule(NekoResolvedModule resolved, ModuleState module, NekoPreparedModule prepared) throws IOException {
         if (executor == null || !executor.canExecute()) {
             throw new IOException("NekoJS script module executor is unavailable.");
@@ -373,173 +378,18 @@ public final class NekoScriptModuleLoaderHost {
         executor.execute(module.value(), require, resolve, resolved.id(), resolved.dirname(), prepared.code());
     }
 
+    // ======== 以下 ESM/CJS 加载 + 栈映射委托给 EsmModuleLifecycle / 内部逻辑 ========
+
     private Object loadEsmModule(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
-        NekoEsmModuleRecord record = beginEsmModule(resolved, prepared);
-        if (record.evaluated() && record.namespace() != null) {
-            return record.namespace();
-        }
-        if (record.asyncEvaluation()) {
-            throw asyncEsmRequireError(resolved);
-        }
-        return captureNamespaceSync(record, esmRewriter.registerModule(resolved.path(), resolved.id(), prepared));
+        return esmLifecycle.loadEsmModule(resolved, prepared);
     }
 
     private CompletableFuture<Value> loadEsmModuleAsync(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
-        NekoEsmModuleRecord record = beginEsmModule(resolved, prepared);
-        if (record.evaluation() != null) {
-            return record.evaluation();
-        }
-        java.net.URI sourceUri = esmRewriter.registerModule(resolved.path(), resolved.id(), prepared);
-        return captureNamespaceAsync(record, sourceUri);
-    }
-
-    private NekoEsmModuleRecord beginEsmModule(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
-        long revision = revision(resolved.id());
-        NekoEsmModuleRecord cached = esmRecordCache.get(resolved.id(), revision);
-        if (cached != null) {
-            if (cached.state() == NekoEsmModuleState.FAILED) {
-                throw new IOException("Native ESM module failed earlier: " + resolved.id(), cached.failure());
-            }
-            if (cached.linkMetadata() != null) {
-                return cached;
-            }
-        }
-
-        NekoEsmModuleRecord record = cached == null ? esmRecordCache.getOrCreate(resolved.id(), revision, resolved.path(), prepared) : cached;
-        try {
-            record.beginLinking();
-            record.linked(esmLinkCache.link(resolved.id(), revision, resolved.path(), prepared));
-            recordStaticDependencies(resolved.id(), record.linkMetadata());
-            markAsyncDescendant(record, new HashSet<>());
-            return record;
-        } catch (IOException | RuntimeException | Error e) {
-            record.failure(e);
-            esmRecordCache.removeAll(resolved.id());
-            throw e;
-        } catch (Throwable throwable) {
-            record.failure(throwable);
-            esmRecordCache.removeAll(resolved.id());
-            throw new IOException("Failed to link native ESM module: " + resolved.id(), throwable);
-        }
-    }
-
-    private Value captureNamespaceSync(NekoEsmModuleRecord record, java.net.URI sourceUri) throws IOException {
-        CompletableFuture<Value> evaluation = new CompletableFuture<>();
-        record.beginEvaluation(evaluation, false);
-        long revision = revision(record.id());
-        String source = "import * as __neko_namespace from " + jsString(sourceUri.toString()) + ";\n"
-                + "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(" + jsString(record.id()) + ", " + revision + ", __neko_namespace);\n";
-        java.net.URI captureUri = NekoEsmVirtualModuleRegistry.register(record.id() + "#namespace-capture:" + sourceUri, source);
-        try {
-            context.eval(Source.newBuilder("js", source, captureUri.toString())
-                    .mimeType("application/javascript+module")
-                    .build());
-            if (record.namespace() == null) {
-                throw new IOException("Failed to capture native ESM namespace: " + record.id());
-            }
-            return record.namespace();
-        } catch (IOException | RuntimeException | Error e) {
-            record.failure(e);
-            esmRecordCache.removeAll(record.id());
-            throw e;
-        } catch (Throwable throwable) {
-            record.failure(throwable);
-            esmRecordCache.removeAll(record.id());
-            throw new IOException("Failed to evaluate native ESM module: " + record.id(), throwable);
-        }
-    }
-
-    private CompletableFuture<Value> captureNamespaceAsync(NekoEsmModuleRecord record, java.net.URI sourceUri) throws IOException {
-        CompletableFuture<Value> evaluation = new CompletableFuture<>();
-        record.beginEvaluation(evaluation, true);
-        long revision = revision(record.id());
-        String source = "const __neko_error_text = __neko_error => {\n"
-                + "  if (__neko_error && __neko_error.stack) return String(__neko_error.stack);\n"
-                + "  if (__neko_error && __neko_error.message) return `${__neko_error.name || 'Error'}: ${__neko_error.message}`;\n"
-                + "  return String(__neko_error);\n"
-                + "};\n"
-                + "import(" + jsString(sourceUri.toString()) + ")\n"
-                + "  .then(__neko_namespace => globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(" + jsString(record.id()) + ", " + revision + ", __neko_namespace))\n"
-                + "  .catch(__neko_error => globalThis.__nekoScriptModuleLoaderHost.failEsmNamespace(" + jsString(record.id()) + ", " + revision + ", __neko_error_text(__neko_error)));\n";
-        java.net.URI captureUri = NekoEsmVirtualModuleRegistry.register(record.id() + "#namespace-capture-async:" + sourceUri, source);
-        try {
-            context.eval(Source.newBuilder("js", source, captureUri.toString()).build());
-            return evaluation;
-        } catch (IOException | RuntimeException | Error e) {
-            record.failure(e);
-            esmRecordCache.removeAll(record.id());
-            throw e;
-        } catch (Throwable throwable) {
-            record.failure(throwable);
-            esmRecordCache.removeAll(record.id());
-            throw new IOException("Failed to evaluate native ESM module: " + record.id(), throwable);
-        }
+        return esmLifecycle.loadEsmModuleAsync(resolved, prepared);
     }
 
     private NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException {
-        return NekoModulePreparationCache.prepare(resolved.path());
-    }
-
-    private void markAsyncDescendant(NekoEsmModuleRecord record, Set<String> visiting) throws IOException {
-        if (!visiting.add(record.id())) {
-            return;
-        }
-        try {
-            if (record.topLevelAwait()) {
-                record.markAsyncEvaluation();
-                return;
-            }
-            NekoEsmLinkMetadata metadata = record.linkMetadata();
-            if (metadata == null) {
-                return;
-            }
-            for (var dependency : metadata.dependencies()) {
-                NekoResolvedModule resolved = dependency.resolved();
-                if (resolved == null || resolved.special() || resolved.json()) {
-                    continue;
-                }
-                NekoPreparedModule prepared = prepare(resolved);
-                if (prepared.mode() != NekoModuleMode.ESM) {
-                    continue;
-                }
-                NekoEsmModuleRecord child = linkedEsmRecord(resolved, prepared);
-                markAsyncDescendant(child, visiting);
-                if (child.asyncEvaluation()) {
-                    record.markAsyncEvaluation();
-                    return;
-                }
-            }
-        } finally {
-            visiting.remove(record.id());
-        }
-    }
-
-    private NekoEsmModuleRecord linkedEsmRecord(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
-        long revision = revision(resolved.id());
-        NekoEsmModuleRecord cached = esmRecordCache.get(resolved.id(), revision);
-        if (cached != null) {
-            if (cached.state() == NekoEsmModuleState.FAILED) {
-                throw new IOException("Native ESM module failed earlier: " + resolved.id(), cached.failure());
-            }
-            if (cached.linkMetadata() != null) {
-                return cached;
-            }
-        }
-        NekoEsmModuleRecord record = cached == null ? esmRecordCache.getOrCreate(resolved.id(), revision, resolved.path(), prepared) : cached;
-        try {
-            record.beginLinking();
-            record.linked(esmLinkCache.link(resolved.id(), revision, resolved.path(), prepared));
-            recordStaticDependencies(resolved.id(), record.linkMetadata());
-            return record;
-        } catch (IOException | RuntimeException | Error e) {
-            record.failure(e);
-            esmRecordCache.removeAll(resolved.id());
-            throw e;
-        } catch (Throwable throwable) {
-            record.failure(throwable);
-            esmRecordCache.removeAll(resolved.id());
-            throw new IOException("Failed to link native ESM module: " + resolved.id(), throwable);
-        }
+        return NekoModulePipelineCache.prepare(resolved.path());
     }
 
     private IOException asyncEsmRequireError(NekoResolvedModule resolved) {
@@ -553,13 +403,13 @@ public final class NekoScriptModuleLoaderHost {
         if (failure instanceof Value value) {
             return new RuntimeException(errorText(value));
         }
-        return new RuntimeException(mapStackText(String.valueOf(failure)));
+        return new RuntimeException(StackTraceMapper.mapStackText(String.valueOf(failure)));
     }
 
     private String errorText(Value value) {
         String stack = stringMember(value, "stack");
         if (stack != null && !stack.isBlank()) {
-            return mapStackText(stack);
+            return StackTraceMapper.mapStackText(stack);
         }
         String message = stringMember(value, "message");
         if (message != null && !message.isBlank()) {
@@ -582,38 +432,6 @@ public final class NekoScriptModuleLoaderHost {
         } catch (RuntimeException ignored) {
             return null;
         }
-    }
-
-    private String mapStackText(String stack) {
-        String[] lines = stack.split("\\R", -1);
-        StringBuilder mapped = new StringBuilder();
-        for (int i = 0; i < lines.length; i++) {
-            if (i > 0) {
-                mapped.append('\n');
-            }
-            mapped.append(mapStackLine(lines[i]));
-        }
-        return mapped.toString();
-    }
-
-    private String mapStackLine(String line) {
-        Matcher matcher = STACK_LOCATION.matcher(line);
-        StringBuilder mapped = new StringBuilder();
-        while (matcher.find()) {
-            String path = matcher.group(2);
-            String displayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
-            if (displayPath == null) {
-                displayPath = path;
-            }
-            int lineNumber = Integer.parseInt(matcher.group(3));
-            int columnNumber = matcher.group(4) == null ? 1 : Integer.parseInt(matcher.group(4));
-            SourceMapRegistry.OriginalPosition position = SourceMapRegistry.getMappedPosition(displayPath, lineNumber, columnNumber);
-            String mappedPath = position.path != null && !position.path.isBlank() ? position.path : displayPath;
-            String columnSuffix = matcher.group(4) == null ? "" : ":" + position.column;
-            matcher.appendReplacement(mapped, Matcher.quoteReplacement(matcher.group(1) + mappedPath + ":" + position.line + columnSuffix + matcher.group(5)));
-        }
-        matcher.appendTail(mapped);
-        return mapped.toString();
     }
 
     private void recordDependency(String parentPath, NekoResolvedModule child) {
@@ -656,28 +474,4 @@ public final class NekoScriptModuleLoaderHost {
         return specialResolver.execute(specifier).as(Object.class);
     }
 
-    private Object parseJson(String rawJson) throws IOException {
-        if (jsonParser == null || !jsonParser.canExecute()) {
-            throw new IOException("JSON parser is unavailable for NekoJS script loader.");
-        }
-        return jsonParser.execute(rawJson);
-    }
-
-    private static String jsString(String value) {
-        return "'" + value.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r") + "'";
-    }
-
-    private record ModuleState(String filename, Value value) {
-        Object exports() {
-            return value.getMember("exports");
-        }
-
-        void exports(Object exports) {
-            value.putMember("exports", exports);
-        }
-
-        void loaded(boolean loaded) {
-            value.putMember("loaded", loaded);
-        }
-    }
 }

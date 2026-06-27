@@ -22,29 +22,31 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * 默认 {@link ErrorTracker} 实现：持有脚本错误状态为实例字段，不再依赖全局 static map。
+ * 默认 {@link ErrorTracker} 实现：持有脚本错误状态为实例字段。
  *
- * <p>构造器接收它真正需要的依赖：{@link NekoJSPaths}（脚本路径 relativize / source 查找）、
- * {@link SandboxConfig}（concise log 开关）。源码位置格式化 helper 也下沉为实例方法，
- * 使用注入的 {@code paths} 而非 legacy static，供 {@link ScriptError} 经 legacy facade 复用。
+ * <p>构造器接收 {@link NekoJSPaths}（脚本路径 relativize / source 查找）和
+ * {@link SandboxConfig}（concise log 开关）。源码位置格式化 helper 为实例方法，
+ * 供 {@link ScriptError} 复用。
  */
 public final class DefaultErrorTracker implements ErrorTracker {
+    private static final Set<String> HOST_FRAME_BLACKLIST = Set.of(
+            "com.oracle.truffle",
+            "org.graalvm",
+            "com.tkisor.nekojs.core.error.DefaultErrorTracker",
+            "com.tkisor.nekojs.script.ScriptExecutor",
+            "com.tkisor.nekojs.script.ScriptManager"
+    );
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
     private final NekoJSPaths paths;
     private final SandboxConfig config;
 
-    private static final Set<String> HOST_FRAME_BLACKLIST = new CopyOnWriteArraySet<>(List.of(
-            "org.graalvm.",
-            "com.oracle.truffle.",
-            "jdk.internal.reflect.",
-            "net.neoforged.bus.",
-            "com.tkisor.nekojs.utils.event.",
-            "com.tkisor.nekojs.api.event.EventBus"
-    ));
-
     public DefaultErrorTracker(NekoJSPaths paths, SandboxConfig config) {
         this.paths = paths;
         this.config = config;
+    }
+
+    public DefaultErrorTracker(SandboxConfig config) {
+        this(NekoJSPaths.get(), config);
     }
 
     public NekoJSPaths paths() {
@@ -59,7 +61,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
     public ScriptError record(ScriptContainer script, Throwable error) {
         clear(script.id);
         clearByScriptPath(script.type, paths.root().relativize(script.path).toString().replace('\\', '/'));
-        ScriptError scriptError = new ScriptError(script, error);
+        ScriptError scriptError = new ScriptError(script, error, this);
         errors.put(script.id, scriptError);
         return scriptError;
     }
@@ -87,7 +89,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
         String eventPath = pathStr;
         ScriptId runtimeId = eventErrorId(currentType, eventPath);
         ScriptError scriptError = errors.compute(runtimeId, (ignored, previous) -> {
-            ScriptError next = new ScriptError(currentType, runtimeId, eventPath, throwable);
+            ScriptError next = new ScriptError(currentType, runtimeId, eventPath, throwable, this);
             if (previous != null && sameEventError(previous, next)) {
                 next.setOccurrenceCount(previous.getOccurrenceCount() + 1);
             }

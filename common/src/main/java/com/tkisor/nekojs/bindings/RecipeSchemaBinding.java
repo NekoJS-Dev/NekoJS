@@ -4,7 +4,7 @@ import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,7 +24,7 @@ public class RecipeSchemaBinding {
     public List<String> types(String namespace) {
         // 合并 handler 方法名和 schema type 名
         List<String> all = new ArrayList<>(current().types(namespace));
-        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         if (entry != null) {
             // handler 的方法名也算 type
             for (var method : entry.handlerClass().getMethods()) {
@@ -88,7 +88,7 @@ public class RecipeSchemaBinding {
 
     // Handler 方法收集委托给 RecipeNamespaceCatalogEntry（共享实现，避免重复反射逻辑）
     private static void collectHandlerMethods(String namespace, String type, List<Map<String, Object>> handlerFields, List<List<String>> constructorOpts) {
-        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         if (entry == null) return;
         var handlerMethods = RecipeNamespaceCatalogEntry.collectHandlerMethods(entry.handlerClass());
         for (var hm : handlerMethods) {
@@ -127,7 +127,7 @@ public class RecipeSchemaBinding {
     }
 
     private static boolean hasHandlerMethod(String namespace, String type) {
-        RecipeNamespaceEntry entry = NekoPluginRuntime.current().recipeNamespaces().get(namespace);
+        RecipeNamespaceEntry entry = NekoRuntimeAccess.get().recipeNamespaces().get(namespace);
         if (entry == null) return false;
         for (var method : entry.handlerClass().getMethods()) {
             if (method.getDeclaringClass() != Object.class && method.getName().equals(type)) {

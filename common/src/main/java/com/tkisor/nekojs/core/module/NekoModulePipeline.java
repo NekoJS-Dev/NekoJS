@@ -21,12 +21,7 @@ import java.util.Set;
 
 /**
  * 实例化模块编译管线：构造器接收 {@link NekoCompilationPipeline}、{@link ScriptCompilerRegistry}、
- * {@link SandboxConfig}，不再调用 {@code ScriptCompilerRegistry.current()} 或
- * {@code ClassFilter.isEnableEsmAuthoring()}。
- *
- * <p>旧 static {@code prepare(...)} 保留为 legacy delegate，委托 bootstrap 绑定的默认实例，
- * 供尚未迁移的 {@code NekoModulePipelineCache} / {@code NekoModulePreparationCache} 调用点使用，
- * 后续 Phase 3D / 6 删除。
+ * {@link SandboxConfig}。根据 ESM/CJS 模式和语言插件编译模块。
  */
 public final class NekoModulePipeline {
     private static final NekoCompilationPipeline SHARED_COMPILATION_PIPELINE = new NekoCompilationPipeline();
@@ -109,7 +104,7 @@ public final class NekoModulePipeline {
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
     }
 
-    /* ================= Legacy static facade（后续 Phase 3D / 6 删除） ================= */
+    /* ================= Legacy static facade ================= */
 
     public static NekoPreparedModule legacyPrepare(Path file, String rawSource) throws Exception {
         NekoModulePipeline instance = LEGACY_INSTANCE;

@@ -168,7 +168,7 @@ public class NekoWorkspaceScreen extends Screen {
         this.treeRoot = new FileNode("root", "", true, -1);
         this.treeRoot.isExpanded = true;
 
-        Path root = NekoJSPaths.ROOT;
+        Path root = NekoJSPaths.get().root();
         if (!Files.exists(root)) return;
 
         try (Stream<Path> stream = Files.walk(root)) {
@@ -392,7 +392,7 @@ public class NekoWorkspaceScreen extends Screen {
 
                 if (!content.equals(newContent)) {
                     try {
-                        Files.writeString(NekoJSPaths.ROOT.resolve(path), newContent);
+                        Files.writeString(NekoJSPaths.get().root().resolve(path), newContent);
                         fileContentCache.put(path, newContent);
                         affectedFiles++;
                         if (tabbedEditor != null) tabbedEditor.openTab(path, newContent);
@@ -411,7 +411,7 @@ public class NekoWorkspaceScreen extends Screen {
         try {
             if (name == null || name.trim().isEmpty()) return;
             String fullPath = targetDir.isEmpty() ? name : targetDir + "/" + name;
-            Path p = NekoJSPaths.ROOT.resolve(fullPath);
+            Path p = NekoJSPaths.get().root().resolve(fullPath);
             if (isDir) {
                 Files.createDirectories(p);
             } else {
@@ -429,7 +429,7 @@ public class NekoWorkspaceScreen extends Screen {
 
     private void deleteItem(String path) {
         try {
-            Path target = NekoJSPaths.ROOT.resolve(path);
+            Path target = NekoJSPaths.get().root().resolve(path);
             if (Files.exists(target)) {
                 if (Files.isDirectory(target)) {
                     try (Stream<Path> walk = Files.walk(target)) { walk.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete); }
@@ -452,7 +452,7 @@ public class NekoWorkspaceScreen extends Screen {
 
     private void openFileInEditor(String path, int selectionStart, int selectionEnd) {
         try {
-            Path p = NekoJSPaths.ROOT.resolve(path);
+            Path p = NekoJSPaths.get().root().resolve(path);
             String text = Files.exists(p) ? Files.readString(p) : "";
             if (tabbedEditor == null) buildWorkspaceLayout();
             tabbedEditor.openTab(path, text);

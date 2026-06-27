@@ -9,18 +9,13 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * 负责过滤 GraalVM 沙盒中的 Java 类访问权限，支持细粒度权限控制
+ * 负责过滤 GraalVM 沙盒中的 Java 类访问权限，支持细粒度权限控制。
+ *
+ * <p>通过 {@link #INSTANCE} 访问全局实例，配置通过 {@link #config()} 获取。
  */
 public class ClassFilter implements Predicate<String> {
 
     public static final ClassFilter INSTANCE = new ClassFilter(SandboxConfig.defaultConfig());
-
-    private static boolean allowThreads = false;
-    private static boolean allowReflection = false;
-    private static boolean allowAsm = false;
-    private static boolean allowFsWriteOutsideNekojs = false;
-    private static boolean enableEsmAuthoring = true;
-    private static boolean conciseScriptErrorLogs = true;
 
     private volatile SandboxConfig config;
 
@@ -46,6 +41,10 @@ public class ClassFilter implements Predicate<String> {
         return config;
     }
 
+    public void updateConfig(SandboxConfig newConfig) {
+        this.config = newConfig;
+    }
+
     @Override
     public boolean test(String className) {
         boolean allowed = isAllowed(className);
@@ -65,55 +64,17 @@ public class ClassFilter implements Predicate<String> {
         return group.stream().anyMatch(className::startsWith);
     }
 
-    public static boolean isAnyUnsafeFeatureEnabled() {
-        return allowThreads || allowReflection || allowAsm;
-    }
-
-    public static boolean isAllowThreads() {
-        return allowThreads;
-    }
-
-    public static boolean isAllowReflection() {
-        return allowReflection;
-    }
-
-    public static boolean isAllowAsm() {
-        return allowAsm;
-    }
-
-    public static boolean isAllowFsWriteOutsideNekojs() {
-        return allowFsWriteOutsideNekojs;
-    }
-
-    public static boolean isEnableEsmAuthoring() {
-        return enableEsmAuthoring;
-    }
-
-    public static boolean isConciseScriptErrorLogs() {
-        return conciseScriptErrorLogs;
-    }
-
     public static SandboxConfig loadEngineConfig() {
-        return loadEngineConfig(NekoJSPaths.ENGINE_CONFIG);
+        return loadEngineConfig(NekoJSPaths.get().engineConfig());
     }
 
     public static SandboxConfig loadEngineConfig(java.nio.file.Path engineConfig) {
         SandboxConfig config = new SandboxConfigLoader().load(engineConfig);
-        syncLegacyConfig(config);
+        INSTANCE.updateConfig(config);
         NekoJS.LOGGER.info(
                 "Engine config loaded. Unsafe features enabled: {}",
                 config.anyUnsafeFeatureEnabled()
         );
         return config;
-    }
-
-    public static void syncLegacyConfig(SandboxConfig config) {
-        INSTANCE.config = config;
-        allowThreads = config.allowThreads();
-        allowReflection = config.allowReflection();
-        allowAsm = config.allowAsm();
-        allowFsWriteOutsideNekojs = config.allowFsWriteOutsideNekojs();
-        enableEsmAuthoring = config.enableEsmAuthoring();
-        conciseScriptErrorLogs = config.conciseScriptErrorLogs();
     }
 }

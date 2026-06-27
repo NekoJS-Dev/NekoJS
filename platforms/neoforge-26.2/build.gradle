@@ -1,0 +1,189 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'idea'
+    id 'net.neoforged.moddev' version '2.0.140'
+    id "me.shedaniel.unified-publishing" version "0.1.+"
+}
+
+version = mod_version
+group = mod_group_id
+def neo_version = "26.2.0.7-beta"
+def minecraft_version= "26.2.0"
+def minecraft_version_range= "[26.2.0,26.3)"
+def neo_version_range= "[26,)"
+def ENV = System.getenv()
+def loader_version_range= "[4,)"
+
+base {
+    archivesName = "${mod_id}-neoforge-${minecraft_version}"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+sourceSets {
+    main {
+        java {
+            srcDir project(':common').file('src/main/java')
+        }
+        resources {
+            srcDir project(':common').file('src/main/resources')
+            srcDir 'src/generated/resources'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    exclusiveContent {
+        forRepository {
+            maven { url "https://cursemaven.com" }
+        }
+        filter { includeGroup "curse.maven" }
+    }
+}
+
+neoForge {
+    version = neo_version
+
+    accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
+
+    interfaceInjectionData {
+        it.from(project.files('src/main/resources/nekojs.interface_injection.json'))
+    }
+
+    runs {
+        client {
+            client()
+            jvmArguments.add('-Dfml.earlydisplay=false')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            clientData()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    implementation project(':common')
+
+    implementation("curse.maven:graal-1504336:7951071")
+    // 30.1.0.12 for NeoForge 26.2
+    implementation "curse.maven:jei-238222:8300448"
+
+    compileOnly 'org.projectlombok:lombok:1.18.44'
+    annotationProcessor 'org.projectlombok:lombok:1.18.44'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(Jar).configureEach {
+    archiveBaseName.set("${mod_id}-neoforge")
+    archiveVersion.set("${minecraft_version}-${mod_version}")
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+unifiedPublishing {
+    project {
+        displayName = "${mod_name} NeoForge ${minecraft_version}-${mod_version}"
+        releaseType = ENV.RELEASE_TYPE ?: "release"
+        gameVersions = [minecraft_version]
+        gameLoaders = ["neoforge"]
+
+        mainPublication tasks.jar
+
+        changelog = ENV.CHANGELOG ?: "A new update for ${mod_name}!"
+
+        relations {
+            depends {
+                curseforge = "graal"
+            }
+        }
+
+        // 配置 CurseForge 发布
+        if (ENV.CURSEFORGE_KEY) {
+            curseforge {
+                token = ENV.CURSEFORGE_KEY
+                // 你的项目 ID (数字)，需要在 gradle.properties 中添加 `curseforge_id=xxxxxx`
+                id = project.curseforge_id
+            }
+        }
+
+        // 配置 Modrinth 发布
+        if (ENV.MODRINTH_TOKEN) {
+            modrinth {
+                token = ENV.MODRINTH_TOKEN
+                // 你的项目 ID (字符串)，需要在 gradle.properties 中添加 `modrinth_id=xxxxxx`
+                id = project.modrinth_id
+                version = "${minecraft_version}-${mod_version}"
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
+

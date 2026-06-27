@@ -7,13 +7,12 @@ import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NekoJSMemberRemapper;
 import com.tkisor.nekojs.core.NeoForgePluginLoader;
 import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
-import com.tkisor.nekojs.core.NekoSandboxBuilder;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.context.NekoCoreContext;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
@@ -22,6 +21,7 @@ import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
 import graal.mod.api.MemberRemapper;
 import com.tkisor.nekojs.platform.NekoIdCompat;
 import com.tkisor.nekojs.platform.NeoForgeIdCompat;
+import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.NeoForgePlatform;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
@@ -44,6 +44,7 @@ import net.neoforged.neoforge.common.NeoForge;
 public class NekoJSMod extends NekoJS {
     public static IEventBus modEventBus;
     public static NekoRuntimeRoot RUNTIME_ROOT;
+    private final ScriptEventsJS scriptEventsRegistrar;
 
     static {
         MemberRemapper.GLOBAL.set(new NekoJSMemberRemapper());
@@ -52,8 +53,12 @@ public class NekoJSMod extends NekoJS {
     }
 
     public NekoJSMod(IEventBus modEventBus, ModContainer modContainer) {
-        super(new DefaultScriptEventBridge(new ScriptEventsJS()));
-        NekoJS.COMMON = this;
+        this(new ScriptEventsJS(), modEventBus, modContainer);
+    }
+
+    private NekoJSMod(ScriptEventsJS scriptEventsRegistrar, IEventBus modEventBus, ModContainer modContainer) {
+        super(new DefaultScriptEventBridge(scriptEventsRegistrar));
+        this.scriptEventsRegistrar = scriptEventsRegistrar;
         NekoJSMod.modEventBus = modEventBus;
 
         long t0 = System.nanoTime();
@@ -83,7 +88,7 @@ public class NekoJSMod extends NekoJS {
     }
 
     private static void initializeWorkspace() {
-        NekoJSPaths paths = NekoJSPaths.legacy();
+        NekoJSPaths paths = NekoJSPaths.get();
         paths.initFolders();
         ScriptBootstrap.generateDefaultScripts();
         paths.initFolders();
@@ -94,30 +99,36 @@ public class NekoJSMod extends NekoJS {
         long s0 = System.nanoTime();
         NeoForgePluginLoader.loadAnnotatedPlugins();
         long s1 = System.nanoTime();
-        NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins());
+        NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins(), this.scriptProperties);
+        scriptEventsRegistrar.bindRuntime(pluginRuntime);
+        ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
         long s2 = System.nanoTime();
 
+        var compilers = ScriptCompilerRegistry.current();
+        SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
+        ClassFilter classFilter = new ClassFilter(sandboxConfig);
+        var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig);
         NekoCoreContext core = new NekoCoreContext(
-                NekoJSPaths.legacy(),
                 NekoSharedEngine.get(),
-                ClassFilter.INSTANCE.config(),
-                ClassFilter.INSTANCE,
-                NekoErrorTracker.legacyInstance()
+                sandboxConfig,
+                classFilter,
+                errorTracker
         );
-        NekoSandboxBuilder.bindLegacyFactory(new NekoSandboxFactory(core, ScriptCompilerRegistry.current()));
-        NekoModulePipeline.bindLegacyInstance(new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), core.sandboxConfig()));
+        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, compilers);
+        NekoModulePipeline.bindLegacyInstance(new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
         RUNTIME_ROOT = new NekoRuntimeRoot(
                 core,
                 pluginRuntime,
-                ScriptCompilerRegistry.current(),
+                compilers,
                 this.scriptEventBridge,
-                this.scriptProperties
+                this.scriptProperties,
+                sandboxFactory
         );
+        ScriptSyncService.bindErrorTracker(core.errorTracker());
 
         for (ScriptType type : ScriptType.autoLoadTypes()) {
-            var manager = new ScriptManager(type, this.scriptEventBridge, this.scriptProperties, core.errorTracker(), core.paths(), core.sandboxConfig());
+            var manager = RUNTIME_ROOT.createScriptManager(type);
             this.scriptManagers.set(type, manager);
-            RUNTIME_ROOT.registerScriptManager(type, manager);
             manager.discoverScripts();
         }
         long s3 = System.nanoTime();

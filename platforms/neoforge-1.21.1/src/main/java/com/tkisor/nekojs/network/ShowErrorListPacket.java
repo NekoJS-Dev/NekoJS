@@ -9,7 +9,11 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 
-public record ShowErrorListPacket(List<ErrorSummaryDTO> errors) implements CustomPacketPayload {
+public record ShowErrorListPacket(List<ErrorSummaryDTO> errors, boolean openIfMissing) implements CustomPacketPayload {
+
+    public ShowErrorListPacket(List<ErrorSummaryDTO> errors) {
+        this(errors, true);
+    }
 
     public static final Type<ShowErrorListPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(NekoJS.MODID, "show_error_list"));
 
@@ -26,7 +30,7 @@ public record ShowErrorListPacket(List<ErrorSummaryDTO> errors) implements Custo
                 b.readInt(),
                 b.readUtf(),
                 b.readUtf(262144)
-        )));
+        )), buf.readBoolean());
     }
 
     public void write(FriendlyByteBuf buf) {
@@ -38,6 +42,7 @@ public record ShowErrorListPacket(List<ErrorSummaryDTO> errors) implements Custo
             b.writeUtf(e.message());
             b.writeUtf(e.fullDetails(), 262144);
         });
+        buf.writeBoolean(this.openIfMissing);
     }
 
     @Override

@@ -70,8 +70,8 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
     @Override
     public TypeOutputLayout outputLayout() {
         return new TypeOutputLayout(
-                NekoJSPaths.PROBE_DIR,
-                NekoJSPaths.GAME_DIR.resolve(".vscode").resolve("nekojs.code-snippets")
+                NekoJSPaths.get().probeDir(),
+                NekoJSPaths.get().gameDir().resolve(".vscode").resolve("nekojs.code-snippets")
         );
     }
 }

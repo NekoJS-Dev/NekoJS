@@ -1,5 +1,6 @@
-package com.tkisor.nekojs.core.error; // 或者是你分离后的包名
+package com.tkisor.nekojs.core.error;
 
+import com.tkisor.nekojs.NekoJSMod;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -8,7 +9,7 @@ import net.minecraft.network.chat.MutableComponent;
 public class NekoErrorUIHelper {
 
     public static Component getErrorComponent() {
-        int errorCount = NekoErrorTracker.getErrorCount();
+        int errorCount = NekoJSMod.RUNTIME_ROOT.errors().count();
 
         MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);
         MutableComponent link = Component.translatable("nekojs.error.tracker.open_list")

@@ -2,7 +2,7 @@ package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.script.context.ScriptContextSeam;
+import com.tkisor.nekojs.script.context.ScriptContextRegistry;
 import com.tkisor.nekojs.utils.event.CancellableEventBus;
 import com.tkisor.nekojs.utils.event.EventBus;
 import com.tkisor.nekojs.utils.event.EventListenerToken;
@@ -65,6 +65,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private final EventBus<EVENT> bus;
     private final Map<ScriptType, List<ScriptEventListenerToken<EVENT>>> tokensByType;
     private ScriptType scriptType;
+    private String groupName;
+    private String eventName;
 
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
@@ -81,6 +83,22 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     public EventBus<EVENT> bus() {
         return bus;
+    }
+
+    public Class<EVENT> eventType() {
+        return bus.eventType();
+    }
+
+    public void metadata(String groupName, String eventName) {
+        this.groupName = groupName;
+        this.eventName = eventName;
+    }
+
+    private String eventLabel() {
+        if (groupName != null && !groupName.isBlank() && eventName != null && !eventName.isBlank()) {
+            return groupName + "." + eventName;
+        }
+        return bus.eventType().getSimpleName();
     }
 
     public ScriptType scriptType() {
@@ -168,25 +186,26 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 token = register(args[0]); // listen((e) => {})
             }
         }
-        ScriptType type = ScriptContextSeam.scriptTypeOf(listener.getContext());
-        String scriptId = ScriptContextSeam.currentScriptIdOf(listener.getContext());
+        ScriptType type = ScriptContextRegistry.scriptTypeOf(listener.getContext());
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(listener.getContext());
+        EventCallbackSourceValidator.validateRegistration(listener, bus.eventType(), type, scriptId, eventLabel());
         tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
         return true;
     }
 
     private EventListenerToken<EVENT> register(Value listener) {
         Context context = listener.getContext();
-        ScriptType type = ScriptContextSeam.scriptTypeOf(context);
-        String scriptId = ScriptContextSeam.currentScriptIdOf(context);
+        ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
 
         return this.bus.listen(event -> {
             try {
                 synchronized (context) {
-                    String previousScriptId = ScriptContextSeam.switchCurrentScriptId(context, scriptId);
+                    String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                     try {
-                        listener.executeVoid(event);
+                        listener.executeVoid(EventProxy.of(event));
                     } finally {
-                        ScriptContextSeam.restoreCurrentScriptId(context, previousScriptId);
+                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                     }
                 }
             } catch (Throwable e) {
@@ -197,19 +216,19 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
         Context context = listener.getContext();
-        ScriptType type = ScriptContextSeam.scriptTypeOf(context);
-        String scriptId = ScriptContextSeam.currentScriptIdOf(context);
+        ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
         return bus.listen(event -> {
             try {
                 synchronized (context) {
-                    String previousScriptId = ScriptContextSeam.switchCurrentScriptId(context, scriptId);
+                    String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                     try {
-                        Value result = listener.execute(event);
+                        Value result = listener.execute(EventProxy.of(event));
                         return result.isBoolean() && result.asBoolean();
                     } finally {
-                        ScriptContextSeam.restoreCurrentScriptId(context, previousScriptId);
+                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                     }
                 }
             } catch (Throwable e) {
@@ -221,8 +240,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
         Context context = listener.getContext();
-        ScriptType type = ScriptContextSeam.scriptTypeOf(context);
-        String scriptId = ScriptContextSeam.currentScriptIdOf(context);
+        ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         var bus = (DispatchEventBus<EVENT, KEY>) this.bus;
         KEY dispatchKey = key.as(bus.dispatchKey().keyType());
 
@@ -231,13 +250,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 event -> {
                     try {
                         synchronized (context) {
-                            String previousScriptId = ScriptContextSeam.switchCurrentScriptId(context, scriptId);
+                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                             try {
                                 if (listener.canExecute()) {
-                                    listener.executeVoid(event);
+                                    listener.executeVoid(EventProxy.of(event));
                                 }
                             } finally {
-                                ScriptContextSeam.restoreCurrentScriptId(context, previousScriptId);
+                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                             }
                         }
                     } catch (Throwable e) {
@@ -249,8 +268,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private EventListenerToken<EVENT> registerDispatchCancellable(Value listener, Value key) {
         Context context = listener.getContext();
-        ScriptType type = ScriptContextSeam.scriptTypeOf(context);
-        String scriptId = ScriptContextSeam.currentScriptIdOf(context);
+        ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         var bus = (DispatchCancellableEventBus<EVENT, KEY>) this.bus;
         KEY dispatchKey = key.as(bus.dispatchKey().keyType());
 
@@ -259,14 +278,14 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 event -> {
                     try {
                         synchronized (context) {
-                            String previousScriptId = ScriptContextSeam.switchCurrentScriptId(context, scriptId);
+                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                             try {
                                 if (listener.canExecute()) {
-                                    Value result = listener.execute(event);
+                                    Value result = listener.execute(EventProxy.of(event));
                                     return result.isBoolean() && result.asBoolean();
                                 }
                             } finally {
-                                ScriptContextSeam.restoreCurrentScriptId(context, previousScriptId);
+                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                             }
                         }
                     } catch (Throwable e) {

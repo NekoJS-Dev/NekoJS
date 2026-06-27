@@ -11,10 +11,10 @@ import java.nio.file.Path;
 import java.util.List;
 
 public enum ScriptType implements ScriptTypePredicate {
-    STARTUP("startup", "NekoJS Startup", NekoJSPaths.STARTUP_SCRIPTS),
-    SERVER("server", "NekoJS Server", NekoJSPaths.SERVER_SCRIPTS),
-    CLIENT("client", "NekoJS Client", NekoJSPaths.CLIENT_SCRIPTS),
-    TEST("test", "NekoJS Test", NekoJSPaths.TEST_SCRIPTS);
+    STARTUP("startup", "NekoJS Startup", NekoJSPaths.get().startupScripts()),
+    SERVER("server", "NekoJS Server", NekoJSPaths.get().serverScripts()),
+    CLIENT("client", "NekoJS Client", NekoJSPaths.get().clientScripts()),
+    TEST("test", "NekoJS Test", NekoJSPaths.get().testScripts());
 
     private static class LoggerHolder {
         private static final ScriptTypedValue<Logger> LOGGERS =

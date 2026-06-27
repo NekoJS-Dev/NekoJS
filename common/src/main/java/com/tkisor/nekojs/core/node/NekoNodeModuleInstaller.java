@@ -1,5 +1,9 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.ErrorTracker;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
@@ -16,8 +20,12 @@ public final class NekoNodeModuleInstaller {
     private NekoNodeModuleInstaller() {}
 
     public static NekoNodeRuntime install(Context context, ScriptType scriptType) {
-        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context);
-        NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost);
+        return install(context, scriptType, new NekoModuleResolver(), NekoJSPaths.get(), new com.tkisor.nekojs.core.error.DefaultErrorTracker(com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig()), com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig());
+    }
+
+    public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
+        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, paths);
+        NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
         loadManifest(context);

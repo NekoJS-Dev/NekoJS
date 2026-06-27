@@ -14,10 +14,13 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 
 * **GraalVM 强力驱动**：拥抱最新 ECMAScript 标准，告别老旧的 Rhino/Nashorn，享受现代 JS 语法和 GraalJS 运行时能力。
 * **TypeScript & JSX 本体支持**：NekoJS 本体内置 `.ts` erasable TypeScript 前端和轻量 `.jsx/.tsx` classic runtime lowering；后续高级 TS/TSX/JSX 语法也优先在本体语言前端中补齐。
+* **原生 ESM 运行时**：支持 `import`/`export`、live binding、循环依赖、top-level await、`import.meta`、dynamic `import()` 和 ESM/CJS 互操作。
+* **Node.js 兼容 API**：内置 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等核心模块 shim。
 * **开发者体验优先**：启动后自动生成工作区目录、编辑器配置和可供外部工具消费的 catalog 元数据；NekoProbe 作为独立项目消费这些信息提供 IDE 智能提示与代码补全。
 * **现代模块化与 NPM 生态**：支持基于 `require()` / `module.exports` 的多文件模块化开发，并可在 `nekojs` 目录下引用纯 JavaScript npm 依赖（不支持包含原生 bindings 的包，也不等同于完整 Node.js 运行时）。
 * **服务端热重载**：服务端脚本可通过 `/nekojs reload` 重新加载；启动注册类脚本仍需重启游戏。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
+* **多平台支持**：同时支持 NeoForge 26.1 26.2 1.21.1，共享 common 基础设施。
 
 ---
 
@@ -41,6 +44,28 @@ nekojs/
 ```
 
 当前自动加载脚本目录为 `startup_scripts/`、`server_scripts/` 和 `client_scripts/`；`test_scripts/` 是通过 `/nekojs test` 显式运行的测试环境。脚本文件支持 `.js`、`.mjs`、`.cjs`、内置 erasable `.ts`，以及轻量 `.jsx/.tsx` classic runtime lowering；更复杂的 TS/TSX 语法会逐步收敛到 NekoJS 本体语言前端。
+
+## 源码结构
+
+```text
+common/                          # 跨平台通用代码
+└── src/main/java/com/tkisor/nekojs/
+    ├── core/                    # 核心运行时：Graal Context/Engine、ClassFilter、VFS
+    ├── script/                  # 脚本管理：NekoJSScriptManager、ScriptType、reload
+    ├── api/                     # 公开 API：NekoJSPlugin、JSTypeAdapter、事件声明、catalog
+    ├── bindings/                # JS 全局绑定
+    ├── plugin/                  # 插件系统：extension point、bootstrap snapshot
+    ├── network/                 # 网络同步
+    └── wrapper/                 # 脚本友好 wrapper
+
+platforms/
+├── neoforge-26.1/               # NeoForge 26.1
+│   └── src/main/java/.../neoforge-26.1/...
+├── neoforge-26.2/               # NeoForge 26.2
+│   └── src/main/java/.../neoforge-26.2/...
+└── neoforge-1.21.1/             # NeoForge 1.21.1
+    └── src/main/java/...
+```
 
 ---
 
@@ -341,7 +366,8 @@ ScriptEvents.server(event => event.register({
 
 NekoJS 目前正处于活跃开发阶段。无论是提交 Issue 报告 Bug、提供功能建议，还是提交 Pull Request，我们都非常欢迎。
 
-* **API 文档**：即将到来
+* **API 文档**：[ai_docs/](ai_docs/) 目录记录了脚本 API 行为、协作方式、平台差异和迁移分析
+* **架构文档**：[ai_arch/](ai_arch/) 目录记录了代码架构分析、改造计划和安全性设计
 * **QQ 群**：1158525822 [点击加入群聊【NekoJS 魔改交流群（？】](https://qm.qq.com/q/rbryak0K6k)
 
 ---

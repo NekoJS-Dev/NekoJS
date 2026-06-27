@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.network;
 
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptType;
 
@@ -14,23 +14,29 @@ public final class ScriptSyncService {
     public static final int MAX_BATCH_SCRIPT_SIZE = 8388608;
     public static final int MAX_BATCH_TOTAL_SIZE = 33554432;
 
+    private static volatile ErrorTracker errorTracker;
+
+    public static void bindErrorTracker(ErrorTracker tracker) {
+        errorTracker = tracker;
+    }
+
     private ScriptSyncService() {}
 
     public static String readScript(String relativePath) throws Exception {
-        Path targetPath = NekoJSPaths.legacy().verifyScriptSyncPath(relativePath);
+        Path targetPath = NekoJSPaths.get().verifyScriptSyncPath(relativePath);
         return Files.exists(targetPath) ? Files.readString(targetPath) : null;
     }
 
     public static void saveScript(String relativePath, String content) throws Exception {
         ScriptSyncFiles.validateContentSize(content, MAX_SINGLE_SCRIPT_SIZE);
-        Path targetPath = NekoJSPaths.legacy().verifyScriptSyncPath(relativePath);
+        Path targetPath = NekoJSPaths.get().verifyScriptSyncPath(relativePath);
         Files.createDirectories(targetPath.getParent());
         Files.writeString(targetPath, content);
         clearErrorsFor(relativePath);
     }
 
     public static Map<String, String> collectAllScripts() {
-        return ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.ROOT);
+        return ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.get().root());
     }
 
     public static int writeBatch(Map<String, String> files) throws Exception {
@@ -48,9 +54,11 @@ public final class ScriptSyncService {
 
     private static void clearErrorsFor(String relativePath) {
         String normalized = relativePath.replace('\\', '/');
+        ErrorTracker tracker = errorTracker;
+        if (tracker == null) return;
         for (ScriptType type : ScriptType.all()) {
             if (normalized.startsWith(type.path.getFileName().toString() + "/")) {
-                NekoErrorTracker.clearByScriptPath(type, normalized);
+                tracker.clearByScriptPath(type, normalized);
                 return;
             }
         }

@@ -13,12 +13,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 实例化模块解析器：构造器接收 {@link NekoJSPaths} 和 {@link ScriptFilePolicy}，
- * 不再调用 {@code ScriptCompilerRegistry.current()} 或 {@code NekoJSPaths.*} static。
- *
- * <p>旧无参构造器保留为 legacy delegate，使用 {@code NekoJSPaths.legacy()} + {@code ScriptFilePolicy.legacyRuntime()}
- * + {@code ScriptCompilerRegistry.current()} 创建过渡实例，供尚未迁移的
- * {@code NekoScriptModuleLoaderHost} 调用点使用，后续 Phase 3F / 6 删除。
+ * 实例化模块解析器：构造器接收 {@link NekoJSPaths} 和 {@link ScriptFilePolicy}。
+ * 负责 entry resolve → file module resolve → extension candidates → index fallback。
  */
 public final class NekoModuleResolver {
     private final NekoJSPaths paths;
@@ -32,7 +28,7 @@ public final class NekoModuleResolver {
     }
 
     public NekoModuleResolver() {
-        this(NekoJSPaths.legacy(), ScriptFilePolicy.legacyRuntime(), ScriptCompilerRegistry.current());
+        this(NekoJSPaths.get(), ScriptFilePolicy.legacyRuntime(), ScriptCompilerRegistry.current());
     }
 
     public NekoResolvedModule resolveEntry(String entryPath) throws IOException {

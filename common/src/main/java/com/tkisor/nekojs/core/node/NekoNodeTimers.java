@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
-import com.tkisor.nekojs.script.context.ScriptContextSeam;
+import com.tkisor.nekojs.core.error.ErrorTracker;
+import com.tkisor.nekojs.script.context.ScriptContextRegistry;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class NekoNodeTimers implements AutoCloseable {
     private final ScriptType scriptType;
+    private final ErrorTracker errorTracker;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(task -> {
         Thread thread = new Thread(task, "NekoJS-NodeTimers");
         thread.setDaemon(true);
@@ -36,8 +37,9 @@ public final class NekoNodeTimers implements AutoCloseable {
     private final Map<Context, String> activeScriptIds = new ConcurrentHashMap<>();
     private final Queue<TimerCallback> ready = new ConcurrentLinkedQueue<>();
 
-    public NekoNodeTimers(ScriptType scriptType) {
+    public NekoNodeTimers(ScriptType scriptType, ErrorTracker errorTracker) {
         this.scriptType = scriptType;
+        this.errorTracker = errorTracker;
     }
 
     public int setTimeout(Value callback, long delayMillis, Object... args) {
@@ -135,7 +137,7 @@ public final class NekoNodeTimers implements AutoCloseable {
     private void recordScriptId(int id, Value callback) {
         if (callback == null) return;
         Context context = callback.getContext();
-        String scriptId = ScriptContextSeam.currentScriptIdOf(context);
+        String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         if (scriptId == null || scriptId.isBlank()) {
             scriptId = activeScriptIds.get(context);
         }
@@ -150,7 +152,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         String scriptId = scriptIds.get(id);
         try {
             synchronized (context) {
-                String previousScriptId = ScriptContextSeam.switchCurrentScriptId(context, scriptId);
+                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                 if (scriptId != null && !scriptId.isBlank()) {
                     activeScriptIds.put(context, scriptId);
                 }
@@ -160,11 +162,11 @@ public final class NekoNodeTimers implements AutoCloseable {
                     if (scriptId != null && !scriptId.isBlank()) {
                         activeScriptIds.remove(context);
                     }
-                    ScriptContextSeam.restoreCurrentScriptId(context, previousScriptId);
+                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                 }
             }
         } catch (Throwable e) {
-            NekoErrorTracker.recordCallbackError(scriptType, "timer", e);
+            errorTracker.recordCallbackError(scriptType, "timer", e);
         }
     }
 

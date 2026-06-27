@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class NekoEsmVirtualModuleRegistry {
-    private static final Path ROOT = NekoJSPaths.ROOT.resolve(".native_esm_modules").normalize().toAbsolutePath();
+    private static final Path ROOT = NekoJSPaths.get().root().resolve(".native_esm_modules").normalize().toAbsolutePath();
     private static final Map<String, String> SOURCES = new ConcurrentHashMap<>();
     private static final Map<String, String> DISPLAY_PATHS = new ConcurrentHashMap<>();
     private static final Map<String, String> DISPLAY_PATHS_BY_FILE_NAME = new ConcurrentHashMap<>();
@@ -131,8 +131,8 @@ public final class NekoEsmVirtualModuleRegistry {
         }
         try {
             Path parsed = Path.of(normalized);
-            Path path = parsed.isAbsolute() ? parsed.normalize().toAbsolutePath() : NekoJSPaths.ROOT.resolve(parsed).normalize().toAbsolutePath();
-            return NekoJSPaths.ROOT.relativize(path).toString().replace('\\', '/');
+            Path path = parsed.isAbsolute() ? parsed.normalize().toAbsolutePath() : NekoJSPaths.get().root().resolve(parsed).normalize().toAbsolutePath();
+            return NekoJSPaths.get().root().relativize(path).toString().replace('\\', '/');
         } catch (Exception ignored) { // path resolution fails → return raw normalized string
             return normalized;
         }

@@ -70,6 +70,7 @@ public class EventGroup {
         }
 
         bus.scriptType(scriptType);
+        bus.metadata(this.name, name);
         this.buses.put(name, new RegisteredBus(bus, scriptType));
         return bus;
     }

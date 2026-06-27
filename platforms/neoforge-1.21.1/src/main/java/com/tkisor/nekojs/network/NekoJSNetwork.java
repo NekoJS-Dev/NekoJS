@@ -48,7 +48,7 @@ public class NekoJSNetwork {
 
     /* ================= Client Handlers ================= */
     private static void handleShowErrorListOnClient(ShowErrorListPacket data, IPayloadContext context) {
-        context.enqueueWork(() -> ClientHandler.openDashboard(data.errors()));
+        context.enqueueWork(() -> ClientHandler.showOrUpdateDashboard(data.errors(), data.openIfMissing()));
     }
 
     private static void handleFetchResponseOnClient(FetchScriptResponsePacket data, IPayloadContext context) {
@@ -72,8 +72,12 @@ public class NekoJSNetwork {
     }
 
     private static class ClientHandler {
-        private static void openDashboard(List<ErrorSummaryDTO> errors) {
-            Minecraft.getInstance().setScreen(new NekoErrorDashboardScreen(errors));
+        private static void showOrUpdateDashboard(List<ErrorSummaryDTO> errors, boolean openIfMissing) {
+            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
+                screen.updateErrors(errors);
+            } else if (openIfMissing) {
+                Minecraft.getInstance().setScreen(new NekoErrorDashboardScreen(errors));
+            }
         }
 
         private static void receiveServerScript(String path, String content) {

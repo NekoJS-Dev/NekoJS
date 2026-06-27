@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
+import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -15,9 +15,9 @@ public class PlayerEventListener {
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            if (player.hasPermissions(2) && NekoErrorTracker.hasErrors()) {
+            if (player.hasPermissions(2) && NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
 
-                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent());
+                player.displayClientMessage(NekoErrorUIHelper.getErrorComponent(), false);
             }
         }
     }

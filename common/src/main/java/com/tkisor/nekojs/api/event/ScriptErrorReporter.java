@@ -4,7 +4,7 @@ import com.tkisor.nekojs.script.ScriptType;
 
 /**
  * Static accessor for script error reporting, breaking the api→core dependency
- * that {@code EventBusJS} previously had on {@code core.error.NekoErrorTracker}.
+ * that {@code EventBusJS} previously had on {@code DefaultErrorTracker}.
  * <p>
  * Set once during bootstrap; the default no-op implementation silently discards
  * errors until the real reporter is installed.

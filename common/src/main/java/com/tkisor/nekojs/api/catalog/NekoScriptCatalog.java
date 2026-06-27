@@ -5,7 +5,7 @@ import com.tkisor.nekojs.api.MemberVisibilityQuery;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
-import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
 import graal.graalvm.polyglot.HostAccess;
@@ -24,33 +24,33 @@ public final class NekoScriptCatalog {
         platformProvider = provider == null ? NekoCatalogPlatformProvider.EMPTY : provider;
     }
 
-    public static NekoScriptCatalogSnapshot snapshot() {
+    public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime) {
         return new NekoScriptCatalogSnapshot(
                 ScriptType.all(),
-                bindings(),
-                events(),
-                adapters(),
+                bindings(runtime),
+                events(runtime),
+                adapters(runtime),
                 recipeNamespaces(),
                 hostExtensions(),
                 List.copyOf(platformProvider.snippets()),
-                NekoTypeDocs.typeDocs(),
-                NekoTypeDocs.manualDeclarations(),
+                NekoTypeDocs.typeDocs(runtime),
+                NekoTypeDocs.manualDeclarations(runtime),
                 platformProvider.outputLayout(),
                 JavaModuleImportPolicy.nekoDefault()
         );
     }
 
-    public static NekoScriptCatalogSnapshot snapshot(ScriptType scriptType) {
+    public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime, ScriptType scriptType) {
         return new NekoScriptCatalogSnapshot(
                 List.of(scriptType),
-                bindings(scriptType),
-                events(scriptType),
-                adapters(),
+                bindings(runtime, scriptType),
+                events(runtime, scriptType),
+                adapters(runtime),
                 recipeNamespaces(),
                 hostExtensions(scriptType),
                 snippets(scriptType),
-                NekoTypeDocs.typeDocs(scriptType),
-                NekoTypeDocs.manualDeclarations(scriptType),
+                NekoTypeDocs.typeDocs(runtime, scriptType),
+                NekoTypeDocs.manualDeclarations(runtime, scriptType),
                 platformProvider.outputLayout(),
                 JavaModuleImportPolicy.nekoDefault()
         );
@@ -85,20 +85,20 @@ public final class NekoScriptCatalog {
     // ... (bindings/events/adapters methods unchanged, omitted for brevity)
     // The rest of the file is the same as before
 
-    public static List<BindingCatalogEntry> bindings() {
+    public static List<BindingCatalogEntry> bindings(IPluginRuntime runtime) {
         List<BindingCatalogEntry> entries = new ArrayList<>();
         for (ScriptType type : ScriptType.all()) {
-            entries.addAll(bindings(type));
+            entries.addAll(bindings(runtime, type));
         }
         return List.copyOf(entries);
     }
 
-    public static List<BindingCatalogEntry> bindings(ScriptType scriptType) {
+    public static List<BindingCatalogEntry> bindings(IPluginRuntime runtime, ScriptType scriptType) {
         List<BindingCatalogEntry> entries = new ArrayList<>();
-        List<TypeDocCatalogEntry> docs = NekoTypeDocs.typeDocs(scriptType).stream()
+        List<TypeDocCatalogEntry> docs = NekoTypeDocs.typeDocs(runtime, scriptType).stream()
                 .filter(doc -> doc.kind().equals("binding"))
                 .toList();
-        for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
+        for (var binding : runtime.bindings(scriptType).values()) {
             BindingCatalogEntry entry = BindingCatalogEntry.of(binding.name(), scriptType, binding.valueType(), binding.value() instanceof Class<?>);
             for (TypeDocCatalogEntry doc : docs) {
                 if (doc.target().equals(binding.name())) {
@@ -110,17 +110,17 @@ public final class NekoScriptCatalog {
         return List.copyOf(entries);
     }
 
-    public static List<EventCatalogEntry> events() {
+    public static List<EventCatalogEntry> events(IPluginRuntime runtime) {
         List<EventCatalogEntry> entries = new ArrayList<>();
         for (ScriptType type : ScriptType.all()) {
-            entries.addAll(events(type));
+            entries.addAll(events(runtime, type));
         }
         return List.copyOf(entries);
     }
 
-    public static List<EventCatalogEntry> events(ScriptType scriptType) {
+    public static List<EventCatalogEntry> events(IPluginRuntime runtime, ScriptType scriptType) {
         List<EventCatalogEntry> entries = new ArrayList<>();
-        for (EventGroup group : NekoRuntimeAccess.get().eventGroups().values()) {
+        for (EventGroup group : runtime.eventGroups().values()) {
             for (var entry : group.viewBuses().entrySet()) {
                 EventGroup.BusHolder holder = entry.getValue();
                 if (!holder.canApplyOn(scriptType)) continue;
@@ -137,9 +137,9 @@ public final class NekoScriptCatalog {
         return List.copyOf(entries);
     }
 
-    public static List<AdapterCatalogEntry> adapters() {
+    public static List<AdapterCatalogEntry> adapters(IPluginRuntime runtime) {
         List<AdapterCatalogEntry> entries = new ArrayList<>();
-        for (var adapter : NekoRuntimeAccess.get().adapters()) {
+        for (var adapter : runtime.adapters()) {
             entries.add(adapterEntry(adapter));
         }
         return List.copyOf(entries);

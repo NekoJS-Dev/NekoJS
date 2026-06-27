@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.error;
 
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.script.ScriptContainer;
@@ -31,8 +30,10 @@ public class ScriptError {
     private String fallbackPath = "Unknown location";
 
     private int occurrenceCount = 1;
+    private final DefaultErrorTracker tracker;
 
-    public ScriptError(ScriptContainer script, Throwable rawException) {
+    public ScriptError(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
+        this.tracker = tracker;
         this.errorId = script.id;
         this.script = script;
         this.scriptType = script.type;
@@ -40,7 +41,8 @@ public class ScriptError {
         parseException();
     }
 
-    public ScriptError(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException) {
+    public ScriptError(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
+        this.tracker = tracker;
         this.errorId = errorId;
         this.script = null;
         this.scriptType = scriptType;
@@ -99,8 +101,8 @@ public class ScriptError {
     private String buildSourceSnippet(String displayPath, String sourceContent, String fallbackSnippet) {
         List<String> sourceLines = null;
         try {
-            Path sourcePath = NekoJSPaths.ROOT.resolve(displayPath).normalize().toAbsolutePath();
-            Path root = NekoJSPaths.ROOT.normalize().toAbsolutePath();
+            Path sourcePath = tracker.paths().root().resolve(displayPath).normalize().toAbsolutePath();
+            Path root = tracker.paths().root().normalize().toAbsolutePath();
             if (sourcePath.startsWith(root) && Files.exists(sourcePath) && this.lineNumber > 0) {
                 sourceLines = Files.readAllLines(sourcePath);
             }
@@ -172,17 +174,17 @@ public class ScriptError {
         return fallbackPath;
     }
 
-    private static String extractRelativePath(SourceSection sourceLocation) {
+    private String extractRelativePath(SourceSection sourceLocation) {
         if (sourceLocation == null || sourceLocation.getSource() == null) return "Unknown location";
-        return NekoErrorTracker.extractRelativePath(sourceLocation.getSource());
+        return tracker.extractRelativePath(sourceLocation.getSource());
     }
 
-    private static String pathToDisplay(Path path) {
+    private String pathToDisplay(Path path) {
         if (path == null) {
             return "Unknown location";
         }
         try {
-            return NekoJSPaths.ROOT.relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');
+            return tracker.paths().root().relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');
         } catch (Exception ignored) { // path relativize fails (different filesystem) → return absolute path
             return path.toString().replace('\\', '/');
         }
@@ -249,7 +251,7 @@ public class ScriptError {
     }
 
     private SourceSection bestUserSourceLocation(PolyglotException exception) {
-        SourceSection fallback = NekoErrorTracker.getBestSourceLocation(exception);
+        SourceSection fallback = tracker.getBestSourceLocation(exception);
         if (fallback != null && !isInternalFrame(extractRelativePath(fallback))) {
             return fallback;
         }
@@ -321,7 +323,7 @@ public class ScriptError {
                 || normalized.startsWith("truffle:") && normalized.contains("/nekojs/node/");
     }
 
-    private static String firstGuestFrame(PolyglotException exception) {
+    private String firstGuestFrame(PolyglotException exception) {
         for (PolyglotException.StackFrame frame : exception.getPolyglotStackTrace()) {
             if (!frame.isGuestFrame()) {
                 continue;
@@ -330,7 +332,7 @@ public class ScriptError {
             if (loc == null || loc.getSource() == null) {
                 continue;
             }
-            String path = NekoErrorTracker.extractRelativePath(loc.getSource());
+            String path = tracker.extractRelativePath(loc.getSource());
             if (isInternalFrame(path)) {
                 continue;
             }
@@ -373,7 +375,7 @@ public class ScriptError {
         sb.append("\n");
         PolyglotException polyglotException = findPolyglotException(rawException);
         if (polyglotException != null) {
-            sb.append(NekoErrorTracker.getMappedStackTrace(polyglotException));
+            sb.append(tracker.getMappedStackTrace(polyglotException));
         } else {
             sb.append(getErrorMessage()).append("\n");
         }

@@ -6,25 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 可靠执行命名资源清理的 {@link AutoCloseable} 跟踪器。
+ * 可靠的资源清理追踪器：注册 {@link AutoCloseable} 资源或 {@link Runnable} 清理动作，
+ * {@link #close()} 时逆序执行所有清理，单个失败不中断后续。
  *
- * <p>支持两类清理：
- * <ul>
- *   <li>{@link #track(String, AutoCloseable)}：注册 {@code AutoCloseable} 资源，{@link #close()} 时调用其 {@code close()}。</li>
- *   <li>{@link #cleanup(String, Runnable)}：注册非 closeable 清理动作（例如 listener unregister、timer cancel、
- *       cache invalidate），{@link #close()} 时执行。</li>
- * </ul>
- *
- * <p>清理要求（见 {@code ai_arch/architecture.md} §4.3 与 {@code plan.md} Phase 2.2）：
- * <ul>
- *   <li>逆序执行 cleanup / close（后注册的先清理，符合创建-销毁反向顺序）。</li>
- *   <li>单个清理失败不中断后续清理：异常用 {@link Throwable#addSuppressed(Throwable)} 聚合到首个异常，
- *       全部清理完成后再抛出首个异常。</li>
- *   <li>日志和异常信息包含 resource name，便于定位 reload / shutdown 泄漏。</li>
- *   <li>{@code ResourceTracker} 只负责可靠执行清理动作；reload 失效顺序由 {@code ScriptReloadCoordinator}
- *       决定，module/cache/source-map revision 失效顺序由 {@code ModuleReloadCoordinator} 决定，
- *       runtime shutdown 顺序由 {@code NekoRuntimeRoot} 决定。不把业务失效策略藏进通用 tracker。</li>
- * </ul>
+ * <p>日志和异常信息包含 resource name，便于定位泄漏。
  */
 public final class ResourceTracker implements AutoCloseable {
     private final List<Entry> entries = new ArrayList<>();

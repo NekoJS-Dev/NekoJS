@@ -7,8 +7,10 @@ import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.log.LoggerStream;
+import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.io.IOAccess;
@@ -21,14 +23,36 @@ import java.util.Set;
 /**
  * 实例化沙盒工厂：使用注入的 {@link NekoCoreContext}（paths/engine/sandboxConfig/classFilter）+
  * {@link ScriptCompilerRegistry}（require extension alias）创建 per-{@link ScriptType} GraalVM {@link Context}。
- *
- * <p>取代旧 {@link NekoSandboxBuilder} 的 static {@code buildSandbox}。旧 builder 保留为 legacy delegate，
- * 委托 bootstrap 绑定的默认 factory，后续 Phase 删除。
- *
- * <p>不在 factory 内读取 {@code NekoPluginRuntime.current()}；Node 模块安装仍走 {@link NekoNodeModuleInstaller}
- * static（Phase 4B 下沉到 {@code ScriptEnvironmentFactory}）。
  */
 public final class NekoSandboxFactory {
+    // Prefix console.warn with [NekoJS_WARN] and console.debug with [NekoJS_DEBUG]
+    // for easy grep-filtering of script output in server logs.
+    static final String CONSOLE_PATCH_JS = """
+            (function() {
+                const originalWarn = console.warn;
+                console.warn = function(...args) {
+                    if (args.length > 0 && typeof args[0] === 'string') {
+                        args[0] = '[NekoJS_WARN] ' + args[0];
+                        originalWarn.apply(console, args);
+                    } else {
+                        originalWarn.apply(console, ['[NekoJS_WARN]', ...args]);
+                    }
+                };
+            
+                const originalDebug = console.debug;
+                console.debug = function(...args) {
+                    if (args.length > 0 && typeof args[0] === 'string') {
+                        args[0] = '[NekoJS_DEBUG] ' + args[0];
+                        console.log.apply(console, args);
+                    } else {
+                        console.log.apply(console, ['[NekoJS_DEBUG]', ...args]);
+                    }
+                };
+            })();
+            """;
+
+    public record Sandbox(Context context, NekoNodeRuntime nodeRuntime) {}
+
     private final NekoCoreContext core;
     private final ScriptCompilerRegistry compilers;
 
@@ -45,8 +69,8 @@ public final class NekoSandboxFactory {
         return compilers;
     }
 
-    public NekoSandboxBuilder.Sandbox build(ScriptType type) {
-        NekoJSPaths paths = core.paths();
+    public Sandbox build(ScriptType type) {
+        NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = core.sandboxConfig();
         ClassFilter classFilter = core.classFilter();
 
@@ -82,10 +106,14 @@ public final class NekoSandboxFactory {
                 .build();
         long t1 = System.nanoTime();
 
-        ctx.eval("js", NekoSandboxBuilder.CONSOLE_PATCH_JS);
+        ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
         long t2 = System.nanoTime();
-        NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type);
+        NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
+                new NekoModuleResolver(paths, new ScriptFilePolicy(compilers), compilers),
+                paths,
+                core.errorTracker(),
+                config);
         long t3 = System.nanoTime();
 
         Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
@@ -111,6 +139,6 @@ public final class NekoSandboxFactory {
                 (t1 - t0) / 1_000_000, (t2 - t1) / 1_000_000,
                 (t3 - t2) / 1_000_000, (t4 - t3) / 1_000_000,
                 (t4 - t0) / 1_000_000);
-        return new NekoSandboxBuilder.Sandbox(ctx, nodeRuntime);
+        return new Sandbox(ctx, nodeRuntime);
     }
 }

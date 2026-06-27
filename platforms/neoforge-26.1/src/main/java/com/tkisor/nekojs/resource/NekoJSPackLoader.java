@@ -35,7 +35,7 @@ public class NekoJSPackLoader {
                         new Pack.ResourcesSupplier() {
                             @Override
                             public @NonNull PackResources openPrimary(PackLocationInfo location) {
-                                return new NekoJSPathPackResources(location.id(), NekoJSPaths.ROOT, event.getPackType());
+                                return new NekoJSPathPackResources(location.id(), NekoJSPaths.get().root(), event.getPackType());
                             }
 
                             @Override

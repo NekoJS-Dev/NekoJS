@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -21,19 +21,27 @@ public final class ScriptLocator {
     private ScriptLocator() {}
 
     public static List<ScriptContainer> discover(ScriptType type, ScriptPropertyRegistry propertyRegistry) {
+        return discover(type, propertyRegistry, ScriptFilePolicy.legacyRuntime());
+    }
+
+    public static List<ScriptContainer> discover(ScriptType type, ScriptPropertyRegistry propertyRegistry, ScriptFilePolicy filePolicy) {
         List<ScriptContainer> containers = new ArrayList<>();
-        for (Path path : discoverScriptFiles(type)) {
+        for (Path path : discoverScriptFiles(type, filePolicy)) {
             containers.add(new ScriptContainer(type.makeId(path), type, path, propertyRegistry));
         }
         return containers;
     }
 
     public static List<String> suggestScriptFiles(ScriptType type, String input) {
+        return suggestScriptFiles(type, input, ScriptFilePolicy.legacyRuntime());
+    }
+
+    public static List<String> suggestScriptFiles(ScriptType type, String input, ScriptFilePolicy filePolicy) {
         String normalizedInput = input == null ? "" : input.replace('\\', '/');
         int slash = normalizedInput.lastIndexOf('/');
         String directoryPrefix = slash < 0 ? "" : normalizedInput.substring(0, slash + 1);
         Set<String> suggestions = new LinkedHashSet<>();
-        for (Path path : discoverScriptFiles(type)) {
+        for (Path path : discoverScriptFiles(type, filePolicy)) {
             String relative = type.path.relativize(path).toString().replace('\\', '/');
             if (!relative.startsWith(directoryPrefix)) {
                 continue;
@@ -49,7 +57,7 @@ public final class ScriptLocator {
         return List.copyOf(suggestions);
     }
 
-    private static List<Path> discoverScriptFiles(ScriptType type) {
+    private static List<Path> discoverScriptFiles(ScriptType type, ScriptFilePolicy filePolicy) {
         List<Path> files = new ArrayList<>();
         Path dir = type.path;
 
@@ -60,7 +68,7 @@ public final class ScriptLocator {
         try (Stream<Path> stream = Files.walk(dir)) {
             stream.filter(Files::isRegularFile)
                     .filter(p -> !p.toString().contains("node_modules"))
-                    .filter(ScriptCompilerRegistry.current()::isSupportedScriptFile)
+                    .filter(filePolicy::isSupportedScriptFile)
                     .sorted()
                     .forEach(files::add);
         } catch (Exception e) {

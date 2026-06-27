@@ -31,7 +31,6 @@ public final class NekoNodeProcess {
 
     public Map<String, String> versions() {
         Map<String, String> versions = new LinkedHashMap<>();
-        versions.put("nekojs", NekoJS.VERSION);
         versions.put("minecraft", Platform.getMcVersion());
         versions.put("java", System.getProperty("java.version", "unknown"));
         versions.put("node", "22.0.0");

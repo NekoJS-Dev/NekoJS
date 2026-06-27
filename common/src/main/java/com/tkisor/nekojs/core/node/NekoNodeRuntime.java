@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.node;
 
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -16,16 +18,18 @@ import com.tkisor.nekojs.script.ScriptType;
 public final class NekoNodeRuntime implements AutoCloseable {
     private final ScriptType scriptType;
     private final NekoScriptModuleLoaderHost moduleLoaderHost;
-    private final NekoNodeFS fs = new NekoNodeFS();
+    private final NekoNodeFS fs;
     private final NekoNodePath path = new NekoNodePath();
     private final NekoNodeOS os = new NekoNodeOS();
     private final NekoNodeTimers timers;
-    private final NekoNodeProcess process = new NekoNodeProcess(fs);
+    private final NekoNodeProcess process;
 
-    public NekoNodeRuntime(ScriptType scriptType, NekoScriptModuleLoaderHost moduleLoaderHost) {
+    public NekoNodeRuntime(ScriptType scriptType, NekoScriptModuleLoaderHost moduleLoaderHost, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
         this.scriptType = scriptType;
         this.moduleLoaderHost = moduleLoaderHost;
-        this.timers = new NekoNodeTimers(scriptType);
+        this.fs = new NekoNodeFS(sandboxConfig);
+        this.process = new NekoNodeProcess(fs);
+        this.timers = new NekoNodeTimers(scriptType, errorTracker);
     }
 
     public ScriptType scriptType() {

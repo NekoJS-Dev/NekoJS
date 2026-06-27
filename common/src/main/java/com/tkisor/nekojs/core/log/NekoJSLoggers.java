@@ -81,7 +81,7 @@ public final class NekoJSLoggers {
             return LoggerFactory.getLogger(loggerName);
         }
 
-        Path nekoLogDir = NekoJSPaths.GAME_DIR.resolve("logs").resolve("nekojs");
+        Path nekoLogDir = NekoJSPaths.get().gameDir().resolve("logs").resolve("nekojs");
         Path file = nekoLogDir.resolve(name + ".log");
         Path oldLogDir = nekoLogDir.resolve("old");
 

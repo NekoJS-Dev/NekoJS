@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.module.esm;
 
-import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
+import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.api.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
@@ -244,7 +244,7 @@ public final class NekoEsmLinker {
     }
 
     private NekoPreparedModule prepare(Path path) throws IOException {
-        return NekoModulePreparationCache.prepare(path);
+        return NekoModulePipelineCache.prepare(path);
     }
 
     private Set<String> localExports(NekoEsmModuleAst ast) {

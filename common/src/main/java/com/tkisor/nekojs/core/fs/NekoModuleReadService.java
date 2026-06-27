@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public final class NekoModuleReadService {
         }
 
         String baseName = fileName.substring(0, fileName.length() - 3);
-        for (String extension : ScriptCompilerRegistry.current().supportedExtensionsInOrder()) {
+        for (String extension : ScriptFilePolicy.legacyRuntime().supportedExtensionsInOrder()) {
             if (".js".equals(extension)) {
                 continue;
             }
@@ -52,7 +52,7 @@ public final class NekoModuleReadService {
         if (virtualSource != null) {
             return Optional.of(virtualSource.getBytes(StandardCharsets.UTF_8));
         }
-        if (path.getFileName() != null && NekoJSPaths.isSupportedScriptFile(path)) {
+        if (path.getFileName() != null && ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path)) {
             return Optional.of(readTransformedModule(path));
         }
         return Optional.empty();
@@ -82,6 +82,6 @@ public final class NekoModuleReadService {
     }
 
     public static byte[] readTransformedModule(Path path) throws IOException {
-        return NekoModulePreparationCache.prepare(path).code().getBytes(StandardCharsets.UTF_8);
+        return NekoModulePipelineCache.prepare(path).code().getBytes(StandardCharsets.UTF_8);
     }
 }

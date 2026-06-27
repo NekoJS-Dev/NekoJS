@@ -1,6 +1,7 @@
 ext.architectureScanRoots = [
         'common/src',
         'platforms/neoforge-26.1/src',
+        'platforms/neoforge-26.2/src',
         'platforms/neoforge-1.21.1/src'
 ]
 
@@ -11,7 +12,7 @@ ext.architectureLegacyPatterns = [
         [key: 'ScriptCompilerRegistry.current', display: 'ScriptCompilerRegistry.current()', regex: java.util.regex.Pattern.compile(/\bScriptCompilerRegistry\.current\s*\(/)],
         [key: 'ClassFilter.INSTANCE', display: 'ClassFilter.INSTANCE', regex: java.util.regex.Pattern.compile(/\bClassFilter\.INSTANCE\b/)],
         [key: 'ClassFilter.staticConfig', display: 'ClassFilter.allow*/enableEsmAuthoring/conciseScriptErrorLogs', regex: java.util.regex.Pattern.compile(/\bClassFilter\.(?:allow[A-Za-z0-9_]*|enableEsmAuthoring|conciseScriptErrorLogs)\b/)],
-        [key: 'NekoJSPaths.static', display: 'NekoJSPaths.*', regex: java.util.regex.Pattern.compile(/\bNekoJSPaths\.[A-Za-z_][A-Za-z0-9_]*\b/)],
+        [key: 'NekoJSPaths.static', display: 'NekoJSPaths.*', regex: java.util.regex.Pattern.compile(/\bNekoJSPaths\.(?!get\b|init\b)[A-Za-z_][A-Za-z0-9_]*\b/)],
         [key: 'NekoErrorTracker.static', display: 'NekoErrorTracker.*', regex: java.util.regex.Pattern.compile(/\bNekoErrorTracker\.(?!bindLegacy\b|legacyInstance\b)[A-Za-z_][A-Za-z0-9_]*\b/)],
         [key: 'PublicStaticMutable', display: 'public static mutable Map/List/Set/boolean', regex: java.util.regex.Pattern.compile(/public\s+static\s+(?!final\b)(?:[\w<>, ?]+\s+)*(?:Map|List|Set|boolean|Boolean)\s+\w+/)]
 ]

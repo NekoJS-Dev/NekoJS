@@ -5,22 +5,19 @@ import com.tkisor.nekojs.api.catalog.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
-import com.tkisor.nekojs.core.NekoSandboxBuilder;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
-import com.tkisor.nekojs.core.error.NekoErrorTracker;
-import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.NekoModulePreparationCache;
+import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
+import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.script.context.ScriptContextRegistry;
-import com.tkisor.nekojs.script.context.ScriptContextSeam;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
@@ -35,10 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 
@@ -46,12 +39,9 @@ import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
  * NekoJS 脚本引擎核心生命周期调度器。
  * <p>
  * 每个实例管理一种 {@link ScriptType}（STARTUP / SERVER / CLIENT / TEST）的完整脚本生命周期。
- * 通过 {@link NekoJS#scriptManagers} 按类型持有，采用依赖注入模式。
- * <p>
- * 全局对象（{@link ScriptEventBridge}、{@link com.tkisor.nekojs.script.prop.ScriptPropertyRegistry}）
- * 均通过 {@link #parent} 访问，本实例不重复持有。
+ * 通过构造器注入 {@link ScriptEventBridge}、{@link ErrorTracker}、{@link NekoJSPaths} 等协作者。
  */
-public final class ScriptManager {
+public final class ScriptManager implements AutoCloseable {
 
     // ---- 最小静态：Context → ScriptManager 反向查找 ----
     private static final Map<Context, ScriptManager> CONTEXT_TO_MANAGER =
@@ -71,19 +61,13 @@ public final class ScriptManager {
 
     // ---- 实例字段 ----
 
-    /**
-     * 拥有此 ScriptManager 的 NekoJS 实例（legacy 过渡）。
-     * Phase 4E 后通过 {@link #scriptEventBridge} / {@link #scriptProperties} / {@link #errorTracker} 访问具体协作者。
-     * Phase 6 删除。
-     */
-    @Deprecated
-    public final NekoJS parent;
-
     private final ScriptEventBridge scriptEventBridge;
     private final ScriptPropertyRegistry scriptProperties;
     private final ErrorTracker errorTracker;
     private final NekoJSPaths paths;
     private final SandboxConfig sandboxConfig;
+    private final ScriptExecutor scriptExecutor;
+    private final ScriptEnvironmentFactory environmentFactory;
 
     /**
      * 本实例管理的脚本类型
@@ -96,30 +80,15 @@ public final class ScriptManager {
 
     // ---- 构造函数 ----
 
-    /**
-     * @param parent    拥有此 manager 的 NekoJS 实例
-     * @param scriptType 本实例管理的脚本类型
-     * @deprecated 使用 {@link #ScriptManager(ScriptType, ScriptEventBridge, ScriptPropertyRegistry, ErrorTracker, NekoJSPaths)}
-     */
-    @Deprecated
-    public ScriptManager(NekoJS parent, ScriptType scriptType) {
-        this.parent = parent;
-        this.scriptType = scriptType;
-        this.scriptEventBridge = parent.scriptEventBridge;
-        this.scriptProperties = parent.scriptProperties;
-        this.errorTracker = NekoErrorTracker.legacyInstance();
-        this.paths = NekoJSPaths.legacy();
-        this.sandboxConfig = ClassFilter.INSTANCE.config();
-    }
-
-    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig) {
-        this.parent = null;
+    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
         this.scriptType = scriptType;
         this.scriptEventBridge = scriptEventBridge;
         this.scriptProperties = scriptProperties;
         this.errorTracker = errorTracker;
         this.paths = paths;
         this.sandboxConfig = sandboxConfig;
+        this.scriptExecutor = new ScriptExecutor(scriptType, errorTracker, paths, sandboxConfig);
+        this.environmentFactory = environmentFactory;
     }
 
     // ---- 配置 ----
@@ -132,54 +101,13 @@ public final class ScriptManager {
 
     private Context getOrCreateContext() {
         if (context == null) {
-            NekoSandboxBuilder.Sandbox sandbox = NekoSandboxBuilder.buildSandbox(scriptType);
-            this.context = sandbox.context();
-            this.nodeRuntime = sandbox.nodeRuntime();
+            ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
+            this.context = env.context();
+            this.nodeRuntime = env.nodeRuntime();
             CONTEXT_TO_MANAGER.put(context, this);
-            ScriptContextSeam.bind(context, scriptType);
-            context.getBindings("js").putMember("__nekoCurrentScriptId", null);
-
-            var bindings = context.getBindings("js");
-            scriptEventBridge.bindEvents(bindings, scriptType);
-
-            var environmentBindings = NekoPluginRuntime.current().bindings(scriptType);
-            environmentBindings.forEach((name, binding) -> {
-                Object obj = binding.value();
-                if (obj instanceof Class<?>) {
-                    Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
-                    bindings.putMember(name, javaType);
-                } else {
-                    bindings.putMember(name, obj);
-                }
-            });
-
-            installJavaClassLoadTelemetry(context, scriptType);
+            ScriptContextRegistry.bind(context, scriptType);
         }
         return context;
-    }
-
-    private void installJavaClassLoadTelemetry(Context ctx, ScriptType type) {
-        if (!JavaClassLoadTelemetry.isEnabled()) return;
-
-        var bindings = ctx.getBindings("js");
-        bindings.putMember("__nekoJavaClassLoadTelemetry", new JavaClassLoadTelemetry());
-        bindings.putMember("__nekoScriptType", type.name());
-        bindings.putMember("__nekoCurrentScriptId", null);
-        ctx.eval("js", """
-                (function() {
-                    if (Java.__nekoTypeTelemetryInstalled) return;
-                    const rawType = Java.type.bind(Java);
-                    Java.type = function(className) {
-                        const result = rawType(className);
-                        if (typeof __nekoCurrentScriptId === 'string') {
-                            __nekoJavaClassLoadTelemetry.recordLoad(__nekoScriptType, __nekoCurrentScriptId, String(className));
-                        }
-                        return result;
-                    };
-                    Java.loadClass = Java.type;
-                    Object.defineProperty(Java, '__nekoTypeTelemetryInstalled', { value: true, enumerable: false });
-                })();
-                """);
     }
 
     // ---- 脚本发现 ----
@@ -218,7 +146,7 @@ public final class ScriptManager {
 
         for (ScriptContainer script : scripts) {
             if (script.shouldRun()) {
-                runScript(ctx, script);
+                scriptExecutor.executeEntry(ctx, script, nodeRuntime);
             }
         }
 
@@ -226,77 +154,6 @@ public final class ScriptManager {
             flushReadyNodeTimers();
             ScriptEvents.post(getScriptEventRegistrar());
         }
-    }
-
-    private void runScript(Context ctx, ScriptContainer script) {
-        try {
-            synchronized (ctx) {
-                Path relativePath = paths.root().relativize(script.path);
-                String requirePath = "./" + relativePath.toString().replace("\\", "/");
-
-                JavaClassLoadTelemetry.enter(script.type, script.id.toString());
-                ScriptContextSeam.switchCurrentScriptId(ctx, script.id.toString());
-                try {
-                    waitForEntryModule(ctx, script, requirePath);
-                } finally {
-                    ScriptContextSeam.switchCurrentScriptId(ctx, null);
-                    JavaClassLoadTelemetry.exit();
-                }
-
-                errorTracker.clear(script.id);
-                errorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
-                script.disabled = false;
-                script.lastError = null;
-            }
-        } catch (Throwable t) {
-            script.disabled = true;
-            script.lastError = t;
-
-            ScriptError scriptError = errorTracker.record(script, t);
-            script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
-        }
-    }
-
-    private void waitForEntryModule(Context ctx, ScriptContainer script, String requirePath) throws Exception {
-        if (nodeRuntime == null || nodeRuntime.moduleLoaderHost() == null) {
-            ctx.eval("js", "globalThis.__nekoScriptLoader.loadEntry").execute(requirePath);
-            return;
-        }
-        CompletableFuture<?> evaluation = nodeRuntime.moduleLoaderHost().loadEntryAsync(requirePath);
-        waitForEvaluation(evaluation);
-    }
-
-    private void waitForEvaluation(CompletableFuture<?> evaluation) throws Exception {
-        while (!evaluation.isDone()) {
-            if (nodeRuntime != null) {
-                nodeRuntime.flushReadyTimers();
-            }
-            try {
-                evaluation.get(1L, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException ignored) {
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw e;
-            } catch (ExecutionException e) {
-                throw unwrapExecutionException(e);
-            }
-        }
-        try {
-            evaluation.get();
-        } catch (ExecutionException e) {
-            throw unwrapExecutionException(e);
-        }
-    }
-
-    private Exception unwrapExecutionException(ExecutionException e) {
-        Throwable cause = e.getCause();
-        if (cause instanceof Exception exception) {
-            return exception;
-        }
-        if (cause instanceof Error error) {
-            throw error;
-        }
-        return new RuntimeException(cause);
     }
 
     // ---- 重载 ----
@@ -318,7 +175,7 @@ public final class ScriptManager {
         }
         scriptType.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", scriptType.name(), displayScriptPath(target), targets.size());
 
-        NekoModulePreparationCache.invalidate(target);
+        NekoModulePipelineCache.invalidate(target);
         Context ctx = getOrCreateContext();
         String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
 
@@ -391,16 +248,25 @@ public final class ScriptManager {
     }
 
     private void reloadEntryScript(Context ctx, ScriptContainer script) {
+        cleanupScriptEntry(script);
+        script.preload();
+        if (script.shouldRun()) {
+            scriptExecutor.executeEntry(ctx, script, nodeRuntime);
+        }
+    }
+
+    private void cleanupScriptEntry(ScriptContainer script) {
         scriptEventBridge.clearListeners(scriptType, script.id.toString());
         if (nodeRuntime != null) {
             nodeRuntime.timers().cancelScript(script.id.toString());
         }
         errorTracker.clear(script.id);
         errorTracker.clearByScriptPath(scriptType, paths.root().relativize(script.path).toString().replace('\\', '/'));
-        script.preload();
-        if (script.shouldRun()) {
-            runScript(ctx, script);
-        }
+    }
+
+    private void fullReloadCleanup() {
+        scriptEventBridge.clearListeners(scriptType);
+        errorTracker.clearByType(scriptType);
     }
 
     // ---- 路径解析 ----
@@ -470,12 +336,11 @@ public final class ScriptManager {
         }
     }
 
-    // ---- 环境重置 ----
+    // ---- 环境重置 / 关闭 ----
 
     private void resetEnvironment() {
-        scriptEventBridge.clearListeners(scriptType);
-        errorTracker.clearByType(scriptType);
-        for (var binding : NekoPluginRuntime.current().bindings(scriptType).values()) {
+        fullReloadCleanup();
+        for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
             binding.close(scriptType);
         }
 
@@ -484,6 +349,10 @@ public final class ScriptManager {
         this.context = null;
         this.nodeRuntime = null;
 
+        closeRuntimeResources(oldRuntime, oldContext);
+    }
+
+    private void closeRuntimeResources(NekoNodeRuntime oldRuntime, Context oldContext) {
         if (oldRuntime != null) {
             try {
                 oldRuntime.close();
@@ -492,7 +361,7 @@ public final class ScriptManager {
             }
         }
         if (oldContext != null) {
-            ScriptContextSeam.unbind(oldContext);
+            ScriptContextRegistry.unbind(oldContext);
             CONTEXT_TO_MANAGER.remove(oldContext);
             try {
                 oldContext.close();
@@ -500,6 +369,17 @@ public final class ScriptManager {
                 scriptType.logger().warn("关闭旧上下文时发生异常", e);
             }
         }
+    }
+
+    @Override
+    public void close() {
+        fullReloadCleanup();
+        for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
+            binding.close(scriptType);
+        }
+        closeRuntimeResources(this.nodeRuntime, this.context);
+        this.context = null;
+        this.nodeRuntime = null;
     }
 
     // ---- 查询 ----
@@ -520,24 +400,24 @@ public final class ScriptManager {
         }
     }
 
-    // ---- Context 身份管理（委托 ScriptContextSeam，Phase 4B 后由 ScriptEnvironmentFactory 持有 registry） ----
+    // ---- Context 身份管理（委托 ScriptContextRegistry） ----
 
     /**
      * 从上下文获取对应的脚本类型
      */
     public static ScriptType getTypeFromContext(Context context) {
-        return ScriptContextSeam.scriptTypeOf(context);
+        return ScriptContextRegistry.scriptTypeOf(context);
     }
 
     public static String switchCurrentScriptId(Context context, String scriptId) {
-        return ScriptContextSeam.switchCurrentScriptId(context, scriptId);
+        return ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
     }
 
     public static void restoreCurrentScriptId(Context context, String scriptId) {
-        ScriptContextSeam.restoreCurrentScriptId(context, scriptId);
+        ScriptContextRegistry.restoreCurrentScriptId(context, scriptId);
     }
 
     public static String getCurrentScriptId(Context context) {
-        return ScriptContextSeam.currentScriptIdOf(context);
+        return ScriptContextRegistry.currentScriptIdOf(context);
     }
 }

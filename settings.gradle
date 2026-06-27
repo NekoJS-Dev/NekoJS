@@ -16,4 +16,5 @@ include 'common'
 
 // 嵌套在 platforms 文件夹里的模块，用冒号分隔
 include 'platforms:neoforge-26.1'
+include 'platforms:neoforge-26.2'
 include 'platforms:neoforge-1.21.1'

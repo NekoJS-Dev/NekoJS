@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.ScriptEventDefinition;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEventRegistry;
+import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import graal.graalvm.polyglot.Value;
 import net.neoforged.bus.api.Event;
@@ -18,6 +19,21 @@ import java.util.function.Consumer;
 
 public class ScriptEventsJS implements ScriptEventRegistrar {
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
+    private IPluginRuntime pluginRuntime;
+
+    public void bindRuntime(IPluginRuntime pluginRuntime) {
+        if (pluginRuntime == null) {
+            throw new IllegalArgumentException("pluginRuntime == null");
+        }
+        this.pluginRuntime = pluginRuntime;
+    }
+
+    private IPluginRuntime pluginRuntime() {
+        if (pluginRuntime == null) {
+            throw new IllegalStateException("ScriptEventsJS runtime has not been bound yet");
+        }
+        return pluginRuntime;
+    }
 
     @Override
     public void register(ScriptType targetType, String groupName, String eventName, Object eventClass, String priority, boolean receiveCancelled) {
@@ -29,9 +45,11 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
         Class<? extends Event> eventClass = resolveEventClass(eventClassValue);
         validateName("group", groupName);
         validateName("name", eventName);
-        ScriptEventRegistry.validateAvailable(targetType, groupName, eventName);
+        IPluginRuntime runtime = pluginRuntime();
+        ScriptEventRegistry.validateAvailable(runtime, targetType, groupName, eventName);
 
         EventBusJS<Event, Void> bus = (EventBusJS) EventBusJS.of((Class) eventClass);
+        bus.metadata(groupName, eventName);
         Consumer<Event> listener = event -> {
             if (bus.post(event) && event instanceof ICancellableEvent cancellable) {
                 cancellable.setCanceled(true);
@@ -39,7 +57,7 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
         };
 
         NeoForge.EVENT_BUS.addListener(priority, receiveCancelled, (Class) eventClass, listener);
-        ScriptEventRegistry.register(new ScriptEventDefinition(
+        ScriptEventRegistry.register(runtime, new ScriptEventDefinition(
                 groupName,
                 eventName,
                 targetType,

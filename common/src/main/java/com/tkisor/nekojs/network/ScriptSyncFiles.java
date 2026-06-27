@@ -22,7 +22,7 @@ public final class ScriptSyncFiles {
                     .forEach(path -> {
                         String relPath = rootDir.relativize(path).toString().replace('\\', '/');
                         try {
-                            NekoJSPaths.legacy().verifyScriptSyncPath(relPath);
+                            NekoJSPaths.get().verifyScriptSyncPath(relPath);
                             files.put(relPath, Files.readString(path));
                         } catch (Exception ignored) {} // invalid sync path → skip this file
                     });
@@ -46,7 +46,7 @@ public final class ScriptSyncFiles {
         int totalSize = 0;
         Map<String, Path> targets = new HashMap<>();
         for (Map.Entry<String, String> entry : files.entrySet()) {
-            Path target = NekoJSPaths.legacy().verifyScriptSyncPath(entry.getKey());
+            Path target = NekoJSPaths.get().verifyScriptSyncPath(entry.getKey());
             int size = entry.getValue().getBytes(StandardCharsets.UTF_8).length;
             if (size > maxSingleFileSize) {
                 throw new IllegalArgumentException("脚本文件过大: " + entry.getKey());

@@ -18,11 +18,12 @@ import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class NekoErrorDashboardScreen extends Screen {
-    private final List<ErrorSummaryDTO> errors;
+    private final List<ErrorSummaryDTO> errors = new ArrayList<>();
     private ErrorListWidget listWidget;
     private EditBox searchBox;
     private StackTraceList stackList;
@@ -69,16 +70,30 @@ public class NekoErrorDashboardScreen extends Screen {
 
     public NekoErrorDashboardScreen(List<ErrorSummaryDTO> errors) {
         super(Component.translatable("nekojs.gui.dashboard.title"));
-        this.errors = errors;
-        if (!errors.isEmpty()) this.selectedError = errors.get(0);
+        updateErrors(errors);
+    }
 
-        for (ErrorSummaryDTO dto : errors) {
+    public void updateErrors(List<ErrorSummaryDTO> updatedErrors) {
+        String selectedId = this.selectedError != null ? this.selectedError.id() : null;
+        this.errors.clear();
+        this.errors.addAll(updatedErrors);
+        this.selectedError = this.errors.stream()
+                .filter(error -> error.id().equals(selectedId))
+                .findFirst()
+                .orElse(this.errors.isEmpty() ? null : this.errors.get(0));
+
+        for (int i = 0; i < filterCounts.length; i++) {
+            filterCounts[i] = 0;
+        }
+        for (ErrorSummaryDTO dto : this.errors) {
             filterCounts[FilterType.ALL.ordinal()]++;
             filterCounts[judgeErrorType(dto).ordinal()]++;
         }
         for (FilterType type : FilterType.VALUES) {
             filterLabels[type.ordinal()] = I18n.get(type.key) + " §8" + filterCounts[type.ordinal()];
         }
+        refreshList();
+        refreshStackView();
     }
 
     @Override
@@ -147,7 +162,7 @@ public class NekoErrorDashboardScreen extends Screen {
 
     private String getInitialTextForPath(String targetPath) {
         try {
-            Path p = NekoJSPaths.ROOT.resolve(targetPath);
+            Path p = NekoJSPaths.get().root().resolve(targetPath);
             if (Files.exists(p)) return Files.readString(p);
         } catch (Exception e) { return "// " + I18n.get("nekojs.gui.toast.error.read_fail", e.getMessage()); }
         return "";
@@ -201,12 +216,12 @@ public class NekoErrorDashboardScreen extends Screen {
 
     private void actionLocate() {
         if (selectedError == null) return;
-        net.minecraft.Util.getPlatform().openUri(NekoJSPaths.ROOT.resolve(selectedError.path()).toUri());
+        net.minecraft.Util.getPlatform().openUri(NekoJSPaths.get().root().resolve(selectedError.path()).toUri());
         toast.show(I18n.get("nekojs.gui.toast.locate_success"));
     }
 
     private void actionLog() {
-        net.minecraft.Util.getPlatform().openUri(NekoJSPaths.GAME_DIR.resolve("logs/latest.log").toUri());
+        net.minecraft.Util.getPlatform().openUri(NekoJSPaths.get().gameDir().resolve("logs/latest.log").toUri());
         toast.show(I18n.get("nekojs.gui.toast.log_success"));
     }
 
@@ -225,7 +240,7 @@ public class NekoErrorDashboardScreen extends Screen {
     private void doSaveTab(NekoTabbedEditor.Tab tab) {
         if (tab == null || tab.editor == null) return;
         try {
-            Path path = NekoJSPaths.ROOT.resolve(tab.path);
+            Path path = NekoJSPaths.get().root().resolve(tab.path);
             Files.writeString(path, tab.editor.getValue());
             toast.show(I18n.get("nekojs.gui.toast.save_success", tab.path));
             tab.editor.markSaved();
@@ -266,7 +281,7 @@ public class NekoErrorDashboardScreen extends Screen {
 
     private void actionSyncUploadAll() {
         toast.show(I18n.get("nekojs.gui.toast.pushing_all"));
-        Map<String, String> localFiles = ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.ROOT);
+        Map<String, String> localFiles = ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.get().root());
         if (localFiles.isEmpty()) {
             toast.show(I18n.get("nekojs.gui.toast.error.empty_dir"));
             return;
@@ -529,7 +544,7 @@ public class NekoErrorDashboardScreen extends Screen {
                 NekoErrorDashboardScreen.this.activeContextMenu = new NekoContextMenu(NekoErrorDashboardScreen.this.font, (int)mouseX, (int)mouseY, NekoErrorDashboardScreen.this.width, NekoErrorDashboardScreen.this.height, List.of(
                         new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.fullscreen"), () -> { isMaximized = true; buildDashboardLayout(); }),
                         new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.open_tab"), () -> { NekoErrorDashboardScreen.this.openTab(dto.path()); }),
-                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.open_external"), () -> { net.minecraft.Util.getPlatform().openUri(NekoJSPaths.ROOT.resolve(dto.path()).toUri()); toast.show(I18n.get("nekojs.gui.toast.cmd_sent")); })
+                        new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.context.open_external"), () -> { net.minecraft.Util.getPlatform().openUri(NekoJSPaths.get().root().resolve(dto.path()).toUri()); toast.show(I18n.get("nekojs.gui.toast.cmd_sent")); })
                 ));
                 return true;
             }

@@ -39,9 +39,13 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public final class NekoPluginBootstrap {
-    private static final List<NekoPluginExtensionPoint<?>> BUILT_IN_EXTENSION_POINTS = List.of(
+
+    private NekoPluginBootstrap() {}
+
+    private static List<NekoPluginExtensionPoint<?>> builtInExtensionPoints(com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
+        return List.of(
             base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
-            base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(NekoJS.COMMON.scriptProperties)),
+            base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(scriptProperties)),
             base("nekojs:bindings", (plugin, context) -> {
                     var predicate = context.client()
                         ? ScriptTypePredicate.exact(ScriptType.CLIENT).negate()
@@ -56,14 +60,13 @@ public final class NekoPluginBootstrap {
             platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces())),
             platform("nekojs:recipe_schemas", (plugin, context) -> plugin.registerRecipeSchemas(context.recipeSchemas())),
             platform("nekojs:recipe_lifecycle", (plugin, context) -> plugin.registerRecipeLifecycleHooks(context.recipeLifecycle()))
-    );
+        );
+    }
 
-    private NekoPluginBootstrap() {}
-
-    public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins) {
+    public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         BootstrapState state = new BootstrapState(Platform.isClient());
         ExtensionRegistry registry = new ExtensionRegistry();
-        BUILT_IN_EXTENSION_POINTS.forEach(registry::register);
+        builtInExtensionPoints(scriptProperties).forEach(registry::register);
         for (NekoJSBasePlugin plugin : plugins) {
             if (plugin instanceof NekoPluginExtensionProvider provider) {
                 provider.registerPluginExtensionPoints(registry);
