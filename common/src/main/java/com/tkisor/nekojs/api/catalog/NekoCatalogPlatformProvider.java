@@ -18,6 +18,15 @@ public interface NekoCatalogPlatformProvider {
         return List.of();
     }
 
+    /**
+     * Game registries for @special literal union type generation.
+     * Returns registry entries (items, blocks, fluids, etc.) that become
+     * types like {@code type Block = "minecraft:stone" | ...}.
+     */
+    default Collection<RegistryTypeCatalogEntry> registryTypes() {
+        return List.of();
+    }
+
     default TypeOutputLayout outputLayout() {
         return null;
     }

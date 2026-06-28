@@ -16,7 +16,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 负责生成工作区配置文件（README, jsconfig.json 等）
@@ -58,14 +61,36 @@ public final class WorkspaceGenerator {
     private static void createConfigForEnv(ScriptType scriptType, Path scriptDir) {
         JSConfigModel model = new JSConfigModel();
 
-        String relativeProbePath = scriptDir.relativize(NekoScriptCatalog.outputLayout().typeRoot(scriptType)).toString().replace('\\', '/');
+        // 计算从脚本目录到 .neko_probe 的相对路径
+        Path probeDir = NekoJSPaths.get().probeDir();
+        String relativeProbePath = scriptDir.relativize(probeDir).toString().replace('\\', '/');
 
         model.compilerOptions.typeRoots = List.of(
-                relativeProbePath,
+                relativeProbePath + "/@package",
                 "../node_modules/@types"
         );
         model.compilerOptions.moduleResolution = "node";
-        model.compilerOptions.baseUrl = relativeProbePath;
+        model.compilerOptions.baseUrl = ".";
+
+        // paths 映射：@package、@side-only/{type}、@special
+        Map<String, List<String>> paths = new LinkedHashMap<>();
+        paths.put("@package", List.of(relativeProbePath + "/@package"));
+        paths.put("@package/*", List.of(relativeProbePath + "/@package/*"));
+
+        String sideOnlyBase = relativeProbePath + "/@side-only/" + scriptType.name;
+        paths.put("@side-only/" + scriptType.name, List.of(sideOnlyBase));
+        paths.put("@side-only/" + scriptType.name + "/*", List.of(sideOnlyBase + "/*"));
+
+        paths.put("@special", List.of(relativeProbePath + "/@special"));
+        paths.put("@special/*", List.of(relativeProbePath + "/@special/*"));
+
+        model.compilerOptions.paths = paths;
+
+        // include 中追加 probe 生成的 .d.ts，让 VS Code 索引类型声明
+        List<String> includes = new ArrayList<>(model.include);
+        includes.add(relativeProbePath + "/@package/**/*.d.ts");
+        includes.add(sideOnlyBase + "/**/*.d.ts");
+        model.include = includes;
 
         ModifyWorkspaceConfigEvent event = new ModifyWorkspaceConfigEvent(model, scriptType.name);
         NeoForge.EVENT_BUS.post(event);

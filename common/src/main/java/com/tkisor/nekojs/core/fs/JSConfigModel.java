@@ -1,7 +1,9 @@
 package com.tkisor.nekojs.core.fs;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class JSConfigModel {
     public CompilerOptions compilerOptions = new CompilerOptions();
@@ -40,7 +42,7 @@ public class JSConfigModel {
         public boolean allowSyntheticDefaultImports = true;
         public boolean experimentalDecorators = true;
         public boolean strict = true;
-        public List<String> paths;
+        public Map<String, List<String>> paths = new LinkedHashMap<>();
 
     }
 }

@@ -3,22 +3,33 @@ package com.tkisor.nekojs.api;
 import com.tkisor.nekojs.api.catalog.HostExtensionSource;
 import com.tkisor.nekojs.api.catalog.NekoCatalogPlatformProvider;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
+import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.inject.*;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.script.ScriptType;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.neoforged.neoforge.common.Tags;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -52,6 +63,25 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
                 HostExtensionSource.any(Level.class, LevelExtension.class),
                 HostExtensionSource.any(MutableComponent.class, MutableComponentExtension.class)
         );
+    }
+
+    @Override
+    public Collection<RegistryTypeCatalogEntry> registryTypes() {
+        List<RegistryTypeCatalogEntry> entries = new ArrayList<>();
+        entries.add(registry("Item", BuiltInRegistries.ITEM));
+        entries.add(registry("Block", BuiltInRegistries.BLOCK));
+        entries.add(registry("Fluid", BuiltInRegistries.FLUID));
+        entries.add(registry("EntityType", BuiltInRegistries.ENTITY_TYPE));
+        return entries;
+    }
+
+    private static <T> RegistryTypeCatalogEntry registry(String typeName, net.minecraft.core.Registry<T> registry) {
+        List<String> ids = new ArrayList<>();
+        registry.keySet().stream()
+                .map(Identifier::toString)
+                .sorted()
+                .forEach(ids::add);
+        return new RegistryTypeCatalogEntry(typeName, ids, List.of());
     }
 
     @Override

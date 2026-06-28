@@ -94,6 +94,13 @@ public final class NekoJSCommands {
                                     return 1;
                                 })
                         )
+
+                        .then(Commands.literal("probe")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    return runProbe(source);
+                                })
+                        )
         );
     }
 
@@ -208,5 +215,32 @@ public final class NekoJSCommands {
         } else {
             source.sendSuccess(() -> Component.literal(successMessage + " - no errors."), false);
         }
+    }
+
+    private static int runProbe(CommandSourceStack source) {
+        var generator = com.tkisor.nekojs.api.probe.ProbeRegistry.getGenerator();
+        if (generator == null) {
+            source.sendFailure(Component.literal("No probe generator registered."));
+            return 0;
+        }
+
+        source.sendSystemMessage(Component.literal("Generating probe files (" + generator.name() + ")..."));
+
+        try {
+            var snapshot = com.tkisor.nekojs.api.catalog.NekoScriptCatalog.snapshot(com.tkisor.nekojs.api.plugin.NekoRuntimeAccess.get());
+            var outputDir = com.tkisor.nekojs.core.fs.NekoJSPaths.get().gameDir().resolve(".neko_probe");
+            var result = generator.generate(snapshot, outputDir);
+
+            if (result.success()) {
+                source.sendSuccess(() -> Component.literal(
+                        "Probe generated: " + result.filesGenerated() + " files in " + result.durationMs() + "ms"), false);
+            } else {
+                source.sendFailure(Component.literal("Probe generation failed: " + result.message()));
+            }
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Probe generation failed", e);
+            source.sendFailure(Component.literal("Probe generation failed: " + e.getMessage()));
+        }
+        return 1;
     }
 }

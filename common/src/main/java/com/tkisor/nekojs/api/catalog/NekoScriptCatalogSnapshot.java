@@ -14,6 +14,7 @@ public record NekoScriptCatalogSnapshot(
         List<SnippetCatalogEntry> snippets,
         List<TypeDocCatalogEntry> typeDocs,
         List<ManualDeclarationCatalogEntry> manualDeclarations,
+        List<RegistryTypeCatalogEntry> registryTypes,
         TypeOutputLayout outputLayout,
         JavaModuleImportPolicy javaModuleImportPolicy
 ) {

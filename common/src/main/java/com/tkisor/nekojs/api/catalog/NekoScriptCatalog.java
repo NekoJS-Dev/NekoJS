@@ -35,6 +35,7 @@ public final class NekoScriptCatalog {
                 List.copyOf(platformProvider.snippets()),
                 NekoTypeDocs.typeDocs(runtime),
                 NekoTypeDocs.manualDeclarations(runtime),
+                List.copyOf(platformProvider.registryTypes()),
                 platformProvider.outputLayout(),
                 JavaModuleImportPolicy.nekoDefault()
         );
@@ -51,6 +52,7 @@ public final class NekoScriptCatalog {
                 snippets(scriptType),
                 NekoTypeDocs.typeDocs(runtime, scriptType),
                 NekoTypeDocs.manualDeclarations(runtime, scriptType),
+                List.copyOf(platformProvider.registryTypes()),
                 platformProvider.outputLayout(),
                 JavaModuleImportPolicy.nekoDefault()
         );

@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.core.plugin;
 
-import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.NekoJSBasePlugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
@@ -78,6 +76,18 @@ public final class NekoPluginBootstrap {
                 extensionPoint.collect(plugin, state);
             }
         }
+
+        // 初始化内置 probe generator
+        com.tkisor.nekojs.api.probe.ProbeRegistry.setGenerator(new com.tkisor.nekojs.probe.BuiltinProbeGenerator(), "NekoJS (built-in)");
+
+        // 允许插件替换 probe generator
+        for (NekoJSBasePlugin plugin : plugins) {
+            plugin.registerProbeGenerator();
+        }
+
+        // 锁定注册表，检测冲突
+        com.tkisor.nekojs.api.probe.ProbeRegistry.lock();
+
         state.freeze();
         return state.createRuntime();
     }
