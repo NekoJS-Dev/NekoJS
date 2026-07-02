@@ -165,6 +165,12 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
+        registry.register(new MobEffectAdapter());
+        registry.register(new PotionAdapter());
+        registry.register(new SoundEventAdapter());
+        registry.register(new ParticleTypeAdapter());
+        registry.register(new BlockEntityTypeAdapter());
+        registry.register(new CreativeModeTabAdapter());
         // Codec 兜底适配器示范（precedence=LOWEST）：任意 JS 值 -> JsonElement -> codec.parse(JsonOps)
         TypeAdapterDsl.registerCodec(registry, Fireworks.class, Fireworks.CODEC);
     }

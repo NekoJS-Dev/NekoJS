@@ -72,6 +72,12 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
         entries.add(registry("Block", BuiltInRegistries.BLOCK));
         entries.add(registry("Fluid", BuiltInRegistries.FLUID));
         entries.add(registry("EntityType", BuiltInRegistries.ENTITY_TYPE));
+        entries.add(registry("MobEffect", BuiltInRegistries.MOB_EFFECT));
+        entries.add(registry("Potion", BuiltInRegistries.POTION));
+        entries.add(registry("SoundEvent", BuiltInRegistries.SOUND_EVENT));
+        entries.add(registry("ParticleType", BuiltInRegistries.PARTICLE_TYPE));
+        entries.add(registry("BlockEntityType", BuiltInRegistries.BLOCK_ENTITY_TYPE));
+        entries.add(registry("CreativeModeTab", BuiltInRegistries.CREATIVE_MODE_TAB));
         return entries;
     }
 
