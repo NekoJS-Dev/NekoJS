@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.js.type_adapter.DataComponentsAdapter;
 import com.tkisor.nekojs.js.type_adapter.ParseIds;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
@@ -41,8 +43,14 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 object(
                         Slot.opt("item", registry("Item")),
                         Slot.opt("id", registry("Item")),
-                        Slot.opt("count", number()))
+                        Slot.opt("count", number()),
+                        Slot.opt("components", raw("{ [key: string]: any }")))
         );
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count?, components? }");
     }
 
     @Override
@@ -124,6 +132,14 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
         // B10: 复用当前实例，不再每次 new
         ItemStack stack = this.apply(itemValue);
+        if (value.hasMember("components")) {
+            DataComponentPatch patch = DataComponentsAdapter.toPatch(value.getMember("components"));
+            if (patch != null && !patch.isEmpty() && !stack.isEmpty()) {
+                ItemStack copy = stack.copy();
+                copy.applyComponents(patch);
+                stack = copy;
+            }
+        }
         if (value.hasMember("count")) {
             return withCount(stack, parsePositiveInt(value.getMember("count"), "count"));
         }

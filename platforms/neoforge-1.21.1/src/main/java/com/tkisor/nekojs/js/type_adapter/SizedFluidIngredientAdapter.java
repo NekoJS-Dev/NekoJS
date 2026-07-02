@@ -3,12 +3,13 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import java.util.List;
+import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
-import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -33,7 +34,19 @@ public final class SizedFluidIngredientAdapter implements JSTypeAdapter<SizedFlu
                         Slot.opt("ingredient", self()),
                         Slot.opt("fluid", string()),
                         Slot.opt("tag", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("regex", string()),
+                        Slot.opt("wildcard", bool()),
+                        Slot.opt("filter", raw("((fluid: $FluidStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self()),
                         Slot.req("amount", number())));
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("fluid:id | #tag | @mod | * | /regex/ | { ingredient|fluid|tag|mod|regex|wildcard|filter|any|all|not, amount }");
     }
 
     @Override
@@ -53,7 +66,8 @@ public final class SizedFluidIngredientAdapter implements JSTypeAdapter<SizedFlu
         } catch (ValueConversionException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new ValueConversionException(SizedFluidIngredient.class, "sized fluid ingredient value", value, e.getMessage(), e);
+            throw new ValueConversionException(SizedFluidIngredient.class, "fluid / sized fluid ingredient object", value,
+                e.getMessage(), e);
         }
     }
 }

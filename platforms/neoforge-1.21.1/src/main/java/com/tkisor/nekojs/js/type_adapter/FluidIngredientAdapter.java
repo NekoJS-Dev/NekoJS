@@ -3,12 +3,13 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import java.util.List;
+import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
-import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -26,14 +27,26 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
         return List.of(
                 self(),
                 string(),
-                arrayOf(string()),
+                arrayOf(self()),
                 host(FluidStack.class),
                 host(Fluid.class),
                 host(NekoId.class),
                 object(
                         Slot.opt("fluid", string()),
                         Slot.opt("tag", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("regex", string()),
+                        Slot.opt("wildcard", bool()),
+                        Slot.opt("filter", raw("((fluid: $FluidStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self()),
                         Slot.opt("ingredient", self())));
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("fluid:id | #tag | @mod | * | /regex/ | { fluid?|tag?|mod?|regex?|wildcard?|filter?|any?|all?|not?|ingredient? }");
     }
 
     @Override
@@ -53,7 +66,8 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
         } catch (ValueConversionException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new ValueConversionException(FluidIngredient.class, "fluid ingredient value", value, e.getMessage(), e);
+            throw new ValueConversionException(FluidIngredient.class, "fluid / fluid id / fluid ingredient object", value,
+                e.getMessage(), e);
         }
     }
 }

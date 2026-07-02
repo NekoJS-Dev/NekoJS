@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import java.util.List;
+import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
@@ -30,6 +31,11 @@ public final class FluidStackAdapter implements JSTypeAdapter<FluidStack> {
                         Slot.opt("fluid", registry("Fluid")),
                         Slot.opt("id", registry("Fluid")),
                         Slot.opt("amount", number())));
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("fluid:id | RegistryTypes.Fluid | $Fluid | $NekoId | { fluid?|id?, amount? }");
     }
 
     @Override

@@ -3,15 +3,17 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
-import java.util.List;
-
-import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
+import java.util.List;
+import java.util.Optional;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.crafting.SizedIngredient;
 
+/** 1.21.1 SizedIngredient 适配器：含 filter/any/all/not。 */
 public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredient> {
     @Override
     public Class<SizedIngredient> getTargetClass() {
@@ -23,13 +25,25 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
         return List.of(
                 self(),
                 string(),
-                arrayOf(string()),
+                arrayOf(self()),
                 host(Ingredient.class),
                 object(
                         Slot.opt("ingredient", host(Ingredient.class)),
                         Slot.opt("item", string()),
                         Slot.opt("tag", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("regex", string()),
+                        Slot.opt("wildcard", bool()),
+                        Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self()),
                         Slot.req("count", number())));
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("item:id | #tag | @mod | * | /regex/ | { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count }");
     }
 
     @Override
@@ -52,24 +66,27 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
                 if (obj instanceof Ingredient ingredient) return new SizedIngredient(ingredient, 1);
             }
             if (value.hasMembers() && value.hasMember("count")) {
-                Value ingredientValue = value.hasMember("ingredient") ? value.getMember("ingredient") : value.hasMember("item") ? value.getMember("item") : value;
+                Value ingredientValue = value.hasMember("ingredient") ? value.getMember("ingredient") : value;
                 return new SizedIngredient(IngredientResolver.fromValue(ingredientValue), parseCount(value.getMember("count")));
             }
             return new SizedIngredient(IngredientResolver.fromValue(value), 1);
         } catch (ValueConversionException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new ValueConversionException(SizedIngredient.class, "sized ingredient value", value, e.getMessage(), e);
+            throw new ValueConversionException(SizedIngredient.class, "ingredient / ingredient object with count", value,
+                e.getMessage(), e);
         }
     }
 
     private static int parseCount(Value value) {
         if (!value.isNumber() || !value.fitsInInt()) {
-            throw new IllegalArgumentException("SizedIngredient count must be an integer");
+            throw new ValueConversionException(SizedIngredient.class, "integer count", value,
+                "SizedIngredient count must be an integer");
         }
         int count = value.asInt();
         if (count <= 0) {
-            throw new IllegalArgumentException("SizedIngredient count must be positive: " + count);
+            throw new ValueConversionException(SizedIngredient.class, "positive integer count", count,
+                "SizedIngredient count must be positive: " + count);
         }
         return count;
     }

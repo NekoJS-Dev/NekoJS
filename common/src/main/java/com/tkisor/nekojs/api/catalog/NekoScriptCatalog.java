@@ -148,7 +148,7 @@ public final class NekoScriptCatalog {
 
     private static AdapterCatalogEntry adapterEntry(JSTypeAdapter<?> adapter) {
         Class<?> targetType = adapter.getTargetClass();
-        return new AdapterCatalogEntry(targetType, adapter.inputShapes(), adapter.getPrecedence());
+        return new AdapterCatalogEntry(targetType, adapter.inputShapes(), adapter.getPrecedence(), adapter.syntaxDoc());
     }
 
     public static List<HostExtensionCatalogEntry> hostExtensions() {

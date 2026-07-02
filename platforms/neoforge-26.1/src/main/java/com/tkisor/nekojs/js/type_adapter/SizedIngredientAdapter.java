@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
 import java.util.List;
+import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import graal.graalvm.polyglot.Value;
@@ -23,13 +24,25 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
         return List.of(
                 self(),
                 string(),
-                arrayOf(string()),
+                arrayOf(self()),
                 host(Ingredient.class),
                 object(
                         Slot.opt("ingredient", host(Ingredient.class)),
                         Slot.opt("item", string()),
                         Slot.opt("tag", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("regex", string()),
+                        Slot.opt("wildcard", bool()),
+                        Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self()),
                         Slot.req("count", number())));
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("item:id | #tag | @mod | * | /regex/ | { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count? }");
     }
 
     @Override
@@ -52,7 +65,7 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
                 if (obj instanceof Ingredient ingredient) return new SizedIngredient(ingredient, 1);
             }
             if (value.hasMembers() && value.hasMember("count")) {
-                Value ingredientValue = value.hasMember("ingredient") ? value.getMember("ingredient") : value.hasMember("item") ? value.getMember("item") : value;
+                Value ingredientValue = value.hasMember("ingredient") ? value.getMember("ingredient") : value;
                 return new SizedIngredient(IngredientResolver.fromValue(ingredientValue), parseCount(value.getMember("count")));
             }
             return new SizedIngredient(IngredientResolver.fromValue(value), 1);

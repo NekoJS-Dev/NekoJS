@@ -10,7 +10,7 @@ public interface BlockStateExtension {
     }
 
 //    default boolean neko$hasTag(String tagLocation) {
-//        Identifier loc = Identifier.tryParse(tagLocation);
+//        Identifier loc = ResourceLocation.tryParse(tagLocation);
 //        if (loc == null) return false;
 //
 //        TagKey<Block> tagKey = TagKey.create(Registries.BLOCK, loc);

@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import graal.graalvm.polyglot.HostAccess;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 适配器目录条目：携带 {@link JSTypeAdapter} 的目标类型、声明的输入形状与优先级。
@@ -14,9 +15,10 @@ import java.util.List;
 public record AdapterCatalogEntry(
         Class<?> targetType,
         List<AdapterInputShape> shapes,
-        HostAccess.TargetMappingPrecedence precedence
+        HostAccess.TargetMappingPrecedence precedence,
+        Optional<String> syntaxDoc
 ) {
     public static AdapterCatalogEntry of(Class<?> targetType, HostAccess.TargetMappingPrecedence precedence) {
-        return new AdapterCatalogEntry(targetType, List.of(), precedence);
+        return new AdapterCatalogEntry(targetType, List.of(), precedence, Optional.empty());
     }
 }

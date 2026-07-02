@@ -1,8 +1,15 @@
 package com.tkisor.nekojs.wrapper.fluid;
 
 import com.tkisor.nekojs.api.data.NekoId;
+import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.holder.NamespaceHolderSet;
+import com.tkisor.nekojs.holder.PredicateHolderSet;
+import com.tkisor.nekojs.holder.RegexHolderSet;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -12,18 +19,35 @@ import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
+/**
+ * 1.21.1 Fluid 解析：支持字符串前缀 {@code @mod} / {@code *} / {@code /regex/} /
+ * {@code #tag} / fluid:id，以及对象形式 {@code { filter, any, all, not, mod, regex, wildcard, fluid, id, tag }}。
+ * 1.21.1 FluidStack 直接传 {@code Fluid} 实例（非 Holder）。
+ */
 public final class FluidResolver {
     private FluidResolver() {}
 
+    private static final HolderLookup.RegistryLookup<Fluid> FLUID_LOOKUP =
+        RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.FLUID);
+
     public static FluidStack stackFromString(String raw) {
-        if (isEmptyStackString(raw)) {
-            return FluidStack.EMPTY;
+        String s = normalizeRaw(raw);
+        char c = s.charAt(0);
+        if (c == '*' || c == '@' || c == '/' || c == '#') {
+            throw new ValueConversionException(FluidStack.class,
+                "fluid id (no tag/mod/regex/wildcard prefix)", s,
+                "FluidStack cannot be created from '" + c + "' syntax; use FluidIngredient instead");
         }
-        ParsedFluidInput input = parseFluidInput(raw, false);
+        ParsedFluidInput input = parseFluidInput(s, false);
         return stackFromFluid(getFluid(input.id()), input.amount());
     }
 
@@ -33,6 +57,7 @@ public final class FluidResolver {
 
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == Fluids.EMPTY || amount <= 0) return FluidStack.EMPTY;
+        // 1.21.1 FluidStack(Fluid, int) 直接传实例
         return new FluidStack(fluid, amount);
     }
 
@@ -49,35 +74,61 @@ public final class FluidResolver {
             int amount = memberAmount(value, FluidAmounts.BUCKET);
             if (value.hasMember("fluid")) return stackFromFluid(getFluid(value.getMember("fluid").asString()), amount);
             if (value.hasMember("id")) return stackFromFluid(getFluid(value.getMember("id").asString()), amount);
-            if (value.hasMember("tag")) throw new IllegalArgumentException("FluidStack cannot be created from a tag");
+            if (value.hasMember("tag")) {
+                throw new ValueConversionException(FluidStack.class, "fluid stack (no 'tag')", value,
+                    "FluidStack cannot be created from a tag");
+            }
         }
-        throw new IllegalArgumentException("Unsupported fluid stack value: " + value);
+        throw new ValueConversionException(FluidStack.class, "fluid / fluid id / fluid object", value,
+            "unsupported fluid stack value");
     }
 
     public static FluidIngredient ingredientFromString(String raw) {
-        ParsedFluidInput input = parseFluidInput(raw, true);
+        String s = normalizeRaw(raw);
+        char c = s.charAt(0);
+        if (c == '*') return allFluids();
+        if (c == '@') return ingredientOfHolders(new NamespaceHolderSet<>(FLUID_LOOKUP, s.substring(1)));
+        if (c == '/') {
+            String body = (s.length() > 2 && s.charAt(s.length() - 1) == '/')
+                ? s.substring(1, s.length() - 1) : s.substring(1);
+            return ingredientOfHolders(new RegexHolderSet<>(FLUID_LOOKUP, Pattern.compile(body)));
+        }
+        ParsedFluidInput input = parseFluidInput(s, true);
         if (input.tag()) {
             ResourceLocation id = ResourceLocation.parse(input.id());
             TagKey<Fluid> tagKey = TagKey.create(Registries.FLUID, id);
-            var tag = BuiltInRegistries.FLUID.getTag(tagKey);
-            if (tag.isEmpty()) throw new IllegalArgumentException("Fluid tag not found: #" + input.id());
-            return FluidIngredient.of(tag.get().stream().map(Holder::value).toArray(Fluid[]::new));
+            var tagSet = BuiltInRegistries.FLUID.getTag(tagKey);
+            if (tagSet.isEmpty()) {
+                throw new ValueConversionException(FluidIngredient.class, "existing fluid tag", "#" + input.id(),
+                    "fluid tag not found: #" + input.id());
+            }
+            Fluid[] fluids = tagSet.get().stream().map(Holder::value).toArray(Fluid[]::new);
+            return FluidIngredient.of(fluids);
         }
         return ingredientFromFluid(getFluid(input.id()));
     }
 
     public static FluidIngredient ingredientFromFluid(Fluid fluid) {
-        if (fluid == Fluids.EMPTY) throw new IllegalArgumentException("Empty fluid ingredients are not supported");
+        if (fluid == Fluids.EMPTY) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty fluid", fluid,
+                "empty fluid ingredients are not supported");
+        }
         return FluidIngredient.of(fluid);
     }
 
     public static FluidIngredient ingredientFromStack(FluidStack stack) {
-        if (stack.isEmpty()) throw new IllegalArgumentException("Empty fluid ingredients are not supported");
+        if (stack.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty fluid stack", stack,
+                "empty fluid ingredients are not supported");
+        }
         return FluidIngredient.of(stack);
     }
 
     public static FluidIngredient ingredientFromValue(Value value) {
-        if (value == null || value.isNull()) throw new IllegalArgumentException("Empty fluid ingredients are not supported");
+        if (value == null || value.isNull()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-null", value,
+                "empty fluid ingredients are not supported");
+        }
         if (value.isString()) return ingredientFromString(value.asString());
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -88,42 +139,58 @@ public final class FluidResolver {
             if (obj instanceof Fluid fluid) return ingredientFromFluid(fluid);
             if (obj instanceof NekoId id) return ingredientFromString(id.toString());
         }
-        if (value.hasArrayElements()) {
-            List<FluidIngredient> ingredients = new ArrayList<>();
-            for (long i = 0; i < value.getArraySize(); i++) ingredients.add(ingredientFromValue(value.getArrayElement(i)));
-            return combine(ingredients);
-        }
-        if (value.hasMembers()) {
-            if (value.hasMember("fluid")) return ingredientFromString(value.getMember("fluid").asString());
-            if (value.hasMember("id")) return ingredientFromString(value.getMember("id").asString());
-            if (value.hasMember("tag")) {
-                String tag = value.getMember("tag").asString();
-                return ingredientFromString(tag.startsWith("#") ? tag : "#" + tag);
-            }
-        }
-        throw new IllegalArgumentException("Unsupported fluid ingredient value: " + value);
+        if (value.hasArrayElements()) return combineFluids(toIngredientList(value));
+        if (value.hasMembers()) return fromFluidObject(value);
+        throw new ValueConversionException(FluidIngredient.class,
+            "fluid / fluid id / fluid ingredient object / array", value, "unsupported fluid ingredient value");
     }
 
-    public static FluidIngredient combine(List<FluidIngredient> alternatives) {
-        if (alternatives.isEmpty()) throw new IllegalArgumentException("FluidIngredient cannot be empty");
-        if (alternatives.size() == 1) return alternatives.getFirst();
-        List<Fluid> fluids = new ArrayList<>();
-        for (FluidIngredient ingredient : alternatives) {
-            for (FluidStack stack : ingredient.getStacks()) {
-                if (!stack.isEmpty()) fluids.add(stack.getFluid());
-            }
+    private static FluidIngredient fromFluidObject(Value value) {
+        if (value.hasMember("filter")) return filterFluids(value.getMember("filter"));
+        if (value.hasMember("any")) return combineFluids(toIngredientList(value.getMember("any")));
+        if (value.hasMember("all")) return intersectFluidIngredients(toIngredientList(value.getMember("all")));
+        if (value.hasMember("not")) {
+            return exceptFluidIngredients(allFluids(), ingredientFromValue(value.getMember("not")));
         }
-        if (fluids.isEmpty()) throw new IllegalArgumentException("FluidIngredient cannot be empty");
-        return FluidIngredient.of(fluids.toArray(Fluid[]::new));
+        if (value.hasMember("wildcard") && value.getMember("wildcard").asBoolean()) return allFluids();
+        if (value.hasMember("mod")) return ingredientOfHolders(new NamespaceHolderSet<>(
+            FLUID_LOOKUP, value.getMember("mod").asString()));
+        if (value.hasMember("regex")) return ingredientOfHolders(new RegexHolderSet<>(
+            FLUID_LOOKUP, Pattern.compile(value.getMember("regex").asString())));
+        if (value.hasMember("fluid")) return ingredientFromString(value.getMember("fluid").asString());
+        if (value.hasMember("id")) return ingredientFromString(value.getMember("id").asString());
+        if (value.hasMember("tag")) {
+            String tag = value.getMember("tag").asString();
+            return ingredientFromString(tag.startsWith("#") ? tag : "#" + tag);
+        }
+        throw new ValueConversionException(FluidIngredient.class,
+            "recognized field (fluid|id|tag|mod|regex|wildcard|filter|any|all|not)", value,
+            "no recognized field in fluid ingredient object");
     }
 
     public static SizedFluidIngredient sizedFromString(String raw) {
         ParsedFluidInput input = parseFluidInput(raw, true);
-        return sizedFromIngredient(ingredientFromString((input.tag() ? "#" : "") + input.id()), input.amount());
+        FluidIngredient ingredient;
+        if (input.tag()) {
+            ResourceLocation id = ResourceLocation.parse(input.id());
+            TagKey<Fluid> tagKey = TagKey.create(Registries.FLUID, id);
+            var tagSet = BuiltInRegistries.FLUID.getTag(tagKey);
+            if (tagSet.isEmpty()) {
+                throw new ValueConversionException(FluidIngredient.class, "existing fluid tag", "#" + input.id(),
+                    "fluid tag not found: #" + input.id());
+            }
+            ingredient = FluidIngredient.of(tagSet.get().stream().map(Holder::value).toArray(Fluid[]::new));
+        } else {
+            ingredient = ingredientFromFluid(getFluid(input.id()));
+        }
+        return new SizedFluidIngredient(ingredient, input.amount());
     }
 
     public static SizedFluidIngredient sizedFromValue(Value value) {
-        if (value == null || value.isNull()) throw new IllegalArgumentException("Empty sized fluid ingredients are not supported");
+        if (value == null || value.isNull()) {
+            throw new ValueConversionException(SizedFluidIngredient.class, "non-null", value,
+                "empty sized fluid ingredients are not supported");
+        }
         if (value.isString()) return sizedFromString(value.asString());
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -136,38 +203,156 @@ public final class FluidResolver {
         }
         if (value.hasMembers()) {
             int amount = memberAmount(value, FluidAmounts.BUCKET);
-            if (value.hasMember("fluid")) return sizedFromIngredient(ingredientFromString(value.getMember("fluid").asString()), amount);
-            if (value.hasMember("id")) return sizedFromIngredient(ingredientFromString(value.getMember("id").asString()), amount);
-            if (value.hasMember("tag")) {
-                String tag = value.getMember("tag").asString();
-                return sizedFromIngredient(ingredientFromString(tag.startsWith("#") ? tag : "#" + tag), amount);
+            FluidIngredient base;
+            if (value.hasMember("ingredient")) {
+                base = ingredientFromValue(value.getMember("ingredient"));
+            } else if (value.hasMember("fluid") || value.hasMember("id") || value.hasMember("tag")
+                || value.hasMember("mod") || value.hasMember("regex") || value.hasMember("wildcard")
+                || value.hasMember("filter") || value.hasMember("any") || value.hasMember("all")
+                || value.hasMember("not")) {
+                base = ingredientFromValue(value);
+            } else {
+                throw new ValueConversionException(SizedFluidIngredient.class,
+                    "sized fluid ingredient object (ingredient or fluid+amount)", value,
+                    "missing ingredient or fluid field");
             }
+            return sizedFromIngredient(base, amount);
         }
-        throw new IllegalArgumentException("Unsupported sized fluid ingredient value: " + value);
+        throw new ValueConversionException(SizedFluidIngredient.class,
+            "fluid / sized fluid ingredient object", value, "unsupported sized fluid ingredient value");
     }
 
     public static SizedFluidIngredient sizedFromIngredient(FluidIngredient ingredient, int amount) {
-        if (amount <= 0) throw new IllegalArgumentException("Fluid amount must be positive: " + amount);
+        if (amount <= 0) {
+            throw new ValueConversionException(SizedFluidIngredient.class, "positive integer amount", amount,
+                "fluid amount must be positive: " + amount);
+        }
         return new SizedFluidIngredient(ingredient, amount);
+    }
+
+    public static FluidIngredient combine(List<FluidIngredient> alternatives) {
+        List<FluidIngredient> present = alternatives.stream().filter(i -> i != null).toList();
+        if (present.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty list", alternatives,
+                "no non-empty alternatives to combine");
+        }
+        if (present.size() == 1) return present.get(0);
+        Set<Fluid> set = new LinkedHashSet<>();
+        for (FluidIngredient fi : present) {
+            for (FluidStack s : fi.getStacks()) {
+                if (s != null && !s.isEmpty()) set.add(s.getFluid());
+            }
+        }
+        if (set.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty combined", present,
+                "combined fluid ingredient is empty");
+        }
+        return FluidIngredient.of(set.toArray(Fluid[]::new));
+    }
+
+    private static FluidIngredient ingredientOfHolders(HolderSet<Fluid> holders) {
+        Fluid[] fluids = holders.stream().map(Holder::value).toArray(Fluid[]::new);
+        return FluidIngredient.of(fluids);
+    }
+
+    private static FluidIngredient allFluids() {
+        return ingredientOfHolders(new AnyHolderSet<>(FLUID_LOOKUP));
+    }
+
+    private static FluidIngredient combineFluids(List<FluidIngredient> ings) {
+        Set<Fluid> set = new LinkedHashSet<>();
+        for (FluidIngredient fi : ings) {
+            for (FluidStack s : fi.getStacks()) {
+                if (s != null && !s.isEmpty()) set.add(s.getFluid());
+            }
+        }
+        if (set.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty fluid array", ings,
+                "combined fluid ingredient is empty");
+        }
+        return FluidIngredient.of(set.toArray(Fluid[]::new));
+    }
+
+    private static FluidIngredient filterFluids(Value fn) {
+        if (!fn.canExecute()) {
+            throw new ValueConversionException(FluidIngredient.class,
+                "{ filter: (fluid)=>boolean }", fn, "'filter' must be a function");
+        }
+        return ingredientOfHolders(new PredicateHolderSet<>(
+            FLUID_LOOKUP, fn,
+            holder -> new FluidStack(holder.value(), FluidAmounts.BUCKET)));
+    }
+
+    private static FluidIngredient intersectFluidIngredients(List<FluidIngredient> ings) {
+        if (ings.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty 'all' array", ings,
+                "'all' array is empty");
+        }
+        Set<Fluid> result = null;
+        for (FluidIngredient fi : ings) {
+            Set<Fluid> cur = new HashSet<>();
+            for (FluidStack s : fi.getStacks()) {
+                if (s != null && !s.isEmpty()) cur.add(s.getFluid());
+            }
+            if (result == null) result = cur;
+            else result.retainAll(cur);
+            if (result.isEmpty()) break;
+        }
+        if (result == null || result.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty fluid intersection", ings,
+                "fluid intersection is empty");
+        }
+        return FluidIngredient.of(result.toArray(Fluid[]::new));
+    }
+
+    private static FluidIngredient exceptFluidIngredients(FluidIngredient base, FluidIngredient sub) {
+        Set<Fluid> set = new LinkedHashSet<>();
+        for (FluidStack s : base.getStacks()) {
+            if (s != null && !s.isEmpty()) set.add(s.getFluid());
+        }
+        for (FluidStack s : sub.getStacks()) {
+            if (s != null && !s.isEmpty()) set.remove(s.getFluid());
+        }
+        if (set.isEmpty()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-empty 'not' result", base + " - " + sub,
+                "difference is empty");
+        }
+        return FluidIngredient.of(set.toArray(Fluid[]::new));
+    }
+
+    private static List<FluidIngredient> toIngredientList(Value arr) {
+        if (!arr.hasArrayElements()) {
+            throw new ValueConversionException(FluidIngredient.class, "fluid ingredient array", arr, "expected array");
+        }
+        List<FluidIngredient> list = new ArrayList<>();
+        for (long i = 0; i < arr.getArraySize(); i++) list.add(ingredientFromValue(arr.getArrayElement(i)));
+        return list;
     }
 
     public static Fluid getFluid(String raw) {
         ResourceLocation id = ResourceLocation.tryParse(normalizeFluidId(raw));
-        if (id == null) throw new IllegalArgumentException("Invalid fluid id: " + raw);
-        return BuiltInRegistries.FLUID.getOptional(id).orElseThrow(() -> new IllegalArgumentException("Fluid not found: " + id));
+        if (id == null) {
+            throw new ValueConversionException(FluidIngredient.class, "valid fluid id", raw, "invalid fluid id: " + raw);
+        }
+        Fluid fluid = BuiltInRegistries.FLUID.getOptional(id).orElse(Fluids.EMPTY);
+        if (fluid == Fluids.EMPTY && !id.getPath().equals("empty")) {
+            throw new ValueConversionException(FluidIngredient.class, "registered fluid id", id, "fluid not found: " + id);
+        }
+        return fluid;
     }
 
     public static String normalizeFluidId(String raw) {
         String id = normalizeRaw(raw);
-        if (id.startsWith("#")) throw new IllegalArgumentException("Expected fluid id but got tag id: " + raw);
-        rejectUnsupported(id);
+        if (id.startsWith("#")) {
+            throw new ValueConversionException(FluidIngredient.class, "fluid id (no '#' prefix)", raw,
+                "expected fluid id but got tag id");
+        }
         return id.contains(":") ? id : "minecraft:" + id;
     }
 
     public static String normalizeFluidTagId(String raw) {
         String id = normalizeRaw(raw);
         String tag = id.startsWith("#") ? id.substring(1) : id;
-        rejectUnsupported(tag);
         return tag.contains(":") ? tag : "minecraft:" + tag;
     }
 
@@ -180,7 +365,10 @@ public final class FluidResolver {
             value = value.substring(xIndex + 1).trim();
         }
         boolean tag = value.startsWith("#");
-        if (tag && !allowTag) throw new IllegalArgumentException("FluidStack cannot be created from a tag: " + raw);
+        if (tag && !allowTag) {
+            throw new ValueConversionException(FluidStack.class, "fluid id (no '#' tag prefix)", raw,
+                "FluidStack cannot be created from a tag");
+        }
         String id = tag ? normalizeFluidTagId(value) : normalizeFluidId(value);
         return new ParsedFluidInput(id.replaceFirst("^#", ""), amount, tag);
     }
@@ -199,7 +387,10 @@ public final class FluidResolver {
             value = value.substring(0, value.length() - 1);
         }
         int amount = (int) Math.floor(Double.parseDouble(value) * multiplier / divisor);
-        if (amount < 1) throw new IllegalArgumentException("Fluid amount must be positive: " + raw);
+        if (amount < 1) {
+            throw new ValueConversionException(FluidIngredient.class, "positive integer amount", raw,
+                "fluid amount must be positive");
+        }
         return amount;
     }
 
@@ -207,32 +398,23 @@ public final class FluidResolver {
         if (!value.hasMember("amount")) return fallback;
         Value amount = value.getMember("amount");
         if (!amount.isNumber() || !amount.fitsInInt()) {
-            throw new IllegalArgumentException("Fluid amount must be an integer");
+            throw new ValueConversionException(FluidIngredient.class, "integer amount", amount,
+                "fluid amount must be an integer");
         }
         int parsed = amount.asInt();
         if (parsed <= 0) {
-            throw new IllegalArgumentException("Fluid amount must be positive: " + parsed);
+            throw new ValueConversionException(FluidIngredient.class, "positive integer amount", parsed,
+                "fluid amount must be positive: " + parsed);
         }
         return parsed;
     }
 
-    private static boolean isEmptyStackString(String raw) {
-        if (raw == null) return true;
-        return switch (raw.trim()) {
-            case "", "-", "empty", "minecraft:empty" -> true;
-            default -> false;
-        };
-    }
-
     private static String normalizeRaw(String raw) {
-        if (raw == null || raw.isBlank()) throw new IllegalArgumentException("Fluid id cannot be empty");
-        return raw.trim();
-    }
-
-    private static void rejectUnsupported(String value) {
-        if (value.equals("*") || value.startsWith("@") || value.startsWith("/") || value.contains("[") || value.contains("{")) {
-            throw new IllegalArgumentException("Unsupported fluid syntax: " + value);
+        if (raw == null || raw.isBlank()) {
+            throw new ValueConversionException(FluidIngredient.class, "non-blank string", raw,
+                "fluid id cannot be empty");
         }
+        return raw.trim();
     }
 
     private record ParsedFluidInput(String id, int amount, boolean tag) {}

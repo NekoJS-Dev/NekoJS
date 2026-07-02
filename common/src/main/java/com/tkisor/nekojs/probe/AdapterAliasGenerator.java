@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -62,7 +63,7 @@ public final class AdapterAliasGenerator {
 
             String union = String.join(" | ", rendered);
             String aliasName = "$" + selfSimple + "_";
-            aliases.put(fqn, new AdapterAlias(aliasName, union, imports, !usedRegistries.isEmpty()));
+            aliases.put(fqn, new AdapterAlias(aliasName, union, imports, !usedRegistries.isEmpty(), entry.syntaxDoc()));
             aliasRegistry.registerClassAlias(fqn, aliasName);
             // 收集别名引用的跨包 host 类型，供 orchestrator 确保它们也被生成，避免悬空 import
             for (String imp : imports) {
@@ -100,7 +101,8 @@ public final class AdapterAliasGenerator {
             String aliasName,
             String union,
             Set<String> importFqns,
-            boolean usesRegistry
+            boolean usesRegistry,
+            Optional<String> doc
     ) {}
 
     // ===================== 形状渲染 =====================

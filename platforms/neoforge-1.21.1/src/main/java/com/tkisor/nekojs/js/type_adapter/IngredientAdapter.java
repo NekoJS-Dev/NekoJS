@@ -3,17 +3,19 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import java.util.List;
+import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.item.IngredientJS;
-import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
+/** 1.21.1 Ingredient 适配器：含 filter/any/all/not + @mod / * / /regex/ + 对象分派。 */
 public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
     @Override
@@ -26,14 +28,25 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
         return List.of(
                 self(),
                 string(),
-                arrayOf(string()),
+                arrayOf(self()),
                 host(ItemStack.class),
                 host(Item.class),
                 host(NekoId.class),
                 object(
                         Slot.opt("item", string()),
                         Slot.opt("tag", string()),
-                        Slot.opt("ingredient", self())));
+                        Slot.opt("mod", string()),
+                        Slot.opt("regex", string()),
+                        Slot.opt("wildcard", bool()),
+                        Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self())));
+    }
+
+    @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("item:id | #tag | @mod | * | /regex/ | { item?|tag?|mod?|regex?|wildcard?|filter?|any?|all?|not? }");
     }
 
     @Override
@@ -55,7 +68,8 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
         } catch (ValueConversionException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new ValueConversionException(Ingredient.class, "ingredient value", value, e.getMessage(), e);
+            throw new ValueConversionException(Ingredient.class, "item / item id / ingredient object", value,
+                e.getMessage(), e);
         }
     }
 }

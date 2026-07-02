@@ -3,11 +3,12 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import java.util.List;
+import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
-import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.level.material.Fluid;
@@ -33,6 +34,11 @@ public final class FluidStackAdapter implements JSTypeAdapter<FluidStack> {
     }
 
     @Override
+    public Optional<String> syntaxDoc() {
+        return Optional.of("fluid:id | RegistryTypes.Fluid | $Fluid | $NekoId | { fluid?|id?, amount? }");
+    }
+
+    @Override
     public HostAccess.TargetMappingPrecedence getPrecedence() {
         return HostAccess.TargetMappingPrecedence.LOW;
     }
@@ -54,7 +60,8 @@ public final class FluidStackAdapter implements JSTypeAdapter<FluidStack> {
         } catch (ValueConversionException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new ValueConversionException(FluidStack.class, "fluid stack value", value, e.getMessage(), e);
+            throw new ValueConversionException(FluidStack.class, "fluid / fluid id / fluid object", value,
+                e.getMessage(), e);
         }
     }
 }

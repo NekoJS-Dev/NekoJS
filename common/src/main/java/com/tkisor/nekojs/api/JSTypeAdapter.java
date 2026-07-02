@@ -4,6 +4,7 @@ import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -29,6 +30,17 @@ public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
      */
     default List<AdapterInputShape> inputShapes() {
         return List.of();
+    }
+
+    /**
+     * 声明此适配器接受的输入语法说明，供 probe 渲染成 TypeScript 输入别名
+     * ({@code $Foo_}) 上方的 JSDoc 注释，让 IDE 使用者了解可用的字符串/对象语法。
+     *
+     * <p>例如 ingredient 适配器可在此说明 {@code #tag} / {@code @mod} / {@code *} /
+     * {@code /regex/} 前缀及 {@code { mod?, filter?, ... }} 对象形式。默认空（不附加文档）。
+     */
+    default Optional<String> syntaxDoc() {
+        return Optional.empty();
     }
 
     /**

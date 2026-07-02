@@ -148,6 +148,8 @@ public final class IndexFileGenerator {
                 String fullName = packageName + "." + simpleName;
                 AdapterAliasGenerator.AdapterAlias adapterAlias = adapterAliasGenerator.getAlias(fullName);
                 if (adapterAlias != null) {
+                    adapterAlias.doc().ifPresent(doc ->
+                        sb.append("    /** ").append(doc.replace("\n", "\n     * ")).append(" */\n"));
                     sb.append("    export type ").append(adapterAlias.aliasName())
                       .append(" = ").append(adapterAlias.union()).append(";\n");
                     continue;
