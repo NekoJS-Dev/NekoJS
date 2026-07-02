@@ -13,6 +13,8 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.context.NekoCoreContext;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
@@ -27,6 +29,7 @@ import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.listener.RegistryEventListener;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.ScriptManager;
@@ -37,6 +40,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -85,6 +89,7 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(RegistryEventListener::onEntityAttributeCreation);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         NeoForge.EVENT_BUS.addListener(RegistryEventListener::onEntityJoinLevel);
+        modEventBus.addListener(NekoJSMod::onLoadComplete);
     }
 
     private static void initializeWorkspace() {
@@ -100,6 +105,7 @@ public class NekoJSMod extends NekoJS {
         NeoForgePluginLoader.loadAnnotatedPlugins();
         long s1 = System.nanoTime();
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins(), this.scriptProperties);
+        NekoRuntimeAccess.get().fireInit();
         scriptEventsRegistrar.bindRuntime(pluginRuntime);
         ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
         long s2 = System.nanoTime();
@@ -108,6 +114,7 @@ public class NekoJSMod extends NekoJS {
         SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
         ClassFilter classFilter = new ClassFilter(sandboxConfig);
         var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig);
+        ScriptErrorReporter.set(new ErrorTrackerReporter(errorTracker));
         NekoCoreContext core = new NekoCoreContext(
                 NekoSharedEngine.get(),
                 sandboxConfig,
@@ -134,6 +141,7 @@ public class NekoJSMod extends NekoJS {
         long s3 = System.nanoTime();
 
         this.scriptManagers.at(ScriptType.STARTUP).loadScripts();
+        NekoRuntimeAccess.get().fireInitStartup();
         long s4 = System.nanoTime();
         GoalEvents.postRegister();
 
@@ -150,5 +158,9 @@ public class NekoJSMod extends NekoJS {
 
     private static void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(WorkspaceGenerator::createWorkspaceConfigs);
+    }
+
+    private static void onLoadComplete(FMLLoadCompleteEvent event) {
+        event.enqueueWork(() -> NekoRuntimeAccess.get().fireAfterInit());
     }
 }

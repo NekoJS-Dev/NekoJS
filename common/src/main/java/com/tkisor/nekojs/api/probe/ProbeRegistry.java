@@ -14,7 +14,7 @@ import java.util.List;
  * <p>使用方式：
  * <pre>{@code
  * // 在插件中替换内置 probe
- * public class MyProbePlugin implements NekoJSBasePlugin {
+ * public class MyProbePlugin implements NekoJSPlugin {
  *     @Override
  *     public void registerProbeGenerator() {
  *         ProbeRegistry.setGenerator(new MyProbeGenerator(), "MyProbeMod");

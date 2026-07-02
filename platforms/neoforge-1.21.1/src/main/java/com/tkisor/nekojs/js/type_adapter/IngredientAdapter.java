@@ -1,6 +1,11 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.ValueConversionException;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.item.IngredientJS;
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
@@ -17,6 +22,21 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
     }
 
     @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                string(),
+                arrayOf(string()),
+                host(ItemStack.class),
+                host(Item.class),
+                host(NekoId.class),
+                object(
+                        Slot.opt("item", string()),
+                        Slot.opt("tag", string()),
+                        Slot.opt("ingredient", self())));
+    }
+
+    @Override
     public boolean test(Value value) {
         if (value.isNull() || value.isString() || value.hasArrayElements() || value.hasMembers()) {
             return true;
@@ -30,6 +50,12 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
     @Override
     public Ingredient apply(Value value) {
-        return IngredientResolver.fromValue(value);
+        try {
+            return IngredientResolver.fromValue(value);
+        } catch (ValueConversionException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new ValueConversionException(Ingredient.class, "ingredient value", value, e.getMessage(), e);
+        }
     }
 }

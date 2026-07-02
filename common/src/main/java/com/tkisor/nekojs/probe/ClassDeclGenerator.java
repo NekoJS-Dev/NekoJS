@@ -149,6 +149,10 @@ public final class ClassDeclGenerator {
                     processedProperties.add(propName);
                     String type = typeConverter.toTypeScript(method.getGenericReturnType());
                     sb.append("        get ").append(propName).append("(): ").append(type).append(";\n");
+                    // GraalJS host object 上 Java 的 getXxx()/isXxx() 实际以方法形式暴露（如 event.getEntity()），
+                    // 而 TS getter 仅允许 .xxx 属性访问，二者不一致会让调用 getXxx() 时补全缺失并报错；
+                    // 以原方法名额外声明一次，使属性与方法两种写法都合法（实例方法段已排除 getter，不会重复）。
+                    sb.append("        ").append(name).append("(): ").append(type).append(";\n");
 
                     // 查找对应的 setter
                     String setterName = "set" + propName.substring(0, 1).toUpperCase() + propName.substring(1);

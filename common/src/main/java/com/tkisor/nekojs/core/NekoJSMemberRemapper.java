@@ -1,67 +1,26 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.annotation.HideFromJS;
-import com.tkisor.nekojs.api.annotation.Remap;
-import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.JavaMemberIndex;
 import graal.mod.api.MemberRemapper;
 
-import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
-import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 
 /**
+ * GraalJS host 层成员名重映射：委托 {@link JavaMemberIndex#remapName}，hideMarker 传
+ * {@code MemberRemapper.HIDE_MEMBER}（满足 graal.mod.api SPI 约定），strict=false（前缀剥离允许空名）。
+ *
  * @author ZZZank
  */
 public class NekoJSMemberRemapper implements MemberRemapper {
 
     @Override
     public String remapField(Field field) {
-        return remapImpl(field);
+        return JavaMemberIndex.remapName(field, MemberRemapper.HIDE_MEMBER, false);
     }
 
     @Override
     public String remapMethod(Method method) {
-        return remapImpl(method);
-    }
-
-    private static <T extends AccessibleObject & Member> String remapImpl(T member) {
-        if (member.isAnnotationPresent(HideFromJS.class) || member.getDeclaringClass().isAnnotationPresent(HideFromJS.class)) {
-            return MemberRemapper.HIDE_MEMBER;
-        }
-
-        var remap = member.getAnnotation(Remap.class);
-        if (remap != null) {
-            return remap.value();
-        }
-
-        var original = member.getName();
-
-        var remapByPrefix = member.getAnnotation(RemapByPrefix.class);
-        if (remapByPrefix != null) {
-            var remapped = findAndRemovePrefix(original, remapByPrefix.value());
-            if (remapped != null) {
-                return remapped;
-            }
-        }
-
-        remapByPrefix = member.getDeclaringClass().getAnnotation(RemapByPrefix.class);
-        if (remapByPrefix != null) {
-            var remapped = findAndRemovePrefix(original, remapByPrefix.value());
-            if (remapped != null) {
-                return remapped;
-            }
-        }
-
-        return original;
-    }
-
-    private static String findAndRemovePrefix(String name, String[] prefixes) {
-        for (var prefix : prefixes) {
-            if (name.startsWith(prefix)) {
-                return name.substring(prefix.length());
-            }
-        }
-        return null;
+        return JavaMemberIndex.remapName(method, MemberRemapper.HIDE_MEMBER, false);
     }
 }

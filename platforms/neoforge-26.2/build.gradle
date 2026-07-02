@@ -90,7 +90,7 @@ neoForge {
 dependencies {
     implementation project(':common')
 
-    implementation("curse.maven:graal-1504336:7951071")
+    implementation("curse.maven:graal-1504336:7983197")
     // 30.1.0.12 for NeoForge 26.2
     implementation "curse.maven:jei-238222:8300448"
 

@@ -1,52 +1,56 @@
 package com.tkisor.nekojs.js.type_adapter;
 
-import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
 import com.tkisor.nekojs.api.data.NekoId;
-import graal.graalvm.polyglot.Value;
+import com.tkisor.nekojs.api.data.ValueConversionException;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 
-import java.util.NoSuchElementException;
-
-public class EntityTypeAdapter implements JSTypeAdapter<EntityType> {
+public class EntityTypeAdapter extends AbstractJSTypeAdapter<EntityType<?>> {
 
     @Override
-    public Class<EntityType> getTargetClass() {
-        return EntityType.class;
+    public Class<EntityType<?>> getTargetClass() {
+        return (Class<EntityType<?>>) (Class<?>) EntityType.class;
     }
 
     @Override
-    public boolean test(Value value) {
-        if (value.isString()) {
-            return true;
-        }
-        return value.isHostObject() && value.asHostObject() instanceof NekoId;
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                registry("EntityType"),
+                host(NekoId.class));
     }
 
     @Override
-    public EntityType<?> apply(Value value) {
-        Identifier id;
-        if (value.isHostObject() && value.asHostObject() instanceof NekoId nekoId) {
-            id = Identifier.fromNamespaceAndPath(nekoId.namespace(), nekoId.path());
-        } else {
-            id = parseId(value.asString());
+    protected EntityType<?> fromString(String s) {
+        String id = s.trim();
+        if (id.isEmpty()) {
+            throw new ValueConversionException(EntityType.class, "entity type id", s,
+                "empty id");
         }
-
-        if (id == null) {
-            return null;
-        }
-
-        return BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElseThrow(() ->
-                new NoSuchElementException("Could not find EntityType with ID: " + id)
-        );
-    }
-
-    private Identifier parseId(String rawId) {
-        if (rawId == null) return null;
-        String id = rawId.trim();
-        if (id.isEmpty()) return null;
         if (!id.contains(":")) id = "minecraft:" + id;
-        return Identifier.tryParse(id);
+        Identifier location = Identifier.tryParse(id);
+        if (location == null) {
+            // B3/B7: 解析失败统一抛 ValueConversionException，不再 return null / NoSuchElementException
+            throw new ValueConversionException(EntityType.class, "valid entity type id", s,
+                "invalid id syntax");
+        }
+        return BuiltInRegistries.ENTITY_TYPE.getOptional(location)
+            .orElseThrow(() -> new ValueConversionException(EntityType.class, "registered entity type id", s,
+                "entity type not found: " + location));
+    }
+
+    @Override
+    protected EntityType<?> fromHostObject(Object host) {
+        if (host instanceof EntityType<?> type) return type;
+        if (host instanceof NekoId id) {
+            return fromString(id.namespace() + ":" + id.path());
+        }
+        return null; // 不识别
     }
 }

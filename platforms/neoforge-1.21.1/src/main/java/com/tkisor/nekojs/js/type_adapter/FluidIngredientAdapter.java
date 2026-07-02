@@ -1,6 +1,11 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.ValueConversionException;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
 import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
@@ -17,6 +22,21 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
     }
 
     @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                string(),
+                arrayOf(string()),
+                host(FluidStack.class),
+                host(Fluid.class),
+                host(NekoId.class),
+                object(
+                        Slot.opt("fluid", string()),
+                        Slot.opt("tag", string()),
+                        Slot.opt("ingredient", self())));
+    }
+
+    @Override
     public boolean test(Value value) {
         if (value.isString() || value.hasArrayElements() || value.hasMembers()) return true;
         if (value.isHostObject()) {
@@ -28,6 +48,12 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
 
     @Override
     public FluidIngredient apply(Value value) {
-        return FluidResolver.ingredientFromValue(value);
+        try {
+            return FluidResolver.ingredientFromValue(value);
+        } catch (ValueConversionException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new ValueConversionException(FluidIngredient.class, "fluid ingredient value", value, e.getMessage(), e);
+        }
     }
 }

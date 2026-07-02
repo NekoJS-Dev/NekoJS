@@ -12,8 +12,8 @@ import java.util.*;
  *
  * <p>格式参考 ProbeJS：
  * <pre>
- * import { $Platform } from "@package/dev/latvian/mods/kubejs/platform";
- * import { $ConsoleJS } from "@package/dev/latvian/mods/kubejs/util";
+ * import { $Platform } from "java:dev/latvian/mods/kubejs/platform";
+ * import { $ConsoleJS } from "java:dev/latvian/mods/kubejs/util";
  *
  * export {};
  *
@@ -53,7 +53,7 @@ public final class BindingDeclarationGenerator {
             importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add("$" + simple);
         }
         for (var entry : importsByPackage.entrySet()) {
-            String importPath = "@package/" + entry.getKey().replace('.', '/');
+            String importPath = "java:" + entry.getKey().replace('.', '/');
             sb.append("import { ").append(String.join(", ", entry.getValue()));
             sb.append(" } from \"").append(importPath).append("\";\n");
         }
@@ -108,6 +108,11 @@ public final class BindingDeclarationGenerator {
     private void collectImports(Class<?> cls, Set<String> imports) {
         if (cls == null || cls.isPrimitive() || cls == Object.class) return;
         if (cls == String.class || cls == Boolean.class || Number.class.isAssignableFrom(cls)) return;
+        // 数组类：递归收集组件类型，避免 "[Lnet/.../Foo;" 描述符泄漏到 import
+        if (cls.isArray()) {
+            collectImports(cls.getComponentType(), imports);
+            return;
+        }
 
         imports.add(cls.getName());
     }

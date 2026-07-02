@@ -1,6 +1,10 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
 import graal.graalvm.polyglot.HostAccess;
@@ -11,6 +15,17 @@ public final class RecipeJsonValueAdapter implements JSTypeAdapter<RecipeJsonVal
     @Override
     public Class<RecipeJsonValue> getTargetClass() {
         return RecipeJsonValue.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                string(),
+                number(),
+                bool(),
+                arrayOf(self()),
+                object());
     }
 
     @Override

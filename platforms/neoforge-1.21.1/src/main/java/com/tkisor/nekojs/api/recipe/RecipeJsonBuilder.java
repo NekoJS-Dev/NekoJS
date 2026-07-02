@@ -13,7 +13,7 @@ import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
 
 import java.util.Map;
 
-public class RecipeJsonBuilder {
+public class RecipeJsonBuilder implements RecipeBuilder {
     private final JsonObject json;
     private final RecipeEventJS event;
     private final RecipeCreationContext context;

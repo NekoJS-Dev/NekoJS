@@ -9,7 +9,9 @@ import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
+import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -21,6 +23,7 @@ public class NekoJSClient {
         modEventBus.addListener(NekoJSClient::onClientResourceReload);
         modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onClientTickPost);
+        NeoForge.EVENT_BUS.addListener(NekoJSClient::onLevelUnload);
         ClientEvents.bindModBus(modEventBus);
     }
 
@@ -39,6 +42,12 @@ public class NekoJSClient {
 
     private static void onClientTickPost(ClientTickEvent.Post event) {
         NekoJSMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).flushReadyNodeTimers();
+    }
+
+    private static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel().isClientSide()) {
+            PDataSyncService.clearClientMirrors();
+        }
     }
 
     // 1.21.1: 事件名改为 RegisterClientReloadListenersEvent

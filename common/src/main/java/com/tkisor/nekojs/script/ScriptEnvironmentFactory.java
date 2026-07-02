@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
@@ -7,6 +8,9 @@ import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.script.context.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 脚本环境工厂：接管 Context/Node/bindings/event/telemetry 初始化。
@@ -41,8 +45,10 @@ public final class ScriptEnvironmentFactory {
         eventBridge.bindEvents(bindings, scriptType);
 
         var environmentBindings = pluginRuntime.bindings(scriptType);
+        Map<String, Class<?>> bindingSchema = new HashMap<>();
         environmentBindings.forEach((name, binding) -> {
             Object obj = binding.value();
+            bindingSchema.put(name, binding.valueType());
             if (obj instanceof Class<?>) {
                 Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
                 bindings.putMember(name, javaType);
@@ -50,6 +56,8 @@ public final class ScriptEnvironmentFactory {
                 bindings.putMember(name, obj);
             }
         });
+        // 暴露绑定名→Java类型映射，供加载时成员校验器（GlobalBindingMemberValidator）查询
+        ScriptBindingSchema.register(scriptType, bindingSchema);
 
         installJavaClassLoadTelemetry(context, scriptType);
 

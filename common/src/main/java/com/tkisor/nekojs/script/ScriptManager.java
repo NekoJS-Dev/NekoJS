@@ -127,297 +127,302 @@ public final class ScriptManager implements AutoCloseable {
      * 加载并顺序执行所有脚本
      */
     public void loadScripts() {
-        if (scripts == null || scripts.isEmpty()) {
-            scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
-            return;
+        NekoRuntimeAccess.get().fireBeforeScriptsLoaded(scriptType);
+        try {
+            if (scripts == null || scripts.isEmpty()) {
+                scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
+                return;
+            }
+
+            Context ctx = getOrCreateContext();
+
+            for (var script : scripts) {
+                script.preload();
+            }
+
+            scripts.sort((s1, s2) -> {
+                int p1 = s1.properties.getOrDefault(ScriptProperty.PRIORITY);
+                int p2 = s2.properties.getOrDefault(ScriptProperty.PRIORITY);
+                return Integer.compare(p2, p1);
+            });
+
+            for (ScriptContainer script : scripts) {
+                if (script.shouldRun()) {
+                    scriptExecutor.executeEntry(ctx, script, nodeRuntime);
+                }
+            }
+
+            if (scriptType == ScriptType.STARTUP) {
+                flushReadyNodeTimers();
+                ScriptEvents.post(getScriptEventRegistrar());
+            }
+        } finally {
+            NekoRuntimeAccess.get().fireAfterScriptsLoaded(scriptType);
+        }
+    }
+
+        // ---- 重载 ----
+
+        public void reloadScripts () {
+            scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
+            resetEnvironment();
+            discoverScripts();
+            loadScripts();
+            scriptType.logger().info("{} 脚本重载完毕。", scriptType.name());
         }
 
-        Context ctx = getOrCreateContext();
+        public List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {
+            discoverScripts();
+            Path target = resolveScriptPath(filePath);
+            List<ScriptContainer> targets = reloadTargets(target);
+            if (targets.isEmpty()) {
+                throw new IOException("No loaded entry depends on " + displayScriptPath(target) + ". Reload the whole " + scriptType.name() + " environment first if this dependency has not been loaded yet.");
+            }
+            scriptType.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", scriptType.name(), displayScriptPath(target), targets.size());
 
-        for (var script : scripts) {
+            NekoModulePipelineCache.invalidate(target);
+            Context ctx = getOrCreateContext();
+            String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
+
+            boolean directEntry = scripts.stream()
+                    .anyMatch(s -> s.path.normalize().toAbsolutePath().equals(target));
+            if (!directEntry) {
+                if (nodeRuntime != null && nodeRuntime.moduleLoaderHost() != null) {
+                    try {
+                        NekoScriptModuleLoaderHost.HotReloadResult result = nodeRuntime.moduleLoaderHost().hotReloadModule(modulePath);
+                        if (result.success()) {
+                            scriptType.logger().info("{} hot-reloaded module {} ({} relinked, {} failed)",
+                                    scriptType.name(), displayScriptPath(target),
+                                    result.relinked().size(), result.failed().size());
+                            return List.of();
+                        }
+                        scriptType.logger().warn("Hot-reload rolled back for {}, falling back to entry re-run. Failed: {}",
+                                modulePath, result.failed());
+                    } catch (Exception e) {
+                        scriptType.logger().warn("Hot-reload failed for {}, falling back to entry re-run: {}",
+                                modulePath, e.getMessage());
+                    }
+                }
+            }
+
+            synchronized (ctx) {
+                for (ScriptContainer script : targets) {
+                    String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
+                    ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
+                }
+                ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
+            }
+
+            for (ScriptContainer script : targets) {
+                reloadEntryScript(ctx, script);
+            }
+
+            scriptType.logger().info("{} 脚本文件 {} 重载完毕。", scriptType.name(), displayScriptPath(target));
+            return targets;
+        }
+
+        public Optional<ScriptContainer> resolveScriptFile (String filePath) throws IOException {
+            discoverScripts();
+            Path target = resolveScriptPath(filePath);
+            return scripts.stream()
+                    .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
+                    .findFirst();
+        }
+
+        private List<ScriptContainer> reloadTargets (Path target){
+            Optional<ScriptContainer> directEntry = scripts.stream()
+                    .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
+                    .findFirst();
+            if (directEntry.isPresent()) {
+                return List.of(directEntry.get());
+            }
+            Context ctx = getOrCreateContext();
+            String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
+            List<String> affectedIds = new ArrayList<>();
+            synchronized (ctx) {
+                Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
+                if (affected.hasArrayElements()) {
+                    for (long i = 0; i < affected.getArraySize(); i++) {
+                        affectedIds.add(affected.getArrayElement(i).asString());
+                    }
+                }
+            }
+            return scripts.stream()
+                    .filter(script -> affectedIds.contains(paths.root().relativize(script.path).toString().replace('\\', '/')))
+                    .toList();
+        }
+
+        private void reloadEntryScript (Context ctx, ScriptContainer script){
+            cleanupScriptEntry(script);
             script.preload();
-        }
-
-        scripts.sort((s1, s2) -> {
-            int p1 = s1.properties.getOrDefault(ScriptProperty.PRIORITY);
-            int p2 = s2.properties.getOrDefault(ScriptProperty.PRIORITY);
-            return Integer.compare(p2, p1);
-        });
-
-        for (ScriptContainer script : scripts) {
             if (script.shouldRun()) {
                 scriptExecutor.executeEntry(ctx, script, nodeRuntime);
             }
         }
 
-        if (scriptType == ScriptType.STARTUP) {
-            flushReadyNodeTimers();
-            ScriptEvents.post(getScriptEventRegistrar());
+        private void cleanupScriptEntry (ScriptContainer script){
+            scriptEventBridge.clearListeners(scriptType, script.id.toString());
+            if (nodeRuntime != null) {
+                nodeRuntime.timers().cancelScript(script.id.toString());
+            }
+            errorTracker.clear(script.id);
+            errorTracker.clearByScriptPath(scriptType, paths.root().relativize(script.path).toString().replace('\\', '/'));
         }
-    }
 
-    // ---- 重载 ----
-
-    public void reloadScripts() {
-        scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
-        resetEnvironment();
-        discoverScripts();
-        loadScripts();
-        scriptType.logger().info("{} 脚本重载完毕。", scriptType.name());
-    }
-
-    public List<ScriptContainer> reloadScriptFile(String filePath) throws IOException {
-        discoverScripts();
-        Path target = resolveScriptPath(filePath);
-        List<ScriptContainer> targets = reloadTargets(target);
-        if (targets.isEmpty()) {
-            throw new IOException("No loaded entry depends on " + displayScriptPath(target) + ". Reload the whole " + scriptType.name() + " environment first if this dependency has not been loaded yet.");
+        private void fullReloadCleanup () {
+            scriptEventBridge.clearListeners(scriptType);
+            errorTracker.clearByType(scriptType);
         }
-        scriptType.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", scriptType.name(), displayScriptPath(target), targets.size());
 
-        NekoModulePipelineCache.invalidate(target);
-        Context ctx = getOrCreateContext();
-        String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
+        // ---- 路径解析 ----
 
-        boolean directEntry = scripts.stream()
-                .anyMatch(s -> s.path.normalize().toAbsolutePath().equals(target));
-        if (!directEntry) {
-            if (nodeRuntime != null && nodeRuntime.moduleLoaderHost() != null) {
+        private Path resolveScriptPath (String filePath) throws IOException {
+            if (scriptType.path == null) {
+                throw new IOException("Script type has no script directory: " + scriptType.name());
+            }
+            if (filePath == null || filePath.isBlank()) {
+                throw new IOException("Script file path is empty.");
+            }
+            String normalizedText = filePath.replace('\\', '/');
+            String rootPrefix = scriptType.name + "/";
+            if (normalizedText.startsWith(rootPrefix)) {
+                normalizedText = normalizedText.substring(rootPrefix.length());
+            }
+            Path relative = Path.of(normalizedText).normalize();
+            if (relative.isAbsolute() || relative.startsWith("..")) {
+                throw new IOException("Invalid script file path: " + filePath);
+            }
+            Path target = scriptType.path.resolve(relative).normalize().toAbsolutePath();
+            Path root = scriptType.path.normalize().toAbsolutePath();
+            if (!target.startsWith(root)) {
+                throw new IOException("Script file is outside " + scriptType.name() + " scripts: " + filePath);
+            }
+            if (!Files.isRegularFile(target) || !ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(target)) {
+                throw new IOException("Unsupported or missing script file: " + filePath);
+            }
+            return target;
+        }
+
+        private String displayScriptPath (Path path){
+            return scriptType.name + "/" + scriptType.path.relativize(path).toString().replace('\\', '/');
+        }
+
+        // ---- 测试脚本 ----
+
+        public void runTestScripts () {
+            if (scriptType != ScriptType.TEST) {
+                throw new IllegalStateException("runTestScripts() can only be called on TEST ScriptManager");
+            }
+            scriptType.logger().info("正在运行 TEST 脚本...");
+
+            resetEnvironment();
+            discoverScripts();
+            loadScripts();
+            flushTestTimers();
+
+            scriptType.logger().info("TEST 脚本运行完毕。");
+        }
+
+        private void flushTestTimers () {
+            if (nodeRuntime == null || context == null) return;
+            for (int i = 0; i < 20 && nodeRuntime.hasPendingTimers(); i++) {
+                synchronized (context) {
+                    nodeRuntime.flushReadyTimers();
+                }
                 try {
-                    NekoScriptModuleLoaderHost.HotReloadResult result = nodeRuntime.moduleLoaderHost().hotReloadModule(modulePath);
-                    if (result.success()) {
-                        scriptType.logger().info("{} hot-reloaded module {} ({} relinked, {} failed)",
-                                scriptType.name(), displayScriptPath(target),
-                                result.relinked().size(), result.failed().size());
-                        return List.of();
-                    }
-                    scriptType.logger().warn("Hot-reload rolled back for {}, falling back to entry re-run. Failed: {}",
-                            modulePath, result.failed());
+                    Thread.sleep(1L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            synchronized (context) {
+                nodeRuntime.flushReadyTimers();
+            }
+        }
+
+        // ---- 环境重置 / 关闭 ----
+
+        private void resetEnvironment () {
+            fullReloadCleanup();
+            for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
+                binding.close(scriptType);
+            }
+
+            Context oldContext = this.context;
+            NekoNodeRuntime oldRuntime = this.nodeRuntime;
+            this.context = null;
+            this.nodeRuntime = null;
+
+            closeRuntimeResources(oldRuntime, oldContext);
+        }
+
+        private void closeRuntimeResources (NekoNodeRuntime oldRuntime, Context oldContext){
+            if (oldRuntime != null) {
+                try {
+                    oldRuntime.close();
                 } catch (Exception e) {
-                    scriptType.logger().warn("Hot-reload failed for {}, falling back to entry re-run: {}",
-                            modulePath, e.getMessage());
+                    scriptType.logger().warn("关闭旧 Node runtime 时发生异常", e);
+                }
+            }
+            if (oldContext != null) {
+                ScriptContextRegistry.unbind(oldContext);
+                CONTEXT_TO_MANAGER.remove(oldContext);
+                try {
+                    oldContext.close();
+                } catch (Exception e) {
+                    scriptType.logger().warn("关闭旧上下文时发生异常", e);
                 }
             }
         }
 
-        synchronized (ctx) {
-            for (ScriptContainer script : targets) {
-                String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
-                ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
+        @Override
+        public void close () {
+            fullReloadCleanup();
+            for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
+                binding.close(scriptType);
             }
-            ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
+            closeRuntimeResources(this.nodeRuntime, this.context);
+            this.context = null;
+            this.nodeRuntime = null;
         }
 
-        for (ScriptContainer script : targets) {
-            reloadEntryScript(ctx, script);
+        // ---- 查询 ----
+
+        public boolean hasScripts () {
+            return scripts != null && !scripts.isEmpty();
         }
 
-        scriptType.logger().info("{} 脚本文件 {} 重载完毕。", scriptType.name(), displayScriptPath(target));
-        return targets;
-    }
-
-    public Optional<ScriptContainer> resolveScriptFile(String filePath) throws IOException {
-        discoverScripts();
-        Path target = resolveScriptPath(filePath);
-        return scripts.stream()
-                .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
-                .findFirst();
-    }
-
-    private List<ScriptContainer> reloadTargets(Path target) {
-        Optional<ScriptContainer> directEntry = scripts.stream()
-                .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
-                .findFirst();
-        if (directEntry.isPresent()) {
-            return List.of(directEntry.get());
+        private ScriptEventRegistrar getScriptEventRegistrar () {
+            return scriptEventBridge.scriptEventRegistrar();
         }
-        Context ctx = getOrCreateContext();
-        String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
-        List<String> affectedIds = new ArrayList<>();
-        synchronized (ctx) {
-            Value affected = ctx.eval("js", "globalThis.__nekoScriptLoader.affectedEntries").execute(modulePath);
-            if (affected.hasArrayElements()) {
-                for (long i = 0; i < affected.getArraySize(); i++) {
-                    affectedIds.add(affected.getArrayElement(i).asString());
+
+        public void flushReadyNodeTimers () {
+            if (nodeRuntime != null && context != null) {
+                synchronized (context) {
+                    nodeRuntime.flushReadyTimers();
                 }
             }
         }
-        return scripts.stream()
-                .filter(script -> affectedIds.contains(paths.root().relativize(script.path).toString().replace('\\', '/')))
-                .toList();
-    }
 
-    private void reloadEntryScript(Context ctx, ScriptContainer script) {
-        cleanupScriptEntry(script);
-        script.preload();
-        if (script.shouldRun()) {
-            scriptExecutor.executeEntry(ctx, script, nodeRuntime);
-        }
-    }
+        // ---- Context 身份管理（委托 ScriptContextRegistry） ----
 
-    private void cleanupScriptEntry(ScriptContainer script) {
-        scriptEventBridge.clearListeners(scriptType, script.id.toString());
-        if (nodeRuntime != null) {
-            nodeRuntime.timers().cancelScript(script.id.toString());
-        }
-        errorTracker.clear(script.id);
-        errorTracker.clearByScriptPath(scriptType, paths.root().relativize(script.path).toString().replace('\\', '/'));
-    }
-
-    private void fullReloadCleanup() {
-        scriptEventBridge.clearListeners(scriptType);
-        errorTracker.clearByType(scriptType);
-    }
-
-    // ---- 路径解析 ----
-
-    private Path resolveScriptPath(String filePath) throws IOException {
-        if (scriptType.path == null) {
-            throw new IOException("Script type has no script directory: " + scriptType.name());
-        }
-        if (filePath == null || filePath.isBlank()) {
-            throw new IOException("Script file path is empty.");
-        }
-        String normalizedText = filePath.replace('\\', '/');
-        String rootPrefix = scriptType.name + "/";
-        if (normalizedText.startsWith(rootPrefix)) {
-            normalizedText = normalizedText.substring(rootPrefix.length());
-        }
-        Path relative = Path.of(normalizedText).normalize();
-        if (relative.isAbsolute() || relative.startsWith("..")) {
-            throw new IOException("Invalid script file path: " + filePath);
-        }
-        Path target = scriptType.path.resolve(relative).normalize().toAbsolutePath();
-        Path root = scriptType.path.normalize().toAbsolutePath();
-        if (!target.startsWith(root)) {
-            throw new IOException("Script file is outside " + scriptType.name() + " scripts: " + filePath);
-        }
-        if (!Files.isRegularFile(target) || !ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(target)) {
-            throw new IOException("Unsupported or missing script file: " + filePath);
-        }
-        return target;
-    }
-
-    private String displayScriptPath(Path path) {
-        return scriptType.name + "/" + scriptType.path.relativize(path).toString().replace('\\', '/');
-    }
-
-    // ---- 测试脚本 ----
-
-    public void runTestScripts() {
-        if (scriptType != ScriptType.TEST) {
-            throw new IllegalStateException("runTestScripts() can only be called on TEST ScriptManager");
-        }
-        scriptType.logger().info("正在运行 TEST 脚本...");
-
-        resetEnvironment();
-        discoverScripts();
-        loadScripts();
-        flushTestTimers();
-
-        scriptType.logger().info("TEST 脚本运行完毕。");
-    }
-
-    private void flushTestTimers() {
-        if (nodeRuntime == null || context == null) return;
-        for (int i = 0; i < 20 && nodeRuntime.hasPendingTimers(); i++) {
-            synchronized (context) {
-                nodeRuntime.flushReadyTimers();
-            }
-            try {
-                Thread.sleep(1L);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
-        synchronized (context) {
-            nodeRuntime.flushReadyTimers();
-        }
-    }
-
-    // ---- 环境重置 / 关闭 ----
-
-    private void resetEnvironment() {
-        fullReloadCleanup();
-        for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
-            binding.close(scriptType);
+        /**
+         * 从上下文获取对应的脚本类型
+         */
+        public static ScriptType getTypeFromContext (Context context){
+            return ScriptContextRegistry.scriptTypeOf(context);
         }
 
-        Context oldContext = this.context;
-        NekoNodeRuntime oldRuntime = this.nodeRuntime;
-        this.context = null;
-        this.nodeRuntime = null;
-
-        closeRuntimeResources(oldRuntime, oldContext);
-    }
-
-    private void closeRuntimeResources(NekoNodeRuntime oldRuntime, Context oldContext) {
-        if (oldRuntime != null) {
-            try {
-                oldRuntime.close();
-            } catch (Exception e) {
-                scriptType.logger().warn("关闭旧 Node runtime 时发生异常", e);
-            }
+        public static String switchCurrentScriptId (Context context, String scriptId){
+            return ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
         }
-        if (oldContext != null) {
-            ScriptContextRegistry.unbind(oldContext);
-            CONTEXT_TO_MANAGER.remove(oldContext);
-            try {
-                oldContext.close();
-            } catch (Exception e) {
-                scriptType.logger().warn("关闭旧上下文时发生异常", e);
-            }
+
+        public static void restoreCurrentScriptId (Context context, String scriptId){
+            ScriptContextRegistry.restoreCurrentScriptId(context, scriptId);
+        }
+
+        public static String getCurrentScriptId (Context context){
+            return ScriptContextRegistry.currentScriptIdOf(context);
         }
     }
-
-    @Override
-    public void close() {
-        fullReloadCleanup();
-        for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
-            binding.close(scriptType);
-        }
-        closeRuntimeResources(this.nodeRuntime, this.context);
-        this.context = null;
-        this.nodeRuntime = null;
-    }
-
-    // ---- 查询 ----
-
-    public boolean hasScripts() {
-        return scripts != null && !scripts.isEmpty();
-    }
-
-    private ScriptEventRegistrar getScriptEventRegistrar() {
-        return scriptEventBridge.scriptEventRegistrar();
-    }
-
-    public void flushReadyNodeTimers() {
-        if (nodeRuntime != null && context != null) {
-            synchronized (context) {
-                nodeRuntime.flushReadyTimers();
-            }
-        }
-    }
-
-    // ---- Context 身份管理（委托 ScriptContextRegistry） ----
-
-    /**
-     * 从上下文获取对应的脚本类型
-     */
-    public static ScriptType getTypeFromContext(Context context) {
-        return ScriptContextRegistry.scriptTypeOf(context);
-    }
-
-    public static String switchCurrentScriptId(Context context, String scriptId) {
-        return ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-    }
-
-    public static void restoreCurrentScriptId(Context context, String scriptId) {
-        ScriptContextRegistry.restoreCurrentScriptId(context, scriptId);
-    }
-
-    public static String getCurrentScriptId(Context context) {
-        return ScriptContextRegistry.currentScriptIdOf(context);
-    }
-}

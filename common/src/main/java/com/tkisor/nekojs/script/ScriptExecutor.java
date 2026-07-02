@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
@@ -9,6 +10,7 @@ import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.script.context.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -45,6 +47,8 @@ public final class ScriptExecutor {
                 errorTracker.clear(script.id);
                 errorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
 
+                validateGlobalBindings(script);
+
                 JavaClassLoadTelemetry.enter(script.type, script.id.toString());
                 ScriptContextRegistry.switchCurrentScriptId(ctx, script.id.toString());
                 try {
@@ -63,6 +67,21 @@ public final class ScriptExecutor {
 
             ScriptError scriptError = errorTracker.record(script, t);
             script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
+        }
+    }
+
+    /**
+     * 加载时校验入口脚本对全局绑定（Utils/Platform/Items 等）的成员访问。
+     *
+     * <p>每次执行/重载都跑（而非只在编译时），保证游戏内错误面板在完整重载（源码未改、模块缓存命中）
+     * 时仍准确反映当前脚本状态 —— 编译时校验（{@code NekoModulePipeline}）受静态缓存限制，这里补足入口脚本。
+     */
+    private void validateGlobalBindings(ScriptContainer script) {
+        try {
+            String source = Files.readString(script.path);
+            GlobalBindingMemberValidator.validate(script.path, source);
+        } catch (Throwable ignored) {
+            // 校验只报告错误，绝不阻塞脚本执行
         }
     }
 

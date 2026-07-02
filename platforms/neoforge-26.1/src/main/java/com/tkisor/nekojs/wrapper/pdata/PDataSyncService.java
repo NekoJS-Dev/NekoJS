@@ -46,6 +46,20 @@ public final class PDataSyncService {
         }
     }
 
+    /**
+     * entity 离开 level（卸载/移除）时由平台 listener 调用：递增 revision 发空 data 包，
+     * 触发跟踪客户端 {@link #acceptClientSync} 清除该 entity 的 mirror（避免 entity id 复用读到旧数据），
+     * 并清理由此 entity 占用的 server 端状态。
+     */
+    public static void onEntityRemoved(Entity entity) {
+        if (entity.level().isClientSide()) return;
+        int id = entity.getId();
+        int revision = SERVER_REVISIONS.merge(id, 1, Integer::sum);
+        PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, new PDataSyncPacket(id, revision, new CompoundTag()));
+        SERVER_REVISIONS.remove(id);
+        DIRTY_ENTITIES.remove(entity);
+    }
+
     public static CompoundTag clientMirror(Entity entity) {
         return CLIENT_ENTITY_MIRROR.getOrDefault(entity.getId(), new CompoundTag()).copy();
     }

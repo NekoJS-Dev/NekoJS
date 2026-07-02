@@ -104,7 +104,7 @@ public class RecipeRegistryProxy implements ProxyObject {
     }
 
     private Object namespaceMember(String namespace) {
-        return new RecipeNamespaceProxy(event, namespace,
+        return new RecipeNamespaceProxy(new RecipeEventSchemaHost(event), namespace,
                 NekoRecipeNamespaces.createHandler(namespace, event),
                 event.getRecipeTypeDefinitions());
     }

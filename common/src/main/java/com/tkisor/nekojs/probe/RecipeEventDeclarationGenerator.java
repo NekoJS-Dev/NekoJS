@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.catalog.RecipeHandlerMethodEntry;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RecipeSchemaTypeEntry;
+import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.script.ScriptType;
 
 import java.util.*;
@@ -20,6 +21,21 @@ import java.util.*;
  * 让 $RecipeEventJS.recipes getter 返回 DocumentedRecipes 而不是 $RecipeRegistryProxy。
  */
 public final class RecipeEventDeclarationGenerator {
+    private final TypeAliasRegistry aliasRegistry;
+
+    public RecipeEventDeclarationGenerator(TypeAliasRegistry aliasRegistry) {
+        this.aliasRegistry = aliasRegistry;
+    }
+
+    /**
+     * 解析某个 Java 类型的输入别名名（如 ItemStack → $ItemStack_）。
+     * 优先取适配器驱动的注册别名，缺失时回退到 {@code $simple_}。
+     */
+    private String resolveAlias(String pkg, String simple) {
+        String fqn = pkg + "." + simple;
+        if (aliasRegistry.hasAlias(fqn)) return aliasRegistry.getAlias(fqn);
+        return "$" + simple + "_";
+    }
 
     /**
      * 为指定 ScriptType 生成 recipe 事件声明。
@@ -33,7 +49,7 @@ public final class RecipeEventDeclarationGenerator {
         StringBuilder sb = new StringBuilder();
         // 生成 import 语句
         for (var entry : importsByPkg.entrySet()) {
-            String importPath = "@package/" + entry.getKey().replace('.', '/');
+            String importPath = "java:" + entry.getKey().replace('.', '/');
             sb.append("import { ").append(String.join(", ", entry.getValue()));
             sb.append(" } from \"").append(importPath).append("\";\n");
         }
@@ -191,12 +207,9 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     private String mapFieldKindToTs(String kind) {
+        String[] pkgType = kindToImport(kind);
+        if (pkgType != null) return resolveAlias(pkgType[0], pkgType[1]);
         return switch (kind) {
-            case "INGREDIENT" -> "$Ingredient_";
-            case "ITEM_STACK" -> "$ItemStack_";
-            case "FLUID_STACK" -> "$FluidStack_";
-            case "FLUID_INGREDIENT" -> "$FluidIngredient_";
-            case "SIZED_FLUID_INGREDIENT" -> "$SizedFluidIngredient_";
             case "STRING" -> "string";
             case "INT", "NUMBER" -> "number";
             case "BOOLEAN" -> "boolean";
@@ -272,16 +285,13 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     private String mapTypeToTs(String typeName) {
+        String[] pkgType = typeToImport(typeName);
+        if (pkgType != null) return resolveAlias(pkgType[0], pkgType[1]);
         return switch (typeName) {
             case "string" -> "string";
             case "number" -> "number";
             case "boolean" -> "boolean";
-            case "ItemStack" -> "$ItemStack_";
-            case "Ingredient" -> "$Ingredient_";
             case "RecipeJsonValue", "json" -> "object";
-            case "FluidStack" -> "$FluidStack_";
-            case "FluidIngredient" -> "$FluidIngredient_";
-            case "SizedFluidIngredient" -> "$SizedFluidIngredient_";
             case "any" -> "any";
             default -> "$" + typeName + "_";
         };

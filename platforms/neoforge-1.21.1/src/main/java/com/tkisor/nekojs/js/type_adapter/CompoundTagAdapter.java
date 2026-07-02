@@ -1,6 +1,10 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.nbt.*;
 import graal.graalvm.polyglot.Value;
 
@@ -9,6 +13,13 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
     @Override
     public Class<CompoundTag> getTargetClass() {
         return CompoundTag.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                object());
     }
 
     @Override
@@ -33,9 +44,11 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
         if (val.isNull()) return StringTag.valueOf("");
         if (val.isBoolean()) return ByteTag.valueOf(val.asBoolean());
         if (val.isNumber()) {
-            double d = val.asDouble();
-            if (d == Math.floor(d)) return IntTag.valueOf(val.asInt());
-            return DoubleTag.valueOf(d);
+            // B5: 旧实现用 d == Math.floor(d) 区分整/浮点，会导致大整数丢精度且把 long 强转成 int。
+            //     改用 fitsInInt/fitsInLong 精确选 NBT 类型。
+            if (val.fitsInInt()) return IntTag.valueOf(val.asInt());
+            if (val.fitsInLong()) return LongTag.valueOf(val.asLong());
+            return DoubleTag.valueOf(val.asDouble());
         }
         if (val.isString()) return StringTag.valueOf(val.asString());
 

@@ -8,7 +8,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 
 **前置需要 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)。请以当前发布页面标注的 Minecraft / NeoForge 版本为准。**
 
-（部分代码使用 Gemini/ChatGPT 生成，看板娘图像由 ChatGPT 生成）
+（部分代码使用 ChatGPT/GLM5.2 生成，看板娘图像由 ChatGPT 生成）
 
 ## 核心特性
 
@@ -21,6 +21,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 * **服务端热重载**：服务端脚本可通过 `/nekojs reload` 重新加载；启动注册类脚本仍需重启游戏。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
 * **多平台支持**：同时支持 NeoForge 26.1 26.2 1.21.1，共享 common 基础设施。
+* **内置Probe补全**: 无需安装 ProbeJS 这类 Mod 即可使用补全，并且实现可被其他更完善的 Probe 替换。
 
 ---
 
@@ -133,6 +134,18 @@ ServerEvents.tickPre(event => {
     // 你的 Tick 逻辑
 });
 ```
+
+---
+
+## 编辑器类型检查
+
+NekoJS 生成的类型声明（`.neko_probe/`）已经把 `ServerEvents`、`BlockEvents` 等全局对象及其事件参数类型完整暴露给编辑器，因此绝大多数错误可以在**事件触发前**就被发现：
+
+* 用 `.ts` 编写脚本可获得完整的编辑器类型检查；现有的 `.js` 脚本只需在文件首行加上 `// @ts-check` 即可逐文件启用检查。
+* 拼写错误（如把 `event.recipes` 写成 `event.rec`）会立即被标红，无需 `import` 任何类型 —— 全局事件对象的签名会自动推断 `event` 的类型。
+* 运行时（游戏内）同样会拦截这类错误：事件回调里访问不存在的成员、或使用未定义的变量，会被记录到错误面板，用 `/nekojs view_all_errors` 查看。
+
+> 注意：NekoJS 内置的是 erasable TypeScript 前端（类型标注会在运行前擦除），暂不支持 `enum` / `namespace` / `module` 等 TS 语法；这类语法会在加载时报错，请在脚本中避免。
 
 ---
 
@@ -366,8 +379,6 @@ ScriptEvents.server(event => event.register({
 
 NekoJS 目前正处于活跃开发阶段。无论是提交 Issue 报告 Bug、提供功能建议，还是提交 Pull Request，我们都非常欢迎。
 
-* **API 文档**：[ai_docs/](ai_docs/) 目录记录了脚本 API 行为、协作方式、平台差异和迁移分析
-* **架构文档**：[ai_arch/](ai_arch/) 目录记录了代码架构分析、改造计划和安全性设计
 * **QQ 群**：1158525822 [点击加入群聊【NekoJS 魔改交流群（？】](https://qm.qq.com/q/rbryak0K6k)
 
 ---

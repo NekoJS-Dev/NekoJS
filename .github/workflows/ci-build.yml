@@ -85,11 +85,36 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Discover platform modules
+        id: platforms
+        shell: bash
+        run: |
+          set -euo pipefail
+          TASKS=""
+          BUILD_TASKS=""
+          while IFS= read -r dir; do
+            name="$(basename "$dir")"
+            # Skip non-module directories (no build.gradle)
+            if [[ ! -f "$dir/build.gradle" ]]; then continue; fi
+            TASKS="$TASKS :platforms:$name:compileJava"
+            BUILD_TASKS="$BUILD_TASKS :platforms:$name:build"
+          done < <(find platforms -mindepth 1 -maxdepth 1 -type d | sort)
+
+          if [[ -z "$TASKS" ]]; then
+            echo "No platform modules found" >&2
+            exit 1
+          fi
+
+          echo "compile_tasks=$TASKS" >> "$GITHUB_OUTPUT"
+          echo "build_tasks=$BUILD_TASKS" >> "$GITHUB_OUTPUT"
+          echo "Discovered compile tasks:$TASKS"
+          echo "Discovered build tasks:$BUILD_TASKS"
+
       - name: Compile Java
-        run: ./gradlew :platforms:neoforge-1.21.1:compileJava :platforms:neoforge-26.1:compileJava --console=plain
+        run: ./gradlew ${{ steps.platforms.outputs.compile_tasks }} --console=plain
 
       - name: Build jars
-        run: ./gradlew :platforms:neoforge-1.21.1:build :platforms:neoforge-26.1:build --console=plain
+        run: ./gradlew ${{ steps.platforms.outputs.build_tasks }} --console=plain
 
       - name: Prepare artifacts
         shell: bash

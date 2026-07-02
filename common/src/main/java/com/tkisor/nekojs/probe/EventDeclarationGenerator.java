@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
  *
  * <p>格式参考 ProbeJS：
  * <pre>
- * import { $RecipeEventJS } from "@package/com/example";
- * import { $ResourceLocation_ } from "@package/net/minecraft/resources";
+ * import { $RecipeEventJS } from "java:com/example";
+ * import { $ResourceLocation_ } from "java:net/minecraft/resources";
  *
  * declare module "@side-only/server/events" {
  * }
@@ -31,9 +31,11 @@ import java.util.stream.Collectors;
  */
 public final class EventDeclarationGenerator {
     private final TypeConverter typeConverter;
+    private final AdapterAliasGenerator adapterAliasGenerator;
 
-    public EventDeclarationGenerator(TypeConverter typeConverter) {
+    public EventDeclarationGenerator(TypeConverter typeConverter, AdapterAliasGenerator adapterAliasGenerator) {
         this.typeConverter = typeConverter;
+        this.adapterAliasGenerator = adapterAliasGenerator;
     }
 
     /**
@@ -59,11 +61,17 @@ public final class EventDeclarationGenerator {
             for (String fqn : imports) {
                 String pkg = fqn.substring(0, fqn.lastIndexOf('.'));
                 String simple = fqn.substring(fqn.lastIndexOf('.') + 1);
-                importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add("$" + simple);
+                List<String> names = importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>());
+                names.add("$" + simple);
+                // dispatch key 参数放宽后可能引用 $Foo_，需一并导入
+                String aliasName = adapterAliasGenerator.aliasNameOf(fqn);
+                if (aliasName != null) {
+                    names.add(aliasName);
+                }
             }
 
             for (var entry : importsByPackage.entrySet()) {
-                String importPath = "@package/" + entry.getKey().replace('.', '/');
+                String importPath = "java:" + entry.getKey().replace('.', '/');
                 sb.append("import { ").append(String.join(", ", entry.getValue()));
                 sb.append(" } from \"").append(importPath).append("\";\n");
             }

@@ -9,7 +9,8 @@ public record RecipeTypeDefinition(
         String type,
         String idPrefix,
         List<List<String>> constructors,
-        Map<String, RecipeFieldDefinition> fields
+        Map<String, RecipeFieldDefinition> fields,
+        List<String> unique
 ) {
     public String key() {
         return namespace + ":" + name;

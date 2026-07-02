@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.api.NekoJSBasePlugin;
+import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
@@ -29,31 +29,49 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final Map<String, EventGroup> eventGroups;
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
+    private final Map<String, String> nodeModules;
     private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
     private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides;
     private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks;
     private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks;
+    private final List<Runnable> initHooks;
+    private final List<Runnable> initStartupHooks;
+    private final List<Runnable> afterInitHooks;
+    private final List<Consumer<ScriptType>> beforeScriptsLoadedHooks;
+    private final List<Consumer<ScriptType>> afterScriptsLoadedHooks;
 
     NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
-                              Map<ScriptType, Map<String, Binding>> bindings,
-                              List<JSTypeAdapter<?>> adapters,
-                              Map<String, EventGroup> eventGroups,
-                              List<TypeDocCatalogEntry> typeDocs,
-                              List<ManualDeclarationCatalogEntry> manualDeclarations,
-                              Map<String, RecipeNamespaceEntry> recipeNamespaces,
-                              Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides,
-                              List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
-                              List<Consumer<RecipeLifecycleContext>> afterRecipesHooks) {
+                      Map<ScriptType, Map<String, Binding>> bindings,
+                      List<JSTypeAdapter<?>> adapters,
+                      Map<String, EventGroup> eventGroups,
+                      List<TypeDocCatalogEntry> typeDocs,
+                      List<ManualDeclarationCatalogEntry> manualDeclarations,
+                      Map<String, String> nodeModules,
+                      Map<String, RecipeNamespaceEntry> recipeNamespaces,
+                      Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides,
+                      List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks,
+                      List<Consumer<RecipeLifecycleContext>> afterRecipesHooks,
+                      List<Runnable> initHooks,
+                      List<Runnable> initStartupHooks,
+                      List<Runnable> afterInitHooks,
+                      List<Consumer<ScriptType>> beforeScriptsLoadedHooks,
+                      List<Consumer<ScriptType>> afterScriptsLoadedHooks) {
         this.scriptCompilers = scriptCompilers;
         this.bindings = bindings;
         this.adapters = adapters;
         this.eventGroups = eventGroups;
         this.typeDocs = typeDocs;
         this.manualDeclarations = manualDeclarations;
+        this.nodeModules = nodeModules;
         this.recipeNamespaces = recipeNamespaces;
         this.recipeSchemaOverrides = recipeSchemaOverrides;
         this.beforeRecipeLoadingHooks = beforeRecipeLoadingHooks;
         this.afterRecipesHooks = afterRecipesHooks;
+        this.initHooks = initHooks;
+        this.initStartupHooks = initStartupHooks;
+        this.afterInitHooks = afterInitHooks;
+        this.beforeScriptsLoadedHooks = beforeScriptsLoadedHooks;
+        this.afterScriptsLoadedHooks = afterScriptsLoadedHooks;
         publishRecipeSchemaOverrides();
     }
 
@@ -68,7 +86,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         RecipeTypeDefinitionStorage.setPluginOverrides(builder.build());
     }
 
-    public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
+    public static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(plugins, scriptProperties);
         current = runtime;
         NekoRuntimeAccess.set(runtime);
@@ -107,6 +125,10 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return manualDeclarations;
     }
 
+    public Map<String, String> nodeModules() {
+        return nodeModules;
+    }
+
     public Map<String, RecipeNamespaceEntry> recipeNamespaces() {
         return recipeNamespaces;
     }
@@ -133,6 +155,51 @@ public final class NekoPluginRuntime implements IPluginRuntime {
                 hook.accept(context);
             } catch (Exception e) {
                 ScriptType.SERVER.logger().error("Recipe lifecycle hook failed", e);
+            }
+        }
+    }
+
+    @Override
+    public void fireInit() {
+        runRunnableHooks(initHooks, ScriptType.STARTUP, "init");
+    }
+
+    @Override
+    public void fireInitStartup() {
+        runRunnableHooks(initStartupHooks, ScriptType.STARTUP, "initStartup");
+    }
+
+    @Override
+    public void fireAfterInit() {
+        runRunnableHooks(afterInitHooks, ScriptType.STARTUP, "afterInit");
+    }
+
+    @Override
+    public void fireBeforeScriptsLoaded(ScriptType type) {
+        runScriptTypeHooks(beforeScriptsLoadedHooks, type, "beforeScriptsLoaded");
+    }
+
+    @Override
+    public void fireAfterScriptsLoaded(ScriptType type) {
+        runScriptTypeHooks(afterScriptsLoadedHooks, type, "afterScriptsLoaded");
+    }
+
+    private void runRunnableHooks(List<Runnable> hooks, ScriptType loggerType, String name) {
+        for (Runnable hook : hooks) {
+            try {
+                hook.run();
+            } catch (Exception e) {
+                loggerType.logger().error("Lifecycle " + name + " hook failed", e);
+            }
+        }
+    }
+
+    private void runScriptTypeHooks(List<Consumer<ScriptType>> hooks, ScriptType type, String name) {
+        for (Consumer<ScriptType> hook : hooks) {
+            try {
+                hook.accept(type);
+            } catch (Exception e) {
+                type.logger().error("Lifecycle " + name + " hook failed for " + type.name(), e);
             }
         }
     }

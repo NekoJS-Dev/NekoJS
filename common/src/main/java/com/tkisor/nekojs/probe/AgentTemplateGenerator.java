@@ -45,7 +45,7 @@ public final class AgentTemplateGenerator {
 
             - Explore `.neko_probe/@side-only` to find the type declarations for events or global objects that are only available on a specific side.
             - DO NOT explore anything under the folder `@special`, as it contains huge amount of type declarations that will overload the context.
-            - You can find definition of each class under the `@package` folder.
+            - You can find definition of each class under the `@package` folder. Import paths use `java:` prefix (e.g., `import { $Integer } from "java:java/lang"`).
 
             ## Type Wrapping
 
@@ -69,7 +69,7 @@ public final class AgentTemplateGenerator {
 
             ## TypeScript and Java Class Paths
 
-            NekoJS reformats Java's class paths into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` is reformatted into `@package/net/minecraft/world/entity/$LivingEntity`. Which is in the `.d.ts` file under `.neko_probe/@package/net/minecraft/world/entity/`. Note that all class names are prefixed with `$` to prevent conflicts with TS native types. Inner classes use `$` separator: `$PlayerInteractEvent$RightClickItem`.
+            NekoJS reformats Java's class paths into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` is reformatted into `java:net/minecraft/world/entity/$LivingEntity`. Which is in the `.d.ts` file under `.neko_probe/@package/net/minecraft/world/entity/`. Note that all class names are prefixed with `$` to prevent conflicts with TS native types. Inner classes use `$` separator: `$PlayerInteractEvent$RightClickItem`.
 
             If the Java class is an interface, it is loadable as a class and can be used in `instanceof` checks, but cannot be instantiated via `new`.
 
@@ -101,7 +101,7 @@ public final class AgentTemplateGenerator {
             - Specific functions, types, or patterns that can be reused
             - Analogous existing features that serve as implementation templates
             - Clear answers to what was asked, not comprehensive overviews
-            - `Java.loadClass` hints for discovered `@package` types
+            - `Java.loadClass` hints for discovered `java:` prefixed types
 
             Remember: Your goal is searching efficiently through MAXIMUM PARALLELISM to report concise and clear answers.
             """;
@@ -147,7 +147,7 @@ public final class AgentTemplateGenerator {
             NekoJS supports ES2022+ features including `import`/`export`, arrow functions, template literals, destructuring, `for...of` loops, classes with `extends`/`implements`, private fields (`#field`), optional chaining (`?.`), nullish coalescing (`??`), top-level await, etc.
 
             TypeScript and Java class paths:
-            Java's class paths are reformatted into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` → `@package/net/minecraft/world/entity/$LivingEntity`. All class names are prefixed with `$`. Inner classes use `$` separator.
+            Java's class paths are reformatted into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` → `java:net/minecraft/world/entity/$LivingEntity`. All class names are prefixed with `$`. Inner classes use `$` separator.
 
             NOTE: Any class not exposed via global bindings will need `Java.loadClass` to access.
 
@@ -174,7 +174,7 @@ public final class AgentTemplateGenerator {
             - Step-by-step implementation with dependencies and parallelism markers
             - Named phases for plans with 5+ steps
             - Verification steps (`/reload`, `/nekojs test`, game restart)
-            - Critical types/events from `@side-only` and `@package`
+            - Critical types/events from `@side-only` and `java:` prefixed imports
             - Explicit scope boundaries
 
             Save to `/memories/session/plan.md`, then show to the user.
@@ -263,7 +263,7 @@ public final class AgentTemplateGenerator {
             - {Game mechanics and findings}
 
             **Involved Game Elements**
-            - {Items, blocks, events from `@side-only`, types from `@package`}
+            - {Items, blocks, events from `@side-only`, types from `java:` prefixed imports}
 
             **Further Considerations**
             - {Challenges, edge cases}

@@ -29,9 +29,22 @@ public interface IPluginRuntime {
 
     List<ManualDeclarationCatalogEntry> manualDeclarations();
 
+    /** 插件注册的 JS 模块：moduleId → CommonJS source。 */
+    Map<String, String> nodeModules();
+
     Map<String, RecipeNamespaceEntry> recipeNamespaces();
 
     void beforeRecipeLoading(RecipeLifecycleContext context);
 
     void afterRecipes(RecipeLifecycleContext context);
+
+    void fireInit();
+
+    void fireInitStartup();
+
+    void fireAfterInit();
+
+    void fireBeforeScriptsLoaded(ScriptType type);
+
+    void fireAfterScriptsLoaded(ScriptType type);
 }

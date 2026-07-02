@@ -203,7 +203,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 synchronized (context) {
                     String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                     try {
-                        listener.executeVoid(EventProxy.of(event));
+                        listener.executeVoid(event);
                     } finally {
                         ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                     }
@@ -225,7 +225,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 synchronized (context) {
                     String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                     try {
-                        Value result = listener.execute(EventProxy.of(event));
+                        Value result = listener.execute(event);
                         return result.isBoolean() && result.asBoolean();
                     } finally {
                         ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
@@ -253,7 +253,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                             String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                             try {
                                 if (listener.canExecute()) {
-                                    listener.executeVoid(EventProxy.of(event));
+                                    listener.executeVoid(event);
                                 }
                             } finally {
                                 ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
@@ -281,7 +281,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                             String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                             try {
                                 if (listener.canExecute()) {
-                                    Value result = listener.execute(EventProxy.of(event));
+                                    Value result = listener.execute(event);
                                     return result.isBoolean() && result.asBoolean();
                                 }
                             } finally {

@@ -1,9 +1,14 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
-import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -14,6 +19,21 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
     @Override
     public Class<FluidIngredient> getTargetClass() {
         return FluidIngredient.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                string(),
+                arrayOf(string()),
+                host(FluidStack.class),
+                host(Fluid.class),
+                host(NekoId.class),
+                object(
+                        Slot.opt("fluid", string()),
+                        Slot.opt("tag", string()),
+                        Slot.opt("ingredient", self())));
     }
 
     @Override
@@ -28,6 +48,13 @@ public final class FluidIngredientAdapter implements JSTypeAdapter<FluidIngredie
 
     @Override
     public FluidIngredient apply(Value value) {
-        return FluidResolver.ingredientFromValue(value);
+        try {
+            return FluidResolver.ingredientFromValue(value);
+        } catch (ValueConversionException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new ValueConversionException(FluidIngredient.class, "fluid / fluid id / fluid ingredient object", value,
+                e.getMessage(), e);
+        }
     }
 }

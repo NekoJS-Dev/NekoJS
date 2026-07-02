@@ -5,7 +5,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import graal.graalvm.polyglot.Value;
 
 public final class JsonObjectAdapter implements JSTypeAdapter<JsonObject> {
@@ -13,6 +17,13 @@ public final class JsonObjectAdapter implements JSTypeAdapter<JsonObject> {
     @Override
     public Class<JsonObject> getTargetClass() {
         return JsonObject.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                object());
     }
 
     @Override
@@ -31,6 +42,14 @@ public final class JsonObjectAdapter implements JSTypeAdapter<JsonObject> {
             obj.add(key, convertValueToJson(value.getMember(key)));
         }
         return obj;
+    }
+
+    /**
+     * 把字符串包装为 gson {@link JsonPrimitive}，供需要走 JsonElement 路径的适配器
+     * （如 {@code CodecAdapter} 的 string 分支）复用。
+     */
+    public static JsonElement primitiveJson(String s) {
+        return new JsonPrimitive(s);
     }
 
     public static JsonElement convertValueToJson(Value value) {

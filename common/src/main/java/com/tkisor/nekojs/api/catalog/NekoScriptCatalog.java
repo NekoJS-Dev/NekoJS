@@ -8,7 +8,6 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
-import graal.graalvm.polyglot.HostAccess;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -149,44 +148,7 @@ public final class NekoScriptCatalog {
 
     private static AdapterCatalogEntry adapterEntry(JSTypeAdapter<?> adapter) {
         Class<?> targetType = adapter.getTargetClass();
-        return new AdapterCatalogEntry(targetType, targetType.getSimpleName(),
-                inputShapesFor(targetType), adapter.getPrecedence(),
-                errorPolicyFor(adapter.getPrecedence()), examplesFor(targetType));
-    }
-
-    private static List<String> inputShapesFor(Class<?> targetType) {
-        return switch (targetType.getSimpleName()) {
-            case "ItemStack" -> List.of("ItemStack", "Item", "item id string", "{ item|id, count?, components? }");
-            case "Ingredient" -> List.of("Ingredient", "IngredientFactory", "ItemStack", "Item", "item id string", "tag id string", "array", "{ item|tag|ingredient }");
-            case "SizedIngredient" -> List.of("SizedIngredient", "SizedIngredientJS", "Ingredient", "IngredientFactory", "item id string", "tag id string", "array", "{ ingredient|item|tag, count }");
-            case "FluidStack" -> List.of("FluidStack", "fluid id string", "{ fluid|id, amount? }");
-            case "FluidIngredient" -> List.of("FluidIngredient", "FluidIngredientJS", "fluid id string", "tag id string", "array", "{ fluid|tag|ingredient }");
-            case "SizedFluidIngredient" -> List.of("SizedFluidIngredient", "FluidIngredient", "FluidIngredientJS", "fluid id string", "tag id string", "{ ingredient|fluid|tag, amount }");
-            case "RecipeFilter" -> List.of("recipe id string", "array of filters", "{ mod?, type?, group?, id?, input?, output?, and?, or?, not?, idStartsWith?, idEndsWith?, idContains? }");
-            case "RecipeJsonValue" -> List.of("primitive", "JS object", "JS array", "JsonElement", "IngredientFactory", "Ingredient", "SizedIngredientJS", "SizedIngredient", "ItemStack", "FluidIngredientJS", "FluidIngredient", "SizedFluidIngredient", "FluidStack");
-            case "JsonObject" -> List.of("JS object");
-            default -> List.of();
-        };
-    }
-
-    private static String errorPolicyFor(HostAccess.TargetMappingPrecedence precedence) {
-        return precedence == HostAccess.TargetMappingPrecedence.LOWEST
-                ? "Prefer native Java overloads first; throw on unsupported shapes."
-                : "Throw on unsupported shapes.";
-    }
-
-    private static List<String> examplesFor(Class<?> targetType) {
-        return switch (targetType.getSimpleName()) {
-            case "ItemStack" -> List.of("ItemJS.of('minecraft:stone')", "ItemJS.of('minecraft:stone').withCount(4)");
-            case "Ingredient" -> List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')");
-            case "SizedIngredient" -> List.of("Ingredient.of('minecraft:stone').withCount(3)", "{ ingredient: 'minecraft:stone', count: 3 }");
-            case "FluidStack" -> List.of("Fluid.of('minecraft:water', 1000)");
-            case "FluidIngredient" -> List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.tag('minecraft:water')");
-            case "SizedFluidIngredient" -> List.of("FluidIngredient.of('minecraft:water').withAmount(1000)");
-            case "RecipeFilter" -> List.of("{ output: 'minecraft:stick' }", "{ mod: 'minecraft', type: 'minecraft:crafting_shaped' }");
-            case "RecipeJsonValue" -> List.of("builder.property('ingredients', [Ingredient.of('minecraft:stone')])", "event.custom({ type: 'minecraft:crafting_shapeless', ingredients: [Ingredient.of('minecraft:stone')], result: { id: 'minecraft:stone_button' } })");
-            default -> List.of();
-        };
+        return new AdapterCatalogEntry(targetType, adapter.inputShapes(), adapter.getPrecedence());
     }
 
     public static List<HostExtensionCatalogEntry> hostExtensions() {

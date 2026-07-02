@@ -10,6 +10,9 @@ import com.tkisor.nekojs.api.recipe.RecipeJsonBuilder;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
+import com.tkisor.nekojs.api.recipe.definition.RecipeFieldDefinition;
+import com.tkisor.nekojs.api.recipe.definition.RecipeFieldRole;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import net.minecraft.core.HolderLookup;
@@ -58,6 +61,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     private final HolderLookup.Provider registries;
     private final RecipeTypeDefinitionRegistry recipeTypeDefinitions;
     private int recipeCounter = 0;
+
+    private final Set<Identifier> takenIds = new HashSet<>();
 
     public RecipeEventJS(Map<Identifier, JsonElement> originalJsons, HolderLookup.Provider registries) {
         this(originalJsons, registries, RecipeTypeDefinitionRegistry.EMPTY);
@@ -164,27 +169,29 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         String randomSuffix = UUID.nameUUIDFromBytes(baseString.getBytes(StandardCharsets.UTF_8))
                 .toString().replace("-", "").substring(0, 8);
 
-        return Identifier.fromNamespaceAndPath("nekojs", prefix + "_" + randomSuffix);
+        Identifier id = Identifier.fromNamespaceAndPath("nekojs", prefix + "_" + randomSuffix);
+        int attempt = 1;
+        while (!takenIds.add(id)) {
+            id = Identifier.fromNamespaceAndPath("nekojs", prefix + "_" + randomSuffix + "_" + (attempt++));
+        }
+        return id;
     }
 
     public void replaceInput(RecipeFilter filter, Ingredient match, Ingredient replacement) {
         if (match == null || replacement == null) return;
         JsonElement replacementJson = serializeIngredient(replacement);
         int replaced = 0;
-        for (Map.Entry<Identifier, JsonElement> entry : jsons.entrySet()) {
+        for (var entry : jsons.entrySet()) {
             if (!entry.getValue().isJsonObject()) continue;
             JsonObject jsonObj = entry.getValue().getAsJsonObject();
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
-            if (replaceInputInJson(jsonObj, match, replacementJson)) replaced++;
+            Set<String> inputKeys = inputKeysFor(jsonObj);
+            if (replaceInputInJson(jsonObj, match, replacementJson, false, inputKeys)) replaced++;
         }
         NekoJS.LOGGER.debug("Successfully intercepted JSON tree and replaced input ingredients in {} recipes", replaced);
     }
 
-    private boolean replaceInputInJson(JsonObject recipeJson, Ingredient match, JsonElement replacementJson) {
-        return replaceInputInJson(recipeJson, match, replacementJson, false);
-    }
-
-    private boolean replaceInputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean inputContext) {
+    private boolean replaceInputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean inputContext, Set<String> inputKeys) {
         if (element == null || element.isJsonNull()) return false;
         if (element.isJsonArray()) {
             boolean modified = false;
@@ -196,7 +203,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
                 if (inputContext && testSingleIngredient(child, match)) {
                     array.set(i, replacementJson.deepCopy());
                     modified = true;
-                } else if (replaceInputInJson(child, match, replacementJson, inputContext)) {
+                } else if (replaceInputInJson(child, match, replacementJson, inputContext, inputKeys)) {
                     modified = true;
                 }
             }
@@ -208,11 +215,11 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         JsonObject object = element.getAsJsonObject();
         for (String key : new ArrayList<>(object.keySet())) {
             JsonElement child = object.get(key);
-            boolean childInputContext = inputContext || isInputKey(key);
+            boolean childInputContext = inputContext || inputKeys.contains(key);
             if (childInputContext && testIngredientNode(child, match)) {
                 object.add(key, replacementJson.deepCopy());
                 modified = true;
-            } else if (replaceInputInJson(child, match, replacementJson, childInputContext)) {
+            } else if (replaceInputInJson(child, match, replacementJson, childInputContext, inputKeys)) {
                 modified = true;
             }
         }
@@ -230,16 +237,14 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
-    private static boolean isInputKey(String key) {
-        return key.equals("ingredient") || key.equals("ingredients") || key.equals("input") || key.equals("inputs") || key.equals("key");
-    }
-
     private boolean testIngredientNode(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
             List<String> nodeItems = nodeIng.items().map(h -> BuiltInRegistries.ITEM.getKey(h.value()).toString()).toList();
             List<String> matchItems = match.items().map(h -> BuiltInRegistries.ITEM.getKey(h.value()).toString()).toList();
-            return !nodeItems.isEmpty() && nodeItems.size() == matchItems.size() && nodeItems.containsAll(matchItems);
+            // Partial match (B-档): non-empty intersection suffices — the size-equality guard
+            // was the common "tag ingredient fails because it has more items than match" trap.
+            return !nodeItems.isEmpty() && !matchItems.isEmpty() && nodeItems.stream().anyMatch(matchItems::contains);
         } catch (Exception e) {
             return false;
         }
@@ -249,16 +254,17 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         if (match == null || replacement == null) return;
         JsonElement replacementJson = serializeResult(replacement);
         int replaced = 0;
-        for (Map.Entry<Identifier, JsonElement> entry : jsons.entrySet()) {
+        for (var entry : jsons.entrySet()) {
             if (!entry.getValue().isJsonObject()) continue;
             JsonObject jsonObj = entry.getValue().getAsJsonObject();
             if (filter != null && !passFilter(entry.getKey(), jsonObj, filter)) continue;
-            if (replaceOutputInJson(jsonObj, match, replacementJson, false)) replaced++;
+            Set<String> outputKeys = outputKeysFor(jsonObj);
+            if (replaceOutputInJson(jsonObj, match, replacementJson, false, outputKeys)) replaced++;
         }
         NekoJS.LOGGER.debug("Successfully intercepted JSON tree and replaced outputs in {} recipes", replaced);
     }
 
-    private boolean replaceOutputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean outputContext) {
+    private boolean replaceOutputInJson(JsonElement element, Ingredient match, JsonElement replacementJson, boolean outputContext, Set<String> outputKeys) {
         if (element == null || element.isJsonNull()) return false;
         if (element.isJsonArray()) {
             boolean modified = false;
@@ -268,7 +274,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
                 if (outputContext && testOutputNode(child, match)) {
                     array.set(i, replacementJson.deepCopy());
                     modified = true;
-                } else if (replaceOutputInJson(child, match, replacementJson, outputContext)) {
+                } else if (replaceOutputInJson(child, match, replacementJson, outputContext, outputKeys)) {
                     modified = true;
                 }
             }
@@ -280,19 +286,15 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         JsonObject object = element.getAsJsonObject();
         for (String key : new ArrayList<>(object.keySet())) {
             JsonElement child = object.get(key);
-            boolean childOutputContext = outputContext || isOutputKey(key);
+            boolean childOutputContext = outputContext || outputKeys.contains(key);
             if (childOutputContext && testOutputNode(child, match)) {
                 object.add(key, replacementJson.deepCopy());
                 modified = true;
-            } else if (replaceOutputInJson(child, match, replacementJson, childOutputContext)) {
+            } else if (replaceOutputInJson(child, match, replacementJson, childOutputContext, outputKeys)) {
                 modified = true;
             }
         }
         return modified;
-    }
-
-    private static boolean isOutputKey(String key) {
-        return key.equals("result") || key.equals("results") || key.equals("output") || key.equals("outputs");
     }
 
     private boolean testOutputNode(JsonElement node, Ingredient match) {
@@ -310,6 +312,50 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     private boolean testOutputId(Identifier id, Ingredient match) {
         return match.items().anyMatch(holder -> BuiltInRegistries.ITEM.getKey(holder.value()).equals(id));
+    }
+
+    /**
+     * Names that mark an input slot for the given recipe: the conservative hardcoded fallback
+     * (classic ingredient slots) plus any schema field tagged role=INPUT for this recipe type
+     * (e.g. smithing template/base/addition, shaped pattern/key).
+     */
+    private Set<String> inputKeysFor(JsonObject json) {
+        Set<String> keys = new HashSet<>();
+        keys.add("ingredient");
+        keys.add("ingredients");
+        keys.add("input");
+        keys.add("inputs");
+        keys.add("key");
+        RecipeTypeDefinition def = definitionOf(json);
+        if (def != null) {
+            for (RecipeFieldDefinition field : def.fields().values()) {
+                if (field.role() == RecipeFieldRole.INPUT) keys.add(field.name());
+            }
+        }
+        return keys;
+    }
+
+    private Set<String> outputKeysFor(JsonObject json) {
+        Set<String> keys = new HashSet<>();
+        keys.add("result");
+        keys.add("results");
+        keys.add("output");
+        keys.add("outputs");
+        RecipeTypeDefinition def = definitionOf(json);
+        if (def != null) {
+            for (RecipeFieldDefinition field : def.fields().values()) {
+                if (field.role() == RecipeFieldRole.OUTPUT) keys.add(field.name());
+            }
+        }
+        return keys;
+    }
+
+    private RecipeTypeDefinition definitionOf(JsonObject json) {
+        if (json == null || !json.has("type") || !json.get("type").isJsonPrimitive()) return null;
+        String type = json.get("type").getAsString();
+        int colon = type.indexOf(':');
+        if (colon <= 0) return null;
+        return recipeTypeDefinitions.get(type.substring(0, colon), type.substring(colon + 1));
     }
 
     public void remove(RecipeFilter filter) {
@@ -400,6 +446,10 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         for (RecipeEntryJS recipe : find(filter)) {
             callback.accept(recipe);
         }
+    }
+
+    public void modify(RecipeFilter filter, Consumer<RecipeEntryJS> callback) {
+        forEach(filter, callback);
     }
 
     public void forEach(Consumer<RecipeEntryJS> callback) {

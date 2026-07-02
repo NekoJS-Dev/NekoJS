@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "neoforge-26.2.refmap.json",
   "mixins": [
+    "MinecraftServerMixin",
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
     "inject.MixinBlock",

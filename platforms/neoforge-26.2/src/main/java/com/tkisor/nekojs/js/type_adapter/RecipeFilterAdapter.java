@@ -1,6 +1,10 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import graal.graalvm.polyglot.Value;
 
@@ -10,6 +14,26 @@ import java.util.List;
 public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
     @Override
     public Class<RecipeFilter> getTargetClass() { return RecipeFilter.class; }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                string(),
+                arrayOf(self()),
+                object(
+                        Slot.opt("not", self()),
+                        Slot.opt("and", self()),
+                        Slot.opt("or", self()),
+                        Slot.opt("output", string()),
+                        Slot.opt("input", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("group", string()),
+                        Slot.opt("id", string()),
+                        Slot.opt("idStartsWith", string()),
+                        Slot.opt("idEndsWith", string()),
+                        Slot.opt("idContains", string()),
+                        Slot.opt("type", string())));
+    }
 
     @Override
     public boolean test(Value value) {

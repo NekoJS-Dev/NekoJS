@@ -1,30 +1,52 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.ValueConversionException;
+import java.util.List;
+import java.util.Map;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import graal.graalvm.polyglot.Value;
 
-import java.util.HashMap;
-import java.util.Map;
-
+/**
+ * TagKey 适配器（保留独立实现）。
+ *
+ * <p>修复：
+ * <ul>
+ *   <li>B2：可变 static {@code HashMap} 改为不可变 {@link Map#of}。</li>
+ *   <li>B6：{@code "registry|tag"} 字符串拆分后校验长度/空段，非法格式抛
+ *       {@link ValueConversionException}。</li>
+ *   <li>B9：中文错误信息改英文，并统一走 {@link ValueConversionException}。</li>
+ * </ul>
+ */
 public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
-    private static Map<String, ResourceKey<?>> REGISTRY_MAP = new HashMap<>();
-
-    static {
-        REGISTRY_MAP.put("item", Registries.ITEM);
-        REGISTRY_MAP.put("block", Registries.BLOCK);
-        REGISTRY_MAP.put("fluid", Registries.FLUID);
-        REGISTRY_MAP.put("entity", Registries.ENTITY_TYPE);
-        REGISTRY_MAP.put("biome", Registries.BIOME);
-    }
+    // B2: 不可变映射（旧实现是可变 HashMap）
+    private static final Map<String, ResourceKey<?>> REGISTRY_MAP = Map.of(
+        "item", Registries.ITEM,
+        "block", Registries.BLOCK,
+        "fluid", Registries.FLUID,
+        "entity", Registries.ENTITY_TYPE,
+        "biome", Registries.BIOME
+    );
 
     @Override
     public Class<TagKey> getTargetClass() {
         return TagKey.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                string(),
+                object(
+                        Slot.opt("type", string()),
+                        Slot.req("tag", string())));
     }
 
     @Override
@@ -33,10 +55,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
             return true;
         }
         // { registry: "block", tag: "minecraft:logs" }
-        if (value.hasMembers() && value.hasMember("tag")) {
-            return true;
-        }
-        return false;
+        return value.hasMembers() && value.hasMember("tag");
     }
 
     @Override
@@ -54,8 +73,13 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
             // 检查是否包含注册表前缀，例如 "block|minecraft:logs"
             if (str.contains("|")) {
                 String[] parts = str.split("\\|", 2);
-                registryName = parts[0];
-                tagPath = parts[1];
+                // B6: 校验拆分结果
+                if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank()) {
+                    throw new ValueConversionException(TagKey.class, "'registry|tag' string", str,
+                        "malformed format, expected '<registry>|<tag>'");
+                }
+                registryName = parts[0].trim();
+                tagPath = parts[1].trim();
             } else {
                 tagPath = str;
             }
@@ -76,7 +100,9 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
         ResourceLocation id = ResourceLocation.tryParse(tagPath);
 
         if (id == null) {
-            throw new IllegalArgumentException("[NekoJS] 无法解析非法的 Tag 标识符: " + tagPath);
+            // B9: 英文错误信息，统一异常
+            throw new ValueConversionException(TagKey.class, "valid tag id", tagPath,
+                "invalid tag identifier: " + tagPath);
         }
 
         // 强转并创建 TagKey

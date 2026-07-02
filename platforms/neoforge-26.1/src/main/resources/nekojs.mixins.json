@@ -4,6 +4,7 @@
   "package": "com.tkisor.nekojs.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "MinecraftServerMixin",
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
     "inject.MixinBlock",

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
@@ -13,6 +14,13 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * 事件回调注册时的加载时预检：解析回调源码，扫描其首参（事件对象）的成员访问，
+ * 对照 {@link JavaMemberIndex#propertyMembersOf(Class)} 校验是否存在；不存在则上报。
+ *
+ * <p>成员访问扫描委托 {@link ScriptMemberAccessScanner}（与 {@code GlobalBindingMemberValidator} 共享）。
+ * 这里只负责识别回调首参名（箭头函数 / function 表达式）并把命中位点映射回 {@link SourceSection} 的绝对行列。
+ */
 final class EventCallbackSourceValidator {
     private EventCallbackSourceValidator() {}
 
@@ -34,9 +42,9 @@ final class EventCallbackSourceValidator {
             return;
         }
 
-        Set<String> validMembers = EventProxy.validMembers(eventType);
+        Set<String> validMembers = JavaMemberIndex.propertyMembersOf(eventType);
         Set<String> reported = new HashSet<>();
-        scanMemberAccesses(source, parameter, (member, offset) -> {
+        ScriptMemberAccessScanner.scan(source, Set.of(parameter), (identifier, member, offset) -> {
             if (validMembers.contains(member) || !reported.add(member)) {
                 return;
             }
@@ -66,7 +74,7 @@ final class EventCallbackSourceValidator {
             String eventLabel
     ) {
         try {
-            String message = EventProxy.unknownMemberMessage(eventType, member);
+            String message = JavaMemberIndex.unknownMemberMessage(eventType, member);
 
             int[] local = lineColumn(source, offset);
             int line = section.getStartLine() + local[0] - 1;
@@ -170,128 +178,11 @@ final class EventCallbackSourceValidator {
         return -1;
     }
 
-    private static void scanMemberAccesses(String source, String parameter, MemberConsumer consumer) {
-        for (int i = 0; i < source.length();) {
-            char c = source.charAt(i);
-            if (c == '\'' || c == '"') {
-                i = skipQuoted(source, i, c);
-                continue;
-            }
-            if (c == '`') {
-                i = skipTemplate(source, i);
-                continue;
-            }
-            if (c == '/' && i + 1 < source.length()) {
-                char next = source.charAt(i + 1);
-                if (next == '/') {
-                    i = skipLineComment(source, i + 2);
-                    continue;
-                }
-                if (next == '*') {
-                    i = skipBlockComment(source, i + 2);
-                    continue;
-                }
-            }
-            if (isIdentifierStart(c)) {
-                int start = i++;
-                while (isIdentifierPart(charAt(source, i))) {
-                    i++;
-                }
-                if (source.substring(start, i).equals(parameter) && boundaryBefore(source, start)) {
-                    int cursor = skipWhitespace(source, i);
-                    if (source.startsWith("?.", cursor)) {
-                        cursor += 2;
-                    } else if (charAt(source, cursor) == '.') {
-                        cursor++;
-                    } else if (charAt(source, cursor) == '[') {
-                        scanBracketMember(source, cursor, consumer);
-                        continue;
-                    } else {
-                        continue;
-                    }
-                    cursor = skipWhitespace(source, cursor);
-                    if (isIdentifierStart(charAt(source, cursor))) {
-                        int memberStart = cursor++;
-                        while (isIdentifierPart(charAt(source, cursor))) {
-                            cursor++;
-                        }
-                        consumer.accept(source.substring(memberStart, cursor), memberStart);
-                    }
-                }
-                continue;
-            }
-            i++;
-        }
-    }
-
-    private static void scanBracketMember(String source, int open, MemberConsumer consumer) {
-        int i = skipWhitespace(source, open + 1);
-        char quote = charAt(source, i);
-        if (quote != '\'' && quote != '"') {
-            return;
-        }
-        int start = i + 1;
-        int end = start;
-        while (end < source.length()) {
-            char c = source.charAt(end);
-            if (c == '\\') {
-                end += 2;
-                continue;
-            }
-            if (c == quote) {
-                int close = skipWhitespace(source, end + 1);
-                if (charAt(source, close) == ']') {
-                    consumer.accept(source.substring(start, end), start);
-                }
-                return;
-            }
-            end++;
-        }
-    }
-
     private static int skipWhitespace(String source, int index) {
         while (index < source.length() && Character.isWhitespace(source.charAt(index))) {
             index++;
         }
         return index;
-    }
-
-    private static int skipQuoted(String source, int start, char quote) {
-        for (int i = start + 1; i < source.length(); i++) {
-            char c = source.charAt(i);
-            if (c == '\\') {
-                i++;
-            } else if (c == quote) {
-                return i + 1;
-            }
-        }
-        return source.length();
-    }
-
-    private static int skipTemplate(String source, int start) {
-        for (int i = start + 1; i < source.length(); i++) {
-            char c = source.charAt(i);
-            if (c == '\\') {
-                i++;
-            } else if (c == '`') {
-                return i + 1;
-            }
-        }
-        return source.length();
-    }
-
-    private static int skipLineComment(String source, int start) {
-        int end = source.indexOf('\n', start);
-        return end < 0 ? source.length() : end + 1;
-    }
-
-    private static int skipBlockComment(String source, int start) {
-        int end = source.indexOf("*/", start);
-        return end < 0 ? source.length() : end + 2;
-    }
-
-    private static boolean boundaryBefore(String source, int index) {
-        return index <= 0 || !isIdentifierPart(source.charAt(index - 1));
     }
 
     private static boolean isBoundary(String source, int index) {
@@ -308,9 +199,5 @@ final class EventCallbackSourceValidator {
 
     private static boolean isIdentifierPart(char c) {
         return c == '_' || c == '$' || Character.isLetterOrDigit(c);
-    }
-
-    private interface MemberConsumer {
-        void accept(String member, int offset);
     }
 }

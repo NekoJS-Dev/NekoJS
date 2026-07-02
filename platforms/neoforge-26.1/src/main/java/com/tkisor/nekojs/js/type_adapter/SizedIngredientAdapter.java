@@ -1,8 +1,13 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.crafting.SizedIngredient;
@@ -11,6 +16,20 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
     @Override
     public Class<SizedIngredient> getTargetClass() {
         return SizedIngredient.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                string(),
+                arrayOf(string()),
+                host(Ingredient.class),
+                object(
+                        Slot.opt("ingredient", host(Ingredient.class)),
+                        Slot.opt("item", string()),
+                        Slot.opt("tag", string()),
+                        Slot.req("count", number())));
     }
 
     @Override
@@ -25,26 +44,35 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
 
     @Override
     public SizedIngredient apply(Value value) {
-        if (value.isHostObject()) {
-            Object obj = value.asHostObject();
-            if (obj instanceof SizedIngredient sized) return sized;
-            if (obj instanceof SizedIngredientJS wrapper) return wrapper.unwrap();
-            if (obj instanceof Ingredient ingredient) return new SizedIngredient(ingredient, 1);
+        try {
+            if (value.isHostObject()) {
+                Object obj = value.asHostObject();
+                if (obj instanceof SizedIngredient sized) return sized;
+                if (obj instanceof SizedIngredientJS wrapper) return wrapper.unwrap();
+                if (obj instanceof Ingredient ingredient) return new SizedIngredient(ingredient, 1);
+            }
+            if (value.hasMembers() && value.hasMember("count")) {
+                Value ingredientValue = value.hasMember("ingredient") ? value.getMember("ingredient") : value.hasMember("item") ? value.getMember("item") : value;
+                return new SizedIngredient(IngredientResolver.fromValue(ingredientValue), parseCount(value.getMember("count")));
+            }
+            return new SizedIngredient(IngredientResolver.fromValue(value), 1);
+        } catch (ValueConversionException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new ValueConversionException(SizedIngredient.class, "ingredient / ingredient object with count", value,
+                e.getMessage(), e);
         }
-        if (value.hasMembers() && value.hasMember("count")) {
-            Value ingredientValue = value.hasMember("ingredient") ? value.getMember("ingredient") : value.hasMember("item") ? value.getMember("item") : value;
-            return new SizedIngredient(IngredientResolver.fromValue(ingredientValue), parseCount(value.getMember("count")));
-        }
-        return new SizedIngredient(IngredientResolver.fromValue(value), 1);
     }
 
     private static int parseCount(Value value) {
         if (!value.isNumber() || !value.fitsInInt()) {
-            throw new IllegalArgumentException("SizedIngredient count must be an integer");
+            throw new ValueConversionException(SizedIngredient.class, "integer count", value,
+                "SizedIngredient count must be an integer");
         }
         int count = value.asInt();
         if (count <= 0) {
-            throw new IllegalArgumentException("SizedIngredient count must be positive: " + count);
+            throw new ValueConversionException(SizedIngredient.class, "positive integer count", count,
+                "SizedIngredient count must be positive: " + count);
         }
         return count;
     }

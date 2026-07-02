@@ -32,6 +32,7 @@ import com.tkisor.nekojs.bindings.static_access.UUIDJS;
 import com.tkisor.nekojs.bindings.static_access.UtilsJS;
 import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.ScriptType;
@@ -59,6 +60,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.Fireworks;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
@@ -162,6 +164,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
+
+        // Codec-backed adapter 示范：Fireworks（1.21.1 有 Fireworks.CODEC）
+        TypeAdapterDsl.registerCodec(registry, Fireworks.class, Fireworks.CODEC);
     }
 
     @Override
@@ -191,5 +196,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));
 
         NekoCommonManualDeclarations.register(registry);
+    }
+
+    @Override
+    public void registerNodeTypeDocs(TypeDocsRegister registry) {
+        NodeModuleTypeDocs.registerBuiltin(registry);
     }
 }

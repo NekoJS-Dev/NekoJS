@@ -90,7 +90,7 @@ neoForge {
 dependencies {
     implementation project(':common')
 
-    implementation("curse.maven:graal-1504336:7951071")
+    implementation("curse.maven:graal-1504336:7983197")
     implementation "curse.maven:jei-238222:7920926"
 
     compileOnly 'org.projectlombok:lombok:1.18.44'

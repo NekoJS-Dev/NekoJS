@@ -1,8 +1,6 @@
 package com.tkisor.nekojs.api.recipe.definition;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonPrimitive;
+import com.tkisor.nekojs.api.recipe.RecipeFieldRoles;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -44,33 +42,30 @@ public final class RecipeSchemaAutoDiscovery {
 
             for (DiscoveredRecipeKey key : sortedKeys) {
                 RecipeFieldDefinition field = new RecipeFieldDefinition(
-                        key.name(), key.name(), key.kind(), key.isList(), key.optional(), null
+                        key.name(), key.name(), key.kind(), key.isList(), key.optional(), null,
+                        RecipeFieldRoles.roleOfName(key.name())
                 );
                 fields.put(key.name(), field);
                 orderedKeys.add(key.name());
             }
 
+            List<String> unique = sortedKeys.stream()
+                    .filter(k -> RecipeFieldRoles.roleOfName(k.name()) == RecipeFieldRole.OUTPUT)
+                    .map(DiscoveredRecipeKey::name)
+                    .toList();
             List<List<String>> constructors = buildConstructors(orderedKeys, sortedKeys);
-            builder.add(new RecipeTypeDefinition(namespace, name, fullType, prefix, constructors, fields));
+            builder.add(new RecipeTypeDefinition(namespace, name, fullType, prefix, constructors, fields, unique));
         }
 
         return builder.build();
     }
 
     private static int keyRolePriority(String name) {
-        if (isOutputName(name)) return 0;
-        if (isInputName(name)) return 1;
-        return 2;
-    }
-
-    private static boolean isOutputName(String name) {
-        return name.startsWith("result") || name.startsWith("output");
-    }
-
-    private static boolean isInputName(String name) {
-        return name.startsWith("ingredient") || name.equals("ingredients") || name.equals("inputs")
-                || name.equals("key") || name.equals("pattern")
-                || name.equals("template") || name.equals("base") || name.equals("addition");
+        return switch (RecipeFieldRoles.roleOfName(name)) {
+            case OUTPUT -> 0;
+            case INPUT -> 1;
+            case OTHER -> 2;
+        };
     }
 
     private static List<List<String>> buildConstructors(List<String> orderedKeys, List<DiscoveredRecipeKey> keyInfos) {

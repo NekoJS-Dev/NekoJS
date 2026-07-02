@@ -10,10 +10,10 @@ import java.util.*;
  *
  * <p>格式参考 ProbeJS：
  * <pre>
- * import { $ClassA } from "@package/other/package";
- * export * as subpackage from "@package/package/subpackage";
+ * import { $ClassA } from "java:other/package";
+ * export * as subpackage from "java:package/subpackage";
  *
- * declare module "@package/package" {
+ * declare module "java:package" {
  *     export class $ClassA { ... }
  * }
  * </pre>
@@ -21,15 +21,18 @@ import java.util.*;
 public final class IndexFileGenerator {
     private final ClassDeclGenerator classDeclGenerator;
     private final TypeConverter typeConverter;
+    private final AdapterAliasGenerator adapterAliasGenerator;
 
     // 性能缓存（线程安全，支持并行生成）
     private final java.util.concurrent.ConcurrentHashMap<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, String> declCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public IndexFileGenerator(ClassDeclGenerator classDeclGenerator, TypeConverter typeConverter) {
+    public IndexFileGenerator(ClassDeclGenerator classDeclGenerator, TypeConverter typeConverter,
+                              AdapterAliasGenerator adapterAliasGenerator) {
         this.classDeclGenerator = classDeclGenerator;
         this.typeConverter = typeConverter;
+        this.adapterAliasGenerator = adapterAliasGenerator;
     }
 
     /**
@@ -38,7 +41,7 @@ public final class IndexFileGenerator {
     public String generate(String packageName, List<String> classNames, List<String> subpackages,
                            Set<String> allClasses) {
         StringBuilder sb = new StringBuilder();
-        String modulePath = "@package/" + packageName.replace('.', '/');
+        String modulePath = "java:" + packageName.replace('.', '/');
 
         // 收集需要 import 的类（使用缓存）
         Set<String> importsNeeded = new LinkedHashSet<>();
@@ -58,6 +61,20 @@ public final class IndexFileGenerator {
             }
         }
 
+        // 合并适配器输入别名引用的跨包类型（如 $Item、$NekoId），并探测是否引用了 @special 注册表字面量
+        boolean moduleUsesRegistry = false;
+        for (String simpleName : classNames) {
+            AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(packageName + "." + simpleName);
+            if (alias == null) continue;
+            importsNeeded.addAll(alias.importFqns());
+            if (alias.usesRegistry()) moduleUsesRegistry = true;
+        }
+
+        // 引用 @special 注册表字面量时，需要导入 RegistryTypes 命名空间
+        if (moduleUsesRegistry) {
+            sb.append("import type { RegistryTypes } from \"@special/types\";\n");
+        }
+
         // 生成 import 语句（按包分组）
         if (!importsNeeded.isEmpty()) {
             Map<String, List<String>> importsByPackage = new TreeMap<>();
@@ -66,11 +83,17 @@ public final class IndexFileGenerator {
                 if (dot < 0) continue; // 默认包的类无法通过模块路径导入，跳过
                 String pkg = fqn.substring(0, dot);
                 String simple = fqn.substring(dot + 1);
-                importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>()).add("$" + simple);
+                List<String> names = importsByPackage.computeIfAbsent(pkg, k -> new ArrayList<>());
+                names.add("$" + simple);
+                // 若该类有适配器输入别名，方法参数放宽后会引用 $Foo_，需一并导入
+                AdapterAliasGenerator.AdapterAlias alias = adapterAliasGenerator.getAlias(fqn);
+                if (alias != null) {
+                    names.add(alias.aliasName());
+                }
             }
 
             for (var entry : importsByPackage.entrySet()) {
-                String importPath = "@package/" + entry.getKey().replace('.', '/');
+                String importPath = "java:" + entry.getKey().replace('.', '/');
                 sb.append("import { ").append(String.join(", ", entry.getValue()));
                 sb.append(" } from \"").append(importPath).append("\";\n");
             }
@@ -120,9 +143,15 @@ public final class IndexFileGenerator {
                 }
             }
 
-            // 生成类型别名（$List_ = E[] 等）
+            // 生成类型别名：优先适配器驱动的输入别名（$ItemStack_ 等），否则回退到集合/残留别名
             for (String simpleName : classNames) {
                 String fullName = packageName + "." + simpleName;
+                AdapterAliasGenerator.AdapterAlias adapterAlias = adapterAliasGenerator.getAlias(fullName);
+                if (adapterAlias != null) {
+                    sb.append("    export type ").append(adapterAlias.aliasName())
+                      .append(" = ").append(adapterAlias.union()).append(";\n");
+                    continue;
+                }
                 String alias = generateTypeAlias(fullName, simpleName);
                 if (alias != null) {
                     sb.append(alias);
@@ -142,7 +171,7 @@ public final class IndexFileGenerator {
         sb.append("// NekoJS Probe Type Declarations\n\n");
 
         for (String pkg : topPackages) {
-            sb.append("export * as ").append(pkg).append(" from \"@package/").append(pkg).append("\";\n");
+            sb.append("export * as ").append(pkg).append(" from \"java:").append(pkg).append("\";\n");
         }
 
         return sb.toString();
@@ -198,6 +227,11 @@ public final class IndexFileGenerator {
 
     private void collectTypeImports(Type type, Set<String> imports, String currentPackage) {
         if (type instanceof Class<?> cls) {
+            // 数组类：递归收集组件类型，避免 "[Lnet/.../Foo;" 描述符泄漏到 import
+            if (cls.isArray()) {
+                collectTypeImports(cls.getComponentType(), imports, currentPackage);
+                return;
+            }
             if (!cls.isPrimitive() && !inSamePackage(cls, currentPackage) && cls != Object.class) {
                 imports.add(cls.getName());
             }
@@ -263,42 +297,15 @@ public final class IndexFileGenerator {
                     "({0}, {1}) => boolean";
             case "java.util.function.BinaryOperator" ->
                     "({0}, {0}) => {0}";
-            // ========== 非 adapter 的输入别名（结构体/函数式接口）==========
-
-            // ========== Adapter 输入别名（NON_GENERIC 前缀表示固定类型）==========
-            // Minecraft 核心类型
-            case "net.minecraft.world.item.ItemStack" ->
-                    "NON_GENERIC:$ItemStack | string";
-            case "net.minecraft.world.item.Item" ->
-                    "NON_GENERIC:$Item | string";
+            // ========== 非 adapter 的残留输入别名（无对应适配器，固定类型）==========
             case "net.minecraft.world.item.Items" ->
                     "NON_GENERIC:$Items";
-            case "net.minecraft.world.item.crafting.Ingredient" ->
-                    "NON_GENERIC:$Ingredient | string | string[]";
-            case "net.minecraft.resources.ResourceLocation" ->
-                    "NON_GENERIC:$ResourceLocation | string";
-            case "net.minecraft.network.chat.Component" ->
-                    "NON_GENERIC:$Component | string";
             case "net.minecraft.core.BlockPos" ->
                     "NON_GENERIC:$BlockPos | [number, number, number]";
             case "net.minecraft.world.level.block.state.BlockState" ->
                     "NON_GENERIC:$BlockState | string";
-            case "net.minecraft.world.level.block.Block" ->
-                    "NON_GENERIC:$Block | string";
-            case "net.minecraft.world.entity.EntityType" ->
-                    "NON_GENERIC:$EntityType | string";
             case "net.minecraft.core.registries.BuiltInRegistries" ->
                     "NON_GENERIC:$BuiltInRegistries";
-
-            // NeoForge Fluid 类型
-            case "net.neoforged.neoforge.fluids.FluidStack" ->
-                    "NON_GENERIC:$FluidStack | string";
-            case "net.neoforged.neoforge.fluids.crafting.FluidIngredient" ->
-                    "NON_GENERIC:$FluidIngredient | string | string[]";
-            case "net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient" ->
-                    "NON_GENERIC:$SizedFluidIngredient | { fluid?: string, amount?: number }";
-            case "net.neoforged.neoforge.common.crafting.SizedIngredient" ->
-                    "NON_GENERIC:$SizedIngredient | { ingredient?: any, count?: number }";
             default -> null;
         };
 

@@ -1,6 +1,10 @@
 package com.tkisor.nekojs.js.type_adapter;
 
+import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.nbt.*;
 import graal.graalvm.polyglot.Value;
 
@@ -9,6 +13,13 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
     @Override
     public Class<CompoundTag> getTargetClass() {
         return CompoundTag.class;
+    }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                object());
     }
 
     @Override
@@ -33,9 +44,10 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
         if (val.isNull()) return StringTag.valueOf("");
         if (val.isBoolean()) return ByteTag.valueOf(val.asBoolean());
         if (val.isNumber()) {
-            double d = val.asDouble();
-            if (d == Math.floor(d)) return IntTag.valueOf(val.asInt());
-            return DoubleTag.valueOf(d);
+            // B5: 分级 int / long / double，避免大整数精度丢失
+            if (val.fitsInInt()) return IntTag.valueOf(val.asInt());
+            if (val.fitsInLong()) return LongTag.valueOf(val.asLong());
+            return DoubleTag.valueOf(val.asDouble());
         }
         if (val.isString()) return StringTag.valueOf(val.asString());
 

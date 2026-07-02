@@ -42,6 +42,7 @@ public final class WorkspaceGenerator {
                     - client_scripts: Runs on the client only. Used for GUI, key bindings, etc.
                     - test_scripts: Explicit smoke/regression scripts. Run with /nekojs test; they are not loaded by normal startup or reload.
                     - Note: Automatically generated type declaration files (.d.ts) are located in the %s folder. Do not modify them manually.
+                    - Tip: Write .ts (or add // @ts-check at the top of a .js file) to enable editor type-checking; run /nekojs view_all_errors in-game to inspect script errors.
                     """.formatted(NekoJSPaths.get().probeDir().getFileName()).trim();
                 Files.writeString(NekoJSPaths.get().readme(), content);
             } catch (IOException ex) {
@@ -72,10 +73,9 @@ public final class WorkspaceGenerator {
         model.compilerOptions.moduleResolution = "node";
         model.compilerOptions.baseUrl = ".";
 
-        // paths 映射：@package、@side-only/{type}、@special
+        // paths 映射：java:、@side-only/{type}、@special
         Map<String, List<String>> paths = new LinkedHashMap<>();
-        paths.put("@package", List.of(relativeProbePath + "/@package"));
-        paths.put("@package/*", List.of(relativeProbePath + "/@package/*"));
+        paths.put("java:*", List.of(relativeProbePath + "/@package/*"));
 
         String sideOnlyBase = relativeProbePath + "/@side-only/" + scriptType.name;
         paths.put("@side-only/" + scriptType.name, List.of(sideOnlyBase));
@@ -89,6 +89,7 @@ public final class WorkspaceGenerator {
         // include 中追加 probe 生成的 .d.ts，让 VS Code 索引类型声明
         List<String> includes = new ArrayList<>(model.include);
         includes.add(relativeProbePath + "/@package/**/*.d.ts");
+        includes.add(relativeProbePath + "/@manual/**/*.d.ts");
         includes.add(sideOnlyBase + "/**/*.d.ts");
         model.include = includes;
 

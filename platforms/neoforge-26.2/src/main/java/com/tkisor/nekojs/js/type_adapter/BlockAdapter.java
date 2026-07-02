@@ -1,8 +1,11 @@
 package com.tkisor.nekojs.js.type_adapter;
 
-import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
 import com.tkisor.nekojs.api.data.NekoId;
-import graal.graalvm.polyglot.Value;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -10,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
-public class BlockAdapter implements JSTypeAdapter<Block> {
+public class BlockAdapter extends AbstractJSTypeAdapter<Block> {
 
     @Override
     public Class<Block> getTargetClass() {
@@ -18,49 +21,39 @@ public class BlockAdapter implements JSTypeAdapter<Block> {
     }
 
     @Override
-    public boolean test(Value value) {
-        if (value.isNull() || value.isString()) {
-            return true;
-        }
-        if (value.isHostObject()) {
-            Object obj = value.asHostObject();
-            return obj instanceof Block || obj instanceof Item || obj instanceof ItemStack || obj instanceof NekoId;
-        }
-        return false;
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                self(),
+                registry("Block"),
+                host(Item.class),
+                host(ItemStack.class),
+                host(NekoId.class));
     }
 
     @Override
-    public Block apply(Value value) {
-        if (value.isNull()) {
-            return Blocks.AIR;
-        }
+    protected Block defaultValue() {
+        return Blocks.AIR;
+    }
 
-        if (value.isHostObject()) {
-            Object obj = value.asHostObject();
-            if (obj instanceof Block block) return block;
-            if (obj instanceof Item item) return Block.byItem(item);
-            if (obj instanceof ItemStack stack) return Block.byItem(stack.getItem());
-            if (obj instanceof NekoId id) return blockFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
-        }
+    @Override
+    protected Block fromString(String s) {
+        return blockFromId(ParseIds.parseItemOrBlockId(s));
+    }
 
-        if (value.isString()) {
-            return blockFromId(parseId(value.asString()));
+    @Override
+    protected Block fromHostObject(Object host) {
+        if (host instanceof Block block) return block;
+        if (host instanceof Item item) return Block.byItem(item);
+        if (host instanceof ItemStack stack) return Block.byItem(stack.getItem());
+        if (host instanceof NekoId id) {
+            return blockFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
         }
-
-        throw new IllegalArgumentException("Unsupported block value: " + value);
+        return null; // 不识别
     }
 
     private Block blockFromId(Identifier id) {
-        return BuiltInRegistries.BLOCK.getOptional(id).orElseThrow(() -> new IllegalArgumentException("Block not found: " + id));
-    }
-
-    private Identifier parseId(String rawId) {
-        if (rawId == null || rawId.isBlank()) return Identifier.withDefaultNamespace("air");
-        String id = rawId.trim();
-        if (id.startsWith("#")) throw new IllegalArgumentException("Expected block id but got tag id: " + rawId);
-        if (!id.contains(":")) id = "minecraft:" + id;
-        Identifier location = Identifier.tryParse(id);
-        if (location == null) throw new IllegalArgumentException("Invalid block id: " + rawId);
-        return location;
+        return BuiltInRegistries.BLOCK.getOptional(id)
+            .orElseThrow(() -> new com.tkisor.nekojs.api.data.ValueConversionException(
+                Block.class, "registered block id", id, "block not found: " + id));
     }
 }

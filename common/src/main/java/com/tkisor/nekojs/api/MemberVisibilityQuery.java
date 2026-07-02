@@ -1,8 +1,6 @@
 package com.tkisor.nekojs.api;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
-import com.tkisor.nekojs.api.annotation.Remap;
-import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.*;
@@ -158,42 +156,8 @@ public final class MemberVisibilityQuery {
         return hierarchy;
     }
 
+    /** 委托 {@link JavaMemberIndex#remapName}：hideMarker=null（隐藏即从可见集合剔除），strict=true（前缀剥离需非空）。 */
     private static @Nullable String remapMember(Member member) {
-        AccessibleObject ao = (AccessibleObject) member;
-
-        if (ao.isAnnotationPresent(HideFromJS.class)
-                || member.getDeclaringClass().isAnnotationPresent(HideFromJS.class)) {
-            return null;
-        }
-
-        Remap remap = ao.getAnnotation(Remap.class);
-        if (remap != null) {
-            return remap.value();
-        }
-
-        String original = member.getName();
-
-        RemapByPrefix remapByPrefix = ao.getAnnotation(RemapByPrefix.class);
-        if (remapByPrefix != null) {
-            String stripped = findAndRemovePrefix(original, remapByPrefix.value());
-            if (stripped != null) return stripped;
-        }
-
-        remapByPrefix = member.getDeclaringClass().getAnnotation(RemapByPrefix.class);
-        if (remapByPrefix != null) {
-            String stripped = findAndRemovePrefix(original, remapByPrefix.value());
-            if (stripped != null) return stripped;
-        }
-
-        return original;
-    }
-
-    private static @Nullable String findAndRemovePrefix(String name, String[] prefixes) {
-        for (String prefix : prefixes) {
-            if (name.startsWith(prefix) && name.length() > prefix.length()) {
-                return name.substring(prefix.length());
-            }
-        }
-        return null;
+        return JavaMemberIndex.remapName(member, null, true);
     }
 }

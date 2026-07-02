@@ -1,8 +1,16 @@
 package com.tkisor.nekojs.wrapper.pdata;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NumericTag;
+import net.minecraft.nbt.ByteTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.FloatTag;
+import net.minecraft.nbt.IntTag;
+import net.minecraft.nbt.LongTag;
+import net.minecraft.nbt.ShortTag;
 import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.ByteArrayTag;
+import net.minecraft.nbt.IntArrayTag;
+import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.nbt.Tag;
 
 import java.util.Objects;
@@ -104,17 +112,32 @@ public class PersistentDataJS {
         return this;
     }
 
+    /**
+     * 批量编辑事务：在一次 copy 上执行多次修改，结束统一写回，避免连续 {@code putXxx} 的多次 copy+写回。
+     * 脚本示例：{@code entity.pdata.edit(tag => { tag.putInt("a",1); tag.putString("b","x"); })}
+     */
+    public PersistentDataJS edit(Consumer<CompoundTag> editor) {
+        CompoundTag tag = getTag();
+        editor.accept(tag);
+        saveTag(tag);
+        return this;
+    }
+
     public Object get(String key) {
         CompoundTag tag = getTag();
         if (!tag.contains(key)) return null;
 
         Tag element = tag.get(key);
-        if (element instanceof NumericTag num) {
-            double d = num.getAsDouble();
-            if (d == Math.floor(d)) return num.getAsInt();
-            return d;
-        }
+        if (element instanceof LongTag l) return l.getAsLong();
+        if (element instanceof IntTag i) return i.getAsInt();
+        if (element instanceof ByteTag b) return b.getAsByte();
+        if (element instanceof ShortTag s) return s.getAsShort();
+        if (element instanceof FloatTag f) return f.getAsFloat();
+        if (element instanceof DoubleTag d) return d.getAsDouble();
         if (element instanceof StringTag str) return str.getAsString();
+        if (element instanceof ByteArrayTag ba) return ba.getAsByteArray();
+        if (element instanceof IntArrayTag ia) return ia.getAsIntArray();
+        if (element instanceof LongArrayTag la) return la.getAsLongArray();
         return element;
     }
 

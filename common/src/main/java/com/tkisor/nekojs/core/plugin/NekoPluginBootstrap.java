@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.core.plugin;
 
-import com.tkisor.nekojs.api.NekoJSBasePlugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.NodeModuleRegister;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
 import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
@@ -10,6 +10,7 @@ import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.lifecycle.PluginLifecycleRegister;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionPoint;
 import com.tkisor.nekojs.api.plugin.NekoPluginExtensionProvider;
@@ -38,40 +39,44 @@ import java.util.stream.Collectors;
 
 public final class NekoPluginBootstrap {
 
-    private NekoPluginBootstrap() {}
+    private NekoPluginBootstrap() {
+    }
 
     private static List<NekoPluginExtensionPoint<?>> builtInExtensionPoints(com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         return List.of(
-            base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
-            base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(scriptProperties)),
-            base("nekojs:bindings", (plugin, context) -> {
-                    var predicate = context.client()
-                        ? ScriptTypePredicate.exact(ScriptType.CLIENT).negate()
-                        : ScriptTypePredicate.any();
-                    predicate.streamMatched().map(context.bindings()::at).forEach(plugin::registerBinding);
-                }
-            ),
-            base("nekojs:adapters", (plugin, context) -> plugin.registerAdapters(context.adapters())),
-            base("nekojs:type_docs", (plugin, context) -> plugin.registerTypeDocs(context.typeDocs())),
-            platform("nekojs:events", (plugin, context) -> plugin.registerEvents(context.events())),
-            clientPlatform("nekojs:client_events", (plugin, context) -> plugin.registerClientEvents(context.events())),
-            platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces())),
-            platform("nekojs:recipe_schemas", (plugin, context) -> plugin.registerRecipeSchemas(context.recipeSchemas())),
-            platform("nekojs:recipe_lifecycle", (plugin, context) -> plugin.registerRecipeLifecycleHooks(context.recipeLifecycle()))
+                base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
+                base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(scriptProperties)),
+                base("nekojs:bindings", (plugin, context) -> {
+                            var predicate = context.client()
+                                    ? ScriptTypePredicate.exact(ScriptType.CLIENT).negate()
+                                    : ScriptTypePredicate.any();
+                            predicate.streamMatched().map(context.bindings()::at).forEach(plugin::registerBinding);
+                        }
+                ),
+                base("nekojs:adapters", (plugin, context) -> plugin.registerAdapters(context.adapters())),
+                base("nekojs:type_docs", (plugin, context) -> plugin.registerTypeDocs(context.typeDocs())),
+                base("nekojs:node_modules", (plugin, context) -> plugin.registerNodeModules(context.nodeModules())),
+                base("nekojs:node_type_docs", (plugin, context) -> plugin.registerNodeTypeDocs(context.typeDocs())),
+                platform("nekojs:events", (plugin, context) -> plugin.registerEvents(context.events())),
+                clientPlatform("nekojs:client_events", (plugin, context) -> plugin.registerClientEvents(context.events())),
+                platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces())),
+                platform("nekojs:recipe_schemas", (plugin, context) -> plugin.registerRecipeSchemas(context.recipeSchemas())),
+                platform("nekojs:recipe_lifecycle", (plugin, context) -> plugin.registerRecipeLifecycleHooks(context.recipeLifecycle())),
+                base("nekojs:lifecycle", (plugin, context) -> plugin.registerLifecycleHooks(context.lifecycle()))
         );
     }
 
-    public static NekoPluginRuntime bootstrap(List<NekoJSBasePlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
+    public static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         BootstrapState state = new BootstrapState(Platform.isClient());
         ExtensionRegistry registry = new ExtensionRegistry();
         builtInExtensionPoints(scriptProperties).forEach(registry::register);
-        for (NekoJSBasePlugin plugin : plugins) {
+        for (NekoJSPlugin plugin : plugins) {
             if (plugin instanceof NekoPluginExtensionProvider provider) {
                 provider.registerPluginExtensionPoints(registry);
             }
         }
         List<NekoPluginExtensionPoint<?>> extensionPoints = registry.freeze();
-        for (NekoJSBasePlugin plugin : plugins) {
+        for (NekoJSPlugin plugin : plugins) {
             for (NekoPluginExtensionPoint<?> extensionPoint : extensionPoints) {
                 extensionPoint.collect(plugin, state);
             }
@@ -81,7 +86,7 @@ public final class NekoPluginBootstrap {
         com.tkisor.nekojs.api.probe.ProbeRegistry.setGenerator(new com.tkisor.nekojs.probe.BuiltinProbeGenerator(), "NekoJS (built-in)");
 
         // 允许插件替换 probe generator
-        for (NekoJSBasePlugin plugin : plugins) {
+        for (NekoJSPlugin plugin : plugins) {
             plugin.registerProbeGenerator();
         }
 
@@ -92,8 +97,8 @@ public final class NekoPluginBootstrap {
         return state.createRuntime();
     }
 
-    private static NekoPluginExtensionPoint<NekoJSBasePlugin> base(String id, BiConsumer<NekoJSBasePlugin, NekoPluginExtensionContext> collector) {
-        return NekoPluginExtensionPoint.of(id, NekoJSBasePlugin.class, collector);
+    private static NekoPluginExtensionPoint<NekoJSPlugin> base(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
+        return NekoPluginExtensionPoint.of(id, NekoJSPlugin.class, collector);
     }
 
     private static NekoPluginExtensionPoint<NekoJSPlugin> platform(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
@@ -109,7 +114,7 @@ public final class NekoPluginBootstrap {
         private boolean frozen;
 
         @Override
-        public <P extends NekoJSBasePlugin> void register(NekoPluginExtensionPoint<P> extensionPoint) {
+        public <P extends NekoJSPlugin> void register(NekoPluginExtensionPoint<P> extensionPoint) {
             if (frozen) {
                 throw new IllegalStateException("Plugin extension registry is frozen after bootstrap collection");
             }
@@ -125,7 +130,7 @@ public final class NekoPluginBootstrap {
         }
     }
 
-    private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister {
+    private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister, NodeModuleRegister {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
@@ -133,10 +138,16 @@ public final class NekoPluginBootstrap {
         private final EventGroupRegistry eventGroups = new EventGroupRegistry.Impl();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
+        private final Map<String, String> nodeModules = new LinkedHashMap<>();
         private final Map<String, RecipeNamespaceEntry> recipeNamespaces = new LinkedHashMap<>();
         private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides = new LinkedHashMap<>();
         private final List<Consumer<RecipeLifecycleContext>> beforeRecipeLoadingHooks = new ArrayList<>();
         private final List<Consumer<RecipeLifecycleContext>> afterRecipesHooks = new ArrayList<>();
+        private final List<Runnable> initHooks = new ArrayList<>();
+        private final List<Runnable> initStartupHooks = new ArrayList<>();
+        private final List<Runnable> afterInitHooks = new ArrayList<>();
+        private final List<Consumer<ScriptType>> beforeScriptsLoadedHooks = new ArrayList<>();
+        private final List<Consumer<ScriptType>> afterScriptsLoadedHooks = new ArrayList<>();
         private boolean frozen;
 
         BootstrapState(boolean client) {
@@ -174,6 +185,11 @@ public final class NekoPluginBootstrap {
         }
 
         @Override
+        public NodeModuleRegister nodeModules() {
+            return this;
+        }
+
+        @Override
         public RecipeNamespaceRegister recipeNamespaces() {
             return this::registerRecipeNamespace;
         }
@@ -203,6 +219,41 @@ public final class NekoPluginBootstrap {
             };
         }
 
+        @Override
+        public PluginLifecycleRegister lifecycle() {
+            return new PluginLifecycleRegister() {
+                @Override
+                public void onInit(Runnable hook) {
+                    requireMutable("lifecycle init hooks");
+                    initHooks.add(Objects.requireNonNull(hook, "hook"));
+                }
+
+                @Override
+                public void onInitStartup(Runnable hook) {
+                    requireMutable("lifecycle initStartup hooks");
+                    initStartupHooks.add(Objects.requireNonNull(hook, "hook"));
+                }
+
+                @Override
+                public void onAfterInit(Runnable hook) {
+                    requireMutable("lifecycle afterInit hooks");
+                    afterInitHooks.add(Objects.requireNonNull(hook, "hook"));
+                }
+
+                @Override
+                public void onBeforeScriptsLoaded(Consumer<ScriptType> hook) {
+                    requireMutable("lifecycle beforeScriptsLoaded hooks");
+                    beforeScriptsLoadedHooks.add(Objects.requireNonNull(hook, "hook"));
+                }
+
+                @Override
+                public void onAfterScriptsLoaded(Consumer<ScriptType> hook) {
+                    requireMutable("lifecycle afterScriptsLoaded hooks");
+                    afterScriptsLoadedHooks.add(Objects.requireNonNull(hook, "hook"));
+                }
+            };
+        }
+
         void freeze() {
             frozen = true;
             scriptCompilers.freeze();
@@ -216,10 +267,16 @@ public final class NekoPluginBootstrap {
                     Map.copyOf(eventGroups.view()),
                     typeDocsSnapshot(),
                     manualDeclarationsSnapshot(),
+                    nodeModulesSnapshot(),
                     recipeNamespacesSnapshot(),
                     recipeSchemaOverridesSnapshot(),
                     beforeRecipeLoadingHooksSnapshot(),
-                    afterRecipesHooksSnapshot()
+                    afterRecipesHooksSnapshot(),
+                    List.copyOf(initHooks),
+                    List.copyOf(initStartupHooks),
+                    List.copyOf(afterInitHooks),
+                    List.copyOf(beforeScriptsLoadedHooks),
+                    List.copyOf(afterScriptsLoadedHooks)
             );
         }
 
@@ -243,6 +300,14 @@ public final class NekoPluginBootstrap {
             manualDeclarations.add(Objects.requireNonNull(entry, "entry"));
         }
 
+        @Override
+        public void register(String moduleId, String source) {
+            requireMutable("node modules");
+            Objects.requireNonNull(moduleId, "moduleId");
+            Objects.requireNonNull(source, "source");
+            nodeModules.put(moduleId, source);
+        }
+
         void registerRecipeNamespace(RecipeNamespaceEntry entry) {
             requireMutable("recipe namespaces");
             Objects.requireNonNull(entry, "entry");
@@ -254,7 +319,7 @@ public final class NekoPluginBootstrap {
 
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
             return this.bindingRegistries.stream()
-                .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
+                    .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
         }
 
         List<TypeDocCatalogEntry> typeDocsSnapshot() {
@@ -267,6 +332,10 @@ public final class NekoPluginBootstrap {
             return manualDeclarations.stream()
                     .sorted(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority))
                     .toList();
+        }
+
+        Map<String, String> nodeModulesSnapshot() {
+            return Collections.unmodifiableMap(new LinkedHashMap<>(nodeModules));
         }
 
         Map<String, RecipeNamespaceEntry> recipeNamespacesSnapshot() {

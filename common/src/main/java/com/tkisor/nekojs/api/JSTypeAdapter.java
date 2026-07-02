@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -15,6 +16,19 @@ public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
 
     default HostAccess.TargetMappingPrecedence getPrecedence() {
         return HostAccess.TargetMappingPrecedence.LOWEST;
+    }
+
+    /**
+     * 声明此适配器接受的输入形状，供 probe 生成宽松的 TypeScript 输入别名。
+     *
+     * <p>返回空列表（默认）表示未声明 —— probe 不会为该目标生成 {@code $Foo_} 别名，
+     * 也不会放宽引用该类型的参数。建议实现此方法，使 {@link #test(Value)} 的接受范围
+     * 与生成的类型声明保持一致。
+     *
+     * @see AdapterInputShape
+     */
+    default List<AdapterInputShape> inputShapes() {
+        return List.of();
     }
 
     /**

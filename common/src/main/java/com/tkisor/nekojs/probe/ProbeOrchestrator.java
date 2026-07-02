@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
@@ -22,10 +23,11 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
     private final TypeConverter typeConverter = new TypeConverter(aliasRegistry);
     private final ClassDeclGenerator classDeclGenerator = new ClassDeclGenerator(typeConverter);
-    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(classDeclGenerator, typeConverter);
-    private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter);
+    private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
+    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(classDeclGenerator, typeConverter, adapterAliasGenerator);
+    private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator(typeConverter);
-    private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator();
+    private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
     private final SpecialTypeGenerator specialTypeGenerator = new SpecialTypeGenerator();
 
     {
@@ -65,6 +67,28 @@ public final class ProbeOrchestrator implements ProbeGenerator {
 
             // 1. 收集需要生成声明的类
             Set<String> classesToGenerate = collectClasses(snapshot);
+
+            // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
+            // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
+            // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
+            for (AdapterCatalogEntry adapter : snapshot.adapters()) {
+                String name = adapter.targetType().getName();
+                if (isRelevantClass(name)) {
+                    classesToGenerate.add(name);
+                }
+            }
+
+            // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
+            // 方法参数）+ 别名表（就近发声明）。必须在 pregenerateDeclarations 之前，因为参数渲染依赖已注册的别名
+            adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
+
+            // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
+            for (String host : adapterAliasGenerator.hostImports()) {
+                if (isRelevantClass(host)) {
+                    classesToGenerate.add(host);
+                }
+            }
+
             NekoJS.LOGGER.info("Probe: {} classes to generate", classesToGenerate.size());
 
             // 2. 构建包树
@@ -94,7 +118,10 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             // 7. 生成 @special 注册表字面量类型
             filesGenerated += generateSpecialTypes(snapshot, outputDir);
 
-            // 8. 生成 .github/agents/ 模板文件
+            // 8. 生成 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
+            filesGenerated += generateManualDeclarations(snapshot, outputDir);
+
+            // 9. 生成 .github/agents/ 模板文件
             Path agentsDir = outputDir.getParent().resolve(".github").resolve("agents");
             AgentTemplateGenerator.generate(agentsDir);
 
@@ -733,5 +760,9 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         Files.createDirectories(specialDir);
         specialTypeGenerator.generate(registries, specialDir);
         return 2; // index.d.ts + types/index.d.ts
+    }
+
+    private int generateManualDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+        return ManualDeclarationGenerator.generate(snapshot.manualDeclarations(), outputDir.resolve("@manual"));
     }
 }

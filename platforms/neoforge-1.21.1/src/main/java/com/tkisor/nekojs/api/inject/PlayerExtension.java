@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.data.AttachedData;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
@@ -29,4 +30,7 @@ public interface PlayerExtension {
         // 1.21.1: 保持逻辑一致，将物品放入背包，如果背包满了则尝试处理
         neko$self().getInventory().placeItemBackInInventory(stack);
     }
+
+    /** 返回挂载到该 player 的内存数据容器；首次访问时 lazy 创建并触发 {@code attachPlayerData}。 */
+    AttachedData<Player> neko$data();
 }

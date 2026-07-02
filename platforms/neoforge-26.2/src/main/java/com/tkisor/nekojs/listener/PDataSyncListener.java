@@ -6,6 +6,7 @@ import com.tkisor.nekojs.script.ScriptType;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @EventBusSubscriber(modid = NekoJS.MODID)
@@ -20,5 +21,10 @@ public final class PDataSyncListener {
             testSm.flushReadyNodeTimers();
         }
         PDataSyncService.flush(event.getServer());
+    }
+
+    @SubscribeEvent
+    public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
+        PDataSyncService.onEntityRemoved(event.getEntity());
     }
 }

@@ -8,7 +8,8 @@ public record RecipeFieldDefinition(
         RecipeFieldKind kind,
         boolean array,
         boolean optional,
-        JsonElement defaultValue
+        JsonElement defaultValue,
+        RecipeFieldRole role
 ) {
     public boolean required() {
         return !optional && defaultValue == null;
