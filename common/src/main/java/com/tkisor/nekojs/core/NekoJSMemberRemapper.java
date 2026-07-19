@@ -15,12 +15,12 @@ import java.lang.reflect.Method;
 public class NekoJSMemberRemapper implements MemberRemapper {
 
     @Override
-    public String remapField(Field field) {
-        return JavaMemberIndex.remapName(field, MemberRemapper.HIDE_MEMBER, false);
+    public String remapField(Field field, Class<?> c) {
+        return JavaMemberIndex.remapName(field, MemberRemapper.HIDE_MEMBER, MemberRemapper.FALL_THROUGH);
     }
 
     @Override
-    public String remapMethod(Method method) {
-        return JavaMemberIndex.remapName(method, MemberRemapper.HIDE_MEMBER, false);
+    public String remapMethod(Method method, Class<?> c) {
+        return JavaMemberIndex.remapName(method, MemberRemapper.HIDE_MEMBER, MemberRemapper.FALL_THROUGH);
     }
 }

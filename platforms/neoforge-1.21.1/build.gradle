@@ -98,7 +98,6 @@ neoForge {
 dependencies {
     implementation project(':common')
 
-    implementation("curse.maven:graal-1504336:7983197")
     implementation "curse.maven:jei-238222:7420587"
 
     compileOnly 'org.projectlombok:lombok:1.18.44'
@@ -164,14 +163,14 @@ unifiedPublishing {
             }
         }
 
-        if (ENV.CURSEFORGE_KEY) {
+        if (ENV.CURSEFORGE_KEY && project.hasProperty('curseforge_id')) {
             curseforge {
                 token = ENV.CURSEFORGE_KEY
                 id = project.curseforge_id
             }
         }
 
-        if (ENV.MODRINTH_TOKEN) {
+        if (ENV.MODRINTH_TOKEN && project.hasProperty('modrinth_id')) {
             modrinth {
                 token = ENV.MODRINTH_TOKEN
                 id = project.modrinth_id

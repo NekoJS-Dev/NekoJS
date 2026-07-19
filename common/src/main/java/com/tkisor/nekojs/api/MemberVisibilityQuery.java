@@ -156,8 +156,7 @@ public final class MemberVisibilityQuery {
         return hierarchy;
     }
 
-    /** 委托 {@link JavaMemberIndex#remapName}：hideMarker=null（隐藏即从可见集合剔除），strict=true（前缀剥离需非空）。 */
     private static @Nullable String remapMember(Member member) {
-        return JavaMemberIndex.remapName(member, null, true);
+        return JavaMemberIndex.remapName(member, null, member.getName());
     }
 }

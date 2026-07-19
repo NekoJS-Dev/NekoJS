@@ -105,10 +105,9 @@ public final class JavaMemberIndex {
      * @param hideMarker 命中 {@code @HideFromJS} 时的返回值。{@link MemberVisibilityQuery} 传 {@code null}
      *                   （表示从可见集合中剔除）；{@code NekoJSMemberRemapper} 传
      *                   {@code MemberRemapper.HIDE_MEMBER} 常量（满足 graal.mod.api SPI 约定）
-     * @param strict     {@code @RemapByPrefix} 剥离前缀时是否要求 {@code name.length() > prefix.length()}
-     *                   （{@link MemberVisibilityQuery} 传 true，避免空名；{@code NekoJSMemberRemapper} 传 false）
+     * @param fallThroughMarker 没有命中任何 remap 时的返回值。传入 {@link Member#getName()} 即相当于通常的 remapper 逻辑（有 remap 则使用，无则用原名）
      */
-    public static @Nullable String remapName(Member member, String hideMarker, boolean strict) {
+    public static @Nullable String remapName(Member member, String hideMarker, String fallThroughMarker) {
         AccessibleObject ao = (AccessibleObject) member;
 
         if (ao.isAnnotationPresent(HideFromJS.class)
@@ -125,25 +124,24 @@ public final class JavaMemberIndex {
 
         RemapByPrefix memberPrefix = ao.getAnnotation(RemapByPrefix.class);
         if (memberPrefix != null) {
-            String stripped = findAndRemovePrefix(original, memberPrefix.value(), strict);
+            String stripped = findAndRemovePrefix(original, memberPrefix.value());
             if (stripped != null) return stripped;
         }
 
         RemapByPrefix classPrefix = member.getDeclaringClass().getAnnotation(RemapByPrefix.class);
         if (classPrefix != null) {
-            String stripped = findAndRemovePrefix(original, classPrefix.value(), strict);
+            String stripped = findAndRemovePrefix(original, classPrefix.value());
             if (stripped != null) return stripped;
         }
 
-        return original;
+        return fallThroughMarker;
     }
 
     // ==================== 内部原语 ====================
 
-    private static @Nullable String findAndRemovePrefix(String name, String[] prefixes, boolean strict) {
+    private static @Nullable String findAndRemovePrefix(String name, String[] prefixes) {
         for (String prefix : prefixes) {
-            if (name.startsWith(prefix)) {
-                if (strict && name.length() <= prefix.length()) continue;
+            if (name.length() > prefix.length() && name.startsWith(prefix)) {
                 return name.substring(prefix.length());
             }
         }

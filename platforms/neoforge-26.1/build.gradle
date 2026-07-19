@@ -90,7 +90,6 @@ neoForge {
 dependencies {
     implementation project(':common')
 
-    implementation("curse.maven:graal-1504336:7983197")
     implementation "curse.maven:jei-238222:7920926"
 
     compileOnly 'org.projectlombok:lombok:1.18.44'
@@ -159,7 +158,7 @@ unifiedPublishing {
         }
 
         // 配置 CurseForge 发布
-        if (ENV.CURSEFORGE_KEY) {
+        if (ENV.CURSEFORGE_KEY && project.hasProperty('curseforge_id')) {
             curseforge {
                 token = ENV.CURSEFORGE_KEY
                 // 你的项目 ID (数字)，需要在 gradle.properties 中添加 `curseforge_id=xxxxxx`
@@ -168,7 +167,7 @@ unifiedPublishing {
         }
 
         // 配置 Modrinth 发布
-        if (ENV.MODRINTH_TOKEN) {
+        if (ENV.MODRINTH_TOKEN && project.hasProperty('modrinth_id')) {
             modrinth {
                 token = ENV.MODRINTH_TOKEN
                 // 你的项目 ID (字符串)，需要在 gradle.properties 中添加 `modrinth_id=xxxxxx`
