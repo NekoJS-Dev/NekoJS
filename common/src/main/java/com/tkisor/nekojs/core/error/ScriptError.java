@@ -3,7 +3,7 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.script.ScriptContainer;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.SourceSection;
 import com.tkisor.nekojs.api.data.ScriptId;

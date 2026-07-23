@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

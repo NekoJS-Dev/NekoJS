@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 /**
  * Static accessor for script error reporting, breaking the api→core dependency

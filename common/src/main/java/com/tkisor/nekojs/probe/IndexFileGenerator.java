@@ -182,8 +182,8 @@ public final class IndexFileGenerator {
     private Class<?> findClass(String fullName) {
         return classCache.computeIfAbsent(fullName, name -> {
             try {
-                return Class.forName(name);
-            } catch (ClassNotFoundException e) {
+                return Class.forName(name, false, Thread.currentThread().getContextClassLoader());
+            } catch (ClassNotFoundException | NoClassDefFoundError e) {
                 return null;
             }
         });
@@ -360,13 +360,6 @@ public final class IndexFileGenerator {
 
         // 缓存 Class 对象
         classCache.put(fullName, cls);
-    }
-
-    /**
-     * 获取已缓存的类 import 集合（用于 BFS 依赖发现）。
-     */
-    public Set<String> getImportsForClass(String fullName) {
-        return importCache.get(fullName);
     }
 
     /**

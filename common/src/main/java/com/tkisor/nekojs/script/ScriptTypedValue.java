@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.ScriptType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

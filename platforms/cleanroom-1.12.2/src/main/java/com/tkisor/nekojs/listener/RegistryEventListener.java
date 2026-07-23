@@ -1,0 +1,199 @@
+package com.tkisor.nekojs.listener;
+
+import com.tkisor.nekojs.NekoJSMod;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.bindings.event.RegistryEvents;
+import com.tkisor.nekojs.bindings.event.ServerEvents;
+import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
+import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import net.minecraft.block.Block;
+import net.minecraft.item.Item;
+import net.minecraft.item.crafting.CraftingManager;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.registry.EntityEntry;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import graal.graalvm.polyglot.PolyglotException;
+
+/**
+ * Bridges Forge 1.12.2 registry events to the script-facing EventJS wrappers.
+ *
+ * <p>The wrapper events (e.g. {@link BlockRegistryEventJS}) are NOT Forge events; they are
+ * plain Java objects posted onto the {@link RegistryEvents} startup buses. This listener is
+ * the only place that:
+ * <ol>
+ *   <li>constructs the wrapper from the raw Forge {@link RegistryEvent.Register},</li>
+ *   <li>posts it to its bus so scripts populate builders, then</li>
+ *   <li>invokes {@code registerAll()} to flush those builders into the Forge registry.</li>
+ * </ol>
+ * Order matters: in 1.12.2, {@code Register<Block>} fires before {@code Register<Item>},
+ * which is what lets {@code BlockRegistryEventJS.PENDING_BLOCK_ITEMS} stage item generation
+ * for {@code ItemRegistryEventJS} to complete.
+ */
+public class RegistryEventListener {
+
+    @SubscribeEvent
+    public static void onRegister(RegistryEvent.Register<?> event) {
+        Class<?> type = event.getRegistry().getRegistrySuperType();
+        if (type == Block.class) {
+            @SuppressWarnings("unchecked")
+            RegistryEvent.Register<Block> raw = (RegistryEvent.Register<Block>) event;
+            BlockRegistryEventJS js = new BlockRegistryEventJS(raw);
+            RegistryEvents.BLOCK.post(js);
+            js.registerAll();
+        } else if (type == Item.class) {
+            @SuppressWarnings("unchecked")
+            RegistryEvent.Register<Item> raw = (RegistryEvent.Register<Item>) event;
+            ItemRegistryEventJS js = new ItemRegistryEventJS(raw);
+            RegistryEvents.ITEM.post(js);
+            js.registerAll();
+        } else if (type == EntityEntry.class) {
+            @SuppressWarnings("unchecked")
+            RegistryEvent.Register<EntityEntry> raw = (RegistryEvent.Register<EntityEntry>) event;
+            EntityTypeRegistryEventJS js = new EntityTypeRegistryEventJS(raw);
+            RegistryEvents.ENTITY_TYPE.post(js);
+            js.registerAll();
+        }
+    }
+
+    /**
+     * Trigger recipe scripts during {@code RegistryEvent.Register<IRecipe>} (LOWEST priority,
+     * so vanilla + mod recipes are already registered and the id snapshot is complete).
+     *
+     * <p>1.12.2 recipes are buildtime {@link IRecipe} objects: the registry freezes after load,
+     * so script-defined recipes must be registered here while it is still open — the
+     * CraftTweaker model. {@code MinecraftRecipeHandler.shaped/shapeless} then call
+     * {@code ForgeRegistries.RECIPES.register(...)} successfully.
+     *
+     * <p>Recipe handler methods stay auto-discovered: {@code collectHandlerMethods} reflects
+     * the handler class, and {@code RecipeRegistryProxy.getMember} returns the handler for
+     * GraalJS to reflect on its own.
+     */
+    /** Guards against double application (RegistryEvent + postInit fallback). */
+    private static final java.util.concurrent.atomic.AtomicBoolean RECIPE_SCRIPTS_APPLIED =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /**
+     * Run recipe scripts once. On Cleanroom 1.12.2 the IRecipe registry is populated very early
+     * (before nekojs preInit registers this listener), so {@link #onRegisterRecipe} typically
+     * misses {@code RegistryEvent.Register<IRecipe>}. The reliable trigger is therefore
+     * {@code NekoJSMod.postInit} (registry still unfrozen — freezes at LoadComplete, per CraftTweaker).
+     * Idempotent via {@link #RECIPE_SCRIPTS_APPLIED}.
+     */
+    public static void applyRecipeScripts() {
+        if (!RECIPE_SCRIPTS_APPLIED.compareAndSet(false, true)) return;
+        ScriptType.SERVER.logger().info("Applying recipe scripts...");
+
+        List<String> recipeIds = new ArrayList<>();
+        for (ResourceLocation id : CraftingManager.REGISTRY.getKeys()) {
+            recipeIds.add(id.toString());
+        }
+        RecipeEventJS recipeEvent = new RecipeEventJS(recipeIds);
+        try {
+            NekoRuntimeAccess.get().beforeRecipeLoading(recipeEvent);
+            ServerEvents.RECIPES.post(recipeEvent);
+            ServerEvents.AFTER_RECIPES.post(recipeEvent);
+            NekoRuntimeAccess.get().afterRecipes(recipeEvent);
+        } catch (PolyglotException e) {
+            if (NekoJSMod.RUNTIME_ROOT != null) {
+                NekoJSMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
+            } else {
+                ScriptType.SERVER.logger().error("Recipe script execution crashed", e);
+            }
+        } catch (Exception e) {
+            ScriptType.SERVER.logger().error("Recipe script execution crashed", e);
+        }
+        ScriptType.SERVER.logger().info("Recipe scripts applied, total recipes: {}", recipeIds.size());
+    }
+
+    /**
+     * Hot-reload recipe scripts at runtime — called after {@code /nekojs reload server}
+     * (which has just re-executed SERVER scripts and registered fresh recipe listeners).
+     *
+     * <p>1.12.2 recipe registry is frozen after LoadComplete, so we:
+     * <ol>
+     *   <li>{@code unfreeze()} the registry (public on {@code ForgeRegistry}, reached via cast),</li>
+     *   <li>remove every previously-registered {@code nekojs:*} recipe,</li>
+     *   <li>reset {@link #RECIPE_SCRIPTS_APPLIED} so {@link #applyRecipeScripts()} re-posts
+     *       the recipe event (firing the new listeners),</li>
+     *   <li>{@code freeze()} again in a {@code finally} so the registry is never left open.</li>
+     * </ol>
+     * {@code CraftingManager.findMatchingRecipe} iterates the live REGISTRY with no cache,
+     * and single-player shares one JVM registry between client and integrated server, so
+     * the new recipes are effective immediately in the crafting table.
+     *
+     * <p>No DummyRecipe / backup machinery (unlike GroovyScript): NekoJS scripts only ever
+     * register their own {@code nekojs:*} recipes, so remove-and-reregister is enough. id
+     * holes left in the availability map are harmless (recipe count is small).
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public synchronized static void reloadRecipes() {
+        net.minecraftforge.registries.ForgeRegistry reg;
+        try {
+            reg = (net.minecraftforge.registries.ForgeRegistry) ForgeRegistries.RECIPES;
+        } catch (ClassCastException e) {
+            ScriptType.SERVER.logger().error("Cannot cast ForgeRegistries.RECIPES to ForgeRegistry — recipe reload aborted", e);
+            return;
+        }
+
+        ScriptType.SERVER.logger().info("Hot-reloading recipe scripts...");
+        reg.unfreeze();
+        try {
+            // Remove every previously-registered nekojs recipe so ids don't collide on re-register.
+            List<ResourceLocation> nekoIds = new ArrayList<>();
+            for (ResourceLocation id : CraftingManager.REGISTRY.getKeys()) {
+                if ("nekojs".equals(id.getNamespace())) nekoIds.add(id);
+            }
+            for (ResourceLocation id : nekoIds) {
+                reg.remove(id);
+            }
+            ScriptType.SERVER.logger().info("Removed {} nekojs recipes before re-run", nekoIds.size());
+
+            // Reset the guard so applyRecipeScripts() re-posts the recipe event. Listeners
+            // were already refreshed by reload(SERVER) (which clears all old listeners).
+            RECIPE_SCRIPTS_APPLIED.set(false);
+            applyRecipeScripts();
+        } catch (Throwable t) {
+            ScriptType.SERVER.logger().error("Recipe hot-reload failed", t);
+        } finally {
+            reg.freeze();
+        }
+        // Rebuild JEI/HEI's display cache on the client render thread. The live registry
+        // already holds the new recipes (single-player shares one JVM between client and
+        // integrated server), but HEI caches them for its recipe panel — without this the
+        // UI stays stale even though the crafting table already works. Skipped on a
+        // dedicated server (no client thread).
+        if (net.minecraftforge.fml.common.FMLCommonHandler.instance().getSide() == net.minecraftforge.fml.relauncher.Side.CLIENT) {
+            try {
+                com.tkisor.nekojs.client.HeiRefresher.scheduleRefresh(true);
+            } catch (Throwable t) {
+                ScriptType.SERVER.logger().warn("Failed to schedule JEI/HEI refresh", t);
+            }
+        }
+        ScriptType.SERVER.logger().info("Recipe hot-reload complete");
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onRegisterRecipe(RegistryEvent.Register<?> event) {
+        if (event.getRegistry().getRegistrySuperType() != IRecipe.class) return;
+        ScriptType.SERVER.logger().info("RegistryEvent.Register<IRecipe> received — applying recipe scripts early");
+        applyRecipeScripts();
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        GoalRegistry.onEntityJoinWorld(event);
+    }
+}

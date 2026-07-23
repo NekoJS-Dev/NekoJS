@@ -2,7 +2,7 @@ package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.nio.file.Path;
 

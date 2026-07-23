@@ -3,7 +3,7 @@ package com.tkisor.nekojs.network;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen;
 import com.tkisor.nekojs.client.gui.NekoWorkspaceScreen;
-import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
+import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;

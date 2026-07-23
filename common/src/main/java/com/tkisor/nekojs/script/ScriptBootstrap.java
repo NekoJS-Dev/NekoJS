@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.NekoJS;
 
 import java.io.IOException;

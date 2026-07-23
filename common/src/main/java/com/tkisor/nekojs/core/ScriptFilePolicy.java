@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

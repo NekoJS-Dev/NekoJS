@@ -12,12 +12,10 @@ import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import graal.graalvm.polyglot.proxy.ProxyObject;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -49,7 +47,7 @@ final class RecipeNamespaceProxy implements ProxyObject {
         this.namespace = namespace;
         this.handler = handler;
         this.definitions = definitions;
-        this.handlerMethods = handler != null ? reflectMethods(handler) : Map.of();
+        this.handlerMethods = handler != null ? RecipeReflectionUtil.reflectMethods(handler) : Map.of();
     }
 
     // ==================== ProxyObject (GraalVM interop) ====================
@@ -94,10 +92,10 @@ final class RecipeNamespaceProxy implements ProxyObject {
         return args -> {
             for (Method m : methods) {
                 int total = m.getParameterCount();
-                int required = requiredParamCount(m);
+                int required = RecipeReflectionUtil.requiredParamCount(m);
                 if (args.length >= required && args.length <= total) {
                     try {
-                        Object[] converted = convertArgs(m, args, total);
+                        Object[] converted = RecipeReflectionUtil.convertArgs(m, args, total);
                         return m.invoke(handler, converted);
                     } catch (Exception e) {
                         break; // conversion failed → try next layer
@@ -166,36 +164,4 @@ final class RecipeNamespaceProxy implements ProxyObject {
         };
     }
 
-    // ==================== Reflection ====================
-
-    private static Map<String, List<Method>> reflectMethods(Object handler) {
-        Map<String, List<Method>> methods = new LinkedHashMap<>();
-        for (Method m : handler.getClass().getMethods()) {
-            if (m.getDeclaringClass() == Object.class) continue;
-            methods.computeIfAbsent(m.getName(), k -> new ArrayList<>()).add(m);
-        }
-        return methods;
-    }
-
-    private static Object[] convertArgs(Method m, Value[] args, int totalParams) {
-        Class<?>[] paramTypes = m.getParameterTypes();
-        Object[] converted = new Object[totalParams];
-        for (int i = 0; i < totalParams; i++) {
-            if (i < args.length) {
-                converted[i] = args[i].as(paramTypes[i]);
-            } else {
-                converted[i] = Optional.empty(); // trailing Optional<T> param
-            }
-        }
-        return converted;
-    }
-
-    private static int requiredParamCount(Method m) {
-        int count = 0;
-        for (var p : m.getParameterTypes()) {
-            if (p == Optional.class) break;
-            count++;
-        }
-        return count;
-    }
 }

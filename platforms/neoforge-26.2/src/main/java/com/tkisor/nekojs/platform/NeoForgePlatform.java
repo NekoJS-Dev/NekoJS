@@ -3,6 +3,7 @@ package com.tkisor.nekojs.platform;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;

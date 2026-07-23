@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.catalog.JavaClassLoadTelemetrySink;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.core.JavaClassLoadTelemetrySink;
+import com.tkisor.nekojs.api.ScriptType;
 
 public final class JavaClassLoadTelemetry {
     private static volatile JavaClassLoadTelemetrySink sink = JavaClassLoadTelemetrySink.EMPTY;

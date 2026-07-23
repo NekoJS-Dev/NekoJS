@@ -1,9 +1,5 @@
 package com.tkisor.nekojs.core.compiler;
 
-import com.tkisor.nekojs.api.compiler.NekoLexer;
-import com.tkisor.nekojs.api.compiler.NekoSourceFile;
-import com.tkisor.nekojs.api.compiler.NekoTokenStream;
-import com.tkisor.nekojs.api.compiler.ScriptCompileResult;
 
 public enum NekoJsxLexer implements NekoLexer {
     INSTANCE;

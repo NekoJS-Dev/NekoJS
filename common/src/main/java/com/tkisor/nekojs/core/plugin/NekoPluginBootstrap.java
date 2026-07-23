@@ -2,28 +2,29 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
-import com.tkisor.nekojs.api.catalog.NodeModuleRegister;
+import com.tkisor.nekojs.core.module.NodeModuleRegister;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
-import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
-import com.tkisor.nekojs.api.lifecycle.PluginLifecycleRegister;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionContext;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionPoint;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionProvider;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionRegistry;
+import com.tkisor.nekojs.core.plugin.PluginLifecycleRegister;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionContext;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionPoint;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionProvider;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
+import com.tkisor.nekojs.probe.ProbeRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
-import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
+import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
-import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
-import com.tkisor.nekojs.api.recipe.RecipeSchemaRegister;
+import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
+import com.tkisor.nekojs.core.plugin.RecipeSchemaRegister;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.platform.Platform;
-import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.script.ScriptTypePredicate;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 
 import java.util.ArrayList;
@@ -83,7 +84,7 @@ public final class NekoPluginBootstrap {
         }
 
         // 初始化内置 probe generator
-        com.tkisor.nekojs.api.probe.ProbeRegistry.setGenerator(new com.tkisor.nekojs.probe.BuiltinProbeGenerator(), "NekoJS (built-in)");
+        ProbeRegistry.setGenerator(new com.tkisor.nekojs.probe.ProbeOrchestrator(), "NekoJS (built-in)");
 
         // 允许插件替换 probe generator
         for (NekoJSPlugin plugin : plugins) {
@@ -91,7 +92,7 @@ public final class NekoPluginBootstrap {
         }
 
         // 锁定注册表，检测冲突
-        com.tkisor.nekojs.api.probe.ProbeRegistry.lock();
+        ProbeRegistry.lock();
 
         state.freeze();
         return state.createRuntime();
@@ -130,7 +131,7 @@ public final class NekoPluginBootstrap {
         }
     }
 
-    private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister, NodeModuleRegister {
+    private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister, NodeModuleRegister, RecipeLifecycleRegister, PluginLifecycleRegister {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
@@ -204,54 +205,58 @@ public final class NekoPluginBootstrap {
 
         @Override
         public RecipeLifecycleRegister recipeLifecycle() {
-            return new RecipeLifecycleRegister() {
-                @Override
-                public void beforeRecipeLoading(Consumer<RecipeLifecycleContext> hook) {
-                    requireMutable("recipe lifecycle hooks");
-                    beforeRecipeLoadingHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
+            return this;
+        }
 
-                @Override
-                public void afterRecipes(Consumer<RecipeLifecycleContext> hook) {
-                    requireMutable("recipe lifecycle hooks");
-                    afterRecipesHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
-            };
+        // ---- RecipeLifecycleRegister ----
+
+        @Override
+        public void beforeRecipeLoading(Consumer<RecipeLifecycleContext> hook) {
+            requireMutable("recipe lifecycle hooks");
+            beforeRecipeLoadingHooks.add(Objects.requireNonNull(hook, "hook"));
         }
 
         @Override
+        public void afterRecipes(Consumer<RecipeLifecycleContext> hook) {
+            requireMutable("recipe lifecycle hooks");
+            afterRecipesHooks.add(Objects.requireNonNull(hook, "hook"));
+        }
+
+        // ---- PluginLifecycleRegister ----
+
+        @Override
         public PluginLifecycleRegister lifecycle() {
-            return new PluginLifecycleRegister() {
-                @Override
-                public void onInit(Runnable hook) {
-                    requireMutable("lifecycle init hooks");
-                    initHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
+            return this;
+        }
 
-                @Override
-                public void onInitStartup(Runnable hook) {
-                    requireMutable("lifecycle initStartup hooks");
-                    initStartupHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
+        @Override
+        public void onInit(Runnable hook) {
+            requireMutable("lifecycle init hooks");
+            initHooks.add(Objects.requireNonNull(hook, "hook"));
+        }
 
-                @Override
-                public void onAfterInit(Runnable hook) {
-                    requireMutable("lifecycle afterInit hooks");
-                    afterInitHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
+        @Override
+        public void onInitStartup(Runnable hook) {
+            requireMutable("lifecycle initStartup hooks");
+            initStartupHooks.add(Objects.requireNonNull(hook, "hook"));
+        }
 
-                @Override
-                public void onBeforeScriptsLoaded(Consumer<ScriptType> hook) {
-                    requireMutable("lifecycle beforeScriptsLoaded hooks");
-                    beforeScriptsLoadedHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
+        @Override
+        public void onAfterInit(Runnable hook) {
+            requireMutable("lifecycle afterInit hooks");
+            afterInitHooks.add(Objects.requireNonNull(hook, "hook"));
+        }
 
-                @Override
-                public void onAfterScriptsLoaded(Consumer<ScriptType> hook) {
-                    requireMutable("lifecycle afterScriptsLoaded hooks");
-                    afterScriptsLoadedHooks.add(Objects.requireNonNull(hook, "hook"));
-                }
-            };
+        @Override
+        public void onBeforeScriptsLoaded(Consumer<ScriptType> hook) {
+            requireMutable("lifecycle beforeScriptsLoaded hooks");
+            beforeScriptsLoadedHooks.add(Objects.requireNonNull(hook, "hook"));
+        }
+
+        @Override
+        public void onAfterScriptsLoaded(Consumer<ScriptType> hook) {
+            requireMutable("lifecycle afterScriptsLoaded hooks");
+            afterScriptsLoadedHooks.add(Objects.requireNonNull(hook, "hook"));
         }
 
         void freeze() {

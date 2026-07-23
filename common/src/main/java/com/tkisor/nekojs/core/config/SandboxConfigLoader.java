@@ -45,7 +45,7 @@ public final class SandboxConfigLoader {
                     config.get("enableEsmAuthoring"),
                     config.get("conciseScriptErrorLogs")
             );
-        } catch (Exception e) {
+        } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load engine.toml, using default sandbox config", e);
             return SandboxConfig.defaultConfig();
         }

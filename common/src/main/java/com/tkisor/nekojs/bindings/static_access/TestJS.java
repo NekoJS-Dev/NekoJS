@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.bindings.static_access;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Value;
 
 import java.util.Objects;

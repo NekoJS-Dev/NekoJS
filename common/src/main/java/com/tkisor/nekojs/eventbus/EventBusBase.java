@@ -1,0 +1,67 @@
+package com.tkisor.nekojs.eventbus;
+
+import com.tkisor.nekojs.eventbus.CommonPriority;
+import com.tkisor.nekojs.api.event.EventListenerToken;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
+/**
+ * @author ZZZank
+ */
+public abstract class EventBusBase<EVENT, LISTENER> {
+    private final Class<EVENT> eventType;
+    private final List<EventListenerTokenImpl<EVENT, LISTENER>> tokens;
+    private final Object key;
+    private volatile LISTENER built;
+
+    protected EventBusBase(Class<EVENT> eventType, Object key) {
+        this.eventType = Objects.requireNonNull(eventType);
+        this.key = key;
+        this.tokens = new ArrayList<>();
+    }
+
+    public final Class<EVENT> eventType() {
+        return eventType;
+    }
+
+    public final boolean isEmpty() {
+        return tokens.isEmpty();
+    }
+
+    public final EventListenerToken<EVENT> listen(LISTENER listener) {
+        return listen(CommonPriority.NORMAL, listener);
+    }
+
+    public final EventListenerToken<EVENT> listen(byte priority, LISTENER listener) {
+        built = null;
+        var keyReference = key == null ? null : new WeakReference<>(key);
+        var token = new EventListenerTokenImpl<>(eventType, priority, listener, keyReference);
+        tokens.add(token);
+        return token;
+    }
+
+    public final boolean unregister(EventListenerToken<EVENT> token) {
+        var changed = token instanceof EventListenerTokenImpl<?, ?> && this.tokens.remove(token);
+        if (changed) {
+            built = null;
+        }
+        return changed;
+    }
+
+    protected final LISTENER getBuilt(Function<Stream<LISTENER>, LISTENER> listenerCompiler) {
+        if (built == null) {
+            synchronized (this) {
+                if (built == null) {
+                    tokens.sort(null);
+                    built = listenerCompiler.apply(tokens.stream().map(EventListenerTokenImpl::listener));
+                }
+            }
+        }
+        return built;
+    }
+}

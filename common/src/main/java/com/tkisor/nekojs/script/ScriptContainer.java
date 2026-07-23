@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.prop.ScriptProperties;

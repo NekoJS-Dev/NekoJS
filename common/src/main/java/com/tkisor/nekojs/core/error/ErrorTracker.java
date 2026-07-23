@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.script.ScriptContainer;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.PolyglotException;
 
 import java.util.Collection;

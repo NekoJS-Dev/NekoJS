@@ -4,7 +4,7 @@ import com.tkisor.nekojs.api.catalog.RecipeHandlerMethodEntry;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RecipeSchemaTypeEntry;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.util.*;
 
@@ -55,9 +55,6 @@ public final class RecipeEventDeclarationGenerator {
         }
         sb.append("\n");
 
-        // declare module
-        sb.append("declare module \"@side-only/").append(scriptType.name).append("/events/recipes\" {\n");
-
         // 1. 为每个 schema 类型生成单独的 builder 类（链式 setter）
         for (RecipeNamespaceCatalogEntry ns : namespaces) {
             for (RecipeSchemaTypeEntry schemaType : ns.schemaTypes()) {
@@ -77,7 +74,6 @@ public final class RecipeEventDeclarationGenerator {
             generateNamespaceMember(sb, ns);
         }
 
-        sb.append("    }\n");
         sb.append("}\n");
 
         return sb.toString();
@@ -124,7 +120,7 @@ public final class RecipeEventDeclarationGenerator {
             if (i > 0) sb.append(", ");
             sb.append(safeParamName(param.name(), i));
             if (i >= method.minArgs() || param.optional()) sb.append("?");
-            sb.append(": ").append(mapTypeToTs(param.type()));
+            sb.append(": ").append(mapParamToTs(param));
         }
 
         // 返回类型：对应的 builder 类，或 $RecipeJsonBuilder
@@ -223,7 +219,6 @@ public final class RecipeEventDeclarationGenerator {
      */
     private void collectImports(List<RecipeNamespaceCatalogEntry> namespaces, Map<String, Set<String>> importsByPkg) {
         Set<String> neededKinds = new HashSet<>();
-        Set<String> neededHandlerTypes = new HashSet<>();
 
         for (RecipeNamespaceCatalogEntry ns : namespaces) {
             // schema field kinds
@@ -232,23 +227,24 @@ public final class RecipeEventDeclarationGenerator {
                     neededKinds.add(field.kind());
                 }
             }
-            // handler param types
-            for (RecipeHandlerMethodEntry method : ns.handlerMethods()) {
-                for (RecipeHandlerMethodEntry.HandlerParam param : method.params()) {
-                    neededHandlerTypes.add(param.type());
-                }
-            }
         }
 
-        // 从 kind 推导 import (pkg -> kindName)
+        // schema field kinds → imports (version-specific mapping; only hit on platforms with schema paths)
         for (String kind : neededKinds) {
             String[] pkgType = kindToImport(kind);
             if (pkgType != null) addImport(importsByPkg, pkgType[0], pkgType[1] + "_");
         }
-        // 从 handler param type 推导 import
-        for (String type : neededHandlerTypes) {
-            String[] pkgType = typeToImport(type);
-            if (pkgType != null) addImport(importsByPkg, pkgType[0], pkgType[1] + "_");
+        // handler param types → imports extracted from each param's generic signature,
+        // so List<Ingredient> / Map<String,Ingredient> pull in $Ingredient_ (and the package
+        // follows the real Java type, not a hard-coded MC-version path).
+        for (RecipeNamespaceCatalogEntry ns : namespaces) {
+            for (RecipeHandlerMethodEntry method : ns.handlerMethods()) {
+                for (RecipeHandlerMethodEntry.HandlerParam param : method.params()) {
+                    String sig = param.genericType();
+                    if (sig == null) continue;
+                    extractFqns(sig, (pkg, simple) -> addImport(importsByPkg, pkg, simple + "_"));
+                }
+            }
         }
     }
 
@@ -282,6 +278,109 @@ public final class RecipeEventDeclarationGenerator {
 
     private static void addImport(Map<String, Set<String>> importsByPkg, String pkg, String className) {
         importsByPkg.computeIfAbsent(pkg, k -> new TreeSet<>()).add("$" + className);
+    }
+
+    /**
+     * Map a handler parameter to its TS type by parsing the generic signature, so
+     * {@code List<Ingredient>} → {@code $Ingredient_[]}, {@code Map<String,Ingredient>} →
+     * {@code { [key: string]: $Ingredient_ }}. Imports are pre-collected by {@link #collectImports}.
+     * Falls back to {@link #mapTypeToTs} when no generic signature is present (primitives).
+     */
+    private String mapParamToTs(RecipeHandlerMethodEntry.HandlerParam param) {
+        String sig = param.genericType();
+        if (sig == null) return mapTypeToTs(param.type());
+        return renderTypeSig(sig);
+    }
+
+    /** Render a generic signature to TS: collections → {@code E[]}, maps → index signature. */
+    private String renderTypeSig(String sig) {
+        int lt = sig.indexOf('<');
+        if (lt < 0) return resolveFqn(sig);
+        String raw = sig.substring(0, lt);
+        String inner = sig.substring(lt + 1, sig.lastIndexOf('>'));
+        List<String> args = splitTopLevel(inner);
+        String rawSimple = raw.substring(raw.lastIndexOf('.') + 1);
+        if (isCollectionRaw(rawSimple) && !args.isEmpty()) {
+            return renderTypeSig(args.get(0)) + "[]";
+        }
+        if (rawSimple.equals("Map") && args.size() >= 2) {
+            return "{ [key: " + renderTypeSig(args.get(0)) + "]: " + renderTypeSig(args.get(1)) + " }";
+        }
+        // other parameterized types — fall back to the raw alias
+        return resolveFqn(raw);
+    }
+
+    /** Resolve a single FQN (or primitive name) to a TS type. */
+    private String resolveFqn(String fqn) {
+        int dot = fqn.lastIndexOf('.');
+        if (dot < 0) return primitiveName(fqn); // primitive like int / boolean
+        switch (fqn) {
+            case "java.lang.String", "java.lang.Character" -> { return "string"; }
+            case "java.lang.Object" -> { return "any"; }
+            case "java.lang.Boolean" -> { return "boolean"; }
+        }
+        if (isNumberWrapper(fqn)) return "number";
+        return resolveAlias(fqn.substring(0, dot), fqn.substring(dot + 1));
+    }
+
+    private static String primitiveName(String name) {
+        return switch (name) {
+            case "int", "long", "short", "byte", "float", "double" -> "number";
+            case "boolean" -> "boolean";
+            case "char" -> "string";
+            case "void" -> "never";
+            default -> "any";
+        };
+    }
+
+    private static boolean isNumberWrapper(String fqn) {
+        return fqn.startsWith("java.lang.") && switch (fqn.substring("java.lang.".length())) {
+            case "Integer", "Long", "Short", "Byte", "Float", "Double" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isCollectionRaw(String simple) {
+        return switch (simple) {
+            case "List", "Collection", "Iterable", "Set", "Queue", "Deque", "NavigableSet",
+                 "ArrayList", "LinkedList", "HashSet", "LinkedHashSet", "TreeSet",
+                 "Vector", "Stack" -> true;
+            default -> false;
+        };
+    }
+
+    /** Split a comma-separated list at top level (ignoring commas nested in {@code <>}). */
+    private static List<String> splitTopLevel(String s) {
+        List<String> result = new ArrayList<>();
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (c == ',' && depth == 0) {
+                result.add(s.substring(start, i).trim());
+                start = i + 1;
+            }
+        }
+        result.add(s.substring(start).trim());
+        return result;
+    }
+
+    /** Walk a generic signature and feed every referenced non-basic class to the consumer. */
+    private static void extractFqns(String sig, java.util.function.BiConsumer<String, String> consumer) {
+        int lt = sig.indexOf('<');
+        String head = lt < 0 ? sig : sig.substring(0, lt);
+        int dot = head.lastIndexOf('.');
+        boolean basic = dot < 0                          // primitive
+                || head.equals("java.lang.String") || head.equals("java.lang.Object")
+                || head.equals("java.lang.Boolean") || isNumberWrapper(head);
+        if (!basic && dot > 0) {
+            consumer.accept(head.substring(0, dot), head.substring(dot + 1));
+        }
+        if (lt >= 0) {
+            String inner = sig.substring(lt + 1, sig.lastIndexOf('>'));
+            for (String arg : splitTopLevel(inner)) extractFqns(arg, consumer);
+        }
     }
 
     private String mapTypeToTs(String typeName) {

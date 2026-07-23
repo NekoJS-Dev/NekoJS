@@ -1,14 +1,15 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.script.context.ScriptContextRegistry;
-import com.tkisor.nekojs.utils.event.CancellableEventBus;
-import com.tkisor.nekojs.utils.event.EventBus;
-import com.tkisor.nekojs.utils.event.EventListenerToken;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchCancellableEventBus;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
+import com.tkisor.nekojs.api.event.CancellableEventBus;
+import com.tkisor.nekojs.api.event.EventBus;
+import com.tkisor.nekojs.api.event.EventListenerToken;
+import com.tkisor.nekojs.api.event.DispatchCancellableEventBus;
+import com.tkisor.nekojs.api.event.DispatchEventBus;
+import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.eventbus.EventBusFactory;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
@@ -48,18 +49,18 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         EventBus<E> bus;
         if (cancellable) {
             bus = dispatchKey != null
-                ? DispatchCancellableEventBus.create(eventType, dispatchKey)
-                : CancellableEventBus.create(eventType);
+                ? EventBusFactory.createDispatchCancellableEventBus(eventType, dispatchKey)
+                : EventBusFactory.createCancellableEventBus(eventType);
         } else {
             bus = dispatchKey != null
-                ? DispatchEventBus.create(eventType, dispatchKey)
-                : EventBus.create(eventType);
+                ? EventBusFactory.createDispatchEventBus(eventType, dispatchKey)
+                : EventBusFactory.createEventBus(eventType);
         }
         return new EventBusJS<>(bus);
     }
 
     public static boolean eventCancellability(Class<?> c) {
-        return NekoCancellableEvent.class.isAssignableFrom(c) || externalCancellabilityPredicate.test(c);
+        return externalCancellabilityPredicate.test(c);
     }
 
     private final EventBus<EVENT> bus;
@@ -92,13 +93,6 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     public void metadata(String groupName, String eventName) {
         this.groupName = groupName;
         this.eventName = eventName;
-    }
-
-    private String eventLabel() {
-        if (groupName != null && !groupName.isBlank() && eventName != null && !eventName.isBlank()) {
-            return groupName + "." + eventName;
-        }
-        return bus.eventType().getSimpleName();
     }
 
     public ScriptType scriptType() {
@@ -188,7 +182,6 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
         ScriptType type = ScriptContextRegistry.scriptTypeOf(listener.getContext());
         String scriptId = ScriptContextRegistry.currentScriptIdOf(listener.getContext());
-        EventCallbackSourceValidator.validateRegistration(listener, bus.eventType(), type, scriptId, eventLabel());
         tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
         return true;
     }
@@ -209,6 +202,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     }
                 }
             } catch (Throwable e) {
+                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                if (e instanceof Error) throw (Error) e;
                 recordListenerError(type, scriptId, "normal", null, event, e);
             }
         });
@@ -232,6 +227,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     }
                 }
             } catch (Throwable e) {
+                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                if (e instanceof Error) throw (Error) e;
                 recordListenerError(type, scriptId, "cancellable", null, event, e);
             }
             return false; // 出错时默认不取消事件
@@ -260,6 +257,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                             }
                         }
                     } catch (Throwable e) {
+                        if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                        if (e instanceof Error) throw (Error) e;
                         recordListenerError(type, scriptId, "dispatch", dispatchKey, event, e);
                     }
                 }
@@ -289,6 +288,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                             }
                         }
                     } catch (Throwable e) {
+                        if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                        if (e instanceof Error) throw (Error) e;
                         recordListenerError(type, scriptId, "dispatchCancellable", dispatchKey, event, e);
                     }
                     return false; // 出错时默认不取消事件

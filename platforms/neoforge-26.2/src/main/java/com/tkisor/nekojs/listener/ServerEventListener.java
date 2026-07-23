@@ -11,7 +11,7 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;

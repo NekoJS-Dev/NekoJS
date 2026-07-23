@@ -1,9 +1,5 @@
 package com.tkisor.nekojs.core.compiler;
 
-import com.tkisor.nekojs.api.compiler.NekoAstLowering;
-import com.tkisor.nekojs.api.compiler.NekoLanguagePlugin;
-import com.tkisor.nekojs.api.compiler.NekoLexer;
-import com.tkisor.nekojs.api.compiler.NekoParser;
 
 import java.util.Set;
 

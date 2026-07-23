@@ -213,7 +213,7 @@ public class NekoWorkspaceScreen extends Screen {
                 }
             });
         } catch (Exception e) {
-            e.printStackTrace();
+            com.tkisor.nekojs.NekoJS.LOGGER.error("Failed to scan local workspace files", e);
         }
 
         this.allLocalFiles.sort(String::compareToIgnoreCase);

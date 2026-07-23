@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.mixin;
 
-import com.tkisor.nekojs.mixin_api.IRecipeManagerExtension;
+import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
 import net.minecraft.server.ReloadableServerResources;
 import net.minecraft.world.item.crafting.RecipeManager;
 import org.spongepowered.asm.mixin.Final;

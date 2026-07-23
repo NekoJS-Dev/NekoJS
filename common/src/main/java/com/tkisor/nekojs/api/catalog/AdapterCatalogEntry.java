@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.JSTypeAdapter;
 import graal.graalvm.polyglot.HostAccess;
 
 import java.util.List;

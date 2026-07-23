@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.tkisor.nekojs.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "target": "@env(DEFAULT)",
+  "client": [
+    "MinecraftMixin"
+  ],
+  "mixins": [
+    "ForgeRegistryMixin",
+    "RecipeManagerMixin"
+  ],
+  "server": [],
+  "setSourceFile": true,
+  "minVersion": "0.8.7"
+}

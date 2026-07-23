@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.util.List;
 
@@ -15,7 +15,6 @@ public record NekoScriptCatalogSnapshot(
         List<TypeDocCatalogEntry> typeDocs,
         List<ManualDeclarationCatalogEntry> manualDeclarations,
         List<RegistryTypeCatalogEntry> registryTypes,
-        TypeOutputLayout outputLayout,
-        JavaModuleImportPolicy javaModuleImportPolicy
+        TypeOutputLayout outputLayout
 ) {
 }

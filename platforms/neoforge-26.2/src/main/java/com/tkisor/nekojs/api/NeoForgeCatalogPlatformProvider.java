@@ -9,7 +9,7 @@ import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.inject.*;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;

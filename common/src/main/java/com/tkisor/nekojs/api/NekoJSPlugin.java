@@ -1,19 +1,20 @@
 package com.tkisor.nekojs.api;
 
-import com.tkisor.nekojs.api.catalog.NodeModuleRegister;
-import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.module.NodeModuleRegister;
+import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
-import com.tkisor.nekojs.api.probe.ProbeRegistry;
+import com.tkisor.nekojs.probe.ProbeRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
-import com.tkisor.nekojs.api.recipe.RecipeLifecycleRegister;
-import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
-import com.tkisor.nekojs.api.recipe.RecipeSchemaRegister;
+import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
+import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
+import com.tkisor.nekojs.core.plugin.RecipeSchemaRegister;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
-import com.tkisor.nekojs.api.lifecycle.PluginLifecycleRegister;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.core.plugin.PluginLifecycleRegister;
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.AttachedData;
 
 /**
@@ -23,6 +24,9 @@ import com.tkisor.nekojs.api.data.AttachedData;
  * {@code @RegisterNekoJSPlugin} 自动发现 {@code implements NekoJSPlugin} 的类。
  */
 public interface NekoJSPlugin {
+    /** Core builtin plugin priority — guarantees earliest load (adapters/bindings register first). */
+    int CORE_PRIORITY = Integer.MAX_VALUE;
+
     default void registerScriptCompilers(ScriptCompilerRegistry registry) {
     }
 
@@ -142,5 +146,12 @@ public interface NekoJSPlugin {
 
     /** 向 {@code Player} 挂载自定义内存数据，首次访问 {@code player.data} 时触发。 */
     default void attachPlayerData(AttachedData<?> data) {
+    }
+
+    /**
+     * jsconfig.json 写盘前修改其模型（paths/include/typeRoots 等）。每个 ScriptType（env）各触发一次，
+     * 对应 server/client/startup/test 脚本目录。默认空实现。
+     */
+    default void modifyWorkspaceConfig(JSConfigModel model, String env) {
     }
 }

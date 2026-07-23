@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.core.compiler;
 
-import com.tkisor.nekojs.api.compiler.NekoSourceAst;
-import com.tkisor.nekojs.api.compiler.NekoSourceFile;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 
 public record NekoEsmSourceAst(

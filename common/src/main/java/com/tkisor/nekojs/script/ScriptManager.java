@@ -1,7 +1,8 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.catalog.JavaClassLoadTelemetrySink;
+import com.tkisor.nekojs.core.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
@@ -13,11 +14,11 @@ import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
-import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
-import com.tkisor.nekojs.script.context.ScriptContextRegistry;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
@@ -163,7 +164,7 @@ public final class ScriptManager implements AutoCloseable {
 
         // ---- 重载 ----
 
-        public void reloadScripts () {
+        public synchronized void reloadScripts () {
             scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
             resetEnvironment();
             discoverScripts();

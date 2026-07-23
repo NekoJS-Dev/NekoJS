@@ -16,12 +16,13 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 * **TypeScript & JSX 本体支持**：NekoJS 本体内置 `.ts` erasable TypeScript 前端和轻量 `.jsx/.tsx` classic runtime lowering；后续高级 TS/TSX/JSX 语法也优先在本体语言前端中补齐。
 * **原生 ESM 运行时**：支持 `import`/`export`、live binding、循环依赖、top-level await、`import.meta`、dynamic `import()` 和 ESM/CJS 互操作。
 * **Node.js 兼容 API**：内置 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等核心模块 shim。
-* **开发者体验优先**：启动后自动生成工作区目录、编辑器配置和可供外部工具消费的 catalog 元数据；NekoProbe 作为独立项目消费这些信息提供 IDE 智能提示与代码补全。
+* **开发者体验优先**：启动后自动生成工作区目录、编辑器配置（jsconfig.json）和可供外部工具消费的 catalog 元数据；内置 probe 直接遍历 catalog 生成 TypeScript 声明（`.d.ts`），无需安装 ProbeJS 这类外部 mod 即可获得 IDE 智能提示与代码补全。
 * **现代模块化与 NPM 生态**：支持基于 `require()` / `module.exports` 的多文件模块化开发，并可在 `nekojs` 目录下引用纯 JavaScript npm 依赖（不支持包含原生 bindings 的包，也不等同于完整 Node.js 运行时）。
 * **服务端热重载**：服务端脚本可通过 `/nekojs reload` 重新加载；启动注册类脚本仍需重启游戏。
+* **配方热重载（Cleanroom 1.12.2）**：`/nekojs reload server` 会解冻注册表 → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 mixin 自动刷新 HEI/JEI 配方面板。NeoForge 平台的配方在数据包加载阶段固化，暂不支持运行时热重载（reload 不会报错但不刷新配方）。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
-* **多平台支持**：同时支持 NeoForge 26.1 26.2 1.21.1，共享 common 基础设施。
-* **内置Probe补全**: 无需安装 ProbeJS 这类 Mod 即可使用补全，并且实现可被其他更完善的 Probe 替换。
+* **多平台支持**：同时支持 NeoForge 26.1 / 26.2 / 1.21.1 与 Cleanroom 1.12.2（Forge），共享 common 基础设施。
+* **可替换的 probe 实现**：内置 probe 生成器（`ProbeOrchestrator`）可被第三方插件通过 `ProbeRegistry.setGenerator` 替换为更完善的实现。
 
 ---
 
@@ -60,10 +61,12 @@ common/                          # 跨平台通用代码
     └── wrapper/                 # 脚本友好 wrapper
 
 platforms/
+├── cleanroom-1.12.2/            # Cleanroom 1.12.2（Forge）
+│   └── src/main/java/...
 ├── neoforge-26.1/               # NeoForge 26.1
-│   └── src/main/java/.../neoforge-26.1/...
+│   └── src/main/java/...
 ├── neoforge-26.2/               # NeoForge 26.2
-│   └── src/main/java/.../neoforge-26.2/...
+│   └── src/main/java/...
 └── neoforge-1.21.1/             # NeoForge 1.21.1
     └── src/main/java/...
 ```
@@ -228,6 +231,21 @@ public final class MyStartupApiPlugin implements StartupBindingsPlugin {
 
 这个流程的生命周期是固定的：先扫描并实例化所有 `@RegisterNekoJSPlugin`，再收集所有 `NekoPluginExtensionProvider` 注册的插件类型，冻结 extension point registry 后才执行各插件的 typed hooks。extension point 的 collector 只能访问受限的 `NekoPluginExtensionContext` registry，不会拿到 `NekoPluginRuntime` 内部集合。所有 registry 都只允许在 bootstrap 收集阶段写入，bootstrap 完成后会 fail-fast 拒绝延迟注册。
 
+### 插件加载顺序与条件
+
+`@RegisterNekoJSPlugin` 支持三个参数控制加载行为：
+
+- `priority`（int，默认 1000）：**数值越大越先加载**。内置核心插件用 `NekoJSPlugin.CORE_PRIORITY`（`Integer.MAX_VALUE`）确保最先注册 adapter/binding 等基础设施。
+- `clientOnly`（boolean，默认 false）：仅客户端进程加载，dedicated server 跳过该插件。
+- `requiredMods`（String[]，默认空）：列出的 mod 全部在场才加载（AND 语义）。
+
+```java
+@RegisterNekoJSPlugin(priority = 500, clientOnly = true, requiredMods = {"jei", "mekanism"})
+public final class MyIntegrationPlugin implements NekoJSPlugin { ... }
+```
+
+过滤与排序在 common 的 `NekoJSBasePluginManager.registerClass` 中统一完成，4 平台 PluginLoader 只负责发现被注解的类。
+
 Recipe lifecycle 也是同一套 typed hook：外部插件可以实现 `RecipeLifecyclePlugin`，或在 `registerRecipeLifecycleHooks` 中注册 `beforeRecipeLoading` / `afterRecipes`。这两个 hook 分别运行在 server recipe 脚本事件前后，操作的是受控 `RecipeLifecycleContext`，不会暴露 recipe manager 的内部 mutable map。
 
 ### 数据驱动配方方法
@@ -307,6 +325,8 @@ NekoJS 提供事件监听机制，用于响应 Minecraft 游戏中的各种状�
 命令事件 (CommandEvents)
 └── register - 命令注册时触发
 ```
+
+> 上方仅列常用事件，事件组持续扩充（`LevelEvents`、`NetworkEvents`、`GoalEvents`、更多 `PlayerEvents`/`ItemEvents`/`BlockEvents`/`EntityEvents` 等）。完整、权威的事件签名以 probe 生成的 `.neko_probe/@side-only/<type>/events/index.d.ts` 为准。
 
 ### 事件类型说明
 

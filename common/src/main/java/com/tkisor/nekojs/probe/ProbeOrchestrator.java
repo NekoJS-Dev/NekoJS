@@ -4,13 +4,15 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
+import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
-import com.tkisor.nekojs.api.probe.ProbeGenerator;
+import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.script.WorkspaceGenerator;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -26,15 +28,17 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
     private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(classDeclGenerator, typeConverter, adapterAliasGenerator);
     private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter, adapterAliasGenerator);
-    private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator(typeConverter);
+    private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
-    private final SpecialTypeGenerator specialTypeGenerator = new SpecialTypeGenerator();
 
     {
         // RecipeEventJS.recipes getter 由 RecipeEventDeclarationGenerator 提供，
         // 让它返回 DocumentedRecipes（来自 @side-only/server/events/recipes）
         try {
-            Class<?> recipeEventClass = Class.forName("com.tkisor.nekojs.wrapper.event.server.RecipeEventJS");
+            Class<?> recipeEventClass = Class.forName(
+                    "com.tkisor.nekojs.wrapper.event.server.RecipeEventJS",
+                    false,
+                    Thread.currentThread().getContextClassLoader());
             classDeclGenerator.overrideGetter(
                     recipeEventClass,
                     "recipes",
@@ -125,6 +129,12 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             Path agentsDir = outputDir.getParent().resolve(".github").resolve("agents");
             AgentTemplateGenerator.generate(agentsDir);
 
+            // 10. 补全 workspace 配置（.neko_probe/jsconfig.json + 各脚本目录 jsconfig.json + snippets）。
+            // probe 生成的 .d.ts 内部大量用 import { $X } from "java:..." / "@side-only/..." / "@special"，
+            // 这些非标准模块说明符只有靠 jsconfig paths 才能被 IDE 解析。启动时已生成一次，这里幂等补全
+            // （已存在的 jsconfig 不重写，仅 snippets 总刷新），保证 /nekojs probe 后 IDE 工件自洽，无需重启游戏。
+            WorkspaceGenerator.createWorkspaceConfigs();
+
             long duration = System.currentTimeMillis() - start;
             NekoJS.LOGGER.info("Probe generated: {} files in {}ms", filesGenerated, duration);
             return GenerateResult.success(filesGenerated, duration);
@@ -157,6 +167,10 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         }
         for (BindingCatalogEntry binding : snapshot.bindings()) {
             if (binding.javaType() != null) queue.add(new Object[]{binding.javaType(), 0});
+            // 代理绑定（如 Item）的 extraDocTypes（委托目标 MC 类）也作为种子，确保其 $Class 声明生成
+            for (Class<?> extra : binding.extraDocTypes()) {
+                queue.add(new Object[]{extra, 0});
+            }
         }
 
         int maxDepth = 5;
@@ -221,386 +235,27 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
         for (String fqn : classNames) {
             futures.add(executor.submit(() -> {
-                try { indexFileGenerator.pregenerateClass(Class.forName(fqn)); } catch (ClassNotFoundException ignored) {}
+                try {
+                    // Use initialize=false to avoid triggering <clinit> which can
+                    // crash on non-OpenGL threads (e.g. client rendering classes)
+                    Class<?> clazz = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
+                    indexFileGenerator.pregenerateClass(clazz);
+                } catch (Throwable t) {
+                    // Log failures for NekoJS platform classes so we can debug missing types
+                    if (fqn.startsWith("com.tkisor.nekojs.")) {
+                        NekoJS.LOGGER.debug("Probe: failed to pregenerate class {}: {}", fqn, t.toString());
+                    }
+                }
             }));
         }
         for (var f : futures) { try { f.get(); } catch (Exception ignored) {} }
         executor.shutdown();
     }
 
-    /**
-     * 添加常用 Java 标准库类。
-     */
-    private void addCommonJavaClasses(Set<String> classes) {
-        String[] commonClasses = {
-            // java.lang
-            "java.lang.String",
-            "java.lang.StringBuilder",
-            "java.lang.StringBuffer",
-            "java.lang.Integer",
-            "java.lang.Long",
-            "java.lang.Double",
-            "java.lang.Float",
-            "java.lang.Boolean",
-            "java.lang.Byte",
-            "java.lang.Short",
-            "java.lang.Character",
-            "java.lang.Number",
-            "java.lang.Comparable",
-            "java.lang.Iterable",
-            "java.lang.Cloneable",
-            "java.lang.AutoCloseable",
-            "java.lang.Runnable",
-            "java.lang.Thread",
-            "java.lang.ThreadGroup",
-            "java.lang.Class",
-            "java.lang.ClassLoader",
-            "java.lang.Enum",
-            "java.lang.Exception",
-            "java.lang.RuntimeException",
-            "java.lang.Error",
-            "java.lang.Throwable",
-            "java.lang.Math",
-            "java.lang.System",
-            "java.lang.Process",
-            "java.lang.ProcessBuilder",
-            "java.lang.Module",
-            "java.lang.Package",
-            "java.lang.StackWalker",
-            "java.lang.StackTraceElement",
-            "java.lang.StringJoiner",
-            "java.lang.System.Logger",
-            "java.lang.System.Logger.Level",
-
-            // java.lang.annotation
-            "java.lang.annotation.Annotation",
-            "java.lang.annotation.Retention",
-            "java.lang.annotation.RetentionPolicy",
-            "java.lang.annotation.Target",
-            "java.lang.annotation.ElementType",
-
-            // java.lang.invoke
-            "java.lang.invoke.MethodHandle",
-            "java.lang.invoke.MethodHandles",
-            "java.lang.invoke.MethodType",
-            "java.lang.invoke.VarHandle",
-
-            // java.lang.reflect
-            "java.lang.reflect.Field",
-            "java.lang.reflect.Method",
-            "java.lang.reflect.Constructor",
-            "java.lang.reflect.Parameter",
-            "java.lang.reflect.Modifier",
-            "java.lang.reflect.Proxy",
-
-            // java.util
-            "java.util.Collection",
-            "java.util.List",
-            "java.util.ArrayList",
-            "java.util.LinkedList",
-            "java.util.Set",
-            "java.util.HashSet",
-            "java.util.TreeSet",
-            "java.util.LinkedHashSet",
-            "java.util.Map",
-            "java.util.HashMap",
-            "java.util.TreeMap",
-            "java.util.LinkedHashMap",
-            "java.util.EnumMap",
-            "java.util.WeakHashMap",
-            "java.util.IdentityHashMap",
-            "java.util.Queue",
-            "java.util.Deque",
-            "java.util.ArrayDeque",
-            "java.util.PriorityQueue",
-            "java.util.Iterator",
-            "java.util.ListIterator",
-            "java.util.Spliterator",
-            "java.util.Optional",
-            "java.util.OptionalInt",
-            "java.util.OptionalLong",
-            "java.util.OptionalDouble",
-            "java.util.Random",
-            "java.util.RandomAccess",
-            "java.util.UUID",
-            "java.util.Date",
-            "java.util.Calendar",
-            "java.util.Locale",
-            "java.util.TimeZone",
-            "java.util.Currency",
-            "java.util.Formatter",
-            "java.util.Scanner",
-            "java.util.StringTokenizer",
-            "java.util.Properties",
-            "java.util.BitSet",
-            "java.util.Objects",
-            "java.util.Arrays",
-            "java.util.Collections",
-            "java.util.Comparator",
-            "java.util.Enumeration",
-            "java.util.EventListener",
-            "java.util.EventObject",
-            "java.util.Observable",
-            "java.util.Observer",
-            "java.util.Timer",
-            "java.util.TimerTask",
-            "java.util.concurrent.Callable",
-            "java.util.concurrent.CompletableFuture",
-            "java.util.concurrent.CompletionStage",
-            "java.util.concurrent.ConcurrentHashMap",
-            "java.util.concurrent.ConcurrentMap",
-            "java.util.concurrent.CountDownLatch",
-            "java.util.concurrent.CyclicBarrier",
-            "java.util.concurrent.Executor",
-            "java.util.concurrent.ExecutorService",
-            "java.util.concurrent.Executors",
-            "java.util.concurrent.Future",
-            "java.util.concurrent.ScheduledExecutorService",
-            "java.util.concurrent.ScheduledFuture",
-            "java.util.concurrent.Semaphore",
-            "java.util.concurrent.ThreadFactory",
-            "java.util.concurrent.TimeUnit",
-            "java.util.concurrent.atomic.AtomicBoolean",
-            "java.util.concurrent.atomic.AtomicInteger",
-            "java.util.concurrent.atomic.AtomicLong",
-            "java.util.concurrent.atomic.AtomicReference",
-            "java.util.concurrent.locks.Lock",
-            "java.util.concurrent.locks.ReentrantLock",
-            "java.util.concurrent.locks.ReadWriteLock",
-            "java.util.concurrent.locks.ReentrantReadWriteLock",
-            "java.util.concurrent.locks.Condition",
-
-            // java.util.function
-            "java.util.function.BiConsumer",
-            "java.util.function.BiFunction",
-            "java.util.function.BinaryOperator",
-            "java.util.function.Consumer",
-            "java.util.function.Function",
-            "java.util.function.Predicate",
-            "java.util.function.Supplier",
-            "java.util.function.UnaryOperator",
-            "java.util.function.IntConsumer",
-            "java.util.function.IntFunction",
-            "java.util.function.IntPredicate",
-            "java.util.function.IntSupplier",
-            "java.util.function.LongConsumer",
-            "java.util.function.LongFunction",
-            "java.util.function.LongPredicate",
-            "java.util.function.LongSupplier",
-            "java.util.function.DoubleConsumer",
-            "java.util.function.DoubleFunction",
-            "java.util.function.DoublePredicate",
-            "java.util.function.DoubleSupplier",
-            "java.util.function.BiPredicate",
-            "java.util.function.ToDoubleFunction",
-            "java.util.function.ToIntFunction",
-            "java.util.function.ToLongFunction",
-
-            // java.util.stream
-            "java.util.stream.Stream",
-            "java.util.stream.IntStream",
-            "java.util.stream.LongStream",
-            "java.util.stream.DoubleStream",
-            "java.util.stream.Collector",
-            "java.util.stream.Collectors",
-
-            // java.io
-            "java.io.File",
-            "java.io.InputStream",
-            "java.io.OutputStream",
-            "java.io.Reader",
-            "java.io.Writer",
-            "java.io.BufferedReader",
-            "java.io.BufferedWriter",
-            "java.io.ByteArrayInputStream",
-            "java.io.ByteArrayOutputStream",
-            "java.io.DataInput",
-            "java.io.DataOutput",
-            "java.io.DataInputStream",
-            "java.io.DataOutputStream",
-            "java.io.FileFilter",
-            "java.io.FilenameFilter",
-            "java.io.FileInputStream",
-            "java.io.FileOutputStream",
-            "java.io.FileReader",
-            "java.io.FileWriter",
-            "java.io.FilterInputStream",
-            "java.io.FilterOutputStream",
-            "java.io.Flushable",
-            "java.io.IOException",
-            "java.io.InputStreamReader",
-            "java.io.ObjectInput",
-            "java.io.ObjectOutput",
-            "java.io.ObjectInputStream",
-            "java.io.ObjectOutputStream",
-            "java.io.OutputStreamWriter",
-            "java.io.PrintStream",
-            "java.io.PrintWriter",
-            "java.io.RandomAccessFile",
-            "java.io.Serializable",
-            "java.io.Closeable",
-
-            // java.nio
-            "java.nio.ByteBuffer",
-            "java.nio.CharBuffer",
-            "java.nio.DoubleBuffer",
-            "java.nio.FloatBuffer",
-            "java.nio.IntBuffer",
-            "java.nio.LongBuffer",
-            "java.nio.ShortBuffer",
-            "java.nio.ByteOrder",
-            "java.nio.Buffer",
-            "java.nio.MappedByteBuffer",
-            "java.nio.channels.Channel",
-            "java.nio.channels.ReadableByteChannel",
-            "java.nio.channels.WritableByteChannel",
-            "java.nio.channels.SeekableByteChannel",
-            "java.nio.channels.FileChannel",
-            "java.nio.charset.Charset",
-            "java.nio.charset.CharsetDecoder",
-            "java.nio.charset.CharsetEncoder",
-            "java.nio.charset.StandardCharsets",
-
-            // java.nio.file
-            "java.nio.file.Path",
-            "java.nio.file.Paths",
-            "java.nio.file.Files",
-            "java.nio.file.FileSystem",
-            "java.nio.file.FileSystems",
-            "java.nio.file.FileVisitor",
-            "java.nio.file.FileVisitResult",
-            "java.nio.file.WatchEvent",
-            "java.nio.file.WatchKey",
-            "java.nio.file.WatchService",
-            "java.nio.file.attribute.BasicFileAttributes",
-            "java.nio.file.attribute.FileAttribute",
-            "java.nio.file.attribute.FileTime",
-            "java.nio.file.AccessMode",
-            "java.nio.file.CopyOption",
-            "java.nio.file.DirectoryStream",
-            "java.nio.file.FileStore",
-            "java.nio.file.LinkOption",
-            "java.nio.file.OpenOption",
-            "java.nio.file.StandardCopyOption",
-            "java.nio.file.StandardOpenOption",
-
-            // java.math
-            "java.math.BigDecimal",
-            "java.math.BigInteger",
-            "java.math.MathContext",
-            "java.math.RoundingMode",
-
-            // java.net
-            "java.net.URI",
-            "java.net.URL",
-            "java.net.URLConnection",
-            "java.net.HttpURLConnection",
-            "java.net.InetAddress",
-            "java.net.InetSocketAddress",
-            "java.net.Proxy",
-            "java.net.Socket",
-            "java.net.ServerSocket",
-            "java.net.CookieManager",
-            "java.net.CookieHandler",
-            "java.net.CookiePolicy",
-            "java.net.URLClassLoader",
-            "java.net.URLDecoder",
-            "java.net.URLEncoder",
-
-            // java.time
-            "java.time.Duration",
-            "java.time.Instant",
-            "java.time.LocalDate",
-            "java.time.LocalDateTime",
-            "java.time.LocalTime",
-            "java.time.Month",
-            "java.time.Year",
-            "java.time.YearMonth",
-            "java.time.ZoneId",
-            "java.time.ZoneOffset",
-            "java.time.ZonedDateTime",
-            "java.time.OffsetDateTime",
-            "java.time.OffsetTime",
-            "java.time.Period",
-            "java.time.Clock",
-            "java.time.DayOfWeek",
-            "java.time.format.DateTimeFormatter",
-            "java.time.format.DateTimeFormatterBuilder",
-            "java.time.temporal.ChronoField",
-            "java.time.temporal.ChronoUnit",
-            "java.time.temporal.Temporal",
-            "java.time.temporal.TemporalAccessor",
-            "java.time.temporal.TemporalAmount",
-            "java.time.temporal.TemporalField",
-            "java.time.temporal.TemporalUnit",
-            "java.time.temporal.ValueRange",
-
-            // java.text
-            "java.text.DateFormat",
-            "java.text.SimpleDateFormat",
-            "java.text.DecimalFormat",
-            "java.text.MessageFormat",
-            "java.text.NumberFormat",
-            "java.text.ChoiceFormat",
-            "java.text.CollationKey",
-            "java.text.Collator",
-            "java.text.BreakIterator",
-            "java.text.CharacterIterator",
-            "java.text.AttributedCharacterIterator",
-            "java.text.AttributedString",
-            "java.text.Format",
-            "java.text.FieldPosition",
-            "java.text.ParsePosition",
-
-            // java.security
-            "java.security.CodeSource",
-            "java.security.Permission",
-            "java.security.PermissionCollection",
-            "java.security.Permissions",
-            "java.security.Policy",
-            "java.security.Principal",
-            "java.security.PrivilegedAction",
-            "java.security.PrivilegedExceptionAction",
-            "java.security.ProtectionDomain",
-            "java.security.SecureRandom",
-            "java.security.cert.Certificate",
-            "java.security.cert.X509Certificate",
-
-            // java.sql
-            "java.sql.Connection",
-            "java.sql.DriverManager",
-            "java.sql.PreparedStatement",
-            "java.sql.ResultSet",
-            "java.sql.SQLException",
-            "java.sql.Statement",
-            "java.sql.Types",
-
-            // javax.script
-            "javax.script.Bindings",
-            "javax.script.Compilable",
-            "javax.script.CompiledScript",
-            "javax.script.Invocable",
-            "javax.script.ScriptContext",
-            "javax.script.ScriptEngine",
-            "javax.script.ScriptEngineFactory",
-            "javax.script.ScriptException",
-            "javax.script.SimpleBindings",
-            "javax.script.SimpleScriptContext"
-        };
-
-        for (String className : commonClasses) {
-            try {
-                Class<?> cls = Class.forName(className);
-                classes.add(cls.getName());
-            } catch (ClassNotFoundException e) {
-                // 类不存在，跳过
-            }
-        }
-    }
-
-    private boolean isRelevantClass(String name) {
+    static boolean isRelevantClass(String name) {
         return name.startsWith("java.") ||
                name.startsWith("net.minecraft.") ||
+               name.startsWith("net.minecraftforge.") ||
                name.startsWith("net.neoforged.") ||
                name.startsWith("com.tkisor.nekojs.");
     }
@@ -646,7 +301,7 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             try {
                 completion.take().get();
             } catch (java.util.concurrent.ExecutionException e) {
-                NekoJS.LOGGER.error("Package generation task failed", e.getCause());
+                NekoJS.LOGGER.debug("Package generation task failed (non-fatal)", e.getCause());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -757,12 +412,137 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         if (registries.isEmpty()) return 0;
 
         Path specialDir = outputDir.resolve("@special");
-        Files.createDirectories(specialDir);
-        specialTypeGenerator.generate(registries, specialDir);
-        return 2; // index.d.ts + types/index.d.ts
+        Path typesDir = specialDir.resolve("types");
+        Files.createDirectories(typesDir);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("declare module \"@special/types\" {\n");
+        sb.append("    export namespace RegistryTypes {\n");
+
+        for (RegistryTypeCatalogEntry registry : registries) {
+            String typeName = registry.typeName();
+            if (registry.entries().isEmpty()) {
+                sb.append("        type ").append(typeName).append(" = string;\n");
+            } else {
+                sb.append("        type ").append(typeName).append(" = ");
+                List<String> entries = registry.entries();
+                for (int i = 0; i < entries.size(); i++) {
+                    if (i > 0) sb.append(" | ");
+                    if (i > 0 && i % 8 == 0) sb.append("\n            ");
+                    sb.append("\"").append(entries.get(i).replace("\"", "\\\"")).append("\"");
+                }
+                sb.append(";\n");
+            }
+        }
+
+        sb.append("    }\n");
+        sb.append("}\n");
+        sb.append("\nexport * as types from \"@special/types\";\n");
+
+        Files.writeString(specialDir.resolve("index.d.ts"), "export * as types from \"@special/types\";\n");
+        Files.writeString(typesDir.resolve("index.d.ts"), sb.toString());
+        return 2;
     }
 
     private int generateManualDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
-        return ManualDeclarationGenerator.generate(snapshot.manualDeclarations(), outputDir.resolve("@manual"));
+        List<ManualDeclarationCatalogEntry> entries = snapshot.manualDeclarations();
+        if (entries == null || entries.isEmpty()) {
+            return 0;
+        }
+        Path manualDir = outputDir.resolve("@manual");
+        Files.createDirectories(manualDir);
+        StringBuilder sb = new StringBuilder();
+        sb.append("// Auto-generated by NekoJS probe. Manual declarations: node:xxx modules, helper types, plugin modules.\n");
+        sb.append("// Do not edit; regenerate with /nekojs probe.\n\n");
+        for (ManualDeclarationCatalogEntry entry : entries) {
+            String decl = entry.declaration();
+            if (decl == null || decl.isBlank()) {
+                continue;
+            }
+            sb.append("// ").append(entry.id()).append('\n');
+            sb.append(decl.trim()).append("\n\n");
+        }
+        Files.writeString(manualDir.resolve("index.d.ts"), sb.toString());
+        return 1;
+    }
+
+    // -----------------------------------------------------------------------
+    //  Inner classes
+    // -----------------------------------------------------------------------
+
+    /**
+     * Java 包层级树：从类全限定名构建树结构，用于生成 package 目录。
+     */
+    private static final class PackageTree {
+        private final Node root = new Node("", null);
+
+        void addClass(String fullyQualifiedName) {
+            String[] parts = fullyQualifiedName.split("\\.");
+            Node current = root;
+            for (int i = 0; i < parts.length - 1; i++) {
+                final Node parent = current;
+                current = current.children.computeIfAbsent(parts[i], k -> new Node(k, parent));
+            }
+            current.classes.add(parts[parts.length - 1]);
+        }
+
+        Node getRoot() {
+            return root;
+        }
+
+        List<Node> traversePackages() {
+            List<Node> result = new ArrayList<>();
+            Deque<Node> stack = new ArrayDeque<>();
+            stack.push(root);
+            while (!stack.isEmpty()) {
+                Node node = stack.pop();
+                if (node != root) {
+                    result.add(node);
+                }
+                List<Node> childList = new ArrayList<>(node.children.values());
+                Collections.reverse(childList);
+                for (Node child : childList) {
+                    stack.push(child);
+                }
+            }
+            return result;
+        }
+
+        static final class Node {
+            final String name;
+            final Node parent;
+            final Map<String, Node> children = new LinkedHashMap<>();
+            final List<String> classes = new ArrayList<>();
+
+            Node(String name, Node parent) {
+                this.name = name;
+                this.parent = parent;
+            }
+
+            String getPackageName() {
+                List<String> path = new ArrayList<>();
+                Node current = this;
+                while (current != null && !current.name.isEmpty()) {
+                    path.add(current.name);
+                    current = current.parent;
+                }
+                Collections.reverse(path);
+                return String.join(".", path);
+            }
+
+            String getPackagePath() {
+                return getPackageName().replace('.', '/');
+            }
+
+            List<String> getSubPackageNames() {
+                List<String> result = new ArrayList<>();
+                for (Node child : children.values()) {
+                    if (!child.children.isEmpty() || !child.classes.isEmpty()) {
+                        result.add(child.name);
+                    }
+                }
+                return result;
+            }
+        }
     }
 }

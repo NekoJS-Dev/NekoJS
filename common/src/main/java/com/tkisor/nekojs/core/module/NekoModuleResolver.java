@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 

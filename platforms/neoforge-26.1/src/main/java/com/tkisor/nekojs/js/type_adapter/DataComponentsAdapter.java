@@ -2,6 +2,7 @@ package com.tkisor.nekojs.js.type_adapter;
 
 import com.google.gson.JsonElement;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.core.JsonObjectAdapter;
 import com.mojang.serialization.JsonOps;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.component.DataComponentPatch;

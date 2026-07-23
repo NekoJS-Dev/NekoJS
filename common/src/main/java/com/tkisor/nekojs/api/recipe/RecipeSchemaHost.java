@@ -11,8 +11,8 @@ import graal.graalvm.polyglot.Value;
  * SPI abstraction over the platform-specific recipe event plus its resolvers/serializers.
  *
  * <p>Centralizes all Minecraft/NeoForge-coupled recipe operations behind a common interface,
- * so the recipe namespace proxies ({@code RecipeNamespaceProxy}, {@code DataDrivenRecipeNamespaceProxy},
- * {@code FallbackNamespaceProxy}) can live in {@code common} with no mod-loader dependencies.
+ * so the recipe namespace proxies ({@code RecipeNamespaceProxy}, {@code FallbackNamespaceProxy})
+ * can live in {@code common} with no mod-loader dependencies.
  * Each platform supplies an implementation wrapping its {@code RecipeEventJS}.
  */
 public interface RecipeSchemaHost {

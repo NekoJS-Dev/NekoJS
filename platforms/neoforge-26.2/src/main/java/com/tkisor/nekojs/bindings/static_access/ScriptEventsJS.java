@@ -6,7 +6,7 @@ import com.tkisor.nekojs.api.event.ScriptEventDefinition;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEventRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Value;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;

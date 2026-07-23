@@ -3,7 +3,8 @@ package com.tkisor.nekojs.bindings.event;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
+import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.eventbus.EventBusFactory;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -50,7 +51,7 @@ public interface EntityEvents {
             GROUP.server("useItemTick", LivingEntityUseItemEvent.Tick.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
-        return DispatchKey.of(Item.class, toStack.andThen(ItemStack::getItem));
+        return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
     }
 
     private static <T extends ItemEntityPickupEvent> DispatchKey<T, Item> dispatchByPickupItem() {
@@ -62,7 +63,7 @@ public interface EntityEvents {
     }
 
     private static <T> DispatchKey<T, EntityType<?>> dispatchByEntity(Function<T, ? extends Entity> toEntity) {
-        return DispatchKey.of(EntityType.class, event -> toEntity.apply(event).getType());
+        return EventBusFactory.createDispatchKey(EntityType.class, event -> toEntity.apply(event).getType());
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)

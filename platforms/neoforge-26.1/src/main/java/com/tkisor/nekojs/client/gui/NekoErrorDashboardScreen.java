@@ -3,7 +3,7 @@ package com.tkisor.nekojs.client.gui;
 import com.tkisor.nekojs.client.gui.components.*;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.network.*;
-import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
+import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;

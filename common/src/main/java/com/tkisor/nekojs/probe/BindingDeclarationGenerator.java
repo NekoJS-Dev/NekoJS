@@ -1,8 +1,7 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -24,12 +23,6 @@ import java.util.*;
  * </pre>
  */
 public final class BindingDeclarationGenerator {
-    private final TypeConverter typeConverter;
-
-    public BindingDeclarationGenerator(TypeConverter typeConverter) {
-        this.typeConverter = typeConverter;
-    }
-
     /**
      * 为指定 ScriptType 生成绑定声明。
      */
@@ -42,6 +35,9 @@ public final class BindingDeclarationGenerator {
         for (BindingCatalogEntry binding : bindings) {
             if (binding.javaType() != null) {
                 collectImports(binding.javaType(), imports);
+            }
+            for (Class<?> extra : binding.extraDocTypes()) {
+                collectImports(extra, imports);
             }
         }
 
@@ -56,6 +52,19 @@ public final class BindingDeclarationGenerator {
             String importPath = "java:" + entry.getKey().replace('.', '/');
             sb.append("import { ").append(String.join(", ", entry.getValue()));
             sb.append(" } from \"").append(importPath).append("\";\n");
+        }
+
+        // Emit type aliases for bindings that use a TypeDoc typeOverride (e.g. ItemJS -> NekoItemHelper).
+        // Without this, `let ItemJS: NekoItemHelper` references an undefined name and the binding loses
+        // all member completion. The alias forwards to the real $Class so the override resolves to members.
+        Set<String> emittedAlias = new LinkedHashSet<>();
+        for (BindingCatalogEntry binding : bindings) {
+            String override = binding.typeOverride();
+            if (override != null && !override.isEmpty()
+                    && binding.javaType() != null && emittedAlias.add(override)) {
+                sb.append("type ").append(override).append(" = $")
+                        .append(getTsClassName(binding.javaType())).append(";\n");
+            }
         }
 
         sb.append("\nexport {};\n\n");
@@ -99,6 +108,12 @@ public final class BindingDeclarationGenerator {
             }
         } else {
             sb.append("any");
+        }
+
+        // DelegatingBinding 代理委托：把 targetClass 的静态成员（typeof $Extra）交叉合并进来。
+        // 例如 Item: NekoItemHelper & typeof $Item —— of/empty 来自 ItemJS 实例，其余静态成员来自 MC Item。
+        for (Class<?> extra : binding.extraDocTypes()) {
+            sb.append(" & typeof $").append(getTsClassName(extra));
         }
 
         sb.append(";\n");

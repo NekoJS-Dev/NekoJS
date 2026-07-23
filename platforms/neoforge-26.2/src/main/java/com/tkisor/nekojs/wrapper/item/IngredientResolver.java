@@ -198,7 +198,9 @@ public final class IngredientResolver {
             }
         }
         if (holders.isEmpty()) return Ingredient.of();
-        return Ingredient.of(holders.toArray(new Item[0]));
+        // holders 是 List<Holder<Item>>，必须先 unwrap 成 Item[]，否则 toArray(new Item[0]) 会
+        // 因元素类型是 Holder 而抛 arraycopy: element type mismatch。
+        return Ingredient.of(holders.stream().map(Holder::value).toArray(Item[]::new));
     }
 
     // ===================== 旧的 id normalize（保留 API，IngredientJS 可能用）=====================

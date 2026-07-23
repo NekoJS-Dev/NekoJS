@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.module.esm;
 
-import com.tkisor.nekojs.api.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;

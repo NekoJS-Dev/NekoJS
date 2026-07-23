@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.data;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.util.Collections;

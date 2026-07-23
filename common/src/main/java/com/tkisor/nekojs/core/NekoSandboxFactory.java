@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.core;
 
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.context.NekoCoreContext;
+import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.ClassFilter;
@@ -11,7 +11,7 @@ import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;

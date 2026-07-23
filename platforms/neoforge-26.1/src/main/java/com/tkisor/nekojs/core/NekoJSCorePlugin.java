@@ -4,16 +4,16 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.tkisor.nekojs.api.*;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.catalog.NekoCommonManualDeclarations;
+import com.tkisor.nekojs.core.plugin.NekoCommonManualDeclarations;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
-import com.tkisor.nekojs.api.catalog.TypeDocsRegister;
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.event.ScriptEvents;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
-import com.tkisor.nekojs.api.recipe.RecipeNamespaceRegister;
+import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
@@ -24,6 +24,9 @@ import com.tkisor.nekojs.bindings.static_access.IDJS;
 import com.tkisor.nekojs.bindings.RecipeSchemaBinding;
 import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
+import com.tkisor.nekojs.js.DelegatingBinding;
+import com.tkisor.nekojs.api.data.Binding;
+import java.util.Set;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.bindings.static_access.StringUtilsJS;
 import com.tkisor.nekojs.bindings.static_access.TestJS;
@@ -35,10 +38,10 @@ import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.platform.Platform;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
-import com.tkisor.nekojs.wrapper.fluid.FluidAmounts;
+import com.tkisor.nekojs.wrapper.FluidAmounts;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -69,7 +72,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.List;
 
-@RegisterNekoJSPlugin
+@RegisterNekoJSPlugin(priority = NekoJSPlugin.CORE_PRIORITY)
 public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
@@ -106,7 +109,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("FluidAmounts", FluidAmounts.class);
         registry.register("Fluids", Fluids.class);
         registry.register("FluidStack", FluidStack.class);
-        registry.register("ItemJS", new ItemJS());
+        ItemJS itemHelper = new ItemJS();
         registry.register("ID", new IDJS());
         registry.register("Color", new ColorJS());
         registry.register("Platform", Platform.class);
@@ -120,7 +123,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("Network", NetworkJS.class);
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
-        registry.register("Item", Item.class);
+        // 全局 Item 是 ProxyObject 代理委托（of/empty 走 ItemJS，其余委托 MC Item 类）。
+        // 代理的动态成员 Java 反射不到，preflight 会误报 "has no member 'of'"，
+        // 故用 Binding.of(name, value, valueType) 显式声明 valueType=ItemJS。
+        registry.register(Binding.of("Item", new DelegatingBinding(itemHelper, Item.class, Set.of("of", "empty")), ItemJS.class));
         registry.register("BlockPos", BlockPos.class);
         registry.register("Direction", Direction.class);
         registry.register("Vec3", Vec3.class);
@@ -191,7 +197,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerTypeDocs(TypeDocsRegister registry) {
-        registry.register(TypeDocCatalogEntry.binding("ItemJS", "NekoItemHelper", "Script-friendly ItemStack factory and helpers.", List.of("ItemJS.of('minecraft:stone')", "ItemJS.empty()")));
+        registry.register(TypeDocCatalogEntry.binding("Item", "NekoItemHelper", "Script-friendly ItemStack factory and helpers (KubeJS-style: Item.of(id)); delegates of/empty to the helper, rest to MC Item.", List.of("Item.of('minecraft:stone')", "Item.of('minecraft:stone', 4)", "Item.empty()")));
         registry.register(TypeDocCatalogEntry.binding("Ingredient", "NekoIngredientHelper", "Script-friendly Ingredient and IngredientJS helper.", List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')")));
         registry.register(TypeDocCatalogEntry.binding("Fluid", "NekoFluidHelper", "Script-friendly FluidStack helper.", List.of("Fluid.of('minecraft:water', FluidAmounts.BUCKET)", "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
         registry.register(TypeDocCatalogEntry.binding("FluidIngredient", "NekoFluidIngredientHelper", "Script-friendly FluidIngredient and SizedFluidIngredient helper.", List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.sized('minecraft:water', 250)")));

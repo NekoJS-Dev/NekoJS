@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class Platform {
-    private static IPlatform INSTANCE;
+    private static volatile IPlatform INSTANCE;
 
     private Platform() {}
 

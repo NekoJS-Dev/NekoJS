@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 /**
  * Adapts an {@link ErrorTracker} into a {@link ScriptErrorReporter.Reporter}, so that callback

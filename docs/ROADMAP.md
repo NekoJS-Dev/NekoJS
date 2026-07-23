@@ -1,6 +1,6 @@
 # NekoJS 路线图
 
-NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 Minecraft JavaScript 脚本运行时。当前方向是保持轻量、JSON-first、贴近 Minecraft / NeoForge 原生类型，同时吸收 KubeJS 中能明显改善脚本体验的 helper、wrapper、adapter 和调试能力。
+NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2，Forge）上提供一个基于 GraalVM/GraalJS 的现代 Minecraft JavaScript 脚本运行时。当前方向是保持轻量、JSON-first、贴近 Minecraft / NeoForge 原生类型，同时吸收 KubeJS 中能明显改善脚本体验的 helper、wrapper、adapter 和调试能力。
 
 ## 当前设计原则
 
@@ -9,6 +9,26 @@ NekoJS 的目标是在 NeoForge 上提供一个基于 GraalVM/GraalJS 的现代 
 - [x] 额外能力优先通过 `ItemJS`、`Ingredient`、`Fluid`、mixin extension 和轻量 wrapper 提供。
 - [x] 避免把 Graal `Value` 暴露为常规脚本 API 参数，优先使用 Java 类型或函数式接口。
 - [x] 平台相关验证优先编译两个平台模块，不单独编译 `common`。
+
+## 2026-07 近期更新
+
+### 近期完成
+
+- [x] **插件系统增强**：`@RegisterNekoJSPlugin` 增加 `priority`（默认 1000，**数值大先加载**）/ `clientOnly` / `requiredMods`（AND 语义）；`NekoJSBasePluginManager.registerClass` 统一负责按 priority 排序 + clientOnly/requiredMods 过滤 + 实例化，过滤逻辑从 4 平台 PluginLoader 上提到 common；内置 CorePlugin 用 `NekoJSPlugin.CORE_PRIORITY`（`Integer.MAX_VALUE`）确保最先注册基础设施。
+- [x] **probe 内置 TypeScript 声明生成**：`ProbeOrchestrator` 直接遍历 `NekoScriptCatalog` 在 `.neko_probe/` 下生成 `.d.ts`（`@package` java alias、`@side-only` events/bindings、`@special` registry 字面量类型、recipe schema 带类型重载），无需外部 ProbeJS mod。recipe schema 由 `MinecraftRecipeSchemaScanner` 扫描 `RECIPE_SERIALIZER` 的 MapCodec 自动发现（下方 Recipe 重构「阶段 1 原版 schema 自动生成」已完成）。
+- [x] **jsconfig 自动生成**：`WorkspaceGenerator` 为每个脚本目录和 `.neko_probe/` 生成 `jsconfig.json`，paths 映射 `java:` / `@side-only` / `@special` 模块说明符，让 VSCode 等编辑器解析 probe 声明；`/nekojs probe` 末尾幂等补全这些配置。
+- [x] **配方热重载（Cleanroom 1.12.2）**：`/nekojs reload server` 解冻 ForgeRegistry → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 `HeiRefresher`（`JeiProxyAccessor` mixin @Accessor，类型安全非反射）自动刷新 HEI/JEI 面板。
+- [x] **健壮性修复**：`Platform.INSTANCE` 加 `volatile`（跨线程可见性）；`ScriptManager.reloadScripts` / `RegistryEventListener.reloadRecipes` 加重入保护（`synchronized`）；`EventBusJS` 4 处 catch 不再吞 `InterruptedException`/`Error`。
+- [x] **common 上提**：`WorkspaceGenerator`、`PluginLoader` 的过滤+实例化、`RecipeRegistryProxy` 常量（`RecipeRegistryKeys`）从平台层上提到 common；`postModifyWorkspaceConfigEvent` 平台 event bus 机制改为 `NekoJSPlugin.modifyWorkspaceConfig` 钩子，删除 4 平台 `ModifyWorkspaceConfigEvent` 死代码。
+- [x] **代码清理**：消除 10 处 `printStackTrace`、删除 `.jswrapper` 空垃圾目录、cleanroom 的 `NativeEventsJS`/`ScriptEventsJS` 桩改为显式 `UnsupportedOperationException`。
+
+### 下一阶段待办（按 ROI 排序）
+
+- [ ] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`global` 共享 map、`Java`/`JsonIO`/`NBTIO` 绑定、`Block.id(s)`/`Item.id(s)` 查找；`BlockPos`/`Vec3`/`BlockState` 输入 adapter（`{x,y,z}` / `[x,y,z]` / `minecraft:stone[prop=val]`）；`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、`BlockEvents.randomTick`/`blockEntityTick` 等缺失事件。
+- [ ] **`ServerEvents.tags`**：tag 修改事件（`add`/`remove`/`replaceAll`），整合包刚需；4 平台各实现 tag 桥接（neoforge tag builder、cleanroom ore dict）。
+- [ ] **3 个 NeoForge 平台源集合并**：26.1/26.2/1.21.1 有 130 个重名类、其中 124 个字节级相同，通过 Gradle 共享源集消除三份维护（独立大重构，需改 `build.gradle` + Unimined）。
+- [ ] **NeoForge 配方热重载**：当前 NeoForge 3 平台配方在数据包阶段固化，`/nekojs reload server` 不刷新配方且静默；接 `ReloadableServerResources` 钩子或至少给出明确告警。
+- [ ] **测试覆盖**：plugin bootstrap / adapter round-trip / 路径安全 / 热重载 等关键路径目前几乎无测试（4 平台模块零测试），优先补 common 纯函数路径（`NekoJSPaths` 路径穿越、adapter 转换、`NekoJSBasePluginManager` 排序）。
 
 ## 已完成的基础能力
 
@@ -147,7 +167,7 @@ RecipeTypeDefinition {
 
 ## Catalog 与外部类型工具契约
 
-NekoProbe 是独立项目，不属于本项目的实现范围。NekoJS 本体负责提供稳定、可枚举的 catalog metadata、workspace layout 和 snippet 数据，让 NekoProbe 或其他外部工具可以生成 TypeScript artifacts，而不是扫描运行时 scope、mixin hook 或依赖内部实现。
+NekoJS 本体既提供稳定、可枚举的 catalog metadata、workspace layout 和 snippet 数据，也内置 probe（`ProbeOrchestrator`）直接遍历 catalog 生成 TypeScript artifacts（`.d.ts`）。外部工具仍可消费 catalog 替换或增强类型生成（通过 `ProbeRegistry.setGenerator`），但不再需要单独安装 ProbeJS 这类外部 mod。
 
 ### NekoJS 侧元数据契约
 
@@ -171,7 +191,7 @@ NekoProbe 是独立项目，不属于本项目的实现范围。NekoJS 本体负
 
 ### 本项目不负责的类型生成实现
 
-以下内容属于 NekoProbe 或其他外部类型工具，不作为 NekoJS 本体路线图任务：
+以下能力现已由内置 `ProbeOrchestrator` 提供（外部工具可通过 `ProbeRegistry.setGenerator` 替换或增强）；保留此处作为「可被替换的边界」说明：
 
 - 类型生成插件 API、class discovery、alias、special docs、side docs、snippet 注入。
 - metadata graph / IR 到 `.d.ts`、snippet 和 workspace config 的完整 emitter。
@@ -405,7 +425,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 
 ### 验证状态
 
-- [x] 3 平台 `compileJava` 通过（neoforge-1.21.1、26.1、26.2）
+- [x] 4 平台 `compileJava` 通过（cleanroom-1.12.2、neoforge-1.21.1、26.1、26.2）
 - [x] `architectureCheck` 通过（allowlist baseline 已同步）
 - [x] 支持平台 neoforge-26.2 已加入 architecture scan roots
 - [x] `NekoJS.COMMON` 从初始 33 降至 4（仅剩 bootstrap 赋值 + `NekoPluginBootstrap` 静态引用）

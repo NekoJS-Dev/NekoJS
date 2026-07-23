@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.script.WithScriptType;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.WithScriptType;
+import com.tkisor.nekojs.api.event.DispatchKey;
 
 import java.util.Collections;
 import java.util.HashMap;

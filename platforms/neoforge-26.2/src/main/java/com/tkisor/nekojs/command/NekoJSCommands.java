@@ -13,9 +13,9 @@ import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
-import com.tkisor.nekojs.network.dto.ErrorSummaryDTO;
+import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.platform.Platform;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -218,7 +218,7 @@ public final class NekoJSCommands {
     }
 
     private static int runProbe(CommandSourceStack source) {
-        var generator = com.tkisor.nekojs.api.probe.ProbeRegistry.getGenerator();
+        var generator = com.tkisor.nekojs.probe.ProbeRegistry.getGenerator();
         if (generator == null) {
             source.sendFailure(Component.literal("No probe generator registered."));
             return 0;

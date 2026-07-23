@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 
 import java.io.IOException;

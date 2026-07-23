@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.holder.NamespaceHolderSet;
 import com.tkisor.nekojs.holder.PredicateHolderSet;
 import com.tkisor.nekojs.holder.RegexHolderSet;
+import com.tkisor.nekojs.wrapper.FluidAmounts;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;

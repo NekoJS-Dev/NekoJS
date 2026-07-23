@@ -60,12 +60,12 @@ public class ModInfo implements IModInfo {
                         try {
                             DISPLAY_NAME_FIELD.set(fmlInfo, newName);
                         } catch (IllegalAccessException e) {
-                            e.printStackTrace();
+                            com.tkisor.nekojs.NekoJS.LOGGER.error("Failed to set mod display name field via reflection", e);
                         }
                     }
                 });
             } catch (Exception ex) {
-                ex.printStackTrace();
+                com.tkisor.nekojs.NekoJS.LOGGER.error("Failed to update mod display name", ex);
             }
         }
     }

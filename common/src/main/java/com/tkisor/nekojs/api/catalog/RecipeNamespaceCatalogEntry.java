@@ -2,8 +2,11 @@ package com.tkisor.nekojs.api.catalog;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -63,11 +66,7 @@ public record RecipeNamespaceCatalogEntry(
     public static List<RecipeHandlerMethodEntry> collectHandlerMethods(Class<?> handlerClass) {
         if (handlerClass == null) return List.of();
         List<RecipeHandlerMethodEntry> entries = new ArrayList<>();
-        var grouped = new java.util.LinkedHashMap<String, List<Method>>();
-        for (var m : handlerClass.getMethods()) {
-            if (m.getDeclaringClass() == Object.class) continue;
-            grouped.computeIfAbsent(m.getName(), k -> new ArrayList<>()).add(m);
-        }
+        var grouped = reflectMethods(handlerClass);
         for (var entry : grouped.entrySet()) {
             List<RecipeHandlerMethodEntry.HandlerParam> bestParams = null;
             int bestTotal = 0;
@@ -77,7 +76,7 @@ public record RecipeNamespaceCatalogEntry(
                 if (params.size() >= bestTotal) {
                     bestParams = params;
                     bestTotal = params.size();
-                    int required = requiredCount(m);
+                    int required = requiredParamCount(m);
                     entries.removeIf(e -> e.methodName().equals(entry.getKey()));
                     entries.add(new RecipeHandlerMethodEntry(entry.getKey(), params, required));
                 }
@@ -94,11 +93,14 @@ public record RecipeNamespaceCatalogEntry(
             Class<?> raw = paramTypes[i];
             boolean optional = raw == Optional.class;
             Class<?> display = raw;
-            if (optional && genericTypes[i] instanceof ParameterizedType pt) {
+            Type generic = genericTypes[i];
+            if (optional && generic instanceof ParameterizedType pt && pt.getRawType() == Optional.class) {
                 if (pt.getActualTypeArguments()[0] instanceof Class<?> c) display = c;
+                generic = pt.getActualTypeArguments()[0]; // unwrap Optional<X> → X
             }
             params.add(new RecipeHandlerMethodEntry.HandlerParam(
-                    paramName(method, i, display), typeName(display), optional));
+                    paramName(method, i, display), typeName(display), qualifiedName(display),
+                    genericSignature(generic), optional));
         }
         return params;
     }
@@ -125,6 +127,41 @@ public record RecipeNamespaceCatalogEntry(
         };
     }
 
+    /**
+     * FQN for the parameter's Java type, so the probe emits version-correct {@code java:...}
+     * imports instead of a hard-coded MC-version package. {@code null} for primitives /
+     * {@code String} / wrapper numbers — those map straight to TS primitives and need no alias.
+     */
+    private static String qualifiedName(Class<?> cls) {
+        if (cls == Optional.class) return null;
+        if (cls.isPrimitive()) return null;
+        if (cls == String.class) return null;
+        if (Number.class.isAssignableFrom(cls) || cls == Boolean.class) return null;
+        return cls.getName();
+    }
+
+    /**
+     * Generic-aware type signature preserving type arguments, e.g.
+     * {@code List<Ingredient>} → {@code "java.util.List<net.minecraft.item.crafting.Ingredient>"}.
+     * The probe parses this to render {@code $Ingredient_[]} / {@code { [key: string]: $V_ }}
+     * instead of a bare {@code $List_}. Falls back to {@code java.lang.Object} for
+     * wildcards / type variables (not expected on recipe handlers).
+     */
+    private static String genericSignature(Type type) {
+        if (type instanceof ParameterizedType pt) {
+            String raw = pt.getRawType().getTypeName();
+            Type[] args = pt.getActualTypeArguments();
+            StringBuilder sb = new StringBuilder(raw).append('<');
+            for (int i = 0; i < args.length; i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(genericSignature(args[i]));
+            }
+            return sb.append('>').toString();
+        }
+        if (type instanceof Class<?> c) return c.getName();
+        return "java.lang.Object";
+    }
+
     private static String simpleTypeName(Class<?> cls) {
         if (cls == Optional.class) return "any";
         String name = cls.getSimpleName();
@@ -132,9 +169,18 @@ public record RecipeNamespaceCatalogEntry(
         return name;
     }
 
-    private static int requiredCount(Method method) {
+    private static Map<String, List<Method>> reflectMethods(Class<?> clazz) {
+        Map<String, List<Method>> methods = new LinkedHashMap<>();
+        for (Method m : clazz.getMethods()) {
+            if (m.getDeclaringClass() == Object.class) continue;
+            methods.computeIfAbsent(m.getName(), k -> new ArrayList<>()).add(m);
+        }
+        return methods;
+    }
+
+    private static int requiredParamCount(Method m) {
         int count = 0;
-        for (var p : method.getParameterTypes()) {
+        for (var p : m.getParameterTypes()) {
             if (p == Optional.class) break;
             count++;
         }

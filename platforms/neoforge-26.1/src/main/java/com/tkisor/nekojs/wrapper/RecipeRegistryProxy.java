@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper;
 
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
+import static com.tkisor.nekojs.api.recipe.RecipeRegistryKeys.*;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import graal.graalvm.polyglot.Value;
@@ -22,13 +23,6 @@ import java.util.Set;
  * {@code hasNamespace(ns)}, {@code hasType(ns, type)}, {@code describeType(ns, type)}.
  */
 public class RecipeRegistryProxy implements ProxyObject {
-    private static final String NAMESPACES = "namespaces";
-    private static final String TYPES = "types";
-    private static final String HAS_NAMESPACE = "hasNamespace";
-    private static final String HAS_TYPE = "hasType";
-    private static final String DESCRIBE = "describeType";
-    private static final List<String> HELPER_KEYS = List.of(NAMESPACES, TYPES, HAS_NAMESPACE, HAS_TYPE, DESCRIBE);
-
     private final RecipeEventJS event;
     private final Map<String, Object> members = new HashMap<>();
 

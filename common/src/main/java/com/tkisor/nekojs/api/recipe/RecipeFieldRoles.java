@@ -7,31 +7,11 @@ import java.util.Set;
 /**
  * Recipe field input/output name conventions (vanilla + common mod practice).
  *
- * <p>Single source of truth for input/output key names. Exposes two granularities:
- * <ul>
- *   <li>{@link #isInputName}/{@link #isOutputName} — the narrow classic-ingredient-slot set, used
- *       as the {@code replaceInput}/{@code replaceOutput} hardcoded fallback so behaviour is
- *       unchanged when a recipe has no schema;</li>
- *   <li>{@link #roleOfName} — the broad set used by schema-scan role inference and the JSON
- *       loader default, which additionally recognises smithing {@code template/base/addition}
- *       and shaped {@code pattern/key} as inputs.</li>
- * </ul>
+ * <p>Broad role inference used by schema-scan role inference and the JSON
+ * loader default, which recognises smithing {@code template/base/addition}
+ * and shaped {@code pattern/key} as inputs, plus classic ingredient/result slots.</p>
  */
 public final class RecipeFieldRoles {
-
-    private static final Set<String> INPUT_NAMES =
-            Set.of("ingredient", "ingredients", "input", "inputs", "key");
-
-    private static final Set<String> OUTPUT_NAMES =
-            Set.of("result", "results", "output", "outputs");
-
-    public static boolean isInputName(String name) {
-        return INPUT_NAMES.contains(name);
-    }
-
-    public static boolean isOutputName(String name) {
-        return OUTPUT_NAMES.contains(name);
-    }
 
     /**
      * Broad role inference: {@code OUTPUT} for result/output (incl. result-prefixed),

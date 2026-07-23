@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "com.tkisor.nekojs.mixin.mod",
+  "plugin": "com.tkisor.nekojs.ModMixinConfigPlugin",
+  "compatibilityLevel": "JAVA_8",
+  "target": "@env(MOD)",
+  "client": [
+    "hei.JeiProxyAccessor"
+  ],
+  "mixins": [],
+  "server": [],
+  "setSourceFile": true,
+  "minVersion": "0.8.7"
+}

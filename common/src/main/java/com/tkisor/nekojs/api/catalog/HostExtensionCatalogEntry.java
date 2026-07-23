@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptTypePredicate;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
 
 import java.lang.reflect.Method;
 

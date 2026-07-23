@@ -6,8 +6,8 @@ import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
-import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchEventBus;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.DispatchEventBus;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,11 +32,10 @@ public final class NekoScriptCatalog {
                 recipeNamespaces(),
                 hostExtensions(),
                 List.copyOf(platformProvider.snippets()),
-                NekoTypeDocs.typeDocs(runtime),
-                NekoTypeDocs.manualDeclarations(runtime),
+                runtime.typeDocs(),
+                runtime.manualDeclarations(),
                 List.copyOf(platformProvider.registryTypes()),
-                platformProvider.outputLayout(),
-                JavaModuleImportPolicy.nekoDefault()
+                platformProvider.outputLayout()
         );
     }
 
@@ -49,11 +48,10 @@ public final class NekoScriptCatalog {
                 recipeNamespaces(),
                 hostExtensions(scriptType),
                 snippets(scriptType),
-                NekoTypeDocs.typeDocs(runtime, scriptType),
-                NekoTypeDocs.manualDeclarations(runtime, scriptType),
+                runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
+                runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 List.copyOf(platformProvider.registryTypes()),
-                platformProvider.outputLayout(),
-                JavaModuleImportPolicy.nekoDefault()
+                platformProvider.outputLayout()
         );
     }
 
@@ -96,11 +94,17 @@ public final class NekoScriptCatalog {
 
     public static List<BindingCatalogEntry> bindings(IPluginRuntime runtime, ScriptType scriptType) {
         List<BindingCatalogEntry> entries = new ArrayList<>();
-        List<TypeDocCatalogEntry> docs = NekoTypeDocs.typeDocs(runtime, scriptType).stream()
+        List<TypeDocCatalogEntry> docs = runtime.typeDocs().stream()
+                .filter(doc -> doc.scriptType().test(scriptType))
                 .filter(doc -> doc.kind().equals("binding"))
                 .toList();
         for (var binding : runtime.bindings(scriptType).values()) {
             BindingCatalogEntry entry = BindingCatalogEntry.of(binding.name(), scriptType, binding.valueType(), binding.value() instanceof Class<?>);
+            // DelegatingBinding 代理：valueType 是 helper，但运行时还委托 targetClass 的静态成员，
+            // 让 probe 把 targetClass 的静态成员也合并进 .d.ts。
+            if (binding.value() instanceof com.tkisor.nekojs.js.DelegatingBinding del) {
+                entry = entry.withExtraDocTypes(List.of(del.targetClass()));
+            }
             for (TypeDocCatalogEntry doc : docs) {
                 if (doc.target().equals(binding.name())) {
                     entry = entry.withDoc(doc);

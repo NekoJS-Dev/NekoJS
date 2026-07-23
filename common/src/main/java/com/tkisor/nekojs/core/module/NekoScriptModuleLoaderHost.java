@@ -1,9 +1,9 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
-import com.tkisor.nekojs.api.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.cache.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkMetadata;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;

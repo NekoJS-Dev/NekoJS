@@ -3,7 +3,8 @@ package com.tkisor.nekojs.bindings.event;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.utils.event.dispatch.DispatchKey;
+import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.eventbus.EventBusFactory;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -41,7 +42,7 @@ public interface BlockEvents {
 
 
     private static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
-        return DispatchKey.of(Block.class, toKey);
+        return EventBusFactory.createDispatchKey(Block.class, toKey);
     }
 
     private static <T extends BlockEvent> DispatchKey<T, Block> dispatchByBlock() {

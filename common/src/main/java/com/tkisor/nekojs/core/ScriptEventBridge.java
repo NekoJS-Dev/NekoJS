@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Value;
 
 public interface ScriptEventBridge {

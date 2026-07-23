@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.platform.Platform;
-import com.tkisor.nekojs.script.ScriptType;
-import com.tkisor.nekojs.utils.event.CancellableEventBus;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.CancellableEventBus;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.Event;

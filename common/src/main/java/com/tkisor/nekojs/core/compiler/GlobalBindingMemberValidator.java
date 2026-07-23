@@ -37,7 +37,7 @@ public final class GlobalBindingMemberValidator {
     /**
      * 扫描单个模块源码，对全局绑定的非法成员访问上报错误。
      *
-     * @param file   模块文件路径（用于推断 {@link com.tkisor.nekojs.script.ScriptType} 与错误定位）
+     * @param file   模块文件路径（用于推断 {@link com.tkisor.nekojs.api.ScriptType} 与错误定位）
      * @param source 模块源码
      */
     public static void validate(Path file, String source) {
@@ -94,18 +94,9 @@ public final class GlobalBindingMemberValidator {
     }
 
     private static int[] lineColumn(String source, int offset) {
-        int line = 1;
-        int column = 1;
-        int end = Math.min(Math.max(offset, 0), source.length());
-        for (int i = 0; i < end; i++) {
-            if (source.charAt(i) == '\n') {
-                line++;
-                column = 1;
-            } else {
-                column++;
-            }
-        }
-        return new int[] {line, column};
+        String pos = NekoSourceLexerBase.position(source, source.length(), Math.min(Math.max(offset, 0), source.length()));
+        int colon = pos.indexOf(':');
+        return new int[] {Integer.parseInt(pos.substring(0, colon)), Integer.parseInt(pos.substring(colon + 1))};
     }
 
     /**
@@ -152,35 +143,19 @@ public final class GlobalBindingMemberValidator {
     }
 
     private static int skipLitStr(String s, int i, char q, int n) {
-        i++;
-        while (i < n) {
-            char c = s.charAt(i);
-            if (c == '\\') { i += 2; continue; }
-            if (c == q) return i + 1;
-            i++;
-        }
-        return n;
+        return NekoSourceLexerBase.skipString(s, n, i, q);
     }
 
     private static int skipLitTpl(String s, int i, int n) {
-        i++;
-        while (i < n) {
-            char c = s.charAt(i);
-            if (c == '\\') { i += 2; continue; }
-            if (c == '`') return i + 1;
-            i++;
-        }
-        return n;
+        return NekoSourceLexerBase.skipTemplate(s, n, i);
     }
 
     private static int skipLitLn(String s, int i, int n) {
-        int e = s.indexOf('\n', i);
-        return e < 0 ? n : e + 1;
+        return NekoSourceLexerBase.skipLineComment(s, n, i);
     }
 
     private static int skipLitBlk(String s, int i, int n) {
-        int e = s.indexOf("*/", i);
-        return e < 0 ? n : e + 2;
+        return NekoSourceLexerBase.skipBlockComment(s, n, i);
     }
 
     private static boolean isLitIdentStart(char c) {

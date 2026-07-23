@@ -3,7 +3,7 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.api.data.AttachedData;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 /**
  * 平台层 mixin 在首次访问 {@code host.data} 时调用本工具，遍历所有已加载插件触发对应的

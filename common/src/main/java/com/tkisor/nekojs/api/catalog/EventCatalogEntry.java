@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptTypePredicate;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
 
 public record EventCatalogEntry(
         String group,

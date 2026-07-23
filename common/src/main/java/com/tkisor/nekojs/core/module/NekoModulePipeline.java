@@ -1,13 +1,13 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.api.compiler.IScriptCompiler;
-import com.tkisor.nekojs.api.compiler.NekoCompileOutput;
-import com.tkisor.nekojs.api.compiler.NekoIRProgram;
-import com.tkisor.nekojs.api.compiler.NekoLanguagePlugin;
-import com.tkisor.nekojs.api.compiler.NekoModuleMode;
-import com.tkisor.nekojs.api.compiler.NekoScriptLanguage;
-import com.tkisor.nekojs.api.compiler.ScriptCompileResult;
-import com.tkisor.nekojs.api.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.IScriptCompiler;
+import com.tkisor.nekojs.core.compiler.NekoCompileOutput;
+import com.tkisor.nekojs.core.compiler.NekoIRProgram;
+import com.tkisor.nekojs.core.compiler.NekoLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.NekoScriptLanguage;
+import com.tkisor.nekojs.core.compiler.ScriptCompileResult;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;

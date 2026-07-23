@@ -51,10 +51,6 @@ public final class RecipeTypeDefinitionRegistry {
         return types == null ? null : types.get(type);
     }
 
-    public Map<String, Map<String, RecipeTypeDefinition>> asMap() {
-        return definitions;
-    }
-
     public static final class Builder {
         private final Map<String, Map<String, RecipeTypeDefinition>> definitions = new LinkedHashMap<>();
 

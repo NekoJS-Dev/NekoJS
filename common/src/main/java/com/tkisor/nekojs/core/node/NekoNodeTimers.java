@@ -2,8 +2,8 @@ package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.core.error.ErrorTracker;
-import com.tkisor.nekojs.script.context.ScriptContextRegistry;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 

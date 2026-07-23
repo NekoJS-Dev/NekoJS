@@ -1,0 +1,130 @@
+package com.tkisor.nekojs.api;
+
+import com.tkisor.nekojs.api.data.ScriptId;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.log.NekoJSLoggers;
+import com.tkisor.nekojs.platform.Platform;
+import com.tkisor.nekojs.script.ScriptTypedValue;
+import org.slf4j.Logger;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+public enum ScriptType implements ScriptTypePredicate {
+    STARTUP("startup", "NekoJS Startup", NekoJSPaths.get().startupScripts()),
+    SERVER("server", "NekoJS Server", NekoJSPaths.get().serverScripts()),
+    CLIENT("client", "NekoJS Client", NekoJSPaths.get().clientScripts()),
+    TEST("test", "NekoJS Test", NekoJSPaths.get().testScripts());
+
+    private static class LoggerHolder {
+        private static final ScriptTypedValue<Logger> LOGGERS =
+                ScriptTypedValue.of(type -> NekoJSLoggers.createLogger(type.name));
+    }
+
+    public final String name;
+    public final String cname;
+    public final Path path;
+
+    ScriptType(String name, String cname, Path path) {
+        this.name = name;
+        this.cname = cname;
+        this.path = path;
+    }
+
+    public Logger logger() {
+        return LoggerHolder.LOGGERS.at(this);
+    }
+
+    public Path getLogFile() {
+        var dir = Platform.getGameDir().resolve("logs/nekojs");
+        var file = dir.resolve(name + ".log");
+
+        try {
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+
+            if (!Files.exists(file)) {
+                var oldFile = dir.resolve(name + ".txt");
+
+                if (Files.exists(oldFile)) {
+                    Files.move(oldFile, file);
+                } else {
+                    Files.createFile(file);
+                }
+            }
+        } catch (Exception ex) {
+            com.tkisor.nekojs.NekoJS.LOGGER.error("Failed to set up script log file", ex);
+        }
+
+        return file;
+    }
+
+    /**
+     * 根据脚本文件路径创建平台无关的标识符
+     * @param file 脚本文件绝对路径
+     * @return 对应的脚本 ID
+     */
+    public ScriptId makeId(Path file) {
+        Path relativePath = this.path.relativize(file);
+        String cleanPath = relativePath.toString().replace('\\', '/');
+        return ScriptId.of("nekojs", this.name + "/" + cleanPath);
+    }
+
+    public String defaultMainScript() {
+        return """
+                // %s example script
+                console.info('Hello, World! (Loaded %s example script)');
+                """.formatted(name, name);
+    }
+
+    public boolean isClient() {
+        return this == CLIENT;
+    }
+
+    public boolean isServer() {
+        return this == SERVER;
+    }
+
+    public boolean isStartup() {
+        return this == STARTUP;
+    }
+
+    public boolean isTest() {
+        return this == TEST;
+    }
+
+    public boolean acceptsServerApis() {
+        return this == STARTUP || this == SERVER || this == TEST;
+    }
+
+    public boolean acceptsClientApis() {
+        return this == STARTUP || this == CLIENT;
+    }
+
+    @Override
+    public boolean test(ScriptType type) {
+        if (this == SERVER) return type.acceptsServerApis();
+        if (this == CLIENT) return type.acceptsClientApis();
+        return this == type;
+    }
+
+    private static final List<ScriptType> EXECUTABLE_TYPES = List.of(STARTUP, SERVER, CLIENT, TEST);
+    private static final List<ScriptType> AUTO_LOAD_TYPES = List.of(STARTUP, SERVER, CLIENT);
+
+    /**
+     * 获取所有需要被动态加载执行的脚本类型。
+     */
+    public static List<ScriptType> all() {
+        return EXECUTABLE_TYPES;
+    }
+
+    public static boolean isExecutableTypeName(String name) {
+        return EXECUTABLE_TYPES.stream().anyMatch(type -> type.name.equals(name));
+    }
+
+    public static List<ScriptType> autoLoadTypes() {
+        return AUTO_LOAD_TYPES;
+    }
+}

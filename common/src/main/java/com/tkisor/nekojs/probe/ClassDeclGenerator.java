@@ -273,7 +273,11 @@ public final class ClassDeclGenerator {
     private String formatConstructor(Constructor<?> ctor) {
         StringBuilder sb = new StringBuilder();
         sb.append("        constructor(");
-        appendParameters(sb, ctor.getParameters(), ctor.isVarArgs());
+        try {
+            appendParameters(sb, ctor.getParameters(), ctor.isVarArgs());
+        } catch (Throwable ignored) {
+            sb.append("...args: any[]");
+        }
         sb.append(");\n");
         return sb.toString();
     }

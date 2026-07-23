@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 public final class ScriptEvents {
     public static final EventGroup GROUP = EventGroup.of("ScriptEvents");

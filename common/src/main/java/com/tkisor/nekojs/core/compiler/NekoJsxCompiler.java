@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.compiler;
 
-import com.tkisor.nekojs.api.compiler.ScriptCompileResult;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -478,45 +477,15 @@ public final class NekoJsxCompiler {
         }
 
         private int skipRegex(int start) {
-            int i = start;
-            boolean inClass = false;
-            while (i < length) {
-                char c = source.charAt(i);
-                if (c == '\\') {
-                    i += 2;
-                    continue;
-                }
-                if (c == '[') {
-                    inClass = true;
-                } else if (c == ']') {
-                    inClass = false;
-                } else if (c == '/' && !inClass) {
-                    i++;
-                    while (i < length && isIdentifierPart(source.charAt(i))) {
-                        i++;
-                    }
-                    return i;
-                }
-                i++;
-            }
-            return length;
+            return NekoSourceLexerBase.skipRegex(source, length, start);
         }
 
         private boolean looksLikeRegexStart(int slash) {
-            int previous = previousNonWhitespace(slash - 1);
-            if (previous < 0) {
-                return true;
-            }
-            char c = source.charAt(previous);
-            return "=(:,[!&|?;{}\n\r".indexOf(c) >= 0;
+            return NekoSourceLexerBase.looksLikeRegexStart(source, length, slash);
         }
 
         private int previousNonWhitespace(int index) {
-            int i = Math.min(index, length - 1);
-            while (i >= 0 && Character.isWhitespace(source.charAt(i))) {
-                i--;
-            }
-            return i;
+            return NekoSourceLexerBase.previousNonWhitespace(source, length, index);
         }
 
         private boolean isIdentifierStart(char c) {
@@ -576,17 +545,7 @@ public final class NekoJsxCompiler {
         }
 
         private String position(int index) {
-            int line = 1;
-            int column = 1;
-            for (int i = 0; i < index && i < length; i++) {
-                if (source.charAt(i) == '\n') {
-                    line++;
-                    column = 1;
-                } else {
-                    column++;
-                }
-            }
-            return line + ":" + column;
+            return NekoSourceLexerBase.position(source, length, index);
         }
     }
 

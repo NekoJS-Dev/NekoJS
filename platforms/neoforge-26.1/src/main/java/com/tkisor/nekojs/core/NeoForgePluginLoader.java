@@ -1,12 +1,13 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.utils.ReflectionUtils;
 
-import java.lang.reflect.Modifier;
-
+/**
+ * 平台插件加载器：仅负责「发现」被 {@link RegisterNekoJSPlugin} 标记的类，
+ * 过滤/实例化/priority 排序交给 common 的 {@link NekoJSBasePluginManager#registerClass}。
+ */
 public final class NeoForgePluginLoader {
     private NeoForgePluginLoader() {}
 
@@ -14,29 +15,8 @@ public final class NeoForgePluginLoader {
         ReflectionUtils.findAnnotationClasses(
                 RegisterNekoJSPlugin.class,
                 null,
-                NeoForgePluginLoader::registerPluginClass,
+                NekoJSBasePluginManager::registerClass,
                 () -> NekoJS.LOGGER.debug("Plugin scan finished")
         );
-    }
-
-    private static void registerPluginClass(Class<?> clazz) {
-        if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
-            NekoJS.LOGGER.error("Plugin {} does not implement NekoJSPlugin", clazz.getName());
-            return;
-        }
-
-        int mod = clazz.getModifiers();
-        if (clazz.isInterface() || Modifier.isAbstract(mod)) {
-            NekoJS.LOGGER.error("Plugin {} is not a concrete class", clazz.getName());
-            return;
-        }
-
-        try {
-            NekoJSPlugin plugin = (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
-            NekoJSPluginManager.register(plugin);
-            NekoJS.LOGGER.debug("Registered plugin: {}", clazz.getName());
-        } catch (Throwable t) {
-            NekoJS.LOGGER.error("Failed to instantiate plugin {}", clazz.getName(), t);
-        }
     }
 }

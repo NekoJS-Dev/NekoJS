@@ -1,8 +1,5 @@
 package com.tkisor.nekojs.core.compiler;
 
-import com.tkisor.nekojs.api.compiler.NekoAstLowering;
-import com.tkisor.nekojs.api.compiler.NekoIRProgram;
-import com.tkisor.nekojs.api.compiler.NekoSourceAst;
 
 public enum NekoEsmToUnifiedIrLowering implements NekoAstLowering {
     INSTANCE;

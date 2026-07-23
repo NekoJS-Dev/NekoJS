@@ -2,7 +2,7 @@ package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -211,9 +211,6 @@ public final class EventDeclarationGenerator {
     }
 
     private boolean isRelevantClass(String name) {
-        return name.startsWith("java.") ||
-               name.startsWith("net.minecraft.") ||
-               name.startsWith("net.neoforged.") ||
-               name.startsWith("com.tkisor.nekojs.");
+        return ProbeOrchestrator.isRelevantClass(name);
     }
 }

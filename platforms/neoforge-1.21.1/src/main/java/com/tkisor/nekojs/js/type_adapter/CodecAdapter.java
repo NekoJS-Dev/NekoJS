@@ -6,6 +6,7 @@ import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.core.JsonObjectAdapter;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 import java.util.List;

@@ -1,0 +1,298 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id 'idea'
+    id 'com.gradleup.shadow' version '9.4.1'
+    id 'xyz.wagyourtail.unimined' version '1.4.23-kappa'
+    id 'net.kyori.blossom' version '2.2.0'
+}
+
+ext {
+    //noinspection GroovyAssignabilityCheck
+    access_transformer_locations = "${mod_id}_at.cfg"
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    if (generate_sources_jar.toBoolean()) {
+        withSourcesJar()
+    }
+    if (generate_javadocs_jar.toBoolean()) {
+        withJavadocJar()
+    }
+}
+
+configurations {
+    contain
+    implementation.extendsFrom(contain)
+    modCompileOnly
+    compileOnly.extendsFrom(modCompileOnly)
+    modRuntimeOnly
+    runtimeOnly.extendsFrom(modRuntimeOnly)
+}
+
+def remapTaskName = enable_shadow.toBoolean() ? "remapShadowJar" : "remapJar"
+
+
+repositories {
+    // Other repositories described by default:
+    // CleanroomMC: https://maven.cleanroommc.com
+    maven {
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+    }
+    maven {
+        name = 'CleanroomCurseMaven'
+        url = 'https://curse.cleanroommc.com'
+    }
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+    }
+    mavenCentral()
+    mavenLocal() // Must be last for caching to work
+}
+
+dependencies {
+    // Cleanroom / Mixin
+    compileOnly "com.cleanroommc:sponge-mixin:0.20.13+mixin.0.8.7"
+    // Cleanroom launchwrapper (IClassTransformer) — needed for the coremod that injects Item.of
+    compileOnly "top.outlands:foundation:0.19.7"
+    if (enable_lwjglx.toBoolean()) {
+        compileOnly "com.cleanroommc:lwjglx:1.0.0"
+    }
+
+    // ie
+    modRuntimeOnly("curse.maven:immersive-engineering-231951:2974106")
+
+    // hei — compileOnly (JeiProxyAccessor mixin + typed HeiRefresher) + runtime (the mod itself)
+    modCompileOnly("curse.maven:had-enough-items-557549:8081514")
+    modRuntimeOnly("curse.maven:had-enough-items-557549:8081514")
+
+    // NekoJS common module
+    implementation project(':common')
+
+    // GraalJS (bundled in jar)
+    contain("curse.maven:graal-1504336:7983197")
+
+    // Common compileOnly dependencies (needed at compile time for common module classes)
+    compileOnly 'org.jspecify:jspecify:1.0.0'
+    compileOnly 'org.slf4j:slf4j-api:1.7.36'
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+
+    // Runtime dependencies (bundled in jar)
+    contain 'com.electronwill.night-config:core:3.8.3'
+    contain 'com.electronwill.night-config:toml:3.8.3'
+    // Note: Gson/Log4j/Guava are bundled with Minecraft 1.12.2, no need to bundle
+    compileOnly 'org.projectlombok:lombok:1.18.44'
+    annotationProcessor 'org.projectlombok:lombok:1.18.44'
+
+    // Testing
+    if (enable_junit_testing.toBoolean()) {
+        testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+}
+
+
+//noinspection GroovyAssignabilityCheck
+unimined.minecraft {
+    version "1.12.2"
+
+    mappings {
+        mcp("stable", "39-1.12")
+    }
+
+    cleanroom {
+        accessTransformer "${rootProject.projectDir}/platforms/cleanroom-1.12.2/src/main/resources/$access_transformer_locations"
+
+        loader "0.5.14-alpha"
+        runs.all {
+            systemProperty("crl.dev.mixin", "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json")
+            args += ['--username', minecraft_username]
+//            def extraArgs = extra_jvm_args
+//            if (extraArgs != null && !extraArgs.trim().isEmpty()) {
+//                jvmArgs += extraArgs.split { "\\s+" }.toList()
+//            }
+            if (is_coremod.toBoolean()) {
+                systemProperty("fml.coreMods.load", coremod_plugin_class_name)
+            }
+            return
+        }
+    }
+
+    defaultRemapJar = false
+
+    String jarTaskName = enable_shadow.toBoolean() ? "shadowJar" : "jar"
+
+    remap(tasks.named(jarTaskName).get()) {
+        mixinRemap {
+            enableBaseMixin()
+            enableMixinExtra()
+        }
+    }
+
+    mods {
+        remap(configurations.modCompileOnly)
+        remap(configurations.modRuntimeOnly)
+    }
+}
+
+processResources {
+    rename '(.+_at.cfg)', 'META-INF/$1'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [
+                    'src/main/java',
+                    project(':common').file('src/main/java')
+            ]
+        }
+        resources {
+            srcDirs = [
+                    'src/main/resources',
+                    project(':common').file('src/main/resources')
+            ]
+        }
+        blossom {
+            javaSources {
+                property('mod_id', mod_id)
+                property('mod_name', mod_name)
+                property('mod_version', mod_version)
+                property('package', "${mod_group_id}.${mod_id}")
+            }
+            resources {
+                property('mod_id', mod_id)
+                property('mod_name', mod_name)
+                property('mod_version', mod_version)
+                property('mod_description', mod_description)
+                property('mod_authors', mod_authors.toString().split(',').findAll { !it.isBlank() }.collect { "\"${it.strip()}\"" }.join(', '))
+//                property('mod_credits', mod_credits)
+//                property('mod_url', mod_url)
+//                property('mod_update_json', mod_update_json)
+//                property('mod_logo_path', mod_logo_path)
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        inheritOutputDirs = true
+    }
+//    project {
+//        settings {
+//            runConfigurations {
+//                '1. Build'(Gradle) {
+//                    taskNames = ["build"]
+//                }
+//                '2. Run Client'(Gradle) {
+//                    taskNames = ["runClient"]
+//                }
+//                '3. Run Server'(Gradle) {
+//                    taskNames = ["runServer"]
+//                }
+//            }
+//            compiler.javac {
+//                afterEvaluate {
+//                    javacAdditionalOptions = '-encoding utf8'
+//                    moduleJavacAdditionalOptions = [
+//                            (project.name + '.main'): tasks.compileJava.options.compilerArgs.collect { "\"${it}\"" }.join(' ')
+//                    ]
+//                }
+//            }
+//        }
+//    }
+}
+
+if (!enable_shadow.toBoolean()) {
+    shadowJar.enabled = false
+}
+
+compileJava {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+    archiveClassifier = 'dev'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Extract all contained deps directly into the jar so classes are available
+    // at runtime without relying on Cleanroom's ContainedDeps scanning
+    if (configurations.contain.size() > 0) {
+        from {
+            configurations.contain.collect {
+                it.isDirectory() ? it : zipTree(it)
+            }
+        }
+    }
+    doFirst {
+        manifest {
+            def attribute_map = [:]
+            attribute_map['ModType'] = "CRL"
+            attribute_map['MixinConfigs'] = "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json"
+            if (configurations.contain.size() > 0) {
+                attribute_map['ContainedDeps'] = configurations.contain.collect { it.name }.join(' ')
+                attribute_map['NonModDeps'] = true
+            }
+            if (is_coremod.toBoolean()) {
+                attribute_map['FMLCorePlugin'] = coremod_plugin_class_name
+                if (coremod_includes_mod.toBoolean()) {
+                    attribute_map['FMLCorePluginContainsFMLMod'] = true
+                }
+            }
+            if (use_access_transformer.toBoolean()) {
+                attribute_map['FMLAT'] = access_transformer_locations
+            }
+            attributes(attribute_map)
+        }
+    }
+    finalizedBy(tasks.named(remapTaskName).get())
+}
+
+
+shadowJar {
+    //noinspection GroovyAssignabilityCheck,GroovyAccessibility
+    configurations = [project.configurations.shadow]
+    archiveClassifier = "shadow"
+}
+
+
+tasks.named(remapTaskName).configure {
+    doFirst {
+        logging.captureStandardOutput LogLevel.INFO
+    }
+    doLast {
+        logging.captureStandardOutput LogLevel.QUIET
+    }
+}
+
+compileTestJava {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
+}
+
+test {
+    useJUnitPlatform()
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    })
+    testLogging {
+        showStandardStreams = true
+    }
+
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

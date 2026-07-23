@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core;
 
 
 import com.tkisor.nekojs.script.ScriptContainer;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.nio.file.Files;

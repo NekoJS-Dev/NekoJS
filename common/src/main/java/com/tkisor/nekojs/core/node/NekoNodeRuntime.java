@@ -5,13 +5,13 @@ import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.api.ScriptType;
 
 /**
  * Per-context Node.js compatibility runtime.
  * Holds all Node-compatible subsystems and the module loader host.
  *
- * <p>Created once per {@link com.tkisor.nekojs.script.ScriptType} context
+ * <p>Created once per {@link com.tkisor.nekojs.api.ScriptType} context
  * during {@link com.tkisor.nekojs.core.node.NekoNodeModuleInstaller#install install()}.
  * Exposed to JS as {@code __nekoNodeRuntime}.
  */

@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.api.catalog;
 
-import com.tkisor.nekojs.script.ScriptTypePredicate;
-import com.tkisor.nekojs.script.WithScriptType;
+import com.tkisor.nekojs.api.ScriptTypePredicate;
+import com.tkisor.nekojs.api.WithScriptType;
 
 public record HostExtensionSource(
         Class<?> targetClass,
