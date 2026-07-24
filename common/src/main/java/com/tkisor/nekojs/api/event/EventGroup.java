@@ -19,6 +19,7 @@ public class EventGroup {
 
     private final String name;
     private final Map<String, RegisteredBus> buses;
+    private volatile boolean frozen;
 
     private EventGroup(String name) {
         this.name = Objects.requireNonNull(name);
@@ -27,6 +28,10 @@ public class EventGroup {
 
     public String name() {
         return name;
+    }
+
+    public void freeze() {
+        frozen = true;
     }
 
     public Map<String, BusHolder> viewBuses() {
@@ -62,6 +67,9 @@ public class EventGroup {
     }
 
     public <BUS extends EventBusJS<?, ?>> BUS add(String name, ScriptType scriptType, BUS bus) {
+        if (frozen) {
+            throw new IllegalStateException("EventGroup '" + this.name + "' is frozen after bootstrap");
+        }
         Objects.requireNonNull(name, "name == null");
         Objects.requireNonNull(scriptType, "scriptType == null");
         Objects.requireNonNull(bus, "bus == null");

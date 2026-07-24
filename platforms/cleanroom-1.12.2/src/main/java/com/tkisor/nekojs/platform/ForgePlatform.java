@@ -9,6 +9,7 @@ import net.minecraftforge.fml.common.ModContainer;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class ForgePlatform implements IPlatform {
     @Override
@@ -60,5 +61,13 @@ public class ForgePlatform implements IPlatform {
     @Override
     public IModInfo getInfo(String modID) {
         return getMods().computeIfAbsent(modID, ModInfo::new);
+    }
+
+    @Override
+    public Set<PlatformCapability> capabilities() {
+        return Set.of(
+                PlatformCapability.NETWORK_CUSTOM_CHANNEL,
+                PlatformCapability.RECIPE_VIEWER
+        );
     }
 }

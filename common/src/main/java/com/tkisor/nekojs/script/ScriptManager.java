@@ -17,7 +17,7 @@ import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
-import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -63,6 +63,7 @@ public final class ScriptManager implements AutoCloseable {
     // ---- 实例字段 ----
 
     private final ScriptEventBridge scriptEventBridge;
+    private final IPluginRuntime pluginRuntime;
     private final ScriptPropertyRegistry scriptProperties;
     private final ErrorTracker errorTracker;
     private final NekoJSPaths paths;
@@ -81,9 +82,10 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- 构造函数 ----
 
-    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
+    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
         this.scriptType = scriptType;
         this.scriptEventBridge = scriptEventBridge;
+        this.pluginRuntime = pluginRuntime;
         this.scriptProperties = scriptProperties;
         this.errorTracker = errorTracker;
         this.paths = paths;
@@ -128,37 +130,41 @@ public final class ScriptManager implements AutoCloseable {
      * 加载并顺序执行所有脚本
      */
     public void loadScripts() {
-        NekoRuntimeAccess.get().fireBeforeScriptsLoaded(scriptType);
+        pluginRuntime.fireBeforeScriptsLoaded(scriptType);
         try {
-            if (scripts == null || scripts.isEmpty()) {
-                scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
-                return;
-            }
-
             Context ctx = getOrCreateContext();
-
-            for (var script : scripts) {
-                script.preload();
-            }
-
-            scripts.sort((s1, s2) -> {
-                int p1 = s1.properties.getOrDefault(ScriptProperty.PRIORITY);
-                int p2 = s2.properties.getOrDefault(ScriptProperty.PRIORITY);
-                return Integer.compare(p2, p1);
-            });
-
-            for (ScriptContainer script : scripts) {
-                if (script.shouldRun()) {
-                    scriptExecutor.executeEntry(ctx, script, nodeRuntime);
-                }
-            }
-
+            loadScriptsInto(ctx, nodeRuntime, scripts);
             if (scriptType == ScriptType.STARTUP) {
                 flushReadyNodeTimers();
                 ScriptEvents.post(getScriptEventRegistrar());
             }
         } finally {
-            NekoRuntimeAccess.get().fireAfterScriptsLoaded(scriptType);
+            pluginRuntime.fireAfterScriptsLoaded(scriptType);
+        }
+    }
+
+    /**
+     * 在指定 Context / Node runtime 中执行给定脚本列表：preload、按优先级排序、逐个执行入口。
+     *
+     * <p>被首次 {@link #loadScripts()} 和事务式 reload 复用。空列表只记录日志，不创建副作用。
+     */
+    private void loadScriptsInto(Context ctx, NekoNodeRuntime node, List<ScriptContainer> scriptsToLoad) {
+        if (scriptsToLoad == null || scriptsToLoad.isEmpty()) {
+            scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
+            return;
+        }
+        for (var script : scriptsToLoad) {
+            script.preload();
+        }
+        scriptsToLoad.sort((s1, s2) -> {
+            int p1 = s1.properties.getOrDefault(ScriptProperty.PRIORITY);
+            int p2 = s2.properties.getOrDefault(ScriptProperty.PRIORITY);
+            return Integer.compare(p2, p1);
+        });
+        for (ScriptContainer script : scriptsToLoad) {
+            if (script.shouldRun()) {
+                scriptExecutor.executeEntry(ctx, script, node);
+            }
         }
     }
 
@@ -166,10 +172,73 @@ public final class ScriptManager implements AutoCloseable {
 
         public synchronized void reloadScripts () {
             scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
-            resetEnvironment();
-            discoverScripts();
-            loadScripts();
+            if (scriptType == ScriptType.STARTUP) {
+                // STARTUP 涉及不可逆注册（物品、方块、实体），无法安全回滚，保持 reset+load 语义。
+                resetEnvironment();
+                discoverScripts();
+                loadScripts();
+            } else {
+                reloadScriptsTransactional();
+            }
             scriptType.logger().info("{} 脚本重载完毕。", scriptType.name());
+        }
+
+        /**
+         * 事务式完整 reload：先在候选 Context 中加载脚本，成功后再切换并关闭旧 Context。
+         *
+         * <p>失败时丢弃候选 Context，保留旧 Context，避免旧实现「先销毁旧环境再加载」导致的
+         * 半失效状态。由于事件总线和 binding 是进程级共享资源，候选加载前会清空旧 listener /
+         * 旧 binding 状态；因此失败时旧 Context 虽然存活，listener 与 binding 状态需要再次
+         * reload 恢复——这是共享资源约束下的最佳折中，核心保证是「不崩溃、旧 Context 不被关闭」。
+         */
+        private void reloadScriptsTransactional () {
+            Context oldContext = this.context;
+            NekoNodeRuntime oldNodeRuntime = this.nodeRuntime;
+
+            scriptEventBridge.clearListeners(scriptType);
+            errorTracker.clearByType(scriptType);
+            for (var binding : pluginRuntime.bindings(scriptType).values()) {
+                binding.close(scriptType);
+            }
+
+            final ScriptEnvironmentFactory.Environment candidate;
+            try {
+                candidate = environmentFactory.create(scriptType);
+            } catch (Throwable t) {
+                scriptType.logger().error("{} 候选环境创建失败，保留旧 Context", scriptType.name(), t);
+                throw new RuntimeException(scriptType.name() + " reload failed; previous context retained", t);
+            }
+
+            Context candidateContext = candidate.context();
+            NekoNodeRuntime candidateNode = candidate.nodeRuntime();
+            CONTEXT_TO_MANAGER.put(candidateContext, this);
+            ScriptContextRegistry.bind(candidateContext, scriptType);
+
+            try {
+                List<ScriptContainer> candidateScripts = ScriptLocator.discover(scriptType, scriptProperties);
+                scriptType.logger().info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
+
+                pluginRuntime.fireBeforeScriptsLoaded(scriptType);
+                try {
+                    loadScriptsInto(candidateContext, candidateNode, candidateScripts);
+                } finally {
+                    pluginRuntime.fireAfterScriptsLoaded(scriptType);
+                }
+
+                this.context = candidateContext;
+                this.nodeRuntime = candidateNode;
+                this.scripts = candidateScripts;
+
+                if (oldContext != null || oldNodeRuntime != null) {
+                    closeRuntimeResources(oldNodeRuntime, oldContext);
+                }
+            } catch (Throwable t) {
+                scriptEventBridge.clearListeners(scriptType);
+                closeRuntimeResources(candidateNode, candidateContext);
+                scriptType.logger().error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
+                        scriptType.name(), t);
+                throw new RuntimeException(scriptType.name() + " reload failed; previous context retained", t);
+            }
         }
 
         public List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {
@@ -316,9 +385,8 @@ public final class ScriptManager implements AutoCloseable {
             }
             scriptType.logger().info("正在运行 TEST 脚本...");
 
-            resetEnvironment();
-            discoverScripts();
-            loadScripts();
+            // TEST 也走事务式 reload：失败时保留上一个 TEST Context，而不是销毁后再尝试加载。
+            reloadScriptsTransactional();
             flushTestTimers();
 
             scriptType.logger().info("TEST 脚本运行完毕。");
@@ -346,7 +414,7 @@ public final class ScriptManager implements AutoCloseable {
 
         private void resetEnvironment () {
             fullReloadCleanup();
-            for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
+            for (var binding : pluginRuntime.bindings(scriptType).values()) {
                 binding.close(scriptType);
             }
 
@@ -380,7 +448,7 @@ public final class ScriptManager implements AutoCloseable {
         @Override
         public void close () {
             fullReloadCleanup();
-            for (var binding : NekoRuntimeAccess.get().bindings(scriptType).values()) {
+            for (var binding : pluginRuntime.bindings(scriptType).values()) {
                 binding.close(scriptType);
             }
             closeRuntimeResources(this.nodeRuntime, this.context);

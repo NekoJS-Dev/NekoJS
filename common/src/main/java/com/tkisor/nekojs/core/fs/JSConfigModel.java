@@ -19,7 +19,10 @@ public class JSConfigModel {
 
     public static class CompilerOptions {
         public String target = "ESNext";
-        public String module = "CommonJS";
+        // ESM-first：脚本源码统一用 import/export（NekoEsmToUnifiedIrLowering 在编译期处理），
+        // probe 生成的 .d.ts 也全用 ESM import，ScriptExecutor 走 native ESM evaluation。
+        // moduleResolution 保持 "node"（paths 与 java: 互操作 specifier 依赖其宽松解析）。
+        public String module = "ESNext";
 
         public String moduleDetection = "force";
 

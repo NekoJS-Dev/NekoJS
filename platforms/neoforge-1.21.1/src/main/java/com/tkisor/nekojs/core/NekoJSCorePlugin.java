@@ -30,9 +30,13 @@ import java.util.Set;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.bindings.static_access.StringUtilsJS;
 import com.tkisor.nekojs.bindings.static_access.TestJS;
+import com.tkisor.nekojs.bindings.static_access.TextJS;
 import com.tkisor.nekojs.bindings.static_access.TimeJS;
 import com.tkisor.nekojs.bindings.static_access.UUIDJS;
 import com.tkisor.nekojs.bindings.static_access.UtilsJS;
+import com.tkisor.nekojs.bindings.static_access.JsonIOJS;
+import com.tkisor.nekojs.bindings.static_access.NbtIOJS;
+import com.tkisor.nekojs.bindings.static_access.NekoGlobal;
 import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
@@ -92,6 +96,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(CommandEvents.GROUP);
         registry.register(RegistryEvents.GROUP);
         registry.register(LevelEvents.GROUP);
+        registry.register(NetworkEvents.GROUP);
         registry.register(ScriptEvents.GROUP);
     }
 
@@ -120,6 +125,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS());
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("Network", NetworkJS.class);
+        registry.register("Text", TextJS.class);
+        registry.register("NbtIO", NbtIOJS.class);
+        registry.register("JsonIO", JsonIOJS.class);
+        registry.register("global", NekoGlobal.shared());
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
         // 全局 Item 是 ProxyObject 代理委托（of/empty 走 ItemJS，其余委托 MC Item 类）。
@@ -167,6 +176,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new ComponentAdapter());
         registry.register(new EntityTypeAdapter());
         registry.register(new BlockAdapter());
+        registry.register(new BlockPosAdapter());
+        registry.register(new Vec3Adapter());
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());

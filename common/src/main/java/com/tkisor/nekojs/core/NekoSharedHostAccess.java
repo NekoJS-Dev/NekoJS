@@ -1,20 +1,24 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
+import java.util.List;
+import java.util.Objects;
+
 public final class NekoSharedHostAccess {
-    private static final HostAccess SHARED_HOST_ACCESS = create();
+    private final HostAccess hostAccess;
 
-    private NekoSharedHostAccess() {}
-
-    public static HostAccess get() {
-        return SHARED_HOST_ACCESS;
+    public NekoSharedHostAccess(List<JSTypeAdapter<?>> adapters) {
+        this.hostAccess = create(List.copyOf(Objects.requireNonNull(adapters, "adapters")));
     }
 
-    private static HostAccess create() {
+    public HostAccess get() {
+        return hostAccess;
+    }
+
+    private static HostAccess create(List<JSTypeAdapter<?>> adapters) {
         HostAccess.Builder hostBuilder = HostAccess.newBuilder(HostAccess.ALL)
                 .allowPublicAccess(true)
 
@@ -29,7 +33,7 @@ public final class NekoSharedHostAccess {
                 .allowAllClassImplementations(true)
                 .allowAllImplementations(true);
 
-        NekoRuntimeAccess.get().adapters().forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
+        adapters.forEach(adapter -> registerTypeAdapter(hostBuilder, adapter));
         hostBuilder.targetTypeMapping(Number.class, Float.class, n -> true, Number::floatValue);
         hostBuilder.targetTypeMapping(Number.class, Integer.class, n -> true, Number::intValue);
         return hostBuilder.build();

@@ -16,10 +16,13 @@ import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -150,12 +153,30 @@ public final class NekoJSCommands {
             } else {
                 root.reload(type);
             }
+            // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
+            if (type == ScriptType.SERVER) {
+                applyRecipeScripts(source);
+            }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
         }
         return 1;
+    }
+
+    /**
+     * SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）。
+     * RecipeManagerMixin.nekojs$applyScripts() 从永久缓存的 baseJsons 重建工作集并重跑配方脚本，
+     * 把脚本生成/修改/删除的配方 JSON 重新解析并替换 RecipeManager 的 recipes。
+     */
+    private static void applyRecipeScripts(CommandSourceStack source) {
+        MinecraftServer server = source.getServer();
+        if (server == null) return;
+        RecipeManager recipeManager = server.getRecipeManager();
+        if (recipeManager instanceof IRecipeManagerExtension ext) {
+            ext.nekojs$applyScripts();
+        }
     }
 
     private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath) {

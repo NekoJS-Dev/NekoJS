@@ -69,7 +69,8 @@ public interface NekoJSPlugin {
     /**
      * 注册自定义探针生成器，替换 NekoJS 内置实现。
      *
-     * <p>调用 {@link ProbeRegistry#setGenerator} 即可。替换后，内置的 {@code /nekojs probe} 指令自动使用新实现。
+     * <p>调用 {@link ProbeRegistry#setGenerator} 即可。内置实现是 fallback：恰好一个第三方实现时使用第三方实现，
+     * 多个第三方实现会在 bootstrap 完成时报告冲突。
      */
     default void registerProbeGenerator() {
     }

@@ -75,7 +75,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public ScriptManager createScriptManager(ScriptType type) {
-        ScriptManager manager = new ScriptManager(type, eventBridge, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory);
+        ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory);
         scriptManagers.put(type, manager);
         return manager;
     }

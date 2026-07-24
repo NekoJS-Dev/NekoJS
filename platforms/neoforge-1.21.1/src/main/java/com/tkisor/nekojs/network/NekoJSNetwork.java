@@ -44,6 +44,10 @@ public class NekoJSNetwork {
 
         // PData 同步包
         registrar.playToClient(PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC, NekoJSNetwork::handlePDataSyncOnClient);
+
+        // 脚本自定义网络通道包（Network.sendToServer / sendToPlayer / sendToAllPlayers）
+        registrar.playToServer(NekoScriptPayload.TYPE, NekoScriptPayload.CODEC, NetworkMessageHandler::handleScriptPayloadOnServer);
+        registrar.playToClient(NekoScriptPayload.TYPE, NekoScriptPayload.CODEC, NetworkMessageHandler::handleScriptPayloadOnClient);
     }
 
     /* ================= Client Handlers ================= */

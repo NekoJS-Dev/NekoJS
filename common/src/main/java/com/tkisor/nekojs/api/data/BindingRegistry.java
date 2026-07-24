@@ -37,7 +37,11 @@ public interface BindingRegistry {
 
         @Override
         public boolean register(Binding binding) {
-            return bindings.put(binding.name(), binding) == null;
+            if (bindings.containsKey(binding.name())) {
+                return false;
+            }
+            bindings.put(binding.name(), binding);
+            return true;
         }
 
         @Override

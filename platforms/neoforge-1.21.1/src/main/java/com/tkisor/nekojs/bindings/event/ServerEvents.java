@@ -1,9 +1,12 @@
 package com.tkisor.nekojs.bindings.event;
 
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
@@ -17,6 +20,18 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 public interface ServerEvents {
     EventGroup GROUP = EventGroup.of("ServerEvents");
+
+    DispatchKey<TagEventJS, ResourceLocation> TAG_REGISTRY_KEY = new DispatchKey<>() {
+        @Override
+        public Class<ResourceLocation> keyType() {
+            return ResourceLocation.class;
+        }
+
+        @Override
+        public ResourceLocation eventToKey(TagEventJS event) {
+            return event.getRegistry();
+        }
+    };
 
     EventBusJS<ServerTickEvent.Pre, Void> TICK_PRE =
             GROUP.server("tickPre", ServerTickEvent.Pre.class);
@@ -42,6 +57,9 @@ public interface ServerEvents {
         GROUP.server("tagsUpdated", TagsUpdatedEvent.class);
     EventBusJS<LootTableLoadEvent, Void> LOOT_TABLE_LOAD =
         GROUP.server("lootTableLoad", LootTableLoadEvent.class);
+
+    EventBusJS<TagEventJS, ResourceLocation> TAGS =
+        GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
         .bind(TICK_PRE)

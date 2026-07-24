@@ -68,4 +68,8 @@ public final class Platform {
     public static Set<String> getList() {
         return get().getList();
     }
+
+    public static Set<PlatformCapability> capabilities() {
+        return get().capabilities();
+    }
 }

@@ -6,6 +6,7 @@ import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
@@ -54,11 +55,15 @@ public final class NekoSandboxFactory {
     public record Sandbox(Context context, NekoNodeRuntime nodeRuntime) {}
 
     private final NekoCoreContext core;
+    private final NekoJSPaths paths;
     private final ScriptCompilerRegistry compilers;
+    private final NekoSharedHostAccess hostAccess;
 
-    public NekoSandboxFactory(NekoCoreContext core, ScriptCompilerRegistry compilers) {
+    public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
         this.core = core;
+        this.paths = paths;
         this.compilers = compilers;
+        this.hostAccess = new NekoSharedHostAccess(pluginRuntime.adapters());
     }
 
     public NekoCoreContext core() {
@@ -70,7 +75,6 @@ public final class NekoSandboxFactory {
     }
 
     public Sandbox build(ScriptType type) {
-        NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = core.sandboxConfig();
         ClassFilter classFilter = core.classFilter();
 
@@ -88,7 +92,7 @@ public final class NekoSandboxFactory {
                 .allowExperimentalOptions(true)
                 .out(outStream)
                 .err(errStream)
-                .allowHostAccess(NekoSharedHostAccess.get())
+                .allowHostAccess(hostAccess.get())
                 .allowIO(ioAccess)
                 .allowCreateThread(config.allowThreads())
                 .allowHostClassLookup(classFilter)

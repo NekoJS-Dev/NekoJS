@@ -59,85 +59,98 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         long start = System.currentTimeMillis();
         int filesGenerated = 0;
 
+        // 原子输出：生成到同级 staging 目录，全部成功后整体替换 outputDir。
+        // 失败则丢弃 staging，旧 outputDir 完整保留，避免旧实现「先删后生成」中途失败丢声明。
+        Path staging = outputDir.resolveSibling(outputDir.getFileName().toString() + ".staging");
+        Path backup = outputDir.resolveSibling(outputDir.getFileName().toString() + ".old");
+
         try {
-            // 清理旧文件
-            if (Files.exists(outputDir)) {
-                Files.walk(outputDir)
-                        .sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(java.io.File::delete);
+            // 恢复上次进程崩溃可能残留的中间态：丢弃半成品 staging；若 outputDir 缺失但有 backup，恢复 backup。
+            deleteRecursive(staging);
+            if (!Files.exists(outputDir) && Files.exists(backup)) {
+                Files.move(backup, outputDir);
             }
-            Files.createDirectories(outputDir);
+            Files.createDirectories(staging);
 
-            // 1. 收集需要生成声明的类
-            Set<String> classesToGenerate = collectClasses(snapshot);
+            try {
+                // 1. 收集需要生成声明的类
+                Set<String> classesToGenerate = collectClasses(snapshot);
 
-            // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
-            // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
-            // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
-            for (AdapterCatalogEntry adapter : snapshot.adapters()) {
-                String name = adapter.targetType().getName();
-                if (isRelevantClass(name)) {
-                    classesToGenerate.add(name);
+                // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
+                // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
+                // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
+                for (AdapterCatalogEntry adapter : snapshot.adapters()) {
+                    String name = adapter.targetType().getName();
+                    if (isRelevantClass(name)) {
+                        classesToGenerate.add(name);
+                    }
                 }
-            }
 
-            // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
-            // 方法参数）+ 别名表（就近发声明）。必须在 pregenerateDeclarations 之前，因为参数渲染依赖已注册的别名
-            adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
+                // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
+                // 方法参数）+ 别名表（就近发声明）。必须在 pregenerateDeclarations 之前，因为参数渲染依赖已注册的别名
+                adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
 
-            // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
-            for (String host : adapterAliasGenerator.hostImports()) {
-                if (isRelevantClass(host)) {
-                    classesToGenerate.add(host);
+                // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
+                for (String host : adapterAliasGenerator.hostImports()) {
+                    if (isRelevantClass(host)) {
+                        classesToGenerate.add(host);
+                    }
                 }
+
+                NekoJS.LOGGER.info("Probe: {} classes to generate", classesToGenerate.size());
+
+                // 2. 构建包树
+                PackageTree tree = new PackageTree();
+                for (String fqn : classesToGenerate) {
+                    tree.addClass(fqn);
+                }
+
+                // 3. 并行预生成所有类声明
+                pregenerateDeclarations(classesToGenerate);
+
+                // 4. 生成 @package Java 类型声明（写入 staging）
+                filesGenerated += generatePackageDeclarations(tree, staging);
+
+                // 4. 生成事件声明
+                filesGenerated += generateEventDeclarations(snapshot, staging);
+
+                // 5. 生成 recipe 事件声明（event.recipes.<namespace>.<type>(...)）
+                filesGenerated += generateRecipeEventDeclarations(snapshot, staging);
+
+                // 6. 生成绑定声明
+                filesGenerated += generateBindingDeclarations(snapshot, staging);
+
+                // 6. 生成 @side-only/{side}/index.d.ts（重新导出 events 和 bindings）
+                filesGenerated += generateSideRootIndexes(staging);
+
+                // 7. 生成 @special 注册表字面量类型
+                filesGenerated += generateSpecialTypes(snapshot, staging);
+
+                // 8. 生成 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
+                filesGenerated += generateManualDeclarations(snapshot, staging);
+
+                // 9. 生成 .github/agents/ 模板文件（outputDir 外部副作用，不参与 staging swap）
+                Path agentsDir = outputDir.getParent().resolve(".github").resolve("agents");
+                AgentTemplateGenerator.generate(agentsDir);
+
+                // 10. 补全 workspace 配置（.neko_probe/jsconfig.json + 各脚本目录 jsconfig.json + snippets）。
+                // probe 生成的 .d.ts 内部大量用 import { $X } from "java:..." / "@side-only/..." / "@special"，
+                // 这些非标准模块说明符只有靠 jsconfig paths 才能被 IDE 解析。启动时已生成一次，这里幂等补全
+                // （已存在的 jsconfig 不重写，仅 snippets 总刷新），保证 /nekojs probe 后 IDE 工件自洽，无需重启游戏。
+                WorkspaceGenerator.createWorkspaceConfigs();
+
+                // 全部生成成功：staging 整体替换 outputDir
+                commitProbeOutput(staging, outputDir, backup);
+
+                long duration = System.currentTimeMillis() - start;
+                NekoJS.LOGGER.info("Probe generated: {} files in {}ms", filesGenerated, duration);
+                return GenerateResult.success(filesGenerated, duration);
+
+            } catch (Exception genFailure) {
+                // 生成中途失败：丢弃 staging 半成品，旧 outputDir 完整保留
+                deleteRecursive(staging);
+                throw genFailure;
             }
-
-            NekoJS.LOGGER.info("Probe: {} classes to generate", classesToGenerate.size());
-
-            // 2. 构建包树
-            PackageTree tree = new PackageTree();
-            for (String fqn : classesToGenerate) {
-                tree.addClass(fqn);
-            }
-
-            // 3. 并行预生成所有类声明
-            pregenerateDeclarations(classesToGenerate);
-
-            // 4. 生成 @package Java 类型声明
-            filesGenerated += generatePackageDeclarations(tree, outputDir);
-
-            // 4. 生成事件声明
-            filesGenerated += generateEventDeclarations(snapshot, outputDir);
-
-            // 5. 生成 recipe 事件声明（event.recipes.<namespace>.<type>(...)）
-            filesGenerated += generateRecipeEventDeclarations(snapshot, outputDir);
-
-            // 6. 生成绑定声明
-            filesGenerated += generateBindingDeclarations(snapshot, outputDir);
-
-            // 6. 生成 @side-only/{side}/index.d.ts（重新导出 events 和 bindings）
-            filesGenerated += generateSideRootIndexes(outputDir);
-
-            // 7. 生成 @special 注册表字面量类型
-            filesGenerated += generateSpecialTypes(snapshot, outputDir);
-
-            // 8. 生成 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
-            filesGenerated += generateManualDeclarations(snapshot, outputDir);
-
-            // 9. 生成 .github/agents/ 模板文件
-            Path agentsDir = outputDir.getParent().resolve(".github").resolve("agents");
-            AgentTemplateGenerator.generate(agentsDir);
-
-            // 10. 补全 workspace 配置（.neko_probe/jsconfig.json + 各脚本目录 jsconfig.json + snippets）。
-            // probe 生成的 .d.ts 内部大量用 import { $X } from "java:..." / "@side-only/..." / "@special"，
-            // 这些非标准模块说明符只有靠 jsconfig paths 才能被 IDE 解析。启动时已生成一次，这里幂等补全
-            // （已存在的 jsconfig 不重写，仅 snippets 总刷新），保证 /nekojs probe 后 IDE 工件自洽，无需重启游戏。
-            WorkspaceGenerator.createWorkspaceConfigs();
-
-            long duration = System.currentTimeMillis() - start;
-            NekoJS.LOGGER.info("Probe generated: {} files in {}ms", filesGenerated, duration);
-            return GenerateResult.success(filesGenerated, duration);
 
         } catch (Exception e) {
             NekoJS.LOGGER.error("Probe generation failed", e);
@@ -147,6 +160,38 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             indexFileGenerator.clearCaches();
             typeConverter.clearCaches();
         }
+    }
+
+    /**
+     * staging 整体替换 outputDir：旧 outputDir → backup，staging → outputDir，删 backup。
+     * swap 中途失败时尝试把 backup 恢复为 outputDir。
+     */
+    private void commitProbeOutput(Path staging, Path outputDir, Path backup) throws IOException {
+        deleteRecursive(backup);
+        if (Files.exists(outputDir)) {
+            Files.move(outputDir, backup);
+        }
+        try {
+            Files.move(staging, outputDir);
+        } catch (IOException e) {
+            if (!Files.exists(outputDir) && Files.exists(backup)) {
+                try {
+                    Files.move(backup, outputDir);
+                } catch (IOException ignored) {
+                }
+            }
+            throw e;
+        }
+        deleteRecursive(backup);
+    }
+
+    /** 递归删除目录及其内容（深度优先逆序，先文件后目录）。 */
+    private static void deleteRecursive(Path dir) throws IOException {
+        if (!Files.exists(dir)) return;
+        Files.walk(dir)
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .forEach(java.io.File::delete);
     }
 
     /**

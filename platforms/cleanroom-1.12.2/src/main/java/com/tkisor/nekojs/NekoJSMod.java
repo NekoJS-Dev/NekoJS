@@ -165,7 +165,7 @@ public class NekoJSMod extends NekoJS {
                 classFilter,
                 errorTracker
         );
-        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, compilers);
+        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime);
         NekoModulePipeline.bindLegacyInstance(new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
         RUNTIME_ROOT = new NekoRuntimeRoot(
                 core,

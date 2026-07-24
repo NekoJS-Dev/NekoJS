@@ -32,13 +32,28 @@ public final class NekoNodeModuleInstaller {
         NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
+        installGlobalTimers(context);
         loadManifest(context);
         loadPluginModules(context);
         return runtime;
     }
 
-    private static void loadManifest(Context context) {
-        String manifest = readResource(MANIFEST);
+    private static void installGlobalTimers(Context context) {
+        try {
+            context.eval(Source.newBuilder("js", GLOBAL_TIMERS_JS, "nekojs/node/globals.js").build());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to install global timer bindings", e);
+        }
+    }
+
+    private static final String GLOBAL_TIMERS_JS = """
+            globalThis.setTimeout = (cb, ms) => __nekoNodeRuntime.timers().setTimeout(cb, ms || 0);
+            globalThis.clearTimeout = (id) => __nekoNodeRuntime.timers().clearTimeout(id);
+            globalThis.setInterval = (cb, ms) => __nekoNodeRuntime.timers().setInterval(cb, ms || 0);
+            globalThis.clearInterval = (id) => __nekoNodeRuntime.timers().clearInterval(id);
+            """;
+
+    private static void loadManifest(Context context) {        String manifest = readResource(MANIFEST);
         for (String line : manifest.split("\\R")) {
             String entry = line.trim();
             if (entry.isEmpty() || entry.startsWith("#")) {

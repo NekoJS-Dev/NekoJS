@@ -14,6 +14,19 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 
 ### 近期完成
 
+- [x] **架构治理（2026-07-24）**：
+    - 移除已失效的 `architectureCheck` 正则计数任务（`gradle/architecture-check.gradle` + 根 `apply from`），架构迁移改由代码评审、定向测试和 `ai_arch/plan.md` 清单跟踪。
+    - **Probe 替换机制修复**：内置 `ProbeOrchestrator` 改为 fallback（`ProbeRegistry.setFallback`），单个第三方实现（`setGenerator`）现在能真正替换它；多个第三方实现仍确定性冲突。`ProbeRegistry` 解耦 `NekoJS`，改用 JDK `java.util.logging`。新增 `ProbeRegistryTest` 覆盖 fallback 生效、第三方替换、多方冲突、锁后注册。
+    - **事务式完整 reload**：SERVER/CLIENT/TEST 的 `reloadScripts` 改为先在候选 Context 加载、成功才切换并关闭旧 Context；失败时丢弃候选并保留旧 Context，避免旧实现「先销毁旧环境再加载」造成的半失效崩溃。STARTUP 因涉及不可逆注册保持 reset+load 语义。`runTestScripts` 同样改为事务式。
+    - **HostAccess 初始化顺序修复**：`NekoSharedHostAccess` 从静态单例改为构造注入实例，基于已冻结的 adapter snapshot 构建，消除类初始化时机固化 adapter 风险。
+    - **Probe 原子输出**：`ProbeOrchestrator.generate` 改为生成到 staging 目录、成功后整体替换 outputDir，失败保留旧声明；入口恢复崩溃残留的 staging/backup 中间态。
+    - **NeoForge 26.1/26.2 共享源码**：新建 `platforms/neoforge-26-shared/`，迁入 142 个共享 Java + 共享资源/模板，两平台用 srcDir 引入；4 个 API 重命名差异文件 + mixins.json + 独有文件保留本地。
+    - **NeoForge 脚本网络功能补全**：原 `NetworkJS` 发送 `NekoScriptPayload` 但未注册、无接收侧，脚本网络通信完全失效。新建 `NetworkEvents`（server/client dispatch bus）、`NetworkDataEventJS`（getter 与 Cleanroom 一致，保证跨平台 API 一致）、`NetworkMessageHandler`（主线程切换后分发）；26.1/26.2 注册 payload 双向。脚本：`NetworkEvents.server("ch", e=>...)` / `NetworkEvents.client("ch", e=>...)`。
+    - **workspace ESM 对齐 / 死代码清理 / Gradle 去重**：`JSConfigModel.module` 从 `"CommonJS"` 改为 `"ESNext"`（脚本生态本就 ESM-first）；删除 `TypeOutputLayout.typeRoot()` 死方法（返回陈旧 `probe-types`、实际为 `@side-only/<type>`、零调用）；新建 `gradle/neoforge-common.gradle` apply script 下沉三 NeoForge 平台字节级相同的 base/repositories/jar/publishing/unifiedPublishing/idea 块，各平台仅 `ext.minecraft_version`/`ext.ENV` 暴露参数、版本与差异块本地维护。四平台编译 + jar 产物名验证通过。
+    - **NeoForge 配方热重载 + KubeJS 工具（JsonIO/global）**：`RecipeManagerMixin` 加永久 `baseJsons` 缓存让 `nekojs$applyScripts()` 可重入，`/nekojs reload server` 后自动重新应用配方脚本（26-shared + 1.21.1）；common 新增 `JsonIO`（gson，parse/toString/read/write）与 `global`（跨 ScriptType 进程级共享 Map）绑定。NBTIO / Pos adapter / 缺失事件（inventoryChanged/foodEaten/randomTick）留后续批次。
+    - **KubeJS API 扩充（TimeJS / Pos adapter / foodEaten）**：`TimeJS` 加 `parseTime`/`parseMs`（`"5s"`→tick/ms）；26-shared + 1.21.1 新增 `BlockPosAdapter`/`Vec3Adapter`（`{x,y,z}` / `[x,y,z]` 输入）与 `ItemEvents.foodEaten`（基于 `LivingEntityUseItemEvent.Finish`）。NBTIO、`inventoryChanged`/`randomTick`（需 mixin）、TextJS（Component builder）、cleanroom 同步留下批。
+    - **HostAccess 初始化顺序修复**：`NekoSharedHostAccess` 从类初始化静态单例改为构造注入实例（`new NekoSharedHostAccess(adapters)`），由 `NekoSandboxFactory` 持有，基于已冻结的 `IPluginRuntime.adapters()` snapshot 构建，不再有「类初始化时机固化 adapter」风险。
+    - **静态状态收敛**：`ScriptManager` 直接注入 `IPluginRuntime`，生命周期核心路径不再调用 `NekoRuntimeAccess.get()`；`NekoSandboxFactory` 直接注入 `NekoJSPaths`。保留 `NekoRuntimeAccess`、`ScriptType.path` 等简洁门面，不追求零 static。
 - [x] **插件系统增强**：`@RegisterNekoJSPlugin` 增加 `priority`（默认 1000，**数值大先加载**）/ `clientOnly` / `requiredMods`（AND 语义）；`NekoJSBasePluginManager.registerClass` 统一负责按 priority 排序 + clientOnly/requiredMods 过滤 + 实例化，过滤逻辑从 4 平台 PluginLoader 上提到 common；内置 CorePlugin 用 `NekoJSPlugin.CORE_PRIORITY`（`Integer.MAX_VALUE`）确保最先注册基础设施。
 - [x] **probe 内置 TypeScript 声明生成**：`ProbeOrchestrator` 直接遍历 `NekoScriptCatalog` 在 `.neko_probe/` 下生成 `.d.ts`（`@package` java alias、`@side-only` events/bindings、`@special` registry 字面量类型、recipe schema 带类型重载），无需外部 ProbeJS mod。recipe schema 由 `MinecraftRecipeSchemaScanner` 扫描 `RECIPE_SERIALIZER` 的 MapCodec 自动发现（下方 Recipe 重构「阶段 1 原版 schema 自动生成」已完成）。
 - [x] **jsconfig 自动生成**：`WorkspaceGenerator` 为每个脚本目录和 `.neko_probe/` 生成 `jsconfig.json`，paths 映射 `java:` / `@side-only` / `@special` 模块说明符，让 VSCode 等编辑器解析 probe 声明；`/nekojs probe` 末尾幂等补全这些配置。
@@ -26,7 +39,8 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 
 - [ ] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`global` 共享 map、`Java`/`JsonIO`/`NBTIO` 绑定、`Block.id(s)`/`Item.id(s)` 查找；`BlockPos`/`Vec3`/`BlockState` 输入 adapter（`{x,y,z}` / `[x,y,z]` / `minecraft:stone[prop=val]`）；`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、`BlockEvents.randomTick`/`blockEntityTick` 等缺失事件。
 - [ ] **`ServerEvents.tags`**：tag 修改事件（`add`/`remove`/`replaceAll`），整合包刚需；4 平台各实现 tag 桥接（neoforge tag builder、cleanroom ore dict）。
-- [ ] **3 个 NeoForge 平台源集合并**：26.1/26.2/1.21.1 有 130 个重名类、其中 124 个字节级相同，通过 Gradle 共享源集消除三份维护（独立大重构，需改 `build.gradle` + Unimined）。
+- [x] **NeoForge 26.1/26.2 共享源集（2026-07-24）**：新建 `platforms/neoforge-26-shared/`（纯目录，不进 settings.gradle），迁入 142 个字节相同/差异可忽略的 Java（140 字节相同 + `NekoJSMod` 取 26.2 干净版 + `RecipeEventJS` 取 26.2 版）+ 共享 `accesstransformer.cfg`/`interface_injection.json`/`neoforge.mods.toml`。26.1/26.2 用 `srcDir '../neoforge-26-shared/...'` 引入；4 个 MC API 重命名差异文件（`EntityType`↔`EntityTypes`、`getApiDescription`↔`getBackendDescription`、`screen`↔`gui.screen()`、`getToastManager`↔`gui.toastManager`）+ `nekojs.mixins.json` + 独有文件保留本地。clean 重建后两平台 jar 产物完整（26.1=566 类、26.2=564 类）。
+- [ ] **NeoForge 1.21.1 共享评估**：1.21.1 与 26.x 有 92 个同路径文件不同（API 演进跨度大），强合并需大量条件编译或抽象，ROI 低；暂不纳入共享，后续单独评估。
 - [ ] **NeoForge 配方热重载**：当前 NeoForge 3 平台配方在数据包阶段固化，`/nekojs reload server` 不刷新配方且静默；接 `ReloadableServerResources` 钩子或至少给出明确告警。
 - [ ] **测试覆盖**：plugin bootstrap / adapter round-trip / 路径安全 / 热重载 等关键路径目前几乎无测试（4 平台模块零测试），优先补 common 纯函数路径（`NekoJSPaths` 路径穿越、adapter 转换、`NekoJSBasePluginManager` 排序）。
 
@@ -365,15 +379,13 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 
 ## 架构迁移：显式依赖与生命周期治理
 
-> 最终更新：2026-06-25
-> 目标：从静态全局状态迁移到显式对象图、组合根、构造器注入
-> 推进文档：[ai_arch/plan.md](../ai_arch/plan.md) | [ai_arch/architecture.md](../ai_arch/architecture.md)
+> 目标：在不牺牲脚本 API 简洁性的前提下，将有生命周期、初始化顺序或测试污染风险的全局状态迁移到显式对象图。
+> 当前实施清单：[ai_arch/plan.md](../ai_arch/plan.md)
 
-### Phase 0：架构规则冻结
+### Phase 0：架构规则冻结（历史阶段）
 
-- [x] 建立 architecture allowlist、architecture check (`gradle architectureCheck`) + dashboard
-- [x] 阻止 allowlist 外新增 `NekoJS.COMMON`、`current()`、static mutable config 等隐藏依赖
-- [x] 迁移仪表盘记录 legacy 调用数量（每个 Phase 降 1 处以上或有注记）
+- [x] 盘点 `NekoJS.COMMON`、`current()`、static mutable config 等隐藏依赖并完成第一轮收敛。
+- [x] 架构迁移改由代码评审、定向测试和 `ai_arch/plan.md` 清单跟踪；旧的正则计数型 `architectureCheck` 已退役。
 
 ### Phase 1：核心值对象、配置和错误状态实例化
 
@@ -426,6 +438,5 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 ### 验证状态
 
 - [x] 4 平台 `compileJava` 通过（cleanroom-1.12.2、neoforge-1.21.1、26.1、26.2）
-- [x] `architectureCheck` 通过（allowlist baseline 已同步）
-- [x] 支持平台 neoforge-26.2 已加入 architecture scan roots
+- [x] 四个平台继续通过编译和定向测试验证共享架构行为。
 - [x] `NekoJS.COMMON` 从初始 33 降至 4（仅剩 bootstrap 赋值 + `NekoPluginBootstrap` 静态引用）

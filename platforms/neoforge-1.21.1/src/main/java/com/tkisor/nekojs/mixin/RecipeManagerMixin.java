@@ -45,15 +45,27 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
     @Unique
     private final Map<ResourceLocation, JsonElement> nekojs$rawJsons = new HashMap<>();
 
+    // 永久缓存 apply() 收到的原始配方 JSON，让 nekojs$applyScripts() 可被 /nekojs reload server 反复调用（热重载）。
+    // rawJsons 是每次 applyScripts 的工作集（会被条件过滤 mutate、末尾 clear），baseJsons 只在 apply 时整体重建。
+    @Unique
+    private final Map<ResourceLocation, JsonElement> nekojs$baseJsons = new HashMap<>();
+
     @Inject(method = "apply(Ljava/util/Map;Lnet/minecraft/server/packs/resources/ResourceManager;Lnet/minecraft/util/profiling/ProfilerFiller;)V", at = @At("HEAD"))
     private void nekojs$cacheRawJsons(Map<ResourceLocation, JsonElement> p_44037_, ResourceManager p_44038_, ProfilerFiller p_44039_, CallbackInfo ci) {
         this.nekojs$rawJsons.clear();
         this.nekojs$rawJsons.putAll(p_44037_);
+        // 同步永久缓存：热重载时 nekojs$applyScripts() 从 baseJsons 重建工作集
+        this.nekojs$baseJsons.clear();
+        this.nekojs$baseJsons.putAll(p_44037_);
     }
 
     @Unique
     @Override
     public void nekojs$applyScripts() {
+        // 从永久缓存重建工作集，使本方法可被 /nekojs reload server 反复调用。
+        // rawJsons 在下方会被条件过滤 mutate、末尾 clear，故每次入口都从 baseJsons 重新拷贝。
+        this.nekojs$rawJsons.clear();
+        this.nekojs$rawJsons.putAll(this.nekojs$baseJsons);
         int beforeCount = this.nekojs$rawJsons.size();
 
         RegistryOps<JsonElement> registryOps = this.registries.createSerializationContext(JsonOps.INSTANCE);

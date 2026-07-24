@@ -9,16 +9,13 @@ plugins {
 version = mod_version
 group = mod_group_id
 
+// minecraft_version / ENV 通过 ext 暴露给 gradle/neoforge-common.gradle
+ext.minecraft_version = "1.21.1"
+ext.ENV = System.getenv()
 def neo_version = "21.1.227"
-def minecraft_version = "1.21.1"
 def minecraft_version_range= "[1.21,1.22)"
 def neo_version_range= "[21.1,22.0)"
-def ENV = System.getenv()
 def loader_version_range= "[4,)"
-
-base {
-    archivesName = "${mod_id}-neoforge-${minecraft_version}"
-}
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
@@ -40,15 +37,9 @@ sourceSets {
     }
 }
 
-repositories {
-    mavenCentral()
-    exclusiveContent {
-        forRepository {
-            maven { url "https://cursemaven.com" }
-        }
-        filter { includeGroup "curse.maven" }
-    }
-}
+// base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea
+// 由 gradle/neoforge-common.gradle 统一配置（三平台字节级相同的部分）
+apply from: rootProject.file('gradle/neoforge-common.gradle')
 
 neoForge {
     version = neo_version
@@ -129,61 +120,3 @@ def generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
-
-tasks.withType(Jar).configureEach {
-    archiveBaseName.set("${mod_id}-neoforge")
-    archiveVersion.set("${minecraft_version}-${mod_version}")
-}
-
-publishing {
-    publications {
-        register('mavenJava', MavenPublication) {
-            from components.java
-        }
-    }
-    repositories {
-        maven {
-            url "file://${project.projectDir}/repo"
-        }
-    }
-}
-
-unifiedPublishing {
-    project {
-        displayName = "${mod_name} NeoForge ${minecraft_version}-${mod_version}"
-        releaseType = ENV.RELEASE_TYPE ?: "release"
-        gameVersions = [minecraft_version]
-        gameLoaders = ["neoforge"]
-
-        mainPublication tasks.jar
-        changelog = ENV.CHANGELOG ?: "A new update for ${mod_name}!"
-
-        relations {
-            depends {
-                curseforge = "graal"
-            }
-        }
-
-        if (ENV.CURSEFORGE_KEY) {
-            curseforge {
-                token = ENV.CURSEFORGE_KEY
-                id = project.curseforge_id
-            }
-        }
-
-        if (ENV.MODRINTH_TOKEN) {
-            modrinth {
-                token = ENV.MODRINTH_TOKEN
-                id = project.modrinth_id
-                version = "${minecraft_version}-${mod_version}"
-            }
-        }
-    }
-}
-
-idea {
-    module {
-        downloadSources = true
-        downloadJavadoc = true
-    }
-}

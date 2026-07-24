@@ -1,15 +1,15 @@
 package com.tkisor.nekojs.probe;
 
-import com.tkisor.nekojs.NekoJS;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * 探针生成器注册表：持有当前生效的 {@link ProbeGenerator} 实现。
  *
- * <p>只允许注册一个实现。如果多个插件尝试注册，游戏将在 bootstrap 完成后崩溃，
- * 并显示冲突的 mod 列表。
+ * <p>内置实现作为 fallback；第三方插件可以注册一个替代实现。如果多个第三方插件尝试注册，
+ * 游戏将在 bootstrap 完成后崩溃，并显示冲突的 mod 列表。
  *
  * <p>使用方式：
  * <pre>{@code
@@ -23,14 +23,17 @@ import java.util.List;
  * }</pre>
  */
 public final class ProbeRegistry {
+    private static final Logger LOGGER = Logger.getLogger(ProbeRegistry.class.getName());
     private static volatile ProbeGenerator generator;
+    private static volatile ProbeGenerator fallbackGenerator;
+    private static volatile String fallbackRegistrar;
     private static volatile boolean locked = false;
     private static final List<String> registrars = new ArrayList<>();
 
     private ProbeRegistry() {}
 
     /**
-     * 注册探针生成器。只能注册一次。
+     * 注册第三方探针生成器。只能有一个第三方实现。
      *
      * <p>如果已注册，将记录冲突信息。冲突会在 {@link #lock()} 时检查并抛出异常。
      *
@@ -50,11 +53,29 @@ public final class ProbeRegistry {
 
         if (generator != null) {
             // 冲突 — 记录但不立即崩溃，等 lock() 时统一报告
-            NekoJS.LOGGER.error("Probe generator conflict detected: {}", entry);
+            LOGGER.log(Level.WARNING, "Probe generator conflict detected: {0}", entry);
         } else {
             generator = newGenerator;
-            NekoJS.LOGGER.info("Probe generator registered: {}", entry);
+            LOGGER.log(Level.INFO, "Probe generator registered: {0}", entry);
         }
+    }
+
+    /**
+     * 注册内置 fallback。存在第三方实现时，fallback 不参与冲突，也不会覆盖第三方实现。
+     */
+    public static synchronized void setFallback(ProbeGenerator newGenerator, String source) {
+        if (newGenerator == null) {
+            throw new IllegalArgumentException("ProbeGenerator cannot be null");
+        }
+        if (locked) {
+            throw new IllegalStateException("Cannot register probe fallback after bootstrap is complete");
+        }
+        if (fallbackGenerator != null) {
+            throw new IllegalStateException("Probe fallback is already registered: " + fallbackRegistrar);
+        }
+        fallbackGenerator = newGenerator;
+        fallbackRegistrar = newGenerator.name() + " (" + source + ")";
+        LOGGER.log(Level.INFO, "Probe fallback registered: {0}", fallbackRegistrar);
     }
 
     /**
@@ -78,12 +99,15 @@ public final class ProbeRegistry {
             sb.append("\nOnly one probe generator is allowed. Remove conflicting probe mods or disable one.\n");
 
             String message = sb.toString();
-            NekoJS.LOGGER.error(message);
+            LOGGER.severe(message);
             throw new IllegalStateException(message);
         }
 
+        if (generator == null) {
+            generator = fallbackGenerator;
+        }
         if (generator != null) {
-            NekoJS.LOGGER.info("Probe generator locked: {}", generator.name());
+            LOGGER.log(Level.INFO, "Probe generator locked: {0}", generator.name());
         }
     }
 

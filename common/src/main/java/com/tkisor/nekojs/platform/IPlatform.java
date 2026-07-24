@@ -59,4 +59,8 @@ public interface IPlatform {
     default Set<String> getList() {
         return getMods().keySet();
     }
+
+    default Set<PlatformCapability> capabilities() {
+        return Set.of();
+    }
 }

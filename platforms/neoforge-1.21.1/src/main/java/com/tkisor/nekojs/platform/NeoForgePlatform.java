@@ -8,6 +8,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class NeoForgePlatform implements IPlatform {
     @Override
@@ -54,5 +55,18 @@ public class NeoForgePlatform implements IPlatform {
     @Override
     public IModInfo getInfo(String modID) {
         return getMods().computeIfAbsent(modID, ModInfo::new);
+    }
+
+    @Override
+    public Set<PlatformCapability> capabilities() {
+        return Set.of(
+                PlatformCapability.RECIPE_HOT_RELOAD,
+                PlatformCapability.RECIPE_SCHEMA_AWARE,
+                PlatformCapability.NETWORK_CUSTOM_CHANNEL,
+                PlatformCapability.RESOURCE_PACKS,
+                PlatformCapability.CLIENT_SCREENS,
+                PlatformCapability.CLIENT_KEYBINDS,
+                PlatformCapability.CLIENT_RENDERERS
+        );
     }
 }

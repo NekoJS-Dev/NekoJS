@@ -48,9 +48,7 @@ public final class NekoPluginBootstrap {
                 base("nekojs:script_compilers", (plugin, context) -> plugin.registerScriptCompilers(context.scriptCompilers())),
                 base("nekojs:script_properties", (plugin, context) -> plugin.registerScriptProperty(scriptProperties)),
                 base("nekojs:bindings", (plugin, context) -> {
-                            var predicate = context.client()
-                                    ? ScriptTypePredicate.exact(ScriptType.CLIENT).negate()
-                                    : ScriptTypePredicate.any();
+                            var predicate = bindingPredicate(context.client());
                             predicate.streamMatched().map(context.bindings()::at).forEach(plugin::registerBinding);
                         }
                 ),
@@ -83,8 +81,8 @@ public final class NekoPluginBootstrap {
             }
         }
 
-        // 初始化内置 probe generator
-        ProbeRegistry.setGenerator(new com.tkisor.nekojs.probe.ProbeOrchestrator(), "NekoJS (built-in)");
+        // 内置 probe 只作为 fallback，单个第三方实现可以真正替换它。
+        ProbeRegistry.setFallback(new com.tkisor.nekojs.probe.ProbeOrchestrator(), "NekoJS (built-in)");
 
         // 允许插件替换 probe generator
         for (NekoJSPlugin plugin : plugins) {
@@ -94,12 +92,30 @@ public final class NekoPluginBootstrap {
         // 锁定注册表，检测冲突
         ProbeRegistry.lock();
 
+        if (scriptProperties instanceof com.tkisor.nekojs.script.prop.ScriptPropertyRegistry.Impl impl) {
+            impl.freeze();
+        }
+        state.events().view().values().forEach(com.tkisor.nekojs.api.event.EventGroup::freeze);
         state.freeze();
         return state.createRuntime();
     }
 
     private static NekoPluginExtensionPoint<NekoJSPlugin> base(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
         return NekoPluginExtensionPoint.of(id, NekoJSPlugin.class, collector);
+    }
+
+    static ScriptTypePredicate bindingPredicate(boolean client) {
+        return client
+                ? ScriptTypePredicate.any()
+                : ScriptTypePredicate.exact(ScriptType.CLIENT).negate();
+    }
+
+    static Map<ScriptType, Map<String, Binding>> freezeBindings(ScriptTypedValue<BindingRegistry> registries) {
+        return registries.stream()
+                .collect(Collectors.toMap(
+                        BindingRegistry::scriptType,
+                        reg -> Map.copyOf(reg.viewRegistered())
+                ));
     }
 
     private static NekoPluginExtensionPoint<NekoJSPlugin> platform(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
@@ -132,6 +148,7 @@ public final class NekoPluginBootstrap {
     }
 
     private static final class BootstrapState implements NekoPluginExtensionContext, TypeDocsRegister, NodeModuleRegister, RecipeLifecycleRegister, PluginLifecycleRegister {
+        private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("nekojs.bootstrap");
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
@@ -199,7 +216,12 @@ public final class NekoPluginBootstrap {
         public RecipeSchemaRegister recipeSchemas() {
             return (namespace, type, schema) -> {
                 requireMutable("recipe schema overrides");
-                recipeSchemaOverrides.computeIfAbsent(namespace, ignored -> new LinkedHashMap<>()).put(type, schema);
+                var inner = recipeSchemaOverrides.computeIfAbsent(namespace, ignored -> new LinkedHashMap<>());
+                if (inner.containsKey(type)) {
+                    LOGGER.warn("Recipe schema override for '{}:{}' is already registered by a higher-priority plugin; ignoring duplicate", namespace, type);
+                    return;
+                }
+                inner.put(type, schema);
             };
         }
 
@@ -310,6 +332,10 @@ public final class NekoPluginBootstrap {
             requireMutable("node modules");
             Objects.requireNonNull(moduleId, "moduleId");
             Objects.requireNonNull(source, "source");
+            if (nodeModules.containsKey(moduleId)) {
+                LOGGER.warn("Node module '{}' is already registered by a higher-priority plugin; ignoring duplicate", moduleId);
+                return;
+            }
             nodeModules.put(moduleId, source);
         }
 
@@ -323,8 +349,7 @@ public final class NekoPluginBootstrap {
         }
 
         Map<ScriptType, Map<String, Binding>> bindingsByScriptType() {
-            return this.bindingRegistries.stream()
-                    .collect(Collectors.toMap(BindingRegistry::scriptType, BindingRegistry::viewRegistered));
+            return freezeBindings(this.bindingRegistries);
         }
 
         List<TypeDocCatalogEntry> typeDocsSnapshot() {

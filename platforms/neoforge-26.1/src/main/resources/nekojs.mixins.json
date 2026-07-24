@@ -7,6 +7,7 @@
     "MinecraftServerMixin",
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
+    "TagLoaderMixin",
     "inject.MixinBlock",
     "inject.MixinBlockState",
     "inject.MixinEntity",

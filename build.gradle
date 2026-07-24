@@ -20,5 +20,3 @@ repositories {
         }
     }
 }
-
-apply from: 'gradle/architecture-check.gradle'
