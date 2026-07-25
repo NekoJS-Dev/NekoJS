@@ -6,7 +6,7 @@
 
 NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft JavaScript 脚本运行时。它面向整合包作者和模组开发者，目标是在 Minecraft 中提供接近现代前端工程化的脚本开发体验。
 
-**前置需要 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)。请以当前发布页面标注的 Minecraft / NeoForge 版本为准。**
+**前置需要 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（25.1.3.6+）。请以当前发布页面标注的 Minecraft / NeoForge 版本为准。**
 
 （部分代码使用 ChatGPT/GLM5.2 生成，看板娘图像由 ChatGPT 生成）
 
@@ -22,6 +22,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 * **配方热重载（Cleanroom 1.12.2）**：`/nekojs reload server` 会解冻注册表 → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 mixin 自动刷新 HEI/JEI 配方面板。NeoForge 平台的配方在数据包加载阶段固化，暂不支持运行时热重载（reload 不会报错但不刷新配方）。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
 * **多平台支持**：同时支持 NeoForge 26.1 / 26.2 / 1.21.1 与 Cleanroom 1.12.2（Forge），共享 common 基础设施。
+* **脚本方法校验**：加载时静态扫描全局绑定和事件回调的成员访问，拼写错误即时提示（如 `Utils.randmInt` → "Did you mean 'randomInt'?"）。可通过 `engine.toml` 中 `scriptMemberValidation` 选项关闭，关闭后零性能开销。
 * **可替换的 probe 实现**：内置 probe 生成器（`ProbeOrchestrator`）可被第三方插件通过 `ProbeRegistry.setGenerator` 替换为更完善的实现。
 
 ---
@@ -38,6 +39,8 @@ nekojs/
 ├── server_scripts/    # 服务端脚本：负责配方修改、事件监听，支持 /nekojs reload
 │   └── tsconfig.json
 ├── client_scripts/    # 客户端脚本：负责 GUI 渲染、粒子效果、按键绑定等视觉逻辑
+│   └── tsconfig.json
+├── test_scripts/     # 测试脚本：通过 /nekojs test 显式运行
 │   └── tsconfig.json
 ├── node_modules/      # 外部库目录：支持原生 Node 模块解析，存放纯 JS 依赖
 ├── assets/            # 资源目录
@@ -56,6 +59,8 @@ common/                          # 跨平台通用代码
     ├── script/                  # 脚本管理：NekoJSScriptManager、ScriptType、reload
     ├── api/                     # 公开 API：NekoJSPlugin、JSTypeAdapter、事件声明、catalog
     ├── bindings/                # JS 全局绑定
+    ├── probe/                   # .d.ts 类型声明生成
+    ├── eventbus/                # 事件总线实现
     ├── plugin/                  # 插件系统：extension point、bootstrap snapshot
     ├── network/                 # 网络同步
     └── wrapper/                 # 脚本友好 wrapper
@@ -161,6 +166,7 @@ NekoJS 的脚本运行在受限 GraalJS 环境中，但它不是“不可信代�
 * 文件系统访问会被限制在游戏目录内，并检测已存在路径的符号链接逃逸。
 * Java 类访问经过 `ClassFilter` 过滤，默认禁止线程、反射、ASM、进程、网络、底层 IO 等高危入口。
 * `nekojs/config/engine.toml` 中的 `allowThreads`、`allowReflection`、`allowAsm` 是高危能力开关，默认关闭。
+* `scriptMemberValidation`（默认开启）在脚本加载时静态扫描全局绑定和事件回调的成员访问，拼写错误会即时提示。关闭可跳过 AST 解析开销。推荐开发时开启，整合包分发时可关闭。
 * 游戏内工作区同步只应交给可信管理员使用；同步功能会限制在脚本目录和脚本扩展名范围内。
 
 ---
