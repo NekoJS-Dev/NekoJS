@@ -60,7 +60,16 @@ public final class ValParser {
         if (peek() != '(') return null;
         pos++;
         List<String> params = parseParenParams();
-        if (params == null) { while (pos < n && peek() != ')' && peek() != '}') pos++; if (peek() == ')') pos++; params = List.of(); }
+        if (params == null) {
+            int depth = 1;
+            while (pos < n && depth > 0) {
+                char c = peek();
+                if (c == '(' || c == '{' || c == '[') depth++;
+                else if (c == ')' || c == '}' || c == ']') depth--;
+                pos++;
+            }
+            params = List.of();
+        }
         skipWs();
         ValNode.Block body = parseBlock();
         List<ValNode> stmts = body != null ? body.stmts() : List.of();
@@ -152,15 +161,13 @@ public final class ValParser {
         if (peek() == '(') {
             pos++; skipWs();
             if (peek() == ')') { pos++; return List.of(); }
+            List<String> ps = parseParenParams();
+            if (ps != null) return ps;
         }
-        List<String> ps = parseParenParams();
-        if (ps != null) return ps;
         pos = saved; return null;
     }
 
     private List<String> parseParenParams() {
-        if (peek() != '(') return null;
-        pos++; skipWs();
         List<String> params = new ArrayList<>();
         while (pos < n) {
             if (isIdStart(peek())) { String n = readIdent(); if (n != null) params.add(n); }
