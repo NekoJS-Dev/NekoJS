@@ -38,7 +38,7 @@ public final class SandboxConfigLoader {
                     " Emits direct source-focused script errors by default. Set false to log full verbose diagnostics and stack traces for analysis.");
 
             setupConfigEntry(config, "jsxAutomaticRuntime", false,
-                    " When true, JSX scripts are automatically transformed by Babel using the automatic React runtime (jsx(...), jsxs(...), jsxDEV(...)) during ESM authoring. Its Babel parser considers the automatic jsx runtime import source URL from tsconfig/jsconfig, compilerOptions.jsxImportSource field.");
+                    " Uses the automatic JSX runtime for .jsx/.tsx scripts: emits jsx()/Fragment() calls and imports from 'nekojs/jsx-runtime' instead of the classic globalThis.__nekoJsxFactory. Requires a jsx-runtime module (place one at nekojs/node_modules/nekojs/jsx-runtime.js).");
 
             setupConfigEntry(config, "scriptMemberValidation", true,
                     " Enables compile-time validation of global-binding and event-callback member accesses. Reports typos and missing members to the in-game error panel. Disable to skip all AST parsing overhead in production modpacks.");

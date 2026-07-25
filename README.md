@@ -148,7 +148,7 @@ NekoJS 生成的类型声明（`.neko_probe/`）已经把 `ServerEvents`、`Bloc
 * 拼写错误（如把 `event.recipes` 写成 `event.rec`）会立即被标红，无需 `import` 任何类型 —— 全局事件对象的签名会自动推断 `event` 的类型。
 * 运行时（游戏内）同样会拦截这类错误：事件回调里访问不存在的成员、或使用未定义的变量，会被记录到错误面板，用 `/nekojs view_all_errors` 查看。
 
-> 注意：NekoJS 内置的是 erasable TypeScript 前端（类型标注会在运行前擦除），暂不支持 `enum` / `namespace` / `module` 等 TS 语法；这类语法会在加载时报错，请在脚本中避免。
+> 注意：NekoJS 内置的 TypeScript 前端支持「可擦除」语法（类型标注、`type`/`interface`、泛型、`as`/`satisfies`、`import type`/`export type`、`declare`、参数属性 `constructor(public x)`、`enum`/`const enum`、`namespace`/`module`、类成员修饰符、`?.`/`!`、函数重载签名等）——这些会在运行前擦除或降级为运行时 IIFE/赋值。**不支持** 装饰器（`@Decorator`）—— NekoJS 是脚本引擎非 TS 框架，遇到装饰器会清晰报错，请改用普通函数包装。
 
 ---
 
@@ -169,7 +169,7 @@ NekoJS 的脚本运行在受限 GraalJS 环境中，但它不是“不可信代�
 
 ### 语言前端
 
-NekoJS 核心主打轻量与稳定，内置 `.ts` 的 erasable TypeScript 支持：类型标注、`type` / `interface`、`import type` / `export type` 等会在 Java 前端中擦除，之后继续走 NekoJS 自有 ESM/CJS pipeline。NekoJS 也内置轻量 `.jsx/.tsx` classic runtime lowering，会把 JSX 元素降到 `globalThis.__nekoJsxFactory(...)` / `globalThis.__nekoJsxFragment(...)`。
+NekoJS 核心主打轻量与稳定，内置 `.ts` 的 TypeScript 支持：类型标注、`type` / `interface`、`import type` / `export type`、泛型（含泛型箭头 `<T>(x: T) => T`）、`as` / `satisfies`、内联 `import { x, type T }`、参数属性、`enum` / `namespace`、类成员修饰符等会在 Java 前端中擦除或降级，之后继续走 NekoJS 自有 ESM/CJS pipeline。NekoJS 也内置 `.jsx/.tsx` lowering：默认 classic runtime（`globalThis.__nekoJsxFactory(...)` / `globalThis.__nekoJsxFragment(...)`），支持 HTML 实体解码、命名空间标签（`<svg:rect/>`）、泛型组件（`<Foo<T>/>`）；在 `nekojs/config/engine.toml` 里设 `jsxAutomaticRuntime = true` 可切换到标准 automatic runtime：从 `nekojs/jsx-runtime` 导入 `jsx`、`jsxs` 和 `Fragment`，子节点放在 `props.children`。在 `nekojs/` 工作区内，请将 runtime 模块放在裸模块路径 `node_modules/nekojs/jsx-runtime.js`。
 
 后续方向是继续增强 NekoJS 本体语言前端，而不是依赖外部 NekoSWC 模组来承担高级 TS/TSX/JSX 转换。脚本语言插件 registry 仍保留给第三方语言扩展使用，但 NekoJS 自身的 TypeScript、JSX、sourcemap chain 和 diagnostics 会优先在本体实现。
 

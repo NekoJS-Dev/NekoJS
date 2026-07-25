@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.compiler;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.nio.file.Path;
@@ -40,6 +41,19 @@ final class NekoSourceMapBuilder {
 
     static Emitter emitter(Path file, String source) {
         return new Emitter(new NekoSourceMapBuilder(file, source));
+    }
+
+    /**
+     * Shifts all mappings down for generated lines inserted without source counterparts.
+     */
+    static String prependUnmappedGeneratedLines(String sourceMap, int lineCount) {
+        if (sourceMap == null || sourceMap.isEmpty() || lineCount <= 0) {
+            return sourceMap;
+        }
+        JsonObject root = JsonParser.parseString(sourceMap).getAsJsonObject();
+        String mappings = root.get("mappings").getAsString();
+        root.addProperty("mappings", ";".repeat(lineCount) + mappings);
+        return root.toString();
     }
 
     private void add(int generatedLine, int generatedColumn, int originalLine, int originalColumn) {

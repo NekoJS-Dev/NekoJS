@@ -66,11 +66,13 @@ public final class NekoModulePipeline {
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
                 return NekoPreparedModule.commonJs(rawSource, null);
             }
-            NekoCompileOutput compiled = compilationPipeline.compile(file, rawSource, extension, language);
+            NekoCompileOutput compiled = compilationPipeline.compile(
+                file, rawSource, extension, language, config.jsxAutomaticRuntime());
             return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
         }
 
-        NekoCompileOutput compiled = compilationPipeline.compile(file, rawSource, extension, language);
+        NekoCompileOutput compiled = compilationPipeline.compile(
+            file, rawSource, extension, language, config.jsxAutomaticRuntime());
         return prepareModule(compiled);
     }
 
