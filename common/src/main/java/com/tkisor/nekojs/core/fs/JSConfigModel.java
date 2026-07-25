@@ -17,6 +17,18 @@ public class JSConfigModel {
             "./**/*.tsx"
     );
 
+    /**
+     * Configures TypeScript's automatic JSX runtime for this model.
+     * Generated workspace configs remain classic by default; callers opt in explicitly.
+     */
+    public void useAutomaticJsxRuntime() {
+        compilerOptions.jsx = "react-jsx";
+        compilerOptions.jsxImportSource = "nekojs";
+        compilerOptions.jsxFactory = null;
+        compilerOptions.jsxFragmentFactory = null;
+        compilerOptions.experimentalDecorators = false;
+    }
+
     public static class CompilerOptions {
         public String target = "ESNext";
         // ESM-first：脚本源码统一用 import/export（NekoEsmToUnifiedIrLowering 在编译期处理），
@@ -30,6 +42,7 @@ public class JSConfigModel {
         public String jsx = "react";
         public String jsxFactory = "__nekoJsxFactory";
         public String jsxFragmentFactory = "__nekoJsxFragment";
+        public String jsxImportSource;
 
         public List<String> lib = List.of("ESNext");
         public boolean allowJs = true;
@@ -43,7 +56,9 @@ public class JSConfigModel {
 
         public boolean esModuleInterop = true;
         public boolean allowSyntheticDefaultImports = true;
-        public boolean experimentalDecorators = true;
+        // 装饰器：NekoJS 运行时不支持（脚本引擎非 TS 框架）。保持 false 避免误导 IDE/用户。
+        // 遇到 @Decorator 会在擦除阶段清晰报错。如需装饰器语义，请用普通函数包装。
+        public boolean experimentalDecorators = false;
         public boolean strict = true;
         public Map<String, List<String>> paths = new LinkedHashMap<>();
 

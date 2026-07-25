@@ -6,6 +6,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -119,5 +120,275 @@ class NekoTypeScriptCompilerTest {
         String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
         assertTrue(out.contains("var g"), "namespace 转换须前置 var 声明: " + out);
         assertFalse(out.contains("namespace g"), "namespace 关键字须被转换: " + out);
+    }
+
+    @Test
+    void erasesGenericArrowFunctionTypeParameters() {
+        // 泛型箭头 <T>(x: T) => T：前导字符是 = 时 <T> 也须擦除，否则 GraalJS 拿到 <T> 报错
+        String src = "const id = <T>(x: T): T => x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertFalse(out.contains("<T>"), "泛型箭头的 <T> 须擦除: " + out);
+        assertFalse(out.contains(": T"), "参数与返回类型注解须擦除: " + out);
+        assertTrue(out.contains("(x"), "参数名保留: " + out);
+        assertTrue(out.contains("=> x"), "箭头体保留: " + out);
+    }
+
+    @Test
+    void erasesGenericArrowInCallArgument() {
+        // 泛型箭头作为函数实参：foo(<T>(x: T) => x) 也须正确擦除 <T>
+        String src = "const r = wrap(<U>(y: U): U => y)";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertFalse(out.contains("<U>"), "泛型箭头 <U> 须擦除: " + out);
+        assertTrue(out.contains("(y"), "参数名保留: " + out);
+    }
+
+    @Test
+    void doesNotMisinterpretComparisonAsGenericArgs() {
+        // 比较 a < b 返回布尔后调用 (c)：不应把 < b > 当泛型擦除
+        // 注意：这里 a < b > (c) 在运行时语义奇怪，但关键是 eraser 不应破坏它
+        // 用更明确的非泛型场景：三元 + 数组索引
+        String src = "const ok = arr[i] > 0 ? pos : neg";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("> 0"), "比较 > 0 须保留（不被当泛型右尖括号）: " + out);
+        assertTrue(out.contains("? pos : neg"), "三元保留: " + out);
+    }
+
+    @Test
+    void preservesInlineTypeImport() {
+        // TS 4.5+ 内联 type 修饰符：import { real, type T } from 'x'
+        // 只应擦除 type T，保留 real 与整个 import 语句
+        String src = "import { real, type T } from 'mod'";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("real"), "内联 import 的运行时绑定 real 须保留: " + out);
+        assertTrue(out.contains("from"), "import ... from 须保留: " + out);
+        assertFalse(out.contains("type T"), "内联 type T 须擦除: " + out);
+    }
+
+    @Test
+    void preservesMixedValueAndTypeInlineImport() {
+        // 多个值绑定 + 多个内联 type：import { a, b, type X, type Y } from 'm'
+        String src = "import { a, b, type X, type Y } from 'm'";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("a"), "值绑定 a 须保留: " + out);
+        assertTrue(out.contains("b"), "值绑定 b 须保留: " + out);
+        assertFalse(out.contains("type X"), "内联 type X 须擦除: " + out);
+        assertFalse(out.contains("type Y"), "内联 type Y 须擦除: " + out);
+    }
+
+    @Test
+    void erasesWholeImportTypeStatement() {
+        // 纯 import type { T }（整条是 type import）仍整体删除
+        String src = "import type { T } from 'mod'\nconst x = 1";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertFalse(out.contains("import type"), "纯 import type 整条须擦除: " + out);
+        assertFalse(out.contains("from 'mod'"), "纯 import type 的 from 须擦除: " + out);
+        assertTrue(out.contains("const x = 1"), "后续语句保留: " + out);
+    }
+
+    @Test
+    void enumNumericAutoIncrementFromExplicitValue() {
+        // enum E { A = 1, B } —— B 应自增为 2
+        String src = "enum E { A = 1, B }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        // A=1, B=2 双向映射
+        assertTrue(out.contains("[\"A\"] = 1"), "A=1 须保留: " + out);
+        assertTrue(out.contains("[\"B\"] = 2"), "B 应自增为 2: " + out);
+    }
+
+    @Test
+    void enumComputedMemberPropagatesToNext() {
+        // enum E { A = base(), B } —— A 是计算值，B 应在运行时基于 A 自增（编译期不知 base() 的值）
+        // TS 语义：B = E["A"] + 1（运行时）。NekoJS 之前错误地把 B 重置成 0。
+        String src = "enum E { A = base(), B }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        // A 用计算表达式赋值
+        assertTrue(out.contains("[\"A\"] = base()"), "A 的计算表达式须保留: " + out);
+        // B 不应是固定 0，应引用 E["A"] + 1（运行时自增）
+        assertTrue(out.contains("E[\"A\"] + 1"), "B 应运行时基于 A 自增（E[\"A\"] + 1）: " + out);
+        assertFalse(out.matches("(?s).*\\[\"B\"\\] = \\[E\\[\\[E\\[\"B\"\\].*"), "B 不应被当作已知数字双向映射: " + out);
+    }
+
+    @Test
+    void namespaceExportInterfaceDoesNotLeaveStrayExport() {
+        // namespace 内 export interface —— interface 由 phase1 擦除，但 export 须被 namespace 转换剥除，
+        // 否则残留 export 在 IIFE 体内导致语法错
+        String src = "namespace N { export interface I { x: number } export const v = 1 }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        // N.v 应被导出到 N.v = v（证明 const 成员被处理）
+        assertTrue(out.contains("N.v = v"), "const 成员 v 须被 namespace 导出: " + out);
+        // 不能残留裸 export（IIFE 体内 export 是非法语法）
+        // 检查 IIFE 体内没有 "export " 开头的裸语句（排除被擦成空格的）
+        assertFalse(out.matches("(?s)\\{[^}]*\\bexport\\s+(interface|type|const|function|let|var|class)"),
+            "namespace IIFE 体内不应残留 export 声明: " + out);
+    }
+
+    @Test
+    void namespaceExportTypeAliasStripped() {
+        // namespace 内 export type X = ... —— type 由 phase1 擦除，export 须剥除
+        String src = "namespace N { export type T = number; export function f(): void {} }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("N.f = f"), "function 成员 f 须被 namespace 导出: " + out);
+        assertFalse(out.matches("(?s)\\(function \\(N\\)[^}]*\\bexport\\s+(type|interface)"),
+            "namespace IIFE 体内不应残留 export type/interface: " + out);
+    }
+
+    @Test
+    void derivedConstructorParameterPropertyInitializesAfterSuper() {
+        String src = "class Base {} class Derived extends Base { constructor(public x: number) { super() } } new Derived(1).x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(1, evaluation.value().asInt(), "derived parameter property must initialize after super(): " + out);
+        }
+    }
+
+    @Test
+    void baseConstructorParameterPropertyInitializesAtBodyStart() {
+        String src = "class Base { constructor(public x: number) { this.seen = this.x } } new Base(2).seen";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(2, evaluation.value().asInt(), "base parameter property must initialize at constructor body start: " + out);
+        }
+    }
+
+    @Test
+    void ordinaryTypedConstructorParameterDoesNotBecomeProperty() {
+        String src = "class C { constructor(x: number) {} } new C(1).x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("ordinary-parameter.ts"), src);
+
+        assertFalse(out.contains("this.x"), "ordinary constructor parameters must not produce property assignments: " + out);
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertTrue(evaluation.value().isNull(), "ordinary constructor parameter property access must evaluate undefined: " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyFollowsCompleteSuperCallWithNestedArguments() {
+        String src = "class Base { constructor(value) { this.value = value } } "
+            + "class Derived extends Base { constructor(public x: number) { super(({ value: (x + 1) }).value) } } "
+            + "const d = new Derived(2); d.value * 10 + d.x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(32, evaluation.value().asInt(), "assignment must follow the complete nested super(...) call: " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyIgnoresPseudoSuperInCommentsAndStrings() {
+        String src = "class Base {} class Derived extends Base { constructor(public x: number) { "
+            + "/* super('comment') */ const text = 'super(\"string\")'; const template = `super(${x})`; super(); this.text = text + template "
+            + "} } new Derived(3).x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(3, evaluation.value().asInt(), "pseudo-super text must not select the insertion point: " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyIgnoresPropertyAndOptionalPropertySuperCalls() {
+        String src = "class Base {} class Derived extends Base { constructor(public x: number) { "
+            + "const obj = { super() { return 0 } }; obj.super(); obj?.super(); super(); "
+            + "} } new Derived(4).x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("property-super.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(4, evaluation.value().asInt(),
+                "obj.super()/obj?.super() must not select the insertion point: " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyIgnoresRegexSuperText() {
+        String src = "class Base {} class Derived extends Base { constructor(public x: number) { "
+            + "const pseudo = /super()/; const delimiters = /[})]/; super(); "
+            + "} } new Derived(5).x";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("regex-super.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(5, evaluation.value().asInt(),
+                "regex /super()/ text and delimiters must not select or disrupt super scanning: " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyFollowsStandaloneSuperStatementAcrossTrivia() {
+        String src = "class Base { constructor(value) { this.value = value } } "
+            + "class Derived extends Base { constructor(public x: number) { "
+            + "super(/* ) } */ /[})]/.test('x') ? x : x); // trailing comment\n"
+            + "this.after = this.x; } } const d = new Derived(6); d.value * 100 + d.after";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("trivia-super.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(606, evaluation.value().asInt(),
+                "assignment must be inserted after the complete standalone super(...); statement: " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyAcceptsAsiTerminatedSuperBeforeNextStatement() {
+        String src = "class Base {} class Derived extends Base { constructor(public x: number) { "
+            + "super() /* trailing trivia */\nthis.y = 1 } } const d = new Derived(7); d.x * 10 + d.y";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("asi-super.ts"), src);
+
+        try (CompilerExecutionAssertions.Evaluation evaluation = CompilerExecutionAssertions.eval(out)) {
+            assertEquals(71, evaluation.value().asInt(),
+                "newline before a new statement must terminate standalone super(): " + out);
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyFailsClosedForNonStandaloneSuperExpressions() {
+        String[] sources = {
+            "class Base {} class Derived extends Base { constructor(public x: number) { super().foo(); } }",
+            "class Base {} class Derived extends Base { constructor(public x: number) { super()\n.foo(); } }",
+            "class Base {} class Derived extends Base { constructor(public x: number) { super()\n?.foo(); } }",
+            "class Base {} class Derived extends Base { constructor(public x: number) { super()\n[0]; } }",
+            "class Base {} class Derived extends Base { constructor(public x: number) { const y = super(); } }"
+        };
+
+        for (String src : sources) {
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("non-standalone-super.ts"), src));
+            assertTrue(ex.getMessage().contains("top-level super"),
+                "non-standalone super use must fail closed: " + ex.getMessage());
+        }
+    }
+
+    @Test
+    void derivedParameterPropertyWithoutTopLevelSuperFailsClosed() {
+        String src = "class Base {} class Derived extends Base { constructor(public x: number) { "
+            + "const text = 'super()'; const template = `super()`; /* super() */ "
+            + "function nested() { super() } class Inner extends Base { constructor() { super() } } "
+            + "} }";
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("missing-super.ts"), src));
+        assertTrue(ex.getMessage().contains("top-level super"),
+            "错误信息须明确说明缺少顶层 super 调用: " + ex.getMessage());
+        assertTrue(ex.getMessage().contains("missing-super.ts"),
+            "错误信息须包含文件路径: " + ex.getMessage());
+    }
+
+    @Test
+    void classDecoratorThrowsUnsupported() {
+        // @Component 装饰器：NekoJS 是脚本引擎非 TS 框架，不支持装饰器，须清晰报错而非产出坏 JS
+        String src = "@Component\nclass Foo {}";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src));
+        assertTrue(ex.getMessage().toLowerCase().contains("decorator"),
+            "错误信息须提及 decorator: " + ex.getMessage());
+    }
+
+    @Test
+    void methodDecoratorThrowsUnsupported() {
+        // 类成员装饰器同样须报错
+        String src = "class Foo {\n  @Log\n  greet() {}\n}";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src));
+        assertTrue(ex.getMessage().toLowerCase().contains("decorator"),
+            "错误信息须提及 decorator: " + ex.getMessage());
     }
 }

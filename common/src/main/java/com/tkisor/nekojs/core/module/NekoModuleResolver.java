@@ -43,6 +43,9 @@ public final class NekoModuleResolver {
         if (specialKind != null) {
             return NekoResolvedModule.special(specifier, specialKind);
         }
+        if (!isFileSpecifier(specifier)) {
+            return resolveBareModule(specifier);
+        }
         Path parent = pathFromLoaderPath(parentPath);
         Path baseDirectory = Files.isDirectory(parent) ? parent : parent.getParent();
         if (baseDirectory == null) {
@@ -51,37 +54,60 @@ public final class NekoModuleResolver {
         return resolveFileModule(baseDirectory.resolve(specifier).normalize());
     }
 
+    private NekoResolvedModule resolveBareModule(String specifier) throws IOException {
+        Path nodeModules = paths.nodeModules().toAbsolutePath().normalize();
+        Path requested = nodeModules.resolve(specifier).normalize();
+        try {
+            return resolveFileModule(requested, nodeModules);
+        } catch (IOException exception) {
+            if (isMissingModule(exception)) {
+                return NekoResolvedModule.special(specifier, NekoModuleKind.SPECIAL);
+            }
+            throw exception;
+        }
+    }
+
+    private boolean isMissingModule(IOException exception) {
+        String message = exception.getMessage();
+        return message != null && (message.startsWith("Module file does not exist:")
+                || message.startsWith("Cannot resolve module:"));
+    }
+
     private NekoResolvedModule resolveFileModule(Path requested) throws IOException {
-        Path verified = verifyModulePath(requested);
+        return resolveFileModule(requested, null);
+    }
+
+    private NekoResolvedModule resolveFileModule(Path requested, Path containmentRoot) throws IOException {
+        Path verified = verifyModulePath(requested, containmentRoot);
         if (Files.isRegularFile(verified)) {
             if (!isLoadableModule(verified)) {
                 throw new IOException("Unsupported module file type: " + loaderPath(verified));
             }
-            return moduleRecord(verified);
+            return moduleRecord(verified, containmentRoot);
         }
         if (hasExtension(verified)) {
             throw new IOException("Module file does not exist: " + loaderPath(verified));
         }
 
         for (String extension : extensionsForCandidates()) {
-            Path candidate = verifyModulePath(verified.resolveSibling(verified.getFileName() + extension));
+            Path candidate = verifyModulePath(verified.resolveSibling(verified.getFileName() + extension), containmentRoot);
             if (Files.isRegularFile(candidate)) {
-                return moduleRecord(candidate);
+                return moduleRecord(candidate, containmentRoot);
             }
         }
         if (Files.isDirectory(verified)) {
             for (String extension : extensionsForCandidates()) {
-                Path candidate = verifyModulePath(verified.resolve("index" + extension));
+                Path candidate = verifyModulePath(verified.resolve("index" + extension), containmentRoot);
                 if (Files.isRegularFile(candidate)) {
-                    return moduleRecord(candidate);
+                    return moduleRecord(candidate, containmentRoot);
                 }
             }
         }
         throw new IOException("Cannot resolve module: " + loaderPath(verified));
     }
 
-    private NekoResolvedModule moduleRecord(Path path) throws IOException {
-        Path verified = verifyModulePath(path);
+    private NekoResolvedModule moduleRecord(Path path, Path containmentRoot) throws IOException {
+        Path verified = verifyModulePath(path, containmentRoot);
         Path canonical = verified.toRealPath();
         NekoModuleKind kind = isJson(canonical) ? NekoModuleKind.JSON : NekoModuleKind.SCRIPT;
         return new NekoResolvedModule(canonical, loaderPath(canonical), loaderPath(canonical.getParent()), null, kind);
@@ -92,11 +118,21 @@ public final class NekoModuleResolver {
     }
 
     private Path verifyModulePath(Path path) throws IOException {
+        return verifyModulePath(path, null);
+    }
+
+    private Path verifyModulePath(Path path, Path containmentRoot) throws IOException {
         Path verified = paths.verifyInsideGameDir(path);
+        if (containmentRoot != null && !verified.toAbsolutePath().normalize().startsWith(containmentRoot)) {
+            throw new IOException("Bare module path escapes node_modules: " + loaderPath(verified));
+        }
         if (Files.exists(verified)) {
             Path realPath = verified.toRealPath();
             if (!realPath.startsWith(paths.gameDir().normalize().toAbsolutePath())) {
                 throw new IOException("Symlink escape detected: " + realPath);
+            }
+            if (containmentRoot != null && !realPath.startsWith(containmentRoot.toRealPath())) {
+                throw new IOException("Bare module path escapes node_modules: " + loaderPath(realPath));
             }
         }
         return verified;
@@ -129,7 +165,7 @@ public final class NekoModuleResolver {
         if (specifier.startsWith("node:") || isBuiltinSpecifier(specifier)) {
             return NekoModuleKind.BUILTIN;
         }
-        return NekoModuleKind.SPECIAL;
+        return null;
     }
 
     private boolean isJavaSpecifier(String specifier) {
