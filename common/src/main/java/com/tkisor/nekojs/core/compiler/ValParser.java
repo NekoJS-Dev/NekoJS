@@ -58,7 +58,9 @@ public final class ValParser {
         String name = readIdent();
         skipWs();
         if (peek() != '(') return null;
+        pos++;
         List<String> params = parseParenParams();
+        if (params == null) { while (pos < n && peek() != ')' && peek() != '}') pos++; if (peek() == ')') pos++; params = List.of(); }
         skipWs();
         ValNode.Block body = parseBlock();
         List<ValNode> stmts = body != null ? body.stmts() : List.of();
@@ -162,11 +164,11 @@ public final class ValParser {
         List<String> params = new ArrayList<>();
         while (pos < n) {
             if (isIdStart(peek())) { String n = readIdent(); if (n != null) params.add(n); }
-            else if (peek() == ')' || peek() == '{' || peek() == '[') { pos = -1; return null; }
+            else if (peek() == ')' || peek() == '{' || peek() == '[') { return null; }
             skipWs();
             if (peek() == ',') { pos++; skipWs(); continue; }
             if (peek() == ')') { pos++; return params; }
-            pos = -1; return null;
+            return null;
         }
         return null;
     }
