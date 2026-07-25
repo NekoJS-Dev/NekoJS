@@ -20,6 +20,7 @@ public interface EventGroupRegistry {
         public void register(EventGroup group) {
             Objects.requireNonNull(group, "group == null");
             groups.computeIfAbsent(group.name(), EventGroup::of).merge(group);
+            EventSchemaRegistry.registerGroup(group);
         }
 
         @Override
