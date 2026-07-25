@@ -34,7 +34,6 @@
 ## 🔗 相关
 
 - [项目 README](https://github.com/) · [更新日志](https://github.com/) · [问题反馈](https://github.com/)
-- 架构设计文档见仓库 `ai_arch/` 目录
 
 ---
 

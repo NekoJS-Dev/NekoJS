@@ -132,7 +132,7 @@ snapshot 包含：
 
 ## Probe 的当前局限
 
-> 这些是 `ai_arch/long-term-api-design.md` 计划修复的，列在这里让你知道边界。
+> 这些是已知边界，列在这里让你知道。
 
 1. **`@Remap`/`@HideFromJS` 当前在 probe 不生效**：`ClassDeclGenerator` 用裸 `getDeclaredMethods()`，没走 `MemberVisibilityQuery`。计划修复（Phase A）。
 2. **JSDoc 覆盖少**：`@Doc`/`@Param` 体系正在接入 `ClassDeclGenerator`（Phase B）。

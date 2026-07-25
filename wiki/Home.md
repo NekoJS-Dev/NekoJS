@@ -71,5 +71,4 @@ ServerEvents.started(event => {
 
 ## 额外资源
 
-- 仓库内 `ai_arch/` 目录有完整的架构分析与设计文档（`nekojs-architecture.md`、`long-term-api-design.md` 等）。
 - `docs/ROADMAP.md` 是项目的设计路线图。
