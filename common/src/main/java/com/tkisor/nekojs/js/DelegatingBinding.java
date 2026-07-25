@@ -36,6 +36,10 @@ public final class DelegatingBinding implements ProxyObject {
         this.extensions = Set.copyOf(extensions);
     }
 
+    public Set<String> extensions() {
+        return extensions;
+    }
+
     /** 代理委托的目标 MC 类；probe 据此把该类的静态成员合并进全局绑定的 .d.ts。 */
     public Class<?> targetClass() {
         return targetClassObj;
