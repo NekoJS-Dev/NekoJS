@@ -8,6 +8,7 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoScriptLanguage;
 import com.tkisor.nekojs.core.compiler.ScriptCompileResult;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.EventCallbackSourceValidator;
 import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
@@ -49,7 +50,10 @@ public final class NekoModulePipeline {
     public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
         // 访问不存在的成员时报错到游戏内错误面板。不阻止编译/执行。
-        GlobalBindingMemberValidator.validate(file, rawSource);
+        if (config.scriptMemberValidation()) {
+            GlobalBindingMemberValidator.validate(file, rawSource);
+            EventCallbackSourceValidator.validate(file, rawSource);
+        }
         String extension = extension(file);
         NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
         NekoLanguagePlugin language = languagePlugin(file, extension);
