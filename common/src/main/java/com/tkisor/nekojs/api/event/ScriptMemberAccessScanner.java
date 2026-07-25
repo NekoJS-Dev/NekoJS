@@ -13,7 +13,10 @@ import java.util.Set;
  * <p>纯词法扫描，不构建 AST：跳过字符串 / 模板 / 注释，识别标识符边界，
  * 对集合内的标识符捕获其后的属性访问。动态计算访问（{@code obj[key]} 中 key 非字符串字面量、
  * 变量中转 {@code const u = Utils; u.foo}）不覆盖 —— 这是静态扫描的固有边界。
+ *
+ * @deprecated 由 {@code com.tkisor.nekojs.core.compiler.ValParser} 替代，它提供 AST 级解析和变量追踪
  */
+@Deprecated(forRemoval = false)
 public final class ScriptMemberAccessScanner {
 
     private ScriptMemberAccessScanner() {}
