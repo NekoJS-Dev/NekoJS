@@ -10,26 +10,26 @@ NekoJS **本体内置** TypeScript 和 JSX 支持，无需额外编译步骤。
 
 | 语法 | 状态 |
 |---|---|
-| 类型注解 `let x: number` | ✅ 擦除 |
-| `type` / `interface` 声明 | ✅ 擦除 |
-| 泛型 `<T>`（类型位置） | ✅ 擦除 |
-| **泛型箭头函数 `<T>(x: T) => T`** | ✅ 擦除 `<T>` |
-| 联合/交叉类型 `A \| B`、`A & B` | ✅ 擦除 |
-| `as` / `satisfies` 断言（含 `as unknown as T` 链式） | ✅ 擦除 |
-| `import type` / `export type`（整条） | ✅ 擦除 |
-| **内联 `import { x, type T }`（TS 4.5+）** | ✅ 只擦 `type T`，保留 `x` |
-| `declare` / `declare module` / `declare global` | ✅ 擦除 |
-| 类成员可见性修饰符 `public`/`private`/`protected`/`readonly`/`abstract`/`override` | ✅ 剥除（保留 `static`） |
-| 参数属性 `constructor(public x: number)` | ✅ 转为 `this.x = x` 赋值 |
-| 函数重载签名 `function f(): T;` | ✅ 擦除签名行 |
-| `implements IFoo, IBar` | ✅ 擦除 |
-| 可选参数 `name?: T` | ✅ 擦除 `?` 与类型 |
-| 非空断言 `a!.x` / `a!` | ✅ 擦除 `!` |
-| 定值断言 `x!: T` / `x!;` | ✅ 擦除 `!` 与类型 |
-| **`enum` / `const enum`** | ✅ 降级为运行时 IIFE 对象（数字双向映射 / 字符串单向 / 计算成员自增） |
-| **`namespace` / `module`** | ✅ 降级为 IIFE，`export` 成员转为 `name.member = member`（支持嵌套作用域、namespace 合并） |
+| 类型注解 `let x: number` | 支持，擦除 |
+| `type` / `interface` 声明 | 支持，擦除 |
+| 泛型 `<T>`（类型位置） | 支持，擦除 |
+| **泛型箭头函数 `<T>(x: T) => T`** | 支持，擦除 `<T>` |
+| 联合/交叉类型 `A \| B`、`A & B` | 支持，擦除 |
+| `as` / `satisfies` 断言（含 `as unknown as T` 链式） | 支持，擦除 |
+| `import type` / `export type`（整条） | 支持，擦除 |
+| **内联 `import { x, type T }`（TS 4.5+）** | 支持，只擦除 `type T`，保留 `x` |
+| `declare` / `declare module` / `declare global` | 支持，擦除 |
+| 类成员可见性修饰符 `public`/`private`/`protected`/`readonly`/`abstract`/`override` | 支持，剥除修饰符并保留 `static` |
+| 参数属性 `constructor(public x: number)` | 支持，转为 `this.x = x` 赋值 |
+| 函数重载签名 `function f(): T;` | 支持，擦除签名行 |
+| `implements IFoo, IBar` | 支持，擦除 |
+| 可选参数 `name?: T` | 支持，擦除 `?` 与类型 |
+| 非空断言 `a!.x` / `a!` | 支持，擦除 `!` |
+| 定值断言 `x!: T` / `x!;` | 支持，擦除 `!` 与类型 |
+| **`enum` / `const enum`** | 支持，降级为运行时 IIFE 对象（数字双向映射 / 字符串单向 / 计算成员自增） |
+| **`namespace` / `module`** | 支持，降级为 IIFE，`export` 成员转为 `name.member = member`（支持嵌套作用域、namespace 合并） |
 
-### ❌ 不支持的语法
+### 不支持的语法
 
 | 语法 | 原因 / 替代 |
 |---|---|
@@ -95,14 +95,14 @@ NekoJS 内置 JSX lowering，默认 **classic runtime**：JSX 元素重写为 `g
 
 | 特性 | 说明 |
 |---|---|
-| 元素 `<div>...</div>`、自闭合 `<br/>`、片段 `<>...</>` | ✅ |
-| 字符串/布尔/表达式属性、spread 属性 `{...obj}` | ✅ |
-| 文本子节点、表达式子节点 `{expr}`、嵌套元素 | ✅ |
-| 大写组件 `<Foo/>`（作引用）、小写 `<div/>`（作字符串）、成员表达式 `<Foo.Bar/>` | ✅ |
-| **HTML 实体解码**（`&amp;`→`&`、`&lt;`→`<`、`&#39;`→`'`、`&quot;`→`"`、数字/十六进制实体） | ✅ 元素文本内解码；字符串属性值原样保留 |
-| **命名空间标签** `<svg:rect/>` | ✅ 名称整段透传给 factory |
-| **泛型组件** `<Foo<number>/>`（TSX） | ✅ JSX 层透传 `Foo<number>`，TS 擦除阶段去 `<number>` |
-| 表达式内的嵌套 JSX（`{cond && <X/>}`、`{arr.map(x => <X/>)}`） | ✅ |
+| 元素 `<div>...</div>`、自闭合 `<br/>`、片段 `<>...</>` | 支持 |
+| 字符串/布尔/表达式属性、spread 属性 `{...obj}` | 支持 |
+| 文本子节点、表达式子节点 `{expr}`、嵌套元素 | 支持 |
+| 大写组件 `<Foo/>`（作引用）、小写 `<div/>`（作字符串）、成员表达式 `<Foo.Bar/>` | 支持 |
+| **HTML 实体解码**（`&amp;` 转成 `&`、`&lt;` 转成 `<`、`&#39;` 转成 `'`、`&quot;` 转成 `"`，以及数字/十六进制实体） | 支持在元素文本内解码；字符串属性值原样保留 |
+| **命名空间标签** `<svg:rect/>` | 支持，名称整段透传给 factory |
+| **泛型组件** `<Foo<number>/>`（TSX） | 支持，JSX 层透传 `Foo<number>`，TS 擦除阶段去掉 `<number>` |
+| 表达式内的嵌套 JSX（`{cond && <X/>}`、`{arr.map(x => <X/>)}`） | 支持 |
 
 ### classic runtime（默认）
 

@@ -106,8 +106,8 @@ console.info(buf.toString('hex')) // '68656c6c6f'
 
 ```javascript
 import fs from 'node:fs'
-fs.writeFileSync('nekojs/data/x.txt', 'ok')      // ✅ 在 nekojs/ 下
-fs.writeFileSync('/etc/passwd', 'hacked')         // ❌ 被沙盒拒绝
+fs.writeFileSync('nekojs/data/x.txt', 'ok')      // 允许：位于 nekojs/ 下
+fs.writeFileSync('/etc/passwd', 'hacked')         // 拒绝：超出沙盒范围
 ```
 
 ## npm 依赖
@@ -120,14 +120,14 @@ const _ = require('lodash')
 console.info(_.chunk([1,2,3,4], 2))   // [[1,2],[3,4]]
 ```
 
-### ⚠️ npm 依赖限制
+### npm 依赖限制
 
 | 限制 | 说明 |
 |---|---|
-| ❌ 原生 bindings | 含 C/C++ 编译产物的包**不能用**（`node-sass`、`sharp`、`better-sqlite3`、`canvas` 等） |
-| ⚠️ 不是完整 Node 运行时 | 缺失的 Node API 会缺失；本表列出的核心模块可用 |
-| ⚠️ 文件沙盒 | 依赖若访问游戏目录外的文件会被拒 |
-| ⚠️ 可信代码 | 脚本（含依赖）应视为可信代码，尤其在多人服务器 |
+| 原生 bindings | 不支持含 C/C++ 编译产物的包（`node-sass`、`sharp`、`better-sqlite3`、`canvas` 等） |
+| Node 运行时范围 | NekoJS 不是完整 Node 运行时；本表列出的核心模块可用，未实现的 API 不可用 |
+| 文件沙盒 | 依赖若访问游戏目录外的文件会被拒绝 |
+| 可信代码 | 脚本及其依赖应视为可信代码，尤其是在多人服务器中 |
 
 ## 实战：测试脚本示例
 
