@@ -85,6 +85,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Run common tests
+        run: ./gradlew :common:test --console=plain
+
       - name: Discover platform modules
         id: platforms
         shell: bash

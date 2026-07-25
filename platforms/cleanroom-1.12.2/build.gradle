@@ -83,7 +83,7 @@ dependencies {
     implementation project(':common')
 
     // GraalJS (bundled in jar)
-    contain("curse.maven:graal-1504336:7983197")
+    contain("curse.maven:graal-1504336:8456810")
 
     // Common compileOnly dependencies (needed at compile time for common module classes)
     compileOnly 'org.jspecify:jspecify:1.0.0'

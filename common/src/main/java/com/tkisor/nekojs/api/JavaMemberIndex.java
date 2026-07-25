@@ -101,14 +101,14 @@ public final class JavaMemberIndex {
      * {@code @HideFromJS}（成员级或类级）&gt; {@code @Remap}（成员级）&gt;
      * {@code @RemapByPrefix}（成员级）&gt; {@code @RemapByPrefix}（类级）&gt; 原名。
      *
-     * <p>两个调用方 historically 有两处细微差异，通过参数参数化，避免逻辑写两遍：
+     * <p>调用方可通过 marker 保持各自的未命中语义，避免将原名误作 Graal remapper chain 的终止结果。
      * @param hideMarker 命中 {@code @HideFromJS} 时的返回值。{@link MemberVisibilityQuery} 传 {@code null}
      *                   （表示从可见集合中剔除）；{@code NekoJSMemberRemapper} 传
      *                   {@code MemberRemapper.HIDE_MEMBER} 常量（满足 graal.mod.api SPI 约定）
-     * @param strict     {@code @RemapByPrefix} 剥离前缀时是否要求 {@code name.length() > prefix.length()}
-     *                   （{@link MemberVisibilityQuery} 传 true，避免空名；{@code NekoJSMemberRemapper} 传 false）
+     * @param fallThroughMarker 没有命中任何 remap 时的返回值。可见性查询传 {@link Member#getName()}；
+     *                          Graal remapper chain 传 {@code MemberRemapper.FALL_THROUGH}。
      */
-    public static @Nullable String remapName(Member member, String hideMarker, boolean strict) {
+    public static @Nullable String remapName(Member member, String hideMarker, String fallThroughMarker) {
         AccessibleObject ao = (AccessibleObject) member;
 
         if (ao.isAnnotationPresent(HideFromJS.class)
@@ -125,25 +125,24 @@ public final class JavaMemberIndex {
 
         RemapByPrefix memberPrefix = ao.getAnnotation(RemapByPrefix.class);
         if (memberPrefix != null) {
-            String stripped = findAndRemovePrefix(original, memberPrefix.value(), strict);
+            String stripped = findAndRemovePrefix(original, memberPrefix.value());
             if (stripped != null) return stripped;
         }
 
         RemapByPrefix classPrefix = member.getDeclaringClass().getAnnotation(RemapByPrefix.class);
         if (classPrefix != null) {
-            String stripped = findAndRemovePrefix(original, classPrefix.value(), strict);
+            String stripped = findAndRemovePrefix(original, classPrefix.value());
             if (stripped != null) return stripped;
         }
 
-        return original;
+        return fallThroughMarker;
     }
 
     // ==================== 内部原语 ====================
 
-    private static @Nullable String findAndRemovePrefix(String name, String[] prefixes, boolean strict) {
+    private static @Nullable String findAndRemovePrefix(String name, String[] prefixes) {
         for (String prefix : prefixes) {
-            if (name.startsWith(prefix)) {
-                if (strict && name.length() <= prefix.length()) continue;
+            if (name.length() > prefix.length() && name.startsWith(prefix)) {
                 return name.substring(prefix.length());
             }
         }
