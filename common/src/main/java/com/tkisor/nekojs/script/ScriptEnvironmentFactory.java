@@ -1,17 +1,21 @@
 package com.tkisor.nekojs.script;
 
+import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
+import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 脚本环境工厂：接管 Context/Node/bindings/event/telemetry 初始化。
@@ -46,10 +50,10 @@ public final class ScriptEnvironmentFactory {
         eventBridge.bindEvents(bindings, scriptType);
 
         var environmentBindings = pluginRuntime.bindings(scriptType);
-        Map<String, Class<?>> bindingSchema = new HashMap<>();
+        Map<String, ScriptBindingSchema.BindingMembers> bindingSchema = new HashMap<>();
         environmentBindings.forEach((name, binding) -> {
             Object obj = binding.value();
-            bindingSchema.put(name, binding.valueType());
+            bindingSchema.put(name, resolveMembers(binding));
             if (obj instanceof Class<?>) {
                 Value javaType = bindings.getMember("Java").invokeMember("type", ((Class<?>) obj).getName());
                 bindings.putMember(name, javaType);
@@ -57,7 +61,6 @@ public final class ScriptEnvironmentFactory {
                 bindings.putMember(name, obj);
             }
         });
-        // 暴露绑定名→Java类型映射，供加载时成员校验器（GlobalBindingMemberValidator）查询
         ScriptBindingSchema.register(scriptType, bindingSchema);
 
         installJavaClassLoadTelemetry(context, scriptType);
@@ -87,6 +90,18 @@ public final class ScriptEnvironmentFactory {
                     Object.defineProperty(Java, '__nekoTypeTelemetryInstalled', { value: true, enumerable: false });
                 })();
                 """);
+    }
+
+    private static ScriptBindingSchema.BindingMembers resolveMembers(com.tkisor.nekojs.api.data.Binding binding) {
+        Set<String> members = new LinkedHashSet<>();
+        Object value = binding.value();
+        if (value instanceof DelegatingBinding db) {
+            members.addAll(db.extensions());
+            members.addAll(JavaMemberIndex.allMembersOf(db.targetClass()));
+        } else {
+            members.addAll(JavaMemberIndex.allMembersOf(binding.valueType()));
+        }
+        return new ScriptBindingSchema.BindingMembers(members);
     }
 
     public record Environment(Context context, com.tkisor.nekojs.core.node.NekoNodeRuntime nodeRuntime) {}

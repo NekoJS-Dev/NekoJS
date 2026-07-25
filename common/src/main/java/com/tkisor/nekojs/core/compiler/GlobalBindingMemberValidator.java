@@ -44,7 +44,7 @@ public final class GlobalBindingMemberValidator {
         if (file == null || source == null || source.isEmpty()) {
             return;
         }
-        Map<String, Class<?>> schema = ScriptBindingSchema.schemaForPath(file);
+        Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file);
         if (schema.isEmpty()) {
             return;
         }
@@ -54,30 +54,29 @@ public final class GlobalBindingMemberValidator {
         Set<String> locals = collectLocalDeclarations(source);
         ScriptMemberAccessScanner.scan(source, names, (identifier, member, offset) -> {
             if (locals.contains(identifier)) {
-                return; // 局部声明（enum/class/const 等）遮蔽同名全局 binding，不应按 binding 校验
+                return;
             }
             if (member == null || member.isEmpty()) {
                 return;
             }
-            Class<?> type = schema.get(identifier);
-            if (type == null) {
+            ScriptBindingSchema.BindingMembers bm = schema.get(identifier);
+            if (bm == null) {
                 return;
             }
-            Set<String> all = JavaMemberIndex.allMembersOf(type);
-            if (all.contains(member)) {
+            if (bm.contains(member)) {
                 return;
             }
             if (!reported.add(identifier + "." + member)) {
                 return;
             }
-            report(file, source, offset, identifier, member, type, all);
+            report(file, source, offset, identifier, member, bm);
         });
     }
 
-    private static void report(Path file, String source, int offset, String identifier, String member, Class<?> type, Set<String> all) {
+    private static void report(Path file, String source, int offset, String identifier, String member, ScriptBindingSchema.BindingMembers bm) {
         try {
-            String suggest = JavaMemberIndex.suggestMember(all, member);
-            String message = "Binding '" + identifier + "' (" + type.getSimpleName() + ") has no member '" + member + "'."
+            String suggest = JavaMemberIndex.suggestMember(bm.memberNames(), member);
+            String message = "Binding '" + identifier + "' has no member '" + member + "'."
                     + (suggest != null ? " Did you mean '" + suggest + "'?" : "");
             int[] lc = lineColumn(source, offset);
             NekoEsmDiagnostic diagnostic = new NekoEsmDiagnostic(
