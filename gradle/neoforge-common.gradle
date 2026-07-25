@@ -1,0 +1,95 @@
+// NekoJS NeoForge 平台公共构建逻辑（convention via apply script）。
+//
+// 消费方（platforms/neoforge-1.21.1 / 26.1 / 26.2）需：
+//   1. plugins {} 中 apply: java-library, maven-publish, idea,
+//      net.neoforged.moddev, me.shedaniel.unified-publishing
+//   2. ext 中提供: minecraft_version, ENV
+//      (mod_id / mod_name / mod_version / mod_group_id 来自根 gradle.properties)
+//   3. apply from: rootProject.file('gradle/neoforge-common.gradle')
+//
+// 用 apply script 而非 buildSrc convention plugin：第三方插件 (moddev / unified-publishing)
+// 的 plugin marker 坐标随版本漂移，在 buildSrc 内硬编码 implementation 依赖会成为额外维护点；
+// apply script 让插件版本继续由各平台 plugins{} 声明，只下沉真正稳定、字节级相同的配置块。
+// 版本相关与有平台差异的部分（runs / sourceSets / accessTransformers / generateModMetadata /
+// dependencies）仍由各平台 build.gradle 本地维护。
+
+def modId      = project.mod_id
+def modName    = project.mod_name
+def modVersion = project.mod_version
+def mcVersion  = project.minecraft_version   // ext property set by consumer
+def ENV        = project.ENV                  // ext property set by consumer
+
+base {
+    archivesName = "${modId}-neoforge-${mcVersion}"
+}
+
+repositories {
+    mavenCentral()
+    exclusiveContent {
+        forRepository {
+            maven { url "https://cursemaven.com" }
+        }
+        filter { includeGroup "curse.maven" }
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    archiveBaseName.set("${modId}-neoforge")
+    archiveVersion.set("${mcVersion}-${modVersion}")
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/repo"
+        }
+    }
+}
+
+unifiedPublishing {
+    project {
+        displayName = "${modName} NeoForge ${mcVersion}-${modVersion}"
+        releaseType = ENV.RELEASE_TYPE ?: "release"
+        gameVersions = [mcVersion]
+        gameLoaders = ["neoforge"]
+
+        mainPublication project.tasks.jar
+
+        changelog = ENV.CHANGELOG ?: "A new update for ${modName}!"
+
+        relations {
+            depends {
+                curseforge = "graal"
+            }
+        }
+
+        // CurseForge 发布（需要环境变量 CURSEFORGE_KEY 与 gradle.properties 的 curseforge_id）
+        if (ENV.CURSEFORGE_KEY) {
+            curseforge {
+                token = ENV.CURSEFORGE_KEY
+                id = project.curseforge_id
+            }
+        }
+
+        // Modrinth 发布（需要环境变量 MODRINTH_TOKEN 与 gradle.properties 的 modrinth_id）
+        if (ENV.MODRINTH_TOKEN) {
+            modrinth {
+                token = ENV.MODRINTH_TOKEN
+                id = project.modrinth_id
+                version = "${mcVersion}-${modVersion}"
+            }
+        }
+    }
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

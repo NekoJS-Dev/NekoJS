@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.api.ScriptType;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,7 +14,7 @@ public final class EventSchemaRegistry {
         Map<String, Class<?>> events = new HashMap<>();
         group.viewBuses().forEach((eventName, busHolder) -> {
             try {
-                EventBusJS<?, ?> bus = busHolder.getBus(null);
+                EventBusJS<?, ?> bus = busHolder.getBus(ScriptType.STARTUP);
                 if (bus != null) events.put(eventName, bus.eventType());
             } catch (Throwable ignored) {
                 events.put(eventName, Object.class);
