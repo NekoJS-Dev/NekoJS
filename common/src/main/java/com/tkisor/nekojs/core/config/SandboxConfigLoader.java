@@ -37,13 +37,21 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "conciseScriptErrorLogs", true,
                     " Emits direct source-focused script errors by default. Set false to log full verbose diagnostics and stack traces for analysis.");
 
+            setupConfigEntry(config, "jsxAutomaticRuntime", false,
+                    " When true, JSX scripts are automatically transformed by Babel using the automatic React runtime (jsx(...), jsxs(...), jsxDEV(...)) during ESM authoring. Its Babel parser considers the automatic jsx runtime import source URL from tsconfig/jsconfig, compilerOptions.jsxImportSource field.");
+
+            setupConfigEntry(config, "scriptMemberValidation", true,
+                    " Enables compile-time validation of global-binding and event-callback member accesses. Reports typos and missing members to the in-game error panel. Disable to skip all AST parsing overhead in production modpacks.");
+
             return new SandboxConfig(
                     config.get("allowThreads"),
                     config.get("allowReflection"),
                     config.get("allowAsm"),
                     config.get("allowFsWriteOutsideNekojs"),
                     config.get("enableEsmAuthoring"),
-                    config.get("conciseScriptErrorLogs")
+                    config.get("conciseScriptErrorLogs"),
+                    config.get("jsxAutomaticRuntime"),
+                    config.get("scriptMemberValidation")
             );
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load engine.toml, using default sandbox config", e);

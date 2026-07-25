@@ -6,10 +6,12 @@ public record SandboxConfig(
         boolean allowAsm,
         boolean allowFsWriteOutsideNekojs,
         boolean enableEsmAuthoring,
-        boolean conciseScriptErrorLogs
+        boolean conciseScriptErrorLogs,
+        boolean jsxAutomaticRuntime,
+        boolean scriptMemberValidation
 ) {
     public static SandboxConfig defaultConfig() {
-        return new SandboxConfig(false, false, false, false, true, true);
+        return new SandboxConfig(false, false, false, false, true, true, false, true);
     }
 
     public boolean anyUnsafeFeatureEnabled() {
