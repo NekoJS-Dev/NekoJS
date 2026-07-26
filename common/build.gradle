@@ -32,6 +32,15 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+sourceSets.main {
+    resources {
+        srcDir "src/main/templates"
+        filter {
+            it.replace('${mod_version}', mod_version)
+        }
+    }
+}
+
 dependencies {
     api 'com.networknt:json-schema-validator:1.5.9'
 
