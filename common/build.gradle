@@ -42,7 +42,9 @@ sourceSets.main {
 }
 
 dependencies {
-    api 'com.networknt:json-schema-validator:1.5.9'
+    api('com.networknt:json-schema-validator:1.5.9') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
 
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
