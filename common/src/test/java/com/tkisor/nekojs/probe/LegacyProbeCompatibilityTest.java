@@ -11,9 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -79,8 +77,6 @@ class LegacyProbeCompatibilityTest {
             matcher.appendReplacement(sb, Matcher.quoteReplacement("import { " + sorted + " } from \"" + module + "\";"));
         }
         matcher.appendTail(sb);
-        String[] lines = sb.toString().split("\n");
-        Arrays.sort(lines);
-        return String.join("\n", lines);
+        return sb.toString();
     }
 }
