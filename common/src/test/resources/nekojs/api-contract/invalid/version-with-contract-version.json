@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "identity": {
+    "owner": "nekojs-core",
+    "kind": "FEATURE",
+    "contractId": "@nekojs/version-module",
+    "version": "1.0.0"
+  },
+  "symbols": [],
+  "modules": [
+    {
+      "id": "@nekojs/version-module",
+      "tier": "VERSION",
+      "contractVersion": "1.0.0",
+      "moduleRevision": 1
+    }
+  ]
+}

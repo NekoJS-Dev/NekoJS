@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "identity": {
+    "owner": "nekojs-core",
+    "kind": "PORTABLE",
+    "contractId": "portable-core",
+    "version": "1.0.0"
+  },
+  "symbols": [
+    {
+      "id": "global:Item",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "object"
+          }
+        }
+      ]
+    }
+  ]
+}
