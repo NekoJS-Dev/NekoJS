@@ -77,15 +77,15 @@ class JsApiSurfaceResolverTest {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "test-owner", ApiContractKind.PORTABLE, "test-contract", ApiVersion.parse("1.0.0")),
+                        "nekojs-core", ApiContractKind.PORTABLE, "test-contract", ApiVersion.parse("1.0.0")),
                 "Test contract",
                 List.of(symbol),
                 List.of(),
                 List.of());
 
         return VerifiedContractSet.of(
-                new VerifiedApiContract(
-                        new ApiContractIdentity("test-owner", ApiContractKind.PORTABLE, "test-contract",
+                VerifiedApiContract.create(
+                        new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "test-contract",
                                 ApiVersion.parse("1.0.0")),
                         contract,
                         URI.create("file:///test"),
@@ -102,15 +102,15 @@ class JsApiSurfaceResolverTest {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "test-owner", ApiContractKind.PORTABLE, "platform-contract", ApiVersion.parse("1.0.0")),
+                        "nekojs-core", ApiContractKind.PORTABLE, "platform-contract", ApiVersion.parse("1.0.0")),
                 "Platform contract",
                 List.of(symbol),
                 List.of(),
                 List.of());
 
         return VerifiedContractSet.of(
-                new VerifiedApiContract(
-                        new ApiContractIdentity("test-owner", ApiContractKind.PORTABLE, "platform-contract",
+                VerifiedApiContract.create(
+                        new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "platform-contract",
                                 ApiVersion.parse("1.0.0")),
                         contract,
                         URI.create("file:///test"),
@@ -143,7 +143,7 @@ class JsApiSurfaceResolverTest {
             VerifiedContractSet contracts,
             ApiContribution... contributions) {
 
-        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin", URI.create("test:///test-plugin.jar"));
+        PluginIdentity owner = new PluginIdentity("nekojs-core", "test-plugin", URI.create("test:///test-plugin.jar"));
         ApiContributionRegistry registry = ApiContributionRegistry.ownedBy(owner, contracts);
         for (ApiContribution contrib : contributions) {
             registry.registerSymbol(contrib);
@@ -202,15 +202,15 @@ class JsApiSurfaceResolverTest {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "test-owner", ApiContractKind.PORTABLE, "finder-contract", ApiVersion.parse("1.0.0")),
+                        "nekojs-core", ApiContractKind.PORTABLE, "finder-contract", ApiVersion.parse("1.0.0")),
                 "Finder contract",
                 List.of(symbol),
                 List.of(),
                 List.of());
 
         VerifiedContractSet contracts = VerifiedContractSet.of(
-                new VerifiedApiContract(
-                        new ApiContractIdentity("test-owner", ApiContractKind.PORTABLE, "finder-contract",
+                VerifiedApiContract.create(
+                        new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "finder-contract",
                                 ApiVersion.parse("1.0.0")),
                         contract,
                         URI.create("file:///test"),
@@ -221,7 +221,7 @@ class JsApiSurfaceResolverTest {
         LegacyGlobalReservation reservation = new LegacyGlobalReservation(
                 "Finder", ApiSymbolId.parse("global:LegacyFinder"));
 
-        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin", URI.create("test:///test-plugin.jar"));
+        PluginIdentity owner = new PluginIdentity("nekojs-core", "test-plugin", URI.create("test:///test-plugin.jar"));
         ApiContributionRegistry registry = ApiContributionRegistry.ownedBy(owner, contracts);
         registry.registerSymbol(ApiContribution.symbol(
                 finderId,
@@ -249,15 +249,15 @@ class JsApiSurfaceResolverTest {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "test-owner", ApiContractKind.PORTABLE, "version-contract", ApiVersion.parse("1.0.0")),
+                        "nekojs-core", ApiContractKind.PORTABLE, "version-contract", ApiVersion.parse("1.0.0")),
                 "Version contract",
                 List.of(symbol),
                 List.of(),
                 List.of());
 
         VerifiedContractSet contracts = VerifiedContractSet.of(
-                new VerifiedApiContract(
-                        new ApiContractIdentity("test-owner", ApiContractKind.PORTABLE, "version-contract",
+                VerifiedApiContract.create(
+                        new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "version-contract",
                                 ApiVersion.parse("1.0.0")),
                         contract,
                         URI.create("file:///test"),
@@ -287,15 +287,15 @@ class JsApiSurfaceResolverTest {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "test-owner", ApiContractKind.PORTABLE, "global-contract", ApiVersion.parse("1.0.0")),
+                        "nekojs-core", ApiContractKind.PORTABLE, "global-contract", ApiVersion.parse("1.0.0")),
                 "Global contract",
                 List.of(symbol),
                 List.of(),
                 List.of());
 
         VerifiedContractSet contracts = VerifiedContractSet.of(
-                new VerifiedApiContract(
-                        new ApiContractIdentity("test-owner", ApiContractKind.PORTABLE, "global-contract",
+                VerifiedApiContract.create(
+                        new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "global-contract",
                                 ApiVersion.parse("1.0.0")),
                         contract,
                         URI.create("file:///test"),

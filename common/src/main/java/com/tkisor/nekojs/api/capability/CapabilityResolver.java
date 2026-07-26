@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.capability;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.surface.ApiResolutionException;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
+import com.tkisor.nekojs.api.surface.EnvironmentScope;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -126,17 +127,46 @@ public final class CapabilityResolver {
             CapabilityProviderContribution provider) {
         if (def.environmentScope() == null || provider.environmentScope() == null) return;
 
-        // Provider scope must be a subset of definition scope
-        // A provider that requires more mods or restricts to fewer environments is valid (narrower scope)
-        // A provider that requires fewer mods or expands to more environments is invalid (broader scope)
-        //
-        // For phase 0-1, we do a semantic check:
-        // - provider's requiredMods must be a superset of definition's requiredMods (more restrictive = ok)
-        // - provider's allowedLoaderIds must be a subset of definition's allowedLoaderIds (more restrictive = ok)
-        // If definition has no restriction, provider must also have no restriction on that dimension
+        EnvironmentScope defScope = def.environmentScope();
+        EnvironmentScope provScope = provider.environmentScope();
 
-        // This is a simplified check - the full semantic subset check is complex
-        // For now, we just ensure the provider's environment key would be contained
+        // Provider scope must be equal or narrower than definition scope.
+        // Narrower means: provider can require MORE mods, restrict to FEWER loaders, etc.
+
+        // If definition restricts to a script type, provider must also restrict to the same or a subset
+        if (defScope.scriptType() != null && provScope.scriptType() != null
+                && defScope.scriptType() != provScope.scriptType()) {
+            throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
+                    "Provider scriptType " + provScope.scriptType()
+                            + " is not contained in definition scope " + defScope.scriptType(),
+                    Map.of("definitionScope", defScope.toString(), "providerScope", provScope.toString()));
+        }
+
+        // If definition restricts to a dist, provider must also restrict to the same or a subset
+        if (defScope.dist() != null && provScope.dist() != null
+                && defScope.dist() != provScope.dist()) {
+            throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
+                    "Provider dist " + provScope.dist()
+                            + " is not contained in definition scope " + defScope.dist(),
+                    Map.of("definitionScope", defScope.toString(), "providerScope", provScope.toString()));
+        }
+
+        // Provider requiredMods must be a superset of definition requiredMods
+        if (!defScope.requiredMods().isEmpty() && !provScope.requiredMods().containsAll(defScope.requiredMods())) {
+            throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
+                    "Provider requiredMods " + provScope.requiredMods()
+                            + " does not contain all definition requiredMods " + defScope.requiredMods(),
+                    Map.of("definitionScope", defScope.toString(), "providerScope", provScope.toString()));
+        }
+
+        // If definition restricts allowedLoaderIds, provider must be a subset
+        if (!defScope.allowedLoaderIds().isEmpty() && !provScope.allowedLoaderIds().isEmpty()
+                && !defScope.allowedLoaderIds().containsAll(provScope.allowedLoaderIds())) {
+            throw new ApiResolutionException("SCOPE_NOT_CONTAINED",
+                    "Provider allowedLoaderIds " + provScope.allowedLoaderIds()
+                            + " is not a subset of definition allowedLoaderIds " + defScope.allowedLoaderIds(),
+                    Map.of("definitionScope", defScope.toString(), "providerScope", provScope.toString()));
+        }
     }
 
     private static void validateProviderPolicy(

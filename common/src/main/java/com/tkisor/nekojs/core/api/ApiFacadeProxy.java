@@ -67,9 +67,8 @@ public final class ApiFacadeProxy implements ProxyObject {
         Map<String, ApiSymbol> memberSymbols = memberNames.stream()
                 .map(name -> {
                     ApiSymbolId memberId = new ApiSymbolId("member", typeId.qualifiedName() + "." + name);
-                    return runtimeView instanceof FrozenApiRegistry frozen
-                            ? frozen.find(memberId).map(s -> Map.entry(name, s))
-                            : Optional.<Map.Entry<String, ApiSymbol>>empty();
+                    return runtimeView.findSymbol(memberId)
+                            .map(s -> Map.entry(name, s));
                 })
                 .filter(Optional::isPresent)
                 .map(Optional::get)

@@ -78,7 +78,7 @@ public final class ProbeContractSetHolder {
 
         String hash = sha256Hex(contract.toString().getBytes(StandardCharsets.UTF_8));
 
-        VerifiedApiContract verified = new VerifiedApiContract(
+        VerifiedApiContract verified = VerifiedApiContract.create(
                 identity,
                 contract,
                 URI.create("file:///probe"),

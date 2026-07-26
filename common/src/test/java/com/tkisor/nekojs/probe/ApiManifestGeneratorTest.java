@@ -71,7 +71,7 @@ class ApiManifestGeneratorTest {
 
         String hash = sha256("bbbb");
         return VerifiedContractSet.of(
-                new VerifiedApiContract(identity, contract, URI.create("file:///test"),
+                VerifiedApiContract.create(identity, contract, URI.create("file:///test"),
                         "nekojs-portable.json", hash, hash));
     }
 

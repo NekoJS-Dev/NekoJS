@@ -219,20 +219,8 @@ public final class JsApiSurfaceResolver {
     }
 
     private static ApiVersion getPortableApiVersion(VerifiedContractSet contracts) {
-        try {
-            VerifiedApiContract portable = contracts.requirePortable("nekojs-core");
-            return portable.identity().version();
-        } catch (IllegalStateException e) {
-            // If no nekojs-core portable contract, find any portable contract
-            for (VerifiedApiContract contract : contracts.all()) {
-                if (contract.identity().kind() == ApiContractKind.PORTABLE) {
-                    return contract.identity().version();
-                }
-            }
-            throw new ApiResolutionException("NO_PORTABLE_CONTRACT",
-                    "No portable contract found in contract set",
-                    Map.of());
-        }
+        VerifiedApiContract portable = contracts.requirePortable("nekojs-core");
+        return portable.identity().version();
     }
 
     private static Map<ApiSymbolId, List<ApiSignature>> collectContractSignatures(
@@ -337,24 +325,18 @@ public final class JsApiSurfaceResolver {
     }
 
     private static boolean isRawNativeType(ApiTypeRef type) {
-        return type.kind() == ApiTypeRef.Kind.SYMBOL
-                && type.name().startsWith("com.tkisor.nekojs.internal.");
+        if (type.kind() != ApiTypeRef.Kind.SYMBOL || type.name() == null) {
+            return false;
+        }
+        String name = type.name();
+        return name.startsWith("net.minecraft.")
+                || name.startsWith("net.neoforged.")
+                || name.startsWith("net.minecraftforge.")
+                || name.startsWith("graal.graalvm.");
     }
 
     private static String findPortableContractHash(VerifiedContractSet contracts) {
-        try {
-            return contracts.requirePortable("nekojs-core").compatibilitySha256();
-        } catch (IllegalStateException e) {
-            // If no nekojs-core portable contract, find any portable contract
-            for (VerifiedApiContract contract : contracts.all()) {
-                if (contract.identity().kind() == ApiContractKind.PORTABLE) {
-                    return contract.compatibilitySha256();
-                }
-            }
-            throw new ApiResolutionException("NO_PORTABLE_CONTRACT",
-                    "No portable contract found in contract set",
-                    Map.of());
-        }
+        return contracts.requirePortable("nekojs-core").compatibilitySha256();
     }
 
     private static ApiInvoker createInvoker(ApiContribution contribution, EnvironmentKey environmentKey) {

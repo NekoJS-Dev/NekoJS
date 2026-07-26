@@ -74,14 +74,14 @@ class ManagedApiEnvironmentTest {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "test-owner", ApiContractKind.PORTABLE, "stable-contract", ApiVersion.parse("1.0.0")),
+                        "nekojs-core", ApiContractKind.PORTABLE, "stable-contract", ApiVersion.parse("1.0.0")),
                 "Stable contract",
                 List.of(declaredSymbol),
                 List.of(),
                 List.of());
         return VerifiedContractSet.of(
-                new VerifiedApiContract(
-                        new ApiContractIdentity("test-owner", ApiContractKind.PORTABLE, "stable-contract",
+                VerifiedApiContract.create(
+                        new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "stable-contract",
                                 ApiVersion.parse("1.0.0")),
                         contract,
                         URI.create("file:///test"),
@@ -91,7 +91,7 @@ class ManagedApiEnvironmentTest {
     }
 
     private static FrozenApiRegistry resolveRegistry(VerifiedContractSet contracts) {
-        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin", URI.create("test:///test-plugin.jar"));
+        PluginIdentity owner = new PluginIdentity("nekojs-core", "test-plugin", URI.create("test:///test-plugin.jar"));
         ApiContributionRegistry registry = ApiContributionRegistry.ownedBy(owner, contracts);
         registry.registerSymbol(ApiContribution.symbol(
                 MEMBER_ID,

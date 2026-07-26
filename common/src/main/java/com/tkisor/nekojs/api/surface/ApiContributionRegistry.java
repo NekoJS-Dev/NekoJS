@@ -53,17 +53,19 @@ public final class ApiContributionRegistry {
             ApiVersion contractVersion,
             CapabilityImplementationMode mode,
             EnvironmentScope scope,
+            Object implementation,
             Map<String, Object> services) {
         Objects.requireNonNull(capabilityId, "capabilityId");
         Objects.requireNonNull(contractVersion, "contractVersion");
         Objects.requireNonNull(mode, "mode");
+        Objects.requireNonNull(implementation, "implementation");
         Objects.requireNonNull(services, "services");
 
         CapabilityProviderContribution provider = new CapabilityProviderContribution(
                 owner,
                 capabilityId,
                 100,
-                services,
+                implementation,
                 scope,
                 services);
         capabilityProviders.add(provider);

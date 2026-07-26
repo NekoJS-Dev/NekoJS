@@ -46,6 +46,11 @@ public final class FrozenApiRegistry implements ApiRuntimeView {
         return Optional.ofNullable(symbolsById.get(id));
     }
 
+    @Override
+    public Optional<ApiSymbol> findSymbol(ApiSymbolId id) {
+        return find(id);
+    }
+
     public ApiSymbol require(ApiSymbolId id) {
         return find(id).orElseThrow(() ->
                 new com.tkisor.nekojs.api.surface.ApiResolutionException("SYMBOL_NOT_FOUND",
@@ -108,6 +113,20 @@ public final class FrozenApiRegistry implements ApiRuntimeView {
         }
 
         return invoker;
+    }
+
+    @Override
+    public Map<String, ApiSymbol> symbolsByJsName(com.tkisor.nekojs.api.surface.ScriptTypeId type) {
+        Objects.requireNonNull(type, "type");
+        if (environmentKey.scriptType() != type) {
+            return Map.of();
+        }
+        Map<String, ApiSymbol> result = new LinkedHashMap<>();
+        result.putAll(globals);
+        for (Map<String, ApiSymbol> exports : moduleExports.values()) {
+            result.putAll(exports);
+        }
+        return result;
     }
 
     @Override

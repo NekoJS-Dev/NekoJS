@@ -60,7 +60,7 @@ class ApiManifestWriterTest {
                 List.of());
 
         return VerifiedContractSet.of(
-                new VerifiedApiContract(
+                VerifiedApiContract.create(
                         portableIdentity(),
                         contract,
                         URI.create("file:///test"),
@@ -280,7 +280,7 @@ class ApiManifestWriterTest {
                 List.of());
 
         VerifiedContractSet contracts = VerifiedContractSet.of(
-                new VerifiedApiContract(
+                VerifiedApiContract.create(
                         portableIdentity(),
                         new NormativeApiContract(
                                 1,
@@ -292,7 +292,7 @@ class ApiManifestWriterTest {
                         "nekojs-portable.json",
                         sha256("aaaa"),
                         sha256("bbbb")),
-                new VerifiedApiContract(
+                VerifiedApiContract.create(
                         new ApiContractIdentity("test-owner", ApiContractKind.FEATURE, "test-module", v1_0_0()),
                         moduleContract,
                         URI.create("file:///test2"),

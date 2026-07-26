@@ -187,6 +187,9 @@ public final class ApiValueMarshaller {
         if (value == null) return false;
         String className = value.getClass().getName();
         return registeredSymbolIds.stream()
-                .anyMatch(id -> id.qualifiedName().contains(className));
+                .anyMatch(id -> {
+                    String qn = id.qualifiedName();
+                    return qn.equals(className) || className.startsWith(qn + ".");
+                });
     }
 }

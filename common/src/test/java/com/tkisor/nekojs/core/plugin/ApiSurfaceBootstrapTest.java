@@ -72,7 +72,7 @@ class ApiSurfaceBootstrapTest {
         ApiSignature sig = ApiSignature.function(List.of(), ApiTypeRef.voidType());
 
         VerifiedApiContract contract = createContractWithSymbol(owner, "test-contract", symbolId, sig);
-        VerifiedContractSet contracts = VerifiedContractSet.of(contract);
+        VerifiedContractSet contracts = VerifiedContractSet.of(contract, nekojsCorePortableContract());
 
         PluginIdentity identity = new PluginIdentity(owner, TestManagedPlugin.class.getName(), TEST_CODE_SOURCE);
 
@@ -128,7 +128,7 @@ class ApiSurfaceBootstrapTest {
         ApiSignature sig = ApiSignature.function(List.of(), ApiTypeRef.voidType());
 
         VerifiedApiContract contract = createContractWithSymbol(owner, "test-contract", symbolId, sig);
-        VerifiedContractSet contracts = VerifiedContractSet.of(contract);
+        VerifiedContractSet contracts = VerifiedContractSet.of(contract, nekojsCorePortableContract());
 
         PluginIdentity wrongIdentity = new PluginIdentity(wrongOwner,
                 TestManagedPlugin.class.getName(), TEST_CODE_SOURCE);
@@ -157,7 +157,7 @@ class ApiSurfaceBootstrapTest {
         ApiSignature sig = ApiSignature.function(List.of(), ApiTypeRef.voidType());
 
         VerifiedApiContract contract = createContractWithSymbol(owner, "test-contract", contractSymbol, sig);
-        VerifiedContractSet contracts = VerifiedContractSet.of(contract);
+        VerifiedContractSet contracts = VerifiedContractSet.of(contract, nekojsCorePortableContract());
 
         PluginIdentity identity = new PluginIdentity(owner, TestManagedPlugin.class.getName(), TEST_CODE_SOURCE);
 
@@ -203,8 +203,25 @@ class ApiSurfaceBootstrapTest {
                 List.of(),
                 List.of());
 
-        return new VerifiedApiContract(identity, contract, TEST_CODE_SOURCE,
+        return VerifiedApiContract.create(identity, contract, TEST_CODE_SOURCE,
                 "test-contract.json", "sha256:test", "sha256:test");
+    }
+
+    private static VerifiedApiContract nekojsCorePortableContract() {
+        ApiContractIdentity identity = new ApiContractIdentity(
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("1.0.0"));
+
+        NormativeApiContract contract = new NormativeApiContract(
+                1,
+                new NormativeApiContract.ContractIdentity(
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("1.0.0")),
+                "Core portable contract",
+                List.of(),
+                List.of(),
+                List.of());
+
+        return VerifiedApiContract.create(identity, contract, TEST_CODE_SOURCE,
+                "nekojs-core.json", "sha256:core", "sha256:core");
     }
 
     private static class TestManagedPlugin implements NekoJSPlugin {

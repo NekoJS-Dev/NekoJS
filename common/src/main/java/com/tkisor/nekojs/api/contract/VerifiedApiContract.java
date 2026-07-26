@@ -14,7 +14,7 @@ public final class VerifiedApiContract {
     private final String integritySha256;
     private final String compatibilitySha256;
 
-    public VerifiedApiContract(ApiContractIdentity identity, NormativeApiContract contract,
+    VerifiedApiContract(ApiContractIdentity identity, NormativeApiContract contract,
                         URI codeSource, String resourceName,
                         String integritySha256, String compatibilitySha256) {
         this.identity = Objects.requireNonNull(identity, "identity");
@@ -23,6 +23,12 @@ public final class VerifiedApiContract {
         this.resourceName = Objects.requireNonNull(resourceName, "resourceName");
         this.integritySha256 = Objects.requireNonNull(integritySha256, "integritySha256");
         this.compatibilitySha256 = Objects.requireNonNull(compatibilitySha256, "compatibilitySha256");
+    }
+
+    public static VerifiedApiContract create(ApiContractIdentity identity, NormativeApiContract contract,
+                                             URI codeSource, String resourceName,
+                                             String integritySha256, String compatibilitySha256) {
+        return new VerifiedApiContract(identity, contract, codeSource, resourceName, integritySha256, compatibilitySha256);
     }
 
     public ApiContractIdentity identity() {

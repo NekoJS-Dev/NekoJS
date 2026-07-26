@@ -82,6 +82,12 @@ public final class ApiContractReader {
         String rawJson = root.toString();
         String integritySha256 = sha256Hex(rawJson.getBytes(StandardCharsets.UTF_8));
 
+        if (expectedIntegritySha256 != null && !expectedIntegritySha256.equals(integritySha256)) {
+            throw new ApiContractException(new ApiContractViolation(
+                    "INTEGRITY_MISMATCH", "/",
+                    "Integrity hash mismatch: expected " + expectedIntegritySha256 + " but got " + integritySha256));
+        }
+
         JsonNode withoutDocs = stripDocs(root);
         String compatJson = withoutDocs.toString();
         String compatibilitySha256 = sha256Hex(compatJson.getBytes(StandardCharsets.UTF_8));
@@ -364,7 +370,7 @@ public final class ApiContractReader {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(data);
-            return HexFormat.of().formatHex(hash);
+            return "sha256:" + HexFormat.of().formatHex(hash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not available", e);
         }
