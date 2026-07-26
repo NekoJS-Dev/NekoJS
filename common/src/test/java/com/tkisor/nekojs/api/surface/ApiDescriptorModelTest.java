@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.surface;
 
 import com.tkisor.nekojs.api.capability.CapabilityDefinition;
 import com.tkisor.nekojs.api.capability.CapabilityImplementationMode;
+import com.tkisor.nekojs.api.capability.ProviderPolicy;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.module.*;
@@ -162,7 +163,12 @@ class ApiDescriptorModelTest {
     void capabilityDefinitionCreation() {
         CapabilityDefinition def = new CapabilityDefinition(
                 "js-engine",
+                ApiVersion.parse("1.0.0"),
                 CapabilityImplementationMode.SINGLE,
+                ProviderPolicy.CORE_ONLY,
+                Set.of(),
+                null,
+                Set.of(),
                 Set.of("graaljs"));
         assertEquals("js-engine", def.name());
         assertEquals(CapabilityImplementationMode.SINGLE, def.mode());
