@@ -782,10 +782,12 @@ global:Item
 global:Platform
 event:PlayerEvents.hurt
 type:nekojs.api.PlayerRef
-member:nekojs.api.PlayerRef.give(nekojs.api.ItemStackRef)
+member:nekojs.api.PlayerRef.give
 module:@nekojs/feature/recipe-json
-module-member:@nekojs/version/neoforge-26.1.unwrapPlayer(PlayerRef)
+module-member:@nekojs/version/neoforge-26.1.unwrapPlayer
 ```
+
+member/module-member symbol ID 不包含参数；同一 JS 成员的 overload 由该 symbol 下的 signature compatibility keys 区分。参数列表相同而仅返回类型不同的两个签名不是合法 JS overload，resolver 必须拒绝。
 
 symbol ID 用于：
 
