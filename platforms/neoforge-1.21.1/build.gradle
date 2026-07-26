@@ -22,17 +22,10 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 sourceSets {
     main {
         java {
-            srcDirs = [
-                    'src/main/java',
-                    project(':common').file('src/main/java')
-            ]
+            srcDirs = ['src/main/java']
         }
         resources {
-            srcDirs = [
-                    'src/main/resources',
-                    project(':common').file('src/main/resources'),
-                    'src/generated/resources'
-            ]
+            srcDirs = ['src/main/resources', 'src/generated/resources']
         }
     }
 }

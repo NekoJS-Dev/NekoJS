@@ -155,16 +155,10 @@ processResources {
 sourceSets {
     main {
         java {
-            srcDirs = [
-                    'src/main/java',
-                    project(':common').file('src/main/java')
-            ]
+            srcDirs = ['src/main/java']
         }
         resources {
-            srcDirs = [
-                    'src/main/resources',
-                    project(':common').file('src/main/resources')
-            ]
+            srcDirs = ['src/main/resources']
         }
         blossom {
             javaSources {

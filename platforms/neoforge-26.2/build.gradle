@@ -22,11 +22,9 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 sourceSets {
     main {
         java {
-            srcDir project(':common').file('src/main/java')
             srcDir '../neoforge-26-shared/src/main/java'
         }
         resources {
-            srcDir project(':common').file('src/main/resources')
             srcDir '../neoforge-26-shared/src/main/resources'
             srcDir 'src/generated/resources'
         }
