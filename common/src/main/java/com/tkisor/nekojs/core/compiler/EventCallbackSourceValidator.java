@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.compiler;
 import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.EventSchemaRegistry;
+import com.tkisor.nekojs.api.event.ManagedCallbackSchemaRegistry;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
@@ -39,9 +40,15 @@ public final class EventCallbackSourceValidator {
             if (call.callee() instanceof ValNode.MemberAccess access
                     && access.object() instanceof ValNode.Identifier ident
                     && schema.containsKey(ident.name())) {
-                Class<?> eventClass = EventSchemaRegistry.resolve(ident.name(), access.member());
-                if (eventClass != null && eventClass != Object.class) {
-                    checkCallbackArgs(call, eventClass, ident.name(), file, source, reported);
+                ManagedCallbackSchemaRegistry.CallbackSchema managed =
+                        ManagedCallbackSchemaRegistry.resolve(ident.name(), access.member());
+                if (managed != null) {
+                    checkCallbackArgsManaged(call, managed, ident.name(), file, source, reported);
+                } else {
+                    Class<?> eventClass = EventSchemaRegistry.resolve(ident.name(), access.member());
+                    if (eventClass != null && eventClass != Object.class) {
+                        checkCallbackArgs(call, eventClass, ident.name(), file, source, reported);
+                    }
                 }
             }
         }
@@ -51,6 +58,39 @@ public final class EventCallbackSourceValidator {
         if (node instanceof ValNode.CallExpr call) {
             for (ValNode a : call.args()) scanNode(a, schema, file, source, reported);
         }
+    }
+
+    private static void checkCallbackArgsManaged(ValNode.CallExpr call,
+                                                  ManagedCallbackSchemaRegistry.CallbackSchema schema,
+                                                  String group, Path file, String src, Set<String> reported) {
+        for (ValNode arg : call.args()) {
+            List<String> params = null;
+            List<ValNode> body = null;
+            if (arg instanceof ValNode.ArrowFunc af) { params = af.params(); body = af.body(); }
+            else if (arg instanceof ValNode.FuncDecl fd) { params = fd.params(); body = fd.body(); }
+            if (params != null && !params.isEmpty()) {
+                Set<String> known = schema.memberNames();
+                for (ValNode s : body) checkBodyManaged(s, params.get(0), known, schema.displayName(), group, file, src, reported);
+            }
+        }
+    }
+
+    private static void checkBodyManaged(ValNode node, String param, Set<String> known,
+                                          String displayName, String group, Path file, String src, Set<String> reported) {
+        if (node instanceof ValNode.MemberAccess access
+                && access.object() instanceof ValNode.Identifier id
+                && id.name().equals(param)) {
+            String m = access.member();
+            if (!known.contains(m)) {
+                if (!reported.add(param + "." + m)) return;
+                report(file, src, access.start(), group + " callback: '" + m
+                        + "' not in " + displayName);
+            }
+        }
+        if (node instanceof ValNode.Block b) for (ValNode st : b.stmts()) checkBodyManaged(st, param, known, displayName, group, file, src, reported);
+        if (node instanceof ValNode.CallExpr call) for (ValNode a : call.args()) checkBodyManaged(a, param, known, displayName, group, file, src, reported);
+        if (node instanceof ValNode.ArrowFunc af) for (ValNode st : af.body()) checkBodyManaged(st, param, known, displayName, group, file, src, reported);
+        if (node instanceof ValNode.MemberAccess ma) checkBodyManaged(ma.object(), param, known, displayName, group, file, src, reported);
     }
 
     private static void checkCallbackArgs(ValNode.CallExpr call, Class<?> eventClass,

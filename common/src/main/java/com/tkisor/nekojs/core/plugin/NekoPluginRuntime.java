@@ -7,14 +7,23 @@ import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.ManagedCallbackSchemaRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.plugin.OwnedPlugin;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
+import com.tkisor.nekojs.api.surface.ApiRuntimeProvider;
+import com.tkisor.nekojs.api.surface.ApiRuntimeView;
+import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
+import com.tkisor.nekojs.api.surface.EnvironmentKey;
+import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
+import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 
 import java.util.List;
 import java.util.Map;
@@ -39,6 +48,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final List<Runnable> afterInitHooks;
     private final List<Consumer<ScriptType>> beforeScriptsLoadedHooks;
     private final List<Consumer<ScriptType>> afterScriptsLoadedHooks;
+    private final ApiRuntimeProvider apiRuntimeProvider;
 
     NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
                       Map<ScriptType, Map<String, Binding>> bindings,
@@ -55,7 +65,8 @@ public final class NekoPluginRuntime implements IPluginRuntime {
                       List<Runnable> initStartupHooks,
                       List<Runnable> afterInitHooks,
                       List<Consumer<ScriptType>> beforeScriptsLoadedHooks,
-                      List<Consumer<ScriptType>> afterScriptsLoadedHooks) {
+                      List<Consumer<ScriptType>> afterScriptsLoadedHooks,
+                      ApiRuntimeProvider apiRuntimeProvider) {
         this.scriptCompilers = scriptCompilers;
         this.bindings = bindings;
         this.adapters = adapters;
@@ -72,6 +83,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.afterInitHooks = afterInitHooks;
         this.beforeScriptsLoadedHooks = beforeScriptsLoadedHooks;
         this.afterScriptsLoadedHooks = afterScriptsLoadedHooks;
+        this.apiRuntimeProvider = apiRuntimeProvider;
         publishRecipeSchemaOverrides();
     }
 
@@ -94,11 +106,40 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return runtime;
     }
 
+    public static NekoPluginRuntime bootstrapOwned(
+            List<OwnedPlugin> ownedPlugins,
+            com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties,
+            VerifiedContractSet contracts) {
+        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrapOwned(ownedPlugins, scriptProperties, contracts);
+        current = runtime;
+        NekoRuntimeAccess.set(runtime);
+        ScriptCompilerRegistry.useRuntime(runtime.scriptCompilers());
+        installManagedCallbackSchemas(runtime);
+        return runtime;
+    }
+
     public static NekoPluginRuntime current() {
         if (current == null) {
             throw new IllegalStateException("NekoPluginRuntime has not been bootstrapped yet");
         }
         return current;
+    }
+
+    private static void installManagedCallbackSchemas(NekoPluginRuntime runtime) {
+        if (runtime.apiRuntimeProvider == null) return;
+        Map<ScriptType, ApiSurfaceSnapshot> snapshots = new java.util.HashMap<>();
+        for (ScriptType type : ScriptType.values()) {
+            EnvironmentKey key = EnvironmentKeyFactory.current(type);
+            ApiRuntimeView view = runtime.apiRuntimeProvider.view(key);
+            if (view == null) continue;
+            ApiEnvironmentSnapshot envSnap = view.environmentSnapshot();
+            if (envSnap != null && envSnap.surfaceSnapshot() != null) {
+                snapshots.put(type, envSnap.surfaceSnapshot());
+            }
+        }
+        if (!snapshots.isEmpty()) {
+            ManagedCallbackSchemaRegistry.install(snapshots);
+        }
     }
 
     public ScriptCompilerRegistry scriptCompilers() {
@@ -182,6 +223,18 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     @Override
     public void fireAfterScriptsLoaded(ScriptType type) {
         runScriptTypeHooks(afterScriptsLoadedHooks, type, "afterScriptsLoaded");
+    }
+
+    @Override
+    public ApiRuntimeView apiRuntime(EnvironmentKey environment) {
+        if (apiRuntimeProvider == null) {
+            return null;
+        }
+        return apiRuntimeProvider.view(environment);
+    }
+
+    public ApiRuntimeProvider apiRuntimeProvider() {
+        return apiRuntimeProvider;
     }
 
     private void runRunnableHooks(List<Runnable> hooks, ScriptType loggerType, String name) {

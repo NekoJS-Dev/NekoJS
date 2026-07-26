@@ -4,9 +4,16 @@ import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
+import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
+import com.tkisor.nekojs.api.surface.ApiRuntimeView;
+import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.surface.EnvironmentKey;
+import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
+import com.tkisor.nekojs.core.api.ApiFacadeProxy;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
@@ -61,11 +68,48 @@ public final class ScriptEnvironmentFactory {
                 bindings.putMember(name, obj);
             }
         });
+
+        bindManagedGlobals(bindings, scriptType, bindingSchema);
+
         ScriptBindingSchema.register(scriptType, bindingSchema);
 
         installJavaClassLoadTelemetry(context, scriptType);
 
         return new Environment(context, nodeRuntime);
+    }
+
+    private void bindManagedGlobals(Value bindings, ScriptType scriptType,
+                                    Map<String, ScriptBindingSchema.BindingMembers> bindingSchema) {
+        EnvironmentKey key = EnvironmentKeyFactory.current(scriptType);
+        ApiRuntimeView view = pluginRuntime.apiRuntime(key);
+        if (view == null) return;
+        ApiEnvironmentSnapshot snapshot = view.environmentSnapshot();
+        if (snapshot == null) return;
+        ApiSurfaceSnapshot surface = snapshot.surfaceSnapshot();
+        if (surface == null) return;
+
+        Map<String, com.tkisor.nekojs.api.surface.ApiSymbol> globals = new HashMap<>();
+        surface.symbols().forEach(s -> {
+            if (s.id().kind().equals("global")) {
+                globals.put(s.id().qualifiedName(), s);
+            }
+        });
+
+        for (var entry : globals.entrySet()) {
+            String name = entry.getKey();
+            if (bindingSchema.containsKey(name)) continue;
+            ApiSymbolId globalId = new ApiSymbolId("global", name);
+            Object impl = findImplementation(name);
+            ApiFacadeProxy proxy = ApiFacadeProxy.global(view, globalId, impl);
+            bindings.putMember(name, proxy);
+            bindingSchema.put(name, ScriptBindingSchema.fromSurface(surface, globalId));
+        }
+    }
+
+    private Object findImplementation(String globalName) {
+        var bindings = pluginRuntime.bindings(ScriptType.STARTUP);
+        com.tkisor.nekojs.api.data.Binding binding = bindings.get(globalName);
+        return binding != null ? binding.value() : null;
     }
 
     private void installJavaClassLoadTelemetry(Context ctx, ScriptType type) {

@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -45,5 +47,21 @@ public final class ScriptBindingSchema {
 
     public static Map<String, BindingMembers> schemaForPath(Path path) {
         return lookup(inferType(path));
+    }
+
+    public static BindingMembers fromSurface(ApiSurfaceSnapshot snapshot, ApiSymbolId typeId) {
+        if (snapshot == null || typeId == null) return new BindingMembers(Set.of());
+        Set<String> members = snapshot.symbols().stream()
+                .filter(s -> s.id().kind().equals("member")
+                        && s.id().qualifiedName().startsWith(typeId.qualifiedName() + "."))
+                .map(s -> {
+                    String qn = s.id().qualifiedName();
+                    int dot = qn.indexOf('.', typeId.qualifiedName().length() + 1);
+                    return dot > 0
+                            ? qn.substring(typeId.qualifiedName().length() + 1, dot)
+                            : qn.substring(typeId.qualifiedName().length() + 1);
+                })
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new BindingMembers(members);
     }
 }
