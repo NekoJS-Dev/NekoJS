@@ -1,0 +1,1 @@
+export * as probe from "java:com/tkisor/nekojs/probe";

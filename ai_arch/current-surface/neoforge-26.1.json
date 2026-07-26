@@ -1,0 +1,108 @@
+{
+  "sourceCommit": "b0856c7",
+  "platform": "neoforge-26.1",
+  "sharedPlugin": "neoforge-26-shared/src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java",
+  "globals": [
+    "AABB",
+    "BlockPos",
+    "Blocks",
+    "Color",
+    "Component",
+    "CompoundTag",
+    "DamageTypes",
+    "Direction",
+    "EntityType",
+    "Fluid",
+    "FluidAmounts",
+    "FluidIngredient",
+    "FluidStack",
+    "Fluids",
+    "ID",
+    "Ingredient",
+    "Item",
+    "Items",
+    "ItemStack",
+    "JsonIO",
+    "MobEffectInstance",
+    "MobEffects",
+    "MutableComponent",
+    "NativeEvents",
+    "Network",
+    "NbtIO",
+    "ParticleTypes",
+    "Platform",
+    "RecipeSchema",
+    "SoundEvents",
+    "StringUtils",
+    "Test",
+    "Text",
+    "Time",
+    "TriState",
+    "UUID",
+    "Utils",
+    "global"
+  ],
+  "clientGlobals": [
+    "InputConstants",
+    "KeyMapping",
+    "Minecraft",
+    "Screen",
+    "Window"
+  ],
+  "events": [
+    { "group": "BlockEvents", "source": "com.tkisor.nekojs.bindings.event.BlockEvents" },
+    { "group": "CommandEvents", "source": "com.tkisor.nekojs.bindings.event.CommandEvents" },
+    { "group": "EntityEvents", "source": "com.tkisor.nekojs.bindings.event.EntityEvents" },
+    { "group": "GoalEvents", "source": "com.tkisor.nekojs.bindings.event.GoalEvents" },
+    { "group": "ItemEvents", "source": "com.tkisor.nekojs.bindings.event.ItemEvents" },
+    { "group": "LevelEvents", "source": "com.tkisor.nekojs.bindings.event.LevelEvents" },
+    { "group": "NetworkEvents", "source": "com.tkisor.nekojs.bindings.event.NetworkEvents" },
+    { "group": "PlayerEvents", "source": "com.tkisor.nekojs.bindings.event.PlayerEvents" },
+    { "group": "RegistryEvents", "source": "com.tkisor.nekojs.bindings.event.RegistryEvents" },
+    { "group": "ScriptEvents", "source": "com.tkisor.nekojs.api.event.ScriptEvents" },
+    { "group": "ServerEvents", "source": "com.tkisor.nekojs.bindings.event.ServerEvents" }
+  ],
+  "clientEvents": [
+    { "group": "ClientEvents", "source": "com.tkisor.nekojs.bindings.event.client.ClientEvents" }
+  ],
+  "adapters": [
+    "BlockAdapter",
+    "BlockEntityTypeAdapter",
+    "BlockPosAdapter",
+    "ComponentAdapter",
+    "CompoundTagAdapter",
+    "CreativeModeTabAdapter",
+    "EntityTypeAdapter",
+    "FluidIngredientAdapter",
+    "FluidStackAdapter",
+    "IdentifierAdapter",
+    "IngredientAdapter",
+    "ItemAdapter",
+    "ItemStackAdapter",
+    "JsonObjectAdapter",
+    "MobEffectAdapter",
+    "ParticleTypeAdapter",
+    "PotionAdapter",
+    "RecipeFilterAdapter",
+    "RecipeJsonValueAdapter",
+    "SizedFluidIngredientAdapter",
+    "SizedIngredientAdapter",
+    "SoundEventAdapter",
+    "TagKeyAdapter",
+    "Vec3Adapter"
+  ],
+  "codecAdapters": [
+    { "target": "net.minecraft.world.item.component.Fireworks", "codec": "Fireworks.CODEC" }
+  ],
+  "recipeNamespaces": [
+    { "namespace": "minecraft", "handler": "MinecraftRecipeHandler" }
+  ],
+  "scriptProperties": ["AFTER", "DISABLE", "MODLOADED", "PRIORITY"],
+  "nativeTypeLeaks": [
+    "Identifier (neoforge 26.x remapped from ResourceLocation)"
+  ],
+  "fakeOrPartialBehaviors": [
+    "Item is DelegatingBinding proxy (of/empty → ItemJS, rest → MC Item class)"
+  ],
+  "targetTiers": ["neoforge-26"]
+}

@@ -8,11 +8,9 @@ import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
-import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.script.WorkspaceGenerator;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -30,6 +28,15 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
+    private final ProbeExternalArtifacts externalArtifacts;
+
+    public ProbeOrchestrator() {
+        this(ProbeExternalArtifacts.DEFAULT);
+    }
+
+    ProbeOrchestrator(ProbeExternalArtifacts externalArtifacts) {
+        this.externalArtifacts = externalArtifacts;
+    }
 
     {
         // RecipeEventJS.recipes getter 由 RecipeEventDeclarationGenerator 提供，
@@ -129,15 +136,8 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                 // 8. 生成 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
                 filesGenerated += generateManualDeclarations(snapshot, staging);
 
-                // 9. 生成 .github/agents/ 模板文件（outputDir 外部副作用，不参与 staging swap）
-                Path agentsDir = outputDir.getParent().resolve(".github").resolve("agents");
-                AgentTemplateGenerator.generate(agentsDir);
-
-                // 10. 补全 workspace 配置（.neko_probe/jsconfig.json + 各脚本目录 jsconfig.json + snippets）。
-                // probe 生成的 .d.ts 内部大量用 import { $X } from "java:..." / "@side-only/..." / "@special"，
-                // 这些非标准模块说明符只有靠 jsconfig paths 才能被 IDE 解析。启动时已生成一次，这里幂等补全
-                // （已存在的 jsconfig 不重写，仅 snippets 总刷新），保证 /nekojs probe 后 IDE 工件自洽，无需重启游戏。
-                WorkspaceGenerator.createWorkspaceConfigs();
+                // 9-10. 外部副作用（.github/agents 模板 + workspace 配置）
+                externalArtifacts.generate(outputDir);
 
                 // 全部生成成功：staging 整体替换 outputDir
                 commitProbeOutput(staging, outputDir, backup);

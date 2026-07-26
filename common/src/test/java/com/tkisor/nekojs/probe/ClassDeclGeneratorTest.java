@@ -22,6 +22,13 @@ class ClassDeclGeneratorTest {
         public void doWork() {}
     }
 
+    /** 样例类：含重载方法与额外 public helper。 */
+    public static class OverloadedSample {
+        public String find(String id) { return id; }
+        public String find(int index) { return String.valueOf(index); }
+        public String internalHelper() { return "legacy-visible"; }
+    }
+
     @Test
     void getterEmittedAsBothPropertyAndMethod() {
         ClassDeclGenerator gen = new ClassDeclGenerator(new TypeConverter(new TypeAliasRegistry()));
@@ -40,10 +47,29 @@ class ClassDeclGeneratorTest {
         assertTrue(decl.contains("doWork():"), decl);
     }
 
+    @Test
+    void legacyGeneratorKeepsBothOverloads() {
+        String decl = new ClassDeclGenerator(new TypeConverter(new TypeAliasRegistry()))
+                .generate(OverloadedSample.class);
+        assertEquals(2, count(decl, "find("), decl);
+        assertTrue(decl.contains("internalHelper():"), decl);
+    }
+
     /** 取 decl 中 prefix 之后的类型文本（到分号为止），用于比较 getter/方法形式类型是否一致。 */
     private static String typeAfter(String decl, String prefix) {
         int i = decl.indexOf(prefix);
         String rest = decl.substring(i + prefix.length());
         return rest.substring(0, rest.indexOf(';')).trim();
+    }
+
+    /** 计算 decl 中 target 出现的次数。 */
+    private static int count(String decl, String target) {
+        int n = 0;
+        int idx = 0;
+        while ((idx = decl.indexOf(target, idx)) != -1) {
+            n++;
+            idx += target.length();
+        }
+        return n;
     }
 }
