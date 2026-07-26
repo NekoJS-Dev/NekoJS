@@ -1,12 +1,10 @@
 package com.tkisor.nekojs.api.surface;
 
-import com.tkisor.nekojs.api.ScriptType;
-
 import java.util.Map;
 import java.util.Objects;
 
 public record EnvironmentKey(
-        ScriptType scriptType,
+        ScriptTypeId scriptType,
         RuntimeDist dist,
         String loaderId,
         String loaderVersionRaw,
