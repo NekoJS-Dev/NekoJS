@@ -77,14 +77,26 @@ jobs:
           distribution: temurin
           java-version: '25'
 
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Install Probe typecheck dependencies
+        run: npm ci
+
       - name: Run common tests
         run: ./gradlew :common:test --console=plain
+
+      - name: Typecheck Probe declarations
+        run: npm run test:probe-types
 
       - name: Discover platform modules
         id: platforms

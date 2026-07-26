@@ -28,6 +28,8 @@ import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.contract.ApiContractReader;
+import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 import com.tkisor.nekojs.listener.RegistryEventListener;
 import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.ScriptManager;
@@ -101,7 +103,16 @@ public class NekoJSMod extends NekoJS {
         long s0 = System.nanoTime();
         NeoForgePluginLoader.loadAnnotatedPlugins();
         long s1 = System.nanoTime();
-        NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrap(NekoJSBasePluginManager.getPlugins(), this.scriptProperties);
+        NekoPluginRuntime pluginRuntime;
+        try {
+            VerifiedContractSet contracts = VerifiedContractSet.of(
+                    ApiContractReader.emptyVerifiedCorePreview(
+                            NekoJS.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+            pluginRuntime = NekoPluginRuntime.bootstrapOwned(
+                    NekoJSBasePluginManager.getOwnedPlugins(), this.scriptProperties, contracts);
+        } catch (java.net.URISyntaxException e) {
+            throw new RuntimeException("Failed to resolve NekoJS code source URI", e);
+        }
         NekoRuntimeAccess.get().fireInit();
         scriptEventsRegistrar.bindRuntime(pluginRuntime);
         ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);

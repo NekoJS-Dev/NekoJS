@@ -8,6 +8,8 @@ import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.surface.ApiRuntimeView;
+import com.tkisor.nekojs.api.surface.EnvironmentKey;
 
 import java.util.List;
 import java.util.Map;
@@ -47,4 +49,7 @@ public interface IPluginRuntime {
     void fireBeforeScriptsLoaded(ScriptType type);
 
     void fireAfterScriptsLoaded(ScriptType type);
+
+    /** Returns the managed API runtime view for the given environment, or null if no managed API was bootstrapped. */
+    ApiRuntimeView apiRuntime(EnvironmentKey environment);
 }

@@ -63,4 +63,10 @@ public interface IPlatform {
     default Set<PlatformCapability> capabilities() {
         return Set.of();
     }
+
+    /** Loader identifier, e.g. "neoforge", "cleanroom", "forge". */
+    String getLoaderId();
+
+    /** Loader version string, e.g. "4.0.0". */
+    String getLoaderVersion();
 }

@@ -112,7 +112,9 @@ final class LegacyProbeFixture {
                 List.of(),
                 List.of(manualDecl),
                 List.of(registryType),
-                new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets"))
+                new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
+                java.util.Map.of(),
+                java.util.List.of()
         );
     }
 }

@@ -5,6 +5,8 @@ import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.common.ModContainer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -12,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class ForgePlatform implements IPlatform {
+    private static final Logger LOGGER = LogManager.getLogger("ForgePlatform");
+
     @Override
     public boolean isClient() {
         return FMLCommonHandler.instance().getSide() == Side.CLIENT;
@@ -69,5 +73,20 @@ public class ForgePlatform implements IPlatform {
                 PlatformCapability.NETWORK_CUSTOM_CHANNEL,
                 PlatformCapability.RECIPE_VIEWER
         );
+    }
+
+    @Override
+    public String getLoaderId() {
+        return "cleanroom";
+    }
+
+    @Override
+    public String getLoaderVersion() {
+        IModInfo cleanroom = getMods().get("cleanroom");
+        if (cleanroom != null) return cleanroom.getVersion();
+        IModInfo forge = getMods().get("forge");
+        if (forge != null) return forge.getVersion();
+        LOGGER.warn("Neither 'cleanroom' nor 'forge' mod found for loader version; defaulting to 0.0.0");
+        return "0.0.0";
     }
 }

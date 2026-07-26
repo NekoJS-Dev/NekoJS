@@ -1,13 +1,17 @@
 package com.tkisor.nekojs.probe;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
+import com.tkisor.nekojs.api.catalog.CurrentSurfaceReport;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
+import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 import com.tkisor.nekojs.api.ScriptType;
@@ -28,6 +32,7 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
+    private final ManagedApiDeclarationGenerator managedDeclGenerator = new ManagedApiDeclarationGenerator();
     private final ProbeExternalArtifacts externalArtifacts;
 
     public ProbeOrchestrator() {
@@ -136,7 +141,13 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                 // 8. 生成 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
                 filesGenerated += generateManualDeclarations(snapshot, staging);
 
-                // 9-10. 外部副作用（.github/agents 模板 + workspace 配置）
+                // 9. 生成 managed declarations
+                filesGenerated += generateManagedDeclarations(snapshot, staging);
+
+                // 10. 生成 api-manifest.json 和 current-surface.json
+                filesGenerated += generateManifestAndSurface(snapshot, staging);
+
+                // 11-12. 外部副作用（.github/agents 模板 + workspace 配置）
                 externalArtifacts.generate(outputDir);
 
                 // 全部生成成功：staging 整体替换 outputDir
@@ -509,6 +520,44 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         }
         Files.writeString(manualDir.resolve("index.d.ts"), sb.toString());
         return 1;
+    }
+
+    private int generateManagedDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = snapshot.managedApis();
+        if (managedApis.isEmpty()) return 0;
+
+        int count = 0;
+        for (ScriptType type : ScriptType.all()) {
+            String content = managedDeclGenerator.generate(managedApis, type);
+            if (content.isEmpty()) continue;
+
+            Path dir = outputDir.resolve("@nekojs").resolve("managed").resolve(type.name);
+            Files.createDirectories(dir);
+            Files.writeString(dir.resolve("index.d.ts"), content);
+            count++;
+        }
+        return count;
+    }
+
+    private int generateManifestAndSurface(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+        int count = 0;
+
+        // api-manifest.json
+        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = snapshot.managedApis();
+        if (!managedApis.isEmpty()) {
+            ApiManifestGenerator manifestGenerator = new ApiManifestGenerator(
+                    com.tkisor.nekojs.core.api.ApiRuntimeVersionReader.read(),
+                    ProbeContractSetHolder.contractSet());
+            manifestGenerator.write(outputDir, managedApis);
+            count++;
+        }
+
+        // current-surface.json
+        String surfaceReport = CurrentSurfaceReport.generate(snapshot);
+        Files.writeString(outputDir.resolve("current-surface.json"), surfaceReport);
+        count++;
+
+        return count;
     }
 
     // -----------------------------------------------------------------------

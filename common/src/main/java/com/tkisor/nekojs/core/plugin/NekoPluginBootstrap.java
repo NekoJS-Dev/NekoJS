@@ -9,6 +9,7 @@ import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
+import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.core.plugin.PluginLifecycleRegister;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionContext;
@@ -26,6 +27,16 @@ import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.ScriptTypePredicate;
 import com.tkisor.nekojs.script.ScriptTypedValue;
+import com.tkisor.nekojs.api.contract.VerifiedContractSet;
+import com.tkisor.nekojs.api.contract.VerifiedApiContract;
+import com.tkisor.nekojs.api.plugin.OwnedPlugin;
+import com.tkisor.nekojs.api.plugin.PluginIdentity;
+import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
+import com.tkisor.nekojs.api.surface.ApiRuntimeProvider;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.surface.EnvironmentKey;
+import com.tkisor.nekojs.api.surface.LegacyGlobalReservation;
+import com.tkisor.nekojs.core.api.FrozenApiRegistrySet;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,6 +78,62 @@ public final class NekoPluginBootstrap {
 
     public static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         BootstrapState state = new BootstrapState(Platform.isClient());
+        collectExtensions(plugins, state, scriptProperties);
+        freezeState(state, scriptProperties);
+        return state.createRuntime(null);
+    }
+
+    public static NekoPluginRuntime bootstrapOwned(
+            List<OwnedPlugin> ownedPlugins,
+            com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties,
+            VerifiedContractSet contracts) {
+        Objects.requireNonNull(ownedPlugins, "ownedPlugins");
+        Objects.requireNonNull(contracts, "contracts");
+
+        List<NekoJSPlugin> plugins = ownedPlugins.stream()
+                .map(OwnedPlugin::plugin)
+                .toList();
+
+        BootstrapState state = new BootstrapState(Platform.isClient());
+        collectExtensions(plugins, state, scriptProperties);
+
+        List<ApiContributionRegistry> managedContributions = new ArrayList<>();
+        for (OwnedPlugin owned : ownedPlugins) {
+            List<VerifiedApiContract> ownerContracts = contracts.forOwner(owned.identity().ownerId());
+            if (ownerContracts.isEmpty()) {
+                continue;
+            }
+            VerifiedContractSet ownerContractSet = VerifiedContractSet.of(
+                    ownerContracts.toArray(VerifiedApiContract[]::new));
+            ApiContributionRegistry registry = ApiContributionRegistry.ownedBy(
+                    owned.identity(), ownerContractSet);
+            owned.plugin().registerApiSurface(registry);
+            managedContributions.add(registry);
+        }
+
+        freezeState(state, scriptProperties);
+
+        List<LegacyGlobalReservation> legacyReservations = buildLegacyReservations(state);
+
+        List<EnvironmentKey> environmentKeys = buildEnvironmentKeys();
+
+        ApiRuntimeProvider apiRuntimeProvider = new FrozenApiRegistrySet(
+                contracts, managedContributions, legacyReservations, environmentKeys);
+
+        return state.createRuntime(apiRuntimeProvider);
+    }
+
+    private static NekoPluginExtensionPoint<NekoJSPlugin> base(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
+        return NekoPluginExtensionPoint.of(id, NekoJSPlugin.class, collector);
+    }
+
+    static ScriptTypePredicate bindingPredicate(boolean client) {
+        return client
+                ? ScriptTypePredicate.any()
+                : ScriptTypePredicate.exact(ScriptType.CLIENT).negate();
+    }
+
+    private static void collectExtensions(List<NekoJSPlugin> plugins, BootstrapState state, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         ExtensionRegistry registry = new ExtensionRegistry();
         builtInExtensionPoints(scriptProperties).forEach(registry::register);
         for (NekoJSPlugin plugin : plugins) {
@@ -81,33 +148,45 @@ public final class NekoPluginBootstrap {
             }
         }
 
-        // 内置 probe 只作为 fallback，单个第三方实现可以真正替换它。
         ProbeRegistry.setFallback(new com.tkisor.nekojs.probe.ProbeOrchestrator(), "NekoJS (built-in)");
-
-        // 允许插件替换 probe generator
         for (NekoJSPlugin plugin : plugins) {
             plugin.registerProbeGenerator();
         }
-
-        // 锁定注册表，检测冲突
         ProbeRegistry.lock();
+    }
 
+    private static void freezeState(BootstrapState state, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         if (scriptProperties instanceof com.tkisor.nekojs.script.prop.ScriptPropertyRegistry.Impl impl) {
             impl.freeze();
         }
         state.events().view().values().forEach(com.tkisor.nekojs.api.event.EventGroup::freeze);
         state.freeze();
-        return state.createRuntime();
     }
 
-    private static NekoPluginExtensionPoint<NekoJSPlugin> base(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
-        return NekoPluginExtensionPoint.of(id, NekoJSPlugin.class, collector);
+    private static List<LegacyGlobalReservation> buildLegacyReservations(BootstrapState state) {
+        List<LegacyGlobalReservation> reservations = new ArrayList<>();
+        Map<ScriptType, Map<String, Binding>> bindings = state.bindingsByScriptType();
+        for (Map<String, Binding> typeBindings : bindings.values()) {
+            for (Binding binding : typeBindings.values()) {
+                String diagId = "global:" + binding.name() + "#" + binding.valueType().getName();
+                reservations.add(new LegacyGlobalReservation(
+                        binding.name(), new ApiSymbolId("global", diagId)));
+            }
+        }
+        for (EventGroup group : state.events().view().values()) {
+            String diagId = "event-group:" + group.name();
+            reservations.add(new LegacyGlobalReservation(
+                    group.name(), new ApiSymbolId("global", diagId)));
+        }
+        return List.copyOf(reservations);
     }
 
-    static ScriptTypePredicate bindingPredicate(boolean client) {
-        return client
-                ? ScriptTypePredicate.any()
-                : ScriptTypePredicate.exact(ScriptType.CLIENT).negate();
+    private static List<EnvironmentKey> buildEnvironmentKeys() {
+        List<EnvironmentKey> keys = new ArrayList<>();
+        for (ScriptType type : ScriptType.values()) {
+            keys.add(com.tkisor.nekojs.api.surface.EnvironmentKeyFactory.current(type));
+        }
+        return List.copyOf(keys);
     }
 
     static Map<ScriptType, Map<String, Binding>> freezeBindings(ScriptTypedValue<BindingRegistry> registries) {
@@ -286,7 +365,7 @@ public final class NekoPluginBootstrap {
             scriptCompilers.freeze();
         }
 
-        NekoPluginRuntime createRuntime() {
+        NekoPluginRuntime createRuntime(ApiRuntimeProvider apiRuntimeProvider) {
             return new NekoPluginRuntime(
                     scriptCompilers,
                     bindingsByScriptType(),
@@ -303,7 +382,8 @@ public final class NekoPluginBootstrap {
                     List.copyOf(initStartupHooks),
                     List.copyOf(afterInitHooks),
                     List.copyOf(beforeScriptsLoadedHooks),
-                    List.copyOf(afterScriptsLoadedHooks)
+                    List.copyOf(afterScriptsLoadedHooks),
+                    apiRuntimeProvider
             );
         }
 

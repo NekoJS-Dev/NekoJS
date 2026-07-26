@@ -3,9 +3,14 @@ package com.tkisor.nekojs.core;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.api.plugin.OwnedPlugin;
+import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.platform.Platform;
 
 import java.lang.reflect.Modifier;
+import java.net.URI;
+import java.security.ProtectionDomain;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -18,18 +23,29 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * {@link #getPlugins()} 返回按 priority 降序（数值大先）排列的视图，priority 相同时保持登记顺序。
  */
 public final class NekoJSBasePluginManager {
-    private record PluginEntry(NekoJSPlugin plugin, int priority) {}
+    private record PluginEntry(PluginIdentity identity, NekoJSPlugin plugin, int priority) {}
 
     private static final List<PluginEntry> ENTRIES = new CopyOnWriteArrayList<>();
-    private static volatile List<NekoJSPlugin> sortedView = List.of();
+    private static volatile List<NekoJSPlugin> sortedView = null;
+    private static volatile List<OwnedPlugin> ownedView = null;
 
     private NekoJSBasePluginManager() {}
 
     /**
      * 读取类上的 {@link RegisterNekoJSPlugin} 注解，按 {@code clientOnly}/{@code requiredMods}
      * 过滤后实例化并登记。priority 来自注解（缺省 1000）。
+     *
+     * <p>使用 legacy owner 格式 {@code "legacy:<class FQN>"}，codeSource 来自 protection domain。
      */
     public static void registerClass(Class<?> clazz) {
+        PluginIdentity identity = createLegacyIdentity(clazz);
+        registerClass(identity, clazz);
+    }
+
+    /**
+     * 使用已验证的 owner identity 注册插件类。
+     */
+    public static void registerClass(PluginIdentity identity, Class<?> clazz) {
         if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
             NekoJS.LOGGER.error("Plugin {} does not implement NekoJSPlugin", clazz.getName());
             return;
@@ -57,12 +73,29 @@ public final class NekoJSBasePluginManager {
         try {
             NekoJSPlugin plugin = (NekoJSPlugin) clazz.getDeclaredConstructor().newInstance();
             int priority = anno != null ? anno.priority() : 1000;
-            ENTRIES.add(new PluginEntry(plugin, priority));
-            sortedView = null; // 失效排序缓存
-            NekoJS.LOGGER.debug("Registered plugin: {} (priority {})", clazz.getName(), priority);
+            ENTRIES.add(new PluginEntry(identity, plugin, priority));
+            sortedView = null;
+            ownedView = null;
+            NekoJS.LOGGER.debug("Registered plugin: {} (priority {}, owner {})", clazz.getName(), priority, identity.ownerId());
         } catch (Throwable t) {
             NekoJS.LOGGER.error("Failed to instantiate plugin {}", clazz.getName(), t);
         }
+    }
+
+    private static PluginIdentity createLegacyIdentity(Class<?> clazz) {
+        URI codeSource = codeSourceUri(clazz);
+        return new PluginIdentity("legacy:" + clazz.getName(), clazz.getName(), codeSource);
+    }
+
+    private static URI codeSourceUri(Class<?> clazz) {
+        try {
+            ProtectionDomain pd = clazz.getProtectionDomain();
+            if (pd != null && pd.getCodeSource() != null && pd.getCodeSource().getLocation() != null) {
+                return pd.getCodeSource().getLocation().toURI();
+            }
+        } catch (Exception ignored) {
+        }
+        return URI.create("legacy:" + clazz.getName());
     }
 
     /** 按 priority 降序（数值大先）返回所有已登记插件。 */
@@ -74,6 +107,18 @@ public final class NekoJSBasePluginManager {
                 .map(PluginEntry::plugin)
                 .toList();
         sortedView = view;
+        return view;
+    }
+
+    /** 返回所有已登记插件及其 owner identity，按 priority 降序排列。 */
+    public static List<OwnedPlugin> getOwnedPlugins() {
+        List<OwnedPlugin> view = ownedView;
+        if (view != null) return view;
+        view = ENTRIES.stream()
+                .sorted(Comparator.comparingInt(PluginEntry::priority).reversed())
+                .map(entry -> new OwnedPlugin(entry.identity(), entry.plugin()))
+                .toList();
+        ownedView = view;
         return view;
     }
 }

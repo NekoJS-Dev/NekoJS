@@ -187,8 +187,8 @@ class ApiDescriptorModelTest {
 
     @Test
     void pluginIdentityEquality() {
-        PluginIdentity id1 = new PluginIdentity("nekojs", "core");
-        PluginIdentity id2 = new PluginIdentity("nekojs", "core");
+        PluginIdentity id1 = new PluginIdentity("nekojs", "core", java.net.URI.create("test:///core.jar"));
+        PluginIdentity id2 = new PluginIdentity("nekojs", "core", java.net.URI.create("test:///core.jar"));
         assertEquals(id1, id2);
         assertEquals(id1.hashCode(), id2.hashCode());
     }

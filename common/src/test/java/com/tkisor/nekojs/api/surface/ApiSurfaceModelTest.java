@@ -187,7 +187,7 @@ class ApiSurfaceModelTest {
 
     @Test
     void apiTierHasExpectedValues() {
-        assertEquals(8, ApiTier.values().length);
+        assertEquals(9, ApiTier.values().length);
         assertNotNull(ApiTier.GLOBAL);
         assertNotNull(ApiTier.MEMBER);
         assertNotNull(ApiTier.MODULE_MEMBER);

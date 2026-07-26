@@ -7,6 +7,7 @@ import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
 import com.tkisor.nekojs.probe.ProbeRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
@@ -34,6 +35,9 @@ public interface NekoJSPlugin {
     }
 
     default void registerBinding(BindingRegistry registry) {
+    }
+
+    default void registerApiSurface(ApiContributionRegistry registry) {
     }
 
     default void registerAdapters(JSTypeAdapterRegistry registry) {

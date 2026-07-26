@@ -70,4 +70,15 @@ public class NeoForgePlatform implements IPlatform {
                 PlatformCapability.CLIENT_RENDERERS
         );
     }
+
+    @Override
+    public String getLoaderId() {
+        return "neoforge";
+    }
+
+    @Override
+    public String getLoaderVersion() {
+        IModInfo neoforge = getMods().get("neoforge");
+        return neoforge != null ? neoforge.getVersion() : "0.0.0";
+    }
 }

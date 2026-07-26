@@ -1182,7 +1182,7 @@ git commit -m "feat(runtime): bind managed APIs from the frozen surface registry
 - Consumes: Probe managed declaration output、api-manifest、current-surface report。
 - Produces: 可重复 `npm run test:probe-types` 门禁和 Phase 0 current-surface 审计文档。
 
-- [ ] **Step 1: 添加固定 TypeScript 工具链**
+- [x] **Step 1: 添加固定 TypeScript 工具链**
 
 `package.json`：
 
@@ -1201,7 +1201,7 @@ git commit -m "feat(runtime): bind managed APIs from the frozen surface registry
 
 运行 `npm install --package-lock-only` 生成 lock；不得手写 lock。
 
-- [ ] **Step 2: 添加 tsconfig 和使用 fixture**
+- [x] **Step 2: 添加 tsconfig 和使用 fixture**
 
 `tsconfig.json` 固定：
 
@@ -1222,27 +1222,27 @@ git commit -m "feat(runtime): bind managed APIs from the frozen surface registry
 
 usage fixture 必须调用 overloaded managed global 并验证 callback payload；不得 import Phase 6 才接线的 feature/platform/version module，不得使用 `any` 或 `@ts-ignore`。
 
-- [ ] **Step 3: 添加 generated fixture writer JUnit test**
+- [x] **Step 3: 添加 generated fixture writer JUnit test**
 
 测试调用 `ManagedApiDeclarationGenerator`，把 actual 固定输出到 `common/build/probe-ts-actual/index.d.ts`，读取 checked-in `common/src/test/probe-ts/generated/index.d.ts` 并断言字节一致。正常 `:common:test` 不得写入 `src/` 或修改工作树。
 
-- [ ] **Step 4: 先运行 tsc 并确认缺声明失败**
+- [x] **Step 4: 先运行 tsc 并确认缺声明失败**
 
 Run: `npm ci; if ($?) { npm run test:probe-types }`
 
 Expected: 首次 FAIL，直到 generated golden 放入正确目录。
 
-- [ ] **Step 5: 生成并审阅 managed declaration golden**
+- [x] **Step 5: 生成并审阅 managed declaration golden**
 
 将 JUnit actual 输出复制为 checked-in `generated/index.d.ts`，确认无 `net.minecraft`、Forge、NeoForge、Graal FQN。
 
-- [ ] **Step 6: 运行 TypeScript 门禁**
+- [x] **Step 6: 运行 TypeScript 门禁**
 
 Run: `npm run test:probe-types`
 
 Expected: 0 TypeScript errors。
 
-- [ ] **Step 7: 把 TypeScript 检查接入 CI**
+- [x] **Step 7: 把 TypeScript 检查接入 CI**
 
 在 `.github/workflows/ci-build.yml` 的 JDK setup 后增加：
 
@@ -1264,7 +1264,7 @@ Expected: 0 TypeScript errors。
         run: npm run test:probe-types
 ```
 
-- [ ] **Step 8: 运行完整验证矩阵**
+- [x] **Step 8: 运行完整验证矩阵**
 
 Run:
 
@@ -1283,7 +1283,7 @@ Expected:
 - Task 1 legacy Probe golden 完全不变。
 - managed Probe output 与 manifest 重复生成字节一致。
 
-- [ ] **Step 9: 检查 API/Probe 禁止项**
+- [x] **Step 9: 检查 API/Probe 禁止项**
 
 Run:
 
@@ -1294,7 +1294,7 @@ git status --short
 
 人工检查 staged diff：不得包含 `build/`、`node_modules/`、`.neko_probe/`、`.zcode/`、`kubejs-2601/` 或无关 `ai_arch/` 文件。
 
-- [ ] **Step 10: 提交**
+- [x] **Step 10: 提交**
 
 ```bash
 git add package.json package-lock.json common/src/test/probe-ts common/src/test/java/com/tkisor/nekojs/probe/ProbeTypeScriptFixtureWriterTest.java .github/workflows/ci-build.yml ai_arch/unified-js-api-phase0-1-plan.md

@@ -61,38 +61,7 @@ public final class WorkspaceGenerator {
     }
 
     private static void createConfigForEnv(ScriptType scriptType, Path scriptDir) {
-        JSConfigModel model = new JSConfigModel();
-
-        // 计算从脚本目录到 .neko_probe 的相对路径
-        Path probeDir = NekoJSPaths.get().probeDir();
-        String relativeProbePath = scriptDir.relativize(probeDir).toString().replace('\\', '/');
-
-        model.compilerOptions.typeRoots = List.of(
-                relativeProbePath + "/@package",
-                "../node_modules/@types"
-        );
-        model.compilerOptions.moduleResolution = "node";
-        model.compilerOptions.baseUrl = ".";
-
-        // paths 映射：java:、@side-only/{type}、@special
-        Map<String, List<String>> paths = new LinkedHashMap<>();
-        paths.put("java:*", List.of(relativeProbePath + "/@package/*"));
-
-        String sideOnlyBase = relativeProbePath + "/@side-only/" + scriptType.name;
-        paths.put("@side-only/" + scriptType.name, List.of(sideOnlyBase));
-        paths.put("@side-only/" + scriptType.name + "/*", List.of(sideOnlyBase + "/*"));
-
-        paths.put("@special", List.of(relativeProbePath + "/@special"));
-        paths.put("@special/*", List.of(relativeProbePath + "/@special/*"));
-
-        model.compilerOptions.paths = paths;
-
-        // include 中追加 probe 生成的 .d.ts，让 VS Code 索引类型声明
-        List<String> includes = new ArrayList<>(model.include);
-        includes.add(relativeProbePath + "/@package/**/*.d.ts");
-        includes.add(relativeProbePath + "/@manual/**/*.d.ts");
-        includes.add(sideOnlyBase + "/**/*.d.ts");
-        model.include = includes;
+        JSConfigModel model = buildConfigForEnv(scriptType, scriptDir, NekoJSPaths.get().probeDir());
 
         for (NekoJSPlugin plugin : NekoJSBasePluginManager.getPlugins()) {
             try {
@@ -111,6 +80,44 @@ public final class WorkspaceGenerator {
                 NekoJS.LOGGER.error("Failed to create config file: {}", configPath, e);
             }
         }
+    }
+
+    /**
+     * Build the jsconfig model for a given script type without writing to disk or invoking plugins.
+     * Extracted for testability.
+     */
+    static JSConfigModel buildConfigForEnv(ScriptType scriptType, Path scriptDir, Path probeDir) {
+        JSConfigModel model = new JSConfigModel();
+
+        String relativeProbePath = scriptDir.relativize(probeDir).toString().replace('\\', '/');
+
+        model.compilerOptions.typeRoots = List.of(
+                relativeProbePath + "/@package",
+                "../node_modules/@types"
+        );
+        model.compilerOptions.moduleResolution = "node";
+        model.compilerOptions.baseUrl = ".";
+
+        Map<String, List<String>> paths = new LinkedHashMap<>();
+        paths.put("java:*", List.of(relativeProbePath + "/@package/*"));
+
+        String sideOnlyBase = relativeProbePath + "/@side-only/" + scriptType.name;
+        paths.put("@side-only/" + scriptType.name, List.of(sideOnlyBase));
+        paths.put("@side-only/" + scriptType.name + "/*", List.of(sideOnlyBase + "/*"));
+
+        paths.put("@special", List.of(relativeProbePath + "/@special"));
+        paths.put("@special/*", List.of(relativeProbePath + "/@special/*"));
+
+        model.compilerOptions.paths = paths;
+
+        List<String> includes = new ArrayList<>(model.include);
+        includes.add(relativeProbePath + "/@package/**/*.d.ts");
+        includes.add(relativeProbePath + "/@manual/**/*.d.ts");
+        includes.add(sideOnlyBase + "/**/*.d.ts");
+        includes.add(relativeProbePath + "/@nekojs/managed/" + scriptType.name + "/**/*.d.ts");
+        model.include = includes;
+
+        return model;
     }
 
     /**

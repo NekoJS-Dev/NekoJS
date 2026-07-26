@@ -72,4 +72,12 @@ public final class Platform {
     public static Set<PlatformCapability> capabilities() {
         return get().capabilities();
     }
+
+    public static String getLoaderId() {
+        return get().getLoaderId();
+    }
+
+    public static String getLoaderVersion() {
+        return get().getLoaderVersion();
+    }
 }

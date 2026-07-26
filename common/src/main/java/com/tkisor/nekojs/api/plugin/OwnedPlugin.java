@@ -1,10 +1,12 @@
 package com.tkisor.nekojs.api.plugin;
 
+import com.tkisor.nekojs.api.NekoJSPlugin;
+
 import java.util.Objects;
 
-public record OwnedPlugin(PluginIdentity identity, String displayName) {
+public record OwnedPlugin(PluginIdentity identity, NekoJSPlugin plugin) {
     public OwnedPlugin {
         Objects.requireNonNull(identity, "identity");
-        Objects.requireNonNull(displayName, "displayName");
+        Objects.requireNonNull(plugin, "plugin");
     }
 }

@@ -80,7 +80,7 @@ public final class CapabilityResolver {
             } else {
                 // Multiple eligible providers: fail-fast
                 String providerNames = eligible.stream()
-                        .map(p -> p.provider().owner() + ":" + p.provider().pluginId())
+                        .map(p -> p.provider().ownerId() + ":" + p.provider().pluginClassName())
                         .collect(Collectors.joining(", "));
                 throw new ApiResolutionException("DUPLICATE_CAPABILITY_PROVIDER",
                         "Capability '" + def.name() + "' has multiple eligible providers: [" + providerNames + "]",
@@ -115,7 +115,7 @@ public final class CapabilityResolver {
                         "Provider " + provider.provider() + " missing required service key '" + key
                                 + "' for capability '" + def.name() + "'",
                         Map.of("capability", def.name(),
-                                "provider", provider.provider().owner() + ":" + provider.provider().pluginId(),
+                                "provider", provider.provider().ownerId() + ":" + provider.provider().pluginClassName(),
                                 "missingKey", key));
             }
         }
@@ -147,22 +147,22 @@ public final class CapabilityResolver {
         switch (def.providerPolicy()) {
             case CORE_ONLY -> {
                 // Only core (nekojs) can provide
-                if (!"nekojs".equals(identity.owner())) {
+                if (!"nekojs".equals(identity.ownerId())) {
                     throw new ApiResolutionException("CORE_ONLY_VIOLATION",
-                            "Addon '" + identity.owner() + "' cannot provide core capability '"
+                            "Addon '" + identity.ownerId() + "' cannot provide core capability '"
                                     + def.name() + "' (CORE_ONLY policy)",
                             Map.of("capability", def.name(),
-                                    "provider", identity.owner() + ":" + identity.pluginId()));
+                                    "provider", identity.ownerId() + ":" + identity.pluginClassName()));
                 }
             }
             case ALLOWLIST -> {
-                if (!def.allowedProviderOwners().contains(identity.owner())
-                        && !"nekojs".equals(identity.owner())) {
+                if (!def.allowedProviderOwners().contains(identity.ownerId())
+                        && !"nekojs".equals(identity.ownerId())) {
                     throw new ApiResolutionException("PROVIDER_NOT_ALLOWED",
-                            "Provider '" + identity.owner() + "' not in allowlist for capability '"
+                            "Provider '" + identity.ownerId() + "' not in allowlist for capability '"
                                     + def.name() + "'",
                             Map.of("capability", def.name(),
-                                    "provider", identity.owner() + ":" + identity.pluginId()));
+                                    "provider", identity.ownerId() + ":" + identity.pluginClassName()));
                 }
             }
         }

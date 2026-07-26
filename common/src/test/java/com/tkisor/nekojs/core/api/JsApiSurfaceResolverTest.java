@@ -143,7 +143,7 @@ class JsApiSurfaceResolverTest {
             VerifiedContractSet contracts,
             ApiContribution... contributions) {
 
-        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin");
+        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin", URI.create("test:///test-plugin.jar"));
         ApiContributionRegistry registry = ApiContributionRegistry.ownedBy(owner, contracts);
         for (ApiContribution contrib : contributions) {
             registry.registerSymbol(contrib);
@@ -221,7 +221,7 @@ class JsApiSurfaceResolverTest {
         LegacyGlobalReservation reservation = new LegacyGlobalReservation(
                 "Finder", ApiSymbolId.parse("global:LegacyFinder"));
 
-        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin");
+        PluginIdentity owner = new PluginIdentity("test-owner", "test-plugin", URI.create("test:///test-plugin.jar"));
         ApiContributionRegistry registry = ApiContributionRegistry.ownedBy(owner, contracts);
         registry.registerSymbol(ApiContribution.symbol(
                 finderId,

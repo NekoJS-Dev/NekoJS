@@ -66,7 +66,7 @@ class CapabilityResolverTest {
 
     private static CapabilityProviderContribution provider(String name) {
         return new CapabilityProviderContribution(
-                new PluginIdentity("nekojs", name),
+                new PluginIdentity("nekojs", name, java.net.URI.create("test:///" + name + ".jar")),
                 "test-capability",
                 100,
                 "implementation-" + name,
@@ -76,7 +76,7 @@ class CapabilityResolverTest {
 
     private static CapabilityProviderContribution provider(String name, EnvironmentScope scope) {
         return new CapabilityProviderContribution(
-                new PluginIdentity("nekojs", name),
+                new PluginIdentity("nekojs", name, java.net.URI.create("test:///" + name + ".jar")),
                 "test-capability",
                 100,
                 "implementation-" + name,
@@ -86,7 +86,7 @@ class CapabilityResolverTest {
 
     private static CapabilityProviderContribution addonProvider(String owner, String name) {
         return new CapabilityProviderContribution(
-                new PluginIdentity(owner, name),
+                new PluginIdentity(owner, name, java.net.URI.create("test:///" + name + ".jar")),
                 "test-capability",
                 100,
                 "implementation-" + name,
@@ -176,7 +176,7 @@ class CapabilityResolverTest {
 
         // Provider doesn't have the required service
         CapabilityProviderContribution providerWithoutService = new CapabilityProviderContribution(
-                new PluginIdentity("nekojs", "a"),
+                new PluginIdentity("nekojs", "a", java.net.URI.create("test:///a.jar")),
                 "test-capability",
                 100,
                 "implementation-a",

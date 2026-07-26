@@ -32,12 +32,12 @@ public final class ApiContributionRegistry {
     private static void validateOwnership(PluginIdentity identity, VerifiedContractSet contracts) {
         for (VerifiedApiContract contract : contracts.all()) {
             ApiContractIdentity contractIdentity = contract.identity();
-            if (!contractIdentity.owner().equals(identity.owner())) {
+            if (!contractIdentity.owner().equals(identity.ownerId())) {
                 throw new ApiResolutionException("OWNER_MISMATCH",
                         "Contract owner '" + contractIdentity.owner()
-                                + "' does not match identity owner '" + identity.owner() + "'",
+                                + "' does not match identity owner '" + identity.ownerId() + "'",
                         Map.of("contractOwner", contractIdentity.owner(),
-                                "identityOwner", identity.owner()));
+                                "identityOwner", identity.ownerId()));
             }
         }
     }

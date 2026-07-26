@@ -78,5 +78,15 @@ public final class TestPlatformInit {
         public java.util.Set<PlatformCapability> capabilities() {
             return java.util.Set.of();
         }
+
+        @Override
+        public String getLoaderId() {
+            return "test";
+        }
+
+        @Override
+        public String getLoaderVersion() {
+            return "0.0.0";
+        }
     }
 }

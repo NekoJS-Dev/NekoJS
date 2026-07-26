@@ -8,5 +8,6 @@ public enum ApiTier {
     PLATFORM,
     ADDON,
     VERSION,
-    UNSAFE_NATIVE
+    UNSAFE_NATIVE,
+    LEGACY_PREVIEW
 }

@@ -8,6 +8,11 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
+import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
+import com.tkisor.nekojs.api.surface.ApiRuntimeView;
+import com.tkisor.nekojs.api.surface.ApiSymbol;
+import com.tkisor.nekojs.api.surface.EnvironmentKey;
+import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,34 +29,85 @@ public final class NekoScriptCatalog {
     }
 
     public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime) {
-        return new NekoScriptCatalogSnapshot(
+        List<BindingCatalogEntry> allBindings = bindings(runtime);
+        List<EventCatalogEntry> allEvents = events(runtime);
+        List<AdapterCatalogEntry> allAdapters = adapters(runtime);
+        List<HostExtensionCatalogEntry> allHostExtensions = hostExtensions();
+
+        NekoScriptCatalogSnapshot temp = new NekoScriptCatalogSnapshot(
                 ScriptType.all(),
-                bindings(runtime),
-                events(runtime),
-                adapters(runtime),
+                allBindings,
+                allEvents,
+                allAdapters,
                 recipeNamespaces(),
-                hostExtensions(),
+                allHostExtensions,
                 List.copyOf(platformProvider.snippets()),
                 runtime.typeDocs(),
                 runtime.manualDeclarations(),
                 List.copyOf(platformProvider.registryTypes()),
-                platformProvider.outputLayout()
+                platformProvider.outputLayout(),
+                Map.of(),
+                List.of()
+        );
+
+        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, ScriptType.all());
+        List<ApiSymbol> legacySurface = LegacySurfaceAdapter.convert(temp);
+
+        return new NekoScriptCatalogSnapshot(
+                ScriptType.all(),
+                allBindings,
+                allEvents,
+                allAdapters,
+                recipeNamespaces(),
+                allHostExtensions,
+                List.copyOf(platformProvider.snippets()),
+                runtime.typeDocs(),
+                runtime.manualDeclarations(),
+                List.copyOf(platformProvider.registryTypes()),
+                platformProvider.outputLayout(),
+                managedApis,
+                legacySurface
         );
     }
 
     public static NekoScriptCatalogSnapshot snapshot(IPluginRuntime runtime, ScriptType scriptType) {
-        return new NekoScriptCatalogSnapshot(
+        List<BindingCatalogEntry> typeBindings = bindings(runtime, scriptType);
+        List<EventCatalogEntry> typeEvents = events(runtime, scriptType);
+        List<HostExtensionCatalogEntry> typeHostExtensions = hostExtensions(scriptType);
+
+        NekoScriptCatalogSnapshot temp = new NekoScriptCatalogSnapshot(
                 List.of(scriptType),
-                bindings(runtime, scriptType),
-                events(runtime, scriptType),
+                typeBindings,
+                typeEvents,
                 adapters(runtime),
                 recipeNamespaces(),
-                hostExtensions(scriptType),
+                typeHostExtensions,
                 snippets(scriptType),
                 runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 List.copyOf(platformProvider.registryTypes()),
-                platformProvider.outputLayout()
+                platformProvider.outputLayout(),
+                Map.of(),
+                List.of()
+        );
+
+        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = buildManagedApis(runtime, List.of(scriptType));
+        List<ApiSymbol> legacySurface = LegacySurfaceAdapter.convert(temp);
+
+        return new NekoScriptCatalogSnapshot(
+                List.of(scriptType),
+                typeBindings,
+                typeEvents,
+                adapters(runtime),
+                recipeNamespaces(),
+                typeHostExtensions,
+                snippets(scriptType),
+                runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
+                runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
+                List.copyOf(platformProvider.registryTypes()),
+                platformProvider.outputLayout(),
+                managedApis,
+                legacySurface
         );
     }
 
@@ -181,5 +237,17 @@ public final class NekoScriptCatalog {
         for (SnippetCatalogEntry snippet : platformProvider.snippets())
             if (snippet.canApplyOn(scriptType)) entries.add(snippet);
         return List.copyOf(entries);
+    }
+
+    private static Map<ScriptType, ApiEnvironmentSnapshot> buildManagedApis(IPluginRuntime runtime, List<ScriptType> scriptTypes) {
+        Map<ScriptType, ApiEnvironmentSnapshot> map = new LinkedHashMap<>();
+        for (ScriptType type : scriptTypes) {
+            EnvironmentKey key = EnvironmentKeyFactory.current(type);
+            ApiRuntimeView view = runtime.apiRuntime(key);
+            if (view != null) {
+                map.put(type, view.environmentSnapshot());
+            }
+        }
+        return Map.copyOf(map);
     }
 }
