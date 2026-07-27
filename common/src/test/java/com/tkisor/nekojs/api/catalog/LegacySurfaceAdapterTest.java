@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTier;
@@ -49,7 +50,7 @@ class LegacySurfaceAdapterTest {
     @Test
     void adapterMapsToAdapterKind() {
         AdapterCatalogEntry entry = AdapterCatalogEntry.of(String.class,
-                graal.graalvm.polyglot.HostAccess.TargetMappingPrecedence.LOWEST);
+                ConversionPrecedence.LOWEST);
         List<ApiSymbol> symbols = LegacySurfaceAdapter.fromAdapters(List.of(entry));
 
         assertEquals(1, symbols.size());
@@ -83,7 +84,7 @@ class LegacySurfaceAdapterTest {
                 "Server", "tick", ScriptType.SERVER,
                 String.class, null, false, false);
         AdapterCatalogEntry adapter = AdapterCatalogEntry.of(String.class,
-                graal.graalvm.polyglot.HostAccess.TargetMappingPrecedence.LOWEST);
+                ConversionPrecedence.LOWEST);
         HostExtensionCatalogEntry hostExt = new HostExtensionCatalogEntry(
                 String.class, Runnable.class, "run", "run",
                 Runnable.class.getMethods()[0], ScriptType.SERVER, false);

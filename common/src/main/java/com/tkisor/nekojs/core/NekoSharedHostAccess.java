@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
@@ -40,6 +41,16 @@ public final class NekoSharedHostAccess {
     }
 
     private static <T> void registerTypeAdapter(HostAccess.Builder builder, JSTypeAdapter<T> adapter) {
-        builder.targetTypeMapping(Value.class, adapter.getTargetClass(), adapter, adapter, adapter.getPrecedence());
+        builder.targetTypeMapping(Value.class, adapter.getTargetClass(), adapter, adapter,
+                toHostAccessPrecedence(adapter.getPrecedence()));
+    }
+
+    private static HostAccess.TargetMappingPrecedence toHostAccessPrecedence(ConversionPrecedence p) {
+        return switch (p) {
+            case LOWEST -> HostAccess.TargetMappingPrecedence.LOWEST;
+            case LOW -> HostAccess.TargetMappingPrecedence.LOW;
+            case HIGH -> HostAccess.TargetMappingPrecedence.HIGH;
+            case HIGHEST -> HostAccess.TargetMappingPrecedence.HIGHEST;
+        };
     }
 }

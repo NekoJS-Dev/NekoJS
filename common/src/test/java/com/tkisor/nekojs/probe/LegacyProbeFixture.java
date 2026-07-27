@@ -4,7 +4,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.ScriptTypePredicate;
 import com.tkisor.nekojs.api.catalog.*;
 import com.tkisor.nekojs.api.AdapterInputShape;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -74,7 +74,7 @@ final class LegacyProbeFixture {
         var adapter = new AdapterCatalogEntry(
                 SampleWidget.class,
                 List.of(AdapterInputShape.self(), AdapterInputShape.string()),
-                HostAccess.TargetMappingPrecedence.LOWEST,
+                ConversionPrecedence.LOWEST,
                 Optional.of("SampleWidget adapter: accepts a string label"));
 
         // Recipe namespace

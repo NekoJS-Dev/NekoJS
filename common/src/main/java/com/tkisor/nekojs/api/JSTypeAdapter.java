@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api;
 
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
+
 import graal.graalvm.polyglot.Value;
 
 import java.util.List;
@@ -15,8 +16,8 @@ import java.util.function.Predicate;
 public interface JSTypeAdapter<T> extends Predicate<Value>, Function<Value, T> {
     Class<T> getTargetClass();
 
-    default HostAccess.TargetMappingPrecedence getPrecedence() {
-        return HostAccess.TargetMappingPrecedence.LOWEST;
+    default ConversionPrecedence getPrecedence() {
+        return ConversionPrecedence.LOWEST;
     }
 
     /**

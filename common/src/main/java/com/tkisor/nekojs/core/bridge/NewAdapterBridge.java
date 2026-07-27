@@ -3,7 +3,6 @@ package com.tkisor.nekojs.core.bridge;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.*;
-import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 
 import java.util.List;
@@ -36,13 +35,8 @@ public final class NewAdapterBridge<T> implements JSTypeAdapter<T> {
     }
 
     @Override
-    public HostAccess.TargetMappingPrecedence getPrecedence() {
-        return switch (delegate.precedence()) {
-            case LOWEST -> HostAccess.TargetMappingPrecedence.LOWEST;
-            case LOW -> HostAccess.TargetMappingPrecedence.LOW;
-            case HIGH -> HostAccess.TargetMappingPrecedence.HIGH;
-            case HIGHEST -> HostAccess.TargetMappingPrecedence.HIGHEST;
-        };
+    public ConversionPrecedence getPrecedence() {
+        return delegate.precedence();
     }
 
     @Override

@@ -3,7 +3,6 @@ package com.tkisor.nekojs.core.bridge;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.*;
 import graal.graalvm.polyglot.Context;
-import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +65,7 @@ class NewAdapterBridgeTest {
         };
 
         NewAdapterBridge<Integer> bridge = new NewAdapterBridge<>(neo);
-        assertEquals(HostAccess.TargetMappingPrecedence.HIGH, bridge.getPrecedence());
+        assertEquals(ConversionPrecedence.HIGH, bridge.getPrecedence());
     }
 
     @Test

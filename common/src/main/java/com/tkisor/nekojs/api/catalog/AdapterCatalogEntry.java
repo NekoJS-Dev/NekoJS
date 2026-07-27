@@ -2,7 +2,7 @@ package com.tkisor.nekojs.api.catalog;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,10 +16,10 @@ import java.util.Optional;
 public record AdapterCatalogEntry(
         Class<?> targetType,
         List<AdapterInputShape> shapes,
-        HostAccess.TargetMappingPrecedence precedence,
+        ConversionPrecedence precedence,
         Optional<String> syntaxDoc
 ) {
-    public static AdapterCatalogEntry of(Class<?> targetType, HostAccess.TargetMappingPrecedence precedence) {
+    public static AdapterCatalogEntry of(Class<?> targetType, ConversionPrecedence precedence) {
         return new AdapterCatalogEntry(targetType, List.of(), precedence, Optional.empty());
     }
 }

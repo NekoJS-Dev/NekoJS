@@ -4,7 +4,6 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.*;
 import graal.graalvm.polyglot.Context;
-import graal.graalvm.polyglot.HostAccess;
 import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -121,8 +120,8 @@ class LegacyAdapterBridgeTest {
         @Override public Class<String> getTargetClass() { return String.class; }
         @Override public boolean test(Value value) { return value.isString(); }
         @Override public String apply(Value value) { return value.asString(); }
-        @Override public HostAccess.TargetMappingPrecedence getPrecedence() {
-            return HostAccess.TargetMappingPrecedence.HIGH;
+        @Override public ConversionPrecedence getPrecedence() {
+            return ConversionPrecedence.HIGH;
         }
     }
 }
