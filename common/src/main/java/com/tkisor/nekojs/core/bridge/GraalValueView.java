@@ -44,20 +44,14 @@ public final class GraalValueView implements JsValueView {
         return delegate.isBoolean();
     }
 
+    /**
+     * Delegates to the GraalVM polyglot runtime's {@link Value#isHostObject()},
+     * which is the most reliable indicator of whether this value represents a
+     * host-language (Java) object.
+     */
     @Override
     public boolean isHostObject() {
-        if (delegate.isHostObject()) {
-            return true;
-        }
-        try {
-            Value meta = delegate.getMetaObject();
-            if (meta != null) {
-                String name = meta.getMetaQualifiedName();
-                return name != null && name.startsWith("java.");
-            }
-        } catch (Exception ignored) {
-        }
-        return false;
+        return delegate.isHostObject();
     }
 
     @Override
@@ -89,7 +83,7 @@ public final class GraalValueView implements JsValueView {
     public <T> T asHostObject(Class<T> type) {
         try {
             return type.cast(delegate.asHostObject());
-        } catch (Exception e) {
+        } catch (ClassCastException | UnsupportedOperationException e) {
             return delegate.as(type);
         }
     }

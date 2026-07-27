@@ -35,6 +35,10 @@ public abstract class AbstractJsTypeAdapter<T> implements JsTypeAdapter<T> {
         return null;
     }
 
+    protected boolean supportsString() {
+        return true;
+    }
+
     protected T fromString(String s) {
         throw new ValueConversionException(targetType, "string", s, "not supported");
     }
@@ -52,7 +56,7 @@ public abstract class AbstractJsTypeAdapter<T> implements JsTypeAdapter<T> {
     @Override
     public boolean supports(JsValueView value, ConversionContext context) {
         if (value.isNull()) return acceptNull();
-        if (value.isString()) return true;
+        if (value.isString()) return supportsString();
         if (value.isHostObject()) {
             Object host = value.asHostObject(Object.class);
             return host != null && targetType.isAssignableFrom(host.getClass());

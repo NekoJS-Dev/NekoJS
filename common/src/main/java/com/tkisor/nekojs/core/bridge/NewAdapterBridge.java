@@ -23,14 +23,14 @@ public final class NewAdapterBridge<T> implements JSTypeAdapter<T> {
     @Override
     public boolean test(Value value) {
         JsValueView view = GraalValueView.wrap(value);
-        if (view == null) return false;
+        if (view == null) view = NullJsValueView.INSTANCE;
         return delegate.supports(view, ConversionContext.empty());
     }
 
     @Override
     public T apply(Value value) {
         JsValueView view = GraalValueView.wrap(value);
-        if (view == null) return null;
+        if (view == null) view = NullJsValueView.INSTANCE;
         return delegate.convert(view, ConversionContext.empty());
     }
 
