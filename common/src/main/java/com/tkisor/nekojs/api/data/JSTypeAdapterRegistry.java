@@ -59,6 +59,11 @@ public interface JSTypeAdapterRegistry {
             adapters.add(Objects.requireNonNull(adapter, "adapter"));
         }
 
+        public <T> void register(com.tkisor.nekojs.api.data.JsTypeAdapter<T> adapter) {
+            adapters.add(Objects.requireNonNull(
+                new com.tkisor.nekojs.core.bridge.NewAdapterBridge<>(adapter), "adapter"));
+        }
+
         @Override
         public Collection<JSTypeAdapter<?>> view() {
             return Collections.unmodifiableList(adapters);
