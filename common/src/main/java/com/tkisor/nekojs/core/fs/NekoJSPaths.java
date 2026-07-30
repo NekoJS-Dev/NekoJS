@@ -7,6 +7,7 @@ import com.tkisor.nekojs.platform.Platform;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -21,9 +22,13 @@ public final class NekoJSPaths {
     public static NekoJSPaths get() {
         NekoJSPaths inst = INSTANCE;
         if (inst == null) {
-            INSTANCE = new NekoJSPaths(Platform.getGameDir());
+            INSTANCE = fromGameDir(Platform.getGameDir());
         }
         return INSTANCE;
+    }
+
+    public static NekoJSPaths fromGameDir(Path gameDir) {
+        return new NekoJSPaths(Objects.requireNonNull(gameDir, "gameDir"));
     }
 
     /* ================= 实例状态 ================= */
@@ -43,13 +48,13 @@ public final class NekoJSPaths {
     private final Set<Path> scriptRoots;
 
     private NekoJSPaths(Path gameDir) {
-        this.gameDir = gameDir;
-        this.root = gameDir.resolve("nekojs");
+        this.gameDir = gameDir.toAbsolutePath().normalize();
+        this.root = this.gameDir.resolve("nekojs");
         this.startupScripts = root.resolve("startup_scripts");
         this.serverScripts = root.resolve("server_scripts");
         this.clientScripts = root.resolve("client_scripts");
         this.testScripts = root.resolve("test_scripts");
-        this.probeDir = gameDir.resolve(".neko_probe");
+        this.probeDir = this.gameDir.resolve(".neko_probe");
         this.nodeModules = root.resolve("node_modules");
         this.config = root.resolve("config");
         this.readme = root.resolve("README.txt");

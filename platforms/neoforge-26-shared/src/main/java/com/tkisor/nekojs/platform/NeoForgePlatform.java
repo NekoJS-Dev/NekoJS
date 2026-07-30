@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.platform;
 
+import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.platform.nbt.NeoForgeNbtBinaryCodec;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.FMLPaths;
@@ -11,6 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class NeoForgePlatform implements IPlatform {
+    private static final NbtBinaryCodec NBT_BINARY_CODEC = NeoForgeNbtBinaryCodec.INSTANCE;
+
     @Override
     public boolean isClient() {
         return FMLLoader.getCurrent().getDist().isClient();
@@ -64,11 +68,17 @@ public class NeoForgePlatform implements IPlatform {
                 PlatformCapability.RECIPE_HOT_RELOAD,
                 PlatformCapability.RECIPE_SCHEMA_AWARE,
                 PlatformCapability.NETWORK_CUSTOM_CHANNEL,
+                PlatformCapability.NBT_BINARY_IO,
                 PlatformCapability.RESOURCE_PACKS,
                 PlatformCapability.CLIENT_SCREENS,
                 PlatformCapability.CLIENT_KEYBINDS,
                 PlatformCapability.CLIENT_RENDERERS
         );
+    }
+
+    @Override
+    public NbtBinaryCodec nbtBinaryCodec() {
+        return NBT_BINARY_CODEC;
     }
 
     @Override

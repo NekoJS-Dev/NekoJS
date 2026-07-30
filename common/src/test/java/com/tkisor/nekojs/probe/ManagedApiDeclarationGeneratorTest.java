@@ -90,6 +90,77 @@ class ManagedApiDeclarationGeneratorTest {
     }
 
     @Test
+    void rendersManagedGlobalAndValueMemberInterfaces() {
+        ApiTypeRef textValue = ApiTypeRef.symbol(ApiSymbolId.parse("type:TextValue"));
+        ApiTypeRef textArgument = ApiTypeRef.union(List.of(
+                ApiTypeRef.primitive("string"), ApiTypeRef.primitive("number"), textValue));
+        ApiSurfaceSnapshot surface = new ApiSurfaceSnapshot(
+                List.of(
+                        new ApiSymbol(ApiSymbolId.parse("global:Text"),
+                                List.of(ApiSignature.function(List.of(), ApiTypeRef.primitive("object")))),
+                        new ApiSymbol(ApiSymbolId.parse("member:Text.of"),
+                                List.of(ApiSignature.function(
+                                        List.of(new ApiParameter("text", ApiTypeRef.primitive("string"), false, false)),
+                                        textValue))),
+                        new ApiSymbol(ApiSymbolId.parse("member:TextValue.append"),
+                                List.of(ApiSignature.function(
+                                        List.of(new ApiParameter("values", textArgument, false, true)),
+                                        textValue)))),
+                Set.of(), List.of(), List.of(), serverEnv());
+
+        String output = generator.generate(
+                Map.of(ScriptType.SERVER, new ApiEnvironmentSnapshot(serverEnv(), surface, emptyContractHashes())),
+                ScriptType.SERVER);
+
+        assertTrue(output.contains("interface $Text"), output);
+        assertTrue(output.contains("const Text: $Text"), output);
+        assertTrue(output.contains("interface $TextValue"), output);
+        assertTrue(output.contains("append(...values: (number | string | $TextValue)[]): $TextValue"), output);
+    }
+
+    @Test
+    void rendersRecursiveJsonInputAlias() {
+        ApiSymbol jsonIo = new ApiSymbol(
+                ApiSymbolId.parse("global:JsonIO"),
+                List.of(ApiSignature.function(List.of(), ApiTypeRef.primitive("object"))));
+        ApiSymbol stringify = new ApiSymbol(
+                ApiSymbolId.parse("member:JsonIO.toString"),
+                List.of(ApiSignature.function(
+                        List.of(new ApiParameter("value", ApiTypeRef.primitive("json"), false, false)),
+                        ApiTypeRef.primitive("string"))));
+        ApiSurfaceSnapshot surface = new ApiSurfaceSnapshot(
+                List.of(jsonIo, stringify), Set.of(), List.of(), List.of(), serverEnv());
+
+        String output = generator.generate(
+                Map.of(ScriptType.SERVER, new ApiEnvironmentSnapshot(serverEnv(), surface, emptyContractHashes())),
+                ScriptType.SERVER);
+
+        assertTrue(output.contains("type JsonInput = null | boolean | number | string | $JsonValue"), output);
+        assertTrue(output.contains("toString(value: JsonInput): string"), output);
+    }
+
+    @Test
+    void rendersRecursiveNbtInputAlias() {
+        ApiSymbol nbt = new ApiSymbol(
+                ApiSymbolId.parse("global:NBT"),
+                List.of(ApiSignature.function(List.of(), ApiTypeRef.primitive("object"))));
+        ApiSymbol of = new ApiSymbol(
+                ApiSymbolId.parse("member:NBT.of"),
+                List.of(ApiSignature.function(
+                        List.of(new ApiParameter("value", ApiTypeRef.primitive("nbt"), false, false)),
+                        ApiTypeRef.symbol(ApiSymbolId.parse("type:NbtValue")))));
+        ApiSurfaceSnapshot surface = new ApiSurfaceSnapshot(
+                List.of(nbt, of), Set.of(), List.of(), List.of(), serverEnv());
+
+        String output = generator.generate(
+                Map.of(ScriptType.SERVER, new ApiEnvironmentSnapshot(serverEnv(), surface, emptyContractHashes())),
+                ScriptType.SERVER);
+
+        assertTrue(output.contains("type NbtInput = string | number | $NbtValue"), output);
+        assertTrue(output.contains("of(value: NbtInput): $NbtValue"), output);
+    }
+
+    @Test
     void skipsNonGlobalSymbols() {
         ApiSymbol event = new ApiSymbol(
                 ApiSymbolId.parse("event:ServerEvents.tick"),

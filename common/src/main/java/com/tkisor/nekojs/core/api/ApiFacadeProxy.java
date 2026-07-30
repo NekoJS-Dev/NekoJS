@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
+import com.tkisor.nekojs.api.error.ApiErrorCodes;
+import com.tkisor.nekojs.api.error.ApiInvocationException;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
@@ -24,6 +26,7 @@ public final class ApiFacadeProxy implements ProxyObject {
     private final Map<String, ApiSymbol> memberSymbols;
     private final ApiValueMarshaller marshaller;
     private final boolean nativeReturn;
+    private final ApiGuestErrorFactory guestErrorFactory;
 
     private ApiFacadeProxy(
             ApiRuntimeView runtimeView,
@@ -32,7 +35,8 @@ public final class ApiFacadeProxy implements ProxyObject {
             Set<String> memberNames,
             Map<String, ApiSymbol> memberSymbols,
             ApiValueMarshaller marshaller,
-            boolean nativeReturn) {
+            boolean nativeReturn,
+            ApiGuestErrorFactory guestErrorFactory) {
         this.runtimeView = Objects.requireNonNull(runtimeView, "runtimeView");
         this.typeId = Objects.requireNonNull(typeId, "typeId");
         this.implementation = implementation;
@@ -40,25 +44,35 @@ public final class ApiFacadeProxy implements ProxyObject {
         this.memberSymbols = Map.copyOf(memberSymbols);
         this.marshaller = Objects.requireNonNull(marshaller, "marshaller");
         this.nativeReturn = nativeReturn;
+        this.guestErrorFactory = guestErrorFactory;
     }
 
     public static ApiFacadeProxy global(ApiRuntimeView runtimeView, ApiSymbolId typeId, Object implementation) {
-        return of(runtimeView, typeId, implementation, false);
+        return of(runtimeView, typeId, implementation, false, null);
+    }
+
+    public static ApiFacadeProxy global(
+            ApiRuntimeView runtimeView,
+            ApiSymbolId typeId,
+            Object implementation,
+            ApiGuestErrorFactory guestErrorFactory) {
+        return of(runtimeView, typeId, implementation, false, Objects.requireNonNull(guestErrorFactory, "guestErrorFactory"));
     }
 
     public static ApiFacadeProxy value(ApiRuntimeView runtimeView, ApiSymbolId typeId, Object implementation) {
-        return of(runtimeView, typeId, implementation, false);
+        return of(runtimeView, typeId, implementation, false, null);
     }
 
     public static ApiFacadeProxy withNativeReturn(ApiRuntimeView runtimeView, ApiSymbolId typeId, Object implementation) {
-        return of(runtimeView, typeId, implementation, true);
+        return of(runtimeView, typeId, implementation, true, null);
     }
 
     private static ApiFacadeProxy of(
             ApiRuntimeView runtimeView,
             ApiSymbolId typeId,
             Object implementation,
-            boolean nativeReturn) {
+            boolean nativeReturn,
+            ApiGuestErrorFactory guestErrorFactory) {
         Objects.requireNonNull(runtimeView, "runtimeView");
         Objects.requireNonNull(typeId, "typeId");
 
@@ -74,13 +88,19 @@ public final class ApiFacadeProxy implements ProxyObject {
                 .map(Optional::get)
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        Set<ApiSymbolId> allSymbolIds = memberSymbols.values().stream()
-                .map(ApiSymbol::id)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        ApiValueMarshaller marshaller = new ApiValueMarshaller(runtimeView, guestErrorFactory);
 
-        ApiValueMarshaller marshaller = new ApiValueMarshaller(runtimeView, allSymbolIds);
+        return new ApiFacadeProxy(
+                runtimeView, typeId, implementation, memberNames, memberSymbols, marshaller, nativeReturn,
+                guestErrorFactory);
+    }
 
-        return new ApiFacadeProxy(runtimeView, typeId, implementation, memberNames, memberSymbols, marshaller, nativeReturn);
+    ApiSymbolId typeId() {
+        return typeId;
+    }
+
+    Object implementation() {
+        return implementation;
     }
 
     @Override
@@ -113,27 +133,74 @@ public final class ApiFacadeProxy implements ProxyObject {
                 rawArgs.add(arg);
             }
 
-            ApiSignature signature = marshaller.selectSignature(symbol, rawArgs);
-            String signatureKey = signature.callKey();
-
-            List<Object> marshalledArgs = marshaller.marshalArguments(signature, rawArgs, typeId.value());
             try {
+                ApiSignature signature = marshaller.selectSignature(symbol, rawArgs);
+                String signatureKey = signature.callKey();
+                String memberId = symbol.id().value();
+                List<Object> marshalledArgs = marshaller.marshalArguments(signature, rawArgs, memberId);
                 Object rawReturn = runtimeView.invoke(symbol.id(), signatureKey, implementation, marshalledArgs);
-                return marshaller.marshalReturn(rawReturn, signature.returnType(), nativeReturn, typeId.value());
-            } catch (ApiRuntimeException e) {
-                throw e;
+                return marshaller.marshalReturn(rawReturn, signature.returnType(), nativeReturn, memberId);
+            } catch (ApiInvocationException e) {
+                ApiRuntimeException normalized = normalize(e, symbol.id());
+                if (guestErrorFactory != null) {
+                    return guestErrorFactory.raise(normalized);
+                }
+                throw normalized;
             } catch (Exception e) {
-                throw new ApiRuntimeException(
-                        "INVOCATION_ERROR",
-                        "Failed to invoke " + symbol.id() + ": " + e.getMessage(),
-                        typeId.value(), null, null, null, null);
+                ApiRuntimeException normalized = new ApiRuntimeException(
+                        ApiErrorCodes.INVOCATION_ERROR,
+                        "Failed to invoke " + symbol.id(),
+                        symbol.id().value(), platform(), minecraftVersion(), null, null, e);
+                if (guestErrorFactory != null) {
+                    return guestErrorFactory.raise(normalized);
+                }
+                throw normalized;
             }
         };
     }
 
+    static ApiFacadeProxy value(
+            ApiRuntimeView runtimeView,
+            ApiSymbolId typeId,
+            Object implementation,
+            ApiGuestErrorFactory guestErrorFactory) {
+        return of(runtimeView, typeId, implementation, false, guestErrorFactory);
+    }
+
+    private ApiRuntimeException normalize(ApiInvocationException error, ApiSymbolId memberId) {
+        Map<String, String> details = new java.util.LinkedHashMap<>(error.details());
+        String requiredCapability = details.remove("requiredCapability");
+        String replacement = details.remove("replacement");
+        details.remove("symbolId");
+        details.remove("platform");
+        details.remove("minecraftVersion");
+        return new ApiRuntimeException(
+                error.code(),
+                error.getMessage(),
+                memberId.value(),
+                platform(),
+                minecraftVersion(),
+                requiredCapability,
+                replacement,
+                details,
+                error);
+    }
+
+    private String platform() {
+        return runtimeView.environmentSnapshot() == null
+                ? null
+                : runtimeView.environmentSnapshot().environmentKey().loaderId();
+    }
+
+    private String minecraftVersion() {
+        return runtimeView.environmentSnapshot() == null
+                ? null
+                : runtimeView.environmentSnapshot().environmentKey().minecraftVersion();
+    }
+
     @Override
     public void putMember(String key, Value value) {
-        // Read-only proxy, ignore writes
+        throw new UnsupportedOperationException("Managed API values are read-only");
     }
 
     @Override

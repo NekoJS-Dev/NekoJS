@@ -15,7 +15,6 @@ import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
-import com.tkisor.nekojs.bindings.static_access.IDJS;
 import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.js.DelegatingBinding;
@@ -31,7 +30,6 @@ import com.tkisor.nekojs.bindings.static_access.UtilsJS;
 import com.tkisor.nekojs.bindings.RecipeSchemaBinding;
 import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
 import com.tkisor.nekojs.js.type_adapter.*;
-import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -88,9 +86,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("FluidAmounts", FluidAmounts.class);
         registry.register("FluidStack", FluidStack.class);
         registry.register("Fluids", net.minecraftforge.fluids.FluidRegistry.class);
-        registry.register("ID", new IDJS());
         registry.register("Color", new ColorJS());
-        registry.register("Platform", Platform.class);
         registry.register("UUID", new UUIDJS());
         registry.register("StringUtils", new StringUtilsJS());
         registry.register("Time", new TimeJS());
@@ -124,7 +120,6 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("DyeColor", net.minecraft.item.EnumDyeColor.class);
         registry.register("ParticleTypes", net.minecraft.util.EnumParticleTypes.class);
         registry.register("Network", com.tkisor.nekojs.wrapper.network.NetworkJS.class);
-        registry.register("Text", com.tkisor.nekojs.bindings.static_access.TextJS.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
             registry.register("Minecraft", net.minecraft.client.Minecraft.class);

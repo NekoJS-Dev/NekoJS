@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.platform;
 
+import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.platform.nbt.CleanroomNbtBinaryCodec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Loader;
@@ -15,6 +17,7 @@ import java.util.Set;
 
 public class ForgePlatform implements IPlatform {
     private static final Logger LOGGER = LogManager.getLogger("ForgePlatform");
+    private static final NbtBinaryCodec NBT_BINARY_CODEC = CleanroomNbtBinaryCodec.INSTANCE;
 
     @Override
     public boolean isClient() {
@@ -71,8 +74,14 @@ public class ForgePlatform implements IPlatform {
     public Set<PlatformCapability> capabilities() {
         return Set.of(
                 PlatformCapability.NETWORK_CUSTOM_CHANNEL,
+                PlatformCapability.NBT_BINARY_IO,
                 PlatformCapability.RECIPE_VIEWER
         );
+    }
+
+    @Override
+    public NbtBinaryCodec nbtBinaryCodec() {
+        return NBT_BINARY_CODEC;
     }
 
     @Override

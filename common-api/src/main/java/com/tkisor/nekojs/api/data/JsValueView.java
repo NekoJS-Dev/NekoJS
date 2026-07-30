@@ -10,6 +10,14 @@ public interface JsValueView {
     boolean isHostObject();
     boolean isArray();
 
+    default boolean isProxyObject() {
+        return false;
+    }
+
+    default Object asProxyObject() {
+        throw new UnsupportedOperationException("value is not a proxy object");
+    }
+
     String asString();
     int asInt();
     double asDouble();

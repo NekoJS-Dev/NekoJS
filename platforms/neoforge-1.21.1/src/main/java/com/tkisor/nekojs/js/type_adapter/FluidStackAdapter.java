@@ -9,7 +9,7 @@ import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -39,8 +39,8 @@ public final class FluidStackAdapter implements JSTypeAdapter<FluidStack> {
     }
 
     @Override
-    public HostAccess.TargetMappingPrecedence getPrecedence() {
-        return HostAccess.TargetMappingPrecedence.LOW;
+    public ConversionPrecedence getPrecedence() {
+        return ConversionPrecedence.LOW;
     }
 
     @Override

@@ -32,3 +32,64 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+tasks.register('checkApiBoundaries') {
+    group = 'verification'
+    description = 'Rejects runtime, platform, game, loader, and Graal imports in common-api.'
+
+    def forbiddenExternalPrefixes = [
+        'graal',
+        'org.graalvm',
+        'net.minecraft',
+        'net.minecraftforge',
+        'net.neoforged'
+    ]
+    def allowedCompileDependencies = [
+        'org.jetbrains:annotations'
+    ]
+
+    inputs.files(fileTree('src/main/java') { include '**/*.java' })
+    inputs.files(configurations.compileClasspath)
+
+    doLast {
+        def violations = []
+        fileTree('src/main/java') { include '**/*.java' }.each { source ->
+            source.eachLine { line, number ->
+                def trimmed = line.trim()
+                if (!trimmed.startsWith('import ') || !trimmed.endsWith(';')) {
+                    return
+                }
+                def importedType = trimmed.substring('import '.length(), trimmed.length() - 1)
+                if (importedType.startsWith('static ')) {
+                    importedType = importedType.substring('static '.length())
+                }
+                def forbiddenExternal = forbiddenExternalPrefixes.any { prefix ->
+                    importedType == prefix || importedType.startsWith(prefix + '.')
+                }
+                def forbiddenNekoRuntime = importedType.startsWith('com.tkisor.nekojs.') &&
+                    !importedType.startsWith('com.tkisor.nekojs.api.')
+                if (forbiddenExternal || forbiddenNekoRuntime) {
+                    violations << "${project.relativePath(source)}:${number}: ${line.trim()}"
+                }
+            }
+        }
+        def resolvedArtifactFiles = [] as Set
+        configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            resolvedArtifactFiles << artifact.file.canonicalFile
+            String coordinate = "${artifact.moduleVersion.id.group}:${artifact.name}"
+            if (!allowedCompileDependencies.contains(coordinate)) {
+                violations << "compile dependency: ${artifact.moduleVersion.id}"
+            }
+        }
+        configurations.compileClasspath.files.each { dependencyFile ->
+            if (!resolvedArtifactFiles.contains(dependencyFile.canonicalFile)) {
+                violations << "unapproved compile classpath file: ${dependencyFile.name}"
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException("common-api boundary violations:\n" + violations.join('\n'))
+        }
+    }
+}
+
+check.dependsOn checkApiBoundaries

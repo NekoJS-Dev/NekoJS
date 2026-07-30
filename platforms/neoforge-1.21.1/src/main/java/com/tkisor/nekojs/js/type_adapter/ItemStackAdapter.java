@@ -5,7 +5,7 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.js.type_adapter.ParseIds;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -53,8 +53,8 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
     }
 
     @Override
-    public HostAccess.TargetMappingPrecedence getPrecedence() {
-        return HostAccess.TargetMappingPrecedence.LOW;
+    public ConversionPrecedence getPrecedence() {
+        return ConversionPrecedence.LOW;
     }
 
     @Override

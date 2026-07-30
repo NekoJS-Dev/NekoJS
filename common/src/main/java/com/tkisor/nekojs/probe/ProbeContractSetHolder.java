@@ -3,18 +3,14 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.ApiContractReader;
-import com.tkisor.nekojs.api.contract.NormativeApiContract;
-import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 import com.tkisor.nekojs.api.surface.ApiRuntimeVersions;
 import com.tkisor.nekojs.api.surface.ApiVersion;
 import com.tkisor.nekojs.core.api.ApiRuntimeVersionReader;
+import com.tkisor.nekojs.core.api.CoreManagedApiBootstrap;
 
-import java.net.URI;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -63,43 +59,20 @@ public final class ProbeContractSetHolder {
     private static VerifiedContractSet createDefault() {
         ApiRuntimeVersions versions = ApiRuntimeVersionReader.read();
         ApiVersion apiVersion = versions.apiVersion();
-
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs", ApiContractKind.PORTABLE, "nekojs-portable", apiVersion);
-
-        NormativeApiContract contract = new NormativeApiContract(
-                versions.catalogSchemaVersion(),
-                new NormativeApiContract.ContractIdentity(
-                        "nekojs", ApiContractKind.PORTABLE, "nekojs-portable", apiVersion),
-                "Portable core contract",
-                List.of(),
-                List.of(),
-                List.of());
-
-        String hash = sha256Hex(contract.toString().getBytes(StandardCharsets.UTF_8));
-
-        VerifiedApiContract verified = VerifiedApiContract.create(
-                identity,
-                contract,
-                URI.create("file:///probe"),
-                "nekojs/api-contract/portable",
-                hash,
-                hash);
-
-        return VerifiedContractSet.of(verified);
-    }
-
-    private static String sha256Hex(byte[] data) {
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", apiVersion);
+        var stream = ProbeContractSetHolder.class.getResourceAsStream(CoreManagedApiBootstrap.RESOURCE);
+        if (stream == null) {
+            throw new IllegalStateException("Core managed API contract not found: " + CoreManagedApiBootstrap.RESOURCE);
+        }
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(data);
-            StringBuilder sb = new StringBuilder("sha256:");
-            for (byte b : hash) {
-                sb.append(String.format("%02x", b));
+            var codeSource = ProbeContractSetHolder.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+            try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                return VerifiedContractSet.of(ApiContractReader.readVerified(
+                        reader, codeSource, CoreManagedApiBootstrap.RESOURCE, identity, null));
             }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
+        } catch (java.net.URISyntaxException | java.io.IOException e) {
+            throw new IllegalStateException("Failed to load core managed API contract", e);
         }
     }
 }

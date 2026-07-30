@@ -237,4 +237,161 @@ class ApiContractReaderTest {
                 });
         assertEquals("MODULE_VERSION_MISMATCH", error.violation().code());
     }
+
+    @Test
+    void errorDocsDoNotChangeCompatibilityHashButErrorCodeDoes() {
+        VerifiedApiContract first = readJson(contractWithError("TYPE_MISMATCH", "first docs"));
+        VerifiedApiContract docsChanged = readJson(contractWithError("TYPE_MISMATCH", "updated docs"));
+        VerifiedApiContract codeChanged = readJson(contractWithError("INVALID_REFERENCE", "first docs"));
+
+        assertNotEquals(first.integritySha256(), docsChanged.integritySha256());
+        assertEquals(first.compatibilitySha256(), docsChanged.compatibilitySha256());
+        assertNotEquals(first.compatibilitySha256(), codeChanged.compatibilitySha256());
+    }
+
+    @Test
+    void rejectsDuplicateErrorCodes() {
+        String json = contractWithErrors("""
+                {"code":"TYPE_MISMATCH"},
+                {"code":"TYPE_MISMATCH"}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("DUPLICATE_ERROR_CODE", error.violation().code());
+    }
+
+    @Test
+    void canonicalHashesIgnoreSetAndObjectOrdering() {
+        VerifiedApiContract first = readJson(contractWithErrors("""
+                {"code":"TYPE_MISMATCH","fields":["symbolId","platform"]},
+                {"code":"INVALID_REFERENCE","fields":["minecraftVersion","symbolId"]}
+                """));
+        VerifiedApiContract reordered = readJson(contractWithErrors("""
+                {"fields":["symbolId","minecraftVersion"],"code":"INVALID_REFERENCE"},
+                {"fields":["platform","symbolId"],"code":"TYPE_MISMATCH"}
+                """));
+
+        assertEquals(first.integritySha256(), reordered.integritySha256());
+        assertEquals(first.compatibilitySha256(), reordered.compatibilitySha256());
+    }
+
+    @Test
+    void rejectsUnknownNormativePrimitive() {
+        String json = contractWithErrors("").replace(
+                "{\"kind\":\"VOID\"}", "{\"kind\":\"PRIMITIVE\",\"name\":\"int\"}");
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("INVALID_PRIMITIVE_TYPE", error.violation().code());
+    }
+
+    @Test
+    void reportsInvalidParameterOrderingAsStructuredContractViolation() {
+        String requiredAfterOptional = contractWithErrors("").replace(
+                "\"parameters\":[]",
+                "\"parameters\":["
+                        + "{\"name\":\"optional\",\"type\":{\"kind\":\"PRIMITIVE\",\"name\":\"string\"},\"optional\":true},"
+                        + "{\"name\":\"required\",\"type\":{\"kind\":\"PRIMITIVE\",\"name\":\"number\"}}]");
+        String nonFinalVarargs = contractWithErrors("").replace(
+                "\"parameters\":[]",
+                "\"parameters\":["
+                        + "{\"name\":\"values\",\"type\":{\"kind\":\"PRIMITIVE\",\"name\":\"string\"},\"varargs\":true},"
+                        + "{\"name\":\"tail\",\"type\":{\"kind\":\"PRIMITIVE\",\"name\":\"string\"},\"optional\":true}]");
+
+        assertEquals("INVALID_CONTRACT_MODEL",
+                assertThrows(ApiContractException.class, () -> readJson(requiredAfterOptional)).violation().code());
+        assertEquals("INVALID_CONTRACT_MODEL",
+                assertThrows(ApiContractException.class, () -> readJson(nonFinalVarargs)).violation().code());
+    }
+
+    @Test
+    void rejectsSignatureReferenceToUndeclaredError() {
+        String json = contractWithErrors("").replace(
+                "\"returnType\":{\"kind\":\"VOID\"}",
+                "\"returnType\":{\"kind\":\"VOID\"},\"errorCodes\":[\"UNKNOWN_ERROR\"]");
+
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("UNKNOWN_SIGNATURE_ERROR", error.violation().code());
+    }
+
+    @Test
+    void rejectsMalformedAndUnresolvedTypeReferences() {
+        String malformedArray = contractWithErrors("").replace(
+                "{\"kind\":\"VOID\"}", "{\"kind\":\"ARRAY\"}");
+        assertEquals("INVALID_CONTRACT_MODEL",
+                assertThrows(ApiContractException.class, () -> readJson(malformedArray)).violation().code());
+
+        String unresolved = contractWithErrors("").replace(
+                "{\"kind\":\"VOID\"}", "{\"kind\":\"SYMBOL\",\"name\":\"type:Missing\"}");
+        assertEquals("UNRESOLVED_TYPE_REFERENCE",
+                assertThrows(ApiContractException.class, () -> readJson(unresolved)).violation().code());
+    }
+
+    @Test
+    void validatesErrorReferencesInsideCallbackSignatures() {
+        String callback = contractWithErrors("").replace(
+                "{\"kind\":\"VOID\"}",
+                "{\"kind\":\"CALLBACK\",\"callbackSignature\":{"
+                        + "\"parameters\":[],\"returnType\":{\"kind\":\"VOID\"},"
+                        + "\"errorCodes\":[\"UNKNOWN_CALLBACK_ERROR\"]}}");
+        assertEquals("UNKNOWN_SIGNATURE_ERROR",
+                assertThrows(ApiContractException.class, () -> readJson(callback)).violation().code());
+    }
+
+    @Test
+    void moduleContractMayReferencePortableTypeOwnedByAnotherContract() {
+        String json = """
+                {
+                  "schemaVersion": 1,
+                  "identity": {
+                    "owner": "nekojs-core",
+                    "kind": "FEATURE",
+                    "contractId": "@nekojs/example",
+                    "version": "1.0.0"
+                  },
+                  "symbols": [],
+                  "modules": [{
+                    "id": "@nekojs/example",
+                    "tier": "FEATURE",
+                    "contractVersion": "1.0.0",
+                    "symbols": [{
+                      "id": "global:Example",
+                      "signatures": [{
+                        "parameters": [],
+                        "returnType": {"kind":"SYMBOL","name":"type:NekoId"}
+                      }]
+                    }]
+                  }]
+                }
+                """;
+        ApiContractIdentity identity = new ApiContractIdentity(
+                "nekojs-core", ApiContractKind.FEATURE, "@nekojs/example", ApiVersion.parse("1.0.0"));
+        assertDoesNotThrow(() -> ApiContractReader.readVerified(
+                new StringReader(json), CODE_SOURCE, RESOURCE_NAME, identity, null));
+    }
+
+    private VerifiedApiContract readJson(String json) {
+        return ApiContractReader.readVerified(
+                new StringReader(json), CODE_SOURCE, RESOURCE_NAME,
+                new ApiContractIdentity(
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("1.0.0")),
+                null);
+    }
+
+    private static String contractWithError(String code, String docs) {
+        return contractWithErrors("{\"code\":\"" + code + "\",\"docs\":\"" + docs + "\"}");
+    }
+
+    private static String contractWithErrors(String errors) {
+        return """
+                {
+                  "schemaVersion": 1,
+                  "identity": {
+                    "owner": "nekojs-core",
+                    "kind": "PORTABLE",
+                    "contractId": "portable-core",
+                    "version": "1.0.0"
+                  },
+                  "symbols": [{"id":"global:Test","signatures":[{"parameters":[],"returnType":{"kind":"VOID"}}]}],
+                  "errors": [%s]
+                }
+                """.formatted(errors);
+    }
 }

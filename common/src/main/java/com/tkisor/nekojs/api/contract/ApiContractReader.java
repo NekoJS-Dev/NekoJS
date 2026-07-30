@@ -21,16 +21,19 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 public final class ApiContractReader {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Set<String> PORTABLE_PRIMITIVES = Set.of("string", "number", "boolean", "null", "object", "json", "nbt");
     private static final JsonSchema SCHEMA;
 
     static {
@@ -75,11 +78,17 @@ public final class ApiContractReader {
                     new ApiContractViolation("SCHEMA_VALIDATION_FAILED", "/", details));
         }
 
-        NormativeApiContract contract = convertToDto(root);
+        NormativeApiContract contract;
+        try {
+            contract = convertToDto(root);
+        } catch (IllegalArgumentException e) {
+            throw new ApiContractException(new ApiContractViolation(
+                    "INVALID_CONTRACT_MODEL", "/", e.getMessage()), e);
+        }
 
         validateSemantics(contract, expectedIdentity);
 
-        String rawJson = root.toString();
+        String rawJson = canonicalJson(root);
         String integritySha256 = sha256Hex(rawJson.getBytes(StandardCharsets.UTF_8));
 
         if (expectedIntegritySha256 != null && !expectedIntegritySha256.equals(integritySha256)) {
@@ -88,8 +97,7 @@ public final class ApiContractReader {
                     "Integrity hash mismatch: expected " + expectedIntegritySha256 + " but got " + integritySha256));
         }
 
-        JsonNode withoutDocs = stripDocs(root);
-        String compatJson = withoutDocs.toString();
+        String compatJson = canonicalJson(stripDocs(root));
         String compatibilitySha256 = sha256Hex(compatJson.getBytes(StandardCharsets.UTF_8));
 
         return new VerifiedApiContract(expectedIdentity, contract, codeSource, resourceName,
@@ -127,8 +135,11 @@ public final class ApiContractReader {
         List<NormativeApiContract.ContractModule> modules = root.has("modules")
                 ? convertModules(root.get("modules"))
                 : List.of();
+        List<NormativeApiContract.ContractError> errors = root.has("errors")
+                ? convertErrors(root.get("errors"))
+                : List.of();
 
-        return new NormativeApiContract(schemaVersion, identity, docs, symbols, capabilities, modules);
+        return new NormativeApiContract(schemaVersion, identity, docs, symbols, capabilities, modules, errors);
     }
 
     private static NormativeApiContract.ContractIdentity convertIdentity(JsonNode node) {
@@ -164,7 +175,11 @@ public final class ApiContractReader {
         }
         ApiTypeRef returnType = convertTypeRef(node.get("returnType"));
         boolean isConstructor = node.has("isConstructor") && node.get("isConstructor").asBoolean();
-        return new ApiSignature(parameters, returnType, isConstructor);
+        List<String> errorCodes = new ArrayList<>();
+        if (node.has("errorCodes")) {
+            node.get("errorCodes").forEach(code -> errorCodes.add(code.asText()));
+        }
+        return new ApiSignature(parameters, returnType, isConstructor, errorCodes);
     }
 
     private static ApiParameter convertParameter(JsonNode node) {
@@ -199,6 +214,22 @@ public final class ApiContractReader {
             String range = capNode.get("contractVersionRange").asText();
             String docs = capNode.has("docs") ? capNode.get("docs").asText() : null;
             result.add(new NormativeApiContract.ContractCapability(id, range, docs));
+        }
+        return result;
+    }
+
+    private static List<NormativeApiContract.ContractError> convertErrors(JsonNode node) {
+        List<NormativeApiContract.ContractError> result = new ArrayList<>();
+        if (node == null || !node.isArray()) return result;
+        for (JsonNode errorNode : node) {
+            List<String> fields = new ArrayList<>();
+            if (errorNode.has("fields")) {
+                errorNode.get("fields").forEach(field -> fields.add(field.asText()));
+            }
+            result.add(new NormativeApiContract.ContractError(
+                    errorNode.get("code").asText(),
+                    fields,
+                    errorNode.has("docs") ? errorNode.get("docs").asText() : null));
         }
         return result;
     }
@@ -295,8 +326,108 @@ public final class ApiContractReader {
             }
         }
 
+        Set<String> errorCodes = new HashSet<>();
+        for (int i = 0; i < contract.errors().size(); i++) {
+            NormativeApiContract.ContractError error = contract.errors().get(i);
+            if (!errorCodes.add(error.code())) {
+                throw new ApiContractException(new ApiContractViolation(
+                        "DUPLICATE_ERROR_CODE", "/errors/" + i + "/code",
+                        "Duplicate error code '" + error.code() + "'"));
+            }
+        }
+
+        List<ApiSymbol> allSymbols = new ArrayList<>(contract.symbols());
+        contract.modules().forEach(module -> allSymbols.addAll(module.symbols()));
+        validateSignatureErrors(contract.symbols(), errorCodes);
+        validateSymbolTypes(allSymbols, actual.kind() == ApiContractKind.PORTABLE);
+
         for (NormativeApiContract.ContractModule module : contract.modules()) {
+            validateSignatureErrors(module.symbols(), errorCodes);
             validateModuleSemantics(module, actual.owner(), actual.kind());
+        }
+    }
+
+    private static void validateSignatureErrors(List<ApiSymbol> symbols, Set<String> declaredErrors) {
+        for (ApiSymbol symbol : symbols) {
+            for (ApiSignature signature : symbol.signatures()) {
+                validateSignatureErrors(signature, symbol.id(), declaredErrors);
+            }
+        }
+    }
+
+    private static void validateSignatureErrors(
+            ApiSignature signature,
+            ApiSymbolId symbolId,
+            Set<String> declaredErrors) {
+        for (String code : signature.errorCodes()) {
+            if (!declaredErrors.contains(code)) {
+                throw new ApiContractException(new ApiContractViolation(
+                        "UNKNOWN_SIGNATURE_ERROR", "/symbols",
+                        "Signature " + symbolId + " references undeclared error '" + code + "'"));
+            }
+        }
+        signature.parameters().forEach(parameter ->
+                validateCallbackErrors(parameter.type(), symbolId, declaredErrors));
+        validateCallbackErrors(signature.returnType(), symbolId, declaredErrors);
+    }
+
+    private static void validateCallbackErrors(
+            ApiTypeRef type,
+            ApiSymbolId symbolId,
+            Set<String> declaredErrors) {
+        type.arguments().forEach(argument -> validateCallbackErrors(argument, symbolId, declaredErrors));
+        if (type.callbackSignature() != null) {
+            validateSignatureErrors(type.callbackSignature(), symbolId, declaredErrors);
+        }
+    }
+
+    private static void validateSymbolTypes(List<ApiSymbol> symbols, boolean requireLocalTypeReferences) {
+        for (ApiSymbol symbol : symbols) {
+            if ("member".equals(symbol.id().kind()) && !symbol.id().qualifiedName().contains(".")) {
+                throw new ApiContractException(new ApiContractViolation(
+                        "INVALID_MEMBER_SYMBOL_ID", "/symbols",
+                        "Member symbol must contain an owner and member name: " + symbol.id()));
+            }
+        }
+        Set<String> declaredTypes = symbols.stream()
+                .filter(symbol -> "member".equals(symbol.id().kind()))
+                .map(symbol -> symbol.id().qualifiedName())
+                .map(name -> name.substring(0, name.lastIndexOf('.')))
+                .collect(Collectors.toSet());
+        for (ApiSymbol symbol : symbols) {
+            for (ApiSignature signature : symbol.signatures()) {
+                signature.parameters().forEach(parameter ->
+                        validateType(parameter.type(), symbol.id(), declaredTypes, requireLocalTypeReferences));
+                validateType(signature.returnType(), symbol.id(), declaredTypes, requireLocalTypeReferences);
+            }
+        }
+    }
+
+    private static void validateType(
+            ApiTypeRef type,
+            ApiSymbolId symbolId,
+            Set<String> declaredTypes,
+            boolean requireLocalTypeReferences) {
+        if (type.kind() == ApiTypeRef.Kind.PRIMITIVE && !PORTABLE_PRIMITIVES.contains(type.name())) {
+            throw new ApiContractException(new ApiContractViolation(
+                    "INVALID_PRIMITIVE_TYPE", "/symbols",
+                    "Unsupported primitive '" + type.name() + "' in " + symbolId));
+        }
+        if (type.kind() == ApiTypeRef.Kind.SYMBOL) {
+            ApiSymbolId reference = ApiSymbolId.parse(type.name());
+            if (!"type".equals(reference.kind())
+                    || requireLocalTypeReferences && !declaredTypes.contains(reference.qualifiedName())) {
+                throw new ApiContractException(new ApiContractViolation(
+                        "UNRESOLVED_TYPE_REFERENCE", "/symbols",
+                        "Unresolved type reference '" + type.name() + "' in " + symbolId));
+            }
+        }
+        type.arguments().forEach(argument ->
+                validateType(argument, symbolId, declaredTypes, requireLocalTypeReferences));
+        if (type.callbackSignature() != null) {
+            type.callbackSignature().parameters().forEach(parameter ->
+                    validateType(parameter.type(), symbolId, declaredTypes, requireLocalTypeReferences));
+            validateType(type.callbackSignature().returnType(), symbolId, declaredTypes, requireLocalTypeReferences);
         }
     }
 
@@ -364,6 +495,43 @@ public final class ApiContractReader {
             return mutable;
         }
         return node;
+    }
+
+    private static String canonicalJson(JsonNode node) {
+        return canonicalize(node, null, null).toString();
+    }
+
+    private static JsonNode canonicalize(JsonNode node, String fieldName, JsonNode parent) {
+        if (node.isObject()) {
+            var result = MAPPER.createObjectNode();
+            Map<String, JsonNode> fields = new TreeMap<>();
+            node.fields().forEachRemaining(entry -> fields.put(entry.getKey(), entry.getValue()));
+            fields.forEach((key, value) -> result.set(key, canonicalize(value, key, node)));
+            return result;
+        }
+        if (node.isArray()) {
+            List<JsonNode> values = new ArrayList<>();
+            node.forEach(child -> values.add(canonicalize(child, null, node)));
+            if (isSetLikeArray(fieldName, parent)) {
+                values.sort(java.util.Comparator.comparing(JsonNode::toString));
+            }
+            var result = MAPPER.createArrayNode();
+            values.forEach(result::add);
+            return result;
+        }
+        return node;
+    }
+
+    private static boolean isSetLikeArray(String fieldName, JsonNode parent) {
+        if (fieldName == null) return false;
+        if (Set.of("symbols", "signatures", "capabilities", "modules", "errors", "fields", "dependencies", "errorCodes")
+                .contains(fieldName)) {
+            return true;
+        }
+        return "arguments".equals(fieldName)
+                && parent != null
+                && parent.has("kind")
+                && "UNION".equals(parent.get("kind").asText());
     }
 
     private static String sha256Hex(byte[] data) {

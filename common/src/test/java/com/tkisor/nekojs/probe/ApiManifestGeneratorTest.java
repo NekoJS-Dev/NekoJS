@@ -58,12 +58,12 @@ class ApiManifestGeneratorTest {
 
     private static VerifiedContractSet portableContractSet() {
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs", ApiContractKind.PORTABLE, "nekojs-portable", v0_0_0());
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", v0_0_0());
 
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "nekojs", ApiContractKind.PORTABLE, "nekojs-portable", v0_0_0()),
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", v0_0_0()),
                 "Portable contract",
                 List.of(),
                 List.of(),
@@ -72,7 +72,7 @@ class ApiManifestGeneratorTest {
         String hash = sha256("bbbb");
         return VerifiedContractSet.of(
                 VerifiedApiContract.create(identity, contract, URI.create("file:///test"),
-                        "nekojs-portable.json", hash, hash));
+                        "portable-core.json", hash, hash));
     }
 
     private static ApiRuntimeVersions defaultVersions() {

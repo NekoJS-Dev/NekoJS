@@ -7,7 +7,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.core.JsonObjectAdapter;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 import java.util.List;
 
@@ -16,7 +16,7 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
 /**
  * 通用 Codec 适配器：任意 JS 值 → {@link JsonElement} → {@code codec.parse(JsonOps)}。
  *
- * <p>precedence={@link HostAccess.TargetMappingPrecedence#LOWEST}，作为兜底映射，避免抢占更具体的 adapter。
+ * <p>precedence={@link ConversionPrecedence#LOWEST}，作为兜底映射，避免抢占更具体的 adapter。
  */
 public final class CodecAdapter<T> extends AbstractJSTypeAdapter<T> {
     private final Class<T> target;
@@ -59,8 +59,8 @@ public final class CodecAdapter<T> extends AbstractJSTypeAdapter<T> {
     }
 
     @Override
-    public HostAccess.TargetMappingPrecedence getPrecedence() {
-        return HostAccess.TargetMappingPrecedence.LOWEST;
+    public ConversionPrecedence getPrecedence() {
+        return ConversionPrecedence.LOWEST;
     }
 
     private T parse(JsonElement json) {

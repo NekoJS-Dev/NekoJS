@@ -20,3 +20,14 @@ repositories {
         }
     }
 }
+
+tasks.register('nbtSmokeTest') {
+    group = 'verification'
+    description = 'Runs portable binary NBT smoke tests across common and every supported platform.'
+    dependsOn(
+            ':common:nbtSmokeTest',
+            ':platforms:neoforge-1.21.1:nbtSmokeTest',
+            ':platforms:neoforge-26.1:nbtSmokeTest',
+            ':platforms:neoforge-26.2:nbtSmokeTest',
+            ':platforms:cleanroom-1.12.2:nbtSmokeTest')
+}

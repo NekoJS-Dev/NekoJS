@@ -2,6 +2,8 @@ package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.NbtValue;
+import com.tkisor.nekojs.core.api.ManagedApiValueAccess;
 import java.util.List;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
@@ -24,7 +26,7 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
 
     @Override
     public boolean test(Value value) {
-        return value.isNull() || value.hasMembers() || (value.isHostObject() && value.asHostObject() instanceof CompoundTag);
+        return !isManagedNbt(value) && (value.isNull() || value.hasMembers() || (value.isHostObject() && value.asHostObject() instanceof CompoundTag));
     }
 
     @Override
@@ -41,6 +43,7 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
     }
 
     private Tag valueToTag(Value val) {
+        if (isManagedNbt(val)) throw new IllegalArgumentException("Managed NbtValue requires an explicit native bridge");
         if (val.isNull()) return StringTag.valueOf("");
         if (val.isBoolean()) return ByteTag.valueOf(val.asBoolean());
         if (val.isNumber()) {
@@ -67,5 +70,9 @@ public final class CompoundTagAdapter implements JSTypeAdapter<CompoundTag> {
         }
 
         return StringTag.valueOf(val.toString());
+    }
+
+    private static boolean isManagedNbt(Value value) {
+        return value.isProxyObject() && ManagedApiValueAccess.is(value.asProxyObject(), NbtValue.class);
     }
 }

@@ -53,6 +53,7 @@ public final class JsApiSurfaceResolver {
         Objects.requireNonNull(contributionRegistries, "contributionRegistries");
         Objects.requireNonNull(legacyReservations, "legacyReservations");
 
+        validateContractTypeClosure(contracts);
         validateLegacyReservations(contributionRegistries, legacyReservations);
 
         List<ApiContribution> allContributions = new ArrayList<>();
@@ -172,6 +173,50 @@ public final class JsApiSurfaceResolver {
                             Map.of("name", contrib.jsName()));
                 }
             }
+        }
+    }
+
+    private static void validateContractTypeClosure(VerifiedContractSet contracts) {
+        List<ApiSymbol> symbols = new ArrayList<>();
+        for (VerifiedApiContract contract : contracts.all()) {
+            symbols.addAll(contract.contract().symbols());
+            contract.contract().modules().forEach(module -> symbols.addAll(module.symbols()));
+        }
+        Set<String> declaredTypes = new HashSet<>();
+        for (ApiSymbol symbol : symbols) {
+            if ("member".equals(symbol.id().kind())) {
+                String name = symbol.id().qualifiedName();
+                int separator = name.lastIndexOf('.');
+                if (separator > 0) declaredTypes.add(name.substring(0, separator));
+            }
+        }
+        for (ApiSymbol symbol : symbols) {
+            for (ApiSignature signature : symbol.signatures()) {
+                signature.parameters().forEach(parameter ->
+                        validateResolvedType(parameter.type(), symbol.id(), declaredTypes));
+                validateResolvedType(signature.returnType(), symbol.id(), declaredTypes);
+            }
+        }
+    }
+
+    private static void validateResolvedType(
+            ApiTypeRef type,
+            ApiSymbolId symbolId,
+            Set<String> declaredTypes) {
+        if (type.kind() == ApiTypeRef.Kind.SYMBOL) {
+            ApiSymbolId reference = ApiSymbolId.parse(type.name());
+            if (!"type".equals(reference.kind()) || !declaredTypes.contains(reference.qualifiedName())) {
+                throw new ApiResolutionException(
+                        "UNRESOLVED_TYPE_REFERENCE",
+                        "Unresolved type reference '" + type.name() + "' in " + symbolId,
+                        Map.of("symbolId", symbolId.value(), "type", type.name()));
+            }
+        }
+        type.arguments().forEach(argument -> validateResolvedType(argument, symbolId, declaredTypes));
+        if (type.callbackSignature() != null) {
+            type.callbackSignature().parameters().forEach(parameter ->
+                    validateResolvedType(parameter.type(), symbolId, declaredTypes));
+            validateResolvedType(type.callbackSignature().returnType(), symbolId, declaredTypes);
         }
     }
 

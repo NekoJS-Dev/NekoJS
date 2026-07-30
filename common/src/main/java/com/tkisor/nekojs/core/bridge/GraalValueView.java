@@ -60,6 +60,16 @@ public final class GraalValueView implements JsValueView {
     }
 
     @Override
+    public boolean isProxyObject() {
+        return delegate.isProxyObject();
+    }
+
+    @Override
+    public Object asProxyObject() {
+        return delegate.asProxyObject();
+    }
+
+    @Override
     public String asString() {
         return delegate.asString();
     }

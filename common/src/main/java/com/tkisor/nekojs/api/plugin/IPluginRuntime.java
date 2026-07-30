@@ -9,6 +9,7 @@ import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 
 import java.util.List;
@@ -52,4 +53,7 @@ public interface IPluginRuntime {
 
     /** Returns the managed API runtime view for the given environment, or null if no managed API was bootstrapped. */
     ApiRuntimeView apiRuntime(EnvironmentKey environment);
+
+    /** Returns the implementation backing a managed global, or null if the global has no implementation. */
+    Object managedApiImplementation(ApiSymbolId globalId);
 }

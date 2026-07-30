@@ -7,7 +7,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.data.AbstractJSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.core.JsonObjectAdapter;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 import java.util.List;
 
@@ -60,8 +60,8 @@ public final class CodecAdapter<T> extends AbstractJSTypeAdapter<T> {
     }
 
     @Override
-    public HostAccess.TargetMappingPrecedence getPrecedence() {
-        return HostAccess.TargetMappingPrecedence.LOWEST;
+    public ConversionPrecedence getPrecedence() {
+        return ConversionPrecedence.LOWEST;
     }
 
     private T parse(JsonElement json) {

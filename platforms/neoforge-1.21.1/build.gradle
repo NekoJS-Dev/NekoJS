@@ -28,6 +28,7 @@ sourceSets {
             srcDirs = ['src/main/resources', 'src/generated/resources']
         }
     }
+    test.java.srcDir '../neoforge-26-shared/src/test/java'
 }
 
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea
@@ -87,6 +88,15 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.44'
 
     compileOnly 'org.jspecify:jspecify:1.0.0'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+
+test {
+    useJUnitPlatform()
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

@@ -12,6 +12,7 @@ import com.tkisor.nekojs.api.plugin.OwnedPlugin;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.surface.*;
 import com.tkisor.nekojs.core.api.FrozenApiRegistrySet;
+import com.tkisor.nekojs.core.api.CoreManagedApiBootstrap;
 import com.tkisor.nekojs.probe.ProbeRegistry;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
@@ -185,6 +186,31 @@ class ApiSurfaceBootstrapTest {
                 List.of(legacyPlugin), scriptProps);
 
         assertNotNull(runtime, "Legacy bootstrap must continue to work");
+    }
+
+    @Test
+    void productionBootstrapPublishesPortableCoreInEveryScriptEnvironment() {
+        NekoPluginRuntime runtime = NekoPluginRuntime.bootstrapOwned(
+                List.of(), new ScriptPropertyRegistry.Impl());
+
+        assertEquals(ApiVersion.parse("0.6.0"),
+                ((FrozenApiRegistrySet) runtime.apiRuntimeProvider())
+                        .contracts().requirePortable("nekojs-core").identity().version());
+        assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.ID_GLOBAL));
+        assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.PLATFORM_GLOBAL));
+        assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.TEXT_GLOBAL));
+        assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.JSON_IO_GLOBAL));
+        assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.NBT_GLOBAL));
+
+        for (com.tkisor.nekojs.api.ScriptType type : com.tkisor.nekojs.api.ScriptType.values()) {
+            ApiRuntimeView view = runtime.apiRuntime(EnvironmentKeyFactory.current(type));
+            assertNotNull(view, type.name());
+            assertTrue(view.findSymbol(CoreManagedApiBootstrap.ID_GLOBAL).isPresent(), type.name());
+            assertTrue(view.findSymbol(CoreManagedApiBootstrap.PLATFORM_GLOBAL).isPresent(), type.name());
+            assertTrue(view.findSymbol(CoreManagedApiBootstrap.TEXT_GLOBAL).isPresent(), type.name());
+            assertTrue(view.findSymbol(CoreManagedApiBootstrap.JSON_IO_GLOBAL).isPresent(), type.name());
+            assertTrue(view.findSymbol(CoreManagedApiBootstrap.NBT_GLOBAL).isPresent(), type.name());
+        }
     }
 
     private VerifiedApiContract createContractWithSymbol(

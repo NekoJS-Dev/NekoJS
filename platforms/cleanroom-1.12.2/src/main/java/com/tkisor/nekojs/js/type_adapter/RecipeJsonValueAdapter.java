@@ -4,7 +4,7 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValueConverter;
-import graal.graalvm.polyglot.HostAccess;
+import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 
 import java.util.List;
@@ -33,8 +33,8 @@ public final class RecipeJsonValueAdapter implements JSTypeAdapter<RecipeJsonVal
     }
 
     @Override
-    public HostAccess.TargetMappingPrecedence getPrecedence() {
-        return HostAccess.TargetMappingPrecedence.LOWEST;
+    public ConversionPrecedence getPrecedence() {
+        return ConversionPrecedence.LOWEST;
     }
 
     @Override

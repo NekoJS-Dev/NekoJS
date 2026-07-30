@@ -29,6 +29,12 @@
         "$ref": "#/$defs/Capability"
       }
     },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ErrorDefinition"
+      }
+    },
     "modules": {
       "type": "array",
       "items": {
@@ -100,6 +106,14 @@
         },
         "docs": {
           "type": "string"
+        },
+        "errorCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          }
         }
       }
     },
@@ -159,6 +173,28 @@
         "contractVersionRange": {
           "type": "string",
           "pattern": "^(exact:|\\[)[^ ]+$"
+        },
+        "docs": {
+          "type": "string"
+        }
+      }
+    },
+    "ErrorDefinition": {
+      "type": "object",
+      "required": ["code"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["symbolId", "requiredCapability", "platform", "minecraftVersion", "replacement", "path", "operation", "limit"]
+          }
         },
         "docs": {
           "type": "string"

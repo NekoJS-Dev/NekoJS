@@ -54,6 +54,40 @@ class JsApiSurfaceResolverTest {
                 Map.of());
     }
 
+    @Test
+    void rejectsExternalTypeMissingFromCombinedContractSet() {
+        ApiVersion version = ApiVersion.parse("1.0.0");
+        ApiContractIdentity portableIdentity = new ApiContractIdentity(
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", version);
+        NormativeApiContract portable = new NormativeApiContract(
+                1,
+                new NormativeApiContract.ContractIdentity(
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", version),
+                null, List.of(), List.of(), List.of());
+        ApiContractIdentity featureIdentity = new ApiContractIdentity(
+                "example-addon", ApiContractKind.ADDON, "@example-addon/api", version);
+        ApiSymbol externalReference = new ApiSymbol(
+                ApiSymbolId.parse("global:Example"),
+                List.of(ApiSignature.function(
+                        List.of(), ApiTypeRef.symbol(ApiSymbolId.parse("type:MissingType")))));
+        NormativeApiContract feature = new NormativeApiContract(
+                1,
+                new NormativeApiContract.ContractIdentity(
+                        "example-addon", ApiContractKind.ADDON, "@example-addon/api", version),
+                null, List.of(externalReference), List.of(), List.of());
+        VerifiedContractSet contracts = VerifiedContractSet.of(
+                VerifiedApiContract.create(
+                        portableIdentity, portable, URI.create("test:///portable"),
+                        "portable.json", "sha256:portable", "sha256:portable"),
+                VerifiedApiContract.create(
+                        featureIdentity, feature, URI.create("test:///feature"),
+                        "feature.json", "sha256:feature", "sha256:feature"));
+
+        ApiResolutionException error = assertThrows(ApiResolutionException.class, () ->
+                JsApiSurfaceResolver.resolve(serverEnv(), contracts, List.of(), List.of()));
+        assertEquals("UNRESOLVED_TYPE_REFERENCE", error.code());
+    }
+
     private static ApiSymbolId finderFindId() {
         return ApiSymbolId.parse("member:type:Finder.find");
     }

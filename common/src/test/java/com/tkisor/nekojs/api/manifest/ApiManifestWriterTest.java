@@ -46,14 +46,14 @@ class ApiManifestWriterTest {
     }
 
     private static ApiContractIdentity portableIdentity() {
-        return new ApiContractIdentity("nekojs", ApiContractKind.PORTABLE, "nekojs-portable", v1_0_0());
+        return new ApiContractIdentity("nekojs-core", ApiContractKind.PORTABLE, "portable-core", v1_0_0());
     }
 
     private static VerifiedContractSet portableContractSet() {
         NormativeApiContract contract = new NormativeApiContract(
                 1,
                 new NormativeApiContract.ContractIdentity(
-                        "nekojs", ApiContractKind.PORTABLE, "nekojs-portable", v1_0_0()),
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", v1_0_0()),
                 "Portable contract",
                 List.of(),
                 List.of(),
@@ -64,7 +64,7 @@ class ApiManifestWriterTest {
                         portableIdentity(),
                         contract,
                         URI.create("file:///test"),
-                        "nekojs-portable.json",
+                        "portable-core.json",
                         sha256("aaaa"),
                         sha256("bbbb")));
     }
@@ -285,11 +285,11 @@ class ApiManifestWriterTest {
                         new NormativeApiContract(
                                 1,
                                 new NormativeApiContract.ContractIdentity(
-                                        "nekojs", ApiContractKind.PORTABLE, "nekojs-portable", v1_0_0()),
+                                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", v1_0_0()),
                                 "Portable contract",
                                 List.of(), List.of(), List.of()),
                         URI.create("file:///test"),
-                        "nekojs-portable.json",
+                        "portable-core.json",
                         sha256("aaaa"),
                         sha256("bbbb")),
                 VerifiedApiContract.create(

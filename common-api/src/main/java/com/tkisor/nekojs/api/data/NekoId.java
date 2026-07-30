@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.api.data;
 
-import com.tkisor.nekojs.NekoJS;
-
 public record NekoId(String namespace, String path) {
+    public static final String DEFAULT_NAMESPACE = "nekojs";
+
     public NekoId {
         if (namespace == null || namespace.isBlank()) {
             throw new IllegalArgumentException("ID namespace cannot be blank");
@@ -17,7 +17,7 @@ public record NekoId(String namespace, String path) {
         if (separator >= 0) {
             return new NekoId(value.substring(0, separator), value.substring(separator + 1));
         }
-        return new NekoId(NekoJS.MODID, value);
+        return new NekoId(DEFAULT_NAMESPACE, value);
     }
 
     public static NekoId of(String namespace, String path) {

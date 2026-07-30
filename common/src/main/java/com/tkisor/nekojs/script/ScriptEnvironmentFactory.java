@@ -14,6 +14,7 @@ import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.api.ApiFacadeProxy;
+import com.tkisor.nekojs.core.api.ApiGuestErrorFactory;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
@@ -69,7 +70,7 @@ public final class ScriptEnvironmentFactory {
             }
         });
 
-        bindManagedGlobals(bindings, scriptType, bindingSchema);
+        bindManagedGlobals(bindings, scriptType, bindingSchema, ApiGuestErrorFactory.create(context));
 
         ScriptBindingSchema.register(scriptType, bindingSchema);
 
@@ -79,7 +80,8 @@ public final class ScriptEnvironmentFactory {
     }
 
     private void bindManagedGlobals(Value bindings, ScriptType scriptType,
-                                    Map<String, ScriptBindingSchema.BindingMembers> bindingSchema) {
+                                    Map<String, ScriptBindingSchema.BindingMembers> bindingSchema,
+                                    ApiGuestErrorFactory guestErrorFactory) {
         EnvironmentKey key = EnvironmentKeyFactory.current(scriptType);
         ApiRuntimeView view = pluginRuntime.apiRuntime(key);
         if (view == null) return;
@@ -99,17 +101,15 @@ public final class ScriptEnvironmentFactory {
             String name = entry.getKey();
             if (bindingSchema.containsKey(name)) continue;
             ApiSymbolId globalId = new ApiSymbolId("global", name);
-            Object impl = findImplementation(name);
-            ApiFacadeProxy proxy = ApiFacadeProxy.global(view, globalId, impl);
+            Object impl = findImplementation(globalId);
+            ApiFacadeProxy proxy = ApiFacadeProxy.global(view, globalId, impl, guestErrorFactory);
             bindings.putMember(name, proxy);
             bindingSchema.put(name, ScriptBindingSchema.fromSurface(surface, globalId));
         }
     }
 
-    private Object findImplementation(String globalName) {
-        var bindings = pluginRuntime.bindings(ScriptType.STARTUP);
-        com.tkisor.nekojs.api.data.Binding binding = bindings.get(globalName);
-        return binding != null ? binding.value() : null;
+    private Object findImplementation(ApiSymbolId globalId) {
+        return pluginRuntime.managedApiImplementation(globalId);
     }
 
     private void installJavaClassLoadTelemetry(Context ctx, ScriptType type) {

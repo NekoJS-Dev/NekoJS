@@ -18,6 +18,8 @@ public interface JSTypeAdapterRegistry {
 
     <T> void register(JSTypeAdapter<T> adapter);
 
+    <T> void register(JsTypeAdapter<T> adapter);
+
     default <T> void register(Class<T> target, Predicate<Value> filter, Function<Value, T> converter) {
         record LambdaJSTypeAdapter<T>(
             Class<T> target,
@@ -59,7 +61,8 @@ public interface JSTypeAdapterRegistry {
             adapters.add(Objects.requireNonNull(adapter, "adapter"));
         }
 
-        public <T> void register(com.tkisor.nekojs.api.data.JsTypeAdapter<T> adapter) {
+        @Override
+        public <T> void register(JsTypeAdapter<T> adapter) {
             adapters.add(Objects.requireNonNull(
                 new com.tkisor.nekojs.core.bridge.NewAdapterBridge<>(adapter), "adapter"));
         }

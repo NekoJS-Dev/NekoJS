@@ -29,6 +29,13 @@ sourceSets {
             srcDir 'src/generated/resources'
         }
     }
+    test.java.srcDir '../neoforge-26-shared/src/test/java'
+}
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+
+test {
+    useJUnitPlatform()
 }
 
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea

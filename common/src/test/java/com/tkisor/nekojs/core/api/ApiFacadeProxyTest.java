@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
+import com.tkisor.nekojs.api.error.ApiErrorCodes;
+import com.tkisor.nekojs.api.error.ApiInvocationException;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
@@ -189,6 +191,95 @@ class ApiFacadeProxyTest {
             context.getBindings("js").putMember("Stable", proxyForRawReturn());
             assertThrows(graal.graalvm.polyglot.PolyglotException.class,
                     () -> context.eval("js", "Stable.rawReturn()"));
+        }
+    }
+
+    @Test
+    void invocationErrorsCarryTheActualMemberIdAndPreserveCause() {
+        RuntimeException cause = new RuntimeException("root cause");
+        FrozenApiRegistry registry = resolve(
+                contractWithStable(),
+                ApiContribution.symbol(
+                        stableDeclaredId(),
+                        ApiTier.GLOBAL,
+                        "Stable",
+                        Set.of(ScriptTypeId.SERVER),
+                        List.of(declaredSignature()),
+                        (ctx, recv, args) -> {
+                            throw new ApiInvocationException(
+                                    ApiErrorCodes.INVALID_REFERENCE,
+                                    "Reference is no longer valid",
+                                    Map.of("symbolId", "spoofed"),
+                                    cause);
+                        }));
+        ApiFacadeProxy proxy = ApiFacadeProxy.global(
+                registry, ApiSymbolId.parse("global:Stable"), new Implementation());
+
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            context.getBindings("js").putMember("Stable", proxy);
+            graal.graalvm.polyglot.PolyglotException thrown = assertThrows(
+                    graal.graalvm.polyglot.PolyglotException.class,
+                    () -> context.eval("js", "Stable.declared('value')"));
+            ApiRuntimeException error = assertInstanceOf(ApiRuntimeException.class, thrown.asHostException());
+            assertEquals(ApiErrorCodes.INVALID_REFERENCE, error.code());
+            assertEquals("member:Stable.declared", error.symbolId().orElseThrow());
+            assertInstanceOf(ApiInvocationException.class, error.getCause());
+            assertSame(cause, error.getCause().getCause());
+        }
+    }
+
+    @Test
+    void restrictedContextReceivesAStableGuestErrorShape() {
+        FrozenApiRegistry registry = resolve(
+                contractWithStable(),
+                ApiContribution.symbol(
+                        stableDeclaredId(),
+                        ApiTier.GLOBAL,
+                        "Stable",
+                        Set.of(ScriptTypeId.SERVER),
+                        List.of(declaredSignature()),
+                        (ctx, recv, args) -> {
+                            throw new ApiInvocationException(
+                                    ApiErrorCodes.INVALID_REFERENCE,
+                                    "Reference is no longer valid");
+                        }));
+
+        try (Context context = Context.newBuilder("js")
+                .allowHostAccess(graal.graalvm.polyglot.HostAccess.NONE)
+                .allowHostClassLookup(name -> false)
+                .build()) {
+            ApiFacadeProxy proxy = ApiFacadeProxy.global(
+                    registry,
+                    ApiSymbolId.parse("global:Stable"),
+                    new Implementation(),
+                    ApiGuestErrorFactory.create(context));
+            context.getBindings("js").putMember("Stable", proxy);
+
+            Value result = context.eval("js", """
+                    (() => {
+                        try {
+                            Stable.declared('value');
+                            return null;
+                        } catch (error) {
+                            return {
+                                isError: error instanceof Error,
+                                code: error.code,
+                                message: error.message,
+                                symbolId: error.symbolId,
+                                platform: error.platform,
+                                minecraftVersion: error.minecraftVersion,
+                                keys: Object.keys(error).sort().join(',')
+                            };
+                        }
+                    })()
+                    """);
+            assertTrue(result.getMember("isError").asBoolean());
+            assertEquals(ApiErrorCodes.INVALID_REFERENCE, result.getMember("code").asString());
+            assertEquals("Reference is no longer valid", result.getMember("message").asString());
+            assertEquals("member:Stable.declared", result.getMember("symbolId").asString());
+            assertEquals("neoforge", result.getMember("platform").asString());
+            assertEquals("1.21.1", result.getMember("minecraftVersion").asString());
+            assertEquals("code,message,minecraftVersion,platform,symbolId", result.getMember("keys").asString());
         }
     }
 

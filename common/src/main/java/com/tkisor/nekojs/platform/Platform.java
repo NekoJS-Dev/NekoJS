@@ -29,6 +29,11 @@ public final class Platform {
         return INSTANCE;
     }
 
+    @HideFromJS
+    public static IPlatform instance() {
+        return get();
+    }
+
     public static boolean isClient() {
         return get().isClient();
     }

@@ -2,6 +2,8 @@ package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
+import com.tkisor.nekojs.api.data.NbtValue;
+import com.tkisor.nekojs.core.api.ManagedApiValueAccess;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.nbt.*;
 
@@ -38,8 +40,8 @@ public final class CompoundTagAdapter implements JSTypeAdapter<NBTTagCompound> {
 
     @Override
     public boolean test(Value value) {
-        return value.isNull() || value.hasMembers()
-            || (value.isHostObject() && value.asHostObject() instanceof NBTTagCompound);
+        return !isManagedNbt(value) && (value.isNull() || value.hasMembers()
+                || (value.isHostObject() && value.asHostObject() instanceof NBTTagCompound));
     }
 
     @Override
@@ -56,6 +58,7 @@ public final class CompoundTagAdapter implements JSTypeAdapter<NBTTagCompound> {
     }
 
     private NBTBase valueToTag(Value val) {
+        if (isManagedNbt(val)) throw new IllegalArgumentException("Managed NbtValue requires an explicit native bridge");
         if (val.isNull()) return new NBTTagString("");
         if (val.isBoolean()) return new NBTTagByte(val.asBoolean() ? (byte) 1 : (byte) 0);
         if (val.isNumber()) {
@@ -80,5 +83,9 @@ public final class CompoundTagAdapter implements JSTypeAdapter<NBTTagCompound> {
         }
 
         return new NBTTagString(val.toString());
+    }
+
+    private static boolean isManagedNbt(Value value) {
+        return value.isProxyObject() && ManagedApiValueAccess.is(value.asProxyObject(), NbtValue.class);
     }
 }

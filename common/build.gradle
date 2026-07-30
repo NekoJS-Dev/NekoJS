@@ -78,3 +78,13 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+tasks.register('nbtSmokeTest', Test) {
+    group = 'verification'
+    description = 'Runs managed API and sandboxed filesystem smoke tests for portable binary NBT.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'nbt-smoke'
+    }
+}

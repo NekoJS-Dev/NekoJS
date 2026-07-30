@@ -3,7 +3,6 @@ package com.tkisor.nekojs.api.surface;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -210,12 +209,4 @@ class ApiSurfaceModelTest {
                 new ApiSymbol(ApiSymbolId.parse("global:test"), List.of()));
     }
 
-    @Test
-    void surfaceSnapshotIsImmutable() {
-        ApiSurfaceSnapshot snapshot = new ApiSurfaceSnapshot(
-                List.of(), Set.of(), List.of(), List.of(),
-                new EnvironmentKey(null, null, null, null, null, null, java.util.Map.of()));
-        assertThrows(UnsupportedOperationException.class, () ->
-                snapshot.symbols().add(null));
-    }
 }

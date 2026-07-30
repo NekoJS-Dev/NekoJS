@@ -19,7 +19,7 @@ public final class ApiManifestWriter {
         Objects.requireNonNull(contracts, "contracts");
         Objects.requireNonNull(environments, "environments");
 
-        VerifiedApiContract portable = contracts.requirePortable("nekojs");
+        VerifiedApiContract portable = contracts.requirePortable("nekojs-core");
         if (!versions.apiVersion().equals(portable.identity().version())) {
             throw new ApiResolutionException(
                     "API_VERSION_MISMATCH",

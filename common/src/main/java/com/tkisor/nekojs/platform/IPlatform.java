@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.platform;
 
+import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
@@ -62,6 +63,10 @@ public interface IPlatform {
 
     default Set<PlatformCapability> capabilities() {
         return Set.of();
+    }
+
+    default NbtBinaryCodec nbtBinaryCodec() {
+        return NbtBinaryCodec.unsupported();
     }
 
     /** Loader identifier, e.g. "neoforge", "cleanroom", "forge". */

@@ -80,15 +80,26 @@ public final class NekoPluginBootstrap {
         BootstrapState state = new BootstrapState(Platform.isClient());
         collectExtensions(plugins, state, scriptProperties);
         freezeState(state, scriptProperties);
-        return state.createRuntime(null);
+        return state.createRuntime(null, Map.of());
     }
 
     public static NekoPluginRuntime bootstrapOwned(
             List<OwnedPlugin> ownedPlugins,
             com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties,
             VerifiedContractSet contracts) {
+        return bootstrapOwned(ownedPlugins, scriptProperties, contracts, List.of(), Map.of());
+    }
+
+    static NekoPluginRuntime bootstrapOwned(
+            List<OwnedPlugin> ownedPlugins,
+            com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties,
+            VerifiedContractSet contracts,
+            List<ApiContributionRegistry> builtInContributions,
+            Map<ApiSymbolId, Object> managedApiImplementations) {
         Objects.requireNonNull(ownedPlugins, "ownedPlugins");
         Objects.requireNonNull(contracts, "contracts");
+        Objects.requireNonNull(builtInContributions, "builtInContributions");
+        Objects.requireNonNull(managedApiImplementations, "managedApiImplementations");
 
         List<NekoJSPlugin> plugins = ownedPlugins.stream()
                 .map(OwnedPlugin::plugin)
@@ -97,7 +108,7 @@ public final class NekoPluginBootstrap {
         BootstrapState state = new BootstrapState(Platform.isClient());
         collectExtensions(plugins, state, scriptProperties);
 
-        List<ApiContributionRegistry> managedContributions = new ArrayList<>();
+        List<ApiContributionRegistry> managedContributions = new ArrayList<>(builtInContributions);
         for (OwnedPlugin owned : ownedPlugins) {
             List<VerifiedApiContract> ownerContracts = contracts.forOwner(owned.identity().ownerId());
             if (ownerContracts.isEmpty()) {
@@ -120,7 +131,7 @@ public final class NekoPluginBootstrap {
         ApiRuntimeProvider apiRuntimeProvider = new FrozenApiRegistrySet(
                 contracts, managedContributions, legacyReservations, environmentKeys);
 
-        return state.createRuntime(apiRuntimeProvider);
+        return state.createRuntime(apiRuntimeProvider, managedApiImplementations);
     }
 
     private static NekoPluginExtensionPoint<NekoJSPlugin> base(String id, BiConsumer<NekoJSPlugin, NekoPluginExtensionContext> collector) {
@@ -365,7 +376,9 @@ public final class NekoPluginBootstrap {
             scriptCompilers.freeze();
         }
 
-        NekoPluginRuntime createRuntime(ApiRuntimeProvider apiRuntimeProvider) {
+        NekoPluginRuntime createRuntime(
+                ApiRuntimeProvider apiRuntimeProvider,
+                Map<ApiSymbolId, Object> managedApiImplementations) {
             return new NekoPluginRuntime(
                     scriptCompilers,
                     bindingsByScriptType(),
@@ -383,7 +396,8 @@ public final class NekoPluginBootstrap {
                     List.copyOf(afterInitHooks),
                     List.copyOf(beforeScriptsLoadedHooks),
                     List.copyOf(afterScriptsLoadedHooks),
-                    apiRuntimeProvider
+                    apiRuntimeProvider,
+                    managedApiImplementations
             );
         }
 

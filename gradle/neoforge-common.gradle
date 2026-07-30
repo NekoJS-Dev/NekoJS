@@ -18,6 +18,13 @@ def modName    = project.mod_name
 def modVersion = project.mod_version
 def mcVersion  = project.minecraft_version   // ext property set by consumer
 def ENV        = project.ENV                  // ext property set by consumer
+def embeddedCommonRuntime = files({
+    project(':common').configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+            .findAll { artifact ->
+                !(artifact.moduleVersion.id.group == 'curse.maven' && artifact.name == 'graal-1504336')
+            }
+            .collect { artifact -> artifact.file }
+})
 
 base {
     archivesName = "${modId}-neoforge-${mcVersion}"
@@ -36,6 +43,140 @@ repositories {
 tasks.withType(Jar).configureEach {
     archiveBaseName.set("${modId}-neoforge")
     archiveVersion.set("${mcVersion}-${modVersion}")
+}
+
+tasks.named('jar', Jar).configure {
+    dependsOn project(':common').tasks.named('jar')
+    dependsOn project(':common-api').tasks.named('jar')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude 'module-info.class'
+    exclude 'META-INF/versions/**/module-info.class'
+    from project(':common').sourceSets.main.output
+    from project(':common-api').sourceSets.main.output
+    from {
+        embeddedCommonRuntime.collect { dependency ->
+            dependency.isDirectory() ? dependency : zipTree(dependency)
+        }
+    }
+}
+
+def verifyRuntimeArtifact = tasks.register('verifyRuntimeArtifact') {
+    group = 'verification'
+    description = 'Verifies that the distributable jar contains runtime and common API classes.'
+    dependsOn tasks.named('jar')
+
+    doLast {
+        def artifact = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def requiredEntries = ([
+            'com/tkisor/nekojs/core/NekoCoreContext.class',
+            'com/tkisor/nekojs/core/api/CoreManagedApiBootstrap.class',
+            'com/tkisor/nekojs/core/api/ApiFacadeProxy.class',
+            'com/tkisor/nekojs/core/api/ApiValueMarshaller.class',
+            'com/tkisor/nekojs/core/api/ApiGuestErrorFactory.class',
+            'com/tkisor/nekojs/api/surface/ApiVersion.class',
+            'com/tkisor/nekojs/api/data/NekoId.class',
+            'com/tkisor/nekojs/api/data/TextValue.class',
+            'com/tkisor/nekojs/api/data/TextArgument.class',
+            'com/tkisor/nekojs/api/data/JsNumber.class',
+            'com/tkisor/nekojs/api/data/JsonValue.class',
+            'com/tkisor/nekojs/api/data/NbtValue.class',
+            'com/tkisor/nekojs/api/data/NbtEntry.class',
+            'com/tkisor/nekojs/api/nbt/NbtBinaryCodec.class',
+            'com/tkisor/nekojs/api/nbt/NbtBinaryException.class',
+            'com/tkisor/nekojs/api/nbt/NbtBinaryLimits.class',
+            'com/tkisor/nekojs/api/facade/JsonFacade.class',
+            'com/tkisor/nekojs/api/facade/NbtFacade.class',
+            'com/tkisor/nekojs/api/facade/IdFacade.class',
+            'com/tkisor/nekojs/api/facade/PlatformFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultIdFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultPlatformFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultTextFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultJsonFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultNbtFacade.class',
+            'com/tkisor/nekojs/core/api/nbt/NbtSnbtSerializer.class',
+            'com/tkisor/nekojs/core/api/nbt/NbtFileStore.class',
+            'com/tkisor/nekojs/platform/nbt/NeoForgeNbtBinaryCodec.class',
+            'com/tkisor/nekojs/core/api/json/JsonValueParser.class',
+            'com/tkisor/nekojs/core/api/json/JsonValueSerializer.class',
+            'com/tkisor/nekojs/core/api/json/JsonValueException.class',
+            'nekojs/api-contract/api-contract.schema.json',
+            'nekojs/api-contract/portable-core-0.6.0.json',
+            'nekojs/api-runtime.properties'
+        ] as Set)
+        [project(':common'), project(':common-api')].each { runtimeProject ->
+            runtimeProject.sourceSets.main.output.files
+                    .findAll { output -> output.isDirectory() }
+                    .each { output ->
+                        fileTree(output).files.each { runtimeFile ->
+                            requiredEntries.add(output.toPath().relativize(runtimeFile.toPath())
+                                    .toString().replace('\\', '/'))
+                        }
+                    }
+        }
+        embeddedCommonRuntime.each { dependency ->
+            if (dependency.isDirectory()) {
+                fileTree(dependency).files.findAll { file -> file.name.endsWith('.class') }.each { file ->
+                    requiredEntries.add(dependency.toPath().relativize(file.toPath()).toString().replace('\\', '/'))
+                }
+            } else {
+                def dependencyArchive = new java.util.zip.ZipFile(dependency)
+                try {
+                    dependencyArchive.entries().each { entry ->
+                        if (!entry.directory && entry.name.endsWith('.class') && !entry.name.endsWith('module-info.class')) {
+                            requiredEntries.add(entry.name)
+                        }
+                    }
+                } finally {
+                    dependencyArchive.close()
+                }
+            }
+        }
+        def archive = new java.util.zip.ZipFile(artifact)
+        try {
+            def entries = archive.entries().collect { it.name } as Set
+            def missing = requiredEntries.findAll { entry -> !entries.contains(entry) }
+            if (!missing.isEmpty()) {
+                throw new GradleException("Runtime artifact ${artifact.name} is missing: ${missing.join(', ')}")
+            }
+            def embeddedGraal = entries.findAll { entry ->
+                entry.startsWith('com/oracle/truffle/')
+                        || entry.startsWith('org/graalvm/')
+                        || entry.startsWith('graal/graalvm/')
+                        || entry.startsWith('graal/mod/')
+                        || entry.startsWith('graal/svm/')
+            }
+            if (!embeddedGraal.isEmpty()) {
+                throw new GradleException(
+                        "Runtime artifact ${artifact.name} embeds classes supplied by required graalmc: "
+                                + embeddedGraal.take(10).join(', '))
+            }
+            def moduleDescriptors = entries.findAll { entry ->
+                entry == 'module-info.class'
+                        || (entry.startsWith('META-INF/versions/') && entry.endsWith('/module-info.class'))
+            }
+            if (!moduleDescriptors.isEmpty()) {
+                throw new GradleException(
+                        "Runtime artifact ${artifact.name} contains dependency module descriptors: "
+                                + moduleDescriptors.join(', '))
+            }
+        } finally {
+            archive.close()
+        }
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn verifyRuntimeArtifact
+}
+
+tasks.register('nbtSmokeTest', Test) {
+    group = 'verification'
+    description = 'Runs the native NeoForge portable binary NBT smoke tests.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'nbt-smoke'
+    }
 }
 
 publishing {

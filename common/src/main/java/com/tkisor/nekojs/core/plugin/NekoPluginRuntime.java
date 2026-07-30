@@ -23,7 +23,10 @@ import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
+import com.tkisor.nekojs.core.api.CoreManagedApiBootstrap;
+import com.tkisor.nekojs.platform.Platform;
 
 import java.util.List;
 import java.util.Map;
@@ -49,6 +52,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final List<Consumer<ScriptType>> beforeScriptsLoadedHooks;
     private final List<Consumer<ScriptType>> afterScriptsLoadedHooks;
     private final ApiRuntimeProvider apiRuntimeProvider;
+    private final Map<ApiSymbolId, Object> managedApiImplementations;
 
     NekoPluginRuntime(ScriptCompilerRegistry scriptCompilers,
                       Map<ScriptType, Map<String, Binding>> bindings,
@@ -66,7 +70,8 @@ public final class NekoPluginRuntime implements IPluginRuntime {
                       List<Runnable> afterInitHooks,
                       List<Consumer<ScriptType>> beforeScriptsLoadedHooks,
                       List<Consumer<ScriptType>> afterScriptsLoadedHooks,
-                      ApiRuntimeProvider apiRuntimeProvider) {
+                       ApiRuntimeProvider apiRuntimeProvider,
+                       Map<ApiSymbolId, Object> managedApiImplementations) {
         this.scriptCompilers = scriptCompilers;
         this.bindings = bindings;
         this.adapters = adapters;
@@ -84,6 +89,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.beforeScriptsLoadedHooks = beforeScriptsLoadedHooks;
         this.afterScriptsLoadedHooks = afterScriptsLoadedHooks;
         this.apiRuntimeProvider = apiRuntimeProvider;
+        this.managedApiImplementations = Map.copyOf(managedApiImplementations);
         publishRecipeSchemaOverrides();
     }
 
@@ -108,14 +114,38 @@ public final class NekoPluginRuntime implements IPluginRuntime {
 
     public static NekoPluginRuntime bootstrapOwned(
             List<OwnedPlugin> ownedPlugins,
+            com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
+        java.net.URI codeSource;
+        try {
+            codeSource = NekoPluginRuntime.class.getProtectionDomain().getCodeSource().getLocation().toURI();
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalStateException("Failed to resolve NekoJS code source URI", e);
+        }
+        CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(Platform.instance(), codeSource);
+        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrapOwned(
+                ownedPlugins,
+                scriptProperties,
+                core.contracts(),
+                List.of(core.contributions()),
+                core.globalImplementations());
+        publish(runtime);
+        return runtime;
+    }
+
+    public static NekoPluginRuntime bootstrapOwned(
+            List<OwnedPlugin> ownedPlugins,
             com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties,
             VerifiedContractSet contracts) {
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrapOwned(ownedPlugins, scriptProperties, contracts);
+        publish(runtime);
+        return runtime;
+    }
+
+    private static void publish(NekoPluginRuntime runtime) {
         current = runtime;
         NekoRuntimeAccess.set(runtime);
         ScriptCompilerRegistry.useRuntime(runtime.scriptCompilers());
         installManagedCallbackSchemas(runtime);
-        return runtime;
     }
 
     public static NekoPluginRuntime current() {
@@ -231,6 +261,11 @@ public final class NekoPluginRuntime implements IPluginRuntime {
             return null;
         }
         return apiRuntimeProvider.view(environment);
+    }
+
+    @Override
+    public Object managedApiImplementation(ApiSymbolId globalId) {
+        return managedApiImplementations.get(globalId);
     }
 
     public ApiRuntimeProvider apiRuntimeProvider() {

@@ -8,7 +8,41 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
     public enum Kind { PRIMITIVE, SYMBOL, ARRAY, UNION, CALLBACK, VOID }
 
     public ApiTypeRef {
+        Objects.requireNonNull(kind, "kind");
         arguments = List.copyOf(arguments == null ? List.of() : arguments);
+        switch (kind) {
+            case PRIMITIVE, SYMBOL -> {
+                requireName(name);
+                if (!arguments.isEmpty() || callbackSignature != null) {
+                    throw new IllegalArgumentException(kind + " type cannot have arguments or callback signature");
+                }
+            }
+            case ARRAY -> {
+                if (name != null || arguments.size() != 1 || callbackSignature != null) {
+                    throw new IllegalArgumentException("array type requires exactly one element type");
+                }
+            }
+            case UNION -> {
+                if (name != null || callbackSignature != null) {
+                    throw new IllegalArgumentException("union type cannot have a name or callback signature");
+                }
+                arguments = arguments.stream().distinct()
+                        .sorted(Comparator.comparing(ApiTypeRef::compatibilityKey)).toList();
+                if (arguments.size() < 2) {
+                    throw new IllegalArgumentException("union requires at least two members");
+                }
+            }
+            case CALLBACK -> {
+                if (name != null || !arguments.isEmpty() || callbackSignature == null) {
+                    throw new IllegalArgumentException("callback type requires a callback signature");
+                }
+            }
+            case VOID -> {
+                if (name != null || !arguments.isEmpty() || callbackSignature != null) {
+                    throw new IllegalArgumentException("void type cannot have additional data");
+                }
+            }
+        }
     }
 
     public static ApiTypeRef primitive(String name) {
