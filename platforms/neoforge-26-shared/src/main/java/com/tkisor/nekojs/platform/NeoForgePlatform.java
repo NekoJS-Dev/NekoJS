@@ -72,7 +72,8 @@ public class NeoForgePlatform implements IPlatform {
                 PlatformCapability.RESOURCE_PACKS,
                 PlatformCapability.CLIENT_SCREENS,
                 PlatformCapability.CLIENT_KEYBINDS,
-                PlatformCapability.CLIENT_RENDERERS
+                PlatformCapability.CLIENT_RENDERERS,
+                PlatformCapability.TAGS
         );
     }
 

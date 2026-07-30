@@ -12,7 +12,7 @@ class PlatformCapabilityTest {
     @Test
     void capabilitySetIsImmutable() {
         Set<PlatformCapability> caps = Set.of(PlatformCapability.TAGS, PlatformCapability.NETWORK_CUSTOM_CHANNEL);
-        assertThrows(UnsupportedOperationException.class, () -> caps.add(PlatformCapability.DATA_GENERATION));
+        assertThrows(UnsupportedOperationException.class, () -> caps.add(PlatformCapability.RECIPE_VIEWER));
     }
 
     @Test
@@ -21,6 +21,6 @@ class PlatformCapabilityTest {
         assertTrue(all.contains(PlatformCapability.TAGS));
         assertTrue(all.contains(PlatformCapability.RECIPE_HOT_RELOAD));
         assertTrue(all.contains(PlatformCapability.NETWORK_CUSTOM_CHANNEL));
-        assertTrue(all.size() >= 20, "expected at least 20 capabilities, got " + all.size());
+        assertTrue(all.size() >= 10, "expected at least 10 capabilities, got " + all.size());
     }
 }

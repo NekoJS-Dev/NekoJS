@@ -298,41 +298,26 @@ NekoJS 提供事件监听机制，用于响应 Minecraft 游戏中的各种状�
 
 ### 已实现事件列表
 
+NekoJS 提供 11 个事件组（以 NeoForge 26.x 为准，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
+
 ```text
-服务器事件 (ServerEvents)
-├── tickPre - 服务器每 tick 开始前触发
-├── tickPost - 服务器每 tick 结束后触发
-├── recipes - 配方注册事件
-└── afterRecipes - 配方脚本执行后、最终解析前触发
-
-玩家事件 (PlayerEvents)
-├── loggedIn - 玩家登录游戏时触发
-└── chat - 玩家发送聊天消息时触发
-
-实体事件 (EntityEvents)
-├── hurtPre - 实体受到伤害前触发（带目标实体）
-├── hurtPost - 实体受到伤害后触发（带目标实体）
-└── death - 实体死亡时触发（带目标实体）
-
-方块事件 (BlockEvents)
-├── broken - 方块被破坏时触发（带目标方块）
-├── rightClicked - 方块被右键点击时触发（带目标方块）
-└── placed - 方块被放置时触发（带目标方块）
-
-物品事件 (ItemEvents)
-├── rightClicked - 物品被右键使用时触发（带目标物品）
-├── tooltip - 物品提示信息显示时触发（客户端事件）
-└── crafted - 物品被合成时触发
-
-注册事件 (RegistryEvents)
-├── item - 物品注册事件（启动时事件）
-└── block - 方块注册事件（启动时事件）
-
-命令事件 (CommandEvents)
-└── register - 命令注册时触发
+服务器事件 (ServerEvents)        约 13 个  tickPre / tickPost / recipes / afterRecipes / tags ...
+玩家事件 (PlayerEvents)          约 17 个  loggedIn / loggedOut / chat / tickPre / tickPost /
+                                              cloned / respawned / changedDimension / advancement /
+                                              container* / inventory* / entityInteract /
+                                              crafted / smelted / destroyed
+实体事件 (EntityEvents)          约 13 个  hurtPre / hurtPost / death ...
+方块事件 (BlockEvents)           约 11 个  broken / rightClicked / placed ...
+物品事件 (ItemEvents)             约 8 个  rightClicked / tooltip / crafted ...
+注册事件 (RegistryEvents)         约 3 个  item / block / fluid（启动时事件）
+命令事件 (CommandEvents)          约 2 个  register ...
+目标事件 (GoalEvents)             约 1 个
+关卡事件 (LevelEvents)           约 10 个  loaded / unloaded / tick ...
+网络事件 (NetworkEvents)          约 2 个
+客户端事件 (ClientEvents)        约 13 个
 ```
 
-> 上方仅列常用事件，事件组持续扩充（`LevelEvents`、`NetworkEvents`、`GoalEvents`、更多 `PlayerEvents`/`ItemEvents`/`BlockEvents`/`EntityEvents` 等）。完整、权威的事件签名以 probe 生成的 `.neko_probe/@side-only/<type>/events/index.d.ts` 为准。
+> 完整、权威的事件签名以 probe 生成的 `.neko_probe/@side-only/<type>/events/index.d.ts` 为准；事件组持续扩充，本表只列代表性事件。
 
 ### 事件类型说明
 
