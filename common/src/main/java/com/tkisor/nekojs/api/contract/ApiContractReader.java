@@ -1,11 +1,9 @@
 package com.tkisor.nekojs.api.contract;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.tkisor.nekojs.api.surface.ApiParameter;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
@@ -13,6 +11,8 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTier;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiVersion;
+import dev.harrel.jsonschema.ValidatorFactory;
+import dev.harrel.jsonschema.providers.GsonNode;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 
 public final class ApiContractReader {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final Set<String> PORTABLE_PRIMITIVES = Set.of("string", "number", "boolean", "null", "object", "json", "nbt");
-    private static final JsonSchema SCHEMA;
+    private static final String SCHEMA_JSON;
+    private static final ValidatorFactory VALIDATOR_FACTORY;
 
     static {
         try (var is = ApiContractReader.class.getResourceAsStream(
@@ -42,11 +42,13 @@ public final class ApiContractReader {
             if (is == null) {
                 throw new ExceptionInInitializerError("Schema resource not found");
             }
-            JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-            SCHEMA = factory.getSchema(MAPPER.readTree(is));
+            SCHEMA_JSON = new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new ExceptionInInitializerError(e);
         }
+        // dev.harrel 使用内置 Gson provider 校验 Draft 2020-12 schema，
+        // 避免 networknt 强绑的 jackson 依赖链被内嵌进平台 jar。
+        VALIDATOR_FACTORY = new ValidatorFactory().withJsonNodeFactory(new GsonNode.Factory());
     }
 
     private ApiContractReader() {
@@ -61,18 +63,26 @@ public final class ApiContractReader {
         Objects.requireNonNull(resourceName, "resourceName");
         Objects.requireNonNull(expectedIdentity, "expectedIdentity");
 
-        JsonNode root;
+        JsonElement root;
+        String rawContractJson;
         try {
-            root = MAPPER.readTree(reader);
-        } catch (IOException e) {
+            StringBuilder buffer = new StringBuilder();
+            char[] chunk = new char[8192];
+            int read;
+            while ((read = reader.read(chunk)) >= 0) {
+                buffer.append(chunk, 0, read);
+            }
+            rawContractJson = buffer.toString();
+            root = JsonParser.parseString(rawContractJson);
+        } catch (Exception e) {
             throw new ApiContractException(
                     new ApiContractViolation("INVALID_JSON", "/", "Failed to parse JSON: " + e.getMessage()), e);
         }
 
-        Set<ValidationMessage> errors = SCHEMA.validate(root);
-        if (!errors.isEmpty()) {
-            String details = errors.stream()
-                    .map(ValidationMessage::toString)
+        var validationResult = VALIDATOR_FACTORY.validate(SCHEMA_JSON, rawContractJson);
+        if (!validationResult.isValid()) {
+            String details = validationResult.getErrors().stream()
+                    .map(error -> error.getInstanceLocation() + ": " + error.getError())
                     .collect(Collectors.joining("; "));
             throw new ApiContractException(
                     new ApiContractViolation("SCHEMA_VALIDATION_FAILED", "/", details));
@@ -124,148 +134,158 @@ public final class ApiContractReader {
                 "nekojs/api-contract/preview", hash, hash);
     }
 
-    private static NormativeApiContract convertToDto(JsonNode root) {
-        int schemaVersion = root.get("schemaVersion").asInt();
-        NormativeApiContract.ContractIdentity identity = convertIdentity(root.get("identity"));
-        String docs = root.has("docs") ? root.get("docs").asText() : null;
-        List<ApiSymbol> symbols = convertSymbols(root.get("symbols"));
-        List<NormativeApiContract.ContractCapability> capabilities = root.has("capabilities")
-                ? convertCapabilities(root.get("capabilities"))
+    private static NormativeApiContract convertToDto(JsonElement root) {
+        int schemaVersion = root.getAsJsonObject().get("schemaVersion").getAsInt();
+        NormativeApiContract.ContractIdentity identity = convertIdentity(root.getAsJsonObject().get("identity"));
+        JsonObject rootObj = root.getAsJsonObject();
+        String docs = rootObj.has("docs") ? rootObj.get("docs").getAsString() : null;
+        List<ApiSymbol> symbols = convertSymbols(rootObj.get("symbols"));
+        List<NormativeApiContract.ContractCapability> capabilities = rootObj.has("capabilities")
+                ? convertCapabilities(rootObj.get("capabilities"))
                 : List.of();
-        List<NormativeApiContract.ContractModule> modules = root.has("modules")
-                ? convertModules(root.get("modules"))
+        List<NormativeApiContract.ContractModule> modules = rootObj.has("modules")
+                ? convertModules(rootObj.get("modules"))
                 : List.of();
-        List<NormativeApiContract.ContractError> errors = root.has("errors")
-                ? convertErrors(root.get("errors"))
+        List<NormativeApiContract.ContractError> errors = rootObj.has("errors")
+                ? convertErrors(rootObj.get("errors"))
                 : List.of();
 
         return new NormativeApiContract(schemaVersion, identity, docs, symbols, capabilities, modules, errors);
     }
 
-    private static NormativeApiContract.ContractIdentity convertIdentity(JsonNode node) {
-        String owner = node.get("owner").asText();
-        ApiContractKind kind = ApiContractKind.valueOf(node.get("kind").asText());
-        String contractId = node.get("contractId").asText();
-        ApiVersion version = ApiVersion.parse(node.get("version").asText());
+    private static NormativeApiContract.ContractIdentity convertIdentity(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        String owner = obj.get("owner").getAsString();
+        ApiContractKind kind = ApiContractKind.valueOf(obj.get("kind").getAsString());
+        String contractId = obj.get("contractId").getAsString();
+        ApiVersion version = ApiVersion.parse(obj.get("version").getAsString());
         return new NormativeApiContract.ContractIdentity(owner, kind, contractId, version);
     }
 
-    private static List<ApiSymbol> convertSymbols(JsonNode node) {
+    private static List<ApiSymbol> convertSymbols(JsonElement node) {
         List<ApiSymbol> result = new ArrayList<>();
-        if (node == null || !node.isArray()) return result;
-        for (JsonNode symNode : node) {
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement symNode : node.getAsJsonArray()) {
             result.add(convertSymbol(symNode));
         }
         return result;
     }
 
-    private static ApiSymbol convertSymbol(JsonNode node) {
-        ApiSymbolId id = ApiSymbolId.parse(node.get("id").asText());
+    private static ApiSymbol convertSymbol(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        ApiSymbolId id = ApiSymbolId.parse(obj.get("id").getAsString());
         List<ApiSignature> signatures = new ArrayList<>();
-        for (JsonNode sigNode : node.get("signatures")) {
+        for (JsonElement sigNode : obj.get("signatures").getAsJsonArray()) {
             signatures.add(convertSignature(sigNode));
         }
         return new ApiSymbol(id, signatures);
     }
 
-    private static ApiSignature convertSignature(JsonNode node) {
+    private static ApiSignature convertSignature(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
         List<ApiParameter> parameters = new ArrayList<>();
-        for (JsonNode paramNode : node.get("parameters")) {
+        for (JsonElement paramNode : obj.get("parameters").getAsJsonArray()) {
             parameters.add(convertParameter(paramNode));
         }
-        ApiTypeRef returnType = convertTypeRef(node.get("returnType"));
-        boolean isConstructor = node.has("isConstructor") && node.get("isConstructor").asBoolean();
+        ApiTypeRef returnType = convertTypeRef(obj.get("returnType"));
+        boolean isConstructor = obj.has("isConstructor") && obj.get("isConstructor").getAsBoolean();
         List<String> errorCodes = new ArrayList<>();
-        if (node.has("errorCodes")) {
-            node.get("errorCodes").forEach(code -> errorCodes.add(code.asText()));
+        if (obj.has("errorCodes")) {
+            obj.get("errorCodes").getAsJsonArray().forEach(code -> errorCodes.add(code.getAsString()));
         }
         return new ApiSignature(parameters, returnType, isConstructor, errorCodes);
     }
 
-    private static ApiParameter convertParameter(JsonNode node) {
-        String name = node.get("name").asText();
-        ApiTypeRef type = convertTypeRef(node.get("type"));
-        boolean optional = node.has("optional") && node.get("optional").asBoolean();
-        boolean varargs = node.has("varargs") && node.get("varargs").asBoolean();
+    private static ApiParameter convertParameter(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        String name = obj.get("name").getAsString();
+        ApiTypeRef type = convertTypeRef(obj.get("type"));
+        boolean optional = obj.has("optional") && obj.get("optional").getAsBoolean();
+        boolean varargs = obj.has("varargs") && obj.get("varargs").getAsBoolean();
         return new ApiParameter(name, type, optional, varargs);
     }
 
-    private static ApiTypeRef convertTypeRef(JsonNode node) {
-        ApiTypeRef.Kind kind = ApiTypeRef.Kind.valueOf(node.get("kind").asText());
-        String name = node.has("name") ? node.get("name").asText() : null;
+    private static ApiTypeRef convertTypeRef(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        ApiTypeRef.Kind kind = ApiTypeRef.Kind.valueOf(obj.get("kind").getAsString());
+        String name = obj.has("name") ? obj.get("name").getAsString() : null;
         List<ApiTypeRef> arguments = new ArrayList<>();
-        if (node.has("arguments")) {
-            for (JsonNode argNode : node.get("arguments")) {
+        if (obj.has("arguments")) {
+            for (JsonElement argNode : obj.get("arguments").getAsJsonArray()) {
                 arguments.add(convertTypeRef(argNode));
             }
         }
         ApiSignature callbackSignature = null;
-        if (node.has("callbackSignature")) {
-            callbackSignature = convertSignature(node.get("callbackSignature"));
+        if (obj.has("callbackSignature")) {
+            callbackSignature = convertSignature(obj.get("callbackSignature"));
         }
         return new ApiTypeRef(kind, name, arguments, callbackSignature);
     }
 
-    private static List<NormativeApiContract.ContractCapability> convertCapabilities(JsonNode node) {
+    private static List<NormativeApiContract.ContractCapability> convertCapabilities(JsonElement node) {
         List<NormativeApiContract.ContractCapability> result = new ArrayList<>();
-        if (node == null || !node.isArray()) return result;
-        for (JsonNode capNode : node) {
-            String id = capNode.get("id").asText();
-            String range = capNode.get("contractVersionRange").asText();
-            String docs = capNode.has("docs") ? capNode.get("docs").asText() : null;
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement capNode : node.getAsJsonArray()) {
+            JsonObject obj = capNode.getAsJsonObject();
+            String id = obj.get("id").getAsString();
+            String range = obj.get("contractVersionRange").getAsString();
+            String docs = obj.has("docs") ? obj.get("docs").getAsString() : null;
             result.add(new NormativeApiContract.ContractCapability(id, range, docs));
         }
         return result;
     }
 
-    private static List<NormativeApiContract.ContractError> convertErrors(JsonNode node) {
+    private static List<NormativeApiContract.ContractError> convertErrors(JsonElement node) {
         List<NormativeApiContract.ContractError> result = new ArrayList<>();
-        if (node == null || !node.isArray()) return result;
-        for (JsonNode errorNode : node) {
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement errorNode : node.getAsJsonArray()) {
+            JsonObject obj = errorNode.getAsJsonObject();
             List<String> fields = new ArrayList<>();
-            if (errorNode.has("fields")) {
-                errorNode.get("fields").forEach(field -> fields.add(field.asText()));
+            if (obj.has("fields")) {
+                obj.get("fields").getAsJsonArray().forEach(field -> fields.add(field.getAsString()));
             }
             result.add(new NormativeApiContract.ContractError(
-                    errorNode.get("code").asText(),
+                    obj.get("code").getAsString(),
                     fields,
-                    errorNode.has("docs") ? errorNode.get("docs").asText() : null));
+                    obj.has("docs") ? obj.get("docs").getAsString() : null));
         }
         return result;
     }
 
-    private static List<NormativeApiContract.ContractModule> convertModules(JsonNode node) {
+    private static List<NormativeApiContract.ContractModule> convertModules(JsonElement node) {
         List<NormativeApiContract.ContractModule> result = new ArrayList<>();
-        if (node == null || !node.isArray()) return result;
-        for (JsonNode modNode : node) {
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement modNode : node.getAsJsonArray()) {
             result.add(convertModule(modNode));
         }
         return result;
     }
 
-    private static NormativeApiContract.ContractModule convertModule(JsonNode node) {
-        String id = node.get("id").asText();
-        ApiTier tier = ApiTier.valueOf(node.get("tier").asText());
-        ApiVersion contractVersion = node.has("contractVersion")
-                ? ApiVersion.parse(node.get("contractVersion").asText())
+    private static NormativeApiContract.ContractModule convertModule(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        String id = obj.get("id").getAsString();
+        ApiTier tier = ApiTier.valueOf(obj.get("tier").getAsString());
+        ApiVersion contractVersion = obj.has("contractVersion")
+                ? ApiVersion.parse(obj.get("contractVersion").getAsString())
                 : null;
-        int moduleRevision = node.has("moduleRevision") ? node.get("moduleRevision").asInt() : 0;
-        String docs = node.has("docs") ? node.get("docs").asText() : null;
-        List<ApiSymbol> symbols = node.has("symbols") ? convertSymbols(node.get("symbols")) : List.of();
-        List<NormativeApiContract.ContractModuleDependency> deps = node.has("dependencies")
-                ? convertDependencies(node.get("dependencies"))
+        int moduleRevision = obj.has("moduleRevision") ? obj.get("moduleRevision").getAsInt() : 0;
+        String docs = obj.has("docs") ? obj.get("docs").getAsString() : null;
+        List<ApiSymbol> symbols = obj.has("symbols") ? convertSymbols(obj.get("symbols")) : List.of();
+        List<NormativeApiContract.ContractModuleDependency> deps = obj.has("dependencies")
+                ? convertDependencies(obj.get("dependencies"))
                 : List.of();
         return new NormativeApiContract.ContractModule(id, tier, contractVersion, moduleRevision, docs, symbols, deps);
     }
 
-    private static List<NormativeApiContract.ContractModuleDependency> convertDependencies(JsonNode node) {
+    private static List<NormativeApiContract.ContractModuleDependency> convertDependencies(JsonElement node) {
         List<NormativeApiContract.ContractModuleDependency> result = new ArrayList<>();
-        if (node == null || !node.isArray()) return result;
-        for (JsonNode depNode : node) {
-            String moduleId = depNode.get("moduleId").asText();
-            String versionRange = depNode.has("versionRange") ? depNode.get("versionRange").asText() : null;
-            ApiTier targetTier = depNode.has("targetTier")
-                    ? ApiTier.valueOf(depNode.get("targetTier").asText())
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement depNode : node.getAsJsonArray()) {
+            JsonObject obj = depNode.getAsJsonObject();
+            String moduleId = obj.get("moduleId").getAsString();
+            String versionRange = obj.has("versionRange") ? obj.get("versionRange").getAsString() : null;
+            ApiTier targetTier = obj.has("targetTier")
+                    ? ApiTier.valueOf(obj.get("targetTier").getAsString())
                     : null;
             result.add(new NormativeApiContract.ContractModuleDependency(moduleId, versionRange, targetTier));
         }
@@ -478,18 +498,18 @@ public final class ApiContractReader {
         }
     }
 
-    private static JsonNode stripDocs(JsonNode node) {
-        if (node.isObject()) {
-            var mutable = MAPPER.createObjectNode();
-            node.fields().forEachRemaining(entry -> {
+    private static JsonElement stripDocs(JsonElement node) {
+        if (node.isJsonObject()) {
+            JsonObject mutable = new JsonObject();
+            node.getAsJsonObject().entrySet().forEach(entry -> {
                 if (!"docs".equals(entry.getKey())) {
-                    mutable.set(entry.getKey(), stripDocs(entry.getValue()));
+                    mutable.add(entry.getKey(), stripDocs(entry.getValue()));
                 }
             });
             return mutable;
-        } else if (node.isArray()) {
-            var mutable = MAPPER.createArrayNode();
-            for (JsonNode child : node) {
+        } else if (node.isJsonArray()) {
+            JsonArray mutable = new JsonArray();
+            for (JsonElement child : node.getAsJsonArray()) {
                 mutable.add(stripDocs(child));
             }
             return mutable;
@@ -497,32 +517,32 @@ public final class ApiContractReader {
         return node;
     }
 
-    private static String canonicalJson(JsonNode node) {
+    private static String canonicalJson(JsonElement node) {
         return canonicalize(node, null, null).toString();
     }
 
-    private static JsonNode canonicalize(JsonNode node, String fieldName, JsonNode parent) {
-        if (node.isObject()) {
-            var result = MAPPER.createObjectNode();
-            Map<String, JsonNode> fields = new TreeMap<>();
-            node.fields().forEachRemaining(entry -> fields.put(entry.getKey(), entry.getValue()));
-            fields.forEach((key, value) -> result.set(key, canonicalize(value, key, node)));
+    private static JsonElement canonicalize(JsonElement node, String fieldName, JsonElement parent) {
+        if (node.isJsonObject()) {
+            JsonObject result = new JsonObject();
+            Map<String, JsonElement> fields = new TreeMap<>();
+            node.getAsJsonObject().entrySet().forEach(entry -> fields.put(entry.getKey(), entry.getValue()));
+            fields.forEach((key, value) -> result.add(key, canonicalize(value, key, node)));
             return result;
         }
-        if (node.isArray()) {
-            List<JsonNode> values = new ArrayList<>();
-            node.forEach(child -> values.add(canonicalize(child, null, node)));
+        if (node.isJsonArray()) {
+            List<JsonElement> values = new ArrayList<>();
+            node.getAsJsonArray().forEach(child -> values.add(canonicalize(child, null, node)));
             if (isSetLikeArray(fieldName, parent)) {
-                values.sort(java.util.Comparator.comparing(JsonNode::toString));
+                values.sort(java.util.Comparator.comparing(JsonElement::toString));
             }
-            var result = MAPPER.createArrayNode();
+            JsonArray result = new JsonArray();
             values.forEach(result::add);
             return result;
         }
         return node;
     }
 
-    private static boolean isSetLikeArray(String fieldName, JsonNode parent) {
+    private static boolean isSetLikeArray(String fieldName, JsonElement parent) {
         if (fieldName == null) return false;
         if (Set.of("symbols", "signatures", "capabilities", "modules", "errors", "fields", "dependencies", "errorCodes")
                 .contains(fieldName)) {
@@ -530,8 +550,9 @@ public final class ApiContractReader {
         }
         return "arguments".equals(fieldName)
                 && parent != null
-                && parent.has("kind")
-                && "UNION".equals(parent.get("kind").asText());
+                && parent.isJsonObject()
+                && parent.getAsJsonObject().has("kind")
+                && "UNION".equals(parent.getAsJsonObject().get("kind").getAsString());
     }
 
     private static String sha256Hex(byte[] data) {
