@@ -410,6 +410,42 @@ Cleanroom 1.12.2 平台的差异：
 - `generateAssets` 写入 `<gameDir>/nekojs/assets`，由 `MinecraftMixin` 注册为 `FolderResourcePack`，每次 F3+T（或首次进入游戏）生效；由于 `LanguageManager` 是第一个资源 reload listener，生成先于模型/纹理加载。
 - `lang` 为 `.lang` 文本格式，不写 JSON 文件：条目经 `LanguageManagerMixin` 直接注入当前语言的 `Locale`（mixin 注入，无反射），并 `LanguageMap.replaceWith` 同步到 I18n。
 
+## 配方查看器集成（JEI）
+
+NeoForge 平台（1.21.1 / 26.1 / 26.2）内置 JEI 集成，脚本在 CLIENT 脚本中监听（与 KubeJS 的 RecipeViewerEvents 对齐，裁剪版）：
+
+```js
+// 从 JEI 隐藏指定物品（不彻底移除）
+RecipeViewerEvents.removeEntries('item', event => {
+  event.add('minecraft:stone');
+});
+
+// 向 JEI 添加条目（如脚本生成的自定义物品）
+RecipeViewerEvents.addEntries('item', event => {
+  event.add('minecraft:stone');
+});
+
+// 隐藏指定配方（可定向类别）
+RecipeViewerEvents.removeRecipes(event => {
+  event.remove('minecraft:stone_from_cobblestone');
+  event.removeFromCategory('minecraft:crafting', 'minecraft:stick');
+});
+
+// 隐藏整个查看器类别
+RecipeViewerEvents.removeCategories(event => {
+  event.remove('minecraft:crafting');
+});
+
+// 为物品附加 tooltip（JEI 注册期应用，F3+T 后更新）
+RecipeViewerEvents.addInformation(event => {
+  event.add('minecraft:stone', '§7This is stone.');
+});
+```
+
+- 条目事件按类型定向（`'item'` / `'fluid'`，可传物品/流体 id 或对象）；配方/类别按 id 定向。
+- 事件在 JEI 运行时重建（每次资源 reload）时触发，脚本需保持幂等。
+- 仅在安装 JEI 时生效；REI / EMI 集成不在本次范围内。
+
 ---
 
 ## 路线图
