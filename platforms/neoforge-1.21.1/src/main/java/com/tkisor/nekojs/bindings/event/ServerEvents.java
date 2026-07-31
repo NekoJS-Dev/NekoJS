@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
 import net.minecraft.resources.ResourceLocation;
@@ -40,6 +41,22 @@ public interface ServerEvents {
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
+
+    /** 数据生成事件：脚本写入 datapack JSON（loot tables / advancements / worldgen 等）。 */
+    DispatchKey<DataGeneratorJS, String> STAGE_KEY = new DispatchKey<>() {
+        @Override
+        public Class<String> keyType() {
+            return String.class;
+        }
+
+        @Override
+        public String eventToKey(DataGeneratorJS event) {
+            return event.getStage();
+        }
+    };
+
+    EventBusJS<DataGeneratorJS, String> GENERATE_DATA =
+            GROUP.server("generateData", DataGeneratorJS.class, STAGE_KEY);
 
     EventBusJS<ServerAboutToStartEvent, Void> ABOUT_TO_START =
         GROUP.server("aboutToStart", ServerAboutToStartEvent.class);

@@ -5,6 +5,9 @@ import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
@@ -15,6 +18,8 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.common.NeoForge;
+
+import java.nio.file.Path;
 
 public class NekoJSClient {
 
@@ -60,6 +65,27 @@ public class NekoJSClient {
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("CLIENT script reload failed", e);
             }
+            postClientGeneration();
         });
+    }
+
+    /**
+     * 客户端生成事件：脚本把 asset JSON 写入 {@code <gameDir>/nekojs/assets}（磁盘 resource
+     * pack，懒读保证 reload 时序正确）。先聚合 lang 再生成 assets，与 KubeJS 流程一致。
+     */
+    private static void postClientGeneration() {
+        try {
+            Path assets = NekoJSPaths.get().assets();
+            DataGeneratorJS generator = new DataGeneratorJS(assets, "after_mods");
+            ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
+            // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
+            for (String lang : ClientEvents.LANG.registeredKeys()) {
+                LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
+                ClientEvents.LANG.post(langGenerator, lang);
+                langGenerator.writeTo(assets, lang);
+            }
+        } catch (Exception e) {
+            NekoJS.LOGGER.debug("Client generation event failed", e);
+        }
     }
 }

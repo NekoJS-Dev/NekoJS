@@ -1,8 +1,11 @@
 package com.tkisor.nekojs.bindings.event.client;
 
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -42,6 +45,38 @@ public interface ClientEvents {
             GROUP.client("registerBlockEntityRenderers", EntityRenderersEvent.RegisterRenderers.class);
     EventBusJS<RegisterParticleProvidersEvent, Void> REGISTER_PARTICLE_PROVIDERS =
             GROUP.client("registerParticleProviders", RegisterParticleProvidersEvent.class);
+
+    DispatchKey<DataGeneratorJS, String> ASSET_STAGE_KEY = new DispatchKey<>() {
+        @Override
+        public Class<String> keyType() {
+            return String.class;
+        }
+
+        @Override
+        public String eventToKey(DataGeneratorJS event) {
+            return event.getStage();
+        }
+    };
+
+    DispatchKey<LangGeneratorJS, String> LANG_KEY = new DispatchKey<>() {
+        @Override
+        public Class<String> keyType() {
+            return String.class;
+        }
+
+        @Override
+        public String eventToKey(LangGeneratorJS event) {
+            return event.getLang();
+        }
+    };
+
+    /** 资产生成事件：脚本写入 resource pack JSON（模型 / blockstate 等）。 */
+    EventBusJS<DataGeneratorJS, String> GENERATE_ASSETS =
+            GROUP.client("generateAssets", DataGeneratorJS.class, ASSET_STAGE_KEY);
+
+    /** 语言生成事件：脚本按语言代码收集翻译条目（{@code en_us} 等）。 */
+    EventBusJS<LangGeneratorJS, String> LANG =
+            GROUP.client("lang", LangGeneratorJS.class, LANG_KEY);
 
     EventBusForgeBridge MAIN_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(TICK_PRE)

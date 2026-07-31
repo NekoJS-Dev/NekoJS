@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -14,6 +15,9 @@ public interface DispatchEventBus<E, K> extends EventBus<E> {
     EventListenerToken<E> listen(K key, Consumer<E> listener);
 
     boolean post(E event, K key);
+
+    /** 已注册监听的定向 key 集合（例如 lang 事件的语言代码）。 */
+    Set<K> registeredKeys();
 
     default <E_ extends E, K_ extends K> DispatchEventBus<E_, K_> castDispatch() {
         return (DispatchEventBus<E_, K_>) this;

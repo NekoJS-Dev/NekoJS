@@ -9,6 +9,7 @@ import com.tkisor.nekojs.eventbus.EventListenerTokenImpl;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -35,6 +36,10 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
 
     public final DispatchKey<EVENT, KEY> dispatchKey() {
         return dispatchKey;
+    }
+
+    public final Set<KEY> registeredKeys() {
+        return Set.copyOf(dispatched.keySet());
     }
 
     protected abstract BUS createBus(Class<EVENT> eventType, KEY key);

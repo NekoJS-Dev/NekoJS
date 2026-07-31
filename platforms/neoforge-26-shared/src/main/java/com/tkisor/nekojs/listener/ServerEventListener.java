@@ -12,6 +12,9 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.bindings.event.ServerEvents;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -43,6 +46,20 @@ public class ServerEventListener {
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("Script overload failed: ", e);
+        }
+        postGenerateData();
+    }
+
+    /**
+     * 数据生成事件：脚本把 datapack JSON 写入 {@code <gameDir>/nekojs/data}（磁盘 datapack，
+     * 懒读保证 reload 时序正确）。目前支持单一 {@code after_mods} 阶段。
+     */
+    private static void postGenerateData() {
+        try {
+            DataGeneratorJS generator = new DataGeneratorJS(NekoJSPaths.get().data(), "after_mods");
+            ServerEvents.GENERATE_DATA.post(generator, "after_mods");
+        } catch (Exception e) {
+            ScriptType.SERVER.logger().error("generateData event failed: ", e);
         }
     }
 

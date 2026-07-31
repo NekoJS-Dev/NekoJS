@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -154,6 +155,14 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             return false;
         }
         throw new IllegalStateException("This bus is not dispatchable");
+    }
+
+    /** 已注册监听的定向 key 集合；非 dispatch 总线返回空集。 */
+    public Set<KEY> registeredKeys() {
+        if (canDispatch()) {
+            return ((DispatchEventBus<EVENT, KEY>) bus).registeredKeys();
+        }
+        return Set.of();
     }
 
     @Override
