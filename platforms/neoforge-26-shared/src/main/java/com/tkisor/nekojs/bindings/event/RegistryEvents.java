@@ -8,9 +8,11 @@ import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.MobEffectRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.PaintingVariantRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ParticleTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.PotionRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.VillagerTypeRegistryEventJS;
 
 public interface RegistryEvents {
     EventGroup GROUP = EventGroup.of("RegistryEvents");
@@ -38,4 +40,10 @@ public interface RegistryEvents {
 
     EventBusJS<ParticleTypeRegistryEventJS, Void> PARTICLE_TYPE =
             GROUP.startup("particleType", ParticleTypeRegistryEventJS.class);
+
+    EventBusJS<PaintingVariantRegistryEventJS, Void> PAINTING_VARIANT =
+            GROUP.startup("paintingVariant", PaintingVariantRegistryEventJS.class);
+
+    EventBusJS<VillagerTypeRegistryEventJS, Void> VILLAGER_TYPE =
+            GROUP.startup("villagerType", VillagerTypeRegistryEventJS.class);
 }

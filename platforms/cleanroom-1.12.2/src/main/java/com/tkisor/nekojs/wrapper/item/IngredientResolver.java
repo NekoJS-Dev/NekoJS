@@ -28,8 +28,12 @@ public final class IngredientResolver {
         }
         char c = s.charAt(0);
         if (c == '*') {
-            // Wildcard - match all items (use OreDictionary wildcard)
-            return Ingredient.EMPTY; // TODO: implement wildcard matching
+            // 通配：匹配所有已注册物品（1.12.2 无原生 wildcard ingredient，枚举注册表）
+            List<ItemStack> stacks = new ArrayList<>();
+            for (Item item : ForgeRegistries.ITEMS) {
+                stacks.add(new ItemStack(item));
+            }
+            return stacks.isEmpty() ? Ingredient.EMPTY : Ingredient.fromStacks(stacks.toArray(new ItemStack[0]));
         }
         if (c == '@') {
             // @mod namespace - all items from a mod

@@ -9,8 +9,10 @@ import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.MobEffectRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ParticleTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.PaintingVariantRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.PotionRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.VillagerTypeRegistryEventJS;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -70,6 +72,14 @@ public final class RegistryEventListener {
         } else if (event.getRegistryKey().equals(Registries.PARTICLE_TYPE)) {
             ParticleTypeRegistryEventJS eventJS = new ParticleTypeRegistryEventJS(event);
             RegistryEvents.PARTICLE_TYPE.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.PAINTING_VARIANT)) {
+            PaintingVariantRegistryEventJS eventJS = new PaintingVariantRegistryEventJS(event);
+            RegistryEvents.PAINTING_VARIANT.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.VILLAGER_TYPE)) {
+            VillagerTypeRegistryEventJS eventJS = new VillagerTypeRegistryEventJS(event);
+            RegistryEvents.VILLAGER_TYPE.post(eventJS);
             eventJS.registerAll();
         }
     }

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs;
 
+import com.tkisor.nekojs.bindings.event.CommandEvents;
 import com.tkisor.nekojs.bindings.event.GoalEvents;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
@@ -116,6 +117,7 @@ public class NekoJSMod extends NekoJS {
     public void serverStarting(FMLServerStartingEvent event) {
         NekoJSCommands.registerCommands(event);
         ServerEvents.STARTING.post(event);
+        CommandEvents.REGISTER.post(event);
     }
 
     @Mod.EventHandler
