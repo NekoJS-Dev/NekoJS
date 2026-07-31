@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.api.registry.ForgeRegistryQueryService;
+import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.platform.nbt.CleanroomNbtBinaryCodec;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
@@ -82,6 +84,11 @@ public class ForgePlatform implements IPlatform {
     @Override
     public NbtBinaryCodec nbtBinaryCodec() {
         return NBT_BINARY_CODEC;
+    }
+
+    @Override
+    public RegistryQueryService registryQueryService() {
+        return ForgeRegistryQueryService.INSTANCE;
     }
 
     @Override

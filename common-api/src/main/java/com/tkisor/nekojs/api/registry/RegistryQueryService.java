@@ -20,4 +20,20 @@ public interface RegistryQueryService {
 
     /** 指定 tag 下的所有条目 id（例如 tag {@code minecraft:planks}）。 */
     List<String> tag(String registryId, String tagId);
+
+    /**
+     * 指定注册表已注册的所有 data map 类型 id（例如 {@code neoforge:furnace_fuels}）。
+     * 注册表未知或平台无 data map（如 1.12.2）时返回空列表。
+     */
+    default List<String> dataMapIds(String registryId) {
+        return List.of();
+    }
+
+    /**
+     * 读取指定注册表条目的 data map 值，序列化为 JSON 字符串。
+     * 条目 / data map 类型 / 注册表任一不存在时返回 {@code null}。
+     */
+    default String dataMapValue(String registryId, String dataMapTypeId, String id) {
+        return null;
+    }
 }

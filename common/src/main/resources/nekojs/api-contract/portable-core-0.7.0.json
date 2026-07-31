@@ -655,6 +655,31 @@
           "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
         }
       ]
+    },
+    {
+      "id": "member:RegistryView.dataMapIds",
+      "signatures": [
+        { "parameters": [], "returnType": { "kind": "ARRAY", "arguments": [{ "kind": "PRIMITIVE", "name": "string" }] } }
+      ]
+    },
+    {
+      "id": "member:RegistryView.dataMapValue",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "dataMapTypeId", "type": { "kind": "PRIMITIVE", "name": "string" } },
+            { "name": "id", "type": { "kind": "PRIMITIVE", "name": "string" } }
+          ],
+          "returnType": {
+            "kind": "UNION",
+            "arguments": [
+              { "kind": "PRIMITIVE", "name": "string" },
+              { "kind": "PRIMITIVE", "name": "null" }
+            ]
+          },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
+        }
+      ]
     }
   ]
 }

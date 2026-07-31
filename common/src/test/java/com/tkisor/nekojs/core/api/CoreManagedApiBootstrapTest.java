@@ -30,7 +30,7 @@ class CoreManagedApiBootstrapTest {
         assertEquals(ApiVersion.parse("0.7.0"),
                 core.contracts().requirePortable("nekojs-core").identity().version());
         assertEquals("nekojs-core", core.contributions().owner().ownerId());
-        assertEquals(63, core.contributions().symbolContributions().size());
+        assertEquals(65, core.contributions().symbolContributions().size());
         assertEquals(6, core.globalImplementations().size());
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.ID_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.PLATFORM_GLOBAL));

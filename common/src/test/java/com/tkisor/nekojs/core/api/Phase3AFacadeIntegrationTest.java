@@ -249,6 +249,12 @@ class Phase3AFacadeIntegrationTest {
             assertEquals("minecraft:stone",
                     context.eval("js", "Registry.get('minecraft:item').tag('minecraft:planks').join(',')").asString());
             assertEquals(false, context.eval("js", "Registry.get('minecraft:not_a_registry').exists()").asBoolean());
+            assertEquals("neoforge:furnace_fuels",
+                    context.eval("js", "Registry.get('minecraft:item').dataMapIds().join(',')").asString());
+            assertEquals("{\"burn_time\":1600}",
+                    context.eval("js", "Registry.get('minecraft:item').dataMapValue('neoforge:furnace_fuels', 'minecraft:coal')").asString());
+            assertEquals(true, context.eval("js",
+                    "Registry.get('minecraft:item').dataMapValue('neoforge:furnace_fuels', 'minecraft:stone') === null").asBoolean());
             assertEquals("TYPE_MISMATCH", context.eval("js", """
                     (() => {
                         try {
@@ -355,6 +361,22 @@ class Phase3AFacadeIntegrationTest {
             return "minecraft:item".equals(registryId) && "minecraft:planks".equals(tagId)
                     ? List.of("minecraft:stone")
                     : List.of();
+        }
+
+        @Override
+        public List<String> dataMapIds(String registryId) {
+            return "minecraft:item".equals(registryId)
+                    ? List.of("neoforge:furnace_fuels")
+                    : List.of();
+        }
+
+        @Override
+        public String dataMapValue(String registryId, String dataMapTypeId, String id) {
+            return "minecraft:item".equals(registryId)
+                    && "neoforge:furnace_fuels".equals(dataMapTypeId)
+                    && "minecraft:coal".equals(id)
+                    ? "{\"burn_time\":1600}"
+                    : null;
         }
     }
 }

@@ -54,6 +54,8 @@ class PortableCorePhase3AContractTest {
         assertTrue(symbols.containsKey(ApiSymbolId.parse("global:Registry")));
         assertTrue(symbols.containsKey(ApiSymbolId.parse("member:Registry.get")));
         assertTrue(symbols.containsKey(ApiSymbolId.parse("member:RegistryView.all")));
+        assertTrue(symbols.containsKey(ApiSymbolId.parse("member:RegistryView.dataMapIds")));
+        assertTrue(symbols.containsKey(ApiSymbolId.parse("member:RegistryView.dataMapValue")));
         assertEquals(Set.of("NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"),
                 symbols.get(ApiSymbolId.parse("member:Text.ofValues")).signatures().getFirst()
                         .errorCodes().stream().collect(Collectors.toSet()));

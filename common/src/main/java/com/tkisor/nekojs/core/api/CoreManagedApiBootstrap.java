@@ -202,6 +202,10 @@ public final class CoreManagedApiBootstrap {
                 ((RegistryView) receiver).has((String) args.getFirst()));
         register(contributions, symbols, "member:RegistryView.tag", (receiver, args) ->
                 ((RegistryView) receiver).tag((String) args.getFirst()));
+        register(contributions, symbols, "member:RegistryView.dataMapIds", (receiver, args) ->
+                ((RegistryView) receiver).dataMapIds());
+        register(contributions, symbols, "member:RegistryView.dataMapValue", (receiver, args) ->
+                ((RegistryView) receiver).dataMapValue((String) args.getFirst(), (String) args.get(1)));
 
         return new CoreManagedApi(
                 contracts,

@@ -55,6 +55,17 @@ class DefaultRegistryFacadeTest {
                 assertThrows(ApiInvocationException.class, () -> items.tag(" ")).code());
     }
 
+    @Test
+    void exposesDataMapQueriesThroughTheView() {
+        RegistryView items = registry.get("minecraft:item");
+
+        // fixture service 未覆写 dataMap 方法 → 走 SPI default（空列表 / null）。
+        assertEquals(List.of(), items.dataMapIds());
+        assertEquals(null, items.dataMapValue("neoforge:furnace_fuels", "minecraft:coal"));
+        assertEquals(ApiErrorCodes.TYPE_MISMATCH,
+                assertThrows(ApiInvocationException.class, () -> items.dataMapValue(" ", "minecraft:coal")).code());
+    }
+
     private static RegistryQueryService fixtureService() {
         return new RegistryQueryService() {
             @Override

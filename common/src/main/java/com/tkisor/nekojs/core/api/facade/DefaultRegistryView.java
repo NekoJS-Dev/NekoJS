@@ -37,6 +37,16 @@ public final class DefaultRegistryView implements RegistryView {
         return service.tag(registryId, requireId(tagId));
     }
 
+    @Override
+    public List<String> dataMapIds() {
+        return service.dataMapIds(registryId);
+    }
+
+    @Override
+    public String dataMapValue(String dataMapTypeId, String id) {
+        return service.dataMapValue(registryId, requireId(dataMapTypeId), requireId(id));
+    }
+
     private static String requireId(String id) {
         Objects.requireNonNull(id, "id");
         if (id.isBlank()) {

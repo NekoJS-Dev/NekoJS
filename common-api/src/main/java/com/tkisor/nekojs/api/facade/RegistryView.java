@@ -19,4 +19,10 @@ public interface RegistryView {
 
     /** 指定 tag 下的所有条目 id。 */
     List<String> tag(String tagId);
+
+    /** 该注册表已注册的所有 data map 类型 id（如 {@code neoforge:furnace_fuels}）。 */
+    List<String> dataMapIds();
+
+    /** 读取指定条目的 data map 值（JSON 字符串）；条目/类型不存在返回 {@code null}。 */
+    String dataMapValue(String dataMapTypeId, String id);
 }

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.registry;
 
+import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -8,8 +9,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.neoforged.neoforge.registries.IRegistryExtension;
+import net.neoforged.neoforge.registries.RegistryManager;
+import net.neoforged.neoforge.registries.datamaps.DataMapType;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -80,6 +85,66 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
                                 .orElse(null))
                         .filter(java.util.Objects::nonNull)
                         .toList());
+    }
+
+    @Override
+    public List<String> dataMapIds(String registryId) {
+        Identifier registryIdentifier = Identifier.tryParse(registryId);
+        if (registryIdentifier == null) {
+            return List.of();
+        }
+        return RegistryManager.getDataMaps().entrySet().stream()
+                .filter(entry -> entry.getKey().identifier().equals(registryIdentifier))
+                .flatMap(entry -> entry.getValue().keySet().stream())
+                .map(Identifier::toString)
+                .sorted()
+                .toList();
+    }
+
+    @Override
+    public String dataMapValue(String registryId, String dataMapTypeId, String id) {
+        Identifier registryIdentifier = Identifier.tryParse(registryId);
+        Identifier typeIdentifier = Identifier.tryParse(dataMapTypeId);
+        Identifier entryIdentifier = Identifier.tryParse(id);
+        if (registryIdentifier == null || typeIdentifier == null || entryIdentifier == null) {
+            return null;
+        }
+        Optional<ResourceKey<? extends Registry<?>>> key = resolveKey(registryId);
+        if (key.isEmpty()) {
+            return null;
+        }
+        DataMapType<?, ?> type = RegistryManager.getDataMap(rawKey(key.get()), typeIdentifier);
+        if (type == null) {
+            return null;
+        }
+        Registry<?> registryValue = registry(key.get()).orElse(null);
+        if (registryValue == null) {
+            return null;
+        }
+        Object value = dataMapValueFor(registryValue, type, entryIdentifier);
+        return value == null ? null : encodeValue(type, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Object dataMapValueFor(Registry<?> registryValue, DataMapType<?, ?> type, Identifier entryLocation) {
+        Map<ResourceKey<?>, ?> values = ((IRegistryExtension) registryValue).getDataMap((DataMapType) type);
+        return values.get(ResourceKey.create(registryValue.key(), entryLocation));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static String encodeValue(DataMapType<?, ?> type, Object value) {
+        try {
+            var result = ((DataMapType) type).codec().encodeStart(JsonOps.INSTANCE, value);
+            Optional<?> encoded = result.result();
+            return encoded.map(e -> e.toString()).orElseGet(() -> value.toString());
+        } catch (RuntimeException error) {
+            return value.toString();
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static ResourceKey rawKey(ResourceKey<?> key) {
+        return key;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
