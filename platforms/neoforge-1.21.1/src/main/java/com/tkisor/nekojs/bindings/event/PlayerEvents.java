@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.wrapper.event.player.InventoryChangedEventJS;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -52,12 +53,20 @@ public interface PlayerEvents {
     EventBusJS<PlayerDestroyItemEvent, Item> DESTROYED =
             GROUP.server("destroyed", PlayerDestroyItemEvent.class, dispatchByItem(PlayerDestroyItemEvent::getOriginal));
 
+    /** 玩家物品栏变化：按物品 id 分发（{@code PlayerEvents.inventoryChanged('minecraft:stone', ...)}）。 */
+    EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
+            GROUP.server("inventoryChanged", InventoryChangedEventJS.class, dispatchByInventoryItem());
+
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
         return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
     }
 
     private static <T extends ItemEntityPickupEvent> DispatchKey<T, Item> dispatchByPickupItem() {
         return dispatchByItem(event -> event.getItemEntity().getItem());
+    }
+
+    private static DispatchKey<InventoryChangedEventJS, Item> dispatchByInventoryItem() {
+        return EventBusFactory.createDispatchKey(Item.class, e -> e.getItem().getItem());
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)

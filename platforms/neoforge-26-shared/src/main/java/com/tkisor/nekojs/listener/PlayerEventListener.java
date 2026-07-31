@@ -20,6 +20,14 @@ public class PlayerEventListener {
 
                 player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(), false);
             }
+            // 挂载物品栏监听器（inventoryChanged 事件）
+            InventoryChangeListener.getOrCreate(player);
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        // 克隆（维度切换 / 死亡重生）后重新挂载：新玩家实体的 inventoryMenu 是新的
+        InventoryChangeListener.getOrCreate(event.getEntity());
     }
 }
