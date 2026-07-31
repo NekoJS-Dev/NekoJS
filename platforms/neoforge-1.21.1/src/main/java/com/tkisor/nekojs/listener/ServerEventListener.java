@@ -12,6 +12,7 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
@@ -55,6 +56,7 @@ public class ServerEventListener {
     private static void postGenerateData() {
         try {
             DataGeneratorJS generator = new DataGeneratorJS(NekoJSPaths.get().data(), "after_mods");
+            PluginGenerationHooks.fireGenerateData(generator);
             ServerEvents.GENERATE_DATA.post(generator, "after_mods");
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("generateData event failed: ", e);

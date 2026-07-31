@@ -17,6 +17,8 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.core.plugin.PluginLifecycleRegister;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.AttachedData;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 
 /**
  * NekoJS 插件接口。合并自原 {@code NekoJSBasePlugin}、{@code NekoJSPlugin} 与 {@code RecipeLifecyclePlugin}。
@@ -158,5 +160,28 @@ public interface NekoJSPlugin {
      * 对应 server/client/startup/test 脚本目录。默认空实现。
      */
     default void modifyWorkspaceConfig(JSConfigModel model, String env) {
+    }
+
+    /**
+     * 生成 datapack 数据（写入 {@code <gameDir>/nekojs/data}，随服务器资源 reload 生效）。
+     * 在 {@code ServerEvents.generateData} 脚本事件之前触发，与脚本共享同一 generator 实例。
+     * 每次服务器资源 reload 都会重新触发。
+     */
+    default void generateData(DataGeneratorJS generator) {
+    }
+
+    /**
+     * 生成资源包资产（写入 {@code <gameDir>/nekojs/assets}，随客户端资源 reload 生效）。
+     * 在 {@code ClientEvents.generateAssets} 脚本事件之前触发，与脚本共享同一 generator 实例。
+     * 每次客户端资源 reload（F3+T）都会重新触发。
+     */
+    default void generateAssets(DataGeneratorJS generator) {
+    }
+
+    /**
+     * 生成语言条目（按语言代码聚合，合并写入 {@code <gameDir>/nekojs/assets/lang/<lang>.json}）。
+     * 在 {@code ClientEvents.lang} 脚本事件之前触发，与脚本共享同一 generator 实例。
+     */
+    default void generateLang(LangGeneratorJS generator) {
     }
 }

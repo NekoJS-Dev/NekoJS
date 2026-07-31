@@ -6,6 +6,7 @@ import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
@@ -78,10 +79,12 @@ public class NekoJSClient {
         try {
             Path assets = NekoJSPaths.get().assets();
             DataGeneratorJS generator = new DataGeneratorJS(assets, "after_mods");
+            PluginGenerationHooks.fireGenerateAssets(generator);
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
             // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
             for (String lang : ClientEvents.LANG.registeredKeys()) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
+                PluginGenerationHooks.fireGenerateLang(langGenerator);
                 ClientEvents.LANG.post(langGenerator, lang);
                 langGenerator.writeTo(assets, lang);
             }
