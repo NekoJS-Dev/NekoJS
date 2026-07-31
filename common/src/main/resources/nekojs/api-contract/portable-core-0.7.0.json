@@ -532,6 +532,12 @@
       ]
     },
     {
+      "id": "member:NBT.compound",
+      "signatures": [
+        { "parameters": [], "returnType": { "kind": "PRIMITIVE", "name": "object" }, "errorCodes": ["API_CONTRACT_VIOLATION"] }
+      ]
+    },
+    {
       "id": "member:NBT.toSnbt",
       "signatures": [
         { "parameters": [{ "name": "value", "type": { "kind": "SYMBOL", "name": "type:NbtValue" } }], "returnType": { "kind": "PRIMITIVE", "name": "string" }, "errorCodes": ["NBT_LIMIT_EXCEEDED"] }

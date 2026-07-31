@@ -163,6 +163,8 @@ public final class CoreManagedApiBootstrap {
                 json.toPrettyString((JsonValue) receiver));
 
         register(contributions, symbols, "global:NBT", (receiver, args) -> nbt);
+        register(contributions, symbols, "member:NBT.compound", (receiver, args) ->
+                new com.tkisor.nekojs.wrapper.nbt.CompoundTagBuilderJS());
         register(contributions, symbols, "member:NBT.of", (receiver, args) -> nbt.of((NbtValue) args.getFirst()));
         register(contributions, symbols, "member:NBT.byte", (receiver, args) -> nbt.byteValue((Number) args.getFirst()));
         register(contributions, symbols, "member:NBT.short", (receiver, args) -> nbt.shortValue((Number) args.getFirst()));

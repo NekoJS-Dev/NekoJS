@@ -67,8 +67,6 @@ repositories {
 dependencies {
     // Cleanroom / Mixin
     compileOnly "com.cleanroommc:sponge-mixin:0.20.13+mixin.0.8.7"
-    // Cleanroom launchwrapper (IClassTransformer) — needed for the coremod that injects Item.of
-    compileOnly "top.outlands:foundation:0.19.7"
     if (enable_lwjglx.toBoolean()) {
         compileOnly "com.cleanroommc:lwjglx:1.0.0"
     }
@@ -119,10 +117,6 @@ unimined.minecraft {
         runs.all {
             systemProperty("crl.dev.mixin", "${mod_id}.default.mixin.json,${mod_id}.mod.mixin.json")
             args += ['--username', minecraft_username]
-//            def extraArgs = extra_jvm_args
-//            if (extraArgs != null && !extraArgs.trim().isEmpty()) {
-//                jvmArgs += extraArgs.split { "\\s+" }.toList()
-//            }
             return
         }
     }
@@ -169,10 +163,6 @@ sourceSets {
                 property('mod_version', mod_version)
                 property('mod_description', mod_description)
                 property('mod_authors', mod_authors.toString().split(',').findAll { !it.isBlank() }.collect { "\"${it.strip()}\"" }.join(', '))
-//                property('mod_credits', mod_credits)
-//                property('mod_url', mod_url)
-//                property('mod_update_json', mod_update_json)
-//                property('mod_logo_path', mod_logo_path)
             }
         }
     }
@@ -182,29 +172,6 @@ idea {
     module {
         inheritOutputDirs = true
     }
-//    project {
-//        settings {
-//            runConfigurations {
-//                '1. Build'(Gradle) {
-//                    taskNames = ["build"]
-//                }
-//                '2. Run Client'(Gradle) {
-//                    taskNames = ["runClient"]
-//                }
-//                '3. Run Server'(Gradle) {
-//                    taskNames = ["runServer"]
-//                }
-//            }
-//            compiler.javac {
-//                afterEvaluate {
-//                    javacAdditionalOptions = '-encoding utf8'
-//                    moduleJavacAdditionalOptions = [
-//                            (project.name + '.main'): tasks.compileJava.options.compilerArgs.collect { "\"${it}\"" }.join(' ')
-//                    ]
-//                }
-//            }
-//        }
-//    }
 }
 
 if (!enable_shadow.toBoolean()) {
