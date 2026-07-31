@@ -3,6 +3,8 @@ package com.tkisor.nekojs.command;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.bindings.event.ServerEvents;
+import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.listener.RegistryEventListener;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
@@ -10,6 +12,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.probe.ProbeRegistry;
 import com.tkisor.nekojs.script.ScriptManager;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -20,6 +23,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -107,12 +111,30 @@ public class NekoJSCommands extends CommandBase {
                 // unfreeze → drop old nekojs recipes → re-post recipe event → refreeze.
                 if (type == ScriptType.SERVER) {
                     RegistryEventListener.reloadRecipes();
+                    generateData(server);
                 }
             }
             sender.sendMessage(new TextComponentString("NekoJS " + type.name + " scripts reloaded."));
         } catch (Throwable e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
             sender.sendMessage(new TextComponentString("Reloading NekoJS " + type.name + " scripts failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 数据生成：插件与脚本把 datapack JSON 写入 {@code <worldDir>/data}
+     * （loot tables / advancements / functions），随后 {@code server.reload()}
+     * 使内容生效（vanilla /reload 等价物，同步且玩家安全）。
+     */
+    private static void generateData(MinecraftServer server) {
+        try {
+            Path dataDir = server.getWorld(0).getSaveHandler().getWorldDirectory().toPath().resolve("data");
+            DataGeneratorJS generator = new DataGeneratorJS(dataDir, "after_mods");
+            PluginGenerationHooks.fireGenerateData(generator);
+            ServerEvents.GENERATE_DATA.post(generator, "after_mods");
+            server.reload();
+        } catch (Exception e) {
+            ScriptType.SERVER.logger().error("generateData event failed", e);
         }
     }
 

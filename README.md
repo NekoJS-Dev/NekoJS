@@ -404,6 +404,12 @@ ClientEvents.lang('en_us', event => {
 - 每次服务器 / 客户端（F3+T）资源 reload 都会重新触发，脚本需保持幂等（重复写入会覆盖）。
 - 外部 mod 可通过 `NekoJSPlugin.generateData/generateAssets/generateLang` 钩子生成数据（先于脚本事件触发）。
 
+Cleanroom 1.12.2 平台的差异：
+
+- `generateData` 写入 `<worldDir>/data`（loot tables / advancements / functions），由 `/nekojs reload server` 触发并调用 `server.reload()`（vanilla /reload 等价物）使内容生效。
+- `generateAssets` 写入 `<gameDir>/nekojs/assets`，由 `MinecraftMixin` 注册为 `FolderResourcePack`，每次 F3+T（或首次进入游戏）生效；由于 `LanguageManager` 是第一个资源 reload listener，生成先于模型/纹理加载。
+- `lang` 为 `.lang` 文本格式，不写 JSON 文件：条目经 `LanguageManagerMixin` 直接注入当前语言的 `Locale`（mixin 注入，无反射），并 `LanguageMap.replaceWith` 同步到 I18n。
+
 ---
 
 ## 路线图

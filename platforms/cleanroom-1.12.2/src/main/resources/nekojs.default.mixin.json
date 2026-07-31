@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_8",
   "target": "@env(DEFAULT)",
   "client": [
-    "MinecraftMixin"
+    "MinecraftMixin",
+    "LanguageManagerMixin",
+    "LocaleAccessor"
   ],
   "mixins": [
     "ForgeRegistryMixin",

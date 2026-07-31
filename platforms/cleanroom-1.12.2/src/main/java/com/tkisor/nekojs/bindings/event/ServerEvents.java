@@ -1,8 +1,10 @@
 package com.tkisor.nekojs.bindings.event;
 
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.LootTableLoadEvent;
@@ -30,6 +32,26 @@ public interface ServerEvents {
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
+
+    /** 数据生成阶段 key：脚本以 {@code ServerEvents.generateData('after_mods', ...)} 定向。 */
+    DispatchKey<DataGeneratorJS, String> STAGE_KEY = new DispatchKey<>() {
+        @Override
+        public Class<String> keyType() {
+            return String.class;
+        }
+
+        @Override
+        public String eventToKey(DataGeneratorJS event) {
+            return event.getStage();
+        }
+    };
+
+    /**
+     * 数据生成事件：脚本把 datapack JSON 写入 {@code <worldDir>/data}（loot tables /
+     * advancements / functions），随后由命令处理器调用 {@code server.reload()} 使内容生效。
+     */
+    EventBusJS<DataGeneratorJS, String> GENERATE_DATA =
+            GROUP.server("generateData", DataGeneratorJS.class, STAGE_KEY);
 
     // 服务器生命周期事件：FMLServer*Event 继承 FMLEvent（而非 eventhandler.Event），
     // 不走 MinecraftForge.EVENT_BUS，无法用 EventBusForgeBridge 订阅。
