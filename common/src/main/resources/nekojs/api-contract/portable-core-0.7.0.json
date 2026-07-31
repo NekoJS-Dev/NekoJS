@@ -4,9 +4,9 @@
     "owner": "nekojs-core",
     "kind": "PORTABLE",
     "contractId": "portable-core",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
-  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, and compressed binary NBT contract candidate.",
+  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, and registry query contract candidate.",
   "errors": [
     { "code": "UNSUPPORTED_CAPABILITY", "fields": ["symbolId", "requiredCapability", "platform", "minecraftVersion"] },
     { "code": "UNSUPPORTED_MODULE", "fields": ["symbolId", "platform", "minecraftVersion"] },
@@ -606,6 +606,54 @@
       "id": "member:NbtEntry.value",
       "signatures": [
         { "parameters": [], "returnType": { "kind": "SYMBOL", "name": "type:NbtValue" } }
+      ]
+    },
+    {
+      "id": "global:Registry",
+      "signatures": [
+        { "parameters": [], "returnType": { "kind": "PRIMITIVE", "name": "object" } }
+      ]
+    },
+    {
+      "id": "member:Registry.get",
+      "signatures": [
+        {
+          "parameters": [{ "name": "registryId", "type": { "kind": "PRIMITIVE", "name": "string" } }],
+          "returnType": { "kind": "SYMBOL", "name": "type:RegistryView" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
+        }
+      ]
+    },
+    {
+      "id": "member:RegistryView.exists",
+      "signatures": [
+        { "parameters": [], "returnType": { "kind": "PRIMITIVE", "name": "boolean" } }
+      ]
+    },
+    {
+      "id": "member:RegistryView.all",
+      "signatures": [
+        { "parameters": [], "returnType": { "kind": "ARRAY", "arguments": [{ "kind": "PRIMITIVE", "name": "string" }] } }
+      ]
+    },
+    {
+      "id": "member:RegistryView.has",
+      "signatures": [
+        {
+          "parameters": [{ "name": "id", "type": { "kind": "PRIMITIVE", "name": "string" } }],
+          "returnType": { "kind": "PRIMITIVE", "name": "boolean" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
+        }
+      ]
+    },
+    {
+      "id": "member:RegistryView.tag",
+      "signatures": [
+        {
+          "parameters": [{ "name": "tagId", "type": { "kind": "PRIMITIVE", "name": "string" } }],
+          "returnType": { "kind": "ARRAY", "arguments": [{ "kind": "PRIMITIVE", "name": "string" }] },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
+        }
       ]
     }
   ]

@@ -8,6 +8,7 @@ import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.api.surface.LoaderVersion;
 import com.tkisor.nekojs.api.surface.RuntimeDist;
 import com.tkisor.nekojs.api.surface.ScriptTypeId;
+import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.platform.IModInfo;
 import com.tkisor.nekojs.platform.IPlatform;
 import com.tkisor.nekojs.platform.PlatformCapability;
@@ -60,6 +61,9 @@ class Phase3AFacadeIntegrationTest {
             context.getBindings("js").putMember("NBT",
                     ApiFacadeProxy.global(registry, CoreManagedApiBootstrap.NBT_GLOBAL,
                             core.globalImplementations().get(CoreManagedApiBootstrap.NBT_GLOBAL), errors));
+            context.getBindings("js").putMember("Registry",
+                    ApiFacadeProxy.global(registry, CoreManagedApiBootstrap.REGISTRY_GLOBAL,
+                            core.globalImplementations().get(CoreManagedApiBootstrap.REGISTRY_GLOBAL), errors));
 
             assertEquals("minecraft:stone", context.eval("js", "ID.asString(ID.of('minecraft:stone'))").asString());
             assertEquals("nekojs:script", context.eval("js", "ID.of('script').asString()").asString());
@@ -237,6 +241,24 @@ class Phase3AFacadeIntegrationTest {
                         }
                     })()
                     """).asString());
+            assertEquals("minecraft:stone,minecraft:dirt",
+                    context.eval("js", "Registry.get('minecraft:item').all().join(',')").asString());
+            assertEquals(true, context.eval("js", "Registry.get('minecraft:item').exists()").asBoolean());
+            assertEquals(true, context.eval("js", "Registry.get('minecraft:item').has('minecraft:stone')").asBoolean());
+            assertEquals(false, context.eval("js", "Registry.get('minecraft:item').has('minecraft:netherite_block')").asBoolean());
+            assertEquals("minecraft:stone",
+                    context.eval("js", "Registry.get('minecraft:item').tag('minecraft:planks').join(',')").asString());
+            assertEquals(false, context.eval("js", "Registry.get('minecraft:not_a_registry').exists()").asBoolean());
+            assertEquals("TYPE_MISMATCH", context.eval("js", """
+                    (() => {
+                        try {
+                            Registry.get('  ');
+                            return 'missing-error';
+                        } catch (error) {
+                            return error.code;
+                        }
+                    })()
+                    """).asString());
         }
     }
 
@@ -267,6 +289,7 @@ class Phase3AFacadeIntegrationTest {
                     PlatformCapability.NBT_BINARY_IO);
         }
         @Override public NbtBinaryCodec nbtBinaryCodec() { return new FixtureNbtCodec(); }
+        @Override public RegistryQueryService registryQueryService() { return new FixtureRegistryQueryService(); }
         @Override public String getLoaderId() { return "neoforge"; }
         @Override public String getLoaderVersion() { return "21.1.0"; }
     }
@@ -306,5 +329,32 @@ class Phase3AFacadeIntegrationTest {
         @Override public void setName(String name) { throw new UnsupportedOperationException(); }
         @Override public String getVersion() { return version; }
         @Override public String getCustomName() { return name; }
+    }
+
+    private static final class FixtureRegistryQueryService implements RegistryQueryService {
+        @Override
+        public boolean hasRegistry(String registryId) {
+            return "minecraft:item".equals(registryId);
+        }
+
+        @Override
+        public List<String> all(String registryId) {
+            return "minecraft:item".equals(registryId)
+                    ? List.of("minecraft:stone", "minecraft:dirt")
+                    : List.of();
+        }
+
+        @Override
+        public boolean has(String registryId, String id) {
+            return "minecraft:item".equals(registryId)
+                    && Set.of("minecraft:stone", "minecraft:dirt").contains(id);
+        }
+
+        @Override
+        public List<String> tag(String registryId, String tagId) {
+            return "minecraft:item".equals(registryId) && "minecraft:planks".equals(tagId)
+                    ? List.of("minecraft:stone")
+                    : List.of();
+        }
     }
 }

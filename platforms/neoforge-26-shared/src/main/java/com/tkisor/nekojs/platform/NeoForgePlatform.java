@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.api.registry.RegistryQueryService;
+import com.tkisor.nekojs.api.registry.NeoForgeRegistryQueryService;
 import com.tkisor.nekojs.platform.nbt.NeoForgeNbtBinaryCodec;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLLoader;
@@ -80,6 +82,11 @@ public class NeoForgePlatform implements IPlatform {
     @Override
     public NbtBinaryCodec nbtBinaryCodec() {
         return NBT_BINARY_CODEC;
+    }
+
+    @Override
+    public RegistryQueryService registryQueryService() {
+        return NeoForgeRegistryQueryService.INSTANCE;
     }
 
     @Override

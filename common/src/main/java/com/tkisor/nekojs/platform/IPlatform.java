@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
@@ -67,6 +68,11 @@ public interface IPlatform {
 
     default NbtBinaryCodec nbtBinaryCodec() {
         return NbtBinaryCodec.unsupported();
+    }
+
+    /** 只读注册表查询服务；平台不支持时返回 {@code null}（脚本侧 {@code Registry} 查询返回空结果）。 */
+    default RegistryQueryService registryQueryService() {
+        return null;
     }
 
     /** Loader identifier, e.g. "neoforge", "cleanroom", "forge". */

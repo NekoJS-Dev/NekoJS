@@ -11,7 +11,10 @@ import com.tkisor.nekojs.api.data.JsonValue;
 import com.tkisor.nekojs.api.data.NbtValue;
 import com.tkisor.nekojs.api.data.NbtEntry;
 import com.tkisor.nekojs.api.facade.ModInfoValue;
+import com.tkisor.nekojs.api.facade.RegistryFacade;
+import com.tkisor.nekojs.api.facade.RegistryView;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
+import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.api.surface.ApiCallHandler;
 import com.tkisor.nekojs.api.surface.ApiContribution;
 import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
@@ -23,6 +26,7 @@ import com.tkisor.nekojs.api.surface.ApiVersion;
 import com.tkisor.nekojs.api.surface.ScriptTypeId;
 import com.tkisor.nekojs.core.api.facade.DefaultIdFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultPlatformFacade;
+import com.tkisor.nekojs.core.api.facade.DefaultRegistryFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultTextFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultJsonFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultNbtFacade;
@@ -42,15 +46,38 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public final class CoreManagedApiBootstrap {
-    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.6.0.json";
+    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.7.0.json";
     public static final ApiSymbolId ID_GLOBAL = ApiSymbolId.parse("global:ID");
     public static final ApiSymbolId PLATFORM_GLOBAL = ApiSymbolId.parse("global:Platform");
     public static final ApiSymbolId TEXT_GLOBAL = ApiSymbolId.parse("global:Text");
     public static final ApiSymbolId JSON_IO_GLOBAL = ApiSymbolId.parse("global:JsonIO");
     public static final ApiSymbolId NBT_GLOBAL = ApiSymbolId.parse("global:NBT");
+    public static final ApiSymbolId REGISTRY_GLOBAL = ApiSymbolId.parse("global:Registry");
 
     private CoreManagedApiBootstrap() {
     }
+
+    private static final RegistryQueryService EMPTY_REGISTRY_SERVICE = new RegistryQueryService() {
+        @Override
+        public boolean hasRegistry(String registryId) {
+            return false;
+        }
+
+        @Override
+        public List<String> all(String registryId) {
+            return List.of();
+        }
+
+        @Override
+        public boolean has(String registryId, String id) {
+            return false;
+        }
+
+        @Override
+        public List<String> tag(String registryId, String tagId) {
+            return List.of();
+        }
+    };
 
     public static CoreManagedApi load(IPlatform platform, URI codeSource) {
         Objects.requireNonNull(platform, "platform");
@@ -159,6 +186,23 @@ public final class CoreManagedApiBootstrap {
         register(contributions, symbols, "member:NbtEntry.key", (receiver, args) -> ((NbtEntry) receiver).key());
         register(contributions, symbols, "member:NbtEntry.value", (receiver, args) -> ((NbtEntry) receiver).value());
 
+        RegistryQueryService registryService = platform.registryQueryService();
+        if (registryService == null) {
+            registryService = EMPTY_REGISTRY_SERVICE;
+        }
+        RegistryFacade registry = new DefaultRegistryFacade(registryService);
+        register(contributions, symbols, "global:Registry", (receiver, args) -> registry);
+        register(contributions, symbols, "member:Registry.get", (receiver, args) ->
+                registry.get((String) args.getFirst()));
+        register(contributions, symbols, "member:RegistryView.exists", (receiver, args) ->
+                ((RegistryView) receiver).exists());
+        register(contributions, symbols, "member:RegistryView.all", (receiver, args) ->
+                ((RegistryView) receiver).all());
+        register(contributions, symbols, "member:RegistryView.has", (receiver, args) ->
+                ((RegistryView) receiver).has((String) args.getFirst()));
+        register(contributions, symbols, "member:RegistryView.tag", (receiver, args) ->
+                ((RegistryView) receiver).tag((String) args.getFirst()));
+
         return new CoreManagedApi(
                 contracts,
                 contributions,
@@ -167,7 +211,8 @@ public final class CoreManagedApiBootstrap {
                         PLATFORM_GLOBAL, platformFacade,
                         TEXT_GLOBAL, text,
                         JSON_IO_GLOBAL, json,
-                        NBT_GLOBAL, nbt));
+                        NBT_GLOBAL, nbt,
+                        REGISTRY_GLOBAL, registry));
     }
 
     private static VerifiedApiContract readContract(URI codeSource) {
@@ -176,7 +221,7 @@ public final class CoreManagedApiBootstrap {
             throw new IllegalStateException("Core managed API contract not found: " + RESOURCE);
         }
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.6.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.7.0"));
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
         } catch (IOException e) {

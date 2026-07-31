@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PortableCorePhase3AContractTest {
-    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.6.0.json";
+    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.7.0.json";
 
     @Test
     void productionReaderAcceptsPlatformAndIdContract() {
@@ -28,7 +28,7 @@ class PortableCorePhase3AContractTest {
         assertNotNull(stream);
 
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.6.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.7.0"));
         VerifiedApiContract verified = ApiContractReader.readVerified(
                 new InputStreamReader(stream, StandardCharsets.UTF_8),
                 URI.create("nekojs:///core"), RESOURCE, identity, null);
@@ -51,6 +51,9 @@ class PortableCorePhase3AContractTest {
         assertTrue(symbols.containsKey(ApiSymbolId.parse("member:NbtValue.toSnbt")));
         assertTrue(symbols.containsKey(ApiSymbolId.parse("member:NBT.read")));
         assertTrue(symbols.containsKey(ApiSymbolId.parse("member:NBT.write")));
+        assertTrue(symbols.containsKey(ApiSymbolId.parse("global:Registry")));
+        assertTrue(symbols.containsKey(ApiSymbolId.parse("member:Registry.get")));
+        assertTrue(symbols.containsKey(ApiSymbolId.parse("member:RegistryView.all")));
         assertEquals(Set.of("NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"),
                 symbols.get(ApiSymbolId.parse("member:Text.ofValues")).signatures().getFirst()
                         .errorCodes().stream().collect(Collectors.toSet()));
