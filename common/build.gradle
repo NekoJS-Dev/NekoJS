@@ -45,8 +45,6 @@ dependencies {
     api project(':common-api')
 
     // JSON Schema (Draft 2020-12) 校验，用于运行时校验 normative API 契约。
-    // 选用 dev.harrel 而非 networknt：内置 Gson provider、不强绑 jackson、零传递依赖，
-    // 避免 jackson+snakeyaml+ethlo 一整条依赖链被内嵌进平台 jar。运行时由平台 jar 内嵌提供。
     implementation 'dev.harrel:json-schema:1.8.1'
 
     testImplementation platform('org.junit:junit-bom:6.0.0')

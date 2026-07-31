@@ -378,6 +378,32 @@ ScriptEvents.server(event => event.register({
 
 自定义事件不会写入插件 bootstrap 的静态事件表；startup reload 会刷新事件定义，server/client reload 会清理对应脚本 listener，避免重复回调。
 
+## 数据与资产生成
+
+脚本可以在资源 reload 时生成 datapack / 资源包 JSON（战利品表、进度、模型、lang 等），写入 `<gameDir>/nekojs/data` 与 `<gameDir>/nekojs/assets`（已注册为 TOP 位置的 datapack / resource pack，懒读保证 reload 时序正确）：
+
+```js
+ServerEvents.generateData('after_mods', event => {
+  event.json('minecraft:loot_tables/blocks/stone.json', {
+    type: 'minecraft:block',
+    pools: []
+  });
+  event.text('minecraft:nekojs/hello.txt', 'content');
+});
+
+ClientEvents.generateAssets('after_mods', event => {
+  event.json('minecraft:models/block/foo.json', { parent: 'minecraft:block/cube_all' });
+});
+
+ClientEvents.lang('en_us', event => {
+  event.add('minecraft:item.foo', 'Foo Item');
+});
+```
+
+- `generateData` / `generateAssets` 按阶段定向（当前支持 `after_mods`）；`lang` 按语言代码定向（`en_us` 等），条目合并写入 `lang/<lang>.json`（保留已有条目）。
+- 每次服务器 / 客户端（F3+T）资源 reload 都会重新触发，脚本需保持幂等（重复写入会覆盖）。
+- 外部 mod 可通过 `NekoJSPlugin.generateData/generateAssets/generateLang` 钩子生成数据（先于脚本事件触发）。
+
 ---
 
 ## 路线图
