@@ -309,7 +309,7 @@ NekoJS 提供 11 个事件组（以 NeoForge 26.x 为准，平台支持范围以
 实体事件 (EntityEvents)          约 13 个  hurtPre / hurtPost / death ...
 方块事件 (BlockEvents)           约 11 个  broken / rightClicked / placed ...
 物品事件 (ItemEvents)             约 8 个  rightClicked / tooltip / crafted ...
-注册事件 (RegistryEvents)         约 3 个  item / block / fluid（启动时事件）
+注册事件 (RegistryEvents)         约 5 个  item / block / entityType / fluid / creativeModeTab（启动时事件）
 命令事件 (CommandEvents)          约 2 个  register ...
 目标事件 (GoalEvents)             约 1 个
 关卡事件 (LevelEvents)           约 10 个  loaded / unloaded / tick ...
@@ -445,6 +445,33 @@ RecipeViewerEvents.addInformation(event => {
 - 条目事件按类型定向（`'item'` / `'fluid'`，可传物品/流体 id 或对象）；配方/类别按 id 定向。
 - 事件在 JEI 运行时重建（每次资源 reload）时触发，脚本需保持幂等。
 - 仅在安装 JEI 时生效；REI / EMI 集成不在本次范围内。
+
+## 内容注册（Fluid / CreativeTab）
+
+除已有的 item / block / entityType 外，startup 脚本可注册流体与创造模式标签页（NeoForge 1.21.1 / 26.1 / 26.2）：
+
+```js
+StartupEvents.registry('fluid', event => {
+  event.create('nekojs:molten_iron')
+    .displayName('Molten Iron')   // 翻译 key，配合 lang 事件提供文本
+    .density(2000)
+    .viscosity(2000)
+    .temperature(1500)
+    .lightLevel(12);
+});
+
+StartupEvents.registry('creativeModeTab', event => {
+  event.create('nekojs:custom')
+    .title('Custom Tab')
+    .icon('minecraft:iron_ingot')
+    .add('minecraft:stone')
+    .add('minecraft:diamond');
+});
+```
+
+- 流体实现为简单流体（单一源流体、无流动、无流体方块、桶返回空气）；26.x 渲染为模型驱动，纹理通过资源包模型提供；1.21.1 的纹理亦留给资源包 / 后续扩展。
+- `FluidRegistryEventJS` 用 PENDING Map 处理 `FLUID_TYPES` / `FLUID` 双 registry 分支（按 id 去重，幂等）。
+- 标签页条目在注册时快照（注册后新增条目需重新注册 / 重进存档）。
 
 ---
 

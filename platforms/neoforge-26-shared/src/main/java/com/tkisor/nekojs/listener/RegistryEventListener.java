@@ -3,13 +3,16 @@ package com.tkisor.nekojs.listener;
 import com.tkisor.nekojs.bindings.event.RegistryEvents;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.CreativeTabRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 public final class RegistryEventListener {
@@ -37,6 +40,17 @@ public final class RegistryEventListener {
             });
 
             BlockRegistryEventJS.PENDING_BLOCK_ITEMS.clear();
+        } else if (event.getRegistryKey().equals(NeoForgeRegistries.FLUID_TYPES.key())) {
+            // 流体类型与流体本体分属两个 registry；两个分支都 post（create 按 id 覆盖去重）
+            RegistryEvents.FLUID.post(new FluidRegistryEventJS());
+            FluidRegistryEventJS.registerTypes(event);
+        } else if (event.getRegistryKey().equals(Registries.FLUID)) {
+            RegistryEvents.FLUID.post(new FluidRegistryEventJS());
+            FluidRegistryEventJS.registerFluids(event);
+        } else if (event.getRegistryKey().equals(Registries.CREATIVE_MODE_TAB)) {
+            CreativeTabRegistryEventJS eventJS = new CreativeTabRegistryEventJS(event);
+            RegistryEvents.CREATIVE_MODE_TAB.post(eventJS);
+            eventJS.registerAll();
         }
     }
 
