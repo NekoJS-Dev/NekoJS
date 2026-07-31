@@ -7,6 +7,10 @@ import com.tkisor.nekojs.wrapper.event.registry.CreativeTabRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.MobEffectRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.ParticleTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.PotionRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
 
 public interface RegistryEvents {
     EventGroup GROUP = EventGroup.of("RegistryEvents");
@@ -22,4 +26,16 @@ public interface RegistryEvents {
 
     EventBusJS<CreativeTabRegistryEventJS, Void> CREATIVE_MODE_TAB =
             GROUP.startup("creativeModeTab", CreativeTabRegistryEventJS.class);
+
+    EventBusJS<SoundEventRegistryEventJS, Void> SOUND_EVENT =
+            GROUP.startup("soundEvent", SoundEventRegistryEventJS.class);
+
+    EventBusJS<MobEffectRegistryEventJS, Void> MOB_EFFECT =
+            GROUP.startup("mobEffect", MobEffectRegistryEventJS.class);
+
+    EventBusJS<PotionRegistryEventJS, Void> POTION =
+            GROUP.startup("potion", PotionRegistryEventJS.class);
+
+    EventBusJS<ParticleTypeRegistryEventJS, Void> PARTICLE_TYPE =
+            GROUP.startup("particleType", ParticleTypeRegistryEventJS.class);
 }

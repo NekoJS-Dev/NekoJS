@@ -7,6 +7,10 @@ import com.tkisor.nekojs.wrapper.event.registry.CreativeTabRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.MobEffectRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.ParticleTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.PotionRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -50,6 +54,22 @@ public final class RegistryEventListener {
         } else if (event.getRegistryKey().equals(Registries.CREATIVE_MODE_TAB)) {
             CreativeTabRegistryEventJS eventJS = new CreativeTabRegistryEventJS(event);
             RegistryEvents.CREATIVE_MODE_TAB.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.SOUND_EVENT)) {
+            SoundEventRegistryEventJS eventJS = new SoundEventRegistryEventJS(event);
+            RegistryEvents.SOUND_EVENT.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.MOB_EFFECT)) {
+            MobEffectRegistryEventJS eventJS = new MobEffectRegistryEventJS(event);
+            RegistryEvents.MOB_EFFECT.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.POTION)) {
+            PotionRegistryEventJS eventJS = new PotionRegistryEventJS(event);
+            RegistryEvents.POTION.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.PARTICLE_TYPE)) {
+            ParticleTypeRegistryEventJS eventJS = new ParticleTypeRegistryEventJS(event);
+            RegistryEvents.PARTICLE_TYPE.post(eventJS);
             eventJS.registerAll();
         }
     }
