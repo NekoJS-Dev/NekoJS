@@ -366,7 +366,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [x] 设计轻量 `Capabilities` startup binding，不复制 PowerfulJS/KubeJS 完整能力系统。
 - [x] 第一版只支持标准 energy/item/fluid capability，使用平台原生 backing storage 保存状态（ItemStackHandler/EnergyStorage/FluidTank 自带 NBT 序列化）。
 - [x] 在 `RegisterCapabilitiesEvent` 中为 block entity 注册 provider（`CapabilityEvents.register`）；暂不做任意 Java interface capability 生成。entity/item/block provider 留待后续。
-- [ ] **26.x 适配**：NeoForge 26 的 capability 常量类型改为 transfer API（`Capabilities.Item/Energy/Fluid` → `ResourceHandler`/`EnergyHandler`），`ItemStackHandler` 仍实现 `IItemHandler` 但无反向适配器——需要自写 ResourceHandler 桥接后支持。
+- [x] **26.x 适配**：正向桥接（IItemHandler/IEnergyStorage/IFluidHandler → ResourceHandler/EnergyHandler），参考官方反向适配器实现，立即提交语义；旧接口标记待删除，@SuppressWarnings(removal)。
 - [ ] 将 pdata 作为脚本业务数据层，capability 作为 NeoForge 生态访问层，两者可复用 NBT 工具但不共用同一个 tag。
 
 ## 长期方向
