@@ -30,6 +30,8 @@ public final class RegistryEventListener {
             BlockRegistryEventJS eventJS = new BlockRegistryEventJS(event);
             RegistryEvents.BLOCK.post(eventJS);
             eventJS.registerAll();
+            // 流体方块（BLOCK 在 FLUID 之后、ITEM 之前）
+            FluidRegistryEventJS.registerBlocks(event);
         } else if (event.getRegistryKey().equals(Registries.ENTITY_TYPE)) {
             EntityTypeRegistryEventJS eventJS = new EntityTypeRegistryEventJS(event);
             RegistryEvents.ENTITY_TYPE.post(eventJS);
@@ -47,6 +49,9 @@ public final class RegistryEventListener {
             });
 
             BlockRegistryEventJS.PENDING_BLOCK_ITEMS.clear();
+
+            // 流体桶（ITEM 在 BLOCK 之后；registerItems 末尾清理所有跨 pass 状态）
+            FluidRegistryEventJS.registerItems(event);
         } else if (event.getRegistryKey().equals(NeoForgeRegistries.FLUID_TYPES.key())) {
             // 流体类型与流体本体分属两个 registry；两个分支都 post（create 按 id 覆盖去重）
             RegistryEvents.FLUID.post(new FluidRegistryEventJS());
