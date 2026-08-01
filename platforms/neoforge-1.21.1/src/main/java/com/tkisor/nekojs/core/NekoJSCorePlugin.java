@@ -118,6 +118,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS());
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("Network", NetworkJS.class);
+        // TriState：1.21.1 在 neoforge 包（net.minecraft.util.TriState 是 1.21.5+ 才迁到 Mojang 的）。
+        registry.register("TriState", net.neoforged.neoforge.common.util.TriState.class);
         registry.register("global", NekoGlobal.shared());
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
