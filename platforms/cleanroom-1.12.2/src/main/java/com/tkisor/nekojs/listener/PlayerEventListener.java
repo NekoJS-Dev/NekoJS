@@ -2,6 +2,7 @@ package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.NekoJSMod;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.text.TextComponentString;
@@ -32,6 +33,15 @@ public class PlayerEventListener {
                     player.sendMessage(SCRIPT_OK);
                 }
             }
+            // 挂载物品栏监听器（inventoryChanged 事件）
+            InventoryChangeListener.getOrCreate(player);
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(net.minecraftforge.event.entity.player.PlayerEvent.Clone event) {
+        // 克隆（维度切换 / 死亡重生）后重新挂载：新玩家实体的 inventoryContainer 是新的
+        EntityPlayer player = event.getEntityPlayer();
+        InventoryChangeListener.getOrCreate(player);
     }
 }

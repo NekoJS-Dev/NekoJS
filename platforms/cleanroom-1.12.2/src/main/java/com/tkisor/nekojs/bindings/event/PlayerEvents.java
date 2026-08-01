@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
+import com.tkisor.nekojs.wrapper.event.player.InventoryChangedEventJS;
 import net.minecraft.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.ServerChatEvent;
@@ -70,6 +71,12 @@ public interface PlayerEvents {
             GROUP.server("destroyed", PlayerDestroyItemEvent.class,
                     EventBusFactory.createDispatchKey(Item.class,
                             e -> e.getOriginal().getItem()));
+
+    /** 玩家物品栏变化：按物品 id 分发（{@code PlayerEvents.inventoryChanged('minecraft:stone', ...)}）。 */
+    EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
+            GROUP.server("inventoryChanged", InventoryChangedEventJS.class,
+                    EventBusFactory.createDispatchKey(Item.class,
+                            e -> e.getItem().getItem()));
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
             .bind(LOGGED_IN)
