@@ -8,6 +8,7 @@ import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.block.Block;
@@ -48,6 +49,13 @@ public class RegistryEventListener {
     public static void onRegister(RegistryEvent.Register<?> event) {
         Class<?> type = event.getRegistry().getRegistrySuperType();
         if (type == Block.class) {
+            // 流体先注册：1.12.2 的 FluidRegistry 是静态注册表（无 Register<Fluid> 事件），
+            // BLOCK 分支是最早的注册事件（Register<Block> 先于 Register<Item>）
+            @SuppressWarnings("unchecked")
+            RegistryEvent.Register<Block> rawBlock = (RegistryEvent.Register<Block>) event;
+            RegistryEvents.FLUID.post(new FluidRegistryEventJS());
+            FluidRegistryEventJS.registerAll(rawBlock);
+
             @SuppressWarnings("unchecked")
             RegistryEvent.Register<Block> raw = (RegistryEvent.Register<Block>) event;
             BlockRegistryEventJS js = new BlockRegistryEventJS(raw);
@@ -59,6 +67,8 @@ public class RegistryEventListener {
             ItemRegistryEventJS js = new ItemRegistryEventJS(raw);
             RegistryEvents.ITEM.post(js);
             js.registerAll();
+            // 流体桶（须在 ItemRegistryEventJS 之后；末尾清理跨分支状态）
+            FluidRegistryEventJS.registerBucketItems(raw);
         } else if (type == EntityEntry.class) {
             @SuppressWarnings("unchecked")
             RegistryEvent.Register<EntityEntry> raw = (RegistryEvent.Register<EntityEntry>) event;
