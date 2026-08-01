@@ -1,5 +1,6 @@
 package com.tkisor.nekojs;
 
+import com.tkisor.nekojs.bindings.event.CapabilityEvents;
 import com.tkisor.nekojs.bindings.event.GoalEvents;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.client.NekoJSClient;
@@ -33,6 +34,7 @@ import com.tkisor.nekojs.script.ScriptBootstrap;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
+import com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJS;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -40,6 +42,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 @Mod(NekoJS.MODID)
@@ -85,9 +88,17 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(RegistryEventListener::onRegister);
         modEventBus.addListener(RegistryEventListener::onEntityAttributeCreation);
         modEventBus.addListener(RegistryEventListener::onBuildCreativeTabContents);
+        modEventBus.addListener(NekoJSMod::onRegisterCapabilities);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         NeoForge.EVENT_BUS.addListener(RegistryEventListener::onEntityJoinLevel);
         modEventBus.addListener(NekoJSMod::onLoadComplete);
+    }
+
+    /** 能力注册：先跑脚本（startup 脚本在 mod 构造期已加载监听），再应用 pending。 */
+    private static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        CapabilityRegistryEventJS eventJS = new CapabilityRegistryEventJS();
+        CapabilityEvents.REGISTER.post(eventJS);
+        eventJS.apply(event);
     }
 
     private static void initializeWorkspace() {

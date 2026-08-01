@@ -18,6 +18,7 @@ import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.BlockJS;
+import com.tkisor.nekojs.bindings.static_access.CapabilitiesJS;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
@@ -91,6 +92,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(GoalEvents.GROUP);
         registry.register(CommandEvents.GROUP);
         registry.register(RegistryEvents.GROUP);
+        registry.register(CapabilityEvents.GROUP);
         registry.register(LevelEvents.GROUP);
         registry.register(ScriptEvents.GROUP);
         registry.register(NetworkEvents.GROUP);
@@ -106,6 +108,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("Ingredient", new IngredientFactory());
         registry.register("RecipeSchema", new RecipeSchemaBinding());
         registry.register("Fluid", new FluidJS());
+        registry.register("Capabilities", new CapabilitiesJS());
         registry.register("FluidIngredient", new FluidIngredientJS());
         registry.register("FluidAmounts", FluidAmounts.class);
         registry.register("Fluids", Fluids.class);
