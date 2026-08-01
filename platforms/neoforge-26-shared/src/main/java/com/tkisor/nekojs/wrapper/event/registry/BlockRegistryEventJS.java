@@ -16,6 +16,13 @@ public class BlockRegistryEventJS {
     /** 待注册 BlockItem 的 builder（含已创建的 Block 与可选的 ItemBuilderJS 配置）。 */
     public static final Map<Identifier, BlockBuilderJS> PENDING_BLOCK_ITEMS = new HashMap<>();
 
+    /**
+     * 声明了 renderType 的方块：id → renderType。
+     * 由客户端资产生成（generateAssets）消费：生成默认方块模型时，
+     * {@code 'translucent'} 用 {@code force_translucent} 贴图引用形式（26.x 模型驱动渲染）。
+     */
+    public static final Map<Identifier, String> RENDER_TYPES = new HashMap<>();
+
     private final RegisterEvent rawEvent;
 
     private final List<BlockBuilderJS> builders = new ArrayList<>();
@@ -38,8 +45,13 @@ public class BlockRegistryEventJS {
     }
 
     public void registerAll() {
+        // 防御性清空：startup 脚本可经 /nekojs reload startup 重跑（注册表虽冻结）
+        RENDER_TYPES.clear();
         for (BlockBuilderJS builder : builders) {
             Identifier location = builder.getLocation();
+            if (builder.getRenderType() != null) {
+                RENDER_TYPES.put(location, builder.getRenderType());
+            }
 
             rawEvent.register(Registries.BLOCK, location, () -> {
                 Block block = builder.createBlock();

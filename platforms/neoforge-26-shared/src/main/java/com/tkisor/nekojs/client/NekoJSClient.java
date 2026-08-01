@@ -81,6 +81,9 @@ public class NekoJSClient {
             DataGeneratorJS generator = new DataGeneratorJS(assets, "after_mods");
             PluginGenerationHooks.fireGenerateAssets(generator);
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
+            // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型
+            // （26.x 模型驱动：translucent 需要 force_translucent 贴图引用）
+            BlockModelGenerator.generateDefaultModels(generator);
             // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
             for (String lang : ClientEvents.LANG.registeredKeys()) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
