@@ -49,7 +49,26 @@ public class ItemBuilderJS {
     }
 
     public Item createItem() {
-        // 1.21.1: 直接使用 new Item.Properties()，不需要 setId()
+        Item.Properties props = buildProperties();
+
+        if (glowing) {
+            return new Item(props) {
+                @Override
+                public boolean isFoil(ItemStack stack) {
+                    return true;
+                }
+            };
+        }
+
+        return new Item(props);
+    }
+
+    /**
+     * 构建配置好的 {@link Item.Properties}。供 {@link net.minecraft.world.item.BlockItem}
+     * 等需要复用属性的场景调用（脚本通过 BlockBuilderJS.item(...) 配置 BlockItem 属性时走这里）。
+     * 1.21.1: 直接使用 new Item.Properties()，不需要 setId()。
+     */
+    public Item.Properties buildProperties() {
         Item.Properties props = new Item.Properties();
 
         if (maxDamage > 0) {
@@ -64,19 +83,8 @@ public class ItemBuilderJS {
         if (foodBuilder != null) {
             // 1.21.1 中食物相关属性全部由 food 囊括
             props.food(foodBuilder.buildFood());
-
-            // 移除了 1.21.2+ 的 CONSUMABLE 组件逻辑，因为在 FoodBuilderJS 中已经统一处理了
         }
 
-        if (glowing) {
-            return new Item(props) {
-                @Override
-                public boolean isFoil(ItemStack stack) {
-                    return true;
-                }
-            };
-        }
-
-        return new Item(props);
+        return props;
     }
 }

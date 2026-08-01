@@ -160,7 +160,7 @@ public class FluidBuilderJS {
      */
     public LiquidBlock createLiquidBlock(Fluid source) {
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
-                .noCollission()
+                .noCollision()
                 .strength(100.0F)
                 .noLootTable();
         return new LiquidBlock((net.minecraft.world.level.material.FlowingFluid) source, props);

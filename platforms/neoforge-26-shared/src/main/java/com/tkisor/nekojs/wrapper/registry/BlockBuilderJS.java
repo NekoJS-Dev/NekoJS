@@ -8,6 +8,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
+import java.util.function.Consumer;
+
 public class BlockBuilderJS {
     @Getter
     private final Identifier location;
@@ -18,6 +20,12 @@ public class BlockBuilderJS {
     private boolean generateItem = true;
     private boolean requiresTool = false;
     private SoundType soundType = SoundType.STONE;
+
+    /** 可选：配置自动创建的 BlockItem（rarity/stackSize 等）。null 表示用默认 Item.Properties。 */
+    private ItemBuilderJS itemBuilder = null;
+
+    /** 实际注册时由 BlockRegistryEventJS 回填的 Block 实例（供 ITEM 分支创建 BlockItem 用）。 */
+    private Block createdBlock = null;
 
     public BlockBuilderJS(Identifier location) {
         this.location = location;
@@ -38,6 +46,14 @@ public class BlockBuilderJS {
 
     public BlockBuilderJS noItem() { this.generateItem = false; return this; }
 
+    /** 配置自动创建的 BlockItem（不影响是否生成，仅定制属性；与 {@link #noItem()} 互斥）。 */
+    public BlockBuilderJS item(Consumer<ItemBuilderJS> consumer) {
+        ItemBuilderJS builder = new ItemBuilderJS(location);
+        consumer.accept(builder);
+        this.itemBuilder = builder;
+        return this;
+    }
+
     public BlockBuilderJS sound(String sound) {
         this.soundType = switch (sound.toLowerCase()) {
             case "wood" -> SoundType.WOOD;
@@ -55,6 +71,15 @@ public class BlockBuilderJS {
     }
 
     public boolean shouldGenerateItem() { return this.generateItem; }
+
+    /** 取自动 BlockItem 的属性 builder（可能为 null = 用默认 Item.Properties）。 */
+    public ItemBuilderJS getItemBuilder() { return itemBuilder; }
+
+    /** 回填实际创建的 Block（由 BlockRegistryEventJS.registerAll 调用）。 */
+    public void setCreatedBlock(Block block) { this.createdBlock = block; }
+
+    /** 取实际创建的 Block（ITEM 分支创建 BlockItem 时用）。 */
+    public Block getCreatedBlock() { return createdBlock; }
 
     public Block createBlock() {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, location);

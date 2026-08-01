@@ -50,6 +50,26 @@ public class ItemBuilderJS {
     }
 
     public Item createItem() {
+        Item.Properties props = buildProperties();
+
+        if (glowing) {
+            return new Item(props) {
+                @Override
+                public boolean isFoil(ItemStack stack) {
+                    return true;
+                }
+            };
+        }
+
+        return new Item(props);
+    }
+
+    /**
+     * 构建配置好的 {@link Item.Properties}（含 id / stackSize / durability / fireResistant /
+     * rarity / 食物组件）。供 {@link net.minecraft.world.item.BlockItem} 等需要复用属性的
+     * 场景调用（脚本通过 BlockBuilderJS.item(...) 配置 BlockItem 属性时走这里）。
+     */
+    public Item.Properties buildProperties() {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, location);
         Item.Properties props = new Item.Properties().setId(key);
 
@@ -68,15 +88,6 @@ public class ItemBuilderJS {
             props.component(DataComponents.CONSUMABLE, foodBuilder.buildConsumable());
         }
 
-        if (glowing) {
-            return new Item(props) {
-                @Override
-                public boolean isFoil(ItemStack stack) {
-                    return true;
-                }
-            };
-        }
-
-        return new Item(props);
+        return props;
     }
 }

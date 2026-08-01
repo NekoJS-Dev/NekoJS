@@ -13,7 +13,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public class BlockRegistryEventJS {
-    public static final Map<ResourceLocation, Block> PENDING_BLOCK_ITEMS = new HashMap<>();
+    /** 待注册 BlockItem 的 builder（含已创建的 Block 与可选的 ItemBuilderJS 配置）。 */
+    public static final Map<ResourceLocation, BlockBuilderJS> PENDING_BLOCK_ITEMS = new HashMap<>();
 
     private final RegisterEvent rawEvent;
 
@@ -42,9 +43,10 @@ public class BlockRegistryEventJS {
 
             rawEvent.register(Registries.BLOCK, location, () -> {
                 Block block = builder.createBlock();
+                builder.setCreatedBlock(block);
 
                 if (builder.shouldGenerateItem()) {
-                    PENDING_BLOCK_ITEMS.put(location, block);
+                    PENDING_BLOCK_ITEMS.put(location, builder);
                 }
                 return block;
             });

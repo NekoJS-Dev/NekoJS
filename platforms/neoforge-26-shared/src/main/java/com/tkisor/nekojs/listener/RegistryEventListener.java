@@ -14,9 +14,11 @@ import com.tkisor.nekojs.wrapper.event.registry.PaintingVariantRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.PotionRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.VillagerTypeRegistryEventJS;
+import com.tkisor.nekojs.wrapper.registry.BlockBuilderJS;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -41,9 +43,12 @@ public final class RegistryEventListener {
             RegistryEvents.ITEM.post(eventJS);
             eventJS.registerAll();
 
-            BlockRegistryEventJS.PENDING_BLOCK_ITEMS.forEach((location, block) -> {
+            BlockRegistryEventJS.PENDING_BLOCK_ITEMS.forEach((location, builder) -> {
                 event.register(Registries.ITEM, location, () -> {
-                    Item.Properties props = new Item.Properties();
+                    Block block = builder.getCreatedBlock();
+                    Item.Properties props = builder.getItemBuilder() != null
+                            ? builder.getItemBuilder().buildProperties()
+                            : new Item.Properties();
                     return new BlockItem(block, props);
                 });
             });
