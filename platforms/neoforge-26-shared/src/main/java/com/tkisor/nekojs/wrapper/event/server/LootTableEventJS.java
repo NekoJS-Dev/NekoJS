@@ -3,17 +3,24 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * {@code ServerEvents.lootTables} 事件对象：loot table 的 JSON 层管理。
@@ -86,6 +93,87 @@ public class LootTableEventJS {
                 : new JsonObject();
         consumer.accept(new LootTableJS(json));
         setJson(id, json);
+    }
+
+    /**
+     * 批量修改方块战利品表：{@code blockId} 为方块 id、{@code '#tag'}（展开标签下所有方块）
+     * 或 {@code '*'}（所有已知方块表）。
+     */
+    public void modifyBlockLoot(String blockId, Consumer<LootTableJS> consumer) {
+        if (blockId.startsWith("#")) {
+            for (String tableId : blockTableIdsForTag(blockId.substring(1))) {
+                modify(tableId, consumer);
+            }
+        } else if ("*".equals(blockId)) {
+            for (String tableId : knownTableIds("blocks/")) {
+                modify(tableId, consumer);
+            }
+        } else {
+            modify(blockTableId(blockId), consumer);
+        }
+    }
+
+    /** 批量修改方块战利品表：{@code filter} 接收方块 id（如 {@code 'mymod:ore'}）返回是否处理。 */
+    public void modifyBlockLoot(Predicate<String> filter, Consumer<LootTableJS> consumer) {
+        for (String tableId : knownTableIds("blocks/")) {
+            if (filter.test(tableId.replace("/blocks/", ":"))) {
+                modify(tableId, consumer);
+            }
+        }
+    }
+
+    /** 批量修改实体战利品表：{@code entityId} 为实体 id 或 {@code '*'}（所有已知实体表）。 */
+    public void modifyEntityLoot(String entityId, Consumer<LootTableJS> consumer) {
+        if ("*".equals(entityId)) {
+            for (String tableId : knownTableIds("entities/")) {
+                modify(tableId, consumer);
+            }
+        } else {
+            modify(entityTableId(entityId), consumer);
+        }
+    }
+
+    /** 批量修改实体战利品表：{@code filter} 接收实体 id（如 {@code 'minecraft:zombie'}）返回是否处理。 */
+    public void modifyEntityLoot(Predicate<String> filter, Consumer<LootTableJS> consumer) {
+        for (String tableId : knownTableIds("entities/")) {
+            if (filter.test(tableId.replace("/entities/", ":"))) {
+                modify(tableId, consumer);
+            }
+        }
+    }
+
+    private static List<String> knownTableIds(String prefix) {
+        List<String> ids = new ArrayList<>();
+        for (String id : new LootTableEventJS().getIds()) {
+            int slash = id.indexOf('/');
+            if (slash >= 0 && id.substring(slash + 1).startsWith(prefix)) {
+                ids.add(id);
+            }
+        }
+        return ids;
+    }
+
+    private static String blockTableId(String blockId) {
+        Identifier id = parseId(blockId);
+        return id.getNamespace() + ":blocks/" + id.getPath();
+    }
+
+    private static String entityTableId(String entityId) {
+        Identifier id = parseId(entityId);
+        return id.getNamespace() + ":entities/" + id.getPath();
+    }
+
+    /** 标签展开：该标签下所有方块对应的 {@code blocks/<path>} 表 id。 */
+    private static List<String> blockTableIdsForTag(String tag) {
+        List<String> ids = new ArrayList<>();
+        TagKey<Block> tagKey = TagKey.create(Registries.BLOCK, Identifier.parse(tag));
+        for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(tagKey)) {
+            holder.unwrapKey().ifPresent(key -> {
+                Identifier location = key.identifier();
+                ids.add(location.getNamespace() + ":blocks/" + location.getPath());
+            });
+        }
+        return ids;
     }
 
     /** 删除指定 loot table（下次 reload 生效，读取时得到空表）。 */
