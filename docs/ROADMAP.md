@@ -37,12 +37,12 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 
 ### 下一阶段待办（按 ROI 排序）
 
-- [ ] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`global` 共享 map、`Java`/`JsonIO`/`NBTIO` 绑定、`Block.id(s)`/`Item.id(s)` 查找；`BlockPos`/`Vec3`/`BlockState` 输入 adapter（`{x,y,z}` / `[x,y,z]` / `minecraft:stone[prop=val]`）；`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、`BlockEvents.randomTick`/`blockEntityTick` 等缺失事件。
+- [ ] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`Java` 绑定、`Block.id(s)`/`Item.id(s)` 查找；`BlockState` 输入 adapter（`minecraft:stone[prop=val]`）；`BlockEvents.randomTick`/`blockEntityTick` 等缺失事件。已补齐：`global` 共享 map、`JsonIO`、`NBT`（含 `parse`/`toObject`/`fromObject`）、`BlockPos`/`Vec3` adapter、`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、富文本 `TextJS`（样式/点击/悬停）。
 - [ ] **`ServerEvents.tags`**：tag 修改事件（`add`/`remove`/`replaceAll`），整合包刚需；4 平台各实现 tag 桥接（neoforge tag builder、cleanroom ore dict）。
 - [x] **NeoForge 26.1/26.2 共享源集（2026-07-24）**：新建 `platforms/neoforge-26-shared/`（纯目录，不进 settings.gradle），迁入 142 个字节相同/差异可忽略的 Java（140 字节相同 + `NekoJSMod` 取 26.2 干净版 + `RecipeEventJS` 取 26.2 版）+ 共享 `accesstransformer.cfg`/`interface_injection.json`/`neoforge.mods.toml`。26.1/26.2 用 `srcDir '../neoforge-26-shared/...'` 引入；4 个 MC API 重命名差异文件（`EntityType`↔`EntityTypes`、`getApiDescription`↔`getBackendDescription`、`screen`↔`gui.screen()`、`getToastManager`↔`gui.toastManager`）+ `nekojs.mixins.json` + 独有文件保留本地。clean 重建后两平台 jar 产物完整（26.1=566 类、26.2=564 类）。
 - [ ] **NeoForge 1.21.1 共享评估**：1.21.1 与 26.x 有 92 个同路径文件不同（API 演进跨度大），强合并需大量条件编译或抽象，ROI 低；暂不纳入共享，后续单独评估。
-- [ ] **NeoForge 配方热重载**：当前 NeoForge 3 平台配方在数据包阶段固化，`/nekojs reload server` 不刷新配方且静默；接 `ReloadableServerResources` 钩子或至少给出明确告警。
-- [ ] **测试覆盖**：plugin bootstrap / adapter round-trip / 路径安全 / 热重载 等关键路径目前几乎无测试（4 平台模块零测试），优先补 common 纯函数路径（`NekoJSPaths` 路径穿越、adapter 转换、`NekoJSBasePluginManager` 排序）。
+- [x] **NeoForge 配方热重载**：`RecipeManagerMixin` 永久缓存数据包阶段的原始配方 JSON（`baseJsons`），`ReloadableServerResourcesMixin` 在资源 reload 收尾、组件/标签绑定后触发 `nekojs$applyScripts()`；`/nekojs reload server` 在脚本 reload 后主动调用，从 `baseJsons` 重建工作集、重跑 `ServerEvents.recipes`/`afterRecipes` 脚本，并用脚本产出 JSON 重新解析替换 `RecipeManager.recipes`（可重入）。3 平台（26.1/26.2/1.21.1）均实现。
+- [ ] **测试覆盖**：common / common-api 已有较完整的纯函数测试（路径穿越、adapter 转换、facade 行为、契约符号计数、NBT SNBT 往返等）；仍缺平台模块的可运行测试与运行时集成验证。后续优先补平台侧 smoke 测试脚本统一化与 CI 门禁。
 
 ## 已完成的基础能力
 
