@@ -20,6 +20,7 @@ public class ItemBuilderJS {
     private boolean fireResistant = false;
     private Rarity rarity = Rarity.COMMON;
     private boolean glowing = false;
+    private int burnTime = 0;
 
     private FoodBuilderJS foodBuilder = null;
 
@@ -59,6 +60,9 @@ public class ItemBuilderJS {
 
     public ItemBuilderJS glowing() { this.glowing = true; return this; }
 
+    /** 燃料燃烧时间（tick）。>0 时物品可作为熔炉/高炉/烟熏炉燃料。 */
+    public ItemBuilderJS burnTime(int ticks) { this.burnTime = Math.max(0, ticks); return this; }
+
     public ItemBuilderJS food(Consumer<FoodBuilderJS> consumer) {
         this.foodBuilder = new FoodBuilderJS();
         consumer.accept(this.foodBuilder);
@@ -68,16 +72,25 @@ public class ItemBuilderJS {
     public Item createItem() {
         Item.Properties props = buildProperties();
 
-        if (glowing) {
-            return new Item(props) {
-                @Override
-                public boolean isFoil(ItemStack stack) {
-                    return true;
-                }
-            };
+        // 仅在需要覆盖方法（发光/燃料）时用匿名子类，否则直接 new Item
+        if (!glowing && burnTime <= 0) {
+            return new Item(props);
         }
 
-        return new Item(props);
+        final boolean foil = glowing;
+        final int burn = burnTime;
+        return new Item(props) {
+            @Override
+            public boolean isFoil(ItemStack stack) {
+                return foil;
+            }
+
+            @Override
+            public int getBurnTime(ItemStack stack, net.minecraft.world.item.crafting.RecipeType<?> type,
+                                    net.minecraft.world.level.block.entity.FuelValues fuelValues) {
+                return burn;
+            }
+        };
     }
 
     /**
