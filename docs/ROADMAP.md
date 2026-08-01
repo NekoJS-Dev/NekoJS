@@ -316,10 +316,10 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 
 ### Painter API 与 client render events
 
-- [ ] 增加 client-only `PainterJS` 链式 API；1.21.1 包装 `GuiGraphics`，26.1 包装 `GuiGraphicsExtractor` / render state API。
-- [ ] 增加 `ClientEvents.hud` / screen render 事件，事件对象携带 `PainterJS`、尺寸、鼠标等上下文。
-- [ ] MVP 绘制能力：`color/resetColor`、`rect/fill`、`outline`、`gradient`、`text/centerText`、`texture`、`item`、`push/pop/translate`、`scissor`。
-- [ ] 确认 dedicated server 不加载 painter/client class。
+- [x] 增加 client-only `PainterJS` 链式 API；1.21.1 包装 `GuiGraphics`，26.1/26.2 包装 `GuiGraphicsExtractor` / render state API（`fill`/`text`/`blit`/`item`/`outline`/`pose` 均为新 API，无 `GuiGraphics`）。
+- [x] 增加 `ClientEvents.hud` / screen render 事件，事件对象携带 `PainterJS`、尺寸等上下文（`RenderGuiEvent.Post` 经 `bindTransformed` 包装）。
+- [x] MVP 绘制能力：`color/resetColor`、`rect/fill`、`outline`、`gradient`、`text/centerText`、`texture`、`item`、`push/pop/translate`、`scissor`。
+- [x] 确认 dedicated server 不加载 painter/client class（`ClientEvents` 为 client-only 组，绑定只在客户端初始化路径注册）。
 
 ### 原生 EntityType 与 Goal 注册
 
