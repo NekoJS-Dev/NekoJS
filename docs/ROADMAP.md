@@ -328,7 +328,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [x] 增加属性注册和客户端 no-op renderer，保证默认脚本实体可被服务端生成且客户端不会因缺 renderer 崩溃。
 - [x] 增加 Goal 注册 MVP：`floatInWater`、`panic`、`randomStroll`、`meleeAttack` vanilla goal factory。
 - [x] 对已有实体追加 goal 时使用 join-level 注入并做 identity marker 去重。
-- [ ] 增加 spawn egg 子阶段。
+- [x] 增加 spawn egg 子阶段（`EntityTypeBuilder.spawnEgg(bg, hl)` 自动注册 `<id>_spawn_egg`；1.21.1 运行时染色，26.x 纹理数据驱动 + 自动模型生成）。
 - [ ] 增加 target/look/avoid 等更多 vanilla goal factory，并评估按 `EntityType` 映射目标 class 的脚本 API。
 - [ ] 增加 functional-interface backed script goal，内部捕获脚本异常并限流日志。
 
@@ -349,7 +349,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 
 **推荐实现阶段**：
 
-- [ ] **阶段 1 — JSON 访问（MVP for 80% 用例）**: `ServerEvents.LOOT_TABLES` 事件，`event.getJson(id)` / `event.setJson(id, json)` / `event.getIds(filter)` / `event.remove(id)` / `event.create(id, type)`。与 recipe 系统理念一致，脚本可以直接操作 `JsonObject`。
+- [x] **阶段 1 — JSON 访问（MVP for 80% 用例）**: `ServerEvents.lootTables` 事件，`event.getJson(id)` / `event.setJson(id, json)` / `event.getIds()` / `event.remove(id)` / `event.create(id, json)`。与 recipe 系统理念一致，脚本可以直接操作 `JsonObject`。（注：`getIds` 暂不带 filter、`create` 直接带 json；修改在服务器数据 reload 时统一应用，经 NeoForge `LootTableLoadEvent` 生效）
 - [ ] **阶段 2 — 便利 builder**: `event.modify(id, table => table.addPool(pool => pool.addEntry(...)))`，LootEntryJS（`of(item)`/`ofTag(tag)`/`group(...)`/`when(consumer)`），JSTypeAdapter（`ItemStack`/`Ingredient` → `LootEntryJS`）。
 - [ ] **阶段 3 — 全局 modifier 事件**: `ServerEvents.LOOT_MODIFIERS`，`event.remove(id)` / `event.add(id, modifierJson)`。
 - [ ] **阶段 4 — Predicate builder（可选）**: 是否包装 vanilla Predicate 取决于用户需求频率，先用 raw JSON 观察。
