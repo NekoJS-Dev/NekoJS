@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.CreativeTabRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.EnchantmentRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
@@ -46,4 +47,7 @@ public interface RegistryEvents {
 
     EventBusJS<VillagerTypeRegistryEventJS, Void> VILLAGER_TYPE =
             GROUP.startup("villagerType", VillagerTypeRegistryEventJS.class);
+
+    EventBusJS<EnchantmentRegistryEventJS, Void> ENCHANTMENT =
+            GROUP.startup("enchantment", EnchantmentRegistryEventJS.class);
 }

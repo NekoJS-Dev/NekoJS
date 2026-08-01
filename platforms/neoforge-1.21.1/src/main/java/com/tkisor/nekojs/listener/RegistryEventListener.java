@@ -4,6 +4,7 @@ import com.tkisor.nekojs.bindings.event.RegistryEvents;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.CreativeTabRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.EnchantmentRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.FluidRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.ItemRegistryEventJS;
@@ -80,6 +81,10 @@ public final class RegistryEventListener {
         } else if (event.getRegistryKey().equals(Registries.VILLAGER_TYPE)) {
             VillagerTypeRegistryEventJS eventJS = new VillagerTypeRegistryEventJS(event);
             RegistryEvents.VILLAGER_TYPE.post(eventJS);
+            eventJS.registerAll();
+        } else if (event.getRegistryKey().equals(Registries.ENCHANTMENT)) {
+            EnchantmentRegistryEventJS eventJS = new EnchantmentRegistryEventJS(event);
+            RegistryEvents.ENCHANTMENT.post(eventJS);
             eventJS.registerAll();
         }
     }
