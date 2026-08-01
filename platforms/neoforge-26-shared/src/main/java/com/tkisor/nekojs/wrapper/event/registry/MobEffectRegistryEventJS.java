@@ -26,6 +26,10 @@ public class MobEffectRegistryEventJS {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<MobEffectBuilderJS> consumer) {
+        MobEffectBuilderJS builder = create(Identifier.parse(id));
+        consumer.accept(builder);
+    }
 
     public void registerAll() {
         for (MobEffectBuilderJS builder : builders) {

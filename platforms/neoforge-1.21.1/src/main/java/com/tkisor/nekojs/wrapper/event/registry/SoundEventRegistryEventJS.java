@@ -26,6 +26,10 @@ public class SoundEventRegistryEventJS {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<SoundEventBuilderJS> consumer) {
+        SoundEventBuilderJS builder = create(ResourceLocation.parse(id));
+        consumer.accept(builder);
+    }
 
     public void registerAll() {
         for (SoundEventBuilderJS builder : builders) {

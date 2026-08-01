@@ -26,6 +26,10 @@ public class CreativeTabRegistryEventJS {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<CreativeTabBuilderJS> consumer) {
+        CreativeTabBuilderJS builder = create(Identifier.parse(id));
+        consumer.accept(builder);
+    }
 
     public void registerAll() {
         for (CreativeTabBuilderJS builder : builders) {

@@ -35,6 +35,10 @@ public class ItemRegistryEventJS  {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<ItemBuilderJS> consumer) {
+        ItemBuilderJS builder = create(ResourceLocation.parse(id));
+        consumer.accept(builder);
+    }
 
     public void createCustom(ResourceLocation id, Supplier<Item> itemSupplier) {
         customItems.put(id, itemSupplier);

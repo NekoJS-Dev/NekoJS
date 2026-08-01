@@ -30,6 +30,10 @@ public class EnchantmentRegistryEventJS {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<EnchantmentBuilderJS> consumer) {
+        EnchantmentBuilderJS builder = create(ResourceLocation.parse(id));
+        consumer.accept(builder);
+    }
 
     public void registerAll() {
         for (EnchantmentBuilderJS builder : builders) {

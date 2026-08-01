@@ -26,6 +26,10 @@ public class VillagerTypeRegistryEventJS {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<VillagerTypeBuilderJS> consumer) {
+        VillagerTypeBuilderJS builder = create(Identifier.parse(id));
+        consumer.accept(builder);
+    }
 
     public void registerAll() {
         for (VillagerTypeBuilderJS builder : builders) {

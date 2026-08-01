@@ -26,6 +26,10 @@ public class PotionRegistryEventJS {
         builders.add(builder);
         return builder;
     }
+    public void create(String id, java.util.function.Consumer<PotionBuilderJS> consumer) {
+        PotionBuilderJS builder = create(Identifier.parse(id));
+        consumer.accept(builder);
+    }
 
     public void registerAll() {
         for (PotionBuilderJS builder : builders) {
