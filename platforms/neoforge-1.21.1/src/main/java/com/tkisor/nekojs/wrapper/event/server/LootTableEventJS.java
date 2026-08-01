@@ -2,10 +2,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
-import com.tkisor.nekojs.core.JsonObjectAdapter;
-import graal.graalvm.polyglot.Value;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -16,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * {@code ServerEvents.lootTables} 事件对象：loot table 的 JSON 层管理。
@@ -77,6 +75,19 @@ public class LootTableEventJS {
         setJson(id, json);
     }
 
+    /**
+     * 便利修改：读取当前 JSON（含脚本先前修改）→ builder 回调 → 写回。
+     * 不存在的 id 从空对象开始（记得 {@code table.setType('minecraft:chest')}）。
+     */
+    public void modify(String id, Consumer<LootTableJS> consumer) {
+        JsonElement current = getJson(id);
+        JsonObject json = current != null && current.isJsonObject()
+                ? current.getAsJsonObject()
+                : new JsonObject();
+        consumer.accept(new LootTableJS(json));
+        setJson(id, json);
+    }
+
     /** 删除指定 loot table（下次 reload 生效，读取时得到空表）。 */
     public void remove(String id) {
         ResourceLocation location = parseId(id);
@@ -112,17 +123,7 @@ public class LootTableEventJS {
         if (json instanceof JsonObject object) {
             return object;
         }
-        if (json instanceof Value value) {
-            return JsonObjectAdapter.convertValueToJsonObject(value);
-        }
-        if (json instanceof String text) {
-            JsonElement parsed = JsonParser.parseString(text);
-            if (parsed.isJsonObject()) {
-                return parsed.getAsJsonObject();
-            }
-            throw new IllegalArgumentException("loot table JSON 必须是对象，得到: " + text);
-        }
-        throw new IllegalArgumentException("loot table JSON 必须是对象或 JSON 字符串，得到: " + json);
+        return LootTableJS.toJsonObject(json);
     }
 
     private static ResourceLocation parseId(String id) {
