@@ -4,6 +4,8 @@
   "package": "com.tkisor.nekojs.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "BlockBehaviourMixin",
+    "LevelChunkBoundTickingBlockEntityMixin",
     "MinecraftServerMixin",
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",

@@ -5,6 +5,8 @@
   "compatibilityLevel": "JAVA_8",
   "refmap": "neoforge-26.2.refmap.json",
   "mixins": [
+    "BlockBehaviourMixin",
+    "LevelChunkBoundTickingBlockEntityMixin",
     "MinecraftServerMixin",
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
