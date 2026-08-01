@@ -30,7 +30,7 @@ public interface BlockEvents {
             GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class, dispatchByBlock());
     EventBusJS<BlockEvent.PortalSpawnEvent, Block> PORTAL_SPAWN =
             GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class, dispatchByBlock());
-    EventBusJS<BlockEvent.BlockToolModificationEvent, Block> TOOL_TOOL_MODIFICATION =
+    EventBusJS<BlockEvent.BlockToolModificationEvent, Block> TOOL_MODIFICATION =
             GROUP.server("toolModification", BlockEvent.BlockToolModificationEvent.class, dispatchByBlock());
 
     EventBusJS<PlayerInteractEvent.RightClickBlock, Block> RIGHT_CLICKED =
@@ -57,7 +57,7 @@ public interface BlockEvents {
         .bind(FLUID_PLACED)
         .bind(FARMLAND_TRAMPLE)
         .bind(PORTAL_SPAWN)
-        .bind(TOOL_TOOL_MODIFICATION)
+        .bind(TOOL_MODIFICATION)
         .bind(RIGHT_CLICKED)
         .bind(PLACED)
         .bind(LEFT_CLICKED);
