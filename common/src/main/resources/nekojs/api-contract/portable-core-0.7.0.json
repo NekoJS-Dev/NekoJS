@@ -375,6 +375,127 @@
       ]
     },
     {
+      "id": "member:TextValue.bold",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "boolean" }, "optional": true }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.italic",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "boolean" }, "optional": true }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.underlined",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "boolean" }, "optional": true }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.strikethrough",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "boolean" }, "optional": true }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.obfuscated",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "boolean" }, "optional": true }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.color",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "color", "type": { "kind": "PRIMITIVE", "name": "string" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.insertion",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "insertion", "type": { "kind": "PRIMITIVE", "name": "string" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.font",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "font", "type": { "kind": "PRIMITIVE", "name": "string" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.click",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "action", "type": { "kind": "PRIMITIVE", "name": "string" } },
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "string" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH"]
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.hover",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "text", "type": { "kind": "SYMBOL", "name": "type:TextValue" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:TextValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
       "id": "global:JsonIO",
       "signatures": [
         {

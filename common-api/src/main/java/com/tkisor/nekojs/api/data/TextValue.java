@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public sealed interface TextValue permits TextValue.Literal, TextValue.Translatable, TextValue.Sequence {
+public sealed interface TextValue permits TextValue.Literal, TextValue.Translatable, TextValue.Sequence, TextValue.Styled {
     static TextValue literal(String text) {
         return new Literal(Objects.requireNonNull(text, "text"));
     }
@@ -31,6 +31,17 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         if (flattened.isEmpty()) return empty();
         if (flattened.size() == 1) return flattened.getFirst();
         return new Sequence(flattened);
+    }
+
+    /** 给 {@code value} 套上一层 {@link TextStyle}。 */
+    static TextValue styled(TextValue value, TextStyle style) {
+        Objects.requireNonNull(value, "value");
+        Objects.requireNonNull(style, "style");
+        if (style.isEmpty()) {
+            return value;
+        }
+        // 透传空值；保留 Styled 包装即使内部为空，以便样式信息（如纯点击事件）不丢失
+        return new Styled(value, style);
     }
 
     boolean isEmpty();
@@ -74,6 +85,22 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         @Override
         public boolean isEmpty() {
             return values.stream().allMatch(TextValue::isEmpty);
+        }
+    }
+
+    /**
+     * 带 {@link TextStyle} 的文本（粗体/颜色/点击事件等）。包装一个基础 {@link TextValue}
+     * （字面量 / 可翻译 / 序列）。序列化到 MC 组件时，把样式应用到对应的组件上。
+     */
+    record Styled(TextValue value, TextStyle style) implements TextValue {
+        public Styled {
+            Objects.requireNonNull(value, "value");
+            Objects.requireNonNull(style, "style");
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return value.isEmpty();
         }
     }
 }

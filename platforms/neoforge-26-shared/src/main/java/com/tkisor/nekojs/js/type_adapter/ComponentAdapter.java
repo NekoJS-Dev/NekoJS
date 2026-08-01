@@ -5,11 +5,21 @@ import com.tkisor.nekojs.api.data.AbstractJsTypeAdapter;
 import com.tkisor.nekojs.api.data.JsValueView;
 import com.tkisor.nekojs.api.data.TextValue;
 import com.tkisor.nekojs.api.data.TextArgument;
+import com.tkisor.nekojs.api.data.TextStyle;
+import com.tkisor.nekojs.api.data.TextClickEvent;
+import com.tkisor.nekojs.api.data.TextHoverEvent;
 import com.tkisor.nekojs.core.api.ManagedApiValueAccess;
 import java.util.List;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.resources.Identifier;
 
 public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
     public ComponentAdapter() {
@@ -48,6 +58,16 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
     }
 
     private static Component convert(TextValue value) {
+        if (value instanceof TextValue.Styled styled) {
+            Component inner = convert(styled.value());
+            if (inner instanceof MutableComponent mutable) {
+                applyStyle(mutable, styled.style());
+                return mutable;
+            }
+            MutableComponent wrapped = Component.empty().append(inner);
+            applyStyle(wrapped, styled.style());
+            return wrapped;
+        }
         if (value instanceof TextValue.Literal literal) {
             return Component.literal(literal.text());
         }
@@ -55,7 +75,7 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
             Object[] arguments = translatable.arguments().stream().map(ComponentAdapter::convertArgument).toArray();
             return Component.translatable(translatable.key(), arguments);
         }
-        Component result = Component.empty();
+        MutableComponent result = Component.empty();
         for (TextValue child : ((TextValue.Sequence) value).values()) {
             result = result.copy().append(convert(child));
         }
@@ -67,5 +87,61 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
         if (argument instanceof TextArgument.StringValue string) return string.value();
         if (argument instanceof TextArgument.NumberValue number) return number.nativeNumber();
         return ((TextArgument.BooleanValue) argument).value();
+    }
+
+    /** 把可移植 {@link TextStyle} 应用到组件上（仅非空字段覆盖）。 */
+    private static void applyStyle(MutableComponent component, TextStyle style) {
+        if (style.isEmpty()) {
+            return;
+        }
+        Style base = component.getStyle();
+        Style patch = base;
+        if (style.bold() != null) patch = patch.withBold(style.bold());
+        if (style.italic() != null) patch = patch.withItalic(style.italic());
+        if (style.underlined() != null) patch = patch.withUnderlined(style.underlined());
+        if (style.strikethrough() != null) patch = patch.withStrikethrough(style.strikethrough());
+        if (style.obfuscated() != null) patch = patch.withObfuscated(style.obfuscated());
+        if (style.color() != null) {
+            TextColor color = TextColor.parseColor(style.color()).result().orElse(null);
+            if (color != null) patch = patch.withColor(color);
+        }
+        if (style.insertion() != null) patch = patch.withInsertion(style.insertion());
+        if (style.font() != null) {
+            Identifier fontId = Identifier.tryParse(style.font());
+            if (fontId != null) patch = patch.withFont(new FontDescription.Resource(fontId));
+        }
+        if (style.clickEvent() != null) {
+            ClickEvent click = convertClick(style.clickEvent());
+            if (click != null) patch = patch.withClickEvent(click);
+        }
+        if (style.hoverEvent() != null) {
+            HoverEvent hover = convertHover(style.hoverEvent());
+            if (hover != null) patch = patch.withHoverEvent(hover);
+        }
+        component.setStyle(patch);
+    }
+
+    private static ClickEvent convertClick(TextClickEvent event) {
+        return switch (event) {
+            case TextClickEvent.RunCommand e -> new ClickEvent.RunCommand(e.command());
+            case TextClickEvent.SuggestCommand e -> new ClickEvent.SuggestCommand(e.command());
+            case TextClickEvent.OpenUrl e -> {
+                try {
+                    yield new ClickEvent.OpenUrl(new java.net.URI(e.url()));
+                } catch (java.net.URISyntaxException ex) {
+                    yield null;
+                }
+            }
+            case TextClickEvent.OpenFile e -> new ClickEvent.OpenFile(e.path());
+            case TextClickEvent.CopyToClipboard e -> new ClickEvent.CopyToClipboard(e.text());
+            case TextClickEvent.ChangePage e -> new ClickEvent.ChangePage(e.page());
+        };
+    }
+
+    private static HoverEvent convertHover(TextHoverEvent event) {
+        if (event instanceof TextHoverEvent.ShowText showText) {
+            return new HoverEvent.ShowText(convert(showText.text()));
+        }
+        return null;
     }
 }

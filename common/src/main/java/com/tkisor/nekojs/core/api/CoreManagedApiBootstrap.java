@@ -143,6 +143,27 @@ public final class CoreManagedApiBootstrap {
                 text.append((TextValue) receiver, args));
         register(contributions, symbols, "member:TextValue.isEmpty", (receiver, args) ->
                 ((TextValue) receiver).isEmpty());
+        // 富文本样式：链式合并，每次返回带样式（Styled）的 TextValue
+        register(contributions, symbols, "member:TextValue.bold", (receiver, args) ->
+                text.bold((TextValue) receiver, boolArg(args, 0, true)));
+        register(contributions, symbols, "member:TextValue.italic", (receiver, args) ->
+                text.italic((TextValue) receiver, boolArg(args, 0, true)));
+        register(contributions, symbols, "member:TextValue.underlined", (receiver, args) ->
+                text.underlined((TextValue) receiver, boolArg(args, 0, true)));
+        register(contributions, symbols, "member:TextValue.strikethrough", (receiver, args) ->
+                text.strikethrough((TextValue) receiver, boolArg(args, 0, true)));
+        register(contributions, symbols, "member:TextValue.obfuscated", (receiver, args) ->
+                text.obfuscated((TextValue) receiver, boolArg(args, 0, true)));
+        register(contributions, symbols, "member:TextValue.color", (receiver, args) ->
+                text.color((TextValue) receiver, (String) args.getFirst()));
+        register(contributions, symbols, "member:TextValue.insertion", (receiver, args) ->
+                text.insertion((TextValue) receiver, (String) args.getFirst()));
+        register(contributions, symbols, "member:TextValue.font", (receiver, args) ->
+                text.font((TextValue) receiver, (String) args.getFirst()));
+        register(contributions, symbols, "member:TextValue.click", (receiver, args) ->
+                text.click((TextValue) receiver, (String) args.get(0), (String) args.get(1)));
+        register(contributions, symbols, "member:TextValue.hover", (receiver, args) ->
+                text.hover((TextValue) receiver, (TextValue) args.getFirst()));
 
         register(contributions, symbols, "global:JsonIO", (receiver, args) -> json);
         register(contributions, symbols, "member:JsonIO.parse", (receiver, args) ->
@@ -238,6 +259,17 @@ public final class CoreManagedApiBootstrap {
     @SuppressWarnings("unchecked")
     private static List<Number> numberList(Object value) {
         return (List<Number>) value;
+    }
+
+    private static boolean boolArg(List<Object> args, int index, boolean fallback) {
+        if (index >= args.size() || args.get(index) == null) {
+            return fallback;
+        }
+        Object value = args.get(index);
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return fallback;
     }
 
     private static void register(
