@@ -9,7 +9,10 @@ import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,6 +35,132 @@ public final class JavaMemberIndex {
     private static final int SUGGEST_MAX_DISTANCE = 3;
     private static final Map<Class<?>, Set<String>> PROPERTY_MEMBERS_CACHE = new ConcurrentHashMap<>();
     private static final Map<Class<?>, Set<String>> ALL_MEMBERS_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, ExposedMembers> EXPOSED_MEMBERS_CACHE = new ConcurrentHashMap<>();
+
+    // ==================== 类型化成员索引（供链式表达式解析） ====================
+
+    /**
+     * 保留重载的类型化成员索引：方法按 JS 可见名分组并保留全部重载，
+     * getter 属性（{@code getX→x}/{@code isX→x}/{@code hasX→x}）与 public 实例字段
+     * 单独分组。名字经 {@link #remapName} 归一化（尊重 {@code @HideFromJS}/
+     * {@code @Remap}/{@code @RemapByPrefix}），与运行时 {@code NekoJSMemberRemapper}
+     * 的暴露名一致。
+     *
+     * <p>与 {@link #propertyMembersOf}（名字集合，不处理 remap、折叠重载）不同，
+     * 本索引保留每个成员的 {@code Type}，供链式成员访问（{@code e.getPlayer().getServer()}）
+     * 按返回类型逐跳推导。
+     */
+    public record ExposedMembers(
+            Map<String, List<Method>> methods,
+            Map<String, List<Method>> propertyGetters,
+            Map<String, List<Field>> fields) {
+
+        public ExposedMembers {
+            methods = Map.copyOf(methods);
+            propertyGetters = Map.copyOf(propertyGetters);
+            fields = Map.copyOf(fields);
+        }
+
+        public boolean hasMember(String name) {
+            return methods.containsKey(name) || propertyGetters.containsKey(name) || fields.containsKey(name);
+        }
+
+        /**
+         * 方法调用候选：按参数数量过滤固定参数 / varargs 重载。
+         * 返回全部候选的返回类型（保守 union），不任意挑选单个重载。
+         */
+        public List<Type> callReturnTypes(String name, int argCount) {
+            List<Method> candidates = methods.get(name);
+            if (candidates == null) return List.of();
+            List<Type> returns = new java.util.ArrayList<>();
+            for (Method m : candidates) {
+                int fixed = m.getParameterCount();
+                boolean varargs = m.isVarArgs();
+                if (varargs ? argCount >= fixed - 1 : argCount == fixed) {
+                    returns.add(m.getGenericReturnType());
+                }
+            }
+            return returns;
+        }
+
+        /** 属性访问候选：getter 属性 + 同名 public 实例字段的类型。 */
+        public List<Type> propertyTypes(String name) {
+            List<Type> types = new java.util.ArrayList<>();
+            List<Method> getters = propertyGetters.get(name);
+            if (getters != null) {
+                for (Method g : getters) types.add(g.getGenericReturnType());
+            }
+            List<Field> fieldList = fields.get(name);
+            if (fieldList != null) {
+                for (Field f : fieldList) types.add(f.getGenericType());
+            }
+            return types;
+        }
+    }
+
+    public static ExposedMembers exposedMembersOf(Class<?> clazz) {
+        return EXPOSED_MEMBERS_CACHE.computeIfAbsent(clazz, JavaMemberIndex::collectExposedMembers);
+    }
+
+    private static ExposedMembers collectExposedMembers(Class<?> clazz) {
+        Map<String, List<Method>> methods = new java.util.TreeMap<>();
+        Map<String, List<Method>> propertyGetters = new java.util.TreeMap<>();
+        Map<String, List<Field>> fields = new java.util.TreeMap<>();
+        for (Method m : clazz.getMethods()) {
+            if (isHiddenOrInternal(m)) continue;
+            String jsName = remapName(m, HIDE_MARKER, m.getName());
+            if (jsName == null) continue;
+            methods.computeIfAbsent(jsName, ignored -> new java.util.ArrayList<>()).add(m);
+            if (m.getParameterCount() == 0) {
+                String prop = propertyName(m.getName());
+                if (prop != null) {
+                    String jsProp = remapName(m, HIDE_MARKER, prop);
+                    if (jsProp != null) {
+                        propertyGetters.computeIfAbsent(jsProp, ignored -> new java.util.ArrayList<>()).add(m);
+                    }
+                }
+            }
+        }
+        for (Field f : clazz.getFields()) {
+            if (java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+            if (f.getDeclaringClass() == Object.class) continue;
+            String jsName = remapName(f, HIDE_MARKER, f.getName());
+            if (jsName == null) continue;
+            fields.computeIfAbsent(jsName, ignored -> new java.util.ArrayList<>()).add(f);
+        }
+        return new ExposedMembers(methods, propertyGetters, fields);
+    }
+
+    private static final String HIDE_MARKER = "\u0000nekojs-hide";
+
+    private static boolean isHiddenOrInternal(Method m) {
+        String name = m.getName();
+        if ("getClass".equals(name) || name.startsWith("neko$")) return true;
+        if (m.getDeclaringClass() == Object.class) return true;
+        if (m.isBridge() || m.isSynthetic()) return true;
+        return false;
+    }
+
+    /** 把返回 {@code Type} 解析为可直接做成员查询的类集合；无法确定时返回空（调用方标 unknown）。 */
+    public static List<Class<?>> typeClasses(Type type) {
+        List<Class<?>> result = new java.util.ArrayList<>();
+        if (type instanceof Class<?> c) {
+            if (c == void.class || c.isPrimitive()) return List.of();
+            result.add(c);
+        } else if (type instanceof java.lang.reflect.ParameterizedType pt
+                && pt.getRawType() instanceof Class<?> c) {
+            result.add(c);
+        } else if (type instanceof java.lang.reflect.TypeVariable<?> tv) {
+            for (Type bound : tv.getBounds()) {
+                result.addAll(typeClasses(bound));
+            }
+        } else if (type instanceof java.lang.reflect.WildcardType wt) {
+            for (Type upper : wt.getUpperBounds()) {
+                result.addAll(typeClasses(upper));
+            }
+        }
+        return result;
+    }
 
     // ==================== 成员名集合（供加载时校验） ====================
 

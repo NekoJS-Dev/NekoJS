@@ -37,7 +37,9 @@ public final class ValParser {
         skipWsCmt();
         if (pos >= n) return null;
         int start = pos;
-        if (matchKw("const") || matchKw("let") || matchKw("var")) return parseVarDecl(start, block);
+        if (matchKw("const")) return parseVarDecl(ValNode.DeclarationKind.CONST, start, block);
+        if (matchKw("let")) return parseVarDecl(ValNode.DeclarationKind.LET, start, block);
+        if (matchKw("var")) return parseVarDecl(ValNode.DeclarationKind.VAR, start, block);
         if (matchKw("function") && peekAfterKw("function") == '(') return parseFuncDecl(start);
         ValNode e = parseExpr();
         skipSemi();
@@ -46,7 +48,7 @@ public final class ValParser {
 
     // ---- declarations ----
 
-    private ValNode.VarDecl parseVarDecl(int start, ValNode.Block block) {
+    private ValNode.VarDecl parseVarDecl(ValNode.DeclarationKind kind, int start, ValNode.Block block) {
         skipWs();
         String name = readIdent();
         if (name == null) { pos = start + 1; return null; }
@@ -54,7 +56,7 @@ public final class ValParser {
         ValNode init = null;
         if (peek() == '=') { pos++; skipWs(); init = parseExpr(); }
         skipSemi();
-        ValNode.VarDecl decl = new ValNode.VarDecl(name, init, start, pos);
+        ValNode.VarDecl decl = new ValNode.VarDecl(kind, name, init, start, pos);
         if (block != null) block.scope().put(name, decl);
         return decl;
     }
@@ -110,8 +112,9 @@ public final class ValParser {
             int start = pos; String name = readIdent();
             if (name != null) return new ValNode.Identifier(name, start, pos);
         }
-        if (c == '\'' || c == '"') { skipStr(); return new ValNode.Identifier("", pos, pos); }
-        if (c == '`') { skipTpl(); return new ValNode.Identifier("", pos, pos); }
+        if (c == '\'' || c == '"') return parseStringLiteral();
+        if (c == '`') { int start = pos; skipTpl(); return new ValNode.Identifier("", start, pos); }
+        if (Character.isDigit(c) || (c == '.' && Character.isDigit(peek(1)))) return parseNumberLiteral();
         if (c == '{') return parseBlock();
         if (c == '(') {
             pos++; skipWs();
@@ -128,10 +131,20 @@ public final class ValParser {
         while (pos < n) {
             skipWs();
             char c = peek();
-            if (c == '.') { pos++; skipWs(); int ms = pos; String m = readIdent(); if (m == null) break; obj = new ValNode.MemberAccess(obj, m, false, ms, pos); }
-            else if (c == '?' && peek(1) == '.') { pos += 2; skipWs(); int ms = pos; String m = readIdent(); if (m == null) break; obj = new ValNode.MemberAccess(obj, m, false, ms, pos); }
-            else if (c == '[') { pos++; skipWs(); char q = peek(); if (q == '\'' || q == '"') { pos++; int ms = pos; skipTo(q); String m = src.substring(ms, pos - 1); pos++; obj = new ValNode.MemberAccess(obj, m, true, ms, pos); } else skipBrackets(); }
-            else if (c == '(') {
+            if (c == '.') {
+                pos++; skipWs(); int ms = pos; String m = readIdent(); if (m == null) break;
+                obj = new ValNode.MemberAccess(obj, m, false, ms, pos);
+            } else if (c == '?' && peek(1) == '.') {
+                pos += 2; skipWs();
+                if (peek() == '[') {
+                    obj = parseBracketAccess(obj, true);
+                } else {
+                    int ms = pos; String m = readIdent(); if (m == null) break;
+                    obj = new ValNode.MemberAccess(obj, m, false, ms, pos);
+                }
+            } else if (c == '[') {
+                obj = parseBracketAccess(obj, false);
+            } else if (c == '(') {
                 pos++; skipWs();
                 List<ValNode> args = new ArrayList<>();
                 while (pos < n && peek() != ')') {
@@ -142,10 +155,28 @@ public final class ValParser {
                 }
                 if (peek() == ')') pos++;
                 obj = new ValNode.CallExpr(obj, args, pos, pos);
-            }
-            else break;
+            } else break;
         }
         return obj;
+    }
+
+    private ValNode parseBracketAccess(ValNode obj, boolean optional) {
+        int start = pos;
+        if (peek() == '[') pos++;
+        skipWs();
+        if (peek() == '\'' || peek() == '"') {
+            ValNode.StringLiteral literal = parseStringLiteral();
+            skipWs();
+            if (peek() == ']') pos++;
+            return new ValNode.MemberAccess(obj, literal.value(), true, literal.start(), pos);
+        }
+        ValNode key = parseExpr();
+        skipWs();
+        if (peek() == ']') pos++;
+        if (key == null) {
+            key = new ValNode.Identifier("", start, pos);
+        }
+        return new ValNode.ComputedMemberAccess(obj, key, optional, start, pos);
     }
 
     private ValNode.ArrowFunc parseArrowBody(List<String> params, int start) {
@@ -191,6 +222,66 @@ public final class ValParser {
             return null;
         }
         return null;
+    }
+
+    private ValNode.NumberLiteral parseNumberLiteral() {
+        int start = pos;
+        while (pos < n) {
+            char c = peek();
+            if (Character.isDigit(c) || c == '.' || c == 'x' || c == 'X'
+                    || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+                    || c == 'e' || c == 'E' || c == '+' || c == '-') {
+                pos++;
+            } else {
+                break;
+            }
+        }
+        return new ValNode.NumberLiteral(src.substring(start, pos), start, pos);
+    }
+
+    private ValNode.StringLiteral parseStringLiteral() {
+        int start = pos;
+        char quote = peek();
+        pos++;
+        StringBuilder value = new StringBuilder();
+        while (pos < n) {
+            char c = src.charAt(pos++);
+            if (c == quote) {
+                return new ValNode.StringLiteral(value.toString(), start, pos);
+            }
+            if (c != '\\' || pos >= n) {
+                value.append(c);
+                continue;
+            }
+            char escaped = src.charAt(pos++);
+            switch (escaped) {
+                case 'n' -> value.append('\n');
+                case 'r' -> value.append('\r');
+                case 't' -> value.append('\t');
+                case 'b' -> value.append('\b');
+                case 'f' -> value.append('\f');
+                case 'v' -> value.append('\u000B');
+                case '0' -> value.append('\0');
+                case '\n' -> { /* line continuation */ }
+                case '\r' -> { if (peek() == '\n') pos++; }
+                case 'x' -> value.append(readHexEscape(2, 'x'));
+                case 'u' -> value.append(readHexEscape(4, 'u'));
+                default -> value.append(escaped);
+            }
+        }
+        return new ValNode.StringLiteral(value.toString(), start, pos);
+    }
+
+    private char readHexEscape(int digits, char prefix) {
+        if (pos + digits > n) return prefix;
+        int value = 0;
+        for (int i = 0; i < digits; i++) {
+            int digit = Character.digit(src.charAt(pos + i), 16);
+            if (digit < 0) return prefix;
+            value = value * 16 + digit;
+        }
+        pos += digits;
+        return (char) value;
     }
 
     // ---- lexer utils ----

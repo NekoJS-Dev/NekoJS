@@ -147,4 +147,81 @@ class JavaMemberIndexTest {
         Method m = PrefixEdge.class.getMethod("ge");
         assertEquals("ge", JavaMemberIndex.remapName(m, null, m.getName()));
     }
+
+    // ==================== ExposedMembers：类型化重载保留索引 ====================
+
+    /** 重载 + getter 属性 + 字段 + generic 返回。 */
+    public static class TypedEvent {
+        public Object getServer() { return new Object(); }
+        public PlayerJS getPlayer() { return null; }
+        public PlayerJS find(String name) { return null; }
+        public PlayerJS find(int id) { return null; }
+        public String varargsJoin(String sep, String... parts) { return ""; }
+        public java.util.List<PlayerJS> getPlayers() { return java.util.List.of(); }
+        public PlayerJS directField = null;
+    }
+
+    public static class PlayerJS {
+        public Object getServer() { return new Object(); }
+    }
+
+    @Test
+    void exposedMembersKeepsAllOverloads() {
+        JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(TypedEvent.class);
+        assertEquals(2, exposed.methods().get("find").size(), "overloads must be preserved");
+    }
+
+    @Test
+    void exposedMembersCallReturnTypesFiltersByArity() {
+        JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(TypedEvent.class);
+        // find(String) 与 find(int) 都是 1 参数：arity=1 两个候选都匹配（保守 union）
+        assertEquals(2, exposed.callReturnTypes("find", 1).size());
+        assertEquals(0, exposed.callReturnTypes("find", 2).size(), "no overload with 2 args");
+    }
+
+    @Test
+    void exposedMembersVarargsArity() {
+        JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(TypedEvent.class);
+        // varargsJoin(sep, parts...)：JS 侧至少要传 sep（1 个参数）
+        assertEquals(1, exposed.callReturnTypes("varargsJoin", 1).size(), "sep only");
+        assertEquals(1, exposed.callReturnTypes("varargsJoin", 3).size(), "sep + 2 parts");
+        assertEquals(0, exposed.callReturnTypes("varargsJoin", 0).size(), "sep is required");
+        assertTrue(exposed.hasMember("varargsJoin"));
+    }
+
+    @Test
+    void exposedMembersPropertyTypesFromGetterAndField() {
+        JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(TypedEvent.class);
+        assertTrue(exposed.propertyTypes("player").stream()
+                .anyMatch(t -> JavaMemberIndex.typeClasses(t).contains(PlayerJS.class)));
+        assertTrue(exposed.propertyTypes("directField").stream()
+                .anyMatch(t -> JavaMemberIndex.typeClasses(t).contains(PlayerJS.class)));
+        assertTrue(exposed.hasMember("server"), "getter property name");
+        assertTrue(exposed.hasMember("getServer"), "method name");
+    }
+
+    @Test
+    void exposedMembersGenericReturnResolvesRawClass() {
+        JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(TypedEvent.class);
+        // List<PlayerJS> 只解析 raw 类 List（容器成员不等于元素成员，符合保守策略）
+        assertTrue(exposed.callReturnTypes("getPlayers", 0).stream()
+                .flatMap(t -> JavaMemberIndex.typeClasses(t).stream())
+                .anyMatch(c -> c == java.util.List.class));
+    }
+
+    @Test
+    void exposedMembersRespectsRemapAndHide() {
+        JavaMemberIndex.ExposedMembers exposed = JavaMemberIndex.exposedMembersOf(Annotated.class);
+        assertTrue(exposed.hasMember("customName"), "remapped name exposed");
+        assertFalse(exposed.hasMember("remapped"), "original name hidden after remap");
+        assertFalse(exposed.hasMember("hidden"), "@HideFromJS excluded");
+        assertFalse(exposed.hasMember("getFoo"), "class-level remap renames getFoo");
+        assertTrue(exposed.hasMember("Foo"), "class-level remap target exposed");
+    }
+
+    @Test
+    void typeClassesOfUnknownReturnsEmpty() {
+        assertTrue(JavaMemberIndex.typeClasses(void.class).isEmpty());
+        assertTrue(JavaMemberIndex.typeClasses(int.class).isEmpty());
+    }
 }

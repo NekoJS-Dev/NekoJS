@@ -19,9 +19,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class ManagedCallbackSchemaRegistry {
 
-    public record CallbackSchema(String displayName, Set<String> memberNames) {
+    /** 契约 payload 字段的类型信息：PORTABLE 有可移植类型；NATIVE 类型不承诺。 */
+    public enum ContractFieldKind {
+        PORTABLE, NATIVE
+    }
+
+    public record ContractFieldType(ContractFieldKind kind, ApiTypeRef portType) {
+        public static ContractFieldType portable(ApiTypeRef portType) {
+            return new ContractFieldType(ContractFieldKind.PORTABLE, portType);
+        }
+
+        public static ContractFieldType nativeField() {
+            return new ContractFieldType(ContractFieldKind.NATIVE, null);
+        }
+    }
+
+    public record CallbackSchema(String displayName, Set<String> memberNames, Map<String, ContractFieldType> fieldTypes) {
         public CallbackSchema {
             memberNames = Set.copyOf(memberNames == null ? Set.of() : memberNames);
+            fieldTypes = Map.copyOf(fieldTypes == null ? Map.of() : fieldTypes);
+        }
+
+        public CallbackSchema(String displayName, Set<String> memberNames) {
+            this(displayName, memberNames, Map.of());
         }
     }
 
@@ -58,11 +78,16 @@ public final class ManagedCallbackSchemaRegistry {
             Map<String, CallbackSchema> group =
                     SCHEMA.computeIfAbsent(event.group(), ignored -> new ConcurrentHashMap<>());
             Set<String> memberNames = new HashSet<>();
+            Map<String, ContractFieldType> fieldTypes = new HashMap<>();
             for (var field : event.payload()) {
                 memberNames.add(field.name());
+                fieldTypes.put(field.name(), switch (field.kind()) {
+                    case PORTABLE -> ContractFieldType.portable(field.portType());
+                    case NATIVE -> ContractFieldType.nativeField();
+                });
             }
             String displayName = event.group() + "." + event.name();
-            group.put(event.name(), new CallbackSchema(displayName, memberNames));
+            group.put(event.name(), new CallbackSchema(displayName, memberNames, fieldTypes));
         }
     }
 

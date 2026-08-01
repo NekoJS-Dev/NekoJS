@@ -47,6 +47,33 @@ class EventCallbackSourceValidatorTest {
         }
     }
 
+    /** 链式测试用：getPlayer() 返回 PlayerJS。 */
+    public static class ChainedEvent {
+        public PlayerJS getPlayer() {
+            return new PlayerJS();
+        }
+
+        public PlayerJS directPlayer = new PlayerJS();
+
+        public PlayerJS find(String name) {
+            return new PlayerJS();
+        }
+
+        public PlayerJS find(int id) {
+            return new PlayerJS();
+        }
+
+        public String varargsJoin(String sep, String... parts) {
+            return "";
+        }
+    }
+
+    public static class PlayerJS {
+        public Object getServer() {
+            return new Object();
+        }
+    }
+
     /** 契约测试用的 ContractEvent 构造助手。 */
     private static NormativeApiContract.ContractEvent contractEvent(String group, String name, String... fields) {
         List<NormativeApiContract.ContractEventField> payload = new ArrayList<>();
@@ -197,5 +224,163 @@ class EventCallbackSourceValidatorTest {
 
         assertEquals("ServerEvents.started", schema.displayName());
         assertTrue(schema.memberNames().contains("server"));
+    }
+
+    // ==================== 动态成员访问（引号 / const key） ====================
+
+    @Test
+    void quotedBracketKnownMethodPasses() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("br-ok"),
+                "TestEvents.started((e) => { e['getServer']() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void quotedBracketTypoReportedWithSuggestion() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("br-typo"),
+                "TestEvents.started((e) => { e['getServeer']() })");
+        assertEquals(1, reported.size());
+        assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
+        assertTrue(reported.getFirst().contains("Did you mean"), reported.getFirst());
+    }
+
+    @Test
+    void doubleQuotedBracketPropertyPasses() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("br-prop"),
+                "TestEvents.started((e) => { e[\"server\"] })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void constStringComputedKeyChecked() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("ck-ok"),
+                "TestEvents.started((e) => { const key = 'getServer'; e[key]() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void constStringComputedKeyTypoReported() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("ck-typo"),
+                "TestEvents.started((e) => { const key = 'getServeer'; e[key]() })");
+        assertEquals(1, reported.size());
+        assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
+        assertTrue(reported.getFirst().contains("Did you mean"), reported.getFirst());
+    }
+
+    @Test
+    void runtimeDynamicKeyNotReported() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("dyn"),
+                "TestEvents.started((e) => { e[keyFromNetwork]() })");
+        assertTrue(reported.isEmpty(), "runtime dynamic key must not be diagnosed: " + reported);
+    }
+
+    @Test
+    void payloadAliasWithConstKey() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("alias-key"),
+                "TestEvents.started((e) => { const x = e; const key = 'getServer'; x[key]() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void letVarKeyNotPropagatedAsConstant() {
+        registerBindingGroup("TestEvents");
+        // let key 可变：不做常量传播，不诊断（也不误报）
+        EventCallbackSourceValidator.validate(serverScript("let-key"),
+                "TestEvents.started((e) => { let key = 'getServeer'; e[key]() })");
+        assertTrue(reported.isEmpty(), "let key must not be treated as constant: " + reported);
+    }
+
+    @Test
+    void blockShadowingDoesNotLeakConstKey() {
+        registerBindingGroup("TestEvents");
+        EventCallbackSourceValidator.validate(serverScript("shadow"),
+                "TestEvents.started((e) => { const key = 'getServer'; { const key = 'getServeer'; e[key]() } })");
+        assertEquals(1, reported.size(), "shadowed key must be used in inner block");
+    }
+
+    // ==================== 链式返回值类型传播 ====================
+
+    private void registerChainedGroup() {
+        EventGroup group = EventGroup.of("ChainedEvents");
+        group.server("started", ChainedEvent.class);
+        EventSchemaRegistry.registerGroup(group);
+        ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
+                "ChainedEvents", new ScriptBindingSchema.BindingMembers(Set.of("started"))));
+    }
+
+    @Test
+    void chainedMethodReturnTypePropagates() {
+        registerChainedGroup();
+        EventCallbackSourceValidator.validate(serverScript("chain-ok"),
+                "ChainedEvents.started((e) => { e.getPlayer().getServer() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void chainedSecondHopTypoReported() {
+        registerChainedGroup();
+        EventCallbackSourceValidator.validate(serverScript("chain-typo"),
+                "ChainedEvents.started((e) => { e.getPlayer().getServeer() })");
+        assertEquals(1, reported.size());
+        assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
+        assertTrue(reported.getFirst().contains("Did you mean"), reported.getFirst());
+    }
+
+    @Test
+    void chainedGetterPropertyPropagates() {
+        registerChainedGroup();
+        EventCallbackSourceValidator.validate(serverScript("chain-prop"),
+                "ChainedEvents.started((e) => { e.player.getServer() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void chainedPublicFieldPropagates() {
+        registerChainedGroup();
+        EventCallbackSourceValidator.validate(serverScript("chain-field"),
+                "ChainedEvents.started((e) => { e.directPlayer.getServer() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void overloadedCallUnionAcceptsMemberOnAnyCandidate() {
+        registerChainedGroup();
+        // find(String) 与 find(int) 返回类型相同（PlayerJS），getServer 都支持
+        EventCallbackSourceValidator.validate(serverScript("chain-overload"),
+                "ChainedEvents.started((e) => { e.find('x').getServer(); e.find(1).getServer() })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void varargsCallPropagatesReturnType() {
+        registerChainedGroup();
+        // varargsJoin(sep, parts...) 返回 String：链式到 String 成员不深入（无对象成员），不误报
+        EventCallbackSourceValidator.validate(serverScript("chain-varargs"),
+                "ChainedEvents.started((e) => { e.varargsJoin('|').length })");
+        assertTrue(reported.isEmpty(), reported.toString());
+    }
+
+    @Test
+    void chainedCallToMissingMethodOnRootReported() {
+        registerChainedGroup();
+        EventCallbackSourceValidator.validate(serverScript("chain-root-typo"),
+                "ChainedEvents.started((e) => { e.getPlayr().getServer() })");
+        assertEquals(1, reported.size());
+        assertTrue(reported.getFirst().contains("getPlayr"), reported.getFirst());
+    }
+
+    @Test
+    void optionalChainedComputedKeyChecked() {
+        registerChainedGroup();
+        EventCallbackSourceValidator.validate(serverScript("opt-chain"),
+                "ChainedEvents.started((e) => { const k = 'getPlayer'; e?.[k]().getServer() })");
+        assertTrue(reported.isEmpty(), reported.toString());
     }
 }
