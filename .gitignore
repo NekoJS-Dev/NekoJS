@@ -7,3 +7,5 @@ node_modules/
 ai_docs/
 .worktrees/
 .superpowers/
+# 平台测试/构建运行时日志
+platforms/*/logs/
