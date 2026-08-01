@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
+import com.tkisor.nekojs.wrapper.client.PainterJS;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -14,6 +15,7 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 public interface ClientEvents {
@@ -78,6 +80,9 @@ public interface ClientEvents {
     EventBusJS<LangGeneratorJS, String> LANG =
             GROUP.client("lang", LangGeneratorJS.class, LANG_KEY);
 
+    /** HUD 绘制事件（每帧 GUI 渲染后），参数为 {@link PainterJS}。 */
+    EventBusJS<PainterJS, Void> HUD = GROUP.client("hud", PainterJS.class);
+
     EventBusForgeBridge MAIN_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(TICK_PRE)
             .bind(TICK_POST)
@@ -85,7 +90,8 @@ public interface ClientEvents {
             .bind(LOGGED_IN)
             .bind(LOGGED_OUT)
             .bind(CLONED)
-            .bind(COMMAND_REGISTRY);
+            .bind(COMMAND_REGISTRY)
+            .bindTransformed(HUD, event -> new PainterJS(event.getGuiGraphics()), RenderGuiEvent.Post.class);
 
     static void bindModBus(IEventBus modEventBus) {
         EventBusForgeBridge.create(modEventBus)
