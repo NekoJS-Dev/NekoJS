@@ -1,7 +1,10 @@
 package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.js.type_adapter.ItemStackAdapter;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 /**
  * 脚本侧的 Item 工厂与助手，同时绑定为全局 {@code Item} 与 {@code ItemJS}。
@@ -37,4 +40,27 @@ public class ItemJS {
     public ItemStack empty() {
         return ItemStack.EMPTY;
     }
+
+    /** 按字符串 id 查物品；不存在返回 null。对齐 NeoForge {@code Item.id(...)}。 */
+    public Item id(String id) {
+        ResourceLocation location = tryParse(id);
+        if (location == null) {
+            return null;
+        }
+        return ForgeRegistries.ITEMS.getValue(location);
+    }
+
+    /** 取物品的注册 id（{@code minecraft:stone} 形式）；未注册返回 null。 */
+    public ResourceLocation idOf(Item item) {
+        return ForgeRegistries.ITEMS.getKey(item);
+    }
+
+    private static ResourceLocation tryParse(String value) {
+        try {
+            return new ResourceLocation(value);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
 }
+

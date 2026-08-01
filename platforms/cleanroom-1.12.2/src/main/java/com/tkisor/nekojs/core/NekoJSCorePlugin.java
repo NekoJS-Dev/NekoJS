@@ -16,6 +16,7 @@ import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
 import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
+import com.tkisor.nekojs.bindings.static_access.BlockJS;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.api.data.Binding;
@@ -96,10 +97,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
         ItemJS itemHelper = new ItemJS();
-        // 全局 Item 是 ProxyObject 代理委托（of/empty 走 ItemJS，其余委托 MC Item 类）。
+        // 全局 Item 是 ProxyObject 代理委托（of/empty/id/idOf 走 ItemJS，其余委托 MC Item 类）。
         // 代理的动态成员 Java 反射不到，preflight 会误报 "has no member 'of'"，
         // 故用 Binding.of(name, value, valueType) 显式声明 valueType=ItemJS。
-        registry.register(Binding.of("Item", new DelegatingBinding(itemHelper, net.minecraft.item.Item.class, Set.of("of", "empty")), ItemJS.class));
+        registry.register(Binding.of("Item", new DelegatingBinding(itemHelper, net.minecraft.item.Item.class, Set.of("of", "empty", "id", "idOf")), ItemJS.class));
         registry.register("BlockPos", BlockPos.class);
         registry.register("Direction", EnumFacing.class);
         registry.register("Vec3", Vec3d.class);
@@ -108,7 +109,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("Blocks", Blocks.class);
         registry.register("NBTTagCompound", NBTTagCompound.class);
         registry.register("ResourceLocation", ResourceLocation.class);
-        registry.register("Block", Block.class);
+        // 全局 Block 同样走代理委托（id/idOf 走 BlockJS，其余委托 MC Block 类）。
+        BlockJS blockHelper = new BlockJS();
+        registry.register(Binding.of("Block", new DelegatingBinding(blockHelper, Block.class, Set.of("id", "idOf")), BlockJS.class));
         registry.register("EntityEntry", net.minecraftforge.fml.common.registry.EntityEntry.class);
         registry.register("SoundEvent", net.minecraft.util.SoundEvent.class);
         registry.register("Potion", net.minecraft.potion.Potion.class);
