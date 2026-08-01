@@ -20,6 +20,9 @@ public class BlockBuilderJS {
     private SoundType soundType = SoundType.STONE;
     private net.minecraft.world.level.material.MapColor mapColor = net.minecraft.world.level.material.MapColor.STONE;
 
+    /** 客户端渲染层：solid / cutout / cutout_mipped / translucent。由客户端 setup 应用。 */
+    private String renderType = null;
+
     /** 可选：配置自动创建的 BlockItem（rarity/stackSize 等）。null 表示用默认 Item.Properties。 */
     private ItemBuilderJS itemBuilder = null;
 
@@ -55,6 +58,19 @@ public class BlockBuilderJS {
     }
 
     public BlockBuilderJS requiresTool() { this.requiresTool = true; return this; }
+
+    /**
+     * 客户端渲染层：{@code 'solid'} / {@code 'cutout'} / {@code 'cutout_mipped'} / {@code 'translucent'}
+     * （做玻璃等透明方块）。1.21.1 会在客户端 setup 时经
+     * {@code ItemBlockRenderTypes.setRenderLayer} 应用。
+     */
+    public BlockBuilderJS renderType(String renderType) {
+        this.renderType = renderType == null || renderType.isBlank() ? null : renderType;
+        return this;
+    }
+
+    /** 取客户端渲染层（可能为 null = 默认 solid）。 */
+    public String getRenderType() { return renderType; }
 
     public BlockBuilderJS noItem() { this.generateItem = false; return this; }
 

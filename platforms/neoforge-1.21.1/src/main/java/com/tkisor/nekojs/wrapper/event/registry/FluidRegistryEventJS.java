@@ -86,12 +86,14 @@ public class FluidRegistryEventJS {
             event.register(Registries.FLUID, id, () -> {
                 Fluid source = builder.createSourceFluid();
                 REGISTERED_SOURCES.put(id, source);
+                applyFluidRenderType(source);
                 return source;
             });
             // 注册 flowing（捕获到 REGISTERED_FLOWING）
             event.register(Registries.FLUID, flowingId, () -> {
                 Fluid flowing = builder.createFlowingFluid();
                 REGISTERED_FLOWING.put(id, flowing);
+                applyFluidRenderType(flowing);
                 return flowing;
             });
         }
@@ -106,8 +108,19 @@ public class FluidRegistryEventJS {
                 Fluid source = REGISTERED_SOURCES.get(id);
                 LiquidBlock block = builder.createLiquidBlock(source);
                 REGISTERED_BLOCKS.put(id, block);
+                // 液体方块按 translucent 渲染（1.21.1 由 ItemBlockRenderTypes 查表；dist 守卫防专用服务器加载客户端类）
+                if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+                    com.tkisor.nekojs.client.ClientBlockRenderTypes.apply(block, "translucent");
+                }
                 return block;
             });
+        }
+    }
+
+    /** 1.21.1：流体本体注册 translucent 渲染层（专用服务器上分支不执行）。 */
+    private static void applyFluidRenderType(Fluid fluid) {
+        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            com.tkisor.nekojs.client.ClientBlockRenderTypes.applyFluid(fluid, "translucent");
         }
     }
 

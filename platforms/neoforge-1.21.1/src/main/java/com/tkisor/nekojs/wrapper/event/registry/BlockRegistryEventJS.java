@@ -45,6 +45,13 @@ public class BlockRegistryEventJS {
                 Block block = builder.createBlock();
                 builder.setCreatedBlock(block);
 
+                // 客户端渲染层：专用服务器上 FMLEnvironment.dist 为 DEDICATED_SERVER，
+                // 分支不执行 → ClientBlockRenderTypes 不会被加载
+                if (builder.getRenderType() != null
+                        && net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+                    com.tkisor.nekojs.client.ClientBlockRenderTypes.apply(block, builder.getRenderType());
+                }
+
                 if (builder.shouldGenerateItem()) {
                     PENDING_BLOCK_ITEMS.put(location, builder);
                 }
