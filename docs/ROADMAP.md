@@ -350,7 +350,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 **推荐实现阶段**：
 
 - [x] **阶段 1 — JSON 访问（MVP for 80% 用例）**: `ServerEvents.lootTables` 事件，`event.getJson(id)` / `event.setJson(id, json)` / `event.getIds()` / `event.remove(id)` / `event.create(id, json)`。与 recipe 系统理念一致，脚本可以直接操作 `JsonObject`。（注：`getIds` 暂不带 filter、`create` 直接带 json；修改在服务器数据 reload 时统一应用，经 NeoForge `LootTableLoadEvent` 生效）
-- [ ] **阶段 2 — 便利 builder**: `event.modify(id, table => table.addPool(pool => pool.addEntry(...)))`，LootEntryJS（`of(item)`/`ofTag(tag)`/`group(...)`/`when(consumer)`），JSTypeAdapter（`ItemStack`/`Ingredient` → `LootEntryJS`）。
+- [x] **阶段 2 — 便利 builder**: `event.modify(id, table => table.addPool(pool => pool.addEntry(...)))`，`LootEntryJS.of(item/ItemStack/'#tag'/JS对象)` + `weight/when/group` 链式，`LootPoolJS.rolls/addEntry/when`。JSON-first：builder 直接操作底层 JsonObject，冷门字段走 raw JSON。
 - [ ] **阶段 3 — 全局 modifier 事件**: `ServerEvents.LOOT_MODIFIERS`，`event.remove(id)` / `event.add(id, modifierJson)`。
 - [ ] **阶段 4 — Predicate builder（可选）**: 是否包装 vanilla Predicate 取决于用户需求频率，先用 raw JSON 观察。
 - [ ] **阶段 5 — 批量操作**: `modifyBlockLoot(filter, consumer)` / `modifyEntityLoot(filter, consumer)`。
