@@ -14,10 +14,10 @@ import net.minecraft.resources.ResourceLocation;
  *   <li>{@link ResourceLocation#tryParse} 失败 -> 抛 {@link ValueConversionException}。</li>
  * </ul>
  */
-final class ParseIds {
+public final class ParseIds {
     private ParseIds() {}
 
-    static ResourceLocation parseItemOrBlockId(String raw) {
+    public static ResourceLocation parseItemOrBlockId(String raw) {
         if (raw == null || raw.isBlank()) return ResourceLocation.withDefaultNamespace("air");
         String id = raw.trim();
         if (id.startsWith("#")) {

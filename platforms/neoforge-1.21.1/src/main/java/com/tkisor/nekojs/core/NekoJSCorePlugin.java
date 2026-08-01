@@ -17,6 +17,7 @@ import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
+import com.tkisor.nekojs.bindings.static_access.BlockJS;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.RecipeSchemaBinding;
@@ -123,10 +124,13 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("global", NekoGlobal.shared());
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
-        // 全局 Item 是 ProxyObject 代理委托（of/empty 走 ItemJS，其余委托 MC Item 类）。
+        // 全局 Item 是 ProxyObject 代理委托（of/empty/id/idOf 走 ItemJS，其余委托 MC Item 类）。
         // 代理的动态成员 Java 反射不到，preflight 会误报 "has no member 'of'"，
         // 故用 Binding.of(name, value, valueType) 显式声明 valueType=ItemJS。
-        registry.register(Binding.of("Item", new DelegatingBinding(itemHelper, Item.class, Set.of("of", "empty")), ItemJS.class));
+        registry.register(Binding.of("Item", new DelegatingBinding(itemHelper, Item.class, Set.of("id", "idOf", "of", "empty")), ItemJS.class));
+        // 全局 Block 同样走代理委托（id/idOf 走 BlockJS，其余委托 MC Block 类）。
+        BlockJS blockHelper = new BlockJS();
+        registry.register(Binding.of("Block", new DelegatingBinding(blockHelper, net.minecraft.world.level.block.Block.class, Set.of("id", "idOf")), BlockJS.class));
         registry.register("BlockPos", BlockPos.class);
         registry.register("Direction", Direction.class);
         registry.register("Vec3", Vec3.class);

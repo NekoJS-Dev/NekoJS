@@ -9,11 +9,11 @@ import net.minecraft.resources.Identifier;
  * <p>统一规则：{@code trim} → 缺省补 {@code minecraft:} 前缀 → 拒绝 {@code #} 前缀（tag id）→
  * {@link Identifier#tryParse(String)}，失败抛 {@link ValueConversionException}。
  */
-final class ParseIds {
+public final class ParseIds {
     private ParseIds() {}
 
     /** 解析物品/方块 id；空串返回 {@code minecraft:air}。 */
-    static Identifier parseItemOrBlockId(String raw) {
+    public static Identifier parseItemOrBlockId(String raw) {
         if (raw == null || raw.isBlank()) return Identifier.withDefaultNamespace("air");
         String id = raw.trim();
         if (id.startsWith("#")) {
