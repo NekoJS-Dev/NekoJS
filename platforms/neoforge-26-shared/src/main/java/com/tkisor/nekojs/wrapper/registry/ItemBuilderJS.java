@@ -23,6 +23,9 @@ public class ItemBuilderJS {
 
     private FoodBuilderJS foodBuilder = null;
 
+    /** 可选：创造标签页 id（如 {@code 'minecraft:building_blocks'} 或自定义 tab id）。null=不分配。 */
+    private Identifier groupTab = null;
+
     public ItemBuilderJS(Identifier location) {
         this.location = location;
     }
@@ -30,6 +33,19 @@ public class ItemBuilderJS {
     public ItemBuilderJS maxStackSize(int size) { this.maxStackSize = size; return this; }
     public ItemBuilderJS maxDamage(int damage) { this.maxDamage = damage; return this; }
     public ItemBuilderJS fireResistant() { this.fireResistant = true; return this; }
+
+    /**
+     * 分配到创造标签页。{@code tabId} 为标签页 id（如 {@code 'minecraft:building_blocks'}
+     * 或 {@link com.tkisor.nekojs.wrapper.event.registry.CreativeTabRegistryEventJS} 注册的
+     * 自定义 tab id）。在 {@code BuildCreativeModeTabContentsEvent} 时追加。
+     */
+    public ItemBuilderJS group(String tabId) {
+        this.groupTab = tabId == null || tabId.isBlank() ? null : Identifier.parse(tabId);
+        return this;
+    }
+
+    /** 取目标创造标签页 id（可能为 null）。 */
+    public Identifier getGroupTab() { return groupTab; }
 
     public ItemBuilderJS rarity(String rarityStr) {
         this.rarity = switch (rarityStr.toLowerCase()) {

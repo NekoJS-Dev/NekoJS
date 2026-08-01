@@ -14,6 +14,12 @@ import java.util.function.Supplier;
 
 public class ItemRegistryEventJS  {
 
+    /**
+     * 已分配创造标签页的物品：物品 id → 标签页 id。
+     * 由 {@code BuildCreativeModeTabContentsEvent} 监听器消费（注册完成后才解析 Item）。
+     */
+    public static final Map<Identifier, Identifier> GROUP_ASSIGNMENTS = new HashMap<>();
+
     private final RegisterEvent rawEvent;
 
     private final List<ItemBuilderJS> builders = new ArrayList<>();
@@ -37,6 +43,9 @@ public class ItemRegistryEventJS  {
     public void registerAll() {
         for (ItemBuilderJS builder : builders) {
             rawEvent.register(Registries.ITEM, builder.getLocation(), builder::createItem);
+            if (builder.getGroupTab() != null) {
+                GROUP_ASSIGNMENTS.put(builder.getLocation(), builder.getGroupTab());
+            }
         }
 
         customItems.forEach((location, supplier) -> {

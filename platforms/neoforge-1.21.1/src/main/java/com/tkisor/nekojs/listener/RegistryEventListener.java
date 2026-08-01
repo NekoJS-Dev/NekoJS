@@ -106,4 +106,22 @@ public final class RegistryEventListener {
     public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
         GoalRegistry.onEntityJoinLevel(event);
     }
+
+    /**
+     * 创造标签页内容构建：把 {@link ItemRegistryEventJS#GROUP_ASSIGNMENTS} 里分配到当前
+     * 标签页的物品追加进去（脚本通过 ItemBuilderJS.group(tabId) 分配）。
+     * 在所有注册完成之后触发，故可安全从 {@link net.minecraft.core.registries.BuiltInRegistries#ITEM} 解析。
+     */
+    public static void onBuildCreativeTabContents(net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent event) {
+        var tabId = event.getTabKey().location();
+        ItemRegistryEventJS.GROUP_ASSIGNMENTS.entrySet().stream()
+                .filter(entry -> entry.getValue().equals(tabId))
+                .forEach(entry -> {
+                    Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(entry.getKey());
+                    if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                        event.accept(new net.minecraft.world.item.ItemStack(item),
+                                net.minecraft.world.item.CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                    }
+                });
+    }
 }

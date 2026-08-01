@@ -84,6 +84,7 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(NekoJSMod::onCommonSetup);
         modEventBus.addListener(RegistryEventListener::onRegister);
         modEventBus.addListener(RegistryEventListener::onEntityAttributeCreation);
+        modEventBus.addListener(RegistryEventListener::onBuildCreativeTabContents);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         NeoForge.EVENT_BUS.addListener(RegistryEventListener::onEntityJoinLevel);
         modEventBus.addListener(NekoJSMod::onLoadComplete);
