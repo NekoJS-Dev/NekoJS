@@ -121,7 +121,7 @@ public final class ApiContractReader {
                 "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0"));
 
         NormativeApiContract contract = new NormativeApiContract(
-                1,
+                2,
                 new NormativeApiContract.ContractIdentity(
                         "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0")),
                 null,
@@ -149,8 +149,11 @@ public final class ApiContractReader {
         List<NormativeApiContract.ContractError> errors = rootObj.has("errors")
                 ? convertErrors(rootObj.get("errors"))
                 : List.of();
+        List<NormativeApiContract.ContractEvent> events = rootObj.has("events")
+                ? convertEvents(rootObj.get("events"))
+                : List.of();
 
-        return new NormativeApiContract(schemaVersion, identity, docs, symbols, capabilities, modules, errors);
+        return new NormativeApiContract(schemaVersion, identity, docs, symbols, capabilities, modules, errors, events);
     }
 
     private static NormativeApiContract.ContractIdentity convertIdentity(JsonElement node) {
@@ -261,6 +264,55 @@ public final class ApiContractReader {
         return result;
     }
 
+    private static List<NormativeApiContract.ContractEvent> convertEvents(JsonElement node) {
+        List<NormativeApiContract.ContractEvent> result = new ArrayList<>();
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement eventNode : node.getAsJsonArray()) {
+            result.add(convertEvent(eventNode));
+        }
+        return result;
+    }
+
+    private static NormativeApiContract.ContractEvent convertEvent(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        String group = obj.get("group").getAsString();
+        String name = obj.get("name").getAsString();
+        NormativeApiContract.EventTier tier =
+                NormativeApiContract.EventTier.valueOf(obj.get("tier").getAsString());
+        NormativeApiContract.Dispatch dispatch = convertDispatch(obj.get("dispatch"));
+        String dispatchKeyType = obj.has("dispatch")
+                && obj.get("dispatch").getAsJsonObject().has("keyType")
+                ? obj.get("dispatch").getAsJsonObject().get("keyType").getAsString()
+                : null;
+        Boolean cancellable = obj.has("cancellable") ? obj.get("cancellable").getAsBoolean() : null;
+        List<NormativeApiContract.ContractEventField> payload = obj.has("payload")
+                ? convertEventFields(obj.get("payload"))
+                : List.of();
+        String docs = obj.has("docs") ? obj.get("docs").getAsString() : null;
+        return new NormativeApiContract.ContractEvent(
+                group, name, tier, dispatch, dispatchKeyType, cancellable, payload, docs);
+    }
+
+    private static NormativeApiContract.Dispatch convertDispatch(JsonElement node) {
+        JsonObject obj = node.getAsJsonObject();
+        return NormativeApiContract.Dispatch.valueOf(obj.get("kind").getAsString());
+    }
+
+    private static List<NormativeApiContract.ContractEventField> convertEventFields(JsonElement node) {
+        List<NormativeApiContract.ContractEventField> result = new ArrayList<>();
+        if (node == null || !node.isJsonArray()) return result;
+        for (JsonElement fieldNode : node.getAsJsonArray()) {
+            JsonObject obj = fieldNode.getAsJsonObject();
+            String name = obj.get("name").getAsString();
+            NormativeApiContract.FieldKind kind =
+                    NormativeApiContract.FieldKind.valueOf(obj.get("kind").getAsString());
+            ApiTypeRef portType = obj.has("portType") ? convertTypeRef(obj.get("portType")) : null;
+            String docs = obj.has("docs") ? obj.get("docs").getAsString() : null;
+            result.add(new NormativeApiContract.ContractEventField(name, kind, portType, docs));
+        }
+        return result;
+    }
+
     private static NormativeApiContract.ContractModule convertModule(JsonElement node) {
         JsonObject obj = node.getAsJsonObject();
         String id = obj.get("id").getAsString();
@@ -360,10 +412,45 @@ public final class ApiContractReader {
         contract.modules().forEach(module -> allSymbols.addAll(module.symbols()));
         validateSignatureErrors(contract.symbols(), errorCodes);
         validateSymbolTypes(allSymbols, actual.kind() == ApiContractKind.PORTABLE);
+        validateEvents(contract, allSymbols, errorCodes);
 
         for (NormativeApiContract.ContractModule module : contract.modules()) {
             validateSignatureErrors(module.symbols(), errorCodes);
             validateModuleSemantics(module, actual.owner(), actual.kind());
+        }
+    }
+
+    private static void validateEvents(
+            NormativeApiContract contract,
+            List<ApiSymbol> allSymbols,
+            Set<String> declaredErrors) {
+        if (contract.events().isEmpty()) {
+            return;
+        }
+        Set<String> declaredTypes = allSymbols.stream()
+                .filter(symbol -> "member".equals(symbol.id().kind()))
+                .map(symbol -> symbol.id().qualifiedName())
+                .map(name -> name.substring(0, name.lastIndexOf('.')))
+                .collect(Collectors.toSet());
+        boolean requireLocalTypeReferences = contract.identity().kind() == ApiContractKind.PORTABLE;
+
+        Set<String> seenEvents = new HashSet<>();
+        for (int i = 0; i < contract.events().size(); i++) {
+            NormativeApiContract.ContractEvent event = contract.events().get(i);
+            String eventKey = event.group() + "." + event.name();
+            if (!seenEvents.add(eventKey)) {
+                throw new ApiContractException(new ApiContractViolation(
+                        "DUPLICATE_EVENT", "/events/" + i,
+                        "Duplicate event '" + eventKey + "'"));
+            }
+            ApiSymbolId eventSymbolId = ApiSymbolId.parse("event:" + eventKey);
+            for (NormativeApiContract.ContractEventField field : event.payload()) {
+                if (field.portType() == null) {
+                    continue;
+                }
+                validateType(field.portType(), eventSymbolId, declaredTypes, requireLocalTypeReferences);
+                validateCallbackErrors(field.portType(), eventSymbolId, declaredErrors);
+            }
         }
     }
 
@@ -544,7 +631,7 @@ public final class ApiContractReader {
 
     private static boolean isSetLikeArray(String fieldName, JsonElement parent) {
         if (fieldName == null) return false;
-        if (Set.of("symbols", "signatures", "capabilities", "modules", "errors", "fields", "dependencies", "errorCodes")
+        if (Set.of("symbols", "signatures", "capabilities", "modules", "errors", "fields", "dependencies", "errorCodes", "events", "payload")
                 .contains(fieldName)) {
             return true;
         }

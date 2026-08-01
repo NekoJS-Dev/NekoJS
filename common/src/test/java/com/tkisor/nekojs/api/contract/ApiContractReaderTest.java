@@ -76,7 +76,7 @@ class ApiContractReaderTest {
 
     @Test
     void rejectsSchemaValidationFailure() {
-        String invalidJson = "{\"schemaVersion\": 1, \"symbols\": []}";
+        String invalidJson = "{\"schemaVersion\": 2, \"symbols\": []}";
         ApiContractException error = assertThrows(ApiContractException.class,
                 () -> {
                     try (Reader r = new StringReader(invalidJson)) {
@@ -167,7 +167,7 @@ class ApiContractReaderTest {
     void rejectsPortableWithModules() {
         String json = """
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "identity": {
                     "owner": "nekojs-core",
                     "kind": "PORTABLE",
@@ -192,7 +192,7 @@ class ApiContractReaderTest {
     void rejectsAddonWithMismatchedModuleId() {
         String json = """
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "identity": {
                     "owner": "some-addon",
                     "kind": "ADDON",
@@ -217,7 +217,7 @@ class ApiContractReaderTest {
     void rejectsAddonWithMismatchedModuleVersion() {
         String json = """
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "identity": {
                     "owner": "some-addon",
                     "kind": "ADDON",
@@ -339,7 +339,7 @@ class ApiContractReaderTest {
     void moduleContractMayReferencePortableTypeOwnedByAnotherContract() {
         String json = """
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "identity": {
                     "owner": "nekojs-core",
                     "kind": "FEATURE",
@@ -382,7 +382,7 @@ class ApiContractReaderTest {
     private static String contractWithErrors(String errors) {
         return """
                 {
-                  "schemaVersion": 1,
+                  "schemaVersion": 2,
                   "identity": {
                     "owner": "nekojs-core",
                     "kind": "PORTABLE",
@@ -393,5 +393,118 @@ class ApiContractReaderTest {
                   "errors": [%s]
                 }
                 """.formatted(errors);
+    }
+
+    private static String contractWithEvent(String eventJson) {
+        return """
+                {
+                  "schemaVersion": 2,
+                  "identity": {
+                    "owner": "nekojs-core",
+                    "kind": "PORTABLE",
+                    "contractId": "portable-core",
+                    "version": "1.0.0"
+                  },
+                  "symbols": [{"id":"global:Test","signatures":[{"parameters":[],"returnType":{"kind":"VOID"}}]}],
+                  "events": [%s]
+                }
+                """.formatted(eventJson);
+    }
+
+    @Test
+    void readsEventsWithPortablePayload() {
+        String json = contractWithEvent("""
+                {"group":"ServerEvents","name":"started","tier":"SERVER",
+                 "dispatch":{"kind":"PLAIN"},
+                 "payload":[{"name":"server","kind":"NATIVE"}],
+                 "cancellable":false}
+                """);
+        VerifiedApiContract verified = readJson(json);
+        NormativeApiContract.ContractEvent event = verified.contract().events().getFirst();
+        assertEquals("ServerEvents", event.group());
+        assertEquals("started", event.name());
+        assertEquals(NormativeApiContract.EventTier.SERVER, event.tier());
+        assertEquals(NormativeApiContract.Dispatch.PLAIN, event.dispatch());
+        assertEquals(Boolean.FALSE, event.cancellable());
+        assertEquals(1, event.payload().size());
+        assertEquals(NormativeApiContract.FieldKind.NATIVE, event.payload().getFirst().kind());
+    }
+
+    @Test
+    void readsDispatchByStringIdEvent() {
+        String json = contractWithEvent("""
+                {"group":"PlayerEvents","name":"crafted","tier":"SERVER",
+                 "dispatch":{"kind":"BY_ID","keyType":"string"}}
+                """);
+        NormativeApiContract.ContractEvent event = readJson(json).contract().events().getFirst();
+        assertEquals(NormativeApiContract.Dispatch.BY_ID, event.dispatch());
+        assertEquals("string", event.dispatchKeyType());
+    }
+
+    @Test
+    void rejectsDuplicateEventGroupAndName() {
+        String json = contractWithEvent("""
+                {"group":"ServerEvents","name":"started","tier":"SERVER","dispatch":{"kind":"PLAIN"}},
+                {"group":"ServerEvents","name":"started","tier":"SERVER","dispatch":{"kind":"PLAIN"}}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("DUPLICATE_EVENT", error.violation().code());
+    }
+
+    @Test
+    void rejectsPlainEventWithDispatchKeyType() {
+        String json = contractWithEvent("""
+                {"group":"ServerEvents","name":"started","tier":"SERVER","dispatch":{"kind":"PLAIN","keyType":"string"}}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("INVALID_CONTRACT_MODEL", error.violation().code());
+    }
+
+    @Test
+    void rejectsByIdEventWithoutKeyType() {
+        String json = contractWithEvent("""
+                {"group":"PlayerEvents","name":"crafted","tier":"SERVER","dispatch":{"kind":"BY_ID"}}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("INVALID_CONTRACT_MODEL", error.violation().code());
+    }
+
+    @Test
+    void rejectsNativePayloadFieldWithPortType() {
+        String json = contractWithEvent("""
+                {"group":"ServerEvents","name":"started","tier":"SERVER","dispatch":{"kind":"PLAIN"},
+                 "payload":[{"name":"server","kind":"NATIVE","portType":{"kind":"PRIMITIVE","name":"string"}}]}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("INVALID_CONTRACT_MODEL", error.violation().code());
+    }
+
+    @Test
+    void rejectsPortablePayloadFieldWithoutPortType() {
+        String json = contractWithEvent("""
+                {"group":"ScriptEvents","name":"server","tier":"STARTUP","dispatch":{"kind":"PLAIN"},
+                 "payload":[{"name":"register","kind":"PORTABLE"}]}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("INVALID_CONTRACT_MODEL", error.violation().code());
+    }
+
+    @Test
+    void rejectsEventWithUnknownTier() {
+        String json = contractWithEvent("""
+                {"group":"ServerEvents","name":"started","tier":"MOD","dispatch":{"kind":"PLAIN"}}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("SCHEMA_VALIDATION_FAILED", error.violation().code());
+    }
+
+    @Test
+    void rejectsPortablePayloadFieldWithUnresolvedTypeReference() {
+        String json = contractWithEvent("""
+                {"group":"ScriptEvents","name":"server","tier":"STARTUP","dispatch":{"kind":"PLAIN"},
+                 "payload":[{"name":"data","kind":"PORTABLE","portType":{"kind":"SYMBOL","name":"type:Missing"}}]}
+                """);
+        ApiContractException error = assertThrows(ApiContractException.class, () -> readJson(json));
+        assertEquals("UNRESOLVED_TYPE_REFERENCE", error.violation().code());
     }
 }

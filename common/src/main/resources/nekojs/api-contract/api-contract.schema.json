@@ -9,7 +9,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "identity": {
       "$ref": "#/$defs/ContractIdentity"
@@ -39,6 +39,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/Module"
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Event"
       }
     }
   },
@@ -298,6 +304,78 @@
         "targetTier": {
           "type": "string",
           "enum": ["FEATURE", "PLATFORM", "ADDON", "VERSION"]
+        }
+      }
+    },
+    "Event": {
+      "type": "object",
+      "required": ["group", "name", "tier", "dispatch"],
+      "additionalProperties": false,
+      "properties": {
+        "group": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9]*$"
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["STARTUP", "SERVER", "CLIENT"]
+        },
+        "dispatch": {
+          "$ref": "#/$defs/EventDispatch"
+        },
+        "cancellable": {
+          "type": "boolean",
+          "description": "三态承诺：true/false 为跨平台承诺；省略表示平台间不一致、不承诺"
+        },
+        "payload": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EventPayloadField"
+          }
+        },
+        "docs": {
+          "type": "string"
+        }
+      }
+    },
+    "EventDispatch": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["PLAIN", "BY_ID"]
+        },
+        "keyType": {
+          "type": "string",
+          "description": "BY_ID 时的键类型（当前固定为 string）"
+        }
+      }
+    },
+    "EventPayloadField": {
+      "type": "object",
+      "required": ["name", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9]*$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["PORTABLE", "NATIVE"]
+        },
+        "portType": {
+          "description": "PORTABLE 字段的可移植类型；NATIVE 字段不得携带",
+          "$ref": "#/$defs/TypeRef"
+        },
+        "docs": {
+          "type": "string"
         }
       }
     }

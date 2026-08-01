@@ -193,7 +193,7 @@ class ApiSurfaceBootstrapTest {
         NekoPluginRuntime runtime = NekoPluginRuntime.bootstrapOwned(
                 List.of(), new ScriptPropertyRegistry.Impl());
 
-        assertEquals(ApiVersion.parse("0.7.0"),
+        assertEquals(ApiVersion.parse("0.8.0"),
                 ((FrozenApiRegistrySet) runtime.apiRuntimeProvider())
                         .contracts().requirePortable("nekojs-core").identity().version());
         assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.ID_GLOBAL));

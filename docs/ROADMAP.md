@@ -33,6 +33,7 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 - [x] **配方热重载（Cleanroom 1.12.2）**：`/nekojs reload server` 解冻 ForgeRegistry → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 `HeiRefresher`（`JeiProxyAccessor` mixin @Accessor，类型安全非反射）自动刷新 HEI/JEI 面板。
 - [x] **健壮性修复**：`Platform.INSTANCE` 加 `volatile`（跨线程可见性）；`ScriptManager.reloadScripts` / `RegistryEventListener.reloadRecipes` 加重入保护（`synchronized`）；`EventBusJS` 4 处 catch 不再吞 `InterruptedException`/`Error`。
 - [x] **common 上提**：`WorkspaceGenerator`、`PluginLoader` 的过滤+实例化、`RecipeRegistryProxy` 常量（`RecipeRegistryKeys`）从平台层上提到 common；`postModifyWorkspaceConfigEvent` 平台 event bus 机制改为 `NekoJSPlugin.modifyWorkspaceConfig` 钩子，删除 4 平台 `ModifyWorkspaceConfigEvent` 死代码。
+- [x] **事件契约（portable-core 0.8.0）**：契约模型新增 `events` 字段（schemaVersion 1→2），约定 34 个跨平台事件（ScriptEvents 2 + ServerEvents 7 + LevelEvents 5 + PlayerEvents 18 + CommandEvents 2）的名称/分发/可取消性/可移植 payload 视图；三平台取消性经 GitHub 源码核实（chat/command/entityInteract 可取消），payload 属性按 Graal 属性访问一致性核实（`server`/`message`/`username` 承诺，`level`/`world`/`command` 命名不一致不承诺）；`ApiContractReader` 增加事件语义校验（重复/分发键/字段类型）。平台独有事件（datapackSync/lootTables/tags 等）留作平台事实 API。
 - [x] **代码清理**：消除 10 处 `printStackTrace`、删除 `.jswrapper` 空垃圾目录、cleanroom 的 `NativeEventsJS`/`ScriptEventsJS` 桩改为显式 `UnsupportedOperationException`。
 
 ### 下一阶段待办（按 ROI 排序）

@@ -51,7 +51,7 @@ class ApiManifestWriterTest {
 
     private static VerifiedContractSet portableContractSet() {
         NormativeApiContract contract = new NormativeApiContract(
-                1,
+                2,
                 new NormativeApiContract.ContractIdentity(
                         "nekojs-core", ApiContractKind.PORTABLE, "portable-core", v1_0_0()),
                 "Portable contract",
