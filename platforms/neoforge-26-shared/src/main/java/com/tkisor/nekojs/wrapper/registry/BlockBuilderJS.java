@@ -20,6 +20,7 @@ public class BlockBuilderJS {
     private boolean generateItem = true;
     private boolean requiresTool = false;
     private SoundType soundType = SoundType.STONE;
+    private net.minecraft.world.level.material.MapColor mapColor = net.minecraft.world.level.material.MapColor.STONE;
 
     /** 可选：配置自动创建的 BlockItem（rarity/stackSize 等）。null 表示用默认 Item.Properties。 */
     private ItemBuilderJS itemBuilder = null;
@@ -41,6 +42,19 @@ public class BlockBuilderJS {
     }
 
     public BlockBuilderJS lightLevel(int lightLevel) { this.lightLevel = lightLevel; return this; }
+
+    /** 地图颜色（地名见 {@link #mapColor(String)}）。默认 STONE。 */
+    public BlockBuilderJS mapColor(net.minecraft.world.level.material.MapColor mapColor) {
+        if (mapColor != null) this.mapColor = mapColor;
+        return this;
+    }
+
+    /** 按名称设地图颜色（如 {@code 'dirt'} / {@code 'water'} / {@code 'gold'} / {@code 'color_red'}）。默认 stone。 */
+    public BlockBuilderJS mapColor(String name) {
+        net.minecraft.world.level.material.MapColor resolved = resolveMapColor(name);
+        if (resolved != null) this.mapColor = resolved;
+        return this;
+    }
 
     public BlockBuilderJS requiresTool() { this.requiresTool = true; return this; }
 
@@ -86,6 +100,7 @@ public class BlockBuilderJS {
 
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
                 .setId(key)
+                .mapColor(mapColor)
                 .destroyTime(hardness)
                 .explosionResistance(resistance)
                 .sound(soundType)
@@ -96,5 +111,49 @@ public class BlockBuilderJS {
         }
 
         return new Block(props);
+    }
+
+    /** 常用 MapColor 名称 → 常量。未命中返回 null（保留默认）。 */
+    private static net.minecraft.world.level.material.MapColor resolveMapColor(String name) {
+        if (name == null) return null;
+        return switch (name.toLowerCase()) {
+            case "none" -> net.minecraft.world.level.material.MapColor.NONE;
+            case "grass" -> net.minecraft.world.level.material.MapColor.GRASS;
+            case "sand" -> net.minecraft.world.level.material.MapColor.SAND;
+            case "wool" -> net.minecraft.world.level.material.MapColor.WOOL;
+            case "fire" -> net.minecraft.world.level.material.MapColor.FIRE;
+            case "ice" -> net.minecraft.world.level.material.MapColor.ICE;
+            case "metal" -> net.minecraft.world.level.material.MapColor.METAL;
+            case "plant" -> net.minecraft.world.level.material.MapColor.PLANT;
+            case "snow" -> net.minecraft.world.level.material.MapColor.SNOW;
+            case "clay" -> net.minecraft.world.level.material.MapColor.CLAY;
+            case "dirt" -> net.minecraft.world.level.material.MapColor.DIRT;
+            case "stone" -> net.minecraft.world.level.material.MapColor.STONE;
+            case "water" -> net.minecraft.world.level.material.MapColor.WATER;
+            case "wood" -> net.minecraft.world.level.material.MapColor.WOOD;
+            case "quartz" -> net.minecraft.world.level.material.MapColor.QUARTZ;
+            case "gold" -> net.minecraft.world.level.material.MapColor.GOLD;
+            case "diamond" -> net.minecraft.world.level.material.MapColor.DIAMOND;
+            case "lapis" -> net.minecraft.world.level.material.MapColor.LAPIS;
+            case "emerald" -> net.minecraft.world.level.material.MapColor.EMERALD;
+            case "podzol" -> net.minecraft.world.level.material.MapColor.PODZOL;
+            case "nether" -> net.minecraft.world.level.material.MapColor.NETHER;
+            case "color_orange", "orange" -> net.minecraft.world.level.material.MapColor.COLOR_ORANGE;
+            case "color_magenta", "magenta" -> net.minecraft.world.level.material.MapColor.COLOR_MAGENTA;
+            case "color_light_blue", "light_blue" -> net.minecraft.world.level.material.MapColor.COLOR_LIGHT_BLUE;
+            case "color_yellow", "yellow" -> net.minecraft.world.level.material.MapColor.COLOR_YELLOW;
+            case "color_light_green", "light_green", "lime" -> net.minecraft.world.level.material.MapColor.COLOR_LIGHT_GREEN;
+            case "color_pink", "pink" -> net.minecraft.world.level.material.MapColor.COLOR_PINK;
+            case "color_gray", "gray", "grey" -> net.minecraft.world.level.material.MapColor.COLOR_GRAY;
+            case "color_light_gray", "light_gray", "light_grey" -> net.minecraft.world.level.material.MapColor.COLOR_LIGHT_GRAY;
+            case "color_cyan", "cyan" -> net.minecraft.world.level.material.MapColor.COLOR_CYAN;
+            case "color_purple", "purple" -> net.minecraft.world.level.material.MapColor.COLOR_PURPLE;
+            case "color_blue", "blue" -> net.minecraft.world.level.material.MapColor.COLOR_BLUE;
+            case "color_brown", "brown" -> net.minecraft.world.level.material.MapColor.COLOR_BROWN;
+            case "color_green", "green" -> net.minecraft.world.level.material.MapColor.COLOR_GREEN;
+            case "color_red", "red" -> net.minecraft.world.level.material.MapColor.COLOR_RED;
+            case "color_black", "black" -> net.minecraft.world.level.material.MapColor.COLOR_BLACK;
+            default -> null;
+        };
     }
 }
