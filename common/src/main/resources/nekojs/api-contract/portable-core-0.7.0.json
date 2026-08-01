@@ -694,6 +694,42 @@
       ]
     },
     {
+      "id": "member:NBT.parse",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "snbt", "type": { "kind": "PRIMITIVE", "name": "string" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:NbtValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "INVALID_NBT", "NBT_LIMIT_EXCEEDED"]
+        }
+      ]
+    },
+    {
+      "id": "member:NBT.toObject",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "SYMBOL", "name": "type:NbtValue" } }
+          ],
+          "returnType": { "kind": "PRIMITIVE", "name": "object" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "INVALID_REFERENCE"]
+        }
+      ]
+    },
+    {
+      "id": "member:NBT.fromObject",
+      "signatures": [
+        {
+          "parameters": [
+            { "name": "value", "type": { "kind": "PRIMITIVE", "name": "object" } }
+          ],
+          "returnType": { "kind": "SYMBOL", "name": "type:NbtValue" },
+          "errorCodes": ["NO_MATCHING_SIGNATURE", "TYPE_MISMATCH", "NBT_LIMIT_EXCEEDED"]
+        }
+      ]
+    },
+    {
       "id": "member:NbtValue.kind",
       "signatures": [
         { "parameters": [], "returnType": { "kind": "PRIMITIVE", "name": "string" } }

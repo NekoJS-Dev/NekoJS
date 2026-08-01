@@ -201,6 +201,9 @@ public final class CoreManagedApiBootstrap {
             nbt.write((String) args.getFirst(), (NbtValue) args.get(1));
             return null;
         });
+        register(contributions, symbols, "member:NBT.parse", (receiver, args) -> nbt.parse((String) args.getFirst()));
+        register(contributions, symbols, "member:NBT.toObject", (receiver, args) -> nbt.toObject((NbtValue) args.getFirst()));
+        register(contributions, symbols, "member:NBT.fromObject", (receiver, args) -> nbt.fromObject(args.getFirst()));
         register(contributions, symbols, "member:NbtValue.kind", (receiver, args) -> nbt.kind((NbtValue) receiver));
         register(contributions, symbols, "member:NbtValue.scalar", (receiver, args) -> nbt.scalar((NbtValue) receiver));
         register(contributions, symbols, "member:NbtValue.values", (receiver, args) -> nbt.values((NbtValue) receiver));

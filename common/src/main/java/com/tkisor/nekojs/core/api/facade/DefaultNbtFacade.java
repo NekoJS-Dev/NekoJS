@@ -7,10 +7,13 @@ import com.tkisor.nekojs.api.error.ApiInvocationException;
 import com.tkisor.nekojs.api.facade.NbtFacade;
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
 import com.tkisor.nekojs.core.api.nbt.NbtFileStore;
+import com.tkisor.nekojs.core.api.nbt.NbtSnbtParser;
 import com.tkisor.nekojs.core.api.nbt.NbtSnbtSerializer;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,6 +75,65 @@ public final class DefaultNbtFacade implements NbtFacade {
             throw mismatch("NBT binary root must be a compound");
         }
         fileStore.write(path, compound);
+    }
+
+    @Override public NbtValue parse(String snbt) {
+        try { return NbtSnbtParser.parse(snbt); }
+        catch (IllegalArgumentException error) {
+            throw new ApiInvocationException(ApiErrorCodes.INVALID_NBT, error.getMessage(), Map.of(), error);
+        }
+    }
+
+    @Override public Object toObject(NbtValue value) {
+        if (value instanceof NbtValue.CompoundValue compound) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            compound.values().forEach((key, child) -> map.put(key, toObject(child)));
+            return map;
+        }
+        if (value instanceof NbtValue.ListValue list) {
+            List<Object> elements = new ArrayList<>(list.values().size());
+            for (NbtValue child : list.values()) elements.add(toObject(child));
+            return elements;
+        }
+        if (value instanceof NbtValue.ByteArrayValue array) {
+            List<Byte> elements = new ArrayList<>(array.values().length);
+            for (byte b : array.values()) elements.add(b);
+            return elements;
+        }
+        if (value instanceof NbtValue.IntArrayValue array) {
+            List<Integer> elements = new ArrayList<>(array.values().length);
+            for (int i : array.values()) elements.add(i);
+            return elements;
+        }
+        Object scalar = scalar(value);
+        return scalar != null ? scalar : value;
+    }
+
+    @Override public NbtValue fromObject(Object value) {
+        if (value == null) throw mismatch("cannot convert null to NBT");
+        if (value instanceof NbtValue nbt) return nbt;
+        if (value instanceof Map<?, ?> map) {
+            Map<String, NbtValue> compound = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                compound.put(String.valueOf(entry.getKey()), fromObject(entry.getValue()));
+            }
+            return NbtValue.compound(compound);
+        }
+        if (value instanceof Collection<?> collection) {
+            List<NbtValue> list = new ArrayList<>(collection.size());
+            for (Object element : collection) list.add(fromObject(element));
+            return NbtValue.list(list);
+        }
+        if (value instanceof Boolean bool) return NbtValue.byteValue((byte) (bool ? 1 : 0));
+        if (value instanceof Byte number) return NbtValue.byteValue(number);
+        if (value instanceof Short number) return NbtValue.shortValue(number);
+        if (value instanceof Integer number) return NbtValue.intValue(number);
+        if (value instanceof Long number) return NbtValue.longValue(number);
+        if (value instanceof Float number) return NbtValue.floatValue(number);
+        if (value instanceof Double number) return NbtValue.doubleValue(number);
+        if (value instanceof Number number) return NbtValue.doubleValue(number.doubleValue());
+        if (value instanceof String string) return NbtValue.string(string);
+        throw mismatch("cannot convert " + value.getClass().getName() + " to NBT");
     }
 
     private static String serialize(NbtValue value) {
