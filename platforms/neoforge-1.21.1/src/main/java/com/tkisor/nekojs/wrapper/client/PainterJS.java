@@ -16,11 +16,23 @@ import net.minecraft.world.item.ItemStack;
 public class PainterJS {
     private final GuiGraphics guiGraphics;
     private final Font font;
+    private final float partialTick;
     private int currentColor = 0xFFFFFFFF;
 
-    public PainterJS(GuiGraphics guiGraphics) {
+    public PainterJS(GuiGraphics guiGraphics, float partialTick) {
         this.guiGraphics = guiGraphics;
         this.font = Minecraft.getInstance().font;
+        this.partialTick = partialTick;
+    }
+
+    /** 当前渲染帧的部分插值（0~1），用于平滑动画。 */
+    public float getPartialTick() {
+        return partialTick;
+    }
+
+    /** 当前客户端世界 tick 数（周期动画：{@code worldTime % 周期}）。 */
+    public long getWorldTime() {
+        return Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
     }
 
     /** 屏幕宽度（GUI 缩放后）。 */
@@ -77,6 +89,26 @@ public class PainterJS {
     public PainterJS gradient(int x, int y, int width, int height, int colorTop, int colorBottom) {
         guiGraphics.fillGradient(x, y, x + width, y + height, colorTop, colorBottom);
         return this;
+    }
+
+    /** 水平渐变矩形（逐列插值，宽度不宜过大）。 */
+    public PainterJS gradientH(int x, int y, int width, int height, int colorLeft, int colorRight) {
+        if (width <= 0) {
+            return this;
+        }
+        float max = width > 1 ? width - 1 : 1;
+        for (int i = 0; i < width; i++) {
+            guiGraphics.fill(x + i, y, x + i + 1, y + height, lerpColor(colorLeft, colorRight, i / max));
+        }
+        return this;
+    }
+
+    private static int lerpColor(int from, int to, float t) {
+        int a = (int) (((from >>> 24) & 0xFF) + (((to >>> 24) & 0xFF) - ((from >>> 24) & 0xFF)) * t);
+        int r = (int) (((from >>> 16) & 0xFF) + (((to >>> 16) & 0xFF) - ((from >>> 16) & 0xFF)) * t);
+        int g = (int) (((from >>> 8) & 0xFF) + (((to >>> 8) & 0xFF) - ((from >>> 8) & 0xFF)) * t);
+        int b = (int) ((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * t);
+        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     /** 文本（左对齐）。 */

@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.client.PainterJS;
+import com.tkisor.nekojs.wrapper.client.ScreenRenderEventJS;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -16,6 +17,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 public interface ClientEvents {
@@ -83,6 +85,9 @@ public interface ClientEvents {
     /** HUD 绘制事件（每帧 GUI 渲染后），参数为 {@link PainterJS}。 */
     EventBusJS<PainterJS, Void> HUD = GROUP.client("hud", PainterJS.class);
 
+    /** 界面渲染事件（Screen 渲染后），参数为 {@link ScreenRenderEventJS}。 */
+    EventBusJS<ScreenRenderEventJS, Void> SCREEN_RENDER = GROUP.client("screenRender", ScreenRenderEventJS.class);
+
     EventBusForgeBridge MAIN_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(TICK_PRE)
             .bind(TICK_POST)
@@ -91,7 +96,10 @@ public interface ClientEvents {
             .bind(LOGGED_OUT)
             .bind(CLONED)
             .bind(COMMAND_REGISTRY)
-            .bindTransformed(HUD, event -> new PainterJS(event.getGuiGraphics()), RenderGuiEvent.Post.class);
+            .bindTransformed(HUD, event -> new PainterJS(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(false)), RenderGuiEvent.Post.class)
+            .bindTransformed(SCREEN_RENDER, event -> new ScreenRenderEventJS(
+                    new PainterJS(event.getGuiGraphics(), event.getPartialTick()),
+                    event.getScreen(), event.getMouseX(), event.getMouseY()), ScreenEvent.Render.Post.class);
 
     static void bindModBus(IEventBus modEventBus) {
         EventBusForgeBridge.create(modEventBus)
