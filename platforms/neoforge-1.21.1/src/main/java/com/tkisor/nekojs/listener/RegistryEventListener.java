@@ -15,9 +15,15 @@ import com.tkisor.nekojs.wrapper.event.registry.PotionRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.VillagerTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.registry.BlockBuilderJS;
+import com.tkisor.nekojs.wrapper.registry.EntityTypeBuilderJS;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -57,6 +63,18 @@ public final class RegistryEventListener {
 
             // 流体桶（ITEM 在 BLOCK 之后；registerItems 末尾清理所有跨 pass 状态）
             FluidRegistryEventJS.registerItems(event);
+
+            // 生物蛋（ENTITY_TYPE 先于 ITEM 触发；1.21.1 四参构造器带颜色，模型 tint 染色）
+            EntityTypeRegistryEventJS.PENDING_SPAWN_EGGS.forEach((location, builder) -> {
+                EntityType<? extends LivingEntity> type = EntityTypeRegistryEventJS.getEntityType(location);
+                if (type == null) {
+                    return;
+                }
+                ResourceLocation eggLocation = ResourceLocation.fromNamespaceAndPath(
+                        location.getNamespace(), location.getPath() + "_spawn_egg");
+                event.register(Registries.ITEM, eggLocation, () -> createSpawnEgg(type, builder));
+            });
+            EntityTypeRegistryEventJS.PENDING_SPAWN_EGGS.clear();
         } else if (event.getRegistryKey().equals(NeoForgeRegistries.FLUID_TYPES.key())) {
             // 流体类型与流体本体分属两个 registry；两个分支都 post（create 按 id 覆盖去重）
             RegistryEvents.FLUID.post(new FluidRegistryEventJS());
@@ -97,6 +115,13 @@ public final class RegistryEventListener {
             RegistryEvents.ENCHANTMENT.post(eventJS);
             eventJS.registerAll();
         }
+    }
+
+    /** 1.21.1：四参构造器（type + 双色）。NekoScriptMob 是 Mob 子类，unchecked 转换安全。 */
+    @SuppressWarnings("unchecked")
+    private static Item createSpawnEgg(EntityType<? extends LivingEntity> type, EntityTypeBuilderJS builder) {
+        return new SpawnEggItem((EntityType<? extends Mob>) (EntityType<?>) type,
+                builder.getSpawnEggBackgroundColor(), builder.getSpawnEggHighlightColor(), new Item.Properties());
     }
 
     public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

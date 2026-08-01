@@ -3,6 +3,8 @@ package com.tkisor.nekojs.client;
 import com.google.gson.JsonObject;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.registry.BlockRegistryEventJS;
+import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
+import net.minecraft.resources.Identifier;
 
 /**
  * 26.x 方块默认模型生成（客户端资产生成阶段）。
@@ -76,5 +78,39 @@ public final class BlockModelGenerator {
         }
         model.add("textures", textures);
         return model;
+    }
+
+    /**
+     * 为请求过 {@code spawnEgg()} 的实体生成默认蛋模型（仅当脚本未自写）。
+     *
+     * <p>26.x 的 spawn egg 渲染数据驱动（无运行时染色）：生成新式 item model
+     * definition 指向旧式模型，旧式模型默认引用鸡蛋纹理占位——自定义外观需用资源包
+     * 覆盖模型 JSON 或提供 {@code <ns>:textures/item/<path>_spawn_egg.png}。
+     */
+    public static void generateSpawnEggModels(DataGeneratorJS generator) {
+        for (Identifier id : EntityTypeRegistryEventJS.registeredSpawnEggs()) {
+            String namespace = id.getNamespace();
+            String path = id.getPath();
+
+            String itemPath = namespace + "/items/" + path + ".json";
+            String modelPath = namespace + "/models/item/" + path + ".json";
+
+            if (generator.getJson(itemPath) == null) {
+                JsonObject item = new JsonObject();
+                JsonObject model = new JsonObject();
+                model.addProperty("type", "minecraft:model");
+                model.addProperty("model", namespace + ":item/" + path);
+                item.add("model", model);
+                generator.json(itemPath, item);
+            }
+            if (generator.getJson(modelPath) == null) {
+                JsonObject model = new JsonObject();
+                model.addProperty("parent", "minecraft:item/generated");
+                JsonObject textures = new JsonObject();
+                textures.addProperty("layer0", "minecraft:item/egg");
+                model.add("textures", textures);
+                generator.json(modelPath, model);
+            }
+        }
     }
 }

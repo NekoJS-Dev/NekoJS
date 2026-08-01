@@ -16,8 +16,12 @@ import com.tkisor.nekojs.wrapper.event.registry.SoundEventRegistryEventJS;
 import com.tkisor.nekojs.wrapper.event.registry.VillagerTypeRegistryEventJS;
 import com.tkisor.nekojs.wrapper.registry.BlockBuilderJS;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -57,6 +61,18 @@ public final class RegistryEventListener {
 
             // 流体桶（ITEM 在 BLOCK 之后；registerItems 末尾清理所有跨 pass 状态）
             FluidRegistryEventJS.registerItems(event);
+
+            // 生物蛋（ENTITY_TYPE 先于 ITEM 触发；26.x 无运行时染色，仅注册功能蛋）
+            EntityTypeRegistryEventJS.PENDING_SPAWN_EGGS.forEach((location, builder) -> {
+                EntityType<? extends LivingEntity> type = EntityTypeRegistryEventJS.getEntityType(location);
+                if (type == null) {
+                    return;
+                }
+                Identifier eggLocation = Identifier.fromNamespaceAndPath(
+                        location.getNamespace(), location.getPath() + "_spawn_egg");
+                event.register(Registries.ITEM, eggLocation, () -> createSpawnEgg(type));
+            });
+            EntityTypeRegistryEventJS.PENDING_SPAWN_EGGS.clear();
         } else if (event.getRegistryKey().equals(NeoForgeRegistries.FLUID_TYPES.key())) {
             // 流体类型与流体本体分属两个 registry；两个分支都 post（create 按 id 覆盖去重）
             RegistryEvents.FLUID.post(new FluidRegistryEventJS());
@@ -97,6 +113,11 @@ public final class RegistryEventListener {
             RegistryEvents.ENCHANTMENT.post(eventJS);
             eventJS.registerAll();
         }
+    }
+
+    /** 26.x：spawn egg 构造器只剩单参，实体类型经 {@link Item.Properties#spawnEgg} 传入。 */
+    private static Item createSpawnEgg(EntityType<? extends LivingEntity> type) {
+        return new SpawnEggItem(new Item.Properties().spawnEgg(type));
     }
 
     public static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {

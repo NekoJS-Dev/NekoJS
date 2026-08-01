@@ -24,6 +24,9 @@ public class EntityTypeBuilderJS {
     private boolean fireImmune = false;
     private boolean noSave = false;
     private boolean noSummon = false;
+    /** spawn egg 颜色（{@code null} 表示不生成蛋）。1.21.1 经 {@code template_spawn_egg} 模型运行时染色。 */
+    private Integer spawnEggBackgroundColor = null;
+    private Integer spawnEggHighlightColor = null;
     private final EntityAttributeBuilderJS attributes = new EntityAttributeBuilderJS();
     private final GoalRegistry.GoalBuilderJS goals = GoalRegistry.builder();
 
@@ -79,6 +82,25 @@ public class EntityTypeBuilderJS {
     public EntityTypeBuilderJS noSummon() {
         this.noSummon = true;
         return this;
+    }
+
+    /** 请求自动注册 {@code <id>_spawn_egg} 物品；颜色在 1.21.1 生效（模型 tint 染色）。 */
+    public EntityTypeBuilderJS spawnEgg(int backgroundColor, int highlightColor) {
+        this.spawnEggBackgroundColor = backgroundColor;
+        this.spawnEggHighlightColor = highlightColor;
+        return this;
+    }
+
+    public boolean isSpawnEggRequested() {
+        return spawnEggBackgroundColor != null;
+    }
+
+    public int getSpawnEggBackgroundColor() {
+        return spawnEggBackgroundColor;
+    }
+
+    public int getSpawnEggHighlightColor() {
+        return spawnEggHighlightColor;
     }
 
     public EntityTypeBuilderJS attributes(Consumer<EntityAttributeBuilderJS> consumer) {

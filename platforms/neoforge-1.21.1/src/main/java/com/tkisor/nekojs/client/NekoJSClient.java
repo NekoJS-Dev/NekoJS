@@ -10,6 +10,7 @@ import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
@@ -80,6 +81,9 @@ public class NekoJSClient {
             DataGeneratorJS generator = new DataGeneratorJS(assets, "after_mods");
             PluginGenerationHooks.fireGenerateAssets(generator);
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
+            // 脚本模型文件已落盘后，为请求过 spawnEgg() 的实体补默认蛋模型
+            // （template_spawn_egg parent，1.21.1 按注册颜色 tint 染色）
+            generateSpawnEggModels(generator);
             // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
             for (String lang : ClientEvents.LANG.registeredKeys()) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
@@ -89,6 +93,22 @@ public class NekoJSClient {
             }
         } catch (Exception e) {
             NekoJS.LOGGER.debug("Client generation event failed", e);
+        }
+    }
+
+    /**
+     * 为请求过 {@code spawnEgg()} 的实体生成默认蛋模型（仅当脚本未自写）。
+     * 1.21.1 的 {@code template_spawn_egg} parent + SpawnEggItem 注册颜色 → 运行时 tint 染色。
+     */
+    private static void generateSpawnEggModels(DataGeneratorJS generator) {
+        for (ResourceLocation id : EntityTypeRegistryEventJS.registeredSpawnEggs()) {
+            String modelPath = id.getNamespace() + "/models/item/" + id.getPath() + ".json";
+            if (generator.getJson(modelPath) != null) {
+                continue;
+            }
+            com.google.gson.JsonObject model = new com.google.gson.JsonObject();
+            model.addProperty("parent", "minecraft:item/template_spawn_egg");
+            generator.json(modelPath, model);
         }
     }
 }

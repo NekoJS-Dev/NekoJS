@@ -84,6 +84,8 @@ public class NekoJSClient {
             // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型
             // （26.x 模型驱动：translucent 需要 force_translucent 贴图引用）
             BlockModelGenerator.generateDefaultModels(generator);
+            // 请求过 spawnEgg() 的实体：补默认蛋模型（26.x 无运行时染色，纹理数据驱动）
+            BlockModelGenerator.generateSpawnEggModels(generator);
             // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
             for (String lang : ClientEvents.LANG.registeredKeys()) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
