@@ -329,7 +329,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [x] 增加 Goal 注册 MVP：`floatInWater`、`panic`、`randomStroll`、`meleeAttack` vanilla goal factory。
 - [x] 对已有实体追加 goal 时使用 join-level 注入并做 identity marker 去重。
 - [x] 增加 spawn egg 子阶段（`EntityTypeBuilder.spawnEgg(bg, hl)` 自动注册 `<id>_spawn_egg`；1.21.1 运行时染色，26.x 纹理数据驱动 + 自动模型生成）。
-- [ ] 增加 target/look/avoid 等更多 vanilla goal factory，并评估按 `EntityType` 映射目标 class 的脚本 API。
+- [x] 增加 target/look/avoid 等更多 vanilla goal factory，并评估按 `EntityType` 映射目标 class 的脚本 API。（结论：`EntityType.getBaseClass()` 自 1.21.x 硬编码 `Entity.class` 不可用——采用**内置 36 实体→类映射** + `Java.type(...)` 传类兜底，NekoJS 脚本实体统一 `NekoScriptMob`；`target/hurtByTarget` 走 `targetSelector`）
 - [ ] 增加 functional-interface backed script goal，内部捕获脚本异常并限流日志。
 
 ### Loot Table API
