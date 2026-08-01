@@ -236,7 +236,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             for (int i = 0; i < array.size(); i++) {
                 JsonElement child = array.get(i);
                 if (outputContext && testOutputNode(child, match)) {
-                    array.set(i, replacementJson.deepCopy());
+                    array.set(i, replacementWithCount(child, replacementJson));
                     modified = true;
                 } else if (replaceOutputInJson(child, match, replacementJson, outputContext, outputKeys)) {
                     modified = true;
@@ -252,13 +252,32 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             JsonElement child = object.get(key);
             boolean childOutputContext = outputContext || outputKeys.contains(key);
             if (childOutputContext && testOutputNode(child, match)) {
-                object.add(key, replacementJson.deepCopy());
+                object.add(key, replacementWithCount(child, replacementJson));
                 modified = true;
             } else if (replaceOutputInJson(child, match, replacementJson, childOutputContext, outputKeys)) {
                 modified = true;
             }
         }
         return modified;
+    }
+
+    /**
+     * 阶段 4：替换输出时保留原 count（result.count 感知）。
+     * 原节点为 {@code {item, count: N}} 且替换 JSON 是单物品对象（无 count）时，
+     * 把 N 迁移到替换结果上，避免替换后数量丢失。
+     */
+    private JsonElement replacementWithCount(JsonElement original, JsonElement replacement) {
+        if (!original.isJsonObject() || !replacement.isJsonObject()) {
+            return replacement.deepCopy();
+        }
+        JsonObject originalObj = original.getAsJsonObject();
+        JsonObject replacementObj = replacement.getAsJsonObject();
+        if (originalObj.has("count") && !replacementObj.has("count")) {
+            JsonObject merged = replacementObj.deepCopy();
+            merged.add("count", originalObj.get("count").deepCopy());
+            return merged;
+        }
+        return replacement.deepCopy();
     }
 
     private boolean testOutputNode(JsonElement node, Ingredient match) {

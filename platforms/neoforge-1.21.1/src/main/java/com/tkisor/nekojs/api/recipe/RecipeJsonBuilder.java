@@ -20,7 +20,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
     private ResourceLocation currentId;
 
     public RecipeJsonBuilder(RecipeEventJS event, String type, String prefix) {
-        this(event, type, prefix, RecipeCreationContext.of("event.builder", type, prefix));
+        this(event, type, prefix, RecipeCreationContext.of("event.builder", type, prefix, captureScriptId()));
     }
 
     public RecipeJsonBuilder(RecipeEventJS event, String type, String prefix, RecipeCreationContext context) {
@@ -35,7 +35,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
     }
 
     public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, String prefix) {
-        this(event, prebuiltJson, prefix, RecipeCreationContext.of("event.custom", recipeType(prebuiltJson), prefix));
+        this(event, prebuiltJson, prefix, RecipeCreationContext.of("event.custom", recipeType(prebuiltJson), prefix, captureScriptId()));
     }
 
     public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, String prefix, RecipeCreationContext context) {
@@ -210,5 +210,20 @@ public class RecipeJsonBuilder implements RecipeBuilder {
             return json.get("type").getAsString();
         }
         return "unknown";
+    }
+
+    /**
+     * 阶段 5：捕获当前脚本 id。在脚本回调执行期间（EventBusJS 已 switchCurrentScriptId），
+     * {@code Context.getCurrent()} 返回当前 Graal 上下文；非脚本线程（如插件直接调用）返回 null。
+     */
+    private static String captureScriptId() {
+        try {
+            var context = graal.graalvm.polyglot.Context.getCurrent();
+            if (context == null) return null;
+            return com.tkisor.nekojs.script.ScriptContextRegistry.currentScriptIdOf(context);
+        } catch (IllegalStateException e) {
+            // 不在 polyglot 上下文中
+            return null;
+        }
     }
 }
