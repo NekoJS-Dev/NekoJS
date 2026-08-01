@@ -21,8 +21,14 @@ public final class ValParser {
         while (pos < n) {
             skipWsCmt();
             if (pos >= n) break;
+            int before = pos;
             ValNode s = parseStatement(root);
             if (s != null) stmts.add(s);
+            if (pos == before) {
+                // 防死循环：parseExpr 失败会恢复 pos，若语句未被消费则强制前进，
+                // 让未知语法（如 ';' 开头的表达式）被跳过而不是挂死 preflight。
+                pos++;
+            }
         }
         return root;
     }
@@ -129,8 +135,10 @@ public final class ValParser {
                 pos++; skipWs();
                 List<ValNode> args = new ArrayList<>();
                 while (pos < n && peek() != ')') {
+                    int beforeArg = pos;
                     ValNode a = parseExpr(); if (a != null) args.add(a);
                     skipWs(); if (peek() == ',') pos++; skipWs();
+                    if (pos == beforeArg) pos++; // 防死循环：未消费的实参（如 ';'）强制跳过
                 }
                 if (peek() == ')') pos++;
                 obj = new ValNode.CallExpr(obj, args, pos, pos);
@@ -152,7 +160,12 @@ public final class ValParser {
         int start = pos; pos++;
         List<ValNode> stmts = new ArrayList<>();
         ValNode.Block block = new ValNode.Block(stmts, null, new LinkedHashMap<>(), start, 0);
-        while (pos < n) { skipWsCmt(); if (pos >= n || peek() == '}') { pos++; break; } ValNode s = parseStatement(block); if (s != null) stmts.add(s); }
+        while (pos < n) {
+            skipWsCmt(); if (pos >= n || peek() == '}') { pos++; break; }
+            int before = pos;
+            ValNode s = parseStatement(block); if (s != null) stmts.add(s);
+            if (pos == before) pos++; // 防死循环：未消费的语句（如裸操作符）强制跳过
+        }
         return new ValNode.Block(stmts, block.parent(), block.scope(), start, pos);
     }
 

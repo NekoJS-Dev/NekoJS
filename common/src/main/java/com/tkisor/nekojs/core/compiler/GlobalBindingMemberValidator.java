@@ -20,7 +20,15 @@ public final class GlobalBindingMemberValidator {
         if (schema.isEmpty()) return;
 
         ValNode.Block ast;
-        try { ast = ValParser.parse(source); } catch (Throwable ignored) { return; }
+        try {
+            ast = ValParser.parse(source);
+        } catch (Throwable e) {
+            // 与 EventCallbackSourceValidator 一致：不静默跳过，记日志提示该文件未获 preflight 保护
+            com.tkisor.nekojs.NekoJS.LOGGER.warn(
+                    "Binding preflight skipped for {}: source not parseable by ValParser ({}: {})",
+                    file, e.getClass().getSimpleName(), e.getMessage());
+            return;
+        }
 
         Map<String, String> remap = new HashMap<>();
         collectRemaps(ast, remap);

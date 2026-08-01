@@ -24,8 +24,11 @@ import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.contract.NormativeApiContract;
+import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 import com.tkisor.nekojs.core.api.CoreManagedApiBootstrap;
+import com.tkisor.nekojs.core.api.FrozenApiRegistrySet;
 import com.tkisor.nekojs.platform.Platform;
 
 import java.util.List;
@@ -169,6 +172,15 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         }
         if (!snapshots.isEmpty()) {
             ManagedCallbackSchemaRegistry.install(snapshots);
+        }
+        // 契约事件（portable-core events 字段）作为回调 schema 权威注入：
+        // 契约承诺的 payload 字段跨平台放行，平台反射仅作补充（见 EventCallbackSourceValidator）。
+        if (runtime.apiRuntimeProvider instanceof FrozenApiRegistrySet frozen) {
+            List<NormativeApiContract.ContractEvent> contractEvents = new java.util.ArrayList<>();
+            for (VerifiedApiContract c : frozen.contracts().all()) {
+                contractEvents.addAll(c.contract().events());
+            }
+            ManagedCallbackSchemaRegistry.installContractEvents(contractEvents);
         }
     }
 
