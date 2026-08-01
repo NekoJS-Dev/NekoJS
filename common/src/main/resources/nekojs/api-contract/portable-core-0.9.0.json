@@ -4,9 +4,9 @@
     "owner": "nekojs-core",
     "kind": "PORTABLE",
     "contractId": "portable-core",
-    "version": "0.8.0"
+    "version": "0.9.0"
   },
-  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, and stable event contract candidate (T0 script lifecycle + T1 server/level/player/command lifecycle).",
+  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment).",
   "errors": [
     {
       "code": "UNSUPPORTED_CAPABILITY",
@@ -2542,6 +2542,536 @@
       },
       "cancellable": true,
       "docs": "可取消：监听器返回 true 取消命令执行"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "item",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.item：注册自定义 item（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "block",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.block：注册自定义 block（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "entityType",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.entityType：注册自定义 entityType（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "fluid",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.fluid：注册自定义 fluid（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "creativeModeTab",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.creativeModeTab：注册自定义 creativeModeTab（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "soundEvent",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.soundEvent：注册自定义 soundEvent（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "mobEffect",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.mobEffect：注册自定义 mobEffect（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "potion",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.potion：注册自定义 potion（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "villagerType",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.villagerType：注册自定义 villagerType（STARTUP）。"
+    },
+    {
+      "group": "RegistryEvents",
+      "name": "enchantment",
+      "tier": "STARTUP",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "payload": [
+        {
+          "name": "create",
+          "kind": "PORTABLE",
+          "portType": {
+            "kind": "CALLBACK",
+            "callbackSignature": {
+              "parameters": [
+                {
+                  "name": "id",
+                  "type": {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  }
+                },
+                {
+                  "name": "consumer",
+                  "type": {
+                    "kind": "CALLBACK",
+                    "callbackSignature": {
+                      "parameters": [
+                        {
+                          "name": "builder",
+                          "type": {
+                            "kind": "PRIMITIVE",
+                            "name": "object"
+                          }
+                        }
+                      ],
+                      "returnType": {
+                        "kind": "VOID"
+                      }
+                    }
+                  }
+                }
+              ],
+              "returnType": {
+                "kind": "VOID"
+              }
+            }
+          },
+          "docs": "create(id, consumer) 声明注册条目；consumer 配置 builder（成员跨平台版本相关，不深入契约）"
+        }
+      ],
+      "docs": "RegistryEvents.enchantment：注册自定义 enchantment（STARTUP）。"
     }
   ]
 }

@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PortableCorePhase3AContractTest {
-    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.8.0.json";
+    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.9.0.json";
 
     @Test
     void productionReaderAcceptsPlatformAndIdContract() {
@@ -30,7 +30,7 @@ class PortableCorePhase3AContractTest {
         assertNotNull(stream);
 
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.8.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.9.0"));
         VerifiedApiContract verified = ApiContractReader.readVerified(
                 new InputStreamReader(stream, StandardCharsets.UTF_8),
                 URI.create("nekojs:///core"), RESOURCE, identity, null);
@@ -102,7 +102,7 @@ class PortableCorePhase3AContractTest {
     }
 
     private static void assertEvents(List<NormativeApiContract.ContractEvent> events) {
-        assertEquals(34, events.size());
+        assertEquals(44, events.size());
 
         Map<String, NormativeApiContract.ContractEvent> byKey = events.stream()
                 .collect(Collectors.toMap(
@@ -155,6 +155,19 @@ class PortableCorePhase3AContractTest {
         for (String name : List.of("ServerEvents.started", "LevelEvents.loaded", "PlayerEvents.loggedIn",
                 "CommandEvents.register")) {
             assertNull(byKey.get(name).cancellable(), name + " cancellable must be uncommitted");
+        }
+
+        // T2：RegistryEvents（10 个，STARTUP/PLAIN，payload 一个 create CALLBACK 字段）
+        for (String name : List.of("item", "block", "entityType", "fluid", "creativeModeTab",
+                "soundEvent", "mobEffect", "potion", "villagerType", "enchantment")) {
+            NormativeApiContract.ContractEvent reg = byKey.get("RegistryEvents." + name);
+            assertNotNull(reg, "missing RegistryEvents." + name);
+            assertEquals(NormativeApiContract.EventTier.STARTUP, reg.tier());
+            assertEquals(NormativeApiContract.Dispatch.PLAIN, reg.dispatch());
+            assertNull(reg.cancellable());
+            assertEquals(1, reg.payload().size());
+            assertEquals("create", reg.payload().getFirst().name());
+            assertEquals(NormativeApiContract.FieldKind.PORTABLE, reg.payload().getFirst().kind());
         }
     }
 }
