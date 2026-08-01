@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
 import net.minecraft.resources.ResourceLocation;
@@ -74,6 +75,10 @@ public interface ServerEvents {
         GROUP.server("tagsUpdated", TagsUpdatedEvent.class);
     EventBusJS<LootTableLoadEvent, Void> LOOT_TABLE_LOAD =
         GROUP.server("lootTableLoad", LootTableLoadEvent.class);
+
+    /** loot table JSON 管理（reload 时 post，先于 loot 解析；修改当次 reload 生效）。 */
+    EventBusJS<LootTableEventJS, Void> LOOT_TABLES =
+        GROUP.server("lootTables", LootTableEventJS.class);
 
     EventBusJS<TagEventJS, ResourceLocation> TAGS =
         GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);

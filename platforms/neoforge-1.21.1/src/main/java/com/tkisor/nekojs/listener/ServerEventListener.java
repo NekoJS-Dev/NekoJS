@@ -14,12 +14,14 @@ import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 
 import java.io.Reader;
@@ -28,6 +30,11 @@ import java.util.Map;
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class ServerEventListener {
     private static volatile boolean schemaAutoDiscovered;
+
+    static {
+        // loot table 加载（reload 流程）时应用脚本在 lootTables 事件中的修改。
+        NeoForge.EVENT_BUS.addListener(LootTableEventJS::onLootTableLoad);
+    }
 
     @SubscribeEvent
     public static void onServerResourceReload(AddReloadListenerEvent event) {
@@ -46,6 +53,8 @@ public class ServerEventListener {
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("Script overload failed: ", e);
         }
+        // loot table JSON 管理（reload 流程先于 loot 解析，修改当次 reload 生效）
+        ServerEvents.LOOT_TABLES.post(new LootTableEventJS());
         postGenerateData();
     }
 
