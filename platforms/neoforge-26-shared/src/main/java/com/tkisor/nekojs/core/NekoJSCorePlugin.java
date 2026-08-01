@@ -171,6 +171,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new ComponentAdapter());
         registry.register(new EntityTypeAdapter());
         registry.register(new BlockAdapter());
+        registry.register(new com.tkisor.nekojs.js.type_adapter.BlockStateAdapter());
         registry.register(new BlockPosAdapter());
         registry.register(new Vec3Adapter());
         registry.register(new CompoundTagAdapter());
