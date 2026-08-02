@@ -69,25 +69,13 @@ public class NekoJSMod extends NekoJS {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-        long t0 = System.nanoTime();
         ForgeRuntimeBootstrap.setup();
-        long t1 = System.nanoTime();
         registerEventListeners();
-        long t2 = System.nanoTime();
         com.tkisor.nekojs.network.NekoJSNetwork.init();
         initializeWorkspace();
-        long t3 = System.nanoTime();
         initializeScripts();
-        long t4 = System.nanoTime();
         WorkspaceGenerator.createWorkspaceConfigs();
-        long t4b = System.nanoTime();
         registerClient();
-        long t5 = System.nanoTime();
-
-        LOGGER.info("Bootstrap timings: setup={}ms events={}ms workspace={}ms scripts={}ms client={}ms total={}ms",
-                (t1 - t0) / 1_000_000, (t2 - t1) / 1_000_000,
-                (t3 - t2) / 1_000_000, (t4 - t3) / 1_000_000,
-                (t5 - t4) / 1_000_000, (t5 - t0) / 1_000_000);
     }
 
     private static void registerEventListeners() {
@@ -144,15 +132,12 @@ public class NekoJSMod extends NekoJS {
     }
 
     private void initializeScripts() {
-        long s0 = System.nanoTime();
         ForgePluginLoader.loadAnnotatedPlugins();
-        long s1 = System.nanoTime();
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(
                 NekoJSBasePluginManager.getOwnedPlugins(), this.scriptProperties);
         NekoRuntimeAccess.get().fireInit();
         scriptEventsRegistrar.bindRuntime(pluginRuntime);
         ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
-        long s2 = System.nanoTime();
 
         var compilers = ScriptCompilerRegistry.current();
         SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
@@ -181,7 +166,6 @@ public class NekoJSMod extends NekoJS {
             this.scriptManagers.set(type, manager);
             manager.discoverScripts();
         }
-        long s3 = System.nanoTime();
 
         this.scriptManagers.at(ScriptType.STARTUP).loadScripts();
         NekoRuntimeAccess.get().fireInitStartup();
@@ -190,11 +174,6 @@ public class NekoJSMod extends NekoJS {
         // before RegistryEvent.Register<IRecipe> fires (registry still unfrozen then).
         // serverAboutToStart reloads SERVER again for the rest of the server lifecycle.
         this.scriptManagers.at(ScriptType.SERVER).loadScripts();
-        long s4 = System.nanoTime();
-
-        LOGGER.info("Script init timings: plugins={}ms bootstrap={}ms discover={}ms load={}ms",
-                (s1 - s0) / 1_000_000, (s2 - s1) / 1_000_000,
-                (s3 - s2) / 1_000_000, (s4 - s3) / 1_000_000);
     }
 
     @Mod.EventHandler
