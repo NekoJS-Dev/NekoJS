@@ -27,7 +27,7 @@ class CoreManagedApiBootstrapTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), URI.create("test:///core.jar"));
 
-        assertEquals(ApiVersion.parse("0.9.0"),
+        assertEquals(ApiVersion.parse("0.10.0"),
                 core.contracts().requirePortable("nekojs-core").identity().version());
         assertEquals("nekojs-core", core.contributions().owner().ownerId());
         assertEquals(79, core.contributions().symbolContributions().size());

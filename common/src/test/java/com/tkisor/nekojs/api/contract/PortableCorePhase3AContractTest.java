@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PortableCorePhase3AContractTest {
-    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.9.0.json";
+    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.10.0.json";
 
     @Test
     void productionReaderAcceptsPlatformAndIdContract() {
@@ -30,7 +30,7 @@ class PortableCorePhase3AContractTest {
         assertNotNull(stream);
 
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.9.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.10.0"));
         VerifiedApiContract verified = ApiContractReader.readVerified(
                 new InputStreamReader(stream, StandardCharsets.UTF_8),
                 URI.create("nekojs:///core"), RESOURCE, identity, null);
@@ -102,7 +102,7 @@ class PortableCorePhase3AContractTest {
     }
 
     private static void assertEvents(List<NormativeApiContract.ContractEvent> events) {
-        assertEquals(44, events.size());
+        assertEquals(73, events.size());
 
         Map<String, NormativeApiContract.ContractEvent> byKey = events.stream()
                 .collect(Collectors.toMap(
@@ -168,6 +168,64 @@ class PortableCorePhase3AContractTest {
             assertEquals(1, reg.payload().size());
             assertEquals("create", reg.payload().getFirst().name());
             assertEquals(NormativeApiContract.FieldKind.PORTABLE, reg.payload().getFirst().kind());
+        }
+
+        // T3：BlockEvents（10，SERVER/BY_ID，payload 全 NATIVE）
+        for (String name : List.of("broken", "placed", "entityPlaced", "entityMultiPlaced",
+                "neighborNotify", "fluidPlaced", "farmlandTrample", "portalSpawn",
+                "rightClicked", "leftClicked")) {
+            NormativeApiContract.ContractEvent blk = byKey.get("BlockEvents." + name);
+            assertNotNull(blk, "missing BlockEvents." + name);
+            assertEquals(NormativeApiContract.EventTier.SERVER, blk.tier());
+            assertEquals(NormativeApiContract.Dispatch.BY_ID, blk.dispatch());
+            assertEquals("string", blk.dispatchKeyType());
+            assertTrue(blk.cancellable(), "BlockEvents." + name + " must be cancellable");
+            assertTrue(blk.payload().stream()
+                    .allMatch(f -> f.kind() == NormativeApiContract.FieldKind.NATIVE && f.portType() == null),
+                    "BlockEvents." + name + " payload must be all NATIVE");
+        }
+
+        // T3：EntityEvents（10，SERVER/BY_ID）
+        for (String name : List.of("joinLevel", "death", "damagePre", "damagePost", "drops",
+                "finalizeSpawn", "useItemStarted", "useItemStopped", "useItemFinished", "useItemTick")) {
+            NormativeApiContract.ContractEvent ent = byKey.get("EntityEvents." + name);
+            assertNotNull(ent, "missing EntityEvents." + name);
+            assertEquals(NormativeApiContract.EventTier.SERVER, ent.tier());
+            assertEquals(NormativeApiContract.Dispatch.BY_ID, ent.dispatch());
+            assertEquals("string", ent.dispatchKeyType());
+        }
+        // joinLevel / damagePre / finalizeSpawn / useItemStarted 可取消；death / damagePost / drops 等不可取消
+        assertEquals(Boolean.TRUE, byKey.get("EntityEvents.joinLevel").cancellable());
+        assertEquals(Boolean.TRUE, byKey.get("EntityEvents.damagePre").cancellable());
+        assertEquals(Boolean.TRUE, byKey.get("EntityEvents.finalizeSpawn").cancellable());
+        assertEquals(Boolean.TRUE, byKey.get("EntityEvents.useItemStarted").cancellable());
+        assertEquals(Boolean.FALSE, byKey.get("EntityEvents.death").cancellable());
+        assertEquals(Boolean.FALSE, byKey.get("EntityEvents.damagePost").cancellable());
+        assertEquals(Boolean.FALSE, byKey.get("EntityEvents.useItemFinished").cancellable());
+
+        // T3：ItemEvents（6，SERVER/BY_ID）
+        for (String name : List.of("rightClicked", "canPickUp", "pickedUp", "dropped",
+                "entityInteracted", "foodEaten")) {
+            NormativeApiContract.ContractEvent itm = byKey.get("ItemEvents." + name);
+            assertNotNull(itm, "missing ItemEvents." + name);
+            assertEquals(NormativeApiContract.EventTier.SERVER, itm.tier());
+            assertEquals(NormativeApiContract.Dispatch.BY_ID, itm.dispatch());
+            assertEquals("string", itm.dispatchKeyType());
+        }
+        assertEquals(Boolean.TRUE, byKey.get("ItemEvents.dropped").cancellable());
+        assertEquals(Boolean.FALSE, byKey.get("ItemEvents.foodEaten").cancellable());
+
+        // T3：ClientEvents（3，CLIENT；tick=PLAIN，generateAssets/lang=BY_ID）
+        NormativeApiContract.ContractEvent tick = byKey.get("ClientEvents.tick");
+        assertNotNull(tick);
+        assertEquals(NormativeApiContract.EventTier.CLIENT, tick.tier());
+        assertEquals(NormativeApiContract.Dispatch.PLAIN, tick.dispatch());
+        for (String name : List.of("generateAssets", "lang")) {
+            NormativeApiContract.ContractEvent ce = byKey.get("ClientEvents." + name);
+            assertNotNull(ce, "missing ClientEvents." + name);
+            assertEquals(NormativeApiContract.EventTier.CLIENT, ce.tier());
+            assertEquals(NormativeApiContract.Dispatch.BY_ID, ce.dispatch());
+            assertEquals("string", ce.dispatchKeyType());
         }
     }
 }

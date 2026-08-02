@@ -4,9 +4,9 @@
     "owner": "nekojs-core",
     "kind": "PORTABLE",
     "contractId": "portable-core",
-    "version": "0.9.0"
+    "version": "0.10.0"
   },
-  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment).",
+  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment + T3 interaction events block/entity/item/client).",
   "errors": [
     {
       "code": "UNSUPPORTED_CAPABILITY",
@@ -3072,6 +3072,772 @@
         }
       ],
       "docs": "RegistryEvents.enchantment：注册自定义 enchantment（STARTUP）。"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "broken",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "破坏方玩家（平台原生 Player）"
+        },
+        {
+          "name": "state",
+          "kind": "NATIVE",
+          "docs": "被破坏方块的 BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        },
+        {
+          "name": "expToDrop",
+          "kind": "NATIVE",
+          "docs": "掉落经验值（int）"
+        }
+      ],
+      "docs": "玩家破坏方块。按方块 id 分发（注册键为字符串 id 如 minecraft:stone）。可取消：监听器返回 true 取消破坏"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "placed",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "放置方玩家（平台原生 Player）"
+        },
+        {
+          "name": "state",
+          "kind": "NATIVE",
+          "docs": "放置的 BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        },
+        {
+          "name": "placedAgainst",
+          "kind": "NATIVE",
+          "docs": "被点击的方块（平台原生）"
+        }
+      ],
+      "docs": "方块被放置。按方块 id 分发。可取消：监听器返回 true 取消放置"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "entityPlaced",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "放置者实体（平台原生 Entity）"
+        },
+        {
+          "name": "state",
+          "kind": "NATIVE",
+          "docs": "放置的 BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        }
+      ],
+      "docs": "实体放置方块。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "entityMultiPlaced",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "放置者实体（平台原生）"
+        },
+        {
+          "name": "replacedBlockStates",
+          "kind": "NATIVE",
+          "docs": "被替换的 BlockState 列表（平台原生）"
+        }
+      ],
+      "docs": "实体一次性放置多方块（如末影水晶）。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "neighborNotify",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "state",
+          "kind": "NATIVE",
+          "docs": "BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        },
+        {
+          "name": "notifiedSides",
+          "kind": "NATIVE",
+          "docs": "被通知的方向列表（平台原生）"
+        }
+      ],
+      "docs": "方块通知邻居更新。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "fluidPlaced",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "originalState",
+          "kind": "NATIVE",
+          "docs": "原 BlockState（平台原生）"
+        },
+        {
+          "name": "newState",
+          "kind": "NATIVE",
+          "docs": "新 BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        }
+      ],
+      "docs": "流体放置方块。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "farmlandTrample",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "踩踏者实体（平台原生）"
+        },
+        {
+          "name": "state",
+          "kind": "NATIVE",
+          "docs": "BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        }
+      ],
+      "docs": "农田被踩踏退化。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "portalSpawn",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "state",
+          "kind": "NATIVE",
+          "docs": "BlockState（平台原生）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        }
+      ],
+      "docs": "传送门尝试生成。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "rightClicked",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "玩家（平台原生 Player）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "手持物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "hand",
+          "kind": "NATIVE",
+          "docs": "主/副手（平台原生）"
+        }
+      ],
+      "docs": "玩家右键方块。按方块 id 分发。可取消"
+    },
+    {
+      "group": "BlockEvents",
+      "name": "leftClicked",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "玩家（平台原生 Player）"
+        },
+        {
+          "name": "pos",
+          "kind": "NATIVE",
+          "docs": "方块坐标 BlockPos（平台原生）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "手持物品（平台原生 ItemStack）"
+        }
+      ],
+      "docs": "玩家左键方块。按方块 id 分发。可取消"
+    },
+    {
+      "group": "EntityEvents",
+      "name": "joinLevel",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "实体（平台原生 Entity）"
+        },
+        {
+          "name": "level",
+          "kind": "NATIVE",
+          "docs": "进入的世界/维度（平台原生 Level）"
+        }
+      ],
+      "docs": "实体进入世界。按实体 id 分发（注册键为字符串 id 如 minecraft:zombie）。可取消"
+    },
+    {
+      "group": "EntityEvents",
+      "name": "death",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "死亡实体（平台原生 LivingEntity）"
+        },
+        {
+          "name": "source",
+          "kind": "NATIVE",
+          "docs": "伤害来源（平台原生 DamageSource）"
+        }
+      ],
+      "docs": "实体死亡。按实体 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "EntityEvents",
+      "name": "damagePre",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "受击实体（平台原生 LivingEntity）"
+        },
+        {
+          "name": "source",
+          "kind": "NATIVE",
+          "docs": "伤害来源（平台原生 DamageSource）"
+        },
+        {
+          "name": "amount",
+          "kind": "NATIVE",
+          "docs": "伤害数值（float）"
+        }
+      ],
+      "docs": "实体受伤（护甲减免前）。按实体 id 分发。可取消"
+    },
+    {
+      "group": "EntityEvents",
+      "name": "damagePost",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "受击实体（平台原生 LivingEntity）"
+        },
+        {
+          "name": "source",
+          "kind": "NATIVE",
+          "docs": "伤害来源（平台原生 DamageSource）"
+        },
+        {
+          "name": "amount",
+          "kind": "NATIVE",
+          "docs": "实际伤害数值（float）"
+        }
+      ],
+      "docs": "实体受伤（护甲减免后）。按实体 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "EntityEvents",
+      "name": "drops",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "死亡实体（平台原生 LivingEntity）"
+        },
+        {
+          "name": "source",
+          "kind": "NATIVE",
+          "docs": "伤害来源（平台原生 DamageSource）"
+        },
+        {
+          "name": "drops",
+          "kind": "NATIVE",
+          "docs": "掉落物集合（平台原生 Collection）"
+        }
+      ],
+      "docs": "实体掉落物生成。按实体 id 分发。不可取消（可修改 drops 集合）",
+      "cancellable": false
+    },
+    {
+      "group": "EntityEvents",
+      "name": "finalizeSpawn",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "生成实体（平台原生）"
+        },
+        {
+          "name": "level",
+          "kind": "NATIVE",
+          "docs": "世界（平台原生 Level）"
+        },
+        {
+          "name": "x",
+          "kind": "NATIVE",
+          "docs": "x 坐标（double）"
+        },
+        {
+          "name": "y",
+          "kind": "NATIVE",
+          "docs": "y 坐标（double）"
+        },
+        {
+          "name": "z",
+          "kind": "NATIVE",
+          "docs": "z 坐标（double）"
+        }
+      ],
+      "docs": "实体生成最终化（决定是否允许生成）。按实体 id 分发。可取消"
+    },
+    {
+      "group": "EntityEvents",
+      "name": "useItemStarted",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "使用方实体（平台原生 LivingEntity）"
+        },
+        {
+          "name": "item",
+          "kind": "NATIVE",
+          "docs": "使用中物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "duration",
+          "kind": "NATIVE",
+          "docs": "剩余使用时长（int）"
+        }
+      ],
+      "docs": "实体开始使用物品。按物品 id 分发。可取消"
+    },
+    {
+      "group": "EntityEvents",
+      "name": "useItemStopped",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "使用方实体（平台原生）"
+        },
+        {
+          "name": "item",
+          "kind": "NATIVE",
+          "docs": "使用中物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "duration",
+          "kind": "NATIVE",
+          "docs": "已使用时长（int）"
+        }
+      ],
+      "docs": "实体停止使用物品。按物品 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "EntityEvents",
+      "name": "useItemFinished",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "使用方实体（平台原生）"
+        },
+        {
+          "name": "item",
+          "kind": "NATIVE",
+          "docs": "原物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "resultItem",
+          "kind": "NATIVE",
+          "docs": "使用后结果物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "duration",
+          "kind": "NATIVE",
+          "docs": "总使用时长（int）"
+        }
+      ],
+      "docs": "实体使用物品完成（如吃完食物）。按物品 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "EntityEvents",
+      "name": "useItemTick",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "使用方实体（平台原生）"
+        },
+        {
+          "name": "item",
+          "kind": "NATIVE",
+          "docs": "使用中物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "duration",
+          "kind": "NATIVE",
+          "docs": "剩余时长（int）"
+        }
+      ],
+      "docs": "实体使用物品每 tick。按物品 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "ItemEvents",
+      "name": "rightClicked",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "玩家（平台原生 Player）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "手持物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "hand",
+          "kind": "NATIVE",
+          "docs": "主/副手（平台原生）"
+        }
+      ],
+      "docs": "玩家右键物品。按物品 id 分发。可取消"
+    },
+    {
+      "group": "ItemEvents",
+      "name": "canPickUp",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "玩家（平台原生 Player）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "被拾取物品（平台原生 ItemStack）"
+        }
+      ],
+      "docs": "玩家拾取物品前。按物品 id 分发。可取消"
+    },
+    {
+      "group": "ItemEvents",
+      "name": "pickedUp",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "玩家（平台原生 Player）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "被拾取物品（平台原生 ItemStack）"
+        }
+      ],
+      "docs": "玩家拾取物品后。按物品 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "ItemEvents",
+      "name": "dropped",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "丢弃方玩家（平台原生 Player）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "被丢弃物品（平台原生 ItemStack）"
+        }
+      ],
+      "docs": "玩家丢弃物品。按物品 id 分发。可取消"
+    },
+    {
+      "group": "ItemEvents",
+      "name": "entityInteracted",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "cancellable": true,
+      "payload": [
+        {
+          "name": "player",
+          "kind": "NATIVE",
+          "docs": "玩家（平台原生 Player）"
+        },
+        {
+          "name": "target",
+          "kind": "NATIVE",
+          "docs": "被交互实体（平台原生 Entity）"
+        },
+        {
+          "name": "itemStack",
+          "kind": "NATIVE",
+          "docs": "手持物品（平台原生 ItemStack）"
+        }
+      ],
+      "docs": "玩家用物品右键实体。按物品 id 分发。可取消"
+    },
+    {
+      "group": "ItemEvents",
+      "name": "foodEaten",
+      "tier": "SERVER",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "entity",
+          "kind": "NATIVE",
+          "docs": "食用实体（平台原生 LivingEntity）"
+        },
+        {
+          "name": "item",
+          "kind": "NATIVE",
+          "docs": "原物品（平台原生 ItemStack）"
+        },
+        {
+          "name": "resultItem",
+          "kind": "NATIVE",
+          "docs": "食用后结果物品（平台原生 ItemStack）"
+        }
+      ],
+      "docs": "实体吃完食物/用完物品。按物品 id 分发。不可取消",
+      "cancellable": false
+    },
+    {
+      "group": "ClientEvents",
+      "name": "tick",
+      "tier": "CLIENT",
+      "dispatch": {
+        "kind": "PLAIN"
+      },
+      "docs": "客户端每 tick。CLIENT 事件，仅客户端脚本可用"
+    },
+    {
+      "group": "ClientEvents",
+      "name": "generateAssets",
+      "tier": "CLIENT",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "stage",
+          "kind": "NATIVE",
+          "docs": "生成阶段（dispatch 键，字符串）"
+        }
+      ],
+      "docs": "客户端资源生成。按 stage 字符串分发（CLIENT）"
+    },
+    {
+      "group": "ClientEvents",
+      "name": "lang",
+      "tier": "CLIENT",
+      "dispatch": {
+        "kind": "BY_ID",
+        "keyType": "string"
+      },
+      "payload": [
+        {
+          "name": "lang",
+          "kind": "NATIVE",
+          "docs": "语言代码（dispatch 键，字符串如 en_us）"
+        }
+      ],
+      "docs": "客户端语言文件生成。按 lang 字符串分发（CLIENT）"
     }
   ]
 }
