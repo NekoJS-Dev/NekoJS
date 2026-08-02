@@ -11,8 +11,10 @@ import com.tkisor.nekojs.api.data.JsonValue;
 import com.tkisor.nekojs.api.data.NbtValue;
 import com.tkisor.nekojs.api.data.NbtEntry;
 import com.tkisor.nekojs.api.facade.ModInfoValue;
+import com.tkisor.nekojs.api.facade.PerformanceFacade;
 import com.tkisor.nekojs.api.facade.RegistryFacade;
 import com.tkisor.nekojs.api.facade.RegistryView;
+import com.tkisor.nekojs.api.data.PerfTimerValue;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.api.surface.ApiCallHandler;
@@ -26,6 +28,7 @@ import com.tkisor.nekojs.api.surface.ApiVersion;
 import com.tkisor.nekojs.api.surface.ScriptTypeId;
 import com.tkisor.nekojs.core.api.facade.DefaultIdFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultPlatformFacade;
+import com.tkisor.nekojs.core.api.facade.DefaultPerformanceFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultRegistryFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultTextFacade;
 import com.tkisor.nekojs.core.api.facade.DefaultJsonFacade;
@@ -46,13 +49,14 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public final class CoreManagedApiBootstrap {
-    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.10.0.json";
+    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.11.0.json";
     public static final ApiSymbolId ID_GLOBAL = ApiSymbolId.parse("global:ID");
     public static final ApiSymbolId PLATFORM_GLOBAL = ApiSymbolId.parse("global:Platform");
     public static final ApiSymbolId TEXT_GLOBAL = ApiSymbolId.parse("global:Text");
     public static final ApiSymbolId JSON_IO_GLOBAL = ApiSymbolId.parse("global:JsonIO");
     public static final ApiSymbolId NBT_GLOBAL = ApiSymbolId.parse("global:NBT");
     public static final ApiSymbolId REGISTRY_GLOBAL = ApiSymbolId.parse("global:Registry");
+    public static final ApiSymbolId PERFORMANCE_GLOBAL = ApiSymbolId.parse("global:Performance");
 
     private CoreManagedApiBootstrap() {
     }
@@ -233,6 +237,24 @@ public final class CoreManagedApiBootstrap {
         register(contributions, symbols, "member:RegistryView.dataMapValue", (receiver, args) ->
                 ((RegistryView) receiver).dataMapValue((String) args.getFirst(), (String) args.get(1)));
 
+        PerformanceFacade performance = new DefaultPerformanceFacade();
+        register(contributions, symbols, "global:Performance", (receiver, args) -> performance);
+        register(contributions, symbols, "member:Performance.now", (receiver, args) -> performance.now());
+        register(contributions, symbols, "member:Performance.time", (receiver, args) ->
+                performance.time(args.getFirst()));
+        register(contributions, symbols, "member:Performance.bench", (receiver, args) ->
+                performance.bench(args.getFirst(), ((Number) args.get(1)).intValue()));
+        register(contributions, symbols, "member:Performance.start", (receiver, args) ->
+                performance.start(args.isEmpty() ? null : (String) args.getFirst()));
+        register(contributions, symbols, "member:PerfTimer.mark", (receiver, args) ->
+                ((PerfTimerValue) receiver).mark((String) args.getFirst()));
+        register(contributions, symbols, "member:PerfTimer.end", (receiver, args) ->
+                ((PerfTimerValue) receiver).end());
+        register(contributions, symbols, "member:PerfTimer.report", (receiver, args) ->
+                ((PerfTimerValue) receiver).report());
+        register(contributions, symbols, "member:PerfTimer.elapsedMillis", (receiver, args) ->
+                ((PerfTimerValue) receiver).elapsedMillis());
+
         return new CoreManagedApi(
                 contracts,
                 contributions,
@@ -242,7 +264,8 @@ public final class CoreManagedApiBootstrap {
                         TEXT_GLOBAL, text,
                         JSON_IO_GLOBAL, json,
                         NBT_GLOBAL, nbt,
-                        REGISTRY_GLOBAL, registry));
+                        REGISTRY_GLOBAL, registry,
+                        PERFORMANCE_GLOBAL, performance));
     }
 
     private static VerifiedApiContract readContract(URI codeSource) {
@@ -251,7 +274,7 @@ public final class CoreManagedApiBootstrap {
             throw new IllegalStateException("Core managed API contract not found: " + RESOURCE);
         }
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.10.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.11.0"));
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
         } catch (IOException e) {

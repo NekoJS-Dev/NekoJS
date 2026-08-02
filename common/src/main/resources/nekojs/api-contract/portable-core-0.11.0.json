@@ -4,9 +4,9 @@
     "owner": "nekojs-core",
     "kind": "PORTABLE",
     "contractId": "portable-core",
-    "version": "0.10.0"
+    "version": "0.11.0"
   },
-  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment + T3 interaction events block/entity/item/client).",
+  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, Performance timing tool, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment + T3 interaction events block/entity/item/client).",
   "errors": [
     {
       "code": "UNSUPPORTED_CAPABILITY",
@@ -1939,6 +1939,164 @@
             "NO_MATCHING_SIGNATURE",
             "TYPE_MISMATCH"
           ]
+        }
+      ]
+    },
+    {
+      "id": "global:Performance",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:Performance.now",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "number"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:Performance.time",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "fn",
+              "type": {
+                "kind": "CALLBACK",
+                "callbackSignature": {
+                  "parameters": [],
+                  "returnType": {
+                    "kind": "VOID"
+                  }
+                }
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "number"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:Performance.bench",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "fn",
+              "type": {
+                "kind": "CALLBACK",
+                "callbackSignature": {
+                  "parameters": [],
+                  "returnType": {
+                    "kind": "VOID"
+                  }
+                }
+              }
+            },
+            {
+              "name": "runs",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "number"
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:Performance.start",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "label",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              },
+              "optional": true
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:PerfTimer"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:PerfTimer.mark",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "label",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:PerfTimer"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:PerfTimer.end",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:PerfTimer"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:PerfTimer.report",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "object"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:PerfTimer.elapsedMillis",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "PRIMITIVE",
+            "name": "number"
+          }
         }
       ]
     },

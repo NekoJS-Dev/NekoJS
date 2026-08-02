@@ -27,17 +27,18 @@ class CoreManagedApiBootstrapTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), URI.create("test:///core.jar"));
 
-        assertEquals(ApiVersion.parse("0.10.0"),
+        assertEquals(ApiVersion.parse("0.11.0"),
                 core.contracts().requirePortable("nekojs-core").identity().version());
         assertEquals("nekojs-core", core.contributions().owner().ownerId());
-        assertEquals(79, core.contributions().symbolContributions().size());
-        assertEquals(6, core.globalImplementations().size());
+        assertEquals(88, core.contributions().symbolContributions().size());
+        assertEquals(7, core.globalImplementations().size());
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.ID_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.PLATFORM_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.TEXT_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.JSON_IO_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.NBT_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.REGISTRY_GLOBAL));
+        assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.PERFORMANCE_GLOBAL));
     }
 
     @Test
