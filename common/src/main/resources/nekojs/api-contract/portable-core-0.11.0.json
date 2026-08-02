@@ -929,6 +929,198 @@
       ]
     },
     {
+      "id": "member:TextValue.black",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.darkBlue",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.darkGreen",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.darkAqua",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.darkRed",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.darkPurple",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.gold",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.gray",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.darkGray",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.blue",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.green",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.aqua",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.red",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.lightPurple",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.yellow",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
+      "id": "member:TextValue.white",
+      "signatures": [
+        {
+          "parameters": [],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          }
+        }
+      ]
+    },
+    {
       "id": "member:TextValue.insertion",
       "signatures": [
         {

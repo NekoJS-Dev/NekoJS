@@ -28,6 +28,39 @@ public interface TextFacade {
 
     TextValue color(TextValue receiver, String color);
 
+    // —— 16 色 KubeJS 风格快捷方法（等价于 .color('red') 等）——
+    TextValue black(TextValue receiver);
+
+    TextValue darkBlue(TextValue receiver);
+
+    TextValue darkGreen(TextValue receiver);
+
+    TextValue darkAqua(TextValue receiver);
+
+    TextValue darkRed(TextValue receiver);
+
+    TextValue darkPurple(TextValue receiver);
+
+    TextValue gold(TextValue receiver);
+
+    TextValue gray(TextValue receiver);
+
+    TextValue darkGray(TextValue receiver);
+
+    TextValue blue(TextValue receiver);
+
+    TextValue green(TextValue receiver);
+
+    TextValue aqua(TextValue receiver);
+
+    TextValue red(TextValue receiver);
+
+    TextValue lightPurple(TextValue receiver);
+
+    TextValue yellow(TextValue receiver);
+
+    TextValue white(TextValue receiver);
+
     TextValue insertion(TextValue receiver, String insertion);
 
     TextValue font(TextValue receiver, String font);

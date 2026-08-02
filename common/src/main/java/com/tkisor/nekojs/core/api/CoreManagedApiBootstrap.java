@@ -160,6 +160,28 @@ public final class CoreManagedApiBootstrap {
                 text.obfuscated((TextValue) receiver, boolArg(args, 0, true)));
         register(contributions, symbols, "member:TextValue.color", (receiver, args) ->
                 text.color((TextValue) receiver, (String) args.getFirst()));
+        // 16 色 KubeJS 风格快捷方法：零参数，委托 facade 对应命名色方法
+        var colorMethods = new java.util.LinkedHashMap<String, java.util.function.Function<TextValue, TextValue>>();
+        colorMethods.put("black", t -> text.black(t));
+        colorMethods.put("darkBlue", t -> text.darkBlue(t));
+        colorMethods.put("darkGreen", t -> text.darkGreen(t));
+        colorMethods.put("darkAqua", t -> text.darkAqua(t));
+        colorMethods.put("darkRed", t -> text.darkRed(t));
+        colorMethods.put("darkPurple", t -> text.darkPurple(t));
+        colorMethods.put("gold", t -> text.gold(t));
+        colorMethods.put("gray", t -> text.gray(t));
+        colorMethods.put("darkGray", t -> text.darkGray(t));
+        colorMethods.put("blue", t -> text.blue(t));
+        colorMethods.put("green", t -> text.green(t));
+        colorMethods.put("aqua", t -> text.aqua(t));
+        colorMethods.put("red", t -> text.red(t));
+        colorMethods.put("lightPurple", t -> text.lightPurple(t));
+        colorMethods.put("yellow", t -> text.yellow(t));
+        colorMethods.put("white", t -> text.white(t));
+        for (var entry : colorMethods.entrySet()) {
+            register(contributions, symbols, "member:TextValue." + entry.getKey(),
+                    (receiver, args) -> entry.getValue().apply((TextValue) receiver));
+        }
         register(contributions, symbols, "member:TextValue.insertion", (receiver, args) ->
                 text.insertion((TextValue) receiver, (String) args.getFirst()));
         register(contributions, symbols, "member:TextValue.font", (receiver, args) ->

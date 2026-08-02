@@ -106,4 +106,37 @@ class DefaultTextFacadeTest {
         assertInstanceOf(TextValue.Sequence.class, seq);
         assertEquals(2, ((TextValue.Sequence) seq).values().size());
     }
+
+    @Test
+    void colorShortcutsApplyNamedColors() {
+        // 16 色 KubeJS 风格快捷方法：等价于 .color('<命名色>')
+        assertEquals("black", styledColor(text.black(text.of("x"))));
+        assertEquals("dark_blue", styledColor(text.darkBlue(text.of("x"))));
+        assertEquals("dark_green", styledColor(text.darkGreen(text.of("x"))));
+        assertEquals("dark_aqua", styledColor(text.darkAqua(text.of("x"))));
+        assertEquals("dark_red", styledColor(text.darkRed(text.of("x"))));
+        assertEquals("dark_purple", styledColor(text.darkPurple(text.of("x"))));
+        assertEquals("gold", styledColor(text.gold(text.of("x"))));
+        assertEquals("gray", styledColor(text.gray(text.of("x"))));
+        assertEquals("dark_gray", styledColor(text.darkGray(text.of("x"))));
+        assertEquals("blue", styledColor(text.blue(text.of("x"))));
+        assertEquals("green", styledColor(text.green(text.of("x"))));
+        assertEquals("aqua", styledColor(text.aqua(text.of("x"))));
+        assertEquals("red", styledColor(text.red(text.of("x"))));
+        assertEquals("light_purple", styledColor(text.lightPurple(text.of("x"))));
+        assertEquals("yellow", styledColor(text.yellow(text.of("x"))));
+        assertEquals("white", styledColor(text.white(text.of("x"))));
+    }
+
+    @Test
+    void colorShortcutsChainWithBold() {
+        TextValue.Styled redBold = assertInstanceOf(TextValue.Styled.class, text.red(text.bold(text.of("hi"), true)));
+        assertEquals("red", redBold.style().color());
+        assertTrue(redBold.style().bold());
+    }
+
+    private static String styledColor(TextValue value) {
+        TextValue.Styled styled = assertInstanceOf(TextValue.Styled.class, value);
+        return styled.style().color();
+    }
 }

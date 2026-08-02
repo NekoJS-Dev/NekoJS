@@ -81,6 +81,24 @@ public final class DefaultTextFacade implements TextFacade {
         return applyStyle(receiver, b -> b.color(color));
     }
 
+    // —— 16 色 KubeJS 风格快捷方法：等价于 .color('<命名色>') ——
+    @Override public TextValue black(TextValue r) { return color(r, "black"); }
+    @Override public TextValue darkBlue(TextValue r) { return color(r, "dark_blue"); }
+    @Override public TextValue darkGreen(TextValue r) { return color(r, "dark_green"); }
+    @Override public TextValue darkAqua(TextValue r) { return color(r, "dark_aqua"); }
+    @Override public TextValue darkRed(TextValue r) { return color(r, "dark_red"); }
+    @Override public TextValue darkPurple(TextValue r) { return color(r, "dark_purple"); }
+    @Override public TextValue gold(TextValue r) { return color(r, "gold"); }
+    @Override public TextValue gray(TextValue r) { return color(r, "gray"); }
+    @Override public TextValue darkGray(TextValue r) { return color(r, "dark_gray"); }
+    @Override public TextValue blue(TextValue r) { return color(r, "blue"); }
+    @Override public TextValue green(TextValue r) { return color(r, "green"); }
+    @Override public TextValue aqua(TextValue r) { return color(r, "aqua"); }
+    @Override public TextValue red(TextValue r) { return color(r, "red"); }
+    @Override public TextValue lightPurple(TextValue r) { return color(r, "light_purple"); }
+    @Override public TextValue yellow(TextValue r) { return color(r, "yellow"); }
+    @Override public TextValue white(TextValue r) { return color(r, "white"); }
+
     @Override
     public TextValue insertion(TextValue receiver, String insertion) {
         return applyStyle(receiver, b -> b.insertion(insertion));
