@@ -107,10 +107,10 @@ RecipeTypeDefinition {
 **实现阶段**：
 
 - [x] **阶段 1 — 原版 schema 自动生成**: 启动时扫描 `BuiltInRegistries.RECIPE_SERIALIZER`，对每个 recipe type 从它的 Codec 推断出 field 结构。不需要手写 ~200 个 schema。（已实现：`common` 层 `RecipeSchemaAutoDiscovery` SPI + 各平台 `MinecraftRecipeSchemaScanner`，接入 `ServerEventListener`。）
-- [ ] **阶段 2 — 类型安全构造器**: `RecipeTypeDefinition` 的 keys 数组新增 `role`（INPUT/OUTPUT/OTHER）和 `optional`。构造时校验参数数量和类型，错误有行号定位。
-- [ ] **阶段 3 — Codec 集成**: 每个 `RecipeFieldKind` 绑定对应的原版 Codec。`INGREDIENT` → `Ingredient.CODEC`，`ITEM_STACK` → `ItemStack.CODEC`，`FLUID_STACK` → `FluidStack.CODEC`。确保序列化与 vanilla 格式完全一致。
-- [ ] **阶段 4 — Component-aware replacement**: `replaceInput`/`replaceOutput` 通过 schema 的 role 字段来定位 INPUT/OUTPUT key，用对应的 Codec 匹配而不是 raw JSON 字符串比较。修复复合 ingredient 无法部分替换的问题。
-- [ ] **阶段 5 — 错误上下文**: recipe 创建/修改时携带 sourceLine，出错时输出具体脚本位置 + recipe type + 字段名。`
+- [x] **阶段 2 — 类型安全构造器**: `RecipeFieldDefinition`（per-field record）携带 `role`（INPUT/OUTPUT/OTHER）和 `optional`；`RecipeNamespaceProxy.resolveArgs()` 按构造器 arity 校验参数数量，`RecipeEventSchemaHost.encodeField` 校验参数类型，错误带 recipe type + 字段名 + 期望/实际 JS 类型。（注：错误尚无 JS 行号——见阶段 5。）
+- [x] **阶段 3 — Codec 集成**: 序列化走原版 Codec（`Ingredient.CODEC`/`ItemStack.CODEC`/`FluidStack.CODEC`/`FluidIngredient.CODEC`/`SizedFluidIngredient.FLAT_CODEC`，`RecipeEventJS` serialize* 方法用 `encodeStart(JsonOps.INSTANCE)`）；kind→Codec 分派在平台 `RecipeEventSchemaHost.encodeField`（保持 loader 无关，cleanroom 有等价实现）。与 vanilla 格式完全一致。
+- [x] **阶段 4 — Component-aware replacement**: `replaceInput`/`replaceOutput` 用 schema `role` 字段定位 INPUT/OUTPUT key（schema 已知配方得 role 精确 key，未知配方回退保守候选名），并用 Codec 反序列化后做 item stack 比较（支持复合 ingredient 部分匹配——修复 tag ingredient 多于匹配项的旧行为），`replacementWithCount` 保留 result.count。
+- [~] **阶段 5 — 错误上下文**: `RecipeCreationContext` 携带 `api/type/prefix/scriptId`（`RecipeJsonBuilder.captureScriptId()` 从 Graal Context 捕获脚本 id），出错时输出 recipe type + 字段名 + script id。**JS sourceLine 未实现**：Graal proxy 调用路径（`ProxyExecutable.execute`）下，Java 侧无法直接获取调用点的 `SourceSection`——源位置只能从 `PolyglotException` 栈帧提取（仅抛异常时可用）。实现 sourceLine 需引入 Graal interop 管道（非小改），暂不纳入；scriptId 已足够定位脚本文件。`
 
 **不采纳的部分**：
 - 完整的 `RecipeComponent<T>` 类型系统（40+ Java 类）— 改用 `RecipeFieldKind` enum + data-driven JSON
