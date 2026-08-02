@@ -39,7 +39,7 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 
 ### 下一阶段待办（按 ROI 排序）
 
-- [ ] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`Java` 绑定、`Block.id(s)`/`Item.id(s)` 查找；`BlockState` 输入 adapter（`minecraft:stone[prop=val]`）；`BlockEvents.randomTick`/`blockEntityTick` 等缺失事件。已补齐：`global` 共享 map、`JsonIO`、`NBT`（含 `parse`/`toObject`/`fromObject`）、`BlockPos`/`Vec3` adapter、`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、富文本 `TextJS`（样式/点击/悬停）。
+- [x] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`Java` 绑定、`Block.id(s)`/`Item.id(s)` 查找（三平台均有）；`BlockState` 输入 adapter（`minecraft:stone[prop=val]`）；`BlockEvents.randomTick`/`blockEntityTick`（NeoForge 通过 mixin 注入 `BlockBehaviourMixin`/`LevelChunkBoundTickingBlockEntityMixin`，事件类 + binding 注册全到位）。已补齐：`global` 共享 map、`JsonIO`、`NBT`（含文件读写 `NBT.read`/`NBT.write`、`parse`/`toObject`/`fromObject`，沙箱化 gzip 二进制 NBT）、`BlockPos`/`Vec3` adapter、`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、富文本 `TextJS`（链式 color/bold/italic/underlined/strikethrough/obfuscated/insertion/font/click/hover/append/translatable，不可变设计）。**次要功能缺口**（非阻塞，后续按需补）：TextJS 的 `keybind`/`score`/`selector`/16 色快捷方法/`translateWithFallback`/`join`；cleanroom `ItemEvents.tooltip` tier 分歧（CLIENT/NeoForge vs SERVER/cleanroom，未进契约）。
 - [ ] **`ServerEvents.tags`**：tag 修改事件（`add`/`remove`/`replaceAll`），整合包刚需；4 平台各实现 tag 桥接（neoforge tag builder、cleanroom ore dict）。
 - [x] **NeoForge 26.1/26.2 共享源集（2026-07-24）**：新建 `platforms/neoforge-26-shared/`（纯目录，不进 settings.gradle），迁入 142 个字节相同/差异可忽略的 Java（140 字节相同 + `NekoJSMod` 取 26.2 干净版 + `RecipeEventJS` 取 26.2 版）+ 共享 `accesstransformer.cfg`/`interface_injection.json`/`neoforge.mods.toml`。26.1/26.2 用 `srcDir '../neoforge-26-shared/...'` 引入；4 个 MC API 重命名差异文件（`EntityType`↔`EntityTypes`、`getApiDescription`↔`getBackendDescription`、`screen`↔`gui.screen()`、`getToastManager`↔`gui.toastManager`）+ `nekojs.mixins.json` + 独有文件保留本地。clean 重建后两平台 jar 产物完整（26.1=566 类、26.2=564 类）。
 - [ ] **NeoForge 1.21.1 共享评估**：1.21.1 与 26.x 有 92 个同路径文件不同（API 演进跨度大），强合并需大量条件编译或抽象，ROI 低；暂不纳入共享，后续单独评估。
@@ -106,7 +106,7 @@ RecipeTypeDefinition {
 
 **实现阶段**：
 
-- [ ] **阶段 1 — 原版 schema 自动生成**: 启动时扫描 `BuiltInRegistries.RECIPE_SERIALIZER`，对每个 recipe type 从它的 Codec 推断出 field 结构。不需要手写 ~200 个 schema。
+- [x] **阶段 1 — 原版 schema 自动生成**: 启动时扫描 `BuiltInRegistries.RECIPE_SERIALIZER`，对每个 recipe type 从它的 Codec 推断出 field 结构。不需要手写 ~200 个 schema。（已实现：`common` 层 `RecipeSchemaAutoDiscovery` SPI + 各平台 `MinecraftRecipeSchemaScanner`，接入 `ServerEventListener`。）
 - [ ] **阶段 2 — 类型安全构造器**: `RecipeTypeDefinition` 的 keys 数组新增 `role`（INPUT/OUTPUT/OTHER）和 `optional`。构造时校验参数数量和类型，错误有行号定位。
 - [ ] **阶段 3 — Codec 集成**: 每个 `RecipeFieldKind` 绑定对应的原版 Codec。`INGREDIENT` → `Ingredient.CODEC`，`ITEM_STACK` → `ItemStack.CODEC`，`FLUID_STACK` → `FluidStack.CODEC`。确保序列化与 vanilla 格式完全一致。
 - [ ] **阶段 4 — Component-aware replacement**: `replaceInput`/`replaceOutput` 通过 schema 的 role 字段来定位 INPUT/OUTPUT key，用对应的 Codec 匹配而不是 raw JSON 字符串比较。修复复合 ingredient 无法部分替换的问题。
