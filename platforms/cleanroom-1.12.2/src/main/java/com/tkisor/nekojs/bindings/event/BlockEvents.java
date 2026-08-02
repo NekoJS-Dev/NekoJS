@@ -13,12 +13,12 @@ import net.minecraftforge.event.world.BlockEvent;
 public interface BlockEvents {
     EventGroup GROUP = EventGroup.of("BlockEvents");
 
-    EventBusJS<BlockEvent.BreakEvent, Block> BREAK =
-            GROUP.server("blockBreak", BlockEvent.BreakEvent.class,
+    EventBusJS<BlockEvent.BreakEvent, Block> BROKEN =
+            GROUP.server("broken", BlockEvent.BreakEvent.class,
                     EventBusFactory.createDispatchKey(Block.class,
                             e -> e.getState().getBlock()));
-    EventBusJS<BlockEvent.PlaceEvent, Block> PLACE =
-            GROUP.server("place", BlockEvent.PlaceEvent.class,
+    EventBusJS<BlockEvent.PlaceEvent, Block> PLACED =
+            GROUP.server("placed", BlockEvent.PlaceEvent.class,
                     EventBusFactory.createDispatchKey(Block.class,
                             e -> e.getPlacedBlock().getBlock()));
     // entityPlaced：等价于 neoforge 的 placed，绑定 EntityPlaceEvent
@@ -61,8 +61,8 @@ public interface BlockEvents {
                             e -> e.getWorld().getBlockState(e.getPos()).getBlock()));
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
-            .bind(BREAK)
-            .bind(PLACE)
+            .bind(BROKEN)
+            .bind(PLACED)
             .bind(ENTITY_PLACED)
             .bind(ENTITY_MULTI_PLACED)
             .bind(NEIGHBOR_NOTIFY)

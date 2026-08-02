@@ -21,8 +21,8 @@ public interface ItemEvents {
             GROUP.server("tooltip", ItemTooltipEvent.class,
                     EventBusFactory.createDispatchKey(Item.class,
                             e -> e.getItemStack().getItem()));
-    EventBusJS<ItemTossEvent, Item> TOSS =
-            GROUP.server("toss", ItemTossEvent.class,
+    EventBusJS<ItemTossEvent, Item> DROPPED =
+            GROUP.server("dropped", ItemTossEvent.class,
                     EventBusFactory.createDispatchKey(Item.class,
                             e -> e.getEntityItem().getItem().getItem()));
     EventBusJS<ItemExpireEvent, Item> EXPIRE =
@@ -59,7 +59,7 @@ public interface ItemEvents {
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
             .bind(TOOLTIP)
-            .bind(TOSS)
+            .bind(DROPPED)
             .bind(EXPIRE)
             .bind(RIGHT_CLICKED)
             .bind(CAN_PICK_UP)

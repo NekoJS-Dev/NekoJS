@@ -14,28 +14,28 @@ import net.minecraftforge.event.entity.living.*;
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
-    EventBusJS<EntityJoinWorldEvent, Entity> JOIN_WORLD =
-            GROUP.server("joinWorld", EntityJoinWorldEvent.class,
+    EventBusJS<EntityJoinWorldEvent, Entity> JOIN_LEVEL =
+            GROUP.server("joinLevel", EntityJoinWorldEvent.class,
                     EventBusFactory.createDispatchKey(Entity.class,
                             EntityJoinWorldEvent::getEntity));
     EventBusJS<LivingDeathEvent, Entity> DEATH =
             GROUP.server("death", LivingDeathEvent.class,
                     EventBusFactory.createDispatchKey(Entity.class,
                             LivingDeathEvent::getEntity));
-    EventBusJS<LivingHurtEvent, Entity> HURT =
-            GROUP.server("hurt", LivingHurtEvent.class,
+    EventBusJS<LivingHurtEvent, Entity> DAMAGE_PRE =
+            GROUP.server("damagePre", LivingHurtEvent.class,
                     EventBusFactory.createDispatchKey(Entity.class,
                             LivingHurtEvent::getEntity));
-    EventBusJS<LivingDamageEvent, Entity> DAMAGE =
-            GROUP.server("damage", LivingDamageEvent.class,
+    EventBusJS<LivingDamageEvent, Entity> DAMAGE_POST =
+            GROUP.server("damagePost", LivingDamageEvent.class,
                     EventBusFactory.createDispatchKey(Entity.class,
                             LivingDamageEvent::getEntity));
     EventBusJS<LivingDropsEvent, Entity> DROPS =
             GROUP.server("drops", LivingDropsEvent.class,
                     EventBusFactory.createDispatchKey(Entity.class,
                             LivingDropsEvent::getEntity));
-    EventBusJS<LivingSpawnEvent.CheckSpawn, Entity> CHECK_SPAWN =
-            GROUP.server("checkSpawn", LivingSpawnEvent.CheckSpawn.class,
+    EventBusJS<LivingSpawnEvent.CheckSpawn, Entity> FINALIZE_SPAWN =
+            GROUP.server("finalizeSpawn", LivingSpawnEvent.CheckSpawn.class,
                     EventBusFactory.createDispatchKey(Entity.class,
                             LivingSpawnEvent::getEntity));
     // 使用物品事件：LivingEntityUseItemEvent.getItem() 返回 ItemStack，dispatch key 取 .getItem() → Item
@@ -57,12 +57,12 @@ public interface EntityEvents {
                             e -> e.getItem().getItem()));
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
-            .bind(JOIN_WORLD)
+            .bind(JOIN_LEVEL)
             .bind(DEATH)
-            .bind(HURT)
-            .bind(DAMAGE)
+            .bind(DAMAGE_PRE)
+            .bind(DAMAGE_POST)
             .bind(DROPS)
-            .bind(CHECK_SPAWN)
+            .bind(FINALIZE_SPAWN)
             .bind(USE_ITEM_STARTED)
             .bind(USE_ITEM_STOPPED)
             .bind(USE_ITEM_FINISHED)
