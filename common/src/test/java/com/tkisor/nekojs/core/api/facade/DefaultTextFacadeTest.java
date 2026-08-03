@@ -47,6 +47,50 @@ class DefaultTextFacadeTest {
     }
 
     @Test
+    void translateWithFallbackCarriesFallback() {
+        TextValue.Translatable translated = assertInstanceOf(
+                TextValue.Translatable.class,
+                text.translateWithFallback("key", "Fallback Text", List.of("arg")));
+        assertEquals("key", translated.key());
+        assertEquals("Fallback Text", translated.fallback());
+        assertEquals(1, translated.arguments().size());
+    }
+
+    @Test
+    void keybindScoreSelectorProduceCorrectVariants() {
+        TextValue.Keybind keybind = assertInstanceOf(TextValue.Keybind.class, text.keybind("key.attack"));
+        assertEquals("key.attack", keybind.keybind());
+
+        TextValue.Score score = assertInstanceOf(TextValue.Score.class, text.score("Steve", "deaths"));
+        assertEquals("Steve", score.name());
+        assertEquals("deaths", score.objective());
+
+        TextValue.Selector selector = assertInstanceOf(TextValue.Selector.class, text.selector("@p"));
+        assertEquals("@p", selector.pattern());
+    }
+
+    @Test
+    void joinInterleavesSeparatorBetweenValues() {
+        TextValue sep = text.of(", ");
+        TextValue result = text.join(sep, List.of("a", "b", "c"));
+        TextValue.Sequence seq = assertInstanceOf(TextValue.Sequence.class, result);
+        // 5 elements: a, ", ", b, ", ", c
+        assertEquals(5, seq.values().size());
+        assertEquals(TextValue.literal("a"), seq.values().get(0));
+        assertEquals(sep, seq.values().get(1));
+        assertEquals(TextValue.literal("b"), seq.values().get(2));
+    }
+
+    @Test
+    void joinHandlesSingleAndEmpty() {
+        TextValue sep = text.of(", ");
+        // single element returns the element directly (not a sequence)
+        assertEquals(TextValue.literal("only"), text.join(sep, List.of("only")));
+        // empty returns empty
+        assertTrue(text.join(sep, List.of()).isEmpty());
+    }
+
+    @Test
     void styleMethodsProduceStyledValueAndChainMerges() {
         TextValue base = text.of("hi");
         // 单个样式产生 Styled，内部值保留原字面量

@@ -11,6 +11,9 @@ import com.tkisor.nekojs.api.data.TextHoverEvent;
 import com.tkisor.nekojs.core.api.ManagedApiValueAccess;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.Style;
+import net.minecraft.util.text.TextComponentKeybind;
+import net.minecraft.util.text.TextComponentScore;
+import net.minecraft.util.text.TextComponentSelector;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.TextFormatting;
@@ -74,7 +77,20 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<ITextComponent> {
         }
         if (value instanceof TextValue.Translatable translatable) {
             Object[] arguments = translatable.arguments().stream().map(ComponentAdapter::convertArgument).toArray();
+            // 1.12.2 TextComponentTranslation 不支持 fallback；带 fallback 时退化为 key 字面量
+            if (translatable.fallback() != null) {
+                return new TextComponentString(translatable.fallback());
+            }
             return new TextComponentTranslation(translatable.key(), arguments);
+        }
+        if (value instanceof TextValue.Keybind keybind) {
+            return new TextComponentKeybind(keybind.keybind());
+        }
+        if (value instanceof TextValue.Score score) {
+            return new TextComponentScore(score.name(), score.objective());
+        }
+        if (value instanceof TextValue.Selector selector) {
+            return new TextComponentSelector(selector.pattern());
         }
         ITextComponent result = new TextComponentString("");
         for (TextValue child : ((TextValue.Sequence) value).values()) {

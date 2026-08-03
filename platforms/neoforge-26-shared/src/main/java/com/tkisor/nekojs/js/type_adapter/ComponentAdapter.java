@@ -73,7 +73,21 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
         }
         if (value instanceof TextValue.Translatable translatable) {
             Object[] arguments = translatable.arguments().stream().map(ComponentAdapter::convertArgument).toArray();
+            if (translatable.fallback() != null) {
+                return Component.translatable(translatable.key(), translatable.fallback(), arguments);
+            }
             return Component.translatable(translatable.key(), arguments);
+        }
+        if (value instanceof TextValue.Keybind keybind) {
+            return Component.keybind(keybind.keybind());
+        }
+        if (value instanceof TextValue.Score score) {
+            return Component.score(score.name(), score.objective());
+        }
+        if (value instanceof TextValue.Selector selector) {
+            // 26.x（MC 1.21.6+）：Component.selector 需要 ParsedSelector（需 CommandBuildContext 解析），
+            // 适配器层无该上下文，退化为字面量。selector 在 1.21.1 / 1.12.2 仍可正常渲染。
+            return Component.literal(selector.pattern());
         }
         MutableComponent result = Component.empty();
         for (TextValue child : ((TextValue.Sequence) value).values()) {

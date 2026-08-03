@@ -4,7 +4,7 @@
     "owner": "nekojs-core",
     "kind": "PORTABLE",
     "contractId": "portable-core",
-    "version": "0.11.0"
+    "version": "0.12.0"
   },
   "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, Performance timing tool, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment + T3 interaction events block/entity/item/client).",
   "errors": [
@@ -690,6 +690,190 @@
       "signatures": [
         {
           "parameters": [
+            {
+              "name": "values",
+              "type": {
+                "kind": "UNION",
+                "arguments": [
+                  {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  },
+                  {
+                    "kind": "PRIMITIVE",
+                    "name": "number"
+                  },
+                  {
+                    "kind": "PRIMITIVE",
+                    "name": "boolean"
+                  },
+                  {
+                    "kind": "SYMBOL",
+                    "name": "type:TextValue"
+                  }
+                ]
+              },
+              "varargs": true
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          },
+          "errorCodes": [
+            "NO_MATCHING_SIGNATURE",
+            "TYPE_MISMATCH"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "member:Text.translateWithFallback",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "key",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            },
+            {
+              "name": "fallback",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            },
+            {
+              "name": "arguments",
+              "type": {
+                "kind": "UNION",
+                "arguments": [
+                  {
+                    "kind": "PRIMITIVE",
+                    "name": "string"
+                  },
+                  {
+                    "kind": "PRIMITIVE",
+                    "name": "number"
+                  },
+                  {
+                    "kind": "PRIMITIVE",
+                    "name": "boolean"
+                  },
+                  {
+                    "kind": "SYMBOL",
+                    "name": "type:TextValue"
+                  }
+                ]
+              },
+              "varargs": true
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          },
+          "errorCodes": [
+            "NO_MATCHING_SIGNATURE",
+            "TYPE_MISMATCH"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "member:Text.keybind",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "keybind",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          },
+          "errorCodes": [
+            "NO_MATCHING_SIGNATURE",
+            "TYPE_MISMATCH"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "member:Text.score",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "name",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            },
+            {
+              "name": "objective",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          },
+          "errorCodes": [
+            "NO_MATCHING_SIGNATURE",
+            "TYPE_MISMATCH"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "member:Text.selector",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "pattern",
+              "type": {
+                "kind": "PRIMITIVE",
+                "name": "string"
+              }
+            }
+          ],
+          "returnType": {
+            "kind": "SYMBOL",
+            "name": "type:TextValue"
+          },
+          "errorCodes": [
+            "NO_MATCHING_SIGNATURE",
+            "TYPE_MISMATCH"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "member:Text.join",
+      "signatures": [
+        {
+          "parameters": [
+            {
+              "name": "separator",
+              "type": {
+                "kind": "SYMBOL",
+                "name": "type:TextValue"
+              }
+            },
             {
               "name": "values",
               "type": {

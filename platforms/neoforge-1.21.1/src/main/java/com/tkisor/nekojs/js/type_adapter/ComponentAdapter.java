@@ -72,7 +72,19 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
         }
         if (value instanceof TextValue.Translatable translatable) {
             Object[] arguments = translatable.arguments().stream().map(ComponentAdapter::convertArgument).toArray();
+            if (translatable.fallback() != null) {
+                return Component.translatable(translatable.key(), translatable.fallback(), arguments);
+            }
             return Component.translatable(translatable.key(), arguments);
+        }
+        if (value instanceof TextValue.Keybind keybind) {
+            return Component.keybind(keybind.keybind());
+        }
+        if (value instanceof TextValue.Score score) {
+            return Component.score(score.name(), score.objective());
+        }
+        if (value instanceof TextValue.Selector selector) {
+            return Component.selector(selector.pattern(), java.util.Optional.empty());
         }
         MutableComponent result = Component.empty();
         for (TextValue child : ((TextValue.Sequence) value).values()) {

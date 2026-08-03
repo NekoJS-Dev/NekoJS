@@ -30,6 +30,26 @@ public final class DefaultTextFacade implements TextFacade {
     }
 
     @Override
+    public TextValue translateWithFallback(String key, String fallback, List<Object> arguments) {
+        return TextValue.translatable(key, fallback, normalizeArguments(arguments));
+    }
+
+    @Override
+    public TextValue keybind(String keybind) {
+        return TextValue.keybind(keybind);
+    }
+
+    @Override
+    public TextValue score(String name, String objective) {
+        return TextValue.score(name, objective);
+    }
+
+    @Override
+    public TextValue selector(String pattern) {
+        return TextValue.selector(pattern);
+    }
+
+    @Override
     public TextValue ofValues(List<Object> values) {
         return TextValue.sequence(normalize(values));
     }
@@ -40,6 +60,19 @@ public final class DefaultTextFacade implements TextFacade {
         combined.add(receiver);
         combined.addAll(normalize(values));
         return TextValue.sequence(combined);
+    }
+
+    @Override
+    public TextValue join(TextValue separator, List<Object> values) {
+        List<TextValue> parts = normalize(values);
+        if (parts.isEmpty()) return TextValue.empty();
+        if (parts.size() == 1) return parts.getFirst();
+        List<TextValue> interleaved = new ArrayList<>();
+        for (int i = 0; i < parts.size(); i++) {
+            if (i > 0) interleaved.add(separator);
+            interleaved.add(parts.get(i));
+        }
+        return TextValue.sequence(interleaved);
     }
 
     // —— 富文本样式：链式合并 ——

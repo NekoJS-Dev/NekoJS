@@ -49,7 +49,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public final class CoreManagedApiBootstrap {
-    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.11.0.json";
+    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.12.0.json";
     public static final ApiSymbolId ID_GLOBAL = ApiSymbolId.parse("global:ID");
     public static final ApiSymbolId PLATFORM_GLOBAL = ApiSymbolId.parse("global:Platform");
     public static final ApiSymbolId TEXT_GLOBAL = ApiSymbolId.parse("global:Text");
@@ -142,7 +142,28 @@ public final class CoreManagedApiBootstrap {
         register(contributions, symbols, "member:Text.empty", (receiver, args) -> text.empty());
         register(contributions, symbols, "member:Text.translatable", (receiver, args) ->
                 text.translatable((String) args.getFirst(), args.subList(1, args.size())));
+        register(contributions, symbols, "member:Text.translateWithFallback", (receiver, args) -> {
+            // (key, fallback, ...args)
+            String key = (String) args.get(0);
+            String fallback = (String) args.get(1);
+            return text.translateWithFallback(key, fallback, args.subList(2, args.size()));
+        });
+        register(contributions, symbols, "member:Text.keybind", (receiver, args) ->
+                text.keybind((String) args.getFirst()));
+        register(contributions, symbols, "member:Text.score", (receiver, args) -> {
+            // (name, objective)
+            String name = (String) args.get(0);
+            String objective = (String) args.get(1);
+            return text.score(name, objective);
+        });
+        register(contributions, symbols, "member:Text.selector", (receiver, args) ->
+                text.selector((String) args.getFirst()));
         register(contributions, symbols, "member:Text.ofValues", (receiver, args) -> text.ofValues(args));
+        register(contributions, symbols, "member:Text.join", (receiver, args) -> {
+            // (separator, ...values) — 第一个参数是分隔符 TextValue/String
+            TextValue separator = toTextValue(args.get(0));
+            return text.join(separator, args.subList(1, args.size()));
+        });
         register(contributions, symbols, "member:TextValue.append", (receiver, args) ->
                 text.append((TextValue) receiver, args));
         register(contributions, symbols, "member:TextValue.isEmpty", (receiver, args) ->
@@ -296,7 +317,7 @@ public final class CoreManagedApiBootstrap {
             throw new IllegalStateException("Core managed API contract not found: " + RESOURCE);
         }
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.11.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.12.0"));
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
         } catch (IOException e) {
@@ -318,6 +339,13 @@ public final class CoreManagedApiBootstrap {
             return bool;
         }
         return fallback;
+    }
+
+    /** join 分隔符：接受 TextValue 或 String（String 包成 Literal）。 */
+    private static TextValue toTextValue(Object value) {
+        if (value instanceof TextValue text) return text;
+        if (value instanceof String string) return TextValue.literal(string);
+        throw new IllegalArgumentException("separator must be a TextValue or String");
     }
 
     private static void register(

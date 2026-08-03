@@ -11,9 +11,24 @@ public interface TextFacade {
 
     TextValue translatable(String key, List<Object> arguments);
 
+    /** 可翻译文本带 fallback：翻译键缺失时显示 fallback 字面量。 */
+    TextValue translateWithFallback(String key, String fallback, List<Object> arguments);
+
+    /** 按键绑定文本（如 {@code "key.attack"} → 渲染为玩家当前攻击键）。 */
+    TextValue keybind(String keybind);
+
+    /** 记分板分数：{@code name} 可填 {@code "*"}（取触发者），{@code objective} 是计分项名。 */
+    TextValue score(String name, String objective);
+
+    /** 实体选择器文本（如 {@code "@p"}、{@code "@a[type=zombie]"}）。 */
+    TextValue selector(String pattern);
+
     TextValue ofValues(List<Object> values);
 
     TextValue append(TextValue receiver, List<Object> values);
+
+    /** 用分隔符 {@code separator} 拼接多个文本值（{@code values} 元素为 String 或 TextValue）。 */
+    TextValue join(TextValue separator, List<Object> values);
 
     // —— 富文本样式（链式合并，每次返回带样式的 TextValue）——
     TextValue bold(TextValue receiver, boolean value);

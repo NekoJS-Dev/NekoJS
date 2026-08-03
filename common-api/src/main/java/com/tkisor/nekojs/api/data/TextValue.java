@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public sealed interface TextValue permits TextValue.Literal, TextValue.Translatable, TextValue.Sequence, TextValue.Styled {
+public sealed interface TextValue permits TextValue.Literal, TextValue.Translatable, TextValue.Keybind, TextValue.Score, TextValue.Selector, TextValue.Sequence, TextValue.Styled {
     static TextValue literal(String text) {
         return new Literal(Objects.requireNonNull(text, "text"));
     }
@@ -14,7 +14,24 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
     }
 
     static TextValue translatable(String key, List<TextArgument> arguments) {
-        return new Translatable(key, arguments);
+        return new Translatable(key, null, arguments);
+    }
+
+    /** 可翻译文本带 fallback：翻译键缺失时显示 fallback（null 表示无 fallback）。 */
+    static TextValue translatable(String key, String fallback, List<TextArgument> arguments) {
+        return new Translatable(key, fallback, arguments);
+    }
+
+    static TextValue keybind(String keybind) {
+        return new Keybind(Objects.requireNonNull(keybind, "keybind"));
+    }
+
+    static TextValue score(String name, String objective) {
+        return new Score(Objects.requireNonNull(name, "name"), Objects.requireNonNull(objective, "objective"));
+    }
+
+    static TextValue selector(String pattern) {
+        return new Selector(Objects.requireNonNull(pattern, "pattern"));
     }
 
     static TextValue sequence(List<TextValue> values) {
@@ -57,7 +74,7 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         }
     }
 
-    record Translatable(String key, List<TextArgument> arguments) implements TextValue {
+    record Translatable(String key, String fallback, List<TextArgument> arguments) implements TextValue {
         public Translatable {
             if (key == null || key.isBlank()) {
                 throw new IllegalArgumentException("translation key must not be blank");
@@ -68,6 +85,30 @@ public sealed interface TextValue permits TextValue.Literal, TextValue.Translata
         @Override
         public boolean isEmpty() {
             return false;
+        }
+    }
+
+    /** 按键绑定（如 {@code "key.attack"}），渲染时解析为玩家当前的按键名。 */
+    record Keybind(String keybind) implements TextValue {
+        @Override
+        public boolean isEmpty() {
+            return keybind.isEmpty();
+        }
+    }
+
+    /** 记分板分数：{@code name} 是持有者名（可填 {@code "*"} 取触发者），{@code objective} 是目标名。 */
+    record Score(String name, String objective) implements TextValue {
+        @Override
+        public boolean isEmpty() {
+            return false;
+        }
+    }
+
+    /** 实体选择器（如 {@code "@p"}、{@code "@a[type=zombie]"}）。 */
+    record Selector(String pattern) implements TextValue {
+        @Override
+        public boolean isEmpty() {
+            return pattern.isEmpty();
         }
     }
 
