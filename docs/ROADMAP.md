@@ -40,7 +40,7 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 ### 下一阶段待办（按 ROI 排序）
 
 - [x] **上层 KubeJS 风格 API 补全**（用户迁移最卡的高 ROI 项）：全局 `setTimeout`/`setInterval`（timers shim 已有，注册为全局绑定）、`Java` 绑定、`Block.id(s)`/`Item.id(s)` 查找（三平台均有）；`BlockState` 输入 adapter（`minecraft:stone[prop=val]`）；`BlockEvents.randomTick`/`blockEntityTick`（NeoForge 通过 mixin 注入 `BlockBehaviourMixin`/`LevelChunkBoundTickingBlockEntityMixin`，事件类 + binding 注册全到位）。已补齐：`global` 共享 map、`JsonIO`、`NBT`（含文件读写 `NBT.read`/`NBT.write`、`parse`/`toObject`/`fromObject`，沙箱化 gzip 二进制 NBT）、`BlockPos`/`Vec3` adapter、`PlayerEvents.inventoryChanged`、`ItemEvents.foodEaten`、富文本 `TextJS`（链式 color/bold/italic/underlined/strikethrough/obfuscated/insertion/font/click/hover/append/translatable，不可变设计）。**次要功能缺口**（非阻塞，后续按需补）：TextJS 的 `keybind`/`score`/`selector`/16 色快捷方法/`translateWithFallback`/`join`；cleanroom `ItemEvents.tooltip` tier 分歧（CLIENT/NeoForge vs SERVER/cleanroom，未进契约）。
-- [ ] **`ServerEvents.tags`**：tag 修改事件（`add`/`remove`/`replaceAll`），整合包刚需；4 平台各实现 tag 桥接（neoforge tag builder、cleanroom ore dict）。
+- [x] **`ServerEvents.tags`**：tag 修改事件（`add`/`remove`/`replaceAll`）。NeoForge 1.21.1/26.x 经 mixin 注入 `TagLoader.build` 实现完整 `TagEventJS`；cleanroom 1.12.2 用 OreDictionary 适配（dispatch 键固定 `'ore_dict'`，`add`/`remove`/`removeAll`/`replaceAll`/`getEntries`，在 `serverAboutToStart` 触发一次）。跨平台语义边界已在 wiki 记录；tags 不进 portable-core 契约（平台特定，与 recipes/lootTables 同级）。
 - [x] **NeoForge 26.1/26.2 共享源集（2026-07-24）**：新建 `platforms/neoforge-26-shared/`（纯目录，不进 settings.gradle），迁入 142 个字节相同/差异可忽略的 Java（140 字节相同 + `NekoJSMod` 取 26.2 干净版 + `RecipeEventJS` 取 26.2 版）+ 共享 `accesstransformer.cfg`/`interface_injection.json`/`neoforge.mods.toml`。26.1/26.2 用 `srcDir '../neoforge-26-shared/...'` 引入；4 个 MC API 重命名差异文件（`EntityType`↔`EntityTypes`、`getApiDescription`↔`getBackendDescription`、`screen`↔`gui.screen()`、`getToastManager`↔`gui.toastManager`）+ `nekojs.mixins.json` + 独有文件保留本地。clean 重建后两平台 jar 产物完整（26.1=566 类、26.2=564 类）。
 - [ ] **NeoForge 1.21.1 共享评估**：1.21.1 与 26.x 有 92 个同路径文件不同（API 演进跨度大），强合并需大量条件编译或抽象，ROI 低；暂不纳入共享，后续单独评估。
 - [x] **NeoForge 配方热重载**：`RecipeManagerMixin` 永久缓存数据包阶段的原始配方 JSON（`baseJsons`），`ReloadableServerResourcesMixin` 在资源 reload 收尾、组件/标签绑定后触发 `nekojs$applyScripts()`；`/nekojs reload server` 在脚本 reload 后主动调用，从 `baseJsons` 重建工作集、重跑 `ServerEvents.recipes`/`afterRecipes` 脚本，并用脚本产出 JSON 重新解析替换 `RecipeManager.recipes`（可重入）。3 平台（26.1/26.2/1.21.1）均实现。
@@ -176,7 +176,7 @@ RecipeTypeDefinition {
 - [ ] 按“低版本差异、无平台副作用、可编译验证”的顺序推进 common 迁移。
 - [ ] 为 Create 等常见 mod 增加轻量 JSON helper，例如 mixing、crushing、pressing，但不引入 schema 系统。
 - [ ] 扩展脚本同步安全校验：路径穿越、绝对路径、扩展名、文件数量、批量大小。
-- [ ] 添加受控调度器：延迟任务、重复任务、reload 自动取消旧任务。
+- [x] 添加受控调度器：延迟任务、重复任务、reload 自动取消旧任务。Node 兼容 `timers`/`node:timers`/`timers/promises` 已实现 `setTimeout`/`clearTimeout`/`setInterval`/`clearInterval`/`setImmediate`/`clearImmediate` 及 promise 版，Context close 与单文件 reload 会取消旧任务。
 - [x] 添加 CI，至少构建两个受支持平台模块。
 - [x] 分析确认 common 模块因无 Minecraft 依赖，仅 6 个纯工具类可迁移（RecipeCreationContext、RecipeJsonPath、RecipeJsonValue、FluidAmounts、NekoWrapper、JsonObjectAdapter）。其余 ~120 个平台文件均有 Minecraft/NeoForge import，需 compat 层才能迁移。
 - [ ] 为路径校验、脚本发现、事件总线、adapter 和 recipe filter 增加聚焦测试。
@@ -376,7 +376,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [ ] 定义稳定的 NekoJS API 版本和破坏性变更迁移策略。
 - [ ] 保持统一元数据可供外部工具生成 `.d.ts`、编辑器类型输出和 API 文档。
 - [ ] 逐步收紧 HostAccess，区分可信本地开发模式与更安全的服务器运行模式。
-- [ ] 增加性能诊断：reload 耗时、脚本执行耗时、慢事件监听器和热点统计。
+- [x] 增加性能诊断：改为**用户驱动**的 Performance 全局绑定（`Performance.now()`/`time(fn)`/`bench(fn,runs)`/`start(label)`+`PerfTimer.mark/end/report/elapsedMillis`），而非被动检测慢监听器/reload 耗时（被动检测被明确否决，已删除自带脚本执行时间 log）。用户可在脚本里自行测量函数耗时与分段计时。
 - [ ] 维护 NekoJS、GraalJS、Minecraft、Java、NeoForge 兼容矩阵，并记录外部工具对 catalog 契约的兼容要求。
 - [ ] 只有在两个平台都能稳定表达 AnyHolderSet / wildcard ingredient 后，再考虑 `Ingredient.all()` / `Ingredient.not(...)`。
 
