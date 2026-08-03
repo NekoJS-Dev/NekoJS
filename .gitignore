@@ -5,6 +5,7 @@ build/
 run/
 node_modules/
 ai_docs/
+ai_arch/
 .worktrees/
 .superpowers/
 # 平台测试/构建运行时日志
