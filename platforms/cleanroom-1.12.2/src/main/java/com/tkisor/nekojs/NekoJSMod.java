@@ -3,6 +3,7 @@ package com.tkisor.nekojs;
 import com.tkisor.nekojs.bindings.event.CommandEvents;
 import com.tkisor.nekojs.bindings.event.GoalEvents;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
+import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
@@ -99,6 +100,15 @@ public class NekoJSMod extends NekoJS {
             LOGGER.error("Failed to load SERVER scripts on server about-to-start", e);
         }
         ServerEvents.ABOUT_TO_START.post(event);
+        // tag 事件：脚本加载后触发一次，让 ore dict 修改在配方注册前生效
+        // （1.12.2 OreDictionary 适配，dispatch 键 'ore_dict'）
+        try {
+            TagEventJS tagEvent = new TagEventJS();
+            ServerEvents.TAGS.post(tagEvent, TagEventJS.REGISTRY_KEY);
+            tagEvent.apply();
+        } catch (Throwable e) {
+            LOGGER.error("Failed to apply tag scripts", e);
+        }
     }
 
     @Mod.EventHandler

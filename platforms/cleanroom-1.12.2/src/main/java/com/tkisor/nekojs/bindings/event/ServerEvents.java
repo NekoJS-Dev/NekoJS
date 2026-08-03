@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.LootTableLoadEvent;
 import net.minecraftforge.event.world.WorldEvent;
@@ -32,6 +33,26 @@ public interface ServerEvents {
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
+
+    /**
+     * 1.12.2 tag 事件（OreDictionary 适配）。dispatch 键固定 {@code "ore_dict"}
+     * （1.12.2 无按注册表分类的现代 tag）。脚本以 {@code ServerEvents.tags('ore_dict', e => ...)} 监听。
+     * <p>语义边界：仅物品/方块；移除是运行时操作；非 NeoForge tag 等价物。
+     * 事件在 {@code serverAboutToStart}（SERVER 脚本加载后）触发一次。
+     */
+    DispatchKey<TagEventJS, String> TAG_REGISTRY_KEY = new DispatchKey<>() {
+        @Override
+        public Class<String> keyType() {
+            return String.class;
+        }
+
+        @Override
+        public String eventToKey(TagEventJS event) {
+            return event.getRegistry();
+        }
+    };
+    EventBusJS<TagEventJS, String> TAGS =
+            GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);
 
     /** 数据生成阶段 key：脚本以 {@code ServerEvents.generateData('after_mods', ...)} 定向。 */
     DispatchKey<DataGeneratorJS, String> STAGE_KEY = new DispatchKey<>() {
