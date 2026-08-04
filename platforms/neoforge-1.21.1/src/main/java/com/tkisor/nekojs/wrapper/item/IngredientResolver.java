@@ -96,6 +96,16 @@ public final class IngredientResolver {
         return wrapper.unwrap();
     }
 
+    /** 匹配所有已注册物品的真 wildcard（live AnyHolderSet，注册表变化即时反映）。 */
+    public static Ingredient wildcard() {
+        return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
+    }
+
+    /** 取反 ingredient：返回匹配「除 excluded 外所有物品」的 DifferenceIngredient。 */
+    public static Ingredient not(Ingredient excluded) {
+        return DifferenceIngredient.of(wildcard(), excluded);
+    }
+
     public static Ingredient fromValue(Value value) {
         if (value == null || value.isNull()) return Ingredient.of();
         if (value.isString()) return fromString(value.asString());

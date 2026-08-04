@@ -88,6 +88,20 @@ public final class IngredientResolver {
         return Ingredient.fromStacks(stack);
     }
 
+    /**
+     * 匹配所有已注册物品的近似 wildcard。
+     * <p><b>1.12.2 语义边界</b>：1.12.2 无原生 wildcard ingredient（不像 NeoForge 的
+     * live AnyHolderSet），此处枚举当前注册表快照。脚本注册后新增的物品不会包含在内，
+     * 且不会以 wildcard 形式参与 codec 序列化（序列化为显式物品列表）。
+     */
+    public static Ingredient wildcard() {
+        List<ItemStack> stacks = new ArrayList<>();
+        for (Item item : ForgeRegistries.ITEMS) {
+            stacks.add(new ItemStack(item));
+        }
+        return stacks.isEmpty() ? Ingredient.EMPTY : Ingredient.fromStacks(stacks.toArray(new ItemStack[0]));
+    }
+
     public static Ingredient fromValue(Value value) {
         if (value == null || value.isNull()) return Ingredient.EMPTY;
         if (value.isString()) return fromString(value.asString());

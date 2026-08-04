@@ -32,8 +32,14 @@ public class IngredientFactory {
         return wrapper;
     }
 
+    /** 匹配所有已注册物品的真 wildcard（live AnyHolderSet）。 */
+    public com.tkisor.nekojs.wrapper.item.IngredientJS all() {
+        return new com.tkisor.nekojs.wrapper.item.IngredientJS(IngredientResolver.wildcard());
+    }
+
+    /** 取反：返回匹配「除 ingredient 外所有物品」的 DifferenceIngredient。 */
     public com.tkisor.nekojs.wrapper.item.IngredientJS not(Ingredient ingredient) {
-        throw new UnsupportedOperationException("Ingredient.not requires a wildcard ingredient, which is not supported yet. Use base.except(ingredient) instead.");
+        return new com.tkisor.nekojs.wrapper.item.IngredientJS(IngredientResolver.not(ingredient));
     }
 }
 

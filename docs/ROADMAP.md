@@ -65,7 +65,7 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 
 - [x] `ItemJS.of(...)` 返回 `ItemStack`，支持脚本友好的物品栈创建。
 - [x] `ItemStack` mixin extension：`withCount`、`copy`、`getId`、`getMod`、`getBlock`、`enchant`、`hasEnchantment`、`matches`、`asIngredient`、`weakNBT`、`strictNBT` 等。
-- [x] `Ingredient` helper：`of`、`item`、`tag`、`any`，并明确暂不支持 `not` 的假语义。
+- [x] `Ingredient` helper：`of`、`item`、`tag`、`any`、`all`（wildcard）、`not`（取反，NeoForge 原生 / 1.12.2 诚实拒绝）。
 - [x] `IngredientFactory` wrapper：`or`、`and`、`intersect`、`except`、`subtract`、`matches`、`first`、`stacks`、`displayStacks`、`withCount`。
 - [x] `SizedIngredientJS` 与 `SizedIngredientAdapter`。
 - [x] `Fluid` / `FluidIngredient` / `SizedFluidIngredient` 相关 helper、wrapper 和 adapter MVP。
@@ -378,7 +378,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [ ] 逐步收紧 HostAccess，区分可信本地开发模式与更安全的服务器运行模式。
 - [x] 增加性能诊断：改为**用户驱动**的 Performance 全局绑定（`Performance.now()`/`time(fn)`/`bench(fn,runs)`/`start(label)`+`PerfTimer.mark/end/report/elapsedMillis`），而非被动检测慢监听器/reload 耗时（被动检测被明确否决，已删除自带脚本执行时间 log）。用户可在脚本里自行测量函数耗时与分段计时。
 - [ ] 维护 NekoJS、GraalJS、Minecraft、Java、NeoForge 兼容矩阵，并记录外部工具对 catalog 契约的兼容要求。
-- [ ] 只有在两个平台都能稳定表达 AnyHolderSet / wildcard ingredient 后，再考虑 `Ingredient.all()` / `Ingredient.not(...)`。
+- [x] `Ingredient.all()` / `Ingredient.not(...)` 已按**分平台语义**实现：NeoForge 1.21.1/26.x 用 live `AnyHolderSet`（all）+ `DifferenceIngredient`（not，替换原 stub）；1.12.2 的 `all()` 用注册表枚举快照近似，`not()` 抛清晰 "unsupported on 1.12.2" 异常（无原生 negation 类型，不提供有损近似）。原门禁条件"两平台都稳定表达 wildcard"无法在 1.12.2 满足，改为分平台诚实降级。
 
 ## 架构迁移：显式依赖与生命周期治理
 
