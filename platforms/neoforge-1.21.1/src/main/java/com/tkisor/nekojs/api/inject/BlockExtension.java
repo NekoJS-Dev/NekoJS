@@ -13,4 +13,9 @@ public interface BlockExtension {
     default String neko$getId() {
         return BuiltInRegistries.BLOCK.getKey(self()).toString();
     }
+
+    /** 返回该方块的描述键（未本地化名称，如 {@code block.minecraft.stone}）。 */
+    default String neko$getName() {
+        return self().getDescriptionId();
+    }
 }

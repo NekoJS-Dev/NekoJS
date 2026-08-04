@@ -48,4 +48,32 @@ public interface LivingEntityExtension {
     default ItemStack neko$getFeetItem() {
         return self().getItemBySlot(EquipmentSlot.FEET);
     }
+
+    default float neko$getHealth() {
+        return self().getHealth();
+    }
+
+    default void neko$setHealth(float amount) {
+        self().setHealth(amount);
+    }
+
+    default float neko$getMaxHealth() {
+        return self().getMaxHealth();
+    }
+
+    default void neko$heal(float amount) {
+        self().heal(amount);
+    }
+
+    default void neko$damage(float amount) {
+        self().hurt(self().damageSources().generic(), amount);
+    }
+
+    default ItemStack neko$getMainHandItem() {
+        return self().getMainHandItem();
+    }
+
+    default ItemStack neko$getOffHandItem() {
+        return self().getOffhandItem();
+    }
 }

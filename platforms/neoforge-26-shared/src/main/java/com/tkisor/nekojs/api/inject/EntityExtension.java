@@ -7,6 +7,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 
 /**
  * @see Entity
@@ -34,6 +35,30 @@ public interface EntityExtension {
 
     default String neko$getId() {
         return BuiltInRegistries.ENTITY_TYPE.getKey(self().getType()).toString();
+    }
+
+    default double neko$getX() {
+        return self().getX();
+    }
+
+    default double neko$getY() {
+        return self().getY();
+    }
+
+    default double neko$getZ() {
+        return self().getZ();
+    }
+
+    default void neko$teleport(double x, double y, double z) {
+        self().teleportTo(x, y, z);
+    }
+
+    default void neko$remove() {
+        self().discard();
+    }
+
+    default Level neko$getLevel() {
+        return self().level();
     }
 
     default PersistentDataJS neko$pdata() {

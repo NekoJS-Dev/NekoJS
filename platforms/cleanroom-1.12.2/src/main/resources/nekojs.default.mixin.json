@@ -12,7 +12,13 @@
     "ForgeRegistryMixin",
     "RecipeManagerMixin",
     "inject.MixinEvent",
-    "inject.MixinBlockEvent"
+    "inject.MixinBlockEvent",
+    "inject.MixinItemStack",
+    "inject.MixinEntity",
+    "inject.MixinLivingEntity",
+    "inject.MixinPlayer",
+    "inject.MixinBlock",
+    "inject.MixinItem"
   ],
   "server": [],
   "setSourceFile": true,
