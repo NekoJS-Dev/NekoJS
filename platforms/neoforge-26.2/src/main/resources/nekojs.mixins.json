@@ -14,6 +14,7 @@
     "inject.MixinBlock",
     "inject.MixinBlockState",
     "inject.MixinEntity",
+    "inject.MixinEvent",
     "inject.MixinItem",
     "inject.MixinItemStack",
     "inject.MixinLevel",

@@ -10,7 +10,9 @@
   ],
   "mixins": [
     "ForgeRegistryMixin",
-    "RecipeManagerMixin"
+    "RecipeManagerMixin",
+    "inject.MixinEvent",
+    "inject.MixinBlockEvent"
   ],
   "server": [],
   "setSourceFile": true,
