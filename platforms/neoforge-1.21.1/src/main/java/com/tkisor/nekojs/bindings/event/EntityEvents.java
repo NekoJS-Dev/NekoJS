@@ -19,9 +19,8 @@ public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 
     // 跨平台统一 wrapper：dispatch key 从 wrapper 提取（entity.getType()）
-    // cancellable 事件显式传 true（wrapper POJO 不携带 cancellability 信息）
     EventBusJS<EntityEventJS, EntityType<?>> DAMAGE_PRE =
-            GROUP.server("damagePre", EntityEventJS.class, true, dispatchByEntityType());
+            GROUP.server("damagePre", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> DAMAGE_POST =
             GROUP.server("damagePost", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> DEATH =
@@ -29,19 +28,19 @@ public interface EntityEvents {
     EventBusJS<EntityEventJS, EntityType<?>> DROPS =
             GROUP.server("drops", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> FINALIZE_SPAWN =
-            GROUP.server("finalizeSpawn", EntityEventJS.class, true, dispatchByEntityType());
+            GROUP.server("finalizeSpawn", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> TICK_Pre =
             GROUP.server("tickPre", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> TICK_Post =
             GROUP.server("tickPost", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> JOIN_LEVEL =
-            GROUP.server("joinLevel", EntityEventJS.class, true, dispatchByEntityType());
+            GROUP.server("joinLevel", EntityEventJS.class, dispatchByEntityType());
     EventBusJS<EntityEventJS, EntityType<?>> LEAVE_LEVEL =
-            GROUP.server("leaveLevel", EntityEventJS.class, true, dispatchByEntityType());
+            GROUP.server("leaveLevel", EntityEventJS.class, dispatchByEntityType());
 
     // useItem 事件按 Item 分发，dispatch key 从 wrapper.item 提取
     EventBusJS<EntityEventJS, Item> USE_START =
-            GROUP.server("useItemStarted", EntityEventJS.class, true, dispatchByItem());
+            GROUP.server("useItemStarted", EntityEventJS.class, dispatchByItem());
     EventBusJS<EntityEventJS, Item> USE_STOP =
             GROUP.server("useItemStopped", EntityEventJS.class, dispatchByItem());
     EventBusJS<EntityEventJS, Item> USE_FINISHED =

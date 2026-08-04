@@ -99,7 +99,7 @@ public class NekoJSMod extends NekoJS {
         } catch (Throwable e) {
             LOGGER.error("Failed to load SERVER scripts on server about-to-start", e);
         }
-        ServerEvents.postAboutToStart(event);
+        ServerEvents.ABOUT_TO_START.post(event);
         // tag 事件：脚本加载后触发一次，让 ore dict 修改在配方注册前生效
         // （1.12.2 OreDictionary 适配，dispatch 键 'ore_dict'）
         try {
@@ -114,23 +114,23 @@ public class NekoJSMod extends NekoJS {
     @Mod.EventHandler
     public void serverStarting(FMLServerStartingEvent event) {
         NekoJSCommands.registerCommands(event);
-        ServerEvents.postStarting(event);
+        ServerEvents.STARTING.post(event);
         CommandEvents.REGISTER.post(event);
     }
 
     @Mod.EventHandler
     public void serverStarted(FMLServerStartedEvent event) {
-        ServerEvents.postStarted(event);
+        ServerEvents.STARTED.post(event);
     }
 
     @Mod.EventHandler
     public void serverStopping(FMLServerStoppingEvent event) {
-        ServerEvents.postStopping(event);
+        ServerEvents.STOPPING.post(event);
     }
 
     @Mod.EventHandler
     public void serverStopped(FMLServerStoppedEvent event) {
-        ServerEvents.postStopped(event);
+        ServerEvents.STOPPED.post(event);
     }
 
     private static void initializeWorkspace() {
