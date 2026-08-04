@@ -5,7 +5,9 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
+import com.tkisor.nekojs.wrapper.event.block.BlockEventJS;
 import net.minecraft.block.Block;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
@@ -13,63 +15,71 @@ import net.minecraftforge.event.world.BlockEvent;
 public interface BlockEvents {
     EventGroup GROUP = EventGroup.of("BlockEvents");
 
-    EventBusJS<BlockEvent.BreakEvent, Block> BROKEN =
-            GROUP.server("broken", BlockEvent.BreakEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
-    EventBusJS<BlockEvent.PlaceEvent, Block> PLACED =
-            GROUP.server("placed", BlockEvent.PlaceEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getPlacedBlock().getBlock()));
-    // entityPlaced：等价于 neoforge 的 placed，绑定 EntityPlaceEvent
-    EventBusJS<BlockEvent.EntityPlaceEvent, Block> ENTITY_PLACED =
-            GROUP.server("entityPlaced", BlockEvent.EntityPlaceEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
-    EventBusJS<BlockEvent.EntityMultiPlaceEvent, Block> ENTITY_MULTI_PLACED =
-            GROUP.server("entityMultiPlaced", BlockEvent.EntityMultiPlaceEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
-    EventBusJS<BlockEvent.NeighborNotifyEvent, Block> NEIGHBOR_NOTIFY =
-            GROUP.server("neighborNotify", BlockEvent.NeighborNotifyEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
-    EventBusJS<BlockEvent.FluidPlaceBlockEvent, Block> FLUID_PLACED =
-            GROUP.server("fluidPlaced", BlockEvent.FluidPlaceBlockEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getNewState().getBlock()));
-    EventBusJS<BlockEvent.FarmlandTrampleEvent, Block> FARMLAND_TRAMPLE =
-            GROUP.server("farmlandTrample", BlockEvent.FarmlandTrampleEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
-    EventBusJS<BlockEvent.PortalSpawnEvent, Block> PORTAL_SPAWN =
-            GROUP.server("portalSpawn", BlockEvent.PortalSpawnEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
+    // 跨平台统一 wrapper：EventBusJS 声明为 BlockEventJS，dispatch key 从 wrapper 提取
+    EventBusJS<BlockEventJS, Block> BROKEN =
+            GROUP.server("broken", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> ENTITY_PLACED =
+            GROUP.server("entityPlaced", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> ENTITY_MULTI_PLACED =
+            GROUP.server("entityMultiPlaced", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> NEIGHBOR_NOTIFY =
+            GROUP.server("neighborNotify", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> FLUID_PLACED =
+            GROUP.server("fluidPlaced", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> FARMLAND_TRAMPLE =
+            GROUP.server("farmlandTrample", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> PORTAL_SPAWN =
+            GROUP.server("portalSpawn", BlockEventJS.class, dispatchByBlock());
+
+    EventBusJS<BlockEventJS, Block> RIGHT_CLICKED =
+            GROUP.server("rightClicked", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> PLACED =
+            GROUP.server("placed", BlockEventJS.class, dispatchByBlock());
+    EventBusJS<BlockEventJS, Block> LEFT_CLICKED =
+            GROUP.server("leftClicked", BlockEventJS.class, dispatchByBlock());
+
     EventBusJS<BlockEvent.HarvestDropsEvent, Block> HARVEST_DROPS =
             GROUP.server("harvestDrops", BlockEvent.HarvestDropsEvent.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getState().getBlock()));
-    // 交互事件：PlayerInteractEvent 的 key 取自被交互方块
-    EventBusJS<PlayerInteractEvent.RightClickBlock, Block> RIGHT_CLICKED =
-            GROUP.server("rightClicked", PlayerInteractEvent.RightClickBlock.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getWorld().getBlockState(e.getPos()).getBlock()));
-    EventBusJS<PlayerInteractEvent.LeftClickBlock, Block> LEFT_CLICKED =
-            GROUP.server("leftClicked", PlayerInteractEvent.LeftClickBlock.class,
-                    EventBusFactory.createDispatchKey(Block.class,
-                            e -> e.getWorld().getBlockState(e.getPos()).getBlock()));
+                    EventBusFactory.createDispatchKey(Block.class, e -> e.getState().getBlock()));
+
+    private static DispatchKey<BlockEventJS, Block> dispatchByBlock() {
+        return EventBusFactory.createDispatchKey(Block.class, BlockEventJS::getBlock);
+    }
+
+    // —— 1.12.2 BlockEvent → BlockEventJS transformer ——
+    // 统一字段名：level（从 getWorld() 映射）、player、pos、state、block
+    private static BlockEventJS fromBlockEvent(BlockEvent event) {
+        return new BlockEventJS(event.getWorld(), event.getPos(), event.getState(),
+                event.getState().getBlock(), null);
+    }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
-            .bind(BROKEN)
-            .bind(PLACED)
-            .bind(ENTITY_PLACED)
-            .bind(ENTITY_MULTI_PLACED)
-            .bind(NEIGHBOR_NOTIFY)
-            .bind(FLUID_PLACED)
-            .bind(FARMLAND_TRAMPLE)
-            .bind(PORTAL_SPAWN)
-            .bind(HARVEST_DROPS)
-            .bind(RIGHT_CLICKED)
-            .bind(LEFT_CLICKED);
+        .bindTransformed(BROKEN, (BlockEvent.BreakEvent e) ->
+                fromBlockEvent(e).withExpToDrop(e.getExpToDrop()), BlockEvent.BreakEvent.class)
+        .bindTransformed(PLACED, e ->
+                new BlockEventJS(e.getWorld(), e.getPos(), e.getPlacedBlock(),
+                        e.getPlacedBlock().getBlock(), e.getPlayer()), BlockEvent.PlaceEvent.class)
+        .bindTransformed(ENTITY_PLACED, e ->
+                fromBlockEvent(e).withEntity(e.getEntity()), BlockEvent.EntityPlaceEvent.class)
+        .bindTransformed(ENTITY_MULTI_PLACED, e ->
+                fromBlockEvent(e).withEntity(e.getEntity()), BlockEvent.EntityMultiPlaceEvent.class)
+        .bindTransformed(NEIGHBOR_NOTIFY, BlockEvents::fromBlockEvent, BlockEvent.NeighborNotifyEvent.class)
+        .bindTransformed(FLUID_PLACED, e ->
+                new BlockEventJS(e.getWorld(), e.getPos(), e.getNewState(),
+                        e.getNewState().getBlock(), null), BlockEvent.FluidPlaceBlockEvent.class)
+        .bindTransformed(FARMLAND_TRAMPLE, e ->
+                fromBlockEvent(e).withFallDistance(e.getFallDistance()).withEntity(e.getEntity()),
+                BlockEvent.FarmlandTrampleEvent.class)
+        .bindTransformed(PORTAL_SPAWN, BlockEvents::fromBlockEvent, BlockEvent.PortalSpawnEvent.class)
+        .bindTransformed(RIGHT_CLICKED, BlockEvents::fromInteractEvent, PlayerInteractEvent.RightClickBlock.class)
+        .bindTransformed(LEFT_CLICKED, BlockEvents::fromInteractEvent, PlayerInteractEvent.LeftClickBlock.class)
+        .bind(HARVEST_DROPS);
+
+    /** PlayerInteractEvent.RightClickBlock/LeftClickBlock → BlockEventJS */
+    private static BlockEventJS fromInteractEvent(PlayerInteractEvent e) {
+        var state = e.getWorld().getBlockState(e.getPos());
+        return new BlockEventJS(e.getWorld(), e.getPos(), state, state.getBlock(),
+                e.getEntityPlayer())
+                .withItem(e.getItemStack(), e.getHand());
+    }
 }
