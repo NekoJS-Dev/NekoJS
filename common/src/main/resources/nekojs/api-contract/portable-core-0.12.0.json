@@ -4,7 +4,7 @@
     "owner": "nekojs-core",
     "kind": "PORTABLE",
     "contractId": "portable-core",
-    "version": "0.13.0"
+    "version": "0.12.0"
   },
   "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, Performance timing tool, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment + T3 interaction events block/entity/item/client).",
   "errors": [
@@ -2975,7 +2975,7 @@
           "docs": "发送者用户名"
         }
       ],
-      "docs": "可取消：监听器返回 true 取消消息发送（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "可取消：监听器返回 true 取消消息发送"
     },
     {
       "group": "PlayerEvents",
@@ -2985,7 +2985,7 @@
         "kind": "PLAIN"
       },
       "cancellable": true,
-      "docs": "可取消：监听器返回 true 取消交互（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "可取消：监听器返回 true 取消交互"
     },
     {
       "group": "PlayerEvents",
@@ -3027,7 +3027,7 @@
         "kind": "BY_ID",
         "keyType": "string"
       },
-      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）"
     },
     {
       "group": "PlayerEvents",
@@ -3037,7 +3037,7 @@
         "kind": "BY_ID",
         "keyType": "string"
       },
-      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）"
     },
     {
       "group": "PlayerEvents",
@@ -3047,7 +3047,7 @@
         "kind": "BY_ID",
         "keyType": "string"
       },
-      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）"
     },
     {
       "group": "PlayerEvents",
@@ -3057,7 +3057,7 @@
         "kind": "BY_ID",
         "keyType": "string"
       },
-      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "按物品 id 分发：注册键为字符串 id（如 minecraft:stick）"
     },
     {
       "group": "CommandEvents",
@@ -3638,7 +3638,7 @@
           "docs": "掉落经验值（int）"
         }
       ],
-      "docs": "玩家破坏方块。按方块 id 分发（注册键为字符串 id 如 minecraft:stone）。可取消：监听器返回 true 取消破坏（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家破坏方块。按方块 id 分发（注册键为字符串 id 如 minecraft:stone）。可取消：监听器返回 true 取消破坏"
     },
     {
       "group": "BlockEvents",
@@ -3671,7 +3671,7 @@
           "docs": "被点击的方块（平台原生）"
         }
       ],
-      "docs": "方块被放置。按方块 id 分发。可取消：监听器返回 true 取消放置（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "方块被放置。按方块 id 分发。可取消：监听器返回 true 取消放置"
     },
     {
       "group": "BlockEvents",
@@ -3699,7 +3699,7 @@
           "docs": "方块坐标 BlockPos（平台原生）"
         }
       ],
-      "docs": "实体放置方块。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "实体放置方块。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3722,7 +3722,7 @@
           "docs": "被替换的 BlockState 列表（平台原生）"
         }
       ],
-      "docs": "实体一次性放置多方块（如末影水晶）。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "实体一次性放置多方块（如末影水晶）。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3750,7 +3750,7 @@
           "docs": "被通知的方向列表（平台原生）"
         }
       ],
-      "docs": "方块通知邻居更新。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "方块通知邻居更新。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3778,7 +3778,7 @@
           "docs": "方块坐标 BlockPos（平台原生）"
         }
       ],
-      "docs": "流体放置方块。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "流体放置方块。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3806,7 +3806,7 @@
           "docs": "方块坐标 BlockPos（平台原生）"
         }
       ],
-      "docs": "农田被踩踏退化。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "农田被踩踏退化。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3829,7 +3829,7 @@
           "docs": "方块坐标 BlockPos（平台原生）"
         }
       ],
-      "docs": "传送门尝试生成。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "传送门尝试生成。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3852,7 +3852,7 @@
           "docs": "方块坐标 BlockPos（平台原生）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "手持物品（平台原生 ItemStack）"
         },
@@ -3862,7 +3862,7 @@
           "docs": "主/副手（平台原生）"
         }
       ],
-      "docs": "玩家右键方块。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家右键方块。按方块 id 分发。可取消"
     },
     {
       "group": "BlockEvents",
@@ -3885,12 +3885,12 @@
           "docs": "方块坐标 BlockPos（平台原生）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "手持物品（平台原生 ItemStack）"
         }
       ],
-      "docs": "玩家左键方块。按方块 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家左键方块。按方块 id 分发。可取消"
     },
     {
       "group": "EntityEvents",
@@ -3913,7 +3913,7 @@
           "docs": "进入的世界/维度（平台原生 Level）"
         }
       ],
-      "docs": "实体进入世界。按实体 id 分发（注册键为字符串 id 如 minecraft:zombie）。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "实体进入世界。按实体 id 分发（注册键为字符串 id 如 minecraft:zombie）。可取消"
     },
     {
       "group": "EntityEvents",
@@ -3935,7 +3935,7 @@
           "docs": "伤害来源（平台原生 DamageSource）"
         }
       ],
-      "docs": "实体死亡。按实体 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体死亡。按实体 id 分发。不可取消",
       "cancellable": false
     },
     {
@@ -3964,7 +3964,7 @@
           "docs": "伤害数值（float）"
         }
       ],
-      "docs": "实体受伤（护甲减免前）。按实体 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "实体受伤（护甲减免前）。按实体 id 分发。可取消"
     },
     {
       "group": "EntityEvents",
@@ -3991,7 +3991,7 @@
           "docs": "实际伤害数值（float）"
         }
       ],
-      "docs": "实体受伤（护甲减免后）。按实体 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体受伤（护甲减免后）。按实体 id 分发。不可取消",
       "cancellable": false
     },
     {
@@ -4019,7 +4019,7 @@
           "docs": "掉落物集合（平台原生 Collection）"
         }
       ],
-      "docs": "实体掉落物生成。按实体 id 分发。不可取消（可修改 drops 集合）（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体掉落物生成。按实体 id 分发。不可取消（可修改 drops 集合）",
       "cancellable": false
     },
     {
@@ -4058,7 +4058,7 @@
           "docs": "z 坐标（double）"
         }
       ],
-      "docs": "实体生成最终化（决定是否允许生成）。按实体 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "实体生成最终化（决定是否允许生成）。按实体 id 分发。可取消"
     },
     {
       "group": "EntityEvents",
@@ -4086,7 +4086,7 @@
           "docs": "剩余使用时长（int）"
         }
       ],
-      "docs": "实体开始使用物品。按物品 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "实体开始使用物品。按物品 id 分发。可取消"
     },
     {
       "group": "EntityEvents",
@@ -4113,7 +4113,7 @@
           "docs": "已使用时长（int）"
         }
       ],
-      "docs": "实体停止使用物品。按物品 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体停止使用物品。按物品 id 分发。不可取消",
       "cancellable": false
     },
     {
@@ -4146,7 +4146,7 @@
           "docs": "总使用时长（int）"
         }
       ],
-      "docs": "实体使用物品完成（如吃完食物）。按物品 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体使用物品完成（如吃完食物）。按物品 id 分发。不可取消",
       "cancellable": false
     },
     {
@@ -4174,7 +4174,7 @@
           "docs": "剩余时长（int）"
         }
       ],
-      "docs": "实体使用物品每 tick。按物品 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体使用物品每 tick。按物品 id 分发。不可取消",
       "cancellable": false
     },
     {
@@ -4193,7 +4193,7 @@
           "docs": "玩家（平台原生 Player）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "手持物品（平台原生 ItemStack）"
         },
@@ -4203,7 +4203,7 @@
           "docs": "主/副手（平台原生）"
         }
       ],
-      "docs": "玩家右键物品。按物品 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家右键物品。按物品 id 分发。可取消"
     },
     {
       "group": "ItemEvents",
@@ -4221,12 +4221,12 @@
           "docs": "玩家（平台原生 Player）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "被拾取物品（平台原生 ItemStack）"
         }
       ],
-      "docs": "玩家拾取物品前。按物品 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家拾取物品前。按物品 id 分发。可取消"
     },
     {
       "group": "ItemEvents",
@@ -4243,12 +4243,12 @@
           "docs": "玩家（平台原生 Player）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "被拾取物品（平台原生 ItemStack）"
         }
       ],
-      "docs": "玩家拾取物品后。按物品 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "玩家拾取物品后。按物品 id 分发。不可取消",
       "cancellable": false
     },
     {
@@ -4267,12 +4267,12 @@
           "docs": "丢弃方玩家（平台原生 Player）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "被丢弃物品（平台原生 ItemStack）"
         }
       ],
-      "docs": "玩家丢弃物品。按物品 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家丢弃物品。按物品 id 分发。可取消"
     },
     {
       "group": "ItemEvents",
@@ -4295,12 +4295,12 @@
           "docs": "被交互实体（平台原生 Entity）"
         },
         {
-          "name": "item",
+          "name": "itemStack",
           "kind": "NATIVE",
           "docs": "手持物品（平台原生 ItemStack）"
         }
       ],
-      "docs": "玩家用物品右键实体。按物品 id 分发。可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）"
+      "docs": "玩家用物品右键实体。按物品 id 分发。可取消"
     },
     {
       "group": "ItemEvents",
@@ -4327,7 +4327,7 @@
           "docs": "食用后结果物品（平台原生 ItemStack）"
         }
       ],
-      "docs": "实体吃完食物/用完物品。按物品 id 分发。不可取消（统一 wrapper：event.level/player/pos 等字段跨平台一致）",
+      "docs": "实体吃完食物/用完物品。按物品 id 分发。不可取消",
       "cancellable": false
     },
     {

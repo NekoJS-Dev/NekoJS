@@ -18,7 +18,7 @@ class ProbeContractSetHolderTest {
         var contracts = ProbeContractSetHolder.contractSet();
         var portable = contracts.requirePortable("nekojs-core");
 
-        assertEquals(ApiVersion.parse("0.13.0"), portable.identity().version());
+        assertEquals(ApiVersion.parse("0.12.0"), portable.identity().version());
         assertTrue(portable.contract().symbols().stream()
                 .anyMatch(symbol -> symbol.id().value().equals("global:JsonIO")));
         assertTrue(portable.contract().symbols().stream()

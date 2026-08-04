@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PortableCorePhase3AContractTest {
-    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.13.0.json";
+    private static final String RESOURCE = "/nekojs/api-contract/portable-core-0.12.0.json";
 
     @Test
     void productionReaderAcceptsPlatformAndIdContract() {
@@ -30,7 +30,7 @@ class PortableCorePhase3AContractTest {
         assertNotNull(stream);
 
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.13.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.12.0"));
         VerifiedApiContract verified = ApiContractReader.readVerified(
                 new InputStreamReader(stream, StandardCharsets.UTF_8),
                 URI.create("nekojs:///core"), RESOURCE, identity, null);
