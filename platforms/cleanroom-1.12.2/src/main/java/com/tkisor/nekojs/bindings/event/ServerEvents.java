@@ -5,7 +5,10 @@ import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.event.server.LootTableLoadEventJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
 import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.LootTableLoadEvent;
@@ -20,7 +23,8 @@ import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 public interface ServerEvents {
     EventGroup GROUP = EventGroup.of("ServerEvents");
 
-    // 1.12.2 tick 事件为单一类带 phase 字段：tickPre/tickPost 用 filter 拆分，避免双触发
+    // tick 事件：1.12.2 单一类带 phase，cleanroom bridge 的 bind(bus, filter) 不支持 transformed，
+    // 因此 tickPre/tickPost 保持原生 TickEvent.ServerTickEvent
     EventBusJS<TickEvent.ServerTickEvent, Void> TICK_PRE =
             GROUP.server("tickPre", TickEvent.ServerTickEvent.class);
     EventBusJS<TickEvent.ServerTickEvent, Void> TICK_POST =
@@ -74,29 +78,64 @@ public interface ServerEvents {
     EventBusJS<DataGeneratorJS, String> GENERATE_DATA =
             GROUP.server("generateData", DataGeneratorJS.class, STAGE_KEY);
 
-    // 服务器生命周期事件：FMLServer*Event 继承 FMLEvent（而非 eventhandler.Event），
-    // 不走 MinecraftForge.EVENT_BUS，无法用 EventBusForgeBridge 订阅。
-    // 这里仅声明 bus（不加入 FORGE_BRIDGE），由 NekoJSMod 的 @Mod.EventHandler 转发 post。
-    // SERVER 脚本在 FMLServerAboutToStartEvent 时加载（见 NekoJSMod.serverAboutToStart），
-    // 因此脚本能监听 starting/started/stopping/stopped；aboutToStart 在脚本加载后立即 post。
-    EventBusJS<FMLServerAboutToStartEvent, Void> ABOUT_TO_START =
-            GROUP.server("aboutToStart", FMLServerAboutToStartEvent.class);
-    EventBusJS<FMLServerStartingEvent, Void> STARTING =
-            GROUP.server("starting", FMLServerStartingEvent.class);
-    EventBusJS<FMLServerStartedEvent, Void> STARTED =
-            GROUP.server("started", FMLServerStartedEvent.class);
-    EventBusJS<FMLServerStoppingEvent, Void> STOPPING =
-            GROUP.server("stopping", FMLServerStoppingEvent.class);
-    EventBusJS<FMLServerStoppedEvent, Void> STOPPED =
-            GROUP.server("stopped", FMLServerStoppedEvent.class);
+    // 统一 wrapper：服务器生命周期 → ServerLifecycleEventJS（非分发）。
+    // 1.12.2 的 FMLServer*Event 继承 FMLEvent（而非 eventhandler.Event），
+    // 不走 MinecraftForge.EVENT_BUS，无法用 FORGE_BRIDGE 订阅。
+    // 由 NekoJSMod 的 @Mod.EventHandler 手动构造 wrapper 并 post（见 NekoJSMod）。
+    EventBusJS<ServerLifecycleEventJS, Void> ABOUT_TO_START =
+        GROUP.server("aboutToStart", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STARTING =
+        GROUP.server("starting", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STARTED =
+        GROUP.server("started", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STOPPING =
+        GROUP.server("stopping", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STOPPED =
+        GROUP.server("stopped", ServerLifecycleEventJS.class);
 
-    EventBusJS<LootTableLoadEvent, Void> LOOT_TABLE_LOAD =
-            GROUP.server("lootTableLoad", LootTableLoadEvent.class);
+    // 统一 wrapper：lootTableLoad → LootTableLoadEventJS（非分发）
+    EventBusJS<LootTableLoadEventJS, Void> LOOT_TABLE_LOAD =
+        GROUP.server("lootTableLoad", LootTableLoadEventJS.class);
+
+    // —— 1.12.2 LootTableLoadEvent → LootTableLoadEventJS transformer ——
+    private static LootTableLoadEventJS fromLootTableLoad(LootTableLoadEvent event) {
+        return new LootTableLoadEventJS(event.getName().toString(), event.getTable());
+    }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
+            // tick 保持原生 + filter：transformed-bind-with-filter 不存在于 cleanroom bridge
             .bind(TICK_PRE, e -> e.phase == TickEvent.Phase.START)
             .bind(TICK_POST, e -> e.phase == TickEvent.Phase.END)
             .bind(WORLD_LOAD)
             .bind(WORLD_UNLOAD)
-            .bind(LOOT_TABLE_LOAD);
+            .bindTransformed(LOOT_TABLE_LOAD, ServerEvents::fromLootTableLoad, LootTableLoadEvent.class);
+
+    // —— 服务器生命周期手动 post helper ——
+    // 由 NekoJSMod 在各 @Mod.EventHandler 中调用：把 FMLServer*Event 转成 wrapper 再投递。
+    // SERVER 脚本在 FMLServerAboutToStartEvent 时加载（见 NekoJSMod.serverAboutToStart）。
+    // 注意：仅 FMLServerAboutToStartEvent/FMLServerStartingEvent 提供 getServer()，
+    // Started/Stopping/Stopped 通过 FMLCommonHandler 取当前服务器实例。
+    static void postAboutToStart(FMLServerAboutToStartEvent event) {
+        ABOUT_TO_START.post(new ServerLifecycleEventJS(event.getServer()));
+    }
+
+    static void postStarting(FMLServerStartingEvent event) {
+        STARTING.post(new ServerLifecycleEventJS(event.getServer()));
+    }
+
+    static void postStarted(FMLServerStartedEvent event) {
+        STARTED.post(new ServerLifecycleEventJS(currentServer()));
+    }
+
+    static void postStopping(FMLServerStoppingEvent event) {
+        STOPPING.post(new ServerLifecycleEventJS(currentServer()));
+    }
+
+    static void postStopped(FMLServerStoppedEvent event) {
+        STOPPED.post(new ServerLifecycleEventJS(currentServer()));
+    }
+
+    private static net.minecraft.server.MinecraftServer currentServer() {
+        return net.minecraftforge.fml.common.FMLCommonHandler.instance().getMinecraftServerInstance();
+    }
 }

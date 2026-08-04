@@ -6,7 +6,10 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
+import com.tkisor.nekojs.wrapper.event.server.LootTableLoadEventJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
 import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
@@ -49,10 +52,11 @@ public interface ServerEvents {
         }
     };
 
-    EventBusJS<ServerTickEvent.Pre, Void> TICK_PRE =
-            GROUP.server("tickPre", ServerTickEvent.Pre.class);
-    EventBusJS<ServerTickEvent.Post, Void> TICK_POST =
-            GROUP.server("tickPost", ServerTickEvent.Post.class);
+    // 统一 wrapper：tickPre/tickPost → ServerTickEventJS（非分发）
+    EventBusJS<ServerTickEventJS, Void> TICK_PRE =
+            GROUP.server("tickPre", ServerTickEventJS.class);
+    EventBusJS<ServerTickEventJS, Void> TICK_POST =
+            GROUP.server("tickPost", ServerTickEventJS.class);
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
@@ -61,23 +65,27 @@ public interface ServerEvents {
     EventBusJS<DataGeneratorJS, String> GENERATE_DATA =
             GROUP.server("generateData", DataGeneratorJS.class, STAGE_KEY);
 
+    // 统一 wrapper：服务器生命周期 → ServerLifecycleEventJS（非分发）
+    EventBusJS<ServerLifecycleEventJS, Void> ABOUT_TO_START =
+        GROUP.server("aboutToStart", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STARTING =
+        GROUP.server("starting", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STARTED =
+        GROUP.server("started", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STOPPING =
+        GROUP.server("stopping", ServerLifecycleEventJS.class);
+    EventBusJS<ServerLifecycleEventJS, Void> STOPPED =
+        GROUP.server("stopped", ServerLifecycleEventJS.class);
 
-    EventBusJS<ServerAboutToStartEvent, Void> ABOUT_TO_START =
-        GROUP.server("aboutToStart", ServerAboutToStartEvent.class);
-    EventBusJS<ServerStartingEvent, Void> STARTING =
-        GROUP.server("starting", ServerStartingEvent.class);
-    EventBusJS<ServerStartedEvent, Void> STARTED =
-        GROUP.server("started", ServerStartedEvent.class);
-    EventBusJS<ServerStoppingEvent, Void> STOPPING =
-        GROUP.server("stopping", ServerStoppingEvent.class);
-    EventBusJS<ServerStoppedEvent, Void> STOPPED =
-        GROUP.server("stopped", ServerStoppedEvent.class);
+    // 以下保持原生事件类型（已有专属 wrapper 或仅限特定平台，按约定不统一）
     EventBusJS<OnDatapackSyncEvent, Void> DATAPACK_SYNC =
         GROUP.server("datapackSync", OnDatapackSyncEvent.class);
     EventBusJS<TagsUpdatedEvent, Void> TAGS_UPDATED =
         GROUP.server("tagsUpdated", TagsUpdatedEvent.class);
-    EventBusJS<LootTableLoadEvent, Void> LOOT_TABLE_LOAD =
-        GROUP.server("lootTableLoad", LootTableLoadEvent.class);
+
+    // 统一 wrapper：lootTableLoad → LootTableLoadEventJS（非分发）
+    EventBusJS<LootTableLoadEventJS, Void> LOOT_TABLE_LOAD =
+        GROUP.server("lootTableLoad", LootTableLoadEventJS.class);
 
     /** loot table JSON 管理（reload 时 post，先于 loot 解析；修改当次 reload 生效）。 */
     EventBusJS<LootTableEventJS, Void> LOOT_TABLES =
@@ -86,15 +94,29 @@ public interface ServerEvents {
     EventBusJS<TagEventJS, Identifier> TAGS =
         GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);
 
+    // —— NeoForge ServerTickEvent/ServerLifecycleEvent/LootTableLoadEvent → wrapper transformer ——
+    private static ServerTickEventJS fromServerTick(ServerTickEvent event) {
+        return new ServerTickEventJS(event.getServer(), event.hasTime());
+    }
+
+    private static ServerLifecycleEventJS fromLifecycle(
+            net.neoforged.neoforge.event.server.ServerLifecycleEvent event) {
+        return new ServerLifecycleEventJS(event.getServer());
+    }
+
+    private static LootTableLoadEventJS fromLootTableLoad(LootTableLoadEvent event) {
+        return new LootTableLoadEventJS(event.getName().toString(), event.getTable());
+    }
+
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-        .bind(TICK_PRE)
-        .bind(TICK_POST)
-        .bind(ABOUT_TO_START)
-        .bind(STARTING)
-        .bind(STARTED)
-        .bind(STOPPING)
-        .bind(STOPPED)
+        .bindTransformed(TICK_PRE, ServerEvents::fromServerTick, ServerTickEvent.Pre.class)
+        .bindTransformed(TICK_POST, ServerEvents::fromServerTick, ServerTickEvent.Post.class)
+        .bindTransformed(ABOUT_TO_START, ServerEvents::fromLifecycle, ServerAboutToStartEvent.class)
+        .bindTransformed(STARTING, ServerEvents::fromLifecycle, ServerStartingEvent.class)
+        .bindTransformed(STARTED, ServerEvents::fromLifecycle, ServerStartedEvent.class)
+        .bindTransformed(STOPPING, ServerEvents::fromLifecycle, ServerStoppingEvent.class)
+        .bindTransformed(STOPPED, ServerEvents::fromLifecycle, ServerStoppedEvent.class)
         .bind(DATAPACK_SYNC)
         .bind(TAGS_UPDATED)
-        .bind(LOOT_TABLE_LOAD);
+        .bindTransformed(LOOT_TABLE_LOAD, ServerEvents::fromLootTableLoad, LootTableLoadEvent.class);
 }

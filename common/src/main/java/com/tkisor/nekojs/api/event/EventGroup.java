@@ -66,6 +66,32 @@ public class EventGroup {
         return add(name, ScriptType.STARTUP, EventBusJS.of(type, EventBusJS.eventCancellability(type), dispatchKey));
     }
 
+    /** 显式指定 cancellability 的 dispatch 重载（用于 wrapper POJO 事件，其类型不携带 cancellability 信息）。 */
+    public <E, K> EventBusJS<E, K> server(String name, Class<E> type, boolean cancellable, DispatchKey<E, K> dispatchKey) {
+        return add(name, ScriptType.SERVER, EventBusJS.of(type, cancellable, dispatchKey));
+    }
+
+    public <E, K> EventBusJS<E, K> client(String name, Class<E> type, boolean cancellable, DispatchKey<E, K> dispatchKey) {
+        return add(name, ScriptType.CLIENT, EventBusJS.of(type, cancellable, dispatchKey));
+    }
+
+    public <E, K> EventBusJS<E, K> startup(String name, Class<E> type, boolean cancellable, DispatchKey<E, K> dispatchKey) {
+        return add(name, ScriptType.STARTUP, EventBusJS.of(type, cancellable, dispatchKey));
+    }
+
+    /** 显式指定 cancellability 的非 dispatch 重载（用于 wrapper POJO 事件）。 */
+    public <E> EventBusJS<E, Void> server(String name, Class<E> type, boolean cancellable) {
+        return add(name, ScriptType.SERVER, EventBusJS.of(type, cancellable));
+    }
+
+    public <E> EventBusJS<E, Void> client(String name, Class<E> type, boolean cancellable) {
+        return add(name, ScriptType.CLIENT, EventBusJS.of(type, cancellable));
+    }
+
+    public <E> EventBusJS<E, Void> startup(String name, Class<E> type, boolean cancellable) {
+        return add(name, ScriptType.STARTUP, EventBusJS.of(type, cancellable));
+    }
+
     public <BUS extends EventBusJS<?, ?>> BUS add(String name, ScriptType scriptType, BUS bus) {
         if (frozen) {
             throw new IllegalStateException("EventGroup '" + this.name + "' is frozen after bootstrap");

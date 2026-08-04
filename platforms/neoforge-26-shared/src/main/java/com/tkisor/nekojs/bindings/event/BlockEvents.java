@@ -20,27 +20,28 @@ public interface BlockEvents {
     EventGroup GROUP = EventGroup.of("BlockEvents");
 
     // 跨平台统一 wrapper：EventBusJS 声明为 BlockEventJS，dispatch key 从 wrapper 提取
+    // 所有 BlockEvents 均可取消（return true 取消），显式传 cancellable=true（wrapper POJO 不携带 cancellability）
     EventBusJS<BlockEventJS, Block> BROKEN =
-            GROUP.server("broken", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("broken", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> ENTITY_PLACED =
-            GROUP.server("entityPlaced", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("entityPlaced", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> ENTITY_MULTI_PLACED =
-            GROUP.server("entityMultiPlaced", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("entityMultiPlaced", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> NEIGHBOR_NOTIFY =
-            GROUP.server("neighborNotify", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("neighborNotify", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> FLUID_PLACED =
-            GROUP.server("fluidPlaced", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("fluidPlaced", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> FARMLAND_TRAMPLE =
-            GROUP.server("farmlandTrample", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("farmlandTrample", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> PORTAL_SPAWN =
-            GROUP.server("portalSpawn", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("portalSpawn", BlockEventJS.class, true, dispatchByBlock());
 
     EventBusJS<BlockEventJS, Block> RIGHT_CLICKED =
-            GROUP.server("rightClicked", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("rightClicked", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> PLACED =
-            GROUP.server("placed", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("placed", BlockEventJS.class, true, dispatchByBlock());
     EventBusJS<BlockEventJS, Block> LEFT_CLICKED =
-            GROUP.server("leftClicked", BlockEventJS.class, dispatchByBlock());
+            GROUP.server("leftClicked", BlockEventJS.class, true, dispatchByBlock());
 
     /** 方块随机 tick（仅对 {@code isRandomlyTicking()} 的方块触发；由 mixin 注入，按 Block 分发）。 */
     EventBusJS<RandomTickEvent, Block> RANDOM_TICK =
