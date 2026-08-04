@@ -49,7 +49,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public final class CoreManagedApiBootstrap {
-    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.12.0.json";
+    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.13.0.json";
     public static final ApiSymbolId ID_GLOBAL = ApiSymbolId.parse("global:ID");
     public static final ApiSymbolId PLATFORM_GLOBAL = ApiSymbolId.parse("global:Platform");
     public static final ApiSymbolId TEXT_GLOBAL = ApiSymbolId.parse("global:Text");
@@ -317,7 +317,7 @@ public final class CoreManagedApiBootstrap {
             throw new IllegalStateException("Core managed API contract not found: " + RESOURCE);
         }
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.12.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.13.0"));
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
         } catch (IOException e) {
