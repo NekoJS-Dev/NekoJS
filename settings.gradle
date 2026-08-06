@@ -31,6 +31,7 @@ plugins {
 
 rootProject.name = 'NekoJS'
 include 'common-api'
+include 'common-api-processor'
 include 'common'
 
 // 嵌套在 platforms 文件夹里的模块，用冒号分隔

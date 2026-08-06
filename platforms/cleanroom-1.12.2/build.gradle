@@ -95,6 +95,8 @@ dependencies {
     // Note: Gson/Log4j/Guava are bundled with Minecraft 1.12.2, no need to bundle
     compileOnly 'org.projectlombok:lombok:1.18.44'
     annotationProcessor 'org.projectlombok:lombok:1.18.44'
+    annotationProcessor project(':common-api-processor')
+    annotationProcessor project(':common-api')
 
     // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter:6.0.3'

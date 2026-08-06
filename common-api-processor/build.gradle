@@ -1,0 +1,29 @@
+plugins {
+    id 'java-library'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = "${mod_id}-api-processor"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // 编译期需要访问 common-api 的 spec 注解（@PlatformAvailability 等），
+    // 但运行时（处理器执行时）由各平台的 compileClasspath 提供，故 compileOnly
+    compileOnly project(':common-api')
+}
+
+// 处理器 jar 需要声明 META-INF/services/javax.annotation.processing.Processor
+jar {
+    manifest {
+        attributes 'Implementation-Title': 'NekoJS Spec Coverage Processor'
+    }
+}
