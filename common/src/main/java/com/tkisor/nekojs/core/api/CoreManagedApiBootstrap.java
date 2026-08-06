@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.api;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.ApiContractReader;
+import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 import com.tkisor.nekojs.api.data.NekoId;
@@ -311,6 +312,13 @@ public final class CoreManagedApiBootstrap {
                         PERFORMANCE_GLOBAL, performance));
     }
 
+    /**
+     * 读取 portable-core 契约。
+     *
+     * <p>当前仍从 JSON 读取 symbols（含 receiver 归属信息）。ContractReflector 已就位
+     * 但 facade 方法的 receiver 归属（如 TextFacade.append 注册为 member:TextValue.append
+     * 而非 member:Text.append）需要显式注解标记，待后续 @ContractMember 注解完成后切换。
+     */
     private static VerifiedApiContract readContract(URI codeSource) {
         var stream = CoreManagedApiBootstrap.class.getResourceAsStream(RESOURCE);
         if (stream == null) {

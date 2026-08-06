@@ -70,7 +70,7 @@ public final class ContractReflector {
             String memberId = "member:" + facadeName + "." + method.getName();
             signaturesByName
                     .computeIfAbsent(memberId, k -> new ArrayList<>())
-                    .add(methodToSignature(method));
+                    .add(methodToSignature(method, 0));
         }
 
         for (var entry : signaturesByName.entrySet()) {
@@ -79,15 +79,15 @@ public final class ContractReflector {
         return symbols;
     }
 
-    private static ApiSignature methodToSignature(Method method) {
+    private static ApiSignature methodToSignature(Method method, int paramOffset) {
         List<ApiParameter> params = new ArrayList<>();
         java.lang.reflect.Parameter[] javaParams = method.getParameters();
         Type[] genericTypes = method.getGenericParameterTypes();
 
-        for (int i = 0; i < javaParams.length; i++) {
+        for (int i = paramOffset; i < javaParams.length; i++) {
             String name = javaParams[i].isNamePresent()
                     ? javaParams[i].getName()
-                    : "arg" + i;
+                    : "arg" + (i - paramOffset);
             ApiTypeRef type = toTypeRef(genericTypes[i]);
             boolean varargs = i == javaParams.length - 1 && method.isVarArgs();
             params.add(new ApiParameter(name, type, false, varargs));
