@@ -12,6 +12,11 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+// 保留参数名，供 ContractReflector 反射 facade 方法参数名（如 Text.of(String text) → "text"）
+compileJava {
+    options.compilerArgs += '-parameters'
+}
+
 repositories {
     mavenCentral()
     maven { url "https://maven.neoforged.net/releases" }
