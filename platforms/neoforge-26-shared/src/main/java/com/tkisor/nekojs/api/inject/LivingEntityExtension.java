@@ -1,79 +1,77 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.LivingEntitySpec;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemStack;
 
 /**
  * @see LivingEntity
- * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface LivingEntityExtension {
+public interface LivingEntityExtension extends LivingEntitySpec {
 
     private LivingEntity self() {
         return (LivingEntity) this;
     }
 
-    default boolean neko$addEffect(MobEffect effect, int durationTicks, int amplifier) {
+    private MobEffect resolveEffect(String effectId) {
+        if (effectId == null) {
+            return null;
+        }
+        Identifier loc = Identifier.parse(effectId.contains(":") ? effectId : "minecraft:" + effectId);
+        return BuiltInRegistries.MOB_EFFECT.getOptional(loc).orElse(null);
+    }
+
+    @Override
+    default boolean neko$addEffect(String effectId, int duration, int amplifier) {
+        MobEffect effect = resolveEffect(effectId);
         if (effect == null) {
             return false;
         }
-        return self().addEffect(new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect), durationTicks, amplifier));
+        return self().addEffect(new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect), duration, amplifier));
     }
 
-    default boolean neko$removeEffect(MobEffect effect) {
+    @Override
+    default boolean neko$removeEffect(String effectId) {
+        MobEffect effect = resolveEffect(effectId);
         if (effect == null) {
             return false;
         }
         return self().removeEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
     }
 
-    default ItemStack neko$getHeadItem() {
+    @Override
+    default Object neko$getHeadItem() {
         return self().getItemBySlot(EquipmentSlot.HEAD);
     }
 
-    default ItemStack neko$getChestItem() {
+    @Override
+    default Object neko$getChestItem() {
         return self().getItemBySlot(EquipmentSlot.CHEST);
     }
 
-    default ItemStack neko$getLegsItem() {
+    @Override
+    default Object neko$getLegsItem() {
         return self().getItemBySlot(EquipmentSlot.LEGS);
     }
 
-    default ItemStack neko$getFeetItem() {
+    @Override
+    default Object neko$getFeetItem() {
         return self().getItemBySlot(EquipmentSlot.FEET);
     }
 
-    default float neko$getHealth() {
-        return self().getHealth();
-    }
-
-    default void neko$setHealth(float amount) {
-        self().setHealth(amount);
-    }
-
-    default float neko$getMaxHealth() {
-        return self().getMaxHealth();
-    }
-
-    default void neko$heal(float amount) {
-        self().heal(amount);
-    }
-
+    @Override
     default void neko$damage(float amount) {
         self().hurt(self().damageSources().generic(), amount);
     }
 
-    default ItemStack neko$getMainHandItem() {
-        return self().getMainHandItem();
-    }
-
-    default ItemStack neko$getOffHandItem() {
+    @Override
+    default Object neko$getOffHandItem() {
         return self().getOffhandItem();
     }
 }
