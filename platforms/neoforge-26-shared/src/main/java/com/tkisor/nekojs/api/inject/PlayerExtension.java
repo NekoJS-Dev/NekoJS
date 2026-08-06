@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.data.AttachedData;
+import com.tkisor.nekojs.api.spec.inject.PlayerSpec;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -9,27 +10,26 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 
-/**
- * @author ZZZank
- */
 @RemapByPrefix("neko$")
-public interface PlayerExtension {
+public interface PlayerExtension extends PlayerSpec {
+
     private Player neko$self() {
         return (Player) this;
     }
 
+    @Override
     default boolean neko$isOp() {
         return Commands.LEVEL_GAMEMASTERS.check(neko$self().permissions());
     }
 
-    default void neko$give(ItemStack stack) {
-        neko$self().getInventory().placeItemBackInInventory(stack);
+    @Override
+    default void neko$give(Object stack) {
+        if (stack instanceof ItemStack itemStack) {
+            neko$self().getInventory().placeItemBackInInventory(itemStack);
+        }
     }
 
-    default void neko$sendMessage(Object message) {
-        neko$self().sendSystemMessage(toComponent(message));
-    }
-
+    @Override
     default void neko$setGamemode(String gamemode) {
         if (!(neko$self() instanceof ServerPlayer serverPlayer)) return;
         GameType type = parseGameType(gamemode);
@@ -38,6 +38,7 @@ public interface PlayerExtension {
         }
     }
 
+    @Override
     default String neko$getGamemode() {
         if (neko$self() instanceof ServerPlayer serverPlayer) {
             return serverPlayer.gameMode.getGameModeForPlayer().getName();
@@ -45,29 +46,48 @@ public interface PlayerExtension {
         return null;
     }
 
-    default void neko$addXp(int levels) {
+    @Override
+    default void neko$addXpLevels(int levels) {
         if (neko$self() instanceof ServerPlayer serverPlayer) {
             serverPlayer.giveExperienceLevels(levels);
         }
     }
 
+    @Override
+    default void neko$addXpPoints(int points) {
+        if (neko$self() instanceof ServerPlayer serverPlayer) {
+            serverPlayer.giveExperiencePoints(points);
+        }
+    }
+
+    @Override
     default int neko$getXpLevel() {
         return neko$self().experienceLevel;
     }
 
+    @Override
     default void neko$setXpLevel(int level) {
         neko$self().experienceLevel = level;
     }
 
+    @Override
     default void neko$kick(Object reason) {
         if (neko$self() instanceof ServerPlayer serverPlayer) {
             serverPlayer.connection.disconnect(toComponent(reason != null ? reason : "Kicked"));
         }
     }
 
-    default boolean neko$isCreative() {
-        return neko$self().isCreative();
+    // —— 不进 spec 的方法（碰撞或平台独有）——
+
+    // isCreative() 与原生零参碰撞，行为一致，JS 直接用原生 — 删除注入版本
+
+    /** 给玩家发送消息。message 接受 String 或平台原生 Component。 */
+    default void neko$sendMessage(Object message) {
+        neko$self().sendSystemMessage(toComponent(message));
     }
+
+    /** 返回挂载到该 player 的内存数据容器；首次访问时 lazy 创建并触发 {@code attachPlayerData}。 */
+    AttachedData<Player> neko$data();
 
     private static Component toComponent(Object o) {
         if (o instanceof Component component) {
@@ -86,7 +106,4 @@ public interface PlayerExtension {
             default -> null;
         };
     }
-
-    /** 返回挂载到该 player 的内存数据容器；首次访问时 lazy 创建并触发 {@code attachPlayerData}。 */
-    AttachedData<Player> neko$data();
 }
