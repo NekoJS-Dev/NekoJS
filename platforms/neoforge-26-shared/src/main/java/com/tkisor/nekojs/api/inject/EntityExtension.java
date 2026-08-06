@@ -1,20 +1,20 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.EntitySpec;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import com.tkisor.nekojs.wrapper.pdata.PersistentDataJS;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 
 /**
  * @see Entity
- * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface EntityExtension {
+public interface EntityExtension extends EntitySpec {
     String NEKO_PDATA_KEY = "NekoJSPersistentData";
 
     private Entity self() {
@@ -25,6 +25,7 @@ public interface EntityExtension {
         return self().entityTags().contains(tag);
     }
 
+    @Override
     default boolean neko$kill() {
         if (self().level() instanceof ServerLevel serverLevel) {
             self().kill(serverLevel);
@@ -33,31 +34,26 @@ public interface EntityExtension {
         return false;
     }
 
+    /** 实体类型注册 id。@Remap 避免与原生 int getId() 零参碰撞。 */
+    @Remap("getRegistryId")
     default String neko$getId() {
         return BuiltInRegistries.ENTITY_TYPE.getKey(self().getType()).toString();
     }
 
-    default double neko$getX() {
-        return self().getX();
-    }
+    // neko$getX/Y/Z 已删除——NF 原生 Entity 有零参 getX()/getY()/getZ()，JS 直接用原生
 
-    default double neko$getY() {
-        return self().getY();
-    }
-
-    default double neko$getZ() {
-        return self().getZ();
-    }
-
+    @Override
     default void neko$teleport(double x, double y, double z) {
         self().teleportTo(x, y, z);
     }
 
+    @Override
     default void neko$remove() {
         self().discard();
     }
 
-    default Level neko$getLevel() {
+    @Override
+    default Object neko$getLevel() {
         return self().level();
     }
 
