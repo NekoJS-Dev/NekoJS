@@ -21,10 +21,12 @@ import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.api.surface.ApiCallHandler;
 import com.tkisor.nekojs.api.surface.ApiContribution;
 import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
+import com.tkisor.nekojs.api.surface.ApiParameter;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTier;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiVersion;
 import com.tkisor.nekojs.api.surface.ScriptTypeId;
 import com.tkisor.nekojs.core.api.facade.DefaultIdFacade;
@@ -41,6 +43,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -313,11 +316,18 @@ public final class CoreManagedApiBootstrap {
     }
 
     /**
+     * 构建 portable-core 契约：symbols 从 facade 接口反射（ContractReflector），
+     * errors 从 JSON 读取（静态错误码字典，变更极低）。
+     *
+     * <p>symbols 不再从 JSON 读取——Java facade 接口方法签名即唯一真相源。
+     * ContractReflector 对每个 facade 方法产出静态符号 + receiver 符号（双产出）。
+     * events 已由 EventContractReflector 在运行时从 EventGroup 反射派生。
+     */
+    /**
      * 读取 portable-core 契约。
      *
-     * <p>当前仍从 JSON 读取 symbols（含 receiver 归属信息）。ContractReflector 已就位
-     * 但 facade 方法的 receiver 归属（如 TextFacade.append 注册为 member:TextValue.append
-     * 而非 member:Text.append）需要显式注解标记，待后续 @ContractMember 注解完成后切换。
+     * <p>symbols 当前仍从 JSON 读取（含内联注册的非 facade 符号如 NBT.compound）。
+     * ContractReflector 已就位（测试验证反射产出正确），待后续处理 facade 外符号后切换。
      */
     private static VerifiedApiContract readContract(URI codeSource) {
         var stream = CoreManagedApiBootstrap.class.getResourceAsStream(RESOURCE);
@@ -330,6 +340,31 @@ public final class CoreManagedApiBootstrap {
             return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to close core managed API contract", e);
+        }
+    }
+
+    /** 从 portable-core JSON 读取 errors 段（保留为静态错误码字典）。 */
+    private static List<NormativeApiContract.ContractError> readErrorsFromJson() {
+        var stream = CoreManagedApiBootstrap.class.getResourceAsStream(RESOURCE);
+        if (stream == null) return List.of();
+        try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+            var root = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
+            if (!root.has("errors")) return List.of();
+            List<NormativeApiContract.ContractError> errors = new java.util.ArrayList<>();
+            for (var errNode : root.getAsJsonArray("errors")) {
+                var obj = errNode.getAsJsonObject();
+                List<String> fields = new java.util.ArrayList<>();
+                if (obj.has("fields")) {
+                    obj.getAsJsonArray("fields").forEach(f -> fields.add(f.getAsString()));
+                }
+                errors.add(new NormativeApiContract.ContractError(
+                        obj.get("code").getAsString(),
+                        fields,
+                        obj.has("docs") ? obj.get("docs").getAsString() : null));
+            }
+            return errors;
+        } catch (Exception e) {
+            return List.of();
         }
     }
 

@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.data.JsonValue;
+import com.tkisor.nekojs.api.data.NbtEntry;
 import com.tkisor.nekojs.api.data.NbtValue;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.TextValue;
@@ -50,33 +51,69 @@ public final class ContractReflector {
      * @return 符号列表
      */
     public static List<ApiSymbol> extractSymbols(String facadeName, Class<?> facadeType) {
+        return extractSymbols(facadeName, facadeType, true);
+    }
+
+    /**
+     * @param includeGlobal true 产出 global:<facadeName> 符号（facade 需要）；
+     *                      false 不产出（数据类型如 ModInfoValue 不是全局对象）
+     */
+    public static List<ApiSymbol> extractSymbols(String facadeName, Class<?> facadeType, boolean includeGlobal) {
         List<ApiSymbol> symbols = new ArrayList<>();
 
-        // global:<facadeName> —— facade 对象本身
-        symbols.add(new ApiSymbol(
+        // global:<facadeName> —— facade 对象本身（数据类型不需要）
+        if (includeGlobal) {
+            symbols.add(new ApiSymbol(
                 ApiSymbolId.parse("global:" + facadeName),
                 List.of(new ApiSignature(
                         List.of(),
                         ApiTypeRef.primitive("object"),
                         false,
                         List.of()))));
+        }
 
-        // member:<facadeName>.<method> —— 按 methodName 分组，重载合并
+        // 按符号 ID 分组收集签名（重载合并 + 静态/receiver 双产出）
         Map<String, List<ApiSignature>> signaturesByName = new java.util.LinkedHashMap<>();
         for (Method method : facadeType.getDeclaredMethods()) {
             if (method.isSynthetic() || method.isBridge()) continue;
             if (method.getName().startsWith("neko$")) continue;
 
-            String memberId = "member:" + facadeName + "." + method.getName();
+            // 静态符号：member:<facadeName>.<method>（全部参数作为脚本参数）
+            String staticId = "member:" + facadeName + "." + method.getName();
             signaturesByName
-                    .computeIfAbsent(memberId, k -> new ArrayList<>())
+                    .computeIfAbsent(staticId, k -> new ArrayList<>())
                     .add(methodToSignature(method, 0));
+
+            // receiver 符号：若第一个参数是数据类型，额外产出 member:<DataType>.<method>
+            // （脚本侧 dataType.method()，receiver 不算参数）
+            Class<?>[] paramTypes = method.getParameterTypes();
+            if (paramTypes.length > 0 && isReceiverType(paramTypes[0])) {
+                String receiverId = "member:" + paramTypes[0].getSimpleName() + "." + method.getName();
+                signaturesByName
+                        .computeIfAbsent(receiverId, k -> new ArrayList<>())
+                        .add(methodToSignature(method, 1));
+            }
         }
 
         for (var entry : signaturesByName.entrySet()) {
             symbols.add(new ApiSymbol(ApiSymbolId.parse(entry.getKey()), entry.getValue()));
         }
         return symbols;
+    }
+
+    /**
+     * 判断一个类是否是 NekoJS 数据类型（可作 receiver）。
+     * facade 方法第一个参数若是这些类型，则额外产出该类型的 receiver 成员符号。
+     */
+    private static boolean isReceiverType(Class<?> cls) {
+        return cls == TextValue.class
+                || cls == NekoId.class
+                || cls == JsonValue.class
+                || cls == NbtValue.class
+                || cls == NbtEntry.class
+                || cls == RegistryView.class
+                || cls == ModInfoValue.class
+                || cls == PerfTimerValue.class;
     }
 
     private static ApiSignature methodToSignature(Method method, int paramOffset) {
