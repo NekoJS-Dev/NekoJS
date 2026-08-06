@@ -96,6 +96,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         this.eventName = eventName;
     }
 
+    /** 事件组名（如 "PlayerEvents"），由 {@link EventGroup#add} 在注册时设置。 */
+    public String groupName() {
+        return groupName;
+    }
+
+    /** 事件名（如 "chat"），由 {@link EventGroup#add} 在注册时设置。 */
+    public String eventName() {
+        return eventName;
+    }
+
     public ScriptType scriptType() {
         return scriptType;
     }

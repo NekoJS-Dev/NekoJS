@@ -173,15 +173,12 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         if (!snapshots.isEmpty()) {
             ManagedCallbackSchemaRegistry.install(snapshots);
         }
-        // 契约事件（portable-core events 字段）作为回调 schema 权威注入：
-        // 契约承诺的 payload 字段跨平台放行，平台反射仅作补充（见 EventCallbackSourceValidator）。
-        if (runtime.apiRuntimeProvider instanceof FrozenApiRegistrySet frozen) {
-            List<NormativeApiContract.ContractEvent> contractEvents = new java.util.ArrayList<>();
-            for (VerifiedApiContract c : frozen.contracts().all()) {
-                contractEvents.addAll(c.contract().events());
-            }
-            ManagedCallbackSchemaRegistry.installContractEvents(contractEvents);
-        }
+        // 事件回调 schema：从运行时 EventGroup 反射派生（替代从 portable-core JSON events 读取）。
+        // ContractEvent 的 payload 字段从 bus.eventType() 反射，字段名跨平台由 mixin 注入的
+        // neko$ 别名统一（如 BlockEventExtension.neko$getLevel）。平台反射仅作补充（见 EventCallbackSourceValidator）。
+        List<NormativeApiContract.ContractEvent> contractEvents =
+                com.tkisor.nekojs.core.api.EventContractReflector.extractEvents(runtime.eventGroups().values());
+        ManagedCallbackSchemaRegistry.installContractEvents(contractEvents);
     }
 
     public ScriptCompilerRegistry scriptCompilers() {
