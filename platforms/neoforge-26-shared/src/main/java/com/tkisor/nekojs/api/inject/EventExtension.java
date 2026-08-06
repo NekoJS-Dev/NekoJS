@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.EventSpec;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
@@ -11,13 +12,9 @@ import net.neoforged.bus.api.ICancellableEvent;
  * 只有实现了 {@link ICancellableEvent} 的事件真正生效；不可取消的事件调用时 no-op。
  */
 @RemapByPrefix("neko$")
-public interface EventExtension {
+public interface EventExtension extends EventSpec {
 
-    /**
-     * 取消当前事件。仅对可取消事件（实现 {@link ICancellableEvent}）生效。
-     *
-     * @return {@code true} 如果事件被成功取消
-     */
+    @Override
     default boolean neko$cancel() {
         if (this instanceof ICancellableEvent cancellable) {
             cancellable.setCanceled(true);
@@ -26,11 +23,7 @@ public interface EventExtension {
         return false;
     }
 
-    /**
-     * 当前事件是否已被取消。
-     *
-     * @return {@code true} 如果事件已被取消
-     */
+    @Override
     default boolean neko$isCancelled() {
         return this instanceof ICancellableEvent cancellable && cancellable.isCanceled();
     }

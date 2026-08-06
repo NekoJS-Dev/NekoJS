@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.ItemSpec;
 import net.minecraft.item.Item;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
@@ -10,10 +11,9 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
  * <p>1.12.2 注册表用 {@link ForgeRegistries#ITEMS}（对齐 1.21.1 的 {@code BuiltInRegistries.ITEM}）。
  *
  * @see Item
- * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface ItemExtension {
+public interface ItemExtension extends ItemSpec {
 
     private Item self() {
         return (Item) this;
@@ -25,6 +25,7 @@ public interface ItemExtension {
      *
      * @return 物品 id；未注册返回 null
      */
+    @Override
     default String neko$getId() {
         return ForgeRegistries.ITEMS.getKey(self()).toString();
     }

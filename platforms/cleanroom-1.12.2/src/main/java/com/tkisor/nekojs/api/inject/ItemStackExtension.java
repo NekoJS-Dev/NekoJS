@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.ItemStackSpec;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.Item;
@@ -20,10 +21,9 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
  * </ul>
  *
  * @see ItemStack
- * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface ItemStackExtension {
+public interface ItemStackExtension extends ItemStackSpec {
 
     private ItemStack self() {
         return (ItemStack) (Object) this;
@@ -46,7 +46,8 @@ public interface ItemStackExtension {
      * @param count 目标数量
      * @return 新的物品栈
      */
-    default ItemStack neko$withCount(int count) {
+    @Override
+    default Object neko$withCount(int count) {
         if (count <= 0 || self().isEmpty()) return ItemStack.EMPTY;
         ItemStack copy = self().copy();
         copy.setCount(count);
@@ -111,6 +112,7 @@ public interface ItemStackExtension {
      * @param level 期望最低等级
      * @return {@code true} 若附魔等级 ≥ level
      */
+    @Override
     default boolean neko$hasEnchantment(String id, int level) {
         Enchantment ench = Enchantment.getEnchantmentByLocation(normalizeId(id));
         if (ench == null) return false;
@@ -123,6 +125,7 @@ public interface ItemStackExtension {
      *
      * @return {@code true} 若 Unbreakable tag 为真
      */
+    @Override
     default boolean neko$isUnbreakable() {
         return self().hasTagCompound() && self().getTagCompound().getBoolean("Unbreakable");
     }
@@ -133,6 +136,7 @@ public interface ItemStackExtension {
      *
      * @param unbreakable 是否不可破坏
      */
+    @Override
     default void neko$setUnbreakable(boolean unbreakable) {
         NBTTagCompound tag = self().getTagCompound();
         if (unbreakable) {
@@ -155,9 +159,11 @@ public interface ItemStackExtension {
      * @param stack 另一个物品栈
      * @return {@code true} 若物品 + metadata + NBT 完全一致
      */
-    default boolean neko$matches(ItemStack stack) {
-        if (stack == null) return false;
-        return self().isItemEqual(stack) && ItemStack.areItemStackTagsEqual(self(), stack);
+    @Override
+    default boolean neko$matches(Object stack) {
+        if (!(stack instanceof ItemStack)) return false;
+        ItemStack other = (ItemStack) stack;
+        return self().isItemEqual(other) && ItemStack.areItemStackTagsEqual(self(), other);
     }
 
     /**

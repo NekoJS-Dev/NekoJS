@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.EventSpec;
 import net.minecraftforge.fml.common.eventhandler.Event;
 
 /**
@@ -11,13 +12,14 @@ import net.minecraftforge.fml.common.eventhandler.Event;
  * 所以这里 try-catch 安全降级。
  */
 @RemapByPrefix("neko$")
-public interface EventExtension {
+public interface EventExtension extends EventSpec {
 
     /**
      * 取消当前事件。仅对 {@code @Cancelable} 事件生效。
      *
      * @return {@code true} 如果事件被成功取消
      */
+    @Override
     default boolean neko$cancel() {
         try {
             ((Event) this).setCanceled(true);
@@ -33,6 +35,7 @@ public interface EventExtension {
      *
      * @return {@code true} 如果事件已被取消
      */
+    @Override
     default boolean neko$isCancelled() {
         return ((Event) this).isCanceled();
     }

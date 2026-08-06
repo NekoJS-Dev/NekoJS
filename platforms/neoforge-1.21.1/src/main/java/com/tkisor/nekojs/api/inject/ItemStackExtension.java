@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.ItemStackSpec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.component.DataComponentMap;
@@ -28,10 +29,9 @@ import java.util.List;
 
 /**
  * @see ItemStack
- * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface ItemStackExtension {
+public interface ItemStackExtension extends ItemStackSpec {
 
     private ItemStack self() {
         return (ItemStack) (Object) this;
@@ -50,7 +50,8 @@ public interface ItemStackExtension {
         self().set(DataComponents.LORE, new ItemLore(lines));
     }
 
-    default ItemStack neko$withCount(int count) {
+    @Override
+    default Object neko$withCount(int count) {
         if (count <= 0 || self().isEmpty()) return ItemStack.EMPTY;
         ItemStack copy = self().copy();
         copy.setCount(count);
@@ -112,6 +113,7 @@ public interface ItemStackExtension {
         return self();
     }
 
+    @Override
     default boolean neko$hasEnchantment(String id, int level) {
         ResourceLocation parsedId = ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) return false;
@@ -168,6 +170,18 @@ public interface ItemStackExtension {
         return ingredient.test(self());
     }
 
+    @Override
+    default boolean neko$matches(Object other) {
+        if (other instanceof ItemStack stack) {
+            return neko$matches(stack);
+        } else if (other instanceof ItemLike item) {
+            return neko$matches(item);
+        } else if (other instanceof Ingredient ingredient) {
+            return neko$matches(ingredient);
+        }
+        return false;
+    }
+
     default boolean neko$areItemsEqual(ItemStack stack) {
         return self().getItem() == stack.getItem();
     }
@@ -182,10 +196,12 @@ public interface ItemStackExtension {
         return ItemStack.isSameItemSameComponents(self(), stack);
     }
 
+    @Override
     default boolean neko$isUnbreakable() {
         return self().has(DataComponents.UNBREAKABLE);
     }
 
+    @Override
     default void neko$setUnbreakable(boolean unbreakable) {
         if (unbreakable) {
             // 1.21.1: UNBREAKABLE 组件要求传入 Unbreakable 对象，true 表示在 tooltip 中显示 "不可破坏" 标签

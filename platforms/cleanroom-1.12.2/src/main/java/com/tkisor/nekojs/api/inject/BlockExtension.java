@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.BlockSpec;
 import net.minecraft.block.Block;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
@@ -10,10 +11,9 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
  * <p>1.12.2 注册表用 {@link ForgeRegistries#BLOCKS}（对齐 1.21.1 的 {@code BuiltInRegistries.BLOCK}）。
  *
  * @see Block
- * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface BlockExtension {
+public interface BlockExtension extends BlockSpec {
 
     private Block self() {
         return (Block) this;
@@ -25,6 +25,7 @@ public interface BlockExtension {
      *
      * @return 方块 id；未注册返回 null
      */
+    @Override
     default String neko$getId() {
         return ForgeRegistries.BLOCKS.getKey(self()).toString();
     }
