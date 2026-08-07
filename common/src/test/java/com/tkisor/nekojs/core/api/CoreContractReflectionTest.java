@@ -48,10 +48,8 @@ class CoreContractReflectionTest {
     }
 
     @Test
-    void contractHasNoErrorsOrEventsOrModules() {
+    void contractHasNoEventsOrModules() {
         var contract = buildContract().contract();
-        // errors 已丢弃（运行时由 ApiErrorCodes 常量驱动，契约不再声明）
-        assertTrue(contract.errors().isEmpty(), "errors should be empty after JSON elimination");
         // events 由 EventContractReflector 运行时反射，契约不携带
         assertTrue(contract.events().isEmpty(), "events should be empty in static contract");
         assertTrue(contract.modules().isEmpty(), "PORTABLE contract has no modules");

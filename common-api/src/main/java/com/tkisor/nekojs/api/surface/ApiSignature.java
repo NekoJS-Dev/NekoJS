@@ -6,13 +6,11 @@ import java.util.Objects;
 public record ApiSignature(
         List<ApiParameter> parameters,
         ApiTypeRef returnType,
-        boolean isConstructor,
-        List<String> errorCodes) {
+        boolean isConstructor) {
 
     public ApiSignature {
         parameters = List.copyOf(parameters == null ? List.of() : parameters);
         Objects.requireNonNull(returnType, "returnType");
-        errorCodes = errorCodes == null ? List.of() : errorCodes.stream().distinct().sorted().toList();
         boolean optionalSeen = false;
         for (int i = 0; i < parameters.size(); i++) {
             ApiParameter parameter = parameters.get(i);
@@ -24,10 +22,6 @@ public record ApiSignature(
             }
             optionalSeen |= parameter.optional() || parameter.varargs();
         }
-    }
-
-    public ApiSignature(List<ApiParameter> parameters, ApiTypeRef returnType, boolean isConstructor) {
-        this(parameters, returnType, isConstructor, List.of());
     }
 
     public static ApiSignature function(List<ApiParameter> parameters, ApiTypeRef returnType) {
@@ -53,6 +47,6 @@ public record ApiSignature(
     }
 
     public String compatibilityKey() {
-        return callKey() + ":" + returnType().compatibilityKey() + ":errors=" + String.join(",", errorCodes);
+        return callKey() + ":" + returnType().compatibilityKey();
     }
 }

@@ -15,7 +15,6 @@ public record NormativeApiContract(
         List<ApiSymbol> symbols,
         List<ContractCapability> capabilities,
         List<ContractModule> modules,
-        List<ContractError> errors,
         List<ContractEvent> events
 ) {
     public NormativeApiContract {
@@ -23,7 +22,6 @@ public record NormativeApiContract(
         symbols = List.copyOf(symbols == null ? List.of() : symbols);
         capabilities = List.copyOf(capabilities == null ? List.of() : capabilities);
         modules = List.copyOf(modules == null ? List.of() : modules);
-        errors = List.copyOf(errors == null ? List.of() : errors);
         events = List.copyOf(events == null ? List.of() : events);
     }
 
@@ -33,19 +31,8 @@ public record NormativeApiContract(
             String docs,
             List<ApiSymbol> symbols,
             List<ContractCapability> capabilities,
-            List<ContractModule> modules,
-            List<ContractError> errors) {
-        this(schemaVersion, identity, docs, symbols, capabilities, modules, errors, List.of());
-    }
-
-    public NormativeApiContract(
-            int schemaVersion,
-            ContractIdentity identity,
-            String docs,
-            List<ApiSymbol> symbols,
-            List<ContractCapability> capabilities,
             List<ContractModule> modules) {
-        this(schemaVersion, identity, docs, symbols, capabilities, modules, List.of(), List.of());
+        this(schemaVersion, identity, docs, symbols, capabilities, modules, List.of());
     }
 
     public record ContractIdentity(String owner, ApiContractKind kind, String contractId, ApiVersion version) {
@@ -61,13 +48,6 @@ public record NormativeApiContract(
         public ContractCapability {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(contractVersionRange, "contractVersionRange");
-        }
-    }
-
-    public record ContractError(String code, List<String> fields, String docs) {
-        public ContractError {
-            Objects.requireNonNull(code, "code");
-            fields = List.copyOf(fields == null ? List.of() : fields);
         }
     }
 

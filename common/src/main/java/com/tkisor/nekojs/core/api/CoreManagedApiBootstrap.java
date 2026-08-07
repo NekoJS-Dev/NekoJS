@@ -364,7 +364,7 @@ public final class CoreManagedApiBootstrap {
 
         NormativeApiContract contract = new NormativeApiContract(
                 2, toContractIdentity(identity), docs, symbols,
-                List.of(), List.of(), List.of());
+                List.of(), List.of());
 
         String integrity = sha256Hex(contract.toString().getBytes(StandardCharsets.UTF_8));
         return VerifiedApiContract.create(identity, contract, codeSource,

@@ -55,12 +55,9 @@ class LegacyProbeTreeTest {
                     "Content mismatch for " + relPath);
         }
 
-        // Check no extra files generated (allowing new managed/manifest/surface files)
-        Set<String> allowedExtras = Set.of(
-                "api-manifest.json",
-                "current-surface.json");
+        // Check no extra files generated (allowing managed declarations subtree)
         for (String relPath : actualFiles.keySet()) {
-            if (relPath.startsWith("@nekojs/managed/") || allowedExtras.contains(relPath)) {
+            if (relPath.startsWith("@nekojs/managed/")) {
                 continue;
             }
             assertTrue(expectedFiles.containsKey(relPath), "Unexpected generated file: " + relPath);

@@ -19,7 +19,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Verifies that Probe output includes managed declarations and manifest alongside legacy files,
+ * Verifies that Probe output includes legacy files alongside managed declarations,
  * and that repeated generation produces identical output.
  */
 class ProbeOutputCompatibilityTest {
@@ -49,20 +49,6 @@ class ProbeOutputCompatibilityTest {
             assertTrue(actualFiles.containsKey(relPath),
                     "Legacy file missing from generated output: " + relPath);
         }
-    }
-
-    @Test
-    void managedDeclarationsAreGenerated() throws Exception {
-        NekoScriptCatalogSnapshot snapshot = LegacyProbeFixture.snapshot();
-        ProbeOrchestrator orchestrator = new ProbeOrchestrator(ProbeExternalArtifacts.NONE);
-        var result = orchestrator.generate(snapshot, tempDir.resolve("probe-types"));
-        assertTrue(result.success(), result.message());
-
-        Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
-
-        // current-surface.json should exist
-        assertTrue(actualFiles.containsKey("current-surface.json"),
-                "current-surface.json should exist. Files: " + actualFiles.keySet());
     }
 
     @Test

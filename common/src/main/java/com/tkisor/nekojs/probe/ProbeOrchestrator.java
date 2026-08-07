@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
-import com.tkisor.nekojs.api.catalog.CurrentSurfaceReport;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
@@ -144,10 +143,7 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                 // 9. 生成 managed declarations
                 filesGenerated += generateManagedDeclarations(snapshot, staging);
 
-                // 10. 生成 api-manifest.json 和 current-surface.json
-                filesGenerated += generateManifestAndSurface(snapshot, staging);
-
-                // 11-12. 外部副作用（.github/agents 模板 + workspace 配置）
+                // 10. 外部副作用（.github/agents 模板 + workspace 配置）
                 externalArtifacts.generate(outputDir);
 
                 // 全部生成成功：staging 整体替换 outputDir
@@ -536,27 +532,6 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             Files.writeString(dir.resolve("index.d.ts"), content);
             count++;
         }
-        return count;
-    }
-
-    private int generateManifestAndSurface(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
-        int count = 0;
-
-        // api-manifest.json
-        Map<ScriptType, ApiEnvironmentSnapshot> managedApis = snapshot.managedApis();
-        if (!managedApis.isEmpty()) {
-            ApiManifestGenerator manifestGenerator = new ApiManifestGenerator(
-                    com.tkisor.nekojs.core.api.ApiRuntimeVersionReader.read(),
-                    ProbeContractSetHolder.contractSet());
-            manifestGenerator.write(outputDir, managedApis);
-            count++;
-        }
-
-        // current-surface.json
-        String surfaceReport = CurrentSurfaceReport.generate(snapshot);
-        Files.writeString(outputDir.resolve("current-surface.json"), surfaceReport);
-        count++;
-
         return count;
     }
 

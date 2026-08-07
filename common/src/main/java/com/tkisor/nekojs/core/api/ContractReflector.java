@@ -92,8 +92,7 @@ public final class ContractReflector {
                 List.of(new ApiSignature(
                         List.of(),
                         ApiTypeRef.primitive("object"),
-                        false,
-                        List.of()))));
+                        false))));
         }
 
         // 按符号 ID 分组收集签名（重载合并 + 静态/receiver 双产出）
@@ -158,7 +157,7 @@ public final class ContractReflector {
                 ApiTypeRef returnType = toReturnType(component.getGenericType());
                 signaturesByName
                         .computeIfAbsent(id, k -> new ArrayList<>())
-                        .add(new ApiSignature(List.of(), returnType, false, List.of()));
+                        .add(new ApiSignature(List.of(), returnType, false));
             }
             return toSymbols(signaturesByName);
         }
@@ -257,7 +256,7 @@ public final class ContractReflector {
         }
 
         ApiTypeRef returnType = toReturnType(method.getGenericReturnType());
-        return new ApiSignature(params, returnType, false, List.of());
+        return new ApiSignature(params, returnType, false);
     }
 
     /** 末位 {@code List<Object>} 表示可变参数联合（string|number|boolean|TextValue）。 */
