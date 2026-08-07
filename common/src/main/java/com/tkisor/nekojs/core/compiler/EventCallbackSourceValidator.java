@@ -66,13 +66,13 @@ public final class EventCallbackSourceValidator {
     }
 
     /**
-     * 事件回调成员检查：契约 schema 与平台反射**并集**。
+     * 事件回调成员检查：反射 schema 与平台反射**并集**。
      *
-     * <p>契约字段（{@code ManagedCallbackSchemaRegistry}，来自 {@code portable-core} events）
-     * 是跨平台承诺：即使某平台事件类反射缺该成员也放行。反射集合
-     * （{@code EventSchemaRegistry} → {@link JavaMemberIndex}）兜底覆盖事件类全部
-     * 可见成员（方法名 + getter 属性名 + 字段名），保证 {@code e.getServer()} 等方法形式不误报。
-     * 两者缺一不可：只查契约会在平台实现缺口处漏检方法形式，只查反射会因平台差异漏掉承诺字段。
+     * <p>反射字段（{@code ManagedCallbackSchemaRegistry}，由 {@code EventContractReflector}
+     * 从运行时 {@code EventGroup} 派生）是跨平台承诺的 payload 视图：即使某平台事件类
+     * 反射缺该成员也放行。平台反射集合（{@code EventSchemaRegistry} →
+     * {@link JavaMemberIndex}）兜底覆盖事件类全部可见成员（方法名 + getter 属性名 + 字段名），
+     * 保证 {@code e.getServer()} 等方法形式不误报。
      */
     private static void checkCallbackArgs(ValNode.CallExpr call, String group,
                                           Path file, String src, Set<String> reported) {

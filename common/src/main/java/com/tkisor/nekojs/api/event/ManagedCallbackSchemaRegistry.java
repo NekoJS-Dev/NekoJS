@@ -62,7 +62,7 @@ public final class ManagedCallbackSchemaRegistry {
     }
 
     /**
-     * 把契约声明的事件（{@code portable-core} 的 {@code events} 字段）注入回调 schema。
+     * 把运行时反射的事件（{@code EventContractReflector} 从 {@code EventGroup} 派生）注入回调 schema。
      *
      * <p>键按 {@code (group, eventName)} 映射——与 {@link EventCallbackSourceValidator}
      * 的查询一致（现有 {@link #install(Map)} 从契约符号提取的映射键是

@@ -6,7 +6,7 @@
     "contractId": "portable-core",
     "version": "0.12.0"
   },
-  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, Performance timing tool, stable event contract (T0 script lifecycle + T1 server/level/player/command lifecycle + T2 registry events item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment + T3 interaction events block/entity/item/client).",
+  "docs": "NekoJS portable Platform, ID, Text, JsonIO, in-memory NBT, compressed binary NBT, registry query, Performance timing tool, stable symbol contract (ID/Platform/Text/JsonIO/NBT/Registry/Performance facades + TextValue/NekoId/JsonValue/NbtValue/NbtEntry/RegistryView/ModInfo/PerfTimer types). Events derived at runtime via EventContractReflector.",
   "errors": [
     {
       "code": "UNSUPPORTED_CAPABILITY",

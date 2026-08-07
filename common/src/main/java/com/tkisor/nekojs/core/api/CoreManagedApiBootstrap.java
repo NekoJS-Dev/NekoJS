@@ -326,16 +326,20 @@ public final class CoreManagedApiBootstrap {
     /**
      * 读取 portable-core 契约。
      *
-     * <p>symbols 当前仍从 JSON 读取（含内联注册的非 facade 符号如 NBT.compound）。
-     * ContractReflector 已就位（测试验证反射产出正确），待后续处理 facade 外符号后切换。
+     * <p>symbols 从 JSON 读取（含 ContractReflector 无法反射的特例符号）。
+     * ContractReflector 已就位（反射覆盖 ~90% 符号），待处理 NBT.compound/
+     * ScriptEventRegistrationEvent 等特例后可切换。版本号从 api-runtime.properties
+     * 读取（单一真相源）。
      */
     private static VerifiedApiContract readContract(URI codeSource) {
         var stream = CoreManagedApiBootstrap.class.getResourceAsStream(RESOURCE);
         if (stream == null) {
             throw new IllegalStateException("Core managed API contract not found: " + RESOURCE);
         }
+        // 版本号从 api-runtime.properties 读取（单一真相源），不再硬编码
+        ApiVersion apiVersion = ApiRuntimeVersionReader.read().apiVersion();
         ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.12.0"));
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", apiVersion);
         try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
         } catch (IOException e) {
