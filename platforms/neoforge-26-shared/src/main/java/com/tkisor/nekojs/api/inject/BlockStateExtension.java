@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.BlockStateSpec;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
@@ -8,7 +9,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 @RemapByPrefix("neko$")
-public interface BlockStateExtension {
+public interface BlockStateExtension extends BlockStateSpec {
     private BlockState self() {
         return (BlockState) this;
     }

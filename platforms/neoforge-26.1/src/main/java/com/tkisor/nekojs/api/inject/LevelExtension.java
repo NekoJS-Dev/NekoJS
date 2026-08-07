@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.data.AttachedData;
+import com.tkisor.nekojs.api.spec.inject.LevelSpec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -20,7 +21,7 @@ import java.util.List;
  * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface LevelExtension {
+public interface LevelExtension extends LevelSpec {
 
     private Level self() {
         return (Level) this;

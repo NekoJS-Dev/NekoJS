@@ -1,8 +1,10 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.MutableComponentSpec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.*;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -15,7 +17,7 @@ import java.net.URI;
  */
 @SuppressWarnings("unused")
 @RemapByPrefix("neko$")
-public interface MutableComponentExtension extends Component {
+public interface MutableComponentExtension extends Component, MutableComponentSpec {
 
     // --- to be implemented ---
 
@@ -149,8 +151,14 @@ public interface MutableComponentExtension extends Component {
         return setStyle(getStyle().withInsertion(s));
     }
 
-    default MutableComponent neko$font(@Nullable FontDescription s) {
-        return setStyle(getStyle().withFont(s));
+    @Override
+    default Object neko$font(@Nullable String font) {
+        FontDescription desc = null;
+        if (font != null) {
+            var id = Identifier.tryParse(font);
+            if (id != null) desc = new FontDescription.Resource(id);
+        }
+        return setStyle(getStyle().withFont(desc));
     }
 
     default MutableComponent neko$click(@Nullable ClickEvent s) {

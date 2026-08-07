@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
+import com.tkisor.nekojs.api.spec.inject.ItemStackSpec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.component.DataComponentMap;
@@ -30,7 +31,7 @@ import java.util.List;
  * @author ZZZank
  */
 @RemapByPrefix("neko$")
-public interface ItemStackExtension {
+public interface ItemStackExtension extends ItemStackSpec {
 
     private ItemStack self() {
         return (ItemStack) (Object) this;
@@ -48,7 +49,8 @@ public interface ItemStackExtension {
         self().set(DataComponents.LORE, new ItemLore(lines));
     }
 
-    default ItemStack neko$withCount(int count) {
+    @Override
+    default Object neko$withCount(int count) {
         if (count <= 0 || self().isEmpty()) return ItemStack.EMPTY;
         ItemStack copy = self().copy();
         copy.setCount(count);
@@ -110,6 +112,7 @@ public interface ItemStackExtension {
         return self();
     }
 
+    @Override
     default boolean neko$hasEnchantment(String id, int level) {
         Identifier parsedId = Identifier.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) return false;
@@ -155,6 +158,14 @@ public interface ItemStackExtension {
         components.set(type, value);
     }
 
+    @Override
+    default boolean neko$matches(Object other) {
+        if (other instanceof ItemStack stack) return neko$matches(stack);
+        if (other instanceof ItemLike item) return neko$matches(item);
+        if (other instanceof Ingredient ingredient) return neko$matches(ingredient);
+        return false;
+    }
+
     default boolean neko$matches(ItemStack stack) {
         return ItemStack.isSameItemSameComponents(self(), stack);
     }
@@ -181,10 +192,12 @@ public interface ItemStackExtension {
         return ItemStack.isSameItemSameComponents(self(), stack);
     }
 
+    @Override
     default boolean neko$isUnbreakable() {
         return self().has(DataComponents.UNBREAKABLE);
     }
 
+    @Override
     default void neko$setUnbreakable(boolean unbreakable) {
         if (unbreakable) {
             self().set(DataComponents.UNBREAKABLE, Unit.INSTANCE);
