@@ -4,7 +4,6 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
-import com.tkisor.nekojs.api.contract.ApiContractReader;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
@@ -100,8 +99,7 @@ class ApiSurfaceBootstrapTest {
         ScriptPropertyRegistry scriptProps = new ScriptPropertyRegistry.Impl();
 
         VerifiedContractSet emptyContracts = VerifiedContractSet.of(
-                ApiContractReader.emptyVerifiedCorePreview(
-                        NekoJS.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+                emptyPortablePreview(NekoJS.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
 
         TestLegacyPlugin legacyPlugin = new TestLegacyPlugin();
         OwnedPlugin legacyOwned = new OwnedPlugin(
@@ -231,6 +229,19 @@ class ApiSurfaceBootstrapTest {
 
         return VerifiedApiContract.create(identity, contract, TEST_CODE_SOURCE,
                 "test-contract.json", "sha256:test", "sha256:test");
+    }
+
+    /** 合成一个空 portable-core 预览契约（替代已删除的 ApiContractReader.emptyVerifiedCorePreview）。 */
+    private static VerifiedApiContract emptyPortablePreview(URI codeSource) {
+        ApiContractIdentity identity = new ApiContractIdentity(
+                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0"));
+        NormativeApiContract contract = new NormativeApiContract(
+                2,
+                new NormativeApiContract.ContractIdentity(
+                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0")),
+                null, List.of(), List.of(), List.of());
+        return VerifiedApiContract.create(identity, contract, codeSource,
+                "nekojs/api-contract/preview", "sha256:preview", "sha256:preview");
     }
 
     private static VerifiedApiContract nekojsCorePortableContract() {

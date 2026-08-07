@@ -1,16 +1,8 @@
 package com.tkisor.nekojs.probe;
 
-import com.tkisor.nekojs.api.contract.ApiContractIdentity;
-import com.tkisor.nekojs.api.contract.ApiContractKind;
-import com.tkisor.nekojs.api.contract.ApiContractReader;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
-import com.tkisor.nekojs.api.surface.ApiRuntimeVersions;
-import com.tkisor.nekojs.api.surface.ApiVersion;
-import com.tkisor.nekojs.core.api.ApiRuntimeVersionReader;
 import com.tkisor.nekojs.core.api.CoreManagedApiBootstrap;
 
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
@@ -57,22 +49,11 @@ public final class ProbeContractSetHolder {
     }
 
     private static VerifiedContractSet createDefault() {
-        ApiRuntimeVersions versions = ApiRuntimeVersionReader.read();
-        ApiVersion apiVersion = versions.apiVersion();
-        ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", apiVersion);
-        var stream = ProbeContractSetHolder.class.getResourceAsStream(CoreManagedApiBootstrap.RESOURCE);
-        if (stream == null) {
-            throw new IllegalStateException("Core managed API contract not found: " + CoreManagedApiBootstrap.RESOURCE);
-        }
         try {
             var codeSource = ProbeContractSetHolder.class.getProtectionDomain().getCodeSource().getLocation().toURI();
-            try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-                return VerifiedContractSet.of(ApiContractReader.readVerified(
-                        reader, codeSource, CoreManagedApiBootstrap.RESOURCE, identity, null));
-            }
-        } catch (java.net.URISyntaxException | java.io.IOException e) {
-            throw new IllegalStateException("Failed to load core managed API contract", e);
+            return VerifiedContractSet.of(CoreManagedApiBootstrap.buildContract(codeSource));
+        } catch (java.net.URISyntaxException e) {
+            throw new IllegalStateException("Failed to resolve probe code source", e);
         }
     }
 }

@@ -44,9 +44,6 @@ sourceSets.main {
 dependencies {
     api project(':common-api')
 
-    // JSON Schema (Draft 2020-12) 校验，用于运行时校验 normative API 契约。
-    implementation 'dev.harrel:json-schema:1.8.1'
-
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'com.google.code.gson:gson:2.11.0'

@@ -2,7 +2,6 @@ package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
-import com.tkisor.nekojs.api.contract.ApiContractReader;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
@@ -11,22 +10,25 @@ import com.tkisor.nekojs.api.data.TextValue;
 import com.tkisor.nekojs.api.data.JsonValue;
 import com.tkisor.nekojs.api.data.NbtValue;
 import com.tkisor.nekojs.api.data.NbtEntry;
+import com.tkisor.nekojs.api.facade.IdFacade;
+import com.tkisor.nekojs.api.facade.JsonFacade;
 import com.tkisor.nekojs.api.facade.ModInfoValue;
+import com.tkisor.nekojs.api.facade.NbtFacade;
 import com.tkisor.nekojs.api.facade.PerformanceFacade;
+import com.tkisor.nekojs.api.facade.PlatformFacade;
 import com.tkisor.nekojs.api.facade.RegistryFacade;
 import com.tkisor.nekojs.api.facade.RegistryView;
+import com.tkisor.nekojs.api.facade.TextFacade;
 import com.tkisor.nekojs.api.data.PerfTimerValue;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.api.surface.ApiCallHandler;
 import com.tkisor.nekojs.api.surface.ApiContribution;
 import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
-import com.tkisor.nekojs.api.surface.ApiParameter;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTier;
-import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiVersion;
 import com.tkisor.nekojs.api.surface.ScriptTypeId;
 import com.tkisor.nekojs.core.api.facade.DefaultIdFacade;
@@ -39,11 +41,11 @@ import com.tkisor.nekojs.core.api.facade.DefaultNbtFacade;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.platform.IPlatform;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +55,6 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 public final class CoreManagedApiBootstrap {
-    public static final String RESOURCE = "/nekojs/api-contract/portable-core-0.12.0.json";
     public static final ApiSymbolId ID_GLOBAL = ApiSymbolId.parse("global:ID");
     public static final ApiSymbolId PLATFORM_GLOBAL = ApiSymbolId.parse("global:Platform");
     public static final ApiSymbolId TEXT_GLOBAL = ApiSymbolId.parse("global:Text");
@@ -91,7 +92,7 @@ public final class CoreManagedApiBootstrap {
         Objects.requireNonNull(platform, "platform");
         Objects.requireNonNull(codeSource, "codeSource");
 
-        VerifiedApiContract contract = readContract(codeSource);
+        VerifiedApiContract contract = buildContract(codeSource);
         VerifiedContractSet contracts = VerifiedContractSet.of(contract);
         Map<ApiSymbolId, ApiSymbol> symbols = contract.contract().symbols().stream()
                 .collect(Collectors.toMap(ApiSymbol::id, symbol -> symbol, (left, right) -> left, LinkedHashMap::new));
@@ -316,59 +317,72 @@ public final class CoreManagedApiBootstrap {
     }
 
     /**
-     * 构建 portable-core 契约：symbols 从 facade 接口反射（ContractReflector），
-     * errors 从 JSON 读取（静态错误码字典，变更极低）。
+     * 程序化构建 portable-core 契约。Java facade/数据类型接口即唯一真相源——
+     * 不再读取任何 JSON 契约文件。
      *
-     * <p>symbols 不再从 JSON 读取——Java facade 接口方法签名即唯一真相源。
-     * ContractReflector 对每个 facade 方法产出静态符号 + receiver 符号（双产出）。
-     * events 已由 EventContractReflector 在运行时从 EventGroup 反射派生。
-     */
-    /**
-     * 读取 portable-core 契约。
+     * <p>symbols 来源（全部反射，0 手写）：
+     * <ul>
+     *   <li>7 个 facade 接口：{@link ContractReflector#extractSymbols}（含 receiver 双产出）
+     *   <li>数据类型自身方法：{@link ContractReflector#reflectDataType}
+     *       （RegistryView/NbtEntry/ModInfo/PerfTimer/TextValue.isEmpty）
+     *   <li>事件注册类：{@link ContractReflector#reflectEventRegistrationSymbols}
+     *       （common 侧 ScriptEventRegistrationEvent）
+     * </ul>
+     * 版本号从 api-runtime.properties 读取（单一真相源）。
+     * integrity/compatibility 哈希基于 {@link NormativeApiContract#toString()} 规范形式。
      *
-     * <p>symbols 从 JSON 读取（含 ContractReflector 无法反射的特例符号）。
-     * ContractReflector 已就位（反射覆盖 ~90% 符号），待处理 NBT.compound/
-     * ScriptEventRegistrationEvent 等特例后可切换。版本号从 api-runtime.properties
-     * 读取（单一真相源）。
+     * @param codeSource 调用方 codeSource URI（用于 VerifiedApiContract 归属）
      */
-    private static VerifiedApiContract readContract(URI codeSource) {
-        var stream = CoreManagedApiBootstrap.class.getResourceAsStream(RESOURCE);
-        if (stream == null) {
-            throw new IllegalStateException("Core managed API contract not found: " + RESOURCE);
-        }
-        // 版本号从 api-runtime.properties 读取（单一真相源），不再硬编码
+    public static VerifiedApiContract buildContract(URI codeSource) {
+        Objects.requireNonNull(codeSource, "codeSource");
         ApiVersion apiVersion = ApiRuntimeVersionReader.read().apiVersion();
         ApiContractIdentity identity = new ApiContractIdentity(
                 "nekojs-core", ApiContractKind.PORTABLE, "portable-core", apiVersion);
-        try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-            return ApiContractReader.readVerified(reader, codeSource, RESOURCE, identity, null);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to close core managed API contract", e);
-        }
+
+        List<ApiSymbol> symbols = new java.util.ArrayList<>();
+        // 7 个 facade：global + member + receiver 双产出
+        symbols.addAll(ContractReflector.extractSymbols("ID", IdFacade.class));
+        symbols.addAll(ContractReflector.extractSymbols("Platform", PlatformFacade.class));
+        symbols.addAll(ContractReflector.extractSymbols("Text", TextFacade.class));
+        symbols.addAll(ContractReflector.extractSymbols("JsonIO", JsonFacade.class));
+        symbols.addAll(ContractReflector.extractSymbols("NBT", NbtFacade.class));
+        symbols.addAll(ContractReflector.extractSymbols("Registry", RegistryFacade.class));
+        symbols.addAll(ContractReflector.extractSymbols("Performance", PerformanceFacade.class));
+        // 数据类型自身方法（receiver 双产出覆盖不到的：无 facade 方法以它为首参）
+        symbols.addAll(ContractReflector.reflectDataType("TextValue", TextValue.class));
+        symbols.addAll(ContractReflector.reflectDataType("RegistryView", RegistryView.class));
+        symbols.addAll(ContractReflector.reflectDataType("NbtEntry", NbtEntry.class));
+        symbols.addAll(ContractReflector.reflectDataType("ModInfo", ModInfoValue.class));
+        symbols.addAll(ContractReflector.reflectDataType("PerfTimer", PerfTimerValue.class));
+        // common 侧事件注册类（Graal Value/ScriptType 全映射为 object）
+        symbols.addAll(ContractReflector.reflectEventRegistrationSymbols());
+
+        String docs = "NekoJS portable core API contract. Symbols reflected from Java facades "
+                + "(ID/Platform/Text/JsonIO/NBT/Registry/Performance) and data types "
+                + "(TextValue/NekoId/JsonValue/NbtValue/NbtEntry/RegistryView/ModInfo/PerfTimer). "
+                + "Events derived at runtime via EventContractReflector.";
+
+        NormativeApiContract contract = new NormativeApiContract(
+                2, toContractIdentity(identity), docs, symbols,
+                List.of(), List.of(), List.of());
+
+        String integrity = sha256Hex(contract.toString().getBytes(StandardCharsets.UTF_8));
+        return VerifiedApiContract.create(identity, contract, codeSource,
+                "nekojs/api-contract/synthesized", integrity, integrity);
     }
 
-    /** 从 portable-core JSON 读取 errors 段（保留为静态错误码字典）。 */
-    private static List<NormativeApiContract.ContractError> readErrorsFromJson() {
-        var stream = CoreManagedApiBootstrap.class.getResourceAsStream(RESOURCE);
-        if (stream == null) return List.of();
-        try (var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-            var root = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
-            if (!root.has("errors")) return List.of();
-            List<NormativeApiContract.ContractError> errors = new java.util.ArrayList<>();
-            for (var errNode : root.getAsJsonArray("errors")) {
-                var obj = errNode.getAsJsonObject();
-                List<String> fields = new java.util.ArrayList<>();
-                if (obj.has("fields")) {
-                    obj.getAsJsonArray("fields").forEach(f -> fields.add(f.getAsString()));
-                }
-                errors.add(new NormativeApiContract.ContractError(
-                        obj.get("code").getAsString(),
-                        fields,
-                        obj.has("docs") ? obj.get("docs").getAsString() : null));
-            }
-            return errors;
-        } catch (Exception e) {
-            return List.of();
+    private static NormativeApiContract.ContractIdentity toContractIdentity(ApiContractIdentity id) {
+        return new NormativeApiContract.ContractIdentity(
+                id.owner(), id.kind(), id.contractId(), id.version());
+    }
+
+    private static String sha256Hex(byte[] data) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(data);
+            return "sha256:" + HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
         }
     }
 
