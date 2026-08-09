@@ -1,0 +1,51 @@
+# NekoJS 共享版本目录。
+#
+# 目的：消除散落在各 build.gradle 中的硬编码依赖版本，集中维护。
+# 仅纳入"多处复用且应统一"的坐标；下列情况刻意留作本地声明：
+#   - slf4j-api：cleanroom 锁 1.7.36（MC 1.12.2 内置），其余用 2.0.13——刻意分歧，不纳入
+#   - junit-jupiter：common-api/common 经 BOM 6.0.0，平台用 5.14.3，cleanroom 用 6.0.3——JUnit 5/6 迁移期刻意分歧
+#   - curse.maven 坐标（jei 每平台不同文件、ie/hei）：每平台/每 MC 版本不同 artifact，无复用价值
+#   - MC/NeoForge/Cleanroom loader 版本：每平台 ext 本地声明
+# 各 build.gradle 通过 `libs.xxx` 访问器引用。
+
+[versions]
+lombok = "1.18.44"
+jetbrainsAnnotations = "24.1.0"
+jspecify = "1.0.0"
+nightConfig = "3.8.3"
+gson = "2.11.0"
+slf4jModern = "2.0.13"          # common only (cleanroom pins 1.7.36 locally — MC 1.12.2 ships slf4j 1.7)
+log4j = "2.20.0"
+icu4j = "77.1"
+junitBom = "6.0.0"
+graal = "8456810"                # curse.maven:graal-1504336 文件 id
+moddev = "2.0.140"
+unifiedPublishing = "0.1.13"
+shadow = "9.4.1"
+unimined = "1.4.23-kappa"
+blossom = "2.2.0"
+# foojay-resolver stays hardcoded in settings.gradle: the settings plugins{} block
+# evaluates before the version catalog is bound, so `alias(libs.plugins.xxx)` is unusable there.
+
+[libraries]
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrainsAnnotations" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+night-config-core = { module = "com.electronwill.night-config:core", version.ref = "nightConfig" }
+night-config-toml = { module = "com.electronwill.night-config:toml", version.ref = "nightConfig" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jModern" }
+log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junitBom" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }      # version via BOM (common/common-api)
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+graal = { module = "curse.maven:graal-1504336", version.ref = "graal" }
+
+[plugins]
+moddev = { id = "net.neoforged.moddev", version.ref = "moddev" }
+unified-publishing = { id = "me.shedaniel.unified-publishing", version.ref = "unifiedPublishing" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+unimined = { id = "xyz.wagyourtail.unimined", version.ref = "unimined" }
+blossom = { id = "net.kyori.blossom", version.ref = "blossom" }

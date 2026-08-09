@@ -249,8 +249,8 @@ public final class NekoJsxCompiler {
             if (isIgnorableExpression(inner)) {
                 return null;
             }
-            String transformed = transform(inner);
-            return new ExpressionResult(new GeneratedPart("(" + transformed + ")", expressionMappings(transformed, 1, start + 1)), end + 1);
+            JsxTransformResult lowered = transformDetailed(inner);
+            return new ExpressionResult(new GeneratedPart("(" + lowered.code() + ")", rebasedMappings(lowered, inner, 1, start + 1)), end + 1);
         }
 
         private AttributeResult parseAttribute(int start) {
@@ -292,14 +292,17 @@ public final class NekoJsxCompiler {
             }
             if (valueStart == '{') {
                 int valueEnd = findMatchingBrace(index);
-                String transformed = transform(source.substring(index + 1, valueEnd));
+                String inner = source.substring(index + 1, valueEnd);
+                JsxTransformResult lowered = transformDetailed(inner);
+                String transformed = lowered.code();
                 if (transformed.isBlank()) {
                     throw jsxError("Missing JSX attribute expression", start);
                 }
                 String text = attributeKey(name) + ": (" + transformed + ")";
                 List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
                 mappings.add(new NekoSourceMapBuilder.MappingPoint(0, start));
-                mappings.addAll(expressionMappings(transformed, text.indexOf('(') + 1, index + 1));
+                // generatedStart 相对 text：紧随 "name: (" 之后的 transformed 起点 = '(' 后一位
+                mappings.addAll(rebasedMappings(lowered, inner, text.indexOf('(') + 1, index + 1));
                 return new AttributeResult(new GeneratedPart(text, mappings), valueEnd + 1);
             }
             throw jsxError("JSX attribute values must be string literals or expressions", index);
@@ -316,8 +319,19 @@ public final class NekoJsxCompiler {
         }
 
         private String transform(String innerSource) {
+            return transformDetailed(innerSource).code();
+        }
+
+        /**
+         * 递归 lowering 子表达式，返回转换后代码与内部 source map。
+         *
+         * <p>内部 source map 把 transformed 的行列映射回 innerSource 的行列。
+         * {@link #rebasedMappings} 据此重建到外层源文件的精确偏移，替代此前按 1:1
+         * 线性合成的近似偏移（嵌套 JSX / 实体解码会改变 transformed 长度，旧逻辑会漂移）。
+         */
+        private JsxTransformResult transformDetailed(String innerSource) {
             if (innerSource == null || innerSource.isBlank()) {
-                return innerSource == null ? "" : innerSource;
+                return new JsxTransformResult(innerSource == null ? "" : innerSource, null);
             }
             // 子表达式递归 lowering：复用本 Transpiler 的 automatic 标志（同一文件 runtime 模式一致）；
             // 内部不再 prepend import（由最外层统一注入）。
@@ -326,29 +340,163 @@ public final class NekoJsxCompiler {
             inner.usedJsx = this.usedJsx;
             inner.usedFragment = this.usedFragment;
             inner.usedJsxs = this.usedJsxs;
-            String lowered = inner.transpile();
+            JsxTransformResult result = inner.transpileDetailed();
             if (inner.usedJsx) this.usedJsx = true;
             if (inner.usedFragment) this.usedFragment = true;
             if (inner.usedJsxs) this.usedJsxs = true;
-            return lowered;
+            return result;
         }
 
-        private List<NekoSourceMapBuilder.MappingPoint> expressionMappings(String transformed, int generatedStart, int originalStart) {
-            // TODO(audit): source map offsets for nested JSX expressions are approximate.
-            // `transformed` comes from transform() → inner.transpile(), which can change lengths
-            // (e.g. nested JSX → jsxs(...) calls, injected runtime identifiers, HTML-entity decode).
-            // This helper assumes a 1:1 offset mapping between `transformed` and the original source,
-            // so newline-synced points past the first can drift. The clean fix requires surfacing the
-            // inner transpiler's source map and remapping its inner-original offsets back to the
-            // outer source offsets; deferred as risky for a narrow nested-expression edge case.
+        /**
+         * 把内部 transpiler 的 source map 重基（rebase）到外层生成文本/源文件的偏移。
+         *
+         * <p>内部 source map 的每个 segment 是 (genLine, genCol)→(srcLine, srcCol)，
+         * 行列均相对 transformed / innerSource。重基：
+         * <ul>
+         *   <li>generated 偏移 = generatedStart + transformed 内偏移</li>
+         *   <li>original 偏移  = originalStart  + innerSource 内偏移</li>
+         * </ul>
+         * 这样嵌套表达式内部的每一行都能精确指回外层源文件，而非按 1:1 长度近似。
+         * 解析失败（空 map / 非 v3 / 无 mappings）时回退到单锚点，保证不丢映射起点。
+         */
+        private List<NekoSourceMapBuilder.MappingPoint> rebasedMappings(
+                JsxTransformResult inner, String innerSource,
+                int generatedStart, int originalStart) {
             List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
             mappings.add(new NekoSourceMapBuilder.MappingPoint(generatedStart, originalStart));
-            for (int i = 0; i < transformed.length(); i++) {
-                if (transformed.charAt(i) == '\n' && i + 1 < transformed.length()) {
-                    mappings.add(new NekoSourceMapBuilder.MappingPoint(generatedStart + i + 1, originalStart + i + 1));
+            if (inner == null || inner.sourceMap() == null || inner.sourceMap().isEmpty()
+                    || inner.code() == null || inner.code().isEmpty()) {
+                return mappings;
+            }
+            int[][] segments = decodeSourceMapMappings(inner.sourceMap());
+            if (segments.length == 0) {
+                return mappings;
+            }
+            String transformed = inner.code();
+            int[] generatedLineStarts = lineStartOffsets(transformed);
+            int[] sourceLineStarts = lineStartOffsets(innerSource);
+            for (int[] seg : segments) {
+                int genLine = seg[0];
+                int genCol = seg[1];
+                int srcLine = seg[2];
+                int srcCol = seg[3];
+                int genOffset = offsetAt(generatedLineStarts, genLine, genCol);
+                int srcOffset = offsetAt(sourceLineStarts, srcLine, srcCol);
+                if (genOffset < 0 || srcOffset < 0) {
+                    continue;
+                }
+                mappings.add(new NekoSourceMapBuilder.MappingPoint(
+                        generatedStart + genOffset, originalStart + srcOffset));
+            }
+            // 保持按 generated 偏移升序（appendMapped 要求升序输入）
+            mappings.sort(java.util.Comparator.comparingInt(NekoSourceMapBuilder.MappingPoint::generatedOffset));
+            return mappings;
+        }
+
+        /** 行首偏移表：lineStarts[i] = 第 i 行起始字符在文本中的偏移（第 0 行恒为 0）。 */
+        private static int[] lineStartOffsets(String text) {
+            java.util.List<Integer> starts = new ArrayList<>();
+            starts.add(0);
+            for (int i = 0; i < text.length(); i++) {
+                if (text.charAt(i) == '\n') {
+                    starts.add(i + 1);
                 }
             }
-            return mappings;
+            int[] arr = new int[starts.size()];
+            for (int i = 0; i < arr.length; i++) {
+                arr[i] = starts.get(i);
+            }
+            return arr;
+        }
+
+        private static int offsetAt(int[] lineStarts, int line, int col) {
+            if (line < 0 || line >= lineStarts.length) {
+                return -1;
+            }
+            return lineStarts[line] + col;
+        }
+
+        /**
+         * 解码 v3 source map 的 mappings 字段为 segment 数组。
+         * 每个 segment = {genLine, genCol, srcLine, srcCol}（忽略 source index，恒为 0）。
+         * 行列均按累计增量还原为绝对值。
+         */
+        private static int[][] decodeSourceMapMappings(String sourceMapJson) {
+            com.google.gson.JsonObject root;
+            try {
+                root = com.google.gson.JsonParser.parseString(sourceMapJson).getAsJsonObject();
+            } catch (Exception ignored) {
+                return new int[0][];
+            }
+            com.google.gson.JsonElement mappingsEl = root.get("mappings");
+            if (mappingsEl == null) {
+                return new int[0][];
+            }
+            String mappings = mappingsEl.getAsString();
+            java.util.List<int[]> out = new ArrayList<>();
+            int genLine = 0;
+            int genCol = 0;
+            int srcLine = 0;
+            int srcCol = 0;
+            int i = 0;
+            int n = mappings.length();
+            while (i < n) {
+                char c = mappings.charAt(i);
+                if (c == ';') {
+                    genLine++;
+                    genCol = 0;
+                    i++;
+                    continue;
+                }
+                if (c == ',') {
+                    i++;
+                    continue;
+                }
+                // 解一个 segment：[genColDelta, srcIndexDelta, srcLineDelta, srcColDelta, (nameDelta)]
+                int[] fieldDeltas = new int[5];
+                int fields = 0;
+                while (i < n) {
+                    char ch = mappings.charAt(i);
+                    if (ch == ';' || ch == ',') {
+                        break;
+                    }
+                    int[] vlq = decodeVlq(mappings, i);
+                    fieldDeltas[fields++] = vlq[0];
+                    i = vlq[1];
+                }
+                if (fields < 4) {
+                    // 缺字段（如纯 generated 映射）——对 JSX 表达式映射无意义，跳过
+                    continue;
+                }
+                genCol += fieldDeltas[0];
+                // fieldDeltas[1] 是 source index delta，恒为 0（单源），忽略
+                srcLine += fieldDeltas[2];
+                srcCol += fieldDeltas[3];
+                out.add(new int[]{genLine, genCol, srcLine, srcCol});
+            }
+            return out.toArray(new int[0][]);
+        }
+
+        /** 解一个 Base64 VLQ，返回 {value, nextIndex}。 */
+        private static final String VLQ_CHARS =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+        private static int[] decodeVlq(String s, int start) {
+            int shift = 0;
+            int value = 0;
+            int i = start;
+            boolean continuation;
+            do {
+                int digit = VLQ_CHARS.indexOf(s.charAt(i));
+                i++;
+                continuation = (digit & 32) != 0;
+                digit &= 31;
+                value += digit << shift;
+                shift += 5;
+            } while (continuation && i < s.length());
+            boolean negative = (value & 1) != 0;
+            value >>>= 1;
+            return new int[]{negative ? -value : value, i};
         }
 
         private String normalizeText(String raw) {

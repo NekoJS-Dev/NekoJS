@@ -2,8 +2,8 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.140'
-    id "me.shedaniel.unified-publishing" version "0.1.13"
+    alias(libs.plugins.moddev)
+    alias(libs.plugins.unified.publishing)
 }
 
 version = mod_version
@@ -90,13 +90,14 @@ dependencies {
     implementation project(':common')
     implementation "curse.maven:jei-238222:7920926"
 
-    compileOnly 'org.projectlombok:lombok:1.18.44'
-    annotationProcessor 'org.projectlombok:lombok:1.18.44'
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
     annotationProcessor project(':common-api-processor')
     annotationProcessor project(':common-api')
 
+    // JUnit deliberately pinned to 5.x locally (common-api/common use the 6.0.0 BOM).
     testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly libs.junit.platform.launcher
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

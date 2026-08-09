@@ -3,9 +3,9 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    id 'com.gradleup.shadow' version '9.4.1'
-    id 'xyz.wagyourtail.unimined' version '1.4.23-kappa'
-    id 'net.kyori.blossom' version '2.2.0'
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.unimined)
+    alias(libs.plugins.blossom)
 }
 
 ext {
@@ -42,7 +42,17 @@ configurations {
 }
 
 def remapTaskName = enable_shadow.toBoolean() ? "remapShadowJar" : "remapJar"
-def embeddedCommonRuntime = project(':common').configurations.runtimeClasspath
+// Graal is bundled into the jar explicitly via the `contain` configuration below
+// (which also lists it in the ContainedDeps manifest). Filtering it out of the
+// transitive common runtime here prevents it from being extracted a second time
+// by the `from { embeddedCommonRuntime }` block — the same pattern NeoForge uses.
+def embeddedCommonRuntime = files({
+    project(':common').configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+            .findAll { artifact ->
+                !(artifact.moduleVersion.id.group == 'curse.maven' && artifact.name == 'graal-1504336')
+            }
+            .collect { artifact -> artifact.file }
+})
 
 
 repositories {
@@ -82,19 +92,21 @@ dependencies {
     implementation project(':common')
 
     // GraalJS (bundled in jar)
-    contain("curse.maven:graal-1504336:8456810")
+    contain(libs.graal)
 
     // Common compileOnly dependencies (needed at compile time for common module classes)
-    compileOnly 'org.jspecify:jspecify:1.0.0'
+    compileOnly libs.jspecify
+    // slf4j deliberately pinned to 1.7.36 here: Minecraft 1.12.2 ships slf4j 1.7,
+    // not the 2.0.x used by common/other platforms. Kept local, not in version catalog.
     compileOnly 'org.slf4j:slf4j-api:1.7.36'
-    compileOnly 'org.jetbrains:annotations:24.1.0'
+    compileOnly libs.jetbrains.annotations
 
     // Runtime dependencies (bundled in jar)
-    contain 'com.electronwill.night-config:core:3.8.3'
-    contain 'com.electronwill.night-config:toml:3.8.3'
+    contain libs.night.config.core
+    contain libs.night.config.toml
     // Note: Gson/Log4j/Guava are bundled with Minecraft 1.12.2, no need to bundle
-    compileOnly 'org.projectlombok:lombok:1.18.44'
-    annotationProcessor 'org.projectlombok:lombok:1.18.44'
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
     annotationProcessor project(':common-api-processor')
     annotationProcessor project(':common-api')
 

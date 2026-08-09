@@ -44,30 +44,30 @@ sourceSets.main {
 dependencies {
     api project(':common-api')
 
-    testImplementation platform('org.junit:junit-bom:6.0.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'com.google.code.gson:gson:2.11.0'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testImplementation libs.gson
+    testRuntimeOnly libs.junit.platform.launcher
     // 25.1.3.6; exported so every platform receives the same remapper SPI.
-    api("curse.maven:graal-1504336:8456810")
+    api(libs.graal)
 
-    compileOnly 'org.jspecify:jspecify:1.0.0'
-    compileOnly 'com.google.code.gson:gson:2.11.0'
-    compileOnly 'org.slf4j:slf4j-api:2.0.13'
-    compileOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
-    compileOnly 'org.apache.logging.log4j:log4j-core:2.20.0'
-    compileOnly 'org.jetbrains:annotations:24.1.0'
-    compileOnly 'com.electronwill.night-config:core:3.8.3'
-    compileOnly 'com.electronwill.night-config:toml:3.8.3'
-    compileOnly 'org.projectlombok:lombok:1.18.44'
-    annotationProcessor 'org.projectlombok:lombok:1.18.44'
+    compileOnly libs.jspecify
+    compileOnly libs.gson
+    compileOnly libs.slf4j.api
+    compileOnly libs.log4j.api
+    compileOnly libs.log4j.core
+    compileOnly libs.jetbrains.annotations
+    compileOnly libs.night.config.core
+    compileOnly libs.night.config.toml
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
     // 测试运行时 stub：compiler/probe 链上的类引用 gson/log4j 等，游戏内由 MC/NeoForge 提供，
     // 但 common 独立测试时需要在 testRuntimeOnly 提供这些实现，否则 NoClassDefFoundError。
-    testRuntimeOnly 'org.slf4j:slf4j-api:2.0.13'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
-    testRuntimeOnly 'org.apache.logging.log4j:log4j-core:2.20.0'
-    testRuntimeOnly 'com.ibm.icu:icu4j:77.1'
+    testRuntimeOnly libs.slf4j.api
+    testRuntimeOnly libs.log4j.api
+    testRuntimeOnly libs.log4j.core
+    testRuntimeOnly libs.icu4j
 
 }
 

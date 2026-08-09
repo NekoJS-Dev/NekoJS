@@ -70,4 +70,15 @@ public interface EntityExtension extends EntitySpec {
     default Object neko$getLevel() {
         return self().getEntityWorld();
     }
+
+    /**
+     * 判断实体是否带有指定标签。对齐 NF {@code neko$hasTag}。
+     * 1.12.2 {@link Entity#getTags()} 直接返回 {@code Set<String>}（vanilla），无需注册表。
+     *
+     * @param tag 标签名
+     * @return {@code true} 若实体带此标签
+     */
+    default boolean neko$hasTag(String tag) {
+        return tag != null && self().getTags().contains(tag);
+    }
 }

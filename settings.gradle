@@ -26,6 +26,8 @@ pluginManagement {
 }
 
 plugins {
+    // Note: foojay-resolver is a settings-plugin and cannot use `alias(libs.plugins.xxx)`
+    // because the version catalog is not yet bound when the settings plugins{} block evaluates.
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
