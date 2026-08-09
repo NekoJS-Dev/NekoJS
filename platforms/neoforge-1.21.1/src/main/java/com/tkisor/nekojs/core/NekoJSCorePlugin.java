@@ -119,6 +119,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("StringUtils", new StringUtilsJS());
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
+        // 清除上一轮 STARTUP 脚本注册的原生 NeoForge 事件监听器，避免 reload 后监听器累积重复触发
+        NativeEventsJS.clear();
         registry.register(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS());
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("Network", NetworkJS.class);

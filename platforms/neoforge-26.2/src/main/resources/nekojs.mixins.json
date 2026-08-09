@@ -2,8 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.tkisor.nekojs.mixin",
-  "compatibilityLevel": "JAVA_8",
-  "refmap": "neoforge-26.2.refmap.json",
+  "compatibilityLevel": "JAVA_21",
   "mixins": [
     "BlockBehaviourMixin",
     "LevelChunkBoundTickingBlockEntityMixin",
@@ -22,9 +21,11 @@
     "inject.MixinMutableComponent",
     "inject.MixinPlayer"
   ],
-  "client": [
-  ],
+  "client": [],
   "injectors": {
     "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
   }
 }

@@ -300,7 +300,18 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                 }
             }));
         }
-        for (var f : futures) { try { f.get(); } catch (Exception ignored) {} }
+        for (var f : futures) {
+            try {
+                f.get();
+            } catch (InterruptedException e) {
+                // 恢复中断标志，让上层感知
+                Thread.currentThread().interrupt();
+                break;
+            } catch (java.util.concurrent.ExecutionException e) {
+                // worker 线程的真实失败（非 NekoJS 类的 classloader 异常等）不应静默丢失
+                NekoJS.LOGGER.debug("Probe: class pregeneration failed", e.getCause());
+            }
+        }
         executor.shutdown();
     }
 
