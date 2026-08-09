@@ -17,6 +17,12 @@
   "net/minecraft/world/level/Level": [
     "com/tkisor/nekojs/api/inject/LevelExtension"
   ],
+  "net/minecraft/world/level/block/state/BlockState": [
+    "com/tkisor/nekojs/api/inject/BlockStateExtension"
+  ],
+  "net/minecraft/server/MinecraftServer": [
+    "com/tkisor/nekojs/api/inject/ServerExtension"
+  ],
   "net/minecraft/world/entity/LivingEntity": [
     "com/tkisor/nekojs/api/inject/LivingEntityExtension"
   ],
