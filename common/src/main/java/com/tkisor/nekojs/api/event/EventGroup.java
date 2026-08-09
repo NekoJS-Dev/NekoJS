@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.WithScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
@@ -85,6 +86,12 @@ public class EventGroup {
 
     public void merge(EventGroup other) {
         if (!this.name.equals(other.name)) {
+            // DEFECT-D8: previously this branch silently no-oped, hiding a real
+            // misconfiguration (two unrelated groups passed to merge). Warn so the
+            // mismatch is observable; no buses are copied on mismatch.
+            NekoJS.LOGGER.warn(
+                    "EventGroup.merge skipped: name mismatch ('{}' != '{}')",
+                    this.name, other.name);
             return;
         }
         other.buses.forEach((busName, registered) -> this.add(busName, registered.scriptType, registered.bus));

@@ -367,7 +367,7 @@ public final class NekoTypeScriptCompiler {
                     lastNumericName = null;
                 } else if (isNumberLit(m.valueExpr())) {
                     long num;
-                    try { num = Long.parseLong(m.valueExpr()); } catch (NumberFormatException e) { num = next; }
+                    try { num = parseNumberLit(m.valueExpr()); } catch (NumberFormatException e) { num = next; }
                     sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(num).append("] = \"").append(nm).append("\"; ");
                     next = num + 1;
                     lastNumericName = nm;
@@ -387,13 +387,53 @@ public final class NekoTypeScriptCompiler {
         private boolean isStringLit(String v) { return !v.isEmpty() && (v.charAt(0) == '"' || v.charAt(0) == '\''); }
 
         private boolean isNumberLit(String v) {
+            // Accept TS numeric literal forms (DEFECT-D2): optional sign, decimal int/float,
+            // hex/octal/binary, exponent, and trailing bigint `n`. Excludes exponent-only / empty.
             if (v.isEmpty()) return false;
-            for (int i = 0; i < v.length(); i++) {
-                char c = v.charAt(i);
-                if (i == 0 && (c == '-' || c == '+')) continue;
-                if (!Character.isDigit(c)) return false;
+            String core = v;
+            if (core.charAt(0) == '+' || core.charAt(0) == '-') core = core.substring(1);
+            if (core.isEmpty() || core.equals("n")) return false;
+            if (core.endsWith("n")) core = core.substring(0, core.length() - 1);
+            if (core.isEmpty()) return false;
+            String lower = core.toLowerCase();
+            if (lower.startsWith("0x")) return lower.length() > 2 && lower.substring(2).chars().allMatch(c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'));
+            if (lower.startsWith("0o")) return lower.length() > 2 && lower.substring(2).chars().allMatch(c -> c >= '0' && c <= '7');
+            if (lower.startsWith("0b")) return lower.length() > 2 && lower.substring(2).chars().allMatch(c -> c == '0' || c == '1');
+            // decimal int/float with optional exponent (single optional `.` between digits)
+            boolean seenDigit = false;
+            boolean seenDot = false;
+            boolean seenExp = false;
+            for (int i = 0; i < core.length(); i++) {
+                char c = core.charAt(i);
+                if (c >= '0' && c <= '9') { seenDigit = true; continue; }
+                if (c == '.' && !seenDot && !seenExp) { seenDot = true; continue; }
+                if ((c == 'e' || c == 'E') && seenDigit && !seenExp) {
+                    seenExp = true;
+                    if (i + 1 < core.length() && (core.charAt(i + 1) == '+' || core.charAt(i + 1) == '-')) i++;
+                    continue;
+                }
+                return false;
             }
-            return true;
+            return seenDigit;
+        }
+
+        /** Parses a TS numeric literal accepted by {@link #isNumberLit}. Floats truncate toward zero. */
+        private long parseNumberLit(String v) {
+            String core = v;
+            boolean neg = false;
+            if (!core.isEmpty() && (core.charAt(0) == '+' || core.charAt(0) == '-')) {
+                neg = core.charAt(0) == '-';
+                core = core.substring(1);
+            }
+            if (core.endsWith("n")) core = core.substring(0, core.length() - 1);
+            String lower = core.toLowerCase();
+            long value;
+            if (lower.startsWith("0x")) value = Long.parseUnsignedLong(lower.substring(2), 16);
+            else if (lower.startsWith("0o")) value = Long.parseUnsignedLong(lower.substring(2), 8);
+            else if (lower.startsWith("0b")) value = Long.parseUnsignedLong(lower.substring(2), 2);
+            else if (lower.indexOf('.') >= 0 || lower.indexOf('e') >= 0) value = (long) Double.parseDouble(core);
+            else value = Long.parseLong(core);
+            return neg ? -value : value;
         }
 
         // ---- namespace（单层）/ module → IIFE，export 成员在末尾批量转 Name.member=member ----
@@ -1014,7 +1054,6 @@ public final class NekoTypeScriptCompiler {
             if (close < 0) return afterImport;
             // 反复擦块内的内联 type 说明符
             int scanFrom = brace + 1;
-            int cursor = afterImport;
             while (true) {
                 int typeStart = findInlineTypeInBlock(scanFrom, close);
                 if (typeStart < 0) break;

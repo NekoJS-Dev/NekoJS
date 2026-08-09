@@ -334,6 +334,13 @@ public final class NekoJsxCompiler {
         }
 
         private List<NekoSourceMapBuilder.MappingPoint> expressionMappings(String transformed, int generatedStart, int originalStart) {
+            // TODO(audit): source map offsets for nested JSX expressions are approximate.
+            // `transformed` comes from transform() → inner.transpile(), which can change lengths
+            // (e.g. nested JSX → jsxs(...) calls, injected runtime identifiers, HTML-entity decode).
+            // This helper assumes a 1:1 offset mapping between `transformed` and the original source,
+            // so newline-synced points past the first can drift. The clean fix requires surfacing the
+            // inner transpiler's source map and remapping its inner-original offsets back to the
+            // outer source offsets; deferred as risky for a narrow nested-expression edge case.
             List<NekoSourceMapBuilder.MappingPoint> mappings = new ArrayList<>();
             mappings.add(new NekoSourceMapBuilder.MappingPoint(generatedStart, originalStart));
             for (int i = 0; i < transformed.length(); i++) {

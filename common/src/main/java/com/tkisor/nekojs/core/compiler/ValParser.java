@@ -298,10 +298,7 @@ public final class ValParser {
     private void skipLine() { pos += 2; while (pos < n && src.charAt(pos) != '\n') pos++; }
     private void skipBlock() { pos += 2; while (pos + 1 < n && !(src.charAt(pos) == '*' && src.charAt(pos + 1) == '/')) pos++; if (pos + 1 < n) pos += 2; }
     private void skipSemi() { skipWs(); if (pos < n && src.charAt(pos) == ';') pos++; }
-    private void skipStr() { char q = src.charAt(pos); pos++; while (pos < n) { if (src.charAt(pos) == '\\') { pos += 2; continue; } if (src.charAt(pos) == q) { pos++; return; } pos++; } }
     private void skipTpl() { pos++; while (pos < n) { if (src.charAt(pos) == '\\') { pos += 2; continue; } if (src.charAt(pos) == '`') { pos++; return; } pos++; } }
-    private void skipBrackets() { int d = 1; pos++; while (pos < n && d > 0) { char c = src.charAt(pos); if (c == '[') d++; else if (c == ']') d--; pos++; } }
-    private void skipTo(char t) { while (pos < n) { if (src.charAt(pos) == '\\') { pos += 2; continue; } if (src.charAt(pos) == t) { pos++; return; } pos++; } }
     private char peek() { return pos < n ? src.charAt(pos) : '\0'; }
     private char peek(int a) { return pos + a < n ? src.charAt(pos + a) : '\0'; }
     private boolean match(String kw) {

@@ -35,17 +35,10 @@ public class SourceMapRegistry {
         OriginalPosition fallback = new OriginalPosition(jsLine, jsColumn, null);
         if (scriptPath == null || MAPPINGS_MAP.isEmpty()) return fallback;
 
+        // Exact normalized-path match only. The previous `endsWith` fallback let two scripts
+        // sharing a path suffix collide (RISK-C3); an unmatched query is now unmapped (null source).
         String query = normalizeLookupPath(scriptPath);
         NormalizedSourceMap mapping = MAPPINGS_MAP.get(query);
-
-        if (mapping == null) {
-            for (Map.Entry<String, NormalizedSourceMap> entry : MAPPINGS_MAP.entrySet()) {
-                if (entry.getKey().endsWith(query) || query.endsWith(entry.getKey())) {
-                    mapping = entry.getValue();
-                    break;
-                }
-            }
-        }
 
         return mapping == null ? fallback : mapping.map(jsLine, jsColumn);
     }
@@ -62,9 +55,11 @@ public class SourceMapRegistry {
 
     public static void clearByPathPrefix(String pathPrefix) {
         if (pathPrefix == null) return;
+        // Prefix match only (DEFECT-D3): `contains` let clearing `foo/bar` also drop `baz/foo/bar`.
+        // normalizeLookupPath already converts `\` to `/`, so a single separator convention is in place.
         String lower = normalizeLookupPath(pathPrefix).toLowerCase();
-        MAPPINGS_MAP.entrySet().removeIf(entry -> entry.getKey().toLowerCase().contains(lower)
-                || entry.getValue().generatedPath.toLowerCase().contains(lower));
+        MAPPINGS_MAP.entrySet().removeIf(entry -> entry.getKey().toLowerCase().startsWith(lower)
+                || entry.getValue().generatedPath.toLowerCase().startsWith(lower));
     }
 
     private static NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {

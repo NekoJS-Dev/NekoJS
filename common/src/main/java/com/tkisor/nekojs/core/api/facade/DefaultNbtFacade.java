@@ -25,7 +25,7 @@ public final class DefaultNbtFacade implements NbtFacade {
     }
 
     @Override public NbtValue of(NbtValue value) { return value; }
-    @Override public Object compound() { return new com.tkisor.nekojs.wrapper.nbt.CompoundTagBuilderJS(); }
+    @Override public com.tkisor.nekojs.api.data.CompoundBuilder compound() { return new com.tkisor.nekojs.wrapper.nbt.CompoundTagBuilderJS(); }
     @Override public NbtValue byteValue(Number value) { return NbtValue.byteValue((byte) requireIntegral(value, Byte.MIN_VALUE, Byte.MAX_VALUE, "byte")); }
     @Override public NbtValue shortValue(Number value) { return NbtValue.shortValue((short) requireIntegral(value, Short.MIN_VALUE, Short.MAX_VALUE, "short")); }
     @Override public NbtValue intValue(Number value) { return NbtValue.intValue((int) requireIntegral(value, Integer.MIN_VALUE, Integer.MAX_VALUE, "int")); }

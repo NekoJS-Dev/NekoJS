@@ -112,12 +112,20 @@ final class NekoSourceMapBuilder {
                 out.append(',');
             }
             encodeVlq(out, mapping.generatedColumn - previousGeneratedColumn);
-            encodeVlq(out, -previousSourceIndex);
+            // This builder always emits a single source (see build(): sources has exactly one entry),
+            // so every segment references source index 0 and the source-index VLQ is always the
+            // delta from previousSourceIndex (0) to 0 — i.e. a constant 0. The earlier
+            // `-previousSourceIndex` form was misleading: the `-` looked like negation of a tracked
+            // index when in fact previousSourceIndex was always 0. Encode the constant 0 explicitly
+            // (DEFECT-D4) and keep previousSourceIndex for a structural assertion of single-source.
+            if (previousSourceIndex != 0) {
+                throw new IllegalStateException("NekoSourceMapBuilder is single-source only");
+            }
+            encodeVlq(out, 0);
             encodeVlq(out, mapping.originalLine - previousOriginalLine);
             encodeVlq(out, mapping.originalColumn - previousOriginalColumn);
 
             previousGeneratedColumn = mapping.generatedColumn;
-            previousSourceIndex = 0;
             previousOriginalLine = mapping.originalLine;
             previousOriginalColumn = mapping.originalColumn;
             firstInLine = false;

@@ -1,6 +1,10 @@
 package com.tkisor.nekojs.api.registry;
 
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
+import com.tkisor.nekojs.NekoJS;
+import net.minecraft.block.Block;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
@@ -59,8 +63,11 @@ public final class ForgeRegistryQueryService implements RegistryQueryService {
     public List<String> tag(String registryId, String tagId) {
         // 1.12.2 无现代 TagKey；OreDictionary 是 tag 语义的等价物，仅对 item/block 有意义。
         ResourceLocation normalized = normalizeRegistryId(registryId);
-        if (normalized == null
-                || !("minecraft:items".equals(normalized.toString()) || "minecraft:blocks".equals(normalized.toString()))) {
+        if (normalized == null) {
+            return List.of();
+        }
+        boolean blockRegistry = "minecraft:blocks".equals(normalized.toString());
+        if (!blockRegistry && !"minecraft:items".equals(normalized.toString())) {
             return List.of();
         }
         String oreName = tagId.startsWith("ore:") ? tagId.substring(4) : tagId;
@@ -69,8 +76,24 @@ public final class ForgeRegistryQueryService implements RegistryQueryService {
         }
         Set<String> ids = new LinkedHashSet<>();
         for (ItemStack stack : OreDictionary.getOres(oreName)) {
-            if (stack != null && stack.getItem() != null && stack.getItem().getRegistryName() != null) {
-                ids.add(stack.getItem().getRegistryName().toString());
+            if (stack == null || stack.isEmpty()) continue;
+            Item item = stack.getItem();
+            if (item == null) continue;
+            if (blockRegistry) {
+                // B8: 对 block 注册表，必须把 OreDictionary 的 ItemStack 映射回 Block 的 id，
+                // 而不是返回 Item id。1.12.2 上 Item→Block 用 Block.getBlockFromItem；
+                // 非 block 物品（如纯锭）会返回 Blocks.AIR，跳过并记 debug 日志。
+                Block block = Block.getBlockFromItem(item);
+                if (block == null || block == Blocks.AIR) {
+                    NekoJS.LOGGER.debug("Skipping non-block OreDictionary entry '{}' for block registry tag '{}'",
+                        item.getRegistryName(), oreName);
+                    continue;
+                }
+                ResourceLocation blockId = block.getRegistryName();
+                if (blockId != null) ids.add(blockId.toString());
+            } else {
+                ResourceLocation itemId = item.getRegistryName();
+                if (itemId != null) ids.add(itemId.toString());
             }
         }
         return List.copyOf(ids);

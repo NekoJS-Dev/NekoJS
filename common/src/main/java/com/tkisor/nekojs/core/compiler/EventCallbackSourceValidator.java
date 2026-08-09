@@ -57,11 +57,29 @@ public final class EventCallbackSourceValidator {
                 checkCallbackArgs(call, ident.name(), file, source, reported);
             }
         }
-        // recurse
-        if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) scanNode(s, schema, file, source, reported);
-        if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) scanNode(s, schema, file, source, reported);
-        if (node instanceof ValNode.CallExpr call) {
+        // DEFECT-D9: recurse into ALL block-bearing and expression-bearing children.
+        // Previously only Block.stmts, ArrowFunc.body, and CallExpr.args were visited,
+        // which missed callbacks nested inside function declarations, nested member
+        // accesses, computed keys, variable initializers, and call callees. ValNode's
+        // sealed hierarchy only exposes these node types (no if/for/while/try — the
+        // simplified ValParser does not model them), so we exhaustively visit every
+        // child the hierarchy actually defines.
+        if (node instanceof ValNode.Block b) {
+            for (ValNode s : b.stmts()) scanNode(s, schema, file, source, reported);
+        } else if (node instanceof ValNode.ArrowFunc af) {
+            for (ValNode s : af.body()) scanNode(s, schema, file, source, reported);
+        } else if (node instanceof ValNode.FuncDecl fd) {
+            for (ValNode s : fd.body()) scanNode(s, schema, file, source, reported);
+        } else if (node instanceof ValNode.CallExpr call) {
+            scanNode(call.callee(), schema, file, source, reported);
             for (ValNode a : call.args()) scanNode(a, schema, file, source, reported);
+        } else if (node instanceof ValNode.MemberAccess access) {
+            scanNode(access.object(), schema, file, source, reported);
+        } else if (node instanceof ValNode.ComputedMemberAccess computed) {
+            scanNode(computed.object(), schema, file, source, reported);
+            scanNode(computed.key(), schema, file, source, reported);
+        } else if (node instanceof ValNode.VarDecl decl) {
+            scanNode(decl.init(), schema, file, source, reported);
         }
     }
 
@@ -204,12 +222,25 @@ public final class EventCallbackSourceValidator {
     private static void resolveStatement(ValNode node, String param, Env env, TypeContext context) {
         if (node == null) return;
         resolveExpr(node, param, env, context);
+        // DEFECT-D9: recurse into every child-bearing node so callbacks nested inside
+        // function declarations, member accesses, computed keys, variable initializers,
+        // and call callees are also validated — not just Block/CallExpr/ArrowFunc.
         if (node instanceof ValNode.Block b) {
             for (ValNode s : b.stmts()) resolveStatement(s, param, env, context);
         } else if (node instanceof ValNode.CallExpr call) {
+            resolveStatement(call.callee(), param, env, context);
             for (ValNode a : call.args()) resolveStatement(a, param, env, context);
         } else if (node instanceof ValNode.ArrowFunc af) {
             for (ValNode s : af.body()) resolveStatement(s, param, env, context);
+        } else if (node instanceof ValNode.FuncDecl fd) {
+            for (ValNode s : fd.body()) resolveStatement(s, param, env, context);
+        } else if (node instanceof ValNode.MemberAccess access) {
+            resolveStatement(access.object(), param, env, context);
+        } else if (node instanceof ValNode.ComputedMemberAccess computed) {
+            resolveStatement(computed.object(), param, env, context);
+            resolveStatement(computed.key(), param, env, context);
+        } else if (node instanceof ValNode.VarDecl decl) {
+            resolveStatement(decl.init(), param, env, context);
         }
     }
 

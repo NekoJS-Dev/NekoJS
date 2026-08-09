@@ -23,8 +23,8 @@ public class EntityAttributeConfig {
     /** Insertion-ordered map so applied values are deterministic for debugging. */
     private final Map<IAttribute, Double> values = new LinkedHashMap<>();
 
-    /** Lookup table indexed by entity registry id. Populated at entity-build time. */
-    private static final Map<ResourceLocation, EntityAttributeConfig> BY_ID = new HashMap<>();
+    /** Lookup table indexed by entity registry id. Populated at entity-build time, read at runtime. */
+    private static final Map<ResourceLocation, EntityAttributeConfig> BY_ID = new java.util.concurrent.ConcurrentHashMap<>();
 
     public EntityAttributeConfig maxHealth(double value) {
         values.put(SharedMonsterAttributes.MAX_HEALTH, value);

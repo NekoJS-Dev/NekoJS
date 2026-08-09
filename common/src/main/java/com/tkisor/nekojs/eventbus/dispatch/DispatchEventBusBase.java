@@ -67,15 +67,13 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
 
     public final boolean unregister(EventListenerToken<EVENT> token) {
         var impl = (EventListenerTokenImpl<EVENT, ?>) token;
-        if (impl.key() == null) {
+        Object tokenKey = impl.key();
+        if (tokenKey == null) {
             return mainBus.unregister(impl);
         }
 
         @SuppressWarnings("unchecked")
-        var key = (KEY) impl.key().get();
-        if (key == null) {
-            return mainBus.unregister(impl);
-        }
+        var key = (KEY) tokenKey;
 
         var bus = this.dispatched.get(key);
         var result = bus != null && bus.unregister(token);
@@ -85,6 +83,24 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
         return result;
     }
 
+    /**
+     * Post an event to the main (non-keyed) listeners first, then to the keyed
+     * listeners registered for {@code key}.
+     *
+     * <p><b>Precedence:</b> {@link #mainBus} listeners always run before keyed
+     * listeners. mainBus listeners are invoked via {@code mainBus.post(event)}.
+     *
+     * <p><b>Cancellation short-circuit:</b> if this bus is cancellable and
+     * {@code mainBus.post(event)} returns {@code true} (a mainBus listener
+     * cancelled the event), the keyed listeners for {@code key} are skipped and
+     * this method returns {@code true} immediately. Keyed listeners only run when
+     * mainBus did not cancel the event. For non-cancellable buses
+     * {@code mainBus.post(event)} always returns {@code false}, so keyed listeners
+     * always run.
+     *
+     * @return {@code true} if a listener cancelled the event, {@code false}
+     *         otherwise (for non-cancellable buses this is always {@code false})
+     */
     public final boolean post(EVENT event, KEY key) {
         if (mainBus.post(event)) {
             return true;
@@ -98,6 +114,19 @@ abstract class DispatchEventBusBase<EVENT, KEY, BUS extends EventBusBase<EVENT, 
         return false;
     }
 
+    /**
+     * Post an event, deriving the dispatch key from the event via
+     * {@link #dispatchKey}.
+     *
+     * <p><b>Precedence:</b> {@link #mainBus} listeners always run first, then the
+     * keyed listeners for the derived key — see {@link #post(Object, Object)}.
+     *
+     * <p><b>Cancellation short-circuit:</b> if this bus is cancellable and a
+     * mainBus listener cancels the event, the keyed listeners are skipped.
+     *
+     * <p>If no keyed listeners are registered at all ({@link #dispatched} empty),
+     * dispatching is skipped and only mainBus is posted.
+     */
     public final boolean post(EVENT event) {
         if (this.dispatched.isEmpty()) {
             // skip dispatching if there's no registered dispatched listener

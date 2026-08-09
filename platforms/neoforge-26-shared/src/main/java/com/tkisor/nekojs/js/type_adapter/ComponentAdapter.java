@@ -85,8 +85,10 @@ public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
             return Component.score(score.name(), score.objective());
         }
         if (value instanceof TextValue.Selector selector) {
-            // 26.x（MC 1.21.6+）：Component.selector 需要 ParsedSelector（需 CommandBuildContext 解析），
-            // 适配器层无该上下文，退化为字面量。selector 在 1.21.1 / 1.12.2 仍可正常渲染。
+            // NF26 limitation: Component.selector requires CommandBuildContext which is unavailable here; degrades to literal. See audit DEFECT-D10.
+            // 26.x（MC 1.21.6+）：Component.selector 签名变为 (ParsedSelector)，而 ParsedSelector 需要
+            // CommandBuildContext 才能从 pattern 构造；适配器层无该上下文，只能退化为字面量。
+            // selector 在 1.21.1 / 1.12.2 仍可正常渲染。
             return Component.literal(selector.pattern());
         }
         MutableComponent result = Component.empty();

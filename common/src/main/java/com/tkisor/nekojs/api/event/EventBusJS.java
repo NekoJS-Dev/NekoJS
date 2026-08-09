@@ -9,6 +9,7 @@ import com.tkisor.nekojs.api.event.EventListenerToken;
 import com.tkisor.nekojs.api.event.DispatchCancellableEventBus;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
 import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.eventbus.CommonPriority;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -66,6 +68,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     private final EventBus<EVENT> bus;
     private final Map<ScriptType, List<ScriptEventListenerToken<EVENT>>> tokensByType;
+    /**
+     * Script type this bus was registered for. Used ONLY as an immutability guard
+     * (see {@link #scriptType(ScriptType)}) — it is intentionally NOT used for
+     * listener filtering or isolation. Listener tokens are bucketed by the
+     * registering script's ScriptType in {@link #tokensByType}, not by this field.
+     * (DEAD-5: do not repurpose this for filtering without auditing the bucketing.)
+     */
     private ScriptType scriptType;
     private String groupName;
     private String eventName;
@@ -115,10 +124,6 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             throw new IllegalStateException("Event bus script type is already " + this.scriptType + ": " + bus.eventType().getName());
         }
         this.scriptType = Objects.requireNonNull(scriptType, "scriptType");
-    }
-
-    public List<EventListenerToken<EVENT>> tokens(ScriptType type) {
-        return tokensByType.getOrDefault(type, List.of()).stream().map(ScriptEventListenerToken::token).toList();
     }
 
     public void clearTokens(ScriptType type) {
@@ -180,23 +185,48 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         if (args.length == 0) {
             throw new IllegalArgumentException("EventBus requires at least one arg");
         }
+
+        // DEFECT-D6: optional priority as the first argument. If args[0] is a string
+        // that matches a priority name (HIGHEST/HIGH/NORMAL/LOW/LOWEST, case-insensitive),
+        // parse it and shift the remaining args. Existing call shapes are preserved:
+        //   listen(listener)                       -> NORMAL
+        //   listen("key", listener)               -> NORMAL (dispatch), "key" is NOT a priority name
+        //   listen("HIGH", listener)              -> HIGH priority
+        //   listen("HIGH", "key", listener)       -> HIGH priority (dispatch)
+        byte priority = CommonPriority.NORMAL;
+        int offset = 0;
+        Byte parsed = parsePriority(args[0]);
+        if (parsed != null) {
+            priority = parsed;
+            offset = 1;
+            if (args.length <= offset) {
+                throw new IllegalArgumentException("EventBus requires a listener after priority");
+            }
+        }
+
+        Value[] rest = new Value[args.length - offset];
+        System.arraycopy(args, offset, rest, 0, rest.length);
+
         EventListenerToken<EVENT> token;
-        Value listener = args.length > 1 && canDispatch() ? args[1] : args[0];
+        Value listener;
         if (canDispatch()) {
+            boolean keyed = rest.length > 1;
+            listener = keyed ? rest[1] : rest[0];
             if (canCancel()) {
-                token = args.length > 1
-                    ? registerDispatchCancellable(args[1], args[0]) // listen("key", (e) => true)
-                    : registerCancellable(args[0]); // listen((e) => true)
+                token = keyed
+                    ? registerDispatchCancellable(priority, rest[1], rest[0]) // listen([prio,] "key", (e) => true)
+                    : registerCancellable(priority, rest[0]); // listen([prio,] (e) => true)
             } else {
-                token = args.length > 1
-                    ? registerDispatch(args[1], args[0]) // listen("key", (e) => {})
-                    : register(args[0]); // listen((e) => {})
+                token = keyed
+                    ? registerDispatch(priority, rest[1], rest[0]) // listen([prio,] "key", (e) => {})
+                    : register(priority, rest[0]); // listen([prio,] (e) => {})
             }
         } else {
+            listener = rest[0];
             if (canCancel()) {
-                token = registerCancellable(args[0]); // listen((e) => true)
+                token = registerCancellable(priority, rest[0]); // listen([prio,] (e) => true)
             } else {
-                token = register(args[0]); // listen((e) => {})
+                token = register(priority, rest[0]); // listen([prio,] (e) => {})
             }
         }
         ScriptType type = ScriptContextRegistry.scriptTypeOf(listener.getContext());
@@ -205,12 +235,35 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return true;
     }
 
+    /**
+     * Parse a JS value as a {@link CommonPriority} name. Returns {@code null} when
+     * the value is not a string or does not match a priority name, so callers can
+     * distinguish "not a priority" (e.g. a dispatch key string) from a valid name.
+     * Matching is case-insensitive.
+     */
+    private static Byte parsePriority(Value value) {
+        if (value == null || !value.isString()) return null;
+        String name = value.asString().trim().toUpperCase(Locale.ROOT);
+        return switch (name) {
+            case "HIGHEST" -> CommonPriority.HIGHEST;
+            case "HIGH" -> CommonPriority.HIGH;
+            case "NORMAL" -> CommonPriority.NORMAL;
+            case "LOW" -> CommonPriority.LOW;
+            case "LOWEST" -> CommonPriority.LOWEST;
+            default -> null;
+        };
+    }
+
     private EventListenerToken<EVENT> register(Value listener) {
+        return register(CommonPriority.NORMAL, listener);
+    }
+
+    private EventListenerToken<EVENT> register(byte priority, Value listener) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
 
-        return this.bus.listen(event -> {
+        return this.bus.listen(priority, event -> {
             try {
                 synchronized (context) {
                     String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
@@ -229,12 +282,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> registerCancellable(Value listener) {
+        return registerCancellable(CommonPriority.NORMAL, listener);
+    }
+
+    private EventListenerToken<EVENT> registerCancellable(byte priority, Value listener) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
-        return bus.listen(event -> {
+        return bus.listen(priority, event -> {
             try {
                 synchronized (context) {
                     String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
@@ -255,6 +312,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> registerDispatch(Value listener, Value key) {
+        return registerDispatch(CommonPriority.NORMAL, listener, key);
+    }
+
+    private EventListenerToken<EVENT> registerDispatch(byte priority, Value listener, Value key) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
@@ -263,6 +324,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
         return bus.listen(
                 dispatchKey,
+                priority,
                 event -> {
                     try {
                         synchronized (context) {
@@ -285,6 +347,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private EventListenerToken<EVENT> registerDispatchCancellable(Value listener, Value key) {
+        return registerDispatchCancellable(CommonPriority.NORMAL, listener, key);
+    }
+
+    private EventListenerToken<EVENT> registerDispatchCancellable(byte priority, Value listener, Value key) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
@@ -293,6 +359,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
         return bus.listen(
                 dispatchKey,
+                priority,
                 event -> {
                     try {
                         synchronized (context) {

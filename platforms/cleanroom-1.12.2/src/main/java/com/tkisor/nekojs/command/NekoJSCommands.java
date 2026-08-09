@@ -21,8 +21,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,19 +38,19 @@ public class NekoJSCommands extends CommandBase {
     }
 
     @Override
-    @Nonnull
+    @NotNull
     public String getName() {
         return "nekojs";
     }
 
     @Override
-    @Nonnull
-    public String getUsage(@Nonnull ICommandSender sender) {
+    @NotNull
+    public String getUsage(@NotNull ICommandSender sender) {
         return "/nekojs <reload|test|error|probe>";
     }
 
     @Override
-    @Nonnull
+    @NotNull
     public List<String> getAliases() {
         return Collections.emptyList();
     }
@@ -61,7 +61,7 @@ public class NekoJSCommands extends CommandBase {
     }
 
     @Override
-    public void execute(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender, @Nonnull String[] args) throws CommandException {
+    public void execute(@NotNull MinecraftServer server, @NotNull ICommandSender sender, @NotNull String[] args) throws CommandException {
         if (args.length == 0) {
             throw new WrongUsageException(getUsage(sender));
         }
@@ -86,7 +86,7 @@ public class NekoJSCommands extends CommandBase {
         }
     }
 
-    private void handleReload(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender, @Nonnull String[] args) throws CommandException {
+    private void handleReload(@NotNull MinecraftServer server, @NotNull ICommandSender sender, @NotNull String[] args) throws CommandException {
         ScriptType type = ScriptType.SERVER;
         if (args.length >= 2) {
             try {
@@ -138,7 +138,7 @@ public class NekoJSCommands extends CommandBase {
         }
     }
 
-    private void handleTest(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender) {
+    private void handleTest(@NotNull MinecraftServer server, @NotNull ICommandSender sender) {
         sender.sendMessage(new TextComponentString("Running NekoJS test scripts..."));
 
         try {
@@ -155,7 +155,7 @@ public class NekoJSCommands extends CommandBase {
         }
     }
 
-    private void handleError(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender) {
+    private void handleError(@NotNull MinecraftServer server, @NotNull ICommandSender sender) {
         int count = NekoJSMod.RUNTIME_ROOT.errors().count();
         if (count > 0) {
             sender.sendMessage(new TextComponentString("There are " + count + " NekoJS script error(s)."));
@@ -164,7 +164,7 @@ public class NekoJSCommands extends CommandBase {
         }
     }
 
-    private void handleProbe(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender) {
+    private void handleProbe(@NotNull MinecraftServer server, @NotNull ICommandSender sender) {
         var generator = ProbeRegistry.getGenerator();
         if (generator == null) {
             sender.sendMessage(new TextComponentString("No probe generator registered."));
@@ -199,8 +199,8 @@ public class NekoJSCommands extends CommandBase {
     }
 
     @Override
-    @Nonnull
-    public List<String> getTabCompletions(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender, @Nonnull String[] args, @Nullable net.minecraft.util.math.BlockPos targetPos) {
+    @NotNull
+    public List<String> getTabCompletions(@NotNull MinecraftServer server, @NotNull ICommandSender sender, @NotNull String[] args, @Nullable net.minecraft.util.math.BlockPos targetPos) {
         if (args.length == 1) {
             return getListOfStringsMatchingLastWord(args, "reload", "test", "error", "probe");
         }
@@ -212,7 +212,7 @@ public class NekoJSCommands extends CommandBase {
     }
 
     @Override
-    public boolean isUsernameIndex(@Nonnull String[] args, int index) {
+    public boolean isUsernameIndex(@NotNull String[] args, int index) {
         return false;
     }
 }

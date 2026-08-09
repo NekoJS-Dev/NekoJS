@@ -45,20 +45,26 @@ public final class ManagedCallbackSchemaRegistry {
         }
     }
 
-    private static final Map<String, Map<String, CallbackSchema>> SCHEMA = new ConcurrentHashMap<>();
+    // RISK-C7: {@code volatile} so {@link #install} can swap the whole map in a
+    // single atomic write. Previously {@code SCHEMA.clear(); SCHEMA.putAll(next);}
+    // was two steps and a concurrent {@link #resolve} could observe the map empty
+    // in between. Inner maps are {@link ConcurrentHashMap} so
+    // {@link #installContractEvents} can mutate them in place after install.
+    private static volatile Map<String, Map<String, CallbackSchema>> SCHEMA = new ConcurrentHashMap<>();
 
     private ManagedCallbackSchemaRegistry() {}
 
     public static void install(Map<ScriptType, ApiSurfaceSnapshot> snapshotsByType) {
         Objects.requireNonNull(snapshotsByType, "snapshotsByType");
-        Map<String, Map<String, CallbackSchema>> next = new HashMap<>();
+        Map<String, Map<String, CallbackSchema>> next = new ConcurrentHashMap<>();
         for (var entry : snapshotsByType.entrySet()) {
             ApiSurfaceSnapshot snapshot = entry.getValue();
             if (snapshot == null) continue;
             extractCallbackSchemas(snapshot, next);
         }
-        SCHEMA.clear();
-        SCHEMA.putAll(next);
+        // RISK-C7: single atomic publication of the fully-built map — no transient
+        // empty window visible to {@link #resolve}/{@link #isKnownGroup}.
+        SCHEMA = next;
     }
 
     /**

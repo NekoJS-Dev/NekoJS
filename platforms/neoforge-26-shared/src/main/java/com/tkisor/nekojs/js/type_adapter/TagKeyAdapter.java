@@ -65,13 +65,13 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
             // 检查是否包含注册表前缀，例如 "block|minecraft:logs"
             if (str.contains("|")) {
                 String[] parts = str.split("\\|", 2);
-                registryName = parts[0];
-                tagPath = parts[1];
-                // B6: 校验分割结果完整性
+                // B4/B6: 校验拆分结果（必须在赋值之前，否则 "block|" 会抛 AIOOBE）
                 if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank()) {
                     throw new ValueConversionException(TagKey.class, "'registry|tag' string", str,
-                        "malformed format");
+                        "malformed format, expected '<registry>|<tag>'");
                 }
+                registryName = parts[0].trim();
+                tagPath = parts[1].trim();
             } else {
                 tagPath = str;
             }

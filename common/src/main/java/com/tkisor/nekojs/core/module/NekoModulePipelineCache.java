@@ -25,20 +25,47 @@ public final class NekoModulePipelineCache {
         Path key = key(path);
         try {
             SourceSnapshot source = readSource(key);
-            PreparedEntry cached = PREPARED_CACHE.get(key);
-            if (cached != null && cached.stamp().equals(source.stamp())) {
-                publishSourceMap(key, cached.prepared());
-                return cached.prepared();
+            // Atomic check-then-act: previously get→miss→compute→put could let two threads
+            // loading the same path both run the full pipeline. computeIfAbsent guarantees
+            // a single pipeline run per (key, stamp); the inner stamp check avoids recomputing
+            // when the cached entry is still valid for this source stamp.
+            PreparedEntry entry = PREPARED_CACHE.compute(key, (k, existing) -> {
+                if (existing != null && existing.stamp().equals(source.stamp())) {
+                    return existing;
+                }
+                try {
+                    NekoPreparedModule prepared = prepareSource(k, source);
+                    return new PreparedEntry(source.stamp(), prepared);
+                } catch (IOException | RuntimeException ex) {
+                    throw new PipelineException(ex);
+                } catch (Exception ex) {
+                    // prepareSource declares 'throws Exception'; tunnel other checked
+                    // exceptions out of the compute lambda the same way.
+                    throw new PipelineException(ex);
+                }
+            });
+            publishSourceMap(key, entry.prepared());
+            return entry.prepared();
+        } catch (PipelineException wrapper) {
+            Throwable cause = wrapper.getCause();
+            if (cause instanceof IOException io) {
+                throw io;
             }
-            NekoPreparedModule prepared = prepareSource(key, source);
-            publishSourceMap(key, prepared);
-            PREPARED_CACHE.put(key, new PreparedEntry(source.stamp(), prepared));
-            return prepared;
+            if (cause instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new IOException("Failed to prepare NekoJS module: " + key + ": " + rootMessage(cause), cause);
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
             throw new IOException("Failed to prepare NekoJS module: " + key + ": " + rootMessage(e), e);
         }
+    }
+
+    /** Internal carrier to tunnel checked exceptions out of the ConcurrentHashMap compute lambda. */
+    private static final class PipelineException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+        PipelineException(Throwable cause) { super(cause); }
     }
 
     public static void clear() {

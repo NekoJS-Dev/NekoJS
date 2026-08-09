@@ -51,12 +51,15 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
                         Slot.opt("mod", string()),
                         Slot.opt("regex", string()),
                         Slot.opt("wildcard", bool()),
-                        Slot.opt("any", arrayOf(self()))));
+                        Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self())));
     }
 
     @Override
     public Optional<String> syntaxDoc() {
-        return Optional.of("item:id | #tag | @mod | * | /regex/ | { item?|tag?|mod?|regex?|wildcard?|any? }");
+        return Optional.of("item:id | #tag | @mod | * | /regex/ | { item?|tag?|mod?|regex?|wildcard?|filter?|any?|all?|not? }");
     }
 
     @Override
@@ -198,6 +201,9 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
     private static Ingredient fromObject(Value value) {
         if (value.hasMember("any")) return compound(value.getMember("any"));
+        if (value.hasMember("all")) return intersection(value.getMember("all"));
+        if (value.hasMember("not")) return complement(value.getMember("not"));
+        if (value.hasMember("filter")) return filterIngredient(value.getMember("filter"));
         if (value.hasMember("wildcard") && value.getMember("wildcard").asBoolean()) return wildcard();
         if (value.hasMember("mod")) return modIngredient(value.getMember("mod").asString());
         if (value.hasMember("regex")) return regexIngredient(value.getMember("regex").asString());
@@ -207,8 +213,82 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
             return fromString(tag.startsWith("#") ? tag : "#" + tag);
         }
         throw new ValueConversionException(Ingredient.class,
-            "recognized field (item|tag|mod|regex|wildcard|any)", value,
+            "recognized field (item|tag|mod|regex|wildcard|filter|any|all|not)", value,
             "no recognized field in ingredient object");
+    }
+
+    /**
+     * {@code filter: (item) => boolean} — a JS predicate ingredient.
+     * <p>1.12.2's {@link Ingredient} is a static stack-list predicate; there is no way
+     * to attach an arbitrary JS function to it. We refuse with a clear message instead
+     * of silently producing an empty/wrong ingredient. Use {@code item}/{@code tag}/
+     * {@code mod}/{@code regex} to enumerate the desired stacks explicitly.
+     */
+    private static Ingredient filterIngredient(Value value) {
+        throw new ValueConversionException(Ingredient.class,
+            "static ingredient list (item/tag/mod/regex)", value,
+            "'filter' (JS predicate ingredient) is not supported on 1.12.2: Ingredient is a " +
+            "static stack list with no dynamic predicate hook. Use { item } / { tag } / " +
+            "{ mod } / { regex } to enumerate matching items explicitly.");
+    }
+
+    /**
+     * {@code all: [ingA, ingB, ...]} — intersection: items that match <em>every</em>
+     * child ingredient. On 1.12.2 this is materialized by intersecting each child's
+     * matching-stacks array.
+     */
+    private static Ingredient intersection(Value value) {
+        if (!value.hasArrayElements()) {
+            throw new ValueConversionException(Ingredient.class, "ingredient array", value,
+                "'all' expects an array of ingredients");
+        }
+        List<ItemStack> result = null;
+        for (long i = 0; i < value.getArraySize(); i++) {
+            Ingredient child = fromValue(value.getArrayElement(i));
+            List<ItemStack> childStacks = new ArrayList<>();
+            for (ItemStack s : child.getMatchingStacks()) {
+                if (s != null && !s.isEmpty()) childStacks.add(s);
+            }
+            if (result == null) {
+                result = new ArrayList<>(childStacks);
+            } else {
+                // keep only stacks already in `result` that also appear in childStacks
+                result.removeIf(existing -> childStacks.stream().noneMatch(c -> stackEquals(existing, c)));
+            }
+        }
+        if (result == null || result.isEmpty()) return Ingredient.EMPTY;
+        return Ingredient.fromStacks(result.toArray(new ItemStack[0]));
+    }
+
+    /**
+     * {@code not: ing} — complement: all registered items <em>except</em> those matched
+     * by the child ingredient. On 1.12.2 this is materialized by subtracting the child's
+     * matching stacks from the full item registry.
+     */
+    private static Ingredient complement(Value value) {
+        Ingredient child = fromValue(value);
+        List<ItemStack> exclude = new ArrayList<>();
+        for (ItemStack s : child.getMatchingStacks()) {
+            if (s != null && !s.isEmpty()) exclude.add(s);
+        }
+        List<ItemStack> remaining = new ArrayList<>();
+        for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
+            ItemStack candidate = new ItemStack(item);
+            boolean isExcluded = false;
+            for (ItemStack ex : exclude) {
+                if (stackEquals(candidate, ex)) { isExcluded = true; break; }
+            }
+            if (!isExcluded) remaining.add(candidate);
+        }
+        if (remaining.isEmpty()) return Ingredient.EMPTY;
+        return Ingredient.fromStacks(remaining.toArray(new ItemStack[0]));
+    }
+
+    /** Item + metadata equality (the 1.12.2 definition of "same stack"). */
+    private static boolean stackEquals(ItemStack a, ItemStack b) {
+        if (a == null || b == null) return a == b;
+        if (a.isEmpty() || b.isEmpty()) return a.isEmpty() == b.isEmpty();
+        return a.getItem() == b.getItem() && a.getMetadata() == b.getMetadata();
     }
 
     private static Ingredient compound(Value value) {

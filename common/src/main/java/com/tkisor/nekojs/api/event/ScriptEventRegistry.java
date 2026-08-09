@@ -66,12 +66,6 @@ public final class ScriptEventRegistry {
         }
     }
 
-    public static synchronized void clearDefinitions() {
-        List<ScriptEventDefinition> definitions = new ArrayList<>(DEFINITIONS.values());
-        DEFINITIONS.clear();
-        definitions.forEach(ScriptEventDefinition::unregister);
-    }
-
     public static synchronized void clearDefinitions(ScriptType targetType) {
         List<String> keys = new ArrayList<>();
         List<ScriptEventDefinition> definitions = new ArrayList<>();

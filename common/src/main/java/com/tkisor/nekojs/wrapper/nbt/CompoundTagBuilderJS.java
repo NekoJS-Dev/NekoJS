@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.wrapper.nbt;
 
+import com.tkisor.nekojs.api.data.CompoundBuilder;
 import com.tkisor.nekojs.api.data.NbtValue;
 
 import java.util.ArrayList;
@@ -11,6 +12,9 @@ import java.util.Objects;
 /**
  * NBT 复合标签构建器（链式，产出不可变 {@link NbtValue.CompoundValue}）。
  *
+ * <p>实现 {@link CompoundBuilder} 接口（定义在 common-api），使 {@code NbtFacade.compound()}
+ * 能返回有类型的接口而非裸 {@code Object}。
+ *
  * <p>脚本通过 {@code NBT.compound()} 或直接 {@code new CompoundTagBuilderJS()} 创建，
  * 用 {@code put/putByte/putInt/.../putCompound/putList} 累积条目，{@code build()}
  * 产出不可变 {@link NbtValue}，可经平台层 adapter / codec 转为 MC {@code CompoundTag}，
@@ -18,64 +22,77 @@ import java.util.Objects;
  *
  * <p>放 common 层（无 MC 依赖）；值类型由 {@link NbtValue} sealed record 体系承载。
  */
-public final class CompoundTagBuilderJS {
+public final class CompoundTagBuilderJS implements CompoundBuilder {
     private final Map<String, NbtValue> entries = new LinkedHashMap<>();
 
     public CompoundTagBuilderJS() {}
 
     /** 放入任意已构建的 {@link NbtValue}。 */
+    @Override
     public CompoundTagBuilderJS put(String key, NbtValue value) {
         entries.put(key, Objects.requireNonNull(value, "value"));
         return this;
     }
 
+    @Override
     public CompoundTagBuilderJS putByte(String key, byte value) {
         return put(key, new NbtValue.ByteValue(value));
     }
 
+    @Override
     public CompoundTagBuilderJS putShort(String key, short value) {
         return put(key, new NbtValue.ShortValue(value));
     }
 
+    @Override
     public CompoundTagBuilderJS putInt(String key, int value) {
         return put(key, new NbtValue.IntValue(value));
     }
 
+    @Override
     public CompoundTagBuilderJS putLong(String key, long value) {
         return put(key, new NbtValue.LongValue(value));
     }
 
+    @Override
     public CompoundTagBuilderJS putFloat(String key, float value) {
         return put(key, new NbtValue.FloatValue(value));
     }
 
+    @Override
     public CompoundTagBuilderJS putDouble(String key, double value) {
         return put(key, new NbtValue.DoubleValue(value));
     }
 
+    @Override
     public CompoundTagBuilderJS putString(String key, String value) {
         return put(key, new NbtValue.StringValue(Objects.requireNonNull(value, "value")));
     }
 
+    @Override
     public CompoundTagBuilderJS putByteArray(String key, byte... values) {
         return put(key, NbtValue.byteArray(values));
     }
 
+    @Override
     public CompoundTagBuilderJS putIntArray(String key, int... values) {
         return put(key, NbtValue.intArray(values));
     }
 
     /** 放入嵌套复合标签（由另一个 builder 构建）。 */
-    public CompoundTagBuilderJS putCompound(String key, CompoundTagBuilderJS builder) {
+    @Override
+    public CompoundTagBuilderJS putCompound(String key, CompoundBuilder builder) {
         return put(key, Objects.requireNonNull(builder, "builder").build());
     }
 
     /** 放入列表（元素为已构建的 {@link NbtValue}）。 */
+    @Override
     public CompoundTagBuilderJS putList(String key, List<NbtValue> values) {
         return put(key, NbtValue.list(Objects.requireNonNull(values, "values")));
     }
 
     /** 放入列表（可变参数）。 */
+    @Override
     public CompoundTagBuilderJS putList(String key, NbtValue... values) {
         return put(key, NbtValue.list(List.of(Objects.requireNonNull(values, "values"))));
     }

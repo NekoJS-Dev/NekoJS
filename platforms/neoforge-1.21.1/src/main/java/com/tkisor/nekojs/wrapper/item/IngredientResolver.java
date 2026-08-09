@@ -174,15 +174,10 @@ public final class IngredientResolver {
         }
         if (list.isEmpty()) return Ingredient.of();
         if (list.size() == 1) return list.get(0);
-        // 1.21.1：CompoundIngredient 不继承 Ingredient，OR 组合展开成 Item[]
-        List<Holder<Item>> holders = new ArrayList<>();
-        for (Ingredient ing : list) {
-            for (ItemStack stack : ing.getItems()) {
-                if (!stack.isEmpty()) holders.add(stack.getItem().builtInRegistryHolder());
-            }
-        }
-        if (holders.isEmpty()) return Ingredient.of();
-        return Ingredient.of(holders.stream().map(Holder::value).toArray(Item[]::new));
+        // B7: 用 CompoundIngredient 保持 live tag 引用，与 NF26 行为一致。
+        // 1.21.1 的 CompoundIngredient.of(Ingredient...) 是 varargs 静态工厂，返回 Ingredient
+        //（内部已 toVanilla）；等价于 NF26 的 new CompoundIngredient(list).toVanilla()。
+        return CompoundIngredient.of(list.toArray(new Ingredient[0]));
     }
 
     private static Ingredient intersection(Value value) {

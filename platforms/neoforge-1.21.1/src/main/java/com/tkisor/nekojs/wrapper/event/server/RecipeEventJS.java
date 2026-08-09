@@ -125,7 +125,11 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public JsonElement serializeSizedFluidIngredient(SizedFluidIngredient ingredient) {
-        return SizedFluidIngredient.FLAT_CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
+        // B6: NF26 (MC 1.21.6+) removed SizedFluidIngredient.FLAT_CODEC, leaving only CODEC.
+        // Use CODEC here so both platforms emit the same JSON shape (NESTED/object form),
+        // matching the NF26 path. FLAT_CODEC was the more compact "<fluid>" form but is no
+        // longer available cross-version; CODEC is the common denominator.
+        return SizedFluidIngredient.NESTED_CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
 
     public ResourceLocation generateRecipeId(String prefix) {

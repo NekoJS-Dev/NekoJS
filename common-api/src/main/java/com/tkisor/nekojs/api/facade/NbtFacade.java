@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.facade;
 
 import com.tkisor.nekojs.api.annotation.Remap;
+import com.tkisor.nekojs.api.data.CompoundBuilder;
 import com.tkisor.nekojs.api.data.NbtEntry;
 import com.tkisor.nekojs.api.data.NbtValue;
 
@@ -10,7 +11,7 @@ public interface NbtFacade {
     NbtValue of(NbtValue value);
 
     /** 创建空 compound 构建器（JS 侧 {@code NBT.compound} 调用，链式构建后转 NbtValue）。 */
-    Object compound();
+    CompoundBuilder compound();
 
     // 标量工厂：Java 方法名带 Value 后缀（byte/short/int/long/float/double 是 Java 关键字，
     // 不能作方法名），用 @Remap 映射到 JS 侧短名。@Remap 同时驱动 Graal host access 与

@@ -3,97 +3,131 @@ package com.tkisor.nekojs.js.type_adapter;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.item.crafting.Ingredient;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 
 /**
- * 1.12.2 SizedIngredient 适配器（passthrough 版）。
- * <b>注意：1.12.2 无 {@code SizedIngredient} 类。</b>
- * 本适配器将 ingredient + count 包装为长度为 2 的数组 [Ingredient, Integer]，
- * 供脚本侧手动解构使用。
+ * 1.12.2 SizedIngredient 适配器。
  *
- * <p>接受：{ ingredient, count } 对象或 Ingredient 宿主对象（count 默认 1）。</p>
+ * <p>1.12.2 has no native {@code SizedIngredient} class, so this adapter resolves to
+ * {@link SizedIngredientJS} (a small value class holding {@link Ingredient} + count)
+ * instead of the legacy {@code Object[]} destructure tuple. Scripts get a proper typed
+ * host object with {@code ingredient()}/{@code count()}/{@code unwrap()} accessors.
+ *
+ * <h2>Accepted inputs</h2>
+ * <ul>
+ *   <li>{@link SizedIngredientJS} host object (passthrough)</li>
+ *   <li>{@link Ingredient} host object (count defaults to 1)</li>
+ *   <li>string ({@code "minecraft:stone"}) / array / object ingredient shapes —
+ *       resolved via {@link IngredientAdapter}, count defaults to 1</li>
+ *   <li>{@code { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count }}
+ *       — ingredient resolved via {@link IngredientAdapter}, count from {@code count}</li>
+ * </ul>
  */
-@SuppressWarnings("unchecked")
-public final class SizedIngredientAdapter implements JSTypeAdapter<Object[]> {
+public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredientJS> {
 
     @Override
-    public Class<Object[]> getTargetClass() {
-        return Object[].class;
+    public Class<SizedIngredientJS> getTargetClass() {
+        return SizedIngredientJS.class;
     }
 
     @Override
     public List<AdapterInputShape> inputShapes() {
         return List.of(
+                self(),
+                host(SizedIngredientJS.class),
                 host(Ingredient.class),
+                string(),
+                arrayOf(self()),
                 object(
                         Slot.opt("ingredient", host(Ingredient.class)),
+                        Slot.opt("item", string()),
+                        Slot.opt("tag", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("regex", string()),
+                        Slot.opt("wildcard", bool()),
+                        Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),
+                        Slot.opt("any", arrayOf(self())),
+                        Slot.opt("all", arrayOf(self())),
+                        Slot.opt("not", self()),
                         Slot.opt("count", number())));
     }
 
     @Override
     public Optional<String> syntaxDoc() {
-        return Optional.of("{ ingredient, count } | $Ingredient (count=1)");
+        return Optional.of("item:id | #tag | $Ingredient | { ingredient|item|tag|mod|regex|wildcard|filter|any|all|not, count }");
     }
 
     @Override
     public boolean test(Value value) {
         if (value == null || value.isNull()) return false;
-        if (value.isHostObject() && value.asHostObject() instanceof Ingredient) return true;
-        return value.hasMembers() && value.hasMember("ingredient");
+        if (value.isHostObject()) {
+            Object obj = value.asHostObject();
+            return obj instanceof SizedIngredientJS || obj instanceof Ingredient;
+        }
+        return value.isString() || value.hasArrayElements() || value.hasMembers();
     }
 
     @Override
-    public Object[] apply(Value value) {
+    public SizedIngredientJS apply(Value value) {
         try {
+            if (value == null || value.isNull()) {
+                throw new ValueConversionException(SizedIngredientJS.class, "ingredient / sized ingredient object", value,
+                    "sized ingredient cannot be null");
+            }
+
+            // Host passthrough
             if (value.isHostObject()) {
                 Object obj = value.asHostObject();
-                if (obj instanceof Ingredient ingredient) {
-                    return new Object[]{ingredient, 1};
-                }
+                if (obj instanceof SizedIngredientJS sized) return sized;
+                if (obj instanceof Ingredient ingredient) return new SizedIngredientJS(ingredient, 1);
             }
+
+            // Object form: look for an explicit count, then resolve the ingredient from
+            // either a dedicated 'ingredient' field or the whole object (which lets
+            // { item, tag, mod, regex, wildcard, any, all, not } work directly).
             if (value.hasMembers()) {
-                Ingredient ingredient;
                 int count = 1;
-                if (value.hasMember("ingredient")) {
-                    Value ingVal = value.getMember("ingredient");
-                    if (ingVal.isHostObject() && ingVal.asHostObject() instanceof Ingredient) {
-                        ingredient = (Ingredient) ingVal.asHostObject();
-                    } else {
-                        throw new ValueConversionException(Object[].class, "Ingredient host object", ingVal,
-                            "'ingredient' must be an Ingredient");
-                    }
-                } else {
-                    throw new ValueConversionException(Object[].class, "object with 'ingredient'", value,
-                        "SizedIngredient object must contain 'ingredient'");
-                }
                 if (value.hasMember("count")) {
-                    Value countVal = value.getMember("count");
-                    if (!countVal.isNumber() || !countVal.fitsInInt()) {
-                        throw new ValueConversionException(Object[].class, "integer count", countVal,
-                            "count must be an integer");
-                    }
-                    count = countVal.asInt();
-                    if (count <= 0) {
-                        throw new ValueConversionException(Object[].class, "positive integer count", count,
-                            "count must be positive: " + count);
-                    }
+                    count = parseCount(value.getMember("count"));
                 }
-                return new Object[]{ingredient, count};
+                Value ingredientValue;
+                if (value.hasMember("ingredient")) {
+                    ingredientValue = value.getMember("ingredient");
+                } else {
+                    ingredientValue = value;
+                }
+                Ingredient ingredient = IngredientAdapter.fromValue(ingredientValue);
+                return new SizedIngredientJS(ingredient, count);
             }
-            throw new ValueConversionException(Object[].class, "Ingredient host object or { ingredient, count }", value,
-                "unsupported sized ingredient value");
+
+            // String / array / scalar — resolve as a plain ingredient with count 1.
+            Ingredient ingredient = IngredientAdapter.fromValue(value);
+            return new SizedIngredientJS(ingredient, 1);
         } catch (ValueConversionException e) {
             throw e;
         } catch (RuntimeException e) {
-            throw new ValueConversionException(Object[].class, "sized ingredient", value,
+            throw new ValueConversionException(SizedIngredientJS.class, "ingredient / ingredient object with count", value,
                 e.getMessage(), e);
         }
+    }
+
+    private static int parseCount(Value value) {
+        if (!value.isNumber() || !value.fitsInInt()) {
+            throw new ValueConversionException(SizedIngredientJS.class, "integer count", value,
+                "SizedIngredient count must be an integer");
+        }
+        int count = value.asInt();
+        if (count <= 0) {
+            throw new ValueConversionException(SizedIngredientJS.class, "positive integer count", count,
+                "SizedIngredient count must be positive: " + count);
+        }
+        return count;
     }
 }

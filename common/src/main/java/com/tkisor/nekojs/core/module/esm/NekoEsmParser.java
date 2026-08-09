@@ -667,7 +667,12 @@ public final class NekoEsmParser {
                 continue;
             }
             if (c == '{') {
-                functionBodyStarts.add(i);
+                // Idempotent (DEFECT-D5): exported functions get markFunctionBodyStart called twice
+                // (parseExport + the main-loop replayScopeSyntax pass). If this body-start offset was
+                // already recorded, don't push a second orphan PendingFunctionParameters entry.
+                if (!functionBodyStarts.add(i)) {
+                    return;
+                }
                 if (parameterStart >= 0) {
                     pendingFunctionParameters.add(new PendingFunctionParameters(i, code.substring(parameterStart, parameterEnd), parameterStart));
                 }
@@ -1320,7 +1325,10 @@ public final class NekoEsmParser {
     }
 
     private boolean newlineTerminatesModuleStatement(int start) {
-        String prefix = code.substring(start, Math.min(length, start + 64)).trim();
+        // Full trimmed statement, not a 64-char prefix window (RISK-C8): the cap could cut off a
+        // long line mid-token and misclassify the statement boundary. startsWith is unaffected by
+        // the trailing length, so only the rest of the source up to end of statement is needed.
+        String prefix = trimStatementFrom(start);
         return prefix.startsWith("import")
                 || prefix.startsWith("export {")
                 || prefix.startsWith("export *")
@@ -1331,7 +1339,7 @@ public final class NekoEsmParser {
     }
 
     private boolean blockModuleStatement(int start) {
-        String prefix = code.substring(start, Math.min(length, start + 64)).trim();
+        String prefix = trimStatementFrom(start);
         return prefix.startsWith("export function")
                 || prefix.startsWith("export async function")
                 || prefix.startsWith("export class")
@@ -1345,6 +1353,29 @@ public final class NekoEsmParser {
                 && !prefix.startsWith("export default function")
                 && !prefix.startsWith("export default async function")
                 && !prefix.startsWith("export default class");
+    }
+
+    /** Returns the statement text starting at {@code start}, trimmed (RISK-C8: replaced the old
+     *  64-char prefix window with the full trimmed statement so long statements are not cut off
+     *  mid-token). All callers use startsWith, so only the leading tokens matter, but the full
+     *  text is returned to preserve newline-spanning signatures.
+     *  Cap at the next statement terminator (`;` or unmatched `}`) to bound the substring; if none
+     *  is found, fall back to a generous window. */
+    private String trimStatementFrom(int start) {
+        int begin = start;
+        while (begin < length && Character.isWhitespace(code.charAt(begin))) begin++;
+        // Bound the scan: walk forward skipping balanced strings/templates/comments and find the
+        // first top-level `;`. If none within the remaining source, take to end.
+        int end = begin;
+        while (end < length) {
+            char c = code.charAt(end);
+            if (c == '\'' || c == '"') { end = skipString(end, c); continue; }
+            if (c == '`') { end = skipTemplate(end); continue; }
+            if (c == ';') break;
+            end++;
+        }
+        while (end > begin && Character.isWhitespace(code.charAt(end - 1))) end--;
+        return code.substring(begin, end);
     }
 
     private boolean topLevel() {
@@ -1419,7 +1450,10 @@ public final class NekoEsmParser {
         int previous = previousNonWhitespace(slash - 1);
         if (previous < 0) return true;
         char c = code.charAt(previous);
-        return "({[=,:;!&|?+-*~^<>".indexOf(c) >= 0;
+        // Mirror NekoSourceLexerBase.looksLikeRegexStart exactly (BUG-B1):
+        // adds `}`, `%`, `/`, newline, CR that this set used to miss, so a `/`
+        // after a closing brace (e.g. `function f(){} /regex/`) is not treated as division.
+        return "=(:,[!&|?;{}<>+-*/%\n\r".indexOf(c) >= 0;
     }
 
     private int previousNonWhitespace(int index) {

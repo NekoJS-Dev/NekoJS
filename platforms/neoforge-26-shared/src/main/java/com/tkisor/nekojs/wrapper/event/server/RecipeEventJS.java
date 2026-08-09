@@ -135,20 +135,10 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
         if (ingredient == null || ingredient.isEmpty()) return new JsonArray();
-        JsonElement tagJson = serializeTagIngredient(ingredient);
-        if (tagJson != null) return tagJson;
+        // B5: always go through Ingredient.CODEC so the JSON shape matches NF1.21.1
+        // (array/object form). Removed the previous serializeTagIngredient special-case
+        // that produced JsonPrimitive("#"+key) for single-tag ingredients.
         return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
-    }
-
-    private JsonElement serializeTagIngredient(Ingredient ingredient) {
-        var unwrapped = ingredient.values.unwrap();
-        if (unwrapped.left().isPresent()) {
-            var key = unwrapped.left().get();
-            if (key.registry().equals(Registries.ITEM)) {
-                return new JsonPrimitive("#" + key.location());
-            }
-        }
-        return null;
     }
 
     public JsonElement serializeFluidStack(FluidStack stack) {

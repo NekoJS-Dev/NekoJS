@@ -62,8 +62,9 @@ import java.util.Set;
 import java.util.function.Function;
 
 public final class GoalRegistry {
-    private static final Map<EntityType<?>, List<GoalFactory>> GOALS = new HashMap<>();
-    private static final Set<Mob> APPLIED_JOIN_GOALS = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    // 注册阶段（registry event 线程）写、gameplay 阶段（主线程）读，用 ConcurrentHashMap 保证 safe-publication
+    private static final Map<EntityType<?>, List<GoalFactory>> GOALS = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Set<Mob> APPLIED_JOIN_GOALS = java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
 
     private GoalRegistry() {}
 
