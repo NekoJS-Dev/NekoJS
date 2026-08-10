@@ -268,13 +268,15 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
         return this.bus.listen(priority, event -> {
             try {
-                synchronized (context) {
-                    String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                    try {
-                        listener.executeVoid(event);
-                    } finally {
-                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
-                    }
+                // No synchronized(context): the Graal Context is single-threaded (allowMultiThread
+                // is not set), so Graal itself enforces single-thread access. All listener invocations
+                // (NeoForge events + timer flushes) run on the game tick thread. The lock was a redundant
+                // uncontended monitor enter/exit per event dispatch.
+                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                try {
+                    listener.executeVoid(event);
+                } finally {
+                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -296,14 +298,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
         return bus.listen(priority, event -> {
             try {
-                synchronized (context) {
-                    String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                    try {
-                        Value result = listener.execute(event);
-                        return result.isBoolean() && result.asBoolean();
-                    } finally {
-                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
-                    }
+                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                try {
+                    Value result = listener.execute(event);
+                    return result.isBoolean() && result.asBoolean();
+                } finally {
+                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -330,15 +330,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 priority,
                 event -> {
                     try {
-                        synchronized (context) {
-                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                            try {
-                                if (listener.canExecute()) {
-                                    listener.executeVoid(event);
-                                }
-                            } finally {
-                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                        String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                        try {
+                            if (listener.canExecute()) {
+                                listener.executeVoid(event);
                             }
+                        } finally {
+                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -365,16 +363,14 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 priority,
                 event -> {
                     try {
-                        synchronized (context) {
-                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                            try {
-                                if (listener.canExecute()) {
-                                    Value result = listener.execute(event);
-                                    return result.isBoolean() && result.asBoolean();
-                                }
-                            } finally {
-                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                        String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                        try {
+                            if (listener.canExecute()) {
+                                Value result = listener.execute(event);
+                                return result.isBoolean() && result.asBoolean();
                             }
+                        } finally {
+                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();

@@ -18,6 +18,13 @@ public class SourceMapRegistry {
     private static final Map<String, NormalizedSourceMap> MAPPINGS_MAP = new ConcurrentHashMap<>();
     private static final java.util.logging.Logger LOGGER =
             java.util.logging.Logger.getLogger(SourceMapRegistry.class.getName());
+    // Cached root URI for path normalization. NekoJSPaths.root is immutable after construction
+    // (see NekoJSPaths javadoc), so this is computed once and reused across all lookups.
+    // Volatile + lazy: SourceMapRegistry may be class-loaded before NekoJSPaths is bound.
+    private static volatile String cachedRootUri;
+    // Backstop cap on cached source maps. Each entry holds decoded VLQ mappings + sourcesContent,
+    // so unbounded growth under script churn could exhaust memory. Reload clears the map (CONC-2).
+    private static final int CACHE_HARD_CAP = 4096;
 
     public static void register(String scriptPath, String sourceMapJson) {
         register(scriptPath, sourceMapJson, 0);
@@ -27,6 +34,13 @@ public class SourceMapRegistry {
         if (scriptPath == null) return;
         String generatedPath = normalizeLookupPath(scriptPath);
         NormalizedSourceMap sourceMap = parse(generatedPath, sourceMapJson, prependedLineCount);
+        // Hard cap to guard against unbounded growth in long-running sessions with heavy
+        // script churn. Reload clears the map (CONC-2), so this is a backstop for edge cases
+        // where many distinct scripts are compiled without a full reload.
+        if (MAPPINGS_MAP.size() > CACHE_HARD_CAP) {
+            LOGGER.warning("SourceMapRegistry exceeded " + CACHE_HARD_CAP + " entries; clearing to bound memory");
+            MAPPINGS_MAP.clear();
+        }
         MAPPINGS_MAP.put(generatedPath, sourceMap);
         if (sourceMap.file != null && !sourceMap.file.isBlank()) {
             MAPPINGS_MAP.put(sourceMap.file, sourceMap);
@@ -199,7 +213,11 @@ public class SourceMapRegistry {
 
     private static String normalizeLookupPath(String path) {
         String normalized = path.replace('\\', '/');
-        String rootUri = NekoJSPaths.get().root().toUri().toString();
+        String rootUri = cachedRootUri;
+        if (rootUri == null) {
+            rootUri = NekoJSPaths.get().root().toUri().toString();
+            cachedRootUri = rootUri;
+        }
         if (normalized.startsWith(rootUri)) {
             normalized = normalized.substring(rootUri.length());
         }
@@ -326,15 +344,15 @@ public class SourceMapRegistry {
 
         OriginalPosition map(int jsLine, int jsColumn) {
             int adjustedLine = jsLine - Math.max(0, prependedLineCount);
-            OriginalPosition adjustedFallback = new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             int lineIndex = adjustedLine - 1;
             if (lineIndex < 0 || lineIndex >= lineMappings.size()) {
-                return adjustedFallback;
+                // Miss: allocate the fallback only when we actually need it (not on every call).
+                return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             }
 
             List<MappingEntry> entries = lineMappings.get(lineIndex);
             if (entries == null || entries.isEmpty()) {
-                return adjustedFallback;
+                return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             }
 
             int targetColumn = Math.max(0, jsColumn - 1);

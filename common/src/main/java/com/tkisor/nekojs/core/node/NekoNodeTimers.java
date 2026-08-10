@@ -151,19 +151,19 @@ public final class NekoNodeTimers implements AutoCloseable {
         Context context = callback.getContext();
         String scriptId = scriptIds.get(id);
         try {
-            synchronized (context) {
-                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+            // No synchronized(context): timer callbacks are flushed on the game tick thread
+            // (see NekoNodeTimers.flushReadyCallbacks), and the Graal Context is single-threaded.
+            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+            if (scriptId != null && !scriptId.isBlank()) {
+                activeScriptIds.put(context, scriptId);
+            }
+            try {
+                callback.executeVoid(args == null ? new Object[0] : args);
+            } finally {
                 if (scriptId != null && !scriptId.isBlank()) {
-                    activeScriptIds.put(context, scriptId);
+                    activeScriptIds.remove(context);
                 }
-                try {
-                    callback.executeVoid(args == null ? new Object[0] : args);
-                } finally {
-                    if (scriptId != null && !scriptId.isBlank()) {
-                        activeScriptIds.remove(context);
-                    }
-                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
-                }
+                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
             }
         } catch (Throwable e) {
             errorTracker.recordCallbackError(scriptType, "timer", e);
