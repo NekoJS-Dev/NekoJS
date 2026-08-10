@@ -15,7 +15,7 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 ### 近期完成
 
 - [x] **架构治理（2026-07-24）**：
-    - 移除已失效的 `architectureCheck` 正则计数任务（`gradle/architecture-check.gradle` + 根 `apply from`），架构迁移改由代码评审、定向测试和 `ai_arch/plan.md` 清单跟踪。
+    - 移除已失效的 `architectureCheck` 正则计数任务（`gradle/architecture-check.gradle` + 根 `apply from`），架构迁移改由代码评审、定向测试和 `ai_arch/archive/plan-architecture-optimization.md` 清单跟踪。
     - **Probe 替换机制修复**：内置 `ProbeOrchestrator` 改为 fallback（`ProbeRegistry.setFallback`），单个第三方实现（`setGenerator`）现在能真正替换它；多个第三方实现仍确定性冲突。`ProbeRegistry` 解耦 `NekoJS`，改用 JDK `java.util.logging`。新增 `ProbeRegistryTest` 覆盖 fallback 生效、第三方替换、多方冲突、锁后注册。
     - **事务式完整 reload**：SERVER/CLIENT/TEST 的 `reloadScripts` 改为先在候选 Context 加载、成功才切换并关闭旧 Context；失败时丢弃候选并保留旧 Context，避免旧实现「先销毁旧环境再加载」造成的半失效崩溃。STARTUP 因涉及不可逆注册保持 reset+load 语义。`runTestScripts` 同样改为事务式。
     - **HostAccess 初始化顺序修复**：`NekoSharedHostAccess` 从静态单例改为构造注入实例，基于已冻结的 adapter snapshot 构建，消除类初始化时机固化 adapter 风险。
@@ -383,12 +383,12 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 ## 架构迁移：显式依赖与生命周期治理
 
 > 目标：在不牺牲脚本 API 简洁性的前提下，将有生命周期、初始化顺序或测试污染风险的全局状态迁移到显式对象图。
-> 当前实施清单：[ai_arch/plan.md](../ai_arch/plan.md)
+> 当前实施清单：[ai_arch/archive/plan-architecture-optimization.md](../ai_arch/archive/plan-architecture-optimization.md)（已完成归档）
 
 ### Phase 0：架构规则冻结（历史阶段）
 
 - [x] 盘点 `NekoJS.COMMON`、`current()`、static mutable config 等隐藏依赖并完成第一轮收敛。
-- [x] 架构迁移改由代码评审、定向测试和 `ai_arch/plan.md` 清单跟踪；旧的正则计数型 `architectureCheck` 已退役。
+- [x] 架构迁移改由代码评审、定向测试和 `ai_arch/archive/plan-architecture-optimization.md` 清单跟踪；旧的正则计数型 `architectureCheck` 已退役。
 
 ### Phase 1：核心值对象、配置和错误状态实例化
 

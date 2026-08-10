@@ -1,7 +1,7 @@
 # Graal-free Conversion SPI
 
 **Date:** 2026-07-27  
-**Status:** draft  
+**Status:** implemented (2026-08) — `JsValueView` / `JsTypeAdapter` / `ConversionPrecedence` / `AbstractJsTypeAdapter` 已在 `common-api/.../api/data/`；桥三件套（`GraalValueView`/`LegacyAdapterBridge`/`NewAdapterBridge`）在 `common/.../core/bridge/`；`common-api` 零 Graal import（grep 验证）。注：仅 `ComponentAdapter` 已迁新 SPI，其余 ~27 平台适配器仍 legacy（见 `.zcode/audit-improvement/05-adapter-marshalling.md` ADAPT-1）。  
 **Context:** `:common-api` module skeleton exists; no actual API packages have been migrated yet because `JSTypeAdapter` and related conversion types leak Graal types (`graal.graalvm.polyglot.Value`, `HostAccess.TargetMappingPrecedence`) into the public SPI.
 
 ## Goal
