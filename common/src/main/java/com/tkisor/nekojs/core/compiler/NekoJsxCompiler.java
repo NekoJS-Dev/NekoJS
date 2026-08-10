@@ -838,20 +838,7 @@ public final class NekoJsxCompiler {
         }
 
         private int skipSlash(int slash) {
-            if (slash + 1 >= length) {
-                return slash;
-            }
-            char next = source.charAt(slash + 1);
-            if (next == '/') {
-                return skipLineComment(slash + 2);
-            }
-            if (next == '*') {
-                return skipBlockComment(slash + 2);
-            }
-            if (looksLikeRegexStart(slash)) {
-                return skipRegex(slash + 1);
-            }
-            return slash;
+            return NekoSourceLexerBase.skipSlash(source, length, slash);
         }
 
         private int skipString(int start, char quote) {

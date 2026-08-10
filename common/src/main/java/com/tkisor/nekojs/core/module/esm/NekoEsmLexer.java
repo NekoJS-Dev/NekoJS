@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module.esm;
 
+import com.tkisor.nekojs.core.compiler.NekoSourceLexerBase;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -95,40 +97,16 @@ public final class NekoEsmLexer {
     }
 
     private int skipTemplate(int start) {
-        int i = start + 1;
-        while (i < length) {
-            char c = source.charAt(i);
-            if (c == '\\') {
-                i += 2;
-                continue;
-            }
-            if (c == '`') return i + 1;
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipTemplate(source, length, start);
     }
 
     private int skipRegex(int start) {
-        int i = start;
-        boolean inClass = false;
-        while (i < length) {
-            char c = source.charAt(i);
-            if (c == '\\') {
-                i += 2;
-                continue;
-            }
-            if (c == '[') inClass = true;
-            else if (c == ']') inClass = false;
-            else if (c == '/' && !inClass) {
-                i++;
-                while (i < length && Character.isLetter(source.charAt(i))) i++;
-                return i;
-            }
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipRegex(source, length, start);
     }
 
+    // Token-based regex-start detection: structurally different from NekoSourceLexerBase's
+    // char-based version (this lexer has a real token stream). Kept local on purpose —
+    // the char-based base heuristic is not applicable here.
     private boolean looksLikeRegexStart(List<NekoEsmToken> tokens) {
         if (tokens.isEmpty()) return true;
         NekoEsmToken previous = tokens.get(tokens.size() - 1);
@@ -140,18 +118,11 @@ public final class NekoEsmLexer {
     }
 
     private int skipLineComment(int start) {
-        int i = start;
-        while (i < length && source.charAt(i) != '\n' && source.charAt(i) != '\r') i++;
-        return i;
+        return NekoSourceLexerBase.skipLineComment(source, length, start);
     }
 
     private int skipBlockComment(int start) {
-        int i = start;
-        while (i + 1 < length) {
-            if (source.charAt(i) == '*' && source.charAt(i + 1) == '/') return i + 2;
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipBlockComment(source, length, start);
     }
 
     private char peek(int index) {
@@ -159,17 +130,16 @@ public final class NekoEsmLexer {
     }
 
     private int readIdentifierEnd(int start) {
-        int i = start;
-        while (i < length && isIdentifierPart(source.charAt(i))) i++;
-        return i;
+        return NekoSourceLexerBase.readIdentifierEnd(source, length, start);
     }
 
+    // Unified onto NekoSourceLexerBase (Unicode identifier rules + '$' + '_').
     private static boolean isIdentifierStart(char c) {
-        return c == '_' || c == '$' || Character.isLetter(c);
+        return NekoSourceLexerBase.isIdentifierStart(c);
     }
 
     private static boolean isIdentifierPart(char c) {
-        return isIdentifierStart(c) || Character.isDigit(c);
+        return NekoSourceLexerBase.isIdentifierPart(c);
     }
 
     private record StringRead(int end, String value) {}

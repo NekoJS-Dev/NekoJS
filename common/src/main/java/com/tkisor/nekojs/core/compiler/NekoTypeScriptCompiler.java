@@ -1502,12 +1502,7 @@ public final class NekoTypeScriptCompiler {
         }
 
         private int skipSlash(int slash) {
-            if (slash + 1 >= length) return slash;
-            char next = source.charAt(slash + 1);
-            if (next == '/') return skipLineComment(slash + 2);
-            if (next == '*') return skipBlockComment(slash + 2);
-            if (looksLikeRegexStart(slash)) return skipRegex(slash + 1);
-            return slash;
+            return NekoSourceLexerBase.skipSlash(source, length, slash);
         }
 
         private int skipString(int start, char quote) {
@@ -1531,10 +1526,10 @@ public final class NekoTypeScriptCompiler {
         }
 
         private boolean looksLikeRegexStart(int slash) {
-            int previous = previousNonWhitespace(slash - 1);
-            if (previous < 0) return true;
-            char c = source.charAt(previous);
-            return "=(:,[!&|?;{}\n\r".indexOf(c) >= 0;
+            // Delegate to the shared base so this char-set stays in sync with JSX/ESM.
+            // The previous private copy was missing `< > + - * / %` (7 chars), which could
+            // mis-classify `a < /regex/` or `a + /regex/` as division in TS source.
+            return NekoSourceLexerBase.looksLikeRegexStart(source, length, slash);
         }
 
         private int nextNonWhitespace(int index) {

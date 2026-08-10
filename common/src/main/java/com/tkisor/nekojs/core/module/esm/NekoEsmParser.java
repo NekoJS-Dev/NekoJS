@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.core.module.esm;
 
 
+import com.tkisor.nekojs.core.compiler.NekoSourceLexerBase;
+
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -1382,90 +1384,41 @@ public final class NekoEsmParser {
         return braceDepth == 0 && parenDepth == 0 && bracketDepth == 0;
     }
 
+    // ---- Scanner primitives: delegate to the shared NekoSourceLexerBase ----
+    // Previously these were hand-rolled copies that had to be kept in sync manually
+    // (the "Mirror exactly (BUG-B1)" comment below used to live here). Now they all
+    // delegate to the single source of truth in core.compiler.
+
     private int skipString(int start, char quote) {
-        int i = start + 1;
-        while (i < length) {
-            char c = code.charAt(i);
-            if (c == '\\') {
-                i += 2;
-                continue;
-            }
-            if (c == quote) return i + 1;
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipString(code, length, start, quote);
     }
 
     private int skipTemplate(int start) {
-        int i = start + 1;
-        while (i < length) {
-            char c = code.charAt(i);
-            if (c == '\\') {
-                i += 2;
-                continue;
-            }
-            if (c == '`') return i + 1;
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipTemplate(code, length, start);
     }
 
     private int skipLineComment(int start) {
-        int i = start;
-        while (i < length && code.charAt(i) != '\n' && code.charAt(i) != '\r') i++;
-        return i;
+        return NekoSourceLexerBase.skipLineComment(code, length, start);
     }
 
     private int skipBlockComment(int start) {
-        int i = start;
-        while (i + 1 < length) {
-            if (code.charAt(i) == '*' && code.charAt(i + 1) == '/') return i + 2;
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipBlockComment(code, length, start);
     }
 
     private int skipRegex(int start) {
-        int i = start;
-        boolean inClass = false;
-        while (i < length) {
-            char c = code.charAt(i);
-            if (c == '\\') {
-                i += 2;
-                continue;
-            }
-            if (c == '[') inClass = true;
-            else if (c == ']') inClass = false;
-            else if (c == '/' && !inClass) {
-                i++;
-                while (i < length && Character.isLetter(code.charAt(i))) i++;
-                return i;
-            }
-            i++;
-        }
-        return length;
+        return NekoSourceLexerBase.skipRegex(code, length, start);
     }
 
     private boolean looksLikeRegexStart(int slash) {
-        int previous = previousNonWhitespace(slash - 1);
-        if (previous < 0) return true;
-        char c = code.charAt(previous);
-        // Mirror NekoSourceLexerBase.looksLikeRegexStart exactly (BUG-B1):
-        // adds `}`, `%`, `/`, newline, CR that this set used to miss, so a `/`
-        // after a closing brace (e.g. `function f(){} /regex/`) is not treated as division.
-        return "=(:,[!&|?;{}<>+-*/%\n\r".indexOf(c) >= 0;
+        return NekoSourceLexerBase.looksLikeRegexStart(code, length, slash);
     }
 
     private int previousNonWhitespace(int index) {
-        int i = index;
-        while (i >= 0 && Character.isWhitespace(code.charAt(i))) i--;
-        return i;
+        return NekoSourceLexerBase.previousNonWhitespace(code, length, index);
     }
 
     private int nextNonWhitespace(int index) {
-        int i = index;
-        while (i < length && Character.isWhitespace(code.charAt(i))) i++;
-        return i;
+        return NekoSourceLexerBase.nextNonWhitespace(code, length, index);
     }
 
     private char peek(int index) {
@@ -1473,9 +1426,7 @@ public final class NekoEsmParser {
     }
 
     private int readIdentifierEnd(int start) {
-        int i = start;
-        while (i < length && isIdentifierPart(code.charAt(i))) i++;
-        return i;
+        return NekoSourceLexerBase.readIdentifierEnd(code, length, start);
     }
 
     private boolean wordBoundary(int index) {
@@ -1662,12 +1613,15 @@ public final class NekoEsmParser {
         }
     }
 
+    // Unified onto NekoSourceLexerBase (Unicode identifier rules + '$' + '_').
+    // The previous Letter+Digit rules rejected combining marks, ZWJ, and other
+    // Unicode identifier characters that the ES spec permits.
     private static boolean isIdentifierStart(char c) {
-        return c == '_' || c == '$' || Character.isLetter(c);
+        return NekoSourceLexerBase.isIdentifierStart(c);
     }
 
     private static boolean isIdentifierPart(char c) {
-        return isIdentifierStart(c) || Character.isDigit(c);
+        return NekoSourceLexerBase.isIdentifierPart(c);
     }
 
     private IllegalArgumentException error(String message) {

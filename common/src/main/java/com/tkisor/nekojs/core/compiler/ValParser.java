@@ -310,6 +310,7 @@ public final class ValParser {
     private boolean matchKw(String kw) { int saved = pos; boolean ok = match(kw); if (!ok) pos = saved; return ok; }
     private char peekAfterKw(String kw) { int i = pos + kw.length(); while (i < n && Character.isWhitespace(src.charAt(i))) i++; return i < n ? src.charAt(i) : '\0'; }
     private String readIdent() { int s = pos; while (pos < n && isIdPart(src.charAt(pos))) pos++; return pos > s ? src.substring(s, pos) : null; }
-    private static boolean isIdStart(char c) { return c == '_' || c == '$' || Character.isLetter(c); }
-    private static boolean isIdPart(char c) { return c == '_' || c == '$' || Character.isLetterOrDigit(c); }
+    // Unified onto NekoSourceLexerBase (Unicode identifier rules + '$' + '_').
+    private static boolean isIdStart(char c) { return NekoSourceLexerBase.isIdentifierStart(c); }
+    private static boolean isIdPart(char c) { return NekoSourceLexerBase.isIdentifierPart(c); }
 }
