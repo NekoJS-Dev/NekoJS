@@ -71,7 +71,9 @@ public final class GlobalBindingMemberValidator {
                                         file,
                                         new NekoEsmSpan(access.start(), access.start() + member.length()),
                                         lc[0], lc[1], msg)));
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                        com.tkisor.nekojs.NekoJS.LOGGER.warn("Binding preflight report failed for {}", resolved, ignored);
+                    }
                 }
             }
         }

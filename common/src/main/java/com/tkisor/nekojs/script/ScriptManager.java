@@ -16,6 +16,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
@@ -200,6 +201,10 @@ public final class ScriptManager implements AutoCloseable {
             for (var binding : pluginRuntime.bindings(scriptType).values()) {
                 binding.close(scriptType);
             }
+            // Clear the process-lifetime static caches (compiled modules, source maps,
+            // virtual ESM URIs) so stale entries from deleted/renamed scripts don't leak.
+            NekoModulePipelineCache.clear();
+            NekoEsmVirtualModuleRegistry.clear();
 
             final ScriptEnvironmentFactory.Environment candidate;
             try {
@@ -342,6 +347,11 @@ public final class ScriptManager implements AutoCloseable {
         private void fullReloadCleanup () {
             scriptEventBridge.clearListeners(scriptType);
             errorTracker.clearByType(scriptType);
+            // Clear the process-lifetime static caches so deleted/renamed scripts don't
+            // leak compiled modules and source maps across reloads. NekoModulePipelineCache.clear()
+            // also clears SourceMapRegistry; NekoEsmVirtualModuleRegistry holds virtual ESM URIs.
+            NekoModulePipelineCache.clear();
+            NekoEsmVirtualModuleRegistry.clear();
         }
 
         // ---- 路径解析 ----

@@ -35,7 +35,17 @@ public final class ApiGuestErrorFactory {
     Object raise(ApiInvocationException error) {
         Map<String, Object> properties = new LinkedHashMap<>(error.details());
         properties.put("code", error.code());
-        properties.put("message", error.getMessage());
+        // When the API exception wraps a cause (e.g. an addon's unexpected exception
+        // surfaced as INVOCATION_ERROR), append the cause's message so the script
+        // author sees the actual failure text in the JS Error.message, not just the
+        // generic wrapper message.
+        String message = error.getMessage();
+        Throwable cause = error.getCause();
+        if (cause != null && cause.getMessage() != null && !cause.getMessage().isBlank()
+                && !cause.getMessage().equals(message)) {
+            message = message + ": " + cause.getMessage();
+        }
+        properties.put("message", message);
         return throwError.execute(ProxyObject.fromMap(properties));
     }
 }

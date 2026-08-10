@@ -1,20 +1,23 @@
 package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.data.Binding;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.common.NeoForge;
 import graal.graalvm.polyglot.Value;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
-public class NativeEventsJS {
+public class NativeEventsJS implements Binding {
 
-    private static final List<Consumer<? extends Event>> REGISTERED_LISTENERS = new ArrayList<>();
+    // CopyOnWriteArrayList: registration (JS/reload thread) and clear() (reload thread) can race.
+    private static final List<Consumer<? extends Event>> REGISTERED_LISTENERS = new CopyOnWriteArrayList<>();
 
     public static void clear() {
         for (Consumer<? extends Event> listener : REGISTERED_LISTENERS) {
@@ -138,5 +141,22 @@ public class NativeEventsJS {
         }
         if (obj instanceof Value v && v.isString()) return resolvePriority(v.asString());
         return EventPriority.NORMAL;
+    }
+
+    // ---- Binding 生命周期：STARTUP reload 时注销旧的原生事件监听器 ----
+
+    @Override
+    public String name() {
+        return "NativeEvents";
+    }
+
+    @Override
+    public Object value() {
+        return this;
+    }
+
+    @Override
+    public void close(ScriptType scriptType) {
+        clear();
     }
 }

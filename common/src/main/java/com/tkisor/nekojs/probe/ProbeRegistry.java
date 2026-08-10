@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.probe;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,7 +28,7 @@ public final class ProbeRegistry {
     private static volatile ProbeGenerator fallbackGenerator;
     private static volatile String fallbackRegistrar;
     private static volatile boolean locked = false;
-    private static final List<String> registrars = new ArrayList<>();
+    private static final List<String> registrars = new CopyOnWriteArrayList<>();
 
     private ProbeRegistry() {}
 

@@ -7,6 +7,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerListener;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
@@ -18,7 +20,9 @@ import java.util.WeakHashMap;
  */
 public final class InventoryChangeListener implements ContainerListener {
 
-    private static final WeakHashMap<Player, InventoryChangeListener> CACHE = new WeakHashMap<>();
+    // WeakHashMap so entries are reclaimed when the player is GC'd; synchronized
+    // because getOrCreate can be reached from multiple event paths.
+    private static final Map<Player, InventoryChangeListener> CACHE = Collections.synchronizedMap(new WeakHashMap<>());
 
     private final Player player;
 

@@ -16,14 +16,13 @@ import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
@@ -138,14 +137,15 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         if (scriptId == null || scriptId.isBlank()) return;
         List<ScriptEventListenerToken<EVENT>> tokens = tokensByType.get(type);
         if (tokens == null) return;
-        Iterator<ScriptEventListenerToken<EVENT>> iterator = tokens.iterator();
-        while (iterator.hasNext()) {
-            ScriptEventListenerToken<EVENT> token = iterator.next();
+        // CopyOnWriteArrayList.iterator() does not support remove(); use removeIf,
+        // which atomically removes matching tokens while unregistering from the bus.
+        tokens.removeIf(token -> {
             if (scriptId.equals(token.scriptId())) {
                 bus.unregister(token.token());
-                iterator.remove();
+                return true;
             }
-        }
+            return false;
+        });
         if (tokens.isEmpty()) {
             tokensByType.remove(type);
         }
@@ -231,7 +231,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
         ScriptType type = ScriptContextRegistry.scriptTypeOf(listener.getContext());
         String scriptId = ScriptContextRegistry.currentScriptIdOf(listener.getContext());
-        tokensByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
+        // Inner list is CopyOnWriteArrayList: read-heavy (post iterates tokens via the
+        // compiled bus) / write-rare (register on script load, clear on reload). Matches
+        // the EventBusBase pattern and survives concurrent reload+post without CME.
+        tokensByType.computeIfAbsent(type, ignored -> new CopyOnWriteArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
         return true;
     }
 

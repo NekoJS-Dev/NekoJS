@@ -126,7 +126,7 @@ public final class ApiValueMarshaller {
             if (matches.size() != 1) {
                 throw new ApiRuntimeException(
                         ApiErrorCodes.TYPE_MISMATCH,
-                        "Argument does not match exactly one union branch",
+                        "Argument does not match exactly one union branch (received " + describeValue(graalValue) + ")",
                         symbolIdStr, null, null, null, null);
             }
             return convertValue(graalValue, matches.getFirst(), symbolIdStr);
@@ -158,7 +158,7 @@ public final class ApiValueMarshaller {
                 if (!Double.isFinite(number)) {
                     throw new ApiRuntimeException(
                             ApiErrorCodes.TYPE_MISMATCH,
-                            "Number argument must be finite",
+                            "Number argument must be finite (received " + graalValue.toString() + ")",
                             symbolIdStr, null, null, null, null);
                 }
                 return new JsNumber(number, graalValue.toString());
@@ -171,7 +171,7 @@ public final class ApiValueMarshaller {
             }
             throw new ApiRuntimeException(
                     ApiErrorCodes.TYPE_MISMATCH,
-                    "Argument does not match primitive type " + typeName,
+                    "Argument does not match primitive type " + typeName + " (received " + describeValue(graalValue) + ")",
                     symbolIdStr, null, null, null, null);
         }
 
@@ -584,6 +584,50 @@ public final class ApiValueMarshaller {
 
     private static ApiRuntimeException typeMismatch(String symbolId, String message) {
         return new ApiRuntimeException(ApiErrorCodes.TYPE_MISMATCH, message, symbolId, null, null, null, null);
+    }
+
+    /**
+     * Produces a short human-readable description of a Graal {@link Value}'s JS kind,
+     * for inclusion in type-mismatch error messages so the script author can see what
+     * they actually passed. Capped at ~80 chars to avoid leaking huge structures.
+     */
+    private static String describeValue(Value graalValue) {
+        String kind;
+        if (graalValue.isNull()) {
+            return "null";
+        }
+        if (graalValue.isString()) {
+            kind = "string";
+        } else if (graalValue.isNumber()) {
+            kind = "number";
+        } else if (graalValue.isBoolean()) {
+            kind = "boolean";
+        } else if (graalValue.canExecute()) {
+            kind = "function";
+        } else if (graalValue.hasArrayElements()) {
+            kind = "array";
+        } else if (graalValue.isHostObject()) {
+            kind = "host object (" + safeClassName(graalValue) + ")";
+        } else if (graalValue.hasMembers()) {
+            kind = "object";
+        } else {
+            kind = "unknown";
+        }
+        if ("string".equals(kind) || "number".equals(kind) || "boolean".equals(kind)) {
+            String repr = graalValue.toString();
+            if (repr.length() > 60) repr = repr.substring(0, 57) + "...";
+            return kind + " \"" + repr + "\"";
+        }
+        return kind;
+    }
+
+    private static String safeClassName(Value graalValue) {
+        try {
+            Object host = graalValue.as(Object.class);
+            return host != null ? host.getClass().getSimpleName() : "null";
+        } catch (Exception ignored) {
+            return "?";
+        }
     }
 
     private static ApiRuntimeException jsonLimit(String symbolId, String message) {

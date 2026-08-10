@@ -8,18 +8,21 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class PDataSyncService {
     private static final int MAX_SYNCS_PER_TICK = 256;
     private static final int MAX_SYNC_TAG_CHARS = 32768;
-    private static final Set<Entity> DIRTY_ENTITIES = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    private static final Map<Integer, Integer> SERVER_REVISIONS = new HashMap<>();
-    private static final Map<Integer, CompoundTag> CLIENT_ENTITY_MIRROR = new HashMap<>();
-    private static final Map<Integer, Integer> CLIENT_REVISIONS = new HashMap<>();
+    // IdentityHashMap-backed for entity-identity semantics; synchronized because
+    // markDirty (JS/timer thread) and flush (server tick thread) can overlap.
+    private static final Set<Entity> DIRTY_ENTITIES = Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));
+    private static final Map<Integer, Integer> SERVER_REVISIONS = new ConcurrentHashMap<>();
+    private static final Map<Integer, CompoundTag> CLIENT_ENTITY_MIRROR = new ConcurrentHashMap<>();
+    private static final Map<Integer, Integer> CLIENT_REVISIONS = new ConcurrentHashMap<>();
 
     private PDataSyncService() {}
 

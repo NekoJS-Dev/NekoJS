@@ -461,7 +461,9 @@ public final class EventCallbackSourceValidator {
             ScriptType type = ScriptBindingSchema.inferType(context.file);
             ScriptErrorReporter.recordCallbackError(type, "event-cb-preflight",
                     new NekoEsmLinkException(new NekoEsmDiagnostic(context.file, new NekoEsmSpan(offset, offset), lc[0], lc[1], msg)));
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            com.tkisor.nekojs.NekoJS.LOGGER.warn("Event callback preflight report failed", ignored);
+        }
     }
 
     private static int[] lc(String src, int o) {

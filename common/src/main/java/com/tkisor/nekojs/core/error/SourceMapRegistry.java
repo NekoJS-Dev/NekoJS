@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SourceMapRegistry {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     private static final Map<String, NormalizedSourceMap> MAPPINGS_MAP = new ConcurrentHashMap<>();
+    private static final java.util.logging.Logger LOGGER =
+            java.util.logging.Logger.getLogger(SourceMapRegistry.class.getName());
 
     public static void register(String scriptPath, String sourceMapJson) {
         register(scriptPath, sourceMapJson, 0);
@@ -73,6 +75,7 @@ public class SourceMapRegistry {
             }
             JsonObject root = rootElement.getAsJsonObject();
             if (root.has("sections")) {
+                LOGGER.warning("Source map for " + generatedPath + " uses indexed 'sections' format, which is not supported; stack traces will point at generated code");
                 return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
             }
 
@@ -90,6 +93,7 @@ public class SourceMapRegistry {
             }
             return new NormalizedSourceMap(generatedPath, file, prependedLineCount, parseMappings(mappings, sources.size(), names.size()), sources, sourcesContent, names);
         } catch (Exception e) {
+            LOGGER.warning("Failed to parse source map for " + generatedPath + ": " + e.getMessage() + "; stack traces will point at generated code");
             return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
         }
     }

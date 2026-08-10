@@ -45,20 +45,27 @@ public abstract class EventBusBase<EVENT, LISTENER> {
     }
 
     public final EventListenerToken<EVENT> listen(byte priority, LISTENER listener) {
-        built = null;
         // The key is held STRONGLY on the token (no WeakReference): see
         // EventListenerTokenImpl javadoc. A weak ref would let the dispatch key be
         // GC'd while the token still lives in a per-key child bus, which makes
         // DispatchEventBusBase.unregister fall back to mainBus and always return false.
         var token = new EventListenerTokenImpl<>(eventType, priority, listener, key);
         tokens.add(token);
+        // Invalidate the compiled snapshot under the same monitor as getBuilt's
+        // recompile, so a concurrent post() never observes a stale non-null `built`
+        // in the window between mutation and invalidation.
+        synchronized (this) {
+            built = null;
+        }
         return token;
     }
 
     public final boolean unregister(EventListenerToken<EVENT> token) {
         var changed = token instanceof EventListenerTokenImpl<?, ?> && this.tokens.remove(token);
         if (changed) {
-            built = null;
+            synchronized (this) {
+                built = null;
+            }
         }
         return changed;
     }

@@ -22,11 +22,11 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.WeakHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
@@ -51,9 +51,9 @@ import java.util.function.Function;
 public final class GoalRegistry {
 
     /** Goals keyed by entity registry id. */
-    private static final Map<ResourceLocation, List<GoalFactory>> GOALS = new HashMap<>();
+    private static final Map<ResourceLocation, List<GoalFactory>> GOALS = new ConcurrentHashMap<>();
     /** Targeting goals keyed by entity registry id (added to {@code mob.targetTasks}). */
-    private static final Map<ResourceLocation, List<GoalFactory>> TARGET_GOALS = new HashMap<>();
+    private static final Map<ResourceLocation, List<GoalFactory>> TARGET_GOALS = new ConcurrentHashMap<>();
     /**
      * Set of entities that have already had join-time goals applied. Backed by a
      * {@link WeakHashMap} so entries are reclaimed once the entity is GC'd, avoiding

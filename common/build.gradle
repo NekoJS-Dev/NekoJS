@@ -75,6 +75,47 @@ test {
     useJUnitPlatform()
 }
 
+// Guard the common module's MC/loader-agnostic invariant: common must not import
+// Minecraft, Forge, or NeoForge types (it is compiled on Java 21 with no MC deps and
+// shared across all 4 platforms). Graal imports ARE allowed — common intentionally owns
+// the GraalJS engine. Mirrors common-api's checkApiBoundaries pattern.
+tasks.register('checkCommonIsolation') {
+    group = 'verification'
+    description = 'Rejects Minecraft/Forge/NeoForge imports in common (keeps it MC-agnostic).'
+
+    def forbiddenPrefixes = [
+        'net.minecraft',
+        'net.minecraftforge',
+        'net.neoforged'
+    ]
+
+    inputs.files(fileTree('src/main/java') { include '**/*.java' })
+
+    doLast {
+        def violations = []
+        fileTree('src/main/java') { include '**/*.java' }.each { source ->
+            source.eachLine { line, number ->
+                def trimmed = line.trim()
+                if (!trimmed.startsWith('import ') || !trimmed.endsWith(';')) {
+                    return
+                }
+                def importedType = trimmed.substring('import '.length(), trimmed.length() - 1)
+                if (importedType.startsWith('static ')) {
+                    importedType = importedType.substring('static '.length())
+                }
+                if (forbiddenPrefixes.any { prefix -> importedType.startsWith(prefix + '.') }) {
+                    violations << "${project.relativePath(source)}:${number}: ${line.trim()}"
+                }
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException("common module MC-agnostic isolation violations:\n" + violations.join('\n'))
+        }
+    }
+}
+
+check.dependsOn checkCommonIsolation
+
 tasks.register('nbtSmokeTest', Test) {
     group = 'verification'
     description = 'Runs managed API and sandboxed filesystem smoke tests for portable binary NBT.'
