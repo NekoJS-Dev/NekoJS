@@ -210,8 +210,10 @@ public final class ScriptManager implements AutoCloseable {
             try {
                 candidate = environmentFactory.create(scriptType);
             } catch (Throwable t) {
-                scriptType.logger().error("{} 候选环境创建失败，保留旧 Context", scriptType.name(), t);
-                throw new RuntimeException(scriptType.name() + " reload failed; previous context retained", t);
+                scriptType.logger().error("{} 候选环境创建失败，保留旧 Context（listener/binding 已清，需再次 reload 恢复）", scriptType.name(), t);
+                throw new RuntimeException(scriptType.name()
+                        + " reload failed; previous scripts retained but event listeners/bindings were cleared"
+                        + " — run /neko reload again to restore listeners", t);
             }
 
             Context candidateContext = candidate.context();
@@ -242,7 +244,14 @@ public final class ScriptManager implements AutoCloseable {
                 closeRuntimeResources(candidateNode, candidateContext);
                 scriptType.logger().error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
                         scriptType.name(), t);
-                throw new RuntimeException(scriptType.name() + " reload failed; previous context retained", t);
+                // Note: listeners and bindings were cleared before the candidate build (they live
+                // on the shared ScriptType bus, so they MUST be cleared before re-loading to avoid
+                // duplicate registration). The surviving old Context is therefore partially degraded
+                // until the user re-runs /neko reload. We cannot reorder the clear to after success
+                // because old and new scripts share the same event bus.
+                throw new RuntimeException(scriptType.name()
+                        + " reload failed; previous scripts retained but event listeners/bindings were cleared"
+                        + " — run /neko reload again to restore listeners", t);
             }
         }
 
