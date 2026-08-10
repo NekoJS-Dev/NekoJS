@@ -52,7 +52,7 @@
 └── @manual/index.d.ts            # 手动 .d.ts 声明
 ```
 
-每个 `*_scripts/` 目录下的 `tsconfig.json` 会把这些路径映射进来：
+每个 `*_scripts/` 目录下的 `jsconfig.json` 会把这些路径映射进来：
 
 ```json
 {
@@ -116,7 +116,7 @@ snapshot 包含：
 
 ### 绑定自带类型
 
-`registry.register("Foo", new FooJS())` —— probe 会反射 `FooJS` 的公共方法。加 `@Doc`/`@Param` 让 `.d.ts` 带文档（见 [注解体系](注解体系)）。
+`registry.register("Foo", new FooJS())` —— probe 会反射 `FooJS` 的公共方法。要带 JSDoc，用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`，见 [插件开发](插件开发)）；注解式文档（`@Doc`/`@Param`）尚在规划中。
 
 ### 注册表字面量
 
@@ -135,7 +135,7 @@ snapshot 包含：
 > 这些是已知边界，列在这里让你知道。
 
 1. **`@Remap`/`@HideFromJS` 当前在 probe 不生效**：`ClassDeclGenerator` 用裸 `getDeclaredMethods()`，没走 `MemberVisibilityQuery`。计划修复（Phase A）。
-2. **JSDoc 覆盖少**：`@Doc`/`@Param` 体系正在接入 `ClassDeclGenerator`（Phase B）。
+2. **JSDoc 覆盖少**：文档注解（`@Doc`/`@Param`）尚在规划中，当前靠编程式 `registerTypeDocs` 补 JSDoc。
 3. **事件 import 可能膨胀**：`EventDeclarationGenerator.collectImports` 递归无深度限制，可能拉进大量无关类（Phase C 修复）。
 4. **配方参数名退化**：编译没开 `-parameters` 时，参数名退化成类型名（Phase C 修复）。
 5. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
@@ -167,6 +167,6 @@ public void registerProbeGenerator(ProbeRegistry registry) {
 
 ## 下一步
 
-- [注解体系](注解体系) —— `@Doc`/`@Param`/`@Remap`/`@HideFromJS` 让 probe 输出准确。
+- [注解体系](注解体系) —— `@Remap`/`@RemapByPrefix`/`@HideFromJS`/`@PlatformAvailability` 让 probe 输出准确。
 - [类型适配器](类型适配器) —— `AdapterInputShape` 如何变成 `$Foo_` 别名。
 - [插件开发](插件开发) —— `registerProbeGenerator` 钩子。
