@@ -172,6 +172,83 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void classWithInitAndMethod() throws Exception {
+        String src = """
+                class Counter:
+                    def __init__(self, start=0):
+                        self.count = start
+                    def bump(self):
+                        self.count += 1
+                        return self.count
+                c = Counter(10)
+                c.bump()
+                """;
+        String js = py(src);
+        assertTrue(js.contains("class Counter"), js);
+        assertTrue(js.contains("constructor(start = 0)"), "__init__→constructor, self dropped: " + js);
+        assertTrue(js.contains("this.count"), "self→this: " + js);
+        assertEquals(11, evalInt(src));
+    }
+
+    @Test
+    void classInheritanceAndSuper() throws Exception {
+        String src = """
+                class Animal:
+                    def __init__(self, name):
+                        self.name = name
+                class Dog(Animal):
+                    def __init__(self, name, trick):
+                        super().__init__(name)
+                        self.trick = trick
+                    def describe(self):
+                        return self.name + self.trick
+                Dog('rex', 'sit').describe()
+                """;
+        String js = py(src);
+        assertTrue(js.contains("class Dog extends Animal"), js);
+        assertTrue(js.contains("super(name)"), "super().__init__→super(): " + js);
+        assertEquals("rexsit", evalString(src));
+    }
+
+    @Test
+    void classStaticMethod() throws Exception {
+        String src = """
+                class Math2:
+                    @staticmethod
+                    def double(x):
+                        return x * 2
+                Math2.double(21)
+                """;
+        String js = py(src);
+        assertTrue(js.contains("static double(x)"), "@staticmethod→static method: " + js);
+        assertEquals(42, evalInt(src));
+    }
+
+    @Test
+    void builtins() throws Exception {
+        assertEquals(7, evalInt("abs(-7)"));
+        assertEquals(1, evalInt("min([3, 1, 2])"));
+        assertEquals(9, evalInt("max(1, 9, 5)"));
+        assertEquals(10, evalInt("sum([1, 2, 3, 4])"));
+        assertEquals(42, evalInt("int('42')"));
+        assertEquals("7", evalString("str(7)"));
+        assertEquals(5, evalInt("len('hello')"));
+        assertFalse(evalBool("bool(0)"));
+        assertTrue(evalBool("bool(1)"));
+        assertEquals(1, evalInt("sorted([3, 1, 2])[0]"));
+    }
+
+    @Test
+    void importEmitsGlobalThisLookup() throws Exception {
+        String js = py("import Item");
+        assertTrue(js.contains("var Item = globalThis.Item;"), "import X → globalThis.X: " + js);
+        js = py("from utils import helper");
+        assertTrue(js.contains("var helper = globalThis.utils.helper;"), "from X import a → globalThis.X.a: " + js);
+        js = py("import Foo as Bar");
+        assertTrue(js.contains("var Bar = globalThis.Foo;"), "import X as Y: " + js);
+    }
+
+    @Test
     void dictIndexing() throws Exception {
         String src = """
                 d = {'a': 1, 'b': 2}

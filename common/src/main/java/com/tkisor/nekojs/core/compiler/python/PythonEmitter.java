@@ -24,6 +24,8 @@ public final class PythonEmitter {
     private int jsLine = 0;   // 0-based number of the next line to be emitted
     private final List<int[]> mappings = new ArrayList<>();   // {generatedJsLine, originalPythonLine0}
     private final IdentityHashMap<PythonNode, Integer> srcLines;
+    private boolean rewriteSelf = false;   // true inside a class method body (self → this)
+    private final java.util.Set<String> classNames = new java.util.HashSet<>();   // for `new` on calls
 
     public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
         this.srcLines = srcLines;
@@ -54,6 +56,7 @@ public final class PythonEmitter {
                 block(f.body());
                 line("}");
             }
+            case PythonNode.ClassDef c -> emitClass(c);
             case PythonNode.If i -> writeIf(i, true);
             case PythonNode.For f -> {
                 line("for (var " + emitTarget(f.target()) + " of " + emitExpr(f.iter()) + ") {");
@@ -72,6 +75,21 @@ public final class PythonEmitter {
             case PythonNode.Assign a -> emitAssign(a);
             case PythonNode.AugAssign a -> emitAugAssign(a);
             case PythonNode.ExprStmt e -> line(emitExpr(e.expr()) + ";");
+            case PythonNode.Import imp -> {
+                for (PythonNode.Spec s : imp.specs()) {
+                    String local = s.alias() != null ? s.alias() : lastSegment(s.name());
+                    line("var " + local + " = globalThis." + s.name() + ";");
+                }
+            }
+            case PythonNode.ImportFrom imp -> {
+                if (imp.star()) {
+                    throw new IllegalArgumentException("python 'from X import *' is not supported");
+                }
+                for (PythonNode.Spec s : imp.specs()) {
+                    String local = s.alias() != null ? s.alias() : s.name();
+                    line("var " + local + " = globalThis." + imp.module() + "." + s.name() + ";");
+                }
+            }
             default -> throw new IllegalArgumentException("unsupported statement: " + node.getClass().getSimpleName());
         }
     }
@@ -111,6 +129,54 @@ public final class PythonEmitter {
         }
     }
 
+    private void emitClass(PythonNode.ClassDef c) {
+        classNames.add(c.name());   // track so calls like Counter(10) emit `new Counter(10)`
+        StringBuilder header = new StringBuilder("class ").append(c.name());
+        if (c.base() != null) header.append(" extends ").append(emitExpr(c.base()));
+        header.append(" {");
+        line(header.toString());
+        indent++;
+        for (PythonNode member : c.body()) {
+            if (member instanceof PythonNode.FunctionDef m) emitMethod(m);
+            else emitStmt(member);
+        }
+        indent--;
+        line("}");
+    }
+
+    private void emitMethod(PythonNode.FunctionDef m) {
+        boolean isStatic = m.decorators().stream().anyMatch("staticmethod"::equals);
+        if (m.decorators().stream().anyMatch(d -> !d.equals("staticmethod"))) {
+            throw new IllegalArgumentException("python class decorators other than @staticmethod are not supported");
+        }
+        boolean prev = rewriteSelf;
+        rewriteSelf = !isStatic;   // instance methods rewrite self → this; static methods do not
+        String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
+        line((isStatic ? "static " : "") + jsMethodName(m.name()) + "(" + params + ") {");
+        block(m.body());
+        line("}");
+        rewriteSelf = prev;
+    }
+
+    /** Drops the leading self/cls parameter of an instance method. */
+    private String dropFirstParam(List<Param> params) {
+        if (params.isEmpty()) return "";
+        return emitParams(params.subList(1, params.size()));
+    }
+
+    private static String jsMethodName(String name) {
+        return switch (name) {
+            case "__init__" -> "constructor";
+            case "__str__" -> "toString";
+            default -> name;   // snake_case etc. preserved (valid JS method names)
+        };
+    }
+
+    private static String lastSegment(String dotted) {
+        int idx = dotted.lastIndexOf('.');
+        return idx < 0 ? dotted : dotted.substring(idx + 1);
+    }
+
     private void writeIf(PythonNode.If i, boolean leadIndent) {
         if (leadIndent) out.append(ind());
         out.append("if (").append(emitExpr(i.cond())).append(") {");
@@ -142,7 +208,7 @@ public final class PythonEmitter {
             case PythonNode.FString f -> jsTemplate(f);
             case PythonNode.BoolLit l -> Boolean.toString(l.value());
             case PythonNode.NoneLit l -> "null";
-            case PythonNode.Name n -> n.id();
+            case PythonNode.Name n -> (rewriteSelf && "self".equals(n.id())) ? "this" : n.id();
             case PythonNode.Attribute a -> emitExpr(a.obj()) + "." + a.attr();
             case PythonNode.Index ix -> emitExpr(ix.obj()) + "[" + emitExpr(ix.index()) + "]";
             case PythonNode.Call c -> emitCall(c);
@@ -161,14 +227,39 @@ public final class PythonEmitter {
     }
 
     private String emitCall(PythonNode.Call c) {
+        // super().__init__(args) → super(args);  super().method(args) → super.method(args)
+        if (c.func() instanceof PythonNode.Attribute attr
+                && attr.obj() instanceof PythonNode.Call sup
+                && sup.func() instanceof PythonNode.Name sn && "super".equals(sn.id()) && sup.args().isEmpty()) {
+            String args = emitArgs(c.args());
+            if ("__init__".equals(attr.attr())) return "super(" + args + ")";
+            return "super." + attr.attr() + "(" + args + ")";
+        }
         if (c.func() instanceof PythonNode.Name fn) {
             List<PythonNode> args = c.args();
+            String e0 = args.isEmpty() ? "" : emitExpr(args.get(0));
             switch (fn.id()) {
                 case "range" -> { return emitRange(args); }
-                case "len" -> {
-                    if (args.size() == 1) return "(" + emitExpr(args.get(0)) + ").length";
-                }
+                case "len" -> { if (args.size() == 1) return "(" + e0 + ").length"; }
                 case "print" -> { return "console.log(" + emitArgs(args) + ")"; }
+                case "abs" -> { if (args.size() == 1) return "Math.abs(" + e0 + ")"; }
+                case "min" -> { return args.size() == 1 ? "Math.min(..." + e0 + ")" : "Math.min(" + emitArgs(args) + ")"; }
+                case "max" -> { return args.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(args) + ")"; }
+                case "sum" -> { if (args.size() == 1) return "(" + e0 + ").reduce((a, b) => (a + b), 0)"; }
+                case "str" -> { if (args.size() == 1) return "String(" + e0 + ")"; }
+                case "int" -> { if (args.size() == 1) return "parseInt(" + e0 + ", 10)"; }
+                case "float" -> { if (args.size() == 1) return "Number(" + e0 + ")"; }
+                case "bool" -> { if (args.size() == 1) return "Boolean(" + e0 + ")"; }
+                case "list" -> { return args.isEmpty() ? "[]" : "[..." + e0 + "]"; }
+                case "dict" -> { return args.isEmpty() ? "({})" : "Object.fromEntries(" + e0 + ")"; }
+                case "sorted" -> {
+                    if (args.size() == 1) return "([...(" + e0 + ")]).sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
+                }
+                case "enumerate" -> { if (args.size() == 1) return "(" + e0 + ").map((v, i) => [i, v])"; }
+                default -> {}
+            }
+            if (classNames.contains(fn.id())) {
+                return "new " + fn.id() + "(" + emitArgs(args) + ")";
             }
         }
         return emitExpr(c.func()) + "(" + emitArgs(c.args()) + ")";

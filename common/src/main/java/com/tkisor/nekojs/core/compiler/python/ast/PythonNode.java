@@ -18,7 +18,10 @@ public sealed interface PythonNode {
     record Module(List<PythonNode> body) implements PythonNode {}
 
     // ---- statements ----
-    record FunctionDef(String name, List<Param> params, List<PythonNode> body) implements PythonNode {}
+    record FunctionDef(String name, List<Param> params, List<PythonNode> body, List<String> decorators)
+            implements PythonNode {}
+    record ClassDef(String name, PythonNode base, List<PythonNode> body, List<String> decorators)
+            implements PythonNode {}                                   // base == null → no extends
     record If(PythonNode cond, List<PythonNode> thenBody, List<PythonNode> elseBody) implements PythonNode {}
     record For(PythonNode target, PythonNode iter, List<PythonNode> body) implements PythonNode {}
     record While(PythonNode cond, List<PythonNode> body) implements PythonNode {}
@@ -29,6 +32,8 @@ public sealed interface PythonNode {
     record Assign(List<PythonNode> targets, PythonNode value) implements PythonNode {}
     record AugAssign(PythonNode target, String op, PythonNode value) implements PythonNode {}
     record ExprStmt(PythonNode expr) implements PythonNode {}
+    record Import(List<Spec> specs) implements PythonNode {}                 // import m [as a], ...
+    record ImportFrom(String module, List<Spec> specs, boolean star) implements PythonNode {}   // from m import ...
 
     // ---- expressions ----
     record IntLit(long value) implements PythonNode {}
@@ -55,4 +60,7 @@ public sealed interface PythonNode {
 
     /** Function/lambda parameter (helper, not itself a node). starArg == true → {@code *name} (varargs). */
     record Param(String name, PythonNode defaultValue, boolean starArg) {}
+
+    /** Import spec (helper, not itself a node). name = module (import) or imported name (from-import); alias null = none. */
+    record Spec(String name, String alias) {}
 }

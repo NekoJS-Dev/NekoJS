@@ -42,8 +42,16 @@ public final class PythonParser {
         skipNewlines();
         while (!at(PythonToken.Type.EOF) && !at(PythonToken.Type.DEDENT)) {
             int stmtLine = peek().line();
-            if (isCompoundKw()) {
-                PythonNode n = parseCompound();
+            if (atOp("@")) {
+                List<String> decorators = parseDecorators();
+                if (!peek().isKw("def") && !peek().isKw("class")) {
+                    throw error("decorator must precede 'def' or 'class' but found '" + peek().text() + "'");
+                }
+                PythonNode n = parseCompound(decorators);
+                srcLines.put(n, stmtLine);
+                out.add(n);
+            } else if (isCompoundKw()) {
+                PythonNode n = parseCompound(List.of());
                 srcLines.put(n, stmtLine);
                 out.add(n);
             } else {
@@ -56,10 +64,34 @@ public final class PythonParser {
         return out;
     }
 
-    private PythonNode parseCompound() {
+    /** Parses one or more {@code @dotted.name} decorator lines, each terminated by NEWLINE. */
+    private List<String> parseDecorators() {
+        List<String> ds = new ArrayList<>();
+        while (atOp("@")) {
+            advance();
+            StringBuilder name = new StringBuilder(expectName());
+            while (matchOp(".")) name.append('.').append(expectName());
+            if (matchOp("(")) {   // skip optional decorator argument list
+                int depth = 1;
+                while (depth > 0 && !at(PythonToken.Type.EOF)) {
+                    if (atOp("(")) depth++;
+                    else if (atOp(")")) depth--;
+                    if (depth > 0) advance();
+                }
+                expectOp(")");
+            }
+            expect(PythonToken.Type.NEWLINE, "NEWLINE after decorator");
+            skipNewlines();
+            ds.add(name.toString());
+        }
+        return ds;
+    }
+
+    private PythonNode parseCompound(List<String> decorators) {
         String kw = peek().text();
         return switch (kw) {
-            case "def" -> parseFunctionDef();
+            case "def" -> parseFunctionDef(decorators);
+            case "class" -> parseClassDef(decorators);
             case "if" -> parseIf();
             case "for" -> parseFor();
             case "while" -> parseWhile();
@@ -67,7 +99,7 @@ public final class PythonParser {
         };
     }
 
-    private PythonNode parseFunctionDef() {
+    private PythonNode parseFunctionDef(List<String> decorators) {
         expectKw("def");
         String name = expectName();
         expectOp("(");
@@ -75,7 +107,27 @@ public final class PythonParser {
         expectOp(")");
         expectOp(":");
         List<PythonNode> body = parseSuite();
-        return new PythonNode.FunctionDef(name, params, body);
+        return new PythonNode.FunctionDef(name, params, body, decorators);
+    }
+
+    private PythonNode parseClassDef(List<String> decorators) {
+        expectKw("class");
+        String name = expectName();
+        PythonNode base = null;
+        if (matchOp("(")) {
+            if (!atOp(")")) {
+                base = parseTest();
+                // skip additional bases / keyword args (v1: single base)
+                while (matchOp(",")) {
+                    if (atOp(")")) break;
+                    parseTest();
+                }
+            }
+            expectOp(")");
+        }
+        expectOp(":");
+        List<PythonNode> body = parseSuite();
+        return new PythonNode.ClassDef(name, base, body, decorators);
     }
 
     private PythonNode parseIf() {
@@ -138,6 +190,8 @@ public final class PythonParser {
     }
 
     private PythonNode parseSimple() {
+        if (peek().isKw("import")) { advance(); return parseImport(); }
+        if (peek().isKw("from")) { advance(); return parseImportFrom(); }
         String kw = peek().text();
         if (peek().isKw("return")) {
             advance();
@@ -450,6 +504,37 @@ public final class PythonParser {
         return args;
     }
 
+    private PythonNode parseImport() {
+        List<PythonNode.Spec> specs = new ArrayList<>();
+        while (true) {
+            String mod = parseDottedName();
+            String alias = matchKw("as") ? expectName() : null;
+            specs.add(new PythonNode.Spec(mod, alias));
+            if (!matchOp(",")) break;
+        }
+        return new PythonNode.Import(specs);
+    }
+
+    private PythonNode parseImportFrom() {
+        String module = parseDottedName();
+        expectKw("import");
+        if (matchOp("*")) return new PythonNode.ImportFrom(module, List.of(), true);
+        List<PythonNode.Spec> specs = new ArrayList<>();
+        while (true) {
+            String name = expectName();
+            String alias = matchKw("as") ? expectName() : null;
+            specs.add(new PythonNode.Spec(name, alias));
+            if (!matchOp(",")) break;
+        }
+        return new PythonNode.ImportFrom(module, specs, false);
+    }
+
+    private String parseDottedName() {
+        StringBuilder sb = new StringBuilder(expectName());
+        while (matchOp(".")) sb.append('.').append(expectName());
+        return sb.toString();
+    }
+
     private List<Param> parseParams(String terminator) {
         List<Param> params = new ArrayList<>();
         while (!atOp(terminator)) {
@@ -496,7 +581,8 @@ public final class PythonParser {
                 || t.equals("^=") || t.equals("<<=") || t.equals(">>=");
     }
     private boolean isCompoundKw() {
-        return peek().isKw("def") || peek().isKw("if") || peek().isKw("for") || peek().isKw("while");
+        return peek().isKw("def") || peek().isKw("class") || peek().isKw("if")
+                || peek().isKw("for") || peek().isKw("while");
     }
     private void skipNewlines() { while (at(PythonToken.Type.NEWLINE)) advance(); }
 
