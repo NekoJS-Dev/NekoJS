@@ -349,7 +349,7 @@ public final class PythonParser {
                 e = new PythonNode.Call(e, args);
             } else if (atOp("[")) {
                 advance();
-                PythonNode idx = parseTest();
+                PythonNode idx = parseSubscript();
                 expectOp("]");
                 e = new PythonNode.Index(e, idx);
             } else if (matchOp(".")) {
@@ -460,6 +460,23 @@ public final class PythonParser {
         if (matchKw("if")) cond = parseOr();
         expectOp("]");
         return new PythonNode.ListComp(element, target, iter, cond);
+    }
+
+    /** Parses a subscript: a plain index expr, or a slice {@code [lo:up:step]} (any part optional). */
+    private PythonNode parseSubscript() {
+        if (atOp(":")) return parseSliceRest(null);     // [:stop...]
+        PythonNode first = parseTest();
+        if (atOp(":")) return parseSliceRest(first);    // [lo:...]
+        return first;                                    // plain index
+    }
+
+    private PythonNode parseSliceRest(PythonNode lower) {
+        expectOp(":");
+        PythonNode upper = null;
+        if (!atOp("]") && !atOp(":")) upper = parseTest();
+        PythonNode step = null;
+        if (matchOp(":") && !atOp("]")) step = parseTest();
+        return new PythonNode.Slice(lower, upper, step);
     }
 
     /** A target list for {@code for}/assignment: {@code x} or {@code a, b} (→ TupleLit). */

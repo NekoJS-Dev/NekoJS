@@ -297,6 +297,27 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void slicing() throws Exception {
+        assertEquals(2, evalInt("[1, 2, 3, 4][1:3][0]"));
+        assertEquals(3, evalInt("sum([1, 2, 3, 4][:2])"));
+        assertEquals("el", evalString("'hello'[1:3]"));
+        assertEquals("cba", evalString("'abc'[::-1]"));
+        assertEquals(3, evalInt("[1, 2, 3][::-1][0]"));
+    }
+
+    @Test
+    void methodMappings() throws Exception {
+        assertEquals("hi", evalString("'HI'.lower()"));
+        assertEquals("HI", evalString("'hi'.upper()"));
+        assertEquals("x", evalString("'  x  '.strip()"));
+        assertEquals(3, evalInt("len('a,b,c'.split(','))"));
+        assertEquals("xbc", evalString("'abc'.replace('a', 'x')"));
+        assertEquals(2, evalInt("len({'a': 1, 'b': 2}.keys())"));
+        assertEquals(2, evalInt("{'a': 1, 'b': 2}.get('b')"));
+        assertEquals(9, evalInt("{'a': 1}.get('z', 9)"));
+    }
+
+    @Test
     void dictIndexing() throws Exception {
         String src = """
                 d = {'a': 1, 'b': 2}

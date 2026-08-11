@@ -44,7 +44,8 @@ public sealed interface PythonNode {
     record NoneLit() implements PythonNode {}
     record Name(String id) implements PythonNode {}
     record Attribute(PythonNode obj, String attr) implements PythonNode {}
-    record Index(PythonNode obj, PythonNode index) implements PythonNode {}
+    record Index(PythonNode obj, PythonNode index) implements PythonNode {}     // index may be a Slice
+    record Slice(PythonNode lower, PythonNode upper, PythonNode step) implements PythonNode {}   // any nullable
     record Call(PythonNode func, List<PythonNode> args) implements PythonNode {}     // an arg may be a Kwarg
     record Kwarg(String name, PythonNode value) implements PythonNode {}              // name=value at a call site
     record Unary(String op, PythonNode operand) implements PythonNode {}

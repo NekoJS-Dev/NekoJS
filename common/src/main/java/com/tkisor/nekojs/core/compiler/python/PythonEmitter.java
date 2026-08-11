@@ -189,6 +189,71 @@ public final class PythonEmitter {
         return -1;
     }
 
+    /** Emits a slice subscript; v1 supports [lo:up] and [::-1] (reverse, type-agnostic). */
+    private String emitSlice(String obj, PythonNode.Slice s) {
+        if (s.step() != null) {
+            if (negativeLiteralMagnitude(s.step()) == 1 && s.lower() == null && s.upper() == null) {
+                return "((function (__s) { return typeof __s === \"string\" ? __s.split(\"\").reverse().join(\"\") "
+                        + ": [...__s].reverse(); })(" + obj + "))";
+            }
+            throw new IllegalArgumentException("python slice step only supports [::-1] in v1");
+        }
+        String lo = s.lower() != null ? emitExpr(s.lower()) : "0";
+        return s.upper() != null ? obj + ".slice(" + lo + ", " + emitExpr(s.upper()) + ")" : obj + ".slice(" + lo + ")";
+    }
+
+    /**
+     * Maps common Python str/list/dict/set method calls to JS idioms. Returns null for unmapped
+     * methods so they fall through to a verbatim {@code obj.method(args)} call.
+     */
+    private String emitMethodCall(PythonNode.Attribute attr, List<PythonNode> args) {
+        String obj = emitExpr(attr.obj());
+        String m = attr.attr();
+        String a = emitArgs(args);
+        String e0 = args.isEmpty() ? "" : emitExpr(args.get(0));
+        String e1 = args.size() > 1 ? emitExpr(args.get(1)) : null;
+        return switch (m) {
+            // str
+            case "upper" -> obj + ".toUpperCase()";
+            case "lower" -> obj + ".toLowerCase()";
+            case "strip" -> obj + ".trim()";
+            case "lstrip" -> obj + ".trimStart()";
+            case "rstrip" -> obj + ".trimEnd()";
+            case "find" -> obj + ".indexOf(" + a + ")";
+            case "rfind" -> obj + ".lastIndexOf(" + a + ")";
+            case "index" -> obj + ".indexOf(" + a + ")";
+            case "ljust" -> obj + ".padEnd(" + a + ")";
+            case "rjust" -> obj + ".padStart(" + a + ")";
+            case "zfill" -> obj + ".padStart(" + a + ", \"0\")";
+            case "replace" -> obj + ".replaceAll(" + a + ")";
+            case "startswith" -> obj + ".startsWith(" + a + ")";
+            case "endswith" -> obj + ".endsWith(" + a + ")";
+            case "count" -> obj + ".split(" + e0 + ").length - 1";
+            case "split" -> args.isEmpty()
+                    ? obj + ".trim().split(/\\s+/).filter(function (x) { return x !== \"\"; })"
+                    : obj + ".split(" + a + ")";
+            case "join" -> obj + ".join(" + a + ")";
+            // list
+            case "append" -> obj + ".push(" + a + ")";
+            case "copy" -> obj + ".slice()";
+            case "reverse" -> obj + ".reverse()";
+            case "insert" -> (e1 != null ? obj + ".splice(" + e0 + ", 0, " + e1 + ")" : null);
+            case "remove" -> "((function (arr, v) { var i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); })(" + obj + ", " + e0 + "))";
+            case "pop" -> args.isEmpty() ? obj + ".pop()" : obj + ".splice(" + e0 + ", 1)[0]";
+            // dict (obj is a plain JS object)
+            case "keys" -> "Object.keys(" + obj + ")";
+            case "values" -> "Object.values(" + obj + ")";
+            case "items" -> "Object.entries(" + obj + ")";
+            case "update" -> "Object.assign(" + obj + ", " + a + ")";
+            case "get" -> (e1 != null
+                    ? "(" + obj + "[" + e0 + "] !== undefined ? " + obj + "[" + e0 + "] : " + e1 + ")"
+                    : obj + "[" + e0 + "]");
+            // set
+            case "discard" -> obj + ".delete(" + a + ")";
+            default -> null;
+        };
+    }
+
     private void writeIf(PythonNode.If i, boolean leadIndent) {
         if (leadIndent) out.append(ind());
         out.append("if (").append(emitExpr(i.cond())).append(") {");
@@ -223,6 +288,9 @@ public final class PythonEmitter {
             case PythonNode.Name n -> (rewriteSelf && "self".equals(n.id())) ? "this" : n.id();
             case PythonNode.Attribute a -> emitExpr(a.obj()) + "." + a.attr();
             case PythonNode.Index ix -> {
+                if (ix.index() instanceof PythonNode.Slice s) {
+                    yield emitSlice(emitExpr(ix.obj()), s);
+                }
                 // negative literal index → Python last-element semantics via slice
                 // (`-1` parses as Unary("-", IntLit), so detect both forms)
                 long mag = negativeLiteralMagnitude(ix.index());
@@ -254,6 +322,11 @@ public final class PythonEmitter {
             String args = emitArgs(c.args().stream().filter(a -> !(a instanceof PythonNode.Kwarg)).toList());
             if ("__init__".equals(attr.attr())) return "super(" + args + ")";
             return "super." + attr.attr() + "(" + args + ")";
+        }
+        // method calls: map common str/list/dict/set methods to JS idioms
+        if (c.func() instanceof PythonNode.Attribute mem) {
+            String mapped = emitMethodCall(mem, c.args());
+            if (mapped != null) return mapped;
         }
         // separate positional args from keyword args
         List<PythonNode> positional = new ArrayList<>();
