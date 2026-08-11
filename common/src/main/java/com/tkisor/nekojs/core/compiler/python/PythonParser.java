@@ -95,6 +95,7 @@ public final class PythonParser {
             case "if" -> parseIf();
             case "for" -> parseFor();
             case "while" -> parseWhile();
+            case "try" -> parseTry();
             default -> throw error("unexpected compound keyword '" + kw + "'");
         };
     }
@@ -163,7 +164,31 @@ public final class PythonParser {
         PythonNode cond = parseTest();
         expectOp(":");
         List<PythonNode> body = parseSuite();
+        // while/else: parse to avoid a crash; v1 discards the else body (no break-tracking).
+        if (matchKw("else")) { expectOp(":"); parseSuite(); }
         return new PythonNode.While(cond, body);
+    }
+
+    private PythonNode parseTry() {
+        expectKw("try");
+        expectOp(":");
+        List<PythonNode> body = parseSuite();
+        String name = null;
+        List<PythonNode> exceptBody = List.of();
+        if (matchKw("except")) {
+            if (!atOp(":")) {                 // optional exception type [as name] — type ignored in v1
+                parseTest();
+                if (matchKw("as")) name = expectName();
+            }
+            expectOp(":");
+            exceptBody = parseSuite();
+        }
+        if (peek().isKw("except")) {
+            throw error("multiple except clauses are not supported in v1");
+        }
+        List<PythonNode> finallyBody = List.of();
+        if (matchKw("finally")) { expectOp(":"); finallyBody = parseSuite(); }
+        return new PythonNode.Try(body, name, exceptBody, finallyBody);
     }
 
     /** A suite is either an INDENT…DEDENT block (header ended by NEWLINE) or an inline simple statement. */
@@ -424,11 +449,14 @@ public final class PythonParser {
             if (matchOp("}")) return new PythonNode.DictLit(List.of(), List.of()); // {}
             PythonNode first = parseTest();
             if (matchOp(":")) {
-                // dict
-                List<PythonNode> keys = new ArrayList<>();
-                List<PythonNode> values = new ArrayList<>();
-                keys.add(first);
-                values.add(parseTest());
+                PythonNode val = parseTest();
+                if (peek().isKw("for")) {
+                    PythonNode[] c = parseCompClauses();
+                    expectOp("}");
+                    return new PythonNode.DictComp(first, val, c[0], c[1], c[2]);
+                }
+                List<PythonNode> keys = new ArrayList<>(List.of(first));
+                List<PythonNode> values = new ArrayList<>(List.of(val));
                 while (matchOp(",")) {
                     if (atOp("}")) break;
                     keys.add(parseTest());
@@ -438,9 +466,12 @@ public final class PythonParser {
                 expectOp("}");
                 return new PythonNode.DictLit(keys, values);
             }
-            // set
-            List<PythonNode> elems = new ArrayList<>();
-            elems.add(first);
+            if (peek().isKw("for")) {
+                PythonNode[] c = parseCompClauses();
+                expectOp("}");
+                return new PythonNode.SetComp(first, c[0], c[1], c[2]);
+            }
+            List<PythonNode> elems = new ArrayList<>(List.of(first));
             while (matchOp(",")) {
                 if (atOp("}")) break;
                 elems.add(parseTest());
@@ -452,14 +483,19 @@ public final class PythonParser {
     }
 
     private PythonNode parseListCompRest(PythonNode element) {
+        PythonNode[] c = parseCompClauses();
+        expectOp("]");
+        return new PythonNode.ListComp(element, c[0], c[1], c[2]);
+    }
+
+    /** Shared {@code for target in iter [if cond]} tail of a comprehension; returns [target, iter, cond]. */
+    private PythonNode[] parseCompClauses() {
         expectKw("for");
         PythonNode target = parseTargetList();
         expectKw("in");
         PythonNode iter = parseOr();
-        PythonNode cond = null;
-        if (matchKw("if")) cond = parseOr();
-        expectOp("]");
-        return new PythonNode.ListComp(element, target, iter, cond);
+        PythonNode cond = matchKw("if") ? parseOr() : null;
+        return new PythonNode[]{target, iter, cond};
     }
 
     /** Parses a subscript: a plain index expr, or a slice {@code [lo:up:step]} (any part optional). */
@@ -608,7 +644,7 @@ public final class PythonParser {
     }
     private boolean isCompoundKw() {
         return peek().isKw("def") || peek().isKw("class") || peek().isKw("if")
-                || peek().isKw("for") || peek().isKw("while");
+                || peek().isKw("for") || peek().isKw("while") || peek().isKw("try");
     }
     private void skipNewlines() { while (at(PythonToken.Type.NEWLINE)) advance(); }
 

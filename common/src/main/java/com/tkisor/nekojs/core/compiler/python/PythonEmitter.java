@@ -59,6 +59,19 @@ public final class PythonEmitter {
                 line("}");
             }
             case PythonNode.ClassDef c -> emitClass(c);
+            case PythonNode.Try t -> {
+                line("try {");
+                block(t.body());
+                if (!t.exceptBody().isEmpty()) {
+                    line("} catch (" + (t.exceptName() != null ? t.exceptName() : "__nekoErr") + ") {");
+                    block(t.exceptBody());
+                }
+                if (!t.finallyBody().isEmpty()) {
+                    line("} finally {");
+                    block(t.finallyBody());
+                }
+                line("}");
+            }
             case PythonNode.If i -> writeIf(i, true);
             case PythonNode.For f -> {
                 line("for (var " + emitTarget(f.target()) + " of " + emitExpr(f.iter()) + ") {");
@@ -310,6 +323,9 @@ public final class PythonEmitter {
             case PythonNode.SetLit l -> "new Set(" + emitElements(l.elements()) + ")";
             case PythonNode.Lambda lam -> "((" + emitParams(lam.params()) + ") => (" + emitExpr(lam.body()) + "))";
             case PythonNode.ListComp lc -> emitListComp(lc);
+            case PythonNode.DictComp dc -> "Object.fromEntries(" + compChain(dc.target(), dc.iter(), dc.cond(),
+                    "[" + emitExpr(dc.key()) + ", " + emitExpr(dc.value()) + "]") + ")";
+            case PythonNode.SetComp sc -> "new Set(" + compChain(sc.target(), sc.iter(), sc.cond(), emitExpr(sc.element())) + ")";
             default -> throw new IllegalArgumentException("unsupported expression: " + node.getClass().getSimpleName());
         };
     }
@@ -447,13 +463,15 @@ public final class PythonEmitter {
     }
 
     private String emitListComp(PythonNode.ListComp lc) {
-        String target = emitTarget(lc.target());
-        String iter = emitExpr(lc.iter());
-        String elem = emitExpr(lc.element());
-        if (lc.cond() != null) {
-            return "(" + iter + ").filter((" + target + ") => " + emitExpr(lc.cond()) + ").map((" + target + ") => " + elem + ")";
-        }
-        return "(" + iter + ").map((" + target + ") => " + elem + ")";
+        return compChain(lc.target(), lc.iter(), lc.cond(), emitExpr(lc.element()));
+    }
+
+    /** Shared (iter)[.filter].map(target => body) pipeline for list/dict/set comprehensions. */
+    private String compChain(PythonNode target, PythonNode iter, PythonNode cond, String bodyExpr) {
+        String t = emitTarget(target);
+        String base = "(" + emitExpr(iter) + ")";
+        String chained = cond != null ? base + ".filter((" + t + ") => " + emitExpr(cond) + ")" : base;
+        return chained + ".map((" + t + ") => " + bodyExpr + ")";
     }
 
     private String emitDict(PythonNode.DictLit d) {

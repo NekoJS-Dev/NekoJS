@@ -318,6 +318,40 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void dictAndSetComprehensions() throws Exception {
+        assertEquals(4, evalInt("{str(x): x * x for x in range(3)}.get('2')"));
+        assertEquals(3, evalInt("len(list({x * 2 for x in range(3)}))"));
+    }
+
+    @Test
+    void tryExcept() throws Exception {
+        String src = """
+                try:
+                    a = None
+                    b = a.foo
+                except:
+                    b = 99
+                b
+                """;
+        String js = py(src);
+        assertTrue(js.contains("try {") && js.contains("} catch"), "try/except → try/catch: " + js);
+        assertEquals(99, evalInt(src));
+    }
+
+    @Test
+    void tryExceptWithBoundName() throws Exception {
+        String src = """
+                caught = False
+                try:
+                    None.foo
+                except Exception as e:
+                    caught = True
+                caught
+                """;
+        assertTrue(evalBool(src));
+    }
+
+    @Test
     void dictIndexing() throws Exception {
         String src = """
                 d = {'a': 1, 'b': 2}

@@ -59,6 +59,12 @@ public sealed interface PythonNode {
     record Lambda(List<Param> params, PythonNode body) implements PythonNode {}
     record ListComp(PythonNode element, PythonNode target, PythonNode iter, PythonNode cond)
             implements PythonNode {}                                   // cond == null → no filter
+    record DictComp(PythonNode key, PythonNode value, PythonNode target, PythonNode iter, PythonNode cond)
+            implements PythonNode {}
+    record SetComp(PythonNode element, PythonNode target, PythonNode iter, PythonNode cond)
+            implements PythonNode {}
+    record Try(List<PythonNode> body, String exceptName, List<PythonNode> exceptBody,
+               List<PythonNode> finallyBody) implements PythonNode {}   // exceptBody/finallyBody empty → absent
 
     /** Function/lambda parameter (helper, not itself a node). starArg == true → {@code *name} (varargs). */
     record Param(String name, PythonNode defaultValue, boolean starArg) {}
