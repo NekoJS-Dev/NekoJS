@@ -208,4 +208,76 @@ class PythonToJsCompilerTest {
     void syntaxErrorThrowsWithFileContext() {
         assertThrows(IllegalArgumentException.class, () -> py("def f(:\n    pass"));
     }
+
+    @Test
+    void sourceMapIsEmittedAndWellFormed() throws Exception {
+        var result = compiler.compileDetailed(Path.of("test.py"), "x = 1\n");
+        assertNotNull(result.sourceMap(), "compileDetailed must emit a source map");
+        var obj = com.google.gson.JsonParser.parseString(result.sourceMap()).getAsJsonObject();
+        assertEquals(3, obj.get("version").getAsInt());
+        assertTrue(obj.get("sources").getAsJsonArray().get(0).getAsString().contains("test.py"));
+        assertFalse(obj.get("mappings").getAsString().isEmpty(), "mappings must be non-empty");
+        assertNotNull(obj.get("sourcesContent"), "sourcesContent (original source) must be present");
+    }
+
+    @Test
+    void sourceMapMapsStatementsToPythonLines() throws Exception {
+        // Two top-level statements on Python lines 1 and 2 → JS lines 0 and 1, mapped back.
+        var result = compiler.compileDetailed(Path.of("test.py"), "x = 1\ny = 2\n");
+        var obj = com.google.gson.JsonParser.parseString(result.sourceMap()).getAsJsonObject();
+        var genToOrig = decodeMappings(obj.get("mappings").getAsString());
+        assertEquals(0, genToOrig.get(0), "JS line 0 ← Python line 1 (origLine 0)");
+        assertEquals(1, genToOrig.get(1), "JS line 1 ← Python line 2 (origLine 1)");
+    }
+
+    @Test
+    void sourceMapMapsFunctionDefToItsLine() throws Exception {
+        // def on line 1; the emitted `function f(...) {` (JS line 0) must map back to Python line 1.
+        var result = compiler.compileDetailed(Path.of("test.py"), "def f(x):\n    return x\nf(1)\n");
+        var obj = com.google.gson.JsonParser.parseString(result.sourceMap()).getAsJsonObject();
+        var genToOrig = decodeMappings(obj.get("mappings").getAsString());
+        assertEquals(0, genToOrig.get(0), "the function header line must map to Python line 1");
+    }
+
+    /** Minimal v3 source-map mappings decoder → generated line (0-based) → original line (0-based). */
+    private static java.util.Map<Integer, Integer> decodeMappings(String mappings) {
+        java.util.Map<Integer, Integer> out = new java.util.HashMap<>();
+        String[] lines = mappings.split(";", -1);
+        int srcIdx = 0, origLine = 0, origCol = 0;
+        for (int genLine = 0; genLine < lines.length; genLine++) {
+            String line = lines[genLine];
+            int genCol = 0;
+            if (!line.isEmpty()) {
+                for (String seg : line.split(",")) {
+                    int[] vals = decodeVlqSegment(seg);
+                    genCol += vals[0];
+                    if (vals.length >= 4) {
+                        srcIdx += vals[1];
+                        origLine += vals[2];
+                        origCol += vals[3];
+                        out.put(genLine, origLine);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    private static final String BASE64 =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    private static int[] decodeVlqSegment(String seg) {
+        java.util.List<Integer> vals = new java.util.ArrayList<>();
+        for (int i = 0; i < seg.length(); ) {
+            int shift = 0, v = 0, digit;
+            do {
+                digit = BASE64.indexOf(seg.charAt(i++));
+                v |= (digit & 0x1f) << shift;
+                shift += 5;
+            } while ((digit & 0x20) != 0);
+            boolean neg = (v & 1) != 0;
+            vals.add(neg ? -(v >>> 1) : (v >>> 1));
+        }
+        return vals.stream().mapToInt(Integer::intValue).toArray();
+    }
 }

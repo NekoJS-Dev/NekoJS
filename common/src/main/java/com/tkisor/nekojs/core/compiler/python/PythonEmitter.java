@@ -3,6 +3,8 @@ package com.tkisor.nekojs.core.compiler.python;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode.Param;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 
 /**
@@ -19,15 +21,32 @@ public final class PythonEmitter {
     private final StringBuilder out = new StringBuilder();
     private int indent = 0;
     private int tempCounter = 0;
+    private int jsLine = 0;   // 0-based number of the next line to be emitted
+    private final List<int[]> mappings = new ArrayList<>();   // {generatedJsLine, originalPythonLine0}
+    private final IdentityHashMap<PythonNode, Integer> srcLines;
+
+    public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
+        this.srcLines = srcLines;
+    }
 
     public String emit(PythonNode.Module module) {
         for (PythonNode stmt : module.body()) emitStmt(stmt);
         return out.toString();
     }
 
+    /** (generatedJsLine, originalPythonLine0Based) pairs, one per statement's first emitted line. */
+    public List<int[]> mappings() {
+        return mappings;
+    }
+
     // ---- statements ----
 
     private void emitStmt(PythonNode node) {
+        // Record a statement-level mapping (the line about to be emitted ← its Python source line).
+        if (!(node instanceof PythonNode.Pass)) {
+            Integer py = srcLines.get(node);
+            if (py != null) mappings.add(new int[]{jsLine, py - 1});
+        }
         switch (node) {
             case PythonNode.Module m -> throw new IllegalArgumentException("nested module");
             case PythonNode.FunctionDef f -> {
@@ -94,18 +113,22 @@ public final class PythonEmitter {
 
     private void writeIf(PythonNode.If i, boolean leadIndent) {
         if (leadIndent) out.append(ind());
-        out.append("if (").append(emitExpr(i.cond())).append(") {\n");
+        out.append("if (").append(emitExpr(i.cond())).append(") {");
+        br();
         block(i.thenBody());
         List<PythonNode> els = i.elseBody();
         if (els.isEmpty()) {
-            line("}");
+            out.append(ind()).append("}");
+            br();
         } else if (els.size() == 1 && els.get(0) instanceof PythonNode.If nested) {
             out.append(ind()).append("} else ");
             writeIf(nested, false);
         } else {
-            out.append(ind()).append("} else {\n");
+            out.append(ind()).append("} else {");
+            br();
             block(els);
-            line("}");
+            out.append(ind()).append("}");
+            br();
         }
     }
 
@@ -325,7 +348,14 @@ public final class PythonEmitter {
     }
 
     private void line(String s) {
-        out.append(ind()).append(s).append('\n');
+        out.append(ind()).append(s);
+        br();
+    }
+
+    /** Appends a line terminator and advances the generated-line counter (single point of truth for jsLine). */
+    private void br() {
+        out.append('\n');
+        jsLine++;
     }
 
     private String ind() {

@@ -17,8 +17,16 @@ public final class PythonParser {
     private final List<PythonToken> tokens;
     private int pos = 0;
 
+    /** Node identity → 1-based Python source line, for statement-granularity source maps. */
+    private final java.util.IdentityHashMap<PythonNode, Integer> srcLines = new java.util.IdentityHashMap<>();
+
     public PythonParser(List<PythonToken> tokens) {
         this.tokens = tokens;
+    }
+
+    /** Statement nodes → their Python source line (1-based). Populated during {@link #parseModule()}. */
+    public java.util.IdentityHashMap<PythonNode, Integer> srcLines() {
+        return srcLines;
     }
 
     public PythonNode parseModule() {
@@ -33,10 +41,15 @@ public final class PythonParser {
         List<PythonNode> out = new ArrayList<>();
         skipNewlines();
         while (!at(PythonToken.Type.EOF) && !at(PythonToken.Type.DEDENT)) {
+            int stmtLine = peek().line();
             if (isCompoundKw()) {
-                out.add(parseCompound());
+                PythonNode n = parseCompound();
+                srcLines.put(n, stmtLine);
+                out.add(n);
             } else {
-                out.addAll(parseSimpleList());
+                List<PythonNode> ss = parseSimpleList();
+                for (PythonNode s : ss) srcLines.put(s, stmtLine);
+                out.addAll(ss);
             }
             skipNewlines();
         }
