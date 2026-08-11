@@ -54,7 +54,7 @@ ServerEvents.recipes(lambda event: (
 | `lambda` | 支持，降级为箭头函数 |
 | **单层**推导式：列表 `[expr for x in iter if cond]`、字典 `{k:v for ...}`、集合 `{e for ...}`（可选 `if`） | 支持，降级为 `.filter().map()` / `Object.fromEntries` / `new Set` |
 | 切片 `xs[lo:up]`、`xs[::-1]`、负下标 `xs[-1]` | 支持（详见「切片」节；除 `[::-1]` 外步长不支持） |
-| `try` / `except` / `finally` | 支持（单 except，类型忽略——详见「try / except」节） |
+| `try` / `except` / `finally`（多个 except、`except (A, B)` 多类型、instanceof 类型匹配） | 支持（详见「try / except」节） |
 | 关键字参数 `print(sep=)`、`sorted(reverse=)` | 支持（其余调用带 kwargs 会报错） |
 | f-string `f'{x}'`（**不含格式说明符**） | 支持，降级为模板字面量 |
 | 列表 / 元组 / 字典 / 集合字面量 | 支持，分别降级为数组 / 数组 / 对象 / `new Set([...])` |
@@ -289,12 +289,23 @@ print(circle_area(2))                    # 12.56
 ```python
 try:
     risky()
-except SomeError as e:
-    handle(e)
+except ValueError as e:
+    handle_v(e)
+except TypeError:
+    handle_t()
 finally:
     cleanup()
 ```
-降级为 JS `try/catch/finally`。**限制**：v1 只支持**单个** `except` 子句（多个会报错）；`except` 的异常**类型会被忽略**（一律捕获），`as e` 绑定的 `e` 是底层 JS 错误对象。配合 `raise Expr`（→ `throw Expr`）可以抛出异常（见「raise」节）。
+
+降级为 JS `try/catch/finally`。支持**多个 `except` 子句**，按顺序做**类型匹配**（instanceof），**未匹配的异常会被重新抛出**（与 Python 一致）：
+
+- `except MyErr as e:` → `if (e instanceof MyErr) { var e = e; ... }`
+- `except (A, B):` → `e instanceof A || e instanceof B`（括号多类型）
+- 裸 `except:` 捕获一切，必须是**最后一个** except 子句
+- **Python 内置异常名**（`Exception`、`ValueError`、`TypeError`、`KeyError` 等）在 JS 运行时不存在，会被映射为 JS 的 `Error`（最接近的基类）。因此 `class MyErr(Exception):` 会转成 `class MyErr extends Error`，`raise MyErr()` + `except MyErr` 能**端到端匹配**。
+- `as e` 绑定的 `e` 是底层 JS 错误对象。
+
+> 注意：`raise 42`（抛非 Error 值）配合 `except Exception` **不会**匹配（`42 instanceof Error` 为假），异常会被重新抛出——这与 Python 语义一致。要捕获任意值用裸 `except:`。
 
 ## Python ↔ JS 差异要点
 
@@ -319,7 +330,7 @@ finally:
 
 下列语法/特性在当前版本**不支持**，遇到会清晰报错（错误信息会带文件名与位置）：
 
-- 多个 `except` 子句、`except` 类型匹配（类型被忽略，一律捕获）、裸 `raise`（重抛当前异常）
+- 裸 `raise`（在 except 里重新抛出当前异常）
 - 切片步长（除 `[::-1]` 外，如 `[::2]`）
 - 生成器 / `yield` / `yield from`
 - `with` 语句（上下文管理器）

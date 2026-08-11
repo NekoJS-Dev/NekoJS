@@ -85,9 +85,49 @@ public final class PythonEmitter {
             case PythonNode.Try t -> {
                 line("try {");
                 block(t.body());
-                if (!t.exceptBody().isEmpty()) {
-                    line("} catch (" + (t.exceptName() != null ? t.exceptName() : "__nekoErr") + ") {");
-                    block(t.exceptBody());
+                List<PythonNode.ExceptClause> excepts = t.excepts();
+                if (!excepts.isEmpty()) {
+                    boolean typed = excepts.size() > 1 || !excepts.get(0).types().isEmpty();
+                    if (!typed) {
+                        // bare single except → plain catch (no type check)
+                        PythonNode.ExceptClause only = excepts.get(0);
+                        line("} catch (" + (only.name() != null ? only.name() : "__nekoErr") + ") {");
+                        block(only.body());
+                    } else {
+                        // typed excepts → one catch + instanceof chain; unmatched errors rethrow.
+                        // Builtin exception names map to Error; user classes (e.g. `class MyErr(Exception):`)
+                        // become real JS classes, so `instanceof` matches `raise MyErr()` naturally.
+                        line("} catch (__nekoErr) {");
+                        indent++;
+                        boolean isFirst = true;
+                        boolean hasBare = false;
+                        for (PythonNode.ExceptClause c : excepts) {
+                            if (c.types().isEmpty()) {   // bare except — parser enforces it is last
+                                hasBare = true;
+                                line(isFirst ? "if (true) {" : "} else {");
+                            } else {
+                                line((isFirst ? "if (" : "} else if (")
+                                        + instanceOfCond(c.types(), "__nekoErr") + ") {");
+                            }
+                            indent++;
+                            if (c.name() != null && !c.name().equals("__nekoErr")) {
+                                line("var " + c.name() + " = __nekoErr;");
+                            }
+                            block(c.body());
+                            indent--;
+                            isFirst = false;
+                        }
+                        if (hasBare) {
+                            line("}");
+                        } else {
+                            line("} else {");
+                            indent++;
+                            line("throw __nekoErr;");
+                            indent--;
+                            line("}");
+                        }
+                        indent--;
+                    }
                 }
                 if (!t.finallyBody().isEmpty()) {
                     line("} finally {");
@@ -277,6 +317,32 @@ public final class PythonEmitter {
             case "__str__" -> "toString";
             default -> name;   // snake_case etc. preserved (valid JS method names)
         };
+    }
+
+    /**
+     * Python builtin exception names → JS {@code Error}, the closest available base class.
+     * {@code class MyErr(Exception):} therefore emits {@code class MyErr extends Error}, making
+     * {@code except MyErr} instanceof-checks match {@code raise MyErr()} end to end.
+     */
+    private static final java.util.Set<String> BUILTIN_EXCEPTIONS = java.util.Set.of(
+            "Exception", "ValueError", "TypeError", "KeyError", "IndexError", "RuntimeError",
+            "AttributeError", "NameError", "ZeroDivisionError", "ArithmeticError", "LookupError",
+            "AssertionError", "OverflowError", "NotImplementedError", "StopIteration", "ImportError",
+            "OSError", "EOFError", "MemoryError", "RecursionError");
+
+    /** {@code e instanceof T0 || e instanceof T1 ...}; builtin exception names map to Error. */
+    private String instanceOfCond(List<PythonNode> types, String varName) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < types.size(); i++) {
+            if (i > 0) sb.append(" || ");
+            sb.append("(").append(varName).append(" instanceof ").append(exceptionTypeExpr(types.get(i))).append(")");
+        }
+        return sb.toString();
+    }
+
+    private String exceptionTypeExpr(PythonNode type) {
+        if (type instanceof PythonNode.Name n && BUILTIN_EXCEPTIONS.contains(n.id())) return "Error";
+        return emitExpr(type);
     }
 
     private static String lastSegment(String dotted) {

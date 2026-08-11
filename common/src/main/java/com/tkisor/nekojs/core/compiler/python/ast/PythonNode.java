@@ -64,12 +64,15 @@ public sealed interface PythonNode {
             implements PythonNode {}
     record SetComp(PythonNode element, PythonNode target, PythonNode iter, PythonNode cond)
             implements PythonNode {}
-    record Try(List<PythonNode> body, String exceptName, List<PythonNode> exceptBody,
-               List<PythonNode> finallyBody) implements PythonNode {}   // exceptBody/finallyBody empty → absent
+    record Try(List<PythonNode> body, List<ExceptClause> excepts, List<PythonNode> finallyBody)
+            implements PythonNode {}                                    // excepts/finallyBody empty → absent
 
     /** Function/lambda parameter (helper, not itself a node). starArg == true → {@code *name} (varargs). */
     record Param(String name, PythonNode defaultValue, boolean starArg) {}
 
     /** Import spec (helper, not itself a node). name = module (import) or imported name (from-import); alias null = none. */
     record Spec(String name, String alias) {}
+
+    /** {@code except} clause (helper, not itself a node). types empty → bare except; name null → no binding. */
+    record ExceptClause(List<PythonNode> types, String name, List<PythonNode> body) {}
 }

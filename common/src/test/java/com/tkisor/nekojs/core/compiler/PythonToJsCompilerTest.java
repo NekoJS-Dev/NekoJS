@@ -314,14 +314,101 @@ class PythonToJsCompilerTest {
     void raiseEmitsThrow() throws Exception {
         String js = py("raise ValueError('boom')");
         assertTrue(js.contains("throw "), "raise Expr → throw Expr: " + js);
-        // raise 42 inside try, caught via except → the thrown value is the catch binding's value.
-        // ('except Exception as e:' is the valid Python form; the type is parsed but ignored at emit.)
-        assertEquals(42, evalInt("try:\n    raise 42\nexcept Exception as e:\n    e"));
+        // raise MyErr(42) → throw new MyErr(42); except MyErr matches via instanceof, e binds the value.
+        String src = """
+                class MyErr:
+                    def __init__(self, v):
+                        self.v = v
+                try:
+                    raise MyErr(42)
+                except MyErr as e:
+                    e.v
+                """;
+        assertEquals(42, evalInt(src));
     }
 
     @Test
     void bareRaiseIsUnsupported() {
         assertThrows(IllegalArgumentException.class, () -> py("raise"));
+    }
+
+    @Test
+    void multipleExceptClausesMatchInOrder() throws Exception {
+        // except clauses lower to an instanceof chain; the first match wins, like Python.
+        String src = """
+                class A:
+                    pass
+                class B:
+                    pass
+                def classify(err):
+                    try:
+                        raise err
+                    except A:
+                        return 'a'
+                    except B:
+                        return 'b'
+                classify(A()) + classify(B())
+                """;
+        assertEquals("ab", evalString(src));
+    }
+
+    @Test
+    void unmatchedExceptionRethrowsToOuterCatch() throws Exception {
+        // A thrown value matching no except clause is rethrown (Python semantics).
+        String src = """
+                got = 'none'
+                class A:
+                    pass
+                class B:
+                    pass
+                try:
+                    try:
+                        raise A()
+                    except B:
+                        got = 'inner'
+                except:
+                    got = 'rethrown'
+                got
+                """;
+        assertEquals("rethrown", evalString(src));
+    }
+
+    @Test
+    void bareExceptCatchesEverything() throws Exception {
+        // A bare except catches any thrown value (even a non-Error like 42).
+        assertEquals(99, evalInt("try:\n    raise 42\nexcept:\n    99"));
+    }
+
+    @Test
+    void exceptWithParenthesizedTypeTuple() throws Exception {
+        // except (A, B) as e → e instanceof A || e instanceof B.
+        String src = """
+                class A:
+                    pass
+                class B:
+                    pass
+                try:
+                    raise B()
+                except (A, B) as e:
+                    'matched'
+                """;
+        assertEquals("matched", evalString(src));
+    }
+
+    @Test
+    void builtinExceptionNamesMapToJsError() throws Exception {
+        // Builtin exception names (undefined in the JS runtime) map to Error in instanceof checks.
+        String js = py("try:\n    pass\nexcept Exception as e:\n    pass");
+        assertTrue(js.contains("instanceof Error"), "Exception → Error in instanceof: " + js);
+        js = py("try:\n    pass\nexcept (ValueError, TypeError):\n    pass");
+        assertTrue(js.contains("(__nekoErr instanceof Error) || (__nekoErr instanceof Error)"),
+                "parenthesized builtin types each map to Error: " + js);
+    }
+
+    @Test
+    void bareExceptMustBeLast() {
+        assertThrows(IllegalArgumentException.class,
+                () -> py("try:\n    pass\nexcept:\n    pass\nexcept ValueError:\n    pass"));
     }
 
     @Test

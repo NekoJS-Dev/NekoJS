@@ -167,22 +167,34 @@ public final class PythonParser {
         expectKw("try");
         expectOp(":");
         List<PythonNode> body = parseSuite();
-        String name = null;
-        List<PythonNode> exceptBody = List.of();
-        if (matchKw("except")) {
-            if (!atOp(":")) {                 // optional exception type [as name] — type ignored in v1
-                parseTest();
+        List<PythonNode.ExceptClause> excepts = new ArrayList<>();
+        while (matchKw("except")) {
+            List<PythonNode> types = List.of();
+            String name = null;
+            if (!atOp(":")) {
+                if (matchOp("(")) {           // except (A, B) as e — parenthesized type tuple
+                    List<PythonNode> ts = new ArrayList<>();
+                    ts.add(parseTest());
+                    while (matchOp(",")) {
+                        if (atOp(")")) break;
+                        ts.add(parseTest());
+                    }
+                    expectOp(")");
+                    types = ts;
+                } else {
+                    types = List.of(parseTest());
+                }
                 if (matchKw("as")) name = expectName();
             }
             expectOp(":");
-            exceptBody = parseSuite();
-        }
-        if (peek().isKw("except")) {
-            throw error("multiple except clauses are not supported in v1");
+            excepts.add(new PythonNode.ExceptClause(types, name, parseSuite()));
+            if (types.isEmpty() && peek().isKw("except")) {
+                throw error("bare 'except' must be the last except clause");
+            }
         }
         List<PythonNode> finallyBody = List.of();
         if (matchKw("finally")) { expectOp(":"); finallyBody = parseSuite(); }
-        return new PythonNode.Try(body, name, exceptBody, finallyBody);
+        return new PythonNode.Try(body, excepts, finallyBody);
     }
 
     /** A suite is either an INDENT…DEDENT block (header ended by NEWLINE) or an inline simple statement. */
