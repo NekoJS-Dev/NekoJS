@@ -1,7 +1,9 @@
 package com.tkisor.nekojs.api.facade;
 
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.Objects;
 
+@ContractReceiver("ModInfo")
 public record ModInfoValue(String id, String name, String version) {
     public ModInfoValue {
         id = requireText(id, "id");

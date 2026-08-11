@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.data.JsonValue;
 import com.tkisor.nekojs.api.data.NbtEntry;
@@ -42,22 +43,14 @@ import java.util.Map;
  * </ul>
  *
  * <p>参数名从方法参数名反射（需 {@code -parameters} 编译），参数类型和返回类型通过
- * {@link #toTypeRef(Type)} 转换为 {@link ApiTypeRef}。类名与契约名不一致时
- * （{@code ModInfoValue}→{@code ModInfo}、{@code PerfTimerValue}→{@code PerfTimer}）
- * 由 {@link #CONTRACT_NAME_OVERRIDES} 统一映射。
+ * {@link #toTypeRef(Type)} 转换为 {@link ApiTypeRef}。哪些类型是 NekoJS 数据类型（可作
+ * receiver）以及类名→契约名映射，统一由 common-api 侧的 {@link ContractReceiver} 注解
+ * 声明（见 {@link #isReceiverType} / {@link #contractNameOf}），不再硬编码于本类。
  */
 public final class ContractReflector {
 
     private ContractReflector() {
     }
-
-    /**
-     * 类名 → 契约名映射。数据类型 Java 类名带 {@code Value} 后缀，但 JS 契约侧用短名。
-     * {@link #symbolRef(Class)} 和 {@link #reflectDataType(String, Class)} 都要与此一致。
-     */
-    private static final Map<Class<?>, String> CONTRACT_NAME_OVERRIDES = Map.of(
-            ModInfoValue.class, "ModInfo",
-            PerfTimerValue.class, "PerfTimer");
 
     /**
      * 从 facade 接口反射出符号列表。
@@ -192,23 +185,24 @@ public final class ContractReflector {
     }
 
     /**
-     * 判断一个类是否是 NekoJS 数据类型（可作 receiver）。
-     * facade 方法第一个参数若是这些类型，则额外产出该类型的 receiver 成员符号。
+     * 判断一个类是否是 NekoJS 数据类型（可作 receiver）：由 common-api 的
+     * {@link ContractReceiver} 注解声明，避免在此硬编码类清单。facade 方法第一个参数
+     * 若是这些类型，则额外产出该类型的 receiver 成员符号。
      */
     private static boolean isReceiverType(Class<?> cls) {
-        return cls == TextValue.class
-                || cls == NekoId.class
-                || cls == JsonValue.class
-                || cls == NbtValue.class
-                || cls == NbtEntry.class
-                || cls == RegistryView.class
-                || cls == ModInfoValue.class
-                || cls == PerfTimerValue.class;
+        return cls.isAnnotationPresent(ContractReceiver.class);
     }
 
-    /** 取数据类型的契约名（查 overrides，否则用 simpleName）。 */
+    /**
+     * 取数据类型的契约名：优先读 {@link ContractReceiver#value()}，空则用类 simpleName。
+     * 与 {@link #isReceiverType} 共用同一注解——单一真相源。
+     */
     private static String contractNameOf(Class<?> cls) {
-        return CONTRACT_NAME_OVERRIDES.getOrDefault(cls, cls.getSimpleName());
+        ContractReceiver receiver = cls.getAnnotation(ContractReceiver.class);
+        if (receiver != null && !receiver.value().isEmpty()) {
+            return receiver.value();
+        }
+        return cls.getSimpleName();
     }
 
     /**

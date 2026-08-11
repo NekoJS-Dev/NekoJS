@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.data;
 
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.List;
 import java.util.Objects;
 
@@ -12,6 +13,7 @@ import java.util.Objects;
  *
  * <p>基于 {@link System#nanoTime()} 单调时钟，亚毫秒精度。
  */
+@ContractReceiver("PerfTimer")
 public final class PerfTimerValue {
     private final String label;
     private final long startNano;

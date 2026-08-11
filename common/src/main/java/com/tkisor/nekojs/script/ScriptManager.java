@@ -81,6 +81,9 @@ public final class ScriptManager implements AutoCloseable {
     private NekoNodeRuntime nodeRuntime;
     private List<ScriptContainer> scripts;
 
+    /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
+    private boolean warnedStartupReloadNonTransactional;
+
     // ---- 构造函数 ----
 
     public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
@@ -174,6 +177,13 @@ public final class ScriptManager implements AutoCloseable {
         public synchronized void reloadScripts () {
             scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
             if (scriptType == ScriptType.STARTUP) {
+                if (!warnedStartupReloadNonTransactional) {
+                    warnedStartupReloadNonTransactional = true;
+                    scriptType.logger().warn(
+                            "{} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；"
+                                    + "若重载期间脚本出错，已注册内容不会回退。",
+                            scriptType.name());
+                }
                 // STARTUP 涉及不可逆注册（物品、方块、实体），无法安全回滚，保持 reset+load 语义。
                 resetEnvironment();
                 discoverScripts();

@@ -1,9 +1,11 @@
 package com.tkisor.nekojs.api.data;
 
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+@ContractReceiver
 public sealed interface TextValue permits TextValue.Literal, TextValue.Translatable, TextValue.Keybind, TextValue.Score, TextValue.Selector, TextValue.Sequence, TextValue.Styled {
     static TextValue literal(String text) {
         return new Literal(Objects.requireNonNull(text, "text"));

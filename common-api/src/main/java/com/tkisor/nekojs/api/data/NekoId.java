@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.api.data;
 
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
+
+@ContractReceiver
 public record NekoId(String namespace, String path) {
     public static final String DEFAULT_NAMESPACE = "nekojs";
 

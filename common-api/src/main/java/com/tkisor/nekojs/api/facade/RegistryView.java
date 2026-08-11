@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.facade;
 
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.List;
 
 /**
@@ -7,6 +8,7 @@ import java.util.List;
  *
  * <p>所有方法只返回基础类型，不暴露 Minecraft 原生对象。
  */
+@ContractReceiver
 public interface RegistryView {
     /** 注册表本身是否存在。 */
     boolean exists();

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.data;
 
+import com.tkisor.nekojs.api.annotation.ContractReceiver;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+@ContractReceiver
 public sealed interface NbtValue permits
         NbtValue.ByteValue,
         NbtValue.ShortValue,
