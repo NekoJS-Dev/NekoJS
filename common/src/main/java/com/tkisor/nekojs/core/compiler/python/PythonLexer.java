@@ -44,10 +44,11 @@ public final class PythonLexer {
             }
             if (c == ' ' || c == '\t' || c == '\f') { advance(); continue; }
             if (c == '\\') {
-                // explicit line continuation: backslash-newline joins lines
+                // explicit line continuation: backslash-newline joins lines, emits no NEWLINE,
+                // and must NOT set atLineStart (we are mid-expression).
                 if (pos + 1 < n && (src.charAt(pos + 1) == '\n' || src.charAt(pos + 1) == '\r')) {
                     advance(); // backslash
-                    consumeNewline(); // newline (no token)
+                    advanceOverNewline();
                     continue;
                 }
                 throw error("unexpected '\\'");
@@ -87,7 +88,7 @@ public final class PythonLexer {
         // blank line or comment-only line → skip, emit nothing, stay atLineStart
         if (pos >= n || peek() == '\n' || peek() == '\r' || peek() == '#') {
             while (pos < n && peek() != '\n' && peek() != '\r') advance();
-            if (pos < n) consumeNewline();
+            if (pos < n) advanceOverNewline();
             return true;
         }
         // emit INDENT / DEDENT(s)
@@ -116,6 +117,13 @@ public final class PythonLexer {
             atLineStart = true;
         }
         // inside brackets: implicit line joining, no NEWLINE, stay !atLineStart
+    }
+
+    /** Advances past a physical newline (\r\n or \n) without emitting any token and without
+     *  touching atLineStart — used for blank/comment-only lines and backslash continuation. */
+    private void advanceOverNewline() {
+        if (peek() == '\r') { advance(); if (pos < n && peek() == '\n') advance(); }
+        else { advance(); }
     }
 
     private void lexNumber() {

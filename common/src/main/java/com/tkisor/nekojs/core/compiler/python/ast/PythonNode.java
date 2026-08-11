@@ -45,7 +45,8 @@ public sealed interface PythonNode {
     record Name(String id) implements PythonNode {}
     record Attribute(PythonNode obj, String attr) implements PythonNode {}
     record Index(PythonNode obj, PythonNode index) implements PythonNode {}
-    record Call(PythonNode func, List<PythonNode> args) implements PythonNode {}
+    record Call(PythonNode func, List<PythonNode> args) implements PythonNode {}     // an arg may be a Kwarg
+    record Kwarg(String name, PythonNode value) implements PythonNode {}              // name=value at a call site
     record Unary(String op, PythonNode operand) implements PythonNode {}
     record Binary(String op, PythonNode left, PythonNode right) implements PythonNode {}
     record Compare(PythonNode left, String op, PythonNode right) implements PythonNode {}

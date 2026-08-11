@@ -496,11 +496,20 @@ public final class PythonParser {
     private List<PythonNode> parseArgList(String close) {
         List<PythonNode> args = new ArrayList<>();
         if (atOp(close)) return args;
-        do {
-            // v1: ignore *args/**kwargs call markers — just parse the value
+        while (true) {
             if (matchOp("**") || matchOp("*")) {}
-            args.add(parseTest());
-        } while (matchOp(","));
+            // keyword argument: NAME '=' value (but not '==')
+            if (peek().type() == PythonToken.Type.NAME && pos + 1 < tokens.size()
+                    && tokens.get(pos + 1).isOp("=")) {
+                String name = advance().text();
+                advance(); // '='
+                args.add(new PythonNode.Kwarg(name, parseTest()));
+            } else {
+                args.add(parseTest());
+            }
+            if (!matchOp(",")) break;
+            if (atOp(close)) break;   // trailing comma
+        }
         return args;
     }
 

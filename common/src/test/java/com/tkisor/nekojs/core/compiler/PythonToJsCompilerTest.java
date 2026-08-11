@@ -248,6 +248,54 @@ class PythonToJsCompilerTest {
         assertTrue(js.contains("var Bar = globalThis.Foo;"), "import X as Y: " + js);
     }
 
+    // ---- audit-driven regression tests (crashes & wrong output on common code) ----
+
+    @Test
+    void blockMayStartWithBlankOrCommentLine() throws Exception {
+        assertEquals(5, evalInt("def f():\n\n    return 5\nf()"));
+        assertEquals(5, evalInt("def f():\n    # a comment\n    return 5\nf()"));
+    }
+
+    @Test
+    void backslashLineContinuation() throws Exception {
+        assertEquals(3, evalInt("1 + \\\n    2"));
+    }
+
+    @Test
+    void chainedComparison() throws Exception {
+        assertTrue(evalBool("1 < 2 < 3"));
+        assertFalse(evalBool("3 < 2 < 1"));
+        assertTrue(evalBool("0 <= 0 <= 10"));
+    }
+
+    @Test
+    void negativeIndex() throws Exception {
+        assertEquals(30, evalInt("[10, 20, 30][-1]"));
+        assertEquals(20, evalInt("[10, 20, 30][-2]"));
+        assertEquals("c", evalString("'abc'[-1]"));
+    }
+
+    @Test
+    void fStringWithSpecialCharsInInterpolation() throws Exception {
+        // ':' inside a quoted string within an interpolation must not terminate it (audit A3)
+        assertEquals("a:b", evalString("f\"{'a:b'}\""));
+    }
+
+    @Test
+    void trailingCommaInCallAndLiteral() throws Exception {
+        assertEquals(6, evalInt("sum([1, 2, 3,])"));
+    }
+
+    @Test
+    void moreBuiltinsAndKwargs() throws Exception {
+        assertTrue(evalBool("any([0, 0, 10])"));
+        assertTrue(evalBool("all([1, 1, 1])"));
+        assertFalse(evalBool("all([1, 0, 1])"));
+        assertEquals(3, evalInt("sorted([3, 1, 2], reverse=True)[0]"));
+        String js = py("print(a, b, sep=':')");
+        assertTrue(js.contains(".join(\":\")"), "print sep kwarg → join: " + js);
+    }
+
     @Test
     void dictIndexing() throws Exception {
         String src = """

@@ -5,7 +5,9 @@ import com.tkisor.nekojs.core.compiler.python.ast.PythonNode.Param;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Emits JavaScript source from a {@link PythonNode} AST. Compound expressions self-parenthesize
@@ -177,6 +179,16 @@ public final class PythonEmitter {
         return idx < 0 ? dotted : dotted.substring(idx + 1);
     }
 
+    /** If {@code idx} is a negative numeric literal, returns its magnitude; otherwise -1. */
+    private static long negativeLiteralMagnitude(PythonNode idx) {
+        if (idx instanceof PythonNode.IntLit lit && lit.value() < 0) return -lit.value();
+        if (idx instanceof PythonNode.Unary u && "-".equals(u.op())
+                && u.operand() instanceof PythonNode.IntLit ol && ol.value() >= 0) {
+            return ol.value();
+        }
+        return -1;
+    }
+
     private void writeIf(PythonNode.If i, boolean leadIndent) {
         if (leadIndent) out.append(ind());
         out.append("if (").append(emitExpr(i.cond())).append(") {");
@@ -210,7 +222,15 @@ public final class PythonEmitter {
             case PythonNode.NoneLit l -> "null";
             case PythonNode.Name n -> (rewriteSelf && "self".equals(n.id())) ? "this" : n.id();
             case PythonNode.Attribute a -> emitExpr(a.obj()) + "." + a.attr();
-            case PythonNode.Index ix -> emitExpr(ix.obj()) + "[" + emitExpr(ix.index()) + "]";
+            case PythonNode.Index ix -> {
+                // negative literal index → Python last-element semantics via slice
+                // (`-1` parses as Unary("-", IntLit), so detect both forms)
+                long mag = negativeLiteralMagnitude(ix.index());
+                if (mag >= 0) {
+                    yield emitExpr(ix.obj()) + ".slice(-" + mag + ")[0]";
+                }
+                yield emitExpr(ix.obj()) + "[" + emitExpr(ix.index()) + "]";
+            }
             case PythonNode.Call c -> emitCall(c);
             case PythonNode.Unary u -> "(" + jsUnary(u.op()) + emitExpr(u.operand()) + ")";
             case PythonNode.Binary b -> emitBinary(b);
@@ -231,56 +251,91 @@ public final class PythonEmitter {
         if (c.func() instanceof PythonNode.Attribute attr
                 && attr.obj() instanceof PythonNode.Call sup
                 && sup.func() instanceof PythonNode.Name sn && "super".equals(sn.id()) && sup.args().isEmpty()) {
-            String args = emitArgs(c.args());
+            String args = emitArgs(c.args().stream().filter(a -> !(a instanceof PythonNode.Kwarg)).toList());
             if ("__init__".equals(attr.attr())) return "super(" + args + ")";
             return "super." + attr.attr() + "(" + args + ")";
         }
+        // separate positional args from keyword args
+        List<PythonNode> positional = new ArrayList<>();
+        Map<String, PythonNode> kwargs = new LinkedHashMap<>();
+        for (PythonNode a : c.args()) {
+            if (a instanceof PythonNode.Kwarg k) kwargs.put(k.name(), k.value());
+            else positional.add(a);
+        }
         if (c.func() instanceof PythonNode.Name fn) {
-            List<PythonNode> args = c.args();
-            String e0 = args.isEmpty() ? "" : emitExpr(args.get(0));
+            String e0 = positional.isEmpty() ? "" : emitExpr(positional.get(0));
             switch (fn.id()) {
-                case "range" -> { return emitRange(args); }
-                case "len" -> { if (args.size() == 1) return "(" + e0 + ").length"; }
-                case "print" -> { return "console.log(" + emitArgs(args) + ")"; }
-                case "abs" -> { if (args.size() == 1) return "Math.abs(" + e0 + ")"; }
-                case "min" -> { return args.size() == 1 ? "Math.min(..." + e0 + ")" : "Math.min(" + emitArgs(args) + ")"; }
-                case "max" -> { return args.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(args) + ")"; }
-                case "sum" -> { if (args.size() == 1) return "(" + e0 + ").reduce((a, b) => (a + b), 0)"; }
-                case "str" -> { if (args.size() == 1) return "String(" + e0 + ")"; }
-                case "int" -> { if (args.size() == 1) return "parseInt(" + e0 + ", 10)"; }
-                case "float" -> { if (args.size() == 1) return "Number(" + e0 + ")"; }
-                case "bool" -> { if (args.size() == 1) return "Boolean(" + e0 + ")"; }
-                case "list" -> { return args.isEmpty() ? "[]" : "[..." + e0 + "]"; }
-                case "dict" -> { return args.isEmpty() ? "({})" : "Object.fromEntries(" + e0 + ")"; }
-                case "sorted" -> {
-                    if (args.size() == 1) return "([...(" + e0 + ")]).sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
-                }
-                case "enumerate" -> { if (args.size() == 1) return "(" + e0 + ").map((v, i) => [i, v])"; }
+                case "range" -> { return emitRange(positional); }
+                case "len" -> { if (positional.size() == 1) return "(" + e0 + ").length"; }
+                case "print" -> { return emitPrint(positional, kwargs); }
+                case "abs" -> { if (positional.size() == 1) return "Math.abs(" + e0 + ")"; }
+                case "min" -> { return positional.size() == 1 ? "Math.min(..." + e0 + ")" : "Math.min(" + emitArgs(positional) + ")"; }
+                case "max" -> { return positional.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(positional) + ")"; }
+                case "sum" -> { if (positional.size() == 1) return "(" + e0 + ").reduce((a, b) => (a + b), 0)"; }
+                case "str" -> { if (positional.size() == 1) return "String(" + e0 + ")"; }
+                case "int" -> { return "parseInt(" + emitArgs(positional) + ")"; }
+                case "float" -> { if (positional.size() == 1) return "Number(" + e0 + ")"; }
+                case "bool" -> { if (positional.size() == 1) return "Boolean(" + e0 + ")"; }
+                case "list" -> { return positional.isEmpty() ? "[]" : "[..." + e0 + "]"; }
+                case "dict" -> { return positional.isEmpty() ? "({})" : "Object.fromEntries(" + e0 + ")"; }
+                case "sorted" -> { return emitSorted(positional, kwargs); }
+                case "enumerate" -> { if (positional.size() == 1) return "(" + e0 + ").map((v, i) => [i, v])"; }
+                case "set" -> { return positional.isEmpty() ? "new Set()" : "new Set(" + e0 + ")"; }
+                case "tuple" -> { return positional.isEmpty() ? "[]" : "[..." + e0 + "]"; }
+                case "any" -> { if (positional.size() == 1) return "(" + e0 + ").some((x) => x)"; }
+                case "all" -> { if (positional.size() == 1) return "(" + e0 + ").every((x) => x)"; }
+                case "ord" -> { if (positional.size() == 1) return "(" + e0 + ").codePointAt(0)"; }
+                case "chr" -> { if (positional.size() == 1) return "String.fromCodePoint(" + e0 + ")"; }
+                case "pow" -> { if (positional.size() == 2) return "Math.pow(" + emitArgs(positional) + ")"; }
+                case "callable" -> { if (positional.size() == 1) return "(typeof " + e0 + " === \"function\")"; }
                 default -> {}
             }
             if (classNames.contains(fn.id())) {
-                return "new " + fn.id() + "(" + emitArgs(args) + ")";
+                return "new " + fn.id() + "(" + emitArgs(positional) + ")";
             }
         }
-        return emitExpr(c.func()) + "(" + emitArgs(c.args()) + ")";
+        if (!kwargs.isEmpty()) {
+            throw new IllegalArgumentException("python keyword arguments are only supported for print/sorted");
+        }
+        return emitExpr(c.func()) + "(" + emitArgs(positional) + ")";
+    }
+
+    /** print(args, sep=, end=) → console.log([args].join(sep)); end= ignored (console.log adds newline). */
+    private String emitPrint(List<PythonNode> args, Map<String, PythonNode> kwargs) {
+        String sep = kwargs.containsKey("sep") ? emitExpr(kwargs.get("sep")) : "\" \"";
+        return "console.log([" + emitArgs(args) + "].join(" + sep + "))";
+    }
+
+    /** sorted(iter, reverse=) → numeric/string sort, optionally reversed. */
+    private String emitSorted(List<PythonNode> args, Map<String, PythonNode> kwargs) {
+        if (args.size() != 1) breakKeyword("sorted", args.size());
+        String base = "([...(" + emitExpr(args.get(0)) + ")]).sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
+        return kwargs.containsKey("reverse") ? base + ".reverse()" : base;
+    }
+
+    private static void breakKeyword(String name, int argc) {
+        throw new IllegalArgumentException("python " + name + "() unsupported with " + argc + " positional args");
     }
 
     private String emitRange(List<PythonNode> args) {
+        // The Array.from callback parameter must NOT shadow variables in the start/step expressions
+        // (e.g. range(i + 1, n) inside a for-loop), so use a reserved param name.
+        final String idx = "__nekoRangeIdx";
         if (args.isEmpty()) throw new IllegalArgumentException("python range() needs at least 1 arg");
         if (args.size() == 1) {
             String stop = emitExpr(args.get(0));
-            return "Array.from({length: " + stop + "}, function (_, i) { return i; })";
+            return "Array.from({length: " + stop + "}, function (_, " + idx + ") { return " + idx + "; })";
         }
         if (args.size() == 2) {
             String start = emitExpr(args.get(0));
             String stop = emitExpr(args.get(1));
-            return "Array.from({length: (" + stop + " - " + start + ")}, function (_, i) { return i + " + start + "; })";
+            return "Array.from({length: (" + stop + " - " + start + ")}, function (_, " + idx + ") { return " + idx + " + " + start + "; })";
         }
         String start = emitExpr(args.get(0));
         String stop = emitExpr(args.get(1));
         String step = emitExpr(args.get(2));
-        return "Array.from({length: Math.ceil((" + stop + " - " + start + ") / " + step + ")}, function (_, i) { return "
-                + start + " + i * " + step + "; })";
+        return "Array.from({length: Math.ceil((" + stop + " - " + start + ") / " + step + ")}, function (_, " + idx + ") { return "
+                + start + " + " + idx + " * " + step + "; })";
     }
 
     private String emitBinary(PythonNode.Binary b) {
@@ -300,6 +355,13 @@ public final class PythonEmitter {
     }
 
     private String emitCompare(PythonNode.Compare c) {
+        // Chained comparison: a<b<c parses to Compare(Compare(a,<,b),<,c) → emit ((a<b) && (b<c)).
+        // (Python evaluates each operand once; the JS form may re-evaluate the middle operand —
+        // acceptable for side-effect-free comparisons, the common case.)
+        if (c.left() instanceof PythonNode.Compare lc) {
+            return "(" + emitCompare(lc) + " && (" + emitExpr(lc.right()) + " " + c.op() + " "
+                    + emitExpr(c.right()) + "))";
+        }
         String left = emitExpr(c.left());
         String right = emitExpr(c.right());
         return switch (c.op()) {

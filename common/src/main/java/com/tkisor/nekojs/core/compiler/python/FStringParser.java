@@ -31,9 +31,21 @@ final class FStringParser {
                 i++; // skip '{'
                 int depth = 1;
                 int start = i;
-                // read the expression until depth-0 '}', or ':'/'!' (format/conversion) at depth 1
+                // read the expression until depth-0 '}', or ':'/'!' (format/conversion) at depth 1,
+                // skipping over quoted string literals so a ':' or '}' inside one doesn't terminate.
                 while (i < len) {
                     char ch = raw.charAt(i);
+                    if (ch == '\'' || ch == '"') {
+                        char q = ch;
+                        i++;
+                        while (i < len) {
+                            char c2 = raw.charAt(i);
+                            if (c2 == '\\' && i + 1 < len) { i += 2; continue; }
+                            if (c2 == q) { i++; break; }
+                            i++;
+                        }
+                        continue;
+                    }
                     if (ch == '{') { depth++; i++; }
                     else if (ch == '}') { depth--; if (depth == 0) break; i++; }
                     else if (ch == ':' && depth == 1) break;
