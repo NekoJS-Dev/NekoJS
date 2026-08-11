@@ -1513,25 +1513,6 @@ public final class NekoTypeScriptCompiler {
             return NekoSourceLexerBase.skipTemplate(source, length, start);
         }
 
-        private int skipLineComment(int start) {
-            return NekoSourceLexerBase.skipLineComment(source, length, start);
-        }
-
-        private int skipBlockComment(int start) {
-            return NekoSourceLexerBase.skipBlockComment(source, length, start);
-        }
-
-        private int skipRegex(int start) {
-            return NekoSourceLexerBase.skipRegex(source, length, start);
-        }
-
-        private boolean looksLikeRegexStart(int slash) {
-            // Delegate to the shared base so this char-set stays in sync with JSX/ESM.
-            // The previous private copy was missing `< > + - * / %` (7 chars), which could
-            // mis-classify `a < /regex/` or `a + /regex/` as division in TS source.
-            return NekoSourceLexerBase.looksLikeRegexStart(source, length, slash);
-        }
-
         private int nextNonWhitespace(int index) {
             return NekoSourceLexerBase.nextNonWhitespace(source, length, index);
         }

@@ -94,7 +94,7 @@ public final class ScriptManager implements AutoCloseable {
         this.errorTracker = errorTracker;
         this.paths = paths;
         this.sandboxConfig = sandboxConfig;
-        this.scriptExecutor = new ScriptExecutor(scriptType, errorTracker, paths, sandboxConfig);
+        this.scriptExecutor = new ScriptExecutor(errorTracker, paths, sandboxConfig);
         this.environmentFactory = environmentFactory;
     }
 

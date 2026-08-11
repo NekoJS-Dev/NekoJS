@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.script;
 
-import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -27,13 +26,11 @@ import java.util.concurrent.TimeoutException;
  * 顶层生命周期协调，不直接承担执行细节。
  */
 public final class ScriptExecutor {
-    private final ScriptType scriptType;
     private final ErrorTracker errorTracker;
     private final NekoJSPaths paths;
     private final SandboxConfig sandboxConfig;
 
-    public ScriptExecutor(ScriptType scriptType, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig) {
-        this.scriptType = scriptType;
+    public ScriptExecutor(ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig) {
         this.errorTracker = errorTracker;
         this.paths = paths;
         this.sandboxConfig = sandboxConfig;

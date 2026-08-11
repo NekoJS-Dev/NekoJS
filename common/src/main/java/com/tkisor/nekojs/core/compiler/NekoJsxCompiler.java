@@ -50,10 +50,6 @@ public final class NekoJsxCompiler {
             this.automatic = automatic;
         }
 
-        private String transpile() {
-            return transpileDetailed().code();
-        }
-
         private JsxTransformResult transpileDetailed() {
             NekoSourceMapBuilder.Emitter output = NekoSourceMapBuilder.emitter(file, source);
             int index = 0;

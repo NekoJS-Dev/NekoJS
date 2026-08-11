@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
@@ -19,16 +18,14 @@ import java.util.Locale;
 public final class NekoModuleResolver {
     private final NekoJSPaths paths;
     private final ScriptFilePolicy filePolicy;
-    private final ScriptCompilerRegistry compilers;
 
-    public NekoModuleResolver(NekoJSPaths paths, ScriptFilePolicy filePolicy, ScriptCompilerRegistry compilers) {
+    public NekoModuleResolver(NekoJSPaths paths, ScriptFilePolicy filePolicy) {
         this.paths = paths;
         this.filePolicy = filePolicy;
-        this.compilers = compilers;
     }
 
     public NekoModuleResolver() {
-        this(NekoJSPaths.get(), ScriptFilePolicy.legacyRuntime(), ScriptCompilerRegistry.current());
+        this(NekoJSPaths.get(), ScriptFilePolicy.legacyRuntime());
     }
 
     public NekoResolvedModule resolveEntry(String entryPath) throws IOException {

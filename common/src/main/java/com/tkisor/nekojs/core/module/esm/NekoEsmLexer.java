@@ -138,9 +138,5 @@ public final class NekoEsmLexer {
         return NekoSourceLexerBase.isIdentifierStart(c);
     }
 
-    private static boolean isIdentifierPart(char c) {
-        return NekoSourceLexerBase.isIdentifierPart(c);
-    }
-
     private record StringRead(int end, String value) {}
 }

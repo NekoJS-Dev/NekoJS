@@ -5,7 +5,6 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
-import com.tkisor.nekojs.core.module.esm.NekoEsmLinkMetadata;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
@@ -268,10 +267,6 @@ public final class NekoScriptModuleLoaderHost {
         return reloadCoordinator.revision(moduleId);
     }
 
-    private long bumpRevision(String moduleId) {
-        return reloadCoordinator.bumpRevision(moduleId);
-    }
-
     private Object loadResolved(NekoResolvedModule resolved) throws IOException {
         return loadResolvedSync(resolved, true);
     }
@@ -437,14 +432,6 @@ public final class NekoScriptModuleLoaderHost {
     private void recordDependency(String parentPath, NekoResolvedModule child) {
         if (child == null || child.special()) return;
         dependencyGraph.recordDependency(parentPath, child.id());
-    }
-
-    private void recordStaticDependencies(String parentId, NekoEsmLinkMetadata metadata) {
-        if (metadata == null) return;
-        dependencyGraph.clearDependencies(parentId);
-        for (var dependency : metadata.dependencies()) {
-            recordDependency(parentId, dependency.resolved());
-        }
     }
 
     private Object requireUnchecked(String parentPath, String specifier) {

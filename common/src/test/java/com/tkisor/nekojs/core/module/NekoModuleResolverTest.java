@@ -87,6 +87,6 @@ class NekoModuleResolverTest {
         constructor.setAccessible(true);
         NekoJSPaths paths = constructor.newInstance(gameDir);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        return new NekoModuleResolver(paths, new ScriptFilePolicy(compilers), compilers);
+        return new NekoModuleResolver(paths, new ScriptFilePolicy(compilers));
     }
 }

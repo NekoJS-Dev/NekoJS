@@ -111,7 +111,7 @@ public final class NekoSandboxFactory {
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
         NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
-                new NekoModuleResolver(paths, new ScriptFilePolicy(compilers), compilers),
+                new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)),
                 paths,
                 core.errorTracker(),
                 config);
