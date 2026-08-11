@@ -57,10 +57,10 @@ public class NekoJSMod extends NekoJS {
     }
 
     public NekoJSMod(IEventBus modEventBus, ModContainer modContainer) {
-        this(new ScriptEventsJS(), modEventBus, modContainer);
+        this(new ScriptEventsJS(), modEventBus);
     }
 
-    private NekoJSMod(ScriptEventsJS scriptEventsRegistrar, IEventBus modEventBus, ModContainer modContainer) {
+    private NekoJSMod(ScriptEventsJS scriptEventsRegistrar, IEventBus modEventBus) {
         super(new DefaultScriptEventBridge(scriptEventsRegistrar));
         this.scriptEventsRegistrar = scriptEventsRegistrar;
         NekoJSMod.modEventBus = modEventBus;

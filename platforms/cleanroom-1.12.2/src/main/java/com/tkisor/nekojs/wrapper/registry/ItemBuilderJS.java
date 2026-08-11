@@ -16,7 +16,6 @@ public class ItemBuilderJS {
     private CreativeTabs creativeTab;
     private int maxStackSize = 64;
     private int maxDamage = 0;
-    private boolean containerItem = false;
     private FoodBuilderJS foodBuilder = null;
 
     public ItemBuilderJS(String registryName) {

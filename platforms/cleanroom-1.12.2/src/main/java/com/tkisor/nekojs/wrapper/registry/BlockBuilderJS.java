@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.wrapper.registry;
 
 import net.minecraft.block.Block;
-import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.util.ResourceLocation;
 
@@ -18,7 +17,6 @@ public class BlockBuilderJS {
     private float lightOpacity = 1.0f;
     private boolean generateItem = true;
     private boolean requiresTool = false;
-    private SoundType soundType = SoundType.STONE;
     private String harvestTool = null;
     private int harvestLevel = 0;
 
@@ -96,21 +94,11 @@ public class BlockBuilderJS {
         return this;
     }
 
+    /**
+     * 1.12.2 的 {@code Block.setSoundType} 是 protected（只能在子类里调用），所以 cleanroom 平台
+     * 暂不应用声音——方法保留以保证脚本 API 兼容（调用成功但无效）。neoforge 平台会真正设置声音。
+     */
     public BlockBuilderJS sound(String sound) {
-        this.soundType = switch (sound.toLowerCase()) {
-            case "wood" -> SoundType.WOOD;
-            case "gravel", "ground" -> SoundType.GROUND;
-            case "grass", "plant" -> SoundType.PLANT;
-            case "metal" -> SoundType.METAL;
-            case "glass" -> SoundType.GLASS;
-            case "wool", "cloth" -> SoundType.CLOTH;
-            case "sand" -> SoundType.SAND;
-            case "snow" -> SoundType.SNOW;
-            case "ladder" -> SoundType.LADDER;
-            case "anvil" -> SoundType.ANVIL;
-            case "slime" -> SoundType.SLIME;
-            default -> SoundType.STONE;
-        };
         return this;
     }
 

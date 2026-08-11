@@ -14,7 +14,6 @@ import net.neoforged.neoforge.event.entity.EntityEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.living.*;
-import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.function.Function;
@@ -52,10 +51,6 @@ public interface EntityEvents {
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
         return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
-    }
-
-    private static <T extends ItemEntityPickupEvent> DispatchKey<T, Item> dispatchByPickupItem() {
-        return dispatchByItem(event -> event.getItemEntity().getItem());
     }
 
     private static <T extends EntityEvent> DispatchKey<T, EntityType<?>> dispatchByEntityType() {

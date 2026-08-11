@@ -61,10 +61,6 @@ public interface PlayerEvents {
         return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
     }
 
-    private static <T extends ItemEntityPickupEvent> DispatchKey<T, Item> dispatchByPickupItem() {
-        return dispatchByItem(event -> event.getItemEntity().getItem());
-    }
-
     private static DispatchKey<InventoryChangedEventJS, Item> dispatchByInventoryItem() {
         return EventBusFactory.createDispatchKey(Item.class, e -> e.getItem().getItem());
     }
