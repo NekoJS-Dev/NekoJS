@@ -71,18 +71,25 @@ public abstract class EventBusBase<EVENT, LISTENER> {
     }
 
     protected final LISTENER getBuilt(Function<Stream<LISTENER>, LISTENER> listenerCompiler) {
-        if (built == null) {
+        // Capture into a local: the return must not re-read the volatile `built` field after
+        // releasing the monitor, because a concurrent listen()/unregister() can invalidate it
+        // (built = null) in the window between the synchronized block exit and the return.
+        // Returning the local snapshot guarantees a non-null compiled listener.
+        LISTENER snapshot = built;
+        if (snapshot == null) {
             synchronized (this) {
-                if (built == null) {
+                snapshot = built;
+                if (snapshot == null) {
                     // Copy into a mutable list for sorting: CopyOnWriteArrayList's
                     // sort mutates in place and would otherwise copy the whole array,
                     // and we want a stable compile snapshot under the lock.
                     var sorted = new ArrayList<>(tokens);
                     sorted.sort(null);
-                    built = listenerCompiler.apply(sorted.stream().map(EventListenerTokenImpl::listener));
+                    snapshot = listenerCompiler.apply(sorted.stream().map(EventListenerTokenImpl::listener));
+                    built = snapshot;
                 }
             }
         }
-        return built;
+        return snapshot;
     }
 }
