@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.lifecycle;
 
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
@@ -37,7 +36,6 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
     private final NekoCoreContext core;
     private final IPluginRuntime pluginRuntime;
-    private final ScriptCompilerRegistry compilers;
     private final ScriptEventBridge eventBridge;
     private final ScriptPropertyRegistry scriptProperties;
     private final ScriptEnvironmentFactory environmentFactory;
@@ -47,14 +45,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     public NekoRuntimeRoot(
             NekoCoreContext core,
             IPluginRuntime pluginRuntime,
-            ScriptCompilerRegistry compilers,
             ScriptEventBridge eventBridge,
             ScriptPropertyRegistry scriptProperties,
             NekoSandboxFactory sandboxFactory
     ) {
         this.core = core;
         this.pluginRuntime = pluginRuntime;
-        this.compilers = compilers;
         this.eventBridge = eventBridge;
         this.scriptProperties = scriptProperties;
         this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);

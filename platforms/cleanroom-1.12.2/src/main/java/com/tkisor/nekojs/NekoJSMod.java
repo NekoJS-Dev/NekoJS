@@ -165,7 +165,6 @@ public class NekoJSMod extends NekoJS {
         RUNTIME_ROOT = new NekoRuntimeRoot(
                 core,
                 pluginRuntime,
-                compilers,
                 this.scriptEventBridge,
                 this.scriptProperties,
                 sandboxFactory
