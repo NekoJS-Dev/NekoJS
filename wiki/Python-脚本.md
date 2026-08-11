@@ -52,7 +52,10 @@ ServerEvents.recipes(lambda event: (
 | `for x in iter:` / `while cond:` | 支持，`for...of` / `while` |
 | 赋值：`=`、增强 `+=`/`-=`/...`//=`/`**=`、元组解包 `a, b = ...`、多目标 `a = b = v` | 支持 |
 | `lambda` | 支持，降级为箭头函数 |
-| **单层**列表推导式 `[expr for x in iter if cond]`（可选 `if` 过滤） | 支持，降级为 `.filter().map()` |
+| **单层**推导式：列表 `[expr for x in iter if cond]`、字典 `{k:v for ...}`、集合 `{e for ...}`（可选 `if`） | 支持，降级为 `.filter().map()` / `Object.fromEntries` / `new Set` |
+| 切片 `xs[lo:up]`、`xs[::-1]`、负下标 `xs[-1]` | 支持（详见「切片」节；除 `[::-1]` 外步长不支持） |
+| `try` / `except` / `finally` | 支持（单 except，类型忽略——详见「try / except」节） |
+| 关键字参数 `print(sep=)`、`sorted(reverse=)` | 支持（其余调用带 kwargs 会报错） |
 | f-string `f'{x}'`（**不含格式说明符**） | 支持，降级为模板字面量 |
 | 列表 / 元组 / 字典 / 集合字面量 | 支持，分别降级为数组 / 数组 / 对象 / `new Set([...])` |
 | 类（`__init__`/构造器、`self`→`this`、`extends` 继承、`super()`、`@staticmethod`、`__str__`→`toString`） | 支持 |
@@ -183,22 +186,60 @@ print(Utils.java)
 | Python | 等价 JS lowering | 备注 |
 |---|---|---|
 | `range(stop)` / `range(start, stop[, step])` | `Array.from({length: ...}, ...)` | 单参数 `[0, stop)`；双参数 `[start, stop)`；三参数含步长 |
-| `len(x)` | `(x).length` | |
-| `print(...)` | `console.log(...)` | 多参数逗号分隔 |
+| `len(x)` | `(x).length` | 对数组/字符串；dict/set 需要 `len(list(d.keys()))` 等绕开 |
+| `print(...)` | `console.log([...].join(sep))` | 支持 `sep=` 关键字参数；`end=` 被忽略（console.log 固定换行） |
 | `abs(x)` | `Math.abs(x)` | |
 | `min(...)` / `min(iterable)` | `Math.min(...)` | 单 iterable 参数会自动 spread |
 | `max(...)` / `max(iterable)` | `Math.max(...)` | 同上 |
 | `sum(iterable)` | `reduce((a,b)=>a+b, 0)` | |
 | `str(x)` | `String(x)` | |
-| `int(x)` | `parseInt(x, 10)` | |
+| `int(x[, base])` | `parseInt(x, base)` | 可选进制 |
 | `float(x)` | `Number(x)` | |
 | `bool(x)` | `Boolean(x)` | |
 | `list()` / `list(iterable)` | `[]` / `[...iterable]` | |
 | `dict()` / `dict(iterable)` | `({})` / `Object.fromEntries(iterable)` | |
-| `sorted(iterable)` | `[...iterable].sort(默认 < 比较器)` | 不接受 `key=`/`reverse=` 参数 |
+| `set()` / `set(iterable)` | `new Set()` / `new Set(iterable)` | |
+| `tuple(iterable)` | `[...iterable]` | 注意：返回的是可变数组（JS 无不可变元组） |
+| `sorted(iterable)` | `[...iterable].sort(比较器)` | 支持 `reverse=True` 关键字；不支持 `key=` |
+| `any(iterable)` / `all(iterable)` | `.some(x=>x)` / `.every(x=>x)` | |
 | `enumerate(iterable)` | `(iterable).map((v, i) => [i, v])` | 返回 `[index, value]` 对 |
+| `ord(c)` / `chr(n)` | `codePointAt(0)` / `String.fromCodePoint(n)` | |
+| `pow(x, y)` | `Math.pow(x, y)` | 不支持三参数模幂 |
+| `callable(x)` | `typeof x === "function"` | |
 
-> 注意：除上表外，**Python 标准库方法都不支持**（如 `str.upper`、`dict.keys`、`list.append` 等）。需要这些能力时请直接写 JS 等价写法（`x.toUpperCase()`、`Object.keys(d)`、`xs.push(v)`）。
+> 常用 **str/list/dict/set 方法**已映射到 JS 等价写法（见下节「方法映射」）；未映射的方法原样透传 `obj.method(args)`（若 JS 侧恰好有同名方法仍可用）。
+
+## 方法映射
+
+常用 str/list/dict/set 方法会自动转译到 JS 等价写法：
+
+| 类型 | 已映射方法 |
+|---|---|
+| **str** | `upper lower strip lstrip rstrip find rfind index ljust rjust zfill replace startswith endswith count split`(无参按空白) `join` |
+| **list** | `append`(→push) `copy insert remove pop reverse` |
+| **dict** | `keys values items update get`(带默认值) |
+| **set** | `discard`(→delete)；`add` 原样透传 |
+
+未在上表的方法原样透传（`obj.method(args)`），若 JS 侧有同名方法仍可用。
+
+## 切片
+
+- `xs[lo:up]`、`xs[:up]`、`xs[lo:]`、`xs[:]` → `xs.slice(lo, up)`
+- `xs[::-1]` → 反转（字符串走 `split/reverse/join`，其它走 `...reverse`）
+- 负数下标 `xs[-1]` → `xs.slice(-1)[0]`（Python 末元素语义）
+- **仅 `[::-1]` 步长**被支持；其它步长（如 `[::2]`）会报错
+
+## try / except
+
+```python
+try:
+    risky()
+except SomeError as e:
+    handle(e)
+finally:
+    cleanup()
+```
+降级为 JS `try/catch/finally`。**限制**：v1 只支持**单个** `except` 子句（多个会报错）；`except` 的异常**类型会被忽略**（一律捕获），`as e` 绑定的 `e` 是底层 JS 错误对象；不支持 `raise`。
 
 ## Python ↔ JS 差异要点
 
@@ -223,18 +264,17 @@ print(Utils.java)
 
 下列语法/特性在当前版本**不支持**，遇到会清晰报错（错误信息会带文件名与位置）：
 
-- `try` / `except` / `finally`、`raise`
-- 切片（`xs[1:3]`、`xs[::-1]`）——只支持下标单元素访问 `xs[i]`
-- 字典推导式 `{k: v for ...}`、集合推导式 `{x for ...}`
+- `raise`、多个 `except` 子句、`except` 类型匹配（类型被忽略，一律捕获）
+- 切片步长（除 `[::-1]` 外，如 `[::2]`）
 - 生成器 / `yield` / `yield from`
 - `with` 语句（上下文管理器）
 - 装饰器（除 `@staticmethod` 外）
-- `**kwargs` 关键字参数（`*args` 支持，但 `**kwargs` 不支持）
+- `**kwargs` 关键字参数（`*args` 支持；`print(sep=)`/`sorted(reverse=)` 例外）
 - f-string 格式说明符（`{x:.2f}`、`{n:>4}` 等）
-- 嵌套/多层列表推导式（`[... for x in ... for y in ...]`）
+- 嵌套/多层推导式（`[... for x in ... for y in ...]`）
 - `from X import *`
 - 矩阵乘 `@` / `@=`
-- 上表以外的标准库方法与内置函数
+- 上表以外的内置函数（如 `isinstance`、`type`、`id`、`round` 的银行家舍入、`zip` 的多迭代器）
 
 > 替代思路：需要这些能力时，直接写 JS 等价写法，或在 `.py` 里调用 NekoJS 暴露的 JS 绑定。Python 子集与 JS/TS 脚本在同一个运行时里，可以混用。
 
