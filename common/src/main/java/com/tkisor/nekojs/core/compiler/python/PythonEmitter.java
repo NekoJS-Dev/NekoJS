@@ -28,13 +28,38 @@ public final class PythonEmitter {
     private final IdentityHashMap<PythonNode, Integer> srcLines;
     private boolean rewriteSelf = false;   // true inside a class method body (self → this)
     private final java.util.Set<String> classNames = new java.util.HashSet<>();   // for `new` on calls
+    /** Top-level names defined by this module (def/class/assign), re-exported so .py files are importable. */
+    private final java.util.Set<String> definedNames = new java.util.LinkedHashSet<>();
 
     public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
         this.srcLines = srcLines;
     }
 
     public String emit(PythonNode.Module module) {
-        for (PythonNode stmt : module.body()) emitStmt(stmt);
+        // Pass 1: collect top-level defined names so the module can re-export them (Python modules
+        // expose all top-level bindings; this lets sibling .py files `from <this> import <name>`).
+        for (PythonNode stmt : module.body()) collectDefinitions(stmt);
+        // Pass 2: ESM import declarations must precede all other statements; emit them first, each
+        // mapped back to its Python source line. Module specifiers are relative to this file
+        // (foo → ./foo, a.b.c → ./a/b/c); NekoModuleResolver probes .py / .js / index.* automatically.
+        for (PythonNode stmt : module.body()) {
+            if (stmt instanceof PythonNode.Import imp) {
+                recordMapping(stmt);
+                for (PythonNode.Spec s : imp.specs()) line(esmNamespaceImport(s));
+            } else if (stmt instanceof PythonNode.ImportFrom impf) {
+                if (impf.star()) throw new IllegalArgumentException("python 'from X import *' is not supported");
+                recordMapping(stmt);
+                line(esmNamedImport(impf));
+            }
+        }
+        // Pass 3: the remaining statements.
+        for (PythonNode stmt : module.body()) {
+            if (stmt instanceof PythonNode.Import || stmt instanceof PythonNode.ImportFrom) continue;
+            emitStmt(stmt);
+        }
+        // Pass 4: emit the export block. Has no Python source line → no source-map entry. Skipped when
+        // the module defines no names (e.g. a bare expression script stays plain JS, not ESM).
+        if (!definedNames.isEmpty()) emitExportBlock();
         return out.toString();
     }
 
@@ -47,16 +72,14 @@ public final class PythonEmitter {
 
     private void emitStmt(PythonNode node) {
         // Record a statement-level mapping (the line about to be emitted ← its Python source line).
-        if (!(node instanceof PythonNode.Pass)) {
-            Integer py = srcLines.get(node);
-            if (py != null) mappings.add(new int[]{jsLine, py - 1});
-        }
+        if (!(node instanceof PythonNode.Pass)) recordMapping(node);
         switch (node) {
             case PythonNode.Module m -> throw new IllegalArgumentException("nested module");
             case PythonNode.FunctionDef f -> {
                 line("function " + f.name() + "(" + emitParams(f.params()) + ") {");
                 block(f.body());
                 line("}");
+                applyDecorators(f.name(), f.decorators());
             }
             case PythonNode.ClassDef c -> emitClass(c);
             case PythonNode.Try t -> {
@@ -84,28 +107,96 @@ public final class PythonEmitter {
                 line("}");
             }
             case PythonNode.Return r -> line(r.value() == null ? "return;" : "return " + emitExpr(r.value()) + ";");
+            case PythonNode.Raise r -> {
+                if (r.exc() == null) {
+                    throw new IllegalArgumentException(
+                            "python bare 'raise' is not supported; raise an exception value");
+                }
+                line("throw " + emitExpr(r.exc()) + ";");
+            }
             case PythonNode.Break b -> line("break;");
             case PythonNode.Continue c -> line("continue;");
             case PythonNode.Pass p -> { /* emit nothing */ }
             case PythonNode.Assign a -> emitAssign(a);
             case PythonNode.AugAssign a -> emitAugAssign(a);
             case PythonNode.ExprStmt e -> line(emitExpr(e.expr()) + ";");
-            case PythonNode.Import imp -> {
-                for (PythonNode.Spec s : imp.specs()) {
-                    String local = s.alias() != null ? s.alias() : lastSegment(s.name());
-                    line("var " + local + " = globalThis." + s.name() + ";");
-                }
-            }
-            case PythonNode.ImportFrom imp -> {
-                if (imp.star()) {
-                    throw new IllegalArgumentException("python 'from X import *' is not supported");
-                }
-                for (PythonNode.Spec s : imp.specs()) {
-                    String local = s.alias() != null ? s.alias() : s.name();
-                    line("var " + local + " = globalThis." + imp.module() + "." + s.name() + ";");
-                }
-            }
+            case PythonNode.Import imp -> throw new IllegalArgumentException(
+                    "python 'import' is only supported at module top level");
+            case PythonNode.ImportFrom imp -> throw new IllegalArgumentException(
+                    "python 'from ... import' is only supported at module top level");
             default -> throw new IllegalArgumentException("unsupported statement: " + node.getClass().getSimpleName());
+        }
+    }
+
+    private void recordMapping(PythonNode node) {
+        Integer py = srcLines.get(node);
+        if (py != null) mappings.add(new int[]{jsLine, py - 1});
+    }
+
+    /** Collects top-level binding names (def/class/assign targets) for the module export block. */
+    private void collectDefinitions(PythonNode stmt) {
+        switch (stmt) {
+            case PythonNode.FunctionDef f -> definedNames.add(f.name());
+            case PythonNode.ClassDef c -> definedNames.add(c.name());
+            case PythonNode.Assign a -> { for (PythonNode t : a.targets()) collectTargetNames(t); }
+            default -> { }
+        }
+    }
+
+    private void collectTargetNames(PythonNode target) {
+        switch (target) {
+            case PythonNode.Name n -> definedNames.add(n.id());
+            case PythonNode.TupleLit t -> { for (PythonNode e : t.elements()) collectTargetNames(e); }
+            default -> { }   // Attribute / Index targets mutate, they don't create new bindings
+        }
+    }
+
+    /**
+     * Builds the ESM import for one {@code import m[.sub][ as alias]} spec. Dots map to path
+     * separators ({@code a.b.c} → {@code ./a/b/c}); the local binding is the alias or the leaf
+     * segment, so {@code import utils} exposes a namespace accessed as {@code utils.x}.
+     */
+    private String esmNamespaceImport(PythonNode.Spec s) {
+        String local = s.alias() != null ? s.alias() : lastSegment(s.name());
+        return "import * as " + local + " from '" + moduleSpecifier(s.name()) + "';";
+    }
+
+    /** Builds the ESM named import for {@code from m[.sub] import a [as x], b}. */
+    private String esmNamedImport(PythonNode.ImportFrom imp) {
+        StringBuilder sb = new StringBuilder("import { ");
+        List<PythonNode.Spec> specs = imp.specs();
+        for (int i = 0; i < specs.size(); i++) {
+            if (i > 0) sb.append(", ");
+            PythonNode.Spec s = specs.get(i);
+            sb.append(s.name());
+            if (s.alias() != null) sb.append(" as ").append(s.alias());
+        }
+        return sb.append(" } from '").append(moduleSpecifier(imp.module())).append("';").toString();
+    }
+
+    /** {@code foo} → {@code './foo'}; {@code a.b.c} → {@code './a/b/c'} (sibling-file / package path). */
+    private static String moduleSpecifier(String dotted) {
+        return "./" + dotted.replace('.', '/');
+    }
+
+    private void emitExportBlock() {
+        StringBuilder sb = new StringBuilder("export { ");
+        int i = 0;
+        for (String n : definedNames) {
+            if (i++ > 0) sb.append(", ");
+            sb.append(n);
+        }
+        line(sb.append(" };").toString());
+    }
+
+    /**
+     * Applies Python decorators as post-definition rewrites: {@code @a / @b / def f} becomes
+     * {@code f = b(f); f = a(f);} (nearest decorator applied first), yielding {@code f = a(b(f))}.
+     * Class decorators apply the same way after the class body.
+     */
+    private void applyDecorators(String name, List<String> decorators) {
+        for (int i = decorators.size() - 1; i >= 0; i--) {
+            line(name + " = " + decorators.get(i) + "(" + name + ");");
         }
     }
 
@@ -157,6 +248,7 @@ public final class PythonEmitter {
         }
         indent--;
         line("}");
+        applyDecorators(c.name(), c.decorators());
     }
 
     private void emitMethod(PythonNode.FunctionDef m) {

@@ -71,14 +71,8 @@ public final class PythonParser {
             advance();
             StringBuilder name = new StringBuilder(expectName());
             while (matchOp(".")) name.append('.').append(expectName());
-            if (matchOp("(")) {   // skip optional decorator argument list
-                int depth = 1;
-                while (depth > 0 && !at(PythonToken.Type.EOF)) {
-                    if (atOp("(")) depth++;
-                    else if (atOp(")")) depth--;
-                    if (depth > 0) advance();
-                }
-                expectOp(")");
+            if (atOp("(")) {
+                throw error("decorator arguments are not supported in v1 (use a bare @name or @module.name)");
             }
             expect(PythonToken.Type.NEWLINE, "NEWLINE after decorator");
             skipNewlines();
@@ -226,6 +220,13 @@ public final class PythonParser {
         if (peek().isKw("break")) { advance(); return new PythonNode.Break(); }
         if (peek().isKw("continue")) { advance(); return new PythonNode.Continue(); }
         if (peek().isKw("pass")) { advance(); return new PythonNode.Pass(); }
+        if (peek().isKw("raise")) {
+            advance();
+            if (atNewlineOrEnd() || atOp(";")) return new PythonNode.Raise(null, null);   // bare raise
+            PythonNode exc = parseTestList();
+            PythonNode from = matchKw("from") ? parseTestList() : null;   // 'from' clause parsed but ignored at emit
+            return new PythonNode.Raise(exc, from);
+        }
         // assignment or expression statement
         PythonNode first = parseTestList();
         if (atAugOp()) {

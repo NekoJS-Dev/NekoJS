@@ -59,7 +59,9 @@ ServerEvents.recipes(lambda event: (
 | f-string `f'{x}'`（**不含格式说明符**） | 支持，降级为模板字面量 |
 | 列表 / 元组 / 字典 / 集合字面量 | 支持，分别降级为数组 / 数组 / 对象 / `new Set([...])` |
 | 类（`__init__`/构造器、`self`→`this`、`extends` 继承、`super()`、`@staticmethod`、`__str__`→`toString`） | 支持 |
-| `import` / `from ... import ...`（映射到 `globalThis` 绑定查找） | 支持 |
+| `import` / `from ... import ...`（按相对路径加载兄弟 `.py`/`.js` 模块，详见「模块与 import」节） | 支持 |
+| `raise Expr` | 支持，降级为 `throw Expr;`（裸 `raise` 不支持） |
+| 装饰器 `@deco` / `@pkg.deco`（顶层函数、类） | 支持，降级为定义后 `name = deco(name)`（`@deco(...)` 带参数、类方法装饰器不支持） |
 | 三元 `a if cond else b` | 支持，降级为 `(cond ? a : b)` |
 | 比较 `in` / `not in` / `is` / `is not` | 支持 |
 | `pass` / `break` / `continue` / `return` | 支持 |
@@ -163,23 +165,76 @@ print(Cat.default())      # Animal(cat)
 - `self` 在实例方法里被改写成 JS 的 `this`；`@staticmethod` 方法不会被改写。
 - `__init__` → `constructor`，`__str__` → `toString`，其它方法名（含 snake_case）原样保留。
 - `extends` 翻译成 JS 的 `extends`；`super().__init__(args)` → `super(args)`，`super().method(args)` → `super.method(args)`。
-- 装饰器**只支持** `@staticmethod`，遇到其它装饰器会清晰报错。
+- 类**方法**装饰器只支持 `@staticmethod`（其它方法装饰器会清晰报错）；顶层函数和类的装饰器见「装饰器」节。
 - 实例化自己定义的类时 `Cat('Tom')` 会自动降级为 `new Cat('Tom')`。
 
-### import：访问 NekoJS 绑定
+### 装饰器
 
-`import` / `from ... import ...` 会被翻译成对 `globalThis` 上对应名字的查找，所以可以直接拿到 NekoJS 注入的全局绑定：
+顶层函数和类的装饰器会翻译成「定义后包装」：
 
 ```python
-import Utils                  # var Utils = globalThis.Utils
-from Item import of           # var of = globalThis.Item.of
-import foo.bar as baz         # var baz = globalThis.foo.bar
+def double(fn):
+    def wrapped(x):
+        return fn(x) * 2
+    return wrapped
 
-print(of('minecraft:dirt'))
-print(Utils.java)
+@double
+def base(x):
+    return x + 1
+
+# 等价于：定义 base 后执行 base = double(base)
+print(base(20))    # (20 + 1) * 2 = 42
 ```
 
-> 注意：这里**不是**真的 Python 模块系统——`.py` 文件之间不能互相 import，也没有 Python 标准库。它只是把名字从 `globalThis` 上取下来。所以 `from Item import of` 的实际语义是「取全局对象 `Item` 上的 `of` 属性」。`from X import *` **不支持**。
+- `@a` / `@b` / `def f` 会按 Python 语义从最近的一个开始包：`f = a(b(f))`。
+- 装饰器本身可以是带点的名字：`@pkg.helper` → `f = pkg.helper(f)`。
+- **类方法**装饰器仍只支持 `@staticmethod`（其它方法装饰器会报错）；**带参数**的装饰器 `@deco(...)` 也不支持（会清晰报错）——需要时写一个返回装饰器的普通函数，再 `@that_func` 引用。
+
+### raise
+
+```python
+def lookup(key):
+    if key is None:
+        raise ValueError('key is required')   # → throw ValueError("key is required");
+    return key
+
+try:
+    lookup(None)
+except Exception as e:
+    print('caught')
+```
+
+`raise Expr` 降级为 JS `throw Expr;`。配合 `try/except` 可以抛出并捕获任意值。**裸 `raise`**（在 except 里重新抛出当前异常）暂不支持——请显式 `raise <一个值>`。`raise ... from cause` 的 `from` 子句会被解析但忽略。
+
+### 模块与 import
+
+`.py` 文件之间可以**互相 import**——`import` / `from ... import ...` 会被翻译成真正的 ESM `import`，由 NekoJS 的模块解析器按**相对路径**加载兄弟文件（与 `.js`/`.ts` 走完全相同的解析管线）：
+
+```python
+# server_scripts/math_utils.py —— 一个可被 import 的库
+PI = 3.14
+
+def circle_area(r):
+    return PI * r * r
+```
+
+```python
+# server_scripts/main.py —— import 上面的库
+from math_utils import circle_area       # import { circle_area } from './math_utils';
+
+print(circle_area(2))                    # 12.56
+```
+
+要点：
+
+- 模块名按**相对路径**解析：`foo` → `./foo`，`a.b.c` → `./a/b/c`。解析器会自动尝试 `.py` / `.js` / `index.*` 等扩展名，所以也可以 import 同目录下的 `.js` 模块。
+- `import foo` → `import * as foo from './foo'`（命名空间，用 `foo.x` 访问）；`import foo as f` 同理绑定到 `f`。
+- `from foo import a, b` → `import { a, b } from './foo'`；`from foo import a as x` → `import { a as x } from './foo'`。
+- 每个 `.py` 文件会自动 **export 它所有顶层定义**（`def`/`class`/顶层赋值的名字），所以兄弟文件能直接 `from <它> import <名字>`——无需任何额外声明。
+- `from X import *` **不支持**（ESM 无法把命名空间展开进当前作用域）。
+- import 必须在**模块顶层**（不能写在函数/类体里）。
+
+> NekoJS 注入的全局绑定（`ServerEvents`、`Item`、`Utils` …）仍在全局作用域里，直接用名字即可（`ServerEvents.started(...)`），无需 import。
 
 ## 内置函数
 
@@ -239,7 +294,7 @@ except SomeError as e:
 finally:
     cleanup()
 ```
-降级为 JS `try/catch/finally`。**限制**：v1 只支持**单个** `except` 子句（多个会报错）；`except` 的异常**类型会被忽略**（一律捕获），`as e` 绑定的 `e` 是底层 JS 错误对象；不支持 `raise`。
+降级为 JS `try/catch/finally`。**限制**：v1 只支持**单个** `except` 子句（多个会报错）；`except` 的异常**类型会被忽略**（一律捕获），`as e` 绑定的 `e` 是底层 JS 错误对象。配合 `raise Expr`（→ `throw Expr`）可以抛出异常（见「raise」节）。
 
 ## Python ↔ JS 差异要点
 
@@ -264,11 +319,11 @@ finally:
 
 下列语法/特性在当前版本**不支持**，遇到会清晰报错（错误信息会带文件名与位置）：
 
-- `raise`、多个 `except` 子句、`except` 类型匹配（类型被忽略，一律捕获）
+- 多个 `except` 子句、`except` 类型匹配（类型被忽略，一律捕获）、裸 `raise`（重抛当前异常）
 - 切片步长（除 `[::-1]` 外，如 `[::2]`）
 - 生成器 / `yield` / `yield from`
 - `with` 语句（上下文管理器）
-- 装饰器（除 `@staticmethod` 外）
+- 带参数的装饰器 `@deco(...)`、类方法装饰器（除 `@staticmethod` 外）
 - `**kwargs` 关键字参数（`*args` 支持；`print(sep=)`/`sorted(reverse=)` 例外）
 - f-string 格式说明符（`{x:.2f}`、`{n:>4}` 等）
 - 嵌套/多层推导式（`[... for x in ... for y in ...]`）
@@ -327,6 +382,6 @@ Python 脚本和 JS/TS 脚本共享：
 ## 下一步
 
 - [脚本基础](脚本基础) —— 脚本类型、生命周期、reload 行为。
-- [全局绑定](全局绑定) —— Python 里通过 `import` 能取到的全部顶层 API。
+- [全局绑定](全局绑定) —— Python 里直接用名字即可访问的顶层 API（无需 import）。
 - [TypeScript 与 JSX](TypeScript-与-JSX) —— 另一种本体语言前端。
 - [常见问题](常见问题) —— 报错排查。

@@ -32,6 +32,7 @@ public sealed interface PythonNode {
     record Assign(List<PythonNode> targets, PythonNode value) implements PythonNode {}
     record AugAssign(PythonNode target, String op, PythonNode value) implements PythonNode {}
     record ExprStmt(PythonNode expr) implements PythonNode {}
+    record Raise(PythonNode exc, PythonNode from) implements PythonNode {}   // exc == null → bare raise; from ignored
     record Import(List<Spec> specs) implements PythonNode {}                 // import m [as a], ...
     record ImportFrom(String module, List<Spec> specs, boolean star) implements PythonNode {}   // from m import ...
 

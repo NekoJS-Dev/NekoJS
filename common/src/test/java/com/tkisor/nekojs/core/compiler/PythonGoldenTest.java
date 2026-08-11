@@ -23,9 +23,14 @@ class PythonGoldenTest {
 
     private final PythonToJsCompiler compiler = new PythonToJsCompiler();
 
-    /** Transpile helper — every test needs the emitted JS for its failure message. */
+    /**
+     * Transpile helper — every test needs the emitted JS for its failure message. The trailing
+     * {@code export { ... };} block (emitted so .py files are importable) is stripped because ESM
+     * {@code export} cannot appear in a script-mode eval; it carries no diagnostic value and the
+     * asserted runtime value comes from the preceding expression statements.
+     */
     private String py(String src) throws Exception {
-        return compiler.compile(Path.of("test.py"), src);
+        return compiler.compile(Path.of("test.py"), src).replaceFirst("\\nexport \\{[^}]*\\};\\s*$", "");
     }
 
     // ----------------------------------------------------------------------

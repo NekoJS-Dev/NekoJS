@@ -21,20 +21,32 @@ class PythonToJsCompilerTest {
         return compiler.compile(Path.of("test.py"), src);
     }
 
+    /**
+     * Strips the trailing {@code export { ... };} block the emitter adds so every .py file is
+     * importable. ESM {@code export} cannot appear in a script-mode {@code eval}; the completion
+     * value we assert comes from the preceding expression statements and is unaffected. Import-free
+     * modules (and bare expression scripts) have no export block, so this is a no-op there. This
+     * mirrors {@link CompilerExecutionAssertions#evalAutomatic}, which strips a JSX runtime import
+     * line for the same reason.
+     */
+    private static String asScript(String js) {
+        return js.replaceFirst("\\nexport \\{[^}]*\\};\\s*$", "");
+    }
+
     private long evalInt(String src) throws Exception {
-        try (var eval = CompilerExecutionAssertions.eval(py(src))) {
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py(src)))) {
             return eval.value().asLong();
         }
     }
 
     private String evalString(String src) throws Exception {
-        try (var eval = CompilerExecutionAssertions.eval(py(src))) {
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py(src)))) {
             return eval.value().asString();
         }
     }
 
     private boolean evalBool(String src) throws Exception {
-        try (var eval = CompilerExecutionAssertions.eval(py(src))) {
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py(src)))) {
             return eval.value().asBoolean();
         }
     }
@@ -239,13 +251,132 @@ class PythonToJsCompilerTest {
     }
 
     @Test
-    void importEmitsGlobalThisLookup() throws Exception {
+    void importEmitsEsmModuleSyntax() throws Exception {
+        // import X → ESM namespace import; NekoModuleResolver probes ./X.py / .js / index.* automatically.
         String js = py("import Item");
-        assertTrue(js.contains("var Item = globalThis.Item;"), "import X → globalThis.X: " + js);
+        assertTrue(js.contains("import * as Item from './Item';"), "import X → ESM namespace import: " + js);
         js = py("from utils import helper");
-        assertTrue(js.contains("var helper = globalThis.utils.helper;"), "from X import a → globalThis.X.a: " + js);
+        assertTrue(js.contains("import { helper } from './utils';"), "from X import a → ESM named import: " + js);
         js = py("import Foo as Bar");
-        assertTrue(js.contains("var Bar = globalThis.Foo;"), "import X as Y: " + js);
+        assertTrue(js.contains("import * as Bar from './Foo';"), "import X as Y → ESM aliased namespace: " + js);
+    }
+
+    @Test
+    void dottedImportMapsToRelativePath() throws Exception {
+        // a.b.c → ./a/b/c (dotted package path → path segments); leaf segment is the local binding.
+        String js = py("import pkg.helpers.math");
+        assertTrue(js.contains("from './pkg/helpers/math'"), "dotted module → slash path: " + js);
+        assertTrue(js.contains("import * as math"), "dotted import binds the leaf segment: " + js);
+        js = py("from a.b import c");
+        assertTrue(js.contains("import { c } from './a/b'"), "from a.b import c → named from ./a/b: " + js);
+    }
+
+    @Test
+    void fromImportMultipleAndAlias() throws Exception {
+        String js = py("from utils import a, b");
+        assertTrue(js.contains("import { a, b } from './utils';"), "multiple names in one import: " + js);
+        js = py("from utils import a as x, b");
+        assertTrue(js.contains("import { a as x, b } from './utils';"), "aliased named import: " + js);
+    }
+
+    @Test
+    void fromImportStarStillUnsupported() {
+        // ESM cannot splat a namespace into the current scope, so 'from X import *' stays rejected.
+        assertThrows(IllegalArgumentException.class, () -> py("from utils import *"));
+    }
+
+    @Test
+    void moduleExportsDefinedTopLevelNames() throws Exception {
+        // A .py module re-exports every top-level def/class/assign so siblings can import it.
+        String js = py("def f():\n    return 1\nclass C:\n    pass\nx = 5");
+        assertTrue(js.contains("export { f, C, x };"), "top-level def/class/assign names are exported: " + js);
+    }
+
+    @Test
+    void bareExpressionScriptHasNoExportBlock() throws Exception {
+        // A module that defines no names (e.g. a single expression) stays plain JS, not ESM.
+        String js = py("2 + 3");
+        assertFalse(js.contains("export"), "no defined names → no export block: " + js);
+    }
+
+    @Test
+    void importsAreHoistedAboveStatements() throws Exception {
+        // ESM requires import declarations before other statements; an import after code still
+        // surfaces to the top of the emitted module.
+        String js = py("x = 1\nimport utils\ny = 2");
+        int importIdx = js.indexOf("import * as utils");
+        int stmtIdx = js.indexOf("var x = 1");
+        assertTrue(importIdx >= 0 && stmtIdx >= 0, "both import and statement must be present: " + js);
+        assertTrue(importIdx < stmtIdx, "import must precede statements: " + js);
+    }
+
+    @Test
+    void raiseEmitsThrow() throws Exception {
+        String js = py("raise ValueError('boom')");
+        assertTrue(js.contains("throw "), "raise Expr → throw Expr: " + js);
+        // raise 42 inside try, caught via except → the thrown value is the catch binding's value.
+        // ('except Exception as e:' is the valid Python form; the type is parsed but ignored at emit.)
+        assertEquals(42, evalInt("try:\n    raise 42\nexcept Exception as e:\n    e"));
+    }
+
+    @Test
+    void bareRaiseIsUnsupported() {
+        assertThrows(IllegalArgumentException.class, () -> py("raise"));
+    }
+
+    @Test
+    void decoratorWrapsTopLevelFunction() throws Exception {
+        // @double / def base → base = double(base); calling base() runs the wrapper.
+        String src = """
+                def double(f):
+                    def g():
+                        return f() + 1
+                    return g
+                @double
+                def base():
+                    return 41
+                base()
+                """;
+        assertEquals(42, evalInt(src));
+    }
+
+    @Test
+    void multipleDecoratorsApplyBottomUp() throws Exception {
+        // @a / @b / def f → f = a(b(f)); nearest decorator (b) applied first.
+        String src = """
+                def add1(f):
+                    return lambda: f() + 1
+                def add10(f):
+                    return lambda: f() + 10
+                @add1
+                @add10
+                def base():
+                    return 0
+                base()
+                """;
+        // add10(base) = ()=>0+10 = 10; add1(that) = ()=>10+1 = 11
+        assertEquals(11, evalInt(src));
+    }
+
+    @Test
+    void classDecoratorWrapsClass() throws Exception {
+        String src = """
+                def tag(cls):
+                    cls.tag = 'x'
+                    return cls
+                @tag
+                class C:
+                    def __init__(self):
+                        self.v = 5
+                C().v
+                """;
+        assertEquals(5, evalInt(src));
+    }
+
+    @Test
+    void decoratorWithArgumentsIsRejected() {
+        // The parser rejects @deco(...) call-form decorators (args would be silently dropped otherwise).
+        assertThrows(IllegalArgumentException.class, () -> py("@deco(1)\ndef f():\n    pass"));
     }
 
     // ---- audit-driven regression tests (crashes & wrong output on common code) ----
