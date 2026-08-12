@@ -329,8 +329,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         c.mergeJsConfigPaths(scriptDir.resolve("jsconfig.json"), aliases);
 
         // include/typeRoots：WorkspaceGenerator.buildConfigForEnv 预写的值指向旧 .neko_probe/@package，
-        // 校正 base 为 tsOut（相对写法照抄，仅 base 换成 tsOut）。
-        // 注意：以下 glob 字符串中的「**」是 TS 递归通配（非注释）。
+        // 校正 base 为 tsOut（glob 写法照抄 WorkspaceGenerator，仅 base 换成 tsOut）。
         List<String> includes = List.of(
                 rel + "/@package/**/*.d.ts",
                 rel + "/@manual/**/*.d.ts",
