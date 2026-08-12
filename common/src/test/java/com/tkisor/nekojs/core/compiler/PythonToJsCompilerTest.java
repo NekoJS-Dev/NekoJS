@@ -533,6 +533,102 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- assert / del / walrus / annotations / try-else / bare raise ----
+
+    @Test
+    void assertPassesAndFails() throws Exception {
+        assertEquals(1, evalInt("assert True\n1"));
+        // assert False raises → caught by bare except (Error mapping)
+        assertEquals(99, evalInt("try:\n    assert False\nexcept:\n    99"));
+        // assert with message
+        String src = """
+                try:
+                    assert 1 == 2, 'mismatch'
+                except Exception as e:
+                    e.message
+                """;
+        // JS Error carries .message; AssertionError maps to Error
+        assertEquals("mismatch", evalString(src));
+    }
+
+    @Test
+    void delRemovesDictKey() throws Exception {
+        // del d[k] → delete d[k]; subsequent get returns undefined → default 0.
+        String src = """
+                d = {'a': 1, 'b': 2}
+                del d['a']
+                d.get('a', 0)
+                """;
+        assertEquals(0, evalInt(src));
+    }
+
+    @Test
+    void walrusAssignsAndYields() throws Exception {
+        // (n := 5) assigns n and yields 5; n is 5 afterwards.
+        String src = """
+                (n := 5)
+                n + n
+                """;
+        String js = py(src);
+        assertTrue(js.contains("(n = 5)"), "walrus → (name = value): " + js);
+        assertEquals(10, evalInt(src));
+    }
+
+    @Test
+    void walrusInComprehension() throws Exception {
+        // capture length once per item via walrus, reuse in the filter and element.
+        String src = "len([y for s in ['a', 'bb', 'ccc'] if (y := len(s)) > 1])";
+        assertEquals(2, evalInt(src));   // 'bb'(2), 'ccc'(3) pass; 'a'(1) filtered
+    }
+
+    @Test
+    void variableAnnotationIsErased() throws Exception {
+        // x: int = 5 lowers to a plain assignment; the annotation is discarded.
+        String src = "x: int = 5\nx";
+        String js = py(src);
+        assertFalse(js.contains("int"), "annotation must be erased: " + js);
+        assertEquals(5, evalInt(src));
+    }
+
+    @Test
+    void tryElseRunsWhenNoException() throws Exception {
+        // else runs only when the try body flows off the end without an exception (NOT via return,
+        // which would skip it — matching Python semantics).
+        String src = """
+                def classify(x):
+                    result = ''
+                    try:
+                        if x < 0:
+                            raise ValueError('neg')
+                        result = 'ok'
+                    except ValueError:
+                        result = 'err'
+                    else:
+                        result = 'else'
+                    return result
+                classify(5) + classify(-1)
+                """;
+        // x=5: no raise, flows off end → else runs ('else'); x=-1: raised+handled → 'err' → 'elseerr'
+        assertEquals("elseerr", evalString(src));
+    }
+
+    @Test
+    void bareRaiseRethrows() throws Exception {
+        // bare raise inside except rethrows the current exception to the outer catch.
+        String src = """
+                log = ''
+                try:
+                    try:
+                        raise ValueError('inner')
+                    except ValueError:
+                        log = 'caught'
+                        raise
+                except:
+                    log + ':rethrown'
+                """;
+        assertEquals("caught:rethrown", evalString(src));
+    }
+
     // ---- f-string format specifiers & conversions ----
 
     @Test

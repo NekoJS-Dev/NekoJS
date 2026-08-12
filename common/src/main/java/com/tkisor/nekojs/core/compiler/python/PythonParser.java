@@ -218,9 +218,11 @@ public final class PythonParser {
                 throw error("bare 'except' must be the last except clause");
             }
         }
+        List<PythonNode> elseBody = List.of();
+        if (matchKw("else")) { expectOp(":"); elseBody = parseSuite(); }
         List<PythonNode> finallyBody = List.of();
         if (matchKw("finally")) { expectOp(":"); finallyBody = parseSuite(); }
-        return new PythonNode.Try(body, excepts, finallyBody);
+        return new PythonNode.Try(body, excepts, elseBody, finallyBody);
     }
 
     /** A suite is either an INDENT…DEDENT block (header ended by NEWLINE) or an inline simple statement. */
@@ -271,6 +273,30 @@ public final class PythonParser {
             if (atNewlineOrEnd() || atOp(";")) return new PythonNode.Yield(null, false);   // bare yield
             if (matchKw("from")) return new PythonNode.Yield(parseTestList(), true);       // yield from iter
             return new PythonNode.Yield(parseTestList(), false);
+        }
+        if (peek().isKw("assert")) {
+            advance();
+            PythonNode cond = parseTest();   // single test (not testlist) so the ',' separates the message
+            PythonNode msg = matchOp(",") ? parseTest() : null;
+            return new PythonNode.Assert(cond, msg);
+        }
+        if (peek().isKw("del")) {
+            advance();
+            List<PythonNode> targets = new ArrayList<>();
+            targets.add(parseUnary());
+            while (matchOp(",")) {
+                if (atNewlineOrEnd() || atOp(";")) break;
+                targets.add(parseUnary());
+            }
+            return new PythonNode.Del(targets);
+        }
+        // variable annotation: NAME ':' type ['=' value]  (a bare 'name:' can only be an annotation at statement level)
+        if (peek().type() == PythonToken.Type.NAME && pos + 1 < tokens.size() && tokens.get(pos + 1).isOp(":")) {
+            String name = advance().text();
+            advance(); // ':'
+            parseTest(); // annotation type — parsed and discarded
+            if (matchOp("=")) return new PythonNode.Assign(List.of(new PythonNode.Name(name)), parseTestList());
+            return new PythonNode.Pass();   // annotation without assignment → no binding, no-op
         }
         // assignment or expression statement
         PythonNode first = parseTestList();
@@ -432,6 +458,13 @@ public final class PythonParser {
     }
 
     private PythonNode parseAtom() {
+        // walrus / named expression: NAME := test → (name = value). The ':=' is a single OP token.
+        if (peek().type() == PythonToken.Type.NAME && pos + 1 < tokens.size()
+                && tokens.get(pos + 1).isOp(":=")) {
+            String name = advance().text();
+            advance(); // ':='
+            return new PythonNode.Walrus(name, parseTest());
+        }
         // yield-expression (yield is an atom in Python, only meaningful inside a generator function).
         if (peek().type() == PythonToken.Type.NAME && "yield".equals(peek().text())) {
             advance();

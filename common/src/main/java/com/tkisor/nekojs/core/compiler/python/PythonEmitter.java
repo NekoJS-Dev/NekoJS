@@ -84,6 +84,8 @@ public final class PythonEmitter {
     private final java.util.Set<String> kwClassNames = new java.util.HashSet<>();
     /** True when any f-string format spec / conversion is used → the __nekoFmt helper is emitted. */
     private boolean needsFmt = false;
+    /** The variable bound to the current exception in each enclosing except clause (top = innermost). */
+    private final java.util.Deque<String> errStack = new java.util.ArrayDeque<>();
 
     public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
         this.srcLines = srcLines;
@@ -152,6 +154,16 @@ public final class PythonEmitter {
             case PythonNode.ClassDef c -> emitClass(c);
             case PythonNode.With w -> emitWith(w, 0);
             case PythonNode.Try t -> {
+                boolean hasElse = !t.elseBody().isEmpty();
+                boolean hasFinally = !t.finallyBody().isEmpty();
+                // else runs only if the try body raised nothing, so track success with a flag; it must
+                // also run BEFORE finally and outside the except handlers (an else-body exception is not
+                // caught by the same excepts). When both else and finally are present, wrap so finally
+                // still runs after the else.
+                String elseFlag = hasElse ? ("__nekoOk" + (tempCounter++)) : null;
+                if (hasElse) line("var " + elseFlag + " = true;");
+                boolean outerWrap = hasElse && hasFinally;
+                if (outerWrap) { line("try {"); indent++; }
                 line("try {");
                 block(t.body());
                 List<PythonNode.ExceptClause> excepts = t.excepts();
@@ -160,14 +172,18 @@ public final class PythonEmitter {
                     if (!typed) {
                         // bare single except → plain catch (no type check)
                         PythonNode.ExceptClause only = excepts.get(0);
-                        line("} catch (" + (only.name() != null ? only.name() : "__nekoErr") + ") {");
+                        String bound = only.name() != null ? only.name() : "__nekoErr";
+                        line("} catch (" + bound + ") {");
+                        if (elseFlag != null) line(elseFlag + " = false;");
+                        errStack.push(bound);
                         block(only.body());
+                        errStack.pop();
                     } else {
                         // typed excepts → one catch + instanceof chain; unmatched errors rethrow.
-                        // Builtin exception names map to Error; user classes (e.g. `class MyErr(Exception):`)
-                        // become real JS classes, so `instanceof` matches `raise MyErr()` naturally.
                         line("} catch (__nekoErr) {");
                         indent++;
+                        if (elseFlag != null) line(elseFlag + " = false;");
+                        errStack.push("__nekoErr");
                         boolean isFirst = true;
                         boolean hasBare = false;
                         for (PythonNode.ExceptClause c : excepts) {
@@ -196,13 +212,27 @@ public final class PythonEmitter {
                             line("}");
                         }
                         indent--;
+                        errStack.pop();
                     }
                 }
-                if (!t.finallyBody().isEmpty()) {
+                if (hasFinally && !outerWrap) {
                     line("} finally {");
                     block(t.finallyBody());
                 }
                 line("}");
+                if (hasElse) {
+                    line("if (" + elseFlag + ") {");
+                    block(t.elseBody());
+                    line("}");
+                }
+                if (outerWrap) {
+                    indent--;
+                    line("} finally {");
+                    indent++;
+                    block(t.finallyBody());
+                    indent--;
+                    line("}");
+                }
             }
             case PythonNode.If i -> writeIf(i, true);
             case PythonNode.For f -> {
@@ -218,10 +248,21 @@ public final class PythonEmitter {
             case PythonNode.Return r -> line(r.value() == null ? "return;" : "return " + emitExpr(r.value()) + ";");
             case PythonNode.Raise r -> {
                 if (r.exc() == null) {
-                    throw new IllegalArgumentException(
-                            "python bare 'raise' is not supported; raise an exception value");
+                    if (errStack.isEmpty()) {
+                        throw new IllegalArgumentException(
+                                "python bare 'raise' is only valid inside an except clause");
+                    }
+                    line("throw " + errStack.peek() + ";");   // re-raise the current exception
+                } else {
+                    line("throw " + emitExpr(r.exc()) + ";");
                 }
-                line("throw " + emitExpr(r.exc()) + ";");
+            }
+            case PythonNode.Assert a -> {
+                String thrown = a.msg() != null ? emitExpr(a.msg()) : "\"AssertionError\"";
+                line("if (!(" + emitExpr(a.cond()) + ")) throw new Error(" + thrown + ");");
+            }
+            case PythonNode.Del d -> {
+                for (PythonNode t : d.targets()) line("delete " + emitExpr(t) + ";");
             }
             case PythonNode.Yield y -> line(y.from()
                     ? "yield* " + emitExpr(y.value()) + ";"
@@ -721,6 +762,7 @@ public final class PythonEmitter {
             case PythonNode.Binary b -> emitBinary(b);
             case PythonNode.Compare c -> emitCompare(c);
             case PythonNode.Ternary t -> "(" + emitExpr(t.cond()) + " ? " + emitExpr(t.ifTrue()) + " : " + emitExpr(t.ifFalse()) + ")";
+            case PythonNode.Walrus w -> "(" + w.name() + " = " + emitExpr(w.value()) + ")";
             case PythonNode.ListLit l -> emitElements(l.elements());
             case PythonNode.TupleLit l -> emitElements(l.elements());
             case PythonNode.DictLit d -> emitDict(d);

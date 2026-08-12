@@ -35,6 +35,8 @@ public sealed interface PythonNode {
     record ExprStmt(PythonNode expr) implements PythonNode {}
     record Raise(PythonNode exc, PythonNode from) implements PythonNode {}   // exc == null → bare raise; from ignored
     record Yield(PythonNode value, boolean from) implements PythonNode {}    // value null → bare yield; from → yield from
+    record Assert(PythonNode cond, PythonNode msg) implements PythonNode {}  // msg == null → bare assert
+    record Del(List<PythonNode> targets) implements PythonNode {}
     record Import(List<Spec> specs) implements PythonNode {}                 // import m [as a], ...
     record ImportFrom(String module, List<Spec> specs, boolean star) implements PythonNode {}   // from m import ...
 
@@ -56,6 +58,7 @@ public sealed interface PythonNode {
     record Binary(String op, PythonNode left, PythonNode right) implements PythonNode {}
     record Compare(PythonNode left, String op, PythonNode right) implements PythonNode {}
     record Ternary(PythonNode cond, PythonNode ifTrue, PythonNode ifFalse) implements PythonNode {}
+    record Walrus(String name, PythonNode value) implements PythonNode {}  // named expression (:=) → (name = value)
     record ListLit(List<PythonNode> elements) implements PythonNode {}
     record TupleLit(List<PythonNode> elements) implements PythonNode {}
     record DictLit(List<PythonNode> keys, List<PythonNode> values) implements PythonNode {}
@@ -64,8 +67,9 @@ public sealed interface PythonNode {
     record ListComp(PythonNode element, List<CompClause> clauses) implements PythonNode {}
     record DictComp(PythonNode key, PythonNode value, List<CompClause> clauses) implements PythonNode {}
     record SetComp(PythonNode element, List<CompClause> clauses) implements PythonNode {}
-    record Try(List<PythonNode> body, List<ExceptClause> excepts, List<PythonNode> finallyBody)
-            implements PythonNode {}                                    // excepts/finallyBody empty → absent
+    record Try(List<PythonNode> body, List<ExceptClause> excepts, List<PythonNode> elseBody,
+               List<PythonNode> finallyBody)
+            implements PythonNode {}                                    // else/finally empty → absent
     record With(List<WithItem> items, List<PythonNode> body) implements PythonNode {}   // 1+ context-manager items
 
     /** Function/lambda parameter (helper, not itself a node).

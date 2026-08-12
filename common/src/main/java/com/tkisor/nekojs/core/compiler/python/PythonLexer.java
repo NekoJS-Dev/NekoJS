@@ -275,6 +275,6 @@ public final class PythonLexer {
     private static final java.util.Set<String> OP3 = java.util.Set.of("**=", "//=", ">>=", "<<=");
     private static final java.util.Set<String> OP2 = java.util.Set.of(
             "**", "//", "<<", ">>", "<=", ">=", "==", "!=", "+=", "-=", "*=", "/=", "%=", "@=",
-            "->", "&=", "|=", "^=");
+            "->", "&=", "|=", "^=", ":=");
     private static final String SINGLE_OPS = "+-*/%@=<>!&|^~()[]{},:.;";
 }
