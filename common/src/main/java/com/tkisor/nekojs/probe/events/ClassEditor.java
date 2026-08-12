@@ -50,6 +50,13 @@ public final class ClassEditor {
         return this;
     }
 
+    /** 重命名类（TS/Python 输出的类名换成 newName；enum 的自引用同步改名）。 */
+    public ClassEditor renameClass(String newName) {
+        touched();
+        decl.renameTo = newName;
+        return this;
+    }
+
     /** 改父类类型。 */
     public ClassEditor changeSuper(Object type) {
         touched();
@@ -134,6 +141,58 @@ public final class ClassEditor {
             TypeSlot slot = ProbeModifyTypeEventJS.override(null, type);
             m.params.add(new MethodDecl.MethodParam(paramName, slot, false));
         });
+    }
+
+    /**
+     * 新增一个实例方法。{@code paramSpecs} 每个元素是 {@code "type"}（参数名自动 arg0/arg1…）
+     * 或 {@code "name:type"}（按第一个 ':' 切分；无 ':' 当纯类型、名字自动）。
+     * 参数名含非法字符不校验（宿主对象信任调用方），但空参数名/空类型抛 IllegalArgumentException；
+     * {@code paramSpecs} 为 null 视为无参数。
+     */
+    public ClassEditor addMethod(String name, Object returnType, Object... paramSpecs) {
+        return addMethodInternal(name, returnType, false, paramSpecs);
+    }
+
+    /** 新增一个静态方法（语义同 {@link #addMethod}，isStatic = true）。 */
+    public ClassEditor addStaticMethod(String name, Object returnType, Object... paramSpecs) {
+        return addMethodInternal(name, returnType, true, paramSpecs);
+    }
+
+    private ClassEditor addMethodInternal(String name, Object returnType, boolean isStatic, Object[] paramSpecs) {
+        touched();
+        MethodDecl m = new MethodDecl(name);
+        m.isStatic = isStatic;
+        m.returnType = ProbeModifyTypeEventJS.override(null, returnType);
+        if (paramSpecs != null) {
+            for (int i = 0; i < paramSpecs.length; i++) {
+                Object spec = paramSpecs[i];
+                if (!(spec instanceof String text)) {
+                    throw new IllegalArgumentException("param spec must be a String, got: "
+                            + (spec == null ? "null" : spec.getClass().getName()));
+                }
+                // 按第一个 ':' 切分；无 ':' → 纯类型，参数名自动 arg<序号>
+                int colon = text.indexOf(':');
+                String pName;
+                String pType;
+                if (colon >= 0) {
+                    pName = text.substring(0, colon);
+                    pType = text.substring(colon + 1);
+                } else {
+                    pName = "arg" + i;
+                    pType = text;
+                }
+                if (pName.isEmpty()) {
+                    throw new IllegalArgumentException("param name must not be empty: '" + text + "'");
+                }
+                if (pType.isBlank()) {
+                    throw new IllegalArgumentException("param type must not be blank: '" + text + "'");
+                }
+                TypeSlot slot = ProbeModifyTypeEventJS.override(null, pType);
+                m.params.add(new MethodDecl.MethodParam(pName, slot, false));
+            }
+        }
+        decl.methods.add(m);
+        return this;
     }
 
     // ==================== 字段级 ====================

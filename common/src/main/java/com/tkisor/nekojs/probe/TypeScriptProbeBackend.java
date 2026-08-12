@@ -250,10 +250,17 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
      * 复用同一份（已编辑的）IR。
      */
     private void applyMutatedOverrides(List<TypeDecl> ir) {
-        if (ir == null) return;
+        if (ir == null) {
+            // 本次无 IR（无监听器）：清空上一轮的隐藏类集合，防跨 run 残留
+            indexFileGenerator.setHiddenClasses(Set.of());
+            return;
+        }
+        // C5a：收集被隐藏（hide）的类，供 IndexFileGenerator 过滤悬空 import / 别名
+        Set<String> hiddenFqns = new LinkedHashSet<>();
         for (TypeDecl d : ir) {
             if (!d.mutated) continue;
             if (d.hidden) {
+                hiddenFqns.add(d.fqn);
                 indexFileGenerator.overrideDeclaration(d.fqn, "", Set.of());
                 continue;
             }
@@ -261,6 +268,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             Set<String> extraImports = ProbeModifyTypeEventJS.collectEditedSymbolFqns(d, pkgOf(d.fqn));
             indexFileGenerator.overrideDeclaration(d.fqn, rendered, extraImports);
         }
+        indexFileGenerator.setHiddenClasses(hiddenFqns);
     }
 
     private static String pkgOf(String fqn) {

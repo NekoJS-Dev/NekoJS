@@ -2,11 +2,15 @@ package com.tkisor.nekojs.probe.backend.python;
 
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.probe.events.ProbeModifyTypeEventJS;
+import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
+import com.tkisor.nekojs.probe.ir.TypeSlot;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -126,5 +130,50 @@ class PythonRendererTest {
         assertTrue(out.contains("def greet(self, arg0: str) -> None:\n        \"\"\"Greets someone.\nSecond line.\"\"\"\n        ..."), out);
         // 字段：行尾 `  # ...` + 后续行 `# ` 前缀
         assertTrue(out.contains("nameField: str  # Field doc.\n    # Second field line."), out);
+    }
+
+    // -------------------- ClassEditor：renameClass / addMethod --------------------
+
+    @Test
+    void renameClass_usesNewPyName() {
+        TypeDecl d = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.Foo");
+        editorFor(d).renameClass("Renamed");
+
+        String out = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of("pkg.Foo"))).render(d);
+        assertTrue(out.contains("class Renamed:"), out);
+        assertFalse(out.contains("class Foo"), "old class name should be gone: " + out);
+    }
+
+    @Test
+    void renameClass_enumSelfRefsFollowInPy() {
+        TypeDecl d = new TypeDecl(TypeDecl.Kind.ENUM, null, "pkg.Color");
+        FieldDecl red = new FieldDecl("RED", TypeSlot.of(null, ApiTypeRef.symbol(new ApiSymbolId("java", "pkg.Color"))));
+        red.isStatic = true;
+        red.isEnumConstant = true;
+        d.fields.add(red);
+
+        editorFor(d).renameClass("Color2");
+
+        String out = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of("pkg.Color"))).render(d);
+        assertTrue(out.contains("class Color2:"), out);
+        assertTrue(out.contains("RED: Color2"), "enum constant self-ref must follow rename: " + out);
+    }
+
+    @Test
+    void addMethod_emitsPythonDef() {
+        TypeDecl d = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.Foo");
+        // "a:string" 具名参数 + "int" 纯类型（参数名自动 arg1）；静态方法无 self
+        editorFor(d).addMethod("foo", "boolean", "a:string", "int");
+        editorFor(d).addStaticMethod("create", "string");
+
+        String out = new PythonClassRenderer(new ApiTypeRefPyRenderer(Set.of("pkg.Foo"))).render(d);
+        assertTrue(out.contains("def foo(self, a: str, arg1: int) -> bool: ..."), out);
+        assertTrue(out.contains("@staticmethod"), out);
+        assertTrue(out.contains("def create() -> str: ..."), out);
+    }
+
+    /** 经事件取得 ClassEditor（ClassEditor 构造器包私有，外部包只能走 forClass）。 */
+    private static com.tkisor.nekojs.probe.events.ClassEditor editorFor(TypeDecl d) {
+        return new ProbeModifyTypeEventJS(Map.of(d.fqn, d)).forClass(d.fqn);
     }
 }

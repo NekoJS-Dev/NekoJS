@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -139,5 +140,72 @@ class ProbeConfigTest {
         String content = Files.readString(cfgFile, StandardCharsets.UTF_8);
         assertTrue(content.contains("enabled = false"), "probe.toml 应含 enabled = false，实际内容: " + content);
         assertFalse(new ProbeConfigLoader().load(cfgFile).enabled(), "重载后 enabled 应为 false");
+    }
+
+    /* ================= B3：per-language 配置（languages.<lang>.backend / .outputDir） ================= */
+
+    @Test
+    void loaderParsesPerLanguageConfig(@TempDir Path tmp) throws Exception {
+        Path cfgFile = NekoJSPaths.fromGameDir(tmp).probeConfig();
+        Files.createDirectories(cfgFile.getParent());
+        Files.writeString(cfgFile, """
+                enabled = true
+
+                [languages.typescript]
+                backend = "builtin"
+                outputDir = "tsx"
+
+                [languages.python]
+                outputDir = "py"
+                """, StandardCharsets.UTF_8);
+
+        ProbeConfig cfg = new ProbeConfigLoader().load(cfgFile);
+        assertTrue(cfg.language("typescript").isPresent());
+        assertEquals("builtin", cfg.language("typescript").get().backend());
+        assertEquals("tsx", cfg.language("typescript").get().outputDir());
+        assertTrue(cfg.language("python").isPresent());
+        assertNull(cfg.language("python").get().backend(), "未写 backend 键应为 null");
+        assertEquals("py", cfg.language("python").get().outputDir());
+        assertTrue(cfg.language("java").isEmpty(), "未配置的语言应返回空 Optional");
+    }
+
+    @Test
+    void loaderMissingLanguagesTableGetsFixedDefaults(@TempDir Path tmp) throws Exception {
+        Path cfgFile = NekoJSPaths.fromGameDir(tmp).probeConfig();
+        Files.createDirectories(cfgFile.getParent());
+        Files.writeString(cfgFile, "enabled = true\n", StandardCharsets.UTF_8);
+
+        ProbeConfig cfg = new ProbeConfigLoader().load(cfgFile);
+        // 缺 languages 表 → setup 写入固定默认集（typescript/python 的 outputDir = 语言 id），与 defaultConfig 一致
+        assertEquals(ProbeConfig.defaultConfig().languages(), cfg.languages(),
+                "缺 languages 表时应落入固定默认集（与 defaultConfig 一致）");
+        assertNull(cfg.language("typescript").get().backend());
+        assertEquals("typescript", cfg.language("typescript").get().outputDir());
+        assertEquals("python", cfg.language("python").get().outputDir());
+    }
+
+    @Test
+    void threeArgConstructorKeepsLanguagesEmpty() {
+        ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", ProbeConfig.ScanConfig.defaultScan());
+        assertTrue(cfg.languages().isEmpty(), "3 参构造应等价 languages=空 Map");
+        assertTrue(cfg.language("typescript").isEmpty());
+    }
+
+    @Test
+    void backendOutputDirUsesPerLanguageOverride(@TempDir Path tmp) {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
+        ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", ProbeConfig.ScanConfig.defaultScan(),
+                Map.of("typescript", new ProbeConfig.LanguageConfig("builtin", "tsx")));
+        Path dir = new TypeScriptProbeBackend().outputDir(paths, cfg);
+        assertEquals(paths.gameDir().resolve(".neko_probe").resolve("tsx"), dir,
+                "languages.typescript.outputDir=tsx 应覆盖默认输出子目录");
+    }
+
+    @Test
+    void backendOutputDirFallsBackToLanguageId(@TempDir Path tmp) {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
+        Path dir = new TypeScriptProbeBackend().outputDir(paths, ProbeConfig.defaultConfig());
+        assertEquals(paths.gameDir().resolve(".neko_probe").resolve("typescript"), dir,
+                "无语言级覆盖时输出目录 = baseDir/<languageId>（旧行为）");
     }
 }

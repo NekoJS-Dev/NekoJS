@@ -5,6 +5,7 @@ import com.tkisor.nekojs.NekoJS;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -17,8 +18,24 @@ import java.util.Set;
  *
  * <p>扫描模式 {@link ScanConfig#mode()}：{@code SMART}（默认，白名单 + {@code forceScanMods} 补充）、
  * {@code FULL}（跳过 include 白名单、仅受 exclude 与 maxDepth 约束）、{@code NONE}（整体跳过扫描，probe 返回失败结果）。
+ *
+ * <p>B3：{@link #languages()} 承载 per-language 配置（{@code [languages.<languageId>]}）——
+ * 每语言可指定优先使用的 backend 名与自定义输出子目录；两者皆可缺省（null → 沿用默认行为）。
  */
-public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan) {
+public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {
+
+    /**
+     * 单语言 probe 配置（{@code [languages.<languageId>]} 表）：
+     * {@code backend} = 命令默认优先选用的 backend 名（null → 用该语言注册表默认）；
+     * {@code outputDir} = {@code baseDir} 下该语言的输出子目录（null → 用语言 id 本身）。
+     */
+    public record LanguageConfig(String backend, String outputDir) {
+    }
+
+    /** 3 参便捷构造：等价 {@code (enabled, baseDir, scan, Map.of())}，保持既有调用点源码兼容。 */
+    public ProbeConfig(boolean enabled, String baseDir, ScanConfig scan) {
+        this(enabled, baseDir, scan, Map.of());
+    }
 
     /** 类扫描过滤配置。 */
     public record ScanConfig(
@@ -47,12 +64,21 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan) {
     }
 
     public static ProbeConfig defaultConfig() {
-        return new ProbeConfig(true, ".neko_probe", ScanConfig.defaultScan());
+        return new ProbeConfig(true, ".neko_probe", ScanConfig.defaultScan(),
+                Map.of(
+                        "typescript", new LanguageConfig(null, "typescript"),
+                        "python", new LanguageConfig(null, "python")));
     }
 
     public ProbeConfig {
         baseDir = (baseDir == null || baseDir.isBlank()) ? ".neko_probe" : baseDir;
         scan = scan == null ? ScanConfig.defaultScan() : scan;
+        languages = languages == null || languages.isEmpty() ? Map.of() : Map.copyOf(languages);
+    }
+
+    /** 取某语言 id 的 per-language 配置（未配置返回空 Optional）。 */
+    public Optional<LanguageConfig> language(String languageId) {
+        return Optional.ofNullable(languages.get(languageId));
     }
 
     /**

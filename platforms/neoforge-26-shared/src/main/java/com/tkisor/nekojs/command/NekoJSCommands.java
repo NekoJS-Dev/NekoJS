@@ -289,7 +289,18 @@ public final class NekoJSCommands {
     }
 
     private static List<ProbeBackend> selectLanguage(String languageId) {
-        return ProbeBackendRegistry.get().defaultBackend(languageId)
+        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
+        // per-language 配置（probe.toml [languages.<lang>].backend）优先：指定了 backend 名时按 (语言, 名字) 精确选取，
+        // 找不到再回退该语言的注册表默认（priority 最高者）；无配置则维持现状（defaultBackend）。
+        var langCfg = ProbeCoordinator.config().language(languageId);
+        if (langCfg.isPresent()) {
+            String configuredName = langCfg.get().backend();
+            if (configuredName != null && !configuredName.isBlank()) {
+                var configured = registry.backend(languageId, configuredName);
+                if (configured.isPresent()) return List.of(configured.get());
+            }
+        }
+        return registry.defaultBackend(languageId)
                 .map(List::of).orElse(List.of());
     }
 

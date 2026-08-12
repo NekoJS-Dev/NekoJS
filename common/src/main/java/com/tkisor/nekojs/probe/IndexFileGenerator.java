@@ -28,6 +28,13 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, String> declCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /**
+     * 被 {@code probe.modify_type} 隐藏（hide）的类 FQN 集合：generate 时过滤这些类的 import 与
+     * 类型别名，防止其他类（反射 import 收集）悬空引用已隐藏类。由 backend 在每次 generate 前
+     * 经 {@link #setHiddenClasses(Set)} 设置；{@link #clearCaches()} 不清除本集合（backend 重新设置）。
+     */
+    private volatile Set<String> hiddenClasses = Set.of();
+
     public IndexFileGenerator(ClassDeclGenerator classDeclGenerator, TypeConverter typeConverter,
                               AdapterAliasGenerator adapterAliasGenerator) {
         this.classDeclGenerator = classDeclGenerator;
@@ -73,6 +80,11 @@ public final class IndexFileGenerator {
         // 引用 @special 注册表字面量时，需要导入 RegistryTypes 命名空间
         if (moduleUsesRegistry) {
             sb.append("import type { RegistryTypes } from \"@special/types\";\n");
+        }
+
+        // C5a：过滤被 hide 的类——其他类的反射 import 收集仍会引用它们（悬空），统一在此剔除
+        if (!hiddenClasses.isEmpty()) {
+            importsNeeded.removeIf(hiddenClasses::contains);
         }
 
         // 生成 import 语句（按包分组）
@@ -261,6 +273,9 @@ public final class IndexFileGenerator {
      * 例如 List&lt;E&gt; → $List_&lt;E&gt; = E[]
      */
     private String generateTypeAlias(String fullName, String simpleName) {
+        // C5a：隐藏类的别名不生成（其声明已为空，别名会悬空引用 $Hidden）
+        if (hiddenClasses.contains(fullName)) return null;
+
         // 需要别名的类型：(完整名, 类型参数数量, 别名模板)
         // 别名模板中 {0} = 第一个类型参数, {1} = 第二个类型参数
         String alias = switch (fullName) {
@@ -382,6 +397,14 @@ public final class IndexFileGenerator {
             merged.addAll(extraImportFqns);
             importCache.put(fqn, merged);
         }
+    }
+
+    /**
+     * 设置本次生成需过滤的隐藏类 FQN 集合（空集 = 清除上一轮的隐藏状态）。
+     * 由 {@code TypeScriptProbeBackend} 在每次 generate 前调用。
+     */
+    public void setHiddenClasses(Set<String> hidden) {
+        this.hiddenClasses = hidden == null || hidden.isEmpty() ? Set.of() : Set.copyOf(hidden);
     }
 
     /**

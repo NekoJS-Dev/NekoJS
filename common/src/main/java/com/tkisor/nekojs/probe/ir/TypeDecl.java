@@ -26,6 +26,11 @@ public final class TypeDecl {
     public final List<String> docs = new ArrayList<>();
     public boolean hidden;
     /**
+     * 重命名后的类名；null = 用 sourceClass 原名。由 {@code probe.modify_type} 的 {@code renameClass}
+     * 设置，各 renderer 渲染 class/interface/enum 名时优先取之（TS 输出仍带 {@code $} 前缀）。
+     */
+    public String renameTo;
+    /**
      * 是否被 {@code probe.modify_type} 事件触及过。由 {@code ClassEditor} 的任意编辑操作置 true；
      * probe backend 据此决定哪些类需要经 renderer 重新渲染并覆盖声明缓存。未触及 → 走旧路径（零回归）。
      */
@@ -35,6 +40,11 @@ public final class TypeDecl {
         this.kind = kind;
         this.sourceClass = sourceClass;
         this.fqn = fqn;
+    }
+
+    /** 渲染时使用的类名（renameTo 优先；null = 未改名，renderer 回退到 sourceClass 原名）。 */
+    public String effectiveTypeName() {
+        return renameTo;
     }
 
     /** 类级泛型参数（名字 + 可选上界 TypeSlot）。 */

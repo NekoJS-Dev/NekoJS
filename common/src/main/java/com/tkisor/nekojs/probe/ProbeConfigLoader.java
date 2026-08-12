@@ -1,11 +1,14 @@
 package com.tkisor.nekojs.probe;
 
+import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.platform.Platform;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 加载 {@code <game>/nekojs/config/probe.toml}，模式与 {@code SandboxConfigLoader} 一致：
@@ -39,6 +42,10 @@ public final class ProbeConfigLoader {
                     " Max BFS depth when walking the type-reachability closure from event/binding/adapter seeds.");
             setup(config, "scan.mode", "SMART",
                     " Scan mode: SMART = classes reachable from event/binding/adapter seeds, filtered by the whitelist + forceScanMods | FULL = whole reachable closure, whitelist bypassed but excludePackages still honored (bounded by maxDepth) | NONE = no scanning at all (probe returns a failure result).");
+            setup(config, "languages.typescript.outputDir", "typescript",
+                    " Per-language probe config ([languages.<languageId>]): outputDir = subdirectory under baseDir for this language's output (defaults to the language id, e.g. 'typescript'). backend = name of the preferred backend for /nekojs probe <languageId> (unset = the language's registered default backend).");
+            setup(config, "languages.python.outputDir", "python",
+                    " outputDir for the python backend (defaults to 'python'; a null/missing value falls back to the language id).");
 
             boolean enabled = config.getOrElse("enabled", Boolean.TRUE);
             String baseDir = config.getOrElse("baseDir", ".neko_probe");
@@ -48,9 +55,11 @@ public final class ProbeConfigLoader {
             List<String> forceScanMods = stringList(config, "scan.forceScanMods");
             int maxDepth = config.getOrElse("scan.maxDepth", 5);
             String mode = config.getOrElse("scan.mode", "SMART");
+            Map<String, ProbeConfig.LanguageConfig> languages = languages(config);
 
             return new ProbeConfig(enabled, baseDir,
-                    new ProbeConfig.ScanConfig(includePackages, extraIncludePackages, excludePackages, forceScanMods, maxDepth, mode));
+                    new ProbeConfig.ScanConfig(includePackages, extraIncludePackages, excludePackages, forceScanMods, maxDepth, mode),
+                    languages);
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load probe.toml, using default probe config", e);
             return ProbeConfig.defaultConfig();
@@ -100,5 +109,28 @@ public final class ProbeConfigLoader {
             return list.stream().map(String::valueOf).toList();
         }
         return List.of();
+    }
+
+    /**
+     * 解析 {@code [languages.<languageId>]} 表：先取 {@code languages} 子表，再遍历其键（每个值应为嵌套 Config）。
+     * 键不存在（或值不是表）时返回空 Map——语言级配置全部缺省，回退到「输出目录 = 语言 id / 注册表默认 backend」。
+     */
+    private static Map<String, ProbeConfig.LanguageConfig> languages(CommentedFileConfig config) {
+        Object raw = config.get("languages");
+        if (!(raw instanceof Config table)) {
+            return Map.of();
+        }
+        Map<String, ProbeConfig.LanguageConfig> result = new LinkedHashMap<>();
+        for (Config.Entry entry : table.entrySet()) {
+            if (!(entry.getValue() instanceof Config langTable)) {
+                continue; // 值不是表（如误写成字符串）→ 忽略该语言条目
+            }
+            Object backendRaw = langTable.get("backend");
+            Object outputDirRaw = langTable.get("outputDir");
+            String backend = backendRaw == null ? null : String.valueOf(backendRaw);
+            String outputDir = outputDirRaw == null ? null : String.valueOf(outputDirRaw);
+            result.put(entry.getKey(), new ProbeConfig.LanguageConfig(backend, outputDir));
+        }
+        return Map.copyOf(result);
     }
 }

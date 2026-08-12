@@ -32,6 +32,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -44,43 +45,93 @@ import java.util.concurrent.Future;
  * <p>Phase 1：共享收集 = 旧 {@code ProbeOrchestrator.collectClasses} 的 BFS（搬到此处并改为配置驱动）。
  * 每个 backend 自管输出目录与 staging/swap；外部副作用（agent 模板 + workspace 配置）在本类统一执行一次。
  *
- * <p>静态工具风格（与旧 {@code ProbeRegistry} 一致）：命令经 {@link #run} 调用，配置经 {@link #config()} 读取。
+ * <p>C3 起支持针对自定义 {@link NekoJSPaths} 实例化（构造传入 paths 与 {@link ProbeExternalArtifacts}），
+ * 便于用临时目录隔离测试；实例方法为 {@link #readConfig()}/{@link #reloadConfigCache()}/
+ * {@link #applyEnabled(boolean)}/{@link #isProbeEnabled()}/{@link #runProbe}。
+ * Java 不允许静态与实例方法同签名共存，故静态兼容层保留与旧版一致的
+ * {@code config()/reloadConfig()/setEnabled(boolean)/isEnabled()/run(snapshot, backends)} 签名，
+ * 委托惰性单例 {@code defaultCoordinator()}；所有既有静态调用点（命令层与测试）不改也继续编译运行。
  */
 public final class ProbeCoordinator {
 
-    private static final ProbeConfigLoader CONFIG_LOADER = new ProbeConfigLoader();
-    private static volatile ProbeConfig cachedConfig;
+    /* ================= 实例状态 ================= */
+    private final NekoJSPaths paths;
+    private final ProbeExternalArtifacts externalArtifacts;
+    private final ProbeConfigLoader configLoader = new ProbeConfigLoader();
+    private volatile ProbeConfig cachedConfig;
 
-    private ProbeCoordinator() {}
+    /** 以给定游戏目录路径构造；外部副作用走 {@link ProbeExternalArtifacts#DEFAULT}。 */
+    public ProbeCoordinator(NekoJSPaths paths) {
+        this(paths, ProbeExternalArtifacts.DEFAULT);
+    }
 
-    /** 读取（首次加载并缓存）probe 配置。 */
-    public static ProbeConfig config() {
+    /** 以给定游戏目录路径与外部副作用实现构造（测试可用 {@link ProbeExternalArtifacts#NONE} 隔离写盘）。 */
+    public ProbeCoordinator(NekoJSPaths paths, ProbeExternalArtifacts artifacts) {
+        this.paths = Objects.requireNonNull(paths, "paths");
+        this.externalArtifacts = Objects.requireNonNull(artifacts, "artifacts");
+    }
+
+    /** 读取（首次加载并缓存）probe 配置（实例版 {@code config()}，绑定本实例的 {@link NekoJSPaths}）。 */
+    public ProbeConfig readConfig() {
         ProbeConfig c = cachedConfig;
         if (c == null) {
-            c = CONFIG_LOADER.load(NekoJSPaths.get().probeConfig());
+            c = configLoader.load(paths.probeConfig());
             cachedConfig = c;
         }
         return c;
     }
 
-    /** 丢弃配置缓存，下次 {@link #config()} 重新从盘读取（供 {@code /nekojs probe reload}）。 */
-    public static void reloadConfig() {
+    /** 丢弃配置缓存，下次 {@link #readConfig()} 重新从盘读取（实例版 {@code reloadConfig()}，供 {@code /nekojs probe reload}）。 */
+    public void reloadConfigCache() {
         cachedConfig = null;
     }
 
-    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（供 {@code /nekojs probe enable|disable} 命令）。异常仅 debug 日志吞掉，不回传细节。 */
-    public static void setEnabled(boolean enabled) {
+    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（实例版 {@code setEnabled}，供 {@code /nekojs probe enable|disable} 命令）。异常仅 debug 日志吞掉，不回传细节。 */
+    public void applyEnabled(boolean enabled) {
         try {
-            ProbeConfigLoader.setEnabled(NekoJSPaths.get().probeConfig(), enabled);
+            ProbeConfigLoader.setEnabled(paths.probeConfig(), enabled);
         } catch (Throwable e) {
             NekoJS.LOGGER.debug("Failed to persist probe enabled={} into probe.toml", enabled, e);
         }
-        reloadConfig();
+        reloadConfigCache();
     }
 
-    /** 当前 probe 总开关（{@code == config().enabled()}）。 */
+    /** 当前 probe 总开关（实例版 {@code isEnabled()}，{@code == readConfig().enabled()}）。 */
+    public boolean isProbeEnabled() {
+        return readConfig().enabled();
+    }
+
+    /* ================= 静态兼容层（旧静态调用点不变） ================= */
+    private static volatile ProbeCoordinator DEFAULT;
+
+    /** 惰性创建绑定全局 {@link NekoJSPaths#get()} 的默认协调器。 */
+    private static ProbeCoordinator defaultCoordinator() {
+        ProbeCoordinator d = DEFAULT;
+        if (d == null) {
+            d = new ProbeCoordinator(NekoJSPaths.get());
+            DEFAULT = d;
+        }
+        return d;
+    }
+
+    /** 静态 facade：委托全局默认协调器读取配置。 */
+    public static ProbeConfig config() {
+        return defaultCoordinator().readConfig();
+    }
+
+    /** 静态 facade：委托全局默认协调器丢弃配置缓存。 */
+    public static void reloadConfig() {
+        defaultCoordinator().reloadConfigCache();
+    }
+
+    /** 静态 facade：委托全局默认协调器持久化 {@code enabled} 并重载。 */
+    public static void setEnabled(boolean enabled) {
+        defaultCoordinator().applyEnabled(enabled);
+    }
+
+    /** 静态 facade：全局默认协调器的 probe 总开关。 */
     public static boolean isEnabled() {
-        return config().enabled();
+        return defaultCoordinator().isProbeEnabled();
     }
 
     /**
@@ -260,16 +311,17 @@ public final class ProbeCoordinator {
 
     /**
      * 对选中的 backend 集合执行一次 probe：共享收集 → 各 backend 渲染 → 外部副作用一次。
+     * 实例版 {@code run(...)}：路径全部取自本实例的 {@link #paths}，外部副作用走 {@link #externalArtifacts}。
      *
      * @param snapshot 当前 catalog 快照
      * @param backends 命令解析出的、本次要跑的 backend（已按 priority/名字解析）
      * @return 每个 backend 的生成结果（顺序与输入一致）
      */
-    public static List<ProbeGenerator.GenerateResult> run(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
+    public List<ProbeGenerator.GenerateResult> runProbe(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
         if (backends.isEmpty()) {
             return List.of(ProbeGenerator.GenerateResult.failure("no probe backend selected"));
         }
-        ProbeConfig cfg = config();
+        ProbeConfig cfg = readConfig();
         if (!cfg.enabled()) {
             return backends.stream()
                     .map(b -> ProbeGenerator.GenerateResult.failure("probe disabled in probe.toml"))
@@ -283,7 +335,7 @@ public final class ProbeCoordinator {
         }
 
         LinkedHashSet<Class<?>> collected = collectClasses(snapshot, cfg);
-        NekoJSPaths paths = NekoJSPaths.get();
+        NekoJSPaths paths = this.paths;
 
         // 共享 IR：当 modify_type/assign_type 有监听器，或某 backend 需要 IR（Python 等）时构建一次。
         // TS 默认不需要：三者皆无时 sharedIr=null，TS 走旧 ClassDeclGenerator 路径（零回归）。
@@ -299,7 +351,7 @@ public final class ProbeCoordinator {
         // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
         try {
             Path baseDir = paths.gameDir().resolve(cfg.baseDir());
-            ProbeExternalArtifacts.DEFAULT.generate(baseDir);
+            externalArtifacts.generate(baseDir);
         } catch (Exception e) {
             NekoJS.LOGGER.error("Probe external artifacts failed", e);
         }
@@ -334,6 +386,11 @@ public final class ProbeCoordinator {
         }
 
         return results;
+    }
+
+    /** 静态 facade：委托全局默认协调器执行一次 probe（命令层旧调用点不变）。 */
+    public static List<ProbeGenerator.GenerateResult> run(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
+        return defaultCoordinator().runProbe(snapshot, backends);
     }
 
     /** 当前已注册的 backend 总数（诊断用）。 */

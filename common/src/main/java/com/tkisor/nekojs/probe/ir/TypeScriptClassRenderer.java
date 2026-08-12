@@ -57,7 +57,7 @@ public final class TypeScriptClassRenderer {
     private String renderClass(TypeDecl d) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "    ", d.docs);
-        sb.append("    export class $").append(tsClassName(d.sourceClass));
+        sb.append("    export class $").append(effectiveClassName(d));
         appendTypeParameters(sb, d);
 
         if (d.superType != null) {
@@ -114,7 +114,7 @@ public final class TypeScriptClassRenderer {
     private String renderInterface(TypeDecl d) {
         StringBuilder sb = new StringBuilder();
         appendDoc(sb, "    ", d.docs);
-        sb.append("    export interface $").append(tsClassName(d.sourceClass));
+        sb.append("    export interface $").append(effectiveClassName(d));
         appendTypeParameters(sb, d);
         if (!d.interfaces.isEmpty()) {
             sb.append(" extends ")
@@ -133,7 +133,7 @@ public final class TypeScriptClassRenderer {
 
     private String renderEnum(TypeDecl d) {
         StringBuilder sb = new StringBuilder();
-        String name = "$" + tsClassName(d.sourceClass);
+        String name = "$" + effectiveClassName(d);
         appendDoc(sb, "    ", d.docs);
         sb.append("    export class ").append(name).append(" {\n");
         for (FieldDecl f : d.fields) {
@@ -272,6 +272,11 @@ public final class TypeScriptClassRenderer {
         String qn = colon >= 0 ? symbolName.substring(colon + 1) : symbolName;
         int dot = qn.lastIndexOf('.');
         return dot >= 0 ? qn.substring(dot + 1) : qn;
+    }
+
+    /** 渲染用的类名：renameTo（modify_type 改名）优先，否则回退 sourceClass 原名。 */
+    private static String effectiveClassName(TypeDecl d) {
+        return d.effectiveTypeName() != null ? d.effectiveTypeName() : tsClassName(d.sourceClass);
     }
 
     private static String tsClassName(Class<?> cls) {

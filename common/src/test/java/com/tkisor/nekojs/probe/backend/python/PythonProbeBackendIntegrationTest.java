@@ -165,10 +165,11 @@ class PythonProbeBackendIntegrationTest {
         // 命名空间 marker
         assertTrue(Files.exists(out.resolve("nekojs/_events/__init__.pyi")), "_events marker missing");
 
-        // 绑定入口：ServerEvents 绑定指向 Type 类；ClientEvents 无绑定条目也补发入口
+        // 绑定入口：ServerEvents 绑定指向 Type 类；ClientEvents 无绑定条目也补发入口。
+        // 未覆盖组名取 ScriptType.all() 中第一个匹配 side（client 事件也匹配 startup，startup 版本是超集）
         String init = Files.readString(out.resolve("nekojs/__init__.pyi"));
         assertTrue(init.contains("from nekojs._events.server import ServerEventsType"), init);
-        assertTrue(init.contains("from nekojs._events.client import ClientEventsType"), init);
+        assertTrue(init.contains("from nekojs._events.startup import ClientEventsType"), init);
         assertTrue(init.contains("ServerEvents: ServerEventsType"), init);
         assertTrue(init.contains("ClientEvents: ClientEventsType"), init);
         assertTrue(init.contains("\"ServerEvents\""), "event groups should be in __all__: " + init);
@@ -195,6 +196,33 @@ class PythonProbeBackendIntegrationTest {
                 "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
         assertTrue(module.contains("FakeProbeEvent_ = FakeProbeEvent | str"),
                 "adapter input alias missing: " + module);
+    }
+
+    // -------------------- C5a：隐藏类残留清理 --------------------
+
+    @Test
+    void generate_hiddenClassNotImportedAndNotRendered(@TempDir Path temp) throws Exception {
+        // A 引用 pkg.b.Hidden；Hidden 被 hide()（mutated + hidden）
+        TypeDecl a = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.a.A");
+        MethodDecl getH = new MethodDecl("getH");
+        getH.returnType = new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", "pkg.b.Hidden")));
+        a.methods.add(getH);
+        TypeDecl hidden = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.b.Hidden");
+        hidden.hidden = true;
+        hidden.mutated = true;
+        List<TypeDecl> ir = List.of(a, hidden);
+
+        ProbeGenerator.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.a", "pkg.b"));
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        // A 的模块：不 import Hidden；对 Hidden 的引用降级为 Any
+        String aMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/a/__init__.pyi"));
+        assertFalse(aMod.contains("import Hidden"), "hidden class must not be imported: " + aMod);
+        assertTrue(aMod.contains("def getH(self) -> Any"), "hidden SYMBOL should degrade to Any: " + aMod);
+
+        // Hidden 的模块：该类不出现
+        String bMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/b/__init__.pyi"));
+        assertFalse(bMod.contains("class Hidden"), "hidden class must not be rendered: " + bMod);
     }
 
     // -------------------- helpers --------------------

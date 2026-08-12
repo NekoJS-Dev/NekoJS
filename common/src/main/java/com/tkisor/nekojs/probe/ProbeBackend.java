@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
 /**
  * 单语言的 probe 产物生成器。每个 backend 负责把共享的 catalog + 收集到的类渲染成**一种**目标语言
@@ -47,11 +48,14 @@ public interface ProbeBackend {
     }
 
     /**
-     * 本 backend 的输出目录。默认 {@code <baseDir>/<languageId>}；backend 可覆盖以自定义布局。
-     * backend 自己负责在 {@link #generate(ProbeContext)} 内清理/原子替换该目录。
+     * 本 backend 的输出目录：优先取 {@code [languages.<languageId>].outputDir}，缺省回退 {@code <baseDir>/<languageId>}；
+     * backend 可整体覆盖以自定义布局。backend 自己负责在 {@link #generate(ProbeContext)} 内清理/原子替换该目录。
      */
     default Path outputDir(NekoJSPaths paths, ProbeConfig config) {
-        return paths.gameDir().resolve(config.baseDir()).resolve(languageId());
+        String dir = config.language(languageId())
+                .flatMap(l -> Optional.ofNullable(l.outputDir()))
+                .orElse(languageId());
+        return paths.gameDir().resolve(config.baseDir()).resolve(dir);
     }
 
     /**

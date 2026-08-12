@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.probe.events.ProbeModifyTypeEventJS;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
@@ -37,7 +38,9 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>（C1）**未编辑** IR 与旧 ClassDeclGenerator 路径产出逐字一致：同一收集结果分别在
  *       {@code ir=null} 与 {@code ir=未编辑列表} 下生成，两棵输出树文件集合与内容必须完全一致。</li>
  *   <li>（A1）getter 覆盖（RecipeEventJS.recipes → DocumentedRecipes）在 IR 重渲染路径同样生效：
- *       renderer 级（直接渲染 mutated TypeDecl）与 backend 级（带 mutated IR 走完整 generate）。</li>
+ *       renderer 级（直接渲染 mutated TypeDecl）与 backend 级（带 mutated IR 走完整 generate）。
+ *       另有一个机制级测试（不依赖 RecipeEventJS，用测试 classpath 上必然存在的 fixture 类）：
+ *       override 键是「类名 + getter 属性名」，与被覆盖类无关，任何类都可注册覆盖。</li>
  *   <li>（A3）TypeDecl 的 docs 列表渲染为 JSDoc 块。</li>
  * </ol>
  */
@@ -181,6 +184,55 @@ class TypeScriptNoopIrGoldenTest {
                 "recipes getter must be DocumentedRecipes after IR re-render:\n" + content);
         assertTrue(content.contains("import { DocumentedRecipes } from \"@side-only/server/events/recipes\";"),
                 "extra import must be merged by IndexFileGenerator:\n" + content);
+    }
+
+    /**
+     * A1 机制级（不依赖 RecipeEventJS，避免 Assume 跳过）：override 键是「类名 + getter 属性名」，
+     * 与被覆盖的类无关。用测试 classpath 上必然存在的 fixture 类验证：
+     * ClassEditor 触碰一个无关成员把 TypeDecl 标记 mutated 后，renderer 上注册的
+     * override（label → MyCustomType）在重渲染时替换 getter 返回类型，且不双发射原 getLabel()。
+     */
+    @Test
+    void getterOverrideAppliesToArbitraryClassOnTestClasspath() {
+        TypeAliasRegistry aliases = new TypeAliasRegistry();
+        TypeConverter tc = new TypeConverter(aliases);
+
+        TypeDecl decl = new TypeReflector().reflect(OverrideMechanismFixture.class);
+
+        // 经 ClassEditor 的公开入口（ProbeModifyTypeEventJS.forClass）隐藏一个无关成员，
+        // 模拟 probe.modify_type 的参数级编辑 → decl 被标记 mutated
+        var event = new ProbeModifyTypeEventJS(Map.of(decl.fqn, decl));
+        var editor = event.forClass(decl.fqn);
+        assertNotNull(editor, "forClass 必须返回 fixture 的 ClassEditor");
+        assertTrue(editor.hasMethod("ping"), "fixture 应有 ping 成员供隐藏");
+        editor.hideMethod("ping");
+        assertTrue(decl.mutated, "ClassEditor 触碰后 TypeDecl 必须标记 mutated");
+
+        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(tc);
+        renderer.overrideGetter(OverrideMechanismFixture.class, "label", "MyCustomType",
+                "import { MyCustomType } from \"@side-only/server/custom\";");
+
+        String out = renderer.render(decl);
+        assertTrue(out.contains("get label(): MyCustomType;"),
+                "override 必须在 IR 重渲染时替换 getter 返回类型:\n" + out);
+        assertFalse(out.contains("getLabel():"),
+                "命中覆盖时只发射 get 行，不双发射原 getLabel() 方法:\n" + out);
+        assertFalse(out.contains("ping()"),
+                "被 hideMethod 隐藏的成员不应出现在重渲染输出:\n" + out);
+    }
+
+    /**
+     * A1 机制测试夹具：含一个 getter（getLabel → property "label"）与一个无关成员（ping）。
+     * 必须是 public static 类，TypeReflector 才会反射其公共成员。
+     */
+    public static class OverrideMechanismFixture {
+        public String getLabel() {
+            return "label";
+        }
+
+        public void ping() {
+            // 无关成员：仅用于被 ClassEditor.hideMethod 触碰，把 TypeDecl 标记为 mutated
+        }
     }
 
     // ------------------------------------------------------------------

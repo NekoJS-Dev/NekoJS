@@ -35,7 +35,7 @@ public final class PythonClassRenderer {
     // ---------------- class ----------------
 
     private String renderClass(TypeDecl d) {
-        String name = ApiTypeRefPyRenderer.simplePyName(d.fqn);
+        String name = effectiveClassName(d);
         StringBuilder sb = new StringBuilder();
         sb.append("class ").append(name).append(bases(d, true)).append(":\n");
         appendDoc(sb, d.docs);
@@ -88,7 +88,7 @@ public final class PythonClassRenderer {
     // ---------------- interface ----------------
 
     private String renderInterface(TypeDecl d) {
-        String name = ApiTypeRefPyRenderer.simplePyName(d.fqn);
+        String name = effectiveClassName(d);
         StringBuilder sb = new StringBuilder();
         sb.append("class ").append(name).append(bases(d, false)).append(":\n");
         appendDoc(sb, d.docs);
@@ -115,7 +115,7 @@ public final class PythonClassRenderer {
     // ---------------- enum ----------------
 
     private String renderEnum(TypeDecl d) {
-        String name = ApiTypeRefPyRenderer.simplePyName(d.fqn);
+        String name = effectiveClassName(d);
         StringBuilder sb = new StringBuilder();
         sb.append("class ").append(name).append(":\n");
         appendDoc(sb, d.docs);
@@ -134,6 +134,11 @@ public final class PythonClassRenderer {
     }
 
     // ---------------- helpers ----------------
+
+    /** 渲染用的类名：renameTo（modify_type 改名）优先，否则回退 fqn 的 Python 简单名。 */
+    private static String effectiveClassName(TypeDecl d) {
+        return d.effectiveTypeName() != null ? d.effectiveTypeName() : ApiTypeRefPyRenderer.simplePyName(d.fqn);
+    }
 
     /** 基类列表：class 含 superType+interfaces；interface 仅 interfaces。 */
     private String bases(TypeDecl d, boolean includeSuper) {

@@ -137,6 +137,11 @@ public final class PythonProbeBackend implements ProbeBackend {
             byPkg.computeIfAbsent(pkg, k -> new ArrayList<>()).add(d);
             availableFqns.add(d.fqn);
         }
+        // C5a：隐藏类从 availableFqns 剔除（在构造类型渲染器之前）——其他模块引用它时不再
+        // import（防悬空），渲染器也会把它当作未收集 SYMBOL 降级为 Any；其自身模块渲染为空串。
+        for (TypeDecl d : ir) {
+            if (d.hidden) availableFqns.remove(d.fqn);
+        }
         // 祖先包（含自身），保证 import 路径上每层都有 __init__.pyi
         Set<String> allPkgs = new TreeSet<>();
         for (String pkg : byPkg.keySet()) allPkgs.addAll(ancestorsOf(pkg));
