@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
-import com.tkisor.nekojs.api.data.AbstractJsTypeAdapter;
+import com.tkisor.nekojs.api.data.BaseJsTypeAdapter;
 import com.tkisor.nekojs.api.data.JsValueView;
 import com.tkisor.nekojs.api.data.TextValue;
 import com.tkisor.nekojs.api.data.TextArgument;
@@ -21,7 +21,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 
-public class ComponentAdapter extends AbstractJsTypeAdapter<Component> {
+public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
     public ComponentAdapter() {
         super(Component.class);
     }

@@ -11,6 +11,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -95,5 +96,10 @@ public class NeoForgePlatform implements IPlatform {
     public String getLoaderVersion() {
         IModInfo neoforge = getMods().get("neoforge");
         return neoforge != null ? neoforge.getVersion() : "0.0.0";
+    }
+
+    @Override
+    public List<String> defaultScanPackages() {
+        return List.of("net.minecraft", "net.neoforged");
     }
 }

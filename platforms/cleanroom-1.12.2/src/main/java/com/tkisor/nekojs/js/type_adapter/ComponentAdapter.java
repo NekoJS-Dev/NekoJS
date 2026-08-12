@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
-import com.tkisor.nekojs.api.data.AbstractJsTypeAdapter;
+import com.tkisor.nekojs.api.data.BaseJsTypeAdapter;
 import com.tkisor.nekojs.api.data.JsValueView;
 import com.tkisor.nekojs.api.data.TextValue;
 import com.tkisor.nekojs.api.data.TextArgument;
@@ -29,7 +29,7 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
  * 1.12.2 Component 适配器：使用 {@link ITextComponent} 替代 1.21.1 的 {@code Component}。
  * 字符串转换为 {@link TextComponentString}。富文本样式经 {@link Style} 应用。
  */
-public class ComponentAdapter extends AbstractJsTypeAdapter<ITextComponent> {
+public class ComponentAdapter extends BaseJsTypeAdapter<ITextComponent> {
 
     public ComponentAdapter() {
         super(ITextComponent.class);

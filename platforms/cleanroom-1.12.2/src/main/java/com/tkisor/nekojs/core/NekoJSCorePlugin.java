@@ -10,6 +10,7 @@ import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.event.ScriptEvents;
+import com.tkisor.nekojs.probe.events.ProbeEvents;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
@@ -73,6 +74,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(com.tkisor.nekojs.bindings.event.LevelEvents.GROUP);
         registry.register(com.tkisor.nekojs.bindings.event.NetworkEvents.GROUP);
         registry.register(ScriptEvents.GROUP);
+        registry.register(ProbeEvents.GROUP);
     }
 
     @Override
@@ -180,6 +182,12 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(TypeDocCatalogEntry.binding("ServerEvents", null,
                 "Server-side event group, including recipe editing.",
                 List.of("ServerEvents.recipes(event => { })", "ServerEvents.afterRecipes(event => { })")));
+        registry.register(TypeDocCatalogEntry.binding("ProbeEvents", null,
+                "Probe generation customization events (probe.*). Listeners go in server_scripts; they run when /nekojs probe is invoked.",
+                List.of(
+                        "ProbeEvents.modifyType.listen(event => { event.forClass('net.minecraft.world.entity.player.Player').renameMethod('getX', 'getCustom'); })",
+                        "ProbeEvents.assignType.listen(event => event.assign('net.minecraft.world.item.ItemStack', 'string'))",
+                        "ProbeEvents.addGlobal.listen(event => event.add('MyFlag', 'boolean'))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null,
                 "Startup-side native Forge event bridge.",
                 List.of("NativeEvents.onEvent('event.class.Name', event => { })")));

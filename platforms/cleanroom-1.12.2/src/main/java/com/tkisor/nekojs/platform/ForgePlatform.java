@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -104,5 +105,10 @@ public class ForgePlatform implements IPlatform {
         if (forge != null) return forge.getVersion();
         LOGGER.warn("Neither 'cleanroom' nor 'forge' mod found for loader version; defaulting to 0.0.0");
         return "0.0.0";
+    }
+
+    @Override
+    public List<String> defaultScanPackages() {
+        return List.of("net.minecraft", "net.minecraftforge");
     }
 }

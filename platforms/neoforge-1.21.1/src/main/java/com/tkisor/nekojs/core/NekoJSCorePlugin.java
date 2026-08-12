@@ -12,6 +12,7 @@ import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.event.ScriptEvents;
+import com.tkisor.nekojs.probe.events.ProbeEvents;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
@@ -96,6 +97,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(LevelEvents.GROUP);
         registry.register(NetworkEvents.GROUP);
         registry.register(ScriptEvents.GROUP);
+        registry.register(ProbeEvents.GROUP);
     }
 
     @Override
@@ -217,6 +219,12 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(TypeDocCatalogEntry.binding("Fluid", "NekoFluidHelper", "Script-friendly FluidStack helper.", List.of("Fluid.of('minecraft:water', FluidAmounts.BUCKET)", "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
         registry.register(TypeDocCatalogEntry.binding("FluidIngredient", "NekoFluidIngredientHelper", "Script-friendly FluidIngredient and SizedFluidIngredient helper.", List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.sized('minecraft:water', 250)")));
         registry.register(TypeDocCatalogEntry.binding("ServerEvents", null, "Server-side event group, including recipe editing.", List.of("ServerEvents.recipes(event => { })", "ServerEvents.afterRecipes(event => { })")));
+        registry.register(TypeDocCatalogEntry.binding("ProbeEvents", null,
+                "Probe generation customization events (probe.*). Listeners go in server_scripts; they run when /nekojs probe is invoked.",
+                List.of(
+                        "ProbeEvents.modifyType.listen(event => { event.forClass('net.minecraft.world.entity.player.Player').renameMethod('getX', 'getCustom'); })",
+                        "ProbeEvents.assignType.listen(event => event.assign('net.minecraft.world.item.ItemStack', 'string'))",
+                        "ProbeEvents.addGlobal.listen(event => event.add('MyFlag', 'boolean'))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.TEST, "Test", "NekoTestHelper", "Test-script assertion and smoke test helper.", List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null, "Startup-side native NeoForge event bridge.", List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "ScriptEvents", null, "Startup-side custom server/client event method registration event group.", List.of("ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', 'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))")));

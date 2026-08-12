@@ -10,7 +10,10 @@ import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
-import com.tkisor.nekojs.probe.ProbeRegistry;
+import com.tkisor.nekojs.probe.ProbeBackend;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
+import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import net.minecraft.command.CommandBase;
@@ -79,7 +82,7 @@ public class NekoJSCommands extends CommandBase {
                 handleError(server, sender);
                 break;
             case "probe":
-                handleProbe(server, sender);
+                handleProbe(server, sender, args);
                 break;
             default:
                 throw new WrongUsageException(getUsage(sender));
@@ -164,38 +167,136 @@ public class NekoJSCommands extends CommandBase {
         }
     }
 
-    private void handleProbe(@NotNull MinecraftServer server, @NotNull ICommandSender sender) {
-        var generator = ProbeRegistry.getGenerator();
-        if (generator == null) {
-            sender.sendMessage(new TextComponentString("No probe generator registered."));
-            return;
+    private void handleProbe(@NotNull MinecraftServer server, @NotNull ICommandSender sender, @NotNull String[] args) {
+        String langArg = args.length >= 2 ? args[1] : null;
+        List<ProbeBackend> backends;
+
+        if (langArg == null || langArg.isEmpty()) {
+            backends = selectDefaultTypescript();
+        } else switch (langArg) {
+            case "all":
+                backends = selectAll();
+                break;
+            case "list":
+                listProbeBackends(sender);
+                return;
+            case "reload":
+                reloadProbeConfig(sender);
+                return;
+            case "enable":
+                enableProbe(sender);
+                return;
+            case "disable":
+                disableProbe(sender);
+                return;
+            default:
+                String name = args.length >= 3 ? args[2] : null;
+                backends = (name == null || name.isEmpty())
+                        ? selectLanguage(langArg)
+                        : selectNamed(langArg, name);
+                break;
         }
 
-        final String generatorName = generator.name();
-        sender.sendMessage(new TextComponentString("Starting probe generation (" + generatorName + ")..."));
-        NekoJS.LOGGER.info("Probe generation started ({}), this may take a while...", generatorName);
+        runProbe(sender, backends);
+    }
+
+    /** /nekojs probe 无参：默认只跑 TS builtin。 */
+    private static List<ProbeBackend> selectDefaultTypescript() {
+        return ProbeBackendRegistry.get().backend("typescript", "builtin")
+                .map(List::of).orElse(List.of());
+    }
+
+    /** /nekojs probe all：所有已注册 backend（跨语言）。 */
+    private static List<ProbeBackend> selectAll() {
+        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
+        List<ProbeBackend> all = new ArrayList<>();
+        for (String lang : registry.languages()) {
+            all.addAll(registry.backendsFor(lang));
+        }
+        return all;
+    }
+
+    private static List<ProbeBackend> selectLanguage(String languageId) {
+        return ProbeBackendRegistry.get().defaultBackend(languageId)
+                .map(List::of).orElse(List.of());
+    }
+
+    private static List<ProbeBackend> selectNamed(String languageId, String name) {
+        return ProbeBackendRegistry.get().backend(languageId, name)
+                .map(List::of).orElse(List.of());
+    }
+
+    private void runProbe(@NotNull ICommandSender sender, List<ProbeBackend> backends) {
+        if (backends.isEmpty()) {
+            sender.sendMessage(new TextComponentString("No probe backend matched. Use /nekojs probe list."));
+            return;
+        }
+        StringBuilder names = new StringBuilder();
+        for (ProbeBackend b : backends) {
+            if (names.length() > 0) names.append(", ");
+            names.append(b.languageId()).append(':').append(b.name());
+        }
+        sender.sendMessage(new TextComponentString("Starting probe (" + names + ")..."));
+        NekoJS.LOGGER.info("Probe generation started ({}), this may take a while...", names);
 
         // Run synchronously on the server command thread.
-        // Background threads crash when ProbeOrchestrator uses its internal thread pool
-        // to Class.forName client rendering classes whose <clinit> calls OpenGL.
+        // 后台线程跑 probe 时，backend 内部的线程池会对客户端渲染类 Class.forName，
+        // 其 <clinit> 调用 OpenGL 会崩溃；故保持在命令线程上触发。
         try {
             var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
-            var outputDir = NekoJSPaths.get().probeDir();
-            var result = generator.generate(snapshot, outputDir);
+            List<ProbeGenerator.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
 
-            String msg;
-            if (result.success()) {
-                msg = "Probe complete: " + result.filesGenerated() + " files in " + result.durationMs() + "ms";
-            } else {
-                msg = "Probe failed: " + result.message();
+            int totalFiles = 0;
+            long maxMs = 0;
+            boolean allOk = true;
+            for (ProbeGenerator.GenerateResult r : results) {
+                if (r.success()) {
+                    totalFiles += r.filesGenerated();
+                    maxMs = Math.max(maxMs, r.durationMs());
+                } else {
+                    allOk = false;
+                    sender.sendMessage(new TextComponentString("  backend failed: " + r.message()));
+                }
             }
-            NekoJS.LOGGER.info("Probe ({}) {}", generatorName, msg);
+            String msg = allOk
+                    ? "Probe complete: " + totalFiles + " files in " + maxMs + "ms"
+                    : "Probe completed with failures";
+            NekoJS.LOGGER.info("Probe ({}) {}", names, msg);
             sender.sendMessage(new TextComponentString(msg));
         } catch (Throwable e) {
             NekoJS.LOGGER.error("Probe generation crashed", e);
             sender.sendMessage(new TextComponentString(
                     "Probe error: " + e.getClass().getSimpleName() + ": " + e.getMessage()));
         }
+    }
+
+    private void listProbeBackends(@NotNull ICommandSender sender) {
+        var entries = ProbeBackendRegistry.get().registrars();
+        if (entries.isEmpty()) {
+            sender.sendMessage(new TextComponentString("No probe backends registered."));
+        } else {
+            sender.sendMessage(new TextComponentString("Registered probe backends:"));
+            for (String e : entries) {
+                sender.sendMessage(new TextComponentString("  - " + e));
+            }
+        }
+    }
+
+    private void reloadProbeConfig(@NotNull ICommandSender sender) {
+        ProbeCoordinator.reloadConfig();
+        sender.sendMessage(new TextComponentString("Probe config (probe.toml) reloaded."));
+    }
+
+    /** /nekojs probe enable：运行时启用 probe（开关持久化由 ProbeCoordinator.setEnabled 负责）。 */
+    private void enableProbe(@NotNull ICommandSender sender) {
+        ProbeCoordinator.setEnabled(true);
+        sender.sendMessage(new TextComponentString("Probe enabled."));
+    }
+
+    /** /nekojs probe disable：运行时禁用 probe。 */
+    private void disableProbe(@NotNull ICommandSender sender) {
+        ProbeCoordinator.setEnabled(false);
+        sender.sendMessage(new TextComponentString("Probe disabled."));
     }
 
     @Override
@@ -207,6 +308,23 @@ public class NekoJSCommands extends CommandBase {
         if (args.length == 2 && "reload".equals(args[0])) {
             return getListOfStringsMatchingLastWord(args,
                     Arrays.stream(ScriptType.values()).map(t -> t.name.toLowerCase()).toArray(String[]::new));
+        }
+        if (args.length == 2 && "probe".equals(args[0])) {
+            List<String> sugg = new ArrayList<>();
+            sugg.add("all");
+            sugg.add("list");
+            sugg.add("reload");
+            sugg.add("enable");
+            sugg.add("disable");
+            sugg.addAll(ProbeBackendRegistry.get().languages());
+            return getListOfStringsMatchingLastWord(args, sugg.toArray(new String[0]));
+        }
+        if (args.length == 3 && "probe".equals(args[0])) {
+            List<String> names = new ArrayList<>();
+            for (ProbeBackend b : ProbeBackendRegistry.get().backendsFor(args[1])) {
+                names.add(b.name());
+            }
+            return getListOfStringsMatchingLastWord(args, names.toArray(new String[0]));
         }
         return Collections.emptyList();
     }

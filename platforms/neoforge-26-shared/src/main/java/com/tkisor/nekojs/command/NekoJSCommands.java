@@ -16,7 +16,13 @@ import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
+import com.tkisor.nekojs.probe.ProbeBackend;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
+import com.tkisor.nekojs.probe.ProbeGenerator;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -26,8 +32,10 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public final class NekoJSCommands {
 
@@ -98,12 +106,7 @@ public final class NekoJSCommands {
                                 })
                         )
 
-                        .then(Commands.literal("probe")
-                                .executes(context -> {
-                                    CommandSourceStack source = context.getSource();
-                                    return runProbe(source);
-                                })
-                        )
+                        .then(probeCommand())
         );
     }
 
@@ -238,30 +241,148 @@ public final class NekoJSCommands {
         }
     }
 
-    private static int runProbe(CommandSourceStack source) {
-        var generator = com.tkisor.nekojs.probe.ProbeRegistry.getGenerator();
-        if (generator == null) {
-            source.sendFailure(Component.literal("No probe generator registered."));
+    // ------------------------------------------------------------------
+    //  Probe（多 backend）
+    // ------------------------------------------------------------------
+
+    private static LiteralArgumentBuilder<CommandSourceStack> probeCommand() {
+        LiteralArgumentBuilder<CommandSourceStack> probe = Commands.literal("probe")
+                .executes(context -> runProbe(context.getSource(), selectDefaultTypescript()));
+        probe.then(Commands.literal("all")
+                .executes(context -> runProbe(context.getSource(), selectAll())));
+        probe.then(Commands.literal("list")
+                .executes(context -> listProbeBackends(context.getSource())));
+        probe.then(Commands.literal("reload")
+                .executes(context -> reloadProbeConfig(context.getSource())));
+        probe.then(Commands.literal("enable")
+                .executes(context -> enableProbe(context.getSource())));
+        probe.then(Commands.literal("disable")
+                .executes(context -> disableProbe(context.getSource())));
+        probe.then(Commands.argument("language", StringArgumentType.word())
+                .suggests((context, builder) -> suggestProbeLanguages(builder))
+                .executes(context -> runProbe(context.getSource(),
+                        selectLanguage(StringArgumentType.getString(context, "language"))))
+                .then(Commands.argument("name", StringArgumentType.word())
+                        .suggests((context, builder) -> suggestProbeBackendNames(
+                                StringArgumentType.getString(context, "language"), builder))
+                        .executes(context -> runProbe(context.getSource(),
+                                selectNamed(
+                                        StringArgumentType.getString(context, "language"),
+                                        StringArgumentType.getString(context, "name"))))));
+        return probe;
+    }
+
+    /** /nekojs probe 无参：默认只跑 TS builtin。 */
+    private static List<ProbeBackend> selectDefaultTypescript() {
+        return ProbeBackendRegistry.get().backend("typescript", "builtin")
+                .map(List::of).orElse(List.of());
+    }
+
+    /** /nekojs probe all：所有已注册 backend（跨语言）。 */
+    private static List<ProbeBackend> selectAll() {
+        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
+        List<ProbeBackend> all = new ArrayList<>();
+        for (String lang : registry.languages()) {
+            all.addAll(registry.backendsFor(lang));
+        }
+        return all;
+    }
+
+    private static List<ProbeBackend> selectLanguage(String languageId) {
+        return ProbeBackendRegistry.get().defaultBackend(languageId)
+                .map(List::of).orElse(List.of());
+    }
+
+    private static List<ProbeBackend> selectNamed(String languageId, String name) {
+        return ProbeBackendRegistry.get().backend(languageId, name)
+                .map(List::of).orElse(List.of());
+    }
+
+    private static int runProbe(CommandSourceStack source, List<ProbeBackend> backends) {
+        if (backends.isEmpty()) {
+            source.sendFailure(Component.literal("No probe backend matched. Use /nekojs probe list."));
             return 0;
         }
-
-        source.sendSystemMessage(Component.literal("Generating probe files (" + generator.name() + ")..."));
+        String names = backends.stream()
+                .map(b -> b.languageId() + ":" + b.name())
+                .collect(Collectors.joining(", "));
+        source.sendSystemMessage(Component.literal("Generating probe (" + names + ")..."));
 
         try {
-            var snapshot = com.tkisor.nekojs.api.catalog.NekoScriptCatalog.snapshot(com.tkisor.nekojs.api.plugin.NekoRuntimeAccess.get());
-            var outputDir = com.tkisor.nekojs.core.fs.NekoJSPaths.get().gameDir().resolve(".neko_probe");
-            var result = generator.generate(snapshot, outputDir);
+            var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
+            List<ProbeGenerator.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
 
-            if (result.success()) {
+            int totalFiles = 0;
+            long maxMs = 0;
+            boolean allOk = true;
+            for (ProbeGenerator.GenerateResult r : results) {
+                if (r.success()) {
+                    totalFiles += r.filesGenerated();
+                    maxMs = Math.max(maxMs, r.durationMs());
+                } else {
+                    allOk = false;
+                    source.sendFailure(Component.literal("  backend failed: " + r.message()));
+                }
+            }
+            if (allOk) {
+                final int tf = totalFiles;
+                final long ms = maxMs;
                 source.sendSuccess(() -> Component.literal(
-                        "Probe generated: " + result.filesGenerated() + " files in " + result.durationMs() + "ms"), false);
-            } else {
-                source.sendFailure(Component.literal("Probe generation failed: " + result.message()));
+                        "Probe generated: " + tf + " files in " + ms + "ms"), false);
             }
         } catch (Exception e) {
             NekoJS.LOGGER.error("Probe generation failed", e);
             source.sendFailure(Component.literal("Probe generation failed: " + e.getMessage()));
         }
         return 1;
+    }
+
+    private static int listProbeBackends(CommandSourceStack source) {
+        var entries = ProbeBackendRegistry.get().registrars();
+        if (entries.isEmpty()) {
+            source.sendSystemMessage(Component.literal("No probe backends registered."));
+        } else {
+            source.sendSystemMessage(Component.literal("Registered probe backends:"));
+            for (String e : entries) {
+                source.sendSystemMessage(Component.literal("  - " + e));
+            }
+        }
+        return 1;
+    }
+
+    private static int reloadProbeConfig(CommandSourceStack source) {
+        ProbeCoordinator.reloadConfig();
+        source.sendSuccess(() -> Component.literal("Probe config (probe.toml) reloaded."), false);
+        return 1;
+    }
+
+    /** /nekojs probe enable：运行时启用 probe（开关持久化由 ProbeCoordinator.setEnabled 负责）。 */
+    private static int enableProbe(CommandSourceStack source) {
+        ProbeCoordinator.setEnabled(true);
+        source.sendSuccess(() -> Component.literal("Probe enabled."), false);
+        return 1;
+    }
+
+    /** /nekojs probe disable：运行时禁用 probe。 */
+    private static int disableProbe(CommandSourceStack source) {
+        ProbeCoordinator.setEnabled(false);
+        source.sendSuccess(() -> Component.literal("Probe disabled."), false);
+        return 1;
+    }
+
+    private static CompletableFuture<Suggestions> suggestProbeLanguages(SuggestionsBuilder builder) {
+        for (String lang : ProbeBackendRegistry.get().languages()) {
+            builder.suggest(lang);
+        }
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestProbeBackendNames(String languageId, SuggestionsBuilder builder) {
+        if (languageId != null && !languageId.isBlank()) {
+            for (ProbeBackend b : ProbeBackendRegistry.get().backendsFor(languageId)) {
+                builder.suggest(b.name());
+            }
+        }
+        return builder.buildFuture();
     }
 }
