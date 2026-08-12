@@ -603,6 +603,68 @@ class PythonToJsCompilerTest {
         assertTrue(evalBool("all([1, 1])"));
     }
 
+    // ---- for/else & while/else ----
+
+    @Test
+    void forElseRunsWhenNoBreak() throws Exception {
+        // else runs if the loop finishes without break (the canonical "not found" pattern).
+        String src = """
+                def find(xs, target):
+                    for x in xs:
+                        if x == target:
+                            return 'found'
+                    else:
+                        return 'missing'
+                find([1, 2, 3], 2) + find([1, 2, 3], 9)
+                """;
+        assertEquals("foundmissing", evalString(src));
+    }
+
+    @Test
+    void forElseSkippedOnBreak() throws Exception {
+        // An explicit break in the body suppresses the else.
+        String src = """
+                state = ''
+                for i in range(5):
+                    if i == 2:
+                        break
+                else:
+                    state = 'completed'
+                state + '|' + str(i)
+                """;
+        // break at i==2 → state stays '' ; i is 2 → '|2'
+        assertEquals("|2", evalString(src));
+    }
+
+    @Test
+    void whileElseRunsWhenConditionFails() throws Exception {
+        String src = """
+                n = 0
+                while n < 3:
+                    n += 1
+                else:
+                    n = 100
+                n
+                """;
+        assertEquals(100, evalInt(src));
+    }
+
+    @Test
+    void whileElseSkippedOnBreak() throws Exception {
+        String src = """
+                n = 0
+                hit = 'no'
+                while n < 10:
+                    n += 1
+                    if n == 2:
+                        break
+                else:
+                    hit = 'yes'
+                hit
+                """;
+        assertEquals("no", evalString(src));
+    }
+
     // ---- iterable unpacking (*args / **kw / [1,*xs] / {**a}) ----
 
     @Test

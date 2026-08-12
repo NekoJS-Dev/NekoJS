@@ -159,7 +159,9 @@ public final class PythonParser {
         PythonNode iter = parseTestList();
         expectOp(":");
         List<PythonNode> body = parseSuite();
-        return new PythonNode.For(target, iter, body);
+        List<PythonNode> elseBody = List.of();
+        if (matchKw("else")) { expectOp(":"); elseBody = parseSuite(); }
+        return new PythonNode.For(target, iter, body, elseBody);
     }
 
     private PythonNode parseWhile() {
@@ -167,9 +169,9 @@ public final class PythonParser {
         PythonNode cond = parseTest();
         expectOp(":");
         List<PythonNode> body = parseSuite();
-        // while/else: parse to avoid a crash; v1 discards the else body (no break-tracking).
-        if (matchKw("else")) { expectOp(":"); parseSuite(); }
-        return new PythonNode.While(cond, body);
+        List<PythonNode> elseBody = List.of();
+        if (matchKw("else")) { expectOp(":"); elseBody = parseSuite(); }
+        return new PythonNode.While(cond, body, elseBody);
     }
 
     private PythonNode parseWith() {

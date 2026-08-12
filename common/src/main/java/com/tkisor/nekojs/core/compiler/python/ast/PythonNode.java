@@ -24,8 +24,10 @@ public sealed interface PythonNode {
     record ClassDef(String name, PythonNode base, List<PythonNode> body, List<String> decorators)
             implements PythonNode {}                                   // base == null → no extends
     record If(PythonNode cond, List<PythonNode> thenBody, List<PythonNode> elseBody) implements PythonNode {}
-    record For(PythonNode target, PythonNode iter, List<PythonNode> body) implements PythonNode {}
-    record While(PythonNode cond, List<PythonNode> body) implements PythonNode {}
+    record For(PythonNode target, PythonNode iter, List<PythonNode> body, List<PythonNode> elseBody)
+            implements PythonNode {}                                   // elseBody empty → no else (runs if no break)
+    record While(PythonNode cond, List<PythonNode> body, List<PythonNode> elseBody)
+            implements PythonNode {}                                   // elseBody empty → no else (runs if no break)
     record Return(PythonNode value) implements PythonNode {}          // value == null → bare return
     record Break() implements PythonNode {}
     record Continue() implements PythonNode {}

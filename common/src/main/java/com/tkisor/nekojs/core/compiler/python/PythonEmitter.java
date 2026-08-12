@@ -86,6 +86,8 @@ public final class PythonEmitter {
     private boolean needsFmt = false;
     /** The variable bound to the current exception in each enclosing except clause (top = innermost). */
     private final java.util.Deque<String> errStack = new java.util.ArrayDeque<>();
+    /** For each enclosing loop: the else-flag var name (or null if the loop has no else). Top = innermost. */
+    private final java.util.Deque<String> loopFlags = new java.util.LinkedList<>();
 
     public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
         this.srcLines = srcLines;
@@ -236,14 +238,32 @@ public final class PythonEmitter {
             }
             case PythonNode.If i -> writeIf(i, true);
             case PythonNode.For f -> {
+                String flag = f.elseBody().isEmpty() ? null : ("__nekoBrk" + (tempCounter++));
+                if (flag != null) line("var " + flag + " = true;");   // stays true unless the body `break`s
                 line("for (var " + emitTarget(f.target()) + " of " + emitExpr(f.iter()) + ") {");
+                loopFlags.push(flag);
                 block(f.body());
+                loopFlags.pop();
                 line("}");
+                if (flag != null) {
+                    line("if (" + flag + ") {");
+                    block(f.elseBody());
+                    line("}");
+                }
             }
             case PythonNode.While w -> {
+                String flag = w.elseBody().isEmpty() ? null : ("__nekoBrk" + (tempCounter++));
+                if (flag != null) line("var " + flag + " = true;");
                 line("while (" + emitExpr(w.cond()) + ") {");
+                loopFlags.push(flag);
                 block(w.body());
+                loopFlags.pop();
                 line("}");
+                if (flag != null) {
+                    line("if (" + flag + ") {");
+                    block(w.elseBody());
+                    line("}");
+                }
             }
             case PythonNode.Return r -> line(r.value() == null ? "return;" : "return " + emitExpr(r.value()) + ";");
             case PythonNode.Raise r -> {
@@ -267,7 +287,11 @@ public final class PythonEmitter {
             case PythonNode.Yield y -> line(y.from()
                     ? "yield* " + emitExpr(y.value()) + ";"
                     : "yield " + (y.value() != null ? emitExpr(y.value()) : "") + ";");
-            case PythonNode.Break b -> line("break;");
+            case PythonNode.Break b -> {
+                String f = loopFlags.peek();
+                if (f != null) line(f + " = false;");   // mark the nearest loop as broken (skips its else)
+                line("break;");
+            }
             case PythonNode.Continue c -> line("continue;");
             case PythonNode.Pass p -> { /* emit nothing */ }
             case PythonNode.Assign a -> emitAssign(a);
