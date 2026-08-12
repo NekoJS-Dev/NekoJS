@@ -58,6 +58,9 @@ ServerEvents.recipes(lambda event: (
 | `with` 语句（上下文管理器） | 支持（详见「with 语句」节） |
 | 关键字参数（任意声明了 `**kwargs` 的函数/方法/`__init__`） | 支持 |
 | 生成器 `yield` / `yield from` | 支持，降级为 JS `function*` / `yield` / `yield*` |
+| 生成器表达式 `(x for x in xs if c)`（可作 `sum(...)` 等的唯一参数） | 支持，降级为立即调用的 `function*` |
+| 可迭代解包 `f(*args)` / `f(**kw)` / `[1, *xs]` / `{**a, **b}` | 支持，降级为 spread |
+| `for/else`、`while/else`（未 `break` 才执行 `else`） | 支持 |
 | f-string `f'{x:.2f}'`（**含格式说明符与 `!r/!s/!a` 转换**） | 支持（详见「f-string」节） |
 | 装饰器 `@deco` / `@pkg.deco`（顶层函数、类） | 支持，降级为定义后 `name = deco(name)` |
 | `assert cond[, msg]` / `del target` | 支持（`assert`→`throw new Error(...)`；`del`→`delete`） |
@@ -163,7 +166,7 @@ def chain(a, b):
     yield from b
 ```
 
-> 注意：`list()` / `for x in g()` / `sum()` / `any()` / `all()` / `sorted()` 等都已先 spread，可直接消费生成器。**生成器表达式**（`(x for x in xs)`，注意是圆括号）仍是子集外——需要生成器请用 `def` + `yield`。
+> 注意：`list()` / `for x in g()` / `sum()` / `any()` / `all()` / `sorted()` 等都已先 spread，可直接消费生成器。也支持**生成器表达式** `(expr for x in iter if cond)`（圆括号形式，或作为 `sum()`/`any()`/`list()` 等的**唯一**参数 `f(x for x in xs)`），它会降级为一个立即调用的 `function*`。
 
 ### with 语句
 
@@ -346,8 +349,8 @@ print(circle_area(2))                    # 12.56
 | `len(x)` | `(x).length` | 对数组/字符串；dict/set 需 `len(list(d.keys()))` 等绕开 |
 | `print(...)` | `console.log([...].join(sep))` | 支持 `sep=` 关键字；`end=` 被忽略 |
 | `abs(x)` | `Math.abs(x)` | |
-| `min(...)` / `min(iterable)` | `Math.min(...)` | 单 iterable 参数自动 spread |
-| `max(...)` / `max(iterable)` | `Math.max(...)` | 同上 |
+| `min(...)` / `min(iterable[, key=])` | `Math.min(...)`（或 `reduce` 带 key） | 单 iterable 参数自动 spread；`key=` 支持 |
+| `max(...)` / `max(iterable[, key=])` | `Math.max(...)`（或 `reduce` 带 key） | 同上 |
 | `sum(iterable)` | `([...iterable]).reduce((a,b)=>a+b, 0)` | 先 spread，可消费生成器 |
 | `str(x)` | `String(x)` | |
 | `int(x[, base])` | `parseInt(x, base)` | 可选进制 |
@@ -357,7 +360,7 @@ print(circle_area(2))                    # 12.56
 | `dict()` / `dict(iterable)` | `({})` / `Object.fromEntries(iterable)` | |
 | `set()` / `set(iterable)` | `new Set()` / `new Set(iterable)` | |
 | `tuple(iterable)` | `[...iterable]` | 注意：返回的是可变数组（JS 无不可变元组） |
-| `sorted(iterable[, reverse=])` | `[...iterable].sort(比较器)` | `reverse=True/False` 按字面值生效；不支持 `key=` |
+| `sorted(iterable[, reverse=][, key=])` | `[...iterable].sort(比较器)` | `reverse`/`key` 均支持 |
 | `any(iterable)` / `all(iterable)` | `.some(x=>x)` / `.every(x=>x)` | 先 spread，可消费生成器 |
 | `enumerate(iterable)` | `([...iterable]).map((v, i) => [i, v])` | 返回 `[index, value]` 对 |
 | `reversed(iterable)` | `[...iterable].reverse()` | |
@@ -456,7 +459,6 @@ finally:
 
 下列语法/特性在当前版本**不支持**，遇到会清晰报错（错误信息会带文件名与位置）：
 
-- 生成器表达式 `(x for x in xs)`（圆括号形式；需要生成器请用 `def` + `yield`）
 - `from X import *`
 - 矩阵乘 `@` / `@=`
 - 带参数的装饰器 `@deco(...)`、类方法装饰器（除 `@staticmethod` 外）
@@ -464,6 +466,8 @@ finally:
 - 关键字实参传给**未声明 `**kwargs`** 的普通函数（仅 `print`/`sorted` 特例）
 - `match` / `case` 模式匹配
 - `async` / `await` / 异步生成器
+- `global` / `nonlocal`
+- 字典合并运算符 `d1 | d2`（dict 上的 `|` 会按位或处理，请改用 `{**d1, **d2}`）
 - 类型注解仅作「解析后丢弃」，不参与运行时类型检查（`int` 等 annot 名字不会被求值）
 - 上表以外的内置函数（如 `id`、`vars`、`globals`、`eval`、`exec`）
 

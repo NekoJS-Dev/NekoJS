@@ -112,7 +112,7 @@
 | 列表 / 元组 / 字典 / 集合字面量 | `[1,2]`、`(1,2)`、`{k:v}`、`{1,2}` | 数组 / 数组 / 对象 / `Set` | ✅ |
 | `lambda` | `lambda x: x*2` | 箭头函数 | ✅（无 `**kwargs`） |
 | 推导式（列表 / 字典 / 集合，多层 `for`、多个 `if`） | `[x for a in A for b in B if c]` | `.filter().map()` / `flatMap` 嵌套 | ✅ |
-| 生成器表达式 `(x for x in xs)` | — | — | ❌（需生成器请用 `def`+`yield`） |
+| 生成器表达式 `(x for x in xs)` | — | 立即调用的 `function*` | ✅ |
 | `yield` / `yield from` | — | `function*` / `yield` / `yield*` | ✅ |
 | 字典合并 `\|`（3.9） | `d1 \| d2` | `位或`（未对 dict 特化） | ❌（按位或处理） |
 | 字面量字符串拼接 `"a" "b"` | — | 隐式拼接 | ✅ |
