@@ -13,17 +13,17 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 ## 核心特性
 
 * **GraalVM 强力驱动**：拥抱最新 ECMAScript 标准，告别老旧的 Rhino/Nashorn，享受现代 JS 语法和 GraalJS 运行时能力。
-* **TypeScript & JSX 本体支持**：NekoJS 本体内置 `.ts` erasable TypeScript 前端和轻量 `.jsx/.tsx` classic runtime lowering；后续高级 TS/TSX/JSX 语法也优先在本体语言前端中补齐。
+* **TypeScript & JSX 本体支持**：NekoJS 本体内置 `.ts` erasable TypeScript 前端和轻量 `.jsx/.tsx` classic runtime lowering；后续高级 TS/TSX/JSX 语法也优先在本体语言前端中补齐。同时内置 Python 子集转译前端（`.py` 自动加载，无需外部运行时，probe 提供 `.pyi` stub）。
 * **原生 ESM 运行时**：支持 `import`/`export`、live binding、循环依赖、top-level await、`import.meta`、dynamic `import()` 和 ESM/CJS 互操作。
 * **Node.js 兼容 API**：内置 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等核心模块 shim。
-* **开发者体验优先**：启动后自动生成工作区目录、编辑器配置（jsconfig.json）和可供外部工具消费的 catalog 元数据；内置 probe 直接遍历 catalog 生成 TypeScript 声明（`.d.ts`），无需安装 ProbeJS 这类外部 mod 即可获得 IDE 智能提示与代码补全。
+* **开发者体验优先**：启动后自动生成工作区目录、编辑器配置（jsconfig.json）和可供外部工具消费的 catalog 元数据；内置 probe 直接遍历 catalog 生成声明文件（多后端：TypeScript `.d.ts` 与 Python `.pyi` stub，通过 `/nekojs probe` 子命令与 `probe.toml` 的 `languages.typescript` / `languages.python` 选择），无需安装 ProbeJS 这类外部 mod 即可获得 IDE 智能提示与代码补全。
 * **现代模块化与 NPM 生态**：支持基于 `require()` / `module.exports` 的多文件模块化开发，并可在 `nekojs` 目录下引用纯 JavaScript npm 依赖（不支持包含原生 bindings 的包，也不等同于完整 Node.js 运行时）。
 * **服务端热重载**：服务端脚本可通过 `/nekojs reload` 重新加载；启动注册类脚本仍需重启游戏。
-* **配方热重载（Cleanroom 1.12.2）**：`/nekojs reload server` 会解冻注册表 → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 mixin 自动刷新 HEI/JEI 配方面板。NeoForge 平台的配方在数据包加载阶段固化，暂不支持运行时热重载（reload 不会报错但不刷新配方）。
+* **配方热重载**：Cleanroom 1.12.2 上 `/nekojs reload server` 会解冻注册表 → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 mixin 自动刷新 HEI/JEI 配方面板。NeoForge 平台（26.x / 1.21.1）同样支持热重载：reload 会重新执行配方脚本并整体替换 `RecipeManager.recipes`（mixin `RecipeManagerMixin#nekojs$applyScripts`，从 prepare 阶段永久缓存的基础配方 JSON 重建工作集）。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
 * **多平台支持**：同时支持 NeoForge 26.1 / 26.2 / 1.21.1 与 Cleanroom 1.12.2（Forge），共享 common 基础设施。
 * **脚本方法校验**：加载时静态扫描全局绑定和事件回调的成员访问，拼写错误即时提示（如 `Utils.randmInt` → "Did you mean 'randomInt'?"）。可通过 `engine.toml` 中 `scriptMemberValidation` 选项关闭，关闭后零性能开销。
-* **可替换的 probe 实现**：内置 probe 生成器（`ProbeOrchestrator`）可被第三方插件通过 `ProbeRegistry.setGenerator` 替换为更完善的实现。
+* **可替换的 probe 实现**：内置 probe 由 `ProbeCoordinator` 统一收集类型并派发给可插拔的 `ProbeBackend` 后端；第三方插件可通过 `ProbeBackendRegistry.register(backend, source)` 注册自定义后端（注册表在 bootstrap 时锁定，冲突会 fail-fast 报错）。
 
 ---
 
@@ -32,7 +32,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 首次启动安装了 NekoJS 的游戏后，游戏根目录下会自动生成 `nekojs` 文件夹：
 
 ```text
-.neko_probe/                # NekoProbe 类型声明库：存放自动生成的 .d.ts 文件（与 nekojs 目录同级）
+.neko_probe/                # NekoProbe 类型声明库：按语言分子目录存放自动生成的声明（默认 typescript/ + python/，可用 probe.toml 的 [languages.<id>].outputDir 配置；与 nekojs 目录同级）
 nekojs/
 ├── startup_scripts/   # 游戏启动脚本：用于注册物品、方块等核心组件（修改需重启游戏）
 │   └── tsconfig.json  # 编辑器配置文件：自动关联根目录 .neko_probe 类型库
@@ -45,10 +45,10 @@ nekojs/
 ├── node_modules/      # 外部库目录：支持原生 Node 模块解析，存放纯 JS 依赖
 ├── assets/            # 资源目录
 ├── data/              # 数据包目录
-└── config/            # 引擎配置文件，例如安全沙盒相关 engine.toml
+└── config/            # 引擎配置文件：engine.toml（安全沙盒等）与 probe.toml（类型生成）
 ```
 
-当前自动加载脚本目录为 `startup_scripts/`、`server_scripts/` 和 `client_scripts/`；`test_scripts/` 是通过 `/nekojs test` 显式运行的测试环境。脚本文件支持 `.js`、`.mjs`、`.cjs`、内置 erasable `.ts`，以及轻量 `.jsx/.tsx` classic runtime lowering；更复杂的 TS/TSX 语法会逐步收敛到 NekoJS 本体语言前端。
+当前自动加载脚本目录为 `startup_scripts/`、`server_scripts/` 和 `client_scripts/`；`test_scripts/` 是通过 `/nekojs test` 显式运行的测试环境。脚本文件支持 `.js`、`.mjs`、`.cjs`、内置 erasable `.ts`、轻量 `.jsx/.tsx` classic runtime lowering，以及 `.py`（Python 子集，同一套脚本目录自动加载）；更复杂的 TS/TSX 语法会逐步收敛到 NekoJS 本体语言前端。脚本文件可用首行注释声明属性：`// priority: <n>` 与 `// after: <path>`（`after:` 已强制生效：同 priority 内按拓扑顺序加载，未解析的引用会告警，成环时回退到原顺序）。
 
 ## 源码结构
 
@@ -59,7 +59,7 @@ common/                          # 跨平台通用代码
     ├── script/                  # 脚本管理：NekoJSScriptManager、ScriptType、reload
     ├── api/                     # 公开 API：NekoJSPlugin、JSTypeAdapter、事件声明、catalog
     ├── bindings/                # JS 全局绑定
-    ├── probe/                   # .d.ts 类型声明生成
+    ├── probe/                   # 类型声明生成（.d.ts / .pyi 多后端）
     ├── eventbus/                # 事件总线实现
     ├── plugin/                  # 插件系统：extension point、bootstrap snapshot
     ├── network/                 # 网络同步
@@ -167,6 +167,7 @@ NekoJS 的脚本运行在受限 GraalJS 环境中，但它不是“不可信代�
 * Java 类访问经过 `ClassFilter` 过滤，默认禁止线程、反射、ASM、进程、网络、底层 IO 等高危入口。
 * `nekojs/config/engine.toml` 中的 `allowThreads`、`allowReflection`、`allowAsm` 是高危能力开关，默认关闭。
 * `scriptMemberValidation`（默认开启）在脚本加载时静态扫描全局绑定和事件回调的成员访问，拼写错误会即时提示。关闭可跳过 AST 解析开销。推荐开发时开启，整合包分发时可关闭。
+* `scriptEvaluationTimeoutSeconds`（默认 30；0 或负数表示不限制）限制脚本入口求值时长：顶层 await / 模块加载永不完成时按超时报错终止，防止挂死服务器线程。
 * 游戏内工作区同步只应交给可信管理员使用；同步功能会限制在脚本目录和脚本扩展名范围内。
 
 ---
@@ -178,6 +179,8 @@ NekoJS 的脚本运行在受限 GraalJS 环境中，但它不是“不可信代�
 NekoJS 核心主打轻量与稳定，内置 `.ts` 的 TypeScript 支持：类型标注、`type` / `interface`、`import type` / `export type`、泛型（含泛型箭头 `<T>(x: T) => T`）、`as` / `satisfies`、内联 `import { x, type T }`、参数属性、`enum` / `namespace`、类成员修饰符等会在 Java 前端中擦除或降级，之后继续走 NekoJS 自有 ESM/CJS pipeline。NekoJS 也内置 `.jsx/.tsx` lowering：默认 classic runtime（`globalThis.__nekoJsxFactory(...)` / `globalThis.__nekoJsxFragment(...)`），支持 HTML 实体解码、命名空间标签（`<svg:rect/>`）、泛型组件（`<Foo<T>/>`）；在 `nekojs/config/engine.toml` 里设 `jsxAutomaticRuntime = true` 可切换到标准 automatic runtime：从 `nekojs/jsx-runtime` 导入 `jsx`、`jsxs` 和 `Fragment`，子节点放在 `props.children`。在 `nekojs/` 工作区内，请将 runtime 模块放在裸模块路径 `node_modules/nekojs/jsx-runtime.js`。
 
 后续方向是继续增强 NekoJS 本体语言前端，而不是依赖外部 NekoSWC 模组来承担高级 TS/TSX/JSX 转换。脚本语言插件 registry 仍保留给第三方语言扩展使用，但 NekoJS 自身的 TypeScript、JSX、sourcemap chain 和 diagnostics 会优先在本体实现。
+
+NekoJS 同样内置 Python 子集转译前端（无外部运行时）：支持 match/case、@staticmethod/@classmethod/@property、生成器、for/else、**kwargs、f-string 与 source map；`.py` 文件与 `.js`/`.ts` 一样从同一套脚本目录自动加载；probe 的 `PythonProbeBackend` 会为 Python 脚本生成 `.pyi` stub。
 
 ### 插件扩展点示例
 
@@ -199,10 +202,10 @@ public interface StartupBindingsPlugin extends NekoJSPlugin {
 ```java
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionPoint;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionProvider;
-import com.tkisor.nekojs.api.plugin.NekoPluginExtensionRegistry;
-import com.tkisor.nekojs.script.ScriptType;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionPoint;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionProvider;
+import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
+import com.tkisor.nekojs.api.ScriptType;
 
 @RegisterNekoJSPlugin
 public final class MyExtensionPointPlugin implements NekoJSPlugin, NekoPluginExtensionProvider {
@@ -288,7 +291,9 @@ event.recipes.create.mixing('create:brass_ingot', [
 
 ### NekoProbe
 
-NekoProbe 是独立于本项目的类型生成/编辑器体验项目。NekoJS 本体负责提供稳定的 `NekoScriptCatalog` 元数据、workspace layout 和 snippets 数据，NekoProbe 消费这些信息生成更完整的 IDE 智能提示与代码补全。
+类型生成已经内置在本仓库中：`ProbeCoordinator` 完成一次共享类收集后，把共享 IR 派发给内置或第三方注册的 `ProbeBackend` 各自渲染（内置 TypeScript `.d.ts` 与 Python `.pyi` 后端）。第三方插件可通过 `probe.assign_type` / `probe.modify_type` / `probe.add_global` / `probe.snippets` 事件定制类型与代码补全，并可通过 editor-config contributor 合并编辑器配置；`NekoScriptCatalog` 元数据与 workspace layout 仍由 NekoJS 本体稳定提供。
+
+可用 `/nekojs probe` 手动触发生成：无参默认只跑 TypeScript 内置后端，支持 `all`（跑全部已注册后端）、`list`（列出后端）、`reload`（重读配置）、`enable` / `disable`（持久化开关）与 `<language> [name]`（指定语言/后端）子命令；配置文件为 `<game>/nekojs/config/probe.toml`。
 
 ---
 
@@ -298,7 +303,7 @@ NekoJS 提供事件监听机制，用于响应 Minecraft 游戏中的各种状�
 
 ### 已实现事件列表
 
-NekoJS 提供 11 个事件组（以 NeoForge 26.x 为准，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
+NekoJS 提供 13 个事件组（以 NeoForge 26.x 为准，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
 
 ```text
 服务器事件 (ServerEvents)        约 13 个  tickPre / tickPost / recipes / afterRecipes / tags ...
@@ -309,11 +314,13 @@ NekoJS 提供 11 个事件组（以 NeoForge 26.x 为准，平台支持范围以
 实体事件 (EntityEvents)          约 13 个  hurtPre / hurtPost / death ...
 方块事件 (BlockEvents)           约 11 个  broken / rightClicked / placed ...
 物品事件 (ItemEvents)             约 8 个  rightClicked / tooltip / crafted ...
-注册事件 (RegistryEvents)         约 9 个  item / block / entityType / fluid / creativeModeTab / soundEvent / mobEffect / potion / particleType（启动时事件）
+注册事件 (RegistryEvents)        约 12 个  item / block / entityType / fluid / creativeModeTab / soundEvent / mobEffect / potion / particleType / paintingVariant / villagerType / enchantment（启动时事件）
 命令事件 (CommandEvents)          约 2 个  register ...
 目标事件 (GoalEvents)             约 1 个
 关卡事件 (LevelEvents)           约 10 个  loaded / unloaded / tick ...
 网络事件 (NetworkEvents)          约 2 个
+能力事件 (CapabilityEvents)        约 1 个  register（启动时事件）
+配方查看器事件 (RecipeViewerEvents) 约 5 个  addEntries / removeEntries / removeRecipes / removeCategories / addInformation（客户端，需 JEI）
 客户端事件 (ClientEvents)        约 13 个
 ```
 
@@ -451,7 +458,7 @@ RecipeViewerEvents.addInformation(event => {
 除已有的 item / block / entityType 外，startup 脚本可注册流体与创造模式标签页（NeoForge 1.21.1 / 26.1 / 26.2）：
 
 ```js
-StartupEvents.registry('fluid', event => {
+RegistryEvents.fluid(event => {
   event.create('nekojs:molten_iron')
     .displayName('Molten Iron')   // 翻译 key，配合 lang 事件提供文本
     .density(2000)
@@ -460,7 +467,7 @@ StartupEvents.registry('fluid', event => {
     .lightLevel(12);
 });
 
-StartupEvents.registry('creativeModeTab', event => {
+RegistryEvents.creativeModeTab(event => {
   event.create('nekojs:custom')
     .title('Custom Tab')
     .icon('minecraft:iron_ingot')
