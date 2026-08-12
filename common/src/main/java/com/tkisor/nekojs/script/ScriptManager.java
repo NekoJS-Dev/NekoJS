@@ -20,7 +20,6 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
-import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -148,7 +147,7 @@ public final class ScriptManager implements AutoCloseable {
     }
 
     /**
-     * 在指定 Context / Node runtime 中执行给定脚本列表：preload、按优先级排序、逐个执行入口。
+     * 在指定 Context / Node runtime 中执行给定脚本列表：preload、按 priority 与 after 依赖排序、逐个执行入口。
      *
      * <p>被首次 {@link #loadScripts()} 和事务式 reload 复用。空列表只记录日志，不创建副作用。
      */
@@ -160,11 +159,11 @@ public final class ScriptManager implements AutoCloseable {
         for (var script : scriptsToLoad) {
             script.preload();
         }
-        scriptsToLoad.sort((s1, s2) -> {
-            int p1 = s1.properties.getOrDefault(ScriptProperty.PRIORITY);
-            int p2 = s2.properties.getOrDefault(ScriptProperty.PRIORITY);
-            return Integer.compare(p2, p1);
-        });
+        ScriptLoadOrderSorter.Result orderResult =
+                ScriptLoadOrderSorter.applyAfterOrder(scriptsToLoad, ScriptContainer::shouldRun);
+        if (orderResult.hasProblems()) {
+            scriptType.logger().warn("{} 脚本 after 依赖排序存在问题：{}", scriptType.name(), orderResult.describe());
+        }
         for (ScriptContainer script : scriptsToLoad) {
             if (script.shouldRun()) {
                 scriptExecutor.executeEntry(ctx, script, node);
