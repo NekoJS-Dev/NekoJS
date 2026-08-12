@@ -68,6 +68,9 @@ dependencies {
     testRuntimeOnly libs.log4j.api
     testRuntimeOnly libs.log4j.core
     testRuntimeOnly libs.icu4j
+    // night-config：ProbeConfigLoader（probe.toml 读写）依赖；游戏内由平台提供，独立测试需注入
+    testRuntimeOnly libs.night.config.core
+    testRuntimeOnly libs.night.config.toml
 
 }
 
