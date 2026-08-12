@@ -286,7 +286,15 @@ public final class PythonEmitter {
                 line("if (!(" + emitExpr(a.cond()) + ")) throw new Error(" + thrown + ");");
             }
             case PythonNode.Del d -> {
-                for (PythonNode t : d.targets()) line("delete " + emitExpr(t) + ";");
+                for (PythonNode t : d.targets()) {
+                    if (t instanceof PythonNode.Name n) {
+                        // `delete x;` 在 ESM 严格模式下是语法错误，且 JS 无法解除 var 绑定
+                        // （Python 的 del x 语义）→ 编译期报错；仅支持 del d[k] / del obj.attr。
+                        throw new IllegalArgumentException("python 'del " + n.id()
+                                + "' is not supported (JS cannot unbind a name; use del d[key] / del obj.attr)");
+                    }
+                    line("delete " + emitExpr(t) + ";");
+                }
             }
             case PythonNode.Yield y -> line(y.from()
                     ? "yield* " + emitExpr(y.value()) + ";"
@@ -546,11 +554,38 @@ public final class PythonEmitter {
         indent++;
         for (PythonNode member : c.body()) {
             if (member instanceof PythonNode.FunctionDef m) emitMethod(m);
+            else if (member instanceof PythonNode.Assign a) emitClassField(a);
+            else if (member instanceof PythonNode.ExprStmt e && e.expr() instanceof PythonNode.StrLit doc)
+                emitClassDocstring(e, doc);
             else emitStmt(member);
         }
         indent--;
         line("}");
         applyDecorators(c.name(), c.decorators());
+    }
+
+    /**
+     * 类体中的普通赋值（{@code class C:\n    x = 5}）在 Python 中是类属性；JS 类体不允许
+     * {@code var}/普通语句（会是语法错误），因此降级为 ES2022 静态类字段 {@code static x = 5;}，
+     * 通过 {@code C.x} 访问，对应 Python 的类属性语义。多重赋值 / 元组解包等复杂形式暂不支持，
+     * 编译期报错（与文件内其它不支持特性的处理一致）。
+     */
+    private void emitClassField(PythonNode.Assign a) {
+        if (a.targets().size() != 1 || !(a.targets().get(0) instanceof PythonNode.Name n)) {
+            throw new IllegalArgumentException(
+                    "python class-body assignments support only a single name target");
+        }
+        recordMapping(a);
+        line("static " + n.id() + " = " + emitExpr(a.value()) + ";");
+    }
+
+    /**
+     * 类 docstring（类体中的裸字符串语句）：JS 类体不允许裸表达式语句，且 Python 中它也
+     * 不产生运行时效果，因此降级为一行注释（source map 仍映射该语句行）。
+     */
+    private void emitClassDocstring(PythonNode.ExprStmt e, PythonNode.StrLit doc) {
+        recordMapping(e);
+        line("// docstring: " + doc.value().replace('\n', ' ').replace('\r', ' '));
     }
 
     private void emitMethod(PythonNode.FunctionDef m) {
@@ -621,6 +656,28 @@ public final class PythonEmitter {
     private String exceptionTypeExpr(PythonNode type) {
         if (type instanceof PythonNode.Name n && BUILTIN_EXCEPTIONS.contains(n.id())) return "Error";
         return emitExpr(type);
+    }
+
+    /**
+     * Lowers {@code isinstance(x, T)} / {@code isinstance(x, (T1, T2))} / {@code isinstance(x, [T1, T2])}
+     * to an instanceof chain. Each type goes through {@link #exceptionTypeExpr}, so builtin exception
+     * names (undefined in the JS runtime) map to {@code Error} — {@code isinstance(e, ValueError)}
+     * matches {@code raise ValueError()} end to end, mirroring the try/except lowering.
+     */
+    private String instanceOfTypeCheck(PythonNode type, String valueExpr) {
+        List<PythonNode> types = switch (type) {
+            case PythonNode.TupleLit tl -> tl.elements();
+            case PythonNode.ListLit ll -> ll.elements();
+            default -> List.of(type);
+        };
+        if (types.isEmpty()) return "false";   // isinstance(x, ()) is always False in Python
+        StringBuilder sb = new StringBuilder("(");
+        for (int i = 0; i < types.size(); i++) {
+            if (i > 0) sb.append(" || ");
+            sb.append("(").append(valueExpr).append(" instanceof ")
+                    .append(exceptionTypeExpr(types.get(i))).append(")");
+        }
+        return sb.append(")").toString();
     }
 
     private static String lastSegment(String dotted) {
@@ -942,7 +999,18 @@ public final class PythonEmitter {
         if (c.func() instanceof PythonNode.Attribute attr
                 && attr.obj() instanceof PythonNode.Call sup
                 && sup.func() instanceof PythonNode.Name sn && "super".equals(sn.id()) && sup.args().isEmpty()) {
-            String args = emitArgs(c.args().stream().filter(a -> !(a instanceof PythonNode.Kwarg)).toList());
+            // kwargs to super() cannot be lowered (JS super() takes positionals only) — reject them
+            // instead of silently dropping them, which previously produced wrong behaviour.
+            for (PythonNode a : c.args()) {
+                if (a instanceof PythonNode.Kwarg k) {
+                    throw new IllegalArgumentException("python keyword argument '" + k.name()
+                            + "=' in super() is not supported");
+                }
+                if (a instanceof PythonNode.Starred s && s.dictSpread()) {
+                    throw new IllegalArgumentException("python **kwargs spread in super() is not supported");
+                }
+            }
+            String args = emitArgs(c.args());
             if ("__init__".equals(attr.attr())) return "super(" + args + ")";
             return "super." + attr.attr() + "(" + args + ")";
         }
@@ -1003,16 +1071,7 @@ public final class PythonEmitter {
                 case "callable" -> { if (positional.size() == 1) return "(typeof " + e0 + " === \"function\")"; }
                 case "isinstance" -> {
                     if (positional.size() == 2) {
-                        PythonNode t = positional.get(1);
-                        if (t instanceof PythonNode.TupleLit tl) {
-                            StringBuilder sb = new StringBuilder("(");
-                            for (int k = 0; k < tl.elements().size(); k++) {
-                                if (k > 0) sb.append(" || ");
-                                sb.append("(").append(e0).append(" instanceof ").append(emitExpr(tl.elements().get(k))).append(")");
-                            }
-                            return sb.append(")").toString();
-                        }
-                        return "(" + e0 + " instanceof " + emitExpr(t) + ")";
+                        return instanceOfTypeCheck(positional.get(1), e0);
                     }
                 }
                 case "type" -> { if (positional.size() == 1) return "(" + e0 + ").constructor"; }

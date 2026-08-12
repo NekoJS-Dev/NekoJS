@@ -237,6 +237,25 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void classBodyAssignBecomesStaticField() throws Exception {
+        // class C: x = 5 → ES2022 static class field (`var`/plain statements are invalid inside a
+        // JS class body); the attribute is readable as C.x like a Python class attribute.
+        String js = py("class C:\n    x = 5");
+        assertTrue(js.contains("static x = 5;"), "class-body assign → static field: " + js);
+        assertEquals(5, evalInt("class C:\n    x = 5\nC.x"));
+    }
+
+    @Test
+    void classDocstringIsDroppedToComment() throws Exception {
+        // A bare string statement (docstring) is illegal inside a JS class body; it is lowered to a
+        // comment (Python docstrings have no runtime effect either).
+        String js = py("class C:\n    'doc'\n    x = 1");
+        assertTrue(js.contains("// docstring: doc"), "docstring → comment: " + js);
+        assertFalse(js.contains("\"doc\";"), "docstring must not become an expression statement: " + js);
+        assertEquals(1, evalInt("class C:\n    'doc'\n    x = 1\nC.x"));
+    }
+
+    @Test
     void builtins() throws Exception {
         assertEquals(7, evalInt("abs(-7)"));
         assertEquals(1, evalInt("min([3, 1, 2])"));
@@ -553,6 +572,18 @@ class PythonToJsCompilerTest {
         assertTrue(evalBool(src));
         // type(x) → x.constructor; instances of the same class share a constructor
         assertTrue(evalBool("class K:\n    pass\nK().constructor is K().constructor"));
+    }
+
+    @Test
+    void isinstanceWithBuiltinExceptionNames() throws Exception {
+        // Builtin exception names are undefined in the JS runtime; isinstance must map them to
+        // Error (like the except-clause lowering) or the emitted JS throws ReferenceError.
+        String js = py("isinstance(Error('x'), ValueError)");
+        assertTrue(js.contains("instanceof Error"), "ValueError → Error in isinstance: " + js);
+        assertTrue(evalBool("isinstance(Error('x'), ValueError)"));
+        assertTrue(evalBool("isinstance(Error('x'), (ValueError, TypeError))"));
+        assertTrue(evalBool("isinstance(Error('x'), [ValueError, TypeError])"));
+        assertFalse(evalBool("isinstance(1, ValueError)"));
     }
 
     @Test
@@ -893,6 +924,24 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void delNameIsUnsupported() {
+        // `delete x;` is a SyntaxError in ESM strict mode (and JS var bindings cannot be unbound),
+        // so del on a plain name is a compile-time error; only del d[k] / del obj.attr are supported.
+        assertThrows(IllegalArgumentException.class, () -> py("x = 1\ndel x"));
+    }
+
+    @Test
+    void delAttributeStillWorks() throws Exception {
+        // del obj.attr → delete obj.attr; (valid in strict mode, unlike `delete name`).
+        String src = """
+                o = {'a': 1, 'b': 2}
+                del o.a
+                o.get('a', 0)
+                """;
+        assertEquals(0, evalInt(src));
+    }
+
+    @Test
     void walrusAssignsAndYields() throws Exception {
         // (n := 5) assigns n and yields 5; n is 5 afterwards.
         String src = """
@@ -1064,6 +1113,21 @@ class PythonToJsCompilerTest {
     void kwargsToNonKwFunctionRejected() {
         // Keyword args require the target to declare **kwargs (or be print/sorted).
         assertThrows(IllegalArgumentException.class, () -> py("def f(a):\n    return a\nf(a=1)"));
+    }
+
+    @Test
+    void superWithKwargsIsRejected() {
+        // super().__init__(a=1) used to silently drop the kwarg; kwargs-to-super is unsupported
+        // (JS super() takes positionals only) → clear compile-time error instead of wrong behaviour.
+        String src = """
+                class A:
+                    def __init__(self, a):
+                        self.a = a
+                class B(A):
+                    def __init__(self):
+                        super().__init__(a=1)
+                """;
+        assertThrows(IllegalArgumentException.class, () -> py(src));
     }
 
     @Test
