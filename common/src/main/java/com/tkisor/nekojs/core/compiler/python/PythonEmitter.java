@@ -20,6 +20,54 @@ import java.util.Map;
  */
 public final class PythonEmitter {
 
+    /**
+     * The runtime helper that implements the common Python format-spec mini-language for
+     * {@code f"{x:spec}"}. Emitted at the top of a module only when it actually uses a format spec
+     * or conversion (detected via {@link #containsFormatted}). Handles: {@code .Nf}, width, alignment
+     * ({@code < > ^ =}), zero-fill ({@code 0}), thousands ({@code ,}), precision (incl. string
+     * truncation), and types {@code f e E x X o b % d c}.
+     */
+    private static final String[] FMT_HELPER = {
+            "const __nekoFmt = function (__v, __spec, __conv) {",
+            "  function rep(c, n) { var r = ''; for (var k = 0; k < n; k++) r += c; return r; }",
+            "  function num(x) { return typeof x === 'number' ? x : parseFloat(x); }",
+            "  if (__conv === 'r' || __conv === 'a') __v = JSON.stringify(__v);",
+            "  else if (__conv === 's') __v = (__v === null) ? 'None' : String(__v);",
+            "  else __v = (__v === null || __v === undefined) ? 'None' : String(__v);",
+            "  if (!__spec) return __v;",
+            "  var s = __spec, fill = ' ', align = null;",
+            "  if (s.length >= 2 && (s.charAt(1) === '<' || s.charAt(1) === '>' || s.charAt(1) === '^' || s.charAt(1) === '=')) { fill = s.charAt(0); align = s.charAt(1); s = s.substring(2); }",
+            "  else if (s.length >= 1 && (s.charAt(0) === '<' || s.charAt(0) === '>' || s.charAt(0) === '^' || s.charAt(0) === '=')) { align = s.charAt(0); s = s.substring(1); }",
+            "  if (s.length >= 1 && s.charAt(0) === '0') { if (align === null) align = '='; if (fill === ' ') fill = '0'; s = s.substring(1); }",
+            "  var width = 0, j = 0;",
+            "  while (j < s.length && s.charAt(j) >= '0' && s.charAt(j) <= '9') { width = width * 10 + (s.charCodeAt(j) - 48); j++; }",
+            "  s = s.substring(j);",
+            "  var comma = s.length >= 1 && s.charAt(0) === ','; if (comma) s = s.substring(1);",
+            "  var prec = -1;",
+            "  if (s.length >= 1 && s.charAt(0) === '.') { s = s.substring(1); var p = ''; while (s.length >= 1 && s.charAt(0) >= '0' && s.charAt(0) <= '9') { p += s.charAt(0); s = s.substring(1); } prec = p ? parseInt(p, 10) : 0; }",
+            "  var type = s.length >= 1 ? s.charAt(0) : '';",
+            "  var isNum = (typeof __v === 'number'), out;",
+            "  if (type === 'f' || type === 'F') out = num(__v).toFixed(prec < 0 ? 6 : prec);",
+            "  else if (type === 'e' || type === 'E') { out = num(__v).toExponential(prec < 0 ? 6 : prec); if (type === 'E') out = out.toUpperCase(); }",
+            "  else if (type === 'x' || type === 'X' || type === 'o' || type === 'b') { var iv = Math.trunc(num(__v)); out = (iv < 0 ? '-' : '') + Math.abs(iv).toString(type === 'x' || type === 'X' ? 16 : type === 'o' ? 8 : 2); if (type === 'X') out = out.toUpperCase(); }",
+            "  else if (type === '%') out = (num(__v) * 100).toFixed(prec < 0 ? 6 : prec) + '%';",
+            "  else if (type === 'd') out = String(Math.trunc(num(__v)));",
+            "  else if (type === 'c') out = String.fromCodePoint(Math.trunc(num(__v)));",
+            "  else if (prec >= 0 && typeof __v === 'string') out = __v.substring(0, prec);",
+            "  else out = String(__v);",
+            "  if (comma) { var d = out.indexOf('.'); var ip = d < 0 ? out : out.substring(0, d); var dp = d < 0 ? '' : out.substring(d); var tmp = '', nn = ip.length; for (var k = 0; k < nn; k++) { if (k > 0 && (nn - k) % 3 === 0 && ip.charAt(k) >= '0' && ip.charAt(k) <= '9') tmp += ','; tmp += ip.charAt(k); } out = tmp + dp; }",
+            "  if (out.length < width) {",
+            "    var pad = width - out.length;",
+            "    if (align === '<') out = out + rep(fill, pad);",
+            "    else if (align === '^') { var h = Math.floor(pad / 2); out = rep(fill, h) + out + rep(fill, pad - h); }",
+            "    else if (align === '=') { var sg = (out.charAt(0) === '-' || out.charAt(0) === '+') ? out.charAt(0) : ''; out = sg + rep(fill, pad) + (sg ? out.substring(1) : out); }",
+            "    else if (align === '>' || ((align === null) && (isNum || type !== ''))) out = rep(fill, pad) + out;",
+            "    else out = out + rep(fill, pad);",
+            "  }",
+            "  return out;",
+            "};"
+    };
+
     private final StringBuilder out = new StringBuilder();
     private int indent = 0;
     private int tempCounter = 0;
@@ -34,6 +82,8 @@ public final class PythonEmitter {
     private final java.util.Set<String> kwFunctions = new java.util.HashSet<>();
     private final java.util.Set<String> kwMethods = new java.util.HashSet<>();
     private final java.util.Set<String> kwClassNames = new java.util.HashSet<>();
+    /** True when any f-string format spec / conversion is used → the __nekoFmt helper is emitted. */
+    private boolean needsFmt = false;
 
     public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
         this.srcLines = srcLines;
@@ -46,6 +96,7 @@ public final class PythonEmitter {
         for (PythonNode stmt : module.body()) {
             collectDefinitions(stmt);
             collectKwAware(stmt);
+            if (containsFormatted(stmt)) needsFmt = true;
         }
         // Pass 2: ESM import declarations must precede all other statements; emit them first, each
         // mapped back to its Python source line. Module specifiers are relative to this file
@@ -61,6 +112,9 @@ public final class PythonEmitter {
             }
         }
         // Pass 3: the remaining statements.
+        if (needsFmt) {
+            for (String l : FMT_HELPER) { out.append(l); br(); }   // runtime format helper (no source mapping)
+        }
         for (PythonNode stmt : module.body()) {
             if (stmt instanceof PythonNode.Import || stmt instanceof PythonNode.ImportFrom) continue;
             emitStmt(stmt);
@@ -207,6 +261,25 @@ public final class PythonEmitter {
             case PythonNode.TupleLit t -> { for (PythonNode e : t.elements()) collectTargetNames(e); }
             default -> { }   // Attribute / Index targets mutate, they don't create new bindings
         }
+    }
+
+    /** Recursively scans a node (and any nested records) for a {@code Formatted} f-string field. */
+    private static boolean containsFormatted(Object o) {
+        if (o == null) return false;
+        if (o instanceof PythonNode.Formatted) return true;
+        Class<?> c = o.getClass();
+        if (c.isRecord()) {
+            for (var rc : c.getRecordComponents()) {
+                try {
+                    if (containsFormatted(rc.getAccessor().invoke(o))) return true;
+                } catch (ReflectiveOperationException ignored) { }
+            }
+            return false;
+        }
+        if (o instanceof java.util.List<?> list) {
+            for (var e : list) if (containsFormatted(e)) return true;
+        }
+        return false;
     }
 
     /** True if a parameter list declares {@code **kwargs} (the only trigger for the kw-aware lowering). */
@@ -965,6 +1038,10 @@ public final class PythonEmitter {
                         default -> sb.append(c);
                     }
                 }
+            } else if (part instanceof PythonNode.Formatted fm) {
+                sb.append("${__nekoFmt(").append(emitExpr(fm.expr())).append(", ")
+                        .append(fm.spec() != null ? jsString(fm.spec()) : "null").append(", ")
+                        .append(fm.conv() != null ? jsString(fm.conv()) : "null").append(")}");
             } else {
                 sb.append("${").append(emitExpr(part)).append('}');
             }

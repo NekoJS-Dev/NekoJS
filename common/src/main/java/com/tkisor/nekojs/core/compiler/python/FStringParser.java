@@ -10,8 +10,9 @@ import java.util.List;
  * (expression) parts, producing a {@link PythonNode.FString}. Each {@code {expr}} interpolation
  * is re-lexed+parsed as a Python expression via {@link PythonLexer}/{@link PythonParser}.
  *
- * <p>v1: format specs ({@code {x:.2f}}) and conversions ({@code {x!r}}) are recognized and
- * discarded — the bare value is emitted. {@code {{}}}/{@code {}}} produce literal braces.
+ * <p>Format specs ({@code {x:.2f}}) and conversions ({@code {x!r}}) are captured and lowered to a
+ * runtime {@code __nekoFmt(value, spec, conv)} call (see PythonEmitter); plain {@code {expr}}
+ * interpolations emit the value directly. {@code {{}}}/{@code {}}} produce literal braces.
  */
 final class FStringParser {
 
@@ -53,10 +54,24 @@ final class FStringParser {
                     else i++;
                 }
                 String exprText = raw.substring(start, i).trim();
-                // skip any conversion/format-spec up to the closing '}'
-                while (i < len && raw.charAt(i) != '}') i++;
+                // optional conversion (!r / !s / !a) then optional format spec (:…) up to the '}'
+                String conv = null;
+                String spec = null;
+                if (i < len && raw.charAt(i) == '!' && i + 1 < len
+                        && (raw.charAt(i + 1) == 'r' || raw.charAt(i + 1) == 's' || raw.charAt(i + 1) == 'a')) {
+                    conv = String.valueOf(raw.charAt(i + 1));
+                    i += 2;
+                }
+                if (i < len && raw.charAt(i) == ':') {
+                    int specStart = ++i;
+                    while (i < len && raw.charAt(i) != '}') i++;   // spec is a literal (no nested fields in v1)
+                    spec = raw.substring(specStart, i);
+                }
                 if (i < len && raw.charAt(i) == '}') i++; // consume '}'
-                parts.add(parseInterpolation(exprText));
+                PythonNode expr = parseInterpolation(exprText);
+                parts.add((spec != null || conv != null)
+                        ? new PythonNode.Formatted(expr, spec, conv)
+                        : expr);
                 continue;
             }
             lit.append(c);

@@ -533,6 +533,46 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- f-string format specifiers & conversions ----
+
+    @Test
+    void fStringFixedPointFormat() throws Exception {
+        assertEquals("3.14", evalString("f'{3.14159:.2f}'"));
+        assertEquals("3.1", evalString("f'{3.14:.1f}'"));
+        assertEquals("25%", evalString("f'{0.25:.0%}'"));
+    }
+
+    @Test
+    void fStringWidthAndAlignment() throws Exception {
+        assertEquals("    hi", evalString("f'{\"hi\":>6}'"));
+        assertEquals("hi    ", evalString("f'{\"hi\":<6}'"));
+        assertEquals("  hi  ", evalString("f'{\"hi\":^6}'"));
+        assertEquals("00000042", evalString("f'{42:08d}'"));
+    }
+
+    @Test
+    void fStringBaseAndThousands() throws Exception {
+        assertEquals("ff", evalString("f'{255:x}'"));
+        assertEquals("FF", evalString("f'{255:X}'"));
+        assertEquals("1,234", evalString("f'{1234:,}'"));
+        assertEquals("1010", evalString("f'{10:b}'"));
+    }
+
+    @Test
+    void fStringConversionAndPrecision() throws Exception {
+        assertEquals("hel", evalString("f'{\"hello\":.3}'"));
+        // !r conversion → JSON.stringify on a string yields a quoted form
+        assertTrue(evalString("f'{\"abc\"!r}'").contains("abc"));
+    }
+
+    @Test
+    void fStringPlainInterpolationUnchanged() throws Exception {
+        // No spec → still a plain template literal, no __nekoFmt helper needed.
+        String js = py("f'{1 + 1}'");
+        assertFalse(js.contains("__nekoFmt"), "plain f-string must not need the format helper: " + js);
+        assertEquals("2", evalString("f'{1 + 1}'"));
+    }
+
     // ---- slicing with arbitrary step ----
 
     @Test

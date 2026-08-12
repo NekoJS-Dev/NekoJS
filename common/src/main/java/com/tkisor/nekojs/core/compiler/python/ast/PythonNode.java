@@ -42,7 +42,8 @@ public sealed interface PythonNode {
     record IntLit(long value) implements PythonNode {}
     record FloatLit(double value) implements PythonNode {}
     record StrLit(String value) implements PythonNode {}
-    record FString(List<PythonNode> parts) implements PythonNode {}   // part: StrLit (literal) | expression
+    record FString(List<PythonNode> parts) implements PythonNode {}   // part: StrLit (literal) | expression | Formatted
+    record Formatted(PythonNode expr, String spec, String conv) implements PythonNode {}  // f-string {expr[:spec][!conv]}
     record BoolLit(boolean value) implements PythonNode {}
     record NoneLit() implements PythonNode {}
     record Name(String id) implements PythonNode {}
