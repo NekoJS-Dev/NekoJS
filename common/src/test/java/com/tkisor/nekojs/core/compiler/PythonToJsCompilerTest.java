@@ -466,6 +466,73 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("@deco(1)\ndef f():\n    pass"));
     }
 
+    // ---- generators / yield ----
+
+    @Test
+    void generatorYieldsCollectedByList() throws Exception {
+        // def g(): yield 1; yield 2 → function* g() {...}; list(g()) spreads the iterator.
+        String src = """
+                def g():
+                    yield 10
+                    yield 20
+                list(g())[1]
+                """;
+        String js = py(src);
+        assertTrue(js.contains("function* g"), "yield makes the function a generator: " + js);
+        assertTrue(js.contains("yield 20"), "yield emits a JS yield: " + js);
+        assertEquals(20, evalInt(src));
+    }
+
+    @Test
+    void generatorIteratedInForLoop() throws Exception {
+        String src = """
+                def g():
+                    yield 1
+                    yield 2
+                    yield 3
+                total = 0
+                for v in g():
+                    total += v
+                total
+                """;
+        assertEquals(6, evalInt(src));
+    }
+
+    @Test
+    void generatorWithLoopBody() throws Exception {
+        // yield i*i for i in range(4) → 0,1,4,9; index [2] = 4.
+        String src = """
+                def squares(n):
+                    for i in range(n):
+                        yield i * i
+                list(squares(4))[2]
+                """;
+        assertEquals(4, evalInt(src));
+    }
+
+    @Test
+    void yieldFromDelegatesToInnerGenerator() throws Exception {
+        // yield from delegates to another iterable: b() yields 1,2 then 3.
+        String src = """
+                def a():
+                    yield 1
+                    yield 2
+                def b():
+                    yield from a()
+                    yield 3
+                len(list(b()))
+                """;
+        String js = py(src);
+        assertTrue(js.contains("yield* "), "yield from → JS yield*: " + js);
+        assertEquals(3, evalInt(src));
+    }
+
+    @Test
+    void generatorExpressionIsRejected() {
+        // Bare generator expressions ((x for x in xs)) are still v1-unsupported (only def-generators).
+        assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
+    }
+
     // ---- audit-driven regression tests (crashes & wrong output on common code) ----
 
     @Test

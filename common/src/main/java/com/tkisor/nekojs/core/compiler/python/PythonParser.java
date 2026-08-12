@@ -3,7 +3,9 @@ package com.tkisor.nekojs.core.compiler.python;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode.Param;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 /**
@@ -16,6 +18,9 @@ public final class PythonParser {
 
     private final List<PythonToken> tokens;
     private int pos = 0;
+
+    /** Per-function generator flag (top of stack = innermost function). Set when a yield is parsed. */
+    private final Deque<boolean[]> fnGen = new ArrayDeque<>();
 
     /** Node identity → 1-based Python source line, for statement-granularity source maps. */
     private final java.util.IdentityHashMap<PythonNode, Integer> srcLines = new java.util.IdentityHashMap<>();
@@ -100,9 +105,12 @@ public final class PythonParser {
         expectOp("(");
         List<Param> params = parseParams(")");
         expectOp(")");
+        if (matchOp("->")) parseTest();   // return-type annotation: parsed and discarded
         expectOp(":");
+        fnGen.push(new boolean[]{false});
         List<PythonNode> body = parseSuite();
-        return new PythonNode.FunctionDef(name, params, body, decorators);
+        boolean isGenerator = fnGen.pop()[0];
+        return new PythonNode.FunctionDef(name, params, body, decorators, isGenerator);
     }
 
     private PythonNode parseClassDef(List<String> decorators) {
@@ -238,6 +246,13 @@ public final class PythonParser {
             PythonNode exc = parseTestList();
             PythonNode from = matchKw("from") ? parseTestList() : null;   // 'from' clause parsed but ignored at emit
             return new PythonNode.Raise(exc, from);
+        }
+        if (peek().isKw("yield")) {
+            advance();
+            markGenerator();
+            if (atNewlineOrEnd() || atOp(";")) return new PythonNode.Yield(null, false);   // bare yield
+            if (matchKw("from")) return new PythonNode.Yield(parseTestList(), true);       // yield from iter
+            return new PythonNode.Yield(parseTestList(), false);
         }
         // assignment or expression statement
         PythonNode first = parseTestList();
@@ -399,6 +414,16 @@ public final class PythonParser {
     }
 
     private PythonNode parseAtom() {
+        // yield-expression (yield is an atom in Python, only meaningful inside a generator function).
+        if (peek().type() == PythonToken.Type.NAME && "yield".equals(peek().text())) {
+            advance();
+            markGenerator();
+            if (matchKw("from")) return new PythonNode.Yield(parseTest(), true);
+            if (atNewlineOrEnd() || atOp(")") || atOp("]") || atOp("}") || atOp(",") || atOp(":") || atOp("=")) {
+                return new PythonNode.Yield(null, false);
+            }
+            return new PythonNode.Yield(parseTestList(), false);
+        }
         PythonToken t = peek();
         switch (t.type()) {
             case INT -> { advance(); return new PythonNode.IntLit(Long.parseLong(t.text())); }
@@ -627,6 +652,11 @@ public final class PythonParser {
     }
 
     // ---- token helpers ----
+
+    /** Marks the innermost function as a generator (called whenever a {@code yield} is parsed). */
+    private void markGenerator() {
+        if (!fnGen.isEmpty()) fnGen.peek()[0] = true;
+    }
 
     private PythonToken peek() { return tokens.get(pos); }
     private PythonToken advance() { return tokens.get(pos++); }

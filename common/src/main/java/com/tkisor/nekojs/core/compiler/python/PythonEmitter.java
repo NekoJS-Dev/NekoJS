@@ -76,7 +76,7 @@ public final class PythonEmitter {
         switch (node) {
             case PythonNode.Module m -> throw new IllegalArgumentException("nested module");
             case PythonNode.FunctionDef f -> {
-                line("function " + f.name() + "(" + emitParams(f.params()) + ") {");
+                line("function" + (f.isGenerator() ? "* " : " ") + f.name() + "(" + emitParams(f.params()) + ") {");
                 block(f.body());
                 line("}");
                 applyDecorators(f.name(), f.decorators());
@@ -154,6 +154,9 @@ public final class PythonEmitter {
                 }
                 line("throw " + emitExpr(r.exc()) + ";");
             }
+            case PythonNode.Yield y -> line(y.from()
+                    ? "yield* " + emitExpr(y.value()) + ";"
+                    : "yield " + (y.value() != null ? emitExpr(y.value()) : "") + ";");
             case PythonNode.Break b -> line("break;");
             case PythonNode.Continue c -> line("continue;");
             case PythonNode.Pass p -> { /* emit nothing */ }
@@ -299,7 +302,8 @@ public final class PythonEmitter {
         boolean prev = rewriteSelf;
         rewriteSelf = !isStatic;   // instance methods rewrite self → this; static methods do not
         String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
-        line((isStatic ? "static " : "") + jsMethodName(m.name()) + "(" + params + ") {");
+        String star = m.isGenerator() ? "*" : "";   // generator method: *name(...)
+        line((isStatic ? "static " : "") + star + jsMethodName(m.name()) + "(" + params + ") {");
         block(m.body());
         line("}");
         rewriteSelf = prev;
@@ -481,6 +485,9 @@ public final class PythonEmitter {
             case PythonNode.SetLit l -> "new Set(" + emitElements(l.elements()) + ")";
             case PythonNode.Lambda lam -> "((" + emitParams(lam.params()) + ") => (" + emitExpr(lam.body()) + "))";
             case PythonNode.ListComp lc -> emitListComp(lc);
+            case PythonNode.Yield y -> y.from()
+                    ? ("(yield* " + emitExpr(y.value()) + ")")
+                    : ("(yield" + (y.value() != null ? " " + emitExpr(y.value()) : "") + ")");
             case PythonNode.DictComp dc -> "Object.fromEntries(" + compChain(dc.target(), dc.iter(), dc.cond(),
                     "[" + emitExpr(dc.key()) + ", " + emitExpr(dc.value()) + "]") + ")";
             case PythonNode.SetComp sc -> "new Set(" + compChain(sc.target(), sc.iter(), sc.cond(), emitExpr(sc.element())) + ")";

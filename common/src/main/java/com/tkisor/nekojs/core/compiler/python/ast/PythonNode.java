@@ -18,8 +18,9 @@ public sealed interface PythonNode {
     record Module(List<PythonNode> body) implements PythonNode {}
 
     // ---- statements ----
-    record FunctionDef(String name, List<Param> params, List<PythonNode> body, List<String> decorators)
-            implements PythonNode {}
+    record FunctionDef(String name, List<Param> params, List<PythonNode> body, List<String> decorators,
+                       boolean isGenerator)
+            implements PythonNode {}                                   // isGenerator → emit function*
     record ClassDef(String name, PythonNode base, List<PythonNode> body, List<String> decorators)
             implements PythonNode {}                                   // base == null → no extends
     record If(PythonNode cond, List<PythonNode> thenBody, List<PythonNode> elseBody) implements PythonNode {}
@@ -33,6 +34,7 @@ public sealed interface PythonNode {
     record AugAssign(PythonNode target, String op, PythonNode value) implements PythonNode {}
     record ExprStmt(PythonNode expr) implements PythonNode {}
     record Raise(PythonNode exc, PythonNode from) implements PythonNode {}   // exc == null → bare raise; from ignored
+    record Yield(PythonNode value, boolean from) implements PythonNode {}    // value null → bare yield; from → yield from
     record Import(List<Spec> specs) implements PythonNode {}                 // import m [as a], ...
     record ImportFrom(String module, List<Spec> specs, boolean star) implements PythonNode {}   // from m import ...
 
