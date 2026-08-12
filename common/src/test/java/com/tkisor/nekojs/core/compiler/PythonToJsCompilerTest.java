@@ -603,6 +603,70 @@ class PythonToJsCompilerTest {
         assertTrue(evalBool("all([1, 1])"));
     }
 
+    // ---- attribute builtins ----
+
+    @Test
+    void getattrHasattrSetattr() throws Exception {
+        String src = """
+                class C:
+                    def __init__(self):
+                        self.x = 5
+                c = C()
+                a = getattr(c, 'x')
+                setattr(c, 'y', 9)
+                b = getattr(c, 'missing', 7)
+                h = hasattr(c, 'y')
+                str(a) + str(c.y) + str(b) + str(h)
+                """;
+        assertEquals("597true", evalString(src));
+    }
+
+    @Test
+    void iterNextOverIterator() throws Exception {
+        // next(it) / iter(x) interop with generators (GraalJS iterators).
+        String src = """
+                def g():
+                    yield 1
+                    yield 2
+                it = iter(g())
+                next(it) + next(it)
+                """;
+        assertEquals(3, evalInt(src));
+    }
+
+    // ---- @classmethod / @property ----
+
+    @Test
+    void classmethodReceivesClass() throws Exception {
+        String src = """
+                class Counter:
+                    @classmethod
+                    def reveal(cls):
+                        return cls
+                Counter.reveal() is Counter
+                """;
+        String js = py(src);
+        assertTrue(js.contains("static reveal()"), "@classmethod → static method: " + js);
+        assertTrue(evalBool(src));
+    }
+
+    @Test
+    void propertyActsAsGetter() throws Exception {
+        String src = """
+                class Rect:
+                    def __init__(self, w, h):
+                        self.w = w
+                        self.h = h
+                    @property
+                    def area(self):
+                        return self.w * self.h
+                Rect(3, 4).area
+                """;
+        String js = py(src);
+        assertTrue(js.contains("get area()"), "@property → getter: " + js);
+        assertEquals(12, evalInt(src));
+    }
+
     // ---- for/else & while/else ----
 
     @Test

@@ -110,6 +110,9 @@ public final class PythonEmitter {
                 recordMapping(stmt);
                 for (PythonNode.Spec s : imp.specs()) line(esmNamespaceImport(s));
             } else if (stmt instanceof PythonNode.ImportFrom impf) {
+                // 魔法 import：`from nekojs import *`（或具名）是给 IDE/pyright 看的类型桩入口，
+                // 运行时无意义——剥离之（不 recordMapping、不 line，source map 零影响）。
+                if ("nekojs".equals(impf.module())) continue;
                 if (impf.star()) throw new IllegalArgumentException("python 'from X import *' is not supported");
                 recordMapping(stmt);
                 line(esmNamedImport(impf));
@@ -550,19 +553,29 @@ public final class PythonEmitter {
     }
 
     private void emitMethod(PythonNode.FunctionDef m) {
-        boolean isStatic = m.decorators().stream().anyMatch("staticmethod"::equals);
-        if (m.decorators().stream().anyMatch(d -> !d.equals("staticmethod"))) {
-            throw new IllegalArgumentException("python class decorators other than @staticmethod are not supported");
+        List<String> decos = m.decorators();
+        boolean isStatic = decos.contains("staticmethod");
+        boolean isClass = decos.contains("classmethod");
+        boolean isProp = decos.contains("property");
+        for (String d : decos) {
+            if (!d.equals("staticmethod") && !d.equals("classmethod") && !d.equals("property")) {
+                throw new IllegalArgumentException(
+                        "python method decorators other than @staticmethod/@classmethod/@property are not supported (got @" + d + ")");
+            }
         }
         boolean prev = rewriteSelf;
-        rewriteSelf = !isStatic;   // instance methods rewrite self → this; static methods do not
+        rewriteSelf = !isStatic && !isClass;   // instance/property methods rewrite self → this
         String star = m.isGenerator() ? "*" : "";   // generator method: *name(...)
+        String name = jsMethodName(m.name());
+        String prefix = isProp ? "get " : (isStatic || isClass) ? "static " : "";
+        String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
         if (hasKwargs(m.params())) {
-            line((isStatic ? "static " : "") + star + jsMethodName(m.name()) + "() {");
-            emitKwPrologue(m.params(), !isStatic);   // instance methods drop the leading self param
+            line(prefix + star + name + "() {");
+            if (isClass) line("var cls = this;");   // classmethod: cls is the called constructor
+            emitKwPrologue(m.params(), !isStatic);   // instance/class/property drop the leading self/cls
         } else {
-            String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
-            line((isStatic ? "static " : "") + star + jsMethodName(m.name()) + "(" + params + ") {");
+            line(prefix + star + name + "(" + params + ") {");
+            if (isClass) line("var cls = this;");
         }
         block(m.body());
         line("}");
@@ -958,6 +971,19 @@ public final class PythonEmitter {
                     if (positional.size() == 2)
                         return "__nekoFmt(" + e0 + ", " + emitExpr(positional.get(1)) + ", null)";
                 }
+                case "getattr" -> {
+                    if (positional.size() == 2) return e0 + "[" + emitExpr(positional.get(1)) + "]";
+                    if (positional.size() == 3) {
+                        String k = emitExpr(positional.get(1)), d = emitExpr(positional.get(2));
+                        return "(" + e0 + "[" + k + "] !== undefined ? " + e0 + "[" + k + "] : " + d + ")";
+                    }
+                }
+                case "hasattr" -> { if (positional.size() == 2) return "(" + e0 + "[" + emitExpr(positional.get(1)) + "] !== undefined)"; }
+                case "setattr" -> { if (positional.size() == 3) return "(" + e0 + "[" + emitExpr(positional.get(1)) + "] = " + emitExpr(positional.get(2)) + ")"; }
+                case "delattr" -> { if (positional.size() == 2) return "(delete " + e0 + "[" + emitExpr(positional.get(1)) + "])"; }
+                case "iter" -> { if (positional.size() == 1) return "(" + e0 + "[Symbol.iterator]())"; }
+                case "next" -> { if (positional.size() == 1) return "(" + e0 + ".next().value)"; }
+                case "frozenset" -> { return positional.isEmpty() ? "new Set()" : "new Set(" + e0 + ")"; }
                 default -> {}
             }
             if (classNames.contains(fn.id())) {
