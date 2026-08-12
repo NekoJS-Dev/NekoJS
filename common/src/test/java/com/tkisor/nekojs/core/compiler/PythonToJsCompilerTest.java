@@ -533,6 +533,71 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- extended builtins ----
+
+    @Test
+    void isinstanceAndType() throws Exception {
+        String src = """
+                class C:
+                    pass
+                class D:
+                    pass
+                c = C()
+                isinstance(c, C) and not isinstance(c, D)
+                """;
+        assertTrue(evalBool(src));
+        // type(x) → x.constructor; instances of the same class share a constructor
+        assertTrue(evalBool("class K:\n    pass\nK().constructor is K().constructor"));
+    }
+
+    @Test
+    void hexOctBinRepr() throws Exception {
+        assertEquals("0xff", evalString("hex(255)"));
+        assertEquals("-0x1", evalString("hex(-1)"));
+        assertEquals("0o17", evalString("oct(15)"));
+        assertEquals("0b1010", evalString("bin(10)"));
+        assertEquals("\"hi\"", evalString("repr('hi')"));
+    }
+
+    @Test
+    void roundAndDivmod() throws Exception {
+        assertEquals(4, evalInt("round(3.6)"));
+        assertEquals(314, evalInt("round(3.1415, 2) * 100"));   // 3.14 * 100 = 314
+        assertEquals(3, evalInt("divmod(17, 5)[0]"));
+        assertEquals(2, evalInt("divmod(17, 5)[1]"));
+    }
+
+    @Test
+    void mapFilterReversedZip() throws Exception {
+        // map/filter take the function first (like Python); reversed/zip return arrays.
+        assertEquals(4, evalInt("list(map(lambda x: x * 2, [1, 2]))[1]"));         // [2,4][1]=4
+        assertEquals(2, evalInt("len(list(filter(lambda x: x > 1, [1, 2, 3])))")); // [2,3]
+        assertEquals(3, evalInt("list(reversed([1, 2, 3]))[0]"));                   // [3,2,1]
+        assertEquals(2, evalInt("len(list(zip([1, 2], [3, 4])))"));                 // [(1,3),(2,4)]
+    }
+
+    @Test
+    void formatBuiltinUsesHelper() throws Exception {
+        String js = py("format(3.14159, '.2f')");
+        assertTrue(js.contains("__nekoFmt"), "format() reuses the format helper: " + js);
+        assertEquals("3.14", evalString("format(3.14159, '.2f')"));
+    }
+
+    @Test
+    void sumAnyAllAcceptIterables() throws Exception {
+        // sum/any/all now spread first, so they work on iterables (e.g. a generator).
+        String src = """
+                def g():
+                    yield 1
+                    yield 2
+                    yield 3
+                sum(g())
+                """;
+        assertEquals(6, evalInt(src));
+        assertTrue(evalBool("any([0, 0, 2])"));
+        assertTrue(evalBool("all([1, 1])"));
+    }
+
     // ---- assert / del / walrus / annotations / try-else / bare raise ----
 
     @Test

@@ -308,6 +308,9 @@ public final class PythonEmitter {
     private static boolean containsFormatted(Object o) {
         if (o == null) return false;
         if (o instanceof PythonNode.Formatted) return true;
+        // format(x, spec) reuses the same helper → trigger its emission when used.
+        if (o instanceof PythonNode.Call call && call.func() instanceof PythonNode.Name fn
+                && "format".equals(fn.id()) && call.args().size() == 2) return true;
         Class<?> c = o.getClass();
         if (c.isRecord()) {
             for (var rc : c.getRecordComponents()) {
@@ -814,7 +817,7 @@ public final class PythonEmitter {
                 case "abs" -> { if (positional.size() == 1) return "Math.abs(" + e0 + ")"; }
                 case "min" -> { return positional.size() == 1 ? "Math.min(..." + e0 + ")" : "Math.min(" + emitArgs(positional) + ")"; }
                 case "max" -> { return positional.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(positional) + ")"; }
-                case "sum" -> { if (positional.size() == 1) return "(" + e0 + ").reduce((a, b) => (a + b), 0)"; }
+                case "sum" -> { if (positional.size() == 1) return "([...(" + e0 + ")]).reduce((a, b) => (a + b), 0)"; }
                 case "str" -> { if (positional.size() == 1) return "String(" + e0 + ")"; }
                 case "int" -> { return "parseInt(" + emitArgs(positional) + ")"; }
                 case "float" -> { if (positional.size() == 1) return "Number(" + e0 + ")"; }
@@ -822,15 +825,65 @@ public final class PythonEmitter {
                 case "list" -> { return positional.isEmpty() ? "[]" : "[..." + e0 + "]"; }
                 case "dict" -> { return positional.isEmpty() ? "({})" : "Object.fromEntries(" + e0 + ")"; }
                 case "sorted" -> { return emitSorted(positional, kwargs); }
-                case "enumerate" -> { if (positional.size() == 1) return "(" + e0 + ").map((v, i) => [i, v])"; }
+                case "enumerate" -> { if (positional.size() == 1) return "([...(" + e0 + ")]).map((v, i) => [i, v])"; }
                 case "set" -> { return positional.isEmpty() ? "new Set()" : "new Set(" + e0 + ")"; }
                 case "tuple" -> { return positional.isEmpty() ? "[]" : "[..." + e0 + "]"; }
-                case "any" -> { if (positional.size() == 1) return "(" + e0 + ").some((x) => x)"; }
-                case "all" -> { if (positional.size() == 1) return "(" + e0 + ").every((x) => x)"; }
+                case "any" -> { if (positional.size() == 1) return "([...(" + e0 + ")]).some((x) => x)"; }
+                case "all" -> { if (positional.size() == 1) return "([...(" + e0 + ")]).every((x) => x)"; }
                 case "ord" -> { if (positional.size() == 1) return "(" + e0 + ").codePointAt(0)"; }
                 case "chr" -> { if (positional.size() == 1) return "String.fromCodePoint(" + e0 + ")"; }
                 case "pow" -> { if (positional.size() == 2) return "Math.pow(" + emitArgs(positional) + ")"; }
                 case "callable" -> { if (positional.size() == 1) return "(typeof " + e0 + " === \"function\")"; }
+                case "isinstance" -> {
+                    if (positional.size() == 2) {
+                        PythonNode t = positional.get(1);
+                        if (t instanceof PythonNode.TupleLit tl) {
+                            StringBuilder sb = new StringBuilder("(");
+                            for (int k = 0; k < tl.elements().size(); k++) {
+                                if (k > 0) sb.append(" || ");
+                                sb.append("(").append(e0).append(" instanceof ").append(emitExpr(tl.elements().get(k))).append(")");
+                            }
+                            return sb.append(")").toString();
+                        }
+                        return "(" + e0 + " instanceof " + emitExpr(t) + ")";
+                    }
+                }
+                case "type" -> { if (positional.size() == 1) return "(" + e0 + ").constructor"; }
+                case "hex" -> { if (positional.size() == 1) return signPrefix(e0, "0x", 16); }
+                case "oct" -> { if (positional.size() == 1) return signPrefix(e0, "0o", 8); }
+                case "bin" -> { if (positional.size() == 1) return signPrefix(e0, "0b", 2); }
+                case "repr" -> { if (positional.size() == 1) return "JSON.stringify(" + e0 + ")"; }
+                case "round" -> {
+                    if (positional.size() == 1) return "Math.round(" + e0 + ")";
+                    if (positional.size() == 2) {
+                        String p1 = emitExpr(positional.get(1));
+                        return "(Math.round(" + e0 + " * Math.pow(10, " + p1 + ")) / Math.pow(10, " + p1 + "))";
+                    }
+                }
+                case "divmod" -> {
+                    if (positional.size() == 2) {
+                        String p1 = emitExpr(positional.get(1));
+                        return "[Math.floor(" + e0 + " / " + p1 + "), " + e0 + " % " + p1 + "]";
+                    }
+                }
+                case "reversed" -> { if (positional.size() == 1) return "[...(" + e0 + ")].reverse()"; }
+                case "map" -> {
+                    if (positional.size() == 2)
+                        return "[...(" + emitExpr(positional.get(1)) + ")].map(" + emitExpr(positional.get(0)) + ")";
+                }
+                case "filter" -> {
+                    if (positional.size() == 2)
+                        return "[...(" + emitExpr(positional.get(1)) + ")].filter(" + emitExpr(positional.get(0)) + ")";
+                }
+                case "zip" -> {
+                    return "((function () { var __its = [" + emitArgs(positional)
+                            + "].map(function (x) { return [...x]; }); var __n = __its.length ? Math.min.apply(null, __its.map(function (a) { return a.length; })) : 0; var __r = [];"
+                            + " for (var __i = 0; __i < __n; __i++) { var __t = []; for (var __j = 0; __j < __its.length; __j++) __t.push(__its[__j][__i]); __r.push(__t); } return __r; })())";
+                }
+                case "format" -> {
+                    if (positional.size() == 2)
+                        return "__nekoFmt(" + e0 + ", " + emitExpr(positional.get(1)) + ", null)";
+                }
                 default -> {}
             }
             if (classNames.contains(fn.id())) {
@@ -885,6 +938,12 @@ public final class PythonEmitter {
 
     private static void breakKeyword(String name, int argc) {
         throw new IllegalArgumentException("python " + name + "() unsupported with " + argc + " positional args");
+    }
+
+    /** {@code hex/oct/bin}: {@code "-0x" + abs.toString(base)} for negatives, {@code "0x" + ...} otherwise. */
+    private static String signPrefix(String numExpr, String prefix, int base) {
+        return "(((" + numExpr + ") < 0) ? \"-" + prefix + "\" : \"" + prefix + "\") + Math.abs(Math.trunc("
+                + numExpr + ")).toString(" + base + ")";
     }
 
     private String emitRange(List<PythonNode> args) {
