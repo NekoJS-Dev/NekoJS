@@ -158,6 +158,7 @@ public final class PythonEmitter {
             }
             case PythonNode.ClassDef c -> emitClass(c);
             case PythonNode.With w -> emitWith(w, 0);
+            case PythonNode.Match m -> emitMatch(m);
             case PythonNode.Try t -> {
                 boolean hasElse = !t.elseBody().isEmpty();
                 boolean hasFinally = !t.finallyBody().isEmpty();
@@ -781,6 +782,85 @@ public final class PythonEmitter {
             sb.append("  ".repeat(d)).append("}\n");
         }
         return sb.append("})())").toString();
+    }
+
+    /**
+     * Lowers a {@code match} statement to an if/else-if chain guarded by a "matched" flag (so a
+     * guard that fails, or a non-matching case, falls through to the next case; the first matching
+     * case's body runs and the match then ends, matching Python). Each case contributes a pattern
+     * condition (over the captured subject) and zero or more bindings; bindings are emitted inside
+     * the case's block before the guard so the guard can reference them.
+     */
+    private void emitMatch(PythonNode.Match m) {
+        String subj = "__nekoSubj" + (tempCounter++);
+        String matched = "__nekoMatched" + (tempCounter++);
+        line("var " + subj + " = " + emitExpr(m.subject()) + ";");
+        line("var " + matched + " = false;");
+        for (PythonNode.MatchCase mc : m.cases()) {
+            List<String> conds = new ArrayList<>();
+            List<String> binds = new ArrayList<>();
+            emitMatchCond(mc.pattern(), subj, conds, binds);
+            String patCond = conds.isEmpty() ? "true" : "(" + String.join(" && ", conds) + ")";
+            line("if (!" + matched + " && " + patCond + ") {");
+            indent++;
+            for (String b : binds) line(b);
+            String guard = mc.guard() != null ? emitExpr(mc.guard()) : "true";
+            line("if (" + guard + ") {");
+            indent++;
+            line(matched + " = true;");
+            for (PythonNode s : mc.body()) emitStmt(s);
+            indent--;
+            line("}");
+            indent--;
+            line("}");
+        }
+    }
+
+    /** Accumulates the match condition terms (conds) and binding statements (binds) for one pattern. */
+    private void emitMatchCond(PythonNode.Pattern p, String subj, List<String> conds, List<String> binds) {
+        if (p instanceof PythonNode.LiteralPat lp) {
+            conds.add(subj + " === " + emitExpr(lp.value()));
+        } else if (p instanceof PythonNode.CapturePat cp) {
+            if (!"_".equals(cp.name())) binds.add("var " + cp.name() + " = " + subj + ";");   // wildcard → no bind
+        } else if (p instanceof PythonNode.OrPat op) {
+            List<String> altConds = new ArrayList<>();
+            for (PythonNode.Pattern alt : op.alts()) {
+                List<String> ac = new ArrayList<>();
+                emitMatchCond(alt, subj, ac, new ArrayList<>());   // OR alternatives must not bind (Python rule)
+                altConds.add(ac.isEmpty() ? "true" : "(" + String.join(" && ", ac) + ")");
+            }
+            conds.add("(" + String.join(" || ", altConds) + ")");
+        } else if (p instanceof PythonNode.SequencePat sp) {
+            conds.add("Array.isArray(" + subj + ")");   // sequence patterns don't match strings (Python)
+            int n = sp.elements().size();
+            conds.add(sp.starName() == null ? subj + ".length === " + n : subj + ".length >= " + n);
+            for (int i = 0; i < n; i++) {
+                String child = (i < sp.starIndex()) ? subj + "[" + i + "]"
+                        : subj + "[" + subj + ".length - " + (n - i) + "]";
+                emitMatchCond(sp.elements().get(i), child, conds, binds);
+            }
+            if (sp.starName() != null) {
+                binds.add("var " + sp.starName() + " = " + subj + ".slice(" + sp.starIndex() + ", "
+                        + subj + ".length - " + (n - sp.starIndex()) + ");");
+            }
+        } else if (p instanceof PythonNode.MappingPat mp) {
+            for (int i = 0; i < mp.keys().size(); i++) {
+                String k = emitExpr(mp.keys().get(i));
+                conds.add(subj + "[" + k + "] !== undefined");
+                binds.add("var " + mp.valueNames().get(i) + " = " + subj + "[" + k + "];");
+            }
+            if (mp.restName() != null) {
+                StringBuilder copy = new StringBuilder("(function (__o) { var __r = {}; for (var __k in __o) __r[__k] = __o[__k];");
+                for (PythonNode key : mp.keys()) copy.append(" delete __r[").append(emitExpr(key)).append("];");
+                copy.append(" return __r; })(").append(subj).append(")");
+                binds.add("var " + mp.restName() + " = " + copy + ";");
+            }
+        } else if (p instanceof PythonNode.ClassPat cp) {
+            conds.add(subj + " instanceof " + cp.className());
+            for (var e : cp.keyword().entrySet()) {
+                emitMatchCond(e.getValue(), subj + "." + e.getKey(), conds, binds);
+            }
+        }
     }
 
     private void writeIf(PythonNode.If i, boolean leadIndent) {

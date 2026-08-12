@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.compiler.python.ast;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Python AST node hierarchy for the {@code python} → JS transpiler
@@ -75,6 +76,7 @@ public sealed interface PythonNode {
                List<PythonNode> finallyBody)
             implements PythonNode {}                                    // else/finally empty → absent
     record With(List<WithItem> items, List<PythonNode> body) implements PythonNode {}   // 1+ context-manager items
+    record Match(PythonNode subject, List<MatchCase> cases) implements PythonNode {}
 
     /** Function/lambda parameter (helper, not itself a node).
      *  starArg → {@code *name} (varargs); kwDict → {@code **name} (keyword dict). */
@@ -93,4 +95,16 @@ public sealed interface PythonNode {
     sealed interface CompClause permits ForComp, IfComp {}
     record ForComp(PythonNode target, PythonNode iter) implements CompClause {}
     record IfComp(PythonNode cond) implements CompClause {}
+
+    /** One {@code case} of a {@code match} (helper, not itself a node). guard == null → no guard. */
+    record MatchCase(Pattern pattern, PythonNode guard, List<PythonNode> body) {}
+
+    /** A {@code case} pattern (helper, not itself a node). */
+    sealed interface Pattern permits LiteralPat, CapturePat, OrPat, SequencePat, MappingPat, ClassPat {}
+    record LiteralPat(PythonNode value) implements Pattern {}                                   // 1 / 'x' / True / None / -1
+    record CapturePat(String name) implements Pattern {}                                        // bare name; "_" → wildcard (no bind)
+    record OrPat(List<Pattern> alts) implements Pattern {}                                      // a | b | c
+    record SequencePat(List<Pattern> elements, String starName, int starIndex) implements Pattern {}  // [a, *r, b]; starName null → no star
+    record MappingPat(List<PythonNode> keys, List<String> valueNames, String restName) implements Pattern {}  // {"k": v, **r}
+    record ClassPat(String className, Map<String, Pattern> keyword) implements Pattern {}       // Cls() / Cls(x=p, ...)
 }

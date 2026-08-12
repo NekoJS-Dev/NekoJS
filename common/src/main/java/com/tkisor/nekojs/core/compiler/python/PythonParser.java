@@ -6,7 +6,9 @@ import com.tkisor.nekojs.core.compiler.python.ast.PythonNode.Param;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Recursive-descent parser turning {@link PythonLexer} tokens into a {@link PythonNode} AST.
@@ -96,6 +98,7 @@ public final class PythonParser {
             case "while" -> parseWhile();
             case "try" -> parseTry();
             case "with" -> parseWith();
+            case "match" -> parseMatch();
             default -> throw error("unexpected compound keyword '" + kw + "'");
         };
     }
@@ -189,6 +192,143 @@ public final class PythonParser {
         expectOp(":");
         List<PythonNode> body = parseSuite();
         return new PythonNode.With(items, body);
+    }
+
+    private PythonNode parseMatch() {
+        expectKw("match");
+        PythonNode subject = parseTestList();
+        expectOp(":");
+        expect(PythonToken.Type.NEWLINE, "NEWLINE after 'match subject:'");
+        expect(PythonToken.Type.INDENT, "INDENT to open a match body");
+        List<PythonNode.MatchCase> cases = new ArrayList<>();
+        skipNewlines();
+        while (matchKw("case")) {
+            PythonNode.Pattern pattern = parsePattern();
+            PythonNode guard = matchKw("if") ? parseOr() : null;
+            expectOp(":");
+            List<PythonNode> body = parseSuite();
+            cases.add(new PythonNode.MatchCase(pattern, guard, body));
+            skipNewlines();
+        }
+        expect(PythonToken.Type.DEDENT, "DEDENT to close 'match'");
+        return new PythonNode.Match(subject, cases);
+    }
+
+    /** pattern ::= closed ('|' closed)* */
+    private PythonNode.Pattern parsePattern() {
+        PythonNode.Pattern first = parsePatternAtom();
+        if (atOp("|")) {
+            List<PythonNode.Pattern> alts = new ArrayList<>(List.of(first));
+            while (matchOp("|")) alts.add(parsePatternAtom());
+            return new PythonNode.OrPat(alts);
+        }
+        return first;
+    }
+
+    private PythonNode.Pattern parsePatternAtom() {
+        if (atOp("[")) return parseSequencePattern();
+        if (atOp("{")) return parseMappingPattern();
+        PythonToken t = peek();
+        if (t.type() == PythonToken.Type.INT || t.type() == PythonToken.Type.FLOAT
+                || t.type() == PythonToken.Type.STRING) {
+            advance();
+            return new PythonNode.LiteralPat(literalTokenToNode(t));
+        }
+        if (t.isKw("True") || t.isKw("False") || t.isKw("None")) {
+            advance();
+            return new PythonNode.LiteralPat("True".equals(t.text()) ? new PythonNode.BoolLit(true)
+                    : "False".equals(t.text()) ? new PythonNode.BoolLit(false) : new PythonNode.NoneLit());
+        }
+        if (atOp("-") || atOp("+")) {
+            String op = advance().text();
+            PythonToken num = peek();
+            if (num.type() != PythonToken.Type.INT && num.type() != PythonToken.Type.FLOAT) {
+                throw error("expected a number after '" + op + "' in a pattern");
+            }
+            advance();
+            return new PythonNode.LiteralPat(new PythonNode.Unary(op, literalTokenToNode(num)));
+        }
+        if (t.type() == PythonToken.Type.NAME) {
+            StringBuilder name = new StringBuilder(expectName());
+            while (matchOp(".")) name.append('.').append(expectName());
+            if (atOp("(")) return parseClassPatternRest(name.toString());
+            return new PythonNode.CapturePat(name.toString());   // bare name → capture (incl. "_" wildcard)
+        }
+        throw error("invalid pattern, found '" + t.text() + "'");
+    }
+
+    private PythonNode.Pattern parseSequencePattern() {
+        expectOp("[");
+        List<PythonNode.Pattern> elements = new ArrayList<>();
+        String starName = null;
+        int starIndex = -1;
+        if (!atOp("]")) {
+            while (true) {
+                if (matchOp("*")) { starName = expectName(); starIndex = elements.size(); }
+                else elements.add(parsePattern());
+                if (!matchOp(",")) break;
+                if (atOp("]")) break;
+            }
+        }
+        expectOp("]");
+        return new PythonNode.SequencePat(elements, starName, starIndex);
+    }
+
+    private PythonNode.Pattern parseMappingPattern() {
+        expectOp("{");
+        List<PythonNode> keys = new ArrayList<>();
+        List<String> valueNames = new ArrayList<>();
+        String restName = null;
+        if (!atOp("}")) {
+            while (true) {
+                if (matchOp("**")) { restName = expectName(); }
+                else {
+                    PythonToken kt = peek();
+                    if (kt.type() != PythonToken.Type.STRING && kt.type() != PythonToken.Type.INT
+                            && kt.type() != PythonToken.Type.FLOAT) {
+                        throw error("mapping-pattern keys must be literal strings or numbers");
+                    }
+                    advance();
+                    keys.add(literalTokenToNode(kt));
+                    expectOp(":");
+                    valueNames.add(expectName());   // value is a capture name (incl. '_')
+                }
+                if (!matchOp(",")) break;
+                if (atOp("}")) break;
+            }
+        }
+        expectOp("}");
+        return new PythonNode.MappingPat(keys, valueNames, restName);
+    }
+
+    private PythonNode.Pattern parseClassPatternRest(String className) {
+        expectOp("(");
+        Map<String, PythonNode.Pattern> keyword = new LinkedHashMap<>();
+        if (!atOp(")")) {
+            while (true) {
+                if (peek().type() == PythonToken.Type.NAME && pos + 1 < tokens.size()
+                        && tokens.get(pos + 1).isOp("=")) {
+                    String k = expectName();
+                    advance(); // '='
+                    keyword.put(k, parsePattern());
+                } else {
+                    throw error("positional class patterns are not supported (use Cls(attr=pattern))");
+                }
+                if (!matchOp(",")) break;
+                if (atOp(")")) break;
+            }
+        }
+        expectOp(")");
+        return new PythonNode.ClassPat(className, keyword);
+    }
+
+    private PythonNode literalTokenToNode(PythonToken t) {
+        return switch (t.type()) {
+            case INT -> new PythonNode.IntLit(Long.parseLong(t.text()));
+            case FLOAT -> new PythonNode.FloatLit(Double.parseDouble(t.text()));
+            case STRING -> new PythonNode.StrLit(t.text());
+            default -> throw error("not a literal token: " + t.text());
+        };
     }
 
     private PythonNode parseTry() {
@@ -777,9 +917,30 @@ public final class PythonParser {
                 || t.equals("^=") || t.equals("<<=") || t.equals(">>=");
     }
     private boolean isCompoundKw() {
-        return peek().isKw("def") || peek().isKw("class") || peek().isKw("if")
-                || peek().isKw("for") || peek().isKw("while") || peek().isKw("try")
-                || peek().isKw("with");
+        PythonToken p = peek();
+        if (p.isKw("def") || p.isKw("class") || p.isKw("if") || p.isKw("for")
+                || p.isKw("while") || p.isKw("try") || p.isKw("with")) return true;
+        // 'match' is a SOFT keyword: it is a match-statement only when the rest of the logical line
+        // has the form '<subject> :' (a ':' at bracket-depth 0 before the NEWLINE), so that 'match'
+        // used as an ordinary identifier ('match = 5', a bare 'match', 'match(x)' call) still works.
+        return p.isKw("match") && looksLikeMatchHeader();
+    }
+
+    private boolean looksLikeMatchHeader() {
+        int depth = 0;
+        for (int i = pos + 1; i < tokens.size(); i++) {
+            PythonToken tk = tokens.get(i);
+            if (tk.type() == PythonToken.Type.NEWLINE || tk.type() == PythonToken.Type.EOF) return false;
+            if (tk.type() == PythonToken.Type.OP) {
+                switch (tk.text()) {
+                    case "(", "[", "{" -> depth++;
+                    case ")", "]", "}" -> depth--;
+                    case ":" -> { if (depth == 0) return true; }
+                    default -> { }
+                }
+            }
+        }
+        return false;
     }
     private void skipNewlines() { while (at(PythonToken.Type.NEWLINE)) advance(); }
 

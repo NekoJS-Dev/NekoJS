@@ -603,6 +603,94 @@ class PythonToJsCompilerTest {
         assertTrue(evalBool("all([1, 1])"));
     }
 
+    // ---- match / case (structural pattern matching) ----
+
+    @Test
+    void matchLiteralAndWildcard() throws Exception {
+        String src = """
+                def classify(n):
+                    match n:
+                        case 0:
+                            return 'zero'
+                        case 1 | 2 | 3:
+                            return 'low'
+                        case _:
+                            return 'other'
+                classify(0) + classify(2) + classify(9)
+                """;
+        assertEquals("zerolowother", evalString(src));
+    }
+
+    @Test
+    void matchCaptureAndGuard() throws Exception {
+        String src = """
+                def sign(n):
+                    match n:
+                        case 0:
+                            return 'Z'
+                        case x if x > 0:
+                            return 'P'
+                        case x:
+                            return 'N'
+                sign(0) + sign(5) + sign(-3)
+                """;
+        assertEquals("ZPN", evalString(src));
+    }
+
+    @Test
+    void matchSequencePattern() throws Exception {
+        String src = """
+                def head(xs):
+                    match xs:
+                        case []:
+                            return 'empty'
+                        case [first, *rest]:
+                            return first
+                head([]) + head([7, 8, 9])
+                """;
+        assertEquals("empty7", evalString(src));
+    }
+
+    @Test
+    void matchMappingPattern() throws Exception {
+        String src = """
+                def name_of(d):
+                    match d:
+                        case {'name': n, **rest}:
+                            return n
+                        case _:
+                            return 'unknown'
+                name_of({'name': 'neko', 'age': 2}) + name_of({'x': 1})
+                """;
+        assertEquals("nekounknown", evalString(src));
+    }
+
+    @Test
+    void matchClassPattern() throws Exception {
+        String src = """
+                class Point:
+                    def __init__(self, x, y):
+                        self.x = x
+                        self.y = y
+                def describe(p):
+                    match p:
+                        case Point(x=0, y=0):
+                            return 'origin'
+                        case Point(x=px):
+                            return 'x=' + str(px)
+                        case _:
+                            return 'other'
+                describe(Point(0, 0)) + '|' + describe(Point(5, 0))
+                """;
+        assertEquals("origin|x=5", evalString(src));
+    }
+
+    @Test
+    void matchIsSoftKeywordAsIdentifier() throws Exception {
+        // 'match' used as a variable name must not be mistaken for a match-statement.
+        assertEquals(5, evalInt("match = 5\nmatch"));
+    }
+
     // ---- attribute builtins ----
 
     @Test
