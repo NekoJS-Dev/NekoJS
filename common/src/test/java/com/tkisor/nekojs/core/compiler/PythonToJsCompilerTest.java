@@ -533,6 +533,23 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- slicing with arbitrary step ----
+
+    @Test
+    void positiveStepEveryOther() throws Exception {
+        assertEquals(9, evalInt("sum([1, 2, 3, 4, 5][::2])"));          // [1,3,5]
+        assertEquals("aceg", evalString("'abcdefgh'[::2]"));
+        assertEquals(2, evalInt("len([1, 2, 3, 4, 5][1::2])"));          // [2,4]
+        assertEquals("bd", evalString("'abcdef'[1:5:2]"));               // indices 1,3
+    }
+
+    @Test
+    void negativeStepReversesAndSkips() throws Exception {
+        assertEquals(5, evalInt("[1, 2, 3, 4, 5][::-2][0]"));            // [5,3,1]
+        assertEquals("dcb", evalString("'abcde'[3:0:-1]"));              // indices 3,2,1
+        assertEquals("cba", evalString("'abc'[::-1]"));                  // regression: still reverses
+    }
+
     // ---- **kwargs / keyword call args ----
 
     @Test

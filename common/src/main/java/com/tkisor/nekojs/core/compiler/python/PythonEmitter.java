@@ -478,17 +478,39 @@ public final class PythonEmitter {
         return -1;
     }
 
-    /** Emits a slice subscript; v1 supports [lo:up] and [::-1] (reverse, type-agnostic). */
+    /**
+     * Emits a slice subscript. No-step slices use the fast {@code .slice(lo, hi)} path; any step
+     * (including {@code [::-1]}) lowers to a Python-faithful helper that honours negative indices,
+     * runtime-determined step sign, and the per-sign {@code None} defaults (start=0/stop=length for
+     * positive step; start=length-1/stop=-1 sentinel for negative step). Strings join back to a
+     * string; everything else returns an array.
+     */
     private String emitSlice(String obj, PythonNode.Slice s) {
-        if (s.step() != null) {
-            if (negativeLiteralMagnitude(s.step()) == 1 && s.lower() == null && s.upper() == null) {
-                return "((function (__s) { return typeof __s === \"string\" ? __s.split(\"\").reverse().join(\"\") "
-                        + ": [...__s].reverse(); })(" + obj + "))";
-            }
-            throw new IllegalArgumentException("python slice step only supports [::-1] in v1");
+        if (s.step() == null) {
+            String lo = s.lower() != null ? emitExpr(s.lower()) : "0";
+            return s.upper() != null ? obj + ".slice(" + lo + ", " + emitExpr(s.upper()) + ")"
+                    : obj + ".slice(" + lo + ")";
         }
-        String lo = s.lower() != null ? emitExpr(s.lower()) : "0";
-        return s.upper() != null ? obj + ".slice(" + lo + ", " + emitExpr(s.upper()) + ")" : obj + ".slice(" + lo + ")";
+        String lo = s.lower() != null ? emitExpr(s.lower()) : "null";
+        String hi = s.upper() != null ? emitExpr(s.upper()) : "null";
+        String step = emitExpr(s.step());
+        return "((function (__s) {\n"
+                + "  var __n = __s.length, __step = " + step + ";\n"
+                + "  if (__step === 0) throw new Error(\"slice step cannot be zero\");\n"
+                + "  var __lo = " + lo + ", __hi = " + hi + ", __r = [];\n"
+                + "  if (__step > 0) {\n"
+                + "    var __start = (__lo === null) ? 0 : __lo, __stop = (__hi === null) ? __n : __hi;\n"
+                + "    if (__start < 0) { __start += __n; if (__start < 0) __start = 0; } if (__start > __n) __start = __n;\n"
+                + "    if (__stop < 0) { __stop += __n; if (__stop < 0) __stop = 0; } if (__stop > __n) __stop = __n;\n"
+                + "    for (var __i = __start; __i < __stop; __i += __step) __r.push(__s[__i]);\n"
+                + "  } else {\n"
+                + "    var __start = (__lo === null) ? (__n - 1) : __lo, __stop = (__hi === null) ? -1 : __hi;\n"
+                + "    if (__start < 0) { __start += __n; if (__start < 0) __start = -1; } if (__start >= __n) __start = __n - 1;\n"
+                + "    if (__hi !== null) { if (__stop < 0) { __stop += __n; if (__stop < 0) __stop = -1; } if (__stop >= __n) __stop = __n - 1; }\n"
+                + "    for (var __i = __start; __i > __stop; __i += __step) __r.push(__s[__i]);\n"
+                + "  }\n"
+                + "  return (typeof __s === \"string\") ? __r.join(\"\") : __r;\n"
+                + "})(" + obj + "))";
     }
 
     /**
