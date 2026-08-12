@@ -10,3 +10,10 @@ ai_arch/
 .superpowers/
 # 平台测试/构建运行时日志
 platforms/*/logs/
+# 参考源码/研究目录(不参与构建)
+ProbeJS-Legacy-main/
+kubejs-2601/
+bb21b/
+bb26/
+# AI 工具产物
+.zcode/
