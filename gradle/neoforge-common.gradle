@@ -6,6 +6,10 @@
 //   2. ext 中提供: minecraft_version, ENV
 //      (mod_id / mod_name / mod_version / mod_group_id 来自根 gradle.properties)
 //   3. apply from: rootProject.file('gradle/neoforge-common.gradle')
+//   4. 若平台在 neoForge.mods."${mod_id}" 中把 :common / :common-api 的 main source set
+//      注册为 ModDev mod source set（开发运行需要共享类可见），必须在 ext 声明
+//      register_shared_dev_mod_source_sets = true，以启用 verifyDevModSourceSets 门禁；
+//      不注册共享 source set 的平台（如 1.21.1）不要声明该属性。
 //
 // 用 apply script 而非 buildSrc convention plugin：第三方插件 (moddev / unified-publishing)
 // 的 plugin marker 坐标随版本漂移，在 buildSrc 内硬编码 implementation 依赖会成为额外维护点；
@@ -163,8 +167,57 @@ def verifyRuntimeArtifact = tasks.register('verifyRuntimeArtifact') {
     }
 }
 
+def sharedDevModSourceSetsEnabled = (project.findProperty('register_shared_dev_mod_source_sets') as Boolean) == true
+def verifyDevModSourceSets = sharedDevModSourceSetsEnabled ? tasks.register('verifyDevModSourceSets') {
+    group = 'verification'
+    description = 'Verifies opted-in NeoForge ModDev mod source-set registration.'
+    dependsOn tasks.named('classes')
+    dependsOn project(':common').tasks.named('classes')
+    dependsOn project(':common-api').tasks.named('classes')
+
+    doLast {
+        def configuredMod = neoForge.mods.findByName(modId)
+        if (configuredMod == null) {
+            throw new GradleException("ModDev model for ${project.path} does not define a mod named '${modId}'.")
+        }
+
+        def configuredSourceSets = configuredMod.modSourceSets.get()
+        def requiredSourceSets = [
+                [project: project, sourceSet: sourceSets.main],
+                [project: project(':common'), sourceSet: project(':common').sourceSets.main],
+                [project: project(':common-api'), sourceSet: project(':common-api').sourceSets.main]
+        ]
+        requiredSourceSets.each { required ->
+            if (!configuredSourceSets.contains(required.sourceSet)) {
+                throw new GradleException(
+                        "ModDev model for mod '${modId}' in ${project.path} does not include "
+                                + "${required.project.path} source set '${required.sourceSet.name}'.")
+            }
+        }
+
+        def requiredClasses = [
+                [project: project, sourceSet: sourceSets.main, classPath: 'com/tkisor/nekojs/NekoJSMod.class'],
+                [project: project(':common'), sourceSet: project(':common').sourceSets.main, classPath: 'com/tkisor/nekojs/NekoJS.class'],
+                [project: project(':common-api'), sourceSet: project(':common-api').sourceSets.main, classPath: 'com/tkisor/nekojs/api/data/NekoId.class']
+        ]
+        requiredClasses.each { required ->
+            def classFileExists = required.sourceSet.output.classesDirs.files.any { outputDirectory ->
+                new File(outputDirectory, required.classPath).isFile()
+            }
+            if (!classFileExists) {
+                throw new GradleException(
+                        "${required.project.path} source set '${required.sourceSet.name}' is missing "
+                                + "compiled class '${required.classPath}'.")
+            }
+        }
+    }
+} : null
+
 tasks.named('check').configure {
     dependsOn verifyRuntimeArtifact
+    if (verifyDevModSourceSets != null) {
+        dependsOn verifyDevModSourceSets
+    }
 }
 
 tasks.register('nbtSmokeTest', Test) {

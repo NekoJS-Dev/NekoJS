@@ -12,6 +12,9 @@ group = mod_group_id
 // minecraft_version / ENV 通过 ext 暴露给 gradle/neoforge-common.gradle
 ext.minecraft_version = "26.2.0"
 ext.ENV = System.getenv()
+// 开发运行把 :common / :common-api 注册为 ModDev mod source set（见下方 mods 块），
+// 由 gradle/neoforge-common.gradle 的 verifyDevModSourceSets 门禁校验。
+ext.register_shared_dev_mod_source_sets = true
 def neo_version = "26.2.0.7-beta"
 def minecraft_version_range= "[26.2.0,26.3)"
 def neo_version_range= "[26,)"
@@ -82,6 +85,8 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            sourceSet(project(':common').sourceSets.main)
+            sourceSet(project(':common-api').sourceSets.main)
         }
     }
 }
