@@ -77,8 +77,8 @@
 | 函数 `def`（默认参数 / `*args` / `**kwargs`） | `def f(a, b=1, *args, **kw):` | `function`（`**kwargs` 触发 prologue） | ✅ |
 | 类与继承 | `class C(B):` | JS `class` / `extends` | ✅ |
 | `super()` | `super().__init__(x)` | `super(x)` / `super.m()` | ✅ |
-| `@staticmethod` / `@classmethod` | `@staticmethod` | `static` 方法 | 🟡（仅 staticmethod；classmethod 未映射 `cls`） |
-| 属性 `@property` | `@property\ndef x(self):` | getter | ❌ |
+| `@staticmethod` / `@classmethod` | `@staticmethod` / `@classmethod` | `static` 方法；classmethod 绑 `cls=this` | ✅ |
+| 属性 `@property` | `@property\ndef x(self):` | JS getter（只读） | ✅ |
 | `if` / `elif` / `else` | — | `if / else if / else` | ✅ |
 | `for x in iter` / `while` | — | `for...of` / `while` | ✅ |
 | `with` 上下文管理器 | `with cm as x:` | 内联 acquire + try/finally | ✅ |
@@ -92,7 +92,7 @@
 | `return` / `break` / `continue` / `pass` | — | 同名 | ✅ |
 | `import` / `from ... import` | — | ESM `import` | ✅ |
 | 类型注解（参数 / 返回 / 变量） | `x: int = 5` | 解析后丢弃 | ✅（丢弃） |
-| `match` / `case` 模式匹配 | `match x:` | 降级 if/else 链 | ❌（可后续补） |
+| `match` / `case` 模式匹配 | `match x:` | 降级 if/else 链 | ✅（字面量/通配/捕获/`|`/序列/映射/类模式+guard） |
 | `async def` / `await` / `async for` / `async with` | — | JS async/await | ❌（GraalJS 支持但价值低） |
 
 ### 表达式级

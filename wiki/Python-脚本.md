@@ -49,6 +49,7 @@ ServerEvents.recipes(lambda event: (
 |---|---|
 | 函数 `def f(a, b=1, *args, **kwargs):`（默认参数、`*args`、`**kwargs`） | 支持，降级为 `function`（hoisted）；`**kwargs` 触发 prologue 重 binding |
 | `if` / `elif` / `else` | 支持，降级为 `if / else if / else` |
+| `match` / `case`（结构化模式匹配：字面量/通配符/捕获/`|`/序列/映射/类模式 + `if guard`） | 支持，降级为 if/else 链 |
 | `for x in iter:` / `while cond:` | 支持，`for...of` / `while` |
 | 赋值：`=`、增强 `+=`/...`//=`/`**=`、元组解包 `a, b = ...`、多目标 `a = b = v`、海象 `:=` | 支持 |
 | `lambda`（支持默认参数、`*args`，**不支持 `**kwargs`**） | 支持，降级为箭头函数 |
@@ -64,7 +65,7 @@ ServerEvents.recipes(lambda event: (
 | f-string `f'{x:.2f}'`（**含格式说明符与 `!r/!s/!a` 转换**） | 支持（详见「f-string」节） |
 | 装饰器 `@deco` / `@pkg.deco`（顶层函数、类） | 支持，降级为定义后 `name = deco(name)` |
 | `assert cond[, msg]` / `del target` | 支持（`assert`→`throw new Error(...)`；`del`→`delete`） |
-| 类（`__init__`/构造器、`self`→`this`、`extends`、`super()`、`@staticmethod`、`__str__`→`toString`） | 支持 |
+| 类（`__init__`/构造器、`self`→`this`、`extends`、`super()`、`@staticmethod`/`@classmethod`/`@property`、`__str__`→`toString`） | 支持 |
 | 类型注解（参数 `x: int`、返回 `-> str`、变量 `x: int = 5`） | 支持（**解析后丢弃**，不参与运行时） |
 | `import` / `from ... import ...`（按相对路径加载兄弟 `.py`/`.js` 模块） | 支持 |
 | `raise Expr` / 裸 `raise`（重抛） | 支持，降级为 `throw` |
@@ -253,7 +254,9 @@ print(Cat.default())      # Animal(cat)
 - `self` 在实例方法里被改写成 JS 的 `this`；`@staticmethod` 方法不会被改写。
 - `__init__` → `constructor`，`__str__` → `toString`，其它方法名（含 snake_case）原样保留。
 - `extends` 翻译成 JS 的 `extends`；`super().__init__(args)` → `super(args)`，`super().method(args)` → `super.method(args)`。
-- 类**方法**装饰器只支持 `@staticmethod`（其它方法装饰器会清晰报错）；顶层函数和类的装饰器见「装饰器」节。
+- 类方法装饰器支持 `@staticmethod`/`@classmethod`/`@property`（其它会清晰报错）；顶层函数和类的装饰器见「装饰器」节。
+- `@classmethod` 降级为 `static` 方法，开头绑定 `var cls = this`（按 `Class.method()` 调用时 `cls` 即该类）。
+- `@property` 降级为 JS getter（`get name() { ... }`，只读，无 setter）。
 - 实例化自己定义的类时 `Cat('Tom')` 会自动降级为 `new Cat('Tom')`。
 
 ### 装饰器
@@ -276,7 +279,7 @@ print(base(20))    # (20 + 1) * 2 = 42
 
 - `@a` / `@b` / `def f` 会按 Python 语义从最近的一个开始包：`f = a(b(f))`。
 - 装饰器本身可以是带点的名字：`@pkg.helper` → `f = pkg.helper(f)`。
-- **类方法**装饰器仍只支持 `@staticmethod`（其它方法装饰器会报错）；**带参数**的装饰器 `@deco(...)` 也不支持（会清晰报错）——需要时写一个返回装饰器的普通函数，再 `@that_func` 引用。
+- **类方法**装饰器支持 `@staticmethod`/`@classmethod`/`@property`（其它方法装饰器会报错）；**带参数**的装饰器 `@deco(...)` 也不支持（会清晰报错）——需要时写一个返回装饰器的普通函数，再 `@that_func` 引用。
 
 ### assert / del
 
@@ -310,6 +313,29 @@ except ValueError:
 ```
 
 `raise Expr` 降级为 JS `throw Expr;`。**裸 `raise`** 在 `except` 子句内会重新抛出当前异常（在内层嵌套的 except 里重抛最近的一个）。`raise ... from cause` 的 `from` 子句会被解析但忽略。
+
+### match / case（模式匹配）
+
+`match subject:` / `case pattern [if guard]:` 降级为一条带「已匹配」标志的 if/else 链：guard 失败或不匹配会落到下一个 case，第一个匹配的 case 体执行后整个 match 结束（与 Python 一致）。绑定名在 guard 求值前就生效，所以 guard 能引用捕获的变量。
+
+```python
+def describe(point):
+    match point:
+        case (0, 0):
+            return 'origin'
+        case (x, 0):
+            return 'x-axis ' + str(x)
+        case (0, y):
+            return 'y-axis ' + str(y)
+        case (x, y) if x == y:
+            return 'diagonal'
+        case _:
+            return 'other'
+```
+
+支持的 pattern：字面量（`1`/`'x'`/`True`/`None`/`-1`）、通配符 `_`、名字捕获、`|` 或模式（`1 | 2 | 3`）、序列模式（`[a, *r, b]`，`*` 可在任意位置）、映射模式（`{'k': v, **rest}`）、类模式（`Cls()` 或 `Cls(x=p)` 关键字形式），以及 `case ... if guard`。
+
+> 限制：类模式只支持**关键字**子模式 `Cls(attr=pat)`（位置子模式需要 `__match_args__`，未支持）；`match` 是软关键字——只有当本行能扫成 `<subject> :` 时才视作 match 语句，所以把 `match` 当普通变量名（`match = 5`、裸 `match`、`match(x)` 调用）仍可用。
 
 ### 模块与 import
 
@@ -377,6 +403,9 @@ print(circle_area(2))                    # 12.56
 | `isinstance(x, T)` / `isinstance(x, (A,B))` | `x instanceof T`（元组→链） | |
 | `type(x)` | `(x).constructor` | |
 | `callable(x)` | `typeof x === "function"` | |
+| `getattr(o, name[, d])` / `hasattr` / `setattr` / `delattr` | `o[name]` 括号访问（带默认值/存在判断/赋值/delete） | |
+| `iter(x)` / `next(it)` | `x[Symbol.iterator]()` / `it.next().value` | 与生成器/迭代器互通 |
+| `frozenset(x)` | `new Set(x)` | JS 无不可变集合，返回普通 Set |
 
 > 常用 **str/list/dict/set 方法**已映射到 JS 等价写法（见下节「方法映射」）；未映射的方法原样透传 `obj.method(args)`（若 JS 侧恰好有同名方法仍可用）。
 
@@ -464,7 +493,6 @@ finally:
 - 带参数的装饰器 `@deco(...)`、类方法装饰器（除 `@staticmethod` 外）
 - `lambda` 里的 `**kwargs`
 - 关键字实参传给**未声明 `**kwargs`** 的普通函数（仅 `print`/`sorted` 特例）
-- `match` / `case` 模式匹配
 - `async` / `await` / 异步生成器
 - `global` / `nonlocal`
 - 字典合并运算符 `d1 | d2`（dict 上的 `|` 会按位或处理，请改用 `{**d1, **d2}`）
