@@ -528,9 +528,14 @@ class PythonToJsCompilerTest {
     }
 
     @Test
-    void generatorExpressionIsRejected() {
-        // Bare generator expressions ((x for x in xs)) are still v1-unsupported (only def-generators).
-        assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
+    void generatorExpressionYieldsLazily() throws Exception {
+        // (x for x in xs) lowers to an IIFE generator; sum/any consume it via spread.
+        String src = "sum(x * x for x in range(4))";
+        String js = py(src);
+        assertTrue(js.contains("function*"), "generator expression → function*: " + js);
+        assertEquals(14, evalInt(src));   // 0+1+4+9
+        assertEquals(3, evalInt("list(x for x in range(10) if x % 3 == 0)[1]"));   // 0,3,6,9 → [1]=3
+        assertTrue(evalBool("any(x > 2 for x in [1, 2, 3])"));
     }
 
     // ---- extended builtins ----
@@ -596,6 +601,52 @@ class PythonToJsCompilerTest {
         assertEquals(6, evalInt(src));
         assertTrue(evalBool("any([0, 0, 2])"));
         assertTrue(evalBool("all([1, 1])"));
+    }
+
+    // ---- iterable unpacking (*args / **kw / [1,*xs] / {**a}) ----
+
+    @Test
+    void starredCallArgsSpread() throws Exception {
+        // f(*args) → f(...args); previously the '*' was silently dropped (bug).
+        String src = """
+                def add(a, b, c):
+                    return a + b + c
+                nums = [10, 20, 30]
+                add(*nums)
+                """;
+        String js = py(src);
+        assertTrue(js.contains("...nums"), "f(*args) → spread: " + js);
+        assertEquals(60, evalInt(src));
+        assertEquals(6, evalInt("max(*[1, 2, 3], *[4, 5, 6])"));   // multiple *spreads
+    }
+
+    @Test
+    void dictSpreadKwargsMerge() throws Exception {
+        // f(**a, b=2) → trailing object merges the spread + explicit kwargs.
+        String src = """
+                def g(**kw):
+                    return kw
+                base = {'x': 1, 'y': 2}
+                g(**base, z=3)['z'] + g(**base, z=3)['x']
+                """;
+        assertEquals(4, evalInt(src));   // 3 + 1
+    }
+
+    @Test
+    void listAndDictLiteralSpread() throws Exception {
+        assertEquals(10, evalInt("sum([1, *[2, 3], 4])"));         // [1,2,3,4] → 10
+        // {**a, **b} merges; 'c' present in both → later spread (b) overrides
+        String src = "d = {**{'a': 1, 'c': 9}, **{'b': 2, 'c': 5}}\nd['a'] + d['b'] + d['c']";
+        assertEquals(8, evalInt(src));   // 1 + 2 + 5
+    }
+
+    @Test
+    void minMaxSortedWithKey() throws Exception {
+        // key= picks the extremum / orders by a function.
+        assertEquals("ccc", evalString("max(['bb', 'a', 'ccc'], key=lambda s: len(s))"));
+        assertEquals("a", evalString("min(['bb', 'a', 'ccc'], key=lambda s: len(s))"));
+        // sorted by key=-x ascending → keys -3,-2,-1 → x 3,2,1 → [0]=3
+        assertEquals(3, evalInt("sorted([3, 1, 2], key=lambda x: -x)[0]"));
     }
 
     // ---- assert / del / walrus / annotations / try-else / bare raise ----

@@ -408,10 +408,15 @@ public final class PythonEmitter {
         }
     }
 
-    /** Builds the tagged trailing object carrying keyword args at a call site. */
-    private String kwObjectLiteral(Map<String, PythonNode> kwargs) {
+    /** Builds the tagged trailing object carrying keyword args (+ any {@code **} spreads) at a call site. */
+    private String kwObjectLiteral(Map<String, PythonNode> kwargs, List<PythonNode> kwSpreads) {
         StringBuilder sb = new StringBuilder("{ ");
         boolean first = true;
+        for (PythonNode spread : kwSpreads) {
+            if (!first) sb.append(", ");
+            first = false;
+            sb.append("...").append(emitExpr(spread));
+        }
         for (var e : kwargs.entrySet()) {
             if (!first) sb.append(", ");
             first = false;
@@ -715,6 +720,32 @@ public final class PythonEmitter {
         line("}");
     }
 
+    /**
+     * Lowers a generator expression {@code (expr for x in iter if cond)} to an immediately-invoked
+     * generator function, so it yields lazily like Python and interoperates with {@code list()}/
+     * {@code sum()}/{@code any()} (which spread). Multi-clause for/if nest as JS for-of / if blocks.
+     */
+    private String emitGenExp(PythonNode.GenExp g) {
+        StringBuilder sb = new StringBuilder("((function* () {\n");
+        int d = 1;
+        for (PythonNode.CompClause c : g.clauses()) {
+            String pad = "  ".repeat(d);
+            if (c instanceof PythonNode.ForComp fc) {
+                sb.append(pad).append("for (var ").append(emitTarget(fc.target())).append(" of (")
+                        .append(emitExpr(fc.iter())).append(")) {\n");
+            } else if (c instanceof PythonNode.IfComp ic) {
+                sb.append(pad).append("if (").append(emitExpr(ic.cond())).append(") {\n");
+            }
+            d++;
+        }
+        sb.append("  ".repeat(d)).append("yield ").append(emitExpr(g.element())).append(";\n");
+        for (int k = 0; k < g.clauses().size(); k++) {
+            d--;
+            sb.append("  ".repeat(d)).append("}\n");
+        }
+        return sb.append("})())").toString();
+    }
+
     private void writeIf(PythonNode.If i, boolean leadIndent) {
         if (leadIndent) out.append(ind());
         out.append("if (").append(emitExpr(i.cond())).append(") {");
@@ -766,6 +797,8 @@ public final class PythonEmitter {
             case PythonNode.Compare c -> emitCompare(c);
             case PythonNode.Ternary t -> "(" + emitExpr(t.cond()) + " ? " + emitExpr(t.ifTrue()) + " : " + emitExpr(t.ifFalse()) + ")";
             case PythonNode.Walrus w -> "(" + w.name() + " = " + emitExpr(w.value()) + ")";
+            case PythonNode.GenExp g -> emitGenExp(g);
+            case PythonNode.Starred s -> "..." + emitExpr(s.value());   // standalone (rare); spreads normally apply at emitArgs/emitElements
             case PythonNode.ListLit l -> emitElements(l.elements());
             case PythonNode.TupleLit l -> emitElements(l.elements());
             case PythonNode.DictLit d -> emitDict(d);
@@ -796,15 +829,18 @@ public final class PythonEmitter {
             if ("__init__".equals(attr.attr())) return "super(" + args + ")";
             return "super." + attr.attr() + "(" + args + ")";
         }
-        // separate positional args from keyword args first (so method-call mappings never see kwargs)
-        List<PythonNode> positional = new ArrayList<>();
+        // separate positional args / keyword args / **dict-spreads first (so method-call mappings never see kwargs)
+        List<PythonNode> positional = new ArrayList<>();   // may contain Starred(*) → spread by emitArgs
         Map<String, PythonNode> kwargs = new LinkedHashMap<>();
+        List<PythonNode> kwSpreads = new ArrayList<>();     // **expr → merged into the trailing kw object
         for (PythonNode a : c.args()) {
             if (a instanceof PythonNode.Kwarg k) kwargs.put(k.name(), k.value());
+            else if (a instanceof PythonNode.Starred s && s.dictSpread()) kwSpreads.add(s.value());
             else positional.add(a);
         }
+        boolean hasKw = !kwargs.isEmpty() || !kwSpreads.isEmpty();
         // method calls: map common str/list/dict/set methods to JS idioms (they take no kwargs)
-        if (kwargs.isEmpty() && c.func() instanceof PythonNode.Attribute mem) {
+        if (!hasKw && c.func() instanceof PythonNode.Attribute mem) {
             String mapped = emitMethodCall(mem, positional);
             if (mapped != null) return mapped;
         }
@@ -815,8 +851,22 @@ public final class PythonEmitter {
                 case "len" -> { if (positional.size() == 1) return "(" + e0 + ").length"; }
                 case "print" -> { return emitPrint(positional, kwargs); }
                 case "abs" -> { if (positional.size() == 1) return "Math.abs(" + e0 + ")"; }
-                case "min" -> { return positional.size() == 1 ? "Math.min(..." + e0 + ")" : "Math.min(" + emitArgs(positional) + ")"; }
-                case "max" -> { return positional.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(positional) + ")"; }
+                case "min" -> {
+                    PythonNode keyFn = kwargs.get("key");
+                    if (keyFn != null && positional.size() == 1) {
+                        String kf = emitExpr(keyFn);
+                        return "([...(" + e0 + ")]).reduce(function (a, b) { return (" + kf + "(a) <= " + kf + "(b)) ? a : b; })";
+                    }
+                    return positional.size() == 1 ? "Math.min(..." + e0 + ")" : "Math.min(" + emitArgs(positional) + ")";
+                }
+                case "max" -> {
+                    PythonNode keyFn = kwargs.get("key");
+                    if (keyFn != null && positional.size() == 1) {
+                        String kf = emitExpr(keyFn);
+                        return "([...(" + e0 + ")]).reduce(function (a, b) { return (" + kf + "(a) >= " + kf + "(b)) ? a : b; })";
+                    }
+                    return positional.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(positional) + ")";
+                }
                 case "sum" -> { if (positional.size() == 1) return "([...(" + e0 + ")]).reduce((a, b) => (a + b), 0)"; }
                 case "str" -> { if (positional.size() == 1) return "String(" + e0 + ")"; }
                 case "int" -> { return "parseInt(" + emitArgs(positional) + ")"; }
@@ -887,18 +937,18 @@ public final class PythonEmitter {
                 default -> {}
             }
             if (classNames.contains(fn.id())) {
-                if (!kwargs.isEmpty()) {
+                if (hasKw) {
                     if (!kwClassNames.contains(fn.id())) {
                         throw new IllegalArgumentException("python keyword arguments to '" + fn.id()
                                 + "()' require its __init__ to declare **kwargs");
                     }
                     return "new " + fn.id() + "(" + emitArgs(positional)
-                            + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs) + ")";
+                            + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs, kwSpreads) + ")";
                 }
                 return "new " + fn.id() + "(" + emitArgs(positional) + ")";
             }
         }
-        if (!kwargs.isEmpty()) {
+        if (hasKw) {
             // Keyword args route to a tagged trailing object only when the callee declares **kwargs.
             boolean kwAware = false;
             String label = "()";
@@ -914,7 +964,7 @@ public final class PythonEmitter {
                         + " (or be print/sorted); '" + label + "' does not");
             }
             return emitExpr(c.func()) + "(" + emitArgs(positional)
-                    + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs) + ")";
+                    + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs, kwSpreads) + ")";
         }
         return emitExpr(c.func()) + "(" + emitArgs(positional) + ")";
     }
@@ -928,7 +978,11 @@ public final class PythonEmitter {
     /** sorted(iter, reverse=) → numeric/string sort; reverse honours a True/False literal (else runtime). */
     private String emitSorted(List<PythonNode> args, Map<String, PythonNode> kwargs) {
         if (args.size() != 1) breakKeyword("sorted", args.size());
-        String sorted = "([...(" + emitExpr(args.get(0)) + ")]).sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
+        PythonNode keyFn = kwargs.get("key");
+        String cmp = keyFn != null
+                ? "function (a, b) { var ka = (" + emitExpr(keyFn) + ")(a), kb = (" + emitExpr(keyFn) + ")(b); return (ka < kb) ? -1 : (ka > kb) ? 1 : 0; }"
+                : "(a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0))";
+        String sorted = "([...(" + emitExpr(args.get(0)) + ")]).sort(" + cmp + ")";
         PythonNode rev = kwargs.get("reverse");
         if (rev == null) return sorted;
         if (rev instanceof PythonNode.BoolLit b) return b.value() ? sorted + ".reverse()" : sorted;
@@ -1048,7 +1102,9 @@ public final class PythonEmitter {
         StringBuilder sb = new StringBuilder("({");
         for (int i = 0; i < d.keys().size(); i++) {
             if (i > 0) sb.append(", ");
-            sb.append("[").append(emitExpr(d.keys().get(i))).append("]: ").append(emitExpr(d.values().get(i)));
+            PythonNode k = d.keys().get(i);
+            if (k instanceof PythonNode.Starred sk) sb.append("...").append(emitExpr(sk.value()));   // {**spread}
+            else sb.append("[").append(emitExpr(k)).append("]: ").append(emitExpr(d.values().get(i)));
         }
         return sb.append("})").toString();
     }
@@ -1057,7 +1113,9 @@ public final class PythonEmitter {
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < elems.size(); i++) {
             if (i > 0) sb.append(", ");
-            sb.append(emitExpr(elems.get(i)));
+            PythonNode e = elems.get(i);
+            if (e instanceof PythonNode.Starred s) sb.append("...").append(emitExpr(s.value()));   // *spread
+            else sb.append(emitExpr(e));
         }
         return sb.append("]").toString();
     }
@@ -1066,7 +1124,9 @@ public final class PythonEmitter {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < args.size(); i++) {
             if (i > 0) sb.append(", ");
-            sb.append(emitExpr(args.get(i)));
+            PythonNode a = args.get(i);
+            if (a instanceof PythonNode.Starred s) sb.append("...").append(emitExpr(s.value()));   // f(*args)
+            else sb.append(emitExpr(a));
         }
         return sb.toString();
     }

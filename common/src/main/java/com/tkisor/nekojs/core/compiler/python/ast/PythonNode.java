@@ -67,6 +67,8 @@ public sealed interface PythonNode {
     record ListComp(PythonNode element, List<CompClause> clauses) implements PythonNode {}
     record DictComp(PythonNode key, PythonNode value, List<CompClause> clauses) implements PythonNode {}
     record SetComp(PythonNode element, List<CompClause> clauses) implements PythonNode {}
+    record GenExp(PythonNode element, List<CompClause> clauses) implements PythonNode {}   // (expr for ...) → generator
+    record Starred(PythonNode value, boolean dictSpread) implements PythonNode {}           // *x / **x unpacking
     record Try(List<PythonNode> body, List<ExceptClause> excepts, List<PythonNode> elseBody,
                List<PythonNode> finallyBody)
             implements PythonNode {}                                    // else/finally empty → absent

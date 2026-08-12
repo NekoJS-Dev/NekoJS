@@ -507,12 +507,17 @@ public final class PythonParser {
         if (matchOp("(")) {
             if (matchOp(")")) return new PythonNode.TupleLit(List.of()); // ()
             PythonNode first = parseTest();
-            if (peek().isKw("for")) throw error("generator expressions are not supported in v1");
+            if (peek().isKw("for")) {
+                // generator expression: (expr for ...)
+                List<PythonNode.CompClause> clauses = parseCompClauses();
+                expectOp(")");
+                return new PythonNode.GenExp(first, clauses);
+            }
             if (matchOp(",")) {
                 List<PythonNode> elems = new ArrayList<>();
                 elems.add(first);
                 while (!atOp(")")) {
-                    elems.add(parseTest());
+                    elems.add(parseElement());
                     if (!matchOp(",")) break;
                 }
                 expectOp(")");
@@ -523,20 +528,34 @@ public final class PythonParser {
         }
         if (matchOp("[")) {
             if (matchOp("]")) return new PythonNode.ListLit(List.of()); // []
-            PythonNode first = parseTest();
+            PythonNode first = parseElement();
             if (peek().isKw("for")) return parseListCompRest(first);
             List<PythonNode> elems = new ArrayList<>();
             elems.add(first);
             while (matchOp(",")) {
                 if (atOp("]")) break;
-                elems.add(parseTest());
+                elems.add(parseElement());
             }
             expectOp("]");
             return new PythonNode.ListLit(elems);
         }
         if (matchOp("{")) {
             if (matchOp("}")) return new PythonNode.DictLit(List.of(), List.of()); // {}
-            PythonNode first = parseTest();
+            if (atOp("**")) {   // dict with a leading **spread
+                List<PythonNode> keys = new ArrayList<>();
+                List<PythonNode> values = new ArrayList<>();
+                advance();
+                keys.add(new PythonNode.Starred(parseTest(), true));
+                values.add(new PythonNode.NoneLit());
+                while (matchOp(",")) {
+                    if (atOp("}")) break;
+                    if (matchOp("**")) { keys.add(new PythonNode.Starred(parseTest(), true)); values.add(new PythonNode.NoneLit()); }
+                    else { PythonNode k = parseTest(); expectOp(":"); keys.add(k); values.add(parseTest()); }
+                }
+                expectOp("}");
+                return new PythonNode.DictLit(keys, values);
+            }
+            PythonNode first = parseElement();   // *x (set spread) or a plain test
             if (matchOp(":")) {
                 PythonNode val = parseTest();
                 if (peek().isKw("for")) {
@@ -548,9 +567,8 @@ public final class PythonParser {
                 List<PythonNode> values = new ArrayList<>(List.of(val));
                 while (matchOp(",")) {
                     if (atOp("}")) break;
-                    keys.add(parseTest());
-                    expectOp(":");
-                    values.add(parseTest());
+                    if (matchOp("**")) { keys.add(new PythonNode.Starred(parseTest(), true)); values.add(new PythonNode.NoneLit()); }
+                    else { keys.add(parseTest()); expectOp(":"); values.add(parseTest()); }
                 }
                 expectOp("}");
                 return new PythonNode.DictLit(keys, values);
@@ -563,12 +581,18 @@ public final class PythonParser {
             List<PythonNode> elems = new ArrayList<>(List.of(first));
             while (matchOp(",")) {
                 if (atOp("}")) break;
-                elems.add(parseTest());
+                elems.add(parseElement());
             }
             expectOp("}");
             return new PythonNode.SetLit(elems);
         }
         throw error("unexpected token '" + peek().text() + "' in expression");
+    }
+
+    /** A list/tuple/set element: a {@code *spread} or a plain test. */
+    private PythonNode parseElement() {
+        if (matchOp("*")) return new PythonNode.Starred(parseTest(), false);
+        return parseTest();
     }
 
     private PythonNode parseListCompRest(PythonNode element) {
@@ -641,17 +665,26 @@ public final class PythonParser {
     private List<PythonNode> parseArgList(String close) {
         List<PythonNode> args = new ArrayList<>();
         if (atOp(close)) return args;
+        boolean first = true;
         while (true) {
-            if (matchOp("**") || matchOp("*")) {}
-            // keyword argument: NAME '=' value (but not '==')
-            if (peek().type() == PythonToken.Type.NAME && pos + 1 < tokens.size()
+            if (atOp("**")) { advance(); args.add(new PythonNode.Starred(parseTest(), true)); }
+            else if (atOp("*")) { advance(); args.add(new PythonNode.Starred(parseTest(), false)); }
+            else if (peek().type() == PythonToken.Type.NAME && pos + 1 < tokens.size()
                     && tokens.get(pos + 1).isOp("=")) {
+                // keyword argument: NAME '=' value (but not '==')
                 String name = advance().text();
                 advance(); // '='
                 args.add(new PythonNode.Kwarg(name, parseTest()));
             } else {
-                args.add(parseTest());
+                PythonNode e = parseTest();
+                if (first && peek().isKw("for")) {
+                    // sole generator-expression argument: f(x for x in xs)
+                    args.add(new PythonNode.GenExp(e, parseCompClauses()));
+                    return args;
+                }
+                args.add(e);
             }
+            first = false;
             if (!matchOp(",")) break;
             if (atOp(close)) break;   // trailing comma
         }
