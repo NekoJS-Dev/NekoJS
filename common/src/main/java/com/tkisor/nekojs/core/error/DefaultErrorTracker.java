@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.error;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -88,20 +87,21 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
         String eventPath = pathStr;
         ScriptId runtimeId = eventErrorId(currentType, eventPath);
+        // 先去重（只比对轻量签名，不读取源码文件）：命中同一错误时仅递增频次，
+        // 避免高频回调（如 20Hz tick 循环）每次错误都重建 ScriptError 并重读源码文件。
         ScriptError scriptError = errors.compute(runtimeId, (ignored, previous) -> {
-            ScriptError next = new ScriptError(currentType, runtimeId, eventPath, throwable, this);
-            if (previous != null && sameEventError(previous, next)) {
-                next.setOccurrenceCount(previous.getOccurrenceCount() + 1);
+            if (previous != null && sameEventError(previous, throwable)) {
+                previous.incrementOccurrence();
+                return previous;
             }
-            return next;
+            return new ScriptError(currentType, runtimeId, eventPath, throwable, this);
         });
 
         String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs());
         String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
-        if (currentType != null) {
-            currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
-        }
-        NekoJS.LOGGER.error("Script {} callback exception:\n{}", kind, detail);
+        // 唯一的控制台输出点：经 CollapsingAppender 写入 per-type 日志文件并镜像到主控制台。
+        // 不再直接写 NekoJS.LOGGER，避免同一条回调错误在控制台重复输出。
+        currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
     }
 
     @Override
@@ -149,10 +149,11 @@ public final class DefaultErrorTracker implements ErrorTracker {
         return new ScriptId("nekojs", "rt/" + type.name() + "/" + pathStr.replace(':', '_'));
     }
 
-    private static boolean sameEventError(ScriptError previous, ScriptError next) {
-        return Objects.equals(previous.getErrorMessage(), next.getErrorMessage())
-                && previous.getLineNumber() == next.getLineNumber()
-                && previous.getColumnNumber() == next.getColumnNumber();
+    private boolean sameEventError(ScriptError previous, Throwable throwable) {
+        ScriptError.ErrorSignature signature = ScriptError.parseSignature(this, throwable, previous.getScript());
+        return Objects.equals(previous.getErrorMessage(), signature.errorMessage)
+                && previous.getLineNumber() == signature.lineNumber
+                && previous.getColumnNumber() == signature.columnNumber;
     }
 
     /* ================= 源码位置格式化 helper（实例方法，使用注入 paths） ================= */

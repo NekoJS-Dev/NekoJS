@@ -29,7 +29,7 @@ public class ScriptError {
 
     private String fallbackPath = "Unknown location";
 
-    private int occurrenceCount = 1;
+    private volatile int occurrenceCount = 1;
     private final DefaultErrorTracker tracker;
 
     public ScriptError(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
@@ -52,50 +52,89 @@ public class ScriptError {
     }
 
     private void parseException() {
+        applySignature(parseSignature(tracker, rawException, script));
+    }
+
+    /**
+     * 轻量解析（不读取源码文件）：仅提取错误信息、映射后的行列号等字段。
+     * 既作为去重签名（{@code DefaultErrorTracker} 在构造完整 {@code ScriptError} 之前先比对），
+     * 也作为完整解析 {@link #parseException()} 的输入，保证两者字段完全一致。
+     */
+    static ErrorSignature parseSignature(DefaultErrorTracker tracker, Throwable rawException, ScriptContainer script) {
         Throwable primary = primaryCause(rawException);
         if (primary instanceof NekoEsmLinkException linkException) {
-            parseEsmDiagnostic(linkException.diagnostic());
-            this.errorMessage = linkException.diagnostic().message();
-            return;
+            NekoEsmDiagnostic diagnostic = linkException.diagnostic();
+            if (diagnostic == null) {
+                return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "");
+            }
+            String message = diagnostic.message();
+            String errorPath = diagnostic.file() != null ? pathToDisplay(tracker, diagnostic.file()) : null;
+            return new ErrorSignature(message != null ? message : "Unknown error", errorPath,
+                    diagnostic.line(), diagnostic.column(), null, true, true, null, "");
         }
         PolyglotException polyglotException = findPolyglotException(rawException);
         if (polyglotException != null) {
-            this.errorMessage = bestMessage(primary);
-
-            SourceSection sourceLocation = bestUserSourceLocation(polyglotException);
+            String errorMessage = bestMessage(primary);
+            SourceSection sourceLocation = bestUserSourceLocation(tracker, polyglotException, script);
             if (sourceLocation != null) {
                 int rawLine = sourceLocation.getStartLine();
                 int rawColumn = sourceLocation.getStartColumn();
                 CharSequence chars = sourceLocation.getCharacters();
                 String jsSnippet = chars != null ? chars.toString().trim() : "";
 
-                String displayPath = extractRelativePath(sourceLocation);
+                String displayPath = extractRelativePath(tracker, sourceLocation);
                 SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(displayPath, rawLine, rawColumn);
-                this.errorPath = pos.path != null && !pos.path.isBlank() ? pos.path : displayPath;
-                this.lineNumber = pos.line;
-                this.columnNumber = pos.column;
-                this.originalSymbolName = pos.name;
-                this.sourceCodeSnippet = buildSourceSnippet(this.errorPath, pos.sourceContent, usefulFallbackSnippet(jsSnippet));
+                String errorPath = pos.path != null && !pos.path.isBlank() ? pos.path : displayPath;
+                return new ErrorSignature(errorMessage, errorPath, pos.line, pos.column, pos.name,
+                        true, false, pos.sourceContent, usefulFallbackSnippet(jsSnippet));
             }
-        } else {
-            this.errorMessage = bestMessage(primary);
+            return new ErrorSignature(errorMessage, null, -1, -1, null, false, false, null, "");
         }
+        return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "");
     }
 
-    private void parseEsmDiagnostic(NekoEsmDiagnostic diagnostic) {
-        if (diagnostic == null) {
+    /** 将轻量解析结果写入实例字段；仅在 {@code buildSnippet} 时读取源码文件构造代码片段。 */
+    private void applySignature(ErrorSignature signature) {
+        this.errorMessage = signature.errorMessage;
+        this.errorPath = signature.errorPath;
+        this.lineNumber = signature.lineNumber;
+        this.columnNumber = signature.columnNumber;
+        this.originalSymbolName = signature.originalSymbolName;
+        if (!signature.buildSnippet) {
+            this.sourceCodeSnippet = "";
             return;
         }
-        if (diagnostic.file() != null) {
-            this.errorPath = pathToDisplay(diagnostic.file());
-        }
-        this.lineNumber = diagnostic.line();
-        this.columnNumber = diagnostic.column();
-        this.sourceCodeSnippet = buildSourceSnippet(getDisplayPath(), "");
+        // ESM 诊断沿用旧 parseEsmDiagnostic 的 getDisplayPath() 语义；Polyglot 异常沿用旧逻辑的 errorPath。
+        String snippetPath = signature.snippetFromDisplayPath ? getDisplayPath() : signature.errorPath;
+        this.sourceCodeSnippet = buildSourceSnippet(snippetPath, signature.sourceContent, signature.fallbackSnippet);
     }
 
-    private String buildSourceSnippet(String displayPath, String fallbackSnippet) {
-        return buildSourceSnippet(displayPath, null, fallbackSnippet);
+    /** 轻量解析结果（包内可见）：错误信息、映射后的行列号等去重签名所需字段。 */
+    static final class ErrorSignature {
+        final String errorMessage;
+        final String errorPath;
+        final int lineNumber;
+        final int columnNumber;
+        final String originalSymbolName;
+        /** true = 需要读取源码文件构建代码片段；false = 片段为空串。 */
+        final boolean buildSnippet;
+        /** true = 片段路径用 getDisplayPath()（ESM 诊断）；false = 用 errorPath（Polyglot 异常）。 */
+        final boolean snippetFromDisplayPath;
+        final String sourceContent;
+        final String fallbackSnippet;
+
+        ErrorSignature(String errorMessage, String errorPath, int lineNumber, int columnNumber, String originalSymbolName,
+                       boolean buildSnippet, boolean snippetFromDisplayPath, String sourceContent, String fallbackSnippet) {
+            this.errorMessage = errorMessage;
+            this.errorPath = errorPath;
+            this.lineNumber = lineNumber;
+            this.columnNumber = columnNumber;
+            this.originalSymbolName = originalSymbolName;
+            this.buildSnippet = buildSnippet;
+            this.snippetFromDisplayPath = snippetFromDisplayPath;
+            this.sourceContent = sourceContent;
+            this.fallbackSnippet = fallbackSnippet;
+        }
     }
 
     private String buildSourceSnippet(String displayPath, String sourceContent, String fallbackSnippet) {
@@ -169,17 +208,17 @@ public class ScriptError {
             return errorPath;
         }
         if (script != null) {
-            return pathToDisplay(script.path);
+            return pathToDisplay(tracker, script.path);
         }
         return fallbackPath;
     }
 
-    private String extractRelativePath(SourceSection sourceLocation) {
+    private static String extractRelativePath(DefaultErrorTracker tracker, SourceSection sourceLocation) {
         if (sourceLocation == null || sourceLocation.getSource() == null) return "Unknown location";
         return tracker.extractRelativePath(sourceLocation.getSource());
     }
 
-    private String pathToDisplay(Path path) {
+    private static String pathToDisplay(DefaultErrorTracker tracker, Path path) {
         if (path == null) {
             return "Unknown location";
         }
@@ -250,9 +289,9 @@ public class ScriptError {
         return trimmed.length() <= 1 ? "" : trimmed;
     }
 
-    private SourceSection bestUserSourceLocation(PolyglotException exception) {
+    private static SourceSection bestUserSourceLocation(DefaultErrorTracker tracker, PolyglotException exception, ScriptContainer script) {
         SourceSection fallback = tracker.getBestSourceLocation(exception);
-        if (fallback != null && !isInternalFrame(extractRelativePath(fallback))) {
+        if (fallback != null && !isInternalFrame(extractRelativePath(tracker, fallback))) {
             return fallback;
         }
         for (PolyglotException.StackFrame frame : exception.getPolyglotStackTrace()) {
@@ -263,7 +302,7 @@ public class ScriptError {
             if (loc == null || loc.getSource() == null) {
                 continue;
             }
-            if (!isInternalFrame(extractRelativePath(loc))) {
+            if (!isInternalFrame(extractRelativePath(tracker, loc))) {
                 return loc;
             }
         }
