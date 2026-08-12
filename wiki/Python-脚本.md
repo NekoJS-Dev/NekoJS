@@ -64,7 +64,7 @@ ServerEvents.recipes(lambda event: (
 | `for/else`、`while/else`（未 `break` 才执行 `else`） | 支持 |
 | f-string `f'{x:.2f}'`（**含格式说明符与 `!r/!s/!a` 转换**） | 支持（详见「f-string」节） |
 | 装饰器 `@deco` / `@pkg.deco`（顶层函数、类） | 支持，降级为定义后 `name = deco(name)` |
-| `assert cond[, msg]` / `del target` | 支持（`assert`→`throw new Error(...)`；`del`→`delete`） |
+| `assert cond[, msg]` / `del target` | 支持（`assert`→`throw new Error(...)`；`del` 仅支持 `del d[k]` / `del obj.attr`，普通名字 `del x` 编译期报错） |
 | 类（`__init__`/构造器、`self`→`this`、`extends`、`super()`、`@staticmethod`/`@classmethod`/`@property`、`__str__`→`toString`） | 支持 |
 | 类型注解（参数 `x: int`、返回 `-> str`、变量 `x: int = 5`） | 支持（**解析后丢弃**，不参与运行时） |
 | `import` / `from ... import ...`（按相对路径加载兄弟 `.py`/`.js` 模块） | 支持 |
@@ -253,11 +253,13 @@ print(Cat.default())      # Animal(cat)
 
 - `self` 在实例方法里被改写成 JS 的 `this`；`@staticmethod` 方法不会被改写。
 - `__init__` → `constructor`，`__str__` → `toString`，其它方法名（含 snake_case）原样保留。
-- `extends` 翻译成 JS 的 `extends`；`super().__init__(args)` → `super(args)`，`super().method(args)` → `super.method(args)`。
+- `extends` 翻译成 JS 的 `extends`；`super().__init__(args)` → `super(args)`，`super().method(args)` → `super.method(args)`；`super()` 的**关键字参数**与 `**` 展开会编译期报错（JS `super()` 只接受位置参数）。
 - 类方法装饰器支持 `@staticmethod`/`@classmethod`/`@property`（其它会清晰报错）；顶层函数和类的装饰器见「装饰器」节。
 - `@classmethod` 降级为 `static` 方法，开头绑定 `var cls = this`（按 `Class.method()` 调用时 `cls` 即该类）。
 - `@property` 降级为 JS getter（`get name() { ... }`，只读，无 setter）。
 - 实例化自己定义的类时 `Cat('Tom')` 会自动降级为 `new Cat('Tom')`。
+- 类体里的普通赋值（`class C: x = 5`）降级为 ES2022 **静态类字段** `static x = 5;`（通过 `C.x` 访问，对应 Python 类属性语义）；类体内的**多重赋值 / 元组解包**会编译期报错。
+- 类 docstring（类体中的裸字符串语句）降级为 `// docstring:` 注释，不产生运行时效果。
 
 ### 装饰器
 
@@ -290,6 +292,8 @@ assert a == b, '不匹配'        # → throw new Error('不匹配')（Assertion
 del d['key']                  # → delete d['key']
 del obj.attr                  # → delete obj.attr
 ```
+
+> `del x`（删除普通名字）**不支持**——JS 无法解除 `var` 绑定，会编译期报错；请改用 `del d[k]` / `del obj.attr`。
 
 ### raise
 
@@ -362,7 +366,7 @@ print(circle_area(2))                    # 12.56
 - `import foo` → `import * as foo from './foo'`（命名空间，用 `foo.x` 访问）；`import foo as f` 同理绑定到 `f`。
 - `from foo import a, b` → `import { a, b } from './foo'`；`from foo import a as x` → `import { a as x } from './foo'`。
 - 每个 `.py` 文件会自动 **export 它所有顶层定义**（`def`/`class`/顶层赋值的名字），所以兄弟文件能直接 `from <它> import <名字>`——无需任何额外声明。
-- `from X import *` **不支持**（ESM 无法把命名空间展开进当前作用域）。
+- `from X import *` **不支持**（ESM 无法把命名空间展开进当前作用域）——唯一例外：`from nekojs import *`（及具名 `from nekojs import name`）会被**静默剥离**（nekojs 是给 IDE/pyright 看的类型桩入口，运行时无意义）。
 - import 必须在**模块顶层**（不能写在函数/类体里）。
 
 > NekoJS 注入的全局绑定（`ServerEvents`、`Item`、`Utils` …）仍在全局作用域里，直接用名字即可（`ServerEvents.started(...)`），无需 import。
@@ -393,14 +397,14 @@ print(circle_area(2))                    # 12.56
 | `map(f, iterable)` | `[...iterable].map(f)` | **函数在前**（与 Python 一致）；返回急切数组 |
 | `filter(pred, iterable)` | `[...iterable].filter(pred)` | **谓词在前** |
 | `zip(*iterables)` | 配对取最短 | 多个可迭代对象，返回 `[a,b]` 元组数组 |
-| `round(x[, n])` | `Math.round`（带 n 时按 10^n 缩放） | 银家舍入与 Python 略有差异 |
+| `round(x[, n])` | `Math.round`（带 n 时按 10^n 缩放） | 与 Python 的**银行家舍入**（四舍六入、五取偶）不同：JS `Math.round` 对 `.5` 一律**五入**（离零） |
 | `divmod(a, b)` | `[Math.floor(a/b), a % b]` | |
 | `ord(c)` / `chr(n)` | `codePointAt(0)` / `String.fromCodePoint(n)` | |
 | `pow(x, y)` | `Math.pow(x, y)` | 不支持三参数模幂 |
 | `hex(n)` / `oct(n)` / `bin(n)` | `"-0x"+abs.toString(16)` 等 | 负数带 `-` 前缀 |
 | `repr(x)` | `JSON.stringify(x)` | 近似 |
 | `format(x, spec)` | `__nekoFmt(x, spec, null)` | 与 f-string 格式说明符同一套规则 |
-| `isinstance(x, T)` / `isinstance(x, (A,B))` | `x instanceof T`（元组→链） | |
+| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | `x instanceof T`（元组/列表→链） | 内置异常名映射为 `Error`（`isinstance(e, ValueError)` → `e instanceof Error`） |
 | `type(x)` | `(x).constructor` | |
 | `callable(x)` | `typeof x === "function"` | |
 | `getattr(o, name[, d])` / `hasattr` / `setattr` / `delattr` | `o[name]` 括号访问（带默认值/存在判断/赋值/delete） | |
@@ -456,14 +460,14 @@ finally:
 - 裸 `except:` 捕获一切，必须是**最后一个** except 子句
 - **`else` 子句**：仅在 try 体「正常流到结尾」（无异常，且没被 `return`/`break`/`continue` 中断）时执行；它的异常**不会**被同一组 except 捕获，但 `finally` 仍会执行。
 - **裸 `raise`** 在 except 内重抛当前异常。
-- **Python 内置异常名**（`Exception`、`ValueError`、`TypeError`、`KeyError` 等）在 JS 运行时不存在，会被映射为 JS 的 `Error`（最接近的基类）。因此 `class MyErr(Exception):` 会转成 `class MyErr extends Error`，`raise MyErr()` + `except MyErr` 能**端到端匹配**。
+- **Python 内置异常名**（`Exception`、`ValueError`、`TypeError`、`KeyError` 等）在 JS 运行时不存在，会被映射为 JS 的 `Error`（最接近的基类）。因此 `class MyErr(Exception):` 会转成 `class MyErr extends Error`，`raise MyErr()` + `except MyErr` 能**端到端匹配**；`isinstance` 走同一映射（`isinstance(e, ValueError)` → `e instanceof Error`）。
 - `as e` 绑定的 `e` 是底层 JS 错误对象。
 
 > 注意：`raise 42`（抛非 Error 值）配合 `except Exception` **不会**匹配（`42 instanceof Error` 为假），异常会被重新抛出——这与 Python 语义一致。要捕获任意值用裸 `except:`。
 
 ## 装饰器
 
-见前文「类 → 装饰器」节（顶层函数/类的装饰器 `@deco` 降级为定义后包装；类方法装饰器仅 `@staticmethod`；`@deco(...)` 带参不支持）。
+见前文「类 → 装饰器」节（顶层函数/类的装饰器 `@deco` 降级为定义后包装；类方法装饰器仅 `@staticmethod`/`@classmethod`/`@property`；`@deco(...)` 带参不支持）。
 
 ## Python ↔ JS 差异要点
 
@@ -486,18 +490,21 @@ finally:
 
 ## 限制（仍不支持）
 
-下列语法/特性在当前版本**不支持**，遇到会清晰报错（错误信息会带文件名与位置）：
+下列语法/特性在当前版本**不支持**。其中一部分会在**编译期专门报错**（错误信息带文件名与位置）：
 
-- `from X import *`
+- `from X import *`（唯一例外：`from nekojs import *` 及具名 `from nekojs import name` 会被**静默剥离**，仅供 IDE/pyright 类型桩使用）
 - 矩阵乘 `@` / `@=`
-- 带参数的装饰器 `@deco(...)`、类方法装饰器（除 `@staticmethod` 外）
+- 带参数的装饰器 `@deco(...)`、其它类方法装饰器（`@staticmethod`/`@classmethod`/`@property` 除外）
 - `lambda` 里的 `**kwargs`
 - 关键字实参传给**未声明 `**kwargs`** 的普通函数（仅 `print`/`sorted` 特例）
-- `async` / `await` / 异步生成器
-- `global` / `nonlocal`
-- 字典合并运算符 `d1 | d2`（dict 上的 `|` 会按位或处理，请改用 `{**d1, **d2}`）
+
+另有一些只会产生**通用解析错误**（非专门提示），或**静默降级**：
+
+- `async` / `await` / 异步生成器 → 通用解析错误
+- `global` / `nonlocal` → 通用解析错误
+- 字典合并运算符 `d1 | d2` → 静默按位或处理（请改用 `{**d1, **d2}`）
 - 类型注解仅作「解析后丢弃」，不参与运行时类型检查（`int` 等 annot 名字不会被求值）
-- 上表以外的内置函数（如 `id`、`vars`、`globals`、`eval`、`exec`）
+- 上表以外的内置函数（如 `id`、`vars`、`globals`、`eval`、`exec`）→ 静默直发 JS 调用（不专门拦截）
 
 > 替代思路：需要这些能力时，直接写 JS 等价写法，或在 `.py` 里调用 NekoJS 暴露的 JS 绑定。Python 子集与 JS/TS 脚本在同一个运行时里，可以混用。
 

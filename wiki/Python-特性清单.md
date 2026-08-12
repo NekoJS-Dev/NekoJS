@@ -16,7 +16,7 @@
 
 | 特性 | PEP | 语法示例 | 对 JS 转译 | NekoJS 状态 |
 |---|---|---|---|---|
-| 结构化模式匹配 `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | 中（可降级为 if/else 链） | ❌ |
+| 结构化模式匹配 `match`/`case` | PEP 634 | `match x:\n  case 1: ...` | 中（可降级为 if/else 链） | ✅（PEP 634，字面量/通配/捕获/`|`/序列/映射/类模式 + guard） |
 | 括号化多上下文管理器 | — | `with (a as x, b as y):` | 易（已支持多项 `with`） | ✅（等价 `with a as x, b as y:`） |
 | `X \| Y` 联合类型注解 | PEP 604 | `def f(x: int \| str)` | 易（注解直接丢弃） | ✅（注解已丢弃） |
 | 更精确的错误定位（带 `^` 指示） | — | — | 与转译无关 | — |
@@ -37,9 +37,9 @@
 | 特性 | PEP | 语法示例 | 对 JS 转译 | NekoJS 状态 |
 |---|---|---|---|---|
 | 类型参数新语法（`type` 语句 + `[T]` 泛型） | PEP 695 | `type ListOrSet[T] = ...` / `def f[T]():` | 注解层面，丢弃即可 | ❌（未解析 `[T]`/`type` 语句） |
-| f-string 形式化（PEP 701：任意表达式、嵌套引号、反斜杠、注释、嵌套 f-string） | PEP 701 | `f"{f'{x}'}"`、`f"{'\n'.join(xs)}"` | 中（需更强 tokenizer） | 🟡（支持插值与格式说明符；嵌套同引号/反斜杠未支持） |
+| f-string 形式化（PEP 701：任意表达式、嵌套引号、反斜杠、注释、嵌套 f-string） | PEP 701 | `f"{f'{x}'}"`、`f"{'\n'.join(xs)}"` | 中（需更强 tokenizer） | 🟡（支持插值与格式说明符；嵌套同引号 f-string 与注释不支持；字符串内反斜杠转义可用） |
 | 每解释器独立 GIL | PEP 684 | — | 运行时/解释器层，无关 | — |
-| `@override` 装饰器（typing） | PEP 698 | `@override\ndef m():` | 注解，丢弃即可 | ❌（类方法装饰器仅 `@staticmethod`） |
+| `@override` 装饰器（typing） | PEP 698 | `@override\ndef m():` | 注解，丢弃即可 | ❌（类方法装饰器仅 `@staticmethod`/`@classmethod`/`@property`） |
 | 缓冲区协议对 Python 暴露 | PEP 688 | — | C 层，无关 | — |
 | 推导式「内联化」（语义不变的性能优化） | PEP 709 | — | 语义不变，无关 | — |
 
@@ -119,9 +119,9 @@
 
 ### 内建函数
 
-NekoJS 已映射的内建（详见 [Python-脚本.md](Python-脚本.md)「内置函数」表）：`range / len / print / abs / min / max / sum / str / int / float / bool / list / dict / set / tuple / sorted / any / all / enumerate / reversed / map / filter / zip / round / divmod / ord / chr / pow / hex / oct / bin / repr / format / isinstance / type / callable`。
+NekoJS 已映射的内建（详见 [Python-脚本.md](Python-脚本.md)「内置函数」表）：`range / len / print / abs / min / max / sum / str / int / float / bool / list / dict / set / tuple / sorted / any / all / enumerate / reversed / map / filter / zip / round / divmod / ord / chr / pow / hex / oct / bin / repr / format / isinstance / type / callable / getattr / hasattr / setattr / delattr / iter / next / frozenset`。
 
-仍未映射：`id / vars / globals / locals / eval / exec / hasattr / setattr / getattr / input / open / iter / next / frozenset / complex / ...`（多为反射、IO 或与 JS 运行时不匹配者）。
+仍未映射：`id / vars / globals / locals / eval / exec / input / open / complex / ...`（多为反射、IO 或与 JS 运行时不匹配者）。
 
 ---
 
@@ -129,18 +129,15 @@ NekoJS 已映射的内建（详见 [Python-脚本.md](Python-脚本.md)「内置
 
 | 特性 | 优先级 | 理由 | 预期映射 |
 |---|---|---|---|
-| `match`/`case` | 🟡 中 | 实用、可降级为 if/else 链；但模式解构（序列/映射/类模式）工作量大 | 降级为 `if/else if` 链（先支持字面量与类模式） |
 | dict 合并 `\|` | 🟢 低 | 少见；`{...a, ...b}` 即可 | 对 dict 操作数特化为 spread 合并 |
 | f-string PEP 701 放宽 | 🟡 中 | 嵌套同引号 / 反斜杠 / 注释 | 需更强的 f-string tokenizer（当前 FStringParser 够用绝大多数场景） |
 | `global`/`nonlocal` | 🔴 低/跳过 | JS 模块作用域语义差异大，难忠实映射 | 建议跳过，鼓励用返回值/容器 |
-| `@property`/`@classmethod` | 🟡 中 | OOP 常用 | `Object.defineProperty` getter / 绑定类 |
 | `async`/`await` | 🔴 低 | GraalJS 支持但脚本侧事件循环接入复杂 | 暂跳过 |
 | 异常组 `except*` | 🔴 低 | JS 无原生对应，模拟成本高 | 跳过 |
 | t-string（3.14） | 🔴 低 | 太新、需 `Template` 类型 | 跳过 |
 | 类型注解求值 | 🔴 低 | 与转译目标无关（静态类型） | 永久丢弃 |
-| 更多内建（`getattr`/`hasattr`/`iter`/`next`） | 🟢 低 | 按需补 | 属性访问 / `Symbol.iterator` |
 
-> 已**完成**的高价值扩展（本轮）：生成器/yield、`with`、多层推导式、任意切片步长、f-string 格式说明符、`**kwargs`+关键字调用、`assert`/`del`/海象、`try/else`、裸 `raise`、类型注解丢弃、扩展内建函数。
+> 已**完成**的高价值扩展（本轮）：生成器/yield、`with`、多层推导式、任意切片步长、f-string 格式说明符、`**kwargs`+关键字调用、`assert`/`del`/海象、`try/else`、裸 `raise`、类型注解丢弃、扩展内建函数、`match`/`case`（全部模式）、`@property`/`@classmethod`、`getattr`/`hasattr`/`setattr`/`delattr`/`iter`/`next`/`frozenset`。
 
 ---
 
