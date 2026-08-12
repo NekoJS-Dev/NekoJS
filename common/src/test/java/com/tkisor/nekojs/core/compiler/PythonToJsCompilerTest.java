@@ -533,6 +533,81 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- with statement (context managers) ----
+
+    @Test
+    void withBindsValueAndRunsExit() throws Exception {
+        // A Python-style context manager: __enter__ returns self, __exit__ runs in finally.
+        String src = """
+                class CM:
+                    def __init__(self):
+                        self.entered = False
+                        self.exited = False
+                    def __enter__(self):
+                        self.entered = True
+                        return self
+                    def __exit__(self):
+                        self.exited = True
+                cm = CM()
+                with cm as obj:
+                    obj.entered
+                cm.exited
+                """;
+        String js = py(src);
+        assertTrue(js.contains("try {") && js.contains("} finally {"), "with → try/finally: " + js);
+        assertTrue(js.contains(".__enter__()"), "with calls __enter__: " + js);
+        assertTrue(evalBool(src));
+    }
+
+    @Test
+    void withWithoutManagerJustBinds() throws Exception {
+        // No __enter__/__exit__ → the context value is bound as-is (the common binding case).
+        String src = """
+                with {'a': 1, 'b': 2} as d:
+                    d['b']
+                """;
+        assertEquals(2, evalInt(src));
+    }
+
+    @Test
+    void withMultipleItemsNest() throws Exception {
+        // with a as x, b as y: → nested acquire/release; both exits run.
+        String src = """
+                log = []
+                class CM:
+                    def __init__(self, tag):
+                        self.tag = tag
+                    def __enter__(self):
+                        log.append(self.tag + 'in')
+                        return self.tag
+                    def __exit__(self):
+                        log.append(self.tag + 'out')
+                with CM('a') as x, CM('b') as y:
+                    log.append(x + y)
+                log[0] + log[1] + log[2] + log[3] + log[4]
+                """;
+        // ain, bin, ab, bout, aout → "ainbinabboutaout"
+        assertEquals("ainbinabboutaout", evalString(src));
+    }
+
+    @Test
+    void withBodyReturnPropagates() throws Exception {
+        // return inside with must return from the enclosing function (not be trapped by the lowering).
+        String src = """
+                class CM:
+                    def __enter__(self):
+                        return self
+                    def __exit__(self):
+                        pass
+                def f():
+                    with CM() as c:
+                        return 42
+                    return 0
+                f()
+                """;
+        assertEquals(42, evalInt(src));
+    }
+
     // ---- audit-driven regression tests (crashes & wrong output on common code) ----
 
     @Test

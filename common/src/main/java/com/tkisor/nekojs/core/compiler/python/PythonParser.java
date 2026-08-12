@@ -95,6 +95,7 @@ public final class PythonParser {
             case "for" -> parseFor();
             case "while" -> parseWhile();
             case "try" -> parseTry();
+            case "with" -> parseWith();
             default -> throw error("unexpected compound keyword '" + kw + "'");
         };
     }
@@ -169,6 +170,23 @@ public final class PythonParser {
         // while/else: parse to avoid a crash; v1 discards the else body (no break-tracking).
         if (matchKw("else")) { expectOp(":"); parseSuite(); }
         return new PythonNode.While(cond, body);
+    }
+
+    private PythonNode parseWith() {
+        expectKw("with");
+        List<PythonNode.WithItem> items = new ArrayList<>();
+        while (true) {
+            PythonNode ctx = parseTest();
+            // 'as' binds a single target (a name or a parenthesised tuple); NOT a comma-list,
+            // so the comma separating with-items is left for the loop below to consume.
+            PythonNode target = matchKw("as") ? parseUnary() : null;
+            items.add(new PythonNode.WithItem(ctx, target));
+            if (!matchOp(",")) break;
+            if (atOp(":")) break;   // trailing comma before ':'
+        }
+        expectOp(":");
+        List<PythonNode> body = parseSuite();
+        return new PythonNode.With(items, body);
     }
 
     private PythonNode parseTry() {
@@ -687,7 +705,8 @@ public final class PythonParser {
     }
     private boolean isCompoundKw() {
         return peek().isKw("def") || peek().isKw("class") || peek().isKw("if")
-                || peek().isKw("for") || peek().isKw("while") || peek().isKw("try");
+                || peek().isKw("for") || peek().isKw("while") || peek().isKw("try")
+                || peek().isKw("with");
     }
     private void skipNewlines() { while (at(PythonToken.Type.NEWLINE)) advance(); }
 

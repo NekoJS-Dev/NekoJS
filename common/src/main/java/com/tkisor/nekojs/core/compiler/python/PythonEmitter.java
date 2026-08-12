@@ -82,6 +82,7 @@ public final class PythonEmitter {
                 applyDecorators(f.name(), f.decorators());
             }
             case PythonNode.ClassDef c -> emitClass(c);
+            case PythonNode.With w -> emitWith(w, 0);
             case PythonNode.Try t -> {
                 line("try {");
                 block(t.body());
@@ -427,6 +428,39 @@ public final class PythonEmitter {
             case "discard" -> obj + ".delete(" + a + ")";
             default -> null;
         };
+    }
+
+    /**
+     * Lowers {@code with ctx [as tgt]: body} to an in-scope acquire/try/finally (not wrapped in an
+     * IIFE) so that {@code return}/{@code break}/{@code continue} inside the body propagate to the
+     * enclosing scope. If the context object exposes JS {@code __enter__}/{@code __exit__} methods
+     * (a Python-style context manager), they are called; otherwise the value is bound as-is, which
+     * covers the common {@code with EXPR as x:} binding case. Multiple items nest.
+     */
+    private void emitWith(PythonNode.With w, int idx) {
+        if (idx == w.items().size()) {
+            for (PythonNode s : w.body()) emitStmt(s);   // body sits inside the innermost try { }
+            return;
+        }
+        PythonNode.WithItem item = w.items().get(idx);
+        String ctxVar = "__nekoCtx" + (tempCounter++);
+        line("var " + ctxVar + " = " + emitExpr(item.context()) + ";");
+        String entered = "((" + ctxVar + " != null && typeof " + ctxVar + ".__enter__ === \"function\") ? "
+                + ctxVar + ".__enter__() : " + ctxVar + ")";
+        if (item.target() != null) {
+            line("var " + emitTarget(item.target()) + " = " + entered + ";");
+        } else {
+            line(entered + ";");   // call __enter__ for its side effect, discard the value
+        }
+        line("try {");
+        indent++;
+        emitWith(w, idx + 1);
+        indent--;
+        line("} finally {");
+        indent++;
+        line("if (" + ctxVar + " != null && typeof " + ctxVar + ".__exit__ === \"function\") " + ctxVar + ".__exit__();");
+        indent--;
+        line("}");
     }
 
     private void writeIf(PythonNode.If i, boolean leadIndent) {

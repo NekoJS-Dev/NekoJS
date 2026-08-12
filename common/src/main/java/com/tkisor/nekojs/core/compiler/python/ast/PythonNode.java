@@ -68,6 +68,7 @@ public sealed interface PythonNode {
             implements PythonNode {}
     record Try(List<PythonNode> body, List<ExceptClause> excepts, List<PythonNode> finallyBody)
             implements PythonNode {}                                    // excepts/finallyBody empty → absent
+    record With(List<WithItem> items, List<PythonNode> body) implements PythonNode {}   // 1+ context-manager items
 
     /** Function/lambda parameter (helper, not itself a node). starArg == true → {@code *name} (varargs). */
     record Param(String name, PythonNode defaultValue, boolean starArg) {}
@@ -77,4 +78,7 @@ public sealed interface PythonNode {
 
     /** {@code except} clause (helper, not itself a node). types empty → bare except; name null → no binding. */
     record ExceptClause(List<PythonNode> types, String name, List<PythonNode> body) {}
+
+    /** {@code with} item (helper, not itself a node). target == null → no {@code as} binding. */
+    record WithItem(PythonNode context, PythonNode target) {}
 }
