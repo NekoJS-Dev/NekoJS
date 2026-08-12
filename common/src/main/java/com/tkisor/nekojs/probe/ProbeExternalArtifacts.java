@@ -6,7 +6,7 @@ import com.tkisor.nekojs.script.WorkspaceGenerator;
 import java.nio.file.Path;
 
 /**
- * External side-effects that ProbeOrchestrator runs outside the outputDir staging swap.
+ * External side-effects that {@link ProbeCoordinator} runs outside the per-backend staging swap.
  * Extracted to allow isolated directory-tree testing with {@link #NONE}.
  */
 public interface ProbeExternalArtifacts {

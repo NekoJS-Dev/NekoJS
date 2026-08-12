@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.surface.*;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,8 +36,7 @@ class ProbeOutputCompatibilityTest {
     @Test
     void legacyFilesStillExistWithManagedOutput() throws Exception {
         NekoScriptCatalogSnapshot snapshot = LegacyProbeFixture.snapshot();
-        ProbeOrchestrator orchestrator = new ProbeOrchestrator(ProbeExternalArtifacts.NONE);
-        var result = orchestrator.generate(snapshot, tempDir.resolve("probe-types"));
+        var result = generateAt(snapshot, tempDir.resolve("probe-types"));
         assertTrue(result.success(), "Probe generation should succeed: " + result.message());
 
         Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
@@ -54,14 +54,13 @@ class ProbeOutputCompatibilityTest {
     @Test
     void repeatedGenerationProducesIdenticalFileHashes() throws Exception {
         NekoScriptCatalogSnapshot snapshot = LegacyProbeFixture.snapshot();
-        ProbeOrchestrator orchestrator = new ProbeOrchestrator(ProbeExternalArtifacts.NONE);
 
         Path probeDir1 = tempDir.resolve("run1").resolve("probe-types");
         Path probeDir2 = tempDir.resolve("run2").resolve("probe-types");
 
-        var result1 = orchestrator.generate(snapshot, probeDir1);
+        var result1 = generateAt(snapshot, probeDir1);
         assertTrue(result1.success(), result1.message());
-        var result2 = orchestrator.generate(snapshot, probeDir2);
+        var result2 = generateAt(snapshot, probeDir2);
         assertTrue(result2.success(), result2.message());
 
         Map<String, String> files1 = readTree(probeDir1);
@@ -76,6 +75,20 @@ class ProbeOutputCompatibilityTest {
             assertEquals(files1.get(relPath), files2.get(relPath),
                     "Content mismatch for " + relPath + " across runs");
         }
+    }
+
+    /**
+     * 用 TypeScriptProbeBackend（Phase 1 起替代旧 ProbeOrchestrator）生成到指定目录。
+     * 显式传入旧 5-前缀白名单，确保与 golden tree 字节可比（无视测试平台的 defaultScanPackages）。
+     */
+    private ProbeGenerator.GenerateResult generateAt(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
+        ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("java", "net.minecraft", "net.minecraftforge", "net.neoforged", "com.tkisor.nekojs"),
+                List.of(), List.of(), List.of("minecraft"), 5, "SMART"));
+        List<Class<?>> collected = new ArrayList<>(ProbeCoordinator.collectClasses(snapshot, cfg));
+        TypeScriptProbeBackend backend = new TypeScriptProbeBackend();
+        ProbeContext ctx = new ProbeContext.Of(snapshot, collected, cfg, NekoJSPaths.get(), "typescript", outputDir);
+        return backend.generate(ctx);
     }
 
     private Map<String, String> readTree(Path root) throws IOException {

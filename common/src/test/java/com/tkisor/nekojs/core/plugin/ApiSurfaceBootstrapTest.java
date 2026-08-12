@@ -12,7 +12,7 @@ import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.surface.*;
 import com.tkisor.nekojs.core.api.FrozenApiRegistrySet;
 import com.tkisor.nekojs.core.api.CoreManagedApiBootstrap;
-import com.tkisor.nekojs.probe.ProbeRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,22 +37,14 @@ class ApiSurfaceBootstrapTest {
 
     @BeforeEach
     void resetStaticState() throws Exception {
-        resetProbeRegistry();
+        resetProbeBackendRegistry();
         resetNekoPluginRuntime();
     }
 
-    private static void resetProbeRegistry() throws Exception {
-        Field locked = ProbeRegistry.class.getDeclaredField("locked");
-        locked.setAccessible(true);
-        locked.set(null, false);
-
-        Field fallback = ProbeRegistry.class.getDeclaredField("fallbackGenerator");
-        fallback.setAccessible(true);
-        fallback.set(null, null);
-
-        Field registrar = ProbeRegistry.class.getDeclaredField("fallbackRegistrar");
-        registrar.setAccessible(true);
-        registrar.set(null, null);
+    private static void resetProbeBackendRegistry() throws Exception {
+        Field inst = ProbeBackendRegistry.class.getDeclaredField("INSTANCE");
+        inst.setAccessible(true);
+        inst.set(null, null);
     }
 
     private static void resetNekoPluginRuntime() throws Exception {

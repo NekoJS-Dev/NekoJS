@@ -1,0 +1,348 @@
+package com.tkisor.nekojs.probe;
+
+import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
+import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
+import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.probe.events.GlobalDecl;
+import com.tkisor.nekojs.probe.events.ProbeAddGlobalEventJS;
+import com.tkisor.nekojs.probe.events.ProbeAssignTypeEventJS;
+import com.tkisor.nekojs.probe.events.ProbeEvents;
+import com.tkisor.nekojs.probe.events.ProbeModifyTypeEventJS;
+import com.tkisor.nekojs.probe.events.ProbeOverrides;
+import com.tkisor.nekojs.probe.events.ProbeSnippetEventJS;
+import com.tkisor.nekojs.probe.events.Snippet;
+import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Type;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+/**
+ * Probe 协调器：跑一次共享类收集，再把结果派发给选中的 {@link ProbeBackend} 各自渲染。
+ *
+ * <p>Phase 1：共享收集 = 旧 {@code ProbeOrchestrator.collectClasses} 的 BFS（搬到此处并改为配置驱动）。
+ * 每个 backend 自管输出目录与 staging/swap；外部副作用（agent 模板 + workspace 配置）在本类统一执行一次。
+ *
+ * <p>静态工具风格（与旧 {@code ProbeRegistry} 一致）：命令经 {@link #run} 调用，配置经 {@link #config()} 读取。
+ */
+public final class ProbeCoordinator {
+
+    private static final ProbeConfigLoader CONFIG_LOADER = new ProbeConfigLoader();
+    private static volatile ProbeConfig cachedConfig;
+
+    private ProbeCoordinator() {}
+
+    /** 读取（首次加载并缓存）probe 配置。 */
+    public static ProbeConfig config() {
+        ProbeConfig c = cachedConfig;
+        if (c == null) {
+            c = CONFIG_LOADER.load(NekoJSPaths.get().probeConfig());
+            cachedConfig = c;
+        }
+        return c;
+    }
+
+    /** 丢弃配置缓存，下次 {@link #config()} 重新从盘读取（供 {@code /nekojs probe reload}）。 */
+    public static void reloadConfig() {
+        cachedConfig = null;
+    }
+
+    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（供 {@code /nekojs probe enable|disable} 命令）。异常仅 debug 日志吞掉，不回传细节。 */
+    public static void setEnabled(boolean enabled) {
+        try {
+            ProbeConfigLoader.setEnabled(NekoJSPaths.get().probeConfig(), enabled);
+        } catch (Throwable e) {
+            NekoJS.LOGGER.debug("Failed to persist probe enabled={} into probe.toml", enabled, e);
+        }
+        reloadConfig();
+    }
+
+    /** 当前 probe 总开关（{@code == config().enabled()}）。 */
+    public static boolean isEnabled() {
+        return config().enabled();
+    }
+
+    /**
+     * 共享类收集：从事件/绑定种子出发做轻量 BFS（仅收集类，不生成声明），按 {@link ProbeConfig} 包过滤。
+     * 适配器目标类、适配器别名引用的 host 类型等 backend 特定的后续增补留给各 backend 自行处理。
+     */
+    public static LinkedHashSet<Class<?>> collectClasses(NekoScriptCatalogSnapshot snapshot, ProbeConfig cfg) {
+        List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
+        Set<String> forcedPkgs = cfg.forcedPackages();
+        LinkedHashSet<Class<?>> visited = new LinkedHashSet<>();
+        Queue<Object[]> queue = new LinkedList<>();
+
+        // 种子类：事件类型和绑定类型（depth 0）
+        for (EventCatalogEntry event : snapshot.events()) {
+            if (event.eventType() != null) queue.add(new Object[]{event.eventType(), 0});
+            if (event.dispatchKeyType() != null) queue.add(new Object[]{event.dispatchKeyType(), 0});
+        }
+        for (BindingCatalogEntry binding : snapshot.bindings()) {
+            if (binding.javaType() != null) queue.add(new Object[]{binding.javaType(), 0});
+            // 代理绑定（如 Item）的 extraDocTypes（委托目标 MC 类）也作为种子
+            for (Class<?> extra : binding.extraDocTypes()) {
+                queue.add(new Object[]{extra, 0});
+            }
+        }
+
+        int maxDepth = cfg.scan().maxDepth() <= 0 ? 5 : cfg.scan().maxDepth();
+
+        while (!queue.isEmpty()) {
+            Object[] entry = queue.poll();
+            Class<?> cls = (Class<?>) entry[0];
+            int depth = (int) entry[1];
+
+            if (depth > maxDepth) continue;
+            if (cls == null || cls.isPrimitive() || cls == Object.class) continue;
+            if (visited.contains(cls)) continue;
+            if (!passesScanFilter(cfg, cls.getName(), platformPkgs, forcedPkgs)) continue;
+
+            visited.add(cls);
+
+            int nextDepth = depth + 1;
+            if (nextDepth > maxDepth) continue;
+
+            if (cls.getSuperclass() != null) queue.add(new Object[]{cls.getSuperclass(), nextDepth});
+            for (Class<?> iface : cls.getInterfaces()) queue.add(new Object[]{iface, nextDepth});
+
+            for (Constructor<?> ctor : cls.getDeclaredConstructors()) {
+                if (Modifier.isPublic(ctor.getModifiers())) {
+                    for (Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                }
+            }
+            for (Method method : cls.getDeclaredMethods()) {
+                if (Modifier.isPublic(method.getModifiers())) {
+                    collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth);
+                    for (Type p : method.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
+                }
+            }
+            for (Field field : cls.getDeclaredFields()) {
+                if (Modifier.isPublic(field.getModifiers())) collectTypeToQueue(field.getGenericType(), queue, nextDepth);
+            }
+        }
+
+        return visited;
+    }
+
+    /**
+     * collectClasses 的过滤判定（exclude 始终生效；FULL 直通 include；SMART 走白名单 + forceScanMods 补充）：
+     * <ul>
+     *   <li>命中 {@code excludePackages} → 跳过（FULL 模式同样生效）</li>
+     *   <li>mode == FULL → 收（跳过 include 白名单；闭包体积由 maxDepth 护栏）</li>
+     *   <li>其余取值（SMART 等）→ {@link ProbeConfig#isRelevantClass}；另命中 forceScanMods 前缀也收</li>
+     * </ul>
+     */
+    private static boolean passesScanFilter(ProbeConfig cfg, String fqn, List<String> platformPkgs, Set<String> forcedPkgs) {
+        if (cfg.isExcluded(fqn)) return false;
+        if ("FULL".equals(cfg.scan().mode())) return true;
+        if (cfg.isRelevantClass(fqn, platformPkgs)) return true;
+        for (String pkg : forcedPkgs) {
+            if (fqn.startsWith(pkg + ".")) return true;
+        }
+        return false;
+    }
+
+    private static void collectTypeToQueue(Type type, Queue<Object[]> queue, int depth) {
+        if (type instanceof Class<?> cls) {
+            queue.add(new Object[]{cls, depth});
+        } else if (type instanceof ParameterizedType pt) {
+            if (pt.getRawType() instanceof Class<?> rawCls) queue.add(new Object[]{rawCls, depth});
+            for (Type arg : pt.getActualTypeArguments()) collectTypeToQueue(arg, queue, depth);
+        } else if (type instanceof GenericArrayType gat) {
+            collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
+        }
+    }
+
+    /**
+     * 构建共享 IR（TypeReflector 反射每个收集到的类），依次：应用 {@code probe.assign_type}（全局类型重定向，
+     * 标记受影响类 mutated）→ 触发 {@code probe.modify_type}（参数级编辑）。反射失败的类被跳过。
+     * 返回不可变 IR 列表（已含编辑）。{@code assignMap} 为空时跳过应用步骤。
+     *
+     * <p>反射阶段并行执行（线程数 = min(可用核数, 8)，每类一个任务），随后按**原始收集顺序**（BFS 序）
+     * 汇总进 LinkedHashMap，保证 {@code List.copyOf(ir.values())} 与串行版本顺序一致；
+     * assign_type / modify_type 仍在 map 建完后串行执行（事件触发顺序不变）。
+     */
+    private static List<TypeDecl> buildAndMutateIr(Collection<Class<?>> collected, Map<String, ApiTypeRef> assignMap) {
+        List<Class<?>> ordered = new ArrayList<>(collected);
+        if (ordered.isEmpty()) return List.of();
+
+        Map<String, TypeDecl> ir = new LinkedHashMap<>();
+        int threads = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 8));
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            // 每类一个反射任务；TypeReflector 无实例状态，各任务新建实例（线程内独立）
+            List<Future<TypeDecl>> futures = new ArrayList<>(ordered.size());
+            for (Class<?> c : ordered) {
+                futures.add(pool.submit(() -> new TypeReflector().reflect(c)));
+            }
+            // 按原始收集顺序汇总：LinkedHashMap 插入序即 collectClasses 的 BFS 序，后续 List.copyOf 稳定
+            for (int i = 0; i < futures.size(); i++) {
+                try {
+                    ir.put(ordered.get(i).getName(), futures.get(i).get());
+                } catch (Throwable ignored) {
+                    // 无法反射的类跳过：TS 仍由 IndexFileGenerator 按旧路径生成；Python 不产出其 stub
+                }
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        // 1. assign_type：先重定向反射产出的类型（标记受影响类 mutated，TS 会重渲染）
+        if (assignMap != null && !assignMap.isEmpty()) {
+            for (TypeDecl d : ir.values()) ProbeAssignTypeEventJS.applyTo(d, assignMap);
+        }
+        // 2. modify_type：参数级编辑（在 assign 之后；modify_type 显式设置的类型不被 assign 二次覆盖）
+        if (!ir.isEmpty() && ProbeEvents.MODIFY_TYPE.hasListeners()) {
+            try {
+                ProbeEvents.MODIFY_TYPE.post(new ProbeModifyTypeEventJS(ir));
+            } catch (Throwable t) {
+                NekoJS.LOGGER.error("probe.modify_type event threw; edits may be incomplete", t);
+            }
+        }
+        return List.copyOf(ir.values());
+    }
+
+    /** 触发 {@code probe.assign_type} 一次，返回收集到的「Java FQN → 自定义类型」映射。 */
+    private static Map<String, ApiTypeRef> fireAssignType() {
+        ProbeAssignTypeEventJS ev = new ProbeAssignTypeEventJS();
+        try {
+            ProbeEvents.ASSIGN_TYPE.post(ev);
+        } catch (Throwable t) {
+            NekoJS.LOGGER.error("probe.assign_type event threw; assignments may be incomplete", t);
+        }
+        return ev.assignments();
+    }
+
+    /** 触发 {@code probe.add_global} 与 {@code probe.snippets}（各有监听器才触发），返回捆绑结果。 */
+    private static ProbeOverrides fireOverrides() {
+        List<GlobalDecl> globals = List.of();
+        List<Snippet> snippets = List.of();
+        if (ProbeEvents.ADD_GLOBAL.hasListeners()) {
+            ProbeAddGlobalEventJS ev = new ProbeAddGlobalEventJS();
+            try {
+                ProbeEvents.ADD_GLOBAL.post(ev);
+            } catch (Throwable t) {
+                NekoJS.LOGGER.error("probe.add_global event threw", t);
+            }
+            globals = ev.globals();
+        }
+        if (ProbeEvents.SNIPPETS.hasListeners()) {
+            ProbeSnippetEventJS ev = new ProbeSnippetEventJS();
+            try {
+                ProbeEvents.SNIPPETS.post(ev);
+            } catch (Throwable t) {
+                NekoJS.LOGGER.error("probe.snippets event threw", t);
+            }
+            snippets = ev.snippets();
+        }
+        return new ProbeOverrides(globals, snippets);
+    }
+
+    /**
+     * 对选中的 backend 集合执行一次 probe：共享收集 → 各 backend 渲染 → 外部副作用一次。
+     *
+     * @param snapshot 当前 catalog 快照
+     * @param backends 命令解析出的、本次要跑的 backend（已按 priority/名字解析）
+     * @return 每个 backend 的生成结果（顺序与输入一致）
+     */
+    public static List<ProbeGenerator.GenerateResult> run(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
+        if (backends.isEmpty()) {
+            return List.of(ProbeGenerator.GenerateResult.failure("no probe backend selected"));
+        }
+        ProbeConfig cfg = config();
+        if (!cfg.enabled()) {
+            return backends.stream()
+                    .map(b -> ProbeGenerator.GenerateResult.failure("probe disabled in probe.toml"))
+                    .toList();
+        }
+        // mode=NONE：整体关闭类扫描（在共享收集与 paths 获取之前尽早返回，不做任何写盘）
+        if ("NONE".equals(cfg.scan().mode())) {
+            return backends.stream()
+                    .map(b -> ProbeGenerator.GenerateResult.failure("probe disabled (scan mode=NONE in probe.toml)"))
+                    .toList();
+        }
+
+        LinkedHashSet<Class<?>> collected = collectClasses(snapshot, cfg);
+        NekoJSPaths paths = NekoJSPaths.get();
+
+        // 共享 IR：当 modify_type/assign_type 有监听器，或某 backend 需要 IR（Python 等）时构建一次。
+        // TS 默认不需要：三者皆无时 sharedIr=null，TS 走旧 ClassDeclGenerator 路径（零回归）。
+        boolean needIr = ProbeEvents.MODIFY_TYPE.hasListeners()
+                || ProbeEvents.ASSIGN_TYPE.hasListeners()
+                || backends.stream().anyMatch(ProbeBackend::requiresIr);
+        Map<String, ApiTypeRef> assignMap = ProbeEvents.ASSIGN_TYPE.hasListeners() ? fireAssignType() : Map.of();
+        List<TypeDecl> sharedIr = needIr ? buildAndMutateIr(collected, assignMap) : null;
+
+        // add_global / snippets：每次 probe 收集一次（各有监听器才触发）
+        ProbeOverrides overrides = fireOverrides();
+
+        // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
+        try {
+            Path baseDir = paths.gameDir().resolve(cfg.baseDir());
+            ProbeExternalArtifacts.DEFAULT.generate(baseDir);
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Probe external artifacts failed", e);
+        }
+
+        EditorConfigContributor editorConfigs = new FileEditorConfigContributor();
+        List<ProbeGenerator.GenerateResult> results = new ArrayList<>(backends.size());
+        for (ProbeBackend backend : backends) {
+            Path langDir = backend.outputDir(paths, cfg);
+            ProbeContext ctx = new ProbeContext.Of(
+                    snapshot,
+                    List.copyOf(collected),
+                    cfg,
+                    paths,
+                    backend.languageId(),
+                    langDir,
+                    sharedIr,
+                    overrides);
+            try {
+                results.add(backend.generate(ctx));
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Probe backend {}:{} failed", backend.languageId(), backend.name(), e);
+                results.add(ProbeGenerator.GenerateResult.failure(e.getMessage()));
+                continue;
+            }
+            // 生成成功后：向编辑器配置贡献本 backend 的片段（paths/extraPaths，幂等合并，指向真实输出目录）
+            try {
+                backend.contributeEditorConfig(editorConfigs, ctx);
+            } catch (Exception e) {
+                NekoJS.LOGGER.debug("Probe backend {}:{} editor-config contribution failed",
+                        backend.languageId(), backend.name(), e);
+            }
+        }
+
+        return results;
+    }
+
+    /** 当前已注册的 backend 总数（诊断用）。 */
+    public static int registeredBackendCount() {
+        return ProbeBackendRegistry.get().registrars().size();
+    }
+
+    /** 仅收集（不渲染），供诊断/测试。 */
+    public static Set<Class<?>> collectOnly(NekoScriptCatalogSnapshot snapshot) {
+        return collectClasses(snapshot, config());
+    }
+}

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Generates the full probe tree from {@link LegacyProbeFixture#snapshot()} using
- * {@link ProbeOrchestrator} with {@link ProbeExternalArtifacts#NONE}, then compares
+ * {@link TypeScriptProbeBackend}（Phase 1 起替代旧 ProbeOrchestrator），then compares
  * every file against golden resources under {@code /nekojs/probe/legacy-tree/}.
  */
 class LegacyProbeTreeTest {
@@ -36,8 +37,7 @@ class LegacyProbeTreeTest {
     @Test
     void legacyTreeMatchesGolden() throws Exception {
         NekoScriptCatalogSnapshot snapshot = LegacyProbeFixture.snapshot();
-        ProbeOrchestrator orchestrator = new ProbeOrchestrator(ProbeExternalArtifacts.NONE);
-        var result = orchestrator.generate(snapshot, tempDir.resolve("probe-types"));
+        var result = generateAt(snapshot, tempDir.resolve("probe-types"));
         assertTrue(result.success(), "Probe generation should succeed: " + result.message());
 
         Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
@@ -62,6 +62,19 @@ class LegacyProbeTreeTest {
             }
             assertTrue(expectedFiles.containsKey(relPath), "Unexpected generated file: " + relPath);
         }
+    }
+
+    /**
+     * 用 TypeScriptProbeBackend 生成到指定目录；显式传入旧 5-前缀白名单以与 golden tree 字节可比。
+     */
+    private ProbeGenerator.GenerateResult generateAt(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
+        ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
+                List.of("java", "net.minecraft", "net.minecraftforge", "net.neoforged", "com.tkisor.nekojs"),
+                List.of(), List.of(), List.of("minecraft"), 5, "SMART"));
+        List<Class<?>> collected = new ArrayList<>(ProbeCoordinator.collectClasses(snapshot, cfg));
+        TypeScriptProbeBackend backend = new TypeScriptProbeBackend();
+        ProbeContext ctx = new ProbeContext.Of(snapshot, collected, cfg, NekoJSPaths.get(), "typescript", outputDir);
+        return backend.generate(ctx);
     }
 
     private Map<String, String> readTree(Path root) throws IOException {

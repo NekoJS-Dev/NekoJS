@@ -91,6 +91,20 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return bus instanceof DispatchEventBus<?, ?>;
     }
 
+    /**
+     * 是否有至少一个监听器已注册。供 probe 等高开销事件发射器在无监听器时跳过
+     * 事件对象构建与 IR 反射（见 {@code TypeScriptProbeBackend} 的「仅有监听器时构建 IR」策略）。
+     *
+     * <p>{@link #tokensByType} 是 JS 侧注册的镜像；为防绕过 {@link #execute} 的直接 Java 注册
+     * （如测试、bridge 代码）失同步，再兜底检查底层 bus 是否为空。
+     */
+    public boolean hasListeners() {
+        for (List<ScriptEventListenerToken<EVENT>> list : tokensByType.values()) {
+            if (!list.isEmpty()) return true;
+        }
+        return bus instanceof com.tkisor.nekojs.eventbus.EventBusBase<?, ?> base && !base.isEmpty();
+    }
+
     public EventBus<EVENT> bus() {
         return bus;
     }

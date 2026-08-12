@@ -3,6 +3,7 @@ package com.tkisor.nekojs.platform;
 import com.tkisor.nekojs.api.annotation.HideFromJS;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -84,5 +85,9 @@ public final class Platform {
 
     public static String getLoaderVersion() {
         return get().getLoaderVersion();
+    }
+
+    public static List<String> defaultScanPackages() {
+        return get().defaultScanPackages();
     }
 }

@@ -363,6 +363,28 @@ public final class IndexFileGenerator {
     }
 
     /**
+     * 用 {@code probe.modify_type} 编辑后重新渲染的声明覆盖缓存，并合并编辑引入的额外 import
+     * （被改写/新增成员引用的 SYMBOL 类型全限定名）。
+     *
+     * <p>必须在 {@link #pregenerateClass} 之后、{@link #generate} 之前调用：pregenerate 已用旧
+     * {@code ClassDeclGenerator} 填充 declCache/importCache；本方法仅覆盖被触及的类。
+     *
+     * @param fqn             类全限定名
+     * @param decl            重新渲染的声明块（{@code null} = 不覆盖声明，仅合并 import）
+     * @param extraImportFqns 编辑引入的额外 SYMBOL 全限定名（同包类型会被调用方过滤掉）
+     */
+    public void overrideDeclaration(String fqn, String decl, Set<String> extraImportFqns) {
+        if (decl != null) {
+            declCache.put(fqn, decl);
+        }
+        if (extraImportFqns != null && !extraImportFqns.isEmpty()) {
+            Set<String> merged = new LinkedHashSet<>(importCache.getOrDefault(fqn, Set.of()));
+            merged.addAll(extraImportFqns);
+            importCache.put(fqn, merged);
+        }
+    }
+
+    /**
      * 清理生成过程中积累的缓存，释放内存。
      */
     public void clearCaches() {

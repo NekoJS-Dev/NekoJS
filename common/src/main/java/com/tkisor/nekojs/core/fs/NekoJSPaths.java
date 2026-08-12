@@ -43,6 +43,7 @@ public final class NekoJSPaths {
     private final Path config;
     private final Path readme;
     private final Path engineConfig;
+    private final Path probeConfig;
     private final Path assets;
     private final Path data;
     private final Set<Path> scriptRoots;
@@ -59,6 +60,7 @@ public final class NekoJSPaths {
         this.config = root.resolve("config");
         this.readme = root.resolve("README.txt");
         this.engineConfig = config.resolve("engine.toml");
+        this.probeConfig = config.resolve("probe.toml");
         this.assets = root.resolve("assets");
         this.data = root.resolve("data");
         this.scriptRoots = Set.of(startupScripts, serverScripts, clientScripts, testScripts);
@@ -76,6 +78,7 @@ public final class NekoJSPaths {
     public Path config() { return config; }
     public Path readme() { return readme; }
     public Path engineConfig() { return engineConfig; }
+    public Path probeConfig() { return probeConfig; }
     public Path assets() { return assets; }
     public Path data() { return data; }
 

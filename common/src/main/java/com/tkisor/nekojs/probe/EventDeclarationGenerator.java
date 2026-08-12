@@ -211,6 +211,6 @@ public final class EventDeclarationGenerator {
     }
 
     private boolean isRelevantClass(String name) {
-        return ProbeOrchestrator.isRelevantClass(name);
+        return ProbeConfigLoader.isRelevantClassDefault(name);
     }
 }

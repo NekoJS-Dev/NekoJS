@@ -1,8 +1,7 @@
 package com.tkisor.nekojs.probe;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
@@ -11,18 +10,33 @@ import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.probe.events.GlobalDecl;
+import com.tkisor.nekojs.probe.events.ProbeModifyTypeEventJS;
+import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
-import com.tkisor.nekojs.api.ScriptType;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
- * 探针编排器：协调所有生成器，管理完整的探针生成流程。
+ * 内置 TypeScript probe backend：把共享收集到的类 + catalog 渲染成 {@code .d.ts}。
+ *
+ * <p>Phase 1：从旧 {@code ProbeOrchestrator} 逐字搬迁全部发射逻辑，仅改三处入口：
+ * <ol>
+ *   <li>种子类来自 {@link ProbeContext#collectedClasses()}（共享 BFS 结果），不再自带 BFS</li>
+ *   <li>包过滤改用 {@link ProbeConfig#isRelevantClass(String, java.util.List)}（配置驱动）</li>
+ *   <li>输出目录 = {@link ProbeContext#languageDir()}（每 backend 自管 staging/swap）</li>
+ * </ol>
+ * 故 TS 产物**内容**与重构前字节一致（仅目录由 {@code .neko_probe/} 迁到 {@code .neko_probe/typescript/}）。
+ * 外部副作用（agent 模板 + workspace 配置）移至 {@link ProbeCoordinator} 统一执行一次。
  */
-public final class ProbeOrchestrator implements ProbeGenerator {
+public final class TypeScriptProbeBackend implements ProbeBackend {
+
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
     private final TypeConverter typeConverter = new TypeConverter(aliasRegistry);
     private final ClassDeclGenerator classDeclGenerator = new ClassDeclGenerator(typeConverter);
@@ -32,15 +46,16 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
     private final ManagedApiDeclarationGenerator managedDeclGenerator = new ManagedApiDeclarationGenerator();
-    private final ProbeExternalArtifacts externalArtifacts;
 
-    public ProbeOrchestrator() {
-        this(ProbeExternalArtifacts.DEFAULT);
-    }
+    // IR 渲染器（Phase 2.6）：仅用于重渲染被 modify_type 编辑过的类；未编辑的类仍走旧 ClassDeclGenerator
+    private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(typeConverter);
 
-    ProbeOrchestrator(ProbeExternalArtifacts externalArtifacts) {
-        this.externalArtifacts = externalArtifacts;
-    }
+    // RecipeEventJS.recipes getter 覆盖的单一数据源：旧 ClassDeclGenerator 路径与 IR 重渲染路径
+    // 都从这里取字面量，避免两处各写一遍导致漂移。
+    private static final String RECIPE_EVENT_RECIPES_GETTER = "recipes";
+    private static final String RECIPE_EVENT_RECIPES_RETURN_TYPE = "DocumentedRecipes";
+    private static final String RECIPE_EVENT_RECIPES_IMPORT =
+            "import { DocumentedRecipes } from \"@side-only/server/events/recipes\";";
 
     {
         // RecipeEventJS.recipes getter 由 RecipeEventDeclarationGenerator 提供，
@@ -50,28 +65,45 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                     "com.tkisor.nekojs.wrapper.event.server.RecipeEventJS",
                     false,
                     Thread.currentThread().getContextClassLoader());
+            // 旧路径：ClassDeclGenerator 直接渲染时命中覆盖
             classDeclGenerator.overrideGetter(
                     recipeEventClass,
-                    "recipes",
-                    "DocumentedRecipes",
-                    "import { DocumentedRecipes } from \"@side-only/server/events/recipes\";"
+                    RECIPE_EVENT_RECIPES_GETTER,
+                    RECIPE_EVENT_RECIPES_RETURN_TYPE,
+                    RECIPE_EVENT_RECIPES_IMPORT
+            );
+            // IR 重渲染路径：modify_type/assign_type 把类标记 mutated 后改走 renderer，覆盖必须同样生效，
+            // 否则 recipes getter 会退化为原始返回类型。
+            tsClassRenderer.overrideGetter(
+                    recipeEventClass,
+                    RECIPE_EVENT_RECIPES_GETTER,
+                    RECIPE_EVENT_RECIPES_RETURN_TYPE,
+                    RECIPE_EVENT_RECIPES_IMPORT
             );
         } catch (ClassNotFoundException ignored) {
         }
     }
 
     @Override
-    public String name() {
-        return "NekoJS Builtin Probe";
+    public String languageId() {
+        return "typescript";
     }
 
     @Override
-    public GenerateResult generate(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
+    public String name() {
+        return "builtin";
+    }
+
+    @Override
+    public ProbeGenerator.GenerateResult generate(ProbeContext ctx) {
         long start = System.currentTimeMillis();
         int filesGenerated = 0;
+        NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
+        Path outputDir = ctx.languageDir();
+        List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
 
         // 原子输出：生成到同级 staging 目录，全部成功后整体替换 outputDir。
-        // 失败则丢弃 staging，旧 outputDir 完整保留，避免旧实现「先删后生成」中途失败丢声明。
+        // 失败则丢弃 staging，旧 outputDir 完整保留，避免「先删后生成」中途失败丢声明。
         Path staging = outputDir.resolveSibling(outputDir.getFileName().toString() + ".staging");
         Path backup = outputDir.resolveSibling(outputDir.getFileName().toString() + ".old");
 
@@ -84,15 +116,18 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             Files.createDirectories(staging);
 
             try {
-                // 1. 收集需要生成声明的类
-                Set<String> classesToGenerate = collectClasses(snapshot);
+                // 1. 种子类来自共享收集（ProbeCoordinator 的 BFS 结果）
+                Set<String> classesToGenerate = new LinkedHashSet<>();
+                for (Class<?> c : ctx.collectedClasses()) {
+                    classesToGenerate.add(c.getName());
+                }
 
                 // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
                 // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
                 // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
                 for (AdapterCatalogEntry adapter : snapshot.adapters()) {
                     String name = adapter.targetType().getName();
-                    if (isRelevantClass(name)) {
+                    if (ctx.config().isRelevantClass(name, platformPkgs)) {
                         classesToGenerate.add(name);
                     }
                 }
@@ -103,12 +138,12 @@ public final class ProbeOrchestrator implements ProbeGenerator {
 
                 // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
                 for (String host : adapterAliasGenerator.hostImports()) {
-                    if (isRelevantClass(host)) {
+                    if (ctx.config().isRelevantClass(host, platformPkgs)) {
                         classesToGenerate.add(host);
                     }
                 }
 
-                NekoJS.LOGGER.info("Probe: {} classes to generate", classesToGenerate.size());
+                NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());
 
                 // 2. 构建包树
                 PackageTree tree = new PackageTree();
@@ -118,6 +153,11 @@ public final class ProbeOrchestrator implements ProbeGenerator {
 
                 // 3. 并行预生成所有类声明
                 pregenerateDeclarations(classesToGenerate);
+
+                // 3b. 应用共享 IR 中被 modify_type 编辑过的类（Strategy B）：
+                //     ctx.ir() 由 ProbeCoordinator 在「有监听器或有 backend 需要 IR」时构建并触发事件；
+                //     为 null（默认 /nekojs probe）则完全走旧 ClassDeclGenerator 路径，TS 产物零回归。
+                applyMutatedOverrides(ctx.ir());
 
                 // 4. 生成 @package Java 类型声明（写入 staging）
                 filesGenerated += generatePackageDeclarations(tree, staging);
@@ -143,15 +183,15 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                 // 9. 生成 managed declarations
                 filesGenerated += generateManagedDeclarations(snapshot, staging);
 
-                // 10. 外部副作用（.github/agents 模板 + workspace 配置）
-                externalArtifacts.generate(outputDir);
+                // 10. 生成 probe.add_global 全局声明（@manual/globals.d.ts，已被 jsconfig include 覆盖）
+                filesGenerated += generateGlobalsDeclarations(ctx.overrides().globals(), staging);
 
-                // 全部生成成功：staging 整体替换 outputDir
+                // 全部生成成功：staging 整体替换 outputDir（外部副作用由 ProbeCoordinator 统一执行）
                 commitProbeOutput(staging, outputDir, backup);
 
                 long duration = System.currentTimeMillis() - start;
-                NekoJS.LOGGER.info("Probe generated: {} files in {}ms", filesGenerated, duration);
-                return GenerateResult.success(filesGenerated, duration);
+                NekoJS.LOGGER.info("Probe [typescript] generated: {} files in {}ms", filesGenerated, duration);
+                return ProbeGenerator.GenerateResult.success(filesGenerated, duration);
 
             } catch (Exception genFailure) {
                 // 生成中途失败：丢弃 staging 半成品，旧 outputDir 完整保留
@@ -160,8 +200,8 @@ public final class ProbeOrchestrator implements ProbeGenerator {
             }
 
         } catch (Exception e) {
-            NekoJS.LOGGER.error("Probe generation failed", e);
-            return GenerateResult.failure(e.getMessage());
+            NekoJS.LOGGER.error("Probe [typescript] generation failed", e);
+            return ProbeGenerator.GenerateResult.failure(e.getMessage());
         } finally {
             // 清理生成过程中积累的缓存，释放内存
             indexFileGenerator.clearCaches();
@@ -202,80 +242,117 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     }
 
     /**
-     * 收集需要生成声明的 Java 类。
-     * 从多个来源发现类：
-     * 1. 常用 Java 标准库类
-     * 2. 事件类和绑定类型
-     * 3. BFS 发现引用的类（每展开一个类 = 1 深度单位）
+     * 对共享 IR 中被 {@code probe.modify_type} 触及（{@code mutated}）的类，重新渲染并覆盖
+     * {@link IndexFileGenerator} 的声明缓存。{@code ir} 为 null（无监听器且无 backend 需要 IR）时
+     * 直接返回，{@link #generate} 全程走旧 {@code ClassDeclGenerator} 路径（Strategy B，零回归）。
+     *
+     * <p>IR 构建 + 事件触发由 {@link ProbeCoordinator} 共享层统一完成（Phase 3），TS 与 Python backend
+     * 复用同一份（已编辑的）IR。
      */
-    private Set<String> collectClasses(NekoScriptCatalogSnapshot snapshot) {
-        Set<String> visited = new LinkedHashSet<>();
-        java.util.Queue<Object[]> queue = new java.util.LinkedList<>();
-
-        // 种子类：事件类型和绑定类型（depth 0）
-        for (EventCatalogEntry event : snapshot.events()) {
-            if (event.eventType() != null) queue.add(new Object[]{event.eventType(), 0});
-            if (event.dispatchKeyType() != null) queue.add(new Object[]{event.dispatchKeyType(), 0});
+    private void applyMutatedOverrides(List<TypeDecl> ir) {
+        if (ir == null) return;
+        for (TypeDecl d : ir) {
+            if (!d.mutated) continue;
+            if (d.hidden) {
+                indexFileGenerator.overrideDeclaration(d.fqn, "", Set.of());
+                continue;
+            }
+            String rendered = tsClassRenderer.render(d);
+            Set<String> extraImports = ProbeModifyTypeEventJS.collectEditedSymbolFqns(d, pkgOf(d.fqn));
+            indexFileGenerator.overrideDeclaration(d.fqn, rendered, extraImports);
         }
-        for (BindingCatalogEntry binding : snapshot.bindings()) {
-            if (binding.javaType() != null) queue.add(new Object[]{binding.javaType(), 0});
-            // 代理绑定（如 Item）的 extraDocTypes（委托目标 MC 类）也作为种子，确保其 $Class 声明生成
-            for (Class<?> extra : binding.extraDocTypes()) {
-                queue.add(new Object[]{extra, 0});
-            }
-        }
-
-        int maxDepth = 5;
-
-        // 轻量 BFS：只收集类名，不做声明生成
-        while (!queue.isEmpty()) {
-            Object[] entry = queue.poll();
-            Class<?> cls = (Class<?>) entry[0];
-            int depth = (int) entry[1];
-
-            if (depth > maxDepth) continue;
-            if (cls == null || cls.isPrimitive() || cls == Object.class) continue;
-
-            String name = cls.getName();
-            if (visited.contains(name)) continue;
-            if (!isRelevantClass(name)) continue;
-
-            visited.add(name);
-
-            int nextDepth = depth + 1;
-            if (nextDepth > maxDepth) continue;
-
-            if (cls.getSuperclass() != null) queue.add(new Object[]{cls.getSuperclass(), nextDepth});
-            for (Class<?> iface : cls.getInterfaces()) queue.add(new Object[]{iface, nextDepth});
-
-            for (java.lang.reflect.Constructor<?> ctor : cls.getDeclaredConstructors()) {
-                if (java.lang.reflect.Modifier.isPublic(ctor.getModifiers())) {
-                    for (java.lang.reflect.Type p : ctor.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
-                }
-            }
-            for (java.lang.reflect.Method method : cls.getDeclaredMethods()) {
-                if (java.lang.reflect.Modifier.isPublic(method.getModifiers())) {
-                    collectTypeToQueue(method.getGenericReturnType(), queue, nextDepth);
-                    for (java.lang.reflect.Type p : method.getGenericParameterTypes()) collectTypeToQueue(p, queue, nextDepth);
-                }
-            }
-            for (java.lang.reflect.Field field : cls.getDeclaredFields()) {
-                if (java.lang.reflect.Modifier.isPublic(field.getModifiers())) collectTypeToQueue(field.getGenericType(), queue, nextDepth);
-            }
-        }
-
-        return visited;
     }
 
-    private void collectTypeToQueue(java.lang.reflect.Type type, java.util.Queue<Object[]> queue, int depth) {
-        if (type instanceof Class<?> cls) {
-            queue.add(new Object[]{cls, depth});
-        } else if (type instanceof java.lang.reflect.ParameterizedType pt) {
-            if (pt.getRawType() instanceof Class<?> rawCls) queue.add(new Object[]{rawCls, depth});
-            for (java.lang.reflect.Type arg : pt.getActualTypeArguments()) collectTypeToQueue(arg, queue, depth);
-        } else if (type instanceof java.lang.reflect.GenericArrayType gat) {
-            collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
+    private static String pkgOf(String fqn) {
+        int dot = fqn.lastIndexOf('.');
+        return dot >= 0 ? fqn.substring(0, dot) : "";
+    }
+
+    /**
+     * 生成 {@code probe.add_global} 收集的全局声明到 {@code @manual/globals.d.ts}。
+     * {@code @manual} 目录下的 .d.ts 已被各脚本目录的 jsconfig include 覆盖，故全局 declare const 生效。
+     */
+    private int generateGlobalsDeclarations(List<GlobalDecl> globals, Path outputDir) throws IOException {
+        if (globals == null || globals.isEmpty()) return 0;
+        Path manualDir = outputDir.resolve("@manual");
+        Files.createDirectories(manualDir);
+        StringBuilder sb = new StringBuilder();
+        sb.append("// Auto-generated by NekoJS probe — global declarations from probe.add_global.\n");
+        sb.append("// Do not edit; regenerate with `/nekojs probe`.\n\n");
+        for (GlobalDecl g : globals) {
+            sb.append("declare const ").append(g.name()).append(": ")
+              .append(TypeScriptClassRenderer.renderTypeRef(g.type())).append(";\n");
         }
+        Files.writeString(manualDir.resolve("globals.d.ts"), sb.toString());
+        return 1;
+    }
+
+    // ------------------------------------------------------------------
+    //  编辑器配置注入（Phase 4）
+    // ------------------------------------------------------------------
+
+    /**
+     * 把 {@code java:*}、{@code @side-only/<env>}、{@code @special/*} 路径别名合并进每个脚本目录的
+     * jsconfig.json（以及 {@code .neko_probe/jsconfig.json}），指向本 backend 真实的输出目录
+     * （{@code .neko_probe/typescript/...}）。幂等合并：probe 拥有的键替换为最新值，用户自定义键保留。
+     *
+     * <p>修复既有 stale：WorkspaceGenerator 预写的 paths 指向 {@code .neko_probe/@package}（Phase 1 前），
+     * 而产物实际在 {@code .neko_probe/typescript/@package}；本合并把 probe 拥有的键校正到正确位置。
+     */
+    @Override
+    public void contributeEditorConfig(EditorConfigContributor contributor, ProbeContext ctx) {
+        NekoJSPaths paths = ctx.paths();
+        Path tsOut = ctx.languageDir(); // .neko_probe/typescript
+        contributeScriptDirJsconfig(contributor, paths.startupScripts(), ScriptType.STARTUP, tsOut);
+        contributeScriptDirJsconfig(contributor, paths.serverScripts(), ScriptType.SERVER, tsOut);
+        contributeScriptDirJsconfig(contributor, paths.clientScripts(), ScriptType.CLIENT, tsOut);
+        contributeScriptDirJsconfig(contributor, paths.testScripts(), ScriptType.TEST, tsOut);
+        contributeProbeDirJsconfig(contributor, paths.probeDir(), tsOut);
+
+        // probe.snippets → nekojs/.vscode/nekojs.code-snippets（TS-only，merge）
+        List<com.tkisor.nekojs.probe.events.Snippet> snippets = ctx.overrides().snippets();
+        if (snippets != null && !snippets.isEmpty()) {
+            contributor.mergeVscodeSnippets(paths.root().resolve(".vscode").resolve("nekojs.code-snippets"), snippets);
+        }
+    }
+
+    private static void contributeScriptDirJsconfig(EditorConfigContributor c, Path scriptDir,
+                                                    ScriptType env, Path tsOut) {
+        String rel = FileEditorConfigContributor.relativePosix(scriptDir, tsOut);
+        Map<String, List<String>> aliases = new LinkedHashMap<>();
+        aliases.put("java:*", List.of(rel + "/@package/*"));
+        String sideBase = rel + "/@side-only/" + env.name;
+        aliases.put("@side-only/" + env.name, List.of(sideBase));
+        aliases.put("@side-only/" + env.name + "/*", List.of(sideBase + "/*"));
+        aliases.put("@special", List.of(rel + "/@special"));
+        aliases.put("@special/*", List.of(rel + "/@special/*"));
+        c.mergeJsConfigPaths(scriptDir.resolve("jsconfig.json"), aliases);
+
+        // include/typeRoots：WorkspaceGenerator.buildConfigForEnv 预写的值指向旧 .neko_probe/@package，
+        // 校正 base 为 tsOut（相对写法照抄，仅 base 换成 tsOut）。
+        // 注意：以下 glob 字符串中的「**」是 TS 递归通配（非注释）。
+        List<String> includes = List.of(
+                rel + "/@package/**/*.d.ts",
+                rel + "/@manual/**/*.d.ts",
+                sideBase + "/**/*.d.ts",
+                rel + "/@nekojs/managed/" + env.name + "/**/*.d.ts");
+        List<String> typeRoots = List.of(rel + "/@package", "../node_modules/@types");
+        c.mergeJsConfigIncludes(scriptDir.resolve("jsconfig.json"), includes);
+        c.mergeJsConfigTypeRoots(scriptDir.resolve("jsconfig.json"), typeRoots);
+    }
+
+    private static void contributeProbeDirJsconfig(EditorConfigContributor c, Path probeDir, Path tsOut) {
+        String rel = FileEditorConfigContributor.relativePosix(probeDir, tsOut); // "typescript"
+        Map<String, List<String>> aliases = new LinkedHashMap<>();
+        aliases.put("java:*", List.of(rel + "/@package/*"));
+        for (ScriptType st : ScriptType.values()) {
+            String sideBase = rel + "/@side-only/" + st.name;
+            aliases.put("@side-only/" + st.name, List.of(sideBase));
+            aliases.put("@side-only/" + st.name + "/*", List.of(sideBase + "/*"));
+        }
+        aliases.put("@special", List.of(rel + "/@special"));
+        aliases.put("@special/*", List.of(rel + "/@special/*"));
+        c.mergeJsConfigPaths(probeDir.resolve("jsconfig.json"), aliases);
     }
 
     /**
@@ -283,8 +360,8 @@ public final class ProbeOrchestrator implements ProbeGenerator {
      */
     private void pregenerateDeclarations(Set<String> classNames) {
         int parallelism = Math.min(Runtime.getRuntime().availableProcessors(), 8);
-        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(parallelism);
-        List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
+        ExecutorService executor = Executors.newFixedThreadPool(parallelism);
+        List<Future<?>> futures = new ArrayList<>();
         for (String fqn : classNames) {
             futures.add(executor.submit(() -> {
                 try {
@@ -307,20 +384,12 @@ public final class ProbeOrchestrator implements ProbeGenerator {
                 // 恢复中断标志，让上层感知
                 Thread.currentThread().interrupt();
                 break;
-            } catch (java.util.concurrent.ExecutionException e) {
+            } catch (ExecutionException e) {
                 // worker 线程的真实失败（非 NekoJS 类的 classloader 异常等）不应静默丢失
                 NekoJS.LOGGER.debug("Probe: class pregeneration failed", e.getCause());
             }
         }
         executor.shutdown();
-    }
-
-    static boolean isRelevantClass(String name) {
-        return name.startsWith("java.") ||
-               name.startsWith("net.minecraft.") ||
-               name.startsWith("net.minecraftforge.") ||
-               name.startsWith("net.neoforged.") ||
-               name.startsWith("com.tkisor.nekojs.");
     }
 
     private int generatePackageDeclarations(PackageTree tree, Path outputDir) throws IOException {
@@ -343,9 +412,9 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         // 2. 并行生成内容 + 写入文件
         List<PackageTree.Node> nodeList = new ArrayList<>(nodes);
         int parallelism = Math.min(Runtime.getRuntime().availableProcessors(), 8);
-        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(parallelism);
-        java.util.concurrent.CompletionService<Void> completion =
-                new java.util.concurrent.ExecutorCompletionService<>(executor);
+        ExecutorService executor = Executors.newFixedThreadPool(parallelism);
+        CompletionService<Void> completion =
+                new ExecutorCompletionService<>(executor);
 
         int taskCount = 0;
         for (PackageTree.Node node : nodeList) {
@@ -363,7 +432,7 @@ public final class ProbeOrchestrator implements ProbeGenerator {
         for (int i = 0; i < taskCount; i++) {
             try {
                 completion.take().get();
-            } catch (java.util.concurrent.ExecutionException e) {
+            } catch (ExecutionException e) {
                 NekoJS.LOGGER.debug("Package generation task failed (non-fatal)", e.getCause());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -553,7 +622,7 @@ public final class ProbeOrchestrator implements ProbeGenerator {
     /**
      * Java 包层级树：从类全限定名构建树结构，用于生成 package 目录。
      */
-    private static final class PackageTree {
+    static final class PackageTree {
         private final Node root = new Node("", null);
 
         void addClass(String fullyQualifiedName) {

@@ -1,0 +1,238 @@
+package com.tkisor.nekojs.probe.backend.python;
+
+import com.tkisor.nekojs.probe.ir.FieldDecl;
+import com.tkisor.nekojs.probe.ir.MethodDecl;
+import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeSlot;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * {@link TypeDecl} IR → Python {@code .pyi} 类/接口/枚举声明块。
+ *
+ * <p>对齐 TS renderer 的成员分段语义（getter→property、setter 无独立 getter→跳过、构造器→{@code __init__}），
+ * 但类型一律走 {@link ApiTypeRefPyRenderer}（best-effort，泛型变量→Any）。方法体用 {@code ...}（stub）。
+ */
+public final class PythonClassRenderer {
+    private final ApiTypeRefPyRenderer typeRenderer;
+
+    public PythonClassRenderer(ApiTypeRefPyRenderer typeRenderer) {
+        this.typeRenderer = typeRenderer;
+    }
+
+    public String render(TypeDecl d) {
+        if (d.hidden) return "";
+        return switch (d.kind) {
+            case ENUM -> renderEnum(d);
+            case INTERFACE -> renderInterface(d);
+            default -> renderClass(d);
+        };
+    }
+
+    // ---------------- class ----------------
+
+    private String renderClass(TypeDecl d) {
+        String name = ApiTypeRefPyRenderer.simplePyName(d.fqn);
+        StringBuilder sb = new StringBuilder();
+        sb.append("class ").append(name).append(bases(d, true)).append(":\n");
+        appendDoc(sb, d.docs);
+        boolean hasMember = false;
+
+        // 字段：静态（ClassVar）+ 实例
+        for (FieldDecl f : d.fields) {
+            if (f.hidden) continue;
+            sb.append("    ").append(pyIdent(f.effectiveName())).append(": ").append(fieldType(f));
+            appendFieldDoc(sb, f.docs, "    ");
+            sb.append("\n");
+            hasMember = true;
+        }
+        // 构造器 → __init__
+        for (MethodDecl c : d.constructors) {
+            if (c.hidden) continue;
+            sb.append("    def __init__(").append(params(c, true)).append(") -> None");
+            appendMethodBody(sb, c.docs);
+            hasMember = true;
+        }
+        // getter → @property（+ setter）
+        for (MethodDecl m : d.methods) {
+            if (m.hidden || !m.isGetter) continue;
+            String ret = renderSlot(m.returnType);
+            sb.append("    @property\n");
+            sb.append("    def ").append(pyIdent(m.property)).append("(self) -> ").append(ret);
+            appendMethodBody(sb, m.docs);
+            if (m.setterParamType != null) {
+                sb.append("    @").append(pyIdent(m.property)).append(".setter\n");
+                sb.append("    def ").append(pyIdent(m.property)).append("(self, value: ")
+                  .append(renderSlot(m.setterParamType)).append(") -> None");
+                appendMethodBody(sb, m.docs);
+            }
+            hasMember = true;
+        }
+        // 方法：静态 + 实例（排除 getter/setter/构造器）
+        for (MethodDecl m : d.methods) {
+            if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
+            sb.append(m.isStatic ? "    @staticmethod\n" : "");
+            sb.append("    def ").append(pyIdent(m.effectiveName()))
+              .append("(").append(params(m, !m.isStatic)).append(") -> ")
+              .append(renderSlot(m.returnType));
+            appendMethodBody(sb, m.docs);
+            hasMember = true;
+        }
+        if (!hasMember) sb.append("    ...\n");
+        return sb.toString();
+    }
+
+    // ---------------- interface ----------------
+
+    private String renderInterface(TypeDecl d) {
+        String name = ApiTypeRefPyRenderer.simplePyName(d.fqn);
+        StringBuilder sb = new StringBuilder();
+        sb.append("class ").append(name).append(bases(d, false)).append(":\n");
+        appendDoc(sb, d.docs);
+        boolean hasMember = false;
+        for (MethodDecl m : d.methods) {
+            if (m.hidden) continue;
+            sb.append("    def ").append(pyIdent(m.effectiveName()))
+              .append("(").append(params(m, true)).append(") -> ")
+              .append(renderSlot(m.returnType));
+            appendMethodBody(sb, m.docs);
+            hasMember = true;
+        }
+        for (FieldDecl f : d.fields) {
+            if (f.hidden || !(f.isStatic && f.isFinal)) continue;
+            sb.append("    ").append(pyIdent(f.effectiveName())).append(": ClassVar[").append(renderSlot(f.type)).append("]");
+            appendFieldDoc(sb, f.docs, "    ");
+            sb.append("\n");
+            hasMember = true;
+        }
+        if (!hasMember) sb.append("    ...\n");
+        return sb.toString();
+    }
+
+    // ---------------- enum ----------------
+
+    private String renderEnum(TypeDecl d) {
+        String name = ApiTypeRefPyRenderer.simplePyName(d.fqn);
+        StringBuilder sb = new StringBuilder();
+        sb.append("class ").append(name).append(":\n");
+        appendDoc(sb, d.docs);
+        boolean hasMember = false;
+        for (FieldDecl f : d.fields) {
+            if (f.hidden || !f.isEnumConstant) continue;
+            sb.append("    ").append(pyIdent(f.effectiveName())).append(": ").append(name);
+            appendFieldDoc(sb, f.docs, "    ");
+            sb.append("\n");
+            hasMember = true;
+        }
+        sb.append("    def name(self) -> str: ...\n");
+        sb.append("    def ordinal(self) -> int: ...\n");
+        sb.append("    def toString(self) -> str: ...\n");
+        return sb.toString();
+    }
+
+    // ---------------- helpers ----------------
+
+    /** 基类列表：class 含 superType+interfaces；interface 仅 interfaces。 */
+    private String bases(TypeDecl d, boolean includeSuper) {
+        Set<String> bases = new HashSet<>();
+        if (includeSuper && d.superType != null) {
+            String s = renderSlot(d.superType);
+            if (!s.equals("Any")) bases.add(s);
+        }
+        for (TypeSlot i : d.interfaces) {
+            String s = renderSlot(i);
+            if (!s.equals("Any")) bases.add(s);
+        }
+        return bases.isEmpty() ? "" : "(" + String.join(", ", bases) + ")";
+    }
+
+    /** 完整参数列表（含可选的 self 前缀）。 */
+    private String params(MethodDecl m, boolean prependSelf) {
+        StringBuilder sb = new StringBuilder();
+        if (prependSelf) sb.append("self");
+        String rest = paramsRest(m);
+        if (!rest.isEmpty()) {
+            if (prependSelf) sb.append(", ");
+            sb.append(rest);
+        }
+        return sb.toString();
+    }
+
+    /** 除 self 外的参数（接口方法直接用这个）。 */
+    private String paramsRest(MethodDecl m) {
+        StringBuilder sb = new StringBuilder();
+        List<MethodDecl.MethodParam> ps = m.params;
+        for (int i = 0; i < ps.size(); i++) {
+            MethodDecl.MethodParam p = ps.get(i);
+            if (i > 0) sb.append(", ");
+            if (p.varargs) {
+                sb.append("*").append(pyIdent(p.name)).append(": ").append(renderSlot(p.type));
+            } else if (p.optional) {
+                sb.append(pyIdent(p.name)).append(": ").append(renderSlot(p.type)).append(" = ...");
+            } else {
+                sb.append(pyIdent(p.name)).append(": ").append(renderSlot(p.type));
+            }
+        }
+        // 返回类型仅给非构造器方法；构造器在外层硬编码 None
+        return sb.toString();
+    }
+
+    /** 字段类型：静态→ClassVar[...]，否则裸类型。 */
+    private String fieldType(FieldDecl f) {
+        String t = renderSlot(f.type);
+        return f.isStatic ? "ClassVar[" + t + "]" : t;
+    }
+
+    private String renderSlot(TypeSlot slot) {
+        return typeRenderer.render(slot == null ? null : slot.ref);
+    }
+
+    private static void appendDoc(StringBuilder sb, List<String> docs) {
+        if (docs == null || docs.isEmpty()) return;
+        sb.append("    \"\"\"").append(docText(docs)).append("\"\"\"\n");
+    }
+
+    /** 方法体：无 docs → 单行 {@code : ...}；有 docs → 换行 docstring + {@code ...}（stub 允许 docstring）。 */
+    private static void appendMethodBody(StringBuilder sb, List<String> docs) {
+        if (docs == null || docs.isEmpty()) {
+            sb.append(": ...\n");
+            return;
+        }
+        sb.append(":\n");
+        sb.append("        \"\"\"").append(docText(docs)).append("\"\"\"\n");
+        sb.append("        ...\n");
+    }
+
+    /** 字段级 docs：首行作为行尾 {@code   # ...} 注释；其余行以 {@code # } 前缀单独成行（跟在字段行之后）。 */
+    private static void appendFieldDoc(StringBuilder sb, List<String> docs, String indent) {
+        if (docs == null || docs.isEmpty()) return;
+        List<String> lines = docs.stream().map(String::strip).filter(s -> !s.isEmpty()).toList();
+        if (lines.isEmpty()) return;
+        sb.append("  # ").append(lines.get(0));
+        for (int i = 1; i < lines.size(); i++) sb.append("\n").append(indent).append("# ").append(lines.get(i));
+    }
+
+    /** docs 拼接（按行 strip 后换行连接）；docstring 定界符 {@code """} 转成 {@code '''} 避免截断。 */
+    private static String docText(List<String> docs) {
+        return docs.stream().map(String::strip)
+                .collect(Collectors.joining("\n"))
+                .replace("\"\"\"", "'''");
+    }
+
+    /** 规避 Python 关键字/软关键字：命中则末尾加 {@code _}。 */
+    static String pyIdent(String name) {
+        if (name == null || name.isEmpty()) return "_";
+        if (PY_KEYWORDS.contains(name)) return name + "_";
+        return name;
+    }
+
+    private static final Set<String> PY_KEYWORDS = Set.of(
+            "False", "None", "True", "and", "as", "assert", "async", "await", "break",
+            "class", "continue", "def", "del", "elif", "else", "except", "finally", "for",
+            "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", "not",
+            "or", "pass", "raise", "return", "try", "while", "with", "yield", "self"
+    );
+}

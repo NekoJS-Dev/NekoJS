@@ -8,7 +8,7 @@ import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
 import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
-import com.tkisor.nekojs.probe.ProbeRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
 import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
@@ -73,12 +73,15 @@ public interface NekoJSPlugin {
     }
 
     /**
-     * 注册自定义探针生成器，替换 NekoJS 内置实现。
+     * 注册 probe backend（按 {@code (languageId, name)} 二维登记）。
      *
-     * <p>调用 {@link ProbeRegistry#setGenerator} 即可。内置实现是 fallback：恰好一个第三方实现时使用第三方实现，
-     * 多个第三方实现会在 bootstrap 完成时报告冲突。
+     * <p>内置已注册 {@code ("typescript", "builtin")} backend（产出 {@code .d.ts}）。
+     * 第三方插件可在此注册其他语言的 backend（如 {@code ("python", "builtin")} 产出 {@code .pyi}），
+     * 或为已有语言提供替代 backend。同一 {@code (语言, 名字)} 在 bootstrap 完成时报冲突。
+     *
+     * <p>命令 {@code /nekojs probe [language] [name]} 可指定运行哪些 backend。
      */
-    default void registerProbeGenerator() {
+    default void registerProbeBackends(ProbeBackendRegistry registry) {
     }
 
     default void registerEvents(EventGroupRegistry registry) {

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.platform;
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -80,4 +81,13 @@ public interface IPlatform {
 
     /** Loader version string, e.g. "4.0.0". */
     String getLoaderVersion();
+
+    /**
+     * Probe 类型生成默认扫描的 Java 包前缀（仅平台自身相关的 MC/loader 包；
+     * {@code java}/{@code com.mojang}/{@code com.tkisor.nekojs} 由 probe 配置层固定追加）。
+     * 平台按需 override 以暴露自身的包。
+     */
+    default List<String> defaultScanPackages() {
+        return List.of("net.minecraft");
+    }
 }

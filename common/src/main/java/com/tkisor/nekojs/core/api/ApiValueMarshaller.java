@@ -500,7 +500,7 @@ public final class ApiValueMarshaller {
                 case CALLBACK -> graalValue.canExecute() ? 4 : -1;
                 case ARRAY -> graalValue.hasArrayElements() ? 4 : -1;
                 case SYMBOL -> symbolScore(graalValue, type);
-                case UNION, VOID -> -1;
+                case UNION, VOID, TYPE_VARIABLE -> -1;
             };
         }
         return switch (type.kind()) {
@@ -509,7 +509,7 @@ public final class ApiValueMarshaller {
             case ARRAY -> value instanceof Iterable<?> || value.getClass().isArray() ? 4 : -1;
             case SYMBOL -> value instanceof ApiFacadeProxy facade
                     && facade.typeId().equals(ApiSymbolId.parse(type.name())) ? 4 : -1;
-            case UNION, VOID -> -1;
+            case UNION, VOID, TYPE_VARIABLE -> -1;
         };
     }
 
@@ -696,7 +696,7 @@ public final class ApiValueMarshaller {
             case ARRAY -> value instanceof Iterable<?> || value.getClass().isArray() ? 4 : -1;
             case SYMBOL -> isPrimitive(value) || value instanceof Iterable<?> || value.getClass().isArray() ? -1 : 2;
             case CALLBACK -> value instanceof ApiCallback ? 4 : -1;
-            case UNION, VOID -> -1;
+            case UNION, VOID, TYPE_VARIABLE -> -1;
         };
     }
 

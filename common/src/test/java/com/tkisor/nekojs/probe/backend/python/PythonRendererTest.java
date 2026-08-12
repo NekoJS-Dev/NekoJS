@@ -1,0 +1,130 @@
+package com.tkisor.nekojs.probe.backend.python;
+
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
+import com.tkisor.nekojs.probe.ir.MethodDecl;
+import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+import org.junit.jupiter.api.Test;
+
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * {@link ApiTypeRefPyRenderer} + {@link PythonClassRenderer} 单测：类型映射 + IR→.pyi 渲染。
+ */
+class PythonRendererTest {
+
+    /** 反射样本：实例字段、getter、实例方法、静态方法、构造器。 */
+    public static class Sample {
+        public String nameField;
+        public Sample() {}
+        public String getName() { return nameField; }   // getter → @property name
+        public void greet(String who) {}
+        public static int helper(int n) { return n; }
+    }
+
+    // -------------------- ApiTypeRefPyRenderer --------------------
+
+    @Test
+    void render_primitives() {
+        ApiTypeRefPyRenderer r = new ApiTypeRefPyRenderer(Set.of());
+        assertEquals("str", r.render(ApiTypeRef.primitive("string")));
+        assertEquals("str", r.render(ApiTypeRef.primitive("char")));
+        assertEquals("bool", r.render(ApiTypeRef.primitive("boolean")));
+        assertEquals("int", r.render(ApiTypeRef.primitive("int")));
+        assertEquals("float", r.render(ApiTypeRef.primitive("double")));
+        assertEquals("Any", r.render(ApiTypeRef.primitive("object")));
+        assertEquals("None", r.render(ApiTypeRef.voidType()));
+    }
+
+    @Test
+    void render_arrayUnionTypeVar() {
+        ApiTypeRefPyRenderer r = new ApiTypeRefPyRenderer(Set.of());
+        assertEquals("list[str]", r.render(ApiTypeRef.array(ApiTypeRef.primitive("string"))));
+        // union 成员在 ApiTypeRef 构造时按 compatibilityKey 排序：int < string → "int | str"
+        assertEquals("int | str",
+                r.render(ApiTypeRef.union(java.util.List.of(ApiTypeRef.primitive("string"), ApiTypeRef.primitive("int")))));
+        assertEquals("Any", r.render(ApiTypeRef.typeVariable("T")));
+    }
+
+    @Test
+    void render_symbolAvailability() {
+        ApiTypeRefPyRenderer r = new ApiTypeRefPyRenderer(Set.of("net.x.Foo"));
+        assertEquals("Foo", r.render(ApiTypeRef.symbol(new ApiSymbolId("java", "net.x.Foo"))));
+        // 未收集的 SYMBOL → Any（避免悬空引用）
+        assertEquals("Any", r.render(ApiTypeRef.symbol(new ApiSymbolId("java", "net.x.Bar"))));
+    }
+
+    @Test
+    void simplePyName_nestedDollarToUnderscore() {
+        assertEquals("Outer_Inner", ApiTypeRefPyRenderer.simplePyName("pkg.Outer$Inner"));
+        assertEquals("Foo", ApiTypeRefPyRenderer.simplePyName("net.x.Foo"));
+    }
+
+    // -------------------- PythonClassRenderer --------------------
+
+    @Test
+    void renderClass_emitsFieldsGetterMethodsCtor() {
+        TypeReflector reflector = new TypeReflector();
+        TypeDecl d = reflector.reflect(Sample.class);
+        ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
+        PythonClassRenderer classR = new PythonClassRenderer(typeR);
+
+        String out = classR.render(d);
+        // 类声明（嵌套类名末尾为 _Sample）
+        assertTrue(out.contains("class "), "class header: " + out);
+        assertTrue(out.trim().startsWith("class "), out);
+        // 实例字段
+        assertTrue(out.contains("nameField: str"), out);
+        // getter → @property + def name(self) -> str
+        assertTrue(out.contains("@property"), out);
+        assertTrue(out.contains("def name(self) -> str"), out);
+        // 实例方法
+        assertTrue(out.contains("def greet(self,"), out);
+        assertTrue(out.contains(": str"), out);   // greet 的 String 参数
+        // 静态方法
+        assertTrue(out.contains("@staticmethod"), out);
+        assertTrue(out.contains("def helper("), out);
+        assertTrue(out.contains("-> int"), out);  // helper 返回 int
+        // 构造器 → __init__
+        assertTrue(out.contains("def __init__(self) -> None"), out);
+    }
+
+    @Test
+    void renderClass_emitsMethodAndFieldDocs() {
+        TypeReflector reflector = new TypeReflector();
+        TypeDecl d = reflector.reflect(Sample.class);
+        ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
+        PythonClassRenderer classR = new PythonClassRenderer(typeR);
+
+        // 类级 docs
+        d.docs.add("Class doc line1");
+        d.docs.add("Class doc line2");
+        // 构造器 docs
+        d.constructors.get(0).docs.add("Creates a sample.");
+        // getter docs（@property 同样处理）
+        MethodDecl getter = d.methods.stream().filter(m -> m.isGetter).findFirst().orElseThrow();
+        getter.docs.add("The name.");
+        // 实例方法 docs（多行）
+        MethodDecl greet = d.methods.stream().filter(m -> m.name.equals("greet")).findFirst().orElseThrow();
+        greet.docs.add("Greets someone.");
+        greet.docs.add("Second line.");
+        // 字段 docs（多行 → 首行行尾注释 + 后续 `# ` 行）
+        d.fields.get(0).docs.add("Field doc.");
+        d.fields.get(0).docs.add("Second field line.");
+
+        String out = classR.render(d);
+        // 类级 docstring（多行）
+        assertTrue(out.contains("    \"\"\"Class doc line1\nClass doc line2\"\"\""), out);
+        // 构造器 docstring：def 行后换行缩进 8 空格
+        assertTrue(out.contains("def __init__(self) -> None:\n        \"\"\"Creates a sample.\"\"\"\n        ..."), out);
+        // getter（@property）docstring
+        assertTrue(out.contains("def name(self) -> str:\n        \"\"\"The name.\"\"\"\n        ..."), out);
+        // 实例方法 docstring（多行）——测试编译无 -parameters，参数名为 arg0
+        assertTrue(out.contains("def greet(self, arg0: str) -> None:\n        \"\"\"Greets someone.\nSecond line.\"\"\"\n        ..."), out);
+        // 字段：行尾 `  # ...` + 后续行 `# ` 前缀
+        assertTrue(out.contains("nameField: str  # Field doc.\n    # Second field line."), out);
+    }
+}

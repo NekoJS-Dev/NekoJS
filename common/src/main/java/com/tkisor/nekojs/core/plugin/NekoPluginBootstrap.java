@@ -16,7 +16,9 @@ import com.tkisor.nekojs.core.plugin.NekoPluginExtensionContext;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionPoint;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionProvider;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
-import com.tkisor.nekojs.probe.ProbeRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.TypeScriptProbeBackend;
+import com.tkisor.nekojs.probe.backend.python.PythonProbeBackend;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
@@ -159,11 +161,14 @@ public final class NekoPluginBootstrap {
             }
         }
 
-        ProbeRegistry.setFallback(new com.tkisor.nekojs.probe.ProbeOrchestrator(), "NekoJS (built-in)");
+        ProbeBackendRegistry probeBackends = new ProbeBackendRegistry();
+        probeBackends.register(new TypeScriptProbeBackend(), "NekoJS (built-in)");
+        probeBackends.register(new PythonProbeBackend(), "NekoJS (built-in)");
         for (NekoJSPlugin plugin : plugins) {
-            plugin.registerProbeGenerator();
+            plugin.registerProbeBackends(probeBackends);
         }
-        ProbeRegistry.lock();
+        probeBackends.lock();
+        ProbeBackendRegistry.setInstance(probeBackends);
     }
 
     private static void freezeState(BootstrapState state, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {

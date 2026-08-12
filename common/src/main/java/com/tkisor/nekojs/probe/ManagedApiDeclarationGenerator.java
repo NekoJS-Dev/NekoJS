@@ -203,6 +203,7 @@ public final class ManagedApiDeclarationGenerator {
                 yield cb.toString();
             }
             case VOID -> "void";
+            case TYPE_VARIABLE -> type.name();
         };
     }
 
