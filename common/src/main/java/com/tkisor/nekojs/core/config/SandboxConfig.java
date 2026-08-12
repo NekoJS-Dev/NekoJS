@@ -8,10 +8,11 @@ public record SandboxConfig(
         boolean enableEsmAuthoring,
         boolean conciseScriptErrorLogs,
         boolean jsxAutomaticRuntime,
-        boolean scriptMemberValidation
+        boolean scriptMemberValidation,
+        int scriptEvaluationTimeoutSeconds
 ) {
     public static SandboxConfig defaultConfig() {
-        return new SandboxConfig(false, false, false, false, true, true, false, true);
+        return new SandboxConfig(false, false, false, false, true, true, false, true, 30);
     }
 
     public boolean anyUnsafeFeatureEnabled() {

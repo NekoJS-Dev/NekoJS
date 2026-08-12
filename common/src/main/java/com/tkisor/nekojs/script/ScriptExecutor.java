@@ -93,6 +93,13 @@ public final class ScriptExecutor {
     }
 
     private void waitForEvaluation(CompletableFuture<?> evaluation, NekoNodeRuntime nodeRuntime) throws Exception {
+        long timeoutSeconds = sandboxConfig.scriptEvaluationTimeoutSeconds();
+        // 有界等待：顶层 await / native ESM 求值永不完成时，超过总时限即抛出超时错误，
+        // 走 executeEntry 的既有失败路径（errorTracker 记录 + 日志），不再无限忙等挂死服务器线程。
+        // 注意：不在此线程 close Graal Context（可能中断其它脚本的执行）—— 只停止等待并上报失败。
+        long deadlineNanos = timeoutSeconds > 0
+                ? System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
+                : Long.MAX_VALUE;
         while (!evaluation.isDone()) {
             if (nodeRuntime != null) {
                 nodeRuntime.flushReadyTimers();
@@ -105,6 +112,10 @@ public final class ScriptExecutor {
                 throw e;
             } catch (ExecutionException e) {
                 throw unwrapExecutionException(e);
+            }
+            if (timeoutSeconds > 0 && System.nanoTime() - deadlineNanos >= 0) {
+                throw new TimeoutException("脚本求值超时（超过 " + timeoutSeconds
+                        + " 秒，可在 engine.toml 中调整 scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成");
             }
         }
         try {

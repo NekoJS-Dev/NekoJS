@@ -43,6 +43,9 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptMemberValidation", true,
                     " Enables compile-time validation of global-binding and event-callback member accesses. Reports typos and missing members to the in-game error panel. Disable to skip all AST parsing overhead in production modpacks.");
 
+            setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 30,
+                    " Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.");
+
             return new SandboxConfig(
                     config.get("allowThreads"),
                     config.get("allowReflection"),
@@ -51,7 +54,8 @@ public final class SandboxConfigLoader {
                     config.get("enableEsmAuthoring"),
                     config.get("conciseScriptErrorLogs"),
                     config.get("jsxAutomaticRuntime"),
-                    config.get("scriptMemberValidation")
+                    config.get("scriptMemberValidation"),
+                    config.get("scriptEvaluationTimeoutSeconds")
             );
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load engine.toml, using default sandbox config", e);
