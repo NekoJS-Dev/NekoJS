@@ -7,6 +7,7 @@ import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -46,8 +47,15 @@ public class NekoJSNetwork {
         registrar.playToClient(PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC, NekoJSNetwork::handlePDataSyncOnClient);
 
         // 脚本自定义网络通道包（Network.sendToServer / sendToPlayer / sendToAllPlayers）
-        registrar.playToServer(NekoScriptPayload.TYPE, NekoScriptPayload.CODEC, NetworkMessageHandler::handleScriptPayloadOnServer);
-        registrar.playToClient(NekoScriptPayload.TYPE, NekoScriptPayload.CODEC, NetworkMessageHandler::handleScriptPayloadOnClient);
+        // 同一个 payload type 只能注册一次（NeoForge 按 type 去重），
+        // 双向收发用 playBidirectional 注册并按连接方向分发到对应 handler。
+        registrar.playBidirectional(NekoScriptPayload.TYPE, NekoScriptPayload.CODEC, (payload, context) -> {
+            if (context.flow() == PacketFlow.SERVERBOUND) {
+                NetworkMessageHandler.handleScriptPayloadOnServer(payload, context);
+            } else {
+                NetworkMessageHandler.handleScriptPayloadOnClient(payload, context);
+            }
+        });
     }
 
     /* ================= Client Handlers ================= */
