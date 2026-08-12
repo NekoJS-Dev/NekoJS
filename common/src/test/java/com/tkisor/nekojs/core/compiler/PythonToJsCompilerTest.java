@@ -533,6 +533,64 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- **kwargs / keyword call args ----
+
+    @Test
+    void kwargsCollectedIntoDict() throws Exception {
+        // def f(**kw): kw → keyword args gather into the kw dict.
+        String src = """
+                def f(**kw):
+                    return kw
+                f(a=1, b=2)['b']
+                """;
+        assertEquals(2, evalInt(src));
+    }
+
+    @Test
+    void kwargsAlongsidePositionalAndDefaults() throws Exception {
+        // positional beats keyword beats default; remaining kwargs land in the kw dict.
+        String src = """
+                def g(x, y=10, *rest, **kw):
+                    return str(x) + str(y) + str(len(rest)) + str(kw.get('z'))
+                g(1, y=2, z=5, w=9)
+                """;
+        // x=1 (positional), y=2 (keyword, beats default 10), rest=[] (0), kw={'z':5,'w':9}; z→5
+        assertEquals("1205", evalString(src));
+    }
+
+    @Test
+    void kwargsClassInitAndMethod() throws Exception {
+        // A class whose __init__ declares **kwargs; constructed and called with keyword args.
+        String src = """
+                class Bag:
+                    def __init__(self, **items):
+                        self.items = items
+                    def total(self, **opts):
+                        s = 0
+                        for k in self.items.keys():
+                            s += self.items[k]
+                        return s + opts.get('bonus', 0)
+                b = Bag(apple=1, banana=2)
+                b.total(bonus=10)
+                """;
+        // items apple=1, banana=2 → 3; bonus=10 → 13
+        assertEquals(13, evalInt(src));
+    }
+
+    @Test
+    void kwargsToNonKwFunctionRejected() {
+        // Keyword args require the target to declare **kwargs (or be print/sorted).
+        assertThrows(IllegalArgumentException.class, () -> py("def f(a):\n    return a\nf(a=1)"));
+    }
+
+    @Test
+    void printAndSortedKwargsStillWork() throws Exception {
+        // Regression: print(sep=) / sorted(reverse=) keep their special-cased handling.
+        assertEquals(3, evalInt("sorted([3, 1, 9, 2], reverse=False)[2]"));
+        String js = py("print(a, b, sep=':')");
+        assertTrue(js.contains(".join(\":\")"), js);
+    }
+
     // ---- multi-clause comprehensions (nested for / multiple if) ----
 
     @Test

@@ -67,8 +67,9 @@ public sealed interface PythonNode {
             implements PythonNode {}                                    // excepts/finallyBody empty → absent
     record With(List<WithItem> items, List<PythonNode> body) implements PythonNode {}   // 1+ context-manager items
 
-    /** Function/lambda parameter (helper, not itself a node). starArg == true → {@code *name} (varargs). */
-    record Param(String name, PythonNode defaultValue, boolean starArg) {}
+    /** Function/lambda parameter (helper, not itself a node).
+     *  starArg → {@code *name} (varargs); kwDict → {@code **name} (keyword dict). */
+    record Param(String name, PythonNode defaultValue, boolean starArg, boolean kwDict) {}
 
     /** Import spec (helper, not itself a node). name = module (import) or imported name (from-import); alias null = none. */
     record Spec(String name, String alias) {}

@@ -662,12 +662,14 @@ public final class PythonParser {
             if (params.size() > 0) expectOp(",");
             if (atOp(terminator)) break;
             boolean star = false;
+            boolean kwDict = false;
             if (matchOp("*")) star = true;
-            else if (matchOp("**")) throw error("**kwargs parameters are not supported in v1");
+            else if (matchOp("**")) kwDict = true;
             String name = expectName();
+            if (terminator.equals(")") && matchOp(":")) parseTest();   // def param annotation (not lambda)
             PythonNode def = null;
             if (matchOp("=")) def = parseTest();
-            params.add(new Param(name, def, star));
+            params.add(new Param(name, def, star, kwDict));
         }
         return params;
     }

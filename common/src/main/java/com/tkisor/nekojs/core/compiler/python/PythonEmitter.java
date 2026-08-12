@@ -30,6 +30,10 @@ public final class PythonEmitter {
     private final java.util.Set<String> classNames = new java.util.HashSet<>();   // for `new` on calls
     /** Top-level names defined by this module (def/class/assign), re-exported so .py files are importable. */
     private final java.util.Set<String> definedNames = new java.util.LinkedHashSet<>();
+    /** Functions/methods/classes that declare {@code **kwargs} → accept a tagged trailing object at call sites. */
+    private final java.util.Set<String> kwFunctions = new java.util.HashSet<>();
+    private final java.util.Set<String> kwMethods = new java.util.HashSet<>();
+    private final java.util.Set<String> kwClassNames = new java.util.HashSet<>();
 
     public PythonEmitter(IdentityHashMap<PythonNode, Integer> srcLines) {
         this.srcLines = srcLines;
@@ -37,8 +41,12 @@ public final class PythonEmitter {
 
     public String emit(PythonNode.Module module) {
         // Pass 1: collect top-level defined names so the module can re-export them (Python modules
-        // expose all top-level bindings; this lets sibling .py files `from <this> import <name>`).
-        for (PythonNode stmt : module.body()) collectDefinitions(stmt);
+        // expose all top-level bindings; this lets sibling .py files `from <this> import <name>`),
+        // and collect **kwargs-aware functions/methods/classes so call sites can route keyword args.
+        for (PythonNode stmt : module.body()) {
+            collectDefinitions(stmt);
+            collectKwAware(stmt);
+        }
         // Pass 2: ESM import declarations must precede all other statements; emit them first, each
         // mapped back to its Python source line. Module specifiers are relative to this file
         // (foo → ./foo, a.b.c → ./a/b/c); NekoModuleResolver probes .py / .js / index.* automatically.
@@ -76,7 +84,13 @@ public final class PythonEmitter {
         switch (node) {
             case PythonNode.Module m -> throw new IllegalArgumentException("nested module");
             case PythonNode.FunctionDef f -> {
-                line("function" + (f.isGenerator() ? "* " : " ") + f.name() + "(" + emitParams(f.params()) + ") {");
+                if (hasKwargs(f.params())) {
+                    // **kwargs → empty signature; a prologue reconstructs binding from `arguments`.
+                    line("function" + (f.isGenerator() ? "* " : " ") + f.name() + "() {");
+                    emitKwPrologue(f.params(), false);
+                } else {
+                    line("function" + (f.isGenerator() ? "* " : " ") + f.name() + "(" + emitParams(f.params()) + ") {");
+                }
                 block(f.body());
                 line("}");
                 applyDecorators(f.name(), f.decorators());
@@ -195,6 +209,100 @@ public final class PythonEmitter {
         }
     }
 
+    /** True if a parameter list declares {@code **kwargs} (the only trigger for the kw-aware lowering). */
+    private static boolean hasKwargs(List<Param> params) {
+        for (Param p : params) if (p.kwDict()) return true;
+        return false;
+    }
+
+    /** Pre-pass: record every function/method/class that declares {@code **kwargs} (for call-site routing). */
+    private void collectKwAware(PythonNode node) {
+        switch (node) {
+            case PythonNode.Module m -> { for (PythonNode s : m.body()) collectKwAware(s); }
+            case PythonNode.FunctionDef f -> {
+                if (hasKwargs(f.params())) kwFunctions.add(f.name());
+                for (PythonNode s : f.body()) collectKwAware(s);   // nested defs
+            }
+            case PythonNode.ClassDef c -> {
+                for (PythonNode member : c.body()) {
+                    if (member instanceof PythonNode.FunctionDef m) {
+                        if (hasKwargs(m.params())) {
+                            kwMethods.add(m.name());
+                            if ("__init__".equals(m.name())) kwClassNames.add(c.name());
+                        }
+                        collectKwAware(m);
+                    } else collectKwAware(member);
+                }
+            }
+            case PythonNode.If i -> { for (PythonNode s : i.thenBody()) collectKwAware(s); for (PythonNode s : i.elseBody()) collectKwAware(s); }
+            case PythonNode.For f -> { for (PythonNode s : f.body()) collectKwAware(s); }
+            case PythonNode.While w -> { for (PythonNode s : w.body()) collectKwAware(s); }
+            case PythonNode.Try t -> {
+                for (PythonNode s : t.body()) collectKwAware(s);
+                for (var ex : t.excepts()) for (PythonNode s : ex.body()) collectKwAware(s);
+                for (PythonNode s : t.finallyBody()) collectKwAware(s);
+            }
+            case PythonNode.With w -> { for (PythonNode s : w.body()) collectKwAware(s); }
+            default -> { }
+        }
+    }
+
+    /**
+     * Emits the prologue that reconstructs Python parameter binding from a JS {@code arguments}
+     * object, used only by functions/methods that declare {@code **kwargs}. Call sites pass keyword
+     * args as a single tagged trailing object {@code { name: value, ..., __nekoKw: true }}; this
+     * prologue separates it from positional args, binds each named positional param (positional
+     * beats keyword beats default), collects {@code *args}, and gathers the remaining keyword args
+     * into the {@code **kwargs} dict (excluding names that bound to a positional param).
+     *
+     * @param skipFirst drop the leading positional param (the implicit {@code self}/{@code cls} of a method)
+     */
+    private void emitKwPrologue(List<Param> params, boolean skipFirst) {
+        List<Param> positional = new ArrayList<>();
+        Param starParam = null;
+        Param kwParam = null;
+        for (Param p : params) {
+            if (p.kwDict()) kwParam = p;
+            else if (p.starArg()) starParam = p;
+            else positional.add(p);
+        }
+        int start = skipFirst ? 1 : 0;
+        line("var __nekoLast = arguments.length > 0 ? arguments[arguments.length - 1] : undefined;");
+        line("var __nekoHasKw = (typeof __nekoLast === \"object\" && __nekoLast !== null && __nekoLast.__nekoKw === true);");
+        line("var __kw = __nekoHasKw ? __nekoLast : {};");
+        line("var __posCount = arguments.length - (__nekoHasKw ? 1 : 0);");
+        for (int i = start; i < positional.size(); i++) {
+            Param p = positional.get(i);
+            String def = p.defaultValue() != null ? emitExpr(p.defaultValue()) : "undefined";
+            String pick = "(__posCount > " + (i - start) + ") ? arguments[" + (i - start) + "]"
+                    + " : (\"" + p.name() + "\" in __kw ? __kw[\"" + p.name() + "\"] : " + def + ")";
+            line("var " + p.name() + " = " + pick + ";");
+        }
+        if (starParam != null) {
+            line("var " + starParam.name() + " = [];");
+            line("for (var __i = " + (positional.size() - start) + "; __i < __posCount; __i++) "
+                    + starParam.name() + ".push(arguments[__i]);");
+        }
+        if (kwParam != null) {
+            StringBuilder excl = new StringBuilder(" __nekoK !== \"__nekoKw\"");
+            for (int i = start; i < positional.size(); i++) excl.append(" && __nekoK !== \"").append(positional.get(i).name()).append("\"");
+            line("var " + kwParam.name() + " = {};");
+            line("for (var __nekoK in __kw) { if (" + excl + ") " + kwParam.name() + "[__nekoK] = __kw[__nekoK]; }");
+        }
+    }
+
+    /** Builds the tagged trailing object carrying keyword args at a call site. */
+    private String kwObjectLiteral(Map<String, PythonNode> kwargs) {
+        StringBuilder sb = new StringBuilder("{ ");
+        boolean first = true;
+        for (var e : kwargs.entrySet()) {
+            if (!first) sb.append(", ");
+            first = false;
+            sb.append(e.getKey()).append(": ").append(emitExpr(e.getValue()));
+        }
+        return sb.append(", __nekoKw: true }").toString();
+    }
+
     /**
      * Builds the ESM import for one {@code import m[.sub][ as alias]} spec. Dots map to path
      * separators ({@code a.b.c} → {@code ./a/b/c}); the local binding is the alias or the leaf
@@ -302,9 +410,14 @@ public final class PythonEmitter {
         }
         boolean prev = rewriteSelf;
         rewriteSelf = !isStatic;   // instance methods rewrite self → this; static methods do not
-        String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
         String star = m.isGenerator() ? "*" : "";   // generator method: *name(...)
-        line((isStatic ? "static " : "") + star + jsMethodName(m.name()) + "(" + params + ") {");
+        if (hasKwargs(m.params())) {
+            line((isStatic ? "static " : "") + star + jsMethodName(m.name()) + "() {");
+            emitKwPrologue(m.params(), !isStatic);   // instance methods drop the leading self param
+        } else {
+            String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
+            line((isStatic ? "static " : "") + star + jsMethodName(m.name()) + "(" + params + ") {");
+        }
         block(m.body());
         line("}");
         rewriteSelf = prev;
@@ -517,7 +630,12 @@ public final class PythonEmitter {
             case PythonNode.TupleLit l -> emitElements(l.elements());
             case PythonNode.DictLit d -> emitDict(d);
             case PythonNode.SetLit l -> "new Set(" + emitElements(l.elements()) + ")";
-            case PythonNode.Lambda lam -> "((" + emitParams(lam.params()) + ") => (" + emitExpr(lam.body()) + "))";
+            case PythonNode.Lambda lam -> {
+                if (hasKwargs(lam.params())) {
+                    throw new IllegalArgumentException("python **kwargs is not supported in a lambda (use a def)");
+                }
+                yield "((" + emitParams(lam.params()) + ") => (" + emitExpr(lam.body()) + "))";
+            }
             case PythonNode.ListComp lc -> compChain(lc.clauses(), emitExpr(lc.element()));
             case PythonNode.Yield y -> y.from()
                     ? ("(yield* " + emitExpr(y.value()) + ")")
@@ -538,17 +656,17 @@ public final class PythonEmitter {
             if ("__init__".equals(attr.attr())) return "super(" + args + ")";
             return "super." + attr.attr() + "(" + args + ")";
         }
-        // method calls: map common str/list/dict/set methods to JS idioms
-        if (c.func() instanceof PythonNode.Attribute mem) {
-            String mapped = emitMethodCall(mem, c.args());
-            if (mapped != null) return mapped;
-        }
-        // separate positional args from keyword args
+        // separate positional args from keyword args first (so method-call mappings never see kwargs)
         List<PythonNode> positional = new ArrayList<>();
         Map<String, PythonNode> kwargs = new LinkedHashMap<>();
         for (PythonNode a : c.args()) {
             if (a instanceof PythonNode.Kwarg k) kwargs.put(k.name(), k.value());
             else positional.add(a);
+        }
+        // method calls: map common str/list/dict/set methods to JS idioms (they take no kwargs)
+        if (kwargs.isEmpty() && c.func() instanceof PythonNode.Attribute mem) {
+            String mapped = emitMethodCall(mem, positional);
+            if (mapped != null) return mapped;
         }
         if (c.func() instanceof PythonNode.Name fn) {
             String e0 = positional.isEmpty() ? "" : emitExpr(positional.get(0));
@@ -579,11 +697,34 @@ public final class PythonEmitter {
                 default -> {}
             }
             if (classNames.contains(fn.id())) {
+                if (!kwargs.isEmpty()) {
+                    if (!kwClassNames.contains(fn.id())) {
+                        throw new IllegalArgumentException("python keyword arguments to '" + fn.id()
+                                + "()' require its __init__ to declare **kwargs");
+                    }
+                    return "new " + fn.id() + "(" + emitArgs(positional)
+                            + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs) + ")";
+                }
                 return "new " + fn.id() + "(" + emitArgs(positional) + ")";
             }
         }
         if (!kwargs.isEmpty()) {
-            throw new IllegalArgumentException("python keyword arguments are only supported for print/sorted");
+            // Keyword args route to a tagged trailing object only when the callee declares **kwargs.
+            boolean kwAware = false;
+            String label = "()";
+            if (c.func() instanceof PythonNode.Name fn) {
+                kwAware = kwFunctions.contains(fn.id());
+                label = fn.id() + "()";
+            } else if (c.func() instanceof PythonNode.Attribute a) {
+                kwAware = kwMethods.contains(a.attr());
+                label = "." + a.attr() + "()";
+            }
+            if (!kwAware) {
+                throw new IllegalArgumentException("python keyword arguments require the target to declare **kwargs"
+                        + " (or be print/sorted); '" + label + "' does not");
+            }
+            return emitExpr(c.func()) + "(" + emitArgs(positional)
+                    + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs) + ")";
         }
         return emitExpr(c.func()) + "(" + emitArgs(positional) + ")";
     }
@@ -594,11 +735,15 @@ public final class PythonEmitter {
         return "console.log([" + emitArgs(args) + "].join(" + sep + "))";
     }
 
-    /** sorted(iter, reverse=) → numeric/string sort, optionally reversed. */
+    /** sorted(iter, reverse=) → numeric/string sort; reverse honours a True/False literal (else runtime). */
     private String emitSorted(List<PythonNode> args, Map<String, PythonNode> kwargs) {
         if (args.size() != 1) breakKeyword("sorted", args.size());
-        String base = "([...(" + emitExpr(args.get(0)) + ")]).sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
-        return kwargs.containsKey("reverse") ? base + ".reverse()" : base;
+        String sorted = "([...(" + emitExpr(args.get(0)) + ")]).sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
+        PythonNode rev = kwargs.get("reverse");
+        if (rev == null) return sorted;
+        if (rev instanceof PythonNode.BoolLit b) return b.value() ? sorted + ".reverse()" : sorted;
+        // non-literal reverse flag → decide at runtime
+        return "((function (__a) { if (" + emitExpr(rev) + ") __a.reverse(); return __a; })(" + sorted + "))";
     }
 
     private static void breakKeyword(String name, int argc) {
