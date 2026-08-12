@@ -16,7 +16,9 @@ import graal.graalvm.polyglot.proxy.ProxyArray;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,26 @@ public final class ApiValueMarshaller {
     private final ApiRuntimeView runtimeView;
     private final ApiGuestErrorFactory guestErrorFactory;
 
+    /**
+     * Parsed {@link ApiSymbolId} per SYMBOL {@link ApiTypeRef}, keyed by object identity.
+     *
+     * <p>{@link ApiTypeRef} is a record, so its {@code equals} is structural: two distinct
+     * instances may compare equal while having unrelated identities. The cache is therefore
+     * deliberately keyed by identity ({@link IdentityHashMap}) — it stores the parse result
+     * for the exact type ref objects this marshaller has seen, so {@code "kind:name"} is
+     * parsed once per distinct type ref instead of on every argument, signature score, and
+     * return conversion. For SYMBOL type refs the parse result depends only on {@code name()},
+     * so identity granularity is safe (equal refs would parse to equal ids as well).
+     *
+     * <p>Facade member calls may run concurrently, hence the {@link Collections#synchronizedMap}
+     * wrapper. A marshaller is constructed per {@link ApiFacadeProxy}
+     * (see {@code ApiFacadeProxy.of}) and the type refs it encounters are the stable
+     * frozen-registry objects of that facade's contract, so this map stays bounded by the
+     * contract size for the marshaller's lifetime.
+     */
+    private final Map<ApiTypeRef, ApiSymbolId> symbolIdCache =
+            Collections.synchronizedMap(new IdentityHashMap<>());
+
     public ApiValueMarshaller(ApiRuntimeView runtimeView) {
         this(runtimeView, null);
     }
@@ -35,6 +57,14 @@ public final class ApiValueMarshaller {
     ApiValueMarshaller(ApiRuntimeView runtimeView, ApiGuestErrorFactory guestErrorFactory) {
         this.runtimeView = Objects.requireNonNull(runtimeView, "runtimeView");
         this.guestErrorFactory = guestErrorFactory;
+    }
+
+    /**
+     * Returns the parsed {@link ApiSymbolId} for a SYMBOL {@link ApiTypeRef}, cached per type
+     * ref identity so the {@code "kind:name"} string is parsed at most once per distinct ref.
+     */
+    private ApiSymbolId symbolIdOf(ApiTypeRef type) {
+        return symbolIdCache.computeIfAbsent(type, ref -> ApiSymbolId.parse(ref.name()));
     }
 
     public ApiSignature selectSignature(ApiSymbol symbol, List<?> rawArgs) {
@@ -191,7 +221,7 @@ public final class ApiValueMarshaller {
         if (paramType.kind() == ApiTypeRef.Kind.SYMBOL && graalValue.isProxyObject()) {
             Object proxy = graalValue.asProxyObject();
             if (proxy instanceof ApiFacadeProxy facade) {
-                ApiSymbolId expectedType = ApiSymbolId.parse(paramType.name());
+                ApiSymbolId expectedType = symbolIdOf(paramType);
                 if (!facade.typeId().equals(expectedType)) {
                     throw new ApiRuntimeException(
                             ApiErrorCodes.TYPE_MISMATCH,
@@ -382,7 +412,7 @@ public final class ApiValueMarshaller {
 
         if (returnType.kind() == ApiTypeRef.Kind.SYMBOL) {
             return ApiFacadeProxy.value(
-                    runtimeView, ApiSymbolId.parse(returnType.name()), rawReturn, guestErrorFactory);
+                    runtimeView, symbolIdOf(returnType), rawReturn, guestErrorFactory);
         }
 
         if (returnType.kind() == ApiTypeRef.Kind.ARRAY) {
@@ -508,7 +538,7 @@ public final class ApiValueMarshaller {
             case CALLBACK -> value instanceof ApiCallback ? 4 : -1;
             case ARRAY -> value instanceof Iterable<?> || value.getClass().isArray() ? 4 : -1;
             case SYMBOL -> value instanceof ApiFacadeProxy facade
-                    && facade.typeId().equals(ApiSymbolId.parse(type.name())) ? 4 : -1;
+                    && facade.typeId().equals(symbolIdOf(type)) ? 4 : -1;
             case UNION, VOID, TYPE_VARIABLE -> -1;
         };
     }
@@ -519,7 +549,7 @@ public final class ApiValueMarshaller {
         }
         Object proxy = value.asProxyObject();
         return proxy instanceof ApiFacadeProxy facade
-                && facade.typeId().equals(ApiSymbolId.parse(type.name())) ? 4 : -1;
+                && facade.typeId().equals(symbolIdOf(type)) ? 4 : -1;
     }
 
     private int primitiveScore(Value value, String typeName) {

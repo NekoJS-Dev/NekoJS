@@ -65,6 +65,82 @@ class ApiValueMarshallerTest {
     }
 
     @Test
+    void symbolTypeChecksStayCorrectAcrossRepeatedCalls() {
+        ApiTypeRef symbolType = ApiTypeRef.symbol(NEKO_ID);
+        ApiSignature signature = ApiSignature.function(
+                List.of(new ApiParameter("id", symbolType, false, false)),
+                ApiTypeRef.primitive("string"));
+        ApiSymbol symbol = new ApiSymbol(ApiSymbolId.parse("member:ID.asString"), List.of(signature));
+        NekoId id = NekoId.of("minecraft:stone");
+        Object wrapped = marshaller.marshalReturn(id, symbolType, false, "member:ID.of");
+        ApiFacadeProxy wrong = ApiFacadeProxy.value(
+                new FixtureRuntimeView(), ApiSymbolId.parse("type:ModInfo"), new Object());
+
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            context.getBindings("js").putMember("id", wrapped);
+            context.getBindings("js").putMember("wrong", wrong);
+            Value value = context.getBindings("js").getMember("id");
+            Value wrongValue = context.getBindings("js").getMember("wrong");
+
+            for (int i = 0; i < 5; i++) {
+                assertSame(signature, marshaller.selectSignature(symbol, List.of(value)));
+                assertEquals(List.of(id), marshaller.marshalArguments(
+                        signature, List.of(value), "member:ID.asString"));
+                ApiRuntimeException error = assertThrows(ApiRuntimeException.class,
+                        () -> marshaller.marshalArguments(
+                                signature, List.of(wrongValue), "member:ID.asString"));
+                assertEquals("TYPE_MISMATCH", error.code());
+            }
+        }
+    }
+
+    @Test
+    void structurallyEqualButDistinctSymbolTypeRefsBothMatch() {
+        // ApiTypeRef is a record (structural equals): the marshaller caches parsed ids by
+        // identity, so two equal-but-distinct instances must both resolve independently.
+        ApiTypeRef first = ApiTypeRef.symbol(NEKO_ID);
+        ApiTypeRef second = ApiTypeRef.symbol(NEKO_ID);
+        assertEquals(first, second);
+        assertTrue(first != second);
+
+        ApiSignature firstSignature = ApiSignature.function(
+                List.of(new ApiParameter("id", first, false, false)), ApiTypeRef.primitive("string"));
+        ApiSignature secondSignature = ApiSignature.function(
+                List.of(new ApiParameter("id", second, false, false)), ApiTypeRef.primitive("string"));
+
+        NekoId id = NekoId.of("minecraft:stone");
+        Object wrapped = marshaller.marshalReturn(id, first, false, "member:ID.of");
+
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            context.getBindings("js").putMember("id", wrapped);
+            Value value = context.getBindings("js").getMember("id");
+
+            ApiSymbol firstSymbol = new ApiSymbol(
+                    ApiSymbolId.parse("member:ID.asString"), List.of(firstSignature));
+            ApiSymbol secondSymbol = new ApiSymbol(
+                    ApiSymbolId.parse("member:ID.asString"), List.of(secondSignature));
+            assertSame(firstSignature, marshaller.selectSignature(firstSymbol, List.of(value)));
+            assertSame(secondSignature, marshaller.selectSignature(secondSymbol, List.of(value)));
+            assertEquals(List.of(id), marshaller.marshalArguments(
+                    firstSignature, List.of(value), "member:ID.asString"));
+            assertEquals(List.of(id), marshaller.marshalArguments(
+                    secondSignature, List.of(value), "member:ID.asString"));
+        }
+    }
+
+    @Test
+    void symbolReturnWrapsSameTypeRefRepeatedly() {
+        ApiTypeRef symbolType = ApiTypeRef.symbol(NEKO_ID);
+        NekoId id = NekoId.of("minecraft:stone");
+        for (int i = 0; i < 5; i++) {
+            ApiFacadeProxy proxy = assertInstanceOf(ApiFacadeProxy.class,
+                    marshaller.marshalReturn(id, symbolType, false, "member:ID.of"));
+            assertSame(id, proxy.implementation());
+            assertEquals(NEKO_ID, proxy.typeId());
+        }
+    }
+
+    @Test
     void arrayReturnUsesProxyArray() {
         Object value = marshaller.marshalReturn(
                 List.of("alpha", "beta"), ApiTypeRef.array(ApiTypeRef.primitive("string")), false,
