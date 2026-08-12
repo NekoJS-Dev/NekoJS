@@ -60,12 +60,9 @@ public sealed interface PythonNode {
     record DictLit(List<PythonNode> keys, List<PythonNode> values) implements PythonNode {}
     record SetLit(List<PythonNode> elements) implements PythonNode {}
     record Lambda(List<Param> params, PythonNode body) implements PythonNode {}
-    record ListComp(PythonNode element, PythonNode target, PythonNode iter, PythonNode cond)
-            implements PythonNode {}                                   // cond == null → no filter
-    record DictComp(PythonNode key, PythonNode value, PythonNode target, PythonNode iter, PythonNode cond)
-            implements PythonNode {}
-    record SetComp(PythonNode element, PythonNode target, PythonNode iter, PythonNode cond)
-            implements PythonNode {}
+    record ListComp(PythonNode element, List<CompClause> clauses) implements PythonNode {}
+    record DictComp(PythonNode key, PythonNode value, List<CompClause> clauses) implements PythonNode {}
+    record SetComp(PythonNode element, List<CompClause> clauses) implements PythonNode {}
     record Try(List<PythonNode> body, List<ExceptClause> excepts, List<PythonNode> finallyBody)
             implements PythonNode {}                                    // excepts/finallyBody empty → absent
     record With(List<WithItem> items, List<PythonNode> body) implements PythonNode {}   // 1+ context-manager items
@@ -81,4 +78,9 @@ public sealed interface PythonNode {
 
     /** {@code with} item (helper, not itself a node). target == null → no {@code as} binding. */
     record WithItem(PythonNode context, PythonNode target) {}
+
+    /** Comprehension clause (helper, not itself a node): a {@code for} loop or an {@code if} guard. */
+    sealed interface CompClause permits ForComp, IfComp {}
+    record ForComp(PythonNode target, PythonNode iter) implements CompClause {}
+    record IfComp(PythonNode cond) implements CompClause {}
 }

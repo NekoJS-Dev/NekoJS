@@ -507,9 +507,9 @@ public final class PythonParser {
             if (matchOp(":")) {
                 PythonNode val = parseTest();
                 if (peek().isKw("for")) {
-                    PythonNode[] c = parseCompClauses();
+                    List<PythonNode.CompClause> c = parseCompClauses();
                     expectOp("}");
-                    return new PythonNode.DictComp(first, val, c[0], c[1], c[2]);
+                    return new PythonNode.DictComp(first, val, c);
                 }
                 List<PythonNode> keys = new ArrayList<>(List.of(first));
                 List<PythonNode> values = new ArrayList<>(List.of(val));
@@ -523,9 +523,9 @@ public final class PythonParser {
                 return new PythonNode.DictLit(keys, values);
             }
             if (peek().isKw("for")) {
-                PythonNode[] c = parseCompClauses();
+                List<PythonNode.CompClause> c = parseCompClauses();
                 expectOp("}");
-                return new PythonNode.SetComp(first, c[0], c[1], c[2]);
+                return new PythonNode.SetComp(first, c);
             }
             List<PythonNode> elems = new ArrayList<>(List.of(first));
             while (matchOp(",")) {
@@ -539,19 +539,22 @@ public final class PythonParser {
     }
 
     private PythonNode parseListCompRest(PythonNode element) {
-        PythonNode[] c = parseCompClauses();
+        List<PythonNode.CompClause> clauses = parseCompClauses();
         expectOp("]");
-        return new PythonNode.ListComp(element, c[0], c[1], c[2]);
+        return new PythonNode.ListComp(element, clauses);
     }
 
-    /** Shared {@code for target in iter [if cond]} tail of a comprehension; returns [target, iter, cond]. */
-    private PythonNode[] parseCompClauses() {
-        expectKw("for");
-        PythonNode target = parseTargetList();
-        expectKw("in");
-        PythonNode iter = parseOr();
-        PythonNode cond = matchKw("if") ? parseOr() : null;
-        return new PythonNode[]{target, iter, cond};
+    /** One or more {@code for target in iter [if cond]*} clauses (Python allows nested for / multiple if). */
+    private List<PythonNode.CompClause> parseCompClauses() {
+        List<PythonNode.CompClause> clauses = new ArrayList<>();
+        while (matchKw("for")) {
+            PythonNode target = parseTargetList();
+            expectKw("in");
+            PythonNode iter = parseOr();
+            clauses.add(new PythonNode.ForComp(target, iter));
+            while (matchKw("if")) clauses.add(new PythonNode.IfComp(parseOr()));
+        }
+        return clauses;
     }
 
     /** Parses a subscript: a plain index expr, or a slice {@code [lo:up:step]} (any part optional). */

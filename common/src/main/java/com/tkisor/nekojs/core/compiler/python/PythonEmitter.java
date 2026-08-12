@@ -518,13 +518,13 @@ public final class PythonEmitter {
             case PythonNode.DictLit d -> emitDict(d);
             case PythonNode.SetLit l -> "new Set(" + emitElements(l.elements()) + ")";
             case PythonNode.Lambda lam -> "((" + emitParams(lam.params()) + ") => (" + emitExpr(lam.body()) + "))";
-            case PythonNode.ListComp lc -> emitListComp(lc);
+            case PythonNode.ListComp lc -> compChain(lc.clauses(), emitExpr(lc.element()));
             case PythonNode.Yield y -> y.from()
                     ? ("(yield* " + emitExpr(y.value()) + ")")
                     : ("(yield" + (y.value() != null ? " " + emitExpr(y.value()) : "") + ")");
-            case PythonNode.DictComp dc -> "Object.fromEntries(" + compChain(dc.target(), dc.iter(), dc.cond(),
+            case PythonNode.DictComp dc -> "Object.fromEntries(" + compChain(dc.clauses(),
                     "[" + emitExpr(dc.key()) + ", " + emitExpr(dc.value()) + "]") + ")";
-            case PythonNode.SetComp sc -> "new Set(" + compChain(sc.target(), sc.iter(), sc.cond(), emitExpr(sc.element())) + ")";
+            case PythonNode.SetComp sc -> "new Set(" + compChain(sc.clauses(), emitExpr(sc.element())) + ")";
             default -> throw new IllegalArgumentException("unsupported expression: " + node.getClass().getSimpleName());
         };
     }
@@ -661,16 +661,46 @@ public final class PythonEmitter {
         };
     }
 
-    private String emitListComp(PythonNode.ListComp lc) {
-        return compChain(lc.target(), lc.iter(), lc.cond(), emitExpr(lc.element()));
-    }
-
-    /** Shared (iter)[.filter].map(target => body) pipeline for list/dict/set comprehensions. */
-    private String compChain(PythonNode target, PythonNode iter, PythonNode cond, String bodyExpr) {
-        String t = emitTarget(target);
-        String base = "(" + emitExpr(iter) + ")";
-        String chained = cond != null ? base + ".filter((" + t + ") => " + emitExpr(cond) + ")" : base;
-        return chained + ".map((" + t + ") => " + bodyExpr + ")";
+    /**
+     * Lowers a comprehension's clause list. A single {@code for} (with any trailing {@code if}
+     * guards) emits the idiomatic {@code (iter).filter(...).map(...)} chain; multiple {@code for}
+     * clauses emit nested {@code flatMap} calls (innermost wraps the element in an array), which is
+     * the only way to express nested loops as a single expression. Guards on a for-level become a
+     * conjunction inside that level's arrow ({@code guard ? <rest> : []}).
+     *
+     * @param elementExpr the per-iteration value — a plain element for list/set, or {@code [k, v]} for dict
+     */
+    private String compChain(List<PythonNode.CompClause> clauses, String elementExpr) {
+        // Group clauses: each ForComp starts a group that absorbs its trailing IfComp guards.
+        List<String> targets = new ArrayList<>();
+        List<String> iters = new ArrayList<>();
+        List<String> guards = new ArrayList<>();
+        for (PythonNode.CompClause c : clauses) {
+            if (c instanceof PythonNode.ForComp fc) {
+                targets.add(emitTarget(fc.target()));
+                iters.add(emitExpr(fc.iter()));
+                guards.add("");
+            } else if (c instanceof PythonNode.IfComp ic) {
+                int last = guards.size() - 1;
+                String g = guards.get(last);
+                g = g.isEmpty() ? "(" + emitExpr(ic.cond()) + ")" : g + " && (" + emitExpr(ic.cond()) + ")";
+                guards.set(last, g);
+            }
+        }
+        if (targets.size() == 1) {
+            String base = "(" + iters.get(0) + ")";
+            String chained = guards.get(0).isEmpty() ? base
+                    : base + ".filter((" + targets.get(0) + ") => " + guards.get(0) + ")";
+            return chained + ".map((" + targets.get(0) + ") => " + elementExpr + ")";
+        }
+        // multiple for-clauses → nested flatMap; innermost wraps the element in an array
+        String body = "[" + elementExpr + "]";
+        for (int gi = targets.size() - 1; gi >= 0; gi--) {
+            String guard = guards.get(gi);
+            String arrowBody = guard.isEmpty() ? body : ("(" + guard + " ? " + body + " : [])");
+            body = "((" + iters.get(gi) + ").flatMap((" + targets.get(gi) + ") => " + arrowBody + "))";
+        }
+        return body;
     }
 
     private String emitDict(PythonNode.DictLit d) {

@@ -533,6 +533,53 @@ class PythonToJsCompilerTest {
         assertThrows(IllegalArgumentException.class, () -> py("list(x for x in range(3))"));
     }
 
+    // ---- multi-clause comprehensions (nested for / multiple if) ----
+
+    @Test
+    void nestedForClausesFlatten() throws Exception {
+        // [(i,j) for i in range(2) for j in range(2)] → 4 pairs; len 4.
+        String src = "len([(i, j) for i in range(2) for j in range(2)])";
+        String js = py(src);
+        assertTrue(js.contains(".flatMap("), "multiple for-clauses → flatMap: " + js);
+        assertEquals(4, evalInt(src));
+    }
+
+    @Test
+    void nestedForSumProducts() throws Exception {
+        // sum of i*j over a 3x3 table = 36
+        String src = "sum([i * j for i in range(1, 4) for j in range(1, 4)])";
+        assertEquals(36, evalInt(src));
+    }
+
+    @Test
+    void multipleIfGuardsInOneFor() throws Exception {
+        // [x for x in range(20) if x % 2 == 0 if x % 3 == 0] → 0,6,12,18; len 4
+        String src = "len([x for x in range(20) if x % 2 == 0 if x % 3 == 0])";
+        String js = py(src);
+        assertTrue(js.contains("&&"), "multiple if guards conjoin: " + js);
+        assertEquals(4, evalInt(src));
+    }
+
+    @Test
+    void nestedForWithIfGuards() throws Exception {
+        // pythagorean triples with hypotenuse < 6: (3,4,5) only → 1
+        String src = """
+                len([(a, b, c) for a in range(1, 6) for b in range(a, 6) for c in range(b, 6)
+                     if a * a + b * b == c * c])
+                """;
+        assertEquals(1, evalInt(src));
+    }
+
+    @Test
+    void dictCompWithNestedFor() throws Exception {
+        // {'k'+i+j: 1 for i in range(2) for j in range(2)} → 4 entries "k00","k01","k10","k11"
+        // (prefix avoids JS object integer-key reordering so insertion order is preserved)
+        String src = "d = {'k' + str(i) + str(j): 1 for i in range(2) for j in range(2)}\nlist(d.keys())[0] + list(d.keys())[3]";
+        String js = py(src);
+        assertTrue(js.contains("Object.fromEntries"), js);
+        assertEquals("k00k11", evalString(src));
+    }
+
     // ---- with statement (context managers) ----
 
     @Test
