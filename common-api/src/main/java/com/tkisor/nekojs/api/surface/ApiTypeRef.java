@@ -5,13 +5,13 @@ import java.util.*;
 public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
                          ApiSignature callbackSignature) {
 
-    public enum Kind { PRIMITIVE, SYMBOL, ARRAY, UNION, CALLBACK, VOID }
+    public enum Kind { PRIMITIVE, SYMBOL, ARRAY, UNION, CALLBACK, VOID, TYPE_VARIABLE }
 
     public ApiTypeRef {
         Objects.requireNonNull(kind, "kind");
         arguments = List.copyOf(arguments == null ? List.of() : arguments);
         switch (kind) {
-            case PRIMITIVE, SYMBOL -> {
+            case PRIMITIVE, SYMBOL, TYPE_VARIABLE -> {
                 requireName(name);
                 if (!arguments.isEmpty() || callbackSignature != null) {
                     throw new IllegalArgumentException(kind + " type cannot have arguments or callback signature");
@@ -51,6 +51,14 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
 
     public static ApiTypeRef symbol(ApiSymbolId id) {
         return new ApiTypeRef(Kind.SYMBOL, Objects.requireNonNull(id, "id").value(), List.of(), null);
+    }
+
+    /**
+     * A declared type variable (e.g. Java generic parameter {@code T}). Used by the probe IR to
+     * faithfully capture generic signatures; the {@code name} is the variable's identifier.
+     */
+    public static ApiTypeRef typeVariable(String name) {
+        return new ApiTypeRef(Kind.TYPE_VARIABLE, requireName(name), List.of(), null);
     }
 
     public static ApiTypeRef array(ApiTypeRef element) {

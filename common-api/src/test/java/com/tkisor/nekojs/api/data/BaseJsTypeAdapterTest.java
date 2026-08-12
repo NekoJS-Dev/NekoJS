@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Collection;
 import java.util.List;
 
-class AbstractJsTypeAdapterTest {
+class BaseJsTypeAdapterTest {
 
     @Test
     void supportsStringWhenIsStringReturnsTrue() {
@@ -80,13 +80,13 @@ class AbstractJsTypeAdapterTest {
             () -> adapter.convert(otherView, ConversionContext.empty()));
     }
 
-    private static final class UpperCaseAdapter extends AbstractJsTypeAdapter<String> {
+    private static final class UpperCaseAdapter extends BaseJsTypeAdapter<String> {
         UpperCaseAdapter() { super(String.class); }
         @Override protected String fromString(String s) { return s.toUpperCase(); }
         @Override protected String fromHostObject(Object host) { return host.toString().toUpperCase(); }
     }
 
-    private static final class NullableAdapter extends AbstractJsTypeAdapter<String> {
+    private static final class NullableAdapter extends BaseJsTypeAdapter<String> {
         NullableAdapter() { super(String.class); }
         @Override protected boolean acceptNull() { return true; }
         @Override protected String defaultValue() { return "DEFAULT"; }

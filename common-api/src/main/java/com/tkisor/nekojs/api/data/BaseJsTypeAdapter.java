@@ -5,10 +5,10 @@ import com.tkisor.nekojs.api.AdapterInputShape;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class AbstractJsTypeAdapter<T> implements JsTypeAdapter<T> {
+public abstract class BaseJsTypeAdapter<T> implements JsTypeAdapter<T> {
     private final Class<T> targetType;
 
-    protected AbstractJsTypeAdapter(Class<T> targetType) {
+    protected BaseJsTypeAdapter(Class<T> targetType) {
         this.targetType = Objects.requireNonNull(targetType, "targetType");
     }
 
