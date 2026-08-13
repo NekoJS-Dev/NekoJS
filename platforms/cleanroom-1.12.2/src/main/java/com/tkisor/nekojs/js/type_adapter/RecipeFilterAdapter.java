@@ -98,7 +98,8 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<Object> {
         copyStringMember(value, filter, "idContains");
         copyStringMember(value, filter, "type");
 
-        return filter.isEmpty() ? null : filter;
+        // 空对象 = 无约束：返回空 Map 表示匹配全部，避免 apply 返回 null 让调用方 NPE
+        return filter;
     }
 
     private void copyStringMember(Value value, Map<String, Object> filter, String key) {

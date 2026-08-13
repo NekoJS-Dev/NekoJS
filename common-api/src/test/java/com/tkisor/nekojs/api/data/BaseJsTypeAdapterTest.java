@@ -80,6 +80,23 @@ class BaseJsTypeAdapterTest {
             () -> adapter.convert(otherView, ConversionContext.empty()));
     }
 
+    @Test
+    void rejectsStringWhenFromStringIsNotOverridden() {
+        JsTypeAdapter<String> adapter = new NoStringAdapter();
+        JsValueView stringView = new MockJsValueView.StringMock("hello");
+
+        assertFalse(adapter.supports(stringView, ConversionContext.empty()),
+                "adapter that does not override fromString must reject the string shape");
+        assertThrows(ValueConversionException.class,
+                () -> adapter.convert(stringView, ConversionContext.empty()));
+    }
+
+    /** 不接受字符串：未覆盖 fromString（supportsString 默认 true 但探测 fromString 会失败）。 */
+    private static final class NoStringAdapter extends BaseJsTypeAdapter<String> {
+        NoStringAdapter() { super(String.class); }
+        @Override protected String fromHostObject(Object host) { return host.toString(); }
+    }
+
     private static final class UpperCaseAdapter extends BaseJsTypeAdapter<String> {
         UpperCaseAdapter() { super(String.class); }
         @Override protected String fromString(String s) { return s.toUpperCase(); }

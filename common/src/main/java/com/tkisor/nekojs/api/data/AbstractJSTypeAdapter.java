@@ -89,7 +89,16 @@ public abstract class AbstractJSTypeAdapter<T> implements JSTypeAdapter<T> {
     @Override
     public final boolean test(Value value) {
         if (value == null || value.isNull()) return acceptNull();
-        if (value.isString()) return true;
+        if (value.isString()) {
+            // 探测 fromString：默认实现抛 ValueConversionException（= 不接受 string 形状），
+            // 避免出现「test 通过但 apply 抛异常」的不一致
+            try {
+                fromString(value.asString());
+                return true;
+            } catch (ValueConversionException e) {
+                return false;
+            }
+        }
         if (value.isHostObject()) {
             try {
                 return fromHostObject(value.asHostObject()) != null;

@@ -1,0 +1,119 @@
+package com.tkisor.nekojs.js.type_adapter;
+
+import com.tkisor.nekojs.api.AdapterInputShape;
+import com.tkisor.nekojs.api.JSTypeAdapter;
+import java.util.List;
+
+import static com.tkisor.nekojs.api.AdapterInputShape.*;
+import com.tkisor.nekojs.api.recipe.RecipeFilter;
+import graal.graalvm.polyglot.Value;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
+    @Override
+    public Class<RecipeFilter> getTargetClass() { return RecipeFilter.class; }
+
+    @Override
+    public List<AdapterInputShape> inputShapes() {
+        return List.of(
+                string(),
+                arrayOf(self()),
+                object(
+                        Slot.opt("not", self()),
+                        Slot.opt("and", self()),
+                        Slot.opt("or", self()),
+                        Slot.opt("output", string()),
+                        Slot.opt("input", string()),
+                        Slot.opt("mod", string()),
+                        Slot.opt("group", string()),
+                        Slot.opt("id", string()),
+                        Slot.opt("idStartsWith", string()),
+                        Slot.opt("idEndsWith", string()),
+                        Slot.opt("idContains", string()),
+                        Slot.opt("type", string())));
+    }
+
+    @Override
+    public boolean test(Value value) {
+        return value != null && (value.isString() || value.hasMembers() || value.hasArrayElements());
+    }
+
+    @Override
+    public RecipeFilter apply(Value value) {
+        if (value == null || value.isNull()) return null;
+
+        if (value.isString()) {
+            return new RecipeFilter.ById(value.asString());
+        }
+
+        if (value.hasArrayElements()) {
+            List<RecipeFilter> list = new ArrayList<>();
+            for (long i = 0; i < value.getArraySize(); i++) {
+                RecipeFilter sub = apply(value.getArrayElement(i));
+                if (sub != null) list.add(sub);
+            }
+            return new RecipeFilter.Or(list);
+        }
+
+        List<RecipeFilter> andFilters = new ArrayList<>();
+
+        if (value.hasMember("not")) {
+            RecipeFilter sub = apply(value.getMember("not"));
+            if (sub != null) andFilters.add(new RecipeFilter.Not(sub));
+        }
+
+        if (value.hasMember("and")) {
+            RecipeFilter sub = apply(value.getMember("and"));
+            if (sub != null) andFilters.add(sub);
+        }
+
+        if (value.hasMember("or")) {
+            RecipeFilter sub = apply(value.getMember("or"));
+            if (sub != null) andFilters.add(sub);
+        }
+
+        if (value.hasMember("output")) {
+            andFilters.add(new RecipeFilter.ByOutput(value.getMember("output").asString()));
+        }
+
+        if (value.hasMember("input")) {
+            andFilters.add(new RecipeFilter.ByInput(value.getMember("input").asString()));
+        }
+
+        if (value.hasMember("mod")) {
+            andFilters.add(new RecipeFilter.ByMod(value.getMember("mod").asString()));
+        }
+
+        if (value.hasMember("group")) {
+            andFilters.add(new RecipeFilter.ByGroup(value.getMember("group").asString()));
+        }
+
+        if (value.hasMember("id")) {
+            andFilters.add(new RecipeFilter.ById(value.getMember("id").asString()));
+        }
+
+        if (value.hasMember("idStartsWith")) {
+            andFilters.add(new RecipeFilter.ByIdStartsWith(value.getMember("idStartsWith").asString()));
+        }
+
+        if (value.hasMember("idEndsWith")) {
+            andFilters.add(new RecipeFilter.ByIdEndsWith(value.getMember("idEndsWith").asString()));
+        }
+
+        if (value.hasMember("idContains")) {
+            andFilters.add(new RecipeFilter.ByIdContains(value.getMember("idContains").asString()));
+        }
+
+        if (value.hasMember("type")) {
+            andFilters.add(new RecipeFilter.ByType(value.getMember("type").asString()));
+        }
+
+        if (andFilters.isEmpty()) {
+            // 空对象 = 无约束 = 匹配全部：And 空列表恒真，避免 apply 返回 null 让调用方 NPE
+            return new RecipeFilter.And(List.of());
+        }
+        return andFilters.size() == 1 ? andFilters.get(0) : new RecipeFilter.And(andFilters);
+    }
+}
