@@ -77,6 +77,10 @@ public final class TypeReflector {
         StringBuilder sb = new StringBuilder();
         for (MethodDecl.MethodParam p : m.params) {
             sb.append('|').append(typeKey(p.type));
+            // varargs/optional 是排序键的一部分：varargs 参数在 IR 中被扁平化为组件类型，
+            // 若不加标志，of(int) 与 of(int...) 的排序键相同 → 稳定排序保留反射原始序 → 跨 JVM 抖动
+            if (p.varargs) sb.append("[]");
+            if (p.optional) sb.append("?");
         }
         return sb.toString();
     }

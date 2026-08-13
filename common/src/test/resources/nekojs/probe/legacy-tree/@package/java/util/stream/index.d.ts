@@ -67,8 +67,8 @@ declare module "java:java/util/stream" {
         max(): $OptionalDouble;
         min(): $OptionalDouble;
         noneMatch(arg0: $DoublePredicate): boolean;
-        of(arg0: number): $DoubleStream;
         of(arg0?: number[]): $DoubleStream;
+        of(arg0: number): $DoubleStream;
         parallel(): $BaseStream;
         parallel(): $DoubleStream;
         peek(arg0: $DoubleConsumer): $DoubleStream;
@@ -130,8 +130,8 @@ declare module "java:java/util/stream" {
         max(): $OptionalInt;
         min(): $OptionalInt;
         noneMatch(arg0: $IntPredicate): boolean;
-        of(arg0: number): $IntStream;
         of(arg0?: number[]): $IntStream;
+        of(arg0: number): $IntStream;
         parallel(): $BaseStream;
         parallel(): $IntStream;
         peek(arg0: $IntConsumer): $IntStream;
@@ -194,8 +194,8 @@ declare module "java:java/util/stream" {
         max(): $OptionalLong;
         min(): $OptionalLong;
         noneMatch(arg0: $LongPredicate): boolean;
-        of(arg0: number): $LongStream;
         of(arg0?: number[]): $LongStream;
+        of(arg0: number): $LongStream;
         parallel(): $BaseStream;
         parallel(): $LongStream;
         peek(arg0: $LongConsumer): $LongStream;
