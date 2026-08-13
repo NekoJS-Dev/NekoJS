@@ -26,7 +26,11 @@ public class ClassFilter implements Predicate<String> {
             "java.lang.Class", "java.lang.Runtime", "java.lang.Process", "java.lang.ProcessBuilder",
             "java.lang.ClassLoader", "java.lang.System",
             "java.io", "java.nio", "java.net", "java.util.jar", "java.util.zip",
-            "sun", "com.sun",
+            // 线程/并发原语：allowThreads=false 的设计意图是脚本不得自行创建线程，
+            // 前缀黑名单必须把可构造线程池的包也挡在 host 类查找之外
+            "java.util.concurrent", "java.lang.management", "java.util.prefs",
+            "java.beans", "javax.management", "java.security",
+            "sun", "com.sun", "jdk",
             "io.netty", "org.openjdk.nashorn", "jdk.nashorn", "org.lwjgl.system",
             "javax.script", "graal.graalvm.polyglot",
             "net.neoforged.fml", "net.neoforged.accesstransformer", "net.neoforged.coremod",

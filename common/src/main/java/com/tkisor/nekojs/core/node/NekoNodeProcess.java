@@ -5,10 +5,21 @@ import com.tkisor.nekojs.platform.Platform;
 
 import java.lang.management.ManagementFactory;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public final class NekoNodeProcess {
     private final NekoNodeFS fs;
+
+    /**
+     * 疑似密钥的环境变量名模式（大小写不敏感、包含匹配）。共享服务器上 process.env
+     * 不得向脚本泄露 AWS/TOKEN/SECRET 等敏感值；普通变量（OS、TEMP、JAVA_HOME 等）
+     * 保留，避免破坏依赖环境变量的整合包脚本。
+     */
+    private static final List<String> SECRET_ENV_PATTERNS = List.of(
+            "password", "passwd", "secret", "token", "credential",
+            "api_key", "apikey", "private_key", "access_key", "client_key");
 
     public NekoNodeProcess(NekoNodeFS fs) {
         this.fs = fs;
@@ -40,9 +51,17 @@ public final class NekoNodeProcess {
     public Map<String, String> env() {
         Map<String, String> env = new LinkedHashMap<>();
         for (Map.Entry<String, String> entry : System.getenv().entrySet()) {
+            if (isSensitiveKey(entry.getKey())) {
+                continue;
+            }
             env.put(entry.getKey(), entry.getValue());
         }
         return env;
+    }
+
+    private static boolean isSensitiveKey(String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
+        return SECRET_ENV_PATTERNS.stream().anyMatch(lower::contains);
     }
 
     public MemoryUsage memoryUsage() {

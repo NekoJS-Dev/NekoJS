@@ -51,6 +51,8 @@ public final class NekoNodeModuleInstaller {
             globalThis.clearTimeout = (id) => __nekoNodeRuntime.timers().clearTimeout(id);
             globalThis.setInterval = (cb, ms) => __nekoNodeRuntime.timers().setInterval(cb, ms || 0);
             globalThis.clearInterval = (id) => __nekoNodeRuntime.timers().clearInterval(id);
+            globalThis.setImmediate = (cb) => __nekoNodeRuntime.timers().setImmediate(cb);
+            globalThis.clearImmediate = (id) => __nekoNodeRuntime.timers().clearImmediate(id);
             """;
 
     private static void loadManifest(Context context) {        String manifest = readResource(MANIFEST);

@@ -151,6 +151,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         try {
             manager.flushReadyNodeTimers();
         } catch (Throwable ignored) {
+            com.tkisor.nekojs.NekoJS.LOGGER.warn("Failed to flush pending {} timers before close", type.name(), ignored);
         }
         manager.close();
     }

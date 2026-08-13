@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.fs;
 
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
@@ -286,6 +287,8 @@ public class NekoJSFileSystem implements FileSystem {
                                 return true;
                             }
                         } catch (IOException e) {
+                            // 目录遍历中单个条目不可读时跳过；debug 记录避免完全静默
+                            NekoJS.LOGGER.debug("Skipping inaccessible directory entry while listing: {}", path, e);
                         }
                     }
                     return false;

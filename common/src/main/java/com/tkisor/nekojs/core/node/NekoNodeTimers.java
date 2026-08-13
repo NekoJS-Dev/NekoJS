@@ -24,6 +24,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Reload cancels all timers registered by the old script.
  */
 public final class NekoNodeTimers implements AutoCloseable {
+    /** ready 队列上限：游戏线程被阻塞时 1ms interval 会不限速堆积，超限直接丢弃新回调并记录。 */
+    private static final int MAX_READY_QUEUE_SIZE = 4096;
+    /** 单次 flush 最多执行的回调数：防止一次 tick 内无限处理导致 tick 冻结。 */
+    private static final int MAX_CALLBACKS_PER_FLUSH = 256;
+
     private final ScriptType scriptType;
     private final ErrorTracker errorTracker;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(task -> {
@@ -45,7 +50,9 @@ public final class NekoNodeTimers implements AutoCloseable {
     public int setTimeout(Value callback, long delayMillis, Object... args) {
         rejectStartupTimer(delayMillis);
         int id = ids.getAndIncrement();
-        ScheduledFuture<?> future = scheduler.schedule(() -> ready.add(new TimerCallback(id, false, callback, args)), Math.max(0L, delayMillis), TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future = scheduler.schedule(
+                () -> enqueueReady(new TimerCallback(id, false, callback, args)),
+                Math.max(0L, delayMillis), TimeUnit.MILLISECONDS);
         tasks.put(id, future);
         recordScriptId(id, callback);
         return id;
@@ -61,7 +68,9 @@ public final class NekoNodeTimers implements AutoCloseable {
         }
         int id = ids.getAndIncrement();
         long delay = Math.max(1L, delayMillis);
-        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> ready.add(new TimerCallback(id, true, callback, args)), delay, delay, TimeUnit.MILLISECONDS);
+        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
+                () -> enqueueReady(new TimerCallback(id, true, callback, args)),
+                delay, delay, TimeUnit.MILLISECONDS);
         tasks.put(id, future);
         recordScriptId(id, callback);
         return id;
@@ -104,7 +113,8 @@ public final class NekoNodeTimers implements AutoCloseable {
 
     public void flushReadyCallbacks() {
         TimerCallback callback;
-        while ((callback = ready.poll()) != null) {
+        int executed = 0;
+        while (executed < MAX_CALLBACKS_PER_FLUSH && (callback = ready.poll()) != null) {
             ScheduledFuture<?> future = tasks.get(callback.id);
             if (future == null) continue;
             if (!callback.repeating) {
@@ -112,7 +122,19 @@ public final class NekoNodeTimers implements AutoCloseable {
                 scriptIds.remove(callback.id);
             }
             execute(callback.id, callback.callback, callback.args);
+            executed++;
         }
+    }
+
+    /** 有界入队：队列已满时丢弃新回调并记一次错误（ErrorTracker 按签名去重，不会刷屏）。 */
+    private void enqueueReady(TimerCallback callback) {
+        if (ready.size() >= MAX_READY_QUEUE_SIZE) {
+            errorTracker.recordCallbackError(scriptType, "timer",
+                    new IllegalStateException("Timer queue overflow (" + MAX_READY_QUEUE_SIZE
+                            + " callbacks pending); dropping new callback id=" + callback.id));
+            return;
+        }
+        ready.add(callback);
     }
 
     public boolean hasPendingCallbacks() {
@@ -160,9 +182,9 @@ public final class NekoNodeTimers implements AutoCloseable {
             try {
                 callback.executeVoid(args == null ? new Object[0] : args);
             } finally {
-                if (scriptId != null && !scriptId.isBlank()) {
-                    activeScriptIds.remove(context);
-                }
+                // 不移除 activeScriptIds：保留「该 Context 最近执行的脚本」归属，使
+                // host 侧触发（无 currentScriptId）注册的 timer 也能在对应脚本 reload 时
+                // 被 cancelScript 清理，避免孤儿 interval 泄漏。
                 ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
             }
         } catch (Throwable e) {
