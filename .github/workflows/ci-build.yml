@@ -85,9 +85,15 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # main/master 写入缓存；PR 分支只读，避免污染缓存
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
 
       - name: Install Probe typecheck dependencies
         run: npm ci
@@ -95,8 +101,9 @@ jobs:
       - name: Run common checks
         run: ./gradlew :common-api:check :common:test --console=plain
 
-      - name: Run portable NBT smoke tests
-        run: ./gradlew nbtSmokeTest --console=plain
+      - name: Run platform NBT smoke tests
+        # :common:test 已覆盖 common 的 nbt-smoke 标签用例，这里只补平台侧（platforms/* 的测试否则永不运行）
+        run: ./gradlew nbtSmokeTest -x :common:nbtSmokeTest --console=plain
 
       - name: Typecheck Probe declarations
         run: npm run test:probe-types
@@ -108,36 +115,36 @@ jobs:
           set -euo pipefail
           TASKS=""
           BUILD_TASKS=""
-          VERIFY_TASKS=""
-          while IFS= read -r dir; do
-            name="$(basename "$dir")"
-            # Skip non-module directories (no build.gradle)
-            if [[ ! -f "$dir/build.gradle" ]]; then continue; fi
+          TEST_TASKS=""
+          # 以 settings.gradle 的 include 列表为唯一事实来源，避免 find 探测与模块声明漂移
+          while IFS= read -r name; do
             TASKS="$TASKS :platforms:$name:compileJava"
             BUILD_TASKS="$BUILD_TASKS :platforms:$name:build"
-            VERIFY_TASKS="$VERIFY_TASKS :platforms:$name:verifyRuntimeArtifact"
-          done < <(find platforms -mindepth 1 -maxdepth 1 -type d | sort)
+            TEST_TASKS="$TEST_TASKS :platforms:$name:test"
+          done < <(grep -o "include 'platforms:[^']*'" settings.gradle | sed "s/include 'platforms://;s/'//" | sort -u)
 
           if [[ -z "$TASKS" ]]; then
-            echo "No platform modules found" >&2
+            echo "No platform modules found in settings.gradle" >&2
             exit 1
           fi
 
           echo "compile_tasks=$TASKS" >> "$GITHUB_OUTPUT"
           echo "build_tasks=$BUILD_TASKS" >> "$GITHUB_OUTPUT"
-          echo "verify_tasks=$VERIFY_TASKS" >> "$GITHUB_OUTPUT"
+          echo "test_tasks=$TEST_TASKS" >> "$GITHUB_OUTPUT"
           echo "Discovered compile tasks:$TASKS"
           echo "Discovered build tasks:$BUILD_TASKS"
-          echo "Discovered artifact verification tasks:$VERIFY_TASKS"
+          echo "Discovered test tasks:$TEST_TASKS"
 
       - name: Compile Java
         run: ./gradlew ${{ steps.platforms.outputs.compile_tasks }} --console=plain
 
-      - name: Build jars
-        run: ./gradlew ${{ steps.platforms.outputs.build_tasks }} --console=plain
+      - name: Run platform tests
+        # 普通 JUnit 冒烟测试（adapter / 事件桥 / mixin 配置完整性），无需启动游戏
+        run: ./gradlew ${{ steps.platforms.outputs.test_tasks }} --console=plain
 
-      - name: Verify runtime artifacts
-        run: ./gradlew ${{ steps.platforms.outputs.verify_tasks }} --console=plain
+      - name: Build jars
+        # build 内含 check → verifyRuntimeArtifact（各平台 build.gradle 已把校验挂进 check），无需单独跑 verify
+        run: ./gradlew ${{ steps.platforms.outputs.build_tasks }} --console=plain
 
       - name: Prepare artifacts
         shell: bash
