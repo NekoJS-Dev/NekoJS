@@ -394,7 +394,8 @@ public final class PythonProbeBackend implements ProbeBackend {
             }
             inputs.remove(simple); // Self 形状 = 目标自身，已在别名左侧
             if (inputs.isEmpty()) continue;
-            out.put(fqn, new PyAdapterAlias(simple + "_", List.copyOf(inputs), Set.copyOf(inputFqns)));
+            // TreeSet：确定性迭代（Set.copyOf 迭代序无规范保证，跨 JVM 会抖动 .pyi 输出）
+            out.put(fqn, new PyAdapterAlias(simple + "_", List.copyOf(inputs), new java.util.TreeSet<>(inputFqns)));
         }
         return out;
     }

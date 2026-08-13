@@ -14,334 +14,10 @@ import { $IntStream, $Stream } from "java:java/util/stream";
 
 export * as constant from "java:java/lang/constant";
 export * as invoke from "java:java/lang/invoke";
-export * as reflect from "java:java/lang/reflect";
 export * as module from "java:java/lang/module";
+export * as reflect from "java:java/lang/reflect";
 
 declare module "java:java/lang" {
-    export class $String implements $Serializable, $Comparable, $CharSequence, $Constable, $ConstantDesc {
-        constructor();
-        constructor(arg0: number[]);
-        constructor(arg0: number[], arg1: number);
-        constructor(arg0: number[], arg1: number, arg2: number);
-        constructor(arg0: number[], arg1: number, arg2: number, arg3: number);
-        constructor(arg0: number[], arg1: number, arg2: number, arg3: string);
-        constructor(arg0: number[], arg1: number, arg2: number, arg3: $Charset);
-        constructor(arg0: number[], arg1: string);
-        constructor(arg0: number[], arg1: $Charset);
-        constructor(arg0: string[]);
-        constructor(arg0: string[], arg1: number, arg2: number);
-        constructor(arg0: number[], arg1: number, arg2: number);
-        constructor(arg0: string);
-        constructor(arg0: $StringBuffer);
-        constructor(arg0: $StringBuilder);
-        static CASE_INSENSITIVE_ORDER: $Comparator<string>;
-        get bytes(): number[];
-        getBytes(): number[];
-        get blank(): boolean;
-        isBlank(): boolean;
-        get empty(): boolean;
-        isEmpty(): boolean;
-        static copyValueOf(arg0: string[], arg1: number, arg2: number): string;
-        static copyValueOf(arg0: string[]): string;
-        static format(arg0: string, arg1?: object[]): string;
-        static format(arg0: $Locale, arg1: string, arg2?: object[]): string;
-        static join(arg0: $CharSequence, arg1?: $CharSequence[]): string;
-        static join(arg0: $CharSequence, arg1: $Iterable<$CharSequence>): string;
-        static valueOf(arg0: boolean): string;
-        static valueOf(arg0: string[], arg1: number, arg2: number): string;
-        static valueOf(arg0: string[]): string;
-        static valueOf(arg0: string): string;
-        static valueOf(arg0: number): string;
-        static valueOf(arg0: number): string;
-        static valueOf(arg0: number): string;
-        static valueOf(arg0: object): string;
-        static valueOf(arg0: number): string;
-        charAt(arg0: number): string;
-        chars(): $IntStream;
-        codePointAt(arg0: number): number;
-        codePointBefore(arg0: number): number;
-        codePointCount(arg0: number, arg1: number): number;
-        codePoints(): $IntStream;
-        compareToIgnoreCase(arg0: string): number;
-        compareTo(arg0: object): number;
-        compareTo(arg0: string): number;
-        concat(arg0: string): string;
-        contains(arg0: $CharSequence): boolean;
-        contentEquals(arg0: $CharSequence): boolean;
-        contentEquals(arg0: $StringBuffer): boolean;
-        describeConstable(): $Optional<string>;
-        endsWith(arg0: string): boolean;
-        equalsIgnoreCase(arg0: string): boolean;
-        equals(arg0: object): boolean;
-        formatted(arg0?: object[]): string;
-        getBytes(arg0: number, arg1: number, arg2: number[], arg3: number): void;
-        getBytes(arg0: string): number[];
-        getBytes(arg0: $Charset): number[];
-        getChars(arg0: number, arg1: number, arg2: string[], arg3: number): void;
-        hashCode(): number;
-        indent(arg0: number): string;
-        indexOf(arg0: number, arg1: number, arg2: number): number;
-        indexOf(arg0: number, arg1: number): number;
-        indexOf(arg0: number): number;
-        indexOf(arg0: string, arg1: number, arg2: number): number;
-        indexOf(arg0: string, arg1: number): number;
-        indexOf(arg0: string): number;
-        intern(): string;
-        lastIndexOf(arg0: number, arg1: number): number;
-        lastIndexOf(arg0: number): number;
-        lastIndexOf(arg0: string, arg1: number): number;
-        lastIndexOf(arg0: string): number;
-        length(): number;
-        lines(): $Stream<string>;
-        matches(arg0: string): boolean;
-        offsetByCodePoints(arg0: number, arg1: number): number;
-        regionMatches(arg0: boolean, arg1: number, arg2: string, arg3: number, arg4: number): boolean;
-        regionMatches(arg0: number, arg1: string, arg2: number, arg3: number): boolean;
-        repeat(arg0: number): string;
-        replaceAll(arg0: string, arg1: string): string;
-        replaceFirst(arg0: string, arg1: string): string;
-        replace(arg0: string, arg1: string): string;
-        replace(arg0: $CharSequence, arg1: $CharSequence): string;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): string;
-        splitWithDelimiters(arg0: string, arg1: number): string[];
-        split(arg0: string, arg1: number): string[];
-        split(arg0: string): string[];
-        startsWith(arg0: string, arg1: number): boolean;
-        startsWith(arg0: string): boolean;
-        stripIndent(): string;
-        stripLeading(): string;
-        stripTrailing(): string;
-        strip(): string;
-        subSequence(arg0: number, arg1: number): $CharSequence;
-        substring(arg0: number, arg1: number): string;
-        substring(arg0: number): string;
-        toCharArray(): string[];
-        toLowerCase(arg0: $Locale): string;
-        toLowerCase(): string;
-        toString(): string;
-        toUpperCase(arg0: $Locale): string;
-        toUpperCase(): string;
-        transform<R>(arg0: $Function<any, R>): R;
-        translateEscapes(): string;
-        trim(): string;
-    }
-
-    export interface $Comparable<T> {
-        compareTo(arg0: T): number;
-    }
-
-    export interface $CharSequence {
-        charAt(arg0: number): string;
-        chars(): $IntStream;
-        codePoints(): $IntStream;
-        compare(arg0: $CharSequence, arg1: $CharSequence): number;
-        isEmpty(): boolean;
-        length(): number;
-        subSequence(arg0: number, arg1: number): $CharSequence;
-        toString(): string;
-    }
-
-    export class $StringBuilder extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable, $CharSequence {
-        constructor();
-        constructor(arg0: number);
-        constructor(arg0: $CharSequence);
-        constructor(arg0: string);
-        appendCodePoint(arg0: number): $AbstractStringBuilder;
-        appendCodePoint(arg0: number): $StringBuilder;
-        append(arg0: boolean): $AbstractStringBuilder;
-        append(arg0: boolean): $StringBuilder;
-        append(arg0: string[], arg1: number, arg2: number): $AbstractStringBuilder;
-        append(arg0: string[], arg1: number, arg2: number): $StringBuilder;
-        append(arg0: string[]): $AbstractStringBuilder;
-        append(arg0: string[]): $StringBuilder;
-        append(arg0: string): $AbstractStringBuilder;
-        append(arg0: string): $Appendable;
-        append(arg0: string): $StringBuilder;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuilder;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuilder;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuilder;
-        append(arg0: $CharSequence, arg1: number, arg2: number): $AbstractStringBuilder;
-        append(arg0: $CharSequence, arg1: number, arg2: number): $Appendable;
-        append(arg0: $CharSequence, arg1: number, arg2: number): $StringBuilder;
-        append(arg0: $CharSequence): $AbstractStringBuilder;
-        append(arg0: $CharSequence): $Appendable;
-        append(arg0: $CharSequence): $StringBuilder;
-        append(arg0: object): $AbstractStringBuilder;
-        append(arg0: object): $StringBuilder;
-        append(arg0: $StringBuffer): $AbstractStringBuilder;
-        append(arg0: $StringBuffer): $StringBuilder;
-        append(arg0: string): $AbstractStringBuilder;
-        append(arg0: string): $StringBuilder;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuilder;
-        capacity(): number;
-        charAt(arg0: number): string;
-        chars(): $IntStream;
-        codePointAt(arg0: number): number;
-        codePointBefore(arg0: number): number;
-        codePointCount(arg0: number, arg1: number): number;
-        codePoints(): $IntStream;
-        compareTo(arg0: object): number;
-        compareTo(arg0: $StringBuilder): number;
-        deleteCharAt(arg0: number): $AbstractStringBuilder;
-        deleteCharAt(arg0: number): $StringBuilder;
-        delete(arg0: number, arg1: number): $AbstractStringBuilder;
-        delete(arg0: number, arg1: number): $StringBuilder;
-        ensureCapacity(arg0: number): void;
-        getChars(arg0: number, arg1: number, arg2: string[], arg3: number): void;
-        indexOf(arg0: string, arg1: number): number;
-        indexOf(arg0: string): number;
-        insert(arg0: number, arg1: boolean): $AbstractStringBuilder;
-        insert(arg0: number, arg1: boolean): $StringBuilder;
-        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $StringBuilder;
-        insert(arg0: number, arg1: string[]): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string[]): $StringBuilder;
-        insert(arg0: number, arg1: string): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string): $StringBuilder;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuilder;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuilder;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuilder;
-        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $StringBuilder;
-        insert(arg0: number, arg1: $CharSequence): $AbstractStringBuilder;
-        insert(arg0: number, arg1: $CharSequence): $StringBuilder;
-        insert(arg0: number, arg1: object): $AbstractStringBuilder;
-        insert(arg0: number, arg1: object): $StringBuilder;
-        insert(arg0: number, arg1: string): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string): $StringBuilder;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuilder;
-        lastIndexOf(arg0: string, arg1: number): number;
-        lastIndexOf(arg0: string): number;
-        length(): number;
-        offsetByCodePoints(arg0: number, arg1: number): number;
-        repeat(arg0: number, arg1: number): $AbstractStringBuilder;
-        repeat(arg0: number, arg1: number): $StringBuilder;
-        repeat(arg0: $CharSequence, arg1: number): $AbstractStringBuilder;
-        repeat(arg0: $CharSequence, arg1: number): $StringBuilder;
-        replace(arg0: number, arg1: number, arg2: string): $AbstractStringBuilder;
-        replace(arg0: number, arg1: number, arg2: string): $StringBuilder;
-        reverse(): $AbstractStringBuilder;
-        reverse(): $StringBuilder;
-        setCharAt(arg0: number, arg1: string): void;
-        subSequence(arg0: number, arg1: number): $CharSequence;
-        substring(arg0: number, arg1: number): string;
-        substring(arg0: number): string;
-        toString(): string;
-        trimToSize(): void;
-    }
-
-    export class $StringBuffer extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable, $CharSequence {
-        constructor();
-        constructor(arg0: number);
-        constructor(arg0: $CharSequence);
-        constructor(arg0: string);
-        appendCodePoint(arg0: number): $AbstractStringBuilder;
-        appendCodePoint(arg0: number): $StringBuffer;
-        append(arg0: boolean): $AbstractStringBuilder;
-        append(arg0: boolean): $StringBuffer;
-        append(arg0: string[], arg1: number, arg2: number): $AbstractStringBuilder;
-        append(arg0: string[], arg1: number, arg2: number): $StringBuffer;
-        append(arg0: string[]): $AbstractStringBuilder;
-        append(arg0: string[]): $StringBuffer;
-        append(arg0: string): $AbstractStringBuilder;
-        append(arg0: string): $Appendable;
-        append(arg0: string): $StringBuffer;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuffer;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuffer;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuffer;
-        append(arg0: $CharSequence, arg1: number, arg2: number): $AbstractStringBuilder;
-        append(arg0: $CharSequence, arg1: number, arg2: number): $Appendable;
-        append(arg0: $CharSequence, arg1: number, arg2: number): $StringBuffer;
-        append(arg0: $CharSequence): $AbstractStringBuilder;
-        append(arg0: $CharSequence): $Appendable;
-        append(arg0: $CharSequence): $StringBuffer;
-        append(arg0: object): $AbstractStringBuilder;
-        append(arg0: object): $StringBuffer;
-        append(arg0: $StringBuffer): $AbstractStringBuilder;
-        append(arg0: $StringBuffer): $StringBuffer;
-        append(arg0: string): $AbstractStringBuilder;
-        append(arg0: string): $StringBuffer;
-        append(arg0: number): $AbstractStringBuilder;
-        append(arg0: number): $StringBuffer;
-        capacity(): number;
-        charAt(arg0: number): string;
-        chars(): $IntStream;
-        codePointAt(arg0: number): number;
-        codePointBefore(arg0: number): number;
-        codePointCount(arg0: number, arg1: number): number;
-        codePoints(): $IntStream;
-        compareTo(arg0: object): number;
-        compareTo(arg0: $StringBuffer): number;
-        deleteCharAt(arg0: number): $AbstractStringBuilder;
-        deleteCharAt(arg0: number): $StringBuffer;
-        delete(arg0: number, arg1: number): $AbstractStringBuilder;
-        delete(arg0: number, arg1: number): $StringBuffer;
-        ensureCapacity(arg0: number): void;
-        getChars(arg0: number, arg1: number, arg2: string[], arg3: number): void;
-        indexOf(arg0: string, arg1: number): number;
-        indexOf(arg0: string): number;
-        insert(arg0: number, arg1: boolean): $AbstractStringBuilder;
-        insert(arg0: number, arg1: boolean): $StringBuffer;
-        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $StringBuffer;
-        insert(arg0: number, arg1: string[]): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string[]): $StringBuffer;
-        insert(arg0: number, arg1: string): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string): $StringBuffer;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuffer;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuffer;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuffer;
-        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $StringBuffer;
-        insert(arg0: number, arg1: $CharSequence): $AbstractStringBuilder;
-        insert(arg0: number, arg1: $CharSequence): $StringBuffer;
-        insert(arg0: number, arg1: object): $AbstractStringBuilder;
-        insert(arg0: number, arg1: object): $StringBuffer;
-        insert(arg0: number, arg1: string): $AbstractStringBuilder;
-        insert(arg0: number, arg1: string): $StringBuffer;
-        insert(arg0: number, arg1: number): $AbstractStringBuilder;
-        insert(arg0: number, arg1: number): $StringBuffer;
-        lastIndexOf(arg0: string, arg1: number): number;
-        lastIndexOf(arg0: string): number;
-        length(): number;
-        offsetByCodePoints(arg0: number, arg1: number): number;
-        repeat(arg0: number, arg1: number): $AbstractStringBuilder;
-        repeat(arg0: number, arg1: number): $StringBuffer;
-        repeat(arg0: $CharSequence, arg1: number): $AbstractStringBuilder;
-        repeat(arg0: $CharSequence, arg1: number): $StringBuffer;
-        replace(arg0: number, arg1: number, arg2: string): $AbstractStringBuilder;
-        replace(arg0: number, arg1: number, arg2: string): $StringBuffer;
-        reverse(): $AbstractStringBuilder;
-        reverse(): $StringBuffer;
-        setCharAt(arg0: number, arg1: string): void;
-        subSequence(arg0: number, arg1: number): $CharSequence;
-        substring(arg0: number, arg1: number): string;
-        substring(arg0: number): string;
-        toString(): string;
-        trimToSize(): void;
-    }
-
-    export interface $Iterable<T> {
-        forEach(arg0: $Consumer<any>): void;
-        iterator(): $Iterator<T>;
-        spliterator(): $Spliterator<T>;
-    }
-
     export class $AbstractStringBuilder implements $Appendable, $CharSequence {
         appendCodePoint(arg0: number): $AbstractStringBuilder;
         append(arg0: boolean): $AbstractStringBuilder;
@@ -407,7 +83,19 @@ declare module "java:java/lang" {
         append(arg0: $CharSequence): $Appendable;
     }
 
-    export interface $Cloneable {
+    export interface $AutoCloseable {
+        close(): void;
+    }
+
+    export interface $CharSequence {
+        charAt(arg0: number): string;
+        chars(): $IntStream;
+        codePoints(): $IntStream;
+        compare(arg0: $CharSequence, arg1: $CharSequence): number;
+        isEmpty(): boolean;
+        length(): number;
+        subSequence(arg0: number, arg1: number): $CharSequence;
+        toString(): string;
     }
 
     export class $Character implements $Serializable, $Comparable, $Constable {
@@ -717,6 +405,112 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
+    export class $ClassLoader {
+        get definedPackages(): $Package[];
+        getDefinedPackages(): $Package[];
+        get name(): string;
+        getName(): string;
+        get parent(): $ClassLoader;
+        getParent(): $ClassLoader;
+        get unnamedModule(): $Module;
+        getUnnamedModule(): $Module;
+        get registeredAsParallelCapable(): boolean;
+        isRegisteredAsParallelCapable(): boolean;
+        static getPlatformClassLoader(): $ClassLoader;
+        static getSystemClassLoader(): $ClassLoader;
+        static getSystemResourceAsStream(arg0: string): $InputStream;
+        static getSystemResources(arg0: string): $Enumeration<$URL>;
+        static getSystemResource(arg0: string): $URL;
+        clearAssertionStatus(): void;
+        getDefinedPackage(arg0: string): $Package;
+        getResourceAsStream(arg0: string): $InputStream;
+        getResources(arg0: string): $Enumeration<$URL>;
+        getResource(arg0: string): $URL;
+        loadClass(arg0: string): $Class<any>;
+        resources(arg0: string): $Stream<$URL>;
+        setClassAssertionStatus(arg0: string, arg1: boolean): void;
+        setPackageAssertionStatus(arg0: string, arg1: boolean): void;
+    }
+
+    export interface $Cloneable {
+    }
+
+    export interface $Comparable<T> {
+        compareTo(arg0: T): number;
+    }
+
+    export class $Double extends number implements $Comparable, $Constable, $ConstantDesc {
+        constructor(arg0: number);
+        constructor(arg0: string);
+        static BYTES: number;
+        static MAX_EXPONENT: number;
+        static MAX_VALUE: number;
+        static MIN_EXPONENT: number;
+        static MIN_NORMAL: number;
+        static MIN_VALUE: number;
+        static NEGATIVE_INFINITY: number;
+        static NaN: number;
+        static POSITIVE_INFINITY: number;
+        static PRECISION: number;
+        static SIZE: number;
+        static TYPE: $Class<number>;
+        get infinite(): boolean;
+        isInfinite(): boolean;
+        get naN(): boolean;
+        isNaN(): boolean;
+        static compare(arg0: number, arg1: number): number;
+        static doubleToLongBits(arg0: number): number;
+        static doubleToRawLongBits(arg0: number): number;
+        static hashCode(arg0: number): number;
+        static isFinite(arg0: number): boolean;
+        static isInfinite(arg0: number): boolean;
+        static isNaN(arg0: number): boolean;
+        static longBitsToDouble(arg0: number): number;
+        static max(arg0: number, arg1: number): number;
+        static min(arg0: number, arg1: number): number;
+        static parseDouble(arg0: string): number;
+        static sum(arg0: number, arg1: number): number;
+        static toHexString(arg0: number): string;
+        static toString(arg0: number): string;
+        static valueOf(arg0: number): number;
+        static valueOf(arg0: string): number;
+        byteValue(): number;
+        compareTo(arg0: number): number;
+        compareTo(arg0: object): number;
+        describeConstable(): $Optional<number>;
+        doubleValue(): number;
+        equals(arg0: object): boolean;
+        floatValue(): number;
+        hashCode(): number;
+        intValue(): number;
+        longValue(): number;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): number;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+        shortValue(): number;
+        toString(): string;
+    }
+
+    export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable, $Serializable {
+        get declaringClass(): $Class<E>;
+        getDeclaringClass(): $Class<E>;
+        static valueOf<T>(arg0: $Class<T>, arg1: string): T;
+        compareTo(arg0: E): number;
+        compareTo(arg0: object): number;
+        describeConstable(): $Optional<$Enum$EnumDesc<E>>;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+    }
+
+    export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc {
+        static of<E>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): E;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+        toString(): string;
+    }
+
     export class $Integer extends number implements $Comparable, $Constable, $ConstantDesc {
         constructor(arg0: number);
         constructor(arg0: string);
@@ -782,30 +576,10 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
-    export interface $Runnable {
-        run(): void;
-    }
-
-    export interface $Readable {
-        read(arg0: $CharBuffer): number;
-    }
-
-    export class $Enum<E extends $Enum<E>> implements $Constable, $Comparable, $Serializable {
-        get declaringClass(): $Class<E>;
-        getDeclaringClass(): $Class<E>;
-        static valueOf<T>(arg0: $Class<T>, arg1: string): T;
-        compareTo(arg0: E): number;
-        compareTo(arg0: object): number;
-        describeConstable(): $Optional<$Enum$EnumDesc<E>>;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        name(): string;
-        ordinal(): number;
-        toString(): string;
-    }
-
-    export interface $AutoCloseable {
-        close(): void;
+    export interface $Iterable<T> {
+        forEach(arg0: $Consumer<any>): void;
+        iterator(): $Iterator<T>;
+        spliterator(): $Spliterator<T>;
     }
 
     export class $Long extends number implements $Comparable, $Constable, $ConstantDesc {
@@ -872,84 +646,6 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
-    export class $Double extends number implements $Comparable, $Constable, $ConstantDesc {
-        constructor(arg0: number);
-        constructor(arg0: string);
-        static BYTES: number;
-        static MAX_EXPONENT: number;
-        static MAX_VALUE: number;
-        static MIN_EXPONENT: number;
-        static MIN_NORMAL: number;
-        static MIN_VALUE: number;
-        static NEGATIVE_INFINITY: number;
-        static NaN: number;
-        static POSITIVE_INFINITY: number;
-        static PRECISION: number;
-        static SIZE: number;
-        static TYPE: $Class<number>;
-        get infinite(): boolean;
-        isInfinite(): boolean;
-        get naN(): boolean;
-        isNaN(): boolean;
-        static compare(arg0: number, arg1: number): number;
-        static doubleToLongBits(arg0: number): number;
-        static doubleToRawLongBits(arg0: number): number;
-        static hashCode(arg0: number): number;
-        static isFinite(arg0: number): boolean;
-        static isInfinite(arg0: number): boolean;
-        static isNaN(arg0: number): boolean;
-        static longBitsToDouble(arg0: number): number;
-        static max(arg0: number, arg1: number): number;
-        static min(arg0: number, arg1: number): number;
-        static parseDouble(arg0: string): number;
-        static sum(arg0: number, arg1: number): number;
-        static toHexString(arg0: number): string;
-        static toString(arg0: number): string;
-        static valueOf(arg0: number): number;
-        static valueOf(arg0: string): number;
-        byteValue(): number;
-        compareTo(arg0: number): number;
-        compareTo(arg0: object): number;
-        describeConstable(): $Optional<number>;
-        doubleValue(): number;
-        equals(arg0: object): boolean;
-        floatValue(): number;
-        hashCode(): number;
-        intValue(): number;
-        longValue(): number;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): number;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
-        shortValue(): number;
-        toString(): string;
-    }
-
-    export class $ClassLoader {
-        get definedPackages(): $Package[];
-        getDefinedPackages(): $Package[];
-        get name(): string;
-        getName(): string;
-        get parent(): $ClassLoader;
-        getParent(): $ClassLoader;
-        get unnamedModule(): $Module;
-        getUnnamedModule(): $Module;
-        get registeredAsParallelCapable(): boolean;
-        isRegisteredAsParallelCapable(): boolean;
-        static getPlatformClassLoader(): $ClassLoader;
-        static getSystemClassLoader(): $ClassLoader;
-        static getSystemResourceAsStream(arg0: string): $InputStream;
-        static getSystemResources(arg0: string): $Enumeration<$URL>;
-        static getSystemResource(arg0: string): $URL;
-        clearAssertionStatus(): void;
-        getDefinedPackage(arg0: string): $Package;
-        getResourceAsStream(arg0: string): $InputStream;
-        getResources(arg0: string): $Enumeration<$URL>;
-        getResource(arg0: string): $URL;
-        loadClass(arg0: string): $Class<any>;
-        resources(arg0: string): $Stream<$URL>;
-        setClassAssertionStatus(arg0: string, arg1: boolean): void;
-        setPackageAssertionStatus(arg0: string, arg1: boolean): void;
-    }
-
     export class $Module implements $AnnotatedElement {
         get annotations(): $Annotation[];
         getAnnotations(): $Annotation[];
@@ -982,6 +678,36 @@ declare module "java:java/lang" {
         isOpen(arg0: string, arg1: $Module): boolean;
         isOpen(arg0: string): boolean;
         toString(): string;
+    }
+
+    export class $ModuleLayer {
+        static boot(): $ModuleLayer;
+        static defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $ClassLoader): $ModuleLayer$Controller;
+        static defineModulesWithOneLoader(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $ClassLoader): $ModuleLayer$Controller;
+        static defineModules(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $Function<string, $ClassLoader>): $ModuleLayer$Controller;
+        static empty(): $ModuleLayer;
+        configuration(): $Configuration;
+        defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ClassLoader): $ModuleLayer;
+        defineModulesWithOneLoader(arg0: $Configuration, arg1: $ClassLoader): $ModuleLayer;
+        defineModules(arg0: $Configuration, arg1: $Function<string, $ClassLoader>): $ModuleLayer;
+        findLoader(arg0: string): $ClassLoader;
+        findModule(arg0: string): $Optional<$Module>;
+        modules(): $Set<$Module>;
+        parents(): $List<$ModuleLayer>;
+        toString(): string;
+    }
+
+    export class $NamedPackage {
+    }
+
+    export class $Number implements $Serializable {
+        constructor();
+        byteValue(): number;
+        doubleValue(): number;
+        floatValue(): number;
+        intValue(): number;
+        longValue(): number;
+        shortValue(): number;
     }
 
     export class $Package extends $NamedPackage implements $AnnotatedElement {
@@ -1018,41 +744,315 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
-    export class $Number implements $Serializable {
+    export interface $Readable {
+        read(arg0: $CharBuffer): number;
+    }
+
+    export interface $Runnable {
+        run(): void;
+    }
+
+    export class $String implements $Serializable, $Comparable, $CharSequence, $Constable, $ConstantDesc {
         constructor();
-        byteValue(): number;
-        doubleValue(): number;
-        floatValue(): number;
-        intValue(): number;
-        longValue(): number;
-        shortValue(): number;
-    }
-
-    export class $Enum$EnumDesc<E extends $Enum<E>> extends $DynamicConstantDesc {
-        static of<E>(arg0: $ClassDesc, arg1: string): $Enum$EnumDesc<E>;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): E;
+        constructor(arg0: number[]);
+        constructor(arg0: number[], arg1: number);
+        constructor(arg0: number[], arg1: number, arg2: number);
+        constructor(arg0: number[], arg1: number, arg2: number, arg3: number);
+        constructor(arg0: number[], arg1: number, arg2: number, arg3: string);
+        constructor(arg0: number[], arg1: number, arg2: number, arg3: $Charset);
+        constructor(arg0: number[], arg1: string);
+        constructor(arg0: number[], arg1: $Charset);
+        constructor(arg0: string[]);
+        constructor(arg0: string[], arg1: number, arg2: number);
+        constructor(arg0: number[], arg1: number, arg2: number);
+        constructor(arg0: string);
+        constructor(arg0: $StringBuffer);
+        constructor(arg0: $StringBuilder);
+        static CASE_INSENSITIVE_ORDER: $Comparator<string>;
+        get bytes(): number[];
+        getBytes(): number[];
+        get blank(): boolean;
+        isBlank(): boolean;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        static copyValueOf(arg0: string[], arg1: number, arg2: number): string;
+        static copyValueOf(arg0: string[]): string;
+        static format(arg0: string, arg1?: object[]): string;
+        static format(arg0: $Locale, arg1: string, arg2?: object[]): string;
+        static join(arg0: $CharSequence, arg1?: $CharSequence[]): string;
+        static join(arg0: $CharSequence, arg1: $Iterable<$CharSequence>): string;
+        static valueOf(arg0: boolean): string;
+        static valueOf(arg0: string[], arg1: number, arg2: number): string;
+        static valueOf(arg0: string[]): string;
+        static valueOf(arg0: string): string;
+        static valueOf(arg0: number): string;
+        static valueOf(arg0: number): string;
+        static valueOf(arg0: number): string;
+        static valueOf(arg0: object): string;
+        static valueOf(arg0: number): string;
+        charAt(arg0: number): string;
+        chars(): $IntStream;
+        codePointAt(arg0: number): number;
+        codePointBefore(arg0: number): number;
+        codePointCount(arg0: number, arg1: number): number;
+        codePoints(): $IntStream;
+        compareToIgnoreCase(arg0: string): number;
+        compareTo(arg0: object): number;
+        compareTo(arg0: string): number;
+        concat(arg0: string): string;
+        contains(arg0: $CharSequence): boolean;
+        contentEquals(arg0: $CharSequence): boolean;
+        contentEquals(arg0: $StringBuffer): boolean;
+        describeConstable(): $Optional<string>;
+        endsWith(arg0: string): boolean;
+        equalsIgnoreCase(arg0: string): boolean;
+        equals(arg0: object): boolean;
+        formatted(arg0?: object[]): string;
+        getBytes(arg0: number, arg1: number, arg2: number[], arg3: number): void;
+        getBytes(arg0: string): number[];
+        getBytes(arg0: $Charset): number[];
+        getChars(arg0: number, arg1: number, arg2: string[], arg3: number): void;
+        hashCode(): number;
+        indent(arg0: number): string;
+        indexOf(arg0: number, arg1: number, arg2: number): number;
+        indexOf(arg0: number, arg1: number): number;
+        indexOf(arg0: number): number;
+        indexOf(arg0: string, arg1: number, arg2: number): number;
+        indexOf(arg0: string, arg1: number): number;
+        indexOf(arg0: string): number;
+        intern(): string;
+        lastIndexOf(arg0: number, arg1: number): number;
+        lastIndexOf(arg0: number): number;
+        lastIndexOf(arg0: string, arg1: number): number;
+        lastIndexOf(arg0: string): number;
+        length(): number;
+        lines(): $Stream<string>;
+        matches(arg0: string): boolean;
+        offsetByCodePoints(arg0: number, arg1: number): number;
+        regionMatches(arg0: boolean, arg1: number, arg2: string, arg3: number, arg4: number): boolean;
+        regionMatches(arg0: number, arg1: string, arg2: number, arg3: number): boolean;
+        repeat(arg0: number): string;
+        replaceAll(arg0: string, arg1: string): string;
+        replaceFirst(arg0: string, arg1: string): string;
+        replace(arg0: string, arg1: string): string;
+        replace(arg0: $CharSequence, arg1: $CharSequence): string;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): string;
+        splitWithDelimiters(arg0: string, arg1: number): string[];
+        split(arg0: string, arg1: number): string[];
+        split(arg0: string): string[];
+        startsWith(arg0: string, arg1: number): boolean;
+        startsWith(arg0: string): boolean;
+        stripIndent(): string;
+        stripLeading(): string;
+        stripTrailing(): string;
+        strip(): string;
+        subSequence(arg0: number, arg1: number): $CharSequence;
+        substring(arg0: number, arg1: number): string;
+        substring(arg0: number): string;
+        toCharArray(): string[];
+        toLowerCase(arg0: $Locale): string;
+        toLowerCase(): string;
         toString(): string;
+        toUpperCase(arg0: $Locale): string;
+        toUpperCase(): string;
+        transform<R>(arg0: $Function<any, R>): R;
+        translateEscapes(): string;
+        trim(): string;
     }
 
-    export class $ModuleLayer {
-        static boot(): $ModuleLayer;
-        static defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $ClassLoader): $ModuleLayer$Controller;
-        static defineModulesWithOneLoader(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $ClassLoader): $ModuleLayer$Controller;
-        static defineModules(arg0: $Configuration, arg1: $ModuleLayer[], arg2: $Function<string, $ClassLoader>): $ModuleLayer$Controller;
-        static empty(): $ModuleLayer;
-        configuration(): $Configuration;
-        defineModulesWithManyLoaders(arg0: $Configuration, arg1: $ClassLoader): $ModuleLayer;
-        defineModulesWithOneLoader(arg0: $Configuration, arg1: $ClassLoader): $ModuleLayer;
-        defineModules(arg0: $Configuration, arg1: $Function<string, $ClassLoader>): $ModuleLayer;
-        findLoader(arg0: string): $ClassLoader;
-        findModule(arg0: string): $Optional<$Module>;
-        modules(): $Set<$Module>;
-        parents(): $List<$ModuleLayer>;
+    export class $StringBuffer extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable, $CharSequence {
+        constructor();
+        constructor(arg0: number);
+        constructor(arg0: $CharSequence);
+        constructor(arg0: string);
+        appendCodePoint(arg0: number): $AbstractStringBuilder;
+        appendCodePoint(arg0: number): $StringBuffer;
+        append(arg0: boolean): $AbstractStringBuilder;
+        append(arg0: boolean): $StringBuffer;
+        append(arg0: string[], arg1: number, arg2: number): $AbstractStringBuilder;
+        append(arg0: string[], arg1: number, arg2: number): $StringBuffer;
+        append(arg0: string[]): $AbstractStringBuilder;
+        append(arg0: string[]): $StringBuffer;
+        append(arg0: string): $AbstractStringBuilder;
+        append(arg0: string): $Appendable;
+        append(arg0: string): $StringBuffer;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuffer;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuffer;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuffer;
+        append(arg0: $CharSequence, arg1: number, arg2: number): $AbstractStringBuilder;
+        append(arg0: $CharSequence, arg1: number, arg2: number): $Appendable;
+        append(arg0: $CharSequence, arg1: number, arg2: number): $StringBuffer;
+        append(arg0: $CharSequence): $AbstractStringBuilder;
+        append(arg0: $CharSequence): $Appendable;
+        append(arg0: $CharSequence): $StringBuffer;
+        append(arg0: object): $AbstractStringBuilder;
+        append(arg0: object): $StringBuffer;
+        append(arg0: $StringBuffer): $AbstractStringBuilder;
+        append(arg0: $StringBuffer): $StringBuffer;
+        append(arg0: string): $AbstractStringBuilder;
+        append(arg0: string): $StringBuffer;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuffer;
+        capacity(): number;
+        charAt(arg0: number): string;
+        chars(): $IntStream;
+        codePointAt(arg0: number): number;
+        codePointBefore(arg0: number): number;
+        codePointCount(arg0: number, arg1: number): number;
+        codePoints(): $IntStream;
+        compareTo(arg0: object): number;
+        compareTo(arg0: $StringBuffer): number;
+        deleteCharAt(arg0: number): $AbstractStringBuilder;
+        deleteCharAt(arg0: number): $StringBuffer;
+        delete(arg0: number, arg1: number): $AbstractStringBuilder;
+        delete(arg0: number, arg1: number): $StringBuffer;
+        ensureCapacity(arg0: number): void;
+        getChars(arg0: number, arg1: number, arg2: string[], arg3: number): void;
+        indexOf(arg0: string, arg1: number): number;
+        indexOf(arg0: string): number;
+        insert(arg0: number, arg1: boolean): $AbstractStringBuilder;
+        insert(arg0: number, arg1: boolean): $StringBuffer;
+        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $StringBuffer;
+        insert(arg0: number, arg1: string[]): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string[]): $StringBuffer;
+        insert(arg0: number, arg1: string): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string): $StringBuffer;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuffer;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuffer;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuffer;
+        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $StringBuffer;
+        insert(arg0: number, arg1: $CharSequence): $AbstractStringBuilder;
+        insert(arg0: number, arg1: $CharSequence): $StringBuffer;
+        insert(arg0: number, arg1: object): $AbstractStringBuilder;
+        insert(arg0: number, arg1: object): $StringBuffer;
+        insert(arg0: number, arg1: string): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string): $StringBuffer;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuffer;
+        lastIndexOf(arg0: string, arg1: number): number;
+        lastIndexOf(arg0: string): number;
+        length(): number;
+        offsetByCodePoints(arg0: number, arg1: number): number;
+        repeat(arg0: number, arg1: number): $AbstractStringBuilder;
+        repeat(arg0: number, arg1: number): $StringBuffer;
+        repeat(arg0: $CharSequence, arg1: number): $AbstractStringBuilder;
+        repeat(arg0: $CharSequence, arg1: number): $StringBuffer;
+        replace(arg0: number, arg1: number, arg2: string): $AbstractStringBuilder;
+        replace(arg0: number, arg1: number, arg2: string): $StringBuffer;
+        reverse(): $AbstractStringBuilder;
+        reverse(): $StringBuffer;
+        setCharAt(arg0: number, arg1: string): void;
+        subSequence(arg0: number, arg1: number): $CharSequence;
+        substring(arg0: number, arg1: number): string;
+        substring(arg0: number): string;
         toString(): string;
+        trimToSize(): void;
     }
 
-    export class $NamedPackage {
+    export class $StringBuilder extends $AbstractStringBuilder implements $Appendable, $Serializable, $Comparable, $CharSequence {
+        constructor();
+        constructor(arg0: number);
+        constructor(arg0: $CharSequence);
+        constructor(arg0: string);
+        appendCodePoint(arg0: number): $AbstractStringBuilder;
+        appendCodePoint(arg0: number): $StringBuilder;
+        append(arg0: boolean): $AbstractStringBuilder;
+        append(arg0: boolean): $StringBuilder;
+        append(arg0: string[], arg1: number, arg2: number): $AbstractStringBuilder;
+        append(arg0: string[], arg1: number, arg2: number): $StringBuilder;
+        append(arg0: string[]): $AbstractStringBuilder;
+        append(arg0: string[]): $StringBuilder;
+        append(arg0: string): $AbstractStringBuilder;
+        append(arg0: string): $Appendable;
+        append(arg0: string): $StringBuilder;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuilder;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuilder;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuilder;
+        append(arg0: $CharSequence, arg1: number, arg2: number): $AbstractStringBuilder;
+        append(arg0: $CharSequence, arg1: number, arg2: number): $Appendable;
+        append(arg0: $CharSequence, arg1: number, arg2: number): $StringBuilder;
+        append(arg0: $CharSequence): $AbstractStringBuilder;
+        append(arg0: $CharSequence): $Appendable;
+        append(arg0: $CharSequence): $StringBuilder;
+        append(arg0: object): $AbstractStringBuilder;
+        append(arg0: object): $StringBuilder;
+        append(arg0: $StringBuffer): $AbstractStringBuilder;
+        append(arg0: $StringBuffer): $StringBuilder;
+        append(arg0: string): $AbstractStringBuilder;
+        append(arg0: string): $StringBuilder;
+        append(arg0: number): $AbstractStringBuilder;
+        append(arg0: number): $StringBuilder;
+        capacity(): number;
+        charAt(arg0: number): string;
+        chars(): $IntStream;
+        codePointAt(arg0: number): number;
+        codePointBefore(arg0: number): number;
+        codePointCount(arg0: number, arg1: number): number;
+        codePoints(): $IntStream;
+        compareTo(arg0: object): number;
+        compareTo(arg0: $StringBuilder): number;
+        deleteCharAt(arg0: number): $AbstractStringBuilder;
+        deleteCharAt(arg0: number): $StringBuilder;
+        delete(arg0: number, arg1: number): $AbstractStringBuilder;
+        delete(arg0: number, arg1: number): $StringBuilder;
+        ensureCapacity(arg0: number): void;
+        getChars(arg0: number, arg1: number, arg2: string[], arg3: number): void;
+        indexOf(arg0: string, arg1: number): number;
+        indexOf(arg0: string): number;
+        insert(arg0: number, arg1: boolean): $AbstractStringBuilder;
+        insert(arg0: number, arg1: boolean): $StringBuilder;
+        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string[], arg2: number, arg3: number): $StringBuilder;
+        insert(arg0: number, arg1: string[]): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string[]): $StringBuilder;
+        insert(arg0: number, arg1: string): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string): $StringBuilder;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuilder;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuilder;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuilder;
+        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: $CharSequence, arg2: number, arg3: number): $StringBuilder;
+        insert(arg0: number, arg1: $CharSequence): $AbstractStringBuilder;
+        insert(arg0: number, arg1: $CharSequence): $StringBuilder;
+        insert(arg0: number, arg1: object): $AbstractStringBuilder;
+        insert(arg0: number, arg1: object): $StringBuilder;
+        insert(arg0: number, arg1: string): $AbstractStringBuilder;
+        insert(arg0: number, arg1: string): $StringBuilder;
+        insert(arg0: number, arg1: number): $AbstractStringBuilder;
+        insert(arg0: number, arg1: number): $StringBuilder;
+        lastIndexOf(arg0: string, arg1: number): number;
+        lastIndexOf(arg0: string): number;
+        length(): number;
+        offsetByCodePoints(arg0: number, arg1: number): number;
+        repeat(arg0: number, arg1: number): $AbstractStringBuilder;
+        repeat(arg0: number, arg1: number): $StringBuilder;
+        repeat(arg0: $CharSequence, arg1: number): $AbstractStringBuilder;
+        repeat(arg0: $CharSequence, arg1: number): $StringBuilder;
+        replace(arg0: number, arg1: number, arg2: string): $AbstractStringBuilder;
+        replace(arg0: number, arg1: number, arg2: string): $StringBuilder;
+        reverse(): $AbstractStringBuilder;
+        reverse(): $StringBuilder;
+        setCharAt(arg0: number, arg1: string): void;
+        subSequence(arg0: number, arg1: number): $CharSequence;
+        substring(arg0: number, arg1: number): string;
+        substring(arg0: number): string;
+        toString(): string;
+        trimToSize(): void;
     }
 
     export type $Iterable_<T> = T[];

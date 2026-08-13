@@ -116,7 +116,7 @@ public final class ProbeBackendRegistry {
 
     /** 已注册 backend 的语言集合（用于命令补全）。 */
     public synchronized Set<String> languages() {
-        return Set.copyOf(byLanguage.keySet());
+        return java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(byLanguage.keySet()));
     }
 
     /** 所有已登记条目（含冲突项），用于 {@code /nekojs probe list}。 */

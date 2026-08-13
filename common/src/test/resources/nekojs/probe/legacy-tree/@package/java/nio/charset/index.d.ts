@@ -69,13 +69,6 @@ declare module "java:java/nio/charset" {
         unmappableCharacterAction(): $CodingErrorAction;
     }
 
-    export class $CodingErrorAction {
-        static IGNORE: $CodingErrorAction;
-        static REPLACE: $CodingErrorAction;
-        static REPORT: $CodingErrorAction;
-        toString(): string;
-    }
-
     export class $CoderResult {
         static OVERFLOW: $CoderResult;
         static UNDERFLOW: $CoderResult;
@@ -93,6 +86,13 @@ declare module "java:java/nio/charset" {
         static unmappableForLength(arg0: number): $CoderResult;
         length(): number;
         throwException(): void;
+        toString(): string;
+    }
+
+    export class $CodingErrorAction {
+        static IGNORE: $CodingErrorAction;
+        static REPLACE: $CodingErrorAction;
+        static REPORT: $CodingErrorAction;
         toString(): string;
     }
 

@@ -74,9 +74,12 @@ public final class AdapterAliasGenerator {
 
     /**
      * 所有别名引用的跨包 host 类型全限定名（如 NekoId、Item），供 orchestrator 纳入生成集合。
+     *
+     * <p>返回按收集序的不可变快照：{@link Set#copyOf} 的迭代序无规范保证（跨 JVM/平台可能
+     * 不同），直接暴露会破坏 probe 输出的确定性，故按插入序复制。
      */
     public Set<String> hostImports() {
-        return Set.copyOf(hostImports);
+        return java.util.Collections.unmodifiableSet(new LinkedHashSet<>(hostImports));
     }
 
     public boolean hasAlias(String fqn) {

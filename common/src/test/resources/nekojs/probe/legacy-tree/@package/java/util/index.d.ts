@@ -3,10 +3,167 @@ import { $Character, $Cloneable, $Double, $Enum, $Integer, $Iterable, $Long, $Ru
 import { $BiConsumer, $BiFunction, $Consumer, $DoubleConsumer, $DoubleSupplier, $Function, $IntConsumer, $IntFunction, $IntSupplier, $LongConsumer, $LongSupplier, $Predicate, $Supplier, $ToDoubleFunction, $ToIntFunction, $ToLongFunction, $UnaryOperator } from "java:java/util/function";
 import { $DoubleStream, $IntStream, $LongStream, $Stream } from "java:java/util/stream";
 
-export * as stream from "java:java/util/stream";
 export * as function from "java:java/util/function";
+export * as stream from "java:java/util/stream";
 
 declare module "java:java/util" {
+    export interface $Collection<E> extends $Iterable {
+        addAll(arg0: E[]): boolean;
+        add(arg0: E): boolean;
+        clear(): void;
+        containsAll(arg0: any[]): boolean;
+        contains(arg0: object): boolean;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        isEmpty(): boolean;
+        iterator(): $Iterator<E>;
+        parallelStream(): $Stream<E>;
+        removeAll(arg0: any[]): boolean;
+        removeIf(arg0: $Predicate<any>): boolean;
+        remove(arg0: object): boolean;
+        retainAll(arg0: any[]): boolean;
+        size(): number;
+        spliterator(): $Spliterator<E>;
+        stream(): $Stream<E>;
+        toArray<T>(arg0: T[]): T[];
+        toArray<T>(arg0: $IntFunction<T[]>): T[];
+        toArray(): object[];
+    }
+
+    export interface $Comparator<T> {
+        compare(arg0: T, arg1: T): number;
+        comparingDouble<T>(arg0: $ToDoubleFunction<any>): $Comparator<T>;
+        comparingInt<T>(arg0: $ToIntFunction<any>): $Comparator<T>;
+        comparingLong<T>(arg0: $ToLongFunction<any>): $Comparator<T>;
+        comparing<T, U>(arg0: $Function<any, U>, arg1: $Comparator<any>): $Comparator<T>;
+        comparing<T, U>(arg0: $Function<any, U>): $Comparator<T>;
+        equals(arg0: object): boolean;
+        naturalOrder<T>(): $Comparator<T>;
+        nullsFirst<T>(arg0: $Comparator<any>): $Comparator<T>;
+        nullsLast<T>(arg0: $Comparator<any>): $Comparator<T>;
+        reverseOrder<T>(): $Comparator<T>;
+        reversed(): $Comparator<T>;
+        thenComparingDouble(arg0: $ToDoubleFunction<any>): $Comparator<T>;
+        thenComparingInt(arg0: $ToIntFunction<any>): $Comparator<T>;
+        thenComparingLong(arg0: $ToLongFunction<any>): $Comparator<T>;
+        thenComparing(arg0: $Comparator<any>): $Comparator<T>;
+        thenComparing<U>(arg0: $Function<any, U>, arg1: $Comparator<any>): $Comparator<T>;
+        thenComparing<U>(arg0: $Function<any, U>): $Comparator<T>;
+    }
+
+    export class $DoubleSummaryStatistics implements $DoubleConsumer {
+        constructor();
+        constructor(arg0: number, arg1: number, arg2: number, arg3: number);
+        get average(): number;
+        getAverage(): number;
+        get count(): number;
+        getCount(): number;
+        get max(): number;
+        getMax(): number;
+        get min(): number;
+        getMin(): number;
+        get sum(): number;
+        getSum(): number;
+        accept(arg0: number): void;
+        combine(arg0: $DoubleSummaryStatistics): void;
+        toString(): string;
+    }
+
+    export interface $Enumeration<E> {
+        asIterator(): $Iterator<E>;
+        hasMoreElements(): boolean;
+        nextElement(): E;
+    }
+
+    export class $IntSummaryStatistics implements $IntConsumer {
+        constructor();
+        constructor(arg0: number, arg1: number, arg2: number, arg3: number);
+        get average(): number;
+        getAverage(): number;
+        get count(): number;
+        getCount(): number;
+        get max(): number;
+        getMax(): number;
+        get min(): number;
+        getMin(): number;
+        get sum(): number;
+        getSum(): number;
+        accept(arg0: number): void;
+        combine(arg0: $IntSummaryStatistics): void;
+        toString(): string;
+    }
+
+    export interface $Iterator<E> {
+        forEachRemaining(arg0: $Consumer<any>): void;
+        hasNext(): boolean;
+        next(): E;
+        remove(): void;
+    }
+
+    export interface $List<E> extends $SequencedCollection {
+        addAll(arg0: number, arg1: E[]): boolean;
+        addAll(arg0: E[]): boolean;
+        addFirst(arg0: E): void;
+        addLast(arg0: E): void;
+        add(arg0: E): boolean;
+        add(arg0: number, arg1: E): void;
+        clear(): void;
+        containsAll(arg0: any[]): boolean;
+        contains(arg0: object): boolean;
+        copyOf<E>(arg0: E[]): $List<E>;
+        equals(arg0: object): boolean;
+        getFirst(): E;
+        getLast(): E;
+        get(arg0: number): E;
+        hashCode(): number;
+        indexOf(arg0: object): number;
+        isEmpty(): boolean;
+        iterator(): $Iterator<E>;
+        lastIndexOf(arg0: object): number;
+        listIterator(arg0: number): $ListIterator<E>;
+        listIterator(): $ListIterator<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E, arg3: E): $List<E>;
+        of<E>(arg0: E, arg1: E, arg2: E): $List<E>;
+        of<E>(arg0: E, arg1: E): $List<E>;
+        of<E>(arg0: E): $List<E>;
+        of<E>(arg0?: object[]): $List<E>;
+        of<E>(): $List<E>;
+        removeAll(arg0: any[]): boolean;
+        removeFirst(): E;
+        removeLast(): E;
+        remove(arg0: number): E;
+        remove(arg0: object): boolean;
+        replaceAll(arg0: $UnaryOperator<E>): void;
+        retainAll(arg0: any[]): boolean;
+        reversed(): $List<E>;
+        reversed(): $SequencedCollection;
+        set(arg0: number, arg1: E): E;
+        size(): number;
+        sort(arg0: $Comparator<any>): void;
+        spliterator(): $Spliterator<E>;
+        subList(arg0: number, arg1: number): $List<E>;
+        toArray<T>(arg0: T[]): T[];
+        toArray(): object[];
+    }
+
+    export interface $ListIterator<E> extends $Iterator {
+        add(arg0: E): void;
+        hasNext(): boolean;
+        hasPrevious(): boolean;
+        nextIndex(): number;
+        next(): E;
+        previousIndex(): number;
+        previous(): E;
+        remove(): void;
+        set(arg0: E): void;
+    }
+
     export class $Locale implements $Cloneable, $Serializable {
         constructor(arg0: string);
         constructor(arg0: string, arg1: string);
@@ -99,6 +256,131 @@ declare module "java:java/util" {
         toString(): string;
     }
 
+    export class $Locale$Category {
+        static DISPLAY: $Locale$Category;
+        static FORMAT: $Locale$Category;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $Locale$Category[];
+        static valueOf(name: string): $Locale$Category;
+    }
+
+    export class $Locale$FilteringMode {
+        static AUTOSELECT_FILTERING: $Locale$FilteringMode;
+        static EXTENDED_FILTERING: $Locale$FilteringMode;
+        static IGNORE_EXTENDED_RANGES: $Locale$FilteringMode;
+        static MAP_EXTENDED_RANGES: $Locale$FilteringMode;
+        static REJECT_EXTENDED_RANGES: $Locale$FilteringMode;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $Locale$FilteringMode[];
+        static valueOf(name: string): $Locale$FilteringMode;
+    }
+
+    export class $Locale$IsoCountryCode {
+        static PART1_ALPHA2: $Locale$IsoCountryCode;
+        static PART1_ALPHA3: $Locale$IsoCountryCode;
+        static PART3: $Locale$IsoCountryCode;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $Locale$IsoCountryCode[];
+        static valueOf(name: string): $Locale$IsoCountryCode;
+    }
+
+    export class $Locale$LanguageRange {
+        constructor(arg0: string);
+        constructor(arg0: string, arg1: number);
+        static MAX_WEIGHT: number;
+        static MIN_WEIGHT: number;
+        get range(): string;
+        getRange(): string;
+        get weight(): number;
+        getWeight(): number;
+        static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;
+        static parse(arg0: string, arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;
+        static parse(arg0: string): $List<$Locale$LanguageRange>;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        toString(): string;
+    }
+
+    export class $LongSummaryStatistics implements $LongConsumer, $IntConsumer {
+        constructor();
+        constructor(arg0: number, arg1: number, arg2: number, arg3: number);
+        get average(): number;
+        getAverage(): number;
+        get count(): number;
+        getCount(): number;
+        get max(): number;
+        getMax(): number;
+        get min(): number;
+        getMin(): number;
+        get sum(): number;
+        getSum(): number;
+        accept(arg0: number): void;
+        accept(arg0: number): void;
+        combine(arg0: $LongSummaryStatistics): void;
+        toString(): string;
+    }
+
+    export interface $Map<K, V> {
+        clear(): void;
+        computeIfAbsent(arg0: K, arg1: $Function<any, V>): V;
+        computeIfPresent(arg0: K, arg1: $BiFunction<any, any, V>): V;
+        compute(arg0: K, arg1: $BiFunction<any, any, V>): V;
+        containsKey(arg0: object): boolean;
+        containsValue(arg0: object): boolean;
+        copyOf<K, V>(arg0: { [key: K]: V }): $Map<K, V>;
+        entrySet(): $Set<$Map$Entry<K, V>>;
+        entry<K, V>(arg0: K, arg1: V): $Map$Entry<K, V>;
+        equals(arg0: object): boolean;
+        forEach(arg0: $BiConsumer<any, any>): void;
+        getOrDefault(arg0: object, arg1: V): V;
+        get(arg0: object): V;
+        hashCode(): number;
+        isEmpty(): boolean;
+        keySet(): $Set<K>;
+        merge(arg0: K, arg1: V, arg2: $BiFunction<any, any, V>): V;
+        ofEntries<K, V>(arg0?: $Map$Entry[]): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V): $Map<K, V>;
+        of<K, V>(arg0: K, arg1: V): $Map<K, V>;
+        of<K, V>(): $Map<K, V>;
+        putAll(arg0: { [key: K]: V }): void;
+        putIfAbsent(arg0: K, arg1: V): V;
+        put(arg0: K, arg1: V): V;
+        remove(arg0: object, arg1: object): boolean;
+        remove(arg0: object): V;
+        replaceAll(arg0: $BiFunction<any, any, V>): void;
+        replace(arg0: K, arg1: V, arg2: V): boolean;
+        replace(arg0: K, arg1: V): V;
+        size(): number;
+        values(): $Collection<V>;
+    }
+
+    export interface $Map$Entry<K, V> {
+        comparingByKey<K, V>(arg0: $Comparator<any>): $Comparator<$Map$Entry<K, V>>;
+        comparingByKey<K, V>(): $Comparator<$Map$Entry<K, V>>;
+        comparingByValue<K, V>(arg0: $Comparator<any>): $Comparator<$Map$Entry<K, V>>;
+        comparingByValue<K, V>(): $Comparator<$Map$Entry<K, V>>;
+        copyOf<K, V>(arg0: $Map$Entry<K, V>): $Map$Entry<K, V>;
+        equals(arg0: object): boolean;
+        getKey(): K;
+        getValue(): V;
+        hashCode(): number;
+        setValue(arg0: V): V;
+    }
+
     export class $Optional<T> {
         get empty(): boolean;
         isEmpty(): boolean;
@@ -124,25 +406,126 @@ declare module "java:java/util" {
         toString(): string;
     }
 
-    export interface $Comparator<T> {
-        compare(arg0: T, arg1: T): number;
-        comparingDouble<T>(arg0: $ToDoubleFunction<any>): $Comparator<T>;
-        comparingInt<T>(arg0: $ToIntFunction<any>): $Comparator<T>;
-        comparingLong<T>(arg0: $ToLongFunction<any>): $Comparator<T>;
-        comparing<T, U>(arg0: $Function<any, U>, arg1: $Comparator<any>): $Comparator<T>;
-        comparing<T, U>(arg0: $Function<any, U>): $Comparator<T>;
+    export class $OptionalDouble {
+        get asDouble(): number;
+        getAsDouble(): number;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        get present(): boolean;
+        isPresent(): boolean;
+        static empty(): $OptionalDouble;
+        static of(arg0: number): $OptionalDouble;
         equals(arg0: object): boolean;
-        naturalOrder<T>(): $Comparator<T>;
-        nullsFirst<T>(arg0: $Comparator<any>): $Comparator<T>;
-        nullsLast<T>(arg0: $Comparator<any>): $Comparator<T>;
-        reverseOrder<T>(): $Comparator<T>;
-        reversed(): $Comparator<T>;
-        thenComparingDouble(arg0: $ToDoubleFunction<any>): $Comparator<T>;
-        thenComparingInt(arg0: $ToIntFunction<any>): $Comparator<T>;
-        thenComparingLong(arg0: $ToLongFunction<any>): $Comparator<T>;
-        thenComparing(arg0: $Comparator<any>): $Comparator<T>;
-        thenComparing<U>(arg0: $Function<any, U>, arg1: $Comparator<any>): $Comparator<T>;
-        thenComparing<U>(arg0: $Function<any, U>): $Comparator<T>;
+        hashCode(): number;
+        ifPresentOrElse(arg0: $DoubleConsumer, arg1: $Runnable): void;
+        ifPresent(arg0: $DoubleConsumer): void;
+        orElseGet(arg0: $DoubleSupplier): number;
+        orElseThrow<X>(arg0: $Supplier<X>): number;
+        orElseThrow(): number;
+        orElse(arg0: number): number;
+        stream(): $DoubleStream;
+        toString(): string;
+    }
+
+    export class $OptionalInt {
+        get asInt(): number;
+        getAsInt(): number;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        get present(): boolean;
+        isPresent(): boolean;
+        static empty(): $OptionalInt;
+        static of(arg0: number): $OptionalInt;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        ifPresentOrElse(arg0: $IntConsumer, arg1: $Runnable): void;
+        ifPresent(arg0: $IntConsumer): void;
+        orElseGet(arg0: $IntSupplier): number;
+        orElseThrow<X>(arg0: $Supplier<X>): number;
+        orElseThrow(): number;
+        orElse(arg0: number): number;
+        stream(): $IntStream;
+        toString(): string;
+    }
+
+    export class $OptionalLong {
+        get asLong(): number;
+        getAsLong(): number;
+        get empty(): boolean;
+        isEmpty(): boolean;
+        get present(): boolean;
+        isPresent(): boolean;
+        static empty(): $OptionalLong;
+        static of(arg0: number): $OptionalLong;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        ifPresentOrElse(arg0: $LongConsumer, arg1: $Runnable): void;
+        ifPresent(arg0: $LongConsumer): void;
+        orElseGet(arg0: $LongSupplier): number;
+        orElseThrow<X>(arg0: $Supplier<X>): number;
+        orElseThrow(): number;
+        orElse(arg0: number): number;
+        stream(): $LongStream;
+        toString(): string;
+    }
+
+    export interface $PrimitiveIterator<T, T_CONS> extends $Iterator {
+        forEachRemaining(arg0: T_CONS): void;
+    }
+
+    export interface $PrimitiveIterator$OfDouble extends $PrimitiveIterator {
+        forEachRemaining(arg0: object): void;
+        forEachRemaining(arg0: $Consumer<any>): void;
+        forEachRemaining(arg0: $DoubleConsumer): void;
+        nextDouble(): number;
+        next(): number;
+        next(): object;
+    }
+
+    export interface $PrimitiveIterator$OfInt extends $PrimitiveIterator {
+        forEachRemaining(arg0: object): void;
+        forEachRemaining(arg0: $Consumer<any>): void;
+        forEachRemaining(arg0: $IntConsumer): void;
+        nextInt(): number;
+        next(): number;
+        next(): object;
+    }
+
+    export interface $PrimitiveIterator$OfLong extends $PrimitiveIterator {
+        forEachRemaining(arg0: object): void;
+        forEachRemaining(arg0: $Consumer<any>): void;
+        forEachRemaining(arg0: $LongConsumer): void;
+        nextLong(): number;
+        next(): number;
+        next(): object;
+    }
+
+    export interface $SequencedCollection<E> extends $Collection {
+        addFirst(arg0: E): void;
+        addLast(arg0: E): void;
+        getFirst(): E;
+        getLast(): E;
+        removeFirst(): E;
+        removeLast(): E;
+        reversed(): $SequencedCollection<E>;
+    }
+
+    export interface $SequencedMap<K, V> extends $Map {
+        firstEntry(): $Map$Entry<K, V>;
+        lastEntry(): $Map$Entry<K, V>;
+        pollFirstEntry(): $Map$Entry<K, V>;
+        pollLastEntry(): $Map$Entry<K, V>;
+        putFirst(arg0: K, arg1: V): V;
+        putLast(arg0: K, arg1: V): V;
+        reversed(): $SequencedMap<K, V>;
+        sequencedEntrySet(): $SequencedSet<$Map$Entry<K, V>>;
+        sequencedKeySet(): $SequencedSet<K>;
+        sequencedValues(): $SequencedCollection<V>;
+    }
+
+    export interface $SequencedSet<E> extends $SequencedCollection, $Set {
+        reversed(): $SequencedCollection;
+        reversed(): $SequencedSet<E>;
     }
 
     export interface $Set<E> extends $Collection {
@@ -193,13 +576,6 @@ declare module "java:java/util" {
         values(): $Collection<V>;
     }
 
-    export interface $Iterator<E> {
-        forEachRemaining(arg0: $Consumer<any>): void;
-        hasNext(): boolean;
-        next(): E;
-        remove(): void;
-    }
-
     export interface $Spliterator<T> {
         characteristics(): number;
         estimateSize(): number;
@@ -219,160 +595,16 @@ declare module "java:java/util" {
         static SUBSIZED: number;
     }
 
-    export class $Locale$Category {
-        static DISPLAY: $Locale$Category;
-        static FORMAT: $Locale$Category;
-        name(): string;
-        ordinal(): number;
-        toString(): string;
-        static values(): $Locale$Category[];
-        static valueOf(name: string): $Locale$Category;
-    }
-
-    export interface $List<E> extends $SequencedCollection {
-        addAll(arg0: number, arg1: E[]): boolean;
-        addAll(arg0: E[]): boolean;
-        addFirst(arg0: E): void;
-        addLast(arg0: E): void;
-        add(arg0: E): boolean;
-        add(arg0: number, arg1: E): void;
-        clear(): void;
-        containsAll(arg0: any[]): boolean;
-        contains(arg0: object): boolean;
-        copyOf<E>(arg0: E[]): $List<E>;
-        equals(arg0: object): boolean;
-        getFirst(): E;
-        getLast(): E;
-        get(arg0: number): E;
-        hashCode(): number;
-        indexOf(arg0: object): number;
-        isEmpty(): boolean;
-        iterator(): $Iterator<E>;
-        lastIndexOf(arg0: object): number;
-        listIterator(arg0: number): $ListIterator<E>;
-        listIterator(): $ListIterator<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E, arg3: E): $List<E>;
-        of<E>(arg0: E, arg1: E, arg2: E): $List<E>;
-        of<E>(arg0: E, arg1: E): $List<E>;
-        of<E>(arg0: E): $List<E>;
-        of<E>(arg0?: object[]): $List<E>;
-        of<E>(): $List<E>;
-        removeAll(arg0: any[]): boolean;
-        removeFirst(): E;
-        removeLast(): E;
-        remove(arg0: number): E;
-        remove(arg0: object): boolean;
-        replaceAll(arg0: $UnaryOperator<E>): void;
-        retainAll(arg0: any[]): boolean;
-        reversed(): $List<E>;
-        reversed(): $SequencedCollection;
-        set(arg0: number, arg1: E): E;
-        size(): number;
-        sort(arg0: $Comparator<any>): void;
-        spliterator(): $Spliterator<E>;
-        subList(arg0: number, arg1: number): $List<E>;
-        toArray<T>(arg0: T[]): T[];
-        toArray(): object[];
-    }
-
-    export class $Locale$LanguageRange {
-        constructor(arg0: string);
-        constructor(arg0: string, arg1: number);
-        static MAX_WEIGHT: number;
-        static MIN_WEIGHT: number;
-        get range(): string;
-        getRange(): string;
-        get weight(): number;
-        getWeight(): number;
-        static mapEquivalents(arg0: $Locale$LanguageRange[], arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;
-        static parse(arg0: string, arg1: { [key: string]: string[] }): $List<$Locale$LanguageRange>;
-        static parse(arg0: string): $List<$Locale$LanguageRange>;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        toString(): string;
-    }
-
-    export interface $Collection<E> extends $Iterable {
-        addAll(arg0: E[]): boolean;
-        add(arg0: E): boolean;
-        clear(): void;
-        containsAll(arg0: any[]): boolean;
-        contains(arg0: object): boolean;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        isEmpty(): boolean;
-        iterator(): $Iterator<E>;
-        parallelStream(): $Stream<E>;
-        removeAll(arg0: any[]): boolean;
-        removeIf(arg0: $Predicate<any>): boolean;
-        remove(arg0: object): boolean;
-        retainAll(arg0: any[]): boolean;
-        size(): number;
-        spliterator(): $Spliterator<E>;
-        stream(): $Stream<E>;
-        toArray<T>(arg0: T[]): T[];
-        toArray<T>(arg0: $IntFunction<T[]>): T[];
-        toArray(): object[];
-    }
-
-    export class $Locale$FilteringMode {
-        static AUTOSELECT_FILTERING: $Locale$FilteringMode;
-        static EXTENDED_FILTERING: $Locale$FilteringMode;
-        static IGNORE_EXTENDED_RANGES: $Locale$FilteringMode;
-        static MAP_EXTENDED_RANGES: $Locale$FilteringMode;
-        static REJECT_EXTENDED_RANGES: $Locale$FilteringMode;
-        name(): string;
-        ordinal(): number;
-        toString(): string;
-        static values(): $Locale$FilteringMode[];
-        static valueOf(name: string): $Locale$FilteringMode;
-    }
-
-    export class $Locale$IsoCountryCode {
-        static PART1_ALPHA2: $Locale$IsoCountryCode;
-        static PART1_ALPHA3: $Locale$IsoCountryCode;
-        static PART3: $Locale$IsoCountryCode;
-        name(): string;
-        ordinal(): number;
-        toString(): string;
-        static values(): $Locale$IsoCountryCode[];
-        static valueOf(name: string): $Locale$IsoCountryCode;
-    }
-
-    export class $OptionalInt {
-        get asInt(): number;
-        getAsInt(): number;
-        get empty(): boolean;
-        isEmpty(): boolean;
-        get present(): boolean;
-        isPresent(): boolean;
-        static empty(): $OptionalInt;
-        static of(arg0: number): $OptionalInt;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        ifPresentOrElse(arg0: $IntConsumer, arg1: $Runnable): void;
-        ifPresent(arg0: $IntConsumer): void;
-        orElseGet(arg0: $IntSupplier): number;
-        orElseThrow<X>(arg0: $Supplier<X>): number;
-        orElseThrow(): number;
-        orElse(arg0: number): number;
-        stream(): $IntStream;
-        toString(): string;
-    }
-
-    export interface $PrimitiveIterator$OfInt extends $PrimitiveIterator {
+    export interface $Spliterator$OfDouble extends $Spliterator$OfPrimitive {
         forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $IntConsumer): void;
-        nextInt(): number;
-        next(): number;
-        next(): object;
+        forEachRemaining(arg0: $DoubleConsumer): void;
+        tryAdvance(arg0: object): boolean;
+        tryAdvance(arg0: $Consumer<any>): boolean;
+        tryAdvance(arg0: $DoubleConsumer): boolean;
+        trySplit(): $Spliterator;
+        trySplit(): $Spliterator$OfDouble;
+        trySplit(): $Spliterator$OfPrimitive;
     }
 
     export interface $Spliterator$OfInt extends $Spliterator$OfPrimitive {
@@ -387,165 +619,6 @@ declare module "java:java/util" {
         trySplit(): $Spliterator$OfPrimitive;
     }
 
-    export class $OptionalDouble {
-        get asDouble(): number;
-        getAsDouble(): number;
-        get empty(): boolean;
-        isEmpty(): boolean;
-        get present(): boolean;
-        isPresent(): boolean;
-        static empty(): $OptionalDouble;
-        static of(arg0: number): $OptionalDouble;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        ifPresentOrElse(arg0: $DoubleConsumer, arg1: $Runnable): void;
-        ifPresent(arg0: $DoubleConsumer): void;
-        orElseGet(arg0: $DoubleSupplier): number;
-        orElseThrow<X>(arg0: $Supplier<X>): number;
-        orElseThrow(): number;
-        orElse(arg0: number): number;
-        stream(): $DoubleStream;
-        toString(): string;
-    }
-
-    export class $IntSummaryStatistics implements $IntConsumer {
-        constructor();
-        constructor(arg0: number, arg1: number, arg2: number, arg3: number);
-        get average(): number;
-        getAverage(): number;
-        get count(): number;
-        getCount(): number;
-        get max(): number;
-        getMax(): number;
-        get min(): number;
-        getMin(): number;
-        get sum(): number;
-        getSum(): number;
-        accept(arg0: number): void;
-        combine(arg0: $IntSummaryStatistics): void;
-        toString(): string;
-    }
-
-    export interface $SequencedMap<K, V> extends $Map {
-        firstEntry(): $Map$Entry<K, V>;
-        lastEntry(): $Map$Entry<K, V>;
-        pollFirstEntry(): $Map$Entry<K, V>;
-        pollLastEntry(): $Map$Entry<K, V>;
-        putFirst(arg0: K, arg1: V): V;
-        putLast(arg0: K, arg1: V): V;
-        reversed(): $SequencedMap<K, V>;
-        sequencedEntrySet(): $SequencedSet<$Map$Entry<K, V>>;
-        sequencedKeySet(): $SequencedSet<K>;
-        sequencedValues(): $SequencedCollection<V>;
-    }
-
-    export interface $Map$Entry<K, V> {
-        comparingByKey<K, V>(arg0: $Comparator<any>): $Comparator<$Map$Entry<K, V>>;
-        comparingByKey<K, V>(): $Comparator<$Map$Entry<K, V>>;
-        comparingByValue<K, V>(arg0: $Comparator<any>): $Comparator<$Map$Entry<K, V>>;
-        comparingByValue<K, V>(): $Comparator<$Map$Entry<K, V>>;
-        copyOf<K, V>(arg0: $Map$Entry<K, V>): $Map$Entry<K, V>;
-        equals(arg0: object): boolean;
-        getKey(): K;
-        getValue(): V;
-        hashCode(): number;
-        setValue(arg0: V): V;
-    }
-
-    export interface $SequencedCollection<E> extends $Collection {
-        addFirst(arg0: E): void;
-        addLast(arg0: E): void;
-        getFirst(): E;
-        getLast(): E;
-        removeFirst(): E;
-        removeLast(): E;
-        reversed(): $SequencedCollection<E>;
-    }
-
-    export interface $ListIterator<E> extends $Iterator {
-        add(arg0: E): void;
-        hasNext(): boolean;
-        hasPrevious(): boolean;
-        nextIndex(): number;
-        next(): E;
-        previousIndex(): number;
-        previous(): E;
-        remove(): void;
-        set(arg0: E): void;
-    }
-
-    export interface $Map<K, V> {
-        clear(): void;
-        computeIfAbsent(arg0: K, arg1: $Function<any, V>): V;
-        computeIfPresent(arg0: K, arg1: $BiFunction<any, any, V>): V;
-        compute(arg0: K, arg1: $BiFunction<any, any, V>): V;
-        containsKey(arg0: object): boolean;
-        containsValue(arg0: object): boolean;
-        copyOf<K, V>(arg0: { [key: K]: V }): $Map<K, V>;
-        entrySet(): $Set<$Map$Entry<K, V>>;
-        entry<K, V>(arg0: K, arg1: V): $Map$Entry<K, V>;
-        equals(arg0: object): boolean;
-        forEach(arg0: $BiConsumer<any, any>): void;
-        getOrDefault(arg0: object, arg1: V): V;
-        get(arg0: object): V;
-        hashCode(): number;
-        isEmpty(): boolean;
-        keySet(): $Set<K>;
-        merge(arg0: K, arg1: V, arg2: $BiFunction<any, any, V>): V;
-        ofEntries<K, V>(arg0?: $Map$Entry[]): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V): $Map<K, V>;
-        of<K, V>(arg0: K, arg1: V): $Map<K, V>;
-        of<K, V>(): $Map<K, V>;
-        putAll(arg0: { [key: K]: V }): void;
-        putIfAbsent(arg0: K, arg1: V): V;
-        put(arg0: K, arg1: V): V;
-        remove(arg0: object, arg1: object): boolean;
-        remove(arg0: object): V;
-        replaceAll(arg0: $BiFunction<any, any, V>): void;
-        replace(arg0: K, arg1: V, arg2: V): boolean;
-        replace(arg0: K, arg1: V): V;
-        size(): number;
-        values(): $Collection<V>;
-    }
-
-    export class $OptionalLong {
-        get asLong(): number;
-        getAsLong(): number;
-        get empty(): boolean;
-        isEmpty(): boolean;
-        get present(): boolean;
-        isPresent(): boolean;
-        static empty(): $OptionalLong;
-        static of(arg0: number): $OptionalLong;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        ifPresentOrElse(arg0: $LongConsumer, arg1: $Runnable): void;
-        ifPresent(arg0: $LongConsumer): void;
-        orElseGet(arg0: $LongSupplier): number;
-        orElseThrow<X>(arg0: $Supplier<X>): number;
-        orElseThrow(): number;
-        orElse(arg0: number): number;
-        stream(): $LongStream;
-        toString(): string;
-    }
-
-    export interface $PrimitiveIterator$OfLong extends $PrimitiveIterator {
-        forEachRemaining(arg0: object): void;
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $LongConsumer): void;
-        nextLong(): number;
-        next(): number;
-        next(): object;
-    }
-
     export interface $Spliterator$OfLong extends $Spliterator$OfPrimitive {
         forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
@@ -558,68 +631,6 @@ declare module "java:java/util" {
         trySplit(): $Spliterator$OfPrimitive;
     }
 
-    export class $LongSummaryStatistics implements $LongConsumer, $IntConsumer {
-        constructor();
-        constructor(arg0: number, arg1: number, arg2: number, arg3: number);
-        get average(): number;
-        getAverage(): number;
-        get count(): number;
-        getCount(): number;
-        get max(): number;
-        getMax(): number;
-        get min(): number;
-        getMin(): number;
-        get sum(): number;
-        getSum(): number;
-        accept(arg0: number): void;
-        accept(arg0: number): void;
-        combine(arg0: $LongSummaryStatistics): void;
-        toString(): string;
-    }
-
-    export interface $PrimitiveIterator$OfDouble extends $PrimitiveIterator {
-        forEachRemaining(arg0: object): void;
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $DoubleConsumer): void;
-        nextDouble(): number;
-        next(): number;
-        next(): object;
-    }
-
-    export interface $Spliterator$OfDouble extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: object): void;
-        forEachRemaining(arg0: $Consumer<any>): void;
-        forEachRemaining(arg0: $DoubleConsumer): void;
-        tryAdvance(arg0: object): boolean;
-        tryAdvance(arg0: $Consumer<any>): boolean;
-        tryAdvance(arg0: $DoubleConsumer): boolean;
-        trySplit(): $Spliterator;
-        trySplit(): $Spliterator$OfDouble;
-        trySplit(): $Spliterator$OfPrimitive;
-    }
-
-    export class $DoubleSummaryStatistics implements $DoubleConsumer {
-        constructor();
-        constructor(arg0: number, arg1: number, arg2: number, arg3: number);
-        get average(): number;
-        getAverage(): number;
-        get count(): number;
-        getCount(): number;
-        get max(): number;
-        getMax(): number;
-        get min(): number;
-        getMin(): number;
-        get sum(): number;
-        getSum(): number;
-        accept(arg0: number): void;
-        combine(arg0: $DoubleSummaryStatistics): void;
-        toString(): string;
-    }
-
-    export interface $PrimitiveIterator<T, T_CONS> extends $Iterator {
-        forEachRemaining(arg0: T_CONS): void;
-    }
-
     export interface $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR extends $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR>> extends $Spliterator {
         forEachRemaining(arg0: T_CONS): void;
         tryAdvance(arg0: T_CONS): boolean;
@@ -627,26 +638,15 @@ declare module "java:java/util" {
         trySplit(): $Spliterator;
     }
 
-    export interface $SequencedSet<E> extends $SequencedCollection, $Set {
-        reversed(): $SequencedCollection;
-        reversed(): $SequencedSet<E>;
-    }
-
-    export interface $Enumeration<E> {
-        asIterator(): $Iterator<E>;
-        hasMoreElements(): boolean;
-        nextElement(): E;
-    }
-
+    export type $Collection_<E> = E[];
+    export type $Iterator_<E> = E[];
+    export type $List_<E> = E[];
+    export type $Map_<K, V> = { [key: string]: V };
     export type $Optional_<T> = T | null;
+    export type $SequencedCollection_<E> = E[];
+    export type $SequencedMap_<K, V> = { [key: string]: V };
+    export type $SequencedSet_<E> = E[];
     export type $Set_<E> = E[];
     export type $SortedMap_<K, V> = { [key: string]: V };
-    export type $Iterator_<E> = E[];
     export type $Spliterator_<T> = T[];
-    export type $List_<E> = E[];
-    export type $Collection_<E> = E[];
-    export type $SequencedMap_<K, V> = { [key: string]: V };
-    export type $SequencedCollection_<E> = E[];
-    export type $Map_<K, V> = { [key: string]: V };
-    export type $SequencedSet_<E> = E[];
 }

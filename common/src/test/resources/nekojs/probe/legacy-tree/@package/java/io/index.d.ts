@@ -1,7 +1,8 @@
 import { $AutoCloseable } from "java:java/lang";
 
 declare module "java:java/io" {
-    export interface $Serializable {
+    export interface $Closeable extends $AutoCloseable {
+        close(): void;
     }
 
     export class $InputStream implements $Closeable {
@@ -23,10 +24,6 @@ declare module "java:java/io" {
         transferTo(arg0: $OutputStream): number;
     }
 
-    export interface $Closeable extends $AutoCloseable {
-        close(): void;
-    }
-
     export class $OutputStream implements $Closeable, $Flushable {
         constructor();
         static nullOutputStream(): $OutputStream;
@@ -35,6 +32,9 @@ declare module "java:java/io" {
         write(arg0: number[], arg1: number, arg2: number): void;
         write(arg0: number[]): void;
         write(arg0: number): void;
+    }
+
+    export interface $Serializable {
     }
 
 }

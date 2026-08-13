@@ -3,30 +3,6 @@ import { $MethodHandle, $MethodHandles$Lookup, $MethodType, $TypeDescriptor$OfFi
 import { $List, $Optional } from "java:java/util";
 
 declare module "java:java/lang/constant" {
-    export interface $Constable {
-        describeConstable(): $Optional<$ConstantDesc>;
-    }
-
-    export interface $ConstantDesc {
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
-    }
-
-    export class $DynamicConstantDesc<T> implements $ConstantDesc {
-        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: $ConstantDesc[]): $ConstantDesc;
-        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: $ConstantDesc[]): $DynamicConstantDesc<T>;
-        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc[]): $DynamicConstantDesc<T>;
-        static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
-        bootstrapArgsList(): $List<$ConstantDesc>;
-        bootstrapArgs(): $ConstantDesc[];
-        bootstrapMethod(): $DirectMethodHandleDesc;
-        constantName(): string;
-        constantType(): $ClassDesc;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): T;
-        toString(): string;
-    }
-
     export interface $ClassDesc extends $ConstantDesc, $TypeDescriptor$OfField {
         arrayType(arg0: number): $ClassDesc;
         arrayType(): $ClassDesc;
@@ -48,6 +24,58 @@ declare module "java:java/lang/constant" {
         packageName(): string;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $Class<any>;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+    }
+
+    export interface $Constable {
+        describeConstable(): $Optional<$ConstantDesc>;
+    }
+
+    export interface $ConstantDesc {
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+    }
+
+    export interface $DirectMethodHandleDesc extends $MethodHandleDesc {
+        isOwnerInterface(): boolean;
+        kind(): $DirectMethodHandleDesc$Kind;
+        lookupDescriptor(): string;
+        methodName(): string;
+        owner(): $ClassDesc;
+        refKind(): number;
+    }
+
+    export class $DirectMethodHandleDesc$Kind {
+        static CONSTRUCTOR: $DirectMethodHandleDesc$Kind;
+        static GETTER: $DirectMethodHandleDesc$Kind;
+        static INTERFACE_SPECIAL: $DirectMethodHandleDesc$Kind;
+        static INTERFACE_STATIC: $DirectMethodHandleDesc$Kind;
+        static INTERFACE_VIRTUAL: $DirectMethodHandleDesc$Kind;
+        static SETTER: $DirectMethodHandleDesc$Kind;
+        static SPECIAL: $DirectMethodHandleDesc$Kind;
+        static STATIC: $DirectMethodHandleDesc$Kind;
+        static STATIC_GETTER: $DirectMethodHandleDesc$Kind;
+        static STATIC_SETTER: $DirectMethodHandleDesc$Kind;
+        static VIRTUAL: $DirectMethodHandleDesc$Kind;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $DirectMethodHandleDesc$Kind[];
+        static valueOf(name: string): $DirectMethodHandleDesc$Kind;
+    }
+
+    export class $DynamicConstantDesc<T> implements $ConstantDesc {
+        static ofCanonical<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3: $ConstantDesc[]): $ConstantDesc;
+        static ofNamed<T>(arg0: $DirectMethodHandleDesc, arg1: string, arg2: $ClassDesc, arg3?: $ConstantDesc[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc, arg1?: $ConstantDesc[]): $DynamicConstantDesc<T>;
+        static of<T>(arg0: $DirectMethodHandleDesc): $DynamicConstantDesc<T>;
+        bootstrapArgsList(): $List<$ConstantDesc>;
+        bootstrapArgs(): $ConstantDesc[];
+        bootstrapMethod(): $DirectMethodHandleDesc;
+        constantName(): string;
+        constantType(): $ClassDesc;
+        equals(arg0: object): boolean;
+        hashCode(): number;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): T;
+        toString(): string;
     }
 
     export interface $MethodHandleDesc extends $ConstantDesc {
@@ -88,34 +116,6 @@ declare module "java:java/lang/constant" {
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodType;
         returnType(): $ClassDesc;
         returnType(): $TypeDescriptor$OfField;
-    }
-
-    export interface $DirectMethodHandleDesc extends $MethodHandleDesc {
-        isOwnerInterface(): boolean;
-        kind(): $DirectMethodHandleDesc$Kind;
-        lookupDescriptor(): string;
-        methodName(): string;
-        owner(): $ClassDesc;
-        refKind(): number;
-    }
-
-    export class $DirectMethodHandleDesc$Kind {
-        static CONSTRUCTOR: $DirectMethodHandleDesc$Kind;
-        static GETTER: $DirectMethodHandleDesc$Kind;
-        static INTERFACE_SPECIAL: $DirectMethodHandleDesc$Kind;
-        static INTERFACE_STATIC: $DirectMethodHandleDesc$Kind;
-        static INTERFACE_VIRTUAL: $DirectMethodHandleDesc$Kind;
-        static SETTER: $DirectMethodHandleDesc$Kind;
-        static SPECIAL: $DirectMethodHandleDesc$Kind;
-        static STATIC: $DirectMethodHandleDesc$Kind;
-        static STATIC_GETTER: $DirectMethodHandleDesc$Kind;
-        static STATIC_SETTER: $DirectMethodHandleDesc$Kind;
-        static VIRTUAL: $DirectMethodHandleDesc$Kind;
-        name(): string;
-        ordinal(): number;
-        toString(): string;
-        static values(): $DirectMethodHandleDesc$Kind[];
-        static valueOf(name: string): $DirectMethodHandleDesc$Kind;
     }
 
 }

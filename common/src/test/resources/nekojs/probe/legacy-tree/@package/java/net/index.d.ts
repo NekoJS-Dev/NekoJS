@@ -4,51 +4,14 @@ import { $Permission } from "java:java/security";
 import { $List, $Map } from "java:java/util";
 
 declare module "java:java/net" {
-    export class $URL implements $Serializable {
-        constructor(arg0: string);
-        constructor(arg0: string, arg1: string, arg2: number, arg3: string);
-        constructor(arg0: string, arg1: string, arg2: number, arg3: string, arg4: $URLStreamHandler);
-        constructor(arg0: string, arg1: string, arg2: string);
-        constructor(arg0: $URL, arg1: string);
-        constructor(arg0: $URL, arg1: string, arg2: $URLStreamHandler);
-        get authority(): string;
-        getAuthority(): string;
-        get content(): object;
-        getContent(): object;
-        get defaultPort(): number;
-        getDefaultPort(): number;
-        get file(): string;
-        getFile(): string;
-        get host(): string;
-        getHost(): string;
-        get path(): string;
-        getPath(): string;
-        get port(): number;
-        getPort(): number;
-        get protocol(): string;
-        getProtocol(): string;
-        get query(): string;
-        getQuery(): string;
-        get ref(): string;
-        getRef(): string;
-        get userInfo(): string;
-        getUserInfo(): string;
-        static of(arg0: $URI, arg1: $URLStreamHandler): $URL;
-        static setURLStreamHandlerFactory(arg0: $URLStreamHandlerFactory): void;
+    export class $Proxy {
+        constructor(arg0: $Proxy$Type, arg1: $SocketAddress);
+        static NO_PROXY: $Proxy;
+        address(): $SocketAddress;
         equals(arg0: object): boolean;
-        getContent(arg0: $Class<any>[]): object;
         hashCode(): number;
-        openConnection(arg0: $Proxy): $URLConnection;
-        openConnection(): $URLConnection;
-        openStream(): $InputStream;
-        sameFile(arg0: $URL): boolean;
-        toExternalForm(): string;
         toString(): string;
-        toURI(): $URI;
-    }
-
-    export class $URLStreamHandler {
-        constructor();
+        type(): $Proxy$Type;
     }
 
     export class $URI implements $Comparable, $Serializable {
@@ -104,6 +67,49 @@ declare module "java:java/net" {
         toASCIIString(): string;
         toString(): string;
         toURL(): $URL;
+    }
+
+    export class $URL implements $Serializable {
+        constructor(arg0: string);
+        constructor(arg0: string, arg1: string, arg2: number, arg3: string);
+        constructor(arg0: string, arg1: string, arg2: number, arg3: string, arg4: $URLStreamHandler);
+        constructor(arg0: string, arg1: string, arg2: string);
+        constructor(arg0: $URL, arg1: string);
+        constructor(arg0: $URL, arg1: string, arg2: $URLStreamHandler);
+        get authority(): string;
+        getAuthority(): string;
+        get content(): object;
+        getContent(): object;
+        get defaultPort(): number;
+        getDefaultPort(): number;
+        get file(): string;
+        getFile(): string;
+        get host(): string;
+        getHost(): string;
+        get path(): string;
+        getPath(): string;
+        get port(): number;
+        getPort(): number;
+        get protocol(): string;
+        getProtocol(): string;
+        get query(): string;
+        getQuery(): string;
+        get ref(): string;
+        getRef(): string;
+        get userInfo(): string;
+        getUserInfo(): string;
+        static of(arg0: $URI, arg1: $URLStreamHandler): $URL;
+        static setURLStreamHandlerFactory(arg0: $URLStreamHandlerFactory): void;
+        equals(arg0: object): boolean;
+        getContent(arg0: $Class<any>[]): object;
+        hashCode(): number;
+        openConnection(arg0: $Proxy): $URLConnection;
+        openConnection(): $URLConnection;
+        openStream(): $InputStream;
+        sameFile(arg0: $URL): boolean;
+        toExternalForm(): string;
+        toString(): string;
+        toURI(): $URI;
     }
 
     export class $URLConnection {
@@ -184,14 +190,8 @@ declare module "java:java/net" {
         toString(): string;
     }
 
-    export class $Proxy {
-        constructor(arg0: $Proxy$Type, arg1: $SocketAddress);
-        static NO_PROXY: $Proxy;
-        address(): $SocketAddress;
-        equals(arg0: object): boolean;
-        hashCode(): number;
-        toString(): string;
-        type(): $Proxy$Type;
+    export class $URLStreamHandler {
+        constructor();
     }
 
     export interface $URLStreamHandlerFactory {

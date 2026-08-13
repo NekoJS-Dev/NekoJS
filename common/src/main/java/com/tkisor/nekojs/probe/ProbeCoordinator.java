@@ -27,6 +27,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -194,7 +195,11 @@ public final class ProbeCoordinator {
             }
         }
 
-        return visited;
+        // 确定性：BFS 访问顺序依赖 getDeclaredMethods/getInterfaces 等反射顺序（JVM 规范不保证，
+        // 跨 JDK 版本/平台可能不同）。返回前按全限定名字典序排序，保证 probe 产物可复现。
+        List<Class<?>> sorted = new ArrayList<>(visited);
+        sorted.sort(Comparator.comparing(Class::getName));
+        return new LinkedHashSet<>(sorted);
     }
 
     /**

@@ -5,6 +5,48 @@ import { $Constructor, $Field, $Method } from "java:java/lang/reflect";
 import { $List, $Optional } from "java:java/util";
 
 declare module "java:java/lang/invoke" {
+    export class $MethodHandle implements $Constable {
+        get varargsCollector(): boolean;
+        isVarargsCollector(): boolean;
+        asCollector(arg0: number, arg1: $Class<any>, arg2: number): $MethodHandle;
+        asCollector(arg0: $Class<any>, arg1: number): $MethodHandle;
+        asFixedArity(): $MethodHandle;
+        asSpreader(arg0: number, arg1: $Class<any>, arg2: number): $MethodHandle;
+        asSpreader(arg0: $Class<any>, arg1: number): $MethodHandle;
+        asType(arg0: $MethodType): $MethodHandle;
+        asVarargsCollector(arg0: $Class<any>): $MethodHandle;
+        bindTo(arg0: object): $MethodHandle;
+        describeConstable(): $Optional<$MethodHandleDesc>;
+        invokeExact(arg0?: object[]): object;
+        invokeWithArguments(arg0?: object[]): object;
+        invokeWithArguments(arg0: any[]): object;
+        invoke(arg0?: object[]): object;
+        toString(): string;
+        type(): $MethodType;
+        withVarargs(arg0: boolean): $MethodHandle;
+    }
+
+    export interface $MethodHandleInfo {
+        getDeclaringClass(): $Class<any>;
+        getMethodType(): $MethodType;
+        getModifiers(): number;
+        getName(): string;
+        getReferenceKind(): number;
+        isVarArgs(): boolean;
+        referenceKindToString(arg0: number): string;
+        reflectAs<T>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;
+        toString(arg0: number, arg1: $Class<any>, arg2: string, arg3: $MethodType): string;
+        static REF_getField: number;
+        static REF_getStatic: number;
+        static REF_invokeInterface: number;
+        static REF_invokeSpecial: number;
+        static REF_invokeStatic: number;
+        static REF_invokeVirtual: number;
+        static REF_newInvokeSpecial: number;
+        static REF_putField: number;
+        static REF_putStatic: number;
+    }
+
     export class $MethodHandles$Lookup {
         static MODULE: number;
         static ORIGINAL: number;
@@ -45,48 +87,6 @@ declare module "java:java/lang/invoke" {
         unreflectSpecial(arg0: $Method, arg1: $Class<any>): $MethodHandle;
         unreflectVarHandle(arg0: $Field): $VarHandle;
         unreflect(arg0: $Method): $MethodHandle;
-    }
-
-    export interface $MethodHandleInfo {
-        getDeclaringClass(): $Class<any>;
-        getMethodType(): $MethodType;
-        getModifiers(): number;
-        getName(): string;
-        getReferenceKind(): number;
-        isVarArgs(): boolean;
-        referenceKindToString(arg0: number): string;
-        reflectAs<T>(arg0: $Class<T>, arg1: $MethodHandles$Lookup): T;
-        toString(arg0: number, arg1: $Class<any>, arg2: string, arg3: $MethodType): string;
-        static REF_getField: number;
-        static REF_getStatic: number;
-        static REF_invokeInterface: number;
-        static REF_invokeSpecial: number;
-        static REF_invokeStatic: number;
-        static REF_invokeVirtual: number;
-        static REF_newInvokeSpecial: number;
-        static REF_putField: number;
-        static REF_putStatic: number;
-    }
-
-    export class $MethodHandle implements $Constable {
-        get varargsCollector(): boolean;
-        isVarargsCollector(): boolean;
-        asCollector(arg0: number, arg1: $Class<any>, arg2: number): $MethodHandle;
-        asCollector(arg0: $Class<any>, arg1: number): $MethodHandle;
-        asFixedArity(): $MethodHandle;
-        asSpreader(arg0: number, arg1: $Class<any>, arg2: number): $MethodHandle;
-        asSpreader(arg0: $Class<any>, arg1: number): $MethodHandle;
-        asType(arg0: $MethodType): $MethodHandle;
-        asVarargsCollector(arg0: $Class<any>): $MethodHandle;
-        bindTo(arg0: object): $MethodHandle;
-        describeConstable(): $Optional<$MethodHandleDesc>;
-        invokeExact(arg0?: object[]): object;
-        invokeWithArguments(arg0?: object[]): object;
-        invokeWithArguments(arg0: any[]): object;
-        invoke(arg0?: object[]): object;
-        toString(): string;
-        type(): $MethodType;
-        withVarargs(arg0: boolean): $MethodHandle;
     }
 
     export class $MethodType implements $Constable, $TypeDescriptor$OfMethod, $Serializable {
@@ -131,6 +131,29 @@ declare module "java:java/lang/invoke" {
         toString(): string;
         unwrap(): $MethodType;
         wrap(): $MethodType;
+    }
+
+    export interface $TypeDescriptor {
+        descriptorString(): string;
+    }
+
+    export interface $TypeDescriptor$OfField<F extends $TypeDescriptor$OfField<F>> extends $TypeDescriptor {
+        arrayType(): F;
+        componentType(): F;
+        isArray(): boolean;
+        isPrimitive(): boolean;
+    }
+
+    export interface $TypeDescriptor$OfMethod<F extends $TypeDescriptor$OfField<F>, M extends $TypeDescriptor$OfMethod<F, M>> extends $TypeDescriptor {
+        changeParameterType(arg0: number, arg1: F): M;
+        changeReturnType(arg0: F): M;
+        dropParameterTypes(arg0: number, arg1: number): M;
+        insertParameterTypes(arg0: number, arg1?: $TypeDescriptor$OfField[]): M;
+        parameterArray(): F[];
+        parameterCount(): number;
+        parameterList(): $List<F>;
+        parameterType(arg0: number): F;
+        returnType(): F;
     }
 
     export class $VarHandle implements $Constable {
@@ -179,35 +202,6 @@ declare module "java:java/lang/invoke" {
         withInvokeExactBehavior(): $VarHandle;
     }
 
-    export interface $TypeDescriptor$OfField<F extends $TypeDescriptor$OfField<F>> extends $TypeDescriptor {
-        arrayType(): F;
-        componentType(): F;
-        isArray(): boolean;
-        isPrimitive(): boolean;
-    }
-
-    export interface $TypeDescriptor$OfMethod<F extends $TypeDescriptor$OfField<F>, M extends $TypeDescriptor$OfMethod<F, M>> extends $TypeDescriptor {
-        changeParameterType(arg0: number, arg1: F): M;
-        changeReturnType(arg0: F): M;
-        dropParameterTypes(arg0: number, arg1: number): M;
-        insertParameterTypes(arg0: number, arg1?: $TypeDescriptor$OfField[]): M;
-        parameterArray(): F[];
-        parameterCount(): number;
-        parameterList(): $List<F>;
-        parameterType(arg0: number): F;
-        returnType(): F;
-    }
-
-    export class $VarHandle$VarHandleDesc extends $DynamicConstantDesc {
-        static ofArray(arg0: $ClassDesc): $VarHandle$VarHandleDesc;
-        static ofField(arg0: $ClassDesc, arg1: string, arg2: $ClassDesc): $VarHandle$VarHandleDesc;
-        static ofStaticField(arg0: $ClassDesc, arg1: string, arg2: $ClassDesc): $VarHandle$VarHandleDesc;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): $VarHandle;
-        toString(): string;
-        varType(): $ClassDesc;
-    }
-
     export class $VarHandle$AccessMode {
         static COMPARE_AND_EXCHANGE: $VarHandle$AccessMode;
         static COMPARE_AND_EXCHANGE_ACQUIRE: $VarHandle$AccessMode;
@@ -247,8 +241,14 @@ declare module "java:java/lang/invoke" {
         static valueOf(name: string): $VarHandle$AccessMode;
     }
 
-    export interface $TypeDescriptor {
-        descriptorString(): string;
+    export class $VarHandle$VarHandleDesc extends $DynamicConstantDesc {
+        static ofArray(arg0: $ClassDesc): $VarHandle$VarHandleDesc;
+        static ofField(arg0: $ClassDesc, arg1: string, arg2: $ClassDesc): $VarHandle$VarHandleDesc;
+        static ofStaticField(arg0: $ClassDesc, arg1: string, arg2: $ClassDesc): $VarHandle$VarHandleDesc;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
+        resolveConstantDesc(arg0: $MethodHandles$Lookup): $VarHandle;
+        toString(): string;
+        varType(): $ClassDesc;
     }
 
 }

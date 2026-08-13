@@ -7,6 +7,12 @@ declare module "java:com/tkisor/nekojs/probe" {
         getMessage(): string;
     }
 
+    export class $LegacyProbeFixture$SampleContext {
+        constructor();
+        get world(): string;
+        getWorld(): string;
+    }
+
     export class $LegacyProbeFixture$SampleDispatchEvent {
         constructor();
         get result(): string;
@@ -25,12 +31,6 @@ declare module "java:com/tkisor/nekojs/probe" {
         getName(): string;
         static of(arg0: string, arg1: number): string;
         static of(arg0: string): string;
-    }
-
-    export class $LegacyProbeFixture$SampleContext {
-        constructor();
-        get world(): string;
-        getWorld(): string;
     }
 
     export class $LegacyProbeFixture$SampleWidget {
