@@ -18,6 +18,7 @@ slf4jModern = "2.0.13"          # common only (cleanroom pins 1.7.36 locally —
 log4j = "2.20.0"
 icu4j = "77.1"
 junitBom = "6.0.0"
+junitLegacy = "5.14.3"           # NeoForge 平台测试用 5.x（common/common-api 走 BOM 6.0.0，cleanroom 用 6.0.3——迁移期刻意分歧）
 graal = "8456810"                # curse.maven:graal-1504336 文件 id
 moddev = "2.0.140"
 unifiedPublishing = "0.1.13"
@@ -40,6 +41,7 @@ log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "lo
 icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junitBom" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }      # version via BOM (common/common-api)
+junit-jupiter-legacy = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitLegacy" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 graal = { module = "curse.maven:graal-1504336", version.ref = "graal" }
 

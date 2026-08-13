@@ -22,7 +22,8 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java']
+            // 与 26.x 共享的版本无关源码树（52 个字节级相同文件，见 git 历史）
+            srcDirs = ['src/main/java', '../neoforge-shared/src/main/java']
         }
         resources {
             srcDirs = ['src/main/resources', 'src/generated/resources']
@@ -93,7 +94,7 @@ dependencies {
 
     // JUnit deliberately pinned to 5.x locally (common-api/common use the 6.0.0 BOM);
     // platform test classpath stays on JUnit 5 during the migration.
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
+    testImplementation libs.junit.jupiter.legacy
     testRuntimeOnly libs.junit.platform.launcher
 }
 sourceSets.test.compileClasspath += sourceSets.main.compileClasspath

@@ -151,7 +151,8 @@ public class NekoJSMod extends NekoJS {
 
         var compilers = ScriptCompilerRegistry.current();
         SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
-        ClassFilter classFilter = new ClassFilter(sandboxConfig);
+        // 复用全局单例（NekoSecurityWarningHandler 等读取 ClassFilter.INSTANCE），避免双实例状态分裂
+        ClassFilter classFilter = ClassFilter.INSTANCE;
         var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig);
         ScriptErrorReporter.set(new ErrorTrackerReporter(errorTracker));
         NekoCoreContext core = new NekoCoreContext(

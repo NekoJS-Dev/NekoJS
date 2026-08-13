@@ -68,6 +68,8 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             try (Reader reader = entry.getValue().openAsReader()) {
                 nekojs$rawJsons.put(id, JsonParser.parseReader(reader));
             } catch (Exception e) {
+                // 坏配方 JSON 不再静默丢弃：告警并附 id，方便整合包作者定位
+                NekoJS.LOGGER.warn("Failed to parse recipe JSON '{}'; it will be skipped", id, e);
             }
         }
         // 同步永久缓存：热重载时 nekojs$applyScripts() 从 baseJsons 重建工作集

@@ -25,6 +25,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 sourceSets {
     main {
         java {
+            srcDir '../neoforge-shared/src/main/java'
             srcDir '../neoforge-26-shared/src/main/java'
         }
         resources {
@@ -101,7 +102,7 @@ dependencies {
     annotationProcessor project(':common-api')
 
     // JUnit deliberately pinned to 5.x locally (common-api/common use the 6.0.0 BOM).
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
+    testImplementation libs.junit.jupiter.legacy
     testRuntimeOnly libs.junit.platform.launcher
 }
 

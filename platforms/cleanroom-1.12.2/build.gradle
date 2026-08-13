@@ -8,6 +8,11 @@ plugins {
     alias(libs.plugins.blossom)
 }
 
+// 平台专属属性从本模块 gradle.properties 加载（与根 gradle.properties 解耦）
+def crlProps = new Properties()
+file('gradle.properties').withInputStream { crlProps.load(it) }
+crlProps.each { key, value -> ext.set(key as String, value as String) }
+
 ext {
     //noinspection GroovyAssignabilityCheck
     access_transformer_locations = "${mod_id}_at.cfg"
@@ -193,7 +198,8 @@ if (!enable_shadow.toBoolean()) {
 }
 
 compileJava {
-    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
+    // Cleanroom 1.12.2 官方仅支持到 Java 21；VERSION_25 字节码会让 Java 17/21 用户直接 UnsupportedClassVersionError
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
@@ -348,7 +354,8 @@ tasks.named(remapTaskName).configure {
 }
 
 compileTestJava {
-    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_25
+    // Cleanroom 1.12.2 官方仅支持到 Java 21；VERSION_25 字节码会让 Java 17/21 用户直接 UnsupportedClassVersionError
+sourceCompatibility = targetCompatibility = JavaVersion.VERSION_21
 }
 
 test {
