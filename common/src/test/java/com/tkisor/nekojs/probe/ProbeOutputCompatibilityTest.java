@@ -53,9 +53,32 @@ class ProbeOutputCompatibilityTest {
         // Phase 2.7（IR 唯一渲染路径）回归护栏：legacy 文件内容必须与录制树逐字一致，
         // 单次反射多产物（TypeReflector → 声明 + import 集合）不得改变任何已有产物字节
         for (Map.Entry<String, String> entry : legacyGolden.entrySet()) {
-            assertEquals(entry.getValue(), actualFiles.get(entry.getKey()),
-                    "Legacy golden content drift for " + entry.getKey());
+            String actual = actualFiles.get(entry.getKey());
+            if (!entry.getValue().equals(actual)) {
+                throw new AssertionError("Legacy golden content drift for " + entry.getKey()
+                        + System.lineSeparator() + goldenDiff(entry.getKey(), entry.getValue(), actual));
+            }
         }
+    }
+
+    /** 诊断：golden 与实际内容的逐行差异摘要（临时排查用，定位跨平台漂移）。 */
+    private static String goldenDiff(String file, String golden, String actual) {
+        List<String> g = golden == null ? List.of() : java.util.Arrays.asList(golden.split("\n", -1));
+        List<String> a = actual == null ? List.of() : java.util.Arrays.asList(actual.split("\n", -1));
+        StringBuilder sb = new StringBuilder();
+        sb.append("golden lines=").append(g.size()).append(" actual lines=").append(a.size());
+        int shown = 0;
+        for (int i = 0; i < Math.max(g.size(), a.size()) && shown < 12; i++) {
+            String gs = i < g.size() ? g.get(i) : "<EOF>";
+            String as = i < a.size() ? a.get(i) : "<EOF>";
+            if (gs.equals(as)) continue;
+            sb.append(System.lineSeparator()).append("L").append(i + 1).append(" G: ")
+              .append(gs.length() > 120 ? gs.substring(0, 120) + "…" : gs);
+            sb.append(System.lineSeparator()).append("L").append(i + 1).append(" A: ")
+              .append(as.length() > 120 ? as.substring(0, 120) + "…" : as);
+            shown++;
+        }
+        return sb.toString();
     }
 
     @Test
