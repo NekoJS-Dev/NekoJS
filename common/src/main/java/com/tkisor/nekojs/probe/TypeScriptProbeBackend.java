@@ -14,6 +14,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.events.GlobalDecl;
 import com.tkisor.nekojs.probe.events.ProbeModifyTypeEventJS;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
@@ -39,19 +40,17 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
     private final TypeConverter typeConverter = new TypeConverter(aliasRegistry);
-    private final ClassDeclGenerator classDeclGenerator = new ClassDeclGenerator(typeConverter);
     private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
-    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(classDeclGenerator, typeConverter, adapterAliasGenerator);
+    // IR 唯一渲染路径（Phase 2.7）：所有类声明与 import 均由 TypeReflector → IR → renderer 产出，
+    // 旧的 ClassDeclGenerator 直接反射渲染已删除
+    private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(typeConverter);
+    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer, typeConverter, adapterAliasGenerator);
     private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
     private final ManagedApiDeclarationGenerator managedDeclGenerator = new ManagedApiDeclarationGenerator();
 
-    // IR 渲染器（Phase 2.6）：仅用于重渲染被 modify_type 编辑过的类；未编辑的类仍走旧 ClassDeclGenerator
-    private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(typeConverter);
-
-    // RecipeEventJS.recipes getter 覆盖的单一数据源：旧 ClassDeclGenerator 路径与 IR 重渲染路径
-    // 都从这里取字面量，避免两处各写一遍导致漂移。
+    // RecipeEventJS.recipes getter 覆盖的单一数据源：唯一渲染路径（IR renderer）从这里取字面量
     private static final String RECIPE_EVENT_RECIPES_GETTER = "recipes";
     private static final String RECIPE_EVENT_RECIPES_RETURN_TYPE = "DocumentedRecipes";
     private static final String RECIPE_EVENT_RECIPES_IMPORT =
@@ -65,15 +64,6 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     "com.tkisor.nekojs.wrapper.event.server.RecipeEventJS",
                     false,
                     Thread.currentThread().getContextClassLoader());
-            // 旧路径：ClassDeclGenerator 直接渲染时命中覆盖
-            classDeclGenerator.overrideGetter(
-                    recipeEventClass,
-                    RECIPE_EVENT_RECIPES_GETTER,
-                    RECIPE_EVENT_RECIPES_RETURN_TYPE,
-                    RECIPE_EVENT_RECIPES_IMPORT
-            );
-            // IR 重渲染路径：modify_type/assign_type 把类标记 mutated 后改走 renderer，覆盖必须同样生效，
-            // 否则 recipes getter 会退化为原始返回类型。
             tsClassRenderer.overrideGetter(
                     recipeEventClass,
                     RECIPE_EVENT_RECIPES_GETTER,
@@ -92,6 +82,15 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     @Override
     public String name() {
         return "builtin";
+    }
+
+    /**
+     * TS backend 永远需要共享 IR：IR 是唯一渲染源（Phase 2.7 起），收集到的类由
+     * {@link ProbeCoordinator} 统一反射为 IR，本 backend 仅补齐 TS 专属的适配器目标类/宿主类型。
+     */
+    @Override
+    public boolean requiresIr() {
+        return true;
     }
 
     @Override
@@ -151,16 +150,25 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     tree.addClass(fqn);
                 }
 
-                // 3. 并行预生成所有类声明
-                pregenerateDeclarations(classesToGenerate);
+                // 3. 单次反射多产物：共享 IR + TS 专属额外类 → 逐类渲染声明与 import 集合，
+                //    全部走唯一 IR 渲染路径（TypeReflector → TypeScriptClassRenderer）。
+                //    ctx.ir() 由 ProbeCoordinator 构建（TS 声明 requiresIr，共享层总是反射一次）。
+                //    线程池优先复用 ProbeCoordinator 的共享池（整个 probe 运行单池）；测试直连
+                //    构造的 ProbeContext 没有共享池时，本 backend 自建并负责关闭。
+                ExecutorService provided = ctx.sharedPool();
+                ExecutorService pool = provided != null
+                        ? provided
+                        : Executors.newFixedThreadPool(parallelism());
+                try {
+                    predeclareClasses(ctx.ir(), classesToGenerate, pool);
 
-                // 3b. 应用共享 IR 中被 modify_type 编辑过的类（Strategy B）：
-                //     ctx.ir() 由 ProbeCoordinator 在「有监听器或有 backend 需要 IR」时构建并触发事件；
-                //     为 null（默认 /nekojs probe）则完全走旧 ClassDeclGenerator 路径，TS 产物零回归。
-                applyMutatedOverrides(ctx.ir());
-
-                // 4. 生成 @package Java 类型声明（写入 staging）
-                filesGenerated += generatePackageDeclarations(tree, staging);
+                    // 4. 生成 @package Java 类型声明（写入 staging，复用同一线程池）
+                    filesGenerated += generatePackageDeclarations(tree, staging, pool);
+                } finally {
+                    if (provided == null) {
+                        pool.shutdown();
+                    }
+                }
 
                 // 4. 生成事件声明
                 filesGenerated += generateEventDeclarations(snapshot, staging);
@@ -205,7 +213,6 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         } finally {
             // 清理生成过程中积累的缓存，释放内存
             indexFileGenerator.clearCaches();
-            typeConverter.clearCaches();
         }
     }
 
@@ -242,33 +249,63 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 对共享 IR 中被 {@code probe.modify_type} 触及（{@code mutated}）的类，重新渲染并覆盖
-     * {@link IndexFileGenerator} 的声明缓存。{@code ir} 为 null（无监听器且无 backend 需要 IR）时
-     * 直接返回，{@link #generate} 全程走旧 {@code ClassDeclGenerator} 路径（Strategy B，零回归）。
-     *
-     * <p>IR 构建 + 事件触发由 {@link ProbeCoordinator} 共享层统一完成（Phase 3），TS 与 Python backend
-     * 复用同一份（已编辑的）IR。
+     * IR 唯一路径的并行预声明：共享 IR（{@code sharedIr}，可能为 null——测试直连的 {@code ProbeContext}
+     * 构造）与 TS 专属额外类（适配器目标/宿主类型）统一为 {@link TypeDecl}，逐类渲染声明 + 计算
+     * import 集合写入 {@link IndexFileGenerator} 缓存；同时收集被 {@code probe.modify_type} hide 的
+     * 类供 import/别名过滤。每类只反射一次（共享 IR 已反射的不再反射），一次反射同时产出
+     * 声明与 import 两个产物。
      */
-    private void applyMutatedOverrides(List<TypeDecl> ir) {
-        if (ir == null) {
-            // 本次无 IR（无监听器）：清空上一轮的隐藏类集合，防跨 run 残留
-            indexFileGenerator.setHiddenClasses(Set.of());
-            return;
-        }
-        // C5a：收集被隐藏（hide）的类，供 IndexFileGenerator 过滤悬空 import / 别名
-        Set<String> hiddenFqns = new LinkedHashSet<>();
-        for (TypeDecl d : ir) {
-            if (!d.mutated) continue;
-            if (d.hidden) {
-                hiddenFqns.add(d.fqn);
-                indexFileGenerator.overrideDeclaration(d.fqn, "", Set.of());
-                continue;
+    private void predeclareClasses(List<TypeDecl> sharedIr, Set<String> classNames, ExecutorService pool) {
+        Map<String, TypeDecl> irByFqn = new LinkedHashMap<>();
+        if (sharedIr != null) {
+            for (TypeDecl d : sharedIr) {
+                irByFqn.put(d.fqn, d);
             }
-            String rendered = tsClassRenderer.render(d);
-            Set<String> extraImports = ProbeModifyTypeEventJS.collectEditedSymbolFqns(d, pkgOf(d.fqn));
-            indexFileGenerator.overrideDeclaration(d.fqn, rendered, extraImports);
+        }
+
+        List<Future<?>> futures = new ArrayList<>();
+        for (String fqn : classNames) {
+            futures.add(pool.submit(() -> {
+                try {
+                    TypeDecl decl = irByFqn.get(fqn);
+                    if (decl == null) {
+                        // 共享 IR 缺失（共享层反射失败，或测试直连 ir=null）：本 backend 自行反射
+                        Class<?> cls = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
+                        decl = new TypeReflector().reflect(cls);
+                    }
+                    Set<String> extraImports = decl.mutated
+                            ? ProbeModifyTypeEventJS.collectEditedSymbolFqns(decl, pkgOf(decl.fqn))
+                            : Set.of();
+                    indexFileGenerator.predeclareClass(fqn, decl, extraImports);
+                } catch (Throwable t) {
+                    // 单个类失败不影响整体（旧行为一致）：NekoJS 平台类失败打 debug 便于排查缺失类型
+                    if (fqn.startsWith("com.tkisor.nekojs.")) {
+                        NekoJS.LOGGER.debug("Probe: failed to predeclare class {}: {}", fqn, t.toString());
+                    }
+                }
+            }));
+        }
+        for (var f : futures) {
+            try {
+                f.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (ExecutionException e) {
+                NekoJS.LOGGER.debug("Probe: class predeclaration failed", e.getCause());
+            }
+        }
+
+        // hide 过滤：被 probe.modify_type hide 的类不产出声明/别名，其它类 import 中剔除其引用
+        Set<String> hiddenFqns = new LinkedHashSet<>();
+        for (TypeDecl d : irByFqn.values()) {
+            if (d.hidden) hiddenFqns.add(d.fqn);
         }
         indexFileGenerator.setHiddenClasses(hiddenFqns);
+    }
+
+    private static int parallelism() {
+        return Math.min(Runtime.getRuntime().availableProcessors(), 8);
     }
 
     private static String pkgOf(String fqn) {
@@ -362,44 +399,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         c.mergeJsConfigPaths(probeDir.resolve("jsconfig.json"), aliases);
     }
 
-    /**
-     * 并行预生成所有类声明（重反射工作放到线程池）。
-     */
-    private void pregenerateDeclarations(Set<String> classNames) {
-        int parallelism = Math.min(Runtime.getRuntime().availableProcessors(), 8);
-        ExecutorService executor = Executors.newFixedThreadPool(parallelism);
-        List<Future<?>> futures = new ArrayList<>();
-        for (String fqn : classNames) {
-            futures.add(executor.submit(() -> {
-                try {
-                    // Use initialize=false to avoid triggering <clinit> which can
-                    // crash on non-OpenGL threads (e.g. client rendering classes)
-                    Class<?> clazz = Class.forName(fqn, false, Thread.currentThread().getContextClassLoader());
-                    indexFileGenerator.pregenerateClass(clazz);
-                } catch (Throwable t) {
-                    // Log failures for NekoJS platform classes so we can debug missing types
-                    if (fqn.startsWith("com.tkisor.nekojs.")) {
-                        NekoJS.LOGGER.debug("Probe: failed to pregenerate class {}: {}", fqn, t.toString());
-                    }
-                }
-            }));
-        }
-        for (var f : futures) {
-            try {
-                f.get();
-            } catch (InterruptedException e) {
-                // 恢复中断标志，让上层感知
-                Thread.currentThread().interrupt();
-                break;
-            } catch (ExecutionException e) {
-                // worker 线程的真实失败（非 NekoJS 类的 classloader 异常等）不应静默丢失
-                NekoJS.LOGGER.debug("Probe: class pregeneration failed", e.getCause());
-            }
-        }
-        executor.shutdown();
-    }
-
-    private int generatePackageDeclarations(PackageTree tree, Path outputDir) throws IOException {
+    private int generatePackageDeclarations(PackageTree tree, Path outputDir, ExecutorService pool) throws IOException {
         Path packageDir = outputDir.resolve("@package");
         Files.createDirectories(packageDir);
 
@@ -416,12 +416,10 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             Files.createDirectories(packageDir.resolve(node.getPackagePath()));
         }
 
-        // 2. 并行生成内容 + 写入文件
+        // 2. 并行生成内容 + 写入文件（复用 generate() 的共享线程池，不另建池）
         List<PackageTree.Node> nodeList = new ArrayList<>(nodes);
-        int parallelism = Math.min(Runtime.getRuntime().availableProcessors(), 8);
-        ExecutorService executor = Executors.newFixedThreadPool(parallelism);
         CompletionService<Void> completion =
-                new ExecutorCompletionService<>(executor);
+                new ExecutorCompletionService<>(pool);
 
         int taskCount = 0;
         for (PackageTree.Node node : nodeList) {
@@ -446,7 +444,6 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 break;
             }
         }
-        executor.shutdown();
 
         // 3. 生成根 index.d.ts
         List<String> topPackages = new ArrayList<>();

@@ -7,6 +7,7 @@ import com.tkisor.nekojs.probe.ir.TypeDecl;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 传给 {@link ProbeBackend#generate(ProbeContext)} 的共享上下文。
@@ -49,6 +50,15 @@ public interface ProbeContext {
      */
     ProbeOverrides overrides();
 
+    /**
+     * 本次 probe 的共享线程池（由 {@link ProbeCoordinator} 创建，IR 反射构建与各 backend 的并行
+     * 生成共用；整个 probe 运行只有这一个池）。直接构造 {@code ProbeContext.Of} 的测试为 null，
+     * backend 自行创建并负责关闭。默认 null。
+     */
+    default ExecutorService sharedPool() {
+        return null;
+    }
+
     /** 简单不可变实现。 */
     record Of(
             NekoScriptCatalogSnapshot snapshot,
@@ -58,7 +68,8 @@ public interface ProbeContext {
             String languageId,
             Path languageDir,
             List<TypeDecl> ir,
-            ProbeOverrides overrides
+            ProbeOverrides overrides,
+            ExecutorService sharedPool
     ) implements ProbeContext {
         public Of {
             java.util.Objects.requireNonNull(snapshot, "snapshot");
@@ -71,6 +82,18 @@ public interface ProbeContext {
             overrides = overrides == null ? ProbeOverrides.empty() : overrides;
         }
 
+        /** 8 参便利构造（sharedPool = null，兼容旧调用方）。 */
+        public Of(NekoScriptCatalogSnapshot snapshot,
+                  List<Class<?>> collectedClasses,
+                  ProbeConfig config,
+                  NekoJSPaths paths,
+                  String languageId,
+                  Path languageDir,
+                  List<TypeDecl> ir,
+                  ProbeOverrides overrides) {
+            this(snapshot, collectedClasses, config, paths, languageId, languageDir, ir, overrides, null);
+        }
+
         /** 7 参便利构造（overrides = empty）。 */
         public Of(NekoScriptCatalogSnapshot snapshot,
                   List<Class<?>> collectedClasses,
@@ -79,7 +102,7 @@ public interface ProbeContext {
                   String languageId,
                   Path languageDir,
                   List<TypeDecl> ir) {
-            this(snapshot, collectedClasses, config, paths, languageId, languageDir, ir, ProbeOverrides.empty());
+            this(snapshot, collectedClasses, config, paths, languageId, languageDir, ir, ProbeOverrides.empty(), null);
         }
 
         /** 6 参便利构造（ir = null, overrides = empty），兼容旧调用方。 */
@@ -89,7 +112,7 @@ public interface ProbeContext {
                   NekoJSPaths paths,
                   String languageId,
                   Path languageDir) {
-            this(snapshot, collectedClasses, config, paths, languageId, languageDir, null, ProbeOverrides.empty());
+            this(snapshot, collectedClasses, config, paths, languageId, languageDir, null, ProbeOverrides.empty(), null);
         }
     }
 }

@@ -17,7 +17,7 @@ public interface ProbeEvents {
      * 在 probe 渲染类型声明**之前**触发。脚本通过 {@link ProbeModifyTypeEventJS#forClass(String)}
      * 拿到 {@link ClassEditor}，对反射产出的 {@code TypeDecl} IR 做参数级编辑（改名/改类型/隐藏/
      * 加参数/文档…）。被触及的类随后经 {@code TypeScriptClassRenderer} 重新渲染并覆盖声明缓存；
-     * 未触及的类仍走旧 {@code ClassDeclGenerator} 路径（TS 产物零回归）。
+     * 未触及的类渲染结果与触及前一致（TypeReflector/TypeScriptClassRenderer 镜像旧渲染契约）。
      *
      * <p>典型用法（server_scripts）：
      * <pre>{@code

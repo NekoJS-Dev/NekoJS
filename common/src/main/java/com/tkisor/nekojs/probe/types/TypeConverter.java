@@ -11,7 +11,6 @@ import java.util.*;
  */
 public final class TypeConverter {
     private final TypeAliasRegistry aliases;
-    private final Set<String> discoveredClasses = new LinkedHashSet<>();
 
     public TypeConverter(TypeAliasRegistry aliases) {
         this.aliases = aliases;
@@ -69,13 +68,6 @@ public final class TypeConverter {
         return "any";
     }
 
-    /**
-     * 获取所有发现的 Java 类全限定名。
-     */
-    public Set<String> getDiscoveredClasses() {
-        return discoveredClasses;
-    }
-
     private String mapPrimitive(Type type) {
         if (type == boolean.class) return "boolean";
         if (type == byte.class || type == short.class || type == int.class ||
@@ -104,9 +96,6 @@ public final class TypeConverter {
         if (cls.isArray()) {
             return toTypeScript(cls.getComponentType(), input) + "[]";
         }
-
-        // 记录发现的类
-        discoveredClasses.add(cls.getName());
 
         // 检查输入别名
         if (input && aliases.hasAlias(cls.getName())) {
@@ -146,16 +135,7 @@ public final class TypeConverter {
             if (alias != null) return alias;
         }
 
-        // 记录发现的类
-        discoveredClasses.add(rawClass.getName());
-
         return "$" + getTsClassName(rawClass) + "<" + argsStr + ">";
     }
 
-    /**
-     * 清理生成过程中积累的缓存，释放内存。
-     */
-    public void clearCaches() {
-        discoveredClasses.clear();
-    }
 }

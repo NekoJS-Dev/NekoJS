@@ -1,208 +1,127 @@
+import { $Class, $Enum, $Runtime$Version, $String } from "java:java/lang";
+import { $Annotation } from "java:java/lang/annotation";
+import { $Set } from "java:java/util";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        accessFlags(): $Set<$AccessFlag>;
-        accessFlags(): $Set<$AccessFlag>;
-        accessFlags(): $Set<$AccessFlag>;
-        canAccess(arg0: object): boolean;
-        equals(arg0: object): boolean;
-        equals(arg0: object): boolean;
-        equals(arg0: object): boolean;
-        get accessible(): boolean;
-        get annotatedExceptionTypes(): $AnnotatedType[];
-        get annotatedParameterTypes(): $AnnotatedType[];
-        get annotatedReceiverType(): $AnnotatedType;
-        get annotatedReceiverType(): $AnnotatedType;
+declare module "java:java/lang/reflect" {
+    export class $Method extends $Executable {
         get annotatedReturnType(): $AnnotatedType;
-        get annotatedReturnType(): $AnnotatedType;
-        get annotatedReturnType(): $AnnotatedType;
-        get annotatedType(): $AnnotatedType;
-        get annotations(): $Annotation[];
-        get bridge(): boolean;
+        getAnnotatedReturnType(): $AnnotatedType;
         get declaredAnnotations(): $Annotation[];
-        get declaredAnnotations(): $Annotation[];
-        get declaredAnnotations(): $Annotation[];
-        get declaredAnnotations(): $Annotation[];
-        get declaredAnnotations(): $Annotation[];
-        get declaringClass(): $Class<T>;
+        getDeclaredAnnotations(): $Annotation[];
         get declaringClass(): $Class<any>;
-        get declaringClass(): $Class<any>;
-        get declaringClass(): $Class<any>;
-        get default(): boolean;
+        getDeclaringClass(): $Class<any>;
         get defaultValue(): object;
-        get enumConstant(): boolean;
-        get exceptionTypes(): $Class<any>[];
-        get exceptionTypes(): $Class<any>[];
-        get exceptionTypes(): $Class<any>[];
-        get genericExceptionTypes(): $Type[];
-        get genericExceptionTypes(): $Type[];
-        get genericExceptionTypes(): $Type[];
-        get genericParameterTypes(): $Type[];
-        get genericParameterTypes(): $Type[];
-        get genericParameterTypes(): $Type[];
-        get genericReturnType(): $Type;
-        get genericType(): $Type;
-        get modifiers(): number;
-        get modifiers(): number;
-        get modifiers(): number;
-        get modifiers(): number;
-        get name(): string;
-        get name(): string;
-        get name(): string;
-        get name(): string;
-        get parameterAnnotations(): $Annotation[][];
-        get parameterAnnotations(): $Annotation[][];
-        get parameterAnnotations(): $Annotation[][];
-        get parameterCount(): number;
-        get parameterCount(): number;
-        get parameterCount(): number;
-        get parameterTypes(): $Class<any>[];
-        get parameterTypes(): $Class<any>[];
-        get parameterTypes(): $Class<any>[];
-        get parameters(): $Parameter[];
-        get returnType(): $Class<any>;
-        get synthetic(): boolean;
-        get synthetic(): boolean;
-        get synthetic(): boolean;
-        get synthetic(): boolean;
-        get type(): $Class<any>;
-        get typeParameters(): $TypeVariable<$Constructor<T>>[];
-        get typeParameters(): $TypeVariable<$Method>[];
-        get typeParameters(): $TypeVariable<any>[];
-        get varArgs(): boolean;
-        get varArgs(): boolean;
-        get varArgs(): boolean;
-        get(arg0: object): object;
-        getAnnotatedBounds(): $AnnotatedType[];
-        getAnnotatedExceptionTypes(): $AnnotatedType[];
-        getAnnotatedOwnerType(): $AnnotatedType;
-        getAnnotatedParameterTypes(): $AnnotatedType[];
-        getAnnotatedReceiverType(): $AnnotatedType;
-        getAnnotatedReceiverType(): $AnnotatedType;
-        getAnnotatedReturnType(): $AnnotatedType;
-        getAnnotatedReturnType(): $AnnotatedType;
-        getAnnotatedReturnType(): $AnnotatedType;
-        getAnnotatedType(): $AnnotatedType;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotation<T>(arg0: $Class<T>): T;
-        getAnnotations(): $Annotation[];
-        getAnnotations(): $Annotation[];
-        getAnnotations(): $Annotation[];
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getBoolean(arg0: object): boolean;
-        getBounds(): $Type[];
-        getByte(arg0: object): number;
-        getChar(arg0: object): string;
-        getDeclaredAnnotation<T>(arg0: $Class<T>): T;
-        getDeclaredAnnotation<T>(arg0: $Class<T>): T;
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotations(): $Annotation[];
-        getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];
-        getDeclaringClass(): $Class<T>;
-        getDeclaringClass(): $Class<any>;
-        getDeclaringClass(): $Class<any>;
-        getDeclaringClass(): $Class<any>;
-        getDeclaringClass(): $Class<any>;
         getDefaultValue(): object;
-        getDouble(arg0: object): number;
+        get exceptionTypes(): $Class<any>[];
         getExceptionTypes(): $Class<any>[];
-        getExceptionTypes(): $Class<any>[];
-        getExceptionTypes(): $Class<any>[];
-        getFloat(arg0: object): number;
-        getGenericDeclaration(): D;
+        get genericExceptionTypes(): $Type[];
         getGenericExceptionTypes(): $Type[];
-        getGenericExceptionTypes(): $Type[];
-        getGenericExceptionTypes(): $Type[];
+        get genericParameterTypes(): $Type[];
         getGenericParameterTypes(): $Type[];
-        getGenericParameterTypes(): $Type[];
-        getGenericParameterTypes(): $Type[];
+        get genericReturnType(): $Type;
         getGenericReturnType(): $Type;
-        getGenericType(): $Type;
-        getInt(arg0: object): number;
-        getLong(arg0: object): number;
+        get modifiers(): number;
         getModifiers(): number;
-        getModifiers(): number;
-        getModifiers(): number;
-        getModifiers(): number;
-        getModifiers(): number;
+        get name(): string;
         getName(): string;
-        getName(): string;
-        getName(): string;
-        getName(): string;
-        getName(): string;
-        getName(): string;
+        get parameterAnnotations(): $Annotation[][];
         getParameterAnnotations(): $Annotation[][];
-        getParameterAnnotations(): $Annotation[][];
-        getParameterAnnotations(): $Annotation[][];
+        get parameterCount(): number;
         getParameterCount(): number;
-        getParameterCount(): number;
-        getParameterCount(): number;
+        get parameterTypes(): $Class<any>[];
         getParameterTypes(): $Class<any>[];
-        getParameterTypes(): $Class<any>[];
-        getParameterTypes(): $Class<any>[];
-        getParameters(): $Parameter[];
+        get returnType(): $Class<any>;
         getReturnType(): $Class<any>;
-        getShort(arg0: object): number;
-        getType(): $Class<any>;
-        getType(): $Type;
-        getTypeName(): string;
-        getTypeParameters(): $TypeVariable<$Constructor<T>>[];
+        get typeParameters(): $TypeVariable<$Method>[];
         getTypeParameters(): $TypeVariable<$Method>[];
-        getTypeParameters(): $TypeVariable<any>[];
-        getTypeParameters(): $TypeVariable<any>[];
-        hashCode(): number;
-        hashCode(): number;
+        get bridge(): boolean;
+        isBridge(): boolean;
+        get default(): boolean;
+        isDefault(): boolean;
+        get synthetic(): boolean;
+        isSynthetic(): boolean;
+        get varArgs(): boolean;
+        isVarArgs(): boolean;
+        equals(arg0: object): boolean;
+        getAnnotation<T>(arg0: $Class<T>): T;
         hashCode(): number;
         invoke(arg0: object, arg1?: object[]): object;
-        isAccessible(): boolean;
-        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
-        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
-        isBridge(): boolean;
-        isDefault(): boolean;
-        isEnumConstant(): boolean;
+        toGenericString(): string;
+        toString(): string;
+    }
+
+    export class $Constructor<T> extends $Executable {
+        get annotatedReceiverType(): $AnnotatedType;
+        getAnnotatedReceiverType(): $AnnotatedType;
+        get annotatedReturnType(): $AnnotatedType;
+        getAnnotatedReturnType(): $AnnotatedType;
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        get declaringClass(): $Class<T>;
+        getDeclaringClass(): $Class<T>;
+        get exceptionTypes(): $Class<any>[];
+        getExceptionTypes(): $Class<any>[];
+        get genericExceptionTypes(): $Type[];
+        getGenericExceptionTypes(): $Type[];
+        get genericParameterTypes(): $Type[];
+        getGenericParameterTypes(): $Type[];
+        get modifiers(): number;
+        getModifiers(): number;
+        get name(): string;
+        getName(): string;
+        get parameterAnnotations(): $Annotation[][];
+        getParameterAnnotations(): $Annotation[][];
+        get parameterCount(): number;
+        getParameterCount(): number;
+        get parameterTypes(): $Class<any>[];
+        getParameterTypes(): $Class<any>[];
+        get typeParameters(): $TypeVariable<$Constructor<T>>[];
+        getTypeParameters(): $TypeVariable<$Constructor<T>>[];
+        get synthetic(): boolean;
         isSynthetic(): boolean;
-        isSynthetic(): boolean;
-        isSynthetic(): boolean;
-        isSynthetic(): boolean;
-        isSynthetic(): boolean;
+        get varArgs(): boolean;
         isVarArgs(): boolean;
-        isVarArgs(): boolean;
-        isVarArgs(): boolean;
-        name(): string;
-        name(): string;
-        name(): string;
+        equals(arg0: object): boolean;
+        getAnnotation<T>(arg0: $Class<T>): T;
+        hashCode(): number;
         newInstance(arg0?: object[]): T;
-        ordinal(): number;
-        ordinal(): number;
-        ordinal(): number;
-        set accessible(value: boolean);
-        set(arg0: object, arg1: object): void;
+        toGenericString(): string;
+        toString(): string;
+    }
+
+    export class $Field extends $AccessibleObject implements $Member {
+        get annotatedType(): $AnnotatedType;
+        getAnnotatedType(): $AnnotatedType;
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        get declaringClass(): $Class<any>;
+        getDeclaringClass(): $Class<any>;
+        get genericType(): $Type;
+        getGenericType(): $Type;
+        get modifiers(): number;
+        getModifiers(): number;
+        get name(): string;
+        getName(): string;
+        get type(): $Class<any>;
+        getType(): $Class<any>;
+        get enumConstant(): boolean;
+        isEnumConstant(): boolean;
+        get synthetic(): boolean;
+        isSynthetic(): boolean;
+        accessFlags(): $Set<$AccessFlag>;
+        equals(arg0: object): boolean;
+        getAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getAnnotation<T>(arg0: $Class<T>): T;
+        getBoolean(arg0: object): boolean;
+        getByte(arg0: object): number;
+        getChar(arg0: object): string;
+        getDouble(arg0: object): number;
+        getFloat(arg0: object): number;
+        getInt(arg0: object): number;
+        getLong(arg0: object): number;
+        getShort(arg0: object): number;
+        get(arg0: object): object;
+        hashCode(): number;
         setBoolean(arg0: object, arg1: boolean): void;
         setByte(arg0: object, arg1: number): void;
         setChar(arg0: object, arg1: string): void;
@@ -211,52 +130,50 @@
         setInt(arg0: object, arg1: number): void;
         setLong(arg0: object, arg1: number): void;
         setShort(arg0: object, arg1: number): void;
+        set(arg0: object, arg1: object): void;
+        toGenericString(): string;
+        toString(): string;
+    }
+
+    export interface $GenericDeclaration extends $AnnotatedElement {
+        getTypeParameters(): $TypeVariable<any>[];
+    }
+
+    export interface $Type {
+        getTypeName(): string;
+    }
+
+    export interface $AnnotatedElement {
+        getAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getAnnotations(): $Annotation[];
+        getAnnotation<T>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getDeclaredAnnotations(): $Annotation[];
+        getDeclaredAnnotation<T>(arg0: $Class<T>): T;
+        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
+    }
+
+    export interface $TypeVariable<D extends $GenericDeclaration> extends $Type, $AnnotatedElement {
+        getAnnotatedBounds(): $AnnotatedType[];
+        getBounds(): $Type[];
+        getGenericDeclaration(): D;
+        getName(): string;
+    }
+
+    export class $AccessFlag {
         static ABSTRACT: $AccessFlag;
         static ANNOTATION: $AccessFlag;
         static BRIDGE: $AccessFlag;
-        static CLASS: $AccessFlag$Location;
-        static DECLARED: number;
         static ENUM: $AccessFlag;
-        static FIELD: $AccessFlag$Location;
         static FINAL: $AccessFlag;
-        static INNER_CLASS: $AccessFlag$Location;
         static INTERFACE: $AccessFlag;
         static MANDATED: $AccessFlag;
-        static METHOD: $AccessFlag$Location;
-        static METHOD_PARAMETER: $AccessFlag$Location;
-        static MODULE: $AccessFlag$Location;
         static MODULE: $AccessFlag;
-        static MODULE_EXPORTS: $AccessFlag$Location;
-        static MODULE_OPENS: $AccessFlag$Location;
-        static MODULE_REQUIRES: $AccessFlag$Location;
         static NATIVE: $AccessFlag;
         static OPEN: $AccessFlag;
         static PRIVATE: $AccessFlag;
         static PROTECTED: $AccessFlag;
         static PUBLIC: $AccessFlag;
-        static PUBLIC: number;
-        static RELEASE_0: $ClassFileFormatVersion;
-        static RELEASE_10: $ClassFileFormatVersion;
-        static RELEASE_11: $ClassFileFormatVersion;
-        static RELEASE_12: $ClassFileFormatVersion;
-        static RELEASE_13: $ClassFileFormatVersion;
-        static RELEASE_14: $ClassFileFormatVersion;
-        static RELEASE_15: $ClassFileFormatVersion;
-        static RELEASE_16: $ClassFileFormatVersion;
-        static RELEASE_17: $ClassFileFormatVersion;
-        static RELEASE_18: $ClassFileFormatVersion;
-        static RELEASE_19: $ClassFileFormatVersion;
-        static RELEASE_1: $ClassFileFormatVersion;
-        static RELEASE_20: $ClassFileFormatVersion;
-        static RELEASE_21: $ClassFileFormatVersion;
-        static RELEASE_2: $ClassFileFormatVersion;
-        static RELEASE_3: $ClassFileFormatVersion;
-        static RELEASE_4: $ClassFileFormatVersion;
-        static RELEASE_5: $ClassFileFormatVersion;
-        static RELEASE_6: $ClassFileFormatVersion;
-        static RELEASE_7: $ClassFileFormatVersion;
-        static RELEASE_8: $ClassFileFormatVersion;
-        static RELEASE_9: $ClassFileFormatVersion;
         static STATIC: $AccessFlag;
         static STATIC_PHASE: $AccessFlag;
         static STRICT: $AccessFlag;
@@ -267,54 +184,137 @@
         static TRANSITIVE: $AccessFlag;
         static VARARGS: $AccessFlag;
         static VOLATILE: $AccessFlag;
-        static setAccessible(arg0: $AccessibleObject[], arg1: boolean): void;
-        static valueOf(name: string): $AccessFlag$Location;
-        static valueOf(name: string): $AccessFlag;
-        static valueOf(name: string): $ClassFileFormatVersion;
-        static values(): $AccessFlag$Location[];
+        name(): string;
+        ordinal(): number;
+        toString(): string;
         static values(): $AccessFlag[];
-        static values(): $ClassFileFormatVersion[];
-        toGenericString(): string;
-        toGenericString(): string;
-        toGenericString(): string;
-        toGenericString(): string;
-        toString(): string;
-        toString(): string;
-        toString(): string;
-        toString(): string;
-        toString(): string;
-        toString(): string;
-        trySetAccessible(): boolean;
-    export class $AccessFlag {
-    export class $AccessFlag$Location {
-    export class $AccessibleObject implements $AnnotatedElement {
-    export class $ClassFileFormatVersion {
-    export class $Constructor<T> extends $Executable {
-    export class $Executable extends $AccessibleObject implements $Member, $GenericDeclaration {
-    export class $Field extends $AccessibleObject implements $Member {
-    export class $Method extends $Executable {
-    export interface $AnnotatedElement {
+        static valueOf(name: string): $AccessFlag;
+    }
+
     export interface $AnnotatedType extends $AnnotatedElement {
-    export interface $GenericDeclaration extends $AnnotatedElement {
+        getAnnotatedOwnerType(): $AnnotatedType;
+        getAnnotations(): $Annotation[];
+        getAnnotation<T>(arg0: $Class<T>): T;
+        getDeclaredAnnotations(): $Annotation[];
+        getType(): $Type;
+    }
+
+    export class $Executable extends $AccessibleObject implements $Member, $GenericDeclaration {
+        get annotatedExceptionTypes(): $AnnotatedType[];
+        getAnnotatedExceptionTypes(): $AnnotatedType[];
+        get annotatedParameterTypes(): $AnnotatedType[];
+        getAnnotatedParameterTypes(): $AnnotatedType[];
+        get annotatedReceiverType(): $AnnotatedType;
+        getAnnotatedReceiverType(): $AnnotatedType;
+        get annotatedReturnType(): $AnnotatedType;
+        getAnnotatedReturnType(): $AnnotatedType;
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        get declaringClass(): $Class<any>;
+        getDeclaringClass(): $Class<any>;
+        get exceptionTypes(): $Class<any>[];
+        getExceptionTypes(): $Class<any>[];
+        get genericExceptionTypes(): $Type[];
+        getGenericExceptionTypes(): $Type[];
+        get genericParameterTypes(): $Type[];
+        getGenericParameterTypes(): $Type[];
+        get modifiers(): number;
+        getModifiers(): number;
+        get name(): string;
+        getName(): string;
+        get parameterAnnotations(): $Annotation[][];
+        getParameterAnnotations(): $Annotation[][];
+        get parameterCount(): number;
+        getParameterCount(): number;
+        get parameterTypes(): $Class<any>[];
+        getParameterTypes(): $Class<any>[];
+        get parameters(): $Parameter[];
+        getParameters(): $Parameter[];
+        get typeParameters(): $TypeVariable<any>[];
+        getTypeParameters(): $TypeVariable<any>[];
+        get synthetic(): boolean;
+        isSynthetic(): boolean;
+        get varArgs(): boolean;
+        isVarArgs(): boolean;
+        accessFlags(): $Set<$AccessFlag>;
+        getAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getAnnotation<T>(arg0: $Class<T>): T;
+        toGenericString(): string;
+    }
+
+    export class $AccessibleObject implements $AnnotatedElement {
+        get annotations(): $Annotation[];
+        getAnnotations(): $Annotation[];
+        get declaredAnnotations(): $Annotation[];
+        getDeclaredAnnotations(): $Annotation[];
+        get accessible(): boolean;
+        isAccessible(): boolean;
+        set accessible(value: boolean);
+        static setAccessible(arg0: $AccessibleObject[], arg1: boolean): void;
+        canAccess(arg0: object): boolean;
+        getAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getAnnotation<T>(arg0: $Class<T>): T;
+        getDeclaredAnnotationsByType<T>(arg0: $Class<T>): T[];
+        getDeclaredAnnotation<T>(arg0: $Class<T>): T;
+        isAnnotationPresent(arg0: $Class<$Annotation>): boolean;
+        trySetAccessible(): boolean;
+    }
+
     export interface $Member {
-    export interface $Type {
-    export interface $TypeVariable<D extends $GenericDeclaration> extends $Type, $AnnotatedElement {
+        accessFlags(): $Set<$AccessFlag>;
+        getDeclaringClass(): $Class<any>;
+        getModifiers(): number;
+        getName(): string;
+        isSynthetic(): boolean;
+        static DECLARED: number;
+        static PUBLIC: number;
     }
+
+    export class $AccessFlag$Location {
+        static CLASS: $AccessFlag$Location;
+        static FIELD: $AccessFlag$Location;
+        static INNER_CLASS: $AccessFlag$Location;
+        static METHOD: $AccessFlag$Location;
+        static METHOD_PARAMETER: $AccessFlag$Location;
+        static MODULE: $AccessFlag$Location;
+        static MODULE_EXPORTS: $AccessFlag$Location;
+        static MODULE_OPENS: $AccessFlag$Location;
+        static MODULE_REQUIRES: $AccessFlag$Location;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $AccessFlag$Location[];
+        static valueOf(name: string): $AccessFlag$Location;
     }
+
+    export class $ClassFileFormatVersion {
+        static RELEASE_0: $ClassFileFormatVersion;
+        static RELEASE_1: $ClassFileFormatVersion;
+        static RELEASE_10: $ClassFileFormatVersion;
+        static RELEASE_11: $ClassFileFormatVersion;
+        static RELEASE_12: $ClassFileFormatVersion;
+        static RELEASE_13: $ClassFileFormatVersion;
+        static RELEASE_14: $ClassFileFormatVersion;
+        static RELEASE_15: $ClassFileFormatVersion;
+        static RELEASE_16: $ClassFileFormatVersion;
+        static RELEASE_17: $ClassFileFormatVersion;
+        static RELEASE_18: $ClassFileFormatVersion;
+        static RELEASE_19: $ClassFileFormatVersion;
+        static RELEASE_2: $ClassFileFormatVersion;
+        static RELEASE_20: $ClassFileFormatVersion;
+        static RELEASE_21: $ClassFileFormatVersion;
+        static RELEASE_3: $ClassFileFormatVersion;
+        static RELEASE_4: $ClassFileFormatVersion;
+        static RELEASE_5: $ClassFileFormatVersion;
+        static RELEASE_6: $ClassFileFormatVersion;
+        static RELEASE_7: $ClassFileFormatVersion;
+        static RELEASE_8: $ClassFileFormatVersion;
+        static RELEASE_9: $ClassFileFormatVersion;
+        name(): string;
+        ordinal(): number;
+        toString(): string;
+        static values(): $ClassFileFormatVersion[];
+        static valueOf(name: string): $ClassFileFormatVersion;
     }
-    }
-    }
-    }
-    }
-    }
-    }
-    }
-    }
-    }
-    }
-    }
-declare module "java:java/lang/reflect" {
-import { $Annotation } from "java:java/lang/annotation";
-import { $Class, $Enum, $Runtime$Version, $String } from "java:java/lang";
-import { $Set } from "java:java/util";
+
 }

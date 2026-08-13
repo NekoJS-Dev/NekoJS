@@ -1,40 +1,40 @@
+import { $AutoCloseable } from "java:java/lang";
 
-
-
-
-
-        available(): number;
-        close(): void;
-        close(): void;
-        close(): void;
-        constructor();
-        constructor();
-        flush(): void;
-        mark(arg0: number): void;
-        markSupported(): boolean;
-        read(): number;
-        read(arg0: number[]): number;
-        read(arg0: number[], arg1: number, arg2: number): number;
-        readAllBytes(): number[];
-        readNBytes(arg0: number): number[];
-        readNBytes(arg0: number[], arg1: number, arg2: number): number;
-        reset(): void;
-        skip(arg0: number): number;
-        skipNBytes(arg0: number): void;
-        static nullInputStream(): $InputStream;
-        static nullOutputStream(): $OutputStream;
-        transferTo(arg0: $OutputStream): number;
-        write(arg0: number): void;
-        write(arg0: number[]): void;
-        write(arg0: number[], arg1: number, arg2: number): void;
-    export class $InputStream implements $Closeable {
-    export class $OutputStream implements $Closeable, $Flushable {
-    export interface $Closeable extends $AutoCloseable {
+declare module "java:java/io" {
     export interface $Serializable {
     }
+
+    export class $InputStream implements $Closeable {
+        constructor();
+        static nullInputStream(): $InputStream;
+        available(): number;
+        close(): void;
+        markSupported(): boolean;
+        mark(arg0: number): void;
+        readAllBytes(): number[];
+        readNBytes(arg0: number[], arg1: number, arg2: number): number;
+        readNBytes(arg0: number): number[];
+        read(arg0: number[], arg1: number, arg2: number): number;
+        read(arg0: number[]): number;
+        read(): number;
+        reset(): void;
+        skipNBytes(arg0: number): void;
+        skip(arg0: number): number;
+        transferTo(arg0: $OutputStream): number;
     }
+
+    export interface $Closeable extends $AutoCloseable {
+        close(): void;
     }
+
+    export class $OutputStream implements $Closeable, $Flushable {
+        constructor();
+        static nullOutputStream(): $OutputStream;
+        close(): void;
+        flush(): void;
+        write(arg0: number[], arg1: number, arg2: number): void;
+        write(arg0: number[]): void;
+        write(arg0: number): void;
     }
-declare module "java:java/io" {
-import { $AutoCloseable } from "java:java/lang";
+
 }

@@ -72,7 +72,11 @@ public final class EventDeclarationGenerator {
 
             for (var entry : importsByPackage.entrySet()) {
                 String importPath = "java:" + entry.getKey().replace('.', '/');
-                sb.append("import { ").append(String.join(", ", entry.getValue()));
+                // 包内符号名按字典序排序：反射方法/接口顺序无规范保证，沿用首插序会导致
+                // 产物跨 JVM 运行抖动（事件类型图深递归时尤甚）
+                List<String> names = new ArrayList<>(new LinkedHashSet<>(entry.getValue()));
+                Collections.sort(names);
+                sb.append("import { ").append(String.join(", ", names));
                 sb.append(" } from \"").append(importPath).append("\";\n");
             }
             sb.append("\n");

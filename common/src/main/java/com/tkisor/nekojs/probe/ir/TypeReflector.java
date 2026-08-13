@@ -9,6 +9,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -54,7 +55,35 @@ public final class TypeReflector {
             case INTERFACE -> reflectInterfaceMembers(cls, decl);
             case ENUM -> reflectEnumMembers(cls, decl);
         }
+
+        // 确定性排序：JVM 规范不保证 getDeclaredMethods/getDeclaredFields 的返回顺序，
+        // 跨进程运行会产生成员顺序抖动 → 按名字（+参数/返回类型）稳定排序，保证 probe 产物可复现。
+        // 渲染分段（getter/静态/实例）由 renderer 按标志过滤，与列表顺序无关。
+        decl.constructors.sort(Comparator.comparing(TypeReflector::constructorKey));
+        decl.fields.sort(Comparator.comparing(f -> f.name));
+        decl.methods.sort(Comparator.comparing(TypeReflector::methodKey));
         return decl;
+    }
+
+    private static String constructorKey(MethodDecl c) {
+        return paramsKey(c);
+    }
+
+    private static String methodKey(MethodDecl m) {
+        return m.name + "|" + paramsKey(m) + "→" + typeKey(m.returnType);
+    }
+
+    private static String paramsKey(MethodDecl m) {
+        StringBuilder sb = new StringBuilder();
+        for (MethodDecl.MethodParam p : m.params) {
+            sb.append('|').append(typeKey(p.type));
+        }
+        return sb.toString();
+    }
+
+    private static String typeKey(TypeSlot slot) {
+        if (slot == null || slot.sourceType == null) return "";
+        return slot.sourceType.getTypeName();
     }
 
     private void reflectClassMembers(Class<?> cls, TypeDecl decl) {
@@ -101,8 +130,17 @@ public final class TypeReflector {
                 f.isStatic = true;
                 f.isEnumConstant = true;
                 decl.fields.add(f);
+            } else if (Modifier.isPublic(field.getModifiers())) {
+                // 非常量公开字段：renderer 的 renderEnum 只发射 isEnumConstant，这里仅供
+                // import 收集镜像旧 collectImports（旧实现对枚举的公开字段类型也收集 import）
+                FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
+                f.isStatic = Modifier.isStatic(field.getModifiers());
+                f.isFinal = Modifier.isFinal(field.getModifiers());
+                decl.fields.add(f);
             }
         }
+        // 枚举的公开方法：renderEnum 不发射（固定骨架），仅用于 import 收集镜像旧行为
+        reflectMethodsLikeClassDecl(cls, decl);
     }
 
     /**
@@ -112,33 +150,27 @@ public final class TypeReflector {
      */
     private void reflectMethodsLikeClassDecl(Class<?> cls, TypeDecl decl) {
         var declared = cls.getDeclaredMethods();
-        // 先建索引以便 getter 配对 setter
+        // 单遍收集，保持 getDeclaredMethods 的原始声明序：旧 ClassDeclGenerator 的 import 收集
+        // 按原始序建立 first-insertion 顺序，import 块字节兼容依赖于此；渲染按 isGetter/isSetter
+        // 标志分段，与收集顺序无关。
         Set<String> processedProperties = new HashSet<>();
         for (var method : declared) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
             boolean isStatic = Modifier.isStatic(method.getModifiers());
 
-            // getter：仅非静态
+            // 非静态 getXxx/isXxx(0 参) → getter（按属性名去重，首个出现者胜出；重复者整体跳过，
+            // 镜像旧实现：不双发射原方法名）
             if (!isStatic && isGetterName(method) && method.getParameterCount() == 0) {
                 String propName = getPropertyName(method);
-                if (propName == null || processedProperties.contains(propName)) continue;
-                processedProperties.add(propName);
-
-                MethodDecl getter = reflectMethod(method);
-                getter.isGetter = true;
-                getter.property = propName;
-                getter.setterParamType = findSetterParamSlot(cls, propName);
-                decl.methods.add(getter);
+                if (propName != null && processedProperties.add(propName)) {
+                    MethodDecl getter = reflectMethod(method);
+                    getter.isGetter = true;
+                    getter.property = propName;
+                    getter.setterParamType = findSetterParamSlot(cls, propName);
+                    decl.methods.add(getter);
+                }
+                continue;
             }
-        }
-        // 其余方法（含静态、setter、实例普通方法），按反射顺序收集并打标志
-        for (var method : declared) {
-            if (!Modifier.isPublic(method.getModifiers())) continue;
-            boolean isStatic = Modifier.isStatic(method.getModifiers());
-
-            boolean alreadyAddedAsGetter = !isStatic && isGetterName(method) && method.getParameterCount() == 0
-                    && processedProperties.contains(getPropertyName(method));
-            if (alreadyAddedAsGetter) continue;
 
             MethodDecl m = reflectMethod(method);
             // 非静态 setXxx(1 参) → isSetter（renderer 实例方法段据此排除）

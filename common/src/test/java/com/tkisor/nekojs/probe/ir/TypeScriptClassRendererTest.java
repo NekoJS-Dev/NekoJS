@@ -1,17 +1,19 @@
 package com.tkisor.nekojs.probe.ir;
 
-import com.tkisor.nekojs.probe.ClassDeclGenerator;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * A/B 回归：对一组有代表性的类，验证「TypeReflector 反射 + TypeScriptClassRenderer 渲染」的输出
- * 与旧 {@link ClassDeclGenerator}（直接反射 Class→String）逐字一致。这是 Phase 2 IR 不破坏 TS 产出的核心保障。
+ * 渲染稳定性回归：对一组有代表性的类，验证「TypeReflector 反射 + TypeScriptClassRenderer 渲染」
+ * 的输出稳定且与 IR 结构一致。旧 ClassDeclGenerator 的逐字对齐 A/B 测试已在 Phase 2.7
+ * 删除（旧渲染器已移除）；字节级端到端保障由 {@code TypeScriptNoopIrGoldenTest}（C1：ir=null
+ * 与 ir=未编辑列表产出树逐字一致）与 {@code ProbeOutputCompatibilityTest}（legacy 产物存在性）
+ * 继续承担。
  *
  * <p>覆盖：普通类、final 类、泛型类、接口（含嵌套）、枚举、含 getter/setter 的类。
  */
@@ -31,24 +33,24 @@ class TypeScriptClassRendererTest {
     );
 
     @Test
-    void rendererMatchesClassDeclGeneratorForAllSamples() {
+    void rendererOutputIsStableForAllSamples() {
         for (Class<?> cls : SAMPLES) {
-            // 旧路径：ClassDeclGenerator 直接渲染
-            TypeAliasRegistry aliases1 = new TypeAliasRegistry();
-            TypeConverter tc1 = new TypeConverter(aliases1);
-            ClassDeclGenerator gen = new ClassDeclGenerator(tc1);
-            String expected = gen.generate(cls);
-
-            // 新路径：TypeReflector → IR → TypeScriptClassRenderer
-            TypeAliasRegistry aliases2 = new TypeAliasRegistry();
-            TypeConverter tc2 = new TypeConverter(aliases2);
             TypeReflector reflector = new TypeReflector();
             TypeDecl decl = reflector.reflect(cls);
-            TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(tc2);
-            String actual = renderer.render(decl);
 
-            assertEquals(expected, actual,
-                    "IR render must byte-match ClassDeclGenerator for " + cls.getName());
+            TypeAliasRegistry aliases1 = new TypeAliasRegistry();
+            TypeScriptClassRenderer renderer1 = new TypeScriptClassRenderer(new TypeConverter(aliases1));
+            String first = renderer1.render(decl);
+
+            // 同一次反射的 IR 渲染两次结果一致（渲染器无状态副作用）
+            TypeAliasRegistry aliases2 = new TypeAliasRegistry();
+            TypeScriptClassRenderer renderer2 = new TypeScriptClassRenderer(new TypeConverter(aliases2));
+            String second = renderer2.render(decl);
+            assertEquals(first, second, "repeated render must be deterministic for " + cls.getName());
+
+            // 基础形态断言（沿用旧渲染器的契约）
+            assertTrue(first.startsWith("    export "), "decl must start with export block: " + cls.getName());
+            assertTrue(first.trim().endsWith("}"), "decl must end with closing brace: " + cls.getName());
         }
     }
 }

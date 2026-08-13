@@ -17,7 +17,7 @@ import java.util.*;
  *   <li>DocumentedRecipes 类 — 把所有命名空间组织成嵌套对象</li>
  * </ul>
  *
- * <p>然后 ClassDeclGenerator 通过 skipGetter+overrideGetter 机制，
+ * <p>然后 TypeScriptClassRenderer 通过 overrideGetter 机制，
  * 让 $RecipeEventJS.recipes getter 返回 DocumentedRecipes 而不是 $RecipeRegistryProxy。
  */
 public final class RecipeEventDeclarationGenerator {
@@ -47,10 +47,12 @@ public final class RecipeEventDeclarationGenerator {
         collectImports(namespaces, importsByPkg);
 
         StringBuilder sb = new StringBuilder();
-        // 生成 import 语句
+        // 生成 import 语句（包内符号名字典序排序：确定性输出，不依赖集合迭代顺序）
         for (var entry : importsByPkg.entrySet()) {
             String importPath = "java:" + entry.getKey().replace('.', '/');
-            sb.append("import { ").append(String.join(", ", entry.getValue()));
+            List<String> names = new ArrayList<>(entry.getValue());
+            java.util.Collections.sort(names);
+            sb.append("import { ").append(String.join(", ", names));
             sb.append(" } from \"").append(importPath).append("\";\n");
         }
         sb.append("\n");

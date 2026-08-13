@@ -50,7 +50,10 @@ public final class BindingDeclarationGenerator {
         }
         for (var entry : importsByPackage.entrySet()) {
             String importPath = "java:" + entry.getKey().replace('.', '/');
-            sb.append("import { ").append(String.join(", ", entry.getValue()));
+            // 包内符号名字典序排序：反射顺序无规范保证，跨 JVM 运行需确定性输出
+            List<String> names = new ArrayList<>(new java.util.LinkedHashSet<>(entry.getValue()));
+            java.util.Collections.sort(names);
+            sb.append("import { ").append(String.join(", ", names));
             sb.append(" } from \"").append(importPath).append("\";\n");
         }
 

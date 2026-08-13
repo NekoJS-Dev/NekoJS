@@ -61,7 +61,11 @@ public final class ProbeConfigLoader {
                     new ProbeConfig.ScanConfig(includePackages, extraIncludePackages, excludePackages, forceScanMods, maxDepth, mode),
                     languages);
         } catch (Throwable e) {
-            NekoJS.LOGGER.warn("Failed to load probe.toml, using default probe config", e);
+            if (java.nio.file.Files.exists(probeConfig)) {
+                // 文件存在但解析失败 = probe.toml 损坏：给用户明确提示（缺失时静默用默认是正常的）
+                NekoJS.LOGGER.warn("probe.toml is corrupt ({}); falling back to the default probe config. "
+                        + "Fix or delete the file to silence this warning.", probeConfig, e);
+            }
             return ProbeConfig.defaultConfig();
         }
     }

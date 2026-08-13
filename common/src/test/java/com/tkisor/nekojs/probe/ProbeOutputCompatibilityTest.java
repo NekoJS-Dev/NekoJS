@@ -49,6 +49,13 @@ class ProbeOutputCompatibilityTest {
             assertTrue(actualFiles.containsKey(relPath),
                     "Legacy file missing from generated output: " + relPath);
         }
+
+        // Phase 2.7（IR 唯一渲染路径）回归护栏：legacy 文件内容必须与录制树逐字一致，
+        // 单次反射多产物（TypeReflector → 声明 + import 集合）不得改变任何已有产物字节
+        for (Map.Entry<String, String> entry : legacyGolden.entrySet()) {
+            assertEquals(entry.getValue(), actualFiles.get(entry.getKey()),
+                    "Legacy golden content drift for " + entry.getKey());
+        }
     }
 
     @Test

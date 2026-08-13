@@ -28,9 +28,9 @@ public interface ProbeBackend {
     }
 
     /**
-     * 是否需要共享的类型声明 IR（{@code List<TypeDecl>}）。TS 默认不需要（无 {@code modify_type}
-     * 监听器时走旧 {@code ClassDeclGenerator} 路径）；Python 等无「旧路径」的语言应返回 true，
-     * 令 {@link ProbeCoordinator} 构建 IR。默认 false。
+     * 是否需要共享的类型声明 IR（{@code List<TypeDecl>}）。TS 与 Python 内置 backend 均返回
+     * true（IR 是唯一渲染源，由 {@link ProbeCoordinator} 统一反射构建）；第三方 backend 若
+     * 有独立的类声明来源可返回 false。默认 false。
      */
     default boolean requiresIr() {
         return false;

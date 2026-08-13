@@ -86,12 +86,13 @@ public final class ProbeCoordinator {
         cachedConfig = null;
     }
 
-    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（实例版 {@code setEnabled}，供 {@code /nekojs probe enable|disable} 命令）。异常仅 debug 日志吞掉，不回传细节。 */
+    /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（实例版 {@code setEnabled}，供 {@code /nekojs probe enable|disable} 命令）。写盘失败时告警：命令看似成功但配置未持久化。 */
     public void applyEnabled(boolean enabled) {
         try {
             ProbeConfigLoader.setEnabled(paths.probeConfig(), enabled);
         } catch (Throwable e) {
-            NekoJS.LOGGER.debug("Failed to persist probe enabled={} into probe.toml", enabled, e);
+            NekoJS.LOGGER.warn("Failed to persist probe enabled={} into {}; the setting will be lost on next reload",
+                    enabled, paths.probeConfig(), e);
         }
         reloadConfigCache();
     }
@@ -223,6 +224,9 @@ public final class ProbeCoordinator {
         } else if (type instanceof GenericArrayType gat) {
             collectTypeToQueue(gat.getGenericComponentType(), queue, depth);
         }
+        // 刻意不跟随 TypeVariable 上界与 WildcardType 上/下界：跟随它们（尤其在 java.* 内）会触发
+        // 级联爆炸——例如 File 的签名拉入 URI/URL/Path/Charset/Locale…，5 层 BFS 穿过 java.io/java.util
+        // 产出海量类。原行为（不跟随）是有意的范围控制，保持 probe 输出有界。
     }
 
     /**
@@ -234,14 +238,13 @@ public final class ProbeCoordinator {
      * 汇总进 LinkedHashMap，保证 {@code List.copyOf(ir.values())} 与串行版本顺序一致；
      * assign_type / modify_type 仍在 map 建完后串行执行（事件触发顺序不变）。
      */
-    private static List<TypeDecl> buildAndMutateIr(Collection<Class<?>> collected, Map<String, ApiTypeRef> assignMap) {
+    private static List<TypeDecl> buildAndMutateIr(Collection<Class<?>> collected, Map<String, ApiTypeRef> assignMap,
+                                                     ExecutorService pool) {
         List<Class<?>> ordered = new ArrayList<>(collected);
         if (ordered.isEmpty()) return List.of();
 
         Map<String, TypeDecl> ir = new LinkedHashMap<>();
-        int threads = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 8));
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
-        try {
+        {
             // 每类一个反射任务；TypeReflector 无实例状态，各任务新建实例（线程内独立）
             List<Future<TypeDecl>> futures = new ArrayList<>(ordered.size());
             for (Class<?> c : ordered) {
@@ -252,11 +255,9 @@ public final class ProbeCoordinator {
                 try {
                     ir.put(ordered.get(i).getName(), futures.get(i).get());
                 } catch (Throwable ignored) {
-                    // 无法反射的类跳过：TS 仍由 IndexFileGenerator 按旧路径生成；Python 不产出其 stub
+                    // 无法反射的类跳过：各 backend 自行按需补反射；Python 不产出其 stub
                 }
             }
-        } finally {
-            pool.shutdownNow();
         }
         // 1. assign_type：先重定向反射产出的类型（标记受影响类 mutated，TS 会重渲染）
         if (assignMap != null && !assignMap.isEmpty()) {
@@ -337,55 +338,64 @@ public final class ProbeCoordinator {
         LinkedHashSet<Class<?>> collected = collectClasses(snapshot, cfg);
         NekoJSPaths paths = this.paths;
 
-        // 共享 IR：当 modify_type/assign_type 有监听器，或某 backend 需要 IR（Python 等）时构建一次。
-        // TS 默认不需要：三者皆无时 sharedIr=null，TS 走旧 ClassDeclGenerator 路径（零回归）。
+        // 共享 IR：当 modify_type/assign_type 有监听器，或某 backend 需要 IR（TS 与 Python 内置
+        // backend 都声明 requiresIr=true，IR 是唯一渲染源）时构建一次。
         boolean needIr = ProbeEvents.MODIFY_TYPE.hasListeners()
                 || ProbeEvents.ASSIGN_TYPE.hasListeners()
                 || backends.stream().anyMatch(ProbeBackend::requiresIr);
         Map<String, ApiTypeRef> assignMap = ProbeEvents.ASSIGN_TYPE.hasListeners() ? fireAssignType() : Map.of();
-        List<TypeDecl> sharedIr = needIr ? buildAndMutateIr(collected, assignMap) : null;
 
-        // add_global / snippets：每次 probe 收集一次（各有监听器才触发）
-        ProbeOverrides overrides = fireOverrides();
-
-        // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
+        // 单一共享线程池：整个 probe 运行（IR 反射构建 + 各 backend 并行生成）只有这一个池
+        ExecutorService sharedPool = Executors.newFixedThreadPool(
+                Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 8)));
         try {
-            Path baseDir = paths.gameDir().resolve(cfg.baseDir());
-            externalArtifacts.generate(baseDir);
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("Probe external artifacts failed", e);
-        }
+            List<TypeDecl> sharedIr = needIr ? buildAndMutateIr(collected, assignMap, sharedPool) : null;
 
-        EditorConfigContributor editorConfigs = new FileEditorConfigContributor();
-        List<ProbeGenerator.GenerateResult> results = new ArrayList<>(backends.size());
-        for (ProbeBackend backend : backends) {
-            Path langDir = backend.outputDir(paths, cfg);
-            ProbeContext ctx = new ProbeContext.Of(
-                    snapshot,
-                    List.copyOf(collected),
-                    cfg,
-                    paths,
-                    backend.languageId(),
-                    langDir,
-                    sharedIr,
-                    overrides);
-            try {
-                results.add(backend.generate(ctx));
-            } catch (Exception e) {
-                NekoJS.LOGGER.error("Probe backend {}:{} failed", backend.languageId(), backend.name(), e);
-                results.add(ProbeGenerator.GenerateResult.failure(e.getMessage()));
-                continue;
-            }
-            // 生成成功后：向编辑器配置贡献本 backend 的片段（paths/extraPaths，幂等合并，指向真实输出目录）
-            try {
-                backend.contributeEditorConfig(editorConfigs, ctx);
-            } catch (Exception e) {
-                NekoJS.LOGGER.debug("Probe backend {}:{} editor-config contribution failed",
-                        backend.languageId(), backend.name(), e);
-            }
-        }
+            // add_global / snippets：每次 probe 收集一次（各有监听器才触发）
+            ProbeOverrides overrides = fireOverrides();
 
-        return results;
+            // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
+            try {
+                Path baseDir = paths.gameDir().resolve(cfg.baseDir());
+                externalArtifacts.generate(baseDir);
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Probe external artifacts failed", e);
+            }
+
+            EditorConfigContributor editorConfigs = new FileEditorConfigContributor();
+            List<ProbeGenerator.GenerateResult> results = new ArrayList<>(backends.size());
+            for (ProbeBackend backend : backends) {
+                Path langDir = backend.outputDir(paths, cfg);
+                ProbeContext ctx = new ProbeContext.Of(
+                        snapshot,
+                        List.copyOf(collected),
+                        cfg,
+                        paths,
+                        backend.languageId(),
+                        langDir,
+                        sharedIr,
+                        overrides,
+                        sharedPool);
+                try {
+                    results.add(backend.generate(ctx));
+                } catch (Exception e) {
+                    NekoJS.LOGGER.error("Probe backend {}:{} failed", backend.languageId(), backend.name(), e);
+                    results.add(ProbeGenerator.GenerateResult.failure(e.getMessage()));
+                    continue;
+                }
+                // 生成成功后：向编辑器配置贡献本 backend 的片段（paths/extraPaths，幂等合并，指向真实输出目录）
+                try {
+                    backend.contributeEditorConfig(editorConfigs, ctx);
+                } catch (Exception e) {
+                    NekoJS.LOGGER.debug("Probe backend {}:{} editor-config contribution failed",
+                            backend.languageId(), backend.name(), e);
+                }
+            }
+
+            return results;
+        } finally {
+            sharedPool.shutdown();
+        }
     }
 
     /** 静态 facade：委托全局默认协调器执行一次 probe（命令层旧调用点不变）。 */

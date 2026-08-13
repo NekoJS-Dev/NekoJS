@@ -4,8 +4,10 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -43,6 +45,22 @@ public final class TypeScriptClassRenderer {
     public void overrideGetter(Class<?> cls, String getterName, String returnType, String importStatement) {
         getterOverrides.computeIfAbsent(cls.getName(), k -> new LinkedHashMap<>())
                 .put(getterName, new GetterOverride(returnType, importStatement));
+    }
+
+    /**
+     * 某类所有 getter 覆盖附带的 import 语句（供 IndexFileGenerator 在写包级 index.d.ts 时合并）。
+     * 镜像旧 {@code ClassDeclGenerator#getExtraImports}。
+     */
+    public Set<String> getExtraImports(String className) {
+        Map<String, GetterOverride> overrides = getterOverrides.get(className);
+        if (overrides == null || overrides.isEmpty()) return Set.of();
+        Set<String> imports = new LinkedHashSet<>();
+        for (GetterOverride override : overrides.values()) {
+            if (override.importStatement() != null && !override.importStatement().isEmpty()) {
+                imports.add(override.importStatement());
+            }
+        }
+        return imports;
     }
 
     public String render(TypeDecl decl) {

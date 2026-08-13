@@ -1,5 +1,10 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.ir.FieldDecl;
+import com.tkisor.nekojs.probe.ir.MethodDecl;
+import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
+import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 
 import java.lang.reflect.*;
@@ -19,7 +24,7 @@ import java.util.*;
  * </pre>
  */
 public final class IndexFileGenerator {
-    private final ClassDeclGenerator classDeclGenerator;
+    private final TypeScriptClassRenderer irRenderer;
     private final TypeConverter typeConverter;
     private final AdapterAliasGenerator adapterAliasGenerator;
 
@@ -35,9 +40,9 @@ public final class IndexFileGenerator {
      */
     private volatile Set<String> hiddenClasses = Set.of();
 
-    public IndexFileGenerator(ClassDeclGenerator classDeclGenerator, TypeConverter typeConverter,
-                              AdapterAliasGenerator adapterAliasGenerator) {
-        this.classDeclGenerator = classDeclGenerator;
+    public IndexFileGenerator(TypeScriptClassRenderer irRenderer,
+                              TypeConverter typeConverter, AdapterAliasGenerator adapterAliasGenerator) {
+        this.irRenderer = irRenderer;
         this.typeConverter = typeConverter;
         this.adapterAliasGenerator = adapterAliasGenerator;
     }
@@ -50,21 +55,13 @@ public final class IndexFileGenerator {
         StringBuilder sb = new StringBuilder();
         String modulePath = "java:" + packageName.replace('.', '/');
 
-        // 收集需要 import 的类（使用缓存）
+        // 收集需要 import 的类（predeclareClass 已按 IR 计算并缓存；缓存缺失表示该类反射失败，跳过）
         Set<String> importsNeeded = new LinkedHashSet<>();
         for (String simpleName : classNames) {
             String fullName = packageName + "." + simpleName;
             Set<String> cached = importCache.get(fullName);
             if (cached != null) {
                 importsNeeded.addAll(cached);
-            } else {
-                Class<?> cls = findClass(fullName);
-                if (cls != null) {
-                    Set<String> classImports = new LinkedHashSet<>();
-                    collectImports(cls, classImports, packageName);
-                    importCache.put(fullName, classImports);
-                    importsNeeded.addAll(classImports);
-                }
             }
         }
 
@@ -87,7 +84,8 @@ public final class IndexFileGenerator {
             importsNeeded.removeIf(hiddenClasses::contains);
         }
 
-        // 生成 import 语句（按包分组）
+        // 生成 import 语句（按包分组；包内符号名按字典序排序，保证跨 JVM 运行输出确定——
+        // 反射的 getInterfaces/getDeclaredMethods 顺序无规范保证，直接沿用首插序会导致产物抖动）
         if (!importsNeeded.isEmpty()) {
             Map<String, List<String>> importsByPackage = new TreeMap<>();
             for (String fqn : importsNeeded) {
@@ -106,17 +104,19 @@ public final class IndexFileGenerator {
 
             for (var entry : importsByPackage.entrySet()) {
                 String importPath = "java:" + entry.getKey().replace('.', '/');
-                sb.append("import { ").append(String.join(", ", entry.getValue()));
+                List<String> names = new ArrayList<>(new LinkedHashSet<>(entry.getValue()));
+                Collections.sort(names);
+                sb.append("import { ").append(String.join(", ", names));
                 sb.append(" } from \"").append(importPath).append("\";\n");
             }
             sb.append("\n");
         }
 
-        // 额外的 import 语句（来自 ClassDeclGenerator.overrideGetter）
+        // 额外的 import 语句（来自 TypeScriptClassRenderer.overrideGetter）
         Set<String> extraImports = new LinkedHashSet<>();
         for (String simpleName : classNames) {
             String fullName = packageName + "." + simpleName;
-            extraImports.addAll(classDeclGenerator.getExtraImports(fullName));
+            extraImports.addAll(irRenderer.getExtraImports(fullName));
         }
         for (String stmt : extraImports) {
             sb.append(stmt).append("\n");
@@ -144,14 +144,6 @@ public final class IndexFileGenerator {
                 if (cached != null) {
                     sb.append(cached);
                     sb.append("\n");
-                } else {
-                    Class<?> cls = findClass(fullName);
-                    if (cls != null) {
-                        String decl = classDeclGenerator.generate(cls);
-                        declCache.put(fullName, decl);
-                        sb.append(decl);
-                        sb.append("\n");
-                    }
                 }
             }
 
@@ -199,44 +191,6 @@ public final class IndexFileGenerator {
                 return null;
             }
         });
-    }
-
-    private void collectImports(Class<?> cls, Set<String> imports, String currentPackage) {
-        if (cls == null || cls.isPrimitive() || cls == Object.class) return;
-        // 数组类：递归收集组件类型
-        if (cls.isArray()) {
-            collectImports(cls.getComponentType(), imports, currentPackage);
-            return;
-        }
-        // 收集父类
-        Class<?> superClass = cls.getSuperclass();
-        if (superClass != null && superClass != Object.class && !inSamePackage(superClass, currentPackage)) {
-            imports.add(superClass.getName());
-        }
-
-        // 收集接口
-        for (Class<?> iface : cls.getInterfaces()) {
-            if (!inSamePackage(iface, currentPackage)) {
-                imports.add(iface.getName());
-            }
-        }
-
-        // 收集字段类型
-        for (Field field : cls.getDeclaredFields()) {
-            if (Modifier.isPublic(field.getModifiers())) {
-                collectTypeImports(field.getGenericType(), imports, currentPackage);
-            }
-        }
-
-        // 收集方法参数和返回值类型
-        for (Method method : cls.getDeclaredMethods()) {
-            if (Modifier.isPublic(method.getModifiers())) {
-                collectTypeImports(method.getGenericReturnType(), imports, currentPackage);
-                for (Type paramType : method.getGenericParameterTypes()) {
-                    collectTypeImports(paramType, imports, currentPackage);
-                }
-            }
-        }
     }
 
     private void collectTypeImports(Type type, Set<String> imports, String currentPackage) {
@@ -355,48 +309,70 @@ public final class IndexFileGenerator {
         return "    export type $" + simpleName + "_<" + paramJoiner + "> = " + result + ";\n";
     }
 
+    // ------------------------------------------------------------------
+    //  IR 唯一路径（Phase 2.7）：单次反射 → TypeDecl → 声明 + import 集合
+    // ------------------------------------------------------------------
+
     /**
-     * 预生成单个类的声明和 import 集合（线程安全）。
-     * 用于 BFS 阶段，反射一次，结果缓存供后续 generate() 使用。
+     * 从已反射的 {@link TypeDecl} 计算 import 集合，镜像旧基于 {@code Class<?>} 直接反射的
+     * 逐项语义（父类/接口/公开字段/公开方法的参数与返回类型——TypeReflector 的 IR 枚举
+     * 与旧实现逐项对齐），保证切换 IR 唯一路径后包级 import 块字节不变。
      */
-    public void pregenerateClass(Class<?> cls) {
-        String fullName = cls.getName();
-        if (declCache.containsKey(fullName)) return;
-
-        // 生成类声明
-        String decl = classDeclGenerator.generate(cls);
-        declCache.put(fullName, decl);
-
-        // 收集 imports
-        String packageName = cls.getPackage() != null ? cls.getPackage().getName() : "";
+    public Set<String> collectImportsFromIr(TypeDecl decl, String currentPackage) {
         Set<String> imports = new LinkedHashSet<>();
-        collectImports(cls, imports, packageName);
-        importCache.put(fullName, imports);
+        Class<?> source = decl.sourceClass;
 
-        // 缓存 Class 对象
-        classCache.put(fullName, cls);
+        // 父类：镜像旧实现（class 取 getSuperclass；interface 为 null；enum 为 java.lang.Enum）
+        if (source != null) {
+            Class<?> superClass = source.getSuperclass();
+            if (superClass != null && superClass != Object.class && !inSamePackage(superClass, currentPackage)) {
+                imports.add(superClass.getName());
+            }
+        }
+
+        // 接口
+        for (TypeSlot iface : decl.interfaces) {
+            if (iface.sourceType instanceof Class<?> cls && !inSamePackage(cls, currentPackage)) {
+                imports.add(cls.getName());
+            }
+        }
+
+        // 公开字段（IR 字段集 = 旧实现的公开字段集，含枚举常量）
+        for (FieldDecl field : decl.fields) {
+            collectTypeImports(field.type.sourceType, imports, currentPackage);
+        }
+
+        // 公开方法（IR 方法集 = 旧实现的公开方法集；构造器与旧实现一致不收集）
+        for (MethodDecl method : decl.methods) {
+            collectTypeImports(method.returnType != null ? method.returnType.sourceType : null, imports, currentPackage);
+            for (MethodDecl.MethodParam p : method.params) {
+                collectTypeImports(p.type.sourceType, imports, currentPackage);
+            }
+        }
+        return imports;
     }
 
     /**
-     * 用 {@code probe.modify_type} 编辑后重新渲染的声明覆盖缓存，并合并编辑引入的额外 import
-     * （被改写/新增成员引用的 SYMBOL 类型全限定名）。
-     *
-     * <p>必须在 {@link #pregenerateClass} 之后、{@link #generate} 之前调用：pregenerate 已用旧
-     * {@code ClassDeclGenerator} 填充 declCache/importCache；本方法仅覆盖被触及的类。
-     *
-     * @param fqn             类全限定名
-     * @param decl            重新渲染的声明块（{@code null} = 不覆盖声明，仅合并 import）
-     * @param extraImportFqns 编辑引入的额外 SYMBOL 全限定名（同包类型会被调用方过滤掉）
+     * IR 唯一路径的类预声明：用 {@link TypeScriptClassRenderer} 渲染 {@link TypeDecl} 并缓存
+     * 声明与 import 集合（单次反射的多产物消费）。{@code extraImportFqns} 为 {@code modify_type}
+     * 编辑引入的额外 SYMBOL 全限定名（可为空）。
      */
-    public void overrideDeclaration(String fqn, String decl, Set<String> extraImportFqns) {
-        if (decl != null) {
-            declCache.put(fqn, decl);
+    public void predeclareClass(String fqn, TypeDecl decl, Set<String> extraImportFqns) {
+        declCache.put(fqn, irRenderer.render(decl));
+        String packageName = packageOf(fqn);
+        Set<String> imports = new LinkedHashSet<>(collectImportsFromIr(decl, packageName));
+        if (extraImportFqns != null) {
+            imports.addAll(extraImportFqns);
         }
-        if (extraImportFqns != null && !extraImportFqns.isEmpty()) {
-            Set<String> merged = new LinkedHashSet<>(importCache.getOrDefault(fqn, Set.of()));
-            merged.addAll(extraImportFqns);
-            importCache.put(fqn, merged);
+        importCache.put(fqn, imports);
+        if (decl.sourceClass != null) {
+            classCache.put(fqn, decl.sourceClass);
         }
+    }
+
+    private static String packageOf(String fqn) {
+        int dot = fqn.lastIndexOf('.');
+        return dot >= 0 ? fqn.substring(0, dot) : "";
     }
 
     /**
