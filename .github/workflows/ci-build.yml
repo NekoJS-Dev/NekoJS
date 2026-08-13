@@ -101,6 +101,16 @@ jobs:
       - name: Run common checks
         run: ./gradlew :common-api:check :common:test --console=plain
 
+      - name: Upload common test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-test-reports
+          path: |
+            common/build/reports/tests/test
+            common/build/test-results/test
+          if-no-files-found: ignore
+
       - name: Run platform NBT smoke tests
         # :common:test 已覆盖 common 的 nbt-smoke 标签用例，这里只补平台侧（platforms/* 的测试否则永不运行）
         run: ./gradlew nbtSmokeTest -x :common:nbtSmokeTest --console=plain
