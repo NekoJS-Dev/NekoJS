@@ -14,6 +14,7 @@ import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.ResourceLimits;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 
@@ -86,7 +87,7 @@ public final class NekoSandboxFactory {
                 .fileSystem(new NekoJSFileSystem(paths.root()))
                 .build();
 
-        Context ctx = Context.newBuilder("js")
+        Context.Builder contextBuilder = Context.newBuilder("js")
                 .engine(core.engine())
                 .allowExperimentalOptions(true)
                 .out(outStream)
@@ -105,8 +106,19 @@ public final class NekoSandboxFactory {
                 .option("js.interop-complete-promises", "true")
                 .option("js.strict", "true")
                 .option("js.v8-compat", "true")
-                .option("js.unhandled-rejections", "throw")
-                .build();
+                .option("js.unhandled-rejections", "throw");
+
+        long statementLimit = config.scriptStatementLimit();
+        if (statementLimit > 0) {
+            contextBuilder.resourceLimits(ResourceLimits.newBuilder()
+                    .statementLimit(statementLimit, null)
+                    .onLimit(event -> logger.warn(
+                            "脚本语句数超过 scriptStatementLimit（{}），Graal 已关闭该 {} 脚本环境；"
+                                    + "当前脚本被中止，下一次取用时会自动重建 Context（/nekojs reload 亦可手动恢复）",
+                            statementLimit, type.name()))
+                    .build());
+        }
+        Context ctx = contextBuilder.build();
 
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");

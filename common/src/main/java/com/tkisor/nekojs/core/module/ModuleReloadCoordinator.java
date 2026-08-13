@@ -6,7 +6,6 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * CJS runtime cache、virtual module registry、source map、dependency graph 的失效顺序。
  *
  * <p>从 {@link NekoScriptModuleLoaderHost} 的 {@code clearCache} / {@code clearRuntimeCache} /
- * {@code invalidateModules} / {@code hotReloadModule} 失效逻辑下沉而来。
+ * {@code invalidateModules} 失效逻辑下沉而来。
  *
  * <p>失效顺序（统一规则）：
  * <ol>
@@ -96,11 +95,4 @@ public final class ModuleReloadCoordinator {
         return moduleRevisions.getOrDefault(moduleId, 0L);
     }
 
-    public void invalidateSingleModule(String moduleId, Path path) {
-        bumpRevision(moduleId);
-        moduleCache.remove(moduleId);
-        esmRecordCache.removeAll(moduleId);
-        esmLinkCache.remove(moduleId, revision(moduleId));
-        NekoModulePipelineCache.invalidate(path);
-    }
 }

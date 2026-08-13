@@ -9,6 +9,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.PolyglotException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,11 +30,13 @@ public final class ScriptExecutor {
     private final ErrorTracker errorTracker;
     private final NekoJSPaths paths;
     private final SandboxConfig sandboxConfig;
+    private final Runnable onContextKilled;
 
-    public ScriptExecutor(ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig) {
+    public ScriptExecutor(ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, Runnable onContextKilled) {
         this.errorTracker = errorTracker;
         this.paths = paths;
         this.sandboxConfig = sandboxConfig;
+        this.onContextKilled = onContextKilled;
     }
 
     public void executeEntry(Context ctx, ScriptContainer script, NekoNodeRuntime nodeRuntime) {
@@ -60,12 +63,26 @@ public final class ScriptExecutor {
                 script.lastError = null;
             }
         } catch (Throwable t) {
+            if (isContextKilledByResourceLimits(t)) {
+                // Graal 因语句上限关闭了 Context：通知 ScriptManager 下次取用时重建环境
+                onContextKilled.run();
+            }
             script.disabled = true;
             script.lastError = t;
 
             ScriptError scriptError = errorTracker.record(script, t);
             script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
         }
+    }
+
+    /** 沿异常链识别「Context 已被 Graal 资源上限关闭」：eval 抛 cancelled / resourceExhausted。 */
+    private static boolean isContextKilledByResourceLimits(Throwable t) {
+        for (Throwable current = t; current != null; current = current.getCause()) {
+            if (current instanceof PolyglotException pe && (pe.isCancelled() || pe.isResourceExhausted())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

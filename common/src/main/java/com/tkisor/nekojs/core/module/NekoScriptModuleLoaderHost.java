@@ -34,7 +34,6 @@ public final class NekoScriptModuleLoaderHost {
     private final NekoEsmModuleRecordCache esmRecordCache;
     private final NekoNativeEsmSourceRewriter esmRewriter;
     private final NekoModuleDependencyGraph dependencyGraph;
-    private final ModuleSliceRelinker sliceRelinker;
     private final Map<String, ModuleState> moduleCache;
     private final Map<String, Long> moduleRevisions;
     private final ModuleReloadCoordinator reloadCoordinator;
@@ -52,7 +51,6 @@ public final class NekoScriptModuleLoaderHost {
         this.esmRecordCache = new NekoEsmModuleRecordCache();
         this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
         this.dependencyGraph = new NekoModuleDependencyGraph();
-        this.sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link);
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
         this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
@@ -67,7 +65,6 @@ public final class NekoScriptModuleLoaderHost {
         this.esmRecordCache = new NekoEsmModuleRecordCache();
         this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
         this.dependencyGraph = new NekoModuleDependencyGraph();
-        this.sliceRelinker = new ModuleSliceRelinker(dependencyGraph, esmRecordCache, esmLinkCache::link);
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
         this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
@@ -181,46 +178,6 @@ public final class NekoScriptModuleLoaderHost {
         NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
     }
-
-    // ======== 热重载：revision bump → cache invalidation → re-prepare → relink → re-evaluate ========
-
-    public HotReloadResult hotReloadModule(String modulePath) throws IOException {
-        NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
-        String moduleId = resolved.id();
-
-        long newRevision = reloadCoordinator.bumpRevision(moduleId);
-        moduleCache.remove(moduleId);
-        esmRecordCache.removeAll(moduleId);
-        esmLinkCache.remove(moduleId, newRevision);
-        NekoModulePipelineCache.invalidate(resolved.path());
-
-        NekoPreparedModule prepared = prepare(resolved);
-
-        ModuleSliceRelinker.SliceResult sliceResult = sliceRelinker.tryRelinkSlice(moduleId, newRevision);
-
-        if (sliceResult.rolledBack()) {
-            return new HotReloadResult(moduleId, sliceResult.relinked(), sliceResult.failed(), false);
-        }
-
-        List<String> reevaluated = new java.util.ArrayList<>();
-        for (String relinkedId : sliceResult.relinked()) {
-            NekoEsmModuleRecord record = esmRecordCache.get(relinkedId, newRevision);
-            if (record != null && record.linkMetadata() != null) {
-                try {
-                    if (record.topLevelAwait() && record.evaluation() != null) {
-                        record.evaluation().join();
-                    }
-                    reevaluated.add(relinkedId);
-                } catch (Exception e) {
-                    sliceResult.failed().add(relinkedId);
-                }
-            }
-        }
-
-        return new HotReloadResult(moduleId, reevaluated, sliceResult.failed(), true);
-    }
-
-    public record HotReloadResult(String changedModuleId, List<String> relinked, List<String> failed, boolean success) {}
 
     // ---- Native ESM import/export: JS bridge __nekoNativeImport 和 NekoNativeEsmSourceRewriter 生成代码调用 ----
 

@@ -46,6 +46,9 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 30,
                     " Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.");
 
+            setupConfigEntry(config, "scriptStatementLimit", 0L,
+                    " Graal ResourceLimits statement cap for each script environment Context (0 = disabled). A cumulative cap: when exceeded, Graal closes the Context and aborts the current evaluation, which is the only reliable way to stop a while(true){} infinite loop inside a synchronous entry. The server thread is unblocked and the script is marked failed; subsequent evaluations run in an automatically rebuilt Context, but listeners/timers registered by the dead Context are lost - run /nekojs reload to fully restore the environment. Choose a generous value (e.g. 50000000) if you enable it - long-running servers execute statements continuously.");
+
             return new SandboxConfig(
                     config.get("allowThreads"),
                     config.get("allowReflection"),
@@ -55,7 +58,8 @@ public final class SandboxConfigLoader {
                     config.get("conciseScriptErrorLogs"),
                     config.get("jsxAutomaticRuntime"),
                     config.get("scriptMemberValidation"),
-                    config.get("scriptEvaluationTimeoutSeconds")
+                    config.get("scriptEvaluationTimeoutSeconds"),
+                    config.get("scriptStatementLimit")
             );
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load engine.toml, using default sandbox config", e);

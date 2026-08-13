@@ -15,7 +15,6 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
@@ -83,6 +82,9 @@ public final class ScriptManager implements AutoCloseable {
     /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
     private boolean warnedStartupReloadNonTransactional;
 
+    /** Graal 因语句上限（scriptStatementLimit）关闭了当前 Context；下次取用时重建。 */
+    private volatile boolean contextKilled;
+
     // ---- 构造函数 ----
 
     public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
@@ -93,7 +95,7 @@ public final class ScriptManager implements AutoCloseable {
         this.errorTracker = errorTracker;
         this.paths = paths;
         this.sandboxConfig = sandboxConfig;
-        this.scriptExecutor = new ScriptExecutor(errorTracker, paths, sandboxConfig);
+        this.scriptExecutor = new ScriptExecutor(errorTracker, paths, sandboxConfig, this::markContextKilled);
         this.environmentFactory = environmentFactory;
     }
 
@@ -105,13 +107,23 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- Context 访问（懒初始化） ----
 
+    /** ScriptExecutor 回调：Graal 因语句上限关闭了当前 Context。 */
+    private void markContextKilled() {
+        this.contextKilled = true;
+    }
+
     private Context getOrCreateContext() {
-        if (context == null) {
+        if (context == null || contextKilled) {
+            if (context != null) {
+                // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源
+                closeRuntimeResources(this.nodeRuntime, this.context);
+            }
             ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
             this.context = env.context();
             this.nodeRuntime = env.nodeRuntime();
             CONTEXT_TO_MANAGER.put(context, this);
             ScriptContextRegistry.bind(context, scriptType);
+            contextKilled = false;
         }
         return context;
     }
@@ -135,8 +147,7 @@ public final class ScriptManager implements AutoCloseable {
     public void loadScripts() {
         pluginRuntime.fireBeforeScriptsLoaded(scriptType);
         try {
-            Context ctx = getOrCreateContext();
-            loadScriptsInto(ctx, nodeRuntime, scripts);
+            loadScriptsInto(scripts);
             if (scriptType == ScriptType.STARTUP) {
                 flushReadyNodeTimers();
                 ScriptEvents.post(getScriptEventRegistrar());
@@ -151,7 +162,7 @@ public final class ScriptManager implements AutoCloseable {
      *
      * <p>被首次 {@link #loadScripts()} 和事务式 reload 复用。空列表只记录日志，不创建副作用。
      */
-    private void loadScriptsInto(Context ctx, NekoNodeRuntime node, List<ScriptContainer> scriptsToLoad) {
+    private void loadScriptsInto(List<ScriptContainer> scriptsToLoad) {
         if (scriptsToLoad == null || scriptsToLoad.isEmpty()) {
             scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
             return;
@@ -166,7 +177,9 @@ public final class ScriptManager implements AutoCloseable {
         }
         for (ScriptContainer script : scriptsToLoad) {
             if (script.shouldRun()) {
-                scriptExecutor.executeEntry(ctx, script, node);
+                // 逐个脚本取最新 Context：某脚本触发语句上限导致 Context 被 Graal 关闭时，
+                // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没
+                scriptExecutor.executeEntry(getOrCreateContext(), script, this.nodeRuntime);
             }
         }
     }
@@ -236,7 +249,7 @@ public final class ScriptManager implements AutoCloseable {
 
                 pluginRuntime.fireBeforeScriptsLoaded(scriptType);
                 try {
-                    loadScriptsInto(candidateContext, candidateNode, candidateScripts);
+                    loadScriptsInto(candidateScripts);
                 } finally {
                     pluginRuntime.fireAfterScriptsLoaded(scriptType);
                 }
@@ -277,27 +290,11 @@ public final class ScriptManager implements AutoCloseable {
             Context ctx = getOrCreateContext();
             String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
 
-            boolean directEntry = scripts.stream()
-                    .anyMatch(s -> s.path.normalize().toAbsolutePath().equals(target));
-            if (!directEntry) {
-                if (nodeRuntime != null && nodeRuntime.moduleLoaderHost() != null) {
-                    try {
-                        NekoScriptModuleLoaderHost.HotReloadResult result = nodeRuntime.moduleLoaderHost().hotReloadModule(modulePath);
-                        if (result.success()) {
-                            scriptType.logger().info("{} hot-reloaded module {} ({} relinked, {} failed)",
-                                    scriptType.name(), displayScriptPath(target),
-                                    result.relinked().size(), result.failed().size());
-                            return List.of();
-                        }
-                        scriptType.logger().warn("Hot-reload rolled back for {}, falling back to entry re-run. Failed: {}",
-                                modulePath, result.failed());
-                    } catch (Exception e) {
-                        scriptType.logger().warn("Hot-reload failed for {}, falling back to entry re-run: {}",
-                                modulePath, e.getMessage());
-                    }
-                }
-            }
-
+            // 单文件重载统一走「失效受影响模块 → 重跑受影响入口」路径。曾经存在一个
+            // ModuleSliceRelinker 捷径试图只 relink 不重跑入口，但 Graal 对每个虚拟
+            // 模块 URI 缓存模块实例，不重跑入口就无法让 import 绑定看到新导出；且其
+            // revision 查询实现不匹配（用新 revision 查旧 record）导致静默 no-op 并
+            // 返回 success=true。捷径已删除，见 git 历史。
             synchronized (ctx) {
                 for (ScriptContainer script : targets) {
                     String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
@@ -307,7 +304,7 @@ public final class ScriptManager implements AutoCloseable {
             }
 
             for (ScriptContainer script : targets) {
-                reloadEntryScript(ctx, script);
+                reloadEntryScript(getOrCreateContext(), script);
             }
 
             scriptType.logger().info("{} 脚本文件 {} 重载完毕。", scriptType.name(), displayScriptPath(target));
@@ -326,9 +323,6 @@ public final class ScriptManager implements AutoCloseable {
             Optional<ScriptContainer> directEntry = scripts.stream()
                     .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
                     .findFirst();
-            if (directEntry.isPresent()) {
-                return List.of(directEntry.get());
-            }
             Context ctx = getOrCreateContext();
             String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
             List<String> affectedIds = new ArrayList<>();
@@ -340,9 +334,17 @@ public final class ScriptManager implements AutoCloseable {
                     }
                 }
             }
-            return scripts.stream()
+            // 依赖图中记录的所有受影响入口（含目标文件本身，若它是入口）都必须重跑：
+            // Graal 按虚拟模块 URI 缓存模块实例，只重跑目标模块无法让已加载入口的
+            // import 绑定看到新导出。
+            List<ScriptContainer> affectedEntries = scripts.stream()
                     .filter(script -> affectedIds.contains(paths.root().relativize(script.path).toString().replace('\\', '/')))
                     .toList();
+            if (!affectedEntries.isEmpty()) {
+                return affectedEntries;
+            }
+            // 文件从未被加载（依赖图无记录）但确实是已发现脚本：直接重跑该入口
+            return directEntry.map(List::of).orElseGet(List::of);
         }
 
         private void reloadEntryScript (Context ctx, ScriptContainer script){

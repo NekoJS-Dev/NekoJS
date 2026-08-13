@@ -175,6 +175,9 @@ final class ScriptLoadOrderSorter {
             problems.add(formatProblems(unresolved.size() + " 个 after 引用无法解析，已忽略", unresolved));
         }
 
+        // 原始稳定顺序快照：成环时整组回退用（见下方 sorted.size() < n 分支）
+        List<ScriptContainer> originalOrder = new ArrayList<>(scripts.subList(from, to));
+
         // Kahn：初始就绪队列按组内原始顺序入队，保证结果稳定确定
         ArrayDeque<Integer> ready = new ArrayDeque<>();
         for (int k = 0; k < n; k++) {
@@ -195,14 +198,17 @@ final class ScriptLoadOrderSorter {
         }
 
         if (sorted.size() < n) {
-            // 循环依赖（或依赖环的脚本）：回退到原始稳定顺序
+            // 循环依赖：整组回退到原始稳定顺序（类文档承诺），而不是把环成员追加到
+            // 已排序节点之后 —— 后者会打乱无关脚本的相对位置（如把无依赖的脚本挤到
+            // 最前）并破坏 after 语义。
             List<String> cycled = new ArrayList<>();
             for (int k = 0; k < n; k++) {
                 if (inDegree[k] > 0) {
-                    sorted.add(scripts.get(from + k));
                     cycled.add(display(scripts.get(from + k)));
                 }
             }
+            sorted.clear();
+            sorted.addAll(originalOrder);
             problems.add(formatProblems(cycled.size() + " 个脚本构成 after 循环依赖，回退到原始顺序", cycled));
         }
 

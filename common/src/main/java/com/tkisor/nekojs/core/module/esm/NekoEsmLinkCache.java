@@ -26,10 +26,6 @@ public final class NekoEsmLinkCache {
         return metadata;
     }
 
-    public void remove(String moduleId, long revision) {
-        links.remove(new Key(moduleId, revision));
-    }
-
     public void removeAll(String moduleId) {
         links.keySet().removeIf(key -> key.moduleId().equals(moduleId));
     }

@@ -121,6 +121,27 @@ class ScriptLoadOrderSorterTest {
         assertIterableEquals(keys(batch), keys(again));
     }
 
+    // ---- 部分环：整组回退原始稳定顺序 ----
+
+    @Test
+    void partialCycleRestoresWholeGroupToOriginalOrder() {
+        // 原始顺序 a b c d；a after b、b after a 成环；c after b 依赖环中成员。
+        // 文档承诺「循环依赖回退到原始稳定顺序」应作用于整组，而不是把环成员
+        // 追加到已排序节点之后（后者会把无关的 d 挤到最前，且破坏 after 语义）。
+        List<ScriptContainer> batch = new ArrayList<>(List.of(
+                script("a.js", 0, "b.js"),
+                script("b.js", 0, "a.js"),
+                script("c.js", 0, "b.js"),
+                script("d.js", 0)));
+
+        ScriptLoadOrderSorter.Result result = sort(batch);
+
+        assertIterableEquals(List.of("a.js", "b.js", "c.js", "d.js"), keys(batch));
+        assertTrue(result.hasProblems());
+        assertTrue(result.describe().contains("循环"),
+                "warning should mention the cycle: " + result.describe());
+    }
+
     // ---- 引用解析的宽松处理 ----
 
     @Test
