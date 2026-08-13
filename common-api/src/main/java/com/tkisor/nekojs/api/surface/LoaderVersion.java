@@ -6,6 +6,15 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * mod 加载器版本（如 {@code "4.0.0"}），支持最多四段数字与可选字母限定符。
+ *
+ * <p>实现 {@link Comparable}：逐段比较数字（缺段按 0），再比较限定符（无限定符 > 有限定符）。
+ * 不可变。
+ *
+ * @param segments  数字段（不可变列表，可为空）
+ * @param qualifier 限定符（如 {@code "beta"}），可为 {@code null}
+ */
 public record LoaderVersion(List<Integer> segments, String qualifier) implements Comparable<LoaderVersion> {
 
     private static final Pattern LOADER_VER = Pattern.compile(
@@ -15,6 +24,7 @@ public record LoaderVersion(List<Integer> segments, String qualifier) implements
         segments = List.copyOf(segments == null ? List.of() : segments);
     }
 
+    /** 解析加载器版本字符串；非法格式抛 {@link IllegalArgumentException}。 */
     public static LoaderVersion parse(String raw) {
         Objects.requireNonNull(raw, "raw");
         Matcher m = LOADER_VER.matcher(raw);
@@ -28,6 +38,7 @@ public record LoaderVersion(List<Integer> segments, String qualifier) implements
         return new LoaderVersion(segs, q);
     }
 
+    /** 逐段比较数字（缺段按 0），再比较限定符（无限定符 > 有限定符）。 */
     @Override
     public int compareTo(LoaderVersion other) {
         int maxLen = Math.max(this.segments.size(), other.segments.size());
@@ -45,6 +56,7 @@ public record LoaderVersion(List<Integer> segments, String qualifier) implements
         return this.qualifier.compareTo(other.qualifier);
     }
 
+    /** 返回版本字符串。 */
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

@@ -3,7 +3,14 @@ package com.tkisor.nekojs.api.data;
 import java.util.Collection;
 import java.util.Collections;
 
+/**
+ * {@link JsValueView} 的 null 实现（单例）。
+ *
+ * <p>除 {@link #isNull()} 返回 {@code true} 外，其余类型判断均为 {@code false}，
+ * 读取值的方法抛 {@link UnsupportedOperationException}。
+ */
 public final class NullJsValueView implements JsValueView {
+    /** 共享单例。 */
     public static final NullJsValueView INSTANCE = new NullJsValueView();
 
     private NullJsValueView() {}

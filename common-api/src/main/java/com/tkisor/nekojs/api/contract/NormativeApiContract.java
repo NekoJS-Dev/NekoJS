@@ -8,6 +8,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * 规范化的 API 契约文档（契约 JSON 的内存表示）。
+ *
+ * <p>描述一个 owner 在指定版本下暴露的符号、能力、模块与事件。容器字段在构造时被拷贝为
+ * 不可变列表；{@link #schemaVersion} 标识契约文档的 schema 版本。
+ *
+ * @param schemaVersion 契约 schema 版本
+ * @param identity      契约身份
+ * @param docs          契约说明
+ * @param symbols       顶层 API 符号
+ * @param capabilities  声明的能力
+ * @param modules       模块
+ * @param events        事件
+ */
 public record NormativeApiContract(
         int schemaVersion,
         ContractIdentity identity,
@@ -25,6 +39,7 @@ public record NormativeApiContract(
         events = List.copyOf(events == null ? List.of() : events);
     }
 
+    /** 便捷构造：无事件列表的契约。 */
     public NormativeApiContract(
             int schemaVersion,
             ContractIdentity identity,
@@ -35,6 +50,7 @@ public record NormativeApiContract(
         this(schemaVersion, identity, docs, symbols, capabilities, modules, List.of());
     }
 
+    /** 契约身份。 */
     public record ContractIdentity(String owner, ApiContractKind kind, String contractId, ApiVersion version) {
         public ContractIdentity {
             Objects.requireNonNull(owner, "owner");
@@ -44,6 +60,7 @@ public record NormativeApiContract(
         }
     }
 
+    /** 能力声明：一个能力 id、其支持的契约版本范围与说明。 */
     public record ContractCapability(String id, String contractVersionRange, String docs) {
         public ContractCapability {
             Objects.requireNonNull(id, "id");
@@ -51,6 +68,7 @@ public record NormativeApiContract(
         }
     }
 
+    /** 模块声明：模块 id、脚本类型、契约版本、修订号、说明、符号与依赖。 */
     public record ContractModule(
             String id,
             com.tkisor.nekojs.api.surface.ApiTier tier,
@@ -68,6 +86,7 @@ public record NormativeApiContract(
         }
     }
 
+    /** 模块依赖：目标模块 id、版本范围与目标脚本类型。 */
     public record ContractModuleDependency(
             String moduleId,
             String versionRange,
