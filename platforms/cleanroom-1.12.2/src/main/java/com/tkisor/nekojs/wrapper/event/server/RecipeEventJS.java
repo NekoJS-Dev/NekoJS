@@ -3,6 +3,7 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.google.gson.JsonObject;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.recipe.RecipeEntryJS;
+import com.tkisor.nekojs.api.recipe.RecipeFilter;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.mixin.ForgeRegistryMixin;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
@@ -16,8 +17,6 @@ import net.minecraft.item.crafting.ShapelessRecipes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
-import net.minecraftforge.oredict.OreDictionary;
-import net.minecraftforge.oredict.OreIngredient;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -34,8 +33,9 @@ import java.util.function.Consumer;
  *   <li><b>No JSON for live recipes.</b> 1.12.2 recipes are not datapack JSON; the only
  *       JSON available is what scripts stage via {@link #setJson}. {@link #getJson} for a
  *       live recipe throws {@link UnsupportedOperationException}.</li>
- *   <li><b>Filters operate on the in-memory {@code IRecipe}.</b> The structured filter map
- *       produced by {@code RecipeFilterAdapter} is interpreted by {@link #matchesFilter}.</li>
+ *   <li><b>Filters operate on the in-memory {@code IRecipe}.</b> A {@link RecipeFilter}
+ *       (parsed by {@code RecipeFilterAdapter}) is evaluated via
+ *       {@link RecipeFilter#test(RecipeEntryJS)}.</li>
  *   <li><b>Recipe creation</b> lives on {@code event.recipes.minecraft.*}
  *       ({@code MinecraftRecipeHandler}); the matching methods here throw
  *       {@link UnsupportedOperationException} pointing there.</li>
@@ -128,9 +128,10 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     // ========== Filter-based iteration (parity with datapack-era RecipeEventJS) ==========
     //
-    // The filter parameter is the structured map produced by RecipeFilterAdapter
-    // (a Map<String,Object>, or null). null == match-all. A flat map with multiple keys
-    // is an AND of those criteria; "not"/"and"/"or" keys carry nested sub-filters.
+    // The filter parameter is a RecipeFilter produced by RecipeFilterAdapter (or null).
+    // null == no match (find returns empty, matching datapack-era semantics). A flat
+    // object is an AND of its criteria; "not" wraps a sub-filter in Not; top-level arrays
+    // are an Or.
 
     /** All recipes as entries. */
     public List<RecipeEntryJS> all() {
@@ -143,14 +144,14 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /** Recipes matching the filter. {@code filter == null} returns an empty list (matches datapack-era semantics). */
-    public List<RecipeEntryJS> find(Object filter) {
+    public List<RecipeEntryJS> find(RecipeFilter filter) {
         List<RecipeEntryJS> recipes = new ArrayList<>();
         if (filter == null) return recipes;
         for (String id : recipeIds) {
             IRecipe recipe = CraftingManager.getRecipe(new ResourceLocation(id));
             if (recipe == null) continue;
             RecipeEntryJS entry = new RecipeEntryJS(this, recipe);
-            if (matchesFilter(filter, entry)) {
+            if (filter.test(entry)) {
                 recipes.add(entry);
             }
         }
@@ -164,15 +165,15 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return recipe == null ? null : new RecipeEntryJS(this, recipe);
     }
 
-    public int count(Object filter) {
+    public int count(RecipeFilter filter) {
         return find(filter).size();
     }
 
-    public boolean exists(Object filter) {
+    public boolean exists(RecipeFilter filter) {
         return !find(filter).isEmpty();
     }
 
-    public void remove(Object filter) {
+    public void remove(RecipeFilter filter) {
         if (filter == null) return;
         List<RecipeEntryJS> toRemove = find(filter);
         int removed = 0;
@@ -186,7 +187,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         NekoJS.LOGGER.debug("Removed {} recipes matching the filter", removed);
     }
 
-    public void forEach(Object filter, Consumer<RecipeEntryJS> callback) {
+    public void forEach(RecipeFilter filter, Consumer<RecipeEntryJS> callback) {
         for (RecipeEntryJS recipe : find(filter)) {
             callback.accept(recipe);
         }
@@ -198,12 +199,12 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
-    /** Alias for {@link #forEach(Object, Consumer)} (datapack-era scripts use {@code modify}). */
-    public void modify(Object filter, Consumer<RecipeEntryJS> callback) {
+    /** Alias for {@link #forEach(RecipeFilter, Consumer)} (datapack-era scripts use {@code modify}). */
+    public void modify(RecipeFilter filter, Consumer<RecipeEntryJS> callback) {
         forEach(filter, callback);
     }
 
-    public String dump(Object filter) {
+    public String dump(RecipeFilter filter) {
         List<RecipeEntryJS> recipes = filter == null ? all() : find(filter);
         JsonObject dump = new JsonObject();
         for (RecipeEntryJS recipe : recipes) {
@@ -217,7 +218,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return dump.toString();
     }
 
-    public void print(Object filter) {
+    public void print(RecipeFilter filter) {
         List<RecipeEntryJS> recipes = filter == null ? all() : find(filter);
         NekoJS.LOGGER.info("=== Recipes ({} matched) ===", recipes.size());
         for (RecipeEntryJS recipe : recipes) {
@@ -236,7 +237,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     // rewritten in-place; other recipe types are logged and skipped (their inputs are
     // not always representable as a swappable Ingredient list on 1.12.2).
 
-    public void replaceInput(Object filter, Ingredient match, Ingredient replacement) {
+    public void replaceInput(RecipeFilter filter, Ingredient match, Ingredient replacement) {
         if (match == null || replacement == null) return;
         int replaced = 0;
         for (RecipeEntryJS entry : find(filter)) {
@@ -255,7 +256,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         NekoJS.LOGGER.debug("Replaced input ingredients in {} recipes", replaced);
     }
 
-    public void replaceOutput(Object filter, Ingredient match, ItemStack replacement) {
+    public void replaceOutput(RecipeFilter filter, Ingredient match, ItemStack replacement) {
         if (match == null || replacement == null || replacement.isEmpty()) return;
         int replaced = 0;
         for (RecipeEntryJS entry : find(filter)) {
@@ -359,137 +360,6 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
         replacement.setRegistryName(id);
         ForgeRegistries.RECIPES.register(replacement);
-    }
-
-    // ========== Filter matching ==========
-
-    /**
-     * Interpret the structured filter map produced by {@code RecipeFilterAdapter}
-     * against a recipe entry. A flat map is an AND of all its criteria; the {@code not}/
-     * {@code and}/{@code or} keys carry nested sub-filters.
-     */
-    @SuppressWarnings("unchecked")
-    private boolean matchesFilter(Object filter, RecipeEntryJS entry) {
-        if (filter == null) return true;
-        if (filter instanceof Map<?, ?> map) {
-            for (Map.Entry<?, ?> e : map.entrySet()) {
-                String key = String.valueOf(e.getKey());
-                Object val = e.getValue();
-                switch (key) {
-                    case "not" -> {
-                        if (matchesFilter(val, entry)) return false;
-                    }
-                    case "and" -> {
-                        if (!matchesFilter(val, entry)) return false;
-                    }
-                    case "or" -> {
-                        if (!matchesOr((List<Object>) val, entry)) return false;
-                    }
-                    case "output" -> {
-                        if (!matchesOutput(String.valueOf(val), entry)) return false;
-                    }
-                    case "input" -> {
-                        if (!matchesInput(String.valueOf(val), entry)) return false;
-                    }
-                    case "mod" -> {
-                        if (!matchesMod(String.valueOf(val), entry)) return false;
-                    }
-                    case "group" -> {
-                        if (!Objects.equals(entry.group(), String.valueOf(val))) return false;
-                    }
-                    case "id" -> {
-                        if (!Objects.equals(entry.id(), normalizeId(String.valueOf(val)))) return false;
-                    }
-                    case "idStartsWith" -> {
-                        if (!entry.id().startsWith(String.valueOf(val))) return false;
-                    }
-                    case "idEndsWith" -> {
-                        if (!entry.id().endsWith(String.valueOf(val))) return false;
-                    }
-                    case "idContains" -> {
-                        if (!entry.id().contains(String.valueOf(val))) return false;
-                    }
-                    case "type" -> {
-                        if (!Objects.equals(entry.type(), String.valueOf(val))) return false;
-                    }
-                    default -> {
-                        // Unknown criterion: fail closed (do not match).
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        // Any other shape is not a recognised filter; fail closed.
-        return false;
-    }
-
-    private boolean matchesOr(List<Object> alternatives, RecipeEntryJS entry) {
-        if (alternatives == null || alternatives.isEmpty()) return false;
-        for (Object alt : alternatives) {
-            if (matchesFilter(alt, entry)) return true;
-        }
-        return false;
-    }
-
-    private boolean matchesOutput(String itemOrTag, RecipeEntryJS entry) {
-        ItemStack output = entry.output();
-        if (output.isEmpty()) return false;
-        if (itemOrTag.startsWith("#")) {
-            String oreName = itemOrTag.substring(1);
-            for (ItemStack ore : OreDictionary.getOres(oreName)) {
-                if (ore != null && !ore.isEmpty() && output.isItemEqual(ore)) return true;
-            }
-            return false;
-        }
-        ResourceLocation target = parseId(itemOrTag);
-        ResourceLocation actual = output.getItem().getRegistryName();
-        return target != null && target.equals(actual);
-    }
-
-    private boolean matchesInput(String itemOrTag, RecipeEntryJS entry) {
-        boolean isTag = itemOrTag.startsWith("#");
-        String body = isTag ? itemOrTag.substring(1) : itemOrTag;
-        ResourceLocation target = isTag ? null : parseId(body);
-        for (Ingredient ing : entry.ingredients()) {
-            if (ing == null || ing == Ingredient.EMPTY) continue;
-            for (ItemStack stack : ing.getMatchingStacks()) {
-                if (stack == null || stack.isEmpty()) continue;
-                if (isTag) {
-                    int[] ids = OreDictionary.getOreIDs(stack);
-                    for (int id : ids) {
-                        if (body.equals(OreDictionary.getOreName(id))) return true;
-                    }
-                } else if (target != null) {
-                    ResourceLocation rl = stack.getItem().getRegistryName();
-                    if (target.equals(rl)) return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private boolean matchesMod(String modId, RecipeEntryJS entry) {
-        return entry.id().startsWith(modId + ":") || (modId.equals(modOf(entry.id())));
-    }
-
-    private static String modOf(String id) {
-        int colon = id.indexOf(':');
-        return colon <= 0 ? "" : id.substring(0, colon);
-    }
-
-    private static ResourceLocation parseId(String raw) {
-        try {
-            String full = raw.contains(":") ? raw : "minecraft:" + raw;
-            return new ResourceLocation(full);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private static String normalizeId(String raw) {
-        ResourceLocation rl = parseId(raw);
-        return rl == null ? raw : rl.toString();
     }
 
     // ========== Recipe-creation stubs (UnsupportedOperationException) ==========

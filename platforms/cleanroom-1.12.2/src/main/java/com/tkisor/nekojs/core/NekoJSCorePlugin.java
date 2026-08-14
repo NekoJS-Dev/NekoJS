@@ -145,7 +145,6 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new BlockAdapter());
         registry.register(new CompoundTagAdapter());
         registry.register(new ItemAdapter());
-        registry.register(new TagKeyAdapter());
         registry.register(new ComponentAdapter());
         registry.register(new SoundEventAdapter());
         registry.register(new EntityTypeAdapter());
