@@ -1,0 +1,142 @@
+// NekoJS NeoForge 26.1 / 26.2 平台公共构建逻辑（convention via apply script）。
+//
+// 消费方（platforms/neoforge-26.1 / 26.2）需：
+//   1. plugins {} 中 apply: java-library, maven-publish, idea,
+//      net.neoforged.moddev, me.shedaniel.unified-publishing
+//   2. apply 前在 ext 中提供版本参数:
+//      nekojsMinecraftVersion / nekojsNeoVersion / nekojsMinecraftVersionRange /
+//      nekojsJeiFileId
+//      （minecraft_version 的 ext 属性以及 neoforge-common.gradle 需要的 ENV /
+//       register_shared_dev_mod_source_sets 由本脚本统一设置，平台无需重复）
+//   3. apply from: rootProject.file('gradle/neoforge-26-shared.gradle')
+//
+// 用 apply script 而非 buildSrc convention plugin：第三方插件 (moddev / unified-publishing)
+// 的 plugin marker 坐标随版本漂移，在 buildSrc 内硬编码 implementation 依赖会成为额外维护点；
+// apply script 让插件版本继续由各平台 plugins{} 声明，只下沉真正稳定、字节级相同的配置块
+// （与 gradle/neoforge-common.gradle 头部注释的理由一致）。
+// 版本相关与有平台差异的部分（minecraft_version / neo_version / minecraft_version_range /
+// JEI fileId）仍由各平台 build.gradle 通过 ext 参数注入。
+
+ext.minecraft_version = ext.nekojsMinecraftVersion
+ext.ENV = System.getenv()
+ext.register_shared_dev_mod_source_sets = true
+
+def neo_version = ext.nekojsNeoVersion
+def minecraft_version_range = ext.nekojsMinecraftVersionRange
+def neo_version_range = "[26,)"
+def loader_version_range = "[4,)"
+def nekojsJeiFileId = ext.nekojsJeiFileId
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+sourceSets {
+    main {
+        java {
+            srcDir '../neoforge-shared/src/main/java'
+            srcDir '../neoforge-26-shared/src/main/java'
+        }
+        resources {
+            srcDir '../neoforge-26-shared/src/main/resources'
+            srcDir 'src/generated/resources'
+        }
+    }
+    test.java.srcDir '../neoforge-26-shared/src/test/java'
+}
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+
+test {
+    useJUnitPlatform()
+}
+
+compileJava {
+    // SpecCoverageProcessor 平台范围校验：本平台属于 NeoForge 系列
+    options.compilerArgs += '-Anekojs.platform=nf'
+}
+
+// base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea
+// 由 gradle/neoforge-common.gradle 统一配置（三平台字节级相同的部分）
+apply from: rootProject.file('gradle/neoforge-common.gradle')
+
+neoForge {
+    version = neo_version
+
+    accessTransformers = project.files('../neoforge-26-shared/src/main/resources/META-INF/accesstransformer.cfg')
+
+    interfaceInjectionData {
+        it.from(project.files('../neoforge-26-shared/src/main/resources/nekojs.interface_injection.json'))
+    }
+
+    runs {
+        client {
+            client()
+            jvmArguments.add('-Dfml.earlydisplay=false')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        data {
+            clientData()
+            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            sourceSet(project(':common').sourceSets.main)
+            sourceSet(project(':common-api').sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    implementation project(':common')
+    implementation "curse.maven:jei-238222:${nekojsJeiFileId}"
+
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    annotationProcessor project(':common-api-processor')
+    annotationProcessor project(':common-api')
+
+    // JUnit deliberately pinned to 5.x locally (common-api/common use the 6.0.0 BOM).
+    testImplementation libs.junit.jupiter.legacy
+    testRuntimeOnly libs.junit.platform.launcher
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "../neoforge-26-shared/src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata

@@ -254,96 +254,26 @@ shadowJar {
 sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
 sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
 
-def verifyRuntimeArtifact = tasks.register('verifyRuntimeArtifact') {
-    group = 'verification'
-    description = 'Verifies that the remapped distributable jar contains runtime and common API classes.'
-    dependsOn tasks.named(remapTaskName)
-
-    doLast {
-        def candidates = tasks.named(remapTaskName).get().outputs.files.files.findAll {
-            it.isFile() && it.name.endsWith('.jar')
-        }
-        if (candidates.size() != 1) {
-            throw new GradleException("Expected one Cleanroom remap output jar, found: ${candidates*.name}")
-        }
-        def artifact = candidates.first()
-        def requiredEntries = ([
-            'com/tkisor/nekojs/core/NekoCoreContext.class',
-            'com/tkisor/nekojs/core/api/CoreManagedApiBootstrap.class',
-            'com/tkisor/nekojs/core/api/ApiFacadeProxy.class',
-            'com/tkisor/nekojs/core/api/ApiValueMarshaller.class',
-            'com/tkisor/nekojs/core/api/ApiGuestErrorFactory.class',
-            'com/tkisor/nekojs/api/surface/ApiVersion.class',
-            'com/tkisor/nekojs/api/data/NekoId.class',
-            'com/tkisor/nekojs/api/data/TextValue.class',
-            'com/tkisor/nekojs/api/data/TextArgument.class',
-            'com/tkisor/nekojs/api/data/JsNumber.class',
-            'com/tkisor/nekojs/api/data/JsonValue.class',
-            'com/tkisor/nekojs/api/data/NbtValue.class',
-            'com/tkisor/nekojs/api/data/NbtEntry.class',
-            'com/tkisor/nekojs/api/nbt/NbtBinaryCodec.class',
-            'com/tkisor/nekojs/api/nbt/NbtBinaryException.class',
-            'com/tkisor/nekojs/api/nbt/NbtBinaryLimits.class',
-            'com/tkisor/nekojs/api/facade/JsonFacade.class',
-            'com/tkisor/nekojs/api/facade/NbtFacade.class',
-            'com/tkisor/nekojs/api/facade/IdFacade.class',
-            'com/tkisor/nekojs/api/facade/PlatformFacade.class',
-            'com/tkisor/nekojs/core/api/facade/DefaultIdFacade.class',
-            'com/tkisor/nekojs/core/api/facade/DefaultPlatformFacade.class',
-            'com/tkisor/nekojs/core/api/facade/DefaultTextFacade.class',
-            'com/tkisor/nekojs/core/api/facade/DefaultJsonFacade.class',
-            'com/tkisor/nekojs/core/api/facade/DefaultNbtFacade.class',
-            'com/tkisor/nekojs/core/api/nbt/NbtSnbtSerializer.class',
-            'com/tkisor/nekojs/core/api/nbt/NbtFileStore.class',
-            'com/tkisor/nekojs/platform/nbt/CleanroomNbtBinaryCodec.class',
-            'com/tkisor/nekojs/core/api/json/JsonValueParser.class',
-            'com/tkisor/nekojs/core/api/json/JsonValueSerializer.class',
-            'com/tkisor/nekojs/core/api/json/JsonValueException.class',
-            'nekojs/api-runtime.properties'
-        ] as Set)
-        [project(':common'), project(':common-api')].each { runtimeProject ->
-            runtimeProject.sourceSets.main.output.files
-                    .findAll { output -> output.isDirectory() }
-                    .each { output ->
-                        fileTree(output).files.each { runtimeFile ->
-                            requiredEntries.add(output.toPath().relativize(runtimeFile.toPath())
-                                    .toString().replace('\\', '/'))
-                        }
-                    }
-        }
-        embeddedCommonRuntime.each { dependency ->
-            if (dependency.isDirectory()) {
-                fileTree(dependency).files.findAll { file -> file.name.endsWith('.class') }.each { file ->
-                    requiredEntries.add(dependency.toPath().relativize(file.toPath()).toString().replace('\\', '/'))
-                }
-            } else {
-                def dependencyArchive = new java.util.zip.ZipFile(dependency)
-                try {
-                    dependencyArchive.entries().each { entry ->
-                        if (!entry.directory && entry.name.endsWith('.class') && !entry.name.endsWith('module-info.class')) {
-                            requiredEntries.add(entry.name)
-                        }
-                    }
-                } finally {
-                    dependencyArchive.close()
-                }
-            }
-        }
-        def archive = new java.util.zip.ZipFile(artifact)
-        try {
-            def entries = archive.entries().collect { it.name } as Set
-            def missing = requiredEntries.findAll { entry -> !entries.contains(entry) }
-            if (!missing.isEmpty()) {
-                throw new GradleException("Runtime artifact ${artifact.name} is missing: ${missing.join(', ')}")
-            }
-        } finally {
-            archive.close()
-        }
+// 可分发 jar 运行时内容校验下沉到 gradle/verify-runtime-artifact.gradle（apply script
+// 参数化，与 gradle/neoforge-common.gradle 共用同一份逻辑，仅注入平台参数）。
+ext.verifyArtifactDescription = 'Verifies that the remapped distributable jar contains runtime and common API classes.'
+ext.verifyJarTaskName = remapTaskName
+ext.verifyArtifactFile = {
+    def candidates = tasks.named(remapTaskName).get().outputs.files.files.findAll {
+        it.isFile() && it.name.endsWith('.jar')
     }
+    if (candidates.size() != 1) {
+        throw new GradleException("Expected one Cleanroom remap output jar, found: ${candidates*.name}")
+    }
+    return candidates.first()
 }
+ext.verifyPlatformCodecClass = 'com/tkisor/nekojs/platform/nbt/CleanroomNbtBinaryCodec.class'
+ext.verifyEmbeddedCommonRuntime = embeddedCommonRuntime
+ext.verifyNeoForgeOnlyChecks = false
+apply from: rootProject.file('gradle/verify-runtime-artifact.gradle')
 
 tasks.named('check').configure {
-    dependsOn verifyRuntimeArtifact
+    dependsOn tasks.named('verifyRuntimeArtifact')
 }
 
 

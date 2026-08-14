@@ -1,0 +1,119 @@
+// NekoJS 可分发 jar 运行时内容校验脚本（convention via apply script）。
+//
+// 消费方（gradle/neoforge-common.gradle / platforms/cleanroom-1.12.2/build.gradle）在
+// apply 之前需通过 ext 提供以下参数：
+//   ext.verifyArtifactDescription    任务描述（与分发产物类型相关的措辞）
+//   ext.verifyJarTaskName            要校验的 jar 任务名（'jar' 或 remapShadowJar/remapJar）
+//   ext.verifyArtifactFile           返回待校验 jar File 的闭包（doLast 内惰性求值）
+//   ext.verifyPlatformCodecClass      平台 NBT codec 类路径（NeoForge/Cleanroom 各一）
+//   ext.verifyEmbeddedCommonRuntime  common 运行时依赖文件集合（与各自 jar 块共用同一份）
+//   ext.verifyNeoForgeOnlyChecks     是否启用 NeoForge 专属校验（graal 嵌入 / module descriptor）
+//
+// 用 apply script 而非 buildSrc convention plugin 的理由与 gradle/neoforge-common.gradle
+// 头部注释一致：避免第三方 plugin marker 坐标漂移成为 buildSrc 的额外维护点，只下沉字节级
+// 相同、真正稳定的配置块；平台差异（codec 类 / 产物解析 / 附加校验 / 描述）通过 ext 注入。
+
+tasks.register('verifyRuntimeArtifact') {
+    group = 'verification'
+    description = project.ext.verifyArtifactDescription
+    dependsOn tasks.named(project.ext.verifyJarTaskName as String)
+
+    doLast {
+        def artifact = ((Closure) project.ext.verifyArtifactFile).call()
+        def requiredEntries = ([
+            'com/tkisor/nekojs/core/NekoCoreContext.class',
+            'com/tkisor/nekojs/core/api/CoreManagedApiBootstrap.class',
+            'com/tkisor/nekojs/core/api/ApiFacadeProxy.class',
+            'com/tkisor/nekojs/core/api/ApiValueMarshaller.class',
+            'com/tkisor/nekojs/core/api/ApiGuestErrorFactory.class',
+            'com/tkisor/nekojs/api/surface/ApiVersion.class',
+            'com/tkisor/nekojs/api/data/NekoId.class',
+            'com/tkisor/nekojs/api/data/TextValue.class',
+            'com/tkisor/nekojs/api/data/TextArgument.class',
+            'com/tkisor/nekojs/api/data/JsNumber.class',
+            'com/tkisor/nekojs/api/data/JsonValue.class',
+            'com/tkisor/nekojs/api/data/NbtValue.class',
+            'com/tkisor/nekojs/api/data/NbtEntry.class',
+            'com/tkisor/nekojs/api/nbt/NbtBinaryCodec.class',
+            'com/tkisor/nekojs/api/nbt/NbtBinaryException.class',
+            'com/tkisor/nekojs/api/nbt/NbtBinaryLimits.class',
+            'com/tkisor/nekojs/api/facade/JsonFacade.class',
+            'com/tkisor/nekojs/api/facade/NbtFacade.class',
+            'com/tkisor/nekojs/api/facade/IdFacade.class',
+            'com/tkisor/nekojs/api/facade/PlatformFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultIdFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultPlatformFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultTextFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultJsonFacade.class',
+            'com/tkisor/nekojs/core/api/facade/DefaultNbtFacade.class',
+            'com/tkisor/nekojs/core/api/nbt/NbtSnbtSerializer.class',
+            'com/tkisor/nekojs/core/api/nbt/NbtFileStore.class',
+            project.ext.verifyPlatformCodecClass,
+            'com/tkisor/nekojs/core/api/json/JsonValueParser.class',
+            'com/tkisor/nekojs/core/api/json/JsonValueSerializer.class',
+            'com/tkisor/nekojs/core/api/json/JsonValueException.class',
+            'nekojs/api-runtime.properties'
+        ] as Set)
+        [project(':common'), project(':common-api')].each { runtimeProject ->
+            runtimeProject.sourceSets.main.output.files
+                    .findAll { output -> output.isDirectory() }
+                    .each { output ->
+                        fileTree(output).files.each { runtimeFile ->
+                            requiredEntries.add(output.toPath().relativize(runtimeFile.toPath())
+                                    .toString().replace('\\', '/'))
+                        }
+                    }
+        }
+        project.ext.verifyEmbeddedCommonRuntime.each { dependency ->
+            if (dependency.isDirectory()) {
+                fileTree(dependency).files.findAll { file -> file.name.endsWith('.class') }.each { file ->
+                    requiredEntries.add(dependency.toPath().relativize(file.toPath()).toString().replace('\\', '/'))
+                }
+            } else {
+                def dependencyArchive = new java.util.zip.ZipFile(dependency)
+                try {
+                    dependencyArchive.entries().each { entry ->
+                        if (!entry.directory && entry.name.endsWith('.class') && !entry.name.endsWith('module-info.class')) {
+                            requiredEntries.add(entry.name)
+                        }
+                    }
+                } finally {
+                    dependencyArchive.close()
+                }
+            }
+        }
+        def archive = new java.util.zip.ZipFile(artifact)
+        try {
+            def entries = archive.entries().collect { it.name } as Set
+            def missing = requiredEntries.findAll { entry -> !entries.contains(entry) }
+            if (!missing.isEmpty()) {
+                throw new GradleException("Runtime artifact ${artifact.name} is missing: ${missing.join(', ')}")
+            }
+            if (project.ext.verifyNeoForgeOnlyChecks as Boolean) {
+                def embeddedGraal = entries.findAll { entry ->
+                    entry.startsWith('com/oracle/truffle/')
+                            || entry.startsWith('org/graalvm/')
+                            || entry.startsWith('graal/graalvm/')
+                            || entry.startsWith('graal/mod/')
+                            || entry.startsWith('graal/svm/')
+                }
+                if (!embeddedGraal.isEmpty()) {
+                    throw new GradleException(
+                            "Runtime artifact ${artifact.name} embeds classes supplied by required graalmc: "
+                                    + embeddedGraal.take(10).join(', '))
+                }
+                def moduleDescriptors = entries.findAll { entry ->
+                    entry == 'module-info.class'
+                            || (entry.startsWith('META-INF/versions/') && entry.endsWith('/module-info.class'))
+                }
+                if (!moduleDescriptors.isEmpty()) {
+                    throw new GradleException(
+                            "Runtime artifact ${artifact.name} contains dependency module descriptors: "
+                                    + moduleDescriptors.join(', '))
+                }
+            }
+        } finally {
+            archive.close()
+        }
+    }
+}
