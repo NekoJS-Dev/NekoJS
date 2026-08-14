@@ -48,7 +48,8 @@ import net.minecraftforge.fml.common.eventhandler.EventBus;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 
-@Mod(modid = NekoJS.MODID, name = "NekoJS", version = "1.1.0-preview1")
+// version 必须手动跟随 gradle.properties 的 mod_version（注解只接受编译期常量，无法引用属性值）
+@Mod(modid = NekoJS.MODID, name = "NekoJS", version = "1.1.0-preview2")
 public class NekoJSMod extends NekoJS {
     public static EventBus modEventBus;
     public static NekoRuntimeRoot RUNTIME_ROOT;

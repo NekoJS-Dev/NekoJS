@@ -114,5 +114,7 @@
   "nekojs.security.detail.reflection.title": "■ 反射与代码注入 (java.lang.reflect / MethodHandles)",
   "nekojs.security.detail.reflection.desc": "允许脚本通过反射强行越权访问和修改 Java 私有数据，可绕过所有安全限制。",
   "nekojs.security.detail.asm.title": "■ 游戏底层内核修改 (org.objectweb.asm)",
-  "nekojs.security.detail.asm.desc": "允许脚本直接操作并修改 Java 字节码，操作不当会导致严重的运行崩溃。"
+  "nekojs.security.detail.asm.desc": "允许脚本直接操作并修改 Java 字节码，操作不当会导致严重的运行崩溃。",
+  "nekojs.security.detail.fsWriteOutsideNekojs.title": "■ 超出 NekoJS 根目录的文件写入 (fs)",
+  "nekojs.security.detail.fsWriteOutsideNekojs.desc": "允许脚本在 NekoJS 数据目录之外写入文件，写入范围扩展到整个游戏目录。"
 }

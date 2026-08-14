@@ -114,5 +114,7 @@
   "nekojs.security.detail.reflection.title": "■ Reflection & Code Injection (java.lang.reflect / MethodHandles)",
   "nekojs.security.detail.reflection.desc": "Allows scripts to forcefully access and modify private Java data via reflection, bypassing all security restrictions.",
   "nekojs.security.detail.asm.title": "■ Game Core Kernel Modification (org.objectweb.asm)",
-  "nekojs.security.detail.asm.desc": "Allows scripts to directly manipulate and modify Java bytecode. Improper operation will cause severe crashes."
+  "nekojs.security.detail.asm.desc": "Allows scripts to directly manipulate and modify Java bytecode. Improper operation will cause severe crashes.",
+  "nekojs.security.detail.fsWriteOutsideNekojs.title": "■ Filesystem Write Outside NekoJS Root (fs)",
+  "nekojs.security.detail.fsWriteOutsideNekojs.desc": "Allows scripts to write files outside the NekoJS data directory, extending write access to the whole game directory."
 }

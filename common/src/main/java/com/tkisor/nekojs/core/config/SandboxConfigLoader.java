@@ -46,8 +46,8 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 30,
                     " Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.");
 
-            setupConfigEntry(config, "scriptStatementLimit", 0L,
-                    " Graal ResourceLimits statement cap for each script environment Context (0 = disabled). A cumulative cap: when exceeded, Graal closes the Context and aborts the current evaluation, which is the only reliable way to stop a while(true){} infinite loop inside a synchronous entry. The server thread is unblocked and the script is marked failed; subsequent evaluations run in an automatically rebuilt Context, but listeners/timers registered by the dead Context are lost - run /nekojs reload to fully restore the environment. Choose a generous value (e.g. 50000000) if you enable it - long-running servers execute statements continuously.");
+            setupConfigEntry(config, "scriptStatementLimit", SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT,
+                    " Graal ResourceLimits statement cap for each script environment Context (0 = disabled). A cumulative cap: when exceeded, Graal closes the Context and aborts the current evaluation, which is the only reliable way to stop a while(true){} infinite loop inside a synchronous entry. The server thread is unblocked and the script is marked failed; subsequent evaluations run in an automatically rebuilt Context, but listeners/timers registered by the dead Context are lost - run /nekojs reload to fully restore the environment. Defaults to 50000000, which is generous enough for long-running servers; set 0 explicitly to disable the cap.");
 
             return new SandboxConfig(
                     config.get("allowThreads"),
@@ -58,13 +58,24 @@ public final class SandboxConfigLoader {
                     config.get("conciseScriptErrorLogs"),
                     config.get("jsxAutomaticRuntime"),
                     config.get("scriptMemberValidation"),
-                    config.get("scriptEvaluationTimeoutSeconds"),
-                    config.get("scriptStatementLimit")
+                    (int) numberValue(config, "scriptEvaluationTimeoutSeconds", 30),
+                    numberValue(config, "scriptStatementLimit", SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT)
             );
         } catch (Throwable e) {
-            NekoJS.LOGGER.warn("Failed to load engine.toml, using default sandbox config", e);
+            NekoJS.LOGGER.warn("Failed to load config/nekojs-engine.toml, using default sandbox config", e);
             return SandboxConfig.defaultConfig();
         }
+    }
+
+    /**
+     * 按数值类型安全读取整型配置项。NightConfig 的 TOML 解析器会把整数存成
+     * Integer/Long 等不同装箱类型，直接以 {@code long} 目标类型调用 {@code get} 会触发
+     * 拆箱 ClassCastException，导致整个文件被误判为损坏而回退默认配置（用户显式写的
+     * {@code scriptStatementLimit = 0} 曾因此被吞掉）。统一走 {@link Number#longValue()}。
+     */
+    private static long numberValue(CommentedFileConfig config, String path, long fallback) {
+        Object value = config.get(path);
+        return value instanceof Number number ? number.longValue() : fallback;
     }
 
     private static void setupConfigEntry(CommentedFileConfig config, String path, Object defaultValue, String comment) {

@@ -103,6 +103,12 @@ public class NekoSecurityWarningHandler {
                     .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE));
         }
 
+        if (ClassFilter.INSTANCE.config().allowFsWriteOutsideNekojs()) {
+            text.append(Component.translatable("nekojs.security.detail.fsWriteOutsideNekojs.title").withStyle(ChatFormatting.RED))
+                    .append(Component.literal("\n"))
+                    .append(Component.translatable("nekojs.security.detail.fsWriteOutsideNekojs.desc").withStyle(ChatFormatting.WHITE));
+        }
+
         return text;
     }
 }

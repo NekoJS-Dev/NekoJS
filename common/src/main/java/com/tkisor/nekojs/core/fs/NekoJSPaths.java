@@ -43,6 +43,7 @@ public final class NekoJSPaths {
     private final Path config;
     private final Path readme;
     private final Path engineConfig;
+    private final Path legacyEngineConfig;
     private final Path probeConfig;
     private final Path assets;
     private final Path data;
@@ -59,7 +60,11 @@ public final class NekoJSPaths {
         this.nodeModules = root.resolve("node_modules");
         this.config = root.resolve("config");
         this.readme = root.resolve("README.txt");
-        this.engineConfig = config.resolve("engine.toml");
+        // 引擎配置放在 <gamedir>/config/nekojs-engine.toml：config/ 目录对脚本只读，
+        // 不在默认脚本写白名单内，避免脚本改写沙盒开关实现跨重启的权限驻留。
+        // 旧位置 <gamedir>/nekojs/config/engine.toml 仅作只读回退（见 legacyEngineConfig）。
+        this.engineConfig = this.gameDir.resolve("config").resolve("nekojs-engine.toml");
+        this.legacyEngineConfig = config.resolve("engine.toml");
         this.probeConfig = config.resolve("probe.toml");
         this.assets = root.resolve("assets");
         this.data = root.resolve("data");
@@ -78,6 +83,8 @@ public final class NekoJSPaths {
     public Path config() { return config; }
     public Path readme() { return readme; }
     public Path engineConfig() { return engineConfig; }
+    /** 旧版引擎配置位置 {@code <gamedir>/nekojs/config/engine.toml}（脚本可写，仅作只读迁移回退）。 */
+    public Path legacyEngineConfig() { return legacyEngineConfig; }
     public Path probeConfig() { return probeConfig; }
     public Path assets() { return assets; }
     public Path data() { return data; }

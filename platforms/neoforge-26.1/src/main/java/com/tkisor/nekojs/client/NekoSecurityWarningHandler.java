@@ -98,7 +98,14 @@ public class NekoSecurityWarningHandler {
         if (ClassFilter.INSTANCE.config().allowAsm()) {
             text.append(Component.translatable("nekojs.security.detail.asm.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
-                    .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE));
+                    .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE))
+                    .append(Component.literal("\n\n"));
+        }
+
+        if (ClassFilter.INSTANCE.config().allowFsWriteOutsideNekojs()) {
+            text.append(Component.translatable("nekojs.security.detail.fsWriteOutsideNekojs.title").withStyle(ChatFormatting.RED))
+                    .append(Component.literal("\n"))
+                    .append(Component.translatable("nekojs.security.detail.fsWriteOutsideNekojs.desc").withStyle(ChatFormatting.WHITE));
         }
 
         return text;
