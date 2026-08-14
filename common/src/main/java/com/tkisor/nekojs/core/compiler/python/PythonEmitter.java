@@ -89,9 +89,31 @@ public final class PythonEmitter {
     private static final String OR_HELPER =
             "const __nekoOr = function (__a, __b) { return __nekoTruthy(__a) ? __a : __b(); };";
 
-    /** Python 取模：结果符号跟随除数（JS {@code %} 跟随被除数，{@code -7 % 2} 得 -1）。 */
+    /**
+     * Python 取模：结果符号跟随除数（JS {@code %} 跟随被除数，{@code -7 % 2} 得 -1）。
+     * 除数为 0 时按 Python 语义抛 {@code ZeroDivisionError}（JS 会静默得到 NaN）。
+     * 注意 {@code __b === 0} 对 {@code -0} 同样成立（JS 中 -0 === 0），与 Python 的
+     * {@code 1 / -0.0} 也抛 ZeroDivisionError 一致。
+     */
     private static final String MOD_HELPER =
-            "const __nekoMod = function (__a, __b) { return ((__a % __b) + __b) % __b; };";
+            "const __nekoMod = function (__a, __b) {"
+            + " if (__b === 0) throw new ZeroDivisionError(\"integer division or modulo by zero\");"
+            + " return ((__a % __b) + __b) % __b; };";
+
+    /**
+     * Python 真除法：除数为 0 抛 {@code ZeroDivisionError}（JS 静默得到 ±Infinity）。
+     * 消息与 CPython 的 {@code "division by zero"} 一致。
+     */
+    private static final String DIV_HELPER =
+            "const __nekoDiv = function (__a, __b) {"
+            + " if (__b === 0) throw new ZeroDivisionError(\"division by zero\");"
+            + " return __a / __b; };";
+
+    /** Python 地板除：先做同样的零除检查，再 {@code Math.floor}。 */
+    private static final String FLOORDIV_HELPER =
+            "const __nekoFloorDiv = function (__a, __b) {"
+            + " if (__b === 0) throw new ZeroDivisionError(\"integer division or modulo by zero\");"
+            + " return Math.floor(__a / __b); };";
 
     /**
      * 序列重复：{@code [0] * 4} / {@code 'ab' * 3}（两个方向都合法）重复序列，负数/零次为空，
@@ -192,6 +214,8 @@ public final class PythonEmitter {
     private final IdentityHashMap<PythonNode, Integer> srcLines;
     private boolean rewriteSelf = false;   // true inside a class method body (self → this)
     private final java.util.Set<String> classNames = new java.util.HashSet<>();   // for `new` on calls
+    /** 由异常/用户类名赋值得到的别名（{@code VE = ValueError}），raise VE / raise VE(...) 同样需要 {@code new}。 */
+    private final java.util.Set<String> excClassAliases = new java.util.HashSet<>();
     /** Top-level names defined by this module (def/class/assign), re-exported so .py files are importable. */
     private final java.util.Set<String> definedNames = new java.util.LinkedHashSet<>();
     /** Functions/methods/classes that declare {@code **kwargs} → accept a tagged trailing object at call sites. */
@@ -203,6 +227,7 @@ public final class PythonEmitter {
     /** 按需发射的运行时助手开关（一次 AST 预扫描 {@link #scanHelpers} 收集，见 {@link #emitRuntimeHelpers}）。 */
     private boolean needsTruthy = false;   // if/while/not/and/or/bool/any/all/推导式过滤/三元/assert/match guard
     private boolean needsMod = false;      // %、%=、divmod
+    private boolean needsDiv = false;      // /、//、/=、//=、divmod（除零抛 ZeroDivisionError）
     private boolean needsMul = false;      // *、*=
     private boolean needsIn = false;       // in / not in
     private boolean needsIter = false;     // for 语句 / 推导式 for 子句
@@ -267,11 +292,13 @@ public final class PythonEmitter {
         if (needsFmt) { for (String l : FMT_HELPER) line0(l); }
         if (needsTruthy) { line0(TRUTHY_HELPER); line0(AND_HELPER); line0(OR_HELPER); }
         if (needsMod) line0(MOD_HELPER);
+        if (needsDiv) { line0(DIV_HELPER); line0(FLOORDIV_HELPER); }
         if (needsMul) line0(MUL_HELPER);
         if (needsIn) line0(IN_HELPER);
         if (needsIter) line0(ITER_HELPER);
         if (needsLen) line0(LEN_HELPER);
-        if (needsExc) { for (String l : EXC_PRELUDE) line0(l); line0(EXCIS_HELPER); }
+        // 除法/取模助手会在运行时 throw new ZeroDivisionError —— prelude 类必须随之发射。
+        if (needsExc || needsMod || needsDiv) { for (String l : EXC_PRELUDE) line0(l); line0(EXCIS_HELPER); }
     }
 
     /** (generatedJsLine, originalPythonLine0Based) pairs, one per statement's first emitted line. */
@@ -423,8 +450,11 @@ public final class PythonEmitter {
                         throw err("python bare 'raise' is only valid inside an except clause");
                     }
                     line("throw " + errStack.peek() + ";");   // re-raise the current exception
-                } else if (r.exc() instanceof PythonNode.Name rn && BUILTIN_EXCEPTIONS.contains(rn.id())) {
-                    line("throw new " + rn.id() + "();");   // raise ValueError → throw new ValueError()
+                } else if (r.exc() instanceof PythonNode.Name rn && isThrowableClassName(rn.id())) {
+                    // raise Cls ≡ raise Cls()（Python 语义）：裸类名（内建异常 / 用户类 / 异常类
+                    // 别名）必须实例化后抛出——旧实现只对内建异常名 new，用户类抛出的是类对象
+                    // 本身，except Cls 的 instanceof 永远不匹配 → 未捕获崩溃。
+                    line("throw new " + rn.id() + "();");
                 } else {
                     // raise ValueError('x') → throw new ValueError("x")（内建异常类由 prelude 提供）
                     line("throw " + emitExpr(r.exc()) + ";");
@@ -476,10 +506,37 @@ public final class PythonEmitter {
     private void collectDefinitions(PythonNode stmt) {
         switch (stmt) {
             case PythonNode.FunctionDef f -> definedNames.add(f.name());
-            case PythonNode.ClassDef c -> definedNames.add(c.name());
-            case PythonNode.Assign a -> { for (PythonNode t : a.targets()) collectTargetNames(t); }
+            case PythonNode.ClassDef c -> {
+                definedNames.add(c.name());
+                // 预扫描阶段就登记类名（emitClass 也会加，Set 去重）：raise Cls / Cls(...) 需要
+                // new，且与其后是否先出现 raise/别名赋值无关（函数体内的 raise 可以先于类定义发射）。
+                classNames.add(c.name());
+            }
+            case PythonNode.Assign a -> {
+                for (PythonNode t : a.targets()) collectTargetNames(t);
+                collectExcAlias(a);
+            }
             default -> { }
         }
+    }
+
+    /**
+     * 记录异常类别名：{@code VE = ValueError}（值是内建异常名 / 用户类名）→ VE 之后的
+     * {@code raise VE} / {@code raise VE('x')} 与直接用类名同样需要 {@code new} 实例化，
+     * 否则 {@code throw VE("x")} 不带 new 调 class → 运行时 TypeError。仅覆盖模块顶层的
+     * 别名赋值（函数体内的别名赋值不追踪，见残留限制）。
+     */
+    private void collectExcAlias(PythonNode.Assign a) {
+        if (a.value() instanceof PythonNode.Name vn && isThrowableClassName(vn.id())) {
+            for (PythonNode t : a.targets()) {
+                if (t instanceof PythonNode.Name tn) excClassAliases.add(tn.id());
+            }
+        }
+    }
+
+    /** raise 的目标是否是一个类名（内建异常 / 用户类 / 异常类别的别名）→ 需要 {@code new} 实例化。 */
+    private boolean isThrowableClassName(String id) {
+        return BUILTIN_EXCEPTIONS.contains(id) || classNames.contains(id) || excClassAliases.contains(id);
     }
 
     private void collectTargetNames(PythonNode target) {
@@ -497,7 +554,9 @@ public final class PythonEmitter {
      * need the modulo/repetition helpers; {@code in} needs membership; for-statements and comprehension
      * {@code for} clauses need iterable normalization; {@code len()} needs the len helper; any builtin
      * exception name reference (or an {@code assert}, which raises AssertionError) needs the exception
-     * prelude.
+     * prelude; {@code filter} needs Python truthiness for its predicate; {@code /}//{@code /=}//
+     * {@code //=}/{@code divmod} need the zero-checked division helpers (which also pull in the
+     * exception prelude for ZeroDivisionError).
      */
     private void scanHelpers(Object o) {
         if (o == null) return;
@@ -508,9 +567,9 @@ public final class PythonEmitter {
         } else if (o instanceof PythonNode.Call call && call.func() instanceof PythonNode.Name fn) {
             String id = fn.id();
             if ("format".equals(id) && call.args().size() == 2) needsFmt = true;
-            if ("bool".equals(id) || "any".equals(id) || "all".equals(id)) needsTruthy = true;
+            if ("bool".equals(id) || "any".equals(id) || "all".equals(id) || "filter".equals(id)) needsTruthy = true;
             if ("len".equals(id)) needsLen = true;
-            if ("divmod".equals(id)) needsMod = true;
+            if ("divmod".equals(id)) { needsMod = true; needsDiv = true; }
         } else if (o instanceof PythonNode.Assert) {
             needsTruthy = true;   // assert 以 Python 真值判定条件
             needsExc = true;      // assert 失败 → new AssertionError(...)
@@ -524,11 +583,13 @@ public final class PythonEmitter {
                 case "and", "or" -> needsTruthy = true;
                 case "%" -> needsMod = true;
                 case "*" -> needsMul = true;
+                case "/", "//" -> needsDiv = true;   // 除零需抛 ZeroDivisionError → __nekoDiv/__nekoFloorDiv
                 default -> { }
             }
         } else if (o instanceof PythonNode.AugAssign ag) {
             if ("%=".equals(ag.op())) needsMod = true;
             else if ("*=".equals(ag.op())) needsMul = true;
+            else if ("/=".equals(ag.op()) || "//=".equals(ag.op())) needsDiv = true;
         } else if (o instanceof PythonNode.Compare cmp && ("in".equals(cmp.op()) || "not in".equals(cmp.op()))) {
             needsIn = true;
         } else if (o instanceof PythonNode.For || o instanceof PythonNode.ForComp) {
@@ -726,7 +787,11 @@ public final class PythonEmitter {
         String value = emitExpr(a.value());
         String op = a.op();
         if (op.equals("//=")) {
-            line(target + " = Math.floor(" + target + " / " + value + ");");
+            // 地板除赋值：除零抛 ZeroDivisionError → 经助手
+            line(target + " = __nekoFloorDiv(" + target + ", " + value + ");");
+        } else if (op.equals("/=")) {
+            // 真除法赋值：同样经助手做零除检查（值语义与 a / b 相同）
+            line(target + " = __nekoDiv(" + target + ", " + value + ");");
         } else if (op.equals("%=")) {
             // Python 取模符号跟随除数 → 经助手（JS %= 跟随被除数）
             line(target + " = __nekoMod(" + target + ", " + value + ");");
@@ -736,7 +801,7 @@ public final class PythonEmitter {
         } else if (op.equals("@=")) {
             throw err("python matmul '@=' is not supported");
         } else {
-            // += -= /= **= &= |= ^= <<= >>=  — all valid JS augmented operators
+            // += -= **= &= |= ^= <<= >>=  — all valid JS augmented operators
             line(target + " " + op + " " + value + ";");
         }
     }
@@ -986,10 +1051,18 @@ public final class PythonEmitter {
                 if (args.size() > 1 || userInstance) yield null;
                 yield args.isEmpty() ? obj + ".pop()" : obj + ".splice(" + e0 + ", 1)[0]";
             }
-            case "sort" -> args.isEmpty()
-                    // 与 sorted() 相同的比较器：数值按大小（JS 默认 sort 是字典序，[10,2,1] → [1,10,2]）
-                    ? obj + ".sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))"
-                    : null;
+            case "sort" -> {
+                // 与 sorted() 相同的比较器：数值按大小（JS 默认 sort 是字典序，[10,2,1] → [1,10,2]）。
+                // 劫持防护与 dict 方法族一致：静态可判定的用户类接收者（Cls(...).sort / 方法体内
+                // self.sort）直接放行原生调用；简单接收者（Name/属性链/索引）再运行时探测——
+                // 只有真数组（且没有自有 sort）才注入比较器，用户类实例保有自己的 sort 方法
+                // （旧实现无条件注入，把 comparator 当成第一个实参传给用户方法 → 静默错误值）。
+                if (!args.isEmpty() || hijackReceiverIsUserInstance(attr)) yield null;
+                String cmp = obj + ".sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
+                if (!hijackReceiverIsPlain(attr)) yield cmp;   // 复杂接收者只求值一次，按数组处理
+                yield "((Array.isArray(" + obj + ") && !Object.prototype.hasOwnProperty.call(" + obj + ", \"sort\")) ? "
+                        + cmp + " : " + obj + ".sort())";
+            }
             // dict (obj is a plain JS object) — worst offenders 走劫持防护
             case "keys" -> {
                 if (!args.isEmpty() || userInstance) yield null;
@@ -1195,6 +1268,17 @@ public final class PythonEmitter {
     }
 
     private void writeIf(PythonNode.If i, boolean leadIndent) {
+        if (!leadIndent) {
+            // 内联嵌套 if（elif 糖改写，或 else: 下唯一一条 if）不经 emitStmt：这里按它自己登记
+            // 的源码行补 curLine 与 source map 映射，使 elif 条件里的发射期报错报告 elif 所在行
+            // （而非外层 if 的行），且 `} else if` 生成行可映射回 Python 源码。外层语句结束时
+            // emitStmt 会恢复 curLine，故无需在此保存/恢复。
+            Integer ln = srcLines.get(i);
+            if (ln != null) {
+                curLine = ln;
+                recordMapping(i);
+            }
+        }
         if (leadIndent) out.append(ind());
         // 条件经 Python 真值判定（空容器为假）；条件串里可能内嵌多行表达式（步进切片/生成器
         // 表达式），其内嵌换行同样要推进 jsLine（与 line() 的记账一致），否则 source map 漂移。
@@ -1368,8 +1452,9 @@ public final class PythonEmitter {
                 }
                 case "divmod" -> {
                     if (positional.size() == 2) {
+                        // 两个元素都经零除检查的助手：divmod(1, 0) 按 Python 抛 ZeroDivisionError
                         String p1 = emitExpr(positional.get(1));
-                        return "[Math.floor(" + e0 + " / " + p1 + "), __nekoMod(" + e0 + ", " + p1 + ")]";
+                        return "[__nekoFloorDiv(" + e0 + ", " + p1 + "), __nekoMod(" + e0 + ", " + p1 + ")]";
                     }
                 }
                 case "reversed" -> { if (positional.size() == 1) return "[...(" + e0 + ")].reverse()"; }
@@ -1378,8 +1463,17 @@ public final class PythonEmitter {
                         return "[...(" + emitExpr(positional.get(1)) + ")].map(" + emitExpr(positional.get(0)) + ")";
                 }
                 case "filter" -> {
-                    if (positional.size() == 2)
-                        return "[...(" + emitExpr(positional.get(1)) + ")].filter(" + emitExpr(positional.get(0)) + ")";
+                    // 谓词结果按 Python 真值判定（空容器为假；JS 对 [] 恒真）；filter(None, seq)
+                    // 是按元素本身真值的恒等过滤（旧实现 .filter(null) → 运行时 TypeError）。
+                    // 谓词以保留名 __nekoFx 作实参调用，避免箭头参数遮蔽谓词表达式里的同名变量。
+                    if (positional.size() == 2) {
+                        String seq = emitExpr(positional.get(1));
+                        if (positional.get(0) instanceof PythonNode.NoneLit) {
+                            return "[...(" + seq + ")].filter((__nekoFx) => __nekoTruthy(__nekoFx))";
+                        }
+                        String pred = emitExpr(positional.get(0));
+                        return "[...(" + seq + ")].filter((__nekoFx) => __nekoTruthy(" + pred + "(__nekoFx)))";
+                    }
                 }
                 case "zip" -> {
                     return "((function () { var __its = [" + emitArgs(positional)
@@ -1406,8 +1500,9 @@ public final class PythonEmitter {
                 default -> {}
             }
             // 内建异常类构造：ValueError('x') → new ValueError("x")（类由 EXC_PRELUDE 提供；
-            // 旧实现发射裸调用 → 运行时 ReferenceError，且被 except 以错误类型意外捕获）
-            if (!hasKw && BUILTIN_EXCEPTIONS.contains(fn.id())) {
+            // 旧实现发射裸调用 → 运行时 ReferenceError，且被 except 以错误类型意外捕获）。
+            // 异类别名（VE = ValueError）同样按类构造处理。
+            if (!hasKw && (BUILTIN_EXCEPTIONS.contains(fn.id()) || excClassAliases.contains(fn.id()))) {
                 return "new " + fn.id() + "(" + emitArgs(positional) + ")";
             }
             if (classNames.contains(fn.id())) {
@@ -1498,7 +1593,12 @@ public final class PythonEmitter {
     private String emitBinary(PythonNode.Binary b) {
         String op = b.op();
         if (op.equals("//")) {
-            return "(Math.floor(" + emitExpr(b.left()) + " / " + emitExpr(b.right()) + "))";
+            // 地板除：除零按 Python 抛 ZeroDivisionError（JS 静默 Infinity）→ 经助手
+            return "(__nekoFloorDiv(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
+        }
+        if (op.equals("/")) {
+            // 真除法：同样经助手做零除检查
+            return "(__nekoDiv(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("@")) {
             throw err("python matmul '@' is not supported");

@@ -1575,6 +1575,188 @@ class PythonToJsCompilerTest {
         assertTrue(js.contains("console.log("), "print() must map to console.log: " + js);
     }
 
+    // ---- defect-fix regression tests (bare class raise / filter truthiness / sort hijack /
+    //      zero division / elif source lines) ----
+
+    @Test
+    void raiseBareUserClassIsInstantiated() throws Exception {
+        // raise Cls ≡ raise Cls()：裸用户类名必须实例化后抛出（旧实现 throw MyError 抛出类对象
+        // 本身，except MyError 的 instanceof 永远不匹配 → 未捕获崩溃）。
+        String src = """
+                class MyError(Exception):
+                    pass
+                try:
+                    raise MyError
+                except MyError:
+                    'caught'
+                """;
+        String js = py(src);
+        assertTrue(js.contains("throw new MyError();"), "bare raise must instantiate the class: " + js);
+        assertEquals("caught", evalString(src));
+        // 函数体内先于类定义发射的 raise 也要实例化（类名在预扫描登记）
+        assertEquals("late", evalString("""
+                def boom():
+                    raise MyError
+                class MyError(Exception):
+                    pass
+                try:
+                    boom()
+                except MyError:
+                    'late'
+                """));
+    }
+
+    @Test
+    void raiseAliasedExceptionClassIsInstantiated() throws Exception {
+        // VE = ValueError; raise VE('boom') → throw new VE("boom")（旧实现无 new 调 class →
+        // 运行时 TypeError）；裸别名 raise VE 同样按 raise VE() 实例化。
+        String src = """
+                VE = ValueError
+                try:
+                    raise VE('boom')
+                except ValueError as e:
+                    e.message
+                """;
+        String js = py(src);
+        assertTrue(js.contains("throw new VE("), "aliased exception call must be a constructor: " + js);
+        assertEquals("boom", evalString(src));
+        String bare = """
+                VE = ValueError
+                try:
+                    raise VE
+                except ValueError:
+                    'bare'
+                """;
+        assertTrue(py(bare).contains("throw new VE();"), "bare aliased raise must instantiate: " + py(bare));
+        assertEquals("bare", evalString(bare));
+    }
+
+    @Test
+    void filterNoneFiltersByTruthiness() throws Exception {
+        // filter(None, seq) 按元素本身的 Python 真值过滤（旧实现 .filter(null) → 运行时
+        // TypeError：null 不是函数）。0 / [] 为假，'a' / 1 / [2] 为真。
+        String src = """
+                kept = list(filter(None, [0, [], 'a', 1, [2]]))
+                str(len(kept)) + kept[0] + str(kept[1]) + str(kept[2][0])
+                """;
+        String js = py(src);
+        assertTrue(js.contains("__nekoTruthy"), "filter must use Python truthiness: " + js);
+        assertEquals("3a12", evalString(src));
+    }
+
+    @Test
+    void filterPredicateUsesPythonTruthiness() throws Exception {
+        // 谓词返回值同样按 Python 真值判定：lambda x: x 返回 [] 为假、[1] 为真。
+        assertEquals(1, evalInt("len(list(filter(lambda x: x, [[], [1]])))"));
+        assertEquals(1, evalInt("list(filter(lambda x: x, [[], [1]]))[0][0]"));
+        // 普通谓词保持原语义（回归钉）
+        assertEquals(2, evalInt("len(list(filter(lambda x: x > 1, [1, 2, 3])))"));
+    }
+
+    @Test
+    void userClassSortMethodNotHijacked() throws Exception {
+        // 用户类自己的 sort 不能被注入比较器实参（旧实现把 comparator 当第一个实参传入 →
+        // b.sort() 返回的是比较器函数而非 None）。
+        String src = """
+                class Box:
+                    def sort(self, key=None):
+                        return key
+                b = Box()
+                b.sort() is None
+                """;
+        String js = py(src);
+        assertTrue(js.contains("Array.isArray(b)"), "bare-name receiver gets a runtime guard: " + js);
+        assertTrue(evalBool(src));
+        // 构造调用接收者（静态可判定）与带实参调用 → 原生直传
+        assertEquals(7, evalInt("class Box:\n    def sort(self, key=None):\n        return key\nBox().sort(7)"));
+        assertEquals(3, evalInt("class Box:\n    def sort(self, key=None):\n        return key\nb = Box()\nb.sort(3)"));
+    }
+
+    @Test
+    void bareListSortStillNumericAware() throws Exception {
+        // 回归钉：数组接收者仍注入数值比较器（JS 默认字典序会把 [10,2,1] 排成 [1,10,2]）。
+        assertEquals("1,2,10", evalString("str([10, 2, 1].sort())"));          // 字面量接收者
+        String src = """
+                xs = [10, 2, 1]
+                xs.sort()
+                str(xs)
+                """;
+        assertEquals("1,2,10", evalString(src));                              // 名字接收者（运行时探测）
+    }
+
+    @Test
+    void moduloByZeroRaisesZeroDivisionError() throws Exception {
+        // Python: 7 % 0 → ZeroDivisionError（JS 静默 NaN）；__nekoMod 现在显式抛出，
+        // 且 needsMod 必须连带发射异常 prelude（ZeroDivisionError 类）。
+        String src = """
+                try:
+                    x = 7 % 0
+                except ZeroDivisionError:
+                    'caught'
+                """;
+        String js = py(src);
+        assertTrue(js.contains("integer division or modulo by zero"), js);
+        assertTrue(js.contains("class ZeroDivisionError extends ArithmeticError"),
+                "needsMod must pull in the exception prelude: " + js);
+        assertEquals("caught", evalString(src));
+        assertEquals(1, evalInt("(-7) % 2"));   // 回归：非零取模语义不变
+    }
+
+    @Test
+    void divisionByZeroRaisesZeroDivisionError() throws Exception {
+        // 1/0、1//0、/=、//=、divmod(1, 0) 全部按 Python 抛 ZeroDivisionError（JS 静默 Infinity）。
+        assertEquals("div", evalString("try:\n    x = 1 / 0\nexcept ZeroDivisionError:\n    'div'"));
+        assertEquals("floordiv", evalString("try:\n    x = 1 // 0\nexcept ZeroDivisionError:\n    'floordiv'"));
+        assertEquals("augdiv", evalString("x = 1\ntry:\n    x /= 0\nexcept ZeroDivisionError:\n    'augdiv'"));
+        assertEquals("augfloor", evalString("x = 1\ntry:\n    x //= 0\nexcept ZeroDivisionError:\n    'augfloor'"));
+        assertEquals("divmod", evalString("try:\n    d = divmod(1, 0)\nexcept ZeroDivisionError:\n    'divmod'"));
+        String js = py("1 / 0");
+        assertTrue(js.contains("__nekoDiv"), "true division must route through __nekoDiv: " + js);
+        js = py("1 // 0");
+        assertTrue(js.contains("__nekoFloorDiv"), "floor division must route through __nekoFloorDiv: " + js);
+        // 非零除法语义不变（回归钉）
+        assertEquals(4, evalInt("8 / 2"));
+        assertEquals(3, evalInt("7 // 2"));
+    }
+
+    @Test
+    void elifConditionErrorReportsElifLine() {
+        // elif 头部（条件）里的发射期错误必须报 elif 所在行，而不是外层 if 的行
+        //（parser 现在为糖改写出的嵌套 If 登记 srcLines，emitter 的内联 writeIf 同步 curLine）。
+        String src = """
+                x = 1
+                if x == 2:
+                    y = 1
+                elif x @ 2:
+                    y = 2
+                """;
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> py(src));
+        assertTrue(ex.getMessage().contains("python source line 4"),
+                "elif condition error must report the elif line: " + ex.getMessage());
+        // elif 体内语句的行号本来就各自登记（parseSuite → parseStatements）——钉住该行为
+        ex = assertThrows(IllegalArgumentException.class, () -> py("x = 1\nif x:\n    pass\nelif x:\n    del x\n"));
+        assertTrue(ex.getMessage().contains("python source line 5"),
+                "elif body error must report the body line: " + ex.getMessage());
+    }
+
+    @Test
+    void elifHeaderGetsSourceMapMapping() throws Exception {
+        // 内联的 `} else if` 生成行现在有 source map 映射，指回 elif 头部的 Python 行。
+        var result = compiler.compileDetailed(Path.of("test.py"),
+                "x = 1\nif x:\n    y = 1\nelif x == 2:\n    y = 2\ny\n");
+        var obj = com.google.gson.JsonParser.parseString(result.sourceMap()).getAsJsonObject();
+        String[] jsLines = result.code().split("\n", -1);
+        int elseIfLine = -1;
+        for (int i = 0; i < jsLines.length; i++) {
+            if (jsLines[i].contains("} else if")) { elseIfLine = i; break; }
+        }
+        assertTrue(elseIfLine >= 0, "emitted JS must contain an inlined else-if: " + result.code());
+        var genToOrig = decodeMappings(obj.get("mappings").getAsString());
+        assertEquals(3, genToOrig.get(elseIfLine),
+                "the else-if JS line must map back to Python line 4 (elif header)");
+    }
+
+
     @Test
     void syntaxErrorThrowsWithFileContext() {
         assertThrows(IllegalArgumentException.class, () -> py("def f(:\n    pass"));

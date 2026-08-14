@@ -148,7 +148,12 @@ public final class PythonParser {
             // elif is sugar for else: if … — rewrite the token in place and recurse
             PythonToken elif = peek();
             tokens.set(pos, new PythonToken(PythonToken.Type.NAME, "if", elif.line(), elif.col()));
-            elseBody.add(parseIf());
+            PythonNode nested = parseIf();
+            // 糖改写出的嵌套 If 不会回到 parseStatements 登记——这里按 elif 头部所在的行补上，
+            // 否则 emitter 内联的 `} else if` 没有 source map 映射，且其中的发射期报错会沿用
+            // 外层 if 的行号（elif 体里的语句不受影响：parseSuite → parseStatements 各自登记）。
+            srcLines.put(nested, elif.line());
+            elseBody.add(nested);
         } else if (matchKw("else")) {
             expectOp(":");
             elseBody.addAll(parseSuite());
