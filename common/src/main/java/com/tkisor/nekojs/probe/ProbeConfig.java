@@ -12,10 +12,14 @@ import java.util.Set;
 /**
  * Probe 行为配置（{@code <game>/nekojs/config/probe.toml}）。
  *
- * <p>Phase 1：控制总开关、输出基目录、类扫描白/黑名单。默认值经过严格选取以**逐字复现**
+ * <p>Phase 1：控制总开关、输出基目录、类扫描白/黑名单。默认 include 经过严格选取以**逐字复现**
  * 旧 {@code ProbeOrchestrator.isRelevantClass} 的 5 个前缀行为（{@code java} /
- * {@code com.tkisor.nekojs} 由本类固定追加，MC/loader 包由 {@code IPlatform.defaultScanPackages()} 注入），
- * 因此重构后 TS 产物保持字节级不变。如需扫描 {@code com.mojang} 等，用 {@code extraIncludePackages} 追加。
+ * {@code com.tkisor.nekojs} 由本类固定追加，MC/loader 包由 {@code IPlatform.defaultScanPackages()} 注入）。
+ * 如需扫描 {@code com.mojang} 等，用 {@code extraIncludePackages} 追加。默认 exclude 镜像
+ * {@code ClassFilter} 类查找黑名单中的整包前缀（{@code com.tkisor.nekojs.core}、
+ * {@code java.awt}/{@code javax.swing}/{@code javax.imageio}、{@code javax.naming}/{@code java.rmi}、
+ * {@code java.sql}/{@code javax.sql}、{@code org.graalvm}/{@code com.oracle.truffle}）——
+ * 这些前缀下的类脚本永远无法 {@code Java.type} 加载，为它们生成声明只会指向不可用类型。
  *
  * <p>扫描模式 {@link ScanConfig#mode()}：{@code SMART}（默认，白名单 + {@code forceScanMods} 补充）、
  * {@code FULL}（跳过 include 白名单、仅受 exclude 与 maxDepth 约束）、{@code NONE}（整体跳过扫描，probe 返回失败结果）。
@@ -47,8 +51,22 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
             int maxDepth,
             ScanMode mode          // SMART | FULL | NONE
     ) {
+        /**
+         * 默认排除前缀：镜像 {@code core/fs/ClassFilter} {@code GENERAL_BLACKLIST} 中的整包条目
+         * （脚本无法 {@code Java.type} 加载这些前缀下的类，生成声明只会误导）。仅作用于默认值
+         * （{@link #defaultScan()} / {@code ProbeConfig.defaultConfig()}）；显式构造的 ScanConfig
+         * （含 golden 测试配置）不受影响，probe.toml 的 {@code scan.excludePackages} 仍为覆盖语义。
+         */
+        private static final List<String> DEFAULT_EXCLUDE_PACKAGES = List.of(
+                "com.tkisor.nekojs.core",
+                // 客户端桌面 API（Robot 按键/截屏/剪贴板）与 JNDI/RMI 远程加载通道、JDBC
+                "java.awt", "javax.swing", "javax.imageio", "javax.naming", "java.rmi",
+                "java.sql", "javax.sql",
+                // Graal/Truffle 引擎内部
+                "org.graalvm", "com.oracle.truffle");
+
         public static ScanConfig defaultScan() {
-            return new ScanConfig(List.of(), List.of(), List.of(), List.of("minecraft"), 5, ScanMode.SMART);
+            return new ScanConfig(List.of(), List.of(), DEFAULT_EXCLUDE_PACKAGES, List.of("minecraft"), 5, ScanMode.SMART);
         }
 
         public ScanConfig {

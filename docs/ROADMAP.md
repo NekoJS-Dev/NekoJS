@@ -248,7 +248,7 @@ NekoJS 本体只需保证 `NekoScriptCatalog`、manual declarations、snippets�
 
 - [x] 增加 26.1 runnable 探测脚本 `server_scripts/src/test_node_api_probe.js`，先记录当前 `require('fs')`、`path`、`util`、`timers`、`buffer`、`process`、`events` 可用性和 VFS 越界行为，不让缺失模块中断 reload。
 - [x] 加强 VFS 路径校验：统一 `resolveGamePath` / `resolveNekoWritePath`，对相对路径、绝对路径、符号链接、创建新文件时的父目录 real path 做一致校验。
-- [x] 明确默认访问策略：读路径限制在 `.minecraft` 内；写/删除默认限制在 `.minecraft/nekojs`；用户可在 `nekojs/config/engine.toml` 设置 `allowFsWriteOutsideNekojs = true` 允许写/删整个 `.minecraft`，但仍禁止越过 game root。
+- [x] 明确默认访问策略：读路径限制在 `.minecraft` 内；写/删除默认限制在 `.minecraft/nekojs`；用户可在 `config/nekojs-engine.toml`（游戏根 config 目录；旧 `nekojs/config/engine.toml` 仅作只读回退）设置 `allowFsWriteOutsideNekojs = true` 允许写/删整个 `.minecraft`，但仍禁止越过 game root。
 - [x] 收紧 `NekoJSFileSystem` 的危险入口：默认禁用 `createSymbolicLink`，避免脚本通过 symlink 创建外部访问通道。
 - [x] 在 CommonJS `require` 外层安装 core module shim：保留现有相对路径/`node_modules` 解析，只拦截 `fs`、`node:fs` 等内置模块名。
 - [x] 增加 issue #23 Java module import 解析：`require('java:java/lang')` / `import { $Integer } from 'java:java/lang'` 通过懒加载 namespace proxy 按 `$Class` 解析 Java 类型；`java:java/lang/Integer` class-level module 会直接返回 Java class 并暴露 `$Integer`/default。`JavaModuleImportPolicy` 允许类型生成器在 package module 与 class module 之间切换。
@@ -291,7 +291,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [x] 将脚本执行入口切到统一 NekoJS loader：`NekoJSScriptManager` 不再按旧实验 flags 或 Graal CommonJS 三路径分流，统一由 `NekoScriptModuleLoaderHost` 进入自有 resolver/runtime。
 - [x] 移除旧 native GraalJS ESM 实验分流和 `.js -> .mjs` alias 方向；后续稳定路线不是路径伪装或 regex import rewrite，而是 NekoJS 自有 AST/IR-backed native ESM runtime。
 - [x] 移除 per-module `require-patch` prepend：Node builtins、`node:` alias、`java:` Java 模块和相对模块解析由自有 loader/runtime 处理，避免污染用户模块行号。
-- [x] 增加可配置脚本错误日志格式：`engine.toml` 默认 `conciseScriptErrorLogs = true`，script/test/event 错误优先输出原因、用户脚本路径、行列号和代码片段；设为 `false` 时输出完整 verbose diagnostics/stack，便于调试分析。
+- [x] 增加可配置脚本错误日志格式：`config/nekojs-engine.toml` 默认 `conciseScriptErrorLogs = true`，script/test/event 错误优先输出原因、用户脚本路径、行列号和代码片段；设为 `false` 时输出完整 verbose diagnostics/stack，便于调试分析。
 - [x] 重做 `SourceMapRegistry`：删除 regex 解析方案，改为 Gson 解析的 v3 sourcemap 模型，支持 `sources`、`sourcesContent`、`names`、`sourceRoot`、prepended line offset 和最终执行路径到原始源码位置映射；错误日志、mapped stack、`node:test` stack line 和 prepared module cache invalidation 已接入 mapped path/source content。
 - [x] 建立当前 TS/TSX/JSX sourcemap chain：`TS` erasure 生成 identity map，`JSX/TSX` classic lowering 产出到原始源码的 v3 map，`.tsx` 在 whitespace-preserving TS erasure 后保留 JSX->TSX map，最终由 prepared module cache 注册执行代码到原始源码的映射。
 - [x] 完全移除 Babel 路线：已删除 Babel transformer Java wrapper、generated bundle、transformer build tools 和仅服务于 Babel transformer 的 npm package 文件；运行时不保留 Babel fallback。

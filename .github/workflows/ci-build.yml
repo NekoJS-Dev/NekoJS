@@ -100,7 +100,8 @@ jobs:
 
       - name: Run common checks
         # 用 :common:check 而非 :common:test：check 才会挂上 checkCommonIsolation 隔离门禁
-        run: ./gradlew :common-api:check :common:check --console=plain
+        # :common-api-processor:test：processor 自身的单测不在 :check 里，需显式调用
+        run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
 
       - name: Run platform NBT smoke tests
         # :common:test 已覆盖 common 的 nbt-smoke 标签用例，这里只补平台侧（platforms/* 的测试否则永不运行）
@@ -185,8 +186,9 @@ jobs:
           retention-days: ${{ needs.analyze.outputs.is_release == 'true' && 90 || 14 }}
 
       - name: Upload test reports on failure
-        # 放在 job 末尾 + if: failure()：任何一步失败（common 检查 / 平台 NBT 冒烟 / 平台测试 / 打包）都能带上报表
-        if: failure()
+        # 放在 job 末尾 + if: ${{ !cancelled() && failure() }}：任何一步失败（common 检查 / 平台 NBT 冒烟 /
+        # 平台测试 / 打包）都能带上报表；!cancelled() 保证并发取消后仍尽力补传已有报表
+        if: ${{ !cancelled() && failure() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
@@ -223,8 +225,8 @@ jobs:
 
       - name: Run common checks
         # 主 job 的 Gradle 守护进程跑在 JDK 25 上；这里用 JDK 21 跑同一组检查（工具链同为 21），
-        # 捕捉对守护进程 JVM 版本的隐性依赖（toolchain 漂移）
-        run: ./gradlew :common-api:check :common:check --console=plain
+        # 捕捉对守护进程 JVM 版本的隐性依赖（toolchain 漂移）；任务列表与主 job 保持一致
+        run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
 
   release:
     name: Create GitHub release
