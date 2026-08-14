@@ -127,7 +127,7 @@ const element = (
 
 ### 自动 runtime（可选）
 
-在 `nekojs/config/engine.toml` 里设：
+在 `config/nekojs-engine.toml`（游戏根 config 目录）里设：
 
 ```toml
 jsxAutomaticRuntime = true

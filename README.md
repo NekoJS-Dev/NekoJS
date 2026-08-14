@@ -22,7 +22,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 * **配方热重载**：Cleanroom 1.12.2 上 `/nekojs reload server` 会解冻注册表 → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 mixin 自动刷新 HEI/JEI 配方面板。NeoForge 平台（26.x / 1.21.1）同样支持热重载：reload 会重新执行配方脚本并整体替换 `RecipeManager.recipes`（mixin `RecipeManagerMixin#nekojs$applyScripts`，从 prepare 阶段永久缓存的基础配方 JSON 重建工作集）。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
 * **多平台支持**：同时支持 NeoForge 26.1 / 26.2 / 1.21.1 与 Cleanroom 1.12.2（Forge），共享 common 基础设施。
-* **脚本方法校验**：加载时静态扫描全局绑定和事件回调的成员访问，拼写错误即时提示（如 `Utils.randmInt` → "Did you mean 'randomInt'?"）。可通过 `engine.toml` 中 `scriptMemberValidation` 选项关闭，关闭后零性能开销。
+* **脚本方法校验**：加载时静态扫描全局绑定和事件回调的成员访问，拼写错误即时提示（如 `Utils.randmInt` → "Did you mean 'randomInt'?"）。可通过 `config/nekojs-engine.toml` 中 `scriptMemberValidation` 选项关闭，关闭后零性能开销。
 * **可替换的 probe 实现**：内置 probe 由 `ProbeCoordinator` 统一收集类型并派发给可插拔的 `ProbeBackend` 后端；第三方插件可通过 `ProbeBackendRegistry.register(backend, source)` 注册自定义后端（注册表在 bootstrap 时锁定，冲突会 fail-fast 报错）。
 
 ---
@@ -45,7 +45,7 @@ nekojs/
 ├── node_modules/      # 外部库目录：支持原生 Node 模块解析，存放纯 JS 依赖
 ├── assets/            # 资源目录
 ├── data/              # 数据包目录
-└── config/            # 引擎配置文件：engine.toml（安全沙盒等）与 probe.toml（类型生成）
+└── config/            # probe.toml（类型生成）。引擎配置在游戏根目录 config/nekojs-engine.toml（旧 nekojs/config/engine.toml 仅作只读回退）
 ```
 
 当前自动加载脚本目录为 `startup_scripts/`、`server_scripts/` 和 `client_scripts/`；`test_scripts/` 是通过 `/nekojs test` 显式运行的测试环境。脚本文件支持 `.js`、`.mjs`、`.cjs`、内置 erasable `.ts`、轻量 `.jsx/.tsx` classic runtime lowering，以及 `.py`（Python 子集，同一套脚本目录自动加载）；更复杂的 TS/TSX 语法会逐步收敛到 NekoJS 本体语言前端。脚本文件可用首行注释声明属性：`// priority: <n>` 与 `// after: <path>`（`after:` 已强制生效：同 priority 内按拓扑顺序加载，未解析的引用会告警，成环时回退到原顺序）。
@@ -53,6 +53,8 @@ nekojs/
 ## 源码结构
 
 ```text
+common-api/                      # 数据契约 + conversion SPI 孵化层（无 MC/Forge/Graal 依赖；插件入口 API 目前仍在 common）
+common-api-processor/            # 编译期注解处理器：common-api 契约的 spec 覆盖检查
 common/                          # 跨平台通用代码
 └── src/main/java/com/tkisor/nekojs/
     ├── core/                    # 核心运行时：Graal Context/Engine、ClassFilter、VFS
@@ -67,6 +69,10 @@ common/                          # 跨平台通用代码
 
 platforms/
 ├── cleanroom-1.12.2/            # Cleanroom 1.12.2（Forge）
+│   └── src/main/java/...
+├── neoforge-shared/             # 3 个 NeoForge 平台共享源码集（1.21.1 + 26.1 + 26.2；非 Gradle 模块）
+│   └── src/main/java/...
+├── neoforge-26-shared/          # 26.x 共享源码集（主源码 26.1 + 26.2；src/test 由 3 个 NeoForge 平台复用；非 Gradle 模块）
 │   └── src/main/java/...
 ├── neoforge-26.1/               # NeoForge 26.1
 │   └── src/main/java/...
@@ -164,11 +170,14 @@ NekoJS 的脚本运行在受限 GraalJS 环境中，但它不是“不可信代�
 当前安全边界包括：
 
 * 文件系统访问会被限制在游戏目录内，并检测已存在路径的符号链接逃逸。
-* Java 类访问经过 `ClassFilter` 过滤，默认禁止线程、反射、ASM、进程、网络、底层 IO 等高危入口。
-* `nekojs/config/engine.toml` 中的 `allowThreads`、`allowReflection`、`allowAsm` 是高危能力开关，默认关闭。
+* Java 类访问经过 `ClassFilter` 按名黑名单过滤（拦截 `Java.type` / `java:` 模块的类查找），默认禁止线程、反射、ASM、进程、网络、底层 IO，以及 AWT/Swing（`java.awt` / `javax.swing` / `javax.imageio`）、RMI/JNDI（`java.rmi` / `javax.naming`）、JDBC（`java.sql` / `javax.sql`）、`java.lang.Module`、Graal/Truffle 内部（`org.graalvm` / `com.oracle.truffle`）和 NekoJS 内部实现（`com.tkisor.nekojs.core`）等高危入口。
+* `config/nekojs-engine.toml`（游戏根 config 目录；旧位置 `nekojs/config/engine.toml` 仅作只读回退，存在旧文件时读取并打印迁移警告）中的 `allowThreads`、`allowReflection`、`allowAsm` 是高危能力开关，默认关闭。
 * `scriptMemberValidation`（默认开启）在脚本加载时静态扫描全局绑定和事件回调的成员访问，拼写错误会即时提示。关闭可跳过 AST 解析开销。推荐开发时开启，整合包分发时可关闭。
 * `scriptEvaluationTimeoutSeconds`（默认 30；0 或负数表示不限制）限制脚本入口求值时长：顶层 await / 模块加载永不完成时按超时报错终止，防止挂死服务器线程。
+* `scriptStatementLimit`（默认 50,000,000 的宽松上限；显式配置 0 仍可禁用）限制单个脚本 Context 可执行的语句总数，超限时 Graal 关闭该 Context 防止死循环耗尽 CPU。
 * 游戏内工作区同步只应交给可信管理员使用；同步功能会限制在脚本目录和脚本扩展名范围内。
+
+> 沙箱边界须知：按名黑名单只拦截 `Java.type` 一类的**类查找**；Java 方法返回值的对象图由 Graal `HostAccess` 控制（当前为 `HostAccess.ALL`），黑名单类的实例仍可能经由方法返回值进入脚本。因此脚本应视为**半可信代码**，不应运行不受信任的第三方脚本。
 
 ---
 
@@ -176,7 +185,7 @@ NekoJS 的脚本运行在受限 GraalJS 环境中，但它不是“不可信代�
 
 ### 语言前端
 
-NekoJS 核心主打轻量与稳定，内置 `.ts` 的 TypeScript 支持：类型标注、`type` / `interface`、`import type` / `export type`、泛型（含泛型箭头 `<T>(x: T) => T`）、`as` / `satisfies`、内联 `import { x, type T }`、参数属性、`enum` / `namespace`、类成员修饰符等会在 Java 前端中擦除或降级，之后继续走 NekoJS 自有 ESM/CJS pipeline。NekoJS 也内置 `.jsx/.tsx` lowering：默认 classic runtime（`globalThis.__nekoJsxFactory(...)` / `globalThis.__nekoJsxFragment(...)`），支持 HTML 实体解码、命名空间标签（`<svg:rect/>`）、泛型组件（`<Foo<T>/>`）；在 `nekojs/config/engine.toml` 里设 `jsxAutomaticRuntime = true` 可切换到标准 automatic runtime：从 `nekojs/jsx-runtime` 导入 `jsx`、`jsxs` 和 `Fragment`，子节点放在 `props.children`。在 `nekojs/` 工作区内，请将 runtime 模块放在裸模块路径 `node_modules/nekojs/jsx-runtime.js`。
+NekoJS 核心主打轻量与稳定，内置 `.ts` 的 TypeScript 支持：类型标注、`type` / `interface`、`import type` / `export type`、泛型（含泛型箭头 `<T>(x: T) => T`）、`as` / `satisfies`、内联 `import { x, type T }`、参数属性、`enum` / `namespace`、类成员修饰符等会在 Java 前端中擦除或降级，之后继续走 NekoJS 自有 ESM/CJS pipeline。NekoJS 也内置 `.jsx/.tsx` lowering：默认 classic runtime（`globalThis.__nekoJsxFactory(...)` / `globalThis.__nekoJsxFragment(...)`），支持 HTML 实体解码、命名空间标签（`<svg:rect/>`）、泛型组件（`<Foo<T>/>`）；在 `config/nekojs-engine.toml` 里设 `jsxAutomaticRuntime = true` 可切换到标准 automatic runtime：从 `nekojs/jsx-runtime` 导入 `jsx`、`jsxs` 和 `Fragment`，子节点放在 `props.children`。在 `nekojs/` 工作区内，请将 runtime 模块放在裸模块路径 `node_modules/nekojs/jsx-runtime.js`。
 
 后续方向是继续增强 NekoJS 本体语言前端，而不是依赖外部 NekoSWC 模组来承担高级 TS/TSX/JSX 转换。脚本语言插件 registry 仍保留给第三方语言扩展使用，但 NekoJS 自身的 TypeScript、JSX、sourcemap chain 和 diagnostics 会优先在本体实现。
 
