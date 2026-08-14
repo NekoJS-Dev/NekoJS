@@ -98,12 +98,40 @@ public abstract class BaseJsTypeAdapter<T> implements JsTypeAdapter<T> {
         return acceptOther(value);
     }
 
-    /** 按值类型分派：null→defaultValue，字符串→fromString，host object→fromHostObject，其余→fromOther。 */
+    /**
+     * 按值类型分派：null→acceptNull 校验后 defaultValue，字符串→fromString，
+     * host object→fromHostObject，其余→fromOther。
+     *
+     * <p>与旧基类 {@code AbstractJSTypeAdapter#apply} 的契约对齐：
+     * 不接受 null 时抛 {@link ValueConversionException} 而非静默返回默认值；
+     * {@code fromHostObject} / {@code fromOther} 对已接受的输入返回 {@code null}
+     * 同样视为失败抛异常（返回 null 会把 null 泄漏给 Graal / 下游 NPE），而非合法结果。
+     */
     @Override
     public T convert(JsValueView value, ConversionContext context) {
-        if (value.isNull()) return defaultValue();
-        if (value.isString()) return fromString(value.asString());
-        if (value.isHostObject()) return fromHostObject(value.asHostObject(Object.class));
-        return fromOther(value);
+        if (value.isNull()) {
+            if (!acceptNull()) {
+                throw new ValueConversionException(targetType, "non-null value", value,
+                    "null input is not accepted by this adapter");
+            }
+            return defaultValue();
+        }
+        if (value.isString()) {
+            return fromString(value.asString());
+        }
+        if (value.isHostObject()) {
+            T result = fromHostObject(value.asHostObject(Object.class));
+            if (result == null) {
+                throw new ValueConversionException(targetType, "recognized host object", value,
+                    getClass().getSimpleName() + ".fromHostObject returned null for an accepted host input");
+            }
+            return result;
+        }
+        T result = fromOther(value);
+        if (result == null) {
+            throw new ValueConversionException(targetType, "supported shape", value,
+                getClass().getSimpleName() + ".fromOther returned null for an accepted input shape");
+        }
+        return result;
     }
 }

@@ -89,6 +89,18 @@ public class LoggerStream extends OutputStream {
         }
     }
 
+    /**
+     * 关闭时冲刷缓冲中最后一行未换行内容（含 64KB 强制分段残留），避免丢日志。
+     *
+     * <p>背景：Graal 在 Context 关闭时只 detach 用户提供的 out/err 流、不会 flush/close
+     * （engine 级 close 才会对其调用 {@code close()}），脚本末尾未以换行结束的输出
+     * 会随行缓冲一起丢失。这里把 close 语义定义为「冲刷后关闭」，幂等（缓冲空时无操作）。
+     */
+    @Override
+    public void close() {
+        flush();
+    }
+
     private static String decode(byte[] bytes) {
         try {
             return StandardCharsets.UTF_8.newDecoder()

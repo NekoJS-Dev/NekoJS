@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.event;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
+import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.event.CancellableEventBus;
 import com.tkisor.nekojs.api.event.EventBus;
 import com.tkisor.nekojs.api.event.EventListenerToken;
@@ -16,12 +17,12 @@ import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
@@ -66,6 +67,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     private final EventBus<EVENT> bus;
+    /**
+     * 按 ScriptType 分桶的 JS 侧监听器镜像。注册（脚本加载线程）与 {@link #hasListeners()}
+     * 迭代（probe 等）可能并发，必须用并发 Map；内层 List 用 CopyOnWriteArrayList
+     * （读多写少，见 {@link #execute}）。此前的非同步 EnumMap 存在并发写丢失 / 迭代
+     * 期间结构修改的问题。
+     */
     private final Map<ScriptType, List<ScriptEventListenerToken<EVENT>>> tokensByType;
     /**
      * Script type this bus was registered for. Used ONLY as an immutability guard
@@ -80,7 +87,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
-        this.tokensByType = new EnumMap<>(ScriptType.class);
+        this.tokensByType = new ConcurrentHashMap<>();
     }
 
     public boolean canCancel() {
@@ -281,6 +288,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
 
         return this.bus.listen(priority, event -> {
+            if (ScriptManager.isContextDead(context)) {
+                // Context 已被 Graal 关闭（语句上限等）：监听器闭包指向死环境，跳过分发，
+                // 避免每次事件都在死 Context 上抛错刷屏；所属 ScriptManager 会在下次取用时重建并清空监听器
+                return;
+            }
             try {
                 // No synchronized(context): the Graal Context is single-threaded (allowMultiThread
                 // is not set), so Graal itself enforces single-thread access. All listener invocations
@@ -295,6 +307,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 if (e instanceof Error) throw (Error) e;
+                // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
+                // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
+                ScriptManager.reportContextKilled(context, e);
                 recordListenerError(type, scriptId, "normal", null, event, e);
             }
         });
@@ -311,6 +326,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         var bus = (CancellableEventBus<EVENT>) this.bus;
 
         return bus.listen(priority, event -> {
+            if (ScriptManager.isContextDead(context)) {
+                // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
+                return false;
+            }
             try {
                 String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                 try {
@@ -322,6 +341,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 if (e instanceof Error) throw (Error) e;
+                ScriptManager.reportContextKilled(context, e);
                 recordListenerError(type, scriptId, "cancellable", null, event, e);
             }
             return false; // 出错时默认不取消事件
@@ -343,6 +363,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 dispatchKey,
                 priority,
                 event -> {
+                    if (ScriptManager.isContextDead(context)) {
+                        // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
+                        return;
+                    }
                     try {
                         String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                         try {
@@ -355,6 +379,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                         if (e instanceof Error) throw (Error) e;
+                        ScriptManager.reportContextKilled(context, e);
                         recordListenerError(type, scriptId, "dispatch", dispatchKey, event, e);
                     }
                 }
@@ -376,6 +401,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 dispatchKey,
                 priority,
                 event -> {
+                    if (ScriptManager.isContextDead(context)) {
+                        // Context 已被 Graal 关闭（语句上限等）：跳过分发，避免每次事件在死环境上报错刷屏
+                        return false;
+                    }
                     try {
                         String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
                         try {
@@ -389,6 +418,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                         if (e instanceof Error) throw (Error) e;
+                        ScriptManager.reportContextKilled(context, e);
                         recordListenerError(type, scriptId, "dispatchCancellable", dispatchKey, event, e);
                     }
                     return false; // 出错时默认不取消事件

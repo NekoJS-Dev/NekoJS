@@ -25,6 +25,7 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Engine;
+import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -166,13 +168,19 @@ class ScriptReloadRegressionTest {
 
     private static ScriptManager newManager(NekoJSPaths paths, TestRecorder recorder, Engine engine,
                                             SandboxConfig config, DefaultErrorTracker tracker) {
+        return newManager(paths, recorder, engine, config, tracker, ScriptEventBridge.EMPTY);
+    }
+
+    private static ScriptManager newManager(NekoJSPaths paths, TestRecorder recorder, Engine engine,
+                                            SandboxConfig config, DefaultErrorTracker tracker,
+                                            ScriptEventBridge eventBridge) {
         StubPluginRuntime pluginRuntime = new StubPluginRuntime(recorder);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
         ScriptEnvironmentFactory environmentFactory =
-                new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, sandboxFactory);
-        return new ScriptManager(ScriptType.SERVER, ScriptEventBridge.EMPTY, pluginRuntime,
+                new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);
+        return new ScriptManager(ScriptType.SERVER, eventBridge, pluginRuntime,
                 newPropertyRegistry(), tracker, paths, config, environmentFactory);
     }
 
@@ -191,7 +199,7 @@ class ScriptReloadRegressionTest {
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
         // 语句上限 100_000（测试用）：死循环迅速烧尽 → Graal 关闭 Context 并中断当前求值，
-        // 服务器线程恢复；生产默认 0（禁用），整合包服务器可按需在 engine.toml 开启
+        // 服务器线程恢复；生产默认 0（禁用），整合包服务器可按需在 config/nekojs-engine.toml 开启
         SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
@@ -214,6 +222,64 @@ class ScriptReloadRegressionTest {
                 manager.close();
             }
             engine.close();
+        }
+    }
+
+    /**
+     * 回归测试：语句上限 kill 后的自动 Context 重建（getOrCreateContext 的重建分支）
+     * 必须先清空本 scriptType 的事件监听器（与事务式 reload / fullReloadCleanup 顺序一致）。
+     * 修复前重建分支只关闭旧环境而不清 listener，残留监听器闭包指向已死 Context，
+     * 之后每次事件分发都会在死环境上报错，直到手动 /nekojs reload。
+     */
+    @Test
+    void rebuildAfterStatementLimitKillClearsEventListeners() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Files.writeString(serverDir.resolve("loop.js"), "while (true) { /* spin forever */ }\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
+        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+        RecordingEventBridge bridge = new RecordingEventBridge();
+        // 直接在声明处构造：lambda 捕获要求 manager 为实际上的 final 变量
+        ScriptManager manager = newManager(paths, recorder, engine, config, tracker, bridge);
+        try {
+            manager.discoverScripts();
+            assertTimeoutPreemptively(Duration.ofSeconds(30), manager::loadScripts,
+                    "initial load must abort via the statement limit");
+            assertTrue(bridge.typeOnlyCleared.isEmpty(),
+                    "first (fresh) environment creation must not clear listeners");
+
+            // 下一次取用 Context 触发自动重建：重建分支必须清空本 scriptType 的全部监听器
+            assertTimeoutPreemptively(Duration.ofSeconds(30), () -> manager.reloadScriptFile("loop.js"));
+            assertTrue(bridge.typeOnlyCleared.contains(ScriptType.SERVER),
+                    "context rebuild after statement-limit kill must clear this scriptType's listeners");
+        } finally {
+            forceCloseLiveContexts();
+            manager.close();
+            engine.close();
+        }
+    }
+
+    /** 记录 clearListeners 调用的桥接桩：区分「整类型清除」（kill 后自动重建路径）与「按脚本清除」（单文件重载路径）。 */
+    private static final class RecordingEventBridge implements ScriptEventBridge {
+        final List<ScriptType> typeOnlyCleared = new CopyOnWriteArrayList<>();
+        final List<String> scriptScopedCleared = new CopyOnWriteArrayList<>();
+
+        @Override
+        public void bindEvents(Value bindings, ScriptType type) {
+        }
+
+        @Override
+        public void clearListeners(ScriptType type) {
+            typeOnlyCleared.add(type);
+        }
+
+        @Override
+        public void clearListeners(ScriptType type, String scriptId) {
+            scriptScopedCleared.add(type + ":" + scriptId);
         }
     }
 

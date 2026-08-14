@@ -59,6 +59,39 @@ public final class ScriptManager implements AutoCloseable {
         return sm;
     }
 
+    /**
+     * JS 回调（事件监听器 / timer）catch 路径共享的 kill 上报：异常链表明 Graal 已因
+     * 资源上限（语句上限）关闭该 Context 时，标记所属 ScriptManager 于下次取用时重建环境。
+     *
+     * <p>与 {@link ScriptExecutor#executeEntry} 的入口路径互补：稳态下只有回调在运行，
+     * 不经此上报则 kill 永远不会被标记，每次 tick 的事件 / timer 都会在已关闭的
+     * Context 上反复抛错，整个脚本环境静默死亡直到手动 reload。未注册的 Context
+     * （测试等场景）安全忽略。
+     */
+    public static void reportContextKilled(Context context, Throwable t) {
+        if (context == null || !ScriptExecutor.isContextKilledByResourceLimits(t)) return;
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager != null) {
+            manager.markContextKilled();
+        }
+    }
+
+    /**
+     * JS 回调（事件监听器 / timer）分发短路判定：闭包捕获的 Context 是否已死。
+     *
+     * <p>本仓库使用的 relocated Graal polyglot API 没有 {@code Context.isOpen()}，
+     * 这里以 ScriptManager 侧的状态等价判定：要么环境被语句上限 kill
+     * （{@code contextKilled}，见 {@link #reportContextKilled}），要么所属
+     * ScriptManager 已切换到新 Context（本闭包指向已被替换的旧环境）。
+     * 未注册的 Context（测试等场景）返回 false，走原有 try/catch 路径。
+     */
+    public static boolean isContextDead(Context context) {
+        if (context == null) return false;
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager == null) return false;
+        return manager.contextKilled || manager.context != context;
+    }
+
     // ---- 实例字段 ----
 
     private final ScriptEventBridge scriptEventBridge;
@@ -75,7 +108,8 @@ public final class ScriptManager implements AutoCloseable {
      */
     public final ScriptType scriptType;
 
-    private Context context;
+    /** volatile：context 可能被回调线程（kill 上报后的重建）与加载线程并发读写。 */
+    private volatile Context context;
     private NekoNodeRuntime nodeRuntime;
     private List<ScriptContainer> scripts;
 
@@ -115,7 +149,12 @@ public final class ScriptManager implements AutoCloseable {
     private Context getOrCreateContext() {
         if (context == null || contextKilled) {
             if (context != null) {
-                // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源
+                // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源。
+                // 与事务式 reload / fullReloadCleanup 相同的顺序：关闭前先清本 scriptType 的
+                // 全部事件监听器——监听器闭包持有指向已死 Context 的 Value，保留只会让每次
+                // 事件分发都在死环境上报错。此处无法重跑脚本重建监听器（重建只创建空环境），
+                // 对本 scriptType 整体清除是正确的最小修复，恢复需再次 reload。
+                scriptEventBridge.clearListeners(scriptType);
                 closeRuntimeResources(this.nodeRuntime, this.context);
             }
             ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
@@ -277,7 +316,7 @@ public final class ScriptManager implements AutoCloseable {
             }
         }
 
-        public List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {
+        public synchronized List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {
             discoverScripts();
             Path target = resolveScriptPath(filePath);
             List<ScriptContainer> targets = reloadTargets(target);
@@ -295,16 +334,28 @@ public final class ScriptManager implements AutoCloseable {
             // 模块 URI 缓存模块实例，不重跑入口就无法让 import 绑定看到新导出；且其
             // revision 查询实现不匹配（用新 revision 查旧 record）导致静默 no-op 并
             // 返回 success=true。捷径已删除，见 git 历史。
-            synchronized (ctx) {
-                for (ScriptContainer script : targets) {
-                    String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
-                    ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
+            //
+            // 「失效 → 重跑」必须成对完成：try/finally 保证中途失败（如失效 eval 抛出、
+            // Context 重建失败）时，未被重跑的入口也补一次 cleanupScriptEntry（幂等），
+            // 不会停留在「模块树已失效但旧 listener / timer 仍在运行」的半失效状态；恢复需再次 reload。
+            int rerunCount = 0;
+            try {
+                synchronized (ctx) {
+                    for (ScriptContainer script : targets) {
+                        String entryPath = "./" + paths.root().relativize(script.path).toString().replace('\\', '/');
+                        ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateModuleTree").execute(entryPath);
+                    }
+                    ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
                 }
-                ctx.eval("js", "globalThis.__nekoScriptLoader.invalidateAffectedModules").execute(modulePath);
-            }
 
-            for (ScriptContainer script : targets) {
-                reloadEntryScript(getOrCreateContext(), script);
+                while (rerunCount < targets.size()) {
+                    reloadEntryScript(getOrCreateContext(), targets.get(rerunCount));
+                    rerunCount++;
+                }
+            } finally {
+                for (int i = rerunCount; i < targets.size(); i++) {
+                    cleanupScriptEntry(targets.get(i));
+                }
             }
 
             scriptType.logger().info("{} 脚本文件 {} 重载完毕。", scriptType.name(), displayScriptPath(target));

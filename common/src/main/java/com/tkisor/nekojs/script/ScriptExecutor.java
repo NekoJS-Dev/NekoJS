@@ -75,8 +75,14 @@ public final class ScriptExecutor {
         }
     }
 
-    /** 沿异常链识别「Context 已被 Graal 资源上限关闭」：eval 抛 cancelled / resourceExhausted。 */
-    private static boolean isContextKilledByResourceLimits(Throwable t) {
+    /**
+     * 沿异常链识别「Context 已被 Graal 资源上限关闭」：eval 抛 cancelled / resourceExhausted。
+     *
+     * <p>公共静态：入口执行路径（{@link #executeEntry}）与 JS 回调 catch 路径
+     * （{@code EventBusJS} 监听器 / {@code NekoNodeTimers.execute}，经
+     * {@link ScriptManager#reportContextKilled}）共享同一判定逻辑，避免复制。
+     */
+    public static boolean isContextKilledByResourceLimits(Throwable t) {
         for (Throwable current = t; current != null; current = current.getCause()) {
             if (current instanceof PolyglotException pe && (pe.isCancelled() || pe.isResourceExhausted())) {
                 return true;
@@ -132,7 +138,7 @@ public final class ScriptExecutor {
             }
             if (timeoutSeconds > 0 && System.nanoTime() - deadlineNanos >= 0) {
                 throw new TimeoutException("脚本求值超时（超过 " + timeoutSeconds
-                        + " 秒，可在 engine.toml 中调整 scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成");
+                        + " 秒，可在 config/nekojs-engine.toml 中调整 scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成");
             }
         }
         try {

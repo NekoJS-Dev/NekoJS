@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.node;
 import com.tkisor.nekojs.api.annotation.HideFromJS;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
+import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -169,8 +170,14 @@ public final class NekoNodeTimers implements AutoCloseable {
     }
 
     private void execute(int id, Value callback, Object[] args) {
-        if (callback == null || !callback.canExecute()) return;
+        if (callback == null) return;
         Context context = callback.getContext();
+        if (ScriptManager.isContextDead(context)) {
+            // Context 已被 Graal 关闭（语句上限等）：回调闭包指向死环境，静默跳过，
+            // 避免每次 tick 都在死 Context 上抛错刷屏；所属 ScriptManager 会在下次取用时重建
+            return;
+        }
+        if (!callback.canExecute()) return;
         String scriptId = scriptIds.get(id);
         try {
             // No synchronized(context): timer callbacks are flushed on the game tick thread
@@ -188,6 +195,9 @@ public final class NekoNodeTimers implements AutoCloseable {
                 ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
             }
         } catch (Throwable e) {
+            // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
+            // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
+            ScriptManager.reportContextKilled(context, e);
             errorTracker.recordCallbackError(scriptType, "timer", e);
         }
     }

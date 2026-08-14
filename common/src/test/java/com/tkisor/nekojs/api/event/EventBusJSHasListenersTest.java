@@ -18,9 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link EventBusJS#bus()} 直接注册 Java 监听器——此场景 {@code tokensByType} 恒为空，
  * 正是要覆盖的兜底分支。
  *
- * <p>{@link EventBusJS} 构造要初始化 {@code EnumMap<ScriptType, …>}（触发 {@code ScriptType.<clinit>}，
- * 依赖 {@code Platform} 已初始化），故 {@code @BeforeAll} 先做平台 fixture 初始化
- * （与 {@code TypeScriptNoopIrGoldenTest} 同款），保证不依赖测试执行顺序。
+ * <p>{@link EventBusJS} 按 {@code ScriptType} 分桶管理监听器（注册 / 清理路径触发
+ * {@code ScriptType.<clinit>}，依赖 {@code Platform} 已初始化），故 {@code @BeforeAll}
+ * 先做平台 fixture 初始化（与 {@code TypeScriptNoopIrGoldenTest} 同款），保证不依赖测试执行顺序。
  */
 class EventBusJSHasListenersTest {
 
