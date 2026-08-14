@@ -64,7 +64,7 @@ ServerEvents.recipes(lambda event: (
 | `for/else`、`while/else`（未 `break` 才执行 `else`） | 支持 |
 | f-string `f'{x:.2f}'`（**含格式说明符与 `!r/!s/!a` 转换**） | 支持（详见「f-string」节） |
 | 装饰器 `@deco` / `@pkg.deco`（顶层函数、类） | 支持，降级为定义后 `name = deco(name)` |
-| `assert cond[, msg]` / `del target` | 支持（`assert`→`throw new Error(...)`；`del` 仅支持 `del d[k]` / `del obj.attr`，普通名字 `del x` 编译期报错） |
+| `assert cond[, msg]` / `del target` | 支持（`assert`→`throw new AssertionError(...)`（内置异常 prelude 类）；`del` 仅支持 `del d[k]` / `del obj.attr`，普通名字 `del x` 编译期报错） |
 | 类（`__init__`/构造器、`self`→`this`、`extends`、`super()`、`@staticmethod`/`@classmethod`/`@property`、`__str__`→`toString`） | 支持 |
 | 类型注解（参数 `x: int`、返回 `-> str`、变量 `x: int = 5`） | 支持（**解析后丢弃**，不参与运行时） |
 | `import` / `from ... import ...`（按相对路径加载兄弟 `.py`/`.js` 模块） | 支持 |
@@ -286,8 +286,8 @@ print(base(20))    # (20 + 1) * 2 = 42
 ### assert / del
 
 ```python
-assert x > 0                  # → if (!(x > 0)) throw new Error("AssertionError");
-assert a == b, '不匹配'        # → throw new Error('不匹配')（AssertionError 映射为 Error）
+assert x > 0                  # → if (!__nekoTruthy(x > 0)) throw new AssertionError("AssertionError");
+assert a == b, '不匹配'        # → throw new AssertionError('不匹配')（AssertionError 是内置异常 prelude 类，可被 except AssertionError 捕获）
 
 del d['key']                  # → delete d['key']
 del obj.attr                  # → delete obj.attr
@@ -376,7 +376,7 @@ print(circle_area(2))                    # 12.56
 | Python | 等价 JS lowering | 备注 |
 |---|---|---|
 | `range(stop)` / `range(start, stop[, step])` | `Array.from({length: ...}, ...)` | |
-| `len(x)` | `(x).length` | 对数组/字符串；dict/set 需 `len(list(d.keys()))` 等绕开 |
+| `len(x)` | `__nekoLen(x)` | 数组/字符串 `.length`、`Map`/`Set` `.size`、dict（JS 对象）`Object.keys().length`——dict/set 无需再绕开 |
 | `print(...)` | `console.log([...].join(sep))` | 支持 `sep=` 关键字；`end=` 被忽略 |
 | `abs(x)` | `Math.abs(x)` | |
 | `min(...)` / `min(iterable[, key=])` | `Math.min(...)`（或 `reduce` 带 key） | 单 iterable 参数自动 spread；`key=` 支持 |
@@ -404,7 +404,7 @@ print(circle_area(2))                    # 12.56
 | `hex(n)` / `oct(n)` / `bin(n)` | `"-0x"+abs.toString(16)` 等 | 负数带 `-` 前缀 |
 | `repr(x)` | `JSON.stringify(x)` | 近似 |
 | `format(x, spec)` | `__nekoFmt(x, spec, null)` | 与 f-string 格式说明符同一套规则 |
-| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | `x instanceof T`（元组/列表→链） | 内置异常名映射为 `Error`（`isinstance(e, ValueError)` → `e instanceof Error`） |
+| `isinstance(x, T)` / `isinstance(x, (A,B))` / `isinstance(x, [A,B])` | `x instanceof T`（元组/列表→链） | 内置异常名走 prelude 类层次（`isinstance(e, ValueError)` → `e instanceof ValueError`，精确匹配） |
 | `type(x)` | `(x).constructor` | |
 | `callable(x)` | `typeof x === "function"` | |
 | `getattr(o, name[, d])` / `hasattr` / `setattr` / `delattr` | `o[name]` 括号访问（带默认值/存在判断/赋值/delete） | |
@@ -460,7 +460,7 @@ finally:
 - 裸 `except:` 捕获一切，必须是**最后一个** except 子句
 - **`else` 子句**：仅在 try 体「正常流到结尾」（无异常，且没被 `return`/`break`/`continue` 中断）时执行；它的异常**不会**被同一组 except 捕获，但 `finally` 仍会执行。
 - **裸 `raise`** 在 except 内重抛当前异常。
-- **Python 内置异常名**（`Exception`、`ValueError`、`TypeError`、`KeyError` 等）在 JS 运行时不存在，会被映射为 JS 的 `Error`（最接近的基类）。因此 `class MyErr(Exception):` 会转成 `class MyErr extends Error`，`raise MyErr()` + `except MyErr` 能**端到端匹配**；`isinstance` 走同一映射（`isinstance(e, ValueError)` → `e instanceof Error`）。
+- **Python 内置异常名**（`Exception`、`ValueError`、`TypeError`、`KeyError` 等）由模块头注入的 **prelude 类层次** 定义（`class Exception extends Error`，各内置异常继承之，`prototype.name` 已修正）。`raise ValueError('x')` → `throw new ValueError("x")`，`except ValueError` → `instanceof ValueError` **精确匹配**（JS 原生 `TypeError` 也可经 `.name` 兜底被同名 `except TypeError` 捕获）；`isinstance(e, ValueError)` 同样精确。
 - `as e` 绑定的 `e` 是底层 JS 错误对象。
 
 > 注意：`raise 42`（抛非 Error 值）配合 `except Exception` **不会**匹配（`42 instanceof Error` 为假），异常会被重新抛出——这与 Python 语义一致。要捕获任意值用裸 `except:`。
@@ -479,14 +479,23 @@ finally:
 | **dict 是 JS 对象** | 键只能是字符串（数字键会被强制成字符串，且形如 `"10"` 的整数键会被 JS 按数值排序提前）。不能用任意可哈希对象（如元组）当键。 |
 | **`//` 地板除** | `a // b` → `Math.floor(a / b)`，与 Python 一样向负无穷取整（`-7 // 2 == -4`）。 |
 | **`**` 幂** | `a ** b` 直接透传给 JS `**`，语义一致。 |
-| **`in` / `not in`** | `x in coll` → `coll.includes(x)`。**只对数组/字符串工作**；对 dict（JS 对象）不工作。判断字典键请写 `'k' in obj`（JS 原生 `in`）或 `obj.k !== undefined`。 |
+| **`in` / `not in`** | `x in coll` → `__nekoIn(x, coll)` 助手：数组/字符串 `.includes`、dict（JS 对象）自有键、`Map`/`Set` `.has`——dict 键判断**无需绕开**（链式成员 `a in b in c` 同样走助手）。 |
 | **`is` / `is not`** | 透传成 JS `===` / `!==`（严格相等）。`None` 映射为 `null`，所以 `x is None` 等价于 `x === null`。 |
-| **`==` / `!=`** | 透传成 JS **宽松相等**（会做类型转换，`1 == '1'` 为真），与 Python 的值相等语义不同。要严格相等请用 `is` / `is not`。 |
-| **`and` / `or`** | 透传成 `&&` / `||`，同样短路返回操作数值，语义一致。 |
+| **`==` / `!=`** | 映射为 JS **严格相等** `===` / `!==`（`"1" == 1` 为假，与 Python 一致）。 |
+| **`and` / `or`** | `__nekoAnd` / `__nekoOr` 助手：短路求值 + 返回操作数值 + **Python 真值语义**（`[] or 'y'` 得 `'y'`）。 |
 | **整数精度** | Python 的 `int` 是任意精度，JS 只有双精度浮点 Number。`> 2^53` 的整数会丢精度，`int(x)` 也受此限制。常规整数运算无差异。 |
 | **变量作用域** | 所有赋值都 emit 成 `var`（函数作用域、可重复声明、被提升），不是 `let`/`const`。没有块级作用域和 TDZ——循环/分支里赋的值会「漏」到外层函数作用域。 |
-| **布尔真值（重要）** | Python 里 `[]`/`{}`/`''`/`0`/`None` 都是假；但 JS 里**空数组、空对象是真**。转译器不做真值转换，所以 `if xs:` 当 `xs=[]` 时，Python 不执行分支，JS `if ([])` 会执行。**对空容器判断请显式写 `if len(xs) == 0:`。** |
+| **布尔真值** | 条件（`if`/`while`/`not`/`and`/`or`/三元/`assert`/推导式 filter/`match` guard）都经 `__nekoTruthy` 助手判定：`[]`/`{}`/`''`/`0`/`None` 均为假，与 Python 一致——**空容器判断无需写 `len(xs)==0`**。 |
 | **`None` / `True` / `False`** | 分别映射为 JS `null` / `true` / `false`（注意不是 `undefined`）。 |
+| **列表 `+` 拼接（坑）** | `[1,2] + [3]` 走 JS `+` → 得到字符串 `"1,23"`（Python 是拼接列表）。`+=` 同理。当前请用 `a.extend(b)` / `[*a, *b]` 替代。 |
+| **`"%s" % x` 格式化（坑）** | 走数值取模路径 → 静默 `NaN`。请用 f-string / `format(x, spec)` 替代。 |
+| **set/dict 位运算符（坑）** | `s1 \| s2`、`d1 \| d2`、`&`、`^`、`-` 对容器走 JS 按位运算 → 静默 `0`。请用方法（`union` 暂缺，可先转 list）或 `dict(d1, **d2)` 式写法。 |
+| **`set.update`（坑）** | 当前被 dict 的 update 映射误伤（`Object.assign` 到 Set 对象上）。请用 `for x in other: s.add(x)`。 |
+| **`print(dict)`（坑）** | dict 打印为 `[object Object]`；需要查看请 `print(list(d.items()))`。 |
+| **非字面负索引（坑）** | `xs[-1]`（字面量）正确取尾；但 `xs[i]` 当运行时 `i<0` → JS 属性访问静默 `undefined`。循环负索引请用 `xs[len(xs)+i]`。 |
+| **`next(gen)` 越界（坑）** | 迭代器耗尽后 `next()` 返回 `undefined`（Python 抛 `StopIteration`）。请配合 `for` 循环使用。 |
+| **`split(sep, maxsplit)` / `replace(old, new, count)`（坑）** | 第三参被 JS 原生方法忽略：`split` 丢弃剩余部分而非保留尾巴、`replace` 替换全部而非前 count 次。需要精确控制请手写循环。 |
+| **`str(e)`** | 内置异常的 `str(e)` 是 `"ValueError: msg"`（带类名前缀，JS Error.toString 风格），Python 是裸 `msg`。消息本体可用 `e.message`。 |
 
 ## 限制（仍不支持）
 

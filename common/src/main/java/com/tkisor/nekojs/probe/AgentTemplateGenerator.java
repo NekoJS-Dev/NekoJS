@@ -31,7 +31,7 @@ public final class AgentTemplateGenerator {
 
             ## NekoJS Notes
 
-            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, decorators, ES2022+ features, native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS.
+            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS.
 
             NekoJS has 4 kinds of script types:
             - **server scripts**: located in `nekojs/server_scripts`, run on the server side. Used for recipes, loot tables, tags, advancements, event handling, etc. Reloadable with `/reload`.
@@ -132,7 +132,7 @@ public final class AgentTemplateGenerator {
             Your SOLE responsibility is planning. NEVER start implementation.
 
             **Notes about NekoJS**:
-            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, decorators, ES2022+ features, native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS.
+            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS.
 
             NekoJS has 4 kinds of script types:
             - **server scripts**: located in `nekojs/server_scripts`, run on the server side. Used for recipes, loot tables, tags, advancements, event handling, etc. Reloadable with `/reload`.
