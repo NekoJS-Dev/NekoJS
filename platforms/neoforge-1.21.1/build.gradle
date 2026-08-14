@@ -104,6 +104,11 @@ test {
     useJUnitPlatform()
 }
 
+compileJava {
+    // SpecCoverageProcessor 平台范围校验：本平台属于 NeoForge 系列
+    options.compilerArgs += '-Anekojs.platform=nf'
+}
+
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
     def replaceProperties = [
             minecraft_version      : minecraft_version,

@@ -42,6 +42,11 @@ test {
     useJUnitPlatform()
 }
 
+compileJava {
+    // SpecCoverageProcessor 平台范围校验：本平台属于 NeoForge 系列
+    options.compilerArgs += '-Anekojs.platform=nf'
+}
+
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea
 // 由 gradle/neoforge-common.gradle 统一配置（三平台字节级相同的部分）
 apply from: rootProject.file('gradle/neoforge-common.gradle')

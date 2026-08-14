@@ -13,8 +13,9 @@ public class ApiContractException extends IllegalArgumentException {
 
     /** @param violation 违规详情，不能为 {@code null}。 */
     public ApiContractException(ApiContractViolation violation) {
-        super(violation.toString());
-        this.violation = Objects.requireNonNull(violation, "violation");
+        // 先判空再传给 super——否则 null 输入会在 super(violation.toString()) 处抛裸 NPE
+        super(Objects.requireNonNull(violation, "violation").toString());
+        this.violation = violation;
     }
 
     /**
@@ -22,8 +23,9 @@ public class ApiContractException extends IllegalArgumentException {
      * @param cause     底层原因，可为 {@code null}
      */
     public ApiContractException(ApiContractViolation violation, Throwable cause) {
-        super(violation.toString(), cause);
-        this.violation = Objects.requireNonNull(violation, "violation");
+        // 同上：先判空再传给 super
+        super(Objects.requireNonNull(violation, "violation").toString(), cause);
+        this.violation = violation;
     }
 
     /** 返回违规详情。 */

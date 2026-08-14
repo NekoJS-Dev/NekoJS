@@ -200,6 +200,9 @@ if (!enable_shadow.toBoolean()) {
 compileJava {
     // Cleanroom 1.12.2 官方仅支持到 Java 21；VERSION_25 字节码会让 Java 17/21 用户直接 UnsupportedClassVersionError
     sourceCompatibility = targetCompatibility = JavaVersion.VERSION_21
+
+    // SpecCoverageProcessor 平台范围校验：本平台为 Cleanroom
+    options.compilerArgs += '-Anekojs.platform=cr'
 }
 
 jar {

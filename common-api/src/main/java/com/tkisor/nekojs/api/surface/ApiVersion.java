@@ -21,6 +21,13 @@ import java.util.regex.Pattern;
 public record ApiVersion(int major, int minor, int patch, String prerelease, String build)
         implements Comparable<ApiVersion> {
 
+    /** 拒绝负数版本分量；{@link #parse(String)} 不会产生，但直接构造可能。 */
+    public ApiVersion {
+        if (major < 0 || minor < 0 || patch < 0) {
+            throw new IllegalArgumentException("negative version component: " + major + "." + minor + "." + patch);
+        }
+    }
+
     private static final Pattern SEMVER = Pattern.compile(
             "^(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)\\.(?<patch>0|[1-9]\\d*)" +
             "(?:-(?<prerelease>[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?" +

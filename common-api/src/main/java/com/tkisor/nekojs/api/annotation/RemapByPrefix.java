@@ -11,8 +11,11 @@ import java.lang.annotation.Target;
  * <p>When applied to a type, all members matching the prefix are remapped
  * to the replacement prefix. Processed by {@code MemberVisibilityQuery}.
  *
- * <p>Example: {@code @RemapByPrefix({"get", "is"})} on a record strips
- * the {@code get} / {@code is} prefixes, exposing record accessors as property-style names.
+ * <p>Example: {@code @RemapByPrefix({"get", "is"})} on a record strips the
+ * {@code get} / {@code is} prefixes from member names. The remainder keeps its
+ * original casing: {@code getName()} is exposed as {@code Name}, not {@code name}.
+ * Use a per-member {@link Remap @Remap} when a lowercased property-style name
+ * is required.
  */
 @Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
