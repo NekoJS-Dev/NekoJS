@@ -14,11 +14,21 @@ import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class ScriptEventsJS implements ScriptEventRegistrar {
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 解析失败的类名负缓存（有上界）：CLASS_CACHE 只记成功，同一坏名字被反复解析时
+     * 每次都会重跑 Class.forName 异常链；命中负缓存后直接抛同类型的
+     * IllegalArgumentException（仅丢失最底层 cause，消息不变）。
+     */
+    private static final Set<String> CLASS_MISS_CACHE = ConcurrentHashMap.newKeySet();
+    private static final int CLASS_MISS_CACHE_LIMIT = 256;
+
     private IPluginRuntime pluginRuntime;
 
     public void bindRuntime(IPluginRuntime pluginRuntime) {
@@ -115,6 +125,9 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
         if (cached != null) {
             return cached;
         }
+        if (CLASS_MISS_CACHE.contains(className)) {
+            throw new IllegalArgumentException("Class not found: " + className);
+        }
 
         String currentName = className;
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -126,6 +139,9 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
             } catch (ClassNotFoundException e) {
                 int lastDotIndex = currentName.lastIndexOf('.');
                 if (lastDotIndex == -1) {
+                    if (CLASS_MISS_CACHE.size() < CLASS_MISS_CACHE_LIMIT) {
+                        CLASS_MISS_CACHE.add(className);
+                    }
                     throw new IllegalArgumentException("Class not found: " + className, e);
                 }
                 currentName = currentName.substring(0, lastDotIndex) + '$' + currentName.substring(lastDotIndex + 1);

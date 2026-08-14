@@ -50,6 +50,19 @@ public final class ApiValueMarshaller {
     private final Map<ApiTypeRef, ApiSymbolId> symbolIdCache =
             Collections.synchronizedMap(new IdentityHashMap<>());
 
+    /**
+     * Memoized arity facts per {@link ApiSignature}: {@code [0]} = required (non-optional,
+     * non-varargs) parameter count, {@code [1]} = whether the last parameter is varargs.
+     *
+     * <p>Computed with the same identity-keyed rationale as {@link #symbolIdCache}: the
+     * signature objects a marshaller sees are the stable frozen-registry objects of its
+     * facade's contract, so the map stays bounded, and recomputing the stream filter for
+     * every candidate signature on every call is avoided. {@code ApiSignature} lives in
+     * common-api (not editable here), so the memoization lives on the marshaller side.
+     */
+    private final Map<ApiSignature, int[]> signatureArityCache =
+            Collections.synchronizedMap(new IdentityHashMap<>());
+
     public ApiValueMarshaller(ApiRuntimeView runtimeView) {
         this(runtimeView, null);
     }
@@ -150,9 +163,12 @@ public final class ApiValueMarshaller {
         }
 
         if (paramType.kind() == ApiTypeRef.Kind.UNION) {
-            List<ApiTypeRef> matches = paramType.arguments().stream()
-                    .filter(type -> valueScore(graalValue, type) >= 0)
-                    .toList();
+            List<ApiTypeRef> matches = new ArrayList<>();
+            for (ApiTypeRef branch : paramType.arguments()) {
+                if (valueScore(graalValue, branch) >= 0) {
+                    matches.add(branch);
+                }
+            }
             if (matches.size() != 1) {
                 throw new ApiRuntimeException(
                         ApiErrorCodes.TYPE_MISMATCH,
@@ -484,11 +500,24 @@ public final class ApiValueMarshaller {
         return marshalled;
     }
 
+    /**
+     * Returns the memoized {@code {requiredCount, hasVarargs(1/0)}} pair for a signature.
+     */
+    private int[] signatureStatsOf(ApiSignature signature) {
+        return signatureArityCache.computeIfAbsent(signature, sig -> {
+            List<ApiParameter> params = sig.parameters();
+            int requiredCount = (int) params.stream().filter(p -> !p.optional() && !p.varargs()).count();
+            boolean hasVarargs = !params.isEmpty() && params.get(params.size() - 1).varargs();
+            return new int[] {requiredCount, hasVarargs ? 1 : 0};
+        });
+    }
+
     private int signatureScore(ApiSignature signature, List<?> rawArgs) {
         List<ApiParameter> params = signature.parameters();
-        int requiredCount = (int) params.stream().filter(p -> !p.optional() && !p.varargs()).count();
+        int[] stats = signatureStatsOf(signature);
+        int requiredCount = stats[0];
         int totalCount = params.size();
-        boolean hasVarargs = !params.isEmpty() && params.get(params.size() - 1).varargs();
+        boolean hasVarargs = stats[1] != 0;
 
         if (rawArgs.size() < requiredCount) {
             return -1;
@@ -517,7 +546,14 @@ public final class ApiValueMarshaller {
 
     private int valueScore(Object value, ApiTypeRef type) {
         if (type.kind() == ApiTypeRef.Kind.UNION) {
-            int score = type.arguments().stream().mapToInt(member -> valueScore(value, member)).max().orElse(-1);
+            // 循环版 max：等价于 stream().mapToInt(...).max().orElse(-1)，免去每参数的流分配
+            int score = -1;
+            for (ApiTypeRef member : type.arguments()) {
+                int memberScore = valueScore(value, member);
+                if (memberScore > score) {
+                    score = memberScore;
+                }
+            }
             return score < 0 ? -1 : score - 1;
         }
         if (value == null || value instanceof Value graalValue && graalValue.isNull()) {
@@ -719,7 +755,15 @@ public final class ApiValueMarshaller {
 
     private int returnBranchScore(Object value, ApiTypeRef type) {
         if (type.kind() == ApiTypeRef.Kind.UNION) {
-            return type.arguments().stream().mapToInt(branch -> returnBranchScore(value, branch)).max().orElse(-1);
+            // 循环版 max：等价于 stream().mapToInt(...).max().orElse(-1)，免去每分支的流分配
+            int score = -1;
+            for (ApiTypeRef branch : type.arguments()) {
+                int branchScore = returnBranchScore(value, branch);
+                if (branchScore > score) {
+                    score = branchScore;
+                }
+            }
+            return score;
         }
         return switch (type.kind()) {
             case PRIMITIVE -> !matchesPrimitive(value, type) ? -1 : "object".equals(type.name()) ? 1 : 4;

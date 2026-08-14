@@ -31,6 +31,14 @@ public final class ApiFacadeProxy implements ProxyObject {
     private final boolean nativeReturn;
     private final ApiGuestErrorFactory guestErrorFactory;
 
+    /**
+     * getMember 返回的可执行对象缓存。脚本里每次 {@code facade.member(...)} 的成员访问都会
+     * 调一次 {@link #getMember}；lambda 只捕获本实例的 final 字段与不可变 {@code memberSymbols}
+     * 条目（无逐次可变状态），因此按 member key 复用同一个 ProxyExecutable 是安全的，
+     * 避免每次属性访问都分配一个新闭包。
+     */
+    private final Map<String, ProxyExecutable> memberExecutables = new ConcurrentHashMap<>();
+
     private ApiFacadeProxy(
             ApiRuntimeView runtimeView,
             ApiSymbolId typeId,
@@ -154,7 +162,7 @@ public final class ApiFacadeProxy implements ProxyObject {
             return null;
         }
 
-        return (ProxyExecutable) arguments -> {
+        return memberExecutables.computeIfAbsent(key, memberKey -> (ProxyExecutable) arguments -> {
             List<Object> rawArgs = new ArrayList<>();
             for (Value arg : arguments) {
                 rawArgs.add(arg);
@@ -183,7 +191,7 @@ public final class ApiFacadeProxy implements ProxyObject {
                 }
                 throw normalized;
             }
-        };
+        });
     }
 
     static ApiFacadeProxy value(

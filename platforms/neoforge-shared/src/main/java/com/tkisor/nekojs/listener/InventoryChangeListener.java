@@ -44,6 +44,10 @@ public final class InventoryChangeListener implements ContainerListener {
         if (stack.isEmpty()) {
             return;
         }
+        // 无监听器时短路：槽位变化高频触发，跳过事件对象构建与分发（同 ProbeCoordinator 的做法）
+        if (!PlayerEvents.INVENTORY_CHANGED.hasListeners()) {
+            return;
+        }
         // 仅响应玩家自身物品栏槽位（container == player.getInventory()）
         if (container.getSlot(index).container != player.getInventory()) {
             return;

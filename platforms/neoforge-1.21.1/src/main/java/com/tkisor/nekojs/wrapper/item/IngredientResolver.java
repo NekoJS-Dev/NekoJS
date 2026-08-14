@@ -25,6 +25,8 @@ import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
@@ -38,6 +40,23 @@ public final class IngredientResolver {
     private static final HolderLookup.RegistryLookup<Item> ITEM_LOOKUP =
         RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.ITEM);
 
+    /**
+     * 脚本提供的 regex 源串 → 预编译 Pattern 缓存。{@code /regex/} 语法与 {@code {regex: ...}}
+     * 的模式串来自脚本（非编译期常量，无法 hoist 成 static final）；Pattern 不可变且线程安全，
+     * 按源串去重可在重复解析同一批配方时省去逐次编译。规模以脚本中不同 regex 数为上界。
+     * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
+     */
+    private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
+
+    private static Pattern compiledRegex(String regex) {
+        Pattern cached = REGEX_CACHE.get(regex);
+        if (cached == null) {
+            cached = Pattern.compile(regex);
+            REGEX_CACHE.put(regex, cached);
+        }
+        return cached;
+    }
+
     public static Ingredient fromString(String raw) {
         String s = normalizeRaw(raw);
         char c = s.charAt(0);
@@ -47,7 +66,7 @@ public final class IngredientResolver {
             case '/' -> {
                 String body = (s.length() > 2 && s.charAt(s.length() - 1) == '/')
                     ? s.substring(1, s.length() - 1) : s.substring(1);
-                yield ingredientOfHolders(new RegexHolderSet<>(ITEM_LOOKUP, Pattern.compile(body)));
+                yield ingredientOfHolders(new RegexHolderSet<>(ITEM_LOOKUP, compiledRegex(body)));
             }
             default -> fromItemOrTagId(s);
         };
@@ -151,7 +170,7 @@ public final class IngredientResolver {
         }
         if (value.hasMember("regex")) {
             return ingredientOfHolders(new RegexHolderSet<>(ITEM_LOOKUP,
-                Pattern.compile(value.getMember("regex").asString())));
+                compiledRegex(value.getMember("regex").asString())));
         }
         if (value.hasMember("item")) return fromValue(value.getMember("item"));
         if (value.hasMember("tag")) {

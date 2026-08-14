@@ -10,6 +10,7 @@ import graal.graalvm.polyglot.Value;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -74,6 +75,14 @@ public class NativeEventsJS implements Binding {
 
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
 
+    /**
+     * 解析失败的类名负缓存（有上界）：CLASS_CACHE 只记成功，同一坏名字被反复解析时
+     * 每次都会重跑 Class.forName 异常链；命中负缓存后直接返回 null（与原失败路径一致，
+     * debug 日志保留）。
+     */
+    private static final Set<String> CLASS_MISS_CACHE = ConcurrentHashMap.newKeySet();
+    private static final int CLASS_MISS_CACHE_LIMIT = 256;
+
     private Class<?> resolveClass(Object obj) {
         switch (obj) {
             case null -> {
@@ -103,6 +112,10 @@ public class NativeEventsJS implements Binding {
         if (CLASS_CACHE.containsKey(className)) {
             return CLASS_CACHE.get(className);
         }
+        if (CLASS_MISS_CACHE.contains(className)) {
+            NekoJS.LOGGER.debug("Class not found, please check the spelling of the class name: {}", className);
+            return null;
+        }
 
         String currentName = className;
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -116,6 +129,9 @@ public class NativeEventsJS implements Binding {
                 int lastDotIndex = currentName.lastIndexOf('.');
                 if (lastDotIndex == -1) {
                     NekoJS.LOGGER.debug("Class not found, please check the spelling of the class name: {}", className);
+                    if (CLASS_MISS_CACHE.size() < CLASS_MISS_CACHE_LIMIT) {
+                        CLASS_MISS_CACHE.add(className);
+                    }
                     return null;
                 }
                 currentName = currentName.substring(0, lastDotIndex) + '$' + currentName.substring(lastDotIndex + 1);

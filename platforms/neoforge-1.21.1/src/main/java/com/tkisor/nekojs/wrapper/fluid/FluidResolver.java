@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 /**
@@ -39,6 +41,26 @@ public final class FluidResolver {
 
     private static final HolderLookup.RegistryLookup<Fluid> FLUID_LOOKUP =
         RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY).lookupOrThrow(Registries.FLUID);
+
+    /**
+     * 脚本提供的 regex 源串 → 预编译 Pattern 缓存。{@code /regex/} 语法与 {@code {regex: ...}}
+     * 的模式串来自脚本（非编译期常量，无法 hoist 成 static final）；Pattern 不可变且线程安全，
+     * 按源串去重可在重复解析同一批配方时省去逐次编译。规模以脚本中不同 regex 数为上界。
+     * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
+     */
+    private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
+
+    /** {@code replaceFirst("^#", "")} 的常量模式：parseFluidInput 每次调用都要编译一次。 */
+    private static final Pattern LEADING_HASH = Pattern.compile("^#");
+
+    private static Pattern compiledRegex(String regex) {
+        Pattern cached = REGEX_CACHE.get(regex);
+        if (cached == null) {
+            cached = Pattern.compile(regex);
+            REGEX_CACHE.put(regex, cached);
+        }
+        return cached;
+    }
 
     public static FluidStack stackFromString(String raw) {
         String s = normalizeRaw(raw);
@@ -92,7 +114,7 @@ public final class FluidResolver {
         if (c == '/') {
             String body = (s.length() > 2 && s.charAt(s.length() - 1) == '/')
                 ? s.substring(1, s.length() - 1) : s.substring(1);
-            return ingredientOfHolders(new RegexHolderSet<>(FLUID_LOOKUP, Pattern.compile(body)));
+            return ingredientOfHolders(new RegexHolderSet<>(FLUID_LOOKUP, compiledRegex(body)));
         }
         ParsedFluidInput input = parseFluidInput(s, true);
         if (input.tag()) {
@@ -157,7 +179,7 @@ public final class FluidResolver {
         if (value.hasMember("mod")) return ingredientOfHolders(new NamespaceHolderSet<>(
             FLUID_LOOKUP, value.getMember("mod").asString()));
         if (value.hasMember("regex")) return ingredientOfHolders(new RegexHolderSet<>(
-            FLUID_LOOKUP, Pattern.compile(value.getMember("regex").asString())));
+            FLUID_LOOKUP, compiledRegex(value.getMember("regex").asString())));
         if (value.hasMember("fluid")) return ingredientFromString(value.getMember("fluid").asString());
         if (value.hasMember("id")) return ingredientFromString(value.getMember("id").asString());
         if (value.hasMember("tag")) {
@@ -371,7 +393,7 @@ public final class FluidResolver {
                 "FluidStack cannot be created from a tag");
         }
         String id = tag ? normalizeFluidTagId(value) : normalizeFluidId(value);
-        return new ParsedFluidInput(id.replaceFirst("^#", ""), amount, tag);
+        return new ParsedFluidInput(LEADING_HASH.matcher(id).replaceFirst(""), amount, tag);
     }
 
     private static int parseAmount(String raw) {

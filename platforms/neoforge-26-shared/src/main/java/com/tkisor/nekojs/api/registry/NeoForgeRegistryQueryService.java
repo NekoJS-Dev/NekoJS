@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * NeoForge 26.x 的只读注册表查询实现。
@@ -29,6 +30,15 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 
     private static final RegistryAccess REGISTRY_ACCESS =
             RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+
+    /**
+     * registryId → ResourceKey 的进程级快照缓存：{@link #REGISTRY_ACCESS} 是 static final、
+     * 只包内置注册表（{@code BuiltInRegistries.REGISTRY}），其 key 集合在 mod 加载后即冻结
+     * （datapack 重载只替换动态注册表内容，不会增删内置 key），而本服务的调用方是脚本侧
+     * {@code Registry.get(...)}（仅脚本执行期可达）。首次 resolveKey 时一次性建表，
+     * 之后未知 id 直接查表为 null，免去每次 ~500 key 的线性扫描与 toString 分配。
+     */
+    private static volatile Map<String, ResourceKey<? extends Registry<?>>> registryKeysById;
 
     private NeoForgeRegistryQueryService() {
     }
@@ -155,8 +165,16 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
     }
 
     private Optional<ResourceKey<? extends Registry<?>>> resolveKey(String registryId) {
-        return REGISTRY_ACCESS.listRegistryKeys()
-                .filter(key -> key.identifier().toString().equals(registryId))
-                .findFirst();
+        return Optional.ofNullable(registryKeysById().get(registryId));
+    }
+
+    private static Map<String, ResourceKey<? extends Registry<?>>> registryKeysById() {
+        Map<String, ResourceKey<? extends Registry<?>>> map = registryKeysById;
+        if (map == null) {
+            Map<String, ResourceKey<? extends Registry<?>>> built = new ConcurrentHashMap<>();
+            REGISTRY_ACCESS.listRegistryKeys().forEach(key -> built.put(key.identifier().toString(), key));
+            registryKeysById = map = built;
+        }
+        return map;
     }
 }
