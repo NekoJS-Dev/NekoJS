@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.probe.ir;
 
+import com.tkisor.nekojs.api.surface.ApiSignature;
+import com.tkisor.nekojs.api.surface.ApiSymbolId;
+import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 import org.junit.jupiter.api.Test;
@@ -141,6 +144,120 @@ class TypeScriptClassRendererTest {
         // superType 取 getSuperclass()（erased Class），故泛型上界不渲染类型实参
         assertTrue(out.contains("export class $ArrayList<E> extends $AbstractList implements"),
                 "regular super class must keep its extends clause:\n" + out);
+    }
+
+    // ---------------- heritage 合法性守卫（probe.assign_type / changeSuper 注入路径） ----------------
+
+    /**
+     * 构造被 probe 编辑过的 heritage 槽：{@code sourceType=null} + {@code overridden=true} →
+     * renderSlot 走 renderTypeRef(ref)。镜像 {@code ProbeModifyTypeEventJS.override}（changeSuper）与
+     * {@code ProbeAssignTypeEventJS.applySlot}（assign_type 重写 SYMBOL 槽）的产出形态。
+     */
+    private static TypeSlot editedSlot(ApiTypeRef ref) {
+        TypeSlot s = new TypeSlot(null, ref);
+        s.overridden = true;
+        return s;
+    }
+
+    private static ApiTypeRef symbol(String fqn) {
+        return ApiTypeRef.symbol(new ApiSymbolId("java", fqn));
+    }
+
+    /** 直接构造合成 TypeDecl（renameTo 提供渲染名，sourceClass=null 表示纯合成）。 */
+    private static TypeDecl decl(TypeDecl.Kind kind, String name) {
+        TypeDecl d = new TypeDecl(kind, null, "test." + name);
+        d.renameTo = name;
+        return d;
+    }
+
+    /** probe.assign("java.lang.CharSequence", "string") 场景：implements 条目被注入原始类型 → 逐条省略。 */
+    @Test
+    void implementsEntryAssignedToPrimitiveIsOmitted() {
+        TypeDecl d = decl(TypeDecl.Kind.CLASS, "StringBuilder");
+        d.interfaces.add(editedSlot(symbol("java.lang.Appendable")));
+        d.interfaces.add(editedSlot(ApiTypeRef.primitive("string")));   // 原 $CharSequence 被 assign 为 string
+
+        String out = render(d);
+        assertEquals("    export class $StringBuilder implements $Appendable {\n    }\n", out,
+                "primitive implements entry must be omitted, valid entry kept");
+    }
+
+    /** 全部 implements 条目都不安全（原始类型/联合）时整个 implements 子句省略，声明仍合法。 */
+    @Test
+    void implementsClauseOmittedWhenAllEntriesUnsafe() {
+        TypeDecl d = decl(TypeDecl.Kind.CLASS, "Unsafe");
+        d.interfaces.add(editedSlot(ApiTypeRef.primitive("number")));
+        d.interfaces.add(editedSlot(ApiTypeRef.union(List.of(symbol("a.A"), symbol("b.B")))));
+
+        String out = render(d);
+        assertEquals("    export class $Unsafe {\n    }\n", out,
+                "entire implements clause must be omitted when no entry is heritage-safe");
+    }
+
+    /** implements 中被注入 union（event.union）或回调：含 | / => 的形态不能作 heritage。 */
+    @Test
+    void unionAndCallbackInImplementsAreOmitted() {
+        ApiTypeRef callback = ApiTypeRef.callback(ApiSignature.function(List.of(), ApiTypeRef.voidType()));
+        TypeDecl d = decl(TypeDecl.Kind.CLASS, "Mixed");
+        d.interfaces.add(editedSlot(symbol("java.io.Serializable")));
+        d.interfaces.add(editedSlot(ApiTypeRef.union(List.of(symbol("a.A"), symbol("b.B")))));
+        d.interfaces.add(editedSlot(callback));
+
+        String out = render(d);
+        assertTrue(out.contains("export class $Mixed implements $Serializable {"),
+                "valid implements entry must survive:\n" + out);
+        assertFalse(out.contains("|"), "union cannot appear in heritage:\n" + out);
+        assertFalse(out.contains("=>"), "callback cannot appear in heritage:\n" + out);
+    }
+
+    /** 接口 extends 列表同路径：assign 注入原始类型 → 该条目省略，合法条目保留。 */
+    @Test
+    void interfaceExtendsEntryAssignedToPrimitiveIsOmitted() {
+        TypeDecl d = decl(TypeDecl.Kind.INTERFACE, "CharSequence");
+        d.interfaces.add(editedSlot(symbol("java.lang.Comparable")));
+        d.interfaces.add(editedSlot(ApiTypeRef.primitive("string")));
+
+        String out = render(d);
+        assertEquals("    export interface $CharSequence extends $Comparable {\n    }\n", out,
+                "primitive extends entry must be omitted, valid entry kept");
+    }
+
+    /** 回归 pin：合法 SYMBOL heritage 条目（extends + implements）原样渲染。 */
+    @Test
+    void validSymbolHeritageEntriesAreKept() {
+        TypeDecl d = decl(TypeDecl.Kind.CLASS, "Pin");
+        d.superType = editedSlot(symbol("java.util.AbstractList"));
+        d.interfaces.add(editedSlot(symbol("java.util.List")));
+        d.interfaces.add(editedSlot(symbol("java.io.Serializable")));
+
+        String out = render(d);
+        assertTrue(out.contains("export class $Pin extends $AbstractList implements $List, $Serializable {"),
+                "symbol heritage entries must render verbatim:\n" + out);
+    }
+
+    /** changeSuper(event.union("a","b"))：union 父类 → 整个 extends 子句省略（implements 照常保留）。 */
+    @Test
+    void unionSuperTypeViaChangeSuperOmitsExtends() {
+        TypeDecl d = decl(TypeDecl.Kind.CLASS, "UnionSuper");
+        d.superType = editedSlot(ApiTypeRef.union(List.of(symbol("a.A"), symbol("b.B"))));
+        d.interfaces.add(editedSlot(symbol("java.io.Serializable")));
+
+        String out = render(d);
+        assertTrue(out.contains("export class $UnionSuper implements $Serializable {"),
+                "extends must be omitted entirely for union super, implements kept:\n" + out);
+        assertFalse(out.contains("extends"), "no extends clause may appear:\n" + out);
+    }
+
+    /** changeSuper 注入回调（(...args: any[]) => any）：同样省略整个 extends 子句。 */
+    @Test
+    void callbackSuperTypeViaChangeSuperOmitsExtends() {
+        ApiTypeRef callback = ApiTypeRef.callback(ApiSignature.function(List.of(), ApiTypeRef.voidType()));
+        TypeDecl d = decl(TypeDecl.Kind.CLASS, "CallbackSuper");
+        d.superType = editedSlot(callback);
+
+        String out = render(d);
+        assertEquals("    export class $CallbackSuper {\n    }\n", out,
+                "extends clause must be omitted for callback super");
     }
 
     private static String render(TypeDecl decl) {

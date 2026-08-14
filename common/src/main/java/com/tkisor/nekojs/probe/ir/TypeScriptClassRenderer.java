@@ -80,15 +80,18 @@ public final class TypeScriptClassRenderer {
 
         if (d.superType != null) {
             String superTs = renderSlot(d.superType, false);
-            // 父类经 TypeConverter 可能映射为 TS 原始类型（Number 子类 → number，即 $Double extends number），
-            // 原始类型不能作 heritage——省略整个 extends 子句（ implements 等照常保留）
-            if (!isTsPrimitiveKeyword(superTs)) {
+            // 父类槽经 TypeConverter 可能映射为 TS 原始类型（Number 子类 → number，即 $Double extends number），
+            // 经 probe 编辑（changeSuper/assign_type）还可能是联合/回调（extends string | number）——
+            // 这些都不能作 heritage，省略整个 extends 子句（implements 等照常保留）
+            if (isHeritageSafe(superTs)) {
                 sb.append(" extends ").append(superTs);
             }
         }
-        if (!d.interfaces.isEmpty()) {
-            sb.append(" implements ")
-              .append(d.interfaces.stream().map(s -> renderSlot(s, false)).collect(Collectors.joining(", ")));
+        // implements 条目经 probe.assign_type 可被重写为任意 ref（primitive/union/回调）——不安全条目逐条
+        // 省略（见 isHeritageSafe），其余条目与整个子句的存续照常保留
+        List<String> implemented = renderHeritageEntries(d.interfaces);
+        if (!implemented.isEmpty()) {
+            sb.append(" implements ").append(String.join(", ", implemented));
         }
         sb.append(" {\n");
 
@@ -140,8 +143,12 @@ public final class TypeScriptClassRenderer {
         sb.append("    export interface $").append(effectiveClassName(d));
         appendTypeParameters(sb, d);
         if (!d.interfaces.isEmpty()) {
-            sb.append(" extends ")
-              .append(d.interfaces.stream().map(s -> renderSlot(s, false)).collect(Collectors.joining(", ")));
+            // 接口 extends 列表与 class implements 同样经 assign_type 可被注入不安全 ref（extends string），
+            // 逐条过滤（见 isHeritageSafe）
+            List<String> extended = renderHeritageEntries(d.interfaces);
+            if (!extended.isEmpty()) {
+                sb.append(" extends ").append(String.join(", ", extended));
+            }
         }
         sb.append(" {\n");
         for (MethodDecl m : d.methods) {
@@ -239,6 +246,38 @@ public final class TypeScriptClassRenderer {
             case "number", "string", "boolean", "void", "object", "any" -> true;
             default -> false;
         };
+    }
+
+    /**
+     * 渲染 interfaces 槽列表并逐条剔除 heritage 不安全条目；全被剔除时返回空列表（调用方省略整个子句）。
+     */
+    private List<String> renderHeritageEntries(List<TypeSlot> slots) {
+        return slots.stream()
+                .map(s -> renderSlot(s, false))
+                .filter(TypeScriptClassRenderer::isHeritageSafe)
+                .toList();
+    }
+
+    /**
+     * 渲染出的类型字符串能否安全地出现在 heritage 位置（class 的 extends/implements、interface 的 extends）。
+     * heritage 只接受普通类型引用，以下形态不安全：
+     * <ul>
+     *   <li>TS 原始类型关键字（含 any/void/object）——{@link #isTsPrimitiveKeyword}</li>
+     *   <li>联合类型（含 {@code |}，渲染为 {@code A | B}）</li>
+     *   <li>回调类型（含 {@code =>}，渲染为 {@code (...args: any[]) => any}）</li>
+     * </ul>
+     *
+     * <p>可达路径：{@code probe.assign_type} 可把任一 SYMBOL 槽（含 implements / 接口 extends 条目）
+     * 重写为任意 ref（如 {@code probe.assign("java.lang.CharSequence", "string")}）；
+     * {@code probe.modify_type.changeSuper} 可把父类槽换成 union/回调/原始类型。
+     *
+     * <p><b>策略：省略（OMIT）而非失败</b>——不安全条目被丢弃、其余条目及声明主体照常渲染，
+     * 保证产出声明语法有效。本 renderer 是纯函数、无日志通道，故以此注释记录该静默策略。
+     */
+    private static boolean isHeritageSafe(String renderedTs) {
+        if (renderedTs == null || renderedTs.isBlank()) return false;
+        if (isTsPrimitiveKeyword(renderedTs)) return false;
+        return !renderedTs.contains("|") && !renderedTs.contains("=>");
     }
 
     /** 渲染类型槽：overridden → ref；否则 → TypeConverter(sourceType)。 */
