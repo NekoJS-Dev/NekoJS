@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id 'java-library'
     id 'idea'
@@ -119,6 +121,43 @@ tasks.register('checkCommonIsolation') {
 
 check.dependsOn checkCommonIsolation
 
+// ---- enum switch ($SwitchMap$) staleness guard -------------------------------------------
+// javac compiles `switch` over common-api enums into a synthetic $SwitchMap$ class inside the
+// CONSUMER (this module). Gradle's compile avoidance only snapshots the ABI member set, which
+// does NOT change when enum constants are merely REORDERED in common-api — so a stale
+// $SwitchMap$ can silently misdispatch at runtime. Fingerprinting the exact jar bytes of
+// :common-api:jar as a compileJava input forces recompilation on any content change.
+// `api project(':common-api')` already makes compileJava depend on :common-api:jar, so the
+// archive exists by the time this provider is evaluated (at execution time); the 'missing'
+// fallback only covers edge cases (e.g. jar task disabled).
+// NOTE: must be a lazy provider — with org.gradle.parallel=true, ':common-api' may not be
+// configured yet when ':common' is evaluated, so the jar task must be looked up at execution time.
+def sha256Of = { File file ->
+    if (file == null || !file.exists()) {
+        return 'missing'
+    }
+    def digest = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        def buffer = new byte[8192]
+        int read
+        while ((read = stream.read(buffer)) != -1) {
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().collect { byte b -> String.format('%02x', b) }.join()
+}
+
+def commonApiJarFingerprint = providers.provider {
+    def jarTask = project(':common-api').tasks.findByName('jar')
+    def file = jarTask?.archiveFile?.getOrNull()?.asFile
+    sha256Of(file)
+}
+
+compileJava {
+    inputs.property('commonApiJarFingerprint', commonApiJarFingerprint)
+}
+// ------------------------------------------------------------------------------------------
+
 tasks.register('nbtSmokeTest', Test) {
     group = 'verification'
     description = 'Runs managed API and sandboxed filesystem smoke tests for portable binary NBT.'
@@ -127,4 +166,20 @@ tasks.register('nbtSmokeTest', Test) {
     useJUnitPlatform {
         includeTags 'nbt-smoke'
     }
+}
+
+// Golden 再生成入口：运行 `./gradlew :common:regenerateGoldens`，通过系统属性
+// nekojs.golden.regenerate=true 让 probe golden 测试用实际输出覆盖 golden 文件后自跳过；
+// 生成后 review diff 并提交。配置镜像 nbtSmokeTest（同样的 testClassesDirs/classpath/
+// JUnit Platform），locale 等系统属性由根 build.gradle 的 Test 约定统一注入。
+tasks.register('regenerateGoldens', Test) {
+    group = 'verification'
+    description = 'Regenerates probe golden files from current actuals (review the diff, then commit).'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'com.tkisor.nekojs.probe.*'
+    }
+    systemProperty 'nekojs.golden.regenerate', 'true'
 }

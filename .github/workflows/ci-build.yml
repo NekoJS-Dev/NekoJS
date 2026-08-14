@@ -99,17 +99,8 @@ jobs:
         run: npm ci
 
       - name: Run common checks
-        run: ./gradlew :common-api:check :common:test --console=plain
-
-      - name: Upload common test reports on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: common-test-reports
-          path: |
-            common/build/reports/tests/test
-            common/build/test-results/test
-          if-no-files-found: ignore
+        # 用 :common:check 而非 :common:test：check 才会挂上 checkCommonIsolation 隔离门禁
+        run: ./gradlew :common-api:check :common:check --console=plain
 
       - name: Run platform NBT smoke tests
         # :common:test 已覆盖 common 的 nbt-smoke 标签用例，这里只补平台侧（platforms/* 的测试否则永不运行）
@@ -192,6 +183,48 @@ jobs:
           path: artifacts/*.jar
           if-no-files-found: error
           retention-days: ${{ needs.analyze.outputs.is_release == 'true' && 90 || 14 }}
+
+      - name: Upload test reports on failure
+        # 放在 job 末尾 + if: failure()：任何一步失败（common 检查 / 平台 NBT 冒烟 / 平台测试 / 打包）都能带上报表
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            common/build/reports/tests/test
+            common/build/test-results/test
+            platforms/*/build/reports/tests/test
+            platforms/*/build/test-results
+          if-no-files-found: ignore
+
+  common-jdk21:
+    name: Common checks (JDK 21)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # 独立小作业只读缓存，避免与主构建写入的缓存条目互相挤占
+          cache-read-only: true
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run common checks
+        # 主 job 的 Gradle 守护进程跑在 JDK 25 上；这里用 JDK 21 跑同一组检查（工具链同为 21），
+        # 捕捉对守护进程 JVM 版本的隐性依赖（toolchain 漂移）
+        run: ./gradlew :common-api:check :common:check --console=plain
 
   release:
     name: Create GitHub release

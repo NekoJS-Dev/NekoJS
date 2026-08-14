@@ -8,9 +8,23 @@ version = mod_version
 
 // 让编译器警告可见（未用 import、raw 类型、unchecked 等），便于及早发现代码质量问题。
 // 不加 -Werror：避免既有警告一夜变红；后续清理后再考虑提升为错误。
+//
+// 编码统一为 UTF-8：源码含大量中文注释，Windows 开发机默认 GBK 时 javac 会报
+// unmappable character（CI 是 UTF-8 所以一直绿）。cleanroom 平台脚本此前单独设置过，
+// 这里全局兜底，重复设置无副作用。
+// 测试 JVM 固定 locale/时区/编码：golden 文件对比对区域设置敏感（数字、日期、
+// 大小写折叠等），避免开发机与 CI 之间漂移。
 allprojects {
     tasks.withType(JavaCompile).configureEach {
         options.compilerArgs += '-Xlint:all'
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.withType(Test).configureEach {
+        systemProperty 'user.language', 'en'
+        systemProperty 'user.country', 'US'
+        systemProperty 'user.timezone', 'UTC'
+        systemProperty 'file.encoding', 'UTF-8'
     }
 }
 

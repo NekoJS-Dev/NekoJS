@@ -17,3 +17,8 @@ bb21b/
 bb26/
 # AI 工具产物
 .zcode/
+# 用户本地目录（本地环境私有，绝不入库）
+/dsh-web-ui/
+/plugins/
+/.pnpm-store/
+/.dsh-tmp/
