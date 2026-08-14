@@ -1005,7 +1005,9 @@ public final class PythonEmitter {
      * {@code obj.method(args)} call (a loud runtime TypeError instead of silently applying the wrong
      * mapping). The worst-offender dict method names ({@link #DICT_METHODS}) are additionally
      * hijack-guarded: a user class defining {@code def keys(self)} keeps its own method (see
-     * {@link #rtDispatch}).
+     * {@link #rtDispatch}); likewise list names JS natives own (sort/pop/copy/insert/remove, see
+     * {@link #rtArrayDispatch}) and str names JS natives lack (index/count, via rtDispatch) —
+     * a bare-name-bound user instance keeps its own method in all of them.
      */
     private String emitMethodCall(PythonNode.Attribute attr, List<PythonNode> args) {
         String obj = emitExpr(attr.obj());
@@ -1024,14 +1026,28 @@ public final class PythonEmitter {
             case "rstrip" -> args.isEmpty() ? obj + ".trimEnd()" : null;
             case "find" -> args.size() == 1 ? obj + ".indexOf(" + a + ")" : null;
             case "rfind" -> args.size() == 1 ? obj + ".lastIndexOf(" + a + ")" : null;
-            case "index" -> args.size() == 1 ? obj + ".indexOf(" + a + ")" : null;
+            case "index" -> {
+                // 劫持防护（sort 之后的同类缺口）：用户类 def index(self, x) 不能被映射成 indexOf。
+                // JS 原生 str/array 都没有 .index 方法 → typeof 探测不会误命中，用 dict 方法族同款 rtDispatch。
+                if (args.size() != 1 || hijackReceiverIsUserInstance(attr)) yield null;
+                yield hijackReceiverIsPlain(attr)
+                        ? rtDispatch(obj, "index", obj + ".index(" + a + ")", obj + ".indexOf(" + a + ")")
+                        : obj + ".indexOf(" + a + ")";
+            }
             case "ljust" -> args.size() == 1 ? obj + ".padEnd(" + a + ")" : null;
             case "rjust" -> args.size() == 1 ? obj + ".padStart(" + a + ")" : null;
             case "zfill" -> args.size() == 1 ? obj + ".padStart(" + a + ", \"0\")" : null;
             case "replace" -> args.size() == 2 ? obj + ".replaceAll(" + a + ")" : null;
             case "startswith" -> args.size() == 1 ? obj + ".startsWith(" + a + ")" : null;
             case "endswith" -> args.size() == 1 ? obj + ".endsWith(" + a + ")" : null;
-            case "count" -> args.size() == 1 ? obj + ".split(" + e0 + ").length - 1" : null;
+            case "count" -> {
+                // 同 index：用户类 def count(self, x) 保有自己的方法；str/array 均无 .count → rtDispatch 探测。
+                if (args.size() != 1 || hijackReceiverIsUserInstance(attr)) yield null;
+                String strForm = obj + ".split(" + e0 + ").length - 1";
+                yield hijackReceiverIsPlain(attr)
+                        ? rtDispatch(obj, "count", obj + ".count(" + e0 + ")", strForm)
+                        : strForm;
+            }
             case "split" -> args.size() <= 1
                     ? (args.isEmpty()
                         ? obj + ".trim().split(/\\s+/).filter(function (x) { return x !== \"\"; })"
@@ -1040,28 +1056,51 @@ public final class PythonEmitter {
             case "join" -> args.size() == 1 ? obj + ".join(" + a + ")" : null;
             // list
             case "append" -> args.size() == 1 ? obj + ".push(" + a + ")" : null;
-            case "copy" -> args.isEmpty() ? obj + ".slice()" : null;
+            // copy/insert/remove/pop 与 sort 同款劫持防护：静态可判定的用户类接收者（Cls(...).m /
+            // 方法体内 self.m）直接放行原生调用；简单接收者（Name/属性链/索引）再运行时探测——
+            // 只有真数组（且没有自有同名属性）才走数组降级映射，裸名字绑定的用户类实例
+            // （b = Box(); b.pop()）保有自己的方法。reverse 的数组降级与原生调用同形（obj.reverse()），
+            // 无劫持歧义，不探测。
+            case "copy" -> {
+                if (!args.isEmpty() || hijackReceiverIsUserInstance(attr)) yield null;
+                yield hijackReceiverIsPlain(attr)
+                        ? rtArrayDispatch(obj, "copy", obj + ".slice()", obj + ".copy()")
+                        : obj + ".slice()";
+            }
             case "reverse" -> args.isEmpty() ? obj + ".reverse()" : null;
-            case "insert" -> (args.size() == 2 ? obj + ".splice(" + e0 + ", 0, " + e1 + ")" : null);
-            case "remove" -> (args.size() == 1
-                    ? "((function (arr, v) { var i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); })(" + obj + ", " + e0 + "))"
-                    : null);
+            case "insert" -> {
+                if (args.size() != 2 || hijackReceiverIsUserInstance(attr)) yield null;
+                String arrForm = obj + ".splice(" + e0 + ", 0, " + e1 + ")";
+                yield hijackReceiverIsPlain(attr)
+                        ? rtArrayDispatch(obj, "insert", arrForm, obj + ".insert(" + e0 + ", " + e1 + ")")
+                        : arrForm;
+            }
+            case "remove" -> {
+                if (args.size() != 1 || hijackReceiverIsUserInstance(attr)) yield null;
+                String arrForm = "((function (arr, v) { var i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); })(" + obj + ", " + e0 + "))";
+                yield hijackReceiverIsPlain(attr)
+                        ? rtArrayDispatch(obj, "remove", arrForm, obj + ".remove(" + e0 + ")")
+                        : arrForm;
+            }
             case "pop" -> {
-                // JS 数组自带 .pop（运行时探测会误命中），故 pop 不做探测，仅防用户类劫持
+                // JS 数组自带 .pop（在 Array.prototype 上，typeof 探测会误命中真数组）→ 与 sort 同款
+                // Array.isArray + 无自有 pop 双条件探测；0 参时数组降级与原生调用同形（obj.pop()），无需探测。
                 if (args.size() > 1 || userInstance) yield null;
-                yield args.isEmpty() ? obj + ".pop()" : obj + ".splice(" + e0 + ", 1)[0]";
+                if (args.isEmpty()) yield obj + ".pop()";
+                String arrForm = obj + ".splice(" + e0 + ", 1)[0]";
+                if (!hijackReceiverIsPlain(attr)) yield arrForm;   // 复杂接收者只求值一次，按数组处理
+                yield rtArrayDispatch(obj, "pop", arrForm, obj + ".pop(" + e0 + ")");
             }
             case "sort" -> {
                 // 与 sorted() 相同的比较器：数值按大小（JS 默认 sort 是字典序，[10,2,1] → [1,10,2]）。
-                // 劫持防护与 dict 方法族一致：静态可判定的用户类接收者（Cls(...).sort / 方法体内
-                // self.sort）直接放行原生调用；简单接收者（Name/属性链/索引）再运行时探测——
-                // 只有真数组（且没有自有 sort）才注入比较器，用户类实例保有自己的 sort 方法
-                // （旧实现无条件注入，把 comparator 当成第一个实参传给用户方法 → 静默错误值）。
+                // 劫持防护：静态可判定的用户类接收者（Cls(...).sort / 方法体内 self.sort）直接放行
+                // 原生调用；简单接收者（Name/属性链/索引）再运行时探测——只有真数组（且没有自有
+                // sort）才注入比较器，用户类实例保有自己的 sort 方法（旧实现无条件注入，把
+                // comparator 当成第一个实参传给用户方法 → 静默错误值）。
                 if (!args.isEmpty() || hijackReceiverIsUserInstance(attr)) yield null;
                 String cmp = obj + ".sort((a, b) => ((a < b) ? -1 : ((a > b) ? 1 : 0)))";
                 if (!hijackReceiverIsPlain(attr)) yield cmp;   // 复杂接收者只求值一次，按数组处理
-                yield "((Array.isArray(" + obj + ") && !Object.prototype.hasOwnProperty.call(" + obj + ", \"sort\")) ? "
-                        + cmp + " : " + obj + ".sort())";
+                yield rtArrayDispatch(obj, "sort", cmp, obj + ".sort()");
             }
             // dict (obj is a plain JS object) — worst offenders 走劫持防护
             case "keys" -> {
@@ -1121,12 +1160,27 @@ public final class PythonEmitter {
     }
 
     /**
-     * dict 方法名劫持防护（之三）：运行时探测分发——receiver 定义了同名方法（用户类实例 /
-     * Map 自带 get/keys 等）则调用之，否则走 dict 降级映射。receiver 必须是简单表达式
+     * 方法名劫持防护（之三）：运行时探测分发——receiver 定义了同名方法（用户类实例 /
+     * Map 自带 get/keys 等）则调用之，否则走降级映射。dict 方法族（get/keys/values/items/update/pop）
+     * 以及 JS 原生没有同名方法的 str/list 名（index/count）都用这档。receiver 必须是简单表达式
      * （{@link #hijackReceiverIsPlain}），因为 obj 文本会被求值多次。
      */
     private static String rtDispatch(String obj, String attrName, String userForm, String dictForm) {
         return "(typeof " + obj + "." + attrName + " === \"function\" ? " + userForm + " : " + dictForm + ")";
+    }
+
+    /**
+     * 方法名劫持防护（之四）：sort/pop/copy/insert/remove 等 JS 原生数组自带（或在
+     * Array.prototype 上）的名字不能用 {@link #rtDispatch} 的 typeof 探测——真数组的
+     * {@code typeof xs.sort === "function"} 恒真，会误命中。改用 Array.isArray +
+     * 「无自有同名属性」双条件：仅真数组（同名方法都在 Array.prototype、非自有属性）走
+     * 数组降级映射，其余 receiver（用户类实例的方法在其原型上而非自有属性）原生调用自身方法。
+     * 用户用 {@code xs.pop = fn} 覆盖时自有属性存在 → 尊重覆盖。receiver 必须是简单表达式
+     * （{@link #hijackReceiverIsPlain}），因为 obj 文本会被求值多次。
+     */
+    private static String rtArrayDispatch(String obj, String attrName, String arrForm, String userForm) {
+        return "((Array.isArray(" + obj + ") && !Object.prototype.hasOwnProperty.call(" + obj + ", \"" + attrName + "\")) ? "
+                + arrForm + " : " + userForm + ")";
     }
 
     /**

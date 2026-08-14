@@ -1685,6 +1685,75 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void userClassListAndStrMethodsNotHijacked() throws Exception {
+        // pop（sort 之后的同类缺口）：用户类保有自己的 pop——0 参时数组降级与原生调用同形
+        // （obj.pop()，天然放行）；带索引时旧实现无条件发射 splice → 运行时 TypeError，
+        // 现在裸名字接收者运行时探测（Array.isArray + 无自有 pop）放行原生调用。
+        assertEquals("marker", evalString("""
+                class Box:
+                    def pop(self):
+                        return 'marker'
+                b = Box()
+                b.pop()
+                """));
+        String indexed = """
+                class Box:
+                    def pop(self, i):
+                        return i * 10
+                b = Box()
+                b.pop(2)
+                """;
+        String js = py(indexed);
+        assertTrue(js.contains("Array.isArray(b)"), "bare-name receiver gets a runtime guard: " + js);
+        assertEquals(20, evalInt(indexed));
+        // 同款防护的兄弟方法：copy/insert/remove（JS 原生数组自带 → rtArrayDispatch）与
+        // index/count（JS 原生没有同名方法 → rtDispatch 的 typeof 探测）。
+        assertEquals("copied", evalString("class Box:\n    def copy(self):\n        return 'copied'\nb = Box()\nb.copy()"));
+        assertEquals(5, evalInt("class Box:\n    def insert(self, i, v):\n        return v\nb = Box()\nb.insert(0, 5)"));
+        assertEquals("gone", evalString("class Box:\n    def remove(self, v):\n        return 'gone'\nb = Box()\nb.remove(3)"));
+        assertEquals(2, evalInt("class Box:\n    def index(self, v):\n        return 2\nb = Box()\nb.index('x')"));
+        assertEquals(3, evalInt("class Box:\n    def count(self, v):\n        return 3\nb = Box()\nb.count('x')"));
+        // 构造调用接收者（静态可判定）→ 原生直传
+        assertEquals(7, evalInt("class Box:\n    def pop(self, i):\n        return i\nBox().pop(7)"));
+    }
+
+    @Test
+    void bareListAndStrMethodsStillNativeSemantics() throws Exception {
+        // 回归钉：数组/字符串接收者仍走各自的降级映射（探测的数组 / 非用户分支）。
+        assertEquals(3, evalInt("""
+                xs = [1, 2, 3]
+                xs.pop()
+                """));
+        assertEquals(1, evalInt("""
+                xs = [1, 2, 3]
+                xs.pop(0)
+                """));
+        assertEquals("1,2", evalString("""
+                xs = [1, 2]
+                str(xs.copy())
+                """));
+        assertEquals("0,1,9", evalString("""
+                xs = [1, 9]
+                xs.insert(0, 0)
+                str(xs)
+                """));
+        assertEquals("1,3", evalString("""
+                xs = [1, 2, 3]
+                xs.remove(2)
+                str(xs)
+                """));
+        assertEquals(1, evalInt("[5, 6, 7].index(6)"));   // 字面量接收者不探测，直接映射
+        assertEquals(2, evalInt("""
+                s = 'banana'
+                s.count('an')
+                """));
+        assertEquals(2, evalInt("""
+                s = 'banana'
+                s.index('na')
+                """));
+    }
+
+    @Test
     void moduloByZeroRaisesZeroDivisionError() throws Exception {
         // Python: 7 % 0 → ZeroDivisionError（JS 静默 NaN）；__nekoMod 现在显式抛出，
         // 且 needsMod 必须连带发射异常 prelude（ZeroDivisionError 类）。

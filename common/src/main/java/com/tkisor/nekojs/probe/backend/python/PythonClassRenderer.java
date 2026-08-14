@@ -147,13 +147,33 @@ public final class PythonClassRenderer {
         Set<String> bases = new LinkedHashSet<>();
         if (includeSuper && d.superType != null) {
             String s = renderSlot(d.superType);
-            if (!s.equals("Any")) bases.add(s);
+            if (isBaseSafe(s)) bases.add(s);
         }
         for (TypeSlot i : d.interfaces) {
             String s = renderSlot(i);
-            if (!s.equals("Any")) bases.add(s);
+            if (isBaseSafe(s)) bases.add(s);
         }
         return bases.isEmpty() ? "" : "(" + String.join(", ", bases) + ")";
+    }
+
+    /**
+     * 渲染出的类型字符串能否安全地出现在 Python 基类位置——与 TS 侧
+     * {@code TypeScriptClassRenderer.isHeritageSafe} 对称的守卫。{@code class X(基类):}
+     * 只接受可子类化的类型引用，probe 编辑 API（{@code assign_type} / {@code modify_type.changeSuper}）
+     * 可把 superType/implements 槽重写为任意 ref，以下形态必须逐条剔除：
+     * <ul>
+     *   <li>{@code Any}（未收集 SYMBOL / object）——原有过滤，悬空引用</li>
+     *   <li>联合类型（含 {@code |}，渲染为 {@code A | B} → 非法基类语法）</li>
+     *   <li>回调类型（{@code Callable[..., Any]} 开头 → 不可子类化）</li>
+     *   <li>{@code None}（VOID 的渲染 → 非法基类）</li>
+     * </ul>
+     * 原始类型（int/float/str/bool）是合法的 Python 基类，保留。策略与 TS 侧一致：剔除而非失败，
+     * 保证产出 stub 语法有效。
+     */
+    private static boolean isBaseSafe(String rendered) {
+        if (rendered == null || rendered.isBlank()) return false;
+        if (rendered.equals("Any") || rendered.equals("None")) return false;
+        return !rendered.contains("|") && !rendered.startsWith("Callable");
     }
 
     /** 完整参数列表（含可选的 self 前缀）。 */
