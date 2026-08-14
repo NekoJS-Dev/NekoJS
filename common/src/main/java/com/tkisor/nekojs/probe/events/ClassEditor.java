@@ -128,19 +128,44 @@ public final class ClassEditor {
         });
     }
 
-    /** 把指定参数标记为 TS 可选（渲染为 {@code name?: type}）。 */
+    /**
+     * 把指定参数标记为 TS 可选（渲染为 {@code name?: type}）。可选参数必须居尾：若其后还有
+     * 必选参数，产出形如 {@code (a: string, b?: number, c: string)} 的非法签名 → 立即抛
+     * {@link IllegalStateException}（varargs 渲染为 {@code name?: T[]}，同样视为可选）。
+     */
     public ClassEditor markOptional(String name, String paramName) {
         return editMethods(name, m -> {
             for (var p : m.params) if (paramName.equals(p.name)) p.optional = true;
+            validateOptionalParamsTrail(m, "markOptional('" + name + "', '" + paramName + "')");
         });
     }
 
-    /** 追加一个参数到方法末尾（所有同名重载）。 */
+    /** 追加一个参数到方法末尾（所有同名重载）。追加的是必选参数：若前面已有可选/varargs 参数
+     *  会形成非法签名，立即抛 {@link IllegalStateException}。 */
     public ClassEditor addParam(String name, String paramName, Object type) {
         return editMethods(name, m -> {
             TypeSlot slot = ProbeModifyTypeEventJS.override(null, type);
             m.params.add(new MethodDecl.MethodParam(paramName, slot, false));
+            validateOptionalParamsTrail(m, "addParam('" + name + "', '" + paramName + "')");
         });
+    }
+
+    /**
+     * 校验参数表不存在「可选参数后跟必选参数」（含 varargs——渲染为 {@code name?: T[]} 视为可选）。
+     * 编辑期失败优于静默产出 TS/Python 都无法解析的声明；异常由 probe.modify_type 事件的外层
+     * try/catch 记录为 error，不会中断游戏。
+     */
+    private void validateOptionalParamsTrail(MethodDecl m, String op) {
+        boolean seenOptional = false;
+        for (var p : m.params) {
+            if (p.optional || p.varargs) {
+                seenOptional = true;
+            } else if (seenOptional) {
+                throw new IllegalStateException("probe.modify_type " + op + " on " + decl.fqn
+                        + " would place required parameter '" + p.name + "' of method '" + m.name
+                        + "' after an optional parameter; optional parameters must be trailing");
+            }
+        }
     }
 
     /**

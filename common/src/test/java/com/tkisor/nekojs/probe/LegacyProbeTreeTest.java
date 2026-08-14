@@ -3,28 +3,33 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Generates the full probe tree from {@link LegacyProbeFixture#snapshot()} using
- * {@link TypeScriptProbeBackend}（Phase 1 起替代旧 ProbeOrchestrator），then compares
+ * {@link TypeScriptProbeBackend}（Phase 1 起替代旧 ProbeOrchestrator）, then compares
  * every file against golden resources under {@code /nekojs/probe/legacy-tree/}.
+ *
+ * <p><b>保留决策</b>：内容比对与 {@link ProbeOutputCompatibilityTest} 重叠，但本测试额外校验
+ * 「无多余文件」（golden 之外仅允许 {@code @nekojs/managed/} 子树），能捕获意外新增的包目录/
+ * 产物文件——因此保留而非删除。归一化已从「全行排序 + import 排序」收紧为与
+ * {@link ProbeOutputCompatibilityTest} 相同的字节级口径（仅 CRLF + 行尾空白归一）：
+ * 排序会掩盖成员顺序回归，而产物顺序本身已有确定性保证（TypeReflector 排序 + 字典序 import）。
  */
 class LegacyProbeTreeTest {
+
+    private static final String GOLDEN_BASE_PATH = "/nekojs/probe/legacy-tree/";
 
     @BeforeAll
     static void initPlatform() {
@@ -41,10 +46,20 @@ class LegacyProbeTreeTest {
         assertTrue(result.success(), "Probe generation should succeed: " + result.message());
 
         Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
+
+        // 重生成模式（-Dnekojs.golden.regenerate=true，由 gradle 任务 regenerateGoldens 设置）：
+        // 实际产物镜像覆盖 golden 资源目录后跳过断言（跑完人工 review + 提交）
+        if (ProbeGoldenSupport.regenerateEnabled()) {
+            Path goldenDir = ProbeGoldenSupport.resourceDir(getClass(), GOLDEN_BASE_PATH);
+            assertNotNull(goldenDir, "golden tree resources must resolve to a file: URL under " + GOLDEN_BASE_PATH);
+            ProbeGoldenSupport.mirrorTree(tempDir.resolve("probe-types"), goldenDir);
+            Assumptions.assumeTrue(false, "goldens regenerated; review and commit");
+        }
+
         Map<String, String> expectedFiles = readGoldenTree();
 
         // Verify golden tree exists
-        assertFalse(expectedFiles.isEmpty(), "Golden tree resources must exist under /nekojs/probe/legacy-tree/");
+        assertFalse(expectedFiles.isEmpty(), "Golden tree resources must exist under " + GOLDEN_BASE_PATH);
 
         // Check all expected files exist with matching content
         for (var entry : expectedFiles.entrySet()) {
@@ -91,50 +106,24 @@ class LegacyProbeTreeTest {
         return files;
     }
 
-    private Map<String, String> readGoldenTree() throws IOException, URISyntaxException {
+    private Map<String, String> readGoldenTree() throws IOException {
         Map<String, String> files = new TreeMap<>();
-        String basePath = "/nekojs/probe/legacy-tree/";
-        // Try to enumerate golden files from classpath resources
-        var url = LegacyProbeTreeTest.class.getResource(basePath);
-        if (url == null) return files;
+        Path dir = ProbeGoldenSupport.resourceDir(LegacyProbeTreeTest.class, GOLDEN_BASE_PATH);
+        if (dir == null) return files;
 
-        if ("file".equals(url.getProtocol())) {
-            Path dir = Path.of(url.toURI());
-            Files.walkFileTree(dir, new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    String rel = dir.relativize(file).toString().replace('\\', '/');
-                    files.put(rel, normalize(Files.readString(file, StandardCharsets.UTF_8)));
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        }
-
+        Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                String rel = dir.relativize(file).toString().replace('\\', '/');
+                files.put(rel, normalize(Files.readString(file, StandardCharsets.UTF_8)));
+                return FileVisitResult.CONTINUE;
+            }
+        });
         return files;
     }
 
-    private static final Pattern IMPORT_PATTERN = Pattern.compile("import \\{([^}]+)\\} from \"([^\"]+)\";");
-
+    /** 与 {@link ProbeOutputCompatibilityTest} 同一口径：仅 CRLF + 行尾空白归一，不做任何重排。 */
     private static String normalize(String value) {
-        String normalized = value.replace("\r\n", "\n");
-        // Sort imports within each import statement
-        Matcher matcher = IMPORT_PATTERN.matcher(normalized);
-        StringBuilder sb = new StringBuilder();
-        while (matcher.find()) {
-            String imports = matcher.group(1);
-            String module = matcher.group(2);
-            String[] parts = imports.split(",");
-            String sorted = Arrays.stream(parts)
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .sorted()
-                    .collect(Collectors.joining(", "));
-            matcher.appendReplacement(sb, Matcher.quoteReplacement("import { " + sorted + " } from \"" + module + "\";"));
-        }
-        matcher.appendTail(sb);
-        // Sort all lines for deterministic comparison (handles non-deterministic member ordering)
-        String[] lines = sb.toString().split("\n");
-        Arrays.sort(lines);
-        return String.join("\n", lines);
+        return value.replace("\r\n", "\n").stripTrailing();
     }
 }

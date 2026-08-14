@@ -4,6 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -55,7 +56,7 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
             extraIncludePackages = extraIncludePackages == null ? List.of() : List.copyOf(extraIncludePackages);
             excludePackages = excludePackages == null ? List.of() : List.copyOf(excludePackages);
             forceScanMods = forceScanMods == null ? List.of() : List.copyOf(forceScanMods);
-            mode = mode == null || mode.isBlank() ? "SMART" : mode.toUpperCase();
+            mode = mode == null || mode.isBlank() ? "SMART" : mode.toUpperCase(Locale.ROOT);
             // 未知取值兜底为 SMART（等价旧行为：默认白名单过滤）
             if (!mode.equals("SMART") && !mode.equals("FULL") && !mode.equals("NONE")) {
                 mode = "SMART";

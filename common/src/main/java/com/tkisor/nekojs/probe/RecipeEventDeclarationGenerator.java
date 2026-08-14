@@ -427,6 +427,7 @@ public final class RecipeEventDeclarationGenerator {
         return name;
     }
 
+    /** 大写归一显式用 {@link Locale#ROOT}，避免默认区域（如 tr 的 i→İ）导致产物漂移。 */
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return s;
         if (s.contains("_")) {
@@ -436,7 +437,7 @@ public final class RecipeEventDeclarationGenerator {
                 if (c == '_') {
                     capitalizeNext = true;
                 } else if (capitalizeNext) {
-                    result.append(Character.toUpperCase(c));
+                    result.append(String.valueOf(c).toUpperCase(Locale.ROOT));
                     capitalizeNext = false;
                 } else {
                     result.append(c);
@@ -444,6 +445,6 @@ public final class RecipeEventDeclarationGenerator {
             }
             return result.toString();
         }
-        return s.substring(0, 1).toUpperCase() + s.substring(1);
+        return s.substring(0, 1).toUpperCase(Locale.ROOT) + s.substring(1);
     }
 }

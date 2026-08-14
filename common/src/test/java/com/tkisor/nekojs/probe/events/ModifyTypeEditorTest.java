@@ -167,6 +167,35 @@ class ModifyTypeEditorTest {
         assertFalse(imps.contains(pkgOf(d.fqn) + ".Sibling"), "same-package symbol must not produce a self-import");
     }
 
+    // ---------------- mark optional (dynamic param name) ----------------
+
+    @Test
+    void markOptional_rendersQuestionMark() {
+        TypeDecl d = reflector.reflect(Sample.class);
+        MethodDecl compute = d.methods.stream().filter(m -> m.name.equals("compute")).findFirst().orElseThrow();
+        String last = compute.params.get(compute.params.size() - 1).name;
+
+        // 可选参数必须居尾：标记最后一个参数
+        new ClassEditor(d).markOptional("compute", last);
+
+        assertTrue(renderer.render(d).contains(last + "?:"),
+                "optional param should render with trailing '?'");
+    }
+
+    @Test
+    void markOptional_rejectsOptionalBeforeRequired() {
+        TypeDecl d = reflector.reflect(Sample.class);
+        MethodDecl compute = d.methods.stream().filter(m -> m.name.equals("compute")).findFirst().orElseThrow();
+        String first = compute.params.get(0).name;
+
+        // compute(x, y)：把首参标记可选会让第二参成为「可选后的必选」→ 非法 TS 签名
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> new ClassEditor(d).markOptional("compute", first));
+        assertTrue(ex.getMessage().contains("optional"),
+                "message should explain the optional-param rule: " + ex.getMessage());
+        assertTrue(ex.getMessage().contains(d.fqn), "message should name the class: " + ex.getMessage());
+    }
+
     // ---------------- add param ----------------
 
     @Test
@@ -178,18 +207,18 @@ class ModifyTypeEditorTest {
         assertTrue(rendered.contains("flag: boolean"), "added param should render");
     }
 
-    // ---------------- mark optional (dynamic param name) ----------------
-
     @Test
-    void markOptional_rendersQuestionMark() {
+    void addParam_rejectsRequiredAfterOptional() {
         TypeDecl d = reflector.reflect(Sample.class);
         MethodDecl compute = d.methods.stream().filter(m -> m.name.equals("compute")).findFirst().orElseThrow();
-        String p0 = compute.params.get(0).name;
+        String last = compute.params.get(compute.params.size() - 1).name;
+        new ClassEditor(d).markOptional("compute", last);
 
-        new ClassEditor(d).markOptional("compute", p0);
-
-        assertTrue(renderer.render(d).contains(p0 + "?:"),
-                "optional param should render with trailing '?'");
+        // 已有可选参数，再追加必选参数 → 非法 TS 签名
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> new ClassEditor(d).addParam("compute", "flag", "boolean"));
+        assertTrue(ex.getMessage().contains("addParam"),
+                "message should name the rejected operation: " + ex.getMessage());
     }
 
     // ---------------- field edits ----------------
@@ -252,6 +281,20 @@ class ModifyTypeEditorTest {
         assertTrue(out.contains("static values(): $Color2[];"), out);
         assertTrue(out.contains("static valueOf(name: string): $Color2;"), out);
         assertFalse(out.contains("$Color;"), "old enum name should be gone: " + out);
+    }
+
+    // ---------------- change super ----------------
+
+    @Test
+    void changeSuper_toTsPrimitiveOmitsExtendsClause() {
+        TypeDecl d = reflector.reflect(Sample.class);
+        new ClassEditor(d).changeSuper("number");
+
+        String out = renderer.render(d);
+        // superType 改写为 TS 原始类型 → extends 子句省略（class $X extends number 非法）
+        assertTrue(out.contains("export class $ModifyTypeEditorTest$Sample {"),
+                "extends clause must be omitted for primitive super type:\n" + out);
+        assertFalse(out.contains("extends number"), out);
     }
 
     // ---------------- addMethod / addStaticMethod ----------------

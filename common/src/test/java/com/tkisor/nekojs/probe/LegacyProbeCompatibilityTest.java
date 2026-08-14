@@ -6,10 +6,13 @@ import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -17,6 +20,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class LegacyProbeCompatibilityTest {
 
@@ -38,6 +42,7 @@ class LegacyProbeCompatibilityTest {
     void legacyBindingDeclarationMatchesGolden() throws Exception {
         var entry = BindingCatalogEntry.of("Helper", ScriptType.SERVER, Helper.class, true);
         String actual = new BindingDeclarationGenerator().generate(List.of(entry), ScriptType.SERVER);
+        maybeRegenerate("legacy-bindings.expected.d.ts", actual);
         assertEquals(resource("legacy-bindings.expected.d.ts"), normalize(actual));
     }
 
@@ -48,7 +53,18 @@ class LegacyProbeCompatibilityTest {
         var generator = new EventDeclarationGenerator(converter, new AdapterAliasGenerator(aliases));
         var event = EventCatalogEntry.of("ServerEvents", "sample", ScriptType.SERVER,
                 SampleEvent.class, null, false, false);
-        assertEquals(resource("legacy-events.expected.d.ts"), normalize(generator.generate(List.of(event), ScriptType.SERVER)));
+        String actual = generator.generate(List.of(event), ScriptType.SERVER);
+        maybeRegenerate("legacy-events.expected.d.ts", actual);
+        assertEquals(resource("legacy-events.expected.d.ts"), normalize(actual));
+    }
+
+    /** 重生成模式（-Dnekojs.golden.regenerate=true）：实际产物覆盖写回 golden 后跳过断言。 */
+    private static void maybeRegenerate(String name, String actual) throws Exception {
+        if (!ProbeGoldenSupport.regenerateEnabled()) return;
+        Path dir = ProbeGoldenSupport.resourceDir(LegacyProbeCompatibilityTest.class, "/nekojs/probe/");
+        assertNotNull(dir, "golden resources must resolve to a file: URL");
+        Files.writeString(dir.resolve(name), actual, StandardCharsets.UTF_8);
+        Assumptions.assumeTrue(false, "goldens regenerated; review and commit");
     }
 
     private static String resource(String name) throws Exception {

@@ -239,13 +239,24 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         deleteRecursive(backup);
     }
 
-    /** 递归删除目录及其内容（深度优先逆序，先文件后目录）。 */
+    /**
+     * 递归删除目录及其内容（深度优先逆序，先文件后目录）。walk 流用 try-with-resources 关闭
+     * （文件句柄泄漏会锁住目录，Windows 上导致后续 move 失败）；删除失败的路径收集后 warn
+     * 一次（典型为 Windows 文件锁），不抛出——调用方按自身语义决定是否视为失败。
+     */
     private static void deleteRecursive(Path dir) throws IOException {
         if (!Files.exists(dir)) return;
-        Files.walk(dir)
-                .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(java.io.File::delete);
+        List<Path> failed = new ArrayList<>();
+        try (var paths = Files.walk(dir)) {
+            paths.sorted(Comparator.reverseOrder())
+                    .forEach(p -> {
+                        if (!p.toFile().delete()) failed.add(p);
+                    });
+        }
+        if (!failed.isEmpty()) {
+            NekoJS.LOGGER.warn("Probe: failed to delete {} path(s) under {} (locked by another process?): {}",
+                    failed.size(), dir, failed);
+        }
     }
 
     /**
@@ -433,16 +444,23 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             taskCount++;
         }
 
-        // 等待所有任务完成
+        // 等待所有任务完成：包文件写失败（磁盘满/权限等）计为硬失败——若吞掉，generate 仍会提交
+        // staging 并报告成功，输出目录静默残缺。累计失败数并抛出，让 generate 走失败路径
+        // （丢弃 staging、保留旧 outputDir），与其它硬失败的处理一致
+        int failedTasks = 0;
         for (int i = 0; i < taskCount; i++) {
             try {
                 completion.take().get();
             } catch (ExecutionException e) {
-                NekoJS.LOGGER.debug("Package generation task failed (non-fatal)", e.getCause());
+                failedTasks++;
+                NekoJS.LOGGER.error("Probe [typescript] package generation task failed", e.getCause());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                break;
+                throw new IOException("Package generation interrupted", e);
             }
+        }
+        if (failedTasks > 0) {
+            throw new IOException("Package generation failed for " + failedTasks + " of " + taskCount + " packages");
         }
 
         // 3. 生成根 index.d.ts

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.surface.*;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -104,6 +105,14 @@ class ProbeTypeScriptFixtureWriterTest {
         // Write actual output for inspection
         Files.createDirectories(ACTUAL_PATH.getParent());
         Files.writeString(ACTUAL_PATH, actual, StandardCharsets.UTF_8);
+
+        // 重生成模式（-Dnekojs.golden.regenerate=true，由 gradle 任务 regenerateGoldens 设置）：
+        // 实际产物覆盖写回 golden 后跳过断言（跑完人工 review + 提交）
+        if (ProbeGoldenSupport.regenerateEnabled()) {
+            Files.createDirectories(GOLDEN_PATH.getParent());
+            Files.writeString(GOLDEN_PATH, actual, StandardCharsets.UTF_8);
+            Assumptions.assumeTrue(false, "goldens regenerated; review and commit");
+        }
 
         // Compare with golden
         assertTrue(Files.exists(GOLDEN_PATH),

@@ -470,9 +470,24 @@ public final class PythonProbeBackend implements ProbeBackend {
         deleteRecursive(backup);
     }
 
+    /**
+     * 递归删除目录及其内容（深度优先逆序，先文件后目录）。walk 流用 try-with-resources 关闭
+     * （文件句柄泄漏会锁住目录，Windows 上导致后续 move 失败）；删除失败的路径收集后 warn
+     * 一次（典型为 Windows 文件锁），不抛出——与 TS backend 的同名工具保持一致。
+     */
     private static void deleteRecursive(Path dir) throws IOException {
         if (!Files.exists(dir)) return;
-        Files.walk(dir).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(java.io.File::delete);
+        List<Path> failed = new ArrayList<>();
+        try (var paths = Files.walk(dir)) {
+            paths.sorted(Comparator.reverseOrder())
+                    .forEach(p -> {
+                        if (!p.toFile().delete()) failed.add(p);
+                    });
+        }
+        if (!failed.isEmpty()) {
+            NekoJS.LOGGER.warn("Probe: failed to delete {} path(s) under {} (locked by another process?): {}",
+                    failed.size(), dir, failed);
+        }
     }
 
     private static String pkgOf(String fqn) {

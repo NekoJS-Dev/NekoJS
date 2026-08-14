@@ -79,7 +79,12 @@ public final class TypeScriptClassRenderer {
         appendTypeParameters(sb, d);
 
         if (d.superType != null) {
-            sb.append(" extends ").append(renderSlot(d.superType, false));
+            String superTs = renderSlot(d.superType, false);
+            // 父类经 TypeConverter 可能映射为 TS 原始类型（Number 子类 → number，即 $Double extends number），
+            // 原始类型不能作 heritage——省略整个 extends 子句（ implements 等照常保留）
+            if (!isTsPrimitiveKeyword(superTs)) {
+                sb.append(" extends ").append(superTs);
+            }
         }
         if (!d.interfaces.isEmpty()) {
             sb.append(" implements ")
@@ -223,6 +228,17 @@ public final class TypeScriptClassRenderer {
             sb.append(renderSlot(p.type, true));
             if (p.varargs) sb.append("[]");
         }
+    }
+
+    /**
+     * 渲染出的类型字符串是否是 TS 原始类型关键字（number/string/boolean 等）——这些不能出现在
+     * {@code extends} 子句里（TypeConverter 会把 Number 子类映射为 number、String/Boolean 同理）。
+     */
+    private static boolean isTsPrimitiveKeyword(String tsType) {
+        return switch (tsType) {
+            case "number", "string", "boolean", "void", "object", "any" -> true;
+            default -> false;
+        };
     }
 
     /** 渲染类型槽：overridden → ref；否则 → TypeConverter(sourceType)。 */

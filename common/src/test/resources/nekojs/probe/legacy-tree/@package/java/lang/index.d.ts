@@ -439,7 +439,7 @@ declare module "java:java/lang" {
         compareTo(arg0: T): number;
     }
 
-    export class $Double extends number implements $Comparable, $Constable, $ConstantDesc {
+    export class $Double implements $Comparable, $Constable, $ConstantDesc {
         constructor(arg0: number);
         constructor(arg0: string);
         static BYTES: number;
@@ -511,7 +511,7 @@ declare module "java:java/lang" {
         toString(): string;
     }
 
-    export class $Integer extends number implements $Comparable, $Constable, $ConstantDesc {
+    export class $Integer implements $Comparable, $Constable, $ConstantDesc {
         constructor(arg0: number);
         constructor(arg0: string);
         static BYTES: number;
@@ -582,7 +582,7 @@ declare module "java:java/lang" {
         spliterator(): $Spliterator<T>;
     }
 
-    export class $Long extends number implements $Comparable, $Constable, $ConstantDesc {
+    export class $Long implements $Comparable, $Constable, $ConstantDesc {
         constructor(arg0: string);
         constructor(arg0: number);
         static BYTES: number;

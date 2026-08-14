@@ -4,13 +4,16 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -151,12 +154,17 @@ public final class TypeReflector {
      * 镜像 ClassDeclGenerator.generateClass 的方法枚举：
      * 非静态 getXxx/isXxx(0 参) → getter；其配对 setXxx(1 参) → setter（isSetter 标志）。
      * 其余方法按原样收集，由 renderer 按标志分段。
+     *
+     * <p>同一属性可能存在多个 getter 候选（协变覆盖 vs 其 bridge 方法、getFoo()/isFoo() 并存），
+     * JVM 规范不保证 getDeclaredMethods 的返回顺序——first-seen 去重会跨 JVM 漂移，且 bridge 胜出时
+     * 渲染出错误的（超类型）返回类型，事后排序无法修复选择。故先对候选做确定性排序：
+     * 非 synthetic/bridge 优先（协变覆盖总是胜出 bridge），同优先级按签名键字典序（getFoo 先于 isFoo）。
+     * 排序只影响候选选择；输出列表在 {@link #reflect} 末尾仍按 methodKey 全量排序，
+     * bridge 方法本身保留在输出中（legacy ProbeJS parity，如 {@code append(arg0: string): $Appendable}）。
      */
     private void reflectMethodsLikeClassDecl(Class<?> cls, TypeDecl decl) {
-        var declared = cls.getDeclaredMethods();
-        // 单遍收集，保持 getDeclaredMethods 的原始声明序：旧 ClassDeclGenerator 的 import 收集
-        // 按原始序建立 first-insertion 顺序，import 块字节兼容依赖于此；渲染按 isGetter/isSetter
-        // 标志分段，与收集顺序无关。
+        Method[] declared = cls.getDeclaredMethods();
+        Arrays.sort(declared, TypeReflector::compareCandidates);
         Set<String> processedProperties = new HashSet<>();
         for (var method : declared) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
@@ -183,6 +191,24 @@ public final class TypeReflector {
             }
             decl.methods.add(m);
         }
+    }
+
+    /**
+     * getter/setter 候选的确定性排序：非 synthetic/bridge 的声明优先（协变覆盖胜出其 bridge），
+     * 同优先级按「名 + 参数类型 + 泛型返回类型」字典序。排序结果与 JVM 返回顺序无关。
+     */
+    private static int compareCandidates(Method a, Method b) {
+        boolean syntheticA = a.isSynthetic() || a.isBridge();
+        boolean syntheticB = b.isSynthetic() || b.isBridge();
+        if (syntheticA != syntheticB) return syntheticA ? 1 : -1;
+        return candidateKey(a).compareTo(candidateKey(b));
+    }
+
+    private static String candidateKey(Method m) {
+        StringBuilder sb = new StringBuilder(m.getName());
+        for (Type p : m.getGenericParameterTypes()) sb.append('|').append(p.getTypeName());
+        sb.append("→").append(m.getGenericReturnType().getTypeName());
+        return sb.toString();
     }
 
     private MethodDecl reflectConstructor(java.lang.reflect.Constructor<?> ctor) {
@@ -222,16 +248,25 @@ public final class TypeReflector {
         }
     }
 
+    /**
+     * 配对 setter 的入参槽：同名 setXxx(1 参) 的公开重载里确定性取一个——非 synthetic/bridge 优先，
+     * 同优先级按泛型参数类型字典序（首个匹配胜出的旧实现依赖 getDeclaredMethods 顺序，跨 JVM 会漂移）。
+     */
     private TypeSlot findSetterParamSlot(Class<?> cls, String propName) {
-        String setterName = "set" + propName.substring(0, 1).toUpperCase() + propName.substring(1);
-        for (var method : cls.getDeclaredMethods()) {
-            if (method.getName().equals(setterName) && method.getParameterCount() == 1
-                    && Modifier.isPublic(method.getModifiers())) {
-                Type t = method.getGenericParameterTypes()[0];
-                return TypeSlot.of(t, toRef(t));
+        String setterName = "set" + propName.substring(0, 1).toUpperCase(Locale.ROOT) + propName.substring(1);
+        Method best = null;
+        for (Method method : cls.getDeclaredMethods()) {
+            if (!method.getName().equals(setterName) || method.getParameterCount() != 1
+                    || !Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
+            if (best == null || compareCandidates(method, best) < 0) {
+                best = method;
             }
         }
-        return null;
+        if (best == null) return null;
+        Type t = best.getGenericParameterTypes()[0];
+        return TypeSlot.of(t, toRef(t));
     }
 
     private static boolean isGetterName(java.lang.reflect.Method method) {
@@ -244,13 +279,14 @@ public final class TypeReflector {
         return name.startsWith("set") && name.length() > 3;
     }
 
+    /** 属性名：getFoo→foo、isFoo→foo。大小写归一显式用 {@link Locale#ROOT}，避免默认区域（如 tr）漂移。 */
     private static String getPropertyName(java.lang.reflect.Method method) {
         String name = method.getName();
         if (name.startsWith("get") && name.length() > 3) {
-            return Character.toLowerCase(name.charAt(3)) + name.substring(4);
+            return name.substring(3, 4).toLowerCase(Locale.ROOT) + name.substring(4);
         }
         if (name.startsWith("is") && name.length() > 2) {
-            return Character.toLowerCase(name.charAt(2)) + name.substring(3);
+            return name.substring(2, 3).toLowerCase(Locale.ROOT) + name.substring(3);
         }
         return null;
     }

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.surface.*;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,6 +41,15 @@ class ProbeOutputCompatibilityTest {
         assertTrue(result.success(), "Probe generation should succeed: " + result.message());
 
         Map<String, String> actualFiles = readTree(tempDir.resolve("probe-types"));
+
+        // 重生成模式（-Dnekojs.golden.regenerate=true，由 gradle 任务 regenerateGoldens 设置）：
+        // 实际产物镜像覆盖 golden 资源目录后跳过断言（跑完人工 review + 提交）
+        if (ProbeGoldenSupport.regenerateEnabled()) {
+            Path goldenDir = ProbeGoldenSupport.resourceDir(getClass(), GOLDEN_BASE_PATH);
+            assertNotNull(goldenDir, "golden tree resources must resolve to a file: URL under " + GOLDEN_BASE_PATH);
+            ProbeGoldenSupport.mirrorTree(tempDir.resolve("probe-types"), goldenDir);
+            Assumptions.assumeTrue(false, "goldens regenerated; review and commit");
+        }
 
         // All legacy golden files must still exist
         Map<String, String> legacyGolden = readGoldenTree();
@@ -135,27 +145,21 @@ class ProbeOutputCompatibilityTest {
         return files;
     }
 
+    private static final String GOLDEN_BASE_PATH = "/nekojs/probe/legacy-tree/";
+
     private Map<String, String> readGoldenTree() throws IOException {
         Map<String, String> files = new TreeMap<>();
-        String basePath = "/nekojs/probe/legacy-tree/";
-        var url = ProbeOutputCompatibilityTest.class.getResource(basePath);
-        if (url == null) return files;
+        Path dir = ProbeGoldenSupport.resourceDir(ProbeOutputCompatibilityTest.class, GOLDEN_BASE_PATH);
+        if (dir == null) return files;
 
-        if ("file".equals(url.getProtocol())) {
-            try {
-                Path dir = Path.of(url.toURI());
-                Files.walkFileTree(dir, new SimpleFileVisitor<>() {
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        String rel = dir.relativize(file).toString().replace('\\', '/');
-                        files.put(rel, normalize(Files.readString(file, StandardCharsets.UTF_8)));
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-            } catch (java.net.URISyntaxException e) {
-                throw new IOException(e);
+        Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                String rel = dir.relativize(file).toString().replace('\\', '/');
+                files.put(rel, normalize(Files.readString(file, StandardCharsets.UTF_8)));
+                return FileVisitResult.CONTINUE;
             }
-        }
+        });
         return files;
     }
 

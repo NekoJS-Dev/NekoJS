@@ -257,10 +257,18 @@ public final class ProbeCoordinator {
             }
             // 按原始收集顺序汇总：LinkedHashMap 插入序即 collectClasses 的 BFS 序，后续 List.copyOf 稳定
             for (int i = 0; i < futures.size(); i++) {
+                String fqn = ordered.get(i).getName();
                 try {
-                    ir.put(ordered.get(i).getName(), futures.get(i).get());
-                } catch (Throwable ignored) {
-                    // 无法反射的类跳过：各 backend 自行按需补反射；Python 不产出其 stub
+                    ir.put(fqn, futures.get(i).get());
+                } catch (InterruptedException e) {
+                    // 中断不能当「反射失败」吞掉：恢复中断标志并向上传播，probe 立刻终止
+                    // （携带半截 IR 继续渲染会把残缺产物提交到磁盘）
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Interrupted while building shared probe IR", e);
+                } catch (Throwable t) {
+                    // 无法反射的类跳过：各 backend 自行按需补反射；Python 不产出其 stub。
+                    // 逐类 debug 日志（含类名）便于排查缺失类型
+                    NekoJS.LOGGER.debug("Probe: failed to reflect class {} into shared IR (skipped)", fqn, t);
                 }
             }
         }
