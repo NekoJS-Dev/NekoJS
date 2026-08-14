@@ -1,0 +1,18 @@
+# 强制文本文件使用 LF 行尾：平台层存在跨源码树字节级对比（scripts/check-platform-drift），
+# 行尾混入会破坏 diff 与未来的 drift 工具。工作树行尾由 core.autocrlf 决定（Windows 上
+# checkout 为 CRLF 属正常），仓库内始终以 LF 存储。
+*.java text eol=lf
+*.gradle text eol=lf
+*.groovy text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.properties text eol=lf
+
+# 二进制资源
+*.png binary
+*.jar binary
+*.mca binary
