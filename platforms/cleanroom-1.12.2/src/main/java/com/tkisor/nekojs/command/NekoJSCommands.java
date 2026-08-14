@@ -10,6 +10,7 @@ import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
@@ -99,6 +100,10 @@ public class NekoJSCommands extends CommandBase {
             }
         }
 
+        if (!canReloadHere(sender, type)) {
+            return;
+        }
+
         try {
             NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
             if (type == ScriptType.TEST) {
@@ -122,6 +127,19 @@ public class NekoJSCommands extends CommandBase {
             NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
             sender.sendMessage(new TextComponentString("Reloading NekoJS " + type.name + " scripts failed: " + e.getMessage()));
         }
+    }
+
+    /**
+     * 与 26-shared/1.21.1 的 canReloadHere 等价的守卫：
+     * 专用服务器（无客户端运行时）上禁止 reload client，避免 walk 进 root.reload(CLIENT)。
+     * Platform.isClient() 由 ForgePlatform 实现（FMLCommonHandler.instance().getSide() == Side.CLIENT）。
+     */
+    private boolean canReloadHere(@NotNull ICommandSender sender, ScriptType type) {
+        if (type == ScriptType.CLIENT && !Platform.isClient()) {
+            sender.sendMessage(new TextComponentString("Client script reload is only available in an integrated client runtime."));
+            return false;
+        }
+        return true;
     }
 
     /**

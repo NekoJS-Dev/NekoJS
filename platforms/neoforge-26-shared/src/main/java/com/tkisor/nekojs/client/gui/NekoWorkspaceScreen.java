@@ -37,6 +37,13 @@ public class NekoWorkspaceScreen extends Screen {
     private boolean isRegex = false;
     private boolean isPreserveCase = false;
 
+    // 搜索 Pattern 缓存：仅当搜索文本或匹配开关（大小写/整词/正则）变化时才重新编译，避免逐键 Pattern.compile
+    private Pattern cachedSearchPattern = null;
+    private String cachedSearchText = null;
+    private boolean cachedPatternMatchCase = false;
+    private boolean cachedPatternMatchWord = false;
+    private boolean cachedPatternRegex = false;
+
     private List<String> allLocalFiles = new ArrayList<>();
     private Map<String, String> fileContentCache = new HashMap<>();
 
@@ -181,6 +188,9 @@ public class NekoWorkspaceScreen extends Screen {
                 String relPath = root.relativize(p).toString().replace('\\', '/');
                 boolean isActualDir = Files.isDirectory(p);
 
+                // 跳过任意深度的 node_modules 与点目录（.git/.cache 等）：不进树、不读内容、不进内容缓存
+                if (isIgnoredPath(relPath, isActualDir)) return;
+
                 if (!isActualDir) {
                     this.allLocalFiles.add(relPath);
                     try {
@@ -224,12 +234,42 @@ public class NekoWorkspaceScreen extends Screen {
         buildSearchTree();
     }
 
+    /**
+     * 工作区扫描忽略规则：路径中任意一级目录为 node_modules 或以 "." 开头（.git/.cache 等）即忽略。
+     * 文件本身的名称不参与判断（根目录下的 .gitignore 等仍正常扫描），仅过滤其父目录。
+     */
+    private static boolean isIgnoredPath(String relPath, boolean isDir) {
+        String[] segments = relPath.split("/");
+        int limit = isDir ? segments.length : segments.length - 1;
+        for (int i = 0; i < limit; i++) {
+            String segment = segments[i];
+            if (segment.equals("node_modules") || segment.startsWith(".")) return true;
+        }
+        return false;
+    }
+
     private Pattern getSearchPattern(String text) {
         if (text == null || text.isEmpty()) return null;
+        // 命中缓存：文本与所有匹配开关都未变化时直接复用已编译的 Pattern
+        if (cachedSearchPattern != null && text.equals(cachedSearchText)
+                && isMatchCase == cachedPatternMatchCase
+                && isMatchWord == cachedPatternMatchWord
+                && isRegex == cachedPatternRegex) {
+            return cachedSearchPattern;
+        }
         String regex = isRegex ? text : Pattern.quote(text);
         if (isMatchWord) regex = "\\b" + regex + "\\b";
         int flags = isMatchCase ? 0 : Pattern.CASE_INSENSITIVE;
-        try { return Pattern.compile(regex, flags); } catch (Exception e) { return null; }
+        try {
+            cachedSearchPattern = Pattern.compile(regex, flags);
+        } catch (Exception e) {
+            cachedSearchPattern = null; // 非法正则：不缓存，下次按键重试（与旧行为一致）
+        }
+        cachedSearchText = text;
+        cachedPatternMatchCase = isMatchCase;
+        cachedPatternMatchWord = isMatchWord;
+        cachedPatternRegex = isRegex;
+        return cachedSearchPattern;
     }
 
     private void buildSearchTree() {
@@ -414,7 +454,13 @@ public class NekoWorkspaceScreen extends Screen {
         try {
             if (name == null || name.trim().isEmpty()) return;
             String fullPath = targetDir.isEmpty() ? name : targetDir + "/" + name;
-            Path p = NekoJSPaths.get().root().resolve(fullPath);
+            // 路径穿越校验：resolve + normalize 后必须仍位于 workspace 根目录内，拒绝 "../" 等逃逸输入
+            Path workspaceRoot = NekoJSPaths.get().root().toAbsolutePath().normalize();
+            Path p = workspaceRoot.resolve(fullPath).normalize();
+            if (!p.startsWith(workspaceRoot)) {
+                toast.show(I18n.get("nekojs.gui.toast.create_fail", name + " (invalid path)"));
+                return;
+            }
             if (isDir) {
                 Files.createDirectories(p);
             } else {

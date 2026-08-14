@@ -22,8 +22,10 @@ import net.minecraft.util.Util;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class NekoErrorDashboardScreen extends Screen {
     private final List<ErrorSummaryDTO> errors = new ArrayList<>();
@@ -39,6 +41,9 @@ public class NekoErrorDashboardScreen extends Screen {
     private boolean isEditing = false;
 
     private NekoTabbedEditor tabbedEditor = null;
+
+    // 初始读取失败的 tab 路径集合：这些 tab 转为只读，禁止保存，防止错误占位文本覆盖源文件
+    private final Set<String> readFailedTabs = new HashSet<>();
 
     private int layoutRightX, layoutRightW, layoutContentY, layoutContentH;
     private long openTime;
@@ -169,18 +174,19 @@ public class NekoErrorDashboardScreen extends Screen {
         if (this.modal.isInputMode()) this.setFocused(this.modal.getWidget());
     }
 
-    private String getInitialTextForPath(String targetPath) {
-        try {
-            Path p = NekoJSPaths.get().root().resolve(targetPath);
-            if (Files.exists(p)) return Files.readString(p);
-        } catch (Exception e) { return "// " + I18n.get("nekojs.gui.toast.error.read_fail", e.getMessage()); }
-        return "";
-    }
-
     public void openTab(String path) {
         this.isEditing = true;
         if (tabbedEditor == null) buildDashboardLayout();
-        String text = getInitialTextForPath(path);
+        String text;
+        try {
+            Path p = NekoJSPaths.get().root().resolve(path);
+            text = Files.exists(p) ? Files.readString(p) : "";
+            readFailedTabs.remove(path); // 读取成功：解除该 tab 的只读限制
+        } catch (Exception e) {
+            // 读取失败：记入 readFailedTabs，doSaveTab 将拒绝保存（占位文本绝不能写回源文件）
+            readFailedTabs.add(path);
+            text = "// " + I18n.get("nekojs.gui.toast.error.read_fail", e.getMessage());
+        }
         tabbedEditor.openTab(path, text);
     }
 
@@ -248,6 +254,11 @@ public class NekoErrorDashboardScreen extends Screen {
 
     private void doSaveTab(NekoTabbedEditor.Tab tab) {
         if (tab == null || tab.editor == null) return;
+        // 初始读取失败的 tab 为只读：当前编辑器内容是错误占位文本而非源文件内容，禁止写回
+        if (readFailedTabs.contains(tab.path)) {
+            toast.show(I18n.get("nekojs.gui.toast.save_fail", I18n.get("nekojs.gui.toast.error.read_fail", tab.path)));
+            return;
+        }
         try {
             Path path = NekoJSPaths.get().root().resolve(tab.path);
             Files.writeString(path, tab.editor.getValue());
