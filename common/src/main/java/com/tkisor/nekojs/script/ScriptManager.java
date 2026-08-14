@@ -14,6 +14,7 @@ import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
+import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
@@ -27,11 +28,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 
@@ -44,8 +44,12 @@ import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 public final class ScriptManager implements AutoCloseable {
 
     // ---- 最小静态：Context → ScriptManager 反向查找 ----
-    private static final Map<Context, ScriptManager> CONTEXT_TO_MANAGER =
-            Collections.synchronizedMap(new WeakHashMap<>());
+    // 用 ConcurrentHashMap 而非 synchronizedMap(WeakHashMap)：isContextDead / reportContextKilled
+    // 位于每次事件与 timer 回调的热路径，synchronizedMap 会把所有回调在 map 锁上串行化。
+    // 键改为强引用，因此不变式：Context 的销毁必须全部经 closeRuntimeResources（其内保证
+    // remove）。当前全部销毁路径（kill 重建、事务 reload 成功/失败、resetEnvironment、close）
+    // 均满足；若新增绕过 closeRuntimeResources 的销毁路径，将同时泄漏 Context 与 ScriptManager。
+    private static final Map<Context, ScriptManager> CONTEXT_TO_MANAGER = new ConcurrentHashMap<>();
 
     /**
      * 从 GraalVM Context 反向查找所属的 ScriptManager 实例。
@@ -111,6 +115,13 @@ public final class ScriptManager implements AutoCloseable {
     /** volatile：context 可能被回调线程（kill 上报后的重建）与加载线程并发读写。 */
     private volatile Context context;
     private NekoNodeRuntime nodeRuntime;
+    /**
+     * 当前 context 的 out/err 日志流。Graal 关闭 Context 时只 detach 用户流、不 flush/close，
+     * 末行未换行输出会滞留在行缓冲中丢失；closeRuntimeResources 在 context.close() 之后
+     * 对它们补一次 close()（内部幂等地冲刷残留缓冲）。随 context 一起成对换新。
+     */
+    private LoggerStream contextOutStream;
+    private LoggerStream contextErrStream;
     private List<ScriptContainer> scripts;
 
     /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
@@ -155,11 +166,13 @@ public final class ScriptManager implements AutoCloseable {
                 // 事件分发都在死环境上报错。此处无法重跑脚本重建监听器（重建只创建空环境），
                 // 对本 scriptType 整体清除是正确的最小修复，恢复需再次 reload。
                 scriptEventBridge.clearListeners(scriptType);
-                closeRuntimeResources(this.nodeRuntime, this.context);
+                closeRuntimeResources(this.nodeRuntime, this.context, this.contextOutStream, this.contextErrStream);
             }
             ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
             this.context = env.context();
             this.nodeRuntime = env.nodeRuntime();
+            this.contextOutStream = env.outStream();
+            this.contextErrStream = env.errStream();
             CONTEXT_TO_MANAGER.put(context, this);
             ScriptContextRegistry.bind(context, scriptType);
             contextKilled = false;
@@ -181,9 +194,15 @@ public final class ScriptManager implements AutoCloseable {
     // ---- 脚本加载与执行 ----
 
     /**
-     * 加载并顺序执行所有脚本
+     * 加载并顺序执行所有脚本。
+     *
+     * <p>synchronized：与 {@link #reloadScripts()} / {@link #reloadScriptFile(String)} 同一把
+     * 实例锁。首次加载（平台 init / client setup）与命令触发的 reload 可能从不同线程进入，
+     * 并发执行会让两个线程各自在 {@link #getOrCreateContext()} 创建候选 Context，输家创建的
+     * Context（及其 timer 调度线程）永远不会被关闭。锁可重入：reloadScripts 内部调用本方法
+     * 不受影响。
      */
-    public void loadScripts() {
+    public synchronized void loadScripts() {
         pluginRuntime.fireBeforeScriptsLoaded(scriptType);
         try {
             loadScriptsInto(scripts);
@@ -256,6 +275,8 @@ public final class ScriptManager implements AutoCloseable {
         private void reloadScriptsTransactional () {
             Context oldContext = this.context;
             NekoNodeRuntime oldNodeRuntime = this.nodeRuntime;
+            LoggerStream oldOutStream = this.contextOutStream;
+            LoggerStream oldErrStream = this.contextErrStream;
 
             scriptEventBridge.clearListeners(scriptType);
             errorTracker.clearByType(scriptType);
@@ -280,6 +301,8 @@ public final class ScriptManager implements AutoCloseable {
 
             Context candidateContext = candidate.context();
             NekoNodeRuntime candidateNode = candidate.nodeRuntime();
+            LoggerStream candidateOutStream = candidate.outStream();
+            LoggerStream candidateErrStream = candidate.errStream();
             CONTEXT_TO_MANAGER.put(candidateContext, this);
             ScriptContextRegistry.bind(candidateContext, scriptType);
 
@@ -296,14 +319,17 @@ public final class ScriptManager implements AutoCloseable {
 
                 this.context = candidateContext;
                 this.nodeRuntime = candidateNode;
+                this.contextOutStream = candidateOutStream;
+                this.contextErrStream = candidateErrStream;
                 this.scripts = candidateScripts;
 
-                if (oldContext != null || oldNodeRuntime != null) {
-                    closeRuntimeResources(oldNodeRuntime, oldContext);
+                if (oldContext != null || oldNodeRuntime != null
+                        || oldOutStream != null || oldErrStream != null) {
+                    closeRuntimeResources(oldNodeRuntime, oldContext, oldOutStream, oldErrStream);
                 }
             } catch (Throwable t) {
                 scriptEventBridge.clearListeners(scriptType);
-                closeRuntimeResources(candidateNode, candidateContext);
+                closeRuntimeResources(candidateNode, candidateContext, candidateOutStream, candidateErrStream);
                 scriptType.logger().error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
                         scriptType.name(), t);
                 // Note: listeners and bindings were cleared before the candidate build (they live
@@ -461,7 +487,10 @@ public final class ScriptManager implements AutoCloseable {
 
         // ---- 测试脚本 ----
 
-        public void runTestScripts () {
+        // synchronized：runTestScripts 内部走 reloadScriptsTransactional（会创建候选 Context），
+        // 与 loadScripts / reloadScripts / close 共用实例锁，防止命令线程并发触发 TEST 运行
+        // 时输家候选 Context 被孤立泄漏（Context + timer 调度线程）。
+        public synchronized void runTestScripts () {
             if (scriptType != ScriptType.TEST) {
                 throw new IllegalStateException("runTestScripts() can only be called on TEST ScriptManager");
             }
@@ -502,13 +531,18 @@ public final class ScriptManager implements AutoCloseable {
 
             Context oldContext = this.context;
             NekoNodeRuntime oldRuntime = this.nodeRuntime;
+            LoggerStream oldOutStream = this.contextOutStream;
+            LoggerStream oldErrStream = this.contextErrStream;
             this.context = null;
             this.nodeRuntime = null;
+            this.contextOutStream = null;
+            this.contextErrStream = null;
 
-            closeRuntimeResources(oldRuntime, oldContext);
+            closeRuntimeResources(oldRuntime, oldContext, oldOutStream, oldErrStream);
         }
 
-        private void closeRuntimeResources (NekoNodeRuntime oldRuntime, Context oldContext){
+        private void closeRuntimeResources (NekoNodeRuntime oldRuntime, Context oldContext,
+                                            LoggerStream oldOutStream, LoggerStream oldErrStream){
             if (oldRuntime != null) {
                 try {
                     oldRuntime.close();
@@ -525,17 +559,35 @@ public final class ScriptManager implements AutoCloseable {
                     scriptType.logger().warn("关闭旧上下文时发生异常", e);
                 }
             }
+            // Graal 关闭 Context 时只 detach out/err 流、不 flush 也不 close，脚本末尾未以
+            // 换行结束的输出会滞留在 LoggerStream 行缓冲中丢失。这里在 context.close() 之后
+            // 补一次 close()（幂等冲刷残留缓冲）；必须在 Context 关闭之后——先关流再关
+            // Context 会把残余写入路由到已关闭的流。
+            closeStreamQuietly(oldOutStream);
+            closeStreamQuietly(oldErrStream);
         }
 
+        private static void closeStreamQuietly (LoggerStream stream){
+            if (stream == null) return;
+            try {
+                stream.close();
+            } catch (Exception ignored) { // 冲刷失败不应中断销毁流程
+            }
+        }
+
+        // synchronized：与 loadScripts / reloadScripts 共用实例锁，防止 shutdown 与并发
+        // reload/test 交错时销毁半初始化的环境（可重入：closeRuntimeResources 无锁）。
         @Override
-        public void close () {
+        public synchronized void close () {
             fullReloadCleanup();
             for (var binding : pluginRuntime.bindings(scriptType).values()) {
                 binding.close(scriptType);
             }
-            closeRuntimeResources(this.nodeRuntime, this.context);
+            closeRuntimeResources(this.nodeRuntime, this.context, this.contextOutStream, this.contextErrStream);
             this.context = null;
             this.nodeRuntime = null;
+            this.contextOutStream = null;
+            this.contextErrStream = null;
         }
 
         // ---- 查询 ----

@@ -29,6 +29,14 @@ public final class NekoNodeTimers implements AutoCloseable {
     private static final int MAX_READY_QUEUE_SIZE = 4096;
     /** 单次 flush 最多执行的回调数：防止一次 tick 内无限处理导致 tick 冻结。 */
     private static final int MAX_CALLBACKS_PER_FLUSH = 256;
+    /**
+     * 并发注册 timer 数上限：{@code while(true){setInterval(()=>{},1000)}} 会在 50M 语句上限
+     * 触发前向 {@code tasks} 无限塞入条目（每个持有 JS 回调 Value 与调度句柄）导致 OOM。
+     * 1024 远超正常脚本需求（沙盒里 timer 是长期资源而非吞吐工具），且小于 ready 队列上限
+     * （每个 interval 会反复向该队列投递）。超限直接抛 {@link IllegalStateException} 给脚本，
+     * 与 STARTUP 拒绝延迟 timer 的 {@link #rejectStartupTimer} 机制一致。
+     */
+    private static final int MAX_SCHEDULED_TIMERS = 1024;
 
     private final ScriptType scriptType;
     private final ErrorTracker errorTracker;
@@ -50,6 +58,7 @@ public final class NekoNodeTimers implements AutoCloseable {
 
     public int setTimeout(Value callback, long delayMillis, Object... args) {
         rejectStartupTimer(delayMillis);
+        rejectTimerOverflow();
         int id = ids.getAndIncrement();
         ScheduledFuture<?> future = scheduler.schedule(
                 () -> enqueueReady(new TimerCallback(id, false, callback, args)),
@@ -67,6 +76,7 @@ public final class NekoNodeTimers implements AutoCloseable {
         if (scriptType == ScriptType.STARTUP) {
             throw new IllegalStateException("setInterval is not supported in startup scripts. Use server_scripts or client_scripts for lifecycle timers.");
         }
+        rejectTimerOverflow();
         int id = ids.getAndIncrement();
         long delay = Math.max(1L, delayMillis);
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
@@ -92,6 +102,18 @@ public final class NekoNodeTimers implements AutoCloseable {
     private void rejectStartupTimer(long delayMillis) {
         if (scriptType == ScriptType.STARTUP && delayMillis > 0L) {
             throw new IllegalStateException("Delayed timers are not supported in startup scripts. Use server_scripts or client_scripts for lifecycle timers.");
+        }
+    }
+
+    /**
+     * 注册数上限拒绝：在分配 id / 调度之前检查，超限抛 {@link IllegalStateException}
+     * （异常会沿 JS 调用栈抛回脚本，经既有错误上报路径记录）。clearTimeout/clearInterval
+     * 或一次性 timer 被 flush 后释放名额即可继续注册。
+     */
+    private void rejectTimerOverflow() {
+        if (tasks.size() >= MAX_SCHEDULED_TIMERS) {
+            throw new IllegalStateException("Too many scheduled timers (limit " + MAX_SCHEDULED_TIMERS
+                    + "); clearTimeout/clearInterval old timers before registering new ones");
         }
     }
 

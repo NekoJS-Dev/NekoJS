@@ -25,6 +25,8 @@ public class LoggerStream extends OutputStream {
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private int flushedLines;
     private boolean overflowWarned;
+    /** close 幂等标记：保证「冲刷一次」语义，重复 close 为 no-op。 */
+    private boolean closed;
 
     private static final String WARN_TAG = "[NekoJS_WARN] ";
     private static final String DEBUG_TAG = "[NekoJS_DEBUG] ";
@@ -114,9 +116,15 @@ public class LoggerStream extends OutputStream {
      * <p>背景：Graal 在 Context 关闭时只 detach 用户提供的 out/err 流、不会 flush/close
      * （engine 级 close 才会对其调用 {@code close()}），脚本末尾未以换行结束的输出
      * 会随行缓冲一起丢失。这里把 close 语义定义为「冲刷后关闭」，幂等（缓冲空时无操作）。
+     *
+     * <p>closed 标记保证多次 close 只冲刷一次：销毁路径（ScriptManager.closeRuntimeResources
+     * 等）与 engine 级 close 都可能触达同一个实例，重复 close 必须是无害 no-op 而不是再次
+     * 冲刷（防止 close 之后偶发写入的残余字节被误当作完整行落盘）。
      */
     @Override
     public void close() {
+        if (closed) return;
+        closed = true;
         flush();
     }
 

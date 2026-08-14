@@ -76,7 +76,7 @@ public final class ScriptEnvironmentFactory {
 
         installJavaClassLoadTelemetry(context, scriptType);
 
-        return new Environment(context, nodeRuntime);
+        return new Environment(context, nodeRuntime, sandbox.outStream(), sandbox.errStream());
     }
 
     private void bindManagedGlobals(Value bindings, ScriptType scriptType,
@@ -148,5 +148,11 @@ public final class ScriptEnvironmentFactory {
         return new ScriptBindingSchema.BindingMembers(members);
     }
 
-    public record Environment(Context context, com.tkisor.nekojs.core.node.NekoNodeRuntime nodeRuntime) {}
+    /**
+     * 携带 out/err {@link LoggerStream}：Graal 关闭 Context 时只 detach 用户流、不 close，
+     * 由 ScriptManager 的销毁路径在 context.close() 之后补一次 close() 冲刷末行缓冲。
+     */
+    public record Environment(Context context, com.tkisor.nekojs.core.node.NekoNodeRuntime nodeRuntime,
+                              com.tkisor.nekojs.core.log.LoggerStream outStream,
+                              com.tkisor.nekojs.core.log.LoggerStream errStream) {}
 }

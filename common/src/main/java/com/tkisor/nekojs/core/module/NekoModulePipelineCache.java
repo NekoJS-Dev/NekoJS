@@ -160,7 +160,10 @@ public final class NekoModulePipelineCache {
             for (ScriptType type : ScriptType.all()) {
                 Path typePath = type.path;
                 String dirName = typePath == null ? type.name + "_scripts" : typePath.getFileName().toString();
-                if (first.equals(dirName)) {
+                // Windows 文件系统大小写不敏感：手建的 Server_scripts 目录同样落在 SERVER
+                // 类型子树内（Path.startsWith 在 Windows 上本就忽略大小写），这里必须同等
+                // 忽略大小写匹配，否则该目录下的模块会被误标为跨类型共享缓存、逃脱按类型清理
+                if (first.equalsIgnoreCase(dirName)) {
                     return type;
                 }
             }

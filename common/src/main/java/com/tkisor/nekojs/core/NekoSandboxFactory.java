@@ -18,7 +18,6 @@ import graal.graalvm.polyglot.ResourceLimits;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.slf4j.Logger;
 
-import java.io.OutputStream;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -53,7 +52,11 @@ public final class NekoSandboxFactory {
             })();
             """;
 
-    public record Sandbox(Context context, NekoNodeRuntime nodeRuntime) {}
+    /**
+     * 携带 out/err {@link LoggerStream} 引用：Graal 关闭 Context 时只 detach 不 close，
+     * 由上层销毁路径在 context.close() 之后补 close() 冲刷末行未换行缓冲。
+     */
+    public record Sandbox(Context context, NekoNodeRuntime nodeRuntime, LoggerStream outStream, LoggerStream errStream) {}
 
     private final NekoCoreContext core;
     private final NekoJSPaths paths;
@@ -80,8 +83,8 @@ public final class NekoSandboxFactory {
         ClassFilter classFilter = core.classFilter();
 
         Logger logger = type.logger();
-        OutputStream outStream = new LoggerStream(logger, false);
-        OutputStream errStream = new LoggerStream(logger, true);
+        LoggerStream outStream = new LoggerStream(logger, false);
+        LoggerStream errStream = new LoggerStream(logger, true);
 
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root()))
@@ -146,6 +149,6 @@ public final class NekoSandboxFactory {
             }
         }
 
-        return new Sandbox(ctx, nodeRuntime);
+        return new Sandbox(ctx, nodeRuntime, outStream, errStream);
     }
 }

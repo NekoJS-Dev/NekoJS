@@ -17,6 +17,7 @@ import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -156,19 +157,30 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     public void clearTokens(ScriptType type, String scriptId) {
         if (scriptId == null || scriptId.isBlank()) return;
-        List<ScriptEventListenerToken<EVENT>> tokens = tokensByType.get(type);
-        if (tokens == null) return;
-        // CopyOnWriteArrayList.iterator() does not support remove(); use removeIf,
-        // which atomically removes matching tokens while unregistering from the bus.
-        tokens.removeIf(token -> {
-            if (scriptId.equals(token.scriptId())) {
-                bus.unregister(token.token());
-                return true;
+        // 空桶移除必须与注册（computeIfAbsent + add）对同一 key 原子：ConcurrentHashMap.compute
+        // 持有 bin 锁，computeIfAbsent 同 key 无法插入执行。若像此前那样「removeIf 判空后再
+        // remove(type)」，并发注册可能恰好把新 token 加入正被移除的列表：底层 bus.listen 仍生效
+        // 而镜像丢失该条目，之后 clearTokens(type) 永远无法再反注册它 → 监听器永久泄漏。
+        List<ScriptEventListenerToken<EVENT>> removed = new ArrayList<>();
+        tokensByType.compute(type, (ignored, tokens) -> {
+            if (tokens == null) return null;
+            List<ScriptEventListenerToken<EVENT>> kept = null;
+            for (ScriptEventListenerToken<EVENT> token : tokens) {
+                if (scriptId.equals(token.scriptId())) {
+                    removed.add(token);
+                } else {
+                    if (kept == null) kept = new ArrayList<>();
+                    kept.add(token);
+                }
             }
-            return false;
+            if (removed.isEmpty()) return tokens; // 无匹配：保持原列表不动
+            // 返回 null 即原子移除空桶；非空则换成新的 CopyOnWriteArrayList（保留并发读语义）
+            return kept == null ? null : new CopyOnWriteArrayList<>(kept);
         });
-        if (tokens.isEmpty()) {
-            tokensByType.remove(type);
+        // bus.unregister 必须在 compute 之外执行：不得在持有 map bin 锁时产生
+        // 可能重入本 map（或 bus）的副作用
+        for (ScriptEventListenerToken<EVENT> token : removed) {
+            bus.unregister(token.token());
         }
     }
 
@@ -255,7 +267,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         // Inner list is CopyOnWriteArrayList: read-heavy (post iterates tokens via the
         // compiled bus) / write-rare (register on script load, clear on reload). Matches
         // the EventBusBase pattern and survives concurrent reload+post without CME.
-        tokensByType.computeIfAbsent(type, ignored -> new CopyOnWriteArrayList<>()).add(new ScriptEventListenerToken<>(token, scriptId));
+        // 注册整体放在 compute 内（与 clearTokens 的 compute 互斥于同一 bin 锁）：若沿用
+        // computeIfAbsent(...).add(...) 的两步写，computeIfAbsent 返回列表后、add 执行前，
+        // 并发 clearTokens 可能已把该列表整体替换/移除，add 落在孤儿列表上 → 镜像丢条目、
+        // 底层监听器泄漏。lambda 内只做列表添加，不产生 map/bus 副作用。
+        tokensByType.compute(type, (ignored, tokens) -> {
+            List<ScriptEventListenerToken<EVENT>> list =
+                    tokens == null ? new CopyOnWriteArrayList<>() : tokens;
+            list.add(new ScriptEventListenerToken<>(token, scriptId));
+            return list;
+        });
         return true;
     }
 

@@ -204,7 +204,9 @@ public final class NekoEsmVirtualModuleRegistry {
         for (ScriptType type : ScriptType.all()) {
             Path typePath = type.path;
             String dirName = typePath == null ? type.name + "_scripts" : typePath.getFileName().toString();
-            if (first.equals(dirName)) {
+            // Windows 大小写不敏感：Server_scripts 与 server_scripts 指向同一类型目录，
+            // 忽略大小写匹配，防止手建异大小写目录下的模块被误判为跨类型共享、逃脱按类型清理
+            if (first.equalsIgnoreCase(dirName)) {
                 return type;
             }
         }
