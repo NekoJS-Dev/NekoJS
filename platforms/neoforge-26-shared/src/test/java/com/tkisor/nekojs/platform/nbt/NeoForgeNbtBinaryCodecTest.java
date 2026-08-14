@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -109,6 +110,11 @@ class NeoForgeNbtBinaryCodecTest {
         assertInvalid(nativeCompressed(longArray));
     }
 
+    @Test
+    void rejectsEmptyNativeListsWithNonEndElementTypes() throws Exception {
+        assertInvalid(compressedRootWithEmptyTypedList());
+    }
+
     private void assertInvalid(byte[] compressed) {
         NbtBinaryException error = assertThrows(NbtBinaryException.class,
                 () -> codec.decodeCompressed(compressed, NbtBinaryLimits.DEFAULT));
@@ -130,6 +136,28 @@ class NeoForgeNbtBinaryCodecTest {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         NbtIo.writeCompressed(root, output);
         return output.toByteArray();
+    }
+
+    /**
+     * Hand-builds gzip'd compressed NBT whose root compound holds a single empty
+     * list with a non-END element type (TAG_Byte, count 0). The native tag APIs
+     * offer no portable way to construct that shape, so the bytes are written
+     * directly with JDK gzip only, which works on every platform this test
+     * compiles against.
+     */
+    private static byte[] compressedRootWithEmptyTypedList() throws Exception {
+        byte[] payload = {
+                0x0A, 0x00, 0x00,                    // root TAG_Compound named ""
+                0x09, 0x00, 0x03, 'b', 'a', 'd',     // entry "bad": TAG_List
+                0x01,                                // element type TAG_Byte
+                0x00, 0x00, 0x00, 0x00,              // count = 0
+                0x00                                 // root TAG_END
+        };
+        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(compressed)) {
+            gzip.write(payload);
+        }
+        return compressed.toByteArray();
     }
 
     private static NbtValue.CompoundValue portableRoot() {

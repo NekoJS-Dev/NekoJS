@@ -16,7 +16,7 @@ public interface BlockExtension extends BlockSpec {
         return BuiltInRegistries.BLOCK.getKey(self()).toString();
     }
 
-    /** 返回该方块的描述键（未本地化名称，如 {@code block.minecraft.stone}）。 */
+    /** 返回该方块的描述键。不进 spec——NF 原生 getName() 零参碰撞。 */
     default String neko$getName() {
         return self().getDescriptionId();
     }

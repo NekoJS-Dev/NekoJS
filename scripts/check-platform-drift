@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+#
+# check-platform-drift — 平台副本漂移检测（dashboard 模式，永远退出 0）。
+#
+# 对成对的平台 main 源码目录做"归一化后 diff"：
+#   1. neoforge-1.21.1 <-> neoforge-26-shared   （主对，1.21.1 与 26.x 的共享副本）
+#   2. neoforge-26.1     <-> neoforge-26.2      （26.x 两版本专属层）
+#   3. cleanroom-1.12.2  <-> neoforge-26-shared （仅参考信息，cleanroom 是独立实现）
+#
+# 归一化规则见 normalize()：去掉 \r，并把已知的"版本机械改名"（ResourceLocation↔Identifier
+# 等）替换成统一记号，以降低噪音。目标是缩小 diff 噪音而不是追求零差异——语义性差异
+# 仍然会（也应该）显示为 drifted。
+#
+# 输出：每对的 identical-after-normalize / drifted 数量 + drifted 文件列表
+# （按归一化 diff 行数降序，最多 TOP_N 条）。CI 门禁策略由主 agent 另行决定。
+
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PLATFORMS="$REPO_ROOT/platforms"
+TOP_N=15
+
+# 归一化：strip CR + 已知机械改名（两侧应用同一套规则，双向收敛）。
+# 注意权限判断的惯用法（X.hasPermissions(2) vs Commands.LEVEL_GAMEMASTERS.check(X.permissions())）
+# 形状不同，只能部分归一化，残留行数属于真实差异。
+normalize() {
+    sed -e 's/\r$//' \
+        -e 's/ResourceLocation/Identifier/g' \
+        -e 's/\.location()/.identifier()/g' \
+        -e 's/\.hasPermissions(2)/.HAS_GM_PERM/g' \
+        -e 's/\.hasPermission(2)/.HAS_GM_PERM/g' \
+        -e 's/Commands\.LEVEL_GAMEMASTERS\.check/HAS_GM_PERM/g' \
+        -e 's/\.displayClientMessage(/.sendSystemMessage(/g' \
+        -e 's/\.listRegistries()/.listRegistryKeys()/g' \
+        -e 's/EntityType\./EntityTypes./g' \
+        -e 's/getApiDescription()/getBackendDescription()/g' \
+        -e 's/Minecraft\.getInstance()\.gui\.setScreen(/MC.setScreen(/g' \
+        -e 's/Minecraft\.getInstance()\.setScreen(/MC.setScreen(/g' \
+        -e 's/Minecraft\.getInstance()\.gui\.screen() instanceof/MC.screen instanceof/g' \
+        -e 's/Minecraft\.getInstance()\.screen instanceof/MC.screen instanceof/g' \
+        -e 's/Minecraft\.getInstance()\.gui\.toastManager()/MC.toastManager()/g' \
+        -e 's/Minecraft\.getInstance()\.getToastManager()/MC.toastManager()/g' \
+        -e '\#^import net\.minecraft\.world\.entity\.EntityTypes;$#d' \
+        "$1"
+}
+
+# report_pair <显示名> <目录A> <目录B>
+report_pair() {
+    local name="$1" dirA="$2" dirB="$3"
+    local filesA filesB common onlyA onlyB
+    filesA="$(cd "$dirA" && find . -name '*.java' | sed 's|^\./||' | sort)"
+    filesB="$(cd "$dirB" && find . -name '*.java' | sed 's|^\./||' | sort)"
+    common="$(comm -12 <(printf '%s\n' "$filesA") <(printf '%s\n' "$filesB"))"
+    onlyA="$(comm -23 <(printf '%s\n' "$filesA") <(printf '%s\n' "$filesB") | wc -l | tr -d ' ')"
+    onlyB="$(comm -13 <(printf '%s\n' "$filesA") <(printf '%s\n' "$filesB") | wc -l | tr -d ' ')"
+
+    local total=0 identical=0 drifted=0 rel diffcount
+    local results=()
+    while IFS= read -r rel; do
+        [ -n "$rel" ] || continue
+        diffcount="$(diff <(normalize "$dirA/$rel") <(normalize "$dirB/$rel") | grep -c '^[<>]')"
+        total=$((total + 1))
+        if [ "$diffcount" -eq 0 ]; then
+            identical=$((identical + 1))
+        else
+            drifted=$((drifted + 1))
+            results+=("$(printf '%06d %s' "$diffcount" "$rel")")
+        fi
+    done <<< "$common"
+
+    printf '\n[%s]\n' "$name"
+    printf '  compared: %d files | identical-after-normalize: %d | drifted: %d | only-in-A: %d | only-in-B: %d\n' \
+        "$total" "$identical" "$drifted" "$onlyA" "$onlyB"
+    if [ "${#results[@]}" -gt 0 ]; then
+        printf '  drifted files (normalized diff lines, desc, top %d):\n' "$TOP_N"
+        printf '%s\n' "${results[@]}" | sort -rn | head -n "$TOP_N" | while IFS= read -r line; do
+            printf '    %s %s\n' "${line:0:6}" "${line:7}"
+        done
+    else
+        printf '  no drifted files\n'
+    fi
+}
+
+printf 'check-platform-drift (repo: %s)' "$REPO_ROOT"
+
+report_pair \
+    'main: neoforge-1.21.1 <-> neoforge-26-shared' \
+    "$PLATFORMS/neoforge-1.21.1/src/main/java" \
+    "$PLATFORMS/neoforge-26-shared/src/main/java"
+
+report_pair \
+    'main: neoforge-26.1 <-> neoforge-26.2' \
+    "$PLATFORMS/neoforge-26.1/src/main/java" \
+    "$PLATFORMS/neoforge-26.2/src/main/java"
+
+report_pair \
+    'informational: cleanroom-1.12.2 <-> neoforge-26-shared' \
+    "$PLATFORMS/cleanroom-1.12.2/src/main/java" \
+    "$PLATFORMS/neoforge-26-shared/src/main/java"
+
+printf '\n(done; exit 0 by design — gating is decided outside this script)\n'
+exit 0

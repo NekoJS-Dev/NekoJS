@@ -11,6 +11,7 @@ import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 
 public final class RecipeJsonValueAdapter implements JSTypeAdapter<RecipeJsonValue> {
+
     @Override
     public Class<RecipeJsonValue> getTargetClass() {
         return RecipeJsonValue.class;

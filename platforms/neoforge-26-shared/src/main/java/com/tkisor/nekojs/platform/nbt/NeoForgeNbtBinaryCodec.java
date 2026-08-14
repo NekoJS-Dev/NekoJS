@@ -18,8 +18,11 @@ import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.ShortTag;
+import net.minecraft.nbt.StreamTagVisitor;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagType;
+import net.minecraft.nbt.TagTypes;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -45,6 +48,7 @@ public final class NeoForgeNbtBinaryCodec implements NbtBinaryCodec {
             if (root == null) {
                 throw invalid("Compressed NBT does not contain a root compound");
             }
+            requireEmptyListsUseEndElementType(compressed, limits);
 
             NbtValue.CompoundValue value = (NbtValue.CompoundValue) fromNative(root, new LimitTracker(), 0);
             ensureDecodedSize(value, limits);
@@ -87,6 +91,26 @@ public final class NeoForgeNbtBinaryCodec implements NbtBinaryCodec {
         }
         if (compressed.length > limits.maxCompressedBytes()) {
             throw fileSize("Compressed NBT exceeds " + limits.maxCompressedBytes() + " bytes");
+        }
+    }
+
+    private static void requireEmptyListsUseEndElementType(byte[] compressed, NbtBinaryLimits limits)
+            throws NbtBinaryException {
+        // 26.x ListTag no longer remembers the element type of an empty list, so the
+        // strictness the 1.21.1/cleanroom codecs enforce via ListTag.getElementType()
+        // has to be checked here with a second pass over the raw compressed bytes.
+        EmptyListElementTypeValidator validator = new EmptyListElementTypeValidator();
+        try {
+            NbtIo.parseCompressed(
+                    new ByteArrayInputStream(compressed),
+                    validator,
+                    new NbtAccounter(limits.maxDecodedBytes(), NbtValue.MAX_DEPTH)
+            );
+        } catch (IOException | RuntimeException exception) {
+            throw nativeFailure("Failed to decode compressed NBT", exception);
+        }
+        if (validator.foundInvalidEmptyList) {
+            throw invalid("Empty native NBT list must use END element type");
         }
     }
 
@@ -349,6 +373,99 @@ public final class NeoForgeNbtBinaryCodec implements NbtBinaryCodec {
 
     private static NbtBinaryException fileSize(String message) {
         return new NbtBinaryException(NbtBinaryException.Reason.FILE_SIZE, message);
+    }
+
+    private static final class EmptyListElementTypeValidator implements StreamTagVisitor {
+        private boolean foundInvalidEmptyList;
+
+        @Override
+        public StreamTagVisitor.ValueResult visitList(TagType<?> elementType, int size) {
+            if (size == 0 && elementType != TagTypes.getType(Tag.TAG_END)) {
+                foundInvalidEmptyList = true;
+                return StreamTagVisitor.ValueResult.HALT;
+            }
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visitEnd() {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(String value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(byte value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(short value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(int value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(long value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(float value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(double value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(byte[] value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(int[] value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visit(long[] value) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.EntryResult visitEntry(TagType<?> type) {
+            return StreamTagVisitor.EntryResult.ENTER;
+        }
+
+        @Override
+        public StreamTagVisitor.EntryResult visitEntry(TagType<?> type, String id) {
+            return StreamTagVisitor.EntryResult.ENTER;
+        }
+
+        @Override
+        public StreamTagVisitor.EntryResult visitElement(TagType<?> type, int index) {
+            return StreamTagVisitor.EntryResult.ENTER;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visitContainerEnd() {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
+
+        @Override
+        public StreamTagVisitor.ValueResult visitRootEntry(TagType<?> type) {
+            return StreamTagVisitor.ValueResult.CONTINUE;
+        }
     }
 
     private static final class LimitTracker {

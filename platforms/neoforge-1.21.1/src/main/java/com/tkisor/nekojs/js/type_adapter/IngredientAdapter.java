@@ -15,7 +15,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
-/** 1.21.1 Ingredient 适配器：含 filter/any/all/not + @mod / * / /regex/ + 对象分派。 */
 public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
 
     @Override
