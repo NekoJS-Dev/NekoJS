@@ -14,9 +14,17 @@ public class LoggerStream extends OutputStream {
     /** 单行缓冲上限：脚本输出巨量无换行内容时强制分段落盘，防止内存无限膨胀。 */
     private static final int MAX_LINE_BYTES = 64 * 1024;
 
+    /**
+     * 单个流累计输出行数上限：console.log 死循环等场景会产生无限行日志，撑爆 per-type
+     * 日志文件与磁盘。超过上限后丢弃后续行并一次性告警；64KB 单行上限行为保持不变。
+     */
+    private static final int MAX_TOTAL_LINES = 100_000;
+
     private final Logger logger;
     private final boolean isErrorPipe;
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    private int flushedLines;
+    private boolean overflowWarned;
 
     private static final String WARN_TAG = "[NekoJS_WARN] ";
     private static final String DEBUG_TAG = "[NekoJS_DEBUG] ";
@@ -71,21 +79,32 @@ public class LoggerStream extends OutputStream {
         if (buffer.size() > 0) {
             String msg = decode(buffer.toByteArray());
 
-            if (isErrorPipe) {
-                if (msg.startsWith(WARN_TAG)) {
-                    logger.warn(msg.substring(WARN_TAG.length()));
-                } else {
-                    logger.error(msg);
-                }
-            } else {
-                if (msg.startsWith(DEBUG_TAG)) {
-                    logger.debug(msg.substring(DEBUG_TAG.length()));
-                } else {
-                    logger.info(msg);
-                }
+            // 行数上限：已输出行数达到上限后丢弃后续行（仅一次性告警），防止脚本日志死循环
+            // 无限写盘。每行在 flush 时即落盘，故「丢弃最旧」退化为实现为「丢弃后续新行」。
+            if (flushedLines < MAX_TOTAL_LINES) {
+                emit(msg);
+            } else if (!overflowWarned) {
+                overflowWarned = true;
+                logger.warn("脚本输出行数超过 {} 行上限，后续输出将被丢弃（防止日志无限增长）", MAX_TOTAL_LINES);
             }
-
+            flushedLines++;
             buffer.reset();
+        }
+    }
+
+    private void emit(String msg) {
+        if (isErrorPipe) {
+            if (msg.startsWith(WARN_TAG)) {
+                logger.warn(msg.substring(WARN_TAG.length()));
+            } else {
+                logger.error(msg);
+            }
+        } else {
+            if (msg.startsWith(DEBUG_TAG)) {
+                logger.debug(msg.substring(DEBUG_TAG.length()));
+            } else {
+                logger.info(msg);
+            }
         }
     }
 

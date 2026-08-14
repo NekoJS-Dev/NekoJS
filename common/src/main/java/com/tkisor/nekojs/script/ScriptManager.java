@@ -262,10 +262,11 @@ public final class ScriptManager implements AutoCloseable {
             for (var binding : pluginRuntime.bindings(scriptType).values()) {
                 binding.close(scriptType);
             }
-            // Clear the process-lifetime static caches (compiled modules, source maps,
-            // virtual ESM URIs) so stale entries from deleted/renamed scripts don't leak.
-            NekoModulePipelineCache.clear();
-            NekoEsmVirtualModuleRegistry.clear();
+            // 清空进程级静态缓存（编译模块、source map、虚拟 ESM URI）中本 scriptType 的条目，
+            // 防止删除/改名后的脚本残留旧产物。按类型局部清除：这些缓存原本无 ScriptType 维度，
+            // 单机 CLIENT 触发 reload 会误清 SERVER 等其它类型已编译的模块/source map/虚拟 URI。
+            NekoModulePipelineCache.clear(scriptType);
+            NekoEsmVirtualModuleRegistry.clear(scriptType);
 
             final ScriptEnvironmentFactory.Environment candidate;
             try {
@@ -418,11 +419,11 @@ public final class ScriptManager implements AutoCloseable {
         private void fullReloadCleanup () {
             scriptEventBridge.clearListeners(scriptType);
             errorTracker.clearByType(scriptType);
-            // Clear the process-lifetime static caches so deleted/renamed scripts don't
-            // leak compiled modules and source maps across reloads. NekoModulePipelineCache.clear()
-            // also clears SourceMapRegistry; NekoEsmVirtualModuleRegistry holds virtual ESM URIs.
-            NekoModulePipelineCache.clear();
-            NekoEsmVirtualModuleRegistry.clear();
+            // 清空进程级静态缓存中本 scriptType 的条目：NekoModulePipelineCache.clear(ScriptType)
+            // 同时按类型清理对应 SourceMapRegistry 条目；NekoEsmVirtualModuleRegistry 持有虚拟 ESM URI。
+            // 局部清除避免单机单类型 reset/close 误清其它类型的编译产物（原全局 clear 会跨类型误伤）。
+            NekoModulePipelineCache.clear(scriptType);
+            NekoEsmVirtualModuleRegistry.clear(scriptType);
         }
 
         // ---- 路径解析 ----

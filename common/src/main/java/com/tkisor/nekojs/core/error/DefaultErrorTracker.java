@@ -35,6 +35,14 @@ public final class DefaultErrorTracker implements ErrorTracker {
             "com.tkisor.nekojs.script.ScriptExecutor",
             "com.tkisor.nekojs.script.ScriptManager"
     );
+    /**
+     * 运行时回调错误（rt/ 前缀）容量上限。非 PolyglotException 去重键含
+     * {@code hash(class+message)}，消息随时间变化的回调错误（如带时间戳/随机数的报错）
+     * 每个新消息都会新增记录，使 {@link #errors} 无界增长。镜像
+     * {@link SourceMapRegistry#CACHE_HARD_CAP} 的 4096 上限模式：超过上限时清空其它
+     * 运行时回调错误、保留最近一条；脚本自身错误按 scriptId 存储、天然有界，不受影响。
+     */
+    private static final int MAX_RUNTIME_CALLBACK_ERRORS = 4096;
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
     private final NekoJSPaths paths;
     private final SandboxConfig config;
@@ -97,6 +105,13 @@ public final class DefaultErrorTracker implements ErrorTracker {
             return new ScriptError(currentType, runtimeId, eventPath, throwable, this);
         });
 
+        // 容量上限（仅超限时触发一次过滤，正常有界路径零开销）：ConcurrentHashMap.size()
+        // 为 O(1)，超限后清空其它运行时回调错误、保留当前这条，防止消息持续变化的
+        // 回调错误无界增长。脚本自身错误（scriptId 非 rt/ 前缀）不受影响。
+        if (errors.size() > MAX_RUNTIME_CALLBACK_ERRORS) {
+            errors.entrySet().removeIf(entry -> isRuntimeCallbackError(entry.getKey()) && !entry.getKey().equals(runtimeId));
+        }
+
         String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs());
         String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
         // 唯一的控制台输出点：经 CollapsingAppender 写入 per-type 日志文件并镜像到主控制台。
@@ -147,6 +162,11 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     private ScriptId eventErrorId(ScriptType type, String pathStr) {
         return new ScriptId("nekojs", "rt/" + type.name() + "/" + pathStr.replace(':', '_'));
+    }
+
+    /** 运行时回调错误 id 以 {@code rt/} 开头；脚本自身错误 id 为 {@code <type>_scripts/...} 相对路径。 */
+    private static boolean isRuntimeCallbackError(ScriptId id) {
+        return id != null && id.path().startsWith("rt/");
     }
 
     private boolean sameEventError(ScriptError previous, Throwable throwable) {
