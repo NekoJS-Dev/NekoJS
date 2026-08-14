@@ -12,6 +12,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -53,6 +55,13 @@ class DefaultRegistryFacadeTest {
                 assertThrows(ApiInvocationException.class, () -> items.has("")).code());
         assertEquals(ApiErrorCodes.TYPE_MISMATCH,
                 assertThrows(ApiInvocationException.class, () -> items.tag(" ")).code());
+    }
+
+    @Test
+    void getReusesCachedViewPerRegistryId() {
+        // DefaultRegistryView 无状态，同一 registryId 应复用同一视图实例，避免按 tick 重复分配
+        assertSame(registry.get("minecraft:item"), registry.get("minecraft:item"));
+        assertNotSame(registry.get("minecraft:item"), registry.get("minecraft:other"));
     }
 
     @Test

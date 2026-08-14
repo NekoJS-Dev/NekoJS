@@ -226,6 +226,17 @@ public final class JavaMemberIndex {
     // ==================== 注解驱动的成员名重映射（共享原语） ====================
 
     /**
+     * remapName 的缓存 key。两个 marker 必须都参与：各调用方的 marker 语义不同
+     * （可见性查询传 null / 原名，运行时 remapper 传 {@code MemberRemapper.HIDE_MEMBER} /
+     * {@code MemberRemapper.FALL_THROUGH}，ExposedMembers 用 {@code HIDE_MARKER}），
+     * 只按 member 缓存会把一方的 marker 串给另一方。结果值按 member 天然有界
+     * （每成员至多几个调用方组合）。
+     */
+    private record RemapKey(Member member, String hideMarker, String fallThroughMarker) {}
+
+    private static final Map<RemapKey, String> REMAP_NAME_CACHE = new ConcurrentHashMap<>();
+
+    /**
      * 无副作用的成员名重映射，按优先级：
      * {@code @HideFromJS}（成员级或类级）&gt; {@code @Remap}（成员级）&gt;
      * {@code @RemapByPrefix}（成员级）&gt; {@code @RemapByPrefix}（类级）&gt; 原名。
@@ -238,6 +249,20 @@ public final class JavaMemberIndex {
      *                          Graal remapper chain 传 {@code MemberRemapper.FALL_THROUGH}。
      */
     public static @Nullable String remapName(Member member, String hideMarker, String fallThroughMarker) {
+        RemapKey key = new RemapKey(member, hideMarker, fallThroughMarker);
+        String cached = REMAP_NAME_CACHE.get(key);
+        if (cached != null) return cached;
+        // 结果为 null（可见性查询剔除隐藏成员）时不缓存：ConcurrentHashMap 不允许 null 值，
+        // 且该路径只在脚本加载期出现，不在运行时 remapper 热路径上。
+        String result = computeRemapName(member, hideMarker, fallThroughMarker);
+        if (result != null) {
+            String raced = REMAP_NAME_CACHE.putIfAbsent(key, result);
+            if (raced != null) return raced;
+        }
+        return result;
+    }
+
+    private static @Nullable String computeRemapName(Member member, String hideMarker, String fallThroughMarker) {
         AccessibleObject ao = (AccessibleObject) member;
 
         if (ao.isAnnotationPresent(HideFromJS.class)

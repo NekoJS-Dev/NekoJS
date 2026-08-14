@@ -136,6 +136,26 @@ class JavaMemberIndexTest {
         assertSame(fallThrough, JavaMemberIndex.remapName(m, null, fallThrough));
     }
 
+    @Test
+    void remapNameCacheDistinguishesHideMarkers() throws NoSuchMethodException {
+        // 缓存 key 必须包含 hideMarker：同一隐藏成员按调用方语义返回不同 marker
+        Method m = Annotated.class.getMethod("hidden");
+        assertEquals("HIDE", JavaMemberIndex.remapName(m, "HIDE", m.getName()));
+        assertEquals("GONE", JavaMemberIndex.remapName(m, "GONE", m.getName()));
+        assertNull(JavaMemberIndex.remapName(m, null, m.getName()));
+    }
+
+    @Test
+    void remapNameCacheDistinguishesFallThroughMarkers() throws NoSuchMethodException {
+        // 无 remap 的成员：结果就是各自的 fallThroughMarker，缓存 key 必须区分
+        Method m = FakeEvent.class.getMethod("greet", String.class);
+        String a = new String("FALL_A");
+        String b = new String("FALL_B");
+        assertSame(a, JavaMemberIndex.remapName(m, null, a));
+        assertSame(b, JavaMemberIndex.remapName(m, null, b));
+        assertSame(a, JavaMemberIndex.remapName(m, null, a));
+    }
+
     /** name 恰等于前缀时不产生空 JS binding。 */
     public static class PrefixEdge {
         @RemapByPrefix({"ge"})
