@@ -415,13 +415,19 @@ class PythonToJsCompilerTest {
     }
 
     @Test
-    void builtinExceptionNamesMapToJsError() throws Exception {
-        // Builtin exception names (undefined in the JS runtime) map to Error in instanceof checks.
+    void builtinExceptionNamesMapToPreludeClasses() throws Exception {
+        // Builtin exception names now map to real classes from the exception prelude (no longer to
+        // plain Error): `except Exception` matches instanceof Error (every prelude class extends
+        // Error), and specific types match via __nekoExcIs (instanceof + JS-native Error .name).
         String js = py("try:\n    pass\nexcept Exception as e:\n    pass");
-        assertTrue(js.contains("instanceof Error"), "Exception → Error in instanceof: " + js);
+        assertTrue(js.contains("instanceof Error"), "Exception → instanceof Error: " + js);
         js = py("try:\n    pass\nexcept (ValueError, TypeError):\n    pass");
-        assertTrue(js.contains("(__nekoErr instanceof Error) || (__nekoErr instanceof Error)"),
-                "parenthesized builtin types each map to Error: " + js);
+        assertTrue(js.contains("__nekoExcIs(__nekoErr, ValueError) || __nekoExcIs(__nekoErr, TypeError)"),
+                "parenthesized builtin types map to __nekoExcIs disjuncts: " + js);
+        assertTrue(js.contains("class Exception extends Error"),
+                "prelude must define Exception extends Error before subclasses: " + js);
+        assertTrue(js.contains("class ValueError extends Exception"),
+                "prelude must define ValueError: " + js);
     }
 
     @Test
@@ -576,14 +582,19 @@ class PythonToJsCompilerTest {
 
     @Test
     void isinstanceWithBuiltinExceptionNames() throws Exception {
-        // Builtin exception names are undefined in the JS runtime; isinstance must map them to
-        // Error (like the except-clause lowering) or the emitted JS throws ReferenceError.
-        String js = py("isinstance(Error('x'), ValueError)");
-        assertTrue(js.contains("instanceof Error"), "ValueError → Error in isinstance: " + js);
-        assertTrue(evalBool("isinstance(Error('x'), ValueError)"));
-        assertTrue(evalBool("isinstance(Error('x'), (ValueError, TypeError))"));
-        assertTrue(evalBool("isinstance(Error('x'), [ValueError, TypeError])"));
+        // Builtin exception names resolve to prelude classes, so isinstance checks the real class
+        // hierarchy (ValueError extends Exception; KeyError extends LookupError) and falls back to
+        // a JS-native Error .name match for errors thrown by the JS runtime itself.
+        String js = py("isinstance(ValueError('x'), ValueError)");
+        assertTrue(js.contains("__nekoExcIs"), "builtin exception isinstance → __nekoExcIs: " + js);
+        assertTrue(evalBool("isinstance(ValueError('x'), ValueError)"));
+        assertTrue(evalBool("isinstance(ValueError('x'), (ValueError, TypeError))"));
+        assertTrue(evalBool("isinstance(ValueError('x'), [ValueError, TypeError])"));
         assertFalse(evalBool("isinstance(1, ValueError)"));
+        // follows the prelude hierarchy, not a blanket Error mapping
+        assertTrue(evalBool("isinstance(ValueError('x'), Exception)"));
+        assertFalse(evalBool("isinstance(ValueError('x'), KeyError)"));
+        assertTrue(evalBool("isinstance(KeyError('k'), LookupError)"));
     }
 
     @Test
@@ -1388,6 +1399,161 @@ class PythonToJsCompilerTest {
         assertFalse(evalBool("5 in [1, 2, 3]"));
         assertTrue(evalBool("not False"));
         assertTrue(evalBool("True and 1 < 2"));
+    }
+
+    // ---- landed-fix regression tests (truthiness / mod / strict eq / repetition / sort / exceptions / dict ops) ----
+
+    @Test
+    void emptyContainerIsFalsyInConditions() throws Exception {
+        // Python truthiness: [] / {} are falsy even though JS arrays/objects are always truthy;
+        // `if not []` must take the truthy branch, and the "" / 0 / None scalars stay falsy.
+        String src = """
+                hits = []
+                if not []:
+                    hits.append('list')
+                if not {}:
+                    hits.append('dict')
+                if []:
+                    hits.append('WRONG')
+                if not '' and not 0 and not None:
+                    hits.append('scalars')
+                str(hits)
+                """;
+        String js = py(src);
+        assertTrue(js.contains("__nekoTruthy"), "conditions must go through __nekoTruthy: " + js);
+        assertEquals("list,dict,scalars", evalString(src));
+    }
+
+    @Test
+    void moduloFollowsDivisorSign() throws Exception {
+        // Python % keeps the divisor's sign; JS % keeps the dividend's (JS: -7 % 2 == -1). The
+        // __nekoMod helper normalizes both directions.
+        assertEquals(1, evalInt("(-7) % 2"));
+        assertEquals(-1, evalInt("7 % -2"));
+        String js = py("(-7) % 2");
+        assertTrue(js.contains("__nekoMod"), "mod must go through __nekoMod: " + js);
+    }
+
+    @Test
+    void equalityIsStrictNoTypeCoercion() throws Exception {
+        // Python == has no type coercion, so "1" == 1 is False; the emitter must use === / !==
+        // (JS loose == would coerce and silently produce True).
+        assertFalse(evalBool("\"1\" == 1"));
+        assertTrue(evalBool("\"1\" != 1"));
+        assertTrue(evalBool("1 == 1"));
+        String js = py("\"1\" == 1");
+        assertTrue(js.contains("==="), "== must emit ===: " + js);
+    }
+
+    @Test
+    void sequenceRepetitionOperator() throws Exception {
+        // [0] * 4 → [0,0,0,0] and "ab" * 3 → "ababab" (JS * on arrays/strings is silent NaN/0);
+        // plain numeric multiply must still work.
+        assertEquals("0,0,0,0", evalString("str([0] * 4)"));
+        assertEquals("ababab", evalString("\"ab\" * 3"));
+        assertEquals(12, evalInt("3 * 4"));
+        assertEquals(6, evalInt("len([1, 2] * 3)"));   // [1,2,1,2,1,2]
+    }
+
+    @Test
+    void bareListSortIsNumericAware() throws Exception {
+        // JS default sort is lexicographic ([10,2,1] → [1,10,2]); the bare .sort() call must lower
+        // to the same numeric-aware comparator as sorted().
+        assertEquals("1,2,10", evalString("str([10, 2, 1].sort())"));
+    }
+
+    @Test
+    void multipleBaseClassesAreRejected() {
+        // v1 supports single inheritance only; extra bases must be a positioned compile error
+        // (previously silently dropped, losing parent B).
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> py("class A:\n    pass\nclass B:\n    pass\nclass C(A, B):\n    pass"));
+        assertTrue(ex.getMessage().contains("multiple base"), "must mention multiple base: " + ex.getMessage());
+    }
+
+    @Test
+    void builtinExceptionRaiseCatchPreservesMessage() throws Exception {
+        // raise ValueError('boom') → throw new ValueError("boom"); except ValueError matches the
+        // prelude class; e.message carries the text. JS Error stringification is "Name: message",
+        // so str(e) is "ValueError: boom" (message preserved; Python would give just "boom").
+        String src = """
+                try:
+                    raise ValueError('boom')
+                except ValueError as e:
+                    e.message + '|' + str(e)
+                """;
+        String js = py(src);
+        assertTrue(js.contains("throw new ValueError"), "raise ValueError(...) → throw new ValueError: " + js);
+        assertTrue(js.indexOf("class Exception extends Error") < js.indexOf("class ValueError extends Exception"),
+                "Exception must be declared before ValueError in the prelude: " + js);
+        assertEquals("boom|ValueError: boom", evalString(src));
+    }
+
+    @Test
+    void nativeJsErrorMatchesByTypeName() throws Exception {
+        // A JS-native TypeError (null.foo) is not an instance of the prelude classes; the
+        // __nekoExcIs .name fallback lets `except TypeError` catch it, and a mismatched type
+        // (`except ValueError`) must rethrow it to an outer catch.
+        String src = """
+                caught = False
+                try:
+                    None.foo
+                except TypeError:
+                    caught = True
+                caught
+                """;
+        assertTrue(evalBool(src));
+        String rethrown = """
+                caught = 'none'
+                try:
+                    try:
+                        None.foo
+                    except ValueError:
+                        caught = 'wrong'
+                except TypeError:
+                    caught = 'rethrown'
+                caught
+                """;
+        assertEquals("rethrown", evalString(rethrown));
+    }
+
+    @Test
+    void membershipInDictAndDictLen() throws Exception {
+        // 'a' in d must use hasOwnProperty for dict literals (old code emitted .includes → runtime
+        // TypeError on plain objects); len(dict) counts own keys.
+        assertTrue(evalBool("'a' in {'a': 1}"));
+        assertFalse(evalBool("'z' in {'a': 1}"));
+        assertTrue(evalBool("'z' not in {'a': 1}"));
+        assertTrue(evalBool("len({}) == 0"));
+        assertEquals(2, evalInt("len({'a': 1, 'b': 2})"));
+        String js = py("'a' in {'a': 1}");
+        assertTrue(js.contains("__nekoIn"), "in must go through __nekoIn: " + js);
+    }
+
+    @Test
+    void forOverDictIteratesKeys() throws Exception {
+        // for k in d must iterate a dict literal's KEYS; a plain JS object is not iterable, so the
+        // __nekoIter helper normalizes it to Object.keys (old code threw a runtime TypeError).
+        String src = """
+                d = {'a': 1, 'b': 2, 'c': 3}
+                keys = []
+                for k in d:
+                    keys.append(k)
+                str(keys)
+                """;
+        String js = py(src);
+        assertTrue(js.contains("__nekoIter"), "for over a dict must go through __nekoIter: " + js);
+        assertEquals("a,b,c", evalString(src));
+    }
+
+    @Test
+    void emitterErrorIncludesPythonSourceLine() {
+        // Emitter-side errors (not parser errors) must carry the offending Python source line so
+        // mod authors can locate the failing statement.
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> py("x = 1\ndel x"));
+        assertTrue(ex.getMessage().contains("python source line 2"), ex.getMessage());
+        ex = assertThrows(IllegalArgumentException.class, () -> py("def f():\n    import os"));
+        assertTrue(ex.getMessage().contains("python source line 2"), ex.getMessage());
     }
 
     @Test

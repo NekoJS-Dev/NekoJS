@@ -16,9 +16,18 @@ import java.util.List;
  */
 final class FStringParser {
 
+    /** 匹配 "python (parse|lex) error at line L, col C: " 前缀，用于换算相对坐标。 */
+    private static final java.util.regex.Pattern ERROR_POSITION =
+            java.util.regex.Pattern.compile("^python (?:parse|lex) error at line (\\d+), col (\\d+): ");
+
     private FStringParser() {}
 
-    static PythonNode.FString parse(String raw) {
+    /**
+     * @param baseLine FSTRING 记号所在源码行（1-based）
+     * @param baseCol  f-string 首个内容字符的源码列（1-based；记号列指向引号，单引号串为 col+1，
+     *                 三引号串差 2 列——可接受，行号总是准确的）
+     */
+    static PythonNode.FString parse(String raw, int baseLine, int baseCol) {
         List<PythonNode> parts = new ArrayList<>();
         StringBuilder lit = new StringBuilder();
         int i = 0;
@@ -68,7 +77,7 @@ final class FStringParser {
                     spec = raw.substring(specStart, i);
                 }
                 if (i < len && raw.charAt(i) == '}') i++; // consume '}'
-                PythonNode expr = parseInterpolation(exprText);
+                PythonNode expr = parseInterpolation(exprText, baseLine, baseCol, start);
                 parts.add((spec != null || conv != null)
                         ? new PythonNode.Formatted(expr, spec, conv)
                         : expr);
@@ -88,11 +97,39 @@ final class FStringParser {
         }
     }
 
-    private static PythonNode parseInterpolation(String exprText) {
+    /**
+     * 把插值表达式重新词法+语法分析。解析错误原本以片段内相对坐标报告（f"{1 +}" 报 col 4），
+     * 这里用 FSTRING 记号的行/列加上片段内偏移换算回源码坐标（首个物理行的错误按
+     * baseCol + offset + 相对列 修正；跨行的错误行号累加、列号保持相对值）。
+     *
+     * @param offset 片段首字符在 f-string 原文内的 0-based 下标
+     */
+    private static PythonNode parseInterpolation(String exprText, int baseLine, int baseCol, int offset) {
         if (exprText.isEmpty()) {
-            throw new IllegalArgumentException("python f-string: empty '{}' interpolation");
+            throw new IllegalArgumentException(
+                    "python f-string: empty '{}' interpolation (line " + baseLine + ", col " + (baseCol + offset) + ")");
         }
-        List<PythonToken> toks = new PythonLexer(exprText).tokenize();
-        return new PythonParser(toks).parseTest();
+        try {
+            List<PythonToken> toks = new PythonLexer(exprText).tokenize();
+            return new PythonParser(toks).parseTest();
+        } catch (IllegalArgumentException e) {
+            throw reposition(e, baseLine, baseCol, offset);
+        }
+    }
+
+    private static IllegalArgumentException reposition(IllegalArgumentException e, int baseLine, int baseCol, int offset) {
+        String msg = e.getMessage() == null ? "" : e.getMessage();
+        int relLine = 1, relCol = 1;
+        String rest = msg;
+        java.util.regex.Matcher mt = ERROR_POSITION.matcher(msg);
+        if (mt.find()) {
+            relLine = Integer.parseInt(mt.group(1));
+            relCol = Integer.parseInt(mt.group(2));
+            rest = msg.substring(mt.end());
+        }
+        int line = baseLine + relLine - 1;
+        int col = relLine == 1 ? baseCol + offset + relCol - 1 : relCol;
+        return new IllegalArgumentException("python parse error at line " + line + ", col " + col
+                + " (in f-string interpolation): " + rest, e);
     }
 }

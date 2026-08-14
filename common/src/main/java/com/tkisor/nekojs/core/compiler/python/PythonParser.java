@@ -124,10 +124,11 @@ public final class PythonParser {
         if (matchOp("(")) {
             if (!atOp(")")) {
                 base = parseTest();
-                // skip additional bases / keyword args (v1: single base)
-                while (matchOp(",")) {
-                    if (atOp(")")) break;
-                    parseTest();
+                // 多重继承 / 类关键字参数：v1 只支持单继承。此前静默跳过额外基类是无声错误
+                // （父类 B 被丢弃），现改为带源码位置的显式报错；尾随逗号仍允许。
+                if (matchOp(",") && !atOp(")")) {
+                    throw error("multiple base classes (or class keyword args) are not supported"
+                            + " (v1: single inheritance only); found extra base '" + peek().text() + "'");
                 }
             }
             expectOp(")");
@@ -324,11 +325,28 @@ public final class PythonParser {
 
     private PythonNode literalTokenToNode(PythonToken t) {
         return switch (t.type()) {
-            case INT -> new PythonNode.IntLit(Long.parseLong(t.text()));
-            case FLOAT -> new PythonNode.FloatLit(Double.parseDouble(t.text()));
+            case INT -> new PythonNode.IntLit(parseIntLiteral(t));
+            case FLOAT -> new PythonNode.FloatLit(parseFloatLiteral(t));
             case STRING -> new PythonNode.StrLit(t.text());
             default -> throw error("not a literal token: " + t.text());
         };
+    }
+
+    /** 数字字面量解析失败（如超出 long 范围）时给出带位置的报错，而非裸 NumberFormatException。 */
+    private long parseIntLiteral(PythonToken t) {
+        try {
+            return Long.parseLong(t.text());
+        } catch (NumberFormatException e) {
+            throw error("invalid integer literal '" + t.text() + "' (out of range?)");
+        }
+    }
+
+    private double parseFloatLiteral(PythonToken t) {
+        try {
+            return Double.parseDouble(t.text());
+        } catch (NumberFormatException e) {
+            throw error("invalid float literal '" + t.text() + "'");
+        }
     }
 
     private PythonNode parseTry() {
@@ -619,8 +637,8 @@ public final class PythonParser {
         }
         PythonToken t = peek();
         switch (t.type()) {
-            case INT -> { advance(); return new PythonNode.IntLit(Long.parseLong(t.text())); }
-            case FLOAT -> { advance(); return new PythonNode.FloatLit(Double.parseDouble(t.text())); }
+            case INT -> { advance(); return new PythonNode.IntLit(parseIntLiteral(t)); }
+            case FLOAT -> { advance(); return new PythonNode.FloatLit(parseFloatLiteral(t)); }
             case STRING -> {
                 advance();
                 StringBuilder sb = new StringBuilder(t.text());
@@ -628,7 +646,9 @@ public final class PythonParser {
                 while (peek().is(PythonToken.Type.STRING)) { sb.append(advance().text()); }
                 return new PythonNode.StrLit(sb.toString());
             }
-            case FSTRING -> { advance(); return FStringParser.parse(t.text()); }
+            // 传入 FSTRING 记号的行/列（记号列指向引号，内容从 col+1 开始），供 FStringParser
+            // 把插值表达式的解析错误换算回源码坐标
+            case FSTRING -> { advance(); return FStringParser.parse(t.text(), t.line(), t.col() + 1); }
             case NAME -> {
                 advance();
                 return switch (t.text()) {
