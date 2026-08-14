@@ -1292,6 +1292,19 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void chainedMembershipRoutesThroughNekoIn() throws Exception {
+        // a in b in c → (a in b) && (b in c)：链式第二段成员判断同样必须经 __nekoIn（旧实现发射
+        // 裸 JS `in` —— 对字符串/字典右操作数是运行时 TypeError，且不走 dict 键的 hasOwnProperty 语义）。
+        String js = py("'a' in 'abc' in ['abc']");
+        assertTrue(js.contains("__nekoIn(\"a\", \"abc\")"), "首段 in 必须经 __nekoIn: " + js);
+        assertTrue(js.contains("__nekoIn(\"abc\", [\"abc\"])"), "链式第二段 in 必须也经 __nekoIn: " + js);
+        assertTrue(evalBool("'a' in 'abc' in ['abc']"));   // 两段都为真
+        assertFalse(evalBool("'z' in 'abc' in ['abc']"));  // 首段为假 → 短路为 False
+        // dict 形式：x in d1 in d2 → (x in d1) && (d1 in d2)，两段都走 __nekoIn 的 dict 键判断
+        assertFalse(evalBool("'a' in {'a': 1} in {'a': 1}"));
+    }
+
+    @Test
     void negativeIndex() throws Exception {
         assertEquals(30, evalInt("[10, 20, 30][-1]"));
         assertEquals(20, evalInt("[10, 20, 30][-2]"));

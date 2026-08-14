@@ -1526,8 +1526,16 @@ public final class PythonEmitter {
         // (Python evaluates each operand once; the JS form may re-evaluate the middle operand —
         // acceptable for side-effect-free comparisons, the common case.)
         if (c.left() instanceof PythonNode.Compare lc) {
-            return "(" + emitCompare(lc) + " && (" + emitExpr(lc.right()) + " " + jsCompareOp(c.op()) + " "
-                    + emitExpr(c.right()) + "))";
+            String mid = emitExpr(lc.right());
+            String right = emitExpr(c.right());
+            // 链式 in / not in（a in b in c → (a in b) && (b in c)）的第二段同样必须经 __nekoIn：
+            // 旧实现发射裸 JS `in` —— 对 dict/Map/数组/字符串右操作数是运行时 TypeError 或错误语义
+            String second = switch (c.op()) {
+                case "in" -> "__nekoIn(" + mid + ", " + right + ")";
+                case "not in" -> "(!__nekoIn(" + mid + ", " + right + "))";
+                default -> "(" + mid + " " + jsCompareOp(c.op()) + " " + right + ")";
+            };
+            return "(" + emitCompare(lc) + " && " + second + ")";
         }
         String left = emitExpr(c.left());
         String right = emitExpr(c.right());

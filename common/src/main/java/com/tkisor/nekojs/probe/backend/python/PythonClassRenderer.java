@@ -5,7 +5,7 @@ import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -142,7 +142,9 @@ public final class PythonClassRenderer {
 
     /** 基类列表：class 含 superType+interfaces；interface 仅 interfaces。 */
     private String bases(TypeDecl d, boolean includeSuper) {
-        Set<String> bases = new HashSet<>();
+        // LinkedHashSet：superType 在前、interfaces 按声明序在后，迭代序即插入序——Set 接口不保证
+        // 迭代序（旧 HashSet 在跨 JVM/平台间可能乱序），违反本仓库的产物确定性标准。
+        Set<String> bases = new LinkedHashSet<>();
         if (includeSuper && d.superType != null) {
             String s = renderSlot(d.superType);
             if (!s.equals("Any")) bases.add(s);

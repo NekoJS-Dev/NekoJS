@@ -82,15 +82,15 @@ class ProbeConfigTest {
 
     @Test
     void scanConfigNormalizesModeAndNulls() {
-        ProbeConfig.ScanConfig s = new ProbeConfig.ScanConfig(null, null, null, null, 0, null);
-        assertEquals("SMART", s.mode());
+        ProbeConfig.ScanConfig s = new ProbeConfig.ScanConfig(null, null, null, null, 0, (String) null);
+        assertEquals(ProbeConfig.ScanConfig.ScanMode.SMART, s.mode());
         assertTrue(s.includePackages().isEmpty());
         assertEquals(0, s.maxDepth());
         ProbeConfig cfg = new ProbeConfig(true, null, s);
         assertEquals(".neko_probe", cfg.baseDir());
 
         ProbeConfig.ScanConfig upper = new ProbeConfig.ScanConfig(List.of(), List.of(), List.of(), List.of(), 5, "full");
-        assertEquals("FULL", upper.mode());
+        assertEquals(ProbeConfig.ScanConfig.ScanMode.FULL, upper.mode());
     }
 
     @Test
@@ -106,7 +106,7 @@ class ProbeConfigTest {
     void unknownScanModeFallsBackToSmart() {
         ProbeConfig.ScanConfig garbage = new ProbeConfig.ScanConfig(
                 List.of(), List.of(), List.of(), List.of(), 5, "garbage-mode");
-        assertEquals("SMART", garbage.mode(), "未知 mode 取值应兜底为 SMART（等价旧默认行为）");
+        assertEquals(ProbeConfig.ScanConfig.ScanMode.SMART, garbage.mode(), "未知 mode 取值应兜底为 SMART（等价旧默认行为）");
     }
 
     @Test

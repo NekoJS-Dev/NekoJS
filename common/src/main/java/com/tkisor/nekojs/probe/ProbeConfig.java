@@ -45,10 +45,10 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
             List<String> excludePackages,
             List<String> forceScanMods,
             int maxDepth,
-            String mode          // SMART | FULL | NONE
+            ScanMode mode          // SMART | FULL | NONE
     ) {
         public static ScanConfig defaultScan() {
-            return new ScanConfig(List.of(), List.of(), List.of(), List.of("minecraft"), 5, "SMART");
+            return new ScanConfig(List.of(), List.of(), List.of(), List.of("minecraft"), 5, ScanMode.SMART);
         }
 
         public ScanConfig {
@@ -56,10 +56,35 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
             extraIncludePackages = extraIncludePackages == null ? List.of() : List.copyOf(extraIncludePackages);
             excludePackages = excludePackages == null ? List.of() : List.copyOf(excludePackages);
             forceScanMods = forceScanMods == null ? List.of() : List.copyOf(forceScanMods);
-            mode = mode == null || mode.isBlank() ? "SMART" : mode.toUpperCase(Locale.ROOT);
-            // 未知取值兜底为 SMART（等价旧行为：默认白名单过滤）
-            if (!mode.equals("SMART") && !mode.equals("FULL") && !mode.equals("NONE")) {
-                mode = "SMART";
+            mode = mode == null ? ScanMode.SMART : mode;
+        }
+
+        /** 字符串便捷构造：兼容 probe.toml 的字符串取值（大小写不敏感；未知取值兜底 SMART，见 {@link ScanMode#parse}）。 */
+        public ScanConfig(List<String> includePackages, List<String> extraIncludePackages,
+                          List<String> excludePackages, List<String> forceScanMods,
+                          int maxDepth, String mode) {
+            this(includePackages, extraIncludePackages, excludePackages, forceScanMods, maxDepth,
+                    ScanMode.parse(mode));
+        }
+
+        /** 扫描模式（{@code probe.toml} 的 {@code scan.mode}）。 */
+        public enum ScanMode {
+            SMART, FULL, NONE;
+
+            /**
+             * 大小写不敏感解析：{@code null}/空串 → 默认 {@link #SMART}；未知取值 warn 并兜底
+             * {@link #SMART}（与旧行为等价：默认走白名单过滤）。
+             */
+            public static ScanMode parse(String raw) {
+                if (raw == null || raw.isBlank()) return SMART;
+                try {
+                    return valueOf(raw.trim().toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException unknown) {
+                    NekoJS.LOGGER.warn(
+                            "probe.toml scan.mode: unknown mode '{}' (expected SMART | FULL | NONE); falling back to SMART",
+                            raw);
+                    return SMART;
+                }
             }
         }
     }

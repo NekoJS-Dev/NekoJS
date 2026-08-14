@@ -54,6 +54,16 @@ public final class TypeAliasRegistry {
     }
 
     /**
+     * 清空全部注册并恢复默认别名表——供 backend 每次 probe 运行前调用，避免上一轮的适配器别名
+     * （{@code registerClassAlias} 产物）泄漏到本轮：若某目标类本轮不再生成，其残留别名仍会放宽参数类型。
+     */
+    public void clear() {
+        classAliases.clear();
+        collectionAliases.clear();
+        registerDefaults();
+    }
+
+    /**
      * 检查是否有类级别的输入别名。
      */
     public boolean hasAlias(String className) {

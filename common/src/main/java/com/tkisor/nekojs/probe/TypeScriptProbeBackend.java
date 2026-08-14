@@ -132,7 +132,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 }
 
                 // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
-                // 方法参数）+ 别名表（就近发声明）。必须在 pregenerateDeclarations 之前，因为参数渲染依赖已注册的别名
+                // 方法参数）+ 别名表（就近发声明）。必须在 predeclareDeclarations 之前，因为参数渲染依赖已注册的别名。
+                // 每次运行先清空 TypeAliasRegistry（恢复默认表），防止上一轮注册的适配器别名在目标类缺席时泄漏。
+                aliasRegistry.clear();
                 adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
 
                 // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
@@ -583,7 +585,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 for (int i = 0; i < entries.size(); i++) {
                     if (i > 0) sb.append(" | ");
                     if (i > 0 && i % 8 == 0) sb.append("\n            ");
-                    sb.append("\"").append(entries.get(i).replace("\"", "\\\"")).append("\"");
+                    // 先转义反斜杠再转义引号：旧实现只转义引号，内嵌反斜杠会截断字符串字面量
+                    String entry = entries.get(i).replace("\\", "\\\\").replace("\"", "\\\"");
+                    sb.append("\"").append(entry).append("\"");
                 }
                 sb.append(";\n");
             }

@@ -212,7 +212,7 @@ public final class ProbeCoordinator {
      */
     private static boolean passesScanFilter(ProbeConfig cfg, String fqn, List<String> platformPkgs, Set<String> forcedPkgs) {
         if (cfg.isExcluded(fqn)) return false;
-        if ("FULL".equals(cfg.scan().mode())) return true;
+        if (cfg.scan().mode() == ProbeConfig.ScanConfig.ScanMode.FULL) return true;
         if (cfg.isRelevantClass(fqn, platformPkgs)) return true;
         for (String pkg : forcedPkgs) {
             if (fqn.startsWith(pkg + ".")) return true;
@@ -342,7 +342,7 @@ public final class ProbeCoordinator {
                     .toList();
         }
         // mode=NONE：整体关闭类扫描（在共享收集与 paths 获取之前尽早返回，不做任何写盘）
-        if ("NONE".equals(cfg.scan().mode())) {
+        if (cfg.scan().mode() == ProbeConfig.ScanConfig.ScanMode.NONE) {
             return backends.stream()
                     .map(b -> ProbeGenerator.GenerateResult.failure("probe disabled (scan mode=NONE in probe.toml)"))
                     .toList();
