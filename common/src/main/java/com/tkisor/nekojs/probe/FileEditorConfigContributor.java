@@ -118,6 +118,11 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         try {
             JsonObject root = readJsonOrEmpty(settingsFile);
             JsonObject python = asObject(root, "python");
+            // Pylance 默认值 "Default" 在某些环境下会退回 Jedi（Jedi 不读取 pyrightconfig/extraPaths，
+            // NekoJS 的 .pyi 包自然无法解析）。用户未显式选择语言服务器时，自动固定为 Pylance。
+            if (!python.has("languageServer")) {
+                python.addProperty("languageServer", "Pylance");
+            }
             JsonObject analysis = asObject(python, "analysis");
             JsonArray arr = analysis.has("extraPaths") && analysis.get("extraPaths").isJsonArray()
                     ? analysis.getAsJsonArray("extraPaths") : new JsonArray();

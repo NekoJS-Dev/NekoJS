@@ -216,6 +216,33 @@ class FileEditorConfigContributorTest {
     }
 
     @Test
+    void mergeVscodePythonExtraPaths_freshForcesPylanceAndPath(@TempDir Path temp) throws IOException {
+        Path cfg = temp.resolve(".vscode/settings.json");
+        new FileEditorConfigContributor().mergeVscodePythonExtraPaths(cfg, List.of("../.neko_probe/python"));
+
+        String out = Files.readString(cfg);
+        assertTrue(out.contains("python"), out);
+        assertTrue(out.contains("\"languageServer\" : \"Pylance\"")
+                        || out.contains("\"languageServer\": \"Pylance\""),
+                "default Pylance should be selected: " + out);
+        assertTrue(out.contains("python.analysis") || out.contains("analysis"), out);
+        assertTrue(out.contains("../.neko_probe/python"), out);
+    }
+
+    @Test
+    void mergeVscodePythonExtraPaths_respectsUserLanguageServer(@TempDir Path temp) throws IOException {
+        Path cfg = temp.resolve(".vscode/settings.json");
+        Files.createDirectories(cfg.getParent());
+        Files.writeString(cfg, "{ \"python\": { \"languageServer\": \"Jedi\" } }");
+
+        new FileEditorConfigContributor().mergeVscodePythonExtraPaths(cfg, List.of("../.neko_probe/python"));
+
+        String out = Files.readString(cfg);
+        assertTrue(out.contains("\"languageServer\": \"Jedi\""), "user's explicit choice must be kept: " + out);
+        assertTrue(out.contains("../.neko_probe/python"), out);
+    }
+
+    @Test
     void mergeVscodeSnippets_freshThenMergePreservesUser(@TempDir Path temp) throws IOException {
         Path file = temp.resolve("nekojs.code-snippets");
         new FileEditorConfigContributor().mergeVscodeSnippets(file, List.of(
