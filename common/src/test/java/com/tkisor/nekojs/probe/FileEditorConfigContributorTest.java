@@ -180,7 +180,8 @@ class FileEditorConfigContributorTest {
                     prev.allowThreads(), prev.allowReflection(), prev.allowAsm(),
                     prev.allowFsWriteOutsideNekojs(), prev.enableEsmAuthoring(),
                     prev.conciseScriptErrorLogs(), automatic, prev.scriptMemberValidation(),
-                    prev.scriptEvaluationTimeoutSeconds(), prev.scriptStatementLimit()));
+                    prev.scriptEvaluationTimeoutSeconds(), prev.scriptStatementLimit(),
+                    prev.scriptRunawayTimeoutSeconds()));
             body.run();
         } finally {
             ClassFilter.INSTANCE.updateConfig(prev);

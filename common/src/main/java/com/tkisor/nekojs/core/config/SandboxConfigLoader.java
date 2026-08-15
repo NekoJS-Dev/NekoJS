@@ -57,8 +57,11 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptEvaluationTimeoutSeconds", 30,
                     " Maximum seconds to wait for a script entry to finish evaluating (top-level await / native ESM). On timeout the script is marked as failed and the server thread stops waiting instead of hanging forever. Set 0 or a negative value to disable the timeout.");
 
-            setupConfigEntry(config, "scriptStatementLimit", SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT,
-                    " Graal ResourceLimits statement cap for each script environment Context (0 = disabled). A cumulative cap: when exceeded, Graal closes the Context and aborts the current evaluation, which is the only reliable way to stop a while(true){} infinite loop inside a synchronous entry. The server thread is unblocked and the script is marked failed; subsequent evaluations run in an automatically rebuilt Context, but listeners/timers registered by the dead Context are lost - run /nekojs reload to fully restore the environment. Defaults to 50000000, which is generous enough for long-running servers; set 0 explicitly to disable the cap.");
+            setupConfigEntry(config, "scriptStatementLimit", 0L,
+                    " Optional absolute cumulative statement budget per Context (0 = disabled, the default). Context-lifetime total; when reached the Context is closed and the current evaluation is aborted, then the environment is rebuilt on next use (registered listeners/timers are lost). Long-lived busy environments eventually hit any non-zero budget - the recommended runaway protection is scriptRunawayTimeoutSeconds; keep this only if you need a hard lifetime cap.");
+
+            setupConfigEntry(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS,
+                    " Runaway watchdog for synchronous script execution, in seconds (0 = disabled). Implemented as a sliding window over statement checkpoints: as long as guest code keeps executing without yielding back to Java (checkpoint gaps <= 250ms), the window accumulates; exceeding this many seconds closes the Context and aborts the evaluation - the only reliable way to stop a while(true){} freezing the server thread. The window resets on every yield, so long-lived environments are never killed regardless of total statements executed. Blockage inside host calls that executes no statements is invisible to this watchdog.");
 
             return new SandboxConfig(
                     config.get("allowThreads"),
@@ -70,7 +73,8 @@ public final class SandboxConfigLoader {
                     config.get("jsxAutomaticRuntime"),
                     config.get("scriptMemberValidation"),
                     (int) numberValue(config, "scriptEvaluationTimeoutSeconds", 30),
-                    numberValue(config, "scriptStatementLimit", SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT)
+                    numberValue(config, "scriptStatementLimit", 0L),
+                    (int) numberValue(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS)
             );
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load nekojs/config/engine.toml, using default sandbox config", e);

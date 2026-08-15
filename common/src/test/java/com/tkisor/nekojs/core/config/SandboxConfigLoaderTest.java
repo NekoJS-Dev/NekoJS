@@ -27,7 +27,8 @@ class SandboxConfigLoaderTest {
         SandboxConfig loaded = new SandboxConfigLoader().load(engineConfig);
 
         assertEquals(SandboxConfig.defaultConfig(), loaded);
-        assertEquals(50_000_000L, loaded.scriptStatementLimit());
+        assertEquals(0L, loaded.scriptStatementLimit());
+        assertEquals(SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS, loaded.scriptRunawayTimeoutSeconds());
         assertFalse(loaded.allowThreads());
         assertFalse(loaded.allowReflection());
         assertFalse(loaded.allowAsm());
@@ -67,7 +68,29 @@ class SandboxConfigLoaderTest {
         SandboxConfig loaded = new SandboxConfigLoader().load(engineConfig);
 
         assertEquals(SandboxConfig.defaultConfig(), loaded);
-        assertEquals(50_000_000L, loaded.scriptStatementLimit());
+        assertEquals(0L, loaded.scriptStatementLimit());
+    }
+
+    @Test
+    void explicitRunawayTimeoutIsHonored() {
+        Path engineConfig = writeEngineConfig("""
+                scriptRunawayTimeoutSeconds = 25
+                scriptStatementLimit = 123456
+                """);
+
+        SandboxConfig loaded = new SandboxConfigLoader().load(engineConfig);
+
+        assertEquals(25, loaded.scriptRunawayTimeoutSeconds());
+        assertEquals(123456L, loaded.scriptStatementLimit());
+    }
+
+    @Test
+    void runawayTimeoutZeroMeansDisabled() {
+        Path engineConfig = writeEngineConfig("""
+                scriptRunawayTimeoutSeconds = 0
+                """);
+
+        assertEquals(0, new SandboxConfigLoader().load(engineConfig).scriptRunawayTimeoutSeconds());
     }
 
     @Test
@@ -121,7 +144,7 @@ class SandboxConfigLoaderTest {
 
     @Test
     void fsWriteOutsideNekojsAloneCountsAsUnsafeFeature() {
-        SandboxConfig fsWriteOnly = new SandboxConfig(false, false, false, true, true, true, false, true, 30, 50_000_000L);
+        SandboxConfig fsWriteOnly = new SandboxConfig(false, false, false, true, true, true, false, true, 30, 50_000_000L, 10);
         assertTrue(fsWriteOnly.anyUnsafeFeatureEnabled());
         assertFalse(SandboxConfig.defaultConfig().anyUnsafeFeatureEnabled());
     }

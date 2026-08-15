@@ -62,12 +62,29 @@ public final class NekoSandboxFactory {
     private final NekoJSPaths paths;
     private final ScriptCompilerRegistry compilers;
     private final NekoSharedHostAccess hostAccess;
+    /** 每 Engine 共享的失控看门狗（Graal 限制：同一 Engine 的所有 Context 必须共用同一个语句谓词实例）。 */
+    private volatile RunawayWatchdog sharedWatchdog;
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
         this.core = core;
         this.paths = paths;
         this.compilers = compilers;
         this.hostAccess = new NekoSharedHostAccess(pluginRuntime.adapters());
+    }
+
+    private RunawayWatchdog sharedWatchdog(SandboxConfig config, Logger logger) {
+        RunawayWatchdog w = sharedWatchdog;
+        if (w == null) {
+            synchronized (this) {
+                w = sharedWatchdog;
+                if (w == null) {
+                    w = new RunawayWatchdog(config.scriptRunawayTimeoutSeconds(), config.scriptStatementLimit(),
+                            (msg, args) -> logger.warn(msg, args), System::nanoTime);
+                    sharedWatchdog = w;
+                }
+            }
+        }
+        return w;
     }
 
     public NekoCoreContext core() {
@@ -112,13 +129,17 @@ public final class NekoSandboxFactory {
                 .option("js.unhandled-rejections", "throw");
 
         long statementLimit = config.scriptStatementLimit();
-        if (statementLimit > 0) {
+        int runawayTimeoutSeconds = config.scriptRunawayTimeoutSeconds();
+        if (statementLimit > 0 || runawayTimeoutSeconds > 0) {
+            // 两种保护共用一个 statementLimit 回调（ResourceLimits.Builder 只允许一个）；
+            // 且 Graal 要求同一 Engine 的所有 Context 共用同一个谓词实例，故工厂级懒缓存共享。
+            RunawayWatchdog watchdog = sharedWatchdog(config, logger);
             contextBuilder.resourceLimits(ResourceLimits.newBuilder()
-                    .statementLimit(statementLimit, null)
+                    .statementLimit(watchdog.checkInterval(), watchdog)
                     .onLimit(event -> logger.warn(
-                            "脚本语句数超过 scriptStatementLimit（{}），Graal 已关闭该 {} 脚本环境；"
-                                    + "当前脚本被中止，下一次取用时会自动重建 Context（/nekojs reload 亦可手动恢复）",
-                            statementLimit, type.name()))
+                            "脚本环境 {} 触发 ResourceLimits（失控看门狗 {}s / 语句上限 {}），Graal 已关闭该 Context；"
+                                    + "当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复）",
+                            type.name(), runawayTimeoutSeconds, statementLimit))
                     .build());
         }
         Context ctx = contextBuilder.build();

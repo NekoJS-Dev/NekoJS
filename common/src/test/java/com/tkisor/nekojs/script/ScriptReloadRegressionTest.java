@@ -319,7 +319,7 @@ class ScriptReloadRegressionTest {
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
         try {
@@ -363,8 +363,7 @@ class ScriptReloadRegressionTest {
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
         // 短超时让修复前的 RED 在 5 秒内失败，而不是等满生产默认的 30 秒。
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5,
-                SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 0, 0);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
         try {
@@ -533,7 +532,7 @@ class ScriptReloadRegressionTest {
         Engine engine = Engine.newBuilder().build();
         // 语句上限 100_000（测试用）：死循环迅速烧尽 → Graal 关闭 Context 并中断当前求值，
         // 服务器线程恢复；生产默认 0（禁用），整合包服务器可按需在 nekojs/config/engine.toml 开启
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;
         try {
@@ -573,7 +572,7 @@ class ScriptReloadRegressionTest {
 
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
-        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         RecordingEventBridge bridge = new RecordingEventBridge();
         // 直接在声明处构造：lambda 捕获要求 manager 为实际上的 final 变量

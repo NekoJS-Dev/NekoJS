@@ -93,7 +93,7 @@ class ClassFilterTest {
     @Test
     void nekojsCoreStaysDeniedEvenWhenAllGatedGroupsEnabled() {
         // 即使宿主显式开启全部高危开关，core 内部实现也绝不允许脚本 lookup
-        SandboxConfig allOn = new SandboxConfig(true, true, true, true, true, true, true, true, 30, 50_000_000L);
+        SandboxConfig allOn = new SandboxConfig(true, true, true, true, true, true, true, true, 30, 50_000_000L, 0);
         ClassFilter filter = new ClassFilter(allOn);
         assertFalse(filter.test("com.tkisor.nekojs.core.fs.ClassFilter"));
         assertFalse(filter.test("com.tkisor.nekojs.core.fs.NekoJSPaths"));
@@ -102,12 +102,14 @@ class ClassFilterTest {
     private static SandboxConfig withAllowReflection(SandboxConfig base, boolean allowReflection) {
         return new SandboxConfig(base.allowThreads(), allowReflection, base.allowAsm(), base.allowFsWriteOutsideNekojs(),
                 base.enableEsmAuthoring(), base.conciseScriptErrorLogs(), base.jsxAutomaticRuntime(),
-                base.scriptMemberValidation(), base.scriptEvaluationTimeoutSeconds(), base.scriptStatementLimit());
+                base.scriptMemberValidation(), base.scriptEvaluationTimeoutSeconds(), base.scriptStatementLimit(),
+                base.scriptRunawayTimeoutSeconds());
     }
 
     private static SandboxConfig withAllowThreads(SandboxConfig base, boolean allowThreads) {
         return new SandboxConfig(allowThreads, base.allowReflection(), base.allowAsm(), base.allowFsWriteOutsideNekojs(),
                 base.enableEsmAuthoring(), base.conciseScriptErrorLogs(), base.jsxAutomaticRuntime(),
-                base.scriptMemberValidation(), base.scriptEvaluationTimeoutSeconds(), base.scriptStatementLimit());
+                base.scriptMemberValidation(), base.scriptEvaluationTimeoutSeconds(), base.scriptStatementLimit(),
+                base.scriptRunawayTimeoutSeconds());
     }
 }

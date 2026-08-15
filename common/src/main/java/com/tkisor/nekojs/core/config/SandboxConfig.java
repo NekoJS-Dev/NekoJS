@@ -10,22 +10,27 @@ public record SandboxConfig(
         boolean jsxAutomaticRuntime,
         boolean scriptMemberValidation,
         int scriptEvaluationTimeoutSeconds,
-        /** Graal ResourceLimits 语句上限（0 = 禁用）。超过后 Graal 会关闭整个 Context 并中断当前求值，
-         * 是终止 while(true){} 死循环的最后手段；ScriptManager 会在下一次取用时自动重建 Context。 */
-        long scriptStatementLimit
+        /** Graal ResourceLimits 语句累计上限（0 = 禁用，默认）。Context 生命周期内语句总量达到上限即关闭
+         * 整个 Context 并中断当前求值。注意这是「终身总量」语义：忙碌服务器上长驻环境终会触顶（触发后
+         * 下次取用时自动重建，但已注册的 listeners/timers 会丢失）——常规失控保护请用
+         * {@link #scriptRunawayTimeoutSeconds}，本上限仅作为整合包作者需要的硬性预算兜底。 */
+        long scriptStatementLimit,
+        /** 同步执行失控看门狗（秒，0 = 禁用，默认 10）。基于语句检查点的滑动窗口：只要宿主代码持续执行
+          未让出（检查点间隙 ≤ 250ms，含事件间隙/长宿主调用后的返回），窗口累加；超过该秒数即判定失控
+          循环并关闭 Context——这是终止同步 while(true){} 的唯一可靠手段。每次让出都会重置窗口，
+          长驻环境无论累计执行多少语句都不会被误杀。不消耗语句的阻塞（宿主调用内部 IO/sleep）不可见。 */
+        int scriptRunawayTimeoutSeconds
 ) {
-    /**
-     * 语句上限默认值（5e7）：足够长跑服务器累计执行，又能最终终止 while(true){} 死循环。
-     * 用户在 nekojs/config/engine.toml 显式写 0 仍表示禁用（NekoSandboxFactory 对 <=0 不设置 ResourceLimits）。
-     */
-    public static final long DEFAULT_SCRIPT_STATEMENT_LIMIT = 50_000_000L;
+    /** 失控看门狗默认窗口（10s）：足以容忍合法的启动期重计算，又把服务器线程的冻结时长限制在秒级。 */
+    public static final int DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS = 10;
 
     public static SandboxConfig defaultConfig() {
-        return new SandboxConfig(false, false, false, false, true, true, false, true, 30, DEFAULT_SCRIPT_STATEMENT_LIMIT);
+        return new SandboxConfig(false, false, false, false, true, true, false, true, 30, 0,
+                DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS);
     }
 
     /** 任一高危能力开关被打开（含 fs 写越界）：驱动客户端安全警告 toast/chat。 */
     public boolean anyUnsafeFeatureEnabled() {
-        return allowThreads || allowReflection || allowAsm || allowFsWriteOutsideNekojs;
+        return allowThreads || allowReflection || allowFsWriteOutsideNekojs;
     }
 }
