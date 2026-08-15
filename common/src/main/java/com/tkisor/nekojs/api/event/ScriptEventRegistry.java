@@ -65,6 +65,11 @@ public final class ScriptEventRegistry {
         return groups;
     }
 
+    /** 当前全部动态脚本事件定义（快照副本；catalog/probe 只读消费）。 */
+    public static synchronized List<ScriptEventDefinition> definitions() {
+        return List.copyOf(DEFINITIONS.values());
+    }
+
     public static synchronized void clearListeners(ScriptType type) {
         for (ScriptEventDefinition definition : DEFINITIONS.values()) {
             if (definition.canApplyOn(type)) {

@@ -9,6 +9,8 @@ import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.api.event.ScriptEventDefinition;
+import com.tkisor.nekojs.api.event.ScriptEventRegistry;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
@@ -193,6 +195,15 @@ public final class NekoScriptCatalog {
                         bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch()));
             }
         }
+        // ScriptEvents 动态注册的事件组并列进目录：probe 才能为它们生成声明，payload
+        // 事件类也随 catalog 种子进入反射 BFS。validateAvailable 已保证不与内置组/绑定
+        // 重名；注册顺序 = 脚本加载顺序（满足确定性）；脚本事件为 PLAIN 总线，无 dispatch 键。
+        for (ScriptEventDefinition definition : ScriptEventRegistry.definitions()) {
+            EventBusJS<?, ?> scriptBus = definition.bus();
+            entries.add(EventCatalogEntry.of(
+                    definition.groupName(), definition.eventName(), definition.targetType(),
+                    scriptBus.eventType(), null, scriptBus.canCancel(), scriptBus.canDispatch()));
+        }
         return List.copyOf(entries);
     }
 
@@ -220,6 +231,14 @@ public final class NekoScriptCatalog {
                         group.name(), entry.getKey(), scriptType,
                         bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch()));
             }
+        }
+        // 动态脚本事件：与静态组一致的 side 过滤语义（canApplyOn），标签用查询侧 ScriptType。
+        for (ScriptEventDefinition definition : ScriptEventRegistry.definitions()) {
+            if (!definition.canApplyOn(scriptType)) continue;
+            EventBusJS<?, ?> scriptBus = definition.bus();
+            entries.add(EventCatalogEntry.of(
+                    definition.groupName(), definition.eventName(), scriptType,
+                    scriptBus.eventType(), null, scriptBus.canCancel(), scriptBus.canDispatch()));
         }
         return List.copyOf(entries);
     }
