@@ -11,7 +11,6 @@
   "mixins": [
     "ForgeRegistryMixin",
     "RecipeManagerMixin",
-    "inject.MixinEvent",
     "inject.MixinBlockEvent",
     "inject.MixinItemStack",
     "inject.MixinEntity",

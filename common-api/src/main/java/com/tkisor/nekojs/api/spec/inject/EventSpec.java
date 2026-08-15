@@ -6,14 +6,17 @@ import com.tkisor.nekojs.api.spec.PlatformAvailability;
 /**
  * 事件统一扩展规范（cancel / isCancelled）。
  *
- * <p>各平台的 {@code EventExtension} 必须 {@code extends EventSpec}。
+ * <p>NeoForge 系平台的 {@code EventExtension} 必须 {@code extends EventSpec}，通过 mixin
+ * 注入各自的原生事件基类（NF {@code net.neoforged.bus.api.Event}）。
  *
- * <p>原生事件类（NF {@code net.neoforged.bus.api.Event} / CR
- * {@code net.minecraftforge.fml.common.eventhandler.Event}）不提供统一的取消接口，
- * 故此 spec 提供 {@code neko$cancel()} / {@code neko$isCancelled()} 作为跨平台统一方法。
+ * <p>scope 为 {@link PlatformAvailability.Scope#NF_ONLY}：Cleanroom 1.12.2 无法实现——
+ * Forge/FML 会在任何 mod 的 mixin 配置注册之前加载
+ * {@code net.minecraftforge.fml.common.eventhandler.Event} 基类（coremod 变换器注册阶段），
+ * 基类 mixin 必然抛 {@code MixinTargetAlreadyLoadedException}。1.12.2 脚本侧取消事件
+ * 请使用监听器 {@code return true} 或原生 {@code setCanceled(true)} / {@code isCanceled()}。
  */
 @RemapByPrefix("neko$")
-@PlatformAvailability(PlatformAvailability.Scope.ALL)
+@PlatformAvailability(PlatformAvailability.Scope.NF_ONLY)
 public interface EventSpec {
 
     /** 取消该事件。仅在可取消事件上有效。返回是否成功取消。 */
