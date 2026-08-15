@@ -9,6 +9,10 @@ version = mod_version
 // 让编译器警告可见（未用 import、raw 类型、unchecked 等），便于及早发现代码质量问题。
 // 不加 -Werror：避免既有警告一夜变红；后续清理后再考虑提升为错误。
 //
+// -parameters：保留方法真实参数名，供 probe 声明生成（TypeReflector 反射）与
+// ContractReflector 使用；缺失时参数名退化为 arg0/arg1。common-api 此前单独开过，
+// 这里全局统一，重复传参无副作用。
+//
 // 编码统一为 UTF-8：源码含大量中文注释，Windows 开发机默认 GBK 时 javac 会报
 // unmappable character（CI 是 UTF-8 所以一直绿）。cleanroom 平台脚本此前单独设置过，
 // 这里全局兜底，重复设置无副作用。
@@ -17,6 +21,7 @@ version = mod_version
 allprojects {
     tasks.withType(JavaCompile).configureEach {
         options.compilerArgs += '-Xlint:all'
+        options.compilerArgs += '-parameters'
         options.encoding = 'UTF-8'
     }
 

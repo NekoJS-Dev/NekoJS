@@ -5,6 +5,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.events.Snippet;
 
@@ -19,12 +21,15 @@ import java.util.Set;
 /**
  * {@link EditorConfigContributor} 的文件实现：用 Gson JsonObject round-trip 读取既有配置，
  * 仅修改 probe 拥有的键（jsconfig 的 {@code compilerOptions.paths} 对应键、顶层 {@code include}、
- * {@code compilerOptions.typeRoots}，以及 pyrightconfig 的 {@code extraPaths}），保留用户自定义键
- * 与未知键。文件不存在则按默认创建。
+ * {@code compilerOptions.typeRoots}、{@code compilerOptions} 的 JSX 运行时键
+ * （{@code jsx}/{@code jsxFactory}/{@code jsxFragmentFactory}/{@code jsxImportSource}），
+ * 以及 pyrightconfig 的 {@code extraPaths}），保留用户自定义键与未知键。文件不存在则按默认创建。
  *
  * <p>关键属性：**幂等且可重复**——每次 probe 都重新合并，保证 paths/include/typeRoots 始终指向
  * backend 真实的输出目录（修复既有 jsconfig 指向旧 {@code .neko_probe/@package} 而非
- * {@code .neko_probe/typescript/@package} 的 stale 问题）。
+ * {@code .neko_probe/typescript/@package} 的 stale 问题）；JSX 运行时键同理始终校正到引擎配置
+ * （{@link ClassFilter#INSTANCE} 的 {@code jsxAutomaticRuntime}）的当前值——用户翻转该开关后，
+ * 既有 jsconfig 在下一次 probe 被纠正，避免 IDE 按旧模式做类型检查。
  */
 public final class FileEditorConfigContributor implements EditorConfigContributor {
 
@@ -42,6 +47,7 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
                 paths.add(e.getKey(), GSON.toJsonTree(e.getValue()));
             }
             compilerOptions.add("paths", paths);
+            reconcileJsxRuntime(compilerOptions);
             root.add("compilerOptions", compilerOptions);
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
@@ -56,6 +62,7 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             JsonObject root = readJsonOrEmpty(jsconfigFile);
             // include 是 probe 拥有的数组：整体替换（用户若自定义大概率就是要覆盖），其余键保留
             root.add("include", GSON.toJsonTree(includeGlobs));
+            reconcileJsxRuntime(asObject(root, "compilerOptions"));
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
             NekoJS.LOGGER.debug("EditorConfig: jsconfig include merge failed at {}", jsconfigFile, ex);
@@ -70,6 +77,7 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             JsonObject compilerOptions = asObject(root, "compilerOptions");
             // typeRoots 是 probe 拥有的数组：整体替换（语义同 include），其余键保留
             compilerOptions.add("typeRoots", GSON.toJsonTree(typeRoots));
+            reconcileJsxRuntime(compilerOptions);
             root.add("compilerOptions", compilerOptions);
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
@@ -125,6 +133,30 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     }
 
     // -------------------- 内部 --------------------
+
+    /**
+     * 把 {@code compilerOptions} 的 JSX 运行时键校正到引擎配置（{@link ClassFilter#INSTANCE} 的
+     * {@code jsxAutomaticRuntime}）的当前值。这些键由引擎拥有（运行时按同一配置做 JSX 变换），
+     * 策略与 include/typeRoots 相同：每次合并整体替换为引擎期望值，避免用户翻转开关后
+     * jsconfig 与运行时编译行为不一致。取值直接来自 {@link JSConfigModel} 模板，
+     * 保证与 {@code WorkspaceGenerator} 新建的 jsconfig 永远写出一致的选项。
+     */
+    private static void reconcileJsxRuntime(JsonObject compilerOptions) {
+        JSConfigModel template = new JSConfigModel();
+        if (ClassFilter.INSTANCE.config().jsxAutomaticRuntime()) {
+            template.useAutomaticJsxRuntime();
+        }
+        JSConfigModel.CompilerOptions opts = template.compilerOptions;
+        compilerOptions.addProperty("jsx", opts.jsx);
+        putOrRemove(compilerOptions, "jsxFactory", opts.jsxFactory);
+        putOrRemove(compilerOptions, "jsxFragmentFactory", opts.jsxFragmentFactory);
+        putOrRemove(compilerOptions, "jsxImportSource", opts.jsxImportSource);
+    }
+
+    private static void putOrRemove(JsonObject obj, String key, String value) {
+        if (value == null) obj.remove(key);
+        else obj.addProperty(key, value);
+    }
 
     private static JsonObject asObject(JsonObject parent, String key) {
         JsonElement el = parent.get(key);

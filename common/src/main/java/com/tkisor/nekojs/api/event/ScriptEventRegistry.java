@@ -29,10 +29,28 @@ public final class ScriptEventRegistry {
         }
     }
 
+    /**
+     * Register a custom script event definition.
+     *
+     * <p>Same-source re-registration is a replacement, not an error: after a per-file STARTUP
+     * reload, {@code ScriptEvents.post} re-fires every startup listener, so the same script may
+     * register the same group/event with the same {@code sourceScriptId} again. The old definition
+     * is unregistered and replaced. A different {@code sourceScriptId} for the same key is still a
+     * hard duplicate.
+     */
     public static synchronized void register(IPluginRuntime runtime, ScriptEventDefinition definition) {
         Objects.requireNonNull(definition, "definition");
-        validateAvailable(runtime, definition.targetType(), definition.groupName(), definition.eventName());
-        DEFINITIONS.put(key(definition.targetType(), definition.groupName(), definition.eventName()), definition);
+        String registrationKey = key(definition.targetType(), definition.groupName(), definition.eventName());
+        ScriptEventDefinition existing = DEFINITIONS.get(registrationKey);
+        if (existing != null) {
+            if (!Objects.equals(existing.sourceScriptId(), definition.sourceScriptId())) {
+                throw new IllegalArgumentException("Script event already registered: " + definition.groupName() + "." + definition.eventName() + " for " + definition.targetType());
+            }
+            existing.unregister();
+        } else {
+            validateAvailable(runtime, definition.targetType(), definition.groupName(), definition.eventName());
+        }
+        DEFINITIONS.put(registrationKey, definition);
     }
 
     public static synchronized Map<String, Map<String, ScriptEventDefinition>> groupsFor(ScriptType type) {

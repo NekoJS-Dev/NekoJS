@@ -156,7 +156,7 @@ export const Fragment = Symbol.for('nekojs.fragment')
 
 ## 配置
 
-`jsconfig.json` 自动生成，默认使用 classic runtime，关键字段：
+`jsconfig.json` 自动生成，jsx 模式**跟随引擎配置**（`config/nekojs-engine.toml` 的 `jsxAutomaticRuntime`）：关闭（默认）时使用 classic runtime，关键字段：
 
 | 字段 | 值 |
 |---|---|
@@ -165,7 +165,9 @@ export const Fragment = Symbol.for('nekojs.fragment')
 | `jsxFactory` | `__nekoJsxFactory` |
 | `jsxFragmentFactory` | `__nekoJsxFragment` |
 
-自动 runtime 是手动选择的：若你维护自己的 workspace 配置，使用 `"jsx": "react-jsx"` 和 `"jsxImportSource": "nekojs"`，不要配置 classic factories。`JSConfigModel#useAutomaticJsxRuntime()` 为插件或外部 workspace 生成器提供相同设置；NekoJS 当前生成的配置仍保持 classic 默认，且不会在平台生命周期中自动切换。
+开启 `jsxAutomaticRuntime = true` 时，生成与每次 probe 合并都会把 jsx 键**双向纠正**为 automatic 模式：`"jsx": "react-jsx"` + `"jsxImportSource": "nekojs"`（TS 会自动在其后拼接 `/jsx-runtime`），并移除两个 factory 键；关闭时反向写回 factory 键。jsx 运行时键视为**引擎拥有键**——手动修改它们只会得到与运行时不符的诊断。
+
+自动 runtime 需要你提供 `nekojs/node_modules/nekojs/jsx-runtime.js` 模块（见前文）；`JSConfigModel#useAutomaticJsxRuntime()` 为插件或外部 workspace 生成器提供相同设置。
 
 详见 [Probe 类型生成](Probe-类型生成)。
 

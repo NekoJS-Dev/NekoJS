@@ -168,8 +168,13 @@ public class NekoJSNetwork {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "权限不足！"));
                 return;
             }
-            Map<String, String> files = ScriptSyncService.collectAllScripts();
-            PacketDistributor.sendToPlayer((ServerPlayer) player, new DownloadAllScriptsPacket(files));
+            try {
+                Map<String, String> files = ScriptSyncService.collectAllScripts();
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new DownloadAllScriptsPacket(files));
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Failed to collect all scripts for client", e);
+                PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "脚本工作区过大，无法整体下发：" + e.getMessage()));
+            }
         });
     }
 

@@ -97,11 +97,17 @@ public final class DefaultErrorTracker implements ErrorTracker {
         ScriptId runtimeId = eventErrorId(currentType, eventPath);
         // 先去重（只比对轻量签名，不读取源码文件）：命中同一错误时仅递增频次，
         // 避免高频回调（如 20Hz tick 循环）每次错误都重建 ScriptError 并重读源码文件。
+        boolean[] created = new boolean[1];
+        long[] previousCountHolder = new long[1];
         ScriptError scriptError = errors.compute(runtimeId, (ignored, previous) -> {
             if (previous != null && sameEventError(previous, throwable)) {
+                previousCountHolder[0] = previous.getOccurrenceCount();
+                created[0] = false;
                 previous.incrementOccurrence();
                 return previous;
             }
+            created[0] = true;
+            previousCountHolder[0] = 0L;
             return new ScriptError(currentType, runtimeId, eventPath, throwable, this);
         });
 
@@ -112,11 +118,15 @@ public final class DefaultErrorTracker implements ErrorTracker {
             errors.entrySet().removeIf(entry -> isRuntimeCallbackError(entry.getKey()) && !entry.getKey().equals(runtimeId));
         }
 
-        String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs());
-        String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
-        // 唯一的控制台输出点：经 CollapsingAppender 写入 per-type 日志文件并镜像到主控制台。
-        // 不再直接写 NekoJS.LOGGER，避免同一条回调错误在控制台重复输出。
-        currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
+        if (shouldLogOccurrence(created[0], previousCountHolder[0], scriptError.getOccurrenceCount())) {
+            String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs());
+            String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
+            // 唯一的控制台输出点：经 CollapsingAppender 写入 per-type 日志文件并镜像到主控制台。
+            // 不再直接写 NekoJS.LOGGER，避免同一条回调错误在控制台重复输出。
+            // 高频重复错误按里程碑节流：新建时记录，此后仅在 1→2、4→5、24→25、…、99→100、
+            // 199→200 等跨越里程碑时记录，避免 20Hz tick 回调刷屏。
+            currentType.logger().error("Script {} callback exception:\n{}", kind, detail);
+        }
     }
 
     @Override
@@ -176,6 +186,43 @@ public final class DefaultErrorTracker implements ErrorTracker {
                 && previous.getColumnNumber() == signature.columnNumber;
     }
 
+    /**
+     * 判断本次回调错误出现是否需要写日志。新建错误（{@code created}）必须记录一次；
+     * 重复错误仅在出现次数跨越里程碑时记录。里程碑为 1, 2, 5, 10, 25, 50, 100，
+     * 之后按 100 的倍数翻倍（100, 200, 400, ...）。
+     *
+     * @param created       本次出现是否新建了错误记录（而非命中已有记录）
+     * @param previousCount 本次出现前的频次（新建时为 0）
+     * @param newCount      本次出现后的频次
+     */
+    static boolean shouldLogOccurrence(boolean created, long previousCount, long newCount) {
+        if (created) {
+            return true;
+        }
+        if (newCount <= previousCount) {
+            return false;
+        }
+        return nextMilestoneAfter(previousCount) <= newCount;
+    }
+
+    private static long nextMilestoneAfter(long count) {
+        if (count < 1) return 1;
+        if (count < 2) return 2;
+        if (count < 5) return 5;
+        if (count < 10) return 10;
+        if (count < 25) return 25;
+        if (count < 50) return 50;
+        if (count < 100) return 100;
+        long milestone = 100;
+        while (milestone <= count) {
+            if (milestone > Long.MAX_VALUE / 2) {
+                return Long.MAX_VALUE;
+            }
+            milestone <<= 1;
+        }
+        return milestone;
+    }
+
     /* ================= 源码位置格式化 helper（实例方法，使用注入 paths） ================= */
 
     public SourceSection getBestSourceLocation(PolyglotException e) {
@@ -206,7 +253,10 @@ public final class DefaultErrorTracker implements ErrorTracker {
                     }
                 }
             }
-        } catch (Exception ignored) {} // file read error → return approximate mapped line
+        } catch (Exception ignored) {
+            // file read error → return approximate mapped line
+            com.tkisor.nekojs.NekoJS.LOGGER.debug("DefaultErrorTracker: failed to read source file for real code line lookup: " + pathStr, ignored);
+        }
         return mappedLine;
     }
 
@@ -291,7 +341,9 @@ public final class DefaultErrorTracker implements ErrorTracker {
                 if (virtualDisplayPath != null) {
                     return virtualDisplayPath;
                 }
-            } catch (Exception ignored) { // URI parse failed → try alternate virtual path resolution
+            } catch (Exception ignored) {
+                // URI parse failed → try alternate virtual path resolution
+                com.tkisor.nekojs.NekoJS.LOGGER.debug("DefaultErrorTracker: failed to parse source URI, trying alternate virtual path resolution: " + uriText, ignored);
             }
             String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(uriText);
             if (virtualDisplayPath != null) {

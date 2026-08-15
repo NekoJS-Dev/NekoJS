@@ -19,8 +19,8 @@ declare module "java:java/util/stream" {
         characteristics(): $Set<$Collector$Characteristics>;
         combiner(): $BinaryOperator<A>;
         finisher(): $Function<A, R>;
-        of<T, A, R>(arg0: $Supplier<A>, arg1: $BiConsumer<A, T>, arg2: $BinaryOperator<A>, arg3: $Function<A, R>, arg4?: $Collector$Characteristics[]): $Collector<T, A, R>;
-        of<T, R>(arg0: $Supplier<R>, arg1: $BiConsumer<R, T>, arg2: $BinaryOperator<R>, arg3?: $Collector$Characteristics[]): $Collector<T, R, R>;
+        of<T, A, R>(arg0: $Supplier<A>, arg1: $BiConsumer<A, T>, arg2: $BinaryOperator<A>, arg3: $Function<A, R>, arg4?: $Collector$Characteristics_[]): $Collector<T, A, R>;
+        of<T, R>(arg0: $Supplier<R>, arg1: $BiConsumer<R, T>, arg2: $BinaryOperator<R>, arg3?: $Collector$Characteristics_[]): $Collector<T, R, R>;
         supplier(): $Supplier<A>;
     }
 
@@ -282,5 +282,6 @@ declare module "java:java/util/stream" {
         build(): $Stream<T>;
     }
 
+    export type $Collector$Characteristics_ = $Collector$Characteristics | "CONCURRENT" | "IDENTITY_FINISH" | "UNORDERED";
     export type $Stream_<T> = T[];
 }

@@ -74,7 +74,9 @@ public final class MinecraftRecipeSchemaScanner {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            com.tkisor.nekojs.NekoJS.LOGGER.debug("MinecraftRecipeSchemaScanner: codec field introspection failed for " + id, ignored);
+        }
 
         if (keys.isEmpty()) {
             keys.addAll(inferFromCommonPatterns(id));

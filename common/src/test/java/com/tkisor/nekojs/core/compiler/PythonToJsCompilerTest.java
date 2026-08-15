@@ -51,6 +51,12 @@ class PythonToJsCompilerTest {
         }
     }
 
+    private double evalDouble(String src) throws Exception {
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py(src)))) {
+            return eval.value().asDouble();
+        }
+    }
+
     @Test
     void canCompileHandlesPyExtension() {
         assertTrue(compiler.canCompile(".py"));
@@ -598,6 +604,69 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void isinstanceBuiltinTypes() throws Exception {
+        // isinstance(x, int/str/list/...) 旧实现发射 x instanceof str（JS 无此全局 → 运行时
+        // ReferenceError），现在路由到类型探针 prelude（__nekoPyInt/...）。语义取舍（务实处理，
+        // 见 emitter 的 TYPE_PRELUDE 注释）：bool 视作 int（Python 的子类关系，
+        // isinstance(True, int) 为 True）；一切 number 视作 float（int/float 同为 JS number，
+        // 5 与 5.0 不可区分）；list 与 tuple 同为数组、set 与 frozenset 同为 Set。
+        assertTrue(evalBool("isinstance(1, int)"));
+        assertTrue(evalBool("isinstance(True, int)"));       // Python: bool 是 int 的子类
+        assertTrue(evalBool("isinstance(1.5, float)"));
+        assertTrue(evalBool("isinstance(5, float)"));        // int/float 同为 JS number
+        assertTrue(evalBool("isinstance('a', str)"));
+        assertTrue(evalBool("isinstance(True, bool)"));
+        assertTrue(evalBool("isinstance([1], list)"));
+        assertTrue(evalBool("isinstance({'a': 1}, dict)"));
+        assertTrue(evalBool("isinstance({1, 2}, set)"));
+        assertTrue(evalBool("isinstance({1, 2}, frozenset)"));
+        assertTrue(evalBool("isinstance((1, 2), tuple)"));
+        // negatives
+        assertFalse(evalBool("isinstance('a', int)"));
+        assertFalse(evalBool("isinstance(1.5, int)"));
+        assertFalse(evalBool("isinstance(1, str)"));
+        assertFalse(evalBool("isinstance(1, bool)"));
+        assertFalse(evalBool("isinstance('a', float)"));
+        assertFalse(evalBool("isinstance('a', list)"));
+        assertFalse(evalBool("isinstance({'a': 1}, list)"));
+        assertFalse(evalBool("isinstance([1], dict)"));
+        assertFalse(evalBool("isinstance({'a': 1}, set)"));
+        assertFalse(evalBool("isinstance({1, 2}, dict)"));
+        // 用户类实例不是 dict（探针按 constructor === Object 判定对象字面量）
+        assertFalse(evalBool("class C:\n    pass\nisinstance(C(), dict)"));
+        // 探针按需发射：只有类型位置引用内建类型名才注入（普通用户类 isinstance 不拉起 prelude）
+        String js = py("isinstance(x, str)");
+        assertTrue(js.contains("__nekoPyStr"), "builtin type isinstance routes to a probe: " + js);
+        assertFalse(py("class C:\n    pass\nisinstance(C(), C)").contains("__nekoPyStr"),
+                "user-class isinstance must not pull in the type prelude");
+    }
+
+    @Test
+    void isinstanceTupleMixed() throws Exception {
+        // (int, str) 元组链：析取链上每个名字各自路由（int → 探针，str → 探针）
+        assertTrue(evalBool("isinstance(5, (int, str))"));
+        assertTrue(evalBool("isinstance('a', (int, str))"));
+        assertFalse(evalBool("isinstance(1.5, (int, str))"));   // 非整数、非字符串
+        // 混合异常类 + 内建类型名：__nekoExcIs 精确类路径与探针在同一析取链共存
+        String mixed = """
+                try:
+                    raise ValueError('boom')
+                except Exception as e:
+                    isinstance(e, (ValueError, str))
+                """;
+        assertTrue(evalBool(mixed));
+        assertFalse(evalBool("""
+                try:
+                    raise ValueError('boom')
+                except Exception as e:
+                    isinstance(e, (KeyError, int))
+                """));
+        String js = py("isinstance(ValueError('x'), (ValueError, str))");
+        assertTrue(js.contains("__nekoExcIs(new ValueError(\"x\"), ValueError) || __nekoPyStr(new ValueError(\"x\"))"),
+                "mixed exception+builtin tuple must chain both routes: " + js);
+    }
+
+    @Test
     void hexOctBinRepr() throws Exception {
         assertEquals("0xff", evalString("hex(255)"));
         assertEquals("-0x1", evalString("hex(-1)"));
@@ -681,6 +750,8 @@ class PythonToJsCompilerTest {
 
     @Test
     void matchSequencePattern() throws Exception {
+        // head([]) returns 'empty', head([7,8,9]) returns 7 — str() wraps the int because
+        // Python's + never implicitly converts a non-str operand (TypeError, now faithful).
         String src = """
                 def head(xs):
                     match xs:
@@ -688,7 +759,7 @@ class PythonToJsCompilerTest {
                             return 'empty'
                         case [first, *rest]:
                             return first
-                head([]) + head([7, 8, 9])
+                head([]) + str(head([7, 8, 9]))
                 """;
         assertEquals("empty7", evalString(src));
     }
@@ -1469,6 +1540,65 @@ class PythonToJsCompilerTest {
     }
 
     @Test
+    void listConcatenation() throws Exception {
+        // [1,2] + [3] → [1,2,3]：JS 的 + 会把两个数组静默串成 "1,23"，必须经 __nekoAdd 拼接；
+        // xs += ys 走同一助手；[0]*2 + [1] 让重复与拼接助手链式混用。
+        assertEquals("1,2,3", evalString("str([1, 2] + [3])"));
+        String aug = """
+                xs = [1, 2]
+                ys = [3]
+                xs += ys
+                str(xs)
+                """;
+        assertEquals("1,2,3", evalString(aug));
+        assertEquals("0,0,1", evalString("str([0] * 2 + [1])"));
+        String js = py("[1, 2] + [3]");
+        assertTrue(js.contains("__nekoAdd([1, 2], [3])"), "+ must route through __nekoAdd: " + js);
+    }
+
+    @Test
+    void stringConcatIsLegal() throws Exception {
+        // str + str 在 Python 里合法且就是拼接——助手必须放行（str+str → a + b）。
+        assertEquals("ab", evalString("'a' + 'b'"));
+        assertEquals("ab3", evalString("'a' + 'b' + '3'"));
+        // f-string 的插值体是解析层模板，其中的 + 照常工作
+        assertEquals("xab!", evalString("f\"x{'a' + 'b'}!\""));
+    }
+
+    @Test
+    void mixedStringPlusThrows() throws Exception {
+        // 'a' + 5 / 5 + 'a' 按 Python 抛 TypeError（JS 的 + 会静默隐式转换成 'a5'/'5a'），
+        // 抛出的是异常 prelude 的 TypeError 类 → except TypeError 精确捕获。
+        assertEquals("caught", evalString("try:\n    x = 'a' + 5\nexcept TypeError:\n    'caught'"));
+        assertEquals("caught", evalString("try:\n    x = 5 + 'a'\nexcept TypeError:\n    'caught'"));
+        // 混合 += 同路
+        assertEquals("caught", evalString("s = 'a'\ntry:\n    s += 5\nexcept TypeError:\n    'caught'"));
+        // 类型精确：except ValueError 不匹配 TypeError → 重抛给外层
+        assertEquals("right", evalString("""
+                try:
+                    try:
+                        x = 'a' + 5
+                    except ValueError:
+                        x = 'wrong'
+                except TypeError:
+                    'right'
+                """));
+    }
+
+    @Test
+    void numericAddUnaffected() throws Exception {
+        // 纯数值加法 / += 数值路径语义不变
+        assertEquals(3, evalInt("1 + 2"));
+        assertEquals(3.5, evalDouble("1.5 + 2"), 0.0);
+        assertEquals(7, evalInt("n = 3\nn += 4\nn"));
+        // 按需注入（needsAdd 预扫描）：用了 + 的模块发射助手；没用 + 的模块不发射
+        String withAdd = py("1 + 2");
+        assertTrue(withAdd.contains("__nekoAdd"), "a module using + needs the add helper: " + withAdd);
+        String noAdd = py("2 * 3");
+        assertFalse(noAdd.contains("__nekoAdd"), "a module without + must not inject __nekoAdd: " + noAdd);
+    }
+
+    @Test
     void bareListSortIsNumericAware() throws Exception {
         // JS default sort is lexicographic ([10,2,1] → [1,10,2]); the bare .sort() call must lower
         // to the same numeric-aware comparator as sorted().
@@ -1901,5 +2031,288 @@ class PythonToJsCompilerTest {
             vals.add(neg ? -(v >>> 1) : (v >>> 1));
         }
         return vals.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    // ---- B1 regression tests: Python str method semantics (literal replace/count/zfill/split maxsplit) ----
+
+    @Test
+    void strReplaceIsLiteralAndCountAware() throws Exception {
+        assertEquals("axb", evalString("'a.b'.replace('.', 'x')"));
+        assertEquals("aX.c", evalString("'a[b].c'.replace('[b]', 'X')"));
+        assertEquals("Xa", evalString("'$a'.replace('$', 'X')"));
+        assertEquals("bb", evalString("'aaaa'.replace('aa', 'b')"));
+        assertEquals("baa", evalString("'aaaa'.replace('aa', 'b', 1)"));
+        assertEquals("-a-b-c-", evalString("'abc'.replace('', '-')"));
+        assertEquals("-a-bc", evalString("'abc'.replace('', '-', 2)"));
+    }
+
+    @Test
+    void strZfillKeepsSign() throws Exception {
+        assertEquals("-0042", evalString("'-42'.zfill(5)"));
+        assertEquals("00042", evalString("'42'.zfill(5)"));
+        assertEquals("42", evalString("'42'.zfill(2)"));
+    }
+
+    @Test
+    void strCountHandlesEmptySubstringAndBounds() throws Exception {
+        assertEquals(4, evalInt("'abc'.count('')"));
+        assertEquals(2, evalInt("'aaaa'.count('aa')"));
+        // CPython: 'banana'[3:] == 'ana', so count('na', 3) == 1 (not 2).
+        assertEquals(1, evalInt("'banana'.count('na', 3)"));
+        assertEquals(2, evalInt("'banana'.count('na')"));
+    }
+
+    @Test
+    void strSplitHonorsMaxsplit() throws Exception {
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py("'a,b,c'.split(',', 1)")))) {
+            assertEquals(2, eval.value().getArraySize());
+            assertEquals("a", eval.value().getArrayElement(0).asString());
+            assertEquals("b,c", eval.value().getArrayElement(1).asString());
+        }
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py("'a,b,c'.split(',', 0)")))) {
+            assertEquals(1, eval.value().getArraySize());
+            assertEquals("a,b,c", eval.value().getArrayElement(0).asString());
+        }
+        try (var eval = CompilerExecutionAssertions.eval(asScript(py("'a,b,c'.split(',')")))) {
+            assertEquals(3, eval.value().getArraySize());
+            assertEquals("a", eval.value().getArrayElement(0).asString());
+            assertEquals("b", eval.value().getArrayElement(1).asString());
+            assertEquals("c", eval.value().getArrayElement(2).asString());
+        }
+    }
+
+    @Test
+    void strCountEmptySubstringReversedBounds() throws Exception {
+        assertEquals(0, evalInt("'abc'.count('', 2, 1)"));
+        assertEquals(0, evalInt("'abc'.count('', 5, 3)"));
+        assertEquals(0, evalInt("'abc'.count('', 5, 6)"));
+    }
+
+    @Test
+    void strMethodsUseCodePoints() throws Exception {
+        assertEquals("-😀-", evalString("'😀'.replace('', '-')"));
+        assertEquals(2, evalInt("'😀'.count('')"));
+        assertEquals("0😀", evalString("'😀'.zfill(2)"));
+        assertEquals(4, evalInt("'a😀b'.count('')"));
+    }
+
+    @Test
+    void userClassReplaceSplitZfillNotHijacked() throws Exception {
+        // 静态可判定的用户类接收者（C().m）必须放行用户方法，不能在新支持的 arity 下被降级映射。
+        assertEquals("user", evalString("""
+                class C:
+                    def replace(self, old, rep, count=2):
+                        return 'user'
+                C().replace('a', 'b', 1)
+                """));
+        assertEquals("user", evalString("class C:\n    def replace(self, old, rep, count=2):\n        return 'user'\nC().replace('a')"));
+        assertEquals("user", evalString("class C:\n    def replace(self, old, rep, count=2):\n        return 'user'\nC().replace('a', 'b')"));
+        assertEquals("user", evalString("class C:\n    def split(self, sep, maxsplit=0):\n        return 'user'\nC().split(',', 1)"));
+        assertEquals("user", evalString("class C:\n    def zfill(self, width=0):\n        return 'user'\nC().zfill(5)"));
+    }
+
+    // ---- JS reserved-word safe renaming ----
+
+    @Test
+    void reservedFunctionParamRenamed() throws Exception {
+        String js = py("def f(new):\n    return new\nf(7)");
+        assertFalse(js.contains("function f(new)"), "reserved param must be renamed: " + js);
+        assertTrue(js.contains("__neko$new"), "reserved param must use the safe name: " + js);
+        assertEquals(7, evalInt("def f(new):\n    return new\nf(7)"));
+    }
+
+    @Test
+    void reservedDefaultParamRenamed() throws Exception {
+        assertEquals(3, evalInt("def f(new=3):\n    return new\nf()"));
+        assertEquals(9, evalInt("def f(new=3):\n    return new\nf(9)"));
+    }
+
+    @Test
+    void reservedLambdaParamRenamed() throws Exception {
+        String js = py("(lambda new: new)(5)");
+        assertFalse(js.contains("lambda new"), "reserved lambda param must be renamed: " + js);
+        assertEquals(5, evalInt("(lambda new: new)(5)"));
+    }
+
+    @Test
+    void reservedLocalVarRenamed() throws Exception {
+        String js = py("new = 4\nnew");
+        assertFalse(js.contains("var new "), "reserved local binding must be renamed: " + js);
+        assertEquals(4, evalInt("new = 4\nnew"));
+    }
+
+    @Test
+    void reservedForTargetRenamed() throws Exception {
+        String src = """
+                acc = []
+                for new in [1, 2, 3]:
+                    acc.append(new)
+                sum(acc)
+                """;
+        String js = py(src);
+        assertFalse(js.contains("for (var new "), "reserved for target must be renamed: " + js);
+        assertEquals(6, evalInt(src));
+    }
+
+    @Test
+    void reservedClassNameRenamedAndConstructed() throws Exception {
+        String src = """
+                class new:
+                    def __init__(self):
+                        self.x = 7
+                new().x
+                """;
+        String js = py(src);
+        assertFalse(js.contains("class new "), "reserved class name must be renamed: " + js);
+        assertTrue(js.contains("class __neko$new "), js);
+        assertEquals(7, evalInt(src));
+    }
+
+    @Test
+    void reservedExceptBindingRenamed() throws Exception {
+        String src = """
+                try:
+                    raise Exception('boom')
+                except Exception as new:
+                    new.message
+                """;
+        String js = py(src);
+        assertFalse(js.contains("var new ="), "reserved except binding must be renamed: " + js);
+        assertEquals("boom", evalString(src));
+    }
+
+    @Test
+    void reservedRenameAvoidsUserDefinedCollision() throws Exception {
+        String src = """
+                new = 40
+                __neko$new = 2
+                new + __neko$new
+                """;
+        String js = py(src);
+        assertTrue(js.contains("__neko$new_1"), "collision with user-defined __neko$new must be avoided: " + js);
+        assertEquals(42, evalInt(src));
+    }
+
+    @Test
+    void reservedClassFieldIsNotRenamed() throws Exception {
+        // Class-body assignments are PROPERTY positions. Reserved-word field names are emitted with
+        // a computed property name so the JS stays valid (`static ["new"] = 5;`) and C.new reads
+        // the raw attribute. Instance access to class fields (`self.new`) is a PRE-EXISTING
+        // static-only limitation shared by non-reserved fields and is intentionally not tested here.
+        String src = "class C:\n    new = 5\nC.new";
+        String js = py(src);
+        assertTrue(js.contains("static [\"new\"] = 5"), "reserved class field must use a computed name: " + js);
+        assertEquals(5, evalInt(src));
+    }
+
+    @Test
+    void reservedClassFieldNamedConstructorUsesComputed() throws Exception {
+        String src = "class C:\n    constructor = 5\nC.constructor";
+        String js = py(src);
+        assertTrue(js.contains("static [\"constructor\"] = 5"), "constructor field must use a computed name: " + js);
+        assertEquals(5, evalInt(src));
+    }
+
+    @Test
+    void reservedClassMethodNameStaysCallable() throws Exception {
+        // Method names are property positions too: `new() {}` is legal in a JS class body.
+        String src = """
+                class C:
+                    def new(self):
+                        return 7
+                C().new()
+                """;
+        assertEquals(7, evalInt(src));
+    }
+
+    @Test
+    void reservedClassMethodNamedConstructorUsesComputed() throws Exception {
+        // A raw `constructor() {}` method would become the JS constructor, not a normal method.
+        // The computed form `["constructor"]() {}` keeps it callable as C().constructor().
+        String src = """
+                class C:
+                    def constructor(self):
+                        return 7
+                C().constructor()
+                """;
+        String js = py(src);
+        assertTrue(js.contains("[\"constructor\"]()"), "constructor method must use a computed name: " + js);
+        assertEquals(7, evalInt(src));
+    }
+
+    @Test
+    void reservedTupleTargetRenamed() throws Exception {
+        String js = py("new, delete = [1, 2]\nnew + delete");
+        assertTrue(js.contains("__neko$new"), "tuple target must use the safe name: " + js);
+        assertTrue(js.contains("__neko$delete"), "tuple target must use the safe name: " + js);
+        assertEquals(3, evalInt("new, delete = [1, 2]\nnew + delete"));
+    }
+
+    @Test
+    void reservedImportAliasRenamed() throws Exception {
+        String ns = py("import math_utils as new");
+        assertTrue(ns.contains("import * as __neko$new from './math_utils';"), ns);
+        String named = py("from math_utils import pi as new");
+        assertTrue(named.contains("import { pi as __neko$new } from './math_utils';"), named);
+    }
+
+    @Test
+    void reservedWithTargetRenamed() throws Exception {
+        String js = py("with 5 as new:\n    pass\nnew");
+        assertTrue(js.contains("__neko$new"), "with-as target must use the safe name: " + js);
+        assertEquals(5, evalInt("with 5 as new:\n    pass\nnew"));
+    }
+
+    @Test
+    void reservedWalrusBindingRenamed() throws Exception {
+        String js = py("(new := 5) + new");
+        assertTrue(js.contains("__neko$new"), "walrus binding must use the safe name: " + js);
+        assertEquals(10, evalInt("(new := 5) + new"));
+    }
+
+    @Test
+    void reservedMatchSequenceStarBindingRenamed() throws Exception {
+        String src = """
+                def first_rest(xs):
+                    match xs:
+                        case [first, *new]:
+                            return first + sum(new)
+                        case _:
+                            return 0
+                first_rest([1, 2, 3])
+                """;
+        String js = py(src);
+        assertTrue(js.contains("__neko$new"), "match star binding must use the safe name: " + js);
+        assertEquals(6, evalInt(src));
+    }
+
+    @Test
+    void reservedMatchMappingRestBindingRenamed() throws Exception {
+        String src = """
+                def name_age(d):
+                    match d:
+                        case {'name': n, **new}:
+                            return n + ':' + str(new['age'])
+                        case _:
+                            return 'none'
+                name_age({'name': 'neko', 'age': 3})
+                """;
+        String js = py(src);
+        assertTrue(js.contains("__neko$new"), "match rest binding must use the safe name: " + js);
+        assertEquals("neko:3", evalString(src));
+    }
+
+    @Test
+    void reservedStarArgsParamRenamed() throws Exception {
+        String js = py("def first(*new):\n    return new[0]\nfirst(7, 8)");
+        assertTrue(js.contains("...__neko$new"), "star-args param must use the safe name: " + js);
+        assertEquals(7, evalInt("def first(*new):\n    return new[0]\nfirst(7, 8)"));
+    }
+
+    @Test
+    void reservedKwargsParamRenamed() throws Exception {
+        String js = py("def get_x(**new):\n    return new['x']\nget_x(x=5)");
+        assertTrue(js.contains("var __neko$new = {};"), "kwargs param must use the safe name: " + js);
+        assertEquals(5, evalInt("def get_x(**new):\n    return new['x']\nget_x(x=5)"));
     }
 }

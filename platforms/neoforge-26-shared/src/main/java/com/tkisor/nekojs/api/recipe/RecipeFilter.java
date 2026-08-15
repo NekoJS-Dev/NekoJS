@@ -139,7 +139,9 @@ public interface RecipeFilter {
                         if (itemHolder.isPresent()) {
                             try {
                                 if (ingredient.acceptsItem(itemHolder.get())) return true;
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) {
+                                com.tkisor.nekojs.NekoJS.LOGGER.debug("RecipeFilter.ByInput: ingredient.acceptsItem check failed for " + itemID, ignored);
+                            }
                         }
                     }
                 }

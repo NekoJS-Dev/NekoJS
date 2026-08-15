@@ -7,8 +7,12 @@ import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -101,7 +105,8 @@ public final class NekoModulePipelineCache {
     }
 
     private static SourceSnapshot readSource(Path path) throws IOException {
-        return new SourceSnapshot(FileStamp.read(path), Files.readString(path));
+        String source = Files.readString(path);
+        return new SourceSnapshot(FileStamp.read(path, source), source);
     }
 
     private static NekoPreparedModule prepareSource(Path path, SourceSnapshot source) throws Exception {
@@ -176,9 +181,29 @@ public final class NekoModulePipelineCache {
 
     private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type) {}
 
-    private record FileStamp(long modifiedMillis, long size) {
-        private static FileStamp read(Path path) throws IOException {
-            return new FileStamp(Files.getLastModifiedTime(path).toMillis(), Files.size(path));
+    /**
+     * 模块文件的内容指纹。
+     *
+     * <p>历史缺陷：仅 (modifiedMillis, size) 无法区分“同一时间戳刻度内对等长文件的覆盖写入”，
+     * 粗粒度时间戳文件系统（如部分 Windows / FAT / 容器挂载）会因此误判未变化，继续返回旧编译模块。
+     * 修复：增加 {@code contentHash}。这里选择 SHA-256 hex 而不是 64-bit hash（如 xxhash/两个 long）：
+     * 源码在 prepare 前已经完整读入（{@code Files.readString}），SHA-256 的额外开销相对模块编译管线
+     * 可以忽略；而 64-bit 在长期运行、大量模块的场景下仍有生日碰撞的微小概率，一旦碰撞会静默返回
+     * 错误代码，SHA-256 可以把这种风险降到工程上可忽略。安全比这微小的 CPU 开销更重要。
+     */
+    private record FileStamp(long modifiedMillis, long size, String contentHash) {
+        private static FileStamp read(Path path, String source) throws IOException {
+            return new FileStamp(Files.getLastModifiedTime(path).toMillis(), Files.size(path), contentHash(source));
+        }
+
+        private static String contentHash(String source) {
+            try {
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                return HexFormat.of().formatHex(digest.digest(source.getBytes(StandardCharsets.UTF_8)));
+            } catch (NoSuchAlgorithmException e) {
+                // JDK 规范要求 SHA-256 算法必须存在；这里作为环境缺陷快速失败。
+                throw new IllegalStateException("SHA-256 digest is not available on this JVM", e);
+            }
         }
     }
 }

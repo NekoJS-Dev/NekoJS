@@ -32,6 +32,16 @@ public final class IndexFileGenerator {
     private final java.util.concurrent.ConcurrentHashMap<String, Class<?>> classCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, String> declCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<String, Set<String>> importCache = new java.util.concurrent.ConcurrentHashMap<>();
+    /**
+     * 枚举输入别名缓存（FQN → 别名名 + 就近发射的声明行）。predeclareClass 时从 {@link TypeDecl}
+     * 计算，generate() 在枚举所在包模块内发射（{@code $Color_ = $Color | "RED" | ...}）。
+     * 参数放宽由 {@link com.tkisor.nekojs.probe.types.TypeAliasRegistry} 对枚举 FQN 的
+     * 惰性别名解析完成（与适配器别名经 registerClassAlias 放宽参数的机制同一出口）。
+     */
+    private final java.util.concurrent.ConcurrentHashMap<String, EnumAlias> enumAliasCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** 枚举输入别名：别名名（如 {@code $DyeColor_}）+ 完整声明行（含换行）。 */
+    private record EnumAlias(String aliasName, String declaration) {}
 
     /**
      * 被 {@code probe.modify_type} 隐藏（hide）的类 FQN 集合：generate 时过滤这些类的 import 与
@@ -100,6 +110,11 @@ public final class IndexFileGenerator {
                 if (alias != null) {
                     names.add(alias.aliasName());
                 }
+                // 枚举同理：参数放宽为 $Enum_ 后需导入枚举所在模块的别名声明
+                EnumAlias enumAlias = enumAliasCache.get(fqn);
+                if (enumAlias != null) {
+                    names.add(enumAlias.aliasName());
+                }
             }
 
             for (var entry : importsByPackage.entrySet()) {
@@ -147,7 +162,8 @@ public final class IndexFileGenerator {
                 }
             }
 
-            // 生成类型别名：优先适配器驱动的输入别名（$ItemStack_ 等），否则回退到集合/残留别名
+            // 生成类型别名：优先适配器驱动的输入别名（$ItemStack_ 等），其次枚举字面量别名
+            // （$DyeColor_ = $DyeColor | "RED" | ...），否则回退到集合/残留别名
             for (String simpleName : classNames) {
                 String fullName = packageName + "." + simpleName;
                 AdapterAliasGenerator.AdapterAlias adapterAlias = adapterAliasGenerator.getAlias(fullName);
@@ -156,6 +172,11 @@ public final class IndexFileGenerator {
                         sb.append("    /** ").append(doc.replace("\n", "\n     * ")).append(" */\n"));
                     sb.append("    export type ").append(adapterAlias.aliasName())
                       .append(" = ").append(adapterAlias.union()).append(";\n");
+                    continue;
+                }
+                EnumAlias enumAlias = enumAliasCache.get(fullName);
+                if (enumAlias != null) {
+                    sb.append(enumAlias.declaration());
                     continue;
                 }
                 String alias = generateTypeAlias(fullName, simpleName);
@@ -358,6 +379,7 @@ public final class IndexFileGenerator {
      * 编辑引入的额外 SYMBOL 全限定名（可为空）。
      */
     public void predeclareClass(String fqn, TypeDecl decl, Set<String> extraImportFqns) {
+        registerEnumAlias(fqn, decl);
         declCache.put(fqn, irRenderer.render(decl));
         String packageName = packageOf(fqn);
         Set<String> imports = new LinkedHashSet<>(collectImportsFromIr(decl, packageName));
@@ -368,6 +390,40 @@ public final class IndexFileGenerator {
         if (decl.sourceClass != null) {
             classCache.put(fqn, decl.sourceClass);
         }
+    }
+
+    /**
+     * 为枚举 {@link TypeDecl} 计算输入别名声明（{@code $Color_ = $Color | "RED" | ...}）并缓存，
+     * 供 {@link #generate} 在枚举所在包模块内就近发射。常量顺序与 {@code TypeScriptClassRenderer.renderEnum}
+     * 的静态常量发射完全一致（同一 {@code decl.fields} 序——TypeReflector 已按名字稳定排序），
+     * 不截断（对齐 ProbeJS：长枚举也发全量字面量联合）。
+     *
+     * <p>跳过：非枚举、被 hide 的枚举（声明为空，别名会悬空）、无 sourceClass 且未改名的
+     * 合成枚举（无法得出与声明一致的稳定命名）。适配器目标为枚举时适配器别名优先（generate 处判定）。
+     */
+    private void registerEnumAlias(String fqn, TypeDecl decl) {
+        if (decl.kind != TypeDecl.Kind.ENUM || decl.hidden) return;
+        String name = decl.effectiveTypeName() != null ? decl.effectiveTypeName() : tsEnumName(decl.sourceClass);
+        if (name == null) return;
+        String aliasName = "$" + name + "_";
+        StringBuilder union = new StringBuilder(aliasName).append(" = $").append(name);
+        for (FieldDecl f : decl.fields) {
+            if (!f.hidden && f.isEnumConstant) {
+                // 枚举常量名是合法 Java 标识符，直接双引号包裹（与 renderEnum 的静态常量同名）
+                union.append(" | \"").append(f.effectiveName()).append("\"");
+            }
+        }
+        enumAliasCache.put(fqn, new EnumAlias(aliasName,
+                "    export type " + union + ";\n"));
+    }
+
+    /** 渲染用的枚举名：镜像 TypeScriptClassRenderer.tsClassName（内部类 Parent$Child）；无源类 → null。 */
+    private static String tsEnumName(Class<?> cls) {
+        if (cls == null) return null;
+        if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
+            return tsEnumName(cls.getEnclosingClass()) + "$" + cls.getSimpleName();
+        }
+        return cls.getSimpleName();
     }
 
     private static String packageOf(String fqn) {
@@ -390,5 +446,6 @@ public final class IndexFileGenerator {
         classCache.clear();
         declCache.clear();
         importCache.clear();
+        enumAliasCache.clear();
     }
 }

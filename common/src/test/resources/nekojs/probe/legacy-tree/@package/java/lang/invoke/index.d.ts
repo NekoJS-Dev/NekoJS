@@ -58,8 +58,8 @@ declare module "java:java/lang/invoke" {
         accessClass<T>(arg0: $Class<T>): $Class<T>;
         bind(arg0: object, arg1: string, arg2: $MethodType): $MethodHandle;
         defineClass(arg0: number[]): $Class<any>;
-        defineHiddenClassWithClassData(arg0: number[], arg1: object, arg2: boolean, arg3?: $MethodHandles$Lookup$ClassOption[]): $MethodHandles$Lookup;
-        defineHiddenClass(arg0: number[], arg1: boolean, arg2?: $MethodHandles$Lookup$ClassOption[]): $MethodHandles$Lookup;
+        defineHiddenClassWithClassData(arg0: number[], arg1: object, arg2: boolean, arg3?: $MethodHandles$Lookup$ClassOption_[]): $MethodHandles$Lookup;
+        defineHiddenClass(arg0: number[], arg1: boolean, arg2?: $MethodHandles$Lookup$ClassOption_[]): $MethodHandles$Lookup;
         dropLookupMode(arg0: number): $MethodHandles$Lookup;
         ensureInitialized<T>(arg0: $Class<T>): $Class<T>;
         findClass(arg0: string): $Class<any>;
@@ -162,7 +162,7 @@ declare module "java:java/lang/invoke" {
         static loadLoadFence(): void;
         static releaseFence(): void;
         static storeStoreFence(): void;
-        accessModeType(arg0: $VarHandle$AccessMode): $MethodType;
+        accessModeType(arg0: $VarHandle$AccessMode_): $MethodType;
         compareAndExchangeAcquire(arg0?: object[]): object;
         compareAndExchangeRelease(arg0?: object[]): object;
         compareAndExchange(arg0?: object[]): object;
@@ -189,9 +189,9 @@ declare module "java:java/lang/invoke" {
         getVolatile(arg0?: object[]): object;
         get(arg0?: object[]): object;
         hasInvokeExactBehavior(): boolean;
-        isAccessModeSupported(arg0: $VarHandle$AccessMode): boolean;
+        isAccessModeSupported(arg0: $VarHandle$AccessMode_): boolean;
         set(arg0?: object[]): void;
-        toMethodHandle(arg0: $VarHandle$AccessMode): $MethodHandle;
+        toMethodHandle(arg0: $VarHandle$AccessMode_): $MethodHandle;
         toString(): string;
         varType(): $Class<any>;
         weakCompareAndSetAcquire(arg0?: object[]): boolean;
@@ -251,4 +251,5 @@ declare module "java:java/lang/invoke" {
         varType(): $ClassDesc;
     }
 
+    export type $VarHandle$AccessMode_ = $VarHandle$AccessMode | "COMPARE_AND_EXCHANGE" | "COMPARE_AND_EXCHANGE_ACQUIRE" | "COMPARE_AND_EXCHANGE_RELEASE" | "COMPARE_AND_SET" | "GET" | "GET_ACQUIRE" | "GET_AND_ADD" | "GET_AND_ADD_ACQUIRE" | "GET_AND_ADD_RELEASE" | "GET_AND_BITWISE_AND" | "GET_AND_BITWISE_AND_ACQUIRE" | "GET_AND_BITWISE_AND_RELEASE" | "GET_AND_BITWISE_OR" | "GET_AND_BITWISE_OR_ACQUIRE" | "GET_AND_BITWISE_OR_RELEASE" | "GET_AND_BITWISE_XOR" | "GET_AND_BITWISE_XOR_ACQUIRE" | "GET_AND_BITWISE_XOR_RELEASE" | "GET_AND_SET" | "GET_AND_SET_ACQUIRE" | "GET_AND_SET_RELEASE" | "GET_OPAQUE" | "GET_VOLATILE" | "SET" | "SET_OPAQUE" | "SET_RELEASE" | "SET_VOLATILE" | "WEAK_COMPARE_AND_SET" | "WEAK_COMPARE_AND_SET_ACQUIRE" | "WEAK_COMPARE_AND_SET_PLAIN" | "WEAK_COMPARE_AND_SET_RELEASE";
 }

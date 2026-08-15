@@ -3,7 +3,7 @@ import { $Annotation } from "java:java/lang/annotation";
 import { $ClassDesc, $Constable, $ConstantDesc, $DynamicConstantDesc } from "java:java/lang/constant";
 import { $MethodHandles$Lookup, $TypeDescriptor$OfField } from "java:java/lang/invoke";
 import { $Configuration, $ModuleDescriptor } from "java:java/lang/module";
-import { $AccessFlag, $AnnotatedElement, $AnnotatedType, $Constructor, $Field, $GenericDeclaration, $Method, $RecordComponent, $Type, $TypeVariable } from "java:java/lang/reflect";
+import { $AccessFlag, $AccessFlag_, $AnnotatedElement, $AnnotatedType, $Constructor, $Field, $GenericDeclaration, $Method, $RecordComponent, $Type, $TypeVariable } from "java:java/lang/reflect";
 import { $URL } from "java:java/net";
 import { $CharBuffer } from "java:java/nio";
 import { $Charset } from "java:java/nio/charset";

@@ -317,4 +317,7 @@ declare module "java:java/lang/reflect" {
         getName(): string;
     }
 
+    export type $AccessFlag_ = $AccessFlag | "ABSTRACT" | "ANNOTATION" | "BRIDGE" | "ENUM" | "FINAL" | "INTERFACE" | "MANDATED" | "MODULE" | "NATIVE" | "OPEN" | "PRIVATE" | "PROTECTED" | "PUBLIC" | "STATIC" | "STATIC_PHASE" | "STRICT" | "SUPER" | "SYNCHRONIZED" | "SYNTHETIC" | "TRANSIENT" | "TRANSITIVE" | "VARARGS" | "VOLATILE";
+    export type $AccessFlag$Location_ = $AccessFlag$Location | "CLASS" | "FIELD" | "INNER_CLASS" | "METHOD" | "METHOD_PARAMETER" | "MODULE" | "MODULE_EXPORTS" | "MODULE_OPENS" | "MODULE_REQUIRES";
+    export type $ClassFileFormatVersion_ = $ClassFileFormatVersion | "RELEASE_0" | "RELEASE_1" | "RELEASE_10" | "RELEASE_11" | "RELEASE_12" | "RELEASE_13" | "RELEASE_14" | "RELEASE_15" | "RELEASE_16" | "RELEASE_17" | "RELEASE_18" | "RELEASE_19" | "RELEASE_2" | "RELEASE_20" | "RELEASE_21" | "RELEASE_3" | "RELEASE_4" | "RELEASE_5" | "RELEASE_6" | "RELEASE_7" | "RELEASE_8" | "RELEASE_9";
 }

@@ -222,15 +222,15 @@ declare module "java:java/util" {
         getVariant(): string;
         static availableLocales(): $Stream<$Locale>;
         static caseFoldLanguageTag(arg0: string): string;
-        static filterTags(arg0: $Locale$LanguageRange[], arg1: string[], arg2: $Locale$FilteringMode): $List<string>;
+        static filterTags(arg0: $Locale$LanguageRange[], arg1: string[], arg2: $Locale$FilteringMode_): $List<string>;
         static filterTags(arg0: $Locale$LanguageRange[], arg1: string[]): $List<string>;
-        static filter(arg0: $Locale$LanguageRange[], arg1: $Locale[], arg2: $Locale$FilteringMode): $List<$Locale>;
+        static filter(arg0: $Locale$LanguageRange[], arg1: $Locale[], arg2: $Locale$FilteringMode_): $List<$Locale>;
         static filter(arg0: $Locale$LanguageRange[], arg1: $Locale[]): $List<$Locale>;
         static forLanguageTag(arg0: string): $Locale;
         static getAvailableLocales(): $Locale[];
-        static getDefault(arg0: $Locale$Category): $Locale;
+        static getDefault(arg0: $Locale$Category_): $Locale;
         static getDefault(): $Locale;
-        static getISOCountries(arg0: $Locale$IsoCountryCode): $Set<string>;
+        static getISOCountries(arg0: $Locale$IsoCountryCode_): $Set<string>;
         static getISOCountries(): string[];
         static getISOLanguages(): string[];
         static lookupTag(arg0: $Locale$LanguageRange[], arg1: string[]): string;
@@ -238,7 +238,7 @@ declare module "java:java/util" {
         static of(arg0: string, arg1: string, arg2: string): $Locale;
         static of(arg0: string, arg1: string): $Locale;
         static of(arg0: string): $Locale;
-        static setDefault(arg0: $Locale$Category, arg1: $Locale): void;
+        static setDefault(arg0: $Locale$Category_, arg1: $Locale): void;
         static setDefault(arg0: $Locale): void;
         clone(): object;
         equals(arg0: object): boolean;
@@ -641,6 +641,9 @@ declare module "java:java/util" {
     export type $Collection_<E> = E[];
     export type $Iterator_<E> = E[];
     export type $List_<E> = E[];
+    export type $Locale$Category_ = $Locale$Category | "DISPLAY" | "FORMAT";
+    export type $Locale$FilteringMode_ = $Locale$FilteringMode | "AUTOSELECT_FILTERING" | "EXTENDED_FILTERING" | "IGNORE_EXTENDED_RANGES" | "MAP_EXTENDED_RANGES" | "REJECT_EXTENDED_RANGES";
+    export type $Locale$IsoCountryCode_ = $Locale$IsoCountryCode | "PART1_ALPHA2" | "PART1_ALPHA3" | "PART3";
     export type $Map_<K, V> = { [key: string]: V };
     export type $Optional_<T> = T | null;
     export type $SequencedCollection_<E> = E[];

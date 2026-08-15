@@ -42,11 +42,23 @@ public final class NekoNodeFS {
     }
 
     public synchronized NekoNodeBuffer readFileBuffer(String path) throws IOException {
-        return NekoNodeBuffer.fromBytes(Files.readAllBytes(resolveRead(path)));
+        Path target = resolveRead(path);
+        long size = Files.size(target);
+        if (size > NekoNodeBuffer.MAX_ALLOC_BYTES) {
+            throw new IOException("File is too large to read into a buffer (" + size
+                    + " bytes; maximum is " + NekoNodeBuffer.MAX_ALLOC_BYTES + "): " + target);
+        }
+        return NekoNodeBuffer.fromBytes(Files.readAllBytes(target));
     }
 
     public synchronized String readFileString(String path, String encoding) throws IOException {
-        return new String(Files.readAllBytes(resolveRead(path)), NekoNodeBuffer.charset(encoding));
+        Path target = resolveRead(path);
+        long size = Files.size(target);
+        if (size > NekoNodeBuffer.MAX_ALLOC_BYTES) {
+            throw new IOException("File is too large to read into a string (" + size
+                    + " bytes; maximum is " + NekoNodeBuffer.MAX_ALLOC_BYTES + "): " + target);
+        }
+        return new String(Files.readAllBytes(target), NekoNodeBuffer.charset(encoding));
     }
 
     public synchronized void writeFile(String path, String data, String encoding) throws IOException {

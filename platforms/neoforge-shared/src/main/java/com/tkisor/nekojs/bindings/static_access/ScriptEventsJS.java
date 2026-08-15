@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEventRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Value;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
@@ -72,11 +73,29 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
                 eventName,
                 targetType,
                 eventClass.getName(),
-                "nekojs:startup/script_events",
+                resolveSourceScriptId(eventClassValue),
                 bus,
                 () -> NeoForge.EVENT_BUS.unregister(listener)
         ));
         NekoJS.LOGGER.debug("Script event registered: {}.{} -> {}", groupName, eventName, eventClass.getName());
+    }
+
+    /**
+     * Resolve the source script id for a ScriptEvents registration.
+     *
+     * <p>BUG-B3: the old implementation always registered with the constant
+     * {@code "nekojs:startup/script_events"}, so per-script STARTUP reload
+     * ({@code clearDefinitions(STARTUP, scriptId)}) never matched and the re-run
+     * threw "Script event already registered".
+     */
+    static String resolveSourceScriptId(Object eventClassValue) {
+        if (eventClassValue instanceof Value polyglotValue) {
+            String scriptId = ScriptContextRegistry.currentScriptIdOf(polyglotValue.getContext());
+            if (scriptId != null && !scriptId.isBlank()) {
+                return scriptId;
+            }
+        }
+        return "nekojs:startup/script_events";
     }
 
     private static void validateName(String field, String value) {

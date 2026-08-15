@@ -13,7 +13,6 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.lifecycle.ResourceTracker;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -93,7 +92,9 @@ public final class ScriptManager implements AutoCloseable {
         if (context == null) return false;
         ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
         if (manager == null) return false;
-        return manager.contextKilled || manager.context != context;
+        // Graal 的 Value.getContext() 可能返回与 Context.Builder.build() 引用不同但
+        // equals/hashCode 相同的包装对象；必须用 equals 比较，否则正常回调也会被误判为 dead。
+        return manager.contextKilled || (manager.context != null && !manager.context.equals(context));
     }
 
     // ---- 实例字段 ----
@@ -157,7 +158,7 @@ public final class ScriptManager implements AutoCloseable {
         this.contextKilled = true;
     }
 
-    private Context getOrCreateContext() {
+    private synchronized Context getOrCreateContext() {
         if (context == null || contextKilled) {
             if (context != null) {
                 // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源。
@@ -221,9 +222,33 @@ public final class ScriptManager implements AutoCloseable {
      * <p>被首次 {@link #loadScripts()} 和事务式 reload 复用。空列表只记录日志，不创建副作用。
      */
     private void loadScriptsInto(List<ScriptContainer> scriptsToLoad) {
+        if (!prepareScriptsForLoad(scriptsToLoad)) {
+            return;
+        }
+        for (ScriptContainer script : scriptsToLoad) {
+            if (script.shouldRun()) {
+                // 逐个脚本取最新 Context：某脚本触发语句上限导致 Context 被 Graal 关闭时，
+                // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没
+                scriptExecutor.executeEntry(getOrCreateContext(), script, this.nodeRuntime);
+            }
+        }
+    }
+
+    private void loadScriptsInto(List<ScriptContainer> scriptsToLoad, Context context, NekoNodeRuntime nodeRuntime) {
+        if (!prepareScriptsForLoad(scriptsToLoad)) {
+            return;
+        }
+        for (ScriptContainer script : scriptsToLoad) {
+            if (script.shouldRun()) {
+                scriptExecutor.executeEntry(context, script, nodeRuntime);
+            }
+        }
+    }
+
+    private boolean prepareScriptsForLoad(List<ScriptContainer> scriptsToLoad) {
         if (scriptsToLoad == null || scriptsToLoad.isEmpty()) {
             scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
-            return;
+            return false;
         }
         for (var script : scriptsToLoad) {
             script.preload();
@@ -233,13 +258,7 @@ public final class ScriptManager implements AutoCloseable {
         if (orderResult.hasProblems()) {
             scriptType.logger().warn("{} 脚本 after 依赖排序存在问题：{}", scriptType.name(), orderResult.describe());
         }
-        for (ScriptContainer script : scriptsToLoad) {
-            if (script.shouldRun()) {
-                // 逐个脚本取最新 Context：某脚本触发语句上限导致 Context 被 Graal 关闭时，
-                // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没
-                scriptExecutor.executeEntry(getOrCreateContext(), script, this.nodeRuntime);
-            }
-        }
+        return true;
     }
 
         // ---- 重载 ----
@@ -306,28 +325,53 @@ public final class ScriptManager implements AutoCloseable {
             CONTEXT_TO_MANAGER.put(candidateContext, this);
             ScriptContextRegistry.bind(candidateContext, scriptType);
 
+            boolean previousKilled = this.contextKilled;
+            // 提前发布候选字段：候选脚本可能注册 timer（setTimeout）并 await 其回调，而
+            // isContextDead(candidateContext) 依赖 this.context 判定。必须在最终切换前就让
+            // 候选成为当前 live Context，否则候选 timer 回调会被当作 dead 跳过。成功路径
+            // 无需重复赋值；失败时在 catch 恢复捕获的旧值。
+            this.context = candidateContext;
+            this.nodeRuntime = candidateNode;
+            this.contextOutStream = candidateOutStream;
+            this.contextErrStream = candidateErrStream;
+
             try {
                 List<ScriptContainer> candidateScripts = ScriptLocator.discover(scriptType, scriptProperties);
                 scriptType.logger().info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
 
+                // 候选加载期间只关心「候选 Context 是否被杀」：先清掉旧标记，加载结束后若标记
+                // 重新变 true，说明是候选环境触发了语句上限。基于状态而非转移检测，避免
+                // previousKilled == true 时漏判并提交一个已死候选。
+                this.contextKilled = false;
                 pluginRuntime.fireBeforeScriptsLoaded(scriptType);
                 try {
-                    loadScriptsInto(candidateScripts);
+                    loadScriptsInto(candidateScripts, candidateContext, candidateNode);
                 } finally {
                     pluginRuntime.fireAfterScriptsLoaded(scriptType);
                 }
 
-                this.context = candidateContext;
-                this.nodeRuntime = candidateNode;
-                this.contextOutStream = candidateOutStream;
-                this.contextErrStream = candidateErrStream;
+                if (this.contextKilled) {
+                    // 候选加载期间有脚本触发语句上限，Graal 已关闭候选 Context。把它按失败
+                    // 处理：交给下方 catch 关闭候选并保留旧 Context，而不是切换到一个已死的
+                    // 候选环境上。
+                    throw new RuntimeException(scriptType.name()
+                            + " candidate context was killed by the statement limit during reload");
+                }
+
                 this.scripts = candidateScripts;
+                // 成功切换到一个健康的新 Context：旧 Context 可能带有的 killed 标记不再有效。
+                this.contextKilled = false;
 
                 if (oldContext != null || oldNodeRuntime != null
                         || oldOutStream != null || oldErrStream != null) {
                     closeRuntimeResources(oldNodeRuntime, oldContext, oldOutStream, oldErrStream);
                 }
             } catch (Throwable t) {
+                this.context = oldContext;
+                this.nodeRuntime = oldNodeRuntime;
+                this.contextOutStream = oldOutStream;
+                this.contextErrStream = oldErrStream;
+                this.contextKilled = previousKilled;
                 scriptEventBridge.clearListeners(scriptType);
                 closeRuntimeResources(candidateNode, candidateContext, candidateOutStream, candidateErrStream);
                 scriptType.logger().error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
@@ -346,6 +390,28 @@ public final class ScriptManager implements AutoCloseable {
         public synchronized List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {
             discoverScripts();
             Path target = resolveScriptPath(filePath);
+
+            if (scriptType == ScriptType.STARTUP) {
+                // STARTUP registrations are irreversible/non-transactional and ScriptEvents
+                // definitions are recreated by a full load (resetEnvironment + discoverScripts
+                // + loadScripts + ScriptEvents.post). Re-posting only the affected listeners
+                // would wipe unaffected custom-event listener tokens, so a targeted STARTUP
+                // reload degrades to a full STARTUP reload.
+                List<ScriptContainer> matched = scripts.stream()
+                        .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
+                        .toList();
+                if (matched.isEmpty()) {
+                    throw new IOException("No loaded STARTUP entry matches " + displayScriptPath(target)
+                            + ". Reload the whole STARTUP environment first if this file has not been loaded yet.");
+                }
+                scriptType.logger().info("正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载。", displayScriptPath(target));
+                reloadScripts();
+                List<ScriptContainer> reloadedMatches = scripts.stream()
+                        .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
+                        .toList();
+                return reloadedMatches.isEmpty() ? matched : reloadedMatches;
+            }
+
             List<ScriptContainer> targets = reloadTargets(target);
             if (targets.isEmpty()) {
                 throw new IOException("No loaded entry depends on " + displayScriptPath(target) + ". Reload the whole " + scriptType.name() + " environment first if this dependency has not been loaded yet.");

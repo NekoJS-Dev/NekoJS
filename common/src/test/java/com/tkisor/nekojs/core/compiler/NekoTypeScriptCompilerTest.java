@@ -393,4 +393,68 @@ class NekoTypeScriptCompilerTest {
         assertTrue(ex.getMessage().toLowerCase().contains("decorator"),
             "错误信息须提及 decorator: " + ex.getMessage());
     }
+
+    // ---- B7 regression tests: enum numeric literal validation ----
+
+    @Test
+    void enumValidNumericLiteralsCompile() {
+        String src = "enum E { A = 1e5, B = .5, C = 1., D = 0x1F, E2 = 0o7, F = 0b101, G = -2 }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("[\"A\"] = 100000"), out);
+        assertTrue(out.contains("[\"B\"] = 0"), out);
+        assertTrue(out.contains("[\"C\"] = 1"), out);
+        assertTrue(out.contains("[\"D\"] = 31"), out);
+        assertTrue(out.contains("[\"E2\"] = 7"), out);
+        assertTrue(out.contains("[\"F\"] = 5"), out);
+        assertTrue(out.contains("[\"G\"] = -2"), out);
+    }
+
+    @Test
+    void enumRejectsExponentWithoutDigits() {
+        String src = "enum E { A = 1e }";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src));
+        assertTrue(ex.getMessage().contains("1e"), "error must mention literal: " + ex.getMessage());
+    }
+
+    @Test
+    void enumRejectsExponentSignWithoutDigits() {
+        String src = "enum E { A = 1e+ }";
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src));
+        assertTrue(ex.getMessage().contains("1e+"), "error must mention literal: " + ex.getMessage());
+    }
+
+    @Test
+    void enumComputedNumericExpressionMembersCompile() {
+        // 1 + 2 / 0xff + 1 / .5 + 1 / 1 << 2 are computed members, not numeric literals;
+        // they must stay runtime expressions and must not be mistaken for malformed literals.
+        String src = "enum E { A = 1 + 2, B = 0xff + 1, C = .5 + 1, D = 1 << 2 }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("[\"A\"] = 1 + 2"), out);
+        assertTrue(out.contains("[\"B\"] = 0xff + 1"), out);
+        assertTrue(out.contains("[\"C\"] = .5 + 1"), out);
+        assertTrue(out.contains("[\"D\"] = 1 << 2"), out);
+    }
+
+    @Test
+    void enumValidExponentNumericLiteralsCompile() {
+        // 1e+5 and 1.5e-2 must be accepted (exponent has at least one digit after optional sign).
+        String src = "enum E { A = 1e+5, B = 1.5e-2 }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("[\"A\"] = 100000"), out);
+        assertTrue(out.contains("[\"B\"] = 0"), out);
+    }
+
+    @Test
+    void enumRejectsInvalidPrefixedNumericLiterals() {
+        for (String literal : new String[]{"0b2", "0o8", "0xG"}) {
+            String src = "enum E { A = " + literal + " }";
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src),
+                "enum literal " + literal + " must be rejected");
+            assertTrue(ex.getMessage().contains(literal),
+                "error must mention literal '" + literal + "': " + ex.getMessage());
+        }
+    }
 }

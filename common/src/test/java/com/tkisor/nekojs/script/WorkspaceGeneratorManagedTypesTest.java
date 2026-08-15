@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
@@ -97,5 +99,35 @@ class WorkspaceGeneratorManagedTypesTest {
 
         assertTrue(model.compilerOptions.typeRoots.contains("../.neko_probe/@package"),
                 "Should preserve @package typeRoot");
+    }
+
+    @Test
+    void buildConfigForEnvFollowsEngineJsxRuntimeMode() {
+        Path scriptDir = Path.of("/game/server_scripts");
+        Path probeDir = Path.of("/game/.neko_probe");
+
+        // 默认（jsxAutomaticRuntime=false）：经典全局工厂写法
+        JSConfigModel classic = WorkspaceGenerator.buildConfigForEnv(ScriptType.SERVER, scriptDir, probeDir);
+        assertEquals("react", classic.compilerOptions.jsx);
+        assertEquals("__nekoJsxFactory", classic.compilerOptions.jsxFactory);
+        assertEquals("__nekoJsxFragment", classic.compilerOptions.jsxFragmentFactory);
+        assertNull(classic.compilerOptions.jsxImportSource);
+
+        // 引擎开启自动运行时：jsconfig 同步切到 react-jsx + nekojs/jsx-runtime
+        SandboxConfig prev = ClassFilter.INSTANCE.config();
+        try {
+            ClassFilter.INSTANCE.updateConfig(new SandboxConfig(
+                    prev.allowThreads(), prev.allowReflection(), prev.allowAsm(),
+                    prev.allowFsWriteOutsideNekojs(), prev.enableEsmAuthoring(),
+                    prev.conciseScriptErrorLogs(), true, prev.scriptMemberValidation(),
+                    prev.scriptEvaluationTimeoutSeconds(), prev.scriptStatementLimit()));
+            JSConfigModel automatic = WorkspaceGenerator.buildConfigForEnv(ScriptType.SERVER, scriptDir, probeDir);
+            assertEquals("react-jsx", automatic.compilerOptions.jsx);
+            assertEquals("nekojs", automatic.compilerOptions.jsxImportSource);
+            assertNull(automatic.compilerOptions.jsxFactory);
+            assertNull(automatic.compilerOptions.jsxFragmentFactory);
+        } finally {
+            ClassFilter.INSTANCE.updateConfig(prev);
+        }
     }
 }

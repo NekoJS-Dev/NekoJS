@@ -23,6 +23,8 @@ import java.util.Map;
 /**
  * 生成工作区配置文件（README, jsconfig.json 等）。平台无关——jsconfig.json 模型写盘前，
  * 通过 {@link NekoJSPlugin#modifyWorkspaceConfig} 钩子让插件修改（每个 ScriptType 触发一次）。
+ * JSX 编译器选项跟随引擎配置（{@link ClassFilter#INSTANCE} 的 jsxAutomaticRuntime），
+ * 保证 IDE 类型检查与运行时的 JSX 变换模式一致。
  */
 public final class WorkspaceGenerator {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -88,6 +90,7 @@ public final class WorkspaceGenerator {
      */
     static JSConfigModel buildConfigForEnv(ScriptType scriptType, Path scriptDir, Path probeDir) {
         JSConfigModel model = new JSConfigModel();
+        applyEngineJsxRuntime(model);
 
         String relativeProbePath = scriptDir.relativize(probeDir).toString().replace('\\', '/');
 
@@ -131,6 +134,7 @@ public final class WorkspaceGenerator {
     private static void createProbeDirConfig() {
         Path probeDir = NekoJSPaths.get().probeDir();
         JSConfigModel model = new JSConfigModel();
+        applyEngineJsxRuntime(model);
         model.compilerOptions.moduleResolution = "node";
         model.compilerOptions.baseUrl = ".";
 
@@ -157,6 +161,19 @@ public final class WorkspaceGenerator {
             } catch (IOException e) {
                 NekoJS.LOGGER.error("Failed to create probe dir config: {}", configPath, e);
             }
+        }
+    }
+
+    /**
+     * 引擎配置驱动 jsconfig 的 JSX 运行时模式，保证 IDE 类型检查与运行时编译一致：
+     * {@code jsxAutomaticRuntime=true}（{@code config/nekojs-engine.toml}）时切换到 TS 自动运行时
+     * （{@code jsx: "react-jsx"} + {@code jsxImportSource: "nekojs"}，TS 解析为
+     * {@code import { jsx } from "nekojs/jsx-runtime"}，与 {@code NekoJsxCompiler} 的产物对齐）；
+     * 默认 false 保持经典 {@code __nekoJsxFactory} 全局工厂写法。
+     */
+    private static void applyEngineJsxRuntime(JSConfigModel model) {
+        if (ClassFilter.INSTANCE.config().jsxAutomaticRuntime()) {
+            model.useAutomaticJsxRuntime();
         }
     }
 

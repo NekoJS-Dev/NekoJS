@@ -25,7 +25,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class NekoJSBasePluginManager {
     private record PluginEntry(PluginIdentity identity, NekoJSPlugin plugin, int priority) {}
 
-    private static final List<PluginEntry> ENTRIES = new CopyOnWriteArrayList<>();
+    // non-final ONLY as a private test seam (tests reset/inject this list); do not reassign in production code.
+    private static List<PluginEntry> ENTRIES = new CopyOnWriteArrayList<>();
     private static volatile List<NekoJSPlugin> sortedView = null;
     private static volatile List<OwnedPlugin> ownedView = null;
 
@@ -37,7 +38,7 @@ public final class NekoJSBasePluginManager {
      *
      * <p>使用 legacy owner 格式 {@code "legacy:<class FQN>"}，codeSource 来自 protection domain。
      */
-    public static void registerClass(Class<?> clazz) {
+    public static synchronized void registerClass(Class<?> clazz) {
         PluginIdentity identity = createLegacyIdentity(clazz);
         registerClass(identity, clazz);
     }
@@ -45,7 +46,7 @@ public final class NekoJSBasePluginManager {
     /**
      * 使用已验证的 owner identity 注册插件类。
      */
-    public static void registerClass(PluginIdentity identity, Class<?> clazz) {
+    public static synchronized void registerClass(PluginIdentity identity, Class<?> clazz) {
         if (!NekoJSPlugin.class.isAssignableFrom(clazz)) {
             NekoJS.LOGGER.error("Plugin {} does not implement NekoJSPlugin", clazz.getName());
             return;
@@ -99,7 +100,7 @@ public final class NekoJSBasePluginManager {
     }
 
     /** 按 priority 降序（数值大先）返回所有已登记插件。 */
-    public static List<NekoJSPlugin> getPlugins() {
+    public static synchronized List<NekoJSPlugin> getPlugins() {
         List<NekoJSPlugin> view = sortedView;
         if (view != null) return view;
         view = ENTRIES.stream()
@@ -111,7 +112,7 @@ public final class NekoJSBasePluginManager {
     }
 
     /** 返回所有已登记插件及其 owner identity，按 priority 降序排列。 */
-    public static List<OwnedPlugin> getOwnedPlugins() {
+    public static synchronized List<OwnedPlugin> getOwnedPlugins() {
         List<OwnedPlugin> view = ownedView;
         if (view != null) return view;
         view = ENTRIES.stream()

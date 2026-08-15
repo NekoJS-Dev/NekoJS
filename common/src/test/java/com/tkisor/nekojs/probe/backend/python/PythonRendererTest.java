@@ -126,8 +126,8 @@ class PythonRendererTest {
         assertTrue(out.contains("def __init__(self) -> None:\n        \"\"\"Creates a sample.\"\"\"\n        ..."), out);
         // getter（@property）docstring
         assertTrue(out.contains("def name(self) -> str:\n        \"\"\"The name.\"\"\"\n        ..."), out);
-        // 实例方法 docstring（多行）——测试编译无 -parameters，参数名为 arg0
-        assertTrue(out.contains("def greet(self, arg0: str) -> None:\n        \"\"\"Greets someone.\nSecond line.\"\"\"\n        ..."), out);
+        // 实例方法 docstring（多行）——根 build.gradle 已全局开启 -parameters，参数名为真实名 who
+        assertTrue(out.contains("def greet(self, who: str) -> None:\n        \"\"\"Greets someone.\nSecond line.\"\"\"\n        ..."), out);
         // 字段：行尾 `  # ...` + 后续行 `# ` 前缀
         assertTrue(out.contains("nameField: str  # Field doc.\n    # Second field line."), out);
     }

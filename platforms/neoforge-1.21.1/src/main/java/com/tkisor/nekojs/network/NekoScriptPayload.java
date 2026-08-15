@@ -9,6 +9,12 @@ import net.minecraft.resources.ResourceLocation;
 
 public record NekoScriptPayload(String channel, CompoundTag data) implements CustomPacketPayload {
 
+    public NekoScriptPayload {
+        if (channel == null || channel.isBlank() || channel.length() > 64) {
+            throw new IllegalArgumentException("Script payload channel must be non-blank and at most 64 characters");
+        }
+    }
+
     public static final Type<NekoScriptPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("nekojs", "script_payload"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, NekoScriptPayload> CODEC = StreamCodec.composite(

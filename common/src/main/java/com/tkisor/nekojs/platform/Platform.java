@@ -13,7 +13,7 @@ public final class Platform {
     private Platform() {}
 
     @HideFromJS
-    public static void init(IPlatform platform) {
+    public static synchronized void init(IPlatform platform) {
         if (INSTANCE != null) {
             throw new IllegalStateException("Platform has already been initialized");
         }

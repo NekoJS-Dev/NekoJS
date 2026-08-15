@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
+import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
@@ -13,8 +14,10 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.ProbeConfig;
 import com.tkisor.nekojs.probe.ProbeContext;
 import com.tkisor.nekojs.probe.ProbeGenerator;
+import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
@@ -198,6 +201,128 @@ class PythonProbeBackendIntegrationTest {
                 "adapter input alias missing: " + module);
     }
 
+    // -------------------- 枚举字面量输入别名（镜像 TS $Enum_）--------------------
+
+    @Test
+    void generate_enumAlias_emitsLiteralUnionInPackageModule(@TempDir Path temp) throws Exception {
+        // 合成枚举 IR：pkg.c.Color{RED,GREEN,BLUE} + 无别名的对照包 pkg.d.Plain
+        TypeDecl color = new TypeDecl(TypeDecl.Kind.ENUM, null, "pkg.c.Color");
+        for (String c : new String[]{"RED", "GREEN", "BLUE"}) {
+            FieldDecl f = new FieldDecl(c, new TypeSlot(null, ApiTypeRef.symbol(new ApiSymbolId("java", "pkg.c.Color"))));
+            f.isStatic = true;
+            f.isEnumConstant = true;
+            color.fields.add(f);
+        }
+        TypeDecl plain = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.d.Plain");
+        List<TypeDecl> ir = List.of(color, plain);
+
+        ProbeGenerator.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.c", "pkg.d"));
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String cMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/c/__init__.pyi"));
+        assertTrue(cMod.contains("class Color:"), cMod);
+        assertTrue(cMod.contains("Color_ = Color | Literal[\"RED\", \"GREEN\", \"BLUE\"]"),
+                "enum literal alias missing: " + cMod);
+        assertTrue(cMod.contains("from typing import Any, Callable, ClassVar, Literal"),
+                "Literal must be imported when the module uses literal unions: " + cMod);
+
+        // 无别名的模块不引入 Literal
+        String dMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/d/__init__.pyi"));
+        assertFalse(dMod.contains("Literal"), "plain module should not import Literal: " + dMod);
+    }
+
+    @Test
+    void generate_enumDispatchKeyEventKeyWidenedToEnumAlias(@TempDir Path temp) throws Exception {
+        // 真实反射的枚举作为 dispatch key：事件重载的 extra 参数应放宽为 FakeProbeEnum_
+        TypeDecl keyEnum = new TypeReflector().reflect(FakeProbeEnum.class);
+        TypeDecl event = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        List<TypeDecl> ir = List.of(keyEnum, event);
+
+        EventCatalogEntry dispatch = new EventCatalogEntry(
+                "SampleEvents", "dispatch", ScriptType.SERVER, FakeProbeEvent.class, FakeProbeEnum.class,
+                false, true, "SampleEvents.dispatch(key, event => {\n  $0\n})");
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(dispatch), List.of());
+
+        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String server = Files.readString(temp.resolve("probe-python/nekojs/_events/server/__init__.pyi"));
+        assertTrue(server.contains("extra: FakeProbeEnum_"),
+                "enum dispatch key should widen to enum alias: " + server);
+        assertTrue(server.contains("import FakeProbeEnum_"),
+                "enum alias import missing in event module: " + server);
+    }
+
+    // -------------------- RegistryValue 形状 → Literal[...]（小注册表）/ str（大注册表）--------------------
+
+    @Test
+    void generate_registryValueAlias_emitsSortedLiteralUnion(@TempDir Path temp) throws Exception {
+        TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        List<TypeDecl> ir = List.of(target);
+
+        // 快照条目乱序 → Literal 必须排序输出（确定性）
+        RegistryTypeCatalogEntry registry = new RegistryTypeCatalogEntry(
+                "SampleBlock", List.of("testcraft:zeta", "testcraft:alpha"), List.of());
+        AdapterCatalogEntry adapter = new AdapterCatalogEntry(
+                FakeProbeEvent.class, List.of(AdapterInputShape.self(), AdapterInputShape.registry("SampleBlock")),
+                ConversionPrecedence.HIGH, Optional.empty());
+
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of(registry));
+        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertTrue(module.contains(
+                        "FakeProbeEvent_ = FakeProbeEvent | Literal[\"testcraft:alpha\", \"testcraft:zeta\"]"),
+                "registry literal union missing: " + module);
+        assertTrue(module.contains("from typing import Any, Callable, ClassVar, Literal"), module);
+    }
+
+    @Test
+    void generate_largeRegistryValueAlias_abbreviatesToStrWithComment(@TempDir Path temp) throws Exception {
+        TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        List<TypeDecl> ir = List.of(target);
+
+        // >=512 条目 → 缩略为 str，行尾注释标注注册表名
+        List<String> entries = new java.util.ArrayList<>();
+        for (int i = 0; i < 512; i++) entries.add("minecraft:block_" + i);
+        RegistryTypeCatalogEntry big = new RegistryTypeCatalogEntry("BigBlock", entries, List.of());
+        AdapterCatalogEntry adapter = new AdapterCatalogEntry(
+                FakeProbeEvent.class, List.of(AdapterInputShape.self(), AdapterInputShape.registry("BigBlock")),
+                ConversionPrecedence.HIGH, Optional.empty());
+
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of(big));
+        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertTrue(module.contains("FakeProbeEvent_ = FakeProbeEvent | str  # BigBlock registry ids"),
+                "large registry should abbreviate to str with a naming comment: " + module);
+        assertFalse(module.contains("Literal["), "large registry must not emit a literal union: " + module);
+        assertFalse(module.contains(", Literal"), "no Literal import when nothing uses it: " + module);
+    }
+
+    @Test
+    void generate_registryValueUnknownRegistry_skipsShape(@TempDir Path temp) throws Exception {
+        // 快照缺失该注册表 → 形状跳过（与旧行为一致），别名退化为其余形状
+        TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        List<TypeDecl> ir = List.of(target);
+
+        AdapterCatalogEntry adapter = new AdapterCatalogEntry(
+                FakeProbeEvent.class, List.of(AdapterInputShape.self(), AdapterInputShape.registry("Missing")),
+                ConversionPrecedence.HIGH, Optional.empty());
+
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of());
+        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertFalse(module.contains("FakeProbeEvent_"), "no alias when all shapes are dropped: " + module);
+    }
+
     // -------------------- C5a：隐藏类残留清理 --------------------
 
     @Test
@@ -230,9 +355,17 @@ class PythonProbeBackendIntegrationTest {
     private static NekoScriptCatalogSnapshot snapshotWith(List<BindingCatalogEntry> bindings,
                                                           List<EventCatalogEntry> events,
                                                           List<AdapterCatalogEntry> adapters) {
+        return snapshotWith(bindings, events, adapters, List.of());
+    }
+
+    /** 带 registryTypes 的快照构造（RegistryValue 形状 → Literal[...] 的数据源）。 */
+    private static NekoScriptCatalogSnapshot snapshotWith(List<BindingCatalogEntry> bindings,
+                                                          List<EventCatalogEntry> events,
+                                                          List<AdapterCatalogEntry> adapters,
+                                                          List<RegistryTypeCatalogEntry> registries) {
         return new NekoScriptCatalogSnapshot(
                 List.of(), bindings, events, adapters, List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), registries, null, Map.of(), List.of());
     }
 
     private static ProbeGenerator.GenerateResult runGenerate(Path temp, NekoScriptCatalogSnapshot snapshot,
@@ -255,3 +388,8 @@ class PythonProbeBackendIntegrationTest {
 
 /** 集成测试用事件类：稳定 FQN，供事件声明与适配器别名断言。 */
 class FakeProbeEvent {}
+
+/** 集成测试用枚举：真实反射路径，供枚举别名与 dispatch key 放宽断言。 */
+enum FakeProbeEnum {
+    RED, GREEN
+}

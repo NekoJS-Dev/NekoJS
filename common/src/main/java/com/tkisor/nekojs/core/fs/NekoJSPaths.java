@@ -22,9 +22,14 @@ public final class NekoJSPaths {
     public static NekoJSPaths get() {
         NekoJSPaths inst = INSTANCE;
         if (inst == null) {
-            INSTANCE = fromGameDir(Platform.getGameDir());
+            synchronized (NekoJSPaths.class) {
+                inst = INSTANCE;
+                if (inst == null) {
+                    INSTANCE = inst = fromGameDir(Platform.getGameDir());
+                }
+            }
         }
-        return INSTANCE;
+        return inst;
     }
 
     public static NekoJSPaths fromGameDir(Path gameDir) {
