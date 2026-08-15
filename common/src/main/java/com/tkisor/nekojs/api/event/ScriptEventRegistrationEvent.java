@@ -16,15 +16,16 @@ public class ScriptEventRegistrationEvent {
         return targetType;
     }
 
-    public void register(Value config) {
-        if (config == null || !config.hasMembers()) {
+    public void register(Object config) {
+        Value cfg = config == null ? null : Value.asValue(config);
+        if (cfg == null || !cfg.hasMembers()) {
             throw new IllegalArgumentException("ScriptEvents register config must be an object");
         }
-        String groupName = readString(config, "group");
-        String eventName = readString(config, "name");
-        Object eventClass = readEventClass(config);
-        String priority = readString(config, "priority", "normal");
-        boolean receiveCancelled = readBoolean(config, "receiveCancelled", false);
+        String groupName = readString(cfg, "group");
+        String eventName = readString(cfg, "name");
+        Object eventClass = readEventClass(cfg);
+        String priority = readString(cfg, "priority", "normal");
+        boolean receiveCancelled = readBoolean(cfg, "receiveCancelled", false);
         registrar.register(targetType, groupName, eventName, eventClass, priority, receiveCancelled);
     }
 

@@ -13,13 +13,13 @@ public class FluidJS {
 
     private static final int BUCKET = Fluid.BUCKET_VOLUME;
 
-    public FluidStack of(Value value) {
-        return resolveStack(value, BUCKET);
+    public FluidStack of(Object value) {
+        return resolveStack(toValue(value), BUCKET);
     }
 
-    public FluidStack of(Value value, int amount) {
+    public FluidStack of(Object value, int amount) {
         if (amount <= 0) throw new IllegalArgumentException("Fluid amount must be positive: " + amount);
-        FluidStack base = resolveStack(value, amount);
+        FluidStack base = resolveStack(toValue(value), amount);
         if (base == null) return null;
         FluidStack copy = base.copy();
         copy.amount = amount;
@@ -84,5 +84,9 @@ public class FluidJS {
         }
 
         throw new IllegalArgumentException("Cannot resolve FluidStack from: " + value);
+    }
+
+    private static Value toValue(Object value) {
+        return value == null ? null : Value.asValue(value);
     }
 }

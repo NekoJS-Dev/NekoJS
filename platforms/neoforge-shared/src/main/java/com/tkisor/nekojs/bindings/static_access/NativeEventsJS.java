@@ -27,41 +27,42 @@ public class NativeEventsJS implements Binding {
         REGISTERED_LISTENERS.clear();
     }
 
-    public void onEvent(Object eventType, Value handler) {
+    public void onEvent(Object eventType, Object handler) {
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
-    public void onEvent(Object priorityObj, boolean receiveCancelled, Object eventType, Value handler) {
+    public void onEvent(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         registerNative(priorityObj, receiveCancelled, eventType, handler);
     }
 
-    public void onEventTyped(Object priorityObj, boolean receiveCancelled, Object eventType, Value handler) {
+    public void onEventTyped(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         onEvent(priorityObj, receiveCancelled, eventType, handler);
     }
 
-    public void onGenericEvent(Object genericClassType, Object eventType, Value handler) {
+    public void onGenericEvent(Object genericClassType, Object eventType, Object handler) {
         // 忽略 genericClassType，直接作为普通事件挂载
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
-    public void onGenericEvent(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Value handler) {
+    public void onGenericEvent(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         registerNative(priorityObj, receiveCancelled, eventType, handler);
     }
 
-    public void onGenericEventTyped(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Value handler) {
+    public void onGenericEventTyped(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         onGenericEvent(genericClassType, priorityObj, receiveCancelled, eventType, handler);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private void registerNative(Object priorityObj, boolean receiveCancelled, Object eventType, Value handler) {
+    private void registerNative(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         Class<? extends Event> eventClass = resolveEventClass(eventType);
         if (eventClass == null) return;
 
         EventPriority priority = resolvePriority(priorityObj);
+        Value handlerValue = handler == null ? null : Value.asValue(handler);
 
         Consumer<Event> consumer = event -> {
             try {
-                handler.executeVoid(event);
+                handlerValue.executeVoid(event);
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("NativeEvent execution exception (" + eventClass.getSimpleName() + "): ", e);
             }

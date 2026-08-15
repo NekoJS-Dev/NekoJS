@@ -13,11 +13,11 @@ import java.util.List;
  */
 public class FluidIngredientJS {
 
-    public List<FluidStack> of(Value... values) {
+    public List<FluidStack> of(Object... values) {
         List<FluidStack> result = new ArrayList<>();
         if (values != null) {
-            for (Value value : values) {
-                List<FluidStack> resolved = resolveIngredient(value);
+            for (Object value : values) {
+                List<FluidStack> resolved = resolveIngredient(toValue(value));
                 if (resolved != null) result.addAll(resolved);
             }
         }
@@ -81,5 +81,9 @@ public class FluidIngredientJS {
         }
 
         return null;
+    }
+
+    private static Value toValue(Object value) {
+        return value == null ? null : Value.asValue(value);
     }
 }

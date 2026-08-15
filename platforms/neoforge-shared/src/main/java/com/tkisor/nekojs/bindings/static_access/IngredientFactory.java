@@ -5,15 +5,19 @@ import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.crafting.Ingredient;
 
 public class IngredientFactory {
-    public com.tkisor.nekojs.wrapper.item.IngredientJS of(Value... values) {
+    public com.tkisor.nekojs.wrapper.item.IngredientJS of(Object... values) {
         com.tkisor.nekojs.wrapper.item.IngredientJS wrapper = new com.tkisor.nekojs.wrapper.item.IngredientJS();
         if (values != null) {
-            for (Value value : values) {
-                Ingredient ingredient = IngredientResolver.fromValue(value);
+            for (Object value : values) {
+                Ingredient ingredient = IngredientResolver.fromValue(toValue(value));
                 wrapper.or(ingredient);
             }
         }
         return wrapper;
+    }
+
+    private static Value toValue(Object value) {
+        return value == null ? null : Value.asValue(value);
     }
 
     public com.tkisor.nekojs.wrapper.item.IngredientJS item(String id) {

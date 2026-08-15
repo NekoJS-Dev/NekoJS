@@ -39,12 +39,13 @@ public final class TestJS {
         return assertTrue(value != null, message);
     }
 
-    public TestJS assertThrows(Value callback, String message) {
-        if (callback == null || !callback.canExecute()) {
+    public TestJS assertThrows(Object callback, String message) {
+        Value fn = callback == null ? null : Value.asValue(callback);
+        if (fn == null || !fn.canExecute()) {
             return fail(formatMessage(message, "assertThrows requires a function"));
         }
         try {
-            callback.executeVoid();
+            fn.executeVoid();
         } catch (Throwable ignored) {
             return pass(message);
         }

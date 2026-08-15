@@ -6,15 +6,19 @@ import graal.graalvm.polyglot.Value;
 import net.minecraft.item.crafting.Ingredient;
 
 public class IngredientFactory {
-    public IngredientJS of(Value... values) {
+    public IngredientJS of(Object... values) {
         IngredientJS wrapper = new IngredientJS();
         if (values != null) {
-            for (Value value : values) {
-                Ingredient ingredient = IngredientResolver.fromValue(value);
+            for (Object value : values) {
+                Ingredient ingredient = IngredientResolver.fromValue(toValue(value));
                 wrapper.or(ingredient);
             }
         }
         return wrapper;
+    }
+
+    private static Value toValue(Object value) {
+        return value == null ? null : Value.asValue(value);
     }
 
     public IngredientJS item(String id) {
