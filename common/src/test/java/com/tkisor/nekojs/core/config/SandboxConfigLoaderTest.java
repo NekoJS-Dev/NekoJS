@@ -28,7 +28,7 @@ class SandboxConfigLoaderTest {
 
         assertEquals(SandboxConfig.defaultConfig(), loaded);
         assertEquals(0L, loaded.scriptStatementLimit());
-        assertEquals(SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS, loaded.scriptRunawayTimeoutSeconds());
+        assertEquals(0, loaded.scriptRunawayTimeoutSeconds());
         assertFalse(loaded.allowThreads());
         assertFalse(loaded.allowReflection());
         assertFalse(loaded.allowAsm());

@@ -15,14 +15,14 @@ public record SandboxConfig(
          * 下次取用时自动重建，但已注册的 listeners/timers 会丢失）——常规失控保护请用
          * {@link #scriptRunawayTimeoutSeconds}，本上限仅作为整合包作者需要的硬性预算兜底。 */
         long scriptStatementLimit,
-        /** 同步执行失控看门狗（秒，0 = 禁用，默认 10）。基于语句检查点的滑动窗口：只要宿主代码持续执行
+        /** 同步执行失控看门狗（秒，0 = 禁用，默认关闭）。基于语句检查点的滑动窗口：只要宿主代码持续执行
           未让出（检查点间隙 ≤ 250ms，含事件间隙/长宿主调用后的返回），窗口累加；超过该秒数即判定失控
           循环并关闭 Context——这是终止同步 while(true){} 的唯一可靠手段。每次让出都会重置窗口，
           长驻环境无论累计执行多少语句都不会被误杀。不消耗语句的阻塞（宿主调用内部 IO/sleep）不可见。 */
         int scriptRunawayTimeoutSeconds
 ) {
-    /** 失控看门狗默认窗口（10s）：足以容忍合法的启动期重计算，又把服务器线程的冻结时长限制在秒级。 */
-    public static final int DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS = 10;
+    /** 失控看门狗默认窗口：0（禁用）——按项目要求，保护机制默认全部关闭，需要者显式开启。 */
+    public static final int DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS = 0;
 
     public static SandboxConfig defaultConfig() {
         return new SandboxConfig(false, false, false, false, true, true, false, true, 30, 0,
