@@ -256,24 +256,24 @@ CR 用 Forge `eventhandler.Event` 谓词（**更宽**——凡 Forge Event 均�
 | `LivingEntitySpec` | ALL | 8 | 三平台；`MixinLivingEntity` |
 | `PlayerSpec` | ALL | 9 | 三平台；`MixinPlayer` |
 | `BlockStateSpec` | NF_ONLY | 3 | NF121/NF26 |
-| `EventSpec` | NF_ONLY | 2 | NF121/NF26；**CR 不可实现**（Event 基类先于 mixin 配置加载，javadoc 说明） |
 | `LevelSpec` | NF_ONLY | 10 | NF121/26.1/26.2 |
 | `MutableComponentSpec` | NF_ONLY | 30 | NF121/NF26 |
 | `ServerSpec` | NF_ONLY | 1 | neoforge-shared |
 
 注：NF26 mixin json 仅注册 4 个 mixin（Level/MutableComponent/Player/MinecraftServer）；Block/BlockState/Entity/Event/ItemStack/LivingEntity
 的 Extension 接口在 26-shared 存在但 **mixin 未注册**（26.x 平台 inject 面实际比接口面窄——差距项）。
+（2026-08-15 裁决：`EventSpec` 及其 `EventExtension`/`MixinEvent`/interface_injection 实现已整体移除，见 rework plan H-3；上表为移除后现状。）
 
-## 6. 事件取消面现状（三套习惯并存）
+## 6. 事件取消面现状（2026-08-15 裁决后）
 
-1. **返回 `true` 即取消**（全平台主通道）：`EventBusJS` 可取消 listener 路径把 JS 返回值 `true` 翻译为原生 `setCanceled(true)`
-   （CR/NF 两个 `EventBusForgeBridge` + NF `ScriptEventsJS`）。
-2. **`event.cancel()` / `event.isCancelled()`**（仅 NF）：`EventSpec.neko$cancel`（`@RemapByPrefix` 去前缀）经 `MixinEvent`
-   注入 NeoForge `Event` 基类；CR 无对应（基类不可 mixin）。
-3. **原生 `setCanceled(true)` / `isCanceled()`**：NF/CR 原生事件对象自身方法始终可见。
+跨平台统一约定为**监听器返回 `true` 即取消**：`EventBusJS` 可取消 listener 路径把 JS 返回值 `true` 翻译为原生
+`setCanceled(true)`（CR/NF 两个 `EventBusForgeBridge` + NF `ScriptEventsJS`）。NF/CR 原生事件对象自身的
+`setCanceled(true)` / `isCanceled()` 始终可用（version 层原生面）。
 
-拼写分裂：注入的 `isCancelled`（双 l）vs 原生 `isCanceled`（单 l）在 NF 脚本侧同时可见。设计基线 §7.3 要求 stable 统一为
-显式 `event.cancel()` 并弃用「返回 true」隐式约定——**尚未落地**（待用户决策，见 rework plan H-3）。
+原 mixin 注入的 `event.cancel()` / `event.isCancelled()`（`EventSpec` + NF121 `MixinEvent` + 26.x
+`nekojs.interface_injection.json` 的 Event 条目）已于 2026-08-15 按用户裁决移除——同时消除与原生
+`isCanceled` 的拼写分裂和「CR Event 基类不可 mixin」造成的跨平台不对称。设计基线 §7.3 的
+「显式 `event.cancel()`」目标相应修订为维持 return-true 约定（偏离记录见 rework plan H-3）。
 
 ## 7. tier 现状
 

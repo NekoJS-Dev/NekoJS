@@ -15,7 +15,7 @@
 | N-3 | 同概念三套脚本名 | id：`Identifier`(NF26)/`ResourceLocation`(NF121,CR)；文本：`Component`/`MutableComponent`(NF) vs `TextComponent`(CR)；NBT：`CompoundTag`(NF) vs `NBTTagCompound`(CR)；实体：`EntityType`(NF) vs `EntityEntry`(CR) | 跨平台脚本必须条件分支；§4.1 stable 层不允许 |
 | N-4 | 同名不同物 | `Fluids`：NF=vanilla `Fluids` 常量类，CR=`FluidRegistry`；`NativeEvents`：NF=可用，CR=显式抛异常 | 语义分裂最危险的一类（脚本不报错但行为不同） |
 | N-5 | javadoc 与实际绑定名不符 | `IdFacade` javadoc 写 `{@code Id}`，实际全局名 `ID` | 文档错误（低风险可修，L-1） |
-| N-6 | 事件取消拼写分裂 | 注入 `isCancelled()`（双 l）与原生 `isCanceled()`（单 l）在 NF 同时可见 | 与 H-3 一并处理 |
+| N-6 | 事件取消拼写分裂 | 注入 `isCancelled()`（双 l）与原生 `isCanceled()`（单 l）在 NF 同时可见 | **已解决**（2026-08-15 裁决移除 mixin 注入面，见 H-3） |
 | N-7 | 历史遗留 `IDJS.of` 返回 `Object` | 已被 `NekoId` + `IdFacade` 取代，`IDJS` 类已不存在 | **已解决**，记录为规则先例：新 facade 不返回 `Object` |
 
 ### 1.2 平台差异（缺口 vs 刻意降级）
@@ -72,7 +72,7 @@ CR 生命周期/注册表事件手动转发（FML 限制）。
 |---|---|
 | 基础工具 | `Time`/`Utils`（+`Color`/`UUID`/`StringUtils`）是平台注册的 helper 类，**不在 core 契约/golden**；`NbtIO` 未独立（IO 并入 `NBT.read/write`，需在契约中确认归属）；`GlobalData` 现名 `global`（小写、NF-only、绑裸 Map） |
 | Item/Ingredient/Fluid | stable 层（不暴露原生类）**完全未建立**：现有 `Item`/`Ingredient`/`Fluid` 全部返回原生 `ItemStack`/`Ingredient`/`FluidStack`（任务约束：保留 vanilla 类名绑定，不换 wrapper）→ stable facade 与原生绑定需分层共存（H-4） |
-| 事件 | `event.cancel()` 统一未落地（§6 三套习惯）；五事件组的 payload/取消语义无 contract tests；`EntityEvents` dispatch 键类型分裂（`Entity` vs `EntityType`） |
+| 事件 | 五事件组的 payload/取消语义无 contract tests；`EntityEvents` dispatch 键类型分裂（`Entity` vs `EntityType`）。**取消统一已裁决（2026-08-15）**：移除 mixin 注入的 cancel/isCancelled，约定维持返回 `true` + 原生 `setCanceled`（见 H-3 实施记录） |
 | 配方 | stable 子集（ids/count/exists/remove + shaped/shapeless/smelting）未从 `RecipeEventJS` 大面上标记或剥离；`@nekojs/feature/recipe-json` 模块未落地 |
 | Network | `NetworkJS` 行为已跨平台对齐（NF26/NF121/CR 三份实现、getter 一致），但未进契约；channel/payload 协议未按 §7.5 承诺化 |
 
@@ -142,13 +142,18 @@ domain contract 提升进 stable（§9.1 阶段 gate）。**
 | M-1 | Value 泄漏修复（§1.3 表全部 9 文件）：公开参数 `Value`→`Object`，边界内 `Value.asValue` 转换；`TestJS.assertThrows` 同法（保留友好错误消息） | 脚本调用形状不变（JS 值经 `Object` 形参仍以 `Value` 到达）；`ScriptEventRegistrationEvent.register` callKey 变化 → golden 显式 regen + review（行为等价的签名变化，非破坏） |
 | M-2 | 命名规则文档化（本文件 §3），类改名**不实施**（`FluidIngredientJS.java` 等文件正被并行修改，避免冲突） | 后续批次单独提交 |
 
+### 高风险——已裁决实施（2026-08-15）
+
+| ID | 项 | 裁决与实施 |
+|---|---|---|
+| H-3 | 事件取消统一 | **用户裁决：移除 mixin 注入方案，不再追求显式 `event.cancel()`。** 已实施：删除 `EventSpec`（含 `EventSpecTest`）、NF121/NF26S `EventExtension`、NF121 `MixinEvent` + mixins.json 条目、26-shared `nekojs.interface_injection.json` 的 `net/neoforged/bus/api/Event` 条目。跨平台取消约定 = 监听器返回 `true`（全平台）+ 原生 `setCanceled(true)`/`isCanceled()`（version 层原生面）。同时消除 `isCancelled/isCanceled` 拼写分裂与「CR Event 基类不可 mixin」的不对称（偏离设计基线 §7.3 的理由：基类注入在 CR 不可实现、且与原生方法拼写/语义双轨）。 |
+
 ### 高风险（**待用户决策，不实施**）
 
 | ID | 项 | 决策点 |
 |---|---|---|
 | H-1 | 脚本可见符号改名/统一：`Identifier`↔`ResourceLocation`、`TextComponent`↔`Component`、`NBTTagCompound`↔`CompoundTag`、`EntityEntry`↔`EntityType`、`Fluids`（CR 语义分裂）、`global`→`GlobalData` | 改名即破坏；选主名+别名保留期；`Fluids` 需决定 CR 绑定改名（如 `FluidRegistry`）还是换绑 vanilla 常量 |
 | H-2 | 跨平台 API 对齐：CR 补 `global`（成本最低，建议首个批准）；其余按「别名策略 vs platform 模块声明」逐项定 | 对齐方向与别名保留期 |
-| H-3 | 事件取消统一 `event.cancel()`（弃用返回-true 约定）：CR Event 基类不可 mixin 的替代方案（wrapper 层统一注入 / 维持 return-true 为 CR 方言）+ `isCancelled/isCanceled` 拼波 | §7.3 明确要求，但涉及全平台行为切换与弃用窗口 |
 | H-4 | tier 落地与 core 契约扩充：`Time`/`Utils`/`GlobalData`/`Network` 进 stable 需先写 domain contract（§9.1 gate）；feature/platform/version 模块注册机制启用；`Item`/`Ingredient`/`Fluid` stable facade 层是否建立（与「保留原生类绑定」共存方式） | 工作量最大；决定 1.0.0 冻结的实际边界 |
 | H-5 | 事件语义去重：CR `worldLoad/worldUnload` 双入口；7 个别名 bus 主名方向；`ItemEvents.tooltip` side 分歧（CLIENT vs SERVER） | 每个 bus 的 stable 准入判定 |
 | H-6 | `EntityEvents` dispatch 键统一（`Entity` 实例 vs `EntityType` id） | 键类型变化对已有脚本分发的影响面 |
@@ -160,7 +165,7 @@ domain contract 提升进 stable（§9.1 阶段 gate）。**
 1. **0.12.x（当前）**：实施 L/M 批次；所有改动保持运行时注册语义不变（constraint：EventGroup/BindingRegistry 行为不变，
    仅表面参数形态与文档）；golden 变化逐条 review 入库。
 2. **0.13（建议）**：用户决策 H-1/H-2/H-5 中「别名可解决」的子集 → 加别名 + `@Deprecated` 主旧名（首次建立脚本侧弃用跑道：
-   至少保留一个 minor）；H-3 若批准，`event.cancel()` 先在 NF 双语并存（cancel + return-true），CR 方案落地后写契约。
+   至少保留一个 minor）；事件取消已按 H-3 裁决落地（return-true 约定，无 mixin 面），契约按该约定描述取消语义。
 3. **1.0.0 前**：H-4 按 domain contract 逐域推进（基础工具 → 事件 → 配方 → Network 顺序，与 §7 冻结范围一致）；
    每域「normative contract → 四平台实现 → ApiManifest conformance」闭环后进 golden。
 4. **弃用窗口约定**：脚本侧符号弃用 = `@Deprecated` + javadoc 替代品 + wiki 条目；移除最早发生在下一个 minor；

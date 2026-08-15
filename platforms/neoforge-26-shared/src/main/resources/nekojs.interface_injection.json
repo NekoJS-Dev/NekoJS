@@ -1,7 +1,4 @@
 {
-  "net/neoforged/bus/api/Event": [
-    "com/tkisor/nekojs/api/inject/EventExtension"
-  ],
   "net/minecraft/world/level/block/Block": [
     "com/tkisor/nekojs/api/inject/BlockExtension"
   ],
