@@ -43,7 +43,7 @@
 
 5. 编辑器配置贡献（各 backend 自报片段，幂等合并）
    ├─ TS：合并各脚本目录 jsconfig.json 的 paths / include / typeRoots（指向 .neko_probe/typescript/）
-   ├─ Python：合并 nekojs/pyrightconfig.json 的 extraPaths（指向 .neko_probe/python）
+   ├─ Python：合并 pyrightconfig.json 的 extraPaths（指向 .neko_probe/python；游戏根/nekojs 根/各脚本目录各一份，见下文 Pylance 说明）
    └─ snippets（TS only）：合并进 nekojs/.vscode/nekojs.code-snippets
 ```
 
@@ -243,7 +243,7 @@ ProbeEvents.snippets(event => {
 `/nekojs probe python` 生成 `.neko_probe/python/nekojs/` stub 包（PEP 484/561），让 pyright / Pylance / Jedi 为 Python 脚本提供补全：
 
 1. 脚本顶部写魔术 import：`from nekojs import *` —— **转译器会剥离它**（不产出任何 JS、source map 不受影响），它只为类型检查器存在。
-2. pyright 通过 `extraPaths` 解析到该 stub 包：NekoJS 把 `.neko_probe/python` 自动（幂等、去重）合并进 `<game>/nekojs/pyrightconfig.json` 的 `extraPaths`。
+2. pyright 通过 `extraPaths` 解析到该 stub 包：NekoJS 把 `.neko_probe/python` 自动（幂等、去重）合并进多个 `pyrightconfig.json` 的 `extraPaths`（游戏根目录、`nekojs/`、各脚本目录各一份）。**注意 Pylance 只读取「工作区根」的 pyrightconfig.json**（pyright CLI 才会从源文件就近向上发现）——请在编辑器中直接打开游戏目录（或 `nekojs/`、某个脚本目录），而不是它们的上层文件夹，否则 Python 补全不生效。
 3. 补全内容：
    - `nekojs/__init__.pyi`：全局绑定 + 事件组入口 + `probe.addGlobal` 的全局声明（`__all__` 框定，`from nekojs import *` 的目标）；
    - `nekojs/_java/<java.包>/__init__.pyi`：Java 类型 stub（泛型展平为 `Any`；成员名、参数数量、字段类型保留，够日常补全）；

@@ -75,14 +75,27 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 把本 backend 的输出目录（{@code .neko_probe/python}，相对 {@code nekojs/} 根）合并进
-     * {@code nekojs/pyrightconfig.json} 的 {@code extraPaths}（幂等、去重；fresh 文件附带默认）。
-     * 让 pyright/pylance 解析到 {@code from nekojs import *} 的 stub 包。
+     * 把本 backend 的输出目录（{@code .neko_probe/python}）合并进 pyrightconfig.json 的
+     * {@code extraPaths}（幂等、去重；fresh 文件附带默认）。
+     *
+     * <p>**每个可能被当作工作区打开的目录都写一份**：Pylance 只读取「工作区根」的
+     * pyrightconfig.json（pyright CLI 才会从源文件就近向上发现），单一嵌套配置在用户打开
+     * 游戏目录 / 脚本目录时会被忽略，导致 {@code from nekojs import *} 无法解析、无补全。
+     * 与 TS 侧 jsconfig「每个脚本目录一份」的策略对齐：nekojs/ 根、四个脚本目录、游戏根目录。
      */
     @Override
     public void contributeEditorConfig(EditorConfigContributor contributor, ProbeContext ctx) {
-        String rel = FileEditorConfigContributor.relativePosix(ctx.paths().root(), ctx.languageDir());
-        contributor.mergePyrightExtraPaths(ctx.paths().root().resolve("pyrightconfig.json"), List.of(rel));
+        com.tkisor.nekojs.core.fs.NekoJSPaths paths = ctx.paths();
+        Path out = ctx.languageDir();
+        contributor.mergePyrightExtraPaths(paths.root().resolve("pyrightconfig.json"),
+                List.of(FileEditorConfigContributor.relativePosix(paths.root(), out)));
+        for (Path scriptDir : List.of(paths.startupScripts(), paths.serverScripts(),
+                paths.clientScripts(), paths.testScripts())) {
+            contributor.mergePyrightExtraPaths(scriptDir.resolve("pyrightconfig.json"),
+                    List.of(FileEditorConfigContributor.relativePosix(scriptDir, out)));
+        }
+        contributor.mergePyrightExtraPaths(paths.gameDir().resolve("pyrightconfig.json"),
+                List.of(FileEditorConfigContributor.relativePosix(paths.gameDir(), out)));
     }
 
     @Override
@@ -618,7 +631,10 @@ public final class PythonProbeBackend implements ProbeBackend {
             - At runtime, the NekoJS transpiler **strips** this line (it emits no JavaScript
               and does not affect the source map). It exists purely for the type checker.
             - The type checker resolves `nekojs` to this stub package via the `extraPaths`
-              entry that NekoJS writes into `nekojs/pyrightconfig.json`.
+              entries that NekoJS writes into pyrightconfig.json files (game root,
+              `nekojs/`, and each script directory). Note Pylance only honors the config
+              at the **workspace root** - open the game directory (or `nekojs/`) in your
+              editor, not a parent folder of it.
 
             After `from nekojs import *`, the global bindings (`Item`, `ServerEvents`,
             `Utils`, ...) and the Java types they expose become visible for completion.
