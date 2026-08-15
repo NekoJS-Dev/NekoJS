@@ -8,6 +8,7 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
+import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
@@ -173,10 +174,35 @@ public final class NekoScriptCatalog {
 
     public static List<EventCatalogEntry> events(IPluginRuntime runtime) {
         List<EventCatalogEntry> entries = new ArrayList<>();
-        for (ScriptType type : ScriptType.all()) {
-            entries.addAll(events(runtime, type));
+        for (EventGroup group : runtime.eventGroups().values()) {
+            for (var entry : group.viewBuses().entrySet()) {
+                EventGroup.BusHolder holder = entry.getValue();
+                // 每个 bus 只产出一条目录条目，并用它的规范 ScriptType 打标签。不能按
+                // ScriptType 逐类型各收集一遍：同一条 SERVER bus 会被打上 STARTUP/SERVER/TEST
+                // 多个标签重复入目录，而 side 过滤（scriptType().test(side)）会把这些同总线
+                // 条目全部放进同一个 side 文件（如 startup 同时命中 STARTUP 与 SERVER 两个标签），
+                // 导致 Python .pyi / TS .d.ts 里同一事件重复声明（Pylance 报「方法声明被同名
+                // 声明遮盖」）。
+                var bus = firstApplicableBus(holder);
+                if (bus == null) continue;
+                Class<?> dispatchKeyType = bus.bus() instanceof DispatchEventBus<?, ?> dispatchBus
+                        ? dispatchBus.dispatchKey().keyType()
+                        : null;
+                entries.add(EventCatalogEntry.of(
+                        group.name(), entry.getKey(), holder.scriptType(),
+                        bus.bus().eventType(), dispatchKeyType, bus.canCancel(), bus.canDispatch()));
+            }
         }
         return List.copyOf(entries);
+    }
+
+    /** 取 holder 在任一适用环境下暴露的 bus（同一 EventBusJS 实例，与目标环境无关）。 */
+    private static EventBusJS<?, ?> firstApplicableBus(EventGroup.BusHolder holder) {
+        for (ScriptType type : ScriptType.all()) {
+            EventBusJS<?, ?> bus = holder.getBus(type);
+            if (bus != null) return bus;
+        }
+        return null;
     }
 
     public static List<EventCatalogEntry> events(IPluginRuntime runtime, ScriptType scriptType) {

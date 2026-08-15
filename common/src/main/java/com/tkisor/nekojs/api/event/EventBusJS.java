@@ -193,6 +193,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
+    // bus 的运行时类型由 of() 工厂按 dispatchKey 决定，canDispatch() 已保证是 DispatchEventBus；
+    // 此处只是擦除层面的泛型收窄
+    @SuppressWarnings("unchecked")
     public boolean post(EVENT event, KEY key) {
         if (canDispatch()) {
             try {
@@ -206,6 +209,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /** 已注册监听的定向 key 集合；非 dispatch 总线返回空集。 */
+    @SuppressWarnings("unchecked")
     public Set<KEY> registeredKeys() {
         if (canDispatch()) {
             return ((DispatchEventBus<EVENT, KEY>) bus).registeredKeys();
@@ -397,6 +401,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return registerDispatch(CommonPriority.NORMAL, listener, key);
     }
 
+    // bus 的运行时类型由 of() 工厂按 dispatchKey 决定，canDispatch() 已保证是 DispatchEventBus；
+    // 此处只是擦除层面的泛型收窄
+    @SuppressWarnings("unchecked")
     private EventListenerToken<EVENT> registerDispatch(byte priority, Value listener, Value key) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
@@ -435,6 +442,9 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return registerDispatchCancellable(CommonPriority.NORMAL, listener, key);
     }
 
+    // bus 的运行时类型由 of() 工厂按 dispatchKey 决定，canDispatch() 已保证是 DispatchCancellableEventBus；
+    // 此处只是擦除层面的泛型收窄
+    @SuppressWarnings("unchecked")
     private EventListenerToken<EVENT> registerDispatchCancellable(byte priority, Value listener, Value key) {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);

@@ -6,7 +6,7 @@ import com.tkisor.nekojs.api.WithScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -24,7 +24,9 @@ public class EventGroup {
 
     private EventGroup(String name) {
         this.name = Objects.requireNonNull(name);
-        this.buses = new HashMap<>();
+        // LinkedHashMap：保持注册顺序，viewBuses()/probe 目录迭代确定（HashMap 的
+        // String key 迭代序依赖 hashCode 内部布局，跨 JDK/运行脆弱）
+        this.buses = new LinkedHashMap<>();
     }
 
     public String name() {
