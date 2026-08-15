@@ -26,8 +26,12 @@ public interface ServerEvents {
     EventBusJS<TickEvent.ServerTickEvent, Void> TICK_POST =
             GROUP.server("tickPost", TickEvent.ServerTickEvent.class);
 
+    // worldLoad/worldUnload 与 LevelEvents.loaded/unloaded 同语义双入口（历史遗留）。
+    // 脚本侧建议迁移到 LevelEvents.loaded/unloaded（跨平台名，见 docs/api-rework-plan.md H-5）。
+    @Deprecated
     EventBusJS<WorldEvent.Load, Void> WORLD_LOAD =
             GROUP.server("worldLoad", WorldEvent.Load.class);
+    @Deprecated
     EventBusJS<WorldEvent.Unload, Void> WORLD_UNLOAD =
             GROUP.server("worldUnload", WorldEvent.Unload.class);
 
