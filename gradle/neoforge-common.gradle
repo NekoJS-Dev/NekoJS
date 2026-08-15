@@ -8,8 +8,9 @@
 //   3. apply from: rootProject.file('gradle/neoforge-common.gradle')
 //   4. 若平台在 neoForge.mods."${mod_id}" 中把 :common / :common-api 的 main source set
 //      注册为 ModDev mod source set（开发运行需要共享类可见），必须在 ext 声明
-//      register_shared_dev_mod_source_sets = true，以启用 verifyDevModSourceSets 门禁；
-//      不注册共享 source set 的平台（如 1.21.1）不要声明该属性。
+//      register_shared_dev_mod_source_sets = true，以启用 verifyDevModSourceSets 门禁。
+//      当前三个 NeoForge 平台（1.21.1 / 26.1 / 26.2）均注册共享 source set 并启用门禁；
+//      不注册共享 source set 的平台不要声明该属性。
 //
 // 用 apply script 而非 buildSrc convention plugin：第三方插件 (moddev / unified-publishing)
 // 的 plugin marker 坐标随版本漂移，在 buildSrc 内硬编码 implementation 依赖会成为额外维护点；

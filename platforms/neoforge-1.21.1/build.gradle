@@ -34,6 +34,9 @@ sourceSets {
 
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea
 // 由 gradle/neoforge-common.gradle 统一配置（三平台字节级相同的部分）
+// 开发运行需要 :common / :common-api 类可见（mixin 注入的扩展接口引用 Spec 类），
+// 与 26.x 一致地注册为 ModDev mod source set 并启用 verifyDevModSourceSets 门禁。
+ext.register_shared_dev_mod_source_sets = true
 apply from: rootProject.file('gradle/neoforge-common.gradle')
 
 neoForge {
@@ -77,6 +80,8 @@ neoForge {
     mods {
         "${mod_id}" {
             sourceSet(sourceSets.main)
+            sourceSet(project(':common').sourceSets.main)
+            sourceSet(project(':common-api').sourceSets.main)
         }
     }
 }
