@@ -80,7 +80,7 @@ Java facade 接口在 `common-api/.../api/facade/`，默认实现在 `common/...
 | `global` | helper | `NekoGlobal.shared()` 共享 Map | PORTABLE | 2026-08-15 CR 补齐（原为 NF-only 缺口） |
 | `Test` | helper | `TestJS`（common，TEST-only） | PORTABLE | |
 | `RecipeSchema` | helper | `RecipeSchemaBinding`（common） | PORTABLE | 配方域，见 §2.5 |
-| `Identifier` / `ResourceLocation` | class | NF26=`net.minecraft.resources.Identifier`；NF121/CR=`ResourceLocation` | 全平台（**JS 名分裂**） | 同一概念三个名字（26.x 改名） |
+| `Identifier` / `ResourceLocation` | class | NF26=`net.minecraft.resources.Identifier`；NF121/CR=`ResourceLocation` | 全平台（**JS 名分裂**） | 同一概念三个名字（26.x 改名）；**id 输入已统一 `string\|NekoId`**（三平台适配器覆盖，rework plan H-1a 裁决），原生绑定保留为 version 层 |
 | `MutableComponent` | class | `net.minecraft.network.chat.MutableComponent` | NF26+NF121 | |
 | `TextComponent` | class | `net.minecraft.util.text.ITextComponent`（接口） | CR | 1.12.2 对应物；与 NF 的 `Component` 非同名 |
 | `Component` | class | `net.minecraft.network.chat.Component` | NF26+NF121 | |
@@ -128,7 +128,7 @@ Java facade 接口在 `common-api/.../api/facade/`，默认实现在 `common/...
 | `AABB` | class | `AABB`/`AxisAlignedBB` | PORTABLE（类名不同） | |
 | `CompoundTag` | class | `net.minecraft.nbt.CompoundTag` | NF26+NF121 | CR 对应 `NBTTagCompound`（名不同） |
 | `NBTTagCompound` | class | `net.minecraft.nbt.NBTTagCompound` | CR | |
-| `NativeEvents` | helper | `NativeEventsJS`（STARTUP-only） | 全平台（**语义分裂**） | NF=可用原生事件桥；CR=`onEvent` 显式抛 `UnsupportedOperationException`（诚实降级） |
+| `NativeEvents` | helper | `NativeEventsJS`（STARTUP-only） | 全平台（**已弃用**） | NF=原生事件桥，弃用指向 `ScriptEvents`（能力对等，rework plan D-2）；CR=`onEvent` 显式抛 `UnsupportedOperationException`（本就不可用，弃用待移除） |
 
 ### 2.5 配方 / Network / 客户端域
 
