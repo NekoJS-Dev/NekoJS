@@ -36,7 +36,8 @@ public interface ItemEvents {
                             e -> e.getItemStack().getItem()));
     // 拾取事件：1.12.2 类名为 EntityItemPickupEvent（无 Post 变体）。
     // getItem()→EntityItem，再 .getItem()→ItemStack，再 .getItem()→Item
-    // canPickUp/pickedUp 绑同一 Forge 类作为别名（1.12.2 无独立的 Post 事件）
+    // canPickUp/pickedUp 绑同一 Forge 类作为别名（1.12.2 无独立的 Post 事件）。
+    // 两者均为跨平台主名（NF：canPickUp=Pre、pickedUp=Post；CR：同一事件坍缩），均不弃用。
     EventBusJS<EntityItemPickupEvent, Item> CAN_PICK_UP =
             GROUP.server("canPickUp", EntityItemPickupEvent.class,
                     EventBusFactory.createDispatchKey(Item.class,

@@ -21,14 +21,20 @@ public interface LevelEvents {
             GROUP.server("tickPre", LevelTickEvent.Pre.class);
     EventBusJS<LevelTickEvent.Post, Void> TICK_POST =
             GROUP.server("tickPost", LevelTickEvent.Post.class);
+    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost（docs/api-rework-plan.md H-5）。
+    @Deprecated
     EventBusJS<LevelTickEvent.Post, Void> TICK =
             GROUP.server("tick", LevelTickEvent.Post.class);
     EventBusJS<ExplosionEvent.Start, Void> EXPLOSION_START =
             GROUP.server("explosionStart", ExplosionEvent.Start.class);
+    // beforeExplosion：explosionStart 的历史别名。脚本侧建议迁移到 explosionStart。
+    @Deprecated
     EventBusJS<ExplosionEvent.Start, Void> BEFORE_EXPLOSION =
             GROUP.server("beforeExplosion", ExplosionEvent.Start.class);
     EventBusJS<ExplosionEvent.Detonate, Void> EXPLOSION_DETONATE =
             GROUP.server("explosionDetonate", ExplosionEvent.Detonate.class);
+    // afterExplosion：explosionDetonate 的历史别名。脚本侧建议迁移到 explosionDetonate。
+    @Deprecated
     EventBusJS<ExplosionEvent.Detonate, Void> AFTER_EXPLOSION =
             GROUP.server("afterExplosion", ExplosionEvent.Detonate.class);
 

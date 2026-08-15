@@ -38,10 +38,15 @@ public interface PlayerEvents {
             GROUP.server("advancement", AdvancementEvent.AdvancementEarnEvent.class);
     EventBusJS<PlayerContainerEvent.Open, Void> CONTAINER_OPENED =
             GROUP.server("containerOpened", PlayerContainerEvent.Open.class);
+    // inventoryOpened：containerOpened 的跨版本兼容别名。脚本侧建议迁移到 containerOpened
+    // （docs/api-rework-plan.md H-5）。
+    @Deprecated
     EventBusJS<PlayerContainerEvent.Open, Void> INVENTORY_OPENED =
             GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class);
     EventBusJS<PlayerContainerEvent.Close, Void> CONTAINER_CLOSED =
             GROUP.server("containerClosed", PlayerContainerEvent.Close.class);
+    // inventoryClosed：containerClosed 的跨版本兼容别名。脚本侧建议迁移到 containerClosed。
+    @Deprecated
     EventBusJS<PlayerContainerEvent.Close, Void> INVENTORY_CLOSED =
             GROUP.server("inventoryClosed", PlayerContainerEvent.Close.class);
     EventBusJS<PlayerInteractEvent.EntityInteract, Void> ENTITY_INTERACT =

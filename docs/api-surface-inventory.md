@@ -159,7 +159,7 @@ CR 用 Forge `eventhandler.Event` 谓词（**更宽**——凡 Forge Event 均�
 | `tick` | — | 是 | **CR only** | CR 保留的无 filter 兼容别名 |
 | `cloned` / `respawned` / `changedDimension` | — | CR 是 / NF 否 | 全 | |
 | `advancement` | — | CR 是 / NF 否 | 全 | 事件类不同（CR 单类） |
-| `containerOpened` / `containerClosed` / `inventoryOpened` / `inventoryClosed` | — | CR 是 / NF 否 | 全 | `inventory*` 为 `container*` 别名 bus |
+| `containerOpened` / `containerClosed` / `inventoryOpened` / `inventoryClosed` | — | CR 是 / NF 否 | 全 | `inventory*` 为 `container*` 别名 bus，**已弃用**（2026-08-15 主名方向裁决，指向 `container*`） |
 | `entityInteract` | — | 是 | 全 | |
 | `crafted` / `smelted` / `destroyed` | `Item` | CR 是 / NF 否 | 全 | |
 | `inventoryChanged` | `Item` | 否 | 全 | 包装事件 `InventoryChangedEventJS` |
@@ -196,9 +196,9 @@ CR 用 Forge `eventhandler.Event` 谓词（**更宽**——凡 Forge Event 均�
 | bus | side | dispatch | cancellable | 覆盖 | 备注 |
 |---|---|---|---|---|---|
 | `rightClicked` | SERVER | `Item` | 是 | 全 | |
-| `tooltip` | **CLIENT(NF) / SERVER(CR)** | `Item` | 否 | 全 | **tier 分歧**，未进契约（ROADMAP 已记录） |
+| `tooltip` | **CLIENT(NF) / SERVER(CR)** | `Item` | 否 | 全 | **tier 分歧维持**（2026-08-15 裁决：side 模型不同不强 align，见 rework plan H-5），不进 stable 契约 |
 | `canPickUp` | SERVER | `Item` | 否 | 全 | |
-| `pickedUpPre` | SERVER | `Item` | 否 | **NF only** | CR 无独立 Post 事件 |
+| `pickedUpPre` | SERVER | `Item` | 否 | **NF only（已弃用 → canPickUp）** | CR 无独立 Post 事件；主名 canPickUp/pickedUp 为跨平台名 |
 | `pickedUp` | SERVER | `Item` | 是(CR) | 全 | CR 与 `canPickUp` 绑同一 Forge 类（别名）；NF=`...PickupEvent.Post` |
 | `dropped` | SERVER | `Item` | 是 | 全 | |
 | `entityInteracted` | SERVER | `Item` | 是 | 全 | |
@@ -224,11 +224,11 @@ CR 用 Forge `eventhandler.Event` 谓词（**更宽**——凡 Forge Event 均�
 | `CommandEvents` | SERVER | `register`（— / 否）；`command`（— / 是） | 全 | CR `register`=`FMLServerStartingEvent` 手动转发 |
 | `RegistryEvents` | STARTUP | `item/block/entityType/fluid/creativeModeTab/soundEvent/mobEffect/potion/villagerType/enchantment`（全 PLAIN） | 全 | NF 多 `particleType`/`paintingVariant`（CR 无注册表，刻意不支持）；CR 全为手动转发包装事件 |
 | `CapabilityEvents` | STARTUP | `register` | **NF only** | platform 层 |
-| `LevelEvents` | SERVER | `loaded/unloaded/saved/tickPre/tickPost/explosionStart/explosionDetonate` | 全 | NF 另有别名 bus `tick`、`beforeExplosion`、`afterExplosion`（CR 无）；CR 全可取消（谓词宽） |
+| `LevelEvents` | SERVER | `loaded/unloaded/saved/tickPre/tickPost/explosionStart/explosionDetonate` | 全 | NF 另有别名 bus `tick`、`beforeExplosion`、`afterExplosion`（**已弃用** → `tickPost`/`explosionStart`/`explosionDetonate`，CR 无）；CR 全可取消（谓词宽） |
 | `NetworkEvents` | SERVER+CLIENT | `server`/`client`（dispatch `String` channel / 否） | 全 | `NetworkDataEventJS` getter 跨平台一致 |
 | `ScriptEvents` | STARTUP | `server`/`client`（— / 否） | 全 | common 同源；payload=`ScriptEventRegistrationEvent`（契约 member×2）；`register(Value config)` **Value 泄漏** |
 | `ProbeEvents` | SERVER | `modifyType/assignType/addGlobal/snippets` | 全 | common 同源 |
-| `ClientEvents` | CLIENT | NF：`tickPre/tickPost/tick/loggedIn/loggedOut/cloned/commandRegistry`（game bus）+ `registerKeyMappings/registerMenuScreens/registerRenderers(+2 别名)/registerParticleProviders`（mod bus）+ `generateData/lang`（dispatch String）+ `hud`/`screenRender`（bindTransformed）；CR：仅 `tick/chatReceived/generateAssets/lang` | **组全平台，bus 大量 NF only** | CR 缺 14 个 bus；`chatReceived` 为 CR 独有 |
+| `ClientEvents` | CLIENT | NF：`tickPre/tickPost/tick(已弃用→tickPost)/loggedIn/loggedOut/cloned/commandRegistry`（game bus）+ `registerKeyMappings/registerMenuScreens/registerRenderers(+2 已弃用别名)/registerParticleProviders`（mod bus）+ `generateData/lang`（dispatch String）+ `hud`/`screenRender`（bindTransformed）；CR：仅 `tick/chatReceived/generateAssets/lang` | **组全平台，bus 大量 NF only** | CR 缺 14 个 bus；`chatReceived` 为 CR 独有 |
 | `RecipeViewerEvents` | CLIENT | `addEntries/removeEntries`(dispatch `String`)、`removeRecipes/removeCategories/addInformation` | NF（**随 JEI 门控注册**，2026-08-15 起） | 由 `RecipeViewerEventsPlugin`（clientOnly + requiredMods="jei"）注册，事件由 JEI 侧插件 post；无 JEI 时不注册（不出现永不触发的空壳面）；CR 无对应 |
 
 ## 4. 类型适配器（JSTypeAdapter 注册）

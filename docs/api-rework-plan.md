@@ -84,7 +84,7 @@ CR 生命周期/注册表事件手动转发（FML 限制）。
 | D-2 | `NativeEvents`（NF）与 `ScriptEvents.register` 都能注册原生事件 | 两套面：前者任意原生类+Value handler，后者组/名声明式。方向：`ScriptEvents` 进 stable，`NativeEvents` 归 platform 模块（H-4） |
 | D-3 | `IngredientFactory`（工厂）与 wrapper `IngredientJS`（`or/and/...`） | 设计如此（工厂造、wrapper 组合），保留；命名规则统一后缀（C-2） |
 | D-4 | `Time`（tick 换算）与 `Performance.now()`（ms 计时） | 语义不同（游戏刻 vs 墙钟），保留但在文档互相指引 |
-| D-5 | NF `ClientEvents.tick`/`LevelEvents.tick` 等 7 个别名 bus 与主名并存 | canonical 方向需决策（H-5） |
+| D-5 | NF `ClientEvents.tick`/`LevelEvents.tick` 等 7 个别名 bus 与主名并存 | **已解决（2026-08-15 裁决）**：主名 = 显式 Pre/Post 式 + 跨平台可用名；别名补 `@Deprecated`（H-5 实施记录见 §4） |
 | D-6 | `RecipeViewerEvents` 组定义完整但从未注册 | 注册或删除（H-8） |
 
 ## 2. 四层归类提案（阶段 C-1）
@@ -147,6 +147,7 @@ domain contract 提升进 stable（§9.1 阶段 gate）。**
 | ID | 项 | 裁决与实施 |
 |---|---|---|
 | H-3 | 事件取消统一 | **用户裁决：移除 mixin 注入方案，不再追求显式 `event.cancel()`。** 已实施：删除 `EventSpec`（含 `EventSpecTest`）、NF121/NF26S `EventExtension`、NF121 `MixinEvent` + mixins.json 条目、26-shared `nekojs.interface_injection.json` 的 `net/neoforged/bus/api/Event` 条目。跨平台取消约定 = 监听器返回 `true`（全平台）+ 原生 `setCanceled(true)`/`isCanceled()`（version 层原生面）。同时消除 `isCancelled/isCanceled` 拼写分裂与「CR Event 基类不可 mixin」的不对称（偏离设计基线 §7.3 的理由：基类注入在 CR 不可实现、且与原生方法拼写/语义双轨）。 |
+| H-5 | 事件别名 bus 主名方向 + tooltip side 分歧 | **用户裁决（2026-08-15）：主名用 `tickPost` 这种，以 API 优先级更高**——即「显式 Pre/Post 式 + 跨平台可用名」为主名，裸别名/单平台冗余别名弃用。已实施（全部 `@Deprecated` + javadoc 指引，行为不变）：NF `ClientEvents.tick`/`LevelEvents.tick`→`tickPost`；`beforeExplosion`→`explosionStart`；`afterExplosion`→`explosionDetonate`；`inventoryOpened/inventoryClosed`（NF+CR）→`containerOpened/containerClosed`；`registerEntityRenderers`/`registerBlockEntityRenderers`→`registerRenderers`；NF `pickedUpPre`→`canPickUp`（跨平台主名 canPickUp/pickedUp——CR 无独立 Pre 事件，两名坍缩到同一事件，注释说明，均不弃用）。**tooltip（自主裁决）：维持现状**——CR SERVER / NF CLIENT 的 side 分歧保留：1.12.2 `ItemTooltipEvent` 仅客户端线程触发但交付 SERVER 脚本（单机 JVM 共享）可用；强行对齐要么改 CR bus side（破坏现有 CR 脚本）要么同组同名双 bus（违反「每 bus 恰好一条目录条目」的 probe 不变量）；该 bus 不进 stable 契约（side 语义不一致，准入标准 1/3 不满足）。CR `worldLoad/worldUnload` 双入口弃用见前批。 |
 
 ### 高风险（**待用户决策，不实施**）
 
@@ -155,7 +156,6 @@ domain contract 提升进 stable（§9.1 阶段 gate）。**
 | H-1 | 脚本可见符号改名/统一：`Identifier`↔`ResourceLocation`、`TextComponent`↔`Component`、`NBTTagCompound`↔`CompoundTag`、`EntityEntry`↔`EntityType`、`Fluids`（CR 语义分裂）、`global`→`GlobalData` | 改名即破坏；选主名+别名保留期；`Fluids` 需决定 CR 绑定改名（如 `FluidRegistry`）还是换绑 vanilla 常量 |
 | H-2 | 跨平台 API 对齐：CR 补 `global`（**已实施 2026-08-15**）；其余按「别名策略 vs platform 模块声明」逐项定 | 对齐方向与别名保留期 |
 | H-4 | tier 落地与 core 契约扩充：`Time`/`Utils`/`GlobalData`/`Network` 进 stable 需先写 domain contract（§9.1 gate）；feature/platform/version 模块注册机制启用；`Item`/`Ingredient`/`Fluid` stable facade 层是否建立（与「保留原生类绑定」共存方式） | 工作量最大；决定 1.0.0 冻结的实际边界 |
-| H-5 | 事件语义去重：CR `worldLoad/worldUnload` 双入口（**已补 `@Deprecated` 指向 `LevelEvents.loaded/unloaded`，2026-08-15**）；7 个别名 bus 主名方向；`ItemEvents.tooltip` side 分歧（CLIENT vs SERVER） | 每个 bus 的 stable 准入判定 |
 | H-6 | `EntityEvents` dispatch 键统一（`Entity` 实例 vs `EntityType` id） | 键类型变化对已有脚本分发的影响面 |
 | ~~H-7~~ | ~~NF26 未注册 mixin 的 Extension 接口处置~~ | **已消解（盘点误报）**：26.x 经 `neoforge.interface_injection.json`（ModDevGradle `interfaceInjectionData`）注入这些接口，并非缺失注册；inventory §5 已修正 |
 | ~~H-8~~ | ~~`RecipeViewerEvents` 未注册组~~ | **已实施（2026-08-15）**：新增 `RecipeViewerEventsPlugin`（neoforge-shared，`clientOnly` + `requiredMods="jei"`）注册组——JEI 在场才注册，无 JEI 不暴露永不触发的空壳面（对齐设计 §4.2） |

@@ -51,9 +51,12 @@ public interface PlayerEvents {
             GROUP.server("containerOpened", PlayerContainerEvent.Open.class);
     EventBusJS<PlayerContainerEvent.Close, Void> CONTAINER_CLOSED =
             GROUP.server("containerClosed", PlayerContainerEvent.Close.class);
-    // inventoryOpened/inventoryClosed：与 containerOpened/closed 同 Forge 类的别名，便于脚本跨版本
+    // inventoryOpened/inventoryClosed：与 containerOpened/closed 同 Forge 类的别名，便于脚本跨版本。
+    // 主名为 containerOpened/containerClosed，脚本侧建议迁移（docs/api-rework-plan.md H-5）。
+    @Deprecated
     EventBusJS<PlayerContainerEvent.Open, Void> INVENTORY_OPENED =
             GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class);
+    @Deprecated
     EventBusJS<PlayerContainerEvent.Close, Void> INVENTORY_CLOSED =
             GROUP.server("inventoryClosed", PlayerContainerEvent.Close.class);
     EventBusJS<PlayerInteractEvent.EntityInteract, Void> ENTITY_INTERACT =
