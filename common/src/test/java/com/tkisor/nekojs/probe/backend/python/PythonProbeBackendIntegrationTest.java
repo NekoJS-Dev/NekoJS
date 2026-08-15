@@ -370,9 +370,13 @@ class PythonProbeBackendIntegrationTest {
         Files.writeString(jsOnly.resolve("main.js"), "console.log(1)\n");
 
         Map<Path, List<String>> merged = new LinkedHashMap<>();
+        Map<Path, List<String>> vscodeMerged = new LinkedHashMap<>();
         EditorConfigContributor recorder = new EditorConfigContributor() {
             @Override public void mergePyrightExtraPaths(Path file, List<String> extraPaths) {
                 merged.put(file.normalize().toAbsolutePath(), List.copyOf(extraPaths));
+            }
+            @Override public void mergeVscodePythonExtraPaths(Path file, List<String> extraPaths) {
+                vscodeMerged.put(file.normalize().toAbsolutePath(), List.copyOf(extraPaths));
             }
             @Override public void mergeJsConfigPaths(Path file, Map<String, List<String>> aliases) {}
             @Override public void mergeJsConfigIncludes(Path file, List<String> includes) {}
@@ -393,6 +397,12 @@ class PythonProbeBackendIntegrationTest {
                 "js-only dir must not get a python pyrightconfig: " + merged.keySet());
         assertEquals(List.of("../../../.neko_probe/python"),
                 merged.get(src.resolve("pyrightconfig.json").normalize().toAbsolutePath()));
+        Path srcSettings = src.resolve(".vscode").resolve("settings.json").normalize().toAbsolutePath();
+        assertTrue(vscodeMerged.containsKey(srcSettings),
+                "src/.vscode/settings.json must get python.analysis.extraPaths: " + vscodeMerged.keySet());
+        assertEquals(List.of("../../../.neko_probe/python"), vscodeMerged.get(srcSettings));
+        assertFalse(vscodeMerged.containsKey(jsOnly.resolve(".vscode").resolve("settings.json").normalize().toAbsolutePath()),
+                "js-only dir must not get python vscode settings: " + vscodeMerged.keySet());
     }
 
     // -------------------- helpers --------------------

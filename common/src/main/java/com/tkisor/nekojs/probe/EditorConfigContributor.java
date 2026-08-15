@@ -61,6 +61,16 @@ public interface EditorConfigContributor {
     void mergePyrightExtraPaths(java.nio.file.Path pyrightFile, List<String> extraPaths);
 
     /**
+     * 把 {@code python.analysis.extraPaths} 合并进 VSCode 工作区设置
+     * （{@code <workspaceRoot>/.vscode/settings.json}，去重、保留未知键）。
+     *
+     * <p>Pylance 对 pyrightconfig.json 的发现策略在不同版本/打开方式下不稳定，而
+     * {@code .vscode/settings.json} 由 VSCode 原生加载，是 Pylance 最可靠的路径注入方式；
+     * pyright CLI 则继续使用 pyrightconfig.json。两者同步写入，互为兜底。
+     */
+    default void mergeVscodePythonExtraPaths(java.nio.file.Path settingsFile, List<String> extraPaths) {}
+
+    /**
      * 把编辑器片段合并进 VSCode {@code .code-snippets} 文件（probe 拥有的片段名替换，用户片段保留）。
      *
      * @param snippetsFile 目标 .code-snippets（如 {@code nekojs/.vscode/nekojs.code-snippets}，不存在则创建）

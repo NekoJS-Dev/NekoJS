@@ -113,6 +113,32 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     }
 
     @Override
+    public void mergeVscodePythonExtraPaths(Path settingsFile, List<String> extraPaths) {
+        if (extraPaths == null || extraPaths.isEmpty()) return;
+        try {
+            JsonObject root = readJsonOrEmpty(settingsFile);
+            JsonObject python = asObject(root, "python");
+            JsonObject analysis = asObject(python, "analysis");
+            JsonArray arr = analysis.has("extraPaths") && analysis.get("extraPaths").isJsonArray()
+                    ? analysis.getAsJsonArray("extraPaths") : new JsonArray();
+            Set<String> existing = new LinkedHashSet<>();
+            for (JsonElement el : arr) {
+                if (el.isJsonPrimitive()) existing.add(el.getAsString());
+            }
+            for (String p : extraPaths) {
+                if (existing.add(p)) arr.add(p);
+            }
+            analysis.add("extraPaths", arr);
+            python.add("analysis", analysis);
+            root.add("python", python);
+            writeJson(settingsFile, root);
+        } catch (Exception ex) {
+            NekoJS.LOGGER.debug("EditorConfig: vscode settings python.analysis.extraPaths merge failed at {}",
+                    settingsFile, ex);
+        }
+    }
+
+    @Override
     public void mergeVscodeSnippets(Path snippetsFile, List<Snippet> snippets) {
         if (snippets == null || snippets.isEmpty()) return;
         try {

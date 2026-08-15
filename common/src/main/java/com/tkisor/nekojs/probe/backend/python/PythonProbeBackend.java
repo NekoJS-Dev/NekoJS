@@ -87,16 +87,26 @@ public final class PythonProbeBackend implements ProbeBackend {
     public void contributeEditorConfig(EditorConfigContributor contributor, ProbeContext ctx) {
         com.tkisor.nekojs.core.fs.NekoJSPaths paths = ctx.paths();
         Path out = ctx.languageDir();
-        contributor.mergePyrightExtraPaths(paths.root().resolve("pyrightconfig.json"),
-                List.of(FileEditorConfigContributor.relativePosix(paths.root(), out)));
+        contributePyright(contributor, paths.root().resolve("pyrightconfig.json"),
+                paths.root().resolve(".vscode").resolve("settings.json"),
+                FileEditorConfigContributor.relativePosix(paths.root(), out));
         for (Path scriptDir : List.of(paths.startupScripts(), paths.serverScripts(),
                 paths.clientScripts(), paths.testScripts())) {
-            contributor.mergePyrightExtraPaths(scriptDir.resolve("pyrightconfig.json"),
-                    List.of(FileEditorConfigContributor.relativePosix(scriptDir, out)));
+            contributePyright(contributor, scriptDir.resolve("pyrightconfig.json"),
+                    scriptDir.resolve(".vscode").resolve("settings.json"),
+                    FileEditorConfigContributor.relativePosix(scriptDir, out));
             mergePyrightConfigsForNestedPythonDirs(contributor, scriptDir, out);
         }
-        contributor.mergePyrightExtraPaths(paths.gameDir().resolve("pyrightconfig.json"),
-                List.of(FileEditorConfigContributor.relativePosix(paths.gameDir(), out)));
+        contributePyright(contributor, paths.gameDir().resolve("pyrightconfig.json"),
+                paths.gameDir().resolve(".vscode").resolve("settings.json"),
+                FileEditorConfigContributor.relativePosix(paths.gameDir(), out));
+    }
+
+    /** 同一个 extraPath 同时写入 pyrightconfig（CLI/Jedi 侧）与 .vscode/settings.json（Pylance 侧），互为兜底。 */
+    private static void contributePyright(EditorConfigContributor contributor, Path pyrightFile,
+                                          Path vscodeSettings, String relativeExtraPath) {
+        contributor.mergePyrightExtraPaths(pyrightFile, List.of(relativeExtraPath));
+        contributor.mergeVscodePythonExtraPaths(vscodeSettings, List.of(relativeExtraPath));
     }
 
     /**
@@ -131,8 +141,9 @@ public final class PythonProbeBackend implements ProbeBackend {
             return;
         }
         for (Path dir : pythonDirs) {
-            contributor.mergePyrightExtraPaths(dir.resolve("pyrightconfig.json"),
-                    List.of(FileEditorConfigContributor.relativePosix(dir, out)));
+            contributePyright(contributor, dir.resolve("pyrightconfig.json"),
+                    dir.resolve(".vscode").resolve("settings.json"),
+                    FileEditorConfigContributor.relativePosix(dir, out));
         }
     }
 
