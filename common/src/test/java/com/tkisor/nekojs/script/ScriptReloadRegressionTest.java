@@ -532,7 +532,7 @@ class ScriptReloadRegressionTest {
         TestRecorder recorder = new TestRecorder();
         Engine engine = Engine.newBuilder().build();
         // 语句上限 100_000（测试用）：死循环迅速烧尽 → Graal 关闭 Context 并中断当前求值，
-        // 服务器线程恢复；生产默认 0（禁用），整合包服务器可按需在 config/nekojs-engine.toml 开启
+        // 服务器线程恢复；生产默认 0（禁用），整合包服务器可按需在 nekojs/config/engine.toml 开启
         SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptManager manager = null;

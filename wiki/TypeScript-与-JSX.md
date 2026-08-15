@@ -127,7 +127,7 @@ const element = (
 
 ### 自动 runtime（可选）
 
-在 `config/nekojs-engine.toml`（游戏根 config 目录）里设：
+在 `nekojs/config/engine.toml`（与 probe.toml 同目录）里设：
 
 ```toml
 jsxAutomaticRuntime = true
@@ -156,7 +156,7 @@ export const Fragment = Symbol.for('nekojs.fragment')
 
 ## 配置
 
-`jsconfig.json` 自动生成，jsx 模式**跟随引擎配置**（`config/nekojs-engine.toml` 的 `jsxAutomaticRuntime`）：关闭（默认）时使用 classic runtime，关键字段：
+`jsconfig.json` 自动生成，jsx 模式**跟随引擎配置**（`nekojs/config/engine.toml` 的 `jsxAutomaticRuntime`）：关闭（默认）时使用 classic runtime，关键字段：
 
 | 字段 | 值 |
 |---|---|

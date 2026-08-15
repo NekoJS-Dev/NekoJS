@@ -166,7 +166,7 @@ public final class WorkspaceGenerator {
 
     /**
      * 引擎配置驱动 jsconfig 的 JSX 运行时模式，保证 IDE 类型检查与运行时编译一致：
-     * {@code jsxAutomaticRuntime=true}（{@code config/nekojs-engine.toml}）时切换到 TS 自动运行时
+     * {@code jsxAutomaticRuntime=true}（{@code nekojs/config/engine.toml}）时切换到 TS 自动运行时
      * （{@code jsx: "react-jsx"} + {@code jsxImportSource: "nekojs"}，TS 解析为
      * {@code import { jsx } from "nekojs/jsx-runtime"}，与 {@code NekoJsxCompiler} 的产物对齐）；
      * 默认 false 保持经典 {@code __nekoJsxFactory} 全局工厂写法。

@@ -16,7 +16,7 @@ public record SandboxConfig(
 ) {
     /**
      * 语句上限默认值（5e7）：足够长跑服务器累计执行，又能最终终止 while(true){} 死循环。
-     * 用户在 config/nekojs-engine.toml 显式写 0 仍表示禁用（NekoSandboxFactory 对 <=0 不设置 ResourceLimits）。
+     * 用户在 nekojs/config/engine.toml 显式写 0 仍表示禁用（NekoSandboxFactory 对 <=0 不设置 ResourceLimits）。
      */
     public static final long DEFAULT_SCRIPT_STATEMENT_LIMIT = 50_000_000L;
 

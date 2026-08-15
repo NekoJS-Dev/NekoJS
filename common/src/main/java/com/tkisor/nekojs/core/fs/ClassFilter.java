@@ -104,8 +104,8 @@ public class ClassFilter implements Predicate<String> {
     }
 
     /**
-     * 加载引擎配置：优先 {@code <gamedir>/config/nekojs-engine.toml}（新位置，脚本不可写）。
-     * 新文件不存在而旧文件 {@code <gamedir>/nekojs/config/engine.toml} 存在时，以只读方式回退
+     * 加载引擎配置：规范位置 {@code <gamedir>/nekojs/config/engine.toml}（与 probe.toml 同目录）。
+     * 该文件不存在而旧位置 {@code <gamedir>/config/nekojs-engine.toml} 存在时，以只读方式回退
      * 读取旧文件并警告提示迁移——<b>不会</b>自动搬移或写出新文件，需用户手动迁移。
      */
     public static SandboxConfig loadEngineConfig() {
@@ -114,8 +114,8 @@ public class ClassFilter implements Predicate<String> {
         java.nio.file.Path legacy = paths.legacyEngineConfig();
         if (!Files.exists(engineConfig) && Files.exists(legacy)) {
             NekoJS.LOGGER.warn(
-                    "[NekoJS Security] Legacy engine config found at {}. Please migrate it to {} "
-                            + "(the legacy location is inside the script-writable nekojs/ workspace). "
+                    "[NekoJS] Legacy engine config found at {}. Please migrate it to {} "
+                            + "(the canonical location is nekojs/config/ alongside probe.toml). "
                             + "The legacy file is still honored read-only and will NOT be moved automatically.",
                     legacy, engineConfig);
             SandboxConfig config = new SandboxConfigLoader().load(legacy, false);

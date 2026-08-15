@@ -73,7 +73,7 @@ public final class SandboxConfigLoader {
                     numberValue(config, "scriptStatementLimit", SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT)
             );
         } catch (Throwable e) {
-            NekoJS.LOGGER.warn("Failed to load config/nekojs-engine.toml, using default sandbox config", e);
+            NekoJS.LOGGER.warn("Failed to load nekojs/config/engine.toml, using default sandbox config", e);
             return SandboxConfig.defaultConfig();
         }
     }

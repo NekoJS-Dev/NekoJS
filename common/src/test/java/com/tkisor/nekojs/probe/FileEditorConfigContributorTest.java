@@ -148,7 +148,7 @@ class FileEditorConfigContributorTest {
     @Test
     void mergeJsConfig_classicRuntimeRestoresClassicJsxKeys(@TempDir Path temp) throws IOException {
         Path jsconfig = temp.resolve("jsconfig.json");
-        // 既有 jsconfig 停留在旧的 automatic 模式（用户已在 nekojs-engine.toml 关闭开关）
+        // 既有 jsconfig 停留在旧的 automatic 模式（用户已在 engine.toml 关闭开关）
         Files.writeString(jsconfig, """
                 {
                   "compilerOptions": {
