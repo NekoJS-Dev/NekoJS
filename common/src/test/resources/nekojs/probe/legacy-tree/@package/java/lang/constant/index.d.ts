@@ -83,9 +83,9 @@ declare module "java:java/lang/constant" {
         equals(arg0: object): boolean;
         invocationType(): $MethodTypeDesc;
         ofConstructor(arg0: $ClassDesc, arg1?: $ClassDesc[]): $DirectMethodHandleDesc;
-        ofField(arg0: $DirectMethodHandleDesc$Kind, arg1: $ClassDesc, arg2: string, arg3: $ClassDesc): $DirectMethodHandleDesc;
-        ofMethod(arg0: $DirectMethodHandleDesc$Kind, arg1: $ClassDesc, arg2: string, arg3: $MethodTypeDesc): $DirectMethodHandleDesc;
-        of(arg0: $DirectMethodHandleDesc$Kind, arg1: $ClassDesc, arg2: string, arg3: string): $DirectMethodHandleDesc;
+        ofField(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $ClassDesc): $DirectMethodHandleDesc;
+        ofMethod(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $MethodTypeDesc): $DirectMethodHandleDesc;
+        of(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: string): $DirectMethodHandleDesc;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodHandle;
     }
@@ -118,4 +118,5 @@ declare module "java:java/lang/constant" {
         returnType(): $TypeDescriptor$OfField;
     }
 
+    export type $DirectMethodHandleDesc$Kind_ = $DirectMethodHandleDesc$Kind | "CONSTRUCTOR" | "GETTER" | "INTERFACE_SPECIAL" | "INTERFACE_STATIC" | "INTERFACE_VIRTUAL" | "SETTER" | "SPECIAL" | "STATIC" | "STATIC_GETTER" | "STATIC_SETTER" | "VIRTUAL";
 }

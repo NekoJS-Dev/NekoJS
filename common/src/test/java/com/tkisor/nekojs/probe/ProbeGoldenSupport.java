@@ -27,15 +27,38 @@ final class ProbeGoldenSupport {
         return Boolean.getBoolean("nekojs.golden.regenerate");
     }
 
-    /** 类路径资源目录解析为 Path（仅支持 file: 协议，与各测试的 golden 加载口径一致）；不可解析返回 null。 */
+    /**
+     * 类路径资源目录解析为 Path（仅支持 file: 协议，与各测试的 golden 加载口径一致）；不可解析返回 null。
+     *
+     * <p>重生成模式下重写到 <b>src/test/resources 源树</b>：Gradle 下类路径资源指向
+     * {@code build/resources/test} 副本，镜像写副本会被 processTestResources 重新覆盖成
+     * src 的旧内容——regen 等于空操作。断言（非 regen）模式仍读 build 副本（由 processTestResources
+     * 从 src 同步，内容一致）。非 Gradle 布局（独立运行时 classpath 直指 src）找不到
+     * build/resources/test 段则原样返回。
+     */
     static Path resourceDir(Class<?> owner, String basePath) {
         var url = owner.getResource(basePath);
         if (url == null || !"file".equals(url.getProtocol())) return null;
+        final Path resolved;
         try {
-            return Path.of(url.toURI());
+            resolved = Path.of(url.toURI());
         } catch (URISyntaxException e) {
             return null;
         }
+        if (!regenerateEnabled()) {
+            return resolved;
+        }
+        for (int i = 0; i + 3 < resolved.getNameCount(); i++) {
+            if ("build".equals(resolved.getName(i).toString())
+                    && "resources".equals(resolved.getName(i + 1).toString())
+                    && "test".equals(resolved.getName(i + 2).toString())) {
+                Path moduleDir = resolved.subpath(0, i);
+                return resolved.getRoot().resolve(moduleDir)
+                        .resolve("src/test/resources")
+                        .resolve(resolved.subpath(i + 3, resolved.getNameCount()));
+            }
+        }
+        return resolved;
     }
 
     /**

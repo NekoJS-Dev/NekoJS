@@ -1,6 +1,6 @@
 import { $InputStream } from "java:java/io";
 import { $Comparable, $String } from "java:java/lang";
-import { $AccessFlag } from "java:java/lang/reflect";
+import { $AccessFlag, $AccessFlag_ } from "java:java/lang/reflect";
 import { $ByteBuffer } from "java:java/nio";
 import { $Optional, $Set } from "java:java/util";
 import { $Supplier } from "java:java/util/function";
@@ -12,7 +12,7 @@ declare module "java:java/lang/module" {
         get open(): boolean;
         isOpen(): boolean;
         static newAutomaticModule(arg0: string): $ModuleDescriptor$Builder;
-        static newModule(arg0: string, arg1: $ModuleDescriptor$Modifier[]): $ModuleDescriptor$Builder;
+        static newModule(arg0: string, arg1: $ModuleDescriptor$Modifier_[]): $ModuleDescriptor$Builder;
         static newModule(arg0: string): $ModuleDescriptor$Builder;
         static newOpenModule(arg0: string): $ModuleDescriptor$Builder;
         static read(arg0: $InputStream, arg1: $Supplier<string[]>): $ModuleDescriptor;

@@ -70,6 +70,10 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public RecipeEventJS(Map<Identifier, JsonElement> originalJsons, HolderLookup.Provider registries, RecipeTypeDefinitionRegistry recipeTypeDefinitions) {
         this.jsons = new HashMap<>(originalJsons);
+        // B4: ids already present in the wrapped datapack JSON map must be treated as taken,
+        // otherwise generateRecipeId can silently return an existing recipe id and
+        // RecipeJsonBuilder would overwrite that recipe.
+        this.takenIds.addAll(jsons.keySet());
         this.registries = registries;
         this.recipeTypeDefinitions = recipeTypeDefinitions == null ? RecipeTypeDefinitionRegistry.EMPTY : recipeTypeDefinitions;
         this.recipesProxy = new RecipeRegistryProxy(this);

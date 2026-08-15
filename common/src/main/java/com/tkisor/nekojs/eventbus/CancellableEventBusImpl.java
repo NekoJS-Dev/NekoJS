@@ -11,6 +11,35 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
+ * Default implementation of {@link CancellableEventBus}.
+ *
+ * <p>This class intentionally exposes both {@code listen} overload shapes:
+ * <ul>
+ * <li>{@code listen(Consumer<E>)} / {@code listen(byte, Consumer<E>)} —
+ *     declared here: fire-and-forget listeners that never cancel;</li>
+ * <li>{@code listen(Predicate<E>)} / {@code listen(byte, Predicate<E>)} —
+ *     inherited from {@code EventBusBase<Predicate<E>>}: cancellable listeners
+ *     whose boolean result decides cancellation.</li>
+ * </ul>
+ * The two shapes coexist so one bus can carry both plain consumers and
+ * cancelling predicates. Because {@code Consumer} and {@code Predicate} are
+ * both single-argument functional interfaces, a bare lambda such as
+ * {@code listen(event -> ...)} is ambiguous for Java plugin authors.
+ *
+ * <p>Recommended unambiguous call forms:
+ * <ul>
+ * <li>Consumer listener: {@code listen((E event) -> { ... })} — a block body
+ *     with no return value;</li>
+ * <li>Predicate listener: {@code listen((E event) -> true/false)} — a boolean
+ *     expression body;</li>
+ * <li>or explicit casts / typed lambda blocks, e.g.
+ *     {@code listen((Consumer<E>) event -> doSomething(event))} and
+ *     {@code listen((Predicate<E>) event -> shouldCancel(event))}.</li>
+ * </ul>
+ *
+ * <p>These APIs are primarily invoked from JS via {@code EventBusJS}, where
+ * Java lambda overload resolution does not apply.
+ *
  * @author ZZZank
  */
 public final class CancellableEventBusImpl<E>
@@ -20,11 +49,15 @@ public final class CancellableEventBusImpl<E>
         super(eventType, key);
     }
 
+    // suppress overloads: intentional dual Consumer/Predicate overloads; see class javadoc
+    @SuppressWarnings("overloads")
     @Override
     public EventListenerToken<E> listen(byte priority, Consumer<E> listener) {
         return listen(priority, new NeverCancelListener<>(listener));
     }
 
+    // suppress overloads: intentional dual Consumer/Predicate overloads; see class javadoc
+    @SuppressWarnings("overloads")
     @Override
     public EventListenerToken<E> listen(Consumer<E> listener) {
         return listen(CommonPriority.NORMAL, new NeverCancelListener<>(listener));

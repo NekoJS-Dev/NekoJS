@@ -19,11 +19,12 @@ public class NekoScriptPayload implements IMessage {
 
     /** Required for reflective deserialization. */
     public NekoScriptPayload() {
-        this("", null);
+        this.channel = "";
+        this.data = new NBTTagCompound();
     }
 
     public NekoScriptPayload(String channel, NBTTagCompound data) {
-        this.channel = channel == null ? "" : channel;
+        this.channel = validateChannel(channel);
         this.data = data != null ? data : new NBTTagCompound();
     }
 
@@ -37,8 +38,15 @@ public class NekoScriptPayload implements IMessage {
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        this.channel = ByteBufUtils.readUTF8String(buf);
+        this.channel = validateChannel(ByteBufUtils.readUTF8String(buf));
         this.data = ByteBufUtils.readTag(buf);
+    }
+
+    private static String validateChannel(String channel) {
+        if (channel == null || channel.isBlank() || channel.length() > 64) {
+            throw new IllegalArgumentException("Script payload channel must be non-blank and at most 64 characters");
+        }
+        return channel;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe.types;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 类型别名注册表：管理 Java 类型到 TypeScript 输入别名的映射。
@@ -11,6 +12,16 @@ import java.util.*;
 public final class TypeAliasRegistry {
     private final Map<String, String> classAliases = new LinkedHashMap<>();
     private final Map<String, CollectionAlias> collectionAliases = new LinkedHashMap<>();
+    /**
+     * 枚举输入别名的惰性解析缓存：FQN → {@code $<SimpleName>_}；空串 = 已确认非枚举/不可加载。
+     *
+     * <p>枚举别名必须与适配器别名（{@code registerClassAlias}，在全部参数渲染前一次性注册）一样
+     * 「先于参数渲染可用」——但共享 IR 是逐类并行预声明的，逐类注册会因任务调度顺序不同导致
+     * 参数是否被放宽随运行抖动（违反产物确定性）。故这里在查询点（{@link TypeConverter} 的
+     * input 查询）按需反射判定枚举并缓存，效果等价于启动时对每个枚举 FQN 调一次
+     * {@code registerClassAlias(fqn, "$" + SimpleName + "_")}，且与处理顺序无关。
+     */
+    private final Map<String, String> enumAliasCache = new ConcurrentHashMap<>();
 
     public TypeAliasRegistry() {
         registerDefaults();
@@ -60,21 +71,60 @@ public final class TypeAliasRegistry {
     public void clear() {
         classAliases.clear();
         collectionAliases.clear();
+        enumAliasCache.clear();
         registerDefaults();
     }
 
     /**
      * 检查是否有类级别的输入别名。
+     *
+     * <p>除显式注册（{@link #registerClassAlias}）外，枚举类型恒有输入别名
+     * {@code $<SimpleName>_}（枚举 | 字符串字面量联合，声明由 IndexFileGenerator 就近发射）。
      */
     public boolean hasAlias(String className) {
-        return classAliases.containsKey(className);
+        if (classAliases.containsKey(className)) return true;
+        return enumInputAlias(className) != null;
     }
 
     /**
      * 获取类级别的输入别名。
+     *
+     * <p>显式注册的别名优先；枚举类型回退到 {@code $<SimpleName>_}（内部类为
+     * {@code $Parent$Child_}，与各生成器的 TS 命名一致）。
      */
     public String getAlias(String className) {
-        return classAliases.get(className);
+        String explicit = classAliases.get(className);
+        if (explicit != null) return explicit;
+        return enumInputAlias(className);
+    }
+
+    /**
+     * 惰性解析枚举的输入别名名：枚举 FQN → {@code $<TS名>_}，非枚举/不可加载 → null。
+     * 结果缓存（含否定结果），跨线程安全。
+     */
+    private String enumInputAlias(String className) {
+        if (className == null) return null;
+        String cached = enumAliasCache.get(className);
+        if (cached != null) return cached.isEmpty() ? null : cached;
+        String alias = null;
+        try {
+            Class<?> cls = Class.forName(className, false, Thread.currentThread().getContextClassLoader());
+            if (cls.isEnum()) {
+                alias = "$" + tsClassName(cls) + "_";
+            }
+        } catch (ClassNotFoundException | LinkageError ignored) {
+            // 不可加载（含 NoClassDefFoundError）：与显式别名缺失时的行为一致（不放宽，正常渲染 $Foo）
+        }
+        enumAliasCache.put(className, alias == null ? "" : alias);
+        return alias;
+    }
+
+    /** 类的 TypeScript 标识符名（内部类用 Parent$Child 格式，与各生成器一致）。 */
+    private static String tsClassName(Class<?> cls) {
+        if (cls.getEnclosingClass() != null && !cls.isAnonymousClass()) {
+            return tsClassName(cls.getEnclosingClass()) + "$" + cls.getSimpleName();
+        }
+        return cls.getSimpleName();
     }
 
     /**

@@ -197,7 +197,9 @@ public class NekoWorkspaceScreen extends Screen {
                         if (Files.size(p) < 1024 * 1024) {
                             fileContentCache.put(relPath, Files.readString(p));
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                        com.tkisor.nekojs.NekoJS.LOGGER.debug("NekoWorkspaceScreen: failed to cache workspace file " + relPath, ignored);
+                    }
                 }
 
                 String[] parts = relPath.split("/");

@@ -68,7 +68,18 @@ public final class NekoJSLoggers {
         return CACHE.computeIfAbsent(name, NekoJSLoggers::createLogger);
     }
 
-    public static Logger createLogger(String name) {
+    /**
+     * Creates the script logger and registers its Log4j appenders on first use.
+     *
+     * <p>This method is {@code synchronized} because it is a check-then-act sequence that
+     * mutates the shared Log4j {@link Configuration}: concurrent first calls for the same
+     * logger name must not register duplicate FileAppender / AsyncAppender /
+     * CollapsingAppender instances or duplicate {@link #APPENDERS} entries.
+     * {@link #get(String)} also reaches this method through
+     * {@link ConcurrentHashMap#computeIfAbsent}, which is atomic per key; synchronizing here
+     * serializes both registration paths under the same lock.</p>
+     */
+    public static synchronized Logger createLogger(String name) {
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration cfg = ctx.getConfiguration();
 

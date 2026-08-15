@@ -111,7 +111,9 @@ public class TileEntityAdapter extends AbstractJSTypeAdapter<Class<? extends Til
                 Object v = ((RegistryNamespaced<ResourceLocation, ?>) registry).getObject(rl);
                 Class<? extends TileEntity> te = asTileEntityClass(v);
                 if (te != null) return te;
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+                com.tkisor.nekojs.NekoJS.LOGGER.debug("TileEntityAdapter: RegistryNamespaced.getObject lookup failed for " + rl, ignored);
+            }
         }
 
         // Map 路径（key 可能是 RL 或 String）
@@ -122,7 +124,9 @@ public class TileEntityAdapter extends AbstractJSTypeAdapter<Class<? extends Til
                 if (v == null) v = m.get(rl.toString());
                 Class<? extends TileEntity> te = asTileEntityClass(v);
                 if (te != null) return te;
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+                com.tkisor.nekojs.NekoJS.LOGGER.debug("TileEntityAdapter: Map registry lookup failed for " + rl, ignored);
+            }
         }
         return null;
     }
@@ -147,6 +151,7 @@ public class TileEntityAdapter extends AbstractJSTypeAdapter<Class<? extends Til
                 }
             } catch (Throwable ignored) {
                 // 映射名/结构异常 → fallback 到 Map 路径
+                com.tkisor.nekojs.NekoJS.LOGGER.debug("TileEntityAdapter: RegistryNamespaced.getKeys failed, falling back to Map path", ignored);
             }
         }
         if (ids.isEmpty() && registry instanceof Map m) {
@@ -222,6 +227,7 @@ public class TileEntityAdapter extends AbstractJSTypeAdapter<Class<? extends Til
                 }
             } catch (Throwable ignored) {
                 // 试下一个
+                com.tkisor.nekojs.NekoJS.LOGGER.debug("TileEntityAdapter: heuristic registry scan failed for field " + f + ", trying next", ignored);
             }
         }
         return null;

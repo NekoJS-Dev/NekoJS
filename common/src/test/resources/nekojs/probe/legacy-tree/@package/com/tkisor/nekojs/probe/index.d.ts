@@ -29,8 +29,8 @@ declare module "java:com/tkisor/nekojs/probe" {
         constructor();
         get name(): string;
         getName(): string;
-        static of(arg0: string, arg1: number): string;
-        static of(arg0: string): string;
+        static of(id: string, count: number): string;
+        static of(id: string): string;
     }
 
     export class $LegacyProbeFixture$SampleWidget {

@@ -218,20 +218,25 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         if (args.length == 0) {
             throw new IllegalArgumentException("EventBus requires at least one arg");
         }
+        if (canDispatch() && args.length == 1 && parsePriority(args[0]) != null) {
+            // listen("HIGH") on a dispatch bus must keep the legacy missing-listener error
+            // instead of treating "HIGH" as a key with no listener.
+            throw new IllegalArgumentException("EventBus requires a listener after priority");
+        }
 
-        // DEFECT-D6: optional priority as the first argument. If args[0] is a string
-        // that matches a priority name (HIGHEST/HIGH/NORMAL/LOW/LOWEST, case-insensitive),
-        // parse it and shift the remaining args. Existing call shapes are preserved:
-        //   listen(listener)                       -> NORMAL
-        //   listen("key", listener)               -> NORMAL (dispatch), "key" is NOT a priority name
-        //   listen("HIGH", listener)              -> HIGH priority
-        //   listen("HIGH", "key", listener)       -> HIGH priority (dispatch)
+        // DEFECT-D6: optional priority as the first argument. args[0] is parsed as a
+        // priority name (HIGHEST/HIGH/NORMAL/LOW/LOWEST, case-insensitive) only when
+        // either the bus is NOT dispatchable, or when a key + listener still follow
+        // after the priority (>= 3 args). Call shapes:
+        //   listen(listener)                  -> NORMAL
+        //   listen("key", listener)           -> NORMAL (dispatch), "key" is NOT a priority name
+        //   listen("HIGH", listener)          -> non-dispatch: HIGH priority;
+        //                                       dispatch: key "HIGH", NORMAL priority
+        //   listen("HIGH", "key", listener)   -> HIGH priority (dispatch)
         byte priority = CommonPriority.NORMAL;
-        int offset = 0;
-        Byte parsed = parsePriority(args[0]);
-        if (parsed != null) {
-            priority = parsed;
-            offset = 1;
+        int offset = priorityArgOffset(args, canDispatch());
+        if (offset > 0) {
+            priority = parsePriority(args[0]);
             if (args.length <= offset) {
                 throw new IllegalArgumentException("EventBus requires a listener after priority");
             }
@@ -278,6 +283,25 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             return list;
         });
         return true;
+    }
+
+    /**
+     * Decide whether {@code args[0]} should be consumed as a priority name.
+     *
+     * <p>On a non-dispatch bus any leading priority-name string keeps its legacy
+     * meaning. On a dispatch bus a leading string is only a priority when there are
+     * still at least two arguments after it (key + listener); otherwise it is the
+     * dispatch key itself — so {@code listen("HIGH", listener)} registers key
+     * {@code "HIGH"} instead of misreading {@code "HIGH"} as a priority.
+     */
+    static int priorityArgOffset(Value[] args, boolean dispatchable) {
+        if (args.length == 0 || parsePriority(args[0]) == null) {
+            return 0;
+        }
+        if (!dispatchable) {
+            return 1;
+        }
+        return args.length >= 3 ? 1 : 0;
     }
 
     /**

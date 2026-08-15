@@ -35,7 +35,7 @@ public final class ScriptTypedValue<T> {
 
     private static final int LENGTH = ScriptType.values().length;
 
-    private final Object[] internal;
+    private volatile Object[] internal;
     private final Function<? super ScriptType, ? extends T> initializer;
 
     private ScriptTypedValue(Object[] internal, Function<? super ScriptType, ? extends T> initializer) {
@@ -52,17 +52,31 @@ public final class ScriptTypedValue<T> {
         return type == null ? LENGTH : type.ordinal();
     }
 
-    public T set(ScriptType type, T value) {
-        var old = getCasted(type);
-        internal[index(type)] = value;
+    private synchronized T setInternal(ScriptType type, T value) {
+        Object[] current = internal;
+        Object[] copy = current.clone();
+        int idx = index(type);
+        @SuppressWarnings("unchecked")
+        T old = (T) copy[idx];
+        copy[idx] = value;
+        internal = copy;
         return old;
     }
 
+    public T set(ScriptType type, T value) {
+        return setInternal(type, value);
+    }
+
     public T at(ScriptType type) {
-        var got = getCasted(type);
+        T got = getCasted(type);
         if (got == null && initializer != null) {
-            got = initializer.apply(type);
-            internal[index(type)] = got;
+            synchronized (this) {
+                got = getCasted(type);
+                if (got == null && initializer != null) {
+                    got = initializer.apply(type);
+                    setInternal(type, got);
+                }
+            }
         }
         return got;
     }
@@ -89,7 +103,8 @@ public final class ScriptTypedValue<T> {
 
     @SuppressWarnings("unchecked")
     public Stream<T> viewExisted() {
-        return (Stream<T>) Arrays.stream(internal).filter(Objects::nonNull);
+        Object[] snapshot = internal;
+        return (Stream<T>) Arrays.stream(snapshot).filter(Objects::nonNull);
     }
 
     public Stream<T> stream() {
@@ -103,8 +118,12 @@ public final class ScriptTypedValue<T> {
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof ScriptTypedValue<?> that
-               && Arrays.equals(internal, that.internal)
+        if (!(o instanceof ScriptTypedValue<?> that)) {
+            return false;
+        }
+        Object[] thisInternal = internal;
+        Object[] thatInternal = that.internal;
+        return Arrays.equals(thisInternal, thatInternal)
                && Objects.equals(initializer, that.initializer);
     }
 

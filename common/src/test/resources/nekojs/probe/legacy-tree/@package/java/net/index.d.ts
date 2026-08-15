@@ -5,7 +5,7 @@ import { $List, $Map } from "java:java/util";
 
 declare module "java:java/net" {
     export class $Proxy {
-        constructor(arg0: $Proxy$Type, arg1: $SocketAddress);
+        constructor(arg0: $Proxy$Type_, arg1: $SocketAddress);
         static NO_PROXY: $Proxy;
         address(): $SocketAddress;
         equals(arg0: object): boolean;

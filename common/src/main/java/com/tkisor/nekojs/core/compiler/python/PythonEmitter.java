@@ -128,6 +128,90 @@ public final class PythonEmitter {
             + " return __a * __b; };";
 
     /**
+     * Python {@code +}/{@code +=}：数组拼接（{@code [1,2] + [3]} → {@code [1,2,3]}——JS 的 {@code +}
+     * 会把两个数组串成字符串 {@code "1,23"}）、str+str 拼接与数值加法。str 与非 str 混用（如
+     * {@code 'a' + 5}）按 Python 抛 {@code TypeError}（JS 会静默隐式转换成 {@code 'a5'}）——
+     * 抛出的是异常 prelude 的 TypeError 类（needsAdd 连带发射 prelude，同 needsMod →
+     * ZeroDivisionError 的先例）。其余非 str/非数组组合退回 JS {@code +} 语义。f-string 与相邻
+     * 字符串字面量拼接发生在解析层（单个 STRING 记号），不经此助手。
+     */
+    private static final String ADD_HELPER =
+            "const __nekoAdd = function (__a, __b) {"
+            + " if (Array.isArray(__a) && Array.isArray(__b)) return __a.concat(__b);"
+            + " var __sa = (typeof __a === 'string'), __sb = (typeof __b === 'string');"
+            + " if (__sa && __sb) return __a + __b;"
+            + " if (__sa || __sb) throw new TypeError(\"can only concatenate str (not \\\"\""
+            + " + (__sa ? typeof __b : typeof __a) + \"\\\") to str\");"
+            + " return __a + __b; };";
+
+    /**
+     * Python {@code str.replace(old, new[, count])}：JS 的 {@code replaceAll} 把 old 当正则、
+     * {@code replace} 把 new 里的 {@code $} 当替换模式——都静默错误。本助手用 {@code split(old).join(rep)}
+     * 实现字面量替换（字符串分隔符在 JS split 中就是字面量）。count&lt;0 = 不限；count==0 = 原样返回；
+     * count&gt;0 只替换前 count 次。空 old 按 Python 语义在字符间与两端插入（len+1 处），count 限制插入次数。
+     */
+    private static final String REPLACE_HELPER =
+            "const __nekoPyStrReplace = function (__s, __old, __rep, __count) {"
+            + " if (__count === 0) return __s;"
+            + " if (__old === '') {"
+            + "   var __cp = Array.from(__s);"
+            + "   var __ins = __cp.length + 1;"
+            + "   var __k = (__count < 0 || __count >= __ins) ? __ins : Math.trunc(__count);"
+            + "   if (__k <= 0) return __s;"
+            + "   if (__cp.length === 0) return __rep;"
+            + "   if (__k >= __ins) return __rep + __cp.join(__rep) + __rep;"
+            + "   return __rep + __cp.slice(0, __k).join(__rep) + __cp.slice(__k).join('');"
+            + " }"
+            + " var __parts = __s.split(__old);"
+            + " var __nsep = __parts.length - 1;"
+            + " if (__count < 0 || __count >= __nsep) return __parts.join(__rep);"
+            + " var __k2 = Math.trunc(__count);"
+            + " if (__k2 <= 0) return __s;"
+            + " return __parts.slice(0, __k2 + 1).join(__rep) + __old + __parts.slice(__k2 + 1).join(__old);"
+            + "};";
+
+    /**
+     * Python {@code str.count(sub[, start[, end]])}：按 Python 切片钳制 start/end（负值从末尾回数），
+     * 非重叠统计；空子串按切片长度+1 计（与 CPython 一致：{@code ''.count('') == 1}）。
+     */
+    private static final String STR_COUNT_HELPER =
+            "const __nekoPyStrCount = function (__s, __sub, __start, __end) {"
+            + " var __cp = Array.from(__s);"
+            + " var __n = __cp.length;"
+            + " var __lo = (__start === null || __start === undefined) ? 0 : Math.trunc(__start);"
+            + " var __hi = (__end === null || __end === undefined) ? __n : Math.trunc(__end);"
+            + " if (__lo < 0) { __lo += __n; if (__lo < 0) __lo = 0; }"
+            + " if (__hi < 0) { __hi += __n; if (__hi < 0) __hi = 0; }"
+            + " if (__hi > __n) __hi = __n;"
+            + " if (__lo > __hi) return 0;"
+            + " if (__sub === '') return (__hi - __lo) + 1;"
+            + " var __slice = __cp.slice(__lo, __hi).join('');"
+            + " var __count = 0, __idx = 0, __subLen = __sub.length;"
+            + " while (true) {"
+            + "   var __i = __slice.indexOf(__sub, __idx);"
+            + "   if (__i < 0) break;"
+            + "   __count++;"
+            + "   __idx = __i + __subLen;"
+            + " }"
+            + " return __count;"
+            + "};";
+
+    /**
+     * Python {@code str.zfill(width)}：符号（-/+）保持在最前，零填充在符号与数字之间；
+     * width &lt;= len 时原样返回。JS {@code padStart} 会把负号一起当内容填充（{@code 00-42}）。
+     */
+    private static final String ZFILL_HELPER =
+            "const __nekoPyZfill = function (__s, __w) {"
+            + " __s = String(__s);"
+            + " __w = Math.trunc(__w);"
+            + " var __len = Array.from(__s).length;"
+            + " if (__len >= __w) return __s;"
+            + " var __sign = (__s.charAt(0) === '-' || __s.charAt(0) === '+') ? __s.charAt(0) : '';"
+            + " var __digits = (__sign === '') ? __s : __s.substring(1);"
+            + " return __sign + \"0\".repeat(__w - __len) + __digits;"
+            + "};";
+
+    /**
      * {@code in} 成员判断：dict(对象字面量)按自有键、Map/Set 按 {@code .has}、数组/字符串按
      * {@code .includes}。旧实现对 dict/set 发射 {@code .includes} —— 运行时 TypeError。
      */
@@ -200,6 +284,52 @@ public final class PythonEmitter {
     };
 
     /**
+     * 内建类型探针 prelude：{@code isinstance(x, int/str/list/...)} 的第二实参是内建类型名时，
+     * 旧实现发射 {@code x instanceof str} —— JS 没有这些全局 → 运行时 ReferenceError。现在按
+     * 探针函数判定（{@link #exceptionCond} 路由）。语义取舍（务实处理，见各探针注释）：
+     * int 接受 boolean（Python 的 bool 是 int 子类，{@code isinstance(True, int)} 为 True）；
+     * float 接受一切 number（本转译器里 int/float 同为 JS number，5 与 5.0 不可区分）；
+     * list 与 tuple 同为 JS 数组（不可区分）；dict 仅指对象字面量（constructor === Object，
+     * 与 {@link #TRUTHY_HELPER}/{@link #ITER_HELPER} 的判定一致，排除数组/Map/Set/用户类实例）；
+     * set 与 frozenset 同为 Set。异常类名仍走 {@link #EXCIS_HELPER} 的精确 instanceof 路径
+     * （混合元组 {@code isinstance(e, (ValueError, str))} 两种路由在同一析取链共存）。
+     * 仅当模块的 isinstance/except 类型位置引用了这些名字时发射（见 {@link #scanHelpers}）。
+     */
+    private static final String[] TYPE_PRELUDE = {
+            "const __nekoPyInt = function (v) { return typeof v === 'boolean'"
+                    + " || (typeof v === 'number' && Number.isInteger(v)); };",
+            "const __nekoPyFloat = function (v) { return typeof v === 'number'; };",
+            "const __nekoPyBool = function (v) { return typeof v === 'boolean'; };",
+            "const __nekoPyStr = function (v) { return typeof v === 'string'; };",
+            "const __nekoPyList = function (v) { return Array.isArray(v); };",
+            "const __nekoPyDict = function (v) { return v !== null && typeof v === 'object'"
+                    + " && v.constructor === Object; };",
+            "const __nekoPySet = function (v) { return v instanceof Set; };",
+            "const __nekoPyFrozenset = function (v) { return v instanceof Set; };",
+            "const __nekoPyTuple = function (v) { return Array.isArray(v); };",
+    };
+
+    /** isinstance/except 类型位置可引用的内建类型名 → {@link #TYPE_PRELUDE} 探针。 */
+    private static final java.util.Set<String> BUILTIN_TYPES = java.util.Set.of(
+            "int", "float", "str", "bool", "list", "dict", "set", "tuple", "frozenset");
+
+    /**
+     * JavaScript reserved words and strict-mode/module-unsafe identifiers. Python allows several of
+     * these as binding names (e.g. {@code def f(new):}), so any binding whose name appears here is
+     * renamed to a deterministic safe JS identifier by {@link #collectJsRenames}. Property names
+     * after {@code .} are intentionally NOT renamed; only variable-like identifiers route through
+     * {@link #jsName(String)}.
+     */
+    private static final java.util.Set<String> JS_RESERVED_IDENTIFIERS = java.util.Set.of(
+            "break", "case", "catch", "class", "const", "continue", "debugger", "default",
+            "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for",
+            "function", "if", "import", "in", "instanceof", "new", "null", "return", "super",
+            "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with",
+            "yield", "let", "static", "implements", "interface", "package", "private", "protected",
+            "public", "await", "async", "arguments", "eval", "undefined", "NaN", "Infinity",
+            "constructor", "prototype");
+
+    /**
      * dict 方法劫持的 worst-offender 名单：这些名字既是 dict 方法也是常见用户方法名，
      * 需要额外的接收者防护（见 {@link #rtDispatch}）。
      */
@@ -218,6 +348,8 @@ public final class PythonEmitter {
     private final java.util.Set<String> excClassAliases = new java.util.HashSet<>();
     /** Top-level names defined by this module (def/class/assign), re-exported so .py files are importable. */
     private final java.util.Set<String> definedNames = new java.util.LinkedHashSet<>();
+    /** Python name → safe JS name for bindings whose Python name is a JS reserved/unsafe identifier. */
+    private final Map<String, String> jsRenames = new LinkedHashMap<>();
     /** Functions/methods/classes that declare {@code **kwargs} → accept a tagged trailing object at call sites. */
     private final java.util.Set<String> kwFunctions = new java.util.HashSet<>();
     private final java.util.Set<String> kwMethods = new java.util.HashSet<>();
@@ -229,10 +361,15 @@ public final class PythonEmitter {
     private boolean needsMod = false;      // %、%=、divmod
     private boolean needsDiv = false;      // /、//、/=、//=、divmod（除零抛 ZeroDivisionError）
     private boolean needsMul = false;      // *、*=
+    private boolean needsAdd = false;      // +、+=（数组/字符串拼接与混合类型 TypeError）
+    private boolean needsReplace = false;  // str.replace(old, new[, count]) → 字面量替换助手
+    private boolean needsStrCount = false; // str.count(sub[, start[, end]]) → Python 语义计数助手
+    private boolean needsZfill = false;    // str.zfill(width) → 符号保持在前的零填充助手
     private boolean needsIn = false;       // in / not in
     private boolean needsIter = false;     // for 语句 / 推导式 for 子句
     private boolean needsLen = false;      // len()
     private boolean needsExc = false;      // 内建异常名被引用 / assert → 异常 prelude + __nekoExcIs
+    private boolean needsTypes = false;    // isinstance/except 类型位置引用内建类型名 → 类型探针 prelude
     /** 当前正在发射的语句的 Python 源码行（1-based；由 emitStmt 从 srcLines 维护），供 {@link #err} 附加位置。 */
     private int curLine = -1;
     /** The variable bound to the current exception in each enclosing except clause (top = innermost). */
@@ -254,6 +391,7 @@ public final class PythonEmitter {
             collectKwAware(stmt);
             scanHelpers(stmt);
         }
+        collectJsRenames(module);
         // Pass 2: ESM import declarations must precede all other statements; emit them first, each
         // mapped back to its Python source line. Module specifiers are relative to this file
         // (foo → ./foo, a.b.c → ./a/b/c); NekoModuleResolver probes .py / .js / index.* automatically.
@@ -294,11 +432,17 @@ public final class PythonEmitter {
         if (needsMod) line0(MOD_HELPER);
         if (needsDiv) { line0(DIV_HELPER); line0(FLOORDIV_HELPER); }
         if (needsMul) line0(MUL_HELPER);
+        if (needsAdd) line0(ADD_HELPER);
+        if (needsReplace) line0(REPLACE_HELPER);
+        if (needsStrCount) line0(STR_COUNT_HELPER);
+        if (needsZfill) line0(ZFILL_HELPER);
         if (needsIn) line0(IN_HELPER);
         if (needsIter) line0(ITER_HELPER);
         if (needsLen) line0(LEN_HELPER);
-        // 除法/取模助手会在运行时 throw new ZeroDivisionError —— prelude 类必须随之发射。
-        if (needsExc || needsMod || needsDiv) { for (String l : EXC_PRELUDE) line0(l); line0(EXCIS_HELPER); }
+        if (needsTypes) { for (String l : TYPE_PRELUDE) line0(l); }
+        // 除法/取模/加法助手会在运行时 throw new ZeroDivisionError / new TypeError —— prelude 类
+        // 必须随之发射（__nekoAdd 抛的 TypeError 也来自 prelude，不能落到 JS 原生 TypeError 类）。
+        if (needsExc || needsMod || needsDiv || needsAdd) { for (String l : EXC_PRELUDE) line0(l); line0(EXCIS_HELPER); }
     }
 
     /** (generatedJsLine, originalPythonLine0Based) pairs, one per statement's first emitted line. */
@@ -320,14 +464,14 @@ public final class PythonEmitter {
             case PythonNode.FunctionDef f -> {
                 if (hasKwargs(f.params())) {
                     // **kwargs → empty signature; a prologue reconstructs binding from `arguments`.
-                    line("function" + (f.isGenerator() ? "* " : " ") + f.name() + "() {");
+                    line("function" + (f.isGenerator() ? "* " : " ") + jsName(f.name()) + "() {");
                     emitKwPrologue(f.params(), false);
                 } else {
-                    line("function" + (f.isGenerator() ? "* " : " ") + f.name() + "(" + emitParams(f.params()) + ") {");
+                    line("function" + (f.isGenerator() ? "* " : " ") + jsName(f.name()) + "(" + emitParams(f.params()) + ") {");
                 }
                 block(f.body());
                 line("}");
-                applyDecorators(f.name(), f.decorators());
+                applyDecorators(jsName(f.name()), f.decorators());
             }
             case PythonNode.ClassDef c -> emitClass(c);
             case PythonNode.With w -> emitWith(w, 0);
@@ -351,7 +495,7 @@ public final class PythonEmitter {
                     if (!typed) {
                         // bare single except → plain catch (no type check)
                         PythonNode.ExceptClause only = excepts.get(0);
-                        String bound = only.name() != null ? only.name() : "__nekoErr";
+                        String bound = only.name() != null ? jsName(only.name()) : "__nekoErr";
                         line("} catch (" + bound + ") {");
                         if (elseFlag != null) line(elseFlag + " = false;");
                         errStack.push(bound);
@@ -375,7 +519,7 @@ public final class PythonEmitter {
                             }
                             indent++;
                             if (c.name() != null && !c.name().equals("__nekoErr")) {
-                                line("var " + c.name() + " = __nekoErr;");
+                                line("var " + jsName(c.name()) + " = __nekoErr;");
                             }
                             block(c.body());
                             indent--;
@@ -454,7 +598,7 @@ public final class PythonEmitter {
                     // raise Cls ≡ raise Cls()（Python 语义）：裸类名（内建异常 / 用户类 / 异常类
                     // 别名）必须实例化后抛出——旧实现只对内建异常名 new，用户类抛出的是类对象
                     // 本身，except Cls 的 instanceof 永远不匹配 → 未捕获崩溃。
-                    line("throw new " + rn.id() + "();");
+                    line("throw new " + jsName(rn.id()) + "();");
                 } else {
                     // raise ValueError('x') → throw new ValueError("x")（内建异常类由 prelude 提供）
                     line("throw " + emitExpr(r.exc()) + ";");
@@ -547,6 +691,287 @@ public final class PythonEmitter {
         }
     }
 
+    /** Returns the JS identifier to emit for a Python name; non-reserved names are unchanged. */
+    private String jsName(String pythonName) {
+        return jsRenames.getOrDefault(pythonName, pythonName);
+    }
+
+    /**
+     * Pre-scan that builds {@link #jsRenames}: every binding position whose Python name is a JS
+     * reserved/unsafe identifier is renamed to {@code __neko$<name>}; if that candidate collides
+     * with any identifier already used in the module (binding or reference), a numeric suffix is
+     * appended until it is unique and deterministic.
+     */
+    private void collectJsRenames(PythonNode.Module module) {
+        java.util.Set<String> userNames = new java.util.HashSet<>();
+        java.util.List<String> bindingNames = new java.util.ArrayList<>();
+        collectUserNames(module, userNames);
+        collectBindingNames(module, bindingNames);
+        java.util.Set<String> usedRenames = new java.util.HashSet<>();
+        for (String name : bindingNames) {
+            if (!JS_RESERVED_IDENTIFIERS.contains(name) || jsRenames.containsKey(name)) continue;
+            String candidate = "__neko$" + name;
+            int counter = 1;
+            while (userNames.contains(candidate) || usedRenames.contains(candidate)) {
+                candidate = "__neko$" + name + "_" + counter++;
+            }
+            jsRenames.put(name, candidate);
+            usedRenames.add(candidate);
+        }
+    }
+
+    /** Collects every variable-like identifier used anywhere in the module (for collision avoidance). */
+    private void collectUserNames(Object o, java.util.Set<String> userNames) {
+        if (o == null) return;
+        if (o instanceof PythonNode.Name n) {
+            userNames.add(n.id());
+            return;
+        }
+        if (o instanceof PythonNode.FunctionDef f) {
+            userNames.add(f.name());
+            for (String d : f.decorators()) userNames.add(decoratorRoot(d));
+            for (PythonNode.Param p : f.params()) collectUserNames(p, userNames);
+            for (PythonNode s : f.body()) collectUserNames(s, userNames);
+            return;
+        }
+        if (o instanceof PythonNode.ClassDef c) {
+            userNames.add(c.name());
+            for (String d : c.decorators()) userNames.add(decoratorRoot(d));
+            collectUserNames(c.base(), userNames);
+            for (PythonNode s : c.body()) collectUserNames(s, userNames);
+            return;
+        }
+        if (o instanceof PythonNode.Lambda l) {
+            for (PythonNode.Param p : l.params()) collectUserNames(p, userNames);
+            collectUserNames(l.body(), userNames);
+            return;
+        }
+        if (o instanceof PythonNode.Walrus w) {
+            userNames.add(w.name());
+            collectUserNames(w.value(), userNames);
+            return;
+        }
+        if (o instanceof PythonNode.Param p) {
+            userNames.add(p.name());
+            collectUserNames(p.defaultValue(), userNames);
+            return;
+        }
+        if (o instanceof PythonNode.Spec s) {
+            // import a.b.c → local binding is the leaf; from m import x [as y] → x or y.
+            userNames.add(s.alias() != null ? s.alias() : lastSegment(s.name()));
+            return;
+        }
+        if (o instanceof PythonNode.ExceptClause ec) {
+            if (ec.name() != null) userNames.add(ec.name());
+            for (PythonNode t : ec.types()) collectUserNames(t, userNames);
+            for (PythonNode s : ec.body()) collectUserNames(s, userNames);
+            return;
+        }
+        if (o instanceof PythonNode.WithItem wi) {
+            collectUserNames(wi.context(), userNames);
+            collectUserNames(wi.target(), userNames);
+            return;
+        }
+        if (o instanceof PythonNode.ForComp fc) {
+            collectUserNames(fc.target(), userNames);
+            collectUserNames(fc.iter(), userNames);
+            return;
+        }
+        if (o instanceof PythonNode.IfComp ic) {
+            collectUserNames(ic.cond(), userNames);
+            return;
+        }
+        if (o instanceof PythonNode.MatchCase mc) {
+            collectPatternUserNames(mc.pattern(), userNames);
+            collectUserNames(mc.guard(), userNames);
+            for (PythonNode s : mc.body()) collectUserNames(s, userNames);
+            return;
+        }
+        if (o instanceof PythonNode.Pattern p) {
+            collectPatternUserNames(p, userNames);
+            return;
+        }
+        Class<?> c = o.getClass();
+        if (c.isRecord()) {
+            for (var rc : c.getRecordComponents()) {
+                try {
+                    collectUserNames(rc.getAccessor().invoke(o), userNames);
+                } catch (ReflectiveOperationException ignored) { }
+            }
+            return;
+        }
+        if (o instanceof java.util.List<?> list) {
+            for (Object e : list) collectUserNames(e, userNames);
+        }
+    }
+
+    private void collectPatternUserNames(PythonNode.Pattern p, java.util.Set<String> userNames) {
+        if (p instanceof PythonNode.LiteralPat lp) {
+            collectUserNames(lp.value(), userNames);
+        } else if (p instanceof PythonNode.CapturePat cp) {
+            if (!"_".equals(cp.name())) userNames.add(cp.name());
+        } else if (p instanceof PythonNode.OrPat op) {
+            for (PythonNode.Pattern alt : op.alts()) collectPatternUserNames(alt, userNames);
+        } else if (p instanceof PythonNode.SequencePat sp) {
+            if (sp.starName() != null) userNames.add(sp.starName());
+            for (PythonNode.Pattern e : sp.elements()) collectPatternUserNames(e, userNames);
+        } else if (p instanceof PythonNode.MappingPat mp) {
+            for (PythonNode k : mp.keys()) collectUserNames(k, userNames);
+            for (String vn : mp.valueNames()) userNames.add(vn);
+            if (mp.restName() != null) userNames.add(mp.restName());
+        } else if (p instanceof PythonNode.ClassPat cp) {
+            userNames.add(cp.className());
+            for (PythonNode.Pattern e : cp.keyword().values()) collectPatternUserNames(e, userNames);
+        }
+    }
+
+    /** Registers every binding position in source order (only names that are reserved/unsafe get mapped). */
+    private void collectBindingNames(Object o, java.util.List<String> bindingNames) {
+        if (o == null) return;
+        if (o instanceof PythonNode.FunctionDef f) {
+            bindingNames.add(f.name());
+            for (PythonNode.Param p : f.params()) collectBindingNames(p, bindingNames);
+            for (PythonNode s : f.body()) collectBindingNames(s, bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.ClassDef c) {
+            bindingNames.add(c.name());
+            collectBindingNames(c.base(), bindingNames);
+            // Class-body members are PROPERTY positions (static fields / methods), not variable
+            // bindings. `static new = 5;` and `new() {}` are valid JS class-body syntax, and
+            // C.new / self.new / C().new() access them as raw property names. Only walk inside
+            // method params/bodies and field value expressions, where real bindings may live.
+            for (PythonNode s : c.body()) collectClassBodyBindingNames(s, bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.Lambda l) {
+            for (PythonNode.Param p : l.params()) collectBindingNames(p, bindingNames);
+            collectBindingNames(l.body(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.Param p) {
+            bindingNames.add(p.name());
+            collectBindingNames(p.defaultValue(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.Assign a) {
+            for (PythonNode t : a.targets()) collectTargetBindingNames(t, bindingNames);
+            collectBindingNames(a.value(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.For f) {
+            collectTargetBindingNames(f.target(), bindingNames);
+            collectBindingNames(f.iter(), bindingNames);
+            for (PythonNode s : f.body()) collectBindingNames(s, bindingNames);
+            for (PythonNode s : f.elseBody()) collectBindingNames(s, bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.Walrus w) {
+            bindingNames.add(w.name());
+            collectBindingNames(w.value(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.Import imp) {
+            for (PythonNode.Spec s : imp.specs()) {
+                bindingNames.add(s.alias() != null ? s.alias() : lastSegment(s.name()));
+            }
+            return;
+        }
+        if (o instanceof PythonNode.ImportFrom impf) {
+            for (PythonNode.Spec s : impf.specs()) {
+                bindingNames.add(s.alias() != null ? s.alias() : s.name());
+            }
+            return;
+        }
+        if (o instanceof PythonNode.ExceptClause ec) {
+            if (ec.name() != null) bindingNames.add(ec.name());
+            for (PythonNode t : ec.types()) collectBindingNames(t, bindingNames);
+            for (PythonNode s : ec.body()) collectBindingNames(s, bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.WithItem wi) {
+            collectTargetBindingNames(wi.target(), bindingNames);
+            collectBindingNames(wi.context(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.ForComp fc) {
+            collectTargetBindingNames(fc.target(), bindingNames);
+            collectBindingNames(fc.iter(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.IfComp ic) {
+            collectBindingNames(ic.cond(), bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.MatchCase mc) {
+            collectPatternBindingNames(mc.pattern(), bindingNames);
+            collectBindingNames(mc.guard(), bindingNames);
+            for (PythonNode s : mc.body()) collectBindingNames(s, bindingNames);
+            return;
+        }
+        if (o instanceof PythonNode.Pattern p) {
+            collectPatternBindingNames(p, bindingNames);
+            return;
+        }
+        Class<?> c = o.getClass();
+        if (c.isRecord()) {
+            for (var rc : c.getRecordComponents()) {
+                try {
+                    collectBindingNames(rc.getAccessor().invoke(o), bindingNames);
+                } catch (ReflectiveOperationException ignored) { }
+            }
+            return;
+        }
+        if (o instanceof java.util.List<?> list) {
+            for (Object e : list) collectBindingNames(e, bindingNames);
+        }
+    }
+
+    /**
+     * Class-body members are property definitions, not variable bindings: the member NAME itself
+     * (a static field or method name) must never enter {@code jsRenames}. This walk only descends
+     * into the executable parts — method parameters/bodies and field value expressions — where
+     * ordinary binding positions (params, walrus, lambdas, etc.) still need reserved-name renames.
+     */
+    private void collectClassBodyBindingNames(Object o, java.util.List<String> bindingNames) {
+        if (o instanceof PythonNode.FunctionDef f) {
+            for (PythonNode.Param p : f.params()) collectBindingNames(p, bindingNames);
+            for (PythonNode s : f.body()) collectBindingNames(s, bindingNames);
+        } else if (o instanceof PythonNode.Assign a) {
+            collectBindingNames(a.value(), bindingNames);
+        } else {
+            collectBindingNames(o, bindingNames);
+        }
+    }
+
+    private void collectTargetBindingNames(PythonNode target, java.util.List<String> bindingNames) {
+        if (target instanceof PythonNode.Name n) {
+            bindingNames.add(n.id());
+        } else if (target instanceof PythonNode.TupleLit t) {
+            for (PythonNode e : t.elements()) collectTargetBindingNames(e, bindingNames);
+        } else if (target != null) {
+            collectBindingNames(target, bindingNames);   // Attribute/Index have no binding, but may contain expressions
+        }
+    }
+
+    private void collectPatternBindingNames(PythonNode.Pattern p, java.util.List<String> bindingNames) {
+        if (p instanceof PythonNode.LiteralPat lp) {
+            collectBindingNames(lp.value(), bindingNames);
+        } else if (p instanceof PythonNode.CapturePat cp) {
+            if (!"_".equals(cp.name())) bindingNames.add(cp.name());
+        } else if (p instanceof PythonNode.OrPat op) {
+            // Python OR patterns must not bind names; emitMatchCond likewise discards their binds.
+        } else if (p instanceof PythonNode.SequencePat sp) {
+            if (sp.starName() != null) bindingNames.add(sp.starName());
+            for (PythonNode.Pattern e : sp.elements()) collectPatternBindingNames(e, bindingNames);
+        } else if (p instanceof PythonNode.MappingPat mp) {
+            for (String vn : mp.valueNames()) bindingNames.add(vn);
+            if (mp.restName() != null) bindingNames.add(mp.restName());
+        } else if (p instanceof PythonNode.ClassPat cp) {
+            for (PythonNode.Pattern e : cp.keyword().values()) collectPatternBindingNames(e, bindingNames);
+        }
+    }
+
     /**
      * One pre-scan walk (same reflection traversal as the old {@code containsFormatted}) that sets
      * every on-demand runtime-helper flag: a {@code Formatted} f-string field or {@code format(x, s)}
@@ -570,6 +995,21 @@ public final class PythonEmitter {
             if ("bool".equals(id) || "any".equals(id) || "all".equals(id) || "filter".equals(id)) needsTruthy = true;
             if ("len".equals(id)) needsLen = true;
             if ("divmod".equals(id)) { needsMod = true; needsDiv = true; }
+            // isinstance(x, int/str/...) 或 isinstance(x, (A, str))：类型位置引用内建类型名 → 探针 prelude
+            if ("isinstance".equals(id)) {
+                for (PythonNode a : call.args()) if (refsBuiltinType(a)) needsTypes = true;
+            }
+        } else if (o instanceof PythonNode.Call call && call.func() instanceof PythonNode.Attribute attr) {
+            // 方法名与 Python str 语义助手一一对应；此处保守预扫描，与 receiver 劫持判定无关。
+            switch (attr.attr()) {
+                case "replace" -> needsReplace = true;
+                case "count" -> needsStrCount = true;
+                case "zfill" -> needsZfill = true;
+                default -> { }
+            }
+        } else if (o instanceof PythonNode.ExceptClause ec) {
+            // except (ValueError, str) 之类的类型位置同样可能引用内建类型名（与 isinstance 同一路由）
+            for (PythonNode t : ec.types()) if (refsBuiltinType(t)) needsTypes = true;
         } else if (o instanceof PythonNode.Assert) {
             needsTruthy = true;   // assert 以 Python 真值判定条件
             needsExc = true;      // assert 失败 → new AssertionError(...)
@@ -582,6 +1022,7 @@ public final class PythonEmitter {
             switch (b.op()) {
                 case "and", "or" -> needsTruthy = true;
                 case "%" -> needsMod = true;
+                case "+" -> needsAdd = true;   // 数组/字符串拼接与混合类型 TypeError → __nekoAdd
                 case "*" -> needsMul = true;
                 case "/", "//" -> needsDiv = true;   // 除零需抛 ZeroDivisionError → __nekoDiv/__nekoFloorDiv
                 default -> { }
@@ -589,6 +1030,7 @@ public final class PythonEmitter {
         } else if (o instanceof PythonNode.AugAssign ag) {
             if ("%=".equals(ag.op())) needsMod = true;
             else if ("*=".equals(ag.op())) needsMul = true;
+            else if ("+=".equals(ag.op())) needsAdd = true;
             else if ("/=".equals(ag.op()) || "//=".equals(ag.op())) needsDiv = true;
         } else if (o instanceof PythonNode.Compare cmp && ("in".equals(cmp.op()) || "not in".equals(cmp.op()))) {
             needsIn = true;
@@ -611,6 +1053,22 @@ public final class PythonEmitter {
         if (o instanceof java.util.List<?> list) {
             for (var e : list) scanHelpers(e);
         }
+    }
+
+    /**
+     * 类型表达式（isinstance 第二实参 / except 类型元组的元素）是否引用了内建类型名
+     * （int/float/str/...）——需要发射 {@link #TYPE_PRELUDE} 探针。只看类型位置，普通的
+     * {@code int('42')} 调用或变量名不会误触发。
+     */
+    private static boolean refsBuiltinType(PythonNode n) {
+        if (n instanceof PythonNode.Name nm) return BUILTIN_TYPES.contains(nm.id());
+        if (n instanceof PythonNode.TupleLit t) {
+            for (PythonNode e : t.elements()) if (refsBuiltinType(e)) return true;
+        }
+        if (n instanceof PythonNode.ListLit l) {
+            for (PythonNode e : l.elements()) if (refsBuiltinType(e)) return true;
+        }
+        return false;
     }
 
     /** True if a parameter list declares {@code **kwargs} (the only trigger for the kw-aware lowering). */
@@ -680,18 +1138,18 @@ public final class PythonEmitter {
             String def = p.defaultValue() != null ? emitExpr(p.defaultValue()) : "undefined";
             String pick = "(__posCount > " + (i - start) + ") ? arguments[" + (i - start) + "]"
                     + " : (\"" + p.name() + "\" in __kw ? __kw[\"" + p.name() + "\"] : " + def + ")";
-            line("var " + p.name() + " = " + pick + ";");
+            line("var " + jsName(p.name()) + " = " + pick + ";");
         }
         if (starParam != null) {
-            line("var " + starParam.name() + " = [];");
+            line("var " + jsName(starParam.name()) + " = [];");
             line("for (var __i = " + (positional.size() - start) + "; __i < __posCount; __i++) "
-                    + starParam.name() + ".push(arguments[__i]);");
+                    + jsName(starParam.name()) + ".push(arguments[__i]);");
         }
         if (kwParam != null) {
             StringBuilder excl = new StringBuilder(" __nekoK !== \"__nekoKw\"");
             for (int i = start; i < positional.size(); i++) excl.append(" && __nekoK !== \"").append(positional.get(i).name()).append("\"");
-            line("var " + kwParam.name() + " = {};");
-            line("for (var __nekoK in __kw) { if (" + excl + ") " + kwParam.name() + "[__nekoK] = __kw[__nekoK]; }");
+            line("var " + jsName(kwParam.name()) + " = {};");
+            line("for (var __nekoK in __kw) { if (" + excl + ") " + jsName(kwParam.name()) + "[__nekoK] = __kw[__nekoK]; }");
         }
     }
 
@@ -719,7 +1177,7 @@ public final class PythonEmitter {
      */
     private String esmNamespaceImport(PythonNode.Spec s) {
         String local = s.alias() != null ? s.alias() : lastSegment(s.name());
-        return "import * as " + local + " from '" + moduleSpecifier(s.name()) + "';";
+        return "import * as " + jsName(local) + " from '" + moduleSpecifier(s.name()) + "';";
     }
 
     /** Builds the ESM named import for {@code from m[.sub] import a [as x], b}. */
@@ -729,8 +1187,15 @@ public final class PythonEmitter {
         for (int i = 0; i < specs.size(); i++) {
             if (i > 0) sb.append(", ");
             PythonNode.Spec s = specs.get(i);
-            sb.append(s.name());
-            if (s.alias() != null) sb.append(" as ").append(s.alias());
+            String imported = s.name();
+            String local = s.alias() != null ? jsName(s.alias()) : jsName(s.name());
+            if (s.alias() != null) {
+                sb.append(imported).append(" as ").append(local);
+            } else if (!imported.equals(local)) {
+                sb.append(imported).append(" as ").append(local);
+            } else {
+                sb.append(imported);
+            }
         }
         return sb.append(" } from '").append(moduleSpecifier(imp.module())).append("';").toString();
     }
@@ -745,7 +1210,7 @@ public final class PythonEmitter {
         int i = 0;
         for (String n : definedNames) {
             if (i++ > 0) sb.append(", ");
-            sb.append(n);
+            sb.append(jsName(n));
         }
         line(sb.append(" };").toString());
     }
@@ -757,8 +1222,20 @@ public final class PythonEmitter {
      */
     private void applyDecorators(String name, List<String> decorators) {
         for (int i = decorators.size() - 1; i >= 0; i--) {
-            line(name + " = " + decorators.get(i) + "(" + name + ");");
+            line(name + " = " + decoratorRef(decorators.get(i)) + "(" + name + ");");
         }
+    }
+
+    /** A decorator is a dotted identifier; only the first segment is a variable reference (property names stay raw). */
+    private String decoratorRef(String dotted) {
+        int dot = dotted.indexOf('.');
+        return dot < 0 ? jsName(dotted) : jsName(dotted.substring(0, dot)) + dotted.substring(dot);
+    }
+
+    /** First identifier segment of a dotted decorator (e.g. {@code module.deco} → {@code module}). */
+    private static String decoratorRoot(String dotted) {
+        int dot = dotted.indexOf('.');
+        return dot < 0 ? dotted : dotted.substring(0, dot);
     }
 
     private void emitAssign(PythonNode.Assign a) {
@@ -776,7 +1253,7 @@ public final class PythonEmitter {
     /** Returns a full assignment statement (with trailing {@code ;}) for one target. */
     private String emitAssignTarget(PythonNode target, String value) {
         return switch (target) {
-            case PythonNode.Name n -> "var " + n.id() + " = " + value + ";";
+            case PythonNode.Name n -> "var " + jsName(n.id()) + " = " + value + ";";
             case PythonNode.TupleLit t -> "var " + emitTarget(t) + " = " + value + ";";
             default -> emitExpr(target) + " = " + value + ";";   // Attribute / Index
         };
@@ -798,6 +1275,9 @@ public final class PythonEmitter {
         } else if (op.equals("*=")) {
             // 序列重复（[0] *= 4 / 'ab' *= 3）或数值乘法 → 经助手
             line(target + " = __nekoMul(" + target + ", " + value + ");");
+        } else if (op.equals("+=")) {
+            // 容器拼接（xs += ys）或数值/字符串加法 → 与二元 + 同路的助手（JS 的 += 同样会静默串接）
+            line(target + " = __nekoAdd(" + target + ", " + value + ");");
         } else if (op.equals("@=")) {
             throw err("python matmul '@=' is not supported");
         } else {
@@ -808,7 +1288,7 @@ public final class PythonEmitter {
 
     private void emitClass(PythonNode.ClassDef c) {
         classNames.add(c.name());   // track so calls like Counter(10) emit `new Counter(10)`
-        StringBuilder header = new StringBuilder("class ").append(c.name());
+        StringBuilder header = new StringBuilder("class ").append(jsName(c.name()));
         if (c.base() != null) header.append(" extends ").append(emitExpr(c.base()));
         header.append(" {");
         line(header.toString());
@@ -822,7 +1302,7 @@ public final class PythonEmitter {
         }
         indent--;
         line("}");
-        applyDecorators(c.name(), c.decorators());
+        applyDecorators(jsName(c.name()), c.decorators());
     }
 
     /**
@@ -837,7 +1317,14 @@ public final class PythonEmitter {
                     "python class-body assignments support only a single name target");
         }
         recordMapping(a);
-        line("static " + n.id() + " = " + emitExpr(a.value()) + ";");
+        // Class-body fields are PROPERTY positions, not variable bindings, so the raw Python name
+        // must be preserved. Reserved/unsafe names are emitted as computed property names so the
+        // JS remains valid (`static ["new"] = 5;`); non-reserved names keep the plain
+        // `static name = ...;` form byte-for-byte.
+        String fieldName = JS_RESERVED_IDENTIFIERS.contains(n.id())
+                ? "[" + jsString(n.id()) + "]"
+                : n.id();
+        line("static " + fieldName + " = " + emitExpr(a.value()) + ";");
     }
 
     /**
@@ -864,6 +1351,12 @@ public final class PythonEmitter {
         rewriteSelf = !isStatic && !isClass;   // instance/property methods rewrite self → this
         String star = m.isGenerator() ? "*" : "";   // generator method: *name(...)
         String name = jsMethodName(m.name());
+        // Reserved method names are legal as raw property names (e.g. `new() {}`), EXCEPT
+        // `constructor` and `prototype`: raw forms have special JS class-body meanings. Emit
+        // computed names for those two so they remain normal callable methods.
+        if ("constructor".equals(m.name()) || "prototype".equals(m.name())) {
+            name = "[" + jsString(name) + "]";
+        }
         String prefix = isProp ? "get " : (isStatic || isClass) ? "static " : "";
         String params = isStatic ? emitParams(m.params()) : dropFirstParam(m.params());
         if (hasKwargs(m.params())) {
@@ -917,14 +1410,21 @@ public final class PythonEmitter {
     }
 
     /**
-     * 单个异常类型的匹配条件：{@code Exception} 根 → {@code instanceof Error}（内建与 JS 原生
+     * 单个异常/类型匹配条件：{@code Exception} 根 → {@code instanceof Error}（内建与 JS 原生
      * 错误通吃）；其余内建异常名 → {@code __nekoExcIs(e, T)}（prelude 类 + JS 原生 Error 按 name
-     * 兜底）；用户类 → 普通 {@code instanceof}。
+     * 兜底）；内建类型名（int/str/list/...）→ {@link #TYPE_PRELUDE} 探针（旧实现发射
+     * {@code e instanceof str} —— JS 无此全局 → 运行时 ReferenceError）；用户类 → 普通
+     * {@code instanceof}。except 子句与 isinstance 的（元组）类型链共用此路由，混合元组
+     * {@code isinstance(e, (ValueError, str))} 自然得到 {@code __nekoExcIs(e, ValueError) || __nekoPyStr(e)}。
      */
     private String exceptionCond(String varName, PythonNode type) {
         if (type instanceof PythonNode.Name n) {
             if ("Exception".equals(n.id())) return "(" + varName + " instanceof Error)";
             if (BUILTIN_EXCEPTIONS.contains(n.id())) return "__nekoExcIs(" + varName + ", " + n.id() + ")";
+            if (BUILTIN_TYPES.contains(n.id())) {
+                String probe = "__nekoPy" + Character.toUpperCase(n.id().charAt(0)) + n.id().substring(1);
+                return probe + "(" + varName + ")";
+            }
         }
         return "(" + varName + " instanceof " + emitExpr(type) + ")";
     }
@@ -1015,6 +1515,7 @@ public final class PythonEmitter {
         String a = emitArgs(args);
         String e0 = args.isEmpty() ? "" : emitExpr(args.get(0));
         String e1 = args.size() > 1 ? emitExpr(args.get(1)) : null;
+        String e2 = args.size() > 2 ? emitExpr(args.get(2)) : null;
         boolean userInstance = DICT_METHODS.contains(m) && hijackReceiverIsUserInstance(attr);
         boolean plainReceiver = DICT_METHODS.contains(m) && hijackReceiverIsPlain(attr);
         return switch (m) {
@@ -1036,23 +1537,60 @@ public final class PythonEmitter {
             }
             case "ljust" -> args.size() == 1 ? obj + ".padEnd(" + a + ")" : null;
             case "rjust" -> args.size() == 1 ? obj + ".padStart(" + a + ")" : null;
-            case "zfill" -> args.size() == 1 ? obj + ".padStart(" + a + ", \"0\")" : null;
-            case "replace" -> args.size() == 2 ? obj + ".replaceAll(" + a + ")" : null;
+            case "zfill" -> {
+                if (hijackReceiverIsUserInstance(attr)) yield null;
+                yield args.size() == 1 ? "__nekoPyZfill(" + obj + ", " + e0 + ")" : null;
+            }
+            case "replace" -> {
+                if (hijackReceiverIsUserInstance(attr)) yield null;
+                if (args.size() < 2 || args.size() > 3) {
+                    throw err("python 'str.replace' needs 2 or 3 arguments (replace(old, new[, count]))");
+                }
+                yield "__nekoPyStrReplace(" + obj + ", " + e0 + ", " + e1 + ", "
+                        + (args.size() == 2 ? "-1" : e2) + ")";
+            }
             case "startswith" -> args.size() == 1 ? obj + ".startsWith(" + a + ")" : null;
             case "endswith" -> args.size() == 1 ? obj + ".endsWith(" + a + ")" : null;
             case "count" -> {
                 // 同 index：用户类 def count(self, x) 保有自己的方法；str/array 均无 .count → rtDispatch 探测。
-                if (args.size() != 1 || hijackReceiverIsUserInstance(attr)) yield null;
-                String strForm = obj + ".split(" + e0 + ").length - 1";
+                if (hijackReceiverIsUserInstance(attr)) yield null;
+                if (args.isEmpty() || args.size() > 3) {
+                    throw err("python 'str.count' needs 1 to 3 arguments (count(sub[, start[, end]]))");
+                }
+                String strForm = "__nekoPyStrCount(" + obj + ", " + e0 + ", "
+                        + (args.size() >= 2 ? e1 : "null") + ", "
+                        + (args.size() >= 3 ? e2 : "null") + ")";
                 yield hijackReceiverIsPlain(attr)
-                        ? rtDispatch(obj, "count", obj + ".count(" + e0 + ")", strForm)
+                        ? rtDispatch(obj, "count", obj + ".count(" + a + ")", strForm)
                         : strForm;
             }
-            case "split" -> args.size() <= 1
-                    ? (args.isEmpty()
-                        ? obj + ".trim().split(/\\s+/).filter(function (x) { return x !== \"\"; })"
-                        : obj + ".split(" + a + ")")
-                    : null;
+            case "split" -> {
+                if (hijackReceiverIsUserInstance(attr)) yield null;
+                if (args.size() > 2) {
+                    throw err("python 'str.split' needs at most 2 arguments (split([sep[, maxsplit]]))");
+                }
+                if (args.size() <= 1) {
+                    yield args.isEmpty()
+                            ? obj + ".trim().split(/\\s+/).filter(function (x) { return x !== \"\"; })"
+                            : obj + ".split(" + a + ")";
+                }
+                yield "((function (__o, __sep, __max) {"
+                        + " if (__max < 0) return __o.split(__sep);"
+                        + " var __limit = Math.trunc(__max);"
+                        + " if (__limit <= 0) return [__o];"
+                        + " if (__sep === '') return __o.split('');"
+                        + " var __parts = [], __idx = 0, __sepLen = __sep.length;"
+                        + " while (__limit > 0) {"
+                        + "   var __i = __o.indexOf(__sep, __idx);"
+                        + "   if (__i < 0) break;"
+                        + "   __parts.push(__o.substring(__idx, __i));"
+                        + "   __idx = __i + __sepLen;"
+                        + "   __limit--;"
+                        + " }"
+                        + " __parts.push(__o.substring(__idx));"
+                        + " return __parts;"
+                        + " })(" + obj + ", " + e0 + ", " + e1 + "))";
+            }
             case "join" -> args.size() == 1 ? obj + ".join(" + a + ")" : null;
             // list
             case "append" -> args.size() == 1 ? obj + ".push(" + a + ")" : null;
@@ -1279,7 +1817,7 @@ public final class PythonEmitter {
         if (p instanceof PythonNode.LiteralPat lp) {
             conds.add(subj + " === " + emitExpr(lp.value()));
         } else if (p instanceof PythonNode.CapturePat cp) {
-            if (!"_".equals(cp.name())) binds.add("var " + cp.name() + " = " + subj + ";");   // wildcard → no bind
+            if (!"_".equals(cp.name())) binds.add("var " + jsName(cp.name()) + " = " + subj + ";");   // wildcard → no bind
         } else if (p instanceof PythonNode.OrPat op) {
             List<String> altConds = new ArrayList<>();
             for (PythonNode.Pattern alt : op.alts()) {
@@ -1298,23 +1836,23 @@ public final class PythonEmitter {
                 emitMatchCond(sp.elements().get(i), child, conds, binds);
             }
             if (sp.starName() != null) {
-                binds.add("var " + sp.starName() + " = " + subj + ".slice(" + sp.starIndex() + ", "
+                binds.add("var " + jsName(sp.starName()) + " = " + subj + ".slice(" + sp.starIndex() + ", "
                         + subj + ".length - " + (n - sp.starIndex()) + ");");
             }
         } else if (p instanceof PythonNode.MappingPat mp) {
             for (int i = 0; i < mp.keys().size(); i++) {
                 String k = emitExpr(mp.keys().get(i));
                 conds.add(subj + "[" + k + "] !== undefined");
-                binds.add("var " + mp.valueNames().get(i) + " = " + subj + "[" + k + "];");
+                binds.add("var " + jsName(mp.valueNames().get(i)) + " = " + subj + "[" + k + "];");
             }
             if (mp.restName() != null) {
                 StringBuilder copy = new StringBuilder("(function (__o) { var __r = {}; for (var __k in __o) __r[__k] = __o[__k];");
                 for (PythonNode key : mp.keys()) copy.append(" delete __r[").append(emitExpr(key)).append("];");
                 copy.append(" return __r; })(").append(subj).append(")");
-                binds.add("var " + mp.restName() + " = " + copy + ";");
+                binds.add("var " + jsName(mp.restName()) + " = " + copy + ";");
             }
         } else if (p instanceof PythonNode.ClassPat cp) {
-            conds.add(subj + " instanceof " + cp.className());
+            conds.add(subj + " instanceof " + jsName(cp.className()));
             for (var e : cp.keyword().entrySet()) {
                 emitMatchCond(e.getValue(), subj + "." + e.getKey(), conds, binds);
             }
@@ -1367,7 +1905,7 @@ public final class PythonEmitter {
             case PythonNode.FString f -> jsTemplate(f);
             case PythonNode.BoolLit l -> Boolean.toString(l.value());
             case PythonNode.NoneLit l -> "null";
-            case PythonNode.Name n -> (rewriteSelf && "self".equals(n.id())) ? "this" : n.id();
+            case PythonNode.Name n -> (rewriteSelf && "self".equals(n.id())) ? "this" : jsName(n.id());
             case PythonNode.Attribute a -> emitExpr(a.obj()) + "." + a.attr();
             case PythonNode.Index ix -> {
                 if (ix.index() instanceof PythonNode.Slice s) {
@@ -1388,7 +1926,7 @@ public final class PythonEmitter {
             case PythonNode.Binary b -> emitBinary(b);
             case PythonNode.Compare c -> emitCompare(c);
             case PythonNode.Ternary t -> "(__nekoTruthy(" + emitExpr(t.cond()) + ") ? " + emitExpr(t.ifTrue()) + " : " + emitExpr(t.ifFalse()) + ")";
-            case PythonNode.Walrus w -> "(" + w.name() + " = " + emitExpr(w.value()) + ")";
+            case PythonNode.Walrus w -> "(" + jsName(w.name()) + " = " + emitExpr(w.value()) + ")";
             case PythonNode.GenExp g -> emitGenExp(g);
             case PythonNode.Starred s -> "..." + emitExpr(s.value());   // standalone (rare); spreads normally apply at emitArgs/emitElements
             case PythonNode.ListLit l -> emitElements(l.elements());
@@ -1557,7 +2095,7 @@ public final class PythonEmitter {
             // 旧实现发射裸调用 → 运行时 ReferenceError，且被 except 以错误类型意外捕获）。
             // 异类别名（VE = ValueError）同样按类构造处理。
             if (!hasKw && (BUILTIN_EXCEPTIONS.contains(fn.id()) || excClassAliases.contains(fn.id()))) {
-                return "new " + fn.id() + "(" + emitArgs(positional) + ")";
+                return "new " + jsName(fn.id()) + "(" + emitArgs(positional) + ")";
             }
             if (classNames.contains(fn.id())) {
                 if (hasKw) {
@@ -1565,10 +2103,10 @@ public final class PythonEmitter {
                         throw err("python keyword arguments to '" + fn.id()
                                 + "()' require its __init__ to declare **kwargs");
                     }
-                    return "new " + fn.id() + "(" + emitArgs(positional)
+                    return "new " + jsName(fn.id()) + "(" + emitArgs(positional)
                             + (positional.isEmpty() ? "" : ", ") + kwObjectLiteral(kwargs, kwSpreads) + ")";
                 }
-                return "new " + fn.id() + "(" + emitArgs(positional) + ")";
+                return "new " + jsName(fn.id()) + "(" + emitArgs(positional) + ")";
             }
         }
         if (hasKw) {
@@ -1664,6 +2202,11 @@ public final class PythonEmitter {
         if (op.equals("*")) {
             // 序列重复（[0] * 4 → 数组重复；'ab' * 3 → 字符串重复）或数值乘法 → 经助手
             return "(__nekoMul(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
+        }
+        if (op.equals("+")) {
+            // 数组拼接 / str+str 拼接 / 数值加法；str 与非 str 混用抛 TypeError（JS 的 + 会静默
+            // 把 [1,2]+[3] 变 "1,23"、'a'+5 变 'a5'）→ 经助手
+            return "(__nekoAdd(" + emitExpr(b.left()) + ", " + emitExpr(b.right()) + "))";
         }
         if (op.equals("and")) {
             // 值语义 + Python 真值 + 短路：右操作数包成 thunk 保持惰性，左操作数作为实参只求值一次
@@ -1796,7 +2339,7 @@ public final class PythonEmitter {
             if (i > 0) sb.append(", ");
             Param p = params.get(i);
             if (p.starArg()) sb.append("...");
-            sb.append(p.name());
+            sb.append(jsName(p.name()));
             if (p.defaultValue() != null) sb.append(" = ").append(emitExpr(p.defaultValue()));
         }
         return sb.toString();
@@ -1805,7 +2348,7 @@ public final class PythonEmitter {
     /** A target pattern (for-of / comprehension param): name or {@code [a, b]} destructuring. */
     private String emitTarget(PythonNode target) {
         return switch (target) {
-            case PythonNode.Name n -> n.id();
+            case PythonNode.Name n -> jsName(n.id());
             case PythonNode.TupleLit t -> {
                 StringBuilder sb = new StringBuilder("[");
                 for (int i = 0; i < t.elements().size(); i++) {

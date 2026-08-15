@@ -3,6 +3,7 @@ package com.tkisor.nekojs.wrapper;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.core.JsonObjectAdapter;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import graal.graalvm.polyglot.Value;
 
 import java.io.IOException;
@@ -22,8 +23,14 @@ import java.util.Objects;
  * <p>写盘使用 sibling temp + atomic move，避免 reload 中途读到半写的文件。
  */
 public final class DataGeneratorJS {
+    /** Hard per-write size cap for generated files (16 MiB). */
+    public static final int MAX_GENERATED_FILE_BYTES = 16 * 1024 * 1024;
+    /** Hard cumulative size cap per generator instance (64 MiB). */
+    public static final long MAX_GENERATED_TOTAL_BYTES = 64 * 1024 * 1024L;
+
     private final Path root;
     private final String stage;
+    private long generatedBytes;
 
     public DataGeneratorJS(Path root) {
         this(root, "");
@@ -72,6 +79,17 @@ public final class DataGeneratorJS {
 
     private void write(String path, String content) {
         Path target = resolve(Objects.requireNonNull(path, "path"));
+        int bytes = content.getBytes(StandardCharsets.UTF_8).length;
+        if (bytes > MAX_GENERATED_FILE_BYTES) {
+            throw new IllegalStateException(
+                    "Generated file " + path + " is " + bytes + " bytes, exceeding the per-file limit of "
+                            + MAX_GENERATED_FILE_BYTES + " bytes");
+        }
+        if (generatedBytes + bytes > MAX_GENERATED_TOTAL_BYTES) {
+            throw new IllegalStateException(
+                    "Generated file " + path + " would reach " + (generatedBytes + bytes)
+                            + " bytes, exceeding the total limit of " + MAX_GENERATED_TOTAL_BYTES + " bytes");
+        }
         try {
             Path parent = target.getParent();
             if (parent != null) {
@@ -91,6 +109,7 @@ public final class DataGeneratorJS {
         } catch (IOException error) {
             throw new IllegalStateException("Failed to write generated file " + path + ": " + error.getMessage(), error);
         }
+        generatedBytes += bytes;
     }
 
     private Path resolve(String path) {
@@ -98,6 +117,16 @@ public final class DataGeneratorJS {
         if (relative.isAbsolute() || relative.startsWith("..")) {
             throw new IllegalArgumentException("Generated file path must be a relative path: " + path);
         }
-        return root.resolve(relative);
+        Path target = root.resolve(relative).normalize();
+        Path verified;
+        try {
+            verified = NekoJSPaths.get().verifyInsideGameDirForCreate(target);
+        } catch (IOException error) {
+            throw new IllegalArgumentException("Generated file path escapes the game directory: " + path, error);
+        }
+        if (!verified.startsWith(root.normalize().toAbsolutePath())) {
+            throw new IllegalArgumentException("Generated file path escapes its root: " + path);
+        }
+        return verified;
     }
 }

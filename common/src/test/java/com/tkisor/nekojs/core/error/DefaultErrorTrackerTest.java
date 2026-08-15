@@ -84,6 +84,40 @@ class DefaultErrorTrackerTest {
         assertEquals(2, stored.getOccurrenceCount(), "相同源码位置的重复 Polyglot 异常必须去重并递增频次");
     }
 
+    @Test
+    void shouldLogOccurrenceFollowsMilestoneSchedule() {
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(true, 0, 1),
+                "首次出现（新建错误）必须记录日志");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 1, 2),
+                "1→2 跨越里程碑 2");
+        assertFalse(DefaultErrorTracker.shouldLogOccurrence(false, 2, 3),
+                "2→3 未跨越任何里程碑");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 4, 5),
+                "4→5 跨越里程碑 5");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 9, 10),
+                "9→10 跨越里程碑 10");
+        assertFalse(DefaultErrorTracker.shouldLogOccurrence(false, 10, 11),
+                "10→11 未跨越任何里程碑");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 24, 25),
+                "24→25 跨越里程碑 25");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 49, 50),
+                "49→50 跨越里程碑 50");
+        assertFalse(DefaultErrorTracker.shouldLogOccurrence(false, 50, 51),
+                "50→51 未跨越里程碑 100");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 99, 100),
+                "99→100 跨越里程碑 100");
+        assertFalse(DefaultErrorTracker.shouldLogOccurrence(false, 100, 199),
+                "100→199 未跨越里程碑 200");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 199, 200),
+                "199→200 跨越里程碑 200");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 399, 400),
+                "399→400 跨越里程碑 400");
+        assertFalse(DefaultErrorTracker.shouldLogOccurrence(false, 400, 799),
+                "400→799 未跨越里程碑 800");
+        assertTrue(DefaultErrorTracker.shouldLogOccurrence(false, 799, 800),
+                "799→800 跨越里程碑 800");
+    }
+
     /** 每次执行都抛出一个全新的 {@link PolyglotException}，模拟 20Hz tick 回调的重复错误。 */
     private PolyglotException throwingPolyglot() {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {

@@ -75,6 +75,10 @@ public final class NekoNodeOS {
         );
     }
 
+    static String ipVersion(String hostAddress) {
+        return hostAddress != null && hostAddress.contains(":") ? "IPv6" : "IPv4";
+    }
+
     public Map<String, List<NetworkAddress>> networkInterfaces() {
         Map<String, List<NetworkAddress>> result = new LinkedHashMap<>();
         try {
@@ -85,12 +89,14 @@ public final class NekoNodeOS {
                 var inetAddresses = ni.getInetAddresses();
                 while (inetAddresses.hasMoreElements()) {
                     var addr = inetAddresses.nextElement();
+                    String hostAddress = addr.getHostAddress();
+                    String version = ipVersion(hostAddress);
                     addresses.add(new NetworkAddress(
-                            addr.getHostAddress(),
-                            addr.getHostAddress().contains(":") ? "IPv6" : "IPv4",
-                            "IPv4",
-                            addr.getHostAddress().contains(":") ? 16 : 4,
-                            addr.getHostAddress()
+                            hostAddress,
+                            version,
+                            version,
+                            "IPv6".equals(version) ? 16 : 4,
+                            hostAddress
                     ));
                 }
                 if (!addresses.isEmpty()) {

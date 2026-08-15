@@ -367,11 +367,18 @@ public final class NekoTypeScriptCompiler {
                     lastNumericName = null;
                 } else if (isNumberLit(m.valueExpr())) {
                     long num;
-                    try { num = parseNumberLit(m.valueExpr()); } catch (NumberFormatException e) { num = next; }
+                    try {
+                        num = parseNumberLit(m.valueExpr());
+                    } catch (NumberFormatException e) {
+                        throw badEnumNumberLiteral(m.valueExpr());
+                    }
                     sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(num).append("] = \"").append(nm).append("\"; ");
                     next = num + 1;
                     lastNumericName = nm;
                     lastNumericKnown = true;
+                } else if (looksLikeNumberLiteral(m.valueExpr())) {
+                    // 形似数值字面量但未通过 isNumberLit（如 1e、1e+）：报编译期错误，不能透传成坏 JS。
+                    throw badEnumNumberLiteral(m.valueExpr());
                 } else {
                     // 计算成员：值运行时才知。作为数字基准（TS 视计算 enum 成员为 number），
                     // 下一个无值成员用 E["thisMember"] + 1 运行时自增。
@@ -403,9 +410,14 @@ public final class NekoTypeScriptCompiler {
             boolean seenDigit = false;
             boolean seenDot = false;
             boolean seenExp = false;
+            boolean seenExpDigit = false;
             for (int i = 0; i < core.length(); i++) {
                 char c = core.charAt(i);
-                if (c >= '0' && c <= '9') { seenDigit = true; continue; }
+                if (c >= '0' && c <= '9') {
+                    seenDigit = true;
+                    if (seenExp) seenExpDigit = true;
+                    continue;
+                }
                 if (c == '.' && !seenDot && !seenExp) { seenDot = true; continue; }
                 if ((c == 'e' || c == 'E') && seenDigit && !seenExp) {
                     seenExp = true;
@@ -414,7 +426,7 @@ public final class NekoTypeScriptCompiler {
                 }
                 return false;
             }
-            return seenDigit;
+            return seenDigit && (!seenExp || seenExpDigit);
         }
 
         /** Parses a TS numeric literal accepted by {@link #isNumberLit}. Floats truncate toward zero. */
@@ -434,6 +446,22 @@ public final class NekoTypeScriptCompiler {
             else if (lower.indexOf('.') >= 0 || lower.indexOf('e') >= 0) value = (long) Double.parseDouble(core);
             else value = Long.parseLong(core);
             return neg ? -value : value;
+        }
+
+        /**
+         * 形似数值字面量但未通过 {@link #isNumberLit} 的枚举成员值（如 {@code 1e}、{@code 1e+}、
+         * {@code 0b2}、{@code 0o8}、{@code 0xG}）。必须整串匹配数值记号形态（可带正负号、
+         * 0x/0o/0b 前缀加字母数字、十进制小数/指数、n 后缀），因此 {@code 1 + 2}、
+         * {@code (1+2)}、{@code 0xff + 1}、{@code 1 << 2} 都不匹配。前缀分支使用宽松字符类，
+         * 因为本方法仅在 {@link #isNumberLit} 返回 false 之后调用，合法字面量不受影响。
+         */
+        private boolean looksLikeNumberLiteral(String v) {
+            if (v.isEmpty()) return false;
+            return v.matches("[+-]?(?:(?:0[xX][0-9a-zA-Z]*)|(?:0[oO][0-9a-zA-Z]*)|(?:0[bB][0-9a-zA-Z]*)|(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d*)?)n?");
+        }
+
+        private IllegalArgumentException badEnumNumberLiteral(String literal) {
+            return new IllegalArgumentException("Invalid TypeScript enum numeric literal '" + literal + "' in " + file);
         }
 
         // ---- namespace（单层）/ module → IIFE，export 成员在末尾批量转 Name.member=member ----

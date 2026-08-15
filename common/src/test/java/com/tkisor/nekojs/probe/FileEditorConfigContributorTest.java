@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.probe.events.Snippet;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -13,8 +15,8 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link FileEditorConfigContributor} 的合并行为：probe 拥有的键（paths 对应键、include、typeRoots）
- * 替换为最新值，用户键/未知键保留；pyrightconfig fresh 附带默认、既有去重。
+ * {@link FileEditorConfigContributor} 的合并行为：probe 拥有的键（paths 对应键、include、typeRoots、
+ * JSX 运行时键）替换为最新值，用户键/未知键保留；pyrightconfig fresh 附带默认、既有去重。
  */
 class FileEditorConfigContributorTest {
 
@@ -111,6 +113,78 @@ class FileEditorConfigContributorTest {
         // 其他键保留
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);
+    }
+
+    @Test
+    void mergeJsConfig_automaticRuntimeSwitchesJsxKeysAndPreservesUserKeys(@TempDir Path temp) throws IOException {
+        Path jsconfig = temp.resolve("jsconfig.json");
+        Files.writeString(jsconfig, """
+                {
+                  "compilerOptions": {
+                    "target": "ESNext",
+                    "jsx": "react",
+                    "jsxFactory": "__nekoJsxFactory",
+                    "jsxFragmentFactory": "__nekoJsxFragment",
+                    "typeRoots": ["./my-types"]
+                  },
+                  "myExtra": 42
+                }""");
+
+        withJsxAutomaticRuntime(true, () ->
+                new FileEditorConfigContributor().mergeJsConfigTypeRoots(jsconfig,
+                        List.of("../../.neko_probe/typescript/@package")));
+
+        String out = Files.readString(jsconfig);
+        // jsx 运行时键被引擎配置校正为 TS 自动运行时
+        assertTrue(out.contains("\"jsx\": \"react-jsx\""), out);
+        assertTrue(out.contains("\"jsxImportSource\": \"nekojs\""), out);
+        assertFalse(out.contains("jsxFactory"), "classic factory keys must be removed: " + out);
+        assertFalse(out.contains("jsxFragmentFactory"), "classic factory keys must be removed: " + out);
+        // 用户键保留
+        assertTrue(out.contains("ESNext"), out);
+        assertTrue(out.contains("myExtra"), out);
+    }
+
+    @Test
+    void mergeJsConfig_classicRuntimeRestoresClassicJsxKeys(@TempDir Path temp) throws IOException {
+        Path jsconfig = temp.resolve("jsconfig.json");
+        // 既有 jsconfig 停留在旧的 automatic 模式（用户已在 nekojs-engine.toml 关闭开关）
+        Files.writeString(jsconfig, """
+                {
+                  "compilerOptions": {
+                    "jsx": "react-jsx",
+                    "jsxImportSource": "nekojs",
+                    "paths": { "java:*": ["../../.neko_probe/@package/*"] }
+                  }
+                }""");
+
+        withJsxAutomaticRuntime(false, () ->
+                new FileEditorConfigContributor().mergeJsConfigPaths(jsconfig,
+                        Map.of("java:*", List.of("../../.neko_probe/typescript/@package/*"))));
+
+        String out = Files.readString(jsconfig);
+        // jsx 运行时键被引擎配置校正回经典全局工厂模式
+        assertTrue(out.contains("\"jsx\": \"react\""), out);
+        assertTrue(out.contains("\"jsxFactory\": \"__nekoJsxFactory\""), out);
+        assertTrue(out.contains("\"jsxFragmentFactory\": \"__nekoJsxFragment\""), out);
+        assertFalse(out.contains("jsxImportSource"), "automatic-runtime key must be removed: " + out);
+        // paths 合并本身的行为不受影响
+        assertTrue(out.contains("../../.neko_probe/typescript/@package/*"), out);
+    }
+
+    /** 临时翻转 {@link ClassFilter#INSTANCE} 的 jsxAutomaticRuntime，结束后恢复（静态状态，必须 try/finally）。 */
+    private static void withJsxAutomaticRuntime(boolean automatic, Runnable body) {
+        SandboxConfig prev = ClassFilter.INSTANCE.config();
+        try {
+            ClassFilter.INSTANCE.updateConfig(new SandboxConfig(
+                    prev.allowThreads(), prev.allowReflection(), prev.allowAsm(),
+                    prev.allowFsWriteOutsideNekojs(), prev.enableEsmAuthoring(),
+                    prev.conciseScriptErrorLogs(), automatic, prev.scriptMemberValidation(),
+                    prev.scriptEvaluationTimeoutSeconds(), prev.scriptStatementLimit()));
+            body.run();
+        } finally {
+            ClassFilter.INSTANCE.updateConfig(prev);
+        }
     }
 
     @Test

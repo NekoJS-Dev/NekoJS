@@ -56,7 +56,7 @@ class ScriptTypeScopedCacheClearTest {
         Path sharedKey = root.resolve("node_modules/pkg/index.js");
 
         Map<Path, Object> cache = pipelineCache();
-        Object stamp = newStamp(1L, 10L);
+        Object stamp = newStamp(1L, 10L, "hash");
         NekoPreparedModule prepared = NekoPreparedModule.commonJs("export default 1", null);
         cache.put(serverKey, newEntry(stamp, prepared, ScriptType.SERVER));
         cache.put(clientKey, newEntry(stamp, prepared, ScriptType.CLIENT));
@@ -73,7 +73,7 @@ class ScriptTypeScopedCacheClearTest {
     void pipelineCacheNoArgClearWipesEverything() throws Exception {
         Path root = NekoJSPaths.get().root().toAbsolutePath().normalize();
         Map<Path, Object> cache = pipelineCache();
-        Object stamp = newStamp(1L, 10L);
+        Object stamp = newStamp(1L, 10L, "hash");
         NekoPreparedModule prepared = NekoPreparedModule.commonJs("export default 1", null);
         cache.put(root.resolve("server_scripts/a.js"), newEntry(stamp, prepared, ScriptType.SERVER));
         cache.put(root.resolve("node_modules/pkg/index.js"), newEntry(stamp, prepared, null));
@@ -115,8 +115,68 @@ class ScriptTypeScopedCacheClearTest {
         assertTrue(isVirtual("some-package"), "跨类型共享模块（裸包名）必须保留");
     }
 
+    @Test
+    void esmRegistryClearByTypeLeavesNoFileNameIndexOrphans() throws Exception {
+        NekoEsmVirtualModuleRegistry.register("server_scripts/x.mjs", "export default 1");
+        NekoEsmVirtualModuleRegistry.register("client_scripts/y.mjs", "export default 2");
+
+        Path serverPath = Path.of(NekoEsmVirtualModuleRegistry.uri("server_scripts/x.mjs"));
+        Path clientPath = Path.of(NekoEsmVirtualModuleRegistry.uri("client_scripts/y.mjs"));
+
+        NekoEsmVirtualModuleRegistry.clear(ScriptType.SERVER);
+
+        assertNull(NekoEsmVirtualModuleRegistry.source(serverPath), "SERVER 类型 source 必须被清除");
+        assertNull(NekoEsmVirtualModuleRegistry.displayPath(serverPath), "SERVER 类型 display path 必须被清除");
+        assertNotNull(NekoEsmVirtualModuleRegistry.source(clientPath), "CLIENT 类型 source 必须保留");
+        assertNotNull(NekoEsmVirtualModuleRegistry.displayPath(clientPath), "CLIENT 类型 display path 必须保留");
+
+        Map<String, String> displayByFileName = esmRegistryMap("DISPLAY_PATHS_BY_FILE_NAME");
+        Map<String, String> keyByFileName = esmRegistryMap("KEY_BY_FILE_NAME");
+        assertFalse(displayByFileName.containsValue("server_scripts/x.mjs"),
+                "DISPLAY_PATHS_BY_FILE_NAME 不能残留 SERVER 类型的孤儿条目");
+        assertFalse(keyByFileName.containsKey(serverPath.getFileName().toString()),
+                "KEY_BY_FILE_NAME 不能残留 SERVER 类型的孤儿条目");
+        assertTrue(displayByFileName.containsValue("client_scripts/y.mjs"),
+                "CLIENT 类型的 file-name 条目必须保留");
+        assertTrue(keyByFileName.containsKey(clientPath.getFileName().toString()),
+                "CLIENT 类型的 key-by-file-name 条目必须保留");
+    }
+
+    @Test
+    void esmRegistryInvalidateKeepsFileNameIndexConsistent() throws Exception {
+        NekoEsmVirtualModuleRegistry.register("server_scripts/x.mjs", "export default 1");
+        NekoEsmVirtualModuleRegistry.register("client_scripts/y.mjs", "export default 2");
+
+        Path serverPath = Path.of(NekoEsmVirtualModuleRegistry.uri("server_scripts/x.mjs"));
+        Path clientPath = Path.of(NekoEsmVirtualModuleRegistry.uri("client_scripts/y.mjs"));
+
+        NekoEsmVirtualModuleRegistry.invalidate("server_scripts/x.mjs");
+
+        assertNull(NekoEsmVirtualModuleRegistry.source(serverPath), "invalidate 后 SERVER 类型 source 必须清除");
+        assertNull(NekoEsmVirtualModuleRegistry.displayPath(serverPath), "invalidate 后 SERVER 类型 display path 必须清除");
+        assertNotNull(NekoEsmVirtualModuleRegistry.source(clientPath), "invalidate SERVER 不能影响 CLIENT 类型 source");
+
+        Map<String, String> displayByFileName = esmRegistryMap("DISPLAY_PATHS_BY_FILE_NAME");
+        Map<String, String> keyByFileName = esmRegistryMap("KEY_BY_FILE_NAME");
+        assertFalse(displayByFileName.containsKey(serverPath.getFileName().toString()),
+                "invalidate 后 DISPLAY_PATHS_BY_FILE_NAME 不能残留 SERVER 条目");
+        assertFalse(keyByFileName.containsKey(serverPath.getFileName().toString()),
+                "invalidate 后 KEY_BY_FILE_NAME 不能残留 SERVER 条目");
+        assertTrue(displayByFileName.containsKey(clientPath.getFileName().toString()),
+                "invalidate SERVER 不能影响 CLIENT 的 file-name 条目");
+        assertTrue(keyByFileName.containsKey(clientPath.getFileName().toString()),
+                "invalidate SERVER 不能影响 CLIENT 的 key-by-file-name 条目");
+    }
+
     private static boolean isVirtual(String moduleId) {
         return NekoEsmVirtualModuleRegistry.isVirtualModule(Path.of(NekoEsmVirtualModuleRegistry.uri(moduleId)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, String> esmRegistryMap(String fieldName) throws Exception {
+        Field field = NekoEsmVirtualModuleRegistry.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (Map<String, String>) field.get(null);
     }
 
     // ---- reflection helpers for the private static PREPARED_CACHE ----
@@ -128,11 +188,11 @@ class ScriptTypeScopedCacheClearTest {
         return (Map<Path, Object>) field.get(null);
     }
 
-    private static Object newStamp(long millis, long size) throws Exception {
+    private static Object newStamp(long millis, long size, String contentHash) throws Exception {
         Class<?> stampClass = Class.forName("com.tkisor.nekojs.core.module.NekoModulePipelineCache$FileStamp");
-        Constructor<?> ctor = stampClass.getDeclaredConstructor(long.class, long.class);
+        Constructor<?> ctor = stampClass.getDeclaredConstructor(long.class, long.class, String.class);
         ctor.setAccessible(true);
-        return ctor.newInstance(millis, size);
+        return ctor.newInstance(millis, size, contentHash);
     }
 
     private static Object newEntry(Object stamp, NekoPreparedModule prepared, ScriptType type) throws Exception {

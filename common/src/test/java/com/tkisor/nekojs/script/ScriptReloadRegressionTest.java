@@ -29,15 +29,21 @@ import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,6 +60,13 @@ class ScriptReloadRegressionTest {
     /** 记录入口脚本观察到的 helper 导出值；作为全局绑定注入沙盒。 */
     public static final class TestRecorder {
         private volatile String value;
+        private volatile Context recordedContext;
+        private volatile boolean contextDead;
+        private volatile Context deadContext;
+        private volatile ScriptManager manager;
+        private volatile boolean managerContextMatches;
+        private volatile boolean managerKilled;
+        private volatile Context managerContextAtProbe;
 
         public void record(String value) {
             this.value = value;
@@ -61,6 +74,60 @@ class ScriptReloadRegressionTest {
 
         public String value() {
             return value;
+        }
+
+        /** 记录「调用此方法的 JS 函数」所属的 Graal Context，用于断言脚本实际执行在哪个环境。 */
+        public void recordContext(Value fn) {
+            this.recordedContext = fn.getContext();
+        }
+
+        public Context recordedContext() {
+            return recordedContext;
+        }
+
+        /** 记录当前 JS 函数所属 Context 是否被 ScriptManager.isContextDead 判为 dead。 */
+        public void recordContextDead(Value fn) {
+            Context context = fn.getContext();
+            this.deadContext = context;
+            this.contextDead = ScriptManager.isContextDead(context);
+            if (manager != null) {
+                try {
+                    Field contextField = ScriptManager.class.getDeclaredField("context");
+                    contextField.setAccessible(true);
+                    this.managerContextAtProbe = (Context) contextField.get(manager);
+                    this.managerContextMatches = (this.managerContextAtProbe != null
+                            && this.managerContextAtProbe.equals(context));
+                    Field killedField = ScriptManager.class.getDeclaredField("contextKilled");
+                    killedField.setAccessible(true);
+                    this.managerKilled = (boolean) killedField.get(manager);
+                } catch (Exception ignored) {
+                    // 诊断辅助：反射失败不应掩盖原始断言
+                }
+            }
+        }
+
+        public boolean contextDead() {
+            return contextDead;
+        }
+
+        public Context deadContext() {
+            return deadContext;
+        }
+
+        public Context managerContextAtProbe() {
+            return managerContextAtProbe;
+        }
+
+        public boolean managerContextMatches() {
+            return managerContextMatches;
+        }
+
+        public boolean managerKilled() {
+            return managerKilled;
+        }
+
+        public void bindManager(ScriptManager manager) {
+            this.manager = manager;
         }
     }
 
@@ -92,11 +159,12 @@ class ScriptReloadRegressionTest {
         @Override public Object managedApiImplementation(ApiSymbolId globalId) { return null; }
     }
 
-    private static Path gameDir;
-
     @BeforeAll
-    static void initPlatform(@TempDir Path temp) {
-        gameDir = temp.resolve("gamedir");
+    static void initPlatform() {
+        // 使用固定的非临时目录：NekoJSLoggers 的 FileAppender 会持有 <gameDir>/logs/nekojs/server.log
+        // 的文件句柄直到 JVM 退出；若把 gameDir 放在 JUnit @TempDir 中，类结束时临时目录清理会
+        // 因文件被占用而在 Windows 上失败（executionError）。
+        Path gameDir = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-test-gamedir");
         TestPlatformInit.ensureInitialized(gameDir);
     }
 
@@ -158,6 +226,252 @@ class ScriptReloadRegressionTest {
         }
     }
 
+    /**
+     * C1 回归：事务式 reload 必须在候选 Context 中加载脚本，而不是沿用旧的
+     * {@code this.context}/{@code this.nodeRuntime}。
+     *
+     * <p>脚本通过 {@code TestRecorder.recordContext((event) => {})} 把「定义该函数的
+     * Graal Context」上报给 Java 侧。reload 成功后，该 Context 必须等于 ScriptManager
+     * 当前持有的候选 Context；修复前脚本跑在旧 Context 中，二者不相等。
+     */
+    @Test
+    void transactionalReloadLoadsScriptsIntoCandidateContext() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path entry = serverDir.resolve("entry.js");
+        Files.writeString(entry, "TestRecorder.record('v1'); TestRecorder.recordContext((event) => {});\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        ScriptManager manager = null;
+        try {
+            manager = newManager(paths, recorder, engine);
+            manager.discoverScripts();
+            manager.loadScripts();
+            assertEquals("v1", recorder.value(), "initial load must execute the entry");
+            assertEquals(currentContext(manager), recorder.recordedContext(),
+                    "initial load must run in the freshly created context");
+
+            Files.writeString(entry, "TestRecorder.record('v2'); TestRecorder.recordContext((event) => {});\n");
+            manager.reloadScripts();
+
+            assertEquals("v2", recorder.value(), "reload must re-run the entry");
+            assertEquals(currentContext(manager), recorder.recordedContext(),
+                    "transactional reload must load candidate scripts into the candidate context");
+        } finally {
+            if (manager != null) {
+                manager.close();
+            }
+            engine.close();
+        }
+    }
+
+    /**
+     * I1 回归：成功的完整 reload 必须清除 {@code contextKilled}；候选加载失败时恢复旧值。
+     * 这里覆盖成功路径（失败路径由候选-kill 检测交给 catch 恢复）。
+     */
+    @Test
+    void successfulTransactionalReloadClearsContextKilledFlag() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path entry = serverDir.resolve("entry.js");
+        Files.writeString(entry, "TestRecorder.record('v1'); TestRecorder.recordContext((event) => {});\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        ScriptManager manager = null;
+        try {
+            manager = newManager(paths, recorder, engine);
+            manager.discoverScripts();
+            manager.loadScripts();
+            setContextKilled(manager, true);
+
+            Files.writeString(entry, "TestRecorder.record('v2'); TestRecorder.recordContext((event) => {});\n");
+            manager.reloadScripts();
+
+            assertFalse(isContextKilled(manager),
+                    "a successfully reloaded context is healthy, so contextKilled must be false");
+            assertEquals("v2", recorder.value(), "reload must re-run the entry");
+            assertEquals(currentContext(manager), recorder.recordedContext(),
+                    "candidate scripts must run in the candidate context");
+        } finally {
+            if (manager != null) {
+                manager.close();
+            }
+            engine.close();
+        }
+    }
+
+    /**
+     * C1/I1 回归：候选加载期间语句上限杀死候选 Context 时，事务式 reload 必须按失败
+     * 处理——关闭候选、保留旧 Context，并把 {@code contextKilled} 恢复为 reload 前的值。
+     * 即使 reload 前 {@code contextKilled} 已经是 true，也不能把死掉的候选提交为 live。
+     */
+    @Test
+    void transactionalReloadRejectsCandidateKilledByStatementLimitWhenPreviousKilledIsTrue() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path entry = serverDir.resolve("entry.js");
+        Files.writeString(entry, "TestRecorder.record('v1');\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L);
+        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+        ScriptManager manager = null;
+        try {
+            manager = newManager(paths, recorder, engine, config, tracker);
+            manager.discoverScripts();
+            manager.loadScripts();
+            assertEquals("v1", recorder.value(), "initial load must succeed");
+
+            Context oldContext = currentContext(manager);
+            setContextKilled(manager, true);
+
+            Files.writeString(entry, "while (true) { /* spin forever */ }\n");
+            assertThrows(RuntimeException.class, manager::reloadScripts,
+                    "reload must fail when the candidate context is killed by the statement limit");
+            assertTrue(isContextKilled(manager),
+                    "failure path must restore previousKilled=true instead of committing the dead candidate");
+            assertEquals(oldContext, currentContext(manager),
+                    "failed transactional reload must keep the old context as current");
+        } finally {
+            forceCloseLiveContexts();
+            if (manager != null) {
+                manager.close();
+            }
+            engine.close();
+        }
+    }
+
+    /**
+     * C1 回归：事务式 reload 候选加载期间，候选 Context 的 timer 回调不能被判定为 dead。
+     * 修复前 {@code isContextDead(candidateContext)} 在最终切换前看到的是旧 Context，
+     * {@code await new Promise(r => setTimeout(r, 0))} 的回调会被跳过，候选脚本加载超时。
+     */
+    @Test
+    void transactionalReloadCandidateTimerCallbacksAreNotSkipped() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path entry = serverDir.resolve("entry.mjs");
+        Files.writeString(entry, "TestRecorder.record('v1');\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        // 短超时让修复前的 RED 在 5 秒内失败，而不是等满生产默认的 30 秒。
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5,
+                SandboxConfig.DEFAULT_SCRIPT_STATEMENT_LIMIT);
+        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+        ScriptManager manager = null;
+        try {
+            manager = newManager(paths, recorder, engine, config, tracker);
+            recorder.bindManager(manager);
+            manager.discoverScripts();
+            manager.loadScripts();
+            assertEquals("v1", recorder.value(), "initial load must succeed");
+
+            Files.writeString(entry, """
+                    TestRecorder.recordContextDead((event) => {});
+                    TestRecorder.record('v2-start');
+                    await new Promise(resolve => setTimeout(() => {
+                        TestRecorder.record('v2-timer-fired');
+                        resolve();
+                    }, 0));
+                    TestRecorder.record('v2-end');
+                    """);
+            assertTimeoutPreemptively(Duration.ofSeconds(10), manager::reloadScripts,
+                    "candidate timer callback must not be skipped as dead");
+            assertEquals(currentContext(manager), recorder.deadContext(),
+                    "isContextDead probe must run in the candidate context");
+            assertTrue(recorder.managerContextMatches(),
+                    "diagnostic: manager.context should be identical to the probe context during candidate load; "
+                            + "probe=" + recorder.deadContext() + " managerAtProbe=" + recorder.managerContextAtProbe()
+                            + " contextDead=" + recorder.contextDead() + " managerKilled=" + recorder.managerKilled());
+            assertFalse(recorder.managerKilled(),
+                    "diagnostic: contextKilled should be false during candidate load");
+            assertFalse(recorder.contextDead(),
+                    "candidate context must not be considered dead during candidate script loading");
+            assertEquals("v2-end", recorder.value(),
+                    "candidate script must run to completion, including its timer-resumed continuation");
+        } finally {
+            forceCloseLiveContexts();
+            if (manager != null) {
+                manager.close();
+            }
+            engine.close();
+        }
+    }
+
+    /**
+     * 回归测试：getOrCreateContext 的 check-then-act 必须原子化。
+     *
+     * <p>修复前该方法未同步，多个线程并发通过空检查后会各自创建 Graal Context，
+     * 输家 Context（及其 Node timer 调度线程）泄漏在 {@link ScriptManager#CONTEXT_TO_MANAGER}。
+     * 由于现有公开 API 中唯一不持实例锁的 {@link ScriptManager#flushReadyNodeTimers()}
+     * 并不创建 Context，本测试通过反射并发调用私有的 getOrCreateContext（测试允许反射，
+     * 与既有测试一致）来固定该契约：每个 fresh manager 只留下一个 Context 条目。
+     */
+    @Test
+    void concurrentGetOrCreateContextCreatesSingleContextPerManager() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        TestRecorder recorder = new TestRecorder();
+        Method getOrCreateContext = ScriptManager.class.getDeclaredMethod("getOrCreateContext");
+        getOrCreateContext.setAccessible(true);
+
+        int threads = 8;
+        int rounds = 5;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            for (int round = 0; round < rounds; round++) {
+                // 每个 round 使用独立 Engine：Graal 要求共享 Engine 的所有 Context 使用同一
+                // HostAccess 配置，而 newManager 每次都会构建新的 NekoSharedHostAccess。
+                Engine engine = Engine.newBuilder().build();
+                ScriptManager manager = newManager(paths, recorder, engine);
+                try {
+                    CountDownLatch start = new CountDownLatch(1);
+                    List<Future<Context>> futures = new ArrayList<>();
+                    for (int t = 0; t < threads; t++) {
+                        futures.add(pool.submit(() -> {
+                            start.await();
+                            return (Context) getOrCreateContext.invoke(manager);
+                        }));
+                    }
+                    start.countDown();
+                    for (Future<Context> future : futures) {
+                        assertDoesNotThrow(() -> future.get(60, TimeUnit.SECONDS));
+                    }
+                    int contexts = contextCountFor(manager);
+                    assertEquals(1, contexts,
+                            "round " + round + ": concurrent getOrCreateContext must leave exactly one Context in CONTEXT_TO_MANAGER");
+                } finally {
+                    manager.close();
+                    engine.close();
+                }
+            }
+        } finally {
+            forceCloseLiveContexts();
+            pool.shutdownNow();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static int contextCountFor(ScriptManager manager) throws Exception {
+        Field field = ScriptManager.class.getDeclaredField("CONTEXT_TO_MANAGER");
+        field.setAccessible(true);
+        Map<Context, ScriptManager> map = (Map<Context, ScriptManager>) field.get(null);
+        int count = 0;
+        for (ScriptManager value : map.values()) {
+            if (value == manager) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private static ScriptManager newManager(NekoJSPaths paths, TestRecorder recorder, Engine engine) {
         return newManager(paths, recorder, engine, SandboxConfig.defaultConfig());
     }
@@ -182,6 +496,25 @@ class ScriptReloadRegressionTest {
                 new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);
         return new ScriptManager(ScriptType.SERVER, eventBridge, pluginRuntime,
                 newPropertyRegistry(), tracker, paths, config, environmentFactory);
+    }
+
+    private static Context currentContext(ScriptManager manager) throws Exception {
+        Field field = ScriptManager.class.getDeclaredField("context");
+        field.setAccessible(true);
+        return (Context) field.get(manager);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static boolean isContextKilled(ScriptManager manager) throws Exception {
+        Field field = ScriptManager.class.getDeclaredField("contextKilled");
+        field.setAccessible(true);
+        return (boolean) field.get(manager);
+    }
+
+    private static void setContextKilled(ScriptManager manager, boolean value) throws Exception {
+        Field field = ScriptManager.class.getDeclaredField("contextKilled");
+        field.setAccessible(true);
+        field.set(manager, value);
     }
 
     /**

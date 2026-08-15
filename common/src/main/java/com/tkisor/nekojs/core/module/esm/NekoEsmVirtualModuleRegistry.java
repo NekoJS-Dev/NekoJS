@@ -19,6 +19,8 @@ public final class NekoEsmVirtualModuleRegistry {
     private static final Map<String, String> SOURCES = new ConcurrentHashMap<>();
     private static final Map<String, String> DISPLAY_PATHS = new ConcurrentHashMap<>();
     private static final Map<String, String> DISPLAY_PATHS_BY_FILE_NAME = new ConcurrentHashMap<>();
+    /** fileName（哈希 .mjs 文件名）→ 当前拥有该 file-name 条目的模块 key。 */
+    private static final Map<String, String> KEY_BY_FILE_NAME = new ConcurrentHashMap<>();
     private static final Map<String, Integer> GENERATIONS = new ConcurrentHashMap<>();
     /** key（path 字符串，与 SOURCES 同键）→ 所属 ScriptType；跨类型共享模块（node:/java:/裸包名）为 null。 */
     private static final Map<String, ScriptType> TYPES = new ConcurrentHashMap<>();
@@ -35,7 +37,7 @@ public final class NekoEsmVirtualModuleRegistry {
         String displayPath = displayPathForModuleId(moduleId);
         SOURCES.put(key, source == null ? "" : source);
         DISPLAY_PATHS.put(key, displayPath);
-        DISPLAY_PATHS_BY_FILE_NAME.put(path.getFileName().toString(), displayPath);
+        putFileNameEntry(key, displayPath);
         ScriptType type = scriptTypeOf(moduleId);
         if (type != null) {
             TYPES.put(key, type);
@@ -49,7 +51,7 @@ public final class NekoEsmVirtualModuleRegistry {
         String displayPath = displayPathForModuleId(moduleId);
         SOURCES.putIfAbsent(key, "");
         DISPLAY_PATHS.putIfAbsent(key, displayPath);
-        DISPLAY_PATHS_BY_FILE_NAME.putIfAbsent(path.getFileName().toString(), displayPath);
+        putFileNameEntryIfAbsent(key, displayPath);
         ScriptType type = scriptTypeOf(moduleId);
         if (type != null) {
             TYPES.putIfAbsent(key, type);
@@ -111,7 +113,7 @@ public final class NekoEsmVirtualModuleRegistry {
         String key = path.toString();
         SOURCES.remove(key);
         DISPLAY_PATHS.remove(key);
-        DISPLAY_PATHS_BY_FILE_NAME.remove(path.getFileName().toString());
+        removeFileNameEntry(key);
         TYPES.remove(key);
         GENERATIONS.merge(moduleId, 1, Integer::sum);
     }
@@ -120,6 +122,7 @@ public final class NekoEsmVirtualModuleRegistry {
         SOURCES.clear();
         DISPLAY_PATHS.clear();
         DISPLAY_PATHS_BY_FILE_NAME.clear();
+        KEY_BY_FILE_NAME.clear();
         GENERATIONS.clear();
         TYPES.clear();
     }
@@ -145,7 +148,7 @@ public final class NekoEsmVirtualModuleRegistry {
         for (String key : keys) {
             SOURCES.remove(key);
             DISPLAY_PATHS.remove(key);
-            DISPLAY_PATHS_BY_FILE_NAME.remove(Path.of(key).getFileName().toString());
+            removeFileNameEntry(key);
             TYPES.remove(key);
         }
         GENERATIONS.keySet().removeIf(moduleId -> scriptTypeOf(moduleId) == type);
@@ -153,6 +156,40 @@ public final class NekoEsmVirtualModuleRegistry {
 
     public static Path root() {
         return ROOT;
+    }
+
+    private static void putFileNameEntry(String key, String displayPath) {
+        String fileName = fileNameOfKey(key);
+        if (fileName == null) {
+            return;
+        }
+        DISPLAY_PATHS_BY_FILE_NAME.put(fileName, displayPath);
+        KEY_BY_FILE_NAME.put(fileName, key);
+    }
+
+    private static void putFileNameEntryIfAbsent(String key, String displayPath) {
+        String fileName = fileNameOfKey(key);
+        if (fileName == null) {
+            return;
+        }
+        DISPLAY_PATHS_BY_FILE_NAME.putIfAbsent(fileName, displayPath);
+        KEY_BY_FILE_NAME.putIfAbsent(fileName, key);
+    }
+
+    private static void removeFileNameEntry(String key) {
+        String fileName = fileNameOfKey(key);
+        if (fileName == null) {
+            return;
+        }
+        if (key.equals(KEY_BY_FILE_NAME.get(fileName))) {
+            DISPLAY_PATHS_BY_FILE_NAME.remove(fileName);
+            KEY_BY_FILE_NAME.remove(fileName);
+        }
+    }
+
+    private static String fileNameOfKey(String key) {
+        Path fileName = Path.of(key).getFileName();
+        return fileName == null ? null : fileName.toString();
     }
 
     private static Path path(String moduleId) {

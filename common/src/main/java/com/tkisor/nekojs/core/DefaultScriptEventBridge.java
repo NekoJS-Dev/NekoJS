@@ -54,7 +54,13 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
         }
         ScriptEventRegistry.clearListeners(type);
         if (type == ScriptType.STARTUP) {
-            ScriptEventRegistry.clearDefinitions(type);
+            // ScriptEvents.post registers definitions with targetType SERVER or CLIENT
+            // (never STARTUP), so a full STARTUP reload must sweep definitions of ALL
+            // target types — otherwise stale SERVER/CLIENT definitions survive and the
+            // re-fired ScriptEvents registration hits "Script event already registered".
+            for (ScriptType target : ScriptType.all()) {
+                ScriptEventRegistry.clearDefinitions(target);
+            }
         }
     }
 
@@ -65,7 +71,13 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
         }
         ScriptEventRegistry.clearListeners(type, scriptId);
         if (type == ScriptType.STARTUP) {
-            ScriptEventRegistry.clearDefinitions(type, scriptId);
+            // ScriptEvents.post always registers definitions with targetType SERVER or CLIENT
+            // (never STARTUP), so a per-script STARTUP reload must sweep definitions of ALL
+            // target types by script id — otherwise stale definitions survive and the re-fired
+            // ScriptEvents registration would hit "Script event already registered".
+            for (ScriptType target : ScriptType.all()) {
+                ScriptEventRegistry.clearDefinitions(target, scriptId);
+            }
         }
     }
 }

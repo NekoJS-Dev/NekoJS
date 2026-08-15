@@ -4,6 +4,7 @@ import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.api.ScriptType;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -36,7 +37,22 @@ public final class ScriptSyncService {
     }
 
     public static Map<String, String> collectAllScripts() {
-        return ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.get().root());
+        Map<String, String> files = ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.get().root());
+        if (files.size() > MAX_SYNC_FILES) {
+            throw new IllegalStateException("脚本数量超过限制: " + files.size() + " (最大 " + MAX_SYNC_FILES + ")");
+        }
+        int totalSize = 0;
+        for (Map.Entry<String, String> entry : files.entrySet()) {
+            int size = entry.getValue().getBytes(StandardCharsets.UTF_8).length;
+            if (size > MAX_BATCH_SCRIPT_SIZE) {
+                throw new IllegalStateException("脚本文件过大: " + entry.getKey() + " (" + size + " bytes, 最大 " + MAX_BATCH_SCRIPT_SIZE + ")");
+            }
+            totalSize += size;
+            if (totalSize > MAX_BATCH_TOTAL_SIZE) {
+                throw new IllegalStateException("脚本总大小超过限制: " + totalSize + " bytes (最大 " + MAX_BATCH_TOTAL_SIZE + ")");
+            }
+        }
+        return files;
     }
 
     public static int writeBatch(Map<String, String> files) throws Exception {

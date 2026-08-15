@@ -12,6 +12,7 @@ import net.minecraft.nbt.NBTTagLong;
 import net.minecraft.nbt.NBTTagShort;
 import net.minecraft.nbt.NBTTagString;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -119,8 +120,8 @@ public class PersistentDataJS {
     public double getDouble(String key) { return getTag().getDouble(key); }
     public String getString(String key) { return getTag().getString(key); }
     public boolean getBoolean(String key) { return getTag().getBoolean(key); }
-    public byte[] getByteArray(String key) { return getTag().getByteArray(key); }
-    public int[] getIntArray(String key) { return getTag().getIntArray(key); }
+    public byte[] getByteArray(String key) { byte[] v = getTag().getByteArray(key); return Arrays.copyOf(v, v.length); }
+    public int[] getIntArray(String key) { int[] v = getTag().getIntArray(key); return Arrays.copyOf(v, v.length); }
     public NBTTagCompound getCompound(String key) { return getTag().getCompoundTag(key).copy(); }
 
     // ===================== scalar putter（可变语义，setXxx 原地改） =====================
@@ -133,8 +134,8 @@ public class PersistentDataJS {
     public PersistentDataJS putDouble(String key, double value) { NBTTagCompound tag = getTag(); tag.setDouble(key, value); saveTag(tag); return this; }
     public PersistentDataJS putString(String key, String value) { NBTTagCompound tag = getTag(); tag.setString(key, value); saveTag(tag); return this; }
     public PersistentDataJS putBoolean(String key, boolean value) { NBTTagCompound tag = getTag(); tag.setBoolean(key, value); saveTag(tag); return this; }
-    public PersistentDataJS putByteArray(String key, byte[] value) { NBTTagCompound tag = getTag(); tag.setByteArray(key, value); saveTag(tag); return this; }
-    public PersistentDataJS putIntArray(String key, int[] value) { NBTTagCompound tag = getTag(); tag.setIntArray(key, value); saveTag(tag); return this; }
+    public PersistentDataJS putByteArray(String key, byte[] value) { NBTTagCompound tag = getTag(); tag.setByteArray(key, Arrays.copyOf(value, value.length)); saveTag(tag); return this; }
+    public PersistentDataJS putIntArray(String key, int[] value) { NBTTagCompound tag = getTag(); tag.setIntArray(key, Arrays.copyOf(value, value.length)); saveTag(tag); return this; }
     public PersistentDataJS putCompound(String key, NBTTagCompound value) { NBTTagCompound tag = getTag(); tag.setTag(key, value.copy()); saveTag(tag); return this; }
 
     // ===================== 动态分发 get（按运行时 NBT 子类型还原 Java 值） =====================
@@ -155,8 +156,8 @@ public class PersistentDataJS {
         if (element instanceof NBTTagFloat f) return f.getFloat();
         if (element instanceof NBTTagDouble d) return d.getDouble();
         if (element instanceof NBTTagString str) return str.getString();
-        if (element instanceof NBTTagByteArray ba) return ba.getByteArray();
-        if (element instanceof NBTTagIntArray ia) return ia.getIntArray();
+        if (element instanceof NBTTagByteArray ba) { byte[] v = ba.getByteArray(); return Arrays.copyOf(v, v.length); }
+        if (element instanceof NBTTagIntArray ia) { int[] v = ia.getIntArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof NBTTagCompound compound) return compound.copy();
         // NBTTagList / 其它未知类型：返回 NBT 节点本身
         return element;

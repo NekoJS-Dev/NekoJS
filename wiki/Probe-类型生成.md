@@ -350,7 +350,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 1. **`@Remap`/`@HideFromJS` 当前在 probe 不生效**：`ClassDeclGenerator` 用裸 `getDeclaredMethods()`，没走 `MemberVisibilityQuery`。计划修复（Phase A）。
 2. **JSDoc 覆盖少**：文档注解（`@Doc`/`@Param`）尚在规划中，当前靠编程式 `registerTypeDocs` 或 `ProbeEvents.modifyType` 的 `setDoc` 系列补 JSDoc。
 3. **事件 import 可能膨胀**：`EventDeclarationGenerator.collectImports` 递归无深度限制，可能拉进大量无关类（Phase C 修复）。
-4. **配方参数名退化**：编译没开 `-parameters` 时，参数名退化成类型名（Phase C 修复）。
+4. **第三方类参数名退化**：NekoJS 各模块已在根 build.gradle 统一以 `-parameters` 编译，自身类的声明携带真实参数名；但未开 `-parameters` 的第三方 jar 与 JDK 类（标准 JDK 的 `java.*` class 文件不含 MethodParameters 属性）仍取不到参数名，`TypeReflector` 的 `isNamePresent` 兜底会把这类参数退化为 `arg0`/`arg1`…。
 5. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
 6. **Python stub 泛型展平**：类型变量渲染为 `Any`，不保留泛型参数关系（够日常补全，非完整类型）。
 

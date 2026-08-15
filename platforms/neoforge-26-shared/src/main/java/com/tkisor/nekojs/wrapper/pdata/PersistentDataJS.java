@@ -13,6 +13,7 @@ import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.nbt.Tag;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -63,9 +64,9 @@ public class PersistentDataJS {
     public double getDouble(String key) { return getTag().getDoubleOr(key, 0.0); }
     public String getString(String key) { return getTag().getStringOr(key, ""); }
     public boolean getBoolean(String key) { return getTag().getBooleanOr(key, false); }
-    public byte[] getByteArray(String key) { return getTag().getByteArray(key).orElse(new byte[0]); }
-    public int[] getIntArray(String key) { return getTag().getIntArray(key).orElse(new int[0]); }
-    public long[] getLongArray(String key) { return getTag().getLongArray(key).orElse(new long[0]); }
+    public byte[] getByteArray(String key) { return getTag().getByteArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new byte[0]); }
+    public int[] getIntArray(String key) { return getTag().getIntArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new int[0]); }
+    public long[] getLongArray(String key) { return getTag().getLongArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new long[0]); }
     public CompoundTag getCompound(String key) { return getTag().getCompound(key).orElseGet(CompoundTag::new).copy(); }
 
     public PersistentDataJS putByte(String key, byte value) { CompoundTag tag = getTag(); tag.putByte(key, value); saveTag(tag); return this; }
@@ -76,9 +77,9 @@ public class PersistentDataJS {
     public PersistentDataJS putDouble(String key, double value) { CompoundTag tag = getTag(); tag.putDouble(key, value); saveTag(tag); return this; }
     public PersistentDataJS putString(String key, String value) { CompoundTag tag = getTag(); tag.putString(key, value); saveTag(tag); return this; }
     public PersistentDataJS putBoolean(String key, boolean value) { CompoundTag tag = getTag(); tag.putBoolean(key, value); saveTag(tag); return this; }
-    public PersistentDataJS putByteArray(String key, byte[] value) { CompoundTag tag = getTag(); tag.putByteArray(key, value); saveTag(tag); return this; }
-    public PersistentDataJS putIntArray(String key, int[] value) { CompoundTag tag = getTag(); tag.putIntArray(key, value); saveTag(tag); return this; }
-    public PersistentDataJS putLongArray(String key, long[] value) { CompoundTag tag = getTag(); tag.putLongArray(key, value); saveTag(tag); return this; }
+    public PersistentDataJS putByteArray(String key, byte[] value) { CompoundTag tag = getTag(); tag.putByteArray(key, Arrays.copyOf(value, value.length)); saveTag(tag); return this; }
+    public PersistentDataJS putIntArray(String key, int[] value) { CompoundTag tag = getTag(); tag.putIntArray(key, Arrays.copyOf(value, value.length)); saveTag(tag); return this; }
+    public PersistentDataJS putLongArray(String key, long[] value) { CompoundTag tag = getTag(); tag.putLongArray(key, Arrays.copyOf(value, value.length)); saveTag(tag); return this; }
     public PersistentDataJS putCompound(String key, CompoundTag value) { CompoundTag tag = getTag(); tag.put(key, value.copy()); saveTag(tag); return this; }
 
     public CompoundTag copyTag() {
@@ -135,9 +136,9 @@ public class PersistentDataJS {
         if (element instanceof FloatTag f) return f.floatValue();
         if (element instanceof DoubleTag d) return d.doubleValue();
         if (element instanceof StringTag str) return str.value();
-        if (element instanceof ByteArrayTag ba) return ba.getAsByteArray();
-        if (element instanceof IntArrayTag ia) return ia.getAsIntArray();
-        if (element instanceof LongArrayTag la) return la.getAsLongArray();
+        if (element instanceof ByteArrayTag ba) { byte[] v = ba.getAsByteArray(); return Arrays.copyOf(v, v.length); }
+        if (element instanceof IntArrayTag ia) { int[] v = ia.getAsIntArray(); return Arrays.copyOf(v, v.length); }
+        if (element instanceof LongArrayTag la) { long[] v = la.getAsLongArray(); return Arrays.copyOf(v, v.length); }
         return element;
     }
 
