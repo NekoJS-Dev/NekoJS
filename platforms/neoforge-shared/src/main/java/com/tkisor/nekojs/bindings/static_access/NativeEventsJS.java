@@ -15,6 +15,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
+/**
+ * 原生 NeoForge 事件桥（任意事件类 + 处理器直挂 EVENT_BUS）。
+ *
+ * @deprecated 已弃用：请改用声明式的 {@code ScriptEvents}——STARTUP 脚本在
+ * {@code ScriptEvents.server/client} 回调中 {@code event.register(group, name, eventClass,
+ * priority, receiveCancelled)} 注册，server/client 脚本按组名监听。ScriptEvents 提供同等能力
+ * （优先级、receiveCancelled、return-true 取消翻译、按脚本 reload 清理）且是可进 stable
+ * 契约的类型化通道。本类保留至弃用窗口结束（docs/api-rework-plan.md D-2）。
+ */
+@Deprecated
 public class NativeEventsJS implements Binding {
 
     // CopyOnWriteArrayList: registration (JS/reload thread) and clear() (reload thread) can race.

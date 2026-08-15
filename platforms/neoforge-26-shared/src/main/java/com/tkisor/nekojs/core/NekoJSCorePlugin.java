@@ -124,8 +124,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP
         // reload, unregistering the previous round's native NeoForge event listeners
         // before the scripts re-register them. Avoids listeners accumulating on reload.
+        // 过渡期：NativeEvents 已弃用（改用 ScriptEvents 声明式注册），保留至弃用窗口结束。
         if (registry.scriptType() == ScriptType.STARTUP) {
-            registry.register(new NativeEventsJS());
+            @SuppressWarnings("deprecation")
+            NativeEventsJS nativeEvents = new NativeEventsJS();
+            registry.register(nativeEvents);
         }
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("TriState", TriState.class);

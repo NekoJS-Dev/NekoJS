@@ -96,7 +96,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
         registry.register("global", NekoGlobal.shared());
-        registry.register(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS());
+        // 过渡期：NativeEvents 已弃用（1.12.2 本就不可用，脚本改用类型化事件绑定），保留至弃用窗口结束。
+        @SuppressWarnings("deprecation")
+        NativeEventsJS nativeEvents = new NativeEventsJS();
+        registry.register(ScriptType.STARTUP, "NativeEvents", nativeEvents);
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);

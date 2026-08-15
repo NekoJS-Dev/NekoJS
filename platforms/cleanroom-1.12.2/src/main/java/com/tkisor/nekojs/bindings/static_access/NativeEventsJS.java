@@ -2,7 +2,10 @@ package com.tkisor.nekojs.bindings.static_access;
 
 /**
  * 1.12.2 NativeEventsJS — native Forge event bridge is not implemented on this platform.
+ *
+ * @deprecated 已弃用：1.12.2 原生注册不可实现，本桩将随弃用窗口移除；脚本请使用类型化事件绑定。
  */
+@Deprecated
 public class NativeEventsJS {
     public void onEvent(String eventClass, Object handler) {
         throw new UnsupportedOperationException(
