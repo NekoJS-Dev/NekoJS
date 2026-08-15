@@ -42,7 +42,9 @@ import java.util.function.Consumer;
  * </ul>
  */
 public class RecipeEventJS implements RecipeLifecycleContext {
-    private final RecipeRegistryProxy recipesProxy = new RecipeRegistryProxy(this);
+    // Lazily created by getRecipes(): constructing the proxy in a constructor or field
+    // initializer would hand a partially initialized `this` to another object (this-escape).
+    private volatile RecipeRegistryProxy recipesProxy;
     private final List<String> recipeIds;
     private final Map<String, String> recipeJsons = new LinkedHashMap<>();
 
@@ -426,7 +428,12 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public RecipeRegistryProxy getRecipes() {
-        return recipesProxy;
+        RecipeRegistryProxy proxy = recipesProxy;
+        if (proxy == null) {
+            proxy = new RecipeRegistryProxy(this);
+            recipesProxy = proxy;
+        }
+        return proxy;
     }
 
     /** Get the raw IRecipe for a given ID. */

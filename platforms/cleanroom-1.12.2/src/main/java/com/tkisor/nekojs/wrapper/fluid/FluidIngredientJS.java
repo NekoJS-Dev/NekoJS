@@ -23,7 +23,11 @@ public class FluidIngredientJS implements NekoWrapper<List<FluidStack>> {
     public FluidIngredientJS() {}
 
     public FluidIngredientJS(String... ids) {
-        for (String id : ids) or(id);
+        // Inline via a static helper instead of delegating to or(): calling an instance
+        // method from a constructor can hand a partially initialized `this` out (this-escape).
+        for (String id : ids) {
+            addResolved(alternatives, FluidResolver.ingredientFromString(id));
+        }
     }
 
     /** Wrap an existing list of FluidStacks. */
@@ -41,13 +45,16 @@ public class FluidIngredientJS implements NekoWrapper<List<FluidStack>> {
     // ===================== Builder methods =====================
 
     public FluidIngredientJS or(String id) {
-        List<FluidStack> resolved = FluidResolver.ingredientFromString(id);
+        addResolved(alternatives, FluidResolver.ingredientFromString(id));
+        return this;
+    }
+
+    private static void addResolved(List<FluidStack> target, List<FluidStack> resolved) {
         for (FluidStack fs : resolved) {
             if (fs != null && fs.amount > 0) {
-                alternatives.add(fs.copy());
+                target.add(fs.copy());
             }
         }
-        return this;
     }
 
     public FluidIngredientJS or(NekoId id) {

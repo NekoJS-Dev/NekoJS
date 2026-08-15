@@ -203,6 +203,10 @@ compileJava {
 
     // SpecCoverageProcessor 平台范围校验：本平台为 Cleanroom
     options.compilerArgs += '-Anekojs.platform=cr'
+
+    // 根配置开了 -Xlint:all；Forge/Mixin 注解（Mod/Mixin/SubscribeEvent...）是运行时元数据，
+    // 本来就不需要注解处理器，javac 的 [processing] 提示纯属噪音，这里单独关掉该 lint。
+    options.compilerArgs += '-Xlint:-processing'
 }
 
 jar {

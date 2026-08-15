@@ -125,6 +125,6 @@ public class EntityTypeBuilderJS {
                     });
         }
 
-        return (EntityEntry) builder.build();
+        return builder.build();
     }
 }

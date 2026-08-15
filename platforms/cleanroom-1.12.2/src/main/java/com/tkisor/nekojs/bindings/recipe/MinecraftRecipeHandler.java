@@ -121,9 +121,6 @@ public class MinecraftRecipeHandler {
         NekoJS.LOGGER.info("Added shapeless recipe: {}", id);
     }
 
-    /**
-     * Add a shapeless recipe with ore dictionary support.
-     */
     // ========== Furnace ==========
 
     /**

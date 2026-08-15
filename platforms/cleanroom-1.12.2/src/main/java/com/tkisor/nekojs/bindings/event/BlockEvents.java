@@ -17,6 +17,10 @@ public interface BlockEvents {
             GROUP.server("broken", BlockEvent.BreakEvent.class,
                     EventBusFactory.createDispatchKey(Block.class,
                             e -> e.getState().getBlock()));
+    // `placed` keeps the classic BlockEvent.PlaceEvent binding for script parity
+    // (getPlacedBlock/getPlayer). Cleanroom deprecates PlaceEvent in favor of
+    // EntityPlaceEvent, which is bound separately as `entityPlaced`.
+    @SuppressWarnings("deprecation")
     EventBusJS<BlockEvent.PlaceEvent, Block> PLACED =
             GROUP.server("placed", BlockEvent.PlaceEvent.class,
                     EventBusFactory.createDispatchKey(Block.class,

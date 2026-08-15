@@ -169,6 +169,7 @@ public final class FluidResolver {
     // ===================== Combine / Intersect / Except =====================
 
     /** Combine multiple ingredient lists into one (union). */
+    @SafeVarargs
     public static List<FluidStack> combine(List<FluidStack>... alternatives) {
         Set<Fluid> seen = new LinkedHashSet<>();
         List<FluidStack> result = new ArrayList<>();
@@ -181,7 +182,13 @@ public final class FluidResolver {
             }
         }
         if (result.isEmpty()) {
-            throw new ValueConversionException(List.class, "non-empty list", alternatives,
+            // Snapshot the generic varargs array into a reifiable list before passing it
+            // anywhere, so the array itself can never be polluted or escape.
+            List<List<FluidStack>> snapshot = new ArrayList<>(alternatives.length);
+            for (List<FluidStack> alternative : alternatives) {
+                snapshot.add(alternative);
+            }
+            throw new ValueConversionException(List.class, "non-empty list", snapshot,
                     "no non-empty alternatives to combine");
         }
         return result;

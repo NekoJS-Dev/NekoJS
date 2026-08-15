@@ -26,6 +26,10 @@ public class NekoJSClient {
     public static class ClientEventHandler {
 
         @SubscribeEvent
+        // refreshResources() is deprecated on 1.12.2 but remains the only synchronous entry
+        // point for reloading resource packs / languages / textures; called on the client
+        // tick thread deliberately so the reload applies before the player enters a world.
+        @SuppressWarnings("deprecation")
         public static void onClientTick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
             if (NekoJSMod.RUNTIME_ROOT == null) return;

@@ -18,15 +18,19 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     public IngredientJS() {}
 
     public IngredientJS(String id) {
-        or(id);
+        // Inline instead of delegating to or(): calling an instance method from a
+        // constructor can hand a partially initialized `this` out (this-escape).
+        this.alternatives.add(IngredientResolver.fromString(id));
     }
 
     public IngredientJS(Ingredient ingredient) {
-        or(ingredient);
+        if (ingredient != null && ingredient != Ingredient.EMPTY) {
+            this.alternatives.add(ingredient);
+        }
     }
 
     public IngredientJS or(String id) {
-        this.alternatives.add(IngredientResolver.fromString(id));
+        addAlternative(id);
         return this;
     }
 
@@ -46,10 +50,18 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     }
 
     public IngredientJS or(Ingredient ingredient) {
+        addAlternative(ingredient);
+        return this;
+    }
+
+    private void addAlternative(String id) {
+        this.alternatives.add(IngredientResolver.fromString(id));
+    }
+
+    private void addAlternative(Ingredient ingredient) {
         if (ingredient != null && ingredient != Ingredient.EMPTY) {
             this.alternatives.add(ingredient);
         }
-        return this;
     }
 
     public IngredientJS or(IngredientJS other) {

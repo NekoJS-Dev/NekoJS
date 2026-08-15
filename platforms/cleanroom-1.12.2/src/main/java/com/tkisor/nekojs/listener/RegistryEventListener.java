@@ -124,19 +124,6 @@ public class RegistryEventListener {
         }
     }
 
-    /**
-     * Trigger recipe scripts during {@code RegistryEvent.Register<IRecipe>} (LOWEST priority,
-     * so vanilla + mod recipes are already registered and the id snapshot is complete).
-     *
-     * <p>1.12.2 recipes are buildtime {@link IRecipe} objects: the registry freezes after load,
-     * so script-defined recipes must be registered here while it is still open — the
-     * CraftTweaker model. {@code MinecraftRecipeHandler.shaped/shapeless} then call
-     * {@code ForgeRegistries.RECIPES.register(...)} successfully.
-     *
-     * <p>Recipe handler methods stay auto-discovered: {@code collectHandlerMethods} reflects
-     * the handler class, and {@code RecipeRegistryProxy.getMember} returns the handler for
-     * GraalJS to reflect on its own.
-     */
     /** Guards against double application (RegistryEvent + postInit fallback). */
     private static final java.util.concurrent.atomic.AtomicBoolean RECIPE_SCRIPTS_APPLIED =
             new java.util.concurrent.atomic.AtomicBoolean(false);
@@ -147,6 +134,18 @@ public class RegistryEventListener {
      * misses {@code RegistryEvent.Register<IRecipe>}. The reliable trigger is therefore
      * {@code NekoJSMod.postInit} (registry still unfrozen — freezes at LoadComplete, per CraftTweaker).
      * Idempotent via {@link #RECIPE_SCRIPTS_APPLIED}.
+     *
+     * <p>Scripts triggered by {@code RegistryEvent.Register<IRecipe>} run at LOWEST priority,
+     * so vanilla + mod recipes are already registered and the id snapshot is complete.
+     *
+     * <p>1.12.2 recipes are buildtime {@link IRecipe} objects: the registry freezes after load,
+     * so script-defined recipes must be registered while it is still open — the CraftTweaker
+     * model. {@code MinecraftRecipeHandler.shaped/shapeless} then call
+     * {@code ForgeRegistries.RECIPES.register(...)} successfully.
+     *
+     * <p>Recipe handler methods stay auto-discovered: {@code collectHandlerMethods} reflects
+     * the handler class, and {@code RecipeRegistryProxy.getMember} returns the handler for
+     * GraalJS to reflect on its own.
      */
     public static void applyRecipeScripts() {
         if (!RECIPE_SCRIPTS_APPLIED.compareAndSet(false, true)) return;
