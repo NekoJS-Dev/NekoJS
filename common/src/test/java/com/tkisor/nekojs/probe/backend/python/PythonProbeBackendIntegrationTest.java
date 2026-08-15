@@ -101,6 +101,29 @@ class PythonProbeBackendIntegrationTest {
         assertFalse(res.success(), "empty IR should fail cleanly, not produce garbage");
     }
 
+    @Test
+    void generate_javaTypeBindingNamedLikeClassEmitsImportOnly_notSelfAlias(@TempDir Path temp) throws Exception {
+        // javaType 已收集，且绑定名 == 类型简单名（如 Items: Items）。旧实现会生成自引用别名，
+        // pyright 报 "Type of Items is unknown because it refers to itself"。
+        TypeDecl item = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        List<TypeDecl> ir = List.of(item);
+
+        BindingCatalogEntry binding = new BindingCatalogEntry(
+                "FakeProbeEvent", ScriptType.SERVER, FakeProbeEvent.class, false, false, true,
+                null, "self-named binding", List.of(), List.of());
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(binding), List.of(), List.of());
+
+        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String init = Files.readString(temp.resolve("probe-python/nekojs/__init__.pyi"));
+        assertTrue(init.contains("from nekojs._java.com.tkisor.nekojs.probe.backend.python import FakeProbeEvent"),
+                "self-named class must be imported: " + init);
+        assertFalse(init.contains("FakeProbeEvent: FakeProbeEvent"),
+                "self-referential alias must not be emitted: " + init);
+        assertTrue(init.contains("\"FakeProbeEvent\""), "name must remain in __all__: " + init);
+    }
+
     // -------------------- B2：绑定尊重 typeOverride --------------------
 
     @Test
@@ -370,13 +393,13 @@ class PythonProbeBackendIntegrationTest {
         Files.writeString(jsOnly.resolve("main.js"), "console.log(1)\n");
 
         Map<Path, List<String>> merged = new LinkedHashMap<>();
-        Map<Path, List<String>> vscodeMerged = new LinkedHashMap<>();
+        Map<Path, List<EditorConfigContributor.VscodeSetting>> vscodeMerged = new LinkedHashMap<>();
         EditorConfigContributor recorder = new EditorConfigContributor() {
             @Override public void mergePyrightExtraPaths(Path file, List<String> extraPaths) {
                 merged.put(file.normalize().toAbsolutePath(), List.copyOf(extraPaths));
             }
-            @Override public void mergeVscodePythonExtraPaths(Path file, List<String> extraPaths) {
-                vscodeMerged.put(file.normalize().toAbsolutePath(), List.copyOf(extraPaths));
+            @Override public void mergeVscodeSettings(Path file, List<EditorConfigContributor.VscodeSetting> settings) {
+                vscodeMerged.put(file.normalize().toAbsolutePath(), List.copyOf(settings));
             }
             @Override public void mergeJsConfigPaths(Path file, Map<String, List<String>> aliases) {}
             @Override public void mergeJsConfigIncludes(Path file, List<String> includes) {}
@@ -399,10 +422,25 @@ class PythonProbeBackendIntegrationTest {
                 merged.get(src.resolve("pyrightconfig.json").normalize().toAbsolutePath()));
         Path srcSettings = src.resolve(".vscode").resolve("settings.json").normalize().toAbsolutePath();
         assertTrue(vscodeMerged.containsKey(srcSettings),
-                "src/.vscode/settings.json must get python.analysis.extraPaths: " + vscodeMerged.keySet());
-        assertEquals(List.of("../../../.neko_probe/python"), vscodeMerged.get(srcSettings));
+                "src/.vscode/settings.json must get python settings: " + vscodeMerged.keySet());
+        var srcContribs = vscodeMerged.get(srcSettings);
+        assertEquals(List.of("../../../.neko_probe/python"),
+                extraPathsOf(srcContribs), "python.analysis.extraPaths contribution: " + srcContribs);
+        assertTrue(srcContribs.stream().anyMatch(s ->
+                        s.key().equals("python.languageServer") && "Pylance".equals(s.value())
+                                && s.mode() == EditorConfigContributor.VscodeSettingMerge.SET_IF_ABSENT),
+                "languageServer must be Pylance only when unset: " + srcContribs);
         assertFalse(vscodeMerged.containsKey(jsOnly.resolve(".vscode").resolve("settings.json").normalize().toAbsolutePath()),
                 "js-only dir must not get python vscode settings: " + vscodeMerged.keySet());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> extraPathsOf(List<EditorConfigContributor.VscodeSetting> settings) {
+        return settings.stream()
+                .filter(s -> s.key().equals("python.analysis.extraPaths"))
+                .map(s -> (List<String>) s.value())
+                .findFirst()
+                .orElse(List.of());
     }
 
     // -------------------- helpers --------------------

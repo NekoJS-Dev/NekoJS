@@ -23,7 +23,8 @@ import java.util.Set;
  * 仅修改 probe 拥有的键（jsconfig 的 {@code compilerOptions.paths} 对应键、顶层 {@code include}、
  * {@code compilerOptions.typeRoots}、{@code compilerOptions} 的 JSX 运行时键
  * （{@code jsx}/{@code jsxFactory}/{@code jsxFragmentFactory}/{@code jsxImportSource}），
- * 以及 pyrightconfig 的 {@code extraPaths}），保留用户自定义键与未知键。文件不存在则按默认创建。
+ * pyrightconfig 的 {@code extraPaths}，以及 {@code .vscode/settings.json} 中各 backend 通过
+ * {@link #mergeVscodeSettings} 声明的贡献键），保留用户自定义键与未知键。文件不存在则按默认创建。
  *
  * <p>关键属性：**幂等且可重复**——每次 probe 都重新合并，保证 paths/include/typeRoots 始终指向
  * backend 真实的输出目录（修复既有 jsconfig 指向旧 {@code .neko_probe/@package} 而非
@@ -115,32 +116,113 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     @Override
     public void mergeVscodePythonExtraPaths(Path settingsFile, List<String> extraPaths) {
         if (extraPaths == null || extraPaths.isEmpty()) return;
+        // 向后兼容入口：委托给通用注入机制。languageServer 仅在用户未显式选择时固定为 Pylance
+        // （"Default" 在部分环境下会退回 Jedi，而 Jedi 不读 pyrightconfig/extraPaths）。
+        mergeVscodeSettings(settingsFile, List.of(
+                new VscodeSetting("python.languageServer", "Pylance", VscodeSettingMerge.SET_IF_ABSENT),
+                new VscodeSetting("python.analysis.extraPaths", extraPaths, VscodeSettingMerge.EXTEND_STRING_ARRAY)));
+    }
+
+    @Override
+    public void mergeVscodeSettings(Path settingsFile, List<VscodeSetting> settings) {
+        if (settings == null || settings.isEmpty()) return;
         try {
             JsonObject root = readJsonOrEmpty(settingsFile);
-            JsonObject python = asObject(root, "python");
-            // Pylance 默认值 "Default" 在某些环境下会退回 Jedi（Jedi 不读取 pyrightconfig/extraPaths，
-            // NekoJS 的 .pyi 包自然无法解析）。用户未显式选择语言服务器时，自动固定为 Pylance。
-            if (!python.has("languageServer")) {
-                python.addProperty("languageServer", "Pylance");
+            boolean changed = false;
+            for (VscodeSetting setting : settings) {
+                changed |= applyVscodeSetting(root, setting);
             }
-            JsonObject analysis = asObject(python, "analysis");
-            JsonArray arr = analysis.has("extraPaths") && analysis.get("extraPaths").isJsonArray()
-                    ? analysis.getAsJsonArray("extraPaths") : new JsonArray();
-            Set<String> existing = new LinkedHashSet<>();
-            for (JsonElement el : arr) {
-                if (el.isJsonPrimitive()) existing.add(el.getAsString());
-            }
-            for (String p : extraPaths) {
-                if (existing.add(p)) arr.add(p);
-            }
-            analysis.add("extraPaths", arr);
-            python.add("analysis", analysis);
-            root.add("python", python);
-            writeJson(settingsFile, root);
+            if (changed) writeJson(settingsFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: vscode settings python.analysis.extraPaths merge failed at {}",
-                    settingsFile, ex);
+            NekoJS.LOGGER.debug("EditorConfig: vscode settings merge failed at {}", settingsFile, ex);
         }
+    }
+
+    private static boolean applyVscodeSetting(JsonObject root, VscodeSetting setting) {
+        String[] parts = setting.key().split("\\.");
+        JsonObject cursor = root;
+        for (int i = 0; i < parts.length - 1; i++) {
+            JsonElement next = cursor.get(parts[i]);
+            if (next != null && next.isJsonObject()) {
+                cursor = next.getAsJsonObject();
+            } else {
+                JsonObject child = new JsonObject();
+                cursor.add(parts[i], child);
+                cursor = child;
+            }
+        }
+        String leaf = parts[parts.length - 1];
+        JsonElement value = GSON.toJsonTree(setting.value());
+        return switch (setting.mode()) {
+            case SET -> {
+                if (value.equals(cursor.get(leaf))) {
+                    yield false;
+                }
+                cursor.add(leaf, value);
+                yield true;
+            }
+            case SET_IF_ABSENT -> {
+                if (cursor.has(leaf)) {
+                    yield false;
+                }
+                cursor.add(leaf, value);
+                yield true;
+            }
+            case MERGE_OBJECT -> {
+                if (!value.isJsonObject()) {
+                    throw new IllegalArgumentException("MERGE_OBJECT contribution must be an object: " + setting.key());
+                }
+                JsonElement existing = cursor.get(leaf);
+                if (existing != null && existing.isJsonObject()) {
+                    yield mergeObjects(existing.getAsJsonObject(), value.getAsJsonObject());
+                }
+                cursor.add(leaf, value);
+                yield true;
+            }
+            case EXTEND_STRING_ARRAY -> {
+                if (!value.isJsonArray()) {
+                    throw new IllegalArgumentException(
+                            "EXTEND_STRING_ARRAY contribution must be an array: " + setting.key());
+                }
+                JsonElement existing = cursor.get(leaf);
+                if (existing == null || !existing.isJsonArray()) {
+                    cursor.add(leaf, value);
+                    yield true;
+                }
+                yield appendUniqueStrings(existing.getAsJsonArray(), value.getAsJsonArray());
+            }
+        };
+    }
+
+    /** 递归合并两个 JSON 对象：incoming 的叶子替换/新增，既有其它叶子（用户或其它 backend 的贡献）保留。 */
+    private static boolean mergeObjects(JsonObject target, JsonObject incoming) {
+        boolean changed = false;
+        for (var e : incoming.entrySet()) {
+            JsonElement inc = e.getValue();
+            JsonElement cur = target.get(e.getKey());
+            if (inc.isJsonObject() && cur != null && cur.isJsonObject()) {
+                changed |= mergeObjects(cur.getAsJsonObject(), inc.getAsJsonObject());
+            } else if (!inc.equals(cur)) {
+                target.add(e.getKey(), inc);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /** 把 incoming 的字符串按字面值去重追加到 target；已有条目（含用户条目）不动。 */
+    private static boolean appendUniqueStrings(JsonArray target, JsonArray incoming) {
+        Set<String> existing = new LinkedHashSet<>();
+        for (JsonElement el : target) {
+            if (el.isJsonPrimitive()) existing.add(el.getAsString());
+        }
+        boolean changed = false;
+        for (JsonElement el : incoming) {
+            if (!el.isJsonPrimitive() || !existing.add(el.getAsString())) continue;
+            target.add(el);
+            changed = true;
+        }
+        return changed;
     }
 
     @Override

@@ -243,6 +243,70 @@ class FileEditorConfigContributorTest {
     }
 
     @Test
+    void mergeVscodeSettings_mixesStrategies_preservesUserAndOtherKeys(@TempDir Path temp) throws IOException {
+        Path cfg = temp.resolve(".vscode/settings.json");
+        Files.createDirectories(cfg.getParent());
+        Files.writeString(cfg, """
+                {
+                  "python": {
+                    "languageServer": "Jedi",
+                    "analysis": {
+                      "extraPaths": ["../user-lib"],
+                      "diagnosticMode": "workspace"
+                    }
+                  },
+                  "typescript.tsdk": "../my-tsdk",
+                  "userTop": 42
+                }""");
+
+        new FileEditorConfigContributor().mergeVscodeSettings(cfg, List.of(
+                new EditorConfigContributor.VscodeSetting("python.languageServer", "Pylance",
+                        EditorConfigContributor.VscodeSettingMerge.SET_IF_ABSENT),
+                new EditorConfigContributor.VscodeSetting("python.analysis.extraPaths",
+                        List.of("../.neko_probe/python", "../user-lib"),
+                        EditorConfigContributor.VscodeSettingMerge.EXTEND_STRING_ARRAY),
+                new EditorConfigContributor.VscodeSetting("python.analysis.typeCheckingMode", "basic",
+                        EditorConfigContributor.VscodeSettingMerge.SET)));
+
+        String out = Files.readString(cfg);
+        // SET_IF_ABSENT：用户显式选的 Jedi 不被覆盖
+        assertTrue(out.contains("\"languageServer\": \"Jedi\""), "user languageServer kept: " + out);
+        // EXTEND_STRING_ARRAY：用户路径保留 + probe 路径去重追加
+        assertTrue(out.contains("../user-lib"), "user extraPath kept: " + out);
+        assertTrue(out.contains("../.neko_probe/python"), "probe extraPath added: " + out);
+        assertEquals(1, out.split("\\.neko_probe/python", -1).length - 1,
+                "extraPaths must dedup: " + out);
+        // SET：probe 拥有的叶子替换
+        assertTrue(out.contains("\"typeCheckingMode\": \"basic\""), "SET leaf written: " + out);
+        // 既有其它键（其它 backend 键 + 用户键）全部保留
+        assertTrue(out.contains("diagnosticMode"), "sibling analysis key kept: " + out);
+        assertTrue(out.contains("typescript.tsdk"), "other backend key kept: " + out);
+        assertTrue(out.contains("userTop"), "unknown top-level key kept: " + out);
+    }
+
+    @Test
+    void mergeVscodeSettings_mergeObject_letsTwoBackendsShareOneObject(@TempDir Path temp) throws IOException {
+        Path cfg = temp.resolve(".vscode/settings.json");
+        Files.createDirectories(cfg.getParent());
+        Files.writeString(cfg, "{ \"files.exclude\": { \"**/.git\": true, \"my.log\": false } }");
+
+        var contributor = new FileEditorConfigContributor();
+        // 模拟 TS backend 与 Python backend 向同一个 files.exclude 各注入自己的条目
+        contributor.mergeVscodeSettings(cfg, List.of(new EditorConfigContributor.VscodeSetting(
+                "files.exclude", Map.of("**/.neko_probe/typescript", true),
+                EditorConfigContributor.VscodeSettingMerge.MERGE_OBJECT)));
+        contributor.mergeVscodeSettings(cfg, List.of(new EditorConfigContributor.VscodeSetting(
+                "files.exclude", Map.of("**/.neko_probe/python", true),
+                EditorConfigContributor.VscodeSettingMerge.MERGE_OBJECT)));
+
+        String out = Files.readString(cfg);
+        assertTrue(out.contains("**/.neko_probe/typescript"), "first backend entry kept: " + out);
+        assertTrue(out.contains("**/.neko_probe/python"), "second backend entry merged in: " + out);
+        assertTrue(out.contains("**/.git"), "existing object entry kept: " + out);
+        assertTrue(out.contains("my.log"), "user object entry kept: " + out);
+    }
+
+    @Test
     void mergeVscodeSnippets_freshThenMergePreservesUser(@TempDir Path temp) throws IOException {
         Path file = temp.resolve("nekojs.code-snippets");
         new FileEditorConfigContributor().mergeVscodeSnippets(file, List.of(

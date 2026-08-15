@@ -81,7 +81,12 @@ public final class PythonProbeBackend implements ProbeBackend {
      * <p>**每个可能被当作工作区打开的目录都写一份**：Pylance 只读取「工作区根」的
      * pyrightconfig.json（pyright CLI 才会从源文件就近向上发现），单一嵌套配置在用户打开
      * 游戏目录 / 脚本目录时会被忽略，导致 {@code from nekojs import *} 无法解析、无补全。
-     * 与 TS 侧 jsconfig「每个脚本目录一份」的策略对齐：nekojs/ 根、四个脚本目录、游戏根目录。
+     * 与 TS 侧 jsconfig「每个脚本目录一份」的策略对齐：nekojs/ 根、四个脚本目录、游戏根目录，
+     * 以及脚本根下每个实际包含 {@code .py} 文件的嵌套目录。
+     * 同一批目录的 {@code .vscode/settings.json} 则经通用注入机制
+     * （{@link EditorConfigContributor#mergeVscodeSettings}）写入
+     * {@code python.analysis.extraPaths}（去重追加）与 {@code python.languageServer}
+     * （仅当用户未显式选择时固定 Pylance），保留用户既有键。
      */
     @Override
     public void contributeEditorConfig(EditorConfigContributor contributor, ProbeContext ctx) {
@@ -102,11 +107,15 @@ public final class PythonProbeBackend implements ProbeBackend {
                 FileEditorConfigContributor.relativePosix(paths.gameDir(), out));
     }
 
-    /** 同一个 extraPath 同时写入 pyrightconfig（CLI/Jedi 侧）与 .vscode/settings.json（Pylance 侧），互为兜底。 */
+    /** 同一个 extraPath 同时写入 pyrightconfig（CLI 侧）与 .vscode/settings.json（Pylance 侧），互为兜底。 */
     private static void contributePyright(EditorConfigContributor contributor, Path pyrightFile,
                                           Path vscodeSettings, String relativeExtraPath) {
         contributor.mergePyrightExtraPaths(pyrightFile, List.of(relativeExtraPath));
-        contributor.mergeVscodePythonExtraPaths(vscodeSettings, List.of(relativeExtraPath));
+        contributor.mergeVscodeSettings(vscodeSettings, List.of(
+                new EditorConfigContributor.VscodeSetting("python.languageServer", "Pylance",
+                        EditorConfigContributor.VscodeSettingMerge.SET_IF_ABSENT),
+                new EditorConfigContributor.VscodeSetting("python.analysis.extraPaths", List.of(relativeExtraPath),
+                        EditorConfigContributor.VscodeSettingMerge.EXTEND_STRING_ARRAY)));
     }
 
     /**
@@ -352,7 +361,11 @@ public final class PythonProbeBackend implements ProbeBackend {
                 type = ApiTypeRefPyRenderer.simplePyName(fqn);
                 importByName.put(type, fqn);
             }
-            lines.add(new String[]{b.name(), type});
+            // 导入名与绑定名相同时（如 `from ... import Items` + `Items` 绑定），
+            // import 本身就完成了重导出；再写 `Items: Items` 会变成 pyright 的自引用报错
+            if (!(type.equals(b.name()) && importByName.containsKey(type))) {
+                lines.add(new String[]{b.name(), type});
+            }
             allNames.add(b.name());
         }
         // 事件组入口：binding 目录里没有对应条目的组名（DefaultScriptEventBridge 在运行时暴露事件组全局），
