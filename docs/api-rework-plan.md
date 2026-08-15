@@ -29,7 +29,7 @@ CR 生命周期/注册表事件手动转发（FML 限制）。
 
 | 缺口 | 方向 | 备注 |
 |---|---|---|
-| `global` 共享 Map | CR 未注册 | `NekoGlobal` 在 common，补注册成本极低，但属跨平台对齐（H-2） |
+| `global` 共享 Map | ~~CR 未注册~~ | **已补齐（2026-08-15）**：CR 注册 `NekoGlobal.shared()`，与 NF 一致 |
 | `CompoundTag`/`MutableComponent`/`EntityType`/`MobEffectInstance`/`DamageTypes`/`Component` | CR 无 | 1.12.2 无直接对应物；需别名策略而非硬补 |
 | `Capabilities`/`TriState` | CR 无 | platform 层设计如此（NF-only），非缺口——归 platform 模块 |
 | `ClientEvents` 14 个 bus | CR 无 | 多为现代客户端注册钩子；`chatReceived` 反向 NF 缺 |
@@ -153,12 +153,12 @@ domain contract 提升进 stable（§9.1 阶段 gate）。**
 | ID | 项 | 决策点 |
 |---|---|---|
 | H-1 | 脚本可见符号改名/统一：`Identifier`↔`ResourceLocation`、`TextComponent`↔`Component`、`NBTTagCompound`↔`CompoundTag`、`EntityEntry`↔`EntityType`、`Fluids`（CR 语义分裂）、`global`→`GlobalData` | 改名即破坏；选主名+别名保留期；`Fluids` 需决定 CR 绑定改名（如 `FluidRegistry`）还是换绑 vanilla 常量 |
-| H-2 | 跨平台 API 对齐：CR 补 `global`（成本最低，建议首个批准）；其余按「别名策略 vs platform 模块声明」逐项定 | 对齐方向与别名保留期 |
+| H-2 | 跨平台 API 对齐：CR 补 `global`（**已实施 2026-08-15**）；其余按「别名策略 vs platform 模块声明」逐项定 | 对齐方向与别名保留期 |
 | H-4 | tier 落地与 core 契约扩充：`Time`/`Utils`/`GlobalData`/`Network` 进 stable 需先写 domain contract（§9.1 gate）；feature/platform/version 模块注册机制启用；`Item`/`Ingredient`/`Fluid` stable facade 层是否建立（与「保留原生类绑定」共存方式） | 工作量最大；决定 1.0.0 冻结的实际边界 |
-| H-5 | 事件语义去重：CR `worldLoad/worldUnload` 双入口；7 个别名 bus 主名方向；`ItemEvents.tooltip` side 分歧（CLIENT vs SERVER） | 每个 bus 的 stable 准入判定 |
+| H-5 | 事件语义去重：CR `worldLoad/worldUnload` 双入口（**已补 `@Deprecated` 指向 `LevelEvents.loaded/unloaded`，2026-08-15**）；7 个别名 bus 主名方向；`ItemEvents.tooltip` side 分歧（CLIENT vs SERVER） | 每个 bus 的 stable 准入判定 |
 | H-6 | `EntityEvents` dispatch 键统一（`Entity` 实例 vs `EntityType` id） | 键类型变化对已有脚本分发的影响面 |
-| H-7 | NF26 六个未注册 mixin 的 Extension 接口处置 | 补 mixin（扩 26.x inject 面）或收窄接口声明 |
-| H-8 | `RecipeViewerEvents` 未注册组：注册进 ClientEvents 注册链 or 删除 | 是否作为 feature `recipe-viewer` 的载体 |
+| ~~H-7~~ | ~~NF26 未注册 mixin 的 Extension 接口处置~~ | **已消解（盘点误报）**：26.x 经 `neoforge.interface_injection.json`（ModDevGradle `interfaceInjectionData`）注入这些接口，并非缺失注册；inventory §5 已修正 |
+| ~~H-8~~ | ~~`RecipeViewerEvents` 未注册组~~ | **已实施（2026-08-15）**：新增 `RecipeViewerEventsPlugin`（neoforge-shared，`clientOnly` + `requiredMods="jei"`）注册组——JEI 在场才注册，无 JEI 不暴露永不触发的空壳面（对齐设计 §4.2） |
 
 ## 5. 迁移路径
 

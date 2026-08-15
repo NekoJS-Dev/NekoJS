@@ -77,7 +77,7 @@ Java facade 接口在 `common-api/.../api/facade/`，默认实现在 `common/...
 | `StringUtils` | helper | `StringUtilsJS`（common） | PORTABLE | |
 | `Time` | helper | `TimeJS`（common：`SECOND/MINUTE/HOUR` 字段、`seconds/minutes/hours/parseTime/parseMs`） | PORTABLE | **未进 core 契约**（§7 冻结候选） |
 | `Utils` | helper | `UtilsJS`（common） | PORTABLE | 同上 |
-| `global` | helper | `NekoGlobal.shared()` 共享 Map | NF26+NF121 | **CR 缺失**（API 缺口） |
+| `global` | helper | `NekoGlobal.shared()` 共享 Map | PORTABLE | 2026-08-15 CR 补齐（原为 NF-only 缺口） |
 | `Test` | helper | `TestJS`（common，TEST-only） | PORTABLE | |
 | `RecipeSchema` | helper | `RecipeSchemaBinding`（common） | PORTABLE | 配方域，见 §2.5 |
 | `Identifier` / `ResourceLocation` | class | NF26=`net.minecraft.resources.Identifier`；NF121/CR=`ResourceLocation` | 全平台（**JS 名分裂**） | 同一概念三个名字（26.x 改名） |
@@ -229,7 +229,7 @@ CR 用 Forge `eventhandler.Event` 谓词（**更宽**——凡 Forge Event 均�
 | `ScriptEvents` | STARTUP | `server`/`client`（— / 否） | 全 | common 同源；payload=`ScriptEventRegistrationEvent`（契约 member×2）；`register(Value config)` **Value 泄漏** |
 | `ProbeEvents` | SERVER | `modifyType/assignType/addGlobal/snippets` | 全 | common 同源 |
 | `ClientEvents` | CLIENT | NF：`tickPre/tickPost/tick/loggedIn/loggedOut/cloned/commandRegistry`（game bus）+ `registerKeyMappings/registerMenuScreens/registerRenderers(+2 别名)/registerParticleProviders`（mod bus）+ `generateData/lang`（dispatch String）+ `hud`/`screenRender`（bindTransformed）；CR：仅 `tick/chatReceived/generateAssets/lang` | **组全平台，bus 大量 NF only** | CR 缺 14 个 bus；`chatReceived` 为 CR 独有 |
-| `RecipeViewerEvents` | CLIENT | `addEntries/removeEntries`(dispatch `String`)、`removeRecipes/removeCategories/addInformation` | **定义未注册**（NF） | 仅 JEI 插件 post，核心插件从不 `EventGroupRegistry.register`；CR 无对应 |
+| `RecipeViewerEvents` | CLIENT | `addEntries/removeEntries`(dispatch `String`)、`removeRecipes/removeCategories/addInformation` | NF（**随 JEI 门控注册**，2026-08-15 起） | 由 `RecipeViewerEventsPlugin`（clientOnly + requiredMods="jei"）注册，事件由 JEI 侧插件 post；无 JEI 时不注册（不出现永不触发的空壳面）；CR 无对应 |
 
 ## 4. 类型适配器（JSTypeAdapter 注册）
 
@@ -260,9 +260,10 @@ CR 用 Forge `eventhandler.Event` 谓词（**更宽**——凡 Forge Event 均�
 | `MutableComponentSpec` | NF_ONLY | 30 | NF121/NF26 |
 | `ServerSpec` | NF_ONLY | 1 | neoforge-shared |
 
-注：NF26 mixin json 仅注册 4 个 mixin（Level/MutableComponent/Player/MinecraftServer）；Block/BlockState/Entity/Event/ItemStack/LivingEntity
-的 Extension 接口在 26-shared 存在但 **mixin 未注册**（26.x 平台 inject 面实际比接口面窄——差距项）。
-（2026-08-15 裁决：`EventSpec` 及其 `EventExtension`/`MixinEvent`/interface_injection 实现已整体移除，见 rework plan H-3；上表为移除后现状。）
+注：26.x 与 1.21.1 使用**两种注入机制**：26.x 经 `neoforge.interface_injection.json`（ModDevGradle
+`interfaceInjectionData` 打包）注入 Block/BlockState/Entity/Item/ItemStack/Level/Server/LivingEntity/MutableComponent/Player；
+1.21.1 用真实 mixin（`nekojs.mixins.json`）。原「26.x mixin json 仅注册 4 个 → inject 面窄于接口面」的说法系盘点误报，已修正。
+（2026-08-15 裁决：`EventSpec` 及其 `EventExtension`/`MixinEvent`/interface_injection Event 条目已移除，见 rework plan H-3；上表为移除后现状。）
 
 ## 6. 事件取消面现状（2026-08-15 裁决后）
 
