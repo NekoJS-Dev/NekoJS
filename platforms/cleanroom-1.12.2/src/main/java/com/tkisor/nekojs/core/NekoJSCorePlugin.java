@@ -25,6 +25,7 @@ import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
 import com.tkisor.nekojs.bindings.static_access.NativeEventsJS;
 import com.tkisor.nekojs.bindings.static_access.StringUtilsJS;
+import com.tkisor.nekojs.bindings.static_access.NekoGlobal;
 import com.tkisor.nekojs.bindings.static_access.TestJS;
 import com.tkisor.nekojs.bindings.static_access.TimeJS;
 import com.tkisor.nekojs.bindings.static_access.UUIDJS;
@@ -94,6 +95,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("StringUtils", new StringUtilsJS());
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
+        registry.register("global", NekoGlobal.shared());
         registry.register(ScriptType.STARTUP, "NativeEvents", new NativeEventsJS());
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("ItemStack", ItemStack.class);
