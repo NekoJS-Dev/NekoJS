@@ -118,7 +118,13 @@ public class ClassFilter implements Predicate<String> {
                             + "(the legacy location is inside the script-writable nekojs/ workspace). "
                             + "The legacy file is still honored read-only and will NOT be moved automatically.",
                     legacy, engineConfig);
-            engineConfig = legacy;
+            SandboxConfig config = new SandboxConfigLoader().load(legacy, false);
+            INSTANCE.updateConfig(config);
+            NekoJS.LOGGER.info(
+                    "Engine config loaded (legacy read-only). Unsafe features enabled: {}",
+                    config.anyUnsafeFeatureEnabled()
+            );
+            return config;
         }
         return loadEngineConfig(engineConfig);
     }

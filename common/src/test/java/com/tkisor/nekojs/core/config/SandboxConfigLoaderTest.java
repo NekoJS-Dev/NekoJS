@@ -96,6 +96,30 @@ class SandboxConfigLoaderTest {
     }
 
     @Test
+    void readOnlyLoadLeavesFileUntouchedButAppliesDefaultsInMemory() throws Exception {
+        // 模拟旧位置 engine.toml：含废弃键、缺少大部分新键、带用户显式值
+        String legacyContent = """
+
+
+                prependRequirePatch = true
+                allowThreads = true
+                scriptStatementLimit = 0
+                """;
+        Path legacyConfig = writeEngineConfig(legacyContent);
+
+        SandboxConfig loaded = new SandboxConfigLoader().load(legacyConfig, false);
+
+        // 内存中：默认值生效、用户显式值保留
+        assertEquals(0L, loaded.scriptStatementLimit());
+        assertTrue(loaded.allowThreads());
+        assertTrue(loaded.enableEsmAuthoring());
+        assertFalse(loaded.allowReflection());
+
+        // 磁盘上：文件一字不动（只读回退契约——不补键、不清理废弃键）
+        assertEquals(legacyContent, Files.readString(legacyConfig, StandardCharsets.UTF_8));
+    }
+
+    @Test
     void fsWriteOutsideNekojsAloneCountsAsUnsafeFeature() {
         SandboxConfig fsWriteOnly = new SandboxConfig(false, false, false, true, true, true, false, true, 30, 50_000_000L);
         assertTrue(fsWriteOnly.anyUnsafeFeatureEnabled());

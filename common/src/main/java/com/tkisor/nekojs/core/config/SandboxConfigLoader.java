@@ -7,11 +7,22 @@ import java.nio.file.Path;
 
 public final class SandboxConfigLoader {
     public SandboxConfig load(Path engineConfig) {
-        try (CommentedFileConfig config = CommentedFileConfig.builder(engineConfig)
-                .sync()
-                .preserveInsertionOrder()
-                .autosave()
-                .build()) {
+        return load(engineConfig, true);
+    }
+
+    /**
+     * 读取引擎配置。{@code writable = false} 用于旧位置
+     * {@code <gamedir>/nekojs/config/engine.toml} 的只读回退：补默认键 / 清理废弃键
+     * 只在内存中生效，不回写文件（{@code ClassFilter#loadEngineConfig} 的契约是
+     * 旧文件 honored read-only，不做任何修改）。
+     */
+    public SandboxConfig load(Path engineConfig, boolean writable) {
+        var builder = CommentedFileConfig.builder(engineConfig)
+                .preserveInsertionOrder();
+        if (writable) {
+            builder.sync().autosave();
+        }
+        try (CommentedFileConfig config = builder.build()) {
 
             config.load();
 
