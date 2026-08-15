@@ -37,9 +37,14 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 sourceSets.main {
     resources {
         srcDir "src/main/templates"
-        filter {
-            it.replace('${mod_version}', mod_version)
-        }
+    }
+}
+
+processResources {
+    // 模板变量替换：sourceSets.main.resources.filter{} 不会作用于 processResources 的
+    // CopySpec（实测不生效），需在任务级显式声明（api-runtime.properties 的 nekojs.version）
+    filesMatching('nekojs/api-runtime.properties') {
+        filter { it.replace('${mod_version}', mod_version) }
     }
 }
 
@@ -78,6 +83,9 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // 透传 golden 再生成开关：`-Dnekojs.golden.regenerate=true`（ApiManifestGoldenTest 等
+    // golden 测试写回基线后跳过断言；与 :common:regenerateGoldens 的 probe golden 模式一致）
+    systemProperty 'nekojs.golden.regenerate', System.getProperty('nekojs.golden.regenerate', 'false')
 }
 
 // Guard the common module's MC/loader-agnostic invariant: common must not import
@@ -155,6 +163,11 @@ def commonApiJarFingerprint = providers.provider {
 
 compileJava {
     inputs.property('commonApiJarFingerprint', commonApiJarFingerprint)
+
+    // 根配置开了 -Xlint:all；@RegisterNekoJSPlugin 由 NekoJSBasePluginManager 运行时反射读取，
+    // Graal 的 TruffleLanguage.Registration 同理（语言注册在运行时完成），都不需要注解处理器，
+    // javac 的 [processing] 提示纯属噪音，这里单独关掉该 lint（与 cleanroom 平台一致）。
+    options.compilerArgs += '-Xlint:-processing'
 }
 // ------------------------------------------------------------------------------------------
 

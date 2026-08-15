@@ -1,0 +1,901 @@
+{
+  "catalogSchemaVersion": 1,
+  "apiVersion": "0.12.0",
+  "spiVersion": "0.0.0",
+  "runtimeContractVersion": "0.0.0",
+  "nekojsVersion": "1.1.0-preview2",
+  "platform": {
+    "loader": "test",
+    "minecraft": "0.0.0"
+  },
+  "capabilities": [],
+  "modules": [],
+  "symbols": [
+    {
+      "id": "global:ID",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "global:JsonIO",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "global:NBT",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "global:Performance",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "global:Platform",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "global:Registry",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "global:Text",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:ID.asString",
+      "signatures": [
+        "(SYMBOL:type:NekoId)"
+      ]
+    },
+    {
+      "id": "member:ID.namespace",
+      "signatures": [
+        "(SYMBOL:type:NekoId)"
+      ]
+    },
+    {
+      "id": "member:ID.of",
+      "signatures": [
+        "(PRIMITIVE:string)",
+        "(PRIMITIVE:string,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:ID.path",
+      "signatures": [
+        "(SYMBOL:type:NekoId)"
+      ]
+    },
+    {
+      "id": "member:JsonIO.parse",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:JsonIO.read",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:JsonIO.toPrettyString",
+      "signatures": [
+        "(PRIMITIVE:json)"
+      ]
+    },
+    {
+      "id": "member:JsonIO.toString",
+      "signatures": [
+        "(PRIMITIVE:json)"
+      ]
+    },
+    {
+      "id": "member:JsonIO.write",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:json)"
+      ]
+    },
+    {
+      "id": "member:JsonValue.toPrettyString",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:JsonValue.toString",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:ModInfo.id",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:ModInfo.name",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:ModInfo.version",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NBT.byte",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:NBT.byteArray",
+      "signatures": [
+        "(ARRAY<PRIMITIVE:object>)"
+      ]
+    },
+    {
+      "id": "member:NBT.compound",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NBT.double",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:NBT.entries",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.float",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:NBT.fromObject",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:NBT.int",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:NBT.intArray",
+      "signatures": [
+        "(ARRAY<PRIMITIVE:object>)"
+      ]
+    },
+    {
+      "id": "member:NBT.kind",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.long",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:NBT.of",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.parse",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:NBT.read",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:NBT.scalar",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.short",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:NBT.toObject",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.toSnbt",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.values",
+      "signatures": [
+        "(PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NBT.write",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:nbt)"
+      ]
+    },
+    {
+      "id": "member:NbtEntry.key",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtEntry.value",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.entries",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.kind",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.of",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.scalar",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.toObject",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.toSnbt",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NbtValue.values",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NekoId.asString",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NekoId.namespace",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:NekoId.path",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.elapsedMillis",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.end",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.ended",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.label",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.mark",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.marks",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:PerfTimer.report",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Performance.bench",
+      "signatures": [
+        "(PRIMITIVE:object,PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:Performance.now",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Performance.start",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Performance.time",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:Platform.capabilities",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.getInfo",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Platform.getList",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.getLoaderId",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.getLoaderVersion",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.getMcVersion",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.isClient",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.isDevelopment",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Platform.isLoaded",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Registry.get",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:RegistryView.all",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:RegistryView.dataMapIds",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:RegistryView.dataMapValue",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:RegistryView.exists",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:RegistryView.has",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:RegistryView.tag",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:ScriptEventRegistrationEvent.register",
+      "signatures": [
+        "(PRIMITIVE:object)",
+        "(PRIMITIVE:string,PRIMITIVE:string,PRIMITIVE:object)",
+        "(PRIMITIVE:string,PRIMITIVE:string,PRIMITIVE:object,PRIMITIVE:string)",
+        "(PRIMITIVE:string,PRIMITIVE:string,PRIMITIVE:object,PRIMITIVE:string,PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:ScriptEventRegistrationEvent.targetType",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Text.append",
+      "signatures": [
+        "(SYMBOL:type:TextValue,...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:Text.aqua",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.black",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.blue",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.bold",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:Text.click",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:string,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.color",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.darkAqua",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.darkBlue",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.darkGray",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.darkGreen",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.darkPurple",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.darkRed",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.empty",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Text.font",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.gold",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.gray",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.green",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.hover",
+      "signatures": [
+        "(SYMBOL:type:TextValue,SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.insertion",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.italic",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:Text.join",
+      "signatures": [
+        "(SYMBOL:type:TextValue,...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:Text.keybind",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.lightPurple",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.obfuscated",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:Text.of",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.ofValues",
+      "signatures": [
+        "(...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:Text.red",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.score",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.selector",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:Text.strikethrough",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:Text.translatable",
+      "signatures": [
+        "(PRIMITIVE:string,...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:Text.translateWithFallback",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:string,...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:Text.underlined",
+      "signatures": [
+        "(SYMBOL:type:TextValue,PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:Text.white",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:Text.yellow",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:TextValue.append",
+      "signatures": [
+        "(...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:TextValue.aqua",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.black",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.blue",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.bold",
+      "signatures": [
+        "(PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:TextValue.click",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:TextValue.color",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:TextValue.darkAqua",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.darkBlue",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.darkGray",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.darkGreen",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.darkPurple",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.darkRed",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.font",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:TextValue.gold",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.gray",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.green",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.hover",
+      "signatures": [
+        "(SYMBOL:type:TextValue)"
+      ]
+    },
+    {
+      "id": "member:TextValue.insertion",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:TextValue.isEmpty",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.italic",
+      "signatures": [
+        "(PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:TextValue.join",
+      "signatures": [
+        "(...UNION<PRIMITIVE:boolean,PRIMITIVE:number,PRIMITIVE:string,SYMBOL:type:TextValue>)"
+      ]
+    },
+    {
+      "id": "member:TextValue.lightPurple",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.obfuscated",
+      "signatures": [
+        "(PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:TextValue.red",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.strikethrough",
+      "signatures": [
+        "(PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:TextValue.underlined",
+      "signatures": [
+        "(PRIMITIVE:boolean)"
+      ]
+    },
+    {
+      "id": "member:TextValue.white",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:TextValue.yellow",
+      "signatures": [
+        "()"
+      ]
+    }
+  ]
+}
