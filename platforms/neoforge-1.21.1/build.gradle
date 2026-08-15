@@ -90,6 +90,13 @@ dependencies {
     implementation project(':common')
     implementation "curse.maven:jei-238222:7420587"
 
+    // dev runServer 的 GraalJS 需要 ICU4J：client run 经 common→GraalMC(curse.maven) 的传递
+    // 依赖拿到 icu4j 77.1，但 MDG 的 server legacy classpath 不收项目 runtimeClasspath 的
+    // 传递库（NoClassDefFoundError: com/ibm/icu/text/DateFormat）。additionalRuntimeClasspath
+    // 是 MDG 为「补进所有 run 运行时」提供的配置；server 侧受 MC 依赖树 strictly 73.2
+    // 约束（GraalJS 所需的 com.ibm.icu.text.DateFormat 73.2 同样提供），不进分发 jar。
+    additionalRuntimeClasspath 'com.ibm.icu:icu4j:73.2'
+
     compileOnly libs.lombok
     annotationProcessor libs.lombok
     annotationProcessor project(':common-api-processor')
@@ -112,6 +119,10 @@ test {
 compileJava {
     // SpecCoverageProcessor 平台范围校验：本平台属于 NeoForge 系列
     options.compilerArgs += '-Anekojs.platform=nf'
+
+    // 根配置开了 -Xlint:all；Forge/NeoForge/Mixin 注解是运行时元数据，不需要注解处理器，
+    // javac 的 [processing] 提示纯属噪音，这里单独关掉该 lint（与 cleanroom 平台一致）。
+    options.compilerArgs += '-Xlint:-processing'
 }
 
 def generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
