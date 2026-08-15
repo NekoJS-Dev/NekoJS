@@ -31,7 +31,9 @@ public interface PlayerEvents {
             GROUP.server("loggedOut", PlayerLoggedOutEvent.class);
     EventBusJS<ServerChatEvent, Void> CHAT =
             GROUP.server("chat", ServerChatEvent.class);
-    // 保留无过滤的 tick（兼容现有脚本），与 tickPre/tickPost 共存
+    // 保留无过滤的 tick（兼容现有脚本），与 tickPre/tickPost 共存。
+    // 脚本侧建议迁移到 tickPre/tickPost（见 docs/api-rework-plan.md H-5）。
+    @Deprecated
     EventBusJS<TickEvent.PlayerTickEvent, Void> TICK =
             GROUP.server("tick", TickEvent.PlayerTickEvent.class);
     // 1.12.2 单一类带 phase：tickPre/tickPost 用 filter 拆分

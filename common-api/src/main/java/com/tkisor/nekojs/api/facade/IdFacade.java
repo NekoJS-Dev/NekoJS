@@ -3,7 +3,7 @@ package com.tkisor.nekojs.api.facade;
 import com.tkisor.nekojs.api.data.NekoId;
 
 /**
- * 资源标识符（ID）门面，暴露为脚本侧全局对象 {@code Id}。
+ * 资源标识符（ID）门面，暴露为脚本侧全局对象 {@code ID}。
  *
  * <p>负责字符串与 {@link NekoId} 之间的转换。脚本侧通常传入
  * {@code "minecraft:stone"} 或省略命名空间的 {@code "stone"}

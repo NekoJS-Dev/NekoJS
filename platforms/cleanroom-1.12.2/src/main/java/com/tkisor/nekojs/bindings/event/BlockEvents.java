@@ -20,6 +20,8 @@ public interface BlockEvents {
     // `placed` keeps the classic BlockEvent.PlaceEvent binding for script parity
     // (getPlacedBlock/getPlayer). Cleanroom deprecates PlaceEvent in favor of
     // EntityPlaceEvent, which is bound separately as `entityPlaced`.
+    // 脚本侧建议迁移到 entityPlaced（见 docs/api-rework-plan.md H-5）。
+    @Deprecated
     @SuppressWarnings("deprecation")
     EventBusJS<BlockEvent.PlaceEvent, Block> PLACED =
             GROUP.server("placed", BlockEvent.PlaceEvent.class,
