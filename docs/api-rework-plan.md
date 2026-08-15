@@ -81,7 +81,7 @@ CR 生命周期/注册表事件手动转发（FML 限制）。
 | # | 重叠 | 判断 |
 |---|---|---|
 | D-1 | CR `ServerEvents.worldLoad/worldUnload` 与 `LevelEvents.loaded/unloaded` 双入口同语义 | 需去重（H-5） |
-| D-2 | `NativeEvents`（NF）与 `ScriptEvents.register` 都能注册原生事件 | **已解决（2026-08-15）**：核实 `ScriptEventsJS` 能力对等（组名声明/priority/receiveCancelled/return-true 取消翻译/按脚本 reload 清理）；`NativeEvents` 三平台 `@Deprecated` 指向 `ScriptEvents`，保留至弃用窗口结束后移除 |
+| D-2 | `NativeEvents`（NF）与 `ScriptEvents.register` 都能注册原生事件 | **已解决（2026-08-15）**：核实 `ScriptEventsJS` 能力对等（组名声明/priority/receiveCancelled/return-true 取消翻译/按脚本 reload 清理）；`NativeEvents` 三平台 `@Deprecated` 指向 `ScriptEvents`，保留至弃用窗口结束后移除。**核查发现三个边界（2026-08-15 复核）**：①注册只能发生在 STARTUP 脚本（`ScriptEvents.server/client` 是 startup bus，由 `ScriptManager` 在 startup 装载前后 post），server 脚本只监听不注册——by design，注册是冻结期操作；②无 STARTUP 目标（targetType 仅 SERVER/CLIENT；STARTUP 目标与 startup 脚本按序加载存在先后序问题——先加载的脚本听不到后注册的事件，暂不支持）；③**probe 不覆盖动态注册的事件组**：`NekoScriptCatalog.events()` 只遍历静态 `runtime.eventGroups()`，`ScriptEventRegistry` 定义不在其中，probe 种子来自 catalog → 动态组无声明、payload 类不进 BFS 反射。修复方案已定：`events(runtime)`/`events(runtime, side)` 增补 `ScriptEventRegistry.groupsFor(...)` 条目（definition 携带 bus：eventType/canCancel 可得；无 dispatch → dispatchKeyType=null；`validateAvailable` 已保证不与内置组冲突；注册顺序=脚本加载顺序，满足 §3.5 确定性）。**实施受阻**：`NekoScriptCatalog.java` 携带用户未提交 WIP（目录每-bus-一条去重修复），待该 WIP 合入后再实施。 |
 | D-3 | `IngredientFactory`（工厂）与 wrapper `IngredientJS`（`or/and/...`） | 设计如此（工厂造、wrapper 组合），保留；命名规则统一后缀（C-2） |
 | D-4 | `Time`（tick 换算）与 `Performance.now()`（ms 计时） | 语义不同（游戏刻 vs 墙钟），保留但在文档互相指引 |
 | D-5 | NF `ClientEvents.tick`/`LevelEvents.tick` 等 7 个别名 bus 与主名并存 | **已解决（2026-08-15 裁决）**：主名 = 显式 Pre/Post 式 + 跨平台可用名；别名补 `@Deprecated`（H-5 实施记录见 §4） |
