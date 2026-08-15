@@ -208,4 +208,65 @@ class ProbeConfigTest {
         assertEquals(paths.gameDir().resolve(".neko_probe").resolve("typescript"), dir,
                 "无语言级覆盖时输出目录 = baseDir/<languageId>（旧行为）");
     }
+
+    /* ================= re: 正则包规则 ================= */
+
+    @Test
+    void regexIncludeRuleMatchesByFullMatch() {
+        ProbeConfig cfg = withScan(new ProbeConfig.ScanConfig(
+                List.of("re:com\\.acme\\..*"), List.of(), List.of(), List.of(), 5, "SMART"));
+        assertTrue(cfg.isRelevantClass("com.acme.api.Foo", NEOFORGE_PLATFORM));
+        assertTrue(cfg.isRelevantClass("com.acme.Foo", NEOFORGE_PLATFORM));
+        // 正则全匹配的精确性：前缀意外延续（com.acmeextra）不应命中
+        assertFalse(cfg.isRelevantClass("com.acmeextra.Foo", NEOFORGE_PLATFORM));
+        // 覆盖语义：正则白名单非空时默认白名单（java 等）不再生效
+        assertFalse(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
+    }
+
+    @Test
+    void regexExcludeWinsOverInclude() {
+        // 默认白名单含 java；正则排除掉 java.lang.reflect 后，该子包整体失活
+        ProbeConfig cfg = withScan(new ProbeConfig.ScanConfig(
+                List.of(), List.of(), List.of("re:java\\.lang\\.reflect\\..*"), List.of(), 5, "SMART"));
+        assertTrue(cfg.isExcluded("java.lang.reflect.Field"));
+        assertFalse(cfg.isExcluded("java.lang.String"));
+        assertFalse(cfg.isRelevantClass("java.lang.reflect.Field", NEOFORGE_PLATFORM),
+                "排除规则优先于白名单命中");
+        assertTrue(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
+    }
+
+    @Test
+    void invalidRegexRuleWarnsOnceAndNeverMatches() {
+        ProbeConfig cfg = withScan(new ProbeConfig.ScanConfig(
+                List.of(), List.of(), List.of("re:***"), List.of(), 5, "SMART"));
+        // 非法正则不抛异常、视为永不命中
+        assertFalse(cfg.isExcluded("java.lang.String"));
+        assertTrue(cfg.isRelevantClass("java.lang.String", NEOFORGE_PLATFORM));
+        // 重复调用命中缓存路径，同样安全
+        assertFalse(cfg.isExcluded("net.minecraft.X"));
+    }
+
+    @Test
+    void forcedPackagesSupportRegexEntries() {
+        ProbeConfig cfg = withScan(new ProbeConfig.ScanConfig(
+                List.of(), List.of(), List.of(),
+                List.of("minecraft", "re:io\\.github\\.(?:alpha|beta)mod\\..*"), 5, "SMART"));
+        Set<String> forced = cfg.forcedPackages();
+        assertTrue(forced.contains("net.minecraft"), "mod id 解析为字面前缀");
+        assertTrue(forced.contains("re:io\\.github\\.(?:alpha|beta)mod\\..*"), "re: 条目原样保留");
+        assertTrue(ProbeConfig.matchesPackageRule("re:io\\.github\\.(?:alpha|beta)mod\\..*", "io.github.alphamod.item.X"));
+        assertFalse(ProbeConfig.matchesPackageRule("re:io\\.github\\.(?:alpha|beta)mod\\..*", "io.github.gammamod.item.X"));
+    }
+
+    @Test
+    void literalPrefixSemanticsUnchanged() {
+        // 回归：无 re: 前缀的条目仍为 startsWith(pkg + ".")，package 自身（无子包）不命中
+        assertTrue(ProbeConfig.matchesPackageRule("java.util", "java.util.List"));
+        assertFalse(ProbeConfig.matchesPackageRule("java.util", "java.utilx.X"));
+        assertFalse(ProbeConfig.matchesPackageRule("java.util", "java.util"));
+    }
+
+    private ProbeConfig withScan(ProbeConfig.ScanConfig scan) {
+        return new ProbeConfig(true, ".neko_probe", scan);
+    }
 }

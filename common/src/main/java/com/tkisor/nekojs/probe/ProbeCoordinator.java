@@ -215,7 +215,7 @@ public final class ProbeCoordinator {
         if (cfg.scan().mode() == ProbeConfig.ScanConfig.ScanMode.FULL) return true;
         if (cfg.isRelevantClass(fqn, platformPkgs)) return true;
         for (String pkg : forcedPkgs) {
-            if (fqn.startsWith(pkg + ".")) return true;
+            if (ProbeConfig.matchesPackageRule(pkg, fqn)) return true;
         }
         return false;
     }

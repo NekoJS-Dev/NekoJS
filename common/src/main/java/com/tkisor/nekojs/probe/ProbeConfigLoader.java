@@ -31,17 +31,17 @@ public final class ProbeConfigLoader {
                     " Base directory for probe output (relative to the game directory). Each language backend owns its own subdirectory under this.");
 
             setup(config, "scan.includePackages", List.of(),
-                    " Package-prefix whitelist applied to Java class scanning. If non-empty, FULLY OVERRIDES the platform defaults. Empty = use defaults (java, com.tkisor.nekojs, plus the platform's MC/loader packages).");
+                    " Package whitelist applied to Java class scanning. Entries are literal package prefixes (fqn startsWith 'prefix.') or regexes written as 're:<pattern>' (full-match against the fqn, e.g. re:com\\.example\\..*\\.api\\..*). If non-empty, FULLY OVERRIDES the platform defaults. Empty = use defaults (java, com.tkisor.nekojs, plus the platform's MC/loader packages).");
             setup(config, "scan.extraIncludePackages", List.of(),
-                    " Extra package prefixes APPENDED to the effective whitelist. Use this to add e.g. com.mojang or a mod's packages without retyping the defaults.");
+                    " Extra package rules APPENDED to the effective whitelist (literal prefixes or 're:' regexes). Use this to add e.g. com.mojang or a mod's packages without retyping the defaults.");
             // 默认值与 ProbeConfig.ScanConfig.defaultScan() 共用同一来源（DEFAULT_EXCLUDE_PACKAGES，
             // 镜像 ClassFilter 整包黑名单）：否则新写出的 probe.toml 会拿到空 exclude，绕过默认排除。
             // setup 只在键缺失时写默认值——已有文件里显式的空列表（excludePackages = []）是用户
             // 的覆盖语义，保持为空（exclude 关闭），不会被默认值回填。
             setup(config, "scan.excludePackages", ProbeConfig.ScanConfig.defaultScan().excludePackages(),
-                    " Package prefixes to EXCLUDE even when matched by the whitelist (deny-list, evaluated last). Defaults mirror the ClassFilter package blacklist (nekojs core, java.desktop UI, JNDI/RMI, JDBC, Graal/Truffle) - scripts can never Java.type classes under those prefixes. Set to an explicit empty list [] to disable exclusions.");
+                    " Package rules to EXCLUDE even when matched by the whitelist (deny-list, evaluated last; literal prefixes or 're:' regexes). Defaults mirror the ClassFilter package blacklist (nekojs core, java.desktop UI, JNDI/RMI, JDBC, Graal/Truffle) - scripts can never Java.type classes under those prefixes. Set to an explicit empty list [] to disable exclusions.");
             setup(config, "scan.forceScanMods", List.of("minecraft"),
-                    " Mod IDs or package prefixes force-included into scanning ON TOP of the whitelist (excludePackages still wins). Built-in modId table: minecraft=net.minecraft, neoforge=net.neoforged, forge=net.minecraftforge, java=java. Entries containing '.' are taken as literal package prefixes; unknown mod IDs are ignored (debug log).");
+                    " Mod IDs or package rules force-included into scanning ON TOP of the whitelist (excludePackages still wins). Built-in modId table: minecraft=net.minecraft, neoforge=net.neoforged, forge=net.minecraftforge, java=java. Entries containing '.' are literal package prefixes; 're:' entries are regexes; unknown mod IDs are ignored (debug log).");
             setup(config, "scan.maxDepth", 5,
                     " Max BFS depth when walking the type-reachability closure from event/binding/adapter seeds.");
             setup(config, "scan.mode", "SMART",

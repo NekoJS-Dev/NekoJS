@@ -113,13 +113,16 @@
 |---|---|---|
 | `enabled` | `true` | 总开关。`false` 时 probe 直接返回失败结果（"probe disabled in probe.toml"）。`/nekojs probe enable|disable` 就是改这个键 |
 | `baseDir` | `".neko_probe"` | 输出基目录（相对游戏目录）。每个语言 backend 拥有其下 `<baseDir>/<语言>` 子目录（如 `.neko_probe/typescript`） |
-| `scan.includePackages` | `[]` | 类扫描的包前缀白名单。**覆盖语义**：非空时**完全取代**默认白名单（`java`、`com.tkisor.nekojs`、平台默认 MC/loader 包）。要**追加**请用 `extraIncludePackages`，不要在此重抄默认值 |
-| `scan.extraIncludePackages` | `[]` | 追加到生效白名单（**追加语义**）。适合加 `com.mojang` 或某 mod 的包 |
-| `scan.excludePackages` | `[]` | 排除前缀（deny-list）。**始终生效**（FULL 模式也保留），命中即跳过 |
-| `scan.forceScanMods` | `["minecraft"]` | 在白名单之外**强制纳入**扫描的 mod id 或包前缀。内置 modId 映射表：`minecraft`→`net.minecraft`、`neoforge`→`net.neoforged`、`forge`→`net.minecraftforge`、`java`→`java`。条目含 `.` 视为字面包前缀直接使用；未知 mod id 记 debug 日志并忽略。excludePackages 仍优先于强制包含 |
+| `scan.includePackages` | `[]` | 类扫描的包规则白名单。条目为**字面包前缀**（`fqn` 以 `前缀.` 开头）或 **`re:` 正则**（如 `re:com\.example\..*\.api\..*`，对全限定名整体匹配）。**覆盖语义**：非空时**完全取代**默认白名单（`java`、`com.tkisor.nekojs`、平台默认 MC/loader 包）。要**追加**请用 `extraIncludePackages`，不要在此重抄默认值 |
+| `scan.extraIncludePackages` | `[]` | 追加到生效白名单（**追加语义**，同样支持字面前缀与 `re:` 正则）。适合加 `com.mojang` 或某 mod 的包 |
+| `scan.excludePackages` | `[]` | 排除规则（deny-list，支持字面前缀与 `re:` 正则）。**始终生效**（FULL 模式也保留），命中即跳过 |
+| `scan.forceScanMods` | `["minecraft"]` | 在白名单之外**强制纳入**扫描的 mod id 或包规则。内置 modId 映射表：`minecraft`→`net.minecraft`、`neoforge`→`net.neoforged`、`forge`→`net.minecraftforge`、`java`→`java`。条目含 `.` 视为字面包前缀、`re:` 开头为正则；未知 mod id 记 debug 日志并忽略。excludePackages 仍优先于强制包含 |
 | `scan.maxDepth` | `5` | 从事件/绑定种子出发的 BFS 最大深度（≤0 时兜底为 5） |
 | `scan.mode` | `"SMART"` | 扫描模式：`SMART`=白名单 + forceScanMods 过滤；`FULL`=跳过 include 白名单，闭包只受 exclude 与 maxDepth 约束；`NONE`=完全不扫描，probe 返回失败结果。未知取值兜底为 `SMART` |
 | `languages.<lang>.outputDir` | 语言 id 本身 | 该语言产物在 `baseDir` 下的**子目录**（如默认 `typescript` → `.neko_probe/typescript`）。缺省/null 回退语言 id。`ProbeBackend.outputDir` 默认实现优先取此键 |
+
+> **包规则的正则支持**：`includePackages` / `extraIncludePackages` / `excludePackages` / `forceScanMods` 的条目既可以是字面包前缀（旧行为，`fqn.startsWith("前缀.")`），也可以写成 `re:<pattern>` 形式的正则（对类全限定名做**全匹配**，如 `re:com\.example\.(mod1|mod2)\..*` 一次纳入多个 mod 包）。正则编译结果有缓存，扫描热路径无额外开销；非法正则会 warn 一次并视为永不命中。
+
 | `languages.<lang>.backend` | 未设 | `/nekojs probe <lang>` 默认优先选用的 backend 名；未设（或找不到该名字）→ 回退该语言注册表默认（priority 最高者） |
 
 > 默认配置自带 `languages.typescript.outputDir = "typescript"` 与 `languages.python.outputDir = "python"`（首次加载写入，保持输出布局与语言 id 一致）。`languages` 表按任意语言 id 动态解析，第三方 backend 语言也能用。

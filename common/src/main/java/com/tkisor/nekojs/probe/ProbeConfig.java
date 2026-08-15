@@ -8,6 +8,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Probe 行为配置（{@code <game>/nekojs/config/probe.toml}）。
@@ -125,6 +128,45 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
         return Optional.ofNullable(languages.get(languageId));
     }
 
+    /* ================= 包规则匹配（字面前缀 / re: 正则） ================= */
+
+    /** 正则规则条目前缀：{@code re:<regex>}，如 {@code re:com\.example\..*\.api\..*}。 */
+    public static final String REGEX_RULE_PREFIX = "re:";
+
+    /**
+     * 已编译正则规则的缓存（含编译失败的负缓存）。扫描会对每个候选类名遍历全部规则，
+     * 缓存避免每个类重复 {@link Pattern#compile}。
+     */
+    private static final Map<String, Optional<Pattern>> PATTERN_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 单条包规则是否命中全限定类名。两种条目形态：
+     * <ul>
+     *   <li>字面包前缀（默认）：{@code fqn.startsWith(rule + ".")}——与历史语义完全一致</li>
+     *   <li>正则：以 {@code re:} 开头（例 {@code re:com\.example\.(mod[12])\..*}），
+     *       对 fqn 做<b>全匹配</b>（{@link java.util.regex.Matcher#matches()}）。编译结果缓存；
+     *       非法正则 warn 一次，该条目视为永不命中</li>
+     * </ul>
+     */
+    public static boolean matchesPackageRule(String rule, String fqn) {
+        if (rule == null || rule.isBlank() || fqn == null || fqn.isEmpty()) return false;
+        if (!rule.startsWith(REGEX_RULE_PREFIX)) {
+            return fqn.startsWith(rule + ".");
+        }
+        return PATTERN_CACHE.computeIfAbsent(rule, ProbeConfig::compileRule)
+                .map(pattern -> pattern.matcher(fqn).matches())
+                .orElse(false);
+    }
+
+    private static Optional<Pattern> compileRule(String rule) {
+        try {
+            return Optional.of(Pattern.compile(rule.substring(REGEX_RULE_PREFIX.length())));
+        } catch (PatternSyntaxException e) {
+            NekoJS.LOGGER.warn("probe.toml package rule '{}' is not a valid regex; the rule never matches", rule, e);
+            return Optional.empty();
+        }
+    }
+
     /**
      * 合成实际生效的包含包前缀集合：
      * <ul>
@@ -149,15 +191,16 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
     }
 
     /**
-     * 判定一个全限定类名是否通过包过滤：命中某个包含前缀、且不命中任何排除前缀。
-     * 前缀匹配语义为 {@code fqn.startsWith(pkg + ".")}（与旧 {@code isRelevantClass} 一致）。
+     * 判定一个全限定类名是否通过包过滤：命中某条包含规则、且不命中任何排除规则。
+     * 条目形态见 {@link #matchesPackageRule}：字面包前缀（{@code fqn.startsWith(pkg + ".")}，
+     * 与旧 {@code isRelevantClass} 一致）或 {@code re:} 正则全匹配。
      */
     public boolean isRelevantClass(String fqn, List<String> platformDefaultPackages) {
         if (fqn == null || fqn.isEmpty()) return false;
         Set<String> included = effectiveIncludePackages(platformDefaultPackages);
         boolean hit = false;
         for (String pkg : included) {
-            if (fqn.startsWith(pkg + ".")) { hit = true; break; }
+            if (matchesPackageRule(pkg, fqn)) { hit = true; break; }
         }
         if (!hit) return false;
         return !isExcluded(fqn);
@@ -165,13 +208,14 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
 
     /**
      * 仅判定排除（从 {@link #isRelevantClass} 的 exclude 段拆分复用）：
-     * 命中任一 {@code scan.excludePackages} 前缀（{@code fqn.startsWith(pkg + ".")}）即返回 true。
-     * 供 FULL 模式（跳过 include 白名单但保留 exclude）与 {@code ProbeCoordinator} 过滤工具使用。
+     * 命中任一 {@code scan.excludePackages} 规则即返回 true（前缀或 {@code re:} 正则，
+     * 见 {@link #matchesPackageRule}）。供 FULL 模式（跳过 include 白名单但保留 exclude）与
+     * {@code ProbeCoordinator} 过滤工具使用。
      */
     public boolean isExcluded(String fqn) {
         if (fqn == null || fqn.isEmpty()) return false;
         for (String pkg : scan.excludePackages()) {
-            if (fqn.startsWith(pkg + ".")) return true;
+            if (matchesPackageRule(pkg, fqn)) return true;
         }
         return false;
     }
@@ -184,9 +228,10 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
             "java", "java");
 
     /**
-     * 解析 {@code scan.forceScanMods} 为「强制包含的包前缀」集合：在白名单之外被强制纳入扫描
+     * 解析 {@code scan.forceScanMods} 为「强制包含的包规则」集合：在白名单之外被强制纳入扫描
      * （exclude 始终优先于强制包含）。解析规则：
      * <ul>
+     *   <li>条目以 {@code re:} 开头 → 正则规则原样保留（匹配语义见 {@link #matchesPackageRule}）</li>
      *   <li>条目含 {@code .} → 视为字面包前缀直接使用</li>
      *   <li>否则查 {@link #MOD_ID_PACKAGES} 内置表；查不到则 debug 日志记录并忽略</li>
      * </ul>
@@ -195,7 +240,7 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
         Set<String> result = new LinkedHashSet<>();
         for (String entry : scan.forceScanMods()) {
             if (entry == null || entry.isBlank()) continue;
-            if (entry.contains(".")) {
+            if (entry.startsWith(REGEX_RULE_PREFIX) || entry.contains(".")) {
                 result.add(entry);
                 continue;
             }
