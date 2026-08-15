@@ -11,9 +11,11 @@ import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.probe.EditorConfigContributor;
 import com.tkisor.nekojs.probe.ProbeConfig;
 import com.tkisor.nekojs.probe.ProbeContext;
 import com.tkisor.nekojs.probe.ProbeGenerator;
+import com.tkisor.nekojs.probe.events.Snippet;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -348,6 +351,48 @@ class PythonProbeBackendIntegrationTest {
         // Hidden 的模块：该类不出现
         String bMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/b/__init__.pyi"));
         assertFalse(bMod.contains("class Hidden"), "hidden class must not be rendered: " + bMod);
+    }
+
+    // -------------------- pyrightconfig: nested Python script dirs --------------------
+
+    @Test
+    void contributeEditorConfig_writesPyrightExtraPathsForEveryPythonDir(@TempDir Path temp) throws Exception {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
+        Path out = temp.resolve(".neko_probe").resolve("python");
+        Path src = paths.serverScripts().resolve("src");
+        Path deep = src.resolve("deep");
+        Files.createDirectories(deep);
+        Files.writeString(src.resolve("ma.py"), "from nekojs import *\n");
+        Files.writeString(deep.resolve("tool.py"), "from nekojs import *\n");
+        // JS-only dir must NOT get a pyrightconfig contribution from the python backend.
+        Path jsOnly = paths.serverScripts().resolve("js_only");
+        Files.createDirectories(jsOnly);
+        Files.writeString(jsOnly.resolve("main.js"), "console.log(1)\n");
+
+        Map<Path, List<String>> merged = new LinkedHashMap<>();
+        EditorConfigContributor recorder = new EditorConfigContributor() {
+            @Override public void mergePyrightExtraPaths(Path file, List<String> extraPaths) {
+                merged.put(file.normalize().toAbsolutePath(), List.copyOf(extraPaths));
+            }
+            @Override public void mergeJsConfigPaths(Path file, Map<String, List<String>> aliases) {}
+            @Override public void mergeJsConfigIncludes(Path file, List<String> includes) {}
+            @Override public void mergeJsConfigTypeRoots(Path file, List<String> typeRoots) {}
+            @Override public void mergeVscodeSnippets(Path file, List<Snippet> snippets) {}
+        };
+
+        ProbeContext ctx = new ProbeContext.Of(emptySnapshot(), List.of(), new ProbeConfig(true, ".neko_probe",
+                new ProbeConfig.ScanConfig(List.of(), List.of(), List.of(), List.of(), 5, "SMART")),
+                paths, "python", out, List.of());
+        new PythonProbeBackend().contributeEditorConfig(recorder, ctx);
+
+        assertTrue(merged.containsKey(src.resolve("pyrightconfig.json").normalize().toAbsolutePath()),
+                "nested python dir src must get pyrightconfig: " + merged.keySet());
+        assertTrue(merged.containsKey(deep.resolve("pyrightconfig.json").normalize().toAbsolutePath()),
+                "deep python dir must get pyrightconfig: " + merged.keySet());
+        assertFalse(merged.containsKey(jsOnly.resolve("pyrightconfig.json").normalize().toAbsolutePath()),
+                "js-only dir must not get a python pyrightconfig: " + merged.keySet());
+        assertEquals(List.of("../../../.neko_probe/python"),
+                merged.get(src.resolve("pyrightconfig.json").normalize().toAbsolutePath()));
     }
 
     // -------------------- helpers --------------------

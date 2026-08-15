@@ -93,9 +93,47 @@ public final class PythonProbeBackend implements ProbeBackend {
                 paths.clientScripts(), paths.testScripts())) {
             contributor.mergePyrightExtraPaths(scriptDir.resolve("pyrightconfig.json"),
                     List.of(FileEditorConfigContributor.relativePosix(scriptDir, out)));
+            mergePyrightConfigsForNestedPythonDirs(contributor, scriptDir, out);
         }
         contributor.mergePyrightExtraPaths(paths.gameDir().resolve("pyrightconfig.json"),
                 List.of(FileEditorConfigContributor.relativePosix(paths.gameDir(), out)));
+    }
+
+    /**
+     * 为脚本根目录下每个「实际包含 .py 脚本」的子目录写一份 pyrightconfig.json。
+     *
+     * <p>Pylance 只读取工作区根的配置，而用户既可能打开游戏目录 / nekojs 目录 / 四个脚本根，
+     * 也可能直接把某个 {@code server_scripts/src} 之类的子目录打开为工作区。给每个含 .py 的
+     * 目录就近放置一份配置（extraPaths 按该目录到 stub 输出的真实相对深度计算），任一目录被
+     * 当作工作区根时都能解析 {@code from nekojs import *}。JS-only 目录不写（Python backend
+     * 无需为其贡献 pyright 配置）。
+     */
+    private static void mergePyrightConfigsForNestedPythonDirs(EditorConfigContributor contributor,
+                                                                Path scriptDir, Path out) {
+        if (scriptDir == null || !Files.isDirectory(scriptDir)) {
+            return;
+        }
+        Set<Path> pythonDirs = new TreeSet<>();
+        try (var stream = Files.walk(scriptDir)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> {
+                        Path name = path.getFileName();
+                        return name != null && name.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".py");
+                    })
+                    .forEach(path -> {
+                        Path parent = path.getParent();
+                        if (parent != null && !parent.equals(scriptDir)) {
+                            pythonDirs.add(parent);
+                        }
+                    });
+        } catch (IOException e) {
+            NekoJS.LOGGER.debug("Probe [python]: failed to scan {} for nested pyright configs", scriptDir, e);
+            return;
+        }
+        for (Path dir : pythonDirs) {
+            contributor.mergePyrightExtraPaths(dir.resolve("pyrightconfig.json"),
+                    List.of(FileEditorConfigContributor.relativePosix(dir, out)));
+        }
     }
 
     @Override
