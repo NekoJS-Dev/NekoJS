@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.event.registry;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.wrapper.registry.BlockBuilderJS;
 import net.minecraft.block.Block;
 import net.minecraftforge.event.RegistryEvent;
@@ -28,27 +31,40 @@ public class BlockRegistryEventJS {
     private final RegistryEvent.Register<Block> rawEvent;
     private final List<BlockBuilderJS> builders = new ArrayList<>();
 
+    /** Wraps the raw Forge Register<Block> event. */
     public BlockRegistryEventJS(RegistryEvent.Register<Block> rawEvent) {
         this.rawEvent = rawEvent;
     }
 
+    /** Creates a block builder for later registration. */
+    @Doc("Creates a new block builder.")
+    @Param(name = "id", value = "registry id like 'my_block' or 'mymod:my_block'")
+    @Return("a new BlockBuilderJS for chaining; the block is registered when the event completes")
     public BlockBuilderJS create(String id) {
         BlockBuilderJS builder = new BlockBuilderJS(id);
         builders.add(builder);
         return builder;
     }
 
+    /** Creates a block builder and configures it in one call. */
+    @Doc("Creates a new block builder and configures it in one call.")
+    @Param(name = "id", value = "registry id like 'my_block' or 'mymod:my_block'")
+    @Param(name = "consumer", value = "callback receiving the builder for configuration")
     public void create(String id, Consumer<BlockBuilderJS> consumer) {
         BlockBuilderJS builder = create(id);
         consumer.accept(builder);
     }
 
     /** Expose the raw Forge registry for advanced script use. */
+    @Doc("Exposes the raw Forge block registry for advanced use.")
+    @Return("the Forge IForgeRegistry<Block> backing this event")
     public IForgeRegistry<Block> getRegistry() {
         return rawEvent.getRegistry();
     }
 
     /** Flush all builders into the Forge registry and stage block-item generation. */
+    @Doc("Registers all blocks created in this event into the Forge registry.")
+    @Doc("Called automatically when the event completes; manual calls are normally unnecessary.")
     public void registerAll() {
         for (BlockBuilderJS builder : builders) {
             Block block = builder.build();

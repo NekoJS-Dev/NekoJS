@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.bindings.recipe;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.CraftingManager;
@@ -26,16 +29,26 @@ import java.util.Map;
 public class MinecraftRecipeHandler {
     private final RecipeEventJS event;
 
+    /** Wraps the recipe event for vanilla recipe manipulation. */
+    @Doc("Vanilla recipe manipulation facade for the recipes event.")
+    @Param(name = "event", value = "the RecipeEventJS instance this handler reads and mutates")
     public MinecraftRecipeHandler(RecipeEventJS event) {
         this.event = event;
     }
 
     // ========== Query ==========
 
+    /** Lists all recipe registry ids. */
+    @Doc("Lists the registry ids of all crafting recipes.")
+    @Return("list of recipe ids like 'minecraft:stick'; never null")
     public List<String> list() {
         return event.getRecipeIds();
     }
 
+    /** Gets the display name of a recipe's output. */
+    @Doc("Gets the display name of a recipe's output stack.")
+    @Param(name = "recipeId", value = "recipe registry id like 'minecraft:stick'")
+    @Return("the output's display name, or null if the recipe or its output is missing")
     public String get(String recipeId) {
         IRecipe recipe = event.getRecipe(recipeId);
         if (recipe != null) {
@@ -45,6 +58,10 @@ public class MinecraftRecipeHandler {
         return null;
     }
 
+    /** Checks whether a recipe id exists. */
+    @Doc("Checks whether a crafting recipe with the given id exists.")
+    @Param(name = "recipeId", value = "recipe registry id")
+    @Return("true if the recipe exists")
     public boolean exists(String recipeId) {
         return event.exists(recipeId);
     }
@@ -52,6 +69,8 @@ public class MinecraftRecipeHandler {
     /**
      * Remove a recipe by its registry name.
      */
+    @Doc("Removes a crafting recipe by its registry id.")
+    @Param(name = "recipeId", value = "recipe registry id like 'minecraft:stick'")
     public void remove(String recipeId) {
         event.remove(recipeId);
     }
@@ -64,6 +83,10 @@ public class MinecraftRecipeHandler {
      * @param pattern rows of pattern characters (e.g. ["AAA", "B B", "AAA"])
      * @param keys mapping of character → Ingredient
      */
+    @Doc("Adds a shaped crafting recipe with a key-based pattern.")
+    @Param(name = "output", value = "the result item stack")
+    @Param(name = "pattern", value = "rows of pattern characters, e.g. ['AAA', 'B B', 'AAA']; space means empty")
+    @Param(name = "keys", value = "map of pattern character to ingredient")
     public void shaped(ItemStack output, List<String> pattern, Map<String, Ingredient> keys) {
         if (output.isEmpty() || pattern.isEmpty()) {
             NekoJS.LOGGER.warn("shaped recipe: empty output or pattern");
@@ -105,6 +128,9 @@ public class MinecraftRecipeHandler {
     /**
      * Add a shapeless recipe.
      */
+    @Doc("Adds a shapeless crafting recipe.")
+    @Param(name = "output", value = "the result item stack")
+    @Param(name = "ingredients", value = "list of ingredients; order does not matter")
     public void shapeless(ItemStack output, List<Ingredient> ingredients) {
         if (output.isEmpty() || ingredients.isEmpty()) {
             NekoJS.LOGGER.warn("shapeless recipe: empty output or ingredients");
@@ -126,6 +152,10 @@ public class MinecraftRecipeHandler {
     /**
      * Add a furnace smelting recipe.
      */
+    @Doc("Adds a furnace smelting recipe.")
+    @Param(name = "input", value = "the input item stack to smelt")
+    @Param(name = "output", value = "the smelting result item stack")
+    @Param(name = "xp", value = "experience granted per smelted item")
     public void smelting(ItemStack input, ItemStack output, float xp) {
         if (input.isEmpty() || output.isEmpty()) {
             NekoJS.LOGGER.warn("smelting recipe: empty input or output");
@@ -139,6 +169,8 @@ public class MinecraftRecipeHandler {
     /**
      * Remove a furnace recipe by input.
      */
+    @Doc("Removes a furnace smelting recipe by its input stack.")
+    @Param(name = "input", value = "the input item stack whose smelting recipe should be removed")
     public void removeSmelting(ItemStack input) {
         if (input.isEmpty()) return;
         Map<ItemStack, ItemStack> smeltingList = net.minecraft.item.crafting.FurnaceRecipes.instance().getSmeltingList();

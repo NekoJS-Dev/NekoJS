@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.bindings.static_access;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import graal.graalvm.polyglot.Value;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.FluidStack;
@@ -13,6 +16,10 @@ import java.util.List;
  */
 public class FluidIngredientJS {
 
+    /** Collects fluid stacks from any number of fluid-like values. */
+    @Doc("Collects fluid stacks from any number of fluid-like values.")
+    @Param(name = "values", value = "fluid id strings, FluidStacks, Fluids, or lists thereof; unknown ids are skipped")
+    @Return("a new list of resolved fluid stacks (one bucket each); never null, may be empty")
     public List<FluidStack> of(Object... values) {
         List<FluidStack> result = new ArrayList<>();
         if (values != null) {
@@ -24,6 +31,10 @@ public class FluidIngredientJS {
         return result;
     }
 
+    /** Returns a single one-bucket stack for a fluid id. */
+    @Doc("Returns a single one-bucket (1000 mB) stack for a fluid id.")
+    @Param(name = "id", value = "fluid id like 'water'")
+    @Return("a list holding the stack, or an empty list if the fluid is unknown")
     public List<FluidStack> fluid(String id) {
         List<FluidStack> result = new ArrayList<>();
         net.minecraftforge.fluids.Fluid fluid = FluidRegistry.getFluid(id);
@@ -33,6 +44,10 @@ public class FluidIngredientJS {
         return result;
     }
 
+    /** 1.12.2 has no fluid tags; always returns an empty list. */
+    @Doc("Fluid tags do not exist on 1.12.2.")
+    @Param(name = "id", value = "tag id; ignored on this platform")
+    @Return("always an empty list")
     public List<FluidStack> tag(String id) {
         // 1.12.2 doesn't have fluid tags - just return empty
         return new ArrayList<>();

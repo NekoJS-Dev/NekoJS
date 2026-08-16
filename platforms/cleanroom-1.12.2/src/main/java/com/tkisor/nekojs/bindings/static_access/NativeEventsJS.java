@@ -2,6 +2,8 @@ package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import graal.graalvm.polyglot.Value;
@@ -39,6 +41,8 @@ public class NativeEventsJS implements Binding {
     /** reload 清理用的注销句柄（bindNative 返回的 Runnable）。 */
     private static final List<Runnable> REMOVAL_TOKENS = new CopyOnWriteArrayList<>();
 
+    /** 注销全部原生监听器（reload 清理入口）。 */
+    @Doc("Unregisters every native listener registered through this binding.")
     public static void clear() {
         for (Runnable token : REMOVAL_TOKENS) {
             try {
@@ -50,26 +54,61 @@ public class NativeEventsJS implements Binding {
         REMOVAL_TOKENS.clear();
     }
 
+    /** 以 NORMAL 优先级订阅任意 Forge 事件类。 */
+    @Doc("Subscribes a handler to any raw Forge event class at NORMAL priority.")
+    @Param(name = "eventType", value = "Forge event class or full class name like 'net.minecraftforge.event.entity.player.AdvancementEvent'")
+    @Param(name = "handler", value = "callback receiving the raw Forge event; returning true cancels a cancelable event")
     public void onEvent(Object eventType, Object handler) {
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
+    /** 以指定优先级与 receiveCancelled 订阅任意 Forge 事件类。 */
+    @Doc("Subscribes a handler to any raw Forge event class with priority and cancelled-event options.")
+    @Param(name = "priorityObj", value = "EventPriority constant or its name string like 'HIGH'; defaults to NORMAL")
+    @Param(name = "receiveCancelled", value = "if true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "Forge event class or full class name")
+    @Param(name = "handler", value = "callback receiving the raw Forge event; returning true cancels a cancelable event")
     public void onEvent(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         registerNative(null, priorityObj, receiveCancelled, eventType, handler);
     }
 
+    /** 同 {@link #onEvent(Object, boolean, Object, Object)}，供脚本显式表达 typed 语义。 */
+    @Doc("Alias of onEvent(priority, receiveCancelled, eventType, handler).")
+    @Param(name = "priorityObj", value = "EventPriority constant or its name string; defaults to NORMAL")
+    @Param(name = "receiveCancelled", value = "if true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "Forge event class or full class name")
+    @Param(name = "handler", value = "callback receiving the raw Forge event")
     public void onEventTyped(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         onEvent(priorityObj, receiveCancelled, eventType, handler);
     }
 
+    /** 以 NORMAL 优先级订阅泛型事件（按事件实例的 {@code getType()} 过滤）。 */
+    @Doc("Subscribes to a generic Forge event at NORMAL priority, filtered by the event's getType().")
+    @Param(name = "genericClassType", value = "the holder class the event's getType() must match, e.g. Item.class for AttachCapabilitiesEvent")
+    @Param(name = "eventType", value = "Forge event class or full class name")
+    @Param(name = "handler", value = "callback receiving the raw Forge event")
     public void onGenericEvent(Object genericClassType, Object eventType, Object handler) {
         onGenericEvent(genericClassType, EventPriority.NORMAL, false, eventType, handler);
     }
 
+    /** 以指定优先级与 receiveCancelled 订阅泛型事件（按事件实例的 {@code getType()} 过滤）。 */
+    @Doc("Subscribes to a generic Forge event with priority and cancelled-event options, filtered by the event's getType().")
+    @Param(name = "genericClassType", value = "the holder class the event's getType() must match")
+    @Param(name = "priorityObj", value = "EventPriority constant or its name string; defaults to NORMAL")
+    @Param(name = "receiveCancelled", value = "if true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "Forge event class or full class name")
+    @Param(name = "handler", value = "callback receiving the raw Forge event")
     public void onGenericEvent(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         registerNative(resolveClass(genericClassType), priorityObj, receiveCancelled, eventType, handler);
     }
 
+    /** 同 {@link #onGenericEvent(Object, Object, boolean, Object, Object)}，供脚本显式表达 typed 语义。 */
+    @Doc("Alias of onGenericEvent(genericClassType, priority, receiveCancelled, eventType, handler).")
+    @Param(name = "genericClassType", value = "the holder class the event's getType() must match")
+    @Param(name = "priorityObj", value = "EventPriority constant or its name string; defaults to NORMAL")
+    @Param(name = "receiveCancelled", value = "if true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "Forge event class or full class name")
+    @Param(name = "handler", value = "callback receiving the raw Forge event")
     public void onGenericEventTyped(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         onGenericEvent(genericClassType, priorityObj, receiveCancelled, eventType, handler);
     }

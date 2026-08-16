@@ -17,6 +17,9 @@ import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppedEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 
+/**
+ * 服务器相关事件总线声明：服务器 tick、生命周期、配方/tag/数据生成与 loot table 事件。
+ */
 public interface ServerEvents {
     EventGroup GROUP = EventGroup.of("ServerEvents");
 

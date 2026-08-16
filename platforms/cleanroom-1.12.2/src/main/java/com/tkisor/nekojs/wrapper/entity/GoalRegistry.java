@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.entity;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import net.minecraft.entity.EntityCreature;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
@@ -48,6 +51,7 @@ import java.util.function.Function;
  *       duplicate injection across chunk reloads.</li>
  * </ul>
  */
+@Doc("Entity AI goal registry keyed by entity registry id (not class, since all script mobs share NekoScriptMob).")
 public final class GoalRegistry {
 
     /** Goals keyed by entity registry id. */
@@ -64,11 +68,17 @@ public final class GoalRegistry {
 
     private GoalRegistry() {}
 
+    /** Creates a new goal builder. */
+    @Doc("Creates a new goal builder.")
+    @Return("a fresh GoalBuilderJS, not yet bound to an entity id")
     public static GoalBuilderJS builder() {
         return new GoalBuilderJS();
     }
 
     /** Persist a builder's collected goals for the given entity id. */
+    @Doc("Commits a builder's collected goals under the given entity id.")
+    @Param(name = "id", value = "the entity registry id")
+    @Param(name = "builder", value = "the builder whose goals are persisted")
     public static void registerForEntity(ResourceLocation id, GoalBuilderJS builder) {
         if (id == null || builder == null) {
             return;
@@ -82,6 +92,8 @@ public final class GoalRegistry {
     }
 
     /** Apply registered goals to a NekoScriptMob by its nekoId (called from initEntityAI). */
+    @Doc("Applies registered goals to a NekoScriptMob by its nekoId (internal).")
+    @Param(name = "mob", value = "the mob to configure")
     public static void applyBuiltInGoals(NekoScriptMob mob) {
         ResourceLocation id = mob.getNekoId();
         if (id == null) {
@@ -97,6 +109,8 @@ public final class GoalRegistry {
      * <p>Skipped on the client, skipped for {@link NekoScriptMob} (those get goals via
      * {@link #applyBuiltInGoals}), and skipped for entities already processed.
      */
+    @Doc("Forge hook injecting script-registered goals into vanilla creatures on world join (internal).")
+    @Param(name = "event", value = "the EntityJoinWorldEvent")
     public static void onEntityJoinWorld(EntityJoinWorldEvent event) {
         if (event.getWorld().isRemote) {
             return;
@@ -152,6 +166,8 @@ public final class GoalRegistry {
      * Script-facing builder. Switches between normal-goal and target-goal modes via
      * {@link #target()} / {@link #goal()}; defaults to normal-goal mode.
      */
+    @Doc("Script-facing AI goal builder; goals are appended with the current priority.")
+    @Doc("Switch between mob.tasks (goal()) and mob.targetTasks (target()) mode; default is goal() mode.")
     public static class GoalBuilderJS {
         private ResourceLocation id;
         private final List<GoalFactory> goals = new ArrayList<>();
@@ -161,6 +177,9 @@ public final class GoalRegistry {
         private int priority = 0;
 
         /** Resolve an entity id string (with optional {@code namespace:path}) to its registry id. */
+        @Doc("Binds the builder to an entity type by id.")
+        @Param(name = "entityId", value = "entity id like 'minecraft:zombie'; must be an EntityCreature type")
+        @Return("this builder, for chaining")
         public GoalBuilderJS forType(String entityId) {
             this.id = parseId(entityId);
             // Validate the entity exists, resolving its class to confirm EntityCreature compatibility.
@@ -177,49 +196,83 @@ public final class GoalRegistry {
         }
 
         /** Switch to targeting-goal mode (goals added to {@code mob.targetTasks}). */
+        @Doc("Switches to targeting-goal mode (mob.targetTasks).")
+        @Return("this builder, for chaining")
         public GoalBuilderJS target() {
             this.targetMode = true;
             return this;
         }
 
         /** Switch to normal-goal mode (goals added to {@code mob.tasks}). Default. */
+        @Doc("Switches to normal-goal mode (mob.tasks); the default mode.")
+        @Return("this builder, for chaining")
         public GoalBuilderJS goal() {
             this.targetMode = false;
             return this;
         }
 
         /** Set the priority for the next appended goal(s). */
+        @Doc("Sets the priority used for the goals appended next; lower runs first.")
+        @Param(name = "p", value = "task priority; lower values take precedence")
+        @Return("this builder, for chaining")
         public GoalBuilderJS priority(int p) {
             this.priority = p;
             return this;
         }
 
+        /** Adds a swimming goal. */
+        @Doc("Adds a swimming goal so the mob floats in water.")
+        @Return("this builder, for chaining")
         public GoalBuilderJS swim() {
             return add(new GoalFactory(priority, mob -> new EntityAISwimming((EntityLiving) mob)));
         }
 
+        /** Adds a wandering goal. */
+        @Doc("Adds a wandering goal.")
+        @Param(name = "speed", value = "movement speed while wandering, e.g. 1.0")
+        @Return("this builder, for chaining")
         public GoalBuilderJS wander(double speed) {
             return add(new GoalFactory(priority, mob -> new EntityAIWander(mob, speed)));
         }
 
+        /** Adds a melee attack goal. */
+        @Doc("Adds a melee attack goal.")
+        @Param(name = "speed", value = "movement speed while attacking")
+        @Param(name = "longMemory", value = "true to keep chasing the target longer")
+        @Return("this builder, for chaining")
         public GoalBuilderJS meleeAttack(double speed, boolean longMemory) {
             return add(new GoalFactory(priority,
                     mob -> new EntityAIAttackMelee(mob, speed, longMemory)));
         }
 
+        /** Adds a panic goal. */
+        @Doc("Adds a panic goal triggered when the mob is hurt.")
+        @Param(name = "speed", value = "movement speed while panicking")
+        @Return("this builder, for chaining")
         public GoalBuilderJS panic(double speed) {
             return add(new GoalFactory(priority, mob -> new EntityAIPanic(mob, speed)));
         }
 
+        /** Adds a look-idle goal. */
+        @Doc("Adds an idle look-around goal.")
+        @Return("this builder, for chaining")
         public GoalBuilderJS lookIdle() {
             return add(new GoalFactory(priority, mob -> new EntityAILookIdle((EntityLiving) mob)));
         }
 
+        /** Adds a leap-at-target goal. */
+        @Doc("Adds a leap-at-target goal.")
+        @Param(name = "leapMotionY", value = "vertical leap strength, e.g. 0.5")
+        @Return("this builder, for chaining")
         public GoalBuilderJS leapAtTarget(float leapMotionY) {
             return add(new GoalFactory(priority,
                     mob -> new EntityAILeapAtTarget((EntityLiving) mob, leapMotionY)));
         }
 
+        /** Adds a hurt-by-target goal. */
+        @Doc("Adds a targeting goal that attacks whoever hurt the mob.")
+        @Param(name = "callsForHelp", value = "true to make nearby mobs of the same type also aggro")
+        @Return("this builder, for chaining")
         public GoalBuilderJS hurtByTarget(boolean callsForHelp) {
             return add(new GoalFactory(priority,
                     mob -> new EntityAIHurtByTarget(mob, callsForHelp)));
@@ -232,6 +285,9 @@ public final class GoalRegistry {
          *                        {@link Class#forName(String)}; must be an
          *                        {@code EntityLivingBase} subclass
          */
+        @Doc("Adds a targeting goal attacking the nearest entity of the given class.")
+        @Param(name = "targetClassName", value = "entity class name, FQN or simple like 'EntityPlayer'; must extend EntityLivingBase")
+        @Return("this builder, for chaining")
         @SuppressWarnings({"unchecked", "rawtypes"})
         public GoalBuilderJS nearestAttackableTarget(String targetClassName) {
             return add(new GoalFactory(priority, mob -> {
@@ -243,11 +299,16 @@ public final class GoalRegistry {
             }));
         }
 
+        /** Whether no goals were collected. */
+        @Doc("Checks whether no goals were collected.")
+        @Return("true if neither normal nor targeting goals were added")
         public boolean isEmpty() {
             return goals.isEmpty() && targetGoals.isEmpty();
         }
 
         /** Commit this builder into the registry under its resolved id. */
+        @Doc("Commits the collected goals into the registry under the bound entity id.")
+        @Doc("Not needed with the Consumer overloads of forType(), which register automatically.")
         public void register() {
             registerForEntity(id, this);
         }

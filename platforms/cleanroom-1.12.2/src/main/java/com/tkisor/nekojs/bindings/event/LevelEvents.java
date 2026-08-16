@@ -8,6 +8,9 @@ import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
+/**
+ * 世界（维度）相关事件总线声明：加载/卸载/保存、tick 与爆炸事件。
+ */
 public interface LevelEvents {
     EventGroup GROUP = EventGroup.of("LevelEvents");
 

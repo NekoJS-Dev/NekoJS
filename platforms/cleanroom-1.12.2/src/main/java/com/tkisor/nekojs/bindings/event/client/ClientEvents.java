@@ -10,6 +10,9 @@ import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
+/**
+ * 客户端相关事件总线声明：客户端 tick、聊天接收、资产生成与语言生成事件。
+ */
 public interface ClientEvents {
     EventGroup GROUP = EventGroup.of("ClientEvents");
 

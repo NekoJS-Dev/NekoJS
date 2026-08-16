@@ -11,6 +11,10 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.*;
 
+/**
+ * 实体相关事件总线声明（含生物事件）。多数 bus 按实体类型 id 分发（如
+ * {@code EntityEvents.death('minecraft:creeper', e => ...)}），物品使用类事件按物品 id 分发。
+ */
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 

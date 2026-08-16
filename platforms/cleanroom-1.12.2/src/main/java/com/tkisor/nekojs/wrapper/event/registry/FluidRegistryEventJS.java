@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.event.registry;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.wrapper.registry.FluidBuilderJS;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
@@ -36,6 +39,10 @@ public class FluidRegistryEventJS {
     /** 需要桶的流体：id → 已注册 Fluid（BLOCK 分支暂存，ITEM 分支消费）。 */
     private static final Map<String, Fluid> PENDING_BUCKET_FLUIDS = new HashMap<>();
 
+    /** 创建一个流体 builder。 */
+    @Doc("Creates a new fluid builder.")
+    @Param(name = "id", value = "fluid id like 'my_fluid'; no namespace needed")
+    @Return("a new FluidBuilderJS for chaining; the fluid and its block are registered during the block registry phase")
     public FluidBuilderJS create(String id) {
         FluidBuilderJS builder = new FluidBuilderJS(id);
         PENDING.put(id, builder);
@@ -43,6 +50,9 @@ public class FluidRegistryEventJS {
     }
 
     /** 便利重载：直接配置并注册。 */
+    @Doc("Creates a new fluid builder and configures it in one call.")
+    @Param(name = "id", value = "fluid id like 'my_fluid'; no namespace needed")
+    @Param(name = "consumer", value = "callback receiving the builder for configuration")
     public void create(String id, Consumer<FluidBuilderJS> consumer) {
         FluidBuilderJS builder = create(id);
         consumer.accept(builder);

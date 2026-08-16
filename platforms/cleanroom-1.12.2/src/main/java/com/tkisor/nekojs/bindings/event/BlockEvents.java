@@ -10,6 +10,10 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.world.BlockEvent;
 
+/**
+ * 方块相关事件总线声明。所有 bus 按方块 id 分发，如
+ * {@code BlockEvents.broken('minecraft:stone', e => ...)}。
+ */
 public interface BlockEvents {
     EventGroup GROUP = EventGroup.of("BlockEvents");
 

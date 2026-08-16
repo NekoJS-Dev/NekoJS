@@ -22,6 +22,10 @@ import net.minecraftforge.fml.common.gameevent.PlayerEvent.ItemCraftedEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent.ItemSmeltedEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
+/**
+ * 玩家相关事件总线声明。多数 bus 不按键分发（订阅所有玩家）；
+ * {@code crafted}/{@code smelted}/{@code destroyed}/{@code inventoryChanged} 按物品 id 分发。
+ */
 public interface PlayerEvents {
     EventGroup GROUP = EventGroup.of("PlayerEvents");
 

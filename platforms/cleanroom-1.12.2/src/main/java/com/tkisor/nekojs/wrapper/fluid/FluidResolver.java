@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.fluid;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.wrapper.FluidAmounts;
@@ -27,17 +30,25 @@ import java.util.regex.Pattern;
  *   <li>Uses {@code new FluidStack(fluid, amount)} for construction</li>
  * </ul>
  */
+@Doc("Static helpers resolving fluid ids and fluid-like values into FluidStacks and fluid ingredient lists.")
 public final class FluidResolver {
     private FluidResolver() {}
 
     // ===================== FluidStack =====================
 
     /** Resolve a fluid id string to a FluidStack (1000mb default). */
+    @Doc("Resolves a fluid id string to a FluidStack of one bucket.")
+    @Param(name = "raw", value = "fluid id like 'water'; tag/mod/regex/wildcard prefixes are rejected here")
+    @Return("the fluid stack; throws ValueConversionException for unknown ids")
     public static FluidStack fromString(String raw) {
         return fromString(raw, FluidAmounts.BUCKET);
     }
 
     /** Resolve a fluid id string to a FluidStack with the given amount. */
+    @Doc("Resolves a fluid id string to a FluidStack with an explicit amount.")
+    @Param(name = "raw", value = "fluid id like 'water', optionally '1000x water' style with amount")
+    @Param(name = "amount", value = "fluid amount in mB")
+    @Return("the fluid stack; throws ValueConversionException for unknown ids")
     public static FluidStack fromString(String raw, int amount) {
         if (raw == null || raw.isBlank()) {
             throw new ValueConversionException(FluidStack.class, "fluid id", raw, "fluid id cannot be empty");
@@ -53,15 +64,28 @@ public final class FluidResolver {
         return stackFromFluid(getFluid(input.id()), input.amount());
     }
 
+    /** Creates a one-bucket stack from a fluid. */
+    @Doc("Creates a one-bucket FluidStack from a fluid.")
+    @Param(name = "fluid", value = "the fluid")
+    @Return("the stack, or null if the fluid is null")
     public static FluidStack stackFromFluid(Fluid fluid) {
         return stackFromFluid(fluid, FluidAmounts.BUCKET);
     }
 
+    /** Creates a stack from a fluid with an amount. */
+    @Doc("Creates a FluidStack from a fluid with an explicit amount.")
+    @Param(name = "fluid", value = "the fluid")
+    @Param(name = "amount", value = "fluid amount in mB; must be positive")
+    @Return("the stack, or null if the fluid is null or the amount is not positive")
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == null || amount <= 0) return null;
         return new FluidStack(fluid, amount);
     }
 
+    /** Resolves a polyglot value into a FluidStack. */
+    @Doc("Resolves any polyglot value into a FluidStack.")
+    @Param(name = "value", value = "a fluid id string, FluidStack, Fluid, NekoId, or an object {fluid|id, amount}")
+    @Return("the stack (a copy for FluidStack inputs), or null for null; throws for unsupported values")
     public static FluidStack stackFromValue(Value value) {
         if (value == null || value.isNull()) return null;
         if (value.isString()) return fromString(value.asString());
@@ -86,6 +110,10 @@ public final class FluidResolver {
 
     // ===================== Fluid Ingredient (List<FluidStack>) =====================
 
+    /** Resolves a fluid ingredient string. */
+    @Doc("Resolves a fluid ingredient string into a list of FluidStacks.")
+    @Param(name = "raw", value = "fluid id, '*all', '@namespace', '/regex/', or '#tag' (tags yield an empty list on 1.12.2)")
+    @Return("the matching stacks; throws for unknown ids or prefixes that match nothing")
     public static List<FluidStack> ingredientFromString(String raw) {
         String s = normalizeRaw(raw);
         char c = s.charAt(0);
@@ -105,6 +133,10 @@ public final class FluidResolver {
         return Collections.singletonList(new FluidStack(fluid, input.amount()));
     }
 
+    /** One-bucket stack list from a fluid. */
+    @Doc("Wraps a fluid as a one-bucket ingredient list.")
+    @Param(name = "fluid", value = "the fluid; must not be null")
+    @Return("a single-element list with the one-bucket stack")
     public static List<FluidStack> ingredientFromFluid(Fluid fluid) {
         if (fluid == null) {
             throw new ValueConversionException(List.class, "non-null fluid", fluid,
@@ -113,6 +145,10 @@ public final class FluidResolver {
         return Collections.singletonList(new FluidStack(fluid, FluidAmounts.BUCKET));
     }
 
+    /** Wraps a stack as an ingredient list. */
+    @Doc("Wraps a FluidStack as a single-element ingredient list (copy taken).")
+    @Param(name = "stack", value = "the stack; must not be null and must have a positive amount")
+    @Return("a single-element list with a copy of the stack")
     public static List<FluidStack> ingredientFromStack(FluidStack stack) {
         if (stack == null || stack.amount <= 0) {
             throw new ValueConversionException(List.class, "non-empty fluid stack", stack,
@@ -121,6 +157,10 @@ public final class FluidResolver {
         return Collections.singletonList(stack.copy());
     }
 
+    /** Resolves any polyglot value into a fluid ingredient list. */
+    @Doc("Resolves any polyglot value into a fluid ingredient list.")
+    @Param(name = "value", value = "a string, FluidIngredientJS, FluidStack, Fluid, NekoId, a list, an array, or an object with fluid/id/tag/mod/regex/wildcard/filter/any/all/not field")
+    @Return("the matching stacks; throws for null input, empty results, or unsupported values")
     public static List<FluidStack> ingredientFromValue(Value value) {
         if (value == null || value.isNull()) {
             throw new ValueConversionException(List.class, "non-null", value,
@@ -169,6 +209,9 @@ public final class FluidResolver {
     // ===================== Combine / Intersect / Except =====================
 
     /** Combine multiple ingredient lists into one (union). */
+    @Doc("Combines multiple fluid ingredient lists into one union, deduplicating fluids.")
+    @Param(name = "alternatives", value = "the lists to combine; null lists are skipped")
+    @Return("the union list; throws ValueConversionException when no non-empty alternative exists")
     @SafeVarargs
     public static List<FluidStack> combine(List<FluidStack>... alternatives) {
         Set<Fluid> seen = new LinkedHashSet<>();
@@ -331,6 +374,10 @@ public final class FluidResolver {
 
     // ===================== Fluid lookup =====================
 
+    /** Looks up a registered fluid by id. */
+    @Doc("Looks up a registered fluid by id.")
+    @Param(name = "raw", value = "fluid id like 'water'; namespace defaults to minecraft")
+    @Return("the fluid; throws ValueConversionException when not found")
     public static Fluid getFluid(String raw) {
         String id = normalizeFluidId(raw);
         Fluid fluid = FluidRegistry.getFluid(id);
@@ -341,6 +388,10 @@ public final class FluidResolver {
         return fluid;
     }
 
+    /** Normalizes a fluid id (adds minecraft: namespace). */
+    @Doc("Normalizes a fluid id, rejecting '#' tag prefixes and defaulting the namespace to 'minecraft'.")
+    @Param(name = "raw", value = "fluid id with or without namespace")
+    @Return("the namespaced id like 'minecraft:water'")
     public static String normalizeFluidId(String raw) {
         String id = normalizeRaw(raw);
         if (id.startsWith("#")) {
@@ -350,6 +401,10 @@ public final class FluidResolver {
         return id.contains(":") ? id : "minecraft:" + id;
     }
 
+    /** Normalizes a fluid tag id. */
+    @Doc("Normalizes a fluid tag id, stripping a leading '#' and defaulting the namespace to 'minecraft'.")
+    @Param(name = "raw", value = "tag id with or without '#' prefix")
+    @Return("the namespaced tag id like 'minecraft:water'")
     public static String normalizeFluidTagId(String raw) {
         String id = normalizeRaw(raw);
         String tag = id.startsWith("#") ? id.substring(1) : id;

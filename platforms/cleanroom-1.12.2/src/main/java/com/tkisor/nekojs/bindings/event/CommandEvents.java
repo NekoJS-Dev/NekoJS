@@ -7,6 +7,9 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 
+/**
+ * 命令相关事件总线声明：{@code register} 用于注册服务器命令，{@code command} 在命令执行时触发。
+ */
 public interface CommandEvents {
     EventGroup GROUP = EventGroup.of("CommandEvents");
 

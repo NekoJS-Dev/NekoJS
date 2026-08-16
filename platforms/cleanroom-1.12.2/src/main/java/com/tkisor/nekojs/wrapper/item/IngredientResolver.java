@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.item;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import graal.graalvm.polyglot.Value;
@@ -18,9 +21,15 @@ import java.util.List;
  * 1.12.2 Ingredient 解析：支持 item:id / ore:name / @mod 前缀以及对象形式。
  * 简化版，不含 NeoForge 1.21.1 的 Holder/HolderSet 系统。
  */
+@Doc("Static helpers resolving item-like values into 1.12.2 ingredients.")
+@Doc("Supports 'item:id', 'ore:name', '*' (all items), '@mod' prefixes, plus objects and arrays.")
 public final class IngredientResolver {
     private IngredientResolver() {}
 
+    /** 从字符串解析 ingredient。 */
+    @Doc("Resolves an ingredient from a string.")
+    @Param(name = "raw", value = "item id like 'minecraft:stone', 'ore:planks', '*' for all items, or '@modid' for a mod's items")
+    @Return("the resolved ingredient; throws ValueConversionException for unknown ids")
     public static Ingredient fromString(String raw) {
         String s = normalizeRaw(raw);
         if (s.startsWith("ore:")) {
@@ -75,14 +84,26 @@ public final class IngredientResolver {
                 "item or ore not found: " + s);
     }
 
+    /** 从 NekoId 解析。 */
+    @Doc("Resolves an ingredient from a NekoId.")
+    @Param(name = "id", value = "the NekoId whose string form is resolved")
+    @Return("the resolved ingredient")
     public static Ingredient fromNekoId(NekoId id) {
         return fromString(id.toString());
     }
 
+    /** 从 Item 解析。 */
+    @Doc("Resolves an ingredient matching a single item.")
+    @Param(name = "item", value = "the item to match")
+    @Return("the ingredient for the item")
     public static Ingredient fromItem(Item item) {
         return Ingredient.fromItem(item);
     }
 
+    /** 从 ItemStack 解析。 */
+    @Doc("Resolves an ingredient matching a single item stack.")
+    @Param(name = "stack", value = "the stack to match; null or empty yields Ingredient.EMPTY")
+    @Return("the ingredient for the stack")
     public static Ingredient fromStack(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return Ingredient.EMPTY;
         return Ingredient.fromStacks(stack);
@@ -94,6 +115,8 @@ public final class IngredientResolver {
      * live AnyHolderSet），此处枚举当前注册表快照。脚本注册后新增的物品不会包含在内，
      * 且不会以 wildcard 形式参与 codec 序列化（序列化为显式物品列表）。
      */
+    @Doc("Approximate wildcard matching every registered item (registry snapshot at call time).")
+    @Return("an ingredient of all items; Ingredient.EMPTY when the registry is empty")
     public static Ingredient wildcard() {
         List<ItemStack> stacks = new ArrayList<>();
         for (Item item : ForgeRegistries.ITEMS) {
@@ -102,6 +125,10 @@ public final class IngredientResolver {
         return stacks.isEmpty() ? Ingredient.EMPTY : Ingredient.fromStacks(stacks.toArray(new ItemStack[0]));
     }
 
+    /** 从任意 polyglot 值解析。 */
+    @Doc("Resolves an ingredient from any polyglot value.")
+    @Param(name = "value", value = "a string, Ingredient, ItemStack, Item, NekoId, an array (OR-combined), or an object with item/ore/mod field")
+    @Return("the resolved ingredient; Ingredient.EMPTY for null; throws for unsupported values")
     public static Ingredient fromValue(Value value) {
         if (value == null || value.isNull()) return Ingredient.EMPTY;
         if (value.isString()) return fromString(value.asString());
@@ -146,10 +173,18 @@ public final class IngredientResolver {
         return stacks.isEmpty() ? Ingredient.EMPTY : Ingredient.fromStacks(stacks.toArray(new ItemStack[0]));
     }
 
+    /** 过滤掉 null/EMPTY，返回有效替代列表。 */
+    @Doc("Filters a list of ingredients, dropping null and Ingredient.EMPTY entries.")
+    @Param(name = "alternatives", value = "candidate ingredients")
+    @Return("a new list containing only the usable ingredients")
     public static List<Ingredient> combine(List<Ingredient> alternatives) {
         return alternatives.stream().filter(i -> i != null && i != Ingredient.EMPTY).toList();
     }
 
+    /** 归一化物品 id（补全 minecraft: 命名空间）。 */
+    @Doc("Normalizes an item id string, defaulting the namespace to 'minecraft'.")
+    @Param(name = "raw", value = "item id with or without namespace")
+    @Return("the namespaced id like 'minecraft:stone'")
     public static String normalizeItemId(String raw) {
         String id = normalizeRaw(raw);
         return id.contains(":") ? id : "minecraft:" + id;

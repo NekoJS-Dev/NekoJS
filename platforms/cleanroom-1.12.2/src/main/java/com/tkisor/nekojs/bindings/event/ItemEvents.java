@@ -14,6 +14,10 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.item.ItemExpireEvent;
 
+/**
+ * 物品相关事件总线声明。所有 bus 按物品 id 分发，如
+ * {@code ItemEvents.rightClicked('minecraft:apple', e => ...)}。
+ */
 public interface ItemEvents {
     EventGroup GROUP = EventGroup.of("ItemEvents");
 

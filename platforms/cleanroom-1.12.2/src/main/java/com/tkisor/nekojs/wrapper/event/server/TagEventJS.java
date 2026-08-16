@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.event.server;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -31,9 +34,12 @@ import java.util.Map;
  * 在配方注册前生效。dispatch 键固定 {@code "ore_dict"}——脚本以
  * {@code ServerEvents.tags('ore_dict', event => ...)} 监听。
  */
+@Doc("Tag modification event adapted to the 1.12.2 OreDictionary.")
+@Doc("Items and blocks only; dispatch key is fixed to 'ore_dict'; removals are runtime operations, not datapack declarations.")
 public final class TagEventJS {
 
     /** 固定 dispatch 键：1.12.2 无按注册表分类的 tag。 */
+    @Doc("The fixed dispatch key for this event on 1.12.2 (no per-registry tags); always 'ore_dict'.")
     public static final String REGISTRY_KEY = "ore_dict";
 
     private final Map<String, List<ItemStack>> additions = new LinkedHashMap<>();
@@ -41,11 +47,16 @@ public final class TagEventJS {
     private final Map<String, List<String>> replacements = new LinkedHashMap<>();
 
     /** dispatch 键（脚本监听用的 registry id 近似）。 */
+    @Doc("The dispatch key scripts listen with; always 'ore_dict' on 1.12.2.")
+    @Return("the fixed registry key string 'ore_dict'")
     public String getRegistry() {
         return REGISTRY_KEY;
     }
 
     /** 把物品 id（{@code minecraft:iron_ingot}）加进 ore 名（{@code forge:ingots/iron}）。 */
+    @Doc("Stages an item id for addition to an ore name (applied on apply()).")
+    @Param(name = "tag", value = "ore name like 'forge:ingots/iron', 'ore:ingots/iron', or 'ingots/iron'")
+    @Param(name = "entry", value = "item id like 'minecraft:iron_ingot'; unknown ids are ignored")
     public void add(String tag, String entry) {
         ItemStack stack = resolveItemStack(entry);
         if (stack == null) return;
@@ -53,6 +64,9 @@ public final class TagEventJS {
     }
 
     /** 从 ore 名移除物品 id。 */
+    @Doc("Stages an item id for removal from an ore name (applied on apply()).")
+    @Param(name = "tag", value = "ore name like 'ingots/iron'")
+    @Param(name = "entry", value = "item id like 'minecraft:iron_ingot'; unknown ids are ignored")
     public void remove(String tag, String entry) {
         ItemStack stack = resolveItemStack(entry);
         if (stack == null) return;
@@ -60,11 +74,16 @@ public final class TagEventJS {
     }
 
     /** 清空 ore 名的全部条目（延迟应用）。 */
+    @Doc("Stages the removal of every entry from an ore name (applied on apply()).")
+    @Param(name = "tag", value = "ore name like 'ingots/iron'")
     public void removeAll(String tag) {
         replacements.put(tag, new ArrayList<>());
     }
 
     /** 用新条目整体替换 ore 名的全部内容。 */
+    @Doc("Stages the replacement of an ore name's whole content with new entries (applied on apply()).")
+    @Param(name = "tag", value = "ore name like 'ingots/iron'")
+    @Param(name = "entries", value = "item ids that form the new content")
     public void replaceAll(String tag, String... entries) {
         List<String> list = new ArrayList<>();
         for (String entry : entries) {
@@ -74,6 +93,9 @@ public final class TagEventJS {
     }
 
     /** 读取 ore 名当前的物品 id 列表。 */
+    @Doc("Reads the item ids currently in an ore name.")
+    @Param(name = "tag", value = "ore name like 'ingots/iron'")
+    @Return("the current item ids; empty list if the ore name does not exist")
     public List<String> getEntries(String tag) {
         String oreName = stripOrePrefix(tag);
         if (!OreDictionary.doesOreNameExist(oreName)) return List.of();
@@ -88,6 +110,8 @@ public final class TagEventJS {
     }
 
     /** 把脚本侧记录的 add/remove/replaceAll 应用到 OreDictionary 运行时。 */
+    @Doc("Applies all staged add/remove/replaceAll operations to the OreDictionary runtime.")
+    @Doc("Called automatically when the event completes; manual calls are normally unnecessary.")
     public void apply() {
         // replaceAll/removeAll：先清空再写入（1.12.2 无清空 API，等价做法是逐个移除现有条目）
         for (var entry : replacements.entrySet()) {
