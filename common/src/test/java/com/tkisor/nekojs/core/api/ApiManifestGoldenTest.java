@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>任何符号/签名/capability/module 变化都会让 golden 对比失败——这是「冻结」的机器可执行
  * 部分：变更必须显式走 `-Dnekojs.golden.regenerate=true` 再生成并经过破坏性变更评审
- * （见 docs/API_VERSIONING.md），禁止静默改动 API 表面。
+ * （治理细节见本地 ai_arch/API_VERSIONING.md，未入库），禁止静默改动 API 表面。
  */
 class ApiManifestGoldenTest {
 

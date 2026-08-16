@@ -32,7 +32,7 @@ public interface PlayerEvents {
     EventBusJS<ServerChatEvent, Void> CHAT =
             GROUP.server("chat", ServerChatEvent.class);
     // 保留无过滤的 tick（兼容现有脚本），与 tickPre/tickPost 共存。
-    // 脚本侧建议迁移到 tickPre/tickPost（见 docs/api-rework-plan.md H-5）。
+    // 脚本侧建议迁移到 tickPre/tickPost（H-5 别名裁决，2026-08-15）。
     @Deprecated
     EventBusJS<TickEvent.PlayerTickEvent, Void> TICK =
             GROUP.server("tick", TickEvent.PlayerTickEvent.class);
@@ -52,7 +52,7 @@ public interface PlayerEvents {
     EventBusJS<PlayerContainerEvent.Close, Void> CONTAINER_CLOSED =
             GROUP.server("containerClosed", PlayerContainerEvent.Close.class);
     // inventoryOpened/inventoryClosed：与 containerOpened/closed 同 Forge 类的别名，便于脚本跨版本。
-    // 主名为 containerOpened/containerClosed，脚本侧建议迁移（docs/api-rework-plan.md H-5）。
+    // 主名为 containerOpened/containerClosed，脚本侧建议迁移（H-5 别名裁决，2026-08-15）。
     @Deprecated
     EventBusJS<PlayerContainerEvent.Open, Void> INVENTORY_OPENED =
             GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class);

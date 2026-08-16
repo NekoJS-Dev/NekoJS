@@ -1,6 +1,6 @@
 # NekoJS 脚本 API 表面盘点（api-surface-inventory）
 
-> 阶段 A 交付物（1.0.0 冻结准备，2026-08-15）。只读盘点，不含改动方案；差距分析与整理方案见 `docs/api-rework-plan.md`。
+> 阶段 A 交付物（1.0.0 冻结准备，2026-08-15）。只读盘点，不含改动方案；差距分析与整理方案见 api-rework-plan 决策台账（2026-08-16 起移至本地 `ai_arch/`，未入库）。
 > 数据来源：四平台 + common 源码级注册代码（`NekoJSCorePlugin.registerBinding/registerEvents/registerAdapters`、`CoreManagedApiBootstrap`、
 > `common-api/spec`），并与 `NekoScriptCatalog` 机制、`common/src/test/resources/nekojs/golden/api-manifest-core.json` 交叉验证。
 > 注意：`platforms/neoforge-26.1/run/.neko_probe/` 下的生成声明是**过期快照**（缺多个新 bus），不得作为事实源；本表以注册代码为准。

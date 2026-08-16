@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  * {@code ScriptEvents.server/client} 回调中 {@code event.register(group, name, eventClass,
  * priority, receiveCancelled)} 注册，server/client 脚本按组名监听。ScriptEvents 提供同等能力
  * （优先级、receiveCancelled、return-true 取消翻译、按脚本 reload 清理）且是可进 stable
- * 契约的类型化通道。本类保留至弃用窗口结束（docs/api-rework-plan.md D-2）。
+ * 契约的类型化通道。本类保留至弃用窗口结束（D-2 裁决，2026-08-15）。
  */
 @Deprecated
 public class NativeEventsJS implements Binding {

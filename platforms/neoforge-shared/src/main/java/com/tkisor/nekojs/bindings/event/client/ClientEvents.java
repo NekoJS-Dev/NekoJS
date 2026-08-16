@@ -27,7 +27,7 @@ public interface ClientEvents {
             GROUP.client("tickPre", ClientTickEvent.Pre.class);
     EventBusJS<ClientTickEvent.Post, Void> TICK_POST =
             GROUP.client("tickPost", ClientTickEvent.Post.class);
-    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost（docs/api-rework-plan.md H-5）。
+    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost（H-5 别名裁决，2026-08-15）。
     @Deprecated
     EventBusJS<ClientTickEvent.Post, Void> TICK =
             GROUP.client("tick", ClientTickEvent.Post.class);
@@ -46,7 +46,7 @@ public interface ClientEvents {
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_RENDERERS =
             GROUP.client("registerRenderers", EntityRenderersEvent.RegisterRenderers.class);
     // 实体与方块实体渲染器共用同一注册 bus；以下两个名字是历史别名。
-    // 脚本侧建议迁移到 registerRenderers（docs/api-rework-plan.md H-5）。
+    // 脚本侧建议迁移到 registerRenderers（H-5 别名裁决，2026-08-15）。
     @Deprecated
     EventBusJS<EntityRenderersEvent.RegisterRenderers, Void> REGISTER_ENTITY_RENDERERS =
             GROUP.client("registerEntityRenderers", EntityRenderersEvent.RegisterRenderers.class);

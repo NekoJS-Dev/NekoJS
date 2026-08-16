@@ -16,7 +16,7 @@ import java.util.Objects;
  * <p>所有列表输出为字典序（确定性，跨 JVM 运行可复现）：capabilities / modules 按名称、
  * symbols 按 stable id、每个 symbol 的签名按调用键。API 表面冻结以 golden 对比测试守护
  * （{@code ApiManifestGoldenTest}）：符号集合或签名变化必须显式更新 golden 并走破坏性
- * 变更评审（见 docs/API_VERSIONING.md）。
+ * 变更评审（治理细节见本地 ai_arch/API_VERSIONING.md，未入库）。
  */
 public final class ApiManifestGenerator {
 
