@@ -17,7 +17,11 @@ public interface PerformanceFacade {
     /** 执行一次 {@code fn}，返回耗时毫秒。 */
     double time(Object fn);
 
-    /** 执行 {@code fn} {@code runs} 次，返回统计（runs/total/mean/min/max）。 */
+    /**
+     * 执行 {@code fn} {@code runs} 次，返回统计（runs/total/mean/min/max）。
+     *
+     * <p>Negative {@code runs} is clamped to {@code 0}.
+     */
     PerfStat bench(Object fn, int runs);
 
     /** 开始一个标签计时器，可选 label。返回不可变 {@link PerfTimerValue} 句柄。 */

@@ -14,6 +14,7 @@ import java.util.Objects;
  */
 @ContractReceiver("ModInfo")
 public record ModInfoValue(String id, String name, String version) {
+    /** Compact constructor: rejects {@code null} or blank components. */
     public ModInfoValue {
         id = requireText(id, "id");
         name = requireText(name, "name");

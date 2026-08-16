@@ -10,10 +10,18 @@ import com.tkisor.nekojs.api.data.NekoId;
  * （此时使用默认命名空间 {@link NekoId#DEFAULT_NAMESPACE}）。
  */
 public interface IdFacade {
-    /** 解析字符串为 {@link NekoId}；无命名空间前缀时使用默认命名空间 {@link NekoId#DEFAULT_NAMESPACE}。 */
+    /**
+     * 解析字符串为 {@link NekoId}；无命名空间前缀时使用默认命名空间 {@link NekoId#DEFAULT_NAMESPACE}。
+     *
+     * @throws IllegalArgumentException when the namespace or path part is blank
+     */
     NekoId of(String value);
 
-    /** 以显式命名空间与路径构造 {@link NekoId}。 */
+    /**
+     * 以显式命名空间与路径构造 {@link NekoId}。
+     *
+     * @throws IllegalArgumentException when {@code namespace} or {@code path} is blank
+     */
     NekoId of(String namespace, String path);
 
     /** 返回 {@link NekoId} 的命名空间。 */

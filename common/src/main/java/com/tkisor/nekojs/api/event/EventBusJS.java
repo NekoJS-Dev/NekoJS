@@ -28,23 +28,41 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
+ * JS 侧事件总线句柄：包装 {@link EventBus} 并实现 {@link ProxyExecutable}，
+ * 脚本通过直接调用总线对象（形如 {@code ServerEvents.tickPre(...)}）注册监听器。
+ *
+ * <p>监听器以 Graal {@link Value} 透传保存，在 post 事件的线程上执行（通常为游戏主线程）。
+ * 每个监听器 token 按注册脚本的 {@link ScriptType} 与 scriptId 记账，供脚本 reload 时
+ * 按类型或按脚本反注册。可取消总线的监听器返回 {@code true} 表示取消事件；dispatch
+ * 总线按 key 定向分发。
+ *
  * @author ZZZank
  */
 public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private static Predicate<Class<?>> externalCancellabilityPredicate = c -> false;
 
+    /**
+     * 设置外部可取消性判定，供 {@link #of(Class)} 工厂决定是否默认创建可取消总线。
+     * 传 {@code null} 等价于「一律不可取消」。
+     */
     public static void setExternalCancellabilityPredicate(Predicate<Class<?>> predicate) {
         externalCancellabilityPredicate = predicate == null ? c -> false : predicate;
     }
 
+    /** 创建事件总线，可取消性由 {@link #eventCancellability(Class)} 判定。 */
     public static <E, K> EventBusJS<E, K> of(Class<E> eventType) {
         return of(eventType, eventCancellability(eventType));
     }
 
+    /** 创建事件总线，显式指定是否可取消（不支持按 key 分发）。 */
     public static <E, K> EventBusJS<E, K> of(Class<E> eventType, boolean cancellable) {
         return of(eventType, cancellable, null);
     }
 
+    /**
+     * 创建事件总线，显式指定是否可取消与可选的分发 key 描述。
+     * 提供 {@code dispatchKey} 时返回可按 key 定向分发的总线，post 时须携带 key。
+     */
     public static <E, K> EventBusJS<E, K> of(
         Class<E> eventType,
         boolean cancellable,
@@ -63,6 +81,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return new EventBusJS<>(bus);
     }
 
+    /** 查询事件类当前的可取消性（未设置外部 predicate 时一律不可取消）。 */
     public static boolean eventCancellability(Class<?> c) {
         return externalCancellabilityPredicate.test(c);
     }
@@ -86,15 +105,18 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     private String groupName;
     private String eventName;
 
+    /** 以底层 bus 构建句柄；{@code bus} 不可为 {@code null}。 */
     public EventBusJS(EventBus<EVENT> bus) {
         this.bus = Objects.requireNonNull(bus);
         this.tokensByType = new ConcurrentHashMap<>();
     }
 
+    /** 底层总线是否可取消（监听器返回 {@code true} 即取消事件）。 */
     public boolean canCancel() {
         return bus instanceof CancellableEventBus<?>;
     }
 
+    /** 底层总线是否支持按 key 定向分发（即 {@link #post(Object, Object)} 可用）。 */
     public boolean canDispatch() {
         return bus instanceof DispatchEventBus<?, ?>;
     }
@@ -113,14 +135,17 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return bus instanceof com.tkisor.nekojs.eventbus.EventBusBase<?, ?> base && !base.isEmpty();
     }
 
+    /** 底层 Java 侧总线，供平台 bridge 直接注册/反注册 Java 监听器（绕过 JS 记账）。 */
     public EventBus<EVENT> bus() {
         return bus;
     }
 
+    /** 本总线承载的事件类型。 */
     public Class<EVENT> eventType() {
         return bus.eventType();
     }
 
+    /** 设置组名/事件名元数据；由 {@link EventGroup#add} 在注册时调用，脚本侧不应手动改动。 */
     public void metadata(String groupName, String eventName) {
         this.groupName = groupName;
         this.eventName = eventName;
@@ -136,10 +161,15 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return eventName;
     }
 
+    /** 注册时绑定的 {@link ScriptType}；未绑定前为 {@code null}。仅作不可变守卫，不用于监听器过滤。 */
     public ScriptType scriptType() {
         return scriptType;
     }
 
+    /**
+     * 绑定 {@link ScriptType}；对已绑定的总线绑定不同值会抛 {@link IllegalStateException}
+     * （同一总线不得跨 ScriptType 复用）。见 {@link #scriptType} 字段注释：该值不参与监听器分桶。
+     */
     public void scriptType(ScriptType scriptType) {
         if (this.scriptType != null && this.scriptType != scriptType) {
             throw new IllegalStateException("Event bus script type is already " + this.scriptType + ": " + bus.eventType().getName());
@@ -147,6 +177,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         this.scriptType = Objects.requireNonNull(scriptType, "scriptType");
     }
 
+    /** 反注册指定 {@link ScriptType} 下已注册的全部 JS 监听器（脚本 reload 清理用）。 */
     public void clearTokens(ScriptType type) {
         List<ScriptEventListenerToken<EVENT>> tokens = tokensByType.remove(type);
         if (tokens == null) return;
@@ -155,6 +186,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
+    /** 反注册指定 {@link ScriptType} 下、由指定 {@code scriptId} 注册的 JS 监听器；{@code scriptId} 为 {@code null} 或空白时不做任何事。 */
     public void clearTokens(ScriptType type, String scriptId) {
         if (scriptId == null || scriptId.isBlank()) return;
         // 空桶移除必须与注册（computeIfAbsent + add）对同一 key 原子：ConcurrentHashMap.compute
@@ -184,6 +216,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         }
     }
 
+    /**
+     * 向总线投递事件。监听器抛出的异常会被捕获并经 ScriptErrorReporter 记录，
+     * 不中断其它监听器；返回事件是否被取消（不可取消总线恒为 {@code false}）。
+     */
     public boolean post(EVENT event) {
         try {
             return this.bus.post(event);
@@ -195,6 +231,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
 
     // bus 的运行时类型由 of() 工厂按 dispatchKey 决定，canDispatch() 已保证是 DispatchEventBus；
     // 此处只是擦除层面的泛型收窄
+    /**
+     * 按 key 向 dispatch 总线投递事件；总线不支持定向分发时抛 {@link IllegalStateException}。
+     * 返回事件是否被取消；监听器异常同 {@link #post(Object)} 被捕获记录。
+     */
     @SuppressWarnings("unchecked")
     public boolean post(EVENT event, KEY key) {
         if (canDispatch()) {
@@ -217,6 +257,19 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         return Set.of();
     }
 
+    /**
+     * {@link ProxyExecutable} 入口：脚本直接调用总线对象即注册监听器，注册成功返回 {@code true}。
+     * 支持的调用形态：
+     * <ul>
+     *   <li>{@code bus(listener)} —— 普通监听，NORMAL 优先级</li>
+     *   <li>{@code bus(priority, listener)} —— 首参为优先级名
+     *       （HIGHEST/HIGH/NORMAL/LOW/LOWEST，大小写不敏感）</li>
+     *   <li>{@code bus(key, listener)} / {@code bus(priority, key, listener)} ——
+     *       dispatch 总线按 key 定向注册</li>
+     * </ul>
+     * 可取消总线的监听器返回 {@code true} 表示取消事件；参数形态非法（缺 listener 等）抛
+     * {@link IllegalArgumentException}。监听器随所属脚本 reload 自动反注册。
+     */
     @Override
     public Object execute(Value... args) {
         if (args.length == 0) {

@@ -20,9 +20,17 @@ public interface JsonFacade {
     /** 把 {@link JsonValue} 序列化为带缩进的易读 JSON 字符串。 */
     String toPrettyString(JsonValue value);
 
-    /** 从数据目录读取指定相对路径的 JSON 文件并解析为 {@link JsonValue}。 */
+    /**
+     * 从数据目录读取指定相对路径的 JSON 文件并解析为 {@link JsonValue}。
+     *
+     * @return the parsed value, or {@code null} when the file does not exist
+     */
     JsonValue read(String path);
 
-    /** 把 {@link JsonValue} 序列化后写入数据目录下指定相对路径的 JSON 文件。 */
+    /**
+     * 把 {@link JsonValue} 序列化后写入数据目录下指定相对路径的 JSON 文件。
+     *
+     * <p>Writes are atomic (temp file + atomic move), so readers never observe a partial file.
+     */
     void write(String path, JsonValue value);
 }
