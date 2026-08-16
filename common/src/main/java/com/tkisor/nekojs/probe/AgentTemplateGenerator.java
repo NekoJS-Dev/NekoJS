@@ -6,7 +6,8 @@ import java.nio.file.Path;
 
 /**
  * 生成 .github/agents/ 下的静态 agent 模板文件。
- * 这些模板教 AI 如何使用 NekoJS 的 probe 类型声明系统。
+ * 这些模板教 AI 如何使用 NekoJS 的 probe 类型声明系统（VS Code custom agents 格式：
+ * frontmatter 字段与工具名以 VS Code 文档为准，未知工具会被编辑器忽略而非报错）。
  */
 public final class AgentTemplateGenerator {
 
@@ -31,25 +32,31 @@ public final class AgentTemplateGenerator {
 
             ## NekoJS Notes
 
-            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS.
+            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS. A Python subset (`.py`, transpiled in-engine, no external runtime) is also supported.
 
             NekoJS has 4 kinds of script types:
-            - **server scripts**: located in `nekojs/server_scripts`, run on the server side. Used for recipes, loot tables, tags, advancements, event handling, etc. Reloadable with `/reload`.
-            - **client scripts**: located in `nekojs/client_scripts`, run on the client side only. Used for GUI, key bindings, rendering, etc.
-            - **startup scripts**: located in `nekojs/startup_scripts`, run on both sides at game startup. Used for registering items, blocks, entities, etc. Changes require a full game restart.
+            - **server scripts**: located in `nekojs/server_scripts`, run on the server side. Used for recipes, loot tables, tags, data generation, event handling, etc. Reloadable with `/nekojs reload server [<file>]`.
+            - **client scripts**: located in `nekojs/client_scripts`, run on the client side only. Used for GUI, key bindings, rendering, etc. Reloadable with `/nekojs reload client [<file>]`.
+            - **startup scripts**: located in `nekojs/startup_scripts`, run at game startup. Used for registering items, blocks, entities, capabilities, etc. `/nekojs reload startup` re-runs them, but registry changes still require a full game restart.
             - **test scripts**: located in `nekojs/test_scripts`, explicit smoke/regression scripts. Run with `/nekojs test`.
+
+            Script files accept first-line attributes: `// priority: <n>` (higher loads first) and `// after: <path>` (topological ordering within the same priority).
+
+            Node-compatible builtins are available: `fs`, `fs/promises`, `path`, `buffer`, `process`, `timers`, `timers/promises`, `util`, `events`, `assert`, `os`, `test` (test only in test scripts), plus `node:` aliases. File access is VFS-limited to the game root directory. Java classes are importable as `java:` modules (e.g., `import { $Integer } from "java:java/lang"`).
+
+            **Events**: cancelable events are cancelled by the listener **returning `true`** (translated to the platform's setCanceled). There is no `event.cancel()` method. Missing platform events can be bridged: `ScriptEvents` (startup scripts register a named event group from a raw event class, then server/client scripts listen by group name; NeoForge) or `NativeEvents.onEvent(...)` (direct native listener; all platforms).
 
             ## Probe Type Declarations
 
-            `.neko_probe` contains the type declarations dumped from the running Minecraft instance via `/nekojs probe`.
+            `.neko_probe` contains the type declarations dumped from the running Minecraft instance via `/nekojs probe`. TypeScript `.d.ts` lives under `.neko_probe/typescript/`, Python `.pyi` stubs under `.neko_probe/python/`.
 
-            - Explore `.neko_probe/@side-only` to find the type declarations for events or global objects that are only available on a specific side.
+            - Explore `.neko_probe/typescript/@side-only` to find the type declarations for events or global objects that are only available on a specific side.
             - DO NOT explore anything under the folder `@special`, as it contains huge amount of type declarations that will overload the context.
             - You can find definition of each class under the `@package` folder. Import paths use `java:` prefix (e.g., `import { $Integer } from "java:java/lang"`).
 
             ## Type Wrapping
 
-            NekoJS supports type wrapping, which allows the engine to reinterpret a value into a different type, e.g. `"minecraft:apple"` → `ItemStack` of apple. All input types are aliased by appending `_` to the original type. For example, the reinterpretable values of `Item` type are named as `Item_`, which is dumped near the original `Item` class.
+            NekoJS supports type wrapping, which allows the engine to reinterpret a value into a different type, e.g., `"minecraft:apple"` → `ItemStack` of apple. All input types are aliased by appending `_` to the original type. For example, the reinterpretable values of `Item` type are named as `Item_`, which is dumped near the original `Item` class.
 
             Beware of methods that have same names and same count of parameters — Java can easily distinguish them by their parameter types, but sometimes in NekoJS they might lead to ambiguity due to type wrapping. Hint these methods if you find them relevant to the question and provide explicit naming that contains method signature to disambiguate, for example:
 
@@ -69,7 +76,7 @@ public final class AgentTemplateGenerator {
 
             ## TypeScript and Java Class Paths
 
-            NekoJS reformats Java's class paths into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` is reformatted into `java:net/minecraft/world/entity/$LivingEntity`. Which is in the `.d.ts` file under `.neko_probe/@package/net/minecraft/world/entity/`. Note that all class names are prefixed with `$` to prevent conflicts with TS native types. Inner classes use `$` separator: `$PlayerInteractEvent$RightClickItem`.
+            NekoJS reformats Java's class paths into TS-friendly format. For example, `net.minecraft.world.entity.LivingEntity` is reformatted into `java:net/minecraft/world/entity/$LivingEntity`. Which is in the `.d.ts` file under `.neko_probe/typescript/@package/net/minecraft/world/entity/`. Note that all class names are prefixed with `$` to prevent conflicts with TS native types. Inner classes use `$` separator: `$PlayerInteractEvent$RightClickItem`.
 
             If the Java class is an interface, it is loadable as a class and can be used in `instanceof` checks, but cannot be instantiated via `new`.
 
@@ -111,6 +118,7 @@ public final class AgentTemplateGenerator {
             name: Plan (NekoJS)
             description: Researches and outlines multi-step plans for NekoJS scripting tasks, without performing implementation.
             argument-hint: Outline the goal or problem to research NekoJS scripting
+            target: vscode
             tools: ['search', 'read', 'agent', 'vscode/memory', 'vscode/askQuestions', 'todo']
             agents: ["Explore (NekoJS)"]
             handoffs:
@@ -132,17 +140,21 @@ public final class AgentTemplateGenerator {
             Your SOLE responsibility is planning. NEVER start implementation.
 
             **Notes about NekoJS**:
-            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS.
+            NekoJS is a Minecraft mod that allows players to create custom scripts to modify game behavior. It uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx` files, type annotations, interfaces, generics, enums, ES2022+ features (decorators are NOT supported and fail compilation), native `import`/`export`, full `class` syntax, JSX/TSX. Not limited to ES5 like KubeJS. A Python subset (`.py`) is also supported.
 
             NekoJS has 4 kinds of script types:
-            - **server scripts**: located in `nekojs/server_scripts`, run on the server side. Used for recipes, loot tables, tags, advancements, event handling, etc. Reloadable with `/reload`.
-            - **client scripts**: located in `nekojs/client_scripts`, run on the client side only. Used for GUI, key bindings, rendering, etc.
-            - **startup scripts**: located in `nekojs/startup_scripts`, run on both sides at game startup. Used for registering items, blocks, entities, etc. Changes require a full game restart.
-            - **test scripts**: located in `nekojs/test_scripts`, explicit smoke/regression scripts. Run with `/nekojs test`.
+            - **server scripts**: `nekojs/server_scripts`, server side. Recipes, loot tables, tags, data generation, event handling. Reloadable with `/nekojs reload server [<file>]`.
+            - **client scripts**: `nekojs/client_scripts`, client side only. GUI, key bindings, rendering. Reloadable with `/nekojs reload client [<file>]`.
+            - **startup scripts**: `nekojs/startup_scripts`, run at game startup. Register items/blocks/entities/capabilities. `/nekojs reload startup` re-runs them; registry changes still require a game restart.
+            - **test scripts**: `nekojs/test_scripts`, explicit smoke/regression scripts. Run with `/nekojs test`.
 
-            `.neko_probe` contains the type declarations dumped from the running Minecraft instance via `/nekojs probe`. Explore `.neko_probe/@side-only` to find the type declarations for events or global objects that are only available on a specific side. DO NOT explore anything under the folder `@special`, as it contains huge amount of type declarations that will overload the context. You can find definition of each class under the `@package` folder.
+            Script files accept first-line attributes: `// priority: <n>` and `// after: <path>`. Node-compatible builtins (`fs`, `path`, `buffer`, `process`, `timers`, `util`, `events`, `assert`, `os`, `node:` aliases) are available; file access is VFS-limited to the game root.
 
-            NekoJS supports type wrapping, which allows the engine to reinterpret a value into a different type, e.g. `"minecraft:apple"` → `ItemStack` of apple. All input types are aliased by appending `_` to the original type. Beware of methods that have same names and same count of parameters — Java can easily distinguish them by their parameter types, but sometimes in NekoJS they might lead to ambiguity due to type wrapping. Avoid using those methods if possible. As a last resort, use explicit naming to disambiguate.
+            **Events**: cancelable events are cancelled by the listener **returning `true`** (there is no `event.cancel()` method). Missing platform events can be bridged with `ScriptEvents` (startup registers a named event group, NeoForge) or `NativeEvents.onEvent(...)` (direct native listener, all platforms).
+
+            `.neko_probe` contains the type declarations dumped from the running Minecraft instance via `/nekojs probe` (TypeScript `.d.ts` under `typescript/`, Python `.pyi` under `python/`). Explore `.neko_probe/typescript/@side-only` to find the type declarations for events or global objects that are only available on a specific side. DO NOT explore anything under the folder `@special`, as it contains huge amount of type declarations that will overload the context. You can find definition of each class under the `@package` folder.
+
+            NekoJS supports type wrapping, which allows the engine to reinterpret a value into a different type, e.g., `"minecraft:apple"` → `ItemStack` of apple. All input types are aliased by appending `_` to the original type. Beware of methods that have same names and same count of parameters — Java can easily distinguish them by their parameter types, but sometimes in NekoJS they might lead to ambiguity due to type wrapping. Avoid using those methods if possible. As a last resort, use explicit naming to disambiguate.
 
             NekoJS supports ES2022+ features including `import`/`export`, arrow functions, template literals, destructuring, `for...of` loops, classes with `extends`/`implements`, private fields (`#field`), optional chaining (`?.`), nullish coalescing (`??`), top-level await, etc.
 
@@ -158,7 +170,7 @@ public final class AgentTemplateGenerator {
             - STOP if you consider running file editing tools — plans are for others to execute. The only write tool you have is #tool:vscode/memory for persisting plans.
             - Use #tool:vscode/askQuestions freely to clarify requirements — don't make large assumptions
             - Present a well-researched plan with loose ends tied BEFORE implementation
-            - Verification: `/reload` for server scripts, `/nekojs test` for test scripts, game restart for startup scripts
+            - Verification: `/nekojs reload server` for server scripts, `/nekojs test` for test scripts, game restart for startup registry changes
             - Reduce the use of `Java.loadClass` — use type wrapping (input aliases with `_` suffix) when possible
             </rules>
 
@@ -173,7 +185,7 @@ public final class AgentTemplateGenerator {
             Draft a comprehensive implementation plan with:
             - Step-by-step implementation with dependencies and parallelism markers
             - Named phases for plans with 5+ steps
-            - Verification steps (`/reload`, `/nekojs test`, game restart)
+            - Verification steps (`/nekojs reload`, `/nekojs test`, game restart)
             - Critical types/events from `@side-only` and `java:` prefixed imports
             - Explicit scope boundaries
 
@@ -206,6 +218,7 @@ public final class AgentTemplateGenerator {
             name: Survey/Brainstorm (NekoJS)
             description: Looks up information from the NekoJS probe declarations, do brainstorms and generate ideas based on the findings.
             argument-hint: Describe WHAT you want to survey or brainstorm about NekoJS scripting
+            target: vscode
             tools: ['search', 'read', 'agent', 'vscode/memory', 'vscode/askQuestions', 'todo']
             agents: ["Explore (NekoJS)"]
             handoffs:
@@ -226,13 +239,13 @@ public final class AgentTemplateGenerator {
             **Ideas and findings**: `/memories/repo/idea_*.md` - fetch / update using #tool:vscode/memory .
 
             **Notes about NekoJS**:
-            NekoJS uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx`, type annotations, interfaces, generics, ES2022+, `import`/`export`, `class` syntax, JSX/TSX.
+            NekoJS uses **GraalJS** with **full TypeScript support** — `.ts`/`.tsx`, type annotations, interfaces, generics, ES2022+, `import`/`export`, `class` syntax, JSX/TSX. A Python subset (`.py`) is also supported.
 
-            Script types: server (`nekojs/server_scripts`, `/reload`), client (`nekojs/client_scripts`), startup (`nekojs/startup_scripts`, game restart), test (`nekojs/test_scripts`, `/nekojs test`).
+            Script types: server (`nekojs/server_scripts`, `/nekojs reload server`), client (`nekojs/client_scripts`, `/nekojs reload client`), startup (`nekojs/startup_scripts`, `/nekojs reload startup`; registry changes need game restart), test (`nekojs/test_scripts`, `/nekojs test`).
 
-            Events are global namespace functions. Bindings are global variables per-side. Recipes are JSON-first.
+            Events are global namespace functions; cancelable events are cancelled by the listener **returning `true`** (no `event.cancel()` method). Bindings are global variables per-side. Recipes are JSON-first. Node-compatible builtins (`fs`, `path`, `buffer`, `timers`, ...) are available.
 
-            Type declarations in `.neko_probe/`: `@side-only/{side}/events/`, `@side-only/{side}/bindings/`, `@package/` (class declarations with `$` prefix). Type wrapping: input aliases with `_` suffix.
+            Type declarations in `.neko_probe/typescript/`: `@side-only/{side}/events/`, `@side-only/{side}/bindings/`, `@package/` (class declarations with `$` prefix). Python stubs in `.neko_probe/python/`. Type wrapping: input aliases with `_` suffix.
 
             <rules>
             - STOP if you consider running file editing tools or implementation agents. Only write tool: #tool:vscode/memory.
@@ -242,7 +255,7 @@ public final class AgentTemplateGenerator {
 
             <workflow>
             ## 1. Discovery
-            Run *Explore (NekoJS)* subagent to gather context from `.neko_probe/@side-only`. Launch 2-3 subagents in parallel for multi-area tasks. Do not deep-dive into `@package`.
+            Run *Explore (NekoJS)* subagent to gather context from `.neko_probe/typescript/@side-only`. Launch 2-3 subagents in parallel for multi-area tasks. Do not deep-dive into `@package`.
 
             ## 2. Alignment
             Use #tool:vscode/askQuestions if ambiguities arise. Loop back to Discovery if scope changes.
