@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -120,6 +121,29 @@ public class EventBusForgeBridge {
     }
 
     /**
+     * 动态注册一个原生事件处理器（{@code NativeEvents} 等脚本侧 API 使用），返回注销句柄。
+     *
+     * <p>与静态 {@link #bind(EventBusJS)} 的区别：静态绑定随 bootstrap 一次性注册、永不注销；
+     * 动态注册的处理器归脚本所有，句柄供 STARTUP reload 清理（重复调用幂等）。
+     * 取消约定与静态绑定一致：处理器自行在 {@link Consumer} 内决定是否 {@code setCanceled(true)}。
+     */
+    public static Runnable bindNative(
+            EventBus forgeBus,
+            Class<? extends Event> eventClass,
+            EventPriority priority,
+            boolean receiveCancelled,
+            Consumer<Event> handler) {
+        ForgeEventDispatcher dispatcher = DISPATCHERS.computeIfAbsent(forgeBus, ForgeEventDispatcher::new);
+        dispatcher.register(eventClass, priority, receiveCancelled, handler);
+        AtomicBoolean removed = new AtomicBoolean();
+        return () -> {
+            if (removed.compareAndSet(false, true)) {
+                dispatcher.remove(eventClass, priority, handler);
+            }
+        };
+    }
+
+    /**
      * NekoJS 处理器注册中心 + 按优先级注册到 Forge 总线的分发槽。
      *
      * <p>1.12.2 Forge 只认方法上的 @SubscribeEvent 注解，而注解的 priority 属性是
@@ -185,6 +209,14 @@ public class EventBusForgeBridge {
                 forgeBus.register(slot);
                 return slot;
             });
+        }
+
+        /** 注销一个动态注册的处理器（按 consumer 实例身份匹配；回收查找缓存）。 */
+        void remove(Class<? extends Event> eventClass, EventPriority priority, Consumer<Event> handler) {
+            List<PrioritizedHandler> list = handlers.get(eventClass);
+            if (list == null) return;
+            list.removeIf(h -> h.priority() == priority && h.handler() == handler);
+            lookupCache.clear();
         }
 
         void dispatch(Event event, EventPriority priority) {

@@ -96,8 +96,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
         registry.register("global", NekoGlobal.shared());
-        // 过渡期：NativeEvents 已弃用（1.12.2 本就不可用，脚本改用类型化事件绑定），保留至弃用窗口结束。
-        @SuppressWarnings("deprecation")
+        // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP
+        // reload, unregistering the previous round's native Forge event listeners
+        // before the scripts re-register them. Avoids listeners accumulating on reload.
         NativeEventsJS nativeEvents = new NativeEventsJS();
         registry.register(ScriptType.STARTUP, "NativeEvents", nativeEvents);
         registry.register(ScriptType.TEST, "Test", new TestJS());

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.Binding;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import graal.graalvm.polyglot.Value;
 
@@ -18,13 +19,14 @@ import java.util.function.Consumer;
 /**
  * 原生 NeoForge 事件桥（任意事件类 + 处理器直挂 EVENT_BUS）。
  *
- * @deprecated 已弃用：请改用声明式的 {@code ScriptEvents}——STARTUP 脚本在
- * {@code ScriptEvents.server/client} 回调中 {@code event.register(group, name, eventClass,
- * priority, receiveCancelled)} 注册，server/client 脚本按组名监听。ScriptEvents 提供同等能力
- * （优先级、receiveCancelled、return-true 取消翻译、按脚本 reload 清理）且是可进 stable
- * 契约的类型化通道。本类保留至弃用窗口结束（D-2 裁决，2026-08-15）。
+ * <p>与声明式的 {@code ScriptEvents}（STARTUP 注册成命名事件组、server/client 脚本按组监听）
+ * 互补：{@code NativeEvents} 面向一次性/就地监听，不引入命名事件组。两者均为一等 API
+ * （2026-08-16 用户裁决：撤销 NativeEvents 弃用，D-2 由「收敛到 ScriptEvents」改为共存）。
+ *
+ * <p>监听器返回 {@code true} 会翻译为 {@code setCanceled(true)}（与全局取消约定一致；
+ * 仅对可取消事件生效）。实现 {@link Binding}：STARTUP reload 时 {@code close()} 注销
+ * 上一轮全部原生监听器，避免 reload 后监听器累积。
  */
-@Deprecated
 public class NativeEventsJS implements Binding {
 
     // CopyOnWriteArrayList: registration (JS/reload thread) and clear() (reload thread) can race.
@@ -72,7 +74,11 @@ public class NativeEventsJS implements Binding {
 
         Consumer<Event> consumer = event -> {
             try {
-                handlerValue.executeVoid(event);
+                Value result = handlerValue.execute(event);
+                if (result.isBoolean() && result.asBoolean()
+                        && event instanceof ICancellableEvent cancellable) {
+                    cancellable.setCanceled(true);
+                }
             } catch (Exception e) {
                 NekoJS.LOGGER.debug("NativeEvent execution exception (" + eventClass.getSimpleName() + "): ", e);
             }
