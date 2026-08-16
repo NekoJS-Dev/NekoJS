@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.bindings.static_access;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Return;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,12 +21,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * // client_scripts 可读到同一个 global.count
  * </pre>
  */
+@Doc("Backing store of the 'global' binding: one map shared across all script types, surviving reloads.")
 public final class NekoGlobal {
     private static final Map<String, Object> SHARED = new ConcurrentHashMap<>();
 
     private NekoGlobal() {}
 
     /** 返回进程级共享 map（绑定到各 Context 的 {@code global}）。 */
+    @Doc("Returns the process-wide map bound as 'global' in every Context.")
+    @Return("the shared map itself, not a copy")
     public static Map<String, Object> shared() {
         return SHARED;
     }

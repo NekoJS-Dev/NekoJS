@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.wrapper;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.recipe.RecipeBuilder;
 import com.tkisor.nekojs.api.recipe.RecipeSchemaHost;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
@@ -34,6 +37,7 @@ import java.util.Set;
  * <p>All public methods below are called by GraalVM via {@link ProxyObject} dispatch,
  * not by direct Java callers. IDE "find usages" will show 0 results.
  */
+@Doc("Recipe namespace proxy: resolves member access to a handler method, a schema builder, or raw JSON fallback.")
 final class RecipeNamespaceProxy implements ProxyObject {
     private final RecipeSchemaHost host;
     private final String namespace;
@@ -52,7 +56,11 @@ final class RecipeNamespaceProxy implements ProxyObject {
 
     // ==================== ProxyObject (GraalVM interop) ====================
 
+    /** Resolves a recipe type name to a callable, trying handler methods, then schema, then fallback. */
     @Override @CalledByDynamicCode
+    @Doc("Resolves a recipe type name to a callable, trying handler first, then schema, then raw JSON fallback.")
+    @Param(name = "type", value = "recipe type path within the namespace, e.g. 'shaped' in 'minecraft:shaped'")
+    @Return("an executable for the resolved layer; never null (fallback accepts any name)")
     public Object getMember(String type) {
         List<Method> methods = handlerMethods.get(type);
         if (methods != null && !methods.isEmpty()) {
@@ -67,7 +75,10 @@ final class RecipeNamespaceProxy implements ProxyObject {
         return fallbackExecutable(type);
     }
 
+    /** Handler method names plus schema type names; fallback names are unbounded and not listed. */
     @Override @CalledByDynamicCode
+    @Doc("Lists handler method names and schema type names in this namespace.")
+    @Return("array of known recipe type names; raw JSON fallback names are not enumerable")
     public Object getMemberKeys() {
         Set<String> keys = new LinkedHashSet<>(handlerMethods.keySet());
         keys.addAll(definitions.types(namespace));
@@ -75,6 +86,7 @@ final class RecipeNamespaceProxy implements ProxyObject {
     }
 
     @Override
+    @Doc("Always true: unknown names still resolve through the raw JSON fallback.")
     public boolean hasMember(String key) {
         return handlerMethods.containsKey(key)
                 || definitions.get(namespace, key) != null
@@ -82,12 +94,15 @@ final class RecipeNamespaceProxy implements ProxyObject {
     }
 
     @Override
+    @Doc("Throws: the recipe namespace proxy is read-only.")
     public void putMember(String key, Value value) {
         throw new UnsupportedOperationException("Recipe namespace is read-only");
     }
 
     // ==================== Handler dispatch ====================
 
+    /** Builds the executable that invokes the first arity/convertibility-matching handler overload,
+     *  falling back to schema or raw JSON when no overload fits. */
     private ProxyExecutable handlerExecutable(String type, List<Method> methods) {
         return args -> {
             for (Method m : methods) {
@@ -111,6 +126,8 @@ final class RecipeNamespaceProxy implements ProxyObject {
 
     // ==================== Schema dispatch ====================
 
+    /** Builds the executable that maps constructor/named-object arguments onto a
+     *  {@link SchemaRecipeBuilder} for the given schema definition. */
     private ProxyExecutable schemaExecutable(RecipeTypeDefinition def) {
         return args -> {
             Map<String, Value> values = resolveArgs(def, args);
@@ -119,6 +136,9 @@ final class RecipeNamespaceProxy implements ProxyObject {
         };
     }
 
+    /** Maps call arguments to schema field names: a single object with matching fields
+     *  is treated as named-object construction, otherwise a positional constructor of
+     *  the same arity is used; throws when neither fits. */
     private Map<String, Value> resolveArgs(RecipeTypeDefinition def, Value[] args) {
         if (args.length == 1 && args[0].hasMembers() && hasNamedField(def, args[0])) {
             Map<String, Value> values = new LinkedHashMap<>();
@@ -141,6 +161,7 @@ final class RecipeNamespaceProxy implements ProxyObject {
         throw new IllegalArgumentException(msg.toString());
     }
 
+    /** True when the JS value exposes at least one member named like a schema field. */
     private static boolean hasNamedField(RecipeTypeDefinition def, Value value) {
         for (String field : def.fields().keySet()) {
             if (value.hasMember(field)) return true;
@@ -150,6 +171,8 @@ final class RecipeNamespaceProxy implements ProxyObject {
 
     // ==================== Raw JSON fallback ====================
 
+    /** Builds the executable that turns a single JSON-like object argument into a raw
+     *  custom recipe stamped with {@code namespace:recipeType}; returns null otherwise. */
     private ProxyExecutable fallbackExecutable(String recipeType) {
         return args -> {
             if (args.length == 1 && args[0].hasMembers()) {

@@ -1,8 +1,10 @@
 package com.tkisor.nekojs.wrapper;
 
-import com.google.gson.JsonElement;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.recipe.RecipeBuilder;
 import com.tkisor.nekojs.api.recipe.RecipeJsonValue;
 import com.tkisor.nekojs.api.recipe.RecipeSchemaHost;
@@ -51,6 +53,7 @@ import java.util.Set;
  *
  * <p>All ProxyObject methods are invoked by GraalVM dispatch, not by direct Java callers.
  */
+@Doc("Schema-driven fluent recipe builder: each schema field becomes a chainable setter.")
 final class SchemaRecipeBuilder implements ProxyObject {
 
     private final RecipeBuilder delegate;
@@ -80,7 +83,7 @@ final class SchemaRecipeBuilder implements ProxyObject {
         for (RecipeFieldDefinition field : def.fields().values()) {
             Value value = initialValues != null ? initialValues.get(field.name()) : null;
             if (value != null) {
-                delegate.setPath(field.path(), new RecipeJsonValue(host.convertField(field, value)));
+                host.applyField(delegate, field, value);
             } else if (field.defaultValue() != null) {
                 delegate.setPath(field.path(), new RecipeJsonValue(field.defaultValue().deepCopy()));
             } else if (field.required()) {
@@ -98,7 +101,11 @@ final class SchemaRecipeBuilder implements ProxyObject {
 
     // ==================== ProxyObject ====================
 
+    /** Cached lookup: delegate methods first, then schema field setters; null when unknown. */
     @Override @CalledByDynamicCode
+    @Doc("Returns a chainable executable: a forwarded delegate method, or a schema field setter.")
+    @Param(name = "key", value = "delegate method name or schema field name")
+    @Return("an executable returning this builder to keep the chain; null for unknown names")
     public Object getMember(String key) {
         ProxyExecutable cached = memberCache.get(key);
         if (cached != null) return cached;
@@ -107,23 +114,30 @@ final class SchemaRecipeBuilder implements ProxyObject {
         return resolved;
     }
 
+    /** All enumerable keys: the delegate's method names plus the schema field names. */
     @Override @CalledByDynamicCode
+    @Doc("Lists delegate method names plus schema field names.")
+    @Return("array of all supported member names")
     public Object getMemberKeys() {
         return allKeys.toArray(String[]::new);
     }
 
     @Override
+    @Doc("True only for delegate method names and schema field names.")
     public boolean hasMember(String key) {
         return allKeys.contains(key);
     }
 
     @Override
+    @Doc("Throws: the recipe builder is read-only.")
     public void putMember(String key, Value value) {
         throw new UnsupportedOperationException("Recipe builder is read-only");
     }
 
     // ==================== Resolution: delegate method first, then schema field ====================
 
+    /** Picks the executable for a key: a delegate overload list when present, otherwise the
+     *  schema field setter, otherwise null (unknown member). */
     private ProxyExecutable resolveMember(String key) {
         List<Method> methods = delegateMethods.get(key);
         if (methods != null && !methods.isEmpty()) {
@@ -136,6 +150,8 @@ final class SchemaRecipeBuilder implements ProxyObject {
         return null;
     }
 
+    /** Invokes the first arity/convertibility-matching delegate overload, rebinding a
+     *  self-returning delegate result to this wrapper so chains stay on the JS-visible type. */
     private ProxyExecutable delegateExecutable(List<Method> methods) {
         return args -> {
             for (Method m : methods) {
@@ -158,14 +174,15 @@ final class SchemaRecipeBuilder implements ProxyObject {
         };
     }
 
+    /** Builds the single-argument setter that applies a schema field through the host and
+     *  returns this wrapper for chaining. */
     private ProxyExecutable fieldExecutable(RecipeFieldDefinition field) {
         return args -> {
             if (args.length != 1) {
                 throw new IllegalArgumentException("Schema field '" + field.name()
                         + "' setter expects exactly 1 argument, got " + args.length);
             }
-            JsonElement encoded = host.convertField(field, args[0]);
-            delegate.setPath(field.path(), new RecipeJsonValue(encoded));
+            host.applyField(delegate, field, args[0]);
             return this;
         };
     }

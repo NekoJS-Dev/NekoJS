@@ -2,6 +2,9 @@ package com.tkisor.nekojs.wrapper;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.core.JsonObjectAdapter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import graal.graalvm.polyglot.Value;
@@ -22,31 +25,41 @@ import java.util.Objects;
  *
  * <p>写盘使用 sibling temp + atomic move，避免 reload 中途读到半写的文件。
  */
+@Doc("Event object for generateData/generateAssets; writes files into NekoJS's disk pack directory.")
 public final class DataGeneratorJS {
     /** Hard per-write size cap for generated files (16 MiB). */
+    @Doc("Per-file size cap for generated files, in bytes (16 MiB).")
     public static final int MAX_GENERATED_FILE_BYTES = 16 * 1024 * 1024;
     /** Hard cumulative size cap per generator instance (64 MiB). */
+    @Doc("Cumulative size cap per generator instance, in bytes (64 MiB).")
     public static final long MAX_GENERATED_TOTAL_BYTES = 64 * 1024 * 1024L;
 
     private final Path root;
     private final String stage;
     private long generatedBytes;
 
+    /** 以根目录构造（阶段为空字符串）。 */
     public DataGeneratorJS(Path root) {
         this(root, "");
     }
 
+    /** 以根目录与阶段名构造。 */
     public DataGeneratorJS(Path root, String stage) {
         this.root = Objects.requireNonNull(root, "root");
         this.stage = stage == null ? "" : stage;
     }
 
     /** 当前生成阶段（如 {@code after_mods}）；未指定时为空字符串。 */
+    @Doc("Returns the generation stage this event belongs to.")
+    @Return("stage name such as 'after_mods', or empty string when unspecified")
     public String getStage() {
         return stage;
     }
 
     /** 写入 JSON 文件；{@code value} 为 JS 对象（自动序列化）或 JSON 字符串。 */
+    @Doc("Writes a JSON file; the value may be a JS object (auto-serialized) or a JSON string.")
+    @Param(name = "path", value = "relative path inside the pack root; must not escape it")
+    @Param(name = "value", value = "JS object, JS array, or JSON string")
     public void json(String path, Object value) {
         String content = value instanceof Value graalValue
                 ? JsonObjectAdapter.convertValueToJson(graalValue).toString()
@@ -55,16 +68,25 @@ public final class DataGeneratorJS {
     }
 
     /** 写入纯文本文件。 */
+    @Doc("Writes plain text to a file.")
+    @Param(name = "path", value = "relative path inside the pack root; must not escape it")
+    @Param(name = "content", value = "text content to write; must not be null")
     public void text(String path, String content) {
         write(path, Objects.requireNonNull(content, "content"));
     }
 
     /** 写入纯文本文件（{@code text} 的别名）。 */
+    @Doc("Writes plain text to a file; alias of text(path, content).")
+    @Param(name = "path", value = "relative path inside the pack root; must not escape it")
+    @Param(name = "content", value = "text content to write; must not be null")
     public void add(String path, String content) {
         text(path, content);
     }
 
     /** 读取已生成的 JSON（不存在时返回 null）。 */
+    @Doc("Reads back a previously generated JSON file.")
+    @Param(name = "path", value = "relative path inside the pack root")
+    @Return("parsed JSON, or null when the file is missing, unreadable, or invalid")
     public JsonElement getJson(String path) {
         try {
             Path file = resolve(path);
