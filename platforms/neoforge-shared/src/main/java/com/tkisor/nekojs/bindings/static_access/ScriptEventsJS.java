@@ -1,12 +1,14 @@
 package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.ScriptEventDefinition;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEventRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
-import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Value;
 import net.neoforged.bus.api.Event;
@@ -19,6 +21,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+/**
+ * 脚本静态绑定 {@code ScriptEvents}：在 STARTUP 脚本中把 NeoForge 事件类注册成
+ * 命名事件组（{@code ScriptEvents.register(...)}），供 server/client 脚本按组监听。
+ */
+@Doc("Static binding 'ScriptEvents': registers a NeoForge event class as a named event group in a STARTUP script.")
+@Doc("Server/client scripts can then listen on that group by name, instead of touching the raw event bus.")
+@Doc("A listener returning true cancels the event (only when the event is cancellable).")
 public class ScriptEventsJS implements ScriptEventRegistrar {
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
 
@@ -32,6 +41,7 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
 
     private IPluginRuntime pluginRuntime;
 
+    /** 绑定插件运行时（平台初始化时调用，脚本不直接使用）。 */
     public void bindRuntime(IPluginRuntime pluginRuntime) {
         if (pluginRuntime == null) {
             throw new IllegalArgumentException("pluginRuntime == null");
@@ -46,6 +56,14 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
         return pluginRuntime;
     }
 
+    /** 注册命名事件组（脚本侧入口，转发到原生挂载）。 */
+    @Doc("Registers a named script event group backed by a NeoForge event class.")
+    @Param(name = "targetType", value = "which scripts may listen: 'server', 'client', or 'startup'")
+    @Param(name = "groupName", value = "group name; must be a valid JS identifier, e.g. 'MyEvents'")
+    @Param(name = "eventName", value = "event name inside the group; must be a valid JS identifier, e.g. 'bossKilled'")
+    @Param(name = "eventClass", value = "the NeoForge event class or its fully qualified name")
+    @Param(name = "priority", value = "EventPriority name like 'HIGH'; blank means NORMAL")
+    @Param(name = "receiveCancelled", value = "when true listeners also receive already-cancelled events")
     @Override
     public void register(ScriptType targetType, String groupName, String eventName, Object eventClass, String priority, boolean receiveCancelled) {
         registerNative(targetType, groupName, eventName, eventClass, resolvePriority(priority), receiveCancelled);
@@ -59,7 +77,7 @@ public class ScriptEventsJS implements ScriptEventRegistrar {
         IPluginRuntime runtime = pluginRuntime();
         ScriptEventRegistry.validateAvailable(runtime, targetType, groupName, eventName);
 
-        EventBusJS<Event, Void> bus = (EventBusJS) EventBusJS.of((Class) eventClass);
+        EventBusJS<Event, Void> bus = EventBusJS.of((Class) eventClass);
         bus.metadata(groupName, eventName);
         Consumer<Event> listener = event -> {
             if (bus.post(event) && event instanceof ICancellableEvent cancellable) {

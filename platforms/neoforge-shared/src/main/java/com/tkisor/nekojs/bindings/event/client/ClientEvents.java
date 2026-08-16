@@ -20,6 +20,7 @@ import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
+/** 客户端事件组（client 脚本）：tick、登录登出、注册类事件（按键/界面/渲染器/粒子）与 HUD、界面绘制等。 */
 public interface ClientEvents {
     EventGroup GROUP = EventGroup.of("ClientEvents");
 

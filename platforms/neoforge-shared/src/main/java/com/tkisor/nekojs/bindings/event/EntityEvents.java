@@ -18,6 +18,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.function.Function;
 
+/** 实体/生物事件组（server 脚本）：伤害、死亡、掉落、tick、进出维度与使用物品等，按实体类型或物品定向。 */
 public interface EntityEvents {
     EventGroup GROUP = EventGroup.of("EntityEvents");
 

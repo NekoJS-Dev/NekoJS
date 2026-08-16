@@ -15,6 +15,7 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.function.Function;
 
+/** 玩家事件组（server 脚本）：登录登出、聊天、tick、重生、合成/烧炼与物品栏变化等（合成类按物品定向）。 */
 public interface PlayerEvents {
     EventGroup GROUP = EventGroup.of("PlayerEvents");
 

@@ -16,6 +16,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import java.util.function.Function;
 
+/** 物品事件组（server/client 脚本）：右键、tooltip、拾取、丢弃、交互与使用完成等，按物品定向。 */
 public interface ItemEvents {
     EventGroup GROUP = EventGroup.of("ItemEvents");
 

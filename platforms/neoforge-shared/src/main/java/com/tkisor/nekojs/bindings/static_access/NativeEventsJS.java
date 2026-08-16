@@ -2,6 +2,9 @@ package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.data.Binding;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.EventPriority;
@@ -27,11 +30,16 @@ import java.util.function.Consumer;
  * 仅对可取消事件生效）。实现 {@link Binding}：STARTUP reload 时 {@code close()} 注销
  * 上一轮全部原生监听器，避免 reload 后监听器累积。
  */
+@Doc("Raw NeoForge event bridge: listen to any NeoForge event class directly on the game event bus.")
+@Doc("Complements the declarative ScriptEvents: use it for one-off or ad-hoc listeners without a named event group.")
+@Doc("A listener returning true cancels the event (only when the event is cancellable).")
 public class NativeEventsJS implements Binding {
 
     // CopyOnWriteArrayList: registration (JS/reload thread) and clear() (reload thread) can race.
     private static final List<Consumer<? extends Event>> REGISTERED_LISTENERS = new CopyOnWriteArrayList<>();
 
+    /** 注销当前全部原生监听器（STARTUP reload 时由 {@link #close} 调用）。 */
+    @Doc("Unregisters every native listener registered so far.")
     public static void clear() {
         for (Consumer<? extends Event> listener : REGISTERED_LISTENERS) {
             NeoForge.EVENT_BUS.unregister(listener);
@@ -39,27 +47,62 @@ public class NativeEventsJS implements Binding {
         REGISTERED_LISTENERS.clear();
     }
 
+    /** 以 NORMAL 优先级监听原生事件（处理器返回 {@code true} 取消可取消事件）。 */
+    @Doc("Listens to a NeoForge event with NORMAL priority.")
+    @Param(name = "eventType", value = "event class or fully qualified class name, e.g. 'net.neoforged.neoforge.event.entity.living.LivingDeathEvent'")
+    @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onEvent(Object eventType, Object handler) {
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
+    /** 以指定优先级监听原生事件（{@code receiveCancelled} 控制是否接收已取消事件）。 */
+    @Doc("Listens to a NeoForge event with an explicit priority and cancelled-event policy.")
+    @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'; defaults to NORMAL on anything else")
+    @Param(name = "receiveCancelled", value = "when true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "event class or fully qualified class name")
+    @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onEvent(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         registerNative(priorityObj, receiveCancelled, eventType, handler);
     }
 
+    /** {@link #onEvent(Object, boolean, Object, Object)} 的显式类型别名。 */
+    @Doc("Alias of onEvent(priority, receiveCancelled, eventType, handler).")
+    @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'")
+    @Param(name = "receiveCancelled", value = "when true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "event class or fully qualified class name")
+    @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onEventTyped(Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         onEvent(priorityObj, receiveCancelled, eventType, handler);
     }
 
+    /** 泛型事件监听（KubeJS 兼容签名，genericClassType 被忽略）。 */
+    @Doc("Listens to a generic NeoForge event at NORMAL priority; the generic class argument is ignored.")
+    @Param(name = "genericClassType", value = "ignored, kept for KubeJS compatibility")
+    @Param(name = "eventType", value = "event class or fully qualified class name")
+    @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onGenericEvent(Object genericClassType, Object eventType, Object handler) {
         // 忽略 genericClassType，直接作为普通事件挂载
         onEvent(EventPriority.NORMAL, false, eventType, handler);
     }
 
+    /** 泛型事件监听（KubeJS 兼容签名，genericClassType 被忽略），带优先级与 receiveCancelled。 */
+    @Doc("Listens to a generic NeoForge event with an explicit priority; the generic class argument is ignored.")
+    @Param(name = "genericClassType", value = "ignored, kept for KubeJS compatibility")
+    @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'")
+    @Param(name = "receiveCancelled", value = "when true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "event class or fully qualified class name")
+    @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onGenericEvent(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         registerNative(priorityObj, receiveCancelled, eventType, handler);
     }
 
+    /** {@link #onGenericEvent(Object, Object, boolean, Object, Object)} 的显式类型别名。 */
+    @Doc("Alias of onGenericEvent(genericClassType, priority, receiveCancelled, eventType, handler).")
+    @Param(name = "genericClassType", value = "ignored, kept for KubeJS compatibility")
+    @Param(name = "priorityObj", value = "EventPriority or its name like 'HIGH'")
+    @Param(name = "receiveCancelled", value = "when true the handler also receives already-cancelled events")
+    @Param(name = "eventType", value = "event class or fully qualified class name")
+    @Param(name = "handler", value = "callback receiving the event; returning true cancels a cancellable event")
     public void onGenericEventTyped(Object genericClassType, Object priorityObj, boolean receiveCancelled, Object eventType, Object handler) {
         onGenericEvent(genericClassType, priorityObj, receiveCancelled, eventType, handler);
     }

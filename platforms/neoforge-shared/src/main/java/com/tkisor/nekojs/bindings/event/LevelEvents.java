@@ -8,6 +8,7 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
+/** 维度（Level）事件组（server 脚本）：加载/卸载/保存、tick 与爆炸各阶段。 */
 public interface LevelEvents {
     EventGroup GROUP = EventGroup.of("LevelEvents");
 
