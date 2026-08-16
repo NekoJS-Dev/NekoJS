@@ -312,7 +312,7 @@ NekoJS 提供事件监听机制，用于响应 Minecraft 游戏中的各种状�
 
 ### 已实现事件列表
 
-NekoJS 提供 13 个事件组（以 NeoForge 26.x 为准，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
+NekoJS 提供 14 个事件组（以 NeoForge 26.x 为准，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
 
 ```text
 服务器事件 (ServerEvents)        约 13 个  tickPre / tickPost / recipes / afterRecipes / tags ...
@@ -330,6 +330,7 @@ NekoJS 提供 13 个事件组（以 NeoForge 26.x 为准，平台支持范围以
 网络事件 (NetworkEvents)          约 2 个
 能力事件 (CapabilityEvents)        约 1 个  register（启动时事件）
 配方查看器事件 (RecipeViewerEvents) 约 5 个  addEntries / removeEntries / removeRecipes / removeCategories / addInformation（客户端，需 JEI）
+类型事件 (ProbeEvents)            约 4 个  modifyType / assignType / addGlobal / snippets（服务端，/nekojs probe 期间触发）
 客户端事件 (ClientEvents)        约 13 个
 ```
 
@@ -392,7 +393,7 @@ ScriptEvents.server(event => event.register({
 }))
 ```
 
-自定义事件不会写入插件 bootstrap 的静态事件表；startup reload 会刷新事件定义，server/client reload 会清理对应脚本 listener，避免重复回调。
+自定义事件不会写入插件 bootstrap 的静态事件表，但会进入 probe 事件目录与类型生成（`.d.ts` / `.pyi`，payload 按事件类反射生成声明）；startup reload 会刷新事件定义，server/client reload 会清理对应脚本 listener，避免重复回调。
 
 ## 数据与资产生成
 
