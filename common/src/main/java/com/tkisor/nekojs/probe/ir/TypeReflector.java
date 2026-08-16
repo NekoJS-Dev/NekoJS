@@ -29,6 +29,8 @@ public final class TypeReflector {
         TypeDecl.Kind kind = cls.isEnum() ? TypeDecl.Kind.ENUM
                 : (cls.isInterface() ? TypeDecl.Kind.INTERFACE : TypeDecl.Kind.CLASS);
         TypeDecl decl = new TypeDecl(kind, cls, cls.getName());
+        // 类级 @Doc → JSDoc（注解缺省时 docs 为空，渲染零输出）
+        decl.docs.addAll(AnnotatedDocs.typeDocs(cls));
 
         // 类级泛型
         for (TypeVariable<?> tv : cls.getTypeParameters()) {
@@ -107,6 +109,7 @@ public final class TypeReflector {
             FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
             f.isStatic = isStatic;
             f.isFinal = Modifier.isFinal(field.getModifiers());
+            f.docs.addAll(AnnotatedDocs.fieldDocs(field));
             decl.fields.add(f);
         }
         // 方法 + getter/setter 推断（与 ClassDeclGenerator 对齐）
@@ -125,6 +128,7 @@ public final class TypeReflector {
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(field.getGenericType(), toRef(field.getGenericType())));
                 f.isStatic = true;
                 f.isFinal = true;
+                f.docs.addAll(AnnotatedDocs.fieldDocs(field));
                 decl.fields.add(f);
             }
         }
@@ -136,6 +140,7 @@ public final class TypeReflector {
                 FieldDecl f = new FieldDecl(field.getName(), TypeSlot.of(cls, toRef(cls)));
                 f.isStatic = true;
                 f.isEnumConstant = true;
+                f.docs.addAll(AnnotatedDocs.fieldDocs(field));
                 decl.fields.add(f);
             } else if (Modifier.isPublic(field.getModifiers())) {
                 // 非常量公开字段：renderer 的 renderEnum 只发射 isEnumConstant，这里仅供
@@ -215,6 +220,7 @@ public final class TypeReflector {
         MethodDecl m = new MethodDecl(ctor.getName());
         m.isConstructor = true;
         reflectParamsInto(m, ctor);
+        m.docs.addAll(AnnotatedDocs.executableDocs(ctor));
         return m;
     }
 
@@ -226,6 +232,7 @@ public final class TypeReflector {
             m.typeParams.add(tv.getName());
         }
         reflectParamsInto(m, method);
+        m.docs.addAll(AnnotatedDocs.executableDocs(method));
         return m;
     }
 
