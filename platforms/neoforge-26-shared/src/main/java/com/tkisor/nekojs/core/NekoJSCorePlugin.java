@@ -107,11 +107,23 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerBinding(BindingRegistry registry) {
-        registry.register("Ingredient", new IngredientFactory());
+        // 同名原版类组合绑定（与下方 Item/Block 代理委托同模式）：工厂方法走 helper，
+        // 其余成员委托同名 vanilla/NeoForge 类的静态成员（如 Ingredient.empty、
+        // Capabilities.ItemHandler.BLOCK）。Binding.of 的 valueType 声明 helper 类型供
+        // preflight/probe 反射（代理动态成员反射不到）。
+        registry.register(Binding.of("Ingredient", new DelegatingBinding(new IngredientFactory(),
+                net.minecraft.world.item.crafting.Ingredient.class,
+                Set.of("of", "item", "tag", "any", "all", "not")), IngredientFactory.class));
         registry.register("RecipeSchema", new RecipeSchemaBinding());
-        registry.register("Fluid", new FluidJS());
-        registry.register("Capabilities", new CapabilitiesJS());
-        registry.register("FluidIngredient", new FluidIngredientJS());
+        registry.register(Binding.of("Fluid", new DelegatingBinding(new FluidJS(),
+                net.minecraft.world.level.material.Fluid.class,
+                Set.of("of", "water", "lava", "empty", "ingredient", "sizedIngredient")), FluidJS.class));
+        registry.register(Binding.of("Capabilities", new DelegatingBinding(new CapabilitiesJS(),
+                net.neoforged.neoforge.capabilities.Capabilities.class,
+                Set.of("itemHandler", "energyStorage", "fluidTank")), CapabilitiesJS.class));
+        registry.register(Binding.of("FluidIngredient", new DelegatingBinding(new FluidIngredientJS(),
+                net.neoforged.neoforge.fluids.crafting.FluidIngredient.class,
+                Set.of("of", "fluid", "tag", "sized")), FluidIngredientJS.class));
         registry.register("FluidAmounts", FluidAmounts.class);
         registry.register("Fluids", Fluids.class);
         registry.register("FluidStack", FluidStack.class);

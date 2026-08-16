@@ -85,7 +85,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerBinding(BindingRegistry registry) {
-        registry.register("Ingredient", new IngredientFactory());
+        // 同名原版类组合绑定（与下方 Item/Block 代理委托同模式）：工厂方法走 helper，
+        // 其余成员委托同名 vanilla 类的静态成员（如 Ingredient.fromStacks）。
+        registry.register(Binding.of("Ingredient", new DelegatingBinding(new IngredientFactory(),
+                net.minecraft.item.crafting.Ingredient.class,
+                Set.of("of", "item", "ore", "any", "all", "not")), IngredientFactory.class));
         registry.register("RecipeSchema", new RecipeSchemaBinding());
         registry.register("FluidAmounts", FluidAmounts.class);
         registry.register("FluidStack", FluidStack.class);
@@ -124,7 +128,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("SoundEvent", net.minecraft.util.SoundEvent.class);
         registry.register("Potion", net.minecraft.potion.Potion.class);
         registry.register("MobEffects", net.minecraft.init.MobEffects.class);
-        registry.register("Fluid", new FluidJS());
+        registry.register(Binding.of("Fluid", new DelegatingBinding(new FluidJS(),
+                net.minecraftforge.fluids.Fluid.class,
+                Set.of("of", "water", "lava", "empty")), FluidJS.class));
+        // 1.12.2 无 FluidIngredient 类型（CR 的 FluidIngredientJS 返回 List<FluidStack> 降级实现），
+        // 无同名原版类可委托，保持普通绑定。
         registry.register("FluidIngredient", new FluidIngredientJS());
         registry.register("PotionEffect", net.minecraft.potion.PotionEffect.class);
         registry.register("TextComponent", net.minecraft.util.text.ITextComponent.class);
