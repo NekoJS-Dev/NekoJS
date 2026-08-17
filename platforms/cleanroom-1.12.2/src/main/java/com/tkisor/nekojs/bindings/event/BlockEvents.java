@@ -80,6 +80,7 @@ public interface BlockEvents {
             .bind(FARMLAND_TRAMPLE)
             .bind(PORTAL_SPAWN)
             .bind(HARVEST_DROPS)
-            .bind(RIGHT_CLICKED)
-            .bind(LEFT_CLICKED);
+            // PlayerInteract 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端交互在 Render 线程）
+            .bind(RIGHT_CLICKED, e -> !e.getWorld().isRemote)
+            .bind(LEFT_CLICKED, e -> !e.getWorld().isRemote);
 }

@@ -91,9 +91,11 @@ public interface PlayerEvents {
             .bind(LOGGED_IN)
             .bind(LOGGED_OUT)
             .bind(CHAT)
-            .bind(TICK)
-            .bind(TICK_PRE, e -> e.phase == TickEvent.Phase.START)
-            .bind(TICK_POST, e -> e.phase == TickEvent.Phase.END)
+            // PlayerTickEvent 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端玩家 tick
+            // 在 Render 线程，进入 SERVER Context 会被 Graal 拒绝多线程访问）
+            .bind(TICK, e -> !e.player.world.isRemote)
+            .bind(TICK_PRE, e -> e.phase == TickEvent.Phase.START && !e.player.world.isRemote)
+            .bind(TICK_POST, e -> e.phase == TickEvent.Phase.END && !e.player.world.isRemote)
             .bind(CLONED)
             .bind(RESPAWNED)
             .bind(CHANGED_DIMENSION)

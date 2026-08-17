@@ -54,12 +54,13 @@ public interface ItemEvents {
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
-            .bind(RIGHT_CLICKED)
+            // RightClickItem 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端交互在 Render 线程）
+            .bind(RIGHT_CLICKED, e -> !e.getLevel().isClientSide())
             .bind(TOOLTIP)
             .bind(CAN_PICK_UP)
             .bind(PICKED_UP_PRE)
             .bind(PICKED_UP)
             .bind(DROPPED)
-            .bind(ENTITY_INTERACTED)
+            .bind(ENTITY_INTERACTED, e -> !e.getLevel().isClientSide())
             .bind(FOOD_EATEN);
 }

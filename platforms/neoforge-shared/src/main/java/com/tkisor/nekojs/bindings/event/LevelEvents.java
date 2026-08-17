@@ -43,9 +43,10 @@ public interface LevelEvents {
             .bind(LOADED)
             .bind(UNLOADED)
             .bind(SAVED)
-            .bind(TICK_PRE)
-            .bind(TICK_POST)
-            .bind(TICK)
+            // LevelTickEvent 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端 level tick 在 Render 线程）
+            .bind(TICK_PRE, e -> !e.getLevel().isClientSide())
+            .bind(TICK_POST, e -> !e.getLevel().isClientSide())
+            .bind(TICK, e -> !e.getLevel().isClientSide())
             .bind(EXPLOSION_START)
             .bind(BEFORE_EXPLOSION)
             .bind(EXPLOSION_DETONATE)

@@ -75,8 +75,10 @@ public interface PlayerEvents {
             .bind(LOGGED_IN)
             .bind(LOGGED_OUT)
             .bind(CHAT)
-            .bind(TICK_POST)
-            .bind(TICK_PRE)
+            // PlayerTickEvent 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端玩家 tick
+            // 在 Render 线程，进入 SERVER Context 会被 Graal 拒绝多线程访问）
+            .bind(TICK_POST, e -> !e.getEntity().level().isClientSide())
+            .bind(TICK_PRE, e -> !e.getEntity().level().isClientSide())
             .bind(CLONED)
             .bind(RESPAWNED)
             .bind(CHANGED_DIMENSION)
@@ -85,7 +87,8 @@ public interface PlayerEvents {
             .bind(INVENTORY_OPENED)
             .bind(CONTAINER_CLOSED)
             .bind(INVENTORY_CLOSED)
-            .bind(ENTITY_INTERACT)
+            // EntityInteract 双逻辑侧触发：SERVER 总线只投递服务端实例
+            .bind(ENTITY_INTERACT, e -> !e.getLevel().isClientSide())
             .bind(CRAFTED)
             .bind(SMELTED)
             .bind(DESTROYED);

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.js;
 
+import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyObject;
 
@@ -29,6 +30,7 @@ public final class DelegatingBinding implements ProxyObject {
 
     private volatile Value helperValue;
     private volatile Value targetValue;
+    private volatile Context boundContext;
 
     public DelegatingBinding(Object helper, Class<?> targetClass, Set<String> extensions) {
         this.helperObj = helper;
@@ -45,9 +47,19 @@ public final class DelegatingBinding implements ProxyObject {
         return targetClassObj;
     }
 
-    /** 在 GraalJS 访问代理时（Context 活跃）才把原始对象包装成 Value。 */
+    /**
+     * 在 GraalJS 访问代理时（Context 活跃）才把原始对象包装成 Value。
+     *
+     * <p>本代理是进程级对象（bootstrap 一次构造、跨 Context 复用），而事务式 reload 会
+     * 关闭旧 Context 并切换到新候选——缓存的 {@code Value} 归属旧 Context，之后访问会抛
+     * {@code The Context is already closed}。因此按<b>当前活跃 Context</b> 缓存：发现
+     * Context 变化（reload 切换）即重建包装。getMember 等回调由 GraalJS 在访问者线程的
+     * 活跃 Context 内调用，{@code Context.getCurrent()} 恒非 null。
+     */
     private void ensure() {
-        if (helperValue == null) {
+        Context current = Context.getCurrent();
+        if (helperValue == null || boundContext != current) {
+            boundContext = current;
             helperValue = Value.asValue(helperObj);
             targetValue = Value.asValue(targetClassObj);
         }

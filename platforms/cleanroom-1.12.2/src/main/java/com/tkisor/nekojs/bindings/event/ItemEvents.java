@@ -66,9 +66,10 @@ public interface ItemEvents {
             .bind(TOOLTIP)
             .bind(DROPPED)
             .bind(EXPIRE)
-            .bind(RIGHT_CLICKED)
+            // PlayerInteract 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端交互在 Render 线程）
+            .bind(RIGHT_CLICKED, e -> !e.getWorld().isRemote)
             .bind(CAN_PICK_UP)
             .bind(PICKED_UP)
-            .bind(ENTITY_INTERACTED)
+            .bind(ENTITY_INTERACTED, e -> !e.getWorld().isRemote)
             .bind(FOOD_EATEN);
 }

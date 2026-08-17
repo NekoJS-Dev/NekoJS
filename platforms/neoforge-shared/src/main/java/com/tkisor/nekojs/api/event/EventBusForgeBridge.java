@@ -10,6 +10,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * 用于将 {@link IEventBus} 与 {@link EventBusJS} 接驳在一起。
@@ -57,6 +58,38 @@ public class EventBusForgeBridge {
 
     public <E extends Event> EventBusForgeBridge bind(EventBusJS<E, ?> bus) {
         return bind(bus, EventPriority.NORMAL, false);
+    }
+
+    /**
+     * 绑定一个带谓词过滤的 NekoJS 总线：仅当原生事件通过 {@code filter} 时才投递给脚本。
+     *
+     * <p>用于双逻辑侧事件（{@code PlayerTickEvent}/{@code LevelTickEvent}/
+     * {@code EntityTickEvent}/{@code EntityJoinLevelEvent}/交互事件等）绑定到 SERVER 总线的场景：
+     * 单人集成服上这些事件的客户端实例在 Render 线程触发，直接进入 SERVER 脚本 Context 会触发
+     * Graal 的多线程访问拒绝（{@code Multi threaded access ... is not allowed}）。约定 SERVER
+     * 总线只投递服务端实例（{@code !level().isClientSide()}），客户端侧事件属于 CLIENT 总线。
+     * filter 仅决定是否投递给脚本，不会取消被过滤掉的原生事件本身。
+     */
+    public <E extends Event> EventBusForgeBridge bind(EventBusJS<E, ?> busJS, Predicate<E> filter) {
+        return bind(busJS, filter, EventPriority.NORMAL, false);
+    }
+
+    public <E extends Event> EventBusForgeBridge bind(
+        EventBusJS<E, ?> busJS,
+        Predicate<E> filter,
+        EventPriority priority,
+        boolean receiveCancelled
+    ) {
+        Objects.requireNonNull(filter, "filter");
+        var bus = busJS.bus();
+        boolean cancellable = bus instanceof CancellableEventBus<E> && ICancellableEvent.class.isAssignableFrom(bus.eventType());
+        Consumer<E> listener = event -> {
+            if (!filter.test(event)) return;
+            if (busJS.post(event) && event instanceof ICancellableEvent cancellableEvent) {
+                cancellableEvent.setCanceled(true);
+            }
+        };
+        return bindImpl(bus.eventType(), listener, priority, receiveCancelled);
     }
 
     public <E, E_FORGE extends Event> EventBusForgeBridge bindTransformed(

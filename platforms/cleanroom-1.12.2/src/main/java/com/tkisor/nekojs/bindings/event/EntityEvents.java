@@ -61,7 +61,8 @@ public interface EntityEvents {
                             e -> e.getItem().getItem()));
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(MinecraftForge.EVENT_BUS)
-            .bind(JOIN_LEVEL)
+            // EntityJoinWorldEvent 双逻辑侧触发：SERVER 总线只投递服务端实例
+            .bind(JOIN_LEVEL, e -> !e.getWorld().isRemote)
             .bind(DEATH)
             .bind(DAMAGE_PRE)
             .bind(DAMAGE_POST)

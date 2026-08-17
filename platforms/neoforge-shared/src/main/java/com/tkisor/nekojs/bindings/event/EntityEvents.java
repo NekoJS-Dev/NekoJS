@@ -68,10 +68,12 @@ public interface EntityEvents {
             .bind(DEATH)
             .bind(DROPS)
             .bind(FINALIZE_SPAWN)
-            .bind(TICK_Pre)
-            .bind(TICK_Post)
-            .bind(JOIN_LEVEL)
-            .bind(LEAVE_LEVEL)
+            // EntityTick/EntityJoinLevel/LeaveLevel 双逻辑侧触发：SERVER 总线只投递服务端实例
+            // （客户端实体 tick/join 在 Render 线程，进入 SERVER Context 会被拒绝）
+            .bind(TICK_Pre, e -> !e.getEntity().level().isClientSide())
+            .bind(TICK_Post, e -> !e.getEntity().level().isClientSide())
+            .bind(JOIN_LEVEL, e -> !e.getEntity().level().isClientSide())
+            .bind(LEAVE_LEVEL, e -> !e.getEntity().level().isClientSide())
             .bind(USE_START)
             .bind(USE_STOP)
             .bind(USE_FINISHED)
