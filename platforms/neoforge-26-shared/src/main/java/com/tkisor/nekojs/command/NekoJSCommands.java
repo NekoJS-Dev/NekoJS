@@ -25,7 +25,10 @@ import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.ProbeGenerator;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -234,8 +237,14 @@ public final class NekoJSCommands {
         refreshOpenErrorDashboard(source);
         int count = NekoJSMod.RUNTIME_ROOT.errors().count();
         if (count > 0) {
-            source.sendSuccess(() -> Component.literal(successMessage + " (" + count + " error(s) remain)"), false);
-            source.sendFailure(NekoErrorUIHelper.getErrorComponent());
+            // 错误数并进同一条消息且可点击打开错误列表，不再追加独立的警告组件：
+            // SERVER reload 还会经 RecipeManagerMixin 广播一次错误摘要（覆盖 /reload 与
+            // 资源重载等无命令反馈的路径），两条警告块会重复刷屏。
+            MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
+                    .withStyle(style -> style
+                            .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
+                            .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors")));
+            source.sendSuccess(() -> message, false);
         } else {
             source.sendSuccess(() -> Component.literal(successMessage + " - no errors."), false);
         }
