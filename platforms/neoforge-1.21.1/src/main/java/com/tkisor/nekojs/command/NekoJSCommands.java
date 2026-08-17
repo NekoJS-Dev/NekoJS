@@ -160,8 +160,16 @@ public final class NekoJSCommands {
                 root.reload(type);
             }
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
+            boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
-                applyRecipeScripts(source);
+                recipeBroadcast = applyRecipeScripts(source);
+            }
+            // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
+            // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。
+            // 控制台收不到玩家广播，仍走 sendReloadResult。
+            if (recipeBroadcast && source.getEntity() instanceof ServerPlayer) {
+                refreshOpenErrorDashboard(source);
+                return 1;
             }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
         } catch (Exception e) {
@@ -176,13 +184,15 @@ public final class NekoJSCommands {
      * RecipeManagerMixin.nekojs$applyScripts() 从永久缓存的 baseJsons 重建工作集并重跑配方脚本，
      * 把脚本生成/修改/删除的配方 JSON 重新解析并替换 RecipeManager 的 recipes。
      */
-    private static void applyRecipeScripts(CommandSourceStack source) {
+    private static boolean applyRecipeScripts(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
-        if (server == null) return;
+        if (server == null) return false;
         RecipeManager recipeManager = server.getRecipeManager();
         if (recipeManager instanceof IRecipeManagerExtension ext) {
             ext.nekojs$applyScripts();
+            return true;
         }
+        return false;
     }
 
     private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath) {
@@ -238,8 +248,8 @@ public final class NekoJSCommands {
         int count = NekoJSMod.RUNTIME_ROOT.errors().count();
         if (count > 0) {
             // 错误数并进同一条消息且可点击打开错误列表，不再追加独立的警告组件：
-            // SERVER reload 还会经 RecipeManagerMixin 广播一次错误摘要（覆盖 /reload 与
-            // 资源重载等无命令反馈的路径），两条警告块会重复刷屏。
+            // 此分支只覆盖无配方广播的路径（test/单文件 reload/CLIENT/STARTUP/控制台），
+            // 玩家执行的 SERVER reload 由 RecipeManagerMixin 的广播单独反馈（见 reloadType）。
             MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
                     .withStyle(style -> style
                             .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("nekojs.error.tracker.hover_hint")))
