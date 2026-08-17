@@ -48,4 +48,13 @@ public interface RecipeSchemaHost {
         }
         return array;
     }
+
+    /**
+     * Apply a JS value to a schema field on the platform builder.
+     * Default: encode to JSON and write via {@link RecipeBuilder#setPath} (datapack-era platforms).
+     * Platforms without a JSON pipeline (1.12.2) override this to apply typed values directly.
+     */
+    default void applyField(RecipeBuilder builder, RecipeFieldDefinition field, Value value) {
+        builder.setPath(field.path(), new RecipeJsonValue(convertField(field, value)));
+    }
 }
