@@ -107,6 +107,11 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         RecipeTypeDefinitionStorage.setPluginOverrides(builder.build());
     }
 
+    /**
+     * Legacy bootstrap 入口：无生产调用方（所有平台经 {@link #bootstrapOwned}），
+     * 仅为嵌入场景/兼容测试保留。API freeze 后计划移除，新代码请用 {@link #bootstrapOwned}。
+     */
+    @Deprecated
     public static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
         NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(plugins, scriptProperties);
         current = runtime;
