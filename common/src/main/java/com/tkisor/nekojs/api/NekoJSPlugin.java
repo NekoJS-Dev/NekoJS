@@ -101,9 +101,10 @@ public interface NekoJSPlugin {
     /**
      * 注册 probe backend（按 {@code (languageId, name)} 二维登记）。
      *
-     * <p>内置已注册 {@code ("typescript", "builtin")} backend（产出 {@code .d.ts}）。
-     * 第三方插件可在此注册其他语言的 backend（如 {@code ("python", "builtin")} 产出 {@code .pyi}），
-     * 或为已有语言提供替代 backend。同一 {@code (语言, 名字)} 在 bootstrap 完成时报冲突。
+     * <p>内置 backend（TypeScript {@code .d.ts} 与 Python {@code .pyi}）由 common 的
+     * {@code NekoProbeBuiltinPlugin} 经本方法注册——与第三方走同一路径。
+     * 第三方可在此注册其他语言的 backend，或为已有语言提供替代 backend
+     * （不同 {@code name}）。同一 {@code (语言, 名字)} 在 bootstrap 结束时报冲突。
      *
      * <p>命令 {@code /nekojs probe [language] [name]} 可指定运行哪些 backend。
      */

@@ -17,8 +17,6 @@ import com.tkisor.nekojs.core.plugin.NekoPluginExtensionPoint;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionProvider;
 import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
-import com.tkisor.nekojs.probe.TypeScriptProbeBackend;
-import com.tkisor.nekojs.probe.backend.python.PythonProbeBackend;
 import com.tkisor.nekojs.api.recipe.RecipeLifecycleContext;
 import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
@@ -74,7 +72,8 @@ public final class NekoPluginBootstrap {
                 platform("nekojs:recipe_namespaces", (plugin, context) -> plugin.registerRecipeNamespaces(context.recipeNamespaces())),
                 platform("nekojs:recipe_schemas", (plugin, context) -> plugin.registerRecipeSchemas(context.recipeSchemas())),
                 platform("nekojs:recipe_lifecycle", (plugin, context) -> plugin.registerRecipeLifecycleHooks(context.recipeLifecycle())),
-                base("nekojs:lifecycle", (plugin, context) -> plugin.registerLifecycleHooks(context.lifecycle()))
+                base("nekojs:lifecycle", (plugin, context) -> plugin.registerLifecycleHooks(context.lifecycle())),
+                base("nekojs:probe_backends", (plugin, context) -> plugin.registerProbeBackends(context.probeBackends()))
         );
     }
 
@@ -161,14 +160,9 @@ public final class NekoPluginBootstrap {
             }
         }
 
-        ProbeBackendRegistry probeBackends = new ProbeBackendRegistry();
-        probeBackends.register(new TypeScriptProbeBackend(), "NekoJS (built-in)");
-        probeBackends.register(new PythonProbeBackend(), "NekoJS (built-in)");
-        for (NekoJSPlugin plugin : plugins) {
-            plugin.registerProbeBackends(probeBackends);
-        }
-        probeBackends.lock();
-        ProbeBackendRegistry.setInstance(probeBackends);
+        // 内置 backend 经 NekoProbeBuiltinPlugin 走同一扩展点注册；这里只负责装配收尾
+        state.probeBackends().lock();
+        ProbeBackendRegistry.setInstance(state.probeBackends());
     }
 
     private static void freezeState(BootstrapState state, com.tkisor.nekojs.script.prop.ScriptPropertyRegistry scriptProperties) {
@@ -247,6 +241,7 @@ public final class NekoPluginBootstrap {
         private final ScriptCompilerRegistry scriptCompilers = ScriptCompilerRegistry.createRuntimeRegistry();
         private final ScriptTypedValue<BindingRegistry> bindingRegistries = ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new);
         private final boolean client;
+        private final ProbeBackendRegistry probeBackends = new ProbeBackendRegistry();
         private final JSTypeAdapterRegistry adapters = new JSTypeAdapterRegistry.Impl();
         private final EventGroupRegistry eventGroups = new EventGroupRegistry.Impl();
         private final List<TypeDocCatalogEntry> typeDocs = new ArrayList<>();
@@ -344,6 +339,11 @@ public final class NekoPluginBootstrap {
         @Override
         public PluginLifecycleRegister lifecycle() {
             return this;
+        }
+
+        @Override
+        public ProbeBackendRegistry probeBackends() {
+            return probeBackends;
         }
 
         @Override

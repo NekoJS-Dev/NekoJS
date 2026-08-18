@@ -10,6 +10,7 @@ import com.tkisor.nekojs.core.plugin.PluginLifecycleRegister;
 import com.tkisor.nekojs.core.plugin.RecipeLifecycleRegister;
 import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
 import com.tkisor.nekojs.core.plugin.RecipeSchemaRegister;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.script.ScriptTypedValue;
 
 public interface NekoPluginExtensionContext {
@@ -36,4 +37,7 @@ public interface NekoPluginExtensionContext {
 
     /** 插件生命周期钩子注册器（registerLifecycleHooks 扩展点用）。 */
     PluginLifecycleRegister lifecycle();
+
+    /** probe backend 注册器（registerProbeBackends 扩展点用）；bootstrap 结束时 lock 并注入全局单例。 */
+    ProbeBackendRegistry probeBackends();
 }
