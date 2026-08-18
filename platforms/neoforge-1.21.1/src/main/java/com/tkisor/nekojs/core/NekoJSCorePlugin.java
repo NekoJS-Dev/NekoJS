@@ -7,7 +7,6 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.core.plugin.NekoCommonManualDeclarations;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 import com.tkisor.nekojs.api.event.EventGroupRegistry;
@@ -36,13 +35,9 @@ import com.tkisor.nekojs.bindings.static_access.TimeJS;
 import com.tkisor.nekojs.bindings.static_access.UUIDJS;
 import com.tkisor.nekojs.bindings.static_access.UtilsJS;
 import com.tkisor.nekojs.bindings.static_access.NekoGlobal;
-import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
-import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
-import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
-import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.FluidAmounts;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
@@ -76,12 +71,6 @@ import java.util.List;
 
 @RegisterNekoJSPlugin(priority = NekoJSPlugin.CORE_PRIORITY)
 public class NekoJSCorePlugin implements NekoJSPlugin {
-
-    @Override
-    public void registerScriptCompilers(ScriptCompilerRegistry registry) {
-        registry.register(NekoTypeScriptLanguagePlugin.INSTANCE);
-        registry.register(NekoJsxLanguagePlugin.INSTANCE);
-    }
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {
@@ -218,14 +207,6 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     }
 
     @Override
-    public void registerScriptProperty(ScriptPropertyRegistry registry) {
-        registry.register(ScriptProperty.AFTER);
-        registry.register(ScriptProperty.MODLOADED);
-        registry.register(ScriptProperty.DISABLE);
-        registry.register(ScriptProperty.PRIORITY);
-    }
-
-    @Override
     public void registerTypeDocs(TypeDocsRegister registry) {
         registry.register(TypeDocCatalogEntry.binding(
                 "Item",
@@ -311,8 +292,4 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         NekoCommonManualDeclarations.register(registry);
     }
 
-    @Override
-    public void registerNodeTypeDocs(TypeDocsRegister registry) {
-        NodeModuleTypeDocs.registerBuiltin(registry);
-    }
 }

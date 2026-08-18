@@ -44,7 +44,12 @@ public interface NekoJSPlugin {
     /** Core builtin plugin priority — guarantees earliest load (adapters/bindings register first). */
     int CORE_PRIORITY = Integer.MAX_VALUE;
 
-    /** 注册脚本编译器（语言插件：TypeScript/JSX 等）。编译器在脚本加载/热重载时被调用。 */
+    /**
+     * 注册脚本编译器（语言插件）。编译器在脚本加载/热重载时被调用。
+     *
+     * <p>内置语言经 common 插件注册，与第三方走同一路径：TypeScript/JSX 由
+     * {@code NekoCommonBuiltinPlugin}、Python 由 {@code PythonTranspilerPlugin}。
+     */
     default void registerScriptCompilers(ScriptCompilerRegistry registry) {
     }
 
