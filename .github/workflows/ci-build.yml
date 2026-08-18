@@ -25,6 +25,7 @@ jobs:
     outputs:
       is_release: ${{ steps.meta.outputs.is_release }}
       version: ${{ steps.meta.outputs.version }}
+      channel: ${{ steps.meta.outputs.channel }}
       title: ${{ steps.meta.outputs.title }}
       short_sha: ${{ steps.meta.outputs.short_sha }}
     steps:
@@ -44,18 +45,35 @@ jobs:
 
           TITLE="$(printf '%s' "$RAW_COMMIT_MSG" | sed -n '1p')"
           SHORT_SHA="$(git rev-parse --short HEAD)"
-          REGEX='^update[[:space:]]+([0-9A-Za-z][0-9A-Za-z._-]*)$'
 
           echo "title=$TITLE" >> "$GITHUB_OUTPUT"
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
-          if [[ "$TITLE" =~ $REGEX ]]; then
+          # 发布触发：commit 标题 "update <版本>" → release 通道；
+          # "update beta <版本>" / "update alpha <版本>" → 对应通道（CurseForge version-type 用）。
+          # 匹配结果立刻落入普通变量：后续 [[ =~ ]] 不匹配会清空 BASH_REMATCH，不能跨判断复用
+          CHANNEL=""
+          VERSION=""
+          if [[ "$TITLE" =~ ^update[[:space:]]+(alpha|beta)[[:space:]]+([0-9A-Za-z][0-9A-Za-z._-]*)$ ]]; then
+            CHANNEL="${BASH_REMATCH[1],,}"
+            VERSION="${BASH_REMATCH[2]}"
+          elif [[ "$TITLE" =~ ^update[[:space:]]+([0-9A-Za-z][0-9A-Za-z._-]*)$ ]]; then
+            CANDIDATE="${BASH_REMATCH[1]}"
+            if ! [[ "$CANDIDATE" =~ ^(alpha|beta)$ ]]; then
+              CHANNEL="release"
+              VERSION="$CANDIDATE"
+            fi
+          fi
+
+          if [[ -n "$CHANNEL" ]]; then
             echo "is_release=true" >> "$GITHUB_OUTPUT"
-            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
-            echo "Release build detected from commit title: $TITLE"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+            echo "Release build detected from commit title: $TITLE (channel: $CHANNEL)"
           else
             echo "is_release=false" >> "$GITHUB_OUTPUT"
             echo "version=" >> "$GITHUB_OUTPUT"
+            echo "channel=" >> "$GITHUB_OUTPUT"
             echo "Development build detected from commit title: $TITLE"
           fi
 
@@ -273,3 +291,111 @@ jobs:
             ${{ steps.changelog.outputs.notes }}
           files: artifacts/*.jar
           fail_on_unmatched_files: true
+
+  curseforge:
+    name: Publish to CurseForge
+    needs:
+      - analyze
+      - build
+    if: github.event_name == 'push' && needs.analyze.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release jars
+        uses: actions/download-artifact@v4
+        with:
+          name: NekoJS-Release-Jars
+          path: artifacts
+
+      - name: Ensure CURSEFORGE_TOKEN is configured
+        # 明确报错优于 mc-publish 拿到空 token 后的模糊失败
+        env:
+          CF_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CF_TOKEN" ]]; then
+            echo "::error::CURSEFORGE_TOKEN secret is not configured. Add it under repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        env:
+          COMMIT_TITLE: ${{ needs.analyze.outputs.title }}
+        run: |
+          set -euo pipefail
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          fi
+
+          NOTES="$(git log "$RANGE" --pretty=format:'* %s (%h)' | sed '/^$/d')"
+          if [[ -z "$NOTES" ]]; then
+            NOTES="* ${COMMIT_TITLE}"
+          fi
+
+          EOF_MARKER="CHANGELOG_$(date +%s)_$RANDOM"
+          echo "notes<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+      # 每个平台 jar 一个 CF file：各自标 MC 版本 + loader；Cleanroom 走 Forge 平台标记
+      # （CF 无 Cleanroom loader 选项），文件显示名标注 Cleanroom
+      - name: Publish NeoForge 26.1.2 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: artifacts/nekojs-neoforge-26.1.2-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (NeoForge 26.1.2)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 26.1.2
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      - name: Publish NeoForge 26.2.0 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: artifacts/nekojs-neoforge-26.2.0-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (NeoForge 26.2.0)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 26.2.0
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      - name: Publish NeoForge 1.21.1 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: artifacts/nekojs-neoforge-1.21.1-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (NeoForge 1.21.1)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      - name: Publish Cleanroom 1.12.2 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          # 精确文件名：避免 nekojs-* 通配误匹配 nekojs-neoforge-*.jar
+          files: artifacts/nekojs-${{ needs.analyze.outputs.version }}.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (Cleanroom 1.12.2)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: forge
+          game-versions: 1.12.2
+          changelog: ${{ steps.changelog.outputs.notes }}
