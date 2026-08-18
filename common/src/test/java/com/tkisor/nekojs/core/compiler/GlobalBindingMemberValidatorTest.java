@@ -65,7 +65,7 @@ class GlobalBindingMemberValidatorTest {
                 "Utils", new ScriptBindingSchema.BindingMembers(JavaMemberIndex.allMembersOf(UtilsJS.class)),
                 "Item", new ScriptBindingSchema.BindingMembers(
                         JavaMemberIndex.allMembersOf(TestItemJS.class), Set.of(TestItemJS.class)),
-                "ServerEvents", new ScriptBindingSchema.BindingMembers(Set.of("recipes"))));
+                "ServerEvents", new ScriptBindingSchema.BindingMembers(Set.of("recipes", "started"))));
         // 生产环境由 ScriptEnvironmentFactory 从运行中 Context 收割；测试给出最小内置集
         ScriptBindingSchema.registerGlobals(ScriptType.SERVER,
                 Set.of("console", "Math", "JSON", "globalThis", "this", "arguments", "super"));
@@ -154,5 +154,71 @@ class GlobalBindingMemberValidatorTest {
                 + "JSON.parse('{}')\r\nMath.max(1, 2)\r\nconsole.log('hi')\r\n");
 
         assertTrue(reported.isEmpty(), "imports/catch params/JS builtins must not be reported: " + reported);
+    }
+
+    /**
+     * 真实事故复现（test_entity_goal.js）：const 局部 + 负数实参 + if/模板串混排，
+     * 局部变量 entity 不得被报未知标识符。
+     */
+    @Test
+    void locallyDeclaredEntityWithNegativeArgsAndTemplateIsNotFlagged() {
+        GlobalBindingMemberValidator.validate(file("entity"),
+                "console.info('loaded')\r\n"
+                + "ServerEvents.started(event => {\r\n"
+                + "  const server = event.getServer()\r\n"
+                + "  const level = server.overworld()\r\n"
+                + "  const entity = level.spawnEntity('nekojs:test_script_mob', 0, -60, 0)\r\n"
+                + "  if (entity == null) {\r\n"
+                + "    console.error('expected to spawn')\r\n"
+                + "    return\r\n"
+                + "  }\r\n"
+                + "  console.info(`spawned type=${entity.getType()}`)\r\n"
+                + "  entity.discard()\r\n"
+                + "})\r\n");
+
+        assertTrue(reported.stream().noneMatch(m -> m.contains("'entity'")),
+                "locally declared entity must not be reported: " + reported);
+    }
+
+    /** 真实事故复现（startup_scripts）：多行链式回调参数（builder/goals）不得被报未知标识符。 */
+    @Test
+    void multilineChainedCallbackParamsAreNotFlagged() {
+        GlobalBindingMemberValidator.validate(file("builder"),
+                "RegistryEvents.item(event => {\r\n"
+                + "    event.create('mymod:cool_gem', builder => {\r\n"
+                + "        builder\r\n"
+                + "            .maxStackSize(16)\r\n"
+                + "            .rarity('rare')\r\n"
+                + "            .fireResistant()\r\n"
+                + "    })\r\n"
+                + "})\r\n"
+                + "RegistryEvents.entityType(event => {\r\n"
+                + "    event.create('nekojs:test_mob', builder => {\r\n"
+                + "        builder.attributes(attributes => {\r\n"
+                + "            attributes.maxHealth(10)\r\n"
+                + "        })\r\n"
+                + "        .goals(goals => {\r\n"
+                + "            goals.floatInWater(0)\r\n"
+                + "        })\r\n"
+                + "    })\r\n"
+                + "})\r\n");
+
+        assertTrue(reported.stream().noneMatch(m -> m.contains("'builder'")
+                        || m.contains("'goals'") || m.contains("'attributes'")),
+                "chained callback params must not be reported: " + reported);
+    }
+
+    /** 真实事故复现（client_scripts）：同文件 function 声明 + 后续调用不得被报未知标识符。 */
+    @Test
+    void namedFunctionDeclarationAndCallAreNotFlagged() {
+        GlobalBindingMemberValidator.validate(file("fn"),
+                "function assertEventGroup(group, keys) {\r\n"
+                + "  keys.forEach(k => console.log(k))\r\n"
+                + "}\r\n"
+                + "assertEventGroup(ClientEvents, ['tick'])\r\n");
+
+        assertTrue(reported.stream().noneMatch(m -> m.contains("'assertEventGroup'")
+                        || m.contains("'group'") || m.contains("'keys'") || m.contains("'k'")),
+                "named function decl and its params must not be reported: " + reported);
     }
 }

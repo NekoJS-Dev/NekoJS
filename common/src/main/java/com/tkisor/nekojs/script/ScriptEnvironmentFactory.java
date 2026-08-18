@@ -78,9 +78,17 @@ public final class ScriptEnvironmentFactory {
         addEventGroupSchema(bindingSchema, pluginRuntime.eventGroups().values(), ScriptEventRegistry.groupsFor(scriptType));
 
         ScriptBindingSchema.register(scriptType, bindingSchema);
-        // 未定义标识符检查的已知全局全集：以运行时 Context 真实可见的全局键为准
-        // （JS 内置 + 引擎/平台装的全部绑定），并补上解析器视作标识符的关键字（this/arguments/super）。
+        // 未定义标识符检查的已知全局全集：以运行时 Context 真实可见的全局为准——
+        // globalThis 全量属性名（JS 内置 + console 等引擎全局）∪ polyglot 绑定键（平台装的绑定），
+        // 并补上解析器视作标识符的关键字（this/arguments/super）。单一来源都会漏：
+        // console 不在绑定键里、而 guest 侧注入的绑定不一定都在 globalThis 上。
         Set<String> knownGlobals = new LinkedHashSet<>(context.getBindings("js").getMemberKeys());
+        Value globalNames = context.eval("js", "Object.getOwnPropertyNames(globalThis)");
+        if (globalNames.hasArrayElements()) {
+            for (long i = 0; i < globalNames.getArraySize(); i++) {
+                knownGlobals.add(globalNames.getArrayElement(i).asString());
+            }
+        }
         knownGlobals.addAll(List.of("this", "arguments", "super"));
         ScriptBindingSchema.registerGlobals(scriptType, knownGlobals);
 

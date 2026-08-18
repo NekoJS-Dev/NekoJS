@@ -99,16 +99,23 @@ public final class GlobalBindingMemberValidator {
 
     private static void collectDeclaredNames(ValNode node, Set<String> out) {
         if (node == null) return;
-        if (node instanceof ValNode.VarDecl decl) out.add(decl.name());
-        else if (node instanceof ValNode.FuncDecl fd) {
+        if (node instanceof ValNode.VarDecl decl) {
+            out.add(decl.name());
+        } else if (node instanceof ValNode.FuncDecl fd) {
             if (!fd.name().isEmpty()) out.add(fd.name());
             out.addAll(fd.params());
-        } else if (node instanceof ValNode.ArrowFunc af) out.addAll(af.params());
+        } else if (node instanceof ValNode.ArrowFunc af) {
+            out.addAll(af.params());
+        }
+        // 名字提取与子节点递归必须相互独立：箭头/函数体内部的声明（如回调里的 const 局部）
+        // 也是文件可见标识符——只收集参数不递归 body 会让回调内局部被误报为未知标识符
         if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) collectDeclaredNames(s, out);
         if (node instanceof ValNode.CallExpr c) {
             collectDeclaredNames(c.callee(), out);
             for (ValNode a : c.args()) collectDeclaredNames(a, out);
         }
+        if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) collectDeclaredNames(s, out);
+        if (node instanceof ValNode.FuncDecl fd) for (ValNode s : fd.body()) collectDeclaredNames(s, out);
         if (node instanceof ValNode.MemberAccess m) collectDeclaredNames(m.object(), out);
         if (node instanceof ValNode.ComputedMemberAccess m) {
             collectDeclaredNames(m.object(), out);
@@ -123,6 +130,7 @@ public final class GlobalBindingMemberValidator {
             addIdentifiersIn(imports.group(1), out);
         }
         matchAll(source, Pattern.compile("\\bclass\\s+([A-Za-z_$][\\w$]*)"), out);
+        matchAll(source, Pattern.compile("\\bfunction\\s+([A-Za-z_$][\\w$]*)\\s*\\("), out);
         matchAll(source, Pattern.compile("\\bcatch\\s*\\(\\s*[A-Za-z_$][\\w$]*\\s*[,)]\\s*([A-Za-z_$][\\w$]*)?"), out);
         // catch (e) 单参数形态（上一条只覆盖多参可选绑定形态）
         matchAll(source, Pattern.compile("\\bcatch\\s*\\(\\s*([A-Za-z_$][\\w$]*)\\s*\\)"), out);

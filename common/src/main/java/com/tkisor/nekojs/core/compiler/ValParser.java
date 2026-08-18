@@ -40,7 +40,9 @@ public final class ValParser {
         if (matchKw("const")) return parseVarDecl(ValNode.DeclarationKind.CONST, start, block);
         if (matchKw("let")) return parseVarDecl(ValNode.DeclarationKind.LET, start, block);
         if (matchKw("var")) return parseVarDecl(ValNode.DeclarationKind.VAR, start, block);
-        if (matchKw("function") && peekAfterKw("function") == '(') return parseFuncDecl(start);
+        // 具名函数声明 function name(...) {...}：parseFuncDecl 自己要求「标识符 + (」，
+        // 匿名 function( 形态作为声明语句非法，走表达式路径
+        if (matchKw("function") && isIdStart(peekAfterKw("function"))) return parseFuncDecl(start);
         ValNode e = parseExpr();
         skipSemi();
         return e;
