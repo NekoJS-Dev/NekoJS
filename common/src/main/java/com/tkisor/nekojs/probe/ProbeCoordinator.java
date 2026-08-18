@@ -167,6 +167,34 @@ public final class ProbeCoordinator {
         defaultCoordinator().applyEnabled(enabled);
     }
 
+    /** 静态 facade：委托全局默认协调器重置编辑器配置（{@code /nekojs probe reset_config}）。 */
+    public static int resetEditorConfigs() {
+        return defaultCoordinator().resetEditorConfigsInternal();
+    }
+
+    /**
+     * 重置所有 backend 管理的编辑器配置文件：逐 backend 删除其整体拥有的文件
+     * （jsconfig/pyrightconfig/snippets，不碰共享的 {@code .vscode/settings.json}），
+     * 随后由 {@code WorkspaceGenerator.createWorkspaceConfigs()} 重建出厂基础配置。
+     * 配置片段（paths/include 等）由随后的 probe 运行重新合并。
+     *
+     * @return 成功执行 reset 的 backend 数
+     */
+    int resetEditorConfigsInternal() {
+        int reset = 0;
+        for (ProbeBackend backend : ProbeBackendRegistry.get().allBackends()) {
+            try {
+                backend.resetEditorConfig(paths);
+                reset++;
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Probe backend {}:{} editor-config reset failed",
+                        backend.languageId(), backend.name(), e);
+            }
+        }
+        com.tkisor.nekojs.script.WorkspaceGenerator.createWorkspaceConfigs();
+        return reset;
+    }
+
     /** 静态 facade：全局默认协调器的 probe 总开关。 */
     public static boolean isEnabled() {
         return defaultCoordinator().isProbeEnabled();

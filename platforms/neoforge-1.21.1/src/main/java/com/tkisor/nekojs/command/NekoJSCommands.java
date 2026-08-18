@@ -273,6 +273,16 @@ public final class NekoJSCommands {
                 .executes(context -> listProbeBackends(context.getSource())));
         probe.then(Commands.literal("reload")
                 .executes(context -> reloadProbeConfig(context.getSource())));
+        // reset_config：删除各 backend 管理的编辑器配置（jsconfig/pyrightconfig/snippets，保留共享
+        // 的 .vscode/settings.json 与用户内容），重建出厂基础配置后立即重跑默认 probe 生成。
+        probe.then(Commands.literal("reset_config")
+                .executes(context -> {
+                    CommandSourceStack source = context.getSource();
+                    int backends = ProbeCoordinator.resetEditorConfigs();
+                    source.sendSystemMessage(Component.literal(
+                            "Editor configs reset (" + backends + " backend(s)); regenerating probe..."));
+                    return runProbe(source, selectDefaultTypescript());
+                }));
         probe.then(Commands.literal("enable")
                 .executes(context -> enableProbe(context.getSource())));
         probe.then(Commands.literal("disable")

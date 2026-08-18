@@ -62,7 +62,7 @@ class FileEditorConfigContributorTest {
     }
 
     @Test
-    void mergeJsConfigIncludes_replacesProbeArray_preservesUserKeys(@TempDir Path temp) throws IOException {
+    void mergeJsConfigIncludes_refreshesProbeEntries_preservesUserEntries(@TempDir Path temp) throws IOException {
         Path jsconfig = temp.resolve("jsconfig.json");
         Files.writeString(jsconfig, """
                 {
@@ -78,18 +78,18 @@ class FileEditorConfigContributorTest {
                         "../../.neko_probe/typescript/@manual/**/*.d.ts"));
 
         String out = Files.readString(jsconfig);
-        // include 整体替换为 probe 贡献值
+        // probe 条目刷新 + 用户条目保留
         assertTrue(out.contains("../../.neko_probe/typescript/@package/**/*.d.ts"), out);
         assertTrue(out.contains("../../.neko_probe/typescript/@manual/**/*.d.ts"), out);
         assertFalse(out.contains("../../.neko_probe/@package"), "stale probe value must be replaced: " + out);
-        assertFalse(out.contains("\"src\""), "user include entries are replaced wholesale (probe owns include): " + out);
+        assertTrue(out.contains("\"src\""), "user include entry must survive (refresh-managed merge): " + out);
         // 其他键（compilerOptions + 未知顶层键）保留
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);
     }
 
     @Test
-    void mergeJsConfigTypeRoots_replacesProbeArray_preservesUserKeys(@TempDir Path temp) throws IOException {
+    void mergeJsConfigTypeRoots_refreshesProbeEntries_preservesUserEntries(@TempDir Path temp) throws IOException {
         Path jsconfig = temp.resolve("jsconfig.json");
         Files.writeString(jsconfig, """
                 {
@@ -104,12 +104,12 @@ class FileEditorConfigContributorTest {
                 List.of("../../.neko_probe/typescript/@package", "../node_modules/@types"));
 
         String out = Files.readString(jsconfig);
-        // typeRoots 整体替换为 probe 贡献值
+        // probe 条目刷新 + 用户条目保留
         assertTrue(out.contains("../../.neko_probe/typescript/@package"), out);
         assertTrue(out.contains("../node_modules/@types"), out);
         assertFalse(out.contains("../../.neko_probe/@package"),
                 "stale probe value must be replaced: " + out);
-        assertFalse(out.contains("./my-types"), "user typeRoots entries replaced wholesale: " + out);
+        assertTrue(out.contains("./my-types"), "user typeRoots entry must survive (refresh-managed merge): " + out);
         // 其他键保留
         assertTrue(out.contains("ESNext"), out);
         assertTrue(out.contains("myExtra"), out);

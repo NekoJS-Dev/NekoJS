@@ -107,6 +107,28 @@ public final class PythonProbeBackend implements ProbeBackend {
                 FileEditorConfigContributor.relativePosix(paths.gameDir(), out));
     }
 
+    /**
+     * 删除本 backend 管理的 pyrightconfig.json（根/游戏目录/各脚本目录）。共享的
+     * {@code .vscode/settings.json} 不删，其中的贡献键由下次 contribute 幂等校正；
+     * 嵌套 Python 目录的衍生 pyrightconfig 不追踪（下次扫描会重新合并，残留无害）。
+     */
+    @Override
+    public void resetEditorConfig(com.tkisor.nekojs.core.fs.NekoJSPaths paths) {
+        for (Path pyright : List.of(
+                paths.root().resolve("pyrightconfig.json"),
+                paths.gameDir().resolve("pyrightconfig.json"),
+                paths.startupScripts().resolve("pyrightconfig.json"),
+                paths.serverScripts().resolve("pyrightconfig.json"),
+                paths.clientScripts().resolve("pyrightconfig.json"),
+                paths.testScripts().resolve("pyrightconfig.json"))) {
+            try {
+                Files.deleteIfExists(pyright);
+            } catch (IOException e) {
+                NekoJS.LOGGER.debug("EditorConfig: failed to delete pyrightconfig {}", pyright, e);
+            }
+        }
+    }
+
     /** 同一个 extraPath 同时写入 pyrightconfig（CLI 侧）与 .vscode/settings.json（Pylance 侧），互为兜底。 */
     private static void contributePyright(EditorConfigContributor contributor, Path pyrightFile,
                                           Path vscodeSettings, String relativeExtraPath) {

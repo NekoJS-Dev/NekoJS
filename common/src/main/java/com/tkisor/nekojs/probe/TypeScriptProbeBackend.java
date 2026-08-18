@@ -419,6 +419,29 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         c.mergeJsConfigTypeAcquisition(probeDir.resolve("jsconfig.json"), false);
     }
 
+    /**
+     * 删除本 backend 管理的编辑器配置：4 个脚本目录 + probe 根目录的 jsconfig、probe 拥有的
+     * VS Code snippets 文件。{@code .vscode/settings.json} 是与用户共享的文件，不删——
+     * 其中本 backend 的贡献键（如 JS 语言服务开关）由下次 contribute 幂等校正。
+     */
+    @Override
+    public void resetEditorConfig(NekoJSPaths paths) {
+        for (Path scriptDir : List.of(paths.startupScripts(), paths.serverScripts(),
+                paths.clientScripts(), paths.testScripts())) {
+            deleteManagedEditorFile(scriptDir.resolve("jsconfig.json"));
+        }
+        deleteManagedEditorFile(paths.probeDir().resolve("jsconfig.json"));
+        deleteManagedEditorFile(paths.root().resolve(".vscode").resolve("nekojs.code-snippets"));
+    }
+
+    private static void deleteManagedEditorFile(Path file) {
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException e) {
+            NekoJS.LOGGER.debug("EditorConfig: failed to delete managed file {}", file, e);
+        }
+    }
+
     private int generatePackageDeclarations(PackageTree tree, Path outputDir, ExecutorService pool) throws IOException {
         Path packageDir = outputDir.resolve("@package");
         Files.createDirectories(packageDir);

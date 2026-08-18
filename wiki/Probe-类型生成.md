@@ -15,8 +15,11 @@
 | `/nekojs probe list` | 列出已注册 backend（形如 `typescript:builtin (NekoJS (built-in))`） |
 | `/nekojs probe reload` | 丢弃 probe.toml 配置缓存，下次从盘重读（改完配置不必重启） |
 | `/nekojs probe enable` / `disable` | 把 `enabled` **持久化**进 probe.toml 并重载缓存 |
+| `/nekojs probe reset_config` | 删除各 backend 生成的编辑器配置（jsconfig/pyrightconfig/snippets），重建出厂基础配置并立即重跑默认 TS probe。jsconfig 手动改坏时用它一键恢复 |
 
 `<语言>` 与 `<名字>` 支持 TAB 补全。所有 probe 子命令在服务端线程执行，权限与 `/nekojs` 一致（op 2+）。
+
+**jsconfig 的合并语义**：每次 probe 只**刷新 probe 管理的条目**（`java:*`/`@side-only/*` 路径别名、include/typeRoots 里指向 `.neko_probe/` 的条目、JSX 运行时键），**你手动加的条目和其它键原样保留**——比如自己 include 一个 `./typings/custom.d.ts` 或加自己的 typeRoots，不会被 probe 覆盖。
 
 ## 工作流程
 

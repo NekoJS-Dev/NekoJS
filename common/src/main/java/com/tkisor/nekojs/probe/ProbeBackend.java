@@ -48,6 +48,16 @@ public interface ProbeBackend {
     }
 
     /**
+     * 删除本 backend 管理的编辑器配置文件（{@code /nekojs probe reset_config} 用）。
+     * 只删 backend 整体拥有的文件（jsconfig/pyrightconfig/snippets），不碰
+     * {@code .vscode/settings.json} 这类与用户共享的文件（其贡献键由下次 contribute 幂等校正）。
+     * 删除后由 {@code WorkspaceGenerator.createWorkspaceConfigs()} 重建出厂基础配置，
+     * 再经 {@link #contributeEditorConfig} 合并出完整配置。默认空。
+     */
+    default void resetEditorConfig(NekoJSPaths paths) {
+    }
+
+    /**
      * 本 backend 的输出目录：优先取 {@code [languages.<languageId>].outputDir}，缺省回退 {@code <baseDir>/<languageId>}；
      * backend 可整体覆盖以自定义布局。backend 自己负责在 {@link #generate(ProbeContext)} 内清理/原子替换该目录。
      */

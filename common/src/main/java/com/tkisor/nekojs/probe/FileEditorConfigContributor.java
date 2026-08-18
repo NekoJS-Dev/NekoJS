@@ -13,6 +13,7 @@ import com.tkisor.nekojs.probe.events.Snippet;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,10 +22,12 @@ import java.util.Set;
 /**
  * {@link EditorConfigContributor} 的文件实现：用 Gson JsonObject round-trip 读取既有配置，
  * 仅修改 probe 拥有的键（jsconfig 的 {@code compilerOptions.paths} 对应键、顶层 {@code include}、
- * {@code compilerOptions.typeRoots}、{@code compilerOptions} 的 JSX 运行时键
- * （{@code jsx}/{@code jsxFactory}/{@code jsxFragmentFactory}/{@code jsxImportSource}），
- * pyrightconfig 的 {@code extraPaths}，以及 {@code .vscode/settings.json} 中各 backend 通过
- * {@link #mergeVscodeSettings} 声明的贡献键），保留用户自定义键与未知键。文件不存在则按默认创建。
+ * {@code compilerOptions.typeRoots}、{@code compilerOptions.typeAcquisition}、
+ * {@code compilerOptions} 的 JSX 运行时键（{@code jsx}/{@code jsxFactory}/{@code jsxFragmentFactory}/
+ * {@code jsxImportSource}），pyrightconfig 的 {@code extraPaths}，以及 {@code .vscode/settings.json}
+ * 中各 backend 通过 {@link #mergeVscodeSettings} 声明的贡献键），保留用户自定义键与未知键。
+ * 文件不存在则按默认创建。数组型键（include/typeRoots）按「刷新 probe 管理条目 + 保留用户条目」
+ * 合并（见 {@link #refreshManagedEntries}），不整体覆盖。
  *
  * <p>关键属性：**幂等且可重复**——每次 probe 都重新合并，保证 paths/include/typeRoots 始终指向
  * backend 真实的输出目录（修复既有 jsconfig 指向旧 {@code .neko_probe/@package} 而非
@@ -61,8 +64,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         if (includeGlobs == null || includeGlobs.isEmpty()) return;
         try {
             JsonObject root = readJsonOrEmpty(jsconfigFile);
-            // include 是 probe 拥有的数组：整体替换（用户若自定义大概率就是要覆盖），其余键保留
-            root.add("include", GSON.toJsonTree(includeGlobs));
+            root.add("include", GSON.toJsonTree(refreshManagedEntries(
+                    existingStrings(root, "include"), includeGlobs, FileEditorConfigContributor::isProbeManagedInclude)));
             reconcileJsxRuntime(asObject(root, "compilerOptions"));
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
@@ -76,8 +79,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
         try {
             JsonObject root = readJsonOrEmpty(jsconfigFile);
             JsonObject compilerOptions = asObject(root, "compilerOptions");
-            // typeRoots 是 probe 拥有的数组：整体替换（语义同 include），其余键保留
-            compilerOptions.add("typeRoots", GSON.toJsonTree(typeRoots));
+            compilerOptions.add("typeRoots", GSON.toJsonTree(refreshManagedEntries(
+                    existingStrings(compilerOptions, "typeRoots"), typeRoots, FileEditorConfigContributor::isProbeManagedTypeRoot)));
             reconcileJsxRuntime(compilerOptions);
             root.add("compilerOptions", compilerOptions);
             writeJson(jsconfigFile, root);
@@ -261,6 +264,47 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     }
 
     // -------------------- 内部 --------------------
+
+    /** jsconfig include 的标准脚本文件 globs——probe 每次贡献（刷新），与 d.ts globs 一起由 {@link #isProbeManagedInclude} 识别。 */
+    private static final Set<String> SCRIPT_FILE_GLOBS = Set.of(
+            "./**/*.js", "./**/*.mjs", "./**/*.cjs",
+            "./**/*.ts", "./**/*.jsx", "./**/*.tsx");
+
+    /**
+     * 刷新数组型 probe 键：丢弃旧的 probe 管理条目（含历史 stale 形态），写入本次贡献值，
+     * **用户自加的条目原样保留**（追加在 probe 条目之后，去重）。probe 条目与用户条目靠
+     * {@code managed} 谓词区分——识别不了的用户条目宁可保留（幂等重跑会去重）。
+     */
+    private static List<String> refreshManagedEntries(List<String> existing, List<String> contributed,
+                                                      java.util.function.Predicate<String> managed) {
+        List<String> out = new ArrayList<>(contributed);
+        for (String entry : existing) {
+            if (managed.test(entry) || out.contains(entry)) continue;
+            out.add(entry);
+        }
+        return out;
+    }
+
+    /** include 中的 probe 管理条目：所有指向 {@code .neko_probe/} 的 glob（含修复前的 stale 路径形态）与标准脚本 globs。 */
+    private static boolean isProbeManagedInclude(String entry) {
+        return entry.contains(".neko_probe/") || SCRIPT_FILE_GLOBS.contains(entry);
+    }
+
+    /** typeRoots 中的 probe 管理条目：{@code .neko_probe/} 输出目录与 probe 默认携带的 node_modules/@types。 */
+    private static boolean isProbeManagedTypeRoot(String entry) {
+        return entry.contains(".neko_probe/") || entry.endsWith("node_modules/@types");
+    }
+
+    /** 读取 JSON 对象某键下的字符串数组；缺失/非数组返回空列表（用户的其它形态不强行解释）。 */
+    private static List<String> existingStrings(JsonObject parent, String key) {
+        JsonElement el = parent.get(key);
+        if (el == null || !el.isJsonArray()) return new ArrayList<>();
+        List<String> out = new ArrayList<>();
+        for (JsonElement e : el.getAsJsonArray()) {
+            if (e.isJsonPrimitive()) out.add(e.getAsString());
+        }
+        return out;
+    }
 
     /**
      * 把 {@code compilerOptions} 的 JSX 运行时键校正到引擎配置（{@link ClassFilter#INSTANCE} 的

@@ -119,6 +119,15 @@ public final class ProbeBackendRegistry {
         return java.util.Collections.unmodifiableSet(new java.util.TreeSet<>(byLanguage.keySet()));
     }
 
+    /** 全部 backend（按语言注册序），供 {@code resetEditorConfig} 等跨语言遍历。 */
+    public synchronized List<ProbeBackend> allBackends() {
+        List<ProbeBackend> out = new ArrayList<>();
+        for (Map<String, ProbeBackend> names : byLanguage.values()) {
+            out.addAll(names.values());
+        }
+        return out;
+    }
+
     /** 所有已登记条目（含冲突项），用于 {@code /nekojs probe list}。 */
     public synchronized List<String> registrars() {
         return List.copyOf(registrars);
