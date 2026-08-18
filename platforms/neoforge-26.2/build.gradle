@@ -12,7 +12,7 @@ group = mod_group_id
 // 版本相关参数通过 ext 注入 gradle/neoforge-26-shared.gradle
 // （minecraft_version / ENV / register_shared_dev_mod_source_sets 由共享脚本统一设置）
 ext.nekojsMinecraftVersion = "26.2.0"
-ext.nekojsNeoVersion = "26.2.0.7-beta"
+ext.nekojsNeoVersion = "26.2.0.57"
 ext.nekojsMinecraftVersionRange = "[26.2.0,26.3)"
 // 30.1.0.12 for NeoForge 26.2
 ext.nekojsJeiFileId = "8300448"
