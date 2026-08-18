@@ -3,6 +3,9 @@ package com.tkisor.nekojs.listener;
 import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.recipe.definition.LegacyRecipeSchemaScanner;
+import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
+import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.RegistryEvents;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
@@ -128,6 +131,22 @@ public class RegistryEventListener {
     private static final java.util.concurrent.atomic.AtomicBoolean RECIPE_SCRIPTS_APPLIED =
             new java.util.concurrent.atomic.AtomicBoolean(false);
 
+    /** 自动配方 schema 只扫一次（注册表内容在 postInit 已完整且 reload 不变；nekojs 自身配方已排除）。 */
+    private static final java.util.concurrent.atomic.AtomicBoolean SCHEMA_SCANNED =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    private static void scanRecipeSchemasOnce() {
+        if (!SCHEMA_SCANNED.compareAndSet(false, true)) return;
+        try {
+            RecipeTypeDefinitionStorage.setAutoDiscovered(
+                    RecipeSchemaAutoDiscovery.discover(LegacyRecipeSchemaScanner::scan));
+            ScriptType.SERVER.logger().info("Recipe schemas auto-discovered.");
+        } catch (Throwable e) {
+            SCHEMA_SCANNED.set(false); // 扫描失败允许下次重试
+            ScriptType.SERVER.logger().error("Recipe schema auto-discovery failed", e);
+        }
+    }
+
     /**
      * Run recipe scripts once. On Cleanroom 1.12.2 the IRecipe registry is populated very early
      * (before nekojs preInit registers this listener), so {@link #onRegisterRecipe} typically
@@ -149,6 +168,7 @@ public class RegistryEventListener {
      */
     public static void applyRecipeScripts() {
         if (!RECIPE_SCRIPTS_APPLIED.compareAndSet(false, true)) return;
+        scanRecipeSchemasOnce();
         ScriptType.SERVER.logger().info("Applying recipe scripts...");
 
         List<String> recipeIds = new ArrayList<>();
@@ -161,6 +181,7 @@ public class RegistryEventListener {
             ServerEvents.RECIPES.post(recipeEvent);
             ServerEvents.AFTER_RECIPES.post(recipeEvent);
             NekoRuntimeAccess.get().afterRecipes(recipeEvent);
+            recipeEvent.flushPendingRecipeBuilders();
         } catch (PolyglotException e) {
             if (NekoJSMod.RUNTIME_ROOT != null) {
                 NekoJSMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);

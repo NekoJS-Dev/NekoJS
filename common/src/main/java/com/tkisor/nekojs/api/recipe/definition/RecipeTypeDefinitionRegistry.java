@@ -21,7 +21,10 @@ public final class RecipeTypeDefinitionRegistry {
     }
 
     public RecipeTypeDefinitionRegistry merge(RecipeTypeDefinitionRegistry other) {
-        Map<String, Map<String, RecipeTypeDefinition>> merged = new LinkedHashMap<>(definitions);
+        // 内层 map 不可变（构造时 unmodifiableMap）：必须复制后再 putAll，
+        // 否则同命名空间合并（如插件覆盖已自动发现的命名空间）会抛 UnsupportedOperationException。
+        Map<String, Map<String, RecipeTypeDefinition>> merged = new LinkedHashMap<>();
+        definitions.forEach((namespace, types) -> merged.put(namespace, new LinkedHashMap<>(types)));
         for (var entry : other.definitions.entrySet()) {
             merged.computeIfAbsent(entry.getKey(), ignored -> new LinkedHashMap<>()).putAll(entry.getValue());
         }

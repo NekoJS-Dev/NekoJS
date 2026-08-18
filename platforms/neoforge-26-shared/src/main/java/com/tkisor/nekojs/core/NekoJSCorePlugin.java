@@ -239,7 +239,13 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
                         "ProbeEvents.addGlobal.listen(event => event.add('MyFlag', 'boolean'))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.TEST, "Test", "NekoTestHelper", "Test-script assertion and smoke test helper.", List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null, "Startup-side native NeoForge event bridge.", List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "ScriptEvents", null, "Startup-side custom server/client event method registration event group.", List.of("ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', 'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))")));
+        registry.register(TypeDocCatalogEntry.binding(
+                ScriptType.STARTUP,
+                "ScriptEvents",
+                null,
+                "Startup-side custom server/client event method registration event group.",
+                List.of("ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', "
+                        + "'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "RegistryEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("RegistryEvents.entityType(event => { })")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));
 

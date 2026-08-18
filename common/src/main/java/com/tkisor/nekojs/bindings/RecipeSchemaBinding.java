@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.bindings;
 
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
+import com.tkisor.nekojs.api.recipe.RecipeJsonTypeCatalog;
 import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
@@ -35,6 +36,11 @@ public class RecipeSchemaBinding {
             }
         }
         return all;
+    }
+
+    /** JSON 目录（mod jar recipes JSON 里声明的 type 清单；无 schema 字段，仅供查询）。 */
+    public List<String> jsonTypes(String namespace) {
+        return new ArrayList<>(RecipeJsonTypeCatalog.types(namespace));
     }
 
     public Map<String, Object> describe(String namespace, String type) {

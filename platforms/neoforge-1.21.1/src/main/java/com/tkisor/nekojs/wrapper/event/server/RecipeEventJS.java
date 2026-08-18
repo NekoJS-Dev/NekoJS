@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 @CalledByDynamicCode
 public class RecipeEventJS implements RecipeLifecycleContext {
 
-    private final RecipeRegistryProxy recipesProxy;
     private final Map<ResourceLocation, JsonElement> jsons;
     private final Map<ResourceLocation, RecipeCreationContext> contexts = new HashMap<>();
     private final HolderLookup.Provider registries;
@@ -41,6 +40,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     private int recipeCounter = 0;
 
     private final Set<ResourceLocation> takenIds = new HashSet<>();
+    // Lazily created by getRecipes(): constructing the proxy in a constructor or field
+    // initializer would hand a partially initialized `this` to another object (this-escape).
+    private volatile RecipeRegistryProxy recipesProxy;
 
     public RecipeEventJS(Map<ResourceLocation, JsonElement> originalJsons, HolderLookup.Provider registries) {
         this(originalJsons, registries, RecipeTypeDefinitionRegistry.EMPTY);
@@ -54,7 +56,6 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         this.takenIds.addAll(jsons.keySet());
         this.registries = registries;
         this.recipeTypeDefinitions = recipeTypeDefinitions == null ? RecipeTypeDefinitionRegistry.EMPTY : recipeTypeDefinitions;
-        this.recipesProxy = new RecipeRegistryProxy(this);
     }
 
     public Map<ResourceLocation, JsonElement> getFinalJsons() { return this.jsons; }
@@ -571,7 +572,12 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public RecipeRegistryProxy getRecipes() {
-        return this.recipesProxy;
+        RecipeRegistryProxy proxy = recipesProxy;
+        if (proxy == null) {
+            proxy = new RecipeRegistryProxy(this);
+            recipesProxy = proxy;
+        }
+        return proxy;
     }
 
     public RecipeJsonBuilder builder(String type) {

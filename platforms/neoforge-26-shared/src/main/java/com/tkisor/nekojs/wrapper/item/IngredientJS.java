@@ -18,13 +18,18 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     public IngredientJS() {}
 
     public IngredientJS(String... ids) {
+        // Inline instead of delegating to or(): calling an instance method from a
+        // constructor can hand a partially initialized `this` out (this-escape).
         for (String id : ids) {
-            or(id);
+            this.alternatives.add(IngredientResolver.fromString(id));
         }
     }
 
     public IngredientJS(Ingredient ingredient) {
-        or(ingredient);
+        // Inline instead of delegating to or(): calling an instance method from a
+        // constructor can hand a partially initialized `this` out (this-escape).
+        Ingredient resolved = IngredientResolver.fromIngredient(ingredient);
+        if (resolved != null && !resolved.isEmpty()) this.alternatives.add(resolved);
     }
 
     public IngredientJS or(String id) {
@@ -105,7 +110,10 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     }
 
     public List<ItemStack> stacks() {
-        return unwrap().items().map(ItemStack::new).toList();
+        // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+        @SuppressWarnings("deprecation")
+        List<ItemStack> result = unwrap().items().map(ItemStack::new).toList();
+        return result;
     }
 
     public List<ItemStack> displayStacks() {

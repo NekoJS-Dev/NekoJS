@@ -55,7 +55,6 @@ import java.util.stream.Collectors;
  */
 public class RecipeEventJS implements RecipeLifecycleContext {
 
-    private final RecipeRegistryProxy recipesProxy;
     private final Map<Identifier, JsonElement> jsons;
     private final Map<Identifier, RecipeCreationContext> contexts = new HashMap<>();
     private final HolderLookup.Provider registries;
@@ -63,6 +62,9 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     private int recipeCounter = 0;
 
     private final Set<Identifier> takenIds = new HashSet<>();
+    // Lazily created by getRecipes(): constructing the proxy in a constructor or field
+    // initializer would hand a partially initialized `this` to another object (this-escape).
+    private volatile RecipeRegistryProxy recipesProxy;
 
     public RecipeEventJS(Map<Identifier, JsonElement> originalJsons, HolderLookup.Provider registries) {
         this(originalJsons, registries, RecipeTypeDefinitionRegistry.EMPTY);
@@ -76,7 +78,6 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         this.takenIds.addAll(jsons.keySet());
         this.registries = registries;
         this.recipeTypeDefinitions = recipeTypeDefinitions == null ? RecipeTypeDefinitionRegistry.EMPTY : recipeTypeDefinitions;
-        this.recipesProxy = new RecipeRegistryProxy(this);
     }
 
     public Map<Identifier, JsonElement> getFinalJsons() { return this.jsons; }
@@ -221,6 +222,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     /** Parse single element through Ingredient.CODEC — works for individual items in arrays. */
+    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    @SuppressWarnings("deprecation")
     private boolean testSingleIngredient(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
@@ -231,6 +234,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
+    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    @SuppressWarnings("deprecation")
     private boolean testIngredientNode(JsonElement node, Ingredient match) {
         try {
             Ingredient nodeIng = Ingredient.CODEC.parse(registries.createSerializationContext(JsonOps.INSTANCE), node).getOrThrow();
@@ -323,6 +328,8 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         }
     }
 
+    // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+    @SuppressWarnings("deprecation")
     private boolean testOutputId(Identifier id, Ingredient match) {
         return match.items().anyMatch(holder -> BuiltInRegistries.ITEM.getKey(holder.value()).equals(id));
     }
@@ -600,7 +607,12 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     }
 
     public RecipeRegistryProxy getRecipes() {
-        return this.recipesProxy;
+        RecipeRegistryProxy proxy = recipesProxy;
+        if (proxy == null) {
+            proxy = new RecipeRegistryProxy(this);
+            recipesProxy = proxy;
+        }
+        return proxy;
     }
 
     public RecipeJsonBuilder builder(String type) {

@@ -223,7 +223,7 @@ public final class IngredientResolver {
         List<Holder<Item>> holders = new ArrayList<>();
         for (Ingredient ingredient : present) {
             for (ItemStack stack : ingredient.getItems()) {
-                if (!stack.isEmpty()) holders.add(stack.getItem().builtInRegistryHolder());
+                if (!stack.isEmpty()) holders.add(stack.getItemHolder());
             }
         }
         if (holders.isEmpty()) return Ingredient.of();

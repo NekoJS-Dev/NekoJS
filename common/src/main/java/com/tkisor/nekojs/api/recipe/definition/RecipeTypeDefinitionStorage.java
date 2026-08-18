@@ -1,24 +1,26 @@
 package com.tkisor.nekojs.api.recipe.definition;
 
 /**
- * Holds three layers of recipe type definitions, merged by {@link #current()}.
+ * Holds four layers of recipe type definitions, merged by {@link #current()}.
  *
  * <pre>
  *   auto-discovered (MinecraftRegistry scan)  ← lowest priority
- *   plugin overrides (registerRecipeSchemas)   ← medium priority
- *   data-driven JSON (data pack definitions)    ← highest priority
+ *   plugin overrides (registerRecipeSchemas)   │
+ *   data-driven JSON (data pack definitions)   │
+ *   script-registered (event.registerSchema)   ← highest priority
  * </pre>
  */
 public final class RecipeTypeDefinitionStorage {
     private static volatile RecipeTypeDefinitionRegistry dataDriven = RecipeTypeDefinitionRegistry.EMPTY;
     private static volatile RecipeTypeDefinitionRegistry autoDiscovered = RecipeTypeDefinitionRegistry.EMPTY;
     private static volatile RecipeTypeDefinitionRegistry pluginOverrides = RecipeTypeDefinitionRegistry.EMPTY;
+    private static volatile RecipeTypeDefinitionRegistry scriptSchemas = RecipeTypeDefinitionRegistry.EMPTY;
 
     private RecipeTypeDefinitionStorage() {}
 
-    /** Merged registry in priority order. */
+    /** Merged registry in priority order: script &gt; data &gt; plugin &gt; auto. */
     public static RecipeTypeDefinitionRegistry current() {
-        return autoDiscovered.merge(pluginOverrides).merge(dataDriven);
+        return autoDiscovered.merge(pluginOverrides).merge(dataDriven).merge(scriptSchemas);
     }
 
     /** Set data-driven definitions (from data pack JSON files). Called on server reload. */
@@ -32,5 +34,10 @@ public final class RecipeTypeDefinitionStorage {
 
     public static void setPluginOverrides(RecipeTypeDefinitionRegistry registry) {
         pluginOverrides = registry == null ? RecipeTypeDefinitionRegistry.EMPTY : registry;
+    }
+
+    /** Set script-registered definitions (event.registerSchema). Replaced wholesale per recipe event run. */
+    public static void replaceScript(RecipeTypeDefinitionRegistry registry) {
+        scriptSchemas = registry == null ? RecipeTypeDefinitionRegistry.EMPTY : registry;
     }
 }

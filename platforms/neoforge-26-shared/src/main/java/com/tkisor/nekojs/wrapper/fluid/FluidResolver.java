@@ -78,7 +78,8 @@ public final class FluidResolver {
 
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == Fluids.EMPTY || amount <= 0) return FluidStack.EMPTY;
-        return new FluidStack(fluid.builtInRegistryHolder(), amount);
+        // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
+        return new FluidStack(BuiltInRegistries.FLUID.wrapAsHolder(fluid), amount);
     }
 
     public static FluidStack stackFromValue(Value value) {
@@ -360,6 +361,7 @@ public final class FluidResolver {
      * 26.x 的 FluidIngredient 抽象类暴露的匹配栈枚举方法名（{@code getMatchingStacks}）。
      * 若 API 实际命名不同由编译错误驱动调整（保留此处以便定位）。
      */
+    @SuppressWarnings("unchecked") // 反射调用的返回类型无法静态校验，调用方按 FluidStack 语义使用
     private static List<FluidStack> matchingStacks(FluidIngredient fi) {
         try {
             return (List<FluidStack>) FluidIngredient.class.getMethod("getMatchingStacks").invoke(fi);

@@ -227,22 +227,86 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
 
     @Override
     public void registerTypeDocs(TypeDocsRegister registry) {
-        registry.register(TypeDocCatalogEntry.binding("Item", "NekoItemHelper", "Script-friendly ItemStack factory and helpers (KubeJS-style: Item.of(id)); delegates of/empty to the helper, rest to MC Item.", List.of("Item.of('minecraft:stone')", "Item.of('minecraft:stone', 4)", "Item.empty()")));
-        registry.register(TypeDocCatalogEntry.binding("Ingredient", "NekoIngredientHelper", "Script-friendly Ingredient and IngredientJS helper.", List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')")));
-        registry.register(TypeDocCatalogEntry.binding("Fluid", "NekoFluidHelper", "Script-friendly FluidStack helper.", List.of("Fluid.of('minecraft:water', FluidAmounts.BUCKET)", "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
-        registry.register(TypeDocCatalogEntry.binding("FluidIngredient", "NekoFluidIngredientHelper", "Script-friendly FluidIngredient and SizedFluidIngredient helper.", List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.sized('minecraft:water', 250)")));
-        registry.register(TypeDocCatalogEntry.binding("ServerEvents", null, "Server-side event group, including recipe editing.", List.of("ServerEvents.recipes(event => { })", "ServerEvents.afterRecipes(event => { })")));
-        registry.register(TypeDocCatalogEntry.binding("ProbeEvents", null,
-                "Probe generation customization events (probe.*). Listeners go in server_scripts; they run when /nekojs probe is invoked.",
+        registry.register(TypeDocCatalogEntry.binding(
+                "Item",
+                "NekoItemHelper",
+                "Script-friendly ItemStack factory and helpers (KubeJS-style: Item.of(id)); "
+                        + "delegates of/empty to the helper, rest to MC Item.",
                 List.of(
-                        "ProbeEvents.modifyType.listen(event => { event.forClass('net.minecraft.world.entity.player.Player').renameMethod('getX', 'getCustom'); })",
-                        "ProbeEvents.assignType.listen(event => event.assign('net.minecraft.world.item.ItemStack', 'string'))",
+                        "Item.of('minecraft:stone')",
+                        "Item.of('minecraft:stone', 4)",
+                        "Item.empty()")));
+        registry.register(TypeDocCatalogEntry.binding(
+                "Ingredient",
+                "NekoIngredientHelper",
+                "Script-friendly Ingredient and IngredientJS helper.",
+                List.of(
+                        "Ingredient.of('minecraft:stone')",
+                        "Ingredient.tag('minecraft:planks')")));
+        registry.register(TypeDocCatalogEntry.binding(
+                "Fluid",
+                "NekoFluidHelper",
+                "Script-friendly FluidStack helper.",
+                List.of(
+                        "Fluid.of('minecraft:water', FluidAmounts.BUCKET)",
+                        "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
+        registry.register(TypeDocCatalogEntry.binding(
+                "FluidIngredient",
+                "NekoFluidIngredientHelper",
+                "Script-friendly FluidIngredient and SizedFluidIngredient helper.",
+                List.of(
+                        "FluidIngredient.of('minecraft:water')",
+                        "FluidIngredient.sized('minecraft:water', 250)")));
+        registry.register(TypeDocCatalogEntry.binding(
+                "ServerEvents",
+                null,
+                "Server-side event group, including recipe editing.",
+                List.of(
+                        "ServerEvents.recipes(event => { })",
+                        "ServerEvents.afterRecipes(event => { })")));
+        registry.register(TypeDocCatalogEntry.binding(
+                "ProbeEvents",
+                null,
+                "Probe generation customization events (probe.*). Listeners go in server_scripts; "
+                        + "they run when /nekojs probe is invoked.",
+                List.of(
+                        "ProbeEvents.modifyType.listen(event => { "
+                                + "event.forClass('net.minecraft.world.entity.player.Player')"
+                                + ".renameMethod('getX', 'getCustom'); })",
+                        "ProbeEvents.assignType.listen(event => "
+                                + "event.assign('net.minecraft.world.item.ItemStack', 'string'))",
                         "ProbeEvents.addGlobal.listen(event => event.add('MyFlag', 'boolean'))")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.TEST, "Test", "NekoTestHelper", "Test-script assertion and smoke test helper.", List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null, "Startup-side native NeoForge event bridge.", List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "ScriptEvents", null, "Startup-side custom server/client event method registration event group.", List.of("ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', 'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "RegistryEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("RegistryEvents.entityType(event => { })")));
-        registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));
+        registry.register(TypeDocCatalogEntry.binding(
+                ScriptType.TEST,
+                "Test",
+                "NekoTestHelper",
+                "Test-script assertion and smoke test helper.",
+                List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
+        registry.register(TypeDocCatalogEntry.binding(
+                ScriptType.STARTUP,
+                "NativeEvents",
+                null,
+                "Startup-side native NeoForge event bridge.",
+                List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
+        registry.register(TypeDocCatalogEntry.binding(
+                ScriptType.STARTUP,
+                "ScriptEvents",
+                null,
+                "Startup-side custom server/client event method registration event group.",
+                List.of("ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', "
+                        + "'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))")));
+        registry.register(TypeDocCatalogEntry.binding(
+                ScriptType.STARTUP,
+                "RegistryEvents",
+                null,
+                "Startup-side registry builders, including scripted entity types.",
+                List.of("RegistryEvents.entityType(event => { })")));
+        registry.register(TypeDocCatalogEntry.binding(
+                ScriptType.STARTUP,
+                "GoalEvents",
+                null,
+                "Startup-side goal registration for existing or scripted entity types.",
+                List.of("GoalEvents.register(event => { })")));
 
         NekoCommonManualDeclarations.register(registry);
     }

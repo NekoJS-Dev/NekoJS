@@ -222,9 +222,10 @@ public final class IngredientResolver {
         if (present.size() == 1) return present.getFirst();
         List<Holder<Item>> holders = new ArrayList<>();
         for (Ingredient ingredient : present) {
-            for (Holder<Item> holder : ingredient.items().toList()) {
-                holders.add(holder);
-            }
+            // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
+            @SuppressWarnings("deprecation")
+            List<Holder<Item>> expanded = ingredient.items().toList();
+            holders.addAll(expanded);
         }
         if (holders.isEmpty()) return Ingredient.of();
         // holders 是 List<Holder<Item>>，必须先 unwrap 成 Item[]，否则 toArray(new Item[0]) 会

@@ -54,9 +54,10 @@ public class FoodBuilderJS {
 
         // 1.21.1 中，药水效果直接添加在 FoodProperties 上
         for (EffectEntry e : effects) {
-            // 1.21.1 推荐使用 getHolder 来获取包含 Registry 信息的 Holder 对象
+            // 1.21.1 推荐使用 getHolder 来获取包含 Registry 信息的 Holder 对象；
+            // effect 用 Supplier 重载（直接传 MobEffectInstance 的旧重载已废弃）
             BuiltInRegistries.MOB_EFFECT.getHolder(e.effectId()).ifPresent(effectHolder ->
-                    builder.effect(new MobEffectInstance(effectHolder, e.durationTicks(), e.amplifier()), e.probability())
+                    builder.effect(() -> new MobEffectInstance(effectHolder, e.durationTicks(), e.amplifier()), e.probability())
             );
         }
 

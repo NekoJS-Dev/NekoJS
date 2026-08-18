@@ -29,21 +29,25 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
         this.event = event;
     }
 
+    /** 创建 JSON 配方 builder（代理到 {@link RecipeJsonBuilder}）。 */
     @Override
     public RecipeBuilder builder(String type, String prefix) {
         return new RecipeJsonBuilder(event, type, prefix);
     }
 
+    /** 添加自定义（非 schema 化）配方 JSON。 */
     @Override
     public Object custom(JsonObject json) {
         return event.custom(json);
     }
 
+    /** 任意 JS 值 → 配方 JSON（经 {@link RecipeJsonValueConverter}）。 */
     @Override
     public JsonElement toJson(Value value) {
         return RecipeJsonValueConverter.toJson(event, value);
     }
 
+    /** 按字段种类编码 JS 值：标量直转，ingredient/fluid 走各 resolver 后序列化。 */
     @Override
     public JsonElement encodeField(RecipeFieldKind kind, Value value) {
         return switch (kind) {
@@ -110,6 +114,8 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
 
     /** 带字段上下文标记的类型错误（convertField 捕获后补字段名）。 */
     private static final class RecipeFieldTypeException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
         RecipeFieldTypeException(String message) {
             super(message);
         }
