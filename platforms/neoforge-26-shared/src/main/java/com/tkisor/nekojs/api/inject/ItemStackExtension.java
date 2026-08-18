@@ -126,13 +126,15 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     default boolean neko$hasEnchantment(Holder<Enchantment> enchantment, int level) {
-        return self().getEnchantments().getLevel(enchantment) >= level;
+        // getEnchantmentLevel：NeoForge 游戏逻辑查附魔等级（getEnchantments 已废弃）
+        return self().getEnchantmentLevel(enchantment) >= level;
     }
 
     default Ingredient neko$asIngredient() {
         if (self().isEmpty()) return Ingredient.of();
         if (self().getComponentsPatch().isEmpty()) {
-            return Ingredient.of(HolderSet.direct(self().getItem().builtInRegistryHolder()));
+            // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder（26.x 的 ItemStack 无 getItemHolder）
+            return Ingredient.of(HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
         }
         return neko$weakNBT();
     }
@@ -150,7 +152,7 @@ public interface ItemStackExtension extends ItemStackSpec {
         for (var entry : self().getComponentsPatch().entrySet()) {
             entry.getValue().ifPresent(value -> setComponent(components, entry.getKey(), value));
         }
-        return DataComponentIngredient.of(strict, components.build(), HolderSet.direct(self().getItem().builtInRegistryHolder()));
+        return DataComponentIngredient.of(strict, components.build(), HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

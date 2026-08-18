@@ -9,6 +9,10 @@ import java.util.Objects;
  */
 public class ApiContractException extends IllegalArgumentException {
 
+    private static final long serialVersionUID = 1L;
+
+    // 诊断载荷运行时只读，异常从不跨进程序列化；保留字段（而非 transient）避免序列化时静默丢数据
+    @SuppressWarnings("serial")
     private final ApiContractViolation violation;
 
     /** @param violation 违规详情，不能为 {@code null}。 */

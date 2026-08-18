@@ -10,7 +10,11 @@ import java.util.Objects;
  */
 public class ApiResolutionException extends IllegalStateException {
 
+    private static final long serialVersionUID = 1L;
+
     private final String code;
+    // 诊断载荷运行时只读，异常从不跨进程序列化；保留字段（而非 transient）避免序列化时静默丢数据
+    @SuppressWarnings("serial")
     private final Map<String, String> details;
 
     /** @param code 错误码，不能为 {@code null} */

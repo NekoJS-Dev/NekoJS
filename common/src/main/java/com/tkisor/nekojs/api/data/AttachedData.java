@@ -15,6 +15,11 @@ import java.util.HashMap;
  * @param <T> 宿主类型
  */
 public class AttachedData<T> extends HashMap<String, Object> {
+    private static final long serialVersionUID = 1L;
+
+    // 宿主对象非可序列化（MinecraftServer/Level/Player 等），容器本身纯内存不持久化；
+    // 保留字段（而非 transient）避免序列化时静默丢引用
+    @SuppressWarnings("serial")
     private final T parent;
 
     public AttachedData(T parent) {

@@ -4,6 +4,8 @@ package com.tkisor.nekojs.api.nbt;
  * NBT 二进制编解码失败时抛出的受检异常，携带失败原因分类。
  */
 public final class NbtBinaryException extends Exception {
+    private static final long serialVersionUID = 1L;
+
     /** 失败原因分类。 */
     public enum Reason { INVALID, LIMIT, FILE_SIZE, UNSUPPORTED }
 

@@ -176,6 +176,7 @@ public final class GoalRegistry {
      * 目标实体 → 实体类。支持 Java 类对象（{@code Java.type(...)}）与实体 id 字符串
      * （内置常用映射；NekoJS 注册的脚本实体统一为 {@link NekoScriptMob}）。
      */
+    @SuppressWarnings("unchecked") // 已用 isAssignableFrom 校验，转换安全
     private static Class<? extends LivingEntity> resolveTarget(Object target) {
         if (target instanceof Class<?> clazz) {
             if (LivingEntity.class.isAssignableFrom(clazz)) {

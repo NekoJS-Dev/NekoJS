@@ -18,6 +18,7 @@ public final class ClientBlockRenderTypes {
     private ClientBlockRenderTypes() {}
 
     /** 按名称应用方块渲染层；未知名称回退 solid。 */
+    @SuppressWarnings("deprecation") // 1.21.1 的 setRenderLayer(Block, ChunkRenderTypeSet) 标 @Deprecated(since=1.19) 但无替代，仍是官方推荐用法
     public static void apply(Block block, String renderType) {
         RenderType layer = parse(renderType);
         ItemBlockRenderTypes.setRenderLayer(block, ChunkRenderTypeSet.of(layer));

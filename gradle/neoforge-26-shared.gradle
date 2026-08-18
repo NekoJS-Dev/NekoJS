@@ -52,6 +52,10 @@ test {
 compileJava {
     // SpecCoverageProcessor 平台范围校验：本平台属于 NeoForge 系列
     options.compilerArgs += '-Anekojs.platform=nf'
+
+    // 根配置开了 -Xlint:all；Forge/NeoForge/Mixin 注解是运行时元数据，不需要注解处理器，
+    // javac 的 [processing] 提示纯属噪音，这里单独关掉该 lint（与 cleanroom 平台一致）。
+    options.compilerArgs += '-Xlint:-processing'
 }
 
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea

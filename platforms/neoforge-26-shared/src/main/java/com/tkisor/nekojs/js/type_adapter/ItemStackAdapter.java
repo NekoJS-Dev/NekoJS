@@ -157,7 +157,8 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
     private static ItemStack itemToItemStack(Item item, int count) {
         if (item == BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace("air"))) return ItemStack.EMPTY;
-        Holder<Item> holder = item.builtInRegistryHolder();
+        // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
+        Holder<Item> holder = BuiltInRegistries.ITEM.wrapAsHolder(item);
         return new ItemStack(holder, count, DataComponentPatch.EMPTY);
     }
 

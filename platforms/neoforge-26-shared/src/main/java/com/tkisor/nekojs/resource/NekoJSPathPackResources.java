@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.PathPackResources;
 import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.metadata.pack.PackFormat;
 import net.minecraft.server.packs.resources.IoSupplier;
 
 import java.io.ByteArrayInputStream;
@@ -28,10 +29,8 @@ public class NekoJSPathPackResources extends PathPackResources {
                 root
         );
 
-        int format = switch (type) {
-            case CLIENT_RESOURCES -> SharedConstants.RESOURCE_PACK_FORMAT_MAJOR;
-            case SERVER_DATA -> SharedConstants.DATA_PACK_FORMAT_MAJOR;
-        };
+        // SharedConstants.*_PACK_FORMAT_MAJOR 已废弃：从当前 WorldVersion 按 PackType 取 PackFormat 的 major
+        int format = SharedConstants.getCurrentVersion().packVersion(type).major();
 
         String json = """
                 {

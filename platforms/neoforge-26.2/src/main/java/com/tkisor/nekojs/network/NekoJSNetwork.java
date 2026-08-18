@@ -87,7 +87,7 @@ public class NekoJSNetwork {
             if (Minecraft.getInstance().gui.screen() instanceof NekoErrorDashboardScreen screen) {
                 screen.updateErrors(errors);
             } else if (openIfMissing) {
-                Minecraft.getInstance().gui.setScreen(new NekoErrorDashboardScreen(errors));
+                Minecraft.getInstance().gui.setScreen(NekoErrorDashboardScreen.create(errors));
             }
         }
 

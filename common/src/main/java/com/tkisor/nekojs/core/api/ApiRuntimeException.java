@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public class ApiRuntimeException extends ApiInvocationException {
 
+    private static final long serialVersionUID = 1L;
+
     private final String code;
     private final String symbolId;
     private final String platform;

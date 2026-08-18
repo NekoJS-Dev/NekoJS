@@ -18,7 +18,6 @@ public final class VerifiedContractSet {
     }
 
     /** 以一组契约构造集合；重复身份抛 {@link IllegalArgumentException}。 */
-    @SafeVarargs
     public static VerifiedContractSet of(VerifiedApiContract... contracts) {
         Map<ApiContractIdentity, VerifiedApiContract> map = new LinkedHashMap<>();
         for (VerifiedApiContract c : contracts) {

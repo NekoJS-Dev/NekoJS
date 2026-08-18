@@ -71,6 +71,10 @@ public class NekoCodeEditor {
     private int acCursorDrawX = -1;
     private int acCursorDrawY = -1;
 
+    // this-escape：构造器向自有 editorBox widget 注册 value/cursor 回调（lambda 捕获 this）。
+    // 所有回调在构造完成后才被 widget 触发，且只调用本类 private 方法——固有初始化模式，
+    // 重构为静态工厂收益低且无法游戏内验证，保守抑制
+    @SuppressWarnings("this-escape")
     public NekoCodeEditor(Font font, int x, int y, int width, int height, String initialText, Runnable onSave) {
         this.font = font;
         this.x = x;

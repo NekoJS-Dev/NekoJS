@@ -46,6 +46,8 @@ public interface DispatchCancellableEventBus<E, K> extends CancellableEventBus<E
     @SuppressWarnings("overloads")
     EventListenerToken<E> listen(K key, Predicate<E> listener);
 
+    // 自类型收窄：E_ extends E、K_ extends K，运行时类型不变，仅擦除层面的强制转换
+    @SuppressWarnings("unchecked")
     @Override
     default <E_ extends E, K_ extends K> DispatchCancellableEventBus<E_, K_> castDispatch() {
         return (DispatchCancellableEventBus<E_, K_>) this;

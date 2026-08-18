@@ -43,6 +43,8 @@ public final class EventBusFactory {
         return new DispatchCancellableEventBusImpl<>(eventType, dispatchKey, new ConcurrentHashMap<>());
     }
 
+    // keyType 的泛型边界由调用方（EventBusJS/EventGroup）保证，Class 本身是擦除的
+    @SuppressWarnings("unchecked")
     public static <E, K> DispatchKey<E, K> createDispatchKey(Class<? super K> keyType, java.util.function.Function<? super E, K> toKey) {
         return new DispatchKeyImpl<>((Class<K>) keyType, toKey);
     }

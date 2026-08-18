@@ -68,7 +68,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
     public ScriptError record(ScriptContainer script, Throwable error) {
         clear(script.id);
         clearByScriptPath(script.type, paths.root().relativize(script.path).toString().replace('\\', '/'));
-        ScriptError scriptError = new ScriptError(script, error, this);
+        ScriptError scriptError = ScriptError.create(script, error, this);
         errors.put(script.id, scriptError);
         return scriptError;
     }
@@ -108,7 +108,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             }
             created[0] = true;
             previousCountHolder[0] = 0L;
-            return new ScriptError(currentType, runtimeId, eventPath, throwable, this);
+            return ScriptError.create(currentType, runtimeId, eventPath, throwable, this);
         });
 
         // 容量上限（仅超限时触发一次过滤，正常有界路径零开销）：ConcurrentHashMap.size()

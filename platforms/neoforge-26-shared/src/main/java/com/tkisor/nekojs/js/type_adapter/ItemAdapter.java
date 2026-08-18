@@ -45,7 +45,7 @@ public class ItemAdapter extends AbstractJSTypeAdapter<Item> {
     protected Item fromHostObject(Object host) {
         if (host instanceof Item item) return item;
         if (host instanceof ItemStack stack) return stack.getItem();
-        if (host instanceof Block block) return Item.byBlock(block);
+        if (host instanceof Block block) return block.asItem();
         if (host instanceof NekoId id) {
             return itemFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
         }

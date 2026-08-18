@@ -68,6 +68,8 @@ public final class CancellableEventBusImpl<E>
         return getBuilt(CancellableEventBusImpl::compile).test(event);
     }
 
+    // 泛型数组无法直接创建，toArray 的数组类型强制转换是擦除层面的必然操作
+    @SuppressWarnings("unchecked")
     private static <E> Predicate<E> compile(Stream<Predicate<E>> predicateStream) {
         var arr = predicateStream.toArray((IntFunction<Predicate<E>[]>) Predicate[]::new);
         switch (arr.length) {

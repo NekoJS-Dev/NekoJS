@@ -66,23 +66,39 @@ public class NekoErrorDashboardScreen extends Screen {
     }
 
     private record MenuCategory(String name, List<NekoContextMenu.MenuItem> items) {}
-    private final List<MenuCategory> menuCategories = List.of(
-            new MenuCategory(I18n.get("nekojs.gui.menu.file"), List.of(
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.save"), this::actionSaveActiveTab),
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.open_external"), this::actionLocate),
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.exit"), this::onClose)
-            )),
-            new MenuCategory(I18n.get("nekojs.gui.menu.sync"), List.of(
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.push_current"), this::actionSyncUploadCurrent),
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.pull_current"), this::actionSyncDownloadCurrent),
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.push_all"), this::actionSyncUploadAll),
-                    new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.pull_all"), this::actionSyncDownloadAll)
-            ))
-    );
+    // 懒初始化：字段初始化器里的 this:: 方法引用会在构造期间把未完成的 this 交给 MenuItem（this-escape）
+    private List<MenuCategory> menuCategories;
 
-    public NekoErrorDashboardScreen(List<ErrorSummaryDTO> errors) {
+    private List<MenuCategory> menuCategories() {
+        List<MenuCategory> cats = this.menuCategories;
+        if (cats == null) {
+            cats = List.of(
+                    new MenuCategory(I18n.get("nekojs.gui.menu.file"), List.of(
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.save"), this::actionSaveActiveTab),
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.open_external"), this::actionLocate),
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.file.exit"), this::onClose)
+                    )),
+                    new MenuCategory(I18n.get("nekojs.gui.menu.sync"), List.of(
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.push_current"), this::actionSyncUploadCurrent),
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.pull_current"), this::actionSyncDownloadCurrent),
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.push_all"), this::actionSyncUploadAll),
+                            new NekoContextMenu.MenuItem(I18n.get("nekojs.gui.menu.sync.pull_all"), this::actionSyncDownloadAll)
+                    ))
+            );
+            this.menuCategories = cats;
+        }
+        return cats;
+    }
+
+    private NekoErrorDashboardScreen() {
         super(Component.translatable("nekojs.gui.dashboard.title"));
-        updateErrors(errors);
+    }
+
+    /** 构造并初始化错误列表：updateErrors 在构造完成后调用，避免构造期 this 逃逸。 */
+    public static NekoErrorDashboardScreen create(List<ErrorSummaryDTO> errors) {
+        NekoErrorDashboardScreen screen = new NekoErrorDashboardScreen();
+        screen.updateErrors(errors);
+        return screen;
     }
 
     public void updateErrors(List<ErrorSummaryDTO> updatedErrors) {
@@ -341,7 +357,7 @@ public class NekoErrorDashboardScreen extends Screen {
         graphics.text(this.font, "§cNEKO§fJS", 15, 21, -1);
 
         int menuX = 5;
-        for (MenuCategory cat : menuCategories) {
+        for (MenuCategory cat : menuCategories()) {
             int w = this.font.width(cat.name());
             boolean hov = mouseX >= menuX && mouseX <= menuX + w + 8 && mouseY >= 0 && mouseY <= 14;
             if (hov && this.activeContextMenu == null) {
@@ -481,7 +497,7 @@ public class NekoErrorDashboardScreen extends Screen {
 
         if (event.y() >= 0 && event.y() <= 14) {
             int menuX = 5;
-            for (MenuCategory cat : menuCategories) {
+            for (MenuCategory cat : menuCategories()) {
                 int w = this.font.width(cat.name()) + 8;
                 if (event.x() >= menuX && event.x() <= menuX + w) {
                     this.activeContextMenu = new NekoContextMenu(this.font, menuX, 14, this.width, this.height, cat.items());

@@ -11,7 +11,11 @@ import java.util.Objects;
  * 脚本侧可经 {@code err.code} 读取错误码（取值见 {@link ApiErrorCodes}）。
  */
 public class ApiInvocationException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
     private final String code;
+    // 诊断载荷运行时只读，异常从不跨进程序列化；保留字段（而非 transient）避免序列化时静默丢数据
+    @SuppressWarnings("serial")
     private final Map<String, String> details;
 
     /**

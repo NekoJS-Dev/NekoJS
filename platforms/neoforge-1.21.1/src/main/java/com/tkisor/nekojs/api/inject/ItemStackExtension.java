@@ -127,7 +127,8 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     default boolean neko$hasEnchantment(Holder<Enchantment> enchantment, int level) {
-        return self().getEnchantments().getLevel(enchantment) >= level;
+        // getEnchantmentLevel：NeoForge 游戏逻辑查附魔等级（getEnchantments 已废弃）
+        return self().getEnchantmentLevel(enchantment) >= level;
     }
 
     default Ingredient neko$asIngredient() {
@@ -150,7 +151,7 @@ public interface ItemStackExtension extends ItemStackSpec {
         for (var entry : self().getComponentsPatch().entrySet()) {
             entry.getValue().ifPresent(value -> setComponent(components, entry.getKey(), value));
         }
-        return DataComponentIngredient.of(strict, components.build(), HolderSet.direct(self().getItem().builtInRegistryHolder()));
+        return DataComponentIngredient.of(strict, components.build(), HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

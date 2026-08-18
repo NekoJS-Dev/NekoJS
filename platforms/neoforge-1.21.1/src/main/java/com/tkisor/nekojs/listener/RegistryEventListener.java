@@ -23,8 +23,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -120,7 +120,8 @@ public final class RegistryEventListener {
     /** 1.21.1：四参构造器（type + 双色）。NekoScriptMob 是 Mob 子类，unchecked 转换安全。 */
     @SuppressWarnings("unchecked")
     private static Item createSpawnEgg(EntityType<? extends LivingEntity> type, EntityTypeBuilderJS builder) {
-        return new SpawnEggItem((EntityType<? extends Mob>) (EntityType<?>) type,
+        // 直接构造器已废弃：用 DeferredSpawnEggItem（supplier 版）保持语义等价
+        return new DeferredSpawnEggItem(() -> (EntityType<? extends Mob>) (EntityType<?>) type,
                 builder.getSpawnEggBackgroundColor(), builder.getSpawnEggHighlightColor(), new Item.Properties());
     }
 

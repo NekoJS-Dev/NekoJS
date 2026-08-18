@@ -24,6 +24,9 @@ import graal.graalvm.polyglot.Value;
  *   <li>B9：中文错误信息改英文，并统一走 {@link ValueConversionException}。</li>
  * </ul>
  */
+// TagKey 是泛型类（TagKey<T>），此处只承载 raw 类型（JSTypeAdapter<T> 的 T 无法表达通配符，
+// getTargetClass 需返回 Class<TagKey>）；raw 用法集中在 REGISTRY_MAP 查表与 TagKey.create
+@SuppressWarnings("rawtypes")
 public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
     // B2: 不可变映射（旧实现是可变 HashMap）

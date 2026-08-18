@@ -28,10 +28,9 @@ public class NekoJSPathPackResources extends PathPackResources {
                 root
         );
 
-        int format = switch (type) {
-            case CLIENT_RESOURCES -> SharedConstants.RESOURCE_PACK_FORMAT;
-            case SERVER_DATA -> SharedConstants.DATA_PACK_FORMAT;
-        };
+        // SharedConstants.RESOURCE_PACK_FORMAT / DATA_PACK_FORMAT 已废弃：按 PackType 从
+        // 当前 WorldVersion 取 pack version（getPackVersion(PackType)）
+        int format = SharedConstants.getCurrentVersion().getPackVersion(type);
 
         String json = """
                 {

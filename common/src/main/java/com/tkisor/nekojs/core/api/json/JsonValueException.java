@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.core.api.json;
 
 public final class JsonValueException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
     public enum Reason { INVALID_JSON, LIMIT_EXCEEDED }
 
     private final Reason reason;

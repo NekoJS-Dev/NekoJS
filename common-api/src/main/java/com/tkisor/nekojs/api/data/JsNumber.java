@@ -9,6 +9,8 @@ import java.util.Objects;
  * 同时提供标准 {@link Number} 数值访问。值必须为有限数；不可变。
  */
 public final class JsNumber extends Number {
+    private static final long serialVersionUID = 1L;
+
     private final double value;
     private final String canonicalText;
 

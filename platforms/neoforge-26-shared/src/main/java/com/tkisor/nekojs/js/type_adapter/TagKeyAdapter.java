@@ -14,6 +14,9 @@ import graal.graalvm.polyglot.Value;
 
 import java.util.Map;
 
+// TagKey 是泛型类（TagKey<T>），此处只承载 raw 类型（JSTypeAdapter<T> 的 T 无法表达通配符，
+// getTargetClass 需返回 Class<TagKey>）；raw 用法集中在 REGISTRY_MAP 查表与 TagKey.create
+@SuppressWarnings("rawtypes")
 public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
     // B2: immutable map + 去掉 mutable static 块

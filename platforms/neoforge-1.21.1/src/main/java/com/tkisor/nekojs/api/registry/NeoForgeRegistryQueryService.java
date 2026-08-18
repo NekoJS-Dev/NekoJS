@@ -114,6 +114,7 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
     }
 
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public String dataMapValue(String registryId, String dataMapTypeId, String id) {
         ResourceLocation registryLocation = tryParse(registryId);
         ResourceLocation typeLocation = tryParse(dataMapTypeId);
@@ -162,8 +163,8 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Optional<Registry<?>> registry(ResourceKey<? extends Registry<?>> key) {
         // RegistryAccess.registry 返回 Optional<Registry<E>>，E 是捕获类型；
-        // 这里只需要 Registry<?> 的能力，显式收窄到通配符。
-        return (Optional) REGISTRY_ACCESS.registry((ResourceKey) key);
+        // 这里只需要 Registry<?> 的能力，实参收窄到 raw 后 E 推断为 Object，无需再转 Optional。
+        return REGISTRY_ACCESS.registry((ResourceKey) key);
     }
 
     private Optional<ResourceKey<? extends Registry<?>>> resolveKey(String registryId) {

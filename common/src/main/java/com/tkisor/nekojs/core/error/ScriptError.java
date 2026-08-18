@@ -32,23 +32,43 @@ public class ScriptError {
     private volatile int occurrenceCount = 1;
     private final DefaultErrorTracker tracker;
 
-    public ScriptError(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
+    private ScriptError(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
         this.tracker = tracker;
         this.errorId = script.id;
         this.script = script;
         this.scriptType = script.type;
         this.rawException = rawException;
-        parseException();
     }
 
-    public ScriptError(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
+    private ScriptError(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
         this.tracker = tracker;
         this.errorId = errorId;
         this.script = null;
         this.scriptType = scriptType;
         this.fallbackPath = fallbackPath;
         this.rawException = rawException;
-        parseException();
+    }
+
+    /**
+     * 构造并解析脚本错误。
+     *
+     * <p>解析（{@link #parseException()}）放在构造<b>完成后</b>执行：若在构造器内调用
+     * 实例方法，会把未完全初始化的 {@code this} 交给可能被重写的方法（this-escape）。
+     */
+    public static ScriptError create(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
+        ScriptError error = new ScriptError(script, rawException, tracker);
+        error.parseException();
+        return error;
+    }
+
+    /**
+     * 构造并解析回调/事件错误（同 {@link #create(ScriptContainer, Throwable, DefaultErrorTracker)}，
+     * 解析在构造完成后执行，避免 this-escape）。
+     */
+    public static ScriptError create(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
+        ScriptError error = new ScriptError(scriptType, errorId, fallbackPath, rawException, tracker);
+        error.parseException();
+        return error;
     }
 
     private void parseException() {

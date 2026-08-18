@@ -396,6 +396,8 @@ public final class NeoForgeNbtBinaryCodec implements NbtBinaryCodec {
     }
 
     private static final class LimitedOutputException extends IOException {
+        private static final long serialVersionUID = 1L;
+
         private LimitedOutputException() {
             super("Compressed NBT exceeds configured limit");
         }
