@@ -2,7 +2,10 @@ package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.ScriptBindingSchema;
+import com.tkisor.nekojs.api.event.ScriptEventDefinition;
+import com.tkisor.nekojs.api.event.ScriptEventRegistry;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
@@ -71,6 +74,7 @@ public final class ScriptEnvironmentFactory {
         });
 
         bindManagedGlobals(bindings, scriptType, bindingSchema, ApiGuestErrorFactory.create(context));
+        addEventGroupSchema(bindingSchema, pluginRuntime.eventGroups().values(), ScriptEventRegistry.groupsFor(scriptType));
 
         ScriptBindingSchema.register(scriptType, bindingSchema);
 
@@ -110,6 +114,28 @@ public final class ScriptEnvironmentFactory {
 
     private Object findImplementation(ApiSymbolId globalId) {
         return pluginRuntime.managedApiImplementation(globalId);
+    }
+
+    /**
+     * 事件组也是全局绑定（{@code ServerEvents}/{@code BlockEvents}/…由 eventBridge.bindEvents 绑定），
+     * 必须一并进入 {@link ScriptBindingSchema}：{@code EventCallbackSourceValidator} 以
+     * {@code schema.containsKey("ServerEvents")} 判定「这是事件组调用」再校验回调体，缺了这一步
+     * 事件回调 preflight（如 {@code event.recipes} 拼写检查）在生产环境整体静默失效
+     * （单测手工 register 过 schema，掩盖了这条断链）。组内合法成员 = 事件名（bus 名）。
+     *
+     * <p>ScriptEvents 自定义事件组（{@code ScriptEventGroupJS}）成员 = 已注册定义名。
+     * 已存在的条目（环境绑定/managed 全局）不覆盖，自定义组用 {@code putIfAbsent}。
+     */
+    static void addEventGroupSchema(Map<String, ScriptBindingSchema.BindingMembers> schema,
+                                     Iterable<EventGroup> groups,
+                                     Map<String, Map<String, ScriptEventDefinition>> scriptEventGroups) {
+        for (EventGroup group : groups) {
+            schema.put(group.name(),
+                    new ScriptBindingSchema.BindingMembers(Set.copyOf(group.viewBuses().keySet())));
+        }
+        scriptEventGroups.forEach((name, definitions) ->
+                schema.putIfAbsent(name,
+                        new ScriptBindingSchema.BindingMembers(Set.copyOf(definitions.keySet()))));
     }
 
     private void installJavaClassLoadTelemetry(Context ctx, ScriptType type) {
