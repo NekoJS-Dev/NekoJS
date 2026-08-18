@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -28,7 +28,9 @@ public final class ReflectionUtils {
         String pkg = basePackage != null ? basePackage : "com.tkisor.nekojs";
         String pkgPath = pkg.replace('.', '/');
 
-        List<Class<?>> found = new ArrayList<>();
+        // dev classpath 可能重复列出同一 jar（cleanroom run 配置里 common/common-api 各出现两次），
+        // 同一 FQCN 会被 getResources 上报多次——按类名去重，保证每个插件类只回调一次
+        Set<String> seen = new HashSet<>();
 
         try {
             Enumeration<URL> resources = Thread.currentThread().getContextClassLoader().getResources(pkgPath);
@@ -37,9 +39,9 @@ public final class ReflectionUtils {
                 String protocol = resource.getProtocol();
 
                 if ("file".equals(protocol)) {
-                    scanDirectory(new File(resource.getFile()), pkg, annotationClass, found, onFound);
+                    scanDirectory(new File(resource.getFile()), pkg, annotationClass, seen, onFound);
                 } else if ("jar".equals(protocol)) {
-                    scanJar(resource, pkgPath, annotationClass, found, onFound);
+                    scanJar(resource, pkgPath, annotationClass, seen, onFound);
                 }
             }
         } catch (IOException e) {
@@ -52,23 +54,23 @@ public final class ReflectionUtils {
     }
 
     private static void scanDirectory(File directory, String pkg, Class<? extends Annotation> annotationClass,
-                                       List<Class<?>> found, Consumer<Class<?>> onFound) {
+                                       Set<String> seen, Consumer<Class<?>> onFound) {
         File[] files = directory.listFiles();
         if (files == null) return;
 
         for (File file : files) {
             String name = file.getName();
             if (file.isDirectory()) {
-                scanDirectory(file, pkg + "." + name, annotationClass, found, onFound);
+                scanDirectory(file, pkg + "." + name, annotationClass, seen, onFound);
             } else if (name.endsWith(".class")) {
                 String className = pkg + "." + name.substring(0, name.length() - 6);
-                tryLoad(className, annotationClass, onFound);
+                tryLoad(className, annotationClass, seen, onFound);
             }
         }
     }
 
     private static void scanJar(URL jarUrl, String pkgPath, Class<? extends Annotation> annotationClass,
-                                 List<Class<?>> found, Consumer<Class<?>> onFound) {
+                                 Set<String> seen, Consumer<Class<?>> onFound) {
         String jarPath = jarUrl.getPath();
         int sepIndex = jarPath.indexOf("!/");
         if (sepIndex > 0) jarPath = jarPath.substring(0, sepIndex);
@@ -81,14 +83,18 @@ public final class ReflectionUtils {
                 String name = entry.getName();
                 if (name.startsWith(pkgPath) && name.endsWith(".class")) {
                     String className = name.substring(0, name.length() - 6).replace('/', '.');
-                    tryLoad(className, annotationClass, onFound);
+                    tryLoad(className, annotationClass, seen, onFound);
                 }
             }
         } catch (IOException ignored) {
         }
     }
 
-    private static void tryLoad(String className, Class<? extends Annotation> annotationClass, Consumer<Class<?>> onFound) {
+    private static void tryLoad(String className, Class<? extends Annotation> annotationClass,
+                                 Set<String> seen, Consumer<Class<?>> onFound) {
+        if (!seen.add(className)) {
+            return;
+        }
         try {
             Class<?> clazz = Class.forName(className, false, Thread.currentThread().getContextClassLoader());
             if (clazz.isAnnotationPresent(annotationClass) && !Modifier.isAbstract(clazz.getModifiers())) {

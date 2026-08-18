@@ -130,7 +130,10 @@ class NekoJSBasePluginManagerTest {
         int registrarThreads = 4;
         int getterThreads = 4;
         int rounds = 20;
-        int expectedSize = registrarThreads * rounds * PLUGIN_CLASSES.size();
+        // 重复发现按 (identity, class) 去重：并发的重复 registerClass 调用下，
+        // 最终视图 = 10 个唯一类各恰好一次（回归：cleanroom dev classpath 重复列出
+        // common/common-api jar，同插件类被扫描两次导致 ScriptProperty 重复注册崩溃）
+        int expectedSize = PLUGIN_CLASSES.size();
 
         ExecutorService pool = Executors.newFixedThreadPool(registrarThreads + getterThreads);
         CountDownLatch start = new CountDownLatch(1);
@@ -166,13 +169,23 @@ class NekoJSBasePluginManagerTest {
             }
 
             assertEquals(expectedSize, NekoJSBasePluginManager.getPlugins().size(),
-                    "final sorted view must contain every plugin registered by all registrar threads");
+                    "final sorted view must contain every unique plugin class exactly once");
             assertEquals(expectedSize, NekoJSBasePluginManager.getOwnedPlugins().size(),
-                    "final owned view must contain every plugin registered by all registrar threads");
+                    "final owned view must contain every unique plugin class exactly once");
         } finally {
             start.countDown();
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    void duplicateDiscoveryOfSameClassRegistersOnce() {
+        NekoJSBasePluginManager.registerClass(PluginP0.class);
+        NekoJSBasePluginManager.registerClass(PluginP0.class);
+
+        assertEquals(1, NekoJSBasePluginManager.getPlugins().size(),
+                "same class discovered twice (duplicate classpath entry) must register exactly once");
+        assertEquals(1, NekoJSBasePluginManager.getOwnedPlugins().size());
     }
 
     /** 在 stream() 中阻塞的 CopyOnWriteArrayList：旧快照在阻塞前捕获，用于确定性复现 stale-view 竞态。 */

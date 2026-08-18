@@ -57,6 +57,17 @@ public final class NekoJSBasePluginManager {
             return;
         }
 
+        // 同 (identity, class) 的重复发现只登记一次：dev classpath 可能重复列出同一 jar
+        // （cleanroom run 里 common/common-api 各出现两次，getResources 会上报两遍），
+        // NeoForge 的 ModList scan data 同样可能对同一类给出多条 AnnotationData。
+        // 不同 identity（不同 owner）注册同一类仍是允许的语义。
+        for (PluginEntry entry : ENTRIES) {
+            if (entry.plugin().getClass() == clazz && entry.identity().equals(identity)) {
+                NekoJS.LOGGER.debug("Skip duplicate plugin registration: {} (owner {})", clazz.getName(), identity.ownerId());
+                return;
+            }
+        }
+
         RegisterNekoJSPlugin anno = clazz.getAnnotation(RegisterNekoJSPlugin.class);
         if (anno != null) {
             if (anno.clientOnly() && !Platform.isClient()) {
