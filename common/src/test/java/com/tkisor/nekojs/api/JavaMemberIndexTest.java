@@ -129,6 +129,25 @@ class JavaMemberIndexTest {
         assertEquals("Foo", JavaMemberIndex.remapName(m, null, m.getName()));
     }
 
+    /** mixin/interface-injection 场景：注解在接口上，注入后方法反射自宿主类。 */
+    @RemapByPrefix("neko$")
+    public interface InjectedSpec {
+        Object neko$data();
+    }
+
+    public static class HostWithInjectedInterface implements InjectedSpec {
+        @Override
+        public String neko$data() { return "x"; }
+    }
+
+    @Test
+    void remapNameInheritsClassLevelPrefixFromInterfaces() throws NoSuchMethodException {
+        // 宿主类方法（declaringClass=HostWithInjectedInterface）必须通过其接口上的
+        // @RemapByPrefix 命中 remap——否则 probe 声明（neko$data）与运行时 JS 名（data）脱节
+        Method m = HostWithInjectedInterface.class.getMethod("neko$data");
+        assertEquals("data", JavaMemberIndex.remapName(m, null, m.getName()));
+    }
+
     @Test
     void remapNameReturnsCallerMarkerWhenNoMappingApplies() throws NoSuchMethodException {
         Method m = FakeEvent.class.getMethod("greet", String.class);

@@ -283,13 +283,28 @@ public final class JavaMemberIndex {
             if (stripped != null) return stripped;
         }
 
-        RemapByPrefix classPrefix = member.getDeclaringClass().getAnnotation(RemapByPrefix.class);
+        // 类级注解含「接口继承」：mixin/interface-injection 注入的方法反射自宿主类
+        // （如 MinecraftServer.neko$data，declaringClass=MinecraftServer），而 @RemapByPrefix
+        // 标注在注入接口上（ServerExtension）——运行时 Graal 走接口方法路径能命中注解，
+        // probe 走宿主类方法路径也必须一致，否则声明（neko$data）与运行时 JS 名（data）脱节
+        RemapByPrefix classPrefix = findRemapByPrefixOnClassOrInterfaces(member.getDeclaringClass());
         if (classPrefix != null) {
             String stripped = findAndRemovePrefix(original, classPrefix.value());
             if (stripped != null) return stripped;
         }
 
         return fallThroughMarker;
+    }
+
+    /** 查找类及其直接/间接接口上的 {@code @RemapByPrefix}（深度优先；命中即返回）。 */
+    private static @Nullable RemapByPrefix findRemapByPrefixOnClassOrInterfaces(Class<?> cls) {
+        RemapByPrefix direct = cls.getAnnotation(RemapByPrefix.class);
+        if (direct != null) return direct;
+        for (Class<?> iface : cls.getInterfaces()) {
+            RemapByPrefix found = findRemapByPrefixOnClassOrInterfaces(iface);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     // ==================== 内部原语 ====================
