@@ -4,14 +4,19 @@ import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
+import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
+import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
 import com.tkisor.nekojs.core.module.esm.NekoNativeEsmSourceRewriter;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
+import graal.graalvm.polyglot.SourceSection;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 
@@ -328,7 +333,77 @@ public final class NekoScriptModuleLoaderHost {
             String specifier = args.length == 0 ? "" : args[0].asString();
             return resolveToStringUnchecked(resolved.id(), specifier);
         };
-        executor.execute(module.value(), require, resolve, resolved.id(), resolved.dirname(), prepared.code());
+        try {
+            executor.execute(module.value(), require, resolve, resolved.id(), resolved.dirname(), prepared.code());
+        } catch (RuntimeException failure) {
+            IOException enriched = withSyntaxLocation(resolved, prepared, failure);
+            if (enriched != null) throw enriched;
+            throw failure;
+        }
+    }
+
+    /**
+     * CJS 模块由 script-loader.js 的 {@code new Function} 编译：语法错误的 SourceSection
+     * 指向编译调用点（internal/script-loader.js 内部帧），用户文件内的真实行列丢失。
+     * 用 {@link Context#parse} 以用户文件名重解析同一份代码取回位置，包成
+     * {@link NekoEsmLinkException} 诊断（ScriptError 对该异常渲染 位置 path:line:col 与代码片段）。
+     * 返回 null 表示保持原异常：链上已有 ESM 诊断（嵌套 require 已在内层定位）、
+     * 无语法错误、或重解析取不到位置。位置基于 prepared.code()：纯 JS 与磁盘文件一致；
+     * 经变换的语言（JSX 等）行列对应编译产物。
+     */
+    private IOException withSyntaxLocation(NekoResolvedModule resolved, NekoPreparedModule prepared, RuntimeException failure) {
+        if (resolved.special() || hasEsmDiagnostic(failure)) {
+            return null;
+        }
+        PolyglotException syntaxError = findSyntaxError(failure);
+        if (syntaxError == null) {
+            return null;
+        }
+        Source source;
+        try {
+            source = Source.newBuilder("js", prepared.code(), resolved.id())
+                    .uri(resolved.path().toAbsolutePath().normalize().toUri())
+                    .build();
+        } catch (IOException | RuntimeException ignored) {
+            return null;
+        }
+        try {
+            context.parse(source);
+        } catch (PolyglotException parseError) {
+            SourceSection location = parseError.getSourceLocation();
+            if (location == null) {
+                return null;
+            }
+            NekoEsmLinkException enriched = new NekoEsmLinkException(new NekoEsmDiagnostic(
+                    resolved.path(),
+                    new NekoEsmSpan(location.getCharIndex(), location.getCharIndex() + location.getCharLength()),
+                    location.getStartLine(), location.getStartColumn(),
+                    syntaxError.getMessage()));
+            enriched.initCause(failure);
+            return enriched;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+        // 重解析通过：new Function 体与顶层 script 解析语义差异（如顶层 return），保留原异常
+        return null;
+    }
+
+    private static boolean hasEsmDiagnostic(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof NekoEsmLinkException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static PolyglotException findSyntaxError(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof PolyglotException polyglotException && polyglotException.isSyntaxError()) {
+                return polyglotException;
+            }
+        }
+        return null;
     }
 
     // ======== 以下 ESM/CJS 加载 + 栈映射委托给 EsmModuleLifecycle / 内部逻辑 ========
