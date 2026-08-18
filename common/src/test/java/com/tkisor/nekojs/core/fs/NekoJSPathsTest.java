@@ -38,11 +38,11 @@ class NekoJSPathsTest {
         NekoJSPaths paths = pathsFor(gameDir);
 
         assertThrows(IOException.class, () -> paths.verifyInsideGameDir(gameDir.resolve("../outside.js")));
-        assertThrows(IOException.class, () -> paths.verifyInsideGameDir(Path.of("C:/Windows/system32/evil.js")));
+        assertThrows(IOException.class, () -> paths.verifyInsideGameDir(outsideRootAbsPath()));
         // 软链到外部目录的路径（若宿主允许创建 symlink）
         Path link = gameDir.resolve("nekojs/link.js");
         try {
-            Files.createSymbolicLink(link, Path.of("C:/Windows/win.ini"));
+            Files.createSymbolicLink(link, gameDir.toAbsolutePath().getRoot());
             Assumptions.assumeTrue(Files.exists(link), "symlink creation unsupported, skipping");
             assertThrows(IOException.class, () -> paths.verifyInsideGameDir(link),
                     "symlink escape must be rejected");
@@ -64,7 +64,7 @@ class NekoJSPathsTest {
         assertEquals(script.toRealPath(), paths.resolveGamePath("nekojs/server_scripts/b.js", gameDir));
         // 越界：server_scripts 上溯三级越过 gameDir
         assertThrows(IOException.class, () -> paths.resolveGamePath("../../../outside.js", cwd));
-        assertThrows(IOException.class, () -> paths.resolveGamePath("C:/Windows/system32/evil.js", cwd));
+        assertThrows(IOException.class, () -> paths.resolveGamePath(outsideRootAbsPath().toString(), cwd));
     }
 
     @Test
@@ -88,7 +88,8 @@ class NekoJSPathsTest {
 
         assertEquals(script.toRealPath(), paths.verifyScriptSyncPath("server_scripts/sync.js"));
         // 绝对路径 / .. 拒绝
-        assertThrows(IOException.class, () -> paths.verifyScriptSyncPath("C:/nekojs/server_scripts/x.js"));
+        assertThrows(IOException.class, () -> paths.verifyScriptSyncPath(
+                outsideRootAbsPath().resolve("nekojs/server_scripts/x.js").toString()));
         assertThrows(IOException.class, () -> paths.verifyScriptSyncPath("../server_scripts/x.js"));
         // 非脚本扩展名拒绝
         assertThrows(IOException.class, () -> paths.verifyScriptSyncPath("server_scripts/x.txt"));
@@ -108,5 +109,15 @@ class NekoJSPathsTest {
         Constructor<NekoJSPaths> constructor = NekoJSPaths.class.getDeclaredConstructor(Path.class);
         constructor.setAccessible(true);
         return constructor.newInstance(gameDir);
+    }
+
+    /**
+     * 跨平台的「gameDir 之外的绝对路径」：取 gameDir 所在文件系统根拼接。
+     * Windows 上是 {@code C:\nekojs-test-outside\evil.js}，Linux CI 上是
+     * {@code /nekojs-test-outside/evil.js}——两者都是绝对路径且必然在 gameDir 外。
+     * （写死 {@code C:/...} 在 Linux 上是相对路径，会解析进 gameDir 导致断言失效。）
+     */
+    private Path outsideRootAbsPath() {
+        return gameDir.toAbsolutePath().getRoot().resolve("nekojs-test-outside/evil.js");
     }
 }
