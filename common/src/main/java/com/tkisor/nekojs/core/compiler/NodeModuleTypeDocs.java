@@ -34,11 +34,31 @@ public final class NodeModuleTypeDocs {
     private NodeModuleTypeDocs() {}
 
     /**
-     * 注册内置 node 模块声明：扫描 {@code modules.list} 中的 {@code .ts} 模块，用 {@link #extractTS}
-     * 自动提取类型声明。所有内置 node 模块均已重写为带类型注解的 {@code .ts}，声明全自动提取，无手写回退。
+     * 注册内置 node 模块声明：扫描 {@code modules.list} 中的 .ts 模块，用 {@link #extractTS}
+     * 自动提取类型声明。所有内置 node 模块均已重写为带类型注解的 .ts，声明全自动提取，无手写回退。
      */
     public static void registerBuiltin(TypeDocsRegister registry) {
         scanBuiltinTypeScriptModules(registry);
+        registerCommonJsGlobals(registry);
+    }
+
+    /**
+     * CJS 互操作全局（{@code require}/{@code module}/{@code exports}）：运行时引擎提供这些
+     * shim，类型侧也必须自带声明——jsconfig 已禁用 Automatic Type Acquisition（ATA 只会按
+     * 依赖名联网拉 @types 包，离线/代理环境卡语言服务），没有这份声明时 {@code require()} 在
+     * .ts 脚本里报 TS2580 且无补全。
+     */
+    private static void registerCommonJsGlobals(TypeDocsRegister registry) {
+        String decl = """
+                declare function require(id: string): any;
+                declare const module: { exports: any };
+                declare const exports: any;
+                """;
+        registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
+            "nekojs.node-auto.cjs-globals",
+            decl,
+            "CommonJS interop globals provided by the script engine (require/module/exports).",
+            List.of()));
     }
 
     /** 扫描 {@code modules.list} 中的 .ts 条目，自动提取类型声明并注册（跳过非 .ts 与无类型信息的模块）。 */
