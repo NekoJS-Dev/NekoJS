@@ -138,7 +138,8 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     public String resolveToString(String parentPath, String specifier) throws IOException {
-        NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
+        // require.resolve 语义：bare 未命中直接报错（见 NekoModuleResolver.resolveForRequire）
+        NekoResolvedModule resolved = resolver.resolveForRequire(parentPath, specifier);
         return resolved.special() ? resolved.specifier() : resolved.id();
     }
 

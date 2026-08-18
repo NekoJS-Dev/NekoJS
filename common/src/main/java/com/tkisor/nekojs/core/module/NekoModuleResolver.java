@@ -51,6 +51,19 @@ public final class NekoModuleResolver {
         return resolveFileModule(baseDirectory.resolve(specifier).normalize());
     }
 
+    /**
+     * require 语义的严格解析：与 {@link #resolve} 相同，但 bare specifier 在 node_modules
+     * 未命中时**不降级为 SPECIAL**（SPECIAL 兜底只服务于 define.js 的 builtin/java: 分类），
+     * 直接抛错——对应 Node 的 {@code require.resolve} MODULE_NOT_FOUND 语义。
+     */
+    public NekoResolvedModule resolveForRequire(String parentPath, String specifier) throws IOException {
+        NekoResolvedModule resolved = resolve(parentPath, specifier);
+        if (resolved.special() && resolved.kind() == NekoModuleKind.SPECIAL) {
+            throw new IOException("Cannot resolve module: " + specifier);
+        }
+        return resolved;
+    }
+
     private NekoResolvedModule resolveBareModule(String specifier) throws IOException {
         Path nodeModules = paths.nodeModules().toAbsolutePath().normalize();
         Path requested = nodeModules.resolve(specifier).normalize();

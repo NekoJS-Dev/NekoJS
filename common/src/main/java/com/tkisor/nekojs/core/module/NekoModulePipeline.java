@@ -14,6 +14,7 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.module.cjs.CjsStaticAnalyzer;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 import com.tkisor.nekojs.core.module.esm.NekoEsmParser;
 
@@ -61,14 +62,15 @@ public final class NekoModulePipeline {
         if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
             if (language instanceof NekoLegacyLanguagePlugin legacyLanguage) {
                 ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
-                return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap());
+                return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap(), CjsStaticAnalyzer.analyze(rawSource));
             }
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
-                return NekoPreparedModule.commonJs(rawSource, null);
+                return NekoPreparedModule.commonJs(rawSource, null, CjsStaticAnalyzer.analyze(rawSource));
             }
             NekoCompileOutput compiled = compilationPipeline.compile(
                 file, rawSource, extension, language, config.jsxAutomaticRuntime());
-            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
+            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap(),
+                    CjsStaticAnalyzer.analyze(rawSource));
         }
 
         NekoCompileOutput compiled = compilationPipeline.compile(

@@ -82,6 +82,32 @@ class NekoModuleResolverTest {
         assertTrue(error.getMessage().startsWith("Unsupported module file type:"), error::getMessage);
     }
 
+    @Test
+    void resolveForRequireRejectsUnknownBareSpecifier() throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+
+        // require.resolve 语义：bare 未命中抛 MODULE_NOT_FOUND，而不是降级为 SPECIAL
+        IOException error = assertThrows(IOException.class,
+                () -> resolver.resolveForRequire("nekojs/server_scripts/main.js", "unknown-package"));
+        assertTrue(error.getMessage().contains("unknown-package"), error::getMessage);
+    }
+
+    @Test
+    void resolveForRequireKeepsBuiltinJavaAndFileModules() throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path module = gameDir.resolve("nekojs/node_modules/nekojs/jsx-runtime.js");
+        Files.createDirectories(module.getParent());
+        Files.writeString(module, "export const jsx = () => null;");
+
+        // builtin / java: 是合法 special，require.resolve 应正常返回
+        assertEquals("fs", resolver.resolveForRequire("nekojs/server_scripts/main.js", "fs").specifier());
+        assertEquals("java:example/Widget",
+                resolver.resolveForRequire("nekojs/server_scripts/main.js", "java:example/Widget").specifier());
+        // 文件模块（含 node_modules 命中）正常解析
+        assertEquals(NekoModuleKind.SCRIPT,
+                resolver.resolveForRequire("nekojs/server_scripts/main.js", "nekojs/jsx-runtime").kind());
+    }
+
     private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {
         Constructor<NekoJSPaths> constructor = NekoJSPaths.class.getDeclaredConstructor(Path.class);
         constructor.setAccessible(true);
