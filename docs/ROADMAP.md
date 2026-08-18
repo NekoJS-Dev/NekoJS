@@ -15,7 +15,7 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 ### 近期完成
 
 - [x] **架构治理（2026-07-24）**：
-    - 移除已失效的 `architectureCheck` 正则计数任务（`gradle/architecture-check.gradle` + 根 `apply from`），架构迁移改由代码评审、定向测试和 `ai_arch/archive/plan-architecture-optimization.md` 清单跟踪。
+    - 移除已失效的 `architectureCheck` 正则计数任务（`gradle/architecture-check.gradle` + 根 `apply from`），架构迁移改由代码评审、定向测试和架构治理文档（已随 `ai_arch/` 整理归档）跟踪。
     - **Probe 替换机制修复**：内置 `ProbeOrchestrator` 改为 fallback（`ProbeRegistry.setFallback`），单个第三方实现（`setGenerator`）现在能真正替换它；多个第三方实现仍确定性冲突。`ProbeRegistry` 解耦 `NekoJS`，改用 JDK `java.util.logging`。新增 `ProbeRegistryTest` 覆盖 fallback 生效、第三方替换、多方冲突、锁后注册。
     - **事务式完整 reload**：SERVER/CLIENT/TEST 的 `reloadScripts` 改为先在候选 Context 加载、成功才切换并关闭旧 Context；失败时丢弃候选并保留旧 Context，避免旧实现「先销毁旧环境再加载」造成的半失效崩溃。STARTUP 因涉及不可逆注册保持 reset+load 语义。`runTestScripts` 同样改为事务式。
     - **HostAccess 初始化顺序修复**：`NekoSharedHostAccess` 从静态单例改为构造注入实例，基于已冻结的 adapter snapshot 构建，消除类初始化时机固化 adapter 风险。
@@ -45,6 +45,13 @@ NekoJS 的目标是在 NeoForge（26.1 / 26.2 / 1.21.1）与 Cleanroom（1.12.2�
 - [ ] **NeoForge 1.21.1 共享评估**：1.21.1 与 26.x 有 92 个同路径文件不同（API 演进跨度大），强合并需大量条件编译或抽象，ROI 低；暂不纳入共享，后续单独评估。
 - [x] **NeoForge 配方热重载**：`RecipeManagerMixin` 永久缓存数据包阶段的原始配方 JSON（`baseJsons`），`ReloadableServerResourcesMixin` 在资源 reload 收尾、组件/标签绑定后触发 `nekojs$applyScripts()`；`/nekojs reload server` 在脚本 reload 后主动调用，从 `baseJsons` 重建工作集、重跑 `ServerEvents.recipes`/`afterRecipes` 脚本，并用脚本产出 JSON 重新解析替换 `RecipeManager.recipes`（可重入）。3 平台（26.1/26.2/1.21.1）均实现。
 - [ ] **测试覆盖**：common / common-api 已有较完整的纯函数测试（路径穿越、adapter 转换、facade 行为、契约符号计数、NBT SNBT 往返等）；仍缺平台模块的可运行测试与运行时集成验证。后续优先补平台侧 smoke 测试脚本统一化与 CI 门禁。
+- [x] **工程卫生收尾（2026-08 批次）**：
+    - **neoforge 平台 javac 警告清零**（`--rerun-tasks` 实测 0 警告）：1.21.1 原 20 条、26.1/26.2 原各 33 条全部消除。处理方式：deprecation 换新 API（`getEnchantmentLevel`/`wrapAsHolder`/`getTagEnchantments` 语义、`FoodProperties.Builder.effect(Supplier,...)`、`DeferredSpawnEggItem`、`block.asItem()`、`WorldVersion.packVersion(type).major()`）；无等价替代的保留 `@SuppressWarnings` 并注释理由（`Ingredient.items()` custom 展开语义、26.1 过渡期 `hurt`、`setRenderLayer`）；this-escape 重构（`RecipeEventJS.recipesProxy` 懒加载、`NekoErrorDashboardScreen` 静态工厂+菜单懒初始化）或 GUI 构造器注册模式注释化抑制（`NekoCodeEditor`）；serial/unchecked/rawtypes 按规范惯例。
+    - `EventGroup.buses` 已改 `LinkedHashMap`（注册顺序确定，probe 目录迭代不再依赖 HashMap 布局）。
+    - CI 平台构建已合并为单次 `build` 调用（原 compile/test/build 三次 Gradle 调用）。
+    - 26.1/26.2 本地 4 个文件（`LevelExtension`/`NekoHostIdentifier`/`NekoSecurityWarningHandler`/`NekoJSNetwork`）确认有真实版本差异，**保留本地**（由 `check-platform-drift` 归一化对比），不再尝试合并。
+    - **probe.toml 启动期自动生成 + 运行时自动重读**：`WorkspaceGenerator.setupWorkspace()` 新增 `ProbeCoordinator.ensureConfigFile()`——此前 probe.toml 只有跑 `/nekojs probe` 命令才落盘（懒加载），清理游戏目录后 `nekojs/config/` 里只有 engine.toml，probe.toml 不会自动回来；现与 engine.toml 对称，首次启动即生成默认配置。`readConfig()` 改为按 probe.toml mtime 自动失效重读（文件被编辑后下次读取自动生效，无需 `/nekojs probe reload`；该命令保留作强制刷新）。`ProbeConfigTest` 新增「缺失文件 → load 自动落盘默认值」、`ProbeCoordinatorInstanceTest` 新增「mtime 变更自动重读 / 文件删除重建 / 多实例互不影响」回归用例。
+    - **1.12.2 自动配方 Schema（2026-08-15）**：cleanroom 新增 `LegacyRecipeSchemaScanner`——postInit 扫描 `CraftingManager.REGISTRY` 按命名空间×配方类反射字段推断 schema（Ingredient/ItemStack/数值/String/List&lt;Ingredient&gt;，跳过 vanilla 与无字段类），并扫描各 mod jar 的 `assets/<modid>/recipes/*.json` 得到 JSON 类型目录（`RecipeSchema.jsonTypes(ns)`，仅查询）。`event.recipes.<modid>.<type>(...)` 走 `RecipeNamespaceProxy` → `ReflectiveRecipeBuilder`（typed 字段累积，event 收尾 flush 反射构造：script ctor → 无参+字段注入，注册 `nekojs:nekojs_<type>_<n>`）。兜底双轨：现有 Java 插件口 + 新 `event.registerSchema(ns, type, { fields, ctor?, class? })`（script 层最高优先级）。common 改动：`applyField` 默认方法（NeoForge 零变化）、storage script 层、`RecipeJsonTypeCatalog`；顺带修复 `RecipeTypeDefinitionRegistry.merge` 同命名空间合并 UOE 潜伏 bug。probe .d.ts 与 `RecipeSchemaBinding` 自动受益；smoke 参考脚本 `platforms/cleanroom-1.12.2/src/test/scripts/recipe_schema_smoke.js`。**probe import 平台化修复**：`RecipeEventDeclarationGenerator` 的 schema kind→包路径改走 `IPlatform.recipeFieldKindPackage`（默认 NeoForge `world.item*`，cleanroom override 为 `item*`）——此前硬编码 NeoForge 包导致 1.12.2 产物中 `$ItemStack_/$Ingredient_` 从两个模块重复 import（TS Duplicate identifier，`event.recipes` 补全失效）；新回归测试 `RecipeEventDeclarationGeneratorTest`（双平台路径 + 去重）。
 
 ## 已完成的基础能力
 
@@ -179,7 +186,9 @@ RecipeTypeDefinition {
 - [x] 添加受控调度器：延迟任务、重复任务、reload 自动取消旧任务。Node 兼容 `timers`/`node:timers`/`timers/promises` 已实现 `setTimeout`/`clearTimeout`/`setInterval`/`clearInterval`/`setImmediate`/`clearImmediate` 及 promise 版，Context close 与单文件 reload 会取消旧任务。
 - [x] 添加 CI，至少构建两个受支持平台模块。
 - [x] 分析确认 common 模块因无 Minecraft 依赖，仅 6 个纯工具类可迁移（RecipeCreationContext、RecipeJsonPath、RecipeJsonValue、FluidAmounts、NekoWrapper、JsonObjectAdapter）。其余 ~120 个平台文件均有 Minecraft/NeoForge import，需 compat 层才能迁移。
-- [ ] 为路径校验、脚本发现、事件总线、adapter 和 recipe filter 增加聚焦测试。
+- [x] 为路径校验、脚本发现、事件总线、adapter 和 recipe filter 增加聚焦测试（2026-08 评估与补齐）：
+    - 已有覆盖：事件总线（`EventBusBaseRuntimeTest`/`EventBusConcurrentStressTest`/`EventBusJSHasListenersTest`/`EventBusJSPriorityKeyTest`）、adapter 与 recipe filter（`RecipeFilterAdapterTest`/`BlockPosAdapterTest`/`Vec3AdapterTest` 等平台共享测试）、脚本排序（`ScriptLoadOrderSorterTest`）。
+    - 本轮补齐：新增 `NekoJSPathsTest`（6 用例：gameDir/nekojs 根边界、相对 cwd 解析、`..` 与绝对路径越界拒绝、symlink 逃逸拒绝、脚本同步白名单（绝对/`..`/非脚本扩展名/脚本根外拒绝）、深层创建路径）。
 
 ## Catalog 与外部类型工具契约
 
@@ -220,7 +229,9 @@ NekoJS 本体只需保证 `NekoScriptCatalog`、manual declarations、snippets�
 
 - [x] 从 `SnippetCatalogEntry` 生成 VSCode snippets；当前 catalog 已提供 server started、recipe event、afterRecipes、recipe namespace introspection、fallback namespace、shapeless recipe、recipe builder 的初始片段，VSCode snippets JSON 序列化已收敛到 common 的 `NekoSnippetJson`。
 - [x] 为工作区生成 per-script-dir `jsconfig.json`，让 `startup_scripts`、`server_scripts`、`client_scripts`、`test_scripts` 获得对应 side 类型。
-- [ ] 保持 workspace layout、side-aware `jsconfig.json` / `tsconfig.json` 与 catalog 输出一致，供外部类型工具接入。
+- [x] **jsconfig 修复（2026-08）**：① include 恒含脚本文件 globs（`./**/*.js` 等）——旧实现被 probe 的 include 整体替换为 d.ts-only，导致 JS 文件不在项目内、IDE 无补全；② `moduleResolution: "node"`（node10）→ `"bundler"`、删除弃用的 `baseUrl`（TS 6/7 兼容）；③ 顺手修复 `TypeScriptProbeBackendEditorConfigTest` 缺 `@BeforeAll TestPlatformInit` 的隔离缺陷。
+    - [x] **@package TS 标识符转义（2026-08）**：修复 Java 类桩 TS 声明的语法错误——① 数字开头 getter 属性名（`get2DigitYearStart` → property `2DigitYearStart`）跳过 getter 段并降级渲染原方法名（`get 2DigitYearStart()` 非法语法）；② TS 保留字参数名转义（`function` → `function_`，含严格模式/上下文关键字集合）；③ **varargs 泛型实参保留**（`MemoryModuleType<?>...` 之前走非泛型路径丢 `<any>`，如 `List.of<E>(arg0?: E[])` 曾渲染成 `object[]`）；④ 泛型数组实参渲染完整性回归测试（旧产物曾出现参数名混入泛型实参的错位）。新增 `TypeScriptClassRendererTest` 4 用例；golden 同步再生成（diff 全部为 varargs 泛型保留 + bridge 删除，已 review）。
+    - **已知遗留**：`@package` TS 声明仍可能有类型解析类问题（未达 tsc 全绿——Java 类型系统与 TS 的映射边界，如部分泛型嵌套/数组组合），影响范围小于语法错误；`@side-only`（事件/绑定声明）无此问题。
 - [ ] 将未来 live editor bridge 作为外部增强，不作为 NekoJS 本体核心依赖。
 
 ### 明确不照搬 ProbeJS 的部分
@@ -307,6 +318,9 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 - [x] 实现 top-level await 第一阶段：pipeline 不再硬拒绝 TLA，ESM entry/static dependency/dynamic import 会等待 Graal native async module evaluation 完成；CJS `require()` 遇到 TLA/async-descendant ESM 会抛出清晰同步错误，而不是用 CJS Promise 包装模拟。
 - [x] 增加 `.mjs` / `.cjs` 脚本扩展支持，并定义 `.js` auto、`.mjs` ESM、`.cjs` CJS 的行为：pipeline/resolver 均按该规则分类，script language registry 也内置这些扩展。
 - [ ] 实现 CJS runtime 第二阶段：Java AST/IR-backed CJS parser/loader，支持 `require`、`module.exports`、`exports`、`__filename`、`__dirname`、JSON、Node builtin、`java:`，并与 native ESM 建立互操作规则。
+    - [x] **第二阶段第一批（2026-08）**：新增 `core/module/cjs/` 基础设施——`CjsStaticAnalyzer`（token 级静态分析：复用 `NekoEsmLexer`，识别字面量 require 依赖、`module.exports` 重赋值 / `exports.xxx` 成员赋值、`__esModule` 互操作标记、影子 require 遮蔽）与 `CjsModuleRecord`（分析结果载体）；`NekoPreparedModule` 增加 `cjsRecord` 字段，`NekoModulePipeline` CJS 分支接入分析；清理 `script-loader.js` 的 `hotReloadModule` 悬空入口（Java host 无此方法）；新增 `CjsStaticAnalyzerTest`（9 用例：依赖提取/字符串注释正则模板干扰/成员访问/动态参数/导出形状/__esModule/影子 require）。**不改变现有执行路径**（执行语义保持 JS glue + Java host，避免无游戏环境下的运行时回归风险）。
+    - [x] **第二阶段第二批（2026-08）**：`require.resolve` 严格校验——`NekoModuleResolver.resolveForRequire`（bare specifier 在 node_modules 未命中时不再降级为 SPECIAL，直接抛 MODULE_NOT_FOUND 语义错误），`NekoScriptModuleLoaderHost.resolveToString` 接入；补 `NekoModuleResolverTest` 2 个用例（未知 bare 拒绝 / builtin+java:+文件模块正常）。
+    - [ ] 后续：CjsModuleRecord/CjsModuleCache 一等模块记录与缓存、interop named 导出静态视图、CJS↔ESM cycle、node_modules 上溯 + package.json main/exports。
 - [x] 定义 ESM/CJS interop 第一阶段：ESM import CJS 的 default/namespace/named 读取 `module.exports`，CJS require 已支持的同步 ESM 通过 native namespace capture module 返回 namespace；测试覆盖 default/namespace/named import CJS、CJS require ESM 和 require TLA ESM 的同步拒绝。后续仍需补 CJS↔ESM cycles 和更完整 CJS runtime。
 - [x] 增加命令级依赖索引 reload：`/nekojs reload <server|client|startup|test> [file]` 支持按 type 整体重载、重跑指定入口，或在指定 helper module 时通过 runtime dependency graph 反向找到已加载的受影响入口并重跑；目标入口会清理自身 event listener、timer、错误记录，并按受影响模块切片失效 CJS cache、ESM module record、prepared cache 和 virtual ESM source。virtual ESM URI 现在带 module generation，reload 后会生成新 URI，避免 Graal 继续复用旧 native ESM module instance，同时避免每次 helper reload 都清空整个 runtime module cache。
 - [ ] 增加真正模块实例级热替换：以 real path、lastModified、size、可选内容 hash、compiler/parser/runtime version、module format 为 key，拆分 source/compile/AST/link/evaluate 缓存；维护 generation/module instance，helper module 变更时只 invalid/relink/re-evaluate 受影响图切片而不是重跑入口，并隔离失败 reload。
@@ -373,7 +387,29 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 
 ## 长期方向
 
-- [ ] 定义稳定的 NekoJS API 版本和破坏性变更迁移策略。
+- [x] **定义稳定的 NekoJS API 版本和破坏性变更迁移策略（2026-08 第一批）**：
+    - 版本模型落地并文档化（版本治理文档 2026-08-16 起移至本地 `ai_arch/API_VERSIONING.md`，未入库）：`api.version=0.12.0` 独立于模组版本、`spi.version`/`runtime.contract.version` 0.0.0 未门控、catalog schema 版本；版本唯一事实源 `api-runtime.properties`。
+    - **API 表面冻结基线（机器可执行）**：新增 `ApiManifest`（可序列化 DTO，设计 §9.5）+ `ApiManifestGenerator`（字典序确定性导出）+ `ApiManifestJson`（gson）；`ApiManifestGoldenTest` 把契约反射产出的 core API 表面固化为 `src/test/resources/nekojs/golden/api-manifest-core.json`（901 行，110+ 符号），任何符号/签名/版本变化必须显式 regenerate + 破坏性变更评审。
+    - 修复连带发现的真实 bug：common 的 `${mod_version}` 模板替换（`sourceSets.resources.filter` 不生效）从未注入 `api-runtime.properties`——游戏里 `Platform.nekojsVersion` 返回的是字面量 `${mod_version}`；改为 `processResources.filesMatching` 注入。
+    - 破坏性变更流程（契约先行 → 弃用窗口 → major bump）、事件准入五标准、冻结范围（基础工具/Item/Ingredient/Fluid/事件/配方/Network）与 Runtime Contract 分离原则已写入治理文档。
+    - 后续：各域 domain contract manifest（事件取消统一 `event.cancel()` 等）按文档 §3/§5 逐域推进，进入 1.0.0 前完成。
+- [x] **脚本 API 表面整理（2026-08-15，1.0.0 冻结准备）**：
+    - 盘点：`docs/api-surface-inventory.md`——四平台 + common 全量表面（core 契约 147 符号、全局绑定按域、14 事件组逐 bus、适配器、spec 接口、事件取消面三套习惯、tier 现状），平台覆盖 PORTABLE / 分裂点逐条标注。
+    - 方案：API 整理方案（api-rework-plan 决策台账，2026-08-16 起移至本地 `ai_arch/`，未入库）——差距分析（命名不一致 / 平台差异（缺口 vs 刻意降级）/ Value 泄漏 / 弃用跑道缺失 / 冻结范围差距 / 重复重叠）、四层归类提案（stable/feature/platform/version）、命名统一规则、整理项按风险分级（H-1~H-8 高风险待用户决策，不实施）。
+    - 低风险实施：`IdFacade` javadoc 契约名修正（`Id`→`ID`）；删除 cleanroom 未注册零引用死代码 `TextJS`；CR `BlockEvents.placed`（经典 `PlaceEvent` 绑定）与 `PlayerEvents.tick`（无 filter 兼容别名）补 `@Deprecated` + 替代指引——仓库首次建立脚本侧弃用跑道。
+    - 中风险实施：脚本 facing Graal `Value` 形参全部收敛为 `Object` 边界透传（`Ingredient`/`Fluid`/`FluidIngredient` 工厂三平台副本、`NativeEvents` 六方法、`Test.assertThrows`、`ScriptEvents.register`；内部 `Value.asValue` 还原，脚本调用形状与行为不变）；golden 再生成 diff 为空——`Value`/`Object` 在 callKey 中同编码 `PRIMITIVE:object`，冻结基线视此类签名变化为非破坏。
+- [x] **API 冻结基线入库 + 事件取消面收敛（2026-08-15，用户裁决）**：
+    - 冻结机制入库：`ApiManifest`/`ApiManifestGenerator`/`ApiManifestJson` + `ApiManifestGoldenTest`（147 core 符号 golden 基线）+ common `processResources` 的 `${mod_version}` 注入修复 + `-Dnekojs.golden.regenerate` 测试透传。
+    - 事件取消：移除 NeoForge `Event` 基类 mixin/interface-injection 注入的 `event.cancel()`/`event.isCancelled()`（`EventSpec`/`EventExtension`×2/`MixinEvent` + mixins.json 条目 + 26-shared `nekojs.interface_injection.json` 的 Event 条目）；跨平台取消统一为监听器返回 `true` + 原生 `setCanceled`，消除 `isCancelled/isCanceled` 拼写分裂与 cleanroom 基类不可 mixin 的不对称（偏离设计基线 §7.3 的理由记录于 H-3 裁决，台账见本地 `ai_arch/api-rework-plan.md`）。
+- [x] **API 整理第三批（2026-08-15，自主推进）**：
+    - CR 补注册跨平台 `global` 共享 Map（`NekoGlobal.shared()`，与 NeoForge 一致；rework plan H-2 首项）。
+    - CR `ServerEvents.worldLoad/worldUnload` 与 `LevelEvents.loaded/unloaded` 同语义双入口，前者补 `@Deprecated` + 迁移指引（H-5 切片）。
+    - `RecipeViewerEvents` 组原先「定义完整但从未注册」（事件由 JEI 插件 post 却无人能监听）：新增 `RecipeViewerEventsPlugin`（neoforge-shared，`clientOnly` + `requiredMods="jei"`）门控注册，JEI 在场才暴露事件面（H-8，对齐设计 §4.2「不注册空壳」）。
+    - H-7 确认为盘点误报并修正文档：26.x 的 Extension 接口经 `nekojs.interface_injection.json`（ModDevGradle `interfaceInjectionData`）注入，并非 mixin 缺注册。
+- [x] **事件别名 bus 主名方向落地（2026-08-15，H-5 用户裁决）**：主名 = 显式 Pre/Post 式 + 跨平台可用名（「主要用 tickPost 这种，以 api 优先级更高」）。弃用标注（行为不变）：NF `ClientEvents.tick`/`LevelEvents.tick`→`tickPost`、`beforeExplosion`/`afterExplosion`→`explosionStart`/`explosionDetonate`、`inventoryOpened/Closed`（NF+CR）→`containerOpened/Closed`、`registerEntityRenderers`/`registerBlockEntityRenderers`→`registerRenderers`、NF `pickedUpPre`→`canPickUp`。`ItemEvents.tooltip` side 分歧维持现状（1.12.2 side 模型不同，强行对齐破坏脚本或 probe 目录不变量；不进 stable 契约）。
+- [x] **id 输入统一 NekoId 契约化 + NativeEvents 收敛（2026-08-15，H-1a/D-2 用户裁决）**：
+    - id 类输入统一为 `string | NekoId`：核实三平台 id 系适配器（`IdentifierAdapter`/`ResourceLocationAdapter`、Item/Block/ItemStack、EntityType/SoundEvent/Potion/MobEffect/Fluid 系、`SimpleRegistryBasedAdapter`）已全面支持 NekoId host 输入——裁决把既成事实固化为契约，无需代码变更；主入口 = 全局 `ID`，原生 `Identifier`/`ResourceLocation` 绑定保留为 version 层逃生舱（不改名、不删）。
+    - `NativeEvents` 三平台 `@Deprecated` 指向 `ScriptEvents`（声明式组名注册；能力对等已核实——priority/receiveCancelled/return-true 取消翻译/按脚本 reload 清理），保留至弃用窗口结束后移除；CR 侧本就抛异常，随窗口移除。
 - [ ] 保持统一元数据可供外部工具生成 `.d.ts`、编辑器类型输出和 API 文档。
 - [ ] 逐步收紧 HostAccess，区分可信本地开发模式与更安全的服务器运行模式。
 - [x] 增加性能诊断：改为**用户驱动**的 Performance 全局绑定（`Performance.now()`/`time(fn)`/`bench(fn,runs)`/`start(label)`+`PerfTimer.mark/end/report/elapsedMillis`），而非被动检测慢监听器/reload 耗时（被动检测被明确否决，已删除自带脚本执行时间 log）。用户可在脚本里自行测量函数耗时与分段计时。
@@ -383,12 +419,12 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 ## 架构迁移：显式依赖与生命周期治理
 
 > 目标：在不牺牲脚本 API 简洁性的前提下，将有生命周期、初始化顺序或测试污染风险的全局状态迁移到显式对象图。
-> 当前实施清单：[ai_arch/archive/plan-architecture-optimization.md](../ai_arch/archive/plan-architecture-optimization.md)（已完成归档）
+> 当前实施清单：已完成并归档（实施记录见 git 历史；`ai_arch/` 已于 2026-08 重新整理）
 
 ### Phase 0：架构规则冻结（历史阶段）
 
 - [x] 盘点 `NekoJS.COMMON`、`current()`、static mutable config 等隐藏依赖并完成第一轮收敛。
-- [x] 架构迁移改由代码评审、定向测试和 `ai_arch/archive/plan-architecture-optimization.md` 清单跟踪；旧的正则计数型 `architectureCheck` 已退役。
+- [x] 架构迁移改由代码评审、定向测试和架构治理文档（已随 `ai_arch/` 整理归档）跟踪；旧的正则计数型 `architectureCheck` 已退役。
 
 ### Phase 1：核心值对象、配置和错误状态实例化
 

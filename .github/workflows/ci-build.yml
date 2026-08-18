@@ -100,7 +100,8 @@ jobs:
 
       - name: Run common checks
         # 用 :common:check 而非 :common:test：check 才会挂上 checkCommonIsolation 隔离门禁
-        # :common-api-processor:test：processor 自身的单测不在 :check 里，需显式调用
+        # :common-api-processor:test 显式列出（JavaPlugin 的 check 默认已依赖 test，这里点名
+        # 是防止将来 check 挂载被改掉时单测静默丢失）
         run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
 
       - name: Run platform NBT smoke tests
@@ -115,37 +116,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TASKS=""
           BUILD_TASKS=""
-          TEST_TASKS=""
           # 以 settings.gradle 的 include 列表为唯一事实来源，避免 find 探测与模块声明漂移
           while IFS= read -r name; do
-            TASKS="$TASKS :platforms:$name:compileJava"
             BUILD_TASKS="$BUILD_TASKS :platforms:$name:build"
-            TEST_TASKS="$TEST_TASKS :platforms:$name:test"
           done < <(grep -o "include 'platforms:[^']*'" settings.gradle | sed "s/include 'platforms://;s/'//" | sort -u)
 
-          if [[ -z "$TASKS" ]]; then
+          if [[ -z "$BUILD_TASKS" ]]; then
             echo "No platform modules found in settings.gradle" >&2
             exit 1
           fi
 
-          echo "compile_tasks=$TASKS" >> "$GITHUB_OUTPUT"
           echo "build_tasks=$BUILD_TASKS" >> "$GITHUB_OUTPUT"
-          echo "test_tasks=$TEST_TASKS" >> "$GITHUB_OUTPUT"
-          echo "Discovered compile tasks:$TASKS"
           echo "Discovered build tasks:$BUILD_TASKS"
-          echo "Discovered test tasks:$TEST_TASKS"
 
-      - name: Compile Java
-        run: ./gradlew ${{ steps.platforms.outputs.compile_tasks }} --console=plain
-
-      - name: Run platform tests
-        # 普通 JUnit 冒烟测试（adapter / 事件桥 / mixin 配置完整性），无需启动游戏
-        run: ./gradlew ${{ steps.platforms.outputs.test_tasks }} --console=plain
-
-      - name: Build jars
-        # build 内含 check → verifyRuntimeArtifact（各平台 build.gradle 已把校验挂进 check），无需单独跑 verify
+      - name: Build platform modules
+        # 单个 build 已按依赖链覆盖 compileJava → test → check（隔离门禁/verifyRuntimeArtifact/
+        # verifyDevModSourceSets），无需分三步重复调用 Gradle
         run: ./gradlew ${{ steps.platforms.outputs.build_tasks }} --console=plain
 
       - name: Prepare artifacts
@@ -227,7 +214,6 @@ jobs:
         # 主 job 的 Gradle 守护进程跑在 JDK 25 上；这里用 JDK 21 跑同一组检查（工具链同为 21），
         # 捕捉对守护进程 JVM 版本的隐性依赖（toolchain 漂移）；任务列表与主 job 保持一致
         run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
-
   release:
     name: Create GitHub release
     needs:
