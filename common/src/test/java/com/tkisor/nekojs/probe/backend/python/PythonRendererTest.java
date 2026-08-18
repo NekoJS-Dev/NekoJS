@@ -20,12 +20,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class PythonRendererTest {
 
-    /** 反射样本：实例字段、getter、实例方法、静态方法、构造器。 */
+    /** 反射样本：实例字段、getter、实例方法、静态方法、构造器（含 Java 重载）。 */
     public static class Sample {
         public String nameField;
         public Sample() {}
+        public Sample(String name) { this.nameField = name; }   // 构造器重载
         public String getName() { return nameField; }   // getter → @property name
         public void greet(String who) {}
+        public void greet(String who, int times) {}     // 与 greet(String) 构成重载
         public static int helper(int n) { return n; }
     }
 
@@ -111,8 +113,11 @@ class PythonRendererTest {
         // getter docs（@property 同样处理）
         MethodDecl getter = d.methods.stream().filter(m -> m.isGetter).findFirst().orElseThrow();
         getter.docs.add("The name.");
-        // 实例方法 docs（多行）
-        MethodDecl greet = d.methods.stream().filter(m -> m.name.equals("greet")).findFirst().orElseThrow();
+        // 实例方法 docs（多行）——docs 加到单参 greet（重载组内任一实例；断言按单参签名匹配）
+        MethodDecl greet = d.methods.stream()
+                .filter(m -> m.name.equals("greet") && m.params.size() == 1)
+                .findFirst()
+                .orElseThrow();
         greet.docs.add("Greets someone.");
         greet.docs.add("Second line.");
         // 字段 docs（多行 → 首行行尾注释 + 后续 `# ` 行）
@@ -130,6 +135,36 @@ class PythonRendererTest {
         assertTrue(out.contains("def greet(self, who: str) -> None:\n        \"\"\"Greets someone.\nSecond line.\"\"\"\n        ..."), out);
         // 字段：行尾 `  # ...` + 后续行 `# ` 前缀
         assertTrue(out.contains("nameField: str  # Field doc.\n    # Second field line."), out);
+    }
+
+    @Test
+    void renderClass_javaOverloadsUseOverloadDecorator() {
+        // Sample 的 greet(String) / greet(String,int) 重载 + 双构造器 → 同名 def 全部标注 @overload，
+        // 否则 Pylance 报「方法声明被同名声明遮盖」
+        TypeDecl d = new TypeReflector().reflect(Sample.class);
+        ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(Set.of(d.fqn));
+        PythonClassRenderer classR = new PythonClassRenderer(typeR);
+
+        String out = classR.render(d);
+        assertEquals(4, countOccurrences(out, "@overload"),
+                "two greet overloads + two __init__ overloads must all carry @overload: " + out);
+        assertTrue(out.contains("@overload\n    def greet(self, who: str) -> None"), out);
+        assertTrue(out.contains("@overload\n    def greet(self, who: str, times: int) -> None"), out);
+        assertTrue(out.contains("@overload\n    def __init__(self) -> None"), out);
+        assertTrue(out.contains("@overload\n    def __init__(self, name: str) -> None"), out);
+
+        assertTrue(PythonClassRenderer.hasOverloads(d));
+        assertFalse(PythonClassRenderer.hasOverloads(new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.Solo")));
+    }
+
+    private static int countOccurrences(String haystack, String needle) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = haystack.indexOf(needle, idx)) >= 0) {
+            count++;
+            idx += needle.length();
+        }
+        return count;
     }
 
     // -------------------- ClassEditor：renameClass / addMethod --------------------

@@ -6,9 +6,7 @@ declare module "java:java/lang/constant" {
     export interface $ClassDesc extends $ConstantDesc, $TypeDescriptor$OfField {
         arrayType(arg0: number): $ClassDesc;
         arrayType(): $ClassDesc;
-        arrayType(): $TypeDescriptor$OfField;
         componentType(): $ClassDesc;
-        componentType(): $TypeDescriptor$OfField;
         descriptorString(): string;
         displayName(): string;
         equals(arg0: object): boolean;
@@ -23,7 +21,6 @@ declare module "java:java/lang/constant" {
         of(arg0: string): $ClassDesc;
         packageName(): string;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $Class<any>;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
     }
 
     export interface $Constable {
@@ -86,36 +83,27 @@ declare module "java:java/lang/constant" {
         ofField(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $ClassDesc): $DirectMethodHandleDesc;
         ofMethod(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: $MethodTypeDesc): $DirectMethodHandleDesc;
         of(arg0: $DirectMethodHandleDesc$Kind_, arg1: $ClassDesc, arg2: string, arg3: string): $DirectMethodHandleDesc;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodHandle;
     }
 
     export interface $MethodTypeDesc extends $ConstantDesc, $TypeDescriptor$OfMethod {
         changeParameterType(arg0: number, arg1: $ClassDesc): $MethodTypeDesc;
-        changeParameterType(arg0: number, arg1: $TypeDescriptor$OfField): $TypeDescriptor$OfMethod;
         changeReturnType(arg0: $ClassDesc): $MethodTypeDesc;
-        changeReturnType(arg0: $TypeDescriptor$OfField): $TypeDescriptor$OfMethod;
         descriptorString(): string;
         displayDescriptor(): string;
         dropParameterTypes(arg0: number, arg1: number): $MethodTypeDesc;
-        dropParameterTypes(arg0: number, arg1: number): $TypeDescriptor$OfMethod;
         equals(arg0: object): boolean;
         insertParameterTypes(arg0: number, arg1?: $ClassDesc[]): $MethodTypeDesc;
-        insertParameterTypes(arg0: number, arg1: $TypeDescriptor$OfField[]): $TypeDescriptor$OfMethod;
         ofDescriptor(arg0: string): $MethodTypeDesc;
         of(arg0: $ClassDesc, arg1?: $ClassDesc[]): $MethodTypeDesc;
         of(arg0: $ClassDesc, arg1: $ClassDesc[]): $MethodTypeDesc;
         of(arg0: $ClassDesc): $MethodTypeDesc;
         parameterArray(): $ClassDesc[];
-        parameterArray(): $TypeDescriptor$OfField[];
         parameterCount(): number;
         parameterList(): $List<$ClassDesc>;
         parameterType(arg0: number): $ClassDesc;
-        parameterType(arg0: number): $TypeDescriptor$OfField;
-        resolveConstantDesc(arg0: $MethodHandles$Lookup): object;
         resolveConstantDesc(arg0: $MethodHandles$Lookup): $MethodType;
         returnType(): $ClassDesc;
-        returnType(): $TypeDescriptor$OfField;
     }
 
     export type $DirectMethodHandleDesc$Kind_ = $DirectMethodHandleDesc$Kind | "CONSTRUCTOR" | "GETTER" | "INTERFACE_SPECIAL" | "INTERFACE_STATIC" | "INTERFACE_VIRTUAL" | "SETTER" | "SPECIAL" | "STATIC" | "STATIC_GETTER" | "STATIC_SETTER" | "VIRTUAL";

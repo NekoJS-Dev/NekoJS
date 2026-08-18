@@ -107,6 +107,14 @@ public final class TypeScriptClassRenderer {
         // getter 段：get prop() + 原方法名() 双发射 + setter
         for (MethodDecl m : d.methods) {
             if (m.hidden || !m.isGetter) continue;
+            // 属性名非合法 TS 标识符（数字开头，如 get2DigitYearStart → 2DigitYearStart）：
+            // 只渲染原方法名（getter 标记使方法段排除它，这里降级补发），脚本仍可调用
+            if (!isValidTsIdentifier(m.property)) {
+                appendDoc(sb, "        ", m.docs);
+                sb.append("        ").append(m.effectiveName()).append("(): ")
+                  .append(renderSlot(m.returnType, false)).append(";\n");
+                continue;
+            }
             appendDoc(sb, "        ", m.docs);
             // getter 覆盖（如 RecipeEventJS.recipes → DocumentedRecipes）：镜像 ClassDeclGenerator，
             // 命中时只发射 get 行，跳过双发射与 setter
@@ -229,13 +237,40 @@ public final class TypeScriptClassRenderer {
         for (int i = 0; i < params.size(); i++) {
             MethodDecl.MethodParam p = params.get(i);
             if (i > 0) sb.append(", ");
-            sb.append(p.name);
+            sb.append(tsParamName(p.name));
             if (p.varargs || p.optional) sb.append("?");
             sb.append(": ");
             sb.append(renderSlot(p.type, true));
             if (p.varargs) sb.append("[]");
         }
     }
+
+    /** TS 参数名转义：JS/TS 保留字不能作参数名（如 Java 参数 {@code function}），追加 {@code _}。 */
+    private static String tsParamName(String name) {
+        if (name == null || name.isEmpty()) return "arg";
+        return TS_RESERVED_WORDS.contains(name) ? name + "_" : name;
+    }
+
+    /** getter/setter 属性名是否为合法 TS 标识符（首字符须字母/下划线/$；数字开头如 {@code 2DigitYearStart} 非法）。 */
+    private static boolean isValidTsIdentifier(String name) {
+        if (name == null || name.isEmpty()) return false;
+        char first = name.charAt(0);
+        if (!(Character.isLetter(first) || first == '_' || first == '$')) return false;
+        for (int i = 1; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (!(Character.isLetterOrDigit(c) || c == '_' || c == '$')) return false;
+        }
+        return true;
+    }
+
+    /** JS/TS 中不能作为参数名的保留字（含严格模式/上下文关键字，保守集合）。 */
+    private static final Set<String> TS_RESERVED_WORDS = Set.of(
+            "break", "case", "catch", "class", "const", "continue", "debugger", "default",
+            "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for",
+            "function", "if", "import", "in", "instanceof", "new", "null", "return", "super",
+            "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with",
+            "let", "static", "yield", "await", "implements", "interface", "package", "private",
+            "protected", "public", "arguments", "eval");
 
     /**
      * 渲染出的类型字符串是否是 TS 原始类型关键字（number/string/boolean 等）——这些不能出现在

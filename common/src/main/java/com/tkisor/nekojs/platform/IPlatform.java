@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.api.recipe.definition.RecipeFieldKind;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import java.nio.file.Path;
 import java.util.List;
@@ -89,5 +90,22 @@ public interface IPlatform {
      */
     default List<String> defaultScanPackages() {
         return List.of("net.minecraft");
+    }
+
+    /**
+     * Recipe schema 字段 kind → 值类的 Java 包（probe 的 recipes 声明 import 用）。
+     * NeoForge 1.21+ 是 {@code net.minecraft.world.item[.crafting]}；1.12.2 override 为
+     * {@code net.minecraft.item[.crafting]}。kind 无类映射时返回 {@code null}。
+     * 包路径必须与真实类一致——否则生成文件里同一别名（$ItemStack_/$Ingredient_）会从
+     * 两个模块重复 import，TS 报 Duplicate identifier，整个 recipes 声明失效。
+     */
+    default String recipeFieldKindPackage(RecipeFieldKind kind) {
+        return switch (kind) {
+            case INGREDIENT -> "net.minecraft.world.item.crafting";
+            case ITEM_STACK -> "net.minecraft.world.item";
+            case FLUID_STACK -> "net.neoforged.neoforge.fluids";
+            case FLUID_INGREDIENT, SIZED_FLUID_INGREDIENT -> "net.neoforged.neoforge.fluids.crafting";
+            default -> null;
+        };
     }
 }

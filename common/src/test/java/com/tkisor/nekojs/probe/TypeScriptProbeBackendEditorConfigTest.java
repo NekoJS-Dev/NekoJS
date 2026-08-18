@@ -2,6 +2,8 @@ package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -19,6 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
  * 指向 backend 真实的 {@code typescript/} 输出目录（修复既有 stale 路径）。
  */
 class TypeScriptProbeBackendEditorConfigTest {
+
+    /** ScriptType 静态初始化需要 Platform（NekoJSPaths.get），独立跑该类也必须先初始化。 */
+    @BeforeAll
+    static void initPlatform() {
+        TestPlatformInit.ensureInitialized();
+    }
 
     @Test
     void contribute_pointsAllAliasesAtTypescriptOutput(@TempDir Path temp) throws Exception {
@@ -51,16 +59,19 @@ class TypeScriptProbeBackendEditorConfigTest {
         // 仅本 env 的 @side-only（不泄露其他 side）
         assertNull(aliases.get("@side-only/client"), "must not inject other env's side-only");
 
-        // server_scripts 的 include：校正到 tsOut（相对写法照抄 WorkspaceGenerator，base 换成 tsOut）
+        // server_scripts 的 include：脚本文件 globs（jsconfig 项目必须包含脚本自身，否则 IDE 无补全）
+        // + probe 声明 globs（相对写法照抄 WorkspaceGenerator，base 换成 tsOut）
         var serverIncludeCall = rec.includeCalls.stream()
                 .filter(e -> posix(e.getKey()).endsWith("server_scripts/jsconfig.json"))
                 .findFirst().orElseThrow(() -> new AssertionError("server_scripts include contribution missing"));
         assertEquals(List.of(
+                "./**/*.js", "./**/*.mjs", "./**/*.cjs",
+                "./**/*.ts", "./**/*.jsx", "./**/*.tsx",
                 "../../.neko_probe/typescript/@package/**/*.d.ts",
                 "../../.neko_probe/typescript/@manual/**/*.d.ts",
                 "../../.neko_probe/typescript/@side-only/server/**/*.d.ts",
                 "../../.neko_probe/typescript/@nekojs/managed/server/**/*.d.ts"), serverIncludeCall.getValue(),
-                "server_scripts include must point at typescript/ output (stale fix)");
+                "server_scripts include must cover script files and typescript/ output");
 
         // server_scripts 的 typeRoots：@package 指向 tsOut，node_modules 相对写法不变
         var serverTypeRootCall = rec.typeRootCalls.stream()
@@ -73,12 +84,12 @@ class TypeScriptProbeBackendEditorConfigTest {
         assertEquals(4, rec.includeCalls.size(), "include contributed to 4 script dirs only");
         assertEquals(4, rec.typeRootCalls.size(), "typeRoots contributed to 4 script dirs only");
 
-        // probe 目录的 jsconfig：相对路径 = "typescript"
+        // probe 目录的 jsconfig：相对路径 = "./typescript"（未设 baseUrl 时 paths 映射值须为相对路径）
         var probeCall = rec.jsCalls.stream()
                 .filter(e -> posix(e.getKey()).endsWith(".neko_probe/jsconfig.json"))
                 .findFirst().orElseThrow();
         Map<String, List<String>> probeAliases = probeCall.getValue();
-        assertEquals(List.of("typescript/@package/*"), probeAliases.get("java:*"));
+        assertEquals(List.of("./typescript/@package/*"), probeAliases.get("java:*"));
         // probe 目录含所有 side
         assertNotNull(probeAliases.get("@side-only/server"));
         assertNotNull(probeAliases.get("@side-only/client"));

@@ -122,6 +122,7 @@ declare module "java:java/util" {
         lastIndexOf(arg0: object): number;
         listIterator(arg0: number): $ListIterator<E>;
         listIterator(): $ListIterator<E>;
+        of<E>(arg0?: E[]): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $List<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E): $List<E>;
@@ -132,7 +133,6 @@ declare module "java:java/util" {
         of<E>(arg0: E, arg1: E, arg2: E): $List<E>;
         of<E>(arg0: E, arg1: E): $List<E>;
         of<E>(arg0: E): $List<E>;
-        of<E>(arg0?: object[]): $List<E>;
         of<E>(): $List<E>;
         removeAll(arg0: any[]): boolean;
         removeFirst(): E;
@@ -142,7 +142,6 @@ declare module "java:java/util" {
         replaceAll(arg0: $UnaryOperator<E>): void;
         retainAll(arg0: any[]): boolean;
         reversed(): $List<E>;
-        reversed(): $SequencedCollection;
         set(arg0: number, arg1: E): E;
         size(): number;
         sort(arg0: $Comparator<any>): void;
@@ -344,7 +343,7 @@ declare module "java:java/util" {
         isEmpty(): boolean;
         keySet(): $Set<K>;
         merge(arg0: K, arg1: V, arg2: $BiFunction<any, any, V>): V;
-        ofEntries<K, V>(arg0?: $Map$Entry[]): $Map<K, V>;
+        ofEntries<K, V>(arg0?: $Map$Entry<K, V>[]): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V, arg18: K, arg19: V): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V, arg16: K, arg17: V): $Map<K, V>;
         of<K, V>(arg0: K, arg1: V, arg2: K, arg3: V, arg4: K, arg5: V, arg6: K, arg7: V, arg8: K, arg9: V, arg10: K, arg11: V, arg12: K, arg13: V, arg14: K, arg15: V): $Map<K, V>;
@@ -474,30 +473,24 @@ declare module "java:java/util" {
     }
 
     export interface $PrimitiveIterator$OfDouble extends $PrimitiveIterator {
-        forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
         forEachRemaining(arg0: $DoubleConsumer): void;
         nextDouble(): number;
         next(): number;
-        next(): object;
     }
 
     export interface $PrimitiveIterator$OfInt extends $PrimitiveIterator {
-        forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
         forEachRemaining(arg0: $IntConsumer): void;
         nextInt(): number;
         next(): number;
-        next(): object;
     }
 
     export interface $PrimitiveIterator$OfLong extends $PrimitiveIterator {
-        forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
         forEachRemaining(arg0: $LongConsumer): void;
         nextLong(): number;
         next(): number;
-        next(): object;
     }
 
     export interface $SequencedCollection<E> extends $Collection {
@@ -524,7 +517,6 @@ declare module "java:java/util" {
     }
 
     export interface $SequencedSet<E> extends $SequencedCollection, $Set {
-        reversed(): $SequencedCollection;
         reversed(): $SequencedSet<E>;
     }
 
@@ -539,6 +531,7 @@ declare module "java:java/util" {
         hashCode(): number;
         isEmpty(): boolean;
         iterator(): $Iterator<E>;
+        of<E>(arg0?: E[]): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E, arg9: E): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E, arg8: E): $Set<E>;
         of<E>(arg0: E, arg1: E, arg2: E, arg3: E, arg4: E, arg5: E, arg6: E, arg7: E): $Set<E>;
@@ -549,7 +542,6 @@ declare module "java:java/util" {
         of<E>(arg0: E, arg1: E, arg2: E): $Set<E>;
         of<E>(arg0: E, arg1: E): $Set<E>;
         of<E>(arg0: E): $Set<E>;
-        of<E>(arg0?: object[]): $Set<E>;
         of<E>(): $Set<E>;
         removeAll(arg0: any[]): boolean;
         remove(arg0: object): boolean;
@@ -569,7 +561,6 @@ declare module "java:java/util" {
         lastKey(): K;
         putFirst(arg0: K, arg1: V): V;
         putLast(arg0: K, arg1: V): V;
-        reversed(): $SequencedMap;
         reversed(): $SortedMap<K, V>;
         subMap(arg0: K, arg1: K): $SortedMap<K, V>;
         tailMap(arg0: K): $SortedMap<K, V>;
@@ -596,46 +587,33 @@ declare module "java:java/util" {
     }
 
     export interface $Spliterator$OfDouble extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
         forEachRemaining(arg0: $DoubleConsumer): void;
-        tryAdvance(arg0: object): boolean;
         tryAdvance(arg0: $Consumer<any>): boolean;
         tryAdvance(arg0: $DoubleConsumer): boolean;
-        trySplit(): $Spliterator;
         trySplit(): $Spliterator$OfDouble;
-        trySplit(): $Spliterator$OfPrimitive;
     }
 
     export interface $Spliterator$OfInt extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
         forEachRemaining(arg0: $IntConsumer): void;
-        tryAdvance(arg0: object): boolean;
         tryAdvance(arg0: $Consumer<any>): boolean;
         tryAdvance(arg0: $IntConsumer): boolean;
-        trySplit(): $Spliterator;
         trySplit(): $Spliterator$OfInt;
-        trySplit(): $Spliterator$OfPrimitive;
     }
 
     export interface $Spliterator$OfLong extends $Spliterator$OfPrimitive {
-        forEachRemaining(arg0: object): void;
         forEachRemaining(arg0: $Consumer<any>): void;
         forEachRemaining(arg0: $LongConsumer): void;
-        tryAdvance(arg0: object): boolean;
         tryAdvance(arg0: $Consumer<any>): boolean;
         tryAdvance(arg0: $LongConsumer): boolean;
-        trySplit(): $Spliterator;
         trySplit(): $Spliterator$OfLong;
-        trySplit(): $Spliterator$OfPrimitive;
     }
 
     export interface $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR extends $Spliterator$OfPrimitive<T, T_CONS, T_SPLITR>> extends $Spliterator {
         forEachRemaining(arg0: T_CONS): void;
         tryAdvance(arg0: T_CONS): boolean;
         trySplit(): T_SPLITR;
-        trySplit(): $Spliterator;
     }
 
     export type $Collection_<E> = E[];

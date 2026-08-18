@@ -55,7 +55,6 @@ declare module "java:java/net" {
         get opaque(): boolean;
         isOpaque(): boolean;
         static create(arg0: string): $URI;
-        compareTo(arg0: object): number;
         compareTo(arg0: $URI): number;
         equals(arg0: object): boolean;
         hashCode(): number;

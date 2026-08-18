@@ -126,7 +126,9 @@ class TypeScriptClassRendererTest {
     // ---------------- extends 原始类型省略 ----------------
 
     /** Number 子类：superType 经 TypeConverter 映射为 number，extends 子句必须省略。 */
-    public abstract static class MyNumber extends Number {}
+    public abstract static class MyNumber extends Number {
+        private static final long serialVersionUID = 1L;
+    }
 
     @Test
     void superClassMappingToTsPrimitiveOmitsExtends() {
@@ -260,7 +262,65 @@ class TypeScriptClassRendererTest {
                 "extends clause must be omitted for callback super");
     }
 
+    /** 标识符转义样本：数字开头 getter 属性、TS 保留字参数名、泛型数组实参（通配符数组）。 */
+    public static class Pair<T, U> {}
+    public static class MemoryModuleType<T> {}
+
+    public static class IdentifierSample {
+        public java.util.Date get2DigitYearStart() { return null; }
+        public void apply(String function, int class_) {}
+        public void addPair(Pair<MemoryModuleType<?>[], MemoryModuleType<?>[]> pair) {}
+    }
+
+    public static class VarargsSample {
+        public void addPair(Pair<MemoryModuleType<?>[], MemoryModuleType<?>[]> pair, MemoryModuleType<?>... rest) {}
+    }
+
+    @Test
+    void numericLeadingGetterPropertyFallsBackToMethodName() {
+        // get2DigitYearStart → property "2DigitYearStart"（数字开头，TS getter 名非法）：
+        // 跳过 getter 段，保留原方法名声明（脚本仍可调用 get2DigitYearStart()）
+        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        String out = render(d);
+        assertFalse(out.contains("get 2DigitYearStart"), "numeric-leading getter must be skipped:\n" + out);
+        assertTrue(out.contains("get2DigitYearStart(): $Date"), "method fallback must remain:\n" + out);
+    }
+
+    @Test
+    void reservedWordParameterNamesAreEscaped() {
+        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        String out = render(d);
+        assertTrue(out.contains("apply(function_: string, class_: number): void"),
+                "reserved-word params must be escaped with _ suffix:\n" + out);
+    }
+
+    @Test
+    void genericArrayArgumentsRenderWithoutParameterLeak() {
+        // 回归：Pair<MemoryModuleType<?>[], MemoryModuleType<?>[]> 的 TS 渲染必须完整、
+        // 不得把后续参数名混入类型（旧产物曾出现 arg3: 混入泛型实参的错位）
+        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        String out = render(d);
+        // 嵌套类名前缀不硬编码：分别校验两个通配符数组实参就位（含分隔逗号与闭合），无参数名泄漏
+        assertTrue(out.contains("<any>[], "), "first wildcard array arg missing:\n" + out);
+        assertTrue(out.contains("MemoryModuleType<any>[]>): void"), "second wildcard array arg missing:\n" + out);
+    }
+
+    @Test
+    void varargsAfterGenericArrayArgsDoesNotLeakParameterName() {
+        // 复现 Brain.addActivityAndRemoveMemoriesWhenStopped 形态：泛型数组实参后跟 varargs——
+        // 旧代码对 varargs 走非泛型路径（raw component），MemoryModuleType<?>... 丢失 <any> 实参
+        TypeDecl d = new TypeReflector().reflect(VarargsSample.class);
+        String out = render(d);
+        // 嵌套类名前缀不硬编码：校验实参链与 varargs（含泛型实参 <any>，非 raw）
+        // 嵌套类名前缀不硬编码：校验第一个实参数组闭合后的分隔、varargs 元素保留泛型实参
+        assertTrue(out.contains("<any>[], "), "generic pair args incomplete:\n" + out);
+        assertFalse(out.contains(", rest:"), "varargs param name must not leak into generic args:\n" + out);
+        assertTrue(out.contains("MemoryModuleType<any>[]): void"),
+                "varargs param must keep generic args and render as optional array:\n" + out);
+    }
+
     private static String render(TypeDecl decl) {
         return new TypeScriptClassRenderer(new TypeConverter(new TypeAliasRegistry())).render(decl);
     }
 }
+

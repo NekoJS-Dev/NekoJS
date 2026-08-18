@@ -130,6 +130,26 @@ class ProbeConfigTest {
     }
 
     @Test
+    void loadCreatesMissingProbeTomlWithDefaults(@TempDir Path tmp) throws Exception {
+        // 与 engine.toml 一样，probe.toml 缺失时 load 应自动落盘默认值（autosave），
+        // 保证首次启动/清理目录后 nekojs/config/probe.toml 自动出现。
+        // 前置条件与真实游戏一致：initFolders 已建好 nekojs/config/ 目录，但 probe.toml 缺失。
+        Path cfgFile = NekoJSPaths.fromGameDir(tmp).probeConfig();
+        Files.createDirectories(cfgFile.getParent());
+        assertFalse(Files.exists(cfgFile), "前置：文件不存在");
+
+        ProbeConfig cfg = new ProbeConfigLoader().load(cfgFile);
+
+        assertTrue(Files.exists(cfgFile), "load 后文件应被自动创建");
+        assertTrue(cfg.enabled(), "默认 enabled = true");
+        String content = Files.readString(cfgFile, StandardCharsets.UTF_8);
+        assertTrue(content.contains("enabled = true"), "默认值应写入文件，实际内容: " + content);
+        assertTrue(content.contains("mode = \"SMART\""), "默认键应有值（TOML 表展开为 [scan]），实际内容: " + content);
+        assertEquals(ProbeConfig.defaultConfig().languages(), cfg.languages(),
+                "缺失 languages 表时应落入固定默认集");
+    }
+
+    @Test
     void setEnabledWritesEnabledIntoProbeToml(@TempDir Path tmp) throws Exception {
         Path cfgFile = NekoJSPaths.fromGameDir(tmp).probeConfig();
         Files.createDirectories(cfgFile.getParent());

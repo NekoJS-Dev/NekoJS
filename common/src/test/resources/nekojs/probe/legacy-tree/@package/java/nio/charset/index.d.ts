@@ -13,7 +13,6 @@ declare module "java:java/nio/charset" {
         static isSupported(arg0: string): boolean;
         aliases(): $Set<string>;
         canEncode(): boolean;
-        compareTo(arg0: object): number;
         compareTo(arg0: $Charset): number;
         contains(arg0: $Charset): boolean;
         decode(arg0: $ByteBuffer): $CharBuffer;

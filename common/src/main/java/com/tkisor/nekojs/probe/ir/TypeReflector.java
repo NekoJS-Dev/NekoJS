@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.ir;
 
+import com.tkisor.nekojs.api.JavaMemberIndex;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 
@@ -118,9 +119,12 @@ public final class TypeReflector {
 
     private void reflectInterfaceMembers(Class<?> cls, TypeDecl decl) {
         for (var method : cls.getDeclaredMethods()) {
-            if (Modifier.isPublic(method.getModifiers())) {
-                decl.methods.add(reflectMethod(method));
-            }
+            if (!Modifier.isPublic(method.getModifiers())) continue;
+            // bridge/synthetic 是 JVM 协变覆盖的实现细节（如 LevelExtension.neko$data()
+            // 覆盖 LevelSpec 的 Object 哨兵时 javac 生成 Object bridge），对 JS/Python 侧
+            // 无意义且会产生「同参不同返回」的非法重载，过滤掉
+            if (method.isSynthetic() || method.isBridge()) continue;
+            decl.methods.add(reflectMethod(method));
         }
         for (var field : cls.getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers()) && Modifier.isPublic(field.getModifiers())
@@ -173,12 +177,20 @@ public final class TypeReflector {
         Set<String> processedProperties = new HashSet<>();
         for (var method : declared) {
             if (!Modifier.isPublic(method.getModifiers())) continue;
+            // bridge/synthetic 是 JVM 协变覆盖的实现细节（如宿主类上 mixin 注入接口的
+            // 协变返回覆盖会生成 Object bridge），对 JS/Python 侧无意义且产生
+            // 「同参不同返回」的冗余重载——与接口收集（reflectInterfaceMembers）一致地过滤
+            if (method.isSynthetic() || method.isBridge()) continue;
             boolean isStatic = Modifier.isStatic(method.getModifiers());
+            // JS 侧方法名：@Remap/@RemapByPrefix 重映射；@HideFromJS → null（跳过）
+            String jsName = jsName(method);
+            if (jsName == null) continue;
 
             // 非静态 getXxx/isXxx(0 参) → getter（按属性名去重，首个出现者胜出；重复者整体跳过，
-            // 镜像旧实现：不双发射原方法名）
-            if (!isStatic && isGetterName(method) && method.getParameterCount() == 0) {
-                String propName = getPropertyName(method);
+            // 镜像旧实现：不双发射原方法名）。getter 判定基于 JS 名：neko$getId remap 为 getId
+            // 后与运行时 Graal getter 属性语义一致（脚本访问 .id）
+            if (!isStatic && isGetterName(jsName) && method.getParameterCount() == 0) {
+                String propName = getPropertyName(jsName);
                 if (propName != null && processedProperties.add(propName)) {
                     MethodDecl getter = reflectMethod(method);
                     getter.isGetter = true;
@@ -191,7 +203,7 @@ public final class TypeReflector {
 
             MethodDecl m = reflectMethod(method);
             // 非静态 setXxx(1 参) → isSetter（renderer 实例方法段据此排除）
-            if (!isStatic && isSetterName(method) && method.getParameterCount() == 1) {
+            if (!isStatic && isSetterName(jsName) && method.getParameterCount() == 1) {
                 m.isSetter = true;
             }
             decl.methods.add(m);
@@ -226,6 +238,16 @@ public final class TypeReflector {
 
     private MethodDecl reflectMethod(java.lang.reflect.Method method) {
         MethodDecl m = new MethodDecl(method.getName());
+        // JS 侧方法名（@Remap/@RemapByPrefix）：与运行时 Graal remapper 语义一致，声明/提示
+        // 用 remap 名；Java 原名保留在 name（排序/编辑语义），renameTo 为空时渲染回退原名
+        String jsName = jsName(method);
+        if (jsName == null) {
+            m.hidden = true; // @HideFromJS
+            return m;
+        }
+        if (!jsName.equals(method.getName())) {
+            m.renameTo = jsName;
+        }
         m.isStatic = Modifier.isStatic(method.getModifiers());
         m.returnType = TypeSlot.of(method.getGenericReturnType(), toRef(method.getGenericReturnType()));
         for (TypeVariable<?> tv : method.getTypeParameters()) {
@@ -236,6 +258,14 @@ public final class TypeReflector {
         return m;
     }
 
+    /**
+     * JS 侧成员名：委托 {@link JavaMemberIndex#remapName}（hideMarker 传 null = 命中
+     * {@code @HideFromJS} 返回 null，调用方跳过）。未命中 remap 返回原名。
+     */
+    private static String jsName(java.lang.reflect.Method method) {
+        return JavaMemberIndex.remapName(method, null, method.getName());
+    }
+
     private void reflectParamsInto(MethodDecl m, java.lang.reflect.Executable exec) {
         boolean varArgs = exec.isVarArgs();
         var params = exec.getParameters();
@@ -243,7 +273,12 @@ public final class TypeReflector {
             var p = params[i];
             Type sourceType;
             if (varArgs && i == params.length - 1 && p.getType().isArray()) {
-                sourceType = p.getType().getComponentType();
+                // varargs 必须走泛型路径：p.getType() 只给 raw Class 数组（component 的泛型实参
+                // 丢失，如 MemoryModuleType<?>... → raw MemoryModuleType）；getParameterizedType()
+                // 返回 GenericArrayType（component = MemoryModuleType<?>）保留下界
+                Type generic = p.getParameterizedType();
+                sourceType = generic instanceof GenericArrayType gat ? gat.getGenericComponentType()
+                        : p.getType().getComponentType();
             } else {
                 sourceType = p.getParameterizedType();
             }
@@ -263,7 +298,8 @@ public final class TypeReflector {
         String setterName = "set" + propName.substring(0, 1).toUpperCase(Locale.ROOT) + propName.substring(1);
         Method best = null;
         for (Method method : cls.getDeclaredMethods()) {
-            if (!method.getName().equals(setterName) || method.getParameterCount() != 1
+            String jsName = jsName(method);
+            if (jsName == null || !jsName.equals(setterName) || method.getParameterCount() != 1
                     || !Modifier.isPublic(method.getModifiers())) {
                 continue;
             }
@@ -276,19 +312,17 @@ public final class TypeReflector {
         return TypeSlot.of(t, toRef(t));
     }
 
-    private static boolean isGetterName(java.lang.reflect.Method method) {
-        String name = method.getName();
+    /** getter 名判定基于 JS 名（remap 后）：neko$getId → getId 即 getter 形态。 */
+    private static boolean isGetterName(String name) {
         return (name.startsWith("get") && name.length() > 3) || (name.startsWith("is") && name.length() > 2);
     }
 
-    private static boolean isSetterName(java.lang.reflect.Method method) {
-        String name = method.getName();
+    private static boolean isSetterName(String name) {
         return name.startsWith("set") && name.length() > 3;
     }
 
     /** 属性名：getFoo→foo、isFoo→foo。大小写归一显式用 {@link Locale#ROOT}，避免默认区域（如 tr）漂移。 */
-    private static String getPropertyName(java.lang.reflect.Method method) {
-        String name = method.getName();
+    private static String getPropertyName(String name) {
         if (name.startsWith("get") && name.length() > 3) {
             return name.substring(3, 4).toLowerCase(Locale.ROOT) + name.substring(4);
         }

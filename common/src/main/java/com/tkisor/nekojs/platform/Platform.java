@@ -90,4 +90,8 @@ public final class Platform {
     public static List<String> defaultScanPackages() {
         return get().defaultScanPackages();
     }
+
+    public static String recipeFieldKindPackage(com.tkisor.nekojs.api.recipe.definition.RecipeFieldKind kind) {
+        return get().recipeFieldKindPackage(kind);
+    }
 }

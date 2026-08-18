@@ -5,8 +5,10 @@ import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -49,9 +51,11 @@ public final class PythonClassRenderer {
             sb.append("\n");
             hasMember = true;
         }
-        // 构造器 → __init__
+        // 构造器 → __init__（多个构造器 = 重载，每个 __init__ 都需 @overload）
+        boolean ctorOverloaded = d.constructors.stream().filter(c -> !c.hidden).count() > 1;
         for (MethodDecl c : d.constructors) {
             if (c.hidden) continue;
+            if (ctorOverloaded) sb.append("    @overload\n");
             sb.append("    def __init__(").append(params(c, true)).append(") -> None");
             appendMethodBody(sb, c.docs);
             hasMember = true;
@@ -71,10 +75,19 @@ public final class PythonClassRenderer {
             }
             hasMember = true;
         }
-        // 方法：静态 + 实例（排除 getter/setter/构造器）
+        // 方法：静态 + 实例（排除 getter/setter/构造器）。Java 重载（同名不同参数）渲染为
+        // 同名 def 时必须全部标注 @overload，否则 Pylance 报「方法声明被同名声明遮盖」
+        // （与 PythonEventRenderer 对 dispatch 事件的处理一致）。
+        Map<String, Integer> methodNameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
             if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
-            sb.append(m.isStatic ? "    @staticmethod\n" : "");
+            methodNameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
+        }
+        for (MethodDecl m : d.methods) {
+            if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
+            boolean overloaded = methodNameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1;
+            if (m.isStatic) sb.append("    @staticmethod\n");
+            if (overloaded) sb.append("    @overload\n");
             sb.append("    def ").append(pyIdent(m.effectiveName()))
               .append("(").append(params(m, !m.isStatic)).append(") -> ")
               .append(renderSlot(m.returnType));
@@ -93,8 +106,15 @@ public final class PythonClassRenderer {
         sb.append("class ").append(name).append(bases(d, false)).append(":\n");
         appendDoc(sb, d.docs);
         boolean hasMember = false;
+        // 接口方法同样可能有 Java 重载 → 同名 def 需 @overload
+        Map<String, Integer> nameCount = new HashMap<>();
         for (MethodDecl m : d.methods) {
             if (m.hidden) continue;
+            nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
+        }
+        for (MethodDecl m : d.methods) {
+            if (m.hidden) continue;
+            if (nameCount.getOrDefault(pyIdent(m.effectiveName()), 0) > 1) sb.append("    @overload\n");
             sb.append("    def ").append(pyIdent(m.effectiveName()))
               .append("(").append(params(m, true)).append(") -> ")
               .append(renderSlot(m.returnType));
@@ -134,6 +154,18 @@ public final class PythonClassRenderer {
     }
 
     // ---------------- helpers ----------------
+
+    /** 渲染出的该类型是否需要 {@code typing.overload} 导入（存在同名 def：重载方法/重载构造器）。 */
+    public static boolean hasOverloads(TypeDecl d) {
+        if (d == null) return false;
+        if (d.constructors.stream().filter(c -> !c.hidden).count() > 1) return true;
+        Map<String, Integer> nameCount = new HashMap<>();
+        for (MethodDecl m : d.methods) {
+            if (m.hidden || m.isGetter || m.isSetter || m.isConstructor) continue;
+            nameCount.merge(pyIdent(m.effectiveName()), 1, Integer::sum);
+        }
+        return nameCount.values().stream().anyMatch(count -> count > 1);
+    }
 
     /** 渲染用的类名：renameTo（modify_type 改名）优先，否则回退 fqn 的 Python 简单名。 */
     private static String effectiveClassName(TypeDecl d) {

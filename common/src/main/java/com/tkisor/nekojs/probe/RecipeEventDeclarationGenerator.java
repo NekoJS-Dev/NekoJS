@@ -3,6 +3,8 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.api.catalog.RecipeHandlerMethodEntry;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;
 import com.tkisor.nekojs.api.catalog.RecipeSchemaTypeEntry;
+import com.tkisor.nekojs.api.recipe.definition.RecipeFieldKind;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.api.ScriptType;
 
@@ -251,31 +253,54 @@ public final class RecipeEventDeclarationGenerator {
     }
 
     /**
-     * field kind → (package, className)。返回的 className 需加 _ 后缀作为输入别名。
+     * field kind → (package, className)。className 需加 _ 后缀作为输入别名。
+     * 包路径按平台（{@link com.tkisor.nekojs.platform.Platform#recipeFieldKindPackage}）：
+     * 1.21+ 为 {@code net.minecraft.world.item*}，1.12.2 为 {@code net.minecraft.item*}。
+     * 别名同名（$ItemStack_/$Ingredient_），包路径必须与真实类一致，否则与 handler 反射
+     * 路径（真实 FQN）产生重复 import，整个 recipes 声明文件 TS 报错。
      */
     private static String[] kindToImport(String kind) {
-        return switch (kind) {
-            case "INGREDIENT" -> new String[]{"net.minecraft.world.item.crafting", "Ingredient"};
-            case "ITEM_STACK" -> new String[]{"net.minecraft.world.item", "ItemStack"};
-            case "FLUID_STACK" -> new String[]{"net.neoforged.neoforge.fluids", "FluidStack"};
-            case "FLUID_INGREDIENT" -> new String[]{"net.neoforged.neoforge.fluids.crafting", "FluidIngredient"};
-            case "SIZED_FLUID_INGREDIENT" -> new String[]{"net.neoforged.neoforge.fluids.crafting", "SizedFluidIngredient"};
+        RecipeFieldKind k;
+        try {
+            k = RecipeFieldKind.valueOf(kind);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        return kindToPkgType(k);
+    }
+
+    private static String[] kindToPkgType(RecipeFieldKind k) {
+        String pkg;
+        try {
+            pkg = Platform.recipeFieldKindPackage(k);
+        } catch (IllegalStateException e) {
+            pkg = null; // 未初始化平台的纯测试环境：schema 字段路径不会真正渲染
+        }
+        if (pkg == null) return null;
+        String simple = switch (k) {
+            case INGREDIENT -> "Ingredient";
+            case ITEM_STACK -> "ItemStack";
+            case FLUID_STACK -> "FluidStack";
+            case FLUID_INGREDIENT -> "FluidIngredient";
+            case SIZED_FLUID_INGREDIENT -> "SizedFluidIngredient";
             default -> null;
         };
+        return simple == null ? null : new String[]{pkg, simple};
     }
 
     /**
-     * handler param type name → (package, className)。
+     * handler param type name → (package, className)。走与 schema kind 相同的平台映射。
      */
     private static String[] typeToImport(String type) {
-        return switch (type) {
-            case "ItemStack" -> new String[]{"net.minecraft.world.item", "ItemStack"};
-            case "Ingredient" -> new String[]{"net.minecraft.world.item.crafting", "Ingredient"};
-            case "FluidStack" -> new String[]{"net.neoforged.neoforge.fluids", "FluidStack"};
-            case "FluidIngredient" -> new String[]{"net.neoforged.neoforge.fluids.crafting", "FluidIngredient"};
-            case "SizedFluidIngredient" -> new String[]{"net.neoforged.neoforge.fluids.crafting", "SizedFluidIngredient"};
+        RecipeFieldKind k = switch (type) {
+            case "ItemStack" -> RecipeFieldKind.ITEM_STACK;
+            case "Ingredient" -> RecipeFieldKind.INGREDIENT;
+            case "FluidStack" -> RecipeFieldKind.FLUID_STACK;
+            case "FluidIngredient" -> RecipeFieldKind.FLUID_INGREDIENT;
+            case "SizedFluidIngredient" -> RecipeFieldKind.SIZED_FLUID_INGREDIENT;
             default -> null;
         };
+        return k == null ? null : kindToPkgType(k);
     }
 
     private static void addImport(Map<String, Set<String>> importsByPkg, String pkg, String className) {

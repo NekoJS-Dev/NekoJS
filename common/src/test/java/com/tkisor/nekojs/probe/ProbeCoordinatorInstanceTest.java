@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  */
 class ProbeCoordinatorInstanceTest {
 
-    /* ================= (a) readConfig() 缓存与 reloadConfigCache ================= */
+    /* ================= (a) readConfig() 缓存、自动重读与 reloadConfigCache ================= */
 
     @Test
     void configCachesAndReloadsFromDisk(@TempDir Path tmp) throws Exception {
@@ -34,7 +34,7 @@ class ProbeCoordinatorInstanceTest {
 
         ProbeCoordinator c = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
         ProbeConfig first = c.readConfig();
-        assertSame(first, c.readConfig(), "readConfig() 应缓存同一实例");
+        assertSame(first, c.readConfig(), "readConfig() 应缓存同一实例（文件未变）");
         assertFalse(first.enabled());
         assertEquals("custom_out", first.baseDir());
 
@@ -42,6 +42,34 @@ class ProbeCoordinatorInstanceTest {
         c.reloadConfigCache();
         assertTrue(c.readConfig().enabled(), "reloadConfigCache 后应重读磁盘");
         assertNotSame(first, c.readConfig(), "reload 后应为新加载的实例");
+    }
+
+    @Test
+    void readConfigAutoReloadsWhenFileChanges(@TempDir Path tmp) throws Exception {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
+        Path cfgFile = paths.probeConfig();
+        Files.createDirectories(cfgFile.getParent());
+        Files.writeString(cfgFile, "enabled = false\n", StandardCharsets.UTF_8);
+
+        ProbeCoordinator c = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
+        ProbeConfig first = c.readConfig();
+        assertFalse(first.enabled());
+        assertSame(first, c.readConfig(), "mtime 未变 → 命中缓存");
+
+        // 模拟用户改配置：内容变更 + 显式推进 mtime（部分文件系统 mtime 粒度粗，保证可检测）
+        Files.writeString(cfgFile, "enabled = true\n", StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(cfgFile, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis() + 5_000));
+
+        ProbeConfig second = c.readConfig();
+        assertTrue(second.enabled(), "mtime 变化后 readConfig 应自动重读磁盘（无需手动 reload）");
+        assertNotSame(first, second, "自动重读后应为新加载的实例");
+        assertSame(second, c.readConfig(), "重读后 mtime 未再变 → 再次命中缓存");
+
+        // 文件被删除：应重新走 loader（创建默认文件或回退默认），不得返回陈旧缓存
+        Files.delete(cfgFile);
+        ProbeConfig third = c.readConfig();
+        assertTrue(Files.exists(cfgFile), "文件缺失时 loader 应重新自动创建");
+        assertTrue(third.enabled(), "删除后重读应拿到默认配置（enabled = true）");
     }
 
     /* ================= (b) runProbe：NONE 模式早退，不写盘 ================= */
@@ -83,10 +111,11 @@ class ProbeCoordinatorInstanceTest {
         b.reloadConfigCache();
         assertFalse(b.readConfig().enabled());
 
+        // a 自己的文件被修改 → 自动重读只读自己目录的新值；b 不受影响
         Files.writeString(cfgA, "enabled = true\n", StandardCharsets.UTF_8);
-        assertFalse(a.readConfig().enabled(), "a 未 reload：缓存不受自己磁盘文件与 b 重载影响");
-        a.reloadConfigCache();
-        assertTrue(a.readConfig().enabled(), "a reload 后读到自己目录的新值");
+        Files.setLastModifiedTime(cfgA, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis() + 5_000));
+        assertTrue(a.readConfig().enabled(), "a 的文件变化后应自动重读（不依赖 b 或手动 reload）");
+        assertFalse(b.readConfig().enabled(), "b 的缓存不得被 a 的重读影响");
     }
 
     /* ================= (d) 静态 facade 仍可调用 ================= */

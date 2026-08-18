@@ -20,7 +20,6 @@ declare module "java:java/lang/module" {
         static read(arg0: $ByteBuffer, arg1: $Supplier<string[]>): $ModuleDescriptor;
         static read(arg0: $ByteBuffer): $ModuleDescriptor;
         accessFlags(): $Set<$AccessFlag>;
-        compareTo(arg0: object): number;
         compareTo(arg0: $ModuleDescriptor): number;
         equals(arg0: object): boolean;
         exports(): $Set<$ModuleDescriptor$Exports>;

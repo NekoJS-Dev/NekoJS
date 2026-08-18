@@ -184,6 +184,12 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(server.contains("def recipes(handler: Callable[[FakeProbeEvent], None]) -> None: ..."), server);
         assertTrue(server.contains("def recipes(extra: FakeProbeEvent_, handler: Callable[[FakeProbeEvent], None]) -> None: ..."),
                 "dispatch overload should widen key via adapter alias: " + server);
+        // dispatch 型事件的两个签名都必须带 @overload：裸同名 def 会被 Pylance 报
+        // 「方法声明被同名声明遮盖」(reportRedeclaration)
+        assertEquals(2, countOccurrences(server, "@overload"),
+                "dispatch event overloads must be declared with @overload: " + server);
+        assertTrue(server.contains("from typing import Any, Callable, overload"),
+                "typing import must include overload: " + server);
         assertTrue(server.contains("from nekojs._java.com.tkisor.nekojs.probe.backend.python import FakeProbeEvent"), server);
         assertTrue(server.contains("import FakeProbeEvent_"), "alias import for widened key missing: " + server);
 
@@ -191,6 +197,8 @@ class PythonProbeBackendIntegrationTest {
         String client = Files.readString(out.resolve("nekojs/_events/client/__init__.pyi"));
         assertTrue(client.contains("class ClientEventsType:"), client);
         assertTrue(client.contains("def tick(handler: Callable[[FakeProbeEvent], None]) -> None: ..."), client);
+        assertEquals(0, countOccurrences(client, "@overload"),
+                "non-dispatch events must not carry @overload: " + client);
         // 命名空间 marker
         assertTrue(Files.exists(out.resolve("nekojs/_events/__init__.pyi")), "_events marker missing");
 
@@ -476,6 +484,16 @@ class PythonProbeBackendIntegrationTest {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
                 List.of(), List.of(), List.of(), null, Map.of(), List.of());
+    }
+
+    private static int countOccurrences(String haystack, String needle) {
+        int count = 0;
+        int idx = 0;
+        while ((idx = haystack.indexOf(needle, idx)) >= 0) {
+            count++;
+            idx += needle.length();
+        }
+        return count;
     }
 }
 

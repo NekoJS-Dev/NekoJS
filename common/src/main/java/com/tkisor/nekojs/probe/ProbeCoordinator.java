@@ -17,6 +17,7 @@ import com.tkisor.nekojs.probe.events.Snippet;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,6 +25,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +62,8 @@ public final class ProbeCoordinator {
     private final ProbeExternalArtifacts externalArtifacts;
     private final ProbeConfigLoader configLoader = new ProbeConfigLoader();
     private volatile ProbeConfig cachedConfig;
+    /** probe.toml 的 mtime（毫秒）缓存戳；{@link Long#MIN_VALUE} = 无缓存/文件缺失不可读。 */
+    private volatile long cachedConfigStamp = Long.MIN_VALUE;
 
     /** 以给定游戏目录路径构造；外部副作用走 {@link ProbeExternalArtifacts#DEFAULT}。 */
     public ProbeCoordinator(NekoJSPaths paths) {
@@ -72,19 +76,40 @@ public final class ProbeCoordinator {
         this.externalArtifacts = Objects.requireNonNull(artifacts, "artifacts");
     }
 
-    /** 读取（首次加载并缓存）probe 配置（实例版 {@code config()}，绑定本实例的 {@link NekoJSPaths}）。 */
+    /**
+     * 读取 probe 配置：带缓存的自动重读——每次调用比对 probe.toml 的 mtime，
+     * 文件被修改（或缺失/新建）时自动重新加载，无需手动 reload。
+     * 并发下两个线程可能同时重载同一文件，load 幂等、后写覆盖，结果等价。
+     */
     public ProbeConfig readConfig() {
         ProbeConfig c = cachedConfig;
-        if (c == null) {
+        long mtime = configMtime();
+        if (c == null || mtime != cachedConfigStamp) {
             c = configLoader.load(paths.probeConfig());
             cachedConfig = c;
+            // load() 可能在文件缺失时自动创建（autosave 写默认值），落盘后 mtime 已变化；
+            // 重新取一次 mtime 作缓存戳，避免下次读取误判为变更而重复加载。
+            cachedConfigStamp = configMtime();
         }
         return c;
     }
 
-    /** 丢弃配置缓存，下次 {@link #readConfig()} 重新从盘读取（实例版 {@code reloadConfig()}，供 {@code /nekojs probe reload}）。 */
+    /** probe.toml 的 mtime（毫秒）；缺失/不可读返回 {@link Long#MIN_VALUE}（恒视为已变更，每次重载）。 */
+    private long configMtime() {
+        try {
+            return Files.getLastModifiedTime(paths.probeConfig()).toMillis();
+        } catch (IOException e) {
+            return Long.MIN_VALUE;
+        }
+    }
+
+    /**
+     * 丢弃配置缓存，下次 {@link #readConfig()} 重新从盘读取（实例版 {@code reloadConfig()}，
+     * 供 {@code /nekojs probe reload} 强制刷新——正常修改配置后 readConfig 已自动感知，无需手动调用）。
+     */
     public void reloadConfigCache() {
         cachedConfig = null;
+        cachedConfigStamp = Long.MIN_VALUE;
     }
 
     /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（实例版 {@code setEnabled}，供 {@code /nekojs probe enable|disable} 命令）。写盘失败时告警：命令看似成功但配置未持久化。 */
@@ -119,6 +144,17 @@ public final class ProbeCoordinator {
     /** 静态 facade：委托全局默认协调器读取配置。 */
     public static ProbeConfig config() {
         return defaultCoordinator().readConfig();
+    }
+
+    /**
+     * 确保 {@code <gamedir>/nekojs/config/probe.toml} 存在：缺失时按默认值自动落盘
+     * （{@link ProbeConfigLoader} 的 autosave 语义，与 {@code engine.toml} 启动期自动生成对称）。
+     * 供 {@code WorkspaceGenerator.setupWorkspace()} 在启动时调用——否则用户首次看到
+     * {@code nekojs/config/} 时只有 engine.toml，probe.toml 要等第一次跑 probe 命令才出现。
+     * 读取失败（文件损坏等）由 loader 内部回退默认配置，此处不抛异常。
+     */
+    public static void ensureConfigFile() {
+        defaultCoordinator().readConfig();
     }
 
     /** 静态 facade：委托全局默认协调器丢弃配置缓存。 */

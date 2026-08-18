@@ -386,13 +386,17 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         aliases.put("@special/*", List.of(rel + "/@special/*"));
         c.mergeJsConfigPaths(scriptDir.resolve("jsconfig.json"), aliases);
 
-        // include/typeRoots：WorkspaceGenerator.buildConfigForEnv 预写的值指向旧 .neko_probe/@package，
-        // 校正 base 为 tsOut（glob 写法照抄 WorkspaceGenerator，仅 base 换成 tsOut）。
-        List<String> includes = List.of(
+        // include：脚本文件 globs（jsconfig 项目必须包含脚本自身，否则 IDE 无补全——
+        // 旧实现整体替换为 d.ts-only 导致 JS 文件不在项目内）+ probe 声明 globs。
+        // mergeJsConfigIncludes 每次 probe 整体替换（幂等），这里必须带上脚本 globs。
+        List<String> includes = new ArrayList<>(List.of(
+                "./**/*.js", "./**/*.mjs", "./**/*.cjs",
+                "./**/*.ts", "./**/*.jsx", "./**/*.tsx"));
+        includes.addAll(List.of(
                 rel + "/@package/**/*.d.ts",
                 rel + "/@manual/**/*.d.ts",
                 sideBase + "/**/*.d.ts",
-                rel + "/@nekojs/managed/" + env.name + "/**/*.d.ts");
+                rel + "/@nekojs/managed/" + env.name + "/**/*.d.ts"));
         List<String> typeRoots = List.of(rel + "/@package", "../node_modules/@types");
         c.mergeJsConfigIncludes(scriptDir.resolve("jsconfig.json"), includes);
         c.mergeJsConfigTypeRoots(scriptDir.resolve("jsconfig.json"), typeRoots);
@@ -400,7 +404,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     private static void contributeProbeDirJsconfig(EditorConfigContributor c, Path probeDir, Path tsOut) {
-        String rel = FileEditorConfigContributor.relativePosix(probeDir, tsOut); // "typescript"
+        // 未设置 baseUrl 时 paths 映射值必须是相对路径（./ 前缀）——TS 4.1+ 相对 tsconfig 位置解析
+        String rel = "./" + FileEditorConfigContributor.relativePosix(probeDir, tsOut); // "./typescript"
         Map<String, List<String>> aliases = new LinkedHashMap<>();
         aliases.put("java:*", List.of(rel + "/@package/*"));
         for (ScriptType st : ScriptType.values()) {

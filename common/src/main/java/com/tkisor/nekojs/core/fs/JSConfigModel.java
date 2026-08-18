@@ -39,12 +39,13 @@ public class JSConfigModel {
         public String target = "ESNext";
         // ESM-first：脚本源码统一用 import/export（NekoEsmToUnifiedIrLowering 在编译期处理），
         // probe 生成的 .d.ts 也全用 ESM import，ScriptExecutor 走 native ESM evaluation。
-        // moduleResolution 保持 "node"（paths 与 java: 互操作 specifier 依赖其宽松解析）。
+        // moduleResolution 用 "bundler"（TS 5.0+）：支持 paths 通配与 ESM 互操作 specifier，
+        // 且不触发 TS 6/7 对 "node"（node10）的弃用警告。
         public String module = "ESNext";
 
         public String moduleDetection = "force";
 
-        public String moduleResolution = null;
+        public String moduleResolution = "bundler";
         public String jsx = "react";
         public String jsxFactory = "__nekoJsxFactory";
         public String jsxFragmentFactory = "__nekoJsxFragment";
@@ -56,7 +57,7 @@ public class JSConfigModel {
 
         public boolean skipLibCheck = true;
 
-        public String baseUrl = ".";
+        // baseUrl 已弃用（TS 6/7）：paths 相对 jsconfig 位置解析，无需 baseUrl
 
         public List<String> typeRoots;
 

@@ -11,6 +11,7 @@ import com.tkisor.nekojs.core.fs.JSConfigModel;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,6 +33,9 @@ public final class WorkspaceGenerator {
     public static void setupWorkspace() {
         createReadme();
         ClassFilter.loadEngineConfig();
+        // probe.toml 与 engine.toml 一样在启动时自动生成（缺失时落盘默认值），
+        // 避免用户首次看到 nekojs/config/ 时只有 engine.toml、probe.toml 要等跑 probe 命令才出现。
+        ProbeCoordinator.ensureConfigFile();
     }
 
     public static void createReadme() {
@@ -93,13 +97,16 @@ public final class WorkspaceGenerator {
         applyEngineJsxRuntime(model);
 
         String relativeProbePath = scriptDir.relativize(probeDir).toString().replace('\\', '/');
+        // paths 映射值必须是相对路径（./ 或 ../ 开头，TS 4.1+ 相对 jsconfig 位置解析）
+        if (!relativeProbePath.startsWith(".")) {
+            relativeProbePath = "./" + relativeProbePath;
+        }
 
         model.compilerOptions.typeRoots = List.of(
                 relativeProbePath + "/@package",
                 "../node_modules/@types"
         );
-        model.compilerOptions.moduleResolution = "node";
-        model.compilerOptions.baseUrl = ".";
+        model.compilerOptions.moduleResolution = "bundler";
 
         Map<String, List<String>> paths = new LinkedHashMap<>();
         paths.put("java:*", List.of(relativeProbePath + "/@package/*"));
@@ -135,18 +142,18 @@ public final class WorkspaceGenerator {
         Path probeDir = NekoJSPaths.get().probeDir();
         JSConfigModel model = new JSConfigModel();
         applyEngineJsxRuntime(model);
-        model.compilerOptions.moduleResolution = "node";
-        model.compilerOptions.baseUrl = ".";
+        model.compilerOptions.moduleResolution = "bundler";
 
         Map<String, List<String>> paths = new LinkedHashMap<>();
-        paths.put("java:*", List.of("@package/*"));
+        // 未设置 baseUrl 时 paths 映射值必须是相对路径（./ 前缀），相对 jsconfig 位置解析
+        paths.put("java:*", List.of("./@package/*"));
         // .neko_probe 内部 @side-only/<type> 与 @special 互引（相对自身）
         for (ScriptType st : ScriptType.values()) {
-            paths.put("@side-only/" + st.name, List.of("@side-only/" + st.name));
-            paths.put("@side-only/" + st.name + "/*", List.of("@side-only/" + st.name + "/*"));
+            paths.put("@side-only/" + st.name, List.of("./@side-only/" + st.name));
+            paths.put("@side-only/" + st.name + "/*", List.of("./@side-only/" + st.name + "/*"));
         }
-        paths.put("@special", List.of("@special"));
-        paths.put("@special/*", List.of("@special/*"));
+        paths.put("@special", List.of("./@special"));
+        paths.put("@special/*", List.of("./@special/*"));
         model.compilerOptions.paths = paths;
 
         // 索引 .neko_probe 下所有 .d.ts
