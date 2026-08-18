@@ -25,6 +25,7 @@ import graal.graalvm.polyglot.Value;
 
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -77,6 +78,11 @@ public final class ScriptEnvironmentFactory {
         addEventGroupSchema(bindingSchema, pluginRuntime.eventGroups().values(), ScriptEventRegistry.groupsFor(scriptType));
 
         ScriptBindingSchema.register(scriptType, bindingSchema);
+        // 未定义标识符检查的已知全局全集：以运行时 Context 真实可见的全局键为准
+        // （JS 内置 + 引擎/平台装的全部绑定），并补上解析器视作标识符的关键字（this/arguments/super）。
+        Set<String> knownGlobals = new LinkedHashSet<>(context.getBindings("js").getMemberKeys());
+        knownGlobals.addAll(List.of("this", "arguments", "super"));
+        ScriptBindingSchema.registerGlobals(scriptType, knownGlobals);
 
         installJavaClassLoadTelemetry(context, scriptType);
 
@@ -164,14 +170,16 @@ public final class ScriptEnvironmentFactory {
 
     private static ScriptBindingSchema.BindingMembers resolveMembers(com.tkisor.nekojs.api.data.Binding binding) {
         Set<String> members = new LinkedHashSet<>();
+        Set<Class<?>> classes = new LinkedHashSet<>();
         Object value = binding.value();
         if (value instanceof DelegatingBinding db) {
             members.addAll(db.extensions());
             members.addAll(JavaMemberIndex.allMembersOf(db.targetClass()));
-        } else {
-            members.addAll(JavaMemberIndex.allMembersOf(binding.valueType()));
+            classes.add(db.targetClass());
         }
-        return new ScriptBindingSchema.BindingMembers(members);
+        classes.add(binding.valueType());
+        members.addAll(JavaMemberIndex.allMembersOf(binding.valueType()));
+        return new ScriptBindingSchema.BindingMembers(members, classes);
     }
 
     /**

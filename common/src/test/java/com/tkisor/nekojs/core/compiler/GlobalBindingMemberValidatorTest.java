@@ -33,6 +33,27 @@ class GlobalBindingMemberValidatorTest {
         }
     }
 
+    /** 链式类型流用：of 返回 TestStackJS。 */
+    public static class TestItemJS {
+        public static TestStackJS of(String id) {
+            return new TestStackJS();
+        }
+
+        public static TestStackJS empty() {
+            return new TestStackJS();
+        }
+    }
+
+    public static class TestStackJS {
+        public TestStackJS withCount(int count) {
+            return this;
+        }
+
+        public String getId() {
+            return "";
+        }
+    }
+
     private final List<String> reported = new ArrayList<>();
 
     @BeforeEach
@@ -42,7 +63,12 @@ class GlobalBindingMemberValidatorTest {
         ScriptErrorReporter.set((type, kind, t) -> reported.add(String.valueOf(t.getMessage())));
         ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
                 "Utils", new ScriptBindingSchema.BindingMembers(JavaMemberIndex.allMembersOf(UtilsJS.class)),
+                "Item", new ScriptBindingSchema.BindingMembers(
+                        JavaMemberIndex.allMembersOf(TestItemJS.class), Set.of(TestItemJS.class)),
                 "ServerEvents", new ScriptBindingSchema.BindingMembers(Set.of("recipes"))));
+        // 生产环境由 ScriptEnvironmentFactory 从运行中 Context 收割；测试给出最小内置集
+        ScriptBindingSchema.registerGlobals(ScriptType.SERVER,
+                Set.of("console", "Math", "JSON", "globalThis", "this", "arguments", "super"));
     }
 
     @AfterEach
@@ -79,5 +105,54 @@ class GlobalBindingMemberValidatorTest {
                 "Utils.serverTell('hi')\r\nconst u = Utils\r\nu.getServer()\r\nServerEvents.recipes(event => {})\r\n");
 
         assertTrue(reported.isEmpty(), "known members (direct + const alias) must not be reported: " + reported);
+    }
+
+    @Test
+    void chainedMemberTypoIsFlaggedViaTypeFlow() {
+        GlobalBindingMemberValidator.validate(file("chain"),
+                "const s = Item.of('minecraft:stone')\r\ns.withCont(3)\r\nItem.empty().getIdd()\r\n");
+
+        assertTrue(reported.stream().anyMatch(m -> m.contains("no member 'withCont'")),
+                "second-level typo via local must be reported: " + reported);
+        assertTrue(reported.stream().anyMatch(m -> m.contains("no member 'getIdd'")),
+                "chained typo on call result must be reported: " + reported);
+    }
+
+    @Test
+    void chainedLegitimateAccessIsNotFlagged() {
+        GlobalBindingMemberValidator.validate(file("chainok"),
+                "Item.of('minecraft:stone').withCount(3).getId()\r\n");
+
+        assertTrue(reported.isEmpty(), "legit chains must not be reported: " + reported);
+    }
+
+    @Test
+    void unknownIdentifierAsObjectOrCalleeIsFlagged() {
+        GlobalBindingMemberValidator.validate(file("unknown"),
+                "Util.serverTell('hi')\r\nqwq()\r\n");
+
+        assertTrue(reported.stream().anyMatch(m -> m.contains("Unknown identifier 'Util'")),
+                "typoed binding name must be reported: " + reported);
+        assertTrue(reported.stream().anyMatch(m -> m.contains("Unknown identifier 'qwq'")),
+                "unknown call target must be reported: " + reported);
+    }
+
+    @Test
+    void typeofAndBareIdentifiersAreNotFlagged() {
+        // typeof 的操作数会被 ValParser 泄漏为独立语句（裸标识符），报了必误报
+        GlobalBindingMemberValidator.validate(file("typeof"),
+                "if (typeof Java !== 'undefined') {\r\n  console.log('has java')\r\n}\r\n");
+
+        assertTrue(reported.isEmpty(), "typeof guard and bare identifiers must not be reported: " + reported);
+    }
+
+    @Test
+    void importAndCatchAndGlobalsAreNotFlagged() {
+        GlobalBindingMemberValidator.validate(file("scope"),
+                "import { ItemStack, Item as It } from 'nekojs:items'\r\n"
+                + "try {\r\n  ItemStack.of('x')\r\n} catch (err) {\r\n  err.getMessage()\r\n}\r\n"
+                + "JSON.parse('{}')\r\nMath.max(1, 2)\r\nconsole.log('hi')\r\n");
+
+        assertTrue(reported.isEmpty(), "imports/catch params/JS builtins must not be reported: " + reported);
     }
 }
