@@ -396,6 +396,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         List<String> typeRoots = List.of(rel + "/@package", "../node_modules/@types");
         c.mergeJsConfigIncludes(scriptDir.resolve("jsconfig.json"), includes);
         c.mergeJsConfigTypeRoots(scriptDir.resolve("jsconfig.json"), typeRoots);
+        c.mergeJsConfigTypeAcquisition(scriptDir.resolve("jsconfig.json"), false);
     }
 
     private static void contributeProbeDirJsconfig(EditorConfigContributor c, Path probeDir, Path tsOut) {
@@ -410,6 +411,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         aliases.put("@special", List.of(rel + "/@special"));
         aliases.put("@special/*", List.of(rel + "/@special/*"));
         c.mergeJsConfigPaths(probeDir.resolve("jsconfig.json"), aliases);
+        c.mergeJsConfigTypeAcquisition(probeDir.resolve("jsconfig.json"), false);
     }
 
     private int generatePackageDeclarations(PackageTree tree, Path outputDir, ExecutorService pool) throws IOException {

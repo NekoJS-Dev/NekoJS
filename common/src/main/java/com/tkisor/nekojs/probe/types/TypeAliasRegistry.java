@@ -130,13 +130,17 @@ public final class TypeAliasRegistry {
     /**
      * 获取集合类型的输入别名。
      *
+     * @param rawClass 参数化类型的 raw class
+     * @param tsArgs   各类型实参**独立渲染后**的 TS 字符串（结构化数组，来自
+     *                 {@code ParameterizedType.getActualTypeArguments()} 逐个转换）。
+     *                 不能传入 join 后的整体字符串再按 ", " 拆分——实参自身可能含 ", "
+     *                 （嵌套多实参泛型），拆分会截断嵌套类型。
      * @return 输入类型字符串，如果不是集合类型则返回 null
      */
-    public String getCollectionAlias(Class<?> rawClass, String typeArgs) {
+    public String getCollectionAlias(Class<?> rawClass, String[] tsArgs) {
         CollectionAlias alias = collectionAliases.get(rawClass.getName());
         if (alias == null) return null;
-        String[] args = typeArgs.isEmpty() ? new String[0] : typeArgs.split(", ");
-        return alias.getInputType(args);
+        return alias.getInputType(tsArgs);
     }
 
     /**

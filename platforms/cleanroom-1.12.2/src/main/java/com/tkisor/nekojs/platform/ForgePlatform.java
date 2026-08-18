@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
+import com.tkisor.nekojs.api.recipe.definition.RecipeFieldKind;
 import com.tkisor.nekojs.api.registry.ForgeRegistryQueryService;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
 import com.tkisor.nekojs.platform.nbt.CleanroomNbtBinaryCodec;
@@ -109,6 +110,17 @@ public class ForgePlatform implements IPlatform {
 
     @Override
     public List<String> defaultScanPackages() {
-        return List.of("net.minecraft", "net.minecraftforge");
+        // com.mojang: 1.12.2 的 authlib/datafixers 同样被 MC API 签名引用，需一并放行
+        return List.of("net.minecraft", "net.minecraftforge", "com.mojang");
+    }
+
+    @Override
+    public String recipeFieldKindPackage(RecipeFieldKind kind) {
+        // 1.12.2：Ingredient/ItemStack 在 net.minecraft.item[.crafting]（1.21+ 移到 world.item*）
+        return switch (kind) {
+            case INGREDIENT -> "net.minecraft.item.crafting";
+            case ITEM_STACK -> "net.minecraft.item";
+            default -> IPlatform.super.recipeFieldKindPackage(kind);
+        };
     }
 }

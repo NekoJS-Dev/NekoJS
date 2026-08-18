@@ -53,6 +53,18 @@ public interface EditorConfigContributor {
     void mergeJsConfigTypeRoots(java.nio.file.Path jsconfigFile, List<String> typeRoots);
 
     /**
+     * 把 {@code typeAcquisition.enable} 写进指定 {@code jsconfig.json} 的顶层 {@code typeAcquisition}。
+     *
+     * <p>脚本工程自带 probe 全量声明，VS Code 的 Automatic Type Acquisition 只会按 JS 依赖名
+     * 猜测并联网拉取 @types 包——离线/代理环境下会拖慢甚至卡住语言服务，并混入无关全局。
+     * typeAcquisition 是 probe 拥有的对象：整体替换（语义同 {@link #mergeJsConfigIncludes}）。
+     *
+     * @param jsconfigFile 目标 jsconfig.json（不存在则创建）
+     * @param enable       是否启用 ATA（probe 一律贡献 false）
+     */
+    default void mergeJsConfigTypeAcquisition(java.nio.file.Path jsconfigFile, boolean enable) {}
+
+    /**
      * 把 extraPaths 合并进指定 {@code pyrightconfig.json}（去重；fresh 文件附带默认 typeCheckingMode）。
      *
      * @param pyrightFile 目标 pyrightconfig.json（不存在则创建）

@@ -87,6 +87,21 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
     }
 
     @Override
+    public void mergeJsConfigTypeAcquisition(Path jsconfigFile, boolean enable) {
+        try {
+            JsonObject root = readJsonOrEmpty(jsconfigFile);
+            JsonObject typeAcquisition = new JsonObject();
+            typeAcquisition.addProperty("enable", enable);
+            // typeAcquisition 是 probe 拥有的对象：整体替换（语义同 include），其余键保留
+            root.add("typeAcquisition", typeAcquisition);
+            reconcileJsxRuntime(asObject(root, "compilerOptions"));
+            writeJson(jsconfigFile, root);
+        } catch (Exception ex) {
+            NekoJS.LOGGER.debug("EditorConfig: jsconfig typeAcquisition merge failed at {}", jsconfigFile, ex);
+        }
+    }
+
+    @Override
     public void mergePyrightExtraPaths(Path pyrightFile, List<String> extraPaths) {
         if (extraPaths == null || extraPaths.isEmpty()) return;
         try {

@@ -103,6 +103,8 @@ public class NeoForgePlatform implements IPlatform {
 
     @Override
     public List<String> defaultScanPackages() {
-        return List.of("net.minecraft", "net.neoforged");
+        // com.mojang: MC API 签名大量引用 datafixers(Either)/brigadier/blaze3d/authlib——
+        // 不放行则 probe 只生成引用它们的 import 而无声明，IDE 里这些类型全部悬空
+        return List.of("net.minecraft", "net.neoforged", "com.mojang");
     }
 }

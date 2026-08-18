@@ -8,6 +8,12 @@ import java.util.Map;
 public class JSConfigModel {
     public CompilerOptions compilerOptions = new CompilerOptions();
 
+    /**
+     * 关闭 Automatic Type Acquisition：脚本工程自带 probe 全量声明，ATA 只会按 JS 依赖名
+     * 猜测并联网拉取 @types 包（离线/代理环境下卡住语言服务、混入无关全局），对补全有害无益。
+     */
+    public TypeAcquisition typeAcquisition = new TypeAcquisition();
+
     public List<String> include = Arrays.asList(
             "./**/*.js",
             "./**/*.mjs",
@@ -62,5 +68,9 @@ public class JSConfigModel {
         public boolean strict = true;
         public Map<String, List<String>> paths = new LinkedHashMap<>();
 
+    }
+
+    public static class TypeAcquisition {
+        public boolean enable = false;
     }
 }

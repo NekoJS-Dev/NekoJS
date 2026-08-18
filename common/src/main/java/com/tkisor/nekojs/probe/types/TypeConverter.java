@@ -127,15 +127,17 @@ public final class TypeConverter {
         for (int i = 0; i < typeArgs.length; i++) {
             tsArgs[i] = toTypeScript(typeArgs[i], input);
         }
-        String argsStr = String.join(", ", tsArgs);
 
-        // 检查输入别名（集合类型）
+        // 检查输入别名（集合类型）。必须传结构化的 tsArgs 数组：单实参的渲染字符串自身可能含
+        // ", "（嵌套多实参泛型，如 List<Pair<A, B>> → "$Pair<$A, $B>"），若按 join 后的字符串
+        // 再 split(", ") 取首段，会把嵌套泛型劈成残缺片段（曾产出 "$Either<$FormattedText[]"
+        // 这类非法 TS，整个 d.ts 解析失败、IDE 补全全灭）。
         if (input) {
-            String alias = aliases.getCollectionAlias(rawClass, argsStr);
+            String alias = aliases.getCollectionAlias(rawClass, tsArgs);
             if (alias != null) return alias;
         }
 
-        return "$" + getTsClassName(rawClass) + "<" + argsStr + ">";
+        return "$" + getTsClassName(rawClass) + "<" + String.join(", ", tsArgs) + ">";
     }
 
 }
