@@ -30,6 +30,9 @@ import com.tkisor.nekojs.wrapper.LangGeneratorJS;
  * 配方命名空间与 schema、probe backend、生命周期钩子等。加载优先级由
  * {@code @RegisterNekoJSPlugin(priority=...)} 控制（数值大者先加载）；内置 CorePlugin
  * 使用 {@link #CORE_PRIORITY} 保证基础设施（adapters/bindings）最先就位。
+ * <b>同优先级插件的相对顺序为发现/扫描序，跨平台不稳定——不要依赖同优先级插件间的顺序</b>
+ * （需要确定性覆盖时用各 registry 的显式 replace/override 语义，如
+ * {@code ScriptCompilerRegistry.replaceLanguage}）。
  *
  * <p>与脚本侧能力的关系（可并用，插件侧优先级更高或更低视扩展点而定）：
  * <ul>

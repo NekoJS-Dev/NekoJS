@@ -102,6 +102,15 @@ public final class ScriptCompilerRegistry {
         extraExtensions.add(normalizeExtension(extension));
     }
 
+    /**
+     * 按扩展名取编译器。
+     *
+     * <p><b>倒序查找、后注册者胜（last-wins）：</b>从最新注册项向前遍历，第一个声明支持
+     * 该扩展名的编译器获胜——后注册的插件可以用普通 {@code register} 覆盖内置编译器，
+     * 无需 {@link #replaceLanguage}。注册顺序由插件 priority 决定（数值大者先注册），
+     * 因此「覆盖内置」的插件通常需要<b>低于</b>内置插件的 priority（后注册），或直接用
+     * {@code replaceLanguage} 显式替换以消除顺序依赖。同 priority 时顺序为扫描序（不稳定）。
+     */
     public IScriptCompiler getCompiler(String extension) {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);
@@ -114,6 +123,7 @@ public final class ScriptCompilerRegistry {
         return null;
     }
 
+    /** 同 {@link #getCompiler(String)} 的 last-wins 语义，返回整个语言插件条目。 */
     public NekoScriptLanguage getLanguage(String extension) {
         String dotted = normalizeExtension(extension);
         String bare = dotted.substring(1);
