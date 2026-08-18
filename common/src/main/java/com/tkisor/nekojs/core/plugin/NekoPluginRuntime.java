@@ -214,6 +214,15 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         return nodeModules;
     }
 
+    /**
+     * 插件经 {@code registerRecipeSchemas} 注册（或覆盖）的配方 schema 快照
+     * （namespace → type → definition，已冻结）。此前只能经
+     * {@code RecipeTypeDefinitionStorage} 的合并视图间接观测，补一个直接访问器。
+     */
+    public Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides() {
+        return recipeSchemaOverrides;
+    }
+
     public Map<String, RecipeNamespaceEntry> recipeNamespaces() {
         return recipeNamespaces;
     }

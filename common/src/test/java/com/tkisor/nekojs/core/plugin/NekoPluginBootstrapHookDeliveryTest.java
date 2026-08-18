@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>{@code registerNodeModules} 注册的模块出现在 {@link NekoPluginRuntime#nodeModules()}；</li>
  *   <li>{@code registerRecipeSchemas} 注册的 schema 经 runtime 构造时的
  *       {@code publishRecipeSchemaOverrides} 发布到 {@link RecipeTypeDefinitionStorage}
- *       （runtime 本身无 recipeSchemaOverrides 访问器，存储层是唯一可观测面）；</li>
+ *       （同时经 runtime.recipeSchemaOverrides() 访问器直接断言快照）；</li>
  *   <li>{@code registerLifecycleHooks} 默认实现把五个便捷方法以方法引用收集进 runtime，
  *       bootstrap 阶段不提前触发，{@code fireXxx} 时按序触发且异常被隔离。</li>
  * </ul>
@@ -96,10 +96,12 @@ class NekoPluginBootstrapHookDeliveryTest {
     void registerRecipeSchemasPublishesOverrideIntoDefinitionStorage() {
         RecordingPlugin plugin = new RecordingPlugin();
 
-        NekoPluginBootstrap.bootstrap(List.of(plugin), new ScriptPropertyRegistry.Impl());
+        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(List.of(plugin), new ScriptPropertyRegistry.Impl());
 
         assertTrue(plugin.calls.contains("registerRecipeSchemas"),
                 "nekojs:recipe_schemas 扩展点必须调用插件的 registerRecipeSchemas");
+        assertSame(SMOKE_SCHEMA, runtime.recipeSchemaOverrides().get("smoke").get("machine"),
+                "runtime 快照必须能直接取回插件注册的 schema（recipeSchemaOverrides() 访问器）");
         assertSame(SMOKE_SCHEMA, RecipeTypeDefinitionStorage.current().get("smoke", "machine"),
                 "插件注册的 schema 必须经 publishRecipeSchemaOverrides 发布到 RecipeTypeDefinitionStorage");
     }

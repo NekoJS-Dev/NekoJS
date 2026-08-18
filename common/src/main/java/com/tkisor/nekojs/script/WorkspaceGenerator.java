@@ -185,7 +185,14 @@ public final class WorkspaceGenerator {
     }
 
     private static void createSnippets() {
-        Path snippetsPath = NekoScriptCatalog.outputLayout().snippetsPath();
+        com.tkisor.nekojs.api.catalog.TypeOutputLayout layout = NekoScriptCatalog.outputLayout();
+        if (layout == null) {
+            // 平台侧未注入 catalog provider（裸 common 环境/测试）：EMPTY provider 的
+            // outputLayout() 为 null，没有 snippets 输出路径，跳过而不是 NPE
+            NekoJS.LOGGER.debug("No catalog output layout available, skipping snippets file creation");
+            return;
+        }
+        Path snippetsPath = layout.snippetsPath();
         try {
             Files.createDirectories(snippetsPath.getParent());
             Files.writeString(snippetsPath, GSON.toJson(NekoSnippetJson.vscodeSnippets()));
