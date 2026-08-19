@@ -293,10 +293,12 @@ public final class NekoScriptModuleLoaderHost {
             return cached.exports();
         }
         ModuleState module = newModuleState(resolved.id());
+        // Node 循环 require 语义：执行前先入缓存，循环方拿到的是执行中模块的「部分 exports」；
+        // 若执行后才入缓存，A↔B 互引会无限重入直至 StackOverflowError。失败时移除以免半初始化模块驻留。
+        moduleCache.put(resolved.id(), module);
         try {
             executeScriptModule(resolved, module, prepared);
             module.loaded(true);
-            moduleCache.put(resolved.id(), module);
             return module.exports();
         } catch (IOException | RuntimeException | Error e) {
             moduleCache.remove(resolved.id());

@@ -96,7 +96,14 @@
         const t = target as NekoHostBuffer
         if (prop === 'length') return t.length()
         if (prop === 'byteLength') return t.length()
-        if (prop === 'buffer') return t.bytes().buffer
+        if (prop === 'buffer') {
+          // 快照为真 ArrayBuffer：宿主 bytes() 每次全量拷贝且返回 Java 数组代理（不能当 ArrayBuffer 用）。
+          // 注意这是快照语义——之后对 buffer 的修改不会反映到已取出的 ArrayBuffer。
+          const out = new ArrayBuffer(t.length())
+          const view = new Uint8Array(out)
+          for (let i = 0; i < t.length(); i++) view[i] = t.get(i)
+          return out
+        }
         if (prop === 'byteOffset') return 0
         if (prop === Symbol.toStringTag) return 'Uint8Array'
         if (prop === Symbol.iterator) return function* () { for (let i = 0; i < t.length(); i++) yield t.get(i) }
@@ -114,8 +121,25 @@
         if (typeof value === 'function') {
           if (prop === 'slice') return (start, end) => wrapBuffer(t.slice(Number(start) || 0, end === undefined ? t.length() : Number(end))) as Buffer
           if (prop === 'subarray') return (start, end) => wrapBuffer(t.slice(Number(start) || 0, end === undefined ? t.length() : Number(end))) as Buffer
-          if (prop === 'fill') return (v, start, end) => wrapBuffer(t.fill(Number(v) || 0, Number(start) || 0, end === undefined ? t.length() : Number(end))) as Buffer
-        if (prop === 'indexOf') return (needle, fromIndex) => t.indexOf(needleBuffer(needle), Number(fromIndex) || 0)
+          if (prop === 'fill') return (v, start, end) => {
+          const from = Number(start) || 0
+          const to = end === undefined ? t.length() : Number(end)
+          if (typeof v === 'number') return wrapBuffer(t.fill(v & 255, from, to)) as Buffer
+          // 字符串/Buffer 填充按 utf8 编码重复铺满 [from, to)（Node 语义）
+          const src = unwrapBuffer(Buffer.from(v, 'utf8'))
+          if (src && src.length() > 0) {
+            for (let offset = from; offset < to; offset += src.length()) {
+              src.copy(t, offset, 0, Math.min(src.length(), to - offset))
+            }
+          }
+          return wrapBuffer(t) as Buffer
+        }
+        if (prop === 'indexOf') return (needle, fromIndex) => {
+          const from = Number(fromIndex) || 0
+          // 负数 fromIndex 从尾部倒数（Node 语义）；宿主只会 clamp 到 0
+          const start = from < 0 ? Math.max(t.length() + from, 0) : from
+          return t.indexOf(needleBuffer(needle), start)
+        }
         if (prop === 'includes') return (needle) => t.includes(needleBuffer(needle))
           if (prop === 'copy') return (targetBuf, targetStart, sourceStart, sourceEnd) => t.copy(unwrapBuffer(targetBuf) as NekoHostBuffer, Number(targetStart) || 0, Number(sourceStart) || 0, sourceEnd === undefined ? t.length() : Number(sourceEnd))
           if (prop === 'equals') return (other) => t.equals(unwrapBuffer(other) as NekoHostBuffer)
@@ -243,6 +267,10 @@
     if (value instanceof ArrayBuffer || (typeof SharedArrayBuffer !== 'undefined' && value instanceof SharedArrayBuffer)) {
       return wrapBuffer(runtime.bufferFromString(latin1FromByteValues(new Uint8Array(value)), 'latin1')) as Buffer
     }
+    if (ArrayBuffer.isView(value)) {
+      const view = new Uint8Array((value as ArrayBufferView).buffer, (value as ArrayBufferView).byteOffset, (value as ArrayBufferView).byteLength)
+      return wrapBuffer(runtime.bufferFromString(latin1FromByteValues(view), 'latin1')) as Buffer
+    }
     if (Array.isArray(value)) return wrapBuffer(runtime.bufferFromString(latin1FromByteValues(value), 'latin1')) as Buffer
     return wrapBuffer(runtime.bufferFromString(String(value ?? ''), encoding || 'utf8')) as Buffer
   }
@@ -285,6 +313,42 @@
     if (!ub) return 1
     return ua.compare(ub)
   }
+
+  class TextEncoder {
+    encoding: string
+
+    constructor() {
+      this.encoding = 'utf-8'
+    }
+
+    encode(input?: string): Uint8Array {
+      return Uint8Array.from(Buffer.from(String(input ?? ''), 'utf8'))
+    }
+  }
+
+  class TextDecoder {
+    encoding: string
+
+    constructor(encoding?: string) {
+      const name = String(encoding ?? 'utf-8')
+      if (!Buffer.isEncoding(name)) throw new RangeError('Unknown encoding: ' + name)
+      this.encoding = name
+    }
+
+    decode(input?: unknown): string {
+      if (input === null || input === undefined) return ''
+      let buf: Buffer
+      if (input instanceof ArrayBuffer) buf = Buffer.from(input)
+      else if (ArrayBuffer.isView(input)) buf = Buffer.from(input)
+      else buf = Buffer.from(String(input), 'latin1')
+      return buf.toString(this.encoding)
+    }
+  }
+
+  globalThis.TextEncoder = TextEncoder
+  globalThis.TextDecoder = TextDecoder
+  globalThis.btoa = function btoa(value: string): string { return Buffer.from(String(value ?? ''), 'latin1').toString('base64') }
+  globalThis.atob = function atob(value: string): string { return Buffer.from(String(value ?? ''), 'base64').toString('latin1') }
 
   globalThis.__nekoNodeBuffer = { Buffer, Blob, wrapBuffer, unwrapBuffer }
   globalThis.__nekoNodeDefine(['buffer', 'node:buffer'], { Buffer, Blob, constants: { MAX_LENGTH: 0x7FFFFFFF, MAX_STRING_LENGTH: 0x1FFFFFFFE } })

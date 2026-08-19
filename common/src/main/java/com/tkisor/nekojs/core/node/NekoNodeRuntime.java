@@ -23,6 +23,7 @@ public final class NekoNodeRuntime implements AutoCloseable {
     private final NekoNodeOS os = new NekoNodeOS();
     private final NekoNodeTimers timers;
     private final NekoNodeProcess process;
+    private final NekoNodeCrypto crypto = new NekoNodeCrypto();
 
     public NekoNodeRuntime(ScriptType scriptType, NekoScriptModuleLoaderHost moduleLoaderHost, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
         this.scriptType = scriptType;
@@ -58,6 +59,15 @@ public final class NekoNodeRuntime implements AutoCloseable {
 
     public NekoNodeProcess process() {
         return process;
+    }
+
+    public NekoNodeCrypto crypto() {
+        return crypto;
+    }
+
+    /** 单调时钟（纳秒），供 process.hrtime / performance.now 使用（Date.now 只有毫秒且非单调）。 */
+    public long nanoTime() {
+        return System.nanoTime();
     }
 
     public NekoNodeBuffer bufferFromString(String value, String encoding) {

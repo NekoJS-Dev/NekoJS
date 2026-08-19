@@ -48,6 +48,21 @@
     isSocket(): boolean
   }
 
+  interface NekoWriteFlag { append: boolean; exclusive: boolean }
+
+  /** flag 白名单解析：不支持的 flag 显式报错（此前静默忽略，'wx' 的独占语义会假成功）。 */
+  function writeFlagFromOptions(options: unknown): NekoWriteFlag {
+    let flag = 'w'
+    if (options && typeof options === 'object' && typeof (options as Record<string, unknown>).flag === 'string') {
+      flag = String((options as Record<string, unknown>).flag)
+    }
+    if (flag === 'w') return { append: false, exclusive: false }
+    if (flag === 'wx' || flag === 'x') return { append: false, exclusive: true }
+    if (flag === 'a') return { append: true, exclusive: false }
+    if (flag === 'ax') return { append: true, exclusive: true }
+    throw new Error(`Unsupported fs flag '${flag}' (supported: w, wx, x, a, ax)`)
+  }
+
   function existsSync(path: unknown): boolean { return runtime.fs().existsSync(String(path)) }
   function accessSync(path: unknown, mode?: unknown): void { runtime.fs().access(String(path), Number(mode) || 0) }
   function readFileSync(path: unknown, options?: unknown): unknown {
@@ -57,8 +72,9 @@
   }
   function writeFileSync(path: unknown, data: unknown, options?: unknown): void {
     const buffer = unwrapBuffer(data)
-    if (buffer) runtime.fs().writeFileBuffer(String(path), buffer)
-    else runtime.fs().writeFile(String(path), String(data ?? ''), encodingFromOptions(options) || 'utf8')
+    const flag = writeFlagFromOptions(options)
+    if (buffer) runtime.fs().writeFileBuffer(String(path), buffer, flag.append, flag.exclusive)
+    else runtime.fs().writeFile(String(path), String(data ?? ''), encodingFromOptions(options) || 'utf8', flag.append, flag.exclusive)
   }
   function appendFileSync(path: unknown, data: unknown, options?: unknown): void { runtime.fs().appendFile(String(path), String(data ?? ''), encodingFromOptions(options) || 'utf8') }
   function mkdirSync(path: unknown, options?: unknown): void { runtime.fs().mkdir(String(path), recursiveFromOptions(options)) }

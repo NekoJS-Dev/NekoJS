@@ -2,6 +2,8 @@
   const { runtime } = globalThis.__nekoNodeInternal
   const timers = globalThis.__nekoNodeTimers
   const startedAtMillis: number = Date.now()
+  /** 单调时钟基线（宿主 System.nanoTime）：hrtime/performance 用它，Date.now 非单调且只有毫秒。 */
+  const startedAtNanos: number = Number(runtime.nanoTime())
 
   let exitCode: number = 0
 
@@ -10,14 +12,14 @@
   interface NekoHrtime { (previous?: [number, number]): [number, number]; bigint(previous?: [number, number]): bigint }
 
   function hrtime(previous?: [number, number]): [number, number] {
-    const seconds: number = Math.floor((Date.now() - startedAtMillis) / 1000)
-    const nanos: number = Math.floor((Date.now() - startedAtMillis) * 1e6 - seconds * 1e9)
-    const result: [number, number] = [seconds, nanos]
+    const deltaNanos = Number(runtime.nanoTime()) - startedAtNanos
+    const seconds = Math.floor(deltaNanos / 1e9)
+    const result: [number, number] = [seconds, deltaNanos - seconds * 1e9]
     if (previous) {
       result[0] -= Number(previous[0]) || 0
-      const deltaNanos: number = result[1] - (Number(previous[1]) || 0)
-      if (deltaNanos < 0) { result[0]--; result[1] = 1e9 + deltaNanos }
-      else result[1] = deltaNanos
+      const deltaNanosDiff = result[1] - (Number(previous[1]) || 0)
+      if (deltaNanosDiff < 0) { result[0]--; result[1] = 1e9 + deltaNanosDiff }
+      else result[1] = deltaNanosDiff
     }
     return result
   }
@@ -44,6 +46,26 @@
     if (typeof console !== 'undefined' && typeof console.error === 'function') {
       console.error('Uncaught exception in ' + origin + ':', error)
     }
+  }
+
+  interface NekoVoidFn { (): void }
+
+  /** GraalJS 无 queueMicrotask：nextTick 退化为 setImmediate 会晚一个游戏 tick。这里用 Promise
+   * 微任务自建队列——同步栈结束后的第一个微任务就排空，顺序保证远好于等 tick（仍非 Node 的
+   * 「先于一切微任务」，引擎层面无法完全复刻）。 */
+  const tickQueue: NekoVoidFn[] = []
+  let tickDrainScheduled = false
+
+  function drainTicks(): void {
+    tickDrainScheduled = false
+    const queue = tickQueue.splice(0)
+    for (const run of queue) run()
+  }
+
+  function scheduleTickDrain(): void {
+    if (tickDrainScheduled) return
+    tickDrainScheduled = true
+    Promise.resolve().then(drainTicks)
   }
 
   /** stdout/stderr 最小实现：write 不追加换行（与 Node 语义一致），转发到宿主日志。 */
@@ -80,7 +102,7 @@
     uptime(): number
     hrtime: NekoHrtime
     memoryUsage(): NekoMemoryUsage
-    cpuUsage(): NekoCpuUsage
+    cpuUsage(previousValue?: NekoCpuUsage): NekoCpuUsage
     nextTick(callback: (...args: unknown[]) => void, ...args: unknown[]): unknown
   }
 
@@ -114,7 +136,16 @@
     uptime(): number { return Math.max(0, (Date.now() - startedAtMillis) / 1000) },
     hrtime,
     memoryUsage(): NekoMemoryUsage { return wrapMemoryUsage(runtime.process().memoryUsage()) },
-    cpuUsage(): NekoCpuUsage { return wrapCpuUsage(runtime.process().cpuUsage()) },
+    cpuUsage(previousValue): NekoCpuUsage {
+      const current = wrapCpuUsage(runtime.process().cpuUsage())
+      if (previousValue && typeof (previousValue as NekoCpuUsage).user === 'number') {
+        return {
+          user: current.user - (previousValue as NekoCpuUsage).user,
+          system: current.system - ((previousValue as NekoCpuUsage).system || 0)
+        }
+      }
+      return current
+    },
     exit(code?: number | string): void {
       if (typeof code === 'number' || typeof code === 'string') exitCode = code
       if (typeof console !== 'undefined' && typeof console.warn === 'function') {
@@ -122,18 +153,14 @@
       }
     },
     nextTick(callback, ...args) {
-      const run = (): void => {
+      tickQueue.push(() => {
         try {
           callback(...args)
         } catch (error) {
           reportError('process.nextTick', error)
         }
-      }
-      if (typeof queueMicrotask === 'function') {
-        queueMicrotask(run)
-      } else {
-        timers.setImmediate(run)
-      }
+      })
+      scheduleTickDrain()
     }
   }
 
@@ -142,4 +169,18 @@
 
   globalThis.__nekoNodeDefine(['process', 'node:process'], process)
   globalThis.process = process
+
+  globalThis.queueMicrotask = function queueMicrotask(callback: NekoVoidFn): void {
+    Promise.resolve().then(() => {
+      try {
+        callback()
+      } catch (error) {
+        reportError('queueMicrotask', error)
+      }
+    })
+  }
+
+  globalThis.performance = {
+    now(): number { return (Number(runtime.nanoTime()) - startedAtNanos) / 1e6 }
+  }
 })()

@@ -116,6 +116,81 @@
     return Object.prototype.toString.call(value) === '[object Arguments]'
   }
 
+  type NekoCloneSeen = Map<unknown, unknown>
+
+  /** structuredClone 值语义：深拷贝普通对象/数组/Date/RegExp/Map/Set/TypedArray/ArrayBuffer，保环。 */
+  function cloneValue(value: unknown, seen: NekoCloneSeen): unknown {
+    if (value === null || typeof value !== 'object') {
+      if (typeof value === 'function') throw new TypeError('#<Function> could not be cloned.')
+      return value
+    }
+    if (seen.has(value)) return seen.get(value)
+    if (value instanceof Date) {
+      const copy = new Date((value as Date).getTime())
+      seen.set(value, copy)
+      return copy
+    }
+    if (value instanceof RegExp) {
+      const copy = new RegExp((value as RegExp).source, (value as RegExp).flags)
+      seen.set(value, copy)
+      return copy
+    }
+    if (value instanceof ArrayBuffer) {
+      const copy = value.slice(0)
+      seen.set(value, copy)
+      return copy
+    }
+    if (value instanceof Map) {
+      const copy = new Map()
+      seen.set(value, copy)
+      for (const entry of value as Map<unknown, unknown>) {
+        copy.set(cloneValue(entry[0], seen), cloneValue(entry[1], seen))
+      }
+      return copy
+    }
+    if (value instanceof Set) {
+      const copy = new Set()
+      seen.set(value, copy)
+      for (const item of value as Set<unknown>) copy.add(cloneValue(item, seen))
+      return copy
+    }
+    if (ArrayBuffer.isView(value)) {
+      const ctor = (value as object).constructor as NekoTypedArrayCtor
+      if (typeof ctor === 'function' && ctor !== DataView) {
+        const copy = new ctor(value as never)
+        seen.set(value, copy)
+        return copy
+      }
+      if (ctor === DataView) {
+        const source = value as DataView
+        const copy = new DataView(source.buffer.slice(0), source.byteOffset, source.byteLength)
+        seen.set(value, copy)
+        return copy
+      }
+    }
+    if (Array.isArray(value)) {
+      const copy: unknown[] = []
+      seen.set(value, copy)
+      for (const item of value) copy.push(cloneValue(item, seen))
+      return copy
+    }
+    const copy = Object.create(Object.getPrototypeOf(value))
+    seen.set(value, copy)
+    for (const key of Reflect.ownKeys(value)) {
+      const descriptor = Reflect.getOwnPropertyDescriptor(value, key)
+      if (!descriptor) continue
+      if ('value' in descriptor) descriptor.value = cloneValue(descriptor.value, seen)
+      Reflect.defineProperty(copy, key, descriptor)
+    }
+    return copy
+  }
+
+  interface NekoTypedArrayCtor { new (source: unknown): unknown }
+
+  function structuredClone(value: unknown): unknown {
+    return cloneValue(value, new Map())
+  }
+
   function objectTag(value: unknown): string {
     return Object.prototype.toString.call(value)
   }
@@ -161,4 +236,5 @@
   }
 
   globalThis.__nekoNodeDefine(['util', 'node:util'], util)
+  globalThis.structuredClone = structuredClone
 })()

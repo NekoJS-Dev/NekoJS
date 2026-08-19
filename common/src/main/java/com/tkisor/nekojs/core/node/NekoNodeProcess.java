@@ -81,10 +81,12 @@ public final class NekoNodeProcess {
     public CpuUsage cpuUsage() {
         com.sun.management.OperatingSystemMXBean osBean =
                 (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-        double load = osBean.getProcessCpuLoad();
-        long nanos = System.nanoTime();
-        long userMicros = load < 0 ? 0 : (long) (load * 1000000);
-        return new CpuUsage(userMicros, 0, nanos);
+        // getProcessCpuTime：进程启动以来的累计 CPU 时间（纳秒；不可用时为 -1）。
+        // Node 语义是 user+system 微秒累计；JVM 无法拆分 user/system，总量记入 user、system 为 0。
+        // （此前用 processCpuLoad 百分比×1e6 填充 user，数值无意义。）
+        long totalNanos = osBean.getProcessCpuTime();
+        long totalMicros = totalNanos < 0 ? 0 : totalNanos / 1000L;
+        return new CpuUsage(totalMicros, 0, System.nanoTime());
     }
 
     public long pid() {

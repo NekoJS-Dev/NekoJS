@@ -196,6 +196,8 @@ public final class NekoModuleResolver {
     }
 
     private boolean isBuiltinSpecifier(String specifier) {
+        // 与 resources/nekojs/node/modules.list 注册表保持同步：bare 内置名必须在此声明，
+        // 否则只有在 node_modules 未装同名包时才会经 SPECIAL 兜底命中（优先级与 Node 相反）
         return specifier.equals("fs")
                 || specifier.equals("path")
                 || specifier.equals("util")
@@ -205,7 +207,9 @@ public final class NekoModuleResolver {
                 || specifier.equals("process")
                 || specifier.equals("events")
                 || specifier.equals("buffer")
-                || specifier.equals("module");
+                || specifier.equals("module")
+                || specifier.equals("os")
+                || specifier.equals("crypto");
     }
 
     private boolean isFileSpecifier(String specifier) {

@@ -69,6 +69,8 @@
       const i = list.findIndex(candidate => candidate === listener || (candidate as unknown as Record<string, NekoEventListener>).listener === listener)
       if (i >= 0) list.splice(i, 1)
       if (list.length === 0) delete this._events[name]
+      // 移除后重置超限警告标记：再次超限时重新告警（Node 行为）
+      else delete (list as unknown as Record<string, boolean>).warned
       return this
     }
 

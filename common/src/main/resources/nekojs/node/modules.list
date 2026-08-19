@@ -1,5 +1,6 @@
 internal/define.js
 modules/buffer.ts
+modules/crypto.ts
 modules/fs.ts
 modules/path.ts
 modules/util.ts

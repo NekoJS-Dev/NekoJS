@@ -79,6 +79,19 @@ class NodeModulesJsRegressionTest {
             assertTrue(installed.marks.contains("nextTick.ran"), "marks: " + installed.marks);
             assertTrue(installed.marks.contains("blob.text:ab"), "marks: " + installed.marks);
             assertFalse(installed.marks.contains("dnr.throw.false-pass"), "marks: " + installed.marks);
+            // nextTick 自建微任务队列：先于其后注册的普通微任务执行（GraalJS 无 queueMicrotask，
+            // 此前 nextTick 退化为 setImmediate 要等一个游戏 tick）
+            assertTrue(installed.marks.indexOf("order:tick") < installed.marks.indexOf("order:promise"), "marks: " + installed.marks);
+            assertTrue(installed.marks.contains("order:microtask"), "marks: " + installed.marks);
+        }
+    }
+
+    @Test
+    void circularRequireReturnsPartialExportsInsteadOfRecursing() {
+        try (Installed installed = new Installed()) {
+            installed.eval(CIRCULAR_REQUIRE_JS);
+            assertTrue(installed.failures.isEmpty(), "failed: " + installed.failures);
+            assertTrue(installed.marks.contains("circ.ok"), "marks: " + installed.marks);
         }
     }
 
@@ -172,6 +185,63 @@ const cb = { name: 'c' }; cb.self = cb
 check('assert.circular', (() => { try { assert.deepStrictEqual(ca, cb); return true } catch (e) { out.add('dbg.circular:' + e); return false } })())
 check('util.circular', (() => { try { return util.isDeepStrictEqual(ca, cb) } catch (e) { out.add('dbg.util.circular:' + e); return false } })())
 
+// buffer fill 字符串（此前静默填零）与负数 fromIndex（此前 clamp 到 0）
+check('fill.str', Buffer.alloc(6).fill('ab').toString() === 'ababab')
+check('fill.str.range', Buffer.alloc(4).fill(7, 1, 3).toString('hex') === '00070700')
+check('indexOf.neg', Buffer.from('abcdef').indexOf('cd', -3) === -1)
+check('indexOf.neg.hit', Buffer.from('abcdef').indexOf('ef', -2) === 4)
+check('buffer.realAB', new Uint8Array(Buffer.from('hi').buffer).length === 2)
+check('from.view', Buffer.from(new Uint8Array([104, 105])).toString() === 'hi')
+
+// crypto 模块
+const crypto = req('node:crypto')
+check('crypto.uuid', /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(crypto.randomUUID()))
+check('crypto.uuid.unique', crypto.randomUUID() !== crypto.randomUUID())
+check('crypto.randomBytes.len', crypto.randomBytes(8).length === 8)
+check('crypto.sha256', crypto.createHash('sha256').update('hello').digest('hex') === '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824')
+check('crypto.md5', crypto.createHash('md5').update('hello').digest('hex') === '5d41402abc4b2a76b9719d911017c592')
+check('crypto.sha256.buffer', Buffer.isBuffer(crypto.createHash('sha256').update('hello').digest()) && crypto.createHash('sha256').update('hello').digest().length === 32)
+check('crypto.hmac', crypto.createHmac('sha256', 'key').update('The quick brown fox jumps over the lazy dog').digest('hex') === 'f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8')
+check('crypto.timingSafeEqual', crypto.timingSafeEqual(Buffer.from('abc'), Buffer.from('abc')) && !crypto.timingSafeEqual(Buffer.from('abc'), Buffer.from('abd')))
+check('crypto.unsupported.algo', (() => { try { crypto.createHash('nope'); return false } catch (_) { return true } })())
+
+// 全局环境
+check('global.alias', global === globalThis)
+check('performance.now', typeof performance.now() === 'number' && performance.now() <= performance.now())
+check('atob.btoa', btoa('hi') === 'aGk=' && atob('aGk=') === 'hi')
+const enc = new TextEncoder()
+const dec = new TextDecoder()
+check('textencoder.len', enc.encode('héllo').length === 6)
+check('textcodec.roundtrip', dec.decode(enc.encode('héllo wörld')) === 'héllo wörld')
+
+// structuredClone：深拷贝 + 隔离 + 环 + Map/Date
+const scSource = { n: 1, nested: { s: 'x' }, m: new Map([['k', 'v']]), d: new Date(1234) }
+scSource.self = scSource
+const cloned = structuredClone(scSource)
+check('clone.deep', cloned.n === 1 && cloned.nested.s === 'x' && cloned.m.get('k') === 'v' && cloned.d.getTime() === 1234)
+check('clone.circular', cloned.self === cloned && cloned.nested !== scSource.nested)
+cloned.nested.s = 'changed'
+check('clone.isolated', scSource.nested.s === 'x')
+
+// hrtime 纳秒位合法（此前毫秒粒度且双重取时竞态）
+const hrt = process.hrtime()
+check('hrtime.nanos', hrt[1] >= 0 && hrt[1] < 1e9)
+const cpuA = process.cpuUsage()
+check('cpuUsage.sane', cpuA.user >= 0 && cpuA.system === 0)
+const cpuB = process.cpuUsage(cpuA)
+check('cpuUsage.diff', cpuB.user >= 0)
+
+// fs flag：wx 独占、a 追加、未知 flag 报错
+const flagDir = 'nekojs/node-flag-' + Date.now()
+fs.mkdirSync(flagDir, { recursive: true })
+fs.writeFileSync(flagDir + '/f.txt', 'x', { flag: 'wx' })
+check('fs.flag.wx.exclusive', (() => { try { fs.writeFileSync(flagDir + '/f.txt', 'y', { flag: 'wx' }); return false } catch (_) { return true } })())
+fs.writeFileSync(flagDir + '/f.txt', 'a', { flag: 'a' })
+fs.writeFileSync(flagDir + '/f.txt', 'b', { flag: 'a' })
+check('fs.flag.a.append', fs.readFileSync(flagDir + '/f.txt', 'utf8') === 'xab')
+check('fs.flag.unsupported', (() => { try { fs.writeFileSync(flagDir + '/g.txt', 'x', { flag: 'r+' }); return false } catch (_) { return true } })())
+fs.rmSync(flagDir, { recursive: true, force: true })
+
 // os.EOL 平台化（此前硬编码 \\n）
 check('os.EOL', os.EOL === (process.platform === 'win32' ? '\\r\\n' : '\\n'))
 
@@ -236,9 +306,36 @@ assert.doesNotReject(() => Promise.resolve(1)).then(
 assert.doesNotReject(() => { throw new Error('dnr-boom') }).then(
   () => out.add('dnr.throw.false-pass'),
   (e) => marks.add('dnr.throw.caught:' + (e && e.code)))
-// nextTick 正常路径 + Blob.text/arrayBuffer
+// nextTick 正常路径 + Blob.text/arrayBuffer + 微任务顺序
 process.nextTick(() => marks.add('nextTick.ran'))
+process.nextTick(() => marks.add('order:tick'))
+Promise.resolve().then(() => marks.add('order:promise'))
+queueMicrotask(() => marks.add('order:microtask'))
 new buffer.Blob(['a', 'b']).text().then((t) => marks.add('blob.text:' + t))
 new buffer.Blob(['ab']).arrayBuffer().then((ab) => marks.add('blob.ab:' + ab.byteLength))
+""";
+
+    /** 循环 require：修复前缓存晚于执行，A↔B 互引无限重入至 StackOverflowError；Node 语义是返回部分 exports。 */
+    private static final String CIRCULAR_REQUIRE_JS = """
+const out = globalThis.__out
+const marks = globalThis.__marks
+const fs = globalThis.__nekoNodeResolve('node:fs')
+const dir = 'nekojs/test_scripts'
+try {
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(dir + '/circ-a.js', 'const b = require("./circ-b.js")\\nmodule.exports = { tag: "a", bTag: b.tag, sawAInB: b.sawA }')
+  fs.writeFileSync(dir + '/circ-b.js', 'const a = require("./circ-a.js")\\nmodule.exports = { tag: "b", sawA: a ? a.tag : "none" }')
+  const a = globalThis.__nekoScriptLoader.loadEntry('test_scripts/circ-a.js')
+  if (a && a.tag === 'a' && a.bTag === 'b' && a.sawAInB === undefined) {
+    marks.add('circ.ok')
+  } else {
+    out.add('circ.bad:' + JSON.stringify(a))
+  }
+} catch (e) {
+  out.add('circ.throw:' + e)
+} finally {
+  fs.rmSync('nekojs/test_scripts/circ-a.js', { force: true })
+  fs.rmSync('nekojs/test_scripts/circ-b.js', { force: true })
+}
 """;
 }

@@ -62,30 +62,49 @@ public final class NekoNodeFS {
     }
 
     public synchronized void writeFile(String path, String data, String encoding) throws IOException {
+        writeFile(path, data, encoding, false, false);
+    }
+
+    public synchronized void writeFile(String path, String data, String encoding, boolean append, boolean exclusive) throws IOException {
         Path target = resolveWrite(path);
-        Path parent = target.getParent();
-        if (parent != null) {
-            Files.createDirectories(verifyWriteParentForCreate(parent));
-        }
-        Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding));
+        createParentDirectories(target);
+        Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding), openOptions(append, exclusive));
     }
 
     public synchronized void writeFileBuffer(String path, NekoNodeBuffer data) throws IOException {
+        writeFileBuffer(path, data, false, false);
+    }
+
+    public synchronized void writeFileBuffer(String path, NekoNodeBuffer data, boolean append, boolean exclusive) throws IOException {
         Path target = resolveWrite(path);
-        Path parent = target.getParent();
-        if (parent != null) {
-            Files.createDirectories(verifyWriteParentForCreate(parent));
-        }
-        Files.write(target, data == null ? new byte[0] : data.bytes());
+        createParentDirectories(target);
+        Files.write(target, data == null ? new byte[0] : data.bytes(), openOptions(append, exclusive));
     }
 
     public synchronized void appendFile(String path, String data, String encoding) throws IOException {
         Path target = resolveWrite(path);
+        createParentDirectories(target);
+        Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+    }
+
+    /** flag 语义（fs.ts 解析后的归一化形态）：append→追加，exclusive→已存在即失败（wx/x/ax）。 */
+    private static OpenOption[] openOptions(boolean append, boolean exclusive) {
+        if (exclusive) {
+            return append
+                    ? new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.APPEND, StandardOpenOption.WRITE}
+                    : new OpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE};
+        }
+        if (append) {
+            return new OpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE};
+        }
+        return new OpenOption[]{StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE};
+    }
+
+    private void createParentDirectories(Path target) throws IOException {
         Path parent = target.getParent();
         if (parent != null) {
             Files.createDirectories(verifyWriteParentForCreate(parent));
         }
-        Files.writeString(target, data == null ? "" : data, NekoNodeBuffer.charset(encoding), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
     }
 
     public synchronized void mkdir(String path, boolean recursive) throws IOException {
