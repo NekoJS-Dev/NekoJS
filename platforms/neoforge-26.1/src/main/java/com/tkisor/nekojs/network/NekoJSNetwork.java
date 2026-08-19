@@ -58,6 +58,22 @@ public class NekoJSNetwork {
                 NetworkMessageHandler::handleScriptPayloadOnServer,
                 NetworkMessageHandler::handleScriptPayloadOnClient
         );
+
+        // P2 多人脚本包分发：配置阶段 payload（S2C）——服务器在 PackSyncConfigurationTask
+        // （RegisterConfigurationTasksEvent 官方入口，免 mixin）中推送哈希清单 + bundle。
+        registrar.configurationToClient(PackHashListPayload.TYPE, PackHashListPayload.STREAM_CODEC, PackSyncMessageHandler::handleHashListOnClient);
+        registrar.configurationToClient(PackBundlePayload.TYPE, PackBundlePayload.STREAM_CODEC, PackSyncMessageHandler::handleBundleOnClient);
+
+        // 客户端接线：包分发触发 CLIENT 脚本重载的钩子 + 断线卸载远端包
+        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+            PackSyncClientConnections.install();
+        }
+    }
+
+    /** 配置阶段任务注册（每个玩家连接一次；packSync 关闭时零任务注册）。 */
+    @SubscribeEvent
+    public static void registerConfigurationTasks(final net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent event) {
+        PackSyncConfigurationTask.register(event);
     }
 
     /* ================= Client Handlers ================= */
