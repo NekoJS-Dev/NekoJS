@@ -1,9 +1,11 @@
 package com.tkisor.nekojs.bindings.event.client;
 
+import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.client.render.RenderRegistrationBusJS;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 import com.tkisor.nekojs.wrapper.client.PainterJS;
@@ -94,6 +96,26 @@ public interface ClientEvents {
 
     /** 界面渲染事件（Screen 渲染后），参数为 {@link ScreenRenderEventJS}。 */
     EventBusJS<ScreenRenderEventJS, Void> SCREEN_RENDER = GROUP.client("screenRender", ScreenRenderEventJS.class);
+
+    /**
+     * 脚本 HUD 渲染器注册入口（非常规总线：调用即注册按 id 记账的常驻渲染器）。
+     * 形态：{@code hudRender('my_hud', { layer: 'normal', priority: 0 }, (ctx, gui) => {})}，
+     * 层为 {@code background|normal|foreground}（background 在原版 HUD 之下），
+     * 同层内 priority 小者先绘制。回调参数 ctx 为 {@code HudRenderContextJS}
+     * （partialTick / 屏幕尺寸 / text / rect / texture 等绘制助手），gui 为原始
+     * GuiGraphics。同 id 重复注册覆盖旧渲染器；CLIENT reload 自动清空。
+     */
+    EventBusJS<Object, Void> HUD_RENDER =
+            GROUP.add("hudRender", ScriptType.CLIENT, RenderRegistrationBusJS.hud());
+
+    /**
+     * 脚本世界渲染器注册入口（非常规总线，同 {@link #HUD_RENDER}）。
+     * 形态：{@code worldRender('my_lines', { layer: 'normal', priority: 0 }, ctx => {})}，
+     * 层为 {@code early|normal|late}。回调参数 ctx 为 {@code WorldRenderContextJS}
+     * （相机位置 / partialTick / line / box 等 3D 绘制助手，世界坐标）。
+     */
+    EventBusJS<Object, Void> WORLD_RENDER =
+            GROUP.add("worldRender", ScriptType.CLIENT, RenderRegistrationBusJS.world());
 
     EventBusForgeBridge MAIN_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
             .bind(TICK_PRE)
