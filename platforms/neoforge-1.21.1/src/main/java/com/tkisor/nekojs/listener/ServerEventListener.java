@@ -13,6 +13,8 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
+import com.tkisor.nekojs.resource.ScriptPackDataManager;
+import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
@@ -45,8 +47,32 @@ public class ServerEventListener {
      */
     @SubscribeEvent
     public static void onServerAboutToStart(ServerAboutToStartEvent event) {
-        activateWorldPacks(event.getServer());
-        ItemModificationEventJS.fire(event.getServer());
+        var server = event.getServer();
+        activateWorldPacks(server);
+        mountScriptPackData(server);
+        // 资源装载期（WorldStem 阶段 server 未就绪，TagsUpdated 刷出跳过）暂存的村民交易在此补刷。
+        if (VillagerTradeManager.pendingCount() > 0) {
+            VillagerTradeManager.apply(server);
+        }
+        ItemModificationEventJS.fire(server);
+    }
+
+    /**
+     * 挂载脚本包 {@code data/} 目录为合成 server datapack（仅含 data/ 的启用包）。
+     * 内容签名未变化时零开销；变化时在服务器线程上 repository.reload + setSelected +
+     * server.reloadResources，随后把 nekojs 包 id 从 worldData 配置中剔除（不落盘）。
+     */
+    private static void mountScriptPackData(net.minecraft.server.MinecraftServer server) {
+        try {
+            var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
+            if (!ScriptPackDataManager.hasDataPacks(packs)) return;
+            boolean changed = ScriptPackDataManager.activateForServer(server, packs);
+            if (changed) {
+                ScriptPackDataManager.reloadServerResources(server);
+            }
+        } catch (Exception e) {
+            ScriptType.SERVER.logger().error("Failed to mount script pack data packs: ", e);
+        }
     }
 
     /**
@@ -59,6 +85,7 @@ public class ServerEventListener {
                 .activateWorldPacks(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
         if (worldPacks.isEmpty()) return;
         try {
+            VillagerTradeManager.beginReload();
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("SERVER reload after world pack activation failed: ", e);
@@ -73,6 +100,10 @@ public class ServerEventListener {
     @SubscribeEvent
     public static void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
         var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
+        // 脚本包 datapack 挂载状态随服务器实例失效；1.21.1 村民交易是静态字段，
+        // reset 会把 VillagerTrades.TRADES 恢复为 vanilla 原始映射，避免跨存档泄漏。
+        ScriptPackDataManager.reset();
+        VillagerTradeManager.reset();
         if (removed.isEmpty()) return;
         var serverManager = NekoJSMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.SERVER);
         if (serverManager != null) serverManager.clearWorldPackListeners(removed);
@@ -95,6 +126,7 @@ public class ServerEventListener {
         }
         event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
+            VillagerTradeManager.beginReload();
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
         } catch (Exception e) {
             ScriptType.SERVER.logger().error("Script overload failed: ", e);
@@ -102,6 +134,23 @@ public class ServerEventListener {
         // loot table JSON 管理（reload 流程先于 loot 解析，修改当次 reload 生效）
         ServerEvents.LOOT_TABLES.post(new LootTableEventJS());
         postGenerateData();
+    }
+
+    /**
+     * 村民交易刷出点：服务器资源 reload 完成、{@code this.resources} 已切换到新实例之后
+     * （{@code updateStaticRegistryTags} 阶段，服务器线程上）。1.21.1 的交易是静态映射，
+     * 此处刷出使 villagers 在下一个补货周期拿到新交易；服务器未就绪（首次 WorldStem
+     * 装载）时跳过，由 {@link #onServerAboutToStart} 补刷。
+     */
+    @SubscribeEvent
+    public static void onTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent event) {
+        if (event.getUpdateCause() != net.neoforged.neoforge.event.TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
+            return;
+        }
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            VillagerTradeManager.apply(server);
+        }
     }
 
     /**
