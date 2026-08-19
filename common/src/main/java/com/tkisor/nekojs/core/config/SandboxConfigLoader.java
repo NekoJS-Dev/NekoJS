@@ -63,6 +63,15 @@ public final class SandboxConfigLoader {
             setupConfigEntry(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS,
                     " Runaway watchdog for synchronous script execution, in seconds (0 = disabled, the default). Implemented as a sliding window over statement checkpoints: as long as guest code keeps executing without yielding back to Java (checkpoint gaps <= 250ms), the window accumulates; exceeding this many seconds closes the Context and aborts the evaluation - the only reliable way to stop a while(true){} freezing the server thread. The window resets on every yield, so long-lived environments are never killed regardless of total statements executed. Blockage inside host calls that executes no statements is invisible to this watchdog.");
 
+            setupConfigEntry(config, "packSync.mode", SandboxConfig.PACK_SYNC_OFF,
+                    " Multiplayer script pack distribution (server -> client). off (default) = disabled; hashOnly = server sends pack hashes only, clients never execute remote packs; all = server pushes packs (manifest + files) during the configuration phase, verified and executed on the client BEFORE vanilla registry validation. Only packs with clientSync != false in their manifest are synced.");
+
+            setupConfigEntry(config, "packSync.allowUnsigned", false,
+                    " Accept server script packs without an Ed25519 signature. false (default) rejects unsigned packs and disconnects with a prompt.");
+
+            setupConfigEntry(config, "dynamicRegistry.enabled", false,
+                    " Allow scripts to register NEW game content (items, etc.) AFTER the server has started, via the DynamicRegistry binding (WORLD/RELOADABLE modes with snapshot-stale tracking). Experimental; keep disabled unless you need it.");
+
             return new SandboxConfig(
                     config.get("allowThreads"),
                     config.get("allowReflection"),
@@ -74,7 +83,10 @@ public final class SandboxConfigLoader {
                     config.get("scriptMemberValidation"),
                     (int) numberValue(config, "scriptEvaluationTimeoutSeconds", 30),
                     numberValue(config, "scriptStatementLimit", 0L),
-                    (int) numberValue(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS)
+                    (int) numberValue(config, "scriptRunawayTimeoutSeconds", SandboxConfig.DEFAULT_SCRIPT_RUNAWAY_TIMEOUT_SECONDS),
+                    stringValue(config, "packSync.mode", SandboxConfig.PACK_SYNC_OFF),
+                    booleanValue(config, "packSync.allowUnsigned", false),
+                    booleanValue(config, "dynamicRegistry.enabled", false)
             );
         } catch (Throwable e) {
             NekoJS.LOGGER.warn("Failed to load nekojs/config/engine.toml, using default sandbox config", e);
@@ -91,6 +103,16 @@ public final class SandboxConfigLoader {
     private static long numberValue(CommentedFileConfig config, String path, long fallback) {
         Object value = config.get(path);
         return value instanceof Number number ? number.longValue() : fallback;
+    }
+
+    private static String stringValue(CommentedFileConfig config, String path, String fallback) {
+        Object value = config.get(path);
+        return value instanceof String s ? s : fallback;
+    }
+
+    private static boolean booleanValue(CommentedFileConfig config, String path, boolean fallback) {
+        Object value = config.get(path);
+        return value instanceof Boolean b ? b : fallback;
     }
 
     private static void setupConfigEntry(CommentedFileConfig config, String path, Object defaultValue, String comment) {

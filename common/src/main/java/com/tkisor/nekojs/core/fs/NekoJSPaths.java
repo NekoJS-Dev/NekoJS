@@ -54,6 +54,7 @@ public final class NekoJSPaths {
     private final Path assets;
     private final Path data;
     private final Path packsRoot;
+    private final Path serverPacks;
     private final Set<Path> scriptRoots;
 
     private NekoJSPaths(Path gameDir) {
@@ -76,6 +77,7 @@ public final class NekoJSPaths {
         this.assets = root.resolve("assets");
         this.data = root.resolve("data");
         this.packsRoot = root.resolve(ScriptPackRegistry.GLOBAL_PACKS_DIR);
+        this.serverPacks = root.resolve("server_packs");
         this.scriptRoots = Set.of(startupScripts, serverScripts, clientScripts, testScripts);
     }
 
@@ -98,6 +100,8 @@ public final class NekoJSPaths {
     public Path data() { return data; }
     /** 脚本包根目录 {@code <gamedir>/nekojs/packs/}（WORLD 包在存档侧，不在此）。 */
     public Path packsRoot() { return packsRoot; }
+    /** 服务器下发脚本包的客户端缓存根 {@code <gamedir>/nekojs/server_packs/}（按服务器地址哈希分桶）。 */
+    public Path serverPacks() { return serverPacks; }
 
     /* ================= 实例路径初始化 ================= */
     public void initFolders() {
