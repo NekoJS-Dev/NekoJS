@@ -37,6 +37,17 @@
     }
   }
 
+  interface NekoDirent {
+    name: string
+    isFile(): boolean
+    isDirectory(): boolean
+    isSymbolicLink(): boolean
+    isBlockDevice(): boolean
+    isCharacterDevice(): boolean
+    isFIFO(): boolean
+    isSocket(): boolean
+  }
+
   function existsSync(path: unknown): boolean { return runtime.fs().existsSync(String(path)) }
   function accessSync(path: unknown, mode?: unknown): void { runtime.fs().access(String(path), Number(mode) || 0) }
   function readFileSync(path: unknown, options?: unknown): unknown {
@@ -53,9 +64,31 @@
   function mkdirSync(path: unknown, options?: unknown): void { runtime.fs().mkdir(String(path), recursiveFromOptions(options)) }
   function rmSync(path: unknown, options?: unknown): void { runtime.fs().rm(String(path), recursiveFromOptions(options), forceFromOptions(options)) }
   function unlinkSync(path: unknown): void { runtime.fs().unlink(String(path)) }
-  function readdirSync(path: unknown): string[] { return Array.from(runtime.fs().readdir(String(path))) }
+  function withFileTypesFromOptions(options: unknown): boolean {
+    return !!(options && typeof options === 'object' && (options as Record<string, unknown>).withFileTypes)
+  }
+  function toDirent(dir: string, name: string): NekoDirent {
+    let stats: any
+    try { stats = runtime.fs().lstat(runtime.path().join(dir, name)) } catch (_) { stats = undefined }
+    return {
+      name,
+      isFile: (): boolean => !!stats && stats.isFile(),
+      isDirectory: (): boolean => !!stats && stats.isDirectory(),
+      isSymbolicLink: (): boolean => !!stats && stats.isSymbolicLink(),
+      isBlockDevice: (): boolean => false,
+      isCharacterDevice: (): boolean => false,
+      isFIFO: (): boolean => false,
+      isSocket: (): boolean => false
+    }
+  }
+  function readdirSync(path: unknown, options?: unknown): unknown {
+    const dir = String(path)
+    const names = Array.from(runtime.fs().readdir(dir))
+    if (!withFileTypesFromOptions(options)) return names
+    return names.map((name) => toDirent(dir, name))
+  }
   function statSync(path: unknown): NekoStats { return wrapStats(runtime.fs().stat(String(path))) }
-  function lstatSync(path: unknown): NekoStats { return wrapStats(runtime.fs().lstatSync(String(path))) }
+  function lstatSync(path: unknown): NekoStats { return wrapStats(runtime.fs().lstat(String(path))) }
   function renameSync(oldPath: unknown, newPath: unknown): void { runtime.fs().rename(String(oldPath), String(newPath)) }
   function copyFileSync(source: unknown, destination: unknown): void { runtime.fs().copyFile(String(source), String(destination)) }
   function realpathSync(path: unknown): string { return String(runtime.fs().realpath(String(path))) }
@@ -83,58 +116,65 @@
     readlinkSync
   }
 
+  type NekoFsCallback = (error: unknown, value?: unknown) => void
+
+  function requireCallback(cb: unknown): NekoFsCallback {
+    if (typeof cb !== 'function') throw new TypeError('Callback must be a function')
+    return cb as NekoFsCallback
+  }
+
   fs.readFile = function (path: unknown, optionsOrCallback?: unknown, callback?: unknown): void {
     const hasOptions = typeof optionsOrCallback === 'object' || typeof optionsOrCallback === 'string'
     const cb = hasOptions ? callback : optionsOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => readFileSync(path, hasOptions ? optionsOrCallback : undefined))
+    callbackResult(requireCallback(cb), () => readFileSync(path, hasOptions ? optionsOrCallback : undefined))
   }
   fs.writeFile = function (path: unknown, data: unknown, optionsOrCallback?: unknown, callback?: unknown): void {
     const hasOptions = typeof optionsOrCallback === 'object' || typeof optionsOrCallback === 'string'
     const cb = hasOptions ? callback : optionsOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => writeFileSync(path, data, hasOptions ? optionsOrCallback : undefined))
+    callbackResult(requireCallback(cb), () => writeFileSync(path, data, hasOptions ? optionsOrCallback : undefined))
   }
   fs.appendFile = function (path: unknown, data: unknown, optionsOrCallback?: unknown, callback?: unknown): void {
     const hasOptions = typeof optionsOrCallback === 'object' || typeof optionsOrCallback === 'string'
     const cb = hasOptions ? callback : optionsOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => appendFileSync(path, data, hasOptions ? optionsOrCallback : undefined))
+    callbackResult(requireCallback(cb), () => appendFileSync(path, data, hasOptions ? optionsOrCallback : undefined))
   }
   fs.mkdir = function (path: unknown, optionsOrCallback?: unknown, callback?: unknown): void {
     const hasOptions = typeof optionsOrCallback === 'object'
     const cb = hasOptions ? callback : optionsOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => mkdirSync(path, hasOptions ? optionsOrCallback : undefined))
+    callbackResult(requireCallback(cb), () => mkdirSync(path, hasOptions ? optionsOrCallback : undefined))
   }
   fs.rm = function (path: unknown, optionsOrCallback?: unknown, callback?: unknown): void {
     const hasOptions = typeof optionsOrCallback === 'object'
     const cb = hasOptions ? callback : optionsOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => rmSync(path, hasOptions ? optionsOrCallback : undefined))
+    callbackResult(requireCallback(cb), () => rmSync(path, hasOptions ? optionsOrCallback : undefined))
   }
   fs.unlink = function (path: unknown, callback?: unknown): void {
-    callbackResult(typeof callback === 'function' ? callback : undefined, () => unlinkSync(path))
+    callbackResult(requireCallback(callback), () => unlinkSync(path))
   }
   fs.readdir = function (path: unknown, optionsOrCallback?: unknown, callback?: unknown): void {
     const hasOptions = typeof optionsOrCallback === 'object' || typeof optionsOrCallback === 'string'
     const cb = hasOptions ? callback : optionsOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => readdirSync(path))
+    callbackResult(requireCallback(cb), () => readdirSync(path, hasOptions ? optionsOrCallback : undefined))
   }
   fs.stat = function (path: unknown, callback?: unknown): void {
-    callbackResult(typeof callback === 'function' ? callback : undefined, () => statSync(path))
+    callbackResult(requireCallback(callback), () => statSync(path))
   }
   fs.lstat = function (path: unknown, callback?: unknown): void {
-    callbackResult(typeof callback === 'function' ? callback : undefined, () => lstatSync(path))
+    callbackResult(requireCallback(callback), () => lstatSync(path))
   }
   fs.rename = function (oldPath: unknown, newPath: unknown, callback?: unknown): void {
-    callbackResult(typeof callback === 'function' ? callback : undefined, () => renameSync(oldPath, newPath))
+    callbackResult(requireCallback(callback), () => renameSync(oldPath, newPath))
   }
   fs.copyFile = function (source: unknown, destination: unknown, callback?: unknown): void {
-    callbackResult(typeof callback === 'function' ? callback : undefined, () => copyFileSync(source, destination))
+    callbackResult(requireCallback(callback), () => copyFileSync(source, destination))
   }
   fs.realpath = function (path: unknown, callback?: unknown): void {
-    callbackResult(typeof callback === 'function' ? callback : undefined, () => realpathSync(path))
+    callbackResult(requireCallback(callback), () => realpathSync(path))
   }
   fs.access = function (path: unknown, modeOrCallback?: unknown, callback?: unknown): void {
     const hasMode = typeof modeOrCallback === 'number'
     const cb = hasMode ? callback : modeOrCallback
-    callbackResult(typeof cb === 'function' ? cb : undefined, () => accessSync(path, hasMode ? modeOrCallback : undefined))
+    callbackResult(requireCallback(cb), () => accessSync(path, hasMode ? modeOrCallback : undefined))
   }
 
   function readFile(path: unknown, options?: unknown): Promise<unknown> { return promiseResult(() => readFileSync(path, options)) }
@@ -143,7 +183,7 @@
   function mkdir(path: unknown, options?: unknown): Promise<void> { return promiseResult(() => mkdirSync(path, options)) }
   function rm(path: unknown, options?: unknown): Promise<void> { return promiseResult(() => rmSync(path, options)) }
   function unlink(path: unknown): Promise<void> { return promiseResult(() => unlinkSync(path)) }
-  function readdir(path: unknown): Promise<string[]> { return promiseResult(() => readdirSync(path)) }
+  function readdir(path: unknown, options?: unknown): Promise<unknown> { return promiseResult(() => readdirSync(path, options)) }
   function stat(path: unknown): Promise<NekoStats> { return promiseResult(() => statSync(path)) }
   function lstat(path: unknown): Promise<NekoStats> { return promiseResult(() => lstatSync(path)) }
   function rename(oldPath: unknown, newPath: unknown): Promise<void> { return promiseResult(() => renameSync(oldPath, newPath)) }

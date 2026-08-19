@@ -1374,7 +1374,24 @@ public final class NekoTypeScriptCompiler {
             if (previous < 0) return false;
             char pc = source.charAt(previous);
             if (!isIdentifierPart(pc) && pc != ')' && pc != ']') return false;
-            return bang + 1 >= length || source.charAt(bang + 1) != '=';
+            if (bang + 1 >= length || source.charAt(bang + 1) != '=') {
+                // `return !!x` / `typeof !!x` 等关键字后的 `!` 是逻辑非而非断言（断言只能跟在表达式后）；
+                // 不排除的话 return !!x 会被擦成 return !x，逻辑反转
+                return !keywordImmediatelyBefore(previous);
+            }
+            return false;
+        }
+
+        /** previous（含）往前构成的标识符是否为语句/运算符关键字——断言不可能紧跟其后。 */
+        private boolean keywordImmediatelyBefore(int end) {
+            int start = end;
+            while (start > 0 && isIdentifierPart(source.charAt(start - 1))) start--;
+            if (start == end) return false;
+            switch (source.substring(start, end + 1)) {
+                case "return", "typeof", "case", "delete", "void",
+                     "throw", "new", "do", "else", "yield", "await" -> { return true; }
+                default -> { return false; }
+            }
         }
 
         /**

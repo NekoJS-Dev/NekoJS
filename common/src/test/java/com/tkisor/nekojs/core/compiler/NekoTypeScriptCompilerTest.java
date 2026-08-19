@@ -114,6 +114,21 @@ class NekoTypeScriptCompilerTest {
     }
 
     @Test
+    void preservesDoubleBangAfterStatementKeywords() {
+        // return/typeof 等关键字后的 `!!` 是逻辑非，不是非空断言；
+        // 修复前 return !!x 会被擦成 return !x（逻辑反转）
+        String src = "function f(x: unknown): boolean { return !!x }\n" +
+            "function g(x: unknown): string { return typeof !!x }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("return !!x"), out);
+        assertTrue(out.contains("typeof !!x"), out);
+        // 真正的非空断言仍要擦除
+        String assertion = "const v = a!.b;";
+        String erased = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), assertion);
+        assertFalse(erased.contains("a!."), erased);
+    }
+
+    @Test
     void namespaceInNestedScopeCompiles() {
         // namespace 在箭头函数体内：转换须前置 var 声明，否则 (name||(name={})) 在严格模式 ReferenceError
         String src = "const f = () => { namespace g { export const x = 1 } return g.x }";

@@ -40,6 +40,31 @@
     return { user: Number(raw.user()), system: Number(raw.system()) }
   }
 
+  function reportError(origin: string, error: unknown): void {
+    if (typeof console !== 'undefined' && typeof console.error === 'function') {
+      console.error('Uncaught exception in ' + origin + ':', error)
+    }
+  }
+
+  /** stdout/stderr 最小实现：write 不追加换行（与 Node 语义一致），转发到宿主日志。 */
+  function createStdStream(useStderr: boolean): NekoStdStream {
+    return {
+      isTTY: false,
+      write(chunk: unknown): boolean {
+        const text = String(chunk ?? '')
+        const body = text.endsWith('\n') ? text.slice(0, -1) : text
+        if (useStderr) console.error(body)
+        else console.log(body)
+        return true
+      }
+    }
+  }
+
+  interface NekoStdStream {
+    isTTY: boolean
+    write(chunk: unknown): boolean
+  }
+
   interface NekoProcessModule {
     argv: string[]
     exitCode: number | string
@@ -47,8 +72,11 @@
     readonly platform: string
     readonly versions: Record<string, string>
     readonly env: Record<string, string>
+    readonly stdout: NekoStdStream
+    readonly stderr: NekoStdStream
     cwd(): string
     chdir(path: string): void
+    exit(code?: number | string): void
     uptime(): number
     hrtime: NekoHrtime
     memoryUsage(): NekoMemoryUsage
@@ -62,6 +90,8 @@
     chdir(value): void { runtime.process().chdir(String(value)) },
     get platform(): string { return String(runtime.process().platform()) },
     get versions(): Record<string, string> { return runtime.process().versions() },
+    get stdout(): NekoStdStream { return stdoutStream },
+    get stderr(): NekoStdStream { return stderrStream },
     get env(): Record<string, string> {
       const cache = process._envCache
       if (cache) return cache
@@ -85,14 +115,30 @@
     hrtime,
     memoryUsage(): NekoMemoryUsage { return wrapMemoryUsage(runtime.process().memoryUsage()) },
     cpuUsage(): NekoCpuUsage { return wrapCpuUsage(runtime.process().cpuUsage()) },
+    exit(code?: number | string): void {
+      if (typeof code === 'number' || typeof code === 'string') exitCode = code
+      if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+        console.warn('process.exit() is a no-op in the NekoJS sandbox; script execution continues.')
+      }
+    },
     nextTick(callback, ...args) {
+      const run = (): void => {
+        try {
+          callback(...args)
+        } catch (error) {
+          reportError('process.nextTick', error)
+        }
+      }
       if (typeof queueMicrotask === 'function') {
-        queueMicrotask(() => { try { callback(...args) } catch (_) {} })
+        queueMicrotask(run)
       } else {
-        timers.setImmediate(callback, ...args)
+        timers.setImmediate(run)
       }
     }
   }
+
+  const stdoutStream = createStdStream(false)
+  const stderrStream = createStdStream(true)
 
   globalThis.__nekoNodeDefine(['process', 'node:process'], process)
   globalThis.process = process

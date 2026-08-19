@@ -39,6 +39,7 @@
     kind: 'suite'
     name: string
     options: NekoNodeTestOptions
+    only: boolean
     parent: NekoNodeTestSuite | null
     nodes: NekoNodeTestNode[]
     before: NekoNodeTestCallback[]
@@ -50,6 +51,7 @@
     kind: 'test'
     name: string
     options: NekoNodeTestOptions
+    only: boolean
     fn: NekoNodeTestCallback | undefined
   }
   type NekoNodeTestNode = NekoNodeTestSuite | NekoNodeTestCase
@@ -62,6 +64,8 @@
     scheduled: boolean
     running: boolean
     finished: boolean
+    /** 任一 test.only/describe.only 注册后置位：未标记 only 的用例按 skip 处理。 */
+    only: boolean
     root: NekoNodeTestSuite | null
     stack: NekoNodeTestSuite[]
   }
@@ -82,6 +86,7 @@
       kind: 'suite',
       name,
       options: options || {},
+      only: false,
       parent,
       nodes: [],
       before: [],
@@ -100,9 +105,12 @@
     scheduled: false,
     running: false,
     finished: false,
+    only: false,
     root: null,
     stack: []
   })
+
+  if (state.only === undefined) state.only = false
 
   if (!state.root) {
     state.root = createSuite('root', {}, null)
@@ -245,7 +253,7 @@
       diagnostic(message) { info(`[NekoJS Test][DIAG] ${message}`) },
       test(subName, options, fn) {
         const args = normalizeArgs(subName, options, fn)
-        const node = createTest(args.name, args.options, args.fn)
+        const node = createTest(args.name, args.options, args.fn, false)
         return runTest(node, ancestors)
       },
       skip(message) { logSkip(name, message) },
@@ -254,14 +262,14 @@
     return context
   }
 
-  function createTest(name: string, options: NekoNodeTestOptions, fn: NekoNodeTestCallback | undefined): NekoNodeTestCase {
-    return { kind: 'test', name, options: options || {}, fn }
+  function createTest(name: string, options: NekoNodeTestOptions, fn: NekoNodeTestCallback | undefined, only: boolean): NekoNodeTestCase {
+    return { kind: 'test', name, options: options || {}, only, fn }
   }
 
   const test = function test(name: unknown, options?: unknown, fn?: unknown): unknown {
     ensureTestScripts()
     const args = normalizeArgs(name, options, fn)
-    return addNode(createTest(args.name, args.options, args.fn))
+    return addNode(createTest(args.name, args.options, args.fn, false))
   } as NekoNodeTestRunner
 
   function describe(name: unknown, options?: unknown, fn?: unknown): unknown {
@@ -291,7 +299,29 @@
     return typeof options[key] === 'string' ? options[key] as string : undefined
   }
 
+  /** only 模式下：节点自身标记 only，或位于任一 only suite 内，才会运行。 */
+  function isOnlySelected(node: NekoNodeTestCase | NekoNodeTestSuite, ancestors: NekoNodeTestSuite[]): boolean {
+    if (node.only) return true
+    return ancestors.some(suite => suite.only)
+  }
+
+  /** 非 only 的 suite 内可能嵌套 only 标记的后代（test.only 直接落在普通 describe 里），需放行。 */
+  function hasOnlyDescendant(suite: NekoNodeTestSuite): boolean {
+    for (const node of suite.nodes) {
+      if (node.kind === 'suite') {
+        if (node.only || hasOnlyDescendant(node)) return true
+      } else if (node.only) {
+        return true
+      }
+    }
+    return false
+  }
+
   async function runTest(node: NekoNodeTestCase, ancestors: NekoNodeTestSuite[]): Promise<void> {
+    if (state.only && !isOnlySelected(node, ancestors)) {
+      logSkip(node.name, 'another test is marked with only')
+      return
+    }
     if (node.options.skip) {
       logSkip(node.name, reason(node.options, 'skip'))
       return
@@ -324,6 +354,10 @@
   }
 
   async function runSuite(suite: NekoNodeTestSuite, ancestors: NekoNodeTestSuite[]): Promise<void> {
+    if (state.only && !isOnlySelected(suite, ancestors) && !hasOnlyDescendant(suite)) {
+      if (suite !== state.root) logSkip(suite.name, 'another test is marked with only')
+      return
+    }
     if (suite.options.skip) {
       if (suite !== state.root) logSkip(suite.name, reason(suite.options, 'skip'))
       return
@@ -385,18 +419,23 @@
       })
   }
 
-  test.only = test
+  test.only = function only(name: unknown, options?: unknown, fn?: unknown): unknown {
+    ensureTestScripts()
+    const args = normalizeArgs(name, options, fn)
+    state.only = true
+    return addNode(createTest(args.name, args.options, args.fn, true))
+  }
   test.skip = function skip(name: unknown, options?: unknown, fn?: unknown): unknown {
     ensureTestScripts()
     const args = normalizeArgs(name, options, fn)
     args.options.skip = args.options.skip || true
-    return addNode(createTest(args.name, args.options, args.fn))
+    return addNode(createTest(args.name, args.options, args.fn, false))
   }
   test.todo = function todo(name: unknown, options?: unknown, fn?: unknown): unknown {
     ensureTestScripts()
     const args = normalizeArgs(name, options, fn)
     args.options.todo = args.options.todo || true
-    return addNode(createTest(args.name, args.options, args.fn))
+    return addNode(createTest(args.name, args.options, args.fn, false))
   }
   test.before = (fn: NekoNodeTestCallback): void => { addHook('before', fn) }
   test.after = (fn: NekoNodeTestCallback): void => { addHook('after', fn) }
@@ -409,7 +448,14 @@
   ;(test as unknown as NekoTestExtra).formatError = formatError
   test.default = test
 
-  describe.only = describe
+  describe.only = function only(name: unknown, options?: unknown, fn?: unknown): unknown {
+    ensureTestScripts()
+    const args = normalizeArgs(name, options, fn)
+    state.only = true
+    const suite = describe(args.name, args.options, args.fn)
+    suite.only = true
+    return suite
+  }
   describe.skip = function skip(name: unknown, options?: unknown, fn?: unknown): unknown {
     ensureTestScripts()
     const args = normalizeArgs(name, options, fn)

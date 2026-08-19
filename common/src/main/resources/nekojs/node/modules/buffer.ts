@@ -63,6 +63,7 @@
     fill(value: number, start?: number, end?: number): Buffer
     indexOf(needle: unknown, fromIndex?: number): number
     includes(needle: unknown): boolean
+    write(value: string, offset?: number, encoding?: string): number
     copy(target: unknown, targetStart?: number, sourceStart?: number, sourceEnd?: number): number
     equals(other: unknown): boolean
     compare(other: unknown): number
@@ -75,7 +76,7 @@
     new(value?: unknown, encoding?: string): Buffer
     (value?: unknown, encoding?: string): Buffer
     from(value: unknown, encoding?: string): Buffer
-    alloc(size: number): Buffer
+    alloc(size: number, fill?: unknown, encoding?: string): Buffer
     allocUnsafe(size: number): Buffer
     allocUnsafeSlow(size: number): Buffer
     isBuffer(value: unknown): value is Buffer
@@ -85,9 +86,12 @@
     compare(a: unknown, b: unknown): number
   }
 
+  /** Proxy → 原始宿主 buffer 的映射：宿主方法参数需要 NekoNodeBuffer，Proxy 无法被 Graal 转换。 */
+  const bufferTargets = new WeakMap<object, NekoHostBuffer>()
+
   function wrapBuffer(hostBuffer: NekoHostBuffer | null | undefined): Buffer | null | undefined {
     if (!hostBuffer) return hostBuffer as Buffer | null | undefined
-    return new Proxy(hostBuffer, {
+    const proxy = new Proxy(hostBuffer, {
       get(target, prop) {
         const t = target as NekoHostBuffer
         if (prop === 'length') return t.length()
@@ -97,14 +101,22 @@
         if (prop === Symbol.toStringTag) return 'Uint8Array'
         if (prop === Symbol.iterator) return function* () { for (let i = 0; i < t.length(); i++) yield t.get(i) }
         if (prop === 'toJSON') return () => ({ type: 'Buffer', data: Array.from({ length: t.length() }, (_, i) => t.get(i)) })
+        if (prop === 'write') return (value: unknown, offset?: unknown, encoding?: unknown): number => {
+          const start = Number(offset) || 0
+          const src = unwrapBuffer(Buffer.from(String(value ?? ''), encoding || 'utf8'))
+          if (!src) return start
+          const written = Math.min(src.length(), t.length() - start)
+          if (written > 0) src.copy(t, start, 0, written)
+          return start + written
+        }
         if (typeof prop === 'string' && /^\d+$/.test(prop)) return t.get(Number(prop))
         const value = (t as unknown as Record<string | symbol, unknown>)[prop]
         if (typeof value === 'function') {
           if (prop === 'slice') return (start, end) => wrapBuffer(t.slice(Number(start) || 0, end === undefined ? t.length() : Number(end))) as Buffer
           if (prop === 'subarray') return (start, end) => wrapBuffer(t.slice(Number(start) || 0, end === undefined ? t.length() : Number(end))) as Buffer
           if (prop === 'fill') return (v, start, end) => wrapBuffer(t.fill(Number(v) || 0, Number(start) || 0, end === undefined ? t.length() : Number(end))) as Buffer
-          if (prop === 'indexOf') return (needle, fromIndex) => t.indexOf(unwrapBuffer(needle), Number(fromIndex) || 0)
-          if (prop === 'includes') return (needle) => t.includes(unwrapBuffer(needle))
+        if (prop === 'indexOf') return (needle, fromIndex) => t.indexOf(needleBuffer(needle), Number(fromIndex) || 0)
+        if (prop === 'includes') return (needle) => t.includes(needleBuffer(needle))
           if (prop === 'copy') return (targetBuf, targetStart, sourceStart, sourceEnd) => t.copy(unwrapBuffer(targetBuf) as NekoHostBuffer, Number(targetStart) || 0, Number(sourceStart) || 0, sourceEnd === undefined ? t.length() : Number(sourceEnd))
           if (prop === 'equals') return (other) => t.equals(unwrapBuffer(other) as NekoHostBuffer)
           if (prop === 'compare') return (other) => t.compare(unwrapBuffer(other) as NekoHostBuffer)
@@ -151,14 +163,40 @@
         ;(t as unknown as Record<string | symbol, unknown>)[prop] = value
         return true
       }
-    }) as Buffer
+    })
+    bufferTargets.set(proxy as unknown as object, hostBuffer)
+    return proxy as Buffer
   }
 
-  // 保留原运行时语义：unwrapBuffer 返回 Proxy 包装的 buffer 本身（宿主方法的 .bytes 句柄）。
-  // 宿主侧 compare/copy/indexOf/includes 经 Proxy.get 委托到 target，故此处只判定形态、原样回传。
+  // unwrapBuffer 必须返回原始宿主 buffer：宿主方法签名是 NekoNodeBuffer，
+  // Graal 无法把 Proxy 转换回宿主类型（此前原样回传 Proxy，indexOf needle /
+  // writeFileBuffer / concat / compare / copy / equals 传参全部失败）。
   function unwrapBuffer(value: unknown): NekoHostBuffer | undefined {
+    const raw = bufferTargets.get(value as object)
+    if (raw) return raw
     if (value && typeof (value as Record<string, unknown>).bytes === 'function') return value as unknown as NekoHostBuffer
     return undefined
+  }
+
+  /** indexOf/includes 的 needle：Buffer 原样透传，字符串按 utf8 编码成 buffer。 */
+  function needleBuffer(needle: unknown): NekoHostBuffer | undefined {
+    const unwrapped = unwrapBuffer(needle)
+    if (unwrapped) return unwrapped
+    if (typeof needle === 'string') return unwrapBuffer(Buffer.from(needle, 'utf8'))
+    return undefined
+  }
+
+  /** 分块 latin1 编码：避免 String.fromCharCode(...hugeArray) 的调用栈溢出。 */
+  function latin1FromByteValues(bytes: ArrayLike<number>): string {
+    let out = ''
+    const CHUNK = 8192
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      const end = Math.min(i + CHUNK, bytes.length)
+      const chunk: number[] = []
+      for (let j = i; j < end; j++) chunk.push(Number(bytes[j]) & 255)
+      out += String.fromCharCode.apply(null, chunk)
+    }
+    return out
   }
 
   function partToString(part: unknown): string {
@@ -167,29 +205,32 @@
   }
 
   class Blob {
-    _parts: unknown[]
+    _text: string
     type: string
     size: number
 
     constructor(parts?: unknown[], options?: NekoBlobOptions) {
-      this._parts = Array.from(parts || [])
       let typeStr = ''
       if (options && options.type) typeStr = String(options.type)
       this.type = typeStr
-      this.size = this._parts.reduce((size, part) => size + partToString(part).length, 0)
+      this._text = Array.from(parts || []).map(partToString).join('')
+      this.size = Buffer.byteLength(this._text, 'utf8')
     }
 
     text(): Promise<string> {
-      return Promise.resolve(this._parts.map(partToString).join(''))
+      return Promise.resolve(this._text)
     }
 
     arrayBuffer(): Promise<ArrayBuffer> {
-      return Promise.resolve(Buffer.from(this._parts.map(partToString).join('')).buffer)
+      const buf = Buffer.from(this._text, 'utf8')
+      const out = new ArrayBuffer(buf.length)
+      const view = new Uint8Array(out)
+      for (let i = 0; i < buf.length; i++) view[i] = buf[i]
+      return Promise.resolve(out)
     }
 
     slice(start?: number, end?: number, type?: string): Blob {
-      const text = this._parts.map(partToString).join('').slice(start || 0, end)
-      return new Blob([text], { type: type || this.type })
+      return new Blob([this._text.slice(start || 0, end)], { type: type || this.type })
     }
   }
 
@@ -200,18 +241,41 @@
   Buffer.from = function (value: unknown, encoding?: string): Buffer {
     if (value && typeof (value as Record<string, unknown>).bytes === 'function') return wrapBuffer(value as unknown as NekoHostBuffer) as Buffer
     if (value instanceof ArrayBuffer || (typeof SharedArrayBuffer !== 'undefined' && value instanceof SharedArrayBuffer)) {
-      return wrapBuffer(runtime.bufferFromString(String.fromCharCode(...new Uint8Array(value)), 'latin1')) as Buffer
+      return wrapBuffer(runtime.bufferFromString(latin1FromByteValues(new Uint8Array(value)), 'latin1')) as Buffer
     }
-    if (Array.isArray(value)) return wrapBuffer(runtime.bufferFromString(String.fromCharCode(...value.map((v: unknown) => Number(v) & 255)), 'latin1')) as Buffer
+    if (Array.isArray(value)) return wrapBuffer(runtime.bufferFromString(latin1FromByteValues(value), 'latin1')) as Buffer
     return wrapBuffer(runtime.bufferFromString(String(value ?? ''), encoding || 'utf8')) as Buffer
   }
-  Buffer.alloc = function (size: number): Buffer { return wrapBuffer(runtime.bufferAlloc(Number(size) || 0)) as Buffer }
+  Buffer.alloc = function (size: number, fill?: unknown, encoding?: string): Buffer {
+    const buf = wrapBuffer(runtime.bufferAlloc(Number(size) || 0)) as Buffer
+    if (fill !== undefined && buf.length > 0) fillBuffer(buf, fill, encoding)
+    return buf
+  }
   Buffer.allocUnsafe = function (size: number): Buffer { return Buffer.alloc(size) }
   Buffer.allocUnsafeSlow = function (size: number): Buffer { return Buffer.alloc(size) }
   Buffer.isBuffer = function (value: unknown): value is Buffer { return !!unwrapBuffer(value) }
-  Buffer.byteLength = function (value: unknown, encoding?: string): number { return runtime.bufferByteLength(String(value ?? ''), encoding || 'utf8') }
+  Buffer.byteLength = function (value: unknown, encoding?: string): number {
+    if (unwrapBuffer(value)) return (value as Buffer).length
+    if (value instanceof ArrayBuffer || (typeof SharedArrayBuffer !== 'undefined' && value instanceof SharedArrayBuffer)) return value.byteLength
+    if (ArrayBuffer.isView(value)) return (value as ArrayBufferView).byteLength
+    return runtime.bufferByteLength(String(value ?? ''), encoding || 'utf8')
+  }
   Buffer.isEncoding = function (encoding: string): boolean {
-    return ['utf8', 'utf-8', 'utf16le', 'utf-16le', 'ucs2', 'ucs-2', 'ascii', 'latin1', 'binary', 'base64', 'hex'].includes(String(encoding).toLowerCase())
+    return ['utf8', 'utf-8', 'utf16le', 'utf-16le', 'ucs2', 'ucs-2', 'ascii', 'latin1', 'binary', 'base64', 'base64url', 'hex'].includes(String(encoding).toLowerCase())
+  }
+  /** Node 语义：fill 为字符串/Blob/Buffer 时按编码重复填充整个 buffer。 */
+  function fillBuffer(buf: Buffer, fill: unknown, encoding?: string): void {
+    if (typeof fill === 'number') {
+      buf.fill(fill & 255, 0, buf.length)
+      return
+    }
+    const src = unwrapBuffer(Buffer.from(fill, encoding || 'utf8'))
+    if (!src || src.length() === 0) return
+    const target = unwrapBuffer(buf)
+    if (!target) return
+    for (let offset = 0; offset < buf.length; offset += src.length()) {
+      src.copy(target, offset, 0, Math.min(src.length(), buf.length - offset))
+    }
   }
   Buffer.concat = function (values: Buffer[], totalLength?: number): Buffer { return wrapBuffer(runtime.bufferConcat((values || []).map((v: Buffer) => unwrapBuffer(v)).filter(Boolean) as NekoHostBuffer[])) as Buffer }
   Buffer.compare = function (a: unknown, b: unknown): number {

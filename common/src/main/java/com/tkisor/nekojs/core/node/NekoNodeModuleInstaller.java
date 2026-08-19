@@ -32,28 +32,12 @@ public final class NekoNodeModuleInstaller {
         NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
-        installGlobalTimers(context);
+        // 全局 timers 由 manifest 的 modules/timers.ts 注册（manifest 同步加载完毕后才执行任何用户脚本，
+        // 无需在 manifest 之前预装一版会丢弃额外参数的简化实现）
         loadManifest(context);
         loadPluginModules(context);
         return runtime;
     }
-
-    private static void installGlobalTimers(Context context) {
-        try {
-            context.eval(Source.newBuilder("js", GLOBAL_TIMERS_JS, "nekojs/node/globals.js").build());
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to install global timer bindings", e);
-        }
-    }
-
-    private static final String GLOBAL_TIMERS_JS = """
-            globalThis.setTimeout = (cb, ms) => __nekoNodeRuntime.timers().setTimeout(cb, ms || 0);
-            globalThis.clearTimeout = (id) => __nekoNodeRuntime.timers().clearTimeout(id);
-            globalThis.setInterval = (cb, ms) => __nekoNodeRuntime.timers().setInterval(cb, ms || 0);
-            globalThis.clearInterval = (id) => __nekoNodeRuntime.timers().clearInterval(id);
-            globalThis.setImmediate = (cb) => __nekoNodeRuntime.timers().setImmediate(cb);
-            globalThis.clearImmediate = (id) => __nekoNodeRuntime.timers().clearImmediate(id);
-            """;
 
     private static void loadManifest(Context context) {        String manifest = readResource(MANIFEST);
         for (String line : manifest.split("\\R")) {

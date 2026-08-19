@@ -69,13 +69,13 @@
     networkInterfaces: (): Record<string, NekoNetworkInterfaceInfo[]> => wrapNetworkInterfaces(runtime.os().networkInterfaces()),
     endianness: (): string => String(runtime.os().endianness()),
     loadavg: (): [number, number, number] => [runtime.os().loadavg1(), runtime.os().loadavg5(), runtime.os().loadavg15()],
+    EOL: String(runtime.os().platform()) === 'win32' ? '\r\n' : '\n',
     release: (): string => String((runtime.process && runtime.process().versions && runtime.process().versions().minecraft) || '1.0'),
     type: (): string => {
       const p = String(runtime.os().platform())
       return p === 'win32' ? 'Windows_NT' : p === 'darwin' ? 'Darwin' : 'Linux'
     },
     version: (): string => String((runtime.process && runtime.process().versions && runtime.process().versions().java) || ''),
-    EOL: '\n',
     constants: {
       UV_UDP_REUSEADDR: 0, SIGTRAP: 5, SIGKILL: 9, SIGUSR1: 10, SIGUSR2: 12, SIGPIPE: 13, SIGALRM: 14, SIGTERM: 15,
       errno: {}, priority: {}, dlopen: {}, signals: {}

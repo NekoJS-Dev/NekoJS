@@ -1,6 +1,9 @@
 ;(function () {
   type NekoEventListener = (...args: unknown[]) => void
 
+  /** 与 Node 一致的 events.errorMonitor：仅监听 error 事件而不阻止抛出。 */
+  const errorMonitor = Symbol.for('events.errorMonitor')
+
   class EventEmitter {
     private _events: Record<string | symbol, NekoEventListener[]>
     private _maxListeners: number | undefined
@@ -15,13 +18,27 @@
     addListener(name: string | symbol, listener: NekoEventListener): this {
       checkListener(listener)
       ;(this._events[name] ||= []).push(listener)
+      this.warnIfExceeded(name)
       return this
     }
 
     prependListener(name: string | symbol, listener: NekoEventListener): this {
       checkListener(listener)
       ;(this._events[name] ||= []).unshift(listener)
+      this.warnIfExceeded(name)
       return this
+    }
+
+    private warnIfExceeded(name: string | symbol): void {
+      const max = this.getMaxListeners()
+      if (!Number.isFinite(max) || max <= 0) return
+      const list = this._events[name]
+      if (list && list.length > max && !(list as unknown as Record<string, boolean>).warned) {
+        ;(list as unknown as Record<string, boolean>).warned = true
+        if (typeof console !== 'undefined' && typeof console.error === 'function') {
+          console.error(`NekoJS warning: possible EventEmitter memory leak detected. ${list.length} ${String(name)} listeners added. Use emitter.setMaxListeners() to increase the limit.`)
+        }
+      }
     }
 
     once(name: string | symbol, listener: NekoEventListener): this {
@@ -58,6 +75,11 @@
     emit(name: string | symbol, ...args: unknown[]): boolean {
       const list = this._events[name]
       if ((!list || list.length === 0) && name === 'error') {
+        // errorMonitor 监听器先于抛出被调用，且不阻止抛出（Node 语义）
+        const monitors = this._events[errorMonitor]
+        if (monitors) {
+          for (const listener of [...monitors]) listener(...args)
+        }
         const error = args[0]
         if (error instanceof Error) throw error
         throw new Error('Unhandled error.' + (error === undefined ? '' : ' ' + String(error)))
@@ -85,7 +107,7 @@
 
     setMaxListeners(value: number): this {
       const max = Number(value)
-      if (!Number.isFinite(max) || max < 0) throw new RangeError('n must be a non-negative number')
+      if (Number.isNaN(max) || max < 0) throw new RangeError('n must be a non-negative number')
       this._maxListeners = max
       return this
     }
@@ -101,6 +123,7 @@
     }
 
     static defaultMaxListeners: number = 10
+    static errorMonitor: symbol = errorMonitor
     static listenerCount(emitter: EventEmitter, name: string | symbol): number { return emitter.listenerCount(name) }
   }
 
@@ -127,6 +150,7 @@
 
   const events = {
     EventEmitter,
+    errorMonitor,
     get defaultMaxListeners(): number { return EventEmitter.defaultMaxListeners },
     set defaultMaxListeners(value: number) { EventEmitter.defaultMaxListeners = Number(value) },
     once: oncePromise,

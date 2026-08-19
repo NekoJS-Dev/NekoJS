@@ -65,17 +65,28 @@
   }
 
   function isDeepStrictEqual(left: unknown, right: unknown): boolean {
+    return deepStrictEqualWithCycleGuard(left, right, new WeakMap())
+  }
+
+  /** 循环引用保护：a→b 配对已比较过即视为相等，避免自引用结构递归爆栈。 */
+  function deepStrictEqualWithCycleGuard(left: unknown, right: unknown, seen: WeakMap<object, object[]>): boolean {
     if (Object.is(left, right)) return true
     if (typeof left !== typeof right) return false
     if (left === null || right === null) return false
     if (typeof left !== 'object') return false
     if ((left as object).constructor !== (right as object).constructor) return false
+    const leftObject = left as object
+    const rightObject = right as object
+    const counterparts = seen.get(leftObject)
+    if (counterparts && counterparts.indexOf(rightObject) >= 0) return true
+    if (counterparts) counterparts.push(rightObject)
+    else seen.set(leftObject, [rightObject])
     if (left instanceof Date) return Object.is((left as Date).getTime(), (right as Date).getTime())
     if (left instanceof RegExp) return String(left) === String(right)
     if (left instanceof Map) {
       if (left.size !== (right as Map<unknown, unknown>).size) return false
       for (const [key, value] of left) {
-        if (!(right as Map<unknown, unknown>).has(key) || !isDeepStrictEqual(value, (right as Map<unknown, unknown>).get(key))) return false
+        if (!(right as Map<unknown, unknown>).has(key) || !deepStrictEqualWithCycleGuard(value, (right as Map<unknown, unknown>).get(key), seen)) return false
       }
       return true
     }
@@ -96,7 +107,7 @@
     if (leftKeys.length !== rightKeys.length) return false
     for (const key of leftKeys) {
       if (!Object.prototype.hasOwnProperty.call(right, key)) return false
-      if (!isDeepStrictEqual((left as any)[key], (right as any)[key])) return false
+      if (!deepStrictEqualWithCycleGuard((left as any)[key], (right as any)[key], seen)) return false
     }
     return true
   }

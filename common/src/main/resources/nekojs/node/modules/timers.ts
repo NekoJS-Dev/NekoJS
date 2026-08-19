@@ -1,15 +1,16 @@
 ;(function () {
   const { runtime } = globalThis.__nekoNodeInternal
 
-  interface NekoTimerHandle { __nekoTimerHandle: true }
+  /** 宿主 setTimeout/setInterval/setImmediate 返回 int id（Node 返回 Timeout 对象，沙盒不适用）。 */
+  type NekoTimerId = number
   type TimerCallback = (...args: unknown[]) => void
 
   const timers = {
-    setTimeout: (callback: TimerCallback, delay?: number, ...args: unknown[]): NekoTimerHandle => runtime.timers().setTimeout(callback, Number(delay) || 0, ...args),
+    setTimeout: (callback: TimerCallback, delay?: number, ...args: unknown[]): NekoTimerId => runtime.timers().setTimeout(callback, Number(delay) || 0, ...args),
     clearTimeout: (id: unknown): void => { runtime.timers().clearTimeout(Number(id)) },
-    setInterval: (callback: TimerCallback, delay?: number, ...args: unknown[]): NekoTimerHandle => runtime.timers().setInterval(callback, Number(delay) || 0, ...args),
+    setInterval: (callback: TimerCallback, delay?: number, ...args: unknown[]): NekoTimerId => runtime.timers().setInterval(callback, Number(delay) || 0, ...args),
     clearInterval: (id: unknown): void => { runtime.timers().clearInterval(Number(id)) },
-    setImmediate: (callback: TimerCallback, ...args: unknown[]): NekoTimerHandle => runtime.timers().setImmediate(callback, ...args),
+    setImmediate: (callback: TimerCallback, ...args: unknown[]): NekoTimerId => runtime.timers().setImmediate(callback, ...args),
     clearImmediate: (id: unknown): void => { runtime.timers().clearImmediate(Number(id)) }
   }
 

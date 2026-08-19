@@ -571,7 +571,9 @@ public final class ScriptManager implements AutoCloseable {
 
         private void flushTestTimers () {
             if (nodeRuntime == null || context == null) return;
-            for (int i = 0; i < 20 && nodeRuntime.hasPendingTimers(); i++) {
+            // 上限 1000 轮（≈1s）：覆盖常见的 await setTimeout(...) 异步断言；
+            // 失控 interval 也会在此截止，不会挂死 /nekojs test
+            for (int i = 0; i < 1000 && nodeRuntime.hasPendingTimers(); i++) {
                 synchronized (context) {
                     nodeRuntime.flushReadyTimers();
                 }

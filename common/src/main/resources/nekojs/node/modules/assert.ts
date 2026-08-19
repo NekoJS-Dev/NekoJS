@@ -96,23 +96,73 @@
   }
 
   function deepStrictEqual(actual: unknown, expected: unknown, message?: string): void {
-    if (!deepEqual(actual, expected)) fail(actual, expected, message, 'deepStrictEqual')
+    if (!isDeepStrictEqualValues(actual, expected, new WeakMap())) fail(actual, expected, message, 'deepStrictEqual')
   }
 
   function notDeepStrictEqual(actual: unknown, expected: unknown, message?: string): void {
-    if (deepEqual(actual, expected)) fail(actual, expected, message, 'notDeepStrictEqual')
+    if (isDeepStrictEqualValues(actual, expected, new WeakMap())) fail(actual, expected, message, 'notDeepStrictEqual')
   }
 
+  function notDeepEqual(actual: unknown, expected: unknown, message?: string): void {
+    if (isLooseDeepEqual(actual, expected, new WeakMap())) fail(actual, expected, message, 'notDeepEqual')
+  }
+
+  /** Node 宽松 deepEqual：原始值按 == 强制转换比较，结构按形状比较（不比较原型）。 */
   function deepEqual(a: unknown, b: unknown): boolean {
+    return isLooseDeepEqual(a, b, new WeakMap())
+  }
+
+  type NekoSeenPairs = WeakMap<object, object[]>
+
+  function seenBefore(seen: NekoSeenPairs, a: object, b: object): boolean {
+    const counterparts = seen.get(a)
+    if (counterwiseHas(counterparts, b)) return true
+    if (counterparts) counterparts.push(b)
+    else seen.set(a, [b])
+    return false
+  }
+
+  function counterwiseHas(counterparts: object[] | undefined, b: object): boolean {
+    return !!counterparts && counterparts.indexOf(b) >= 0
+  }
+
+  function isDeepStrictEqualValues(a: unknown, b: unknown, seen: NekoSeenPairs): boolean {
     if (Object.is(a, b)) return true
     if (typeof a !== typeof b) return false
     if (!a || !b || typeof a !== 'object') return false
+    if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false
     if (Array.isArray(a) !== Array.isArray(b)) return false
+    if (seenBefore(seen, a, b)) return true
+    if (a instanceof Date) return Object.is((a as Date).getTime(), (b as Date).getTime())
+    if (a instanceof RegExp) return String(a) === String(b)
+    if (Array.isArray(a)) {
+      if ((a as unknown[]).length !== (b as unknown[]).length) return false
+      for (let i = 0; i < (a as unknown[]).length; i++) {
+        if (!isDeepStrictEqualValues((a as unknown[])[i], (b as unknown[])[i], seen)) return false
+      }
+      return true
+    }
     const aKeys = Object.keys(a)
     const bKeys = Object.keys(b)
     if (aKeys.length !== bKeys.length) return false
     for (const key of aKeys) {
-      if (!Object.prototype.hasOwnProperty.call(b, key) || !deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false
+      if (!Object.prototype.hasOwnProperty.call(b, key) || !isDeepStrictEqualValues((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], seen)) return false
+    }
+    return true
+  }
+
+  function isLooseDeepEqual(a: unknown, b: unknown, seen: NekoSeenPairs): boolean {
+    if (a == null && b == null) return true
+    if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return a == b
+    if (seenBefore(seen, a, b)) return true
+    if (Array.isArray(a) !== Array.isArray(b)) return false
+    if (a instanceof Date) return (a as Date).getTime() == (b as Date).getTime()
+    if (a instanceof RegExp) return String(a) === String(b)
+    const aKeys = Object.keys(a)
+    const bKeys = Object.keys(b)
+    if (aKeys.length !== bKeys.length) return false
+    for (const key of aKeys) {
+      if (!Object.prototype.hasOwnProperty.call(b, key) || !isLooseDeepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], seen)) return false
     }
     return true
   }
@@ -150,12 +200,24 @@
     }
   }
 
+  type NekoSyncFn = () => unknown
+
+  /** fn 同步抛错按 rejection 处理（Node 语义），而非同步抛给调用方。 */
+  function toMaybePromise(fn: NekoMaybeAsyncFn): unknown {
+    try {
+      const invocable = fn as NekoSyncFn
+      return typeof fn === 'function' ? invocable() : fn
+    } catch (error) {
+      return Promise.reject(error)
+    }
+  }
+
   function rejects(fn: NekoMaybeAsyncFn, expected?: NekoAssertExpected | string, message?: string): Promise<unknown> {
     if (typeof expected === 'string' && message === undefined) {
       message = expected
       expected = undefined
     }
-    const promise = typeof fn === 'function' ? (fn as NekoMaybeAsyncFn) : fn
+    const promise = toMaybePromise(fn)
     return Promise.resolve(promise).then(
       () => fail(undefined, expected || 'rejection', message, 'rejects'),
       (error: unknown) => {
@@ -170,7 +232,7 @@
       message = expected
       expected = undefined
     }
-    const promise = typeof fn === 'function' ? (fn as NekoMaybeAsyncFn) : fn
+    const promise = toMaybePromise(fn)
     return Promise.resolve(promise).catch((error: unknown) => {
       if (!expected || matchesExpected(error, expected)) {
         const reason = (error as Error).message || error
@@ -222,7 +284,7 @@
     notStrictEqual,
     deepEqual,
     deepStrictEqual,
-    notDeepEqual: notDeepStrictEqual,
+    notDeepEqual,
     notDeepStrictEqual,
     throws,
     doesNotThrow,
