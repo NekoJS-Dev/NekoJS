@@ -17,6 +17,10 @@ description = '''${mod_description}'''
 [[mixins]]
 config = "${mod_id}.mixins.json"
 
+# DynamicRegistry (runtime content registration): client-only component-reapply mixin
+[[mixins]]
+config = "${mod_id}-dynamic.mixins.json"
+
 [[accessTransformers]]
 file="META-INF/accesstransformer.cfg"
 
