@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
@@ -22,6 +23,15 @@ public interface ItemEvents {
 
     EventBusJS<PlayerInteractEvent.RightClickItem, Item> RIGHT_CLICKED =
             GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, dispatchByItem(PlayerInteractEvent::getItemStack));
+
+    /**
+     * 运行时物品属性修改（server 脚本）：每次服务器启动（about-to-start）与
+     * {@code /nekojs reload server} 时由平台侧手动 post（快照恢复模型，见
+     * {@link ItemModificationEventJS}），不挂 NeoForge 总线。
+     */
+    EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
+            GROUP.server("modification", ItemModificationEventJS.class);
+
     EventBusJS<ItemTooltipEvent, Item> TOOLTIP =
             GROUP.client("tooltip", ItemTooltipEvent.class, dispatchByItem(ItemTooltipEvent::getItemStack));
 
