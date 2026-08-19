@@ -156,6 +156,12 @@ public final class NekoTypeScriptCompiler {
                         continue;
                     }
                 }
+                if (c == '?' && bareOptionalParameterAt(i)) {
+                    // 裸可选参数 `b?`（无 `: T` 标注时 `?` 无人擦除，残留即语法错误）
+                    eraseRange(i, i + 1);
+                    i++;
+                    continue;
+                }
                 i++;
             }
             transform();
@@ -1267,7 +1273,40 @@ public final class NekoTypeScriptCompiler {
             char c = source.charAt(previousToken);
             if (c != '{' && c != ',') return false;
             int objectStart = enclosingOpenBrace(previousToken);
-            return objectStart >= 0 && objectLiteralContext(objectStart);
+            if (objectStart < 0 || !objectLiteralContext(objectStart)) return false;
+            // 方法简写参数表：属性名前的 `,` 位于对象字面量 `{` 之后未闭合的 `(` 内
+            // （如 { m(a: T, b: U) {} } 里 b 前的逗号）——那是参数分隔符而非属性分隔符，
+            // 其后的 `:` 是参数类型注解，须走正常擦除（此前被误判为属性冒号而残留）。
+            if (c == ',' && parenDepthBetween(objectStart + 1, previousToken) > 0) return false;
+            return true;
+        }
+
+        /** [from, to) 区间内未闭合的 `(` 层数；跳过字符串/模板/注释，避免字面量里的括号干扰。 */
+        private int parenDepthBetween(int from, int to) {
+            int depth = 0;
+            int i = Math.max(0, from);
+            while (i < to && i < length) {
+                char ch = source.charAt(i);
+                if (ch == '\'' || ch == '"') {
+                    i = skipString(i, ch);
+                    continue;
+                }
+                if (ch == '`') {
+                    i = skipTemplate(i);
+                    continue;
+                }
+                if (ch == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) {
+                        i = skipped;
+                        continue;
+                    }
+                }
+                if (ch == '(') depth++;
+                else if (ch == ')') depth--;
+                i++;
+            }
+            return depth;
         }
 
         private int enclosingOpenBrace(int before) {
@@ -1392,6 +1431,18 @@ public final class NekoTypeScriptCompiler {
                      "throw", "new", "do", "else", "yield", "await" -> { return true; }
                 default -> { return false; }
             }
+        }
+
+        /**
+         * 裸可选参数 {@code b?}（无 {@code : T} 类型标注）：{@code ?} 前是标识符、
+         * 后（跳过空白）是 `,` 或 `)`。三元 {@code x ? a : b} 的 {@code ?} 后是表达式、
+         * 可选链 {@code a?.}、空值合并 {@code a??} 均不满足该判据，不受影响。
+         */
+        private boolean bareOptionalParameterAt(int question) {
+            int previous = previousNonWhitespace(question - 1);
+            if (previous < 0 || !isIdentifierPart(source.charAt(previous))) return false;
+            int next = nextNonWhitespace(question + 1);
+            return next < length && (source.charAt(next) == ',' || source.charAt(next) == ')');
         }
 
         /**

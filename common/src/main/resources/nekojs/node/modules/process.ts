@@ -136,7 +136,7 @@
     uptime(): number { return Math.max(0, (Date.now() - startedAtMillis) / 1000) },
     hrtime,
     memoryUsage(): NekoMemoryUsage { return wrapMemoryUsage(runtime.process().memoryUsage()) },
-    cpuUsage(previousValue): NekoCpuUsage {
+    cpuUsage(previousValue?): NekoCpuUsage {
       const current = wrapCpuUsage(runtime.process().cpuUsage())
       if (previousValue && typeof (previousValue as NekoCpuUsage).user === 'number') {
         return {

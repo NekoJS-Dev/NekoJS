@@ -14,13 +14,13 @@
 
   function wrapHash(hostHash: NekoHostHash): NekoDigest {
     const handle: NekoDigest = {
-      update(data, encoding) {
+      update(data: unknown, encoding?: string): NekoDigest {
         const buffer = unwrapBuffer(data)
         if (buffer) hostHash.updateBuffer(buffer)
         else hostHash.updateString(String(data ?? ''), encoding || 'utf8')
         return handle
       },
-      digest(encoding) {
+      digest(encoding?: string): unknown {
         if (encoding === undefined) return wrapBuffer(hostHash.digestBuffer())
         return hostHash.digestString(encoding)
       }
@@ -28,35 +28,25 @@
     return handle
   }
 
-  /** RFC 4122 v4 UUID。 */
-  function randomUUID(): string {
-    return runtime.crypto().randomUUID()
-  }
-
-  function randomBytes(size: number): unknown {
-    return wrapBuffer(runtime.crypto().randomBytes(Number(size) || 0))
-  }
-
-  function createHash(algorithm: string): NekoDigest {
-    return wrapHash(runtime.crypto().createHash(String(algorithm)))
-  }
-
-  function createHmac(algorithm: string, key: unknown): NekoDigest {
-    const keyBuffer = unwrapBuffer(key)
-    const hostKey = keyBuffer || unwrapBuffer(globalThis.Buffer.from(key, 'utf8'))
-    return wrapHash(runtime.crypto().createHmac(String(algorithm), hostKey))
-  }
-
-  function timingSafeEqual(a: unknown, b: unknown): boolean {
-    return runtime.crypto().timingSafeEqual(unwrapBuffer(a), unwrapBuffer(b))
-  }
-
   const crypto = {
-    randomUUID,
-    randomBytes,
-    createHash,
-    createHmac,
-    timingSafeEqual
+    /** RFC 4122 v4 UUID。 */
+    randomUUID(): string {
+      return runtime.crypto().randomUUID()
+    },
+    randomBytes(size: number): unknown {
+      return wrapBuffer(runtime.crypto().randomBytes(Number(size) || 0))
+    },
+    createHash(algorithm: string): NekoDigest {
+      return wrapHash(runtime.crypto().createHash(String(algorithm)))
+    },
+    createHmac(algorithm: string, key: unknown): NekoDigest {
+      const keyBuffer = unwrapBuffer(key)
+      const hostKey = keyBuffer || unwrapBuffer(globalThis.Buffer.from(key, 'utf8'))
+      return wrapHash(runtime.crypto().createHmac(String(algorithm), hostKey))
+    },
+    timingSafeEqual(a: unknown, b: unknown): boolean {
+      return runtime.crypto().timingSafeEqual(unwrapBuffer(a), unwrapBuffer(b))
+    }
   }
 
   globalThis.__nekoNodeDefine(['crypto', 'node:crypto'], crypto)

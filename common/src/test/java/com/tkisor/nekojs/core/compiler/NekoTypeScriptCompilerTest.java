@@ -129,6 +129,51 @@ class NekoTypeScriptCompilerTest {
     }
 
     @Test
+    void erasesObjectLiteralMethodShorthandParams() {
+        // 修复前：方法简写第 2+ 参数的注解被 objectLiteralPropertyColon 误判为属性冒号而残留
+        String src = "const o = { m(a: string, b: number, c?: boolean): void { return null } }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        String flat = out.replaceAll("\\s+", " ");
+        assertTrue(flat.contains("m(a , b , c ) { return null }"), out);
+        assertFalse(out.contains("b: number"), out);
+        assertFalse(out.contains("c?"), out);
+    }
+
+    @Test
+    void objectLiteralPropertyColonsSurviveMethodShorthandFix() {
+        // 属性值、字符串里的括号、类方法、箭头体不受方法简写修复影响
+        String src = "const keep = { a: 1, b: 2, c: '(' }\n" +
+            "const keepCall = { k: f('('), v: 2 }\n" +
+            "const keepFn = { m(a: string) { return a } , n: 3 }\n" +
+            "class C { m(a: string, b: number): void {} }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertTrue(out.contains("a: 1, b: 2, c: '('"), out);
+        assertTrue(out.contains("f('('), v: 2"), out);
+        assertTrue(out.contains("n: 3"), out);
+        assertFalse(out.contains("a: string"), out);
+        assertFalse(out.contains("b: number"), out);
+    }
+
+    @Test
+    void erasesBareOptionalParams() {
+        // 修复前：无 `: T` 标注的裸可选参数 `b?` 的 `?` 无人擦除，残留即语法错误
+        String src = "function f(a, b?) {}\n" +
+            "const g = (x?, y) => x\n" +
+            "const o = { m(a?) { return a } }";
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertFalse(out.contains("b?"), out);
+        assertFalse(out.contains("x?"), out);
+        assertFalse(out.contains("a?"), out);
+        String flat = out.replaceAll("\\s+", " ");
+        assertTrue(flat.contains("function f(a, b )"), out);
+        // 三元 / 可选链 / 空值合并不受影响
+        String keep = "const t = x ? y : z\nconst o2 = a?.b ?? c";
+        String kept = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), keep);
+        assertTrue(kept.contains("x ? y : z"), kept);
+        assertTrue(kept.contains("a?.b ?? c"), kept);
+    }
+
+    @Test
     void namespaceInNestedScopeCompiles() {
         // namespace 在箭头函数体内：转换须前置 var 声明，否则 (name||(name={})) 在严格模式 ReferenceError
         String src = "const f = () => { namespace g { export const x = 1 } return g.x }";
