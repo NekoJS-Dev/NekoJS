@@ -32,6 +32,8 @@ public class NekoJSClient {
         modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onClientTickPost);
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onLevelUnload);
+        // Reload progress HUD (8e)：自包含订阅 RenderGuiEvent.Post，不走 ClientEvents
+        com.tkisor.nekojs.client.hud.NekoReloadProgressHud.install();
         ClientEvents.bindModBus(modEventBus);
     }
 

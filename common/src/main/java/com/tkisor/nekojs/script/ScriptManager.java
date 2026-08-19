@@ -13,6 +13,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -229,15 +230,29 @@ public final class ScriptManager implements AutoCloseable {
      * 不受影响。
      */
     public synchronized void loadScripts() {
-        pluginRuntime.fireBeforeScriptsLoaded(scriptType);
+        // Reload progress HUD：首次加载独占会话；被 reloadScripts 嵌套调用时（STARTUP 分支）
+        // 已有活动会话，begin 返回 false，finish 交由外层 reload 负责。
+        final boolean progressOwned = ReloadProgressTracker.begin(scriptType.name, 1);
         try {
-            loadScriptsInto(scripts);
-            if (scriptType == ScriptType.STARTUP) {
-                flushReadyNodeTimers();
-                ScriptEvents.post(getScriptEventRegistrar());
+            pluginRuntime.fireBeforeScriptsLoaded(scriptType);
+            try {
+                loadScriptsInto(scripts);
+                if (scriptType == ScriptType.STARTUP) {
+                    flushReadyNodeTimers();
+                    ScriptEvents.post(getScriptEventRegistrar());
+                }
+            } finally {
+                pluginRuntime.fireAfterScriptsLoaded(scriptType);
             }
-        } finally {
-            pluginRuntime.fireAfterScriptsLoaded(scriptType);
+            ReloadProgressTracker.step(scriptType.name, "scripts executed");
+            if (progressOwned) {
+                ReloadProgressTracker.finish(scriptType.name, true);
+            }
+        } catch (Throwable t) {
+            if (progressOwned) {
+                ReloadProgressTracker.finish(scriptType.name, false);
+            }
+            throw t;
         }
     }
 
@@ -289,23 +304,33 @@ public final class ScriptManager implements AutoCloseable {
         // ---- 重载 ----
 
         public synchronized void reloadScripts () {
-            scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
-            if (scriptType == ScriptType.STARTUP) {
-                if (!warnedStartupReloadNonTransactional) {
-                    warnedStartupReloadNonTransactional = true;
-                    scriptType.logger().warn(
-                            "{} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；"
-                                    + "若重载期间脚本出错，已注册内容不会回退。",
-                            scriptType.name());
+            ReloadProgressTracker.begin(scriptType.name, scriptType == ScriptType.STARTUP ? 3 : 5);
+            boolean progressSuccess = false;
+            try {
+                scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
+                if (scriptType == ScriptType.STARTUP) {
+                    if (!warnedStartupReloadNonTransactional) {
+                        warnedStartupReloadNonTransactional = true;
+                        scriptType.logger().warn(
+                                "{} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；"
+                                        + "若重载期间脚本出错，已注册内容不会回退。",
+                                scriptType.name());
+                    }
+                    // STARTUP 涉及不可逆注册（物品、方块、实体），无法安全回滚，保持 reset+load 语义。
+                    resetEnvironment();
+                    ReloadProgressTracker.step(scriptType.name, "environment reset");
+                    discoverScripts();
+                    ReloadProgressTracker.step(scriptType.name, "scripts discovered");
+                    loadScripts();
+                    ReloadProgressTracker.step(scriptType.name, "scripts executed");
+                } else {
+                    reloadScriptsTransactional();
                 }
-                // STARTUP 涉及不可逆注册（物品、方块、实体），无法安全回滚，保持 reset+load 语义。
-                resetEnvironment();
-                discoverScripts();
-                loadScripts();
-            } else {
-                reloadScriptsTransactional();
+                progressSuccess = true;
+                scriptType.logger().info("{} 脚本重载完毕。", scriptType.name());
+            } finally {
+                ReloadProgressTracker.finish(scriptType.name, progressSuccess);
             }
-            scriptType.logger().info("{} 脚本重载完毕。", scriptType.name());
         }
 
         /**
@@ -332,6 +357,7 @@ public final class ScriptManager implements AutoCloseable {
             // 单机 CLIENT 触发 reload 会误清 SERVER 等其它类型已编译的模块/source map/虚拟 URI。
             NekoModulePipelineCache.clear(scriptType);
             NekoEsmVirtualModuleRegistry.clear(scriptType);
+            ReloadProgressTracker.step(scriptType.name, "old listeners and bindings cleared");
 
             final ScriptEnvironmentFactory.Environment candidate;
             try {
@@ -342,6 +368,7 @@ public final class ScriptManager implements AutoCloseable {
                         + " reload failed; previous scripts retained but event listeners/bindings were cleared"
                         + " — run /neko reload again to restore listeners", t);
             }
+            ReloadProgressTracker.step(scriptType.name, "candidate environment created");
 
             Context candidateContext = candidate.context();
             NekoNodeRuntime candidateNode = candidate.nodeRuntime();
@@ -363,6 +390,7 @@ public final class ScriptManager implements AutoCloseable {
             try {
                 List<ScriptContainer> candidateScripts = discoverWithPacks();
                 scriptType.logger().info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
+                ReloadProgressTracker.step(scriptType.name, "discovered " + candidateScripts.size() + " scripts");
 
                 // 候选加载期间只关心「候选 Context 是否被杀」：先清掉旧标记，加载结束后若标记
                 // 重新变 true，说明是候选环境触发了语句上限。基于状态而非转移检测，避免
@@ -374,6 +402,7 @@ public final class ScriptManager implements AutoCloseable {
                 } finally {
                     pluginRuntime.fireAfterScriptsLoaded(scriptType);
                 }
+                ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
 
                 if (this.contextKilled) {
                     // 候选加载期间有脚本触发语句上限，Graal 已关闭候选 Context。把它按失败
@@ -391,6 +420,7 @@ public final class ScriptManager implements AutoCloseable {
                         || oldOutStream != null || oldErrStream != null) {
                     closeRuntimeResources(oldNodeRuntime, oldContext, oldOutStream, oldErrStream);
                 }
+                ReloadProgressTracker.step(scriptType.name, "committed");
             } catch (Throwable t) {
                 this.context = oldContext;
                 this.nodeRuntime = oldNodeRuntime;
