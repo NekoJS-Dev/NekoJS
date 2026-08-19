@@ -112,8 +112,60 @@ public final class NekoJSCommands {
 
                         .then(packsCommand())
 
+                        .then(registryCommand())
+
+                        .then(Commands.literal("trust")
+                                .then(Commands.argument("address", StringArgumentType.string())
+                                        .executes(context -> trustServer(context.getSource(), StringArgumentType.getString(context, "address")))))
+
                         .then(probeCommand())
         );
+    }
+
+    /**
+     * /nekojs registry：动态注册健康快照（每注册表条目数 + stale 残留）。
+     * /nekojs registry stale：只列出上次 reload 后脚本不再注册的条目 id。
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> registryCommand() {
+        return Commands.literal("registry")
+                .executes(context -> {
+                    for (var s : com.tkisor.nekojs.dynamic.DynamicRegistryDebug.snapshot()) {
+                        context.getSource().sendSystemMessage(Component.literal(s.summary()));
+                    }
+                    return 1;
+                })
+                .then(Commands.literal("stale")
+                        .executes(context -> {
+                            boolean any = false;
+                            for (var s : com.tkisor.nekojs.dynamic.DynamicRegistryDebug.snapshot()) {
+                                for (String id : s.prettyStaleIds()) {
+                                    context.getSource().sendSystemMessage(Component.literal(id));
+                                    any = true;
+                                }
+                            }
+                            if (!any) {
+                                context.getSource().sendSystemMessage(Component.literal("No stale dynamic registry entries."));
+                            }
+                            return 1;
+                        }));
+    }
+
+    /**
+     * /nekojs trust &lt;address&gt;：把服务器脚本包来源加入本进程的信任存储（多人脚本分发的
+     * 首连断连→信任→重连流程）。仅在客户端进程生效（单人环境即本进程）；远程多人请用
+     * 客户端命令（见 NekoClientCommands）或先进入单人世界执行。
+     */
+    private static int trustServer(CommandSourceStack source, String address) {
+        if (!com.tkisor.nekojs.platform.Platform.isClient()) {
+            source.sendFailure(Component.literal("Run /nekojs trust on a client process (e.g. in a singleplayer world)."));
+            return 0;
+        }
+        var store = com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.get();
+        store.trustServer(address);
+        source.sendSuccess(() -> Component.literal(
+                "Trusted " + address + " (bucket " + com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.bucketFor(address)
+                        + "). Reconnect to receive its script packs."), false);
+        return 1;
     }
 
     /**
@@ -216,6 +268,11 @@ public final class NekoJSCommands {
                 }
                 testSm.runTestScripts();
             } else {
+                if (type == ScriptType.SERVER) {
+                    // 清空上一轮 stage 的村民交易，防止 reload 重复累积（与 ServerEventListener
+                    // 资源 reload 路径同约定：每次完整脚本 reload 前 beginReload）
+                    com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
+                }
                 root.reload(type);
             }
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
@@ -224,6 +281,17 @@ public final class NekoJSCommands {
                 recipeBroadcast = applyRecipeScripts(source);
                 // 物品属性修改重放：与服务器启动同一路径（先恢复快照再重跑 modification 事件）
                 ItemModificationEventJS.fire(source.getServer());
+                // 村民交易 flush：脚本 stage 的交易在 reload 收尾落注册表（与 ServerEventListener 的
+                // TagsUpdated hook 同路径）；脚本包 data/ 目录作为强制数据包挂载（内容签名变化才重载）
+                MinecraftServer server = source.getServer();
+                if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
+                    com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
+                }
+                var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
+                if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
+                        && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {
+                    com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
+                }
             }
             // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
             // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。

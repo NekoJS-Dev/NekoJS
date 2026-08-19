@@ -50,7 +50,7 @@ public class NekoJSCommands extends CommandBase {
     @Override
     @NotNull
     public String getUsage(@NotNull ICommandSender sender) {
-        return "/nekojs <reload|test|error|probe|packs>";
+        return "/nekojs <reload|test|error|probe|packs|trust>";
     }
 
     @Override
@@ -88,9 +88,33 @@ public class NekoJSCommands extends CommandBase {
             case "packs":
                 handlePacks(sender, args);
                 break;
+            case "trust":
+                handleTrust(sender, args);
+                break;
             default:
                 throw new WrongUsageException(getUsage(sender));
         }
+    }
+
+    /**
+     * /nekojs trust &lt;address&gt;：把服务器脚本包来源加入本进程信任存储（多人脚本分发：
+     * 首连未信任会被断开并提示本命令，信任后重连收包）。仅在客户端进程生效（单人即本进程）。
+     */
+    private void handleTrust(@NotNull ICommandSender sender, @NotNull String[] args) throws CommandException {
+        if (args.length < 2) {
+            throw new WrongUsageException("/nekojs trust <address>");
+        }
+        if (!com.tkisor.nekojs.platform.Platform.isClient()) {
+            notifyCommandListener(sender, this, 0,
+                    "Run /nekojs trust on a client process (e.g. in a singleplayer world).");
+            return;
+        }
+        String address = args[1];
+        var store = com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.get();
+        store.trustServer(address);
+        notifyCommandListener(sender, this, 0,
+                "Trusted " + address + " (bucket " + com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.bucketFor(address)
+                        + "). Reconnect to receive its script packs.");
     }
 
     /**

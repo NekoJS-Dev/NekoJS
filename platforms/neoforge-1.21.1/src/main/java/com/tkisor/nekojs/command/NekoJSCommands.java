@@ -112,8 +112,29 @@ public final class NekoJSCommands {
 
                         .then(packsCommand())
 
+                        .then(Commands.literal("trust")
+                                .then(Commands.argument("address", StringArgumentType.string())
+                                        .executes(context -> trustServer(context.getSource(), StringArgumentType.getString(context, "address")))))
+
                         .then(probeCommand())
         );
+    }
+
+    /**
+     * /nekojs trust &lt;address&gt;：把服务器脚本包来源加入本进程的信任存储（多人脚本分发的
+     * 首连断连→信任→重连流程）。仅在客户端进程生效（单人环境即本进程）。
+     */
+    private static int trustServer(CommandSourceStack source, String address) {
+        if (!com.tkisor.nekojs.platform.Platform.isClient()) {
+            source.sendFailure(Component.literal("Run /nekojs trust on a client process (e.g. in a singleplayer world)."));
+            return 0;
+        }
+        var store = com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.get();
+        store.trustServer(address);
+        source.sendSuccess(() -> Component.literal(
+                "Trusted " + address + " (bucket " + com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.bucketFor(address)
+                        + "). Reconnect to receive its script packs."), false);
+        return 1;
     }
 
     /**
@@ -216,6 +237,10 @@ public final class NekoJSCommands {
                 }
                 testSm.runTestScripts();
             } else {
+                if (type == ScriptType.SERVER) {
+                    // 清空上一轮 stage 的村民交易，防止 reload 重复累积
+                    com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
+                }
                 root.reload(type);
             }
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
@@ -224,6 +249,16 @@ public final class NekoJSCommands {
                 recipeBroadcast = applyRecipeScripts(source);
                 // 物品属性修改重放：与服务器启动同一路径（先恢复快照再重跑 modification 事件）
                 ItemModificationEventJS.fire(source.getServer());
+                // 村民交易 flush + 脚本包 data/ 挂载（与 ServerEventListener 的 TagsUpdated 路径同约定）
+                MinecraftServer server = source.getServer();
+                if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
+                    com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
+                }
+                var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
+                if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
+                        && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {
+                    com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
+                }
             }
             // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
             // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。
