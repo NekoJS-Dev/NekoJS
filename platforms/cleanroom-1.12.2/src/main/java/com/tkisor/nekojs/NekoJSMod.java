@@ -90,6 +90,9 @@ public class NekoJSMod extends NekoJS {
 
     @Mod.EventHandler
     public void serverAboutToStart(FMLServerAboutToStartEvent event) {
+        // 激活存档侧世界脚本包（<world>/nekojs_packs/）：必须在 SERVER reload 之前，
+        // 这样包内脚本随同一次 reload 纳入，无需二次重载
+        activateWorldPacks();
         // SERVER 脚本在最早的服务器生命周期事件加载，确保脚本能监听后续所有服务器事件
         //（starting/started/tick/recipes 等）。每次服务器启动都重新加载
         //（单人游戏每次开关世界、专用服务器每次启停）。
@@ -132,6 +135,40 @@ public class NekoJSMod extends NekoJS {
     @Mod.EventHandler
     public void serverStopped(FMLServerStoppedEvent event) {
         ServerEvents.STOPPED.post(event);
+        deactivateWorldPacks();
+    }
+
+    private static void activateWorldPacks() {
+        try {
+            java.io.File saveRoot = net.minecraftforge.common.DimensionManager.getCurrentSaveRootDirectory();
+            if (saveRoot == null) return;
+            com.tkisor.nekojs.core.pack.ScriptPackRegistry.get()
+                    .activateWorldPacks(saveRoot.toPath());
+        } catch (Throwable t) {
+            LOGGER.warn("Failed to activate world script packs", t);
+        }
+    }
+
+    /**
+     * 卸载世界脚本包：按包前缀反注册 SERVER 监听器与 timer；客户端同侧清理
+     * （客户端脚本在下次进世界时整体重载，这里只清监听器，避免返回标题界面后
+     * 世界包回调继续在菜单 tick 上触发）。
+     */
+    private static void deactivateWorldPacks() {
+        try {
+            var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
+            if (removed.isEmpty()) return;
+            if (RUNTIME_ROOT != null) {
+                var serverManager = RUNTIME_ROOT.scriptManagerOrNull(ScriptType.SERVER);
+                if (serverManager != null) serverManager.clearWorldPackListeners(removed);
+                if (com.tkisor.nekojs.platform.Platform.isClient()) {
+                    var clientManager = RUNTIME_ROOT.scriptManagerOrNull(ScriptType.CLIENT);
+                    if (clientManager != null) clientManager.clearWorldPackListeners(removed);
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("Failed to deactivate world script packs", t);
+        }
     }
 
     private static void initializeWorkspace() {

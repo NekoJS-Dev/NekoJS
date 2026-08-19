@@ -24,7 +24,9 @@ public class NekoJSNetwork {
     /**
      * Initialize the network channel. Idempotent so it is safe to call from
      * multiple entry points. Registers the script payload handler on both the
-     * server (discriminator 0) and client (discriminator 1) sides.
+     * server (discriminator 0) and client (discriminator 1) sides, and the
+     * client data sync handler on the client side (discriminator 2, server to
+     * client only).
      */
     public static void init() {
         if (registered) {
@@ -32,6 +34,7 @@ public class NekoJSNetwork {
         }
         CHANNEL.registerMessage(NetworkMessageHandler.class, NekoScriptPayload.class, 0, Side.SERVER);
         CHANNEL.registerMessage(NetworkMessageHandler.class, NekoScriptPayload.class, 1, Side.CLIENT);
+        CHANNEL.registerMessage(ClientDataMessageHandler.class, ClientDataSyncPacket.class, 2, Side.CLIENT);
         registered = true;
         NekoJS.LOGGER.debug("NekoJS Network channel initialized (1.12.2 script payload)");
     }

@@ -9,6 +9,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
+import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import com.tkisor.nekojs.wrapper.event.registry.EntityTypeRegistryEventJS;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
@@ -54,6 +55,8 @@ public class NekoJSClient {
     private static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel().isClientSide()) {
             PDataSyncService.clearClientMirrors();
+            // ClientData 键值存储随断线/切世界一并清空（服务端重连后会重新推送）
+            ClientDataStore.SHARED.clear();
         }
     }
 

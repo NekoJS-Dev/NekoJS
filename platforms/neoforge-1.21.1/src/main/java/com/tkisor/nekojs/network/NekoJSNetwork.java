@@ -46,6 +46,9 @@ public class NekoJSNetwork {
         // PData 同步包
         registrar.playToClient(PDataSyncPacket.TYPE, PDataSyncPacket.STREAM_CODEC, NekoJSNetwork::handlePDataSyncOnClient);
 
+        // ClientData 键值同步包（ClientData.sync / clientData.get，服务端→客户端单向）
+        registrar.playToClient(ClientDataSyncPacket.TYPE, ClientDataSyncPacket.STREAM_CODEC, ClientDataMessageHandler::handleOnClient);
+
         // 脚本自定义网络通道包（Network.sendToServer / sendToPlayer / sendToAllPlayers）
         // 同一个 payload type 只能注册一次（NeoForge 按 type 去重），
         // 双向收发用 playBidirectional 注册并按连接方向分发到对应 handler。

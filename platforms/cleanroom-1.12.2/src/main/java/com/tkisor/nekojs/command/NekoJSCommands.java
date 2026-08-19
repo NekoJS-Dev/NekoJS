@@ -50,7 +50,7 @@ public class NekoJSCommands extends CommandBase {
     @Override
     @NotNull
     public String getUsage(@NotNull ICommandSender sender) {
-        return "/nekojs <reload|test|error|probe>";
+        return "/nekojs <reload|test|error|probe|packs>";
     }
 
     @Override
@@ -85,8 +85,50 @@ public class NekoJSCommands extends CommandBase {
             case "probe":
                 handleProbe(server, sender, args);
                 break;
+            case "packs":
+                handlePacks(sender, args);
+                break;
             default:
                 throw new WrongUsageException(getUsage(sender));
+        }
+    }
+
+    /**
+     * /nekojs packs：列出全部脚本包；/nekojs packs enable|disable <id> 写包状态文件
+     * （优先级高于 manifest），提示 reload 生效。与 NeoForge 平台同名命令语义一致。
+     */
+    private void handlePacks(@NotNull ICommandSender sender, @NotNull String[] args) throws CommandException {
+        var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
+        registry.refreshGlobalPacks();
+        java.util.List<com.tkisor.nekojs.core.pack.ScriptPack> all = new java.util.ArrayList<>();
+        all.addAll(registry.globalPacks());
+        all.addAll(registry.worldPacks());
+
+        if (args.length >= 3 && (args[1].equals("enable") || args[1].equals("disable"))) {
+            String id = args[2];
+            var match = all.stream().filter(p -> p.id().equals(id)).findFirst();
+            if (match.isEmpty()) {
+                throw new WrongUsageException("No script pack with id '" + id + "'. Use /nekojs packs to list.");
+            }
+            boolean enable = args[1].equals("enable");
+            com.tkisor.nekojs.core.pack.ScriptPackState.save(match.get().root(), enable);
+            notifyCommandListener(sender, this, 0,
+                    "Script pack " + match.get().scope() + ":" + id + " " + (enable ? "enabled" : "disabled")
+                            + ". Run /nekojs reload (server|client) to apply.");
+            return;
+        }
+
+        if (all.isEmpty()) {
+            notifyCommandListener(sender, this, 0,
+                    "No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/).");
+            return;
+        }
+        notifyCommandListener(sender, this, 0, "Script packs (" + all.size() + "):");
+        for (var pack : all) {
+            notifyCommandListener(sender, this, 0, "  [" + (pack.enabled() ? "x" : " ") + "] "
+                    + pack.scope() + ":" + pack.id() + " v" + pack.version()
+                    + (pack.name().equals(pack.id()) ? "" : " (" + pack.name() + ")")
+                    + " - " + pack.root());
         }
     }
 

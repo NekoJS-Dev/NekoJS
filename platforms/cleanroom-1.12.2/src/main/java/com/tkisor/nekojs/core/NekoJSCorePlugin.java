@@ -128,6 +128,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("DyeColor", net.minecraft.item.EnumDyeColor.class);
         registry.register("ParticleTypes", net.minecraft.util.EnumParticleTypes.class);
         registry.register("Network", com.tkisor.nekojs.wrapper.network.NetworkJS.class);
+        // Server-to-client key-value push (the client-side read-only view `clientData`
+        // is registered by the common builtin plugin)
+        registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
             registry.register("Minecraft", net.minecraft.client.Minecraft.class);

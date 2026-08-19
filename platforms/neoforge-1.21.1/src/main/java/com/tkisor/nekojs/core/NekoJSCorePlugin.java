@@ -40,6 +40,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import com.tkisor.nekojs.wrapper.FluidAmounts;
+import com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -131,6 +132,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         }
         registry.register(ScriptType.TEST, "Test", new TestJS());
         registry.register("Network", NetworkJS.class);
+        // 服务端→客户端键值推送（客户端侧只读视图 clientData 由 common 内置插件注册）
+        registry.register("ClientData", ClientDataSyncJS.class);
         // TriState：1.21.1 在 neoforge 包（net.minecraft.util.TriState 是 1.21.5+ 才迁到 Mojang 的）。
         registry.register("TriState", net.neoforged.neoforge.common.util.TriState.class);
         registry.register("global", NekoGlobal.shared());

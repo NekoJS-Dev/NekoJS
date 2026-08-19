@@ -23,6 +23,7 @@ import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.ProbeGenerator;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
@@ -109,8 +110,66 @@ public final class NekoJSCommands {
                                 })
                         )
 
+                        .then(packsCommand())
+
                         .then(probeCommand())
         );
+    }
+
+    /**
+     * /nekojs packs：列出全部脚本包（GLOBAL/WORLD、启用态、目录）。
+     * /nekojs packs enable|disable <id>：写包状态文件（优先级高于 manifest），提示 reload 生效；
+     * 状态文件对 WORLD 包同样有效，但其脚本在下次进入该世界时才重新评估。
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> packsCommand() {
+        return Commands.literal("packs")
+                .executes(context -> {
+                    listPacks(context.getSource());
+                    return 1;
+                })
+                .then(Commands.literal("enable")
+                        .then(Commands.argument("id", StringArgumentType.word())
+                                .executes(context -> togglePack(context.getSource(), StringArgumentType.getString(context, "id"), true))))
+                .then(Commands.literal("disable")
+                        .then(Commands.argument("id", StringArgumentType.word())
+                                .executes(context -> togglePack(context.getSource(), StringArgumentType.getString(context, "id"), false))));
+    }
+
+    private static void listPacks(CommandSourceStack source) {
+        var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
+        registry.refreshGlobalPacks();
+        var all = new java.util.ArrayList<com.tkisor.nekojs.core.pack.ScriptPack>();
+        all.addAll(registry.globalPacks());
+        all.addAll(registry.worldPacks());
+        if (all.isEmpty()) {
+            source.sendSystemMessage(Component.literal("No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/)."));
+            return;
+        }
+        source.sendSystemMessage(Component.literal("Script packs (" + all.size() + "):"));
+        for (var pack : all) {
+            source.sendSystemMessage(Component.literal("  [" + (pack.enabled() ? "x" : " ") + "] "
+                    + pack.scope() + ":" + pack.id() + " v" + pack.version()
+                    + (pack.name().equals(pack.id()) ? "" : " (" + pack.name() + ")")
+                    + " - " + pack.root()));
+        }
+    }
+
+    private static int togglePack(CommandSourceStack source, String id, boolean enabled) {
+        var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
+        registry.refreshGlobalPacks();
+        var all = new java.util.ArrayList<com.tkisor.nekojs.core.pack.ScriptPack>();
+        all.addAll(registry.globalPacks());
+        all.addAll(registry.worldPacks());
+        var match = all.stream().filter(p -> p.id().equals(id)).findFirst();
+        if (match.isEmpty()) {
+            source.sendFailure(Component.literal("No script pack with id '" + id + "'. Use /nekojs packs to list."));
+            return 0;
+        }
+        com.tkisor.nekojs.core.pack.ScriptPackState.save(match.get().root(), enabled);
+        source.sendSystemMessage(Component.literal("Script pack " + match.get().scope() + ":" + id
+                + " " + (enabled ? "enabled" : "disabled")
+                + ". Run /nekojs reload (server|client) to apply."));
+        return 1;
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand() {
@@ -163,6 +222,8 @@ public final class NekoJSCommands {
             boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
                 recipeBroadcast = applyRecipeScripts(source);
+                // 物品属性修改重放：与服务器启动同一路径（先恢复快照再重跑 modification 事件）
+                ItemModificationEventJS.fire(source.getServer());
             }
             // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
             // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。

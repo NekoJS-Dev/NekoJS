@@ -3,6 +3,7 @@ package com.tkisor.nekojs.client;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -13,6 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class NekoJSClient {
 
     private static final AtomicBoolean SCRIPTS_LOADED = new AtomicBoolean(false);
+    /** 上一 tick 是否在世界中：离开世界（断线/退出存档）时清空 ClientData 存储。 */
+    private static boolean WAS_IN_WORLD = false;
 
     /** 首 tick 是否已完成（CLIENT 脚本已加载）——mixin 据此决定是否触发生成管线。 */
     public static boolean isReady() {
@@ -33,6 +36,14 @@ public class NekoJSClient {
         public static void onClientTick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
             if (NekoJSMod.RUNTIME_ROOT == null) return;
+
+            // 1.12.2 没有统一的 level unload 客户端事件，这里用 tick 边沿检测代替：
+            // 世界从有到无（断线/退出存档）即清空 ClientData 键值存储（服务端重连后会重新推送）。
+            boolean inWorld = Minecraft.getMinecraft().world != null;
+            if (WAS_IN_WORLD && !inWorld) {
+                ClientDataStore.SHARED.clear();
+            }
+            WAS_IN_WORLD = inWorld;
 
             // Load client scripts on first tick (after Minecraft is fully initialized)
             if (SCRIPTS_LOADED.compareAndSet(false, true)) {
