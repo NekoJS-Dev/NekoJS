@@ -187,9 +187,34 @@ public final class ScriptManager implements AutoCloseable {
      * 发现本类型对应的脚本文件
      */
     public void discoverScripts() {
-        List<ScriptContainer> discovered = ScriptLocator.discover(scriptType, scriptProperties);
+        List<ScriptContainer> discovered = discoverWithPacks();
         this.scripts = discovered;
         scriptType.logger().info("发现了 {} 个 {} 脚本。", discovered.size(), scriptType.name());
+    }
+
+    /**
+     * 发现脚本前重扫全局脚本包，使包的启用/禁用与增删在下次 reload 即时生效
+     * （WORLD 包由平台生命周期钩子另行激活/卸载，见 ScriptPackRegistry）。
+     */
+    private List<ScriptContainer> discoverWithPacks() {
+        com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().refreshGlobalPacks();
+        return ScriptLocator.discover(scriptType, scriptProperties);
+    }
+
+    /**
+     * 卸载世界脚本包在本类型上注册的一切：按包 scriptId 前缀反注册事件监听器
+     * （含动态事件定义）并取消其 timer。供平台 serverStopped / 断线钩子调用——
+     * 不做完整 reload（Context 与平铺/全局包脚本保持存活）。
+     */
+    public void clearWorldPackListeners(List<com.tkisor.nekojs.core.pack.ScriptPack> packs) {
+        for (com.tkisor.nekojs.core.pack.ScriptPack pack : packs) {
+            if (pack.scope() != com.tkisor.nekojs.core.pack.ScriptPackScope.WORLD) continue;
+            String prefix = pack.scriptIdPrefix(scriptType);
+            scriptEventBridge.clearListenersByPrefix(scriptType, prefix);
+            if (nodeRuntime != null) {
+                nodeRuntime.timers().cancelScriptByPrefix(prefix);
+            }
+        }
     }
 
     // ---- 脚本加载与执行 ----
@@ -336,7 +361,7 @@ public final class ScriptManager implements AutoCloseable {
             this.contextErrStream = candidateErrStream;
 
             try {
-                List<ScriptContainer> candidateScripts = ScriptLocator.discover(scriptType, scriptProperties);
+                List<ScriptContainer> candidateScripts = discoverWithPacks();
                 scriptType.logger().info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
 
                 // 候选加载期间只关心「候选 Context 是否被杀」：先清掉旧标记，加载结束后若标记

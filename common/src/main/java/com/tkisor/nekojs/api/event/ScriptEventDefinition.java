@@ -40,6 +40,10 @@ public record ScriptEventDefinition(
         bus.clearTokens(type, scriptId);
     }
 
+    public void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
+        bus.clearTokensByPrefix(type, scriptIdPrefix);
+    }
+
     public void unregister() {
         unregisterer.run();
         for (ScriptType type : ScriptType.all()) {

@@ -134,6 +134,20 @@ public final class NekoNodeTimers implements AutoCloseable {
         idsToCancel.forEach(this::cancel);
     }
 
+    /**
+     * 按 scriptId 前缀取消 timer（脚本包整体卸载用；包内脚本 id 统一携带
+     * {@code packs/<id>/} / {@code worldpacks/<id>/} 前缀，见 ScriptPack#idPathPrefix）。
+     */
+    public void cancelScriptByPrefix(String scriptIdPrefix) {
+        if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) return;
+        List<Integer> idsToCancel = List.copyOf(scriptIds.entrySet()).stream()
+                .filter(entry -> entry.getValue() != null && entry.getValue().startsWith(scriptIdPrefix))
+                .map(Map.Entry::getKey)
+                .toList();
+        ready.removeIf(callback -> idsToCancel.contains(callback.id));
+        idsToCancel.forEach(this::cancel);
+    }
+
     public void flushReadyCallbacks() {
         TimerCallback callback;
         int executed = 0;

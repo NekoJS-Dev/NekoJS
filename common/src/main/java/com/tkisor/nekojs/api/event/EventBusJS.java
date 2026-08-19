@@ -217,6 +217,34 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /**
+     * 按 scriptId 前缀反注册监听器：清理所有 id 以 {@code scriptIdPrefix} 开头的脚本注册的
+     * JS 监听器。用于脚本包（尤其 WORLD 包）整体卸载——包内脚本 id 统一携带
+     * {@code packs/<id>/} / {@code worldpacks/<id>/} 前缀（见 ScriptPack#idPathPrefix）。
+     * 并发约束与 {@link #clearTokens(ScriptType, String)} 相同（compute 原子分桶）。
+     */
+    public void clearTokensByPrefix(ScriptType type, String scriptIdPrefix) {
+        if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) return;
+        List<ScriptEventListenerToken<EVENT>> removed = new ArrayList<>();
+        tokensByType.compute(type, (ignored, tokens) -> {
+            if (tokens == null) return null;
+            List<ScriptEventListenerToken<EVENT>> kept = null;
+            for (ScriptEventListenerToken<EVENT> token : tokens) {
+                if (token.scriptId() != null && token.scriptId().startsWith(scriptIdPrefix)) {
+                    removed.add(token);
+                } else {
+                    if (kept == null) kept = new ArrayList<>();
+                    kept.add(token);
+                }
+            }
+            if (removed.isEmpty()) return tokens;
+            return kept == null ? null : new CopyOnWriteArrayList<>(kept);
+        });
+        for (ScriptEventListenerToken<EVENT> token : removed) {
+            bus.unregister(token.token());
+        }
+    }
+
+    /**
      * 向总线投递事件。监听器抛出的异常会被捕获并经 ScriptErrorReporter 记录，
      * 不中断其它监听器；返回事件是否被取消（不可取消总线恒为 {@code false}）。
      */

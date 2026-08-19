@@ -2,10 +2,13 @@ package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.data.ScriptId;
+import com.tkisor.nekojs.core.pack.ScriptPackScope;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.script.prop.ScriptProperties;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,14 +19,31 @@ public final class ScriptContainer {
     public final Path path;
     public final ScriptProperties properties;
 
+    /**
+     * 所属脚本包 id；平铺脚本目录（workspace）来源的脚本为 {@code null}。
+     * 用于按包归因（probe 展示 / 世界包卸载时按前缀反注册监听器）。
+     */
+    @Nullable
+    public final String packId;
+    /** 所属脚本包作用域；平铺脚本为 {@code null}。 */
+    @Nullable
+    public final ScriptPackScope packScope;
+
     public boolean disabled = false;
     public Throwable lastError;
 
     public ScriptContainer(ScriptId id, ScriptType type, Path path, ScriptPropertyRegistry propertyRegistry) {
+        this(id, type, path, propertyRegistry, null, null);
+    }
+
+    public ScriptContainer(ScriptId id, ScriptType type, Path path, ScriptPropertyRegistry propertyRegistry,
+                           @Nullable String packId, @Nullable ScriptPackScope packScope) {
         this.id = id;
         this.type = type;
         this.path = path;
         this.properties = new ScriptProperties(propertyRegistry);
+        this.packId = packId;
+        this.packScope = packScope;
     }
 
     public boolean isType(ScriptType type) {

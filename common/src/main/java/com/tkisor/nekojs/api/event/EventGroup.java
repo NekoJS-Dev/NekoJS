@@ -148,6 +148,17 @@ public class EventGroup {
         }
     }
 
+    /** 按 scriptId 前缀清理本组监听器（脚本包整体卸载用，见 {@link EventBusJS#clearTokensByPrefix}）。 */
+    public void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
+        for (var entry : buses.entrySet()) {
+            var registered = entry.getValue();
+
+            if (registered.canApplyOn(type)) {
+                clearBusByPrefix(registered.bus, type, scriptIdPrefix);
+            }
+        }
+    }
+
     /// using a separate method to avoid problematic generic check
     private static <E> void clearBus(EventBusJS<E, ?> bus, ScriptType type) {
         bus.clearTokens(type);
@@ -155,6 +166,10 @@ public class EventGroup {
 
     private static <E> void clearBus(EventBusJS<E, ?> bus, ScriptType type, String scriptId) {
         bus.clearTokens(type, scriptId);
+    }
+
+    private static <E> void clearBusByPrefix(EventBusJS<E, ?> bus, ScriptType type, String scriptIdPrefix) {
+        bus.clearTokensByPrefix(type, scriptIdPrefix);
     }
 
     /** 组内单个总线的持有句柄：携带总线绑定的 {@link ScriptType}，并可按目标脚本环境取用总线。 */

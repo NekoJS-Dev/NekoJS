@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.platform.Platform;
 
 import java.io.IOException;
@@ -52,6 +53,7 @@ public final class NekoJSPaths {
     private final Path probeConfig;
     private final Path assets;
     private final Path data;
+    private final Path packsRoot;
     private final Set<Path> scriptRoots;
 
     private NekoJSPaths(Path gameDir) {
@@ -73,6 +75,7 @@ public final class NekoJSPaths {
         this.probeConfig = config.resolve("probe.toml");
         this.assets = root.resolve("assets");
         this.data = root.resolve("data");
+        this.packsRoot = root.resolve(ScriptPackRegistry.GLOBAL_PACKS_DIR);
         this.scriptRoots = Set.of(startupScripts, serverScripts, clientScripts, testScripts);
     }
 
@@ -93,6 +96,8 @@ public final class NekoJSPaths {
     public Path probeConfig() { return probeConfig; }
     public Path assets() { return assets; }
     public Path data() { return data; }
+    /** 脚本包根目录 {@code <gamedir>/nekojs/packs/}（WORLD 包在存档侧，不在此）。 */
+    public Path packsRoot() { return packsRoot; }
 
     /* ================= 实例路径初始化 ================= */
     public void initFolders() {

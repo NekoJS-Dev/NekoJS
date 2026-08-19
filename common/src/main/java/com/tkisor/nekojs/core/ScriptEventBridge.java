@@ -28,4 +28,11 @@ public interface ScriptEventBridge {
     default void clearListeners(ScriptType type, String scriptId) {
         clearListeners(type);
     }
+
+    /**
+     * 按 scriptId 前缀反注册监听器（脚本包整体卸载用；前缀见
+     * {@code ScriptPack#scriptIdPrefix(ScriptType)}）。默认空实现，与 {@link #EMPTY} 一致。
+     */
+    default void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
+    }
 }

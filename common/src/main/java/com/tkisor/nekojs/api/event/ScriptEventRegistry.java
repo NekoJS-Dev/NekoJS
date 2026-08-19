@@ -89,6 +89,18 @@ public final class ScriptEventRegistry {
         }
     }
 
+    /** 按 scriptId 前缀清理动态事件监听器（脚本包整体卸载用）。 */
+    public static synchronized void clearListenersByPrefix(ScriptType type, String scriptIdPrefix) {
+        if (scriptIdPrefix == null || scriptIdPrefix.isBlank()) {
+            return;
+        }
+        for (ScriptEventDefinition definition : DEFINITIONS.values()) {
+            if (definition.canApplyOn(type)) {
+                definition.clearListenersByPrefix(type, scriptIdPrefix);
+            }
+        }
+    }
+
     public static synchronized void clearDefinitions(ScriptType targetType) {
         List<String> keys = new ArrayList<>();
         List<ScriptEventDefinition> definitions = new ArrayList<>();
@@ -110,6 +122,24 @@ public final class ScriptEventRegistry {
         List<ScriptEventDefinition> definitions = new ArrayList<>();
         for (Map.Entry<String, ScriptEventDefinition> entry : DEFINITIONS.entrySet()) {
             if (entry.getValue().targetType() == targetType && sourceScriptId.equals(entry.getValue().sourceScriptId())) {
+                keys.add(entry.getKey());
+                definitions.add(entry.getValue());
+            }
+        }
+        keys.forEach(DEFINITIONS::remove);
+        definitions.forEach(ScriptEventDefinition::unregister);
+    }
+
+    /** 按 sourceScriptId 前缀清理动态事件定义（脚本包整体卸载用）。 */
+    public static synchronized void clearDefinitionsByPrefix(ScriptType targetType, String sourceScriptIdPrefix) {
+        if (sourceScriptIdPrefix == null || sourceScriptIdPrefix.isBlank()) {
+            return;
+        }
+        List<String> keys = new ArrayList<>();
+        List<ScriptEventDefinition> definitions = new ArrayList<>();
+        for (Map.Entry<String, ScriptEventDefinition> entry : DEFINITIONS.entrySet()) {
+            String source = entry.getValue().sourceScriptId();
+            if (entry.getValue().targetType() == targetType && source != null && source.startsWith(sourceScriptIdPrefix)) {
                 keys.add(entry.getKey());
                 definitions.add(entry.getValue());
             }
