@@ -21,6 +21,7 @@ import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
@@ -395,9 +396,9 @@ public final class NekoJSCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> probeCommand() {
         LiteralArgumentBuilder<CommandSourceStack> probe = Commands.literal("probe")
-                .executes(context -> runProbe(context.getSource(), selectDefaultTypescript()));
+                .executes(context -> runProbe(context.getSource(), ProbeBackendSelector.defaultTypescript()));
         probe.then(Commands.literal("all")
-                .executes(context -> runProbe(context.getSource(), selectAll())));
+                .executes(context -> runProbe(context.getSource(), ProbeBackendSelector.all())));
         probe.then(Commands.literal("list")
                 .executes(context -> listProbeBackends(context.getSource())));
         probe.then(Commands.literal("reload")
@@ -410,7 +411,7 @@ public final class NekoJSCommands {
                     int backends = ProbeCoordinator.resetEditorConfigs();
                     source.sendSystemMessage(Component.literal(
                             "Editor configs reset (" + backends + " backend(s)); regenerating probe..."));
-                    return runProbe(source, selectDefaultTypescript());
+                    return runProbe(source, ProbeBackendSelector.defaultTypescript());
                 }));
         probe.then(Commands.literal("enable")
                 .executes(context -> enableProbe(context.getSource())));
@@ -419,52 +420,15 @@ public final class NekoJSCommands {
         probe.then(Commands.argument("language", StringArgumentType.word())
                 .suggests((context, builder) -> suggestProbeLanguages(builder))
                 .executes(context -> runProbe(context.getSource(),
-                        selectLanguage(StringArgumentType.getString(context, "language"))))
+                        ProbeBackendSelector.forLanguage(StringArgumentType.getString(context, "language"))))
                 .then(Commands.argument("name", StringArgumentType.word())
                         .suggests((context, builder) -> suggestProbeBackendNames(
                                 StringArgumentType.getString(context, "language"), builder))
                         .executes(context -> runProbe(context.getSource(),
-                                selectNamed(
+                                ProbeBackendSelector.named(
                                         StringArgumentType.getString(context, "language"),
                                         StringArgumentType.getString(context, "name"))))));
         return probe;
-    }
-
-    /** /nekojs probe 无参：默认只跑 TS builtin。 */
-    private static List<ProbeBackend> selectDefaultTypescript() {
-        return ProbeBackendRegistry.get().backend("typescript", "builtin")
-                .map(List::of).orElse(List.of());
-    }
-
-    /** /nekojs probe all：所有已注册 backend（跨语言）。 */
-    private static List<ProbeBackend> selectAll() {
-        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
-        List<ProbeBackend> all = new ArrayList<>();
-        for (String lang : registry.languages()) {
-            all.addAll(registry.backendsFor(lang));
-        }
-        return all;
-    }
-
-    private static List<ProbeBackend> selectLanguage(String languageId) {
-        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
-        // per-language 配置（probe.toml [languages.<lang>].backend）优先：指定了 backend 名时按 (语言, 名字) 精确选取，
-        // 找不到再回退该语言的注册表默认（priority 最高者）；无配置则维持现状（defaultBackend）。
-        var langCfg = ProbeCoordinator.config().language(languageId);
-        if (langCfg.isPresent()) {
-            String configuredName = langCfg.get().backend();
-            if (configuredName != null && !configuredName.isBlank()) {
-                var configured = registry.backend(languageId, configuredName);
-                if (configured.isPresent()) return List.of(configured.get());
-            }
-        }
-        return registry.defaultBackend(languageId)
-                .map(List::of).orElse(List.of());
-    }
-
-    private static List<ProbeBackend> selectNamed(String languageId, String name) {
-        return ProbeBackendRegistry.get().backend(languageId, name)
-                .map(List::of).orElse(List.of());
     }
 
     private static int runProbe(CommandSourceStack source, List<ProbeBackend> backends) {
@@ -488,6 +452,9 @@ public final class NekoJSCommands {
                 if (r.success()) {
                     totalFiles += r.filesGenerated();
                     maxMs = Math.max(maxMs, r.durationMs());
+                    for (String w : r.warnings()) {
+                        source.sendSystemMessage(Component.literal("  warning: " + w));
+                    }
                 } else {
                     allOk = false;
                     source.sendFailure(Component.literal("  backend failed: " + r.message()));
@@ -540,7 +507,7 @@ public final class NekoJSCommands {
     }
 
     private static CompletableFuture<Suggestions> suggestProbeLanguages(SuggestionsBuilder builder) {
-        for (String lang : ProbeBackendRegistry.get().languages()) {
+        for (String lang : ProbeBackendSelector.languageSuggestions()) {
             builder.suggest(lang);
         }
         return builder.buildFuture();
@@ -548,7 +515,7 @@ public final class NekoJSCommands {
 
     private static CompletableFuture<Suggestions> suggestProbeBackendNames(String languageId, SuggestionsBuilder builder) {
         if (languageId != null && !languageId.isBlank()) {
-            for (ProbeBackend b : ProbeBackendRegistry.get().backendsFor(languageId)) {
+            for (ProbeBackend b : ProbeBackendSelector.nameSuggestions(languageId)) {
                 builder.suggest(b.name());
             }
         }

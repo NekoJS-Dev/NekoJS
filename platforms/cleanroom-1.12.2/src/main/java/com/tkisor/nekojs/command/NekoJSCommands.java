@@ -13,6 +13,7 @@ import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.script.ScriptManager;
@@ -256,10 +257,10 @@ public class NekoJSCommands extends CommandBase {
         List<ProbeBackend> backends;
 
         if (langArg == null || langArg.isEmpty()) {
-            backends = selectDefaultTypescript();
+            backends = ProbeBackendSelector.defaultTypescript();
         } else switch (langArg) {
             case "all":
-                backends = selectAll();
+                backends = ProbeBackendSelector.all();
                 break;
             case "list":
                 listProbeBackends(sender);
@@ -276,49 +277,12 @@ public class NekoJSCommands extends CommandBase {
             default:
                 String name = args.length >= 3 ? args[2] : null;
                 backends = (name == null || name.isEmpty())
-                        ? selectLanguage(langArg)
-                        : selectNamed(langArg, name);
+                        ? ProbeBackendSelector.forLanguage(langArg)
+                        : ProbeBackendSelector.named(langArg, name);
                 break;
         }
 
         runProbe(sender, backends);
-    }
-
-    /** /nekojs probe 无参：默认只跑 TS builtin。 */
-    private static List<ProbeBackend> selectDefaultTypescript() {
-        return ProbeBackendRegistry.get().backend("typescript", "builtin")
-                .map(List::of).orElse(List.of());
-    }
-
-    /** /nekojs probe all：所有已注册 backend（跨语言）。 */
-    private static List<ProbeBackend> selectAll() {
-        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
-        List<ProbeBackend> all = new ArrayList<>();
-        for (String lang : registry.languages()) {
-            all.addAll(registry.backendsFor(lang));
-        }
-        return all;
-    }
-
-    private static List<ProbeBackend> selectLanguage(String languageId) {
-        ProbeBackendRegistry registry = ProbeBackendRegistry.get();
-        // per-language 配置（probe.toml [languages.<lang>].backend）优先：指定了 backend 名时按 (语言, 名字) 精确选取，
-        // 找不到再回退该语言的注册表默认（priority 最高者）；无配置则维持现状（defaultBackend）。
-        var langCfg = ProbeCoordinator.config().language(languageId);
-        if (langCfg.isPresent()) {
-            String configuredName = langCfg.get().backend();
-            if (configuredName != null && !configuredName.isBlank()) {
-                var configured = registry.backend(languageId, configuredName);
-                if (configured.isPresent()) return List.of(configured.get());
-            }
-        }
-        return registry.defaultBackend(languageId)
-                .map(List::of).orElse(List.of());
-    }
-
-    private static List<ProbeBackend> selectNamed(String languageId, String name) {
-        return ProbeBackendRegistry.get().backend(languageId, name)
-                .map(List::of).orElse(List.of());
     }
 
     private void runProbe(@NotNull ICommandSender sender, List<ProbeBackend> backends) {
@@ -348,6 +312,9 @@ public class NekoJSCommands extends CommandBase {
                 if (r.success()) {
                     totalFiles += r.filesGenerated();
                     maxMs = Math.max(maxMs, r.durationMs());
+                    for (String w : r.warnings()) {
+                        sender.sendMessage(new TextComponentString("  warning: " + w));
+                    }
                 } else {
                     allOk = false;
                     sender.sendMessage(new TextComponentString("  backend failed: " + r.message()));
