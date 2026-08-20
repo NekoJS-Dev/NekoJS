@@ -40,9 +40,9 @@
 
 3. probe.addGlobal / probe.snippets 收集（各有监听器才触发）
 
-4. 每个选中 backend 各自渲染到 <baseDir>/<该语言输出子目录>（默认与语言 id 同名：.neko_probe/typescript、.neko_probe/python）
-   ├─ 生成到 <目录>.staging → 全部成功后原子替换 → 旧的备份到 <目录>.old
-   └─ 中途失败则丢弃 staging，旧产物完整保留
+4. 每个选中 backend 串行渲染：render 产物进内存（不触盘）→ 默认 generate 统一落盘到
+   <baseDir>/<该语言输出子目录>.staging → 全部成功后原子替换（旧目录备份到 <目录>.old 再删）
+   └─ render 或提交中途失败 → 丢弃 staging，旧产物完整保留；路径越界（绝对路径/..）直接拒绝
 
 5. 编辑器配置贡献（各 backend 自报片段，幂等合并）
    ├─ TS：合并各脚本目录 jsconfig.json 的 paths / include / typeRoots（指向 .neko_probe/typescript/）
@@ -291,7 +291,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 |---|---|---|
 | `ProbeCoordinator` | `common/.../probe/` | 协调器：共享类收集（BFS）、按需共享 IR、事件触发、派发 backend、外部副作用 |
 | `ProbeBackendRegistry` | `common/.../probe/` | backend 按 `(语言, 名字)` 二维登记；lock 时冲突崩溃；命令解析与补全 |
-| `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`generate`/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
+| `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`render` 渲染到内存 + 默认 `generate` 原子提交/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
 | `ProbeBackendSelector` | `common/.../probe/` | `/nekojs probe` 的 backend 解析（语言默认/per-language 配置覆盖/全选/补全），三平台命令层共用 |
 | `ProbeOutputCommitter` | `common/.../probe/` | staging/backup 目录交换的唯一实现（恢复/提交/递归删除/render 产物路径校验） |
 | `TypeScriptProbeBackend` | `common/.../probe/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径） |
@@ -339,24 +339,82 @@ snapshot 包含：
 
 `NekoCatalogPlatformProvider.snippets()` 提供 IDE 代码片段；脚本侧可用 `ProbeEvents.snippets` 追加。
 
-## 替换 / 新增 backend
+## 新增自定义 backend（开发者指南）
 
-第三方实现 `ProbeBackend` 并通过 `registerProbeBackends` 注册（内置 `typescript:builtin` / `python:builtin` 已占位，可用同语言不同名字**新增** backend）：
+内置 `typescript:builtin` / `python:builtin` 已占位；第三方用同语言不同 `name` **替换**实现，或用新语言 id **新增**一种产物（如 Lua、JSON 清单、文档站）。
+
+### 最小可用示例
+
+一个 backend 只需实现 `languageId()` / `name()` / `render(ctx)` 三个方法。下面是一个把收集到的类导出成 JSON 清单的完整例子：
+
+```java
+public final class JsonListBackend implements ProbeBackend {
+
+    @Override
+    public String languageId() {          // 语言 id：输出目录默认用它，命令也用它
+        return "json";
+    }
+
+    @Override
+    public String name() {                // 同语言内唯一；替换内置实现时换名字共存
+        return "list";
+    }
+
+    @Override
+    public Map<String, String> render(ProbeContext ctx) {
+        // 契约：返回「相对输出目录的路径（'/' 分隔）→ UTF-8 文本」；绝对不要写磁盘
+        StringBuilder sb = new StringBuilder("{\"classes\":[
+");
+        boolean first = true;
+        for (Class<?> c : ctx.collectedClasses()) {      // 共享 BFS 收集到的类（已按配置过滤）
+            if (!first) sb.append(",
+");
+            first = false;
+            sb.append("    {\"fqn\": \"").append(c.getName()).append("\"}");
+        }
+        sb.append("
+]}
+");
+        return Map.of("classes.json", sb.toString());
+    }
+}
+```
+
+在插件的 `registerProbeBackends` 钩子注册（见 [插件开发](插件开发)）：
 
 ```java
 @Override
 public void registerProbeBackends(ProbeBackendRegistry registry) {
-    registry.register(new MyBetterProbeBackend(), "my-addon");
+    registry.register(new JsonListBackend(), "my-addon");
 }
 ```
 
-**实现契约（预发布重构后大幅简化）**：只需实现 `render(ProbeContext)`——返回「相对输出目录的路径（`/` 分隔）→ UTF-8 文本内容」的映射，**不触碰磁盘**；staging 落盘、原子提交、崩溃恢复、路径越界校验（拒绝绝对路径与 `..`）由接口的默认 `generate` 统一负责。渲染抛异常即失败结果，旧输出自动保留。
+之后 `/nekojs probe json` 生成 `.neko_probe/json/classes.json`（`/nekojs probe json list` 精确指定，`/nekojs probe all` 也会带上它）。
 
-**规则**：
+### render 契约（唯一必须实现的渲染方法）
+
+- 返回「相对输出目录的路径（`/` 分隔，如 `@package/net/minecraft/index.d.ts`）→ UTF-8 文本内容」；**不触碰磁盘**。
+- staging 落盘、原子提交、崩溃残留恢复、路径越界校验（拒绝绝对路径与 `..` 段）全部由接口的**默认 `generate()`** 统一负责——你不需要也不可能写错提交逻辑。
+- render 抛异常 → 该 backend 记为失败（消息进命令输出），旧输出自动完整保留。
+- 前置条件不满足（如缺数据）直接抛 `IllegalArgumentException`，消息会原样展示给用户。
+
+### 可选覆盖
+
+| 方法 | 默认 | 何时覆盖 |
+|---|---|---|
+| `requiresIr()` | `false` | 需要共享类型 IR（`ctx.ir()`，语言中性的 `TypeDecl` 列表，已含 `probe.modifyType`/`assignType` 编辑）时返回 `true`——内置 TS/Python 都走这条路 |
+| `priority()` | `0` | 同语言多 backend 时高者为 `/nekojs probe <语言>` 的默认 |
+| `outputDir(paths, config)` | `<baseDir>/<语言id>`，可被 `probe.toml [languages.<id>].outputDir` 覆盖 | 特殊目录布局 |
+| `contributeEditorConfig(...)` | 空 | 让 IDE 认识你的产物（合并进 jsconfig/pyrightconfig 等，幂等） |
+| `resetEditorConfig(...)` | 空 | `/nekojs probe reset_config` 时清理你写的编辑器配置 |
+| `generate(ctx)` | render + 原子提交 | **一般不要覆盖**——自管 staging/backup/恢复极易出错，仅极端特殊需求 |
+
+### 规则
+
 - 同一 `(语言, 名字)` 重复注册 → bootstrap lock 时**崩溃**（确定性冲突，列出所有注册者）。
-- 同语言多 backend 时，`/nekojs probe <语言>` 选 priority 最高者，其余用 `/nekojs probe <语言> <名字>` 指定。
-- 两个选中 backend 的 outputDir 相同时，一次运行只跑第一个、其余跳过并告警（staging 整目录替换会互相吞产物；要共目录请用 `outputDir` 配置区分）。
-- 你的 TS backend 要遵守上面的模块布局约定，否则 `jsconfig.json` 路径失效。
+- 同语言多 backend 时，`/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可指定），其余用 `/nekojs probe <语言> <名字>`。
+- 一次运行中两个选中 backend 的 outputDir 相同时，只跑第一个、其余跳过并告警（staging 整目录替换会互相吞产物；要区分目录用 `outputDir` 配置）。
+- 替换 TS 实现要遵守上面的模块布局约定，否则 `jsconfig.json` 路径失效。
 
 ## Probe 的当前局限
 
