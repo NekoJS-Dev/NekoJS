@@ -227,7 +227,7 @@ class ProbeCoordinatorHardeningTest {
         assertTrue(Files.exists(paths.gameDir().resolve(".neko_probe").resolve("good").resolve("ok.txt")));
     }
 
-    /* ================= 4. editor-config 失败不拖垮生成结果 ================= */
+    /* ================= 4. editor-config 失败不拖垮生成结果（进 warnings） ================= */
 
     @Test
     void editorConfigFailureDoesNotFailGeneration(@TempDir Path tmp) {
@@ -240,7 +240,11 @@ class ProbeCoordinatorHardeningTest {
         List<ProbeGenerator.GenerateResult> results = c.runProbe(emptySnapshot(), List.of(backend));
 
         assertEquals(1, results.size());
-        assertTrue(results.get(0).success(), "editor-config 失败只降级为日志，生成结果仍为成功");
+        assertTrue(results.get(0).success(), "editor-config 失败只降级，生成结果仍为成功");
+        assertEquals(1, results.get(0).warnings().size());
+        assertTrue(results.get(0).warnings().get(0).contains("editor-config contribution failed"),
+                results.get(0).warnings().get(0));
+        assertTrue(results.get(0).warnings().get(0).contains("editor-config boom"));
     }
 
     /* ================= 5/6. Python staging 回滚与残留恢复 ================= */

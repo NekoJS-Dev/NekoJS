@@ -103,15 +103,12 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
         // 原子输出：生成到同级 staging 目录，全部成功后整体替换 outputDir。
         // 失败则丢弃 staging，旧 outputDir 完整保留，避免「先删后生成」中途失败丢声明。
-        Path staging = outputDir.resolveSibling(outputDir.getFileName().toString() + ".staging");
-        Path backup = outputDir.resolveSibling(outputDir.getFileName().toString() + ".old");
+        Path staging = ProbeOutputCommitter.stagingDir(outputDir);
+        Path backup = ProbeOutputCommitter.backupDir(outputDir);
 
         try {
-            // 恢复上次进程崩溃可能残留的中间态：丢弃半成品 staging；若 outputDir 缺失但有 backup，恢复 backup。
-            deleteRecursive(staging);
-            if (!Files.exists(outputDir) && Files.exists(backup)) {
-                Files.move(backup, outputDir);
-            }
+            // 恢复上次进程崩溃可能残留的中间态（丢弃半成品 staging / 恢复 backup），见 committer
+            ProbeOutputCommitter.recoverStaging(outputDir, staging, backup);
             Files.createDirectories(staging);
 
             try {
@@ -197,7 +194,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 filesGenerated += generateGlobalsDeclarations(ctx.overrides().globals(), staging);
 
                 // 全部生成成功：staging 整体替换 outputDir（外部副作用由 ProbeCoordinator 统一执行）
-                commitProbeOutput(staging, outputDir, backup);
+                ProbeOutputCommitter.commit(staging, outputDir, backup);
 
                 long duration = System.currentTimeMillis() - start;
                 NekoJS.LOGGER.info("Probe [typescript] generated: {} files in {}ms", filesGenerated, duration);
@@ -205,7 +202,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
             } catch (Exception genFailure) {
                 // 生成中途失败：丢弃 staging 半成品，旧 outputDir 完整保留
-                deleteRecursive(staging);
+                ProbeOutputCommitter.deleteRecursive(staging);
                 throw genFailure;
             }
 
@@ -215,49 +212,6 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         } finally {
             // 清理生成过程中积累的缓存，释放内存
             indexFileGenerator.clearCaches();
-        }
-    }
-
-    /**
-     * staging 整体替换 outputDir：旧 outputDir → backup，staging → outputDir，删 backup。
-     * swap 中途失败时尝试把 backup 恢复为 outputDir。
-     */
-    private void commitProbeOutput(Path staging, Path outputDir, Path backup) throws IOException {
-        deleteRecursive(backup);
-        if (Files.exists(outputDir)) {
-            Files.move(outputDir, backup);
-        }
-        try {
-            Files.move(staging, outputDir);
-        } catch (IOException e) {
-            if (!Files.exists(outputDir) && Files.exists(backup)) {
-                try {
-                    Files.move(backup, outputDir);
-                } catch (IOException ignored) {
-                }
-            }
-            throw e;
-        }
-        deleteRecursive(backup);
-    }
-
-    /**
-     * 递归删除目录及其内容（深度优先逆序，先文件后目录）。walk 流用 try-with-resources 关闭
-     * （文件句柄泄漏会锁住目录，Windows 上导致后续 move 失败）；删除失败的路径收集后 warn
-     * 一次（典型为 Windows 文件锁），不抛出——调用方按自身语义决定是否视为失败。
-     */
-    private static void deleteRecursive(Path dir) throws IOException {
-        if (!Files.exists(dir)) return;
-        List<Path> failed = new ArrayList<>();
-        try (var paths = Files.walk(dir)) {
-            paths.sorted(Comparator.reverseOrder())
-                    .forEach(p -> {
-                        if (!p.toFile().delete()) failed.add(p);
-                    });
-        }
-        if (!failed.isEmpty()) {
-            NekoJS.LOGGER.warn("Probe: failed to delete {} path(s) under {} (locked by another process?): {}",
-                    failed.size(), dir, failed);
         }
     }
 

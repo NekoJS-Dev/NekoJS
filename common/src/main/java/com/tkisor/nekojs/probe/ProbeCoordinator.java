@@ -317,13 +317,14 @@ public final class ProbeCoordinator {
      * 构建共享 IR（TypeReflector 反射每个收集到的类），依次：应用 {@code probe.assign_type}（全局类型重定向，
      * 标记受影响类 mutated）→ 触发 {@code probe.modify_type}（参数级编辑）。反射失败的类被跳过。
      * 返回不可变 IR 列表（已含编辑）。{@code assignMap} 为空时跳过应用步骤。
+     * 事件监听器抛异常时继续（best-effort），但把「部分应用」风险写入 {@code warnings} 供调用方感知。
      *
      * <p>反射阶段并行执行（线程数 = min(可用核数, 8)，每类一个任务），随后按**原始收集顺序**（BFS 序）
      * 汇总进 LinkedHashMap，保证 {@code List.copyOf(ir.values())} 与串行版本顺序一致；
      * assign_type / modify_type 仍在 map 建完后串行执行（事件触发顺序不变）。
      */
     private static List<TypeDecl> buildAndMutateIr(Collection<Class<?>> collected, Map<String, ApiTypeRef> assignMap,
-                                                     ExecutorService pool) {
+                                                     ExecutorService pool, List<String> warnings) {
         List<Class<?>> ordered = new ArrayList<>(collected);
         if (ordered.isEmpty()) return List.of();
 
@@ -361,24 +362,26 @@ public final class ProbeCoordinator {
                 ProbeEvents.MODIFY_TYPE.post(new ProbeModifyTypeEventJS(ir));
             } catch (Throwable t) {
                 NekoJS.LOGGER.error("probe.modify_type event threw; edits may be incomplete", t);
+                warnings.add("probe.modify_type event threw; edits may be incomplete (" + t + ")");
             }
         }
         return List.copyOf(ir.values());
     }
 
     /** 触发 {@code probe.assign_type} 一次，返回收集到的「Java FQN → 自定义类型」映射。 */
-    private static Map<String, ApiTypeRef> fireAssignType() {
+    private static Map<String, ApiTypeRef> fireAssignType(List<String> warnings) {
         ProbeAssignTypeEventJS ev = new ProbeAssignTypeEventJS();
         try {
             ProbeEvents.ASSIGN_TYPE.post(ev);
         } catch (Throwable t) {
             NekoJS.LOGGER.error("probe.assign_type event threw; assignments may be incomplete", t);
+            warnings.add("probe.assign_type event threw; assignments may be incomplete (" + t + ")");
         }
         return ev.assignments();
     }
 
     /** 触发 {@code probe.add_global} 与 {@code probe.snippets}（各有监听器才触发），返回捆绑结果。 */
-    private static ProbeOverrides fireOverrides() {
+    private static ProbeOverrides fireOverrides(List<String> warnings) {
         List<GlobalDecl> globals = List.of();
         List<Snippet> snippets = List.of();
         if (ProbeEvents.ADD_GLOBAL.hasListeners()) {
@@ -387,6 +390,7 @@ public final class ProbeCoordinator {
                 ProbeEvents.ADD_GLOBAL.post(ev);
             } catch (Throwable t) {
                 NekoJS.LOGGER.error("probe.add_global event threw", t);
+                warnings.add("probe.add_global event threw (" + t + ")");
             }
             globals = ev.globals();
         }
@@ -396,6 +400,7 @@ public final class ProbeCoordinator {
                 ProbeEvents.SNIPPETS.post(ev);
             } catch (Throwable t) {
                 NekoJS.LOGGER.error("probe.snippets event threw", t);
+                warnings.add("probe.snippets event threw (" + t + ")");
             }
             snippets = ev.snippets();
         }
@@ -451,16 +456,18 @@ public final class ProbeCoordinator {
         boolean needIr = ProbeEvents.MODIFY_TYPE.hasListeners()
                 || ProbeEvents.ASSIGN_TYPE.hasListeners()
                 || backends.stream().anyMatch(ProbeBackend::requiresIr);
-        Map<String, ApiTypeRef> assignMap = ProbeEvents.ASSIGN_TYPE.hasListeners() ? fireAssignType() : Map.of();
+        // 本次运行级降级信息（事件监听器抛异常等）：追加到每个 backend 的结果 warnings
+        List<String> runWarnings = new ArrayList<>();
+        Map<String, ApiTypeRef> assignMap = ProbeEvents.ASSIGN_TYPE.hasListeners() ? fireAssignType(runWarnings) : Map.of();
 
         // 单一共享线程池：整个 probe 运行（IR 反射构建 + 各 backend 并行生成）只有这一个池
         ExecutorService sharedPool = Executors.newFixedThreadPool(
                 Math.max(1, Math.min(Runtime.getRuntime().availableProcessors(), 8)));
         try {
-            List<TypeDecl> sharedIr = needIr ? buildAndMutateIr(collected, assignMap, sharedPool) : null;
+            List<TypeDecl> sharedIr = needIr ? buildAndMutateIr(collected, assignMap, sharedPool, runWarnings) : null;
 
             // add_global / snippets：每次 probe 收集一次（各有监听器才触发）
-            ProbeOverrides overrides = fireOverrides();
+            ProbeOverrides overrides = fireOverrides(runWarnings);
 
             // 外部基础配置（WorkspaceGenerator 写 jsconfig 等）先执行一次，供 backend 的 contributeEditorConfig 合并
             try {
@@ -495,20 +502,30 @@ public final class ProbeCoordinator {
                         sharedIr,
                         overrides,
                         sharedPool);
+                ProbeGenerator.GenerateResult result;
                 try {
-                    results.add(backend.generate(ctx));
+                    result = backend.generate(ctx);
                 } catch (Exception e) {
                     NekoJS.LOGGER.error("Probe backend {}:{} failed", backend.languageId(), backend.name(), e);
-                    results.add(ProbeGenerator.GenerateResult.failure(e.getMessage()));
-                    continue;
+                    result = ProbeGenerator.GenerateResult.failure(e.getMessage());
                 }
-                // 生成成功后：向编辑器配置贡献本 backend 的片段（paths/extraPaths，幂等合并，指向真实输出目录）
-                try {
-                    backend.contributeEditorConfig(editorConfigs, ctx);
-                } catch (Exception e) {
-                    NekoJS.LOGGER.debug("Probe backend {}:{} editor-config contribution failed",
-                            backend.languageId(), backend.name(), e);
+                // 生成成功后：向编辑器配置贡献本 backend 的片段（paths/extraPaths，幂等合并，指向真实输出目录）。
+                // 失败只降级（生成产物已提交），但记入该 backend 的 warnings 让命令层可见。
+                List<String> backendWarnings = new ArrayList<>();
+                if (result.success()) {
+                    try {
+                        backend.contributeEditorConfig(editorConfigs, ctx);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.debug("Probe backend {}:{} editor-config contribution failed",
+                                backend.languageId(), backend.name(), e);
+                        backendWarnings.add("editor-config contribution failed for " + backend.languageId() + ":"
+                                + backend.name() + " (" + e + ")");
+                    }
                 }
+                if (!runWarnings.isEmpty()) {
+                    backendWarnings.addAll(0, runWarnings);
+                }
+                results.add(ProbeGenerator.GenerateResult.withWarnings(result, backendWarnings));
             }
 
             return results;

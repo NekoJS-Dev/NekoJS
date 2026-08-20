@@ -14,6 +14,7 @@ import com.tkisor.nekojs.probe.events.GlobalDecl;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeContext;
 import com.tkisor.nekojs.probe.ProbeGenerator;
+import com.tkisor.nekojs.probe.ProbeOutputCommitter;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
@@ -216,26 +217,23 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
 
         Path outputDir = ctx.languageDir();
-        Path staging = outputDir.resolveSibling(outputDir.getFileName().toString() + ".staging");
-        Path backup = outputDir.resolveSibling(outputDir.getFileName().toString() + ".old");
+        Path staging = ProbeOutputCommitter.stagingDir(outputDir);
+        Path backup = ProbeOutputCommitter.backupDir(outputDir);
 
         try {
-            deleteRecursive(staging);
-            if (!Files.exists(outputDir) && Files.exists(backup)) {
-                Files.move(backup, outputDir);
-            }
+            ProbeOutputCommitter.recoverStaging(outputDir, staging, backup);
             Files.createDirectories(staging);
 
             try {
                 int files = doGenerate(staging, ir, ctx.snapshot(), ctx.overrides().globals());
 
-                commitProbeOutput(staging, outputDir, backup);
+                ProbeOutputCommitter.commit(staging, outputDir, backup);
 
                 long duration = System.currentTimeMillis() - start;
                 NekoJS.LOGGER.info("Probe [python] generated: {} files in {}ms", files, duration);
                 return ProbeGenerator.GenerateResult.success(files, duration);
             } catch (Exception genFailure) {
-                deleteRecursive(staging);
+                ProbeOutputCommitter.deleteRecursive(staging);
                 throw genFailure;
             }
         } catch (Exception e) {
@@ -678,42 +676,6 @@ public final class PythonProbeBackend implements ProbeBackend {
         if (m.returnType != null) ApiTypeRefPyRenderer.collectSymbolFqns(m.returnType.ref, out);
         if (m.setterParamType != null) ApiTypeRefPyRenderer.collectSymbolFqns(m.setterParamType.ref, out);
         for (MethodDecl.MethodParam p : m.params) ApiTypeRefPyRenderer.collectSymbolFqns(p.type.ref, out);
-    }
-
-    // ============================== IO 工具（镜像 TS backend）==============================
-
-    private static void commitProbeOutput(Path staging, Path outputDir, Path backup) throws IOException {
-        deleteRecursive(backup);
-        if (Files.exists(outputDir)) Files.move(outputDir, backup);
-        try {
-            Files.move(staging, outputDir);
-        } catch (IOException e) {
-            if (!Files.exists(outputDir) && Files.exists(backup)) {
-                try { Files.move(backup, outputDir); } catch (IOException ignored) {}
-            }
-            throw e;
-        }
-        deleteRecursive(backup);
-    }
-
-    /**
-     * 递归删除目录及其内容（深度优先逆序，先文件后目录）。walk 流用 try-with-resources 关闭
-     * （文件句柄泄漏会锁住目录，Windows 上导致后续 move 失败）；删除失败的路径收集后 warn
-     * 一次（典型为 Windows 文件锁），不抛出——与 TS backend 的同名工具保持一致。
-     */
-    private static void deleteRecursive(Path dir) throws IOException {
-        if (!Files.exists(dir)) return;
-        List<Path> failed = new ArrayList<>();
-        try (var paths = Files.walk(dir)) {
-            paths.sorted(Comparator.reverseOrder())
-                    .forEach(p -> {
-                        if (!p.toFile().delete()) failed.add(p);
-                    });
-        }
-        if (!failed.isEmpty()) {
-            NekoJS.LOGGER.warn("Probe: failed to delete {} path(s) under {} (locked by another process?): {}",
-                    failed.size(), dir, failed);
-        }
     }
 
     private static String pkgOf(String fqn) {
