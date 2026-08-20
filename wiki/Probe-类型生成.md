@@ -294,7 +294,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`render` 渲染到内存 + 默认 `generate` 原子提交/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
 | `ProbeBackendSelector` | `common/.../probe/` | `/nekojs probe` 的 backend 解析（语言默认/per-language 配置覆盖/全选/补全），三平台命令层共用 |
 | `ProbeOutputCommitter` | `common/.../probe/` | staging/backup 目录交换的唯一实现（恢复/提交/递归删除/render 产物路径校验） |
-| `TypeScriptProbeBackend` | `common/.../probe/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径） |
+| `TypeScriptProbeBackend` | `common/.../probe/backend/typescript/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径）+ 六个声明生成器 |
 | `PythonProbeBackend` | `common/.../probe/backend/python/` | 内置 Python backend：`.pyi` stub 包（`requiresIr=true`） |
 | `TypeReflector` / `TypeDecl` | `common/.../probe/ir/` | `Class<?>` → 声明 IR（getter/setter 推断、`@Remap`/`@HideFromJS`、`@Doc` 注解文档） |
 | `TypeScriptClassRenderer` | `common/.../probe/ir/` | `TypeDecl` → TS 类/接口/枚举块（唯一渲染路径；getter 覆盖表） |
@@ -303,7 +303,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `EventDeclarationGenerator` | `common/.../probe/` | `@side-only/{side}/events/index.d.ts` |
 | `RecipeEventDeclarationGenerator` | `common/.../probe/` | `event.recipes.<ns>.<type>(...)` 类型 |
 | `AdapterAliasGenerator` | `common/.../probe/` | 从 `AdapterInputShape` 渲染 `$Foo_` 别名 |
-| `TypeConverter` / `TypeAliasRegistry` | `common/.../probe/types/` | Java `Type` → TS 字符串 |
+| `TypeAliasRegistry` | `common/.../probe/types/` | TS 输入别名（适配器/枚举/集合放宽）；Java `Type` → `ApiTypeRef` 的唯一映射在 `TypeReflector.toRef`，TS/Python 共用 |
 
 ## 数据源：catalog snapshot
 

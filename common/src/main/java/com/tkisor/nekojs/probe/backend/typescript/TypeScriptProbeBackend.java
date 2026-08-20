@@ -63,23 +63,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     private static final String RECIPE_EVENT_RECIPES_IMPORT =
             "import { DocumentedRecipes } from \"@side-only/server/events/recipes\";";
 
-    {
-        // RecipeEventJS.recipes getter 由 RecipeEventDeclarationGenerator 提供，
-        // 让它返回 DocumentedRecipes（来自 @side-only/server/events/recipes）
-        try {
-            Class<?> recipeEventClass = Class.forName(
-                    "com.tkisor.nekojs.wrapper.event.server.RecipeEventJS",
-                    false,
-                    Thread.currentThread().getContextClassLoader());
-            tsClassRenderer.overrideGetter(
-                    recipeEventClass,
-                    RECIPE_EVENT_RECIPES_GETTER,
-                    RECIPE_EVENT_RECIPES_RETURN_TYPE,
-                    RECIPE_EVENT_RECIPES_IMPORT
-            );
-        } catch (ClassNotFoundException ignored) {
-        }
-    }
+    /** 内建 getter 覆盖只应用一次（实例是注册表单例，render 每轮调用）。 */
+    private volatile boolean builtinOverridesApplied;
 
     @Override
     public String languageId() {
@@ -106,6 +91,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
      */
     @Override
     public Map<String, String> render(ProbeContext ctx) {
+        applyBuiltinGetterOverrides();
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
         List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
         Map<String, String> files = new LinkedHashMap<>();
@@ -195,6 +181,30 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         } finally {
             // 清理生成过程中积累的缓存，释放内存
             indexFileGenerator.clearCaches();
+        }
+    }
+
+    /**
+     * 内建 getter 覆盖：RecipeEventJS.recipes getter 由 RecipeEventDeclarationGenerator 提供，
+     * 让它返回 DocumentedRecipes（来自 @side-only/server/events/recipes）。显式在首次 render
+     * 前应用（替代旧实例初始化块——静态副作用隐藏且难以测试）；wrapper 类不在 common
+     * classpath（单元测试）时静默跳过。
+     */
+    private void applyBuiltinGetterOverrides() {
+        if (builtinOverridesApplied) return;
+        builtinOverridesApplied = true;
+        try {
+            Class<?> recipeEventClass = Class.forName(
+                    "com.tkisor.nekojs.wrapper.event.server.RecipeEventJS",
+                    false,
+                    Thread.currentThread().getContextClassLoader());
+            tsClassRenderer.overrideGetter(
+                    recipeEventClass,
+                    RECIPE_EVENT_RECIPES_GETTER,
+                    RECIPE_EVENT_RECIPES_RETURN_TYPE,
+                    RECIPE_EVENT_RECIPES_IMPORT
+            );
+        } catch (ClassNotFoundException ignored) {
         }
     }
 
