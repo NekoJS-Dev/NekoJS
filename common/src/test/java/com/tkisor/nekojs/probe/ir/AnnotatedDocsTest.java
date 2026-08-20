@@ -59,9 +59,8 @@ class AnnotatedDocsTest {
 
     @Test
     void rendererEmitsJsdocForAnnotatedMembersOnly() {
-        var converter = new com.tkisor.nekojs.probe.types.TypeConverter(
+        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(
                 new com.tkisor.nekojs.probe.types.TypeAliasRegistry());
-        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(converter);
         String out = renderer.render(new TypeReflector().reflect(Fixture.class));
 
         assertTrue(out.contains("/** Fixture type for annotation doc tests. */"), "类级 JSDoc 应输出:\n" + out);

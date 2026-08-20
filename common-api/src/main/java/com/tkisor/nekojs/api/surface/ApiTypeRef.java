@@ -25,10 +25,18 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
         Objects.requireNonNull(kind, "kind");
         arguments = List.copyOf(arguments == null ? List.of() : arguments);
         switch (kind) {
-            case PRIMITIVE, SYMBOL, TYPE_VARIABLE -> {
+            case PRIMITIVE, TYPE_VARIABLE -> {
                 requireName(name);
                 if (!arguments.isEmpty() || callbackSignature != null) {
                     throw new IllegalArgumentException(kind + " type cannot have arguments or callback signature");
+                }
+            }
+            case SYMBOL -> {
+                // SYMBOL 允许携带泛型实参（如 Map<K, V>）：probe IR 用它无损承载参数化 Java 类型，
+                // 各语言渲染器自行决定渲染形态（TS 的 $Map<$K, $V>、Python 的语法糖）。
+                requireName(name);
+                if (callbackSignature != null) {
+                    throw new IllegalArgumentException("symbol type cannot have a callback signature");
                 }
             }
             case ARRAY -> {
@@ -67,6 +75,12 @@ public record ApiTypeRef(Kind kind, String name, List<ApiTypeRef> arguments,
     /** 构造符号类型引用（以 {@link ApiSymbolId} 命名）。 */
     public static ApiTypeRef symbol(ApiSymbolId id) {
         return new ApiTypeRef(Kind.SYMBOL, Objects.requireNonNull(id, "id").value(), List.of(), null);
+    }
+
+    /** 构造带泛型实参的符号类型引用（如 {@code Map<K, V>}）——probe IR 无损承载参数化 Java 类型用。 */
+    public static ApiTypeRef symbol(ApiSymbolId id, List<ApiTypeRef> arguments) {
+        return new ApiTypeRef(Kind.SYMBOL, Objects.requireNonNull(id, "id").value(),
+                arguments == null ? List.of() : List.copyOf(arguments), null);
     }
 
     /**

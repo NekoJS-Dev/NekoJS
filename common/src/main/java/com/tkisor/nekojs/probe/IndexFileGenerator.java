@@ -5,7 +5,6 @@ import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -25,7 +24,6 @@ import java.util.*;
  */
 public final class IndexFileGenerator {
     private final TypeScriptClassRenderer irRenderer;
-    private final TypeConverter typeConverter;
     private final AdapterAliasGenerator adapterAliasGenerator;
 
     // 性能缓存（线程安全，支持并行生成）
@@ -50,10 +48,8 @@ public final class IndexFileGenerator {
      */
     private volatile Set<String> hiddenClasses = Set.of();
 
-    public IndexFileGenerator(TypeScriptClassRenderer irRenderer,
-                              TypeConverter typeConverter, AdapterAliasGenerator adapterAliasGenerator) {
+    public IndexFileGenerator(TypeScriptClassRenderer irRenderer, AdapterAliasGenerator adapterAliasGenerator) {
         this.irRenderer = irRenderer;
-        this.typeConverter = typeConverter;
         this.adapterAliasGenerator = adapterAliasGenerator;
     }
 

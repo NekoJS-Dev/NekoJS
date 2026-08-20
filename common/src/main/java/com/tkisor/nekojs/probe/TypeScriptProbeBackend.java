@@ -18,7 +18,6 @@ import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -40,13 +39,12 @@ import java.util.concurrent.*;
 public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private final TypeAliasRegistry aliasRegistry = new TypeAliasRegistry();
-    private final TypeConverter typeConverter = new TypeConverter(aliasRegistry);
     private final AdapterAliasGenerator adapterAliasGenerator = new AdapterAliasGenerator(aliasRegistry);
     // IR 唯一渲染路径（Phase 2.7）：所有类声明与 import 均由 TypeReflector → IR → renderer 产出，
     // 旧的 ClassDeclGenerator 直接反射渲染已删除
-    private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(typeConverter);
-    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer, typeConverter, adapterAliasGenerator);
-    private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(typeConverter, adapterAliasGenerator);
+    private final TypeScriptClassRenderer tsClassRenderer = new TypeScriptClassRenderer(aliasRegistry);
+    private final IndexFileGenerator indexFileGenerator = new IndexFileGenerator(tsClassRenderer, adapterAliasGenerator);
+    private final EventDeclarationGenerator eventGenerator = new EventDeclarationGenerator(aliasRegistry, adapterAliasGenerator);
     private final BindingDeclarationGenerator bindingGenerator = new BindingDeclarationGenerator();
     private final RecipeEventDeclarationGenerator recipeEventGenerator = new RecipeEventDeclarationGenerator(aliasRegistry);
     private final ManagedApiDeclarationGenerator managedDeclGenerator = new ManagedApiDeclarationGenerator();

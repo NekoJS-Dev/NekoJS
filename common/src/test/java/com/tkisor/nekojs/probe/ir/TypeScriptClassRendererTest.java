@@ -4,7 +4,6 @@ import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -42,12 +41,12 @@ class TypeScriptClassRendererTest {
             TypeDecl decl = reflector.reflect(cls);
 
             TypeAliasRegistry aliases1 = new TypeAliasRegistry();
-            TypeScriptClassRenderer renderer1 = new TypeScriptClassRenderer(new TypeConverter(aliases1));
+            TypeScriptClassRenderer renderer1 = new TypeScriptClassRenderer(aliases1);
             String first = renderer1.render(decl);
 
             // 同一次反射的 IR 渲染两次结果一致（渲染器无状态副作用）
             TypeAliasRegistry aliases2 = new TypeAliasRegistry();
-            TypeScriptClassRenderer renderer2 = new TypeScriptClassRenderer(new TypeConverter(aliases2));
+            TypeScriptClassRenderer renderer2 = new TypeScriptClassRenderer(aliases2);
             String second = renderer2.render(decl);
             assertEquals(first, second, "repeated render must be deterministic for " + cls.getName());
 
@@ -320,7 +319,7 @@ class TypeScriptClassRendererTest {
     }
 
     private static String render(TypeDecl decl) {
-        return new TypeScriptClassRenderer(new TypeConverter(new TypeAliasRegistry())).render(decl);
+        return new TypeScriptClassRenderer(new TypeAliasRegistry()).render(decl);
     }
 }
 

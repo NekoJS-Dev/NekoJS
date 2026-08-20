@@ -138,7 +138,15 @@ public final class TypeAliasRegistry {
      * @return 输入类型字符串，如果不是集合类型则返回 null
      */
     public String getCollectionAlias(Class<?> rawClass, String[] tsArgs) {
-        CollectionAlias alias = collectionAliases.get(rawClass.getName());
+        return getCollectionAlias(rawClass.getName(), tsArgs);
+    }
+
+    /**
+     * fqn 版集合输入别名查询（ref 渲染路径用——ref 只有符号 FQN，没有 Class 实例）。
+     * 语义与 {@link #getCollectionAlias(Class, String[])} 完全一致。
+     */
+    public String getCollectionAlias(String rawFqn, String[] tsArgs) {
+        CollectionAlias alias = collectionAliases.get(rawFqn);
         if (alias == null) return null;
         return alias.getInputType(tsArgs);
     }

@@ -11,7 +11,9 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Locale;
@@ -332,31 +334,42 @@ public final class TypeReflector {
         return null;
     }
 
-    // ---- Java Type → ApiTypeRef（best-effort，供 Python/编辑；TS 默认渲染不用它）----
+    // ---- Java Type → ApiTypeRef（唯一类型映射：无损承载，语言糖由各渲染器决定）----
 
-    private static ApiTypeRef toRef(Type type) {
+    /**
+     * Java 反射类型 → {@link ApiTypeRef}（probe 的唯一类型映射，TS/Python 渲染均以此为准）。
+     *
+     * <p>保真约定（与旧 {@code TypeConverter} 的 TS 语义逐项对齐，保证双轨合并后产物零回归）：
+     * <ul>
+     *   <li>参数化类型 → SYMBOL(raw) **携带完整实参**（{@code Map<K,V>} 保留两个实参；
+     *       语法糖——TS 的 {@code $Map<$K, $V>}、Python 的 {@code list[X]}——由各语言渲染器决定）</li>
+     *   <li>有界通配符 → 上界；无界通配符 → {@code any}（对齐 TypeConverter 的 "any"，非 object）</li>
+     *   <li>raw 非 Class 的参数化类型 / 未知形态 → {@code any}</li>
+     * </ul>
+     */
+    public static ApiTypeRef toRef(Type type) {
         if (type == null || type == void.class || type == Void.class) return ApiTypeRef.voidType();
         if (type instanceof Class<?> cls) return classToRef(cls);
         if (type instanceof ParameterizedType pt) {
             Type raw = pt.getRawType();
             if (raw instanceof Class<?> rawCls) {
                 Type[] args = pt.getActualTypeArguments();
-                // 单参集合 → 数组；其余按 raw symbol（参数列表丢失，Phase 3 细化）
-                if (args.length == 1 && isCollectionLike(rawCls)) {
-                    return ApiTypeRef.array(toRef(args[0]));
+                List<ApiTypeRef> argRefs = new ArrayList<>(args.length);
+                for (Type arg : args) {
+                    argRefs.add(toRef(arg));
                 }
-                return ApiTypeRef.symbol(new ApiSymbolId("java", rawCls.getName()));
+                return ApiTypeRef.symbol(new ApiSymbolId("java", rawCls.getName()), argRefs);
             }
-            return ApiTypeRef.voidType();
+            return ApiTypeRef.primitive("any");
         }
         if (type instanceof GenericArrayType gat) return ApiTypeRef.array(toRef(gat.getGenericComponentType()));
         if (type instanceof TypeVariable<?> tv) return ApiTypeRef.typeVariable(tv.getName());
         if (type instanceof WildcardType wt) {
             Type[] upper = wt.getUpperBounds();
             if (upper.length > 0 && upper[0] != Object.class) return toRef(upper[0]);
-            return ApiTypeRef.primitive("object");
+            return ApiTypeRef.primitive("any");
         }
-        return ApiTypeRef.voidType();
+        return ApiTypeRef.primitive("any");
     }
 
     private static ApiTypeRef classToRef(Class<?> cls) {
@@ -370,11 +383,5 @@ public final class TypeReflector {
         if (cls == Object.class) return ApiTypeRef.primitive("object");
         if (cls.isArray()) return ApiTypeRef.array(classToRef(cls.getComponentType()));
         return ApiTypeRef.symbol(new ApiSymbolId("java", cls.getName()));
-    }
-
-    private static boolean isCollectionLike(Class<?> cls) {
-        return java.util.Collection.class.isAssignableFrom(cls)
-                || java.lang.Iterable.class.isAssignableFrom(cls)
-                || cls.getName().startsWith("java.util.stream.");
     }
 }

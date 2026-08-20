@@ -11,7 +11,6 @@ import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -123,7 +122,6 @@ class TypeScriptNoopIrGoldenTest {
     void getterOverrideSurvivesIrRerender() throws Exception {
         Class<?> recipeEventClass = recipeEventClassOrSkip();
         TypeAliasRegistry aliases = new TypeAliasRegistry();
-        TypeConverter tc = new TypeConverter(aliases);
 
         TypeDecl decl;
         try {
@@ -144,7 +142,7 @@ class TypeScriptNoopIrGoldenTest {
         if (other != null) other.hidden = true;
         decl.mutated = true;
 
-        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(tc);
+        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(aliases);
         renderer.overrideGetter(recipeEventClass, "recipes", "DocumentedRecipes",
                 "import { DocumentedRecipes } from \"@side-only/server/events/recipes\";");
 
@@ -195,7 +193,6 @@ class TypeScriptNoopIrGoldenTest {
     @Test
     void getterOverrideAppliesToArbitraryClassOnTestClasspath() {
         TypeAliasRegistry aliases = new TypeAliasRegistry();
-        TypeConverter tc = new TypeConverter(aliases);
 
         TypeDecl decl = new TypeReflector().reflect(OverrideMechanismFixture.class);
 
@@ -208,7 +205,7 @@ class TypeScriptNoopIrGoldenTest {
         editor.hideMethod("ping");
         assertTrue(decl.mutated, "ClassEditor 触碰后 TypeDecl 必须标记 mutated");
 
-        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(tc);
+        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(aliases);
         renderer.overrideGetter(OverrideMechanismFixture.class, "label", "MyCustomType",
                 "import { MyCustomType } from \"@side-only/server/custom\";");
 
@@ -242,7 +239,6 @@ class TypeScriptNoopIrGoldenTest {
     @Test
     void rendererEmitsJsDocBlocksForDocs() {
         TypeAliasRegistry aliases = new TypeAliasRegistry();
-        TypeConverter tc = new TypeConverter(aliases);
 
         TypeDecl decl = new TypeDecl(TypeDecl.Kind.CLASS, null, "com.example.Documented");
         decl.docs.add("Class-level doc");
@@ -269,7 +265,7 @@ class TypeScriptNoopIrGoldenTest {
         getter.docs.add("getter doc");
         decl.methods.add(getter);
 
-        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(tc);
+        TypeScriptClassRenderer renderer = new TypeScriptClassRenderer(aliases);
         String out = renderer.render(decl);
 
         // 单行 doc → 一行块注释

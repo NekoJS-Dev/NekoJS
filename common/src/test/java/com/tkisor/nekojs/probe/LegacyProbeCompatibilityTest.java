@@ -4,7 +4,6 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,8 +48,8 @@ class LegacyProbeCompatibilityTest {
     @Test
     void legacyEventDeclarationMatchesGolden() throws Exception {
         var aliases = new TypeAliasRegistry();
-        var converter = new TypeConverter(aliases);
-        var generator = new EventDeclarationGenerator(converter, new AdapterAliasGenerator(aliases));
+        // n/a: converter removed
+        var generator = new EventDeclarationGenerator(aliases, new AdapterAliasGenerator(aliases));
         var event = EventCatalogEntry.of("ServerEvents", "sample", ScriptType.SERVER,
                 SampleEvent.class, null, false, false);
         String actual = generator.generate(List.of(event), ScriptType.SERVER);

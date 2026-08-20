@@ -6,7 +6,6 @@ import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -25,7 +24,7 @@ class ProbePhase5EventsTest {
     }
 
     private final TypeScriptClassRenderer tsRenderer =
-            new TypeScriptClassRenderer(new TypeConverter(new TypeAliasRegistry()));
+            new TypeScriptClassRenderer(new TypeAliasRegistry());
 
     // -------------------- assign_type --------------------
 

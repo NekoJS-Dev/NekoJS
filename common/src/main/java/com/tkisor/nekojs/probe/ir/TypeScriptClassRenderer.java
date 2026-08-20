@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.probe.ir;
 
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
-import com.tkisor.nekojs.probe.types.TypeConverter;
+import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -13,11 +13,11 @@ import java.util.stream.Collectors;
 /**
  * {@link TypeDecl} → TypeScript 类/接口/枚举声明块（不含 {@code declare module} 外壳）。
  *
- * <p>镜像旧 {@code ClassDeclGenerator} 的分段与格式，确保**未编辑** IR 的渲染与旧实现逐字一致：
- * <ul>
- *   <li>未编辑类型槽 → {@link TypeConverter#toTypeScript(java.lang.reflect.Type, boolean)} 渲染 sourceType</li>
- *   <li>modify_type 改写过的槽（{@link TypeSlot#overridden}）→ {@link #renderRef(ApiTypeRef)} 渲染 ref</li>
- * </ul>
+ * <p>类型槽**唯一**经 {@link TypeSlot#ref}（{@link ApiTypeRef}）渲染——TS 与 Python 共用同一份
+ * 类型语义（映射在 {@link TypeReflector#toRef}）；{@code sourceType} 不参与渲染（仅排序/溯源）。
+ *
+ * <p>参数位置（{@code input=true}）应用输入别名放宽（适配器/枚举/集合别名，查
+ * {@link TypeAliasRegistry}），语义与旧 TypeConverter 逐项对齐。
  *
  * <p>getter 覆盖表（{@link #overrideGetter}）镜像 {@code ClassDeclGenerator.overrideGetter}：
  * {@code probe.modify_type}/{@code probe.assign_type} 把类标记 mutated 后改走本 renderer 重渲染，
@@ -25,14 +25,14 @@ import java.util.stream.Collectors;
  * 否则覆盖会随重渲染丢失。
  */
 public final class TypeScriptClassRenderer {
-    private final TypeConverter typeConverter;
+    private final TypeAliasRegistry aliases;
 
     // 覆盖 getter 的返回类型 (fqn -> getter 属性名 -> { returnType, importStatement })
     // 键是 getter 的**属性名**（如 "recipes"），与 ClassDeclGenerator 的 lookup 口径一致
     private final Map<String, Map<String, GetterOverride>> getterOverrides = new LinkedHashMap<>();
 
-    public TypeScriptClassRenderer(TypeConverter typeConverter) {
-        this.typeConverter = typeConverter;
+    public TypeScriptClassRenderer(TypeAliasRegistry aliases) {
+        this.aliases = aliases;
     }
 
     /** getter 覆盖条目：返回类型字符串 + 附带 import 语句（import 由 IndexFileGenerator 合并，本类不消费）。 */
@@ -315,31 +315,66 @@ public final class TypeScriptClassRenderer {
         return !renderedTs.contains("|") && !renderedTs.contains("=>");
     }
 
-    /** 渲染类型槽：overridden → ref；否则 → TypeConverter(sourceType)。 */
+    /** 渲染类型槽：唯一路径 = ref（input=true 时应用输入别名放宽）。 */
     private String renderSlot(TypeSlot slot, boolean input) {
-        if (slot == null) return "any";
-        if (slot.overridden || slot.sourceType == null) return renderTypeRef(slot.ref);
-        return typeConverter.toTypeScript(slot.sourceType, input);
+        if (slot == null || slot.ref == null) return "any";
+        return renderTypeRef(slot.ref, aliases, input);
     }
 
-    /** 简单 ApiTypeRef → TS（用于 modify_type 改写过的槽，及 probe.add_global 的全局声明类型）。 */
+    /** 简单 ApiTypeRef → TS（无别名表；probe.add_global 的全局声明类型等声明位使用）。 */
     public static String renderTypeRef(ApiTypeRef ref) {
+        return renderTypeRef(ref, null, false);
+    }
+
+    /**
+     * ApiTypeRef → TS。{@code input=true} 且提供别名表时应用输入别名放宽——语义与旧
+     * TypeConverter 逐项对齐：参数化符号先查集合别名（结构化实参数组，防嵌套泛型被
+     * {@code ", "} 拆坏），非参数化符号查类别名（适配器/枚举惰性别名）。
+     */
+    public static String renderTypeRef(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input) {
         if (ref == null) return "any";
         return switch (ref.kind()) {
             case VOID -> "void";
             case PRIMITIVE -> mapPrimT(ref.name());
             case TYPE_VARIABLE -> ref.name();
-            case ARRAY -> renderTypeRef(ref.arguments().get(0)) + "[]";
+            case ARRAY -> renderTypeRef(ref.arguments().get(0), aliases, input) + "[]";
             case UNION -> ref.arguments().stream()
-                    .map(TypeScriptClassRenderer::renderTypeRef)
+                    .map(a -> renderTypeRef(a, aliases, input))
                     .collect(Collectors.joining(" | "));
-            case SYMBOL -> "$" + simpleSymbolName(ref.name());
+            case SYMBOL -> renderSymbol(ref, aliases, input);
             case CALLBACK -> "(...args: any[]) => any";
         };
     }
 
-    private String renderRef(ApiTypeRef ref) {
-        return renderTypeRef(ref);
+    /** SYMBOL 渲染：input 别名（集合/类）优先，否则 {@code $Name<实参...>}（实参递归、input 传播）。 */
+    private static String renderSymbol(ApiTypeRef ref, TypeAliasRegistry aliases, boolean input) {
+        String fqn = fqnOfSymbol(ref.name());
+        if (input && aliases != null) {
+            if (!ref.arguments().isEmpty()) {
+                String[] renderedArgs = ref.arguments().stream()
+                        .map(a -> renderTypeRef(a, aliases, true))
+                        .toArray(String[]::new);
+                String alias = aliases.getCollectionAlias(fqn, renderedArgs);
+                if (alias != null) return alias;
+            } else if (aliases.hasAlias(fqn)) {
+                return aliases.getAlias(fqn);
+            }
+        }
+        StringBuilder sb = new StringBuilder("$").append(simpleSymbolName(ref.name()));
+        if (!ref.arguments().isEmpty()) {
+            sb.append('<');
+            sb.append(ref.arguments().stream()
+                    .map(a -> renderTypeRef(a, aliases, input))
+                    .collect(Collectors.joining(", ")));
+            sb.append('>');
+        }
+        return sb.toString();
+    }
+
+    /** symbol name 形如 {@code "java:java.util.List"} → 取 FQN 部分。 */
+    private static String fqnOfSymbol(String symbolName) {
+        int colon = symbolName.indexOf(':');
+        return colon >= 0 ? symbolName.substring(colon + 1) : symbolName;
     }
 
     /**

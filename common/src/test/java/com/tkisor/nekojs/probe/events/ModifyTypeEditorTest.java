@@ -14,7 +14,6 @@ import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.Test;
@@ -45,7 +44,7 @@ class ModifyTypeEditorTest {
 
     private final TypeReflector reflector = new TypeReflector();
     private final TypeScriptClassRenderer renderer =
-            new TypeScriptClassRenderer(new TypeConverter(new TypeAliasRegistry()));
+            new TypeScriptClassRenderer(new TypeAliasRegistry());
 
     // ---------------- resolveType ----------------
 
@@ -150,7 +149,9 @@ class ModifyTypeEditorTest {
         new ClassEditor(d).changeParamType("compute", 0, "java.lang.String");
 
         String rendered = renderer.render(d);
-        assertTrue(rendered.contains("$String"), "edited param type should render as $Symbol");
+        // 编辑参数与反射参数语义一致：input 位置应用别名放宽（java.lang.String → string）。
+        // （旧双轨渲染 ref 裸渲染为 $String，与反射参数的 string 不一致——合并后修正）
+        assertTrue(rendered.contains("compute(x: string"), "edited param should widen like reflected params: " + rendered);
 
         // import 收集：compute 的首个参数改为 java.lang.String（跨包），应被收集
         Set<String> imps = ProbeModifyTypeEventJS.collectEditedSymbolFqns(d, pkgOf(d.fqn));

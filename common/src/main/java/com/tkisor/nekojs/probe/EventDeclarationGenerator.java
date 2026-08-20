@@ -1,7 +1,9 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
+import com.tkisor.nekojs.probe.ir.TypeReflector;
+import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
+import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.api.ScriptType;
 
 import java.lang.reflect.*;
@@ -30,11 +32,11 @@ import java.util.stream.Collectors;
  * </pre>
  */
 public final class EventDeclarationGenerator {
-    private final TypeConverter typeConverter;
+    private final TypeAliasRegistry aliasRegistry;
     private final AdapterAliasGenerator adapterAliasGenerator;
 
-    public EventDeclarationGenerator(TypeConverter typeConverter, AdapterAliasGenerator adapterAliasGenerator) {
-        this.typeConverter = typeConverter;
+    public EventDeclarationGenerator(TypeAliasRegistry aliasRegistry, AdapterAliasGenerator adapterAliasGenerator) {
+        this.aliasRegistry = aliasRegistry;
         this.adapterAliasGenerator = adapterAliasGenerator;
     }
 
@@ -147,7 +149,8 @@ public final class EventDeclarationGenerator {
 
         // 有 dispatch key 的版本
         if (event.dispatchable() && event.dispatchKeyType() != null) {
-            String keyType = typeConverter.toTypeScript(event.dispatchKeyType(), true);
+            String keyType = TypeScriptClassRenderer.renderTypeRef(
+                    TypeReflector.toRef(event.dispatchKeyType()), aliasRegistry, true);
             sb.append("        function ").append(event.name());
             sb.append("(extra: ").append(keyType);
             sb.append(", handler: ((event: ").append(eventType).append(") => void)): void;\n");

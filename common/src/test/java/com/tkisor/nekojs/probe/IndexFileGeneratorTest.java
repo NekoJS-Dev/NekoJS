@@ -8,7 +8,6 @@ import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
-import com.tkisor.nekojs.probe.types.TypeConverter;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -24,8 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class IndexFileGeneratorTest {
 
     private static IndexFileGenerator generator(TypeAliasRegistry registry) {
-        TypeConverter converter = new TypeConverter(registry);
-        return new IndexFileGenerator(new TypeScriptClassRenderer(converter), converter,
+        return new IndexFileGenerator(new TypeScriptClassRenderer(registry),
                 new AdapterAliasGenerator(registry));
     }
 
@@ -90,10 +88,11 @@ class IndexFileGeneratorTest {
         // 非枚举且无显式别名 → 无别名（不放宽）
         assertFalse(registry.hasAlias("java.util.ArrayList"));
 
-        // TypeConverter 消费：仅 input（参数）放宽，返回值保持完整类型
-        TypeConverter converter = new TypeConverter(registry);
-        assertEquals("$DayOfWeek_", converter.toTypeScript(java.time.DayOfWeek.class, true));
-        assertEquals("$DayOfWeek", converter.toTypeScript(java.time.DayOfWeek.class, false));
+        // 输入别名消费：仅 input（参数）放宽，返回值保持完整类型（经渲染器，TypeConverter 已删）
+        assertEquals("$DayOfWeek_", com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer.renderTypeRef(
+                com.tkisor.nekojs.probe.ir.TypeReflector.toRef(java.time.DayOfWeek.class), registry, true));
+        assertEquals("$DayOfWeek", com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer.renderTypeRef(
+                com.tkisor.nekojs.probe.ir.TypeReflector.toRef(java.time.DayOfWeek.class), registry, false));
 
         // 显式注册别名优先于枚举惰性别名（与适配器别名同一注册表出口）
         registry.registerClassAlias("java.time.DayOfWeek", "string");
