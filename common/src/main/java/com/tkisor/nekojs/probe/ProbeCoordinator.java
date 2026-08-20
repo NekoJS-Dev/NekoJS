@@ -27,9 +27,11 @@ import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -41,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Probe 协调器：跑一次共享类收集，再把结果派发给选中的 {@link ProbeBackend} 各自渲染。
@@ -62,8 +65,19 @@ public final class ProbeCoordinator {
     private final ProbeExternalArtifacts externalArtifacts;
     private final ProbeConfigLoader configLoader = new ProbeConfigLoader();
     private volatile ProbeConfig cachedConfig;
-    /** probe.toml 的 mtime（毫秒）缓存戳；{@link Long#MIN_VALUE} = 无缓存/文件缺失不可读。 */
-    private volatile long cachedConfigStamp = Long.MIN_VALUE;
+    /** probe.toml 缓存戳（mtime+size 双因子）；{@link ConfigStamp#MISSING} = 无缓存/文件缺失不可读。 */
+    private volatile ConfigStamp cachedConfigStamp = ConfigStamp.MISSING;
+    /**
+     * runProbe 互斥：同一协调器实例同一时间只允许一次运行（fail-fast——占用期间的再次调用
+     * 立即返回失败结果，不排队）。除 staging 目录交换外，backend 实例（注册表单例）携带
+     * 每轮清理的可变渲染缓存，并发运行会互相破坏；用户命令场景「立即提示已在运行」优于静默排队。
+     */
+    private final AtomicBoolean running = new AtomicBoolean();
+
+    /** 配置缓存戳：仅凭 mtime 会漏检同戳不同内容的写入（部分文件系统 mtime 粒度粗），补 size 因子。 */
+    private record ConfigStamp(long mtime, long size) {
+        static final ConfigStamp MISSING = new ConfigStamp(Long.MIN_VALUE, -1L);
+    }
 
     /** 以给定游戏目录路径构造；外部副作用走 {@link ProbeExternalArtifacts#DEFAULT}。 */
     public ProbeCoordinator(NekoJSPaths paths) {
@@ -77,29 +91,30 @@ public final class ProbeCoordinator {
     }
 
     /**
-     * 读取 probe 配置：带缓存的自动重读——每次调用比对 probe.toml 的 mtime，
+     * 读取 probe 配置：带缓存的自动重读——每次调用比对 probe.toml 的 mtime+size 戳，
      * 文件被修改（或缺失/新建）时自动重新加载，无需手动 reload。
      * 并发下两个线程可能同时重载同一文件，load 幂等、后写覆盖，结果等价。
      */
     public ProbeConfig readConfig() {
         ProbeConfig c = cachedConfig;
-        long mtime = configMtime();
-        if (c == null || mtime != cachedConfigStamp) {
+        ConfigStamp stamp = configStamp();
+        if (c == null || !stamp.equals(cachedConfigStamp)) {
             c = configLoader.load(paths.probeConfig());
             cachedConfig = c;
-            // load() 可能在文件缺失时自动创建（autosave 写默认值），落盘后 mtime 已变化；
-            // 重新取一次 mtime 作缓存戳，避免下次读取误判为变更而重复加载。
-            cachedConfigStamp = configMtime();
+            // load() 可能在文件缺失时自动创建（autosave 写默认值），落盘后戳已变化；
+            // 重新取一次戳，避免下次读取误判为变更而重复加载。
+            cachedConfigStamp = configStamp();
         }
         return c;
     }
 
-    /** probe.toml 的 mtime（毫秒）；缺失/不可读返回 {@link Long#MIN_VALUE}（恒视为已变更，每次重载）。 */
-    private long configMtime() {
+    /** probe.toml 的 mtime+size；缺失/不可读返回 {@link ConfigStamp#MISSING}（恒视为已变更，每次重载）。 */
+    private ConfigStamp configStamp() {
         try {
-            return Files.getLastModifiedTime(paths.probeConfig()).toMillis();
+            BasicFileAttributes attrs = Files.readAttributes(paths.probeConfig(), BasicFileAttributes.class);
+            return new ConfigStamp(attrs.lastModifiedTime().toMillis(), attrs.size());
         } catch (IOException e) {
-            return Long.MIN_VALUE;
+            return ConfigStamp.MISSING;
         }
     }
 
@@ -109,7 +124,7 @@ public final class ProbeCoordinator {
      */
     public void reloadConfigCache() {
         cachedConfig = null;
-        cachedConfigStamp = Long.MIN_VALUE;
+        cachedConfigStamp = ConfigStamp.MISSING;
     }
 
     /** 把 probe.toml 的 {@code enabled} 写盘并重载缓存（实例版 {@code setEnabled}，供 {@code /nekojs probe enable|disable} 命令）。写盘失败时告警：命令看似成功但配置未持久化。 */
@@ -391,6 +406,9 @@ public final class ProbeCoordinator {
      * 对选中的 backend 集合执行一次 probe：共享收集 → 各 backend 渲染 → 外部副作用一次。
      * 实例版 {@code run(...)}：路径全部取自本实例的 {@link #paths}，外部副作用走 {@link #externalArtifacts}。
      *
+     * <p>同一协调器实例同一时间只允许一次运行（fail-fast）：占用期间的再次调用立即返回
+     * {@code "probe already running"}，不排队。
+     *
      * @param snapshot 当前 catalog 快照
      * @param backends 命令解析出的、本次要跑的 backend（已按 priority/名字解析）
      * @return 每个 backend 的生成结果（顺序与输入一致）
@@ -399,6 +417,19 @@ public final class ProbeCoordinator {
         if (backends.isEmpty()) {
             return List.of(ProbeGenerator.GenerateResult.failure("no probe backend selected"));
         }
+        if (!running.compareAndSet(false, true)) {
+            return backends.stream()
+                    .map(b -> ProbeGenerator.GenerateResult.failure("probe already running"))
+                    .toList();
+        }
+        try {
+            return runProbeLocked(snapshot, backends);
+        } finally {
+            running.set(false);
+        }
+    }
+
+    private List<ProbeGenerator.GenerateResult> runProbeLocked(NekoScriptCatalogSnapshot snapshot, List<ProbeBackend> backends) {
         ProbeConfig cfg = readConfig();
         if (!cfg.enabled()) {
             return backends.stream()
@@ -441,8 +472,19 @@ public final class ProbeCoordinator {
 
             EditorConfigContributor editorConfigs = new FileEditorConfigContributor();
             List<ProbeGenerator.GenerateResult> results = new ArrayList<>(backends.size());
+            // 输出目录去重：两个 backend 写同一目录时，staging/swap 整目录替换会互相吞掉产物
+            // （后跑者覆盖先跑者）。每组目录只跑第一个选中的 backend，其余跳过并告警——
+            // 同语言多 backend 共存合法，但共享输出目录不合法（要换目录用 outputDir 配置）。
+            Set<Path> seenOutputDirs = new HashSet<>();
             for (ProbeBackend backend : backends) {
-                Path langDir = backend.outputDir(paths, cfg);
+                Path langDir = backend.outputDir(paths, cfg).normalize();
+                if (!seenOutputDirs.add(langDir)) {
+                    NekoJS.LOGGER.warn("Probe backend {}:{} skipped: output directory {} is also targeted by another selected backend in this run",
+                            backend.languageId(), backend.name(), langDir);
+                    results.add(ProbeGenerator.GenerateResult.failure(
+                            "skipped: duplicate output directory " + langDir + " (already generated by another selected backend)"));
+                    continue;
+                }
                 ProbeContext ctx = new ProbeContext.Of(
                         snapshot,
                         List.copyOf(collected),

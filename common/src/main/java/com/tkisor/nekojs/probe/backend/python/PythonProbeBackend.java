@@ -20,8 +20,11 @@ import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -29,6 +32,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -140,6 +144,17 @@ public final class PythonProbeBackend implements ProbeBackend {
                         EditorConfigContributor.VscodeSettingMerge.EXTEND_STRING_ARRAY)));
     }
 
+    /** 嵌套 pyrightconfig 扫描的最大深度（相对脚本根；防超大工作区全量 walk）。 */
+    private static final int NESTED_SCAN_MAX_DEPTH = 8;
+
+    /**
+     * 嵌套 pyrightconfig 扫描跳过的目录名（构建产物/依赖/缓存/VCS——它们不含用户脚本，
+     * 全量 walk 只浪费 IO；{@code .vscode} 含的是配置而非脚本）。
+     */
+    private static final Set<String> NESTED_SCAN_IGNORED_DIRS = Set.of(
+            ".git", ".idea", ".vscode", "__pycache__", "node_modules",
+            "build", "dist", "out", "target", ".pnpm-store", ".dsh-tmp");
+
     /**
      * 为脚本根目录下每个「实际包含 .py 脚本」的子目录写一份 pyrightconfig.json。
      *
@@ -148,6 +163,9 @@ public final class PythonProbeBackend implements ProbeBackend {
      * 目录就近放置一份配置（extraPaths 按该目录到 stub 输出的真实相对深度计算），任一目录被
      * 当作工作区根时都能解析 {@code from nekojs import *}。JS-only 目录不写（Python backend
      * 无需为其贡献 pyright 配置）。
+     *
+     * <p>扫描有界：深度上限 {@link #NESTED_SCAN_MAX_DEPTH}，忽略 {@link #NESTED_SCAN_IGNORED_DIRS}
+     * 子树（node_modules/构建产物等不含用户脚本，全量 walk 在大型工作区代价明显）。
      */
     private static void mergePyrightConfigsForNestedPythonDirs(EditorConfigContributor contributor,
                                                                 Path scriptDir, Path out) {
@@ -155,18 +173,29 @@ public final class PythonProbeBackend implements ProbeBackend {
             return;
         }
         Set<Path> pythonDirs = new TreeSet<>();
-        try (var stream = Files.walk(scriptDir)) {
-            stream.filter(Files::isRegularFile)
-                    .filter(path -> {
-                        Path name = path.getFileName();
-                        return name != null && name.toString().toLowerCase(java.util.Locale.ROOT).endsWith(".py");
-                    })
-                    .forEach(path -> {
-                        Path parent = path.getParent();
+        try {
+            Files.walkFileTree(scriptDir, Set.of(), NESTED_SCAN_MAX_DEPTH, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    if (dir.equals(scriptDir)) return FileVisitResult.CONTINUE;
+                    Path name = dir.getFileName();
+                    return name != null && NESTED_SCAN_IGNORED_DIRS.contains(name.toString())
+                            ? FileVisitResult.SKIP_SUBTREE
+                            : FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    Path name = file.getFileName();
+                    if (name != null && name.toString().toLowerCase(Locale.ROOT).endsWith(".py")) {
+                        Path parent = file.getParent();
                         if (parent != null && !parent.equals(scriptDir)) {
                             pythonDirs.add(parent);
                         }
-                    });
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
         } catch (IOException e) {
             NekoJS.LOGGER.debug("Probe [python]: failed to scan {} for nested pyright configs", scriptDir, e);
             return;

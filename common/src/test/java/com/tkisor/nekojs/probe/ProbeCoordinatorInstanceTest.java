@@ -72,6 +72,30 @@ class ProbeCoordinatorInstanceTest {
         assertTrue(third.enabled(), "删除后重读应拿到默认配置（enabled = true）");
     }
 
+    @Test
+    void readConfigReloadsWhenSizeChangesWithSameMtime(@TempDir Path tmp) throws Exception {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
+        Path cfgFile = paths.probeConfig();
+        Files.createDirectories(cfgFile.getParent());
+
+        // 固定 mtime、只变内容长度：仅凭 mtime 的缓存戳会漏检（部分文件系统 mtime 粒度粗）
+        java.nio.file.attribute.FileTime fixed = java.nio.file.attribute.FileTime.fromMillis(1_700_000_000_000L);
+        Files.writeString(cfgFile, "enabled = true\n", StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(cfgFile, fixed);
+
+        ProbeCoordinator c = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
+        ProbeConfig first = c.readConfig();
+        assertTrue(first.enabled());
+        assertSame(first, c.readConfig(), "mtime 与 size 均未变 → 命中缓存");
+
+        Files.writeString(cfgFile, "enabled = false\n", StandardCharsets.UTF_8);
+        Files.setLastModifiedTime(cfgFile, fixed); // 关键：mtime 与缓存戳相同，仅 size 变化
+
+        ProbeConfig second = c.readConfig();
+        assertFalse(second.enabled(), "size 变化（同 mtime）也应触发自动重读");
+        assertNotSame(first, second);
+    }
+
     /* ================= (b) runProbe：NONE 模式早退，不写盘 ================= */
 
     @Test
