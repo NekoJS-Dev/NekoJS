@@ -121,7 +121,7 @@ class ProbeOutputCompatibilityTest {
      * 用 TypeScriptProbeBackend（Phase 1 起替代旧 ProbeOrchestrator）生成到指定目录。
      * 显式传入旧 5-前缀白名单，确保与 golden tree 字节可比（无视测试平台的 defaultScanPackages）。
      */
-    private ProbeGenerator.GenerateResult generateAt(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
+    private ProbeBackend.GenerateResult generateAt(NekoScriptCatalogSnapshot snapshot, Path outputDir) {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 List.of("java", "net.minecraft", "net.minecraftforge", "net.neoforged", "com.tkisor.nekojs"),
                 List.of(), List.of(), List.of("minecraft"), 5, "SMART"));

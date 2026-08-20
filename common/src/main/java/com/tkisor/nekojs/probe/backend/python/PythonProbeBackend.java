@@ -13,7 +13,6 @@ import com.tkisor.nekojs.probe.FileEditorConfigContributor;
 import com.tkisor.nekojs.probe.events.GlobalDecl;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeContext;
-import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.probe.ProbeOutputCommitter;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
@@ -208,47 +207,24 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
     }
 
+    /**
+     * 渲染全部 Python 产物到内存（相对输出目录路径 → 内容）。落盘与原子提交由接口默认
+     * {@code generate} 统一负责，本方法不触碰磁盘。
+     */
     @Override
-    public ProbeGenerator.GenerateResult generate(ProbeContext ctx) {
-        long start = System.currentTimeMillis();
+    public Map<String, String> render(ProbeContext ctx) {
         List<TypeDecl> ir = ctx.ir();
         if (ir == null || ir.isEmpty()) {
-            return ProbeGenerator.GenerateResult.failure("python probe requires shared IR; no classes collected");
+            throw new IllegalArgumentException("python probe requires shared IR; no classes collected");
         }
-
-        Path outputDir = ctx.languageDir();
-        Path staging = ProbeOutputCommitter.stagingDir(outputDir);
-        Path backup = ProbeOutputCommitter.backupDir(outputDir);
-
-        try {
-            ProbeOutputCommitter.recoverStaging(outputDir, staging, backup);
-            Files.createDirectories(staging);
-
-            try {
-                int files = doGenerate(staging, ir, ctx.snapshot(), ctx.overrides().globals());
-
-                ProbeOutputCommitter.commit(staging, outputDir, backup);
-
-                long duration = System.currentTimeMillis() - start;
-                NekoJS.LOGGER.info("Probe [python] generated: {} files in {}ms", files, duration);
-                return ProbeGenerator.GenerateResult.success(files, duration);
-            } catch (Exception genFailure) {
-                ProbeOutputCommitter.deleteRecursive(staging);
-                throw genFailure;
-            }
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("Probe [python] generation failed", e);
-            return ProbeGenerator.GenerateResult.failure(e.getMessage());
-        }
+        return renderFiles(ir, ctx.snapshot(), ctx.overrides().globals());
     }
 
     // ============================== 生成主体 ==============================
 
-    private int doGenerate(Path staging, List<TypeDecl> ir, NekoScriptCatalogSnapshot snapshot,
-                           List<GlobalDecl> globals) throws IOException {
-        Path nekojsDir = staging.resolve("nekojs");
-        Path javaBase = nekojsDir.resolve("_java");
-        Files.createDirectories(javaBase);
+    private Map<String, String> renderFiles(List<TypeDecl> ir, NekoScriptCatalogSnapshot snapshot,
+                                            List<GlobalDecl> globals) {
+        Map<String, String> files = new LinkedHashMap<>();
 
         // 1. 按 Java 包分组 + 可用 FQN 集
         Map<String, List<TypeDecl>> byPkg = new TreeMap<>();
@@ -286,36 +262,27 @@ public final class PythonProbeBackend implements ProbeBackend {
         Map<String, PyAdapterAlias> wideningAliases = new LinkedHashMap<>(adapterAliases);
         wideningAliases.putAll(enumAliases);
 
-        int files = 0;
         // _java/__init__.pyi（namespace marker）
-        Files.writeString(javaBase.resolve("__init__.pyi"), "# Auto-generated namespace marker.\n");
-        files++;
+        files.put("nekojs/_java/__init__.pyi", "# Auto-generated namespace marker.\n");
 
         // 2. 每个包模块
         for (String pkg : allPkgs) {
-            Path pkgDir = javaBase;
-            for (String seg : pkg.split("\\.")) pkgDir = pkgDir.resolve(seg);
-            Files.createDirectories(pkgDir);
+            String pkgModule = "nekojs/_java/" + pkg.replace('.', '/') + "/__init__.pyi";
             List<TypeDecl> classes = byPkg.getOrDefault(pkg, List.of());
-            if (classes.isEmpty()) {
-                Files.writeString(pkgDir.resolve("__init__.pyi"), "# Auto-generated namespace marker.\n");
-            } else {
-                Files.writeString(pkgDir.resolve("__init__.pyi"),
-                        renderPackageModule(pkg, classes, classR, typeR, availableFqns, adapterAliases, enumAliases));
-            }
-            files++;
+            files.put(pkgModule, classes.isEmpty()
+                    ? "# Auto-generated namespace marker.\n"
+                    : renderPackageModule(pkg, classes, classR, typeR, availableFqns, adapterAliases, enumAliases));
         }
 
         // 3. 事件声明（B3）：nekojs/_events/<side>/__init__.pyi
-        files += writeEventStubs(nekojsDir, snapshot, typeR, availableFqns, wideningAliases);
+        writeEventStubs(files, snapshot, typeR, availableFqns, wideningAliases);
 
         // 4. nekojs/__init__.pyi（全局绑定 + 事件组入口 + probe.add_global 全局声明）
-        files += writeBindingsInit(nekojsDir, snapshot, availableFqns, typeR, globals);
+        writeBindingsInit(files, snapshot, availableFqns, typeR, globals);
 
         // 5. py.typed (PEP 561) + README
-        Files.writeString(nekojsDir.resolve("py.typed"), "");
-        Files.writeString(nekojsDir.resolve("README.md"), README_TEXT);
-        files += 2;
+        files.put("nekojs/py.typed", "");
+        files.put("nekojs/README.md", README_TEXT);
 
         return files;
     }
@@ -380,8 +347,8 @@ public final class PythonProbeBackend implements ProbeBackend {
     }
 
     /** nekojs/__init__.pyi：全局绑定 + 事件组入口 + {@code probe.add_global} 全局声明（{@code from nekojs import *} 的目标）。 */
-    private int writeBindingsInit(Path nekojsDir, NekoScriptCatalogSnapshot snapshot, Set<String> availableFqns,
-                                  ApiTypeRefPyRenderer typeR, List<GlobalDecl> globals) throws IOException {
+    private void writeBindingsInit(Map<String, String> files, NekoScriptCatalogSnapshot snapshot, Set<String> availableFqns,
+                                   ApiTypeRefPyRenderer typeR, List<GlobalDecl> globals) {
         List<BindingCatalogEntry> bindings = snapshot.bindings().stream()
                 .filter(BindingCatalogEntry::emit)
                 .toList();
@@ -466,8 +433,7 @@ public final class PythonProbeBackend implements ProbeBackend {
             sb.append("\"").append(allNames.get(i)).append("\"");
         }
         sb.append("]\n");
-        Files.writeString(nekojsDir.resolve("__init__.pyi"), sb.toString());
-        return 1;
+        files.put("nekojs/__init__.pyi", sb.toString());
     }
 
     /** 每个 side 的事件组名（按事件出现顺序去重）；无事件的 side 不出现。 */
@@ -496,30 +462,25 @@ public final class PythonProbeBackend implements ProbeBackend {
     // ============================== 事件声明（B3） ==============================
 
     /** 为每个 side 写 {@code nekojs/_events/<side>/__init__.pyi}（无事件的 side 跳过）；root marker 一并产出。 */
-    private int writeEventStubs(Path nekojsDir, NekoScriptCatalogSnapshot snapshot,
-                                ApiTypeRefPyRenderer typeR, Set<String> availableFqns,
-                                Map<String, PyAdapterAlias> adapterAliases) throws IOException {
+    private void writeEventStubs(Map<String, String> files, NekoScriptCatalogSnapshot snapshot,
+                                 ApiTypeRefPyRenderer typeR, Set<String> availableFqns,
+                                 Map<String, PyAdapterAlias> adapterAliases) {
         List<EventCatalogEntry> events = snapshot.events();
-        if (events == null || events.isEmpty()) return 0;
+        if (events == null || events.isEmpty()) return;
 
         PythonEventRenderer eventR = new PythonEventRenderer(typeR, availableFqns);
         int count = 0;
-        Path eventsBase = nekojsDir.resolve("_events");
         for (ScriptType side : ScriptType.all()) {
             List<EventCatalogEntry> sideEvents = events.stream()
                     .filter(e -> e.scriptType().test(side))
                     .toList();
             if (sideEvents.isEmpty()) continue;
-            Path dir = eventsBase.resolve(side.name);
-            Files.createDirectories(dir);
-            Files.writeString(dir.resolve("__init__.pyi"), eventR.render(side, sideEvents, adapterAliases));
+            files.put("nekojs/_events/" + side.name + "/__init__.pyi", eventR.render(side, sideEvents, adapterAliases));
             count++;
         }
         if (count > 0) {
-            Files.writeString(eventsBase.resolve("__init__.pyi"), "# Auto-generated namespace marker.\n");
-            count++;
+            files.put("nekojs/_events/__init__.pyi", "# Auto-generated namespace marker.\n");
         }
-        return count;
     }
 
     // ============================== 适配器输入别名（B4） ==============================

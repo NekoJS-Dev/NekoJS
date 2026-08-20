@@ -27,6 +27,8 @@ public final class ProbeConfigLoader {
 
             setup(config, "enabled", true,
                     " Master switch for probe (.d.ts / .pyi) generation. Use /nekojs probe enable|disable to toggle.");
+            setup(config, "runAtStartup", false,
+                    " Run the default probe automatically once after each server start (opt-in; equivalent to `/nekojs probe` at ServerStarted). Keeps type declarations fresh without remembering the command.");
             setup(config, "baseDir", ".neko_probe",
                     " Base directory for probe output (relative to the game directory). Each language backend owns its own subdirectory under this.");
 
@@ -52,6 +54,7 @@ public final class ProbeConfigLoader {
                     " outputDir for the python backend (defaults to 'python'; a null/missing value falls back to the language id).");
 
             boolean enabled = config.getOrElse("enabled", Boolean.TRUE);
+            boolean runAtStartup = config.getOrElse("runAtStartup", Boolean.FALSE);
             String baseDir = config.getOrElse("baseDir", ".neko_probe");
             List<String> includePackages = stringList(config, "scan.includePackages");
             List<String> extraIncludePackages = stringList(config, "scan.extraIncludePackages");
@@ -61,7 +64,7 @@ public final class ProbeConfigLoader {
             String mode = config.getOrElse("scan.mode", "SMART");
             Map<String, ProbeConfig.LanguageConfig> languages = languages(config);
 
-            return new ProbeConfig(enabled, baseDir,
+            return new ProbeConfig(enabled, runAtStartup, baseDir,
                     new ProbeConfig.ScanConfig(includePackages, extraIncludePackages, excludePackages, forceScanMods, maxDepth, mode),
                     languages);
         } catch (Throwable e) {

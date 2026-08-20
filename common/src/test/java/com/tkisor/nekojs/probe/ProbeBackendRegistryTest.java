@@ -91,8 +91,8 @@ class ProbeBackendRegistryTest {
             @Override public String name() { return name; }
             @Override public int priority() { return priority; }
             @Override
-            public ProbeGenerator.GenerateResult generate(ProbeContext ctx) {
-                return ProbeGenerator.GenerateResult.success(0, 0L);
+            public java.util.Map<String, String> render(ProbeContext ctx) {
+                return java.util.Map.of();
             }
         };
     }

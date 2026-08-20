@@ -45,6 +45,28 @@ public final class ProbeOutputCommitter {
     }
 
     /**
+     * 校验 render 产物键集：返回第一个非法的相对路径（null = 全部合法）。
+     * 非法 = null/空白、绝对路径、含 {@code ..} 段、或含非法路径字符（NUL 等）。
+     * backend 声明文件不应拥有任意文件系统写权限——越界路径在这里被拒绝。
+     */
+    public static String firstIllegalRelativePath(Iterable<String> keys) {
+        for (String key : keys) {
+            if (key == null || key.isBlank()) return String.valueOf(key);
+            Path p;
+            try {
+                p = Path.of(key);
+            } catch (RuntimeException e) {
+                return key;
+            }
+            if (p.isAbsolute()) return key;
+            for (Path seg : p) {
+                if ("..".equals(seg.toString())) return key;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 恢复上次进程崩溃可能残留的中间态：丢弃半成品 staging；若 outputDir 缺失但有 backup，
      * 恢复 backup。调用方随后自行 {@code Files.createDirectories(staging)}。
      */

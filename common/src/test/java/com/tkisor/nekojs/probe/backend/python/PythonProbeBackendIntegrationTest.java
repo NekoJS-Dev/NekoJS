@@ -12,9 +12,9 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.EditorConfigContributor;
+import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeConfig;
 import com.tkisor.nekojs.probe.ProbeContext;
-import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.probe.events.Snippet;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
@@ -65,7 +65,7 @@ class PythonProbeBackendIntegrationTest {
         Path outputDir = temp.resolve("probe-python");
         ProbeContext ctx = new ProbeContext.Of(snapshot, List.of(), cfg, paths, "python", outputDir, ir);
 
-        ProbeGenerator.GenerateResult res = new PythonProbeBackend().generate(ctx);
+        ProbeBackend.GenerateResult res = new PythonProbeBackend().generate(ctx);
         assertTrue(res.success(), "generate failed: " + res.message());
 
         // pkg.a 模块：跨包 import Bar + class Foo + 方法
@@ -97,7 +97,7 @@ class PythonProbeBackendIntegrationTest {
                 List.of(), List.of(), List.of(), List.of(), 5, "SMART"));
         ProbeContext ctx = new ProbeContext.Of(emptySnapshot(), List.of(), cfg, paths, "python",
                 temp.resolve("out"), List.of());
-        ProbeGenerator.GenerateResult res = new PythonProbeBackend().generate(ctx);
+        ProbeBackend.GenerateResult res = new PythonProbeBackend().generate(ctx);
         assertFalse(res.success(), "empty IR should fail cleanly, not produce garbage");
     }
 
@@ -113,7 +113,7 @@ class PythonProbeBackendIntegrationTest {
                 null, "self-named binding", List.of(), List.of());
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(binding), List.of(), List.of());
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String init = Files.readString(temp.resolve("probe-python/nekojs/__init__.pyi"));
@@ -138,7 +138,7 @@ class PythonProbeBackendIntegrationTest {
                 "NekoItemHelper", "item binding", List.of(), List.of());
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(item), List.of(), List.of());
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of("com.example"));
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of("com.example"));
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String init = Files.readString(temp.resolve("probe-python/nekojs/__init__.pyi"));
@@ -174,7 +174,7 @@ class PythonProbeBackendIntegrationTest {
         NekoScriptCatalogSnapshot snapshot = snapshotWith(
                 List.of(serverEvents), List.of(recipes, tick), List.of(adapter));
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         Path out = temp.resolve("probe-python");
@@ -225,7 +225,7 @@ class PythonProbeBackendIntegrationTest {
                 ConversionPrecedence.HIGH, Optional.empty());
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter));
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         // 别名声明在目标类的包模块里
@@ -250,7 +250,7 @@ class PythonProbeBackendIntegrationTest {
         TypeDecl plain = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.d.Plain");
         List<TypeDecl> ir = List.of(color, plain);
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.c", "pkg.d"));
+        ProbeBackend.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.c", "pkg.d"));
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String cMod = Files.readString(temp.resolve("probe-python/nekojs/_java/pkg/c/__init__.pyi"));
@@ -277,7 +277,7 @@ class PythonProbeBackendIntegrationTest {
                 false, true, "SampleEvents.dispatch(key, event => {\n  $0\n})");
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(dispatch), List.of());
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String server = Files.readString(temp.resolve("probe-python/nekojs/_events/server/__init__.pyi"));
@@ -302,7 +302,7 @@ class PythonProbeBackendIntegrationTest {
                 ConversionPrecedence.HIGH, Optional.empty());
 
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of(registry));
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String module = Files.readString(temp.resolve(
@@ -327,7 +327,7 @@ class PythonProbeBackendIntegrationTest {
                 ConversionPrecedence.HIGH, Optional.empty());
 
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of(big));
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String module = Files.readString(temp.resolve(
@@ -349,7 +349,7 @@ class PythonProbeBackendIntegrationTest {
                 ConversionPrecedence.HIGH, Optional.empty());
 
         NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of());
-        ProbeGenerator.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
         assertTrue(res.success(), "generate failed: " + res.message());
 
         String module = Files.readString(temp.resolve(
@@ -371,7 +371,7 @@ class PythonProbeBackendIntegrationTest {
         hidden.mutated = true;
         List<TypeDecl> ir = List.of(a, hidden);
 
-        ProbeGenerator.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.a", "pkg.b"));
+        ProbeBackend.GenerateResult res = runGenerate(temp, emptySnapshot(), ir, List.of("pkg.a", "pkg.b"));
         assertTrue(res.success(), "generate failed: " + res.message());
 
         // A 的模块：不 import Hidden；对 Hidden 的引用降级为 Any
@@ -469,7 +469,7 @@ class PythonProbeBackendIntegrationTest {
                 List.of(), List.of(), registries, null, Map.of(), List.of());
     }
 
-    private static ProbeGenerator.GenerateResult runGenerate(Path temp, NekoScriptCatalogSnapshot snapshot,
+    private static ProbeBackend.GenerateResult runGenerate(Path temp, NekoScriptCatalogSnapshot snapshot,
                                                              List<TypeDecl> ir, List<String> includes) throws Exception {
         ProbeConfig cfg = new ProbeConfig(true, ".neko_probe", new ProbeConfig.ScanConfig(
                 includes, List.of(), List.of(), List.of(), 5, "SMART"));

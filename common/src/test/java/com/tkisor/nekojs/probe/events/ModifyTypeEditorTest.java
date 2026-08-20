@@ -6,7 +6,6 @@ import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.ProbeConfig;
 import com.tkisor.nekojs.probe.ProbeContext;
-import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.probe.TypeScriptProbeBackend;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
@@ -16,6 +15,7 @@ import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;
 import com.tkisor.nekojs.probe.ir.TypeSlot;
 import com.tkisor.nekojs.probe.types.TypeAliasRegistry;
 import com.tkisor.nekojs.probe.types.TypeConverter;
+import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -354,7 +354,7 @@ class ModifyTypeEditorTest {
                 List.of(java.io.File.class, java.nio.file.Path.class), cfg,
                 NekoJSPaths.fromGameDir(temp), "typescript", out, List.of(pathDecl));
 
-        ProbeGenerator.GenerateResult res = new TypeScriptProbeBackend().generate(ctx);
+        ProbeBackend.GenerateResult res = new TypeScriptProbeBackend().generate(ctx);
         assertTrue(res.success(), "generate failed: " + res.message());
 
         // java/io 模块：File 的反射 import 里 Path 被剔除，其余跨包 import（URI/URL）不受影响

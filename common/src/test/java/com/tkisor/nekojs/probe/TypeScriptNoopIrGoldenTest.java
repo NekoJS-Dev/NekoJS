@@ -97,8 +97,8 @@ class TypeScriptNoopIrGoldenTest {
         ProbeContext ctxA = ctx(snapshot, collected, cfg, outA, null);
         ProbeContext ctxB = ctx(snapshot, collected, cfg, outB, ir);
 
-        ProbeGenerator.GenerateResult resultA = new TypeScriptProbeBackend().generate(ctxA);
-        ProbeGenerator.GenerateResult resultB = new TypeScriptProbeBackend().generate(ctxB);
+        ProbeBackend.GenerateResult resultA = new TypeScriptProbeBackend().generate(ctxA);
+        ProbeBackend.GenerateResult resultB = new TypeScriptProbeBackend().generate(ctxB);
         assertTrue(resultA.success(), "legacy path failed: " + resultA.message());
         assertTrue(resultB.success(), "IR path failed: " + resultB.message());
 
@@ -173,7 +173,7 @@ class TypeScriptNoopIrGoldenTest {
         ProbeContext ctx = ctx(emptySnapshot(), List.of(recipeEventClass), goldenConfig(),
                 out, List.of(decl));
 
-        ProbeGenerator.GenerateResult result = new TypeScriptProbeBackend().generate(ctx);
+        ProbeBackend.GenerateResult result = new TypeScriptProbeBackend().generate(ctx);
         assertTrue(result.success(), result.message());
 
         // 包路径 = fqn 包名（$ 内部类按 fqn 写入该包）

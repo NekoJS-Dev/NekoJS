@@ -115,6 +115,7 @@
 | 键 | 默认 | 语义 |
 |---|---|---|
 | `enabled` | `true` | 总开关。`false` 时 probe 直接返回失败结果（"probe disabled in probe.toml"）。`/nekojs probe enable|disable` 就是改这个键 |
+| `runAtStartup` | `false` | 开服自动跑一次默认 TS probe（ServerStarted 时，等价 `/nekojs probe`；结果摘要进日志，失败不影响开服）。不想每次手动敲命令就打开它 |
 | `baseDir` | `".neko_probe"` | 输出基目录（相对游戏目录）。每个语言 backend 拥有其下 `<baseDir>/<语言>` 子目录（如 `.neko_probe/typescript`） |
 | `scan.includePackages` | `[]` | 类扫描的包规则白名单。条目为**字面包前缀**（`fqn` 以 `前缀.` 开头）或 **`re:` 正则**（如 `re:com\.example\..*\.api\..*`，对全限定名整体匹配）。**覆盖语义**：非空时**完全取代**默认白名单（`java`、`com.tkisor.nekojs`、平台默认 MC/loader 包）。要**追加**请用 `extraIncludePackages`，不要在此重抄默认值 |
 | `scan.extraIncludePackages` | `[]` | 追加到生效白名单（**追加语义**，同样支持字面前缀与 `re:` 正则）。适合加 `com.mojang` 或某 mod 的包 |
@@ -291,6 +292,8 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `ProbeCoordinator` | `common/.../probe/` | 协调器：共享类收集（BFS）、按需共享 IR、事件触发、派发 backend、外部副作用 |
 | `ProbeBackendRegistry` | `common/.../probe/` | backend 按 `(语言, 名字)` 二维登记；lock 时冲突崩溃；命令解析与补全 |
 | `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`generate`/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
+| `ProbeBackendSelector` | `common/.../probe/` | `/nekojs probe` 的 backend 解析（语言默认/per-language 配置覆盖/全选/补全），三平台命令层共用 |
+| `ProbeOutputCommitter` | `common/.../probe/` | staging/backup 目录交换的唯一实现（恢复/提交/递归删除/render 产物路径校验） |
 | `TypeScriptProbeBackend` | `common/.../probe/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径） |
 | `PythonProbeBackend` | `common/.../probe/backend/python/` | 内置 Python backend：`.pyi` stub 包（`requiresIr=true`） |
 | `TypeReflector` / `TypeDecl` | `common/.../probe/ir/` | `Class<?>` → 声明 IR（getter/setter 推断、`@Remap`/`@HideFromJS`、`@Doc` 注解文档） |
@@ -347,9 +350,12 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 }
 ```
 
+**实现契约（预发布重构后大幅简化）**：只需实现 `render(ProbeContext)`——返回「相对输出目录的路径（`/` 分隔）→ UTF-8 文本内容」的映射，**不触碰磁盘**；staging 落盘、原子提交、崩溃恢复、路径越界校验（拒绝绝对路径与 `..`）由接口的默认 `generate` 统一负责。渲染抛异常即失败结果，旧输出自动保留。
+
 **规则**：
 - 同一 `(语言, 名字)` 重复注册 → bootstrap lock 时**崩溃**（确定性冲突，列出所有注册者）。
 - 同语言多 backend 时，`/nekojs probe <语言>` 选 priority 最高者，其余用 `/nekojs probe <语言> <名字>` 指定。
+- 两个选中 backend 的 outputDir 相同时，一次运行只跑第一个、其余跳过并告警（staging 整目录替换会互相吞产物；要共目录请用 `outputDir` 配置区分）。
 - 你的 TS backend 要遵守上面的模块布局约定，否则 `jsconfig.json` 路径失效。
 
 ## Probe 的当前局限

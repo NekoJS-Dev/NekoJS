@@ -19,11 +19,11 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
-import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -410,12 +410,12 @@ public final class NekoJSCommands {
 
         try {
             var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
-            List<ProbeGenerator.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
+            List<ProbeBackend.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
 
             int totalFiles = 0;
             long maxMs = 0;
             boolean allOk = true;
-            for (ProbeGenerator.GenerateResult r : results) {
+            for (ProbeBackend.GenerateResult r : results) {
                 if (r.success()) {
                     totalFiles += r.filesGenerated();
                     maxMs = Math.max(maxMs, r.durationMs());
@@ -432,6 +432,22 @@ public final class NekoJSCommands {
                 final long ms = maxMs;
                 source.sendSuccess(() -> Component.literal(
                         "Probe generated: " + tf + " files in " + ms + "ms"), false);
+                // 输出目录提示：用户最常问「文件去哪了」；相对游戏目录显示
+                String dirs = results.stream()
+                        .map(ProbeBackend.GenerateResult::outputDir)
+                        .filter(java.util.Objects::nonNull)
+                        .map(d -> {
+                            try {
+                                return NekoJSPaths.get().gameDir().relativize(d).toString();
+                            } catch (IllegalArgumentException e) {
+                                return d.toString();
+                            }
+                        })
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+                if (!dirs.isEmpty()) {
+                    source.sendSystemMessage(Component.literal("  Output: " + dirs));
+                }
             }
         } catch (Exception e) {
             NekoJS.LOGGER.error("Probe generation failed", e);

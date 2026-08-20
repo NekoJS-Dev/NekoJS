@@ -106,7 +106,7 @@ class ProbeCoordinatorInstanceTest {
         Files.writeString(cfgFile, "enabled = true\n[scan]\nmode = \"NONE\"\n", StandardCharsets.UTF_8);
 
         ProbeCoordinator c = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
-        List<ProbeGenerator.GenerateResult> results = c.runProbe(emptySnapshot(), List.of(new TypeScriptProbeBackend()));
+        List<ProbeBackend.GenerateResult> results = c.runProbe(emptySnapshot(), List.of(new TypeScriptProbeBackend()));
         assertEquals(1, results.size());
         assertFalse(results.get(0).success());
         assertEquals("probe disabled (scan mode=NONE in probe.toml)", results.get(0).message());

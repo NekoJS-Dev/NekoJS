@@ -15,7 +15,6 @@ import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
-import com.tkisor.nekojs.probe.ProbeGenerator;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import net.minecraft.command.CommandBase;
@@ -303,12 +302,12 @@ public class NekoJSCommands extends CommandBase {
         // 其 <clinit> 调用 OpenGL 会崩溃；故保持在命令线程上触发。
         try {
             var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
-            List<ProbeGenerator.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
+            List<ProbeBackend.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
 
             int totalFiles = 0;
             long maxMs = 0;
             boolean allOk = true;
-            for (ProbeGenerator.GenerateResult r : results) {
+            for (ProbeBackend.GenerateResult r : results) {
                 if (r.success()) {
                     totalFiles += r.filesGenerated();
                     maxMs = Math.max(maxMs, r.durationMs());
@@ -325,6 +324,24 @@ public class NekoJSCommands extends CommandBase {
                     : "Probe completed with failures";
             NekoJS.LOGGER.info("Probe ({}) {}", names, msg);
             sender.sendMessage(new TextComponentString(msg));
+            if (allOk) {
+                // 输出目录提示：相对游戏目录显示
+                StringBuilder dirs = new StringBuilder();
+                for (ProbeBackend.GenerateResult r : results) {
+                    if (r.outputDir() == null) continue;
+                    String rel;
+                    try {
+                        rel = NekoJSPaths.get().gameDir().relativize(r.outputDir()).toString();
+                    } catch (IllegalArgumentException e) {
+                        rel = r.outputDir().toString();
+                    }
+                    if (dirs.length() > 0) dirs.append(", ");
+                    dirs.append(rel);
+                }
+                if (dirs.length() > 0) {
+                    sender.sendMessage(new TextComponentString("  Output: " + dirs));
+                }
+            }
         } catch (Throwable e) {
             NekoJS.LOGGER.error("Probe generation crashed", e);
             sender.sendMessage(new TextComponentString(

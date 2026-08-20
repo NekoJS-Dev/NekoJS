@@ -67,7 +67,7 @@ class ProbeScanModeTest {
         Files.writeString(cfgFile, "enabled = true\n[scan]\nmode = \"NONE\"\n", StandardCharsets.UTF_8);
         ProbeCoordinator.reloadConfig();
         try {
-            List<ProbeGenerator.GenerateResult> results =
+            List<ProbeBackend.GenerateResult> results =
                     ProbeCoordinator.run(emptySnapshot(), List.of(new TypeScriptProbeBackend()));
             assertEquals(1, results.size());
             assertFalse(results.get(0).success());

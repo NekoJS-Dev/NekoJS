@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.probe;
 
 import com.tkisor.nekojs.NekoJS;
+
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.AdapterCatalogEntry;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
@@ -93,122 +94,98 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         return true;
     }
 
+    /**
+     * 渲染全部 TS 产物到内存（相对输出目录路径 → 内容）。落盘与原子提交由接口默认
+     * {@code generate} 经 {@link ProbeOutputCommitter} 统一负责，本方法不触碰磁盘。
+     */
     @Override
-    public ProbeGenerator.GenerateResult generate(ProbeContext ctx) {
-        long start = System.currentTimeMillis();
-        int filesGenerated = 0;
+    public Map<String, String> render(ProbeContext ctx) {
         NekoScriptCatalogSnapshot snapshot = ctx.snapshot();
-        Path outputDir = ctx.languageDir();
         List<String> platformPkgs = ProbeConfigLoader.platformDefaultPackages();
-
-        // 原子输出：生成到同级 staging 目录，全部成功后整体替换 outputDir。
-        // 失败则丢弃 staging，旧 outputDir 完整保留，避免「先删后生成」中途失败丢声明。
-        Path staging = ProbeOutputCommitter.stagingDir(outputDir);
-        Path backup = ProbeOutputCommitter.backupDir(outputDir);
-
+        Map<String, String> files = new LinkedHashMap<>();
         try {
-            // 恢复上次进程崩溃可能残留的中间态（丢弃半成品 staging / 恢复 backup），见 committer
-            ProbeOutputCommitter.recoverStaging(outputDir, staging, backup);
-            Files.createDirectories(staging);
-
-            try {
-                // 1. 种子类来自共享收集（ProbeCoordinator 的 BFS 结果）
-                Set<String> classesToGenerate = new LinkedHashSet<>();
-                for (Class<?> c : ctx.collectedClasses()) {
-                    classesToGenerate.add(c.getName());
-                }
-
-                // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
-                // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
-                // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
-                for (AdapterCatalogEntry adapter : snapshot.adapters()) {
-                    String name = adapter.targetType().getName();
-                    if (ctx.config().isRelevantClass(name, platformPkgs)) {
-                        classesToGenerate.add(name);
-                    }
-                }
-
-                // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
-                // 方法参数）+ 别名表（就近发声明）。必须在 predeclareDeclarations 之前，因为参数渲染依赖已注册的别名。
-                // 每次运行先清空 TypeAliasRegistry（恢复默认表），防止上一轮注册的适配器别名在目标类缺席时泄漏。
-                aliasRegistry.clear();
-                adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
-
-                // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
-                for (String host : adapterAliasGenerator.hostImports()) {
-                    if (ctx.config().isRelevantClass(host, platformPkgs)) {
-                        classesToGenerate.add(host);
-                    }
-                }
-
-                NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());
-
-                // 2. 构建包树
-                PackageTree tree = new PackageTree();
-                for (String fqn : classesToGenerate) {
-                    tree.addClass(fqn);
-                }
-
-                // 3. 单次反射多产物：共享 IR + TS 专属额外类 → 逐类渲染声明与 import 集合，
-                //    全部走唯一 IR 渲染路径（TypeReflector → TypeScriptClassRenderer）。
-                //    ctx.ir() 由 ProbeCoordinator 构建（TS 声明 requiresIr，共享层总是反射一次）。
-                //    线程池优先复用 ProbeCoordinator 的共享池（整个 probe 运行单池）；测试直连
-                //    构造的 ProbeContext 没有共享池时，本 backend 自建并负责关闭。
-                ExecutorService provided = ctx.sharedPool();
-                ExecutorService pool = provided != null
-                        ? provided
-                        : Executors.newFixedThreadPool(parallelism());
-                try {
-                    predeclareClasses(ctx.ir(), classesToGenerate, pool);
-
-                    // 4. 生成 @package Java 类型声明（写入 staging，复用同一线程池）
-                    filesGenerated += generatePackageDeclarations(tree, staging, pool);
-                } finally {
-                    if (provided == null) {
-                        pool.shutdown();
-                    }
-                }
-
-                // 4. 生成事件声明
-                filesGenerated += generateEventDeclarations(snapshot, staging);
-
-                // 5. 生成 recipe 事件声明（event.recipes.<namespace>.<type>(...)）
-                filesGenerated += generateRecipeEventDeclarations(snapshot, staging);
-
-                // 6. 生成绑定声明
-                filesGenerated += generateBindingDeclarations(snapshot, staging);
-
-                // 6. 生成 @side-only/{side}/index.d.ts（重新导出 events 和 bindings）
-                filesGenerated += generateSideRootIndexes(staging);
-
-                // 7. 生成 @special 注册表字面量类型
-                filesGenerated += generateSpecialTypes(snapshot, staging);
-
-                // 8. 生成 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
-                filesGenerated += generateManualDeclarations(snapshot, staging);
-
-                // 9. 生成 managed declarations
-                filesGenerated += generateManagedDeclarations(snapshot, staging);
-
-                // 10. 生成 probe.add_global 全局声明（@manual/globals.d.ts，已被 jsconfig include 覆盖）
-                filesGenerated += generateGlobalsDeclarations(ctx.overrides().globals(), staging);
-
-                // 全部生成成功：staging 整体替换 outputDir（外部副作用由 ProbeCoordinator 统一执行）
-                ProbeOutputCommitter.commit(staging, outputDir, backup);
-
-                long duration = System.currentTimeMillis() - start;
-                NekoJS.LOGGER.info("Probe [typescript] generated: {} files in {}ms", filesGenerated, duration);
-                return ProbeGenerator.GenerateResult.success(filesGenerated, duration);
-
-            } catch (Exception genFailure) {
-                // 生成中途失败：丢弃 staging 半成品，旧 outputDir 完整保留
-                ProbeOutputCommitter.deleteRecursive(staging);
-                throw genFailure;
+            // 1. 种子类来自共享收集（ProbeCoordinator 的 BFS 结果）
+            Set<String> classesToGenerate = new LinkedHashSet<>();
+            for (Class<?> c : ctx.collectedClasses()) {
+                classesToGenerate.add(c.getName());
             }
 
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("Probe [typescript] generation failed", e);
-            return ProbeGenerator.GenerateResult.failure(e.getMessage());
+            // 强制纳入相关前缀内的适配器目标类，确保其包模块与输入别名（$Foo_）一定生成。
+            // 跳过不在相关性前缀内的目标（如 gson 的 JsonObject）：它们的依赖图无法被干净探测，
+            // 强行生成会引入悬空类型引用；这类目标若被引用，按既有行为保持原样。
+            for (AdapterCatalogEntry adapter : snapshot.adapters()) {
+                String name = adapter.targetType().getName();
+                if (ctx.config().isRelevantClass(name, platformPkgs)) {
+                    classesToGenerate.add(name);
+                }
+            }
+
+            // 准备适配器输入别名：仅处理会被实际生成的目标，填充 TypeAliasRegistry（放宽引用该类型的
+            // 方法参数）+ 别名表（就近发声明）。必须在 predeclareDeclarations 之前，因为参数渲染依赖已注册的别名。
+            // 每次运行先清空 TypeAliasRegistry（恢复默认表），防止上一轮注册的适配器别名在目标类缺席时泄漏。
+            aliasRegistry.clear();
+            adapterAliasGenerator.prepare(snapshot.adapters(), classesToGenerate);
+
+            // 别名引用的跨包 host 类型（如 NekoId、Item）也需生成声明，否则别名里的 $NekoId 等会悬空
+            for (String host : adapterAliasGenerator.hostImports()) {
+                if (ctx.config().isRelevantClass(host, platformPkgs)) {
+                    classesToGenerate.add(host);
+                }
+            }
+
+            NekoJS.LOGGER.info("Probe [typescript]: {} classes to generate", classesToGenerate.size());
+
+            // 2. 构建包树
+            PackageTree tree = new PackageTree();
+            for (String fqn : classesToGenerate) {
+                tree.addClass(fqn);
+            }
+
+            // 3. 单次反射多产物：共享 IR + TS 专属额外类 → 逐类渲染声明与 import 集合，
+            //    全部走唯一 IR 渲染路径（TypeReflector → TypeScriptClassRenderer）。
+            //    ctx.ir() 由 ProbeCoordinator 构建（TS 声明 requiresIr，共享层总是反射一次）。
+            //    线程池优先复用 ProbeCoordinator 的共享池（整个 probe 运行单池）；测试直连
+            //    构造的 ProbeContext 没有共享池时，本 backend 自建并负责关闭。
+            ExecutorService provided = ctx.sharedPool();
+            ExecutorService pool = provided != null
+                    ? provided
+                    : Executors.newFixedThreadPool(parallelism());
+            try {
+                predeclareClasses(ctx.ir(), classesToGenerate, pool);
+
+                // 4. 渲染 @package Java 类型声明（并行渲染，产物进内存，复用同一线程池）
+                renderPackageDeclarations(tree, files, pool);
+            } finally {
+                if (provided == null) {
+                    pool.shutdown();
+                }
+            }
+
+            // 4. 渲染事件声明
+            renderEventDeclarations(snapshot, files);
+
+            // 5. 渲染 recipe 事件声明（event.recipes.<namespace>.<type>(...)）
+            renderRecipeEventDeclarations(snapshot, files);
+
+            // 6. 渲染绑定声明
+            renderBindingDeclarations(snapshot, files);
+
+            // 6. 渲染 @side-only/{side}/index.d.ts（重新导出 events 和 bindings）
+            renderSideRootIndexes(files);
+
+            // 7. 渲染 @special 注册表字面量类型
+            renderSpecialTypes(snapshot, files);
+
+            // 8. 渲染 @manual 手动声明（node:xxx 模块、helper 类型、插件模块）
+            renderManualDeclarations(snapshot, files);
+
+            // 9. 渲染 managed declarations
+            renderManagedDeclarations(snapshot, files);
+
+            // 10. 渲染 probe.add_global 全局声明（@manual/globals.d.ts，已被 jsconfig include 覆盖）
+            renderGlobalsDeclarations(ctx.overrides().globals(), files);
+
+            return files;
         } finally {
             // 清理生成过程中积累的缓存，释放内存
             indexFileGenerator.clearCaches();
@@ -281,13 +258,11 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
     }
 
     /**
-     * 生成 {@code probe.add_global} 收集的全局声明到 {@code @manual/globals.d.ts}。
+     * 渲染 {@code probe.add_global} 收集的全局声明到 {@code @manual/globals.d.ts}。
      * {@code @manual} 目录下的 .d.ts 已被各脚本目录的 jsconfig include 覆盖，故全局 declare const 生效。
      */
-    private int generateGlobalsDeclarations(List<GlobalDecl> globals, Path outputDir) throws IOException {
-        if (globals == null || globals.isEmpty()) return 0;
-        Path manualDir = outputDir.resolve("@manual");
-        Files.createDirectories(manualDir);
+    private void renderGlobalsDeclarations(List<GlobalDecl> globals, Map<String, String> files) {
+        if (globals == null || globals.isEmpty()) return;
         StringBuilder sb = new StringBuilder();
         sb.append("// Auto-generated by NekoJS probe — global declarations from probe.add_global.\n");
         sb.append("// Do not edit; regenerate with `/nekojs probe`.\n\n");
@@ -295,8 +270,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             sb.append("declare const ").append(g.name()).append(": ")
               .append(TypeScriptClassRenderer.renderTypeRef(g.type())).append(";\n");
         }
-        Files.writeString(manualDir.resolve("globals.d.ts"), sb.toString());
-        return 1;
+        files.put("@manual/globals.d.ts", sb.toString());
     }
 
     // ------------------------------------------------------------------
@@ -396,10 +370,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         }
     }
 
-    private int generatePackageDeclarations(PackageTree tree, Path outputDir, ExecutorService pool) throws IOException {
-        Path packageDir = outputDir.resolve("@package");
-        Files.createDirectories(packageDir);
-
+    private void renderPackageDeclarations(PackageTree tree, Map<String, String> files, ExecutorService pool) {
         List<PackageTree.Node> nodes = tree.traversePackages();
 
         // 收集所有类的简单名（用于同名冲突检测）
@@ -408,14 +379,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             allClassNames.addAll(node.classes);
         }
 
-        // 1. 批量创建所有目录
-        for (PackageTree.Node node : nodes) {
-            Files.createDirectories(packageDir.resolve(node.getPackagePath()));
-        }
-
-        // 2. 并行生成内容 + 写入文件（复用 generate() 的共享线程池，不另建池）
+        // 并行渲染各包 index.d.ts 内容（复用 render() 的共享线程池），主线程按序收进内存产物表
         List<PackageTree.Node> nodeList = new ArrayList<>(nodes);
-        CompletionService<Void> completion =
+        CompletionService<Map.Entry<String, String>> completion =
                 new ExecutorCompletionService<>(pool);
 
         int taskCount = 0;
@@ -424,79 +390,58 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 String packageName = node.getPackageName();
                 List<String> subpackages = node.getSubPackageNames();
                 String content = indexFileGenerator.generate(packageName, node.classes, subpackages, allClassNames);
-                Files.writeString(packageDir.resolve(node.getPackagePath()).resolve("index.d.ts"), content);
-                return null;
+                return Map.entry("@package/" + node.getPackagePath() + "/index.d.ts", content);
             });
             taskCount++;
         }
 
-        // 等待所有任务完成：包文件写失败（磁盘满/权限等）计为硬失败——若吞掉，generate 仍会提交
-        // staging 并报告成功，输出目录静默残缺。累计失败数并抛出，让 generate 走失败路径
-        // （丢弃 staging、保留旧 outputDir），与其它硬失败的处理一致
+        // 渲染失败计为硬失败——若吞掉，默认 generate 会提交 staging 并报告成功，输出静默残缺
         int failedTasks = 0;
         for (int i = 0; i < taskCount; i++) {
             try {
-                completion.take().get();
+                Map.Entry<String, String> rendered = completion.take().get();
+                files.put(rendered.getKey(), rendered.getValue());
             } catch (ExecutionException e) {
                 failedTasks++;
                 NekoJS.LOGGER.error("Probe [typescript] package generation task failed", e.getCause());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IOException("Package generation interrupted", e);
+                throw new IllegalStateException("Package generation interrupted", e);
             }
         }
         if (failedTasks > 0) {
-            throw new IOException("Package generation failed for " + failedTasks + " of " + taskCount + " packages");
+            throw new IllegalStateException("Package generation failed for " + failedTasks + " of " + taskCount + " packages");
         }
 
-        // 3. 生成根 index.d.ts
+        // 根 index.d.ts
         List<String> topPackages = new ArrayList<>();
         for (PackageTree.Node child : tree.getRoot().children.values()) {
             topPackages.add(child.name);
         }
-        Files.writeString(packageDir.resolve("index.d.ts"), indexFileGenerator.generateRoot(topPackages));
-
-        return taskCount + 1;
+        files.put("@package/index.d.ts", indexFileGenerator.generateRoot(topPackages));
     }
 
-    private int generateEventDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
-        int count = 0;
-        Path sideOnlyDir = outputDir.resolve("@side-only");
-
+    private void renderEventDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         for (ScriptType type : ScriptType.all()) {
             List<EventCatalogEntry> events = snapshot.events().stream()
                     .filter(e -> e.scriptType().test(type))
                     .toList();
             if (events.isEmpty()) continue;
 
-            Path dir = sideOnlyDir.resolve(type.name).resolve("events");
-            Files.createDirectories(dir);
-
-            String content = eventGenerator.generate(events, type);
-            Files.writeString(dir.resolve("index.d.ts"), content);
-            count++;
+            files.put("@side-only/" + type.name + "/events/index.d.ts", eventGenerator.generate(events, type));
         }
-
-        return count;
     }
 
-    private int generateRecipeEventDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+    private void renderRecipeEventDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         List<RecipeNamespaceCatalogEntry> namespaces = snapshot.recipeNamespaces();
-        if (namespaces.isEmpty()) return 0;
+        if (namespaces.isEmpty()) return;
 
         // 只为 server 脚本生成 recipe 声明
-        Path dir = outputDir.resolve("@side-only").resolve("server").resolve("events").resolve("recipes");
-        Files.createDirectories(dir);
-
-        String content = recipeEventGenerator.generate(namespaces, ScriptType.SERVER);
-        Files.writeString(dir.resolve("index.d.ts"), content);
-        return 1;
+        files.put("@side-only/server/events/recipes/index.d.ts",
+                recipeEventGenerator.generate(namespaces, ScriptType.SERVER));
     }
 
-    private int generateBindingDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
-        int count = 0;
-        Path sideOnlyDir = outputDir.resolve("@side-only");
-
+    private void renderBindingDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         for (ScriptType type : ScriptType.all()) {
             List<BindingCatalogEntry> bindings = snapshot.bindings().stream()
                     .filter(b -> b.scriptType() == type && b.emit())
@@ -504,56 +449,43 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             if (bindings.isEmpty()) continue;
 
             // 参考 ProbeJS: @side-only/server/bindings/index.d.ts（无 GlobalBindings 子目录）
-            Path dir = sideOnlyDir.resolve(type.name).resolve("bindings");
-            Files.createDirectories(dir);
-
-            String content = bindingGenerator.generate(bindings, type);
-            Files.writeString(dir.resolve("index.d.ts"), content);
-            count++;
+            files.put("@side-only/" + type.name + "/bindings/index.d.ts", bindingGenerator.generate(bindings, type));
         }
-
-        return count;
     }
 
     /**
      * 为每个 side 生成根 index.d.ts，重新导出 events 和 bindings。
-     * 参考 ProbeJS: @side-only/server/index.d.ts
+     * 参考 ProbeJS: @side-only/server/index.d.ts。side 的 events/bindings 是否存在
+     * 从已有产物键推导（等价旧实现的目录存在性检查）。
      */
-    private int generateSideRootIndexes(Path outputDir) throws IOException {
-        int count = 0;
-        Path sideOnlyDir = outputDir.resolve("@side-only");
-
-        for (ScriptType type : ScriptType.all()) {
-            Path sideDir = sideOnlyDir.resolve(type.name);
-            if (!Files.exists(sideDir)) continue;
-
-            StringBuilder sb = new StringBuilder();
-            Path eventsDir = sideDir.resolve("events");
-            Path bindingsDir = sideDir.resolve("bindings");
-
-            if (Files.exists(eventsDir)) {
-                sb.append("export * as events from \"@side-only/").append(type.name).append("/events\";\n");
-            }
-            if (Files.exists(bindingsDir)) {
-                sb.append("export * as bindings from \"@side-only/").append(type.name).append("/bindings\";\n");
-            }
-
-            if (sb.length() > 0) {
-                Files.writeString(sideDir.resolve("index.d.ts"), sb.toString());
-                count++;
+    private void renderSideRootIndexes(Map<String, String> files) {
+        Set<String> sides = new TreeSet<>();
+        for (String key : files.keySet()) {
+            if (key.startsWith("@side-only/")) {
+                String rest = key.substring("@side-only/".length());
+                int slash = rest.indexOf('/');
+                if (slash > 0) sides.add(rest.substring(0, slash));
             }
         }
+        for (String side : sides) {
+            boolean hasEvents = files.keySet().stream().anyMatch(k -> k.startsWith("@side-only/" + side + "/events"));
+            boolean hasBindings = files.keySet().stream().anyMatch(k -> k.startsWith("@side-only/" + side + "/bindings"));
+            if (!hasEvents && !hasBindings) continue;
 
-        return count;
+            StringBuilder sb = new StringBuilder();
+            if (hasEvents) {
+                sb.append("export * as events from \"@side-only/").append(side).append("/events\";\n");
+            }
+            if (hasBindings) {
+                sb.append("export * as bindings from \"@side-only/").append(side).append("/bindings\";\n");
+            }
+            files.put("@side-only/" + side + "/index.d.ts", sb.toString());
+        }
     }
 
-    private int generateSpecialTypes(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+    private void renderSpecialTypes(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         List<RegistryTypeCatalogEntry> registries = snapshot.registryTypes();
-        if (registries.isEmpty()) return 0;
-
-        Path specialDir = outputDir.resolve("@special");
-        Path typesDir = specialDir.resolve("types");
-        Files.createDirectories(typesDir);
+        if (registries.isEmpty()) return;
 
         StringBuilder sb = new StringBuilder();
         sb.append("declare module \"@special/types\" {\n");
@@ -581,18 +513,15 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         sb.append("}\n");
         sb.append("\nexport * as types from \"@special/types\";\n");
 
-        Files.writeString(specialDir.resolve("index.d.ts"), "export * as types from \"@special/types\";\n");
-        Files.writeString(typesDir.resolve("index.d.ts"), sb.toString());
-        return 2;
+        files.put("@special/index.d.ts", "export * as types from \"@special/types\";\n");
+        files.put("@special/types/index.d.ts", sb.toString());
     }
 
-    private int generateManualDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+    private void renderManualDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         List<ManualDeclarationCatalogEntry> entries = snapshot.manualDeclarations();
         if (entries == null || entries.isEmpty()) {
-            return 0;
+            return;
         }
-        Path manualDir = outputDir.resolve("@manual");
-        Files.createDirectories(manualDir);
         StringBuilder sb = new StringBuilder();
         sb.append("// Auto-generated by NekoJS probe. Manual declarations: node:xxx modules, helper types, plugin modules.\n");
         sb.append("// Do not edit; regenerate with /nekojs probe.\n\n");
@@ -604,25 +533,19 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             sb.append("// ").append(entry.id()).append('\n');
             sb.append(decl.trim()).append("\n\n");
         }
-        Files.writeString(manualDir.resolve("index.d.ts"), sb.toString());
-        return 1;
+        files.put("@manual/index.d.ts", sb.toString());
     }
 
-    private int generateManagedDeclarations(NekoScriptCatalogSnapshot snapshot, Path outputDir) throws IOException {
+    private void renderManagedDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         Map<ScriptType, ApiEnvironmentSnapshot> managedApis = snapshot.managedApis();
-        if (managedApis.isEmpty()) return 0;
+        if (managedApis.isEmpty()) return;
 
-        int count = 0;
         for (ScriptType type : ScriptType.all()) {
             String content = managedDeclGenerator.generate(managedApis, type);
             if (content.isEmpty()) continue;
 
-            Path dir = outputDir.resolve("@nekojs").resolve("managed").resolve(type.name);
-            Files.createDirectories(dir);
-            Files.writeString(dir.resolve("index.d.ts"), content);
-            count++;
+            files.put("@nekojs/managed/" + type.name + "/index.d.ts", content);
         }
-        return count;
     }
 
     // -----------------------------------------------------------------------

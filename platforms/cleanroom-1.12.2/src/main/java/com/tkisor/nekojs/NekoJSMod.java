@@ -125,6 +125,8 @@ public class NekoJSMod extends NekoJS {
     @Mod.EventHandler
     public void serverStarted(FMLServerStartedEvent event) {
         ServerEvents.STARTED.post(event);
+        // 开服自动 probe（probe.toml runAtStartup = true 时启用，默认关闭）；失败只记日志
+        com.tkisor.nekojs.probe.ProbeCoordinator.runStartupProbeIfConfigured();
     }
 
     @Mod.EventHandler

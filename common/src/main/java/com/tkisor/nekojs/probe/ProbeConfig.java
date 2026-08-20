@@ -30,7 +30,7 @@ import java.util.regex.PatternSyntaxException;
  * <p>B3：{@link #languages()} 承载 per-language 配置（{@code [languages.<languageId>]}）——
  * 每语言可指定优先使用的 backend 名与自定义输出子目录；两者皆可缺省（null → 沿用默认行为）。
  */
-public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {
+public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {
 
     /**
      * 单语言 probe 配置（{@code [languages.<languageId>]} 表）：
@@ -40,9 +40,14 @@ public record ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<
     public record LanguageConfig(String backend, String outputDir) {
     }
 
-    /** 3 参便捷构造：等价 {@code (enabled, baseDir, scan, Map.of())}，保持既有调用点源码兼容。 */
+    /** 旧 4 参兼容构造（runAtStartup = false），保持既有调用点源码兼容。 */
+    public ProbeConfig(boolean enabled, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {
+        this(enabled, false, baseDir, scan, languages);
+    }
+
+    /** 3 参便捷构造：等价 {@code (enabled, false, baseDir, scan, Map.of())}，保持既有调用点源码兼容。 */
     public ProbeConfig(boolean enabled, String baseDir, ScanConfig scan) {
-        this(enabled, baseDir, scan, Map.of());
+        this(enabled, false, baseDir, scan, Map.of());
     }
 
     /** 类扫描过滤配置。 */

@@ -18,6 +18,7 @@ import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -27,6 +28,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 import java.io.Reader;
 import java.util.Map;
@@ -45,6 +47,15 @@ public class ServerEventListener {
      * 脚本 reload 时由 {@code /nekojs reload server}（NekoJSCommands）重放，走同一条
      * 快照恢复路径；物品单例与已修改组件跨 vanilla /reload 保留，无需在此重放。
      */
+    /**
+     * 开服自动 probe（probe.toml {@code runAtStartup = true} 时启用，默认关闭）：
+     * 服务器完全启动后跑一次默认 TS backend，结果摘要进日志；失败不影响开服。
+     */
+    @SubscribeEvent
+    public static void onServerStarted(ServerStartedEvent event) {
+        ProbeCoordinator.runStartupProbeIfConfigured();
+    }
+
     @SubscribeEvent
     public static void onServerAboutToStart(ServerAboutToStartEvent event) {
         var server = event.getServer();
