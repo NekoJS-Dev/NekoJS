@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.probe;
+package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
@@ -125,7 +125,7 @@ public final class ManagedApiDeclarationGenerator {
         }
     }
 
-    static String renderSignature(ApiSignature sig) {
+    public static String renderSignature(ApiSignature sig) {
         if (sig.isConstructor()) {
             return renderConstructorSignature(sig);
         }
@@ -172,7 +172,7 @@ public final class ManagedApiDeclarationGenerator {
         }
     }
 
-    static String renderTypeRef(ApiTypeRef type) {
+    public static String renderTypeRef(ApiTypeRef type) {
         return switch (type.kind()) {
             case PRIMITIVE -> mapPrimitive(type.name());
             case SYMBOL -> {

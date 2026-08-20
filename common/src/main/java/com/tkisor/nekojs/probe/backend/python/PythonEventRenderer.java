@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.backend.python;
 
+import com.tkisor.nekojs.probe.backend.typescript.EventDeclarationGenerator;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;

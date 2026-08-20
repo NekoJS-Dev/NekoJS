@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.types;
 
+import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 

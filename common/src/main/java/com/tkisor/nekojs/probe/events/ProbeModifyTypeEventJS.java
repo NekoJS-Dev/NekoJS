@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe.events;
 
+import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.probe.ir.FieldDecl;

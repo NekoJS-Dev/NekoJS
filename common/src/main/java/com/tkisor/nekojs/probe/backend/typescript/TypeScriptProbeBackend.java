@@ -1,5 +1,13 @@
-package com.tkisor.nekojs.probe;
+package com.tkisor.nekojs.probe.backend.typescript;
 
+import com.tkisor.nekojs.probe.EditorConfigContributor;
+import com.tkisor.nekojs.probe.FileEditorConfigContributor;
+import com.tkisor.nekojs.probe.ProbeBackend;
+import com.tkisor.nekojs.probe.ProbeConfig;
+import com.tkisor.nekojs.probe.ProbeConfigLoader;
+import com.tkisor.nekojs.probe.ProbeContext;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
+import com.tkisor.nekojs.probe.ProbeOutputCommitter;
 import com.tkisor.nekojs.NekoJS;
 
 import com.tkisor.nekojs.api.ScriptType;

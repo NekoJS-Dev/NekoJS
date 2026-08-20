@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.ManagedApiDeclarationGenerator;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.surface.*;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;

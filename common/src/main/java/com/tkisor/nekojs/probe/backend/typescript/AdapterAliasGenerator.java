@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.probe;
+package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.AdapterInputShape.Slot;

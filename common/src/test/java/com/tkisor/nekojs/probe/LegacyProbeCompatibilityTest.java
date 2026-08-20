@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.AdapterAliasGenerator;
+import com.tkisor.nekojs.probe.backend.typescript.BindingDeclarationGenerator;
+import com.tkisor.nekojs.probe.backend.typescript.EventDeclarationGenerator;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;

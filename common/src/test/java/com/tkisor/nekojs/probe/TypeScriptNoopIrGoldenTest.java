@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.IndexFileGenerator;
+import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;

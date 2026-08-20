@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.catalog;
 
+import com.tkisor.nekojs.probe.backend.typescript.AdapterAliasGenerator;
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;

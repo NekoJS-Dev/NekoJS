@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.RecipeEventDeclarationGenerator;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.RecipeHandlerMethodEntry;
 import com.tkisor.nekojs.api.catalog.RecipeNamespaceCatalogEntry;

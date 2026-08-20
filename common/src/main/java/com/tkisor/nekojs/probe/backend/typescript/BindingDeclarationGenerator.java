@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.probe;
+package com.tkisor.nekojs.probe.backend.typescript;
 
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.ScriptType;

@@ -1,12 +1,12 @@
 package com.tkisor.nekojs.probe.events;
 
+import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.probe.ProbeConfig;
 import com.tkisor.nekojs.probe.ProbeContext;
-import com.tkisor.nekojs.probe.TypeScriptProbeBackend;
 import com.tkisor.nekojs.probe.ir.FieldDecl;
 import com.tkisor.nekojs.probe.ir.MethodDecl;
 import com.tkisor.nekojs.probe.ir.TypeDecl;

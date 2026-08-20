@@ -1,5 +1,6 @@
-package com.tkisor.nekojs.probe;
+package com.tkisor.nekojs.probe.backend.typescript;
 
+import com.tkisor.nekojs.probe.ProbeConfigLoader;
 import com.tkisor.nekojs.api.catalog.EventCatalogEntry;
 import com.tkisor.nekojs.probe.ir.TypeReflector;
 import com.tkisor.nekojs.probe.ir.TypeScriptClassRenderer;

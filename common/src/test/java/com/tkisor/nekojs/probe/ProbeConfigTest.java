@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.TypeScriptProbeBackend;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.probe.backend.python.PythonProbeBackend;

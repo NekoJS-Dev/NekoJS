@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.probe;
 
+import com.tkisor.nekojs.probe.backend.typescript.EventDeclarationGenerator;
 import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.tkisor.nekojs.NekoJS;
