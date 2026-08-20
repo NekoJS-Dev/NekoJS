@@ -51,8 +51,9 @@ public interface ProbeContext {
     ProbeOverrides overrides();
 
     /**
-     * 本次 probe 的共享线程池（由 {@link ProbeCoordinator} 创建，IR 反射构建与各 backend 的并行
-     * 生成共用；整个 probe 运行只有这一个池）。直接构造 {@code ProbeContext.Of} 的测试为 null，
+     * 本次 probe 的共享线程池（由 {@link ProbeCoordinator} 创建，IR 反射构建与各 backend **内部**的
+     * 并行渲染共用；整个 probe 运行只有这一个池。注意：backend 之间由协调器**串行**调度——线程池
+     * 不承诺 backend 间并行）。直接构造 {@code ProbeContext.Of} 的测试为 null，
      * backend 自行创建并负责关闭。默认 null。
      */
     default ExecutorService sharedPool() {

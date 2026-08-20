@@ -21,7 +21,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 | **TypeScript & JSX 本体支持** | 内置 `.ts` 可擦除 TypeScript 前端和轻量 `.jsx/.tsx` classic runtime lowering，无需额外编译步骤。 |
 | **原生 ESM 运行时** | 支持 `import`/`export`、live binding、循环依赖、top-level await、`import.meta`、动态 `import()`、ESM/CJS 互操作。 |
 | **Node.js 兼容 API** | 内置 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等核心模块 shim。 |
-| **IDE 智能提示** | 启动后自动生成 `.d.ts` 类型声明（`.neko_probe/`），无需外部 ProbeJS mod 即可获得补全。 |
+| **IDE 智能提示** | `/nekojs probe` 一键生成 TypeScript/Python 类型声明（`.neko_probe/`），无需外部 ProbeJS mod 即可获得补全。 |
 | **服务端热重载** | `/nekojs reload` 热重载服务端脚本；NeoForge 与 Cleanroom 均支持配方热重载（详见 [命令](命令)）。 |
 | **多平台** | 同时支持 NeoForge 26.1 / 26.2 / 1.21.1 与 Cleanroom 1.12.2（Forge），共享通用基础设施。 |
 

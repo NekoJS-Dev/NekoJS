@@ -2,7 +2,7 @@
 
 > Probe 是 NekoJS 内置的**类型声明生成器**（ProbeJS 等价物）。它反射运行中的 Java 类，为 **TypeScript** 生成 `.d.ts`、为 **Python** 生成 `.pyi` stub 包，配合编辑器配置让 IDE 获得补全。
 >
-> 内置两个 backend：`typescript:builtin` 与 `python:builtin`（在 `NekoPluginBootstrap` 注册）。第三方插件可通过 `registerProbeBackends` 注册自己的 backend。
+> 内置两个 backend：`typescript:builtin` 与 `python:builtin`（由 common 的 `NekoProbeBuiltinPlugin` 插件注册）。第三方插件可通过 `registerProbeBackends` 注册自己的 backend。
 
 ## 命令一览
 
@@ -32,11 +32,11 @@
      （SMART 走 include 白名单 + forceScanMods；FULL 直通仅排除；NONE 直接失败）
 
 2. 共享 IR（按需构建）
-   ├─ 触发条件：probe.modifyType / probe.assignType 有监听器，或选中 backend requiresIr（Python 恒 true）
+   ├─ 触发条件：probe.modifyType / probe.assignType 有监听器，或选中 backend requiresIr
+   │  （TS 与 Python 内置 backend 均 requiresIr=true，IR 是唯一渲染源）
    ├─ TypeReflector 并行反射每个收集到的类 → List<TypeDecl>（反射失败的类跳过）
    ├─ 先应用 probe.assignType（全局类型重定向，标记受影响类 mutated）
    └─ 再触发 probe.modifyType（参数级编辑，显式编辑不被 assign 二次覆盖）
-     （TS 无监听器时 ir=null，完全走旧 ClassDeclGenerator 路径，产物零回归）
 
 3. probe.addGlobal / probe.snippets 收集（各有监听器才触发）
 
@@ -154,12 +154,12 @@ outputDir = "typescript"     # 未设 → 语言 id 本身
 
 | 事件 | 事件对象 | 时机/作用 |
 |---|---|---|
-| `modifyType` | `ProbeModifyTypeEventJS` | 类型渲染**之前**（IR 构建后）：对反射产出的 `TypeDecl` 做参数级编辑。被触及的类由 `TypeScriptClassRenderer` 重新渲染并覆盖声明缓存；未触及的类仍走旧 `ClassDeclGenerator` 路径（TS 产物零回归） |
+| `modifyType` | `ProbeModifyTypeEventJS` | 类型渲染**之前**（IR 构建后）：对反射产出的 `TypeDecl` 做参数级编辑；被标记的类渲染时直接使用编辑后的 IR |
 | `assignType` | `ProbeAssignTypeEventJS` | 全局类型重定向：把某 Java 全限定名**处处**改写为自定义类型。IR 构建后应用（替换 SYMBOL 类型槽），TS（重渲染被触及类）与 Python 均生效 |
 | `addGlobal` | `ProbeAddGlobalEventJS` | 登记额外全局声明（名字+类型）。TS → `@manual/globals.d.ts`（`declare const Name: T;`）；Python → `nekojs/__init__.pyi` |
 | `snippets` | `ProbeSnippetEventJS` | 登记 VSCode `.code-snippets` 片段。当前仅 TS backend 消费（合并进 `nekojs/.vscode/nekojs.code-snippets`，probe 拥有的片段名替换，用户片段保留） |
 
-> `modifyType` / `assignType` 有监听器时，coordinator 会构建共享 IR（Python backend 恒需 IR）；两者皆无监听器且只跑 TS 时，IR 不构建，TS 走旧路径零回归。
+> 共享 IR 在任一选中 backend 需要（内置 TS/Python 均 requiresIr=true）或有 `modifyType`/`assignType` 监听器时构建一次，所有 backend 复用同一份（已含编辑）。
 
 类型入参（所有编辑/声明方法）接受：
 - **字符串**：含 `.` → Java 全限定名（SYMBOL）；否则 → 原始类型名（`"string"`/`"number"`/`"boolean"`/`"int"`…）
@@ -291,11 +291,10 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `ProbeCoordinator` | `common/.../probe/` | 协调器：共享类收集（BFS）、按需共享 IR、事件触发、派发 backend、外部副作用 |
 | `ProbeBackendRegistry` | `common/.../probe/` | backend 按 `(语言, 名字)` 二维登记；lock 时冲突崩溃；命令解析与补全 |
 | `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`generate`/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
-| `TypeScriptProbeBackend` | `common/.../probe/` | 内置 TS backend：`.d.ts` 全流程（旧 ClassDeclGenerator 路径 + IR 重渲染） |
+| `TypeScriptProbeBackend` | `common/.../probe/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径） |
 | `PythonProbeBackend` | `common/.../probe/backend/python/` | 内置 Python backend：`.pyi` stub 包（`requiresIr=true`） |
-| `TypeReflector` / `TypeDecl` | `common/.../probe/ir/` | `Class<?>` → 声明 IR（getter/setter 推断镜像旧实现） |
-| `TypeScriptClassRenderer` | `common/.../probe/ir/` | `TypeDecl` → TS 类/接口/枚举块（modifyType 重渲染路径；getter 覆盖表） |
-| `ClassDeclGenerator` | `common/.../probe/` | 旧路径：Java 类 → TS 类声明 |
+| `TypeReflector` / `TypeDecl` | `common/.../probe/ir/` | `Class<?>` → 声明 IR（getter/setter 推断、`@Remap`/`@HideFromJS`、`@Doc` 注解文档） |
+| `TypeScriptClassRenderer` | `common/.../probe/ir/` | `TypeDecl` → TS 类/接口/枚举块（唯一渲染路径；getter 覆盖表） |
 | `IndexFileGenerator` | `common/.../probe/` | 每包的 `index.d.ts`、import 收集、声明缓存覆盖 |
 | `BindingDeclarationGenerator` | `common/.../probe/` | `@side-only/{side}/bindings/index.d.ts` |
 | `EventDeclarationGenerator` | `common/.../probe/` | `@side-only/{side}/events/index.d.ts` |
@@ -323,7 +322,7 @@ snapshot 包含：
 
 ### 绑定自带类型
 
-`registry.register("Foo", new FooJS())` —— probe 会反射 `FooJS` 的公共方法。要带 JSDoc，用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`，见 [插件开发](插件开发)）；注解式文档（`@Doc`/`@Param`）尚在规划中。
+`registry.register("Foo", new FooJS())` —— probe 会反射 `FooJS` 的公共方法。要带 JSDoc，直接在类/方法/参数上标注 `@Doc`/`@Param`/`@Return` 注解（`TypeReflector` 消费后生成进 JSDoc），或用编程式 `registerTypeDocs`（`TypeDocsRegister.register(...)` / `registerManualDeclaration(...)`，见 [插件开发](插件开发)）。
 
 ### 注册表字面量
 
@@ -357,12 +356,11 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 > 这些是已知边界，列在这里让你知道。
 
-1. **`@Remap`/`@HideFromJS` 当前在 probe 不生效**：`ClassDeclGenerator` 用裸 `getDeclaredMethods()`，没走 `MemberVisibilityQuery`。计划修复（Phase A）。
-2. **JSDoc 覆盖少**：文档注解（`@Doc`/`@Param`）尚在规划中，当前靠编程式 `registerTypeDocs` 或 `ProbeEvents.modifyType` 的 `setDoc` 系列补 JSDoc。
-3. **事件 import 可能膨胀**：`EventDeclarationGenerator.collectImports` 递归无深度限制，可能拉进大量无关类（Phase C 修复）。
-4. **第三方类参数名退化**：NekoJS 各模块已在根 build.gradle 统一以 `-parameters` 编译，自身类的声明携带真实参数名；但未开 `-parameters` 的第三方 jar 与 JDK 类（标准 JDK 的 `java.*` class 文件不含 MethodParameters 属性）仍取不到参数名，`TypeReflector` 的 `isNamePresent` 兜底会把这类参数退化为 `arg0`/`arg1`…。
-5. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
-6. **Python stub 泛型展平**：类型变量渲染为 `Any`，不保留泛型参数关系（够日常补全，非完整类型）。
+1. **JSDoc 覆盖取决于注解覆盖**：`@Doc`/`@Param`/`@Return` 注解文档与 `@Remap`/`@RemapByPrefix`/`@HideFromJS` 名字/可见性语义均已实现（`TypeReflector` 直接消费，与运行时 Graal remapper 口径一致）；未标注的类靠编程式 `registerTypeDocs` 或 `ProbeEvents.modifyType` 的 `setDoc` 系列补 JSDoc。
+2. **事件 import 可能膨胀**：`EventDeclarationGenerator.collectImports` 递归无深度限制，可能拉进大量无关类（Phase C 修复）。
+3. **第三方类参数名退化**：NekoJS 各模块已在根 build.gradle 统一以 `-parameters` 编译，自身类的声明携带真实参数名；但未开 `-parameters` 的第三方 jar 与 JDK 类（标准 JDK 的 `java.*` class 文件不含 MethodParameters 属性）仍取不到参数名，`TypeReflector` 的 `isNamePresent` 兜底会把这类参数退化为 `arg0`/`arg1`…。
+4. **版本偏差**：probe 是手动触发的，新加 mod/注册内容后类型声明会过期，需重新 `/nekojs probe`。
+5. **Python stub 泛型展平**：类型变量渲染为 `Any`，不保留泛型参数关系（够日常补全，非完整类型）。
 
 ## 测试 probe
 
@@ -372,7 +370,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 - `ProbeConfigTest` / `ProbeScanModeTest` —— probe.toml 解析与 SMART/FULL/NONE 扫描语义。
 - `ProbeOutputCompatibilityTest` / `LegacyProbeTreeTest` / `TypeScriptNoopIrGoldenTest` —— TS 产物兼容性、未编辑 IR 与旧路径逐字一致（golden）、getter 覆盖在 IR 重渲染路径生效。
 - `TypeScriptProbeBackendEditorConfigTest` / `FileEditorConfigContributorTest` —— jsconfig/pyrightconfig 幂等合并。
-- `ClassDeclGeneratorTest` / `ManagedApiDeclarationGeneratorTest` —— 类声明生成。
+- `ManagedApiDeclarationGeneratorTest` —— managed API 全局声明生成。
 - `api/event/EventBusJSHasListenersTest` —— `hasListeners()` 的 `EventBusBase.isEmpty()` 兜底分支（probe 用它在无监听器时跳过 IR 构建）。
 
 详见这些测试了解 probe 的可测边界。
