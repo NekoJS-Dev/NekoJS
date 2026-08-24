@@ -58,7 +58,10 @@ public final class NekoJSPaths {
     private final Set<Path> scriptRoots;
 
     private NekoJSPaths(Path gameDir) {
-        this.gameDir = gameDir.toAbsolutePath().normalize();
+        // Windows 上 gameDir 可能带 8.3 短名（如 C:\Users\RUNNER~1\...）或大小写与磁盘实际形式
+        // 不一致：与 toRealPath() 的结果混用会让 startsWith 判定全部失配。构造时统一成 real
+        // 形式，所有派生路径（root/scripts/config...）随之同源；取 real 失败时退回逻辑形式。
+        this.gameDir = toRealForm(gameDir.toAbsolutePath().normalize());
         this.root = this.gameDir.resolve("nekojs");
         this.startupScripts = root.resolve("startup_scripts");
         this.serverScripts = root.resolve("server_scripts");
@@ -157,7 +160,7 @@ public final class NekoJSPaths {
         }
 
         Path target = verifyInsideGameDir(root.resolve(parsed));
-        if (!target.startsWith(root.toAbsolutePath().normalize())) {
+        if (!target.startsWith(canonicalSplicedForm(root))) {
             throw new IOException("Access outside NekoJS workspace is forbidden: " + relativePath);
         }
         if (!isSupportedScriptFile(target)) {
@@ -170,9 +173,9 @@ public final class NekoJSPaths {
     }
 
     public boolean isInsideScriptRoot(Path path) {
-        Path normalized = path.normalize().toAbsolutePath();
+        Path normalized = canonicalSplicedForm(path);
         return scriptRoots.stream()
-                .map(rt -> rt.normalize().toAbsolutePath())
+                .map(rt -> canonicalSplicedForm(rt.normalize().toAbsolutePath()))
                 .anyMatch(normalized::startsWith);
     }
 
@@ -181,6 +184,16 @@ public final class NekoJSPaths {
     }
 
     /* ================= 内部工具 ================= */
+
+    /** 存在则返回 toRealPath 形式（解析 8.3 短名/大小写/symlink），否则原样返回。 */
+    private static Path toRealForm(Path path) {
+        try {
+            return Files.exists(path) ? path.toRealPath() : path;
+        } catch (IOException e) {
+            return path;
+        }
+    }
+
     private Path resolveAgainstWorkingDirectory(String path, Path currentWorkingDirectory) {
         Path parsed = Path.of(path);
         if (parsed.isAbsolute()) {
@@ -190,36 +203,8 @@ public final class NekoJSPaths {
         return base.resolve(parsed);
     }
 
-    private Path verifyInsideRoot(Path path, Path rt) throws IOException {
-        Path normalizedRoot = rt.normalize().toAbsolutePath();
-        Path normalized = path.normalize().toAbsolutePath();
-        if (!normalized.startsWith(normalizedRoot)) {
-            throw new IOException("Access outside allowed root is forbidden: " + normalized);
-        }
-        if (Files.exists(normalized)) {
-            Path realPath = normalized.toRealPath();
-            if (!realPath.startsWith(normalizedRoot)) {
-                throw new IOException("Symlink escape detected: " + realPath);
-            }
-        }
-        return normalized;
-    }
-
-    private Path verifyInsideRootForCreate(Path path, Path rt) throws IOException {
-        Path normalizedRoot = rt.normalize().toAbsolutePath();
-        Path normalized = verifyInsideRoot(path, rt);
-        Path existingParent = nearestExistingParent(normalized);
-        if (existingParent != null) {
-            Path realParent = existingParent.toRealPath();
-            if (!realParent.startsWith(normalizedRoot)) {
-                throw new IOException("Symlink parent escape detected: " + realParent);
-            }
-        }
-        return normalized;
-    }
-
-    private Path nearestExistingParent(Path path) {
-        Path current = path.getParent();
+    private static Path nearestExistingAncestorOrSelf(Path path) {
+        Path current = path;
         while (current != null) {
             if (Files.exists(current)) {
                 return current;
@@ -227,6 +212,65 @@ public final class NekoJSPaths {
             current = current.getParent();
         }
         return null;
+    }
+
+    /**
+     * 路径的规范比较形式：自身存在则 {@code toRealPath()}；否则取最近存在祖先的 real 形式
+     * 拼接缺失后缀。缺失根目录（如尚未 initFolders 的 {@code nekojs/}）与缺失目标路径都
+     * 用同一规则生成形式，比较才不因 8.3 短名/大小写拼写差异失配。
+     */
+    private static Path canonicalSplicedForm(Path path) {
+        Path abs = path.normalize().toAbsolutePath();
+        Path anchor = nearestExistingAncestorOrSelf(abs);
+        if (anchor == null) {
+            return abs;
+        }
+        try {
+            Path anchorReal = anchor.toRealPath();
+            return anchor.getNameCount() == abs.getNameCount()
+                    ? anchorReal
+                    : anchorReal.resolve(abs.subpath(anchor.getNameCount(), abs.getNameCount()));
+        } catch (IOException e) {
+            return abs;
+        }
+    }
+
+    /**
+     * 根包含性校验（ForCreate 与普通校验共用同一物理包含不变量）：
+     * <ul>
+     *   <li>目标已存在：以 {@code toRealPath()} 的 real 形式判定并返回——同时抓住 symlink
+     *       逃逸与 8.3 短名/大小写失配（Windows 的 {@code C:\Users\RUNNER~1\...} 与
+     *       toRealPath 解析出的长名混用曾是全部误判来源）；</li>
+     *   <li>目标缺失：以拼接形式判定——最近存在祖先的 real 形式（解析全部 symlink/短名）
+     *       拼上缺失后缀。已存在前缀里的 symlink 父目录逃逸在此被抓住；别名拼写的新路径
+     *       也因两侧同规则拼接而不被误拒。返回该规范形式，同一逻辑路径不因调用方拼写不同
+     *       而产生不同结果。</li>
+     * </ul>
+     */
+    private Path verifyInsideRoot(Path path, Path rt) throws IOException {
+        Path rootAbs = rt.normalize().toAbsolutePath();
+        Path rootForm = canonicalSplicedForm(rootAbs);
+        Path normalized = path.normalize().toAbsolutePath();
+        if (Files.exists(normalized)) {
+            Path realPath = normalized.toRealPath();
+            if (!realPath.startsWith(rootForm)) {
+                throw new IOException("Symlink escape detected: " + realPath);
+            }
+            return realPath;
+        }
+        Path spliced = canonicalSplicedForm(normalized);
+        if (!spliced.startsWith(rootForm)) {
+            if (normalized.startsWith(rootAbs) || normalized.startsWith(rootForm)) {
+                // 逻辑上在根内，但已存在前缀解析后指向根外——symlink 祖先逃逸
+                throw new IOException("Symlink escape detected: " + spliced);
+            }
+            throw new IOException("Access outside allowed root is forbidden: " + normalized);
+        }
+        return spliced;
+    }
+
+    private Path verifyInsideRootForCreate(Path path, Path rt) throws IOException {
+        return verifyInsideRoot(path, rt);
     }
 
     private static void ensureDir(Path dir) {

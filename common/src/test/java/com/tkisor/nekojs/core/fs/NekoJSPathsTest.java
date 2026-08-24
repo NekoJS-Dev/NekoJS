@@ -72,8 +72,9 @@ class NekoJSPathsTest {
         NekoJSPaths paths = pathsFor(gameDir);
         Path root = gameDir.resolve("nekojs");
 
-        // 相对 nekojs 根（root 本身作为 cwd）解析
-        assertEquals(root.resolve("cache/data.json").normalize().toAbsolutePath(),
+        // 相对 nekojs 根（root 本身作为 cwd）解析；缺失路径返回规范形式
+        // （real 前缀拼接缺失后缀——CI 的 tmpdir 短名与本地长名统一）
+        assertEquals(gameDir.toRealPath().resolve("nekojs/cache/data.json"),
                 paths.resolveNekoWritePath("cache/data.json", root));
         // 越出 nekojs 根（到 gameDir 直接写文件）拒绝
         assertThrows(IOException.class, () -> paths.resolveNekoWritePath("../data.json", root));
@@ -102,7 +103,47 @@ class NekoJSPathsTest {
         NekoJSPaths paths = pathsFor(gameDir);
         Path deep = gameDir.resolve("nekojs/cache/new/dir/file.json");
 
-        assertEquals(deep.normalize().toAbsolutePath(), paths.verifyInsideGameDirForCreate(deep));
+        // 缺失路径以规范形式（real 前缀 + 缺失后缀）返回，跨平台/拼写形式一致
+        assertEquals(gameDir.toRealPath().resolve("nekojs/cache/new/dir/file.json"),
+                paths.verifyInsideGameDirForCreate(deep));
+    }
+
+    /**
+     * Windows 8.3 短名/大小写别名回归：CI runner 的 {@code java.io.tmpdir} 是
+     * {@code C:\Users\RUNNER~1\...} 短名形式，而 {@code toRealPath()} 解析为长名——两种
+     * 形式混用曾让所有已存在文件被误判 "Symlink escape detected"（中文用户名的 Windows
+     * 玩家会以同样方式踩中）。用大小写翻转别名在同源文件系统上模拟同一失配；文件系统大小写
+     * 敏感（别名不存在）时跳过。
+     */
+    @Test
+    void verifyInsideGameDirToleratesRealFormAliasOfRoot() throws Exception {
+        Path alias = aliasByCase(gameDir);
+        // 注意 Path.equals 在 Windows 上大小写不敏感，必须用字符串比较确认拼写确实不同
+        Assumptions.assumeTrue(!alias.toString().equals(gameDir.toString()) && Files.exists(alias),
+                "filesystem is case-sensitive or alias does not resolve — nothing to simulate");
+
+        NekoJSPaths paths = pathsFor(gameDir);
+        Path script = alias.resolve("nekojs/server_scripts/alias.js");
+        Files.createDirectories(script.getParent());
+        Files.writeString(script, "console.log('alias')");
+
+        assertEquals(script.toRealPath(), paths.verifyInsideGameDir(script),
+                "existing file addressed via alias form must resolve to its real form, not be rejected");
+        assertEquals(script.getParent().toRealPath().resolve("not-yet.js"),
+                paths.verifyInsideGameDirForCreate(alias.resolve("nekojs/server_scripts/not-yet.js")),
+                "missing path addressed via alias form must pass via its existing ancestor and come back in real form");
+        assertTrue(paths.isInsideScriptRoot(script),
+                "alias-form script path must still be recognized as inside a script root");
+    }
+
+    /** 全路径大小写翻转：大小写不敏感文件系统上解析到同一路径，敏感系统上则不存在。 */
+    private static Path aliasByCase(Path path) {
+        StringBuilder sb = new StringBuilder(path.toString().length());
+        for (int i = 0; i < path.toString().length(); i++) {
+            char c = path.toString().charAt(i);
+            sb.append(Character.isLowerCase(c) ? Character.toUpperCase(c) : Character.toLowerCase(c));
+        }
+        return Path.of(sb.toString());
     }
 
     private static NekoJSPaths pathsFor(Path gameDir) throws Exception {

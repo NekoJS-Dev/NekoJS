@@ -453,6 +453,18 @@ jobs:
         shell: bash
         run: ./gradlew :common-api:check :common:check --console=plain
 
+      # Windows 专属失败的诊断依赖：与主 build job 的 test-reports 区分命名
+      - name: Upload common test reports
+        if: ${{ !cancelled() && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-windows
+          path: |
+            common/build/reports/tests/test
+            common/build/test-results/test
+            common-api/build/reports/tests/test
+            common-api/build/test-results/test
+
   gametest-smoke:
     # headless GameTest 冒烟：本地实测 ~40s 自行退出（"All N required tests passed"）。
     # mixin/interface-injection 的加载路径只有这里会在 CI 里真正跑起来。
@@ -472,6 +484,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: Run game test server
         run: ./gradlew :platforms:neoforge-26.1:runGameTestServer --console=plain
