@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -43,21 +44,23 @@ class MixinConfigIntegrityTest {
         String pkg = packageEl.getAsString();
         assertFalse(pkg.isEmpty(), "mixin config 'package' must not be empty");
 
-        JsonElement mixinsEl = root.get("mixins");
-        assertNotNull(mixinsEl, "mixin config missing 'mixins'");
-        JsonArray mixins = mixinsEl.getAsJsonArray();
-        assertFalse(mixins.isEmpty(), "mixin config 'mixins' must not be empty");
-
+        // 三段全查（旧版只查 mixins 段——client/server 段的类名拼错不会被抓住）
         Set<String> seen = new HashSet<>();
         ClassLoader loader = getClass().getClassLoader();
-        for (JsonElement element : mixins) {
-            String simpleName = element.getAsString();
-            assertTrue(seen.add(simpleName), "duplicate mixin entry: " + simpleName);
+        for (String section : List.of("mixins", "client", "server")) {
+            JsonElement sectionEl = root.get(section);
+            if (sectionEl == null) continue;
+            JsonArray sectionMixins = sectionEl.getAsJsonArray();
+            for (JsonElement element : sectionMixins) {
+                String simpleName = element.getAsString();
+                assertTrue(seen.add(section + ":" + simpleName), "duplicate mixin entry: " + simpleName);
 
-            String fqcn = pkg + "." + simpleName;
-            // initialize=false：只验证类存在且可加载，避免在无游戏上下文下运行 mixin 静态初始化器。
-            assertDoesNotThrow(() -> Class.forName(fqcn, false, loader),
-                "mixin class not found on classpath: " + fqcn);
+                String fqcn = pkg + "." + simpleName;
+                // initialize=false：只验证类存在且可加载，避免在无游戏上下文下运行 mixin 静态初始化器。
+                assertDoesNotThrow(() -> Class.forName(fqcn, false, loader),
+                        "mixin class not found on classpath: " + fqcn);
+            }
         }
+        assertFalse(seen.isEmpty(), "mixin config lists no mixin classes at all");
     }
 }
