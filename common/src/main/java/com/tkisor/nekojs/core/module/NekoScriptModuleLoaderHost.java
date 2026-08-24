@@ -208,6 +208,10 @@ public final class NekoScriptModuleLoaderHost {
         NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
         recordDependency(parentPath, resolved);
         if (resolved.special()) {
+            if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
+                // automatic JSX runtime 的命名导入（jsx/jsxs/Fragment）需要静态导出名
+                return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "jsx", "jsxs", "Fragment").toString();
+            }
             return esmRewriter.syntheticObjectModuleUri(resolved.specifier()).toString();
         }
         if (resolved.json()) {

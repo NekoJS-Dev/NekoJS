@@ -94,11 +94,52 @@ public final class PythonEmitter {
      * 除数为 0 时按 Python 语义抛 {@code ZeroDivisionError}（JS 会静默得到 NaN）。
      * 注意 {@code __b === 0} 对 {@code -0} 同样成立（JS 中 -0 === 0），与 Python 的
      * {@code 1 / -0.0} 也抛 ZeroDivisionError 一致。
+     * 左操作数是字符串时为 Python %-格式化（{@code "%s=%d" % (k, v)}），路由到
+     * {@link #PERCENT_HELPER}——曾无字符串分支，静默得到 {@code NaN}。
      */
     private static final String MOD_HELPER =
             "const __nekoMod = function (__a, __b) {"
+            + " if (typeof __a === 'string') return __nekoPyPercent(__a, Array.isArray(__b) ? __b : [__b]);"
             + " if (__b === 0) throw new ZeroDivisionError(\"integer division or modulo by zero\");"
             + " return ((__a % __b) + __b) % __b; };";
+
+    /**
+     * Python %-格式化子集：{@code %s %r %d %i %f %g %x %X %o %%}，支持宽度（含 {@code -}
+     * 左对齐）与精度。数值/字符串转换沿用 {@code __nekoPyStr} 的 Python 拼写。
+     */
+    private static final String PERCENT_HELPER =
+            "const __nekoPyPercent = function (fmt, args) {"
+            + " var ai = 0;"
+            + " return String(fmt).replace(/%(-?\\d+)?(?:\\.(\\d+))?([srdifgxXo%])/g, function (_, w, p, t) {"
+            + "  if (t === '%') return '%';"
+            + "  var v = args[ai++];"
+            + "  var s;"
+            + "  if (t === 's' || t === 'r') { s = (v === null || v === undefined) ? 'None' : (t === 'r' ? JSON.stringify(v) : __nekoPyStr(v)); }"
+            + "  else if (t === 'd' || t === 'i') s = String(Math.trunc(Number(v)));"
+            + "  else if (t === 'f') s = Number(v).toFixed(p === undefined ? 6 : parseInt(p, 10));"
+            + "  else if (t === 'x' || t === 'X' || t === 'o') { var iv = Math.trunc(Number(v)); s = Math.abs(iv).toString(t === 'o' ? 8 : 16); if (t === 'X') s = s.toUpperCase(); if (iv < 0) s = '-' + s; }"
+            + "  else s = String(Number(v));"
+            + "  if (w !== undefined) { var width = parseInt(w, 10); var left = width < 0; if (left) width = -width; while (s.length < width) s = left ? s + ' ' : ' ' + s; }"
+            + "  return s;"
+            + " });"
+            + " };";
+
+    /**
+     * Python {@code str()}/print/{@code %s} 的字符串化：{@code None}/{@code True}/{@code False}、
+     * 数组（元素递归 PyStr 化、{@code ', '} 连接——JS 的 String(arr) 同形但元素是 JS 拼写）、
+     * 普通对象按 {@code {k: v}}。自定义对象退化为 JS 拼写（未实现 {@code __str__}）。
+     */
+    private static final String PYSTR_HELPER =
+            "const __nekoPyStr = function (v) {"
+            + " if (v === null || v === undefined) return 'None';"
+            + " if (v === true) return 'True';"
+            + " if (v === false) return 'False';"
+            + " if (Array.isArray(v)) return '[' + v.map(__nekoPyStr).join(', ') + ']';"
+            + " if (typeof v === 'object' && v !== null && v.constructor === Object) {"
+            + "  return '{' + Object.entries(v).map(function (kv) { return \"'\" + String(kv[0]).replace(/'/g, \"\\\\'\") + \"': \" + __nekoPyStr(kv[1]); }).join(', ') + '}';"
+            + " }"
+            + " return String(v);"
+            + " };";
 
     /**
      * Python 真除法：除数为 0 抛 {@code ZeroDivisionError}（JS 静默得到 ±Infinity）。
@@ -370,6 +411,7 @@ public final class PythonEmitter {
     private boolean needsLen = false;      // len()
     private boolean needsExc = false;      // 内建异常名被引用 / assert → 异常 prelude + __nekoExcIs
     private boolean needsTypes = false;    // isinstance/except 类型位置引用内建类型名 → 类型探针 prelude
+    private boolean needsPyStr = false;    // str()/print()/%-格式化 → __nekoPyStr（Python 字符串拼写）
     /** 当前正在发射的语句的 Python 源码行（1-based；由 emitStmt 从 srcLines 维护），供 {@link #err} 附加位置。 */
     private int curLine = -1;
     /** The variable bound to the current exception in each enclosing except clause (top = innermost). */
@@ -429,7 +471,8 @@ public final class PythonEmitter {
     private void emitRuntimeHelpers() {
         if (needsFmt) { for (String l : FMT_HELPER) line0(l); }
         if (needsTruthy) { line0(TRUTHY_HELPER); line0(AND_HELPER); line0(OR_HELPER); }
-        if (needsMod) line0(MOD_HELPER);
+        if (needsMod || needsPyStr) line0(PYSTR_HELPER);
+        if (needsMod) { line0(PERCENT_HELPER); line0(MOD_HELPER); }
         if (needsDiv) { line0(DIV_HELPER); line0(FLOORDIV_HELPER); }
         if (needsMul) line0(MUL_HELPER);
         if (needsAdd) line0(ADD_HELPER);
@@ -466,11 +509,21 @@ public final class PythonEmitter {
                     // **kwargs → empty signature; a prologue reconstructs binding from `arguments`.
                     line("function" + (f.isGenerator() ? "* " : " ") + jsName(f.name()) + "() {");
                     emitKwPrologue(f.params(), false);
+                    block(f.body());
+                    line("}");
+                } else if (rewriteSelf && !f.isGenerator()) {
+                    // 方法体内嵌套 def：Python 的嵌套函数经闭包引用外层 self——发成箭头函数
+                    // （lexical this = 方法的 this），self → this 的重写得以穿透。
+                    // 曾一律发 function：this 重绑，嵌套体里的 self 变 undefined。
+                    // 生成器（箭头不可为 generator）与 **kwargs（prologue 依赖 arguments）保持 function。
+                    line("var " + jsName(f.name()) + " = (" + emitParams(f.params()) + ") => {");
+                    block(f.body());
+                    line("};");
                 } else {
                     line("function" + (f.isGenerator() ? "* " : " ") + jsName(f.name()) + "(" + emitParams(f.params()) + ") {");
+                    block(f.body());
+                    line("}");
                 }
-                block(f.body());
-                line("}");
                 applyDecorators(jsName(f.name()), f.decorators());
             }
             case PythonNode.ClassDef c -> emitClass(c);
@@ -995,6 +1048,8 @@ public final class PythonEmitter {
             if ("bool".equals(id) || "any".equals(id) || "all".equals(id) || "filter".equals(id)) needsTruthy = true;
             if ("len".equals(id)) needsLen = true;
             if ("divmod".equals(id)) { needsMod = true; needsDiv = true; }
+            // str()/print()：__nekoPyStr 化（None/True/False/数组的 Python 拼写）
+            if ("str".equals(id) || "print".equals(id)) needsPyStr = true;
             // isinstance(x, int/str/...) 或 isinstance(x, (A, str))：类型位置引用内建类型名 → 探针 prelude
             if ("isinstance".equals(id)) {
                 for (PythonNode a : call.args()) if (refsBuiltinType(a)) needsTypes = true;
@@ -1319,12 +1374,14 @@ public final class PythonEmitter {
         recordMapping(a);
         // Class-body fields are PROPERTY positions, not variable bindings, so the raw Python name
         // must be preserved. Reserved/unsafe names are emitted as computed property names so the
-        // JS remains valid (`static ["new"] = 5;`); non-reserved names keep the plain
-        // `static name = ...;` form byte-for-byte.
+        // JS remains valid (`["new"] = 5;`); non-reserved names keep the plain form byte-for-byte.
         String fieldName = JS_RESERVED_IDENTIFIERS.contains(n.id())
                 ? "[" + jsString(n.id()) + "]"
                 : n.id();
-        line("static " + fieldName + " = " + emitExpr(a.value()) + ";");
+        // 实例字段而非 static：Python 的类属性经 self 读写（self.total += 1 是实例语义），
+        // static 字段对 this.total 不可见，曾让所有 self 访问得到 undefined/NaN。
+        // ClassName.attr 直接访问（Python 的类级读取）不再支持——脚本用法以 self 为主。
+        line(fieldName + " = " + emitExpr(a.value()) + ";");
     }
 
     /**
@@ -1591,7 +1648,7 @@ public final class PythonEmitter {
                         + " return __parts;"
                         + " })(" + obj + ", " + e0 + ", " + e1 + "))";
             }
-            case "join" -> args.size() == 1 ? obj + ".join(" + a + ")" : null;
+            case "join" -> args.size() == 1 ? "([..." + a + "].join(" + obj + "))" : null;
             // list
             case "append" -> args.size() == 1 ? obj + ".push(" + a + ")" : null;
             // copy/insert/remove/pop 与 sort 同款劫持防护：静态可判定的用户类接收者（Cls(...).m /
@@ -1669,9 +1726,10 @@ public final class PythonEmitter {
                     throw err("python '.get()' needs a key argument (get(key[, default]))");
                 }
                 if (args.size() > 2) yield null;
+                // 无 default 的 .get(k)：缺失键返回 None（裸索引得 undefined，is None 判定失效）
                 String fb = (e1 != null)
                         ? "(" + obj + "[" + e0 + "] !== undefined ? " + obj + "[" + e0 + "] : " + e1 + ")"
-                        : obj + "[" + e0 + "]";
+                        : "(" + obj + "[" + e0 + "] !== undefined ? " + obj + "[" + e0 + "] : null)";
                 yield plainReceiver ? rtDispatch(obj, m, obj + ".get(" + a + ")", fb) : fb;
             }
             // set
@@ -2009,7 +2067,7 @@ public final class PythonEmitter {
                     return positional.size() == 1 ? "Math.max(..." + e0 + ")" : "Math.max(" + emitArgs(positional) + ")";
                 }
                 case "sum" -> { if (positional.size() == 1) return "([...(" + e0 + ")]).reduce((a, b) => (a + b), 0)"; }
-                case "str" -> { if (positional.size() == 1) return "String(" + e0 + ")"; }
+                case "str" -> { if (positional.size() == 1) return "__nekoPyStr(" + e0 + ")"; }
                 case "int" -> { return "parseInt(" + emitArgs(positional) + ")"; }
                 case "float" -> { if (positional.size() == 1) return "Number(" + e0 + ")"; }
                 case "bool" -> { if (positional.size() == 1) return "__nekoTruthy(" + e0 + ")"; }
@@ -2130,10 +2188,11 @@ public final class PythonEmitter {
         return emitExpr(c.func()) + "(" + emitArgs(positional) + ")";
     }
 
-    /** print(args, sep=, end=) → console.log([args].join(sep)); end= ignored (console.log adds newline). */
+    /** print(args, sep=, end=) → console.log：每个实参先 __nekoPyStr 化（None/True/False、数组
+     *  元素递归），再按 sep 连接；end= 忽略（console.log 自带换行）。 */
     private String emitPrint(List<PythonNode> args, Map<String, PythonNode> kwargs) {
         String sep = kwargs.containsKey("sep") ? emitExpr(kwargs.get("sep")) : "\" \"";
-        return "console.log([" + emitArgs(args) + "].join(" + sep + "))";
+        return "console.log([" + emitArgs(args) + "].map(__nekoPyStr).join(" + sep + "))";
     }
 
     /** sorted(iter, reverse=) → numeric/string sort; reverse honours a True/False literal (else runtime). */

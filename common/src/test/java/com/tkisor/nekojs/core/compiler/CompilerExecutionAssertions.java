@@ -18,6 +18,15 @@ final class CompilerExecutionAssertions {
         }
     }
 
+    /** ES module 模式 parse-only（.mjs 触发）：含 import/export 语句的擦除产物必须这样验证。*/
+    static void parseModule(String code) {
+        try (Context context = restrictedContext()) {
+            context.parse(Source.newBuilder("js", code, "corpus.mjs").build());
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("failed to build module source", e);
+        }
+    }
+
     static Evaluation eval(String code) {
         Context context = restrictedContext();
         try {

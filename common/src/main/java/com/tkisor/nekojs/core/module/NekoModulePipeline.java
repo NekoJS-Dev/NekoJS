@@ -49,20 +49,38 @@ public final class NekoModulePipeline {
     }
 
     public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
+        String extension = extension(file);
         // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
         // 访问不存在的成员时报错到游戏内错误面板。不阻止编译/执行。
-        if (config.scriptMemberValidation()) {
+        // JS 族（原始源即 JS）在编译前对原始源跑；转译语言（.py/.ts/.tsx…）的原始源不是
+        // JS（# 注释、类型注解、def/class 会被 JS-only 的 ValParser 碎成伪调用 → 'Unknown
+        // identifier' 系统性误报），改为在编译后对产物 JS 跑——那才是运行时真正执行的代码。
+        if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
             GlobalBindingMemberValidator.validate(file, rawSource);
             EventCallbackSourceValidator.validate(file, rawSource);
         }
-        String extension = extension(file);
+        NekoPreparedModule prepared = prepareModule(file, rawSource, extension);
+        if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
+            GlobalBindingMemberValidator.validate(file, prepared.code());
+            EventCallbackSourceValidator.validate(file, prepared.code());
+        }
+        return prepared;
+    }
+
+    /** 原始源就是 JS、可直接跑 JS-only 预检的扩展名。*/
+    static boolean rawPreflightApplies(String extension) {
+        return ".js".equals(extension) || ".mjs".equals(extension) || ".cjs".equals(extension) || ".jsx".equals(extension);
+    }
+
+    private NekoPreparedModule prepareModule(Path file, String rawSource, String extension) throws Exception {
         NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
         NekoLanguagePlugin language = languagePlugin(file, extension);
 
         if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
             if (language instanceof NekoLegacyLanguagePlugin legacyLanguage) {
                 ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
-                return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap(), CjsStaticAnalyzer.analyze(rawSource));
+                // CJS 静态分析必须跑在编译产物上：require/module.exports 由转译生成，原始源里不存在
+                return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap(), CjsStaticAnalyzer.analyze(compiled.code()));
             }
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
                 return NekoPreparedModule.commonJs(rawSource, null, CjsStaticAnalyzer.analyze(rawSource));
@@ -70,7 +88,7 @@ public final class NekoModulePipeline {
             NekoCompileOutput compiled = compilationPipeline.compile(
                 file, rawSource, extension, language, config.jsxAutomaticRuntime());
             return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap(),
-                    CjsStaticAnalyzer.analyze(rawSource));
+                    CjsStaticAnalyzer.analyze(compiled.code()));
         }
 
         NekoCompileOutput compiled = compilationPipeline.compile(

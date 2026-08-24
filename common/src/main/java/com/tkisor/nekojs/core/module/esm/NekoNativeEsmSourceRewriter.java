@@ -214,6 +214,24 @@ public final class NekoNativeEsmSourceRewriter {
         return NekoEsmVirtualModuleRegistry.register(specifier + "#dynamic", source);
     }
 
+    /**
+     * 带命名导出的特殊模块合成源：{@code import { jsx, Fragment } from 'nekojs/jsx-runtime'}
+     * 这类编译器注入的命名导入需要静态 export 名（GraalJS 的 ESM 在 parse 期解析导出名），
+     * 默认的 syntheticObjectModuleUri 只提供 default/namespace。
+     */
+    public java.net.URI syntheticNamedModuleUri(String specifier, String... exportNames) {
+        StringBuilder source = new StringBuilder();
+        source.append("const __neko_module = globalThis.__nekoNodeResolve(").append(jsString(specifier)).append(");\n");
+        source.append("if (__neko_module === globalThis.__nekoNodeNoModule) throw new Error('Cannot resolve module: ")
+                .append(escapeForSingleQuoted(specifier)).append("');\n");
+        source.append("export default __neko_module;\n");
+        source.append("export const namespace = __neko_module;\n");
+        for (String name : exportNames) {
+            source.append("export const ").append(name).append(" = __neko_module[").append(jsString(name)).append("];\n");
+        }
+        return NekoEsmVirtualModuleRegistry.register(specifier + "#dynamic", source.toString());
+    }
+
     public java.net.URI syntheticCjsModuleUri(String resolvedModuleId, String parentModuleId, String specifier) {
         String source = "const __neko_exports = globalThis.__nekoScriptModuleLoaderHost.nativeImport(" + jsString(parentModuleId) + ", " + jsString(specifier) + ");\n"
                 + "export default __neko_exports;\n"

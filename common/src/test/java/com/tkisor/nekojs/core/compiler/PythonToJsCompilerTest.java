@@ -243,12 +243,14 @@ class PythonToJsCompilerTest {
     }
 
     @Test
-    void classBodyAssignBecomesStaticField() throws Exception {
-        // class C: x = 5 → ES2022 static class field (`var`/plain statements are invalid inside a
-        // JS class body); the attribute is readable as C.x like a Python class attribute.
+    void classBodyAssignBecomesInstanceField() throws Exception {
+        // class C: x = 5 → ES2022 instance class field（类体里 var/普通语句非法）。Python 的
+        // 类属性以 self 读写为主（self.total += 1 是实例语义），static 字段对 this.x 不可见，
+        // 曾让所有 self 访问得到 undefined/NaN——降级为实例字段。
         String js = py("class C:\n    x = 5");
-        assertTrue(js.contains("static x = 5;"), "class-body assign → static field: " + js);
-        assertEquals(5, evalInt("class C:\n    x = 5\nC.x"));
+        assertTrue(js.contains(" x = 5;"), "class-body assign → instance field: " + js);
+        assertFalse(js.contains("static x"), "class attribute must not be static: " + js);
+        assertEquals(5, evalInt("class C:\n    x = 5\nC().x"));
     }
 
     @Test
@@ -258,7 +260,7 @@ class PythonToJsCompilerTest {
         String js = py("class C:\n    'doc'\n    x = 1");
         assertTrue(js.contains("// docstring: doc"), "docstring → comment: " + js);
         assertFalse(js.contains("\"doc\";"), "docstring must not become an expression statement: " + js);
-        assertEquals(1, evalInt("class C:\n    'doc'\n    x = 1\nC.x"));
+        assertEquals(1, evalInt("class C:\n    'doc'\n    x = 1\nC().x"));
     }
 
     @Test
@@ -819,7 +821,7 @@ class PythonToJsCompilerTest {
                 h = hasattr(c, 'y')
                 str(a) + str(c.y) + str(b) + str(h)
                 """;
-        assertEquals("597true", evalString(src));
+        assertEquals("597True", evalString(src));
     }
 
     @Test
@@ -1505,7 +1507,7 @@ class PythonToJsCompilerTest {
                 """;
         String js = py(src);
         assertTrue(js.contains("__nekoTruthy"), "conditions must go through __nekoTruthy: " + js);
-        assertEquals("list,dict,scalars", evalString(src));
+        assertEquals("[list, dict, scalars]", evalString(src));
     }
 
     @Test
@@ -1533,7 +1535,7 @@ class PythonToJsCompilerTest {
     void sequenceRepetitionOperator() throws Exception {
         // [0] * 4 → [0,0,0,0] and "ab" * 3 → "ababab" (JS * on arrays/strings is silent NaN/0);
         // plain numeric multiply must still work.
-        assertEquals("0,0,0,0", evalString("str([0] * 4)"));
+        assertEquals("[0, 0, 0, 0]", evalString("str([0] * 4)"));
         assertEquals("ababab", evalString("\"ab\" * 3"));
         assertEquals(12, evalInt("3 * 4"));
         assertEquals(6, evalInt("len([1, 2] * 3)"));   // [1,2,1,2,1,2]
@@ -1543,15 +1545,15 @@ class PythonToJsCompilerTest {
     void listConcatenation() throws Exception {
         // [1,2] + [3] → [1,2,3]：JS 的 + 会把两个数组静默串成 "1,23"，必须经 __nekoAdd 拼接；
         // xs += ys 走同一助手；[0]*2 + [1] 让重复与拼接助手链式混用。
-        assertEquals("1,2,3", evalString("str([1, 2] + [3])"));
+        assertEquals("[1, 2, 3]", evalString("str([1, 2] + [3])"));
         String aug = """
                 xs = [1, 2]
                 ys = [3]
                 xs += ys
                 str(xs)
                 """;
-        assertEquals("1,2,3", evalString(aug));
-        assertEquals("0,0,1", evalString("str([0] * 2 + [1])"));
+        assertEquals("[1, 2, 3]", evalString(aug));
+        assertEquals("[0, 0, 1]", evalString("str([0] * 2 + [1])"));
         String js = py("[1, 2] + [3]");
         assertTrue(js.contains("__nekoAdd([1, 2], [3])"), "+ must route through __nekoAdd: " + js);
     }
@@ -1602,7 +1604,7 @@ class PythonToJsCompilerTest {
     void bareListSortIsNumericAware() throws Exception {
         // JS default sort is lexicographic ([10,2,1] → [1,10,2]); the bare .sort() call must lower
         // to the same numeric-aware comparator as sorted().
-        assertEquals("1,2,10", evalString("str([10, 2, 1].sort())"));
+        assertEquals("[1, 2, 10]", evalString("str([10, 2, 1].sort())"));
     }
 
     @Test
@@ -1686,7 +1688,7 @@ class PythonToJsCompilerTest {
                 """;
         String js = py(src);
         assertTrue(js.contains("__nekoIter"), "for over a dict must go through __nekoIter: " + js);
-        assertEquals("a,b,c", evalString(src));
+        assertEquals("[a, b, c]", evalString(src));
     }
 
     @Test
@@ -1805,13 +1807,13 @@ class PythonToJsCompilerTest {
     @Test
     void bareListSortStillNumericAware() throws Exception {
         // 回归钉：数组接收者仍注入数值比较器（JS 默认字典序会把 [10,2,1] 排成 [1,10,2]）。
-        assertEquals("1,2,10", evalString("str([10, 2, 1].sort())"));          // 字面量接收者
+        assertEquals("[1, 2, 10]", evalString("str([10, 2, 1].sort())"));          // 字面量接收者
         String src = """
                 xs = [10, 2, 1]
                 xs.sort()
                 str(xs)
                 """;
-        assertEquals("1,2,10", evalString(src));                              // 名字接收者（运行时探测）
+        assertEquals("[1, 2, 10]", evalString(src));                              // 名字接收者（运行时探测）
     }
 
     @Test
@@ -1858,16 +1860,16 @@ class PythonToJsCompilerTest {
                 xs = [1, 2, 3]
                 xs.pop(0)
                 """));
-        assertEquals("1,2", evalString("""
+        assertEquals("[1, 2]", evalString("""
                 xs = [1, 2]
                 str(xs.copy())
                 """));
-        assertEquals("0,1,9", evalString("""
+        assertEquals("[0, 1, 9]", evalString("""
                 xs = [1, 9]
                 xs.insert(0, 0)
                 str(xs)
                 """));
-        assertEquals("1,3", evalString("""
+        assertEquals("[1, 3]", evalString("""
                 xs = [1, 2, 3]
                 xs.remove(2)
                 str(xs)
@@ -2196,20 +2198,21 @@ class PythonToJsCompilerTest {
     @Test
     void reservedClassFieldIsNotRenamed() throws Exception {
         // Class-body assignments are PROPERTY positions. Reserved-word field names are emitted with
-        // a computed property name so the JS stays valid (`static ["new"] = 5;`) and C.new reads
-        // the raw attribute. Instance access to class fields (`self.new`) is a PRE-EXISTING
-        // static-only limitation shared by non-reserved fields and is intentionally not tested here.
-        String src = "class C:\n    new = 5\nC.new";
+        // a computed property name so the JS stays valid (`["new"] = 5;`); class attributes are
+        // instance fields (see classBodyAssignBecomesInstanceField), so access goes through C().
+        String src = "class C:\n    new = 5\nC().new";
         String js = py(src);
-        assertTrue(js.contains("static [\"new\"] = 5"), "reserved class field must use a computed name: " + js);
+        assertTrue(js.contains("[\"new\"] = 5;"), "reserved class field must use a computed name: " + js);
+        assertFalse(js.contains("static"), "class attribute must not be static: " + js);
         assertEquals(5, evalInt(src));
     }
 
     @Test
     void reservedClassFieldNamedConstructorUsesComputed() throws Exception {
-        String src = "class C:\n    constructor = 5\nC.constructor";
+        String src = "class C:\n    constructor = 5\nC()[\"constructor\"]";
         String js = py(src);
-        assertTrue(js.contains("static [\"constructor\"] = 5"), "constructor field must use a computed name: " + js);
+        assertTrue(js.contains("[\"constructor\"] = 5;"), "constructor field must use a computed name: " + js);
+        assertFalse(js.contains("static"), "class attribute must not be static: " + js);
         assertEquals(5, evalInt(src));
     }
 
@@ -2314,5 +2317,73 @@ class PythonToJsCompilerTest {
         String js = py("def get_x(**new):\n    return new['x']\nget_x(x=5)");
         assertTrue(js.contains("var __neko$new = {};"), "kwargs param must use the safe name: " + js);
         assertEquals(5, evalInt("def get_x(**new):\n    return new['x']\nget_x(x=5)"));
+    }
+
+    // ---- W3 六条 Python 语义修复（审计 §4 P1） ----
+
+    @Test
+    void percentFormattingOnStrings() throws Exception {
+        // "%s=%d" % (k, v)：曾静默走数值取模得 NaN
+        assertEquals("a=1", evalString("'a=%d' % 1"));
+        assertEquals("x and y", evalString("'%s and %s' % ('x', 'y')"));
+        assertEquals("3.14", evalString("'%.2f' % 3.14159"));
+        assertEquals("100%", evalString("'100%%' % ()"));
+        assertEquals("  42", evalString("'%4d' % 42"));
+        assertEquals("ff", evalString("'%x' % 255"));
+        // 数值取模不受影响
+        assertEquals(1, evalInt("-7 % 2"));
+    }
+
+    @Test
+    void stringJoinIsPythonOrder() throws Exception {
+        // sep.join(iterable)：接收者是分隔符、实参是可迭代对象——曾编成 sep.join(...) 的 JS 调用
+        assertEquals("a,b,c", evalString("','.join(['a', 'b', 'c'])"));
+        assertEquals("abc", evalString("''.join(['a', 'b', 'c'])"));
+    }
+
+    @Test
+    void classAttributeReadableThroughSelf() throws Exception {
+        // 类属性以 self 读写（self.total += 1 是实例语义）——曾编成 static 字段，self 访问 NaN
+        assertEquals(1, evalInt("""
+                class Counter:
+                    total = 0
+                    def bump(self):
+                        self.total = self.total + 1
+                        return self.total
+                Counter().bump()
+                """));
+        assertEquals(5, evalInt("class C:\n    x = 5\nC().x"));
+    }
+
+    @Test
+    void dictGetMissingKeyIsNoneForIsCheck() throws Exception {
+        // d.get(k) 缺失键返回 None（is None 成立）——曾编成裸索引得 undefined，is None 失效
+        assertEquals("True", evalString("d = {'a': 1}\nstr(d.get('missing') is None)"));
+        assertEquals("False", evalString("d = {'a': 1}\nstr(d.get('a') is None)"));
+        assertEquals("fallback", evalString("d = {}\nstr(d.get('k', 'fallback'))"));
+    }
+
+    @Test
+    void strUsesPythonSpellings() throws Exception {
+        // str()/print() 的 Python 拼写：None/True/False、数组元素递归——曾输出 JS 拼写
+        assertEquals("None", evalString("str(None)"));
+        assertEquals("True", evalString("str(True)"));
+        assertEquals("[1, None, True]", evalString("str([1, None, True])"));
+        assertEquals("{'a': 1}", evalString("str({'a': 1})"));
+    }
+
+    @Test
+    void nestedDefInsideMethodKeepsSelf() throws Exception {
+        // 方法内嵌套 def 经闭包引用外层 self——曾发成 function 重绑 this，self 变 undefined
+        assertEquals(20, evalInt("""
+                class C:
+                    def __init__(self):
+                        self.n = 10
+                    def outer(self):
+                        def inner():
+                            return self.n * 2
+                        return inner()
+                C().outer()
+                """));
     }
 }

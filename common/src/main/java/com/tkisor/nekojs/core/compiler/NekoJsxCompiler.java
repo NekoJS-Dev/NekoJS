@@ -149,6 +149,8 @@ public final class NekoJsxCompiler {
             }
             List<GeneratedPart> props = new ArrayList<>();
             boolean selfClosing = false;
+            // automatic runtime：key 不进 props，单独作为 jsx()/jsxs() 的第三实参（React 约定）
+            GeneratedPart keyExpression = null;
 
             while (index < length) {
                 index = skipWhitespace(index);
@@ -165,19 +167,23 @@ public final class NekoJsxCompiler {
                     break;
                 }
                 AttributeResult attribute = parseAttribute(index);
-                props.add(attribute.part());
+                if (automatic && "key".equals(attribute.name()) && attribute.valuePart() != null) {
+                    keyExpression = attribute.valuePart();
+                } else {
+                    props.add(attribute.part());
+                }
                 index = attribute.nextIndex();
             }
 
             GeneratedPart typeExpression = new GeneratedPart(jsxTagExpression(tagExpr), List.of(new NekoSourceMapBuilder.MappingPoint(0, nameStart)));
             GeneratedPart propsExpression = props.isEmpty() ? GeneratedPart.unmapped("null") : objectPart(props);
             if (selfClosing) {
-                return factoryCall(start, typeExpression, propsExpression, List.of(), index);
+                return factoryCall(start, typeExpression, propsExpression, List.of(), keyExpression, index);
             }
 
             List<GeneratedPart> children = new ArrayList<>();
             index = parseChildren(index, tagName, children);
-            return factoryCall(start, typeExpression, propsExpression, children, index);
+            return factoryCall(start, typeExpression, propsExpression, children, keyExpression, index);
         }
 
         private ParseResult parseFragment(int start) {
@@ -270,7 +276,7 @@ public final class NekoJsxCompiler {
             String name = source.substring(start, nameEnd);
             int index = skipWhitespace(nameEnd);
             if (index >= length || source.charAt(index) != '=') {
-                return new AttributeResult(new GeneratedPart(attributeKey(name) + ": true", List.of(new NekoSourceMapBuilder.MappingPoint(0, start))), nameEnd);
+                return new AttributeResult(new GeneratedPart(attributeKey(name) + ": true", List.of(new NekoSourceMapBuilder.MappingPoint(0, start))), nameEnd, name, null);
             }
 
             index = skipWhitespace(index + 1);
@@ -280,11 +286,15 @@ public final class NekoJsxCompiler {
             char valueStart = source.charAt(index);
             if (valueStart == '\'' || valueStart == '"') {
                 int valueEnd = skipString(index, valueStart);
-                String text = attributeKey(name) + ": " + source.substring(index, valueEnd);
+                // 与 React/TS 的 JSX 语义一致：字符串属性值解码 HTML 实体（&amp; → &），
+                // 并经 stringLiteral 转义（多行属性值原样拷贝会产出非法 JS 字符串字面量）
+                String decoded = decodeHtmlEntities(source.substring(index + 1, valueEnd - 1));
+                GeneratedPart valuePart = GeneratedPart.unmapped(stringLiteral(decoded));
+                String text = attributeKey(name) + ": " + valuePart.text();
                 return new AttributeResult(new GeneratedPart(text, List.of(
                         new NekoSourceMapBuilder.MappingPoint(0, start),
                         new NekoSourceMapBuilder.MappingPoint(text.indexOf(source.charAt(index)), index)
-                )), valueEnd);
+                )), valueEnd, name, valuePart);
             }
             if (valueStart == '{') {
                 int valueEnd = findMatchingBrace(index);
@@ -299,7 +309,9 @@ public final class NekoJsxCompiler {
                 mappings.add(new NekoSourceMapBuilder.MappingPoint(0, start));
                 // generatedStart 相对 text：紧随 "name: (" 之后的 transformed 起点 = '(' 后一位
                 mappings.addAll(rebasedMappings(lowered, inner, text.indexOf('(') + 1, index + 1));
-                return new AttributeResult(new GeneratedPart(text, mappings), valueEnd + 1);
+                GeneratedPart valuePart = new GeneratedPart("(" + transformed + ")",
+                        rebasedMappings(lowered, inner, 1, index + 1));
+                return new AttributeResult(new GeneratedPart(text, mappings), valueEnd + 1, name, valuePart);
             }
             throw jsxError("JSX attribute values must be string literals or expressions", index);
         }
@@ -495,12 +507,42 @@ public final class NekoJsxCompiler {
             return new int[]{negative ? -value : value, i};
         }
 
+        /**
+         * JSX 文本白空白的 React/Babel 规则（换行驱动，而非一刀切 trim）：
+         * 换行后的行首空白与换行前的行尾空白去除、纯空白行删除、保留行之间的换行折叠为
+         * 单个空格；同一行内的空白（元素间空格 {@code <b>x</b> <i>y</i>}）原样保留——
+         * 旧实现 {\s+→" "}+trim 把元素间有效空格也丢了。
+         */
         private String normalizeText(String raw) {
             if (raw == null) {
                 return null;
             }
-            String normalized = raw.replace('\r', ' ');
-            normalized = normalized.replaceAll("\\s+", " ").trim();
+            String[] lines = raw.split("\r\n|\n|\r", -1);
+            int lastNonEmpty = 0;
+            for (int i = 0; i < lines.length; i++) {
+                if (!lines[i].replace(" ", "").replace("\t", "").isEmpty()) {
+                    lastNonEmpty = i;
+                }
+            }
+            StringBuilder sb = new StringBuilder(raw.length());
+            for (int i = 0; i <= lastNonEmpty; i++) {
+                String line = lines[i];
+                boolean isFirst = i == 0;
+                boolean isLast = i == lastNonEmpty;
+                if (!isFirst) {
+                    line = line.replaceAll("^[ \t]+", "");
+                }
+                if (!isLast) {
+                    line = line.replaceAll("[ \t]+$", "");
+                }
+                if (!line.isEmpty()) {
+                    sb.append(line);
+                    if (!isLast) {
+                        sb.append(' ');
+                    }
+                }
+            }
+            String normalized = sb.toString();
             if (normalized.isEmpty()) return null;
             return decodeHtmlEntities(normalized);
         }
@@ -881,12 +923,12 @@ public final class NekoJsxCompiler {
             return NekoSourceLexerBase.isIdentifierPart(c);
         }
 
-        private ParseResult factoryCall(int originalStart, GeneratedPart typeExpression, GeneratedPart propsExpression, List<GeneratedPart> children, int nextIndex) {
+        private ParseResult factoryCall(int originalStart, GeneratedPart typeExpression, GeneratedPart propsExpression, List<GeneratedPart> children, GeneratedPart keyExpression, int nextIndex) {
             if (automatic) {
                 // 标准 automatic runtime：
-                // - 0/1 child → jsx(type, props)
-                // - 2+ children → jsxs(type, props)
-                // - children 始终放在 props.children（单值或数组）
+                // - 0/1 child → jsx(type, props, key?)
+                // - 2+ children → jsxs(type, props, key?)
+                // - children 始终放在 props.children（单值或数组）；key 是第三实参，不进 props
                 boolean multi = children.size() > 1;
                 if (multi) {
                     usedJsxs = true;
@@ -897,6 +939,10 @@ public final class NekoJsxCompiler {
                 call.append(typeExpression);
                 call.append(", ");
                 call.append(automaticProps(propsExpression, children));
+                if (keyExpression != null) {
+                    call.append(", ");
+                    call.append(keyExpression);
+                }
                 call.append(")");
                 return new ParseResult(call.text(), call.mappings(), nextIndex);
             }
@@ -1053,5 +1099,10 @@ public final class NekoJsxCompiler {
     }
     private record ParseResult(String text, List<NekoSourceMapBuilder.MappingPoint> mappings, int nextIndex) {}
     private record ExpressionResult(GeneratedPart part, int nextIndex) {}
-    private record AttributeResult(GeneratedPart part, int nextIndex) {}
+    /** name 为 null 表示 spread 属性；valuePart 为属性值表达式（布尔简写属性为 null），供 key 提取复用。*/
+    private record AttributeResult(GeneratedPart part, int nextIndex, String name, GeneratedPart valuePart) {
+        AttributeResult(GeneratedPart part, int nextIndex) {
+            this(part, nextIndex, null, null);
+        }
+    }
 }

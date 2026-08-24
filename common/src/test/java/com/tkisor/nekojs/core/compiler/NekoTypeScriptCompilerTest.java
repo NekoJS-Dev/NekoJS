@@ -461,8 +461,10 @@ class NekoTypeScriptCompilerTest {
         String src = "enum E { A = 1e5, B = .5, C = 1., D = 0x1F, E2 = 0o7, F = 0b101, G = -2 }";
         String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
         assertTrue(out.contains("[\"A\"] = 100000"), out);
-        assertTrue(out.contains("[\"B\"] = 0"), out);
+        // 浮点字面量不得截断（曾钉住错误行为：.5 被截成 0）
+        assertTrue(out.contains("[\"B\"] = 0.5"), out);
         assertTrue(out.contains("[\"C\"] = 1"), out);
+        assertFalse(out.contains("[\"C\"] = 1."), out);
         assertTrue(out.contains("[\"D\"] = 31"), out);
         assertTrue(out.contains("[\"E2\"] = 7"), out);
         assertTrue(out.contains("[\"F\"] = 5"), out);
@@ -503,7 +505,8 @@ class NekoTypeScriptCompilerTest {
         String src = "enum E { A = 1e+5, B = 1.5e-2 }";
         String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
         assertTrue(out.contains("[\"A\"] = 100000"), out);
-        assertTrue(out.contains("[\"B\"] = 0"), out);
+        // 浮点枚举值不被截断（曾钉住错误行为：1.5e-2 被截成 0）
+        assertTrue(out.contains("[\"B\"] = 0.015"), out);
     }
 
     @Test
@@ -516,5 +519,163 @@ class NekoTypeScriptCompilerTest {
             assertTrue(ex.getMessage().contains(literal),
                 "error must mention literal '" + literal + "': " + ex.getMessage());
         }
+    }
+
+    // ---- P0 regression: 语句级结构预扫描（W3） ----
+
+    @Test
+    void importAliasIsPreservedAsValueAlias() {
+        // import { A as B } 的 as 是 JS 原生值别名——曾被当类型断言擦掉，运行时 ReferenceError
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "import { Items as ItemRegistry } from './registry';\nItemRegistry.air();");
+        assertTrue(out.contains("Items as ItemRegistry"), out);
+        assertTrue(out.contains("ItemRegistry.air();"), out);
+        CompilerExecutionAssertions.parseModule(out);
+    }
+
+    @Test
+    void exportAliasIsPreserved() {
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "export { default as x, y as z } from './m';");
+        assertTrue(out.contains("default as x"), out);
+        assertTrue(out.contains("y as z"), out);
+        CompilerExecutionAssertions.parseModule(out);
+    }
+
+    @Test
+    void typeAssertionAfterImportStillErased() {
+        // export/import 声明体里的 as any 仍是类型断言，必须照常擦除（别名豁免只限命名子句）
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "export const n = 1 as const;\nexport const s = getValue() as string;");
+        assertTrue(out.matches("(?s).*export const n = 1[ ]*;.*"), out);
+        assertTrue(out.matches("(?s).*export const s = getValue[(][)][ ]*;.*"), out);
+        assertFalse(out.contains("as const"), out);
+        assertFalse(out.contains("as string"), out);
+        CompilerExecutionAssertions.parseModule(out);
+    }
+
+    @Test
+    void switchCaseBodyIsNotErased() {
+        // case 1: 的冒号曾被当类型注解（数字也是 identifier 字符），case 体整条被删
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "switch (n) {\n  case 1: doOne(); break;\n  case 'a': doA(); break;\n  default: doOther(); break;\n}");
+        assertTrue(out.contains("case 1: doOne();"), out);
+        assertTrue(out.contains("case 'a': doA();"), out);
+        assertTrue(out.contains("default: doOther();"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void switchCaseWithIdentifierConstBodyIsNotErased() {
+        // 标识符常量的 case（前导是标识符字符）同样曾被误擦
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "const BIG = 2;\nswitch (n) { case BIG: doBig(); break; }");
+        assertTrue(out.contains("case BIG: doBig();"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void ternaryInsideCaseExpressionKeepsRealCaseColon() {
+        // case 表达式里的三元冒号不是 case 冒号：只有配对的那个 ':' 属于 case
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "switch (n) { case flag ? 1 : 2: doIt(); break; }");
+        assertTrue(out.contains("case flag ? 1 : 2: doIt();"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void labeledStatementIsNotGutted() {
+        // outer: for 的 label 冒号曾把整条循环当类型注解掏空
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "outer: for (let i = 0; i < 3; i++) {\n  for (let j = 0; j < 3; j++) {\n    if (j > i) continue outer;\n  }\n}");
+        assertTrue(out.contains("outer: for"), out);
+        assertTrue(out.contains("continue outer;"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void classFieldTypeAnnotationStillErased() {
+        // label 识别不得误伤类字段类型注解（含泛型类型）；注解类型以 '{' 开头的字段
+        //（x: { a: number }）是既有 P2 缺口，不在此钉住
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "class C {\n  width: number = 2;\n  table: Map<string, number> = new Map();\n}");
+        assertTrue(out.matches("(?s).*width[ ]*= 2;.*"), out);
+        assertFalse(out.contains(": number"), out);
+        assertFalse(out.contains("Map<string"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void optionalChainGenericTypeArgumentsAreErased() {
+        // a?.<T>(x)：'.' 前导的泛型实参曾拒判，残留 <T> 即 SyntaxError
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "const r = source?.<string>(arg);");
+        assertFalse(out.contains("<string>"), out);
+        assertTrue(out.contains("source?"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void declareConstIsErasedWholeStatement() {
+        // declare const 只擦 declare 会留无初始化 const → SyntaxError；整句擦除
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "declare const VERSION: string;\nconst local = 1;");
+        assertFalse(out.contains("VERSION"), out);
+        assertTrue(out.contains("const local = 1;"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void exportDeclareIsErasedWholeStatement() {
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "export declare function helper(a: number): string;\nconst local = 2;");
+        assertFalse(out.contains("helper"), out);
+        assertFalse(out.contains("export ;"), out);
+        assertTrue(out.contains("const local = 2;"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void exportInlineTypeSpecifierIsErased() {
+        // export { type Config, createConfig }：内联 type 曾只在 import 分支处理 → 残留非法 JS
+        // （module parse 会校验导出绑定存在，需给出 createConfig 的定义）
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "const createConfig = () => 1;\nexport { type Config, createConfig };");
+        assertFalse(out.contains("type Config"), out);
+        assertTrue(out.contains("createConfig"), out);
+        CompilerExecutionAssertions.parseModule(out);
+    }
+
+    @Test
+    void importDefaultBindingWithInlineTypeSpecifierIsErased() {
+        // default 绑定 + 命名子句：named clause 曾只认紧邻 import 的 '{'
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "import def, { type Only, real } from './m';\ndef(real);");
+        assertFalse(out.contains("type Only"), out);
+        assertTrue(out.contains("real"), out);
+        CompilerExecutionAssertions.parseModule(out);
+    }
+
+    @Test
+    void abstractClassMembersAreElided() {
+        // 抽象成员是"无实现占位"：TS 官方行为是 elide，残留无体方法在 JS class 里是 SyntaxError
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "abstract class Base {\n  abstract name: string;\n  abstract move(): void;\n  concrete(): number { return 1; }\n}\nclass Impl extends Base {\n  name = 'x';\n  move() {}\n}");
+        assertFalse(out.contains("abstract"), out);
+        assertFalse(out.contains(": void"), out);
+        assertFalse(out.contains(": string"), out);
+        assertTrue(out.contains("concrete()"), out);
+        assertTrue(out.contains("return 1;"), out);
+        assertTrue(out.contains("move() {}"), out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void enumFloatValueIsNotTruncated() {
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
+            "enum Rarity { Half = 0.5, Full = 1 }");
+        assertTrue(out.contains("[\"Half\"] = 0.5"), out);
+        assertTrue(out.contains("[\"Full\"] = 1]"), out);
+        CompilerExecutionAssertions.parse(out);
     }
 }

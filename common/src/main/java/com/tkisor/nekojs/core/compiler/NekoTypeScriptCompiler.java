@@ -40,12 +40,19 @@ public final class NekoTypeScriptCompiler {
         private final String source;
         private final StringBuilder out;
         private final int length;
+        /** 预扫描：该偏移的 ':' 是 switch case/default 或 label 冒号（typeAnnotationAt 必须拒判）。*/
+        private final boolean[] caseOrLabelColon;
+        /** 预扫描：该偏移处于 import/export 的值别名子句（named {...} 或 * as X）——其中的 as 是 JS 原生别名。*/
+        private final boolean[] aliasClause;
 
         private Eraser(Path file, String source) {
             this.file = file;
             this.source = source;
             this.out = new StringBuilder(source);
             this.length = source.length();
+            this.caseOrLabelColon = new boolean[length];
+            this.aliasClause = new boolean[length];
+            scanStructure();
         }
 
         private String erase() {
@@ -75,8 +82,18 @@ public final class NekoTypeScriptCompiler {
                         continue;
                     }
                     if ("abstract".equals(word)) {
-                        eraseRange(i, end);
-                        i = end;
+                        if (startsWithKeyword(nextNonWhitespace(end), "class")) {
+                            // abstract class：只擦修饰词，类本身照常
+                            eraseRange(i, end);
+                            i = end;
+                        } else {
+                            // 类体里的抽象成员（abstract m(): void; / abstract field: T;）：
+                            // TS 语义是"无实现占位"，JS class 里残留无体方法/无初始化字段即
+                            // SyntaxError——整条成员擦除（与 TS 官方 elide 行为一致）
+                            int memberEnd = statementOrBlockDeclarationEnd(i);
+                            eraseRange(i, memberEnd);
+                            i = memberEnd;
+                        }
                         continue;
                     }
                     // enum/namespace/module：不再抛异常，作为普通标识符跳过，留给转换阶段（transformEnums/Namespaces）处理
@@ -94,6 +111,18 @@ public final class NekoTypeScriptCompiler {
                     }
                     if ("export".equals(word) && typeExportAfter(end)) {
                         i = eraseExportTypeDeclaration(i);
+                        continue;
+                    }
+                    if ("export".equals(word) && startsWithKeyword(nextNonWhitespace(end), "declare")) {
+                        // export declare const/function/... 整条是环境声明：连同 export 一起整句擦除
+                        // （只擦 declare 会留下裸 export + 无初始化声明 → SyntaxError）
+                        int end2 = statementOrBlockDeclarationEnd(i);
+                        eraseRange(i, end2);
+                        i = end2;
+                        continue;
+                    }
+                    if ("export".equals(word) && hasInlineTypeSpecifier(end)) {
+                        i = eraseInlineTypeSpecifiers(i, end);
                         continue;
                     }
                     if ("implements".equals(word)) {
@@ -166,6 +195,171 @@ public final class NekoTypeScriptCompiler {
             }
             transform();
             return out.toString();
+        }
+
+        // ===== 阶段0：语句级结构预扫描 =====
+
+        /**
+         * 一遍线性扫描记录语句级上下文，供擦除谓词查表（擦除器本身仍按字符推进）：
+         * <ul>
+         *   <li>case/default/label 的 ':' —— {@code typeAnnotationAt} 曾把 {@code case 1:} 的冒号
+         *       （数字也是 identifier 字符）与 label 冒号当成类型注解，掏空整个 case 体/label 语句；</li>
+         *   <li>import/export 的值别名子句 —— {@code import { A as B }} 的 as 是 JS 原生别名，
+         *       {@code assertionContext} 曾把它当类型断言擦掉导致运行时 ReferenceError。</li>
+         * </ul>
+         * 识别规则保守：label 要求「标识符在语句头 + ':' 后跟 for/while/do/switch/if/try 完整词」，
+         * 类字段 {@code x: { a: T }}（冒号后是对象类型）与对象字面量属性不可误伤——误标一个本就
+         * 不该擦除的冒号（对象属性）无行为影响，漏标才会破坏擦除。
+         */
+        private void scanStructure() {
+            boolean statementHead = true;
+            int i = 0;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (statementHead && isIdentifierStart(c)) {
+                    int end = readIdentifierEnd(i + 1);
+                    String word = source.substring(i, end);
+                    if (word.equals("import") || word.equals("export")) {
+                        i = markAliasClauses(end);
+                        statementHead = false;
+                        continue;
+                    }
+                    if (word.equals("case")) {
+                        int colon = findCaseColon(end);
+                        if (colon >= 0) caseOrLabelColon[colon] = true;
+                        i = end;
+                        statementHead = false;
+                        continue;
+                    }
+                    if (word.equals("default")) {
+                        int p = nextNonWhitespace(end);
+                        if (p < length && source.charAt(p) == ':') caseOrLabelColon[p] = true;
+                        i = end;
+                        statementHead = false;
+                        continue;
+                    }
+                    int p = nextNonWhitespace(end);
+                    if (p < length && source.charAt(p) == ':' && labelStatementAfter(p + 1)) {
+                        caseOrLabelColon[p] = true;
+                    }
+                    statementHead = false;
+                    i = end;
+                    continue;
+                }
+                // 语句边界重置语句头；空白（空格/Tab/\r）保持当前状态——"{\n  case" 里
+                // 换行后的缩进空格不能把语句头标志吃掉
+                if (c == ';' || c == '{' || c == '}' || c == '\n') {
+                    statementHead = true;
+                } else if (!Character.isWhitespace(c)) {
+                    statementHead = false;
+                }
+                i++;
+            }
+        }
+
+        /** label 冒号后必须是 loop/switch/if/try 语句头（完整词匹配；break/continue 目标才需要 label）。*/
+        private boolean labelStatementAfter(int from) {
+            int i = nextNonWhitespace(from);
+            if (i >= length || !isIdentifierStart(source.charAt(i))) return false;
+            int end = readIdentifierEnd(i + 1);
+            String word = source.substring(i, end);
+            return word.equals("for") || word.equals("while") || word.equals("do")
+                || word.equals("switch") || word.equals("if") || word.equals("try");
+        }
+
+        /**
+         * 从 case 关键字之后扫描配对 ':'（跳过字符串/模板/括号内内容；深度 0 的三元 ?: 配对计数，
+         * 排除 ?. 与 ??）。遇到 {@code ;}/{@code {} 说明输入形态异常，返回 -1 不当 case 处理。
+         */
+        private int findCaseColon(int from) {
+            int parenDepth = 0, ternary = 0, i = from;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (c == '(' || c == '[') { parenDepth++; i++; continue; }
+                if (c == ')' || c == ']') { if (parenDepth > 0) parenDepth--; i++; continue; }
+                if (c == '?' && parenDepth == 0
+                        && !(i + 1 < length && (source.charAt(i + 1) == '.' || source.charAt(i + 1) == '?'))) {
+                    ternary++;
+                    i++;
+                    continue;
+                }
+                if (c == ':' && parenDepth == 0) {
+                    if (ternary > 0) { ternary--; i++; continue; }
+                    return i;
+                }
+                if (c == ';' || c == '{') return -1;
+                i++;
+            }
+            return -1;
+        }
+
+        /**
+         * 标记 import/export 语句里的值别名子句（named {...} 与 {@code * as X}）为 aliasClause。
+         * 扫描在遇到声明体边界（{@code =}/{@code (}/const/function/class/default 等关键字）即止——
+         * {@code export const x = y as any} 的 as 仍是类型断言，必须照常擦除。
+         */
+        private int markAliasClauses(int from) {
+            int i = from;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') { i = skipString(i, c); continue; }
+                if (c == '`') { i = skipTemplate(i); continue; }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) { i = skipped; continue; }
+                }
+                if (c == '{') {
+                    int close = matchingCloseBracket(i, '{', '}');
+                    if (close < 0) return i;
+                    for (int k = i; k <= close; k++) aliasClause[k] = true;
+                    i = close + 1;
+                    continue;
+                }
+                if (c == '*') {
+                    int asKw = nextNonWhitespace(i + 1);
+                    if (asKw >= 0 && asKw + 2 <= length && startsWithKeyword(asKw, "as")) {
+                        int name = nextNonWhitespace(asKw + 2);
+                        if (name < length && isIdentifierStart(source.charAt(name))) {
+                            int nameEnd = readIdentifierEnd(name + 1);
+                            for (int k = i; k < nameEnd; k++) aliasClause[k] = true;
+                            i = nameEnd;
+                            continue;
+                        }
+                    }
+                    i++;
+                    continue;
+                }
+                if (isIdentifierStart(c)) {
+                    int end = readIdentifierEnd(i + 1);
+                    String word = source.substring(i, end);
+                    if (word.equals("from") || word.equals("type")) { i = end; continue; }
+                    // default/声明关键字之后是值区（可能含 as 断言），别名子句已结束
+                    if (word.equals("default") || word.equals("const") || word.equals("let")
+                            || word.equals("var") || word.equals("function") || word.equals("class")
+                            || word.equals("async") || word.equals("abstract") || word.equals("enum")
+                            || word.equals("interface") || word.equals("namespace") || word.equals("module")) {
+                        return i;
+                    }
+                    i = end;
+                    continue;
+                }
+                if (c == '=' || c == '(') return i;
+                if (c == ';' || c == '\n') return i + 1;
+                i++;
+            }
+            return i;
         }
 
         // ===== 阶段2：转换（enum/namespace/参数属性）—— 在 out 上 replace，改变长度，source map 行号可能偏移 =====
@@ -345,7 +539,7 @@ public final class NekoTypeScriptCompiler {
         private String generateEnumIife(String name, List<EnumMember> members) {
             StringBuilder sb = new StringBuilder();
             sb.append("var ").append(name).append("; (function (").append(name).append(") { ");
-            long next = 0;
+            double next = 0;
             // 上一个数字成员的名字（用于上一个成员是「计算值」时，下一个无值成员的运行时自增 E["prev"] + 1）。
             // lastNumericKnown=true 表示 next 是编译期已知值（字面量数字）；false 表示上一个数字成员是计算值。
             String lastNumericName = null;
@@ -362,7 +556,7 @@ public final class NekoTypeScriptCompiler {
                         // 这个成员本身也是「计算」性质（值依赖运行时 prev），后续继续 +1
                     } else {
                         // 已知数字基准（或首个成员从 0 起）：用编译期字面量
-                        sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(next).append("] = \"").append(nm).append("\"; ");
+                        sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(formatEnumNumber(next)).append("] = \"").append(nm).append("\"; ");
                         lastNumericName = nm;
                         lastNumericKnown = true;
                         next++;
@@ -372,13 +566,13 @@ public final class NekoTypeScriptCompiler {
                     // 字符串成员不提供数字基准
                     lastNumericName = null;
                 } else if (isNumberLit(m.valueExpr())) {
-                    long num;
+                    double num;
                     try {
                         num = parseNumberLit(m.valueExpr());
                     } catch (NumberFormatException e) {
                         throw badEnumNumberLiteral(m.valueExpr());
                     }
-                    sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(num).append("] = \"").append(nm).append("\"; ");
+                    sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(formatEnumNumber(num)).append("] = \"").append(nm).append("\"; ");
                     next = num + 1;
                     lastNumericName = nm;
                     lastNumericKnown = true;
@@ -435,8 +629,8 @@ public final class NekoTypeScriptCompiler {
             return seenDigit && (!seenExp || seenExpDigit);
         }
 
-        /** Parses a TS numeric literal accepted by {@link #isNumberLit}. Floats truncate toward zero. */
-        private long parseNumberLit(String v) {
+        /** Parses a TS numeric literal accepted by {@link #isNumberLit}. Floats keep their value (0.5 stays 0.5). */
+        private double parseNumberLit(String v) {
             String core = v;
             boolean neg = false;
             if (!core.isEmpty() && (core.charAt(0) == '+' || core.charAt(0) == '-')) {
@@ -445,13 +639,20 @@ public final class NekoTypeScriptCompiler {
             }
             if (core.endsWith("n")) core = core.substring(0, core.length() - 1);
             String lower = core.toLowerCase();
-            long value;
-            if (lower.startsWith("0x")) value = Long.parseUnsignedLong(lower.substring(2), 16);
-            else if (lower.startsWith("0o")) value = Long.parseUnsignedLong(lower.substring(2), 8);
-            else if (lower.startsWith("0b")) value = Long.parseUnsignedLong(lower.substring(2), 2);
-            else if (lower.indexOf('.') >= 0 || lower.indexOf('e') >= 0) value = (long) Double.parseDouble(core);
-            else value = Long.parseLong(core);
+            double value;
+            if (lower.startsWith("0x")) value = (double) Long.parseUnsignedLong(lower.substring(2), 16);
+            else if (lower.startsWith("0o")) value = (double) Long.parseUnsignedLong(lower.substring(2), 8);
+            else if (lower.startsWith("0b")) value = (double) Long.parseUnsignedLong(lower.substring(2), 2);
+            else value = Double.parseDouble(core);
             return neg ? -value : value;
+        }
+
+        /** 枚举数字值的输出形式：整数值不打小数点（0 而不是 0.0），非整数保留 double 字面量。*/
+        private static String formatEnumNumber(double v) {
+            if (v == Math.rint(v) && Math.abs(v) <= 9.007199254740992E15) {
+                return String.valueOf((long) v);
+            }
+            return String.valueOf(v);
         }
 
         /**
@@ -978,7 +1179,11 @@ public final class NekoTypeScriptCompiler {
 
         private int eraseDeclare(int start) {
             int after = nextNonWhitespace(start + "declare".length());
-            if (startsWithKeyword(after, "global") || startsWithKeyword(after, "module") || startsWithKeyword(after, "namespace")) {
+            if (startsWithKeyword(after, "global") || startsWithKeyword(after, "module") || startsWithKeyword(after, "namespace")
+                    || startsWithKeyword(after, "const") || startsWithKeyword(after, "let") || startsWithKeyword(after, "var")
+                    || startsWithKeyword(after, "class") || startsWithKeyword(after, "abstract") || startsWithKeyword(after, "function")
+                    || startsWithKeyword(after, "enum")) {
+                // 环境声明整句擦除：declare const x: T 只擦 declare 会留下无初始化 const → SyntaxError
                 int end = statementOrBlockDeclarationEnd(start);
                 eraseRange(start, end);
                 return end;
@@ -1034,6 +1239,10 @@ public final class NekoTypeScriptCompiler {
         }
 
         private boolean assertionContext(int start) {
+            if (aliasClause[start]) {
+                // import/export 值别名子句里的 as（import { A as B }）：JS 原生别名，原样保留
+                return false;
+            }
             int previous = previousNonWhitespace(start - 1);
             return previous >= 0 && ")]}'\"`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$".indexOf(source.charAt(previous)) >= 0;
         }
@@ -1048,14 +1257,44 @@ public final class NekoTypeScriptCompiler {
             return startsWithKeyword(i, "type") || startsWithKeyword(i, "interface");
         }
 
-        /** import 语句的命名导入块里是否含内联 type 修饰符（TS 4.5+：{ real, type T }）。*/
-        private boolean hasInlineTypeSpecifier(int afterImport) {
-            int brace = nextNonWhitespace(afterImport);
-            // 只处理命名导入：import { ... } from ...
-            if (brace >= length || source.charAt(brace) != '{') return false;
+        /** import/export 语句的命名导入/导出块里是否含内联 type 修饰符（TS 4.5+：{ real, type T }）。*/
+        private boolean hasInlineTypeSpecifier(int afterKeyword) {
+            int brace = findNamedClauseBrace(afterKeyword);
+            if (brace < 0) return false;
             int close = matchingCloseBracket(brace, '{', '}');
             if (close < 0) return false;
             return findInlineTypeInBlock(brace + 1, close) >= 0;
+        }
+
+        /**
+         * 定位 import/export 语句头之后的命名子句 '{'（越过 default 绑定、逗号与 type 关键字：
+         * {@code import def, { type A, B } from '...'}）。遇到声明体边界（=、(、const/function/
+         * class 等关键字）、分号或换行即无命名子句；模块字符串（import '...'）同理。
+         */
+        private int findNamedClauseBrace(int from) {
+            int i = from;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') return -1;
+                if (c == '{') return i;
+                if (c == '*' || c == ',') { i++; continue; }
+                if (c == '=' || c == '(' || c == ';' || c == '\n') return -1;
+                if (isIdentifierStart(c)) {
+                    int end = readIdentifierEnd(i + 1);
+                    String word = source.substring(i, end);
+                    if (word.equals("type") || word.equals("as")) { i = end; continue; }
+                    if (word.equals("const") || word.equals("let") || word.equals("var")
+                            || word.equals("function") || word.equals("class") || word.equals("default")
+                            || word.equals("async") || word.equals("abstract") || word.equals("enum")
+                            || word.equals("interface") || word.equals("namespace") || word.equals("module")) {
+                        return -1;
+                    }
+                    i = end;
+                    continue;
+                }
+                i++;
+            }
+            return -1;
         }
 
         /** 在 {...} 块内查找顶层（逗号深度 0）的 `type X` 说明符，返回 type 关键字起点；找不到返回 -1。*/
@@ -1081,11 +1320,12 @@ public final class NekoTypeScriptCompiler {
             return -1;
         }
 
-        /** 擦除 import 命名导入块里的所有内联 `type X` 说明符（含尾随逗号），保留值绑定与整条 import。*/
-        private int eraseInlineTypeSpecifiers(int start, int afterImport) {
-            int brace = nextNonWhitespace(afterImport);
+        /** 擦除 import/export 命名块里的所有内联 `type X` 说明符（含尾随逗号），保留值绑定与整条语句。*/
+        private int eraseInlineTypeSpecifiers(int start, int afterKeyword) {
+            int brace = findNamedClauseBrace(afterKeyword);
+            if (brace < 0) return afterKeyword;
             int close = matchingCloseBracket(brace, '{', '}');
-            if (close < 0) return afterImport;
+            if (close < 0) return afterKeyword;
             // 反复擦块内的内联 type 说明符
             int scanFrom = brace + 1;
             while (true) {
@@ -1138,7 +1378,7 @@ public final class NekoTypeScriptCompiler {
             boolean arrowContext = previousChar == '=' || previousChar == ','
                 || previousChar == '(' || previousChar == '{' || previousChar == ';'
                 || previousChar == '\n' || previousChar == '\r' || previousChar == ':';
-            if (!isIdentifierPart(previousChar) && previousChar != ')' && previousChar != ']' && !arrowContext) {
+            if (!isIdentifierPart(previousChar) && previousChar != ')' && previousChar != ']' && previousChar != '.' && !arrowContext) {
                 return false;
             }
             // 语句起始关键字（return/throw/yield/await 等）后的 <T>( 也是泛型箭头
@@ -1160,13 +1400,13 @@ public final class NekoTypeScriptCompiler {
             if (nextChar == '(' || nextChar == '{') return true;
             if (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>') return true;
             // 非箭头上下文（标识符/) / ] 前导）下，<T>( 仍是泛型调用（如 foo<T>(x)）
-            if ((isIdentifierPart(previousChar) || previousChar == ')' || previousChar == ']') && nextChar == '(') {
+            if ((isIdentifierPart(previousChar) || previousChar == ')' || previousChar == ']' || previousChar == '.') && nextChar == '(') {
                 return true;
             }
             // 泛型实参出现在表达式里但非紧接调用：foo<T>, / foo<T>) / foo<T>] / foo<T>;
             // （典型场景：TSX 泛型组件 <Foo<number>/> lowering 后的 Foo<number> 表达式）
             // 仅当前导是标识符/`)`/`]` 时认定；前导是 `,`/`=` 等属于箭头上下文（上面 arrowContext 已覆盖）
-            if ((isIdentifierPart(previousChar) || previousChar == ')' || previousChar == ']')
+            if ((isIdentifierPart(previousChar) || previousChar == ')' || previousChar == ']' || previousChar == '.')
                 && (nextChar == ',' || nextChar == ')' || nextChar == ']' || nextChar == ';'
                     || nextChar == '\n' || nextChar == '\r')) {
                 return true;
@@ -1175,6 +1415,9 @@ public final class NekoTypeScriptCompiler {
         }
 
         private boolean typeAnnotationAt(int colon) {
+            // case/default/label 冒号不是类型注解（case 1: 的前导数字也是 identifier 字符；
+            // outer: for 的 label 冒号曾把整条循环语句当类型擦掉）
+            if (caseOrLabelColon[colon]) return false;
             // 三元 cond ? a : b 的 : 不是类型注解——先判，覆盖 : 前为 )/]/}/数字/字符串等所有前导
             // （isTernaryColon 已排除 ?: 可选参数与 ?. 可选链）
             if (isTernaryColon(colon)) return false;

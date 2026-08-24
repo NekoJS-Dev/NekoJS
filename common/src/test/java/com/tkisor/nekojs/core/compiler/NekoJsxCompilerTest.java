@@ -60,11 +60,48 @@ class NekoJsxCompilerTest {
     }
 
     @Test
-    void doesNotDecodeEntitiesInStringAttributes() {
-        // 字符串属性值里的实体是字面量（与 React 行为一致），不作解码
+    void decodesEntitiesInStringAttributeValues() {
+        // 与 React/TS 的 JSX 语义一致：字符串属性值里的实体须解码（曾钉住"原样保留"的非 React 行为）
         String out = compile("const el = <a title=\"A &amp; B\"/>");
-        // 属性字符串原样保留（带引号）
-        assertTrue(out.contains("A &amp; B"), "字符串属性里的实体应原样保留: " + out);
+        assertFalse(out.contains("&amp;"), "&amp; 须解码为 &: " + out);
+        assertTrue(out.contains("'A & B'"), "解码后的值须以转义后的 JS 字符串字面量出现: " + out);
+    }
+
+    @Test
+    void multiLineStringAttributeProducesValidJsLiteral() {
+        // 多行属性值：换行必须转义为 \n——原样拷贝会产出非法 JS 字符串字面量
+        String out = compile("const el = <a title=\"line1\nline2\"/>");
+        assertTrue(out.contains("line1\\nline2"), "换行须转义: " + out);
+        CompilerExecutionAssertions.parse(out);
+    }
+
+    @Test
+    void keepsSingleSpaceBetweenElementsOnSameLine() {
+        // React 规则：同一行内元素间的空格是有效内容（曾与换行一起被 trim 掉）
+        String out = compile("const el = <p><b>Hi</b> <i>There</i></p>");
+        assertTrue(out.contains(", ' ', "), "元素间单空格须保留为文本子节点: " + out);
+    }
+
+    @Test
+    void removesWhitespaceRunsThatSpanNewlines() {
+        // React 规则：跨换行的空白 run（换行相邻标签）删除；行中文本间换行折叠为单空格
+        String out = compile("const el = <p>\n  hello\n  world\n</p>");
+        assertTrue(out.contains("'hello world'"), "行间换行折叠为单空格: " + out);
+    }
+
+    @Test
+    void automaticRuntimePassesKeyAsThirdArgument() {
+        String out = NekoJsxCompiler.compileJsx(Path.of("key.jsx"),
+                "const a = <Item key={id}/>;\nconst b = <List key=\"k\">{a}{a}</List>", true).code();
+        assertTrue(out.contains("jsx(Item, null, (id))"), "key 表达式须作为第三实参: " + out);
+        assertTrue(out.contains("jsxs(List, {children: [(a), (a)]}, 'k')"), "字符串 key 须解码并作为第三实参: " + out);
+        assertFalse(out.contains("key: id"), "key 不得留在 props: " + out);
+    }
+
+    @Test
+    void automaticRuntimeKeepsKeyInPropsForClassic() {
+        String out = NekoJsxCompiler.compileJsx(Path.of("key-classic.jsx"), "const a = <Item key={id}/>", false).code();
+        assertTrue(out.contains("key: (id)"), "classic runtime 的 key 留在 props: " + out);
     }
 
     @Test
@@ -72,7 +109,7 @@ class NekoJsxCompilerTest {
         // 命名空间标签 <svg:rect/> —— 名称整段作为字符串传给 factory。
         String out = compile("const el = <svg:rect xlink:href=\"#shape\"/>");
         assertTrue(out.contains("'svg:rect'"), "命名空间标签须作字符串字面量: " + out);
-        assertTrue(out.contains("'xlink:href': \"#shape\""), "命名空间属性须使用合法属性键: " + out);
+        assertTrue(out.contains("'xlink:href': '#shape'"), "命名空间属性须使用合法属性键（转义字面量）: " + out);
 
         String componentOut = compile("const el = <Foo.Bar/>");
         assertTrue(componentOut.contains("__nekoJsxFactory(Foo.Bar, null)"),

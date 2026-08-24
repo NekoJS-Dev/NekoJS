@@ -23,11 +23,11 @@ class NekoModuleResolverTest {
     @Test
     void resolvesBareUserNodeModuleAsScript() throws Exception {
         NekoModuleResolver resolver = resolverFor(gameDir);
-        Path runtime = gameDir.resolve("nekojs/node_modules/nekojs/jsx-runtime.js");
+        Path runtime = gameDir.resolve("nekojs/node_modules/nekojs/user-lib.js");
         Files.createDirectories(runtime.getParent());
         Files.writeString(runtime, "export const jsx = () => null;");
 
-        NekoResolvedModule resolved = resolver.resolve("nekojs/server_scripts/main.js", "nekojs/jsx-runtime");
+        NekoResolvedModule resolved = resolver.resolve("nekojs/server_scripts/main.js", "nekojs/user-lib");
 
         assertEquals(NekoModuleKind.SCRIPT, resolved.kind());
         assertEquals(runtime.toRealPath(), resolved.path());
@@ -72,12 +72,12 @@ class NekoModuleResolverTest {
     @Test
     void propagatesUnsupportedBareNodeModuleCandidateErrors() throws Exception {
         NekoModuleResolver resolver = resolverFor(gameDir);
-        Path unsupported = gameDir.resolve("nekojs/node_modules/nekojs/jsx-runtime.txt");
+        Path unsupported = gameDir.resolve("nekojs/node_modules/nekojs/user-lib.txt");
         Files.createDirectories(unsupported.getParent());
         Files.writeString(unsupported, "not a script");
 
         IOException error = assertThrows(IOException.class,
-                () -> resolver.resolve("nekojs/server_scripts/main.js", "nekojs/jsx-runtime.txt"));
+                () -> resolver.resolve("nekojs/server_scripts/main.js", "nekojs/user-lib.txt"));
 
         assertTrue(error.getMessage().startsWith("Unsupported module file type:"), error::getMessage);
     }
@@ -95,7 +95,7 @@ class NekoModuleResolverTest {
     @Test
     void resolveForRequireKeepsBuiltinJavaAndFileModules() throws Exception {
         NekoModuleResolver resolver = resolverFor(gameDir);
-        Path module = gameDir.resolve("nekojs/node_modules/nekojs/jsx-runtime.js");
+        Path module = gameDir.resolve("nekojs/node_modules/nekojs/user-lib.js");
         Files.createDirectories(module.getParent());
         Files.writeString(module, "export const jsx = () => null;");
 
@@ -105,7 +105,7 @@ class NekoModuleResolverTest {
                 resolver.resolveForRequire("nekojs/server_scripts/main.js", "java:example/Widget").specifier());
         // 文件模块（含 node_modules 命中）正常解析
         assertEquals(NekoModuleKind.SCRIPT,
-                resolver.resolveForRequire("nekojs/server_scripts/main.js", "nekojs/jsx-runtime").kind());
+                resolver.resolveForRequire("nekojs/server_scripts/main.js", "nekojs/user-lib").kind());
     }
 
     private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {

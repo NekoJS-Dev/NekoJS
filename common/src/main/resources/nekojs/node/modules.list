@@ -14,3 +14,4 @@ modules/os.ts
 modules/example.ts
 internal/script-loader.js
 bootstrap.js
+modules/jsx-runtime.ts
