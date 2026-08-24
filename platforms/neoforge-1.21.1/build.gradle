@@ -29,7 +29,10 @@ sourceSets {
             srcDirs = ['src/main/resources', 'src/generated/resources']
         }
     }
-    test.java.srcDir '../neoforge-26-shared/src/test/java'
+    // 只挂三平台共享的测试层。不能挂 ../neoforge-26-shared/src/test/java：本平台的 main 也不
+    // 包含 neoforge-26-shared/src/main/java，那一层里的 26.x-only 测试（DynamicRegistry 等）
+    // 在这里根本没有被测类。
+    test.java.srcDir '../neoforge-shared/src/test/java'
 }
 
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea

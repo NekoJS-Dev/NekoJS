@@ -20,7 +20,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * <p>平台 PluginLoader 仅负责「发现」被 {@link RegisterNekoJSPlugin} 标记的类，
  * 通过 {@link #registerClass(Class)} 交给本类完成「按 clientOnly/requiredMods 过滤 + 实例化 + priority 排序」。
- * {@link #getPlugins()} 返回按 priority 降序（数值大先）排列的视图，priority 相同时保持登记顺序。
+ * {@link #getPlugins()} 返回按 priority 降序（数值大先）排列的视图，priority 相同时按实现类 FQN
+ * 字典序（登记顺序来自平台注解扫描，不确定，不能作为排序依据）。
  */
 public final class NekoJSBasePluginManager {
     private record PluginEntry(PluginIdentity identity, NekoJSPlugin plugin, int priority) {}
@@ -110,24 +111,37 @@ public final class NekoJSBasePluginManager {
         return URI.create("legacy:" + clazz.getName());
     }
 
-    /** 按 priority 降序（数值大先）返回所有已登记插件。 */
+    /**
+     * 插件顺序：priority 降序（数值大先），同 priority 按实现类 FQN 再按 owner id 字典序。
+     *
+     * <p>不能只按 priority 排：内置插件里 8 个有 7 个用缺省 1000，而登记顺序来自平台的注解
+     * 扫描结果（NeoForge 的 {@code getAllScanData()} 是 Set，遍历顺序不保证），而 binding
+     * 注册是 first-wins——同 priority 下靠登记顺序等于让「谁的绑定生效」随 JVM 运行而变。
+     * FQN 兜底让顺序在同一份 classpath 上完全确定。
+     */
+    private static final Comparator<PluginEntry> ORDER = Comparator
+            .comparingInt(PluginEntry::priority).reversed()
+            .thenComparing(entry -> entry.plugin().getClass().getName())
+            .thenComparing(entry -> entry.identity().ownerId());
+
+    /** 按 priority 降序（数值大先）、同 priority 按类 FQN 字典序返回所有已登记插件。 */
     public static synchronized List<NekoJSPlugin> getPlugins() {
         List<NekoJSPlugin> view = sortedView;
         if (view != null) return view;
         view = ENTRIES.stream()
-                .sorted(Comparator.comparingInt(PluginEntry::priority).reversed())
+                .sorted(ORDER)
                 .map(PluginEntry::plugin)
                 .toList();
         sortedView = view;
         return view;
     }
 
-    /** 返回所有已登记插件及其 owner identity，按 priority 降序排列。 */
+    /** 返回所有已登记插件及其 owner identity，顺序同 {@link #getPlugins()}。 */
     public static synchronized List<OwnedPlugin> getOwnedPlugins() {
         List<OwnedPlugin> view = ownedView;
         if (view != null) return view;
         view = ENTRIES.stream()
-                .sorted(Comparator.comparingInt(PluginEntry::priority).reversed())
+                .sorted(ORDER)
                 .map(entry -> new OwnedPlugin(entry.identity(), entry.plugin()))
                 .toList();
         ownedView = view;

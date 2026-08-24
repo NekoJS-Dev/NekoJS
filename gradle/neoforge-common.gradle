@@ -151,6 +151,16 @@ publishing {
     }
 }
 
+// unifiedPublishing 只保留「产物元数据」，不再配置任何发布目标。
+//
+// 实际发布路径是 .github/workflows/ci-build.yml 的 curseforge job（Kir-Antipov/mc-publish，
+// CF 项目 1518701，四个平台 jar 分别上传，secret 名为 CURSEFORGE_TOKEN）。这里原本有两个
+// 目标块引用 project.curseforge_id / project.modrinth_id，但这两个属性从未在任何
+// gradle.properties 里声明过——也就是说它们从来没成功跑过一次，只要有人设了
+// CURSEFORGE_KEY/MODRINTH_TOKEN 就会以 MissingPropertyException 炸在配置期。既然发布不走
+// 这条路（而且 NekoJS 目前没有 Modrinth 项目），把死配置删掉而不是补一个编造的 id。
+//
+// 若日后要恢复 gradle 侧发布：在根 gradle.properties 声明真实 id，再把目标块加回来。
 unifiedPublishing {
     project {
         displayName = "${modName} NeoForge ${mcVersion}-${modVersion}"
@@ -165,23 +175,6 @@ unifiedPublishing {
         relations {
             depends {
                 curseforge = "graal"
-            }
-        }
-
-        // CurseForge 发布（需要环境变量 CURSEFORGE_KEY 与 gradle.properties 的 curseforge_id）
-        if (ENV.CURSEFORGE_KEY) {
-            curseforge {
-                token = ENV.CURSEFORGE_KEY
-                id = project.curseforge_id
-            }
-        }
-
-        // Modrinth 发布（需要环境变量 MODRINTH_TOKEN 与 gradle.properties 的 modrinth_id）
-        if (ENV.MODRINTH_TOKEN) {
-            modrinth {
-                token = ENV.MODRINTH_TOKEN
-                id = project.modrinth_id
-                version = "${mcVersion}-${modVersion}"
             }
         }
     }

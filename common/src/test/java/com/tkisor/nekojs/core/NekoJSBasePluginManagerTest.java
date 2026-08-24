@@ -188,6 +188,35 @@ class NekoJSBasePluginManagerTest {
         assertEquals(1, NekoJSBasePluginManager.getOwnedPlugins().size());
     }
 
+    /**
+     * 同 priority 的顺序必须由类 FQN 决定，而不是登记顺序：登记顺序来自平台的注解扫描结果
+     * （NeoForge 的 {@code getAllScanData()} 是 Set），而 binding 注册是 first-wins，靠登记
+     * 顺序等于让「谁的绑定生效」随 JVM 运行而变。内置插件里 8 个有 7 个共用缺省 priority 1000。
+     */
+    @Test
+    void samePriorityPluginsAreOrderedByClassNameNotRegistrationOrder() {
+        NekoJSBasePluginManager.registerClass(SamePriorityB.class);
+        NekoJSBasePluginManager.registerClass(SamePriorityC.class);
+        NekoJSBasePluginManager.registerClass(SamePriorityA.class);
+
+        List<Class<?>> expected = List.of(SamePriorityA.class, SamePriorityB.class, SamePriorityC.class);
+        assertEquals(expected,
+                NekoJSBasePluginManager.getPlugins().stream().map(Object::getClass).map(c -> (Class<?>) c).toList());
+        assertEquals(expected,
+                NekoJSBasePluginManager.getOwnedPlugins().stream()
+                        .map(owned -> (Class<?>) owned.plugin().getClass()).toList());
+    }
+
+    /** 高 priority 仍然优先于 FQN 字典序。 */
+    @Test
+    void priorityStillOutranksClassName() {
+        NekoJSBasePluginManager.registerClass(SamePriorityA.class);
+        NekoJSBasePluginManager.registerClass(PluginP9.class);
+
+        assertEquals(List.of(PluginP9.class, SamePriorityA.class),
+                NekoJSBasePluginManager.getPlugins().stream().map(p -> (Class<?>) p.getClass()).toList());
+    }
+
     /** 在 stream() 中阻塞的 CopyOnWriteArrayList：旧快照在阻塞前捕获，用于确定性复现 stale-view 竞态。 */
     private static final class BlockingEntries extends CopyOnWriteArrayList<Object> {
         private static final long serialVersionUID = 1L;
@@ -237,4 +266,14 @@ class NekoJSBasePluginManagerTest {
 
     @RegisterNekoJSPlugin(priority = 1009)
     public static class PluginP9 implements NekoJSPlugin {}
+
+    // 同 priority（缺省 1000）三例：登记顺序刻意为 B、C、A，与 FQN 字典序不同。
+    @RegisterNekoJSPlugin
+    public static class SamePriorityA implements NekoJSPlugin {}
+
+    @RegisterNekoJSPlugin
+    public static class SamePriorityB implements NekoJSPlugin {}
+
+    @RegisterNekoJSPlugin
+    public static class SamePriorityC implements NekoJSPlugin {}
 }

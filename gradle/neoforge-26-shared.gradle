@@ -40,7 +40,12 @@ sourceSets {
             srcDir 'src/generated/resources'
         }
     }
-    test.java.srcDir '../neoforge-26-shared/src/test/java'
+    // 测试源码分两层，与 main 的分层一一对应：
+    //   ../neoforge-shared/src/test/java     三个 NeoForge 平台（1.21.1/26.1/26.2）共享
+    //   ../neoforge-26-shared/src/test/java  只有 26.x 有的东西（如 DynamicRegistry）
+    // 1.21.1 只挂第一层——它的 main 也不包含 neoforge-26-shared/src/main/java，挂第二层会
+    // 直接编译失败（这正是 26.x-only 测试必须与共享测试分开放的原因）。
+    test.java.srcDirs = ['src/test/java', '../neoforge-shared/src/test/java', '../neoforge-26-shared/src/test/java']
 }
 sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
 sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
@@ -114,6 +119,11 @@ dependencies {
 
     compileOnly libs.lombok
     annotationProcessor libs.lombok
+    // jspecify：neoforge-26-shared 与 neoforge-shared 的源码用了 org.jspecify.annotations
+    // （ScriptPackDataManager / EventBusForgeBridge / NekoJSPackLoader）。今天能编过靠 NeoForge
+    // 自身依赖图的传递引入——一旦上游换掉 nullness 库就会突然编译失败，所以显式声明
+    // （common 与另外两个平台都已显式声明）。
+    compileOnly libs.jspecify
     annotationProcessor project(':common-api-processor')
     annotationProcessor project(':common-api')
 

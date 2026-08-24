@@ -11,11 +11,14 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -36,7 +39,10 @@ class ApiManifestGoldenTest {
         ApiManifest manifest = buildManifest();
         String actual = ApiManifestJson.toJson(manifest) + "\n";
 
-        if (System.getProperty("nekojs.golden.regenerate") != null) {
+        // Boolean.getBoolean（而非 != null）：:common:test 无条件把这个 system property 透传成
+        // 字符串 "false"（common/build.gradle），所以 != null 会让每次普通测试都改写基线再
+        // Assumptions.abort，冻结门禁整体空转。
+        if (Boolean.getBoolean("nekojs.golden.regenerate")) {
             Files.createDirectories(GOLDEN_PATH.getParent());
             Files.writeString(GOLDEN_PATH, actual);
             Assumptions.abort("golden regenerated, review the diff before committing");
@@ -73,6 +79,52 @@ class ApiManifestGoldenTest {
         assertTrue(ids.contains("member:NBT.parse"), "NBT.parse must be frozen");
         // 契约反射的符号总数基线（原 JSON 110 个，反射允许更完整）
         assertTrue(ids.size() >= 110, "frozen symbol count below baseline: " + ids.size());
+    }
+
+    /**
+     * 负向断言：冻结门禁必须真的能发现表面变化。少一个符号、多一个符号、或某个符号多一个
+     * 重载签名，序列化结果都必须与 golden 不同——否则 {@link #coreApiSurfaceMatchesFrozenGolden}
+     * 只是在比较两份恒等的字符串。
+     */
+    @Test
+    void goldenRejectsRemovedAddedAndChangedSymbols() throws Exception {
+        String golden = Files.readString(GOLDEN_PATH);
+        ApiManifest manifest = buildManifest();
+        List<ApiManifest.ManifestSymbol> symbols = manifest.symbols();
+        assertTrue(symbols.size() >= 2, "need at least two symbols to mutate");
+
+        assertNotEquals(golden, json(withSymbols(manifest, symbols.subList(1, symbols.size()))),
+                "removing a symbol must change the manifest JSON");
+
+        List<ApiManifest.ManifestSymbol> added = new ArrayList<>(symbols);
+        added.add(new ApiManifest.ManifestSymbol("global:zzzNotFrozen", List.of()));
+        assertNotEquals(golden, json(withSymbols(manifest, added)),
+                "adding a symbol must change the manifest JSON");
+
+        List<ApiManifest.ManifestSymbol> changed = new ArrayList<>(symbols);
+        ApiManifest.ManifestSymbol first = changed.get(0);
+        List<String> extraSignature = new ArrayList<>(first.signatures());
+        extraSignature.add("(java.lang.String)");
+        changed.set(0, new ApiManifest.ManifestSymbol(first.id(), extraSignature));
+        assertNotEquals(golden, json(withSymbols(manifest, changed)),
+                "adding an overload signature must change the manifest JSON");
+    }
+
+    /** 再生成开关必须只在显式为 true 时打开：build.gradle 无条件透传字符串 "false"。 */
+    @Test
+    void regenerateSwitchIsOffForNonTrueValues() {
+        assertFalse(Boolean.getBoolean("nekojs.golden.regenerate"),
+                "golden regeneration must be off during a normal test run; the gate is a no-op otherwise");
+    }
+
+    private static String json(ApiManifest manifest) {
+        return ApiManifestJson.toJson(manifest) + "\n";
+    }
+
+    private static ApiManifest withSymbols(ApiManifest base, List<ApiManifest.ManifestSymbol> symbols) {
+        return new ApiManifest(base.catalogSchemaVersion(), base.apiVersion(), base.spiVersion(),
+                base.runtimeContractVersion(), base.nekojsVersion(), base.platform(),
+                base.capabilities(), base.modules(), symbols);
     }
 
     private static ApiManifest buildManifest() {

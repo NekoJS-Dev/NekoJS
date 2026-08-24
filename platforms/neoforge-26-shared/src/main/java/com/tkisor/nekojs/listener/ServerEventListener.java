@@ -43,11 +43,6 @@ public class ServerEventListener {
     }
 
     /**
-     * 物品属性修改事件：每次服务器启动时 post 一次（datapack 装载完成、玩家加入前）。
-     * 脚本 reload 时由 {@code /nekojs reload server}（NekoJSCommands）重放，走同一条
-     * 快照恢复路径；物品单例与已修改组件跨 vanilla /reload 保留，无需在此重放。
-     */
-    /**
      * 开服自动 probe（probe.toml {@code runAtStartup = true} 时启用，默认关闭）：
      * 服务器完全启动后跑一次默认 TS backend，结果摘要进日志；失败不影响开服。
      */
@@ -65,6 +60,9 @@ public class ServerEventListener {
         if (VillagerTradeManager.pendingCount() > 0) {
             VillagerTradeManager.apply(server);
         }
+        // 物品属性修改：每次服务器启动 post 一次（datapack 装载完成、玩家加入前）。脚本 reload
+        // 时由 `/nekojs reload server`（NekoJSCommands）重放，走同一条快照恢复路径；物品单例与
+        // 已修改组件跨 vanilla /reload 保留，无需在此重放。
         ItemModificationEventJS.fire(server);
     }
 
