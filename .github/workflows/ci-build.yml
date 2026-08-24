@@ -399,3 +399,25 @@ jobs:
           loaders: forge
           game-versions: 1.12.2
           changelog: ${{ steps.changelog.outputs.notes }}
+
+      # Modrinth 发布：项目建好后在 repo Settings → Secrets and variables → Actions 配置
+      #   secret   MODRINTH_TOKEN = Modrinth API token
+      #   variable MODRINTH_ID   = Modrinth 项目页 URL 末尾的 id
+      # 两者齐备前本步骤自动跳过（条件写在 if 里而不是省略步骤，让"将来要开 Modrinth"在
+      # workflow 里可见）。gradle 侧 unifiedPublishing 不再配置发布目标，原因见
+      # gradle/neoforge-common.gradle 的注释。
+      - name: Publish to Modrinth
+        if: env.MODRINTH_ID != '' && env.MODRINTH_TOKEN != ''
+        uses: Kir-Antipov/mc-publish@v3.3
+        env:
+          MODRINTH_ID: ${{ vars.MODRINTH_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        with:
+          modrinth-id: ${{ vars.MODRINTH_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: artifacts/*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }}
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge;forge
+          game-versions: 26.1.2;26.2.0;1.21.1;1.12.2
+          changelog: ${{ steps.changelog.outputs.notes }}

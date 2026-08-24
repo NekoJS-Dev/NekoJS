@@ -303,6 +303,48 @@ class ScriptReloadRegressionTest {
     }
 
     /**
+     * W1 回归：preload 读失败（编码损坏/权限问题）的脚本不得静默消失。
+     * 旧行为是 {@code disabled=true} 后 {@code shouldRun()} 跳过、{@code lastError} 无人读——
+     * 日志与错误面板都没有任何痕迹。修复后必须进 ErrorTracker 且异常类型保留。
+     */
+    @Test
+    void unreadableScriptSurfacesInErrorTrackerInsteadOfVanishing() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Path broken = serverDir.resolve("broken-encoding.js");
+        // 0x80/0x81 是非法 UTF-8 序列：Files.newBufferedReader 的默认 UTF-8 解码在读到时
+        // 抛 MalformedInputException，覆盖 preload 的 catch(Exception) 路径
+        Files.write(broken, new byte[]{(byte) 0x80, (byte) 0x81, '\n'});
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
+        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+        ScriptManager manager = null;
+        try {
+            manager = newManager(paths, recorder, engine, config, tracker);
+            manager.discoverScripts();
+            assertDoesNotThrow(manager::loadScripts,
+                    "an unreadable sibling script must not abort the whole load");
+
+            boolean reported = tracker.getAllErrors().stream()
+                    .anyMatch(error -> error.getErrorId() != null
+                            && error.getErrorId().toString().contains("broken-encoding"));
+            assertTrue(reported,
+                    "unreadable script must land in the error tracker instead of vanishing; errors="
+                            + tracker.getAllErrors().stream().map(e -> e.getErrorId()).toList());
+        } finally {
+            forceCloseLiveContexts();
+            if (manager != null) {
+                manager.close();
+            }
+            engine.close();
+            Files.deleteIfExists(broken);
+        }
+    }
+
+    /**
      * C1/I1 回归：候选加载期间语句上限杀死候选 Context 时，事务式 reload 必须按失败
      * 处理——关闭候选、保留旧 Context，并把 {@code contextKilled} 恢复为 reload 前的值。
      * 即使 reload 前 {@code contextKilled} 已经是 true，也不能把死掉的候选提交为 live。
