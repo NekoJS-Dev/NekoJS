@@ -146,7 +146,7 @@ public final class DataGeneratorJS {
         } catch (IOException error) {
             throw new IllegalArgumentException("Generated file path escapes the game directory: " + path, error);
         }
-        if (!verified.startsWith(root.normalize().toAbsolutePath())) {
+        if (!NekoJSPaths.isInside(verified, root)) {
             throw new IllegalArgumentException("Generated file path escapes its root: " + path);
         }
         return verified;

@@ -121,6 +121,24 @@ public final class NekoJSPaths {
     }
 
     /* ================= 路径校验（实例方法） ================= */
+
+    /**
+     * 路径的公共规范形式（见 {@code canonicalSplicedForm}）：自身存在则 toRealPath，
+     * 否则最近存在祖先 real 形式拼接缺失后缀。跨调用方统一比较/relativize 用。
+     */
+    public static Path canonicalForm(Path path) {
+        return canonicalSplicedForm(path);
+    }
+
+    /**
+     * 判断路径是否位于给定根内，两侧都取规范比较形式（存在→toRealPath，缺失→最近存在
+     * 祖先 real + 缺失后缀拼接）。调用方持有未规范化的根（如含 8.3 短名/大小写别名的
+     * 临时目录）时，与 {@link #verifyInsideGameDir} 等返回的规范形式直接 startsWith 会失配。
+     */
+    public static boolean isInside(Path path, Path root) {
+        return canonicalForm(path).startsWith(canonicalForm(root));
+    }
+
     public Path verifyInsideGameDir(Path path) throws IOException {
         return verifyInsideRoot(path, gameDir);
     }

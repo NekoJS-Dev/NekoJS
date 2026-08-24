@@ -485,6 +485,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # 2026-08-24 首跑即红：跨 run 恢复的 ~/.gradle 里残留 26.1.2.36-beta 时代的
+      # NFRT/构建缓存产物，重新组装的 patched jar 引用 2 参 EventHooks.onResourceReload
+      #（.71 起为 3 参）→ NoSuchMethodError。恢复后清除这两层缓存，强制按当前 userdev
+      # 重新生成 patched jar；post 阶段会把干净状态存回 actions cache。
+      - name: Purge stale NeoForm/build caches
+        run: rm -rf "$HOME/.gradle/caches/neoformruntime" "$HOME/.gradle/caches/build-cache-1"
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 

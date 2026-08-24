@@ -121,10 +121,16 @@ class ProbeTypeScriptFixtureWriterTest {
                         + "\nRun the test once, review the actual output at " + ACTUAL_PATH
                         + ", then copy it to " + GOLDEN_PATH);
 
-        String golden = Files.readString(GOLDEN_PATH, StandardCharsets.UTF_8);
-        assertEquals(golden, actual,
+        // 行尾归一（Windows runner checkout 出 CRLF golden，生成内容为 LF）；
+        // 与 TypeScriptNoopIrGoldenTest.normalize 同规则
+        String golden = normalize(Files.readString(GOLDEN_PATH, StandardCharsets.UTF_8));
+        assertEquals(golden, normalize(actual),
                 "Generated declaration does not match golden. "
                         + "If intentional, update golden by copying:\n"
                         + "  " + ACTUAL_PATH + "\n  -> " + GOLDEN_PATH);
+    }
+
+    private static String normalize(String value) {
+        return value.replace("\r\n", "\n").stripTrailing();
     }
 }

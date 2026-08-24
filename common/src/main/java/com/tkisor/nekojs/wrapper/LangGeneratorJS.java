@@ -91,7 +91,7 @@ public final class LangGeneratorJS {
         } catch (IOException error) {
             throw new IllegalArgumentException("Lang file escapes the game directory: " + file, error);
         }
-        if (!verified.startsWith(assetsRoot.normalize().toAbsolutePath())) {
+        if (!NekoJSPaths.isInside(verified, assetsRoot)) {
             throw new IllegalArgumentException("Lang file escapes the assets root: " + verified);
         }
         try {

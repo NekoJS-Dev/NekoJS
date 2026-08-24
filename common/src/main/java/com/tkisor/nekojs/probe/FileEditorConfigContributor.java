@@ -356,9 +356,13 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
 
     /**
      * 计算 {@code from} 到 {@code to} 的相对路径，以 POSIX 斜杠返回（用于 jsconfig/pyrightconfig 中的相对引用）。
+     * 两侧先统一到规范形式（存在→toRealPath，缺失→拼接形式）：Windows 上 8.3 短名
+     * （{@code RUNNER~1}）与 toRealPath 长名混用时，relativize 会产生爬到盘根再落回
+     * 绝对路径的垃圾结果。
      */
     public static String relativePosix(Path from, Path to) {
-        return from.relativize(to).toString().replace('\\', '/');
+        return NekoJSPaths.canonicalForm(from).relativize(NekoJSPaths.canonicalForm(to))
+                .toString().replace('\\', '/');
     }
 
     /** 便捷：{@link NekoJSPaths#root()} 到指定目录的相对 POSIX 路径。 */
