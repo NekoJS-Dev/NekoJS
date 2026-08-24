@@ -307,7 +307,7 @@ class TypeScriptNoopIrGoldenTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     /** 照抄 {@link ProbeOutputCompatibilityTest#readTree}：相对路径归一化 + 行尾归一化。 */

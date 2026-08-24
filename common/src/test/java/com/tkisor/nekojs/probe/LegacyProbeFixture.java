@@ -80,10 +80,11 @@ final class LegacyProbeFixture {
         // Recipe namespace
         var recipeNamespace = RecipeNamespaceCatalogEntry.of("testcraft", null);
 
-        // Registry literal type
+        // Registry literal type（entries 里 packns 不属于任何 mod：golden 顺带固定
+        // RegistryTypes.Namespace 对 mod 表与条目命名空间的并集）
         var registryType = new RegistryTypeCatalogEntry(
                 "SampleBlock",
-                List.of("testcraft:alpha", "testcraft:beta"),
+                List.of("testcraft:alpha", "testcraft:beta", "packns:gamma"),
                 List.of("testcraft:all_blocks"));
 
         // Manual declaration
@@ -112,6 +113,8 @@ final class LegacyProbeFixture {
                 List.of(),
                 List.of(manualDecl),
                 List.of(registryType),
+                // mod 表（othermod 没往注册表注册任何东西，仍应出现在命名空间联合里）
+                List.of("othermod", "testcraft"),
                 new TypeOutputLayout(Path.of("probe-types"), Path.of("snippets")),
                 java.util.Map.of(),
                 java.util.List.of()

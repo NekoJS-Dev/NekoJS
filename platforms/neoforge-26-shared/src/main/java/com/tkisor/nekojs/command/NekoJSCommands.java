@@ -440,6 +440,7 @@ public final class NekoJSCommands {
                 .map(b -> b.languageId() + ":" + b.name())
                 .collect(Collectors.joining(", "));
         source.sendSystemMessage(Component.literal("Generating probe (" + names + ")..."));
+        boolean allOk = true;
 
         try {
             var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
@@ -447,7 +448,6 @@ public final class NekoJSCommands {
 
             int totalFiles = 0;
             long maxMs = 0;
-            boolean allOk = true;
             for (ProbeBackend.GenerateResult r : results) {
                 if (r.success()) {
                     totalFiles += r.filesGenerated();
@@ -485,8 +485,9 @@ public final class NekoJSCommands {
         } catch (Exception e) {
             NekoJS.LOGGER.error("Probe generation failed", e);
             source.sendFailure(Component.literal("Probe generation failed: " + e.getMessage()));
+            return 0;
         }
-        return 1;
+        return allOk ? 1 : 0;
     }
 
     private static int listProbeBackends(CommandSourceStack source) {

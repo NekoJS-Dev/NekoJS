@@ -10,6 +10,7 @@
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
     "TagLoaderMixin",
+    "inject.MixinItemStack",
     "inject.MixinLevel",
     "inject.MixinMutableComponent",
     "inject.MixinPlayer"

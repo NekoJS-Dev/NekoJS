@@ -148,6 +148,30 @@ class JavaMemberIndexTest {
         assertEquals("data", JavaMemberIndex.remapName(m, null, m.getName()));
     }
 
+    @RemapByPrefix("neko$")
+    public interface InjectedStackSpec {
+        String neko$getId();
+    }
+
+    public static class HostWithInjectedStack implements InjectedStackSpec {
+        @Override
+        public String neko$getId() { return "minecraft:stone"; }
+    }
+
+    public static class HostWithUnmappedInternal {
+        public String neko$internal() { return "hidden"; }
+    }
+
+    @Test
+    void injectedRemappedMethodsAppearInAllVisibilityIndexesButInternalRemainHidden() {
+        assertTrue(JavaMemberIndex.allMembersOf(HostWithInjectedStack.class).contains("getId"));
+        assertTrue(JavaMemberIndex.propertyMembersOf(HostWithInjectedStack.class).contains("getId"));
+        assertTrue(JavaMemberIndex.exposedMembersOf(HostWithInjectedStack.class).hasMember("getId"));
+        assertTrue(JavaMemberIndex.exposedMembersOf(HostWithInjectedStack.class).hasMember("id"));
+        assertFalse(JavaMemberIndex.allMembersOf(HostWithUnmappedInternal.class).contains("neko$internal"));
+        assertFalse(JavaMemberIndex.exposedMembersOf(HostWithUnmappedInternal.class).hasMember("internal"));
+    }
+
     @Test
     void remapNameReturnsCallerMarkerWhenNoMappingApplies() throws NoSuchMethodException {
         Method m = FakeEvent.class.getMethod("greet", String.class);

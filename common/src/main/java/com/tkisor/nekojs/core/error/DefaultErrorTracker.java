@@ -238,7 +238,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     public int getRealCodeLine(String pathStr, int mappedLine) {
-        if (mappedLine <= 0) return mappedLine;
+        if (mappedLine <= 0 || isVirtualPath(pathStr)) return mappedLine;
         try {
             Path sourcePath = paths.root().resolve(pathStr);
             if (Files.exists(sourcePath)) {
@@ -335,15 +335,16 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if (scriptDisplayPath != null) {
                 return scriptDisplayPath;
             }
-            try {
-                Path path = Path.of(source.getURI());
-                String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
-                if (virtualDisplayPath != null) {
-                    return virtualDisplayPath;
+            if ("file".equalsIgnoreCase(source.getURI().getScheme())) {
+                try {
+                    Path path = Path.of(source.getURI());
+                    String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+                    if (virtualDisplayPath != null) {
+                        return virtualDisplayPath;
+                    }
+                } catch (Exception ignored) {
+                    // A malformed local URI can still fall through to virtual path resolution.
                 }
-            } catch (Exception ignored) {
-                // URI parse failed → try alternate virtual path resolution
-                com.tkisor.nekojs.NekoJS.LOGGER.debug("DefaultErrorTracker: failed to parse source URI, trying alternate virtual path resolution: " + uriText, ignored);
             }
             String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(uriText);
             if (virtualDisplayPath != null) {
@@ -354,6 +355,14 @@ public final class DefaultErrorTracker implements ErrorTracker {
             String scriptDisplayPath = extractScriptDisplayPath(source.getName());
             return scriptDisplayPath != null ? scriptDisplayPath : source.getName();
         }
+    }
+
+    private static boolean isVirtualPath(String pathText) {
+        if (pathText == null || pathText.isBlank()) return false;
+        int colon = pathText.indexOf(':');
+        if (colon <= 0) return false;
+        String scheme = pathText.substring(0, colon);
+        return !"file".equalsIgnoreCase(scheme) && !scheme.matches("[A-Za-z]");
     }
 
     private static String extractScriptDisplayPath(String pathText) {

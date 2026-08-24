@@ -39,17 +39,29 @@ public final class AdapterAliasGenerator {
     /**
      * 解析适配器的形状，填充别名注册表与别名缓存。
      *
+     * <p>分两遍：第一遍只登记 {@code targetType -> $Foo_} 映射，第二遍才渲染。这样嵌套位置
+     * 引用别的适配器目标时（如 {@code SizedIngredient} 的 {@code ingredient} 槽位引用
+     * {@code Ingredient}）不受适配器注册顺序影响。
+     *
      * @param generatedClasses 本次会被实际生成声明类的全限定名集合；仅处理其中的适配器目标，
      *                         避免为未生成的目标注册别名而引入悬空类型引用
      */
     public void prepare(List<AdapterCatalogEntry> adapters, Set<String> generatedClasses) {
         aliases.clear();
         hostImports.clear();
+
+        List<AdapterCatalogEntry> eligible = new ArrayList<>();
         for (AdapterCatalogEntry entry : adapters) {
             if (entry.shapes().isEmpty()) continue;
+            String fqn = entry.targetType().getName();
+            if (!generatedClasses.contains(fqn)) continue;
+            eligible.add(entry);
+            aliasRegistry.registerClassAlias(fqn, "$" + tsClassName(entry.targetType()) + "_");
+        }
+
+        for (AdapterCatalogEntry entry : eligible) {
             Class<?> target = entry.targetType();
             String fqn = target.getName();
-            if (!generatedClasses.contains(fqn)) continue;
             String selfSimple = tsClassName(target);
             String selfPackage = target.getPackage() != null ? target.getPackage().getName() : "";
 
@@ -57,14 +69,14 @@ public final class AdapterAliasGenerator {
             Set<String> usedRegistries = new LinkedHashSet<>();
             Set<String> rendered = new LinkedHashSet<>();
             for (AdapterInputShape shape : entry.shapes()) {
-                rendered.add(render(shape, selfSimple, selfPackage, imports, usedRegistries));
+                // 顶层 self() 必须渲染成 $Foo（渲染成 $Foo_ 会让别名自引用成环）
+                rendered.add(render(shape, selfSimple, selfPackage, imports, usedRegistries, false));
             }
             if (rendered.isEmpty()) continue;
 
             String union = String.join(" | ", rendered);
             String aliasName = "$" + selfSimple + "_";
             aliases.put(fqn, new AdapterAlias(aliasName, union, imports, !usedRegistries.isEmpty(), entry.syntaxDoc()));
-            aliasRegistry.registerClassAlias(fqn, aliasName);
             // 收集别名引用的跨包 host 类型，供 orchestrator 确保它们也被生成，避免悬空 import
             for (String imp : imports) {
                 if (!imp.equals(fqn)) hostImports.add(imp);
@@ -110,13 +122,20 @@ public final class AdapterAliasGenerator {
 
     // ===================== 形状渲染 =====================
 
+    /**
+     * @param nested 是否处于嵌套位置（数组元素 / 对象槽位 / 联合成员 / 模板洞）。嵌套位置的
+     *               目标类型要放宽成输入别名 {@code $Foo_}：运行时那些位置同样经适配器转换，
+     *               所以 {@code { any: ['minecraft:stone'] }} 之类的写法必须能通过类型检查。
+     *               顶层不放宽——否则 {@code $Foo_ = $Foo_ | ...} 自引用成环。
+     */
     private String render(AdapterInputShape shape, String selfSimple, String selfPackage,
-                          Set<String> imports, Set<String> usedRegistries) {
+                          Set<String> imports, Set<String> usedRegistries, boolean nested) {
         return switch (shape) {
             case AdapterInputShape.StringValue v -> "string";
+            case AdapterInputShape.LiteralValue v -> "\"" + v.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
             case AdapterInputShape.NumberValue v -> "number";
             case AdapterInputShape.BooleanValue v -> "boolean";
-            case AdapterInputShape.SelfValue v -> "$" + selfSimple;
+            case AdapterInputShape.SelfValue v -> "$" + selfSimple + (nested ? "_" : "");
             case AdapterInputShape.HostValue v -> {
                 Class<?> hostCls = v.cls();
                 // 同包目标已在当前模块声明，无需 import；跨包才收集
@@ -124,16 +143,37 @@ public final class AdapterAliasGenerator {
                 if (!hostPkg.equals(selfPackage)) {
                     imports.add(hostCls.getName());
                 }
-                yield "$" + tsClassName(hostCls);
+                String hostAlias = nested ? aliasRegistry.getAlias(hostCls.getName()) : null;
+                yield hostAlias != null ? hostAlias : "$" + tsClassName(hostCls);
             }
             case AdapterInputShape.ArrayOfValue v ->
-                    render(v.element(), selfSimple, selfPackage, imports, usedRegistries) + "[]";
+                    render(v.element(), selfSimple, selfPackage, imports, usedRegistries, true) + "[]";
             case AdapterInputShape.ObjectValue v ->
                     renderObject(v.slots(), selfSimple, selfPackage, imports, usedRegistries);
+            case AdapterInputShape.UnionValue v -> {
+                List<String> members = new ArrayList<>();
+                for (AdapterInputShape member : v.members()) {
+                    members.add(render(member, selfSimple, selfPackage, imports, usedRegistries, true));
+                }
+                // 恒加括号：槽位/数组元素位置都合法，且不依赖调用点自己判断优先级
+                yield "(" + String.join(" | ", members) + ")";
+            }
             case AdapterInputShape.RegistryValue v -> {
                 usedRegistries.add(v.typeName());
                 yield "RegistryTypes." + v.typeName();
             }
+            case AdapterInputShape.RegistryTagValue v -> {
+                usedRegistries.add(v.typeName());
+                yield "RegistryTypes." + v.typeName() + "Tag";
+            }
+            case AdapterInputShape.NamespaceValue v -> {
+                // 与注册表字面量同一模块（@special/types），复用同一条 import 触发
+                usedRegistries.add("Namespace");
+                yield "RegistryTypes.Namespace";
+            }
+            case AdapterInputShape.TemplateValue v -> "`" + v.prefix()
+                    + "${" + render(v.hole(), selfSimple, selfPackage, imports, usedRegistries, true) + "}"
+                    + v.suffix() + "`";
             case AdapterInputShape.RawValue v -> v.ts();
         };
     }
@@ -143,7 +183,7 @@ public final class AdapterAliasGenerator {
         if (slots.isEmpty()) return "{ [key: string]: any }";
         List<String> parts = new ArrayList<>();
         for (Slot slot : slots) {
-            String type = render(slot.shape(), selfSimple, selfPackage, imports, usedRegistries);
+            String type = render(slot.shape(), selfSimple, selfPackage, imports, usedRegistries, true);
             parts.add(quoteKey(slot.name()) + (slot.required() ? "" : "?") + ": " + type);
         }
         return "{ " + String.join(", ", parts) + " }";

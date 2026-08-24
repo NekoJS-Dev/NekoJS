@@ -100,6 +100,7 @@ class LegacySurfaceAdapterTest {
                 List.of(),
                 List.of(),
                 List.of(),
+                List.of(),
                 new TypeOutputLayout(java.nio.file.Path.of("types"), java.nio.file.Path.of("snippets")),
                 Map.of(),
                 List.of()

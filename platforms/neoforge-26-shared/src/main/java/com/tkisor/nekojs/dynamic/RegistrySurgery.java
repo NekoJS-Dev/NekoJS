@@ -51,14 +51,19 @@ public final class RegistrySurgery {
 
     private static Field field(Class<?> owner, String name) {
         return FIELD_CACHE.computeIfAbsent(owner.getName() + "#" + name, ignored -> {
-            try {
-                Field field = owner.getDeclaredField(name);
-                field.setAccessible(true);
-                return field;
-            } catch (NoSuchFieldException e) {
-                throw new IllegalStateException(
-                        "MappedRegistry internals moved: field '" + name + "' not found on " + owner.getName(), e);
+            Class<?> current = owner;
+            while (current != null) {
+                try {
+                    Field field = current.getDeclaredField(name);
+                    field.setAccessible(true);
+                    return field;
+                } catch (NoSuchFieldException ignoredMissing) {
+                    current = current.getSuperclass();
+                }
             }
+            throw new IllegalStateException(
+                    "MappedRegistry internals moved: field '" + name + "' not found on " + owner.getName(),
+                    new NoSuchFieldException(name));
         });
     }
 

@@ -137,7 +137,7 @@ ProbeCoordinator.runProbe
 TypeScriptProbeBackend ──► .neko_probe/typescript/（@package / @side-only / @special / @manual / @nekojs/managed）
 PythonProbeBackend    ──► .neko_probe/python/（nekojs/{__init__.pyi, py.typed, _java, _events}）
         ▼
-各自 staging 原子替换（成功才覆盖 outputDir，失败保留旧声明）+ 编辑器配置注入
+各自就地逐文件同步 outputDir（渲染失败不触盘，旧声明保留）+ 编辑器配置注入
 ```
 
 ### 3.2 事件目录不变量（防重复声明，历史 bug 教训）
@@ -165,7 +165,7 @@ PythonProbeBackend    ──► .neko_probe/python/（nekojs/{__init__.pyi, py.t
 ### 3.5 确定性与原子性
 
 - **[必须]** 所有生成路径保持确定性排序：collectClasses 结果按 FQN 字典序、TypeReflector 成员排序、import 字典序——生成产物必须可复现，不得依赖反射/HashMap 的偶然顺序。
-- 输出采用 staging 原子替换：失败保留旧声明；入口需能恢复崩溃残留的 staging/backup 中间态。
+- 输出采用就地逐文件同步：先整体渲染进内存，再写变化的文件、删本次不再产出的文件；渲染失败不触盘。目录级 rename 在 Windows 上会被编辑器句柄挡住（AccessDenied），不要退回那条路。
 
 ### 3.6 修改规则
 

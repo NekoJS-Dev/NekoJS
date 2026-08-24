@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@link ProbeBackend#render} / 默认 {@code generate} 的契约回归（预发布接口重构）：
  * <ul>
  *   <li>render 纯内存——不创建/触碰输出目录</li>
- *   <li>默认 generate：staging 落盘 + 原子提交 + 结果携带 outputDir</li>
+ *   <li>默认 generate：逐文件就地写入输出目录 + 结果携带 outputDir</li>
  *   <li>路径越界防护：绝对路径 / {@code ..} 段被拒绝，目录外零写盘</li>
  *   <li>异常消息兜底：null message 的异常不再产出 "backend failed: null"</li>
  *   <li>probe.toml {@code runAtStartup} 解析（默认 false）</li>
@@ -53,11 +53,11 @@ class ProbeBackendRenderTest {
         assertTrue(files.containsKey("nekojs/__init__.pyi"));
         assertTrue(files.containsKey("nekojs/py.typed"));
         assertFalse(Files.exists(out), "render 不得触碰输出目录");
-        assertFalse(Files.exists(out.resolveSibling("python.staging")), "render 不得创建 staging");
+        assertFalse(Files.exists(out.resolveSibling("python.staging")), "render 不得创建任何中间目录");
     }
 
     @Test
-    void defaultGenerateCommitsRenderedFilesAtomically(@TempDir Path tmp) throws Exception {
+    void defaultGenerateWritesRenderedFilesInPlace(@TempDir Path tmp) throws Exception {
         NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
         Path out = paths.gameDir().resolve(".neko_probe").resolve("custom");
         ProbeBackend backend = new FakeRenderBackend(Map.of(
@@ -194,6 +194,6 @@ class ProbeBackendRenderTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 }

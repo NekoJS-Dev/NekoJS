@@ -43,8 +43,10 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
                         Slot.opt("not", self()),
                         Slot.opt("and", self()),
                         Slot.opt("or", self()),
-                        Slot.opt("output", string()),
-                        Slot.opt("input", string()),
+                        // output/input 是物品 id 或 #标签：逐个列出而不是用裸 string，
+                        // 否则联合里的 id 字面量补全会被 string 吞掉
+                        Slot.opt("output", union(registry("Item"), template("#", registryTag("Item")))),
+                        Slot.opt("input", union(registry("Item"), template("#", registryTag("Item")))),
                         Slot.opt("mod", string()),
                         Slot.opt("group", string()),
                         Slot.opt("id", string()),

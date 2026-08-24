@@ -136,7 +136,8 @@ public final class PythonProbeBackend implements ProbeBackend {
                 registries.put(r.typeName(), r);
             }
         }
-        Map<String, PyAdapterAlias> adapterAliases = buildAdapterAliases(snapshot.adapters(), availableFqns, registries);
+        Map<String, PyAdapterAlias> adapterAliases = buildAdapterAliases(snapshot.adapters(), availableFqns,
+                registries, snapshot.modIds());
         // 枚举字面量别名：Color_ = Color | Literal["RED", ...]（镜像 TS 侧 $Color_ 输入别名）
         Map<String, PyAdapterAlias> enumAliases = buildEnumAliases(ir, availableFqns);
         // dispatch key 放宽视图：适配器 + 枚举别名合并（枚举 key 经 PythonEventRenderer 放宽为 Enum_）
@@ -377,10 +378,12 @@ public final class PythonProbeBackend implements ProbeBackend {
      * 避免别名悬空；无法映射到 Python 的形状（未收集 host/RawValue/快照缺失的注册表）跳过并 debug 日志。
      *
      * @param registries 注册表字面量查表（typeName → 条目），供 RegistryValue 形状渲染 Literal 联合
+     * @param modIds     已加载 mod id，供 NamespaceValue 形状渲染 Literal 联合（与注册表命名空间取并集）
      */
     private Map<String, PyAdapterAlias> buildAdapterAliases(List<AdapterCatalogEntry> adapters,
                                                             Set<String> availableFqns,
-                                                            Map<String, RegistryTypeCatalogEntry> registries) {
+                                                            Map<String, RegistryTypeCatalogEntry> registries,
+                                                            List<String> modIds) {
         Map<String, PyAdapterAlias> out = new LinkedHashMap<>();
         if (adapters == null) return out;
         for (AdapterCatalogEntry entry : adapters) {
@@ -394,7 +397,8 @@ public final class PythonProbeBackend implements ProbeBackend {
             Set<String> inputs = new LinkedHashSet<>();
             List<String> largeRegistries = new ArrayList<>();
             for (AdapterInputShape shape : entry.shapes()) {
-                String rendered = renderInputShape(shape, simple, inputFqns, availableFqns, registries, largeRegistries);
+                String rendered = renderInputShape(shape, simple, inputFqns, availableFqns, registries,
+                        modIds, largeRegistries);
                 if (rendered != null) inputs.add(rendered);
             }
             inputs.remove(simple); // Self 形状 = 目标自身，已在别名左侧
@@ -451,7 +455,45 @@ public final class PythonProbeBackend implements ProbeBackend {
             NekoJS.LOGGER.debug("Python probe: skip adapter registry input {} (registry not in snapshot)", typeName);
             return null;
         }
-        List<String> entries = new ArrayList<>(entry.entries());
+        return renderLiteralUnion(typeName, entry.entries(), largeRegistries);
+    }
+
+    /**
+     * RegistryTagValue 形状 → Python 类型字符串：与 {@link #renderRegistryInput} 同源同规则，
+     * 只是取 {@code tagEntries}。标签未采集（如 1.12.2 无标签系统）时回退 {@code str}，与 TS 侧
+     * {@code type XTag = string} 的回退一致。
+     */
+    private String renderRegistryTagInput(String typeName, Map<String, RegistryTypeCatalogEntry> registries,
+                                          List<String> largeRegistries) {
+        RegistryTypeCatalogEntry entry = registries.get(typeName);
+        if (entry == null) {
+            NekoJS.LOGGER.debug("Python probe: skip adapter registry tag input {} (registry not in snapshot)", typeName);
+            return null;
+        }
+        return renderLiteralUnion(typeName + "Tag", entry.tagEntries(), largeRegistries);
+    }
+
+    /**
+     * NamespaceValue 形状 → Python 类型字符串：与 TS 侧 {@code RegistryTypes.Namespace} 同源
+     * 同规则——加载器 mod 列表（{@code snapshot.modIds()}）与注册表条目 id 的 {@code ':'} 前缀
+     * 取并集。两者都空（快照来自无平台的单测）时回退 {@code str}，与 TS 侧一致。
+     */
+    private String renderNamespaceInput(List<String> modIds, Map<String, RegistryTypeCatalogEntry> registries,
+                                        List<String> largeRegistries) {
+        Set<String> namespaces = new java.util.TreeSet<>(modIds);
+        for (RegistryTypeCatalogEntry entry : registries.values()) {
+            for (String id : entry.entries()) {
+                if (id == null || id.isBlank()) continue;
+                int colon = id.indexOf(':');
+                namespaces.add(colon < 0 ? id : id.substring(0, colon));
+            }
+        }
+        namespaces.remove("");
+        return renderLiteralUnion("Namespace", List.copyOf(namespaces), largeRegistries);
+    }
+
+    private String renderLiteralUnion(String typeName, List<String> rawEntries, List<String> largeRegistries) {
+        List<String> entries = new ArrayList<>(rawEntries);
         if (entries.isEmpty()) return "str"; // TS 侧 @special 对空注册表同样回退 string
         if (entries.size() >= REGISTRY_LITERAL_LIMIT) {
             largeRegistries.add(typeName);
@@ -470,9 +512,11 @@ public final class PythonProbeBackend implements ProbeBackend {
     private String renderInputShape(AdapterInputShape shape, String selfSimple,
                                     Set<String> inputFqns, Set<String> availableFqns,
                                     Map<String, RegistryTypeCatalogEntry> registries,
-                                    List<String> largeRegistries) {
+                                    List<String> modIds, List<String> largeRegistries) {
         return switch (shape) {
             case AdapterInputShape.StringValue v -> "str";
+            case AdapterInputShape.LiteralValue v ->
+                    "Literal[\"" + v.text().replace("\\", "\\\\").replace("\"", "\\\"") + "\"]";
             case AdapterInputShape.NumberValue v -> "float";
             case AdapterInputShape.BooleanValue v -> "bool";
             case AdapterInputShape.SelfValue v -> selfSimple;
@@ -488,12 +532,27 @@ public final class PythonProbeBackend implements ProbeBackend {
                 yield ApiTypeRefPyRenderer.simplePyName(fqn);
             }
             case AdapterInputShape.ArrayOfValue v -> {
-                String elem = renderInputShape(v.element(), selfSimple, inputFqns, availableFqns, registries, largeRegistries);
+                String elem = renderInputShape(v.element(), selfSimple, inputFqns, availableFqns, registries,
+                        modIds, largeRegistries);
                 yield elem == null ? null : "list[" + elem + "]";
             }
             case AdapterInputShape.ObjectValue v -> "dict[str, Any]";
+            case AdapterInputShape.UnionValue v -> {
+                List<String> members = new ArrayList<>();
+                for (AdapterInputShape member : v.members()) {
+                    String rendered = renderInputShape(member, selfSimple, inputFqns, availableFqns,
+                            registries, modIds, largeRegistries);
+                    if (rendered != null) members.add(rendered);
+                }
+                yield members.isEmpty() ? null : "(" + String.join(" | ", members) + ")";
+            }
             case AdapterInputShape.RegistryValue v ->
                     renderRegistryInput(v.typeName(), registries, largeRegistries);
+            case AdapterInputShape.RegistryTagValue v ->
+                    renderRegistryTagInput(v.typeName(), registries, largeRegistries);
+            case AdapterInputShape.NamespaceValue v -> renderNamespaceInput(modIds, registries, largeRegistries);
+            // Python 没有模板字面量类型：整个模板退化为 str（前后缀语法无法表达，字段语义已由 doc 覆盖）
+            case AdapterInputShape.TemplateValue v -> "str";
             case AdapterInputShape.RawValue v -> {
                 NekoJS.LOGGER.debug("Python probe: skip adapter raw TS input '{}'", v.ts());
                 yield null;

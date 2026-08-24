@@ -3,8 +3,6 @@ package com.tkisor.nekojs.probe;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +17,7 @@ import java.util.Optional;
  * 输出目录（{@link #outputDir}），互不干扰。
  *
  * <p><b>实现契约（预发布重构简化）</b>：实现只需提供 {@link #render}——把产物渲染进内存
- * （相对输出目录的路径 → UTF-8 文本），**不触碰磁盘**；staging/原子提交/崩溃恢复/路径越界校验
+ * （相对输出目录的路径 → UTF-8 文本），**不触碰磁盘**；落盘/陈旧文件清理/路径越界校验
  * 由 {@link #generate} 默认实现统一负责（经 {@link ProbeOutputCommitter}）。需要完全自管输出的
  * 第三方 backend 仍可覆盖 {@code generate}，但不推荐——提交语义（备份/恢复/残留清理）容易写错。
  *
@@ -88,17 +86,15 @@ public interface ProbeBackend {
     Map<String, String> render(ProbeContext ctx);
 
     /**
-     * {@link #render} + 落盘 + 原子提交（默认实现）：恢复崩溃残留 → 逐文件写入 staging →
-     * {@link ProbeOutputCommitter#commit} 整体替换输出目录。渲染失败（未触盘）或提交失败
-     * （staging 丢弃、旧输出保留）分别转为失败结果。
+     * {@link #render} + 落盘（默认实现）：渲染到内存 → 校验相对路径 →
+     * {@link ProbeOutputCommitter#commitInPlace} 逐文件就地同步。渲染失败时不触盘；
+     * 某个文件被外部进程锁住时转为失败结果并点名该文件。
      *
      * @return 生成结果（文件数、耗时、输出目录、warnings）
      */
     default GenerateResult generate(ProbeContext ctx) {
         long start = System.currentTimeMillis();
         Path outputDir = ctx.languageDir();
-        Path staging = ProbeOutputCommitter.stagingDir(outputDir);
-        Path backup = ProbeOutputCommitter.backupDir(outputDir);
 
         Map<String, String> files;
         try {
@@ -117,26 +113,15 @@ public interface ProbeBackend {
         }
 
         try {
-            ProbeOutputCommitter.recoverStaging(outputDir, staging, backup);
-            Files.createDirectories(staging);
-            for (Map.Entry<String, String> e : files.entrySet()) {
-                Path file = staging.resolve(e.getKey()).normalize();
-                if (file.getParent() != null) {
-                    Files.createDirectories(file.getParent());
-                }
-                Files.writeString(file, e.getValue(), StandardCharsets.UTF_8);
-            }
-            ProbeOutputCommitter.commit(staging, outputDir, backup);
+            ProbeOutputCommitter.CommitReport report = ProbeOutputCommitter.commitInPlace(outputDir, files);
             long duration = System.currentTimeMillis() - start;
-            NekoJS.LOGGER.info("Probe [{}] generated {} files in {}ms", languageId(), files.size(), duration);
-            return GenerateResult.success(files.size(), duration, outputDir);
+            NekoJS.LOGGER.info("Probe [{}] generated {} files in {}ms ({} written, {} unchanged, {} stale removed)",
+                    languageId(), files.size(), duration,
+                    report.written(), report.unchanged(), report.deleted());
+            return GenerateResult.withWarnings(
+                    GenerateResult.success(files.size(), duration, outputDir), report.warnings());
         } catch (Exception e) {
-            NekoJS.LOGGER.error("Probe [{}] commit failed (old output preserved)", languageId(), e);
-            try {
-                ProbeOutputCommitter.deleteRecursive(staging);
-            } catch (Exception cleanup) {
-                NekoJS.LOGGER.debug("Probe [{}] staging cleanup after failure also failed", languageId(), cleanup);
-            }
+            NekoJS.LOGGER.error("Probe [{}] write failed (output may be partially updated)", languageId(), e);
             return GenerateResult.failure(outputDir, GenerateResult.messageOf(e));
         }
     }

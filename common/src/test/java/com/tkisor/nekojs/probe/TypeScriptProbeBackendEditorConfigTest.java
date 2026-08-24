@@ -103,7 +103,7 @@ class TypeScriptProbeBackendEditorConfigTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, java.util.Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, java.util.Map.of(), List.of());
     }
 
     /** 记录式贡献器：捕获所有 merge 调用，不触碰磁盘。 */

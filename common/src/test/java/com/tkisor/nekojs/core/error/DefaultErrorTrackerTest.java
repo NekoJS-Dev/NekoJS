@@ -13,6 +13,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -82,6 +84,17 @@ class DefaultErrorTrackerTest {
 
         ScriptError stored = singleError();
         assertEquals(2, stored.getOccurrenceCount(), "相同源码位置的重复 Polyglot 异常必须去重并递增频次");
+    }
+
+    @Test
+    void virtualTruffleUriDoesNotBecomeARealFilePath() throws Exception {
+        Source source = Source.newBuilder("js", "throw new Error('x');", "internal/script-loader.js")
+                .uri(URI.create("truffle:module/nekojs/node/internal/script-loader.js"))
+                .build();
+
+        String path = tracker.extractRelativePath(source);
+        assertTrue(path.startsWith("truffle:"), path);
+        assertEquals(7, tracker.getRealCodeLine(path, 7));
     }
 
     @Test

@@ -109,15 +109,16 @@ public final class JavaMemberIndex {
         for (Method m : clazz.getMethods()) {
             if (isHiddenOrInternal(m)) continue;
             String jsName = remapName(m, HIDE_MARKER, m.getName());
-            if (jsName == null) continue;
+            if (!isExposedName(m, jsName)) continue;
             methods.computeIfAbsent(jsName, ignored -> new java.util.ArrayList<>()).add(m);
             if (m.getParameterCount() == 0) {
-                String prop = propertyName(m.getName());
-                if (prop != null) {
-                    String jsProp = remapName(m, HIDE_MARKER, prop);
-                    if (jsProp != null) {
-                        propertyGetters.computeIfAbsent(jsProp, ignored -> new java.util.ArrayList<>()).add(m);
-                    }
+                String remappedProp = propertyName(jsName);
+                String originalProp = propertyName(m.getName());
+                String jsProp = remappedProp != null
+                        ? remappedProp
+                        : originalProp == null ? null : remapName(m, HIDE_MARKER, originalProp);
+                if (jsProp != null && !HIDE_MARKER.equals(jsProp)) {
+                    propertyGetters.computeIfAbsent(jsProp, ignored -> new java.util.ArrayList<>()).add(m);
                 }
             }
         }
@@ -135,10 +136,20 @@ public final class JavaMemberIndex {
 
     private static boolean isHiddenOrInternal(Method m) {
         String name = m.getName();
-        if ("getClass".equals(name) || name.startsWith("neko$")) return true;
+        if ("getClass".equals(name)) return true;
         if (m.getDeclaringClass() == Object.class) return true;
         if (m.isBridge() || m.isSynthetic()) return true;
         return false;
+    }
+
+    /**
+     * Internal prefixed methods remain hidden unless an annotation explicitly maps them to a JS name.
+     * The remap must be evaluated before this check because interface-injected methods are reflected
+     * from the Minecraft host class, while their {@code @RemapByPrefix} lives on the injected interface.
+     */
+    private static boolean isExposedName(Method method, String jsName) {
+        return jsName != null && !jsName.isBlank() && !HIDE_MARKER.equals(jsName)
+                && (!method.getName().startsWith("neko$") || !jsName.startsWith("neko$"));
     }
 
     /** 把返回 {@code Type} 解析为可直接做成员查询的类集合；无法确定时返回空（调用方标 unknown）。 */
@@ -321,10 +332,9 @@ public final class JavaMemberIndex {
     private static Set<String> collectPropertyMembers(Class<?> clazz) {
         Set<String> members = new LinkedHashSet<>();
         for (Method m : clazz.getMethods()) {
-            String name = m.getName();
-            if ("getClass".equals(name) || name.startsWith("neko$") || m.getDeclaringClass() == Object.class) {
-                continue;
-            }
+            if ("getClass".equals(m.getName()) || m.getDeclaringClass() == Object.class) continue;
+            String name = remapName(m, null, m.getName());
+            if (!isExposedName(m, name)) continue;
             members.add(name);
             if (m.getParameterCount() == 0) {
                 String prop = propertyName(name);
@@ -340,10 +350,9 @@ public final class JavaMemberIndex {
     private static Set<String> collectAllMembers(Class<?> clazz) {
         Set<String> members = new LinkedHashSet<>();
         for (Method m : clazz.getMethods()) {
-            String name = m.getName();
-            if ("getClass".equals(name) || name.startsWith("neko$")) {
-                continue;
-            }
+            if ("getClass".equals(m.getName())) continue;
+            String name = remapName(m, null, m.getName());
+            if (!isExposedName(m, name)) continue;
             members.add(name);
             String prop = propertyName(name);
             if (prop != null) {

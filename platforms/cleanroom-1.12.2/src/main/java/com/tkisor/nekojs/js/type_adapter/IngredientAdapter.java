@@ -40,15 +40,22 @@ public final class IngredientAdapter implements JSTypeAdapter<Ingredient> {
     public List<AdapterInputShape> inputShapes() {
         return List.of(
                 self(),
-                string(),
+                // 逐个字符串语法单列（而不是一个裸 string）：裸 string 会吞掉联合里的字面量补全，
+                // 导致原料位置完全没有 id 提示。1.12.2 无标签系统，"#" 后是矿辞名，
+                // RegistryTypes.ItemTag 在本平台会回退成 string（标签集合为空），语义正好吻合
+                registry("Item"),
+                template("#", registryTag("Item")),
+                template("@", namespace()),
+                literal("*"),
+                template("/", string()),
                 arrayOf(self()),
                 host(ItemStack.class),
                 host(Item.class),
                 host(NekoId.class),
                 object(
-                        Slot.opt("item", string()),
-                        Slot.opt("tag", string()),
-                        Slot.opt("mod", string()),
+                        Slot.opt("item", registry("Item")),
+                        Slot.opt("tag", registryTag("Item")),
+                        Slot.opt("mod", namespace()),
                         Slot.opt("regex", string()),
                         Slot.opt("wildcard", bool()),
                         Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),

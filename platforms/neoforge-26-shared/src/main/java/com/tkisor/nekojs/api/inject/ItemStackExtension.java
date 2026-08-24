@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.HideFromJS;
+import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.inject.ItemStackSpec;
 import net.minecraft.core.Holder;
@@ -57,17 +59,10 @@ public interface ItemStackExtension extends ItemStackSpec {
         return copy;
     }
 
-    default ItemStack neko$copy() {
-        return self().copy();
-    }
-
-    default ItemStack neko$setCount(int count) {
+    @Remap("setCountAndReturn")
+    default ItemStack neko$setCountAndReturn(int count) {
         self().setCount(count);
         return self();
-    }
-
-    default Item neko$getItem() {
-        return self().getItem();
     }
 
     default Block neko$getBlock() {
@@ -78,12 +73,14 @@ public interface ItemStackExtension extends ItemStackSpec {
         return BuiltInRegistries.ITEM.getKey(self().getItem()).getNamespace();
     }
 
-    default boolean neko$isEnchanted() {
+    @Remap("hasGlint")
+    default boolean neko$hasGlint() {
         Boolean glint = self().get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
         return glint != null ? glint : self().isEnchanted();
     }
 
-    default void neko$setEnchanted(boolean enchanted) {
+    @Remap("setGlint")
+    default void neko$setGlint(boolean enchanted) {
         if (enchanted) {
             self().set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
         } else {
@@ -91,7 +88,8 @@ public interface ItemStackExtension extends ItemStackSpec {
         }
     }
 
-    default ItemStack neko$enchant(String id, int level) {
+    @Remap("enchantById")
+    default ItemStack neko$enchantById(String id, int level) {
         Identifier parsedId = Identifier.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) {
             throw new IllegalArgumentException("Invalid enchantment id: " + id);
@@ -104,6 +102,7 @@ public interface ItemStackExtension extends ItemStackSpec {
         return neko$enchant(enchantment, level);
     }
 
+    @HideFromJS
     default ItemStack neko$enchant(Holder<Enchantment> enchantment, int level) {
         if (level <= 0) {
             throw new IllegalArgumentException("Enchantment level must be positive: " + level);

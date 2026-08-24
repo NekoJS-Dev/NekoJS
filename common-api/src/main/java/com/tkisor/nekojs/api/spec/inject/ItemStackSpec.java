@@ -12,8 +12,8 @@ import com.tkisor.nekojs.api.spec.PlatformAvailability;
  * <p><b>碰撞排除（调研驱动）：</b>以下方法因原生零参碰撞而不在 spec 中：
  * <ul>
  *   <li>{@code copy()} / {@code getItem()} —— 两平台原生均有同名零参方法，行为一致，JS 用原生
- *   <li>{@code setCount(int)} —— 两平台原生均有，neko 版返回 this（链式）vs 原生 void，语义不同
- *   <li>{@code enchant(Holder,int)} —— NF 原生碰撞（neko 的 String 版本保留但不进 spec）
+ *   <li>{@code setCount(int)} —— 两平台原生均有；链式扩展使用平台侧唯一名称 {@code setCountAndReturn}
+ *   <li>{@code enchant(...)} / {@code isEnchanted()} —— 原版已有同名入口；按 id 附魔和 NekoJS 光效语义使用平台侧唯一名称
  * </ul>
  */
 @RemapByPrefix("neko$")
@@ -23,6 +23,11 @@ public interface ItemStackSpec {
     /** 返回指定数量的副本（不修改原 ItemStack）。 */
     default Object neko$withCount(int count) {
         throw new UnsupportedOperationException("ItemStackSpec.neko$withCount not implemented");
+    }
+
+    /** 返回该堆栈物品的注册表 id（如 {@code minecraft:stone}）。 */
+    default String neko$getId() {
+        throw new UnsupportedOperationException("ItemStackSpec.neko$getId not implemented");
     }
 
     /** 检查是否拥有指定附魔。enchId 如 "minecraft:sharpness"。 */

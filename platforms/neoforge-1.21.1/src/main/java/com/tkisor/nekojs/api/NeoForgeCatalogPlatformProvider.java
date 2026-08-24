@@ -9,6 +9,7 @@ import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.inject.*;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.api.ScriptType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.MutableComponent;
@@ -87,7 +88,30 @@ public class NeoForgeCatalogPlatformProvider implements NekoCatalogPlatformProvi
                 .map(ResourceLocation::toString)
                 .sorted()
                 .forEach(ids::add);
-        return new RegistryTypeCatalogEntry(typeName, ids, List.of());
+        return new RegistryTypeCatalogEntry(typeName, ids, tagIds(registry));
+    }
+
+    /**
+     * 该注册表当前已绑定的标签 id（不含 {@code #} 前缀）。probe 在服务器运行时执行，数据包标签
+     * 此时已绑定；排序保证产物确定性。标签未加载时为空流，probe 侧会回退成 {@code string}。
+     */
+    private static <T> List<String> tagIds(net.minecraft.core.Registry<T> registry) {
+        return registry.getTagNames()
+                .map(tag -> tag.location().toString())
+                .sorted()
+                .toList();
+    }
+
+    /**
+     * 已加载 mod id：{@code "@create"} 这类命名空间过滤写法的补全来源之一。
+     *
+     * <p>取加载器的 mod 列表，覆盖「装了但没往某个注册表注册东西」的 mod；probe 再把它与注册表
+     * 条目 id 的命名空间取并集（那部分覆盖脚本 {@code event.create('mymod:x')}、数据包等不属于
+     * 任何 mod 的命名空间）。排序与去重由 {@code NekoScriptCatalog.modIds()} 统一负责。
+     */
+    @Override
+    public Collection<String> modIds() {
+        return Platform.getMods().keySet();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.inject;
 
+import com.tkisor.nekojs.api.annotation.Remap;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.inject.ItemStackSpec;
 import net.minecraft.enchantment.Enchantment;
@@ -70,32 +71,15 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     /**
-     * 复制当前物品栈（深拷贝，包含 NBT）。对齐 1.21.1 {@code ItemStack.copy()}。
-     *
-     * @return 物品栈副本
-     */
-    default ItemStack neko$copy() {
-        return self().copy();
-    }
-
-    /**
-     * 设置数量并返回自身（builder 风格）。对齐 1.21.1 {@code setCount(int)} 的链式语义。
+     * 设置数量并返回自身（builder 风格），使用独立名称避免与原版 void setCount 冲突。
      *
      * @param count 目标数量
      * @return 当前物品栈
      */
-    default ItemStack neko$setCount(int count) {
+    @Remap("setCountAndReturn")
+    default ItemStack neko$setCountAndReturn(int count) {
         self().setCount(count);
         return self();
-    }
-
-    /**
-     * 取物品栈对应的 {@link Item}。对齐 1.21.1 {@code getItem()}。
-     *
-     * @return 物品
-     */
-    default Item neko$getItem() {
-        return self().getItem();
     }
 
     /**
@@ -107,7 +91,8 @@ public interface ItemStackExtension extends ItemStackSpec {
      * @param level 附魔等级，必须为正
      * @return 当前物品栈
      */
-    default ItemStack neko$enchant(String id, int level) {
+    @Remap("enchantById")
+    default ItemStack neko$enchantById(String id, int level) {
         if (level <= 0) {
             throw new IllegalArgumentException("Enchantment level must be positive: " + level);
         }
@@ -218,7 +203,8 @@ public interface ItemStackExtension extends ItemStackSpec {
      *
      * @return {@code true} 若带 effect
      */
-    default boolean neko$isEnchanted() {
+    @Remap("hasGlint")
+    default boolean neko$hasGlint() {
         return self().hasEffect();
     }
 

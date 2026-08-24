@@ -131,12 +131,12 @@ class ProbeScanModeTest {
                 "ProbeScanModeEvents", "test", ScriptType.SERVER, eventType, null, false, false);
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(event), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 }

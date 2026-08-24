@@ -47,7 +47,7 @@ public final class ProbeCoordinator {
     private final ProbeConfigService configService;
     /**
      * runProbe 互斥：同一协调器实例同一时间只允许一次运行（fail-fast——占用期间的再次调用
-     * 立即返回失败结果，不排队）。除 staging 目录交换外，backend 实例（注册表单例）携带
+     * 立即返回失败结果，不排队）。除输出目录写入外，backend 实例（注册表单例）携带
      * 每轮清理的可变渲染缓存，并发运行会互相破坏；用户命令场景「立即提示已在运行」优于静默排队。
      */
     private final AtomicBoolean running = new AtomicBoolean();
@@ -170,7 +170,7 @@ public final class ProbeCoordinator {
      *
      * <p>同一协调器实例同一时间只允许一次运行（fail-fast）：占用期间的再次调用立即返回
      * {@code "probe already running"}，不排队。选中集合内重复 outputDir 的后续 backend 被跳过
-     * （结果为 failure，staging/swap 会互相吞产物）。事件/编辑器配置的降级信息进结果 warnings。
+     * （结果为 failure，就地同步会把先跑者的产物当陈旧文件删掉）。事件/编辑器配置的降级信息进结果 warnings。
      *
      * @param snapshot 当前 catalog 快照
      * @param backends 命令解析出的、本次要跑的 backend（已按 priority/名字解析）
@@ -242,7 +242,7 @@ public final class ProbeCoordinator {
 
             EditorConfigContributor editorConfigs = new FileEditorConfigContributor();
             List<ProbeBackend.GenerateResult> results = new ArrayList<>(backends.size());
-            // 输出目录去重：两个 backend 写同一目录时，staging/swap 整目录替换会互相吞掉产物
+            // 输出目录去重：两个 backend 写同一目录时，后跑者的陈旧文件清理会删掉先跑者的产物
             // （后跑者覆盖先跑者）。每组目录只跑第一个选中的 backend，其余跳过并告警——
             // 同语言多 backend 共存合法，但共享输出目录不合法（要换目录用 outputDir 配置）。
             Set<Path> seenOutputDirs = new HashSet<>();

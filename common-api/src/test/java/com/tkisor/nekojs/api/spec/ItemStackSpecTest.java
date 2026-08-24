@@ -9,6 +9,7 @@ class ItemStackSpecTest {
 
     @Test
     void itemStackSpecDeclaresAllUnifiedMethods() {
+        assertDoesNotThrow(() -> ItemStackSpec.class.getMethod("neko$getId"));
         assertDoesNotThrow(() -> ItemStackSpec.class.getMethod("neko$withCount", int.class));
         assertDoesNotThrow(() -> ItemStackSpec.class.getMethod("neko$hasEnchantment", String.class, int.class));
         assertDoesNotThrow(() -> ItemStackSpec.class.getMethod("neko$isUnbreakable"));
@@ -18,11 +19,17 @@ class ItemStackSpecTest {
 
     @Test
     void ambiguousMethodsExcludedFromSpec() {
-        // copy / getItem 因两平台原生同名零参碰撞而不在 spec 中
+        // 原版已经提供这些方法，Spec 不应制造同名 facade。
         assertThrows(NoSuchMethodException.class,
             () -> ItemStackSpec.class.getMethod("neko$copy"));
         assertThrows(NoSuchMethodException.class,
             () -> ItemStackSpec.class.getMethod("neko$getItem"));
+        assertThrows(NoSuchMethodException.class,
+            () -> ItemStackSpec.class.getMethod("neko$setCount", int.class));
+        assertThrows(NoSuchMethodException.class,
+            () -> ItemStackSpec.class.getMethod("neko$enchant", String.class, int.class));
+        assertThrows(NoSuchMethodException.class,
+            () -> ItemStackSpec.class.getMethod("neko$isEnchanted"));
     }
 
     @Test

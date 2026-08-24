@@ -39,7 +39,7 @@ import java.util.concurrent.*;
  * <ol>
  *   <li>种子类来自 {@link ProbeContext#collectedClasses()}（共享 BFS 结果），不再自带 BFS</li>
  *   <li>包过滤改用 {@link ProbeConfig#isRelevantClass(String, java.util.List)}（配置驱动）</li>
- *   <li>输出目录 = {@link ProbeContext#languageDir()}（每 backend 自管 staging/swap）</li>
+ *   <li>输出目录 = {@link ProbeContext#languageDir()}（每 backend 一个目录，落盘由默认 generate 负责）</li>
  * </ol>
  * 故 TS 产物**内容**与重构前字节一致（仅目录由 {@code .neko_probe/} 迁到 {@code .neko_probe/typescript/}）。
  * 外部副作用（agent 模板 + workspace 配置）移至 {@link ProbeCoordinator} 统一执行一次。
@@ -411,7 +411,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             taskCount++;
         }
 
-        // 渲染失败计为硬失败——若吞掉，默认 generate 会提交 staging 并报告成功，输出静默残缺
+        // 渲染失败计为硬失败——若吞掉，默认 generate 会照残缺结果同步并报告成功，输出静默缺文件
         int failedTasks = 0;
         for (int i = 0; i < taskCount; i++) {
             try {
@@ -501,29 +501,23 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
     private void renderSpecialTypes(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
         List<RegistryTypeCatalogEntry> registries = snapshot.registryTypes();
-        if (registries.isEmpty()) return;
+        List<String> modIds = snapshot.modIds();
+        if (registries.isEmpty() && modIds.isEmpty()) return;
 
         StringBuilder sb = new StringBuilder();
         sb.append("declare module \"@special/types\" {\n");
         sb.append("    export namespace RegistryTypes {\n");
 
         for (RegistryTypeCatalogEntry registry : registries) {
-            String typeName = registry.typeName();
-            if (registry.entries().isEmpty()) {
-                sb.append("        type ").append(typeName).append(" = string;\n");
-            } else {
-                sb.append("        type ").append(typeName).append(" = ");
-                List<String> entries = registry.entries();
-                for (int i = 0; i < entries.size(); i++) {
-                    if (i > 0) sb.append(" | ");
-                    if (i > 0 && i % 8 == 0) sb.append("\n            ");
-                    // 先转义反斜杠再转义引号：旧实现只转义引号，内嵌反斜杠会截断字符串字面量
-                    String entry = entries.get(i).replace("\\", "\\\\").replace("\"", "\\\"");
-                    sb.append("\"").append(entry).append("\"");
-                }
-                sb.append(";\n");
-            }
+            appendLiteralUnion(sb, registry.typeName(), registry.entries());
+            // 标签联合总是发：脚本里 "#minecraft:planks" 这类写法依赖它，未采集标签的平台
+            // （如 1.12.2 无标签系统）回退成 string，避免模板类型退化成 never 而误报
+            appendLiteralUnion(sb, registry.typeName() + "Tag", registry.tagEntries());
         }
+        // 命名空间联合：供 "@mod" 这类前缀写法补全。mod 表与注册表命名空间取并集——mod 表覆盖
+        // 「装了但没往这个注册表注册东西」的 mod，条目 id 前缀覆盖脚本/数据包自造的命名空间。
+        // 与具体注册表无关，所以只发一份
+        appendLiteralUnion(sb, "Namespace", namespacesOf(modIds, registries));
 
         sb.append("    }\n");
         sb.append("}\n");
@@ -531,6 +525,42 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
 
         files.put("@special/index.d.ts", "export * as types from \"@special/types\";\n");
         files.put("@special/types/index.d.ts", sb.toString());
+    }
+
+    /**
+     * mod id 与注册表条目 id 命名空间的并集（{@code "minecraft:stone"} → {@code "minecraft"}）。
+     *
+     * <p>无 {@code ':'} 的条目按原样计入（1.12.2 少数注册表 id 不带命名空间）；TreeSet 保证
+     * 跨 JVM 确定序。
+     */
+    private static List<String> namespacesOf(List<String> modIds, List<RegistryTypeCatalogEntry> registries) {
+        Set<String> namespaces = new TreeSet<>(modIds);
+        for (RegistryTypeCatalogEntry registry : registries) {
+            for (String entry : registry.entries()) {
+                if (entry == null || entry.isBlank()) continue;
+                int colon = entry.indexOf(':');
+                namespaces.add(colon < 0 ? entry : entry.substring(0, colon));
+            }
+        }
+        namespaces.remove("");
+        return List.copyOf(namespaces);
+    }
+
+    /** {@code type Name = "a" | "b";}；条目为空时回退 {@code type Name = string;}。 */
+    private static void appendLiteralUnion(StringBuilder sb, String typeName, List<String> entries) {
+        if (entries.isEmpty()) {
+            sb.append("        type ").append(typeName).append(" = string;\n");
+            return;
+        }
+        sb.append("        type ").append(typeName).append(" = ");
+        for (int i = 0; i < entries.size(); i++) {
+            if (i > 0) sb.append(" | ");
+            if (i > 0 && i % 8 == 0) sb.append("\n            ");
+            // 先转义反斜杠再转义引号：旧实现只转义引号，内嵌反斜杠会截断字符串字面量
+            String entry = entries.get(i).replace("\\", "\\\\").replace("\"", "\\\"");
+            sb.append("\"").append(entry).append("\"");
+        }
+        sb.append(";\n");
     }
 
     private void renderManualDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {

@@ -48,6 +48,7 @@ public final class NekoScriptCatalog {
                 runtime.typeDocs(),
                 runtime.manualDeclarations(),
                 List.copyOf(platformProvider.registryTypes()),
+                modIds(),
                 platformProvider.outputLayout(),
                 Map.of(),
                 List.of()
@@ -67,6 +68,7 @@ public final class NekoScriptCatalog {
                 runtime.typeDocs(),
                 runtime.manualDeclarations(),
                 List.copyOf(platformProvider.registryTypes()),
+                modIds(),
                 platformProvider.outputLayout(),
                 managedApis,
                 legacySurface
@@ -89,6 +91,7 @@ public final class NekoScriptCatalog {
                 runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 List.copyOf(platformProvider.registryTypes()),
+                modIds(),
                 platformProvider.outputLayout(),
                 Map.of(),
                 List.of()
@@ -108,6 +111,7 @@ public final class NekoScriptCatalog {
                 runtime.typeDocs().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 runtime.manualDeclarations().stream().filter(entry -> entry.scriptType().test(scriptType)).toList(),
                 List.copyOf(platformProvider.registryTypes()),
+                modIds(),
                 platformProvider.outputLayout(),
                 managedApis,
                 legacySurface
@@ -134,6 +138,11 @@ public final class NekoScriptCatalog {
             });
         }
         return List.copyOf(map.values());
+    }
+
+    /** 已加载 mod id（去重 + 排序，保证 probe 输出确定性）。 */
+    public static List<String> modIds() {
+        return platformProvider.modIds().stream().distinct().sorted().toList();
     }
 
     public static TypeOutputLayout outputLayout() {

@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.js.type_adapter.TileEntityAdapter;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.ResourceLocation;
@@ -64,6 +65,18 @@ public class ForgeCatalogPlatformProvider implements NekoCatalogPlatformProvider
                 .sorted()
                 .forEach(ids::add);
         return new RegistryTypeCatalogEntry(typeName, ids, List.of());
+    }
+
+    /**
+     * 已加载 mod id：{@code "@create"} 这类命名空间过滤写法的补全来源之一。
+     *
+     * <p>取加载器的 mod 列表，覆盖「装了但没往某个注册表注册东西」的 mod；probe 再把它与注册表
+     * 条目 id 的命名空间取并集（那部分覆盖脚本 {@code event.create('mymod:x')}、数据包等不属于
+     * 任何 mod 的命名空间）。排序与去重由 {@code NekoScriptCatalog.modIds()} 统一负责。
+     */
+    @Override
+    public Collection<String> modIds() {
+        return Platform.getMods().keySet();
     }
 
     @Override

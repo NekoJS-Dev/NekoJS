@@ -8,9 +8,6 @@
   "net/minecraft/world/item/Item": [
     "com/tkisor/nekojs/api/inject/ItemExtension"
   ],
-  "net/minecraft/world/item/ItemStack": [
-    "com/tkisor/nekojs/api/inject/ItemStackExtension"
-  ],
   "net/minecraft/world/level/Level": [
     "com/tkisor/nekojs/api/inject/LevelExtension"
   ],

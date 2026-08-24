@@ -24,14 +24,19 @@ public final class SizedIngredientAdapter implements JSTypeAdapter<SizedIngredie
     public List<AdapterInputShape> inputShapes() {
         return List.of(
                 self(),
-                string(),
+                // 字符串语法逐个单列：裸 string 会吞掉联合里的 id 字面量补全
+                registry("Item"),
+                template("#", registryTag("Item")),
+                template("@", namespace()),
+                literal("*"),
+                template("/", string()),
                 arrayOf(self()),
                 host(Ingredient.class),
                 object(
                         Slot.opt("ingredient", host(Ingredient.class)),
-                        Slot.opt("item", string()),
-                        Slot.opt("tag", string()),
-                        Slot.opt("mod", string()),
+                        Slot.opt("item", registry("Item")),
+                        Slot.opt("tag", registryTag("Item")),
+                        Slot.opt("mod", namespace()),
                         Slot.opt("regex", string()),
                         Slot.opt("wildcard", bool()),
                         Slot.opt("filter", raw("((item: $ItemStack) => boolean)")),

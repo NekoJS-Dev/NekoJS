@@ -357,6 +357,48 @@ class PythonProbeBackendIntegrationTest {
         assertFalse(module.contains("FakeProbeEvent_"), "no alias when all shapes are dropped: " + module);
     }
 
+    @Test
+    void generate_namespaceAlias_mergesModIdsAndRegistryNamespaces(@TempDir Path temp) throws Exception {
+        TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        List<TypeDecl> ir = List.of(target);
+
+        // packns 只在条目 id 里（脚本/数据包造的命名空间），othermod 只在 mod 表里（装了但没注册东西）
+        RegistryTypeCatalogEntry registry = new RegistryTypeCatalogEntry(
+                "SampleBlock", List.of("packns:zeta", "minecraft:alpha"), List.of());
+        AdapterCatalogEntry adapter = new AdapterCatalogEntry(
+                FakeProbeEvent.class, List.of(AdapterInputShape.self(), AdapterInputShape.namespace()),
+                ConversionPrecedence.HIGH, Optional.empty());
+
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of(registry),
+                List.of("othermod", "minecraft"));
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, ir, List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertTrue(module.contains(
+                        "FakeProbeEvent_ = FakeProbeEvent | Literal[\"minecraft\", \"othermod\", \"packns\"]"),
+                "namespace literal union should merge mod ids and registry namespaces: " + module);
+    }
+
+    @Test
+    void generate_namespaceAliasWithoutPlatform_fallsBackToStr(@TempDir Path temp) throws Exception {
+        // 无平台的快照（单测/纯 IR 场景）两个数据源都空 → str，与 TS 侧 type Namespace = string 一致
+        TypeDecl target = new TypeDecl(TypeDecl.Kind.CLASS, FakeProbeEvent.class, FakeProbeEvent.class.getName());
+        AdapterCatalogEntry adapter = new AdapterCatalogEntry(
+                FakeProbeEvent.class, List.of(AdapterInputShape.self(), AdapterInputShape.namespace()),
+                ConversionPrecedence.HIGH, Optional.empty());
+
+        NekoScriptCatalogSnapshot snapshot = snapshotWith(List.of(), List.of(), List.of(adapter), List.of());
+        ProbeBackend.GenerateResult res = runGenerate(temp, snapshot, List.of(target), List.of());
+        assertTrue(res.success(), "generate failed: " + res.message());
+
+        String module = Files.readString(temp.resolve(
+                "probe-python/nekojs/_java/com/tkisor/nekojs/probe/backend/python/__init__.pyi"));
+        assertTrue(module.contains("FakeProbeEvent_ = FakeProbeEvent | str"),
+                "namespace fallback missing: " + module);
+    }
+
     // -------------------- C5a：隐藏类残留清理 --------------------
 
     @Test
@@ -464,9 +506,18 @@ class PythonProbeBackendIntegrationTest {
                                                           List<EventCatalogEntry> events,
                                                           List<AdapterCatalogEntry> adapters,
                                                           List<RegistryTypeCatalogEntry> registries) {
+        return snapshotWith(bindings, events, adapters, registries, List.of());
+    }
+
+    /** 再带 modIds 的快照构造（NamespaceValue 形状的第二个数据源）。 */
+    private static NekoScriptCatalogSnapshot snapshotWith(List<BindingCatalogEntry> bindings,
+                                                          List<EventCatalogEntry> events,
+                                                          List<AdapterCatalogEntry> adapters,
+                                                          List<RegistryTypeCatalogEntry> registries,
+                                                          List<String> modIds) {
         return new NekoScriptCatalogSnapshot(
                 List.of(), bindings, events, adapters, List.of(), List.of(), List.of(),
-                List.of(), List.of(), registries, null, Map.of(), List.of());
+                List.of(), List.of(), registries, modIds, null, Map.of(), List.of());
     }
 
     private static ProbeBackend.GenerateResult runGenerate(Path temp, NekoScriptCatalogSnapshot snapshot,
@@ -483,7 +534,7 @@ class PythonProbeBackendIntegrationTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     private static int countOccurrences(String haystack, String needle) {

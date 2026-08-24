@@ -35,11 +35,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * runProbe 的失败路径与生命周期硬化回归：
  * <ol>
  *   <li>并发第二次 runProbe 被拒（fail-fast 互斥，不排队）</li>
- *   <li>同 outputDir 的后续 backend 被跳过（staging/swap 不会互相吞产物）</li>
+ *   <li>同 outputDir 的后续 backend 被跳过（就地同步会把先跑者的产物当陈旧文件删掉）</li>
  *   <li>一个 backend 失败不影响后续 backend</li>
  *   <li>contributeEditorConfig 抛异常不影响生成成功结果（进 warnings）</li>
- *   <li>Python 渲染中途失败 → 旧输出完整保留、staging 清除</li>
- *   <li>崩溃残留（staging/backup）在下一次运行被恢复/清理</li>
+ *   <li>Python 渲染中途失败 → 旧输出完整保留（渲染阶段不触盘）</li>
+ *   <li>目录交换时代遗留的 .staging/.old 在下一次运行被清理，且内容不泄漏</li>
  *   <li>assign_type 先于 modify_type 应用（modify 的显式设置不被 assign 二次覆盖）</li>
  * </ol>
  */
@@ -241,7 +241,7 @@ class ProbeCoordinatorHardeningTest {
         Files.writeString(out.resolve("old-marker.txt"), "keep");
 
         // 毒丸 IR：fqn 含 NUL（JDK 在 Windows/Linux 均拒绝 NUL 路径段）→ render 内包路径计算失败。
-        // 渲染阶段不触盘：旧输出天然保留，且不应产生任何 staging。
+        // 渲染阶段不触盘：旧输出天然保留，且不应产生任何中间目录。
         TypeDecl good = new TypeDecl(TypeDecl.Kind.CLASS, null, "pkg.a.Foo");
         TypeDecl poison = new TypeDecl(TypeDecl.Kind.CLASS, null, "bad\u0000pkg.Cls");
         ProbeContext ctx = new ProbeContext.Of(emptySnapshot(), List.of(),
@@ -251,14 +251,15 @@ class ProbeCoordinatorHardeningTest {
 
         assertFalse(res.success());
         assertTrue(Files.exists(out.resolve("old-marker.txt")), "渲染失败必须完整保留旧输出");
-        assertFalse(Files.exists(out.resolveSibling("python.staging")), "渲染失败不应留下 staging");
+        assertFalse(Files.exists(out.resolveSibling("python.staging")), "渲染失败不应留下中间目录");
     }
 
     @Test
-    void stagingLeftoversRecoveredAndCleanedAfterSuccessfulRun(@TempDir Path tmp) throws Exception {
+    void legacySwapLeftoversAreCleanedUpAndNeverLeakIntoOutput(@TempDir Path tmp) throws Exception {
         NekoJSPaths paths = NekoJSPaths.fromGameDir(tmp);
         Path out = paths.gameDir().resolve(".neko_probe").resolve("python");
-        // 模拟上次进程崩溃的残留：半成品 staging + 停留在 backup 的旧产物（outputDir 缺失）
+        // 目录交换时代（或其崩溃）遗留的 .staging/.old：现在只清理，不再恢复成输出目录——
+        // 产物完全由本次 render 决定，旧内容没有回填价值
         Files.createDirectories(out.resolveSibling("python.staging"));
         Files.writeString(out.resolveSibling("python.staging").resolve("junk.txt"), "half-written");
         Files.createDirectories(out.resolveSibling("python.old"));
@@ -271,11 +272,11 @@ class ProbeCoordinatorHardeningTest {
         ProbeBackend.GenerateResult res = new PythonProbeBackend().generate(ctx);
 
         assertTrue(res.success(), res.message());
-        assertFalse(Files.exists(out.resolveSibling("python.staging")), "成功运行后 staging 必须已提交/清除");
-        assertFalse(Files.exists(out.resolveSibling("python.old")), "成功运行后 backup 必须删除");
+        assertFalse(Files.exists(out.resolveSibling("python.staging")), "遗留 staging 必须清除");
+        assertFalse(Files.exists(out.resolveSibling("python.old")), "遗留 backup 必须清除");
         assertTrue(Files.exists(out.resolve("nekojs").resolve("_java").resolve("pkg").resolve("a").resolve("__init__.pyi")),
                 "新产物应正常生成");
-        assertFalse(Files.exists(out.resolve("stale.txt")), "崩溃残留的 backup 内容不得泄漏进新产物");
+        assertFalse(Files.exists(out.resolve("stale.txt")), "遗留 backup 内容不得泄漏进新产物");
         assertEquals(out, res.outputDir());
     }
 
@@ -337,7 +338,7 @@ class ProbeCoordinatorHardeningTest {
     private static NekoScriptCatalogSnapshot emptySnapshot() {
         return new NekoScriptCatalogSnapshot(
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, Map.of(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, Map.of(), List.of());
     }
 
     private static NekoScriptCatalogSnapshot snapshotWithBinding(Class<?> javaType) {
@@ -345,6 +346,6 @@ class ProbeCoordinatorHardeningTest {
                 List.of(),
                 List.of(BindingCatalogEntry.of("Host", ScriptType.SERVER, javaType, false)),
                 List.of(), List.of(), List.of(), List.of(), List.of(),
-                List.of(), List.of(), List.of(), null, new LinkedHashMap<>(), List.of());
+                List.of(), List.of(), List.of(), List.of(), null, new LinkedHashMap<>(), List.of());
     }
 }

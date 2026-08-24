@@ -26,15 +26,20 @@ public final class SizedFluidIngredientAdapter implements JSTypeAdapter<SizedFlu
     public List<AdapterInputShape> inputShapes() {
         return List.of(
                 self(),
-                string(),
+                // 字符串语法逐个单列：裸 string 会吞掉联合里的 id 字面量补全
+                registry("Fluid"),
+                template("#", registryTag("Fluid")),
+                template("@", namespace()),
+                literal("*"),
+                template("/", string()),
                 host(FluidStack.class),
                 host(Fluid.class),
                 host(NekoId.class),
                 object(
                         Slot.opt("ingredient", self()),
-                        Slot.opt("fluid", string()),
-                        Slot.opt("tag", string()),
-                        Slot.opt("mod", string()),
+                        Slot.opt("fluid", registry("Fluid")),
+                        Slot.opt("tag", registryTag("Fluid")),
+                        Slot.opt("mod", namespace()),
                         Slot.opt("regex", string()),
                         Slot.opt("wildcard", bool()),
                         Slot.opt("filter", raw("((fluid: $FluidStack) => boolean)")),
