@@ -70,7 +70,10 @@ public class NekoJSClient {
             try {
                 NekoJSMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
             } catch (Exception e) {
-                NekoJS.LOGGER.debug("CLIENT script reload failed", e);
+                // 旧环境的监听器已被 reload 清空、新环境没建起来时，玩家不会有任何提示——
+                // 必须 error 级日志 + 错误面板（rt/ 条目），不再只打 DEBUG
+                NekoJS.LOGGER.error("CLIENT script reload (F3+T) failed", e);
+                NekoJSMod.RUNTIME_ROOT.errorTracker().recordCallbackError(ScriptType.CLIENT, "client_reload", e);
             }
             postClientGeneration();
         });
@@ -99,7 +102,9 @@ public class NekoJSClient {
                 langGenerator.writeTo(assets, lang);
             }
         } catch (Exception e) {
-            NekoJS.LOGGER.debug("Client generation event failed", e);
+            // 资产生成失败 = 客户端脚本产物不完整（模型/lang 缺失），同样进错误面板
+            NekoJS.LOGGER.error("Client asset generation failed", e);
+            NekoJSMod.RUNTIME_ROOT.errorTracker().recordCallbackError(ScriptType.CLIENT, "generate_assets", e);
         }
     }
 }

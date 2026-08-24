@@ -11,8 +11,10 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
 
-import java.nio.file.Path;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringJoiner;
 
 public final class EventCallbackSourceValidator {
 
@@ -54,7 +57,7 @@ public final class EventCallbackSourceValidator {
             if (call.callee() instanceof ValNode.MemberAccess access
                     && access.object() instanceof ValNode.Identifier ident
                     && schema.containsKey(ident.name())) {
-                checkCallbackArgs(call, ident.name(), file, source, reported);
+                checkCallbackArgs(call, ident.name(), schema, file, source, reported);
             }
         }
         // DEFECT-D9: recurse into ALL block-bearing and expression-bearing children.
@@ -91,10 +94,20 @@ public final class EventCallbackSourceValidator {
      * 反射缺该成员也放行。平台反射集合（{@code EventSchemaRegistry} →
      * {@link JavaMemberIndex}）兜底覆盖事件类全部可见成员（方法名 + getter 属性名 + 字段名），
      * 保证 {@code e.getServer()} 等方法形式不误报。
+     *
+     * <p>回调参数不只出现在事件注册上：绑定的普通方法也收回调（如
+     * {@code DynamicRegistry.item(id, b => b.maxStackSize(64))}）。这类「非事件回调」按
+     * 绑定方法签名的函数式参数（{@code Consumer<ItemBuilder>} 的第一个类型实参）登记形参类型；
+     * 签名推不出来（非泛型、类型实参非具体类、找不到匹配重载）就整段跳过——预检的默认答案
+     * 必须是「不知道就别报」，否则 builder 回调一用就误报（2026-08-24 日志：
+     * {@code 'maxStackSize' not in DynamicRegistry}）。
      */
     private static void checkCallbackArgs(ValNode.CallExpr call, String group,
+                                          Map<String, ScriptBindingSchema.BindingMembers> schema,
                                           Path file, String src, Set<String> reported) {
-        for (ValNode arg : call.args()) {
+        String member = ((ValNode.MemberAccess) call.callee()).member();
+        for (int argIndex = 0; argIndex < call.args().size(); argIndex++) {
+            ValNode arg = call.args().get(argIndex);
             List<String> params = null;
             List<ValNode> body = null;
             if (arg instanceof ValNode.ArrowFunc af) { params = af.params(); body = af.body(); }
@@ -102,27 +115,77 @@ public final class EventCallbackSourceValidator {
             if (params == null || params.isEmpty()) continue;
 
             ManagedCallbackSchemaRegistry.CallbackSchema managed =
-                    ManagedCallbackSchemaRegistry.resolve(group, ((ValNode.MemberAccess) call.callee()).member());
-            Class<?> eventClass = EventSchemaRegistry.resolve(group, ((ValNode.MemberAccess) call.callee()).member());
+                    ManagedCallbackSchemaRegistry.resolve(group, member);
+            Class<?> eventClass = EventSchemaRegistry.resolve(group, member);
 
             String displayName;
+            Map<String, Set<Class<?>>> callbackParamTypes = Map.of();
             if (managed != null) {
                 displayName = managed.displayName();
             } else if (eventClass != null && eventClass != Object.class) {
                 displayName = eventClass.getSimpleName();
             } else {
-                displayName = group;
+                callbackParamTypes = callbackParamTypes(schema, group, member, call.args().size(), argIndex, params);
+                if (callbackParamTypes.isEmpty()) continue;
+                Set<Class<?>> first = callbackParamTypes.values().iterator().next();
+                displayName = classNames(first);
             }
 
             Env env = new Env();
             for (ValNode s : body) {
                 collectDecls(s, params.getFirst(), env);
             }
-            TypeContext context = new TypeContext(managed, eventClass, group, displayName, file, src, reported);
+            TypeContext context = new TypeContext(managed, eventClass, group, displayName,
+                    callbackParamTypes, file, src, reported);
             for (ValNode s : body) {
                 resolveStatement(s, params.getFirst(), env, context);
             }
         }
+    }
+
+    /**
+     * 非事件回调的形参类型：在绑定 {@code valueClasses} 上找与方法名、调用参数数匹配的重载，
+     * 取该参数位声明的泛型类型；若是函数式接口（{@code Consumer<X>}/{@code Function<X,?>}…），
+     * 回调第 j 个形参 = 第 j 个类型实参。只接受具体类实参（通配/类型变量推不出唯一答案），
+     * 任一环节失败即返回空表——调用方据此跳过整段检查。
+     */
+    private static Map<String, Set<Class<?>>> callbackParamTypes(
+            Map<String, ScriptBindingSchema.BindingMembers> schema, String group, String member,
+            int argCount, int argIndex, List<String> params) {
+        ScriptBindingSchema.BindingMembers bm = schema.get(group);
+        if (bm == null || argIndex < 0) return Map.of();
+        Map<String, Set<Class<?>>> out = new HashMap<>();
+        for (Class<?> cls : bm.valueClasses()) {
+            List<Method> candidates = JavaMemberIndex.exposedMembersOf(cls).methods().get(member);
+            if (candidates == null) continue;
+            for (Method m : candidates) {
+                int fixed = m.getParameterCount();
+                if (m.isVarArgs() ? argCount < fixed - 1 : argCount != fixed) continue;
+                if (argIndex >= fixed) continue;
+                Type declared = m.getGenericParameterTypes()[argIndex];
+                if (!(declared instanceof ParameterizedType pt)
+                        || !(pt.getRawType() instanceof Class<?> raw)
+                        || !isFunctionalShape(raw)) continue;
+                Type[] typeArgs = pt.getActualTypeArguments();
+                for (int j = 0; j < params.size() && j < typeArgs.length; j++) {
+                    if (typeArgs[j] instanceof Class<?> argClass) {
+                        out.computeIfAbsent(params.get(j), k -> new LinkedHashSet<>()).add(argClass);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    private static boolean isFunctionalShape(Class<?> raw) {
+        return raw.isAnnotationPresent(FunctionalInterface.class)
+                || raw.getName().startsWith("java.util.function.");
+    }
+
+    private static String classNames(Set<Class<?>> classes) {
+        StringJoiner joiner = new StringJoiner("/");
+        for (Class<?> cls : classes) joiner.add(cls.getSimpleName());
+        return joiner.toString();
     }
 
     // ==================== 词法环境：const 别名与常量字符串 ====================
@@ -197,22 +260,26 @@ public final class EventCallbackSourceValidator {
         record Unknown() implements ResolvedValue {}
     }
 
-    /** 校验上下文：契约 schema + 平台事件类 + 报告通道。 */
+    /** 校验上下文：契约 schema + 平台事件类 + 非事件回调的形参类型 + 报告通道。 */
     private static final class TypeContext {
         final ManagedCallbackSchemaRegistry.CallbackSchema managed;
         final Class<?> eventClass;
         final String group;
         final String displayName;
+        /** 非事件回调形参名 → 签名推导的类型集合（事件路径恒为空表）。 */
+        final Map<String, Set<Class<?>>> callbackParamTypes;
         final Path file;
         final String source;
         final Set<String> reported;
 
         TypeContext(ManagedCallbackSchemaRegistry.CallbackSchema managed, Class<?> eventClass,
-                    String group, String displayName, Path file, String source, Set<String> reported) {
+                    String group, String displayName, Map<String, Set<Class<?>>> callbackParamTypes,
+                    Path file, String source, Set<String> reported) {
             this.managed = managed;
             this.eventClass = eventClass;
             this.group = group;
             this.displayName = displayName;
+            this.callbackParamTypes = callbackParamTypes;
             this.file = file;
             this.source = source;
             this.reported = reported;
@@ -247,12 +314,24 @@ public final class EventCallbackSourceValidator {
     /** 解析表达式并返回其类型流；同时报告其中未知成员的访问。 */
     private static ResolvedValue resolveExpr(ValNode node, String param, Env env, TypeContext context) {
         if (node instanceof ValNode.Identifier id) {
+            // 非事件回调的形参（签名推导）：优先于事件根类型——两条路径不会同时出现
+            Set<Class<?>> typed = context.callbackParamTypes.get(id.name());
+            if (typed != null && !typed.isEmpty()) {
+                return new ResolvedValue.JavaTypes(typed);
+            }
             if (param.equals(id.name())) {
                 return rootValue(context);
             }
             Binding b = env.lookup(id.name());
             if (b instanceof Binding.Alias alias) {
-                return alias.target().equals(param) ? rootValue(context) : new ResolvedValue.Unknown();
+                if (alias.target().equals(param)) {
+                    return rootValue(context);
+                }
+                Set<Class<?>> aliasTyped = context.callbackParamTypes.get(alias.target());
+                if (aliasTyped != null && !aliasTyped.isEmpty()) {
+                    return new ResolvedValue.JavaTypes(aliasTyped);
+                }
+                return new ResolvedValue.Unknown();
             }
             return new ResolvedValue.Unknown();
         }
@@ -316,19 +395,23 @@ public final class EventCallbackSourceValidator {
         if (context.managed != null) {
             apiMembers.addAll(context.managed.memberNames());
         }
+        // 两个来源都空 = 该回调形参类型完全未知：必须返回 Unknown。空集 WideApiMembers 对任何
+        // 成员都会「不包含」成立，等于把回调里的每次成员访问都判成错报（这正是
+        // DynamicRegistry builder 回调误报的根因之一）。
+        if (classes.isEmpty() && apiMembers.isEmpty()) {
+            return new ResolvedValue.Unknown();
+        }
         if (!classes.isEmpty() && apiMembers.isEmpty()) {
             return new ResolvedValue.JavaTypes(classes);
         }
-        if (classes.isEmpty() && !apiMembers.isEmpty()) {
+        if (classes.isEmpty()) {
             return new ResolvedValue.ApiMembers(apiMembers);
         }
         // 并集：契约字段 + 反射成员。契约字段作为 API 成员放行，反射成员由 Java 类检查。
         // 两者都出现时用"宽集合"检查（根成员检查的既有语义）。
         Set<String> wide = new LinkedHashSet<>(apiMembers);
-        if (!classes.isEmpty()) {
-            for (Class<?> c : classes) {
-                wide.addAll(JavaMemberIndex.propertyMembersOf(c));
-            }
+        for (Class<?> c : classes) {
+            wide.addAll(JavaMemberIndex.propertyMembersOf(c));
         }
         return new ResolvedValue.WideApiMembers(wide);
     }

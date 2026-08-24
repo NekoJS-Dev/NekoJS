@@ -74,6 +74,38 @@ class EventCallbackSourceValidatorTest {
         }
     }
 
+    /** 非事件回调（builder）签名推导用：绑定类收回调的普通方法。 */
+    public static class RegistryLikeBinding {
+        public Object item(String id, java.util.function.Consumer<ItemBuilderLike> config) {
+            return null;
+        }
+
+        public Object soundEvent(String id, java.util.function.Consumer<SoundBuilderLike> config) {
+            return null;
+        }
+
+        /** 形参是非泛型类型：签名推不出回调形参类型，整段检查必须跳过。 */
+        public Object opaque(String id, Object config) {
+            return null;
+        }
+    }
+
+    public static class ItemBuilderLike {
+        public ItemBuilderLike maxStackSize(int size) {
+            return this;
+        }
+
+        public ItemBuilderLike rarity(String rarity) {
+            return this;
+        }
+    }
+
+    public static class SoundBuilderLike {
+        public SoundBuilderLike fixedRange(float range) {
+            return this;
+        }
+    }
+
     /** 契约测试用的 ContractEvent 构造助手。 */
     private static NormativeApiContract.ContractEvent contractEvent(String group, String name, String... fields) {
         List<NormativeApiContract.ContractEventField> payload = new ArrayList<>();
@@ -109,6 +141,13 @@ class EventCallbackSourceValidatorTest {
     private static void registerBindingGroup(String group) {
         ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
                 group, new ScriptBindingSchema.BindingMembers(Set.of("started"))));
+    }
+
+    /** 非事件回调（builder）路径：valueClasses 带绑定类，形参类型从方法签名推导。 */
+    private static void registerRegistryBinding() {
+        ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
+                "DynamicRegistry", new ScriptBindingSchema.BindingMembers(
+                        Set.of("item", "soundEvent", "opaque"), Set.of(RegistryLikeBinding.class))));
     }
 
     private static Path serverScript(String name) {
@@ -198,6 +237,59 @@ class EventCallbackSourceValidatorTest {
                 "TestEvents.started((e) => { const x = e; x.getServer() })");
 
         assertTrue(reported.isEmpty(), "alias to known member must pass: " + reported);
+    }
+
+    /**
+     * 2026-08-24 日志误报的回归：{@code DynamicRegistry.item('id', b => b.maxStackSize(64))}
+     * 被报 {@code 'maxStackSize' not in DynamicRegistry}。根因：builder 回调不是事件注册，
+     * managed/eventClass 双空时 rootValue 退化成空集成员表，任何成员访问都判错。
+     * 现在：签名（{@code Consumer<ItemBuilder>}）推导形参类型，按 ItemBuilder 成员检查。
+     */
+    @Test
+    void builderCallbackParamTypedFromBindingSignature() {
+        registerRegistryBinding();
+
+        EventCallbackSourceValidator.validate(serverScript("builder-ok"),
+                "DynamicRegistry.item('mymod:cool_gem', (b) => { b.maxStackSize(64); b.rarity('epic') })");
+
+        assertTrue(reported.isEmpty(), "builder callback members must pass: " + reported);
+    }
+
+    @Test
+    void builderCallbackTypoReportedAgainstBuilderType() {
+        registerRegistryBinding();
+
+        EventCallbackSourceValidator.validate(serverScript("builder-typo"),
+                "DynamicRegistry.soundEvent('mymod:ding', (b) => { b.fixedRang(16) })");
+
+        assertEquals(1, reported.size(), "builder typo must be reported exactly once: " + reported);
+        assertTrue(reported.getFirst().contains("fixedRang"), reported.getFirst());
+        assertTrue(reported.getFirst().contains("ItemBuilderLike") == false
+                && reported.getFirst().contains("SoundBuilderLike"), reported.getFirst());
+        assertTrue(reported.getFirst().contains("Did you mean"), reported.getFirst());
+    }
+
+    /** 签名推不出形参类型（非泛型参数）时整段跳过：宁可漏检也不误报。 */
+    @Test
+    void builderCallbackWithOpaqueSignatureSkipped() {
+        registerRegistryBinding();
+
+        EventCallbackSourceValidator.validate(serverScript("builder-opaque"),
+                "DynamicRegistry.opaque('mymod:x', (b) => { b.anythingAtAll() })");
+
+        assertTrue(reported.isEmpty(), "unresolvable callback param must not be reported: " + reported);
+    }
+
+    /** 事件回调里嵌套 builder 回调：外层按事件类查，内层按绑定签名查，互不干扰。 */
+    @Test
+    void builderCallbackNestedInsideEventCallback() {
+        registerBindingGroup("TestEvents");
+        registerRegistryBinding();
+
+        EventCallbackSourceValidator.validate(serverScript("nested"),
+                "TestEvents.started((e) => { e.getServer(); DynamicRegistry.item('mymod:x', (b) => { b.maxStackSize(8) }) })");
+
+        assertTrue(reported.isEmpty(), "nested builder callback inside event callback must pass: " + reported);
     }
 
     @Test

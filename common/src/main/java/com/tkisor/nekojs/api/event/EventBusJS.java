@@ -425,15 +425,19 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return;
             }
             try {
-                // No synchronized(context): the Graal Context is single-threaded (allowMultiThread
-                // is not set), so Graal itself enforces single-thread access. All listener invocations
-                // (NeoForge events + timer flushes) run on the game tick thread. The lock was a redundant
-                // uncontended monitor enter/exit per event dispatch.
-                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                try {
-                    listener.executeVoid(event);
-                } finally {
-                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                // synchronized(context)：「监听器都在游戏 tick 线程」的旧假设不成立——
+                // /nekojs reload client 在服务器命令线程上跑（NekoJSCommands），而 CLIENT
+                // 事件在 Render 线程分发；边 reload 边触发客户端事件会撞 Graal 单线程约束
+                // （Multi threaded access）。以 Context monitor 序列化所有进入点
+                // （ScriptManager 的 timer flush / close 也用同一把锁）。
+                String previousScriptId;
+                synchronized (context) {
+                    previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                    try {
+                        listener.executeVoid(event);
+                    } finally {
+                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                    }
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -462,12 +466,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return false;
             }
             try {
-                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                try {
-                    Value result = listener.execute(event);
-                    return result.isBoolean() && result.asBoolean();
-                } finally {
-                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                // synchronized(context)：与 register() 同理——命令线程 reload 与 Render/tick
+                // 线程分发并发时以 Context monitor 序列化（见 register() 注释）
+                synchronized (context) {
+                    String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                    try {
+                        Value result = listener.execute(event);
+                        return result.isBoolean() && result.asBoolean();
+                    } finally {
+                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                    }
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -502,13 +510,17 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         return;
                     }
                     try {
-                        String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                        try {
-                            if (listener.canExecute()) {
-                                listener.executeVoid(event);
+                        // synchronized(context)：与 register() 同理——命令线程 reload 与分发
+                        // 线程并发时以 Context monitor 序列化（见 register() 注释）
+                        synchronized (context) {
+                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                            try {
+                                if (listener.canExecute()) {
+                                    listener.executeVoid(event);
+                                }
+                            } finally {
+                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                             }
-                        } finally {
-                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -543,14 +555,17 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         return false;
                     }
                     try {
-                        String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                        try {
-                            if (listener.canExecute()) {
-                                Value result = listener.execute(event);
-                                return result.isBoolean() && result.asBoolean();
+                        // synchronized(context)：与 register() 同理（见 register() 注释）
+                        synchronized (context) {
+                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                            try {
+                                if (listener.canExecute()) {
+                                    Value result = listener.execute(event);
+                                    return result.isBoolean() && result.asBoolean();
+                                }
+                            } finally {
+                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                             }
-                        } finally {
-                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();

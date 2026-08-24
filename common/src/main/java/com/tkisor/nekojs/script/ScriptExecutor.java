@@ -101,8 +101,12 @@ public final class ScriptExecutor {
         try {
             String source = Files.readString(script.path);
             GlobalBindingMemberValidator.validate(script.path, source);
-        } catch (Throwable ignored) {
-            // 校验只报告错误，绝不阻塞脚本执行
+        } catch (Throwable t) {
+            // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
+            // 否则所有成员校验静默消失且无人察觉（文件读不出来除外，那条已由
+            // preload 失败路径上报错误面板）
+            com.tkisor.nekojs.NekoJS.LOGGER.warn(
+                    "Global binding preflight failed for {}: {}", script.path, t.toString(), t);
         }
     }
 

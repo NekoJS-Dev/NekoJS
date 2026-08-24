@@ -92,9 +92,7 @@ class ScriptReloadRegressionTest {
             this.contextDead = ScriptManager.isContextDead(context);
             if (manager != null) {
                 try {
-                    Field contextField = ScriptManager.class.getDeclaredField("context");
-                    contextField.setAccessible(true);
-                    this.managerContextAtProbe = (Context) contextField.get(manager);
+                    this.managerContextAtProbe = currentContext(manager);
                     this.managerContextMatches = (this.managerContextAtProbe != null
                             && this.managerContextAtProbe.equals(context));
                     Field killedField = ScriptManager.class.getDeclaredField("contextKilled");
@@ -498,9 +496,14 @@ class ScriptReloadRegressionTest {
     }
 
     private static Context currentContext(ScriptManager manager) throws Exception {
-        Field field = ScriptManager.class.getDeclaredField("context");
+        // context 与 nodeRuntime/流已收进成对发布的 RuntimeEnvironment record（单个 volatile
+        // 引用）；从这里取 context 等价于旧字段直读
+        Field field = ScriptManager.class.getDeclaredField("runtime");
         field.setAccessible(true);
-        return (Context) field.get(manager);
+        Object environment = field.get(manager);
+        Method contextAccessor = environment.getClass().getDeclaredMethod("context");
+        contextAccessor.setAccessible(true);
+        return (Context) contextAccessor.invoke(environment);
     }
 
     @SuppressWarnings("unchecked")

@@ -181,6 +181,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(new FluidIngredientAdapter());
         registry.register(new SizedFluidIngredientAdapter());
         registry.register(new ResourceLocationAdapter());
+        registry.register(new HolderAdapter());
         registry.register(new RecipeFilterAdapter());
         registry.register(new RecipeJsonValueAdapter());
         registry.register(new JsonObjectAdapter());

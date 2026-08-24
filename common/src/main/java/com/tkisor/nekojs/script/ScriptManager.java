@@ -95,7 +95,8 @@ public final class ScriptManager implements AutoCloseable {
         if (manager == null) return false;
         // Graal 的 Value.getContext() 可能返回与 Context.Builder.build() 引用不同但
         // equals/hashCode 相同的包装对象；必须用 equals 比较，否则正常回调也会被误判为 dead。
-        return manager.contextKilled || (manager.context != null && !manager.context.equals(context));
+        return manager.contextKilled || (manager.runtime.context() != null
+                && !manager.runtime.context().equals(context));
     }
 
     // ---- 实例字段 ----
@@ -114,16 +115,24 @@ public final class ScriptManager implements AutoCloseable {
      */
     public final ScriptType scriptType;
 
-    /** volatile：context 可能被回调线程（kill 上报后的重建）与加载线程并发读写。 */
-    private volatile Context context;
-    private NekoNodeRuntime nodeRuntime;
     /**
-     * 当前 context 的 out/err 日志流。Graal 关闭 Context 时只 detach 用户流、不 flush/close，
-     * 末行未换行输出会滞留在行缓冲中丢失；closeRuntimeResources 在 context.close() 之后
-     * 对它们补一次 close()（内部幂等地冲刷残留缓冲）。随 context 一起成对换新。
+     * context 与随行资源（node runtime、out/err 流）的不可分成对快照。
+     *
+     * <p>必须整体经单个 volatile 引用发布：旧实现 {@code context} 是 volatile 但
+     * {@code nodeRuntime}/{@code contextOutStream}/{@code contextErrStream} 是普通字段，
+     * tick 线程无锁读这一组字段时会看到「新 context 配旧 runtime」的错配——reload 后 timer
+     * 打到已关闭的旧运行时，或 null 检查与使用之间字段被清导致 NPE。
      */
-    private LoggerStream contextOutStream;
-    private LoggerStream contextErrStream;
+    private record RuntimeEnvironment(Context context, NekoNodeRuntime nodeRuntime,
+                                      LoggerStream outStream, LoggerStream errStream) {
+        static final RuntimeEnvironment EMPTY = new RuntimeEnvironment(null, null, null, null);
+
+        boolean isEmpty() {
+            return context == null;
+        }
+    }
+
+    private volatile RuntimeEnvironment runtime = RuntimeEnvironment.EMPTY;
     private List<ScriptContainer> scripts;
 
     /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
@@ -159,27 +168,31 @@ public final class ScriptManager implements AutoCloseable {
         this.contextKilled = true;
     }
 
-    private synchronized Context getOrCreateContext() {
-        if (context == null || contextKilled) {
-            if (context != null) {
+    private synchronized RuntimeEnvironment getOrCreateEnvironment() {
+        if (runtime.isEmpty() || contextKilled) {
+            if (!runtime.isEmpty()) {
                 // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源。
                 // 与事务式 reload / fullReloadCleanup 相同的顺序：关闭前先清本 scriptType 的
                 // 全部事件监听器——监听器闭包持有指向已死 Context 的 Value，保留只会让每次
                 // 事件分发都在死环境上报错。此处无法重跑脚本重建监听器（重建只创建空环境），
                 // 对本 scriptType 整体清除是正确的最小修复，恢复需再次 reload。
                 scriptEventBridge.clearListeners(scriptType);
-                closeRuntimeResources(this.nodeRuntime, this.context, this.contextOutStream, this.contextErrStream);
+                closeRuntimeResources(this.runtime);
             }
             ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
-            this.context = env.context();
-            this.nodeRuntime = env.nodeRuntime();
-            this.contextOutStream = env.outStream();
-            this.contextErrStream = env.errStream();
-            CONTEXT_TO_MANAGER.put(context, this);
-            ScriptContextRegistry.bind(context, scriptType);
+            RuntimeEnvironment created = new RuntimeEnvironment(
+                    env.context(), env.nodeRuntime(), env.outStream(), env.errStream());
+            this.runtime = created;
+            CONTEXT_TO_MANAGER.put(created.context(), this);
+            ScriptContextRegistry.bind(created.context(), scriptType);
             contextKilled = false;
+            return created;
         }
-        return context;
+        return runtime;
+    }
+
+    private Context getOrCreateContext() {
+        return getOrCreateEnvironment().context();
     }
 
     // ---- 脚本发现 ----
@@ -212,6 +225,7 @@ public final class ScriptManager implements AutoCloseable {
             if (pack.scope() != com.tkisor.nekojs.core.pack.ScriptPackScope.WORLD) continue;
             String prefix = pack.scriptIdPrefix(scriptType);
             scriptEventBridge.clearListenersByPrefix(scriptType, prefix);
+            NekoNodeRuntime nodeRuntime = this.runtime.nodeRuntime();
             if (nodeRuntime != null) {
                 nodeRuntime.timers().cancelScriptByPrefix(prefix);
             }
@@ -267,9 +281,11 @@ public final class ScriptManager implements AutoCloseable {
         }
         for (ScriptContainer script : scriptsToLoad) {
             if (script.shouldRun()) {
-                // 逐个脚本取最新 Context：某脚本触发语句上限导致 Context 被 Graal 关闭时，
-                // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没
-                scriptExecutor.executeEntry(getOrCreateContext(), script, this.nodeRuntime);
+                // 逐个脚本取最新环境：某脚本触发语句上限导致 Context 被 Graal 关闭时，
+                // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没。context 与
+                // nodeRuntime 从同一次快照取出，避免读到错配对。
+                RuntimeEnvironment env = getOrCreateEnvironment();
+                scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime());
             }
         }
     }
@@ -292,6 +308,7 @@ public final class ScriptManager implements AutoCloseable {
         }
         for (var script : scriptsToLoad) {
             script.preload();
+            reportPreloadFailure(script);
         }
         ScriptLoadOrderSorter.Result orderResult =
                 ScriptLoadOrderSorter.applyAfterOrder(scriptsToLoad, ScriptContainer::shouldRun);
@@ -299,6 +316,18 @@ public final class ScriptManager implements AutoCloseable {
             scriptType.logger().warn("{} 脚本 after 依赖排序存在问题：{}", scriptType.name(), orderResult.describe());
         }
         return true;
+    }
+
+    /**
+     * preload 读失败（编码/权限/文件消失）时 {@code disabled} 置位、{@code shouldRun()}
+     * 静默跳过，{@code lastError} 旧逻辑无人读——脚本直接消失且日志/错误面板均无痕迹。
+     * 这里上报错误面板并落 error 日志，让「脚本为什么没跑」可被看见。
+     */
+    private void reportPreloadFailure(ScriptContainer script) {
+        if (script.disabled && script.lastError != null) {
+            errorTracker.record(script, script.lastError);
+            scriptType.logger().error("无法读取脚本 {}，已跳过：{}", script.path, script.lastError.toString());
+        }
     }
 
         // ---- 重载 ----
@@ -342,10 +371,7 @@ public final class ScriptManager implements AutoCloseable {
          * reload 恢复——这是共享资源约束下的最佳折中，核心保证是「不崩溃、旧 Context 不被关闭」。
          */
         private void reloadScriptsTransactional () {
-            Context oldContext = this.context;
-            NekoNodeRuntime oldNodeRuntime = this.nodeRuntime;
-            LoggerStream oldOutStream = this.contextOutStream;
-            LoggerStream oldErrStream = this.contextErrStream;
+            RuntimeEnvironment oldEnvironment = this.runtime;
 
             scriptEventBridge.clearListeners(scriptType);
             errorTracker.clearByType(scriptType);
@@ -370,22 +396,19 @@ public final class ScriptManager implements AutoCloseable {
             }
             ReloadProgressTracker.step(scriptType.name, "candidate environment created");
 
-            Context candidateContext = candidate.context();
-            NekoNodeRuntime candidateNode = candidate.nodeRuntime();
-            LoggerStream candidateOutStream = candidate.outStream();
-            LoggerStream candidateErrStream = candidate.errStream();
+            RuntimeEnvironment candidateEnvironment = new RuntimeEnvironment(
+                    candidate.context(), candidate.nodeRuntime(), candidate.outStream(), candidate.errStream());
+            Context candidateContext = candidateEnvironment.context();
+            NekoNodeRuntime candidateNode = candidateEnvironment.nodeRuntime();
             CONTEXT_TO_MANAGER.put(candidateContext, this);
             ScriptContextRegistry.bind(candidateContext, scriptType);
 
             boolean previousKilled = this.contextKilled;
-            // 提前发布候选字段：候选脚本可能注册 timer（setTimeout）并 await 其回调，而
-            // isContextDead(candidateContext) 依赖 this.context 判定。必须在最终切换前就让
-            // 候选成为当前 live Context，否则候选 timer 回调会被当作 dead 跳过。成功路径
-            // 无需重复赋值；失败时在 catch 恢复捕获的旧值。
-            this.context = candidateContext;
-            this.nodeRuntime = candidateNode;
-            this.contextOutStream = candidateOutStream;
-            this.contextErrStream = candidateErrStream;
+            // 提前发布候选环境（单个 volatile 引用，四元组不会错配）：候选脚本可能注册 timer
+            // （setTimeout）并 await 其回调，而 isContextDead(candidateContext) 依赖当前环境判定。
+            // 必须在最终切换前就让候选成为当前 live 环境，否则候选 timer 回调会被当作 dead
+            // 跳过。成功路径无需重复赋值；失败时在 catch 恢复捕获的旧值。
+            this.runtime = candidateEnvironment;
 
             try {
                 List<ScriptContainer> candidateScripts = discoverWithPacks();
@@ -416,19 +439,15 @@ public final class ScriptManager implements AutoCloseable {
                 // 成功切换到一个健康的新 Context：旧 Context 可能带有的 killed 标记不再有效。
                 this.contextKilled = false;
 
-                if (oldContext != null || oldNodeRuntime != null
-                        || oldOutStream != null || oldErrStream != null) {
-                    closeRuntimeResources(oldNodeRuntime, oldContext, oldOutStream, oldErrStream);
+                if (!oldEnvironment.isEmpty()) {
+                    closeRuntimeResources(oldEnvironment);
                 }
                 ReloadProgressTracker.step(scriptType.name, "committed");
             } catch (Throwable t) {
-                this.context = oldContext;
-                this.nodeRuntime = oldNodeRuntime;
-                this.contextOutStream = oldOutStream;
-                this.contextErrStream = oldErrStream;
+                this.runtime = oldEnvironment;
                 this.contextKilled = previousKilled;
                 scriptEventBridge.clearListeners(scriptType);
-                closeRuntimeResources(candidateNode, candidateContext, candidateOutStream, candidateErrStream);
+                closeRuntimeResources(candidateEnvironment);
                 scriptType.logger().error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
                         scriptType.name(), t);
                 // Note: listeners and bindings were cleared before the candidate build (they live
@@ -549,13 +568,15 @@ public final class ScriptManager implements AutoCloseable {
         private void reloadEntryScript (Context ctx, ScriptContainer script){
             cleanupScriptEntry(script);
             script.preload();
+            reportPreloadFailure(script);
             if (script.shouldRun()) {
-                scriptExecutor.executeEntry(ctx, script, nodeRuntime);
+                scriptExecutor.executeEntry(ctx, script, this.runtime.nodeRuntime());
             }
         }
 
         private void cleanupScriptEntry (ScriptContainer script){
             scriptEventBridge.clearListeners(scriptType, script.id.toString());
+            NekoNodeRuntime nodeRuntime = this.runtime.nodeRuntime();
             if (nodeRuntime != null) {
                 nodeRuntime.timers().cancelScript(script.id.toString());
             }
@@ -625,6 +646,11 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         private void flushTestTimers () {
+            // 一次快照读取 + 同一把锁对象：旧实现每轮重读 volatile context 当锁，reload 并发
+            // 时会出现「这轮锁 A、下轮锁 B」甚至 NPE；快照保证整轮循环锁同一 Context
+            RuntimeEnvironment env = this.runtime;
+            NekoNodeRuntime nodeRuntime = env.nodeRuntime();
+            Context context = env.context();
             if (nodeRuntime == null || context == null) return;
             // 上限 1000 轮（≈1s）：覆盖常见的 await setTimeout(...) 异步断言；
             // 失控 interval 也会在此截止，不会挂死 /nekojs test
@@ -652,20 +678,14 @@ public final class ScriptManager implements AutoCloseable {
                 binding.close(scriptType);
             }
 
-            Context oldContext = this.context;
-            NekoNodeRuntime oldRuntime = this.nodeRuntime;
-            LoggerStream oldOutStream = this.contextOutStream;
-            LoggerStream oldErrStream = this.contextErrStream;
-            this.context = null;
-            this.nodeRuntime = null;
-            this.contextOutStream = null;
-            this.contextErrStream = null;
-
-            closeRuntimeResources(oldRuntime, oldContext, oldOutStream, oldErrStream);
+            RuntimeEnvironment oldEnvironment = this.runtime;
+            this.runtime = RuntimeEnvironment.EMPTY;
+            closeRuntimeResources(oldEnvironment);
         }
 
-        private void closeRuntimeResources (NekoNodeRuntime oldRuntime, Context oldContext,
-                                            LoggerStream oldOutStream, LoggerStream oldErrStream){
+        private void closeRuntimeResources (RuntimeEnvironment environment){
+            NekoNodeRuntime oldRuntime = environment.nodeRuntime();
+            Context oldContext = environment.context();
             if (oldRuntime != null) {
                 try {
                     oldRuntime.close();
@@ -677,7 +697,12 @@ public final class ScriptManager implements AutoCloseable {
                 ScriptContextRegistry.unbind(oldContext);
                 CONTEXT_TO_MANAGER.remove(oldContext);
                 try {
-                    oldContext.close();
+                    // 关闭前先取 Context 自己的 monitor：tick/分发线程可能正执行在
+                    // synchronized(context) 里，无锁直接 close 会撞上 Graal 单线程约束
+                    // （reload 后日志刷 "The Context is already closed"）
+                    synchronized (oldContext) {
+                        oldContext.close();
+                    }
                 } catch (Exception e) {
                     scriptType.logger().warn("关闭旧上下文时发生异常", e);
                 }
@@ -686,8 +711,8 @@ public final class ScriptManager implements AutoCloseable {
             // 换行结束的输出会滞留在 LoggerStream 行缓冲中丢失。这里在 context.close() 之后
             // 补一次 close()（幂等冲刷残留缓冲）；必须在 Context 关闭之后——先关流再关
             // Context 会把残余写入路由到已关闭的流。
-            closeStreamQuietly(oldOutStream);
-            closeStreamQuietly(oldErrStream);
+            closeStreamQuietly(environment.outStream());
+            closeStreamQuietly(environment.errStream());
         }
 
         private static void closeStreamQuietly (LoggerStream stream){
@@ -706,11 +731,8 @@ public final class ScriptManager implements AutoCloseable {
             for (var binding : pluginRuntime.bindings(scriptType).values()) {
                 binding.close(scriptType);
             }
-            closeRuntimeResources(this.nodeRuntime, this.context, this.contextOutStream, this.contextErrStream);
-            this.context = null;
-            this.nodeRuntime = null;
-            this.contextOutStream = null;
-            this.contextErrStream = null;
+            closeRuntimeResources(this.runtime);
+            this.runtime = RuntimeEnvironment.EMPTY;
         }
 
         // ---- 查询 ----
@@ -724,7 +746,14 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         public void flushReadyNodeTimers () {
-            if (nodeRuntime != null && context != null) {
+            // 快照读取：context 与 nodeRuntime 必须来自同一成对发布，且整段用同一把锁。
+            // 旧实现两次独立字段读 + 每次以「刚读到的 context」为锁，reload 并发时会把
+            // 新 runtime 的 timer 打进旧 Context 的锁里（或反之），Graal 单线程约束直接报
+            // Multi threaded access。
+            RuntimeEnvironment env = this.runtime;
+            Context context = env.context();
+            NekoNodeRuntime nodeRuntime = env.nodeRuntime();
+            if (context != null && nodeRuntime != null) {
                 synchronized (context) {
                     nodeRuntime.flushReadyTimers();
                 }
