@@ -84,20 +84,80 @@ report_pair() {
 
 printf 'check-platform-drift (repo: %s)' "$REPO_ROOT"
 
-report_pair \
-    'main: neoforge-1.21.1 <-> neoforge-26-shared' \
-    "$PLATFORMS/neoforge-1.21.1/src/main/java" \
-    "$PLATFORMS/neoforge-26-shared/src/main/java"
+# ==================== 调用模式 ====================
+#   check-platform-drift                     dashboard（旧行为，只打印，exit 0）
+#   check-platform-drift --write-baseline F  把各对 drifted 数写入基线 F
+#   check-platform-drift --ratchet F          与基线比较：任一对 drifted 变多/缺对/新对 → exit 1
+# 棘轮只设防 drifted（平台层收敛必须单调下降，下降后 --write-baseline 更新基线入库）；
+# identical 上涨是好事，不设防。
+MODE="${1:-}"
+BASELINE_FILE="${2:-}"
 
-report_pair \
-    'main: neoforge-26.1 <-> neoforge-26.2' \
-    "$PLATFORMS/neoforge-26.1/src/main/java" \
-    "$PLATFORMS/neoforge-26.2/src/main/java"
+run_all_pairs() {
+    report_pair \
+        'main: neoforge-1.21.1 <-> neoforge-26-shared' \
+        "$PLATFORMS/neoforge-1.21.1/src/main/java" \
+        "$PLATFORMS/neoforge-26-shared/src/main/java"
 
-report_pair \
-    'informational: cleanroom-1.12.2 <-> neoforge-26-shared' \
-    "$PLATFORMS/cleanroom-1.12.2/src/main/java" \
-    "$PLATFORMS/neoforge-26-shared/src/main/java"
+    report_pair \
+        'main: neoforge-26.1 <-> neoforge-26.2' \
+        "$PLATFORMS/neoforge-26.1/src/main/java" \
+        "$PLATFORMS/neoforge-26.2/src/main/java"
 
-printf '\n(done; exit 0 by design — gating is decided outside this script)\n'
+    report_pair \
+        'informational: cleanroom-1.12.2 <-> neoforge-26-shared' \
+        "$PLATFORMS/cleanroom-1.12.2/src/main/java" \
+        "$PLATFORMS/neoforge-26-shared/src/main/java"
+}
+
+# 从 report 输出提取「[对名] 后面的 drifted: N」
+drifted_numbers() {
+    awk '/^\[/{pair=$0} /drifted:/{for(i=1;i<=NF;i++) if($i=="drifted:"){v=$(i+1); sub(/\|$/,"",v); print pair, v}}'
+}
+
+case "$MODE" in
+    --write-baseline)
+        [ -n "$BASELINE_FILE" ] || { echo "usage: $0 --write-baseline <file>" >&2; exit 2; }
+        run_all_pairs | drifted_numbers > "$BASELINE_FILE"
+        echo "baseline written to $BASELINE_FILE:"
+        cat "$BASELINE_FILE"
+        ;;
+    --ratchet)
+        [ -f "$BASELINE_FILE" ] || { echo "baseline file missing: $BASELINE_FILE" >&2; exit 2; }
+        CURRENT="$(mktemp)"
+        run_all_pairs | drifted_numbers | tee "$CURRENT"
+        FAILED=0
+        # 对名含空格：行内最后一个空格前是对名、之后是 drifted 数
+        while IFS= read -r bline; do
+            [ -n "$bline" ] || continue
+            bcount="${bline##* }"
+            bpair="${bline% *}"
+            ccount="$(awk -v p="$bpair" 'index($0,p)==1 {print $NF}' "$CURRENT")"
+            if [ -z "$ccount" ]; then
+                echo "RATCHET FAIL: pair no longer reported: $bpair (baseline drifted=$bcount)" >&2
+                FAILED=1
+            elif [ "$ccount" -gt "$bcount" ]; then
+                echo "RATCHET FAIL: $bpair drifted $bcount -> $ccount" >&2
+                FAILED=1
+            elif [ "$ccount" -lt "$bcount" ]; then
+                echo "ratchet note: $bpair improved ($bcount -> $ccount) - update baseline via --write-baseline" >&2
+            fi
+        done < "$BASELINE_FILE"
+        while IFS= read -r cline; do
+            [ -n "$cline" ] || continue
+            cpair="${cline% *}"
+            grep -qF "$cpair" "$BASELINE_FILE" || {
+                echo "RATCHET FAIL: new pair not in baseline: $cline" >&2
+                FAILED=1
+            }
+        done < "$CURRENT"
+        rm -f "$CURRENT"
+        [ "$FAILED" -eq 0 ] && echo "drift ratchet OK"
+        exit "$FAILED"
+        ;;
+    *)
+        run_all_pairs
+        printf '\n(done; dashboard mode exits 0 by design - use --ratchet in CI)\n'
+        ;;
+esac
 exit 0

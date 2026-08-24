@@ -113,6 +113,13 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
+      - name: Platform drift ratchet
+        # 棘轮：任一平台对的 drifted 文件数只允许持平或下降。有意收敛后先
+        # bash scripts/check-platform-drift --write-baseline scripts/platform-drift-baseline.txt
+        # 再提交基线。纯 bash，无需 JDK。
+        shell: bash
+        run: bash scripts/check-platform-drift --ratchet scripts/platform-drift-baseline.txt
+
       - name: Install Probe typecheck dependencies
         run: npm ci
 
@@ -421,3 +428,56 @@ jobs:
           loaders: neoforge;forge
           game-versions: 26.1.2;26.2.0;1.21.1;1.12.2
           changelog: ${{ steps.changelog.outputs.notes }}
+
+  windows-common-test:
+    # golden 基线曾出现跨 JDK/跨平台漂移（b9ca637 就是这类问题的修复）：
+    # Linux-only CI 会让 Windows 特有的路径/行尾/排序问题溜进主干。
+    name: Common tests on Windows
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run common checks
+        shell: bash
+        run: ./gradlew :common-api:check :common:check --console=plain
+
+  gametest-smoke:
+    # headless GameTest 冒烟：本地实测 ~40s 自行退出（"All N required tests passed"）。
+    # mixin/interface-injection 的加载路径只有这里会在 CI 里真正跑起来。
+    name: GameTest smoke (NeoForge 26.1)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run game test server
+        run: ./gradlew :platforms:neoforge-26.1:runGameTestServer --console=plain
+
+      - name: Assert tests passed
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -rE "All [0-9]+ required tests passed" platforms/neoforge-26.1/run/logs/             || { echo "no 'required tests passed' marker found in gametest logs"; exit 1; }
