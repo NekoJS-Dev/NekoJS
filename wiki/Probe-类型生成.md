@@ -40,9 +40,10 @@
 
 3. probe.addGlobal / probe.snippets 收集（各有监听器才触发）
 
-4. 每个选中 backend 串行渲染：render 产物进内存（不触盘）→ 默认 generate 统一落盘到
-   <baseDir>/<该语言输出子目录>.staging → 全部成功后原子替换（旧目录备份到 <目录>.old 再删）
-   └─ render 或提交中途失败 → 丢弃 staging，旧产物完整保留；路径越界（绝对路径/..）直接拒绝
+4. 每个选中 backend 串行渲染：render 产物进内存（不触盘）→ 默认 generate 逐文件就地同步进
+   <baseDir>/<该语言输出子目录>：内容相同的跳过、变化的覆盖写、本次不再产出的删除
+   ├─ render 失败 → 完全不触盘，旧产物原样保留；路径越界（绝对路径/..）直接拒绝
+   └─ 某个文件被外部进程锁住 → 带退避重试，仍失败则报错点名该文件（陈旧文件删不掉只告警）
 
 5. 编辑器配置贡献（各 backend 自报片段，幂等合并）
    ├─ TS：合并各脚本目录 jsconfig.json 的 paths / include / typeRoots（指向 .neko_probe/typescript/）
@@ -279,7 +280,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 |---|---|
 | `@package/` | Java 包按目录树镜像 |
 | `@side-only/<side>/` | 按脚本侧别分（startup/server/client） |
-| `@special/types/` | 注册表字面量 union（如所有物品 id） |
+| `@special/types/` | 注册表字面量 union（所有物品 id 及其标签 id） |
 | `@manual/` | 插件/平台手动写的 `.d.ts`（+ `globals.d.ts`） |
 | `$ClassName` | 类声明命名约定（避免与 JS 关键字冲突） |
 | `$Foo_` | 适配器输入别名（`Foo` 是目标类型名） |
@@ -293,7 +294,7 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `ProbeBackendRegistry` | `common/.../probe/` | backend 按 `(语言, 名字)` 二维登记；lock 时冲突崩溃；命令解析与补全 |
 | `ProbeBackend` / `ProbeContext` | `common/.../probe/` | 单语言生成器接口（`render` 渲染到内存 + 默认 `generate` 原子提交/`contributeEditorConfig`/`outputDir`/`requiresIr`）；共享上下文 |
 | `ProbeBackendSelector` | `common/.../probe/` | `/nekojs probe` 的 backend 解析（语言默认/per-language 配置覆盖/全选/补全），三平台命令层共用 |
-| `ProbeOutputCommitter` | `common/.../probe/` | staging/backup 目录交换的唯一实现（恢复/提交/递归删除/render 产物路径校验） |
+| `ProbeOutputCommitter` | `common/.../probe/` | 产物落盘的唯一实现（就地逐文件同步/陈旧清理/遗留目录清理/render 产物路径校验） |
 | `TypeScriptProbeBackend` | `common/.../probe/backend/typescript/` | 内置 TS backend：`.d.ts` 全流程（IR 唯一渲染路径）+ 六个声明生成器 |
 | `PythonProbeBackend` | `common/.../probe/backend/python/` | 内置 Python backend：`.pyi` stub 包（`requiresIr=true`） |
 | `TypeReflector` / `TypeDecl` | `common/.../probe/ir/` | `Class<?>` → 声明 IR（getter/setter 推断、`@Remap`/`@HideFromJS`、`@Doc` 注解文档） |
@@ -330,6 +331,14 @@ snapshot 包含：
 ### 注册表字面量
 
 通过 `NekoCatalogPlatformProvider.registryTypes()` 提供注册表 id 列表，probe 生成 `@special/types/index.d.ts`（如所有物品 id 的字符串字面量 union），让脚本里 `'minecraft:stone'` 有补全。
+
+每个注册表还额外生成一个标签联合：
+
+- `RegistryTypes.<名字>Tag`（如 `RegistryTypes.ItemTag`）——probe 运行时该注册表已绑定的标签。适配器用 `template("#", registryTag("Item"))` 包成 <code>\`#${RegistryTypes.ItemTag}\`</code>，于是 `'#minecraft:planks'` 也有补全。为空（平台没有标签系统，或 probe 在标签绑定前运行）时回退成 `string`，避免模板类型退化成 `never` 而误报。
+
+另有一个与具体注册表无关的联合：
+
+- `RegistryTypes.Namespace`——两个数据源的并集：`NekoCatalogPlatformProvider.modIds()`（三平台都取加载器的 mod 列表，覆盖「装了但没往这个注册表注册东西」的 mod）与全部注册表条目 id 的 `:` 前缀（覆盖脚本 `event.create('mymod:cool_gem')`、数据包等不属于任何 mod 的命名空间）。适配器用 `template("@", namespace())` 包成 <code>\`@${RegistryTypes.Namespace}\`</code>，于是 `'@create'` 也有补全。不按注册表切分：一个命名空间能不能写与它出现在哪个注册表无关，过滤不到东西只是空结果而不是错误。
 
 ### 手动声明
 
@@ -394,7 +403,7 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 ### render 契约（唯一必须实现的渲染方法）
 
 - 返回「相对输出目录的路径（`/` 分隔，如 `@package/net/minecraft/index.d.ts`）→ UTF-8 文本内容」；**不触碰磁盘**。
-- staging 落盘、原子提交、崩溃残留恢复、路径越界校验（拒绝绝对路径与 `..` 段）全部由接口的**默认 `generate()`** 统一负责——你不需要也不可能写错提交逻辑。
+- 落盘、陈旧文件清理、写入锁重试、路径越界校验（拒绝绝对路径与 `..` 段）全部由接口的**默认 `generate()`** 统一负责——你不需要也不可能写错落盘逻辑。
 - render 抛异常 → 该 backend 记为失败（消息进命令输出），旧输出自动完整保留。
 - 前置条件不满足（如缺数据）直接抛 `IllegalArgumentException`，消息会原样展示给用户。
 
@@ -407,13 +416,13 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 | `outputDir(paths, config)` | `<baseDir>/<语言id>`，可被 `probe.toml [languages.<id>].outputDir` 覆盖 | 特殊目录布局 |
 | `contributeEditorConfig(...)` | 空 | 让 IDE 认识你的产物（合并进 jsconfig/pyrightconfig 等，幂等） |
 | `resetEditorConfig(...)` | 空 | `/nekojs probe reset_config` 时清理你写的编辑器配置 |
-| `generate(ctx)` | render + 原子提交 | **一般不要覆盖**——自管 staging/backup/恢复极易出错，仅极端特殊需求 |
+| `generate(ctx)` | render + 落盘 | **一般不要覆盖**——自管落盘/陈旧清理/锁重试极易出错，仅极端特殊需求 |
 
 ### 规则
 
 - 同一 `(语言, 名字)` 重复注册 → bootstrap lock 时**崩溃**（确定性冲突，列出所有注册者）。
 - 同语言多 backend 时，`/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可指定），其余用 `/nekojs probe <语言> <名字>`。
-- 一次运行中两个选中 backend 的 outputDir 相同时，只跑第一个、其余跳过并告警（staging 整目录替换会互相吞产物；要区分目录用 `outputDir` 配置）。
+- 一次运行中两个选中 backend 的 outputDir 相同时，只跑第一个、其余跳过并告警（后跑者会把先跑者的产物当陈旧文件删掉；要区分目录用 `outputDir` 配置）。
 - 替换 TS 实现要遵守上面的模块布局约定，否则 `jsconfig.json` 路径失效。
 
 ## Probe 的当前局限
