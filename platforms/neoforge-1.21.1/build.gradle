@@ -19,11 +19,53 @@ def loader_version_range= "[4,)"
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+// W5/A8 步骤 3：「仅机械改名」文件的 1.21.1 副本不再手维护——从 26-shared master 生成
+// （清单 scripts/gen-1211-masters.txt，规则 scripts/gen-1211-rules.properties，产物在
+// build/generated 不进 src）。单一可编辑副本在 26-shared 侧；生成规则与
+// scripts/check-platform-drift 的归一化规则互为反向，master 用了 1.21.1 没有的 API
+// 会在这里直接编译失败（而不是静默漂移）。
+def legacySharedRules = []
+rootProject.file('scripts/gen-1211-rules.properties').eachLine { line ->
+    def text = line.trim()
+    if (text && !text.startsWith('#')) {
+        def eq = text.indexOf('=')
+        legacySharedRules << [java.util.regex.Pattern.compile(text.substring(0, eq)), text.substring(eq + 1)]
+    }
+}
+def legacySharedMasters = []
+rootProject.file('scripts/gen-1211-masters.txt').eachLine { line ->
+    def rel = line.trim()
+    if (rel && !rel.startsWith('#')) {
+        legacySharedMasters << rel
+    }
+}
+def generateLegacySharedSources = tasks.register('generateLegacySharedSources', Copy) {
+    group = 'build'
+    description = 'Generates 1.21.1 sources from neoforge-26-shared masters (mechanical renames only).'
+    inputs.files rootProject.file('scripts/gen-1211-rules.properties'),
+            rootProject.file('scripts/gen-1211-masters.txt')
+    into layout.buildDirectory.dir('generated/legacy-shared-sources/java')
+    filteringCharset = 'UTF-8'
+    def rules = legacySharedRules
+    legacySharedMasters.each { rel ->
+        from(rootProject.file('platforms/neoforge-26-shared/src/main/java')) {
+            include rel
+        }
+    }
+    filter { String line ->
+        def result = line
+        rules.each { pattern, replacement -> result = pattern.matcher(result).replaceAll(replacement) }
+        result
+    }
+}
+
 sourceSets {
     main {
         java {
             // 与 26.x 共享的版本无关源码树（52 个字节级相同文件，见 git 历史）
             srcDirs = ['src/main/java', '../neoforge-shared/src/main/java']
+            // 上方 generateLegacySharedSources 的产物目录（任务提供者挂 srcDir 自动带上依赖）
+            srcDir generateLegacySharedSources
         }
         resources {
             srcDirs = ['src/main/resources', 'src/generated/resources']
@@ -33,6 +75,10 @@ sourceSets {
     // 包含 neoforge-26-shared/src/main/java，那一层里的 26.x-only 测试（DynamicRegistry 等）
     // 在这里根本没有被测类。
     test.java.srcDir '../neoforge-shared/src/test/java'
+}
+// 读 main 源集的其它任务（sourcesJar 等）同样需要生成先行
+tasks.matching { it.name == 'sourcesJar' || it.name == 'compileJava' }.configureEach {
+    dependsOn generateLegacySharedSources
 }
 
 // base.archivesName / repositories / tasks.withType(Jar) / publishing / unifiedPublishing / idea

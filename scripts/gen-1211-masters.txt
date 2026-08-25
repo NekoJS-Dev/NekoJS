@@ -1,0 +1,32 @@
+# gen-1211-masters — 参与生成的 26-shared master 相对路径（相对 neoforge-26-shared/src/main/java）。
+# 生成产物进 1.21.1 的 build/generated（不进 src）；修改只发生在 master 一侧。
+# 约束：本清单内的文件必须与 1.21.1 侧保持「归一化后相同」（scripts/check-platform-drift 主对），
+# 否则生成会掩盖真实分歧——从清单移除并恢复 1.21.1 手维护副本。
+com/tkisor/nekojs/api/recipe/RecipeEntryJS.java
+com/tkisor/nekojs/api/recipe/RecipeJsonBuilder.java
+com/tkisor/nekojs/bindings/static_access/BlockJS.java
+com/tkisor/nekojs/js/type_adapter/BlockStateAdapter.java
+com/tkisor/nekojs/network/DownloadAllScriptsPacket.java
+com/tkisor/nekojs/network/FetchAllScriptsRequestPacket.java
+com/tkisor/nekojs/network/FetchScriptRequestPacket.java
+com/tkisor/nekojs/network/FetchScriptResponsePacket.java
+com/tkisor/nekojs/network/NekoScriptPayload.java
+com/tkisor/nekojs/network/OpenWorkspacePacket.java
+com/tkisor/nekojs/network/PDataSyncPacket.java
+com/tkisor/nekojs/network/SaveScriptPacket.java
+com/tkisor/nekojs/network/ShowErrorListPacket.java
+com/tkisor/nekojs/network/ShowErrorScreenPacket.java
+com/tkisor/nekojs/network/SyncFeedbackPacket.java
+com/tkisor/nekojs/network/UploadAllScriptsPacket.java
+com/tkisor/nekojs/platform/NeoForgeIdCompat.java
+com/tkisor/nekojs/wrapper/event/registry/CreativeTabRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/EnchantmentRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/EntityTypeRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/ItemRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/MobEffectRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/ParticleTypeRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/PotionRegistryEventJS.java
+com/tkisor/nekojs/wrapper/event/registry/SoundEventRegistryEventJS.java
+com/tkisor/nekojs/wrapper/registry/CreativeTabBuilderJS.java
+com/tkisor/nekojs/wrapper/registry/MobEffectBuilderJS.java
+com/tkisor/nekojs/wrapper/registry/ParticleTypeBuilderJS.java

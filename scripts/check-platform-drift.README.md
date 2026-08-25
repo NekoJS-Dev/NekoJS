@@ -49,6 +49,14 @@ bash scripts/check-platform-drift
 
 ## 基线变更记录
 
+- **2026-08-25（W5 步骤 3）**：28 个「仅机械改名」文件（13 个 network 包、7 个
+  RegistryEventJS、builder 等，~1,600 行 ×2）不再手维护 1.21.1 副本——
+  `platforms/neoforge-1.21.1` 的 `generateLegacySharedSources` 任务从 26-shared master
+  按 `scripts/gen-1211-rules.properties`（本脚本主对归一化规则的反向）生成到
+  build/generated。生成产物已验证与删除前的手维护副本逐字节一致。
+  **drifted 计数不变（113）**——这批文件原本就在 identical-after-normalize 桶里；
+  变化是 compared 141→113、identical 28→0、only-in-B +28（master 单侧存在）。
+  master 用了 1.21.1 没有的 API 时由 1.21.1 编译失败兜底（不是静默漂移）。
 - **2026-08-25（W5 步骤 1+2）**：`111/0/73 → 113/0/69`。
   - 9 个字节相同文件上提 neoforge-shared（不影响 drifted）；
   - 26.1/26.2 的 4 个版本专属文件收进 26-shared + per-version compat
