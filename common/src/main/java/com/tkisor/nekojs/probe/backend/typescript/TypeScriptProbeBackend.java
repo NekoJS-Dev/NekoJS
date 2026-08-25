@@ -244,9 +244,11 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                             : Set.of();
                     indexFileGenerator.predeclareClass(fqn, decl, extraImports);
                 } catch (Throwable t) {
-                    // 单个类失败不影响整体（旧行为一致）：NekoJS 平台类失败打 debug 便于排查缺失类型
+                    // 单个类失败不影响整体（旧行为一致）。自家平台类失败意味着 API 缺失于
+                    // index.d.ts——必须可见（A5），第三方类保持静默跳过（数量大、价值低）
                     if (fqn.startsWith("com.tkisor.nekojs.")) {
-                        NekoJS.LOGGER.debug("Probe: failed to predeclare class {}: {}", fqn, t.toString());
+                        com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                                "平台类 " + fqn + " 预声明失败（该类不会进入 index.d.ts）", t);
                     }
                 }
             }));
@@ -258,7 +260,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                 Thread.currentThread().interrupt();
                 break;
             } catch (ExecutionException e) {
-                NekoJS.LOGGER.debug("Probe: class predeclaration failed", e.getCause());
+                com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                        "类型预声明任务失败（部分类可能缺失于 index.d.ts）", e.getCause());
             }
         }
 
@@ -388,7 +391,8 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
         try {
             Files.deleteIfExists(file);
         } catch (IOException e) {
-            NekoJS.LOGGER.debug("EditorConfig: failed to delete managed file {}", file, e);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "删除 probe 管理的编辑器文件失败（" + file + "）：reset 可能不完整", e);
         }
     }
 

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.fs.SandboxPolicy;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.log.LoggerStream;
@@ -104,7 +105,7 @@ public final class NekoSandboxFactory {
         LoggerStream errStream = new LoggerStream(logger, true);
 
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root()))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths)))
                 .build();
 
         Context.Builder contextBuilder = Context.newBuilder("js")

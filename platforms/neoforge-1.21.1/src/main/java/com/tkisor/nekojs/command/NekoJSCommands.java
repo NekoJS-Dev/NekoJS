@@ -231,6 +231,19 @@ public final class NekoJSCommands {
 //        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
         try {
             NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            // W7/A2：CLIENT Context 归客户端主线程所有——集成服务器线程发起的 reload 转投
+            // Render 线程执行（事件分发/timers 也在那里），命令侧立即返回
+            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+                    try {
+                        root.reload(ScriptType.CLIENT);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.error("Reloading {} scripts failed fatally", ScriptType.CLIENT.name, e);
+                    }
+                });
+                source.sendSystemMessage(Component.literal("NekoJS client scripts reload scheduled on the client thread."));
+                return 1;
+            }
             if (type == ScriptType.TEST) {
                 ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                 if (testSm == null) {
@@ -299,6 +312,20 @@ public final class NekoJSCommands {
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
             NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            // W7/A2：单文件 reload 同样遵守 CLIENT 线程归属（见 reloadType 的整批分支）
+            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+                    try {
+                        int affected = root.scriptManagerOf(ScriptType.CLIENT).reloadScriptFile(filePath).size();
+                        NekoJS.LOGGER.info("NekoJS client script {} reloaded ({} affected).", filePath, affected);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", ScriptType.CLIENT.name, filePath, e);
+                    }
+                });
+                source.sendSystemMessage(Component.literal("NekoJS client script " + filePath + " reload scheduled on the client thread."));
+                return 1;
+            }
+
             int affectedEntries = root.scriptManagerOf(type).reloadScriptFile(filePath).size();
             if (type == ScriptType.TEST) {
                 ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);

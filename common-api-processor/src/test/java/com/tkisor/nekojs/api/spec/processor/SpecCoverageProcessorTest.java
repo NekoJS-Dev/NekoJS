@@ -52,7 +52,7 @@ class SpecCoverageProcessorTest {
             public @interface PlatformAvailability {
                 Scope value() default Scope.ALL;
 
-                enum Scope { ALL, NF_ONLY, CR_ONLY }
+                enum Scope { ALL, NF_ONLY, NF26_ONLY, CR_ONLY }
             }
             """;
 
@@ -76,6 +76,17 @@ class SpecCoverageProcessorTest {
 
             @PlatformAvailability(PlatformAvailability.Scope.NF_ONLY)
             public interface NfOnlySpec {
+                default String neko$name() { throw new UnsupportedOperationException(); }
+            }
+            """;
+
+    private static final String NF26_ONLY_SPEC = """
+            package demo;
+
+            import com.tkisor.nekojs.api.spec.PlatformAvailability;
+
+            @PlatformAvailability(PlatformAvailability.Scope.NF26_ONLY)
+            public interface Nf26OnlySpec {
                 default String neko$name() { throw new UnsupportedOperationException(); }
             }
             """;
@@ -144,7 +155,7 @@ class SpecCoverageProcessorTest {
 
     @Test
     void requiredSpecCoveredWithOptionCompiles() throws Exception {
-        CompileResult result = compile(List.of("-Anekojs.platform=nf"),
+        CompileResult result = compile(List.of("-Anekojs.platform=nf26"),
                 source("demo.NfOnlySpec", NF_ONLY_SPEC),
                 source("demo.NfOnlyImpl", NF_ONLY_IMPL));
         assertTrue(result.success(), () -> String.join("; ", result.errors()));
@@ -160,12 +171,38 @@ class SpecCoverageProcessorTest {
 
     @Test
     void nfOnlySpecRequiredOnNeoForge() throws Exception {
-        CompileResult result = compile(List.of("-Anekojs.platform=nf"),
+        CompileResult result = compile(List.of("-Anekojs.platform=nf26"),
                 source("demo.NfOnlySpec", NF_ONLY_SPEC));
         assertFalse(result.success());
         assertTrue(result.errors().stream().anyMatch(e ->
-                        e.contains("NfOnlySpec") && e.contains("NF_ONLY") && e.contains("[nf]")),
+                        e.contains("NfOnlySpec") && e.contains("NF_ONLY") && e.contains("[nf26]")),
                 () -> "expected scope enforcement error, got: " + result.errors());
+    }
+
+    @Test
+    void nf26OnlySpecRequiredOnNf26() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=nf26"),
+                source("demo.Nf26OnlySpec", NF26_ONLY_SPEC));
+        assertFalse(result.success());
+        assertTrue(result.errors().stream().anyMatch(e ->
+                        e.contains("Nf26OnlySpec") && e.contains("NF26_ONLY") && e.contains("[nf26]")),
+                () -> "expected scope enforcement error, got: " + result.errors());
+    }
+
+    @Test
+    void nf26OnlySpecNotRequiredOnNf121() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=nf121"),
+                source("demo.Nf26OnlySpec", NF26_ONLY_SPEC));
+        assertTrue(result.success(), () -> String.join("; ", result.errors()));
+    }
+
+    @Test
+    void legacyNfPlatformValueIsRejectedWithMigrationHint() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=nf"),
+                source("demo.Plain", PLAIN));
+        assertFalse(result.success());
+        assertTrue(result.errors().stream().anyMatch(e -> e.contains("已废弃")),
+                () -> "expected legacy-value migration error, got: " + result.errors());
     }
 
     @Test
@@ -198,7 +235,7 @@ class SpecCoverageProcessorTest {
 
     @Test
     void noSpecsWithOptionWarnsAndSkips() throws Exception {
-        CompileResult result = compile(List.of("-Anekojs.platform=nf"),
+        CompileResult result = compile(List.of("-Anekojs.platform=nf26"),
                 source("demo.Plain", PLAIN));
         assertTrue(result.success(), () -> String.join("; ", result.errors()));
         assertTrue(result.warnings().stream().anyMatch(w -> w.contains("跳过范围校验")),

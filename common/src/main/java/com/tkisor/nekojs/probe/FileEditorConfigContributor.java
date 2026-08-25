@@ -55,7 +55,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             root.add("compilerOptions", compilerOptions);
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: jsconfig merge failed at {}", jsconfigFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "jsconfig 合并失败（" + jsconfigFile + "）：编辑器可能读不到 probe 生成的类型配置", ex);
         }
     }
 
@@ -69,7 +70,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             reconcileJsxRuntime(asObject(root, "compilerOptions"));
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: jsconfig include merge failed at {}", jsconfigFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "jsconfig include 合并失败（" + jsconfigFile + "）：编辑器可能不扫描 probe 输出目录", ex);
         }
     }
 
@@ -85,7 +87,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             root.add("compilerOptions", compilerOptions);
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: jsconfig typeRoots merge failed at {}", jsconfigFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "jsconfig typeRoots 合并失败（" + jsconfigFile + "）", ex);
         }
     }
 
@@ -100,7 +103,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             reconcileJsxRuntime(asObject(root, "compilerOptions"));
             writeJson(jsconfigFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: jsconfig typeAcquisition merge failed at {}", jsconfigFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "jsconfig typeAcquisition 合并失败（" + jsconfigFile + "）：ATA 可能重新联网拉 @types", ex);
         }
     }
 
@@ -127,7 +131,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             root.add("extraPaths", arr);
             writeJson(pyrightFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: pyrightconfig merge failed at {}", pyrightFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "pyrightconfig 合并失败（" + pyrightFile + "）：Pylance 可能不认识 probe 输出目录", ex);
         }
     }
 
@@ -152,7 +157,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             }
             if (changed) writeJson(settingsFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: vscode settings merge failed at {}", settingsFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "vscode settings 合并失败（" + settingsFile + "）", ex);
         }
     }
 
@@ -259,7 +265,8 @@ public final class FileEditorConfigContributor implements EditorConfigContributo
             }
             writeJson(snippetsFile, root);
         } catch (Exception ex) {
-            NekoJS.LOGGER.debug("EditorConfig: snippets merge failed at {}", snippetsFile, ex);
+            com.tkisor.nekojs.core.error.Diagnostics.report("probe-editor-config", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "代码片段合并失败（" + snippetsFile + "）", ex);
         }
     }
 

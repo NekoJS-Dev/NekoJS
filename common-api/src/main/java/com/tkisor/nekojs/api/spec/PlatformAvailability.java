@@ -30,6 +30,8 @@ public @interface PlatformAvailability {
         ALL,
         /** 仅 NeoForge 系列（26.x + 1.21.1） */
         NF_ONLY,
+        /** 仅 NeoForge 26.x（26-shared 源集，26.1/26.2） */
+        NF26_ONLY,
         /** 仅 Cleanroom 1.12.2 */
         CR_ONLY
     }

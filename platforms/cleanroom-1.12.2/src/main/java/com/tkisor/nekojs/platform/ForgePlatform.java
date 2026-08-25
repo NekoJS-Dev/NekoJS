@@ -79,7 +79,11 @@ public class ForgePlatform implements IPlatform {
         return Set.of(
                 PlatformCapability.NETWORK_CUSTOM_CHANNEL,
                 PlatformCapability.NBT_BINARY_IO,
-                PlatformCapability.RECIPE_VIEWER
+                PlatformCapability.RECIPE_VIEWER,
+                // W7 校正：cleanroom 实际支持却漏声明的四项之三（CLIENT_SCREENS 无实现证据，不声明）
+                PlatformCapability.TAGS,
+                PlatformCapability.RECIPE_HOT_RELOAD,
+                PlatformCapability.RECIPE_SCHEMA_AWARE
         );
     }
 

@@ -20,11 +20,19 @@ import java.util.Set;
 public class NekoJSFileSystem implements FileSystem {
     private final java.nio.file.FileSystem delegate = FileSystems.getDefault();
     private final NekoJSPaths paths;
+    private final SandboxPolicy policy;
     private Path currentWorkingDirectory;
 
     public NekoJSFileSystem(Path initialWorkingDirectory) {
+        // 无显式配置的旧入口：按默认沙箱配置裁决（生产路径见 NekoSandboxFactory，传真实配置）
+        this(initialWorkingDirectory, new SandboxPolicy(
+                com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig(), NekoJSPaths.get()));
+    }
+
+    public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy) {
         this.currentWorkingDirectory = initialWorkingDirectory;
         this.paths = NekoJSPaths.get();
+        this.policy = policy;
     }
 
     @Override
@@ -86,13 +94,14 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        Path verifiedPath = paths.verifyInsideGameDirForCreate(dir);
+        // W7/A6：写/删统一走 SandboxPolicy（§3-24 此前无条件放行到 gameDir；§3-23 配置保护）
+        Path verifiedPath = policy.resolveWrite(dir);
         Files.createDirectory(verifiedPath, attrs);
     }
 
     @Override
     public void delete(Path path) throws IOException {
-        Path verifiedPath = paths.verifyInsideGameDir(path);
+        Path verifiedPath = policy.resolveWriteExisting(path);
         Files.delete(verifiedPath);
     }
 
@@ -104,7 +113,7 @@ public class NekoJSFileSystem implements FileSystem {
                 || options.contains(StandardOpenOption.CREATE_NEW);
         Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path)
                 ? path.normalize().toAbsolutePath()
-                : writing ? paths.verifyInsideGameDirForCreate(path) : paths.verifyInsideGameDir(path);
+                : writing ? policy.resolveWrite(path) : paths.verifyInsideGameDir(path);
         verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
 
         var preparedBytes = NekoModuleReadService.readPreparedBytes(verifiedPath);

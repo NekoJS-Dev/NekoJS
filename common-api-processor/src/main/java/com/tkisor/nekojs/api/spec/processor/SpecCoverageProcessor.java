@@ -106,11 +106,15 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         String raw = processingEnv.getOptions().get(PLATFORM_OPTION);
         if (raw == null) return; // 未启用平台范围校验
         String value = raw.trim().toLowerCase(Locale.ROOT);
-        if ("nf".equals(value) || "cr".equals(value)) {
+        if ("nf26".equals(value) || "nf121".equals(value) || "cr".equals(value)) {
             platform = value;
+        } else if ("nf".equals(value)) {
+            // 旧值在平台标签化（W7）后无法区分 26.x 与 1.21.1，快速失败逼升级
+            messager.printMessage(Diagnostic.Kind.ERROR,
+                "-A" + PLATFORM_OPTION + "=nf 已废弃：请按平台传 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）");
         } else {
             messager.printMessage(Diagnostic.Kind.ERROR,
-                "-A" + PLATFORM_OPTION + "='" + raw + "' 非法：只支持 nf（NeoForge 系列）或 cr（Cleanroom）");
+                "-A" + PLATFORM_OPTION + "='" + raw + "' 非法：只支持 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）");
         }
     }
 
@@ -200,7 +204,8 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     /** scope 语义：ALL = 所有平台；NF_ONLY = 仅 nf；CR_ONLY = 仅 cr。 */
     private boolean isRequiredOn(PlatformAvailability.Scope scope) {
         return scope == PlatformAvailability.Scope.ALL
-            || (scope == PlatformAvailability.Scope.NF_ONLY && "nf".equals(platform))
+            || (scope == PlatformAvailability.Scope.NF_ONLY && ("nf26".equals(platform) || "nf121".equals(platform)))
+            || (scope == PlatformAvailability.Scope.NF26_ONLY && "nf26".equals(platform))
             || (scope == PlatformAvailability.Scope.CR_ONLY && "cr".equals(platform));
     }
 

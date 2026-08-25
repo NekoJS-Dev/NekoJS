@@ -28,12 +28,15 @@ import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -116,6 +119,10 @@ public final class NekoJSCommands {
 
                         .then(registryCommand())
 
+                        .then(handCommand())
+
+                        .then(inventoryCommand())
+
                         .then(Commands.literal("trust")
                                 .then(Commands.argument("address", StringArgumentType.string())
                                         .executes(context -> trustServer(context.getSource(), StringArgumentType.getString(context, "address")))))
@@ -150,6 +157,73 @@ public final class NekoJSCommands {
                             }
                             return 1;
                         }));
+    }
+
+    /**
+     * /nekojs hand: prints the main-hand item of the executing player (item id, count,
+     * damage if damageable, and the data component patch). Requires a player source.
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> handCommand() {
+        return Commands.literal("hand")
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    showHand(context.getSource(), player.getMainHandItem());
+                    return 1;
+                });
+    }
+
+    private static void showHand(CommandSourceStack source, ItemStack stack) {
+        if (stack.isEmpty()) {
+            source.sendSystemMessage(Component.literal("Empty hand"));
+            return;
+        }
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        // Item id is click-to-copy: the main dev-loop use is pasting the id into a script
+        MutableComponent line = Component.literal(id)
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent.CopyToClipboard(id))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to copy"))))
+                .append(Component.literal(" x" + stack.getCount()));
+        source.sendSystemMessage(line);
+        if (stack.isDamageableItem()) {
+            source.sendSystemMessage(Component.literal("  damage: " + stack.getDamageValue() + "/" + stack.getMaxDamage()));
+        }
+        source.sendSystemMessage(Component.literal("  components: " + compactComponents(stack)));
+    }
+
+    /** Single-line component patch summary, flattened and truncated so chat stays readable. */
+    private static String compactComponents(ItemStack stack) {
+        String text = stack.getComponentsPatch().toString().replace('\n', ' ');
+        return text.length() > 300 ? text.substring(0, 300) + "..." : text;
+    }
+
+    /**
+     * /nekojs inventory: lists all non-empty main inventory slots (0-35) of the executing
+     * player, one line per slot. Requires a player source.
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> inventoryCommand() {
+        return Commands.literal("inventory")
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    listInventory(context.getSource(), player.getInventory());
+                    return 1;
+                });
+    }
+
+    private static void listInventory(CommandSourceStack source, Inventory inventory) {
+        int used = 0;
+        for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            source.sendSystemMessage(Component.literal("slot " + slot + ": "
+                    + BuiltInRegistries.ITEM.getKey(stack.getItem()).toString() + " x" + stack.getCount()));
+            used++;
+        }
+        if (used == 0) {
+            source.sendSystemMessage(Component.literal("Inventory is empty."));
+        }
     }
 
     /**
@@ -263,6 +337,19 @@ public final class NekoJSCommands {
 //        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
         try {
             NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            // W7/A2：CLIENT Context 归客户端主线程所有——集成服务器线程发起的 reload 转投
+            // Render 线程执行（事件分发/timers 也在那里），命令侧立即返回
+            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+                    try {
+                        root.reload(ScriptType.CLIENT);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.error("Reloading {} scripts failed fatally", ScriptType.CLIENT.name, e);
+                    }
+                });
+                source.sendSystemMessage(Component.literal("NekoJS client scripts reload scheduled on the client thread."));
+                return 1;
+            }
             if (type == ScriptType.TEST) {
                 ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
                 if (testSm == null) {
@@ -335,6 +422,20 @@ public final class NekoJSCommands {
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
             NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            // W7/A2：单文件 reload 同样遵守 CLIENT 线程归属（见 reloadType 的整批分支）
+            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+                    try {
+                        int affected = root.scriptManagerOf(ScriptType.CLIENT).reloadScriptFile(filePath).size();
+                        NekoJS.LOGGER.info("NekoJS client script {} reloaded ({} affected).", filePath, affected);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", ScriptType.CLIENT.name, filePath, e);
+                    }
+                });
+                source.sendSystemMessage(Component.literal("NekoJS client script " + filePath + " reload scheduled on the client thread."));
+                return 1;
+            }
+
             int affectedEntries = root.scriptManagerOf(type).reloadScriptFile(filePath).size();
             if (type == ScriptType.TEST) {
                 ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);

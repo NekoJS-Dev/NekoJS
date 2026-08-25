@@ -312,7 +312,7 @@ NekoJS 提供事件监听机制，用于响应 Minecraft 游戏中的各种状�
 
 ### 已实现事件列表
 
-NekoJS 提供 14 个事件组（以 NeoForge 26.x 为准，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
+NekoJS 提供 16 个事件组（以 NeoForge 26.x 为准，含 `ScriptEvents` 与 `KeyBindEvents`，平台支持范围以 probe 为准）。下列仅展示每组常用事件：
 
 ```text
 服务器事件 (ServerEvents)        约 13 个  tickPre / tickPost / recipes / afterRecipes / tags ...
@@ -320,7 +320,7 @@ NekoJS 提供 14 个事件组（以 NeoForge 26.x 为准，平台支持范围以
                                               cloned / respawned / changedDimension / advancement /
                                               container* / inventory* / entityInteract /
                                               crafted / smelted / destroyed
-实体事件 (EntityEvents)          约 13 个  hurtPre / hurtPost / death ...
+实体事件 (EntityEvents)          约 13 个  damagePre / damagePost / death ...
 方块事件 (BlockEvents)           约 11 个  broken / rightClicked / placed ...
 物品事件 (ItemEvents)             约 8 个  rightClicked / tooltip / crafted ...
 注册事件 (RegistryEvents)        约 12 个  item / block / entityType / fluid / creativeModeTab / soundEvent / mobEffect / potion / particleType / paintingVariant / villagerType / enchantment（启动时事件）
@@ -355,7 +355,7 @@ PlayerEvents.loggedIn(event => {
     console.log(`玩家 ${player.name} 已登录`);
 });
 
-EntityEvents.hurtPre(event => {
+EntityEvents.damagePre(event => {
     const entity = event.entity;
     const damage = event.damage;
     console.log(`实体 ${entity.type} 即将受到 ${damage} 点伤害`);

@@ -82,6 +82,7 @@ public class ClassFilter implements Predicate<String> {
      */
     public void updateConfig(SandboxConfig newConfig) {
         this.config = newConfig;
+        decisionCache.clear();
     }
 
     @Override
@@ -91,7 +92,19 @@ public class ClassFilter implements Predicate<String> {
         return allowed;
     }
 
+    /** 类名 → 允许与否的裁决缓存：test() 每次类加载都查，40 个前缀逐条 stream 太贵（§3-21）。 */
+    private final java.util.concurrent.ConcurrentHashMap<String, Boolean> decisionCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private boolean isAllowed(String className) {
+        Boolean cached = decisionCache.get(className);
+        if (cached != null) return cached;
+        boolean allowed = computeAllowed(className);
+        decisionCache.put(className, allowed);
+        return allowed;
+    }
+
+    private boolean computeAllowed(String className) {
         if (!config.allowThreads() && matchesGroup(className, THREAD_GROUP)) return false;
         if (!config.allowReflection() && matchesGroup(className, REFLECT_GROUP)) return false;
         if (!config.allowAsm() && matchesGroup(className, ASM_GROUP)) return false;
@@ -99,8 +112,21 @@ public class ClassFilter implements Predicate<String> {
         return true;
     }
 
-    private boolean matchesGroup(String className, Set<String> group) {
-        return group.stream().anyMatch(className::startsWith);
+    /**
+     * 包边界匹配（§3-21）：前缀必须命中完整类名、或以 {@code 前缀.} / {@code 前缀$}（嵌套类
+     * 二进制名）继续——裸 startsWith 会把 {@code sunlight.*} 误杀进 {@code sun.*}、把
+     * {@code jdkutil.*} 误杀进 {@code jdk.*}。{@code $} 分支不能省：否则
+     * {@code java.lang.invoke.MethodHandles$Lookup} 会从 {@code MethodHandles} 前缀下漏出。
+     */
+    private static boolean matchesGroup(String className, Set<String> group) {
+        for (String prefix : group) {
+            if (className.equals(prefix)
+                    || className.startsWith(prefix + '.')
+                    || className.startsWith(prefix + '$')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

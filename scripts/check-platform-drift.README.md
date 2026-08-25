@@ -73,3 +73,9 @@ bash scripts/check-platform-drift
 
 依赖：bash + coreutils（sed / diff / find / comm / sort），无其他外部依赖，
 可在 Windows Git Bash 下直接运行。
+
+## 2026-08-25 W7 波：115/0/69（+1 真实分歧）
+
+新增 `client/ClientReloadExecutor`（CLIENT reload 转投 Render 线程，26-shared 与 1.21.1 各一份）：
+两平台实现因 `FMLEnvironment` API 拼写不同（26.x `getDist()` vs 21.1 `dist` 字段）而非字节相同，
+计为一处真实 drifted（主对 114→115）。26.1↔26.2 与 cleanroom 信息对不变。

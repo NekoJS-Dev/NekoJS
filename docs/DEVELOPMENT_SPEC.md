@@ -44,7 +44,7 @@ NekoJS 有两条契约通道，方向不同：
 **编译期（SpecCoverageProcessor，`common-api-processor`）**
 - Spec 接口放在 `com.tkisor.nekojs.api.spec` / `.spec.inject`，标注 `@PlatformAvailability`（`Scope.ALL / NF_ONLY / CR_ONLY`）。
 - **[必须]** 每个 Spec 接口的 `neko$` 方法必须被平台实现接口**显式覆盖**（Spec 的哨兵 default 不算覆盖），处理器对签名做参数个数+类型全等校验。
-- **[必须]** 平台模块编译必须传 `-Anekojs.platform=nf|cr`（nf = NeoForge 系列，cr = Cleanroom），处理器据此强制 `Scope` 要求的平台实现存在；不传选项则范围校验静默失效——这是配置错误，不是可选项。
+- **[必须]** 平台模块编译必须传 `-Anekojs.platform=nf|cr`（nf = NeoForge 系列，cr = Cleanroom），处理器据此强制 `Scope` 要求的平台实现存在；不传选项则范围校验静默失效——这是配置错误，不是可选项。门禁：`ApiManifestGoldenTest` 固化处理器产物，处理器没跑（漏传选项）时 golden 比对必红。
 - `Scope.ALL` 仅用于"所有平台都能原生或 mixin 实现"的接口。
 
 **运行时（契约反射）**
@@ -56,7 +56,7 @@ NekoJS 有两条契约通道，方向不同：
 
 - 插件 = `implements NekoJSPlugin` + `@RegisterNekoJSPlugin(clientOnly / requiredMods / priority)`。`priority` 默认 1000，数值大先加载；`CORE_PRIORITY = Integer.MAX_VALUE` 保留给核心插件。
 - 平台加载器只做**发现**；过滤/排序/实例化统一在 common 的 `NekoJSBasePluginManager`。
-- **[必须]** 绑定名、事件组名、配方命名空间是全局唯一 ID，重复注册直接抛异常；所有注册必须在 bootstrap 冻结（`freezeState`）之前完成，冻结后注册抛 `IllegalStateException`。
+- **[必须]** 配方命名空间重复注册直接抛异常；绑定名重复是 warn + 首个获胜；事件组重名走 `EventGroup.merge` 合并总线。所有注册必须在 bootstrap 冻结（`freezeState`）之前完成，冻结后注册抛 `IllegalStateException`。
 
 ---
 
@@ -181,7 +181,7 @@ PythonProbeBackend    ──► .neko_probe/python/（nekojs/{__init__.pyi, py.t
 
 | 位置 | 框架 | 说明 |
 |---|---|---|
-| common-api / common / common-api-processor | JUnit 6（BOM 6.0.0） | 主战场在 common（约 120 个测试类，按被测包镜像） |
+| common-api / common / common-api-processor | JUnit 6（BOM 6.0.0） | 主战场在 common（151 个测试类 / 1,180 个 @Test，按被测包镜像；全仓 199 个测试类） |
 | neoforge 平台（含 26-shared 测试） | JUnit **5.14.3 legacy** | 与 common 的 5/6 分歧是迁移期刻意状态，勿"顺手统一" |
 | cleanroom | JUnit 6.0.3 | |
 
@@ -234,9 +234,9 @@ CI（`.github/workflows/ci-build.yml`，push/PR main+master）：JDK 25 跑 `:co
 
 ---
 
-## 附录 A：neoforge 平台遗留警告清单（[现状]，已清零）
+## 附录 A：neoforge 平台遗留警告清单（[历史]，一次性测量）
 
-2026-08 批次已全部清零（`--rerun-tasks` 实测 0 警告）。此附录保留原清单作历史记录，勿再引用：
+2026-08 批次曾以 `--rerun-tasks` 实测清零（一次性测量，CI 不持续复现；后续提交未保持零警告承诺）。此附录保留原清单作历史记录，勿再引用：
 
 - **neoforge-1.21.1（原 20 条）**：deprecation ×8（`ItemStackExtension`、`FoodBuilderJS`、`ClientBlockRenderTypes`、`RegistryEventListener`、`NekoJSPathPackResources`、`IngredientResolver`）；this-escape ×7（`RecipeEventJS`、`NekoCodeEditor`、`NekoErrorDashboardScreen`、共享 `FluidIngredientJS`）；serial ×2（`NeoForgeNbtBinaryCodec.LimitedOutputException`、共享 `RecipeEventSchemaHost`）；unchecked ×1（`GoalRegistry`）；rawtypes ×1（`TagKeyAdapter`）；cast ×1（共享 `ScriptEventsJS`）。
 - **neoforge-26.1 / 26.2（原各 33 条，两份完全相同）**：deprecation ×15（`Ingredient.items()` 族 5 处、`builtInRegistryHolder()` 族 6 处、`LivingEntityExtension`、`ItemAdapter`、`NekoJSPathPackResources` ×2）；this-escape ×9；unchecked ×4（含 `NeoForgeRegistryQueryService` 2 处）；cast ×2（`ScriptEventsJS`、`NeoForgeRegistryQueryService`）；serial ×2；rawtypes ×1。

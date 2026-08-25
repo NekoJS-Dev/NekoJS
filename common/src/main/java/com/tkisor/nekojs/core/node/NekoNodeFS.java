@@ -12,12 +12,13 @@ import java.util.List;
 
 public final class NekoNodeFS {
     private final NekoJSPaths paths;
-    private final SandboxConfig sandboxConfig;
+    private final com.tkisor.nekojs.core.fs.SandboxPolicy policy;
     private Path currentWorkingDirectory;
 
     public NekoNodeFS(SandboxConfig sandboxConfig) {
         this.paths = NekoJSPaths.get();
-        this.sandboxConfig = sandboxConfig;
+        // W7/A6：写策略唯一真相（nekojs/config 拒写 + allowFsWriteOutsideNekojs 收敛），与 Graal FS 同源
+        this.policy = new com.tkisor.nekojs.core.fs.SandboxPolicy(sandboxConfig, paths);
         this.currentWorkingDirectory = paths.gameDir();
     }
 
@@ -205,23 +206,16 @@ public final class NekoNodeFS {
     }
 
     private Path resolveWrite(String path) throws IOException {
-        if (sandboxConfig.allowFsWriteOutsideNekojs()) {
-            return paths.resolveGamePathForCreate(String.valueOf(path), currentWorkingDirectory);
-        }
-        return paths.resolveNekoWritePathForCreate(String.valueOf(path), currentWorkingDirectory);
+        return policy.resolveWrite(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path resolveWriteExisting(String path) throws IOException {
-        if (sandboxConfig.allowFsWriteOutsideNekojs()) {
-            return paths.resolveGamePath(String.valueOf(path), currentWorkingDirectory);
-        }
-        return paths.resolveNekoWritePath(String.valueOf(path), currentWorkingDirectory);
+        return policy.resolveWriteExisting(String.valueOf(path), currentWorkingDirectory);
     }
 
     private Path verifyWriteParentForCreate(Path path) throws IOException {
-        if (sandboxConfig.allowFsWriteOutsideNekojs()) {
-            return paths.verifyInsideGameDirForCreate(path);
-        }
-        return paths.verifyInsideNekoRootForCreate(path);
+        // 与写入同源裁决（含受保护配置拒绝——正常路径下 parent 不可能落进 nekojs/config，
+        // 这里只是防直接以 parent 形式绕过）
+        return policy.resolveWrite(path);
     }
 }

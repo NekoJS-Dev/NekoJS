@@ -389,7 +389,7 @@ NekoJS 的 ESM 仍然不是传统 npm package-main/import-graph 脚本发现模�
 ## 长期方向
 
 - [x] **定义稳定的 NekoJS API 版本和破坏性变更迁移策略（2026-08 第一批）**：
-    - 版本模型落地并文档化（版本治理文档 2026-08-16 起移至本地 `ai_arch/API_VERSIONING.md`，未入库）：`api.version=0.12.0` 独立于模组版本、`spi.version`/`runtime.contract.version` 0.0.0 未门控、catalog schema 版本；版本唯一事实源 `api-runtime.properties`。
+    - 版本模型落地并文档化（版本治理文档 2026-08-16 起未入库（维护在开发者本地 ai_arch/，克隆仓库不含））：`api.version=0.12.0` 独立于模组版本、`spi.version`/`runtime.contract.version` 0.0.0 未门控、catalog schema 版本；版本唯一事实源 `api-runtime.properties`。
     - **API 表面冻结基线（机器可执行）**：新增 `ApiManifest`（可序列化 DTO，设计 §9.5）+ `ApiManifestGenerator`（字典序确定性导出）+ `ApiManifestJson`（gson）；`ApiManifestGoldenTest` 把契约反射产出的 core API 表面固化为 `src/test/resources/nekojs/golden/api-manifest-core.json`（901 行，110+ 符号），任何符号/签名/版本变化必须显式 regenerate + 破坏性变更评审。
     - 修复连带发现的真实 bug：common 的 `${mod_version}` 模板替换（`sourceSets.resources.filter` 不生效）从未注入 `api-runtime.properties`——游戏里 `Platform.nekojsVersion` 返回的是字面量 `${mod_version}`；改为 `processResources.filesMatching` 注入。
     - 破坏性变更流程（契约先行 → 弃用窗口 → major bump）、事件准入五标准、冻结范围（基础工具/Item/Ingredient/Fluid/事件/配方/Network）与 Runtime Contract 分离原则已写入治理文档。
