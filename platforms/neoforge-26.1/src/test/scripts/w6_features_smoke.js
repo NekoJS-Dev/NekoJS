@@ -5,7 +5,7 @@
 
 try {
   ServerEvents.recipes(event => {
-    event.shaped('minecraft:torch', ['C', 'S'], { C: 'minecraft:coal', S: 'minecraft:stick' })
+    event.shaped('minecraft:torch', ['C', 'S'], { C: '#minecraft:coals', S: 'minecraft:stick' })
         .id('nekojs:w6_damage_smoke')
         .damageIngredient('minecraft:iron_pickaxe', 1)
         .keepIngredient('minecraft:stick')

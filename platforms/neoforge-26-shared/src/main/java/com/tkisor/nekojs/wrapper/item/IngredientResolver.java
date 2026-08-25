@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.wrapper.item;
 
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.api.inject.ItemStackExtension;
@@ -25,8 +26,10 @@ import net.neoforged.neoforge.common.crafting.IntersectionIngredient;
 import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -44,6 +47,14 @@ public final class IngredientResolver {
      * 非法 regex 抛 PatternSyntaxException，不缓存（与原行为一致）。
      */
     private static final Map<String, Pattern> REGEX_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * Tag-created ingredients → their {@link TagKey}，供序列化改写为 "#id" 引用形态（见 {@link #tagOriginOf}）。
+     * WeakHashMap：一次配方 reload 会创建成千上万短命 ingredient，不能进程级泄漏。
+     * {@code Ingredient#equals} 按 values 比较——同一 tag 的多个实例互撞映射到相同 TagKey，无害。
+     */
+    private static final Map<Ingredient, TagKey<Item>> TAG_ORIGIN =
+        Collections.synchronizedMap(new WeakHashMap<>());
 
     private static Pattern compiledRegex(String regex) {
         Pattern cached = REGEX_CACHE.get(regex);
@@ -83,7 +94,9 @@ public final class IngredientResolver {
             if (tag.isEmpty()) {
                 throw new ValueConversionException(Ingredient.class, "existing item tag", s, "item tag not found: " + s);
             }
-            return Ingredient.of(tag.get());
+            Ingredient ingredient = Ingredient.of(tag.get());
+            TAG_ORIGIN.put(ingredient, tagKey);
+            return ingredient;
         }
         Item item = BuiltInRegistries.ITEM.getOptional(location)
             .orElseThrow(() -> new ValueConversionException(Ingredient.class, "registered item id", s,
@@ -115,6 +128,18 @@ public final class IngredientResolver {
     /** 匹配所有已注册物品的真 wildcard（live AnyHolderSet，注册表变化即时反映）。 */
     public static Ingredient wildcard() {
         return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
+    }
+
+    /**
+     * 配方 JSON 序列化时取回 tag ingredient 的 {@link TagKey}：{@code #tag} 解析出的
+     * HolderSet.Named 绑定在 BuiltInRegistries 的 owner 上，而配方序列化用的是本次数据包
+     * 加载的 RegistryOps——两者包装层实例不同，{@code HolderSetCodec} 的 owner 校验恒拒绝
+     * （"is not valid in current registry set"，真机表现为 shaped 配方里写 {@code #tag}
+     * 原料必炸）。序列化侧据此改写为 vanilla 合法的 {@code {"tag": ...}} 引用形态，
+     * 重新 parse 时由当前 RegistryOps 自行解析。非 tag 来源返回 {@code null}。
+     */
+    public static TagKey<Item> tagOriginOf(Ingredient ingredient) {
+        return ingredient == null ? null : TAG_ORIGIN.get(ingredient);
     }
 
     /** 取反 ingredient：返回匹配「除 excluded 外所有物品」的 DifferenceIngredient。 */

@@ -15,6 +15,7 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeFieldRole;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
+import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -140,10 +141,22 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public JsonElement serializeIngredient(Ingredient ingredient) {
         if (ingredient == null || ingredient.isEmpty()) return new JsonArray();
+        // #tag 原料不能走 Ingredient.CODEC encode：创建侧（BuiltInRegistries 的 owner）与
+        // 序列化侧（本次数据包加载的 RegistryOps）包装层不同实例，HolderSetCodec 的 owner
+        // 校验恒拒绝（"is not valid in current registry set"）。改写为 vanilla 合法的
+        // {"tag": ...} 引用形态——Ingredient.CODEC 的 either(TagKey, list) 分支直接接受，
+        // RecipeManagerMixin 重新 parse 时由当前 ops 解析出正确的 Named 集。
+        var tagKey = IngredientResolver.tagOriginOf(ingredient);
+        if (tagKey != null) {
+            // 26.x 的 tag 紧凑形态就是 "#<id>" 裸字符串（TagKey.hashedCodec = STRING + '#' 前缀，
+            // Ingredient.CODEC 的 either 第一分支直接接受）
+            return new JsonPrimitive("#" + tagKey.location());
+        }
         // B5: always go through Ingredient.CODEC so the JSON shape matches NF1.21.1
         // (array/object form). Removed the previous serializeTagIngredient special-case
         // that produced JsonPrimitive("#"+key) for single-tag ingredients.
-        return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
+        return Ingredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE),
+                ingredient).getOrThrow(JsonParseException::new);
     }
 
     public JsonElement serializeFluidStack(FluidStack stack) {
