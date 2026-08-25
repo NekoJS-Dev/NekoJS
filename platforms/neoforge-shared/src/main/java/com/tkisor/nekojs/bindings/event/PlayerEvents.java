@@ -39,8 +39,7 @@ public interface PlayerEvents {
             GROUP.server("advancement", AdvancementEvent.AdvancementEarnEvent.class);
     EventBusJS<PlayerContainerEvent.Open, Void> CONTAINER_OPENED =
             GROUP.server("containerOpened", PlayerContainerEvent.Open.class);
-    // inventoryOpened：containerOpened 的跨版本兼容别名。脚本侧建议迁移到 containerOpened
-    // （docs/api-rework-plan.md H-5）。
+    // inventoryOpened：containerOpened 的跨版本兼容别名。脚本侧建议迁移到 containerOpened（H-5 别名裁决）。
     @Deprecated
     EventBusJS<PlayerContainerEvent.Open, Void> INVENTORY_OPENED =
             GROUP.server("inventoryOpened", PlayerContainerEvent.Open.class);

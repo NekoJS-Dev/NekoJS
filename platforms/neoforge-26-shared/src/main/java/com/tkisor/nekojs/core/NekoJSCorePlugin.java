@@ -16,6 +16,7 @@ import com.tkisor.nekojs.api.recipe.RecipeNamespaceEntry;
 import com.tkisor.nekojs.core.plugin.RecipeNamespaceRegister;
 import com.tkisor.nekojs.bindings.event.*;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
+import com.tkisor.nekojs.bindings.event.client.KeyBindEvents;
 import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.BlockJS;
 import com.tkisor.nekojs.bindings.static_access.CapabilitiesJS;
@@ -94,6 +95,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
         registry.register(ClientEvents.GROUP);
+        registry.register(KeyBindEvents.GROUP);
     }
 
     @Override

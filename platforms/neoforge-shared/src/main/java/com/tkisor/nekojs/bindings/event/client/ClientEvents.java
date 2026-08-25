@@ -14,6 +14,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -21,6 +22,7 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 /** 客户端事件组（client 脚本）：tick、登录登出、注册类事件（按键/界面/渲染器/粒子）与 HUD、界面绘制等。 */
 public interface ClientEvents {
@@ -34,6 +36,34 @@ public interface ClientEvents {
     @Deprecated
     EventBusJS<ClientTickEvent.Post, Void> TICK =
             GROUP.client("tick", ClientTickEvent.Post.class);
+    /**
+     * Player tick (pre), observed on the client: posts the raw NeoForge
+     * {@link PlayerTickEvent.Pre} whose entity is the local player (typed as the common
+     * {@code Player}, so the shape matches the server-side bus). Fires on the client
+     * thread, only in client_scripts; the server-side counterpart is
+     * {@code PlayerEvents.tickPre}. The native event fires on BOTH logical sides —
+     * this bus is bound through a side filter and only dispatches client instances.
+     */
+    EventBusJS<PlayerTickEvent.Pre, Void> PLAYER_TICK_PRE =
+            GROUP.client("playerTickPre", PlayerTickEvent.Pre.class);
+    /**
+     * Player tick (post), observed on the client: posts the raw NeoForge
+     * {@link PlayerTickEvent.Post}. Fires on the client thread, only in client_scripts;
+     * the server-side counterpart is {@code PlayerEvents.tickPost}. Same side filter as
+     * {@link #PLAYER_TICK_PRE}: logical-server instances are never dispatched here.
+     */
+    EventBusJS<PlayerTickEvent.Post, Void> PLAYER_TICK_POST =
+            GROUP.client("playerTickPost", PlayerTickEvent.Post.class);
+    /**
+     * Interaction key input (attack / use item / pick block), client-side only: posts
+     * the raw NeoForge {@link InputEvent.InteractionKeyMappingTriggered}. Fires on the
+     * client thread when the player presses the attack / use / pick key, only in
+     * client_scripts. Cancellable: a listener returning {@code true} blocks vanilla
+     * processing of the key. Use {@code isAttack()} / {@code isUseItem()} /
+     * {@code isPickBlock()} to tell them apart; use-item inputs fire once per hand.
+     */
+    EventBusJS<InputEvent.InteractionKeyMappingTriggered, Void> INTERACTION_KEY =
+            GROUP.client("interactionKey", InputEvent.InteractionKeyMappingTriggered.class);
     EventBusJS<ClientPlayerNetworkEvent.LoggingIn, Void> LOGGED_IN =
             GROUP.client("loggedIn", ClientPlayerNetworkEvent.LoggingIn.class);
     EventBusJS<ClientPlayerNetworkEvent.LoggingOut, Void> LOGGED_OUT =
@@ -121,6 +151,13 @@ public interface ClientEvents {
             .bind(TICK_PRE)
             .bind(TICK_POST)
             .bind(TICK)
+            // PlayerTickEvent fires on BOTH logical sides (client instances arrive on the
+            // Render thread): the CLIENT buses below only dispatch client instances —
+            // mirror of the server-side filter in PlayerEvents.FORGE_BRIDGE
+            .bind(PLAYER_TICK_PRE, e -> e.getEntity().level().isClientSide())
+            .bind(PLAYER_TICK_POST, e -> e.getEntity().level().isClientSide())
+            // InteractionKeyMappingTriggered only ever fires on the logical client
+            .bind(INTERACTION_KEY)
             .bind(LOGGED_IN)
             .bind(LOGGED_OUT)
             .bind(CLONED)
