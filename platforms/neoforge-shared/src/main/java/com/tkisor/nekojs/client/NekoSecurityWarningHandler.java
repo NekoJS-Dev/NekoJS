@@ -2,8 +2,8 @@ package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.platform.compat.McClientCompat;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
@@ -41,8 +41,7 @@ public class NekoSecurityWarningHandler {
         checkHostOnce();
 
         if (needsWarningThisSession && !titleWarningShown && event.getScreen() instanceof TitleScreen) {
-            SystemToast.addOrUpdate(
-                    Minecraft.getInstance().getToastManager(),
+            McClientCompat.get().addOrUpdateSystemToast(
                     SystemToast.SystemToastId.PACK_LOAD_FAILURE,
                     Component.translatable("nekojs.security.toast.title").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
                     Component.translatable("nekojs.security.toast.desc")
@@ -57,7 +56,7 @@ public class NekoSecurityWarningHandler {
         checkHostOnce();
 
         if (needsWarningThisSession && !chatWarningShown) {
-            HoverEvent hoverEvent = new HoverEvent.ShowText(getDetailedWarningText());
+            HoverEvent hoverEvent = McClientCompat.get().hoverEventShowText(getDetailedWarningText());
 
             MutableComponent details = Component.literal("\n")
                     .append(Component.translatable("nekojs.security.chat.hover_hint"))
@@ -96,6 +95,8 @@ public class NekoSecurityWarningHandler {
         }
 
         if (ClassFilter.INSTANCE.config().allowAsm()) {
+            // asm 与 fsWrite 段之间的 "\n\n" 分隔与 threads/reflection 段一致；
+            // 1.21.1 旧副本漏了它（asm+fsWrite 同时开启时两段挤在一起），统一为有分隔。
             text.append(Component.translatable("nekojs.security.detail.asm.title").withStyle(ChatFormatting.RED))
                     .append(Component.literal("\n"))
                     .append(Component.translatable("nekojs.security.detail.asm.desc").withStyle(ChatFormatting.WHITE))

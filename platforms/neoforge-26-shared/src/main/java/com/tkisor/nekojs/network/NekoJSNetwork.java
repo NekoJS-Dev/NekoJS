@@ -4,6 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen;
 import com.tkisor.nekojs.client.gui.NekoWorkspaceScreen;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
+import com.tkisor.nekojs.platform.compat.McClientCompat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -103,23 +104,23 @@ public class NekoJSNetwork {
 
     private static class ClientHandler {
         private static void showOrUpdateDashboard(List<ErrorSummaryDTO> errors, boolean openIfMissing) {
-            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
+            if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
                 screen.updateErrors(errors);
             } else if (openIfMissing) {
-                Minecraft.getInstance().setScreen(NekoErrorDashboardScreen.create(errors));
+                McClientCompat.get().showScreen(NekoErrorDashboardScreen.create(errors));
             }
         }
 
         private static void receiveServerScript(String content) {
-            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
+            if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
                 screen.loadServerScript(content);
             }
         }
 
         private static void processFeedback(boolean success, String message) {
-            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
+            if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
                 screen.onSyncFeedback(success, message);
-            } else if (Minecraft.getInstance().screen instanceof NekoWorkspaceScreen wsScreen) {
+            } else if (McClientCompat.get().currentScreen() instanceof NekoWorkspaceScreen wsScreen) {
                 wsScreen.onSyncFeedback(success, message);
             } else if (Minecraft.getInstance().player != null) {
                 String prefix = success ? "§a✔ " : "§c✖ ";
@@ -137,7 +138,7 @@ public class NekoJSNetwork {
         }
 
         private static void openWorkspace() {
-            Minecraft.getInstance().setScreen(new NekoWorkspaceScreen());
+            McClientCompat.get().showScreen(new NekoWorkspaceScreen());
         }
     }
 

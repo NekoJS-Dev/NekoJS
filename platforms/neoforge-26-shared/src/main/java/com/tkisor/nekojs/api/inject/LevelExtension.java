@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.inject;
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.data.AttachedData;
 import com.tkisor.nekojs.api.spec.inject.LevelSpec;
+import com.tkisor.nekojs.platform.compat.McVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -46,7 +47,7 @@ public interface LevelExtension extends LevelSpec {
     }
 
     default Entity neko$spawnLightning(double x, double y, double z) {
-        return neko$spawnEntity(EntityType.LIGHTNING_BOLT, x, y, z);
+        return neko$spawnEntity(McVersionCompat.get().lightningBoltType(), x, y, z);
     }
 
     default String neko$getId() {

@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.platform.compat.McClientCompat;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.lang.management.ManagementFactory;
@@ -42,7 +42,7 @@ public class NekoHostIdentifier {
         }
 
         try {
-            hwInfo.append(RenderSystem.getApiDescription()).append(" | ");
+            hwInfo.append(McClientCompat.get().renderBackendDescription()).append(" | ");
         } catch (Throwable t) {
             hwInfo.append("UnknownGPU | ");
         }
