@@ -47,5 +47,18 @@ bash scripts/check-platform-drift
 
 **永远为 0**（dashboard 模式）。是否作为 CI 门禁、阈值如何，由上层另行决定。
 
+## 基线变更记录
+
+- **2026-08-25（W5 步骤 1+2）**：`111/0/73 → 113/0/69`。
+  - 9 个字节相同文件上提 neoforge-shared（不影响 drifted）；
+  - 26.1/26.2 的 4 个版本专属文件收进 26-shared + per-version compat
+    （`platform/compat/McVersionCompat` / `McClientCompat`，ServiceLoader 提供）——
+    26.1↔26.2 比较对归零（was 4 文件 / 1,127 行双份编译）；
+  - cleanroom 对 73→69（4 个搬走文件退出比较）；
+  - **主对 111→113 是度量口径扩大而非新增分歧**：LevelExtension 与 NekoJSNetwork
+    从 26.1/26.2 层搬进 26-shared 后，与 1.21.1 独立副本开始配对——这两对的分歧
+    一直存在（1.21.1 时间/天气与网络注册 API 结构不同），此前不在任何比较对里。
+    现在被追踪，后续收敛可棘轮下降。
+
 依赖：bash + coreutils（sed / diff / find / comm / sort），无其他外部依赖，
 可在 Windows Git Bash 下直接运行。
