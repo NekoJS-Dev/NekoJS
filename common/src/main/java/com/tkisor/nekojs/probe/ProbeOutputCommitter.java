@@ -181,7 +181,9 @@ public final class ProbeOutputCommitter {
             try {
                 Files.write(file, content);
                 return;
-            } catch (AccessDeniedException e) {
+            } catch (IOException e) {
+                // 共享冲突是 AccessDeniedException；编辑器内存映射占住文件（TS 语言服务的锁形态）
+                // 在 Windows 上映射成带「用户映射区域」字样的普通 IOException——两者都要重试并包装
                 last = e;
                 if (attempt == WRITE_ATTEMPTS) break;
                 sleepBackoff(attempt);
