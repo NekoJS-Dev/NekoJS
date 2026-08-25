@@ -54,23 +54,26 @@ public final class ModuleReloadCoordinator {
         this.paths = NekoJSPaths.get();
     }
 
+    /**
+     * 清空本 host 的全部模块状态。只管 host 私有缓存（moduleCache/record/link/revision/
+     * dependencyGraph——它们本就 per-Context）；进程级共享缓存（prepared pipeline cache、
+     * 虚拟 ESM registry）的清理由 {@link NekoScriptModuleLoaderHost} 按自身 ScriptType 分区
+     * 执行（W4/§3-28：guest 可达的 clearCache 不得一键清空其它类型已编译的模块）。
+     */
     public void clearAll() {
         moduleCache.clear();
         esmRecordCache.clear();
         esmLinkCache.clear();
         moduleRevisions.clear();
         dependencyGraph.clear();
-        NekoModulePipelineCache.clear();
-        NekoEsmVirtualModuleRegistry.clear();
     }
 
+    /** 同 {@link #clearAll()}，但保留依赖图（运行缓存清理，依赖关系仍有效）。 */
     public void clearRuntimeCache() {
         moduleCache.clear();
         esmRecordCache.clear();
         esmLinkCache.clear();
         moduleRevisions.clear();
-        NekoModulePipelineCache.clear();
-        NekoEsmVirtualModuleRegistry.clear();
     }
 
     public void invalidateModules(List<String> moduleIds, boolean removeGraphNodes) {

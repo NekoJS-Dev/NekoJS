@@ -31,8 +31,14 @@ public final class ScriptSyncFiles {
                         long size;
                         try {
                             size = Files.size(path);
-                        } catch (Exception ignored) {
-                            return; // unreadable metadata → keep old per-file skip behavior
+                        } catch (Exception e) {
+                            // 服务器→客户端同步静默丢文件是「客户端跑旧脚本/缺脚本」的最隐蔽来源，
+                            // 必须可见（W4/A5）；invalid sync path 的跳过仍保持静默（非脚本文件属预期）
+                            com.tkisor.nekojs.core.error.Diagnostics.report(
+                                    "script-sync",
+                                    com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                                    "跳过无法读取大小的脚本文件，该文件不会同步给客户端: " + relPath, e);
+                            return;
                         }
 
                         if (size > ScriptSyncService.MAX_BATCH_SCRIPT_SIZE) {
@@ -49,8 +55,11 @@ public final class ScriptSyncFiles {
                             String content = Files.readString(path);
                             files.put(relPath, content);
                             totalSize[0] += size;
-                        } catch (Exception ignored) {
-                            // read failure after size checks → keep old per-file skip behavior
+                        } catch (Exception e) {
+                            com.tkisor.nekojs.core.error.Diagnostics.report(
+                                    "script-sync",
+                                    com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                                    "脚本文件读取失败，该文件不会同步给客户端: " + relPath, e);
                         }
                     });
         } catch (IllegalStateException e) {

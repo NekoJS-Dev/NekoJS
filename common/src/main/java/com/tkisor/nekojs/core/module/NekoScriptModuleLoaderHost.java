@@ -12,6 +12,7 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.module.esm.NekoNativeEsmSourceRewriter;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
@@ -160,11 +161,26 @@ public final class NekoScriptModuleLoaderHost {
     @CalledByDynamicCode
     public void clearCache() {
         reloadCoordinator.clearAll();
+        clearSharedCachesForOwnType();
     }
 
     @CalledByDynamicCode
     public void clearRuntimeCache() {
         reloadCoordinator.clearRuntimeCache();
+        clearSharedCachesForOwnType();
+    }
+
+    /**
+     * 进程级共享缓存（prepared pipeline cache + source map、虚拟 ESM registry）按本 host 的
+     * ScriptType 分区清理（W4/§3-28）。旧实现 guest 调 {@code clearCache()} 会全进程清空，
+     * 一个 CLIENT 脚本就能让 SERVER 已编译的模块/source map 全部失效。
+     * 未登记类型的 Context（测试等场景）退化为全清，保持旧行为。
+     */
+    private void clearSharedCachesForOwnType() {
+        com.tkisor.nekojs.api.ScriptType type =
+                com.tkisor.nekojs.script.ScriptContextRegistry.scriptTypeOf(context);
+        NekoModulePipelineCache.clear(type);
+        NekoEsmVirtualModuleRegistry.clear(type);
     }
 
     @CalledByDynamicCode

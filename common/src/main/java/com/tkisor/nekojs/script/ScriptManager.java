@@ -172,11 +172,15 @@ public final class ScriptManager implements AutoCloseable {
         if (runtime.isEmpty() || contextKilled) {
             if (!runtime.isEmpty()) {
                 // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源。
-                // 与事务式 reload / fullReloadCleanup 相同的顺序：关闭前先清本 scriptType 的
-                // 全部事件监听器——监听器闭包持有指向已死 Context 的 Value，保留只会让每次
-                // 事件分发都在死环境上报错。此处无法重跑脚本重建监听器（重建只创建空环境），
-                // 对本 scriptType 整体清除是正确的最小修复，恢复需再次 reload。
-                scriptEventBridge.clearListeners(scriptType);
+                // 必须与 resetEnvironment / close 的 teardown 等价（W4/§3-9）：监听器闭包
+                // 持有指向已死 Context 的 Value，errorTracker/模块/ESM 缓存与 binding 状态
+                // 同属旧环境。缺一步就是「kill 重建后静默携带脏状态」——例如残留 errorTracker
+                // 条目永远不清、binding 缓存的旧 Context helper 下次取用报已关闭。
+                // 此处无法重跑脚本重建监听器（重建只创建空环境），恢复需再次 reload。
+                fullReloadCleanup();
+                for (var binding : pluginRuntime.bindings(scriptType).values()) {
+                    binding.close(scriptType);
+                }
                 closeRuntimeResources(this.runtime);
             }
             ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);

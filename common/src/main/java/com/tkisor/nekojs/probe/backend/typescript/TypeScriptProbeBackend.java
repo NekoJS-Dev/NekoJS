@@ -204,7 +204,13 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     RECIPE_EVENT_RECIPES_RETURN_TYPE,
                     RECIPE_EVENT_RECIPES_IMPORT
             );
-        } catch (ClassNotFoundException ignored) {
+        } catch (ClassNotFoundException e) {
+            // RecipeEventJS 在 common 模块：缺失说明类路径异常，覆盖不生效会悄悄给出错误的
+            // event.recipes 类型（W4/A5）
+            com.tkisor.nekojs.core.error.Diagnostics.report(
+                    "probe-typescript",
+                    com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "RecipeEventJS 不在类路径上，event.recipes 的类型覆盖未生效（补全形状可能不准确）", e);
         }
     }
 

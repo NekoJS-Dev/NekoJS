@@ -114,6 +114,12 @@ public class NativeEventsJS implements Binding {
 
         EventPriority priority = resolvePriority(priorityObj);
         Value handlerValue = handler == null ? null : Value.asValue(handler);
+        // 记录 handler 的归属（Context/ScriptType）：分发时的异常必须按脚本类型进错误面板
+        // （与 EventBusJS.recordListenerError 同一通道），而不是一行 debug——原生事件
+        // handler 抛错后旧实现完全不可见，「监听器看起来在跑但每次都静默失败」（W4/A5）
+        graal.graalvm.polyglot.Context handlerContext = contextOf(handlerValue);
+        ScriptType ownerType = handlerContext == null ? null
+                : com.tkisor.nekojs.script.ScriptManager.getTypeFromContext(handlerContext);
 
         Consumer<Event> consumer = event -> {
             try {
@@ -123,7 +129,14 @@ public class NativeEventsJS implements Binding {
                     cancellable.setCanceled(true);
                 }
             } catch (Exception e) {
-                NekoJS.LOGGER.debug("NativeEvent execution exception (" + eventClass.getSimpleName() + "): ", e);
+                com.tkisor.nekojs.script.ScriptManager.reportContextKilled(handlerContext, e);
+                if (ownerType != null) {
+                    com.tkisor.nekojs.api.event.ScriptErrorReporter.recordCallbackError(ownerType,
+                            "native-event event=" + eventClass.getName()
+                                    + " script=" + currentScriptIdOf(handlerContext), e);
+                } else {
+                    NekoJS.LOGGER.debug("NativeEvent execution exception (" + eventClass.getSimpleName() + "): ", e);
+                }
             }
         };
 
@@ -131,6 +144,25 @@ public class NativeEventsJS implements Binding {
 
         REGISTERED_LISTENERS.add(consumer);
         NekoJS.LOGGER.debug("Native event registered successfully: {}", eventClass.getSimpleName());
+    }
+
+    private static graal.graalvm.polyglot.Context contextOf(Value value) {
+        if (value == null) return null;
+        try {
+            return value.getContext();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String currentScriptIdOf(graal.graalvm.polyglot.Context context) {
+        if (context == null) return "unknown";
+        try {
+            String scriptId = com.tkisor.nekojs.script.ScriptManager.getCurrentScriptId(context);
+            return scriptId == null || scriptId.isBlank() ? "unknown" : scriptId;
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
 
     private static final Map<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
@@ -164,7 +196,8 @@ public class NativeEventsJS implements Binding {
             default -> {
             }
         }
-        NekoJS.LOGGER.debug("Failed to resolve class type: {}", obj);
+        // 注册期失败（值转不成 Class）：监听器不会注册，必须可见（W4/A5）
+        NekoJS.LOGGER.warn("Failed to resolve class type for native event registration: {}", obj);
         return null;
     }
 

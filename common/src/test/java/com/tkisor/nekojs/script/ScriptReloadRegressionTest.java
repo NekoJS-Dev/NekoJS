@@ -67,6 +67,8 @@ class ScriptReloadRegressionTest {
         private volatile boolean managerContextMatches;
         private volatile boolean managerKilled;
         private volatile Context managerContextAtProbe;
+        /** binding.close(scriptType) 调用记录（kill 重建 teardown 等价性断言用）。 */
+        final java.util.List<String> closedBindings = new CopyOnWriteArrayList<>();
 
         public void record(String value) {
             this.value = value;
@@ -137,7 +139,13 @@ class ScriptReloadRegressionTest {
         }
 
         @Override public Map<String, Binding> bindings(ScriptType type) {
-            return Map.of("TestRecorder", Binding.of("TestRecorder", recorder));
+            return Map.of("TestRecorder", new Binding() {
+                @Override public String name() { return "TestRecorder"; }
+                @Override public Object value() { return recorder; }
+                @Override public void close(ScriptType closedType) {
+                    recorder.closedBindings.add(closedType.name());
+                }
+            });
         }
 
         @Override public Map<String, EventGroup> eventGroups() { return Map.of(); }
@@ -637,6 +645,57 @@ class ScriptReloadRegressionTest {
             forceCloseLiveContexts();
             manager.close();
             engine.close();
+        }
+    }
+
+    /**
+     * W4/§3-9 回归：语句上限 kill 后的自动重建路径必须与 resetEnvironment / close 的
+     * teardown 等价——除清监听器外还要跑 fullReloadCleanup（errorTracker 按类型清空）
+     * 与 binding.close(scriptType)。旧实现只做「清监听器 + 关旧环境」，kill 重建后
+     * errorTracker 残留旧条目、binding 缓存的旧 Context 状态静默携带进新环境。
+     */
+    @Test
+    void rebuildAfterStatementLimitKillMatchesFullTeardown() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        Path serverDir = paths.serverScripts();
+        Files.createDirectories(serverDir);
+        Files.writeString(serverDir.resolve("loop.js"), "while (true) { /* spin forever */ }\n");
+        // broken.js：必然产生一条 errorTracker 记录（语法错误），用于验证重建时 fullReloadCleanup 清空
+        Files.writeString(serverDir.resolve("broken.js"), "this is ! not valid javascript\n");
+
+        TestRecorder recorder = new TestRecorder();
+        Engine engine = Engine.newBuilder().build();
+        SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 30, 100_000L, 0);
+        DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+        RecordingEventBridge bridge = new RecordingEventBridge();
+        ScriptManager manager = newManager(paths, recorder, engine, config, tracker, bridge);
+        try {
+            manager.discoverScripts();
+            assertTimeoutPreemptively(Duration.ofSeconds(30), manager::loadScripts,
+                    "initial load must abort via the statement limit (loop.js)");
+            assertTrue(tracker.getAllErrors().stream()
+                            .anyMatch(error -> String.valueOf(error.getErrorId()).contains("broken")),
+                    "broken.js must be tracked before the rebuild; errors="
+                            + tracker.getAllErrors().stream().map(e -> e.getErrorId()).toList());
+
+            // 触发自动重建：reloadScriptFile 内部第一次取 Context 即走 kill 重建分支
+            assertTimeoutPreemptively(Duration.ofSeconds(30), () -> manager.reloadScriptFile("loop.js"));
+
+            assertTrue(bridge.typeOnlyCleared.contains(ScriptType.SERVER),
+                    "rebuild must clear this scriptType's listeners");
+            assertTrue(recorder.closedBindings.contains(ScriptType.SERVER.name()),
+                    "rebuild must close this scriptType's bindings (teardown parity with resetEnvironment/close)");
+            boolean brokenStillTracked = tracker.getAllErrors().stream()
+                    .anyMatch(error -> String.valueOf(error.getErrorId()).contains("broken"));
+            assertFalse(brokenStillTracked,
+                    "rebuild must clear this scriptType's error tracker entries via fullReloadCleanup; errors="
+                            + tracker.getAllErrors().stream().map(e -> e.getErrorId()).toList());
+        } finally {
+            forceCloseLiveContexts();
+            manager.close();
+            engine.close();
+            Files.deleteIfExists(serverDir.resolve("broken.js"));
+            Files.deleteIfExists(serverDir.resolve("loop.js"));
         }
     }
 

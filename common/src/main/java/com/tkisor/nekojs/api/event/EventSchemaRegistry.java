@@ -16,8 +16,16 @@ public final class EventSchemaRegistry {
             try {
                 EventBusJS<?, ?> bus = busHolder.getBus(ScriptType.STARTUP);
                 if (bus != null) events.put(eventName, bus.eventType());
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
                 events.put(eventName, Object.class);
+                // 降级必须可见（W4/A5）：Object.class 会让该事件的回调成员校验静默失效，
+                // 旧行为连日志都没有，「预检为什么没报这个拼写」完全要靠推断
+                com.tkisor.nekojs.core.error.Diagnostics.report(
+                        "event-schema",
+                        com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                        "事件组 " + group.name() + " 的事件 " + eventName
+                                + " 无法解析事件类型，已降级为 Object（该事件的回调成员校验将被跳过）",
+                        t);
             }
         });
         SCHEMA.put(group.name(), Map.copyOf(events));

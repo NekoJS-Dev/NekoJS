@@ -271,20 +271,20 @@ final class ScriptLoadOrderSorter {
         return new Ref(key, glob);
     }
 
-    /** 脚本在类型根目录下的相对路径 key（正斜杠分隔），与 {@link com.tkisor.nekojs.api.ScriptType#makeId} 一致。 */
+    /**
+     * 脚本在类型作用域下的相对 key（正斜杠分隔），与 {@link com.tkisor.nekojs.api.ScriptType#makeId}
+     * 及 {@link ScriptPack#idPathPrefix()} 的拼法一致：以发现阶段算好的 {@link ScriptId} 为
+     * 单一来源（W4/A4），去掉开头的类型段——平铺脚本为 {@code foo/bar.js}，包脚本为
+     * {@code packs/<id>/foo/bar.js}。
+     *
+     * <p>旧实现用 {@code type.path.relativize(script.path)}：包脚本不在类型根下，会得到
+     * {@code ../packs/...} 形式的 key，被 {@link #resolve} 的 {@code ..} 越界检查拒绝——
+     * {@code after:} 指向包内脚本、以及包内脚本的 {@code ./sibling.js} 相对引用全部静默失效。
+     */
     private static String keyOf(ScriptContainer script) {
-        Path root = script.type.path;
-        Path relative;
-        if (root == null) {
-            relative = script.path;
-        } else {
-            try {
-                relative = root.relativize(script.path);
-            } catch (IllegalArgumentException e) {
-                relative = script.path;
-            }
-        }
-        return relative.toString().replace('\\', '/');
+        String path = script.id.path();
+        String prefix = script.type.name + "/";
+        return path.startsWith(prefix) ? path.substring(prefix.length()) : path;
     }
 
     private static String display(ScriptContainer script) {

@@ -61,12 +61,33 @@ public final class ScriptBindingSchema {
         return type == null ? Map.of() : SCHEMAS.getOrDefault(type, Map.of());
     }
 
+    /**
+     * 从脚本文件路径推导所属 {@link ScriptType}。平铺布局直接按类型根前缀判定；脚本包布局
+     * （GLOBAL {@code <root>/packs/<id>/…}、WORLD {@code <world>/nekojs_packs/<id>/…}、
+     * SERVER_CACHE {@code …/server_packs/…}）不在任何类型根之下，按路径中的
+     * {@code <type>_scripts} 段推导——与 {@code DefaultErrorTracker.extractScriptDisplayPath}
+     * 同一约定。缺了这一步，包内脚本的预检 schema 恒为空，成员/事件回调校验对包脚本
+     * 整体静默失效（W4/A4）。
+     */
     public static ScriptType inferType(Path path) {
         if (path == null) return null;
         Path norm = path.toAbsolutePath().normalize();
         for (ScriptType type : ScriptType.values()) {
             if (type.path == null) continue;
             if (norm.startsWith(type.path.toAbsolutePath().normalize())) return type;
+        }
+        return typeByScriptsDirSegment(norm);
+    }
+
+    private static ScriptType typeByScriptsDirSegment(Path norm) {
+        for (Path segment : norm) {
+            String name = segment.toString();
+            for (ScriptType type : ScriptType.all()) {
+                String dirName = type.path == null ? type.name + "_scripts" : type.path.getFileName().toString();
+                if (name.equalsIgnoreCase(dirName)) {
+                    return type;
+                }
+            }
         }
         return null;
     }

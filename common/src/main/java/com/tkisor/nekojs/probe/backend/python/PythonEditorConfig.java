@@ -74,7 +74,11 @@ final class PythonEditorConfig {
             try {
                 Files.deleteIfExists(pyright);
             } catch (IOException e) {
-                NekoJS.LOGGER.debug("EditorConfig: failed to delete pyrightconfig {}", pyright, e);
+                // 删除失败 → 过期配置残留，下次打开工作区时 extraPaths 指向已删除的 stub 目录
+                com.tkisor.nekojs.core.error.Diagnostics.report(
+                        "probe-python",
+                        com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                        "删除过期的 pyrightconfig.json 失败（可能被编辑器占用）: " + pyright, e);
             }
         }
     }
@@ -143,7 +147,12 @@ final class PythonEditorConfig {
                 }
             });
         } catch (IOException e) {
-            NekoJS.LOGGER.debug("Probe [python]: failed to scan {} for nested pyright configs", scriptDir, e);
+            // 嵌套 pyright 扫描失败 → 子目录工作区无补全且无任何痕迹（W4/A5）
+            com.tkisor.nekojs.core.error.Diagnostics.report(
+                    "probe-python",
+                    com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
+                    "扫描 " + scriptDir + " 下的嵌套 Python 目录失败，这些子目录将不生成 pyrightconfig.json"
+                            + "（Pylance 补全可能不可用）", e);
             return;
         }
         for (Path dir : pythonDirs) {

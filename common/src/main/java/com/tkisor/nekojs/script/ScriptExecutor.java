@@ -11,6 +11,7 @@ import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -98,15 +99,20 @@ public final class ScriptExecutor {
      * 时仍准确反映当前脚本状态 —— 编译时校验（{@code NekoModulePipeline}）受静态缓存限制，这里补足入口脚本。
      */
     private void validateGlobalBindings(ScriptContainer script) {
+        String source;
         try {
-            String source = Files.readString(script.path);
+            source = Files.readString(script.path);
+        } catch (IOException e) {
+            // 读取失败已由 preload 失败路径上报错误面板（ScriptManager.reportPreloadFailure），不重复
+            return;
+        }
+        try {
             GlobalBindingMemberValidator.validate(script.path, source);
         } catch (Throwable t) {
             // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
-            // 否则所有成员校验静默消失且无人察觉（文件读不出来除外，那条已由
-            // preload 失败路径上报错误面板）
-            com.tkisor.nekojs.NekoJS.LOGGER.warn(
-                    "Global binding preflight failed for {}: {}", script.path, t.toString(), t);
+            // 进错误面板（recordCallbackError 含里程碑节流），否则该类型的成员校验
+            // 静默消失且无人察觉（W4/A5）
+            errorTracker.recordCallbackError(script.type, "preflight-validator", t);
         }
     }
 
