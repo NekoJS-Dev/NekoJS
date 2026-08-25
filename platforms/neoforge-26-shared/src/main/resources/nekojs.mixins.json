@@ -9,6 +9,7 @@
     "MinecraftServerMixin",
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
+    "ResultSlotMixin",
     "TagLoaderMixin",
     "inject.MixinItemStack",
     "inject.MixinLevel",

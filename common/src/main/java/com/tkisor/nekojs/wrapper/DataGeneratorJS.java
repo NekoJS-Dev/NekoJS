@@ -134,7 +134,8 @@ public final class DataGeneratorJS {
         generatedBytes += bytes;
     }
 
-    private Path resolve(String path) {
+    /** 包内可见：同包的 {@link AssetGeneratorJS} 二进制写盘复用同一包含性校验（不绕过）。 */
+    Path resolve(String path) {
         Path relative = Path.of(path).normalize();
         if (relative.isAbsolute() || relative.startsWith("..")) {
             throw new IllegalArgumentException("Generated file path must be a relative path: " + path);

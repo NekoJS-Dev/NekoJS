@@ -38,6 +38,7 @@ import com.tkisor.nekojs.bindings.static_access.NekoGlobal;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
+import com.tkisor.nekojs.wrapper.AssetGeneratorJS;
 import com.tkisor.nekojs.wrapper.FluidAmounts;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS;
 import com.tkisor.nekojs.wrapper.network.NetworkJS;
@@ -135,6 +136,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register("Network", NetworkJS.class);
         // 服务端→客户端键值推送（客户端侧只读视图 clientData 由 common 内置插件注册）
         registry.register("ClientData", ClientDataSyncJS.class);
+        // 类型化资产生成（KubeJS 风格 blockState/blockModel/itemModel/texture），写入
+        // <gameDir>/nekojs/assets 资源包，与 generateAssets 事件同目录，reload 时懒读生效
+        registry.register("Assets", new AssetGeneratorJS());
         registry.register("global", NekoGlobal.shared());
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
@@ -215,6 +219,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin {
         registry.register(TypeDocCatalogEntry.binding("Ingredient", "NekoIngredientHelper", "Script-friendly Ingredient and IngredientJS helper.", List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')")));
         registry.register(TypeDocCatalogEntry.binding("Fluid", "NekoFluidHelper", "Script-friendly FluidStack helper.", List.of("Fluid.of('minecraft:water', FluidAmounts.BUCKET)", "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
         registry.register(TypeDocCatalogEntry.binding("FluidIngredient", "NekoFluidIngredientHelper", "Script-friendly FluidIngredient and SizedFluidIngredient helper.", List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.sized('minecraft:water', 250)")));
+        registry.register(TypeDocCatalogEntry.binding("Assets", "AssetGeneratorJS", "Typed asset generators writing into NekoJS's assets pack (blockState/blockModel/itemModel/texture); takes effect on the next resource reload.", List.of(
+                "Assets.blockState('mymod:my_block', 'mymod:block/my_block')",
+                "Assets.blockModel('mymod:my_block', { parent: 'minecraft:block/cube_all', textures: { all: 'my_block' } })",
+                "Assets.itemModel('mymod:my_item', { parent: 'minecraft:item/generated', textures: { layer0: 'my_item' } })",
+                "Assets.texture('mymod:item/my_item')")));
         registry.register(TypeDocCatalogEntry.binding("ServerEvents", null, "Server-side event group, including recipe editing.", List.of("ServerEvents.recipes(event => { })", "ServerEvents.afterRecipes(event => { })")));
         registry.register(TypeDocCatalogEntry.binding("ProbeEvents", null,
                 "Probe generation customization events (probe.*). Listeners go in server_scripts; they run when /nekojs probe is invoked.",

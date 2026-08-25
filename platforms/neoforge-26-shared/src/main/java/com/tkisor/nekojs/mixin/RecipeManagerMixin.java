@@ -96,6 +96,9 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
         try {
+            // 原料动作（damage/keep/replaceIngredient）是纯脚本状态：脚本重跑前整表清空，
+            // 由本次脚本执行期间 RecipeJsonBuilder 的动作调用重建——删掉的脚本动作随之消失
+            com.tkisor.nekojs.api.recipe.IngredientActionRegistry.clear();
             NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
             ServerEvents.RECIPES.post(eventJS);
             ServerEvents.AFTER_RECIPES.post(eventJS);

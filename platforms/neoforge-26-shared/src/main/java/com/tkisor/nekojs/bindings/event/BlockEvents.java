@@ -7,6 +7,7 @@ import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.event.level.BlockEntityTickEvent;
 import com.tkisor.nekojs.event.level.RandomTickEvent;
+import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.common.NeoForge;
@@ -51,6 +52,15 @@ public interface BlockEvents {
     EventBusJS<BlockEntityTickEvent, BlockEntityType<?>> BLOCK_ENTITY_TICK =
             GROUP.server("blockEntityTick", BlockEntityTickEvent.class,
                     EventBusFactory.createDispatchKey(BlockEntityType.class, BlockEntityTickEvent::getType));
+
+    /**
+     * 运行时方块属性修改（server 脚本）：每次服务器启动（about-to-start）与
+     * {@code /nekojs reload server} 时由平台侧手动 post（快照恢复模型，见
+     * {@link BlockModificationEventJS}），不挂 NeoForge 总线（同
+     * {@code ItemEvents.MODIFICATION} 的 posted-object 模式）。
+     */
+    EventBusJS<BlockModificationEventJS, Void> MODIFICATION =
+            GROUP.server("modification", BlockModificationEventJS.class);
 
     private static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
         return EventBusFactory.createDispatchKey(Block.class, toKey);

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper.registry;
 
 import lombok.Getter;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -11,7 +12,7 @@ import net.minecraft.world.item.Rarity;
 
 import java.util.function.Consumer;
 
-public class ItemBuilderJS {
+public class ItemBuilderJS implements TaggableBuilder<ItemBuilderJS> {
     @Getter
     private final Identifier location;
 
@@ -29,6 +30,12 @@ public class ItemBuilderJS {
 
     public ItemBuilderJS(Identifier location) {
         this.location = location;
+    }
+
+    /** {@link TaggableBuilder}：物品 tag 归属 ITEM 注册表。 */
+    @Override
+    public ResourceKey<? extends Registry<?>> getTagRegistry() {
+        return Registries.ITEM;
     }
 
     public ItemBuilderJS maxStackSize(int size) { this.maxStackSize = size; return this; }

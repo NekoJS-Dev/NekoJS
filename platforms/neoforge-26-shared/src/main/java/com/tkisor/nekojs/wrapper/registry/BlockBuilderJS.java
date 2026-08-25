@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper.registry;
 
 import lombok.Getter;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -10,7 +11,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import java.util.function.Consumer;
 
-public class BlockBuilderJS {
+public class BlockBuilderJS implements TaggableBuilder<BlockBuilderJS> {
     @Getter
     private final Identifier location;
 
@@ -33,6 +34,12 @@ public class BlockBuilderJS {
 
     public BlockBuilderJS(Identifier location) {
         this.location = location;
+    }
+
+    /** {@link TaggableBuilder}：方块 tag 归属 BLOCK 注册表（给 BlockItem 打 tag 走 {@code item(cb)}）。 */
+    @Override
+    public ResourceKey<? extends Registry<?>> getTagRegistry() {
+        return Registries.BLOCK;
     }
 
     public BlockBuilderJS hardness(float hardness) { this.hardness = hardness; return this; }

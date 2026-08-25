@@ -3,7 +3,6 @@
 # 约束：本清单内的文件必须与 1.21.1 侧保持「归一化后相同」（scripts/check-platform-drift 主对），
 # 否则生成会掩盖真实分歧——从清单移除并恢复 1.21.1 手维护副本。
 com/tkisor/nekojs/api/recipe/RecipeEntryJS.java
-com/tkisor/nekojs/api/recipe/RecipeJsonBuilder.java
 com/tkisor/nekojs/bindings/static_access/BlockJS.java
 com/tkisor/nekojs/js/type_adapter/BlockStateAdapter.java
 com/tkisor/nekojs/network/DownloadAllScriptsPacket.java

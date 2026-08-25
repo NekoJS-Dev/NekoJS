@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper.registry;
 
 import lombok.Getter;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -12,6 +13,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.BaseFlowingFluid;
 import net.neoforged.neoforge.fluids.FluidType;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -29,7 +31,7 @@ import java.util.function.Supplier;
  * {@link BaseFlowingFluid.Properties} 的 {@link Supplier} 懒解析，注册完成前不触发。
  * 26.x（1.21.5+）流体渲染为模型驱动（纹理走资源包模型），不提供 still/flowing 纹理 API。
  */
-public class FluidBuilderJS {
+public class FluidBuilderJS implements TaggableBuilder<FluidBuilderJS> {
     @Getter
     private final Identifier location;
 
@@ -58,6 +60,21 @@ public class FluidBuilderJS {
 
     public FluidBuilderJS(Identifier location) {
         this.location = location;
+    }
+
+    /** {@link TaggableBuilder}：流体 tag（如 {@code minecraft:water}）归属 FLUID 注册表。 */
+    @Override
+    public ResourceKey<? extends Registry<?>> getTagRegistry() {
+        return Registries.FLUID;
+    }
+
+    /**
+     * 流体 tag 同时打 source 与 flowing 两个流体（对标原版 {@code minecraft:water} tag
+     * 同时含 {@code water} 与 {@code flowing_water}——流动性检查常落在 flowing 变体上）。
+     */
+    @Override
+    public List<Identifier> getTagTargets() {
+        return List.of(location, getFlowingLocation());
     }
 
     /** 显示名（作为翻译 key，如 {@code fluid.nekojs.molten_iron}）。 */

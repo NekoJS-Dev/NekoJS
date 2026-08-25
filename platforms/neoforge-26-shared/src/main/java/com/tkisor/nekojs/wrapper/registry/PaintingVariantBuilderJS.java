@@ -1,8 +1,11 @@
 package com.tkisor.nekojs.wrapper.registry;
 
 import lombok.Getter;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.decoration.painting.PaintingVariant;
 
 import java.util.Optional;
@@ -13,7 +16,7 @@ import java.util.Optional;
  * <p>脚本指定宽高（16 的倍数，单位像素）、纹理资源 id（指向
  * {@code assets/<ns>/textures/painting/<path>.png}），可选标题 / 作者。
  */
-public class PaintingVariantBuilderJS {
+public class PaintingVariantBuilderJS implements TaggableBuilder<PaintingVariantBuilderJS> {
     @Getter
     private final Identifier location;
 
@@ -26,6 +29,12 @@ public class PaintingVariantBuilderJS {
     public PaintingVariantBuilderJS(Identifier location) {
         this.location = location;
         this.assetId = location;
+    }
+
+    /** {@link TaggableBuilder}：画作 tag（如 {@code minecraft:placeable}）归属 PAINTING_VARIANT 注册表。 */
+    @Override
+    public ResourceKey<? extends Registry<?>> getTagRegistry() {
+        return Registries.PAINTING_VARIANT;
     }
 
     public PaintingVariantBuilderJS width(int width) { this.width = width; return this; }

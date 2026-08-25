@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.wrapper.event.server;
 
+import com.tkisor.nekojs.api.annotation.Doc;
+import com.tkisor.nekojs.api.annotation.Param;
+import com.tkisor.nekojs.api.annotation.Return;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
@@ -19,12 +22,23 @@ import net.minecraft.world.item.component.DamageResistant;
  *     item.rarity = 'epic';
  *     item.fireResistant = true;
  *   });
+ *   event.modify('minecraft:stick', item {@code ->} {
+ *     item.food = { nutrition: 4, saturation: 0.6, canAlwaysEat: true, eatSeconds: 1.6 };
+ *   });
+ *   event.modify('minecraft:blaze_rod', item {@code ->} {
+ *     item.tool = { miningSpeed: 6 };
+ *     item.attackDamage = 6;
+ *     item.attackSpeed = -2.4;
+ *   });
  * });
  * </pre>
  *
  * <p>Unset properties keep the item's current (pre-modification) values. Writing
  * a property applies it to the item's default {@link DataComponentMap} when the
  * enclosing event finishes, so all stacks of that item pick up the change.
+ * Properties that accept {@code null} (food, tool) remove the corresponding
+ * component instead. The food/tool/attribute mappings live in
+ * {@link ItemModificationComponents}.
  */
 public class ItemModificationJS {
 
@@ -35,6 +49,12 @@ public class ItemModificationJS {
     private Integer maxDamage;
     private Rarity rarity;
     private Boolean fireResistant;
+    private ItemModificationComponents.FoodSpec food;
+    private boolean removeFood;
+    private ItemModificationComponents.ToolSpec tool;
+    private boolean removeTool;
+    private Double attackDamage;
+    private Double attackSpeed;
 
     /** Maximum stack size (1..99). {@code null} = keep current value. */
     public Integer getMaxStackSize() {
@@ -88,6 +108,90 @@ public class ItemModificationJS {
     }
 
     /**
+     * 待写入的食物配置；{@code null} 表示未设置（保持原值）或已被 {@code item.food = null}
+     * 请求移除。
+     */
+    @Doc("The pending food override as { nutrition, saturation, canAlwaysEat, eatSeconds }, or null when unset (keep current food) or when removal was requested with item.food = null.")
+    @Return("Pending food spec, or null.")
+    public ItemModificationComponents.FoodSpec getFood() {
+        return food;
+    }
+
+    @Doc("Replaces the item's food component (minecraft:food).")
+    @Doc("Options: nutrition (default 1), saturation (default 0.1, a modifier: absolute saturation = nutrition * saturation * 2), canAlwaysEat (default false), eatSeconds (optional eating duration in seconds).")
+    @Doc("The item also gets a consumable component so it can actually be eaten: a default one (1.6s) when it had none, the existing one when eatSeconds is omitted, or a fresh one with the given duration when eatSeconds is set.")
+    @Doc("Pass null to remove food entirely: a previously edible item loses its eating animation component too; drink-only items (potions) keep theirs.")
+    @Param(name = "value", value = "Object like { nutrition: 4, saturation: 0.6, canAlwaysEat: true, eatSeconds: 1.6 }, or null to remove food.")
+    public void setFood(Object value) {
+        if (value == null) {
+            this.food = null;
+            this.removeFood = true;
+        } else {
+            this.food = ItemModificationComponents.parseFood(value);
+            this.removeFood = false;
+        }
+    }
+
+    /**
+     * 待写入的工具配置；{@code null} 表示未设置或已被 {@code item.tool = null} 请求移除。
+     */
+    @Doc("The pending tool override as { miningSpeed, damagePerBlock, canDestroyBlocksInCreative }, or null when unset or when removal was requested.")
+    @Return("Pending tool spec, or null.")
+    public ItemModificationComponents.ToolSpec getTool() {
+        return tool;
+    }
+
+    @Doc("Makes the item an effective tool for every block by writing minecraft:tool with a single catch-all rule: given mining speed everywhere plus correct-for-drops (obsidian etc. will drop).")
+    @Doc("Options: miningSpeed (required, > 0), damagePerBlock (default 1 durability per block), canDestroyBlocksInCreative (default true).")
+    @Doc("26.x has no item-side mining level (tool tiers live on block components), so there is no level to set here. Pass null to remove the tool component.")
+    @Param(name = "value", value = "Object like { miningSpeed: 6 }, or null to remove the tool component.")
+    public void setTool(Object value) {
+        if (value == null) {
+            this.tool = null;
+            this.removeTool = true;
+        } else {
+            this.tool = ItemModificationComponents.parseTool(value);
+            this.removeTool = false;
+        }
+    }
+
+    /**
+     * 待写入的基础攻击伤害加成；{@code null} = 保持原值。数值为修饰量（玩家基础攻击
+     * 伤害 2.0 不包含在内），语义同 KubeJS 8 的 attackDamage。
+     */
+    @Doc("Replaces the item's base attack damage modifier (minecraft:base_attack_damage, ADD_VALUE on mainhand), keeping every other attribute entry - including attack speed.")
+    @Doc("The value is a bonus on top of the player's base attack damage (2.0 on 26.x), so total damage = 2.0 + value.")
+    @Return("Pending attack damage override, or null when not set.")
+    public Double getAttackDamage() {
+        return attackDamage;
+    }
+
+    @Doc("Replaces the item's base attack damage modifier (minecraft:base_attack_damage, ADD_VALUE on mainhand), keeping every other attribute entry - including attack speed.")
+    @Doc("The value is a bonus on top of the player's base attack damage (2.0 on 26.x), so total damage = 2.0 + value. Swords use around 3..8.")
+    @Param(name = "damage", value = "New base attack damage bonus, e.g. 6 for a strong weapon.")
+    public void setAttackDamage(double damage) {
+        this.attackDamage = damage;
+    }
+
+    /**
+     * 待写入的基础攻击速度加成；{@code null} = 保持原值。数值为修饰量（玩家基础攻击
+     * 速度 4.0 不包含在内），语义同 KubeJS 8 的 attackSpeed。
+     */
+    @Doc("Replaces the item's base attack speed modifier (minecraft:base_attack_speed, ADD_VALUE on mainhand), keeping every other attribute entry - including attack damage.")
+    @Doc("The value is a bonus on top of the player's base attack speed (4.0 on 26.x): a sword uses -2.4 for a total of 1.6.")
+    @Return("Pending attack speed override, or null when not set.")
+    public Double getAttackSpeed() {
+        return attackSpeed;
+    }
+
+    @Doc("Replaces the item's base attack speed modifier (minecraft:base_attack_speed, ADD_VALUE on mainhand), keeping every other attribute entry - including attack damage.")
+    @Doc("The value is a bonus on top of the player's base attack speed (4.0 on 26.x): a sword uses -2.4 for a total of 1.6.")
+    @Param(name = "speed", value = "New base attack speed bonus, e.g. -2.4 for sword-like speed.")
+    public void setAttackSpeed(double speed) {
+        this.attackSpeed = speed;
+    }
+
+    /**
      * Writes the requested properties into {@code builder} (seeded with the item's
      * pristine components), validating the durability/stacking invariant first.
      */
@@ -104,6 +208,19 @@ public class ItemModificationJS {
         }
         if (fireResistant != null) {
             builder.set(DataComponents.DAMAGE_RESISTANT, fireResistant ? createFireResistance(server) : null);
+        }
+        if (food != null) {
+            ItemModificationComponents.applyFood(builder, base, food);
+        } else if (removeFood) {
+            ItemModificationComponents.removeFood(builder, base);
+        }
+        if (tool != null) {
+            ItemModificationComponents.applyTool(builder, tool);
+        } else if (removeTool) {
+            builder.set(DataComponents.TOOL, null);
+        }
+        if (attackDamage != null || attackSpeed != null) {
+            ItemModificationComponents.applyAttributes(builder, base, attackDamage, attackSpeed);
         }
     }
 

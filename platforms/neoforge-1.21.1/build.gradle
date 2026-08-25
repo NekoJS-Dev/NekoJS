@@ -39,7 +39,7 @@ rootProject.file('scripts/gen-1211-masters.txt').eachLine { line ->
         legacySharedMasters << rel
     }
 }
-def generateLegacySharedSources = tasks.register('generateLegacySharedSources', Copy) {
+def generateLegacySharedSources = tasks.register('generateLegacySharedSources', Sync) {
     group = 'build'
     description = 'Generates 1.21.1 sources from neoforge-26-shared masters (mechanical renames only).'
     inputs.files rootProject.file('scripts/gen-1211-rules.properties'),

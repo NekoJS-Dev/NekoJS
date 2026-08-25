@@ -4,7 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -17,7 +17,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
     private final JsonObject json;
     private final RecipeEventJS event;
     private final RecipeCreationContext context;
-    private Identifier currentId;
+    private ResourceLocation currentId;
 
     public RecipeJsonBuilder(RecipeEventJS event, String type, String prefix) {
         this(event, type, prefix, RecipeCreationContext.of("event.builder", type, prefix, captureScriptId()));
@@ -48,11 +48,11 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         this.event.setRecipeContext(this.currentId, this.context);
     }
 
-    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, Identifier currentId) {
+    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, ResourceLocation currentId) {
         this(event, prebuiltJson, currentId, event.getRecipeContext(currentId));
     }
 
-    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, Identifier currentId, RecipeCreationContext context) {
+    public RecipeJsonBuilder(RecipeEventJS event, JsonObject prebuiltJson, ResourceLocation currentId, RecipeCreationContext context) {
         this.event = event;
         this.json = prebuiltJson;
         this.currentId = currentId;
@@ -60,18 +60,18 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         this.event.setRecipeContext(this.currentId, this.context);
     }
 
-    public static Identifier parseId(String id) {
+    public static ResourceLocation parseId(String id) {
         if (id.contains(":")) {
-            return Identifier.tryParse(id);
+            return ResourceLocation.tryParse(id);
         }
-        return Identifier.fromNamespaceAndPath("nekojs", id);
+        return ResourceLocation.fromNamespaceAndPath("nekojs", id);
     }
 
     public RecipeJsonBuilder id(String newId) {
         event.getFinalJsons().remove(this.currentId);
         event.removeRecipeContext(this.currentId);
 
-        Identifier parsedId = parseId(newId);
+        ResourceLocation parsedId = parseId(newId);
 
         if (parsedId == null) {
             NekoJS.LOGGER.debug("Invalid recipe ID: {}", newId);
@@ -198,43 +198,6 @@ public class RecipeJsonBuilder implements RecipeBuilder {
 
     public RecipeJsonBuilder jsonProperty(String key, Boolean value) {
         json.addProperty(key, value);
-        return this;
-    }
-
-    // ---- 原料动作（W6）：作用于合成余量，纯脚本状态不进 JSON，见 IngredientActionRegistry ----
-
-    /**
-     * 匹配的合成原料在消耗时耐久 +amount（不可破坏的物品按保留处理；耐久耗尽则消失）。
-     * 例：{@code .damageIngredient('minecraft:iron_pickaxe', 1)}。
-     */
-    @com.tkisor.nekojs.api.annotation.Doc("Matched crafting ingredients come back with durability reduced by amount (unbreakable items are kept intact; broken ones vanish).")
-    @com.tkisor.nekojs.api.annotation.Param(name = "ingredient", value = "item id, item array, tag like '#c:tools', or an Ingredient")
-    @com.tkisor.nekojs.api.annotation.Param(name = "amount", value = "durability to subtract per craft; defaults to 1")
-    public RecipeJsonBuilder damageIngredient(Ingredient ingredient, int amount) {
-        IngredientActionRegistry.record(currentId,
-                new IngredientActionRegistry.Action(IngredientActionRegistry.Kind.DAMAGE, ingredient, amount, ItemStack.EMPTY));
-        return this;
-    }
-
-    /** 匹配的合成原料在消耗时原样保留（复制一份，不损耗耐久）。例：{@code .keepIngredient('#c:tools')}。 */
-    @com.tkisor.nekojs.api.annotation.Doc("Matched crafting ingredients are kept intact after crafting (a fresh copy stays in the grid).")
-    @com.tkisor.nekojs.api.annotation.Param(name = "ingredient", value = "item id, item array, tag like '#c:tools', or an Ingredient")
-    public RecipeJsonBuilder keepIngredient(Ingredient ingredient) {
-        IngredientActionRegistry.record(currentId,
-                new IngredientActionRegistry.Action(IngredientActionRegistry.Kind.KEEP, ingredient, 1, ItemStack.EMPTY));
-        return this;
-    }
-
-    /**
-     * 匹配的合成原料在消耗后替换为指定物品。例：{@code .replaceIngredient('minecraft:diamond', 'minecraft:emerald')}。
-     */
-    @com.tkisor.nekojs.api.annotation.Doc("Matched crafting ingredients are replaced with the given item after crafting.")
-    @com.tkisor.nekojs.api.annotation.Param(name = "ingredient", value = "item id, item array, tag like '#c:tools', or an Ingredient")
-    @com.tkisor.nekojs.api.annotation.Param(name = "with", value = "replacement item id or ItemStack")
-    public RecipeJsonBuilder replaceIngredient(Ingredient ingredient, ItemStack with) {
-        IngredientActionRegistry.record(currentId,
-                new IngredientActionRegistry.Action(IngredientActionRegistry.Kind.REPLACE, ingredient, 1,
-                        with == null ? ItemStack.EMPTY : with));
         return this;
     }
 

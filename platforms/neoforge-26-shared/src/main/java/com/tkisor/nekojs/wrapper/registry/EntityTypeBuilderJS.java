@@ -3,6 +3,7 @@ package com.tkisor.nekojs.wrapper.registry;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.entity.NekoScriptMob;
 import lombok.Getter;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -13,7 +14,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 
 import java.util.function.Consumer;
 
-public class EntityTypeBuilderJS {
+public class EntityTypeBuilderJS implements TaggableBuilder<EntityTypeBuilderJS> {
     @Getter
     private final Identifier location;
 
@@ -34,6 +35,12 @@ public class EntityTypeBuilderJS {
 
     public EntityTypeBuilderJS(Identifier location) {
         this.location = location;
+    }
+
+    /** {@link TaggableBuilder}：实体 tag（如 {@code minecraft:raiders}）归属 ENTITY_TYPE 注册表。 */
+    @Override
+    public ResourceKey<? extends Registry<?>> getTagRegistry() {
+        return Registries.ENTITY_TYPE;
     }
 
     public EntityTypeBuilderJS category(String category) {

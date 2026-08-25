@@ -5,6 +5,7 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.item.Item;
@@ -21,7 +22,7 @@ import net.neoforged.neoforge.registries.RegisterEvent;
  * <p>默认不挂 {@code effects}（注册成功、可被附魔/书本/互斥，但无实际效果）；脚本无需提供
  * 复杂的运行时对象即可得到一个合法、可注册的附魔。
  */
-public class EnchantmentBuilderJS {
+public class EnchantmentBuilderJS implements TaggableBuilder<EnchantmentBuilderJS> {
     @Getter
     private final Identifier location;
 
@@ -38,6 +39,12 @@ public class EnchantmentBuilderJS {
 
     public EnchantmentBuilderJS(Identifier location) {
         this.location = location;
+    }
+
+    /** {@link TaggableBuilder}：附魔 tag（如 {@code minecraft:treasure}）归属 ENCHANTMENT 注册表。 */
+    @Override
+    public ResourceKey<? extends Registry<?>> getTagRegistry() {
+        return Registries.ENCHANTMENT;
     }
 
     /** 支持附魔的物品标签（带或不带 {@code #} 前缀均可）。 */

@@ -49,6 +49,9 @@ bash scripts/check-platform-drift
 
 ## 基线变更记录
 
+- **2026-08-25（W6 原料动作）**：`RecipeJsonBuilder` 移出生成清单、恢复 1.21.1 手维护副本
+  （26.x 侧新增 damage/keep/replaceIngredient 依赖 26-only 的 IngredientActionRegistry）。
+  主对 drifted 113→114、compared 113→114——标准逃生门用法（见清单文件头注释）。
 - **2026-08-25（W5 步骤 3）**：28 个「仅机械改名」文件（13 个 network 包、7 个
   RegistryEventJS、builder 等，~1,600 行 ×2）不再手维护 1.21.1 副本——
   `platforms/neoforge-1.21.1` 的 `generateLegacySharedSources` 任务从 26-shared master

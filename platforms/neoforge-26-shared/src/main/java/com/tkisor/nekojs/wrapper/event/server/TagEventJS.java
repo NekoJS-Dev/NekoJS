@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.wrapper.event.server;
 
+import com.tkisor.nekojs.wrapper.registry.BuilderTags;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagLoader;
@@ -23,6 +24,10 @@ public final class TagEventJS {
     public TagEventJS(Identifier registryId, Map<Identifier, List<TagLoader.EntryWithSource>> sourceMap) {
         this.registryId = registryId;
         this.sourceMap = sourceMap;
+        // 注册 builder 的待写 tag（.tag(...)，见 BuilderTags）先于脚本监听器注入本事件：
+        // 脚本随后的 add/remove 仍可覆盖，apply() 统一写回。待写条目不在此消费——
+        // 每次 tag（重）加载都会重新注入（稳定事实，跨 /reload 存活）。
+        BuilderTags.flushInto(registryId, this::add);
     }
 
     public Identifier getRegistry() {
@@ -93,10 +98,20 @@ public final class TagEventJS {
         for (var entry : removals.entrySet()) {
             var list = sourceMap.get(entry.getKey());
             if (list == null) continue;
+            // TagEntry 无值相等（identity），按 (id, isTag) 匹配移除——否则 remove() 新建的
+            // TagEntry 永远匹配不上源表里的同 id 条目（含 builder 待写条目）
             var toRemove = entry.getValue().stream()
                     .map(TagLoader.EntryWithSource::entry)
+                    .map(e -> new RemovalKey(e.getId(), e.isTag()))
                     .collect(java.util.stream.Collectors.toSet());
-            list.removeIf(e -> toRemove.contains(e.entry()));
+            list.removeIf(e -> {
+                var target = e.entry();
+                return toRemove.contains(new RemovalKey(target.getId(), target.isTag()));
+            });
         }
+    }
+
+    /** remove 匹配键：元素 id + 是否 tag 引用（忽略 required 差异）。 */
+    private record RemovalKey(Identifier id, boolean tag) {
     }
 }

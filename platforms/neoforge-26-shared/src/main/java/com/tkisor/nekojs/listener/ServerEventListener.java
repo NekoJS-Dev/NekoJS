@@ -16,6 +16,7 @@ import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
+import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
@@ -64,6 +65,9 @@ public class ServerEventListener {
         // 时由 `/nekojs reload server`（NekoJSCommands）重放，走同一条快照恢复路径；物品单例与
         // 已修改组件跨 vanilla /reload 保留，无需在此重放。
         ItemModificationEventJS.fire(server);
+        // 方块属性修改：同一时机 post（先整体恢复上轮快照再重放，删除的 modify 自动回退）；
+        // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
+        BlockModificationEventJS.fire();
     }
 
     /**
