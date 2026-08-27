@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -27,9 +28,15 @@ public class RegistryEventJS<T> {
     }
 
     public RegistryObjectBuilder<T> custom(String id, String type) {
-        var builder = Objects.requireNonNull(types.get(type), "No registry object type matching " + type)
-            .createBuilder(createNewId(id));
+        var objectType = Objects.requireNonNull(types.get(type), "No registry object type matching " + type);
+        var builder = objectType.createBuilder(createNewId(id));
         providers.put(builder.id, builder::build);
+        return builder;
+    }
+
+    public RegistryObjectBuilder<T> custom(String id, String type, Consumer<RegistryObjectBuilder<T>> modifner) {
+        var builder = custom(id, type);
+        modifner.accept(builder);
         return builder;
     }
 

@@ -12,7 +12,27 @@ import java.util.*;
  * @author ZZZank
  */
 public class RegistryInfos {
+    private static RegistryInfos INSTANCE;
+
     private final Map<Identifier, RegistryInfo<?>> infos = new HashMap<>();
+
+    /**
+     * 获取全局 RegistryInfos 实例。
+     *
+     * @return 全局实例，如果尚未初始化则返回 null
+     */
+    public static RegistryInfos getInstance() {
+        return INSTANCE;
+    }
+
+    /**
+     * 设置全局 RegistryInfos 实例。
+     *
+     * @param instance RegistryInfos 实例
+     */
+    public static void setInstance(RegistryInfos instance) {
+        INSTANCE = instance;
+    }
 
     /// @param classesToScan a list of classes, whose element will have its fields scanned and look for public static
     /// final [ResourceKey] fields that represents a [Registry]. The [net.minecraft.core.registries.Registries] class
