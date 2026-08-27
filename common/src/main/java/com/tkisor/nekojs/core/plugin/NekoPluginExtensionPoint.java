@@ -30,7 +30,8 @@ public record NekoPluginExtensionPoint<P extends NekoJSPlugin>(
         String id,
         Class<P> pluginType,
         Predicate<NekoPluginExtensionContext> enabled,
-        BiConsumer<P, NekoPluginExtensionContext> collector
+        BiConsumer<P, NekoPluginExtensionContext> collector,
+        Runnable onFinish
 ) {
     public NekoPluginExtensionPoint {
         if (id == null || id.isBlank()) {
@@ -50,7 +51,16 @@ public record NekoPluginExtensionPoint<P extends NekoJSPlugin>(
             Class<P> pluginType,
             BiConsumer<P, NekoPluginExtensionContext> collector
     ) {
-        return new NekoPluginExtensionPoint<>(id, pluginType, context -> true, collector);
+        return new NekoPluginExtensionPoint<>(id, pluginType, context -> true, collector, null);
+    }
+
+    public static <P extends NekoJSPlugin> NekoPluginExtensionPoint<P> of(
+        String id,
+        Class<P> pluginType,
+        BiConsumer<P, NekoPluginExtensionContext> collector,
+        Runnable onFinish
+    ) {
+        return new NekoPluginExtensionPoint<>(id, pluginType, context -> true, collector, onFinish);
     }
 
     /**
@@ -63,7 +73,7 @@ public record NekoPluginExtensionPoint<P extends NekoJSPlugin>(
             Class<P> pluginType,
             BiConsumer<P, NekoPluginExtensionContext> collector
     ) {
-        return new NekoPluginExtensionPoint<>(id, pluginType, NekoPluginExtensionContext::client, collector);
+        return new NekoPluginExtensionPoint<>(id, pluginType, NekoPluginExtensionContext::client, collector, null);
     }
 
     /**
