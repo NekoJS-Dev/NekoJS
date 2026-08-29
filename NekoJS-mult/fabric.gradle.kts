@@ -54,13 +54,13 @@ repositories {
 val bundled: Configuration by configurations.creating
 configurations.implementation.get().extendsFrom(bundled)
 
-// GraalMC 的 curse 文件按加载器分 build：8456810 是 NeoForge 构建（catalog 默认，
-// 无 fabric.mod.json），fabric 节点定向解析到 8456812（fabric 构建，"支持所有版本"
-// 指 MC 版本维度）。
+// GraalMC 的 curse 文件按加载器分 build：8762962 是 NeoForge 构建（catalog 默认），
+// fabric 节点定向解析到 8762963（fabric 构建，GraalMC 25.1.3.7；须自带 TRegex 注册，
+// 见 libs.versions.toml 的 graal 注释）。
 configurations.all {
     resolutionStrategy.eachDependency {
         if (requested.group == "curse.maven" && requested.name == "graal-1504336") {
-            useVersion("8456812")
+            useVersion("8762963")
         }
     }
 }
