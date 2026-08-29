@@ -20,7 +20,7 @@ public final class RecipeNamespacesPoint {
     private RecipeNamespacesPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:recipe_namespaces} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:recipe_namespaces} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /** 注册配方命名空间 Java handler——{@code event.recipes.<namespace>.<method>(...)} 的方法实现层。 */
@@ -59,11 +59,11 @@ public final class RecipeNamespacesPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, Bucket, Map<String, RecipeNamespaceEntry>> POINT =
-            NekoPluginExtensionPoint.<Contributor, Bucket, Map<String, RecipeNamespaceEntry>>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, RecipeNamespaceEntry>> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, RecipeNamespaceEntry>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.failFast())
                     .initializer(context -> new Bucket())
-                    .collector(Contributor::registerRecipeNamespaces)
+                    .collector(NekoJSPlugin::registerRecipeNamespaces)
                     .finish(Bucket::snapshot)
                     .build();
 }

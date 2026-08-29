@@ -16,7 +16,7 @@ public final class NodeTypeDocsPoint {
     private NodeTypeDocsPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:node_type_docs} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:node_type_docs} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /**
@@ -28,11 +28,11 @@ public final class NodeTypeDocsPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot> POINT =
-            NekoPluginExtensionPoint.<Contributor, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, TypeDocsPoint.Bucket, TypeDocsPoint.TypeDocsSnapshot>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())
                     .initializer(context -> new TypeDocsPoint.Bucket())
-                    .collector(Contributor::registerNodeTypeDocs)
+                    .collector(NekoJSPlugin::registerNodeTypeDocs)
                     .finish(TypeDocsPoint.Bucket::snapshot)
                     .build();
 }

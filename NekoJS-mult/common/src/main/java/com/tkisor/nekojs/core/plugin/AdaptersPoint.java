@@ -18,7 +18,7 @@ public final class AdaptersPoint {
     private AdaptersPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:adapters} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:adapters} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /**
@@ -30,11 +30,11 @@ public final class AdaptersPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, JSTypeAdapterRegistry, List<Object>> POINT =
-            NekoPluginExtensionPoint.<Contributor, JSTypeAdapterRegistry, List<Object>>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, JSTypeAdapterRegistry, List<Object>> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, JSTypeAdapterRegistry, List<Object>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())
                     .initializer(context -> new JSTypeAdapterRegistry.Impl())
-                    .collector(Contributor::registerAdapters)
+                    .collector(NekoJSPlugin::registerAdapters)
                     .finish(registry -> List.copyOf(registry.view()))
                     .build();
 }

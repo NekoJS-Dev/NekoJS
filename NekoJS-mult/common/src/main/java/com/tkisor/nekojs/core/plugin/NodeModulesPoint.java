@@ -29,7 +29,7 @@ public final class NodeModulesPoint {
     private NodeModulesPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:node_modules} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:node_modules} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /**
@@ -74,11 +74,11 @@ public final class NodeModulesPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册，与第三方同一条 provider 路径）。 */
-    public static final NekoPluginExtensionPoint<Contributor, Bucket, Map<String, String>> POINT =
-            NekoPluginExtensionPoint.<Contributor, Bucket, Map<String, String>>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, String>> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, String>>builder(ID, NekoJSPlugin.class)
                     .merge(POLICY)
                     .initializer(context -> new Bucket())
-                    .collector(Contributor::registerNodeModules)
+                    .collector(NekoJSPlugin::registerNodeModules)
                     .finish(Bucket::snapshot)
                     .build();
 }
