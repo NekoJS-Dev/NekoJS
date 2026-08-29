@@ -8,7 +8,6 @@ plugins {
 }
 
 stonecutter active "26.1.2"
-
 // stonecutter 默认只认 java/kt/cfg/json5/yaml/... 这些扩展名（jar 内 DefaultsKt）：
 // 本项目还要处理 nekojs.mixins.json（json5 语义）与 neoforge.mods.toml（`#` 注释，同 cfg），
 // 用 handlers.inherit 把已有处理器套到新扩展名上。
@@ -262,4 +261,31 @@ tasks.register("sandboxCheck") {
             .filter { it.plugins.hasPlugin("java") }
             .map { "${it.path}:check" }
     )
+}
+
+// ---- switchVersion：切换 active 节点（T4）-----------------------------------------
+// 用法：gradlew switchVersion -Pnode=26.2.0。改控制器脚本的 active 行，执行后需在 IDE
+// 重新 Gradle sync 才生效（本任务在配置完成后执行，改写对本次构建无影响）。
+// 可用节点 = versions/ 下的目录（forge 分支有独立 active 机制，不在此列）。
+tasks.register("switchVersion") {
+    group = "nekojs"
+    description = "Switches the stonecutter active node: gradlew switchVersion -Pnode=<node>."
+    outputs.upToDateWhen { false }   // 每次执行都改写控制器行
+    doLast {
+        val versionsDir = rootDir.resolve("versions")
+        val available = versionsDir.listFiles { f -> f.isDirectory }?.map { it.name }?.sorted().orEmpty()
+        val target = (findProperty("node") as String?)
+            ?: throw GradleException("用法：gradlew switchVersion -Pnode=<节点名>（可用：$available）")
+        if (target !in available) {
+            throw GradleException("未知节点 $target——可用：$available")
+        }
+        val controller = rootDir.resolve("stonecutter.gradle.kts")
+        val activeLine = Regex("""(?m)^stonecutter active "([^"]+)"\s*$""")
+        val text = controller.readText()
+        if (!activeLine.containsMatchIn(text)) {
+            throw GradleException("stonecutter.gradle.kts 里找不到 `stonecutter active \"…\"` 声明")
+        }
+        controller.writeText(activeLine.replaceFirst(text, "stonecutter active \"$target\""))
+        println("switchVersion: active 节点已切换为 $target（IDE 重新 Gradle sync 后生效）")
+    }
 }
