@@ -151,7 +151,7 @@ class PluginGenerationHooksTest {
 
     /** 记录三个生成钩子调用（实例由插件管理器创建，录制走静态状态）。 */
     @RegisterNekoJSPlugin(priority = 1000)
-    public static class RecordingGenerationPlugin implements NekoJSPlugin, GenerationPoint.Contributor {
+    public static class RecordingGenerationPlugin implements NekoJSPlugin {
         static final List<DataGeneratorJS> dataCalls = new CopyOnWriteArrayList<>();
         static final List<DataGeneratorJS> assetCalls = new CopyOnWriteArrayList<>();
         static final List<LangGeneratorJS> langCalls = new CopyOnWriteArrayList<>();
@@ -181,7 +181,7 @@ class PluginGenerationHooksTest {
 
     /** 三个生成钩子全部抛异常，验证 fire 入口的异常隔离语义。 */
     @RegisterNekoJSPlugin(priority = 1001)
-    public static class ThrowingGenerationPlugin implements NekoJSPlugin, GenerationPoint.Contributor {
+    public static class ThrowingGenerationPlugin implements NekoJSPlugin {
         @Override
         public void generateData(DataGeneratorJS generator) {
             throw new IllegalStateException("boom-generateData");
@@ -200,7 +200,7 @@ class PluginGenerationHooksTest {
 
     /** 在 generateData 钩子里经共享 generator 写盘，验证「与脚本共享同一 generator」的端到端语义。 */
     @RegisterNekoJSPlugin(priority = 1000)
-    public static class WritingGenerationPlugin implements NekoJSPlugin, GenerationPoint.Contributor {
+    public static class WritingGenerationPlugin implements NekoJSPlugin {
         @Override
         public void generateData(DataGeneratorJS generator) {
             generator.text("plugin_smoke/mark.txt", "plugin-was-here");

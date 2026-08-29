@@ -90,9 +90,7 @@ public final class WorkspaceGenerator {
 
         for (NekoJSPlugin plugin : NekoJSBasePluginManager.getPlugins()) {
             try {
-                if (plugin instanceof com.tkisor.nekojs.core.plugin.GenerationPoint.Contributor contributor) {
-                    contributor.modifyWorkspaceConfig(model, scriptType.name);
-                }
+                plugin.modifyWorkspaceConfig(model, scriptType.name);
             } catch (Throwable t) {
                 NekoJS.LOGGER.error("Plugin {} failed modifyWorkspaceConfig for {}",
                         plugin.getClass(), scriptType.name, t);
