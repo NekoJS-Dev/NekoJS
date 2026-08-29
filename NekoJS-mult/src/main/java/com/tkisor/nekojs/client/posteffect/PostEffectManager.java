@@ -1,40 +1,32 @@
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 //? if neoforge {
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分案例）：本文件只承载 26.x 形态，内联版本
+// 守卫已清零。1.21.1 的完整实现住在 versions/1.21.1/src 的同名孪生文件（行为 = 本文件
+// 在 1.21.1 节点的历史求值产物，构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.client.posteffect;
 
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-//? if >=26 {
 import com.mojang.blaze3d.shaders.ShaderType;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
-//?}
 import com.tkisor.nekojs.NekoJS;
 import net.minecraft.client.Minecraft;
-//? if >=26 {
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.client.renderer.PostChainConfig;
 import net.minecraft.client.renderer.Projection;
 import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.texture.TextureManager;
-//?}
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import java.lang.reflect.Field;
-//? if >=26 {
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-//?}
 import java.util.Map;
-//? if >=26 {
 import java.util.Set;
-//?}
 import java.util.concurrent.ConcurrentHashMap;
-//? if <26 {
-/*import org.slf4j.LoggerFactory;
-*///?}
 
 /**
  * Runtime client post-effect registry (feature 8b, client-side only; ported from Katton's
@@ -58,39 +50,23 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class PostEffectManager {
 
-//? if >=26 {
     private static final Logger LOGGER = LogUtils.getLogger();
-//?} else {
-/*    private static final Logger LOGGER = LoggerFactory.getLogger("NekoJS PostEffects");
-*///?}
 
     /** 26.x post-chain resources live at {@code assets/<ns>/post_effect/<path>.json}. */
-//? if >=26 {
     private static final FileToIdConverter POST_EFFECT_FILES = FileToIdConverter.json("post_effect");
-//?} else {
-/*    private static final FileToIdConverter POST_EFFECT_FILES = FileToIdConverter.json("shaders/post");
-*///?}
 
     private static final Map<Identifier, Definition> DEFINITIONS = new ConcurrentHashMap<>();
-//? if <26 {
-/*    private static volatile Identifier lastSetId;
-*///?}
 
     private PostEffectManager() {
     }
 
     /** A runtime-registered effect: validated chain config plus optional custom GLSL sources. */
-//? if >=26 {
     record Definition(PostChainConfig config, String chainJson,
                       Map<Identifier, String> fragmentShaders, Map<Identifier, String> vertexShaders) {
-//?} else {
-/*    record Definition(String chainJson) {
-*///?}
     }
 
     // ---- registration (stored for the future ShaderManagerMixin; not activatable in v1) ----
 
-//? if >=26 {
     public static boolean register(Identifier id, String chainJson,
                                    Map<Identifier, String> fragmentShaders,
                                    Map<Identifier, String> vertexShaders) {
@@ -99,18 +75,6 @@ public final class PostEffectManager {
         DEFINITIONS.put(id, new Definition(config, chainJson,
                 Map.copyOf(fragmentShaders), Map.copyOf(vertexShaders)));
         LOGGER.info("Registered runtime client post effect {} (activation requires the pending ShaderManager mixin)", id);
-//?} else {
-/*    public static boolean register(Identifier id, String chainJson) {
-        if (chainJson == null || chainJson.isBlank()) return false;
-        try {
-            JsonParser.parseString(chainJson);
-        } catch (JsonParseException e) {
-            NekoJS.LOGGER.warn("Failed to parse runtime client post effect {}", id, e);
-            return false;
-        }
-        DEFINITIONS.put(id, new Definition(chainJson));
-        LOGGER.info("Registered runtime client post effect {} (activation requires a pending 1.21.1 post-chain mixin)", id);
-*///?}
         return true;
     }
 
@@ -137,46 +101,22 @@ public final class PostEffectManager {
 
     // ---- activation (vanilla-resource-backed effects; client-thread execution) ----
 
-//? if <26 {
-/*    static Identifier chainLocation(Identifier id) {
-        return id.withPath("shaders/post/" + id.getPath() + ".json");
-    }
-*///?}
     /**
      * Activates the post effect {@code id}. Returns {@code false} when the id is only known
      * as a runtime definition (needs the pending mixin) or the id cannot be found.
      */
     public static boolean set(Identifier id) {
         if (isRuntimeOnly(id)) {
-//? if >=26 {
             LOGGER.warn("Post effect {} was registered at runtime and cannot be activated until the ShaderManager mixin lands; use a resource-pack effect id instead", id);
-//?} else {
-/*            LOGGER.warn("Post effect {} was registered at runtime and cannot be activated until the 1.21.1 post-chain mixin lands; use a resource-pack effect id instead", id);
-*///?}
             return false;
         }
-//? if >=26 {
         Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.setPostEffect(id));
-//?} else {
-/*        if (!isResourceAvailable(id)) {
-            LOGGER.warn("Post effect {} has no shaders/post chain resource; refusing to activate", id);
-            return false;
-        }
-        Identifier location = chainLocation(id);
-        lastSetId = id;
-        Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.loadEffect(location));
-*///?}
         return true;
     }
 
     /** Deactivates any active post effect. */
     public static boolean clear() {
-//? if >=26 {
         Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.clearPostEffect());
-//?} else {
-/*        lastSetId = null;
-        Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.shutdownEffect());
-*///?}
         return true;
     }
 
@@ -194,12 +134,7 @@ public final class PostEffectManager {
     /** Currently active effect id ({@code GameRenderer#currentPostEffect()}), or null. */
     @Nullable
     public static Identifier current() {
-//? if >=26 {
         return Minecraft.getInstance().gameRenderer.currentPostEffect();
-//?} else {
-/*        if (lastSetId == null) return null;
-        return Minecraft.getInstance().gameRenderer.currentEffect() != null ? lastSetId : null;
-*///?}
     }
 
     /**
@@ -207,29 +142,13 @@ public final class PostEffectManager {
      * {@code GameRenderer} field (no public getter), read via reflection.
      */
     public static boolean isActive() {
-//? if >=26 {
         GameRendererFields fields = GameRendererFields.read();
         return fields != null && fields.effectActive();
-//?} else {
-/*        Object gameRenderer = Minecraft.getInstance().gameRenderer;
-        try {
-            Field field = gameRenderer.getClass().getDeclaredField("effectActive");
-            field.setAccessible(true);
-            return Boolean.TRUE.equals(field.get(gameRenderer));
-        } catch (ReflectiveOperationException e) {
-            LOGGER.debug("Could not read GameRenderer.effectActive", e);
-            return Minecraft.getInstance().gameRenderer.currentEffect() != null;
-        }
-*///?}
     }
 
     /** True when the effect exists as a {@code post_effect} resource in the active packs. */
     public static boolean isResourceAvailable(Identifier id) {
-//? if >=26 {
         return Minecraft.getInstance().getResourceManager().getResource(POST_EFFECT_FILES.idToFile(id)).isPresent();
-//?} else {
-/*        return Minecraft.getInstance().getResourceManager().getResource(chainLocation(id)).isPresent();
-*///?}
     }
 
     static boolean isRuntimeOnly(Identifier id) {
@@ -243,7 +162,6 @@ public final class PostEffectManager {
      * The pending mixin injects at {@code ShaderManager#getShader} HEAD and returns this when
      * non-null — until then the method is public but unused (vanilla-only shaders work).
      */
-//? if >=26 {
     @Nullable
     public static String getRuntimeShaderSource(Identifier id, ShaderType type) {
         for (Definition definition : DEFINITIONS.values()) {
@@ -353,6 +271,5 @@ public final class PostEffectManager {
             }
         }
     }
-//?}
 }
 //?}

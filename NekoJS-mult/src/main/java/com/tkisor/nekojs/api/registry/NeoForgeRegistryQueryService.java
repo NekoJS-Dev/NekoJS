@@ -1,4 +1,13 @@
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 //? if neoforge {
+//~ mc_legacy_api
+// 版本差异收敛（DEVEX-ROADMAP 档 1）：本文件启用文件级 mc_legacy_api——两侧门槛已核验
+// （1.21.1 求值形态无 .identifier()，26.x 形态无 .location()/.listRegistries()），
+// 覆盖 .identifier()↔.location() 与 .listRegistryKeys()↔.listRegistries() 两组纯改名。
+// tryParse 提升为两端中立方法：26.x 的 Identifier.parse 与 1.21.1 一样对非法输入抛异常
+// （26.x 另有不抛的 tryParse，本类 26.x 原始写法用的就是它——catch 版语义等价）。
+// 残留 2 条守卫是真 API 改名，无法用改名表安全表达：Registry get/getTag、
+// RegistryAccess lookup/registry。
 package com.tkisor.nekojs.api.registry;
 
 import com.mojang.serialization.JsonOps;
@@ -18,9 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-//? if <26 {
-/*import com.google.gson.JsonElement;
-*///?}
 
 /**
  * NeoForge 26.x 的只读注册表查询实现。
@@ -65,43 +71,25 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 
     @Override
     public boolean has(String registryId, String id) {
-//? if >=26 {
-        Identifier identifier = Identifier.tryParse(id);
+        Identifier identifier = tryParse(id);
         if (identifier == null) {
-//?} else {
-/*        Identifier location = tryParse(id);
-        if (location == null) {
-*///?}
             return false;
         }
         return resolveKey(registryId)
                 .flatMap(this::registry)
-//? if >=26 {
                 .map(registryValue -> registryValue.containsKey(identifier))
-//?} else {
-/*                .map(registryValue -> registryValue.containsKey(location))
-*///?}
                 .orElse(false);
     }
 
     @Override
     public List<String> tag(String registryId, String tagId) {
-//? if >=26 {
-        Identifier identifier = Identifier.tryParse(tagId);
+        Identifier identifier = tryParse(tagId);
         if (identifier == null) {
-//?} else {
-/*        Identifier location = tryParse(tagId);
-        if (location == null) {
-*///?}
             return List.of();
         }
         return resolveKey(registryId)
                 .flatMap(this::registry)
-//? if >=26 {
                 .flatMap(registryValue -> tagInRegistry(registryValue, identifier))
-//?} else {
-/*                .flatMap(registryValue -> tagInRegistry(registryValue, location))
-*///?}
                 .orElseGet(List::of);
     }
 
@@ -116,11 +104,7 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 *///?}
                 .map(holders -> holders.stream()
                         .map(holder -> holder.unwrapKey()
-//? if >=26 {
                                 .map(key -> key.identifier().toString())
-//?} else {
-/*                                .map(key -> key.location().toString())
-*///?}
                                 .orElse(null))
                         .filter(java.util.Objects::nonNull)
                         .toList());
@@ -128,21 +112,12 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
 
     @Override
     public List<String> dataMapIds(String registryId) {
-//? if >=26 {
-        Identifier registryIdentifier = Identifier.tryParse(registryId);
+        Identifier registryIdentifier = tryParse(registryId);
         if (registryIdentifier == null) {
-//?} else {
-/*        Identifier registryLocation = tryParse(registryId);
-        if (registryLocation == null) {
-*///?}
             return List.of();
         }
         return RegistryManager.getDataMaps().entrySet().stream()
-//? if >=26 {
                 .filter(entry -> entry.getKey().identifier().equals(registryIdentifier))
-//?} else {
-/*                .filter(entry -> entry.getKey().location().equals(registryLocation))
-*///?}
                 .flatMap(entry -> entry.getValue().keySet().stream())
                 .map(Identifier::toString)
                 .sorted()
@@ -152,28 +127,17 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public String dataMapValue(String registryId, String dataMapTypeId, String id) {
-//? if >=26 {
-        Identifier registryIdentifier = Identifier.tryParse(registryId);
-        Identifier typeIdentifier = Identifier.tryParse(dataMapTypeId);
-        Identifier entryIdentifier = Identifier.tryParse(id);
+        Identifier registryIdentifier = tryParse(registryId);
+        Identifier typeIdentifier = tryParse(dataMapTypeId);
+        Identifier entryIdentifier = tryParse(id);
         if (registryIdentifier == null || typeIdentifier == null || entryIdentifier == null) {
-//?} else {
-/*        Identifier registryLocation = tryParse(registryId);
-        Identifier typeLocation = tryParse(dataMapTypeId);
-        Identifier entryLocation = tryParse(id);
-        if (registryLocation == null || typeLocation == null || entryLocation == null) {
-*///?}
             return null;
         }
         Optional<ResourceKey<? extends Registry<?>>> key = resolveKey(registryId);
         if (key.isEmpty()) {
             return null;
         }
-//? if >=26 {
         DataMapType<?, ?> type = RegistryManager.getDataMap(rawKey(key.get()), typeIdentifier);
-//?} else {
-/*        DataMapType<?, ?> type = RegistryManager.getDataMap(rawKey(key.get()), typeLocation);
-*///?}
         if (type == null) {
             return null;
         }
@@ -181,11 +145,7 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
         if (registryValue == null) {
             return null;
         }
-//? if >=26 {
         Object value = dataMapValueFor(registryValue, type, entryIdentifier);
-//?} else {
-/*        Object value = dataMapValueFor(registryValue, type, entryLocation);
-*///?}
         return value == null ? null : encodeValue(type, value);
     }
 
@@ -230,23 +190,19 @@ public final class NeoForgeRegistryQueryService implements RegistryQueryService 
         Map<String, ResourceKey<? extends Registry<?>>> map = registryKeysById;
         if (map == null) {
             Map<String, ResourceKey<? extends Registry<?>>> built = new ConcurrentHashMap<>();
-//? if >=26 {
             REGISTRY_ACCESS.listRegistryKeys().forEach(key -> built.put(key.identifier().toString(), key));
-//?} else {
-/*            REGISTRY_ACCESS.listRegistries().forEach(key -> built.put(key.location().toString(), key));
-*///?}
             registryKeysById = map = built;
         }
         return map;
     }
-//? if <26 {
-/*    private static Identifier tryParse(String value) {
+
+    /** 两端中立的容错解析：26.x 与 1.21.1 的 {@code Identifier.parse} 都对非法输入抛异常。 */
+    private static Identifier tryParse(String value) {
         try {
             return Identifier.parse(value);
         } catch (RuntimeException error) {
             return null;
         }
     }
-*///?}
 }
 //?}

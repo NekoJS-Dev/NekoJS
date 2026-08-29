@@ -38,4 +38,11 @@ public final class Nf262ClientCompat implements McClientCompat.Impl {
     public HoverEvent hoverEventShowText(Component text) {
         return new HoverEvent.ShowText(text);
     }
+
+    @Override
+    public void dashboardLoadServerScript(Screen screen, String path, String content) {
+        if (screen instanceof com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen dashboard) {
+            dashboard.loadServerScript(content);
+        }
+    }
 }

@@ -1,12 +1,12 @@
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 //? if neoforge {
+// 版本差异已下沉到 RecipeEventJS 的版本中立静态助手（getRecipeOutputId 双参桥接 /
+// recipeHolderId / recipeGroup / ingredientMatches——两个时代各有一份实现，签名中立）
+// ——本文件零内联版本守卫（DEVEX-ROADMAP 档 1）。
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.core.HolderLookup;
-//? if >=26 {
-import net.minecraft.core.HolderSet;
-//?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -17,9 +17,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import org.jetbrains.annotations.Nullable;
 import java.util.List;
-//? if <26 {
-/*import net.minecraft.world.item.ItemStack;
-*///?}
 
 /**
  * Filter for querying/removing recipes. Supports nested logical combinators.
@@ -41,23 +38,6 @@ import java.util.List;
 public interface RecipeFilter {
 
     boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries);
-
-//? if >=26 {
-    static boolean isItemInHolderSet(HolderSet<Item> set, Identifier targetId, HolderLookup.RegistryLookup<Item> registry) {
-        return set.unwrap().map(
-                key -> {
-                    var targetHolder = registry.get(ResourceKey.create(Registries.ITEM, targetId));
-                    return targetHolder.isPresent() && targetHolder.get().is(key);
-                },
-                list -> {
-                    for (var h : list) {
-                        if (BuiltInRegistries.ITEM.getKey(h.value()).equals(targetId)) return true;
-                    }
-                    return false;
-                }
-        );
-    }
-//?}
 
     record And(List<RecipeFilter> filters) implements RecipeFilter {
         @Override
@@ -93,11 +73,7 @@ public interface RecipeFilter {
 
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            String actualIdStr = RecipeEventJS.getRecipeOutputId(holder.value());
-//?} else {
-/*            String actualIdStr = RecipeEventJS.getRecipeOutputId(holder.value(), registries);
-*///?}
+            String actualIdStr = RecipeEventJS.getRecipeOutputId(holder.value(), registries);
             if (actualIdStr == null) return false;
 
             Identifier actualId = Identifier.parse(actualIdStr);
@@ -122,58 +98,9 @@ public interface RecipeFilter {
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
             List<Ingredient> ingredients = RecipeEventJS.getIngredients(holder.value());
-//? if >=26 {
-            var itemRegistry = registries.lookupOrThrow(Registries.ITEM);
-//?}
 
             for (Ingredient ingredient : ingredients) {
-//? if <26 {
-/*                if (ingredient.isEmpty()) continue;
-*///?}
-                if (tagKey != null) {
-//? if >=26 {
-                    boolean matches = ingredient.values.unwrap().map(
-                            key -> key.equals(tagKey),
-                            list -> {
-                                var targetTagSet = itemRegistry.get(tagKey);
-                                if (targetTagSet.isPresent()) {
-                                    for (var h : list) {
-                                        Identifier hId = BuiltInRegistries.ITEM.getKey(h.value());
-                                        for (var tagH : targetTagSet.get()) {
-                                            if (BuiltInRegistries.ITEM.getKey(tagH.value()).equals(hId)) return true;
-                                        }
-                                    }
-                                }
-                                return false;
-                            }
-                    );
-                    if (matches) return true;
-//?} else {
-/*                    for (ItemStack stack : ingredient.getItems()) {
-                        if (stack.is(tagKey)) return true;
-                    }
-*///?}
-                }
-                else if (itemID != null) {
-//? if >=26 {
-                    if (!ingredient.isCustom()) {
-                        if (isItemInHolderSet(ingredient.values, itemID, itemRegistry)) return true;
-                    } else {
-                        var itemHolder = itemRegistry.get(ResourceKey.create(Registries.ITEM, itemID));
-                        if (itemHolder.isPresent()) {
-                            try {
-                                if (ingredient.acceptsItem(itemHolder.get())) return true;
-                            } catch (Exception ignored) {
-                                com.tkisor.nekojs.NekoJS.LOGGER.debug("RecipeFilter.ByInput: ingredient.acceptsItem check failed for " + itemID, ignored);
-                            }
-                        }
-//?} else {
-/*                    Item targetItem = BuiltInRegistries.ITEM.get(itemID);
-                    if (ingredient.test(new ItemStack(targetItem))) {
-                        return true;
-*///?}
-                    }
-                }
+                if (RecipeEventJS.ingredientMatches(ingredient, tagKey, itemID, registries)) return true;
             }
             return false;
         }
@@ -182,22 +109,14 @@ public interface RecipeFilter {
     record ByMod(String modId) implements RecipeFilter {
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            return holder.id().identifier().getNamespace().equals(modId);
-//?} else {
-/*            return holder.id().getNamespace().equals(modId);
-*///?}
+            return RecipeEventJS.recipeHolderId(holder).getNamespace().equals(modId);
         }
     }
 
     record ByGroup(String group) implements RecipeFilter {
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            return holder.value().group().equals(group);
-//?} else {
-/*            return holder.value().getGroup().equals(group);
-*///?}
+            return RecipeEventJS.recipeGroup(holder.value()).equals(group);
         }
     }
 
@@ -208,44 +127,28 @@ public interface RecipeFilter {
 
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            return target != null && holder.id().identifier().equals(target);
-//?} else {
-/*            return target != null && holder.id().equals(target);
-*///?}
+            return target != null && RecipeEventJS.recipeHolderId(holder).equals(target);
         }
     }
 
     record ByIdStartsWith(String prefix) implements RecipeFilter {
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            return holder.id().identifier().toString().startsWith(prefix);
-//?} else {
-/*            return holder.id().toString().startsWith(prefix);
-*///?}
+            return RecipeEventJS.recipeHolderId(holder).toString().startsWith(prefix);
         }
     }
 
     record ByIdEndsWith(String suffix) implements RecipeFilter {
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            return holder.id().identifier().toString().endsWith(suffix);
-//?} else {
-/*            return holder.id().toString().endsWith(suffix);
-*///?}
+            return RecipeEventJS.recipeHolderId(holder).toString().endsWith(suffix);
         }
     }
 
     record ByIdContains(String text) implements RecipeFilter {
         @Override
         public boolean test(RecipeHolder<?> holder, HolderLookup.Provider registries) {
-//? if >=26 {
-            return holder.id().identifier().toString().contains(text);
-//?} else {
-/*            return holder.id().toString().contains(text);
-*///?}
+            return RecipeEventJS.recipeHolderId(holder).toString().contains(text);
         }
     }
 

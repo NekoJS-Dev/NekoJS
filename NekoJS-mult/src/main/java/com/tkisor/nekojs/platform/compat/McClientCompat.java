@@ -54,5 +54,8 @@ public final class McClientCompat {
 
         /** show-text HoverEvent 的版本无关构造（26.x HoverEvent.ShowText vs 1.21.1 Action 构造）。 */
         HoverEvent hoverEventShowText(Component text);
+
+        /** 错误面板载入服务端脚本（1.21.1 面板签名带 path、26.x 只收 content——形状差下沉到实现）。 */
+        void dashboardLoadServerScript(Screen screen, String path, String content);
     }
 }

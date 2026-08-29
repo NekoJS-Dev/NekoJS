@@ -18,10 +18,12 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionRegistry;
 import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -30,6 +32,7 @@ import net.minecraft.world.item.crafting.*;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import org.jetbrains.annotations.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
@@ -617,6 +620,78 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         if (recipe instanceof SingleItemRecipe single) return List.of(single.input());
         if (recipe instanceof AbstractCookingRecipe cooking) return List.of(cooking.input());
         return List.of();
+    }
+
+    // ---- 版本中立静态助手（DEVEX-ROADMAP 档 1）：供 RecipeFilter 等共享代码零守卫调用，
+    // ---- 1.21.1 孪生文件有对应实现（写 1.21.1 类名），签名保持时代中立。
+
+    /** 1.21.1 双参形状的桥接：26.x 的输出 id 从配方结果模板直接读出，registries 不参与求值。 */
+    public static String getRecipeOutputId(Recipe<?> recipe, HolderLookup.Provider registries) {
+        return getRecipeOutputId(recipe);
+    }
+
+    /** 配方 id 的中立访问器：26.x 的 RecipeId 需要 .identifier() 解包，1.21.1 的 holder.id() 即 id 本体。 */
+    public static Identifier recipeHolderId(RecipeHolder<?> holder) {
+        return holder.id().identifier();
+    }
+
+    /** 配方分组的中立访问器：26.x 为 group()、1.21.1 为 getGroup()。 */
+    public static String recipeGroup(Recipe<?> recipe) {
+        return recipe.group();
+    }
+
+    /** 单个配料是否命中 tag/id 过滤：26.x 配料内部是 HolderSet（isCustom / values / acceptsItem）。 */
+    public static boolean ingredientMatches(Ingredient ingredient, @Nullable TagKey<Item> tagKey,
+                                            @Nullable Identifier itemID, HolderLookup.Provider registries) {
+        var itemRegistry = registries.lookupOrThrow(Registries.ITEM);
+        if (tagKey != null) {
+            boolean matches = ingredient.values.unwrap().map(
+                    key -> key.equals(tagKey),
+                    list -> {
+                        var targetTagSet = itemRegistry.get(tagKey);
+                        if (targetTagSet.isPresent()) {
+                            for (var h : list) {
+                                Identifier hId = BuiltInRegistries.ITEM.getKey(h.value());
+                                for (var tagH : targetTagSet.get()) {
+                                    if (BuiltInRegistries.ITEM.getKey(tagH.value()).equals(hId)) return true;
+                                }
+                            }
+                        }
+                        return false;
+                    }
+            );
+            if (matches) return true;
+        }
+        else if (itemID != null) {
+            if (!ingredient.isCustom()) {
+                if (isItemInHolderSet(ingredient.values, itemID, itemRegistry)) return true;
+            } else {
+                var itemHolder = itemRegistry.get(ResourceKey.create(Registries.ITEM, itemID));
+                if (itemHolder.isPresent()) {
+                    try {
+                        if (ingredient.acceptsItem(itemHolder.get())) return true;
+                    } catch (Exception ignored) {
+                        NekoJS.LOGGER.debug("RecipeFilter.ByInput: ingredient.acceptsItem check failed for " + itemID, ignored);
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isItemInHolderSet(HolderSet<Item> set, Identifier targetId, HolderLookup.RegistryLookup<Item> registry) {
+        return set.unwrap().map(
+                key -> {
+                    var targetHolder = registry.get(ResourceKey.create(Registries.ITEM, targetId));
+                    return targetHolder.isPresent() && targetHolder.get().is(key);
+                },
+                list -> {
+                    for (var h : list) {
+                        if (BuiltInRegistries.ITEM.getKey(h.value()).equals(targetId)) return true;
+                    }
+                    return false;
+                }
+        );
     }
 
     public RecipeRegistryProxy getRecipes() {

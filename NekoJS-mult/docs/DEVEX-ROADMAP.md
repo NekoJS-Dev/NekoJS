@@ -7,11 +7,11 @@
 
 ## 进度
 
-- [ ] T3 加载器轴正名：`deps.platform` / `deps.loader_version` 拆键 + guardLint 恒假常量规则
-- [ ] T1 档 1 重文件接缝化（首批 top 5 组合：facade 案例为主 + 拆分案例 1–2 个），验证后批量
+- [x] T3 加载器轴正名：`deps.platform` / `deps.loader_version` 拆键 + guardLint 恒假常量规则 ✅ 2026-08-30
+- [x] T1 档 1 重文件接缝化（首批 top 5）：`PostEffectManager` 整文件拆分（案例：几乎无共享逻辑）；`NekoJSNetwork`→`McPlatformCompat` facade（新增，3 版本实现 + services）；`NekoJSNetwork` 屏幕守卫并入既有 `McClientCompat`（新增 `dashboardLoadServerScript`）；`NekoJSCorePlugin` 守卫审计（排版假差异按 26.x 基准解析，15→8）；`RecipeFilter`→`RecipeEventJS` 中立静态助手（`recipeHolderId`/`recipeGroup`/`ingredientMatches`/双参 `getRecipeOutputId`）；`NeoForgeRegistryQueryService` 文件级启用 `//~ mc_legacy_api` + 中立 `tryParse`（16→2）。守卫块 624→557 ✅ 2026-08-30
 - [ ] T2 节点构建收拢：buildSrc convention plugin（NeoForge 先行 → fabric / forge；含 loom-back-compat spike）
 - [ ] T1 档 2 长尾消化：replacements 扩容 + 小 facade，按包分批（每 PR guardLint 计数可见下降）
-- [ ] T1 档 3 ADR-0008 修订成文（与档 1 首批同 PR）
+- [x] T1 档 3 ADR-0008 修订成文 ✅ 2026-08-30（随档 1 首批落地）
 - [ ] T4 工作流与文档收尾：switchVersion 任务 / 构建文档重写（CI 节点列表维持手写）
 - [ ] 装机（零成本）：IDE 安装 Stonecutter Dev 插件
 
