@@ -25,8 +25,9 @@
   fabric 用 `NekoEntityPDataMixin`：`@Unique` 字段 + `addAdditionalSaveData/readAdditionalSaveData`
   TAIL 注入。26.x 的存档走 `ValueOutput/ValueInput`（非 NBT 直接树），NBT 用
   `output.store(key, CompoundTag.CODEC, tag)` / `input.read(key, CompoundTag.CODEC)` 存取。
-  **存档格式与 NeoForge 兼容**：外层 `Neo.JSPersistentData` 容器键 + 内层 `NekoJSPersistentData`
-  子键——同一存档跨加载器迁移 pdata 不丢。
+  **存档格式与 NeoForge 兼容**：外层 `NeoForgeData` 容器键（从 minecraft-patched sources 的
+  Entity#addAdditionalSaveData 核实：storeNullable("NeoForgeData", ...)) + 内层
+  `NekoJSPersistentData` 子键——同一存档跨加载器迁移 pdata 不丢。
 - **duck 接口 `NekoEntityPData`**（共享树）：fabric mixin 实现到 Entity 上，桥实现经它
   `((NekoEntityPData) entity).neko$getPDataRoot()` 取容器。
 - **`EntityPDataStore`（中立桥，票 09 的关键抽象）**：`neko$pdata()` 的读写不再直接摸
@@ -52,3 +53,20 @@
 - 共享测试树对 26 系专属 API 的测试要加 `//? if >=26`（1.21.1 的 CompoundTag API 不同会编译红）；
   fabric 节点的 testImplementation（junit）此前缺失（共享树从未给 fabric 配过测试），
   在 fabric.gradle.kts 补上。
+
+
+## Review 跟进
+
+- **容器键写错**（review 从 patched sources 核实）：NeoForge 把 getPersistentData() 存在
+  `"NeoForgeData"` 键下，不是我想当然的 "Neo.JSPersistentData"——原样会双向丢数据
+  （NeoForge 存的 fabric 读不到、反之亦然）。已改并用 sources 一手核实。
+- **实体离开钩子覆盖不足**：第一版只挂了换维度（AFTER_ENTITY_CHANGE_LEVEL），而 NeoForge 侧是
+  EntityLeaveLevelEvent（chunk 卸载/死亡/消失/换维度都算）。消失的实体不发清包 → revision/mirror
+  残留 → entity id 复用读旧数据（onEntityRemoved 存在的意义）。改挂 ServerEntityEvents.ENTITY_UNLOAD。
+- **客户端切维度清 mirror**：NeoForge 挂 client level unload；fabric 只挂了 DISCONNECT。
+  补上客户端世界实例变化监听（复用票 05 的"只在离开已有世界时清"防早清教训）。
+- 删除无调用方的 EntityPDataStore.readable()；mixin 里的子键名改引
+  EntityExtension.NEKO_PDATA_KEY 共享常量（防两边改名漂移）。
+- 已知偏差（记录不修）：fabric 的 id→实体查表（findEntity）在 NeoForge 侧其实不需要
+  （调用现场就有实体），是 id 键形为可测性付出的间接层成本——Level.getEntity 是 map 查找，
+  每 tick 至多 256 次，可接受。
