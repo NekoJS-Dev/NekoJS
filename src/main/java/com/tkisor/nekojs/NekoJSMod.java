@@ -37,6 +37,7 @@ import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
 import com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJS;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -83,7 +84,7 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(NekoJSMod::onRegisterCapabilities);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
         // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
-        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent.class,
+        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class,
                 event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
         modEventBus.addListener(NekoJSMod::onLoadComplete);
     }
