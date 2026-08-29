@@ -22,6 +22,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
+import com.tkisor.nekojs.fabric.event.FabricItemEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.FabricIdCompat;
