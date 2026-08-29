@@ -7,6 +7,7 @@ import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.core.plugin.AdaptersPoint;
 import com.tkisor.nekojs.core.plugin.EventsPoint;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
+import com.tkisor.nekojs.fabric.event.FabricItemEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.js.type_adapter.BlockAdapter;
 import com.tkisor.nekojs.js.type_adapter.BlockEntityTypeAdapter;
@@ -59,8 +60,10 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // 服务端生命周期 / tick / 玩家进出服 + chat：中立 payload 子集
         registry.register(FabricServerEventBindings.SERVER_EVENTS);
         registry.register(FabricServerEventBindings.PLAYER_EVENTS);
-        // 实体 joinLevel / death（按实体类型 dispatch）
+        // 实体 joinLevel / death / damagePre / damagePost（按实体类型 dispatch）
         registry.register(FabricEntityEventBindings.ENTITY_EVENTS);
+        // 物品 rightClicked（按物品 id dispatch）
+        registry.register(FabricItemEventBindings.ITEM_EVENTS);
     }
 
     @Override

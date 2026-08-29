@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "server": [
     "ServerCommonPacketListenerAccessor",
+    "ServerGamePacketListenerMixin",
     "ServerLevelMixin"
   ],
   "injectors": {
