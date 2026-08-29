@@ -62,6 +62,28 @@ class PluginHookPairingTest {
     /** 基接口上唯一的非收集型 {@code register} 钩子（bootstrap 直调，见 NekoPluginBootstrap）。 */
     private static final String DIRECT_CALLED_REGISTER_HOOK = "registerApiSurface";
 
+    /**
+     * 配对钩子的参数类型冻结表（simple name）：作者 API 面的签名漂移在此被 CI 拦截。
+     * （{@code ApiManifestGoldenTest} 冻结的是脚本面绑定/member，不含 Java 插件 SPI；
+     * 插件作者面的签名守卫就是本表。）
+     */
+    private static final Map<String, List<String>> FROZEN_SIGNATURES = Map.ofEntries(
+            Map.entry("registerEvents", List.of("EventGroupRegistry")),
+            Map.entry("registerClientEvents", List.of("EventGroupRegistry")),
+            Map.entry("registerBinding", List.of("BindingRegistry")),
+            Map.entry("registerAdapters", List.of("JSTypeAdapterRegistry")),
+            Map.entry("registerScriptCompilers", List.of("ScriptCompilerRegistry")),
+            Map.entry("registerScriptProperty", List.of("ScriptPropertyRegistry")),
+            Map.entry("registerTypeDocs", List.of("TypeDocsRegister")),
+            Map.entry("registerNodeTypeDocs", List.of("TypeDocsRegister")),
+            Map.entry("registerNodeModules", List.of("NodeModuleRegister")),
+            Map.entry("registerProbeBackends", List.of("ProbeBackendRegistry")),
+            Map.entry("registerRecipeNamespaces", List.of("RecipeNamespaceRegister")),
+            Map.entry("registerRecipeSchemas", List.of("RecipeSchemaRegister")),
+            Map.entry("registerLifecycleHooks", List.of("PluginLifecycleRegister")),
+            Map.entry("registerRecipeLifecycleHooks", List.of("RecipeLifecycleRegister")),
+            Map.entry(DIRECT_CALLED_REGISTER_HOOK, List.of("ApiContributionRegistry")));
+
     @Test
     void builtinListMatchesPairingTable() {
         Set<String> ids = captureBuiltinRegistrations().stream()
@@ -91,6 +113,21 @@ class PluginHookPairingTest {
             assertFalse(Modifier.isAbstract(hook.getModifiers()),
                     entry.getValue() + " 必须是 default 空实现（未覆写的插件被收集时必须为 no-op）");
         }
+    }
+
+    @Test
+    void facadeHookSignaturesAreFrozen() {
+        FROZEN_SIGNATURES.forEach((hookName, expectedParams) -> {
+            Method hook = Arrays.stream(NekoJSPlugin.class.getDeclaredMethods())
+                    .filter(m -> m.getName().equals(hookName))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("钩子 " + hookName + " 未声明在 NekoJSPlugin 上"));
+            List<String> actualParams = Arrays.stream(hook.getParameterTypes())
+                    .map(Class::getSimpleName)
+                    .toList();
+            assertEquals(expectedParams, actualParams,
+                    "作者面签名漂移（" + hookName + "）：变更必须走破坏性变更评审并同步本冻结表");
+        });
     }
 
     @Test
