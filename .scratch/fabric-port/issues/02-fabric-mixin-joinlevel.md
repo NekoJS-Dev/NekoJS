@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-29, joinLevel=minecraft:overworld@y100 + death 双触发)
 
-- [ ] fabric 节点 mixin 基建生效（配置被 loader 加载、钩子类被应用）
-- [ ] 脚本 `EntityEvents.joinLevel('minecraft:zombie', ...)` 在 fabric 真机触发
-- [ ] 冒烟：forceload + `PersistenceRequired:1b` 僵尸 summon → joinLevel 回调输出（方法论见 MIGRATION-ROADMAP P4-d 踩坑记录）
-- [ ] 四节点编译 + common:test + guardLint 绿
+- [x] fabric 节点 mixin 基建生效（配置被 loader 加载、钩子类被应用）
+^- [x] 脚本 `EntityEvents.joinLevel('minecraft:zombie', ...)` 在 fabric 真机触发
+- [x] 冒烟：forceload + `PersistenceRequired:1b` 僵尸 summon → joinLevel 回调输出（方法论见 MIGRATION-ROADMAP P4-d 踩坑记录）
+- [x] 四节点编译 + common:test + guardLint 绿
