@@ -49,5 +49,7 @@ public final class FabricEntityEventBindings {
     /** ServerLevelMixin 钩子入口：ServerLevel 接受实体加入时调用（服务端专属，天然满足 SERVER 总线约定）。 */
     public static void postJoinLevel(Entity entity, ServerLevel level) {
         JOIN_LEVEL.post(new EntityJoinLevelEventJS(entity, level), entity.getType());
+        // 与 NeoForge 侧 NekoJSMod 的 EntityJoinLevelEvent 监听同职责：应用脚本注册的 goal
+        com.tkisor.nekojs.wrapper.entity.GoalRegistry.onEntityJoinLevel(entity, level);
     }
 }

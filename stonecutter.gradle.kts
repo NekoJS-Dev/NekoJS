@@ -87,8 +87,10 @@ stonecutter parameters {
 //   5. 连续守卫段 > 8 行软告警——"方法级 ≤ 5"的代理指标（免脆弱的大括号追踪）；
 //   6. 模块边界（ADR-0007）：common-api 零 MC/Loader/Graal import、common 零
 //      MC/Loader import——当前基线为零，新增即硬失败；
-//   7. wrapper 层零 loader import（ADR-0004 目标）——P0 报告模式（现存文件是
-//      P2 通用注册表的改写对象），P3 把 wrapperLoaderImportHardFail 翻转为 true。
+//   7. wrapper 层零 loader import（ADR-0004 目标，hardFail 已于票 07 翻转）。
+//      例外：整文件 loader 守卫（`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件
+//      是显式平台面——其 loader import 在对侧编译单元不存在，不计违规、仅 informational
+//      列出（配方簇 / 能力系统 / 网络脚本通道等 fabric 移植件落地时逐个去掉守卫）。
 // （规则一致性不用 lint：`!mc_ids` 的 token 对是字面 replace 调用（循环生成会静默失效，
 //   见 replacements 块注释），与已删除的合并工具 NORMALIZE 是同一套规则。）
 val guardLint = tasks.register("guardLint") {
@@ -103,7 +105,7 @@ val guardLint = tasks.register("guardLint") {
     val densityLimit = 20
     val runLimit = 8
     val exemptMarker = Regex("""^\s*//\s*guard-exempt\((\d+)\):\s*(.+)""")
-    val wrapperLoaderImportHardFail = false // P3 翻转（见块头注释第 7 条）
+    val wrapperLoaderImportHardFail = true // 票 07 翻转：wrapper 层未守卫文件零 loader import
     val loaderImport = Regex("""^\s*import\s+(net\.neoforged|net\.fabricmc|net\.minecraftforge)\b.*""")
     val mcLoaderImport = Regex("""^\s*import\s+(net\.minecraft|net\.neoforged|net\.fabricmc|net\.minecraftforge)\b.*""")
     val graalImport = Regex("""^\s*import\s+org\.graalvm\b.*""")
@@ -112,10 +114,15 @@ val guardLint = tasks.register("guardLint") {
     doLast {
         val problems = mutableListOf<String>()
         val warnings = mutableListOf<String>()
+        val platformFacing = mutableListOf<String>()
         val exemptions = mutableListOf<String>()
         var guards = 0
 
         fun rel(f: File) = f.relativeTo(project.projectDir).invariantSeparatorsPath
+
+        // 最外层守卫 = 文件里第一个 `//? if` 行（嵌套守卫必在内层）；条件含 loader
+        // token 即"最外层 loader 守卫"——loader import 随外层分支在对侧编译单元整体消失。
+        val outerLoaderGuard = Regex("""^//\? if .*\b(neoforge|fabric)\b.*\{$""")
 
         sources.forEach { source ->
             val lines = source.readLines()
@@ -127,6 +134,11 @@ val guardLint = tasks.register("guardLint") {
             var loaderImports = 0
             val path = rel(source)
             val inWrapper = path.startsWith(wrapperDir)
+            // 整文件 loader 守卫（首行守卫 + 尾行收尾）= 显式平台面，不计入 wrapper 零
+            // loader import 目标（对侧编译单元无这些 import）；未守卫文件才受 hardFail 约束。
+            val platformFacingWrapper = inWrapper &&
+                lines.firstOrNull { it.trim().startsWith("//? if ") }
+                    ?.let { outerLoaderGuard.matches(it.trim()) } == true
             lines.forEachIndexed { index, raw ->
                 val line = raw.trim()
                 if (line.startsWith("//? if ")) {
@@ -171,9 +183,11 @@ val guardLint = tasks.register("guardLint") {
             if (maxRun > runLimit) {
                 warnings += "$path: 连续守卫段 $maxRun 行 > $runLimit（方法级密度代理，考虑抽 facade 或拆分，ADR-0008）"
             }
-            if (inWrapper && loaderImports > 0) {
-                val msg = "$path: loader import $loaderImports 处（ADR-0004 目标为零；P2 通用注册表改写对象）"
+            if (inWrapper && loaderImports > 0 && !platformFacingWrapper) {
+                val msg = "$path: loader import $loaderImports 处（ADR-0004 目标为零）"
                 if (wrapperLoaderImportHardFail) problems += msg else warnings += msg
+            } else if (platformFacingWrapper && loaderImports > 0) {
+                platformFacing += "$path: loader import $loaderImports 处（整文件平台面，informational）"
             }
         }
 
@@ -198,6 +212,7 @@ val guardLint = tasks.register("guardLint") {
         logger.lifecycle("guardLint: 守卫块 $guards，扫描 ${sources.files.size} 个文件；超限豁免 ${exemptions.size} 个；警告 ${warnings.size} 条")
         exemptions.forEach { logger.lifecycle("  [exempt] $it") }
         warnings.forEach { logger.warn("guardLint: $it") }
+        platformFacing.forEach { logger.lifecycle("guardLint: [platform-facing] $it") }
         if (problems.isNotEmpty()) {
             throw GradleException("guardLint 发现 ${problems.size} 个问题：\n" + problems.joinToString("\n") { "  - $it" })
         }

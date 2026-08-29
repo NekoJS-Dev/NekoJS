@@ -1,5 +1,3 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.entity;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -23,4 +21,3 @@ public class NekoScriptMob extends PathfinderMob {
         GoalRegistry.applyBuiltInGoals(this);
     }
 }
-//?}
