@@ -1,0 +1,327 @@
+// NeoForge 分支节点 convention plugin（对 1.21.1 / 26.1.2 / 26.2.0 各求值一次）。
+// 从根 build.gradle.kts 原体迁入（DEVEX-ROADMAP T2）：节点入口只剩一行 plugins 声明，
+// 节点可变项全部来自 versions/<node>/gradle.properties（deps.*）。
+// 与原体的两处适配：
+//   1. stonecutter 扩展不在 buildSrc 编译类路径上——stonecutter.process(File, path)
+//      经反射桥接（0.9.x 稳定方法名），供 AT 与 mods.toml 模板喂送预处理副本；
+//   2. 版本目录经 buildSrc settings 导入，libs 通过 LibrariesForLibs 取用。
+//
+// 节点源码构成：分支共享 src/main/java（版本守卫 + loader 守卫单副本）+ 节点专属
+// versions/<node>/src/main/{java,resources}（per-node compat 与不可守卫配对副本）。
+
+import groovy.lang.Closure
+import org.gradle.accessors.dm.LibrariesForLibs
+import org.slf4j.event.Level
+import java.util.concurrent.Callable
+
+plugins {
+    id("java-library")
+    id("net.neoforged.moddev")
+}
+
+// ---- per-node 参数 -----------------------------------------------------------
+
+val libs = the<LibrariesForLibs>()
+
+val mcVersion = property("deps.minecraft") as String
+val neoVersion = property("deps.neo") as String
+val jeiFileId = property("deps.jei") as String
+val platformTag = property("deps.platform_tag") as String
+val mcRange = property("deps.mc_range") as String
+val neoRange = property("deps.neo_range") as String
+val javaRelease = (property("deps.java") as String).toInt()
+// AT / iface JSON / mods.toml 模板均已迁进沙箱共享或 era 层，不再需要 per-node 路径参数
+
+val modern = !mcVersion.startsWith("1.")   // 26.x vs 1.21.1
+
+val modId = property("mod_id") as String
+val modVersion = property("mod_version") as String
+val modName = property("mod_name") as String
+val modLicense = property("mod_license") as String
+val modAuthors = property("mod_authors") as String
+val modDescription = property("mod_description") as String
+
+version = modVersion
+
+// 节点在 settings 里先于 common 注册，求值时 :common 尚未配置；
+// 跨项目读 sourceSets 前必须显式声明求值依赖（求值顺序陷阱①，封死在本插件内）
+evaluationDependsOn(":common-api")
+evaluationDependsOn(":common")
+
+// MDG mods 块的 lambda receiver 不是 project，sourceSet 需在顶层捕获
+val mainSources = sourceSets.main.get()
+val commonSources = project(":common").sourceSets.main.get()
+val commonApiSources = project(":common-api").sourceSets.main.get()
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(javaRelease)
+
+base { archivesName = "nekojs-neoforge" }
+tasks.withType<Jar>().configureEach { archiveVersion.set("$mcVersion-$modVersion") }
+
+repositories {
+    mavenCentral()
+    exclusiveContent {
+        forRepository { maven { url = uri("https://cursemaven.com") } }
+        filter { includeGroup("curse.maven") }
+    }
+}
+
+// ---- stonecutter 预处理桥 -------------------------------------------------------
+// 反射调用 stonecutter 扩展的 process(File, String)：active 节点返回原文件，
+// 其余节点返回预处理产物。MDG 按路径消费 AT/模板，必须喂处理后的副本
+//（求值顺序陷阱②：该输出是 stonecutterGenerate 的产物、又是 createMinecraftArtifacts
+//  的输入，入口脚本里的显式 dependsOn 声明迁入本插件体末尾）。
+
+private fun Project.stonecutterProcessed(input: File, path: String): Any =
+    extensions.getByName("stonecutter")
+        .let { sc -> sc.javaClass.methods.first { it.name == "process" && it.parameterCount == 2 }.invoke(sc, input, path) }
+
+// ---- 源码集 --------------------------------------------------------------------
+
+sourceSets.main {
+    resources.srcDir(layout.projectDirectory.dir("src/generated/resources"))
+    resources.srcDir(rootProject.file(if (modern) "src/main/resources-modern" else "src/main/resources-legacy"))
+}
+
+// ---- 测试源集（共享 src/test/java + 节点本地），26.x-only 测试为整文件守卫 -------------
+//   （26.x-only 测试不能挂给 1.21.1——被测类不在其 main 源集里；loader 同理走守卫）
+
+sourceSets.test.configure {
+    compileClasspath += sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().runtimeClasspath
+}
+
+// ---- MDG ---------------------------------------------------------------------
+
+neoForge {
+    version = neoVersion
+
+    // MDG 按路径消费 AT：喂 stonecutter 处理过的副本（active 节点即原文件）
+    accessTransformers.from(
+        stonecutterProcessed(
+            rootProject.file("src/main/resources/META-INF/accesstransformer.cfg"),
+            "processed/accesstransformer.cfg",
+        )
+    )
+
+    if (modern) {
+        // interface injection 只有 26.x 有（1.21.1 侧主仓也没挂），无版本差异，直接用 era 层原文件
+        interfaceInjectionData {
+            from(files(rootProject.file("src/main/resources-modern/nekojs.interface_injection.json")))
+        }
+    }
+
+    mods {
+        create(modId) {
+            sourceSet(mainSources)
+            sourceSet(commonSources)
+            sourceSet(commonApiSources)
+        }
+    }
+
+    // runs：对齐主仓 neoforge-26-shared.gradle / 1.21.1 build.gradle
+    //（1.21.1 的 data run 用 data()，26.x 用 clientData()——26.x 的 datagen 分侧了）
+    runs {
+        create("client") {
+            client()
+            jvmArguments.add("-Dfml.earlydisplay=false")
+            systemProperty("neoforge.enabledGameTestNamespaces", modId)
+        }
+        create("server") {
+            server()
+            programArgument("--nogui")
+            systemProperty("neoforge.enabledGameTestNamespaces", modId)
+        }
+        create("gameTestServer") {
+            type = "gameTestServer"
+            systemProperty("neoforge.enabledGameTestNamespaces", modId)
+        }
+        create("data") {
+            if (modern) clientData() else data()
+            programArguments.addAll(
+                "--mod", modId, "--all",
+                "--output", layout.projectDirectory.dir("src/generated/resources").asFile.absolutePath,
+                "--existing", layout.projectDirectory.dir("src/main/resources").asFile.absolutePath,
+            )
+        }
+        configureEach {
+            systemProperty("forge.logging.markers", "REGISTRIES")
+            logLevel = Level.DEBUG
+        }
+    }
+}
+
+// ---- 依赖 ---------------------------------------------------------------------
+// 必须位于 neoForge{}（runs 声明）之后：additionalRuntimeClasspath configuration
+// 由 RunModel 在 runs 声明时才创建（顺序反了会 UnknownConfigurationException）
+
+dependencies {
+    implementation(project(":common"))
+    implementation("curse.maven:jei-238222:$jeiFileId")
+
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+    annotationProcessor(project(":common-api-processor"))
+    annotationProcessor(project(":common-api"))
+    compileOnly(libs.jspecify)
+
+    // JUnit 与主仓平台层同款（5.x 迁移期刻意分歧，BOM 6.0.0 只给 common 系）
+    testImplementation(libs.junit.jupiter.legacy)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
+    if (!modern) {
+        // 主仓 1.21.1 的 dev-run ICU4J 补丁：MDG server legacy classpath 不收项目
+        // runtimeClasspath 的传递库；26.x 走 clientData 时代不再需要
+        "additionalRuntimeClasspath"("com.ibm.icu:icu4j:73.2")
+    }
+}
+
+// stonecutter.process 的输出落在 build/generated/stonecutter/main/... 里，
+// 该目录是 stonecutterGenerate 的输出、又是 MDG createMinecraftArtifacts 的输入
+//（AT 按路径消费）→ 显式声明依赖，消除隐式依赖陷阱。
+tasks.matching { it.name == "createMinecraftArtifacts" }.configureEach {
+    dependsOn(tasks.named("stonecutterGenerate"))
+}
+
+// ---- neoforge.mods.toml 模板展开 ------------------------------------------------
+
+val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata") {
+    val replaceProperties = mapOf(
+        "minecraft_version" to mcVersion,
+        "minecraft_version_range" to mcRange,
+        "neo_version" to neoVersion,
+        "neo_version_range" to neoRange,
+        "loader_version_range" to "[4,)",
+        "mod_id" to modId,
+        "mod_name" to modName,
+        "mod_license" to modLicense,
+        "mod_version" to modVersion,
+        "mod_authors" to modAuthors,
+        "mod_description" to modDescription,
+    )
+    inputs.properties(replaceProperties)
+    expand(replaceProperties)
+    // 模板同样走 stonecutter.process（26.x 多一段 dynamic mixins 声明）
+    from(
+        stonecutterProcessed(
+            rootProject.file("src/main/templates/META-INF/neoforge.mods.toml"),
+            "processed/neoforge.mods.toml",
+        )
+    ) { into("META-INF") }
+    into(layout.buildDirectory.dir("generated/sources/modMetadata"))
+}
+sourceSets.main { resources.srcDir(generateModMetadata) }
+neoForge.ideSyncTask(generateModMetadata)
+
+// ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）--------------------------
+// 与 fabric / forge 节点同构——装配逻辑单副本（T2 前 neo/fabric 各有一份逐字复制）。
+
+val embeddedCommonRuntime = files(
+    Callable {
+        project(":common").configurations.runtimeClasspath.get().resolvedConfiguration.resolvedArtifacts
+            .filter { artifact ->
+                !(artifact.moduleVersion.id.group == "curse.maven" && artifact.name == "graal-1504336")
+            }
+            .map { artifact -> artifact.file }
+    }
+)
+
+tasks.jar {
+    dependsOn(project(":common").tasks.named("jar"))
+    dependsOn(project(":common-api").tasks.named("jar"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("module-info.class")
+    exclude("META-INF/versions/**/module-info.class")
+    from(project(":common").sourceSets.main.get().output)
+    from(project(":common-api").sourceSets.main.get().output)
+    // 求值顺序陷阱③：必须 from(Closure)（执行期求值）——KTS 的 map{} 会在配置期立即迭代，
+    // 触发 :common:runtimeClasspath 的无锁解析（IDEA sync / gradlew tasks 直接炸）。
+    from(object : Closure<Any>(null) {
+        fun doCall(): List<Any> = embeddedCommonRuntime
+            .toCollection(mutableListOf())
+            .map { dep -> if (dep.isDirectory) dep else zipTree(dep) }
+    })
+}
+
+// ---- 编译约定（对齐主仓根 allprojects + neoforge-26-shared.gradle）---------------
+
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+    options.compilerArgs.addAll(listOf(
+        "-parameters",
+        "-Xlint:all",
+        "-Xlint:-processing",
+        "-Anekojs.platform=$platformTag",
+    ))
+}
+
+// 诊断辅助：打印本节点 main 的编译 classpath（用于 vanilla-only 隔离编译探针）
+tasks.register("dumpCompileClasspath") {
+    val cp = sourceSets.main.map { it.compileClasspath.asPath }
+    doLast { println(cp.get()) }
+}
+
+// ---- 测试任务（locale 固定对齐主仓根 allprojects 的 Test 约定）----------------------
+
+tasks.test {
+    useJUnitPlatform()
+    systemProperty("user.language", "en")
+    systemProperty("user.country", "US")
+    systemProperty("user.timezone", "UTC")
+    systemProperty("file.encoding", "UTF-8")
+}
+
+tasks.register<Test>("nbtSmokeTest") {
+    group = "verification"
+    description = "Runs the native NeoForge portable binary NBT smoke tests."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("nbt-smoke")
+    }
+}
+
+// ---- verifyDevModSourceSets：ModDev mod source-set 注册门禁 ----------------------
+// 断言 mods{} 里注册了本平台 + :common + :common-api 三个 source set，且各自的关键
+// class 已编译出来（开发运行需要它们可见）。
+
+val verifyDevModSourceSets = tasks.register("verifyDevModSourceSets") {
+    group = "verification"
+    description = "Verifies NeoForge ModDev mod source-set registration for this node."
+    dependsOn(tasks.named("classes"))
+    dependsOn(project(":common").tasks.named("classes"))
+    dependsOn(project(":common-api").tasks.named("classes"))
+
+    val requiredSets = mapOf(
+        ":${project.name}" to mainSources,
+        ":common" to commonSources,
+        ":common-api" to commonApiSources,
+    )
+    val requiredClasses = listOf(
+        Triple(":${project.name}", mainSources, "com/tkisor/nekojs/NekoJSMod.class"),
+        Triple(":common", commonSources, "com/tkisor/nekojs/NekoJS.class"),
+        Triple(":common-api", commonApiSources, "com/tkisor/nekojs/api/data/NekoId.class"),
+    )
+    val configuredSets = neoForge.mods.named(modId).map { it.modSourceSets.get() }
+
+    doLast {
+        val registered = configuredSets.get()
+        requiredSets.forEach { (path, sourceSet) ->
+            if (sourceSet !in registered) {
+                throw GradleException(
+                    "ModDev model for mod '$modId' in ${project.path} does not include $path source set '${sourceSet.name}'."
+                )
+            }
+        }
+        requiredClasses.forEach { (path, sourceSet, classPath) ->
+            val present = sourceSet.output.classesDirs.files.any { dir -> File(dir, classPath).isFile }
+            if (!present) {
+                throw GradleException("$path source set '${sourceSet.name}' is missing compiled class '$classPath'.")
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn(verifyDevModSourceSets)
+}
