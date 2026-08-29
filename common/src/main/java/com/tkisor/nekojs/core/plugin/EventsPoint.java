@@ -21,7 +21,7 @@ public final class EventsPoint {
     private EventsPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:events} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:events} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /** 注册服务端事件组（{@code ServerEvents.*}/{@code PlayerEvents.*} 等）。 */
@@ -52,11 +52,11 @@ public final class EventsPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, EventGroupRegistry, Map<String, EventGroup>> POINT =
-            NekoPluginExtensionPoint.<Contributor, EventGroupRegistry, Map<String, EventGroup>>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, EventGroupRegistry, Map<String, EventGroup>>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.failFast())
                     .initializer(context -> new EventGroupRegistry.Impl())
-                    .collector(Contributor::registerEvents)
+                    .collector(NekoJSPlugin::registerEvents)
                     .finish(EventsPoint::freezeEventGroups)
                     .build();
 }

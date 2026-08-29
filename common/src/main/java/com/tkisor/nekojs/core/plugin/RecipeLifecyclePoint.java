@@ -20,7 +20,7 @@ public final class RecipeLifecyclePoint {
     private RecipeLifecyclePoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:recipe_lifecycle} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:recipe_lifecycle} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /**
@@ -78,11 +78,11 @@ public final class RecipeLifecyclePoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, Bucket, RecipeLifecycleHooks> POINT =
-            NekoPluginExtensionPoint.<Contributor, Bucket, RecipeLifecycleHooks>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, RecipeLifecycleHooks> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, RecipeLifecycleHooks>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())
                     .initializer(context -> new Bucket())
-                    .collector(Contributor::registerRecipeLifecycleHooks)
+                    .collector(NekoJSPlugin::registerRecipeLifecycleHooks)
                     .finish(Bucket::snapshot)
                     .build();
 }

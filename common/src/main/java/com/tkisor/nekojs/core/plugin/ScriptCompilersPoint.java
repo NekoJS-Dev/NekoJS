@@ -15,7 +15,7 @@ public final class ScriptCompilersPoint {
     private ScriptCompilersPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:script_compilers} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:script_compilers} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /** 注册脚本编译器（语言插件）。编译器在脚本加载/热重载时被调用。 */
@@ -24,11 +24,11 @@ public final class ScriptCompilersPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, ScriptCompilerRegistry, ScriptCompilerRegistry> POINT =
-            NekoPluginExtensionPoint.<Contributor, ScriptCompilerRegistry, ScriptCompilerRegistry>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, ScriptCompilerRegistry, ScriptCompilerRegistry> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, ScriptCompilerRegistry, ScriptCompilerRegistry>builder(ID, NekoJSPlugin.class)
                     .merge(MergePolicy.append())
                     .initializer(context -> ScriptCompilerRegistry.createRuntimeRegistry())
-                    .collector(Contributor::registerScriptCompilers)
+                    .collector(NekoJSPlugin::registerScriptCompilers)
                     .finish(registry -> {
                         registry.freeze();
                         return registry;

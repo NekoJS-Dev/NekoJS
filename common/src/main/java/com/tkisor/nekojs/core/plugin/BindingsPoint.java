@@ -26,7 +26,7 @@ public final class BindingsPoint {
     private BindingsPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:bindings} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:bindings} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /**
@@ -38,10 +38,10 @@ public final class BindingsPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册时构造）。 */
-    public static NekoPluginExtensionPoint<Contributor, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
+    public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>> point(
             boolean client) {
         var predicate = NekoPluginBootstrap.bindingPredicate(client);
-        return NekoPluginExtensionPoint.<Contributor, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>>builder(ID, Contributor.class)
+        return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptTypedValue<BindingRegistry>, Map<ScriptType, Map<String, Binding>>>builder(ID, NekoJSPlugin.class)
                 .merge(MergePolicy.append())
                 .initializer(context -> ScriptTypedValue.of(BindingRegistry.BindingRegistryImpl::new))
                 .collector((plugin, registries) -> predicate.streamMatched()

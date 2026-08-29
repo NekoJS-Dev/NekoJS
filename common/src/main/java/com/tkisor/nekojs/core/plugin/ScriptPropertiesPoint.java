@@ -18,7 +18,7 @@ public final class ScriptPropertiesPoint {
     private ScriptPropertiesPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:script_properties} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:script_properties} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /** 注册脚本属性（{@code AFTER}/{@code MODLOADED}/{@code DISABLE}/{@code PRIORITY} 等文件头属性）。 */
@@ -27,12 +27,12 @@ public final class ScriptPropertiesPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册时构造）。 */
-    public static NekoPluginExtensionPoint<Contributor, ScriptPropertyRegistry, ScriptPropertyRegistry> point(
+    public static NekoPluginExtensionPoint<NekoJSPlugin, ScriptPropertyRegistry, ScriptPropertyRegistry> point(
             ScriptPropertyRegistry scriptProperties) {
-        return NekoPluginExtensionPoint.<Contributor, ScriptPropertyRegistry, ScriptPropertyRegistry>builder(ID, Contributor.class)
+        return NekoPluginExtensionPoint.<NekoJSPlugin, ScriptPropertyRegistry, ScriptPropertyRegistry>builder(ID, NekoJSPlugin.class)
                 .merge(MergePolicy.append())
                 .initializer(context -> scriptProperties)
-                .collector(Contributor::registerScriptProperty)
+                .collector(NekoJSPlugin::registerScriptProperty)
                 .finish(registry -> {
                     if (registry instanceof ScriptPropertyRegistry.Impl impl) {
                         impl.freeze();

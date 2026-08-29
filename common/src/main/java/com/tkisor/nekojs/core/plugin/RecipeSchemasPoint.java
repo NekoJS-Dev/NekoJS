@@ -25,7 +25,7 @@ public final class RecipeSchemasPoint {
     private RecipeSchemasPoint() {
     }
 
-    /** 贡献面：实现本接口的插件被 {@code nekojs:recipe_schemas} 扩展点收集。 */
+    /** 显式声明形态（与直接覆写 NekoJSPlugin 对应钩子等价收集）：插件被 {@code nekojs:recipe_schemas} 扩展点收集。 */
     public interface Contributor extends NekoJSPlugin {
 
         /** 注册配方 schema 覆盖（同 {@code (namespace, type)} 首胜）。 */
@@ -71,11 +71,11 @@ public final class RecipeSchemasPoint {
     }
 
     /** 扩展点定义（由 {@link NekoBuiltinPointsPlugin} 清单注册）。 */
-    public static final NekoPluginExtensionPoint<Contributor, Bucket, Map<String, Map<String, RecipeTypeDefinition>>> POINT =
-            NekoPluginExtensionPoint.<Contributor, Bucket, Map<String, Map<String, RecipeTypeDefinition>>>builder(ID, Contributor.class)
+    public static final NekoPluginExtensionPoint<NekoJSPlugin, Bucket, Map<String, Map<String, RecipeTypeDefinition>>> POINT =
+            NekoPluginExtensionPoint.<NekoJSPlugin, Bucket, Map<String, Map<String, RecipeTypeDefinition>>>builder(ID, NekoJSPlugin.class)
                     .merge(POLICY)
                     .initializer(context -> new Bucket())
-                    .collector(Contributor::registerRecipeSchemas)
+                    .collector(NekoJSPlugin::registerRecipeSchemas)
                     .finish(Bucket::snapshot)
                     .build();
 }
