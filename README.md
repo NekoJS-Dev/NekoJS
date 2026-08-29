@@ -52,12 +52,13 @@ nekojs/
 
 ## 源码结构
 
-仓库是 stonecutter 多版本 × 多加载器单仓：一棵版本共享树 + 每节点参数目录 + 每加载器构建脚本。
+仓库是 stonecutter 多版本 × 多加载器单仓：一棵版本共享树 + 每节点参数目录 + buildSrc convention plugin（每平台一个，承载全部节点构建逻辑）。
 
 ```text
 common-api/                      # 数据契约 + conversion SPI 孵化层（无 MC/Loader/Graal 依赖；插件入口 API 目前仍在 common）
 common-api-processor/            # 编译期注解处理器：common-api 契约的 spec 覆盖检查
 common/                          # 跨平台引擎（Graal Context / ESM·CJS 模块 / probe / 事件总线 / 插件系统）
+buildSrc/                        # 节点 convention plugin（nekojs.neoforge-node / fabric-node / forge-node）
 src/                             # 版本共享树（stonecutter 根分支）：所有平台共用单副本
 ├── main/java/                   #   主源码：版本差异 = //? if >=26 守卫 + replacements；加载器差异 = //? if neoforge 守卫
 ├── main/resources*/             #   AT / mixins / iface JSON（modern / legacy era 分层）
@@ -67,11 +68,11 @@ versions/
 ├── 1.21.1/                      # NeoForge 1.21.1 节点（节点参数 + 节点专属源码）
 ├── 26.1.2/                      # NeoForge 26.1.2 节点
 ├── 26.2.0/                      # NeoForge 26.2.0 节点
-└── 26.1.2-fabric/               # Fabric 26.1.2 节点（fabric.gradle.kts；与上面节点共享同一棵 src/）
+└── 26.1.2-fabric/               # Fabric 26.1.2 节点（与上面节点共享同一棵 src/）
 forge/versions/1.20.1/           # Forge 1.20.1（独立分支骨架；B4 端口未开始）
 ```
 
-构建入口见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)（日常命令 / 守卫纪律 / active 切换 / 真机冒烟）。
+构建入口见 [wiki/构建系统](wiki/构建系统.md)（日常命令 / 守卫纪律 / active 切换 / 加新版本三步）。
 
 ---
 
@@ -483,7 +484,7 @@ RegistryEvents.creativeModeTab(event => {
 
 ## 路线图
 
-仓库结构与开发工作流见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)；多加载器改造的完整迁移史见 [docs/migration-history.md](docs/migration-history.md)。
+仓库结构与开发工作流见 [wiki/构建系统](wiki/构建系统.md)；构建体系的演进计划见 [docs/DEVEX-ROADMAP.md](docs/DEVEX-ROADMAP.md)。
 
 ---
 
