@@ -10,3 +10,6 @@ spec: `.scratch/specs/plugin-authoring-model.md` §Implementation 4。依赖票 
 
 ## 验收
 - 全仓无 GenerationPoint 引用残留；两个测试绿
+
+## 结果
+done（ec989a9）：两处直调去过滤，死 POINT 删除，两测试类绿

@@ -8,3 +8,6 @@ spec: `.scratch/specs/plugin-authoring-model.md` §Implementation 6。依赖票 
 
 ## 验收
 - diff 评审通过；全绿
+
+## 结果
+done（1a15679）：golden 实为脚本面守卫、基线零变化（spec 已修正）；四节点 test --rerun-tasks 全绿 + guardLint 绿
