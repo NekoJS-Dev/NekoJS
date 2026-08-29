@@ -20,11 +20,14 @@ import com.tkisor.nekojs.wrapper.RecipeRegistryProxy;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.*;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+import org.jetbrains.annotations.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
@@ -592,6 +595,36 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public static List<Ingredient> getIngredients(Recipe<?> recipe) {
         return recipe.getIngredients();
+    }
+
+    // ---- 版本中立静态助手（对应共享树 26.x 版同名方法；供 RecipeFilter 零守卫调用） ----
+
+    /** 配方 id 的中立访问器：1.21.1 的 holder.id() 即 ResourceLocation 本体。 */
+    public static ResourceLocation recipeHolderId(RecipeHolder<?> holder) {
+        return holder.id();
+    }
+
+    /** 配方分组的中立访问器：1.21.1 为 getGroup()。 */
+    public static String recipeGroup(Recipe<?> recipe) {
+        return recipe.getGroup();
+    }
+
+    /** 单个配料是否命中 tag/id 过滤：1.21.1 配料走 ItemStack 集合匹配（registries 参数仅为签名中立）。 */
+    public static boolean ingredientMatches(Ingredient ingredient, @Nullable TagKey<Item> tagKey,
+                                            @Nullable ResourceLocation itemID, HolderLookup.Provider registries) {
+        if (ingredient.isEmpty()) return false;
+        if (tagKey != null) {
+            for (ItemStack stack : ingredient.getItems()) {
+                if (stack.is(tagKey)) return true;
+            }
+        }
+        else if (itemID != null) {
+            Item targetItem = BuiltInRegistries.ITEM.get(itemID);
+            if (ingredient.test(new ItemStack(targetItem))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public RecipeRegistryProxy getRecipes() {

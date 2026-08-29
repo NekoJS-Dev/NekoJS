@@ -1,17 +1,16 @@
 //? if neoforge {
+// 版本差异已收拢进 compat 门面（DEVEX-ROADMAP 档 1）：屏幕访问/错误面板载入走
+// McClientCompat，dist/OP 权限/脚本 payload 双向注册走 McPlatformCompat——
+// 本文件零内联版本守卫。
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.client.gui.NekoErrorDashboardScreen;
 import com.tkisor.nekojs.client.gui.NekoWorkspaceScreen;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
-//? if >=26 {
 import com.tkisor.nekojs.platform.compat.McClientCompat;
-//?}
+import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 import net.minecraft.client.Minecraft;
-//? if >=26 {
-import net.minecraft.commands.Commands;
-//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -24,9 +23,6 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import java.util.List;
 import java.util.Map;
-//? if <26 {
-/*import net.minecraft.network.protocol.PacketFlow;
-*///?}
 
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class NekoJSNetwork {
@@ -61,24 +57,9 @@ public class NekoJSNetwork {
         registrar.playToClient(ClientDataSyncPacket.TYPE, ClientDataSyncPacket.STREAM_CODEC, ClientDataMessageHandler::handleOnClient);
 
         // 脚本自定义网络通道包（Network.sendToServer / sendToPlayer / sendToAllPlayers）
-        // 同一个 payload type 只能注册一次（NeoForge 26 按 type 去重）；3 参 playBidirectional
-        // 会把 client 侧 handler 置 null，客户端校验会报缺失，必须用 4 参版本分别指定两端 handler。
-//? if >=26 {
-        registrar.playBidirectional(
-                NekoScriptPayload.TYPE,
-                NekoScriptPayload.CODEC,
-                NetworkMessageHandler::handleScriptPayloadOnServer,
-                NetworkMessageHandler::handleScriptPayloadOnClient
-        );
-//?} else {
-/*        registrar.playBidirectional(NekoScriptPayload.TYPE, NekoScriptPayload.CODEC, (payload, context) -> {
-            if (context.flow() == PacketFlow.SERVERBOUND) {
-                NetworkMessageHandler.handleScriptPayloadOnServer(payload, context);
-            } else {
-                NetworkMessageHandler.handleScriptPayloadOnClient(payload, context);
-            }
-        });
-*///?}
+        // 同一个 payload type 只能注册一次（NeoForge 26 按 type 去重）；注册形状的版本差异
+        //（26.x 4 参 / 1.21.1 3 参 + flow 判别）下沉进 McPlatformCompat 实现。
+        McPlatformCompat.get().registerScriptPayload(registrar);
 
         // P2 多人脚本包分发：配置阶段 payload（S2C）——服务器在 PackSyncConfigurationTask
         // （RegisterConfigurationTasksEvent 官方入口，免 mixin）中推送哈希清单 + bundle。
@@ -86,11 +67,7 @@ public class NekoJSNetwork {
         registrar.configurationToClient(PackBundlePayload.TYPE, PackBundlePayload.STREAM_CODEC, PackSyncMessageHandler::handleBundleOnClient);
 
         // 客户端接线：包分发触发 CLIENT 脚本重载的钩子 + 断线卸载远端包
-//? if >=26 {
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
-//?} else {
-/*        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
-*///?}
+        if (McPlatformCompat.get().isClientDist()) {
             PackSyncClientConnections.install();
         }
     }
@@ -107,11 +84,7 @@ public class NekoJSNetwork {
     }
 
     private static void handleFetchResponseOnClient(FetchScriptResponsePacket data, IPayloadContext context) {
-//? if >=26 {
-        context.enqueueWork(() -> ClientHandler.receiveServerScript(data.content()));
-//?} else {
-/*        context.enqueueWork(() -> ClientHandler.receiveServerScript(data.path(), data.content()));
-*///?}
+        context.enqueueWork(() -> ClientHandler.receiveServerScript(data.path(), data.content()));
     }
 
     private static void handleSyncFeedbackOnClient(SyncFeedbackPacket data, IPayloadContext context) {
@@ -132,45 +105,23 @@ public class NekoJSNetwork {
 
     private static class ClientHandler {
         private static void showOrUpdateDashboard(List<ErrorSummaryDTO> errors, boolean openIfMissing) {
-//? if >=26 {
             if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
-//?} else {
-/*            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
-*///?}
                 screen.updateErrors(errors);
             } else if (openIfMissing) {
-//? if >=26 {
                 McClientCompat.get().showScreen(NekoErrorDashboardScreen.create(errors));
-//?} else {
-/*                Minecraft.getInstance().setScreen(NekoErrorDashboardScreen.create(errors));
-*///?}
             }
         }
 
-//? if >=26 {
-        private static void receiveServerScript(String content) {
+        private static void receiveServerScript(String path, String content) {
             if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
-                screen.loadServerScript(content);
-//?} else {
-/*        private static void receiveServerScript(String path, String content) {
-            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
-                screen.loadServerScript(path, content);
-*///?}
+                McClientCompat.get().dashboardLoadServerScript(screen, path, content);
             }
         }
 
         private static void processFeedback(boolean success, String message) {
-//? if >=26 {
             if (McClientCompat.get().currentScreen() instanceof NekoErrorDashboardScreen screen) {
-//?} else {
-/*            if (Minecraft.getInstance().screen instanceof NekoErrorDashboardScreen screen) {
-*///?}
                 screen.onSyncFeedback(success, message);
-//? if >=26 {
             } else if (McClientCompat.get().currentScreen() instanceof NekoWorkspaceScreen wsScreen) {
-//?} else {
-/*            } else if (Minecraft.getInstance().screen instanceof NekoWorkspaceScreen wsScreen) {
-*///?}
                 wsScreen.onSyncFeedback(success, message);
             } else if (Minecraft.getInstance().player != null) {
                 String prefix = success ? "§a✔ " : "§c✖ ";
@@ -188,11 +139,7 @@ public class NekoJSNetwork {
         }
 
         private static void openWorkspace() {
-//? if >=26 {
             McClientCompat.get().showScreen(new NekoWorkspaceScreen());
-//?} else {
-/*            Minecraft.getInstance().setScreen(new NekoWorkspaceScreen());
-*///?}
         }
     }
 
@@ -200,11 +147,7 @@ public class NekoJSNetwork {
     private static void handleFetchRequestOnServer(FetchScriptRequestPacket data, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-//? if >=26 {
-            if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
-//?} else {
-/*            if (!player.hasPermissions(2)) {
-*///?}
+            if (!McPlatformCompat.get().isGameMaster(player)) {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "权限不足，无法拉取服务端代码！"));
                 return;
             }
@@ -225,11 +168,7 @@ public class NekoJSNetwork {
     private static void handleSaveScriptOnServer(SaveScriptPacket data, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-//? if >=26 {
-            if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
-//?} else {
-/*            if (!player.hasPermissions(2)) {
-*///?}
+            if (!McPlatformCompat.get().isGameMaster(player)) {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "权限不足，无法修改服务端代码！"));
                 return;
             }
@@ -246,11 +185,7 @@ public class NekoJSNetwork {
     private static void handleFetchAllRequestOnServer(FetchAllScriptsRequestPacket data, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-//? if >=26 {
-            if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
-//?} else {
-/*            if (!player.hasPermissions(2)) {
-*///?}
+            if (!McPlatformCompat.get().isGameMaster(player)) {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "权限不足！"));
                 return;
             }
@@ -267,11 +202,7 @@ public class NekoJSNetwork {
     private static void handleUploadAllOnServer(UploadAllScriptsPacket data, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-//? if >=26 {
-            if (!Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
-//?} else {
-/*            if (!player.hasPermissions(2)) {
-*///?}
+            if (!McPlatformCompat.get().isGameMaster(player)) {
                 PacketDistributor.sendToPlayer((ServerPlayer) player, new SyncFeedbackPacket(false, "权限不足！"));
                 return;
             }

@@ -1,4 +1,9 @@
 //? if neoforge {
+// 版本守卫审计后收敛（DEVEX-ROADMAP 档 1）：registerTypeDocs 里两套排版不同但字面量
+// 折叠后逐字相同的文案已按 26.x 基准合并（假差异）；NetworkEvents 的注册位置统一到基准位
+// （ScriptEvents 之后；注册表按组名索引，先后不影响查找）。保留的真差异：
+// KeyBindEvents / Assets / IdentifierAdapter（26.x 独有符号）与 TriState（26.x 挪到了
+// net.minecraft.util，1.21.1 在 neoforge common util）。
 package com.tkisor.nekojs.core;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -77,9 +82,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 import java.util.List;
-//? if <26 {
-/*import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
-*///?}
 
 @RegisterNekoJSPlugin(priority = NekoJSPlugin.CORE_PRIORITY)
 public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.TypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.NodeTypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.EventsPoint.Contributor, com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor, com.tkisor.nekojs.core.plugin.AdaptersPoint.Contributor, com.tkisor.nekojs.core.plugin.RecipeNamespacesPoint.Contributor {
@@ -100,13 +102,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(CommandEvents.GROUP);
         registry.register(CapabilityEvents.GROUP);
         registry.register(LevelEvents.GROUP);
-//? if <26 {
-/*        registry.register(NetworkEvents.GROUP);
-*///?}
         registry.register(ScriptEvents.GROUP);
-//? if >=26 {
         registry.register(NetworkEvents.GROUP);
-//?}
         registry.register(ProbeEvents.GROUP);
     }
 
@@ -162,11 +159,6 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("ClientData", ClientDataSyncJS.class);
         // 类型化资产生成（KubeJS 风格 blockState/blockModel/itemModel/texture），写入
         // <gameDir>/nekojs/assets 资源包，与 generateAssets 事件同目录，reload 时懒读生效
-//? if >=26 {
-        registry.register("Assets", new AssetGeneratorJS());
-//?} else {
-/*        registry.register("TriState", net.neoforged.neoforge.common.util.TriState.class);
-*///?}
         registry.register("global", NekoGlobal.shared());
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
@@ -242,122 +234,41 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
 //        registry.registerSchema();
-//? if >=26 {
+        // RecipeEventJS 是节点拆分对（共享树 26.x 版 + versions/1.21.1 孪生），两时代 FQCN
+        // 相同——统一走 FQN，无需按时代切换 import/简单名。
         registry.register(new RecipeNamespaceEntry("minecraft", e -> new MinecraftRecipeHandler((com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e), MinecraftRecipeHandler.class));
-//?} else {
-/*        registry.register(new RecipeNamespaceEntry("minecraft", event -> new MinecraftRecipeHandler((RecipeEventJS) event), MinecraftRecipeHandler.class));
-*///?}
     }
 
     @Override
     public void registerTypeDocs(TypeDocsRegister registry) {
-//? if >=26 {
         registry.register(TypeDocCatalogEntry.binding("Item", "NekoItemHelper", "Script-friendly ItemStack factory and helpers (KubeJS-style: Item.of(id)); delegates of/empty to the helper, rest to MC Item.", List.of("Item.of('minecraft:stone')", "Item.of('minecraft:stone', 4)", "Item.empty()")));
         registry.register(TypeDocCatalogEntry.binding("Ingredient", "NekoIngredientHelper", "Script-friendly Ingredient and IngredientJS helper.", List.of("Ingredient.of('minecraft:stone')", "Ingredient.tag('minecraft:planks')")));
         registry.register(TypeDocCatalogEntry.binding("Fluid", "NekoFluidHelper", "Script-friendly FluidStack helper.", List.of("Fluid.of('minecraft:water', FluidAmounts.BUCKET)", "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
         registry.register(TypeDocCatalogEntry.binding("FluidIngredient", "NekoFluidIngredientHelper", "Script-friendly FluidIngredient and SizedFluidIngredient helper.", List.of("FluidIngredient.of('minecraft:water')", "FluidIngredient.sized('minecraft:water', 250)")));
+//? if >=26 {
         registry.register(TypeDocCatalogEntry.binding("Assets", "AssetGeneratorJS", "Typed asset generators writing into NekoJS's assets pack (blockState/blockModel/itemModel/texture); takes effect on the next resource reload.", List.of(
                 "Assets.blockState('mymod:my_block', 'mymod:block/my_block')",
                 "Assets.blockModel('mymod:my_block', { parent: 'minecraft:block/cube_all', textures: { all: 'my_block' } })",
                 "Assets.itemModel('mymod:my_item', { parent: 'minecraft:item/generated', textures: { layer0: 'my_item' } })",
                 "Assets.texture('mymod:item/my_item')")));
+//?}
         registry.register(TypeDocCatalogEntry.binding("ServerEvents", null, "Server-side event group, including recipe editing.", List.of("ServerEvents.recipes(event => { })", "ServerEvents.afterRecipes(event => { })")));
         registry.register(TypeDocCatalogEntry.binding("ProbeEvents", null,
                 "Probe generation customization events (probe.*). Listeners go in server_scripts; they run when /nekojs probe is invoked.",
                 List.of(
                         "ProbeEvents.modifyType.listen(event => { event.forClass('net.minecraft.world.entity.player.Player').renameMethod('getX', 'getCustom'); })",
                         "ProbeEvents.assignType.listen(event => event.assign('net.minecraft.world.item.ItemStack', 'string'))",
-//?} else {
-/*        registry.register(TypeDocCatalogEntry.binding(
-                "Item",
-                "NekoItemHelper",
-                "Script-friendly ItemStack factory and helpers (KubeJS-style: Item.of(id)); "
-                        + "delegates of/empty to the helper, rest to MC Item.",
-                List.of(
-                        "Item.of('minecraft:stone')",
-                        "Item.of('minecraft:stone', 4)",
-                        "Item.empty()")));
-        registry.register(TypeDocCatalogEntry.binding(
-                "Ingredient",
-                "NekoIngredientHelper",
-                "Script-friendly Ingredient and IngredientJS helper.",
-                List.of(
-                        "Ingredient.of('minecraft:stone')",
-                        "Ingredient.tag('minecraft:planks')")));
-        registry.register(TypeDocCatalogEntry.binding(
-                "Fluid",
-                "NekoFluidHelper",
-                "Script-friendly FluidStack helper.",
-                List.of(
-                        "Fluid.of('minecraft:water', FluidAmounts.BUCKET)",
-                        "Fluid.of({ fluid: 'minecraft:water', amount: 250 })")));
-        registry.register(TypeDocCatalogEntry.binding(
-                "FluidIngredient",
-                "NekoFluidIngredientHelper",
-                "Script-friendly FluidIngredient and SizedFluidIngredient helper.",
-                List.of(
-                        "FluidIngredient.of('minecraft:water')",
-                        "FluidIngredient.sized('minecraft:water', 250)")));
-        registry.register(TypeDocCatalogEntry.binding(
-                "ServerEvents",
-                null,
-                "Server-side event group, including recipe editing.",
-                List.of(
-                        "ServerEvents.recipes(event => { })",
-                        "ServerEvents.afterRecipes(event => { })")));
-        registry.register(TypeDocCatalogEntry.binding(
-                "ProbeEvents",
-                null,
-                "Probe generation customization events (probe.*). Listeners go in server_scripts; "
-                        + "they run when /nekojs probe is invoked.",
-                List.of(
-                        "ProbeEvents.modifyType.listen(event => { "
-                                + "event.forClass('net.minecraft.world.entity.player.Player')"
-                                + ".renameMethod('getX', 'getCustom'); })",
-                        "ProbeEvents.assignType.listen(event => "
-                                + "event.assign('net.minecraft.world.item.ItemStack', 'string'))",
-*///?}
                         "ProbeEvents.addGlobal.listen(event => event.add('MyFlag', 'boolean'))")));
-//? if >=26 {
         registry.register(TypeDocCatalogEntry.binding(ScriptType.TEST, "Test", "NekoTestHelper", "Test-script assertion and smoke test helper.", List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null, "Startup-side native NeoForge event bridge.", List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
-//?} else {
-/*        registry.register(TypeDocCatalogEntry.binding(
-                ScriptType.TEST,
-                "Test",
-                "NekoTestHelper",
-                "Test-script assertion and smoke test helper.",
-                List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
-        registry.register(TypeDocCatalogEntry.binding(
-                ScriptType.STARTUP,
-                "NativeEvents",
-                null,
-                "Startup-side native NeoForge event bridge.",
-                List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
-*///?}
         registry.register(TypeDocCatalogEntry.binding(
                 ScriptType.STARTUP,
                 "ScriptEvents",
                 null,
                 "Startup-side custom server/client event declaration event group.",
                 List.of("ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))")));
-//? if >=26 {
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "RegistryEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("RegistryEvents.register(event => event.entityType('mymod:cat', b => { }))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));
-//?} else {
-/*        registry.register(TypeDocCatalogEntry.binding(
-                ScriptType.STARTUP,
-                "RegistryEvents",
-                null,
-                "Startup-side registry builders, including scripted entity types.",
-                List.of("RegistryEvents.register(event => event.entityType('mymod:cat', b => { }))")));
-        registry.register(TypeDocCatalogEntry.binding(
-                ScriptType.STARTUP,
-                "GoalEvents",
-                null,
-                "Startup-side goal registration for existing or scripted entity types.",
-                List.of("GoalEvents.register(event => { })")));
-*///?}
 
         NekoCommonManualDeclarations.register(registry);
     }
