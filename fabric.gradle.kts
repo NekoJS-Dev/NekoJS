@@ -19,7 +19,7 @@ plugins {
 }
 
 val mcVersion = property("deps.minecraft") as String
-val loaderVersion = property("deps.loader") as String
+val loaderVersion = property("deps.loader_version") as String
 val fabricApiVersion = property("deps.fabric_api") as String
 val javaRelease = (property("deps.java") as String).toInt()
 

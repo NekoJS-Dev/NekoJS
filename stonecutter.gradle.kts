@@ -48,8 +48,10 @@ stonecutter handlers {
 // 归一化），改规则要同时改两处；guardLint 无法自动核对（见下），靠这条注释与 code review。
 stonecutter parameters {
     // 加载器常量：守卫的加载器轴，如 `//? if neoforge { ... //?}`。
-    // parameters 块按节点懒求值，值取自各节点 gradle.properties 的 deps.loader。
-    constants.match(node.project.property("deps.loader") as String, "neoforge", "fabric", "forge")
+    // parameters 块按节点懒求值，值取自各节点 gradle.properties 的 deps.platform
+    // （平台 token，与 deps.loader_version=loader 版本号分键——fabric 节点曾因一键两义
+    // 让三个常量全不命中，见 ADR-0008 规则 8 的恒假检查）。
+    constants.match(node.project.property("deps.platform") as String, "neoforge", "fabric", "forge")
     replacements {
         regex(current.parsed >= "26", "!mc_ids") {
             // 方向：第一条 pair 必须是「1.21.1 形态 -> 26.x 形态」（条件为真=26.x 走正向、
@@ -90,7 +92,11 @@ stonecutter parameters {
 //   7. wrapper 层零 loader import（ADR-0004 目标，hardFail 已于票 07 翻转）。
 //      例外：整文件 loader 守卫（`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件
 //      是显式平台面——其 loader import 在对侧编译单元不存在，不计违规、仅 informational
-//      列出（配方簇 / 能力系统 / 网络脚本通道等 fabric 移植件落地时逐个去掉守卫）。
+//      列出（配方簇 / 能力系统 / 网络脚本通道等 fabric 移植件落地时逐个去掉守卫）；
+//   8. 恒假常量（DEVEX-ROADMAP T3）：守卫条件引用的 loader 常量必须至少在一个节点
+//      取值为真——平台事实源是 versions/*/gradle.properties 的 deps.platform（与
+//      constants.match 同源），否则为永不激活分支，硬失败。fabric 节点曾因 deps.loader
+//      一键两义（值是 loader 版本号）让三个常量全不命中，见该键的拆分注释。
 // （规则一致性不用 lint：`!mc_ids` 的 token 对是字面 replace 调用（循环生成会静默失效，
 //   见 replacements 块注释），与已删除的合并工具 NORMALIZE 是同一套规则。）
 val guardLint = tasks.register("guardLint") {
@@ -100,7 +106,8 @@ val guardLint = tasks.register("guardLint") {
     val sources = fileTree("src") { include("**/*.java") }
     val commonApiSources = fileTree("common-api/src/main/java") { include("**/*.java") }
     val commonSources = fileTree("common/src/main/java") { include("**/*.java") }
-    inputs.files(sources, commonApiSources, commonSources)
+    val nodeProperties = fileTree("versions") { include("*/gradle.properties") }
+    inputs.files(sources, commonApiSources, commonSources, nodeProperties)
 
     val densityLimit = 20
     val runLimit = 8
@@ -117,6 +124,15 @@ val guardLint = tasks.register("guardLint") {
         val platformFacing = mutableListOf<String>()
         val exemptions = mutableListOf<String>()
         var guards = 0
+
+        // 规则 8 的事实源：节点平台集合（deps.platform，与 constants.match 同源）。
+        // forge 分支有自己的源码树、不编译共享 src，不计入平台集合。
+        val platformLine = Regex("""^deps\.platform=(\S+)$""")
+        val nodePlatforms = nodeProperties.files
+            .flatMap { f -> f.readLines().mapNotNull { platformLine.matchEntire(it.trim())?.groupValues?.get(1) } }
+            .toSet()
+        val usedConstants = sortedSetOf<String>()
+        val constantToken = Regex("""\b(neoforge|fabric|forge)\b""")
 
         fun rel(f: File) = f.relativeTo(project.projectDir).invariantSeparatorsPath
 
@@ -148,6 +164,8 @@ val guardLint = tasks.register("guardLint") {
                 if (line.startsWith("//? if ")) {
                     opens++
                     guards++
+                    // 规则 8：收集条件里的 loader 常量引用（如 `//? if neoforge && >=26 {`）
+                    constantToken.findAll(line).forEach { usedConstants += it.value }
                     if (inTextBlock) {
                         problems += "${source.name}:${index + 1} 守卫落在文本块内（stonecutter 会报 Unmatched scope closer）"
                     }
@@ -192,6 +210,14 @@ val guardLint = tasks.register("guardLint") {
                 if (wrapperLoaderImportHardFail) problems += msg else warnings += msg
             } else if (platformFacingWrapper && loaderImports > 0) {
                 platformFacing += "$path: loader import $loaderImports 处（整文件平台面，informational）"
+            }
+        }
+
+        // 规则 8：恒假常量——被守卫引用、但没有任何节点平台能取真的常量 = 永不激活分支
+        //（写坏不报编译错，只能在这里拦）
+        usedConstants.forEach { c ->
+            if (c !in nodePlatforms) {
+                problems += "守卫常量 `$c` 无任何节点取值为真（节点平台集合：$nodePlatforms）——恒假分支（规则 8）"
             }
         }
 
