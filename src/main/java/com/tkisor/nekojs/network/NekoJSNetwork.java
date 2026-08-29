@@ -34,6 +34,9 @@ public class NekoJSNetwork {
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1");
 
+        // play 阶段发送面的中立通道（共享树业务侧只依赖 PlayPacketDispatcher）
+        PlayPacketDispatcher.install(new NeoForgePlayPacketDispatcher());
+
         // 基础功能包
         registrar.playToClient(ShowErrorListPacket.TYPE, ShowErrorListPacket.STREAM_CODEC, NekoJSNetwork::handleShowErrorListOnClient);
         registrar.playToServer(FetchScriptRequestPacket.TYPE, FetchScriptRequestPacket.STREAM_CODEC, NekoJSNetwork::handleFetchRequestOnServer);

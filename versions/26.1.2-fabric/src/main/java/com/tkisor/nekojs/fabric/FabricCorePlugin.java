@@ -41,7 +41,14 @@ import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
  * 落到注册表类型的必要通道，缺失时报 "Unsupported target type"。
  */
 public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contributor,
-        com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor, AdaptersPoint.Contributor {
+        com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor,
+        com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, AdaptersPoint.Contributor {
+
+    @Override
+    public void registerBinding(com.tkisor.nekojs.api.data.BindingRegistry registry) {
+        // 服务端→客户端键值推送（只读侧 clientData 由 common 内置插件注册）
+        registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
+    }
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {

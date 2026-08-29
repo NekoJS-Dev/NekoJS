@@ -60,6 +60,17 @@ public final class FabricServerEventBindings {
 
     private FabricServerEventBindings() {}
 
+    /** 等待下一个 tick 末 post loggedIn 的玩家（见 register 中的时机说明）。 */
+    private static final java.util.Queue<net.minecraft.server.level.ServerPlayer> PENDING_LOGINS =
+            new java.util.concurrent.ConcurrentLinkedQueue<>();
+
+    private static void drainPendingLogins() {
+        net.minecraft.server.level.ServerPlayer player;
+        while ((player = PENDING_LOGINS.poll()) != null) {
+            LOGGED_IN.post(new PlayerLifecycleEventJS(player));
+        }
+    }
+
     /**
      * @param loadServerScripts SERVER 脚本首次加载动作（{@code NekoRuntimeRoot.reload(SERVER)}）
      */
@@ -77,10 +88,16 @@ public final class FabricServerEventBindings {
                 STOPPED.post(new ServerLifecycleEventJS(server)));
         ServerTickEvents.START_SERVER_TICK.register(server ->
                 TICK_PRE.post(new ServerTickEventJS(server)));
-        ServerTickEvents.END_SERVER_TICK.register(server ->
-                TICK_POST.post(new ServerTickEventJS(server)));
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            drainPendingLogins();
+            TICK_POST.post(new ServerTickEventJS(server));
+        });
+        // fabric 的 JOIN 在 PlayerList#placeNewPlayer 中途触发（语义是"可以给这个连接发包了"），
+        // 此刻玩家还没进 server.getPlayerList()——NeoForge 的 PlayerLoggedInEvent 是进列表之后。
+        // 因此排到下一个 tick 末再 post：否则脚本在 loggedIn 里做的全服广播（ClientData.sync 等）
+        // 会静默漏掉刚进来的这个人。server.execute 不行——同线程会内联执行。
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                LOGGED_IN.post(new PlayerLifecycleEventJS(handler.player)));
+                PENDING_LOGINS.add(handler.player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 LOGGED_OUT.post(new PlayerLifecycleEventJS(handler.player)));
         net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->

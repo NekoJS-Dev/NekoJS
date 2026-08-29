@@ -4,10 +4,10 @@ package com.tkisor.nekojs.wrapper.pdata;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.inject.EntityExtension;
 import com.tkisor.nekojs.network.PDataSyncPacket;
+import com.tkisor.nekojs.network.PlayPacketDispatcher;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -67,7 +67,7 @@ public final class PDataSyncService {
         if (entity.level().isClientSide()) return;
         int id = entity.getId();
         int revision = SERVER_REVISIONS.merge(id, 1, Integer::sum);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, new PDataSyncPacket(id, revision, new CompoundTag()));
+        PlayPacketDispatcher.get().sendToPlayersTrackingEntityAndSelf(entity, new PDataSyncPacket(id, revision, new CompoundTag()));
         SERVER_REVISIONS.remove(id);
         DIRTY_ENTITIES.remove(entity);
     }
@@ -104,7 +104,7 @@ public final class PDataSyncService {
         }
 
         int revision = SERVER_REVISIONS.merge(entity.getId(), 1, Integer::sum);
-        PacketDistributor.sendToPlayersTrackingEntityAndSelf(entity, new PDataSyncPacket(entity.getId(), revision, data));
+        PlayPacketDispatcher.get().sendToPlayersTrackingEntityAndSelf(entity, new PDataSyncPacket(entity.getId(), revision, data));
     }
 }
 //?}
