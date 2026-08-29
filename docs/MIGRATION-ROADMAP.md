@@ -18,6 +18,13 @@
 
 ---
 
+## ✅ 图收束（2026-08-29）
+
+P0–P4 全部完成。三阶段两发布的第一阶段（P1，插件 API breaking）与第二阶段（P2，唯一脚本
+breaking 大版本）内容均已落地并真机冒烟；P3 守卫治理豁免清零 + wrapper hardFail；P4 CI 强制 +
+Fabric 端口（本地票 02–09）收官。未竟事项不阻塞收束：判据③真人测试经用户裁定以本地测试替代
+（见 P4 行）；Forge 1.20.1 端口按原计划在 B4 之后独立进行（不进本图）。
+
 ## P0 纪律先行（无破坏）✅ 2026-08-28 完成
 
 先让工具看住，再动代码。
@@ -26,13 +33,13 @@
 - [x] 模块边界检查：L1/L2 零 MC/Loader/Graal import——落地于 guardLint 的 import 扫描（ADR-0007 修订：与密度检查同一工具入口；原定 processor 方案改为 guardLint，核心决策"不引新依赖"不变）；负向测试已验证拦截
 - [x] 现状守卫基线：7 个超限文件打豁免标记（GUI 三屏 55/47/46 → P3 26.2 基准化；NbtBinaryCodec 30 / VillagerTradeManager 24 → P3 facade 候选；RecipeEventJS 21 → P2 改写；RecipeManagerMixin 21 → P3 复查）；wrapper 层 26 文件 55 处 loader import 进入报告基线
 
-## P1 扩展点系统（插件 API breaking，脚本无感）
+## P1 扩展点系统（插件 API breaking，脚本无感）✅ 2026-08-29 完成
 
 ADR-0001 / 0002 / 0003 / 0007。对应判据②。
 
 - [x] V2 核心落 `common`（全部完成：builder 唯一入口 + merge 必填 + 拓扑 freeze + 两档访问 + 密封；**七个过渡工厂已删**，测试改 builder，全绿）
 - [x] datagen 四钩子 Point 化（GenerationPoint.Contributor 直发模式，全绿）；**契约迁移已解锁**：NekoJSPlugin 归零引擎包签名，迁移=搬文件+根脚本接线。原侦察记录：：瘦身后剩余签名类型中 `JSConfigModel`（core.fs）、`DataGeneratorJS`/`LangGeneratorJS`（wrapper）在引擎包，直接迁移引发级联；且 `api.*` 包目前在 common 与 common-api 间**分裂共存**。推荐路线：先把 datagen 钩子（generateData/generateAssets/generateLang/modifyWorkspaceConfig）Point 化成 Contributor，NekoJSPlugin 归零引擎签名后再迁；另 common 无独立 build.gradle.kts，依赖接线在根构建脚本
-- [ ] 契约物理迁移 common-api——**配方已定（包名保持，零 import 改动）**：`common` 已依赖 `common-api`（common/build.gradle:62 `api project(':common-api')`），故只需**按包平移文件**：`NekoJSPlugin` + 四个活签名类型（`ApiContributionRegistry`→连带 api/surface 簇、`RecipeLifecycleContext`→连带 api/recipe 簇、`ScriptType`/`ScriptTypePredicate`、`AttachedData`）从 common 移入 common-api **同包名目录**，编译报错即把下一层依赖类型一并平移，循环至绿；common-api 已有 `checkApiBoundaries` 检查模式可验证
+- [x] ~~契约物理迁移 common-api~~（配方行，由下行完成记录取代）
 - [x] **契约物理迁移完成（2026-08-29，全平台绿）**：`NekoJSPlugin`/`ScriptType`/`ScriptTypePredicate`/`ApiContributionRegistry`+surface 簇/capability 簇/`RecipeLifecycleContext`/`AttachedData` 包名平移入 common-api；`EnvironmentKeyFactory`（平台耦合）留守 common；common-api 补 jspecify。前置：ScriptType 抽薄（`ScriptTypeEnv` 承载 scriptsDir/logger/logFile/makeId，约 40 调用点改写）
 - **ScriptType 抽薄设计（已定待实施）**：① 枚举常量停止捕获 `NekoJSPaths`（public `path` 字段是最大耦合，类初始化期 fs 访问）→ 迁引擎侧 `ScriptTypeEnv.of(type).path()/logger()/logFile()`（common），契约枚举只留 name/cname/predicate；② `.logger()` 15 文件、`.path` 使用点全量改写为访问器；③ 完成后即可整体平移契约簇。工作量：中等（一次专注会话）
 - [x] 14 个内置 EP → Point 文件（全部完成，三节点 + 全量测试 + guardLint 绿）
@@ -43,10 +50,19 @@ ADR-0001 / 0002 / 0003 / 0007。对应判据②。
   - 特例预告：`bindings`（client 谓词闭包）与 `script_properties`（scriptProperties 闭包）不能是静态常量——Point 文件提供静态工厂方法，清单注册时构造；`client_events` 用 `dependsOn(events)` + initializer `result(events)`（V2 语义首秀）
 - [x] `NekoBuiltinPointsPlugin`（清单 14 行 + bootstrap 显式提升 + 闭包构造参数）；`BuiltinPluginExtensionPoints`（394 行）**已删除**
 - [x] `NekoJSPlugin` 瘦身（33 → 15 default 方法，纯生命周期 + apiSurface + 便捷钩子，直接 breaking）
-- [ ] `NekoPluginRuntime` 访问器迁 handle（迁移期委托保留，**P1 末删除**）
-- [ ] 验收：判据②试做 + 既有启动冒烟（`/nekojs` 命令、probe 生成、脚本三目录加载）
+- [x] `NekoPluginRuntime` 访问器收敛完成（2026-08-29）：api 层消费方 12 处全部走
+  `NekoRuntimeAccess`（common-api 的 IPluginRuntime 契约，非具体类）；具体类静态访问器
+  `current()` 仅剩 core 内部 1 处（NekoNodeModuleInstaller，非 api 面）；per-EP 访问器零新增
+  （ADR-0001「冻结 NekoPluginRuntime」达成）。原构想的 `NekoPluginExtensionHandle` 聚合句柄
+  保留为 bootstrap 内部机制（注册方取回产物），api 层访问面以 NekoRuntimeAccess 收口——
+  更贴合「api 层不碰 core 类」的 M1 判据
+- [x] 验收：判据②试做通过（见 P2「registry_infos / registry_types」行：新增 2 个引擎级 EP =
+  2 个 Point 文件 + 1 个 provider 2 行，零核心类改动）；启动冒烟多轮通过（P2 判据①真机 26.2.0
+  runServer Done 0.294s 零 ERROR / P4 fabric runServer Done 零错误；startup/server/client 三目录
+  脚本加载、RegistryEvents 收集回调、probe 目录/类型生成均在冒烟中覆盖；`/nekojs` 命令树随
+  NekoJSCommands 在两平台注册，probe enable/preview 等子命令在 P4 冒烟中实际调用）
 
-## P2 通用注册表 + 脚本面切换（唯一脚本 breaking，大版本）
+## P2 通用注册表 + 脚本面切换（唯一脚本 breaking，大版本）✅ 2026-08-29 完成
 
 ADR-0004 / 0005 / 0006。对应判据①。
 
@@ -58,22 +74,43 @@ ADR-0004 / 0005 / 0006。对应判据①。
 - [x] **wiki 重写完成**：《注册新内容》整页重写（单入口 + 12 builder 参考 + 连带注册说明 + 迁移表）；《快速开始》示例、《事件参考》RegistryEvents 节/契约表/契约语义同步
 - [x] **判据①真机冒烟通过（26.2.0 runServer，2026-08-29）**：`RegistryEvents.register` 收集回调执行、item/block（含预创建 item 子 builder）/fluid/potion 四例 builder 全生成、连带注册全投递（零 undelivered/duplicate 诊断）、服务器 `Done (0.294s)` 全日志 0 ERROR。途中修复：回调预检对 ProxyObject payload 的 managed 契约路径误报（rootValue 整体退回 Unknown）；暴露并绕过 dev 服务器残留进程锁世界锁的问题。**P2 全部完成**
 
-## P3 模块与守卫治理（无破坏）
+## P3 模块与守卫治理（无破坏）✅ 2026-08-29 完成
 
 ADR-0007 / 0008。
 
 - [x] **GUI 主干 26.2 化完成**：三屏（NekoWorkspaceScreen/NekoErrorDashboardScreen/NekoCodeEditor）共享树改纯 26.2 求值版（各剩 1 个整文件守卫），1.21.1 完整求值变体落 `versions/1.21.1/src`（节点 src 不走守卫求值，须放已求值版——实测得出）。148 行守卫消失
 - [x] **剩余 4 豁免文件节点拆分完成（facade 计划由节点拆分替代，更贴合 M2 裁定）**：RecipeManagerMixin / NeoForgeNbtBinaryCodec / VillagerTradeManager / RecipeEventJS 同法拆分——共享树纯 26.x + 1.21.1 节点求值变体
 - [x] **守卫密度达标：豁免清零**（守卫块 863 → 626，超限文件 7 → 0；guardLint 全绿）
-- [ ] wrapper 层零 loader import 达标（guardLint 拦截）
+- [x] **wrapper 层零 loader import 达标（2026-08-29，票 07）**：guardLint 规则细化（最外层
+  loader 守卫 + 尾行收尾 = 显式平台面，informational 列出）+ `wrapperLoaderImportHardFail=true`
+  翻转；GoalRegistry/NekoScriptMob 去守卫桥接（fabric 侧 Mob 字段 AW 放宽）；余 10 文件
+  34 处全部整文件平台面（配方簇/capabilities/NetworkJS/FluidBuilder/LootTable）
 
-## P4 收尾与跟进
+## P4 收尾与跟进 ✅ 2026-08-29 完成
 
 - [x] **guardLint 挂 CI 强制**（ci-build.yml 新增独立步骤；processor 测试原已在 CI。wrapper loader import 维持警告基线，hardFail 待 Fabric 功能端口完成后翻转）
 - [x] **Fabric 脚本运行时 bring-up 完成（26.1.2-fabric，2026-08-29）**：`FabricPluginLoader`（内置清单 + nekojs entrypoint，bootstrap 内部构造的 EP 清单插件不入列）+ `FabricCorePlugin`（BlockEvents 组挂进绑定）+ `FabricRegistryAdapter`（收集事件 post 一次 → vanilla Registry.register 单批抽干，跨注册表懒引用免序）+ `NekoJSFabricMod` 完整装配（与 NekoJSMod 同构）。**真机冒烟通过**：startup 脚本加载、RegistryEvents.register 收集回调执行（soundEvent/mobEffect 糖方法）、服务器 Done (0.498s) 零错误。GraalMC curse 文件按加载器分 build（用户提示查明）：8456810=NeoForge 构建（catalog 默认）、8456812=fabric 构建（fabric.gradle.kts resolutionStrategy 定向），两平台冒烟均通过。ICU4J 踩坑记录：loom 对 MC manifest 库去重导致 icu4j 依赖被从 dev run 类路径剥离（bundled/runtimeOnly/api 传递全灭；探针对照 commons-text 可进），解法 = 类提取进 sourceSet 输出目录（loom 不过滤源集输出，分发 jar 亦随之携带）。**尚未接**（后续批次）：ServerEvents/PlayerEvents 等主体事件组 fabric 桥、网络 payload 通道、ScriptEvents 自定义事件、客户端专属装配
 - [x] **Fabric 服务端事件面 v1（2026-08-29，P4-c）**：中立 payload（ServerLifecycleEventJS / ServerTickEventJS / PlayerLifecycleEventJS，共享树无守卫，成员名对齐契约 getter）+ FabricServerEventBindings（生命周期 5 时机 + tickPre/Post + loggedIn/Out，同名组 EventGroupRegistry 合并挂载）+ SERVER 脚本加载钩子（SERVER_STARTING → reload(SERVER)，对齐 NeoForge 在 datapack reload listener 注册期的首载时机）。真机冒烟通过：starting/started（event.server.getPlayerList() 实取值）/tickPost 全触发、零错误。已知时序差异：fabric starting 早于 NeoForge 同名事件（世界装载前，playerList 未就绪）。余量：chat/EntityEvents/ItemEvents、网络、ScriptEvents、客户端装配
 - [x] **Fabric 实体事件 + 类型适配器 + chat（2026-08-29，P4-d）**：① FabricCorePlugin 挂 AdaptersPoint——注册 17 个平台无关类型适配器（EntityType/Block/Item/Identifier/...），这是 dispatch 字符串键（EntityEvents.death('minecraft:zombie',...)）落注册表类型的必要通道（此前缺失报 Unsupported target type，适配器注册此前只在 NeoForge 核心插件）；② EntityEvents.death 经 ServerLivingEntityEvents.ALLOW_DEATH（死亡判定前，语义对齐 NeoForge LivingDeathEvent）+ LivingDeathEventJS 中立 payload；③ PlayerEvents.chat 经 ServerMessageEvents.CHAT_MESSAGE + ServerChatEventJS（player/username/message 字符串成员，对齐契约）。真机冒烟通过：forceload + PersistenceRequired 僵尸 /kill → death 按实体类型 dispatch 触发、source=genericKill。踩坑记录：无玩家时出生区块不保持加载（实体被丢弃非死亡）、敌对生物无玩家瞬间 despawn、armor stand 重写死亡路径绕过钩子——冒烟须用 PersistenceRequired 常规生物 + forceload。joinLevel 暂缺：fabric-api 无「实体加入世界」等价事件（ENTITY_LOAD 仅覆盖存储装载），待 fabric mixin 通道
-- [ ] 判据③真人测试（ZZZank）
+
+- [x] **Fabric 本地票冲刺收官（2026-08-29，票 02–09）**：mixin joinLevel 通道（ServerLevelMixin
+  addEntity TAIL）→ 客户端装配（ClientModInitializer + CLIENT 脚本 CLIENT_STARTED 加载 +
+  ClientEvents tick + tick 裸名别名 + 时机差异如实记录）→ 包分发通道（配置任务 addTask 对齐
+  NeoForge、canSend 校验、latch 主线程协议、内存连接跳过经 ServerCommonPacketListenerAccessor、
+  双阶段 DISCONNECT 卸载；真机验证：推送→落盘→未信任断连→信任后激活执行）→ play 网络 +
+  ClientData（PlayPacketDispatcher 中立发送面 + loggedIn 延迟到 tick 末修 fabric JOIN 时序、
+  clientData 离开世界清空）→ ScriptEvents 中立化（方案 A：声明式自定义事件 + 脚本 post，
+  ScriptEventsJS 下沉 common，probe 渲染 post/any payload，冻结基线按门禁再生，wiki 三篇 + README
+  迁移表）→ wrapper 清算 + hardFail 翻转（见 P3）→ damagePre/Post（真机）+ rightClicked
+  （服务端 handleUseItem mixin；UseItemCallback 是纯客户端事件的教训记录）→ 实体扩展 + pdata
+  （NekoEntityPDataMixin 持久化 + EntityPDataStore 中立桥 + 接口注入 mixin + 同步去重单测；
+  NeoForgeData 容器键经 patched sources 核实）。每票 code-review 双轴 + 跟进提交；
+  review 抓获并修复：内存连接跳过缺失、配置阶段断连事件不触发、.loggedIn 广播漏人、
+  clientData 进服即清、脚本 id 解析 BUG-B3 复发、容器键写错、卸载钩子覆盖不足。
+- [x] ~~判据③真人测试（ZZZank）~~——**用户裁定砍掉（2026-08-29）**：以本地测试替代真人测试
+  验收。等效覆盖：判据①真机冒烟（26.2.0 四例 builder）+ 判据②静态试做 + 新增注册表类型的
+  贡献式扫描根（反射 Registries）+ gen/NekoRegistryDeclarations 手写声明 + wiki《注册新内容》
+  整页重写（贡献者不看内部文档的文档面已就位）。真人测试留作后续独立事项，不阻塞本图收束
 - [ ] Forge 1.20.1 端口照原 roadmap（B4 之后），不进本图
 
 ---
