@@ -28,3 +28,13 @@
 - `/nekojs trust` 命令仍是 neoforge 面（命令注册未移植），fabric 冒烟直接写
   `nekojs/config/trusted-servers.json`（bucket = sha256(小写地址)）。命令移植归后续票。
 - 首次 runClient 会弹无障碍引导挡住 quickPlay，`options.txt` 置 `onboardAccessibility:false` 即可。
+- 内存连接（单人/局域网主机自己的客户端）判定要在服务器侧就做（NeoForge 侧
+  `listener.getConnection().isMemoryConnection()`），否则每次进世界都会白算全部包的哈希并把
+  bundle 灌进内存管道。fabric networking API 不转发 `Connection`，vanilla 字段是 protected ——
+  加了 `ServerCommonPacketListenerAccessor`（@Accessor mixin）取字段。
+- 未信任是在**配置阶段**被踢，`ClientPlayConnectionEvents.DISCONNECT` 不会触发（连不到 play
+  阶段），必须同时注册 `ClientConfigurationConnectionEvents.DISCONNECT` 才能卸载远端包状态。
+
+**本票只做包分发通道**：ScriptSyncService 自身的 play 阶段包（FetchScript/SaveScript/
+DownloadAll/UploadAll/SyncFeedback/OpenWorkspace/NekoScriptPayload）与 PData/ClientData
+同步包仍是 neoforge 面 —— play 阶段通道底座归票 05。

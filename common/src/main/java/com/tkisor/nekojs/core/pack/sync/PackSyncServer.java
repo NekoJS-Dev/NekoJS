@@ -17,6 +17,12 @@ import java.util.List;
  */
 public final class PackSyncServer {
 
+    /**
+     * 配置阶段推送任务的 id（各平台的 {@code ConfigurationTask.Type} 共用同一字符串，
+     * 保证 NeoForge 与 fabric 的任务身份一致）。
+     */
+    public static final String TASK_ID = NekoJS.MODID + ":pack_sync";
+
     private PackSyncServer() {}
 
     /** 当前 engine.toml 的 packSync 是否启用（mode != off）。 */

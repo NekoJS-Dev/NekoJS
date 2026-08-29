@@ -62,6 +62,19 @@ public record PackBundlePayload(List<PackEntry> packs) implements CustomPacketPa
         return new PackBundlePayload(entries);
     }
 
+    /** 各平台接收面共用：线格式 bundle → 客户端管线包快照（哈希由管线自算/对照）。 */
+    public List<SyncedPack> toSyncedPacks() {
+        List<SyncedPack> out = new ArrayList<>(packs.size());
+        for (PackEntry pack : packs) {
+            List<PackContentFile> files = new ArrayList<>(pack.files().size());
+            for (FileEntry file : pack.files()) {
+                files.add(new PackContentFile(file.relativePath(), file.bytes()));
+            }
+            out.add(SyncedPack.of(pack.syncId(), pack.scope(), null, pack.manifestJsonText(), files));
+        }
+        return out;
+    }
+
     public static final Type<PackBundlePayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath(NekoJS.MODID, "pack_bundle"));
 
