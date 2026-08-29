@@ -60,7 +60,6 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         }
     }
 
-
     static {
         Platform.init(new FabricPlatform());
         NekoIdCompat.init(new FabricIdCompat());
