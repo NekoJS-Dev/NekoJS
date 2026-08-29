@@ -496,9 +496,7 @@
       "id": "member:ScriptEventRegistrationEvent.register",
       "signatures": [
         "(PRIMITIVE:object)",
-        "(PRIMITIVE:string,PRIMITIVE:string,PRIMITIVE:object)",
-        "(PRIMITIVE:string,PRIMITIVE:string,PRIMITIVE:object,PRIMITIVE:string)",
-        "(PRIMITIVE:string,PRIMITIVE:string,PRIMITIVE:object,PRIMITIVE:string,PRIMITIVE:boolean)"
+        "(PRIMITIVE:object,PRIMITIVE:object)"
       ]
     },
     {

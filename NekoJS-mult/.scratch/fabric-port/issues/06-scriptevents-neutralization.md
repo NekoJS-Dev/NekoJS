@@ -2,9 +2,9 @@
 
 **What to build:** 自定义脚本事件注册面（`ScriptEvents.server(ev => ev.register('组','名','net.neoforged...类名'))`）目前以 NeoForge 事件类名驱动、整文件 neoforge 守卫。中立化重设计：中立事件源描述（平台无关的注册参数）+ 双端解析。
 
-**Blocked by:** 等用户裁定 API 形态（下方两案）。
+**Blocked by:** None（用户裁定采用方案 A）。
 
-**Status:** needs-info（设计已成型，等一次裁定）
+**Status:** done（方案 A）
 
 ## 现状（读码结论）
 
@@ -41,7 +41,27 @@
 **推荐 A**：唯一不可中立的能力（按类名挂原生事件）本来就有 `NativeEvents` 承担，
 A 之后 `ScriptEvents` 与内置事件组职责不重叠，且 common 里现成的中立管线可以直接用。
 
-- [ ] 中立 API 形态确定（与用户确认：A / B）
-- [ ] NeoForge 侧迁移到中立形态
-- [ ] fabric 侧最小子集可用（`ScriptEventsJS` 下沉 common + fabric 传真 registrar）
-- [ ] wiki《事件扩展》同步 + 四节点编译 + 测试 + guardLint 绿
+- [x] 中立 API 形态确定：方案 A
+- [x] NeoForge 侧迁移到中立形态（`ScriptEventsJS` 下沉 common，删掉 neoforge 版）
+- [x] fabric 侧可用（`FabricCorePlugin` 注册 `ScriptEvents.GROUP`、`NekoJSFabricMod` 传真 registrar）
+- [x] wiki《事件扩展》《全局绑定》《事件参考》+ README 同步；四节点编译 + 测试 + guardLint 绿
+
+## 落地记录
+
+- `ScriptEventsJS` 从 `src/main/java`（neoforge 守卫）移到 `common/src/main/java`，同包名，
+  所以 `NekoJSMod` 的 import 不用改。`register(targetType, group, name, sourceScriptId)`：
+  建一个不可取消的 `EventBusJS.of(Object.class, false)`，不挂任何平台总线，unregisterer 为空。
+- 触发面：新增 `ScriptEventBusJS`（同时实现 `ProxyExecutable` + `ProxyObject`）——
+  调用即注册监听（转发给 `EventBusJS`），`post` 成员触发。`ScriptEventGroupJS.getMember`
+  返回它而不是裸 bus，所以只有 `ScriptEvents` 声明出来的事件允许脚本自己 post，
+  内置事件组不受影响。
+- `ScriptEventDefinition` 去掉 `eventClassName`（全仓无读取方）。
+- 冻结基线（`api-manifest-core.json`）按门禁流程 `-Dnekojs.golden.regenerate=true` 再生成，
+  diff 就是 `ScriptEventRegistrationEvent.register` 的 3 个原生类重载换成 `(object,object)`。
+- `sourceScriptId` 现在由 `ScriptEventRegistrationEvent` 解析：从脚本传进来的任一 Graal 值
+  反查其 Context 的当前脚本 id（所以位置形态签名是 `(Object, Object)` 而不是 `(String, String)`
+  —— 拿不到 Value 就退化成整类型清理，会打破 per-file STARTUP reload 的按来源清理）。
+- fabric 冒烟：startup 声明 `MyEvents.bossKilled` → server 脚本监听 + 第 40 tick `post`
+  → 日志 `SE-SMOKE: listener got boss=ender_dragon hp=0`。
+  第一次跑报 `Unknown identifier 'ScriptEvents'`：`ScriptEvents.GROUP` 原先只由
+  NeoForge 核心插件注册，fabric 侧要在 `FabricCorePlugin.registerEvents` 里补一行。

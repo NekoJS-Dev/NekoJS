@@ -66,13 +66,13 @@ class ScriptEventRegistryTest {
         StubPluginRuntime runtime = new StubPluginRuntime();
         AtomicBoolean oldUnregistered = new AtomicBoolean(false);
         ScriptEventDefinition first = new ScriptEventDefinition(
-                "grp", "server_evt", ScriptType.SERVER, String.class.getName(), SCRIPT_ID,
+                "grp", "server_evt", ScriptType.SERVER, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> oldUnregistered.set(true));
 
         ScriptEventRegistry.register(runtime, first);
 
         ScriptEventDefinition replacement = new ScriptEventDefinition(
-                "grp", "server_evt", ScriptType.SERVER, String.class.getName(), SCRIPT_ID,
+                "grp", "server_evt", ScriptType.SERVER, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> {});
         assertDoesNotThrow(() -> ScriptEventRegistry.register(runtime, replacement),
                 "same-key same-source re-registration must be a replacement, not an error");
@@ -84,12 +84,12 @@ class ScriptEventRegistryTest {
     void differentSourceDuplicateStillThrows() {
         StubPluginRuntime runtime = new StubPluginRuntime();
         ScriptEventDefinition first = new ScriptEventDefinition(
-                "grp", "server_evt", ScriptType.SERVER, String.class.getName(), SCRIPT_ID,
+                "grp", "server_evt", ScriptType.SERVER, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> {});
         ScriptEventRegistry.register(runtime, first);
 
         ScriptEventDefinition otherSource = new ScriptEventDefinition(
-                "grp", "server_evt", ScriptType.SERVER, String.class.getName(), OTHER_SCRIPT_ID,
+                "grp", "server_evt", ScriptType.SERVER, OTHER_SCRIPT_ID,
                 EventBusJS.of(String.class), () -> {});
         assertThrows(IllegalArgumentException.class, () -> ScriptEventRegistry.register(runtime, otherSource),
                 "same key from a different source id must still be rejected");
@@ -102,14 +102,14 @@ class ScriptEventRegistryTest {
         AtomicBoolean clientUnregistered = new AtomicBoolean(false);
 
         ScriptEventRegistry.register(runtime, new ScriptEventDefinition(
-                "grp", "server_evt", ScriptType.SERVER, String.class.getName(), SCRIPT_ID,
+                "grp", "server_evt", ScriptType.SERVER, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> serverUnregistered.set(true)));
         ScriptEventRegistry.register(runtime, new ScriptEventDefinition(
-                "grp", "client_evt", ScriptType.CLIENT, String.class.getName(), SCRIPT_ID,
+                "grp", "client_evt", ScriptType.CLIENT, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> clientUnregistered.set(true)));
 
         DefaultScriptEventBridge bridge = new DefaultScriptEventBridge(
-                (targetType, groupName, eventName, eventClass, priority, receiveCancelled) -> {});
+                (targetType, groupName, eventName, sourceScriptId) -> {});
         bridge.setPluginRuntime(runtime);
         bridge.clearListeners(ScriptType.STARTUP, SCRIPT_ID);
 
@@ -126,14 +126,14 @@ class ScriptEventRegistryTest {
         AtomicBoolean clientUnregistered = new AtomicBoolean(false);
 
         ScriptEventRegistry.register(runtime, new ScriptEventDefinition(
-                "grp", "server_evt", ScriptType.SERVER, String.class.getName(), SCRIPT_ID,
+                "grp", "server_evt", ScriptType.SERVER, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> serverUnregistered.set(true)));
         ScriptEventRegistry.register(runtime, new ScriptEventDefinition(
-                "grp", "client_evt", ScriptType.CLIENT, String.class.getName(), SCRIPT_ID,
+                "grp", "client_evt", ScriptType.CLIENT, SCRIPT_ID,
                 EventBusJS.of(String.class), () -> clientUnregistered.set(true)));
 
         DefaultScriptEventBridge bridge = new DefaultScriptEventBridge(
-                (targetType, groupName, eventName, eventClass, priority, receiveCancelled) -> {});
+                (targetType, groupName, eventName, sourceScriptId) -> {});
         bridge.setPluginRuntime(runtime);
         bridge.clearListeners(ScriptType.STARTUP);
 

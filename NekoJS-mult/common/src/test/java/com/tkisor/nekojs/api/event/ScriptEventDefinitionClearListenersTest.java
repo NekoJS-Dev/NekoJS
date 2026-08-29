@@ -43,7 +43,7 @@ class ScriptEventDefinitionClearListenersTest {
         assertFalse(((EventBusImpl<?>) bus).isEmpty());
 
         ScriptEventDefinition def = new ScriptEventDefinition(
-                "grp", "evt", ScriptType.SERVER, "java.lang.String", "script.js", jsBus, () -> {});
+                "grp", "evt", ScriptType.SERVER, "script.js", jsBus, () -> {});
         def.clearListeners(ScriptType.SERVER);
 
         assertEquals(0, totalTokens(jsBus), "clearListeners must sweep ALL buckets (BUG-B3 fix)");
@@ -58,7 +58,7 @@ class ScriptEventDefinitionClearListenersTest {
         injectToken(jsBus, ScriptType.SERVER, "beta.js", bus.listen(s -> {}));
 
         ScriptEventDefinition def = new ScriptEventDefinition(
-                "grp", "evt", ScriptType.SERVER, "java.lang.String", "alpha.js", jsBus, () -> {});
+                "grp", "evt", ScriptType.SERVER, "alpha.js", jsBus, () -> {});
         def.clearListeners(ScriptType.SERVER, "alpha.js");
 
         assertEquals(1, totalTokens(jsBus), "only the alpha.js listener should be removed");

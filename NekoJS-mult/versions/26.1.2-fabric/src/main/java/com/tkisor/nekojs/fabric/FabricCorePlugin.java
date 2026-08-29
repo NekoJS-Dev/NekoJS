@@ -54,6 +54,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
     public void registerEvents(EventGroupRegistry registry) {
         // broken：FabricBlockEventBindings 已接 PlayerBlockBreakEvents.BEFORE
         registry.register(BlockEvents.GROUP);
+        // 自定义脚本事件的声明面（STARTUP 的 ScriptEvents.server/client，平台无关）
+        registry.register(com.tkisor.nekojs.api.event.ScriptEvents.GROUP);
         // 服务端生命周期 / tick / 玩家进出服 + chat：中立 payload 子集
         registry.register(FabricServerEventBindings.SERVER_EVENTS);
         registry.register(FabricServerEventBindings.PLAYER_EVENTS);

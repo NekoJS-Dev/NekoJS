@@ -20,7 +20,7 @@ public class ScriptEventGroupJS implements ProxyObject {
         if (definition == null) {
             throw new IllegalArgumentException("No such script event bus: " + groupName + "." + key);
         }
-        return definition.bus();
+        return new ScriptEventBusJS(groupName, key, definition.bus());
     }
 
     @Override

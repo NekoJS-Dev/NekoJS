@@ -65,10 +65,15 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         NekoIdCompat.init(new FabricIdCompat());
     }
 
+    private final com.tkisor.nekojs.bindings.static_access.ScriptEventsJS scriptEventsRegistrar;
+
     public NekoJSFabricMod() {
-        // ScriptEvents 自定义事件注册器是 neoforge 实现面；fabric 侧传 null——
-        // 未注册自定义事件时桥不会触碰 registrar（bindEvents 只读 ScriptEventRegistry）
-        super(new DefaultScriptEventBridge(null));
+        this(new com.tkisor.nekojs.bindings.static_access.ScriptEventsJS());
+    }
+
+    private NekoJSFabricMod(com.tkisor.nekojs.bindings.static_access.ScriptEventsJS scriptEventsRegistrar) {
+        super(new DefaultScriptEventBridge(scriptEventsRegistrar));
+        this.scriptEventsRegistrar = scriptEventsRegistrar;
     }
 
     @Override
@@ -112,6 +117,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 NekoJSBasePluginManager.getOwnedPlugins(), this.scriptProperties);
         NekoRuntimeAccess.get().fireInit();
         ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
+        this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
 
         var compilers = ScriptCompilerRegistry.current();
         SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();

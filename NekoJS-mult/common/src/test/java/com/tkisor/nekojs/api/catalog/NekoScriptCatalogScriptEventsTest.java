@@ -95,7 +95,7 @@ class NekoScriptCatalogScriptEventsTest {
 
     private static void registerDefinition(String group, String name, ScriptType target, Class<?> eventType) {
         ScriptEventRegistry.register(new StubRuntime(Map.of()), new ScriptEventDefinition(
-                group, name, target, eventType.getName(), "test_scripts/catalog.js",
+                group, name, target, "test_scripts/catalog.js",
                 EventBusJS.of(eventType), () -> {}));
     }
 
