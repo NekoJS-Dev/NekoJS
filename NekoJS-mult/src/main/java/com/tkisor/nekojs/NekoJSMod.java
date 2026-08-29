@@ -82,7 +82,9 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(RegistryEventAdapter::onBuildCreativeTabContents);
         modEventBus.addListener(NekoJSMod::onRegisterCapabilities);
         NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
-        NeoForge.EVENT_BUS.addListener(GoalRegistry::onEntityJoinLevel);
+        // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent.class,
+                event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
         modEventBus.addListener(NekoJSMod::onLoadComplete);
     }
 

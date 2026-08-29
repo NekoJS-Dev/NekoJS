@@ -1,7 +1,8 @@
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.entity;
 
+//? if neoforge {
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
+//?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
@@ -57,7 +58,8 @@ import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
 import net.minecraft.world.entity.npc.villager.Villager;
 //?}
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -117,8 +119,8 @@ public final class GoalRegistry {
         apply(mob, goals);
     }
 
-    public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Mob mob) || mob instanceof NekoScriptMob) {
+    public static void onEntityJoinLevel(Entity entity, Level level) {
+        if (level.isClientSide() || !(entity instanceof Mob mob) || mob instanceof NekoScriptMob) {
             return;
         }
         if (!APPLIED_JOIN_GOALS.add(mob)) {
@@ -232,9 +234,12 @@ public final class GoalRegistry {
                 return mapped;
             }
             Identifier location = id.contains(":") ? Identifier.parse(id) : Identifier.fromNamespaceAndPath("nekojs", id);
+//? if neoforge {
+            // 脚本注册的实体统一是 NekoScriptMob（fabric 上脚本实体注册面未移植，走不到这里）
             if (EntityTypeBuilder.getEntityType(location) != null) {
                 return NekoScriptMob.class;
             }
+//?}
             throw new IllegalArgumentException("未知目标实体（无内置映射，可用 Java.type(...) 传类）: " + id);
         }
         throw new IllegalArgumentException("无法解析目标: " + target);
@@ -352,4 +357,3 @@ public final class GoalRegistry {
         }
     }
 }
-//?}

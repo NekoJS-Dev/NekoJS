@@ -89,6 +89,8 @@ dependencies {
 loom.runs {
     named("server") { runDir("run-server") }
 }
+// fabric 版 AT：GoalRegistry（共享树）访问 Mob#goalSelector/targetSelector
+loom.accessWidenerPath = file("src/main/resources/nekojs-fabric.accesswidener")
 
 // fabric.mod.json 模板展开（Loom 不做变量替换，沿用 ProcessResources 约定）
 // 属性必须在顶层读：任务配置 lambda 里裸调 property() 会解析到任务的动态属性查找
