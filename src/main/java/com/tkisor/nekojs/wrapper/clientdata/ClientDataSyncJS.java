@@ -4,7 +4,7 @@ import com.google.gson.JsonElement;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.network.ClientDataSyncPacket;
-import com.tkisor.nekojs.network.PlayPacketDispatcher;
+import com.tkisor.nekojs.network.PlayPacketDispatchers;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -31,7 +31,7 @@ public final class ClientDataSyncJS {
     @Param(name = "value", value = "JSON-compatible value (string/number/bool/object/array/null)")
     public static void sync(String key, Object value) {
         var packet = createPacket(key, value);
-        PlayPacketDispatcher.get().sendToAllPlayers(packet);
+        PlayPacketDispatchers.get().sendToAllPlayers(packet);
     }
 
     /** 推送给指定玩家。 */
@@ -41,7 +41,7 @@ public final class ClientDataSyncJS {
     @Param(name = "value", value = "JSON-compatible value (string/number/bool/object/array/null)")
     public static void syncTo(ServerPlayer player, String key, Object value) {
         var packet = createPacket(key, value);
-        PlayPacketDispatcher.get().sendToPlayer(player, packet);
+        PlayPacketDispatchers.get().sendToPlayer(player, packet);
     }
 
     private static ClientDataSyncPacket createPacket(String key, Object value) {
