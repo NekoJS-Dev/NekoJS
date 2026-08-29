@@ -4,6 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
@@ -41,11 +42,11 @@ import org.slf4j.LoggerFactory;
  * 两处 loader 差异：插件发现走 {@link FabricPluginLoader}（内置清单 + entrypoint）；
  * 注册表无逐 pass 事件，改 {@link FabricRegistryAdapter} 单批直注。
  *
- * <p>尚未接（随 LoaderBridge 后续批次）：chat / EntityEvents / ItemEvents 等余量事件、
- * 网络payload 通道（ScriptSync / pdata / clientData 推送）、
- * 自定义脚本事件（ScriptEvents，neoforge 实现面）、JEI 配方查看器、客户端专属装配。
- * 当前 fabric 脚本面 = 中性绑定 + 通用注册表（5 个平台无关类型）+ BlockEvents.broken
- * + ServerEvents 生命周期/tick + PlayerEvents 进出服（SERVER 脚本在 SERVER_STARTING 加载）。
+ * <p>尚未接（随 LoaderBridge 后续批次）：damagePre/Post 与 ItemEvents 等余量事件、
+ * pdata（依赖实体扩展机制）、JEI 配方查看器。
+ * 当前 fabric 脚本面 = 中性绑定 + 通用注册表 + BlockEvents.broken + ServerEvents 生命周期/tick
+ * + PlayerEvents 进出服/chat + EntityEvents joinLevel/death + ClientEvents tick（CLIENT 脚本）
+ * + 包分发与 ClientData 网络通道 + ScriptEvents 自定义事件。
  */
 public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
@@ -65,13 +66,13 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         NekoIdCompat.init(new FabricIdCompat());
     }
 
-    private final com.tkisor.nekojs.bindings.static_access.ScriptEventsJS scriptEventsRegistrar;
+    private final ScriptEventsJS scriptEventsRegistrar;
 
     public NekoJSFabricMod() {
-        this(new com.tkisor.nekojs.bindings.static_access.ScriptEventsJS());
+        this(new ScriptEventsJS());
     }
 
-    private NekoJSFabricMod(com.tkisor.nekojs.bindings.static_access.ScriptEventsJS scriptEventsRegistrar) {
+    private NekoJSFabricMod(ScriptEventsJS scriptEventsRegistrar) {
         super(new DefaultScriptEventBridge(scriptEventsRegistrar));
         this.scriptEventsRegistrar = scriptEventsRegistrar;
     }

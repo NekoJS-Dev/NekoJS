@@ -62,8 +62,9 @@ class NekoScriptCatalogScriptEventsTest {
         EventCatalogEntry tick = events.stream().filter(e -> e.name().equals("clientTick")).findFirst().orElseThrow();
         assertEquals(ScriptType.SERVER, hurt.scriptType());
         assertEquals(ScriptType.CLIENT, tick.scriptType());
-        assertEquals(String.class, hurt.eventType());
-        assertEquals(Integer.class, tick.eventType());
+        assertTrue(hurt.scriptDefined(), "script events carry no event class (payload is script-provided)");
+        assertTrue(tick.scriptDefined(), "script events carry no event class (payload is script-provided)");
+        assertEquals(null, hurt.eventType());
         assertTrue(!hurt.dispatchable(), "script events are plain buses (no dispatch key)");
     }
 

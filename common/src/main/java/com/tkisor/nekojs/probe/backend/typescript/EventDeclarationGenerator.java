@@ -127,6 +127,16 @@ public final class EventDeclarationGenerator {
     private String generateEventMethod(EventCatalogEntry event) {
         StringBuilder sb = new StringBuilder();
 
+        // ScriptEvents 声明的自定义事件：载荷任意、且脚本可自己触发
+        if (event.scriptDefined()) {
+            sb.append("        namespace ").append(event.name()).append(" {\n");
+            sb.append("            function post(payload?: any): void;\n");
+            sb.append("        }\n");
+            sb.append("        function ").append(event.name());
+            sb.append("(handler: ((payload: any) => void)): void;\n");
+            return sb.toString();
+        }
+
         // 事件类类型
         String eventType = "any";
         if (event.eventType() != null) {

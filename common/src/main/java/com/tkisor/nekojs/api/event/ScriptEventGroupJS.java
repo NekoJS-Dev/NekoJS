@@ -8,6 +8,8 @@ import java.util.Map;
 public class ScriptEventGroupJS implements ProxyObject {
     private final String groupName;
     private final Map<String, ScriptEventDefinition> definitions;
+    /** 事件句柄按名缓存：每次 getMember 新建会让 {@code G.n !== G.n}。 */
+    private final Map<String, ScriptEventBusJS> handles = new java.util.concurrent.ConcurrentHashMap<>();
 
     public ScriptEventGroupJS(String groupName, Map<String, ScriptEventDefinition> definitions) {
         this.groupName = groupName;
@@ -20,7 +22,7 @@ public class ScriptEventGroupJS implements ProxyObject {
         if (definition == null) {
             throw new IllegalArgumentException("No such script event bus: " + groupName + "." + key);
         }
-        return new ScriptEventBusJS(groupName, key, definition.bus());
+        return handles.computeIfAbsent(key, name -> new ScriptEventBusJS(groupName, name, definition.bus()));
     }
 
     @Override

@@ -58,9 +58,22 @@ A 之后 `ScriptEvents` 与内置事件组职责不重叠，且 common 里现成
 - `ScriptEventDefinition` 去掉 `eventClassName`（全仓无读取方）。
 - 冻结基线（`api-manifest-core.json`）按门禁流程 `-Dnekojs.golden.regenerate=true` 再生成，
   diff 就是 `ScriptEventRegistrationEvent.register` 的 3 个原生类重载换成 `(object,object)`。
-- `sourceScriptId` 现在由 `ScriptEventRegistrationEvent` 解析：从脚本传进来的任一 Graal 值
-  反查其 Context 的当前脚本 id（所以位置形态签名是 `(Object, Object)` 而不是 `(String, String)`
-  —— 拿不到 Value 就退化成整类型清理，会打破 per-file STARTUP reload 的按来源清理）。
+- `sourceScriptId` 由 `ScriptEventRegistrationEvent` 从**当前活跃 Context** 取
+  （`Context.getCurrent()` + `ScriptContextRegistry.currentScriptIdOf`，与 `DelegatingBinding`
+  同套路），所以位置形态签名保持 `(String, String)`。第一版改成 `(Object, Object)` 去嗅探
+  Graal `Value` 反查 Context 是错的：位置形态的实参在 host interop 下就是 `java.lang.String`，
+  永远拿不到 Value，per-file STARTUP reload 的按来源清理会退回常量（BUG-B3 复发）。
+  新增 `ScriptEventSourceIdTest` 从 JS 里 eval `event.register(...)` 覆盖这条。
+- probe：脚本事件的 payload 不再是 `java.lang.Object`（否则 `.d.ts` 渲染成 `$Object`
+  且把 Object 塞进反射 BFS 种子）。`EventCatalogEntry.ofScriptEvent` 让 `eventType == null`，
+  TS 后端渲染 `(payload: any) => void` 并额外声明 `post(payload?: any)`；Python 后端
+  `renderClass(null)` 本来就给 `Any`。
+- 被 review 抓到的漏网：`src/test/.../ScriptEventsJSSourceIdTest.java`（neoforge 守卫）
+  还在调已删除的 `ScriptEventsJS.resolveSourceScriptId`——我第一轮只跑了 `:common:test`，
+  没跑节点 `compileTestJava`。已改为 common 侧的 `ScriptEventSourceIdTest`。
+  顺带发现 `BuilderTagTest` 自 50029bd（P2 通用注册表改写）起就引用已删除的 `*BuilderJS`
+  类名，节点 test 编译一直是红的——已按新类名（`gen.ItemBuilder` 等）修好。
+  节点 `test`/`compileTestJava` 现已纳入本票的回归命令。
 - fabric 冒烟：startup 声明 `MyEvents.bossKilled` → server 脚本监听 + 第 40 tick `post`
   → 日志 `SE-SMOKE: listener got boss=ender_dragon hp=0`。
   第一次跑报 `Unknown identifier 'ScriptEvents'`：`ScriptEvents.GROUP` 原先只由
