@@ -1,6 +1,6 @@
 // NeoForge 分支共享构建脚本：stonecutter 对每个版本节点（versions/1.21.1、versions/26.1.2、
 // versions/26.2.0）各求值一次。per-node 参数来自 versions/<node>/gradle.properties
-//（stonecutter property() 读取；deps.loader=neoforge 驱动 `//? if neoforge` 常量）。
+//（stonecutter property() 读取；deps.platform=neoforge 驱动 `//? if neoforge` 常量）。
 //
 // 节点源码构成：分支共享 src/main/java（版本守卫 + loader 守卫单副本）+ 节点专属
 // versions/<node>/src/main/{java,resources}（per-node compat 与不可守卫配对副本）。
