@@ -97,6 +97,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         });
         FabricPackSync.registerServer();
         FabricPlayNetwork.registerServer();
+        FabricPDataSync.registerServer();
         initializeWorkspace();
         initializeScripts();
         FabricRegistryAdapter.onInitialize();

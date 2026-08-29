@@ -86,6 +86,31 @@ public class NekoJSMod extends NekoJS {
         // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
         NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class,
                 event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
+        // 实体持久化数据存取桥：NeoForge 容器 = Entity#getPersistentData()（实体就在调用现场，
+        // 此处直接解引用成 id 再交给 store——镜像/同步层同样按 id 记账）
+        com.tkisor.nekojs.api.inject.EntityPDataStore.install(new com.tkisor.nekojs.api.inject.EntityPDataStore.Access() {
+            @Override
+            public net.minecraft.nbt.CompoundTag get(int entityId, String key) {
+                var container = pdataContainer(entityId);
+                if (container == null) return new net.minecraft.nbt.CompoundTag();
+//? if >=26 {
+                return container.getCompound(key).orElseGet(net.minecraft.nbt.CompoundTag::new).copy();
+//?} else {
+/*                return container.getCompound(key).copy();
+*///?}
+            }
+
+            @Override
+            public void set(int entityId, String key, net.minecraft.nbt.CompoundTag tag) {
+                var container = pdataContainer(entityId);
+                if (container == null) return;
+                if (tag.isEmpty()) {
+                    container.remove(key);
+                } else {
+                    container.put(key, tag.copy());
+                }
+            }
+        });
         modEventBus.addListener(NekoJSMod::onLoadComplete);
     }
 
@@ -94,6 +119,17 @@ public class NekoJSMod extends NekoJS {
         CapabilityRegistryEventJS eventJS = new CapabilityRegistryEventJS();
         CapabilityEvents.REGISTER.post(eventJS);
         eventJS.apply(event);
+    }
+
+    /** 实体 id → 持久化容器（NeoForge 容器挂实体上；id→实体经全维度查表，仅服务器线程调用）。 */
+    private static net.minecraft.nbt.CompoundTag pdataContainer(int entityId) {
+        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return null;
+        for (var level : server.getAllLevels()) {
+            var entity = level.getEntity(entityId);
+            if (entity != null) return entity.getPersistentData();
+        }
+        return null;
     }
 
     private static void initializeWorkspace() {
