@@ -3,8 +3,11 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
+import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
+
+import java.util.function.BiConsumer;
 
 /**
  * 平台层在资源 reload 时对全部插件触发 generateData / generateAssets / generateLang
@@ -17,31 +20,25 @@ public final class PluginGenerationHooks {
     private PluginGenerationHooks() {}
 
     public static void fireGenerateData(DataGeneratorJS generator) {
-        for (NekoJSPlugin plugin : NekoJSBasePluginManager.getPlugins()) {
-            try {
-                plugin.generateData(generator);
-            } catch (Exception e) {
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("generateData hook failed for " + plugin.getClass().getName(), e);
-            }
-        }
+        fire("generateData", ScriptType.SERVER, generator, NekoJSPlugin::generateData);
     }
 
     public static void fireGenerateAssets(DataGeneratorJS generator) {
-        for (NekoJSPlugin plugin : NekoJSBasePluginManager.getPlugins()) {
-            try {
-                plugin.generateAssets(generator);
-            } catch (Exception e) {
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).error("generateAssets hook failed for " + plugin.getClass().getName(), e);
-            }
-        }
+        fire("generateAssets", ScriptType.CLIENT, generator, NekoJSPlugin::generateAssets);
     }
 
     public static void fireGenerateLang(LangGeneratorJS generator) {
+        fire("generateLang", ScriptType.CLIENT, generator, NekoJSPlugin::generateLang);
+    }
+
+    /** 全员触发 + 异常隔离的公共形状：钩子名进日志、env 定 logger、generator 类型参数化。 */
+    private static <G> void fire(String hook, ScriptType env, G generator,
+            BiConsumer<NekoJSPlugin, G> call) {
         for (NekoJSPlugin plugin : NekoJSBasePluginManager.getPlugins()) {
             try {
-                plugin.generateLang(generator);
+                call.accept(plugin, generator);
             } catch (Exception e) {
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).error("generateLang hook failed for " + plugin.getClass().getName(), e);
+                ScriptTypeEnv.logger(env).error(hook + " hook failed for " + plugin.getClass().getName(), e);
             }
         }
     }

@@ -1,5 +1,7 @@
 # 模块边界：四层归属判据
 
+> **2026-08-29 修订（ADR-0010 §4）**：`NekoJSPlugin` 经实施裁决移回 `common`——18 个恢复钩子的参数类型全在 common，反向搬 14 个类型会级联拖出内部依赖；FQCN 不变、common-api 内无反向引用。本表"common-api = 对外契约"中**插件入口接口**以此为准；其归位后的边界守护（零 MC/Loader import、钩子-点配对）由 `checkCommonIsolation` 与 `PluginHookPairingTest` 承担，`common-api-processor` 契约检查不再覆盖该接口。
+
 `common-api`（93 文件）已有部分契约包，但插件入口 `NekoJSPlugin` 仍在 `common`（README 注明的过渡状态）；节点目录几乎全是参数（节点专属源码仅 5 个文件），即几乎所有代码都堆在共享树。本 ADR 把归属规则成文：
 
 ## 四层归属判据
