@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.listener;
 
 import com.google.gson.JsonElement;
@@ -19,22 +18,21 @@ import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
-import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import java.io.Reader;
 import java.util.Map;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
 
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class ServerEventListener {
@@ -69,7 +67,6 @@ public class ServerEventListener {
         ItemModificationEventJS.fire(server);
         // 方块属性修改：同一时机 post（先整体恢复上轮快照再重放，删除的 modify 自动回退）；
         // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
-        BlockModificationEventJS.fire();
     }
 
     /**
@@ -128,7 +125,7 @@ public class ServerEventListener {
     }
 
     @SubscribeEvent
-    public static void onServerResourceReload(AddServerReloadListenersEvent event) {
+    public static void onServerResourceReload(AddReloadListenerEvent event) {
         if (!schemaAutoDiscovered) {
             try {
                 RecipeSchemaAutoDiscovery.DiscoveredRecipeTypes discovered = MinecraftRecipeSchemaScanner.scan();
@@ -138,7 +135,7 @@ public class ServerEventListener {
             }
             schemaAutoDiscovered = true;
         }
-        event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
+        event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
             VillagerTradeManager.beginReload();
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
@@ -157,7 +154,10 @@ public class ServerEventListener {
      * 服务器未就绪（首次 WorldStem 装载）时跳过，由 {@link #onServerAboutToStart} 补刷。
      */
     @SubscribeEvent
-    public static void onServerDataTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad event) {
+    public static void onTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent event) {
+        if (event.getUpdateCause() != net.neoforged.neoforge.event.TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
+            return;
+        }
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             VillagerTradeManager.apply(server);
@@ -180,8 +180,8 @@ public class ServerEventListener {
 
     private static void loadRecipeTypeDefinitions(ResourceManager manager) {
         RecipeTypeDefinitionRegistry.Builder builder = RecipeTypeDefinitionRegistry.builder();
-        for (Map.Entry<Identifier, Resource> entry : manager.listResources("nekojs/recipe_types", path -> path.getPath().endsWith(".json")).entrySet()) {
-            Identifier resourceId = entry.getKey();
+        for (Map.Entry<ResourceLocation, Resource> entry : manager.listResources("nekojs/recipe_types", path -> path.getPath().endsWith(".json")).entrySet()) {
+            ResourceLocation resourceId = entry.getKey();
             String path = resourceId.getPath();
             String prefix = "nekojs/recipe_types/";
             String typeName = path.substring(prefix.length(), path.length() - ".json".length());
@@ -198,4 +198,3 @@ public class ServerEventListener {
         RecipeTypeDefinitionStorage.replace(builder.build());
     }
 }
-//?}

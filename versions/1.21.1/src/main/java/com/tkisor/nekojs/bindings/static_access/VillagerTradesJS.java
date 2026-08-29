@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.NekoJS;
@@ -9,14 +8,9 @@ import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
 import graal.graalvm.polyglot.Value;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.item.trading.TradeSet;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /**
  * Static binding {@code VillagerTrades}: stages villager / wandering trader trade additions
@@ -24,7 +18,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  * {@code minecraft:villager_trade} / {@code minecraft:trade_set} registries at the end of
  * the reload cycle, so calling this anywhere during script load is safe.
  */
-@Doc("Static binding 'VillagerTrades': append custom trades to vanilla villager and wandering trader trade sets.")
+@Doc("Static binding 'VillagerTrades': append custom trades to vanilla villager and wandering trader trade pools.")
 public class VillagerTradesJS {
 
     /**
@@ -33,30 +27,18 @@ public class VillagerTradesJS {
      * <p>Example: {@code VillagerTrades.add('minecraft:farmer/level_1', {
      * cost: '1x minecraft:emerald', result: '5x minecraft:apple', maxUses: 12, xp: 2 })}</p>
      */
-    @Doc("Appends a trade to an existing trade set registry entry (e.g. 'minecraft:farmer/level_1', 'minecraft:wandering_trader/buying').")
-    @Doc("The change is staged and applied when the reload cycle finishes; returns false when the trade set id is unknown or the config is invalid.")
-    @Param(name = "tradeSet", value = "trade set registry id, '<namespace>:<profession>/level_<n>' or a wandering trader set id")
+    @Doc("Appends a trade to a villager trade pool ('<namespace>:<profession>/level_<n>') or a wandering trader pool ('minecraft:wandering_trader/level_1' or 'level_2').")
+    @Doc("The change is staged and applied when the reload cycle finishes; villagers offer the trade on their next restock. Returns false for unknown pools or invalid configs.")
+    @Param(name = "tradeSet", value = "trade pool id, e.g. 'minecraft:farmer/level_1' or 'minecraft:wandering_trader/buying'")
     @Param(name = "config", value = "{ cost: '<count>x <item id>', costB: '<count>x <item id>' (optional), result: '<count>x <item id>', maxUses: 12, xp: 2, priceMultiplier: 0.05 }")
     @Return("true when the trade was staged for the next flush")
     public boolean add(String tradeSet, Object config) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) {
+        if (ServerLifecycleHooks.getCurrentServer() == null) {
             NekoJS.LOGGER.warn("VillagerTrades.add: no server is running; trade for '{}' ignored", tradeSet);
             return false;
         }
-        Identifier setId = Identifier.tryParse(tradeSet);
-        if (setId == null) {
-            NekoJS.LOGGER.warn("VillagerTrades.add: invalid trade set id '{}'", tradeSet);
-            return false;
-        }
-        ResourceKey<TradeSet> setKey = ResourceKey.create(Registries.TRADE_SET, setId);
-        Registry<TradeSet> registry = tradeSetRegistry(server);
-        if (registry == null) {
-            NekoJS.LOGGER.warn("VillagerTrades.add: TRADE_SET registry is not available");
-            return false;
-        }
-        if (!registry.containsKey(setKey)) {
-            NekoJS.LOGGER.warn("VillagerTrades.add: trade set '{}' is not registered", setId);
+        Target target = parseTarget(tradeSet);
+        if (target == null) {
             return false;
         }
 
@@ -72,12 +54,12 @@ public class VillagerTradesJS {
         float priceMultiplier = readFloat(cfg, "priceMultiplier", 0.05f);
         if (maxUses <= 0 || xp < 0 || priceMultiplier < 0.0f || priceMultiplier > 1.0f) {
             NekoJS.LOGGER.warn("VillagerTrades.add({}): maxUses must be > 0, xp >= 0 and priceMultiplier within 0..1 (got {}/{}/{})",
-                    setId, maxUses, xp, priceMultiplier);
+                    tradeSet, maxUses, xp, priceMultiplier);
             return false;
         }
 
         VillagerTradeManager.stageAdd(new VillagerTradeManager.PendingTrade(
-                setKey,
+                target.professionId, target.level,
                 cost.id, cost.count,
                 costB != null ? costB.id : null, costB != null ? costB.count : 1,
                 result.id, result.count,
@@ -92,14 +74,56 @@ public class VillagerTradesJS {
         return VillagerTradeManager.pendingCount();
     }
 
-    private static Registry<TradeSet> tradeSetRegistry(MinecraftServer server) {
-        if (server.reloadableRegistries().lookup() instanceof RegistryAccess access) {
-            return access.lookup(Registries.TRADE_SET).orElse(null);
+    private record Target(ResourceLocation professionId, int level) {}
+
+    /** Parses 'minecraft:farmer/level_1' / 'minecraft:wandering_trader/<pool>' into a profession+level target. */
+    private static Target parseTarget(String tradeSet) {
+        int slash = tradeSet == null ? -1 : tradeSet.lastIndexOf('/');
+        if (slash <= 0 || slash == tradeSet.length() - 1) {
+            NekoJS.LOGGER.warn("VillagerTrades.add: trade set id must look like '<profession>/level_<n>', got '{}'", tradeSet);
+            return null;
         }
-        return null;
+        String professionText = tradeSet.substring(0, slash);
+        String levelText = tradeSet.substring(slash + 1).toLowerCase();
+        int level;
+        if (levelText.startsWith("level_")) {
+            try {
+                level = Integer.parseInt(levelText.substring("level_".length()));
+            } catch (NumberFormatException e) {
+                level = -1;
+            }
+        } else {
+            level = switch (levelText) {
+                case "buying", "common" -> 1;
+                case "uncommon", "rare" -> 2;
+                default -> -1;
+            };
+        }
+        if (level < 1) {
+            NekoJS.LOGGER.warn("VillagerTrades.add: cannot parse a level from trade set id '{}'", tradeSet);
+            return null;
+        }
+        ResourceLocation professionId = ResourceLocation.tryParse(professionText);
+        if (professionId == null) {
+            NekoJS.LOGGER.warn("VillagerTrades.add: invalid profession id in '{}'", tradeSet);
+            return null;
+        }
+        boolean wandering = professionId.getPath().equals("wandering_trader");
+        if (wandering) {
+            if (!VillagerTradeManager.wanderingTraderLevels().contains(level)) {
+                NekoJS.LOGGER.warn("VillagerTrades.add: wandering trader has no level {} pool", level);
+                return null;
+            }
+            return new Target(null, level);
+        }
+        if (!BuiltInRegistries.VILLAGER_PROFESSION.containsKey(professionId)) {
+            NekoJS.LOGGER.warn("VillagerTrades.add: profession '{}' is not registered", professionId);
+            return null;
+        }
+        return new Target(professionId, level);
     }
 
-    private record ItemSpec(Identifier id, int count) {}
+    private record ItemSpec(ResourceLocation id, int count) {}
 
     /** Reads an item spec: '3x minecraft:apple', 'minecraft:apple', or { item: 'minecraft:apple', count: 3 }. */
     private static ItemSpec readItem(Value cfg, String key, boolean required) {
@@ -141,7 +165,7 @@ public class VillagerTradesJS {
             NekoJS.LOGGER.warn("VillagerTrades.add: '{}' count must be > 0 (got {})", key, count);
             return null;
         }
-        Identifier id = Identifier.tryParse(idText);
+        ResourceLocation id = ResourceLocation.tryParse(idText);
         if (id == null) {
             NekoJS.LOGGER.warn("VillagerTrades.add: '{}' is not a valid item id: '{}'", key, idText);
             return null;
@@ -166,4 +190,3 @@ public class VillagerTradesJS {
         return cfg != null && cfg.hasMember(key) ? cfg.getMember(key) : null;
     }
 }
-//?}

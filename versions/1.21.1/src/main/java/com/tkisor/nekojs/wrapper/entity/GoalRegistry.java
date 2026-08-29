@@ -1,14 +1,11 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-// 本类本体 fabric 也编译——neoforge 依赖（EntityTypeBuilder）是两处局部守卫，非整文件包装。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.entity;
 
 // 脚本实体注册面（EntityTypeBuilder）是 neoforge 面；fabric 上此依赖不存在
-//? if neoforge {
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
-//?}
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -23,20 +20,7 @@ import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ambient.Bat;
-import net.minecraft.world.entity.animal.bee.Bee;
-import net.minecraft.world.entity.animal.chicken.Chicken;
-import net.minecraft.world.entity.animal.cow.Cow;
-import net.minecraft.world.entity.animal.feline.Cat;
-import net.minecraft.world.entity.animal.fox.Fox;
 import net.minecraft.world.entity.animal.goat.Goat;
-import net.minecraft.world.entity.animal.golem.IronGolem;
-import net.minecraft.world.entity.animal.golem.SnowGolem;
-import net.minecraft.world.entity.animal.equine.Llama;
-import net.minecraft.world.entity.animal.pig.Pig;
-import net.minecraft.world.entity.animal.rabbit.Rabbit;
-import net.minecraft.world.entity.animal.sheep.Sheep;
-import net.minecraft.world.entity.animal.turtle.Turtle;
-import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.ElderGuardian;
@@ -46,15 +30,6 @@ import net.minecraft.world.entity.monster.Phantom;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.monster.piglin.Piglin;
-import net.minecraft.world.entity.monster.skeleton.Skeleton;
-import net.minecraft.world.entity.monster.skeleton.Stray;
-import net.minecraft.world.entity.monster.skeleton.WitherSkeleton;
-import net.minecraft.world.entity.monster.spider.Spider;
-import net.minecraft.world.entity.monster.zombie.Drowned;
-import net.minecraft.world.entity.monster.zombie.Husk;
-import net.minecraft.world.entity.monster.zombie.Zombie;
-import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
-import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -65,6 +40,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import net.minecraft.world.entity.animal.Bee;
+import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.Chicken;
+import net.minecraft.world.entity.animal.Cow;
+import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.animal.Rabbit;
+import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.entity.animal.SnowGolem;
+import net.minecraft.world.entity.animal.Turtle;
+import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.animal.horse.Llama;
+import net.minecraft.world.entity.monster.Drowned;
+import net.minecraft.world.entity.monster.Husk;
+import net.minecraft.world.entity.monster.Skeleton;
+import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.entity.monster.Spider;
+import net.minecraft.world.entity.monster.Stray;
+import net.minecraft.world.entity.monster.WitherSkeleton;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.monster.ZombifiedPiglin;
+import net.minecraft.world.entity.npc.Villager;
 
 public final class GoalRegistry {
     // 注册阶段写、gameplay 阶段读，用 ConcurrentHashMap 保证 safe-publication
@@ -139,7 +137,7 @@ public final class GoalRegistry {
         TARGET_CLASSES.put("witch", Witch.class);
         TARGET_CLASSES.put("blaze", Blaze.class);
         // Slime 在 26.1 仍是 monster 包，26.2 起拆到 cubemob 子包——按版本取可用类
-        addTarget("slime", "net.minecraft.world.entity.monster.cubemob.Slime", "net.minecraft.world.entity.monster.Slime");
+        TARGET_CLASSES.put("slime", Slime.class);
         TARGET_CLASSES.put("phantom", Phantom.class);
         TARGET_CLASSES.put("husk", Husk.class);
         TARGET_CLASSES.put("drowned", Drowned.class);
@@ -169,17 +167,6 @@ public final class GoalRegistry {
     }
 
     /** 按候选类名逐个加载（跨小版本拆包差异兜底），全部失败则跳过该映射。 */
-    private static void addTarget(String id, String... classNames) {
-        for (String name : classNames) {
-            try {
-                @SuppressWarnings("unchecked")
-                Class<? extends LivingEntity> clazz = (Class<? extends LivingEntity>) Class.forName(name);
-                TARGET_CLASSES.put(id, clazz);
-                return;
-            } catch (ClassNotFoundException | LinkageError ignored) {
-            }
-        }
-    }
 
     /**
      * 目标实体 → 实体类。支持 Java 类对象（{@code Java.type(...)}）与实体 id 字符串
@@ -203,13 +190,11 @@ public final class GoalRegistry {
             if (mapped != null) {
                 return mapped;
             }
-            Identifier location = id.contains(":") ? Identifier.parse(id) : Identifier.fromNamespaceAndPath("nekojs", id);
-//? if neoforge {
+            ResourceLocation location = id.contains(":") ? ResourceLocation.parse(id) : ResourceLocation.fromNamespaceAndPath("nekojs", id);
             // 脚本注册的实体统一是 NekoScriptMob（fabric 上脚本实体注册面未移植，走不到这里）
             if (EntityTypeBuilder.getEntityType(location) != null) {
                 return NekoScriptMob.class;
             }
-//?}
             throw new IllegalArgumentException("未知目标实体（无内置映射，可用 Java.type(...) 传类）: " + id);
         }
         throw new IllegalArgumentException("无法解析目标: " + target);
@@ -225,7 +210,7 @@ public final class GoalRegistry {
         }
 
         public GoalBuilderJS forType(String id) {
-            Identifier location = id.contains(":") ? Identifier.parse(id) : Identifier.fromNamespaceAndPath("minecraft", id);
+            ResourceLocation location = id.contains(":") ? ResourceLocation.parse(id) : ResourceLocation.fromNamespaceAndPath("minecraft", id);
             this.type = BuiltInRegistries.ENTITY_TYPE.getOptional(location).orElseThrow(() -> new IllegalArgumentException("Unknown entity type: " + id));
             return this;
         }

@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.bindings.recipe;
 
@@ -13,6 +12,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class MinecraftRecipeHandler {
     private final RecipeEventJS event;
@@ -22,7 +22,7 @@ public class MinecraftRecipeHandler {
     // ========== crafting_shaped ==========
 
     public RecipeJsonBuilder crafting_shaped(ItemStack result, List<String> pattern,
-                                             Map<String, Ingredient> keys) {
+                                             Map<String, Ingredient> keys, Optional<String> group) {
         JsonArray patternArray = new JsonArray();
         for (String row : pattern) patternArray.add(row);
         JsonObject keyObj = new JsonObject();
@@ -30,10 +30,12 @@ public class MinecraftRecipeHandler {
             keyObj.add(entry.getKey(), event.serializeIngredient(entry.getValue()));
         RecipeJsonBuilder builder = event.builder("minecraft:crafting_shaped")
                 .jsonProperty("pattern", patternArray).jsonProperty("key", keyObj).output("result", result);
+        group.ifPresent(g -> builder.jsonProperty("group", g));
         return builder;
     }
 
-    public RecipeJsonBuilder crafting_shaped(ItemStack result, List<List<Ingredient>> inlinePattern) {
+    public RecipeJsonBuilder crafting_shaped(ItemStack result, List<List<Ingredient>> inlinePattern,
+                                             Optional<String> group) {
         JsonArray patternArray = new JsonArray();
         JsonObject keyObj = new JsonObject();
         Map<String, Character> seen = new HashMap<>();
@@ -51,16 +53,18 @@ public class MinecraftRecipeHandler {
         }
         RecipeJsonBuilder builder = event.builder("minecraft:crafting_shaped")
                 .jsonProperty("pattern", patternArray).jsonProperty("key", keyObj).output("result", result);
+        group.ifPresent(g -> builder.jsonProperty("group", g));
         return builder;
     }
 
-    public RecipeJsonBuilder crafting_shapeless(ItemStack result, List<Ingredient> ingredients) {
+    public RecipeJsonBuilder crafting_shapeless(ItemStack result, List<Ingredient> ingredients,
+                                                Optional<String> group) {
         JsonArray arr = new JsonArray();
         for (Ingredient ing : ingredients)
             if (ing != null && !ing.isEmpty()) arr.add(event.serializeIngredient(ing));
         RecipeJsonBuilder builder = event.builder("minecraft:crafting_shapeless")
                 .jsonProperty("ingredients", arr).output("result", result);
+        group.ifPresent(g -> builder.jsonProperty("group", g));
         return builder;
     }
 }
-//?}

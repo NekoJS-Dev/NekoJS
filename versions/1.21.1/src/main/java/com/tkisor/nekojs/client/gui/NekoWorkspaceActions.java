@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.client.gui;
 
 import com.tkisor.nekojs.client.gui.components.NekoMenuBar;
@@ -9,14 +8,14 @@ import com.tkisor.nekojs.client.gui.components.NekoTabbedEditor;
 import com.tkisor.nekojs.client.gui.components.NekoToast;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.network.*;
-import net.minecraft.util.Util;
 import net.minecraft.client.resources.language.I18n;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import net.minecraft.Util;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class NekoWorkspaceActions {
 
@@ -60,7 +59,7 @@ public class NekoWorkspaceActions {
         if (tabbedEditor == null || tabbedEditor.getActiveTab() == null) {
             toast.show(I18n.get("nekojs.gui.toast.error.no_file_open")); return;
         }
-        ClientPacketDistributor.sendToServer(new SaveScriptPacket(tabbedEditor.getActiveTab().path, tabbedEditor.getActiveTab().editor.getValue()));
+        PacketDistributor.sendToServer(new SaveScriptPacket(tabbedEditor.getActiveTab().path, tabbedEditor.getActiveTab().editor.getValue()));
         toast.show(I18n.get("nekojs.gui.toast.pushing_current"));
     }
 
@@ -68,7 +67,7 @@ public class NekoWorkspaceActions {
         if (tabbedEditor == null || tabbedEditor.getActiveTab() == null) {
             toast.show(I18n.get("nekojs.gui.toast.error.no_file_open")); return;
         }
-        ClientPacketDistributor.sendToServer(new FetchScriptRequestPacket(tabbedEditor.getActiveTab().path));
+        PacketDistributor.sendToServer(new FetchScriptRequestPacket(tabbedEditor.getActiveTab().path));
         toast.show(I18n.get("nekojs.gui.toast.pulling_current"));
     }
 
@@ -78,16 +77,15 @@ public class NekoWorkspaceActions {
         if (localFiles.isEmpty()) {
             toast.show(I18n.get("nekojs.gui.toast.error.empty_dir")); return;
         }
-        ClientPacketDistributor.sendToServer(new UploadAllScriptsPacket(localFiles));
+        PacketDistributor.sendToServer(new UploadAllScriptsPacket(localFiles));
     }
 
     public static void syncDownloadAll(NekoToast toast) {
         toast.show(I18n.get("nekojs.gui.toast.pulling_all"));
-        ClientPacketDistributor.sendToServer(new FetchAllScriptsRequestPacket());
+        PacketDistributor.sendToServer(new FetchAllScriptsRequestPacket());
     }
 
     public static void openLocalDir() {
-        Util.getPlatform().openFile(NekoJSPaths.get().root().toFile());
+        Util.getPlatform().openUri(NekoJSPaths.get().root().toUri());
     }
 }
-//?}

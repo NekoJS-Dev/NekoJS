@@ -1,11 +1,11 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.util.selector;
 
 import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.commands.arguments.selector.EntitySelectorParser;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -17,8 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import net.minecraft.advancements.critereon.MinMaxBounds;
 
 /**
  * 程序化 {@link EntitySelector} 流式构建器（移植自 Katton 的 EntitySelectorBuilder，
@@ -37,7 +37,7 @@ public class EntitySelectorBuilderJS {
     private int maxResults = 0;
     private boolean includesEntities = false;
     private boolean worldLimited = false;
-    private Object distance;
+    private MinMaxBounds.Doubles distance;
     private Double x;
     private Double y;
     private Double z;
@@ -76,7 +76,8 @@ public class EntitySelectorBuilderJS {
     /** 按实体 tag 过滤（如 {@code 'minecraft:skeletons'}）；inverse 为 true 时反选。 */
     public EntitySelectorBuilderJS typeTag(String tagId, boolean inverse) {
         var tag = EntitySelectorsJS.resolveEntityTypeTag(tagId);
-        predicates.add(entity -> entity.is(tag) != inverse);
+        Predicate<Entity> predicate = entity -> entity.getType().is(tag) != inverse;
+        predicates.add(predicate);
         return this;
     }
 
@@ -137,7 +138,7 @@ public class EntitySelectorBuilderJS {
         if (minDistance > maxDistance) {
             throw new IllegalArgumentException("min distance cannot be greater than max distance");
         }
-        this.distance = EntitySelectorFactory.doublesBetween(minDistance, maxDistance);
+        this.distance = MinMaxBounds.Doubles.between(minDistance, maxDistance);
         this.worldLimited = true;
         return this;
     }
@@ -147,7 +148,7 @@ public class EntitySelectorBuilderJS {
         if (maxDistance < 0) {
             throw new IllegalArgumentException("distance cannot be negative");
         }
-        this.distance = EntitySelectorFactory.doublesAtMost(maxDistance);
+        this.distance = MinMaxBounds.Doubles.atMost(maxDistance);
         this.worldLimited = true;
         return this;
     }
@@ -157,7 +158,7 @@ public class EntitySelectorBuilderJS {
         if (minDistance < 0) {
             throw new IllegalArgumentException("distance cannot be negative");
         }
-        this.distance = EntitySelectorFactory.doublesAtLeast(minDistance);
+        this.distance = MinMaxBounds.Doubles.atLeast(minDistance);
         this.worldLimited = true;
         return this;
     }
@@ -180,7 +181,7 @@ public class EntitySelectorBuilderJS {
         }
         predicates.add(entity -> {
             if (entity instanceof ServerPlayer player) {
-                return (player.gameMode() == gamemode) != inverse;
+                return (player.gameMode.getGameModeForPlayer() == gamemode) != inverse;
             }
             return false;
         });
@@ -209,7 +210,7 @@ public class EntitySelectorBuilderJS {
     /** 按实体标签（scoreboard tag）过滤；空串匹配「无标签」；inverse 为 true 时反选。 */
     public EntitySelectorBuilderJS tag(String tag, boolean inverse) {
         predicates.add(entity -> {
-            var tags = entity.entityTags();
+            var tags = entity.getTags();
             return (tag.isEmpty() ? tags.isEmpty() : tags.contains(tag)) != inverse;
         });
         return this;
@@ -276,7 +277,7 @@ public class EntitySelectorBuilderJS {
     public EntitySelector create() {
         AABB aabb;
         if (deltaX == null && deltaY == null && deltaZ == null) {
-            Double maxDistance = EntitySelectorFactory.maxOf(distance);
+            Double maxDistance = maxDistanceOrNull(distance);
             aabb = maxDistance == null
                     ? null
                     : new AABB(-maxDistance, -maxDistance, -maxDistance,
@@ -288,16 +289,16 @@ public class EntitySelectorBuilderJS {
                     deltaZ == null ? 0.0 : deltaZ);
         }
         // 未设置 x/y/z 时位置函数为恒等（find 传入的锚点原样生效）
-        Function<Vec3, Vec3> position;
+        java.util.function.Function<Vec3, Vec3> position;
         if (x != null || y != null || z != null) {
             position = vec3 -> new Vec3(
                     x == null ? vec3.x : x,
                     y == null ? vec3.y : y,
                     z == null ? vec3.z : z);
         } else {
-            position = Function.identity();
+            position = java.util.function.Function.identity();
         }
-        return EntitySelectorFactory.create(
+        return new EntitySelector(
                 maxResults,
                 includesEntities,
                 worldLimited,
@@ -306,7 +307,19 @@ public class EntitySelectorBuilderJS {
                 position,
                 aabb,
                 order,
-                type);
+                false,
+                null,
+                null,
+                type,
+                false);
+    }
+
+    /** 1.21.1：{@code Doubles.max()} 直接返回 Optional（26.x 为 {@code bounds().max()}）。 */
+    private static Double maxDistanceOrNull(MinMaxBounds.Doubles range) {
+        if (range == null) {
+            return null;
+        }
+        return range.max().orElse(null);
     }
 
     /** 镜像 {@code EntitySelectorParser#createAabb()}：负 delta 向下扩展，正向 +1 padding。 */
@@ -331,15 +344,13 @@ public class EntitySelectorBuilderJS {
     private static EntityType<?> entityType(String entityTypeId) {
         String normalized = entityTypeId.indexOf(':') >= 0 ? entityTypeId : "minecraft:" + entityTypeId;
         return BuiltInRegistries.ENTITY_TYPE
-                .getOptional(Identifier.parse(normalized))
+                .getOptional(ResourceLocation.parse(normalized))
                 .orElseThrow(() -> new IllegalArgumentException("unknown entity type: " + entityTypeId));
     }
 
     /** 是否为玩家类型（26.2 无 {@code EntityType.PLAYER} 常量，经注册表比较）。 */
     private static boolean isPlayerType(EntityType<?> resolved) {
-        EntityType<?> player = BuiltInRegistries.ENTITY_TYPE
-                .getOptional(Identifier.parse("minecraft:player"))
-                .orElse(null);
+        EntityType<?> player = BuiltInRegistries.ENTITY_TYPE.get(ResourceLocation.parse("minecraft:player"));
         return resolved == player;
     }
 

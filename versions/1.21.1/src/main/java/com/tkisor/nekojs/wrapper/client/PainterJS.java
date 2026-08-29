@@ -1,32 +1,29 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 /**
  * {@code ClientEvents.hud} 事件对象：HUD 绘制（每帧 GUI 渲染后，26.x 的
- * {@link GuiGraphicsExtractor} 渲染状态模型）。所有坐标以 GUI 缩放后的像素为单位
+ * {@link GuiGraphics} 渲染状态模型）。所有坐标以 GUI 缩放后的像素为单位
  * （{@code getWidth()/getHeight()} 为缩放后屏幕尺寸）。
  *
  * <p>颜色参数为 ARGB int（如 {@code 0x80FF0000} = 半透明红）；省略颜色时使用
  * {@code color()/resetColor()} 设置的当前色（默认不透明白）。
  */
 public class PainterJS {
-    private final GuiGraphicsExtractor guiGraphics;
+    private final GuiGraphics guiGraphics;
     private final Font font;
     private final float partialTick;
     private int currentColor = 0xFFFFFFFF;
 
-    public PainterJS(GuiGraphicsExtractor guiGraphics) {
-        this(guiGraphics, 0F);
-    }
 
-    public PainterJS(GuiGraphicsExtractor guiGraphics, float partialTick) {
+    public PainterJS(GuiGraphics guiGraphics, float partialTick) {
         this.guiGraphics = guiGraphics;
         this.font = Minecraft.getInstance().font;
         this.partialTick = partialTick;
@@ -44,12 +41,12 @@ public class PainterJS {
 
     /** 屏幕宽度（GUI 缩放后）。 */
     public int getWidth() {
-        return guiGraphics.guiWidth();
+        return Minecraft.getInstance().getWindow().getGuiScaledWidth();
     }
 
     /** 屏幕高度（GUI 缩放后）。 */
     public int getHeight() {
-        return guiGraphics.guiHeight();
+        return Minecraft.getInstance().getWindow().getGuiScaledHeight();
     }
 
     /** 设置默认颜色（ARGB），供省略颜色参数的绘制方法使用。 */
@@ -77,12 +74,18 @@ public class PainterJS {
 
     /** 1px 矩形边框。 */
     public PainterJS outline(int x, int y, int width, int height) {
-        guiGraphics.outline(x, y, x + width, y + height, currentColor);
+        guiGraphics.hLine(x, x + width - 1, y, currentColor);
+        guiGraphics.hLine(x, x + width - 1, y + height - 1, currentColor);
+        guiGraphics.vLine(x, y, y + height - 1, currentColor);
+        guiGraphics.vLine(x + width - 1, y, y + height - 1, currentColor);
         return this;
     }
 
     public PainterJS outline(int x, int y, int width, int height, int color) {
-        guiGraphics.outline(x, y, x + width, y + height, color);
+        guiGraphics.hLine(x, x + width - 1, y, color);
+        guiGraphics.hLine(x, x + width - 1, y + height - 1, color);
+        guiGraphics.vLine(x, y, y + height - 1, color);
+        guiGraphics.vLine(x + width - 1, y, y + height - 1, color);
         return this;
     }
 
@@ -114,58 +117,58 @@ public class PainterJS {
 
     /** 文本（左对齐）。 */
     public PainterJS text(String text, int x, int y) {
-        guiGraphics.text(font, text, x, y, currentColor);
+        guiGraphics.drawString(font, text, x, y, currentColor);
         return this;
     }
 
     public PainterJS text(String text, int x, int y, int color) {
-        guiGraphics.text(font, text, x, y, color);
+        guiGraphics.drawString(font, text, x, y, color);
         return this;
     }
 
     /** 文本（水平居中）。 */
     public PainterJS centerText(String text, int x, int y) {
-        guiGraphics.centeredText(font, text, x, y, currentColor);
+        guiGraphics.drawCenteredString(font, text, x, y, currentColor);
         return this;
     }
 
     public PainterJS centerText(String text, int x, int y, int color) {
-        guiGraphics.centeredText(font, text, x, y, color);
+        guiGraphics.drawCenteredString(font, text, x, y, color);
         return this;
     }
 
     /** 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 默认 0。 */
     public PainterJS texture(String textureId, int x, int y, int width, int height) {
-        guiGraphics.blit(Identifier.parse(textureId), x, y, width, height, 0, 0, width, height);
+        guiGraphics.blit(ResourceLocation.parse(textureId), x, y, 0, 0, width, height);
         return this;
     }
 
     /** 贴图（带纹理内偏移 u/v）。 */
     public PainterJS texture(String textureId, int x, int y, int u, int v, int width, int height) {
-        guiGraphics.blit(Identifier.parse(textureId), x, y, width, height, u, v, width, height);
+        guiGraphics.blit(ResourceLocation.parse(textureId), x, y, u, v, width, height);
         return this;
     }
 
     /** 物品图标（{@code Item.of('minecraft:diamond')}）。 */
     public PainterJS item(ItemStack stack, int x, int y) {
-        guiGraphics.item(stack, x, y);
+        guiGraphics.renderItem(stack, x, y);
         return this;
     }
 
     /** 变换栈：保存当前变换（配合 {@code translate} 使用）。 */
     public PainterJS push() {
-        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().pushPose();
         return this;
     }
 
     public PainterJS pop() {
-        guiGraphics.pose().popMatrix();
+        guiGraphics.pose().popPose();
         return this;
     }
 
     /** 平移后续绘制（GUI 坐标，先 push 再 translate 最后 pop）。 */
     public PainterJS translate(float x, float y) {
-        guiGraphics.pose().translate(x, y);
+        guiGraphics.pose().translate(x, y, 0);
         return this;
     }
 

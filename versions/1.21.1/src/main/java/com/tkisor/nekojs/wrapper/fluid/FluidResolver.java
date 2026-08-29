@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.fluid;
 
 import com.tkisor.nekojs.api.data.NekoId;
@@ -16,7 +15,7 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
@@ -81,7 +80,7 @@ public final class FluidResolver {
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == Fluids.EMPTY || amount <= 0) return FluidStack.EMPTY;
         // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
-        return new FluidStack(BuiltInRegistries.FLUID.wrapAsHolder(fluid), amount);
+        return new FluidStack(fluid, amount);
     }
 
     public static FluidStack stackFromValue(Value value) {
@@ -120,14 +119,15 @@ public final class FluidResolver {
         }
         ParsedFluidInput input = parseFluidInput(s, true);
         if (input.tag()) {
-            Identifier id = Identifier.parse(input.id());
+            ResourceLocation id = ResourceLocation.parse(input.id());
             TagKey<Fluid> tagKey = TagKey.create(Registries.FLUID, id);
-            var tag = BuiltInRegistries.FLUID.get(tagKey);
-            if (tag.isEmpty()) {
+            var tagSet = BuiltInRegistries.FLUID.getTag(tagKey);
+            if (tagSet.isEmpty()) {
                 throw new ValueConversionException(FluidIngredient.class, "existing fluid tag", "#" + input.id(),
                     "fluid tag not found: #" + input.id());
             }
-            return FluidIngredient.of(tag.get());
+            Fluid[] fluids = tagSet.get().stream().map(Holder::value).toArray(Fluid[]::new);
+            return FluidIngredient.of(fluids);
         }
         return ingredientFromFluid(getFluid(input.id()));
     }
@@ -198,14 +198,14 @@ public final class FluidResolver {
         ParsedFluidInput input = parseFluidInput(raw, true);
         FluidIngredient ingredient;
         if (input.tag()) {
-            Identifier id = Identifier.parse(input.id());
+            ResourceLocation id = ResourceLocation.parse(input.id());
             TagKey<Fluid> tagKey = TagKey.create(Registries.FLUID, id);
-            var tag = BuiltInRegistries.FLUID.get(tagKey);
-            if (tag.isEmpty()) {
+            var tagSet = BuiltInRegistries.FLUID.getTag(tagKey);
+            if (tagSet.isEmpty()) {
                 throw new ValueConversionException(FluidIngredient.class, "existing fluid tag", "#" + input.id(),
                     "fluid tag not found: #" + input.id());
             }
-            ingredient = FluidIngredient.of(tag.get());
+            ingredient = FluidIngredient.of(tagSet.get().stream().map(Holder::value).toArray(Fluid[]::new));
         } else {
             ingredient = ingredientFromFluid(getFluid(input.id()));
         }
@@ -267,7 +267,7 @@ public final class FluidResolver {
         if (present.size() == 1) return present.get(0);
         Set<Fluid> set = new LinkedHashSet<>();
         for (FluidIngredient fi : present) {
-            for (FluidStack s : matchingStacks(fi)) {
+            for (FluidStack s : fi.getStacks()) {
                 if (s != null && !s.isEmpty()) set.add(s.getFluid());
             }
         }
@@ -289,20 +289,10 @@ public final class FluidResolver {
         return ingredientOfHolders(new AnyHolderSet<>(FLUID_LOOKUP));
     }
 
-    private static FluidIngredient filterFluids(Value fn) {
-        if (!fn.canExecute()) {
-            throw new ValueConversionException(FluidIngredient.class,
-                "{ filter: (fluid)=>boolean }", fn, "'filter' must be a function");
-        }
-        return ingredientOfHolders(new PredicateHolderSet<>(
-            FLUID_LOOKUP, fn,
-            holder -> new FluidStack(holder, FluidAmounts.BUCKET)));
-    }
-
     private static FluidIngredient combineFluids(List<FluidIngredient> ings) {
         Set<Fluid> set = new LinkedHashSet<>();
         for (FluidIngredient fi : ings) {
-            for (FluidStack s : matchingStacks(fi)) {
+            for (FluidStack s : fi.getStacks()) {
                 if (s != null && !s.isEmpty()) set.add(s.getFluid());
             }
         }
@@ -313,6 +303,16 @@ public final class FluidResolver {
         return FluidIngredient.of(set.toArray(Fluid[]::new));
     }
 
+    private static FluidIngredient filterFluids(Value fn) {
+        if (!fn.canExecute()) {
+            throw new ValueConversionException(FluidIngredient.class,
+                "{ filter: (fluid)=>boolean }", fn, "'filter' must be a function");
+        }
+        return ingredientOfHolders(new PredicateHolderSet<>(
+            FLUID_LOOKUP, fn,
+            holder -> new FluidStack(holder.value(), FluidAmounts.BUCKET)));
+    }
+
     private static FluidIngredient intersectFluidIngredients(List<FluidIngredient> ings) {
         if (ings.isEmpty()) {
             throw new ValueConversionException(FluidIngredient.class, "non-empty 'all' array", ings,
@@ -321,7 +321,7 @@ public final class FluidResolver {
         Set<Fluid> result = null;
         for (FluidIngredient fi : ings) {
             Set<Fluid> cur = new HashSet<>();
-            for (FluidStack s : matchingStacks(fi)) {
+            for (FluidStack s : fi.getStacks()) {
                 if (s != null && !s.isEmpty()) cur.add(s.getFluid());
             }
             if (result == null) result = cur;
@@ -337,10 +337,10 @@ public final class FluidResolver {
 
     private static FluidIngredient exceptFluidIngredients(FluidIngredient base, FluidIngredient sub) {
         Set<Fluid> set = new LinkedHashSet<>();
-        for (FluidStack s : matchingStacks(base)) {
+        for (FluidStack s : base.getStacks()) {
             if (s != null && !s.isEmpty()) set.add(s.getFluid());
         }
-        for (FluidStack s : matchingStacks(sub)) {
+        for (FluidStack s : sub.getStacks()) {
             if (s != null && !s.isEmpty()) set.remove(s.getFluid());
         }
         if (set.isEmpty()) {
@@ -359,26 +359,12 @@ public final class FluidResolver {
         return list;
     }
 
-    /**
-     * 26.x 的 FluidIngredient 抽象类暴露的匹配栈枚举方法名（{@code getMatchingStacks}）。
-     * 若 API 实际命名不同由编译错误驱动调整（保留此处以便定位）。
-     */
-    @SuppressWarnings("unchecked") // 反射调用的返回类型无法静态校验，调用方按 FluidStack 语义使用
-    private static List<FluidStack> matchingStacks(FluidIngredient fi) {
-        try {
-            return (List<FluidStack>) FluidIngredient.class.getMethod("getMatchingStacks").invoke(fi);
-        } catch (ReflectiveOperationException e) {
-            throw new ValueConversionException(FluidIngredient.class, "fluid ingredient", fi,
-                "FluidIngredient.getMatchingStacks unavailable: " + e.getMessage());
-        }
-    }
-
     public static Fluid getFluid(String raw) {
-        Identifier id = Identifier.tryParse(normalizeFluidId(raw));
+        ResourceLocation id = ResourceLocation.tryParse(normalizeFluidId(raw));
         if (id == null) {
             throw new ValueConversionException(FluidIngredient.class, "valid fluid id", raw, "invalid fluid id: " + raw);
         }
-        Fluid fluid = BuiltInRegistries.FLUID.getValue(id);
+        Fluid fluid = BuiltInRegistries.FLUID.getOptional(id).orElse(Fluids.EMPTY);
         if (fluid == Fluids.EMPTY && !id.getPath().equals("empty")) {
             throw new ValueConversionException(FluidIngredient.class, "registered fluid id", id, "fluid not found: " + id);
         }
@@ -463,4 +449,3 @@ public final class FluidResolver {
 
     private record ParsedFluidInput(String id, int amount, boolean tag) {}
 }
-//?}

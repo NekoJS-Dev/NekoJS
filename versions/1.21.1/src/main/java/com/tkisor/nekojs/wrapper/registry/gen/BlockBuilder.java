@@ -1,12 +1,10 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
-import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -25,10 +23,9 @@ import java.util.function.Consumer;
  * {@link #noItem()} 置 null 抑制、本类 {@code implements Supplier}（BlockItem 经
  * {@link #get()} 懒引用方块，注册事件抽干期才构建）。
  */
-public class BlockBuilder extends RegistryObjectBuilder<Block> implements TaggableBuilder<BlockBuilder> {
+public class BlockBuilder extends RegistryObjectBuilder<Block> {
 
     /** 声明了 renderType 的方块（26.x 资产生成消费：translucent 用 force_translucent 贴图引用）。 */
-    public static final Map<Identifier, String> RENDER_TYPES = new HashMap<>();
 
     public float hardness = 1.5f;
     public float resistance = 1.5f;
@@ -44,20 +41,9 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
     /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 置 null。 */
     public ItemBuilder item;
 
-    public BlockBuilder(Identifier id) {
+    public BlockBuilder(ResourceLocation id) {
         super(id);
         this.item = new ItemBuilder(id);
-    }
-
-    /** {@link TaggableBuilder}：方块 tag 归属 BLOCK 注册表（给 BlockItem 打 tag 走 {@code item}）。 */
-    @Override
-    public net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>> getTagRegistry() {
-        return Registries.BLOCK;
-    }
-
-    @Override
-    public Identifier getLocation() {
-        return id;
     }
 
     /** 不可破坏（硬度 -1 / 抗爆 3600000）。 */
@@ -81,14 +67,8 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
 
     @Override
     public Block build() {
-        net.minecraft.resources.ResourceKey<Block> key =
-                net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id);
-        if (renderType != null && !renderType.isBlank()) {
-            RENDER_TYPES.put(id, renderType);
-        }
 
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
-                .setId(key)
                 .mapColor(resolveMapColor(mapColor))
                 .destroyTime(hardness)
                 .explosionResistance(resistance)
@@ -100,6 +80,10 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         }
 
         Block block = new Block(props);
+        if (renderType != null && !renderType.isBlank()
+                && net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            com.tkisor.nekojs.client.ClientBlockRenderTypes.apply(block, renderType);
+        }
         return block;
     }
 
@@ -172,4 +156,3 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         };
     }
 }
-//?}

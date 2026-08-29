@@ -1,17 +1,15 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.spec.inject.MutableComponentSpec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.*;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStackTemplate;
 import org.jetbrains.annotations.Nullable;
-import java.net.URI;
 
 /**
  * @author ZZZank
@@ -154,12 +152,8 @@ public interface MutableComponentExtension extends Component, MutableComponentSp
 
     @Override
     default Object neko$font(@Nullable String font) {
-        FontDescription desc = null;
-        if (font != null) {
-            var id = Identifier.tryParse(font);
-            if (id != null) desc = new FontDescription.Resource(id);
-        }
-        return setStyle(getStyle().withFont(desc));
+        ResourceLocation loc = font == null ? null : ResourceLocation.tryParse(font);
+        return setStyle(getStyle().withFont(loc));
     }
 
     default MutableComponent neko$click(@Nullable ClickEvent s) {
@@ -167,23 +161,23 @@ public interface MutableComponentExtension extends Component, MutableComponentSp
     }
 
     default MutableComponent neko$clickSuggestCommand(String command) {
-        return neko$click(new ClickEvent.SuggestCommand(command));
+        return neko$click(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command));
     }
 
     default MutableComponent neko$clickCopy(String text) {
-        return neko$click(new ClickEvent.CopyToClipboard(text));
+        return neko$click(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, text));
     }
 
     default MutableComponent neko$clickChangePage(int page) {
-        return neko$click(new ClickEvent.ChangePage(page));
+        return neko$click(new ClickEvent(ClickEvent.Action.CHANGE_PAGE, Integer.toString(page)));
     }
 
     default MutableComponent neko$clickOpenUrl(String url) {
-        return neko$click(new ClickEvent.OpenUrl(URI.create(url)));
+        return neko$click(new ClickEvent(ClickEvent.Action.OPEN_URL, url));
     }
 
     default MutableComponent neko$clickOpenFile(String path) {
-        return neko$click(new ClickEvent.OpenFile(path));
+        return neko$click(new ClickEvent(ClickEvent.Action.OPEN_FILE, path));
     }
 
     default MutableComponent neko$hover(@Nullable HoverEvent hover) {
@@ -191,14 +185,14 @@ public interface MutableComponentExtension extends Component, MutableComponentSp
     }
 
     default MutableComponent neko$hoverText(Component text) {
-        return neko$hover(new HoverEvent.ShowText(text));
+        return neko$hover(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text));
     }
 
     default MutableComponent neko$hoverItem(ItemStack stack) {
-        return neko$hover(new HoverEvent.ShowItem(ItemStackTemplate.fromNonEmptyStack(stack)));
+        return neko$hover(new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackInfo(stack)));
     }
 
     default MutableComponent neko$hoverEntity(Entity entity) {
-        return neko$hover(new HoverEvent.ShowEntity(new HoverEvent.EntityTooltipInfo(entity.getType(), entity.getUUID(), entity.getName())));
+        return neko$hover(new HoverEvent(HoverEvent.Action.SHOW_ENTITY, new HoverEvent.EntityTooltipInfo(entity.getType(), entity.getUUID(), entity.getName())));
     }
 }

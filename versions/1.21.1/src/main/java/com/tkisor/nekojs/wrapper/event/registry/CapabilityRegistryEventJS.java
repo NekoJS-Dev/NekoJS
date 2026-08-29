@@ -1,24 +1,23 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.event.registry;
 
 import com.tkisor.nekojs.js.type_adapter.ParseIds;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Supplier;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * {@code CapabilityEvents.register} 事件对象：为方块实体注册标准 capability provider。
@@ -38,7 +37,7 @@ public class CapabilityRegistryEventJS {
      * @param provider          返回能力实例的回调（如 {@code () => Capabilities.itemHandler(6)}）
      */
     public void registerBlockEntity(String blockEntityTypeId, String capability, Supplier<Object> provider) {
-        Identifier location = ParseIds.parseItemOrBlockId(blockEntityTypeId);
+        ResourceLocation location = ParseIds.parseItemOrBlockId(blockEntityTypeId);
         BlockEntityType<?> type = BuiltInRegistries.BLOCK_ENTITY_TYPE.getOptional(location)
                 .orElseThrow(() -> new IllegalArgumentException("未知方块实体类型: " + blockEntityTypeId));
         pending.add(new PendingRegistration(type, capability.toLowerCase(Locale.ROOT), provider));
@@ -50,17 +49,17 @@ public class CapabilityRegistryEventJS {
         for (PendingRegistration registration : pending) {
             switch (registration.capability) {
                 case "item" -> event.registerBlockEntity(
-                        (BlockCapability) Capabilities.Item.BLOCK,
+                        (BlockCapability) Capabilities.ItemHandler.BLOCK,
                         (BlockEntityType) registration.type,
-                        (blockEntity, direction) -> (ResourceHandler<ItemResource>) registration.provider.get());
+                        (blockEntity, direction) -> (IItemHandler) registration.provider.get());
                 case "energy" -> event.registerBlockEntity(
-                        (BlockCapability) Capabilities.Energy.BLOCK,
+                        (BlockCapability) Capabilities.EnergyStorage.BLOCK,
                         (BlockEntityType) registration.type,
-                        (blockEntity, direction) -> (EnergyHandler) registration.provider.get());
+                        (blockEntity, direction) -> (IEnergyStorage) registration.provider.get());
                 case "fluid" -> event.registerBlockEntity(
-                        (BlockCapability) Capabilities.Fluid.BLOCK,
+                        (BlockCapability) Capabilities.FluidHandler.BLOCK,
                         (BlockEntityType) registration.type,
-                        (blockEntity, direction) -> (ResourceHandler<FluidResource>) registration.provider.get());
+                        (blockEntity, direction) -> (IFluidHandler) registration.provider.get());
                 default -> throw new IllegalArgumentException("未知 capability（支持 item/energy/fluid）: " + registration.capability);
             }
         }
@@ -69,4 +68,3 @@ public class CapabilityRegistryEventJS {
     private record PendingRegistration(BlockEntityType<?> type, String capability, Supplier<Object> provider) {
     }
 }
-//?}

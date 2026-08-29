@@ -1,15 +1,13 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.tkisor.nekojs.NekoJS;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.world.phys.Vec3;
-import java.lang.reflect.Method;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 
 /**
  * {@code ClientEvents.worldRender} 回调上下文：相机位置 + partialTick，以及
@@ -29,9 +27,6 @@ public class WorldRenderContextJS {
     private final float partialTick;
 
     /** 反射解析的 buffer source 实例（26.1 客户端生命周期内不变）；26.2 为 {@code null}。 */
-    private static volatile Object bufferSource;
-    private static volatile boolean bufferSourceResolved;
-    private static volatile boolean degradeWarned;
 
     public WorldRenderContextJS(Vec3 cameraPos, float partialTick) {
         this.cameraPos = cameraPos;
@@ -60,11 +55,6 @@ public class WorldRenderContextJS {
             int argbColor,
             float lineWidth
     ) {
-        Object source = bufferSource();
-        if (source == null) {
-            warnDegradedOnce();
-            return this;
-        }
         int a = (argbColor >>> 24) & 0xFF;
         int r = (argbColor >>> 16) & 0xFF;
         int g = (argbColor >>> 8) & 0xFF;
@@ -84,26 +74,15 @@ public class WorldRenderContextJS {
         poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
         var pose = poseStack.last();
 
-        try {
-            RenderType lines = RenderTypes.linesTranslucent();
-            Method getBuffer = source.getClass().getMethod("getBuffer", RenderType.class);
-            VertexConsumer consumer = (VertexConsumer) getBuffer.invoke(source, lines);
-            float width = Math.max(1f, lineWidth);
-            consumer.addVertex(pose, (float) x1, (float) y1, (float) z1)
-                    .setColor(r, g, b, a)
-                    .setNormal(nx, ny, nz)
-                    .setLineWidth(width);
-            consumer.addVertex(pose, (float) x2, (float) y2, (float) z2)
-                    .setColor(r, g, b, a)
-                    .setNormal(nx, ny, nz)
-                    .setLineWidth(width);
-            Method endBatch = source.getClass().getMethod("endBatch", RenderType.class);
-            endBatch.invoke(source, lines);
-        } catch (ReflectiveOperationException e) {
-            bufferSourceResolved = false; // 实例可能已随渲染重建失效，允许下次重新解析
-            bufferSource = null;
-            warnDegradedOnce();
-        }
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer consumer = bufferSource.getBuffer(RenderType.lines());
+        consumer.addVertex(pose, (float) x1, (float) y1, (float) z1)
+                .setColor(r, g, b, a)
+                .setNormal(nx, ny, nz);
+        consumer.addVertex(pose, (float) x2, (float) y2, (float) z2)
+                .setColor(r, g, b, a)
+                .setNormal(nx, ny, nz);
+        bufferSource.endBatch(RenderType.lines());
         return this;
     }
 
@@ -141,34 +120,4 @@ public class WorldRenderContextJS {
      * 解析 immediate buffer source：{@code Minecraft#renderBuffers()} →
      * {@code RenderBuffers#bufferSource()}（26.1 存在；26.2 均已移除 → null 降级）。
      */
-    private static Object bufferSource() {
-        if (bufferSourceResolved) {
-            return bufferSource;
-        }
-        synchronized (WorldRenderContextJS.class) {
-            if (bufferSourceResolved) {
-                return bufferSource;
-            }
-            try {
-                Object minecraft = Minecraft.getInstance();
-                Method renderBuffers = minecraft.getClass().getMethod("renderBuffers");
-                Object buffers = renderBuffers.invoke(minecraft);
-                Method bufferSource = buffers.getClass().getMethod("bufferSource");
-                WorldRenderContextJS.bufferSource = bufferSource.invoke(buffers);
-            } catch (ReflectiveOperationException | RuntimeException e) {
-                WorldRenderContextJS.bufferSource = null;
-            }
-            bufferSourceResolved = true;
-            return WorldRenderContextJS.bufferSource;
-        }
-    }
-
-    private static void warnDegradedOnce() {
-        if (!degradeWarned) {
-            degradeWarned = true;
-            NekoJS.LOGGER.warn(
-                    "worldRender line drawing is not supported on this MC version "
-                            + "(immediate buffer source unavailable); HUD renderers are unaffected");
-        }
-    }
 }

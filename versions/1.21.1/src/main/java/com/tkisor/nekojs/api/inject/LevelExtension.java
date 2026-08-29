@@ -1,23 +1,22 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
 import com.tkisor.nekojs.api.data.AttachedData;
 import com.tkisor.nekojs.api.spec.inject.LevelSpec;
-import com.tkisor.nekojs.platform.compat.McVersionCompat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.List;
+import net.minecraft.world.entity.MobSpawnType;
 
 /**
  * @author ZZZank
@@ -35,12 +34,12 @@ public interface LevelExtension extends LevelSpec {
 
     default Entity neko$spawnEntity(EntityType<?> type, double x, double y, double z) {
         if (self() instanceof ServerLevel serverLevel) {
-            var entity = type.create(serverLevel, EntitySpawnReason.EVENT);
+            var entity = type.create(serverLevel, null, BlockPos.containing(x, y, z), MobSpawnType.EVENT, true, false);
             if (entity == null) {
                 return null;
             }
 
-            entity.setPos(x, y, z);
+            entity.moveTo(x, y, z, entity.getYRot(), entity.getXRot());
             serverLevel.addFreshEntity(entity);
             return entity;
         }
@@ -48,11 +47,11 @@ public interface LevelExtension extends LevelSpec {
     }
 
     default Entity neko$spawnLightning(double x, double y, double z) {
-        return neko$spawnEntity(McVersionCompat.get().lightningBoltType(), x, y, z);
+        return neko$spawnEntity(EntityType.LIGHTNING_BOLT, x, y, z);
     }
 
     default String neko$getId() {
-        return self().dimension().identifier().toString();
+        return self().dimension().location().toString();
     }
 
     /**
@@ -68,7 +67,7 @@ public interface LevelExtension extends LevelSpec {
         } else if (block instanceof Block b) {
             state = b.defaultBlockState();
         } else if (block instanceof String id) {
-            var loc = Identifier.tryParse(id);
+            var loc = ResourceLocation.tryParse(id);
             if (loc != null) {
                 state = BuiltInRegistries.BLOCK.getOptional(loc)
                         .map(Block::defaultBlockState)
@@ -86,7 +85,7 @@ public interface LevelExtension extends LevelSpec {
      * <p>26.x 移除了 {@code getDayTime}，这里改用主世界时钟（{@link Level#getOverworldClockTime()}）。
      */
     default long neko$getTime() {
-        return self().getOverworldClockTime();
+        return self().getDayTime();
     }
 
     /**
@@ -95,11 +94,7 @@ public interface LevelExtension extends LevelSpec {
      */
     default void neko$setTime(long time) {
         if (self() instanceof ServerLevel serverLevel) {
-            var clockManager = serverLevel.getServer().clockManager();
-            serverLevel.registryAccess()
-                    .lookupOrThrow(net.minecraft.core.registries.Registries.WORLD_CLOCK)
-                    .get(net.minecraft.world.clock.WorldClocks.OVERWORLD)
-                    .ifPresent(clock -> clockManager.setTotalTicks(clock, time));
+            serverLevel.setDayTime(time);
         }
     }
 
@@ -119,7 +114,10 @@ public interface LevelExtension extends LevelSpec {
      * {@code 0.0} 表示停止。该 API 对客户端/服务端世界均可用。
      */
     default void neko$setRaining(boolean raining) {
-        self().setRainLevel(raining ? 1.0F : 0.0F);
+        if (self() instanceof ServerLevel serverLevel) {
+            // (clearTime, rainTime, raining, thundering)
+            serverLevel.setWeatherParameters(0, raining ? 600 : 0, raining, false);
+        }
     }
 
     /**
@@ -128,8 +126,7 @@ public interface LevelExtension extends LevelSpec {
      * {@code time % 24000} 落在 {@code [0, 13000)} 视为白天。
      */
     default boolean neko$isDay() {
-        long time = self().getOverworldClockTime();
-        return (time % 24000L) < 13000L;
+        return self().isDay();
     }
 
     /** 返回挂载到该 level 的内存数据容器；首次访问时 lazy 创建并触发 {@code attachLevelData}。 */

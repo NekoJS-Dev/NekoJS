@@ -1,15 +1,15 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.client.render;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * {@code ClientEvents.hudRender} 回调上下文（26.x 的 {@link GuiGraphicsExtractor}
+ * {@code ClientEvents.hudRender} 回调上下文（26.x 的 {@link GuiGraphics}
  * 渲染状态模型）：携带 partialTick 与缩放后屏幕尺寸，并提供常用绘制助手
  * （移植自 Katton 的 HUD draw helpers，命名对齐 {@code PainterJS}；
  * {@code drawText}/{@code fillRect}/{@code drawTexture} 为任务规格别名）。
@@ -17,12 +17,12 @@ import net.minecraft.world.item.ItemStack;
  * <p>颜色参数为 ARGB int（如 {@code 0x80FF0000} = 半透明红）。
  */
 public class HudRenderContextJS {
-    private final GuiGraphicsExtractor graphics;
+    private final GuiGraphics graphics;
     private final Font font;
     private final float partialTick;
     private int currentColor = 0xFFFFFFFF;
 
-    public HudRenderContextJS(GuiGraphicsExtractor graphics, float partialTick) {
+    public HudRenderContextJS(GuiGraphics graphics, float partialTick) {
         this.graphics = graphics;
         this.font = Minecraft.getInstance().font;
         this.partialTick = partialTick;
@@ -35,16 +35,16 @@ public class HudRenderContextJS {
 
     /** 屏幕宽度（GUI 缩放后）。 */
     public int getWidth() {
-        return graphics.guiWidth();
+        return Minecraft.getInstance().getWindow().getGuiScaledWidth();
     }
 
     /** 屏幕高度（GUI 缩放后）。 */
     public int getHeight() {
-        return graphics.guiHeight();
+        return Minecraft.getInstance().getWindow().getGuiScaledHeight();
     }
 
-    /** 原始图形对象（26.x {@link GuiGraphicsExtractor}），供脚本直接调用未包装的能力。 */
-    public GuiGraphicsExtractor graphics() {
+    /** 原始图形对象（26.x {@link GuiGraphics}），供脚本直接调用未包装的能力。 */
+    public GuiGraphics graphics() {
         return graphics;
     }
 
@@ -62,12 +62,12 @@ public class HudRenderContextJS {
 
     /** 文本（左对齐）。 */
     public HudRenderContextJS text(String text, int x, int y) {
-        graphics.text(font, text, x, y, currentColor);
+        graphics.drawString(font, text, x, y, currentColor);
         return this;
     }
 
     public HudRenderContextJS text(String text, int x, int y, int color) {
-        graphics.text(font, text, x, y, color);
+        graphics.drawString(font, text, x, y, color);
         return this;
     }
 
@@ -78,12 +78,12 @@ public class HudRenderContextJS {
 
     /** 文本（水平居中）。 */
     public HudRenderContextJS centerText(String text, int x, int y) {
-        graphics.centeredText(font, text, x, y, currentColor);
+        graphics.drawCenteredString(font, text, x, y, currentColor);
         return this;
     }
 
     public HudRenderContextJS centerText(String text, int x, int y, int color) {
-        graphics.centeredText(font, text, x, y, color);
+        graphics.drawCenteredString(font, text, x, y, color);
         return this;
     }
 
@@ -105,12 +105,14 @@ public class HudRenderContextJS {
 
     /** 1px 矩形边框。 */
     public HudRenderContextJS outline(int x, int y, int width, int height) {
-        graphics.outline(x, y, x + width, y + height, currentColor);
-        return this;
+        return outline(x, y, width, height, currentColor);
     }
 
     public HudRenderContextJS outline(int x, int y, int width, int height, int color) {
-        graphics.outline(x, y, x + width, y + height, color);
+        graphics.hLine(x, x + width - 1, y, color);
+        graphics.hLine(x, x + width - 1, y + height - 1, color);
+        graphics.vLine(x, y, y + height - 1, color);
+        graphics.vLine(x + width - 1, y, y + height - 1, color);
         return this;
     }
 
@@ -124,13 +126,13 @@ public class HudRenderContextJS {
      * 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 为纹理内偏移。
      */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height, int u, int v) {
-        graphics.blit(Identifier.parse(textureId), x, y, width, height, u, v, width, height);
+        graphics.blit(ResourceLocation.parse(textureId), x, y, u, v, width, height);
         return this;
     }
 
     /** 贴图（整张纹理，u/v 为 0）。 */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height) {
-        graphics.blit(Identifier.parse(textureId), x, y, width, height, 0, 0, width, height);
+        graphics.blit(ResourceLocation.parse(textureId), x, y, 0, 0, width, height);
         return this;
     }
 
@@ -141,7 +143,7 @@ public class HudRenderContextJS {
 
     /** 物品图标（{@code Item.of('minecraft:diamond')}）。 */
     public HudRenderContextJS item(ItemStack stack, int x, int y) {
-        graphics.item(stack, x, y);
+        graphics.renderItem(stack, x, y);
         return this;
     }
 

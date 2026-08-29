@@ -1,12 +1,10 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import java.util.ArrayList;
 import java.util.List;
@@ -152,7 +150,7 @@ public class NekoTabbedEditor {
         return mx >= menuX && mx <= menuX + menuW && my >= menuY && my <= menuY + menuH;
     }
 
-    public void renderUnderlay(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+    public void renderUnderlay(GuiGraphics g, int mouseX, int mouseY) {
         if (tabs.isEmpty()) return;
 
         g.fill(x, y, x + width, y + TAB_HEIGHT, 0xFF1E1E1E);
@@ -181,12 +179,12 @@ public class NekoTabbedEditor {
                     g.fill(currentX + tabW - 1, y + 4, currentX + tabW, y + TAB_HEIGHT - 4, 0x40FFFFFF);
                 }
 
-                g.text(font, label, currentX + 8, y + 6, isActive ? 0xFFFFFFFF : 0xFFAAAAAA);
+                g.drawString(font, label, currentX + 8, y + 6, isActive ? 0xFFFFFFFF : 0xFFAAAAAA, false);
 
                 int closeX = currentX + tabW - 14;
                 boolean hoverClose = mouseX >= closeX - 3 && mouseX <= closeX + 9 && mouseY >= y + 3 && mouseY <= y + TAB_HEIGHT - 3;
                 if (hoverClose) g.fill(closeX - 3, y + 3, closeX + 9, y + TAB_HEIGHT - 3, 0x33FFFFFF);
-                g.text(font, "x", closeX, y + 6, hoverClose ? 0xFFFF7777 : 0xFFAAAAAA);
+                g.drawString(font, "x", closeX, y + 6, hoverClose ? 0xFFFF7777 : 0xFFAAAAAA, false);
             }
             currentX += tabW;
         }
@@ -205,7 +203,7 @@ public class NekoTabbedEditor {
         boolean hoverDrop = mouseX >= dropX && mouseX <= dropX + DROPDOWN_BTN_WIDTH && mouseY >= y && mouseY <= y + TAB_HEIGHT;
         g.fill(dropX, y, dropX + DROPDOWN_BTN_WIDTH, y + TAB_HEIGHT, hoverDrop ? 0xFF3E3E42 : 0xFF252526);
         g.fill(dropX, y + 4, dropX + 1, y + TAB_HEIGHT - 4, 0xFF111111);
-        g.text(font, "v", dropX + 7, y + 6, isDropdownOpen ? 0xFFFFFFFF : 0xFFAAAAAA);
+        g.drawString(font, "v", dropX + 7, y + 6, isDropdownOpen ? 0xFFFFFFFF : 0xFFAAAAAA, false);
 
         if (activeTab != null && activeTab.editor != null) {
             activeTab.editor.renderUnderlay(g);
@@ -222,7 +220,10 @@ public class NekoTabbedEditor {
             int menuH = Math.min(contentH + 6, maxAvailableH);
 
             g.fill(menuX, menuY, menuX + menuW, menuY + menuH, 0xFF1E1E1E);
-            g.outline(menuX, menuY, menuW, menuH, 0xFF454545);
+            g.fill(menuX, menuY, menuX + menuW, menuY + 1, 0xFF454545);
+            g.fill(menuX, menuY + menuH - 1, menuX + menuW, menuY + menuH, 0xFF454545);
+            g.fill(menuX, menuY + 1, menuX + 1, menuY + menuH - 1, 0xFF454545);
+            g.fill(menuX + menuW - 1, menuY + 1, menuX + menuW, menuY + menuH - 1, 0xFF454545);
 
             g.enableScissor(menuX, menuY + 1, menuX + menuW, menuY + menuH - 1);
             for (int i = 0; i < tabs.size(); i++) {
@@ -239,7 +240,7 @@ public class NekoTabbedEditor {
                 String l = getTabLabel(t);
                 if (font.width(l) > menuW - 20) l = font.plainSubstrByWidth(l, menuW - 25) + "...";
                 int color = (t == activeTab) ? 0xFF00A2FF : 0xFFCCCCCC;
-                g.text(font, l, menuX + 8, iy + 3, color);
+                g.drawString(font, l, menuX + 8, iy + 3, color, false);
             }
             g.disableScissor();
 
@@ -266,8 +267,13 @@ public class NekoTabbedEditor {
             }
 
             g.fill(tooltipX, tooltipY, tooltipX + tooltipW, tooltipY + tooltipH, 0xF0151515);
-            g.outline(tooltipX, tooltipY, tooltipW, tooltipH, 0xFF555555);
-            g.text(font, hoveredTabPath, tooltipX + 4, tooltipY + 3, 0xFFCCCCCC);
+            g.fill(tooltipX, tooltipY, tooltipX + tooltipW, tooltipY + 1, 0xFF555555);
+            g.fill(tooltipX, tooltipY + tooltipH - 1, tooltipX + tooltipW, tooltipY + tooltipH, 0xFF555555);
+            g.fill(tooltipX, tooltipY + 1, tooltipX + 1, tooltipY + tooltipH - 1, 0xFF555555);
+            g.fill(tooltipX + tooltipW - 1, tooltipY + 1, tooltipX + tooltipW, tooltipY + tooltipH - 1, 0xFF555555);
+
+            // 1.21.1: text() -> drawString()
+            g.drawString(font, hoveredTabPath, tooltipX + 4, tooltipY + 3, 0xFFCCCCCC, false);
         }
     }
 
@@ -370,9 +376,9 @@ public class NekoTabbedEditor {
         return false;
     }
 
-    public boolean keyPressed(KeyEvent event) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (activeTab != null && activeTab.editor != null) {
-            return activeTab.editor.keyPressed(event);
+            return activeTab.editor.keyPressed(keyCode, scanCode, modifiers);
         }
         return false;
     }
@@ -384,4 +390,3 @@ public class NekoTabbedEditor {
         return false;
     }
 }
-//?}

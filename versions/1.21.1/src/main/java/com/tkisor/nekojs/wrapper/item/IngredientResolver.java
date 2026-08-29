@@ -1,9 +1,7 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.item;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
 import com.tkisor.nekojs.api.inject.ItemStackExtension;
@@ -15,10 +13,9 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -28,10 +25,8 @@ import net.neoforged.neoforge.common.crafting.DifferenceIngredient;
 import net.neoforged.neoforge.common.crafting.IntersectionIngredient;
 import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -55,8 +50,6 @@ public final class IngredientResolver {
      * WeakHashMap：一次配方 reload 会创建成千上万短命 ingredient，不能进程级泄漏。
      * {@code Ingredient#equals} 按 values 比较——同一 tag 的多个实例互撞映射到相同 TagKey，无害。
      */
-    private static final Map<Ingredient, TagKey<Item>> TAG_ORIGIN =
-        Collections.synchronizedMap(new WeakHashMap<>());
 
     private static Pattern compiledRegex(String regex) {
         Pattern cached = REGEX_CACHE.get(regex);
@@ -85,20 +78,19 @@ public final class IngredientResolver {
     }
 
     private static Ingredient fromItemOrTagId(String s) {
-        Identifier location = Identifier.tryParse(s.startsWith("#") ? s.substring(1) : s);
+        ResourceLocation location = ResourceLocation.tryParse(s.startsWith("#") ? s.substring(1) : s);
         if (location == null) {
             throw new ValueConversionException(Ingredient.class, "item id / #tag / @mod / * / /regex/", s,
                 "invalid identifier: " + s);
         }
         if (s.startsWith("#")) {
             TagKey<Item> tagKey = TagKey.create(Registries.ITEM, location);
-            var tag = BuiltInRegistries.ITEM.get(tagKey);
-            if (tag.isEmpty()) {
+            var tagSet = BuiltInRegistries.ITEM.getTag(tagKey);
+            if (tagSet.isEmpty()) {
                 throw new ValueConversionException(Ingredient.class, "existing item tag", s, "item tag not found: " + s);
             }
-            Ingredient ingredient = Ingredient.of(tag.get());
-            TAG_ORIGIN.put(ingredient, tagKey);
-            return ingredient;
+            Item[] items = tagSet.get().stream().map(Holder::value).toArray(Item[]::new);
+            return Ingredient.of(items);
         }
         Item item = BuiltInRegistries.ITEM.getOptional(location)
             .orElseThrow(() -> new ValueConversionException(Ingredient.class, "registered item id", s,
@@ -140,9 +132,6 @@ public final class IngredientResolver {
      * 原料必炸）。序列化侧据此改写为 vanilla 合法的 {@code {"tag": ...}} 引用形态，
      * 重新 parse 时由当前 RegistryOps 自行解析。非 tag 来源返回 {@code null}。
      */
-    public static TagKey<Item> tagOriginOf(Ingredient ingredient) {
-        return ingredient == null ? null : TAG_ORIGIN.get(ingredient);
-    }
 
     /** 取反 ingredient：返回匹配「除 excluded 外所有物品」的 DifferenceIngredient。 */
     public static Ingredient not(Ingredient excluded) {
@@ -181,7 +170,7 @@ public final class IngredientResolver {
             }
             return ingredientOfHolders(new PredicateHolderSet<>(
                 ITEM_LOOKUP, fn,
-                holder -> new ItemStack(holder, 1, DataComponentPatch.EMPTY)));
+                holder -> new ItemStack(holder.value(), 1)));
         }
         if (value.hasMember("any")) return compound(value.getMember("any"));
         if (value.hasMember("all")) return intersection(value.getMember("all"));
@@ -221,7 +210,7 @@ public final class IngredientResolver {
         }
         if (list.isEmpty()) return Ingredient.of();
         if (list.size() == 1) return list.get(0);
-        return new CompoundIngredient(list).toVanilla();
+        return CompoundIngredient.of(list.toArray(new Ingredient[0]));
     }
 
     private static Ingredient intersection(Value value) {
@@ -244,15 +233,15 @@ public final class IngredientResolver {
     // ===================== 给 IngredientJS.or() 用的旧 combine（保持兼容）=====================
 
     public static Ingredient combine(List<Ingredient> alternatives) {
-        List<Ingredient> present = alternatives.stream().filter(i -> i != null && !i.isEmpty()).toList();
+        List<Ingredient> present = alternatives.stream().filter(i -> i != null).toList();
         if (present.isEmpty()) return Ingredient.of();
         if (present.size() == 1) return present.getFirst();
         List<Holder<Item>> holders = new ArrayList<>();
         for (Ingredient ingredient : present) {
             // items() 无等价非废弃 API（getValues().stream() 不含 custom ingredient 展开），保守保留
-            @SuppressWarnings("deprecation")
-            List<Holder<Item>> expanded = ingredient.items().toList();
-            holders.addAll(expanded);
+            for (ItemStack stack : ingredient.getItems()) {
+                if (!stack.isEmpty()) holders.add(stack.getItemHolder());
+            }
         }
         if (holders.isEmpty()) return Ingredient.of();
         // holders 是 List<Holder<Item>>，必须先 unwrap 成 Item[]，否则 toArray(new Item[0]) 会
@@ -285,4 +274,3 @@ public final class IngredientResolver {
         return raw.trim();
     }
 }
-//?}

@@ -1,13 +1,10 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
-import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
-import java.util.List;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.LiquidBlock;
@@ -35,7 +32,7 @@ import java.util.function.Supplier;
  * event.fluid('mymod:molten_iron', b =&gt; { b.density = 3000; b.lightLevel = 15; b.noBucket() })
  * </pre>
  */
-public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements TaggableBuilder<FluidBuilder> {
+public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
 
     public String displayName = null;
     public int density = 1000;
@@ -59,7 +56,7 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
 
     private FluidType cachedType;
 
-    public FluidBuilder(Identifier id) {
+    public FluidBuilder(ResourceLocation id) {
         super(id);
         this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
             @Override
@@ -81,26 +78,6 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
         };
     }
 
-    /** {@link TaggableBuilder}：流体 tag（如 {@code minecraft:water}）归属 FLUID 注册表。 */
-    @Override
-    public net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>> getTagRegistry() {
-        return Registries.FLUID;
-    }
-
-    @Override
-    public Identifier getLocation() {
-        return id;
-    }
-
-    /**
-     * 流体 tag 同时打 source 与 flowing 两个流体（对标原版 {@code minecraft:water} tag
-     * 同时含 {@code water} 与 {@code flowing_water}——流动性检查常落在 flowing 变体上）。
-     */
-    @Override
-    public List<Identifier> getTagTargets() {
-        return List.of(id, getFlowingId());
-    }
-
     /** 抑制自动桶物品（{@code <id>_bucket}）连带注册。 */
     public void noBucket() {
         this.bucket = false;
@@ -112,18 +89,21 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     }
 
     /** flowing 流体的 id：{@code flowing_<path>}（同 namespace）。 */
-    public Identifier getFlowingId() {
-        return Identifier.fromNamespaceAndPath(id.getNamespace(), "flowing_" + id.getPath());
+    public ResourceLocation getFlowingId() {
+        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), "flowing_" + id.getPath());
     }
 
     /** 桶物品 id：{@code <path>_bucket}。 */
-    public Identifier getBucketId() {
-        return Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_bucket");
+    public ResourceLocation getBucketId() {
+        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_bucket");
     }
 
     @Override
     public Fluid build() {
         Fluid source = new BaseFlowingFluid.Source(properties());
+        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            com.tkisor.nekojs.client.ClientBlockRenderTypes.applyFluid(source, "translucent");
+        }
         return source;
     }
 
@@ -177,20 +157,19 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     /** 液体方块：引用 source 流体；noCollision + 高抗爆 + 无 loot（对标 vanilla 水/岩浆）。 */
     private LiquidBlock createLiquidBlock() {
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
-                .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id))
-                .noCollision()
+                .noCollission()
                 .strength(100.0F)
                 .noLootTable();
         LiquidBlock liquid = new LiquidBlock((net.minecraft.world.level.material.FlowingFluid) get(), props);
+        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            com.tkisor.nekojs.client.ClientBlockRenderTypes.apply(liquid, "translucent");
+        }
         return liquid;
     }
 
     /** 桶物品：引用 source 流体；stacksTo(1)。 */
     private BucketItem createBucketItem() {
-        net.minecraft.resources.ResourceKey<Item> key =
-                net.minecraft.resources.ResourceKey.create(Registries.ITEM, getBucketId());
-        Item.Properties props = new Item.Properties().setId(key).stacksTo(1);
+        Item.Properties props = new Item.Properties().stacksTo(1);
         return new BucketItem(get(), props);
     }
 }
-//?}

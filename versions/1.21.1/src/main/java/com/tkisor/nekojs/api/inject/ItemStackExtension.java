@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
@@ -15,9 +14,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.Unit;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -29,6 +27,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import java.util.List;
+import net.minecraft.world.item.component.Unbreakable;
 
 /**
  * @see ItemStack
@@ -92,7 +91,7 @@ public interface ItemStackExtension extends ItemStackSpec {
 
     @Remap("enchantById")
     default ItemStack neko$enchantById(String id, int level) {
-        Identifier parsedId = Identifier.tryParse(id.contains(":") ? id : "minecraft:" + id);
+        ResourceLocation parsedId = ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) {
             throw new IllegalArgumentException("Invalid enchantment id: " + id);
         }
@@ -115,7 +114,7 @@ public interface ItemStackExtension extends ItemStackSpec {
 
     @Override
     default boolean neko$hasEnchantment(String id, int level) {
-        Identifier parsedId = Identifier.tryParse(id.contains(":") ? id : "minecraft:" + id);
+        ResourceLocation parsedId = ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) return false;
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
         return ServerLifecycleHooks.getCurrentServer()
@@ -132,10 +131,9 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     default Ingredient neko$asIngredient() {
-        if (self().isEmpty()) return Ingredient.of();
         if (self().getComponentsPatch().isEmpty()) {
             // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder（26.x 的 ItemStack 无 getItemHolder）
-            return Ingredient.of(HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
+            return Ingredient.of(self().getItem());
         }
         return neko$weakNBT();
     }
@@ -161,13 +159,6 @@ public interface ItemStackExtension extends ItemStackSpec {
         components.set(type, value);
     }
 
-    @Override
-    default boolean neko$matches(Object other) {
-        if (other instanceof ItemStack stack) return neko$matches(stack);
-        if (other instanceof ItemLike item) return neko$matches(item);
-        if (other instanceof Ingredient ingredient) return neko$matches(ingredient);
-        return false;
-    }
 
     default boolean neko$matches(ItemStack stack) {
         return ItemStack.isSameItemSameComponents(self(), stack);
@@ -179,6 +170,18 @@ public interface ItemStackExtension extends ItemStackSpec {
 
     default boolean neko$matches(Ingredient ingredient) {
         return ingredient.test(self());
+    }
+
+    @Override
+    default boolean neko$matches(Object other) {
+        if (other instanceof ItemStack stack) {
+            return neko$matches(stack);
+        } else if (other instanceof ItemLike item) {
+            return neko$matches(item);
+        } else if (other instanceof Ingredient ingredient) {
+            return neko$matches(ingredient);
+        }
+        return false;
     }
 
     default boolean neko$areItemsEqual(ItemStack stack) {
@@ -203,7 +206,7 @@ public interface ItemStackExtension extends ItemStackSpec {
     @Override
     default void neko$setUnbreakable(boolean unbreakable) {
         if (unbreakable) {
-            self().set(DataComponents.UNBREAKABLE, Unit.INSTANCE);
+            self().set(DataComponents.UNBREAKABLE, new Unbreakable(true));
         } else {
             self().remove(DataComponents.UNBREAKABLE);
         }
@@ -213,4 +216,3 @@ public interface ItemStackExtension extends ItemStackSpec {
         return BuiltInRegistries.ITEM.getKey(self().getItem()).toString();
     }
 }
-//?}
