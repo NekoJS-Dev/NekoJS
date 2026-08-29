@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done (commit 50029bd)
 
-- [ ] .gitignore 覆盖 versions/*/run/、logs/、.gradle/、loom-cache 等开发产物
-- [ ] git add + commit 完成，`git status` 干净（除既有未跟踪备份 tarball）
-- [ ] 提交信息概括本批里程碑（P2 + P3 + P4a-d）
+- [x] .gitignore 覆盖 versions/*/run/、logs/、.gradle/、loom-cache 等开发产物
+- [x] git add + commit 完成，`git status` 干净（除既有未跟踪备份 tarball）
+- [x] 提交信息概括本批里程碑（P2 + P3 + P4a-d）
