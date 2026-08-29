@@ -1,45 +1,21 @@
-# Issue tracker: GitHub
+# Issue tracker: 本地文档（GitHub 仅作档案）
 
-Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+**2026-08-30 裁定**：内部计划、spec、工单一律落仓库本地文档，**不发 GitHub issue**（GitHub issue 无法删除；首个误发的 #51 已关闭存证）。GitHub Issues 保留为历史档案与社区来件面：#1–#51 只读，不再主动新增；`/triage` 对社区来件的处理仍在 GitHub。
 
-## Conventions
+## 本地约定
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
-- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
-- **Close**: `gh issue close <number> --comment "..."`
+- 计划 / spec / 工单写成 `docs/` 下的 Markdown，与现有平铺风格一致（`MIGRATION-ROADMAP.md`、`DEVEX-ROADMAP.md`）；文件名按主题命名。
+- 进度与状态直接维护在文档内（轨道勾选、阶段标记），git 提交历史即工单历史；不建镜像 issue。
+- 技能说 "publish to the issue tracker" → 写本地文档。
+- 技能说 "fetch the relevant ticket" → 读对应的本地文档（按主题在 `docs/` 下找，找不到就问用户）。
+- 仅当用户**明确点名**要发 issue 时才使用 `gh issue create`。
 
-Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
+## GitHub 操作备忘（档案与例外）
 
-## Pull requests as a triage surface
+社区来件与历史考古仍走 `gh` CLI（仓库 clone 内自动解析远端）：
 
-**PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
-
-When set to `yes`, PRs run through the same labels and states as issues, using the `gh pr` equivalents:
-
-- **Read a PR**: `gh pr view <number> --comments` and `gh pr diff <number>` for the diff.
-- **List external PRs for triage**: `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments` then keep only `authorAssociation` of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, or `NONE` (drop `OWNER`/`MEMBER`/`COLLABORATOR`).
-- **Comment / label / close**: `gh pr comment`, `gh pr edit --add-label`/`--remove-label`, `gh pr close`.
-
-GitHub shares one number space across issues and PRs, so a bare `#42` may be either: resolve with `gh pr view 42` and fall back to `gh issue view 42`.
-
-## When a skill says "publish to the issue tracker"
-
-Create a GitHub issue.
-
-## When a skill says "fetch the relevant ticket"
-
-Run `gh issue view <number> --comments`.
-
-## Wayfinding operations
-
-Used by `/wayfinder`. The **map** is a single issue with **child** issues as tickets.
-
-- **Map**: a single issue labelled `wayfinder:map`, holding the Notes / Decisions-so-far / Fog body. `gh issue create --label wayfinder:map`.
-- **Child ticket**: an issue linked to the map as a GitHub sub-issue (`gh api` on the sub-issues endpoint). Where sub-issues aren't enabled, add the child to a task list in the map body and put `Part of #<map>` at the top of the child body. Labels: `wayfinder:<type>` (`research`/`prototype`/`grilling`/`task`). Once claimed, the ticket is assigned to the driving dev.
-- **Blocking**: GitHub's **native issue dependencies**, the canonical, UI-visible representation. Add an edge with `gh api --method POST repos/<owner>/<repo>/issues/<child>/dependencies/blocked_by -F issue_id=<blocker-db-id>`, where `<blocker-db-id>` is the blocker's numeric **database id** (`gh api repos/<owner>/<repo>/issues/<n> --jq .id`, _not_ the `#number` or `node_id`). GitHub reports `issue_dependencies_summary.blocked_by` (open blockers only, the live gate). Where dependencies aren't available, fall back to a `Blocked by: #<n>, #<n>` line at the top of the child body. A ticket is unblocked when every blocker is closed.
-- **Frontier query**: list the map's open children (`gh issue list --state open`, scoped to the map's sub-issues / task list), drop any with an open blocker (`issue_dependencies_summary.blocked_by > 0`, or an open issue in the `Blocked by` line) or an assignee; first in map order wins.
-- **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
-- **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
+- 读历史：`gh issue view <number> --comments`；列表：`gh issue list --state all --json number,title,labels --jq '...'`
+- 历史票上的标签（`wayfinder:*`、`ready-for-agent` 等）仅作存档含义，不再用于新工单；新工单无标签体系，状态归文档本身。
+- **PRs as a request surface: no.** 外部 PR 不走工单化流程。
+- Wayfinder：过去的地图与子票以 GitHub issue 维护（#38–#50，已收官，只读）；今后的地图 / 子票用本地文档承载（参照 `docs/DEVEX-ROADMAP.md` 的轨道 / 勾选结构），GitHub sub-issue 与 dependency 机制不再使用。
+- GitHub 分 issue 与 PR 共享编号空间，考古时裸 `#42` 需先用 `gh pr view 42` 再 `gh issue view 42` 消歧。
