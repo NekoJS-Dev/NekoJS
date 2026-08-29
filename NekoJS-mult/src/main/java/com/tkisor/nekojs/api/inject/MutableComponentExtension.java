@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.RemapByPrefix;
@@ -7,13 +9,9 @@ import net.minecraft.network.chat.*;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-//? if >=26 {
 import net.minecraft.world.item.ItemStackTemplate;
-//?}
 import org.jetbrains.annotations.Nullable;
-//? if >=26 {
 import java.net.URI;
-//?}
 
 /**
  * @author ZZZank
@@ -156,17 +154,12 @@ public interface MutableComponentExtension extends Component, MutableComponentSp
 
     @Override
     default Object neko$font(@Nullable String font) {
-//? if >=26 {
         FontDescription desc = null;
         if (font != null) {
             var id = Identifier.tryParse(font);
             if (id != null) desc = new FontDescription.Resource(id);
         }
         return setStyle(getStyle().withFont(desc));
-//?} else {
-/*        Identifier loc = font == null ? null : Identifier.tryParse(font);
-        return setStyle(getStyle().withFont(loc));
-*///?}
     }
 
     default MutableComponent neko$click(@Nullable ClickEvent s) {
@@ -174,43 +167,23 @@ public interface MutableComponentExtension extends Component, MutableComponentSp
     }
 
     default MutableComponent neko$clickSuggestCommand(String command) {
-//? if >=26 {
         return neko$click(new ClickEvent.SuggestCommand(command));
-//?} else {
-/*        return neko$click(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command));
-*///?}
     }
 
     default MutableComponent neko$clickCopy(String text) {
-//? if >=26 {
         return neko$click(new ClickEvent.CopyToClipboard(text));
-//?} else {
-/*        return neko$click(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, text));
-*///?}
     }
 
     default MutableComponent neko$clickChangePage(int page) {
-//? if >=26 {
         return neko$click(new ClickEvent.ChangePage(page));
-//?} else {
-/*        return neko$click(new ClickEvent(ClickEvent.Action.CHANGE_PAGE, Integer.toString(page)));
-*///?}
     }
 
     default MutableComponent neko$clickOpenUrl(String url) {
-//? if >=26 {
         return neko$click(new ClickEvent.OpenUrl(URI.create(url)));
-//?} else {
-/*        return neko$click(new ClickEvent(ClickEvent.Action.OPEN_URL, url));
-*///?}
     }
 
     default MutableComponent neko$clickOpenFile(String path) {
-//? if >=26 {
         return neko$click(new ClickEvent.OpenFile(path));
-//?} else {
-/*        return neko$click(new ClickEvent(ClickEvent.Action.OPEN_FILE, path));
-*///?}
     }
 
     default MutableComponent neko$hover(@Nullable HoverEvent hover) {
@@ -218,26 +191,14 @@ public interface MutableComponentExtension extends Component, MutableComponentSp
     }
 
     default MutableComponent neko$hoverText(Component text) {
-//? if >=26 {
         return neko$hover(new HoverEvent.ShowText(text));
-//?} else {
-/*        return neko$hover(new HoverEvent(HoverEvent.Action.SHOW_TEXT, text));
-*///?}
     }
 
     default MutableComponent neko$hoverItem(ItemStack stack) {
-//? if >=26 {
         return neko$hover(new HoverEvent.ShowItem(ItemStackTemplate.fromNonEmptyStack(stack)));
-//?} else {
-/*        return neko$hover(new HoverEvent(HoverEvent.Action.SHOW_ITEM, new HoverEvent.ItemStackInfo(stack)));
-*///?}
     }
 
     default MutableComponent neko$hoverEntity(Entity entity) {
-//? if >=26 {
         return neko$hover(new HoverEvent.ShowEntity(new HoverEvent.EntityTooltipInfo(entity.getType(), entity.getUUID(), entity.getName())));
-//?} else {
-/*        return neko$hover(new HoverEvent(HoverEvent.Action.SHOW_ENTITY, new HoverEvent.EntityTooltipInfo(entity.getType(), entity.getUUID(), entity.getName())));
-*///?}
     }
 }

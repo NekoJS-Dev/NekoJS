@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.wrapper.fluid;
 
@@ -79,11 +81,7 @@ public final class FluidResolver {
     public static FluidStack stackFromFluid(Fluid fluid, int amount) {
         if (fluid == Fluids.EMPTY || amount <= 0) return FluidStack.EMPTY;
         // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
-//? if >=26 {
         return new FluidStack(BuiltInRegistries.FLUID.wrapAsHolder(fluid), amount);
-//?} else {
-/*        return new FluidStack(fluid, amount);
-*///?}
     }
 
     public static FluidStack stackFromValue(Value value) {
@@ -124,22 +122,12 @@ public final class FluidResolver {
         if (input.tag()) {
             Identifier id = Identifier.parse(input.id());
             TagKey<Fluid> tagKey = TagKey.create(Registries.FLUID, id);
-//? if >=26 {
             var tag = BuiltInRegistries.FLUID.get(tagKey);
             if (tag.isEmpty()) {
-//?} else {
-/*            var tagSet = BuiltInRegistries.FLUID.getTag(tagKey);
-            if (tagSet.isEmpty()) {
-*///?}
                 throw new ValueConversionException(FluidIngredient.class, "existing fluid tag", "#" + input.id(),
                     "fluid tag not found: #" + input.id());
             }
-//? if >=26 {
             return FluidIngredient.of(tag.get());
-//?} else {
-/*            Fluid[] fluids = tagSet.get().stream().map(Holder::value).toArray(Fluid[]::new);
-            return FluidIngredient.of(fluids);
-*///?}
         }
         return ingredientFromFluid(getFluid(input.id()));
     }
@@ -212,21 +200,12 @@ public final class FluidResolver {
         if (input.tag()) {
             Identifier id = Identifier.parse(input.id());
             TagKey<Fluid> tagKey = TagKey.create(Registries.FLUID, id);
-//? if >=26 {
             var tag = BuiltInRegistries.FLUID.get(tagKey);
             if (tag.isEmpty()) {
-//?} else {
-/*            var tagSet = BuiltInRegistries.FLUID.getTag(tagKey);
-            if (tagSet.isEmpty()) {
-*///?}
                 throw new ValueConversionException(FluidIngredient.class, "existing fluid tag", "#" + input.id(),
                     "fluid tag not found: #" + input.id());
             }
-//? if >=26 {
             ingredient = FluidIngredient.of(tag.get());
-//?} else {
-/*            ingredient = FluidIngredient.of(tagSet.get().stream().map(Holder::value).toArray(Fluid[]::new));
-*///?}
         } else {
             ingredient = ingredientFromFluid(getFluid(input.id()));
         }
@@ -288,11 +267,7 @@ public final class FluidResolver {
         if (present.size() == 1) return present.get(0);
         Set<Fluid> set = new LinkedHashSet<>();
         for (FluidIngredient fi : present) {
-//? if >=26 {
             for (FluidStack s : matchingStacks(fi)) {
-//?} else {
-/*            for (FluidStack s : fi.getStacks()) {
-*///?}
                 if (s != null && !s.isEmpty()) set.add(s.getFluid());
             }
         }
@@ -312,22 +287,6 @@ public final class FluidResolver {
 
     private static FluidIngredient allFluids() {
         return ingredientOfHolders(new AnyHolderSet<>(FLUID_LOOKUP));
-//? if <26 {
-/*    }
-
-    private static FluidIngredient combineFluids(List<FluidIngredient> ings) {
-        Set<Fluid> set = new LinkedHashSet<>();
-        for (FluidIngredient fi : ings) {
-            for (FluidStack s : fi.getStacks()) {
-                if (s != null && !s.isEmpty()) set.add(s.getFluid());
-            }
-        }
-        if (set.isEmpty()) {
-            throw new ValueConversionException(FluidIngredient.class, "non-empty fluid array", ings,
-                "combined fluid ingredient is empty");
-        }
-        return FluidIngredient.of(set.toArray(Fluid[]::new));
-*///?}
     }
 
     private static FluidIngredient filterFluids(Value fn) {
@@ -337,7 +296,6 @@ public final class FluidResolver {
         }
         return ingredientOfHolders(new PredicateHolderSet<>(
             FLUID_LOOKUP, fn,
-//? if >=26 {
             holder -> new FluidStack(holder, FluidAmounts.BUCKET)));
     }
 
@@ -353,9 +311,6 @@ public final class FluidResolver {
                 "combined fluid ingredient is empty");
         }
         return FluidIngredient.of(set.toArray(Fluid[]::new));
-//?} else {
-/*            holder -> new FluidStack(holder.value(), FluidAmounts.BUCKET)));
-*///?}
     }
 
     private static FluidIngredient intersectFluidIngredients(List<FluidIngredient> ings) {
@@ -366,11 +321,7 @@ public final class FluidResolver {
         Set<Fluid> result = null;
         for (FluidIngredient fi : ings) {
             Set<Fluid> cur = new HashSet<>();
-//? if >=26 {
             for (FluidStack s : matchingStacks(fi)) {
-//?} else {
-/*            for (FluidStack s : fi.getStacks()) {
-*///?}
                 if (s != null && !s.isEmpty()) cur.add(s.getFluid());
             }
             if (result == null) result = cur;
@@ -386,18 +337,10 @@ public final class FluidResolver {
 
     private static FluidIngredient exceptFluidIngredients(FluidIngredient base, FluidIngredient sub) {
         Set<Fluid> set = new LinkedHashSet<>();
-//? if >=26 {
         for (FluidStack s : matchingStacks(base)) {
-//?} else {
-/*        for (FluidStack s : base.getStacks()) {
-*///?}
             if (s != null && !s.isEmpty()) set.add(s.getFluid());
         }
-//? if >=26 {
         for (FluidStack s : matchingStacks(sub)) {
-//?} else {
-/*        for (FluidStack s : sub.getStacks()) {
-*///?}
             if (s != null && !s.isEmpty()) set.remove(s.getFluid());
         }
         if (set.isEmpty()) {
@@ -414,7 +357,6 @@ public final class FluidResolver {
         List<FluidIngredient> list = new ArrayList<>();
         for (long i = 0; i < arr.getArraySize(); i++) list.add(ingredientFromValue(arr.getArrayElement(i)));
         return list;
-//? if >=26 {
     }
 
     /**
@@ -429,7 +371,6 @@ public final class FluidResolver {
             throw new ValueConversionException(FluidIngredient.class, "fluid ingredient", fi,
                 "FluidIngredient.getMatchingStacks unavailable: " + e.getMessage());
         }
-//?}
     }
 
     public static Fluid getFluid(String raw) {
@@ -437,11 +378,7 @@ public final class FluidResolver {
         if (id == null) {
             throw new ValueConversionException(FluidIngredient.class, "valid fluid id", raw, "invalid fluid id: " + raw);
         }
-//? if >=26 {
         Fluid fluid = BuiltInRegistries.FLUID.getValue(id);
-//?} else {
-/*        Fluid fluid = BuiltInRegistries.FLUID.getOptional(id).orElse(Fluids.EMPTY);
-*///?}
         if (fluid == Fluids.EMPTY && !id.getPath().equals("empty")) {
             throw new ValueConversionException(FluidIngredient.class, "registered fluid id", id, "fluid not found: " + id);
         }

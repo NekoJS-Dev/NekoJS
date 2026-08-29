@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.wrapper.event.registry;
 
@@ -9,22 +11,14 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-//? if >=26 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
-//?}
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Supplier;
-//? if <26 {
-/*import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.items.IItemHandler;
-*///?}
 
 /**
  * {@code CapabilityEvents.register} 事件对象：为方块实体注册标准 capability provider。
@@ -56,41 +50,17 @@ public class CapabilityRegistryEventJS {
         for (PendingRegistration registration : pending) {
             switch (registration.capability) {
                 case "item" -> event.registerBlockEntity(
-//? if >=26 {
                         (BlockCapability) Capabilities.Item.BLOCK,
-//?} else {
-/*                        (BlockCapability) Capabilities.ItemHandler.BLOCK,
-*///?}
                         (BlockEntityType) registration.type,
-//? if >=26 {
                         (blockEntity, direction) -> (ResourceHandler<ItemResource>) registration.provider.get());
-//?} else {
-/*                        (blockEntity, direction) -> (IItemHandler) registration.provider.get());
-*///?}
                 case "energy" -> event.registerBlockEntity(
-//? if >=26 {
                         (BlockCapability) Capabilities.Energy.BLOCK,
-//?} else {
-/*                        (BlockCapability) Capabilities.EnergyStorage.BLOCK,
-*///?}
                         (BlockEntityType) registration.type,
-//? if >=26 {
                         (blockEntity, direction) -> (EnergyHandler) registration.provider.get());
-//?} else {
-/*                        (blockEntity, direction) -> (IEnergyStorage) registration.provider.get());
-*///?}
                 case "fluid" -> event.registerBlockEntity(
-//? if >=26 {
                         (BlockCapability) Capabilities.Fluid.BLOCK,
-//?} else {
-/*                        (BlockCapability) Capabilities.FluidHandler.BLOCK,
-*///?}
                         (BlockEntityType) registration.type,
-//? if >=26 {
                         (blockEntity, direction) -> (ResourceHandler<FluidResource>) registration.provider.get());
-//?} else {
-/*                        (blockEntity, direction) -> (IFluidHandler) registration.provider.get());
-*///?}
                 default -> throw new IllegalArgumentException("未知 capability（支持 item/energy/fluid）: " + registration.capability);
             }
         }

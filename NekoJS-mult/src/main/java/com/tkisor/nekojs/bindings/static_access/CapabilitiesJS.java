@@ -1,27 +1,21 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.bindings.static_access;
 
-//? if >=26 {
 import net.minecraft.world.item.ItemStack;
-//?}
 import net.neoforged.neoforge.energy.EnergyStorage;
-//? if >=26 {
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-//?}
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
-//? if >=26 {
 import net.neoforged.neoforge.items.IItemHandler;
-//?}
 import net.neoforged.neoforge.items.ItemStackHandler;
-//? if >=26 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?}
 
 /**
  * {@code Capabilities} 静态绑定：创建标准 capability 实例（26.x transfer API 类型），
@@ -36,32 +30,19 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * <p>旧接口（ItemStackHandler 等）在 26.x 标记为待删除——桥接正是为过渡期提供支持，
  * 新版 transfer API 的本地实现可后续替换。
  */
-//? if >=26 {
 @SuppressWarnings("removal")
-//?}
 public class CapabilitiesJS {
     /** 创建 N 格物品栏（内部 {@link ItemStackHandler}，暴露为 transfer API 类型）。 */
-//? if >=26 {
     public ResourceHandler<ItemResource> itemHandler(int size) {
         return new ItemResourceHandlerBridge(new ItemStackHandler(size));
-//?} else {
-/*    public ItemStackHandler itemHandler(int size) {
-        return new ItemStackHandler(size);
-*///?}
     }
 
     /** 创建能量存储（容量 / 最大输入 / 最大输出 FE/t）。 */
-//? if >=26 {
     public EnergyHandler energyStorage(int capacity, int maxReceive, int maxExtract) {
         return new EnergyHandlerBridge(new EnergyStorage(capacity, maxReceive, maxExtract));
-//?} else {
-/*    public EnergyStorage energyStorage(int capacity, int maxReceive, int maxExtract) {
-        return new EnergyStorage(capacity, maxReceive, maxExtract);
-*///?}
     }
 
     /** 创建单槽流体罐（容量 mB）。 */
-//? if >=26 {
     public ResourceHandler<FluidResource> fluidTank(int capacity) {
         return new FluidResourceHandlerBridge(new FluidTank(capacity));
     }
@@ -164,10 +145,6 @@ public class CapabilitiesJS {
         public int extract(int tank, FluidResource resource, int amount, TransactionContext context) {
             return handler.drain(new FluidStack(resource.value(), amount), IFluidHandler.FluidAction.EXECUTE).getAmount();
         }
-//?} else {
-/*    public FluidTank fluidTank(int capacity) {
-        return new FluidTank(capacity);
-*///?}
     }
 }
 //?}

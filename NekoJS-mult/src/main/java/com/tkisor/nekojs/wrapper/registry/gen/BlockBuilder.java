@@ -1,10 +1,10 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
-//?}
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
@@ -25,16 +25,10 @@ import java.util.function.Consumer;
  * {@link #noItem()} 置 null 抑制、本类 {@code implements Supplier}（BlockItem 经
  * {@link #get()} 懒引用方块，注册事件抽干期才构建）。
  */
-//? if >=26 {
 public class BlockBuilder extends RegistryObjectBuilder<Block> implements TaggableBuilder<BlockBuilder> {
-//?} else {
-/*public class BlockBuilder extends RegistryObjectBuilder<Block> {
-*///?}
 
     /** 声明了 renderType 的方块（26.x 资产生成消费：translucent 用 force_translucent 贴图引用）。 */
-//? if >=26 {
     public static final Map<Identifier, String> RENDER_TYPES = new HashMap<>();
-//?}
 
     public float hardness = 1.5f;
     public float resistance = 1.5f;
@@ -53,7 +47,6 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
     public BlockBuilder(Identifier id) {
         super(id);
         this.item = new ItemBuilder(id);
-//? if >=26 {
     }
 
     /** {@link TaggableBuilder}：方块 tag 归属 BLOCK 注册表（给 BlockItem 打 tag 走 {@code item}）。 */
@@ -65,7 +58,6 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
     @Override
     public Identifier getLocation() {
         return id;
-//?}
     }
 
     /** 不可破坏（硬度 -1 / 抗爆 3600000）。 */
@@ -89,18 +81,14 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
 
     @Override
     public Block build() {
-//? if >=26 {
         net.minecraft.resources.ResourceKey<Block> key =
                 net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id);
         if (renderType != null && !renderType.isBlank()) {
             RENDER_TYPES.put(id, renderType);
         }
-//?}
 
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
-//? if >=26 {
                 .setId(key)
-//?}
                 .mapColor(resolveMapColor(mapColor))
                 .destroyTime(hardness)
                 .explosionResistance(resistance)
@@ -112,12 +100,6 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         }
 
         Block block = new Block(props);
-//? if <26 {
-/*        if (renderType != null && !renderType.isBlank()
-                && net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
-            com.tkisor.nekojs.client.ClientBlockRenderTypes.apply(block, renderType);
-        }
-*///?}
         return block;
     }
 

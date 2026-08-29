@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.client.render;
 
 import net.minecraft.client.Minecraft;
@@ -33,20 +35,12 @@ public class HudRenderContextJS {
 
     /** 屏幕宽度（GUI 缩放后）。 */
     public int getWidth() {
-//? if >=26 {
         return graphics.guiWidth();
-//?} else {
-/*        return Minecraft.getInstance().getWindow().getGuiScaledWidth();
-*///?}
     }
 
     /** 屏幕高度（GUI 缩放后）。 */
     public int getHeight() {
-//? if >=26 {
         return graphics.guiHeight();
-//?} else {
-/*        return Minecraft.getInstance().getWindow().getGuiScaledHeight();
-*///?}
     }
 
     /** 原始图形对象（26.x {@link GuiGraphicsExtractor}），供脚本直接调用未包装的能力。 */
@@ -68,20 +62,12 @@ public class HudRenderContextJS {
 
     /** 文本（左对齐）。 */
     public HudRenderContextJS text(String text, int x, int y) {
-//? if >=26 {
         graphics.text(font, text, x, y, currentColor);
-//?} else {
-/*        graphics.drawString(font, text, x, y, currentColor);
-*///?}
         return this;
     }
 
     public HudRenderContextJS text(String text, int x, int y, int color) {
-//? if >=26 {
         graphics.text(font, text, x, y, color);
-//?} else {
-/*        graphics.drawString(font, text, x, y, color);
-*///?}
         return this;
     }
 
@@ -119,23 +105,12 @@ public class HudRenderContextJS {
 
     /** 1px 矩形边框。 */
     public HudRenderContextJS outline(int x, int y, int width, int height) {
-//? if >=26 {
         graphics.outline(x, y, x + width, y + height, currentColor);
         return this;
-//?} else {
-/*        return outline(x, y, width, height, currentColor);
-*///?}
     }
 
     public HudRenderContextJS outline(int x, int y, int width, int height, int color) {
-//? if >=26 {
         graphics.outline(x, y, x + width, y + height, color);
-//?} else {
-/*        graphics.hLine(x, x + width - 1, y, color);
-        graphics.hLine(x, x + width - 1, y + height - 1, color);
-        graphics.vLine(x, y, y + height - 1, color);
-        graphics.vLine(x + width - 1, y, y + height - 1, color);
-*///?}
         return this;
     }
 
@@ -149,21 +124,13 @@ public class HudRenderContextJS {
      * 贴图（完整纹理 id，如 {@code 'minecraft:textures/gui/icons.png'}），u/v 为纹理内偏移。
      */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height, int u, int v) {
-//? if >=26 {
         graphics.blit(Identifier.parse(textureId), x, y, width, height, u, v, width, height);
-//?} else {
-/*        graphics.blit(Identifier.parse(textureId), x, y, u, v, width, height);
-*///?}
         return this;
     }
 
     /** 贴图（整张纹理，u/v 为 0）。 */
     public HudRenderContextJS texture(String textureId, int x, int y, int width, int height) {
-//? if >=26 {
         graphics.blit(Identifier.parse(textureId), x, y, width, height, 0, 0, width, height);
-//?} else {
-/*        graphics.blit(Identifier.parse(textureId), x, y, 0, 0, width, height);
-*///?}
         return this;
     }
 
@@ -174,11 +141,7 @@ public class HudRenderContextJS {
 
     /** 物品图标（{@code Item.of('minecraft:diamond')}）。 */
     public HudRenderContextJS item(ItemStack stack, int x, int y) {
-//? if >=26 {
         graphics.item(stack, x, y);
-//?} else {
-/*        graphics.renderItem(stack, x, y);
-*///?}
         return this;
     }
 

@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.api.inject;
 
@@ -15,9 +17,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-//? if >=26 {
 import net.minecraft.util.Unit;
-//?}
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -29,9 +29,6 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import java.util.List;
-//? if <26 {
-/*import net.minecraft.world.item.component.Unbreakable;
-*///?}
 
 /**
  * @see ItemStack
@@ -135,16 +132,10 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     default Ingredient neko$asIngredient() {
-//? if >=26 {
         if (self().isEmpty()) return Ingredient.of();
-//?}
         if (self().getComponentsPatch().isEmpty()) {
             // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder（26.x 的 ItemStack 无 getItemHolder）
-//? if >=26 {
             return Ingredient.of(HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
-//?} else {
-/*            return Ingredient.of(self().getItem());
-*///?}
         }
         return neko$weakNBT();
     }
@@ -170,7 +161,6 @@ public interface ItemStackExtension extends ItemStackSpec {
         components.set(type, value);
     }
 
-//? if >=26 {
     @Override
     default boolean neko$matches(Object other) {
         if (other instanceof ItemStack stack) return neko$matches(stack);
@@ -178,7 +168,6 @@ public interface ItemStackExtension extends ItemStackSpec {
         if (other instanceof Ingredient ingredient) return neko$matches(ingredient);
         return false;
     }
-//?}
 
     default boolean neko$matches(ItemStack stack) {
         return ItemStack.isSameItemSameComponents(self(), stack);
@@ -190,20 +179,6 @@ public interface ItemStackExtension extends ItemStackSpec {
 
     default boolean neko$matches(Ingredient ingredient) {
         return ingredient.test(self());
-//? if <26 {
-/*    }
-
-    @Override
-    default boolean neko$matches(Object other) {
-        if (other instanceof ItemStack stack) {
-            return neko$matches(stack);
-        } else if (other instanceof ItemLike item) {
-            return neko$matches(item);
-        } else if (other instanceof Ingredient ingredient) {
-            return neko$matches(ingredient);
-        }
-        return false;
-*///?}
     }
 
     default boolean neko$areItemsEqual(ItemStack stack) {
@@ -228,11 +203,7 @@ public interface ItemStackExtension extends ItemStackSpec {
     @Override
     default void neko$setUnbreakable(boolean unbreakable) {
         if (unbreakable) {
-//? if >=26 {
             self().set(DataComponents.UNBREAKABLE, Unit.INSTANCE);
-//?} else {
-/*            self().set(DataComponents.UNBREAKABLE, new Unbreakable(true));
-*///?}
         } else {
             self().remove(DataComponents.UNBREAKABLE);
         }

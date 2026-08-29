@@ -1,16 +1,14 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
-//? if >=26 {
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-//?}
 import net.minecraft.network.chat.Component;
-//? if >=26 {
 import net.minecraft.client.resources.language.I18n;
-//?}
 import org.lwjgl.glfw.GLFW;
 import java.util.function.Consumer;
 
@@ -82,22 +80,11 @@ public class NekoModal {
 
         graphics.fill(0, 0, screenW, screenH, 0x88000000);
         graphics.fill(mx, my, mx + mw, my + mh, 0xFF1E1E1E);
-//? if >=26 {
         graphics.outline(mx, my, mw, mh, 0xFF454545);
-//?} else {
-/*        graphics.fill(mx, my, mx + mw, my + 1, 0xFF454545);
-        graphics.fill(mx, my + mh - 1, mx + mw, my + mh, 0xFF454545);
-        graphics.fill(mx, my + 1, mx + 1, my + mh - 1, 0xFF454545);
-        graphics.fill(mx + mw - 1, my + 1, mx + mw, my + mh - 1, 0xFF454545);
-*///?}
 
         if (type == 0) {
             graphics.centeredText(this.font, title, screenW / 2, my + 8, 0xFFFFFFFF);
-//? if >=26 {
             this.input.extractRenderState(graphics, mouseX, mouseY, partialTick);
-//?} else {
-/*            this.input.render(graphics, mouseX, mouseY, partialTick);
-*///?}
         } else if (type == 1) {
             graphics.centeredText(this.font, title, screenW / 2, my + 14, 0xFFFFFFFF);
             graphics.centeredText(this.font, Component.translatable("nekojs.gui.modal.warning.irreversible"), screenW / 2, my + 32, 0xFFFFFFFF);
@@ -113,11 +100,7 @@ public class NekoModal {
         graphics.centeredText(this.font, Component.translatable("nekojs.gui.modal.button.cancel"), mx + mw - 32, btnY + 4, 0xFFFFFFFF);
     }
 
-//? if >=26 {
     public boolean mouseClicked(MouseButtonEvent event, int screenW, int screenH) {
-//?} else {
-/*    public boolean mouseClicked(double mouseX, double mouseY, int button, int screenW, int screenH) {
-*///?}
         if (!isOpen) return false;
 
         int mw = 240; int mh = 80;
@@ -125,48 +108,26 @@ public class NekoModal {
         int my = screenH / 2 - mh / 2;
         int btnY = my + 55;
 
-//? if >=26 {
         if (event.button() == 0 && event.y() >= btnY && event.y() <= btnY + 16) {
             if (event.x() >= mx + mw - 110 && event.x() <= mx + mw - 60) {
-//?} else {
-/*        if (button == 0 && mouseY >= btnY && mouseY <= btnY + 16) {
-            if (mouseX >= mx + mw - 110 && mouseX <= mx + mw - 60) {
-*///?}
                 if (type == 0 && inputCallback != null) inputCallback.accept(input.getValue());
                 else if (type == 1 && confirmCallback != null) confirmCallback.run();
                 close();
                 return true;
             }
-//? if >=26 {
             if (event.x() >= mx + mw - 55 && event.x() <= mx + mw - 10) {
-//?} else {
-/*            if (mouseX >= mx + mw - 55 && mouseX <= mx + mw - 10) {
-*///?}
                 close();
                 return true;
             }
         }
-//? if >=26 {
         if (type == 0 && input.mouseClicked(event, false)) return true;
-//?} else {
-/*        if (type == 0 && input.mouseClicked(mouseX, mouseY, button)) return true;
-*///?}
         return true;
     }
 
-//? if >=26 {
     public boolean keyPressed(KeyEvent event) {
-//?} else {
-/*    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-*///?}
         if (!isOpen) return false;
-//? if >=26 {
         if (event.key() == GLFW.GLFW_KEY_ESCAPE) { close(); return true; }
         if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
-//?} else {
-/*        if (keyCode == GLFW.GLFW_KEY_ESCAPE) { close(); return true; }
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-*///?}
             if (type == 0 && inputCallback != null) inputCallback.accept(input.getValue());
             else if (type == 1 && confirmCallback != null) confirmCallback.run();
             close();

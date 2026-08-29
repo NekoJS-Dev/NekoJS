@@ -1,11 +1,11 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
 import java.util.List;
-//?}
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BucketItem;
@@ -35,11 +35,7 @@ import java.util.function.Supplier;
  * event.fluid('mymod:molten_iron', b =&gt; { b.density = 3000; b.lightLevel = 15; b.noBucket() })
  * </pre>
  */
-//? if >=26 {
 public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements TaggableBuilder<FluidBuilder> {
-//?} else {
-/*public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
-*///?}
 
     public String displayName = null;
     public int density = 1000;
@@ -83,7 +79,6 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
                 return FluidBuilder.this.createBucketItem();
             }
         };
-//? if >=26 {
     }
 
     /** {@link TaggableBuilder}：流体 tag（如 {@code minecraft:water}）归属 FLUID 注册表。 */
@@ -104,7 +99,6 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     @Override
     public List<Identifier> getTagTargets() {
         return List.of(id, getFlowingId());
-//?}
     }
 
     /** 抑制自动桶物品（{@code <id>_bucket}）连带注册。 */
@@ -130,11 +124,6 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     @Override
     public Fluid build() {
         Fluid source = new BaseFlowingFluid.Source(properties());
-//? if <26 {
-/*        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
-            com.tkisor.nekojs.client.ClientBlockRenderTypes.applyFluid(source, "translucent");
-        }
-*///?}
         return source;
     }
 
@@ -188,32 +177,19 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> implements Taggab
     /** 液体方块：引用 source 流体；noCollision + 高抗爆 + 无 loot（对标 vanilla 水/岩浆）。 */
     private LiquidBlock createLiquidBlock() {
         BlockBehaviour.Properties props = BlockBehaviour.Properties.of()
-//? if >=26 {
                 .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id))
                 .noCollision()
-//?} else {
-/*                .noCollission()
-*///?}
                 .strength(100.0F)
                 .noLootTable();
         LiquidBlock liquid = new LiquidBlock((net.minecraft.world.level.material.FlowingFluid) get(), props);
-//? if <26 {
-/*        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
-            com.tkisor.nekojs.client.ClientBlockRenderTypes.apply(liquid, "translucent");
-        }
-*///?}
         return liquid;
     }
 
     /** 桶物品：引用 source 流体；stacksTo(1)。 */
     private BucketItem createBucketItem() {
-//? if >=26 {
         net.minecraft.resources.ResourceKey<Item> key =
                 net.minecraft.resources.ResourceKey.create(Registries.ITEM, getBucketId());
         Item.Properties props = new Item.Properties().setId(key).stacksTo(1);
-//?} else {
-/*        Item.Properties props = new Item.Properties().stacksTo(1);
-*///?}
         return new BucketItem(get(), props);
     }
 }

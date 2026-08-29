@@ -1,7 +1,10 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 本类本体 fabric 也编译——neoforge 依赖（EntityTypeBuilder）是两处局部守卫，非整文件包装。
 package com.tkisor.nekojs.wrapper.entity;
 
-//? if neoforge {
 // 脚本实体注册面（EntityTypeBuilder）是 neoforge 面；fabric 上此依赖不存在
+//? if neoforge {
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
 //?}
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -20,15 +23,12 @@ import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ambient.Bat;
-//? if >=26 {
 import net.minecraft.world.entity.animal.bee.Bee;
 import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.entity.animal.feline.Cat;
 import net.minecraft.world.entity.animal.fox.Fox;
-//?}
 import net.minecraft.world.entity.animal.goat.Goat;
-//? if >=26 {
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.animal.equine.Llama;
@@ -37,7 +37,6 @@ import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.animal.turtle.Turtle;
 import net.minecraft.world.entity.animal.wolf.Wolf;
-//?}
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.ElderGuardian;
@@ -47,7 +46,6 @@ import net.minecraft.world.entity.monster.Phantom;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.monster.piglin.Piglin;
-//? if >=26 {
 import net.minecraft.world.entity.monster.skeleton.Skeleton;
 import net.minecraft.world.entity.monster.skeleton.Stray;
 import net.minecraft.world.entity.monster.skeleton.WitherSkeleton;
@@ -57,7 +55,6 @@ import net.minecraft.world.entity.monster.zombie.Husk;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;
 import net.minecraft.world.entity.npc.villager.Villager;
-//?}
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -68,31 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-//? if <26 {
-/*import net.minecraft.world.entity.animal.Bee;
-import net.minecraft.world.entity.animal.Cat;
-import net.minecraft.world.entity.animal.Chicken;
-import net.minecraft.world.entity.animal.Cow;
-import net.minecraft.world.entity.animal.Fox;
-import net.minecraft.world.entity.animal.IronGolem;
-import net.minecraft.world.entity.animal.Pig;
-import net.minecraft.world.entity.animal.Rabbit;
-import net.minecraft.world.entity.animal.Sheep;
-import net.minecraft.world.entity.animal.SnowGolem;
-import net.minecraft.world.entity.animal.Turtle;
-import net.minecraft.world.entity.animal.Wolf;
-import net.minecraft.world.entity.animal.horse.Llama;
-import net.minecraft.world.entity.monster.Drowned;
-import net.minecraft.world.entity.monster.Husk;
-import net.minecraft.world.entity.monster.Skeleton;
-import net.minecraft.world.entity.monster.Slime;
-import net.minecraft.world.entity.monster.Spider;
-import net.minecraft.world.entity.monster.Stray;
-import net.minecraft.world.entity.monster.WitherSkeleton;
-import net.minecraft.world.entity.monster.Zombie;
-import net.minecraft.world.entity.monster.ZombifiedPiglin;
-import net.minecraft.world.entity.npc.Villager;
-*///?}
 
 public final class GoalRegistry {
     // 注册阶段写、gameplay 阶段读，用 ConcurrentHashMap 保证 safe-publication
@@ -167,11 +139,7 @@ public final class GoalRegistry {
         TARGET_CLASSES.put("witch", Witch.class);
         TARGET_CLASSES.put("blaze", Blaze.class);
         // Slime 在 26.1 仍是 monster 包，26.2 起拆到 cubemob 子包——按版本取可用类
-//? if >=26 {
         addTarget("slime", "net.minecraft.world.entity.monster.cubemob.Slime", "net.minecraft.world.entity.monster.Slime");
-//?} else {
-/*        TARGET_CLASSES.put("slime", Slime.class);
-*///?}
         TARGET_CLASSES.put("phantom", Phantom.class);
         TARGET_CLASSES.put("husk", Husk.class);
         TARGET_CLASSES.put("drowned", Drowned.class);
@@ -201,7 +169,6 @@ public final class GoalRegistry {
     }
 
     /** 按候选类名逐个加载（跨小版本拆包差异兜底），全部失败则跳过该映射。 */
-//? if >=26 {
     private static void addTarget(String id, String... classNames) {
         for (String name : classNames) {
             try {
@@ -213,7 +180,6 @@ public final class GoalRegistry {
             }
         }
     }
-//?}
 
     /**
      * 目标实体 → 实体类。支持 Java 类对象（{@code Java.type(...)}）与实体 id 字符串

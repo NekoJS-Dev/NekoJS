@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.listener;
 
@@ -17,9 +19,7 @@ import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
-//?}
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
@@ -30,16 +30,11 @@ import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
-//? if >=26 {
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
-//?}
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import java.io.Reader;
 import java.util.Map;
-//? if <26 {
-/*import net.neoforged.neoforge.event.AddReloadListenerEvent;
-*///?}
 
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class ServerEventListener {
@@ -74,9 +69,7 @@ public class ServerEventListener {
         ItemModificationEventJS.fire(server);
         // 方块属性修改：同一时机 post（先整体恢复上轮快照再重放，删除的 modify 自动回退）；
         // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
-//? if >=26 {
         BlockModificationEventJS.fire();
-//?}
     }
 
     /**
@@ -135,11 +128,7 @@ public class ServerEventListener {
     }
 
     @SubscribeEvent
-//? if >=26 {
     public static void onServerResourceReload(AddServerReloadListenersEvent event) {
-//?} else {
-/*    public static void onServerResourceReload(AddReloadListenerEvent event) {
-*///?}
         if (!schemaAutoDiscovered) {
             try {
                 RecipeSchemaAutoDiscovery.DiscoveredRecipeTypes discovered = MinecraftRecipeSchemaScanner.scan();
@@ -149,11 +138,7 @@ public class ServerEventListener {
             }
             schemaAutoDiscovered = true;
         }
-//? if >=26 {
         event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
-//?} else {
-/*        event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
-*///?}
         try {
             VillagerTradeManager.beginReload();
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
@@ -172,14 +157,7 @@ public class ServerEventListener {
      * 服务器未就绪（首次 WorldStem 装载）时跳过，由 {@link #onServerAboutToStart} 补刷。
      */
     @SubscribeEvent
-//? if >=26 {
     public static void onServerDataTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad event) {
-//?} else {
-/*    public static void onTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent event) {
-        if (event.getUpdateCause() != net.neoforged.neoforge.event.TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) {
-            return;
-        }
-*///?}
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             VillagerTradeManager.apply(server);

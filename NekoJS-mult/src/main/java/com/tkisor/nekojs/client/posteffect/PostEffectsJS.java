@@ -1,5 +1,8 @@
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 //? if neoforge {
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分案例）：脚本面 @Doc/@Param 文案存在时代差
+//（探针类型 golden 会校验），故与 1.21.1 拆为孪生——1.21.1 版住在 versions/1.21.1/src。
+// 改动脚本面行为时须同步孪生文件。
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.ScriptType;
@@ -11,9 +14,7 @@ import com.tkisor.nekojs.core.posteffect.PostEffectChainJson;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
-//? if >=26 {
 import java.util.LinkedHashMap;
-//?}
 import java.util.List;
 import java.util.Map;
 
@@ -84,34 +85,20 @@ public final class PostEffectsJS implements Binding {
      *   <li>{@code blurRadius} / {@code blurRounds} — generate a vanilla box-blur chain instead.</li>
      * </ul>
      */
-//? if >=26 {
     @Doc("Registers a runtime post-effect chain from options { chainJson?, fragmentShader?, fragmentShaderId?, uniformsJson?, blurRadius?, blurRounds? }; returns true when the chain JSON is valid.")
-//?} else {
-/*    @Doc("Registers a runtime post-effect chain from options { chainJson?: string, program?: string }; returns true when the chain JSON is well-formed.")
-*///?}
     @Param(name = "id", value = "effect id, e.g. 'nekojs:my_invert'")
-//? if >=26 {
     @Param(name = "options", value = "{ chainJson?: string, fragmentShader?: string, fragmentShaderId?: string, uniformsJson?: string, blurRadius?: number, blurRounds?: number }")
     @Return("true when registered (runtime-only ids need the pending ShaderManager mixin to activate)")
-//?} else {
-/*    @Param(name = "options", value = "{ chainJson?: string, program?: string }")
-    @Return("true when registered (runtime-only ids need the pending 1.21.1 post-chain mixin to activate)")
-*///?}
     public boolean register(String id, Map<String, Object> options) {
         Identifier effectId = Identifier.tryParse(id);
         if (effectId == null) return false;
         Map<String, Object> opts = options == null ? Map.of() : options;
 
-//? if >=26 {
         String chainJson = asString(opts.get("chainJson"));
         Map<Identifier, String> fragmentShaders = PostEffectManager.parseShaderMap(asStringMap(opts.get("fragmentShaders")));
         Map<Identifier, String> vertexShaders = PostEffectManager.parseShaderMap(asStringMap(opts.get("vertexShaders")));
-//?} else {
-/*        String chainJson = opts.get("chainJson") instanceof String s ? s : null;
-*///?}
 
         if (chainJson == null) {
-//? if >=26 {
             String fragmentShader = asString(opts.get("fragmentShader"));
             Number blurRadius = asNumber(opts.get("blurRadius"));
             if (fragmentShader != null) {
@@ -133,18 +120,9 @@ public final class PostEffectsJS implements Binding {
             } else {
                 return false;
             }
-//?} else {
-/*            String program = opts.get("program") instanceof String p ? p : null;
-            if (program == null) return false;
-            chainJson = PostEffectChainJson.simpleBlitChainLegacy(program);
-*///?}
         }
 
-//? if >=26 {
         return PostEffectManager.register(effectId, chainJson, fragmentShaders, vertexShaders);
-//?} else {
-/*        return PostEffectManager.register(effectId, chainJson);
-*///?}
     }
 
     /** Removes a runtime-registered definition; clears it first when active. */
@@ -158,11 +136,7 @@ public final class PostEffectsJS implements Binding {
 
     /** Activates the effect on the client thread. Runtime-only ids warn and return false (v1). */
     @Doc("Activates a post effect (e.g. 'minecraft:invert'); executed on the client thread.")
-//? if >=26 {
     @Param(name = "id", value = "effect id; must exist as a post_effect resource in v1")
-//?} else {
-/*    @Param(name = "id", value = "effect id; must exist as a shaders/post chain resource in v1")
-*///?}
     @Return("true when accepted")
     public boolean set(String id) {
         Identifier effectId = Identifier.tryParse(id);
@@ -186,11 +160,7 @@ public final class PostEffectsJS implements Binding {
     }
 
     /** Currently active effect id, or null. */
-//? if >=26 {
     @Doc("Returns the currently active effect id, or null when none is active.")
-//?} else {
-/*    @Doc("Returns the id last activated through this binding, or null when none is active.")
-*///?}
     @Return("effect id string or null")
     @Nullable
     public String current() {
@@ -215,11 +185,7 @@ public final class PostEffectsJS implements Binding {
     }
 
     /** Whether the effect exists as a post_effect resource (activatable in v1). */
-//? if >=26 {
     @Doc("Returns whether the effect exists as a post_effect resource in the active resource packs (activatable without mixins).")
-//?} else {
-/*    @Doc("Returns whether the effect exists as a shaders/post chain resource in the active resource packs (activatable without mixins).")
-*///?}
     @Param(name = "id", value = "effect id")
     @Return("true when resource-backed")
     public boolean isAvailable(String id) {
@@ -234,7 +200,6 @@ public final class PostEffectsJS implements Binding {
         return new ArrayList<>(PRESETS);
     }
 
-//? if >=26 {
     @Nullable
     private static String asString(Object value) {
         return value instanceof String s ? s : null;
@@ -259,6 +224,5 @@ public final class PostEffectsJS implements Binding {
         }
         return null;
     }
-//?}
 }
 //?}
