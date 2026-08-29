@@ -128,8 +128,8 @@ jobs:
         run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
 
       - name: Guard lint (ADR-0008/0009 守卫纪律强制)
-        # 守卫密度 ≤20 + 豁免标记校验；wrapper 层 loader import 当前为警告基线
-        # （13 文件已全部整文件 neoforge 守卫隔离，hardFail 随 Fabric 功能端口翻转）
+        # 守卫密度 ≤20 + 豁免标记校验；wrapper 层零 loader import 已 hardFail
+        #（整文件 loader 守卫的平台面文件列 informational，见 stonecutter.gradle.kts 规则 7）
         run: ./gradlew guardLint --console=plain
 
       - name: Run NeoForge NBT smoke tests

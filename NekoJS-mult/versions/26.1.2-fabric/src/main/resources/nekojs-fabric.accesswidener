@@ -1,5 +1,7 @@
 accessWidener v2 official
 # GoalRegistry（共享树 wrapper）给脚本注册的实体加 goal 需要 public 访问这两个字段；
-# NeoForge 侧由 AT 放宽，fabric 侧由此 AW 等价。
+# NeoForge 侧由 NeoForge 自带 AT 放宽，fabric 侧由此 AW 等价。
+# namespace 用 official 而非 named：26.x 起 Mojang 去混淆，loom 只认 official（named 会报
+# "Expected official namespace for access widener entry"）。
 accessible field net/minecraft/world/entity/Mob goalSelector Lnet/minecraft/world/entity/ai/goal/GoalSelector;
 accessible field net/minecraft/world/entity/Mob targetSelector Lnet/minecraft/world/entity/ai/goal/GoalSelector;

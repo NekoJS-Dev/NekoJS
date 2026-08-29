@@ -41,3 +41,17 @@
   sed/grep 输出完全看不见，正则永远不匹配，lint 全员误报。用 `chr(8)` 扫描定位后修掉。
 - 去 GoalRegistry 尾部整文件守卫时误删了内层 `>=26` 守卫的闭合 `//?}`（guardLint 的
   配对检查当场抓住——这正是这条 lint 的价值）。
+
+
+## Review 跟进
+
+- lint 判定补上第二条件（最后一个非空行必须是该守卫的收尾 `//?}`）：只看首个 `//? if`
+  的话，GoalRegistry 自己（首个守卫是 import 小守卫、尾行是 `}`）会被误判成平台面，
+  hardFail 对它静默失效——任何后续未守卫的 loader import 都会被原谅。
+- `GoalRegistry.onEntityJoinLevel` 增加 `GOALS.isEmpty()` 早退：APPLIED_JOIN_GOALS 是强引用
+  集合，不退的话每个加入的生物都会被永久钉住（fabric 上此表恒空，尤其要退）。
+- NekoJSMod / FabricEntityEventBindings 改用 import（不再内联 FQN）；AW 文件里写明
+  namespace 选 official 的原因；CI 步骤注释同步（不再是"警告基线"）。
+- 已知边界（记录不修）：fabric 上 GoalRegistry 暂无脚本入口（GoalEvents 事件面与
+  EntityTypeBuilder 均 neoforge 面）——本票只按票面桥接 loader 单点，API 面随脚本实体
+  注册的移植票落地后即生效。

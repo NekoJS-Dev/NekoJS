@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.wrapper.entity;
 
 //? if neoforge {
+// 脚本实体注册面（EntityTypeBuilder）是 neoforge 面；fabric 上此依赖不存在
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
 //?}
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -120,6 +121,9 @@ public final class GoalRegistry {
     }
 
     public static void onEntityJoinLevel(Entity entity, Level level) {
+        // 没有脚本注册的 goal 时零开销退出——APPLIED_JOIN_GOALS 是强引用集合，
+        // 否则每个加入的生物都会被永久钉住（fabric 上此表恒空，尤其要退）
+        if (GOALS.isEmpty()) return;
         if (level.isClientSide() || !(entity instanceof Mob mob) || mob instanceof NekoScriptMob) {
             return;
         }

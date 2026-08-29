@@ -134,11 +134,15 @@ val guardLint = tasks.register("guardLint") {
             var loaderImports = 0
             val path = rel(source)
             val inWrapper = path.startsWith(wrapperDir)
-            // 整文件 loader 守卫（首行守卫 + 尾行收尾）= 显式平台面，不计入 wrapper 零
-            // loader import 目标（对侧编译单元无这些 import）；未守卫文件才受 hardFail 约束。
+            // 整文件 loader 守卫 = 显式平台面，不计入 wrapper 零 loader import 目标
+            //（对侧编译单元无这些 import）。两个条件都要满足：首个 `//? if`（最外层）
+            // 条件含 loader token，且最后一个非空行是该守卫的收尾 `//?}`——只看首行会把
+            //「方法级 loader 守卫 + 其余裸奔」的文件误判成平台面（hardFail 被静默绕过）。
+            val lastSignificant = lines.lastOrNull { it.isNotBlank() }?.trim()
             val platformFacingWrapper = inWrapper &&
                 lines.firstOrNull { it.trim().startsWith("//? if ") }
-                    ?.let { outerLoaderGuard.matches(it.trim()) } == true
+                    ?.let { outerLoaderGuard.matches(it.trim()) } == true &&
+                (lastSignificant?.removePrefix("*/")?.trim() == "//?}")
             lines.forEachIndexed { index, raw ->
                 val line = raw.trim()
                 if (line.startsWith("//? if ")) {

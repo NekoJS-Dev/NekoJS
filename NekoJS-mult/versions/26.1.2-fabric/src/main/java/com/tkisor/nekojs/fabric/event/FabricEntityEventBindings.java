@@ -3,6 +3,7 @@ package com.tkisor.nekojs.fabric.event;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
+import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.entity.EntityJoinLevelEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.LivingDeathEventJS;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -50,6 +51,6 @@ public final class FabricEntityEventBindings {
     public static void postJoinLevel(Entity entity, ServerLevel level) {
         JOIN_LEVEL.post(new EntityJoinLevelEventJS(entity, level), entity.getType());
         // 与 NeoForge 侧 NekoJSMod 的 EntityJoinLevelEvent 监听同职责：应用脚本注册的 goal
-        com.tkisor.nekojs.wrapper.entity.GoalRegistry.onEntityJoinLevel(entity, level);
+        GoalRegistry.onEntityJoinLevel(entity, level);
     }
 }
