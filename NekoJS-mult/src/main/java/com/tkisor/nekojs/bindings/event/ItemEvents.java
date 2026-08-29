@@ -1,0 +1,76 @@
+//? if neoforge {
+package com.tkisor.nekojs.bindings.event;
+
+import com.tkisor.nekojs.api.event.EventBusForgeBridge;
+import com.tkisor.nekojs.api.event.EventBusJS;
+import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.eventbus.EventBusFactory;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+
+import java.util.function.Function;
+
+/** 物品事件组（server/client 脚本）：右键、tooltip、拾取、丢弃、交互与使用完成等，按物品定向。 */
+public interface ItemEvents {
+    EventGroup GROUP = EventGroup.of("ItemEvents");
+
+    EventBusJS<PlayerInteractEvent.RightClickItem, Item> RIGHT_CLICKED =
+            GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, dispatchByItem(PlayerInteractEvent::getItemStack));
+
+    /**
+     * 运行时物品属性修改（server 脚本）：每次服务器启动（about-to-start）与
+     * {@code /nekojs reload server} 时由平台侧手动 post（快照恢复模型，见
+     * {@link ItemModificationEventJS}），不挂 NeoForge 总线。
+     */
+    EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
+            GROUP.server("modification", ItemModificationEventJS.class);
+
+    EventBusJS<ItemTooltipEvent, Item> TOOLTIP =
+            GROUP.client("tooltip", ItemTooltipEvent.class, dispatchByItem(ItemTooltipEvent::getItemStack));
+
+    EventBusJS<ItemEntityPickupEvent.Pre, Item> CAN_PICK_UP =
+            GROUP.server("canPickUp", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem());
+    // pickedUpPre：canPickUp 的冗余别名（同一 Pre 事件）。跨平台主名是 canPickUp/pickedUp
+    // （cleanroom 无独立 Pre 事件），脚本侧建议迁移到 canPickUp（H-5 别名裁决，2026-08-15）。
+    @Deprecated
+    EventBusJS<ItemEntityPickupEvent.Pre, Item> PICKED_UP_PRE =
+            GROUP.server("pickedUpPre", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem());
+    EventBusJS<ItemEntityPickupEvent.Post, Item> PICKED_UP =
+            GROUP.server("pickedUp", ItemEntityPickupEvent.Post.class, dispatchByPickupItem());
+    EventBusJS<ItemTossEvent, Item> DROPPED =
+            GROUP.server("dropped", ItemTossEvent.class, dispatchByItem(event -> event.getEntity().getItem()));
+    EventBusJS<PlayerInteractEvent.EntityInteract, Item> ENTITY_INTERACTED =
+            GROUP.server("entityInteracted", PlayerInteractEvent.EntityInteract.class, dispatchByItem(PlayerInteractEvent.EntityInteract::getItemStack));
+    // 物品使用完成（吃完食物/用完盾弓等）。对标 KubeJS foodEaten，基于 LivingEntityUseItemEvent.Finish，
+    // 脚本侧可用 event.item.isEdible() 等进一步过滤是否食物。
+    EventBusJS<LivingEntityUseItemEvent.Finish, Item> FOOD_EATEN =
+            GROUP.server("foodEaten", LivingEntityUseItemEvent.Finish.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
+
+    private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
+        return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
+    }
+
+    private static <T extends ItemEntityPickupEvent> DispatchKey<T, Item> dispatchByPickupItem() {
+        return dispatchByItem(event -> event.getItemEntity().getItem());
+    }
+
+    EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
+            // RightClickItem 双逻辑侧触发：SERVER 总线只投递服务端实例（客户端交互在 Render 线程）
+            .bind(RIGHT_CLICKED, e -> !e.getLevel().isClientSide())
+            .bind(TOOLTIP)
+            .bind(CAN_PICK_UP)
+            .bind(PICKED_UP_PRE)
+            .bind(PICKED_UP)
+            .bind(DROPPED)
+            .bind(ENTITY_INTERACTED, e -> !e.getLevel().isClientSide())
+            .bind(FOOD_EATEN);
+}
+//?}

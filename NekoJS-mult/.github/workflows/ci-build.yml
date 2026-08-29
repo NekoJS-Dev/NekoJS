@@ -1,0 +1,501 @@
+name: NekoJS CI Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze build metadata
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.meta.outputs.is_release }}
+      version: ${{ steps.meta.outputs.version }}
+      channel: ${{ steps.meta.outputs.channel }}
+      title: ${{ steps.meta.outputs.title }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
+    steps:
+      - name: Checkout metadata
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract commit title and release version
+        id: meta
+        shell: bash
+        env:
+          RAW_COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || github.event_name }}
+        run: |
+          set -euo pipefail
+          shopt -s nocasematch
+
+          TITLE="$(printf '%s' "$RAW_COMMIT_MSG" | sed -n '1p')"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+          # 发布触发：commit 标题 "update <版本>" → release 通道；
+          # "update beta <版本>" / "update alpha <版本>" → 对应通道（CurseForge version-type 用）。
+          # 匹配结果立刻落入普通变量：后续 [[ =~ ]] 不匹配会清空 BASH_REMATCH，不能跨判断复用
+          CHANNEL=""
+          VERSION=""
+          if [[ "$TITLE" =~ ^update[[:space:]]+(alpha|beta)[[:space:]]+([0-9A-Za-z][0-9A-Za-z._-]*)$ ]]; then
+            CHANNEL="${BASH_REMATCH[1],,}"
+            VERSION="${BASH_REMATCH[2]}"
+          elif [[ "$TITLE" =~ ^update[[:space:]]+([0-9A-Za-z][0-9A-Za-z._-]*)$ ]]; then
+            CANDIDATE="${BASH_REMATCH[1]}"
+            if ! [[ "$CANDIDATE" =~ ^(alpha|beta)$ ]]; then
+              CHANNEL="release"
+              VERSION="$CANDIDATE"
+            fi
+          fi
+
+          if [[ -n "$CHANNEL" ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+            echo "Release build detected from commit title: $TITLE (channel: $CHANNEL)"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "channel=" >> "$GITHUB_OUTPUT"
+            echo "Development build detected from commit title: $TITLE"
+          fi
+
+  build:
+    name: Build version nodes
+    needs: analyze
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # main/master 写入缓存；PR 分支只读，避免污染缓存
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Drop local org.gradle.java.home pin
+        # gradle.properties 里的 org.gradle.java.home 是本机 Windows 路径钉版（PATH 上是
+        # Zulu 8 的机器用）；CI 由 setup-java 提供 JDK，留着会在 linux runner 上启动失败。
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Install Probe typecheck dependencies
+        run: npm ci
+
+      - name: Run common checks
+        # 用 :common:check 而非 :common:test：check 才会挂上 checkCommonIsolation 隔离门禁
+        # :common-api-processor:test 显式列出（JavaPlugin 的 check 默认已依赖 test，这里点名
+        # 是防止将来 check 挂载被改掉时单测静默丢失）
+        run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
+
+      - name: Guard lint (ADR-0008/0009 守卫纪律强制)
+        # 守卫密度 ≤20 + 豁免标记校验；wrapper 层 loader import 当前为警告基线
+        # （13 文件已全部整文件 neoforge 守卫隔离，hardFail 随 Fabric 功能端口翻转）
+        run: ./gradlew guardLint --console=plain
+
+      - name: Run NeoForge NBT smoke tests
+        # 根分支三个 NeoForge 节点各注册了 nbtSmokeTest（fabric/forge 的分支脚本未注册该任务）
+        run: ./gradlew :1.21.1:nbtSmokeTest :26.1.2:nbtSmokeTest :26.2.0:nbtSmokeTest --console=plain
+
+      - name: Typecheck Probe declarations
+        run: npm run test:probe-types
+
+      - name: Build version nodes
+        # 节点列表变化时同步更新 settings.gradle.kts 与此处：
+        # 根分支 = 1.21.1 / 26.1.2 / 26.2.0（NeoForge，根 build.gradle.kts）
+        #        + 26.1.2-fabric（Fabric，fabric.gradle.kts）；forge 分支 = 1.20.1（forge/build.gradle.kts）
+        # 单个 build 已按依赖链覆盖 compileJava → test → check（隔离门禁/verifyDevModSourceSets）
+        run: ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :forge:1.20.1:build --console=plain
+
+      - name: Prepare artifacts
+        shell: bash
+        env:
+          IS_RELEASE: ${{ needs.analyze.outputs.is_release }}
+          SHORT_SHA: ${{ needs.analyze.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          while IFS= read -r jar; do
+            name="$(basename "$jar")"
+            case "$name" in
+              *-sources.jar|*-javadoc.jar|*-dev.jar|*-plain.jar) continue ;;
+            esac
+
+            if [[ "$IS_RELEASE" == "true" ]]; then
+              cp "$jar" "artifacts/$name"
+            else
+              cp "$jar" "artifacts/${name%.jar}-dev-${SHORT_SHA}.jar"
+            fi
+          done < <(find versions forge/versions -path '*/build/libs/*.jar' -type f | sort)
+
+          if ! compgen -G 'artifacts/*.jar' > /dev/null; then
+            echo "No jar artifacts were produced" >&2
+            exit 1
+          fi
+
+          ls -lh artifacts
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.analyze.outputs.is_release == 'true' && 'NekoJS-Release-Jars' || 'NekoJS-Dev-Jars' }}
+          path: artifacts/*.jar
+          if-no-files-found: error
+          retention-days: ${{ needs.analyze.outputs.is_release == 'true' && 90 || 14 }}
+
+      - name: Upload test reports on failure
+        # 放在 job 末尾 + if: ${{ !cancelled() && failure() }}：任何一步失败（common 检查 / NBT 冒烟 /
+        # probe typecheck / 节点构建）都能带上报表；!cancelled() 保证并发取消后仍尽力补传已有报表
+        if: ${{ !cancelled() && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            common/build/reports/tests/test
+            common/build/test-results/test
+            versions/*/build/reports/tests/test
+            versions/*/build/test-results
+          if-no-files-found: ignore
+
+  common-jdk21:
+    name: Common checks (JDK 21)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # 独立小作业只读缓存，避免与主构建写入的缓存条目互相挤占
+          cache-read-only: true
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Drop local org.gradle.java.home pin
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Run common checks
+        # 主 job 的 Gradle 守护进程跑在 JDK 25 上；这里用 JDK 21 跑同一组检查（工具链同为 21），
+        # 捕捉对守护进程 JVM 版本的隐性依赖（toolchain 漂移）；任务列表与主 job 保持一致
+        run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
+
+  release:
+    name: Create GitHub release
+    needs:
+      - analyze
+      - build
+    if: github.event_name == 'push' && needs.analyze.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release jars
+        uses: actions/download-artifact@v4
+        with:
+          name: NekoJS-Release-Jars
+          path: artifacts
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        env:
+          COMMIT_TITLE: ${{ needs.analyze.outputs.title }}
+        run: |
+          set -euo pipefail
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          fi
+
+          NOTES="$(git log "$RANGE" --pretty=format:'* %s (%h)' | sed '/^$/d')"
+          if [[ -z "$NOTES" ]]; then
+            NOTES="* ${COMMIT_TITLE}"
+          fi
+
+          EOF_MARKER="CHANGELOG_$(date +%s)_$RANDOM"
+          echo "notes<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.analyze.outputs.version }}
+          name: NekoJS v${{ needs.analyze.outputs.version }}
+          body: |
+            ## Summary
+            ${{ needs.analyze.outputs.title }}
+
+            ## Changelog
+            ${{ steps.changelog.outputs.notes }}
+          files: artifacts/*.jar
+          fail_on_unmatched_files: true
+
+  curseforge:
+    name: Publish to CurseForge
+    needs:
+      - analyze
+      - build
+    if: github.event_name == 'push' && needs.analyze.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release jars
+        uses: actions/download-artifact@v4
+        with:
+          name: NekoJS-Release-Jars
+          path: artifacts
+
+      - name: Ensure CURSEFORGE_TOKEN is configured
+        # 明确报错优于 mc-publish 拿到空 token 后的模糊失败
+        env:
+          CF_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$CF_TOKEN" ]]; then
+            echo "::error::CURSEFORGE_TOKEN secret is not configured. Add it under repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        env:
+          COMMIT_TITLE: ${{ needs.analyze.outputs.title }}
+        run: |
+          set -euo pipefail
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+
+          if [[ -z "$PREVIOUS_TAG" ]]; then
+            RANGE="HEAD"
+          else
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          fi
+
+          NOTES="$(git log "$RANGE" --pretty=format:'* %s (%h)' | sed '/^$/d')"
+          if [[ -z "$NOTES" ]]; then
+            NOTES="* ${COMMIT_TITLE}"
+          fi
+
+          EOF_MARKER="CHANGELOG_$(date +%s)_$RANDOM"
+          echo "notes<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
+      # 每个平台 jar 一个 CF file：各自标 MC 版本 + loader。
+      # Cleanroom 1.12.2 的发布留在 legacy 分支的流水线里，不在本仓。
+      - name: Publish NeoForge 26.1.2 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: artifacts/nekojs-neoforge-26.1.2-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (NeoForge 26.1.2)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 26.1.2
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      - name: Publish NeoForge 26.2.0 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: artifacts/nekojs-neoforge-26.2.0-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (NeoForge 26.2.0)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 26.2.0
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      - name: Publish NeoForge 1.21.1 file
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: '1518701'
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          files: artifacts/nekojs-neoforge-1.21.1-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }} (NeoForge 1.21.1)
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 1.21.1
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+      # Fabric 26.1.2：jar 已能构建，但 LoaderBridge 移植完成前脚本运行时不可用，
+      # 暂不发布。解封时去掉本注释块即可（fabric.mod.json 会让 mc-publish 自动校验依赖）。
+      # - name: Publish Fabric 26.1.2 file
+      #   uses: Kir-Antipov/mc-publish@v3.3
+      #   with:
+      #     curseforge-id: '1518701'
+      #     curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+      #     files: artifacts/nekojs-fabric-26.1.2-*.jar
+      #     name: NekoJS ${{ needs.analyze.outputs.version }} (Fabric 26.1.2)
+      #     version-type: ${{ needs.analyze.outputs.channel }}
+      #     loaders: fabric
+      #     game-versions: 26.1.2
+      #     changelog: ${{ steps.changelog.outputs.notes }}
+
+      # Modrinth 发布：项目建好后在 repo Settings → Secrets and variables → Actions 配置
+      #   secret   MODRINTH_TOKEN = Modrinth API token
+      #   variable MODRINTH_ID   = Modrinth 项目页 URL 末尾的 id
+      # 两者齐备前本步骤自动跳过（条件写在 if 里而不是省略步骤，让"将来要开 Modrinth"在
+      # workflow 里可见）。loaders/game-versions 随 fabric/forge 解封同步扩充。
+      - name: Publish to Modrinth
+        if: env.MODRINTH_ID != '' && env.MODRINTH_TOKEN != ''
+        uses: Kir-Antipov/mc-publish@v3.3
+        env:
+          MODRINTH_ID: ${{ vars.MODRINTH_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        with:
+          modrinth-id: ${{ vars.MODRINTH_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: artifacts/nekojs-neoforge-*.jar
+          name: NekoJS ${{ needs.analyze.outputs.version }}
+          version-type: ${{ needs.analyze.outputs.channel }}
+          loaders: neoforge
+          game-versions: 26.1.2;26.2.0;1.21.1
+          changelog: ${{ steps.changelog.outputs.notes }}
+
+  windows-common-test:
+    # golden 基线曾出现跨 JDK/跨平台漂移（b9ca637 就是这类问题的修复）：
+    # Linux-only CI 会让 Windows 特有的路径/行尾/排序问题溜进主干。
+    name: Common tests on Windows
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Drop local org.gradle.java.home pin
+        shell: bash
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Run common checks
+        shell: bash
+        run: ./gradlew :common-api:check :common:check --console=plain
+
+      # Windows 专属失败的诊断依赖：与主 build job 的 test-reports 区分命名
+      - name: Upload common test reports
+        if: ${{ !cancelled() && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-windows
+          path: |
+            common/build/reports/tests/test
+            common/build/test-results/test
+            common-api/build/reports/tests/test
+            common-api/build/test-results/test
+
+  gametest-smoke:
+    # headless GameTest 冒烟：本地实测 ~15s 自行退出（"All N required tests passed"）。
+    # mixin/interface-injection 的加载路径只有这里会在 CI 里真正跑起来。
+    name: GameTest smoke (NeoForge 26.1)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 跨 run 恢复的 ~/.gradle 里可能残留旧 MC/NeoForge 时代的 NFRT/构建缓存产物，
+      # 重新组装的 patched jar 会引用过期 API 签名 → NoSuchMethodError。恢复后清除
+      # 这两层缓存，强制按当前 userdev 重新生成 patched jar；post 阶段把干净状态存回 cache。
+      - name: Purge stale NeoForm/build caches
+        run: rm -rf "$HOME/.gradle/caches/neoformruntime" "$HOME/.gradle/caches/build-cache-1"
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Drop local org.gradle.java.home pin
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Run game test server
+        run: ./gradlew :26.1.2:runGameTestServer --console=plain
+
+      - name: Assert tests passed
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -rE "All [0-9]+ required tests passed" versions/26.1.2/run/logs/             || { echo "no 'required tests passed' marker found in gametest logs"; exit 1; }

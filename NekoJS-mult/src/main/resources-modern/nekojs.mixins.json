@@ -1,0 +1,28 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tkisor.nekojs.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BlockBehaviourMixin",
+    "LevelChunkBoundTickingBlockEntityMixin",
+    "MinecraftServerMixin",
+    "RecipeManagerMixin",
+    "ReloadableServerResourcesMixin",
+    "ResultSlotMixin",
+    "TagLoaderMixin",
+    "inject.MixinItemStack",
+    "inject.MixinLevel",
+    "inject.MixinMutableComponent",
+    "inject.MixinPlayer"
+  ],
+  "client": [
+    "ShaderManagerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

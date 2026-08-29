@@ -1,0 +1,34 @@
+package com.tkisor.nekojs.wrapper.registry.gen;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
+
+/**
+ * 状态效果 builder：类别决定 HUD 图标底色，颜色为 ARGB int。
+ * <pre>
+ * event.mobEffect('mymod:wither_touch', b =&gt; { b.category = 'harmful'; b.color = 0x8B0000 })
+ * </pre>
+ */
+public class MobEffectBuilder extends RegistryObjectBuilder<MobEffect> {
+
+    /** 类别名：beneficial / harmful / neutral（默认 neutral）。 */
+    public String category = "neutral";
+    /** ARGB 颜色（如 0x8B0000）。 */
+    public int color = 0xFFFFFF;
+
+    public MobEffectBuilder(Identifier id) {
+        super(id);
+    }
+
+    @Override
+    public MobEffect build() {
+        MobEffectCategory resolved = switch (category == null ? "neutral" : category.toLowerCase()) {
+            case "beneficial" -> MobEffectCategory.BENEFICIAL;
+            case "harmful" -> MobEffectCategory.HARMFUL;
+            default -> MobEffectCategory.NEUTRAL;
+        };
+        // MobEffect 的构造器为 protected，用匿名子类实例化（不做任何方法覆盖）。
+        return new MobEffect(resolved, color) {};
+    }
+}

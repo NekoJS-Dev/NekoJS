@@ -1,0 +1,45 @@
+//? if neoforge {
+package com.tkisor.nekojs.listener;
+
+import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
+import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
+//? if >=26 {
+import net.minecraft.commands.Commands;
+//?}
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+
+@EventBusSubscriber(modid = NekoJS.MODID)
+public class PlayerEventListener {
+
+    // 客户端error可能不会立即显示
+    @SubscribeEvent
+    public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+//? if >=26 {
+            if (Commands.LEVEL_GAMEMASTERS.check(player.permissions()) && NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
+//?} else {
+/*            if (player.hasPermissions(2) && NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
+*///?}
+
+//? if >=26 {
+                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(), false);
+//?} else {
+/*                player.displayClientMessage(NekoErrorUIHelper.getErrorComponent(), false);
+*///?}
+            }
+            // 挂载物品栏监听器（inventoryChanged 事件）
+            InventoryChangeListener.getOrCreate(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(PlayerEvent.Clone event) {
+        // 克隆（维度切换 / 死亡重生）后重新挂载：新玩家实体的 inventoryMenu 是新的
+        InventoryChangeListener.getOrCreate(event.getEntity());
+    }
+}
+//?}

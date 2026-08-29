@@ -1,0 +1,209 @@
+// 副本来源：主仓 common/build.gradle（沙箱不回写主仓）。
+// 差异：折入主仓根 build.gradle allprojects 的编译约定（-parameters/UTF-8；
+// -Xlint:all 省略——原文件对 compileJava 单独关了 [processing]，避免追加顺序噪音）。
+// checkCommonIsolation / $SwitchMap$ 指纹守卫 / golden 测试入口一并保留（副本内自洽）。
+
+import java.security.MessageDigest
+
+plugins {
+    id 'java-library'
+    id 'idea'
+}
+
+version = mod_version
+group = mod_group_id
+
+
+repositories {
+    mavenCentral()
+
+    maven {
+        url "https://maven.neoforged.net/releases"
+    }
+
+    exclusiveContent {
+        forRepository {
+            maven {
+                url "https://cursemaven.com"
+            }
+        }
+        filter {
+            includeGroup "curse.maven"
+        }
+    }
+}
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += '-parameters'
+}
+
+sourceSets.main {
+    resources {
+        srcDir "src/main/templates"
+    }
+}
+
+processResources {
+    // 模板变量替换：sourceSets.main.resources.filter{} 不会作用于 processResources 的
+    // CopySpec（实测不生效），需在任务级显式声明（api-runtime.properties 的 nekojs.version）
+    filesMatching('nekojs/api-runtime.properties') {
+        filter { it.replace('${mod_version}', mod_version) }
+    }
+}
+
+dependencies {
+    api project(':common-api')
+
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testImplementation libs.gson
+    testRuntimeOnly libs.junit.platform.launcher
+    // 25.1.3.6; exported so every platform receives the same remapper SPI.
+    api(libs.graal)
+
+    compileOnly libs.jspecify
+    compileOnly libs.gson
+    compileOnly libs.slf4j.api
+    compileOnly libs.log4j.api
+    compileOnly libs.log4j.core
+    compileOnly libs.jetbrains.annotations
+    compileOnly libs.night.config.core
+    compileOnly libs.night.config.toml
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+
+    // 测试运行时 stub：compiler/probe 链上的类引用 gson/log4j 等，游戏内由 MC/NeoForge 提供，
+    // 但 common 独立测试时需要在 testRuntimeOnly 提供这些实现，否则 NoClassDefFoundError。
+    testRuntimeOnly libs.slf4j.api
+    testRuntimeOnly libs.log4j.api
+    testRuntimeOnly libs.log4j.core
+    testRuntimeOnly libs.icu4j
+    // night-config：ProbeConfigLoader（probe.toml 读写）依赖；游戏内由平台提供，独立测试需注入
+    testRuntimeOnly libs.night.config.core
+    testRuntimeOnly libs.night.config.toml
+
+}
+
+test {
+    useJUnitPlatform()
+    // 主仓根 build.gradle allprojects 的 Test 约定（golden 对比对 locale 敏感）
+    systemProperty 'user.language', 'en'
+    systemProperty 'user.country', 'US'
+    systemProperty 'user.timezone', 'UTC'
+    systemProperty 'file.encoding', 'UTF-8'
+    // 透传 golden 再生成开关：`-Dnekojs.golden.regenerate=true`（ApiManifestGoldenTest 等
+    // golden 测试写回基线后跳过断言；与 :common:regenerateGoldens 的 probe golden 模式一致）
+    systemProperty 'nekojs.golden.regenerate', System.getProperty('nekojs.golden.regenerate', 'false')
+}
+
+// Guard the common module's MC/loader-agnostic invariant: common must not import
+// Minecraft, Forge, or NeoForge types (it is compiled on Java 21 with no MC deps and
+// shared across all 4 platforms). Graal imports ARE allowed — common intentionally owns
+// the GraalJS engine. Mirrors common-api's checkApiBoundaries pattern.
+tasks.register('checkCommonIsolation') {
+    group = 'verification'
+    description = 'Rejects Minecraft/Forge/NeoForge imports in common (keeps it MC-agnostic).'
+
+    def forbiddenPrefixes = [
+        'net.minecraft',
+        'net.minecraftforge',
+        'net.neoforged'
+    ]
+
+    inputs.files(fileTree('src/main/java') { include '**/*.java' })
+
+    doLast {
+        def violations = []
+        fileTree('src/main/java') { include '**/*.java' }.each { source ->
+            source.eachLine { line, number ->
+                def trimmed = line.trim()
+                if (!trimmed.startsWith('import ') || !trimmed.endsWith(';')) {
+                    return
+                }
+                def importedType = trimmed.substring('import '.length(), trimmed.length() - 1)
+                if (importedType.startsWith('static ')) {
+                    importedType = importedType.substring('static '.length())
+                }
+                if (forbiddenPrefixes.any { prefix -> importedType.startsWith(prefix + '.') }) {
+                    violations << "${project.relativePath(source)}:${number}: ${line.trim()}"
+                }
+            }
+        }
+        if (!violations.isEmpty()) {
+            throw new GradleException("common module MC-agnostic isolation violations:\n" + violations.join('\n'))
+        }
+    }
+}
+
+check.dependsOn checkCommonIsolation
+
+// ---- enum switch ($SwitchMap$) staleness guard -------------------------------------------
+// javac compiles `switch` over common-api enums into a synthetic $SwitchMap$ class inside the
+// CONSUMER (this module). Gradle's compile avoidance only snapshots the ABI member set, which
+// does NOT change when enum constants are merely REORDERED in common-api — so a stale
+// $SwitchMap$ can silently misdispatch at runtime. Fingerprinting the exact jar bytes of
+// :common-api:jar as a compileJava input forces recompilation on any content change.
+// `api project(':common-api')` already makes compileJava depend on :common-api:jar, so the
+// archive exists by the time this provider is evaluated (at execution time); the 'missing'
+// fallback only covers edge cases (e.g. jar task disabled).
+// NOTE: must be a lazy provider — with org.gradle.parallel=true, ':common-api' may not be
+// configured yet when ':common' is evaluated, so the jar task must be looked up at execution time.
+def sha256Of = { File file ->
+    if (file == null || !file.exists()) {
+        return 'missing'
+    }
+    def digest = MessageDigest.getInstance('SHA-256')
+    file.withInputStream { stream ->
+        def buffer = new byte[8192]
+        int read
+        while ((read = stream.read(buffer)) != -1) {
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().collect { byte b -> String.format('%02x', b) }.join('')
+}
+
+def commonApiJarFingerprint = providers.provider {
+    def jarTask = project(':common-api').tasks.findByName('jar')
+    def file = jarTask?.archiveFile?.getOrNull()?.asFile
+    sha256Of(file)
+}
+
+compileJava {
+    inputs.property('commonApiJarFingerprint', commonApiJarFingerprint)
+
+    // Graal 的 TruffleLanguage.Registration 等是运行时反射读取，不需要注解处理器，
+    // javac 的 [processing] 提示纯属噪音，单独关掉该 lint。
+    options.compilerArgs += '-Xlint:-processing'
+}
+// ------------------------------------------------------------------------------------------
+
+tasks.register('nbtSmokeTest', Test) {
+    group = 'verification'
+    description = 'Runs managed API and sandboxed filesystem smoke tests for portable binary NBT.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'nbt-smoke'
+    }
+}
+
+// Golden 再生成入口：运行 `./gradlew :common:regenerateGoldens`
+tasks.register('regenerateGoldens', Test) {
+    group = 'verification'
+    description = 'Regenerates probe golden files from current actuals (review the diff, then commit).'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'com.tkisor.nekojs.probe.*'
+    }
+    systemProperty 'nekojs.golden.regenerate', 'true'
+}

@@ -1,0 +1,649 @@
+//? if neoforge {
+//? if >=26 {
+package com.tkisor.nekojs.command;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.NekoJSMod;
+import com.tkisor.nekojs.core.ScriptLocator;
+import com.tkisor.nekojs.script.ScriptManager;
+import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
+import com.tkisor.nekojs.network.OpenWorkspacePacket;
+import com.tkisor.nekojs.network.ShowErrorListPacket;
+import com.tkisor.nekojs.network.ErrorSummaryDTO;
+import com.tkisor.nekojs.platform.Platform;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.api.recipe.IRecipeManagerExtension;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.probe.ProbeBackend;
+import com.tkisor.nekojs.probe.ProbeBackendRegistry;
+import com.tkisor.nekojs.probe.ProbeBackendSelector;
+import com.tkisor.nekojs.probe.ProbeCoordinator;
+import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeManager;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+public final class NekoJSCommands {
+
+    private NekoJSCommands() {}
+
+    public static void register(RegisterCommandsEvent event) {
+        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+
+        dispatcher.register(
+                Commands.literal("nekojs")
+                        .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
+
+                        .then(reloadCommand())
+
+                        .then(Commands.literal("test")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
+
+                                    try {
+                                        NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+                                        ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
+                                        if (testSm == null) {
+                                            testSm = root.createScriptManager(ScriptType.TEST);
+                                        }
+                                        testSm.runTestScripts();
+                                        sendReloadResult(source, "NekoJS test scripts completed.");
+                                    } catch (Exception e) {
+                                        NekoJS.LOGGER.error("Running test scripts failed fatally", e);
+                                        source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
+                                    }
+                                    return 1;
+                                })
+                        )
+
+                        .then(Commands.literal("error")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    if (NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
+                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent());
+                                    } else {
+                                        source.sendSuccess(() -> Component.translatable("nekojs.command.error.healthy"), false);
+                                    }
+                                    return 1;
+                                })
+                        )
+
+                        .then(Commands.literal("view_all_errors")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    if (NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
+                                        ServerPlayer player = source.getPlayerOrException();
+
+                                        PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot()));
+                                    } else {
+                                        source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
+                                    }
+                                    return 1;
+                                })
+                        )
+
+                        .then(Commands.literal("editor")
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    ServerPlayer player = source.getPlayerOrException();
+                                    PacketDistributor.sendToPlayer(player, new OpenWorkspacePacket());
+                                    return 1;
+                                })
+                        )
+
+                        .then(packsCommand())
+
+                        .then(registryCommand())
+
+                        .then(handCommand())
+
+                        .then(inventoryCommand())
+
+                        .then(Commands.literal("trust")
+                                .then(Commands.argument("address", StringArgumentType.string())
+                                        .executes(context -> trustServer(context.getSource(), StringArgumentType.getString(context, "address")))))
+
+                        .then(probeCommand())
+        );
+    }
+
+    /**
+     * /nekojs registry：动态注册健康快照（每注册表条目数 + stale 残留）。
+     * /nekojs registry stale：只列出上次 reload 后脚本不再注册的条目 id。
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> registryCommand() {
+        return Commands.literal("registry")
+                .executes(context -> {
+                    for (var s : com.tkisor.nekojs.dynamic.DynamicRegistryDebug.snapshot()) {
+                        context.getSource().sendSystemMessage(Component.literal(s.summary()));
+                    }
+                    return 1;
+                })
+                .then(Commands.literal("stale")
+                        .executes(context -> {
+                            boolean any = false;
+                            for (var s : com.tkisor.nekojs.dynamic.DynamicRegistryDebug.snapshot()) {
+                                for (String id : s.prettyStaleIds()) {
+                                    context.getSource().sendSystemMessage(Component.literal(id));
+                                    any = true;
+                                }
+                            }
+                            if (!any) {
+                                context.getSource().sendSystemMessage(Component.literal("No stale dynamic registry entries."));
+                            }
+                            return 1;
+                        }));
+    }
+
+    /**
+     * /nekojs hand: prints the main-hand item of the executing player (item id, count,
+     * damage if damageable, and the data component patch). Requires a player source.
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> handCommand() {
+        return Commands.literal("hand")
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    showHand(context.getSource(), player.getMainHandItem());
+                    return 1;
+                });
+    }
+
+    private static void showHand(CommandSourceStack source, ItemStack stack) {
+        if (stack.isEmpty()) {
+            source.sendSystemMessage(Component.literal("Empty hand"));
+            return;
+        }
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        // Item id is click-to-copy: the main dev-loop use is pasting the id into a script
+        MutableComponent line = Component.literal(id)
+                .withStyle(style -> style
+                        .withClickEvent(new ClickEvent.CopyToClipboard(id))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to copy"))))
+                .append(Component.literal(" x" + stack.getCount()));
+        source.sendSystemMessage(line);
+        if (stack.isDamageableItem()) {
+            source.sendSystemMessage(Component.literal("  damage: " + stack.getDamageValue() + "/" + stack.getMaxDamage()));
+        }
+        source.sendSystemMessage(Component.literal("  components: " + compactComponents(stack)));
+    }
+
+    /** Single-line component patch summary, flattened and truncated so chat stays readable. */
+    private static String compactComponents(ItemStack stack) {
+        String text = stack.getComponentsPatch().toString().replace('\n', ' ');
+        return text.length() > 300 ? text.substring(0, 300) + "..." : text;
+    }
+
+    /**
+     * /nekojs inventory: lists all non-empty main inventory slots (0-35) of the executing
+     * player, one line per slot. Requires a player source.
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> inventoryCommand() {
+        return Commands.literal("inventory")
+                .executes(context -> {
+                    ServerPlayer player = context.getSource().getPlayerOrException();
+                    listInventory(context.getSource(), player.getInventory());
+                    return 1;
+                });
+    }
+
+    private static void listInventory(CommandSourceStack source, Inventory inventory) {
+        int used = 0;
+        for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            source.sendSystemMessage(Component.literal("slot " + slot + ": "
+                    + BuiltInRegistries.ITEM.getKey(stack.getItem()).toString() + " x" + stack.getCount()));
+            used++;
+        }
+        if (used == 0) {
+            source.sendSystemMessage(Component.literal("Inventory is empty."));
+        }
+    }
+
+    /**
+     * /nekojs trust &lt;address&gt;：把服务器脚本包来源加入本进程的信任存储（多人脚本分发的
+     * 首连断连→信任→重连流程）。仅在客户端进程生效（单人环境即本进程）；远程多人请用
+     * 客户端命令（见 NekoClientCommands）或先进入单人世界执行。
+     */
+    private static int trustServer(CommandSourceStack source, String address) {
+        if (!com.tkisor.nekojs.platform.Platform.isClient()) {
+            source.sendFailure(Component.literal("Run /nekojs trust on a client process (e.g. in a singleplayer world)."));
+            return 0;
+        }
+        var store = com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.get();
+        store.trustServer(address);
+        source.sendSuccess(() -> Component.literal(
+                "Trusted " + address + " (bucket " + com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore.bucketFor(address)
+                        + "). Reconnect to receive its script packs."), false);
+        return 1;
+    }
+
+    /**
+     * /nekojs packs：列出全部脚本包（GLOBAL/WORLD、启用态、目录）。
+     * /nekojs packs enable|disable <id>：写包状态文件（优先级高于 manifest），提示 reload 生效；
+     * 状态文件对 WORLD 包同样有效，但其脚本在下次进入该世界时才重新评估。
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> packsCommand() {
+        return Commands.literal("packs")
+                .executes(context -> {
+                    listPacks(context.getSource());
+                    return 1;
+                })
+                .then(Commands.literal("enable")
+                        .then(Commands.argument("id", StringArgumentType.word())
+                                .executes(context -> togglePack(context.getSource(), StringArgumentType.getString(context, "id"), true))))
+                .then(Commands.literal("disable")
+                        .then(Commands.argument("id", StringArgumentType.word())
+                                .executes(context -> togglePack(context.getSource(), StringArgumentType.getString(context, "id"), false))));
+    }
+
+    private static void listPacks(CommandSourceStack source) {
+        var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
+        registry.refreshGlobalPacks();
+        var all = new java.util.ArrayList<com.tkisor.nekojs.core.pack.ScriptPack>();
+        all.addAll(registry.globalPacks());
+        all.addAll(registry.worldPacks());
+        if (all.isEmpty()) {
+            source.sendSystemMessage(Component.literal("No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/)."));
+            return;
+        }
+        source.sendSystemMessage(Component.literal("Script packs (" + all.size() + "):"));
+        for (var pack : all) {
+            source.sendSystemMessage(Component.literal("  [" + (pack.enabled() ? "x" : " ") + "] "
+                    + pack.scope() + ":" + pack.id() + " v" + pack.version()
+                    + (pack.name().equals(pack.id()) ? "" : " (" + pack.name() + ")")
+                    + " - " + pack.root()));
+        }
+    }
+
+    private static int togglePack(CommandSourceStack source, String id, boolean enabled) {
+        var registry = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get();
+        registry.refreshGlobalPacks();
+        var all = new java.util.ArrayList<com.tkisor.nekojs.core.pack.ScriptPack>();
+        all.addAll(registry.globalPacks());
+        all.addAll(registry.worldPacks());
+        var match = all.stream().filter(p -> p.id().equals(id)).findFirst();
+        if (match.isEmpty()) {
+            source.sendFailure(Component.literal("No script pack with id '" + id + "'. Use /nekojs packs to list."));
+            return 0;
+        }
+        com.tkisor.nekojs.core.pack.ScriptPackState.save(match.get().root(), enabled);
+        source.sendSystemMessage(Component.literal("Script pack " + match.get().scope() + ":" + id
+                + " " + (enabled ? "enabled" : "disabled")
+                + ". Run /nekojs reload (server|client) to apply."));
+        return 1;
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand() {
+        LiteralArgumentBuilder<CommandSourceStack> reload = Commands.literal("reload")
+                .executes(context -> reloadType(context.getSource(), ScriptType.SERVER));
+        for (ScriptType type : ScriptType.all()) {
+            addReloadType(reload, type);
+        }
+        return reload;
+    }
+
+    private static void addReloadType(LiteralArgumentBuilder<CommandSourceStack> reload, ScriptType type) {
+        reload.then(Commands.literal(type.name)
+                .executes(context -> reloadType(context.getSource(), type))
+                .then(Commands.argument("file", StringArgumentType.greedyString())
+                        .suggests((context, builder) -> suggestReloadFiles(type, builder))
+                        .executes(context -> reloadFile(context.getSource(), type, StringArgumentType.getString(context, "file")))));
+    }
+
+    private static CompletableFuture<Suggestions> suggestReloadFiles(ScriptType type, SuggestionsBuilder builder) {
+        String prefix = "nekojs reload " + type.name + " ";
+        String input = builder.getInput();
+        int commandStart = input.startsWith("/") ? 1 : 0;
+        int fileStart = input.startsWith(prefix, commandStart) ? commandStart + prefix.length() : builder.getStart();
+        String fileInput = input.substring(Math.min(fileStart, input.length())).replace('\\', '/');
+        SuggestionsBuilder pathBuilder = builder.createOffset(fileStart);
+        for (String suggestion : ScriptLocator.suggestScriptFiles(type, fileInput)) {
+            pathBuilder.suggest(suggestion);
+        }
+        return pathBuilder.buildFuture();
+    }
+
+    private static int reloadType(CommandSourceStack source, ScriptType type) {
+        if (!canReloadHere(source, type)) {
+            return 0;
+        }
+//        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
+        try {
+            NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            // W7/A2：CLIENT Context 归客户端主线程所有——集成服务器线程发起的 reload 转投
+            // Render 线程执行（事件分发/timers 也在那里），命令侧立即返回
+            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+                    try {
+                        root.reload(ScriptType.CLIENT);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.error("Reloading {} scripts failed fatally", ScriptType.CLIENT.name, e);
+                    }
+                });
+                source.sendSystemMessage(Component.literal("NekoJS client scripts reload scheduled on the client thread."));
+                return 1;
+            }
+            if (type == ScriptType.TEST) {
+                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
+                if (testSm == null) {
+                    testSm = root.createScriptManager(ScriptType.TEST);
+                }
+                testSm.runTestScripts();
+            } else {
+                if (type == ScriptType.SERVER) {
+                    // 清空上一轮 stage 的村民交易，防止 reload 重复累积（与 ServerEventListener
+                    // 资源 reload 路径同约定：每次完整脚本 reload 前 beginReload）
+                    com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
+                }
+                root.reload(type);
+            }
+            // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
+            boolean recipeBroadcast = false;
+            if (type == ScriptType.SERVER) {
+                recipeBroadcast = applyRecipeScripts(source);
+                // 物品属性修改重放：与服务器启动同一路径（先恢复快照再重跑 modification 事件）
+                ItemModificationEventJS.fire(source.getServer());
+                // 方块属性修改重放：同路径（fire 内先整体恢复上轮快照，删除的 modify 自动回退）
+                BlockModificationEventJS.fire();
+                // 村民交易 flush：脚本 stage 的交易在 reload 收尾落注册表（与 ServerEventListener 的
+                // TagsUpdated hook 同路径）；脚本包 data/ 目录作为强制数据包挂载（内容签名变化才重载）
+                MinecraftServer server = source.getServer();
+                if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
+                    com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
+                }
+                var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
+                if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
+                        && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {
+                    com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
+                }
+            }
+            // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
+            // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。
+            // 控制台收不到玩家广播，仍走 sendReloadResult。
+            if (recipeBroadcast && source.getEntity() instanceof ServerPlayer) {
+                refreshOpenErrorDashboard(source);
+                return 1;
+            }
+            sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
+            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
+        }
+        return 1;
+    }
+
+    /**
+     * SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）。
+     * RecipeManagerMixin.nekojs$applyScripts() 从永久缓存的 baseJsons 重建工作集并重跑配方脚本，
+     * 把脚本生成/修改/删除的配方 JSON 重新解析并替换 RecipeManager 的 recipes。
+     */
+    private static boolean applyRecipeScripts(CommandSourceStack source) {
+        MinecraftServer server = source.getServer();
+        if (server == null) return false;
+        RecipeManager recipeManager = server.getRecipeManager();
+        if (recipeManager instanceof IRecipeManagerExtension ext) {
+            ext.nekojs$applyScripts();
+            return true;
+        }
+        return false;
+    }
+
+    private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath) {
+        if (!canReloadHere(source, type)) {
+            return 0;
+        }
+        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
+        try {
+            NekoRuntimeRoot root = NekoJSMod.RUNTIME_ROOT;
+            // W7/A2：单文件 reload 同样遵守 CLIENT 线程归属（见 reloadType 的整批分支）
+            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+                    try {
+                        int affected = root.scriptManagerOf(ScriptType.CLIENT).reloadScriptFile(filePath).size();
+                        NekoJS.LOGGER.info("NekoJS client script {} reloaded ({} affected).", filePath, affected);
+                    } catch (Exception e) {
+                        NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", ScriptType.CLIENT.name, filePath, e);
+                    }
+                });
+                source.sendSystemMessage(Component.literal("NekoJS client script " + filePath + " reload scheduled on the client thread."));
+                return 1;
+            }
+
+            int affectedEntries = root.scriptManagerOf(type).reloadScriptFile(filePath).size();
+            if (type == ScriptType.TEST) {
+                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
+                if (testSm != null) {
+                    testSm.flushReadyNodeTimers();
+                }
+            }
+            sendReloadResult(source, "NekoJS " + type.name + " script " + filePath + " reloaded (" + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", type.name, filePath, e);
+            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + " failed: " + e.getMessage()));
+        }
+        return 1;
+    }
+
+    private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
+        if (type == ScriptType.CLIENT && !Platform.isClient()) {
+            source.sendFailure(Component.literal("Client script reload is only available in an integrated client runtime."));
+            return false;
+        }
+        return true;
+    }
+
+    private static List<ErrorSummaryDTO> errorSnapshot() {
+        return NekoJSMod.RUNTIME_ROOT.errors().errors().stream()
+                .map(err -> new ErrorSummaryDTO(
+                        err.getErrorId().toString(),
+                        err.getDisplayPath(),
+                        err.getLineNumber(),
+                        err.getOccurrenceCount(),
+                        err.getErrorMessage(),
+                        err.getFullDetailText()
+                )).toList();
+    }
+
+    private static void refreshOpenErrorDashboard(CommandSourceStack source) {
+        if (source.getEntity() instanceof ServerPlayer player) {
+            PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(), false));
+        }
+    }
+
+    private static void sendReloadResult(CommandSourceStack source, String successMessage) {
+        refreshOpenErrorDashboard(source);
+        int count = NekoJSMod.RUNTIME_ROOT.errors().count();
+        if (count > 0) {
+            // 错误数并进同一条消息且可点击打开错误列表，不再追加独立的警告组件：
+            // 此分支只覆盖无配方广播的路径（test/单文件 reload/CLIENT/STARTUP/控制台），
+            // 玩家执行的 SERVER reload 由 RecipeManagerMixin 的广播单独反馈（见 reloadType）。
+            MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
+                    .withStyle(style -> style
+                            .withHoverEvent(new HoverEvent.ShowText(Component.translatable("nekojs.error.tracker.hover_hint")))
+                            .withClickEvent(new ClickEvent.RunCommand("/nekojs view_all_errors")));
+            source.sendSuccess(() -> message, false);
+        } else {
+            source.sendSuccess(() -> Component.literal(successMessage + " - no errors."), false);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Probe（多 backend）
+    // ------------------------------------------------------------------
+
+    private static LiteralArgumentBuilder<CommandSourceStack> probeCommand() {
+        LiteralArgumentBuilder<CommandSourceStack> probe = Commands.literal("probe")
+                .executes(context -> runProbe(context.getSource(), ProbeBackendSelector.defaultTypescript()));
+        probe.then(Commands.literal("all")
+                .executes(context -> runProbe(context.getSource(), ProbeBackendSelector.all())));
+        probe.then(Commands.literal("list")
+                .executes(context -> listProbeBackends(context.getSource())));
+        probe.then(Commands.literal("reload")
+                .executes(context -> reloadProbeConfig(context.getSource())));
+        // reset_config：删除各 backend 管理的编辑器配置（jsconfig/pyrightconfig/snippets，保留共享
+        // 的 .vscode/settings.json 与用户内容），重建出厂基础配置后立即重跑默认 probe 生成。
+        probe.then(Commands.literal("reset_config")
+                .executes(context -> {
+                    CommandSourceStack source = context.getSource();
+                    int backends = ProbeCoordinator.resetEditorConfigs();
+                    source.sendSystemMessage(Component.literal(
+                            "Editor configs reset (" + backends + " backend(s)); regenerating probe..."));
+                    return runProbe(source, ProbeBackendSelector.defaultTypescript());
+                }));
+        probe.then(Commands.literal("enable")
+                .executes(context -> enableProbe(context.getSource())));
+        probe.then(Commands.literal("disable")
+                .executes(context -> disableProbe(context.getSource())));
+        probe.then(Commands.argument("language", StringArgumentType.word())
+                .suggests((context, builder) -> suggestProbeLanguages(builder))
+                .executes(context -> runProbe(context.getSource(),
+                        ProbeBackendSelector.forLanguage(StringArgumentType.getString(context, "language"))))
+                .then(Commands.argument("name", StringArgumentType.word())
+                        .suggests((context, builder) -> suggestProbeBackendNames(
+                                StringArgumentType.getString(context, "language"), builder))
+                        .executes(context -> runProbe(context.getSource(),
+                                ProbeBackendSelector.named(
+                                        StringArgumentType.getString(context, "language"),
+                                        StringArgumentType.getString(context, "name"))))));
+        return probe;
+    }
+
+    private static int runProbe(CommandSourceStack source, List<ProbeBackend> backends) {
+        if (backends.isEmpty()) {
+            source.sendFailure(Component.literal("No probe backend matched. Use /nekojs probe list."));
+            return 0;
+        }
+        String names = backends.stream()
+                .map(b -> b.languageId() + ":" + b.name())
+                .collect(Collectors.joining(", "));
+        source.sendSystemMessage(Component.literal("Generating probe (" + names + ")..."));
+        boolean allOk = true;
+
+        try {
+            var snapshot = NekoScriptCatalog.snapshot(NekoRuntimeAccess.get());
+            List<ProbeBackend.GenerateResult> results = ProbeCoordinator.run(snapshot, backends);
+
+            int totalFiles = 0;
+            long maxMs = 0;
+            for (ProbeBackend.GenerateResult r : results) {
+                if (r.success()) {
+                    totalFiles += r.filesGenerated();
+                    maxMs = Math.max(maxMs, r.durationMs());
+                    for (String w : r.warnings()) {
+                        source.sendSystemMessage(Component.literal("  warning: " + w));
+                    }
+                } else {
+                    allOk = false;
+                    source.sendFailure(Component.literal("  backend failed: " + r.message()));
+                }
+            }
+            if (allOk) {
+                final int tf = totalFiles;
+                final long ms = maxMs;
+                source.sendSuccess(() -> Component.literal(
+                        "Probe generated: " + tf + " files in " + ms + "ms"), false);
+                // 输出目录提示：用户最常问「文件去哪了」；相对游戏目录显示
+                String dirs = results.stream()
+                        .map(ProbeBackend.GenerateResult::outputDir)
+                        .filter(java.util.Objects::nonNull)
+                        .map(d -> {
+                            try {
+                                return NekoJSPaths.get().gameDir().relativize(d).toString();
+                            } catch (IllegalArgumentException e) {
+                                return d.toString();
+                            }
+                        })
+                        .distinct()
+                        .collect(Collectors.joining(", "));
+                if (!dirs.isEmpty()) {
+                    source.sendSystemMessage(Component.literal("  Output: " + dirs));
+                }
+            }
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Probe generation failed", e);
+            source.sendFailure(Component.literal("Probe generation failed: " + e.getMessage()));
+            return 0;
+        }
+        return allOk ? 1 : 0;
+    }
+
+    private static int listProbeBackends(CommandSourceStack source) {
+        var entries = ProbeBackendRegistry.get().registrars();
+        if (entries.isEmpty()) {
+            source.sendSystemMessage(Component.literal("No probe backends registered."));
+        } else {
+            source.sendSystemMessage(Component.literal("Registered probe backends:"));
+            for (String e : entries) {
+                source.sendSystemMessage(Component.literal("  - " + e));
+            }
+        }
+        return 1;
+    }
+
+    private static int reloadProbeConfig(CommandSourceStack source) {
+        ProbeCoordinator.reloadConfig();
+        source.sendSuccess(() -> Component.literal("Probe config (probe.toml) reloaded."), false);
+        return 1;
+    }
+
+    /** /nekojs probe enable：运行时启用 probe（开关持久化由 ProbeCoordinator.setEnabled 负责）。 */
+    private static int enableProbe(CommandSourceStack source) {
+        ProbeCoordinator.setEnabled(true);
+        source.sendSuccess(() -> Component.literal("Probe enabled."), false);
+        return 1;
+    }
+
+    /** /nekojs probe disable：运行时禁用 probe。 */
+    private static int disableProbe(CommandSourceStack source) {
+        ProbeCoordinator.setEnabled(false);
+        source.sendSuccess(() -> Component.literal("Probe disabled."), false);
+        return 1;
+    }
+
+    private static CompletableFuture<Suggestions> suggestProbeLanguages(SuggestionsBuilder builder) {
+        for (String lang : ProbeBackendSelector.languageSuggestions()) {
+            builder.suggest(lang);
+        }
+        return builder.buildFuture();
+    }
+
+    private static CompletableFuture<Suggestions> suggestProbeBackendNames(String languageId, SuggestionsBuilder builder) {
+        if (languageId != null && !languageId.isBlank()) {
+            for (ProbeBackend b : ProbeBackendSelector.nameSuggestions(languageId)) {
+                builder.suggest(b.name());
+            }
+        }
+        return builder.buildFuture();
+    }
+}
+//?}
+//?}
