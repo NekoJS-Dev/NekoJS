@@ -9,8 +9,8 @@ import net.minecraft.world.entity.Entity;
  * （NeoForge = {@code PacketDistributor}，fabric = {@code ServerPlayNetworking} + {@code PlayerLookup}），
  * 共享树的业务侧（{@code ClientDataSyncJS} / {@code PDataSyncService} 等）只依赖本接口。
  *
- * <p>未装配时全部发送静默丢弃（专用服务器早期 / 单元测试环境），不抛异常——发送失败不应
- * 打断脚本执行。
+ * <p>发送失败不应打断脚本执行：未装配（专用服务器早期 / 单元测试）或没有可达目标时静默丢弃，
+ * 不抛异常。装配与取用见 {@link PlayPacketDispatchers}。
  */
 public interface PlayPacketDispatcher {
 
@@ -22,31 +22,4 @@ public interface PlayPacketDispatcher {
 
     /** 发给跟踪该实体的玩家（实体自身是玩家时也包含它）。 */
     void sendToPlayersTrackingEntityAndSelf(Entity entity, CustomPacketPayload payload);
-
-    /** 未装配时的空实现。 */
-    PlayPacketDispatcher NOOP = new PlayPacketDispatcher() {
-        @Override
-        public void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {}
-
-        @Override
-        public void sendToAllPlayers(CustomPacketPayload payload) {}
-
-        @Override
-        public void sendToPlayersTrackingEntityAndSelf(Entity entity, CustomPacketPayload payload) {}
-    };
-
-    static void install(PlayPacketDispatcher dispatcher) {
-        Holder.current = dispatcher == null ? NOOP : dispatcher;
-    }
-
-    static PlayPacketDispatcher get() {
-        return Holder.current;
-    }
-
-    /** 接口不能有可变静态字段，用嵌套类持有。 */
-    final class Holder {
-        private static volatile PlayPacketDispatcher current = NOOP;
-
-        private Holder() {}
-    }
 }

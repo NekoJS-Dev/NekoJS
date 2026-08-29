@@ -8,6 +8,10 @@ import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.level.ServerPlayer;
+
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * 服务端事件面的 fabric 桥 v1：生命周期（aboutToStart/starting/started/stopping/stopped）、
@@ -58,14 +62,13 @@ public final class FabricServerEventBindings {
     public static final EventBusJS<com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS, Void> CHAT =
             PLAYER_EVENTS.server("chat", com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS.class);
 
+    /** 等待下一个 tick 末 post loggedIn 的玩家（见 {@link #register} 中的时机说明）。 */
+    private static final Queue<ServerPlayer> PENDING_LOGINS = new ConcurrentLinkedQueue<>();
+
     private FabricServerEventBindings() {}
 
-    /** 等待下一个 tick 末 post loggedIn 的玩家（见 register 中的时机说明）。 */
-    private static final java.util.Queue<net.minecraft.server.level.ServerPlayer> PENDING_LOGINS =
-            new java.util.concurrent.ConcurrentLinkedQueue<>();
-
     private static void drainPendingLogins() {
-        net.minecraft.server.level.ServerPlayer player;
+        ServerPlayer player;
         while ((player = PENDING_LOGINS.poll()) != null) {
             LOGGED_IN.post(new PlayerLifecycleEventJS(player));
         }
@@ -84,8 +87,11 @@ public final class FabricServerEventBindings {
                 STARTED.post(new ServerLifecycleEventJS(server)));
         ServerLifecycleEvents.SERVER_STOPPING.register(server ->
                 STOPPING.post(new ServerLifecycleEventJS(server)));
-        ServerLifecycleEvents.SERVER_STOPPED.register(server ->
-                STOPPED.post(new ServerLifecycleEventJS(server)));
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            // 未来得及 post 的登录不带进下一个服务器实例（单人退出世界再进）
+            PENDING_LOGINS.clear();
+            STOPPED.post(new ServerLifecycleEventJS(server));
+        });
         ServerTickEvents.START_SERVER_TICK.register(server ->
                 TICK_PRE.post(new ServerTickEventJS(server)));
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -98,8 +104,11 @@ public final class FabricServerEventBindings {
         // 会静默漏掉刚进来的这个人。server.execute 不行——同线程会内联执行。
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 PENDING_LOGINS.add(handler.player));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                LOGGED_OUT.post(new PlayerLifecycleEventJS(handler.player)));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            // 同一 tick 内进又出：撤掉排队中的 loggedIn，避免 loggedOut 先于 loggedIn
+            if (PENDING_LOGINS.remove(handler.player)) return;
+            LOGGED_OUT.post(new PlayerLifecycleEventJS(handler.player));
+        });
         net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
                 CHAT.post(new com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS(sender, message.signedContent())));
     }

@@ -5,9 +5,11 @@ import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.network.ClientDataSyncPacket;
 import com.tkisor.nekojs.network.PlayPacketDispatcher;
+import com.tkisor.nekojs.network.PlayPacketDispatchers;
 import com.tkisor.nekojs.wrapper.clientdata.ClientDataStore;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -31,22 +33,38 @@ public final class FabricPlayNetwork {
     /** 发全服需要 server 实例，而脚本线程没有上下文——跟随服务器生命周期持有当前实例。 */
     private static volatile MinecraftServer currentServer;
 
+    /** 上一次见到的客户端世界实例（切维度/断线时变化，用于清空 clientData）。 */
+    private static Object lastClientLevel;
+
     private FabricPlayNetwork() {}
 
     /** 服务器半：发送面装配 + S2C payload 类型注册（common init 调用）。 */
     public static void registerServer() {
         PayloadTypeRegistry.clientboundPlay().register(
                 ClientDataSyncPacket.TYPE, ClientDataSyncPacket.STREAM_CODEC);
-        PlayPacketDispatcher.install(new FabricDispatcher());
+        PlayPacketDispatchers.install(new FabricDispatcher());
         ServerLifecycleEvents.SERVER_STARTING.register(server -> currentServer = server);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> currentServer = null);
     }
 
-    /** 客户端半：receiver + 断线清空 store（client init 调用）。 */
+    /** 客户端半：receiver + 断线/切世界清空 store（client init 调用）。 */
     public static void registerClient() {
         ClientPlayNetworking.registerGlobalReceiver(ClientDataSyncPacket.TYPE, (payload, context) ->
                 context.client().execute(() -> acceptClientData(payload)));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientDataStore.SHARED.clear());
+        // NeoForge 侧挂在 client level unload（断线与切维度都清），fabric 无对应事件——
+        // 盯客户端世界实例变化等价：切维度换 ClientLevel 实例、断线变 null。
+        // 只在"离开一个已有世界"时清（lastClientLevel 非空），进服那次 null→世界不清，
+        // 否则会把刚随进服推下来的数据一起抹掉。
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            Object level = client.level;
+            if (level == lastClientLevel) return;
+            boolean leftPreviousLevel = lastClientLevel != null;
+            lastClientLevel = level;
+            if (leftPreviousLevel) {
+                ClientDataStore.SHARED.clear();
+            }
+        });
     }
 
     /** 与 NeoForge 侧 {@code ClientDataMessageHandler} 同：主线程解析 JSON 后写入共享 store。 */
@@ -74,7 +92,9 @@ public final class FabricPlayNetwork {
         public void sendToAllPlayers(CustomPacketPayload payload) {
             MinecraftServer server = currentServer;
             if (server == null) {
-                throw new IllegalStateException("No server is running; cannot broadcast " + payload.type().id());
+                // 契约是发送失败不打断脚本：服务器未运行时丢弃并告警
+                NekoJS.LOGGER.warn("No server is running; dropping broadcast of {}", payload.type().id());
+                return;
             }
             for (ServerPlayer player : PlayerLookup.all(server)) {
                 sendToPlayer(player, payload);
