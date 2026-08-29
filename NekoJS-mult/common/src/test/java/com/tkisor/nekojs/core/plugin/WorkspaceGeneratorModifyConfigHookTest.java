@@ -134,7 +134,7 @@ class WorkspaceGeneratorModifyConfigHookTest {
 
     /** 记录每次 modifyWorkspaceConfig 的 env，并向模型追加可断言的 include 标记。 */
     @RegisterNekoJSPlugin(priority = 1000)
-    public static class RecordingWorkspacePlugin implements NekoJSPlugin, GenerationPoint.Contributor {
+    public static class RecordingWorkspacePlugin implements NekoJSPlugin {
         static final String MARKER_INCLUDE = "plugin_smoke/**/*.d.ts";
         static final List<String> envs = new CopyOnWriteArrayList<>();
 
