@@ -2,7 +2,6 @@
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.core.pack.sync.PackContentFile;
 import com.tkisor.nekojs.core.pack.sync.PackSyncServer;
 import com.tkisor.nekojs.core.pack.sync.SyncedPack;
 import net.minecraft.network.protocol.Packet;
@@ -50,7 +49,7 @@ public class PackSyncConfigurationTask implements ConfigurationTask {
             }
             listener.send(new PackHashListPayload(hashes));
             if (!PackSyncServer.hashOnly() && !hashes.isEmpty()) {
-                listener.send(toBundlePayload(packs));
+                listener.send(PackBundlePayload.of(packs));
             }
         } catch (Exception e) {
             NekoJS.LOGGER.error("Failed to push script pack sync during configuration", e);
@@ -62,22 +61,6 @@ public class PackSyncConfigurationTask implements ConfigurationTask {
     @Override
     public ConfigurationTask.Type type() {
         return TYPE;
-    }
-
-    static PackBundlePayload toBundlePayload(List<SyncedPack> packs) {
-        List<PackBundlePayload.PackEntry> entries = new ArrayList<>();
-        for (SyncedPack pack : packs) {
-            List<PackBundlePayload.FileEntry> files = new ArrayList<>();
-            for (PackContentFile file : pack.files()) {
-                files.add(new PackBundlePayload.FileEntry(file.relativePath(), file.bytes()));
-            }
-            entries.add(new PackBundlePayload.PackEntry(
-                pack.syncId(),
-                pack.scopeName(),
-                pack.manifestJson().getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                files));
-        }
-        return new PackBundlePayload(entries);
     }
 }
 //?}

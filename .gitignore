@@ -3,9 +3,11 @@
 build/
 **/build/
 
-# 运行时产物（节点 run/ 与服务端日志不进版本库）
+# 运行时产物（节点 run/、run-server/ 与服务端日志不进版本库）
 run/
 **/run/
+run-server/
+**/run-server/
 logs/
 **/logs/
 *.log

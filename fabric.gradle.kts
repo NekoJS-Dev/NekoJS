@@ -83,6 +83,13 @@ dependencies {
 // 共享版本树（src/main/java）由 stonecutter 自动挂载；加载器差异用 `//? if neoforge`
 // 整文件守卫与 `//? if fabric` 表达，跨加载器中立契约（BlockEvents 等）直接住共享树。
 
+// dev run 目录：server 与 client 分开。共用一个目录时两个进程会互相覆盖 logs/latest.log
+// 与 nekojs/*.log（Windows 上还会撞 Files.move 轮转），且客户端会把服务器的 nekojs/packs/
+// 当成自己的本地 GLOBAL 包——包分发这类"服务器→客户端"通道就无法验证。
+loom.runs {
+    named("server") { runDir("run-server") }
+}
+
 // fabric.mod.json 模板展开（Loom 不做变量替换，沿用 ProcessResources 约定）
 // 属性必须在顶层读：任务配置 lambda 里裸调 property() 会解析到任务的动态属性查找
 val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata") {
