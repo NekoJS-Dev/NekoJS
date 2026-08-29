@@ -53,6 +53,14 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
     public static NekoRuntimeRoot RUNTIME_ROOT;
 
+    /** 客户端 tick 冲刷 CLIENT 侧 node timers（与 NeoForge 侧 NekoJSClient 同职责）。 */
+    public static void flushClientNodeTimers() {
+        if (RUNTIME_ROOT != null) {
+            RUNTIME_ROOT.scriptManagerOf(com.tkisor.nekojs.api.ScriptType.CLIENT).flushReadyNodeTimers();
+        }
+    }
+
+
     static {
         Platform.init(new FabricPlatform());
         NekoIdCompat.init(new FabricIdCompat());

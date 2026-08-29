@@ -40,7 +40,8 @@ import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
  * dispatch 字符串键（如 {@code EntityEvents.joinLevel('minecraft:zombie', ...)}）
  * 落到注册表类型的必要通道，缺失时报 "Unsupported target type"。
  */
-public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contributor, AdaptersPoint.Contributor {
+public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contributor,
+        com.tkisor.nekojs.core.plugin.ClientEventsPoint.Contributor, AdaptersPoint.Contributor {
 
     @Override
     public void registerEvents(EventGroupRegistry registry) {
@@ -51,6 +52,12 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(FabricServerEventBindings.PLAYER_EVENTS);
         // 实体 joinLevel / death（按实体类型 dispatch）
         registry.register(FabricEntityEventBindings.ENTITY_EVENTS);
+    }
+
+    @Override
+    public void registerClientEvents(EventGroupRegistry registry) {
+        // 客户端 tick v1（CLIENT 脚本由 NekoJSFabricClient 在 CLIENT_STARTED 加载）
+        registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS);
     }
 
     @Override
