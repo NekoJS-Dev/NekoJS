@@ -208,10 +208,8 @@ public final class NekoScriptCatalog {
         // 事件类也随 catalog 种子进入反射 BFS。validateAvailable 已保证不与内置组/绑定
         // 重名；注册顺序 = 脚本加载顺序（满足确定性）；脚本事件为 PLAIN 总线，无 dispatch 键。
         for (ScriptEventDefinition definition : ScriptEventRegistry.definitions()) {
-            EventBusJS<?, ?> scriptBus = definition.bus();
-            entries.add(EventCatalogEntry.of(
-                    definition.groupName(), definition.eventName(), definition.targetType(),
-                    scriptBus.eventType(), null, scriptBus.canCancel(), scriptBus.canDispatch()));
+            entries.add(EventCatalogEntry.ofScriptEvent(
+                    definition.groupName(), definition.eventName(), definition.targetType()));
         }
         return List.copyOf(entries);
     }
@@ -244,10 +242,8 @@ public final class NekoScriptCatalog {
         // 动态脚本事件：与静态组一致的 side 过滤语义（canApplyOn），标签用查询侧 ScriptType。
         for (ScriptEventDefinition definition : ScriptEventRegistry.definitions()) {
             if (!definition.canApplyOn(scriptType)) continue;
-            EventBusJS<?, ?> scriptBus = definition.bus();
-            entries.add(EventCatalogEntry.of(
-                    definition.groupName(), definition.eventName(), scriptType,
-                    scriptBus.eventType(), null, scriptBus.canCancel(), scriptBus.canDispatch()));
+            entries.add(EventCatalogEntry.ofScriptEvent(
+                    definition.groupName(), definition.eventName(), scriptType));
         }
         return List.copyOf(entries);
     }

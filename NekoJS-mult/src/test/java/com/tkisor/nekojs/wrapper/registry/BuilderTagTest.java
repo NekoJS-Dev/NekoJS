@@ -4,6 +4,12 @@
 package com.tkisor.nekojs.wrapper.registry;
 
 import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
+import com.tkisor.nekojs.wrapper.registry.gen.BlockBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.EnchantmentBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.FluidBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.PaintingVariantBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagLoader;
@@ -116,9 +122,9 @@ class BuilderTagTest {
 
     @Test
     void itemBuilderTagRecordsPendingItemEntryAndStaysChainable() {
-        ItemBuilderJS builder = new ItemBuilderJS(id("mymod:my_pick"));
+        ItemBuilder builder = new ItemBuilder(id("mymod:my_pick"));
 
-        ItemBuilderJS chained = builder.tag("c:tools/pickaxe").tag("minecraft:mineable/pickaxe");
+        ItemBuilder chained = builder.tag("c:tools/pickaxe").tag("minecraft:mineable/pickaxe");
 
         assertSame(builder, chained, "tag(...) must return the same builder for chaining");
 
@@ -130,7 +136,7 @@ class BuilderTagTest {
 
     @Test
     void bareTagNameDefaultsToMinecraftNamespaceAndHashPrefixIsTolerated() {
-        new ItemBuilderJS(id("mymod:my_pick"))
+        new ItemBuilder(id("mymod:my_pick"))
                 .tag("mineable/pickaxe")
                 .tag("#c:tools/pickaxe");
 
@@ -142,14 +148,14 @@ class BuilderTagTest {
 
     @Test
     void blankTagArgumentsAreSkippedWithoutRecording() {
-        new ItemBuilderJS(id("mymod:my_pick")).tag("  ", "c:tools/pickaxe", "");
+        new ItemBuilder(id("mymod:my_pick")).tag("  ", "c:tools/pickaxe", "");
 
         assertEquals(1, BuilderTags.size(), "only the well-formed tag must be recorded");
     }
 
     @Test
     void varargsTagCallRecordsEveryArgument() {
-        new ItemBuilderJS(id("mymod:my_pick")).tag("c:tools/pickaxe", "c:tools");
+        new ItemBuilder(id("mymod:my_pick")).tag("c:tools/pickaxe", "c:tools");
 
         RecordingAdder adder = new RecordingAdder();
         BuilderTags.flushInto(id("minecraft:item"), adder);
@@ -158,11 +164,11 @@ class BuilderTagTest {
 
     @Test
     void blockBuilderTagRecordsBlockRegistryEntry() {
-        // BlockBuilderJS 构造触碰 SoundType→SoundEvents→注册表；裸 JUnit 跳过本例
+        // BlockBuilder 构造触碰 SoundType→SoundEvents→注册表；裸 JUnit 跳过本例
         org.junit.jupiter.api.Assumptions.assumeTrue(
                 com.tkisor.nekojs.testfixture.VanillaRegistryProbe.available(),
                 "block properties need vanilla registries (no FML loader in bare JUnit)");
-        new BlockBuilderJS(id("mymod:my_ore")).tag("minecraft:mineable/pickaxe");
+        new BlockBuilder(id("mymod:my_ore")).tag("minecraft:mineable/pickaxe");
 
         RecordingAdder blockAdder = new RecordingAdder();
         BuilderTags.flushInto(id("minecraft:block"), blockAdder);
@@ -175,7 +181,7 @@ class BuilderTagTest {
 
     @Test
     void entityTypeBuilderTagRecordsEntityTypeRegistryEntry() {
-        new EntityTypeBuilderJS(id("mymod:test_mob")).tag("minecraft:raiders");
+        new EntityTypeBuilder(id("mymod:test_mob")).tag("minecraft:raiders");
 
         RecordingAdder adder = new RecordingAdder();
         BuilderTags.flushInto(id("minecraft:entity_type"), adder);
@@ -184,8 +190,8 @@ class BuilderTagTest {
 
     @Test
     void enchantmentAndPaintingVariantBuildersTagTheirRegistries() {
-        new EnchantmentBuilderJS(id("mymod:ice_bane")).tag("minecraft:treasure");
-        new PaintingVariantBuilderJS(id("mymod:epic_painting")).tag("minecraft:placeable");
+        new EnchantmentBuilder(id("mymod:ice_bane")).tag("minecraft:treasure");
+        new PaintingVariantBuilder(id("mymod:epic_painting")).tag("minecraft:placeable");
 
         RecordingAdder enchantmentAdder = new RecordingAdder();
         BuilderTags.flushInto(id("minecraft:enchantment"), enchantmentAdder);
@@ -198,7 +204,7 @@ class BuilderTagTest {
 
     @Test
     void fluidBuilderTagCoversSourceAndFlowingFluids() {
-        FluidBuilderJS builder = new FluidBuilderJS(id("mymod:molten_iron"));
+        FluidBuilder builder = new FluidBuilder(id("mymod:molten_iron"));
 
         assertSame(builder, builder.tag("c:molten_iron"));
 
