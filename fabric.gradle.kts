@@ -78,6 +78,10 @@ dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     compileOnly(libs.jspecify)
+
+    // src/test（共享测试树）由 stonecutter 挂进本节点；junit 与主仓平台层同款
+    testImplementation(libs.junit.jupiter.legacy)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // 共享版本树（src/main/java）由 stonecutter 自动挂载；加载器差异用 `//? if neoforge`

@@ -1,5 +1,3 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.pdata;
 
 import net.minecraft.nbt.ByteArrayTag;
@@ -79,4 +77,3 @@ class PersistentDataJSTest {
         assertArrayEquals(new long[] {7L, 8L, 9L}, ((LongArrayTag) tag.get("longs")).getAsLongArray());
     }
 }
-//?}

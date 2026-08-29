@@ -1,5 +1,3 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
-//? if neoforge {
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.Remap;
@@ -8,7 +6,6 @@ import com.tkisor.nekojs.api.spec.inject.EntitySpec;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import com.tkisor.nekojs.wrapper.pdata.PersistentDataJS;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
@@ -72,28 +69,11 @@ public interface EntityExtension extends EntitySpec {
             return PersistentDataJS.readOnly(() -> PDataSyncService.clientMirror(self()));
         }
         return new PersistentDataJS(
-                this::neko$getPDataTag,
-                this::neko$setPDataTag,
+                () -> EntityPDataStore.getPDataTag(self(), NEKO_PDATA_KEY),
+                tag -> EntityPDataStore.setPDataTag(self(), NEKO_PDATA_KEY, tag),
                 () -> PDataSyncService.markDirty(self()),
                 () -> PDataSyncService.syncNow(self())
         );
     }
 
-    private CompoundTag neko$getPDataTag() {
-//? if >=26 {
-        return self().getPersistentData().getCompound(NEKO_PDATA_KEY).orElseGet(CompoundTag::new).copy();
-//?} else {
-/*        return self().getPersistentData().getCompound(NEKO_PDATA_KEY).copy();
-*///?}
-    }
-
-    private void neko$setPDataTag(CompoundTag tag) {
-        CompoundTag persistentData = self().getPersistentData();
-        if (tag.isEmpty()) {
-            persistentData.remove(NEKO_PDATA_KEY);
-        } else {
-            persistentData.put(NEKO_PDATA_KEY, tag.copy());
-        }
-    }
 }
-//?}

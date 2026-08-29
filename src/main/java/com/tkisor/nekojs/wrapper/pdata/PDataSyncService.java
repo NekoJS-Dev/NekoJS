@@ -1,4 +1,3 @@
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.pdata;
 
 import com.tkisor.nekojs.NekoJS;
@@ -77,6 +76,16 @@ public final class PDataSyncService {
         return CLIENT_ENTITY_MIRROR.getOrDefault(entity.getId(), new CompoundTag()).copy();
     }
 
+    /** 按 entity id 读取 mirror（无 Entity 上下文的测试/诊断用；无数据返回空 tag）。 */
+    public static CompoundTag clientMirrorById(int entityId) {
+        return CLIENT_ENTITY_MIRROR.getOrDefault(entityId, new CompoundTag()).copy();
+    }
+
+    /** 该 entity id 当前是否有 mirror 数据（测试/诊断用）。 */
+    public static boolean hasPendingClientData(int entityId) {
+        return CLIENT_ENTITY_MIRROR.containsKey(entityId);
+    }
+
     /** 客户端收到同步包：按 revision 去重后更新/清除 mirror（空数据 = 清除）。 */
     public static void acceptClientSync(PDataSyncPacket packet) {
         int currentRevision = CLIENT_REVISIONS.getOrDefault(packet.entityId(), -1);
@@ -107,4 +116,3 @@ public final class PDataSyncService {
         PlayPacketDispatchers.get().sendToPlayersTrackingEntityAndSelf(entity, new PDataSyncPacket(entity.getId(), revision, data));
     }
 }
-//?}
