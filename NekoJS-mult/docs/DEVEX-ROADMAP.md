@@ -9,10 +9,10 @@
 
 - [x] T3 加载器轴正名：`deps.platform` / `deps.loader_version` 拆键 + guardLint 恒假常量规则 ✅ 2026-08-30
 - [x] T1 档 1 重文件接缝化（首批 top 5）：`PostEffectManager` 整文件拆分（案例：几乎无共享逻辑）；`NekoJSNetwork`→`McPlatformCompat` facade（新增，3 版本实现 + services）；`NekoJSNetwork` 屏幕守卫并入既有 `McClientCompat`（新增 `dashboardLoadServerScript`）；`NekoJSCorePlugin` 守卫审计（排版假差异按 26.x 基准解析，15→8）；`RecipeFilter`→`RecipeEventJS` 中立静态助手（`recipeHolderId`/`recipeGroup`/`ingredientMatches`/双参 `getRecipeOutputId`）；`NeoForgeRegistryQueryService` 文件级启用 `//~ mc_legacy_api` + 中立 `tryParse`（16→2）。守卫块 624→557 ✅ 2026-08-30
-- [ ] T2 节点构建收拢：buildSrc convention plugin（NeoForge 先行 → fabric / forge；含 loom-back-compat spike）
-- [ ] T1 档 2 长尾消化：replacements 扩容 + 小 facade，按包分批（每 PR guardLint 计数可见下降）
+- [x] T2 节点构建收拢：buildSrc convention plugin（nekojs.neoforge-node / fabric-node / forge-node，入口 331/190/142 行 → 各 5 行；`stonecutter.process` 反射桥、loom-back-compat 体内 apply 的 spike 通过；五节点 jar 验证）✅ 2026-08-30
+- [ ] T1 档 2 长尾消化：**未开工**（设计为按包分批）。下一步：对 1–2 守卫的 100+ 个长尾文件按包做审计批（处置菜单已验证：replacements 扩容 / 小 facade / 假守卫解析——首批 top5 的 4 种处置模式可直接复制）。当前 opener 525（grep 口径，基线 624）；guardLint 口径 557（首批后首测）。
 - [x] T1 档 3 ADR-0008 修订成文 ✅ 2026-08-30（随档 1 首批落地）
-- [ ] T4 工作流与文档收尾：switchVersion 任务 / 构建文档重写（CI 节点列表维持手写）
+- [x] T4 工作流与文档收尾：`switchVersion` 任务（往返实测）+ wiki/构建系统.md 整页重写为现行架构 + README 悬空链接修复 ✅ 2026-08-30（CI 节点列表维持手写，Q4 裁定）
 - [ ] 装机（零成本）：IDE 安装 Stonecutter Dev 插件
 
 ## 裁定记录
