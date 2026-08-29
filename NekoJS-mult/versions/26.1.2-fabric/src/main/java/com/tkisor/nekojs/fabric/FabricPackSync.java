@@ -1,16 +1,15 @@
 package com.tkisor.nekojs.fabric;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.pack.sync.PackContentFile;
 import com.tkisor.nekojs.core.pack.sync.PackSyncClient;
 import com.tkisor.nekojs.core.pack.sync.PackSyncServer;
 import com.tkisor.nekojs.core.pack.sync.SyncedPack;
+import com.tkisor.nekojs.fabric.mixin.ServerCommonPacketListenerAccessor;
 import com.tkisor.nekojs.network.PackBundlePayload;
 import com.tkisor.nekojs.network.PackHashListPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.FabricServerConfigurationPacketListenerImpl;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
@@ -26,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -58,37 +56,37 @@ public final class FabricPackSync {
                 PackBundlePayload.TYPE, PackBundlePayload.STREAM_CODEC);
         ServerConfigurationConnectionEvents.CONFIGURE.register((handler, server) -> {
             if (!PackSyncServer.enabled()) return;
+            // 内存连接（单人 / 局域网主机自己的客户端）不参与分发，与 NeoForge 侧
+            // PackSyncConfigurationTask#register 同判据——否则每次进世界都白算一遍全部包的哈希
+            if (((ServerCommonPacketListenerAccessor) handler).nekojs$connection().isMemoryConnection()) return;
             if (!ServerConfigurationNetworking.canSend(handler, PackHashListPayload.TYPE)) return;
-            ((FabricServerConfigurationPacketListenerImpl) handler).addTask(new PushTask(handler));
+            handler.addTask(new PushTask(handler));
         });
     }
 
     /**
      * 配置阶段推送任务：与 NeoForge 侧 {@code PackSyncConfigurationTask} 同 Type id
-     * （{@code nekojs:pack_sync}）与同序——先哈希清单，非 hashOnly 且有包时紧随 bundle。
+     * （{@link PackSyncServer#TASK_ID}）与同序——先哈希清单，非 hashOnly 且有包时紧随 bundle。
      * 任务在队列里执行，客户端注册表校验必然晚于本任务完成。
      */
     private record PushTask(ServerConfigurationPacketListenerImpl handler) implements ConfigurationTask {
 
-        static final ConfigurationTask.Type TYPE = new ConfigurationTask.Type(NekoJS.MODID + ":pack_sync");
+        static final ConfigurationTask.Type TYPE = new ConfigurationTask.Type(PackSyncServer.TASK_ID);
 
         @Override
         public void start(Consumer<Packet<?>> sender) {
             try {
                 List<SyncedPack> packs = PackSyncServer.collectSyncPacks();
-                List<PackHashListPayload.HashEntry> hashes = new ArrayList<>();
-                for (SyncedPack pack : packs) {
-                    hashes.add(new PackHashListPayload.HashEntry(pack.syncId(), pack.hash()));
-                }
-                ServerConfigurationNetworking.send(handler, new PackHashListPayload(hashes));
-                if (!PackSyncServer.hashOnly() && !hashes.isEmpty()) {
+                PackHashListPayload hashes = PackHashListPayload.of(packs);
+                ServerConfigurationNetworking.send(handler, hashes);
+                if (!PackSyncServer.hashOnly() && !hashes.entries().isEmpty()) {
                     ServerConfigurationNetworking.send(handler, PackBundlePayload.of(packs));
                 }
-                LOGGER.info("Pushed {} script pack(s) to a configuring client", hashes.size());
+                LOGGER.info("Pushed {} script pack(s) to a configuring client", hashes.entries().size());
             } catch (Exception e) {
                 LOGGER.error("Failed to push script pack sync during configuration", e);
             } finally {
-                ((FabricServerConfigurationPacketListenerImpl) handler).completeTask(TYPE);
+                handler.completeTask(TYPE);
             }
         }
 
@@ -103,6 +101,8 @@ public final class FabricPackSync {
         ClientConfigurationNetworking.registerGlobalReceiver(PackHashListPayload.TYPE, FabricPackSync::handleHashList);
         ClientConfigurationNetworking.registerGlobalReceiver(PackBundlePayload.TYPE, FabricPackSync::handleBundle);
         PackSyncClient.installClientReloadHook(FabricPackSync::reloadClientScripts);
+        // 两个阶段都要卸载远端包：未信任/验签失败是在配置阶段就被踢，走不到 play 阶段断线
+        ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) -> PackSyncClient.handleDisconnect());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PackSyncClient.handleDisconnect());
     }
 
@@ -112,10 +112,7 @@ public final class FabricPackSync {
         Connection connection = context.packetContext().get(PacketContext.CONNECTION);
         if (connection == null || connection.isMemoryConnection()) return;
         String address = resolveServerAddress(connection);
-        List<PackSyncClient.HashEntry> entries = new ArrayList<>();
-        for (PackHashListPayload.HashEntry entry : payload.entries()) {
-            entries.add(new PackSyncClient.HashEntry(entry.syncId(), entry.hash()));
-        }
+        List<PackSyncClient.HashEntry> entries = payload.toClientEntries();
         PackSyncClient.prepareMainThreadWork();
         context.client().execute(() -> {
             try {
@@ -130,14 +127,7 @@ public final class FabricPackSync {
     private static void handleBundle(PackBundlePayload payload, ClientConfigurationNetworking.Context context) {
         Connection connection = context.packetContext().get(PacketContext.CONNECTION);
         if (connection == null || connection.isMemoryConnection()) return;
-        List<SyncedPack> packs = new ArrayList<>();
-        for (PackBundlePayload.PackEntry pack : payload.packs()) {
-            List<PackContentFile> files = new ArrayList<>();
-            for (PackBundlePayload.FileEntry file : pack.files()) {
-                files.add(new PackContentFile(file.relativePath(), file.bytes()));
-            }
-            packs.add(SyncedPack.of(pack.syncId(), pack.scope(), null, pack.manifestJsonText(), files));
-        }
+        List<SyncedPack> packs = payload.toSyncedPacks();
         PackSyncClient.prepareMainThreadWork();
         context.client().execute(() -> {
             try {
@@ -154,6 +144,8 @@ public final class FabricPackSync {
 
     private static void reloadClientScripts() {
         if (NekoJSFabricMod.RUNTIME_ROOT == null) return;
+        // CLIENT 管理器可能尚未建立（autoLoadTypes 之前 / 专用服务器进程）——reload 会抛
+        if (NekoJSFabricMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.CLIENT) == null) return;
         NekoJSFabricMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
     }
 

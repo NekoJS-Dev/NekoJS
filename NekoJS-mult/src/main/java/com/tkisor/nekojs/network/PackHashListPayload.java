@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.pack.sync.PackSyncClient;
+import com.tkisor.nekojs.core.pack.sync.SyncedPack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -24,6 +26,24 @@ public record PackHashListPayload(List<HashEntry> entries) implements CustomPack
 
     public PackHashListPayload {
         entries = List.copyOf(entries);
+    }
+
+    /** 各平台推送面共用：包快照列表 → 线格式哈希清单。 */
+    public static PackHashListPayload of(List<SyncedPack> packs) {
+        List<HashEntry> entries = new ArrayList<>();
+        for (SyncedPack pack : packs) {
+            entries.add(new HashEntry(pack.syncId(), pack.hash()));
+        }
+        return new PackHashListPayload(entries);
+    }
+
+    /** 各平台接收面共用：线格式条目 → 客户端管线条目。 */
+    public List<PackSyncClient.HashEntry> toClientEntries() {
+        List<PackSyncClient.HashEntry> out = new ArrayList<>(entries.size());
+        for (HashEntry entry : entries) {
+            out.add(new PackSyncClient.HashEntry(entry.syncId(), entry.hash()));
+        }
+        return out;
     }
 
     public static final Type<PackHashListPayload> TYPE =

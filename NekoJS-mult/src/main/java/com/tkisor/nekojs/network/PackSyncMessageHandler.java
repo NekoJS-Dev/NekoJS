@@ -7,7 +7,6 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,10 +30,7 @@ public final class PackSyncMessageHandler {
     public static void handleHashListOnClient(PackHashListPayload payload, IPayloadContext context) {
         if (context.connection().isMemoryConnection()) return;
         String address = resolveServerAddress(context);
-        List<PackSyncClient.HashEntry> entries = new ArrayList<>();
-        for (PackHashListPayload.HashEntry entry : payload.entries()) {
-            entries.add(new PackSyncClient.HashEntry(entry.syncId(), entry.hash()));
-        }
+        List<PackSyncClient.HashEntry> entries = payload.toClientEntries();
         PackSyncClient.prepareMainThreadWork();
         context.enqueueWork(() -> {
             try {
@@ -49,15 +45,7 @@ public final class PackSyncMessageHandler {
     /** S2C 配置阶段 bundle：管线拒绝（验签失败/完整性失败/未信任）时断连并展示原因。 */
     public static void handleBundleOnClient(PackBundlePayload payload, IPayloadContext context) {
         if (context.connection().isMemoryConnection()) return;
-        List<com.tkisor.nekojs.core.pack.sync.SyncedPack> packs = new ArrayList<>();
-        for (PackBundlePayload.PackEntry pack : payload.packs()) {
-            List<com.tkisor.nekojs.core.pack.sync.PackContentFile> files = new ArrayList<>();
-            for (PackBundlePayload.FileEntry file : pack.files()) {
-                files.add(new com.tkisor.nekojs.core.pack.sync.PackContentFile(file.relativePath(), file.bytes()));
-            }
-            packs.add(com.tkisor.nekojs.core.pack.sync.SyncedPack.of(
-                pack.syncId(), pack.scope(), null, pack.manifestJsonText(), files));
-        }
+        List<com.tkisor.nekojs.core.pack.sync.SyncedPack> packs = payload.toSyncedPacks();
         PackSyncClient.prepareMainThreadWork();
         context.enqueueWork(() -> {
             try {

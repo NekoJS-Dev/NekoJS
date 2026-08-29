@@ -4,6 +4,7 @@
   "package": "com.tkisor.nekojs.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
   "server": [
+    "ServerCommonPacketListenerAccessor",
     "ServerLevelMixin"
   ],
   "injectors": {

@@ -12,7 +12,6 @@ import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
 /**
  * 配置阶段包分发任务（NeoForge 26.x / 1.21.1 共用）：通过
  * {@link RegisterConfigurationTasksEvent}（FML 官方入口，免 mixin）挂进每个连接的
@@ -23,7 +22,7 @@ import java.util.function.Consumer;
  */
 public class PackSyncConfigurationTask implements ConfigurationTask {
 
-    public static final ConfigurationTask.Type TYPE = new ConfigurationTask.Type(NekoJS.MODID + ":pack_sync");
+    public static final ConfigurationTask.Type TYPE = new ConfigurationTask.Type(PackSyncServer.TASK_ID);
 
     private final ServerConfigurationPacketListener listener;
 
@@ -43,12 +42,9 @@ public class PackSyncConfigurationTask implements ConfigurationTask {
     public void start(Consumer<Packet<?>> sender) {
         try {
             List<SyncedPack> packs = PackSyncServer.collectSyncPacks();
-            List<PackHashListPayload.HashEntry> hashes = new ArrayList<>();
-            for (SyncedPack pack : packs) {
-                hashes.add(new PackHashListPayload.HashEntry(pack.syncId(), pack.hash()));
-            }
-            listener.send(new PackHashListPayload(hashes));
-            if (!PackSyncServer.hashOnly() && !hashes.isEmpty()) {
+            PackHashListPayload hashes = PackHashListPayload.of(packs);
+            listener.send(hashes);
+            if (!PackSyncServer.hashOnly() && !hashes.entries().isEmpty()) {
                 listener.send(PackBundlePayload.of(packs));
             }
         } catch (Exception e) {
