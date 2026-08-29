@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.pack.sync.PackContentFile;
+import com.tkisor.nekojs.core.pack.sync.SyncedPack;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -41,6 +43,23 @@ public record PackBundlePayload(List<PackEntry> packs) implements CustomPacketPa
 
     public PackBundlePayload {
         packs = List.copyOf(packs);
+    }
+
+    /** 各平台推送面共用的转换：{@link SyncedPack} 列表 → 线格式 bundle。 */
+    public static PackBundlePayload of(List<SyncedPack> packs) {
+        List<PackEntry> entries = new ArrayList<>();
+        for (SyncedPack pack : packs) {
+            List<FileEntry> files = new ArrayList<>();
+            for (PackContentFile file : pack.files()) {
+                files.add(new FileEntry(file.relativePath(), file.bytes()));
+            }
+            entries.add(new PackEntry(
+                pack.syncId(),
+                pack.scopeName(),
+                pack.manifestJson().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                files));
+        }
+        return new PackBundlePayload(entries);
     }
 
     public static final Type<PackBundlePayload> TYPE =

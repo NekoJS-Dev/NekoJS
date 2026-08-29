@@ -21,6 +21,7 @@ public final class NekoJSFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         LOGGER.info("NekoJS fabric client entrypoint reached.");
+        FabricPackSync.registerClient();
         FabricClientEventBindings.register(() -> {
             if (NekoJSFabricMod.RUNTIME_ROOT == null) {
                 LOGGER.error("CLIENT_STARTED: RUNTIME_ROOT not assembled yet, skipping CLIENT script load");

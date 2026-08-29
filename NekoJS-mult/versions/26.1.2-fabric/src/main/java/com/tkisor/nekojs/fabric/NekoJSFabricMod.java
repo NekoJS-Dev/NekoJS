@@ -88,6 +88,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 RUNTIME_ROOT.reload(com.tkisor.nekojs.api.ScriptType.SERVER);
             }
         });
+        FabricPackSync.registerServer();
         initializeWorkspace();
         initializeScripts();
         FabricRegistryAdapter.onInitialize();
