@@ -1,8 +1,17 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Value;
 
+/**
+ * {@code ScriptEvents.server/client} 的回调载荷：脚本在其中声明自定义事件。
+ *
+ * <pre>
+ * ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
+ * ScriptEvents.server(event => event.register({ group: 'MyEvents', name: 'bossKilled' }))
+ * </pre>
+ */
 public class ScriptEventRegistrationEvent {
     private final ScriptType targetType;
     private final ScriptEventRegistrar registrar;
@@ -16,69 +25,54 @@ public class ScriptEventRegistrationEvent {
         return targetType;
     }
 
+    /** 对象形态：{@code { group, name }}。 */
     public void register(Object config) {
         Value cfg = config == null ? null : Value.asValue(config);
         if (cfg == null || !cfg.hasMembers()) {
             throw new IllegalArgumentException("ScriptEvents register config must be an object");
         }
-        String groupName = readString(cfg, "group");
-        String eventName = readString(cfg, "name");
-        Object eventClass = readEventClass(cfg);
-        String priority = readString(cfg, "priority", "normal");
-        boolean receiveCancelled = readBoolean(cfg, "receiveCancelled", false);
-        registrar.register(targetType, groupName, eventName, eventClass, priority, receiveCancelled);
+        if (hasMember(cfg, "event") || hasMember(cfg, "eventClass")) {
+            throw new IllegalArgumentException(
+                    "ScriptEvents register config takes only group and name; custom events carry a script-provided payload");
+        }
+        register(cfg.getMember("group"), cfg.getMember("name"));
     }
 
-    public void register(String groupName, String eventName, Object eventClass) {
-        registrar.register(targetType, groupName, eventName, eventClass, "normal", false);
+    /** 位置形态：{@code register('MyEvents', 'bossKilled')}。 */
+    public void register(Object groupName, Object eventName) {
+        String group = asString(groupName, "group");
+        String name = asString(eventName, "name");
+        registrar.register(targetType, group, name, resolveSourceScriptId(groupName, eventName));
     }
 
-    public void register(String groupName, String eventName, Object eventClass, String priority) {
-        registrar.register(targetType, groupName, eventName, eventClass, priority, false);
-    }
-
-    public void register(String groupName, String eventName, Object eventClass, String priority, boolean receiveCancelled) {
-        registrar.register(targetType, groupName, eventName, eventClass, priority, receiveCancelled);
-    }
-
-    private static String readString(Value config, String member) {
+    private static boolean hasMember(Value config, String member) {
         Value value = config.getMember(member);
-        if (value == null || !value.isString()) {
-            throw new IllegalArgumentException("ScriptEvents register config field must be a string: " + member);
-        }
-        return value.asString();
+        return value != null && !value.isNull();
     }
 
-    private static String readString(Value config, String member, String fallback) {
-        Value value = config.getMember(member);
-        if (value == null || value.isNull()) {
-            return fallback;
+    private static String asString(Object value, String field) {
+        if (value instanceof String string && !string.isBlank()) {
+            return string;
         }
-        if (!value.isString()) {
-            throw new IllegalArgumentException("ScriptEvents register config field must be a string: " + member);
+        if (value instanceof Value polyglot && polyglot.isString()) {
+            return polyglot.asString();
         }
-        return value.asString();
+        throw new IllegalArgumentException("ScriptEvents " + field + " must be a string: " + value);
     }
 
-    private static boolean readBoolean(Value config, String member, boolean fallback) {
-        Value value = config.getMember(member);
-        if (value == null || value.isNull()) {
-            return fallback;
+    /**
+     * 注册来源脚本 id：从脚本传入的任一 Graal 值反查其 Context 的当前脚本 id。
+     * 拿不到时退回常量——per-file STARTUP reload 的按来源清理会退化成整类型清理。
+     */
+    private static String resolveSourceScriptId(Object... candidates) {
+        for (Object candidate : candidates) {
+            if (candidate instanceof Value polyglot) {
+                String scriptId = ScriptContextRegistry.currentScriptIdOf(polyglot.getContext());
+                if (scriptId != null && !scriptId.isBlank()) {
+                    return scriptId;
+                }
+            }
         }
-        if (!value.isBoolean()) {
-            throw new IllegalArgumentException("ScriptEvents register config field must be a boolean: " + member);
-        }
-        return value.asBoolean();
-    }
-
-    private static Object readEventClass(Value config) {
-        Value value = config.getMember("event");
-        if (value == null || value.isNull()) {
-            value = config.getMember("eventClass");
-        }
-        if (value == null || value.isNull()) {
-            throw new IllegalArgumentException("ScriptEvents register config requires event or eventClass");
-        }
-        return value;
+        return "nekojs:startup/script_events";
     }
 }

@@ -339,9 +339,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
                 ScriptType.STARTUP,
                 "ScriptEvents",
                 null,
-                "Startup-side custom server/client event method registration event group.",
-                List.of("ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', "
-                        + "'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))")));
+                "Startup-side custom server/client event declaration event group.",
+                List.of("ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))")));
 //? if >=26 {
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "RegistryEvents", null, "Startup-side registry builders, including scripted entity types.", List.of("RegistryEvents.register(event => event.entityType('mymod:cat', b => { }))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "GoalEvents", null, "Startup-side goal registration for existing or scripted entity types.", List.of("GoalEvents.register(event => { })")));

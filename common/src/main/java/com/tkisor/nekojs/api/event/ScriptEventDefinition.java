@@ -6,7 +6,6 @@ public record ScriptEventDefinition(
         String groupName,
         String eventName,
         ScriptType targetType,
-        String eventClassName,
         String sourceScriptId,
         EventBusJS<?, ?> bus,
         Runnable unregisterer

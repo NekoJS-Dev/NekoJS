@@ -355,36 +355,34 @@ EntityEvents.damagePre(event => {
 
 ### Startup 自定义事件方法
 
-`startup_scripts` 可以用 `ScriptEvents` 把 NeoForge 原生事件注册成更友好的 server/client 事件方法：
+`startup_scripts` 可以用 `ScriptEvents` 声明自定义的 server/client 事件（跨加载器一致，事件载荷由触发方自己传）：
 
 ```js
 // startup_scripts/src/events.js
-ScriptEvents.server(event => event.register('CustomServerEvents', 'playerTick', 'net.neoforged.neoforge.event.tick.PlayerTickEvent.Post'))
-ScriptEvents.client(event => event.register('CustomClientEvents', 'screenOpening', 'net.neoforged.neoforge.client.event.ScreenEvent.Opening'))
+ScriptEvents.server(event => event.register('MyEvents', 'bossKilled'))
+ScriptEvents.client(event => event.register('MyClientEvents', 'hudRefresh'))
 ```
 
-随后在对应环境监听：
+随后在对应环境监听与触发：
 
 ```js
 // server_scripts/src/main.js
-CustomServerEvents.playerTick(event => {
-  console.info(`player tick: ${event.getEntity().getName().getString()}`)
+MyEvents.bossKilled(payload => {
+  console.info(`boss killed: ${payload.boss}`)
 })
+
+MyEvents.bossKilled.post({ boss: 'ender_dragon' })
 ```
 
-对象形式可设置优先级和是否接收已取消事件：
+对象形式：
 
 ```js
-ScriptEvents.server(event => event.register({
-  group: 'CustomServerEvents',
-  name: 'rightClickBlock',
-  event: 'net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock',
-  priority: 'normal',
-  receiveCancelled: false
-}))
+ScriptEvents.server(event => event.register({ group: 'MyEvents', name: 'bossKilled' }))
 ```
 
-自定义事件不会写入插件 bootstrap 的静态事件表，但会进入 probe 事件目录与类型生成（`.d.ts` / `.pyi`，payload 按事件类反射生成声明）；startup reload 会刷新事件定义，server/client reload 会清理对应脚本 listener，避免重复回调。
+要按类名监听 NeoForge 原生事件，用 `NativeEvents.onEvent(...)`（NeoForge 面）。
+
+自定义事件不会写入插件 bootstrap 的静态事件表，但会进入 probe 事件目录与类型生成（`.d.ts` / `.pyi`）；startup reload 会刷新事件定义，server/client reload 会清理对应脚本 listener，避免重复回调。
 
 ## 数据与资产生成
 

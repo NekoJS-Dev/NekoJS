@@ -20,7 +20,7 @@ public interface ScriptEventBridge {
     void clearListeners(ScriptType type);
 
     default ScriptEventRegistrar scriptEventRegistrar() {
-        return (targetType, groupName, eventName, eventClass, priority, receiveCancelled) -> {
+        return (targetType, groupName, eventName, sourceScriptId) -> {
             throw new UnsupportedOperationException("Script event registration is not available");
         };
     }
