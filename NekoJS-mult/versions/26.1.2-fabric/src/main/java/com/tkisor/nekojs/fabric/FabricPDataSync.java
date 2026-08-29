@@ -6,7 +6,7 @@ import com.tkisor.nekojs.network.PDataSyncPacket;
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -30,6 +30,9 @@ public final class FabricPDataSync {
     /** findEntity 需要 server 实例（与 FabricPlayNetwork 同生命周期）。 */
     private static volatile MinecraftServer currentServer;
 
+    /** 上一次见到的客户端世界实例（切维度/断线时变化，用于清 mirror）。 */
+    private static Object lastClientLevel;
+
     private FabricPDataSync() {}
 
     /** 服务器半：payload 注册 + store 装配 + flush / 实体换世界钩子（common init 调用）。 */
@@ -40,8 +43,10 @@ public final class FabricPDataSync {
         ServerLifecycleEvents.SERVER_STARTING.register(server -> currentServer = server);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> currentServer = null);
         ServerTickEvents.END_SERVER_TICK.register(FabricPDataSync::flush);
-        ServerEntityLevelChangeEvents.AFTER_ENTITY_CHANGE_LEVEL.register(
-                (original, newEntity, origin, destination) -> PDataSyncService.onEntityRemoved(original));
+        // 对齐 NeoForge 的 EntityLeaveLevelEvent 语义（chunk 卸载/死亡/消失/换维度都算离开）：
+        // 只用换维度事件会漏掉消失的实体——revision/mirror 残留，entity id 复用会读到旧数据
+        ServerEntityEvents.ENTITY_UNLOAD.register(
+                (entity, level) -> PDataSyncService.onEntityRemoved(entity));
     }
 
     private static EntityPDataStore.Access fullAccess() {
@@ -89,5 +94,16 @@ public final class FabricPDataSync {
                 context.client().execute(() -> PDataSyncService.acceptClientSync(payload)));
         ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> PDataSyncService.clearClientMirrors());
+        // 切维度也要清（NeoForge 挂 client level unload）：只在"离开一个已有世界"时清，
+        // 进服那次 null→世界 的变化不清（否则抹掉刚随进服推下来的数据——票 05 的教训）
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            Object level = client.level;
+            if (level == lastClientLevel) return;
+            boolean leftPreviousLevel = lastClientLevel != null;
+            lastClientLevel = level;
+            if (leftPreviousLevel) {
+                PDataSyncService.clearClientMirrors();
+            }
+        });
     }
 }

@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.api.inject;
 
-import com.tkisor.nekojs.wrapper.pdata.PersistentDataJS;
-
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 
@@ -77,11 +75,6 @@ public final class EntityPDataStore {
 
     public static void setPDataTag(Entity entity, String key, CompoundTag tag) {
         current.set(entity.getId(), key, tag);
-    }
-
-    /** 只读视图（{@code PersistentDataJS.readOnly} 入参便捷形式）。 */
-    public static PersistentDataJS readable(Entity entity, String key) {
-        return PersistentDataJS.readOnly(() -> getPDataTag(entity, key));
     }
 
 }
