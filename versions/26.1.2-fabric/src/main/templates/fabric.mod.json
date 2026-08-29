@@ -9,6 +9,9 @@
   "entrypoints": {
     "main": [
       "com.tkisor.nekojs.fabric.NekoJSFabricMod"
+    ],
+    "client": [
+      "com.tkisor.nekojs.fabric.NekoJSFabricClient"
     ]
   },
   "mixins": [

@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] fabric.mod.json client entrypoint 注册，CLIENT 脚本加载
-- [ ] `ClientEvents.tickPost` 在 fabric 客户端触发
-- [ ] runClient 冒烟（或至少客户端脚本加载日志 + tick 验证）
-- [ ] 四节点编译 + 测试 + guardLint 绿
+- [x] fabric.mod.json client entrypoint 注册，CLIENT 脚本加载
+- [x] `ClientEvents.tickPost` 在 fabric 客户端触发
+- [x] runClient 冒烟（或至少客户端脚本加载日志 + tick 验证）—— latest.log 11:44: `[client] FABRIC-SMOKE-CLIENT: client script loaded` + `tick #1~#3`（CLIENT_STARTED 加载、END_CLIENT_TICK 驱动 + flushClientNodeTimers）
+- [x] 四节点编译 + 测试 + guardLint 绿
