@@ -1,0 +1,15 @@
+# BlockEvents 对脚本可见的成员（26.1.2；26.x 多一个 26-only 的 modification）。改 API 时更新本文件并在 diff 里说明。
+blockEntityTick
+broken
+entityMultiPlaced
+entityPlaced
+farmlandTrample
+fluidPlaced
+leftClicked
+neighborNotify
+placed
+portalSpawn
+randomTick
+rightClicked
+toolModification
+modification

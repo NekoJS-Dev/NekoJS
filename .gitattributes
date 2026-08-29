@@ -1,0 +1,22 @@
+# 仓库内一律 LF：共享树被多节点按精确文本预处理（stonecutter 守卫/replacements），
+# 行尾混入会让守卫匹配与 diff 产生假差异。工作树行尾由 core.autocrlf 决定
+#（Windows 上 checkout 为 CRLF 属正常），仓库内始终以 LF 存储。
+*.java text eol=lf
+*.gradle text eol=lf
+*.kts text eol=lf
+*.groovy text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.json5 text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.properties text eol=lf
+# 无扩展名脚本不匹配 *.sh，单独声明（仓库内 LF）
+gradlew text eol=lf
+
+# 二进制资源
+*.png binary
+*.jar binary
+*.mca binary

@@ -1,0 +1,151 @@
+package com.tkisor.nekojs.core.module;
+
+import com.tkisor.nekojs.core.compiler.IScriptCompiler;
+import com.tkisor.nekojs.core.compiler.NekoCompileOutput;
+import com.tkisor.nekojs.core.compiler.NekoIRProgram;
+import com.tkisor.nekojs.core.compiler.NekoLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.NekoScriptLanguage;
+import com.tkisor.nekojs.core.compiler.ScriptCompileResult;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.EventCallbackSourceValidator;
+import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.module.cjs.CjsStaticAnalyzer;
+import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
+import com.tkisor.nekojs.core.module.esm.NekoEsmParser;
+
+import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * 实例化模块编译管线：构造器接收 {@link NekoCompilationPipeline}、{@link ScriptCompilerRegistry}、
+ * {@link SandboxConfig}。根据 ESM/CJS 模式和语言插件编译模块。
+ */
+public final class NekoModulePipeline {
+    private static final NekoCompilationPipeline SHARED_COMPILATION_PIPELINE = new NekoCompilationPipeline();
+    private static volatile NekoModulePipeline LEGACY_INSTANCE;
+
+    private final NekoCompilationPipeline compilationPipeline;
+    private final ScriptCompilerRegistry compilers;
+    private final SandboxConfig config;
+
+    public NekoModulePipeline(NekoCompilationPipeline compilationPipeline, ScriptCompilerRegistry compilers, SandboxConfig config) {
+        this.compilationPipeline = compilationPipeline;
+        this.compilers = compilers;
+        this.config = config;
+    }
+
+    public static void bindLegacyInstance(NekoModulePipeline pipeline) {
+        LEGACY_INSTANCE = pipeline;
+    }
+
+    public static NekoModulePipeline legacyInstance() {
+        return LEGACY_INSTANCE;
+    }
+
+    public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
+        String extension = extension(file);
+        // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
+        // 访问不存在的成员时报错到游戏内错误面板。不阻止编译/执行。
+        // JS 族（原始源即 JS）在编译前对原始源跑；转译语言（.py/.ts/.tsx…）的原始源不是
+        // JS（# 注释、类型注解、def/class 会被 JS-only 的 ValParser 碎成伪调用 → 'Unknown
+        // identifier' 系统性误报），改为在编译后对产物 JS 跑——那才是运行时真正执行的代码。
+        if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
+            GlobalBindingMemberValidator.validate(file, rawSource);
+            EventCallbackSourceValidator.validate(file, rawSource);
+        }
+        NekoPreparedModule prepared = prepareModule(file, rawSource, extension);
+        if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
+            GlobalBindingMemberValidator.validate(file, prepared.code());
+            EventCallbackSourceValidator.validate(file, prepared.code());
+        }
+        return prepared;
+    }
+
+    /** 原始源就是 JS、可直接跑 JS-only 预检的扩展名。*/
+    static boolean rawPreflightApplies(String extension) {
+        return ".js".equals(extension) || ".mjs".equals(extension) || ".cjs".equals(extension) || ".jsx".equals(extension);
+    }
+
+    private NekoPreparedModule prepareModule(Path file, String rawSource, String extension) throws Exception {
+        NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
+        NekoLanguagePlugin language = languagePlugin(file, extension);
+
+        if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
+            if (language instanceof NekoLegacyLanguagePlugin legacyLanguage) {
+                ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
+                // CJS 静态分析必须跑在编译产物上：require/module.exports 由转译生成，原始源里不存在
+                return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap(), CjsStaticAnalyzer.analyze(compiled.code()));
+            }
+            if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
+                return NekoPreparedModule.commonJs(rawSource, null, CjsStaticAnalyzer.analyze(rawSource));
+            }
+            NekoCompileOutput compiled = compilationPipeline.compile(
+                file, rawSource, extension, language, config.jsxAutomaticRuntime());
+            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap(),
+                    CjsStaticAnalyzer.analyze(compiled.code()));
+        }
+
+        NekoCompileOutput compiled = compilationPipeline.compile(
+            file, rawSource, extension, language, config.jsxAutomaticRuntime());
+        return prepareModule(compiled);
+    }
+
+    private NekoPreparedModule prepareModule(NekoCompileOutput compiled) {
+        NekoIRProgram ir = compiled.program();
+        if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
+            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
+        }
+        NekoEsmModuleAst ast = compiled.esmAst();
+        if (ast == null) {
+            ast = new NekoEsmParser(null, compiled.code()).parse();
+        }
+        return NekoPreparedModule.esm(compiled.code(), compiled.program().sourceMap(), ast);
+    }
+
+    private NekoLanguagePlugin languagePlugin(Path file, String extension) {
+        NekoScriptLanguage language = compilers.getLanguage(extension);
+        if (language != null) {
+            if (language.plugin() != null) {
+                return language.plugin();
+            }
+            if (language.compiler() != null) {
+                return new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler());
+            }
+        }
+        IScriptCompiler compiler = compilers.getCompiler(extension);
+        if (compiler != null) {
+            return new NekoLegacyLanguagePlugin("legacy:" + extension.substring(1), Set.of(extension), compiler);
+        }
+        if (!ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
+            throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
+        }
+        return NekoJavaScriptLanguagePlugin.INSTANCE;
+    }
+
+    private String extension(Path file) {
+        String fileName = file.getFileName().toString();
+        int dot = fileName.lastIndexOf('.');
+        return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
+    }
+
+    /* ================= Legacy static facade ================= */
+
+    public static NekoPreparedModule legacyPrepare(Path file, String rawSource) throws Exception {
+        NekoModulePipeline instance = LEGACY_INSTANCE;
+        if (instance != null) {
+            return instance.prepare(file, rawSource);
+        }
+        return legacyPrepareFallback(file, rawSource);
+    }
+
+    private static NekoPreparedModule legacyPrepareFallback(Path file, String rawSource) throws Exception {
+        return new NekoModulePipeline(SHARED_COMPILATION_PIPELINE, ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig())
+                .prepare(file, rawSource);
+    }
+}

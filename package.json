@@ -1,0 +1,10 @@
+{
+  "name": "nekojs-build-tools",
+  "private": true,
+  "scripts": {
+    "test:probe-types": "tsc -p common/src/test/probe-ts/tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}

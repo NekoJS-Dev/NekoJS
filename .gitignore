@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# 运行时产物（节点 run/ 与服务端日志不进版本库）
+run/
+**/run/
+logs/
+**/logs/
+*.log
+*.log.gz
+
+# stonecutter 按 AT/模板路径消费的预处理产物
+**/processed/
+
+# IDE
+.idea/
+*.iml
+.vscode/

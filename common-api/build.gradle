@@ -1,0 +1,53 @@
+// 副本来源：主仓 common-api/build.gradle（沙箱不回写主仓）。
+// 差异：折入主仓根 build.gradle allprojects 的编译约定（-parameters/-Xlint:all/UTF-8），
+// 沙箱根 build.gradle.kts 是 stonecutter 中央脚本，不能再放 allprojects 块。
+
+plugins {
+    id 'java-library'
+    id 'idea'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = "${mod_id}-api"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// 保留参数名，供 ContractReflector 反射 facade 方法参数名（如 Text.of(String text) → "text"）
+compileJava {
+    options.compilerArgs += '-parameters'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += '-Xlint:all'
+}
+
+repositories {
+    mavenCentral()
+    maven { url "https://maven.neoforged.net/releases" }
+    exclusiveContent {
+        forRepository { maven { url "https://cursemaven.com" } }
+        filter { includeGroup "curse.maven" }
+    }
+}
+
+dependencies {
+    compileOnly libs.jetbrains.annotations
+    compileOnly libs.jspecify
+
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.platform.launcher
+}
+
+test {
+    systemProperty 'user.language', 'en'
+    systemProperty 'user.country', 'US'
+    systemProperty 'user.timezone', 'UTC'
+    systemProperty 'file.encoding', 'UTF-8'
+    useJUnitPlatform()
+}

@@ -1,0 +1,53 @@
+// 副本来源：主仓 common-api-processor/build.gradle（沙箱不回写主仓）。
+// 差异：折入主仓根 build.gradle allprojects 的编译约定（UTF-8 等）。
+
+plugins {
+    id 'java-library'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = "${mod_id}-api-processor"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += '-parameters'
+    options.compilerArgs += '-Xlint:all'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // 编译期需要访问 common-api 的 spec 注解（@PlatformAvailability 等），
+    // 但运行时（处理器执行时）由各平台的 compileClasspath 提供，故 compileOnly
+    compileOnly project(':common-api')
+
+    // 处理器单测：SpecCoverageProcessorTest 通过系统编译器内嵌编译源码，
+    // 需在测试 JVM 中加载真实的 @PlatformAvailability 类（processorpath 用）
+    testImplementation project(':common-api')
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
+    testRuntimeOnly libs.junit.platform.launcher
+}
+
+test {
+    systemProperty 'user.language', 'en'
+    systemProperty 'user.country', 'US'
+    systemProperty 'user.timezone', 'UTC'
+    systemProperty 'file.encoding', 'UTF-8'
+    useJUnitPlatform()
+}
+
+// 处理器 jar 需要声明 META-INF/services/javax.annotation.processing.Processor
+jar {
+    manifest {
+        attributes 'Implementation-Title': 'NekoJS Spec Coverage Processor'
+    }
+}

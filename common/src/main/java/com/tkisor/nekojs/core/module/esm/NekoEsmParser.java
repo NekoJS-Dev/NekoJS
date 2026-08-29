@@ -1,0 +1,1650 @@
+package com.tkisor.nekojs.core.module.esm;
+
+
+import com.tkisor.nekojs.core.compiler.NekoSourceLexerBase;
+
+import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public final class NekoEsmParser {
+    private final Path file;
+    private final String code;
+    private final int length;
+    private final List<NekoEsmStatement> statements = new ArrayList<>();
+    private final List<NekoEsmRuntimeExpression> runtimeExpressions = new ArrayList<>();
+    private final List<NekoEsmLocalBinding> localBindings = new ArrayList<>();
+    private final List<NekoEsmScope> scopes = new ArrayList<>();
+    private final Deque<ScopeFrame> scopeStack = new ArrayDeque<>();
+    private final Set<Integer> functionBodyStarts = new HashSet<>();
+    private final List<PendingFunctionParameters> pendingFunctionParameters = new ArrayList<>();
+    private final List<PendingBlockBinding> pendingBlockBindings = new ArrayList<>();
+    private boolean module;
+    private boolean topLevelAwait;
+    private int braceDepth;
+    private int parenDepth;
+    private int bracketDepth;
+    private int nextScopeId = 1;
+
+    public NekoEsmParser(Path file, String code) {
+        this.file = file;
+        this.code = code == null ? "" : code;
+        this.length = this.code.length();
+    }
+
+    public NekoEsmModuleAst parse() {
+        scopes.add(new NekoEsmScope(0, -1, NekoEsmScopeKind.MODULE, new NekoEsmSpan(0, length)));
+        scopeStack.push(new ScopeFrame(0, -1, NekoEsmScopeKind.MODULE, 0, false));
+        int i = 0;
+        while (i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '/') {
+                if (peek(i + 1) == '/') {
+                    i = skipLineComment(i + 2);
+                    continue;
+                }
+                if (peek(i + 1) == '*') {
+                    i = skipBlockComment(i + 2);
+                    continue;
+                }
+                if (looksLikeRegexStart(i)) {
+                    i = skipRegex(i + 1);
+                    continue;
+                }
+            }
+            if (isIdentifierStart(c)) {
+                int end = readIdentifierEnd(i + 1);
+                String word = code.substring(i, end);
+                if ("function".equals(word)) {
+                    markFunctionBodyStart(end);
+                } else if ("catch".equals(word)) {
+                    recordCatchBinding(end);
+                }
+                if (topLevel() && "import".equals(word)) {
+                    int next = nextNonWhitespace(end);
+                    if (next < length && code.charAt(next) == '(') {
+                        addDynamicImportExpression(i, end);
+                    } else if (next < length && code.charAt(next) == '.') {
+                        int metaEnd = maybeReadImportMeta(i, next + 1);
+                        if (metaEnd > i) {
+                            i = metaEnd;
+                            continue;
+                        }
+                    } else {
+                        i = readModuleStatement(i);
+                        continue;
+                    }
+                } else if (topLevel() && "export".equals(word)) {
+                    int exportEnd = readModuleStatement(i);
+                    if (blockModuleStatement(i)) {
+                        replayScopeSyntax(i, exportEnd);
+                    }
+                    i = exportEnd;
+                    continue;
+                } else if (topLevel() && "await".equals(word)) {
+                    topLevelAwait = true;
+                } else if ("import".equals(word)) {
+                    int next = nextNonWhitespace(end);
+                    if (next < length && code.charAt(next) == '(') {
+                        addDynamicImportExpression(i, end);
+                    } else if (next < length && code.charAt(next) == '.') {
+                        int metaEnd = maybeReadImportMeta(i, next + 1);
+                        if (metaEnd > i) {
+                            i = metaEnd;
+                            continue;
+                        }
+                    }
+                }
+                if (!"export".equals(word)) {
+                    recordLocalDeclaration(i, word);
+                }
+                i = end;
+                continue;
+            }
+            switch (c) {
+                case '{' -> {
+                    maybeMarkFunctionLikeBody(i);
+                    openBraceScope(i);
+                    braceDepth++;
+                }
+                case '}' -> {
+                    closeBraceScope(i);
+                    braceDepth = Math.max(0, braceDepth - 1);
+                }
+                case '(' -> parenDepth++;
+                case ')' -> parenDepth = Math.max(0, parenDepth - 1);
+                case '[' -> bracketDepth++;
+                case ']' -> bracketDepth = Math.max(0, bracketDepth - 1);
+                default -> {
+                }
+            }
+            i++;
+        }
+        while (scopeStack.size() > 1) {
+            closeScope(length);
+        }
+        return new NekoEsmModuleAst(module, topLevelAwait, statements, runtimeExpressions, localBindings, scopes);
+    }
+
+    private void recordLocalDeclaration(int start, String word) {
+        if (!"const".equals(word) && !"let".equals(word) && !"var".equals(word) && !"function".equals(word) && !"class".equals(word)) {
+            return;
+        }
+        int declarationStart = nextNonWhitespace(start + word.length());
+        if (declarationStart >= length) {
+            return;
+        }
+        if ("const".equals(word) || "let".equals(word) || "var".equals(word)) {
+            recordVariableDeclarationBindings(declarationStart, word);
+            return;
+        }
+        if (isIdentifierStart(code.charAt(declarationStart))) {
+            int nameEnd = readIdentifierEnd(declarationStart + 1);
+            localBindings.add(new NekoEsmLocalBinding(code.substring(declarationStart, nameEnd), word, NekoEsmBindingSource.DECLARATION, new NekoEsmSpan(declarationStart, nameEnd), declarationScopeId(word)));
+        }
+    }
+
+    private void recordVariableDeclarationBindings(int declarationStart, String kind) {
+        int i = declarationStart;
+        int scopeId = declarationScopeId(kind);
+        while (i < length) {
+            i = nextNonWhitespace(i);
+            if (i >= length || code.charAt(i) == ';' || code.charAt(i) == '\n' || code.charAt(i) == '\r') {
+                return;
+            }
+            char first = code.charAt(i);
+            if (isIdentifierStart(first)) {
+                int nameEnd = readIdentifierEnd(i + 1);
+                localBindings.add(new NekoEsmLocalBinding(code.substring(i, nameEnd), kind, NekoEsmBindingSource.DECLARATION, new NekoEsmSpan(i, nameEnd), scopeId));
+                i = skipVariableInitializer(nameEnd);
+            } else if (first == '{' || first == '[') {
+                int declarationEnd = findDeclarationPatternEnd(i);
+                if (declarationEnd > i) {
+                    recordPatternBindings(code.substring(i, declarationEnd), kind, new NekoEsmSpan(i, declarationEnd), scopeId);
+                }
+                i = skipVariableInitializer(declarationEnd);
+            } else {
+                return;
+            }
+            i = nextNonWhitespace(i);
+            if (i < length && code.charAt(i) == ',') {
+                i++;
+                continue;
+            }
+            return;
+        }
+    }
+
+    private int skipVariableInitializer(int start) {
+        int i = nextNonWhitespace(start);
+        if (i >= length || code.charAt(i) != '=') {
+            return start;
+        }
+        return skipVariableExpression(i + 1);
+    }
+
+    private int skipVariableExpression(int start) {
+        int i = start;
+        int depth = 0;
+        while (i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '/') {
+                if (peek(i + 1) == '/') {
+                    i = skipLineComment(i + 2);
+                    continue;
+                }
+                if (peek(i + 1) == '*') {
+                    i = skipBlockComment(i + 2);
+                    continue;
+                }
+                if (looksLikeRegexStart(i)) {
+                    i = skipRegex(i + 1);
+                    continue;
+                }
+            }
+            if (c == '{' || c == '[' || c == '(') depth++;
+            else if (c == '}' || c == ']' || c == ')') {
+                if (depth == 0) return i;
+                depth--;
+            } else if ((c == ',' || c == ';' || c == '\n' || c == '\r') && depth == 0) {
+                return i;
+            }
+            i++;
+        }
+        return length;
+    }
+
+    private int findDeclarationPatternEnd(int start) {
+        int i = start;
+        int depth = 0;
+        while (i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '{' || c == '[' || c == '(') depth++;
+            else if (c == '}' || c == ']' || c == ')') depth = Math.max(0, depth - 1);
+            else if (c == '=' && depth == 0) return i;
+            else if ((c == ';' || c == '\n' || c == '\r') && depth == 0) return i;
+            i++;
+        }
+        return length;
+    }
+
+    private List<NekoEsmLocalBinding> recordPatternBindings(String pattern, String kind, NekoEsmSpan span, int scopeId) {
+        return recordPatternBindings(pattern, kind, NekoEsmBindingSource.DECLARATION, span, scopeId);
+    }
+
+    private List<NekoEsmLocalBinding> recordPatternBindings(String pattern, String kind, NekoEsmBindingSource source, NekoEsmSpan span, int scopeId) {
+        PatternBindingReader reader = new PatternBindingReader(pattern, kind, source, span.start(), scopeId);
+        List<NekoEsmLocalBinding> bindings = reader.read();
+        localBindings.addAll(bindings);
+        return bindings;
+    }
+
+    private final class PatternBindingReader {
+        private final String pattern;
+        private final String kind;
+        private final NekoEsmBindingSource source;
+        private final int absoluteOffset;
+        private final int scopeId;
+        private final List<NekoEsmLocalBinding> bindings = new ArrayList<>();
+
+        private PatternBindingReader(String pattern, String kind, NekoEsmBindingSource source, int absoluteOffset, int scopeId) {
+            this.pattern = pattern == null ? "" : pattern;
+            this.kind = kind;
+            this.source = source;
+            this.absoluteOffset = absoluteOffset;
+            this.scopeId = scopeId;
+        }
+
+        private List<NekoEsmLocalBinding> read() {
+            int start = nextPatternNonWhitespace(pattern, 0);
+            if (start < pattern.length()) {
+                readBindingPattern(start, pattern.length());
+            }
+            return List.copyOf(bindings);
+        }
+
+        private int readBindingPattern(int start, int end) {
+            int i = nextPatternNonWhitespace(pattern, start);
+            if (i >= end) return end;
+            char c = pattern.charAt(i);
+            if (c == '{') return readObjectPattern(i, end);
+            if (c == '[') return readArrayPattern(i, end);
+            if (isIdentifierStart(c)) {
+                int nameEnd = readPatternIdentifierEnd(pattern, i + 1);
+                addBinding(pattern.substring(i, nameEnd), i, nameEnd);
+                return nameEnd;
+            }
+            return i + 1;
+        }
+
+        private int readObjectPattern(int start, int end) {
+            int i = start + 1;
+            while (i < end) {
+                i = nextPatternNonWhitespace(pattern, i);
+                if (i >= end || pattern.charAt(i) == '}') return i + 1;
+                if (pattern.startsWith("...", i)) {
+                    i = readBindingPattern(i + 3, end);
+                    continue;
+                }
+                if (isPropertyNameStart(i)) {
+                    int nameStart = i;
+                    i = readPropertyName(i, end);
+                    int afterName = nextPatternNonWhitespace(pattern, i);
+                    if (afterName < end && pattern.charAt(afterName) == ':') {
+                        i = readBindingPattern(afterName + 1, end);
+                    } else if (isIdentifierStart(pattern.charAt(nameStart))) {
+                        addBinding(pattern.substring(nameStart, i), nameStart, i);
+                        i = skipDefaultValue(i, end);
+                    }
+                } else if (pattern.charAt(i) == '[') {
+                    int computedEnd = skipComputedPropertyName(i, end);
+                    int afterComputed = nextPatternNonWhitespace(pattern, computedEnd);
+                    if (afterComputed < end && pattern.charAt(afterComputed) == ':') {
+                        i = readBindingPattern(afterComputed + 1, end);
+                    } else {
+                        i = computedEnd;
+                    }
+                } else if (pattern.charAt(i) == '{') {
+                    i = readBindingPattern(i, end);
+                } else {
+                    i++;
+                }
+                i = skipToNextElement(i, end);
+            }
+            return end;
+        }
+
+        private int skipComputedPropertyName(int start, int end) {
+            int i = start + 1;
+            int depth = 0;
+            while (i < end) {
+                char c = pattern.charAt(i);
+                if (c == '\'' || c == '"') {
+                    i = skipPatternString(pattern, i, c);
+                    continue;
+                }
+                if (c == '`') {
+                    i = skipPatternTemplate(pattern, i);
+                    continue;
+                }
+                if (c == '[' || c == '{' || c == '(') depth++;
+                else if (c == ']' && depth == 0) return i + 1;
+                else if (c == ']' || c == '}' || c == ')') depth = Math.max(0, depth - 1);
+                i++;
+            }
+            return end;
+        }
+
+        private int readArrayPattern(int start, int end) {
+            int i = start + 1;
+            while (i < end) {
+                i = nextPatternNonWhitespace(pattern, i);
+                if (i >= end || pattern.charAt(i) == ']') return i + 1;
+                if (pattern.charAt(i) == ',') {
+                    i++;
+                    continue;
+                }
+                if (pattern.startsWith("...", i)) {
+                    i = readBindingPattern(i + 3, end);
+                } else {
+                    i = readBindingPattern(i, end);
+                    i = skipDefaultValue(i, end);
+                }
+                i = skipToNextElement(i, end);
+            }
+            return end;
+        }
+
+        private boolean isPropertyNameStart(int index) {
+            char c = pattern.charAt(index);
+            return isIdentifierStart(c) || c == '\'' || c == '"';
+        }
+
+        private int readPropertyName(int start, int end) {
+            char c = pattern.charAt(start);
+            if (c == '\'' || c == '"') return skipPatternString(pattern, start, c);
+            return readPatternIdentifierEnd(pattern, start + 1);
+        }
+
+        private int skipDefaultValue(int start, int end) {
+            int i = nextPatternNonWhitespace(pattern, start);
+            if (i >= end || pattern.charAt(i) != '=') return start;
+            return skipExpression(i + 1, end);
+        }
+
+        private int skipExpression(int start, int end) {
+            int i = start;
+            int depth = 0;
+            while (i < end) {
+                char c = pattern.charAt(i);
+                if (c == '\'' || c == '"') {
+                    i = skipPatternString(pattern, i, c);
+                    continue;
+                }
+                if (c == '`') {
+                    i = skipPatternTemplate(pattern, i);
+                    continue;
+                }
+                if (c == '{' || c == '[' || c == '(') depth++;
+                else if (c == '}' || c == ']' || c == ')') {
+                    if (depth == 0) return i;
+                    depth--;
+                } else if (c == ',' && depth == 0) {
+                    return i;
+                }
+                i++;
+            }
+            return end;
+        }
+
+        private int skipToNextElement(int start, int end) {
+            int i = skipExpression(start, end);
+            if (i < end && pattern.charAt(i) == ',') return i + 1;
+            return i;
+        }
+
+        private void addBinding(String name, int start, int end) {
+            if (!isPatternKeyword(name)) {
+                bindings.add(new NekoEsmLocalBinding(name, kind, source, new NekoEsmSpan(absoluteOffset + start, absoluteOffset + end), scopeId));
+            }
+        }
+    }
+
+    private int skipPatternString(String text, int start, char quote) {
+        int i = start + 1;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            if (c == '\\') {
+                i += 2;
+                continue;
+            }
+            if (c == quote) return i + 1;
+            i++;
+        }
+        return text.length();
+    }
+
+    private int declarationScopeId(String kind) {
+        if (kind != null && kind.contains("function")) {
+            return currentScopeId();
+        }
+        if ("var".equals(kind)) {
+            return nearestVarScopeId();
+        }
+        if ("class".equals(kind)) {
+            ScopeFrame frame = scopeStack.peek();
+            if (frame != null && code.charAt(frame.start) == '{' && previousKeyword(frame.start, "class")) {
+                return frame.parentId;
+            }
+        }
+        return currentScopeId();
+    }
+
+    private boolean previousKeyword(int position, String keyword) {
+        int i = previousNonWhitespace(position - 1);
+        if (i < 0 || code.charAt(i) != ')') {
+            int end = i + 1;
+            while (i >= 0 && isIdentifierPart(code.charAt(i))) i--;
+            return keyword.equals(code.substring(i + 1, end));
+        }
+        int open = matchingOpenParen(i);
+        if (open < 0) return false;
+        i = previousNonWhitespace(open - 1);
+        int end = i + 1;
+        while (i >= 0 && isIdentifierPart(code.charAt(i))) i--;
+        return keyword.equals(code.substring(i + 1, end));
+    }
+
+    private int matchingOpenParen(int close) {
+        int depth = 0;
+        for (int i = close; i >= 0; i--) {
+            char c = code.charAt(i);
+            if (c == ')') depth++;
+            else if (c == '(') {
+                depth--;
+                if (depth == 0) return i;
+            }
+        }
+        return -1;
+    }
+
+    private int currentScopeId() {
+        ScopeFrame frame = scopeStack.peek();
+        return frame == null ? 0 : frame.id;
+    }
+
+    private int nearestVarScopeId() {
+        for (ScopeFrame frame : scopeStack) {
+            if (frame.kind == NekoEsmScopeKind.FUNCTION || frame.kind == NekoEsmScopeKind.MODULE || staticBlockScope(frame)) {
+                return frame.id;
+            }
+        }
+        return 0;
+    }
+
+    private boolean staticBlockScope(ScopeFrame frame) {
+        return frame != null && frame.kind == NekoEsmScopeKind.BLOCK && code.charAt(frame.start) == '{' && previousKeyword(frame.start, "static");
+    }
+
+    private void maybeMarkFunctionLikeBody(int bodyStart) {
+        if (functionBodyStarts.contains(bodyStart)) {
+            return;
+        }
+        int previous = previousNonWhitespace(bodyStart - 1);
+        if (previous < 0) return;
+        if (code.charAt(previous) == '>' && previousNonWhitespace(previous - 1) >= 0 && code.charAt(previousNonWhitespace(previous - 1)) == '=') {
+            functionBodyStarts.add(bodyStart);
+            markArrowFunctionParameters(previousNonWhitespace(previous - 1));
+            return;
+        }
+        if (code.charAt(previous) == ')') {
+            int open = matchingOpenParen(previous);
+            if (open >= 0 && methodBodyAfterParameters(open)) {
+                functionBodyStarts.add(bodyStart);
+                pendingFunctionParameters.add(new PendingFunctionParameters(bodyStart, code.substring(open + 1, previous), open + 1));
+            }
+        }
+    }
+
+    private void markArrowFunctionParameters(int arrowEquals) {
+        int previous = previousNonWhitespace(arrowEquals - 1);
+        if (previous < 0) return;
+        if (code.charAt(previous) == ')') {
+            int open = matchingOpenParen(previous);
+            if (open >= 0) {
+                pendingFunctionParameters.add(new PendingFunctionParameters(nextNonWhitespace(arrowEquals + 2), code.substring(open + 1, previous), open + 1));
+            }
+            return;
+        }
+        if (isIdentifierPart(code.charAt(previous))) {
+            int end = previous + 1;
+            while (previous >= 0 && isIdentifierPart(code.charAt(previous))) previous--;
+            int start = previous + 1;
+            pendingFunctionParameters.add(new PendingFunctionParameters(nextNonWhitespace(arrowEquals + 2), code.substring(start, end), start));
+        }
+    }
+
+    private boolean methodBodyAfterParameters(int parameterOpen) {
+        int memberStart = methodMemberStart(parameterOpen);
+        if (memberStart < 0 || !methodContainerAllowsMembers()) return false;
+        int previous = previousNonWhitespace(memberStart - 1);
+        return previous >= 0 && (code.charAt(previous) == '{' || code.charAt(previous) == ',' || code.charAt(previous) == ';' || code.charAt(previous) == '}');
+    }
+
+    private int methodMemberStart(int parameterOpen) {
+        int previous = previousNonWhitespace(parameterOpen - 1);
+        if (previous < 0) return -1;
+        int start;
+        if (isIdentifierPart(code.charAt(previous))) {
+            while (previous >= 0 && isIdentifierPart(code.charAt(previous))) previous--;
+            start = previous + 1;
+            int hash = previousNonWhitespace(start - 1);
+            if (hash >= 0 && code.charAt(hash) == '#') start = hash;
+        } else if (code.charAt(previous) == ']') {
+            start = matchingOpenBracket(previous);
+            if (start < 0) return -1;
+        } else {
+            return -1;
+        }
+        return includeMethodModifiers(start);
+    }
+
+    private int includeMethodModifiers(int start) {
+        int current = start;
+        while (true) {
+            int previous = previousNonWhitespace(current - 1);
+            if (previous >= 0 && code.charAt(previous) == '*') {
+                current = previous;
+                continue;
+            }
+            if (previous < 0 || !isIdentifierPart(code.charAt(previous))) {
+                return current;
+            }
+            int end = previous + 1;
+            while (previous >= 0 && isIdentifierPart(code.charAt(previous))) previous--;
+            String word = code.substring(previous + 1, end);
+            if ("static".equals(word) || "async".equals(word) || "get".equals(word) || "set".equals(word) || "accessor".equals(word)) {
+                current = previous + 1;
+                continue;
+            }
+            return current;
+        }
+    }
+
+    private boolean methodContainerAllowsMembers() {
+        ScopeFrame frame = scopeStack.peek();
+        if (frame == null || frame.start < 0 || frame.start >= length || code.charAt(frame.start) != '{') return false;
+        if (frame.classBody) return true;
+        int previous = previousNonWhitespace(frame.start - 1);
+        return previous >= 0 && "=(:,[,{".indexOf(code.charAt(previous)) >= 0;
+    }
+
+    private boolean classBodyScope(int start) {
+        int i = previousNonWhitespace(start - 1);
+        while (i >= 0) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"' || c == '`' || c == ';' || c == '}' || c == '{' || c == '=' || c == ',') return false;
+            if (isIdentifierPart(c)) {
+                int end = i + 1;
+                while (i >= 0 && isIdentifierPart(code.charAt(i))) i--;
+                if ("class".equals(code.substring(i + 1, end))) return true;
+                continue;
+            }
+            i--;
+        }
+        return false;
+    }
+
+    private int matchingOpenBracket(int close) {
+        int depth = 0;
+        for (int i = close; i >= 0; i--) {
+            char c = code.charAt(i);
+            if (c == ']') depth++;
+            else if (c == '[') {
+                depth--;
+                if (depth == 0) return i;
+            }
+        }
+        return -1;
+    }
+
+    private void markFunctionBodyStart(int from) {
+        int i = from;
+        int parameterStart = -1;
+        int parameterEnd = -1;
+        while (i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '/') {
+                if (peek(i + 1) == '/') {
+                    i = skipLineComment(i + 2);
+                    continue;
+                }
+                if (peek(i + 1) == '*') {
+                    i = skipBlockComment(i + 2);
+                    continue;
+                }
+            }
+            if (c == '(') {
+                int close = matchingCloseParen(i);
+                if (close < 0) return;
+                parameterStart = i + 1;
+                parameterEnd = close;
+                i = close + 1;
+                continue;
+            }
+            if (c == '{') {
+                // Idempotent (DEFECT-D5): exported functions get markFunctionBodyStart called twice
+                // (parseExport + the main-loop replayScopeSyntax pass). If this body-start offset was
+                // already recorded, don't push a second orphan PendingFunctionParameters entry.
+                if (!functionBodyStarts.add(i)) {
+                    return;
+                }
+                if (parameterStart >= 0) {
+                    pendingFunctionParameters.add(new PendingFunctionParameters(i, code.substring(parameterStart, parameterEnd), parameterStart));
+                }
+                return;
+            }
+            if (c == ';' || c == '\n' || c == '\r') {
+                return;
+            }
+            i++;
+        }
+    }
+
+    private int matchingCloseParen(int open) {
+        int depth = 0;
+        int i = open;
+        while (i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '(') depth++;
+            else if (c == ')') {
+                depth--;
+                if (depth == 0) return i;
+            }
+            i++;
+        }
+        return -1;
+    }
+
+    private void openBraceScope(int start) {
+        boolean functionScope = functionBodyStarts.remove(start);
+        NekoEsmScopeKind kind = functionScope ? NekoEsmScopeKind.FUNCTION : NekoEsmScopeKind.BLOCK;
+        int id = nextScopeId++;
+        scopeStack.push(new ScopeFrame(id, currentScopeId(), kind, start, !functionScope && classBodyScope(start)));
+        if (functionScope) {
+            recordPendingFunctionParameters(start, id);
+        }
+        recordPendingBlockBindings(start, id);
+    }
+
+    private void recordPendingFunctionParameters(int bodyStart, int scopeId) {
+        for (int i = pendingFunctionParameters.size() - 1; i >= 0; i--) {
+            PendingFunctionParameters parameters = pendingFunctionParameters.get(i);
+            if (parameters.bodyStart() == bodyStart) {
+                recordParameterBindings(parameters.raw(), parameters.absoluteOffset(), scopeId);
+                pendingFunctionParameters.remove(i);
+                return;
+            }
+        }
+    }
+
+    private void recordPendingBlockBindings(int bodyStart, int scopeId) {
+        for (int i = pendingBlockBindings.size() - 1; i >= 0; i--) {
+            PendingBlockBinding binding = pendingBlockBindings.get(i);
+            if (binding.bodyStart() == bodyStart) {
+                recordPatternBindings(binding.raw(), binding.kind(), NekoEsmBindingSource.DECLARATION, new NekoEsmSpan(binding.absoluteOffset(), binding.absoluteOffset() + binding.raw().length()), scopeId);
+                pendingBlockBindings.remove(i);
+                return;
+            }
+        }
+    }
+
+    private void recordParameterBindings(String raw, int absoluteOffset, int scopeId) {
+        for (String parameter : splitPatternList(raw)) {
+            String trimmed = parameter.trim();
+            if (trimmed.isEmpty()) continue;
+            int relativeStart = parameter.indexOf(trimmed);
+            if (trimmed.startsWith("...")) {
+                relativeStart += 3;
+                trimmed = trimmed.substring(3).trim();
+            }
+            int defaultIndex = topLevelPatternEquals(trimmed);
+            if (defaultIndex >= 0) {
+                trimmed = trimmed.substring(0, defaultIndex).trim();
+            }
+            if (trimmed.isEmpty()) continue;
+            int parameterAbsoluteStart = absoluteOffset + Math.max(0, relativeStart);
+            recordPatternBindings(trimmed, "param", NekoEsmBindingSource.DECLARATION, new NekoEsmSpan(parameterAbsoluteStart, parameterAbsoluteStart + trimmed.length()), scopeId);
+        }
+    }
+
+    private void recordCatchBinding(int from) {
+        int open = nextNonWhitespace(from);
+        if (open >= length || code.charAt(open) != '(') return;
+        int close = matchingCloseParen(open);
+        if (close < 0) return;
+        String binding = code.substring(open + 1, close).trim();
+        if (binding.isEmpty()) return;
+        int relativeStart = code.substring(open + 1, close).indexOf(binding);
+        int absoluteStart = open + 1 + Math.max(0, relativeStart);
+        int bodyStart = nextNonWhitespace(close + 1);
+        if (bodyStart < length && code.charAt(bodyStart) == '{') {
+            pendingBlockBindings.add(new PendingBlockBinding(bodyStart, binding, "catch", absoluteStart));
+        }
+    }
+
+    private List<String> splitPatternList(String raw) {
+        List<String> parts = new ArrayList<>();
+        int start = 0;
+        int depth = 0;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipPatternString(raw, i, c) - 1;
+            } else if (c == '`') {
+                i = skipPatternTemplate(raw, i) - 1;
+            } else if (c == '{' || c == '[' || c == '(') {
+                depth++;
+            } else if (c == '}' || c == ']' || c == ')') {
+                depth = Math.max(0, depth - 1);
+            } else if (c == ',' && depth == 0) {
+                parts.add(raw.substring(start, i));
+                start = i + 1;
+            }
+        }
+        parts.add(raw.substring(start));
+        return parts;
+    }
+
+    private int topLevelPatternEquals(String raw) {
+        int depth = 0;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipPatternString(raw, i, c) - 1;
+            } else if (c == '`') {
+                i = skipPatternTemplate(raw, i) - 1;
+            } else if (c == '{' || c == '[' || c == '(') {
+                depth++;
+            } else if (c == '}' || c == ']' || c == ')') {
+                depth = Math.max(0, depth - 1);
+            } else if (c == '=' && depth == 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void closeBraceScope(int end) {
+        if (scopeStack.size() <= 1) {
+            return;
+        }
+        closeScope(end + 1);
+    }
+
+    private void closeScope(int end) {
+        ScopeFrame frame = scopeStack.pop();
+        scopes.add(new NekoEsmScope(frame.id, frame.parentId, frame.kind, new NekoEsmSpan(frame.start, end), frame.classBody));
+    }
+
+    private int skipPatternTemplate(String text, int start) {
+        int i = start + 1;
+        while (i < text.length()) {
+            char c = text.charAt(i);
+            if (c == '\\') {
+                i += 2;
+                continue;
+            }
+            if (c == '`') return i + 1;
+            i++;
+        }
+        return text.length();
+    }
+
+    private int readPatternIdentifierEnd(String text, int start) {
+        int i = start;
+        while (i < text.length() && isIdentifierPart(text.charAt(i))) i++;
+        return i;
+    }
+
+    private int nextPatternNonWhitespace(String text, int index) {
+        int i = index;
+        while (i < text.length() && Character.isWhitespace(text.charAt(i))) i++;
+        return i;
+    }
+
+    private boolean isPatternKeyword(String word) {
+        return "const".equals(word) || "let".equals(word) || "var".equals(word);
+    }
+
+    private int readModuleStatement(int start) {
+        int i = start;
+        int localBrace = 0;
+        int localParen = 0;
+        int localBracket = 0;
+        while (i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '/') {
+                if (peek(i + 1) == '/') {
+                    i = skipLineComment(i + 2);
+                    continue;
+                }
+                if (peek(i + 1) == '*') {
+                    i = skipBlockComment(i + 2);
+                    continue;
+                }
+                if (looksLikeRegexStart(i)) {
+                    i = skipRegex(i + 1);
+                    continue;
+                }
+            }
+            switch (c) {
+                case '{' -> localBrace++;
+                case '}' -> {
+                    if (localBrace > 0) localBrace--;
+                    if (localBrace == 0 && localParen == 0 && localBracket == 0 && blockModuleStatement(start)) {
+                        addStatement(start, i + 1);
+                        return i + 1;
+                    }
+                }
+                case '(' -> localParen++;
+                case ')' -> {
+                    if (localParen > 0) localParen--;
+                }
+                case '[' -> localBracket++;
+                case ']' -> {
+                    if (localBracket > 0) localBracket--;
+                }
+                case ';' -> {
+                    if (localBrace == 0 && localParen == 0 && localBracket == 0) {
+                        addStatement(start, i + 1);
+                        return i + 1;
+                    }
+                }
+                case '\n', '\r' -> {
+                    if (localBrace == 0 && localParen == 0 && localBracket == 0 && newlineTerminatesModuleStatement(start)) {
+                        addStatement(start, i);
+                        return i;
+                    }
+                }
+                default -> {
+                }
+            }
+            i++;
+        }
+        addStatement(start, length);
+        return length;
+    }
+
+    private void addStatement(int start, int end) {
+        module = true;
+        markTopLevelAwaitInStatement(start, end);
+        String raw = code.substring(start, end);
+        String trimmed = raw.trim();
+        NekoEsmSpan span = new NekoEsmSpan(start, end);
+        if (trimmed.startsWith("import")) {
+            NekoEsmImportDecl importDecl = parseImport(span, trimmed);
+            recordImportBindings(span, importDecl);
+            statements.add(importDecl);
+            return;
+        }
+        if (trimmed.startsWith("export")) {
+            statements.add(parseExport(span, trimmed));
+            return;
+        }
+        throw error("Unsupported ESM statement: " + oneLine(trimmed));
+    }
+
+    private void markTopLevelAwaitInStatement(int start, int end) {
+        int i = start;
+        int localBrace = 0;
+        int localParen = 0;
+        int localBracket = 0;
+        while (i < end && i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '/') {
+                if (peek(i + 1) == '/') {
+                    i = skipLineComment(i + 2);
+                    continue;
+                }
+                if (peek(i + 1) == '*') {
+                    i = skipBlockComment(i + 2);
+                    continue;
+                }
+                if (looksLikeRegexStart(i)) {
+                    i = skipRegex(i + 1);
+                    continue;
+                }
+            }
+            if (isIdentifierStart(c)) {
+                int wordEnd = readIdentifierEnd(i + 1);
+                if (localBrace == 0 && localParen == 0 && localBracket == 0 && "await".equals(code.substring(i, wordEnd))) {
+                    topLevelAwait = true;
+                    return;
+                }
+                i = wordEnd;
+                continue;
+            }
+            switch (c) {
+                case '{' -> localBrace++;
+                case '}' -> localBrace = Math.max(0, localBrace - 1);
+                case '(' -> localParen++;
+                case ')' -> localParen = Math.max(0, localParen - 1);
+                case '[' -> localBracket++;
+                case ']' -> localBracket = Math.max(0, localBracket - 1);
+                default -> {
+                }
+            }
+            i++;
+        }
+    }
+
+    private void replayScopeSyntax(int start, int end) {
+        int i = start;
+        int depth = 0;
+        while (i < end && i < length) {
+            char c = code.charAt(i);
+            if (c == '\'' || c == '"') {
+                i = skipString(i, c);
+                continue;
+            }
+            if (c == '`') {
+                i = skipTemplate(i);
+                continue;
+            }
+            if (c == '/') {
+                if (peek(i + 1) == '/') {
+                    i = skipLineComment(i + 2);
+                    continue;
+                }
+                if (peek(i + 1) == '*') {
+                    i = skipBlockComment(i + 2);
+                    continue;
+                }
+                if (looksLikeRegexStart(i)) {
+                    i = skipRegex(i + 1);
+                    continue;
+                }
+            }
+            if (isIdentifierStart(c)) {
+                int wordEnd = readIdentifierEnd(i + 1);
+                String word = code.substring(i, wordEnd);
+                if ("function".equals(word)) {
+                    markFunctionBodyStart(wordEnd);
+                } else if ("catch".equals(word)) {
+                    recordCatchBinding(wordEnd);
+                }
+                if (depth > 0) {
+                    recordLocalDeclaration(i, word);
+                }
+                i = wordEnd;
+                continue;
+            }
+            switch (c) {
+                case '{' -> {
+                    maybeMarkFunctionLikeBody(i);
+                    openBraceScope(i);
+                    depth++;
+                }
+                case '}' -> {
+                    closeBraceScope(i);
+                    depth = Math.max(0, depth - 1);
+                }
+                default -> {
+                }
+            }
+            i++;
+        }
+    }
+
+    private void recordImportBindings(NekoEsmSpan span, NekoEsmImportDecl importDecl) {
+        if (importDecl.defaultName() != null) {
+            localBindings.add(new NekoEsmLocalBinding(importDecl.defaultName(), "import", NekoEsmBindingSource.IMPORT, span, 0));
+        }
+        if (importDecl.namespaceName() != null) {
+            localBindings.add(new NekoEsmLocalBinding(importDecl.namespaceName(), "import", NekoEsmBindingSource.IMPORT, span, 0));
+        }
+        for (NekoEsmBinding binding : importDecl.namedBindings()) {
+            localBindings.add(new NekoEsmLocalBinding(binding.local(), "import", NekoEsmBindingSource.IMPORT, span, 0));
+        }
+    }
+
+    private NekoEsmImportDecl parseImport(NekoEsmSpan span, String statement) {
+        TokenCursor cursor = new TokenCursor(span, statement);
+        cursor.expectIdentifier("import");
+        if (cursor.peekKind(NekoEsmTokenKind.STRING)) {
+            Specifier specifier = cursor.expectSpecifier();
+            cursor.skipOptionalSemicolon();
+            cursor.expectEnd("Unsupported import syntax: " + oneLine(statement));
+            return new NekoEsmImportDecl(span, statement, specifier.value, specifier.span, null, null, List.of(), true);
+        }
+
+        String defaultName = null;
+        String namespaceName = null;
+        List<NekoEsmBinding> namedBindings = new ArrayList<>();
+        if (cursor.peekKind(NekoEsmTokenKind.IDENTIFIER)) {
+            defaultName = cursor.expectIdentifierName("Expected default import binding");
+            if (cursor.consumeText(",")) {
+                ImportBindings nested = parseSecondaryImportBindings(cursor, statement);
+                namespaceName = nested.namespaceName;
+                namedBindings.addAll(nested.namedBindings);
+            }
+        } else {
+            ImportBindings bindings = parseSecondaryImportBindings(cursor, statement);
+            namespaceName = bindings.namespaceName;
+            namedBindings.addAll(bindings.namedBindings);
+        }
+        cursor.expectIdentifier("from");
+        Specifier specifier = cursor.expectSpecifier();
+        cursor.skipOptionalSemicolon();
+        cursor.expectEnd("Unsupported import syntax: " + oneLine(statement));
+        return new NekoEsmImportDecl(span, statement, specifier.value, specifier.span, defaultName, namespaceName, namedBindings, false);
+    }
+
+    private ImportBindings parseSecondaryImportBindings(TokenCursor cursor, String statement) {
+        if (cursor.consumeText("*")) {
+            cursor.expectIdentifier("as");
+            return new ImportBindings(null, cursor.expectIdentifierName("Expected namespace import binding"), List.of());
+        }
+        if (cursor.peekText("{")) {
+            return new ImportBindings(null, null, parseNamedBindings(cursor, true));
+        }
+        throw error("Unsupported import bindings: " + oneLine(statement));
+    }
+
+    private NekoEsmExportDecl parseExport(NekoEsmSpan span, String statement) {
+        TokenCursor cursor = new TokenCursor(span, statement);
+        cursor.expectIdentifier("export");
+        if (cursor.consumeIdentifier("default")) {
+            return parseDefaultExport(span, statement, cursor);
+        }
+        if (cursor.consumeText("*")) {
+            if (cursor.consumeIdentifier("as")) {
+                String namespaceName = cursor.expectIdentifierName("Expected namespace re-export binding");
+                cursor.expectIdentifier("from");
+                Specifier specifier = cursor.expectSpecifier();
+                cursor.skipOptionalSemicolon();
+                cursor.expectEnd("Unsupported namespace re-export syntax: " + oneLine(statement));
+                return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.RE_EXPORT_NAMESPACE, specifier.value, specifier.span, null, null, namespaceName, null, List.of());
+            }
+            cursor.expectIdentifier("from");
+            Specifier specifier = cursor.expectSpecifier();
+            cursor.skipOptionalSemicolon();
+            cursor.expectEnd("Unsupported star re-export syntax: " + oneLine(statement));
+            return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.RE_EXPORT_ALL, specifier.value, specifier.span, null, null, null, null, List.of());
+        }
+        if (cursor.peekText("{")) {
+            List<NekoEsmBinding> bindings = parseNamedBindings(cursor, false);
+            if (cursor.consumeIdentifier("from")) {
+                Specifier specifier = cursor.expectSpecifier();
+                cursor.skipOptionalSemicolon();
+                cursor.expectEnd("Unsupported re-export syntax: " + oneLine(statement));
+                return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.RE_EXPORT_LIST, specifier.value, specifier.span, null, null, null, null, bindings);
+            }
+            cursor.skipOptionalSemicolon();
+            cursor.expectEnd("Unsupported export list suffix: " + oneLine(statement));
+            return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.LIST, null, null, null, null, null, null, bindings);
+        }
+        DeclarationHead declaration = parseDeclarationHead(cursor);
+        if (declaration == null) {
+            throw error("Unsupported export syntax: " + oneLine(statement));
+        }
+        if ("const".equals(declaration.kind) || "let".equals(declaration.kind) || "var".equals(declaration.kind)) {
+            List<ParsedBinding> parsedBindings = parseVariableDeclarationBindings(cursor, declaration.kind, NekoEsmBindingSource.EXPORT_DECLARATION, 0);
+            if (parsedBindings.isEmpty()) {
+                throw error("Unsupported export declaration: " + oneLine(statement));
+            }
+            List<NekoEsmBinding> exportBindings = new ArrayList<>();
+            for (ParsedBinding binding : parsedBindings) {
+                exportBindings.add(new NekoEsmBinding(binding.name, binding.name));
+            }
+            return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.DECLARATION, null, null, declaration.kind, parsedBindings.get(0).name, null, null, exportBindings);
+        }
+        NekoEsmToken name = cursor.expectIdentifierToken("Expected exported declaration name");
+        String localName = name.text();
+        NekoEsmSpan nameSpan = cursor.absoluteSpan(name);
+        localBindings.add(new NekoEsmLocalBinding(localName, declaration.kind, NekoEsmBindingSource.EXPORT_DECLARATION, nameSpan, 0));
+        if (declaration.kind.contains("function")) {
+            markFunctionBodyStart(nameSpan.end());
+        }
+        return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.DECLARATION, null, null, declaration.kind, localName, null, null, List.of(new NekoEsmBinding(localName, localName)));
+    }
+
+    private NekoEsmExportDecl parseDefaultExport(NekoEsmSpan span, String statement, TokenCursor cursor) {
+        DeclarationHead declaration = parseDefaultDeclarationHead(cursor);
+        if (declaration != null) {
+            if (cursor.peekKind(NekoEsmTokenKind.IDENTIFIER) && !cursor.peekIdentifier("extends")) {
+                NekoEsmToken name = cursor.consume();
+                String localName = name.text();
+                NekoEsmSpan nameSpan = cursor.absoluteSpan(name);
+                localBindings.add(new NekoEsmLocalBinding(localName, declaration.kind, NekoEsmBindingSource.EXPORT_DEFAULT_DECLARATION, nameSpan, 0));
+                if (declaration.kind.contains("function")) {
+                    markFunctionBodyStart(nameSpan.end());
+                }
+                return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.DEFAULT_NAMED_DECLARATION, null, null, declaration.kind, localName, null, null, List.of());
+            }
+            return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.DEFAULT_ANONYMOUS_DECLARATION, null, null, declaration.kind, null, null, null, List.of());
+        }
+        String expression = defaultExportExpression(cursor);
+        return new NekoEsmExportDecl(span, statement, NekoEsmExportKind.DEFAULT_EXPRESSION, null, null, null, null, null, expression, List.of());
+    }
+
+    private List<NekoEsmBinding> parseNamedBindings(TokenCursor cursor, boolean importBindings) {
+        cursor.expectText("{");
+        List<NekoEsmBinding> bindings = new ArrayList<>();
+        while (!cursor.consumeText("}")) {
+            String imported = cursor.expectIdentifierName("Expected named ESM binding");
+            String local = imported;
+            if (cursor.consumeIdentifier("as")) {
+                local = cursor.expectIdentifierName("Expected named ESM binding alias");
+            }
+            bindings.add(new NekoEsmBinding(imported, local));
+            if (cursor.consumeText(",")) {
+                continue;
+            }
+            cursor.expectText("}");
+            break;
+        }
+        return List.copyOf(bindings);
+    }
+
+    private DeclarationHead parseDeclarationHead(TokenCursor cursor) {
+        if (cursor.consumeIdentifier("const")) return new DeclarationHead("const");
+        if (cursor.consumeIdentifier("let")) return new DeclarationHead("let");
+        if (cursor.consumeIdentifier("var")) return new DeclarationHead("var");
+        int mark = cursor.mark();
+        boolean async = cursor.consumeIdentifier("async");
+        if (cursor.consumeIdentifier("function")) {
+            boolean generator = cursor.consumeText("*");
+            return new DeclarationHead(functionKind(async, generator));
+        }
+        cursor.reset(mark);
+        if (cursor.consumeIdentifier("class")) return new DeclarationHead("class");
+        return null;
+    }
+
+    private DeclarationHead parseDefaultDeclarationHead(TokenCursor cursor) {
+        int mark = cursor.mark();
+        boolean async = cursor.consumeIdentifier("async");
+        if (cursor.consumeIdentifier("function")) {
+            boolean generator = cursor.consumeText("*");
+            return new DeclarationHead(functionKind(async, generator));
+        }
+        cursor.reset(mark);
+        if (cursor.consumeIdentifier("class")) return new DeclarationHead("class");
+        return null;
+    }
+
+    private String functionKind(boolean async, boolean generator) {
+        if (async && generator) return "async function*";
+        if (async) return "async function";
+        return generator ? "function*" : "function";
+    }
+
+    private List<ParsedBinding> parseVariableDeclarationBindings(TokenCursor cursor, String kind, NekoEsmBindingSource source, int scopeId) {
+        List<ParsedBinding> bindings = new ArrayList<>();
+        while (!cursor.atEnd() && !cursor.peekText(";")) {
+            if (cursor.consumeText(",")) {
+                continue;
+            }
+            if (cursor.peekKind(NekoEsmTokenKind.IDENTIFIER)) {
+                NekoEsmToken token = cursor.consume();
+                NekoEsmSpan bindingSpan = cursor.absoluteSpan(token);
+                localBindings.add(new NekoEsmLocalBinding(token.text(), kind, source, bindingSpan, scopeId));
+                bindings.add(new ParsedBinding(token.text(), bindingSpan));
+            } else if (cursor.peekText("{") || cursor.peekText("[")) {
+                int startIndex = cursor.mark();
+                int endIndex = cursor.balancedPatternEndIndex();
+                if (endIndex <= startIndex) {
+                    throw error("Unsupported variable export binding pattern");
+                }
+                NekoEsmToken start = cursor.token(startIndex);
+                NekoEsmToken end = cursor.token(endIndex - 1);
+                NekoEsmSpan patternSpan = new NekoEsmSpan(cursor.absoluteStart(start), cursor.absoluteEnd(end));
+                String pattern = cursor.sourceBetween(start.span().start(), end.span().end());
+                for (NekoEsmLocalBinding binding : recordPatternBindings(pattern, kind, source, patternSpan, scopeId)) {
+                    bindings.add(new ParsedBinding(binding.name(), binding.span()));
+                }
+                cursor.reset(endIndex);
+            } else {
+                break;
+            }
+            if (!cursor.skipToNextVariableDeclarator()) {
+                break;
+            }
+        }
+        return List.copyOf(bindings);
+    }
+
+    private String defaultExportExpression(TokenCursor cursor) {
+        String expression = cursor.remainingSource().trim();
+        if (expression.endsWith(";")) {
+            expression = expression.substring(0, expression.length() - 1).trim();
+        }
+        return expression;
+    }
+
+    private void addDynamicImportExpression(int importStart, int importEnd) {
+        int openParen = nextNonWhitespace(importEnd);
+        int specifierStart = nextNonWhitespace(openParen + 1);
+        if (specifierStart < length) {
+            char quote = code.charAt(specifierStart);
+            if (quote == '\'' || quote == '"') {
+                int literalEnd = skipString(specifierStart, quote);
+                int closeParen = nextNonWhitespace(literalEnd);
+                if (closeParen < length && code.charAt(closeParen) == ')') {
+                    String specifier = code.substring(specifierStart + 1, Math.max(specifierStart + 1, literalEnd - 1));
+                    runtimeExpressions.add(new NekoEsmRuntimeExpression(
+                            NekoEsmRuntimeExpressionKind.DYNAMIC_IMPORT,
+                            new NekoEsmSpan(importStart, importEnd),
+                            specifier,
+                            new NekoEsmSpan(specifierStart, literalEnd)));
+                    return;
+                }
+            }
+        }
+        runtimeExpressions.add(new NekoEsmRuntimeExpression(NekoEsmRuntimeExpressionKind.DYNAMIC_IMPORT, new NekoEsmSpan(importStart, importEnd)));
+    }
+
+    private int maybeReadImportMeta(int importStart, int metaStart) {
+        int metaEnd = metaStart + "meta".length();
+        if (!code.startsWith("meta", metaStart) || !wordBoundary(metaEnd)) return -1;
+        int dot = nextNonWhitespace(metaEnd);
+        if (dot >= length || code.charAt(dot) != '.') return -1;
+        int propertyStart = nextNonWhitespace(dot + 1);
+        int propertyEnd = readIdentifierEnd(propertyStart);
+        String property = code.substring(propertyStart, propertyEnd);
+        NekoEsmRuntimeExpressionKind kind = switch (property) {
+            case "url" -> NekoEsmRuntimeExpressionKind.IMPORT_META_URL;
+            case "filename" -> NekoEsmRuntimeExpressionKind.IMPORT_META_FILENAME;
+            case "dirname" -> NekoEsmRuntimeExpressionKind.IMPORT_META_DIRNAME;
+            case "resolve" -> NekoEsmRuntimeExpressionKind.IMPORT_META_RESOLVE;
+            default -> null;
+        };
+        if (kind == null) return -1;
+        runtimeExpressions.add(new NekoEsmRuntimeExpression(kind, new NekoEsmSpan(importStart, propertyEnd)));
+        return propertyEnd;
+    }
+
+    private boolean newlineTerminatesModuleStatement(int start) {
+        // Full trimmed statement, not a 64-char prefix window (RISK-C8): the cap could cut off a
+        // long line mid-token and misclassify the statement boundary. startsWith is unaffected by
+        // the trailing length, so only the rest of the source up to end of statement is needed.
+        String prefix = trimStatementFrom(start);
+        return prefix.startsWith("import")
+                || prefix.startsWith("export {")
+                || prefix.startsWith("export *")
+                || prefix.startsWith("export const")
+                || prefix.startsWith("export let")
+                || prefix.startsWith("export var")
+                || expressionDefaultExport(prefix);
+    }
+
+    private boolean blockModuleStatement(int start) {
+        String prefix = trimStatementFrom(start);
+        return prefix.startsWith("export function")
+                || prefix.startsWith("export async function")
+                || prefix.startsWith("export class")
+                || prefix.startsWith("export default function")
+                || prefix.startsWith("export default async function")
+                || prefix.startsWith("export default class");
+    }
+
+    private boolean expressionDefaultExport(String prefix) {
+        return prefix.startsWith("export default")
+                && !prefix.startsWith("export default function")
+                && !prefix.startsWith("export default async function")
+                && !prefix.startsWith("export default class");
+    }
+
+    /** Returns the statement text starting at {@code start}, trimmed (RISK-C8: replaced the old
+     *  64-char prefix window with the full trimmed statement so long statements are not cut off
+     *  mid-token). All callers use startsWith, so only the leading tokens matter, but the full
+     *  text is returned to preserve newline-spanning signatures.
+     *  Cap at the next statement terminator (`;` or unmatched `}`) to bound the substring; if none
+     *  is found, fall back to a generous window. */
+    private String trimStatementFrom(int start) {
+        int begin = start;
+        while (begin < length && Character.isWhitespace(code.charAt(begin))) begin++;
+        // Bound the scan: walk forward skipping balanced strings/templates/comments and find the
+        // first top-level `;`. If none within the remaining source, take to end.
+        int end = begin;
+        while (end < length) {
+            char c = code.charAt(end);
+            if (c == '\'' || c == '"') { end = skipString(end, c); continue; }
+            if (c == '`') { end = skipTemplate(end); continue; }
+            if (c == ';') break;
+            end++;
+        }
+        while (end > begin && Character.isWhitespace(code.charAt(end - 1))) end--;
+        return code.substring(begin, end);
+    }
+
+    private boolean topLevel() {
+        return braceDepth == 0 && parenDepth == 0 && bracketDepth == 0;
+    }
+
+    // ---- Scanner primitives: delegate to the shared NekoSourceLexerBase ----
+    // Previously these were hand-rolled copies that had to be kept in sync manually
+    // (the "Mirror exactly (BUG-B1)" comment below used to live here). Now they all
+    // delegate to the single source of truth in core.compiler.
+
+    private int skipString(int start, char quote) {
+        return NekoSourceLexerBase.skipString(code, length, start, quote);
+    }
+
+    private int skipTemplate(int start) {
+        return NekoSourceLexerBase.skipTemplate(code, length, start);
+    }
+
+    private int skipLineComment(int start) {
+        return NekoSourceLexerBase.skipLineComment(code, length, start);
+    }
+
+    private int skipBlockComment(int start) {
+        return NekoSourceLexerBase.skipBlockComment(code, length, start);
+    }
+
+    private int skipRegex(int start) {
+        return NekoSourceLexerBase.skipRegex(code, length, start);
+    }
+
+    private boolean looksLikeRegexStart(int slash) {
+        return NekoSourceLexerBase.looksLikeRegexStart(code, length, slash);
+    }
+
+    private int previousNonWhitespace(int index) {
+        return NekoSourceLexerBase.previousNonWhitespace(code, length, index);
+    }
+
+    private int nextNonWhitespace(int index) {
+        return NekoSourceLexerBase.nextNonWhitespace(code, length, index);
+    }
+
+    private char peek(int index) {
+        return index >= 0 && index < length ? code.charAt(index) : '\0';
+    }
+
+    private int readIdentifierEnd(int start) {
+        return NekoSourceLexerBase.readIdentifierEnd(code, length, start);
+    }
+
+    private boolean wordBoundary(int index) {
+        return index >= length || !isIdentifierPart(code.charAt(index));
+    }
+
+    private final class TokenCursor {
+        private final NekoEsmSpan statementSpan;
+        private final String source;
+        private final List<NekoEsmToken> tokens;
+        private int index;
+
+        private TokenCursor(NekoEsmSpan statementSpan, String source) {
+            this.statementSpan = statementSpan;
+            this.source = source == null ? "" : source;
+            this.tokens = new NekoEsmLexer(this.source).tokenize();
+        }
+
+        private int mark() {
+            return index;
+        }
+
+        private void reset(int mark) {
+            index = mark;
+        }
+
+        private boolean atEnd() {
+            return peek().kind() == NekoEsmTokenKind.EOF;
+        }
+
+        private NekoEsmToken token(int tokenIndex) {
+            return tokens.get(tokenIndex);
+        }
+
+        private NekoEsmToken peek() {
+            return tokens.get(Math.min(index, tokens.size() - 1));
+        }
+
+        private NekoEsmToken consume() {
+            return tokens.get(index++);
+        }
+
+        private boolean peekKind(NekoEsmTokenKind kind) {
+            return peek().kind() == kind;
+        }
+
+        private boolean peekText(String text) {
+            return peek().text(text);
+        }
+
+        private boolean peekIdentifier(String text) {
+            return peek().identifier(text);
+        }
+
+        private boolean consumeText(String text) {
+            if (!peekText(text)) return false;
+            index++;
+            return true;
+        }
+
+        private boolean consumeIdentifier(String text) {
+            if (!peekIdentifier(text)) return false;
+            index++;
+            return true;
+        }
+
+        private void expectText(String text) {
+            if (!consumeText(text)) {
+                throw error("Expected '" + text + "' in ESM statement");
+            }
+        }
+
+        private void expectIdentifier(String text) {
+            if (!consumeIdentifier(text)) {
+                throw error("Expected '" + text + "' in ESM statement");
+            }
+        }
+
+        private String expectIdentifierName(String message) {
+            return expectIdentifierToken(message).text();
+        }
+
+        private NekoEsmToken expectIdentifierToken(String message) {
+            if (!peekKind(NekoEsmTokenKind.IDENTIFIER)) {
+                throw error(message);
+            }
+            return consume();
+        }
+
+        private Specifier expectSpecifier() {
+            if (!peekKind(NekoEsmTokenKind.STRING)) {
+                throw error("Expected ESM module specifier");
+            }
+            NekoEsmToken token = consume();
+            return new Specifier(token.value(), absoluteSpan(token));
+        }
+
+        private void skipOptionalSemicolon() {
+            consumeText(";");
+        }
+
+        private void expectEnd(String message) {
+            if (!atEnd()) {
+                throw error(message);
+            }
+        }
+
+        private int balancedPatternEndIndex() {
+            if (!peekText("{") && !peekText("[")) {
+                return index;
+            }
+            Deque<String> closing = new ArrayDeque<>();
+            int i = index;
+            while (i < tokens.size()) {
+                NekoEsmToken token = tokens.get(i);
+                if (token.kind() == NekoEsmTokenKind.EOF) {
+                    break;
+                }
+                String text = token.text();
+                if ("{".equals(text)) closing.push("}");
+                else if ("[".equals(text)) closing.push("]");
+                else if ("(".equals(text)) closing.push(")");
+                else if ("}".equals(text) || "]".equals(text) || ")".equals(text)) {
+                    if (closing.isEmpty() || !closing.pop().equals(text)) {
+                        return index;
+                    }
+                    if (closing.isEmpty()) {
+                        return i + 1;
+                    }
+                }
+                i++;
+            }
+            return index;
+        }
+
+        private boolean skipToNextVariableDeclarator() {
+            int depth = 0;
+            while (!atEnd()) {
+                String text = peek().text();
+                if (depth == 0) {
+                    if (";".equals(text)) {
+                        consume();
+                        return false;
+                    }
+                    if (",".equals(text)) {
+                        consume();
+                        return true;
+                    }
+                }
+                if ("{".equals(text) || "[".equals(text) || "(".equals(text)) {
+                    depth++;
+                } else if ("}".equals(text) || "]".equals(text) || ")".equals(text)) {
+                    if (depth == 0) {
+                        return false;
+                    }
+                    depth--;
+                }
+                consume();
+            }
+            return false;
+        }
+
+        private NekoEsmSpan absoluteSpan(NekoEsmToken token) {
+            return new NekoEsmSpan(absoluteStart(token), absoluteEnd(token));
+        }
+
+        private int absoluteStart(NekoEsmToken token) {
+            return statementSpan.start() + token.span().start();
+        }
+
+        private int absoluteEnd(NekoEsmToken token) {
+            return statementSpan.start() + token.span().end();
+        }
+
+        private String sourceBetween(int start, int end) {
+            return source.substring(Math.max(0, start), Math.min(source.length(), end));
+        }
+
+        private String remainingSource() {
+            if (atEnd()) {
+                return "";
+            }
+            return source.substring(peek().span().start());
+        }
+    }
+
+    // Unified onto NekoSourceLexerBase (Unicode identifier rules + '$' + '_').
+    // The previous Letter+Digit rules rejected combining marks, ZWJ, and other
+    // Unicode identifier characters that the ES spec permits.
+    private static boolean isIdentifierStart(char c) {
+        return NekoSourceLexerBase.isIdentifierStart(c);
+    }
+
+    private static boolean isIdentifierPart(char c) {
+        return NekoSourceLexerBase.isIdentifierPart(c);
+    }
+
+    private IllegalArgumentException error(String message) {
+        return new IllegalArgumentException("Failed to parse NekoJS ESM module" + (file == null ? "" : " " + file) + ": " + message);
+    }
+
+    private static String oneLine(String value) {
+        return value.replace('\n', ' ').replace('\r', ' ').trim();
+    }
+
+    private record ImportBindings(String defaultName, String namespaceName, List<NekoEsmBinding> namedBindings) {}
+
+    private record DeclarationHead(String kind) {}
+
+    private record ParsedBinding(String name, NekoEsmSpan span) {}
+
+    private record Specifier(String value, NekoEsmSpan span) {}
+
+    private record PendingFunctionParameters(int bodyStart, String raw, int absoluteOffset) {}
+
+    private record PendingBlockBinding(int bodyStart, String raw, String kind, int absoluteOffset) {}
+
+    private record ScopeFrame(int id, int parentId, NekoEsmScopeKind kind, int start, boolean classBody) {}
+
+
+}
