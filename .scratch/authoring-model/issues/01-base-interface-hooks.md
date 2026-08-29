@@ -11,3 +11,6 @@ spec: `.scratch/specs/plugin-authoring-model.md` §Implementation 1、3
 ## 验收
 - :common-api :common 编译绿，common-api 无 NekoJSPlugin 残留引用
 - 18 钩子签名与 V1 对照一致（参数类型 FQCN 全在 common/common-api，已核实）
+
+## 结果
+done（ffdd8ab）：接口移回 common，18 钩子与 V1 逐字一致，全项目编译绿

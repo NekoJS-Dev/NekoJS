@@ -9,3 +9,6 @@ spec: `.scratch/specs/plugin-authoring-model.md` §Implementation 7、9。
 
 ## 验收
 - ADR 与实现一致；wiki 索引与 14 钩子实际清单一致
+
+## 结果
+done：ADR-0010 + wiki 双形态说明/registerLifecycleHooks 补行/自定义 EP 示例 + spec 修正

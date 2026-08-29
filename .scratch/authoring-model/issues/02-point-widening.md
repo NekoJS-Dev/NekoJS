@@ -22,3 +22,6 @@ spec: `.scratch/specs/plugin-authoring-model.md` §Implementation 2。依赖票 
 
 ## 验收
 - 14 文件各 ~2 行 diff；:common 编译绿；既有测试（NekoPluginBootstrapV2Test 等）不红
+
+## 结果
+done（9ed6acf）：14 点放宽，负向/正向既有测试全绿

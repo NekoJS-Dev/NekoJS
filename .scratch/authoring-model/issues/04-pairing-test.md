@@ -10,3 +10,6 @@ spec: `.scratch/specs/plugin-authoring-model.md` §Implementation 5。依赖票 
 
 ## 验收
 - 测试绿；人为加一个无配对钩子能变红（本地验证后撤掉）
+
+## 结果
+done：配对表按扩展点 id 为键（bindings/script_properties 为闭包工厂无 POINT 常量）；补 FROZEN_SIGNATURES 签名冻结
