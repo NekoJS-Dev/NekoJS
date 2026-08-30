@@ -2,8 +2,7 @@
 package com.tkisor.nekojs.client;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
+import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 
 /**
  * CLIENT 脚本 reload 的线程归属（W7/A2）：客户端 Context 的所有权线程是客户端主线程
@@ -20,11 +19,8 @@ public final class ClientReloadExecutor {
     private ClientReloadExecutor() {}
 
     public static boolean isClientDist() {
-//? if >=26 {
-        return FMLEnvironment.getDist() == Dist.CLIENT;
-//?} else {
-/*        return FMLEnvironment.dist == Dist.CLIENT;
-*///?}
+        // dist 访问器的版本差异由 McPlatformCompat 门面承载（本文件 neoforge 面）
+        return McPlatformCompat.get().isClientDist();
     }
 
     /** 转投客户端主线程执行；命令侧立即返回，结果反馈由 reload 流程自身的广播/日志承担。 */
