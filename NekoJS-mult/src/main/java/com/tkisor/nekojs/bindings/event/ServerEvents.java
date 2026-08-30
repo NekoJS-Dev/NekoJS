@@ -37,15 +37,6 @@ public interface ServerEvents {
     };
 
     /** 数据生成阶段 key：脚本以 {@code ServerEvents.generateData('after_mods', ...)} 定向。 */
-//? if <26 {
-/*    EventBusJS<ServerTickEvent.Pre, Void> TICK_PRE =
-            GROUP.server("tickPre", ServerTickEvent.Pre.class);
-    EventBusJS<ServerTickEvent.Post, Void> TICK_POST =
-            GROUP.server("tickPost", ServerTickEvent.Post.class);
-
-    EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
-    EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
-*///?}
     DispatchKey<DataGeneratorJS, String> STAGE_KEY = new DispatchKey<>() {
         @Override
         public Class<String> keyType() {
@@ -58,7 +49,7 @@ public interface ServerEvents {
         }
     };
 
-//? if >=26 {
+    // 两时代的声明逐字相同（ServerTickEvent / RecipeEventJS 两端同包同名），无需守卫。
     EventBusJS<ServerTickEvent.Pre, Void> TICK_PRE =
             GROUP.server("tickPre", ServerTickEvent.Pre.class);
     EventBusJS<ServerTickEvent.Post, Void> TICK_POST =
@@ -66,7 +57,6 @@ public interface ServerEvents {
 
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
-//?}
 
     /** 数据生成事件：脚本写入 datapack JSON（loot tables / advancements / worldgen 等）。 */
     EventBusJS<DataGeneratorJS, String> GENERATE_DATA =

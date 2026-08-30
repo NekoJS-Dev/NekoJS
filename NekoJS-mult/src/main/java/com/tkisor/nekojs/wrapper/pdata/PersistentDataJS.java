@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.wrapper.pdata;
 
 import net.minecraft.nbt.CompoundTag;
@@ -55,7 +57,6 @@ public class PersistentDataJS {
         return this;
     }
 
-//? if >=26 {
     public byte getByte(String key) { return getTag().getByteOr(key, (byte) 0); }
     public short getShort(String key) { return getTag().getShortOr(key, (short) 0); }
     public int getInt(String key) { return getTag().getIntOr(key, 0); }
@@ -68,20 +69,6 @@ public class PersistentDataJS {
     public int[] getIntArray(String key) { return getTag().getIntArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new int[0]); }
     public long[] getLongArray(String key) { return getTag().getLongArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new long[0]); }
     public CompoundTag getCompound(String key) { return getTag().getCompound(key).orElseGet(CompoundTag::new).copy(); }
-//?} else {
-/*    public byte getByte(String key) { return getTag().getByte(key); }
-    public short getShort(String key) { return getTag().getShort(key); }
-    public int getInt(String key) { return getTag().getInt(key); }
-    public long getLong(String key) { return getTag().getLong(key); }
-    public float getFloat(String key) { return getTag().getFloat(key); }
-    public double getDouble(String key) { return getTag().getDouble(key); }
-    public String getString(String key) { return getTag().getString(key); }
-    public boolean getBoolean(String key) { return getTag().getBoolean(key); }
-    public byte[] getByteArray(String key) { byte[] v = getTag().getByteArray(key); return Arrays.copyOf(v, v.length); }
-    public int[] getIntArray(String key) { int[] v = getTag().getIntArray(key); return Arrays.copyOf(v, v.length); }
-    public long[] getLongArray(String key) { long[] v = getTag().getLongArray(key); return Arrays.copyOf(v, v.length); }
-    public CompoundTag getCompound(String key) { return getTag().getCompound(key).copy(); }
-*///?}
 
     public PersistentDataJS putByte(String key, byte value) { CompoundTag tag = getTag(); tag.putByte(key, value); saveTag(tag); return this; }
     public PersistentDataJS putShort(String key, short value) { CompoundTag tag = getTag(); tag.putShort(key, value); saveTag(tag); return this; }
@@ -143,7 +130,6 @@ public class PersistentDataJS {
         if (!tag.contains(key)) return null;
 
         Tag element = tag.get(key);
-//? if >=26 {
         if (element instanceof LongTag l) return l.longValue();
         if (element instanceof IntTag i) return i.intValue();
         if (element instanceof ByteTag b) return b.byteValue();
@@ -151,15 +137,6 @@ public class PersistentDataJS {
         if (element instanceof FloatTag f) return f.floatValue();
         if (element instanceof DoubleTag d) return d.doubleValue();
         if (element instanceof StringTag str) return str.value();
-//?} else {
-/*        if (element instanceof LongTag l) return l.getAsLong();
-        if (element instanceof IntTag i) return i.getAsInt();
-        if (element instanceof ByteTag b) return b.getAsByte();
-        if (element instanceof ShortTag s) return s.getAsShort();
-        if (element instanceof FloatTag f) return f.getAsFloat();
-        if (element instanceof DoubleTag d) return d.getAsDouble();
-        if (element instanceof StringTag str) return str.getAsString();
-*///?}
         if (element instanceof ByteArrayTag ba) { byte[] v = ba.getAsByteArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof IntArrayTag ia) { int[] v = ia.getAsIntArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof LongArrayTag la) { long[] v = la.getAsLongArray(); return Arrays.copyOf(v, v.length); }

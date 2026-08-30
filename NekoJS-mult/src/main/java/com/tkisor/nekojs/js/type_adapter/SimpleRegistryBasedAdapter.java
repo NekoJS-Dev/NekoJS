@@ -1,3 +1,6 @@
+//~ mc_legacy_api
+// 本文件启用文件级 mc_legacy_api（26.x 活形态无 .location()，1.21.1 求值形态无 .identifier()
+// ——门槛已核验；变量名 identifier/location 为行为中性的改名差异）。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -57,13 +60,8 @@ public class SimpleRegistryBasedAdapter<T> extends AbstractJSTypeAdapter<T> {
         if (host instanceof NekoId(String namespace, String path)) {
             return getFromRegistry(Identifier.fromNamespaceAndPath(namespace, path));
         }
-//? if >=26 {
         if (host instanceof Identifier identifier) {
             return getFromRegistry(identifier);
-//?} else {
-/*        if (host instanceof Identifier location) {
-            return getFromRegistry(location);
-*///?}
         }
         if (targetType.isInstance(host)) {
             return targetType.cast(host);
@@ -74,11 +72,7 @@ public class SimpleRegistryBasedAdapter<T> extends AbstractJSTypeAdapter<T> {
     private T getFromRegistry(Identifier id) {
         return registry.getOptional(id)
             .orElseThrow(() -> new ValueConversionException(targetType, "registered " + targetType.getSimpleName() + " id",
-//? if >=26 {
                 id, "no object with id '" + id + "' in registry '" + registry.key().identifier() + "'"));
-//?} else {
-/*                id, "no object with id '" + id + "' in registry '" + registry.key().location() + "'"));
-*///?}
     }
 
     private Identifier parseId(String rawId) {
