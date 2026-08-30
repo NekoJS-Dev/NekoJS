@@ -8,7 +8,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
- * Fabric 侧 {@link IPlatform} 实现（B3：LoaderBridge 的第一块）。
+ * Fabric 侧 {@link IPlatform} 实现（fabric 侧脚本运行时移植的第一块）。
  *
  * <p>与 NeoForge 侧的 {@code NeoForgePlatform} 一一对应，只是数据源换成 Fabric Loader：
  * <ul>
@@ -19,7 +19,7 @@ import net.fabricmc.loader.api.FabricLoader;
  * </ul>
  *
  * <p>capabilities 只声明 fabric 侧已经成立的位：TAGS / RESOURCE_PACKS。网络通道、
- * 配方热重载、配方查看器等要等 LoaderBridge 对应实现落地后再点亮——`IPlatform` 的
+ * 配方热重载、配方查看器等要等 fabric 侧对应实现落地后再点亮——`IPlatform` 的
  * 默认方法（nbtBinaryCodec / registryQueryService）保持未实现语义，脚本侧会拿到空结果
  * 而不是崩溃。
  */

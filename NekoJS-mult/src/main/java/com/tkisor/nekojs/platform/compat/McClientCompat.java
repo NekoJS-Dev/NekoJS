@@ -8,7 +8,7 @@ import net.minecraft.network.chat.HoverEvent;
 import java.util.ServiceLoader;
 
 /**
- * 客户端侧的跨版本编译期符号差异门面（W5/A8 step 2）。
+ * 客户端侧的跨版本编译期符号差异门面。
  *
  * <p>本门面住在 neoforge-shared（1.21.1 与 26.x 都编译它），覆盖三类差异：
  * <ul>

@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fabric 客户端入口（票 03）：CLIENT 脚本加载 + 客户端事件桥（tick v1）。
+ * Fabric 客户端入口：CLIENT 脚本加载 + 客户端事件桥（当前只接 tick）。
  *
  * <p>与 NeoForge 侧 {@code NekoJSClient} 对应：那边在 mod 事件（client setup，资源就绪前）
  * 里加载 CLIENT 脚本并接客户端总线；这边在 {@code ClientModInitializer} 注册 fabric 桥，

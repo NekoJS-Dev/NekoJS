@@ -16,8 +16,8 @@ import com.tkisor.nekojs.probe.backend.python.PythonProbeBackend;
  * change.
  *
  * <p>Lives under {@code com.tkisor.nekojs.*} so it is auto-discovered on every
- * platform (NeoForge ASM scan from the embedded {@code common} classes and the
- * Cleanroom package scanner alike). Uses the default priority (1000): backend
+ * platform (NeoForge ASM scan from the embedded {@code common} classes and
+ * package-scanning loaders alike). Uses the default priority (1000): backend
  * registration order is irrelevant because {@link ProbeBackendRegistry#lock()}
  * fails fast on {@code (language, name)} conflicts.
  */

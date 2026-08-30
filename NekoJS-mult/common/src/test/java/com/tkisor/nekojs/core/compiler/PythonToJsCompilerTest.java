@@ -1386,7 +1386,7 @@ class PythonToJsCompilerTest {
 
     @Test
     void fStringWithSpecialCharsInInterpolation() throws Exception {
-        // ':' inside a quoted string within an interpolation must not terminate it (audit A3)
+        // ':' inside a quoted string within an interpolation must not terminate it
         assertEquals("a:b", evalString("f\"{'a:b'}\""));
     }
 
@@ -2319,7 +2319,7 @@ class PythonToJsCompilerTest {
         assertEquals(5, evalInt("def get_x(**new):\n    return new['x']\nget_x(x=5)"));
     }
 
-    // ---- W3 六条 Python 语义修复（审计 §4 P1） ----
+    // ---- 六条 Python 语义修复 ----
 
     @Test
     void percentFormattingOnStrings() throws Exception {

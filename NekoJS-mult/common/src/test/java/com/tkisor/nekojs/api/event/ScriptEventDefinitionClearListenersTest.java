@@ -15,7 +15,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Regression test for the BUG-B3 cross-bucket sweep in
+ * Regression test for the cross-bucket sweep in
  * {@link ScriptEventDefinition#clearListeners(ScriptType)}: listeners registered from a script
  * of one ScriptType (e.g. STARTUP) must be cleared even when clearListeners is invoked with a
  * different ScriptType (e.g. SERVER), because JS listener tokens are bucketed by the *registering*

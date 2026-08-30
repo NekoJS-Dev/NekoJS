@@ -12,10 +12,10 @@ import java.util.Map;
 /**
  * 最小 classfile 注解读取器：直接解析 .class 字节的常量池与注解属性。
  *
- * <p>为什么不用反射：ModDev 的 test 环境会用 javaagent 在内存里改写注解类定义（本项目实测
- * mixin 类在 test JVM 里注解被清空，磁盘字节完好）；也不依赖 ASM（测试 classpath 上不可靠）。
+ * <p>为什么不用反射：ModDev 的 test 环境会用 javaagent 在内存里改写注解类定义（mixin
+ * 类在 test JVM 里注解被清空，磁盘字节完好）；也不依赖 ASM（测试 classpath 上不可靠）。
  * {@code getResourceAsStream} 返回的是原始文件字节，不受 agent 影响，且 RuntimeVisible 与
- * RuntimeInvisible（CLASS retention，cleanroom 的 sponge-mixin 是这种）注解都读得到。
+ * RuntimeInvisible（CLASS retention）注解都读得到。
  *
  * <p>只覆盖 mixin 验证需要的注解形状：String / Class / 枚举 / 注解嵌套 / 上述类型的数组。
  * 其它 element_value 类型解析为 null 并跳过。

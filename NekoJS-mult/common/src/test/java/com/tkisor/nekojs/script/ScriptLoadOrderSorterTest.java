@@ -219,7 +219,7 @@ class ScriptLoadOrderSorterTest {
                 sortedKeys(script("a.js", 0), script("b.js", 0), script("c.js", 0)));
     }
 
-    // ---- 包脚本（W4/A4）：key 从 ScriptId 派生，不再产生 ../packs/... ----
+    // ---- 包脚本：key 从 ScriptId 派生，不再产生 ../packs/... ----
 
     @Test
     void afterReferenceIntoPackScriptResolves() {

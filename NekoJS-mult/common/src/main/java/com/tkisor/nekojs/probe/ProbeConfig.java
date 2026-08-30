@@ -27,7 +27,7 @@ import java.util.regex.PatternSyntaxException;
  * <p>扫描模式 {@link ScanConfig#mode()}：{@code SMART}（默认，白名单 + {@code forceScanMods} 补充）、
  * {@code FULL}（跳过 include 白名单、仅受 exclude 与 maxDepth 约束）、{@code NONE}（整体跳过扫描，probe 返回失败结果）。
  *
- * <p>B3：{@link #languages()} 承载 per-language 配置（{@code [languages.<languageId>]}）——
+ * <p>{@link #languages()} 承载 per-language 配置（{@code [languages.<languageId>]}）——
  * 每语言可指定优先使用的 backend 名与自定义输出子目录；两者皆可缺省（null → 沿用默认行为）。
  */
 public record ProbeConfig(boolean enabled, boolean runAtStartup, String baseDir, ScanConfig scan, Map<String, LanguageConfig> languages) {

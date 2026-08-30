@@ -76,7 +76,7 @@ public class NekoJSMod extends NekoJS {
 
     private static void registerEventListeners(IEventBus modEventBus) {
         modEventBus.addListener(NekoJSMod::onCommonSetup);
-        // 通用注册表适配（P2）：收集（首 pass 前一次）→ 逐 pass 抽干 → 属性/创造页后置
+        // 通用注册表适配：收集（首 pass 前一次）→ 逐 pass 抽干 → 属性/创造页后置
         modEventBus.addListener(RegistryEventAdapter::onRegister);
         modEventBus.addListener(RegistryEventAdapter::onEntityAttributeCreation);
         modEventBus.addListener(RegistryEventAdapter::onBuildCreativeTabContents);

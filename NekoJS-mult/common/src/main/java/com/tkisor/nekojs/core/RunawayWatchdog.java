@@ -52,7 +52,7 @@ final class RunawayWatchdog implements Predicate<Source> {
      * 一个谓词实例，因此本实例被各 ScriptType 沙盒共享；Source 切换（新求值/另一 Context）
      * 时窗口与计数一并重置，避免同线程上多个 Context 相互串扰累计。
      *
-     * <p>{@code lastSource} 持弱引用（W4/§3-13）：旧实现是普通字段，求值线程的 ThreadLocal
+     * <p>{@code lastSource} 持弱引用：旧实现是普通字段，求值线程的 ThreadLocal
      * 会永久钉住最后一次求值的 {@link Source} 及其可达的 Context 图——reload 后旧 Source
      * 无法回收，反复 reload 内存单调增长。弱引用下窗口语义不变：活跃求值的 Source 被
      * 引擎强引用，比较仍命中；求值结束后引用自然清除，下次触发视为新 Source 重起窗口。

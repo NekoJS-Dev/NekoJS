@@ -5,7 +5,7 @@ import net.minecraft.world.entity.EntityType;
 import java.util.ServiceLoader;
 
 /**
- * 26.x 版本间编译期符号差异的通用侧门面（W5/A8 step 2）。
+ * 26.x 版本间编译期符号差异的通用侧门面。
  *
  * <p>26.1 与 26.2 之间存在纯编译期改名（如 {@code EntityType.LIGHTNING_BOLT} →
  * {@code EntityTypes.LIGHTNING_BOLT}），共享代码直接引用任何一侧都会在另一侧编不过。

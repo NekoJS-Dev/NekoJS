@@ -3,7 +3,7 @@ package com.tkisor.nekojs.api.surface;
 import java.util.List;
 
 /**
- * 可序列化的 API 表面观测结果（ApiManifest，设计见 unified-js-api-design §9.5）。
+ * 可序列化的 API 表面观测结果（ApiManifest）。
  *
  * <p>manifest 是「实现观测结果」，不是规范性输入：它由 {@code ApiManifestGenerator} 从
  * 冻结的 surface snapshot 导出，用于 API diff、跨平台 stable 子集比较与发布工具。

@@ -76,7 +76,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public RecipeEventJS(Map<Identifier, JsonElement> originalJsons, HolderLookup.Provider registries, RecipeTypeDefinitionRegistry recipeTypeDefinitions) {
         this.jsons = new HashMap<>(originalJsons);
-        // B4: ids already present in the wrapped datapack JSON map must be treated as taken,
+        // ids already present in the wrapped datapack JSON map must be treated as taken,
         // otherwise generateRecipeId can silently return an existing recipe id and
         // RecipeJsonBuilder would overwrite that recipe.
         this.takenIds.addAll(jsons.keySet());
@@ -622,7 +622,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return List.of();
     }
 
-    // ---- 版本中立静态助手（DEVEX-ROADMAP 档 1）：供 RecipeFilter 等共享代码零守卫调用，
+    // ---- 版本中立静态助手：供 RecipeFilter 等共享代码零守卫调用，
     // ---- 1.21.1 孪生文件有对应实现（写 1.21.1 类名），签名保持时代中立。
 
     /** 1.21.1 双参形状的桥接：26.x 的输出 id 从配方结果模板直接读出，registries 不参与求值。 */

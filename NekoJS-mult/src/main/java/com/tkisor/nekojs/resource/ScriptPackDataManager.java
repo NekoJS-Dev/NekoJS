@@ -42,7 +42,7 @@ import java.util.stream.Stream;
  * persist into the save. The {@code data/} directories are content-hashed: an unchanged
  * signature skips the resource reload entirely.</p>
  *
- * <p>Client {@code assets/} mounting is intentionally out of scope here (follow-up).</p>
+ * <p>Client {@code assets/} mounting is intentionally out of scope here.</p>
  */
 public final class ScriptPackDataManager {
 

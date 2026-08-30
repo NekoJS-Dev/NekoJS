@@ -5,8 +5,7 @@ import java.util.List;
 /**
  * 一个待分发的脚本包快照（平台无关的传输单元）：{@code syncId}（{@code <scope段>:<包id>}，
  * 如 {@code packs:demo} / {@code worldpacks:demo}）、作用域枚举名、manifest 原文 JSON、
- * 内容文件列表与包哈希。NeoForge 26.x / 1.21.1 的 payload 与 Cleanroom 1.12.2 的
- * ByteBuf 编解码各自与本记录互转。
+ * 内容文件列表与包哈希。各平台的 payload 或 ByteBuf 编解码各自与本记录互转。
  */
 public record SyncedPack(
     String syncId,

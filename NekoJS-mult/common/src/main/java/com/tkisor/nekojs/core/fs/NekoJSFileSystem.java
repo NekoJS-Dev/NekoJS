@@ -94,7 +94,7 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
-        // W7/A6：写/删统一走 SandboxPolicy（§3-24 此前无条件放行到 gameDir；§3-23 配置保护）
+        // 写/删统一走 SandboxPolicy（此前无条件放行到 gameDir，且不保护 nekojs/config）
         Path verifiedPath = policy.resolveWrite(dir);
         Files.createDirectory(verifiedPath, attrs);
     }

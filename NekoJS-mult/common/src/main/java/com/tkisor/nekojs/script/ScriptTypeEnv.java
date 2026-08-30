@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * {@link ScriptType} 的引擎侧环境（P1 契约抽薄，ADR-0007）：脚本目录、logger 与
+ * {@link ScriptType} 的引擎侧环境（契约抽薄，ADR-0007）：脚本目录、logger 与
  * 日志文件的解析原先内嵌在 {@code ScriptType}（枚举常量类初始化期捕获
  * {@code NekoJSPaths}），现全部迁到本引擎类——契约枚举只留名称与谓词语义，
  * 引擎包依赖归零后即可平移 common-api。

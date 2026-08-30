@@ -131,7 +131,7 @@ class NekoJSBasePluginManagerTest {
         int getterThreads = 4;
         int rounds = 20;
         // 重复发现按 (identity, class) 去重：并发的重复 registerClass 调用下，
-        // 最终视图 = 10 个唯一类各恰好一次（回归：cleanroom dev classpath 重复列出
+        // 最终视图 = 10 个唯一类各恰好一次（回归：dev classpath 重复列出
         // common/common-api jar，同插件类被扫描两次导致 ScriptProperty 重复注册崩溃）
         int expectedSize = PLUGIN_CLASSES.size();
 

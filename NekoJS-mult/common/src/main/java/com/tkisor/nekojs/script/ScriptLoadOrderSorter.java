@@ -274,7 +274,7 @@ final class ScriptLoadOrderSorter {
     /**
      * 脚本在类型作用域下的相对 key（正斜杠分隔），与 {@link com.tkisor.nekojs.api.ScriptType#makeId}
      * 及 {@link ScriptPack#idPathPrefix()} 的拼法一致：以发现阶段算好的 {@link ScriptId} 为
-     * 单一来源（W4/A4），去掉开头的类型段——平铺脚本为 {@code foo/bar.js}，包脚本为
+     * 单一来源，去掉开头的类型段——平铺脚本为 {@code foo/bar.js}，包脚本为
      * {@code packs/<id>/foo/bar.js}。
      *
      * <p>旧实现用 {@code type.path.relativize(script.path)}：包脚本不在类型根下，会得到

@@ -11,9 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W3 负向语料：TS 擦除/降级产物必须能被 GraalJS parse（含 import/export 的按 module 模式），
+ * 负向语料：TS 擦除/降级产物必须能被 GraalJS parse（含 import/export 的按 module 模式），
  * 且不触发 enum/namespace/参数属性降级的输入保持行数不变（阶段一擦除是等长空白替换，
- * source map 的 1:1 行映射依赖这一点）。语料覆盖审计 §4 列出的全部高危形态。
+ * source map 的 1:1 行映射依赖这一点）。语料覆盖已知的全部高危形态。
  */
 class TypeScriptErasureParseCorpusTest {
 

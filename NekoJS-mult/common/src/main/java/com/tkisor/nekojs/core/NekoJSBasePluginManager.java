@@ -59,7 +59,7 @@ public final class NekoJSBasePluginManager {
         }
 
         // 同 (identity, class) 的重复发现只登记一次：dev classpath 可能重复列出同一 jar
-        // （cleanroom run 里 common/common-api 各出现两次，getResources 会上报两遍），
+        // （common/common-api 可能各出现两次，getResources 会上报两遍），
         // NeoForge 的 ModList scan data 同样可能对同一类给出多条 AnnotationData。
         // 不同 identity（不同 owner）注册同一类仍是允许的语义。
         for (PluginEntry entry : ENTRIES) {

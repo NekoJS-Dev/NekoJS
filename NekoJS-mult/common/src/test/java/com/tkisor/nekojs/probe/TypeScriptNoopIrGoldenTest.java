@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *       renderer 级（直接渲染 mutated TypeDecl）与 backend 级（带 mutated IR 走完整 generate）。
  *       另有一个机制级测试（不依赖 RecipeEventJS，用测试 classpath 上必然存在的 fixture 类）：
  *       override 键是「类名 + getter 属性名」，与被覆盖类无关，任何类都可注册覆盖。</li>
- *   <li>（A3）TypeDecl 的 docs 列表渲染为 JSDoc 块。</li>
+ *   <li>TypeDecl 的 docs 列表渲染为 JSDoc 块。</li>
  * </ol>
  */
 class TypeScriptNoopIrGoldenTest {
@@ -235,7 +235,7 @@ class TypeScriptNoopIrGoldenTest {
     }
 
     // ------------------------------------------------------------------
-    //  A3：docs 渲染为 JSDoc 块
+    //  docs 渲染为 JSDoc 块
     // ------------------------------------------------------------------
 
     @Test

@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  * 作为 bundle 完整性自检（写盘后从盘重读重算必须与预期一致）。
  *
  * <p>参与哈希的内容目录：四个脚本目录 + {@code assets/} + {@code data/}
- * （包形态约定，见 katton-adoption-plan §4）。{@code .neko_pack.state.json} 等状态文件
+ * （包形态约定）。{@code .neko_pack.state.json} 等状态文件
  * 不参与——它们不属于分发内容。
  */
 public final class PackHasher {

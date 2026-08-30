@@ -163,7 +163,7 @@ class ProbeConfigTest {
         assertFalse(new ProbeConfigLoader().load(cfgFile).enabled(), "重载后 enabled 应为 false");
     }
 
-    /* ================= B3：per-language 配置（languages.<lang>.backend / .outputDir） ================= */
+    /* ================= per-language 配置（languages.<lang>.backend / .outputDir） ================= */
 
     @Test
     void loaderParsesPerLanguageConfig(@TempDir Path tmp) throws Exception {

@@ -26,7 +26,7 @@ public final class FabricClientEventBindings {
     public static final EventBusJS<ClientTickEventJS, Void> TICK_POST =
             CLIENT_EVENTS.client("tickPost", ClientTickEventJS.class);
 
-    // tick：tickPost 的裸名别名（H-5 别名裁决，与 NeoForge 侧一致）。
+    // tick：tickPost 的裸名别名（与 NeoForge 侧一致）。
     @Deprecated
     public static final EventBusJS<ClientTickEventJS, Void> TICK =
             CLIENT_EVENTS.client("tick", ClientTickEventJS.class);

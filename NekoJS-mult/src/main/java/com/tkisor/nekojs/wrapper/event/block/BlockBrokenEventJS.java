@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * 方块被破坏事件（{@code BlockEvents.broken}）的**加载器中立**载荷。
  *
- * <p>B3 SPI 样板：这个类只用原版 MC 类型，所以三个 NeoForge 节点、fabric、forge 都能共用。
+ * <p>SPI 样板：这个类只用原版 MC 类型，所以三个 NeoForge 节点、fabric、forge 都能共用。
  * 各加载器在自己的绑定点把原生事件转换成本类（NeoForge 侧见
  * {@code BlockEvents.FORGE_BRIDGE} 的 {@code bindTransformed}）。
  *

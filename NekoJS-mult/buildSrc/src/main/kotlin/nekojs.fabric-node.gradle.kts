@@ -1,8 +1,8 @@
-// fabric 节点 convention plugin（26.1.2-fabric）。从 fabric.gradle.kts 原体迁入
-//（DEVEX-ROADMAP T2）。loom-back-compat 在本插件体内 apply——它从控制器脚本
-//（stonecutter.gradle.kts，apply false）声明的 fabric-loom 版本挑选变体，声明链不变。
-// 与原体的适配：libs 经 LibrariesForLibs 取用；loom / loomx 扩展不在本插件编译期
-// 类型面上，经 withGroovyBuilder 动态访问（方法/属性名与 loom 稳定 API 对齐）。
+// Fabric 节点的构建约定（26.1.2-fabric）。loom-back-compat 在本插件体内 apply——它按 MC
+// 版本挑选 Loom 变体，版本号从控制器脚本 stonecutter.gradle.kts 的 `apply false` 声明读取。
+//
+// 两个环境限制：libs 访问器要通过 LibrariesForLibs 取；loom / loomx 扩展在本插件的编译期
+// 类型面上不存在，只能用 withGroovyBuilder 动态访问。
 
 import groovy.lang.Closure
 import org.gradle.accessors.dm.LibrariesForLibs
@@ -28,7 +28,7 @@ val modDescription = property("mod_description") as String
 
 version = modVersion
 
-// 节点在 settings 里先于 common 注册，求值时 :common 尚未配置（求值顺序陷阱①）
+// 节点在 settings 里先于 common 注册，求值时 :common 还没配置完
 evaluationDependsOn(":common-api")
 evaluationDependsOn(":common")
 
@@ -52,9 +52,8 @@ repositories {
 val bundled = configurations.create("bundled")
 configurations.named("implementation").get().extendsFrom(bundled)
 
-// GraalMC 的 curse 文件按加载器分 build：8762962 是 NeoForge 构建（catalog 默认，
-// 无 fabric.mod.json），fabric 节点定向解析到 8762963（fabric 构建，GraalMC 25.1.3.7；
-// 须自带 TRegex 注册，见 libs.versions.toml 的 graal 注释）。
+// GraalMC 的 curse 文件按加载器分构建：版本目录里的默认值是 NeoForge 构建（不含
+// fabric.mod.json），fabric 节点定向解析到 8762963。版本下限见 libs.versions.toml 的 graal 注释。
 configurations.all {
     resolutionStrategy.eachDependency {
         if (requested.group == "curse.maven" && requested.name == "graal-1504336") {
@@ -79,13 +78,13 @@ dependencies {
     annotationProcessor(libs.lombok)
     compileOnly(libs.jspecify)
 
-    // 共享 src/test（共享测试树）由 stonecutter 挂进本节点；junit 与主仓平台层同款
+    // 共享测试树由 stonecutter 挂进本节点；MC 节点统一用 JUnit 5
     testImplementation(libs.junit.jupiter.legacy)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // 共享版本树（src/main/java）由 stonecutter 自动挂载；加载器差异用 `//? if neoforge`
-// 整文件守卫与节点目录表达，跨加载器中立契约（BlockEvents 等）直接住共享树。
+// 整文件守卫和节点目录表达，跨加载器中立的部分（BlockEvents 等）直接住共享树。
 
 // dev run 目录：server 与 client 分开。共用一个目录时两个进程会互相覆盖 logs/latest.log
 // 与 nekojs/*.log（Windows 上还会撞 Files.move 轮转）。
@@ -116,10 +115,10 @@ val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata"
 }
 sourceSets.main { resources.srcDir(generateModMetadata) }
 
-// ICU4J：GraalJS（truffle）静态初始化需要；fabric loader / MC dev 环境都不提供。
-// 实测 loom 会把用户声明的 icu4j 依赖从 dev run 类路径剥离（识别为 MC manifest 库去重），
-// 故不走依赖通道——直接把类提取进主 sourceSet 输出目录：dev run 类路径必含源集输出，
-// 分发 jar 亦随之携带（同时覆盖 dev 与生产，无需 bundled 嵌包）。
+// ICU4J：GraalJS（truffle）的静态初始化需要它，而 fabric loader 和 MC 开发环境都不提供。
+// 不能走依赖通道：loom 会把用户声明的 icu4j 从 dev run 类路径剥离（它按 MC manifest 库
+// 去重）。改为把类直接提取进主 sourceSet 的输出目录——dev run 类路径必含源集输出，分发
+// jar 也随之携带，一举覆盖开发与生产两侧。
 val icuClassesDir = layout.buildDirectory.dir("generated/icuClasses")
 val extractIcuClasses = tasks.register<Sync>("extractIcuClasses") {
     val icuJar = configurations.detachedConfiguration(
@@ -147,12 +146,13 @@ tasks.processResources {
     exclude("nekojs.interface_injection.json")
 }
 
-// LoaderBridge 移植前共享测试树全部被 `//? if neoforge` 守卫成空文件：测试源码存在但没有
-// 可发现的测试类，Gradle 9 的 failOnNoDiscoveredTests 会因此失败——显式放行。
+// 共享测试树目前整树被 `//? if neoforge` 守卫，在 fabric 节点上求值成空文件：测试源码
+// 存在但没有可发现的测试类，Gradle 9 的 failOnNoDiscoveredTests 会因此失败。fabric 侧的
+// 测试随脚本运行时移植一起补上，在那之前显式放行。
 tasks.test { failOnNoDiscoveredTests = false }
 
-// ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）——与 neo/forge 节点同构 ----
-// Loom 会在 remapJar 阶段重映射 jar；引擎与 Graal 不引用 MC 类，重映射对其为恒等变换。
+// ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）——与 NeoForge 节点同构 ----
+// Loom 会在 remapJar 阶段重映射 jar；引擎与 Graal 不引用 MC 类，重映射对它们是恒等变换。
 
 val embeddedCommonRuntime = files(
     Callable {
@@ -172,7 +172,7 @@ tasks.jar {
     exclude("META-INF/versions/**/module-info.class")
     from(project(":common").sourceSets.main.get().output)
     from(project(":common-api").sourceSets.main.get().output)
-    // 求值顺序陷阱③：from(Closure) 执行期求值（配置期解析会撞 :common 的无锁解析）
+    // 必须 from(Closure) 执行期求值：配置期解析会撞 :common 的无锁解析
     from(object : Closure<Any>(null) {
         fun doCall(): List<Any> = embeddedCommonRuntime
             .toCollection(mutableListOf())
@@ -187,5 +187,5 @@ tasks.jar {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all", "-Xlint:-processing"))
-    // fabric 骨架暂无 @PlatformAvailability 注解源；平台标签（fl26 等）随 LoaderBridge 一起定
+    // 不传 -Anekojs.platform：fabric 侧还没有 @PlatformAvailability 注解源
 }

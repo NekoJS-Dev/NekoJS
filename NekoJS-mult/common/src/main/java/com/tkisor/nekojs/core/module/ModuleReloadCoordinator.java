@@ -58,7 +58,7 @@ public final class ModuleReloadCoordinator {
      * 清空本 host 的全部模块状态。只管 host 私有缓存（moduleCache/record/link/revision/
      * dependencyGraph——它们本就 per-Context）；进程级共享缓存（prepared pipeline cache、
      * 虚拟 ESM registry）的清理由 {@link NekoScriptModuleLoaderHost} 按自身 ScriptType 分区
-     * 执行（W4/§3-28：guest 可达的 clearCache 不得一键清空其它类型已编译的模块）。
+     * 执行（guest 可达的 clearCache 不得一键清空其它类型已编译的模块）。
      */
     public void clearAll() {
         moduleCache.clear();

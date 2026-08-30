@@ -9,7 +9,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import java.util.ServiceLoader;
 
 /**
- * 双端（client+server）通用符号差异的版本门面（DEVEX-ROADMAP 档 1：从 NekoJSNetwork 的
+ * 双端（client+server）通用符号差异的版本门面（从 NekoJSNetwork 的
  * 内联守卫收拢而来）。覆盖三类差异：
  * <ul>
  *   <li>dist 检查：26.x 是 {@code FMLEnvironment.getDist()}、1.21.1 是字段

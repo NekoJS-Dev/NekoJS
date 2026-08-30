@@ -111,7 +111,7 @@ public final class ScriptExecutor {
         } catch (Throwable t) {
             // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
             // 进错误面板（recordCallbackError 含里程碑节流），否则该类型的成员校验
-            // 静默消失且无人察觉（W4/A5）
+            // 静默消失且无人察觉
             errorTracker.recordCallbackError(script.type, "preflight-validator", t);
         }
     }

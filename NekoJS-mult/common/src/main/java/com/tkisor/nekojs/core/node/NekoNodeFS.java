@@ -17,7 +17,7 @@ public final class NekoNodeFS {
 
     public NekoNodeFS(SandboxConfig sandboxConfig) {
         this.paths = NekoJSPaths.get();
-        // W7/A6：写策略唯一真相（nekojs/config 拒写 + allowFsWriteOutsideNekojs 收敛），与 Graal FS 同源
+        // 写策略唯一真相（nekojs/config 拒写 + allowFsWriteOutsideNekojs 收敛），与 Graal FS 同源
         this.policy = new com.tkisor.nekojs.core.fs.SandboxPolicy(sandboxConfig, paths);
         this.currentWorkingDirectory = paths.gameDir();
     }

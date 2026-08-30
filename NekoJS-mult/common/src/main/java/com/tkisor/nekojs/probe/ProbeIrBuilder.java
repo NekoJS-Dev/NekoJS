@@ -67,7 +67,7 @@ final class ProbeIrBuilder {
                     throw new IllegalStateException("Interrupted while building shared probe IR", e);
                 } catch (Throwable t) {
                     // 无法反射的类跳过：各 backend 自行按需补反射；Python 不产出其 stub。
-                    // 降级必须可见（A5）：该类会从对应产物里整体消失，debug 日志等于静默
+                    // 降级必须可见：该类会从对应产物里整体消失，debug 日志等于静默
                     com.tkisor.nekojs.core.error.Diagnostics.report("probe-ir", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
                             "类 " + fqn + " 反射进共享 IR 失败，已跳过（该类不会出现在部分类型产物中）", t);
                 }

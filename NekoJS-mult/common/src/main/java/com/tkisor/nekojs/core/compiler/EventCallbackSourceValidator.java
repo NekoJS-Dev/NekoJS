@@ -99,7 +99,7 @@ public final class EventCallbackSourceValidator {
      * {@code DynamicRegistry.item(id, b => b.maxStackSize(64))}）。这类「非事件回调」按
      * 绑定方法签名的函数式参数（{@code Consumer<ItemBuilder>} 的第一个类型实参）登记形参类型；
      * 签名推不出来（非泛型、类型实参非具体类、找不到匹配重载）就整段跳过——预检的默认答案
-     * 必须是「不知道就别报」，否则 builder 回调一用就误报（2026-08-24 日志：
+     * 必须是「不知道就别报」，否则 builder 回调一用就误报（例如
      * {@code 'maxStackSize' not in DynamicRegistry}）。
      */
     private static void checkCallbackArgs(ValNode.CallExpr call, String group,

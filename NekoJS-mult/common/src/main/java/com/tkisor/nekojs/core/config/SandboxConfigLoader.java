@@ -98,7 +98,7 @@ public final class SandboxConfigLoader {
      * 按数值类型安全读取整型配置项。NightConfig 的 TOML 解析器会把整数存成
      * Integer/Long 等不同装箱类型，直接以 {@code long} 目标类型调用 {@code get} 会触发
      * 拆箱 ClassCastException，导致整个文件被误判为损坏而回退默认配置（用户显式写的
-     * {@code scriptStatementLimit = 0} 曾因此被吞掉）。统一走 {@link Number#longValue()}。
+     * {@code scriptStatementLimit = 0} 会被吞掉）。统一走 {@link Number#longValue()}。
      */
     private static long numberValue(CommentedFileConfig config, String path, long fallback) {
         Object value = config.get(path);

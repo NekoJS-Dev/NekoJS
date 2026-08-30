@@ -1,7 +1,6 @@
 //? if neoforge {
-// 版本差异已收拢进 compat 门面（DEVEX-ROADMAP 档 1）：屏幕访问/错误面板载入走
-// McClientCompat，dist/OP 权限/脚本 payload 双向注册走 McPlatformCompat——
-// 本文件零内联版本守卫。
+// 版本差异全部走 compat 门面，本文件零版本守卫：屏幕访问与错误面板载入走 McClientCompat，
+// dist 判定、OP 权限、脚本 payload 注册走 McPlatformCompat。
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
@@ -30,7 +29,7 @@ public class NekoJSNetwork {
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1");
 
-        // play 阶段发送面的中立通道（共享树业务侧只依赖 PlayPacketDispatcher）
+        // play 阶段发送面的中立通道：业务代码只依赖 PlayPacketDispatcher
         PlayPacketDispatchers.install(new NeoForgePlayPacketDispatcher());
 
         // 基础功能包
@@ -61,7 +60,7 @@ public class NekoJSNetwork {
         //（26.x 4 参 / 1.21.1 3 参 + flow 判别）下沉进 McPlatformCompat 实现。
         McPlatformCompat.get().registerScriptPayload(registrar);
 
-        // P2 多人脚本包分发：配置阶段 payload（S2C）——服务器在 PackSyncConfigurationTask
+        // 多人脚本包分发：配置阶段 payload（S2C）——服务器在 PackSyncConfigurationTask
         // （RegisterConfigurationTasksEvent 官方入口，免 mixin）中推送哈希清单 + bundle。
         registrar.configurationToClient(PackHashListPayload.TYPE, PackHashListPayload.STREAM_CODEC, PackSyncMessageHandler::handleHashListOnClient);
         registrar.configurationToClient(PackBundlePayload.TYPE, PackBundlePayload.STREAM_CODEC, PackSyncMessageHandler::handleBundleOnClient);

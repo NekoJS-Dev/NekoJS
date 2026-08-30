@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 package com.tkisor.nekojs.network;
 
@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * S3 regression test: the script payload channel must be non-null, non-blank
+ * Regression test: the script payload channel must be non-null, non-blank
  * and at most 64 characters. Constructed directly through the record's compact
  * constructor so the test needs no RegistryFriendlyByteBuf setup.
  */

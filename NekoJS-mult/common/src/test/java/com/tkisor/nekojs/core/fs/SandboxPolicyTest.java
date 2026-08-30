@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@link SandboxPolicy} 是两层脚本文件系统（Graal FileSystem + Node shim）写裁决的唯一真相
- * （W7/A6，审计 §3-23/24）：受保护配置拒写、flag 收敛、两层一致。
+ * {@link SandboxPolicy} 是两层脚本文件系统（Graal FileSystem + Node shim）写裁决的唯一真相：
+ * 受保护配置拒写、flag 收敛、两层一致。
  */
 class SandboxPolicyTest {
 
@@ -56,7 +56,7 @@ class SandboxPolicyTest {
 
         // neko 根内放行（不存在路径的 for-create 形式也应通过）
         assertDoesNotThrow(() -> strict.resolveWrite(paths.root().resolve("startup_scripts/new.js")));
-        // gameDir 内、neko 根外拒绝（§3-24：此前 Graal FS 无条件放行到 mods/）
+        // gameDir 内、neko 根外拒绝（此前 Graal FS 无条件放行到 mods/）
         assertThrows(IOException.class, () -> strict.resolveWrite(gameDir.resolve("mods/malicious.jar")));
         assertThrows(IOException.class, () -> strict.resolveWrite(gameDir.resolve("world/data/x.dat")));
     }

@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Regression test for the B3 follow-up: a targeted STARTUP {@code reloadScriptFile}
+ * Regression test: a targeted STARTUP {@code reloadScriptFile}
  * must degrade to a FULL STARTUP reload instead of the partial invalidation/rerun path,
  * because STARTUP registrations are irreversible and re-posting only the affected
  * ScriptEvents listeners would wipe unaffected custom-event listener tokens.

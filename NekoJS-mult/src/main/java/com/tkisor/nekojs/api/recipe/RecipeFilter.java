@@ -1,8 +1,7 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
-// 版本差异已下沉到 RecipeEventJS 的版本中立静态助手（getRecipeOutputId 双参桥接 /
-// recipeHolderId / recipeGroup / ingredientMatches——两个时代各有一份实现，签名中立）
-// ——本文件零内联版本守卫（DEVEX-ROADMAP 档 1）。
+// 版本差异下沉到 RecipeEventJS 的版本中立静态助手（getRecipeOutputId 的双参重载 /
+// recipeHolderId / recipeGroup / ingredientMatches），本文件因此零版本守卫。
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;

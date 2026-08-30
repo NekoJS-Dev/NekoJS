@@ -1,5 +1,5 @@
-// buildSrc 的独立 settings:与主构建互不共享插件管理,但导入根版本目录
-// (gradle/libs.versions.toml),使 convention plugin 里的依赖坐标保持单一事实源。
+// buildSrc 有自己的 settings：插件管理与主构建互不共享，但导入根版本目录
+// （gradle/libs.versions.toml），让 convention plugin 里的依赖坐标保持单一事实源。
 dependencyResolutionManagement {
     repositories {
         gradlePluginPortal()

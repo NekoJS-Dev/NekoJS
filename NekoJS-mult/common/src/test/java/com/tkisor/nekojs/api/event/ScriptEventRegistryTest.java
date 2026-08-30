@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Follow-up regression tests for BUG-B3:
+ * Regression tests for the cross-bucket listener bookkeeping:
  *
  * <ul>
  *   <li>{@link ScriptEventRegistry#register} must be idempotent when the same key is

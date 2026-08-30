@@ -23,13 +23,13 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 | **Node.js 兼容 API** | 内置 `fs`、`path`、`buffer`、`process`、`timers`、`util`、`events`、`assert`、`os`、`test` 等核心模块 shim。 |
 | **IDE 智能提示** | `/nekojs probe` 一键生成 TypeScript/Python 类型声明（`.neko_probe/`），无需外部 ProbeJS mod 即可获得补全。 |
 | **服务端热重载** | `/nekojs reload` 热重载服务端脚本；NeoForge 与 Cleanroom 均支持配方热重载（详见 [命令](命令)）。 |
-| **多平台** | 同时支持 NeoForge 26.1 / 26.2 / 1.21.1 与 Cleanroom 1.12.2（Forge），共享通用基础设施。 |
+| **多平台** | 同时支持 NeoForge 26.1 / 26.2 / 1.21.1，Fabric 26.1 正在移植；Cleanroom 1.12.2（Forge）在独立的 legacy 分支维护。 |
 
 ---
 
 ## 三十秒上手
 
-1. 安装前置 mod [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) 和 NekoJS，启动游戏。
+1. 安装前置 mod [Graal](https://www.curseforge.com/minecraft/mc-mods/graal)（**25.1.3.7 或更高**）和 NekoJS，启动游戏。
 2. 在游戏根目录下会自动生成 `nekojs/` 文件夹。
 3. 在 `nekojs/server_scripts/` 里新建 `hello.js`：
 
@@ -67,10 +67,13 @@ ServerEvents.started(event => {
 | NeoForge 1.21.1 | 1.21.1 | NeoForge 21.1.x | 21 |
 | Cleanroom 1.12.2 | 1.12.2 | Cleanroom（Forge）0.5.14-alpha | 25 |
 
-> 绝大多数脚本 API 跨平台一致；少数 1.12.2 因 API 差异略有不同，文中会标注。
+> 绝大多数脚本 API 跨平台一致；少数 1.12.2 因 API 差异略有不同，文中会标注。Cleanroom 1.12.2 在独立的 legacy 分支维护，与上面三个 NeoForge 版本不在同一个代码库里。
+>
+> Fabric 26.1 还在移植中，暂无发布版本。运行前置 [Graal](https://www.curseforge.com/minecraft/mc-mods/graal) 需要 25.1.3.7 或更高。
 
 ---
 
 ## 额外资源
 
-- `docs/ROADMAP.md` 是项目的设计路线图。
+- `docs/adr/` 收录了引擎的设计决策记录（扩展点模型、注册表模型、模块边界、守卫纪律等）。
+- 想了解仓库自身怎么组织和构建，看 [项目架构](项目架构) 和 [构建系统](构建系统)。

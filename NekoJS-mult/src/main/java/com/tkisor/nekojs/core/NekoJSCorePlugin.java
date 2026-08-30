@@ -1,9 +1,6 @@
 //? if neoforge {
-// 版本守卫审计后收敛（DEVEX-ROADMAP 档 1）：registerTypeDocs 里两套排版不同但字面量
-// 折叠后逐字相同的文案已按 26.x 基准合并（假差异）；NetworkEvents 的注册位置统一到基准位
-// （ScriptEvents 之后；注册表按组名索引，先后不影响查找）。保留的真差异：
-// KeyBindEvents / Assets / IdentifierAdapter（26.x 独有符号）与 TriState（26.x 挪到了
-// net.minecraft.util，1.21.1 在 neoforge common util）。
+// 本文件保留的版本守卫都是真差异：KeyBindEvents / Assets / IdentifierAdapter 是 26.x 独有
+// 符号，TriState 在 26.x 挪到了 net.minecraft.util（1.21.1 在 neoforge 的 common util）。
 package com.tkisor.nekojs.core;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -92,7 +89,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(ServerEvents.GROUP);
         // ⚠️ 顺序要紧：BlockEvents.GROUP 住在跨加载器共享层，访问它**不会**再顺带初始化
         // NeoForge 适配层（以前同一个类，靠类初始化副作用顺带完成）。而 registry.register
-        // 之后组会被 freeze，晚到的总线会被拒绝——真机探针实测表现为脚本侧
+        // 之后组会被 freeze，晚到的总线会被拒绝——症状是脚本侧
         // "Binding 'BlockEvents' has no member 'randomTick'"。所以必须先 bootstrap 再 register。
         NeoForgeBlockEvents.bootstrap();
         registry.register(BlockEvents.GROUP);
@@ -234,7 +231,7 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
     @Override
     public void registerRecipeNamespaces(RecipeNamespaceRegister registry) {
 //        registry.registerSchema();
-        // RecipeEventJS 是节点拆分对（共享树 26.x 版 + versions/1.21.1 孪生），两时代 FQCN
+        // RecipeEventJS 是拆分对（版本树里的 26.x 版 + versions/1.21.1 的 1.21.1 版），两时代 FQCN
         // 相同——统一走 FQN，无需按时代切换 import/简单名。
         registry.register(new RecipeNamespaceEntry("minecraft", e -> new MinecraftRecipeHandler((com.tkisor.nekojs.wrapper.event.server.RecipeEventJS) e), MinecraftRecipeHandler.class));
     }

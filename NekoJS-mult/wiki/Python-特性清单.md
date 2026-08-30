@@ -119,7 +119,7 @@
 
 ### 内建函数
 
-NekoJS 已映射的内建（详见 [Python-脚本.md](Python-脚本.md)「内置函数」表）：`range / len / print / abs / min / max / sum / str / int / float / bool / list / dict / set / tuple / sorted / any / all / enumerate / reversed / map / filter / zip / round / divmod / ord / chr / pow / hex / oct / bin / repr / format / isinstance / type / callable / getattr / hasattr / setattr / delattr / iter / next / frozenset`。
+NekoJS 已映射的内建（详见 [Python 脚本](Python-脚本)「内置函数」表）：`range / len / print / abs / min / max / sum / str / int / float / bool / list / dict / set / tuple / sorted / any / all / enumerate / reversed / map / filter / zip / round / divmod / ord / chr / pow / hex / oct / bin / repr / format / isinstance / type / callable / getattr / hasattr / setattr / delattr / iter / next / frozenset`。
 
 仍未映射：`id / vars / globals / locals / eval / exec / input / open / complex / ...`（多为反射、IO 或与 JS 运行时不匹配者）。
 

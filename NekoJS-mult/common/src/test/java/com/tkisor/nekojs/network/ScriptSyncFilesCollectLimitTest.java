@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * S3 quality follow-up: collectAllValidScripts must enforce the batch limits while
+ * collectAllValidScripts must enforce the batch limits while
  * walking the tree, before reading file contents into memory. The tests install an
  * isolated NekoJSPaths instance over a @TempDir game dir so the global singleton is
  * never polluted for other tests.

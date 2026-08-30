@@ -17,45 +17,38 @@ stonecutter handlers {
     inherit("cfg", "toml")
 }
 
-// 版本间的**纯名义改名**交给 replacements，共享 src 里只存 26.x 一种形态。
-// 分两组，按风险给不同的默认开关（标识符带 `!` = 默认启用）：
+// 版本间的**纯改名**由 replacements 处理，共享 src 里只写 26.x 一种形态。规则分两组，
+// 默认开关不同（标识符带 `!` = 默认启用）：
 //
-//   !mc_ids       —— 全局默认启用。**入选门槛：该 token 在某一侧完全不出现**
-//                    （实测：26.x 侧 GuiGraphicsExtractor 44 次 / 裸 GuiGraphics 0 次，
-//                    1.21.1 侧反之 42 / 0；ResourceLocation↔Identifier 同理），
-//                    所以全局替换不可能误伤。这批规则让文件不必为改名写守卫，
-//                    是可读性的主要来源（守卫块 991 → 764）。
-//   mc_legacy_api —— **默认关闭**，只在已证明"归一化后逐字节相同"的 masters 里
-//                    用 `//~ mc_legacy_api` 局部启用。收纳两类不安全规则：
-//                    ① 调用形状不同（`sendSystemMessage` 与 `displayClientMessage`
-//                       参数个数不一样，实测 PlayerExtension 盲改编译失败）；
-//                    ② **同一侧两种写法并存**——26.x 里 `.identifier()` 用 28 次、
-//                       但 TagKey/ResourceKey 上仍是 `.location()`（2 处：
-//                       NeoForgeCatalogPlatformProvider / RecipeEventJS）。把它放进
-//                       全局组会把那 2 处改坏（实测 26.2.0 编译失败）——这正是主仓
-//                       gen-1211 规则必须配 allowlist 的原因。
+//   !mc_ids       —— 全局默认启用。入选门槛是「该 token 在某一侧完全不出现」：例如
+//                    26.x 只用 GuiGraphicsExtractor、1.21.1 只用 GuiGraphics，两侧不交叉，
+//                    所以全局替换不可能误伤。这组规则让文件不必为改名写守卫。
+//   mc_legacy_api —— 默认关闭，只在验证过的单个文件里用 `//~ mc_legacy_api` 局部启用。
+//                    收纳两类不安全规则：
+//                    ① 调用形状不同——`sendSystemMessage` 与 `displayClientMessage` 的
+//                       参数个数不一样，盲替换会编译失败；
+//                    ② 同一侧两种写法并存——26.x 上大部分地方是 `.identifier()`，但
+//                       TagKey / ResourceKey 上仍是 `.location()`，全局替换会改坏后者。
 //
-// 方向语义：条件为真时 source→target，为假时自动反向；regex 不能自动反向，正/反两条都写。
-// 一律用 `\b` 词边界——纯字符串替换会误伤 NekoHostIdentifier 之类的复合标识符。
+// 方向语义：条件为真时 source→target，为假时自动反向。regex 不能自动反向，正反两条都要写。
+// 一律用 `\b` 词边界，否则会误伤 NekoHostIdentifier 之类的复合标识符。
 //
-// 已知副作用（可接受）：字符串字面量（8 处）与注释（17 处）里的 `Identifier` 也会被改名。
-// 前者只影响日志/异常文本里的类名措辞（改后恰好是该版本的真实类名，反而更准），
-// 后者是文档措辞。字节码等价性由 tools/verify_bytecode.py 把关。
-// `!mc_ids` 的 token 对必须写成**字面** replace 调用：实测把它们改成
-// `rules.forEach { replace(...) }` 从文件循环生成后，整组规则静默失效（编译不报错、
-// 替换不发生）——stonecutter 的 replacements DSL 要在配置期就地登记。
-// 这份清单与 tools/merge_pairs.py 的 NORMALIZE 是同一套规则（前者构建期还原、后者合并期
-// 归一化），改规则要同时改两处；guardLint 无法自动核对（见下），靠这条注释与 code review。
+// 可接受的副作用：字符串字面量与注释里的 `Identifier` 也会被改名。前者只影响日志/异常
+// 文本里的类名措辞（改后恰好是该版本的真实类名），后者是文档措辞。
+//
+// 约束：`!mc_ids` 的 token 对必须写成**字面** replace 调用。改成 `rules.forEach { replace(...) }`
+// 从列表循环生成，整组规则会静默失效——编译不报错、替换也不发生，因为 stonecutter 的
+// replacements DSL 要求在配置期就地登记。
 stonecutter parameters {
     // 加载器常量：守卫的加载器轴，如 `//? if neoforge { ... //?}`。
-    // parameters 块按节点懒求值，值取自各节点 gradle.properties 的 deps.platform
-    // （平台 token，与 deps.loader_version=loader 版本号分键——fabric 节点曾因一键两义
-    // 让三个常量全不命中，见 ADR-0008 规则 8 的恒假检查）。
-    constants.match(node.project.property("deps.platform") as String, "neoforge", "fabric", "forge")
+    // parameters 块按节点懒求值，值取自各节点 gradle.properties 的 deps.platform。
+    // 注意 deps.platform（平台 token）与 deps.loader_version（loader 版本号）是两个键——
+    // 曾经共用一个键，导致 fabric 节点上三个常量全部不命中，见下面 guardLint 规则 8。
+    constants.match(node.project.property("deps.platform") as String, "neoforge", "fabric")
     replacements {
         regex(current.parsed >= "26", "!mc_ids") {
             // 方向：第一条 pair 必须是「1.21.1 形态 -> 26.x 形态」（条件为真=26.x 走正向、
-            // 为假=1.21.1 走反向）。写反了两侧都不报错但规则静默失效（踩过一次）。
+            // 为假=1.21.1 走反向）。写反了两侧都不报错，规则只是静默失效。
             replace("""\bResourceLocation\b""" to "Identifier", """\bIdentifier\b""" to "ResourceLocation")
             replace("""\bGuiGraphics\b""" to "GuiGraphicsExtractor", """\bGuiGraphicsExtractor\b""" to "GuiGraphics")
             replace("""\bdrawCenteredString\b""" to "centeredText", """\bcenteredText\b""" to "drawCenteredString")
@@ -75,30 +68,24 @@ stonecutter parameters {
     }
 }
 
-// ---- 自研守卫体检任务（长期护栏）--------------------------------------------------
-// 迁移期踩到的坑都是"守卫写坏"的具体形态；把它们固化成 lint，避免重犯：
+// ---- 守卫体检任务（长期护栏）----------------------------------------------------
+// 八条规则，每条对应一种"守卫写坏了但编译器不报错"的形态：
 //   1. 守卫必须配对（`//? if` 数 == 闭合数）——手工编辑最容易破坏的不变量；
 //   2. 守卫不能落在 Java 文本块（"""）内——标记会被当字符串内容，stonecutter 报
 //      Unmatched scope closer；
 //   3. 守卫分支首行不能以 `/*` 开头——与"分支被禁用"的磁盘表示歧义，真 javadoc 会被
-//      当成禁用包装剥掉。
-// 路线图 P0 扩展（ADR-0007 / ADR-0008，docs/MIGRATION-ROADMAP.md）：
-//   4. 密度阈值：文件级 `//? if` ≤ 20 硬限；超限须有 `// guard-exempt(20): 理由`
-//      豁免标记（纯 Java 注释，不用 `//?` 前缀——那是 stonecutter 指令语法），
-//      豁免清单每次运行输出；
-//   5. 连续守卫段 > 8 行软告警——"方法级 ≤ 5"的代理指标（免脆弱的大括号追踪）；
+//      当成禁用包装剥掉；
+//   4. 密度：单文件 `//? if` ≤ 20，超限须写 `// guard-exempt(20): 理由` 豁免标记
+//      （纯 Java 注释，不用 `//?` 前缀——那是 stonecutter 指令语法），豁免清单每次输出；
+//   5. 连续守卫段 > 8 行软告警——"方法级密度"的代理指标，避免脆弱的大括号追踪；
 //   6. 模块边界（ADR-0007）：common-api 零 MC/Loader/Graal import、common 零
-//      MC/Loader import——当前基线为零，新增即硬失败；
-//   7. wrapper 层零 loader import（ADR-0004 目标，hardFail 已于票 07 翻转）。
-//      例外：整文件 loader 守卫（`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件
-//      是显式平台面——其 loader import 在对侧编译单元不存在，不计违规、仅 informational
-//      列出（配方簇 / 能力系统 / 网络脚本通道等 fabric 移植件落地时逐个去掉守卫）；
-//   8. 恒假常量（DEVEX-ROADMAP T3）：守卫条件引用的 loader 常量必须至少在一个节点
-//      取值为真——平台事实源是 versions/*/gradle.properties 的 deps.platform（与
-//      constants.match 同源），否则为永不激活分支，硬失败。fabric 节点曾因 deps.loader
-//      一键两义（值是 loader 版本号）让三个常量全不命中，见该键的拆分注释。
-// （规则一致性不用 lint：`!mc_ids` 的 token 对是字面 replace 调用（循环生成会静默失效，
-//   见 replacements 块注释），与已删除的合并工具 NORMALIZE 是同一套规则。）
+//      MC/Loader import。当前基线为零违规，新增即硬失败；
+//   7. wrapper 层零 loader import（ADR-0004）。例外：整文件 loader 守卫
+//      （`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件是显式平台面，其 loader
+//      import 在对侧编译单元根本不存在，不计违规、只做提示性列出；
+//   8. 恒假常量：守卫条件引用的 loader 常量必须至少在一个节点取值为真。平台事实源是
+//      versions/*/gradle.properties 的 deps.platform（与 constants.match 同源）。否则
+//      该分支永不激活，而这既不报编译错也不报守卫错，只能在这里拦。
 val guardLint = tasks.register("guardLint") {
     group = "verification"
     description = "Lints stonecutter guards (pairing, hazard shapes, density) and module boundaries."
@@ -112,7 +99,8 @@ val guardLint = tasks.register("guardLint") {
     val densityLimit = 20
     val runLimit = 8
     val exemptMarker = Regex("""^\s*//\s*guard-exempt\((\d+)\):\s*(.+)""")
-    val wrapperLoaderImportHardFail = true // 票 07 翻转：wrapper 层未守卫文件零 loader import
+    val wrapperLoaderImportHardFail = true // wrapper 层未守卫文件零 loader import（规则 7）
+    // 探测面刻意比当前支持的加载器宽：net.minecraftforge 现在不该出现，真出现了要报出来
     val loaderImport = Regex("""^\s*import\s+(net\.neoforged|net\.fabricmc|net\.minecraftforge)\b.*""")
     val mcLoaderImport = Regex("""^\s*import\s+(net\.minecraft|net\.neoforged|net\.fabricmc|net\.minecraftforge)\b.*""")
     val graalImport = Regex("""^\s*import\s+org\.graalvm\b.*""")
@@ -249,8 +237,7 @@ val guardLint = tasks.register("guardLint") {
 }
 
 // ---- 门禁聚合：guard lint + 全部节点 check -----------------------------------------
-// src-common 目录已折入共享版本树（loader 轴由 `//? if <loader>` 守卫表达，原目录墙
-// 机制随之退役）；共享树的跨加载器中立性由守卫与 code review 把关。
+// 共享树对各加载器保持中立，靠守卫和 code review 把关——没有目录级隔离机制。
 tasks.register("sandboxCheck") {
     group = "verification"
     description = "Gate: guard lint + every node's check (compile/tests/artifact verify)."
@@ -263,7 +250,7 @@ tasks.register("sandboxCheck") {
     )
 }
 
-// ---- switchVersion：切换 active 节点（T4）-----------------------------------------
+// ---- switchVersion：切换 active 节点 -----------------------------------------------
 // 用法：gradlew switchVersion -Pnode=26.2.0。改控制器脚本的 active 行，执行后需在 IDE
 // 重新 Gradle sync 才生效（本任务在配置完成后执行，改写对本次构建无影响）。
 // 可用节点 = versions/ 下的目录。

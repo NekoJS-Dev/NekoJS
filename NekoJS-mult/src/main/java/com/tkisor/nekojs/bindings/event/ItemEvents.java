@@ -39,7 +39,7 @@ public interface ItemEvents {
     EventBusJS<ItemEntityPickupEvent.Pre, Item> CAN_PICK_UP =
             GROUP.server("canPickUp", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem());
     // pickedUpPre：canPickUp 的冗余别名（同一 Pre 事件）。跨平台主名是 canPickUp/pickedUp
-    // （cleanroom 无独立 Pre 事件），脚本侧建议迁移到 canPickUp（H-5 别名裁决，2026-08-15）。
+    // （部分加载器没有独立的 Pre 事件），脚本侧建议迁移到 canPickUp。
     @Deprecated
     EventBusJS<ItemEntityPickupEvent.Pre, Item> PICKED_UP_PRE =
             GROUP.server("pickedUpPre", ItemEntityPickupEvent.Pre.class, dispatchByPickupItem());

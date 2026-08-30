@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  *
  * <p>与声明式的 {@code ScriptEvents}（STARTUP 注册成命名事件组、server/client 脚本按组监听）
  * 互补：{@code NativeEvents} 面向一次性/就地监听，不引入命名事件组。两者均为一等 API
- * （2026-08-16 用户裁决：撤销 NativeEvents 弃用，D-2 由「收敛到 ScriptEvents」改为共存）。
+ * （二者共存：{@code NativeEvents} 不会被收敛进 {@code ScriptEvents}）。
  *
  * <p>监听器返回 {@code true} 会翻译为 {@code setCanceled(true)}（与全局取消约定一致；
  * 仅对可取消事件生效）。实现 {@link Binding}：STARTUP reload 时 {@code close()} 注销
@@ -117,7 +117,7 @@ public class NativeEventsJS implements Binding {
         Value handlerValue = handler == null ? null : Value.asValue(handler);
         // 记录 handler 的归属（Context/ScriptType）：分发时的异常必须按脚本类型进错误面板
         // （与 EventBusJS.recordListenerError 同一通道），而不是一行 debug——原生事件
-        // handler 抛错后旧实现完全不可见，「监听器看起来在跑但每次都静默失败」（W4/A5）
+        // handler 抛错后旧实现完全不可见，「监听器看起来在跑但每次都静默失败」
         graal.graalvm.polyglot.Context handlerContext = contextOf(handlerValue);
         ScriptType ownerType = handlerContext == null ? null
                 : com.tkisor.nekojs.script.ScriptManager.getTypeFromContext(handlerContext);
@@ -197,7 +197,7 @@ public class NativeEventsJS implements Binding {
             default -> {
             }
         }
-        // 注册期失败（值转不成 Class）：监听器不会注册，必须可见（W4/A5）
+        // 注册期失败（值转不成 Class）：监听器不会注册，必须可见
         NekoJS.LOGGER.warn("Failed to resolve class type for native event registration: {}", obj);
         return null;
     }

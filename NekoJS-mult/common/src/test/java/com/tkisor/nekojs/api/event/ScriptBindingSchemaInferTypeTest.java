@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * W4/A4 回归：{@link ScriptBindingSchema#inferType} 必须识别脚本包布局。
+ * 回归：{@link ScriptBindingSchema#inferType} 必须识别脚本包布局。
  *
  * <p>包脚本（GLOBAL {@code <root>/packs/<id>/<type>_scripts/…}、WORLD
  * {@code <world>/nekojs_packs/<id>/<type>_scripts/…}、SERVER_CACHE

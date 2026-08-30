@@ -109,7 +109,7 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         if ("nf26".equals(value) || "nf121".equals(value) || "cr".equals(value)) {
             platform = value;
         } else if ("nf".equals(value)) {
-            // 旧值在平台标签化（W7）后无法区分 26.x 与 1.21.1，快速失败逼升级
+            // 旧值在平台标签化后无法区分 26.x 与 1.21.1，快速失败逼升级
             messager.printMessage(Diagnostic.Kind.ERROR,
                 "-A" + PLATFORM_OPTION + "=nf 已废弃：请按平台传 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）");
         } else {

@@ -24,7 +24,7 @@ public final class ApiManifestGenerator {
 
     /**
      * @param versions 运行时版本快照（api-runtime.properties）
-     * @param loader   平台 loader 标识（如 {@code neoforge} / {@code cleanroom}）
+     * @param loader   平台 loader 标识（如 {@code neoforge} / {@code fabric}）
      * @param minecraft Minecraft 版本标识（如 {@code 26.1} / {@code 1.21.1} / {@code 1.12.2}）
      * @param surface  冻结的 API 表面快照
      */

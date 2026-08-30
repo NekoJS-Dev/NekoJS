@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W2 护栏：mixin 目标静态解析——mixin 层此前零自动化验证。
+ * 护栏：mixin 目标静态解析——mixin 层此前零自动化验证。
  *
  * <p>mixin 注入失败只在运行期爆（production 与 dev 的失败面还不同）。本测试解析每个 mixin
  * 类的 .class 字节（{@link ClassFileAnnotations}），逐条验证：
@@ -37,9 +37,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *       （描述符因泛型擦除只按名比对，避免误报）。</li>
  * </ol>
  *
- * <p>必须走字节而不是反射：ModDev 的 test 环境会用 agent 在内存里改写 mixin 类（实测注解
- * 被清空）；cleanroom 侧 sponge-mixin 的注解还是 CLASS retention，反射同样读不到。字节解析
- * 两条路都通。各平台从自己的 classpath 读同名配置；cleanroom 有自己的配置名与测试副本。
+ * <p>必须走字节而不是反射：ModDev 的 test 环境会用 agent 在内存里改写 mixin 类（注解
+ * 会被清空）；某些 mixin 实现的注解只有 CLASS retention，反射同样读不到。字节解析
+ * 两条路都通。各平台从自己的 classpath 读同名配置。
  */
 class MixinTargetResolutionTest {
 
