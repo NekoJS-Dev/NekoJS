@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.eventbus.CancellableEventBusImpl;
+
 import java.util.function.Predicate;
 
 /**
@@ -38,6 +40,10 @@ import java.util.function.Predicate;
  * @author ZZZank
  */
 public interface CancellableEventBus<E> extends EventBus<E> {
+
+    static <E> CancellableEventBus<E> create(Class<E> eventType) {
+        return new CancellableEventBusImpl<>(eventType, null);
+    }
 
     // suppress overloads: intentional dual Consumer/Predicate overloads; see class javadoc
     @SuppressWarnings("overloads")

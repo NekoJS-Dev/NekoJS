@@ -193,7 +193,7 @@ class ApiSurfaceBootstrapTest {
         assertNotNull(runtime.managedApiImplementation(CoreManagedApiBootstrap.NBT_GLOBAL));
 
         for (com.tkisor.nekojs.api.ScriptType type : com.tkisor.nekojs.api.ScriptType.values()) {
-            ApiRuntimeView view = runtime.apiRuntime(EnvironmentKeyFactory.current(type));
+            ApiRuntimeView view = runtime.apiRuntime(EnvironmentKey.current(type));
             assertNotNull(view, type.name());
             assertTrue(view.findSymbol(CoreManagedApiBootstrap.ID_GLOBAL).isPresent(), type.name());
             assertTrue(view.findSymbol(CoreManagedApiBootstrap.PLATFORM_GLOBAL).isPresent(), type.name());

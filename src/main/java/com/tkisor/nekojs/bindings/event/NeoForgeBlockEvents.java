@@ -8,7 +8,6 @@ import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.event.level.BlockEntityTickEvent;
 import com.tkisor.nekojs.event.level.RandomTickEvent;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
 import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import net.minecraft.world.level.block.Block;
@@ -73,7 +72,7 @@ public final class NeoForgeBlockEvents {
     /** 方块实体 tick（所有有 ticker 的方块实体，按 BlockEntityType 分发）。 */
     public static final EventBusJS<BlockEntityTickEvent, BlockEntityType<?>> BLOCK_ENTITY_TICK =
             BlockEvents.GROUP.server("blockEntityTick", BlockEntityTickEvent.class,
-                    EventBusFactory.createDispatchKey(BlockEntityType.class, BlockEntityTickEvent::getType));
+                    DispatchKey.of(BlockEntityType.class, BlockEntityTickEvent::getType));
 
     /**
      * 运行时方块属性修改（server 脚本）：每次服务器启动（about-to-start）与

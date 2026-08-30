@@ -15,7 +15,6 @@ import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
-import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -292,7 +291,7 @@ public final class NekoScriptCatalog {
     private static Map<ScriptType, ApiEnvironmentSnapshot> buildManagedApis(IPluginRuntime runtime, List<ScriptType> scriptTypes) {
         Map<ScriptType, ApiEnvironmentSnapshot> map = new LinkedHashMap<>();
         for (ScriptType type : scriptTypes) {
-            EnvironmentKey key = EnvironmentKeyFactory.current(type);
+            EnvironmentKey key = EnvironmentKey.current(type);
             ApiRuntimeView view = runtime.apiRuntime(key);
             if (view != null) {
                 map.put(type, view.environmentSnapshot());

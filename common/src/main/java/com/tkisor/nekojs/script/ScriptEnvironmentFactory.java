@@ -12,7 +12,6 @@ import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
-import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
@@ -100,7 +99,7 @@ public final class ScriptEnvironmentFactory {
     private void bindManagedGlobals(Value bindings, ScriptType scriptType,
                                     Map<String, ScriptBindingSchema.BindingMembers> bindingSchema,
                                     ApiGuestErrorFactory guestErrorFactory) {
-        EnvironmentKey key = EnvironmentKeyFactory.current(scriptType);
+        EnvironmentKey key = EnvironmentKey.current(scriptType);
         ApiRuntimeView view = pluginRuntime.apiRuntime(key);
         if (view == null) return;
         ApiEnvironmentSnapshot snapshot = view.environmentSnapshot();

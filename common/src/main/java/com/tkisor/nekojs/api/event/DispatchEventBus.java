@@ -1,12 +1,19 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.eventbus.dispatch.DispatchEventBusImpl;
+
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
  * @author ZZZank
  */
 public interface DispatchEventBus<E, K> extends EventBus<E> {
+
+    static <E, K> DispatchEventBus<E, K> create(Class<E> eventType, DispatchKey<E, K> dispatchKey) {
+        return new DispatchEventBusImpl<>(eventType, dispatchKey, new ConcurrentHashMap<>());
+    }
 
     DispatchKey<E, K> dispatchKey();
 

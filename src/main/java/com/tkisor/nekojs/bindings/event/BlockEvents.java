@@ -3,7 +3,6 @@ package com.tkisor.nekojs.bindings.event;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
 import net.minecraft.world.level.block.Block;
 import java.util.function.Function;
@@ -41,6 +40,6 @@ public final class BlockEvents {
             GROUP.server("broken", BlockBrokenEventJS.class, dispatchByBlock(BlockBrokenEventJS::getBlock));
 
     static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
-        return EventBusFactory.createDispatchKey(Block.class, toKey);
+        return DispatchKey.of(Block.class, toKey);
     }
 }

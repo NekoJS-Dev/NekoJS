@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.client.render;
 
+import com.tkisor.nekojs.api.event.EventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
@@ -32,7 +32,7 @@ public class RenderRegistrationBusJS extends EventBusJS<Object, Void> {
 
     private RenderRegistrationBusJS(Mode mode) {
         // 底层 bus 仅为满足 EventBusJS 构造约束：本总线从不 post，只覆写 execute
-        super(EventBusFactory.createEventBus(Object.class));
+        super(EventBus.create(Object.class));
         this.mode = mode;
     }
 

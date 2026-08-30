@@ -9,9 +9,9 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.api.event.EventBus;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import graal.graalvm.polyglot.Value;
 import java.util.Arrays;
 import java.util.Map;
@@ -66,7 +66,7 @@ public final class KeyBindEvents {
 
     /** Dispatch key of the trigger buses: the full binding id, e.g. {@code 'nekojs:my_key'}. */
     private static final DispatchKey<KeyBindEventJS, String> KEY_DISPATCH =
-            EventBusFactory.createDispatchKey(String.class, KeyBindEventJS::getId);
+            DispatchKey.of(String.class, KeyBindEventJS::getId);
 
     /**
      * Fired when a registered binding transitions to down this tick (edge detection on
@@ -349,7 +349,7 @@ public final class KeyBindEvents {
     public static final class RegisterBus extends EventBusJS<Object, Void> {
 
         RegisterBus() {
-            super(EventBusFactory.createEventBus(Object.class));
+            super(EventBus.create(Object.class));
         }
 
         /**

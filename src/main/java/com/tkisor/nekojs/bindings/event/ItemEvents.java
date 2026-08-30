@@ -5,7 +5,6 @@ import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.DispatchKey;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -55,7 +54,7 @@ public interface ItemEvents {
             GROUP.server("foodEaten", LivingEntityUseItemEvent.Finish.class, dispatchByItem(LivingEntityUseItemEvent::getItem));
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
-        return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
+        return DispatchKey.of(Item.class, toStack.andThen(ItemStack::getItem));
     }
 
     private static <T extends ItemEntityPickupEvent> DispatchKey<T, Item> dispatchByPickupItem() {

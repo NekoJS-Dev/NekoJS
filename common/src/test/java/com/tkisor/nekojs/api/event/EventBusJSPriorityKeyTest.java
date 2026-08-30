@@ -1,7 +1,6 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
@@ -40,7 +39,7 @@ class EventBusJSPriorityKeyTest {
     void setUp() {
         context = Context.newBuilder("js").allowAllAccess(true).build();
         ScriptContextRegistry.bind(context, ScriptType.SERVER);
-        dispatchBus = EventBusJS.of(String.class, false, EventBusFactory.createStringDispatchKey());
+        dispatchBus = EventBusJS.of(String.class, false, DispatchKey.string());
         delivered = new AtomicInteger();
         context.getBindings("js").putMember("delivered", delivered);
     }
@@ -123,5 +122,35 @@ class EventBusJSPriorityKeyTest {
                 "dispatch bus: non-priority key string must never be parsed as priority");
         assertEquals(1, EventBusJS.priorityArgOffset(new Value[]{high, listener}, false),
                 "non-dispatch bus: ('HIGH', listener) must keep parsing HIGH as priority");
+    }
+
+    /**
+     * 静态工厂语义回归：EventBusFactory 退役后，接口静态工厂造出的总线必须保持
+     * 原有语义——普通总线不可取消、可取消总线按谓词结果取消并短路、按 key 分发。
+     */
+    @Test
+    void staticFactoryBusSemanticsUnchanged() {
+        EventBus<String> plain = EventBus.create(String.class);
+        plain.listen(e -> { delivered.incrementAndGet(); });
+        assertFalse(plain.post("e"), "plain bus is never cancellable");
+        assertEquals(1, delivered.get());
+
+        CancellableEventBus<String> cancellable = CancellableEventBus.create(String.class);
+        AtomicInteger afterCancel = new AtomicInteger();
+        cancellable.listen(e -> true);
+        cancellable.listen(e -> { afterCancel.incrementAndGet(); return false; });
+        assertTrue(cancellable.post("e"), "predicate returning true must cancel");
+        assertEquals(0, afterCancel.get(), "listeners after a cancelling one must not run");
+
+        CancellableEventBus<String> nonCancelling = CancellableEventBus.create(String.class);
+        nonCancelling.listen(e -> false);
+        assertFalse(nonCancelling.post("e"), "no cancelling listener means not cancelled");
+
+        DispatchEventBus<String, String> dispatch = DispatchEventBus.create(String.class, DispatchKey.string());
+        AtomicInteger keyed = new AtomicInteger();
+        dispatch.listen("k", e -> { keyed.incrementAndGet(); });
+        dispatch.post("e", "k");
+        dispatch.post("e", "other");
+        assertEquals(1, keyed.get(), "keyed listener must receive only posts for its own key");
     }
 }

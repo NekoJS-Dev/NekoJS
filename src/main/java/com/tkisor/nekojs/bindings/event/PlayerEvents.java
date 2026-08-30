@@ -6,7 +6,6 @@ import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.wrapper.event.player.InventoryChangedEventJS;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
@@ -64,11 +63,11 @@ public interface PlayerEvents {
             GROUP.server("inventoryChanged", InventoryChangedEventJS.class, dispatchByInventoryItem());
 
     private static <T> DispatchKey<T, Item> dispatchByItem(Function<T, ItemStack> toStack) {
-        return EventBusFactory.createDispatchKey(Item.class, toStack.andThen(ItemStack::getItem));
+        return DispatchKey.of(Item.class, toStack.andThen(ItemStack::getItem));
     }
 
     private static DispatchKey<InventoryChangedEventJS, Item> dispatchByInventoryItem() {
-        return EventBusFactory.createDispatchKey(Item.class, e -> e.getItem().getItem());
+        return DispatchKey.of(Item.class, e -> e.getItem().getItem());
     }
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
