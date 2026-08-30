@@ -10,7 +10,9 @@
 // 不支持 Forge 1.20.1：它的 API 与共享树差了一个时代，守卫和 replacements 桥接不了，
 // 移植等于维护第二套代码库。
 //
-// 引擎三模块（common / common-api / common-api-processor）是普通子项目，不参与版本化。
+// 引擎两模块（common / common-api-processor）是普通子项目，不参与版本化。对外契约类型住
+// common 的 com.tkisor.nekojs.api.* 包下，"零 MC/Loader/Graal import"这条纪律由 guardLint
+// 按包前缀强制（ADR-0007），不再由独立模块承载。
 
 pluginManagement {
     repositories {
@@ -37,4 +39,4 @@ stonecutter {
     }
 }
 
-include("common-api", "common-api-processor", "common")
+include("common-api-processor", "common")

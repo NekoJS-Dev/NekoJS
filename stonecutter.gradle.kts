@@ -78,8 +78,8 @@ stonecutter parameters {
 //   4. 密度：单文件 `//? if` ≤ 20，超限须写 `// guard-exempt(20): 理由` 豁免标记
 //      （纯 Java 注释，不用 `//?` 前缀——那是 stonecutter 指令语法），豁免清单每次输出；
 //   5. 连续守卫段 > 8 行软告警——"方法级密度"的代理指标，避免脆弱的大括号追踪；
-//   6. 模块边界（ADR-0007）：common-api 零 MC/Loader/Graal import、common 零
-//      MC/Loader import。当前基线为零违规，新增即硬失败；
+//   6. 模块边界（ADR-0007）：common 里 com.tkisor.nekojs.api.* 零 MC/Loader/Graal
+//      import、common 其余部分零 MC/Loader import。当前基线为零违规，新增即硬失败；
 //   7. wrapper 层零 loader import（ADR-0004）。例外：整文件 loader 守卫
 //      （`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件是显式平台面，其 loader
 //      import 在对侧编译单元根本不存在，不计违规、只做提示性列出；
@@ -91,10 +91,11 @@ val guardLint = tasks.register("guardLint") {
     description = "Lints stonecutter guards (pairing, hazard shapes, density) and module boundaries."
 
     val sources = fileTree("src") { include("**/*.java") }
-    val commonApiSources = fileTree("common-api/src/main/java") { include("**/*.java") }
+    // 契约包按包前缀取材：api.* 与引擎实现同住 common，边界不再由模块划分承载（ADR-0007）
+    val apiSources = fileTree("common/src/main/java/com/tkisor/nekojs/api") { include("**/*.java") }
     val commonSources = fileTree("common/src/main/java") { include("**/*.java") }
     val nodeProperties = fileTree("versions") { include("*/gradle.properties") }
-    inputs.files(sources, commonApiSources, commonSources, nodeProperties)
+    inputs.files(sources, apiSources, commonSources, nodeProperties)
 
     val densityLimit = 20
     val runLimit = 8
@@ -208,12 +209,12 @@ val guardLint = tasks.register("guardLint") {
             }
         }
 
-        // 模块边界（ADR-0007 四层判据）：当前基线均为零违规，新增即失败
-        commonApiSources.forEach { f ->
+        // 模块边界（ADR-0007）：当前基线均为零违规，新增即失败
+        apiSources.forEach { f ->
             f.readLines().forEach { line ->
                 val t = line.trim()
                 if (mcLoaderImport.matches(t) || graalImport.matches(t)) {
-                    problems += "${rel(f)}: 违反 L1 边界（common-api 零 MC/Loader/Graal import，ADR-0007）: $t"
+                    problems += "${rel(f)}: 违反 L1 边界（com.tkisor.nekojs.api.* 零 MC/Loader/Graal import，ADR-0007）: $t"
                 }
             }
         }

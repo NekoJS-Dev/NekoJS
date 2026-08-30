@@ -1,5 +1,5 @@
-// 副本来源：主仓 common-api-processor/build.gradle（沙箱不回写主仓）。
-// 差异：折入主仓根 build.gradle allprojects 的编译约定（UTF-8 等）。
+// spec 覆盖检查的注解处理器。它必须是独立制品才能被当作 annotationProcessor 使用（处理器不能
+// 与被它处理的代码在同一次编译里），所以契约类型并入 common 之后它仍然是单独的子项目。
 
 plugins {
     id 'java-library'
@@ -25,13 +25,14 @@ repositories {
 }
 
 dependencies {
-    // 编译期需要访问 common-api 的 spec 注解（@PlatformAvailability 等），
-    // 但运行时（处理器执行时）由各平台的 compileClasspath 提供，故 compileOnly
-    compileOnly project(':common-api')
+    // 只用到 api.spec 的注解（@PlatformAvailability 等）。声明为非传递：契约类型现在住 :common，
+    // 而 :common 用 `api` 导出 Graal（cursemaven），传递进来会让本模块也要配 cursemaven 仓库并
+    // 下载一个它根本不碰的引擎依赖。processorpath 只需要 :common 自己的 class。
+    compileOnly(project(':common')) { transitive = false }
 
     // 处理器单测：SpecCoverageProcessorTest 通过系统编译器内嵌编译源码，
     // 需在测试 JVM 中加载真实的 @PlatformAvailability 类（processorpath 用）
-    testImplementation project(':common-api')
+    testImplementation(project(':common')) { transitive = false }
     testImplementation platform(libs.junit.bom)
     testImplementation libs.junit.jupiter
     testRuntimeOnly libs.junit.platform.launcher
