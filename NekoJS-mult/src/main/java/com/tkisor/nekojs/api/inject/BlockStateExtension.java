@@ -41,11 +41,8 @@ public interface BlockStateExtension extends BlockStateSpec {
     }
 
     default String neko$getId() {
-//? if >=26 {
-        return self().getBlock().neko$getId();
-//?} else {
-/*        return ((BlockExtension) self().getBlock()).neko$getId();
-*///?}
+        // 26.x 经接口注入 Block 直接持有 neko$getId；1.21.1 需强转——强转写法两端等价
+        return ((BlockExtension) self().getBlock()).neko$getId();
     }
 }
 //?}
