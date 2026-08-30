@@ -64,9 +64,10 @@ nekojs/
 仓库是 stonecutter 多版本多加载器单仓：一棵共享源码树，加上每个节点的参数目录。
 
 ```text
-common-api/            # 数据契约与 conversion SPI（不依赖 MC / 加载器 / Graal）
-common-api-processor/  # 编译期注解处理器，检查 common-api 契约的 spec 覆盖
 common/                # 跨平台引擎：Graal Context、ESM/CJS 模块、probe、事件总线、插件系统
+│                       #   com.tkisor.nekojs.api.* 是对外契约包（零 MC/加载器/Graal import，
+│                       #   由 guardLint 强制）
+common-api-processor/  # 编译期注解处理器，检查契约 spec 覆盖
 buildSrc/              # 节点构建约定（nekojs.neoforge-node / nekojs.fabric-node）
 src/                   # 版本共享树，所有节点共用这一份
 ├── main/java/         #   版本差异用 //? if >=26 守卫和 replacements 表达
