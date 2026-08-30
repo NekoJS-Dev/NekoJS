@@ -46,13 +46,11 @@ version = modVersion
 
 // 节点在 settings 里先于 common 注册，求值时 :common 还没配置完；跨项目读 sourceSets
 // 之前必须显式声明求值依赖。
-evaluationDependsOn(":common-api")
 evaluationDependsOn(":common")
 
 // MDG mods 块的 lambda receiver 不是 project，sourceSet 需在顶层捕获
 val mainSources = sourceSets.main.get()
 val commonSources = project(":common").sourceSets.main.get()
-val commonApiSources = project(":common-api").sourceSets.main.get()
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(javaRelease)
 
@@ -114,7 +112,6 @@ neoForge {
         create(modId) {
             sourceSet(mainSources)
             sourceSet(commonSources)
-            sourceSet(commonApiSources)
         }
     }
 
@@ -160,7 +157,9 @@ dependencies {
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     annotationProcessor(project(":common-api-processor"))
-    annotationProcessor(project(":common-api"))
+    // 处理器在自己的 classloader 里加载 @PlatformAvailability，所以契约类型也要上处理器路径。
+    // 契约类型现在住 :common，代价是处理器路径上多出 common 与 Graal（不影响编译/运行 classpath）。
+    annotationProcessor(project(":common"))
     compileOnly(libs.jspecify)
 
     // MC 节点用 JUnit 5：NeoForge 测试环境不兼容 JUnit 6（引擎模块走 BOM 6.0.0）
@@ -226,12 +225,10 @@ val embeddedCommonRuntime = files(
 
 tasks.jar {
     dependsOn(project(":common").tasks.named("jar"))
-    dependsOn(project(":common-api").tasks.named("jar"))
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude("module-info.class")
     exclude("META-INF/versions/**/module-info.class")
     from(project(":common").sourceSets.main.get().output)
-    from(project(":common-api").sourceSets.main.get().output)
     // 必须用 from(Closure)（执行期求值）：KTS 的 map{} 会在配置期立即迭代，触发
     // :common:runtimeClasspath 的无锁解析，IDEA sync 和 gradlew tasks 会直接失败。
     from(object : Closure<Any>(null) {
@@ -280,25 +277,23 @@ tasks.register<Test>("nbtSmokeTest") {
 }
 
 // ---- verifyDevModSourceSets：ModDev mod source-set 注册门禁 ----------------------
-// 断言 mods{} 里注册了本平台 + :common + :common-api 三个 source set，且各自的关键
-// class 已编译出来（开发运行需要它们可见）。
+// 断言 mods{} 里注册了本平台与 :common 两个 source set，且各自的关键 class 已编译出来
+// （开发运行需要它们可见）。契约类型（api.*）随 :common 一起进来，用 NekoId 抽查。
 
 val verifyDevModSourceSets = tasks.register("verifyDevModSourceSets") {
     group = "verification"
     description = "Verifies NeoForge ModDev mod source-set registration for this node."
     dependsOn(tasks.named("classes"))
     dependsOn(project(":common").tasks.named("classes"))
-    dependsOn(project(":common-api").tasks.named("classes"))
 
     val requiredSets = mapOf(
         ":${project.name}" to mainSources,
         ":common" to commonSources,
-        ":common-api" to commonApiSources,
     )
     val requiredClasses = listOf(
         Triple(":${project.name}", mainSources, "com/tkisor/nekojs/NekoJSMod.class"),
         Triple(":common", commonSources, "com/tkisor/nekojs/NekoJS.class"),
-        Triple(":common-api", commonApiSources, "com/tkisor/nekojs/api/data/NekoId.class"),
+        Triple(":common", commonSources, "com/tkisor/nekojs/api/data/NekoId.class"),
     )
     val configuredSets = neoForge.mods.named(modId).map { it.modSourceSets.get() }
 

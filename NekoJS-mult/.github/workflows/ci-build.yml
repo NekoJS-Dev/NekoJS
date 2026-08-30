@@ -125,7 +125,7 @@ jobs:
         # 用 :common:check 而非 :common:test：check 才会挂上 checkCommonIsolation 隔离门禁
         # :common-api-processor:test 显式列出（JavaPlugin 的 check 默认已依赖 test，这里点名
         # 是防止将来 check 挂载被改掉时单测静默丢失）
-        run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
+        run: ./gradlew :common:check :common-api-processor:test --console=plain
 
       - name: Guard lint
         # 守卫配对/密度/形状 + 模块边界。规则清单与理由见 stonecutter.gradle.kts 的 guardLint。
@@ -226,7 +226,7 @@ jobs:
       - name: Run common checks
         # 主 job 的 Gradle 守护进程跑在 JDK 25 上；这里用 JDK 21 跑同一组检查（工具链同为 21），
         # 捕捉对守护进程 JVM 版本的隐性依赖（toolchain 漂移）；任务列表与主 job 保持一致
-        run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
+        run: ./gradlew :common:check :common-api-processor:test --console=plain
 
   release:
     name: Create GitHub release
@@ -443,7 +443,7 @@ jobs:
 
       - name: Run common checks
         shell: bash
-        run: ./gradlew :common-api:check :common:check --console=plain
+        run: ./gradlew :common:check --console=plain
 
       # Windows 专属失败的诊断依赖：与主 build job 的 test-reports 区分命名
       - name: Upload common test reports
@@ -454,8 +454,6 @@ jobs:
           path: |
             common/build/reports/tests/test
             common/build/test-results/test
-            common-api/build/reports/tests/test
-            common-api/build/test-results/test
 
   gametest-smoke:
     # headless GameTest 冒烟：跑完会自行退出并打印 "All N required tests passed"（下面按这行

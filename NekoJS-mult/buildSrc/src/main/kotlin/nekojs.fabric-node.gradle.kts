@@ -29,7 +29,6 @@ val modDescription = property("mod_description") as String
 version = modVersion
 
 // 节点在 settings 里先于 common 注册，求值时 :common 还没配置完
-evaluationDependsOn(":common-api")
 evaluationDependsOn(":common")
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(javaRelease)
@@ -166,12 +165,10 @@ val embeddedCommonRuntime = files(
 
 tasks.jar {
     dependsOn(project(":common").tasks.named("jar"))
-    dependsOn(project(":common-api").tasks.named("jar"))
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     exclude("module-info.class")
     exclude("META-INF/versions/**/module-info.class")
     from(project(":common").sourceSets.main.get().output)
-    from(project(":common-api").sourceSets.main.get().output)
     // 必须 from(Closure) 执行期求值：配置期解析会撞 :common 的无锁解析
     from(object : Closure<Any>(null) {
         fun doCall(): List<Any> = embeddedCommonRuntime

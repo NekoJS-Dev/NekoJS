@@ -6,7 +6,7 @@
 #     的 deps.* 键，按节点取值。
 #   - curse.maven 的 JEI 等模组坐标 —— 每个 MC 版本是不同的 artifact，无复用价值。
 #
-# JUnit 有两条版本线，是刻意的：引擎模块（common / common-api）走 BOM 6.0.0，
+# JUnit 有两条版本线，是刻意的：引擎模块（common / common-api-processor）走 BOM 6.0.0，
 # MC 节点走 5.14.3，因为 NeoForge 测试环境目前只兼容 JUnit 5。别把它们统一掉。
 
 [versions]
@@ -18,7 +18,7 @@ gson = "2.11.0"
 slf4jModern = "2.0.13"
 log4j = "2.20.0"
 icu4j = "77.1"
-junitBom = "6.0.0"               # 引擎模块（common / common-api）
+junitBom = "6.0.0"               # 引擎模块（common / common-api-processor）
 junitLegacy = "5.14.3"           # MC 节点：NeoForge 测试环境只兼容 JUnit 5
 graal = "8762962"                # curse.maven 文件 id = GraalMC 25.1.3.7（NeoForge 构建；fabric=8762963）
                                  # 不可降级：正则求值要求 GraalMC 自带 TRegex 语言 provider 注册，

@@ -1,9 +1,6 @@
-// 副本来源：主仓 common/build.gradle（沙箱不回写主仓）。
-// 差异：折入主仓根 build.gradle allprojects 的编译约定（-parameters/UTF-8；
-// -Xlint:all 省略——原文件对 compileJava 单独关了 [processing]，避免追加顺序噪音）。
-// checkCommonIsolation / $SwitchMap$ 指纹守卫 / golden 测试入口一并保留（副本内自洽）。
-
-import java.security.MessageDigest
+// 引擎模块：MC / Loader 无关的纯 Java 21 主体，四个节点共用。com.tkisor.nekojs.api.* 是对外
+// 契约包（零 MC/Loader/Graal import，由 guardLint 按包前缀强制，ADR-0007）；其余包是引擎实现，
+// 允许直接依赖 Graal。不发布 Maven 制品，产物由各节点内嵌进平台 fat jar。
 
 plugins {
     id 'java-library'
@@ -41,6 +38,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // 保留参数名：ContractReflector 反射读 facade 方法的参数名（Text.of(String text) → "text"）
     options.compilerArgs += '-parameters'
 }
 
@@ -59,8 +57,6 @@ processResources {
 }
 
 dependencies {
-    api project(':common-api')
-
     testImplementation platform(libs.junit.bom)
     testImplementation libs.junit.jupiter
     testImplementation libs.gson
@@ -106,7 +102,7 @@ test {
 // Guard the common module's MC/loader-agnostic invariant: common must not import
 // Minecraft, Forge, or NeoForge types (it is compiled on Java 21 with no MC deps and
 // shared across all 4 platforms). Graal imports ARE allowed — common intentionally owns
-// the GraalJS engine. Mirrors common-api's checkApiBoundaries pattern.
+// the GraalJS engine. Overlaps guardLint's L2 rule; kept so `:common:check` alone catches it.
 tasks.register('checkCommonIsolation') {
     group = 'verification'
     description = 'Rejects Minecraft/Forge/NeoForge imports in common (keeps it MC-agnostic).'
@@ -144,46 +140,15 @@ tasks.register('checkCommonIsolation') {
 
 check.dependsOn checkCommonIsolation
 
-// ---- enum switch ($SwitchMap$) staleness guard -------------------------------------------
-// javac compiles `switch` over common-api enums into a synthetic $SwitchMap$ class inside the
-// CONSUMER (this module). Gradle's compile avoidance only snapshots the ABI member set, which
-// does NOT change when enum constants are merely REORDERED in common-api — so a stale
-// $SwitchMap$ can silently misdispatch at runtime. Fingerprinting the exact jar bytes of
-// :common-api:jar as a compileJava input forces recompilation on any content change.
-// `api project(':common-api')` already makes compileJava depend on :common-api:jar, so the
-// archive exists by the time this provider is evaluated (at execution time); the 'missing'
-// fallback only covers edge cases (e.g. jar task disabled).
-// NOTE: must be a lazy provider — with org.gradle.parallel=true, ':common-api' may not be
-// configured yet when ':common' is evaluated, so the jar task must be looked up at execution time.
-def sha256Of = { File file ->
-    if (file == null || !file.exists()) {
-        return 'missing'
-    }
-    def digest = MessageDigest.getInstance('SHA-256')
-    file.withInputStream { stream ->
-        def buffer = new byte[8192]
-        int read
-        while ((read = stream.read(buffer)) != -1) {
-            digest.update(buffer, 0, read)
-        }
-    }
-    return digest.digest().collect { byte b -> String.format('%02x', b) }.join('')
-}
-
-def commonApiJarFingerprint = providers.provider {
-    def jarTask = project(':common-api').tasks.findByName('jar')
-    def file = jarTask?.archiveFile?.getOrNull()?.asFile
-    sha256Of(file)
-}
-
 compileJava {
-    inputs.property('commonApiJarFingerprint', commonApiJarFingerprint)
-
     // Graal 的 TruffleLanguage.Registration 等是运行时反射读取，不需要注解处理器，
     // javac 的 [processing] 提示纯属噪音，单独关掉该 lint。
     options.compilerArgs += '-Xlint:-processing'
 }
-// ------------------------------------------------------------------------------------------
+
+// 注意：api.* 的枚举与 switch 现在同模块编译。若将来又把 api.* 拆成独立制品，跨 jar 的
+// $SwitchMap$ 陷阱会原样回来——javac 把 switch over enum 编译成消费方内部的合成类，而
+// Gradle 的 ABI 编译回避不会注意到枚举常量重排，会留下错误分派的陈旧 $SwitchMap$。
 
 tasks.register('nbtSmokeTest', Test) {
     group = 'verification'
