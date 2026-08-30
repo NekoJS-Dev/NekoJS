@@ -1,9 +1,9 @@
 package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.wrapper.event.item.ItemRightClickEventJS;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
@@ -28,7 +28,7 @@ public final class FabricItemEventBindings {
     private static final EventBusJS<ItemRightClickEventJS, Item> RIGHT_CLICKED =
             ITEM_EVENTS.add("rightClicked", ScriptType.SERVER, EventBusJS.of(
                     ItemRightClickEventJS.class, true,
-                    EventBusFactory.createDispatchKey(Item.class, event -> event.getItemStack().getItem())));
+                    DispatchKey.of(Item.class, event -> event.getItemStack().getItem())));
 
     private FabricItemEventBindings() {}
 

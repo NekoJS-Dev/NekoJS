@@ -1,5 +1,8 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.eventbus.dispatch.DispatchCancellableEventBusImpl;
+
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /**
@@ -37,6 +40,13 @@ import java.util.function.Predicate;
  * @author ZZZank
  */
 public interface DispatchCancellableEventBus<E, K> extends CancellableEventBus<E>, DispatchEventBus<E, K> {
+
+    static <E, K> DispatchCancellableEventBus<E, K> create(
+        Class<E> eventType,
+        DispatchKey<E, K> dispatchKey
+    ) {
+        return new DispatchCancellableEventBusImpl<>(eventType, dispatchKey, new ConcurrentHashMap<>());
+    }
 
     // suppress overloads: intentional dual Consumer/Predicate overloads; see class javadoc
     @SuppressWarnings("overloads")

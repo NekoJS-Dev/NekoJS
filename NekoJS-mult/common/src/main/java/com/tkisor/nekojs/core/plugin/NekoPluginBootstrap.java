@@ -12,7 +12,6 @@ import com.tkisor.nekojs.api.surface.ApiContributionRegistry;
 import com.tkisor.nekojs.api.surface.ApiRuntimeProvider;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
-import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 import com.tkisor.nekojs.api.surface.LegacyGlobalReservation;
 import com.tkisor.nekojs.core.api.FrozenApiRegistrySet;
 import com.tkisor.nekojs.platform.Platform;
@@ -182,7 +181,7 @@ public final class NekoPluginBootstrap {
     private static List<EnvironmentKey> buildEnvironmentKeys() {
         List<EnvironmentKey> keys = new ArrayList<>();
         for (ScriptType type : ScriptType.values()) {
-            keys.add(EnvironmentKeyFactory.current(type));
+            keys.add(EnvironmentKey.current(type));
         }
         return List.copyOf(keys);
     }

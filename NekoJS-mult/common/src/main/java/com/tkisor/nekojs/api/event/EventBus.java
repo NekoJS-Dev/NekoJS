@@ -1,11 +1,17 @@
 package com.tkisor.nekojs.api.event;
 
+import com.tkisor.nekojs.eventbus.EventBusImpl;
+
 import java.util.function.Consumer;
 
 /**
  * @author ZZZank
  */
 public interface EventBus<E> {
+
+    static <E> EventBus<E> create(Class<E> eventType) {
+        return new EventBusImpl<>(eventType, null);
+    }
 
     Class<E> eventType();
 

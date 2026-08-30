@@ -1,9 +1,9 @@
 package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.entity.EntityJoinLevelEventJS;
 import com.tkisor.nekojs.wrapper.event.entity.LivingDamageEventJS;
@@ -36,20 +36,20 @@ public final class FabricEntityEventBindings {
 
     public static final EventBusJS<EntityJoinLevelEventJS, EntityType<?>> JOIN_LEVEL =
             ENTITY_EVENTS.server("joinLevel", EntityJoinLevelEventJS.class,
-                    EventBusFactory.createDispatchKey(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
 
     public static final EventBusJS<LivingDeathEventJS, EntityType<?>> DEATH =
             ENTITY_EVENTS.server("death", LivingDeathEventJS.class,
-                    EventBusFactory.createDispatchKey(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
 
     private static final EventBusJS<LivingDamageEventJS, EntityType<?>> DAMAGE_PRE =
             ENTITY_EVENTS.add("damagePre", ScriptType.SERVER, EventBusJS.of(
                     LivingDamageEventJS.class, true,
-                    EventBusFactory.createDispatchKey(EntityType.class, event -> event.getEntity().getType())));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType())));
 
     private static final EventBusJS<LivingDamageEventJS, EntityType<?>> DAMAGE_POST =
             ENTITY_EVENTS.server("damagePost", LivingDamageEventJS.class,
-                    EventBusFactory.createDispatchKey(EntityType.class, event -> event.getEntity().getType()));
+                    DispatchKey.of(EntityType.class, event -> event.getEntity().getType()));
 
     private FabricEntityEventBindings() {}
 

@@ -12,7 +12,6 @@ import com.tkisor.nekojs.api.event.DispatchCancellableEventBus;
 import com.tkisor.nekojs.api.event.DispatchEventBus;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.eventbus.CommonPriority;
-import com.tkisor.nekojs.eventbus.EventBusFactory;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
@@ -72,12 +71,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         EventBus<E> bus;
         if (cancellable) {
             bus = dispatchKey != null
-                ? EventBusFactory.createDispatchCancellableEventBus(eventType, dispatchKey)
-                : EventBusFactory.createCancellableEventBus(eventType);
+                ? DispatchCancellableEventBus.create(eventType, dispatchKey)
+                : CancellableEventBus.create(eventType);
         } else {
             bus = dispatchKey != null
-                ? EventBusFactory.createDispatchEventBus(eventType, dispatchKey)
-                : EventBusFactory.createEventBus(eventType);
+                ? DispatchEventBus.create(eventType, dispatchKey)
+                : EventBus.create(eventType);
         }
         return new EventBusJS<>(bus);
     }

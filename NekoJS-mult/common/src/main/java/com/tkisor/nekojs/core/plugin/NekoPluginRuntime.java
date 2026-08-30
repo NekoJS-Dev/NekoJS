@@ -22,7 +22,6 @@ import com.tkisor.nekojs.api.surface.ApiRuntimeProvider;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
-import com.tkisor.nekojs.api.surface.EnvironmentKeyFactory;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
@@ -155,7 +154,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         if (runtime.apiRuntimeProvider == null) return;
         Map<ScriptType, ApiSurfaceSnapshot> snapshots = new java.util.HashMap<>();
         for (ScriptType type : ScriptType.values()) {
-            EnvironmentKey key = EnvironmentKeyFactory.current(type);
+            EnvironmentKey key = EnvironmentKey.current(type);
             ApiRuntimeView view = runtime.apiRuntimeProvider.view(key);
             if (view == null) continue;
             ApiEnvironmentSnapshot envSnap = view.environmentSnapshot();
