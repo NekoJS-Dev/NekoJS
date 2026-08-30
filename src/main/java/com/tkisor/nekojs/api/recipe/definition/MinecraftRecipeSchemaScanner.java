@@ -1,4 +1,6 @@
 //? if neoforge {
+//~ mc_legacy_api
+// 本文件启用文件级 mc_legacy_api（26.x 活形态无 .location()，1.21.1 求值形态无 .identifier()）。
 package com.tkisor.nekojs.api.recipe.definition;
 
 import com.mojang.serialization.Codec;
@@ -26,11 +28,7 @@ public final class MinecraftRecipeSchemaScanner {
         Map<String, List<RecipeSchemaAutoDiscovery.DiscoveredRecipeKey>> types = new LinkedHashMap<>();
 
         for (var entry : BuiltInRegistries.RECIPE_SERIALIZER.entrySet()) {
-//? if >=26 {
             Identifier id = entry.getKey().identifier();
-//?} else {
-/*            Identifier id = entry.getKey().location();
-*///?}
             RecipeSerializer<?> serializer = entry.getValue();
             String typeKey = id.toString();
 
