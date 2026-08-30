@@ -142,9 +142,9 @@ jobs:
       - name: Build version nodes
         # 节点列表变化时同步更新 settings.gradle.kts 与此处：
         # 根分支 = 1.21.1 / 26.1.2 / 26.2.0（NeoForge，根 build.gradle.kts）
-        #        + 26.1.2-fabric（Fabric，fabric.gradle.kts）；forge 分支 = 1.20.1（forge/build.gradle.kts）
+        #        + 26.1.2-fabric（Fabric，fabric.gradle.kts）
         # 单个 build 已按依赖链覆盖 compileJava → test → check（隔离门禁/verifyDevModSourceSets）
-        run: ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :forge:1.20.1:build --console=plain
+        run: ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build --console=plain
 
       - name: Prepare artifacts
         shell: bash
@@ -166,7 +166,7 @@ jobs:
             else
               cp "$jar" "artifacts/${name%.jar}-dev-${SHORT_SHA}.jar"
             fi
-          done < <(find versions forge/versions -path '*/build/libs/*.jar' -type f | sort)
+          done < <(find versions -path '*/build/libs/*.jar' -type f | sort)
 
           if ! compgen -G 'artifacts/*.jar' > /dev/null; then
             echo "No jar artifacts were produced" >&2

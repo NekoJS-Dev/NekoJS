@@ -25,5 +25,5 @@
 ## Consequences
 
 - 现状 `common/src/main/java/com/tkisor/nekojs/api/` 下的插件入口类型迁移到 `common-api`（包名不变、模块归属变化），插件作者 import 路径不变。
-- `forge/` 独立分支（B4 端口）并入根分支时按同判据落位。
+- 原 `forge/` 独立分支条款已失效（2026-08-30：1.20.1 移植取消，骨架自仓库移除）。
 - 边界检查的处理器扩展工作量列入 G1 编排。
