@@ -63,6 +63,43 @@ ADR-0010 §4 记录了实施裁决：迁不动——18 个钩子的参数类型�
 级联拖出内部依赖，最终 `NekoJSPlugin` 留在 `common`。所以今天这个模块不是一个未完成的计划，
 而是一次已经失败的搬迁留下的残留：契约层里没有插件入口，插件作者仍然只能编译依赖平台 fat jar。
 
+## 原始设计：这些工厂类不是设计，是拆分的副产物
+
+`v1.0.4` 是单 Gradle 模块，事件总线的写法是这样的（`utils/event/EventBus.java`）：
+
+```java
+public interface EventBus<E> {
+    static <E> EventBus<E> create(Class<E> eventType) {
+        return new EventBusImpl<>(eventType);
+    }
+    // ...
+}
+```
+
+接口住 `utils/event/`，实现住 `utils/event/impl/`，接口 import 实现并**自带静态工厂**。
+`CancellableEventBus.create(...)`、`DispatchEventBus.create(...)` 同形，`DispatchKey` 更完整：
+`of(Class, Function)` / `of(Class)` / `string()` 三个静态工厂全在接口上。**没有 `EventBusFactory`
+这个类**——拿到接口就知道怎么造一个。
+
+它是分两步变成今天这样的：
+
+1. **`3b9882df`（2026-07-23，仍是单模块）**：包结构重排为 `api/event/`（契约）+ `eventbus/`
+   （实现），静态工厂从接口上剥掉，新增 57 行的 `eventbus/EventBusFactory`。这一步是**包级洁癖
+   的选择而不是语言限制**——`EventBusFactory` 自己的 javadoc 写着理由："Lives in `eventbus/`
+   package to avoid circular dependencies with impl classes"。而 v1.0.4 证明那个包环是完全可以
+   接受的：Java 允许它，原作者也这么写了几个版本。
+2. **`d59c97d3`（2026-07-27）建 `common-api` 骨架，`ff55a7b1` 把这批接口迁进去**：至此那个
+   *偏好*变成了*不可能*。契约层在依赖图上位于引擎之下，接口再也无法引用实现，静态工厂不是"我们
+   选择不写"，而是"写不出来"。
+
+命名上的退化也一并发生了：`DispatchKey.of(keyType, toKey)` 变成
+`EventBusFactory.createDispatchKey(keyType, toKey)`，`DispatchKey.string()` 变成
+`EventBusFactory.createStringDispatchKey()`。同一件事多了一个类名、一层前缀，还从契约包搬进了
+实现包——版本树里的业务代码因此要 import 引擎实现包。
+
+这段历史决定了本文方案第二步的性质：**它不是新设计，是把 v1.0.4 已经验证过的形状恢复回来。**
+也说明并入模块之后唯一残留的反对意见是那个包环偏好，而那个偏好在原始设计里就没有被当成硬约束。
+
 ## Solution
 
 把 `common-api` 的源码并入 `common`，仍然放在 `com.tkisor.nekojs.api.*` 包下，**所有 FQCN
@@ -74,7 +111,7 @@ ADR-0010 §4 记录了实施裁决：迁不动——18 个钩子的参数类型�
 
 改完之后收回来的是：
 
-- 接口可以自带静态工厂。`EventBus.of(...)`、`DispatchKey.of(...)` 这类写法成为可能，因为契约
+- 接口可以自带静态工厂。`EventBus.create(...)`、`DispatchKey.of(...)` 这类写法成为可能，因为契约
   类型和实现终于在同一个编译单元里。`EventBusFactory` 与 `EnvironmentKeyFactory` 这两个绕道
   工厂可以退役，构造入口回到类型本身。
 - 7 个拆包合并，一个类只属于一个制品。
@@ -102,7 +139,7 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
 
 1. 作为引擎贡献者，我想在拿到一个契约接口时就能看见怎么造出它的实例，这样我不必先去猜实现住在哪个模块、再去找有没有对应的工厂类。
 2. 作为引擎贡献者，我想在版本树的业务代码里写 `DispatchKey.of(...)` 而不是 `EventBusFactory.createDispatchKey(...)`，这样调用点不必知道实现包的名字。
-3. 作为引擎贡献者，我想让 `EventBus` 这类接口自带 `of` 系列静态工厂，这样新增一种总线时构造入口自然长在类型上，不必同步维护一个平行的工厂类。
+3. 作为引擎贡献者，我想让 `EventBus` 这类接口自带静态工厂，这样新增一种总线时构造入口自然长在类型上，不必同步维护一个平行的工厂类。
 4. 作为引擎贡献者，我想知道一个类唯一属于哪个制品，这样在 IDE 里跳转和在构建里定位都不产生歧义。
 5. 作为引擎贡献者，我想只维护一份引擎层 `build.gradle`，这样编译选项（`-Xlint`、`-parameters`、toolchain）只有一处事实源，不会两边悄悄漂移。
 6. 作为引擎贡献者，我想删掉 `$SwitchMap$` 指纹守卫，这样枚举重排的正确性由 javac 的正常增量编译保证，而不是靠一段需要被理解和维护的构建脚本。
@@ -118,6 +155,9 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
 16. 作为审阅者，我想在 diff 里看到"纯移动 + 删除机制"而不是"移动 + 顺手改逻辑"，这样我能低成本确认行为未变。
 17. 作为审阅者，我想让工厂类退役与模块并入是两个可独立回滚的步骤，这样出问题时能只回退一半。
 18. 作为维护者，我想在将来真的需要一个可单独依赖的 API 制品时，知道那件事的前置条件是什么，这样我不会误以为只要重新拆个模块就够了。
+
+19. 作为引擎贡献者，我想让恢复后的静态工厂沿用 v1.0.4 的方法名，这样翻旧提交和旧分支时同一个概念只有一个名字。
+20. 作为审阅者，我想知道当前形状是从哪个提交开始偏离原始设计的，这样我能判断这次调整是回归而不是又一次重构。
 
 ## Implementation Decisions
 
@@ -154,16 +194,22 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
    同步。ADR-0007 决策 1（插件入口迁 `common-api`）连同 ADR-0010 §4 的推回一起归档为"该路线
    已终止"，避免后来者重走。
 
-### 第二步：构造入口回到类型上
+### 第二步：构造入口回到类型上（恢复 v1.0.4 的形状）
 
-9. **`EventBusFactory` 退役**：把 5 个创建方法改写为契约类型自身的静态工厂——`EventBus.of`、
-   `CancellableEventBus.of`、`DispatchEventBus.of`、`DispatchCancellableEventBus.of`、
-   `DispatchKey.of`（含现有的 `keyType` 单参与 `keyType + toKey` 双参两个形态，以及
-   `DispatchKey.ofString()`）。调用点从 `EventBusFactory.createXxx` 改为对应静态工厂。
-10. **`EnvironmentKeyFactory` 退役**：`current()` 并入 `EnvironmentKey` 作为静态工厂。
-11. **不做**的事：不改任何接口的实例方法签名，不改实现类的行为，不动 `precedence` / 冲突语义。
+9. **`EventBusFactory` 退役**：5 个创建方法改回契约类型自身的静态工厂。命名取 v1.0.4 的原名而
+   不是造新的——`EventBus.create` / `CancellableEventBus.create` / `DispatchEventBus.create` /
+   `DispatchCancellableEventBus.create`，以及 `DispatchKey.of(keyType, toKey)` /
+   `DispatchKey.of(keyType)` / `DispatchKey.string()`。调用点从 `EventBusFactory.createXxx` 改为
+   对应静态工厂。
+10. **接受 `api.event` ↔ `eventbus` 的包环**。这是第二步的全部代价，也是 v1.0.4 的原状：契约包
+    import 实现包。它不影响编译、不影响运行，只违反"包依赖应当是 DAG"这条洁癖。换来的是构造
+    入口长在类型上。若将来确实想恢复 DAG，正确做法是把实现移进契约包（同包内 package-private
+    实现类），而不是再立一个工厂类。
+11. **`EnvironmentKeyFactory` 退役**：`current()` 并入 `EnvironmentKey` 作为静态工厂。注意它与
+    上面几个不同——它的阻碍不是包环而是 `platform.Platform` 的位置，并入模块后才成立。
+12. **不做**的事：不改任何接口的实例方法签名，不改实现类的行为，不动 `precedence` / 冲突语义。
     第二步只搬构造入口的位置。
-12. **迁移期兼容**：不保留 `EventBusFactory` 的委托壳。它是引擎内部类型，21 个调用点全在本仓
+13. **迁移期兼容**：不保留 `EventBusFactory` 的委托壳。它是引擎内部类型，21 个调用点全在本仓
     （`common` 主源 4 处、`common` 测试 1 处、版本树 16 处——共享树 `bindings/event` 与
     `client/render` 共 10 处、`1.21.1` 节点 1 处、`26.1.2-fabric` 节点 5 处），一次改完；保留一个
     空壳只会让"构造入口在哪"重新变成两个答案。
@@ -190,10 +236,14 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
    它内嵌编译源码字符串，不依赖真实 jar 布局，所以它验证的正是"处理器仍能加载到注解类型"。
 
 **第二步需要的新测试**：只有一处。`EventBusFactory` 退役后，新的静态工厂应当有一个测试断言
-四种总线的**可取消性与分发语义未变**——即 `EventBus.of` 造出的总线 `canCancel()` 为假、
-`CancellableEventBus.of` 为真、`DispatchEventBus.of` 按 key 分发。现有 `EventBusJSPriorityKeyTest`
-已经覆盖了 dispatch key 的行为，扩一个用例即可，不新建测试类。**不要**为静态工厂本身写
-"调用它返回非 null"这种测试——那是在测实现细节。
+四种总线的**可取消性与分发语义未变**——即 `EventBus.create` 造出的总线 `canCancel()` 为假、
+`CancellableEventBus.create` 为真、`DispatchEventBus.create` 按 key 分发。现有
+`EventBusJSPriorityKeyTest` 已经覆盖了 dispatch key 的行为，扩一个用例即可，不新建测试类。
+**不要**为静态工厂本身写"调用它返回非 null"这种测试——那是在测实现细节。
+
+另外第二步有一个便宜的等价性检查值得做一次：改调用点之前先跑一遍 `:common:test` 与四节点
+`build` 留底，改完再跑，两次结果应当完全一致。因为静态工厂与旧工厂方法返回的是同一批实现类，
+任何行为差异都意味着改写时手滑了。
 
 **回归风险最高的两点，各有对应的既有门禁**：枚举重排导致的 `$SwitchMap$` 错误分派（删掉指纹
 守卫后由 javac 正常增量编译保证，`:common:test` 全量跑即可暴露）；fat jar 装配来源变化
@@ -225,7 +275,7 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
   建议移动与删除机制分成两个提交，让 `git log --follow` 能干净地跟过去。
 - **第二步会顺手改善版本树的可读性。** 版本树里 16 处 `EventBusFactory.*` 调用是它唯一直接引用
   引擎实现包的地方（共享树的 `bindings/event` 与 `client/render`，加上 `1.21.1` 与
-  `26.1.2-fabric` 两个节点目录）；换成 `DispatchKey.of` / `EventBus.of` 之后，那一层对引擎的
+  `26.1.2-fabric` 两个节点目录）；换成 `DispatchKey.of` / `EventBus.create` 之后，那一层对引擎的
   依赖就只剩契约类型。
 - **"什么该放 `api.*`"这条自查规则**在文档同步时要写清，否则并入之后这个包会变成默认堆放地。
   可用的判据：被版本树或插件消费的类型放 `api.*`（当前 43 个符合），只有引擎内部消费的不放。
@@ -233,6 +283,10 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
   让新代码至少不再加剧。
 - **枚举与 `switch` 的那条坑值得留一句注释**在 `common` 里：删掉指纹守卫之后，如果将来又把
   `api.*` 的枚举拆到另一个制品，同样的陷阱会原样回来。
-
-
-
+- **顺手可清的三个类型**：`api.contract.ApiContractViolation`、`api.data.NullJsValueView` 谁都不
+  引用，`api.data.ConversionContext` 只被 common-api 自己的测试引用。它们不属于本变更（会改
+  FQCN 集合），但并入之后再删会更容易——建议作为后续小改动单独处理。
+- **这次调整的性质是回归而非重构。** 从 `v1.0.4` 到今天，事件总线的构造入口经历了
+  "接口自带静态工厂" → "剥离到同模块的工厂类"（`3b9882df`）→ "被模块边界固化成唯一可能"
+  （`ff55a7b1`）三步。方案的第二步把它退回第一步的形状，第一步则是拆掉让它无法退回的那道墙。
+  审阅时可以直接对照 `git show v1.0.4:src/main/java/com/tkisor/nekojs/utils/event/EventBus.java`。
