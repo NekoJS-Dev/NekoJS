@@ -1,11 +1,9 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.event.server;
 
-import com.tkisor.nekojs.wrapper.registry.BuilderTags;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagLoader;
 import java.util.ArrayList;
@@ -17,68 +15,67 @@ public final class TagEventJS {
 
     private static final String SOURCE = "NekoJS";
 
-    private final Identifier registryId;
-    private final Map<Identifier, List<TagLoader.EntryWithSource>> sourceMap;
-    private final Map<Identifier, List<TagLoader.EntryWithSource>> additions = new HashMap<>();
-    private final Map<Identifier, List<TagLoader.EntryWithSource>> removals = new HashMap<>();
+    private final ResourceLocation registryId;
+    private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> sourceMap;
+    private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> additions = new HashMap<>();
+    private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> removals = new HashMap<>();
     /** replaceAll/removeAll 的延迟替换：apply 时先清空 tag 源列表再写入新条目。 */
-    private final Map<Identifier, List<TagLoader.EntryWithSource>> replacements = new HashMap<>();
+    private final Map<ResourceLocation, List<TagLoader.EntryWithSource>> replacements = new HashMap<>();
 
-    public TagEventJS(Identifier registryId, Map<Identifier, List<TagLoader.EntryWithSource>> sourceMap) {
+    public TagEventJS(ResourceLocation registryId, Map<ResourceLocation, List<TagLoader.EntryWithSource>> sourceMap) {
         this.registryId = registryId;
         this.sourceMap = sourceMap;
         // 注册 builder 的待写 tag（.tag(...)，见 BuilderTags）先于脚本监听器注入本事件：
         // 脚本随后的 add/remove 仍可覆盖，apply() 统一写回。待写条目不在此消费——
         // 每次 tag（重）加载都会重新注入（稳定事实，跨 /reload 存活）。
-        BuilderTags.flushInto(registryId, this::add);
     }
 
-    public Identifier getRegistry() {
+    public ResourceLocation getRegistry() {
         return registryId;
     }
 
     public void add(String tag, String entry) {
-        add(Identifier.parse(tag), Identifier.parse(entry));
+        add(ResourceLocation.parse(tag), ResourceLocation.parse(entry));
     }
 
-    public void add(Identifier tag, Identifier entry) {
+    public void add(ResourceLocation tag, ResourceLocation entry) {
         additions.computeIfAbsent(tag, k -> new ArrayList<>())
                 .add(new TagLoader.EntryWithSource(TagEntry.element(entry), SOURCE));
     }
 
     public void remove(String tag, String entry) {
-        remove(Identifier.parse(tag), Identifier.parse(entry));
+        remove(ResourceLocation.parse(tag), ResourceLocation.parse(entry));
     }
 
-    public void remove(Identifier tag, Identifier entry) {
+    public void remove(ResourceLocation tag, ResourceLocation entry) {
         removals.computeIfAbsent(tag, k -> new ArrayList<>())
                 .add(new TagLoader.EntryWithSource(TagEntry.element(entry), SOURCE, true));
     }
 
     /** 清空 tag 的全部条目（延迟应用，与 add/remove 组合时语义正确）。 */
     public void removeAll(String tag) {
-        removeAll(Identifier.parse(tag));
+        removeAll(ResourceLocation.parse(tag));
     }
 
-    public void removeAll(Identifier tag) {
+    public void removeAll(ResourceLocation tag) {
         replacements.put(tag, new ArrayList<>());
     }
 
     /** 用新条目整体替换 tag 的全部内容。 */
     public void replaceAll(String tag, String... entries) {
-        replaceAll(Identifier.parse(tag), entries);
+        replaceAll(ResourceLocation.parse(tag), entries);
     }
 
-    public void replaceAll(Identifier tag, String... entries) {
+    public void replaceAll(ResourceLocation tag, String... entries) {
         List<TagLoader.EntryWithSource> list = new ArrayList<>();
         for (String entry : entries) {
-            list.add(new TagLoader.EntryWithSource(TagEntry.element(Identifier.parse(entry)), SOURCE));
+            list.add(new TagLoader.EntryWithSource(TagEntry.element(ResourceLocation.parse(entry)), SOURCE));
         }
         replacements.put(tag, list);
     }
 
     public List<String> getEntries(String tag) {
-        var entries = sourceMap.get(Identifier.parse(tag));
+        var entries = sourceMap.get(ResourceLocation.parse(tag));
         if (entries == null) return List.of();
         return entries.stream()
                 .map(e -> e.entry().toString())
@@ -105,17 +102,10 @@ public final class TagEventJS {
             // TagEntry 永远匹配不上源表里的同 id 条目（含 builder 待写条目）
             var toRemove = entry.getValue().stream()
                     .map(TagLoader.EntryWithSource::entry)
-                    .map(e -> new RemovalKey(e.getId(), e.isTag()))
                     .collect(java.util.stream.Collectors.toSet());
-            list.removeIf(e -> {
-                var target = e.entry();
-                return toRemove.contains(new RemovalKey(target.getId(), target.isTag()));
-            });
+            list.removeIf(e -> toRemove.contains(e.entry()));
         }
     }
 
     /** remove 匹配键：元素 id + 是否 tag 引用（忽略 required 差异）。 */
-    private record RemovalKey(Identifier id, boolean tag) {
-    }
 }
-//?}

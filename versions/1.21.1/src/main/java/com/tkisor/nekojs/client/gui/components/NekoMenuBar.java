@@ -1,11 +1,11 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.gui.GuiGraphics;
 import java.util.List;
+import org.lwjgl.glfw.GLFW;
 
 public class NekoMenuBar {
     public record MenuCategory(String name, List<NekoContextMenu.MenuItem> items) {}
@@ -17,7 +17,7 @@ public class NekoMenuBar {
         this.categories = categories;
     }
 
-    public void render(GuiGraphicsExtractor g, Font font, int mouseX, int mouseY, int startX, int startY) {
+    public void render(GuiGraphics g, Font font, int mouseX, int mouseY, int startX, int startY) {
         int menuX = startX;
         for (MenuCategory cat : categories) {
             int w = font.width(cat.name());
@@ -25,7 +25,7 @@ public class NekoMenuBar {
             if (hov && this.activeContextMenu == null) {
                 g.fill(menuX, startY, menuX + w + 8, startY + 14, 0xFF3E3E42);
             }
-            g.text(font, cat.name(), menuX + 4, startY + 3, 0xFFCCCCCC);
+            g.drawString(font, cat.name(), menuX + 4, startY + 3, 0xFFCCCCCC, false);
             menuX += w + 8;
         }
         if (this.activeContextMenu != null) {
@@ -53,8 +53,8 @@ public class NekoMenuBar {
         return false;
     }
 
-    public boolean keyPressed(KeyEvent event) {
-        if (this.activeContextMenu != null && event.isEscape()) {
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (this.activeContextMenu != null && keyCode == GLFW.GLFW_KEY_ESCAPE) {
             this.activeContextMenu = null;
             return true;
         }

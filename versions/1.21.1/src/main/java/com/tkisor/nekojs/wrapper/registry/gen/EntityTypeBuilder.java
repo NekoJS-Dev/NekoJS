@@ -1,17 +1,13 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.entity.NekoScriptMob;
 import com.tkisor.nekojs.wrapper.registry.EntityAttributeBuilderJS;
-import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
-import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
@@ -35,13 +31,12 @@ import java.util.function.Supplier;
  * })
  * </pre>
  */
-public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
-        implements TaggableBuilder<EntityTypeBuilder> {
+public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
 
     /** build 期记账的实体（持久：客户端渲染器 / goal 校验 / 属性事件查询用）。 */
-    private static final Map<Identifier, EntityTypeBuilder> REGISTERED = new HashMap<>();
+    private static final Map<ResourceLocation, EntityTypeBuilder> REGISTERED = new HashMap<>();
     /** 已注册的 spawn egg item id（跨 reload 保留，客户端生成模型用）。 */
-    private static final java.util.Set<Identifier> SPAWN_EGGS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final java.util.Set<ResourceLocation> SPAWN_EGGS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /** 生物类别名：monster/ambient/water_creature/water_ambient/underground_water_creature/axolotls/misc（默认 creature）。 */
     public String category = "creature";
@@ -59,19 +54,8 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     private final EntityAttributeBuilderJS attributes = new EntityAttributeBuilderJS();
     private final GoalRegistry.GoalBuilderJS goals = GoalRegistry.builder();
 
-    public EntityTypeBuilder(Identifier id) {
+    public EntityTypeBuilder(ResourceLocation id) {
         super(id);
-    }
-
-    /** {@link TaggableBuilder}：实体 tag（如 {@code minecraft:raiders}）归属 ENTITY_TYPE 注册表。 */
-    @Override
-    public ResourceKey<? extends Registry<?>> getTagRegistry() {
-        return Registries.ENTITY_TYPE;
-    }
-
-    @Override
-    public Identifier getLocation() {
-        return id;
     }
 
     /** 设置碰撞箱宽高。 */
@@ -116,7 +100,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
             builder.noSummon();
         }
 
-        EntityType<NekoScriptMob> type = builder.build(ResourceKey.create(Registries.ENTITY_TYPE, id));
+        EntityType<NekoScriptMob> type = builder.build(id.toString());
         goals.forType(type).register();
         REGISTERED.put(id, this);
         if (spawnEggBackgroundColor != null) {
@@ -126,8 +110,8 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     }
 
     /** spawn egg 物品 id：{@code <path>_spawn_egg}（同 namespace）。 */
-    public Identifier getSpawnEggId() {
-        return Identifier.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_spawn_egg");
+    public ResourceLocation getSpawnEggId() {
+        return ResourceLocation.fromNamespaceAndPath(id.getNamespace(), id.getPath() + "_spawn_egg");
     }
 
     /** 连带注册：请求过 spawn egg 时注册 {@code <id>_spawn_egg}（ITEM pass 在 ENTITY_TYPE 之后）。 */
@@ -136,11 +120,10 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
         if (spawnEggBackgroundColor == null) {
             return;
         }
-        Identifier eggId = getSpawnEggId();
-        registry.additional(Registries.ITEM, eggId, () -> new SpawnEggItem(
-                new Item.Properties()
-                        .setId(ResourceKey.create(Registries.ITEM, eggId))
-                        .spawnEgg((EntityType<? extends LivingEntity>) this.get())));
+        ResourceLocation eggId = getSpawnEggId();
+        registry.additional(Registries.ITEM, eggId, () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(
+                () -> (EntityType<? extends net.minecraft.world.entity.Mob>) (EntityType<?>) this.get(),
+                spawnEggBackgroundColor, spawnEggHighlightColor, new Item.Properties()));
     }
 
     /**
@@ -157,7 +140,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     }
 
     /** build 好的脚本实体类型（未注册 id 返回 null）。 */
-    public static EntityType<? extends LivingEntity> getEntityType(Identifier entityId) {
+    public static EntityType<? extends LivingEntity> getEntityType(ResourceLocation entityId) {
         EntityTypeBuilder builder = REGISTERED.get(entityId);
         return builder == null ? null : builder.entityType();
     }
@@ -168,7 +151,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     }
 
     /** 已注册的 spawn egg item id（客户端模型生成用，跨 reload 保留）。 */
-    public static java.util.Set<Identifier> registeredSpawnEggs() {
+    public static java.util.Set<ResourceLocation> registeredSpawnEggs() {
         return java.util.Collections.unmodifiableSet(SPAWN_EGGS);
     }
 
@@ -191,4 +174,3 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
         };
     }
 }
-//?}

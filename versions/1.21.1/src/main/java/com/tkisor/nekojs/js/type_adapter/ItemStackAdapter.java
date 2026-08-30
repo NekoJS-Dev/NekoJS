@@ -1,20 +1,18 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
-import com.tkisor.nekojs.js.type_adapter.DataComponentsAdapter;
 import com.tkisor.nekojs.js.type_adapter.ParseIds;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -43,14 +41,12 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 object(
                         Slot.opt("item", registry("Item")),
                         Slot.opt("id", registry("Item")),
-                        Slot.opt("count", number()),
-                        Slot.opt("components", raw("{ [key: string]: any }")))
-        );
+                        Slot.opt("count", number())));
     }
 
     @Override
     public Optional<String> syntaxDoc() {
-        return Optional.of("item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count?, components? }");
+        return Optional.of("item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count? }");
     }
 
     @Override
@@ -76,20 +72,16 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
             return ItemStack.EMPTY;
         }
 
-        if (value.isString()) {
-            return stringToItemStack(value.asString());
-        }
+        if (value.isString()) return stringToItemStack(value.asString());
 
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
             if (obj instanceof ItemStack stack) return stack.copy();
             if (obj instanceof Item item) return itemToItemStack(item, 1);
-            if (obj instanceof NekoId id) return idToItemStack(Identifier.fromNamespaceAndPath(id.namespace(), id.path()), 1);
+            if (obj instanceof NekoId id) return idToItemStack(ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path()), 1);
         }
 
-        if (value.hasMembers()) {
-            return objectToItemStack(value);
-        }
+        if (value.hasMembers()) return objectToItemStack(value);
 
         throw new ValueConversionException(ItemStack.class, "item stack value", value, "unsupported item stack value");
     }
@@ -106,7 +98,7 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
         }
 
         // id 部分复用 ParseIds（统一 trim / minecraft: 前缀 / 拒绝 tag 前缀 / tryParse）
-        Identifier id = ParseIds.parseItemOrBlockId(idText);
+        ResourceLocation id = ParseIds.parseItemOrBlockId(idText);
         return idToItemStack(id, count);
     }
 
@@ -132,34 +124,27 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
         // B10: 复用当前实例，不再每次 new
         ItemStack stack = this.apply(itemValue);
-        if (value.hasMember("components")) {
-            DataComponentPatch patch = DataComponentsAdapter.toPatch(value.getMember("components"));
-            if (patch != null && !patch.isEmpty() && !stack.isEmpty()) {
-                ItemStack copy = stack.copy();
-                copy.applyComponents(patch);
-                stack = copy;
-            }
-        }
         if (value.hasMember("count")) {
             return withCount(stack, parsePositiveInt(value.getMember("count"), "count"));
         }
         return stack;
     }
 
-    private static ItemStack idToItemStack(Identifier id, int count) {
+    private static ItemStack idToItemStack(ResourceLocation id, int count) {
         if (id.getPath().equals("air")) return ItemStack.EMPTY;
-        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
-        Holder<Item> holder = BuiltInRegistries.ITEM.get(key)
+        Item item = BuiltInRegistries.ITEM.getOptional(id)
                 .orElseThrow(() -> new ValueConversionException(ItemStack.class, "registered item id", id,
                     "Item not found: " + id));
-        return new ItemStack(holder, count, DataComponentPatch.EMPTY);
+        ItemStack stack = item.getDefaultInstance();
+        stack.setCount(count);
+        return stack;
     }
 
     private static ItemStack itemToItemStack(Item item, int count) {
-        if (item == BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace("air"))) return ItemStack.EMPTY;
-        // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
-        Holder<Item> holder = BuiltInRegistries.ITEM.wrapAsHolder(item);
-        return new ItemStack(holder, count, DataComponentPatch.EMPTY);
+        if (item == BuiltInRegistries.ITEM.getOptional(ResourceLocation.withDefaultNamespace("air")).orElse(null)) return ItemStack.EMPTY;
+        ItemStack stack = item.getDefaultInstance();
+        stack.setCount(count);
+        return stack;
     }
 
     public static ItemStack withCount(ItemStack stack, int count) {

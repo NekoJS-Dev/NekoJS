@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.platform;
 
 import com.tkisor.nekojs.api.nbt.NbtBinaryCodec;
@@ -18,16 +17,15 @@ import java.util.Map;
 import java.util.Set;
 
 public class NeoForgePlatform implements IPlatform {
-    private static final NbtBinaryCodec NBT_BINARY_CODEC = NeoForgeNbtBinaryCodec.INSTANCE;
 
     @Override
     public boolean isClient() {
-        return FMLLoader.getCurrent().getDist().isClient();
+        return FMLLoader.getDist().isClient();
     }
 
     @Override
     public boolean isDevelopment() {
-        return !FMLLoader.getCurrent().isProduction();
+        return !FMLLoader.isProduction();
     }
 
     @Override
@@ -85,7 +83,7 @@ public class NeoForgePlatform implements IPlatform {
 
     @Override
     public NbtBinaryCodec nbtBinaryCodec() {
-        return NBT_BINARY_CODEC;
+        return NeoForgeNbtBinaryCodec.INSTANCE;
     }
 
     @Override
@@ -111,4 +109,3 @@ public class NeoForgePlatform implements IPlatform {
         return List.of("net.minecraft", "net.neoforged", "com.mojang");
     }
 }
-//?}

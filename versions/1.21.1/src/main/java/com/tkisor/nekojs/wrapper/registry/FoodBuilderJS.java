@@ -1,13 +1,11 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.registry;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.component.Consumable;
-import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,7 +15,7 @@ public class FoodBuilderJS {
     private boolean alwaysEat = false;
     private boolean fastEat = false;
 
-    private record EffectEntry(Identifier effectId, int durationTicks, int amplifier, float probability) {}
+    private record EffectEntry(ResourceLocation effectId, int durationTicks, int amplifier, float probability) {}
     private final List<EffectEntry> effects = new ArrayList<>();
 
     public FoodBuilderJS() {}
@@ -34,7 +32,7 @@ public class FoodBuilderJS {
      * @param amplifier 等级 (0 = I级, 1 = II级)
      * @param probability 获得该效果的概率 (0.0 ~ 1.0)
      */
-    public FoodBuilderJS effect(Identifier effectId, int durationTicks, int amplifier, float probability) {
+    public FoodBuilderJS effect(ResourceLocation effectId, int durationTicks, int amplifier, float probability) {
         if (effectId != null) {
             this.effects.add(new EffectEntry(effectId, durationTicks, amplifier, probability));
         }
@@ -49,22 +47,19 @@ public class FoodBuilderJS {
         if (this.alwaysEat) {
             builder.alwaysEdible();
         }
-        return builder.build();
-    }
+        if (this.fastEat) {
+            builder.fast();
+        }
 
-    public Consumable buildConsumable() {
-        Consumable.Builder builder = Consumable.builder();
-
-        builder.consumeSeconds(this.fastEat ? 0.8F : 1.6F);
-
+        // 1.21.1 中，药水效果直接添加在 FoodProperties 上
         for (EffectEntry e : effects) {
-            BuiltInRegistries.MOB_EFFECT.get(e.effectId()).ifPresent(effectHolder ->
-                    builder.onConsume(new ApplyStatusEffectsConsumeEffect(
-                            new MobEffectInstance(effectHolder, e.durationTicks(), e.amplifier()),
-                            e.probability()
-                    ))
+            // 1.21.1 推荐使用 getHolder 来获取包含 Registry 信息的 Holder 对象；
+            // effect 用 Supplier 重载（直接传 MobEffectInstance 的旧重载已废弃）
+            BuiltInRegistries.MOB_EFFECT.getHolder(e.effectId()).ifPresent(effectHolder ->
+                    builder.effect(() -> new MobEffectInstance(effectHolder, e.durationTicks(), e.amplifier()), e.probability())
             );
         }
         return builder.build();
     }
+
 }

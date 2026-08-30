@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.data.ValueConversionException;
@@ -18,21 +20,13 @@ public final class ParseIds {
         String id = raw.trim();
         if (id.startsWith("#")) {
             throw new ValueConversionException(Identifier.class, "item/block id (not tag)", raw,
-//? if >=26 {
                 "expected item or block id but got tag id");
-//?} else {
-/*                "expected item/block id but got tag id: " + raw);
-*///?}
         }
         if (!id.contains(":")) id = "minecraft:" + id;
         Identifier location = Identifier.tryParse(id);
         if (location == null) {
             throw new ValueConversionException(Identifier.class, "valid item/block id", raw,
-//? if >=26 {
                 "invalid id syntax");
-//?} else {
-/*                "invalid item/block id: " + raw);
-*///?}
         }
         return location;
     }
@@ -43,22 +37,12 @@ public final class ParseIds {
         try {
             count = Integer.parseInt(raw.trim());
         } catch (NumberFormatException e) {
-//? if >=26 {
             throw new ValueConversionException(Object.class, "positive integer", raw,
                 "count must be an integer", e);
-//?} else {
-/*            throw new ValueConversionException(Integer.class, "integer", raw,
-                "count must be an integer: " + raw, e);
-*///?}
         }
         if (count <= 0) {
-//? if >=26 {
             throw new ValueConversionException(Object.class, "positive integer", count,
                 "count must be positive");
-//?} else {
-/*            throw new ValueConversionException(Integer.class, "positive integer", count,
-                "count must be positive: " + count);
-*///?}
         }
         return count;
     }

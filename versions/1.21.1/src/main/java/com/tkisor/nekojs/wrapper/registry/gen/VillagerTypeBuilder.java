@@ -1,9 +1,9 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.registry.gen;
 
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.npc.villager.VillagerType;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.npc.VillagerType;
 
 /**
  * 村民类型 builder：纯标识类型（无配置字段），身份由注册 id 决定；
@@ -12,12 +12,12 @@ import net.minecraft.world.entity.npc.villager.VillagerType;
  */
 public class VillagerTypeBuilder extends RegistryObjectBuilder<VillagerType> {
 
-    public VillagerTypeBuilder(Identifier id) {
+    public VillagerTypeBuilder(ResourceLocation id) {
         super(id);
     }
 
     @Override
     public VillagerType build() {
-        return new VillagerType();
+        return new VillagerType(id.getPath());
     }
 }

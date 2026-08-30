@@ -1,6 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
-//? if neoforge {
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 // TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -8,12 +7,13 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ItemEvents;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.Item;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.lang.reflect.Field;
 
 /**
  * Server-side item property modification event ({@code ItemEvents.modification}),
@@ -48,7 +48,8 @@ import java.util.function.Consumer;
 public class ItemModificationEventJS {
 
     /** 每个物品的原始组件快照（跨脚本 reload 保留，restore 路径依据）。 */
-    private static final Map<Identifier, DataComponentMap> SNAPSHOTS = new ConcurrentHashMap<>();
+    private static final Map<ResourceLocation, DataComponentMap> SNAPSHOTS = new ConcurrentHashMap<>();
+    private static final Field COMPONENTS_FIELD = componentsField();
 
     private final MinecraftServer server;
     private int modifiedCount;
@@ -77,7 +78,7 @@ public class ItemModificationEventJS {
      * @param modifier property callback
      */
     public void modify(String itemId, Consumer<ItemModificationJS> modifier) {
-        Identifier id = parseItemId(itemId);
+        ResourceLocation id = parseItemId(itemId);
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
         if (item == null) {
             throw new IllegalArgumentException("Unknown item: " + itemId);
@@ -96,7 +97,7 @@ public class ItemModificationEventJS {
         modifier.accept(modification);
 
         DataComponentMap.Builder builder = DataComponentMap.builder().addAll(base);
-        modification.applyTo(builder, base, server);
+        modification.applyTo(builder, base);
         applyComponents(item, builder.build());
         modifiedCount++;
     }
@@ -106,7 +107,7 @@ public class ItemModificationEventJS {
         return modifiedCount;
     }
 
-    private static Identifier parseItemId(String itemId) {
+    private static ResourceLocation parseItemId(String itemId) {
         if (itemId == null || itemId.isBlank()) {
             throw new IllegalArgumentException("Item id must not be empty");
         }
@@ -114,7 +115,7 @@ public class ItemModificationEventJS {
         if (!id.contains(":")) {
             id = "minecraft:" + id;
         }
-        Identifier location = Identifier.tryParse(id);
+        ResourceLocation location = ResourceLocation.tryParse(id);
         if (location == null) {
             throw new IllegalArgumentException("Invalid item id: " + itemId);
         }
@@ -122,9 +123,21 @@ public class ItemModificationEventJS {
     }
 
     // builtInRegistryHolder() 无非废弃等价 API（components() 委托它），保守保留
-    @SuppressWarnings("deprecation")
     private static void applyComponents(Item item, DataComponentMap components) {
-        item.builtInRegistryHolder().bindComponents(components);
+        try {
+            COMPONENTS_FIELD.set(item, components);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Failed to write item components of " + BuiltInRegistries.ITEM.getKey(item), e);
+        }
+    }
+
+    private static Field componentsField() {
+        try {
+            Field field = Item.class.getDeclaredField("components");
+            field.setAccessible(true);
+            return field;
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
     }
 }
-//?}
