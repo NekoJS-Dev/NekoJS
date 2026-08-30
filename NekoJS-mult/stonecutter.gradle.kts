@@ -126,7 +126,6 @@ val guardLint = tasks.register("guardLint") {
         var guards = 0
 
         // 规则 8 的事实源：节点平台集合（deps.platform，与 constants.match 同源）。
-        // forge 分支有自己的源码树、不编译共享 src，不计入平台集合。
         val platformLine = Regex("""^deps\.platform=(\S+)$""")
         val nodePlatforms = nodeProperties.files
             .flatMap { f -> f.readLines().mapNotNull { platformLine.matchEntire(it.trim())?.groupValues?.get(1) } }
@@ -267,7 +266,7 @@ tasks.register("sandboxCheck") {
 // ---- switchVersion：切换 active 节点（T4）-----------------------------------------
 // 用法：gradlew switchVersion -Pnode=26.2.0。改控制器脚本的 active 行，执行后需在 IDE
 // 重新 Gradle sync 才生效（本任务在配置完成后执行，改写对本次构建无影响）。
-// 可用节点 = versions/ 下的目录（forge 分支有独立 active 机制，不在此列）。
+// 可用节点 = versions/ 下的目录。
 tasks.register("switchVersion") {
     group = "nekojs"
     description = "Switches the stonecutter active node: gradlew switchVersion -Pnode=<node>."
@@ -281,7 +280,7 @@ tasks.register("switchVersion") {
             throw GradleException("未知节点 $target——可用：$available")
         }
         val controller = rootDir.resolve("stonecutter.gradle.kts")
-        // 按行前缀定位声明；不写含 `stonecutter active "…"` 字样的正则——正则字面量与
+        // 按行前缀定位声明；不写含 `stonecutter active "26.1.2"` 字样的正则——正则字面量与
         // 第 10 行声明同形，对本文件做全局替换时会连坐改坏
         val text = controller.readText()
         val activeLine = text.lineSequence().firstOrNull { it.startsWith("stonecutter active ") }

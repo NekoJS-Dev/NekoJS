@@ -21,7 +21,7 @@ NekoJS 是一个基于 **NeoForge** 和 **GraalVM/GraalJS** 构建的 Minecraft 
 * **服务端热重载**：服务端脚本可通过 `/nekojs reload` 重新加载；启动注册类脚本仍需重启游戏。
 * **配方热重载**：Cleanroom 1.12.2 上 `/nekojs reload server` 会解冻注册表 → 移除旧 nekojs 配方 → 重跑配方脚本 → 重新冻结，并通过 mixin 自动刷新 HEI/JEI 配方面板。NeoForge 平台（26.x / 1.21.1）同样支持热重载：reload 会重新执行配方脚本并整体替换 `RecipeManager.recipes`（mixin `RecipeManagerMixin#nekojs$applyScripts`，从 prepare 阶段永久缓存的基础配方 JSON 重建工作集）。
 * **受限安全沙盒**：NekoJS 会限制脚本文件访问范围并过滤高危 Java 类访问。脚本仍应视为可信代码，尤其是在多人服务器中使用远程同步功能时。
-* **多版本多加载器单仓**：NeoForge 26.1 / 26.2 / 1.21.1 全量支持，Fabric 26.1 正在移植 LoaderBridge，Forge 1.20.1 在路线图上；全部平台共享同一棵源码树（stonecutter 守卫表达差异）。Cleanroom 1.12.2 留在 legacy 分支维护。
+* **多版本多加载器单仓**：NeoForge 26.1 / 26.2 / 1.21.1 全量支持，Fabric 26.1 正在移植 LoaderBridge；全部平台共享同一棵源码树（stonecutter 守卫表达差异）。Cleanroom 1.12.2 留在 legacy 分支维护。
 * **脚本方法校验**：加载时静态扫描全局绑定和事件回调的成员访问，拼写错误即时提示（如 `Utils.randmInt` → "Did you mean 'randomInt'?"）。可通过 `config/nekojs-engine.toml` 中 `scriptMemberValidation` 选项关闭，关闭后零性能开销。
 * **可替换的 probe 实现**：内置 probe 由 `ProbeCoordinator` 统一收集类型并派发给可插拔的 `ProbeBackend` 后端；第三方插件可通过 `ProbeBackendRegistry.register(backend, source)` 注册自定义后端（注册表在 bootstrap 时锁定，冲突会 fail-fast 报错）。
 
@@ -69,7 +69,6 @@ versions/
 ├── 26.1.2/                      # NeoForge 26.1.2 节点
 ├── 26.2.0/                      # NeoForge 26.2.0 节点
 └── 26.1.2-fabric/               # Fabric 26.1.2 节点（与上面节点共享同一棵 src/）
-forge/versions/1.20.1/           # Forge 1.20.1（独立分支骨架；B4 端口未开始）
 ```
 
 构建入口见 [wiki/构建系统](wiki/构建系统.md)（日常命令 / 守卫纪律 / active 切换 / 加新版本三步）。

@@ -5,10 +5,7 @@
 //     1.21.1 / 26.1.2 / 26.2.0      —— NeoForge 节点，根 build.gradle.kts
 //     26.1.2-fabric                 —— Fabric 节点，id 带后缀避免撞名，`to` 右侧是
 //                                       干净逻辑版本（守卫按它解析），fabric.gradle.kts
-//   forge 分支（独立树）：
-//     1.20.1                        —— Forge 47 骨架，forge/build.gradle.kts。
-//       1.20.1 的 API 距离共享树太远（B4 端口未开始），共享树编不了，故留独立分支；
-//       端口完成后再并入根分支（与 fabric 同法）。
+//   （Forge 1.20.1 已放弃：API 距离共享树太远，移植需独立代码库；骨架已移除，git 历史可找回。）
 //
 // 引擎三模块（common/common-api/common-api-processor）为普通子项目，不参与版本化。
 
@@ -34,9 +31,6 @@ stonecutter {
     create(rootProject) {
         versions("1.21.1", "26.1.2", "26.2.0")
         version("26.1.2-fabric", "26.1.2").buildscript = "fabric.gradle.kts"
-        branch("forge") {
-            versions("1.20.1")
-        }
     }
 }
 
