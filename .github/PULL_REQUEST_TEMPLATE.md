@@ -11,9 +11,9 @@
 
 ## 按改动范围
 
-### 改了 common-api
-- [ ] **[必须]** `:common-api:check`
-- [ ] **[必须]** `:common:check` + 全量 `:common:test`（common-api jar 指纹强制 common 重编译）
+### 改了 common 的契约包（`com.tkisor.nekojs.api.*`）
+- [ ] **[必须]** `:common:check` + 全量 `:common:test`
+- [ ] **[必须]** 确认零 MC/Loader/Graal import（guardLint L1 会拦，但先自查省一轮 CI）
 
 ### 改了 common
 - [ ] **[必须]** `:common:check`（checkCommonIsolation 门禁：禁止 MC/loader import）

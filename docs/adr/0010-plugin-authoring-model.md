@@ -1,5 +1,10 @@
 # 插件作者面双形态模型：基接口门面 + Point 事实源
 
+> **2026-08-30 注**：本文写于 `common-api` 尚为独立模块时。该模块已并入 `common`
+> （见 [ADR-0007](0007-module-boundaries.md) 修订），下文第 4 条里"移回 common /
+> 留守 common-api"的模块表述已过时，但归位决策与理由仍然有效——这些类型现在都住
+> `common` 的 `com.tkisor.nekojs.api.*` 契约包。
+
 ADR-0001/0002 把插件注册面摊平成 per-channel Contributor 后，作者注册插件要翻十几个 Point 文件、implements 一串接口；wiki《插件开发》的钩子一览（单接口形态）与实现脱节。V1 的病根是胖接口无事实源膨胀（25 个方法堆在接口上）+ 万能 `NekoPluginExtensionContext` 耦合；V2 的新问题是作者上手面。裁决（grilling 2026-08-29）：**作者体验 V1 优先，同时保留 NekoJS 开发体验，两者共存**。本 ADR 定实现模型：
 
 1. **双形态**：每条通道的**事实源**是自包含 Point 文件（MergePolicy / initializer / finisher / dependsOn 全在点内，ADR-0001 语义不变）；`NekoJSPlugin` 基接口钩子是各点的**门面投影**。覆写基接口钩子（推荐、最简）与 implements `XxxPoint.Contributor`（显式形态）由同一个点收集，效果完全等价。
