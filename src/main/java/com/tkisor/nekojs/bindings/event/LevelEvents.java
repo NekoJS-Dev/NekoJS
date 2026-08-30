@@ -23,7 +23,7 @@ public interface LevelEvents {
             GROUP.server("tickPre", LevelTickEvent.Pre.class);
     EventBusJS<LevelTickEvent.Post, Void> TICK_POST =
             GROUP.server("tickPost", LevelTickEvent.Post.class);
-    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost（H-5 别名裁决，2026-08-15）。
+    // tick：tickPost 的裸名别名。脚本侧建议迁移到 tickPre/tickPost。
     @Deprecated
     EventBusJS<LevelTickEvent.Post, Void> TICK =
             GROUP.server("tick", LevelTickEvent.Post.class);

@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link EntityPDataStore.Access} 的契约与 {@link EntityPDataStore} 的装配语义（票 09）：
+ * {@link EntityPDataStore.Access} 的契约与 {@link EntityPDataStore} 的装配语义：
  * getter 拷贝防御、空写移除子键、install 覆盖、fallback 键控。Access 键为实体 id
  * ——无需构造真实实体（{@code EntityType.PIG} 会触发 NeoForge AttachmentHolder 静态链，裸 JUnit 无 FML）。
  */

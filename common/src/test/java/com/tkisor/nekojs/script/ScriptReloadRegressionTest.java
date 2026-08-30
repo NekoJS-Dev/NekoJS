@@ -311,7 +311,7 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * W1 回归：preload 读失败（编码损坏/权限问题）的脚本不得静默消失。
+     * 回归：preload 读失败（编码损坏/权限问题）的脚本不得静默消失。
      * 旧行为是 {@code disabled=true} 后 {@code shouldRun()} 跳过、{@code lastError} 无人读——
      * 日志与错误面板都没有任何痕迹。修复后必须进 ErrorTracker 且异常类型保留。
      */
@@ -649,7 +649,7 @@ class ScriptReloadRegressionTest {
     }
 
     /**
-     * W4/§3-9 回归：语句上限 kill 后的自动重建路径必须与 resetEnvironment / close 的
+     * 回归：语句上限 kill 后的自动重建路径必须与 resetEnvironment / close 的
      * teardown 等价——除清监听器外还要跑 fullReloadCleanup（errorTracker 按类型清空）
      * 与 binding.close(scriptType)。旧实现只做「清监听器 + 关旧环境」，kill 重建后
      * errorTracker 残留旧条目、binding 缓存的旧 Context 状态静默携带进新环境。

@@ -12,7 +12,7 @@ import com.tkisor.nekojs.core.plugin.NekoPluginExtensionRegistry;
 import net.minecraft.core.registries.Registries;
 
 /**
- * 通用注册表的扩展点定义插件（P2）：以与第三方完全相同的 provider 路径注册
+ * 通用注册表的扩展点定义插件：以与第三方完全相同的 provider 路径注册
  * {@code nekojs:registry_infos} / {@code nekojs:registry_types} 两个引擎级扩展点，
  * 并把单一注册入口 {@link RegistryEvents#REGISTER} 挂进事件组、登记内置 builder 类型。
  *
@@ -21,7 +21,7 @@ import net.minecraft.core.registries.Registries;
  * 扫描发现）注册——V2 模型下"引擎 EP + 版本树定义"的规范形态。
  * registry_types 经 {@code dependsOn(registry_infos)} 声明依赖，拓扑序由引擎保证。
  *
- * <p>内置类型清单随 Builder 重写（P2 后续）逐个扩充；当前先落首个类型
+ * <p>内置类型清单随 Builder 重写逐个扩充；当前先落首个类型
  * （sound_event/basic）做垂直切片。
  */
 @RegisterNekoJSPlugin

@@ -147,7 +147,7 @@ class PythonProbeBackendIntegrationTest {
                 "override class should be imported: " + init);
     }
 
-    // -------------------- B3：事件声明 .pyi + 事件组绑定 --------------------
+    // -------------------- 事件声明 .pyi + 事件组绑定 --------------------
 
     @Test
     void generate_events_produceEventStubsAndGroupBindings(@TempDir Path temp) throws Exception {
@@ -213,7 +213,7 @@ class PythonProbeBackendIntegrationTest {
         assertTrue(init.contains("\"ClientEvents\""), "event groups should be in __all__: " + init);
     }
 
-    // -------------------- B4：适配器输入别名 --------------------
+    // -------------------- 适配器输入别名 --------------------
 
     @Test
     void generate_adapterAlias_emitsInPackageModule(@TempDir Path temp) throws Exception {

@@ -206,7 +206,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             );
         } catch (ClassNotFoundException e) {
             // RecipeEventJS 在 common 模块：缺失说明类路径异常，覆盖不生效会悄悄给出错误的
-            // event.recipes 类型（W4/A5）
+            // event.recipes 类型
             com.tkisor.nekojs.core.error.Diagnostics.report(
                     "probe-typescript",
                     com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
@@ -245,7 +245,7 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
                     indexFileGenerator.predeclareClass(fqn, decl, extraImports);
                 } catch (Throwable t) {
                     // 单个类失败不影响整体（旧行为一致）。自家平台类失败意味着 API 缺失于
-                    // index.d.ts——必须可见（A5），第三方类保持静默跳过（数量大、价值低）
+                    // index.d.ts——必须可见，第三方类保持静默跳过（数量大、价值低）
                     if (fqn.startsWith("com.tkisor.nekojs.")) {
                         com.tkisor.nekojs.core.error.Diagnostics.report("probe-typescript", com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,
                                 "平台类 " + fqn + " 预声明失败（该类不会进入 index.d.ts）", t);

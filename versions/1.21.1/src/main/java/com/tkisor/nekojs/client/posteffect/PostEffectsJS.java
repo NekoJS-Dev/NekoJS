@@ -1,8 +1,6 @@
-// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分案例）：主干 PostEffectsJS 已 26.x
-// 基准化；本文件为 1.21.1 的完整实现——脚本面 @Doc/@Param 文案存在时代差（探针类型
-// golden 会校验），行为 = 主干在 1.21.1 节点的历史求值产物（构造性变换）。
-// 主干脚本面变更时须同步本文件。
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
+//（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
+// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄主干的措辞。
 package com.tkisor.nekojs.client.posteffect;
 
 import com.tkisor.nekojs.api.ScriptType;

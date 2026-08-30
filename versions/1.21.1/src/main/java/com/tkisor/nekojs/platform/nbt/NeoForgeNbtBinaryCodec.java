@@ -1,5 +1,7 @@
-// 1.21.1 节点专有变体：主干已 26.x 基准化（ADR-0008 P3），本文件为 1.21.1 的完整实现
-// guard-exempt(20): P3 facade 候选（NBT 版本差异，ADR-0008 ≥3 文件规则）
+// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
+//（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
+// guard-exempt(20): NBT 二进制编解码在两个时代差异密集。同一主题再出现在第三个文件时
+// 按 ADR-0008 抽 facade，届时本豁免可以撤掉
 package com.tkisor.nekojs.platform.nbt;
 
 import com.tkisor.nekojs.api.data.NbtValue;
@@ -78,7 +80,7 @@ public final class NeoForgeNbtBinaryCodec implements NbtBinaryCodec {
     private static NbtValue.CompoundValue fromNativeCompound(CompoundTag compound, PortableBudget budget, int depth)
             throws NbtBinaryException {
         // 26.x ListTag no longer remembers the element type of an empty list, so the
-        // strictness the 1.21.1/cleanroom codecs enforce via ListTag.getElementType()
+        // strictness the 1.21.1 codec enforces via ListTag.getElementType()
         // has to be checked here with a second pass over the raw compressed bytes.
         budget.visit(depth);
         Map<String, NbtValue> values = new LinkedHashMap<>();

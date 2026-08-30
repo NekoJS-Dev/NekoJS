@@ -36,14 +36,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Fabric 入口：脚本运行时 bring-up（P4-b）。
+ * Fabric 入口：脚本运行时 bring-up。
  *
  * <p>装配序与 NeoForge 侧 {@code NekoJSMod} 一致：插件发现 → V2 bootstrap →
  * 引擎上下文 / 沙盒工厂 / 运行时根 → STARTUP 脚本加载 → 通用注册表收集+抽干。
  * 两处 loader 差异：插件发现走 {@link FabricPluginLoader}（内置清单 + entrypoint）；
  * 注册表无逐 pass 事件，改 {@link FabricRegistryAdapter} 单批直注。
  *
- * <p>尚未接（随 LoaderBridge 后续批次）：damagePre/Post 与 ItemEvents 等余量事件、
+ * <p>尚未接（随后续批次）：damagePre/Post 与 ItemEvents 等余量事件、
  * pdata（依赖实体扩展机制）、JEI 配方查看器。
  * 当前 fabric 脚本面 = 中性绑定 + 通用注册表 + BlockEvents.broken + ServerEvents 生命周期/tick
  * + PlayerEvents 进出服/chat + EntityEvents joinLevel/death + ClientEvents tick（CLIENT 脚本）

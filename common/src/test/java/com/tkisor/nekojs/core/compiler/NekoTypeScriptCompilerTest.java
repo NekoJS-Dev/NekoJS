@@ -521,7 +521,7 @@ class NekoTypeScriptCompilerTest {
         }
     }
 
-    // ---- P0 regression: 语句级结构预扫描（W3） ----
+    // ---- regression: 语句级结构预扫描 ----
 
     @Test
     void importAliasIsPreservedAsValueAlias() {
@@ -596,7 +596,7 @@ class NekoTypeScriptCompilerTest {
     @Test
     void classFieldTypeAnnotationStillErased() {
         // label 识别不得误伤类字段类型注解（含泛型类型）；注解类型以 '{' 开头的字段
-        //（x: { a: number }）是既有 P2 缺口，不在此钉住
+        //（x: { a: number }）是既有缺口，不在此钉住
         String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"),
             "class C {\n  width: number = 2;\n  table: Map<string, number> = new Map();\n}");
         assertTrue(out.matches("(?s).*width[ ]*= 2;.*"), out);

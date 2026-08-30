@@ -202,7 +202,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         return this;
     }
 
-    // ---- 原料动作（W6）：作用于合成余量，纯脚本状态不进 JSON，见 IngredientActionRegistry ----
+    // ---- 原料动作：作用于合成余量，纯脚本状态不进 JSON，见 IngredientActionRegistry ----
 
     /**
      * 匹配的合成原料在消耗时耐久 +amount（不可破坏的物品按保留处理；耐久耗尽则消失）。

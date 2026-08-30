@@ -1,5 +1,6 @@
-// 1.21.1 节点专有变体：主干已 26.x 基准化（ADR-0008 P3），本文件为 1.21.1 的完整实现
-// guard-exempt(20): P3 复查（配方 mixin 版本差异）
+// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
+//（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
+// guard-exempt(20): 配方 mixin 的注入点两个时代差别很大，逐处守卫比再拆文件更清楚（ADR-0008）
 package com.tkisor.nekojs.mixin;
 
 import com.tkisor.nekojs.script.ScriptTypeEnv;

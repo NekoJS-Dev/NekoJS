@@ -1,5 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
+// 改本文件行为时须同步它。
 package com.tkisor.nekojs.client.render;
 
 import net.minecraft.client.Minecraft;

@@ -1,5 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
+// 改本文件行为时须同步它。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -68,7 +68,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
             // 检查是否包含注册表前缀，例如 "block|minecraft:logs"
             if (str.contains("|")) {
                 String[] parts = str.split("\\|", 2);
-                // B4/B6: 校验拆分结果（必须在赋值之前，否则 "block|" 会抛 AIOOBE）
+                // 校验拆分结果（必须在赋值之前，否则 "block|" 会抛 AIOOBE）
                 if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank()) {
                     throw new ValueConversionException(TagKey.class, "'registry|tag' string", str,
                         "malformed format, expected '<registry>|<tag>'");

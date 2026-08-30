@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * 原料动作消费点（W6）：vanilla 在取出合成产物时经
+ * 原料动作消费点：vanilla 在取出合成产物时经
  * {@code ResultSlot#getRemainingItems(CraftingInput, Level)} 计算默认余量
  * （{@code CraftingRecipe#defaultCraftingReminder}：逐物品 crafting remainder）。
  * 在其返回后按配方 id 查 {@link IngredientActionRegistry} 变换匹配槽位的余量。

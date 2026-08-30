@@ -7,7 +7,7 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 
 /**
- * 脚本可触达文件系统写策略的唯一真相（W7/A6，审计 §3-23/24）。
+ * 脚本可触达文件系统写策略的唯一真相。
  *
  * <p>此前两层各判各的：Graal {@link NekoJSFileSystem} 写路径无条件
  * {@code verifyInsideGameDirForCreate}（{@code allowFsWriteOutsideNekojs=false} 也能写

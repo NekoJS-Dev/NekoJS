@@ -1,5 +1,6 @@
-// 1.21.1 节点专有变体：主干已 26.x 基准化（ADR-0008 P3），本文件为 1.21.1 的完整实现
-// guard-exempt(20): P2 通用注册表重写对象（ADR-0004/0006）
+// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
+//（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
+// guard-exempt(20): 通用注册表重写对象，配方读写形状在两个时代差异密集（ADR-0004 / ADR-0006）
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.google.gson.*;
@@ -73,7 +74,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
 
     public RecipeEventJS(Map<ResourceLocation, JsonElement> originalJsons, HolderLookup.Provider registries, RecipeTypeDefinitionRegistry recipeTypeDefinitions) {
         this.jsons = new HashMap<>(originalJsons);
-        // B4: ids already present in the wrapped datapack JSON map must be treated as taken,
+        // ids already present in the wrapped datapack JSON map must be treated as taken,
         // otherwise generateRecipeId can silently return an existing recipe id and
         // RecipeJsonBuilder would overwrite that recipe.
         this.takenIds.addAll(jsons.keySet());

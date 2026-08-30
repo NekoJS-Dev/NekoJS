@@ -1,6 +1,6 @@
-// fabric 分支节点入口（26.1.2-fabric）：节点构建逻辑全部住在 buildSrc 的
-// nekojs.fabric-node convention plugin（DEVEX-ROADMAP T2），loom-back-compat 由插件体内
-// apply（从控制器脚本的 apply false 声明读 Loom 版本）。
+// Fabric 节点入口（26.1.2-fabric）：构建逻辑全部住在 buildSrc 的 nekojs.fabric-node
+// convention plugin。loom-back-compat 在插件体内 apply，Loom 版本从控制器脚本的
+// `apply false` 声明读取。
 plugins {
     id("nekojs.fabric-node")
 }

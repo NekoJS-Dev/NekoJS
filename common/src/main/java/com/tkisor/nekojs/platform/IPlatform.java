@@ -77,7 +77,7 @@ public interface IPlatform {
         return null;
     }
 
-    /** Loader identifier, e.g. "neoforge", "cleanroom", "forge". */
+    /** Loader identifier, e.g. "neoforge" or "fabric". */
     String getLoaderId();
 
     /** Loader version string, e.g. "4.0.0". */

@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 原料动作注册表（W6）：{@code damageIngredient / keepIngredient / replaceIngredient}
+ * 原料动作注册表：{@code damageIngredient / keepIngredient / replaceIngredient}
  * 在 {@link RecipeJsonBuilder} 上登记，作用于对应配方的合成余量（crafting remainder）。
  *
  * <p>动作是纯脚本状态：<strong>不写进配方 JSON</strong>（vanilla 反序列化会拒绝未知字段），

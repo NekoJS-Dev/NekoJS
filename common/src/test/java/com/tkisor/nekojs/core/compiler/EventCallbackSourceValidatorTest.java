@@ -240,7 +240,7 @@ class EventCallbackSourceValidatorTest {
     }
 
     /**
-     * 2026-08-24 日志误报的回归：{@code DynamicRegistry.item('id', b => b.maxStackSize(64))}
+     * builder 回调误报的回归：{@code DynamicRegistry.item('id', b => b.maxStackSize(64))}
      * 被报 {@code 'maxStackSize' not in DynamicRegistry}。根因：builder 回调不是事件注册，
      * managed/eventClass 双空时 rootValue 退化成空集成员表，任何成员访问都判错。
      * 现在：签名（{@code Consumer<ItemBuilder>}）推导形参类型，按 ItemBuilder 成员检查。

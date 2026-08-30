@@ -172,7 +172,7 @@ public final class NekoScriptModuleLoaderHost {
 
     /**
      * 进程级共享缓存（prepared pipeline cache + source map、虚拟 ESM registry）按本 host 的
-     * ScriptType 分区清理（W4/§3-28）。旧实现 guest 调 {@code clearCache()} 会全进程清空，
+     * ScriptType 分区清理。旧实现 guest 调 {@code clearCache()} 会全进程清空，
      * 一个 CLIENT 脚本就能让 SERVER 已编译的模块/source map 全部失效。
      * 未登记类型的 Context（测试等场景）退化为全清，保持旧行为。
      */

@@ -33,7 +33,7 @@ public final class ScriptSyncFiles {
                             size = Files.size(path);
                         } catch (Exception e) {
                             // 服务器→客户端同步静默丢文件是「客户端跑旧脚本/缺脚本」的最隐蔽来源，
-                            // 必须可见（W4/A5）；invalid sync path 的跳过仍保持静默（非脚本文件属预期）
+                            // 必须可见；invalid sync path 的跳过仍保持静默（非脚本文件属预期）
                             com.tkisor.nekojs.core.error.Diagnostics.report(
                                     "script-sync",
                                     com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,

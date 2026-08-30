@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * nekojs/node 内置模块的端到端回归：真实安装 manifest 到 GraalJS Context，
- * 在 guest 侧验证 2026-08 修复面——assert.rejects/doesNotReject 调用 fn、
+ * 在 guest 侧验证以下修复面——assert.rejects/doesNotReject 调用 fn、
  * deepEqual 宽松语义、path.parse/format 普通对象化与 posix/win32 独立语义、
  * buffer base64/hex/base64url 编码与字符串 needle、fs.lstat 与 withFileTypes、
  * os.EOL 平台化、module.isBuiltin、events.errorMonitor、process.exit/stdout。

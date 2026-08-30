@@ -18,7 +18,7 @@ public final class EventSchemaRegistry {
                 if (bus != null) events.put(eventName, bus.eventType());
             } catch (Throwable t) {
                 events.put(eventName, Object.class);
-                // 降级必须可见（W4/A5）：Object.class 会让该事件的回调成员校验静默失效，
+                // 降级必须可见：Object.class 会让该事件的回调成员校验静默失效，
                 // 旧行为连日志都没有，「预检为什么没报这个拼写」完全要靠推断
                 com.tkisor.nekojs.core.error.Diagnostics.report(
                         "event-schema",

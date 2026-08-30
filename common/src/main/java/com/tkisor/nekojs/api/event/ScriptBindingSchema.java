@@ -68,7 +68,7 @@ public final class ScriptBindingSchema {
      * SERVER_CACHE {@code …/server_packs/…}）不在任何类型根之下，按路径中的
      * {@code <type>_scripts} 段推导——与 {@code DefaultErrorTracker.extractScriptDisplayPath}
      * 同一约定。缺了这一步，包内脚本的预检 schema 恒为空，成员/事件回调校验对包脚本
-     * 整体静默失效（W4/A4）。
+     * 整体静默失效。
      */
     public static ScriptType inferType(Path path) {
         if (path == null) return null;

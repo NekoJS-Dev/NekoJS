@@ -1,5 +1,7 @@
-// 1.21.1 节点专有变体：主干已 26.x 基准化（ADR-0008 P3），本文件为 1.21.1 的完整实现
-// guard-exempt(20): P3 facade 候选（村民交易版本差异）
+// 1.21.1 实现，与版本树 src/ 下的同名 26.x 文件成对。内容等于那份文件在本节点求值后的形态
+//（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
+// guard-exempt(20): 村民交易的注册表形状在两个时代差异密集。同一主题再出现在第三个文件时
+// 按 ADR-0008 抽 facade，届时本豁免可以撤掉
 package com.tkisor.nekojs.villager;
 
 import com.tkisor.nekojs.NekoJS;

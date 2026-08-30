@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 package com.tkisor.nekojs.network;
 
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * S3 regression test: the script batch packets must enforce entry-count,
+ * Regression test: the script batch packets must enforce entry-count,
  * per-file and total-size limits on both encode and decode. The test file
  * lives in the shared 26.x test tree and is also compiled by the 1.21.1
  * platform, so it only uses the version-independent {@link FriendlyByteBuf}

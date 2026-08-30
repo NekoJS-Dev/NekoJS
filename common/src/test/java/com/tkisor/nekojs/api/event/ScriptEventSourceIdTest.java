@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * B3 regression: a {@code ScriptEvents} declaration must record the id of the script that
+ * Regression: a {@code ScriptEvents} declaration must record the id of the script that
  * made it, so per-script STARTUP reload ({@code ScriptEventRegistry.clearDefinitions(
  * STARTUP, scriptId)}) can clear exactly that script's definitions. The fallback constant
  * {@code "nekojs:startup/script_events"} never matches a reload id.

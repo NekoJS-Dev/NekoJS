@@ -16,7 +16,7 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 /**
  * Self-registering built-in plugin for the pure-common registrations that used
  * to be duplicated verbatim in every platform {@code NekoJSCorePlugin}
- * (neoforge-26-shared / neoforge-1.21.1 / cleanroom-1.12.2): the TypeScript and
+ * (neoforge-26-shared / neoforge-1.21.1): the TypeScript and
  * JSX language plugins, the four built-in script properties, the built-in
  * node module type declarations, and the platform-agnostic global bindings.
  *

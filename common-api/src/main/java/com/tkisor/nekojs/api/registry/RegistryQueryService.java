@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * 只读的 Minecraft 注册表查询 SPI。
  *
- * <p>由各平台实现（NeoForge / Cleanroom），返回基础类型（id 字符串、布尔值），
+ * <p>由各平台实现，返回基础类型（id 字符串、布尔值），
  * 不暴露任何 Minecraft 原生类型。供 {@code Registry} 脚本绑定使用。
  */
 public interface RegistryQueryService {

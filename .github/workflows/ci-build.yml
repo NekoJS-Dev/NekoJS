@@ -127,9 +127,8 @@ jobs:
         # 是防止将来 check 挂载被改掉时单测静默丢失）
         run: ./gradlew :common-api:check :common:check :common-api-processor:test --console=plain
 
-      - name: Guard lint (ADR-0008/0009 守卫纪律强制)
-        # 守卫密度 ≤20 + 豁免标记校验；wrapper 层零 loader import 已 hardFail
-        #（整文件 loader 守卫的平台面文件列 informational，见 stonecutter.gradle.kts 规则 7）
+      - name: Guard lint
+        # 守卫配对/密度/形状 + 模块边界。规则清单与理由见 stonecutter.gradle.kts 的 guardLint。
         run: ./gradlew guardLint --console=plain
 
       - name: Run NeoForge NBT smoke tests
@@ -346,8 +345,7 @@ jobs:
           echo "$NOTES" >> "$GITHUB_OUTPUT"
           echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
 
-      # 每个平台 jar 一个 CF file：各自标 MC 版本 + loader。
-      # Cleanroom 1.12.2 的发布留在 legacy 分支的流水线里，不在本仓。
+      # 每个平台 jar 一个 CurseForge file：各自标 MC 版本 + loader。
       - name: Publish NeoForge 26.1.2 file
         uses: Kir-Antipov/mc-publish@v3.3
         with:
@@ -384,8 +382,8 @@ jobs:
           game-versions: 1.21.1
           changelog: ${{ steps.changelog.outputs.notes }}
 
-      # Fabric 26.1.2：jar 已能构建，但 LoaderBridge 移植完成前脚本运行时不可用，
-      # 暂不发布。解封时去掉本注释块即可（fabric.mod.json 会让 mc-publish 自动校验依赖）。
+      # Fabric 26.1.2 的 jar 已能构建，但脚本运行时还没在 fabric 上跑通，所以暂不发布。
+      # 能发布时去掉本注释块即可（fabric.mod.json 会让 mc-publish 自动校验依赖）。
       # - name: Publish Fabric 26.1.2 file
       #   uses: Kir-Antipov/mc-publish@v3.3
       #   with:
@@ -402,7 +400,7 @@ jobs:
       #   secret   MODRINTH_TOKEN = Modrinth API token
       #   variable MODRINTH_ID   = Modrinth 项目页 URL 末尾的 id
       # 两者齐备前本步骤自动跳过（条件写在 if 里而不是省略步骤，让"将来要开 Modrinth"在
-      # workflow 里可见）。loaders/game-versions 随 fabric/forge 解封同步扩充。
+      # workflow 里可见）。fabric 开始发布时，loaders / game-versions 要同步补上。
       - name: Publish to Modrinth
         if: env.MODRINTH_ID != '' && env.MODRINTH_TOKEN != ''
         uses: Kir-Antipov/mc-publish@v3.3
@@ -420,8 +418,8 @@ jobs:
           changelog: ${{ steps.changelog.outputs.notes }}
 
   windows-common-test:
-    # golden 基线曾出现跨 JDK/跨平台漂移（b9ca637 就是这类问题的修复）：
-    # Linux-only CI 会让 Windows 特有的路径/行尾/排序问题溜进主干。
+    # golden 基线对路径分隔符、行尾和排序敏感，这类问题只在 Windows 上暴露。
+    # 只跑 Linux 的话它们会溜进主干。
     name: Common tests on Windows
     runs-on: windows-latest
     permissions:
@@ -460,8 +458,8 @@ jobs:
             common-api/build/test-results/test
 
   gametest-smoke:
-    # headless GameTest 冒烟：本地实测 ~15s 自行退出（"All N required tests passed"）。
-    # mixin/interface-injection 的加载路径只有这里会在 CI 里真正跑起来。
+    # headless GameTest 冒烟：跑完会自行退出并打印 "All N required tests passed"（下面按这行
+    # 判定成功）。mixin 与 interface-injection 的加载路径只有这里会在 CI 里真正跑起来。
     name: GameTest smoke (NeoForge 26.1)
     runs-on: ubuntu-latest
     permissions:

@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * pdata 同步的客户端去重/清除语义（票 09）：acceptClientSync 按 revision 单调推进，
+ * pdata 同步的客户端去重/清除语义：acceptClientSync 按 revision 单调推进，
  * 空 data 包 = 清除该实体的 mirror；clearClientMirrors 全清（断线/换世界）。
  * 纯静态 Map 逻辑，无 live Entity——两条平台（NeoForge/fabric 的 receiver）喂同一入口。
  */

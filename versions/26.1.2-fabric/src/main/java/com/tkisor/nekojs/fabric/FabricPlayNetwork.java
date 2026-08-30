@@ -21,12 +21,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 /**
- * play 阶段网络的 fabric 桥（票 05）：装配 {@link PlayPacketDispatcher} 发送面，
+ * play 阶段网络的 fabric 桥：装配 {@link PlayPacketDispatcher} 发送面，
  * 注册 S2C payload 类型与客户端 receiver。payload 类与线格式沿用共享树，与 NeoForge 侧一致。
  *
- * <p>v1 只带 {@code ClientData} 键值同步（{@code ClientData.sync} → {@code clientData.get}）。
+ * <p>当前只带 {@code ClientData} 键值同步（{@code ClientData.sync} → {@code clientData.get}）。
  * pdata 同步包的 fabric 面依赖实体扩展机制（{@code EntityExtension} 与实体持久化数据存储在
- * fabric 上都还没有），见票 09。
+ * fabric 上都还没有）。
  */
 public final class FabricPlayNetwork {
 

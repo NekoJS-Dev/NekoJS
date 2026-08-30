@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  * <p>线程模型：平台处理器在网络线程收包，经 {@code enqueueWork} 切主线程执行本类方法；
  * NeoForge 配置阶段的处理器用 {@link #prepareMainThreadWork}/{@link #completeMainThreadWork}/
  * {@link #awaitMainThreadWork} 阻塞网络线程直到主线程执行完毕——保证后续注册表同步
- * 在远端脚本执行之后进行。Cleanroom 1.12.2 无配置阶段，登录后执行，无需阻塞。
+ * 在远端脚本执行之后进行。无配置阶段的加载器改为登录后执行，无需阻塞。
  *
  * <p>客户端自身 engine.toml 语义：mode=off 忽略全部同步包；mode=hashOnly 清空并永不
  * 执行远端包（单人/本地内存连接由平台入口直接跳过同步）。

@@ -97,7 +97,7 @@ public final class NeoForgeNbtBinaryCodec implements NbtBinaryCodec {
     private static void requireEmptyListsUseEndElementType(byte[] compressed, NbtBinaryLimits limits)
             throws NbtBinaryException {
         // 26.x ListTag no longer remembers the element type of an empty list, so the
-        // strictness the 1.21.1/cleanroom codecs enforce via ListTag.getElementType()
+        // strictness the 1.21.1 codec enforces via ListTag.getElementType()
         // has to be checked here with a second pass over the raw compressed bytes.
         EmptyListElementTypeValidator validator = new EmptyListElementTypeValidator();
         try {

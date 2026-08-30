@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 package com.tkisor.nekojs.platform.compat;
 
@@ -9,7 +9,7 @@ import java.util.ServiceLoader;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W5/A8 接线回归：共享代码经 ServiceLoader 取 per-version compat 实现，
+ * 客户端 compat 接线回归：共享代码经 ServiceLoader 取 per-version compat 实现，
  * services 文件缺失时首次调用只会抛 IllegalStateException——编译期完全不可见，
  * 到运行期才炸（错误面板 toast / 主机码 / 闪电生成全部失效）。这里在测试 classpath
  * 上直接验证 provider 存在；不触发 MC 类初始化（provider 实例化是惰性解析方法体）。

@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 包分发的 fabric 桥（票 04）：payload 类与共享核管线（{@link PackSyncClient}/
+ * 包分发的 fabric 桥：payload 类与共享核管线（{@link PackSyncClient}/
  * {@link PackSyncServer}）与 NeoForge 侧同源，线格式一致。
  *
  * <p>服务器推送面：fabric 没有 NeoForge 的 {@code RegisterConfigurationTasksEvent}，等价入口是

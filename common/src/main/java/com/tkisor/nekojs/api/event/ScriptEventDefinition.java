@@ -17,7 +17,7 @@ public record ScriptEventDefinition(
     /**
      * Clear listener tokens for this custom event.
      *
-     * <p>BUG-B3: {@code ScriptEvents}-registered custom events declare a
+     * <p>{@code ScriptEvents}-registered custom events declare a
      * {@code targetType} of SERVER/CLIENT, but JS listener tokens are bucketed in
      * {@link EventBusJS} by the registering script's ScriptType — and since
      * {@code ScriptEvents} is STARTUP-only, the tokens always land in the STARTUP

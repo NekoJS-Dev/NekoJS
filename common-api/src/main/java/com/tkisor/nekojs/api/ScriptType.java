@@ -2,7 +2,7 @@ package com.tkisor.nekojs.api;
 
 /**
  * 脚本类型。契约枚举只承载名称与谓词语义；引擎侧环境（脚本目录、logger、日志文件、
- * 脚本 id）见 {@code ScriptTypeEnv}（common 引擎，P1 契约抽薄，ADR-0007）。
+ * 脚本 id）见 {@code ScriptTypeEnv}（common 引擎，契约抽薄，ADR-0007）。
  */
 public enum ScriptType implements ScriptTypePredicate {
     STARTUP("startup", "NekoJS Startup"),

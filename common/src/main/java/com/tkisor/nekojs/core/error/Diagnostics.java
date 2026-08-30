@@ -3,7 +3,7 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.NekoJS;
 
 /**
- * 宿主侧诊断通道（W4/A5）：把散落在各处的「catch-and-continue」失败从 DEBUG/静默
+ * 宿主侧诊断通道：把散落在各处的「catch-and-continue」失败从 DEBUG/静默
  * 升级为带作用域标签的可见报告。
  *
  * <p>边界（与 {@link ErrorTracker} 分工）：ErrorTracker 只记录脚本入口执行、事件/timer

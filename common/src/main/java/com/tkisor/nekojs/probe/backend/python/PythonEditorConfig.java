@@ -147,7 +147,7 @@ final class PythonEditorConfig {
                 }
             });
         } catch (IOException e) {
-            // 嵌套 pyright 扫描失败 → 子目录工作区无补全且无任何痕迹（W4/A5）
+            // 嵌套 pyright 扫描失败 → 子目录工作区无补全且无任何痕迹
             com.tkisor.nekojs.core.error.Diagnostics.report(
                     "probe-python",
                     com.tkisor.nekojs.core.error.Diagnostics.Severity.WARN,

@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 //? if >=26 {
 package com.tkisor.nekojs.api.recipe;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W6 原料动作：{@link IngredientActionRegistry} 的匹配/变换语义。
+ * 原料动作：{@link IngredientActionRegistry} 的匹配/变换语义。
  *
  * <p>除水桶余量用例外，全部用自定义 Item 实例（{@code new Item(new Item.Properties())}
  * 不触碰注册表），裸 JUnit 可跑；涉及 vanilla 注册表类初始化的用例经

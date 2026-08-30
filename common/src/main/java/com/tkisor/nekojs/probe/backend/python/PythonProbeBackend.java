@@ -128,7 +128,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         ApiTypeRefPyRenderer typeR = new ApiTypeRefPyRenderer(availableFqns);
         PythonClassRenderer classR = new PythonClassRenderer(typeR);
 
-        // 1.5 适配器输入别名（B4）：目标 FQN → <Simple>_ = <Simple> | <输入类型们>
+        // 1.5 适配器输入别名：目标 FQN → <Simple>_ = <Simple> | <输入类型们>
         // 注册表字面量查表（typeName → 条目）：RegistryValue 形状 → Literal[...]（小注册表）/ str（大注册表）
         Map<String, RegistryTypeCatalogEntry> registries = new LinkedHashMap<>();
         if (snapshot.registryTypes() != null) {
@@ -156,7 +156,7 @@ public final class PythonProbeBackend implements ProbeBackend {
                     : renderPackageModule(pkg, classes, classR, typeR, availableFqns, adapterAliases, enumAliases));
         }
 
-        // 3. 事件声明（B3）：nekojs/_events/<side>/__init__.pyi
+        // 3. 事件声明：nekojs/_events/<side>/__init__.pyi
         writeEventStubs(files, snapshot, typeR, availableFqns, wideningAliases);
 
         // 4. nekojs/__init__.pyi（全局绑定 + 事件组入口 + probe.add_global 全局声明）
@@ -341,7 +341,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         return null;
     }
 
-    // ============================== 事件声明（B3） ==============================
+    // ============================== 事件声明 ==============================
 
     /** 为每个 side 写 {@code nekojs/_events/<side>/__init__.pyi}（无事件的 side 跳过）；root marker 一并产出。 */
     private void writeEventStubs(Map<String, String> files, NekoScriptCatalogSnapshot snapshot,
@@ -365,7 +365,7 @@ public final class PythonProbeBackend implements ProbeBackend {
         }
     }
 
-    // ============================== 适配器输入别名（B4） ==============================
+    // ============================== 适配器输入别名 ==============================
 
     /**
      * 适配器输入别名（Python 版）：{@code <Simple>_ = <Simple> | <输入类型们>}。

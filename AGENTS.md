@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Plans, specs and tickets live as local docs under `docs/` (e.g. `docs/DEVEX-ROADMAP.md`) — do NOT create GitHub issues for them. GitHub Issues are read-only archive; community reports via `/triage` are the exception. See `docs/agents/issue-tracker.md`.
+Plans, specs and tickets live as local Markdown under `docs/` — do NOT create GitHub issues for them. GitHub Issues are a read-only archive; community reports via `/triage` are the exception. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

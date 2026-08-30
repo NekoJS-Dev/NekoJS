@@ -11,8 +11,8 @@ import java.util.Set;
  * script language via {@link PythonToJsCompiler}.
  *
  * <p>Lives under {@code com.tkisor.nekojs.*} so it is auto-discovered on every platform:
- * NeoForge's ASM annotation scan picks it up from the embedded {@code common} classes, and the
- * Cleanroom 1.12.2 package scanner (rooted at {@code com.tkisor.nekojs}) finds it too. No
+ * NeoForge's ASM annotation scan picks it up from the embedded {@code common} classes, and
+ * package-scanning loaders rooted at {@code com.tkisor.nekojs} find it too. No
  * per-platform wiring is required. Uses the default priority (1000), so it registers after
  * {@code NekoJSCorePlugin} ({@link NekoJSPlugin#CORE_PRIORITY}).
  */

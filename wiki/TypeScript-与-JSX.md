@@ -175,7 +175,7 @@ export const Fragment = Symbol.for('nekojs.fragment')
 
 - **可擦除 TS ≠ 完整 TS**。本体的 TS 前端是有意轻量的，避免捆绑重的 TS 依赖。装饰器和其它没有 NekoJS lowering 语义、需要类型 emit 的特性会被拒，错误信息会引导你换写法；`enum` 与 `namespace` 是已支持的 NekoJS lowering 扩展。
 - TS 的**类型不参与运行时行为**——擦除后就是普通 JS。
-- 后续高级 TS/TSX/JSX 语法会优先在本体语言前端中补齐（见 ROADMAP）。
+- 更高级的 TS/TSX/JSX 语法会继续在本体语言前端里补齐，不打算改成依赖外部编译器。
 
 ## 下一步
 

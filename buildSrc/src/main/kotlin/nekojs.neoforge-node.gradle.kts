@@ -1,13 +1,15 @@
-// NeoForge 分支节点 convention plugin（对 1.21.1 / 26.1.2 / 26.2.0 各求值一次）。
-// 从根 build.gradle.kts 原体迁入（DEVEX-ROADMAP T2）：节点入口只剩一行 plugins 声明，
-// 节点可变项全部来自 versions/<node>/gradle.properties（deps.*）。
-// 与原体的两处适配：
-//   1. stonecutter 扩展不在 buildSrc 编译类路径上——stonecutter.process(File, path)
-//      经反射桥接（0.9.x 稳定方法名），供 AT 与 mods.toml 模板喂送预处理副本；
-//   2. 版本目录经 buildSrc settings 导入，libs 通过 LibrariesForLibs 取用。
+// NeoForge 节点的构建约定（对 1.21.1 / 26.1.2 / 26.2.0 各求值一次）。节点入口
+// build.gradle.kts 只有一行 plugins 声明，节点间差异全部来自 versions/<node>/gradle.properties
+// 的 deps.* 键。
 //
-// 节点源码构成：分支共享 src/main/java（版本守卫 + loader 守卫单副本）+ 节点专属
-// versions/<node>/src/main/{java,resources}（per-node compat 与不可守卫配对副本）。
+// 节点的源码由两部分组成：所有节点共用的 src/main/java，加上本节点专属的
+// versions/<node>/src/main/{java,resources}（放版本 compat 实现和差异过大不便用守卫表达的
+// 孪生文件）。
+//
+// 两个环境限制值得先知道：
+//   1. stonecutter 扩展不在 buildSrc 的编译类路径上，所以 process(File, path) 只能反射调用
+//      （见下面的 stonecutterProcessed）；
+//   2. 版本目录经 buildSrc/settings.gradle.kts 导入，libs 访问器要通过 LibrariesForLibs 取。
 
 import groovy.lang.Closure
 import org.gradle.accessors.dm.LibrariesForLibs
@@ -30,7 +32,6 @@ val platformTag = property("deps.platform_tag") as String
 val mcRange = property("deps.mc_range") as String
 val neoRange = property("deps.neo_range") as String
 val javaRelease = (property("deps.java") as String).toInt()
-// AT / iface JSON / mods.toml 模板均已迁进沙箱共享或 era 层，不再需要 per-node 路径参数
 
 val modern = !mcVersion.startsWith("1.")   // 26.x vs 1.21.1
 
@@ -43,8 +44,8 @@ val modDescription = property("mod_description") as String
 
 version = modVersion
 
-// 节点在 settings 里先于 common 注册，求值时 :common 尚未配置；
-// 跨项目读 sourceSets 前必须显式声明求值依赖（求值顺序陷阱①，封死在本插件内）
+// 节点在 settings 里先于 common 注册，求值时 :common 还没配置完；跨项目读 sourceSets
+// 之前必须显式声明求值依赖。
 evaluationDependsOn(":common-api")
 evaluationDependsOn(":common")
 
@@ -67,10 +68,8 @@ repositories {
 }
 
 // ---- stonecutter 预处理桥 -------------------------------------------------------
-// 反射调用 stonecutter 扩展的 process(File, String)：active 节点返回原文件，
-// 其余节点返回预处理产物。MDG 按路径消费 AT/模板，必须喂处理后的副本
-//（求值顺序陷阱②：该输出是 stonecutterGenerate 的产物、又是 createMinecraftArtifacts
-//  的输入，入口脚本里的显式 dependsOn 声明迁入本插件体末尾）。
+// 反射调用 stonecutter 扩展的 process(File, String)：active 节点返回原文件，其余节点返回
+// 预处理产物。MDG 按路径消费 AT 和 mods.toml 模板，必须喂处理后的副本。
 
 private fun Project.stonecutterProcessed(input: File, path: String): Any =
     extensions.getByName("stonecutter")
@@ -105,7 +104,7 @@ neoForge {
     )
 
     if (modern) {
-        // interface injection 只有 26.x 有（1.21.1 侧主仓也没挂），无版本差异，直接用 era 层原文件
+        // interface injection 只有 26.x 支持，且无版本内差异，直接用 26.x 资源层的原文件
         interfaceInjectionData {
             from(files(rootProject.file("src/main/resources-modern/nekojs.interface_injection.json")))
         }
@@ -119,8 +118,7 @@ neoForge {
         }
     }
 
-    // runs：对齐主仓 neoforge-26-shared.gradle / 1.21.1 build.gradle
-    //（1.21.1 的 data run 用 data()，26.x 用 clientData()——26.x 的 datagen 分侧了）
+    // 1.21.1 的 data run 用 data()，26.x 用 clientData()——26.x 起 datagen 按端分侧了
     runs {
         create("client") {
             client()
@@ -165,20 +163,20 @@ dependencies {
     annotationProcessor(project(":common-api"))
     compileOnly(libs.jspecify)
 
-    // JUnit 与主仓平台层同款（5.x 迁移期刻意分歧，BOM 6.0.0 只给 common 系）
+    // MC 节点用 JUnit 5：NeoForge 测试环境不兼容 JUnit 6（引擎模块走 BOM 6.0.0）
     testImplementation(libs.junit.jupiter.legacy)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     if (!modern) {
-        // 主仓 1.21.1 的 dev-run ICU4J 补丁：MDG server legacy classpath 不收项目
-        // runtimeClasspath 的传递库；26.x 走 clientData 时代不再需要
+        // 1.21.1 的开发运行需要显式补 ICU4J：MDG 的 server legacy classpath 不收项目
+        // runtimeClasspath 的传递依赖。26.x 走 clientData，不再需要。
         "additionalRuntimeClasspath"("com.ibm.icu:icu4j:73.2")
     }
 }
 
-// stonecutter.process 的输出落在 build/generated/stonecutter/main/... 里，
-// 该目录是 stonecutterGenerate 的输出、又是 MDG createMinecraftArtifacts 的输入
-//（AT 按路径消费）→ 显式声明依赖，消除隐式依赖陷阱。
+// stonecutter.process 的输出落在 build/generated/stonecutter/main/ 下，这个目录既是
+// stonecutterGenerate 的输出、又是 MDG createMinecraftArtifacts 的输入（AT 按路径消费），
+// 所以要显式声明依赖，否则是隐式依赖。
 tasks.matching { it.name == "createMinecraftArtifacts" }.configureEach {
     dependsOn(tasks.named("stonecutterGenerate"))
 }
@@ -214,7 +212,7 @@ sourceSets.main { resources.srcDir(generateModMetadata) }
 neoForge.ideSyncTask(generateModMetadata)
 
 // ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）--------------------------
-// 与 fabric / forge 节点同构——装配逻辑单副本（T2 前 neo/fabric 各有一份逐字复制）。
+// 与 fabric 节点的装配逻辑保持同构。
 
 val embeddedCommonRuntime = files(
     Callable {
@@ -234,8 +232,8 @@ tasks.jar {
     exclude("META-INF/versions/**/module-info.class")
     from(project(":common").sourceSets.main.get().output)
     from(project(":common-api").sourceSets.main.get().output)
-    // 求值顺序陷阱③：必须 from(Closure)（执行期求值）——KTS 的 map{} 会在配置期立即迭代，
-    // 触发 :common:runtimeClasspath 的无锁解析（IDEA sync / gradlew tasks 直接炸）。
+    // 必须用 from(Closure)（执行期求值）：KTS 的 map{} 会在配置期立即迭代，触发
+    // :common:runtimeClasspath 的无锁解析，IDEA sync 和 gradlew tasks 会直接失败。
     from(object : Closure<Any>(null) {
         fun doCall(): List<Any> = embeddedCommonRuntime
             .toCollection(mutableListOf())
@@ -243,7 +241,7 @@ tasks.jar {
     })
 }
 
-// ---- 编译约定（对齐主仓根 allprojects + neoforge-26-shared.gradle）---------------
+// ---- 编译约定 -------------------------------------------------------------------
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
@@ -261,7 +259,7 @@ tasks.register("dumpCompileClasspath") {
     doLast { println(cp.get()) }
 }
 
-// ---- 测试任务（locale 固定对齐主仓根 allprojects 的 Test 约定）----------------------
+// ---- 测试任务（locale / 时区固定，避免依赖机器环境）--------------------------------
 
 tasks.test {
     useJUnitPlatform()

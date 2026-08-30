@@ -41,7 +41,7 @@ class ScriptPackRegistryTest {
         assertEquals("", manifest.description());
         assertTrue(manifest.authors().isEmpty());
         assertTrue(manifest.enabledByDefault()); // 默认启用
-        assertTrue(manifest.clientSync()); // 默认随服分发（P2 消费）
+        assertTrue(manifest.clientSync()); // 默认随服分发
         assertNull(manifest.signature());
     }
 

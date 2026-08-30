@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W2 护栏：每个 {@code *Extension} 宿主注入接口必须真的被应用——要么被 nekojs.mixins.json
+ * 护栏：每个 {@code *Extension} 宿主注入接口必须真的被应用——要么被 nekojs.mixins.json
  * 里列出的 mixin 实现，要么登记在 nekojs.interface_injection.json（26.x 双路径：interface
  * injection 覆盖 dev，mixin 覆盖 production）。
  *

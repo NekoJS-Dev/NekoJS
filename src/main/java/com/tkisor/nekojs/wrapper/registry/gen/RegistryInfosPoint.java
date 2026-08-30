@@ -26,8 +26,8 @@ import net.minecraft.resources.ResourceKey;
  * （如模组自定义注册表）。merge 策略 {@link MergePolicy#append}（贡献的是
  * 扫描类/信息条目，无键冲突）。
  *
- * <p>本点与 {@link RegistryTypesPoint} 是 V2 扩展点系统上首批引擎级新消费者
- * （P2 / PR #37 主场），也是"新增内置扩展点 = 1 文件 + 清单 1 行"判据②的试做对象：
+ * <p>本点与 {@link RegistryTypesPoint} 是 V2 扩展点系统上首批引擎级新消费者，
+ * 也是"新增内置扩展点 = 1 文件 + 清单 1 行"这一目标的试做对象：
  * 它们经 {@code NekoRegistryPointsPlugin}（版本树 provider）注册。
  */
 public final class RegistryInfosPoint {

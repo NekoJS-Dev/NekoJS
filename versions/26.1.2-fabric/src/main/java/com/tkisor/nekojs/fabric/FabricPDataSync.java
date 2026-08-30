@@ -15,7 +15,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 
 /**
- * pdata 的 fabric 面（票 09）：
+ * pdata 的 fabric 面：
  * <ul>
  *   <li>持久化容器：{@code NekoEntityPDataMixin} 给 {@code Entity} 加的 {@code neko$pdataTag}
  *       （duck 接口 {@link NekoEntityPData}）→ 装进 {@link EntityPDataStore}，两平台同形读写；</li>
@@ -95,7 +95,7 @@ public final class FabricPDataSync {
         ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> PDataSyncService.clearClientMirrors());
         // 切维度也要清（NeoForge 挂 client level unload）：只在"离开一个已有世界"时清，
-        // 进服那次 null→世界 的变化不清（否则抹掉刚随进服推下来的数据——票 05 的教训）
+        // 进服那次 null→世界 的变化不清（否则会抹掉刚随进服推下来的数据）
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Object level = client.level;
             if (level == lastClientLevel) return;

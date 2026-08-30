@@ -32,7 +32,7 @@ import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
  *
  * <p>与 NeoForge 侧 {@code NekoJSCorePlugin} 的关系：那份清单里 ServerEvents /
  * PlayerEvents 等主体组与载荷类都是 NeoForge 面（整文件守卫），fabric 端随
- * LoaderBridge 各事件桥落地逐个加入本清单——脚本写法跨加载器一致的前提是
+ * fabric 侧各事件桥落地逐个加入本清单——脚本写法跨加载器一致的前提是
  * 总线与载荷中立（{@code BlockEvents.BROKEN} 即样板）。服务端生命周期/tick/
  * 进出服/chat 与实体 joinLevel/death 已由 fabric 桥以同名组 + 中立 payload 接通。
  *
@@ -68,7 +68,7 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerClientEvents(EventGroupRegistry registry) {
-        // 客户端 tick v1（CLIENT 脚本由 NekoJSFabricClient 在 CLIENT_STARTED 加载）
+        // 客户端 tick 事件（CLIENT 脚本由 NekoJSFabricClient 在 CLIENT_STARTED 加载）
         registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS);
     }
 

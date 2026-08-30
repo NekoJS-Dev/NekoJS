@@ -173,7 +173,7 @@ public final class ScriptManager implements AutoCloseable {
         if (runtime.isEmpty() || contextKilled) {
             if (!runtime.isEmpty()) {
                 // 旧 Context 已被 Graal 关闭（语句上限触发）；清理注册与残留资源。
-                // 必须与 resetEnvironment / close 的 teardown 等价（W4/§3-9）：监听器闭包
+                // 必须与 resetEnvironment / close 的 teardown 等价：监听器闭包
                 // 持有指向已死 Context 的 Value，errorTracker/模块/ESM 缓存与 binding 状态
                 // 同属旧环境。缺一步就是「kill 重建后静默携带脏状态」——例如残留 errorTracker
                 // 条目永远不清、binding 缓存的旧 Context helper 下次取用报已关闭。

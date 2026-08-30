@@ -39,11 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W4 验收：连续 50 次事务式 reload 的内存稳定性（不单调增长）。
+ * 验收：连续 50 次事务式 reload 的内存稳定性（不单调增长）。
  *
  * <p>每次 reload 创建候选 Graal Context、执行 ESM 入口（虚拟 ESM registry + prepared
  * pipeline cache + source map 全部走一遍）、提交后关闭旧 Context。已知的历史泄漏源：
- * RunawayWatchdog 的 ThreadLocal 强引用最后一次求值的 Source（§3-13，已改弱引用）、
+ * RunawayWatchdog 的 ThreadLocal 强引用最后一次求值的 Source（已改弱引用）、
  * CONTEXT_TO_MANAGER / ScriptContextRegistry 残留（close 路径已保证 remove/unbind）、
  * NekoEsmVirtualModuleRegistry generation 计数无界（clear(type) 已重置）。
  *

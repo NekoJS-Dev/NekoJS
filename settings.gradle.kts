@@ -1,13 +1,16 @@
-// NekoJS —— 多版本 × 多加载器单仓（独立主仓形态）。
+// NekoJS —— 多 MC 版本 × 多加载器单仓。
 //
-// 版本图（stonecutter 0.9.7）：
-//   根分支（共享 src/ 版本树，loader 常量区分加载器）：
-//     1.21.1 / 26.1.2 / 26.2.0      —— NeoForge 节点，根 build.gradle.kts
-//     26.1.2-fabric                 —— Fabric 节点，id 带后缀避免撞名，`to` 右侧是
-//                                       干净逻辑版本（守卫按它解析），fabric.gradle.kts
-//   （Forge 1.20.1 已放弃：API 距离共享树太远，移植需独立代码库；骨架已移除，git 历史可找回。）
+// 版本图（stonecutter 0.9.7）：四个节点共用一棵源码树 src/，版本差异由守卫与
+// replacements 表达，加载器差异由 `//? if neoforge` / `//? if fabric` 守卫表达。
+//   1.21.1 / 26.1.2 / 26.2.0      —— NeoForge 节点，入口 build.gradle.kts
+//   26.1.2-fabric                 —— Fabric 节点，入口 fabric.gradle.kts。id 带后缀避免
+//                                    与 NeoForge 的 26.1.2 撞名，`to` 右侧是守卫解析用的
+//                                    干净逻辑版本
 //
-// 引擎三模块（common/common-api/common-api-processor）为普通子项目，不参与版本化。
+// 不支持 Forge 1.20.1：它的 API 与共享树差了一个时代，守卫和 replacements 桥接不了，
+// 移植等于维护第二套代码库。
+//
+// 引擎三模块（common / common-api / common-api-processor）是普通子项目，不参与版本化。
 
 pluginManagement {
     repositories {

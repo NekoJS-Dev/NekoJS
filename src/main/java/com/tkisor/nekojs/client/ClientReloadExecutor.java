@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 
 /**
- * CLIENT 脚本 reload 的线程归属（W7/A2）：客户端 Context 的所有权线程是客户端主线程
+ * CLIENT 脚本 reload 的线程归属：客户端 Context 的所有权线程是客户端主线程
  * （Render 线程）——事件分发、timers flush、F3+T 资源 reload 全在那里。单人游戏中
  * {@code /nekojs reload client} 在集成服务器线程执行，原地 reload 会让同一 Context
  * 被两个线程先后触碰（外部 synchronized 保住了顺序，但每次新增入口都要重新推理）；

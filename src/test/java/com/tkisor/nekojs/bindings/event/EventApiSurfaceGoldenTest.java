@@ -1,4 +1,4 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
@@ -15,11 +15,11 @@ import org.junit.jupiter.api.Test;
 /**
  * **脚本 API 表面 golden**：钉住 {@code BlockEvents} 命名空间对脚本可见的成员集合。
  *
- * <p>为什么需要它：SPI 抽取（共享声明 + 加载器适配）会改变字节码，所以"与主仓字节码一致"
+ * <p>为什么需要它：SPI 抽取（共享声明 + 加载器适配）会改变字节码，所以"字节码逐字不变"
  * 对被重构的文件不再是正确的不变量。真正该守的不变量是**脚本看到的东西没变**——
  * 这正是本测试。它比字节码比对更贴近用户，且能抓到字节码抓不到的一类 bug：
  *
- * <p>实测案例：把 {@code GROUP} 搬到共享层后，{@code registry.register(GROUP)} 不再靠类
+ * <p>典型场景：把 {@code GROUP} 搬到共享层后，{@code registry.register(GROUP)} 不再靠类
  * 初始化副作用登记 NeoForge 适配层的总线，而 {@code register} 之后组会 {@code freeze()}，
  * 于是 {@code randomTick} 静默消失（脚本报 {@code Binding 'BlockEvents' has no member
  * 'randomTick'}）。字节码比对全绿，只有真机才发现。本测试把这个场景变成 {@code check} 里

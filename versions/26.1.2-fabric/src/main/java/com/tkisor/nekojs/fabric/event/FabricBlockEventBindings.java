@@ -5,7 +5,7 @@ import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 
 /**
- * B3 SPI 样板的**收益证明**：fabric 侧把原生 Fabric API 事件接到**同一条**
+ * SPI 样板的**收益证明**：fabric 侧把原生 Fabric API 事件接到**同一条**
  * {@code BlockEvents.BROKEN} 总线上——脚本写 {@code BlockEvents.broken(...)} 的方式与
  * NeoForge 完全一致，因为总线载荷是加载器中立的 {@link BlockBrokenEventJS}。
  *

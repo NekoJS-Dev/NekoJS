@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * W3 预检语言门禁回归：JS-only 的 ValParser 预检只允许对原始源即 JS 的扩展名跑——
+ * 预检语言门禁回归：JS-only 的 ValParser 预检只允许对原始源即 JS 的扩展名跑——
  * .py（# 注释、def/class）与 .ts（类型注解、interface）的原始源会被碎成伪调用，
  * 产生 "Unknown identifier" 系统性误报进错误面板。转译语言的预检改在编译产物上跑。
  */
