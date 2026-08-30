@@ -7,6 +7,7 @@ plugins {
     id("net.fabricmc.fabric-loom") version "1.17.20" apply false
 }
 
+// 切版本用 `gradlew switchVersion -Pnode=<节点>`；勿手改本行、勿在本文件做含本行的全局替换
 stonecutter active "26.1.2"
 // stonecutter 默认只认 java/kt/cfg/json5/yaml/... 这些扩展名（jar 内 DefaultsKt）：
 // 本项目还要处理 nekojs.mixins.json（json5 语义）与 neoforge.mods.toml（`#` 注释，同 cfg），
@@ -280,12 +281,13 @@ tasks.register("switchVersion") {
             throw GradleException("未知节点 $target——可用：$available")
         }
         val controller = rootDir.resolve("stonecutter.gradle.kts")
-        val activeLine = Regex("""(?m)^stonecutter active "([^"]+)"\s*$""")
+        // 按行前缀定位声明；不写含 `stonecutter active "…"` 字样的正则——正则字面量与
+        // 第 10 行声明同形，对本文件做全局替换时会连坐改坏
         val text = controller.readText()
-        if (!activeLine.containsMatchIn(text)) {
-            throw GradleException("stonecutter.gradle.kts 里找不到 `stonecutter active \"…\"` 声明")
-        }
-        controller.writeText(activeLine.replaceFirst(text, "stonecutter active \"$target\""))
+        val activeLine = text.lineSequence().firstOrNull { it.startsWith("stonecutter active ") }
+            ?: throw GradleException("stonecutter.gradle.kts 里找不到 `stonecutter active \"…\"` 声明")
+        val at = text.indexOf(activeLine)
+        controller.writeText(text.replaceRange(at, at + activeLine.length, "stonecutter active \"$target\""))
         println("switchVersion: active 节点已切换为 $target（IDE 重新 Gradle sync 后生效）")
     }
 }
