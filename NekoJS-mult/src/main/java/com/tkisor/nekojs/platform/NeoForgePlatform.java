@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.platform;
 
@@ -16,26 +18,16 @@ import java.util.Map;
 import java.util.Set;
 
 public class NeoForgePlatform implements IPlatform {
-//? if >=26 {
     private static final NbtBinaryCodec NBT_BINARY_CODEC = NeoForgeNbtBinaryCodec.INSTANCE;
-//?}
 
     @Override
     public boolean isClient() {
-//? if >=26 {
         return FMLLoader.getCurrent().getDist().isClient();
-//?} else {
-/*        return FMLLoader.getDist().isClient();
-*///?}
     }
 
     @Override
     public boolean isDevelopment() {
-//? if >=26 {
         return !FMLLoader.getCurrent().isProduction();
-//?} else {
-/*        return !FMLLoader.isProduction();
-*///?}
     }
 
     @Override
@@ -93,11 +85,7 @@ public class NeoForgePlatform implements IPlatform {
 
     @Override
     public NbtBinaryCodec nbtBinaryCodec() {
-//? if >=26 {
         return NBT_BINARY_CODEC;
-//?} else {
-/*        return NeoForgeNbtBinaryCodec.INSTANCE;
-*///?}
     }
 
     @Override

@@ -1,11 +1,11 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
 import net.minecraft.resources.ResourceKey;
-//?}
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -25,12 +25,8 @@ import net.minecraft.world.item.enchantment.Enchantment;
  * event.enchantment('mymod:venom', b =&gt; { b.supportedItems = 'minecraft:enchantable/weapon'; b.maxLevel = 3 })
  * </pre>
  */
-//? if >=26 {
 public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
         implements TaggableBuilder<EnchantmentBuilder> {
-//?} else {
-/*public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment> {
-*///?}
 
     /** 支持附魔的物品标签 id（如 'minecraft:enchantable/weapon'，'#' 前缀 tolerated）。默认空集合。 */
     public String supportedItems = null;
@@ -48,7 +44,6 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
 
     public EnchantmentBuilder(Identifier id) {
         super(id);
-//? if >=26 {
     }
 
     /** {@link TaggableBuilder}：附魔 tag（如 {@code minecraft:treasure}）归属 ENCHANTMENT 注册表。 */
@@ -60,7 +55,6 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
     @Override
     public Identifier getLocation() {
         return id;
-//?}
     }
 
     @Override
@@ -86,11 +80,7 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
             return HolderSet.empty();
         }
         // 26.x: Registry<T> implements HolderGetter；ENCHANTMENT 注册晚于 ITEM 注册与物品标签绑定
-//? if >=26 {
         return BuiltInRegistries.ITEM.getOrThrow(TagKey.create(Registries.ITEM, tagId));
-//?} else {
-/*        return BuiltInRegistries.ITEM.getOrCreateTag(TagKey.create(Registries.ITEM, tagId));
-*///?}
     }
 
     private static EquipmentSlotGroup resolveSlots(String value) {

@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -36,13 +38,8 @@ public class ItemAdapter extends AbstractJSTypeAdapter<Item> {
     }
 
     @Override
-//? if >=26 {
     protected Item fromString(String s) {
         return itemFromId(ParseIds.parseItemOrBlockId(s));
-//?} else {
-/*    protected Item fromString(String rawId) {
-        return itemFromId(ParseIds.parseItemOrBlockId(rawId));
-*///?}
     }
 
     @Override
@@ -50,28 +47,15 @@ public class ItemAdapter extends AbstractJSTypeAdapter<Item> {
         if (host instanceof Item item) return item;
         if (host instanceof ItemStack stack) return stack.getItem();
         if (host instanceof Block block) return block.asItem();
-//? if >=26 {
         if (host instanceof NekoId id) {
             return itemFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
         }
         return null; // 不识别
-//?} else {
-/*        if (host instanceof NekoId id) return itemFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
-        return null;
-*///?}
     }
 
-//? if >=26 {
     private Item itemFromId(Identifier id) {
-//?} else {
-/*    private static Item itemFromId(Identifier id) {
-*///?}
         return BuiltInRegistries.ITEM.getOptional(id)
-//? if >=26 {
             .orElseThrow(() -> new ValueConversionException(Item.class, "registered item id", id,
                 "item not found: " + id));
-//?} else {
-/*            .orElseThrow(() -> new ValueConversionException(Item.class, "item id", id, "Item not found: " + id));
-*///?}
     }
 }

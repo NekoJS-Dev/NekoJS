@@ -1,16 +1,15 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
-//~ mc_legacy_api
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.entity.NekoScriptMob;
 import com.tkisor.nekojs.wrapper.registry.EntityAttributeBuilderJS;
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-//?}
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
@@ -36,12 +35,8 @@ import java.util.function.Supplier;
  * })
  * </pre>
  */
-//? if >=26 {
 public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
         implements TaggableBuilder<EntityTypeBuilder> {
-//?} else {
-/*public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
-*///?}
 
     /** build 期记账的实体（持久：客户端渲染器 / goal 校验 / 属性事件查询用）。 */
     private static final Map<Identifier, EntityTypeBuilder> REGISTERED = new HashMap<>();
@@ -66,7 +61,6 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
 
     public EntityTypeBuilder(Identifier id) {
         super(id);
-//? if >=26 {
     }
 
     /** {@link TaggableBuilder}：实体 tag（如 {@code minecraft:raiders}）归属 ENTITY_TYPE 注册表。 */
@@ -78,7 +72,6 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
     @Override
     public Identifier getLocation() {
         return id;
-//?}
     }
 
     /** 设置碰撞箱宽高。 */
@@ -123,11 +116,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
             builder.noSummon();
         }
 
-//? if >=26 {
         EntityType<NekoScriptMob> type = builder.build(ResourceKey.create(Registries.ENTITY_TYPE, id));
-//?} else {
-/*        EntityType<NekoScriptMob> type = builder.build(id.toString());
-*///?}
         goals.forType(type).register();
         REGISTERED.put(id, this);
         if (spawnEggBackgroundColor != null) {
@@ -148,16 +137,10 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
             return;
         }
         Identifier eggId = getSpawnEggId();
-//? if >=26 {
         registry.additional(Registries.ITEM, eggId, () -> new SpawnEggItem(
                 new Item.Properties()
                         .setId(ResourceKey.create(Registries.ITEM, eggId))
                         .spawnEgg((EntityType<? extends LivingEntity>) this.get())));
-//?} else {
-/*        registry.additional(Registries.ITEM, eggId, () -> new net.neoforged.neoforge.common.DeferredSpawnEggItem(
-                () -> (EntityType<? extends net.minecraft.world.entity.Mob>) (EntityType<?>) this.get(),
-                spawnEggBackgroundColor, spawnEggHighlightColor, new Item.Properties()));
-*///?}
     }
 
     /**

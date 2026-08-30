@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -12,9 +14,7 @@ import com.tkisor.nekojs.core.api.ManagedApiValueAccess;
 import java.util.List;
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import net.minecraft.network.chat.Component;
-//? if >=26 {
 import net.minecraft.network.chat.FontDescription;
-//?}
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -90,11 +90,7 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
             // 26.x（MC 1.21.6+）：Component.selector 签名变为 (ParsedSelector)，而 ParsedSelector 需要
             // CommandBuildContext 才能从 pattern 构造；适配器层无该上下文，只能退化为字面量。
             // selector 在 1.21.1 / 1.12.2 仍可正常渲染。
-//? if >=26 {
             return Component.literal(selector.pattern());
-//?} else {
-/*            return Component.selector(selector.pattern(), java.util.Optional.empty());
-*///?}
         }
         MutableComponent result = Component.empty();
         for (TextValue child : ((TextValue.Sequence) value).values()) {
@@ -129,11 +125,7 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
         if (style.insertion() != null) patch = patch.withInsertion(style.insertion());
         if (style.font() != null) {
             Identifier fontId = Identifier.tryParse(style.font());
-//? if >=26 {
             if (fontId != null) patch = patch.withFont(new FontDescription.Resource(fontId));
-//?} else {
-/*            if (fontId != null) patch = patch.withFont(fontId);
-*///?}
         }
         if (style.clickEvent() != null) {
             ClickEvent click = convertClick(style.clickEvent());
@@ -148,7 +140,6 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
 
     private static ClickEvent convertClick(TextClickEvent event) {
         return switch (event) {
-//? if >=26 {
             case TextClickEvent.RunCommand e -> new ClickEvent.RunCommand(e.command());
             case TextClickEvent.SuggestCommand e -> new ClickEvent.SuggestCommand(e.command());
             case TextClickEvent.OpenUrl e -> {
@@ -161,24 +152,12 @@ public class ComponentAdapter extends BaseJsTypeAdapter<Component> {
             case TextClickEvent.OpenFile e -> new ClickEvent.OpenFile(e.path());
             case TextClickEvent.CopyToClipboard e -> new ClickEvent.CopyToClipboard(e.text());
             case TextClickEvent.ChangePage e -> new ClickEvent.ChangePage(e.page());
-//?} else {
-/*            case TextClickEvent.RunCommand e -> new ClickEvent(ClickEvent.Action.RUN_COMMAND, e.command());
-            case TextClickEvent.SuggestCommand e -> new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, e.command());
-            case TextClickEvent.OpenUrl e -> new ClickEvent(ClickEvent.Action.OPEN_URL, e.url());
-            case TextClickEvent.OpenFile e -> new ClickEvent(ClickEvent.Action.OPEN_FILE, e.path());
-            case TextClickEvent.CopyToClipboard e -> new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, e.text());
-            case TextClickEvent.ChangePage e -> new ClickEvent(ClickEvent.Action.CHANGE_PAGE, e.value());
-*///?}
         };
     }
 
     private static HoverEvent convertHover(TextHoverEvent event) {
         if (event instanceof TextHoverEvent.ShowText showText) {
-//? if >=26 {
             return new HoverEvent.ShowText(convert(showText.text()));
-//?} else {
-/*            return new HoverEvent(HoverEvent.Action.SHOW_TEXT, convert(showText.text()));
-*///?}
         }
         return null;
     }

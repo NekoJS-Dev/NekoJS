@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.holder;
 
 import com.mojang.datafixers.util.Either;
@@ -8,9 +10,7 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
-//? if >=26 {
 import java.util.stream.Stream;
-//?}
 
 /**
  * 按正则匹配注册表 id 的惰性 HolderSet（对应 {@code /regex/} 语法）。
@@ -30,11 +30,7 @@ public final class RegexHolderSet<T> extends HolderSet.ListBacked<T> {
     protected List<Holder<T>> contents() {
         if (contents == null) {
             contents = List.copyOf(lookup.listElements()
-//? if >=26 {
                 .filter(ref -> pattern.matcher(ref.key().identifier().toString()).find())
-//?} else {
-/*                .filter(ref -> pattern.matcher(ref.key().location().toString()).find())
-*///?}
                 .<Holder<T>>map(ref -> ref)
                 .toList());
         }
@@ -56,7 +52,6 @@ public final class RegexHolderSet<T> extends HolderSet.ListBacked<T> {
         return contents().contains(holder);
     }
 
-//? if >=26 {
     @Override
     public boolean isBound() {
         return contents != null;
@@ -71,5 +66,4 @@ public final class RegexHolderSet<T> extends HolderSet.ListBacked<T> {
     public int size() {
         return contents().size();
     }
-//?}
 }

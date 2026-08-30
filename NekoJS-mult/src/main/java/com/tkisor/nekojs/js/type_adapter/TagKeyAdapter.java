@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -23,12 +25,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
         "block", Registries.BLOCK,
         "fluid", Registries.FLUID,
         "entity", Registries.ENTITY_TYPE,
-//? if >=26 {
         "biome", Registries.BIOME);
-//?} else {
-/*        "biome", Registries.BIOME
-    );
-*///?}
 
     @Override
     public Class<TagKey> getTargetClass() {
@@ -50,14 +47,10 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
             return true;
         }
         // { registry: "block", tag: "minecraft:logs" }
-//? if >=26 {
         if (value.hasMembers() && value.hasMember("tag")) {
             return true;
         }
         return false;
-//?} else {
-/*        return value.hasMembers() && value.hasMember("tag");
-*///?}
     }
 
     @Override
@@ -103,11 +96,7 @@ public class TagKeyAdapter implements JSTypeAdapter<TagKey> {
 
         if (id == null) {
             // B9: 英文信息 + 统一异常
-//? if >=26 {
             throw new ValueConversionException(TagKey.class, "valid tag identifier", tagPath,
-//?} else {
-/*            throw new ValueConversionException(TagKey.class, "valid tag id", tagPath,
-*///?}
                 "invalid tag identifier: " + tagPath);
         }
 

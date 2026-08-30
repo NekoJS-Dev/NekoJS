@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.client;
 
@@ -16,18 +18,13 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
-//? if >=26 {
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
-//?}
 import com.tkisor.nekojs.wrapper.pdata.PDataSyncService;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import java.nio.file.Path;
-//? if <26 {
-/*import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
-*///?}
 
 public class NekoJSClient {
 
@@ -67,16 +64,10 @@ public class NekoJSClient {
         }
     }
 
-//? if >=26 {
     private static void onClientResourceReload(AddClientReloadListenersEvent event) {
         Identifier listenerId = Identifier.fromNamespaceAndPath(NekoJS.MODID, "client_scripts_reload");
 
         event.addListener(listenerId, (ResourceManagerReloadListener) resourceManager -> {
-//?} else {
-/*    private static void onClientResourceReload(RegisterClientReloadListenersEvent event) {
-        // 1.21.1: NeoForge 注册重载监听器不需要手动指定 ID，直接 registerReloadListener 即可
-        event.registerReloadListener((ResourceManagerReloadListener) resourceManager -> {
-*///?}
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
                 NekoJSMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
@@ -102,13 +93,9 @@ public class NekoJSClient {
             ClientEvents.GENERATE_ASSETS.post(generator, "after_mods");
             // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型
             // （26.x 模型驱动：translucent 需要 force_translucent 贴图引用）
-//? if >=26 {
             BlockModelGenerator.generateDefaultModels(generator);
             // 请求过 spawnEgg() 的实体：补默认蛋模型（26.x 无运行时染色，纹理数据驱动）
             BlockModelGenerator.generateSpawnEggModels(generator);
-//?} else {
-/*            generateSpawnEggModels(generator);
-*///?}
             // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
             for (String lang : ClientEvents.LANG.registeredKeys()) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
@@ -122,18 +109,5 @@ public class NekoJSClient {
             NekoJSMod.RUNTIME_ROOT.errorTracker().recordCallbackError(ScriptType.CLIENT, "generate_assets", e);
         }
     }
-//? if <26 {
-/*    private static void generateSpawnEggModels(DataGeneratorJS generator) {
-        for (Identifier id : EntityTypeBuilder.registeredSpawnEggs()) {
-            String modelPath = id.getNamespace() + "/models/item/" + id.getPath() + ".json";
-            if (generator.getJson(modelPath) != null) {
-                continue;
-            }
-            com.google.gson.JsonObject model = new com.google.gson.JsonObject();
-            model.addProperty("parent", "minecraft:item/template_spawn_egg");
-            generator.json(modelPath, model);
-        }
-    }
-*///?}
 }
 //?}

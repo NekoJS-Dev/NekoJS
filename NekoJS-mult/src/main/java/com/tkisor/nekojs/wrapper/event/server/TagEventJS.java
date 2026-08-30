@@ -1,10 +1,10 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.event.server;
 
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.registry.BuilderTags;
-//?}
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagLoader;
@@ -30,9 +30,7 @@ public final class TagEventJS {
         // 注册 builder 的待写 tag（.tag(...)，见 BuilderTags）先于脚本监听器注入本事件：
         // 脚本随后的 add/remove 仍可覆盖，apply() 统一写回。待写条目不在此消费——
         // 每次 tag（重）加载都会重新注入（稳定事实，跨 /reload 存活）。
-//? if >=26 {
         BuilderTags.flushInto(registryId, this::add);
-//?}
     }
 
     public Identifier getRegistry() {
@@ -107,25 +105,17 @@ public final class TagEventJS {
             // TagEntry 永远匹配不上源表里的同 id 条目（含 builder 待写条目）
             var toRemove = entry.getValue().stream()
                     .map(TagLoader.EntryWithSource::entry)
-//? if >=26 {
                     .map(e -> new RemovalKey(e.getId(), e.isTag()))
-//?}
                     .collect(java.util.stream.Collectors.toSet());
-//? if >=26 {
             list.removeIf(e -> {
                 var target = e.entry();
                 return toRemove.contains(new RemovalKey(target.getId(), target.isTag()));
             });
-//?} else {
-/*            list.removeIf(e -> toRemove.contains(e.entry()));
-*///?}
         }
     }
 
     /** remove 匹配键：元素 id + 是否 tag 引用（忽略 required 差异）。 */
-//? if >=26 {
     private record RemovalKey(Identifier id, boolean tag) {
     }
-//?}
 }
 //?}

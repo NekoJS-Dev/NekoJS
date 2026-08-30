@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
@@ -8,20 +10,13 @@ import com.tkisor.nekojs.event.level.BlockEntityTickEvent;
 import com.tkisor.nekojs.event.level.RandomTickEvent;
 import com.tkisor.nekojs.eventbus.EventBusFactory;
 import com.tkisor.nekojs.wrapper.event.block.BlockBrokenEventJS;
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
-//?}
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
-//? if >=26 {
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
-//?}
-//? if <26 {
-/*import net.neoforged.neoforge.event.level.BlockEvent.BreakEvent;
-*///?}
 
 /**
  * {@code BlockEvents} 的 **NeoForge 适配层**：把原生事件接到
@@ -86,10 +81,8 @@ public final class NeoForgeBlockEvents {
      * {@link BlockModificationEventJS}），不挂 NeoForge 总线（同
      * {@code ItemEvents.MODIFICATION} 的 posted-object 模式）。
      */
-//? if >=26 {
     public static final EventBusJS<BlockModificationEventJS, Void> MODIFICATION =
             BlockEvents.GROUP.server("modification", BlockModificationEventJS.class);
-//?}
 
     private static <T extends BlockEvent> DispatchKey<T, Block> dispatchByBlock() {
         return BlockEvents.dispatchByBlock(event -> event.getState().getBlock());
@@ -97,19 +90,11 @@ public final class NeoForgeBlockEvents {
 
     public static final EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
         // 中立总线的绑定点：这里是加载器代码，写加载器类型与版本守卫是恰当的
-//? if >=26 {
         .bindTransformed(
                 BlockEvents.BROKEN,
                 (BreakBlockEvent event) -> new BlockBrokenEventJS(
                         event.getLevel(), event.getPos(), event.getState(), event.getPlayer()),
                 BreakBlockEvent.class)
-//?} else {
-/*        .bindTransformed(
-                BlockEvents.BROKEN,
-                (BreakEvent event) -> new BlockBrokenEventJS(
-                        event.getLevel(), event.getPos(), event.getState(), event.getPlayer()),
-                BreakEvent.class)
-*///?}
         .bind(ENTITY_PLACED)
         .bind(ENTITY_MULTI_PLACED)
         .bind(NEIGHBOR_NOTIFY)

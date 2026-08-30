@@ -1,5 +1,7 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.tkisor.nekojs.NekoJS;
@@ -12,9 +14,6 @@ import net.minecraft.world.item.Item;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-//? if <26 {
-/*import java.lang.reflect.Field;
-*///?}
 
 /**
  * Server-side item property modification event ({@code ItemEvents.modification}),
@@ -50,9 +49,6 @@ public class ItemModificationEventJS {
 
     /** 每个物品的原始组件快照（跨脚本 reload 保留，restore 路径依据）。 */
     private static final Map<Identifier, DataComponentMap> SNAPSHOTS = new ConcurrentHashMap<>();
-//? if <26 {
-/*    private static final Field COMPONENTS_FIELD = componentsField();
-*///?}
 
     private final MinecraftServer server;
     private int modifiedCount;
@@ -100,11 +96,7 @@ public class ItemModificationEventJS {
         modifier.accept(modification);
 
         DataComponentMap.Builder builder = DataComponentMap.builder().addAll(base);
-//? if >=26 {
         modification.applyTo(builder, base, server);
-//?} else {
-/*        modification.applyTo(builder, base);
-*///?}
         applyComponents(item, builder.build());
         modifiedCount++;
     }
@@ -130,29 +122,9 @@ public class ItemModificationEventJS {
     }
 
     // builtInRegistryHolder() 无非废弃等价 API（components() 委托它），保守保留
-//? if >=26 {
     @SuppressWarnings("deprecation")
-//?}
     private static void applyComponents(Item item, DataComponentMap components) {
-//? if >=26 {
         item.builtInRegistryHolder().bindComponents(components);
-//?} else {
-/*        try {
-            COMPONENTS_FIELD.set(item, components);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Failed to write item components of " + BuiltInRegistries.ITEM.getKey(item), e);
-        }
-    }
-
-    private static Field componentsField() {
-        try {
-            Field field = Item.class.getDeclaredField("components");
-            field.setAccessible(true);
-            return field;
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
-        }
-*///?}
     }
 }
 //?}

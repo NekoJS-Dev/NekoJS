@@ -1,10 +1,10 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
 package com.tkisor.nekojs.client.render;
 
 import com.tkisor.nekojs.NekoJS;
-//? if >=26 {
 import net.minecraft.client.Minecraft;
-//?}
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -54,7 +54,6 @@ public class ClientRenderEvents {
     }
 
     @SubscribeEvent
-//? if >=26 {
     public static void onAfterTranslucentBlocks(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         dispatchWorld(ClientRenderRegistry.WorldLayer.EARLY, event);
     }
@@ -70,33 +69,13 @@ public class ClientRenderEvents {
     }
 
     private static void dispatchWorld(ClientRenderRegistry.WorldLayer layer, RenderLevelStageEvent event) {
-//?} else {
-/*    public static void onLevelRender(RenderLevelStageEvent event) {
-        ClientRenderRegistry.WorldLayer layer;
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
-            layer = ClientRenderRegistry.WorldLayer.EARLY;
-        } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_WEATHER) {
-            layer = ClientRenderRegistry.WorldLayer.NORMAL;
-        } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
-            layer = ClientRenderRegistry.WorldLayer.LATE;
-        } else {
-            return;
-        }
-*///?}
         if (!ClientRenderRegistry.hasWorld(layer)) {
             return;
         }
-//? if >=26 {
         var cameraState = event.getLevelRenderState().cameraRenderState;
-//?}
         WorldRenderContextJS ctx = new WorldRenderContextJS(
-//? if >=26 {
                 cameraState != null ? cameraState.pos : net.minecraft.world.phys.Vec3.ZERO,
                 Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
-//?} else {
-/*                event.getCamera().getPosition(),
-                event.getPartialTick().getGameTimeDeltaPartialTick(false));
-*///?}
         ClientRenderRegistry.dispatchWorld(layer, ctx);
     }
 

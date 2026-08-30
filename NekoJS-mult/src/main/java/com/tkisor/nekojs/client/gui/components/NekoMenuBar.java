@@ -1,14 +1,11 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-//? if >=26 {
 import net.minecraft.client.input.KeyEvent;
-//?}
 import java.util.List;
-//? if <26 {
-/*import org.lwjgl.glfw.GLFW;
-*///?}
 
 public class NekoMenuBar {
     public record MenuCategory(String name, List<NekoContextMenu.MenuItem> items) {}
@@ -28,11 +25,7 @@ public class NekoMenuBar {
             if (hov && this.activeContextMenu == null) {
                 g.fill(menuX, startY, menuX + w + 8, startY + 14, 0xFF3E3E42);
             }
-//? if >=26 {
             g.text(font, cat.name(), menuX + 4, startY + 3, 0xFFCCCCCC);
-//?} else {
-/*            g.drawString(font, cat.name(), menuX + 4, startY + 3, 0xFFCCCCCC, false);
-*///?}
             menuX += w + 8;
         }
         if (this.activeContextMenu != null) {
@@ -60,13 +53,8 @@ public class NekoMenuBar {
         return false;
     }
 
-//? if >=26 {
     public boolean keyPressed(KeyEvent event) {
         if (this.activeContextMenu != null && event.isEscape()) {
-//?} else {
-/*    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.activeContextMenu != null && keyCode == GLFW.GLFW_KEY_ESCAPE) {
-*///?}
             this.activeContextMenu = null;
             return true;
         }

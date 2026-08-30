@@ -1,13 +1,13 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.wrapper.registry;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.food.FoodProperties;
-//? if >=26 {
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
-//?}
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,24 +49,9 @@ public class FoodBuilderJS {
         if (this.alwaysEat) {
             builder.alwaysEdible();
         }
-//? if <26 {
-/*        if (this.fastEat) {
-            builder.fast();
-        }
-
-        // 1.21.1 中，药水效果直接添加在 FoodProperties 上
-        for (EffectEntry e : effects) {
-            // 1.21.1 推荐使用 getHolder 来获取包含 Registry 信息的 Holder 对象；
-            // effect 用 Supplier 重载（直接传 MobEffectInstance 的旧重载已废弃）
-            BuiltInRegistries.MOB_EFFECT.getHolder(e.effectId()).ifPresent(effectHolder ->
-                    builder.effect(() -> new MobEffectInstance(effectHolder, e.durationTicks(), e.amplifier()), e.probability())
-            );
-        }
-*///?}
         return builder.build();
     }
 
-//? if >=26 {
     public Consumable buildConsumable() {
         Consumable.Builder builder = Consumable.builder();
 
@@ -82,5 +67,4 @@ public class FoodBuilderJS {
         }
         return builder.build();
     }
-//?}
 }

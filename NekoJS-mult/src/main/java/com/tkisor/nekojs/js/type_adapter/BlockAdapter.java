@@ -1,3 +1,5 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
@@ -11,9 +13,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-//? if <26 {
-/*import com.tkisor.nekojs.api.data.ValueConversionException;
-*///?}
 
 public class BlockAdapter extends AbstractJSTypeAdapter<Block> {
 
@@ -38,13 +37,8 @@ public class BlockAdapter extends AbstractJSTypeAdapter<Block> {
     }
 
     @Override
-//? if >=26 {
     protected Block fromString(String s) {
         return blockFromId(ParseIds.parseItemOrBlockId(s));
-//?} else {
-/*    protected Block fromString(String rawId) {
-        return blockFromId(ParseIds.parseItemOrBlockId(rawId));
-*///?}
     }
 
     @Override
@@ -52,28 +46,15 @@ public class BlockAdapter extends AbstractJSTypeAdapter<Block> {
         if (host instanceof Block block) return block;
         if (host instanceof Item item) return Block.byItem(item);
         if (host instanceof ItemStack stack) return Block.byItem(stack.getItem());
-//? if >=26 {
         if (host instanceof NekoId id) {
             return blockFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
         }
         return null; // 不识别
-//?} else {
-/*        if (host instanceof NekoId id) return blockFromId(Identifier.fromNamespaceAndPath(id.namespace(), id.path()));
-        return null;
-*///?}
     }
 
-//? if >=26 {
     private Block blockFromId(Identifier id) {
-//?} else {
-/*    private static Block blockFromId(Identifier id) {
-*///?}
         return BuiltInRegistries.BLOCK.getOptional(id)
-//? if >=26 {
             .orElseThrow(() -> new com.tkisor.nekojs.api.data.ValueConversionException(
                 Block.class, "registered block id", id, "block not found: " + id));
-//?} else {
-/*            .orElseThrow(() -> new ValueConversionException(Block.class, "block id", id, "Block not found: " + id));
-*///?}
     }
 }

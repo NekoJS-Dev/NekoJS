@@ -1,19 +1,17 @@
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.AdapterInputShape;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
-//? if >=26 {
 import com.tkisor.nekojs.js.type_adapter.DataComponentsAdapter;
-//?}
 import com.tkisor.nekojs.js.type_adapter.ParseIds;
 import com.tkisor.nekojs.api.data.ConversionPrecedence;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Holder;
-//? if >=26 {
 import net.minecraft.core.component.DataComponentPatch;
-//?}
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -45,22 +43,14 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 object(
                         Slot.opt("item", registry("Item")),
                         Slot.opt("id", registry("Item")),
-//? if >=26 {
                         Slot.opt("count", number()),
                         Slot.opt("components", raw("{ [key: string]: any }")))
         );
-//?} else {
-/*                        Slot.opt("count", number())));
-*///?}
     }
 
     @Override
     public Optional<String> syntaxDoc() {
-//? if >=26 {
         return Optional.of("item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count?, components? }");
-//?} else {
-/*        return Optional.of("item:id | RegistryTypes.Item | $Item | $NekoId | { item?|id?, count? }");
-*///?}
     }
 
     @Override
@@ -86,13 +76,9 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
             return ItemStack.EMPTY;
         }
 
-//? if >=26 {
         if (value.isString()) {
             return stringToItemStack(value.asString());
         }
-//?} else {
-/*        if (value.isString()) return stringToItemStack(value.asString());
-*///?}
 
         if (value.isHostObject()) {
             Object obj = value.asHostObject();
@@ -101,13 +87,9 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
             if (obj instanceof NekoId id) return idToItemStack(Identifier.fromNamespaceAndPath(id.namespace(), id.path()), 1);
         }
 
-//? if >=26 {
         if (value.hasMembers()) {
             return objectToItemStack(value);
         }
-//?} else {
-/*        if (value.hasMembers()) return objectToItemStack(value);
-*///?}
 
         throw new ValueConversionException(ItemStack.class, "item stack value", value, "unsupported item stack value");
     }
@@ -150,7 +132,6 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
         // B10: 复用当前实例，不再每次 new
         ItemStack stack = this.apply(itemValue);
-//? if >=26 {
         if (value.hasMember("components")) {
             DataComponentPatch patch = DataComponentsAdapter.toPatch(value.getMember("components"));
             if (patch != null && !patch.isEmpty() && !stack.isEmpty()) {
@@ -159,7 +140,6 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
                 stack = copy;
             }
         }
-//?}
         if (value.hasMember("count")) {
             return withCount(stack, parsePositiveInt(value.getMember("count"), "count"));
         }
@@ -168,35 +148,18 @@ public final class ItemStackAdapter implements JSTypeAdapter<ItemStack> {
 
     private static ItemStack idToItemStack(Identifier id, int count) {
         if (id.getPath().equals("air")) return ItemStack.EMPTY;
-//? if >=26 {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
         Holder<Item> holder = BuiltInRegistries.ITEM.get(key)
-//?} else {
-/*        Item item = BuiltInRegistries.ITEM.getOptional(id)
-*///?}
                 .orElseThrow(() -> new ValueConversionException(ItemStack.class, "registered item id", id,
                     "Item not found: " + id));
-//? if >=26 {
         return new ItemStack(holder, count, DataComponentPatch.EMPTY);
-//?} else {
-/*        ItemStack stack = item.getDefaultInstance();
-        stack.setCount(count);
-        return stack;
-*///?}
     }
 
     private static ItemStack itemToItemStack(Item item, int count) {
-//? if >=26 {
         if (item == BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace("air"))) return ItemStack.EMPTY;
         // builtInRegistryHolder 已废弃：从注册表 wrap 等价 holder
         Holder<Item> holder = BuiltInRegistries.ITEM.wrapAsHolder(item);
         return new ItemStack(holder, count, DataComponentPatch.EMPTY);
-//?} else {
-/*        if (item == BuiltInRegistries.ITEM.getOptional(Identifier.withDefaultNamespace("air")).orElse(null)) return ItemStack.EMPTY;
-        ItemStack stack = item.getDefaultInstance();
-        stack.setCount(count);
-        return stack;
-*///?}
     }
 
     public static ItemStack withCount(ItemStack stack, int count) {

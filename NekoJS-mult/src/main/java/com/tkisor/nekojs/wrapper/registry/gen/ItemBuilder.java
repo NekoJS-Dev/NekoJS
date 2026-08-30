@@ -1,11 +1,11 @@
-// TODO(loader-port): deferred to the LoaderBridge fabric port
+// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
+// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
 //? if neoforge {
+// TODO(loader-port): deferred to the LoaderBridge fabric port
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.FoodBuilderJS;
-//? if >=26 {
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
-//?}
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
@@ -22,11 +22,7 @@ import java.util.function.Consumer;
  * </pre>
  * 复合配置（food）保留 void 方法；发光 / 燃料仅在需要覆盖方法时用匿名子类。
  */
-//? if >=26 {
 public class ItemBuilder extends RegistryObjectBuilder<Item> implements TaggableBuilder<ItemBuilder> {
-//?} else {
-/*public class ItemBuilder extends RegistryObjectBuilder<Item> {
-*///?}
 
     /** 已分配创造标签页的物品：物品 id → 标签页 id（BuildCreativeModeTabContents 时消费）。 */
     public static final Map<Identifier, Identifier> GROUP_ASSIGNMENTS = new HashMap<>();
@@ -46,7 +42,6 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
 
     public ItemBuilder(Identifier id) {
         super(id);
-//? if >=26 {
     }
 
     /** {@link TaggableBuilder}：物品 tag 归属 ITEM 注册表。 */
@@ -58,7 +53,6 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     @Override
     public Identifier getLocation() {
         return id;
-//?}
     }
 
     /** 配置食物属性（nutrition/saturation/效果等），复合配置保留方法面。 */
@@ -89,12 +83,8 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
             }
 
             @Override
-//? if >=26 {
             public int getBurnTime(ItemStack stack, net.minecraft.world.item.crafting.RecipeType<?> type,
                                     net.minecraft.world.level.block.entity.FuelValues fuelValues) {
-//?} else {
-/*            public int getBurnTime(ItemStack stack, net.minecraft.world.item.crafting.RecipeType<?> type) {
-*///?}
                 return burn;
             }
         };
@@ -105,13 +95,9 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
      * rarity / 食物组件）。供 BlockBuilder 等需要复用属性的场景调用。
      */
     public Item.Properties buildProperties() {
-//? if >=26 {
         net.minecraft.resources.ResourceKey<Item> key =
                 net.minecraft.resources.ResourceKey.create(Registries.ITEM, id);
         Item.Properties props = new Item.Properties().setId(key);
-//?} else {
-/*        Item.Properties props = new Item.Properties();
-*///?}
 
         if (maxDamage > 0) {
             props.durability(maxDamage);
@@ -125,9 +111,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
 
         if (foodBuilder != null) {
             props.food(foodBuilder.buildFood());
-//? if >=26 {
             props.component(net.minecraft.core.component.DataComponents.CONSUMABLE, foodBuilder.buildConsumable());
-//?}
         }
 
         return props;
