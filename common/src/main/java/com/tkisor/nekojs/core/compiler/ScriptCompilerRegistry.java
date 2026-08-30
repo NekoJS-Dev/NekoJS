@@ -109,7 +109,9 @@ public final class ScriptCompilerRegistry {
      * 该扩展名的编译器获胜——后注册的插件可以用普通 {@code register} 覆盖内置编译器，
      * 无需 {@link #replaceLanguage}。注册顺序由插件 priority 决定（数值大者先注册），
      * 因此「覆盖内置」的插件通常需要<b>低于</b>内置插件的 priority（后注册），或直接用
-     * {@code replaceLanguage} 显式替换以消除顺序依赖。同 priority 时顺序为扫描序（不稳定）。
+     * {@code replaceLanguage} 显式替换以消除顺序依赖。同 priority 时按实现类 FQN 再按 owner id
+     * 排序（见 {@code NekoJSBasePluginManager.ORDER}）——在同一份 classpath 上确定，但依赖你的
+     * 类名，别当契约用。
      */
     public IScriptCompiler getCompiler(String extension) {
         String dotted = normalizeExtension(extension);
