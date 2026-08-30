@@ -38,13 +38,12 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
 import com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJS;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
+import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -183,11 +182,8 @@ public class NekoJSMod extends NekoJS {
     }
 
     private static void registerClient(IEventBus modEventBus) {
-//? if >=26 {
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
-//?} else {
-/*        if (FMLEnvironment.dist == Dist.CLIENT) {
-*///?}
+        // dist 访问器的版本差异由 McPlatformCompat 门面承载（本文件 neoforge 面，门面可用）
+        if (McPlatformCompat.get().isClientDist()) {
             NekoJSClient.register(modEventBus);
         }
     }

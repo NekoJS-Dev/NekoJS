@@ -1,5 +1,5 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.pdata;
 
 import net.minecraft.nbt.CompoundTag;
@@ -57,18 +57,18 @@ public class PersistentDataJS {
         return this;
     }
 
-    public byte getByte(String key) { return getTag().getByteOr(key, (byte) 0); }
-    public short getShort(String key) { return getTag().getShortOr(key, (short) 0); }
-    public int getInt(String key) { return getTag().getIntOr(key, 0); }
-    public long getLong(String key) { return getTag().getLongOr(key, 0L); }
-    public float getFloat(String key) { return getTag().getFloatOr(key, 0.0f); }
-    public double getDouble(String key) { return getTag().getDoubleOr(key, 0.0); }
-    public String getString(String key) { return getTag().getStringOr(key, ""); }
-    public boolean getBoolean(String key) { return getTag().getBooleanOr(key, false); }
-    public byte[] getByteArray(String key) { return getTag().getByteArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new byte[0]); }
-    public int[] getIntArray(String key) { return getTag().getIntArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new int[0]); }
-    public long[] getLongArray(String key) { return getTag().getLongArray(key).map(a -> Arrays.copyOf(a, a.length)).orElse(new long[0]); }
-    public CompoundTag getCompound(String key) { return getTag().getCompound(key).orElseGet(CompoundTag::new).copy(); }
+    public byte getByte(String key) { return getTag().getByte(key); }
+    public short getShort(String key) { return getTag().getShort(key); }
+    public int getInt(String key) { return getTag().getInt(key); }
+    public long getLong(String key) { return getTag().getLong(key); }
+    public float getFloat(String key) { return getTag().getFloat(key); }
+    public double getDouble(String key) { return getTag().getDouble(key); }
+    public String getString(String key) { return getTag().getString(key); }
+    public boolean getBoolean(String key) { return getTag().getBoolean(key); }
+    public byte[] getByteArray(String key) { byte[] v = getTag().getByteArray(key); return Arrays.copyOf(v, v.length); }
+    public int[] getIntArray(String key) { int[] v = getTag().getIntArray(key); return Arrays.copyOf(v, v.length); }
+    public long[] getLongArray(String key) { long[] v = getTag().getLongArray(key); return Arrays.copyOf(v, v.length); }
+    public CompoundTag getCompound(String key) { return getTag().getCompound(key).copy(); }
 
     public PersistentDataJS putByte(String key, byte value) { CompoundTag tag = getTag(); tag.putByte(key, value); saveTag(tag); return this; }
     public PersistentDataJS putShort(String key, short value) { CompoundTag tag = getTag(); tag.putShort(key, value); saveTag(tag); return this; }
@@ -130,13 +130,13 @@ public class PersistentDataJS {
         if (!tag.contains(key)) return null;
 
         Tag element = tag.get(key);
-        if (element instanceof LongTag l) return l.longValue();
-        if (element instanceof IntTag i) return i.intValue();
-        if (element instanceof ByteTag b) return b.byteValue();
-        if (element instanceof ShortTag s) return s.shortValue();
-        if (element instanceof FloatTag f) return f.floatValue();
-        if (element instanceof DoubleTag d) return d.doubleValue();
-        if (element instanceof StringTag str) return str.value();
+        if (element instanceof LongTag l) return l.getAsLong();
+        if (element instanceof IntTag i) return i.getAsInt();
+        if (element instanceof ByteTag b) return b.getAsByte();
+        if (element instanceof ShortTag s) return s.getAsShort();
+        if (element instanceof FloatTag f) return f.getAsFloat();
+        if (element instanceof DoubleTag d) return d.getAsDouble();
+        if (element instanceof StringTag str) return str.getAsString();
         if (element instanceof ByteArrayTag ba) { byte[] v = ba.getAsByteArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof IntArrayTag ia) { int[] v = ia.getAsIntArray(); return Arrays.copyOf(v, v.length); }
         if (element instanceof LongArrayTag la) { long[] v = la.getAsLongArray(); return Arrays.copyOf(v, v.length); }

@@ -1,9 +1,9 @@
-// 26.x 基准主干（DEVEX-ROADMAP 档 1 整文件拆分）：内联版本守卫已清零，1.21.1 孪生住在
-// versions/1.21.1/src 同名文件（构造性变换）；改本文件行为时须同步孪生文件。
+// 1.21.1 节点专有变体（DEVEX-ROADMAP 档 1 整文件拆分）：主干已 26.x 基准化，本文件为 1.21.1 的
+// 完整实现（构造性变换）；主干行为变更时须同步本文件。
 package com.tkisor.nekojs.client.gui.components;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import java.util.List;
 
 public class NekoContextMenu {
@@ -26,14 +26,17 @@ public class NekoContextMenu {
         this.y = Math.min(sy, screenHeight - height - 5);
     }
 
-    public void render(GuiGraphicsExtractor g, int mx, int my) {
+    public void render(GuiGraphics g, int mx, int my) {
         g.fill(x, y, x + width, y + height, 0xFF18181B);
-        g.outline(x, y, width, height, 0xFF3F3F46);
+        g.fill(x, y, x + width, y + 1, 0xFF3F3F46); // 上
+        g.fill(x, y + height - 1, x + width, y + height, 0xFF3F3F46); // 下
+        g.fill(x, y + 1, x + 1, y + height - 1, 0xFF3F3F46); // 左
+        g.fill(x + width - 1, y + 1, x + width, y + height - 1, 0xFF3F3F46); // 右
         for (int i = 0; i < items.size(); i++) {
             int iy = y + 3 + i * 18;
             boolean h = mx >= x && mx <= x + width && my >= iy && my < iy + 18;
             if (h) g.fill(x + 2, iy, x + width - 2, iy + 18, 0xFF27272A);
-            g.text(font, items.get(i).label(), x + 8, iy + 5, h ? -1 : 0xFFA1A1AA);
+            g.drawString(font, items.get(i).label(), x + 8, iy + 5, h ? -1 : 0xFFA1A1AA, false);
         }
     }
 
