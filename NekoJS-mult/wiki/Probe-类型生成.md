@@ -53,7 +53,9 @@
 
 ## 输出布局
 
-### TypeScript（`.neko_probe/typescript/`）
+下面这些是**内置 backend 实际产出的布局**，不是 probe 强制的格式。真正的机制只有一条：`render` 返回「相对路径 → 文本」的 map，路径叫什么完全由 backend 自己决定。目录本身也可配（`probe.toml` 的 `[languages.<id>].outputDir`）。
+
+### TypeScript（默认 `.neko_probe/typescript/`）
 
 ```text
 .neko_probe/typescript/
@@ -75,7 +77,7 @@
 └── jsconfig.json                   # 内部解析用
 ```
 
-### Python（`.neko_probe/python/nekojs/`）
+### Python（默认 `.neko_probe/python/nekojs/`）
 
 ```text
 .neko_probe/python/nekojs/
@@ -272,11 +274,11 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 
 合并规则：probe 拥有的键替换为最新值，**用户自定义键保留**（不会覆盖你手写的 jsx/其它配置，见 [TypeScript 与 JSX](TypeScript-与-JSX)）。
 
-## 模块布局约定（不变量）
+## 内置 TS 布局的命名约定
 
-以下是 probe 输出的**稳定约定**，第三方 probe backend 替换实现也要遵守：
+下表是内置 TypeScript backend 用的目录与命名。**probe 不检查这些名字**，代码里没有任何地方强制它们——列在这里是因为两件事引用了它们：脚本里写的 `import type ... from '@side-only/server/events'` 这类模块说明符，以及 probe 自己合并进 `jsconfig.json` 的路径别名。
 
-| 约定 | 含义 |
+| 名字 | 含义 |
 |---|---|
 | `@package/` | Java 包按目录树镜像 |
 | `@side-only/<side>/` | 按脚本侧别分（startup/server/client） |
@@ -285,6 +287,12 @@ probe 生成后会把以下配置**幂等合并**进每个脚本目录的 `jscon
 | `$ClassName` | 类声明命名约定（避免与 JS 关键字冲突） |
 | `$Foo_` | 适配器输入别名（`Foo` 是目标类型名） |
 | `java:` / `@side-only` / `@special` | 模块标识符前缀 |
+
+所以约束是有条件的，不是普遍的：
+
+- **写一个新语言的 backend**（Lua、JSON 清单、文档站…）：跟这张表毫无关系，随便怎么组织产物。
+- **替换 TypeScript backend 但想直接复用现有编辑器接线**：沿用这套名字最省事，什么都不用改。
+- **替换 TypeScript backend 且想用自己的布局**：可以，但要同时改两处编辑器接线，否则脚本里的 `@side-only/...` 解析不到。一是 backend 上的 `contributeEditorConfig`——probe 跑完后合并进 `jsconfig.json` 的那批路径别名；二是插件钩子 `NekoJSPlugin.modifyWorkspaceConfig`——`WorkspaceGenerator` 在工作区首次生成（`jsconfig.json` 还不存在时）写的那份配置独立硬编码了同一批别名，不改它的话首次开服到第一次跑 probe 之间那份 jsconfig 是错的。另外已有脚本写死了这些模块说明符，所以换布局对脚本作者是 breaking change。
 
 ## 关键类
 
@@ -420,10 +428,13 @@ public void registerProbeBackends(ProbeBackendRegistry registry) {
 
 ### 规则
 
-- 同一 `(语言, 名字)` 重复注册 → bootstrap lock 时**崩溃**（确定性冲突，列出所有注册者）。
-- 同语言多 backend 时，`/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可指定），其余用 `/nekojs probe <语言> <名字>`。
-- 一次运行中两个选中 backend 的 outputDir 相同时，只跑第一个、其余跳过并告警（后跑者会把先跑者的产物当陈旧文件删掉；要区分目录用 `outputDir` 配置）。
-- 替换 TS 实现要遵守上面的模块布局约定，否则 `jsconfig.json` 路径失效。
+这三条是代码真的会拦你的：
+
+- 同一 `(语言, 名字)` 重复注册 → bootstrap lock 时**崩溃**，报错里列出冲突的那些注册者。
+- `render` 返回的路径必须是合法相对路径：null、空白、解析不了的键、绝对路径、含 `..` 段都会被拒绝，整个 backend 记为失败且不触盘。
+- 一次运行里两个选中 backend 的 `outputDir` 相同时，只跑第一个，其余跳过并告警——因为后跑者会把先跑者的产物当陈旧文件删掉。要共存就用 `outputDir` 分开。
+
+另外两条是选择而非限制：同语言多 backend 时 `/nekojs probe <语言>` 选 priority 最高者（`probe.toml [languages.<lang>].backend` 可以指定），其余用 `/nekojs probe <语言> <名字>` 显式跑；替换 TS 实现时布局怎么办见上面的命名约定一节。
 
 ## Probe 的当前局限
 
