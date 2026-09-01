@@ -29,9 +29,28 @@ public final class MethodDecl {
     public TypeSlot setterParamType;    // getter 配对的 setter 入参类型；null = 无 setter
     public boolean hidden;
     public final List<String> docs = new ArrayList<>();
+    /** 手写重载（{@code @Overload} 注解），渲染为同名附加声明。 */
+    public final List<Overload> overloads = new ArrayList<>();
 
     public MethodDecl(String name) {
         this.name = name;
+    }
+
+    /**
+     * 一条手写重载声明。参数条目与返回类型是 TypeScript 片段原样输出（{@code name: Type}），
+     * 不走 {@link TypeSlot} 反射链——这些签名本来就出现在反射表达不了的位置。
+     */
+    public static final class Overload {
+        public final List<String> params;
+        /** 空串 = 沿用方法的反射返回类型（构造器无返回值语义）。 */
+        public final String returns;
+        public final List<String> docs;
+
+        public Overload(List<String> params, String returns, List<String> docs) {
+            this.params = List.copyOf(params);
+            this.returns = returns == null ? "" : returns;
+            this.docs = List.copyOf(docs);
+        }
     }
 
     /** 渲染时使用的名字（renameTo 优先）。 */
