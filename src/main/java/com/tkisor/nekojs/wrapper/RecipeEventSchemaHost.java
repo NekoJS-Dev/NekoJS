@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.wrapper;
 
 import com.google.gson.JsonElement;
@@ -13,7 +11,9 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeFieldDefinition;
 import com.tkisor.nekojs.api.recipe.definition.RecipeFieldKind;
 import com.tkisor.nekojs.js.type_adapter.ItemStackAdapter;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+//? if neoforge {
 import com.tkisor.nekojs.wrapper.fluid.FluidResolver;
+//?}
 import com.tkisor.nekojs.wrapper.item.IngredientResolver;
 import graal.graalvm.polyglot.Value;
 
@@ -60,9 +60,15 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
             case BOOLEAN -> new JsonPrimitive(requireBoolean(value));
             case INGREDIENT -> event.serializeIngredient(IngredientResolver.fromValue(value));
             case ITEM_STACK -> event.serializeResult(new ItemStackAdapter().apply(value));
+//? if neoforge {
             case FLUID_STACK -> event.serializeFluidStack(FluidResolver.stackFromValue(value));
             case FLUID_INGREDIENT -> event.serializeFluidIngredient(FluidResolver.ingredientFromValue(value));
             case SIZED_FLUID_INGREDIENT -> event.serializeSizedFluidIngredient(FluidResolver.sizedFromValue(value));
+//?} else {
+/*            // fabric 无流体配方体系（FluidResolver 未移植）：fluid 字段在 fabric 未支持
+            default -> throw new UnsupportedOperationException(
+                    "fluid recipe fields are not supported on fabric yet");
+*///?}
         };
     }
 
@@ -123,4 +129,3 @@ final class RecipeEventSchemaHost implements RecipeSchemaHost {
         }
     }
 }
-//?}

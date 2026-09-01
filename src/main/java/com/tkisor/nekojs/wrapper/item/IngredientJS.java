@@ -1,4 +1,3 @@
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.item;
 
 import com.tkisor.nekojs.api.data.NekoId;
@@ -6,9 +5,11 @@ import com.tkisor.nekojs.wrapper.NekoWrapper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+//? if neoforge {
 import net.neoforged.neoforge.common.crafting.CompoundIngredient;
 import net.neoforged.neoforge.common.crafting.DifferenceIngredient;
 import net.neoforged.neoforge.common.crafting.IntersectionIngredient;
+//?}
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +62,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
         return or(other.unwrap());
     }
 
+//? if neoforge {
     public IngredientJS and(Ingredient ingredient) {
         return new IngredientJS(IntersectionIngredient.of(unwrap(), ingredient));
     }
@@ -76,11 +78,13 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     public IngredientJS subtract(Ingredient ingredient) {
         return except(ingredient);
     }
+//?}
 
     public IngredientJS asIngredient() {
         return this;
     }
 
+//? if neoforge {
     public SizedIngredientJS asStack() {
         return withCount(1);
     }
@@ -88,6 +92,7 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
     public SizedIngredientJS withCount(int count) {
         return new SizedIngredientJS(unwrap(), count);
     }
+//?}
 
     public boolean matches(ItemStack stack) {
         return unwrap().test(stack);
@@ -138,4 +143,4 @@ public class IngredientJS implements NekoWrapper<Ingredient> {
         return IngredientResolver.combine(alternatives);
     }
 }
-//?}
+

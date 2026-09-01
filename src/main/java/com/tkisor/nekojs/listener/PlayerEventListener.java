@@ -21,7 +21,7 @@ public class PlayerEventListener {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (Commands.LEVEL_GAMEMASTERS.check(player.permissions()) && NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
 
-                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(), false);
+                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(NekoJSMod.RUNTIME_ROOT.errors().count()), false);
             }
             // 挂载物品栏监听器（inventoryChanged 事件）
             InventoryChangeListener.getOrCreate(player);

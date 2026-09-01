@@ -1,12 +1,13 @@
 // 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
 // 改本文件行为时须同步它。
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.item;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.data.NekoId;
 import com.tkisor.nekojs.api.data.ValueConversionException;
+//? if neoforge {
 import com.tkisor.nekojs.api.inject.ItemStackExtension;
+//?}
 import com.tkisor.nekojs.holder.NamespaceHolderSet;
 import com.tkisor.nekojs.holder.PredicateHolderSet;
 import com.tkisor.nekojs.holder.RegexHolderSet;
@@ -23,10 +24,12 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+//? if neoforge {
 import net.neoforged.neoforge.common.crafting.CompoundIngredient;
 import net.neoforged.neoforge.common.crafting.DifferenceIngredient;
 import net.neoforged.neoforge.common.crafting.IntersectionIngredient;
 import net.neoforged.neoforge.registries.holdersets.AnyHolderSet;
+//?}
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -73,7 +76,7 @@ public final class IngredientResolver {
         String s = normalizeRaw(raw);
         char c = s.charAt(0);
         return switch (c) {
-            case '*' -> ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
+            case '*' -> allItemsSnapshot();
             case '@' -> ingredientOfHolders(new NamespaceHolderSet<>(ITEM_LOOKUP, s.substring(1)));
             case '/' -> {
                 String body = (s.length() > 2 && s.charAt(s.length() - 1) == '/')
@@ -116,7 +119,13 @@ public final class IngredientResolver {
 
     public static Ingredient fromStack(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return Ingredient.of();
+//? if neoforge {
         return ((ItemStackExtension) (Object) stack).neko$asIngredient();
+//?} else {
+/*        // fabric 无 ItemStackExtension 注入：降级为纯物品形态（丢数据组件）——26.x 组件 ingredient
+        // 的 fabric 面随 ItemStackExtension 移植批次补（见 docs/fabric-port-status.md）
+        return Ingredient.of(stack.getItem());
+*///?}
     }
 
     public static Ingredient fromIngredient(Ingredient ingredient) {
@@ -127,9 +136,9 @@ public final class IngredientResolver {
         return wrapper.unwrap();
     }
 
-    /** 匹配所有已注册物品的真 wildcard（live AnyHolderSet，注册表变化即时反映）。 */
+    /** 匹配所有已注册物品的 wildcard（快照语义：ingredientOfHolders 本就拍平成 Item[]）。 */
     public static Ingredient wildcard() {
-        return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
+        return allItemsSnapshot();
     }
 
     /**
@@ -144,9 +153,17 @@ public final class IngredientResolver {
         return ingredient == null ? null : TAG_ORIGIN.get(ingredient);
     }
 
-    /** 取反 ingredient：返回匹配「除 excluded 外所有物品」的 DifferenceIngredient。 */
+    /** 取反 ingredient：返回匹配「除 excluded 外所有物品」。 */
     public static Ingredient not(Ingredient excluded) {
+//? if neoforge {
         return DifferenceIngredient.of(wildcard(), excluded);
+//?} else {
+/*        // fabric 无 DifferenceIngredient：wildcard 快照减去 excluded 匹配集（展开层面等价）
+        @SuppressWarnings("deprecation")
+        var excludedItems = excluded.items().map(Holder::value).collect(java.util.stream.Collectors.toSet());
+        return Ingredient.of(ITEM_LOOKUP.listElements().map(Holder::value)
+                .filter(item -> !excludedItems.contains(item)).toArray(Item[]::new));
+*///?}
     }
 
     // ===================== fromValue 统一入口（字符串/对象/数组/host）=====================
@@ -186,11 +203,15 @@ public final class IngredientResolver {
         if (value.hasMember("any")) return compound(value.getMember("any"));
         if (value.hasMember("all")) return intersection(value.getMember("all"));
         if (value.hasMember("not")) {
+//? if neoforge {
             Ingredient all = ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
             return DifferenceIngredient.of(all, fromValue(value.getMember("not")));
+//?} else {
+/*            return not(fromValue(value.getMember("not")));
+*///?}
         }
         if (value.hasMember("wildcard") && value.getMember("wildcard").asBoolean()) {
-            return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
+            return wildcard();
         }
         if (value.hasMember("mod")) {
             return ingredientOfHolders(new NamespaceHolderSet<>(ITEM_LOOKUP,
@@ -221,7 +242,12 @@ public final class IngredientResolver {
         }
         if (list.isEmpty()) return Ingredient.of();
         if (list.size() == 1) return list.get(0);
+//? if neoforge {
         return new CompoundIngredient(list).toVanilla();
+//?} else {
+/*        // fabric 无 CompoundIngredient：combine（下方中立方法）的展开合并等价
+        return combine(list);
+*///?}
     }
 
     private static Ingredient intersection(Value value) {
@@ -231,7 +257,11 @@ public final class IngredientResolver {
         Ingredient result = null;
         for (long i = 0; i < value.getArraySize(); i++) {
             Ingredient ing = fromValue(value.getArrayElement(i));
+//? if neoforge {
             result = (result == null) ? ing : IntersectionIngredient.of(result, ing);
+//?} else {
+/*            result = (result == null) ? ing : intersectItems(result, ing);
+*///?}
         }
         return result == null ? Ingredient.of() : result;
     }
@@ -239,6 +269,22 @@ public final class IngredientResolver {
     private static Ingredient ingredientOfHolders(HolderSet<Item> holders) {
         Item[] items = holders.stream().map(Holder::value).toArray(Item[]::new);
         return Ingredient.of(items);
+    }
+
+    /** 全部已注册物品的快照（neoforge 走 live AnyHolderSet 再拍平，fabric 直接枚举 lookup——两侧都是快照）。 */
+    private static Ingredient allItemsSnapshot() {
+//? if neoforge {
+        return ingredientOfHolders(new AnyHolderSet<>(ITEM_LOOKUP));
+//?} else {
+/*        return Ingredient.of(ITEM_LOOKUP.listElements().map(Holder::value).toArray(Item[]::new));
+*///?}
+    }
+
+    /** 两 ingredient 匹配集的交集（快照；neoforge 侧用 IntersectionIngredient，见 intersection）。 */
+    @SuppressWarnings("deprecation")
+    private static Ingredient intersectItems(Ingredient a, Ingredient b) {
+        var set = b.items().map(Holder::value).collect(java.util.stream.Collectors.toSet());
+        return Ingredient.of(a.items().map(Holder::value).filter(set::contains).toArray(Item[]::new));
     }
 
     // ===================== 给 IngredientJS.or() 用的旧 combine（保持兼容）=====================
@@ -285,4 +331,4 @@ public final class IngredientResolver {
         return raw.trim();
     }
 }
-//?}
+

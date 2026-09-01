@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.wrapper;
 
 import com.tkisor.nekojs.api.recipe.NekoRecipeNamespaces;
@@ -118,4 +116,3 @@ public class RecipeRegistryProxy implements ProxyObject {
         return arguments[index].asString();
     }
 }
-//?}

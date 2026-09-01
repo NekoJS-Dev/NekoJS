@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>{@code error} / {@code view_all_errors} 降级为文本输出（错误 UI 与网络面板未移植）</li>
  *   <li>{@code editor} 不注册（工作区编辑器 GUI 面未移植）</li>
- *   <li>SERVER reload 不做配方热重载与 Modification 重放（对应机制未移植；脚本本身的
- *       reload 完整可用）</li>
+ *   <li>SERVER reload 做配方热重载（RecipeManagerMixin 孪生），但不做 Modification/
+ *       村民交易重放（对应机制未移植 fabric）</li>
  *   <li>CLIENT reload 同步执行（无 ClientReloadExecutor 的 Render 线程投递）</li>
  * </ul>
  * 依赖面齐后应与共享树版合并回单副本。
@@ -129,8 +129,10 @@ public final class FabricNekoJSCommands {
                 }
                 testSm.runTestScripts();
             } else {
-                // fabric v1：无配方热重载与 Modification/村民交易重放（对应机制未移植）
                 root.reload(type);
+                if (type == ScriptType.SERVER) {
+                    applyRecipeScripts(source);
+                }
             }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
         } catch (Exception e) {
@@ -138,6 +140,19 @@ public final class FabricNekoJSCommands {
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
         }
         return 1;
+    }
+
+    /**
+     * SERVER 脚本 reload 后重新应用配方脚本（与 NeoForge 版 {@code NekoJSCommands#applyRecipeScripts}
+     * 同语义）：RecipeManagerMixin 孪生的 {@code nekojs$applyScripts()} 从永久缓存重建工作集并
+     * 重跑配方脚本；其内部会向全体 gamemaster 广播 ✔/⚠。
+     */
+    private static void applyRecipeScripts(CommandSourceStack source) {
+        net.minecraft.server.MinecraftServer server = source.getServer();
+        if (server == null) return;
+        if (server.getRecipeManager() instanceof com.tkisor.nekojs.api.recipe.IRecipeManagerExtension ext) {
+            ext.nekojs$applyScripts();
+        }
     }
 
     private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath) {

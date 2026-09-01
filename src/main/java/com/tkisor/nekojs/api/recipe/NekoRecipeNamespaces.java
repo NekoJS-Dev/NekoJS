@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.api.recipe;
 
 import com.tkisor.nekojs.api.MemberVisibilityQuery;
@@ -86,4 +84,3 @@ public final class NekoRecipeNamespaces {
         return Collections.unmodifiableSet(recipeTypes);
     }
 }
-//?}

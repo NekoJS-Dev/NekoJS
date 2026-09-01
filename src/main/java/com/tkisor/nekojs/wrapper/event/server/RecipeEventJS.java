@@ -1,4 +1,3 @@
-//? if neoforge && >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
 import com.google.gson.*;
@@ -29,9 +28,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
+//? if neoforge {
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+//?}
 import org.jetbrains.annotations.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -162,6 +163,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
                 ingredient).getOrThrow(JsonParseException::new);
     }
 
+//? if neoforge {
     public JsonElement serializeFluidStack(FluidStack stack) {
         return FluidStack.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), stack).getOrThrow(JsonParseException::new);
     }
@@ -173,6 +175,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
     public JsonElement serializeSizedFluidIngredient(SizedFluidIngredient ingredient) {
         return SizedFluidIngredient.CODEC.encodeStart(registries.createSerializationContext(JsonOps.INSTANCE), ingredient).getOrThrow(JsonParseException::new);
     }
+//?}
 
     public Identifier generateRecipeId(String prefix) {
         String baseString = prefix + "_" + (recipeCounter++);
@@ -663,6 +666,7 @@ public class RecipeEventJS implements RecipeLifecycleContext {
             if (matches) return true;
         }
         else if (itemID != null) {
+//? if neoforge {
             if (!ingredient.isCustom()) {
                 if (isItemInHolderSet(ingredient.values, itemID, itemRegistry)) return true;
             } else {
@@ -675,6 +679,10 @@ public class RecipeEventJS implements RecipeLifecycleContext {
                     }
                 }
             }
+//?} else {
+/*            // fabric 无 custom ingredient（isCustom 是 NeoForge patch）：全部走 values 检查
+            if (isItemInHolderSet(ingredient.values, itemID, itemRegistry)) return true;
+*///?}
         }
         return false;
     }
@@ -708,4 +716,3 @@ public class RecipeEventJS implements RecipeLifecycleContext {
         return new RecipeJsonBuilder(this, type, prefix);
     }
 }
-//?}

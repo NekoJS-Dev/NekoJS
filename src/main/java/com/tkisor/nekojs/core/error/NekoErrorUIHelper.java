@@ -1,8 +1,5 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.core.error;
 
-import com.tkisor.nekojs.NekoJSMod;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -10,8 +7,11 @@ import net.minecraft.network.chat.MutableComponent;
 
 public class NekoErrorUIHelper {
 
-    public static Component getErrorComponent() {
-        int errorCount = NekoJSMod.RUNTIME_ROOT.errors().count();
+    /**
+     * @param errorCount 当前错误总数——由调用方传入（两加载器的 runtime root 各自持有
+     *                   error tracker，本类不绑任一入口类）
+     */
+    public static Component getErrorComponent(int errorCount) {
         MutableComponent main = Component.translatable("nekojs.error.tracker.warning", errorCount);
         MutableComponent link = Component.translatable("nekojs.error.tracker.open_list")
                 .withStyle(style -> style
@@ -30,4 +30,4 @@ public class NekoErrorUIHelper {
         return Component.translatable("nekojs.error.tracker.success");
     }
 }
-//?}
+

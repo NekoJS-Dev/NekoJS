@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.bindings.static_access;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -77,4 +75,3 @@ public class IngredientFactory {
         return new com.tkisor.nekojs.wrapper.item.IngredientJS(IngredientResolver.not(ingredient));
     }
 }
-//?}

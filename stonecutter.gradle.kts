@@ -80,9 +80,11 @@ stonecutter parameters {
 //   5. 连续守卫段 > 8 行软告警——"方法级密度"的代理指标，避免脆弱的大括号追踪；
 //   6. 模块边界（ADR-0007）：common 里 com.tkisor.nekojs.api.* 零 MC/Loader/Graal
 //      import、common 其余部分零 MC/Loader import。当前基线为零违规，新增即硬失败；
-//   7. wrapper 层零 loader import（ADR-0004）。例外：整文件 loader 守卫
+//   7. wrapper 层零 loader import（ADR-0004）。例外一：整文件 loader 守卫
 //      （`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件是显式平台面，其 loader
-//      import 在对侧编译单元根本不存在，不计违规、只做提示性列出；
+//      import 在对侧编译单元根本不存在，不计违规、只做提示性列出；例外二：行内 loader
+//      守卫（如配方面的流体分支 `//? if neoforge`）内的 loader import 同理在对侧求值时
+//      整段消失——按守卫深度豁免，只有守卫外的 loader import 才是漏网的双面污染；
 //   8. 恒假常量：守卫条件引用的 loader 常量必须至少在一个节点取值为真。平台事实源是
 //      versions/*/gradle.properties 的 deps.platform（与 constants.match 同源）。否则
 //      该分支永不激活，而这既不报编译错也不报守卫错，只能在这里拦。
@@ -132,6 +134,7 @@ val guardLint = tasks.register("guardLint") {
             val lines = source.readLines()
             var opens = 0
             var closes = 0
+            var guardDepth = 0
             var inTextBlock = false
             var run = 0
             var maxRun = 0
@@ -152,6 +155,7 @@ val guardLint = tasks.register("guardLint") {
                 if (line.startsWith("//? if ")) {
                     opens++
                     guards++
+                    guardDepth++
                     // 规则 8：收集条件里的 loader 常量引用（如 `//? if neoforge && >=26 {`）
                     constantToken.findAll(line).forEach { usedConstants += it.value }
                     if (inTextBlock) {
@@ -173,8 +177,13 @@ val guardLint = tasks.register("guardLint") {
                 if (run > maxRun) maxRun = run
                 // 闭合只算真正的收尾（`//?}` / `*///?}`）；`//?} else {` 这类是**续接**，
                 // 记成闭合会把双分支守卫误判为"未配对"。
-                if (normalized == "//?}") closes++
-                if (inWrapper && loaderImport.matches(line)) loaderImports++
+                if (normalized == "//?}") {
+                    closes++
+                    if (guardDepth > 0) guardDepth--
+                }
+                // 行内守卫内的 loader import 在对侧求值时整段消失，与整文件守卫同理豁免；
+                // 只有守卫外（depth=0）的 loader import 才是漏网的双面污染。
+                if (inWrapper && guardDepth == 0 && loaderImport.matches(line)) loaderImports++
                 // 文本块起止（同一行成对出现时不翻转）
                 val quotes = Regex("\"\"\"").findAll(raw).count()
                 if (quotes % 2 == 1) inTextBlock = !inTextBlock
@@ -268,7 +277,7 @@ tasks.register("switchVersion") {
             throw GradleException("未知节点 $target——可用：$available")
         }
         val controller = rootDir.resolve("stonecutter.gradle.kts")
-        // 按行前缀定位声明；不写含 `stonecutter active "26.1.2"` 字样的正则——正则字面量与
+        // 按行前缀定位声明；不写含 `stonecutter active "26.1.2-fabric"` 字样的正则——正则字面量与
         // 第 10 行声明同形，对本文件做全局替换时会连坐改坏
         val text = controller.readText()
         val activeLine = text.lineSequence().firstOrNull { it.startsWith("stonecutter active ") }

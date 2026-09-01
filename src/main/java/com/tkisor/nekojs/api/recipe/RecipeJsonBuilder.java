@@ -1,4 +1,3 @@
-//? if neoforge {
 package com.tkisor.nekojs.api.recipe;
 
 import com.google.gson.JsonElement;
@@ -8,9 +7,11 @@ import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+//? if neoforge {
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+//?}
 import java.util.Map;
 
 public class RecipeJsonBuilder implements RecipeBuilder {
@@ -161,6 +162,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         return this;
     }
 
+//? if neoforge {
     public RecipeJsonBuilder fluid(String key, FluidStack stack) {
         if (stack != null) json.add(key, event.serializeFluidStack(stack));
         return this;
@@ -175,6 +177,7 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         if (ingredient != null) json.add(key, event.serializeSizedFluidIngredient(ingredient));
         return this;
     }
+//?}
 
     public RecipeJsonBuilder property(String key, RecipeJsonValue value) {
         json.add(key, RecipeJsonValueConverter.toJson(event, value));
@@ -266,4 +269,3 @@ public class RecipeJsonBuilder implements RecipeBuilder {
         }
     }
 }
-//?}

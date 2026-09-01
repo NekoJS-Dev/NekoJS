@@ -5,3 +5,13 @@ accessWidener v2 official
 # "Expected official namespace for access widener entry"）。
 accessible field net/minecraft/world/entity/Mob goalSelector Lnet/minecraft/world/entity/ai/goal/GoalSelector;
 accessible field net/minecraft/world/entity/Mob targetSelector Lnet/minecraft/world/entity/ai/goal/GoalSelector;
+
+# 配方面（RecipeEventJS 的输出 id / ingredient 助手直接读配方内部状态；NeoForge 侧由
+# 共享 AT 放宽同名成员，fabric 由此 AW 等价——条目随配方面移植按需补，非 AT 全量镜像）。
+accessible field net/minecraft/world/item/crafting/ShapedRecipe result Lnet/minecraft/world/item/ItemStackTemplate;
+accessible field net/minecraft/world/item/crafting/ShapelessRecipe result Lnet/minecraft/world/item/ItemStackTemplate;
+accessible field net/minecraft/world/item/crafting/ShapelessRecipe ingredients Ljava/util/List;
+accessible field net/minecraft/world/item/crafting/SingleItemRecipe result Lnet/minecraft/world/item/ItemStackTemplate;
+accessible method net/minecraft/world/item/crafting/SingleItemRecipe result ()Lnet/minecraft/world/item/ItemStackTemplate;
+accessible field net/minecraft/world/item/crafting/Ingredient values Lnet/minecraft/core/HolderSet;
+
