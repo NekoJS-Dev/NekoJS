@@ -6,9 +6,7 @@
   "mixins": [
     "MixinEntity",
     "MixinLivingEntity",
-    "NekoEntityPDataMixin"
-  ],
-  "server": [
+    "NekoEntityPDataMixin",
     "ServerCommonPacketListenerAccessor",
     "ServerGamePacketListenerMixin",
     "ServerLevelMixin"

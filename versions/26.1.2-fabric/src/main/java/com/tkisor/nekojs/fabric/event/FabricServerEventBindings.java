@@ -8,6 +8,7 @@ import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Queue;
@@ -65,6 +66,18 @@ public final class FabricServerEventBindings {
     /** 等待下一个 tick 末 post loggedIn 的玩家（见 {@link #register} 中的时机说明）。 */
     private static final Queue<ServerPlayer> PENDING_LOGINS = new ConcurrentLinkedQueue<>();
 
+    /**
+     * 当前运行中的服务器实例（SERVER_STARTING 设、SERVER_STOPPED 清）。
+     * fabric-api 无 {@code ServerLifecycleHooks#getCurrentServer} 等价物，配方 mixin 的
+     * 广播段（RecipeManagerMixin 孪生）从这里取 server 找 gamemaster 玩家。
+     */
+    private static volatile MinecraftServer currentServer;
+
+    /** @return 当前服务器实例；不在服务器生命周期内（纯客户端未开世界等）为 {@code null}。 */
+    public static MinecraftServer currentServer() {
+        return currentServer;
+    }
+
     private FabricServerEventBindings() {}
 
     private static void drainPendingLogins() {
@@ -79,6 +92,7 @@ public final class FabricServerEventBindings {
      */
     public static void register(Runnable loadServerScripts) {
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            currentServer = server;
             loadServerScripts.run();
             ABOUT_TO_START.post(new ServerLifecycleEventJS(server));
             STARTING.post(new ServerLifecycleEventJS(server));
@@ -90,6 +104,7 @@ public final class FabricServerEventBindings {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             // 未来得及 post 的登录不带进下一个服务器实例（单人退出世界再进）
             PENDING_LOGINS.clear();
+            currentServer = null;
             STOPPED.post(new ServerLifecycleEventJS(server));
         });
         ServerTickEvents.START_SERVER_TICK.register(server ->

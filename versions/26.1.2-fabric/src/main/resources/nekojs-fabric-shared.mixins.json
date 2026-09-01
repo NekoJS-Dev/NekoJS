@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tkisor.nekojs.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MinecraftServerMixin",
+    "RecipeManagerMixin",
+    "ReloadableServerResourcesMixin",
+    "ResultSlotMixin",
+    "inject.MixinLevel",
+    "inject.MixinPlayer",
+    "inject.MixinMutableComponent"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

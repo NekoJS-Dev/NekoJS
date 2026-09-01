@@ -134,7 +134,10 @@ sourceSets.main {
 }
 
 // 共享树的 resources（src/main/resources、resources-modern/-legacy、templates）由 stonecutter
-// 挂进本节点，里面是 NeoForge 专属的 AT/mixins/mods.toml；fabric jar 不应携带它们。
+// 挂进本节点。其中 AT / mods.toml / interface_injection 是 NeoForge 机制，fabric jar 不应携带；
+// nekojs.mixins.json / nekojs-dynamic.mixins.json 里既有 NeoForge 专属 mixin 也有对两加载器
+// 中立的条目——中立的那批由节点自己的 nekojs-fabric-shared/-dynamic.mixins.json 按条目激活
+// （清单见 docs/fabric-port-status.md），整文件 exclude 的目的是不把 NeoForge 专属条目带进来。
 // stonecutter 在 afterEvaluate 追加 srcDir，但 CopySpec 的 exclude 过滤器在执行期生效，仍然有效。
 tasks.processResources {
     exclude("META-INF/accesstransformer.cfg")
@@ -184,5 +187,7 @@ tasks.jar {
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all", "-Xlint:-processing"))
-    // 不传 -Anekojs.platform：fabric 侧还没有 @PlatformAvailability 注解源
+    // 不传 -Anekojs.platform：fabric 节点尚未把 common-api-processor 挂进 annotationProcessor
+    // （NeoForge 节点两样都有）。@PlatformAvailability 注解源本身在 :common 里、fabric 可见，
+    // 接线是待办而非不可能——接好后按节点平台传 fabric。
 }
