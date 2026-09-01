@@ -22,7 +22,6 @@ import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
-import com.tkisor.nekojs.fabric.event.FabricItemEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.FabricIdCompat;
@@ -43,11 +42,13 @@ import org.slf4j.LoggerFactory;
  * 两处 loader 差异：插件发现走 {@link FabricPluginLoader}（内置清单 + entrypoint）；
  * 注册表无逐 pass 事件，改 {@link FabricRegistryAdapter} 单批直注。
  *
- * <p>尚未接（随后续批次）：damagePre/Post 与 ItemEvents 等余量事件、
- * pdata（依赖实体扩展机制）、JEI 配方查看器。
- * 当前 fabric 脚本面 = 中性绑定 + 通用注册表 + BlockEvents.broken + ServerEvents 生命周期/tick
- * + PlayerEvents 进出服/chat + EntityEvents joinLevel/death + ClientEvents tick（CLIENT 脚本）
- * + 包分发与 ClientData 网络通道 + ScriptEvents 自定义事件。
+ * <p>尚未接（随后续批次，缺口全录见 {@code docs/fabric-port-status.md}）：JEI 配方查看器、
+ * 工作区编辑器 GUI 与其网络包、Modification 重放、网络自定义通道。
+ * 当前 fabric 脚本面 = 中性绑定 + 通用注册表 + 配方脚本（recipes/afterRecipes + 原料动作）
+ * + GoalEvents + BlockEvents.broken + ServerEvents 生命周期/tick + PlayerEvents 进出服/chat
+ * + EntityEvents joinLevel/death/damagePre/damagePost + ItemEvents.rightClicked
+ * + ClientEvents tick（CLIENT 脚本）+ Level/Player/Server/MutableComponent 实体扩展
+ * + 包分发与 ClientData/PData 网络通道 + ScriptEvents 自定义事件。
  */
 public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
@@ -103,6 +104,9 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         initializeWorkspace();
         initializeScripts();
         FabricRegistryAdapter.onInitialize();
+        // 全部注册/装载完成后收尾（NeoForge 侧在 FMLLoadComplete 的 RegistryEventAdapter.onLoadComplete
+        // 之后 fire；fabric 侧 FabricRegistryAdapter.onInitialize 即注册抽干完成，同位次）
+        NekoRuntimeAccess.get().fireAfterInit();
         LOGGER.info("NekoJS {} fabric bootstrap done (startup scripts loaded, registry drained).", NekoJS.MODID);
     }
 
@@ -155,5 +159,8 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
         this.scriptManagers.at(ScriptType.STARTUP).loadScripts();
         NekoRuntimeAccess.get().fireInitStartup();
+        // STARTUP 脚本加载后触发 goal 注册（镜像 NekoJSMod：脚本监听器此时才挂上；
+        // 注册面由节点孪生 GoalEvents 提供，消费端 FabricEntityEventBindings 已在跑）
+        com.tkisor.nekojs.bindings.event.GoalEvents.postRegister();
     }
 }

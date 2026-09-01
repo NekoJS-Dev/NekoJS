@@ -15,11 +15,14 @@
     ]
   },
   "mixins": [
-    "nekojs-fabric.mixins.json"
+    "nekojs-fabric.mixins.json",
+    "nekojs-fabric-shared.mixins.json",
+    "nekojs-fabric-dynamic.mixins.json"
   ],
   "accessWidener": "nekojs-fabric.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
     "minecraft": "~${minecraft_version}",
     "java": ">=${java_version}"
   }

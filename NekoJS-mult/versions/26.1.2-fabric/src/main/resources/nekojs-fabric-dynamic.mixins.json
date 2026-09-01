@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tkisor.nekojs.dynamic.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "RegistryDataCollectorMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
