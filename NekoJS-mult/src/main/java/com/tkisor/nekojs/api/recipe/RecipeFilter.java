@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 // 版本差异下沉到 RecipeEventJS 的版本中立静态助手（getRecipeOutputId 的双参重载 /
 // recipeHolderId / recipeGroup / ingredientMatches），本文件因此零版本守卫。
 package com.tkisor.nekojs.api.recipe;
@@ -158,4 +156,3 @@ public interface RecipeFilter {
         }
     }
 }
-//?}

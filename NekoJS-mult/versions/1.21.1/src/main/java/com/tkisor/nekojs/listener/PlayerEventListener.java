@@ -19,7 +19,7 @@ public class PlayerEventListener {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (player.hasPermissions(2) && NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
 
-                player.displayClientMessage(NekoErrorUIHelper.getErrorComponent(), false);
+                player.displayClientMessage(NekoErrorUIHelper.getErrorComponent(NekoJSMod.RUNTIME_ROOT.errors().count()), false);
             }
             // 挂载物品栏监听器（inventoryChanged 事件）
             InventoryChangeListener.getOrCreate(player);

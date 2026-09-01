@@ -1,4 +1,3 @@
-//? if neoforge {
 package com.tkisor.nekojs.api.recipe;
 
 import com.google.gson.JsonArray;
@@ -7,16 +6,22 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+//? if neoforge {
 import com.tkisor.nekojs.wrapper.fluid.FluidIngredientJS;
+//?}
 import com.tkisor.nekojs.wrapper.item.IngredientJS;
+//? if neoforge {
 import com.tkisor.nekojs.wrapper.item.SizedIngredientJS;
+//?}
 import graal.graalvm.polyglot.Value;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+//? if neoforge {
 import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.crafting.FluidIngredient;
 import net.neoforged.neoforge.fluids.crafting.SizedFluidIngredient;
+//?}
 
 import java.util.List;
 import java.util.Map;
@@ -68,6 +73,7 @@ public final class RecipeJsonValueConverter {
             case Ingredient ingredient -> {
                 return event.serializeIngredient(ingredient);
             }
+//? if neoforge {
             case SizedIngredientJS ingredient -> {
                 return sizedIngredientToJson(event, ingredient.unwrap());
             }
@@ -86,6 +92,7 @@ public final class RecipeJsonValueConverter {
             case FluidStack stack -> {
                 return event.serializeFluidStack(stack);
             }
+//?}
             case ItemStack stack -> {
                 return event.serializeResult(stack);
             }
@@ -141,11 +148,12 @@ public final class RecipeJsonValueConverter {
         return new JsonPrimitive(value.toString());
     }
 
+//? if neoforge {
     private static JsonElement sizedIngredientToJson(RecipeEventJS event, SizedIngredient ingredient) {
         JsonObject json = new JsonObject();
         json.add("ingredient", event.serializeIngredient(ingredient.ingredient()));
         json.addProperty("count", ingredient.count());
         return json;
     }
-}
 //?}
+}

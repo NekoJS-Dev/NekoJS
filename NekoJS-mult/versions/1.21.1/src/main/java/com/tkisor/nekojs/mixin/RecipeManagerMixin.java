@@ -131,7 +131,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
                     if (!NekoJSMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
                         player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
                     } else {
-                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent());
+                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(NekoJSMod.RUNTIME_ROOT.errors().count()));
                     }
                 }
             });

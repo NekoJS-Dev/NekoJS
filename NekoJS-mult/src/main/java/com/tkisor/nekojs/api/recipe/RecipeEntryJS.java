@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 //~ mc_legacy_api
 package com.tkisor.nekojs.api.recipe;
 
@@ -117,4 +115,3 @@ public class RecipeEntryJS {
         event.removeRecipeContext(id);
     }
 }
-//?}

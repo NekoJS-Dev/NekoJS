@@ -1,4 +1,4 @@
-//? if neoforge && >=26 {
+//? if >=26 {
 package com.tkisor.nekojs.mixin;
 
 import com.tkisor.nekojs.script.ScriptTypeEnv;
@@ -7,7 +7,12 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
+//? if neoforge {
 import com.tkisor.nekojs.NekoJSMod;
+//?} else {
+/*import com.tkisor.nekojs.fabric.NekoJSFabricMod;
+import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
+*///?}
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
@@ -26,15 +31,19 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
+//? if neoforge {
 import net.minecraft.util.Unit;
+//?}
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeMap;
+//? if neoforge {
 import net.neoforged.neoforge.common.conditions.ConditionalOps;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+//?}
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -86,7 +95,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         this.nekojs$rawJsons.clear();
         this.nekojs$rawJsons.putAll(this.nekojs$baseJsons);
         int beforeCount = this.nekojs$rawJsons.size();
-
+//? if neoforge {
         // 相当于: ! ICondition.conditionsMatched(JsonOps.INSTANCE, entry.getValue())
         // 这么写只是为了避免重复创建 ConditionalOps
         var conditionalCodec = ConditionalOps.createConditionalCodec(Unit.CODEC);
@@ -94,6 +103,7 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 
         int afterCount = this.nekojs$rawJsons.size();
         NekoJS.LOGGER.debug("Filtered out {} recipes that did not meet conditions", beforeCount - afterCount);
+//?}
 
         RecipeEventJS eventJS = new RecipeEventJS(this.nekojs$rawJsons, this.registries, RecipeTypeDefinitionStorage.current());
         try {
@@ -105,7 +115,11 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             ServerEvents.AFTER_RECIPES.post(eventJS);
             NekoRuntimeAccess.get().afterRecipes(eventJS);
         } catch (PolyglotException e) {
+//? if neoforge {
             NekoJSMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
+//?} else {
+/*            NekoJSFabricMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
+*///?}
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Recipe script execution crashed", e);
         }
@@ -128,15 +142,31 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
         this.nekojs$rawJsons.clear();
 
         com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).debug("Script execution completed, total recipes: {}", this.recipes.values().size());
+//? if neoforge {
         List<ServerPlayer> players = null;
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();
+//?} else {
+/*        List<ServerPlayer> players = null;
+        net.minecraft.server.MinecraftServer nekojs$server = FabricServerEventBindings.currentServer();
+        if (nekojs$server != null) {
+            players = nekojs$server.getPlayerList().getPlayers();
+*///?}
             players.forEach(player -> {
                 if (Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
+//? if neoforge {
                     if (!NekoJSMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
+//?} else {
+/*                    if (!NekoJSFabricMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
+*///?}
                         player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
                     } else {
-                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent());
+                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(
+//? if neoforge {
+                                NekoJSMod.RUNTIME_ROOT.errors().count()));
+//?} else {
+/*                                NekoJSFabricMod.RUNTIME_ROOT.errors().count()));
+*///?}
                     }
                 }
             });

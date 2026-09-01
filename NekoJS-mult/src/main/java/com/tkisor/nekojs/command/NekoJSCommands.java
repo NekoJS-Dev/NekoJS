@@ -86,7 +86,7 @@ public final class NekoJSCommands {
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
                                     if (NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
-                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent());
+                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent(NekoJSMod.RUNTIME_ROOT.errors().count()));
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.healthy"), false);
                                     }
