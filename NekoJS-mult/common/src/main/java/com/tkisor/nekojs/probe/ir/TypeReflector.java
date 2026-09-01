@@ -235,6 +235,7 @@ public final class TypeReflector {
         m.isConstructor = true;
         reflectParamsInto(m, ctor);
         m.docs.addAll(AnnotatedDocs.executableDocs(ctor));
+        m.overloads.addAll(AnnotatedDocs.overloads(ctor));
         return m;
     }
 
@@ -257,6 +258,7 @@ public final class TypeReflector {
         }
         reflectParamsInto(m, method);
         m.docs.addAll(AnnotatedDocs.executableDocs(method));
+        m.overloads.addAll(AnnotatedDocs.overloads(method));
         return m;
     }
 

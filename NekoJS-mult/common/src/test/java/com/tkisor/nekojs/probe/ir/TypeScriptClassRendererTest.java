@@ -318,6 +318,81 @@ class TypeScriptClassRendererTest {
                 "varargs param must keep generic args and render as optional array:\n" + out);
     }
 
+    // ---------------- @Overload / @DeprecatedNekojs（注解 → IR → 渲染） ----------------
+
+    /** 手写重载 + 弃用标记的样本：方法两个重载（一个带 doc/returns、一个缺省继承返回类型）。 */
+    public static class OverloadDeprecatedSample {
+        @com.tkisor.nekojs.api.annotation.Doc("Creates a stack.")
+        @com.tkisor.nekojs.api.annotation.Overload({"id: string"})
+        @com.tkisor.nekojs.api.annotation.Overload(
+                value = {"item: $ItemStack", "count?: number"},
+                returns = "string",
+                doc = "Copy with a count.")
+        public static java.util.List<String> of(java.util.function.Supplier<?> input, int flags) {
+            return java.util.List.of();
+        }
+
+        @com.tkisor.nekojs.api.annotation.DeprecatedNekojs(
+                value = "Moved to matchTag.",
+                replacedBy = "matchTag")
+        public void anyTag(String tag) { }
+
+        @com.tkisor.nekojs.api.annotation.DeprecatedNekojs(replacedBy = "ACTIVE_FLAGS")
+        public static final int LEGACY_FLAG = 1;
+
+        @com.tkisor.nekojs.api.annotation.Overload({"count?: number"})
+        public OverloadDeprecatedSample(String id, int extra) { }
+    }
+
+    @Test
+    void overloadsRenderAsAdditionalDeclarationsAfterPrimarySignature() {
+        TypeDecl d = new TypeReflector().reflect(OverloadDeprecatedSample.class);
+        String out = render(d);
+
+        // 主声明仍在（反射签名）
+        assertTrue(out.contains("static of(input: $Supplier<any>, flags: number): $List<string>;"), out);
+        // 重载 1：无 returns → 继承主声明的返回类型渲染
+        assertTrue(out.contains("static of(id: string): $List<string>;"), out);
+        // 重载 2：带 doc（单行 JSDoc 折叠形态）与显式 returns
+        assertTrue(out.contains("/** Copy with a count. */"), out);
+        assertTrue(out.contains("static of(item: $ItemStack, count?: number): string;"), out);
+        // 声明顺序：主签名在前，重载按注解声明序随后
+        assertTrue(out.indexOf("of(input: $Supplier<any>") < out.indexOf("of(id: string)"), out);
+        assertTrue(out.indexOf("of(id: string)") < out.indexOf("of(item: $ItemStack"), out);
+    }
+
+    @Test
+    void constructorOverloadsRenderWithoutReturnType() {
+        TypeDecl d = new TypeReflector().reflect(OverloadDeprecatedSample.class);
+        String out = render(d);
+        assertTrue(out.contains("constructor(id: string, extra: number);"), out);
+        assertTrue(out.contains("constructor(count?: number);"), out);
+    }
+
+    @Test
+    void deprecatedMembersRenderJsDocTag() {
+        TypeDecl d = new TypeReflector().reflect(OverloadDeprecatedSample.class);
+        String out = render(d);
+
+        // 方法：原因 + 替代
+        assertTrue(out.contains("@deprecated Moved to matchTag. Use matchTag instead."), out);
+        // 字段：只有替代
+        assertTrue(out.contains("@deprecated Use ACTIVE_FLAGS instead."), out);
+        // JSDoc 块形态：单条 doc 折叠为一行
+        assertTrue(out.contains("/** @deprecated Use ACTIVE_FLAGS instead. */"), out);
+    }
+
+    @Test
+    void unannotatedMembersRenderNoDeprecationOrOverloadLines() {
+        // 回归守护：无注解的成员渲染零变化（golden 逐字节一致的前提）
+        TypeDecl d = new TypeReflector().reflect(IdentifierSample.class);
+        String out = render(d);
+        assertFalse(out.contains("@deprecated"), out);
+        // 该样本无 @Overload：方法名只应出现一次（唯一声明）
+        long applyCount = out.split("apply", -1).length - 1;
+        assertEquals(1, applyCount, "unannotated method must render exactly one declaration");
+    }
+
     private static String render(TypeDecl decl) {
         return new TypeScriptClassRenderer(new TypeAliasRegistry()).render(decl);
     }

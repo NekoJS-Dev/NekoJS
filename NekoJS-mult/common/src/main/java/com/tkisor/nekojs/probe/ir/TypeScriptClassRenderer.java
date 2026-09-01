@@ -207,6 +207,7 @@ public final class TypeScriptClassRenderer {
         sb.append("        constructor(");
         appendParameters(sb, c.params);
         sb.append(");\n");
+        appendOverloads(sb, c, true);
         return sb.toString();
     }
 
@@ -231,7 +232,32 @@ public final class TypeScriptClassRenderer {
         sb.append("(");
         appendParameters(sb, m.params);
         sb.append("): ").append(renderSlot(m.returnType, false)).append(";\n");
+        appendOverloads(sb, m, false);
         return sb.toString();
+    }
+
+    /**
+     * 发射手写重载（{@code @Overload}）：同名（构造器则 constructor）附加声明，参数条目为
+     * TypeScript 片段原样拼接；returns 为空沿用反射返回类型。参数与返回类型不经 renderSlot，
+     * 也不参与 import 收集——引用的类型须已在本模块可见（{@code $Foo} 形式），由注解作者保证。
+     */
+    private void appendOverloads(StringBuilder sb, MethodDecl m, boolean constructor) {
+        for (MethodDecl.Overload o : m.overloads) {
+            appendDoc(sb, "        ", o.docs);
+            sb.append("        ");
+            if (constructor) {
+                sb.append("constructor(");
+            } else {
+                if (m.isStatic) sb.append("static ");
+                sb.append(m.effectiveName()).append("(");
+            }
+            sb.append(String.join(", ", o.params)).append(")");
+            if (!constructor) {
+                sb.append(": ");
+                sb.append(o.returns.isEmpty() ? renderSlot(m.returnType, false) : o.returns);
+            }
+            sb.append(";\n");
+        }
     }
 
     private void appendParameters(StringBuilder sb, List<MethodDecl.MethodParam> params) {
