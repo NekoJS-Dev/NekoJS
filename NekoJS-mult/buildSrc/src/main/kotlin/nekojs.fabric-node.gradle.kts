@@ -148,10 +148,17 @@ tasks.processResources {
     exclude("nekojs.interface_injection.json")
 }
 
-// 共享测试树目前整树被 `//? if neoforge` 守卫，在 fabric 节点上求值成空文件：测试源码
-// 存在但没有可发现的测试类，Gradle 9 的 failOnNoDiscoveredTests 会因此失败。fabric 侧的
-// 测试随脚本运行时移植一起补上，在那之前显式放行。
-tasks.test { failOnNoDiscoveredTests = false }
+// 共享测试树的守卫面逐步放开后（适配器三件套等），JUnit Platform 必须显式启用——
+// Gradle 9 默认测试框架不是 JUnit Platform，不配则 jupiter 测试静默发现不了
+// （failOnNoDiscoveredTests = false 曾把这一点掩盖成"没有测试"）。
+tasks.test {
+    useJUnitPlatform()
+    systemProperty("user.language", "en")
+    systemProperty("user.country", "US")
+    systemProperty("user.timezone", "UTC")
+    systemProperty("file.encoding", "UTF-8")
+    failOnNoDiscoveredTests = false
+}
 
 // ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）——与 NeoForge 节点同构 ----
 // Loom 会在 remapJar 阶段重映射 jar；引擎与 Graal 不引用 MC 类，重映射对它们是恒等变换。

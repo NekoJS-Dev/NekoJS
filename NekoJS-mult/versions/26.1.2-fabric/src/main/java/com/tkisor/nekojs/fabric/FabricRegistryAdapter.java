@@ -51,6 +51,13 @@ public final class FabricRegistryAdapter {
                         .register(output -> itemIds.forEach(id ->
                                 BuiltInRegistries.ITEM.getOptional(id).ifPresent(item ->
                                         output.accept(new net.minecraft.world.item.ItemStack(item))))));
+        // 物品燃料（NeoForge 侧走 getBurnTime override；fabric 经 FuelValueEvents.BUILD 灌表，
+        // 每次燃料表构建（服务器启动/数据包重载）都会重放——幂等）
+        if (!com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.FUEL_ASSIGNMENTS.isEmpty()) {
+            net.fabricmc.fabric.api.registry.FuelValueEvents.BUILD.register((builder, ctx) ->
+                    com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.FUEL_ASSIGNMENTS.forEach((id, time) ->
+                            BuiltInRegistries.ITEM.getOptional(id).ifPresent(item -> builder.add(item, time))));
+        }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

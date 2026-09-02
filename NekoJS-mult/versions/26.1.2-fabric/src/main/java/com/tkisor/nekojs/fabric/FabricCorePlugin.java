@@ -100,6 +100,14 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register("MobEffectInstance", net.minecraft.world.effect.MobEffectInstance.class);
         registry.register("DamageTypes", net.minecraft.world.damagesource.DamageTypes.class);
         registry.register("TriState", net.minecraft.util.TriState.class);
+        // client 类绑定（与 NeoForge 侧同款 per-ScriptType 条件；专用服务器不注册）
+        if (registry.scriptType() == com.tkisor.nekojs.api.ScriptType.CLIENT) {
+            registry.register("Minecraft", net.minecraft.client.Minecraft.class);
+            registry.register("Screen", net.minecraft.client.gui.screens.Screen.class);
+            registry.register("Window", com.mojang.blaze3d.platform.Window.class);
+            registry.register("KeyMapping", net.minecraft.client.KeyMapping.class);
+            registry.register("InputConstants", com.mojang.blaze3d.platform.InputConstants.class);
+        }
     }
 
     @Override
@@ -146,6 +154,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
     public void registerClientEvents(EventGroupRegistry registry) {
         // 客户端 tick 事件（CLIENT 脚本由 NekoJSFabricClient 在 CLIENT_STARTED 加载）
         registry.register(com.tkisor.nekojs.fabric.event.FabricClientEventBindings.CLIENT_EVENTS);
+        // 脚本按键绑定（register/pressed/released/tick；孪生 KeyBindEvents，
+        // 轮询挂载在 NekoJSFabricClient）
+        registry.register(com.tkisor.nekojs.bindings.event.client.KeyBindEvents.GROUP);
     }
 
     @Override

@@ -119,18 +119,32 @@
     已知笔误（共享树，两侧同在）：CreativeTabBuilder.icon 是字段，javadoc/示例里的
     `b.icon('...')` 方法调用写法不可用（应 `b.icon = '...'`）。
 
+11. **P1 收尾批**（2026-09-02 第五批）：
+    - 物品燃料面：ItemBuilder.burnTime 记账（FUEL_ASSIGNMENTS），FabricRegistryAdapter
+      经 FuelValueEvents.BUILD 灌表（每次燃料表构建重放，幂等）
+    - client 类绑定五项（Minecraft/Screen/Window/KeyMapping/InputConstants，
+      scriptType()==CLIENT 条件注册）
+    - KeyBindEvents fabric 孪生（register/pressed/released/tick；复用共享树 KeyBindIds）。
+      两个 26.x 事实：fabric-api 的 KeyMappingHelper 在 Options 构建后撞 GameOptions
+      二次初始化守卫（CLIENT 脚本时机必然晚于 Options）——孪生改为直接扩
+      options.keyMappings 数组（AW mutable；NeoForge 版同款替换由 NeoForge patch
+      去 final 支撑）；pressed/released/tick 的边沿检测挂 ClientTickEvents
+    - 测试树放行三个中立适配器测试（BlockPos/Vec3/Holder）+ **修出 fabric 节点测试
+      从未真正跑过的存量问题**：fabric-node.gradle.kts 缺 useJUnitPlatform()（Gradle 9
+      默认框架非 Platform，jupiter 测试静默发现不了，failOnNoDiscoveredTests=false
+      掩盖了这一点）——补上后 6 类 26 用例全绿（三个放行测试 + pdata 三件套存量）
+    - common-api-processor 接线**不做**：processor 平台值只有 nf/cr 两态，fabric 是
+      第三平台需先扩 processor 的平台模型（fabric 上大量 spec 未实现，接上会误报红）
+
 ## P1 剩余（功能面）
 
-- KeyBindEvents（KeyBindingHelper + ClientTickEvents 轮询）。
-- client 类绑定（Minecraft/Screen/Window/KeyMapping/InputConstants——client dist 注册）。
-- 物品燃料面（FabricFuelRegistry：ItemBuilder.burnTime 在 fabric 未生效）。
 - PlayerEvents：changedDimension（需 mixin，此版 fabric-api 无现成事件）、advancement/
   container×4/entityInteract/crafted/smelted/destroyed/inventoryChanged（mixin 面）。
 - LevelEvents：saved/爆炸系（需 mixin Level#explode、Explosion radius AW public-f）。
 - ItemEvents：canPickUp/pickedUp/dropped/entityInteracted/foodEaten（mixin 面）。
 - BlockEvents：placed/rightClicked/leftClicked 等（fabric-api/mixin 面）。
 - FluidBuilder（需 fabric 流体重设计）。
-- 测试树放行三个中立适配器测试；common-api-processor 接线。
+- common-api-processor 的 fabric 平台支持（processor 端先扩平台模型，见上）。
 
 ## P2（大块移植，按需排期）
 
