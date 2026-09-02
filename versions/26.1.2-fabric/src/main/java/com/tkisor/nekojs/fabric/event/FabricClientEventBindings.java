@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.client.ClientTickEventJS;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 
 /**
  * 客户端事件面的 fabric 桥 v1：tickPre / tickPost + CLIENT 脚本加载钩子。
@@ -45,5 +46,11 @@ public final class FabricClientEventBindings {
             // 与 NeoForge 侧 NekoJSClient#onClientTickPost 同：tick 上冲刷 CLIENT 侧 node timers
             com.tkisor.nekojs.fabric.NekoJSFabricMod.flushClientNodeTimers();
         });
+        // 物品 tooltip（孪生 ItemEvents.TOOLTIP，按物品 id dispatch）：lines 是渲染前的
+        // 可变列表，监听器 mutate 即生效（fabric 回调不可取消整段渲染，删空列表即近似取消）
+        ItemTooltipCallback.EVENT.register((stack, ctx, flag, lines) ->
+                com.tkisor.nekojs.bindings.event.ItemEvents.TOOLTIP.post(
+                        new com.tkisor.nekojs.wrapper.event.item.ItemTooltipEventJS(stack, lines),
+                        stack.getItem()));
     }
 }

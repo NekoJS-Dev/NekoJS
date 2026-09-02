@@ -86,19 +86,34 @@
 
 （无——原 P0 两项已分别在上面第 7、8 条完成。）
 
-## P1（功能面，现成 fabric-api 挂点）
+9. **P1 事件面与基础绑定**（2026-09-02 第三批）：
+   - LevelEvents 子集（loaded/unloaded ← ServerLevelEvents；tickPre/tickPost ←
+     START/END_LEVEL_TICK）；PlayerEvents 扩四总线（tickPre/tickPost ← 服务端 tick
+     首尾遍历、cloned ← ServerPlayerEvents.COPY_FROM、respawned ← AFTER_RESPAWN；
+     注意此版 fabric-api 无 AFTER_CHANGE_DIMENSION，changedDimension 需 mixin）；
+     ItemEvents.tooltip ← ItemTooltipCallback（lines 可变列表 mutate 即生效，不可取消）；
+     CommandEvents.register ← CommandRegistrationCallback。中立 payload ×6 落共享树
+     （LevelEventJS/PlayerTickEventJS/PlayerRespawnEventJS/PlayerCloneEventJS/
+     ItemTooltipEventJS/CommandRegistryEventJS），节点孪生接口 ×3
+   - **基础静态绑定面补齐**（勘察矩阵漏项，冒烟暴露）：FabricCorePlugin 补 24 个
+     纯 vanilla/中立绑定——ItemStack/Items/Item/Block/Blocks/BlockPos/Direction/
+     Vec3/AABB/MutableComponent/Component/DyeColor/SoundEvents/ParticleTypes/
+     EntityType/CompoundTag/Identifier/MobEffects/MobEffectInstance/DamageTypes/
+     TriState/Color/UUID/StringUtils/Time/Utils/global/Test。此前 fabric 脚本连
+     `ItemStack`/`Component` 都是 unknown identifier。
 
-- 注册 builder 7 件套（Item/Block/Fluid/EntityType/Enchantment/CreativeTab/ParticleType
-  ——FluidBuilder 需 fabric 流体重设计）；NekoRegistryPointsPlugin 只注册了 5 个中性 builder。
-- LevelEvents 全组（ServerLevelEvents.LOAD/UNLOAD、LevelTickEvents 现成）。
-- PlayerEvents 剩余 15 总线（respawned/changedDimension 有现成 fabric-api 事件；
-  containerOpened/inventoryChanged 需 mixin）。
-- ItemEvents.tooltip（ItemTooltipCallback 现成）、canPickUp/pickedUp/dropped/foodEaten（mixin）。
+## P1 剩余（功能面）
+
+- 注册 builder 7 件套（FluidBuilder 需 fabric 流体重设计）；NekoRegistryPointsPlugin
+  只注册了 5 个中性 builder。
 - KeyBindEvents（KeyBindingHelper + ClientTickEvents 轮询）。
-- CommandEvents.register（CommandRegistrationCallback 现成——FabricNekoJSCommands 已挂
-  同款回调，补脚本命令注册面即可）。
-- 测试树放行三个中立适配器测试（BlockPos/Vec3/HolderAdapter——被测面已在 fabric 注册）。
-- common-api-processor 接线（annotationProcessor + -Anekojs.platform=fabric）。
+- client 类绑定（Minecraft/Screen/Window/KeyMapping/InputConstants——client dist 注册）。
+- PlayerEvents：changedDimension（需 mixin，此版 fabric-api 无现成事件）、advancement/
+  container×4/entityInteract/crafted/smelted/destroyed/inventoryChanged（mixin 面）。
+- LevelEvents：saved/爆炸系（需 mixin Level#explode、Explosion radius AW public-f）。
+- ItemEvents：canPickUp/pickedUp/dropped/entityInteracted/foodEaten（mixin 面）。
+- BlockEvents：placed/rightClicked/leftClicked 等（fabric-api/mixin 面）。
+- 测试树放行三个中立适配器测试；common-api-processor 接线。
 
 ## P2（大块移植，按需排期）
 

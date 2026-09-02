@@ -60,6 +60,46 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // 脚本自定义网络通道（Network.sendToServer/sendToPlayer/sendToAll；payload 双向
         // 注册与 receiver 在 FabricPlayNetwork）
         registry.register("Network", com.tkisor.nekojs.wrapper.network.NetworkJS.class);
+        // ---- 基础静态绑定（与 NeoForge 侧 NekoJSCorePlugin 同名同值，纯 vanilla/中立）----
+        // 引擎侧 helper（common/static_access）
+        registry.register("Color", new com.tkisor.nekojs.bindings.static_access.ColorJS());
+        registry.register("UUID", new com.tkisor.nekojs.bindings.static_access.UUIDJS());
+        registry.register("StringUtils", new com.tkisor.nekojs.bindings.static_access.StringUtilsJS());
+        registry.register("Time", new com.tkisor.nekojs.bindings.static_access.TimeJS());
+        registry.register("Utils", new com.tkisor.nekojs.bindings.static_access.UtilsJS());
+        registry.register(com.tkisor.nekojs.api.ScriptType.TEST, "Test",
+                new com.tkisor.nekojs.bindings.static_access.TestJS());
+        registry.register("global", com.tkisor.nekojs.bindings.static_access.NekoGlobal.shared());
+        // vanilla 类型/常量类
+        registry.register("ItemStack", net.minecraft.world.item.ItemStack.class);
+        registry.register("Items", net.minecraft.world.item.Items.class);
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("Item",
+                new com.tkisor.nekojs.js.DelegatingBinding(new com.tkisor.nekojs.bindings.static_access.ItemJS(),
+                        net.minecraft.world.item.Item.class,
+                        java.util.Set.of("id", "idOf", "of", "empty")),
+                com.tkisor.nekojs.bindings.static_access.ItemJS.class));
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("Block",
+                new com.tkisor.nekojs.js.DelegatingBinding(new com.tkisor.nekojs.bindings.static_access.BlockJS(),
+                        net.minecraft.world.level.block.Block.class,
+                        java.util.Set.of("id", "idOf")),
+                com.tkisor.nekojs.bindings.static_access.BlockJS.class));
+        registry.register("Blocks", net.minecraft.world.level.block.Blocks.class);
+        registry.register("BlockPos", net.minecraft.core.BlockPos.class);
+        registry.register("Direction", net.minecraft.core.Direction.class);
+        registry.register("Vec3", net.minecraft.world.phys.Vec3.class);
+        registry.register("AABB", net.minecraft.world.phys.AABB.class);
+        registry.register("MutableComponent", net.minecraft.network.chat.MutableComponent.class);
+        registry.register("Component", net.minecraft.network.chat.Component.class);
+        registry.register("DyeColor", net.minecraft.world.item.DyeColor.class);
+        registry.register("SoundEvents", net.minecraft.sounds.SoundEvents.class);
+        registry.register("ParticleTypes", net.minecraft.core.particles.ParticleTypes.class);
+        registry.register("EntityType", net.minecraft.world.entity.EntityType.class);
+        registry.register("CompoundTag", net.minecraft.nbt.CompoundTag.class);
+        registry.register("Identifier", net.minecraft.resources.Identifier.class);
+        registry.register("MobEffects", net.minecraft.world.effect.MobEffects.class);
+        registry.register("MobEffectInstance", net.minecraft.world.effect.MobEffectInstance.class);
+        registry.register("DamageTypes", net.minecraft.world.damagesource.DamageTypes.class);
+        registry.register("TriState", net.minecraft.util.TriState.class);
     }
 
     @Override
@@ -93,6 +133,13 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // 脚本自定义网络通道：server/client 总线按 channel dispatch（receiver 在
         // FabricPlayNetwork，发送面 NetworkJS → PlayPacketDispatchers）
         registry.register(com.tkisor.nekojs.bindings.event.NetworkEvents.GROUP);
+        // 维度 loaded/unloaded/tickPre/tickPost（FabricLevelEventBindings，中立 payload）
+        registry.register(com.tkisor.nekojs.bindings.event.LevelEvents.GROUP);
+        // 命令注册（FabricCommandEventBindings：脚本向 event.dispatcher 注册命令）
+        registry.register(com.tkisor.nekojs.bindings.event.CommandEvents.GROUP);
+        // 物品 tooltip（client，FabricClientEventBindings 挂 ItemTooltipCallback；组名
+        // "ItemEvents" 与 FabricItemEventBindings 的 rightClicked 组同名合并）
+        registry.register(com.tkisor.nekojs.bindings.event.ItemEvents.GROUP);
     }
 
     @Override

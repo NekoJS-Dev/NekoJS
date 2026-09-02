@@ -2,9 +2,13 @@ package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerLifecycleEventJS;
+import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
+import com.tkisor.nekojs.wrapper.event.player.PlayerTickEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -58,6 +62,14 @@ public final class FabricServerEventBindings {
             PLAYER_EVENTS.server("loggedIn", PlayerLifecycleEventJS.class);
     public static final EventBusJS<PlayerLifecycleEventJS, Void> LOGGED_OUT =
             PLAYER_EVENTS.server("loggedOut", PlayerLifecycleEventJS.class);
+    public static final EventBusJS<PlayerTickEventJS, Void> PLAYER_TICK_PRE =
+            PLAYER_EVENTS.server("tickPre", PlayerTickEventJS.class);
+    public static final EventBusJS<PlayerTickEventJS, Void> PLAYER_TICK_POST =
+            PLAYER_EVENTS.server("tickPost", PlayerTickEventJS.class);
+    public static final EventBusJS<PlayerCloneEventJS, Void> CLONED =
+            PLAYER_EVENTS.server("cloned", PlayerCloneEventJS.class);
+    public static final EventBusJS<PlayerRespawnEventJS, Void> RESPAWNED =
+            PLAYER_EVENTS.server("respawned", PlayerRespawnEventJS.class);
 
     /** chat：中立 payload（player/username/message 字符串，契约可移植成员）。 */
     public static final EventBusJS<com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS, Void> CHAT =
@@ -107,12 +119,27 @@ public final class FabricServerEventBindings {
             currentServer = null;
             STOPPED.post(new ServerLifecycleEventJS(server));
         });
-        ServerTickEvents.START_SERVER_TICK.register(server ->
-                TICK_PRE.post(new ServerTickEventJS(server)));
+        ServerTickEvents.START_SERVER_TICK.register(server -> {
+            TICK_PRE.post(new ServerTickEventJS(server));
+            // 玩家 tick：fabric-api 无 per-player tick 事件，在服务端 tick 首尾遍历
+            //（NeoForge 侧 PlayerTickEvent.Pre/Post 同为服务端 tick 驱动，时机等价）
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                PLAYER_TICK_PRE.post(new PlayerTickEventJS(player));
+            }
+        });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             drainPendingLogins();
             TICK_POST.post(new ServerTickEventJS(server));
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                PLAYER_TICK_POST.post(new PlayerTickEventJS(player));
+            }
         });
+        // 克隆/重生：fabric COPY_FROM（数据拷贝点，对齐 PlayerEvent.Clone）与
+        // AFTER_RESPAWN（重生完成）。alive = 旧实体仍存活（末地返回式重生）
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) ->
+                CLONED.post(new PlayerCloneEventJS(newPlayer, oldPlayer, alive)));
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) ->
+                RESPAWNED.post(new PlayerRespawnEventJS(newPlayer, oldPlayer, alive)));
         // fabric 的 JOIN 在 PlayerList#placeNewPlayer 中途触发（语义是"可以给这个连接发包了"），
         // 此刻玩家还没进 server.getPlayerList()——NeoForge 的 PlayerLoggedInEvent 是进列表之后。
         // 因此排到下一个 tick 末再 post：否则脚本在 loggedIn 里做的全服广播（ClientData.sync 等）
