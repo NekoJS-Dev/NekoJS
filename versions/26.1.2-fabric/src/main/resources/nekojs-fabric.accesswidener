@@ -19,3 +19,8 @@ accessible field net/minecraft/world/item/crafting/Ingredient values Lnet/minecr
 # AT 放宽同名构造，fabric 由此 AW 等价）。
 accessible method net/minecraft/core/particles/SimpleParticleType <init> (Z)V
 
+# 按键绑定面：26.x 的 Options.keyMappings 是 public final（NeoForge 侧由 NeoForge patch
+# 去 final 后数组替换，fabric 由 mutable 等价）——KeyBindEvents 孪生在 CLIENT 脚本注册
+# 绑定时扩数组（KeyMappingHelper 在 options 构建后不可用，见孪生注释）。
+mutable field net/minecraft/client/Options keyMappings [Lnet/minecraft/client/KeyMapping;
+

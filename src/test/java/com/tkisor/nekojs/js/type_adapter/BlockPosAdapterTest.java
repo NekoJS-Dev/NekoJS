@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.js.type_adapter;
 
 import com.tkisor.nekojs.api.data.ValueConversionException;
@@ -82,4 +80,3 @@ class BlockPosAdapterTest {
         assertThrows(ValueConversionException.class, () -> adapter.apply(value));
     }
 }
-//?}

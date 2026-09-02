@@ -24,6 +24,8 @@ public final class NekoJSFabricClient implements ClientModInitializer {
         FabricPackSync.registerClient();
         FabricPlayNetwork.registerClient();
         FabricPDataSync.registerClient();
+        // 脚本按键绑定：register 入口 + pressed/released/tick 轮询（ClientTickEvents）
+        com.tkisor.nekojs.bindings.event.client.KeyBindEvents.register();
         FabricClientEventBindings.register(() -> {
             if (NekoJSFabricMod.RUNTIME_ROOT == null) {
                 LOGGER.error("CLIENT_STARTED: RUNTIME_ROOT not assembled yet, skipping CLIENT script load");

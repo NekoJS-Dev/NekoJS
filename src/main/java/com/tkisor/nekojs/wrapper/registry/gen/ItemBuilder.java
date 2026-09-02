@@ -25,6 +25,10 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     /** 已分配创造标签页的物品：物品 id → 标签页 id（BuildCreativeModeTabContents 时消费）。 */
     public static final Map<Identifier, Identifier> GROUP_ASSIGNMENTS = new HashMap<>();
 
+    /** burnTime 记账：物品 id → 燃烧 tick。fabric 消费（FuelValueEvents.BUILD 灌入）；
+     * NeoForge 走匿名子类的 getBurnTime override，不读此表。 */
+    public static final Map<Identifier, Integer> FUEL_ASSIGNMENTS = new HashMap<>();
+
     public int maxStackSize = 64;
     public int maxDamage = 0;
     public boolean fireResistant = false;
@@ -65,6 +69,9 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
 
         if (groupTab != null && !groupTab.isBlank()) {
             GROUP_ASSIGNMENTS.put(id, Identifier.parse(groupTab));
+        }
+        if (burnTime > 0) {
+            FUEL_ASSIGNMENTS.put(id, burnTime);
         }
 
         // 仅在需要覆盖方法（发光/燃料）时用匿名子类，否则直接 new Item
