@@ -44,6 +44,15 @@ public final class FabricPlayNetwork {
         PayloadTypeRegistry.clientboundPlay().register(
                 ClientDataSyncPacket.TYPE, ClientDataSyncPacket.STREAM_CODEC);
         PlayPacketDispatchers.install(new FabricDispatcher());
+        // 脚本自定义通道（Network.sendToServer/sendToPlayer/sendToAll）：双向类型 + 服务端 receiver。
+        // receiver 在网络线程触发——切服务端主线程后走中立投递（脚本回调访问 MC 对象须主线程）。
+        PayloadTypeRegistry.serverboundPlay().register(
+                com.tkisor.nekojs.network.NekoScriptPayload.TYPE, com.tkisor.nekojs.network.NekoScriptPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(
+                com.tkisor.nekojs.network.NekoScriptPayload.TYPE, com.tkisor.nekojs.network.NekoScriptPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(com.tkisor.nekojs.network.NekoScriptPayload.TYPE,
+                (payload, context) -> context.server().execute(() ->
+                        com.tkisor.nekojs.network.NetworkMessageHandler.postServerEvent(payload, context.player())));
         ServerLifecycleEvents.SERVER_STARTING.register(server -> currentServer = server);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> currentServer = null);
     }
@@ -52,6 +61,10 @@ public final class FabricPlayNetwork {
     public static void registerClient() {
         ClientPlayNetworking.registerGlobalReceiver(ClientDataSyncPacket.TYPE, (payload, context) ->
                 context.client().execute(() -> acceptClientData(payload)));
+        // 脚本自定义通道客户端 receiver：切客户端主线程后走中立投递
+        ClientPlayNetworking.registerGlobalReceiver(com.tkisor.nekojs.network.NekoScriptPayload.TYPE,
+                (payload, context) -> context.client().execute(() ->
+                        com.tkisor.nekojs.network.NetworkMessageHandler.postClientEvent(payload)));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientDataStore.SHARED.clear());
         // NeoForge 侧挂在 client level unload（断线与切维度都清），fabric 无对应事件——
         // 盯客户端世界实例变化等价：切维度换 ClientLevel 实例、断线变 null。
