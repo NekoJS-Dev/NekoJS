@@ -21,7 +21,9 @@ import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindings;
+import com.tkisor.nekojs.fabric.event.FabricCommandEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
+import com.tkisor.nekojs.fabric.event.FabricLevelEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.FabricIdCompat;
@@ -94,6 +96,8 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
         FabricBlockEventBindings.register();
         FabricEntityEventBindings.register();
+        FabricLevelEventBindings.register();
+        FabricCommandEventBindings.register();
         FabricServerEventBindings.register(() -> {
             if (RUNTIME_ROOT != null) {
                 RUNTIME_ROOT.reload(com.tkisor.nekojs.api.ScriptType.SERVER);
