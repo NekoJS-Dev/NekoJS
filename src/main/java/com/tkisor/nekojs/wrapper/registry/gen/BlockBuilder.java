@@ -1,7 +1,5 @@
 // 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
 // 改本文件行为时须同步它。
-//? if neoforge {
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.TaggableBuilder;
@@ -172,4 +170,3 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         };
     }
 }
-//?}

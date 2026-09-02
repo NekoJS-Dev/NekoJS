@@ -1,7 +1,5 @@
 // 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
 // 改本文件行为时须同步它。
-//? if neoforge {
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import com.tkisor.nekojs.wrapper.registry.FoodBuilderJS;
@@ -82,11 +80,15 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
                 return foil;
             }
 
+//? if neoforge {
+            // getBurnTime 是 NeoForge 注入 Item 的 patch 方法，fabric 上不存在此 override；
+            // fabric 的燃料面（FabricFuelRegistry）随燃料批次接（见 docs/fabric-port-status.md）
             @Override
             public int getBurnTime(ItemStack stack, net.minecraft.world.item.crafting.RecipeType<?> type,
                                     net.minecraft.world.level.block.entity.FuelValues fuelValues) {
                 return burn;
             }
+//?}
         };
     }
 
@@ -126,4 +128,3 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
         };
     }
 }
-//?}

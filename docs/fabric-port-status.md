@@ -102,17 +102,34 @@
      TriState/Color/UUID/StringUtils/Time/Utils/global/Test。此前 fabric 脚本连
      `ItemStack`/`Component` 都是 unknown identifier。
 
+10. **注册 builder 六件套**（2026-09-02 第四批）：Item/Block/EntityType/Enchantment/
+    CreativeTab/ParticleType 去守卫（builder 本体零 loader 依赖，纯连坐守卫），
+    FabricRegistryAdapter 收尾挂两个平台钩子——实体属性（FabricDefaultAttributeRegistry，
+    消费同一 drainPendingAttributes）与 groupTab 追加（CreativeModeTabEvents.
+    modifyOutputEvent 按标签页分组，消费同一 GROUP_ASSIGNMENTS）。NeoForge patch
+    差异三处行内处理：ItemBuilder.getBurnTime（fabric 无此 override，燃料面留待
+    FabricFuelRegistry 批次）、EntityTypeBuilder.setShouldReceiveVelocityUpdates
+    （fabric 无对应设置点）、CreativeModeTab.builder() 无参重载（fabric 走
+    FabricCreativeModeTab.builder()）；AW 补 SimpleParticleType 构造。
+    **平台事实（26.x）**：附魔是 vanilla 数据驱动注册表（BuiltInRegistries 无常量），
+    代码注册在**两个加载器上都不可行**（NeoForge 26 实测同报 "RegisterEvent never
+    fired"）；EnchantmentBuilder 条目保留（1.21.1 孪生可用），26.x 附魔走数据包面。
+    CreativeTabBuilder 顺手修了 eager ItemStack 快照（fabric mod init 早于组件绑定
+    必炸，改为懒回调解析——两侧通用）。
+    已知笔误（共享树，两侧同在）：CreativeTabBuilder.icon 是字段，javadoc/示例里的
+    `b.icon('...')` 方法调用写法不可用（应 `b.icon = '...'`）。
+
 ## P1 剩余（功能面）
 
-- 注册 builder 7 件套（FluidBuilder 需 fabric 流体重设计）；NekoRegistryPointsPlugin
-  只注册了 5 个中性 builder。
 - KeyBindEvents（KeyBindingHelper + ClientTickEvents 轮询）。
 - client 类绑定（Minecraft/Screen/Window/KeyMapping/InputConstants——client dist 注册）。
+- 物品燃料面（FabricFuelRegistry：ItemBuilder.burnTime 在 fabric 未生效）。
 - PlayerEvents：changedDimension（需 mixin，此版 fabric-api 无现成事件）、advancement/
   container×4/entityInteract/crafted/smelted/destroyed/inventoryChanged（mixin 面）。
 - LevelEvents：saved/爆炸系（需 mixin Level#explode、Explosion radius AW public-f）。
 - ItemEvents：canPickUp/pickedUp/dropped/entityInteracted/foodEaten（mixin 面）。
 - BlockEvents：placed/rightClicked/leftClicked 等（fabric-api/mixin 面）。
+- FluidBuilder（需 fabric 流体重设计）。
 - 测试树放行三个中立适配器测试；common-api-processor 接线。
 
 ## P2（大块移植，按需排期）

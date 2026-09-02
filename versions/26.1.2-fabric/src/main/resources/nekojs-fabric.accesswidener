@@ -15,3 +15,7 @@ accessible field net/minecraft/world/item/crafting/SingleItemRecipe result Lnet/
 accessible method net/minecraft/world/item/crafting/SingleItemRecipe result ()Lnet/minecraft/world/item/ItemStackTemplate;
 accessible field net/minecraft/world/item/crafting/Ingredient values Lnet/minecraft/core/HolderSet;
 
+# 注册 builder 面：ParticleTypeBuilder 直接构造 SimpleParticleType（NeoForge 侧由共享
+# AT 放宽同名构造，fabric 由此 AW 等价）。
+accessible method net/minecraft/core/particles/SimpleParticleType <init> (Z)V
+
