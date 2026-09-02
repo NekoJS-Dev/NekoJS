@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.wrapper.registry.gen;
 
 import net.minecraft.core.particles.SimpleParticleType;
@@ -25,4 +23,3 @@ public class ParticleTypeBuilder extends RegistryObjectBuilder<SimpleParticleTyp
         return new SimpleParticleType(overrideLimiter);
     }
 }
-//?}

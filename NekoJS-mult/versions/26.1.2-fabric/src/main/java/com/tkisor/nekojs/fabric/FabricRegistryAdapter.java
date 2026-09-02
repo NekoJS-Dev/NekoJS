@@ -35,6 +35,22 @@ public final class FabricRegistryAdapter {
             drainRegistry(key);
         }
         REPOSITORY.undeliveredAdditional().keySet().stream().toList().forEach(FabricRegistryAdapter::drainRegistry);
+        // 实体属性挂载：EntityTypeBuilder build 期记账的属性表统一注册（NeoForge 侧由
+        // EntityAttributeCreationEvent 消费同一 drainPendingAttributes）
+        com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder.drainPendingAttributes()
+                .forEach(net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry::register);
+        // groupTab 分配消费：GROUP_ASSIGNMENTS 按标签页分组注册 modifyOutput 追加
+        //（NeoForge 侧由 BuildCreativeModeTabContentsEvent 消费）；modifyOutput 是懒回调，
+        // 注册表此时已冻结完毕，物品解析在回调期安全
+        java.util.Map<Identifier, java.util.List<Identifier>> byTab = new java.util.HashMap<>();
+        com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder.GROUP_ASSIGNMENTS.forEach(
+                (itemId, tabId) -> byTab.computeIfAbsent(tabId, k -> new java.util.ArrayList<>()).add(itemId));
+        byTab.forEach((tabId, itemIds) ->
+                net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(
+                                ResourceKey.create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, tabId))
+                        .register(output -> itemIds.forEach(id ->
+                                BuiltInRegistries.ITEM.getOptional(id).ifPresent(item ->
+                                        output.accept(new net.minecraft.world.item.ItemStack(item))))));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

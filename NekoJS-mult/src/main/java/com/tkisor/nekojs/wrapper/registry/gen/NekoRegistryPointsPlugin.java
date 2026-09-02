@@ -61,14 +61,18 @@ public final class NekoRegistryPointsPlugin
         collector.setDefault(Registries.PAINTING_VARIANT, "basic");
         collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
-        //? if neoforge {
-        // NeoForge 特化类型（连带注册 / 平台事件挂钩 / NeoForge 映射差异）
+        // builder 本体平台无关（零 loader 依赖），fabric 由 FabricRegistryAdapter 单批直注 +
+        // 收尾挂实体属性/groupTab 追加（NeoForge 侧经 EntityAttributeCreationEvent /
+        // BuildCreativeModeTabContentsEvent 消费同一批记账）。
         collector.registerType(Registries.ITEM, "basic", ItemBuilder::new);
         collector.setDefault(Registries.ITEM, "basic");
         collector.registerType(Registries.BLOCK, "basic", BlockBuilder::new);
         collector.setDefault(Registries.BLOCK, "basic");
+//? if neoforge {
+        // 流体体系是 NeoForge 面（FluidStack/FluidIngredient），fabric 等价物需重设计
         collector.registerType(Registries.FLUID, "basic", FluidBuilder::new);
         collector.setDefault(Registries.FLUID, "basic");
+//?}
         collector.registerType(Registries.ENTITY_TYPE, "basic", EntityTypeBuilder::new);
         collector.setDefault(Registries.ENTITY_TYPE, "basic");
         collector.registerType(Registries.ENCHANTMENT, "basic", EnchantmentBuilder::new);
@@ -77,7 +81,6 @@ public final class NekoRegistryPointsPlugin
         collector.setDefault(Registries.PARTICLE_TYPE, "basic");
         collector.registerType(Registries.CREATIVE_MODE_TAB, "basic", CreativeTabBuilder::new);
         collector.setDefault(Registries.CREATIVE_MODE_TAB, "basic");
-        //?}
     }
 
     /** registry_infos 产物（bootstrap 完成后可取；adapter 构建脚本面事件时调用）。 */
