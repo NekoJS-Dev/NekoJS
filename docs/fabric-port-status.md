@@ -67,16 +67,24 @@
 - `bindings/event/ServerEvents`（fabric 孪生）：共享树版是 NeoForge 原生事件签名整文件
   守卫，孪生只含 recipes/afterRecipes；后续把共享树版事件载荷中立化后合并回单副本。
 
+7. **网络自定义通道整链打通**（2026-09-02 第二批）：NekoScriptPayload 双向注册
+   （PayloadTypeRegistry serverbound/clientbound + ServerPlayNetworking/
+   ClientPlayNetworking receiver，切主线程后走中立投递）；共享树 NetworkJS 的
+   S2C 两法改走 PlayPacketDispatchers（中立发送面）、C2S 行内 loader 分支；
+   NetworkMessageHandler 拆出中立 post 核心（NeoForge 的 IPayloadContext 包装收进
+   行内守卫）；FabricCorePlugin 注册 NetworkEvents 组与 "Network" 绑定——脚本
+   `Network.sendToServer/sendToPlayer/sendToAll` 与 `NetworkEvents.server/client`
+   在 fabric 可用；FabricPlatform 点亮 NETWORK_CUSTOM_CHANNEL 位。
+8. **FabricCatalogPlatformProvider**（fabric 的 probe/workspace 目录数据源）：
+   host 扩展 7/9（ItemStack/BlockState 两接口待其扩展批次）、registry 类型×10、
+   配方命名空间（复用去守卫后的 NekoRecipeNamespaces）、snippets、modIds；
+   NekoJSFabricMod static 块接线 setPlatformProvider——fabric 的 typings 从此
+   含 host 扩展方法（runServer 实测 `nekojs probe` 生成 301 文件，
+   addXpLevels/spawnLightning 出现在产物 d.ts 中）。
+
 ## P0 剩余（破坏活面）
 
-1. **网络自定义通道整链**：NetworkEvents 组注册 + NekoScriptPayload 双向注册
-   （PayloadTypeRegistry.playC2S/S2C + ServerPlayNetworking/ClientPlayNetworking receiver）
-   + NetworkJS 绑定（共享树守卫，需孪生或中立化）。发送面 PlayPacketDispatcher 已由
-   FabricDispatcher 实现。脚本 `Network.sendToServer/sendToPlayer` 当前不可用。
-2. **NekoScriptCatalog.setPlatformProvider 未调用**：fabric 的 probe/typings 不含 host
-   扩展方法（运行时不受影响——@RemapByPrefix 成员重映射是共享的）。需要一个
-   FabricCatalogPlatformProvider（镜像 NeoForgeCatalogPlatformProvider 的九个
-   HostExtensionSource）。
+（无——原 P0 两项已分别在上面第 7、8 条完成。）
 
 ## P1（功能面，现成 fabric-api 挂点）
 

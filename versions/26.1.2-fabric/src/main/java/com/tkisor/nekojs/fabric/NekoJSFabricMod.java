@@ -66,6 +66,9 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
     static {
         Platform.init(new FabricPlatform());
         NekoIdCompat.init(new FabricIdCompat());
+        // probe/workspace 目录的平台数据源（注册表类型、host 扩展、snippets）——运行时
+        // 成员重映射是共享的，不装这个只缺 typings/文档面（见 docs/fabric-port-status.md）
+        com.tkisor.nekojs.api.catalog.NekoScriptCatalog.setPlatformProvider(new FabricCatalogPlatformProvider());
     }
 
     private final ScriptEventsJS scriptEventsRegistrar;

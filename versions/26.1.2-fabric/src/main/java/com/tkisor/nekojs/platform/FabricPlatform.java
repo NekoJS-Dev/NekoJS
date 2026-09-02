@@ -18,8 +18,9 @@ import net.fabricmc.loader.api.FabricLoader;
  *   <li>{@code FMLPaths.GAMEDIR} → {@link FabricLoader#getGameDir()}</li>
  * </ul>
  *
- * <p>capabilities 只声明 fabric 侧已经成立的位：TAGS / RESOURCE_PACKS。网络通道、
- * 配方热重载、配方查看器等要等 fabric 侧对应实现落地后再点亮——`IPlatform` 的
+ * <p>capabilities 只声明 fabric 侧已经成立的位：TAGS / RESOURCE_PACKS /
+ * NETWORK_CUSTOM_CHANNEL（脚本自定义通道已双向注册）。配方热重载、配方查看器等
+ * 要等 fabric 侧对应实现落地后再点亮——`IPlatform` 的
  * 默认方法（nbtBinaryCodec / registryQueryService）保持未实现语义，脚本侧会拿到空结果
  * 而不是崩溃。
  */
@@ -71,7 +72,8 @@ public final class FabricPlatform implements IPlatform {
 
     @Override
     public Set<PlatformCapability> capabilities() {
-        return Set.of(PlatformCapability.TAGS, PlatformCapability.RESOURCE_PACKS);
+        return Set.of(PlatformCapability.TAGS, PlatformCapability.RESOURCE_PACKS,
+                PlatformCapability.NETWORK_CUSTOM_CHANNEL);
     }
 
     @Override

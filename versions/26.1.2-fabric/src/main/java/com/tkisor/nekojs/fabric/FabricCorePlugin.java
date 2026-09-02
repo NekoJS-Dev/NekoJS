@@ -57,6 +57,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
                         java.util.Set.of("of", "item", "tag", "any", "all", "not")),
                 com.tkisor.nekojs.bindings.static_access.IngredientFactory.class));
         registry.register("RecipeSchema", new com.tkisor.nekojs.bindings.RecipeSchemaBinding());
+        // 脚本自定义网络通道（Network.sendToServer/sendToPlayer/sendToAll；payload 双向
+        // 注册与 receiver 在 FabricPlayNetwork）
+        registry.register("Network", com.tkisor.nekojs.wrapper.network.NetworkJS.class);
     }
 
     @Override
@@ -87,6 +90,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(FabricEntityEventBindings.ENTITY_EVENTS);
         // 物品 rightClicked（按物品 id dispatch）
         registry.register(FabricItemEventBindings.ITEM_EVENTS);
+        // 脚本自定义网络通道：server/client 总线按 channel dispatch（receiver 在
+        // FabricPlayNetwork，发送面 NetworkJS → PlayPacketDispatchers）
+        registry.register(com.tkisor.nekojs.bindings.event.NetworkEvents.GROUP);
     }
 
     @Override
