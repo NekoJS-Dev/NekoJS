@@ -148,6 +148,12 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // 物品 tooltip（client，FabricClientEventBindings 挂 ItemTooltipCallback；组名
         // "ItemEvents" 与 FabricItemEventBindings 的 rightClicked 组同名合并）
         registry.register(com.tkisor.nekojs.bindings.event.ItemEvents.GROUP);
+        // 玩家事件 mixin 面子集（容器开合/合成/烧炼/损毁/进度/实体交互/维度切换，
+        // 中立 payload；与 FabricServerEventBindings.PLAYER_EVENTS 同名合并）
+        registry.register(com.tkisor.nekojs.bindings.event.PlayerEvents.GROUP);
+        // 实体事件 mixin 面子集（drops/finalizeSpawn/tickPre/tickPost/leaveLevel；
+        // 与 FabricEntityEventBindings.ENTITY_EVENTS 同名合并）
+        registry.register(com.tkisor.nekojs.bindings.event.EntityEvents.GROUP);
     }
 
     @Override
