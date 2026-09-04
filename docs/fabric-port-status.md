@@ -144,15 +144,64 @@
     entityPlaced / entityMultiPlaced 无现成回调，留 mixin 批次。语义差异：fabric 的
     AttackBlockCallback 只在生存模式触发（NeoForge 侧全模式），记入载荷 javadoc。
 
+13. **事件 mixin 面收网（Player/Item/Entity/Block/Level）**（2026-09-05 第七批）：
+    18 个新 mixin + 5 个 Fabric*BindingsV2 总线类 + 16 个共享树中立载荷 + 3 个孪生接口
+    （PlayerEvents×10 总线 / ItemEvents×6 / EntityEvents×5）+ BlockEvents 3 / LevelEvents 5：
+    - PlayerEvents：containerOpened/containerClosed（ServerPlayerContainerMixin：openMenu/
+      openHorseInventory/openNautilusInventory 用 `@At("RETURN")` + `containerMenu` 读取
+      ——openMenu 里新菜单是局部变量，INVOKE 注入取不到；doCloseContainer 用 HEAD，
+      removed/putfield 之前旧菜单仍在）、crafted/smelted（ResultSlot 两混入 @At HEAD，
+      26.x 无 ServerPlayerRecipes，smelted 数据在 FurnaceResultSlot.checkTakeAchievements）、
+      destroyed（ItemStack.applyDamage：HEAD 快照 isBroken + RETURN 比较，避免
+      INVOKE shrink 扫描降级）、advancement（PlayerAdvancements.lambda$award$0 HEAD——
+      "刚完成且有 display"语义，与 NeoForge 一致）、entityInteract（并入
+      MixinServerGamePacketListenerItemInteract——见下方工程经验 7）、changedDimension
+      （ServerPlayer.teleport(TeleportTransition) HEAD/TAIL，26.x 无 changeDimension）。
+    - ItemEvents：canPickUp+pickedUpPre（同一 handler 双 dispatch）、pickedUp
+      （playerTouch TAIL + isRemoved 过滤成功拾取）、dropped（ServerPlayer.drop(ItemStack,ZZ)
+      汇聚点 HEAD，isDeadOrDying 排除死亡掉落）、foodEaten（completeUsingItem TAIL）、
+      entityInteracted（handleInteract INVOKE interactOn）。
+    - EntityEvents：drops（dropAllDeathLoot HEAD）、finalizeSpawn（TAIL +
+      CIR&lt;SpawnGroupData&gt;；EntitySpawnReason 26.x 才有，载荷整文件 `//? if >=26` 守护）、
+      tickPre/tickPost（MixinEntityTick HEAD/TAIL）、leaveLevel（ENTITY_UNLOAD 惰性注册）。
+    - BlockEvents：portalSpawn（PortalShape.createPortalBlocks HEAD，@Shadow axis/bottomLeft
+      构造载荷；框架生成不经 PortalShape 的路径不覆盖——载明接线清单）、neighborNotify
+      （NeighborUpdater.executeUpdate HEAD——26.x 红石通知网络唯一汇点，接口**静态**方法，
+      mixin 类必须是 interface 且 handler private static；高频通道，无监听器短路）、
+      farmlandTrample（fallOn 内 getBbWidth 调用点 INVOKE，全套判定之后，消除"体型
+      过小多触发"偏差已记入 javadoc）。
+    - LevelEvents：saved（ServerLevel.save TAIL）、explosionStart/detonate 及
+      before/after 总线（Explosion.explode()I HEAD/TAIL + CIR&lt;Integer&gt;，
+      前/后总线由同一 handler 按 hasListeners 分发）。
+    **mixin 注入工程经验（本批实测，后续批次直接照抄）**：① `@At("INVOKE")` target
+    在本 fork（sponge-mixin 基 0.8.7）下必须用单 L 形式 `Lowner;name(desc)ret`，
+    `LL` 形式全部扫 0（owner 解析出多余 L 前缀，与 CP owner 永不匹配）；② INVOKE
+    handler 的实参只能取宿主方法参（前缀）+ CallbackInfo/CIR，被调方法实参取不到——
+    需要就用 TAIL/RETURN + @Shadow 字段或重新解析（如 packet.entityId()）；③ 目标
+    方法非 void 必须用 CallbackInfoReturnable（否则 "CallbackInfoReturnable is
+    required!"）；④ `method = "name"` 不带描述符会解析到继承链同名方法
+    （fallOn 误中 Block.fallOn → 扫 0），一律写全描述符；⑤ CP owner ≠ 声明类的
+    INVOKE 目标扫 0（transferState：CP 是静态类型 InventoryMenu、声明在
+    AbstractContainerMenu）；⑥ 接口静态方法目标：mixin 类声明为 interface +
+    handler private static；⑦ 同一注入点两个孪生 @Inject 出现"一个扫 0 一个通过"
+    的怪癖（解释未定论），处理方式：合并进单一 handler 一次 dispatch
+    （entityInteract + entityInteracted 已如此合并）。
+    冒烟：runServer 启动 `Done (0.943s)` 零注入失败、78s 后正常停止；四节点
+    （common/26.1.2/26.1.2-fabric/26.2.0）编译 + guardLint（247 守卫块 0 警告）全绿。
+    遗留：ServerPlayer/ServerGamePacketListenerImpl 的混入在玩家连接时才类加载
+    （headless 冒烟覆盖不到），defaultRequire=1 保证失败必崩不静默。Explosion radius
+    AW public-f 未做（爆破半径修饰留待后续）。
+
 ## P1 剩余（功能面）
 
 - BlockEvents：placed/entityPlaced/entityMultiPlaced（mixin，26.x fabric-api 无现成回调）、
-  neighborNotify/fluidPlaced/farmlandTrample/portalSpawn/randomTick/blockEntityTick
-  （mixin 面）、modification（SERVER_STARTING 重放）。
-- PlayerEvents：changedDimension（需 mixin，此版 fabric-api 无现成事件）、advancement/
-  container×4/entityInteract/crafted/smelted/destroyed/inventoryChanged（mixin 面）。
-- LevelEvents：saved/爆炸系（需 mixin Level#explode、Explosion radius AW public-f）。
-- ItemEvents：canPickUp/pickedUp/dropped/entityInteracted/foodEaten（mixin 面）。
+  fluidPlaced、randomTick/blockEntityTick（mixin 面）、modification（SERVER_STARTING 重放）。
+  neighborNotify/farmlandTrample/portalSpawn 已在第 13 批完成。
+- PlayerEvents：inventoryChanged（mixin 面）。container×4/crafted/smelted/destroyed/
+  advancement/entityInteract/changedDimension 已在第 13 批完成。
+- LevelEvents：saved/爆炸系已在第 13 批完成（Explosion radius 修饰 AW 未做）。
+- ItemEvents：canPickUp/pickedUp/pickedUpPre/dropped/entityInteracted/foodEaten 已在第 13 批完成；
+  剩 category/food 配方面（其余 P2）。
 - FluidBuilder（需 fabric 流体重设计）。
 - common-api-processor 的 fabric 平台支持（processor 端先扩平台模型，见上）。
 
