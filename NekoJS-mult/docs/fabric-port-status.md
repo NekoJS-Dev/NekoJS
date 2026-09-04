@@ -136,13 +136,23 @@
     - common-api-processor 接线**不做**：processor 平台值只有 nf/cr 两态，fabric 是
       第三平台需先扩 processor 的平台模型（fabric 上大量 spec 未实现，接上会误报红）
 
+12. **BlockEvents.rightClicked / leftClicked**（2026-09-02 第六批）：两个中立 payload
+    （BlockRightClickEventJS / BlockLeftClickEventJS）落共享树，FabricBlockEventBindings
+    接 UseBlockCallback / AttackBlockCallback（均未弃用；双端回调过滤客户端实例，SERVER
+    总线语义与 NeoForge 侧一致）。可取消：脚本 return true → fabric 回调 SUCCESS。
+    **26.x 平台事实：PlayerBlockPlaceEvents 已从 fabric-api 删除**——placed /
+    entityPlaced / entityMultiPlaced 无现成回调，留 mixin 批次。语义差异：fabric 的
+    AttackBlockCallback 只在生存模式触发（NeoForge 侧全模式），记入载荷 javadoc。
+
 ## P1 剩余（功能面）
 
+- BlockEvents：placed/entityPlaced/entityMultiPlaced（mixin，26.x fabric-api 无现成回调）、
+  neighborNotify/fluidPlaced/farmlandTrample/portalSpawn/randomTick/blockEntityTick
+  （mixin 面）、modification（SERVER_STARTING 重放）。
 - PlayerEvents：changedDimension（需 mixin，此版 fabric-api 无现成事件）、advancement/
   container×4/entityInteract/crafted/smelted/destroyed/inventoryChanged（mixin 面）。
 - LevelEvents：saved/爆炸系（需 mixin Level#explode、Explosion radius AW public-f）。
 - ItemEvents：canPickUp/pickedUp/dropped/entityInteracted/foodEaten（mixin 面）。
-- BlockEvents：placed/rightClicked/leftClicked 等（fabric-api/mixin 面）。
 - FluidBuilder（需 fabric 流体重设计）。
 - common-api-processor 的 fabric 平台支持（processor 端先扩平台模型，见上）。
 
