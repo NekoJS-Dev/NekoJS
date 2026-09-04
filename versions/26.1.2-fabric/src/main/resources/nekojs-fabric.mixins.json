@@ -9,7 +9,25 @@
     "NekoEntityPDataMixin",
     "ServerCommonPacketListenerAccessor",
     "ServerGamePacketListenerMixin",
-    "ServerLevelMixin"
+    "ServerLevelMixin",
+    "ServerPlayerContainerMixin",
+    "CraftingResultSlotMixin",
+    "FurnaceResultSlotMixin",
+    "ItemStackDestroyMixin",
+    "PlayerAdvancementsMixin",
+    "ServerPlayerDimensionMixin",
+    "MixinItemEntityPickup",
+    "MixinServerPlayerItemDrop",
+    "MixinLivingEntityUseItemFinish",
+    "MixinServerGamePacketListenerItemInteract",
+    "MixinLivingEntityDeathDrops",
+    "MixinMobFinalizeSpawn",
+    "MixinEntityTick",
+    "MixinServerLevelSave",
+    "MixinServerExplosion",
+    "MixinPortalShape",
+    "MixinNeighborUpdater",
+    "MixinFarmlandBlock"
   ],
   "injectors": {
     "defaultRequire": 1
