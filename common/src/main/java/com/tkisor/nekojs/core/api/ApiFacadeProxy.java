@@ -8,6 +8,8 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.ApiRuntimeView;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
+import graal.graalvm.polyglot.proxy.ProxyIterable;
+import graal.graalvm.polyglot.proxy.ProxyIterator;
 import graal.graalvm.polyglot.proxy.ProxyObject;
 
 import java.util.ArrayList;
@@ -20,7 +22,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class ApiFacadeProxy implements ProxyObject {
+public final class ApiFacadeProxy implements ProxyObject, ProxyIterable {
 
     private final ApiRuntimeView runtimeView;
     private final ApiSymbolId typeId;
@@ -236,6 +238,29 @@ public final class ApiFacadeProxy implements ProxyObject {
     @Override
     public void putMember(String key, Value value) {
         throw new UnsupportedOperationException("Managed API values are read-only");
+    }
+
+    /**
+     * 底层实现本身可迭代（如 {@code RegistryView} 的条目 id 列表）时，代理对象对脚本
+     * {@code for...of} 可见。元素按原样透传——今天唯一的可迭代实现产出 String id。
+     */
+    @Override
+    public ProxyIterator getIterator() {
+        if (!(implementation instanceof Iterable<?> iterable)) {
+            return null;
+        }
+        java.util.Iterator<?> iterator = iterable.iterator();
+        return new ProxyIterator() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public Object getNext() {
+                return iterator.next();
+            }
+        };
     }
 
     @Override

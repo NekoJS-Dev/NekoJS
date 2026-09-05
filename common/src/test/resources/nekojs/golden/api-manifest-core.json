@@ -487,6 +487,12 @@
       ]
     },
     {
+      "id": "member:RegistryView.iterator",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
       "id": "member:RegistryView.tag",
       "signatures": [
         "(PRIMITIVE:string)"
