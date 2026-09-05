@@ -75,5 +75,12 @@ Stage: 已实施完结（2026-09-06，分支 feat/kjs-wrapper-parity，全票勾
 
 ## Further Notes
 
+实施期新增/澄清的决定（2026-09-06 实施时）：
+
+- record 转换对对象字面量里的**未知字段一律报错**（typo 早暴露）——比 spec 正文"缺字段才报错"更严格，属有意为之。
+- alias 建议注册在其来源适配器之后；来源在注册时尚未就绪的，优先级回退 LOWEST 并记忆化惰性解析。
+- 扫描器的 ResourceKey 字段经根注册表（BuiltInRegistries.REGISTRY）解析成 Registry 对象；解析不到（裸 JVM / 未 bootstrap）静默跳过。
+- Registry facade 可迭代化经 ApiFacadeProxy 实现 ProxyIterable 达成；连带修正 ApiValueMarshaller 的 SYMBOL 返回分支打分不再一刀切拒收 Iterable 值（联合类型里 ARRAY 分支 4 分仍稳定压过 SYMBOL 2 分）。
+
 - 背景：KJS 1.21 的 `wrapper` 包横跨绑定与转换两层；NekoJS 的对标物分别是绑定扩展点体系和 `type_adapter` → targetTypeMapping 管线。本 spec 只补转换层三缺口 + 绑定层 6 全局，其余已对齐（codec 一行注册已有、错误面已对齐、probe/typings 反超）。
 - 用户裁定记录：spec 落本地 docs、不发 GitHub issue（issue-tracker 裁定沿用）。

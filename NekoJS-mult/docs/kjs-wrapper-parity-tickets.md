@@ -34,9 +34,9 @@ T1–T4 各自在独立分支/工作树实现，汇入 PR 分支 `feat/kjs-wrapp
 
 - [x] 启动时扫描已知 holder 类的 `public static final ResourceKey<? extends Registry<T>>` / `Registry<T>` 字段（vanilla `Registries`/`BuiltInRegistries`、NeoForge 注册表类；插件可贡献额外类）
 - [x] 对每个"没有专属 adapter 的注册表类型"动态实例化 `SimpleRegistryBasedAdapter` 同款逻辑并注册，优先级 LOWEST（手写 adapter 零行为变化）
-- [x] 转换期查表：RegistryAccess 懒初始化（HolderAdapter 模式），裸 JVM 单测不炸
+- [x] 裸 JVM 单测不炸：安装期读字段，解析不到（裸 JVM/未 bootstrap）静默跳过；ResourceKey 字段经根注册表 BuiltInRegistries.REGISTRY 解析
 - [x] 失败静默跳过 + debug 日志，不阻断启动
-- [x] 未适配类型转换失败时，报错信息提示"该类型属于注册表 X"（若扫描器认识它）
+- [x] 扫描出的类型报错自带注册表名（SimpleRegistryBasedAdapter："no object with id … in registry …"）；扫描器未覆盖的类型维持通用 Cannot convert 报错
 - [x] 测试：合成静态字段类测发现/去重；注册表真值路径沿 `VanillaRegistryProbe` assume-skip
 - [x] 1.21.1 / 26.x 类名差异（`ResourceLocation`/`Identifier` 等）用守卫表达
 

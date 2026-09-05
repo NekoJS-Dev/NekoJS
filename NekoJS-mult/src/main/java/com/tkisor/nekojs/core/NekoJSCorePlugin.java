@@ -62,6 +62,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -251,8 +252,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         // Codec 兜底适配器示范（precedence=LOWEST）：任意 JS 值 -> JsonElement -> codec.parse(JsonOps)
         TypeAdapterDsl.registerCodec(registry, Fireworks.class, Fireworks.CODEC);
         // 自动注册表适配器兜底：vanilla 注册表类型里没手写适配器的（Fluid、Attribute、
-        // VillagerProfession 等）动态补 SimpleRegistryBasedAdapter，字符串 id 直通
-        RegistryAutoAdapterScanner.installInto(registry, List.of(BuiltInRegistries.class));
+        // VillagerProfession 等）动态补 SimpleRegistryBasedAdapter，字符串 id 直通。
+        // Registries（ResourceKey holder）与 BuiltInRegistries（Registry holder）覆盖同一批
+        // vanilla 类型，去重集合保证只注册一次；mod 注册表经插件贡献额外 holder 类
+        RegistryAutoAdapterScanner.installInto(registry, List.of(BuiltInRegistries.class, Registries.class));
     }
 
     @Override
