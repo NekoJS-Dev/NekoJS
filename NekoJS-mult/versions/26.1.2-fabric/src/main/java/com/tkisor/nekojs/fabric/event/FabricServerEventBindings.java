@@ -6,11 +6,18 @@ import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerTickEventJS;
+import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
+import com.tkisor.nekojs.wrapper.event.server.DatapackSyncEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
+import com.tkisor.nekojs.wrapper.event.server.LootTableLoadEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
+import com.tkisor.nekojs.wrapper.event.server.TagUpdatedEventJS;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.CommonLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -54,6 +61,31 @@ public final class FabricServerEventBindings {
             SERVER_EVENTS.server("tickPre", ServerTickEventJS.class);
     public static final EventBusJS<ServerTickEventJS, Void> TICK_POST =
             SERVER_EVENTS.server("tickPost", ServerTickEventJS.class);
+
+    // ---- 资源/生命周期面（第 15 批；NeoForge 侧直传原生事件，fabric 侧纯回调 + 中立载荷）----
+
+    /**
+     * 数据包同步（server 脚本）：{@code ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS}
+     * 转换。player 为 null 表示 reload 后的全体玩家（与 NF OnDatapackSyncEvent 一致）。
+     */
+    public static final EventBusJS<DatapackSyncEventJS, Void> DATAPACK_SYNC =
+            SERVER_EVENTS.server("datapackSync", DatapackSyncEventJS.class);
+
+    /**
+     * 标签更新（server 脚本）：{@code CommonLifecycleEvents.TAGS_LOADED} 转换
+     * （fabric impl 经 ReloadableServerResourcesMixin 在服务端资源装载完成时触发，
+     * 时机与 NF TagsUpdatedEvent 对齐；NF 原生的 UpdateCause 无 fabric 对应）。
+     */
+    public static final EventBusJS<TagUpdatedEventJS, Void> TAGS_UPDATED =
+            SERVER_EVENTS.server("tagsUpdated", TagUpdatedEventJS.class);
+
+    /**
+     * 战利品表装载（server 脚本）：{@code LootTableEvents.MODIFY} 转换。
+     * 语义差异（记录）：NF 是整表 get/set 且可取消；fabric 是 builder 原地修改、
+     * 不可取消——载荷 javadoc 与移植台账双记录。
+     */
+    public static final EventBusJS<LootTableLoadEventJS, Void> LOOT_TABLE_LOAD =
+            SERVER_EVENTS.server("lootTableLoad", LootTableLoadEventJS.class);
 
     /** 与 NeoForge 侧 bindings/event/PlayerEvents 同名（fabric 子集）。 */
     public static final EventGroup PLAYER_EVENTS = EventGroup.of("PlayerEvents");
@@ -107,6 +139,10 @@ public final class FabricServerEventBindings {
             currentServer = server;
             loadServerScripts.run();
             ABOUT_TO_START.post(new ServerLifecycleEventJS(server));
+            // 与 NeoForge 侧 ServerEventListener#onServerAboutToStart 同位次：
+            // aboutToStart 事件之后、starting 之前重放物品/方块属性修改
+            ItemModificationEventJS.fire(server);
+            BlockModificationEventJS.fire();
             STARTING.post(new ServerLifecycleEventJS(server));
         });
         ServerLifecycleEvents.SERVER_STARTED.register(server ->
@@ -150,6 +186,25 @@ public final class FabricServerEventBindings {
             // 同一 tick 内进又出：撤掉排队中的 loggedIn，避免 loggedOut 先于 loggedIn
             if (PENDING_LOGINS.remove(handler.player)) return;
             LOGGED_OUT.post(new PlayerLifecycleEventJS(handler.player));
+        });
+        // 数据包同步：player=null = reload 后的全体玩家（与 NF OnDatapackSyncEvent 语义一致）
+        ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register((player, hasJoinedBefore) -> {
+            MinecraftServer server = currentServer;
+            if (server != null) {
+                DATAPACK_SYNC.post(new DatapackSyncEventJS(player, server.getPlayerList()));
+            }
+        });
+        // 标签更新：fabric TAGS_LOADED（RegistryAccess, updated）——TAGS_UPDATED 载荷的
+        // shouldUpdateStaticData 承载 updated（NF 的 UpdateCause 无 fabric 对应，差异记录）
+        CommonLifecycleEvents.TAGS_LOADED.register((registries, updated) ->
+                TAGS_UPDATED.post(new TagUpdatedEventJS(registries, updated)));
+        // 战利品表装载：per-table MODIFY（builder 模式；NF 侧为整表 get/set + 可取消，差异记录）
+        LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
+            if (!LOOT_TABLE_LOAD.hasListeners()) {
+                return;
+            }
+            LOOT_TABLE_LOAD.post(new LootTableLoadEventJS(
+                    key.identifier(), tableBuilder, registries));
         });
         net.fabricmc.fabric.api.message.v1.ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
                 CHAT.post(new com.tkisor.nekojs.wrapper.event.player.ServerChatEventJS(sender, message.signedContent())));

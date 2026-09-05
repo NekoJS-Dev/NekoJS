@@ -14,6 +14,7 @@ import com.tkisor.nekojs.wrapper.event.item.ItemEntityPickupEventJS;
 import com.tkisor.nekojs.wrapper.event.item.ItemTooltipEventJS;
 import com.tkisor.nekojs.wrapper.event.item.ItemUseFinishedEventJS;
 import com.tkisor.nekojs.wrapper.event.item.PlayerEntityInteractEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -61,4 +62,9 @@ public interface ItemEvents {
             GROUP.add("entityInteracted", ScriptType.SERVER, EventBusJS.of(
                     PlayerEntityInteractEventJS.class, true,
                     DispatchKey.of(Item.class, event -> event.getItem().getItem())));
+
+    // modification（posted-object 模式）：服务器启动与 /nekojs reload server 时
+    // 平台侧手动 post（ItemModificationEventJS.fire），不挂任何总线事件。
+    EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
+            GROUP.server("modification", ItemModificationEventJS.class);
 }
