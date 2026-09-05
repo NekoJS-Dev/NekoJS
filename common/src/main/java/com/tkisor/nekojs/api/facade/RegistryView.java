@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.facade;
 
 import com.tkisor.nekojs.api.annotation.ContractReceiver;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -33,7 +34,7 @@ public interface RegistryView extends Iterable<String> {
     String dataMapValue(String dataMapTypeId, String id);
 
     @Override
-    default java.util.Iterator<String> iterator() {
+    default Iterator<String> iterator() {
         return all().iterator();
     }
 }

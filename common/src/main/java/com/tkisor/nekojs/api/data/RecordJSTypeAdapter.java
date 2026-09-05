@@ -36,6 +36,7 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
     private final Class<T> recordClass;
     private final Map<String, Object> defaults;
     private final RecordComponent[] components;
+    private final Set<String> componentNames;
     private final Constructor<T> canonical;
 
     public RecordJSTypeAdapter(Class<T> recordClass, Map<String, Object> defaults) {
@@ -45,9 +46,10 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
         this.recordClass = recordClass;
         this.defaults = Map.copyOf(defaults);
         this.components = recordClass.getRecordComponents();
-        Set<String> names = componentNames();
+        this.componentNames = Arrays.stream(components).map(RecordComponent::getName)
+                .collect(Collectors.toUnmodifiableSet());
         for (String key : this.defaults.keySet()) {
-            if (!names.contains(key)) {
+            if (!componentNames.contains(key)) {
                 throw new IllegalArgumentException("default for unknown component '" + key + "' of "
                         + recordClass.getName());
             }
@@ -109,9 +111,9 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
             }
         }
         for (String key : value.getMemberKeys()) {
-            if (!componentNames().contains(key)) {
+            if (!componentNames.contains(key)) {
                 throw new ValueConversionException(recordClass, objectShapeDescription(), value,
-                        "unknown field '" + key + "' (expected: " + String.join(", ", componentNames()) + ")");
+                        "unknown field '" + key + "' (expected: " + String.join(", ", componentNames) + ")");
             }
         }
         try {
@@ -169,8 +171,17 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
                 .map(Enum::name).collect(Collectors.joining(", ")) + ")");
     }
 
-    private Set<String> componentNames() {
-        return Arrays.stream(components).map(RecordComponent::getName).collect(Collectors.toSet());
+    /** 字段类型的统一分类：probe 形状与报错文本共用一份映射，不会漂移。 */
+    private enum FieldShapeKind {
+        STRING, BOOLEAN, NUMBER, ENUM, HOST
+    }
+
+    private static FieldShapeKind classify(Class<?> type) {
+        if (type == String.class) return FieldShapeKind.STRING;
+        if (type == boolean.class || type == Boolean.class) return FieldShapeKind.BOOLEAN;
+        if (type.isPrimitive() || Number.class.isAssignableFrom(type)) return FieldShapeKind.NUMBER;
+        if (type.isEnum()) return FieldShapeKind.ENUM;
+        return FieldShapeKind.HOST;
     }
 
     private String objectShapeDescription() {
@@ -189,18 +200,21 @@ public final class RecordJSTypeAdapter<T extends Record> implements JSTypeAdapte
     }
 
     private static String simpleShape(Class<?> type) {
-        if (type == String.class) return "string";
-        if (type == boolean.class || type == Boolean.class) return "boolean";
-        if (type.isPrimitive() || Number.class.isAssignableFrom(type)) return "number";
-        if (type.isEnum()) return "string (" + type.getSimpleName() + ")";
-        return type.getSimpleName();
+        return switch (classify(type)) {
+            case STRING -> "string";
+            case BOOLEAN -> "boolean";
+            case NUMBER -> "number";
+            case ENUM -> "string (" + type.getSimpleName() + ")";
+            case HOST -> type.getSimpleName();
+        };
     }
 
     private static AdapterInputShape shapeOf(Class<?> type) {
-        if (type == String.class) return AdapterInputShape.string();
-        if (type == boolean.class || type == Boolean.class) return AdapterInputShape.bool();
-        if (type.isPrimitive() || Number.class.isAssignableFrom(type)) return AdapterInputShape.number();
-        if (type.isEnum()) return AdapterInputShape.string();
-        return AdapterInputShape.host(type);
+        return switch (classify(type)) {
+            case STRING, ENUM -> AdapterInputShape.string();
+            case BOOLEAN -> AdapterInputShape.bool();
+            case NUMBER -> AdapterInputShape.number();
+            case HOST -> AdapterInputShape.host(type);
+        };
     }
 }

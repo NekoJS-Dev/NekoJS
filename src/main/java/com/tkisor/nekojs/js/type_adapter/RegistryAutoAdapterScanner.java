@@ -4,6 +4,8 @@ import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.data.JSTypeAdapterRegistry;
 
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +19,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 自动注册表适配器扫描器：扫 holder 类里的 {@code public static final Registry<T>} 字段，
+ * 自动注册表适配器扫描器：扫 holder 类里的 {@code public static final Registry<T>} /
+ * {@code ResourceKey<Registry<T>>} 字段（后者经根注册表解析成 Registry 对象），
  * 对"没有专属适配器的注册表类型"动态实例化 {@link SimpleRegistryBasedAdapter} 并注册——
  * 脚本侧任何注册表类型参数都能直接传字符串 id，零 per-type 代码
  * （KubeJS {@code RegistryType.Scanner} 的对标；NekoJS 没有 Mixin 那条路，走静态字段反射）。
@@ -50,23 +53,65 @@ public final class RegistryAutoAdapterScanner {
     private static void installField(JSTypeAdapterRegistry registry, Set<Class<?>> covered, Field field) {
         int mods = field.getModifiers();
         if (!Modifier.isStatic(mods) || !Modifier.isPublic(mods)) return;
-        if (!Registry.class.isAssignableFrom(field.getType())) return;
+        if (Registry.class.isAssignableFrom(field.getType())) {
+            registerFromHolder(registry, covered, field.getGenericType(), () -> readStatic(field, Registry.class));
+        } else if (ResourceKey.class.isAssignableFrom(field.getType())) {
+            // vanilla Registries 类只发 ResourceKey——经根注册表解析成 Registry 对象再注册；
+            // 根注册表查不到（裸 JVM / 未 bootstrap）则静默跳过
+            registerFromHolder(registry, covered, keyTargetRegistryType(field.getGenericType()),
+                    () -> resolveFromRoot(readStatic(field, ResourceKey.class)));
+        }
+    }
 
-        Class<?> valueType = registryValueType(field.getGenericType());
+    private static void registerFromHolder(JSTypeAdapterRegistry registry, Set<Class<?>> covered,
+            Type registryType, java.util.function.Supplier<Registry<?>> source) {
+        Class<?> valueType = registryValueType(registryType);
         if (valueType == null) return; // 裸泛型 / 类型实参不是 Class
         if (Registry.class.isAssignableFrom(valueType)) return; // 根注册表等
         if (!covered.add(valueType)) return; // 已有专属适配器（手写 adapter 优先）
 
         Registry<?> registryObject;
         try {
-            registryObject = (Registry<?>) field.get(null);
+            registryObject = source.get();
         } catch (Throwable inaccessible) {
-            LOGGER.debug("registry auto-adapter: skip field {}", field, inaccessible);
+            LOGGER.debug("registry auto-adapter: skip field {}", valueType, inaccessible);
             return;
         }
         if (registryObject == null) return;
 
         register(registry, registryObject, valueType);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <H> H readStatic(Field field, Class<H> expected) {
+        try {
+            return (H) field.get(null);
+        } catch (Throwable inaccessible) {
+            LOGGER.debug("registry auto-adapter: field {} unreadable", field, inaccessible);
+            return null;
+        }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Registry<?> resolveFromRoot(ResourceKey<?> key) {
+        if (key == null) return null;
+        // REGISTRY 声明为 Registry<? extends Registry<?>>——通配捕获让泛型调用不可行，
+        // 走 raw 调用并兼容两种返回形态（26.x 的 get 返回 Optional，旧版返回可空对象）
+        Object resolved = ((Registry) BuiltInRegistries.REGISTRY).get(key);
+        if (resolved instanceof java.util.Optional<?> optional) {
+            return (Registry<?>) optional.orElse(null);
+        }
+        return (Registry<?>) resolved;
+    }
+
+    /** 取 {@code ResourceKey<Registry<T>>} 的内层 {@code Registry<T>} 类型；形态不符返回 null。 */
+    private static Type keyTargetRegistryType(Type genericType) {
+        if (genericType instanceof ParameterizedType parameterized
+                && parameterized.getActualTypeArguments()[0] instanceof ParameterizedType inner
+                && Registry.class.isAssignableFrom((Class<?>) inner.getRawType())) {
+            return inner;
+        }
+        return null;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})

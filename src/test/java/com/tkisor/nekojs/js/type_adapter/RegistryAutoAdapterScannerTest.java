@@ -8,6 +8,10 @@ import com.tkisor.nekojs.testfixture.VanillaRegistryProbe;
 import graal.graalvm.polyglot.Value;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.material.Fluid;
 
 import org.junit.jupiter.api.Assumptions;
@@ -95,6 +99,44 @@ class RegistryAutoAdapterScannerTest {
                 assertEquals(com.tkisor.nekojs.api.data.ConversionPrecedence.LOWEST, adapter.getPrecedence());
             }
         }
+    }
+
+    /** ResourceKey 形态 holder：vanilla Registries 类的字段形态（经根注册表解析）。 */
+    static class SyntheticKeyHolder {
+        public static final ResourceKey<Registry<Fluid>> FLUID = Registries.FLUID;
+    }
+
+    /** 根注册表里不存在的 key：裸 JVM 应静默跳过。 */
+    static class SyntheticUnresolvableKeyHolder {
+        public static final ResourceKey<Registry<String>> NOT_A_REAL_REGISTRY =
+                ResourceKey.create(
+                        ResourceKey.createRegistryKey(Identifier.tryParse("nekojs:no_such_root")),
+                        Identifier.tryParse("nekojs:no_such_registry"));
+    }
+
+    @Test
+    void unresolvableResourceKeyFieldsAreSkippedOnBareJvm() {
+        JSTypeAdapterRegistry.Impl registry = new JSTypeAdapterRegistry.Impl();
+
+        RegistryAutoAdapterScanner.installInto(registry, List.of(SyntheticUnresolvableKeyHolder.class));
+
+        assertTrue(registry.view().isEmpty(), "根注册表解析不到的 ResourceKey 字段应被静默跳过");
+    }
+
+    @Test
+    void resourceKeyFieldsResolveAndDedupAgainstRegistryHolders() {
+        Assumptions.assumeTrue(VanillaRegistryProbe.available());
+        JSTypeAdapterRegistry.Impl registry = new JSTypeAdapterRegistry.Impl();
+
+        // Registries（ResourceKey 形态）与 BuiltInRegistries（Registry 形态）覆盖同一批
+        // vanilla 类型——去重集合保证 Fluid 只注册一次
+        RegistryAutoAdapterScanner.installInto(registry,
+                List.of(BuiltInRegistries.class, SyntheticKeyHolder.class));
+
+        long fluidAdapters = registry.view().stream()
+                .filter(adapter -> adapter.getTargetClass() == Fluid.class)
+                .count();
+        assertEquals(1, fluidAdapters, "同一注册表类型经两种 holder 形态只应注册一次");
     }
 }
 //?}
