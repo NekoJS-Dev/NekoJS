@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
@@ -41,8 +42,10 @@ public class DamageSourceJS {
         return level.damageSources().explosion(null);
     }
 
+    // drowning()/starvation() 这类 DamageSources 便捷方法各版本有无不一，
+    // 统一走 DamageTypes 键构造——语义等价且全版本可用
     public DamageSource drowning(Level level) {
-        return level.damageSources().drowning();
+        return level.damageSources().source(DamageTypes.DROWN);
     }
 
     public DamageSource fall(Level level) {
@@ -58,7 +61,7 @@ public class DamageSourceJS {
     }
 
     public DamageSource starvation(Level level) {
-        return level.damageSources().starvation();
+        return level.damageSources().source(DamageTypes.STARVE);
     }
 
     public DamageSource outOfWorld(Level level) {
