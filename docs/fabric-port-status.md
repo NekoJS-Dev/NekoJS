@@ -192,16 +192,50 @@
     （headless 冒烟覆盖不到），defaultRequire=1 保证失败必崩不静默。Explosion radius
     AW public-f 未做（爆破半径修饰留待后续）。
 
+14. **放置/流体/tick 簇 + inventoryChanged**（2026-09-05 第八批；spec 见
+    `fabric-port-block-player-events-spec.md`，评审后按 javap/补丁源码实证修订）：
+    - **placed / entityPlaced**：26.x 重大事实——NF 补丁源码里
+      `BlockEvent.EntityPlaceEvent` 的唯一 post 点是末影人放置
+      （`EndermanLeaveBlockGoal` 内 `EventHooks.onBlockPlace`），BlockItem/
+      FallingBlock/Wither 均无挂点；`onMultiBlockPlace` 零调用（**entityMultiPlaced
+      在 NF 26.x 是死事件**，fabric 不实现）。fabric 挂 `canPlaceBlock` HEAD
+      （上下文全在声明参数，避免 INVOKE+LocalCapture 脆弱性），取消 =
+      `setReturnValue(false)` → tick 的 && 短路，与 NF 取消语义一致（保留手中方块）。
+      一次放置双总线投递（与 NF 双绑定同构）。分发键差异：NF 取快照（脚下方块）、
+      fabric 取放置物——载荷 javadoc 与台账双记录。
+    - **fluidPlaced**：NF 26.1.2 只挂 LavaFluid 三处（spreadTo 成石 + 火焰蔓延×2），
+      不覆盖黑曜石/圆石/玄武岩（`LiquidBlock#shouldSpreadLiquid`）。fabric 覆盖
+      LiquidBlock 两处 INVOKE（ordinal 0 = isSource?obsidian:cobble、ordinal 1 = basalt，
+      取消 = `setReturnValue(true)` 流体继续流动）+ LavaFluid.spreadTo INVOKE
+      （取消 = 整方法早退；NF 是参数换旧状态，净效果一致）——fabric 是 NF 超集。
+    - **randomTick / blockEntityTick**：派发路径孪生决策落地——NF 侧不动（原生
+      Event 子类走 NF 总线），fabric mixin 直投中立总线（`BlockBehaviour#randomTick`
+      与 `LevelChunk$BoundTickingBlockEntity#tick` HEAD，与 NF 同名 mixin 逐行孪生，
+      高频无监听器短路）。
+    - **inventoryChanged**：共享树 `InventoryChangeListener` 本就中立——去整文件
+      `//? if neoforge` 守卫即复用；fabric 挂载用 fabric-api 现成回调
+      （`ServerPlayConnectionEvents.JOIN` ≙ PlayerLoggedInEvent、
+      `ServerPlayerEvents.COPY_FROM` ≙ PlayerEvent.Clone，`registerLifecycle()`
+      接进 NekoJSFabricMod），零 mixin。孪生 PlayerEvents 补 INVENTORY_CHANGED 总线。
+    - 新载荷 ×4（BlockPlaced/BlockFluidPlaced/BlockRandomTick/BlockEntityTickEventJS）、
+      mixin ×5、mixins.json +5、V2 总线 +5。
+    - **顺带修复**：1.21.1 节点自第 13 批起整树编译红（`BlockNeighborNotifyEventJS`
+      引用 26.x-only 的 `net.minecraft.world.level.redstone.Orientation`）——补
+      `//? if >=26` 文件守卫后恢复绿。**教训**：共享树载荷的 import 也要做版本
+      可用性检查（guardLint 只查 loader 泄漏，不查版本可用类型）。
+    验证：runServer `Done (1.043s)` 零注入失败（LiquidBlock/LavaFluid/BlockBehaviour/
+    BoundTicking 四 mixin 启动期即织入验证）；五节点编译全绿 + guardLint 320 文件
+    0 警告。
+
 ## P1 剩余（功能面）
 
-- BlockEvents：placed/entityPlaced/entityMultiPlaced（mixin，26.x fabric-api 无现成回调）、
-  fluidPlaced、randomTick/blockEntityTick（mixin 面）、modification（SERVER_STARTING 重放）。
-  neighborNotify/farmlandTrample/portalSpawn 已在第 13 批完成。
-- PlayerEvents：inventoryChanged（mixin 面）。container×4/crafted/smelted/destroyed/
-  advancement/entityInteract/changedDimension 已在第 13 批完成。
+- BlockEvents：fluidPlaced 的 LavaFluid.randomTick 火焰蔓延两处（NF 有、fabric 无，
+  无脚本价值）。placed/entityPlaced/fluidPlaced/randomTick/blockEntityTick/portalSpawn/
+  neighborNotify/farmlandTrample 已在第 13/14 批完成；entityMultiPlaced 双平台死事件
+  （NF 零调用点）。
+- PlayerEvents：全部完成（inventoryChanged 于第 14 批）。
 - LevelEvents：saved/爆炸系已在第 13 批完成（Explosion radius 修饰 AW 未做）。
-- ItemEvents：canPickUp/pickedUp/pickedUpPre/dropped/entityInteracted/foodEaten 已在第 13 批完成；
-  剩 category/food 配方面（其余 P2）。
+- ItemEvents：mixin 面已在第 13 批完成；剩 category/food 配方面（其余 P2）。
 - FluidBuilder（需 fabric 流体重设计）。
 - common-api-processor 的 fabric 平台支持（processor 端先扩平台模型，见上）。
 
