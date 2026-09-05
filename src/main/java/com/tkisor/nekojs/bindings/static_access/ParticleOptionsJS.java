@@ -38,8 +38,13 @@ public class ParticleOptionsJS {
                 .orElseThrow(() -> new ValueConversionException(ParticleOptions.class, "registered particle id",
                         particleId, "particle not found: " + particleId));
         JsonElement json = JsonObjectAdapter.convertValueToJson(options);
-        return type.codec().parse(JsonOps.INSTANCE, json)
+        // MapCodec#parse(DynamicOps, T) 只在部分 DFU 版本存在；decode(ops, MapLike) 是
+        // MapCodec 的抽象核心方法，全版本可用——先经 ops.getMap 把 JsonElement 转 MapLike
+        var map = JsonOps.INSTANCE.getMap(json)
                 .getOrThrow(failure -> new ValueConversionException(ParticleOptions.class,
-                        "particle options for '" + particleId + "'", options, failure.message()));
+                        "particle options object for '" + particleId + "'", options, failure));
+        return type.codec().decode(JsonOps.INSTANCE, map)
+                .getOrThrow(failure -> new ValueConversionException(ParticleOptions.class,
+                        "particle options for '" + particleId + "'", options, failure));
     }
 }
