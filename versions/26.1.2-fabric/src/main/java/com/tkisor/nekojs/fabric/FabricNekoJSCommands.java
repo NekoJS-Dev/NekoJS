@@ -8,6 +8,8 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
+import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
+import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -44,8 +46,9 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>{@code error} / {@code view_all_errors} 降级为文本输出（错误 UI 与网络面板未移植）</li>
  *   <li>{@code editor} 不注册（工作区编辑器 GUI 面未移植）</li>
- *   <li>SERVER reload 做配方热重载（RecipeManagerMixin 孪生），但不做 Modification/
- *       村民交易重放（对应机制未移植 fabric）</li>
+ *   <li>SERVER reload 做配方热重载（RecipeManagerMixin 孪生）+ Modification 重放
+ *       （ItemModificationEventJS/BlockModificationEventJS 已去守卫复用）；
+ *       村民交易重放仍未移植（对应机制无 fabric 落点）</li>
  *   <li>CLIENT reload 同步执行（无 ClientReloadExecutor 的 Render 线程投递）</li>
  * </ul>
  * 依赖面齐后应与共享树版合并回单副本。
@@ -132,6 +135,10 @@ public final class FabricNekoJSCommands {
                 root.reload(type);
                 if (type == ScriptType.SERVER) {
                     applyRecipeScripts(source);
+                    // 与 NeoForge 版 NekoJSCommands#reloadServer 同位次：配方重放后
+                    // 重放物品/方块属性修改（快照恢复模型保证幂等）
+                    ItemModificationEventJS.fire(source.getServer());
+                    BlockModificationEventJS.fire();
                 }
             }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");

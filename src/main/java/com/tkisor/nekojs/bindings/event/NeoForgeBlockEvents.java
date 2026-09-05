@@ -79,9 +79,9 @@ public final class NeoForgeBlockEvents {
      * {@code /nekojs reload server} 时由平台侧手动 post（快照恢复模型，见
      * {@link BlockModificationEventJS}），不挂 NeoForge 总线（同
      * {@code ItemEvents.MODIFICATION} 的 posted-object 模式）。
+     * **总线声明已上移共享层** {@link BlockEvents#MODIFICATION}（fabric 复用同一
+     * 声明），本类不再持有。
      */
-    public static final EventBusJS<BlockModificationEventJS, Void> MODIFICATION =
-            BlockEvents.GROUP.server("modification", BlockModificationEventJS.class);
 
     private static <T extends BlockEvent> DispatchKey<T, Block> dispatchByBlock() {
         return BlockEvents.dispatchByBlock(event -> event.getState().getBlock());

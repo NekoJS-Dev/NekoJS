@@ -39,6 +39,14 @@ public final class BlockEvents {
     public static final EventBusJS<BlockBrokenEventJS, Block> BROKEN =
             GROUP.server("broken", BlockBrokenEventJS.class, dispatchByBlock(BlockBrokenEventJS::getBlock));
 
+    // modification（posted-object 模式，不挂任何总线事件：平台侧在服务器启动与
+    // /nekojs reload server 时手动 post）。载荷 BlockModificationEventJS 是 26.x
+    // 面（1.21.1 无此总线，其区块属性修改走别的路径），故整块版本守卫。
+    //? if >=26 {
+    public static final EventBusJS<com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS, Void> MODIFICATION =
+            GROUP.server("modification", com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS.class);
+    //?}
+
     static <T> DispatchKey<T, Block> dispatchByBlock(Function<T, Block> toKey) {
         return DispatchKey.of(Block.class, toKey);
     }

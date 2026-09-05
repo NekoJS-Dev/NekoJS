@@ -1,5 +1,4 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
+// 26.x 实现（BlockBehaviour.Properties 修改面为 26.x API，1.21.1 无 BlockEvents.modification 总线）。
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
@@ -7,7 +6,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
-import com.tkisor.nekojs.bindings.event.NeoForgeBlockEvents;
+import com.tkisor.nekojs.bindings.event.BlockEvents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
@@ -64,7 +63,7 @@ public class BlockModificationEventJS {
         // restore-all-first：先恢复上一轮全部修改，再 post；被删掉的 modify 在本次 reload 即消失
         restoreAll();
         BlockModificationEventJS event = new BlockModificationEventJS();
-        NeoForgeBlockEvents.MODIFICATION.post(event);
+        BlockEvents.MODIFICATION.post(event);
         if (event.modifiedCount > 0) {
             NekoJS.LOGGER.info("NekoJS block modifications applied to {} block(s)", event.modifiedCount);
         }
@@ -135,5 +134,4 @@ public class BlockModificationEventJS {
         return location;
     }
 }
-//?}
 //?}
