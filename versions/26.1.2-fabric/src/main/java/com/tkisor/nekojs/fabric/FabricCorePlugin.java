@@ -178,6 +178,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
+        // alias：ItemLike 参数复用 Item 适配器的输入形状（id 字符串等），值转成 Item 后 asItem 适配
+        registry.registerAlias(net.minecraft.world.level.ItemLike.class,
+                net.minecraft.world.item.Item.class, net.minecraft.world.item.Item::asItem);
         registry.register(new MobEffectAdapter());
         registry.register(new PotionAdapter());
         registry.register(new SoundEventAdapter());
