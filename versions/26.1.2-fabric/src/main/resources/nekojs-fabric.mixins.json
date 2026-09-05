@@ -27,7 +27,12 @@
     "MixinServerExplosion",
     "MixinPortalShape",
     "MixinNeighborUpdater",
-    "MixinFarmlandBlock"
+    "MixinFarmlandBlock",
+    "MixinEndermanLeaveBlockGoal",
+    "MixinLiquidBlock",
+    "MixinLavaFluid",
+    "MixinBlockBehaviourRandomTick",
+    "MixinLevelChunkBoundTickingBlockEntity"
   ],
   "injectors": {
     "defaultRequire": 1

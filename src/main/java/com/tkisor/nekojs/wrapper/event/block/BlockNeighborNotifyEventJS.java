@@ -1,3 +1,6 @@
+//? if >=26 {
+// Orientation（net.minecraft.world.level.redstone）在 1.21.1 不存在——载荷随 26.x 面
+// 一起走版本守卫（1.21.1 侧 neighborNotify 仍走 NeoForge 原生事件，不经本类）。
 package com.tkisor.nekojs.wrapper.event.block;
 
 import com.tkisor.nekojs.api.annotation.Doc;
@@ -71,3 +74,4 @@ public class BlockNeighborNotifyEventJS {
         return state.getBlock();
     }
 }
+//?}
