@@ -27,6 +27,8 @@ import com.tkisor.nekojs.js.type_adapter.SoundEventAdapter;
 import com.tkisor.nekojs.js.type_adapter.TagKeyAdapter;
 import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
 
+import java.util.List;
+
 /**
  * Fabric 侧核心插件 v1：注册<b>当前已有 fabric 桥</b>的事件组与平台无关类型适配器。
  *
@@ -192,5 +194,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new com.tkisor.nekojs.js.type_adapter.IngredientAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeJsonValueAdapter());
+        // 自动注册表适配器兜底：没手写适配器的 vanilla 注册表类型动态补字符串 id 转换
+        com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScanner.installInto(
+                registry, List.of(net.minecraft.core.registries.BuiltInRegistries.class));
     }
 }
