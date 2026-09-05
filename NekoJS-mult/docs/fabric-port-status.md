@@ -227,13 +227,40 @@
     BoundTicking 四 mixin 启动期即织入验证）；五节点编译全绿 + guardLint 320 文件
     0 警告。
 
+15. **ServerEvents 资源/生命周期面收口**（2026-09-05 第九批；spec 见
+    `fabric-port-server-events-spec.md`）：
+    - **lootTableLoad**：fabric-loot-api-v3 `LootTableEvents.MODIFY`（ResourceKey,
+      LootTable.Builder, LootTableSource, registries）→ 中立载荷
+      `LootTableLoadEventJS`。**语义差异**：NF 是整表 get/set + 可取消；fabric 是
+      builder 原地修改、不可取消（`event.table.addPool(...)` 风格）。26.x 字节码
+      事实：`ResourceKey.location()` 已改名 `identifier()`。
+    - **datapackSync**：`ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS(player,
+      hasJoinedBefore)` → `DatapackSyncEventJS`（player=null = reload 后全体玩家，
+      与 NF OnDatapackSyncEvent 语义一致）。
+    - **tagsUpdated**：`CommonLifecycleEvents.TAGS_LOADED(registries, updated)` →
+      `TagUpdatedEventJS`——fabric impl 经 ReloadableServerResourcesMixin 在服务端
+      资源装载完成时触发（时机与 NF 对齐）；NF 的 UpdateCause 无 fabric 对应，
+      载荷以 shouldUpdateStaticData 承载 updated 布尔。
+    - **Item/Block MODIFICATION 重放**：四个 modification 类本就 vanilla-only
+      （DataComponentMap/Holder.bindComponents/BlockBehaviour.Properties），去
+      `//? if neoforge` 守卫（保留 `>=26`，1.21.1 走自己的副本）即复用；总线声明
+      `BlockEvents.MODIFICATION` **上移共享层 BlockEvents.java**（`//? if >=26` 块内
+      ——1.21.1 无此总线），NF `NeoForgeBlockEvents` 删本地声明，脚本面不变。
+      fabric 触发时机与 NF 同位次：SERVER_STARTING（ABOUT_TO_START post 后）fire×2
+      + `/nekojs reload server`（FabricNekoJSCommands reloadType SERVER 分支，
+      配方重放之后）fire×2。快照恢复模型保证幂等。
+    - 三载荷零 mixin、零 mixin 配置变更。全部守卫块调整经五节点编译验证。
+    验证：runServer `Done (0.979s)` 零失败；五节点编译 + guardLint 323 文件 0 警告。
+    **P1 事件面至此真正零缺口**（原清单漏项 modification 已补记）。
+
 ## P1 剩余（功能面）
 
 - BlockEvents：fluidPlaced 的 LavaFluid.randomTick 火焰蔓延两处（NF 有、fabric 无，
   无脚本价值）。placed/entityPlaced/fluidPlaced/randomTick/blockEntityTick/portalSpawn/
-  neighborNotify/farmlandTrample 已在第 13/14 批完成；entityMultiPlaced 双平台死事件
-  （NF 零调用点）。
-- PlayerEvents：全部完成（inventoryChanged 于第 14 批）。
+  neighborNotify/farmlandTrample/modification 已在第 13-15 批完成；entityMultiPlaced
+  双平台死事件（NF 零调用点）。
+- PlayerEvents / ServerEvents（lootTableLoad/datapackSync/tagsUpdated）/ Item·Block
+  modification：全部完成（第 13-15 批）。
 - LevelEvents：saved/爆炸系已在第 13 批完成（Explosion radius 修饰 AW 未做）。
 - ItemEvents：mixin 面已在第 13 批完成；剩 category/food 配方面（其余 P2）。
 - FluidBuilder（需 fabric 流体重设计）。
