@@ -26,11 +26,16 @@ import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.BlockJS;
 import com.tkisor.nekojs.bindings.static_access.CapabilitiesJS;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
+import com.tkisor.nekojs.bindings.static_access.DamageSourceJS;
+import com.tkisor.nekojs.bindings.static_access.DataMapJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
 import com.tkisor.nekojs.bindings.RecipeSchemaBinding;
 import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
+import com.tkisor.nekojs.bindings.static_access.KMathJS;
+import com.tkisor.nekojs.bindings.static_access.ParticleOptionsJS;
+import com.tkisor.nekojs.bindings.static_access.TextIcons;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.api.data.Binding;
 import java.util.Set;
@@ -142,6 +147,21 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("StringUtils", new StringUtilsJS());
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
+        // 数学/图标/伤害/粒子：KJS wrapper 面对齐（JavaMath 直接绑 java.lang.Math）
+        registry.register("JavaMath", Math.class);
+        registry.register("KMath", KMathJS.class);
+        registry.register("TextIcons", TextIcons.class);
+        registry.register(Binding.of("DamageSource", new DelegatingBinding(new DamageSourceJS(),
+                net.minecraft.world.damagesource.DamageSource.class,
+                Set.of("of", "generic", "magic", "explosion", "drowning", "fall", "lava", "lightning",
+                        "starvation", "outOfWorld")),
+                DamageSourceJS.class));
+        registry.register(Binding.of("ParticleOptions", new DelegatingBinding(new ParticleOptionsJS(),
+                net.minecraft.core.particles.ParticleOptions.class,
+                Set.of("of")),
+                ParticleOptionsJS.class));
+        // NeoForge data map 快捷查询（其余 map 经 Registry.get(...).dataMapValue(...)）
+        registry.register("DataMap", DataMapJS.class);
         // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP
         // reload, unregistering the previous round's native NeoForge event listeners
         // before the scripts re-register them. Avoids listeners accumulating on reload.

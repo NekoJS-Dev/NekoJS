@@ -283,6 +283,25 @@ class ApiFacadeProxyTest {
         }
     }
 
+    @Test
+    void iterableImplementationIsForOfAble() {
+        // 可迭代实现（如 RegistryView 的条目 id 列表）经代理转发后 for...of 仍然成立
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            ApiFacadeProxy proxy = ApiFacadeProxy.global(
+                    resolve(contractWithStable()), ApiSymbolId.parse("global:Stable"),
+                    List.of("minecraft:stone", "minecraft:dirt"));
+            context.getBindings("js").putMember("Stable", proxy);
+            String joined = context.eval("js", """
+                    (() => {
+                        const acc = [];
+                        for (const id of Stable) acc.push(id);
+                        return acc.join(',');
+                    })()
+                    """).asString();
+            assertEquals("minecraft:stone,minecraft:dirt", joined);
+        }
+    }
+
     public static final class CallbackPayload {
         public String visible() {
             return "visible";

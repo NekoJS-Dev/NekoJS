@@ -768,7 +768,9 @@ public final class ApiValueMarshaller {
         return switch (type.kind()) {
             case PRIMITIVE -> !matchesPrimitive(value, type) ? -1 : "object".equals(type.name()) ? 1 : 4;
             case ARRAY -> value instanceof Iterable<?> || value.getClass().isArray() ? 4 : -1;
-            case SYMBOL -> isPrimitive(value) || value instanceof Iterable<?> || value.getClass().isArray() ? -1 : 2;
+            // Iterable 不再拒收：契约接收者可以自身可迭代（如 RegistryView 的 for...of），
+            // 联合类型里 ARRAY 分支（4 分）仍稳定压过 SYMBOL（2 分），歧义不会出现
+            case SYMBOL -> isPrimitive(value) || value.getClass().isArray() ? -1 : 2;
             case CALLBACK -> value instanceof ApiCallback ? 4 : -1;
             case UNION, VOID, TYPE_VARIABLE -> -1;
         };
