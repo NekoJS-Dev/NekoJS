@@ -24,6 +24,7 @@ import com.tkisor.nekojs.fabric.event.FabricBlockEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricCommandEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricLevelEventBindings;
+import com.tkisor.nekojs.fabric.event.FabricPlayerEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.FabricIdCompat;
@@ -98,6 +99,8 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         FabricEntityEventBindings.register();
         FabricLevelEventBindings.register();
         FabricCommandEventBindings.register();
+        // inventoryChanged 的监听器挂载（fabric-api 生命周期回调，零 mixin）
+        FabricPlayerEventBindings.registerLifecycle();
         FabricServerEventBindings.register(() -> {
             if (RUNTIME_ROOT != null) {
                 RUNTIME_ROOT.reload(com.tkisor.nekojs.api.ScriptType.SERVER);

@@ -10,6 +10,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.wrapper.event.player.InventoryChangedEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerAdvancementEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerChangedDimensionEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerContainerEventJS;
@@ -58,4 +59,10 @@ public interface PlayerEvents {
 
     EventBusJS<PlayerChangedDimensionEventJS, Void> CHANGED_DIMENSION =
             GROUP.server("changedDimension", PlayerChangedDimensionEventJS.class);
+
+    // inventoryChanged：按物品 id 分发，与 NeoForge 侧共享树声明同构
+    // （监听器挂载见 FabricPlayerEventBindings.registerLifecycle）。
+    EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
+            GROUP.server("inventoryChanged", InventoryChangedEventJS.class,
+                    DispatchKey.of(Item.class, e -> e.getItem().getItem()));
 }

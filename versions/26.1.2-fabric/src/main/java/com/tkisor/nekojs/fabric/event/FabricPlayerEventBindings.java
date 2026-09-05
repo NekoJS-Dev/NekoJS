@@ -1,12 +1,15 @@
 package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.bindings.event.PlayerEvents;
+import com.tkisor.nekojs.listener.InventoryChangeListener;
 import com.tkisor.nekojs.wrapper.event.player.PlayerAdvancementEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerChangedDimensionEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerContainerEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerCraftedEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerDestroyItemEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerEntityInteractEventJS;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
@@ -84,5 +87,21 @@ public final class FabricPlayerEventBindings {
     public static void postChangedDimension(ServerPlayer player,
                                             ResourceKey<Level> from, ResourceKey<Level> to) {
         PlayerEvents.CHANGED_DIMENSION.post(new PlayerChangedDimensionEventJS(player, from, to));
+    }
+
+    /**
+     * 物品栏监听器生命周期挂载（{@code PlayerEvents.inventoryChanged}）：
+     * 与 NeoForge 侧 {@code PlayerEventListener}（PlayerLoggedInEvent + PlayerEvent.Clone）
+     * 同位次——fabric-api 现成回调即可，零 mixin。{@code InventoryChangeListener.getOrCreate}
+     * 幂等（WeakHashMap 缓存），COPY_FROM 覆盖死亡重生/维度切换后新实体的重挂载。
+     *
+     * <p>由 {@code NekoJSFabricMod.onInitialize} 调用（server 环境仅：回调注册在
+     * dedicated/integrated server 均生效，事件本身只对 ServerPlayer 触发）。
+     */
+    public static void registerLifecycle() {
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+                InventoryChangeListener.getOrCreate(handler.player));
+        ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) ->
+                InventoryChangeListener.getOrCreate(newPlayer));
     }
 }

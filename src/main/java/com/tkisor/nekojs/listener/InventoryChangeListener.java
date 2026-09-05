@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.bindings.event.PlayerEvents;
@@ -65,4 +63,3 @@ public final class InventoryChangeListener implements ContainerListener {
         // 不关心数据条变化
     }
 }
-//?}
