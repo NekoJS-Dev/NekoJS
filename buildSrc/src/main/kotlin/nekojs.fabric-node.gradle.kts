@@ -1,4 +1,5 @@
-// Fabric 节点的构建约定（26.1.2-fabric）。loom-back-compat 在本插件体内 apply——它按 MC
+// Fabric 节点的构建约定（26.x-fabric）。源代码节点由 deps.fabric_source_node 指定；
+// loom-back-compat 在本插件体内 apply——它按 MC
 // 版本挑选 Loom 变体，版本号从控制器脚本 stonecutter.gradle.kts 的 `apply false` 声明读取。
 //
 // 两个环境限制：libs 访问器要通过 LibrariesForLibs 取；loom / loomx 扩展在本插件的编译期
@@ -20,6 +21,7 @@ pluginManager.apply("dev.kikugie.loom-back-compat")
 val mcVersion = property("deps.minecraft") as String
 val loaderVersion = property("deps.loader_version") as String
 val fabricApiVersion = property("deps.fabric_api") as String
+val fabricSourceNode = property("deps.fabric_source_node") as String
 val javaRelease = (property("deps.java") as String).toInt()
 
 val modId = property("mod_id") as String
@@ -87,7 +89,12 @@ dependencies {
 // 整文件守卫和节点目录表达，跨加载器中立的部分（BlockEvents 等）直接住共享树。
 // 少数 NeoForge 专属实现没有共享语义，按类名下放并从 Fabric source set 排除，避免
 // 它们因缺少外层守卫而进入 Fabric fat jar。
-sourceSets.main { java.exclude("**/NeoForge*.java") }
+val fabricSourceRoot = rootProject.file("versions/$fabricSourceNode/src/main")
+sourceSets.main {
+    java.srcDir(fabricSourceRoot.resolve("java"))
+    resources.srcDir(fabricSourceRoot.resolve("resources"))
+    java.exclude("**/NeoForge*.java")
+}
 
 // dev run 目录：server 与 client 分开。共用一个目录时两个进程会互相覆盖 logs/latest.log
 // 与 nekojs/*.log（Windows 上还会撞 Files.move 轮转）。
@@ -96,7 +103,7 @@ extensions.getByName("loom").withGroovyBuilder {
         "named"("server") { "runDir"("run-server") }
     }
     // accessWidenerPath 是属性(setter),非方法——setProperty 走 Groovy 属性派发
-    setProperty("accessWidenerPath", file("src/main/resources/nekojs-fabric.accesswidener"))
+    setProperty("accessWidenerPath", fabricSourceRoot.resolve("resources/nekojs-fabric.accesswidener"))
 }
 
 // fabric.mod.json 模板展开（Loom 不做变量替换，沿用 ProcessResources 约定）
@@ -114,7 +121,7 @@ val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata"
     )
     inputs.properties(replaceProperties)
     expand(replaceProperties)
-    from("src/main/templates")
+    from(fabricSourceRoot.resolve("templates"))
     into(layout.buildDirectory.dir("generated/sources/modMetadata"))
 }
 sourceSets.main { resources.srcDir(generateModMetadata) }

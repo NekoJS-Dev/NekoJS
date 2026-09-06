@@ -1,15 +1,16 @@
 # Fabric 节点扩展：补齐其他 MC 版本
 
-> 状态：ready-for-agent（建议先裁决 Further Notes 的分阶段与前置条件）。
+> 状态：第 1 阶段实现中（26.2.0-fabric 已加入版本图，当前通过显式 source bridge 复用 26.1.2 Fabric 实现；第 0 步源码上移仍待完成）。
 > 涉及的既有决策：[ADR-0007](adr/0007-module-boundaries.md)（三层归属判据——fabric 实现的落位
 > 受它约束）、[ADR-0008](adr/0008-guard-discipline.md)（整文件 loader 守卫的纪律与豁免）、
 > ADR-0009（发布矩阵）。
 
 ## Problem Statement
 
-版本图现在是"NeoForge 三个版本、Fabric 一个"的不对称面：`1.21.1` / `26.1.2` / `26.2.0`
-是 NeoForge 节点，Fabric 只有 `26.1.2-fabric`。Fabric 用户在 1.21.1 和 26.2.0 上没有
-NekoJS 可用，而这两个版本 NeoForge 侧都有制品。
+版本图现在是"NeoForge 三个版本、Fabric 两个过渡节点"的不对称面：`1.21.1` / `26.1.2` / `26.2.0`
+是 NeoForge 节点，Fabric 有 `26.1.2-fabric` 和可构建的 `26.2.0-fabric`。后者当前通过
+source bridge 复用 26.1.2 实现，尚未独立 runtime smoke；Fabric 用户在 1.21.1 上仍没有
+NekoJS 可用，而 NeoForge 侧已有对应制品。
 
 更根本的阻塞是：**Fabric 主线本身还没跑通**。`26.1.2-fabric` 的 jar 能构建，但脚本
 运行时没有在 Fabric 上端到端验证过，发布通道因此整体处于注释状态（发版工作流里
@@ -33,7 +34,9 @@ dev run 目录。资源文件（access widener、fabric mixin 配置、mod 描�
 Fabric 节点约定插件改为从共享树取。
 
 **第 1 阶段（26.2.0-fabric）**：与 `26.1.2-fabric` 同一 MC 时代（Java 25、`>=26` 守卫
-区），Fabric API 差异预期为零或极小。新增根级节点 + 参数目录即可；若勘察发现
+区），Fabric API 差异预期为零或极小。当前已新增根级节点 + 参数目录，并通过显式
+`deps.fabric_source_node=26.1.2-fabric` source bridge 复用已验证实现；第 0 步源码上移
+完成后再移除该 bridge。若勘察发现
 26.1↔26.2 的 Fabric API 有差异，差异走共享树内的 `>=26.2` 守卫，不复制文件。这一步
 同时是第 0 步的验证：两个 Fabric 节点消费同一份实现，任何"单副本假设不成立"的信号
 （守卫交织、求值冲突）都会在这里暴露。
@@ -149,8 +152,7 @@ Fabric 节点约定插件改为从共享树取。
   →（等 26.x Fabric 跑通并发布）→ 1.21.1-fabric。如果用户想三步连做，1.21.1-fabric
   的风险是排障时无法区分"Fabric 面的问题"与"1.21.1 面的问题"，因为两个面都没有
   跑通的基线。
-- **26.2.0-fabric 的 Fabric API 版本号**：实施时从 Fabric 元数据定版并钉进参数文件；
-  spec 不预写版本号（写死会过时）。
+- **26.2.0-fabric 的 Fabric API 版本号**：已从 Fabric Maven 元数据定版为 `0.159.0+26.2` 并钉进参数文件；后续升级仍需重新核对元数据。
 - **loom 的版本兼容**：节点约定插件经 loom-back-compat 按 MC 版本挑 Loom 变体。
   26.2.0 预期与 26.1.2 同变体；1.21.1 是否有可用变体是第 2 阶段的第一个勘察项——
   如果需要不同变体，插件里按版本分派的逻辑要扩。
