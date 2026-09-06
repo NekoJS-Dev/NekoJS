@@ -1,6 +1,7 @@
-// 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
-// 改本文件行为时须同步它。
-//? if neoforge {
+// 26.x 实现。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，改本文件行为时须同步它。
+// 加载器分叉共三处（enchantById/hasEnchantment 的动态附魔注册表服务端访问、
+// componentIngredient 的组件匹配成分），均为行内 loader 守卫——对侧编译单元整段
+// 消失（guardLint 规则 7 豁免），无整文件守卫。
 package com.tkisor.nekojs.api.inject;
 
 import com.tkisor.nekojs.api.annotation.HideFromJS;
@@ -26,8 +27,14 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.enchantment.Enchantment;
+//? if neoforge {
 import net.neoforged.neoforge.common.crafting.DataComponentIngredient;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+//?}
+//? if fabric {
+/*import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
+import net.fabricmc.fabric.api.recipe.v1.ingredient.DefaultCustomIngredients;*/
+//?}
 import java.util.List;
 
 /**
@@ -97,10 +104,18 @@ public interface ItemStackExtension extends ItemStackSpec {
             throw new IllegalArgumentException("Invalid enchantment id: " + id);
         }
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
+        //? if neoforge {
         Holder.Reference<Enchantment> enchantment = ServerLifecycleHooks.getCurrentServer()
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .getOrThrow(key);
+        //?}
+        //? if fabric {
+        /*Holder.Reference<Enchantment> enchantment = FabricServerEventBindings.currentServer()
+                .registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(key);*/
+        //?}
         return neko$enchant(enchantment, level);
     }
 
@@ -118,17 +133,27 @@ public interface ItemStackExtension extends ItemStackSpec {
         Identifier parsedId = Identifier.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (parsedId == null) return false;
         ResourceKey<Enchantment> key = ResourceKey.create(Registries.ENCHANTMENT, parsedId);
+        //? if neoforge {
         return ServerLifecycleHooks.getCurrentServer()
                 .registryAccess()
                 .lookupOrThrow(Registries.ENCHANTMENT)
                 .get(key)
                 .map(enchantment -> neko$hasEnchantment(enchantment, level))
                 .orElse(false);
+        //?}
+        //? if fabric {
+        /*return FabricServerEventBindings.currentServer()
+                .registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .get(key)
+                .map(enchantment -> neko$hasEnchantment(enchantment, level))
+                .orElse(false);*/
+        //?}
     }
 
     default boolean neko$hasEnchantment(Holder<Enchantment> enchantment, int level) {
-        // getEnchantmentLevel：NeoForge 游戏逻辑查附魔等级（getEnchantments 已废弃）
-        return self().getEnchantmentLevel(enchantment) >= level;
+        // 26.x 移除 ItemStack#getEnchantmentLevel —— 经 ItemEnchantments 组件查等级
+        return self().getEnchantments().getLevel(enchantment) >= level;
     }
 
     default Ingredient neko$asIngredient() {
@@ -149,17 +174,25 @@ public interface ItemStackExtension extends ItemStackSpec {
     }
 
     private Ingredient componentIngredient(boolean strict) {
+        //? if neoforge {
         DataComponentMap.Builder components = DataComponentMap.builder();
         for (var entry : self().getComponentsPatch().entrySet()) {
             entry.getValue().ifPresent(value -> setComponent(components, entry.getKey(), value));
         }
         return DataComponentIngredient.of(strict, components.build(), HolderSet.direct(BuiltInRegistries.ITEM.wrapAsHolder(self().getItem())));
+        //?}
+        /* fabric 无 strict 区分：DefaultCustomIngredients.components 按整栈组件精确匹配 */
+        //? if fabric {
+        /*return DefaultCustomIngredients.components(self());*/
+        //?}
     }
 
+    //? if neoforge {
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void setComponent(DataComponentMap.Builder components, DataComponentType type, Object value) {
         components.set(type, value);
     }
+    //?}
 
     @Override
     default boolean neko$matches(Object other) {
@@ -213,4 +246,3 @@ public interface ItemStackExtension extends ItemStackSpec {
         return BuiltInRegistries.ITEM.getKey(self().getItem()).toString();
     }
 }
-//?}

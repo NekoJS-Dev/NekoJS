@@ -1,5 +1,3 @@
-// TODO(fabric): fabric 侧还没有对应实现，整文件守卫等移植完成后去掉
-//? if neoforge {
 package com.tkisor.nekojs.mixin.inject;
 
 import com.tkisor.nekojs.api.inject.ItemStackExtension;
@@ -10,4 +8,4 @@ import org.spongepowered.asm.mixin.Mixin;
 @Mixin(ItemStack.class)
 public abstract class MixinItemStack implements ItemStackExtension {
 }
-//?}
+
