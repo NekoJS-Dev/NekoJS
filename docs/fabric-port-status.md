@@ -253,6 +253,36 @@
     验证：runServer `Done (0.979s)` 零失败；五节点编译 + guardLint 323 文件 0 警告。
     **P1 事件面至此真正零缺口**（原清单漏项 modification 已补记）。
 
+16. **inject 扩展链激活 + 债务清点**（2026-09-06 第十批）：
+    - **发现并修复 26.x 存量缺口（双平台）**：P2-P4 重设计（50029bd2）把
+      inject.MixinBlock/BlockState/Item/Entity/LivingEntity 五个 mixin 全部死在
+      `//? if <26` 分支里，resources-modern 也没登记——26.x NF 侧
+      `HostExtensionSource` 九源照常宣称，但 Item/Block/BlockState/Entity/LivingEntity
+      的 `neko$*` 脚本面在 26.x 上**静默失效**。修复：五 mixin 去 `<26` 包裹
+      （空 `implements` 实现，两端通用）+ resources-modern 登记 +5。
+    - **fabric 侧**：MixinItemStack 去守卫 + nekojs-fabric-shared.mixins.json +6
+      （五复活 + ItemStack）+ FabricCatalogPlatformProvider 补齐九源（原缺
+      ItemStack/BlockState 两源）。verbose 冒烟确认 9/9 inject mixin 全部织入。
+    - **ItemStackExtension 中立化三处**（原整文件 neoforge 守卫的原因）：
+      enchantById / hasEnchantment(id,level) 的动态附魔注册表服务端访问
+      （NF ServerLifecycleHooks ↔ fabric FabricServerEventBindings.currentServer）、
+      componentIngredient 的组件匹配成分（NF DataComponentIngredient ↔ fabric
+      DefaultCustomIngredients.components，fabric 无 strict 区分）。行内 loader
+      守卫落地。**26.x API 事实**：`ItemStack#getEnchantmentLevel` 已移除，改经
+      `getEnchantments().getLevel()`。
+    - **守卫新教训（active 节点语义）**：active 节点直接编译共享树磁盘——守卫对
+      active 侧是惰性注释，**禁用分支必须在磁盘上 `/* */` 包裹**；stonecutter 生成
+      侧对 active 分支剥包裹、对禁用分支加包裹；分支内容行首不能是 `//`（会被
+      生成器吞掉）。
+    - **common-api 债务（memory 修订）**：ApiContractViolation 已删（确认零引用）；
+      NullJsValueView / ConversionContext **不删**——memory 记载过时，二者现被
+      NewAdapterBridge/LegacyAdapterBridge 与 JsTypeAdapter 接口承载。
+    - **Explosion radius AW 作废**：26.x `Explosion` 已接口化、`radius()` 只读
+      访问器、无字段、脚本面无 setRadius——两平台语义一致，无 AW 可做（batch 13
+      遗留项销账）。AT 第 112 行字段条目为 1.21.1 时代遗留，26.x 不生效。
+    验证：五节点编译 + guardLint 全绿；verbose 冒烟 `Done` 零注入失败、9/9 inject
+    织入；common 测试绿。
+
 ## P1 剩余（功能面）
 
 - BlockEvents：fluidPlaced 的 LavaFluid.randomTick 火焰蔓延两处（NF 有、fabric 无，
