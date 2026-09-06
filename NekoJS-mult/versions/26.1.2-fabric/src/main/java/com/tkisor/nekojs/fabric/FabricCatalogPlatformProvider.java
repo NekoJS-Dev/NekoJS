@@ -12,8 +12,10 @@ import com.tkisor.nekojs.api.catalog.RegistryTypeCatalogEntry;
 import com.tkisor.nekojs.api.catalog.SnippetCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeOutputLayout;
 import com.tkisor.nekojs.api.inject.BlockExtension;
+import com.tkisor.nekojs.api.inject.BlockStateExtension;
 import com.tkisor.nekojs.api.inject.EntityExtension;
 import com.tkisor.nekojs.api.inject.ItemExtension;
+import com.tkisor.nekojs.api.inject.ItemStackExtension;
 import com.tkisor.nekojs.api.inject.LevelExtension;
 import com.tkisor.nekojs.api.inject.LivingEntityExtension;
 import com.tkisor.nekojs.api.inject.MutableComponentExtension;
@@ -29,8 +31,10 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,11 +60,13 @@ public class FabricCatalogPlatformProvider implements NekoCatalogPlatformProvide
 
     @Override
     public Collection<HostExtensionSource> hostExtensions() {
-        // 与 NeoForge 版的九源差 ItemStack/BlockState 两个：ItemStackExtension /
-        // BlockStateExtension 在 fabric 仍整文件守卫，类不存在（见 docs/fabric-port-status.md）
+        // 与 NeoForge 版同为九源：ItemStack/BlockState 扩展随第 16 批 inject 链激活
+        // （MixinItemStack/MixinBlockState 进 nekojs-fabric-shared.mixins.json）
         return List.of(
+                HostExtensionSource.any(ItemStack.class, ItemStackExtension.class),
                 HostExtensionSource.any(Item.class, ItemExtension.class),
                 HostExtensionSource.any(Block.class, BlockExtension.class),
+                HostExtensionSource.any(BlockState.class, BlockStateExtension.class),
                 HostExtensionSource.any(Entity.class, EntityExtension.class),
                 HostExtensionSource.any(LivingEntity.class, LivingEntityExtension.class),
                 HostExtensionSource.any(Player.class, PlayerExtension.class),

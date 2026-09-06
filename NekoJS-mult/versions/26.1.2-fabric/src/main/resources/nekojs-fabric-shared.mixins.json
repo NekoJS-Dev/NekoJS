@@ -8,9 +8,15 @@
     "RecipeManagerMixin",
     "ReloadableServerResourcesMixin",
     "ResultSlotMixin",
+    "inject.MixinBlock",
+    "inject.MixinBlockState",
+    "inject.MixinEntity",
+    "inject.MixinItem",
+    "inject.MixinItemStack",
     "inject.MixinLevel",
-    "inject.MixinPlayer",
-    "inject.MixinMutableComponent"
+    "inject.MixinLivingEntity",
+    "inject.MixinMutableComponent",
+    "inject.MixinPlayer"
   ],
   "injectors": {
     "defaultRequire": 1
