@@ -1,4 +1,4 @@
-// Fabric 节点的构建约定（26.x-fabric）。源代码节点由 deps.fabric_source_node 指定；
+// Fabric 节点的构建约定（26.x-fabric）。实现源码和资源来自版本树共享根；
 // loom-back-compat 在本插件体内 apply——它按 MC
 // 版本挑选 Loom 变体，版本号从控制器脚本 stonecutter.gradle.kts 的 `apply false` 声明读取。
 //
@@ -21,13 +21,15 @@ pluginManager.apply("dev.kikugie.loom-back-compat")
 val mcVersion = property("deps.minecraft") as String
 val loaderVersion = property("deps.loader_version") as String
 val fabricApiVersion = property("deps.fabric_api") as String
-val fabricSourceNode = property("deps.fabric_source_node") as String
 val javaRelease = (property("deps.java") as String).toInt()
 
 val modId = property("mod_id") as String
 val modVersion = property("mod_version") as String
 val modName = property("mod_name") as String
 val modDescription = property("mod_description") as String
+
+val fabricResourceRoot = rootProject.file("src/main/resources-fabric")
+val fabricTemplateRoot = rootProject.file("src/main/templates-fabric")
 
 version = modVersion
 
@@ -85,15 +87,11 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// 共享版本树（src/main/java）由 stonecutter 自动挂载；加载器差异用 `//? if neoforge`
-// 整文件守卫和节点目录表达，跨加载器中立的部分（BlockEvents 等）直接住共享树。
-// 少数 NeoForge 专属实现没有共享语义，按类名下放并从 Fabric source set 排除，避免
-// 它们因缺少外层守卫而进入 Fabric fat jar。
-val fabricSourceRoot = rootProject.file("versions/$fabricSourceNode/src/main")
+// 共享版本树（src/main/java）由 stonecutter 自动挂载；Fabric-only 实现也位于共享树，
+// 由整文件 `//? if fabric` 守卫选择。Fabric 资源单独使用 loader-specific 根，避免
+// NeoForge 节点把 Fabric 配置和 mixin 清单带进制品。
 sourceSets.main {
-    java.srcDir(fabricSourceRoot.resolve("java"))
-    resources.srcDir(fabricSourceRoot.resolve("resources"))
-    java.exclude("**/NeoForge*.java")
+    resources.srcDir(fabricResourceRoot)
 }
 
 // dev run 目录：server 与 client 分开。共用一个目录时两个进程会互相覆盖 logs/latest.log
@@ -103,7 +101,7 @@ extensions.getByName("loom").withGroovyBuilder {
         "named"("server") { "runDir"("run-server") }
     }
     // accessWidenerPath 是属性(setter),非方法——setProperty 走 Groovy 属性派发
-    setProperty("accessWidenerPath", fabricSourceRoot.resolve("resources/nekojs-fabric.accesswidener"))
+    setProperty("accessWidenerPath", fabricResourceRoot.resolve("nekojs-fabric.accesswidener"))
 }
 
 // fabric.mod.json 模板展开（Loom 不做变量替换，沿用 ProcessResources 约定）
@@ -121,7 +119,7 @@ val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata"
     )
     inputs.properties(replaceProperties)
     expand(replaceProperties)
-    from(fabricSourceRoot.resolve("templates"))
+    from(fabricTemplateRoot)
     into(layout.buildDirectory.dir("generated/sources/modMetadata"))
 }
 sourceSets.main { resources.srcDir(generateModMetadata) }
@@ -145,12 +143,10 @@ sourceSets.main {
     output.dir(mapOf("builtBy" to extractIcuClasses), icuClassesDir)
 }
 
-// 共享树的 resources（src/main/resources、resources-modern/-legacy、templates）由 stonecutter
-// 挂进本节点。其中 AT / mods.toml / interface_injection 是 NeoForge 机制，fabric jar 不应携带；
-// nekojs.mixins.json / nekojs-dynamic.mixins.json 里既有 NeoForge 专属 mixin 也有对两加载器
-// 中立的条目——中立的那批由节点自己的 nekojs-fabric-shared/-dynamic.mixins.json 按条目激活
-// （清单见 docs/fabric-port-status.md），整文件 exclude 的目的是不把 NeoForge 专属条目带进来。
-// stonecutter 在 afterEvaluate 追加 srcDir，但 CopySpec 的 exclude 过滤器在执行期生效，仍然有效。
+// 共享树的 resources（src/main/resources、resources-modern/-legacy）由 stonecutter 挂进本节点。
+// Fabric-only resources-fabric 根已在上面显式加入；NeoForge 的 convention plugin 不引用它，
+// 因此 Fabric access widener 和 mixin 清单不会进入 NeoForge 制品。
+// 共享 NeoForge 资源仍由下方禁止清单兜底，防止跨加载器资源误装。
 val fabricForbiddenResourceEntries = setOf(
     "META-INF/accesstransformer.cfg",
     "META-INF/neoforge.mods.toml",

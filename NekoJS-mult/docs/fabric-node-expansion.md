@@ -1,6 +1,6 @@
 # Fabric 节点扩展：补齐其他 MC 版本
 
-> 状态：第 1 阶段实现中（26.2.0-fabric 已加入版本图，当前通过显式 source bridge 复用 26.1.2 Fabric 实现；第 0 步源码上移仍待完成）。
+> 状态：第 0 步源码上移已完成；两个 Fabric 节点现在共用共享树内受守卫的实现，26.2.0-fabric 仍待独立 runtime smoke。
 > 涉及的既有决策：[ADR-0007](adr/0007-module-boundaries.md)（三层归属判据——fabric 实现的落位
 > 受它约束）、[ADR-0008](adr/0008-guard-discipline.md)（整文件 loader 守卫的纪律与豁免）、
 > ADR-0009（发布矩阵）。
@@ -8,8 +8,8 @@
 ## Problem Statement
 
 版本图现在是"NeoForge 三个版本、Fabric 两个过渡节点"的不对称面：`1.21.1` / `26.1.2` / `26.2.0`
-是 NeoForge 节点，Fabric 有 `26.1.2-fabric` 和可构建的 `26.2.0-fabric`。后者当前通过
-source bridge 复用 26.1.2 实现，尚未独立 runtime smoke；Fabric 用户在 1.21.1 上仍没有
+是 NeoForge 节点，Fabric 有 `26.1.2-fabric` 和可构建的 `26.2.0-fabric`。后者现在直接消费
+共享树内的 Fabric 实现，尚未独立 runtime smoke；Fabric 用户在 1.21.1 上仍没有
 NekoJS 可用，而 NeoForge 侧已有对应制品。
 
 更根本的阻塞是：**Fabric 主线本身还没跑通**。`26.1.2-fabric` 的 jar 能构建，但脚本
@@ -35,8 +35,7 @@ Fabric 节点约定插件改为从共享树取。
 
 **第 1 阶段（26.2.0-fabric）**：与 `26.1.2-fabric` 同一 MC 时代（Java 25、`>=26` 守卫
 区），Fabric API 差异预期为零或极小。当前已新增根级节点 + 参数目录，并通过显式
-`deps.fabric_source_node=26.1.2-fabric` source bridge 复用已验证实现；第 0 步源码上移
-完成后再移除该 bridge。若勘察发现
+两个 Fabric 节点直接消费共享树内同一份已验证实现。若勘察发现
 26.1↔26.2 的 Fabric API 有差异，差异走共享树内的 `>=26.2` 守卫，不复制文件。这一步
 同时是第 0 步的验证：两个 Fabric 节点消费同一份实现，任何"单副本假设不成立"的信号
 （守卫交织、求值冲突）都会在这里暴露。
