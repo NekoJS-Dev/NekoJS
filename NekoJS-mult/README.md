@@ -31,7 +31,7 @@ NekoJS 是一个跑在 GraalJS 上的 Minecraft 脚本运行时。整合包作�
 
 **平台**
 
-- 一棵源码树同时支持 NeoForge 26.1 / 26.2 / 1.21.1，Fabric 26.1.2 与 26.2.0 节点可构建；Fabric runtime smoke 当前只覆盖 26.1.2，两个 Fabric 制品均未开启外部发布。Cleanroom 1.12.2 在独立的 legacy 分支维护，不在本仓库构建。
+- 一棵源码树同时支持 NeoForge 26.1 / 26.2 / 1.21.1，Fabric 26.1.2 与 26.2.0 节点可构建，CI runtime smoke 覆盖两个节点；两个 Fabric 制品均未开启外部发布。Cleanroom 1.12.2 在独立的 legacy 分支维护，不在本仓库构建。
 
 ---
 

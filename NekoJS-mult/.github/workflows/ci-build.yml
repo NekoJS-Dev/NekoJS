@@ -203,8 +203,14 @@ jobs:
           if-no-files-found: ignore
 
   fabric-runtime-smoke:
-    name: Fabric runtime smoke (26.1.2)
+    name: Fabric runtime smoke (${{ matrix.node }})
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 26.1.2-fabric
+          - 26.2.0-fabric
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -233,31 +239,35 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          smoke_dir=versions/26.1.2-fabric/run-server/nekojs
-          rm -rf versions/26.1.2-fabric/run-server
+          node='${{ matrix.node }}'
+          smoke_dir="versions/$node/run-server/nekojs"
+          fixture_dir=versions/26.1.2-fabric/src/test/resources/fabric-runtime-smoke
+          rm -rf "versions/$node/run-server"
           mkdir -p "$smoke_dir/startup_scripts" "$smoke_dir/server_scripts"
-          cp versions/26.1.2-fabric/src/test/resources/fabric-runtime-smoke/startup_scripts/fabric_ci_smoke.js "$smoke_dir/startup_scripts/"
-          cp versions/26.1.2-fabric/src/test/resources/fabric-runtime-smoke/server_scripts/fabric_ci_smoke.js "$smoke_dir/server_scripts/"
-          printf 'eula=true\n' > versions/26.1.2-fabric/run-server/eula.txt
+          cp "$fixture_dir/startup_scripts/fabric_ci_smoke.js" "$smoke_dir/startup_scripts/"
+          cp "$fixture_dir/server_scripts/fabric_ci_smoke.js" "$smoke_dir/server_scripts/"
+          printf 'eula=true\n' > "versions/$node/run-server/eula.txt"
 
       - name: Run Fabric server smoke
         shell: bash
         run: |
           set -uo pipefail
-          log_file=fabric-runtime-smoke.log
+          node='${{ matrix.node }}'
+          run_dir="versions/$node/run-server"
+          log_file="fabric-runtime-smoke-$node.log"
           : > "$log_file"
           timeout --foreground --signal=TERM --kill-after=15s 180s \
-            ./gradlew :26.1.2-fabric:runServer --console=plain > "$log_file" 2>&1 &
+            ./gradlew ":$node:runServer" --console=plain > "$log_file" 2>&1 &
           server_pid=$!
           found=0
           for _ in $(seq 1 180); do
-            if grep -R -q 'FABRIC-CI-SMOKE: server started' versions/26.1.2-fabric/run-server 2>/dev/null; then
+            if grep -R -q 'FABRIC-CI-SMOKE: server started' "$run_dir" 2>/dev/null; then
               found=1
               kill -TERM "$server_pid" 2>/dev/null || true
               break
             fi
             if grep -Eiq 'Critical injection|FAILED during|Mixin.*(failed|error)|Could not find required mod' \
-                "$log_file" versions/26.1.2-fabric/run-server/logs 2>/dev/null; then
+                "$log_file" "$run_dir/logs" 2>/dev/null; then
               echo 'Fabric runtime smoke found a startup or Mixin failure' >&2
               kill -TERM "$server_pid" 2>/dev/null || true
               wait "$server_pid" 2>/dev/null || true
@@ -275,17 +285,18 @@ jobs:
             cat "$log_file"
             exit 1
           fi
-          grep -R -q 'FABRIC-CI-SMOKE: startup bindings ok' versions/26.1.2-fabric/run-server
+          grep -R -q 'FABRIC-CI-SMOKE: startup bindings ok' "$run_dir"
 
       - name: Upload Fabric smoke logs on failure
         if: ${{ !cancelled() && failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: fabric-runtime-smoke-logs
+          name: fabric-runtime-smoke-logs-${{ matrix.node }}
           path: |
-            fabric-runtime-smoke.log
-            versions/26.1.2-fabric/run-server/logs
+            fabric-runtime-smoke-${{ matrix.node }}.log
+            versions/${{ matrix.node }}/run-server/logs
           if-no-files-found: ignore
+
 
   common-jdk21:
     name: Common checks (JDK 21)
@@ -475,8 +486,8 @@ jobs:
           game-versions: 1.21.1
           changelog: ${{ steps.changelog.outputs.notes }}
 
-      # Fabric 26.1.2 的 jar 已能构建，但脚本运行时还没在 fabric 上跑通，所以暂不发布。
-      # 能发布时去掉本注释块即可（fabric.mod.json 会让 mc-publish 自动校验依赖）。
+      # Fabric 26.1.2/26.2.0 的 jar 与 server smoke 已通过，但外部发布仍按计划关闭。
+      # 能发布时去掉对应注释块即可（fabric.mod.json 会让 mc-publish 自动校验依赖）。
       # - name: Publish Fabric 26.1.2 file
       #   uses: Kir-Antipov/mc-publish@v3.3
       #   with:
