@@ -203,8 +203,10 @@ jobs:
           if-no-files-found: ignore
 
   fabric-runtime-smoke:
-    name: Fabric runtime smoke (${{ matrix.node }})
-    needs: build
+    name: Fabric artifact and development smoke (${{ matrix.node }})
+    needs:
+      - analyze
+      - build
     strategy:
       fail-fast: false
       matrix:
@@ -235,6 +237,52 @@ jobs:
       - name: Drop local org.gradle.java.home pin
         run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
+      - name: Download built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.analyze.outputs.is_release == 'true' && 'NekoJS-Release-Jars' || 'NekoJS-Dev-Jars' }}
+          path: artifacts
+
+      - name: Verify packaged Fabric artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          node='${{ matrix.node }}'
+          case "$node" in
+            26.1.2-fabric) mc_version=26.1.2; fabric_api=0.155.2+26.1.2 ;;
+            26.2.0-fabric) mc_version=26.2; fabric_api=0.159.0+26.2 ;;
+            *) echo "unknown Fabric node: $node" >&2; exit 1 ;;
+          esac
+          artifact="$(find artifacts -type f -name "nekojs-fabric-$mc_version-*.jar" | head -n 1)"
+          if [[ -z "$artifact" ]]; then
+            echo "No packaged Fabric artifact found for $node" >&2
+            find artifacts -type f -maxdepth 2 -print >&2
+            exit 1
+          fi
+          entries="fabric-artifact-entries-$node.txt"
+          jar tf "$artifact" | tee "$entries" >/dev/null
+          for required in \
+              fabric.mod.json \
+              nekojs-fabric.accesswidener \
+              nekojs-fabric.mixins.json \
+              nekojs-fabric-shared.mixins.json \
+              nekojs-fabric-dynamic.mixins.json \
+              com/tkisor/nekojs/fabric/NekoJSFabricMod.class \
+              com/tkisor/nekojs/fabric/NekoJSFabricClient.class; do
+            grep -Fxq "$required" "$entries" || { echo "Missing $required in $artifact" >&2; exit 1; }
+          done
+          if grep -Eiq 'NeoForge|neoforged' "$entries"; then
+            echo "NeoForge-named entries leaked into $artifact" >&2
+            grep -Ei 'NeoForge|neoforged' "$entries" >&2
+            exit 1
+          fi
+          metadata="$(unzip -p "$artifact" fabric.mod.json)"
+          grep -Fq "\"fabric-api\": \">=$fabric_api\"" <<<"$metadata" || {
+            echo "fabric.mod.json has the wrong Fabric API minimum for $node" >&2
+            exit 1
+          }
+          echo "Packaged Fabric artifact smoke passed: $artifact"
+
       - name: Install Fabric smoke fixture
         shell: bash
         run: |
@@ -248,7 +296,7 @@ jobs:
           cp "$fixture_dir/server_scripts/fabric_ci_smoke.js" "$smoke_dir/server_scripts/"
           printf 'eula=true\n' > "versions/$node/run-server/eula.txt"
 
-      - name: Run Fabric server smoke
+      - name: Run Fabric development runtime smoke
         shell: bash
         run: |
           set -uo pipefail
@@ -302,6 +350,7 @@ jobs:
     name: Common checks (JDK 21)
     runs-on: ubuntu-latest
     permissions:
+
       contents: read
     steps:
       - name: Checkout code
