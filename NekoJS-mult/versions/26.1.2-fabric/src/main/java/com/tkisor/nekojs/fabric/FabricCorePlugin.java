@@ -27,6 +27,8 @@ import com.tkisor.nekojs.js.type_adapter.SoundEventAdapter;
 import com.tkisor.nekojs.js.type_adapter.TagKeyAdapter;
 import com.tkisor.nekojs.js.type_adapter.Vec3Adapter;
 
+import java.util.List;
+
 /**
  * Fabric 侧核心插件 v1：注册<b>当前已有 fabric 桥</b>的事件组与平台无关类型适配器。
  *
@@ -67,6 +69,23 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register("StringUtils", new com.tkisor.nekojs.bindings.static_access.StringUtilsJS());
         registry.register("Time", new com.tkisor.nekojs.bindings.static_access.TimeJS());
         registry.register("Utils", new com.tkisor.nekojs.bindings.static_access.UtilsJS());
+        // 数学/图标/伤害/粒子（与 NeoForge 侧同名同值；DataMap 是 NeoForge 专属，fabric 不注册）
+        registry.register("JavaMath", Math.class);
+        registry.register("KMath", com.tkisor.nekojs.bindings.static_access.KMathJS.class);
+        registry.register("TextIcons", com.tkisor.nekojs.bindings.static_access.TextIcons.class);
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("DamageSource",
+                new com.tkisor.nekojs.js.DelegatingBinding(
+                        new com.tkisor.nekojs.bindings.static_access.DamageSourceJS(),
+                        net.minecraft.world.damagesource.DamageSource.class,
+                        java.util.Set.of("of", "generic", "magic", "explosion", "drowning", "fall", "lava",
+                                "lightning", "starvation", "outOfWorld")),
+                com.tkisor.nekojs.bindings.static_access.DamageSourceJS.class));
+        registry.register(com.tkisor.nekojs.api.data.Binding.of("ParticleOptions",
+                new com.tkisor.nekojs.js.DelegatingBinding(
+                        new com.tkisor.nekojs.bindings.static_access.ParticleOptionsJS(),
+                        net.minecraft.core.particles.ParticleOptions.class,
+                        java.util.Set.of("of")),
+                com.tkisor.nekojs.bindings.static_access.ParticleOptionsJS.class));
         registry.register(com.tkisor.nekojs.api.ScriptType.TEST, "Test",
                 new com.tkisor.nekojs.bindings.static_access.TestJS());
         registry.register("global", com.tkisor.nekojs.bindings.static_access.NekoGlobal.shared());
@@ -178,6 +197,9 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
+        // alias：ItemLike 参数复用 Item 适配器的输入形状（id 字符串等），值转成 Item 后 asItem 适配
+        registry.registerAlias(net.minecraft.world.level.ItemLike.class,
+                net.minecraft.world.item.Item.class, net.minecraft.world.item.Item::asItem);
         registry.register(new MobEffectAdapter());
         registry.register(new PotionAdapter());
         registry.register(new SoundEventAdapter());
@@ -189,5 +211,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         registry.register(new com.tkisor.nekojs.js.type_adapter.IngredientAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeFilterAdapter());
         registry.register(new com.tkisor.nekojs.js.type_adapter.RecipeJsonValueAdapter());
+        // 自动注册表适配器兜底：没手写适配器的 vanilla 注册表类型动态补字符串 id 转换
+        com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScanner.installInto(
+                registry, List.of(net.minecraft.core.registries.BuiltInRegistries.class));
     }
 }

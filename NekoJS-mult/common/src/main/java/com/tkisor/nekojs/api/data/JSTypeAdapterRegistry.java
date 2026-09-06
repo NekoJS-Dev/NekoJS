@@ -51,6 +51,24 @@ public interface JSTypeAdapterRegistry {
         register(new LambdaJSTypeAdapter<>(target, filter, converter));
     }
 
+    /**
+     * alias 注册：目标类型 X 复用来源类型 Y 的适配器（输入识别、输入形状、优先级全部透传），
+     * 值先转成 Y 再经 {@code converter} 变成 X。
+     *
+     * <p>来源适配器在首次转换时惰性解析，注册顺序无关。alias 链允许，环不允许。
+     *
+     * @throws IllegalArgumentException 当 {@code target == from}
+     */
+    default <F, T> void registerAlias(Class<T> target, Class<F> from, Function<F, T> converter) {
+        register(new AliasJSTypeAdapter<>(target, from, converter, null, this));
+    }
+
+    /** 同 {@link #registerAlias(Class, Class, Function)}，但显式指定优先级（默认沿用来源适配器）。 */
+    default <F, T> void registerAlias(Class<T> target, Class<F> from, Function<F, T> converter,
+                                      ConversionPrecedence precedence) {
+        register(new AliasJSTypeAdapter<>(target, from, converter, precedence, this));
+    }
+
     Collection<JSTypeAdapter<?>> view();
 
     final class Impl implements JSTypeAdapterRegistry {
