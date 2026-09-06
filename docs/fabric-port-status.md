@@ -283,6 +283,17 @@
     验证：五节点编译 + guardLint 全绿；verbose 冒烟 `Done` 零注入失败、9/9 inject
     织入；common 测试绿。
 
+17. **Fabric 分发 jar 与发布隔离门禁**（2026-09-06 发布收口首项）：
+    `verifyFabricRuntimeArtifact` 直接读取最终 fat jar，断言 `fabric.mod.json`、access
+    widener、三份 Fabric mixin 配置、Fabric 主/客户端入口与 common runtime 入口以及已测
+    Fabric API 最低版本均存在，同时拒绝 NeoForge AT/mods.toml/mixin 配置、路径或类名中
+    含 `NeoForge`/`neoforged` 的 loader-specific class 与 NeoForge service。Fabric source
+    set 同时排除未被外层守卫包裹的 `NeoForge*.java`，避免门禁只报错而无法生成合规制品。
+    任务接入 Fabric `check`，因此节点 `build` 自动执行；嵌套仓库 CI 在 release 时也会排除
+    `nekojs-fabric-*`，避免尚未通过运行时 smoke 的 jar 被 GitHub Release 意外公开。
+    CI 新增版本库中的 Fabric server smoke fixture，启动后要求 startup/server-started
+    markers，并拒绝常见 Mixin/启动失败。
+
 ## P1 剩余（功能面）
 
 - BlockEvents：fluidPlaced 的 LavaFluid.randomTick 火焰蔓延两处（NF 有、fabric 无，

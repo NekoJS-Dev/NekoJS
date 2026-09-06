@@ -22,7 +22,7 @@
   "accessWidener": "nekojs-fabric.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
-    "fabric-api": "*",
+    "fabric-api": ">=${fabric_api_version}",
     "minecraft": "~${minecraft_version}",
     "java": ">=${java_version}"
   }

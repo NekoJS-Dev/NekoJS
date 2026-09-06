@@ -160,6 +160,12 @@ jobs:
               *-sources.jar|*-javadoc.jar|*-dev.jar|*-plain.jar) continue ;;
             esac
 
+            # Fabric builds are CI artifacts only until the runtime smoke gate and release plan are approved.
+            # Do not attach an unverified Fabric jar to a public GitHub release.
+            if [[ "$IS_RELEASE" == "true" && "$name" == nekojs-fabric-* ]]; then
+              continue
+            fi
+
             if [[ "$IS_RELEASE" == "true" ]]; then
               cp "$jar" "artifacts/$name"
             else
@@ -194,6 +200,91 @@ jobs:
             common/build/test-results/test
             versions/*/build/reports/tests/test
             versions/*/build/test-results
+          if-no-files-found: ignore
+
+  fabric-runtime-smoke:
+    name: Fabric runtime smoke (26.1.2)
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Drop local org.gradle.java.home pin
+        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
+
+      - name: Install Fabric smoke fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_dir=versions/26.1.2-fabric/run-server/nekojs
+          rm -rf versions/26.1.2-fabric/run-server
+          mkdir -p "$smoke_dir/startup_scripts" "$smoke_dir/server_scripts"
+          cp versions/26.1.2-fabric/src/test/resources/fabric-runtime-smoke/startup_scripts/fabric_ci_smoke.js "$smoke_dir/startup_scripts/"
+          cp versions/26.1.2-fabric/src/test/resources/fabric-runtime-smoke/server_scripts/fabric_ci_smoke.js "$smoke_dir/server_scripts/"
+          printf 'eula=true\n' > versions/26.1.2-fabric/run-server/eula.txt
+
+      - name: Run Fabric server smoke
+        shell: bash
+        run: |
+          set -uo pipefail
+          log_file=fabric-runtime-smoke.log
+          : > "$log_file"
+          timeout --foreground --signal=TERM --kill-after=15s 180s \
+            ./gradlew :26.1.2-fabric:runServer --console=plain > "$log_file" 2>&1 &
+          server_pid=$!
+          found=0
+          for _ in $(seq 1 180); do
+            if grep -R -q 'FABRIC-CI-SMOKE: server started' versions/26.1.2-fabric/run-server 2>/dev/null; then
+              found=1
+              kill -TERM "$server_pid" 2>/dev/null || true
+              break
+            fi
+            if grep -Eiq 'Critical injection|FAILED during|Mixin.*(failed|error)|Could not find required mod' \
+                "$log_file" versions/26.1.2-fabric/run-server/logs 2>/dev/null; then
+              echo 'Fabric runtime smoke found a startup or Mixin failure' >&2
+              kill -TERM "$server_pid" 2>/dev/null || true
+              wait "$server_pid" 2>/dev/null || true
+              cat "$log_file"
+              exit 1
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          wait "$server_pid" 2>/dev/null || true
+          if [[ "$found" != 1 ]]; then
+            echo 'Fabric runtime smoke did not reach the server-started marker' >&2
+            cat "$log_file"
+            exit 1
+          fi
+          grep -R -q 'FABRIC-CI-SMOKE: startup bindings ok' versions/26.1.2-fabric/run-server
+
+      - name: Upload Fabric smoke logs on failure
+        if: ${{ !cancelled() && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fabric-runtime-smoke-logs
+          path: |
+            fabric-runtime-smoke.log
+            versions/26.1.2-fabric/run-server/logs
           if-no-files-found: ignore
 
   common-jdk21:

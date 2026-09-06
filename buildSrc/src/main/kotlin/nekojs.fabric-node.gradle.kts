@@ -7,6 +7,7 @@
 import groovy.lang.Closure
 import org.gradle.accessors.dm.LibrariesForLibs
 import java.util.concurrent.Callable
+import java.util.zip.ZipFile
 
 plugins {
     id("java-library")
@@ -84,6 +85,9 @@ dependencies {
 
 // 共享版本树（src/main/java）由 stonecutter 自动挂载；加载器差异用 `//? if neoforge`
 // 整文件守卫和节点目录表达，跨加载器中立的部分（BlockEvents 等）直接住共享树。
+// 少数 NeoForge 专属实现没有共享语义，按类名下放并从 Fabric source set 排除，避免
+// 它们因缺少外层守卫而进入 Fabric fat jar。
+sourceSets.main { java.exclude("**/NeoForge*.java") }
 
 // dev run 目录：server 与 client 分开。共用一个目录时两个进程会互相覆盖 logs/latest.log
 // 与 nekojs/*.log（Windows 上还会撞 Files.move 轮转）。
@@ -105,6 +109,7 @@ val generateModMetadata = tasks.register<ProcessResources>("generateModMetadata"
         "mod_description" to modDescription,
         "minecraft_version" to mcVersion,
         "loader_version" to loaderVersion,
+        "fabric_api_version" to fabricApiVersion,
         "java_version" to javaRelease.toString(),
     )
     inputs.properties(replaceProperties)
@@ -139,13 +144,16 @@ sourceSets.main {
 // 中立的条目——中立的那批由节点自己的 nekojs-fabric-shared/-dynamic.mixins.json 按条目激活
 // （清单见 docs/fabric-port-status.md），整文件 exclude 的目的是不把 NeoForge 专属条目带进来。
 // stonecutter 在 afterEvaluate 追加 srcDir，但 CopySpec 的 exclude 过滤器在执行期生效，仍然有效。
+val fabricForbiddenResourceEntries = setOf(
+    "META-INF/accesstransformer.cfg",
+    "META-INF/neoforge.mods.toml",
+    "neoforge.mods.toml",
+    "nekojs.mixins.json",
+    "nekojs-dynamic.mixins.json",
+    "nekojs.interface_injection.json",
+)
 tasks.processResources {
-    exclude("META-INF/accesstransformer.cfg")
-    exclude("META-INF/neoforge.mods.toml")
-    exclude("neoforge.mods.toml")
-    exclude("nekojs.mixins.json")
-    exclude("nekojs-dynamic.mixins.json")
-    exclude("nekojs.interface_injection.json")
+    exclude(*fabricForbiddenResourceEntries.toTypedArray())
 }
 
 // 共享测试树的守卫面逐步放开后（适配器三件套等），JUnit Platform 必须显式启用——
@@ -190,6 +198,76 @@ tasks.jar {
         fun doCall(): List<Any> = bundled.resolve().map { dep -> zipTree(dep) }
     })
 }
+
+// ---- verifyFabricRuntimeArtifact：制品不得混入 NeoForge 配置或入口 -------------------
+// processResources 的 exclude 只描述期望；此任务直接检查最终 fat jar，防止源集或装配逻辑
+// 变化后静默把 NeoForge 资源带进 Fabric 发布物。
+val fabricJar = tasks.named<Jar>("jar")
+val verifyFabricRuntimeArtifact = tasks.register("verifyFabricRuntimeArtifact") {
+    group = "verification"
+    description = "Verifies that the Fabric runtime jar has its Fabric entrypoints and no NeoForge artifacts."
+    dependsOn(fabricJar)
+    inputs.file(fabricJar.flatMap { it.archiveFile })
+
+    doLast {
+        val archive = fabricJar.get().archiveFile.get().asFile
+        val requiredEntries = setOf(
+            "fabric.mod.json",
+            "nekojs-fabric.accesswidener",
+            "nekojs-fabric.mixins.json",
+            "nekojs-fabric-shared.mixins.json",
+            "nekojs-fabric-dynamic.mixins.json",
+            "com/tkisor/nekojs/fabric/NekoJSFabricMod.class",
+            "com/tkisor/nekojs/fabric/NekoJSFabricClient.class",
+            "com/tkisor/nekojs/NekoJS.class",
+        )
+        val forbiddenPrefixes = listOf(
+            "com/tkisor/nekojs/neoforge/",
+            "net/neoforged/",
+            "META-INF/services/net.neoforged.",
+        )
+        val forbiddenClassNameTokens = listOf("neoforge", "neoforged")
+
+        ZipFile(archive).use { jar ->
+            val zipEntries = jar.entries()
+            val entries = generateSequence {
+                if (zipEntries.hasMoreElements()) zipEntries.nextElement().name else null
+            }.toSet()
+            val missing = requiredEntries - entries
+            val forbidden = entries.filter { entry ->
+                entry in fabricForbiddenResourceEntries || forbiddenPrefixes.any(entry::startsWith)
+            }
+            val forbiddenClasses = entries.filter { entry ->
+                entry.endsWith(".class") && forbiddenClassNameTokens.any { token ->
+                    entry.contains(token, ignoreCase = true)
+                }
+            }
+            val expectedFabricApiDependency = "\"fabric-api\": \">=$fabricApiVersion\""
+            val metadata = if ("fabric.mod.json" in missing) "" else {
+                jar.getInputStream(jar.getEntry("fabric.mod.json")).bufferedReader().use { it.readText() }
+            }
+            val invalidFabricApiDependency = expectedFabricApiDependency !in metadata
+
+            if (missing.isNotEmpty() || forbidden.isNotEmpty() || forbiddenClasses.isNotEmpty() || invalidFabricApiDependency) {
+                throw GradleException(
+                    "Fabric runtime artifact ${archive.name} is invalid: " +
+                        listOfNotNull(
+                            missing.takeIf { it.isNotEmpty() }?.let { "missing ${it.sorted()}" },
+                            forbidden.takeIf { it.isNotEmpty() }?.let { "contains NeoForge artifacts ${it.sorted()}" },
+                            forbiddenClasses.takeIf { it.isNotEmpty() }?.let {
+                                "contains NeoForge classes ${it.sorted()}"
+                            },
+                            invalidFabricApiDependency.takeIf { it }?.let {
+                                "does not require fabric-api >=$fabricApiVersion"
+                            },
+                        ).joinToString("; ")
+                )
+            }
+        }
+    }
+}
+
+tasks.named("check") { dependsOn(verifyFabricRuntimeArtifact) }
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
