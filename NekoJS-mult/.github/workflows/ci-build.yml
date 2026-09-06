@@ -188,6 +188,16 @@ jobs:
           if-no-files-found: error
           retention-days: ${{ needs.analyze.outputs.is_release == 'true' && 90 || 14 }}
 
+      - name: Upload Fabric smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NekoJS-Fabric-Smoke-Jars
+          path: |
+            versions/26.1.2-fabric/build/libs/nekojs-fabric-*.jar
+            versions/26.2.0-fabric/build/libs/nekojs-fabric-*.jar
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload test reports on failure
         # 放在 job 末尾 + if: ${{ !cancelled() && failure() }}：任何一步失败（common 检查 / NBT 冒烟 /
         # probe typecheck / 节点构建）都能带上报表；!cancelled() 保证并发取消后仍尽力补传已有报表
@@ -204,9 +214,7 @@ jobs:
 
   fabric-runtime-smoke:
     name: Fabric artifact and development smoke (${{ matrix.node }})
-    needs:
-      - analyze
-      - build
+    needs: build
     strategy:
       fail-fast: false
       matrix:
@@ -237,10 +245,10 @@ jobs:
       - name: Drop local org.gradle.java.home pin
         run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
-      - name: Download built artifacts
+      - name: Download Fabric smoke artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.analyze.outputs.is_release == 'true' && 'NekoJS-Release-Jars' || 'NekoJS-Dev-Jars' }}
+          name: NekoJS-Fabric-Smoke-Jars
           path: artifacts
 
       - name: Verify packaged Fabric artifact
@@ -268,8 +276,20 @@ jobs:
               nekojs-fabric-shared.mixins.json \
               nekojs-fabric-dynamic.mixins.json \
               com/tkisor/nekojs/fabric/NekoJSFabricMod.class \
-              com/tkisor/nekojs/fabric/NekoJSFabricClient.class; do
+              com/tkisor/nekojs/fabric/NekoJSFabricClient.class \
+              com/tkisor/nekojs/NekoJS.class; do
             grep -Fxq "$required" "$entries" || { echo "Missing $required in $artifact" >&2; exit 1; }
+          done
+          for forbidden in \
+              META-INF/accesstransformer.cfg \
+              META-INF/neoforge.mods.toml \
+              nekojs.mixins.json \
+              nekojs-dynamic.mixins.json \
+              nekojs.interface_injection.json; do
+            if grep -Fxq "$forbidden" "$entries"; then
+              echo "Forbidden NeoForge resource leaked into $artifact: $forbidden" >&2
+              exit 1
+            fi
           done
           if grep -Eiq 'NeoForge|neoforged' "$entries"; then
             echo "NeoForge-named entries leaked into $artifact" >&2
