@@ -324,6 +324,7 @@ jobs:
     needs:
       - analyze
       - build
+      - fabric-runtime-smoke
     if: github.event_name == 'push' && needs.analyze.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -384,6 +385,7 @@ jobs:
     needs:
       - analyze
       - build
+      - fabric-runtime-smoke
     if: github.event_name == 'push' && needs.analyze.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     permissions:

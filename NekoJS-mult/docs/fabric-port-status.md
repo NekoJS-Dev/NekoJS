@@ -291,8 +291,9 @@
     set 同时排除未被外层守卫包裹的 `NeoForge*.java`，避免门禁只报错而无法生成合规制品。
     任务接入 Fabric `check`，因此节点 `build` 自动执行；嵌套仓库 CI 在 release 时也会排除
     `nekojs-fabric-*`，避免尚未通过运行时 smoke 的 jar 被 GitHub Release 意外公开。
-    CI 新增版本库中的 Fabric server smoke fixture，启动后要求 startup/server-started
-    markers，并拒绝常见 Mixin/启动失败。
+    `release` 与 `curseforge` workflow job 同时依赖 `fabric-runtime-smoke`，smoke 失败时
+    不进入任何发布任务。Fabric 测试任务已禁止空测试集。CI 使用版本库中的 Fabric server
+    smoke fixture，启动后要求 startup/server-started markers，并拒绝常见 Mixin/启动失败。
 
 ## P1 剩余（功能面）
 
