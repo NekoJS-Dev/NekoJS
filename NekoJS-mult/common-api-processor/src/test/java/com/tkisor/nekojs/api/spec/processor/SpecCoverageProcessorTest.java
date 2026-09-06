@@ -91,6 +91,17 @@ class SpecCoverageProcessorTest {
             }
             """;
 
+    private static final String CR_ONLY_SPEC = """
+            package demo;
+
+            import com.tkisor.nekojs.api.spec.PlatformAvailability;
+
+            @PlatformAvailability(PlatformAvailability.Scope.CR_ONLY)
+            public interface CrOnlySpec {
+                default String neko$name() { throw new UnsupportedOperationException(); }
+            }
+            """;
+
     /** Covers neko$ping but not neko$pong(int). */
     private static final String PARTIAL_IMPL = """
             package demo;
@@ -216,6 +227,40 @@ class SpecCoverageProcessorTest {
     }
 
     @Test
+    void allScopeRequiredOnFabric() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=fabric"),
+                source("demo.AllSpec", ALL_SPEC));
+        assertFalse(result.success());
+        assertTrue(result.errors().stream().anyMatch(e ->
+                        e.contains("AllSpec") && e.contains("ALL") && e.contains("[fabric]")),
+                () -> "expected scope enforcement error, got: " + result.errors());
+    }
+
+    @Test
+    void nfOnlySpecNotRequiredOnFabric() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=fabric"),
+                source("demo.NfOnlySpec", NF_ONLY_SPEC));
+        assertTrue(result.success(), () -> String.join("; ", result.errors()));
+        assertEquals(List.of(), result.errors());
+    }
+
+    @Test
+    void nf26OnlySpecNotRequiredOnFabric() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=fabric"),
+                source("demo.Nf26OnlySpec", NF26_ONLY_SPEC));
+        assertTrue(result.success(), () -> String.join("; ", result.errors()));
+        assertEquals(List.of(), result.errors());
+    }
+
+    @Test
+    void crOnlySpecNotRequiredOnFabric() throws Exception {
+        CompileResult result = compile(List.of("-Anekojs.platform=fabric"),
+                source("demo.CrOnlySpec", CR_ONLY_SPEC));
+        assertTrue(result.success(), () -> String.join("; ", result.errors()));
+        assertEquals(List.of(), result.errors());
+    }
+
+    @Test
     void withoutOptionScopeIsNotEnforced() throws Exception {
         CompileResult result = compile(List.of(),
                 source("demo.NfOnlySpec", NF_ONLY_SPEC));
@@ -224,7 +269,7 @@ class SpecCoverageProcessorTest {
 
     @Test
     void invalidPlatformOptionValueFails() throws Exception {
-        CompileResult result = compile(List.of("-Anekojs.platform=fabric"),
+        CompileResult result = compile(List.of("-Anekojs.platform=invalid"),
                 source("demo.Plain", PLAIN));
         assertFalse(result.success());
         assertTrue(result.errors().stream().anyMatch(e -> e.contains("非法")),

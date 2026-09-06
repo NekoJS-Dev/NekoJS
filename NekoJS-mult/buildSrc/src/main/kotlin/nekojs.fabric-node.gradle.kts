@@ -78,6 +78,8 @@ dependencies {
 
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
+    annotationProcessor(project(":common-api-processor"))
+    annotationProcessor(project(":common"))
     compileOnly(libs.jspecify)
 
     // 共享测试树由 stonecutter 挂进本节点；MC 节点统一用 JUnit 5
@@ -279,8 +281,10 @@ tasks.named("check") { dependsOn(verifyFabricRuntimeArtifact) }
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all", "-Xlint:-processing"))
-    // 不传 -Anekojs.platform：fabric 节点尚未把 common-api-processor 挂进 annotationProcessor
-    // （NeoForge 节点两样都有）。@PlatformAvailability 注解源本身在 :common 里、fabric 可见，
-    // 接线是待办而非不可能——接好后按节点平台传 fabric。
+    options.compilerArgs.addAll(listOf(
+        "-parameters",
+        "-Xlint:all",
+        "-Xlint:-processing",
+        "-Anekojs.platform=fabric",
+    ))
 }

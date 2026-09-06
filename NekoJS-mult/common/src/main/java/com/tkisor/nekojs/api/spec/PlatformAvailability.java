@@ -22,11 +22,11 @@ public @interface PlatformAvailability {
     /**
      * 平台范围枚举。
      *
-     * <p>{@link #ALL} 意味着所有目标平台（NF26 / NF121 / CR / 未来 Fabric）都必须实现该 spec。
+     * <p>{@link #ALL} 意味着所有目标平台（NF26 / NF121 / CR / Fabric）都必须实现该 spec。
      * 只有"所有平台原生类都不提供、需 mixin 注入"的方法才应进入 {@code ALL} spec。
      */
     enum Scope {
-        /** 所有目标平台必须实现（NF26 / NF121 / CR / Future Fabric） */
+        /** 所有目标平台必须实现（NF26 / NF121 / CR / Fabric） */
         ALL,
         /** 仅 NeoForge 系列（26.x + 1.21.1） */
         NF_ONLY,

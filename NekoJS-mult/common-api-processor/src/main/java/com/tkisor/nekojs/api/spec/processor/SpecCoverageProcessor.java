@@ -34,8 +34,8 @@ import java.util.Set;
  *
  * <p>未覆盖 → 编译 ERROR（IDE 红线）。
  *
- * <p><b>平台范围强制（可选）</b>：编译时传 {@code -Anekojs.platform=<nf|cr>}（nf = NeoForge
- * 系列，cr = Cleanroom）后，额外按 {@link PlatformAvailability.Scope} 语义校验：scope 要求
+ * <p><b>平台范围强制（可选）</b>：编译时传 {@code -Anekojs.platform=<nf26|nf121|cr|fabric>} 后，
+ * 额外按 {@link PlatformAvailability.Scope} 语义校验：scope 要求
  * 当前平台实现、但本次编译中没有任何非 Spec 接口<b>直接 extends</b> 该 spec → 编译 ERROR。
  * 未传该选项时只做方法覆盖校验（历史行为），spec 接口完全缺失时处理器静默跳过。
  */
@@ -43,7 +43,7 @@ import java.util.Set;
 @SupportedOptions(SpecCoverageProcessor.PLATFORM_OPTION)
 public class SpecCoverageProcessor extends AbstractProcessor {
 
-    /** 编译选项名：目标平台（nf = NeoForge 系列 / 26.x + 1.21.1，cr = Cleanroom 1.12.2）。 */
+    /** 编译选项名：目标平台（nf26 / nf121 = NeoForge，cr = Cleanroom 1.12.2，fabric = Fabric）。 */
     static final String PLATFORM_OPTION = "nekojs.platform";
 
     /** spec 接口所在包；扫描这些包以枚举全部 spec（含仅存在于 classpath 的）。 */
@@ -59,7 +59,7 @@ public class SpecCoverageProcessor extends AbstractProcessor {
     private Elements elements;
     private Messager messager;
 
-    /** 解析后的目标平台（"nf" / "cr"）；null 表示未传选项或值非法（非法时已报错）。 */
+    /** 解析后的目标平台；null 表示未传选项或值非法（非法时已报错）。 */
     private String platform;
     /** 保证平台选项解析 + 范围校验只在首个 round 执行一次。 */
     private boolean scopeCheckDone;
@@ -106,7 +106,7 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         String raw = processingEnv.getOptions().get(PLATFORM_OPTION);
         if (raw == null) return; // 未启用平台范围校验
         String value = raw.trim().toLowerCase(Locale.ROOT);
-        if ("nf26".equals(value) || "nf121".equals(value) || "cr".equals(value)) {
+        if ("nf26".equals(value) || "nf121".equals(value) || "cr".equals(value) || "fabric".equals(value)) {
             platform = value;
         } else if ("nf".equals(value)) {
             // 旧值在平台标签化后无法区分 26.x 与 1.21.1，快速失败逼升级
@@ -114,7 +114,7 @@ public class SpecCoverageProcessor extends AbstractProcessor {
                 "-A" + PLATFORM_OPTION + "=nf 已废弃：请按平台传 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）");
         } else {
             messager.printMessage(Diagnostic.Kind.ERROR,
-                "-A" + PLATFORM_OPTION + "='" + raw + "' 非法：只支持 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）");
+                "-A" + PLATFORM_OPTION + "='" + raw + "' 非法：只支持 nf26（NeoForge 26.x）/ nf121（1.21.1）/ cr（Cleanroom）/ fabric（Fabric）");
         }
     }
 
@@ -201,7 +201,7 @@ public class SpecCoverageProcessor extends AbstractProcessor {
         return availability != null ? availability.value() : PlatformAvailability.Scope.ALL;
     }
 
-    /** scope 语义：ALL = 所有平台；NF_ONLY = 仅 nf；CR_ONLY = 仅 cr。 */
+    /** scope 语义：ALL = 所有平台；NF_ONLY = 仅 NeoForge；CR_ONLY = 仅 Cleanroom；Fabric 只要求 ALL。 */
     private boolean isRequiredOn(PlatformAvailability.Scope scope) {
         return scope == PlatformAvailability.Scope.ALL
             || (scope == PlatformAvailability.Scope.NF_ONLY && ("nf26".equals(platform) || "nf121".equals(platform)))
