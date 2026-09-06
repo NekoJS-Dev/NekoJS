@@ -73,7 +73,7 @@ public interface ItemEvents {
             .bind(FOOD_EATEN);
 }
 //?} else {
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
+// fabric 节点孪生：版本树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
 // 事件类）。fabric 侧 rightClicked 由 FabricItemEventBindings 提供（组实例各自注册、同名
 // 合并），tooltip 由 FabricClientEventBindings 挂 ItemTooltipCallback 投递；canPickUp/
 // pickedUpPre/pickedUp/dropped/foodEaten/entityInteracted 为 mixin 挂点批次

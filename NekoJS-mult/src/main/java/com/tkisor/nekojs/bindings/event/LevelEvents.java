@@ -54,9 +54,9 @@ public interface LevelEvents {
             .bind(AFTER_EXPLOSION);
 }
 //?} else {
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
+// fabric 节点孪生：版本树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
 // 事件类）。fabric 侧由 FabricLevelEventBindings 以中立 payload 提供子集；爆炸系与
-// saved 需 mixin（见 docs/fabric-port-status.md），落地后本孪生随之扩。共享树版事件载荷
+// saved 需 mixin（见 docs/fabric-port-status.md），落地后本孪生随之扩。版本树版事件载荷
 // 中立化后合并回单副本。
 package com.tkisor.nekojs.bindings.event;
 

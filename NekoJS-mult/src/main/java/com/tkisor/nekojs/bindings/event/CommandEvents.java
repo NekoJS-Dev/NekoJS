@@ -22,7 +22,7 @@ public interface CommandEvents {
             .bind(COMMAND);
 }
 //?} else {
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
+// fabric 节点孪生：版本树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
 // RegisterCommandsEvent/CommandEvent）。fabric 侧 REGISTER 由 FabricCommandEventBindings 挂
 // CommandRegistrationCallback 投递；command（执行拦截）需 mixin Commands#performCommand，
 // 落地后本孪生随之扩。

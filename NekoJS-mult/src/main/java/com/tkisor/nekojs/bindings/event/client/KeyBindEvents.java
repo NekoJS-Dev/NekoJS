@@ -425,11 +425,11 @@ public final class KeyBindEvents {
 }
 //?}
 //?} else {
-// fabric 节点孪生：共享树同名类整文件 `//? if neoforge && >=26` 守卫（重 NeoForge 面：
+// fabric 节点孪生：版本树同名类整文件 `//? if neoforge && >=26` 守卫（重 NeoForge 面：
 // RegisterKeyMappingsEvent 事件窗口、mod-bus 订阅、FML 运行时探测）。fabric 侧等价物更简——
 // KeyMappingHelper.registerKeyMapping 任意时机可调（无事件窗口/pending 重试），状态轮询挂
 // ClientTickEvents.END_CLIENT_TICK（edge-detect 逻辑与 NeoForge 版逐行同构）。
-// 解析/分类逻辑复用共享树 KeyBindIds（>=26 版本守卫，fabric 26 存活）。共享树版去 NeoForge
+// 解析/分类逻辑复用版本树 KeyBindIds（>=26 版本守卫，fabric 26 存活）。版本树版去 NeoForge
 // 化后（payload/RegisterBus 提为中立形态）合并回单副本。
 package com.tkisor.nekojs.bindings.event.client;
 

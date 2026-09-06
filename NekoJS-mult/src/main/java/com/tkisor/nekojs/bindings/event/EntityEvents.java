@@ -80,7 +80,7 @@ public interface EntityEvents {
             .bind(USE_TICK);
 }
 //?} else {
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
+// fabric 节点孪生：版本树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
 // 事件类）。fabric 侧 joinLevel/death/damagePre/damagePost 由 FabricEntityEventBindings 提供
 // （组实例各自注册、同名合并）；本孪生提供 drops/finalizeSpawn/tickPre/tickPost/leaveLevel
 // （中立 payload，由 FabricEntityEventBindingsV2 + fabric/mixin/* 投递）。

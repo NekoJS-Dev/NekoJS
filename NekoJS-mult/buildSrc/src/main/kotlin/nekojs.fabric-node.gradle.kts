@@ -89,7 +89,7 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
-// 共享版本树（src/main/java）由 stonecutter 自动挂载；Fabric-only 实现也位于共享树，
+// 共享版本树（src/main/java）由 stonecutter 自动挂载；Fabric-only 实现也位于版本树，
 // 由整文件 `//? if fabric` 守卫选择。Fabric 资源单独使用 loader-specific 根，避免
 // NeoForge 节点把 Fabric 配置和 mixin 清单带进制品。
 sourceSets.main {
@@ -148,7 +148,7 @@ sourceSets.main {
     output.dir(mapOf("builtBy" to extractIcuClasses), icuClassesDir)
 }
 
-// 共享树的 resources（src/main/resources、resources-modern/-legacy）由 stonecutter 挂进本节点。
+// 版本树的 resources（src/main/resources、resources-modern/-legacy）由 stonecutter 挂进本节点。
 // Fabric-only resources-fabric 根已在上面显式加入；NeoForge 的 convention plugin 不引用它，
 // 因此 Fabric access widener 和 mixin 清单不会进入 NeoForge 制品。
 // 共享 NeoForge 资源仍由下方禁止清单兜底，防止跨加载器资源误装。

@@ -48,14 +48,12 @@ version = modVersion
 // 之前必须显式声明求值依赖。
 evaluationDependsOn(":common")
 
-// Shared sources must always be consumed after Stonecutter processing. The active node
-// otherwise compiles raw src/main/java, which is unsafe for dual-loader files with
-// conditional package/import branches. Node-local compatibility sources remain raw.
+// Shared sources always come from Stonecutter's processed output. The active node's
+// project directory is versions/<node>, so its raw source directory contains only
+// node-local compatibility files and never bypasses shared-source processing.
 sourceSets.main {
-    java.setSrcDirs(listOf(
-        layout.buildDirectory.dir("generated/stonecutter/main/java"),
-        layout.projectDirectory.dir("src/main/java"),
-    ))
+    java.setSrcDirs(listOf(layout.buildDirectory.dir("generated/stonecutter/main/java")))
+    java.srcDir(layout.projectDirectory.dir("src/main/java"))
 }
 tasks.withType<JavaCompile>().configureEach {
     dependsOn(tasks.named("stonecutterGenerate"))

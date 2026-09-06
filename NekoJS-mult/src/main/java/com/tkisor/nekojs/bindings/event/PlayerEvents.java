@@ -93,12 +93,12 @@ public interface PlayerEvents {
             .bind(DESTROYED);
 }
 //?} else {
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
+// fabric 节点孪生：版本树同名接口整文件 `//? if neoforge` 守卫（总线直传 NeoForge 原生
 // 事件类），本孪生只包含 fabric 侧由 mixin 提供的「mixin 面」玩家事件总线；payload 为
-// 共享树中立类（wrapper/event/player）。loggedIn/loggedOut/chat/tickPre/tickPost/cloned/
+// 版本树中立类（wrapper/event/player）。loggedIn/loggedOut/chat/tickPre/tickPost/cloned/
 // respawned 已由 FabricServerEventBindings.PLAYER_EVENTS 提供，不在此重复声明——同名组
 // "PlayerEvents" 经 EventGroupRegistry 按名合并（与 ServerEvents 孪生同机制），脚本侧
-// 组名与总线名与 NeoForge 侧一致。共享树版事件载荷中立化后合并回单副本。
+// 组名与总线名与 NeoForge 侧一致。版本树版事件载荷中立化后合并回单副本。
 package com.tkisor.nekojs.bindings.event;
 
 import com.tkisor.nekojs.api.ScriptType;
@@ -155,7 +155,7 @@ public interface PlayerEvents {
     EventBusJS<PlayerChangedDimensionEventJS, Void> CHANGED_DIMENSION =
             GROUP.server("changedDimension", PlayerChangedDimensionEventJS.class);
 
-    // inventoryChanged：按物品 id 分发，与 NeoForge 侧共享树声明同构
+    // inventoryChanged：按物品 id 分发，与 NeoForge 侧版本树声明同构
     // （监听器挂载见 FabricPlayerEventBindings.registerLifecycle）。
     EventBusJS<InventoryChangedEventJS, Item> INVENTORY_CHANGED =
             GROUP.server("inventoryChanged", InventoryChangedEventJS.class,

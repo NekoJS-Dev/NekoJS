@@ -99,7 +99,7 @@ public interface ServerEvents {
         .bind(LOOT_TABLE_LOAD);
 }
 //?} else {
-// fabric 节点孪生：共享树同名接口整文件 `//? if neoforge` 守卫（生命周期/tick 等总线直传
+// fabric 节点孪生：版本树同名接口整文件 `//? if neoforge` 守卫（生命周期/tick 等总线直传
 // NeoForge 原生事件），fabric 侧已有 FabricServerEventBindings 以同名组提供中立子集。本孪生
 // 只补配方面需要的两条总线（RecipeManagerMixin 孪生 fire），与 FabricServerEventBindings 的
 // SERVER_EVENTS 同组名，经 EventGroupRegistry 合并成脚本侧的同一个 ServerEvents 组。
