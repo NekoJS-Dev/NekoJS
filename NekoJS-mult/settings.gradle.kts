@@ -3,9 +3,9 @@
 // 版本图（stonecutter 0.9.7）：四个节点共用一棵源码树 src/，版本差异由守卫与
 // replacements 表达，加载器差异由 `//? if neoforge` / `//? if fabric` 守卫表达。
 //   1.21.1 / 26.1.2 / 26.2.0      —— NeoForge 节点，入口 build.gradle.kts
-//   26.1.2-fabric                 —— Fabric 节点，入口 fabric.gradle.kts。id 带后缀避免
-//                                    与 NeoForge 的 26.1.2 撞名，`to` 右侧是守卫解析用的
-//                                    干净逻辑版本
+//   26.1.2-fabric / 26.2.0-fabric —— Fabric 节点，入口 fabric.gradle.kts。id 带后缀避免
+//                                    与 NeoForge 节点撞名；26.2 当前复用已验证的
+//                                    26.1.2 Fabric source bridge，待第 0 步上移收口
 //
 // 不支持 Forge 1.20.1：它的 API 与共享树差了一个时代，守卫和 replacements 桥接不了，
 // 移植等于维护第二套代码库。
@@ -36,6 +36,7 @@ stonecutter {
     create(rootProject) {
         versions("1.21.1", "26.1.2", "26.2.0")
         version("26.1.2-fabric", "26.1.2").buildscript = "fabric.gradle.kts"
+        version("26.2.0-fabric", "26.2.0").buildscript = "fabric.gradle.kts"
     }
 }
 

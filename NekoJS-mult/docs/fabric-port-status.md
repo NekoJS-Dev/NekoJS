@@ -1,4 +1,4 @@
-# Fabric 移植状态与缺口台账（26.1.2-fabric）
+# Fabric 移植状态与缺口台账（26.1.2-fabric / 26.2.0-fabric）
 
 > 状态：living document——本文档是 fabric 移植的缺口台账与批次记录。
 > 勘察事实源：2026-09-01/02 两轮只读勘察（笔记存 `D:\mcmodDemo\NekoJS\.agent-notes\fabric-port-audit\`，
@@ -283,7 +283,7 @@
     验证：五节点编译 + guardLint 全绿；verbose 冒烟 `Done` 零注入失败、9/9 inject
     织入；common 测试绿。
 
-17. **Fabric 分发 jar 与发布隔离门禁**（2026-09-06 发布收口首项）：
+17. **Fabric 分发 jar 与发布隔离门禁**（2026-09-06 发布收口首项；26.2 bridge 于本轮加入）：
     `verifyFabricRuntimeArtifact` 直接读取最终 fat jar，断言 `fabric.mod.json`、access
     widener、三份 Fabric mixin 配置、Fabric 主/客户端入口与 common runtime 入口以及已测
     Fabric API 最低版本均存在，同时拒绝 NeoForge AT/mods.toml/mixin 配置、路径或类名中
