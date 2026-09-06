@@ -165,7 +165,8 @@ tasks.test {
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
     systemProperty("file.encoding", "UTF-8")
-    failOnNoDiscoveredTests = false
+    // Fabric now has a versioned runtime smoke gate and six JUnit tests; an empty suite must fail.
+    failOnNoDiscoveredTests = true
 }
 
 // ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）——与 NeoForge 节点同构 ----
