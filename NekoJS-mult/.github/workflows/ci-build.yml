@@ -334,7 +334,7 @@ jobs:
               kill -TERM "$server_pid" 2>/dev/null || true
               break
             fi
-            if grep -Eiq 'Critical injection|FAILED during|Mixin.*(failed|error)|Could not find required mod' \
+            if grep -Eiq 'Critical injection|FAILED during|Mixin.*\b(failed|error)\b|Could not find required mod' \
                 "$log_file" "$run_dir/logs" 2>/dev/null; then
               echo 'Fabric runtime smoke found a startup or Mixin failure' >&2
               kill -TERM "$server_pid" 2>/dev/null || true

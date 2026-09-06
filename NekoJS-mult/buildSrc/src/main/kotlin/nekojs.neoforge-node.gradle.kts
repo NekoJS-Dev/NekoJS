@@ -48,6 +48,19 @@ version = modVersion
 // 之前必须显式声明求值依赖。
 evaluationDependsOn(":common")
 
+// Shared sources must always be consumed after Stonecutter processing. The active node
+// otherwise compiles raw src/main/java, which is unsafe for dual-loader files with
+// conditional package/import branches. Node-local compatibility sources remain raw.
+sourceSets.main {
+    java.setSrcDirs(listOf(
+        layout.buildDirectory.dir("generated/stonecutter/main/java"),
+        layout.projectDirectory.dir("src/main/java"),
+    ))
+}
+tasks.withType<JavaCompile>().configureEach {
+    dependsOn(tasks.named("stonecutterGenerate"))
+}
+
 // MDG mods 块的 lambda receiver 不是 project，sourceSet 需在顶层捕获
 val mainSources = sourceSets.main.get()
 val commonSources = project(":common").sourceSets.main.get()

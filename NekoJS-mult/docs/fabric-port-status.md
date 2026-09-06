@@ -133,8 +133,9 @@
       从未真正跑过的存量问题**：fabric-node.gradle.kts 缺 useJUnitPlatform()（Gradle 9
       默认框架非 Platform，jupiter 测试静默发现不了，failOnNoDiscoveredTests=false
       掩盖了这一点）——补上后 6 类 26 用例全绿（三个放行测试 + pdata 三件套存量）
-    - common-api-processor 接线**不做**：processor 平台值只有 nf/cr 两态，fabric 是
-      第三平台需先扩 processor 的平台模型（fabric 上大量 spec 未实现，接上会误报红）
+    - common-api-processor Fabric 接线已完成（2026-09-07）：processor 接受
+      `-Anekojs.platform=fabric`，Fabric 节点接入 processor 与 common annotation path；ALL
+      spec 在 Fabric 上强制覆盖，NeoForge/Cleanroom-only spec 不在 Fabric 上强制。
 
 12. **BlockEvents.rightClicked / leftClicked**（2026-09-02 第六批）：两个中立 payload
     （BlockRightClickEventJS / BlockLeftClickEventJS）落共享树，FabricBlockEventBindings
@@ -306,7 +307,6 @@
 - LevelEvents：saved/爆炸系已在第 13 批完成（Explosion radius 修饰 AW 未做）。
 - ItemEvents：mixin 面已在第 13 批完成；剩 category/food 配方面（其余 P2）。
 - FluidBuilder（需 fabric 流体重设计）。
-- common-api-processor 的 fabric 平台支持（processor 端先扩平台模型，见上）。
 
 ## P2（大块移植，按需排期）
 

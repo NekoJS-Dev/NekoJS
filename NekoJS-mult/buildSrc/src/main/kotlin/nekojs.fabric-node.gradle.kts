@@ -93,6 +93,9 @@ dependencies {
 // 由整文件 `//? if fabric` 守卫选择。Fabric 资源单独使用 loader-specific 根，避免
 // NeoForge 节点把 Fabric 配置和 mixin 清单带进制品。
 sourceSets.main {
+    // NeoForge-named shared implementations remain outside Fabric; this preserves the
+    // pre-migration source-set boundary for loader-specific classes without duplicating them.
+    java.exclude("**/NeoForge*.java")
     resources.srcDir(fabricResourceRoot)
 }
 
