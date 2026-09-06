@@ -30,7 +30,7 @@
 ## 决策
 
 1. ~~**插件入口契约迁入 `common-api`**~~ —— **已终止**（2026-08-29 实施裁决推回，2026-08-30 随模块并入正式终结，理由见文件头修订注记）。`NekoJSPlugin` 留在 `common`，钩子-点配对由 `PluginHookPairingTest` 看住。
-2. **新代码按同判据落位**：ADR-0004 平台适配层——NeoForge adapter（1.21.1 / 26.x 同 API）→ 共享树守卫内；Fabric adapter → `26.1.2-fabric` 节点目录（整文件差异）。
+2. **新代码按同判据落位**：ADR-0004 平台适配层——NeoForge adapter（1.21.1 / 26.x 同 API）→ 共享树守卫内；Fabric adapter → 共享树 `//? if fabric` 整文件守卫内；只有版本差异过大时才落节点孪生。
 3. **client/GUI 高守卫区保留共享树**（RE1：client 包 258 条守卫为全树最密）——单副本价值 > 守卫成本，密度治理归 M2，不因密度下放。
 4. **边界做编译期检查**：L1/L2 零 MC/loader import、wrapper 层零 loader import（ADR-0004 要求）——**落地于 `guardLint` 任务的 import 扫描**（同为已有机制、单一工具入口，与 ADR-0008 第 5 条一致；核心决策"不引入 ArchUnit 新依赖"不变）。L1 自模块并入起按包前缀（`com/tkisor/nekojs/api/**`）取材，不再依赖模块目录划分。
 
