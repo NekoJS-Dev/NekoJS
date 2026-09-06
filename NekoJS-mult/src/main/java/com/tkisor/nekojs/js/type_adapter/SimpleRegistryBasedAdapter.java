@@ -1,5 +1,5 @@
 //~ mc_legacy_api
-// 本文件启用文件级 mc_legacy_api（26.x 活形态无 .location()，1.21.1 求值形态无 .identifier()
+// 本文件启用文件级 mc_legacy_api（26.x 活形态无 .identifier()，1.21.1 求值形态无 .identifier()
 // ——门槛已核验；变量名 identifier/location 为行为中性的改名差异）。
 package com.tkisor.nekojs.js.type_adapter;
 

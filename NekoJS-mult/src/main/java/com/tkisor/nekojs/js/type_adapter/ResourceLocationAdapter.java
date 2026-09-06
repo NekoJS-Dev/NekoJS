@@ -9,19 +9,19 @@ import java.util.List;
 
 import static com.tkisor.nekojs.api.AdapterInputShape.*;
 import com.tkisor.nekojs.api.data.NekoId;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /^*
- * ResourceLocation 适配器。无命名空间的 string 用 {@link NekoJS#MODID} 作为默认命名空间
+ * Identifier 适配器。无命名空间的 string 用 {@link NekoJS#MODID} 作为默认命名空间
  * （保留旧实现行为）。识别但非法的输入（如 tryParse 失败）抛 {@link ValueConversionException}。
  ^/
-public class ResourceLocationAdapter extends AbstractJSTypeAdapter<ResourceLocation> {
+public class ResourceLocationAdapter extends AbstractJSTypeAdapter<Identifier> {
 
     private static final String DEFAULT_NAMESPACE = NekoJS.MODID;
 
     @Override
-    public Class<ResourceLocation> getTargetClass() {
-        return ResourceLocation.class;
+    public Class<Identifier> getTargetClass() {
+        return Identifier.class;
     }
 
     @Override
@@ -33,23 +33,23 @@ public class ResourceLocationAdapter extends AbstractJSTypeAdapter<ResourceLocat
     }
 
     @Override
-    protected ResourceLocation fromString(String s) {
+    protected Identifier fromString(String s) {
         if (s.contains(":")) {
-            // 1.21.1: ResourceLocation.parse 在非法时直接抛异常；先 tryParse 做 null 检查统一错误。
-            ResourceLocation parsed = ResourceLocation.tryParse(s);
+            // 1.21.1: Identifier.parse 在非法时直接抛异常；先 tryParse 做 null 检查统一错误。
+            Identifier parsed = Identifier.tryParse(s);
             if (parsed == null) {
-                throw new ValueConversionException(ResourceLocation.class, "valid resource location string", s,
+                throw new ValueConversionException(Identifier.class, "valid resource location string", s,
                     "invalid resource location: " + s);
             }
             return parsed;
         }
-        return ResourceLocation.fromNamespaceAndPath(DEFAULT_NAMESPACE, s);
+        return Identifier.fromNamespaceAndPath(DEFAULT_NAMESPACE, s);
     }
 
     @Override
-    protected ResourceLocation fromHostObject(Object host) {
-        if (host instanceof ResourceLocation location) return location;
-        if (host instanceof NekoId id) return ResourceLocation.fromNamespaceAndPath(id.namespace(), id.path());
+    protected Identifier fromHostObject(Object host) {
+        if (host instanceof Identifier location) return location;
+        if (host instanceof NekoId id) return Identifier.fromNamespaceAndPath(id.namespace(), id.path());
         return null;
     }
 }

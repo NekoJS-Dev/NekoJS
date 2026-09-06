@@ -2,8 +2,8 @@
 //? if neoforge {
 //~ mc_legacy_api
 // 版本差异收敛（DEVEX-ROADMAP 档 1）：本文件启用文件级 mc_legacy_api——两侧门槛已核验
-// （1.21.1 求值形态无 .identifier()，26.x 形态无 .location()/.listRegistries()），
-// 覆盖 .identifier()↔.location() 与 .listRegistryKeys()↔.listRegistries() 两组纯改名。
+// （1.21.1 求值形态无 .identifier()，26.x 形态无 .identifier()/.listRegistryKeys()），
+// 覆盖 .identifier()↔.identifier() 与 .listRegistryKeys()↔.listRegistryKeys() 两组纯改名。
 // tryParse 提升为两端中立方法：26.x 的 Identifier.parse 与 1.21.1 一样对非法输入抛异常
 // （26.x 另有不抛的 tryParse，本类 26.x 原始写法用的就是它——catch 版语义等价）。
 // 残留 2 条守卫是真 API 改名，无法用改名表安全表达：Registry get/getTag、

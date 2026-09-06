@@ -98,7 +98,7 @@ public final class RegistryEventAdapter {
      * 在所有注册完成之后触发，故可安全从 {@link BuiltInRegistries#ITEM} 解析。
      */
     public static void onBuildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
-        // 26.x: ResourceKey.identifier()（ResourceLocation 已重命名为 Identifier）
+        // 26.x: ResourceKey.identifier()（Identifier 已重命名为 Identifier）
 //? if >=26 {
         var tabId = event.getTabKey().identifier();
 //?} else {
