@@ -218,15 +218,19 @@ public final class TagEventJS {
         for (var entry : removals.entrySet()) {
             var list = sourceMap.get(entry.getKey());
             if (list == null) continue;
-            // Fabric's TagEntry exposes no id/tag accessors; its stable string form
-            // preserves the element/tag distinction needed for removal.
+            // Fabric's TagEntry exposes no id/tag accessors. Normalize the optional
+            // marker so remove(tag, id) removes both required and optional entries.
             var toRemove = entry.getValue().stream()
                     .map(TagLoader.EntryWithSource::entry)
-                    .map(Object::toString)
+                    .map(TagEventJS::removalKey)
                     .collect(java.util.stream.Collectors.toSet());
-            list.removeIf(e -> toRemove.contains(e.entry().toString()));
+            list.removeIf(e -> toRemove.contains(removalKey(e.entry())));
         }
     }
 
+    private static String removalKey(TagEntry entry) {
+        String key = entry.toString();
+        return key.endsWith("?") ? key.substring(0, key.length() - 1) : key;
+    }
 }
 //?}
