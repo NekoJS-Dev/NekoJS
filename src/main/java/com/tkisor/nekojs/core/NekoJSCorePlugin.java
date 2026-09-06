@@ -26,11 +26,16 @@ import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.BlockJS;
 import com.tkisor.nekojs.bindings.static_access.CapabilitiesJS;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
+import com.tkisor.nekojs.bindings.static_access.DamageSourceJS;
+import com.tkisor.nekojs.bindings.static_access.DataMapJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
 import com.tkisor.nekojs.bindings.static_access.FluidIngredientJS;
 import com.tkisor.nekojs.bindings.RecipeSchemaBinding;
 import com.tkisor.nekojs.bindings.static_access.IngredientFactory;
 import com.tkisor.nekojs.bindings.static_access.ItemJS;
+import com.tkisor.nekojs.bindings.static_access.KMathJS;
+import com.tkisor.nekojs.bindings.static_access.ParticleOptionsJS;
+import com.tkisor.nekojs.bindings.static_access.TextIcons;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.api.data.Binding;
 import java.util.Set;
@@ -56,6 +61,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -73,6 +80,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
@@ -140,6 +148,21 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("StringUtils", new StringUtilsJS());
         registry.register("Time", new TimeJS());
         registry.register("Utils", new UtilsJS());
+        // 数学/图标/伤害/粒子：KJS wrapper 面对齐（JavaMath 直接绑 java.lang.Math）
+        registry.register("JavaMath", Math.class);
+        registry.register("KMath", KMathJS.class);
+        registry.register("TextIcons", TextIcons.class);
+        registry.register(Binding.of("DamageSource", new DelegatingBinding(new DamageSourceJS(),
+                net.minecraft.world.damagesource.DamageSource.class,
+                Set.of("of", "generic", "magic", "explosion", "drowning", "fall", "lava", "lightning",
+                        "starvation", "outOfWorld")),
+                DamageSourceJS.class));
+        registry.register(Binding.of("ParticleOptions", new DelegatingBinding(new ParticleOptionsJS(),
+                net.minecraft.core.particles.ParticleOptions.class,
+                Set.of("of")),
+                ParticleOptionsJS.class));
+        // NeoForge data map 快捷查询（其余 map 经 Registry.get(...).dataMapValue(...)）
+        registry.register("DataMap", DataMapJS.class);
         // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP
         // reload, unregistering the previous round's native NeoForge event listeners
         // before the scripts re-register them. Avoids listeners accumulating on reload.
@@ -218,6 +241,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(new CompoundTagAdapter());
         registry.register(new TagKeyAdapter());
         registry.register(new ItemAdapter());
+        // alias：ItemLike 参数复用 Item 适配器的输入形状（id 字符串等），值转成 Item 后 asItem 适配
+        registry.registerAlias(ItemLike.class, Item.class, Item::asItem);
         registry.register(new MobEffectAdapter());
         registry.register(new PotionAdapter());
         registry.register(new SoundEventAdapter());
@@ -226,6 +251,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(new CreativeModeTabAdapter());
         // Codec 兜底适配器示范（precedence=LOWEST）：任意 JS 值 -> JsonElement -> codec.parse(JsonOps)
         TypeAdapterDsl.registerCodec(registry, Fireworks.class, Fireworks.CODEC);
+        // 自动注册表适配器兜底：vanilla 注册表类型里没手写适配器的（Fluid、Attribute、
+        // VillagerProfession 等）动态补 SimpleRegistryBasedAdapter，字符串 id 直通。
+        // Registries（ResourceKey holder）与 BuiltInRegistries（Registry holder）覆盖同一批
+        // vanilla 类型，去重集合保证只注册一次；mod 注册表经插件贡献额外 holder 类
+        RegistryAutoAdapterScanner.installInto(registry, List.of(BuiltInRegistries.class, Registries.class));
     }
 
     @Override

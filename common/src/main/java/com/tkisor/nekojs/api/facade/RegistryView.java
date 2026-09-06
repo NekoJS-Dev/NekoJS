@@ -1,15 +1,20 @@
 package com.tkisor.nekojs.api.facade;
 
 import com.tkisor.nekojs.api.annotation.ContractReceiver;
+import java.util.Iterator;
 import java.util.List;
 
 /**
  * 单个注册表的只读视图，暴露给脚本的 {@code Registry.get(...)} 结果。
  *
  * <p>所有方法只返回基础类型，不暴露 Minecraft 原生对象。
+ *
+ * <p>实现 {@link Iterable}：视图对象经引擎侧代理转发时可被 {@code for...of} 直接遍历
+ * （按条目 id 字符串），KubeJS {@code RegistryWrapper} 的 {@code Iterable} 形态对标——
+ * {@code for (const id of Registry.get('minecraft:item'))}。
  */
 @ContractReceiver
-public interface RegistryView {
+public interface RegistryView extends Iterable<String> {
     /** 注册表本身是否存在。 */
     boolean exists();
 
@@ -27,4 +32,9 @@ public interface RegistryView {
 
     /** 读取指定条目的 data map 值（JSON 字符串）；条目/类型不存在返回 {@code null}。 */
     String dataMapValue(String dataMapTypeId, String id);
+
+    @Override
+    default Iterator<String> iterator() {
+        return all().iterator();
+    }
 }
