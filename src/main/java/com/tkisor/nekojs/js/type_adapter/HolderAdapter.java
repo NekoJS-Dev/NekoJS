@@ -25,7 +25,7 @@ import static com.tkisor.nekojs.api.AdapterInputShape.*;
  * 注册表的绑定 API。这与 {@code IdentifierAdapter}（纯 id 解析）不同：返回的是注册表绑定的
  * holder，可直接传给原版方法。
  *
- * <p>1.21.1 侧是本文件的机械改名副本（Identifier↔ResourceLocation 等，见
+ * <p>1.21.1 侧是本文件的机械改名副本（Identifier↔Identifier 等，见
  * scripts/check-platform-drift）。
  */
 public final class HolderAdapter extends AbstractJSTypeAdapter<Holder<?>> {

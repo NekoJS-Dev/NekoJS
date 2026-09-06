@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code generateRecipeId("custom")} would produce must not be silently
  * overwritten. The test file lives in the shared 26.x test tree and is also
  * compiled by the 1.21.1 platform, so it deliberately avoids importing the
- * platform-specific id class (Identifier / ResourceLocation) and creates ids
+ * platform-specific id class (Identifier / Identifier) and creates ids
  * through the same public {@code fromNamespaceAndPath} factory both classes
  * expose.
  */
