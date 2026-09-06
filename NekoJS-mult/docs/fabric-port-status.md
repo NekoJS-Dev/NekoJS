@@ -294,7 +294,7 @@
     `nekojs-fabric-*`，避免尚未通过运行时 smoke 的 jar 被 GitHub Release 意外公开。
     `release` 与 `curseforge` workflow job 同时依赖 `fabric-runtime-smoke`，smoke 失败时
     不进入任何发布任务。Fabric 测试任务已禁止空测试集。CI 使用版本库中的 Fabric server
-    smoke fixture，启动后要求 startup/server-started markers，并拒绝常见 Mixin/启动失败。
+    smoke fixture，启动后要求 startup/server-started、tags-event 与 tags-applied markers，并拒绝常见 Mixin/启动失败。
 
 18. **Fabric ServerEvents.tags / TagLoader 接线**（2026-09-07）：
     - 26.x Fabric 分支复用 vanilla `TagLoader.loadPendingTags` 的 registry key 与 `build` 前注入点，
@@ -302,7 +302,7 @@
     - `TagEventJS` 保留 NeoForge 三参数 `EntryWithSource` 语义，同时为 Fabric 使用 vanilla 两参数
       record 构造；Fabric 侧以 `TagEntry.toString()` 保持元素/tag 移除匹配。
     - 两个 Fabric 节点的 shared mixin 配置已登记 `TagLoaderMixin`。runtime smoke 在 server started
-      后触发一次资源 reload，实际验证 item tag 的 add/apply/remove 与 tags event marker。
+      后触发一次资源 reload，实际验证 item tag 的自动 add/apply；Fabric-only 单测覆盖 optional remove。
     - 验证：26.1.2-fabric 与 26.2.0-fabric compile/build、defaultRequire=1 注入和功能性 tag smoke 均通过。
 
 ## P1 剩余（功能面）

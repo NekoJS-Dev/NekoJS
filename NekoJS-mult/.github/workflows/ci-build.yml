@@ -330,7 +330,8 @@ jobs:
           found=0
           for _ in $(seq 1 180); do
             if grep -R -q 'FABRIC-CI-SMOKE: server started' "$run_dir" 2>/dev/null \
-                && grep -R -q 'FABRIC-CI-SMOKE: tags event ok' "$run_dir" 2>/dev/null; then
+                && grep -R -q 'FABRIC-CI-SMOKE: tags event ok' "$run_dir" 2>/dev/null \
+                && grep -R -q 'FABRIC-CI-SMOKE: tags applied ok' "$run_dir" 2>/dev/null; then
               found=1
               kill -TERM "$server_pid" 2>/dev/null || true
               break
@@ -350,7 +351,7 @@ jobs:
           done
           wait "$server_pid" 2>/dev/null || true
           if [[ "$found" != 1 ]]; then
-            echo 'Fabric runtime smoke did not reach the server-started and tags-event markers' >&2
+            echo 'Fabric runtime smoke did not reach the server-started, tags-event, and tags-applied markers' >&2
             cat "$log_file"
             exit 1
           fi
