@@ -105,14 +105,22 @@ public interface ServerEvents {
 // SERVER_EVENTS 同组名，经 EventGroupRegistry 合并成脚本侧的同一个 ServerEvents 组。
 package com.tkisor.nekojs.bindings.event;
 
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
+import com.tkisor.nekojs.wrapper.event.server.TagEventJS;
+import net.minecraft.resources.Identifier;
 
 /** 配方脚本事件（SERVER 侧）：总线名与 NeoForge 侧 {@code ServerEvents} 一致，脚本写法跨加载器相同。 */
 public interface ServerEvents {
     EventGroup GROUP = EventGroup.of("ServerEvents");
 
+    DispatchKey<TagEventJS, Identifier> TAG_REGISTRY_KEY =
+            DispatchKey.of(Identifier.class, TagEventJS::getRegistry);
+
+    EventBusJS<TagEventJS, Identifier> TAGS =
+            GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);
     EventBusJS<RecipeEventJS, Void> RECIPES = GROUP.server("recipes", RecipeEventJS.class);
     EventBusJS<RecipeEventJS, Void> AFTER_RECIPES = GROUP.server("afterRecipes", RecipeEventJS.class);
 }

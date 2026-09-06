@@ -296,6 +296,15 @@
     不进入任何发布任务。Fabric 测试任务已禁止空测试集。CI 使用版本库中的 Fabric server
     smoke fixture，启动后要求 startup/server-started markers，并拒绝常见 Mixin/启动失败。
 
+18. **Fabric ServerEvents.tags / TagLoader 接线**（2026-09-07）：
+    - 26.x Fabric 分支复用 vanilla `TagLoader.loadPendingTags` 的 registry key 与 `build` 前注入点，
+      在 `TagLoaderMixin` 中构造并分发 `ServerEvents.tags`，无需 `TagManagerMixin` 或新的依赖。
+    - `TagEventJS` 保留 NeoForge 三参数 `EntryWithSource` 语义，同时为 Fabric 使用 vanilla 两参数
+      record 构造；Fabric 侧以 `TagEntry.toString()` 保持元素/tag 移除匹配。
+    - 两个 Fabric 节点的 shared mixin 配置已登记 `TagLoaderMixin`。runtime smoke 在 server started
+      后触发一次资源 reload，实际验证 item tag 的 add/apply/remove 与 tags event marker。
+    - 验证：26.1.2-fabric 与 26.2.0-fabric compile/build、defaultRequire=1 注入和功能性 tag smoke 均通过。
+
 ## P1 剩余（功能面）
 
 - BlockEvents：fluidPlaced 的 LavaFluid.randomTick 火焰蔓延两处（NF 有、fabric 无，
@@ -313,7 +322,7 @@
 脚本编辑器同步 8 包 + 工作区 GUI（NekoWorkspaceScreen/NekoCodeEditor 需 AW：MultiLineEditBox
 等）；配方面余量（ItemModification/BlockModification 重放、tagsUpdated/lootTableLoad/
 datapackSync、generateData）；ItemStackExtension+MixinItemStack 链（ItemStack 脚本扩展面）；
-BlockStateExtension（hasTag）；TagLoaderMixin（ServerEvents.tags）；后处理三件套
+BlockStateExtension（hasTag）；后处理三件套
 （ShaderManagerMixin/PostEffectManager）；VillagerTrades（fabric 无 RegisterVillagerTradesEvent
 等价，需 mixin 或重写）；JEI；BlockModelGenerator（fabric 无 datagen 事件，需自建管线）。
 
