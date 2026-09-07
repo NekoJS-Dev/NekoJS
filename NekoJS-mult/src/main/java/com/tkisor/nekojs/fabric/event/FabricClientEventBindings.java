@@ -4,6 +4,7 @@ package com.tkisor.nekojs.fabric.event;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.wrapper.event.client.ClientTickEventJS;
+import com.tkisor.nekojs.wrapper.event.client.PostEffectEventJS;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
@@ -32,6 +33,14 @@ public final class FabricClientEventBindings {
     @Deprecated
     public static final EventBusJS<ClientTickEventJS, Void> TICK =
             CLIENT_EVENTS.client("tick", ClientTickEventJS.class);
+
+    /**
+     * Declaration-only post-effect collector. The CLIENT reload owner must post a fresh
+     * {@link PostEffectEventJS}, seal its catalog, and reconcile it through a renderer adapter.
+     * Fabric renderer hooks are intentionally not installed by this declaration surface.
+     */
+    public static final EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
+            CLIENT_EVENTS.client("postEffects", PostEffectEventJS.class);
 
     private FabricClientEventBindings() {}
 
