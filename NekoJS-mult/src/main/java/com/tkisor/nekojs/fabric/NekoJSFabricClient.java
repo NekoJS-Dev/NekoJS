@@ -32,9 +32,7 @@ public final class NekoJSFabricClient implements ClientModInitializer {
                 LOGGER.error("CLIENT_STARTED: RUNTIME_ROOT not assembled yet, skipping CLIENT script load");
                 return;
             }
-            FabricPostEffectScriptBridge.beginReload();
             NekoJSFabricMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
-            FabricPostEffectScriptBridge.reconcile();
         });
         LOGGER.info("NekoJS fabric client bindings registered (CLIENT scripts load at CLIENT_STARTED).");
     }

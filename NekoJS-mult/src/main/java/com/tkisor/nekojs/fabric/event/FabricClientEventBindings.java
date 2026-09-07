@@ -4,9 +4,15 @@ package com.tkisor.nekojs.fabric.event;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.posteffect.PostEffectCatalog;
+import com.tkisor.nekojs.fabric.FabricPostEffectScriptBridge;
 import com.tkisor.nekojs.wrapper.event.client.ClientTickEventJS;
 import com.tkisor.nekojs.wrapper.event.client.PostEffectEventJS;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 
@@ -56,7 +62,35 @@ public final class FabricClientEventBindings {
      * @param loadClientScripts CLIENT 脚本加载动作（客户端资源就绪后、CLIENT_STARTED 时机）
      */
     public static void register(Runnable loadClientScripts) {
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> loadClientScripts.run());
+        final boolean[] reloadCommitted = {false};
+        ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new IdentifiableResourceReloadListener() {
+            @Override
+            public Identifier getFabricId() {
+                return Identifier.fromNamespaceAndPath("nekojs", "client_scripts_eventized_reload");
+            }
+
+            @Override
+            public java.util.concurrent.CompletableFuture<Void> reload(
+                    PreparableReloadListener.SharedState sharedState,
+                    java.util.concurrent.Executor preparationExecutor,
+                    PreparableReloadListener.PreparationBarrier barrier,
+                    java.util.concurrent.Executor applyExecutor) {
+                return barrier.wait(net.minecraft.util.Unit.INSTANCE).thenRunAsync(() -> {
+                    FabricPostEffectScriptBridge.beginReload();
+                    loadClientScripts.run();
+                    FabricPostEffectScriptBridge.reconcile();
+                    reloadCommitted[0] = true;
+                }, applyExecutor);
+            }
+        });
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            if (!reloadCommitted[0]) {
+                FabricPostEffectScriptBridge.beginReload();
+                loadClientScripts.run();
+                FabricPostEffectScriptBridge.reconcile();
+                reloadCommitted[0] = true;
+            }
+        });
         ClientTickEvents.START_CLIENT_TICK.register(client -> TICK_PRE.post(ClientTickEventJS.INSTANCE));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             TICK_POST.post(ClientTickEventJS.INSTANCE);
