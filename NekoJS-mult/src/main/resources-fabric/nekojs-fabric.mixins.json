@@ -34,6 +34,9 @@
     "MixinBlockBehaviourRandomTick",
     "MixinLevelChunkBoundTickingBlockEntity"
   ],
+  "client": [
+    "GameRendererAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   }
