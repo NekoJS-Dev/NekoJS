@@ -104,6 +104,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         FabricPlayerEventBindings.registerLifecycle();
         FabricServerEventBindings.register(() -> {
             if (RUNTIME_ROOT != null) {
+                com.tkisor.nekojs.villager.VillagerTradeScriptBridge.beginServerReload();
                 RUNTIME_ROOT.reload(com.tkisor.nekojs.api.ScriptType.SERVER);
             }
         });

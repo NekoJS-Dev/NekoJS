@@ -3,6 +3,7 @@ package com.tkisor.nekojs.bindings.event.client;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.event.DispatchKey;
+import com.tkisor.nekojs.api.posteffect.PostEffectCatalog;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
@@ -64,6 +65,13 @@ public interface ClientEvents {
      */
     EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
             GROUP.client("postEffects", PostEffectEventJS.class);
+
+    /** Creates, posts, and seals one complete CLIENT post-effect catalog. */
+    static PostEffectCatalog collectPostEffects() {
+        PostEffectEventJS event = new PostEffectEventJS();
+        POST_EFFECTS.post(event);
+        return event.catalog();
+    }
 
     /**
      * Interaction key input (attack / use item / pick block), client-side only: posts

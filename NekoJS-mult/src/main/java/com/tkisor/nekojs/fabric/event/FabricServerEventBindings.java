@@ -153,6 +153,7 @@ public final class FabricServerEventBindings {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             // 未来得及 post 的登录不带进下一个服务器实例（单人退出世界再进）
             PENDING_LOGINS.clear();
+            com.tkisor.nekojs.villager.VillagerTradeScriptBridge.stop();
             currentServer = null;
             STOPPED.post(new ServerLifecycleEventJS(server));
         });
@@ -197,8 +198,13 @@ public final class FabricServerEventBindings {
         });
         // 标签更新：fabric TAGS_LOADED（RegistryAccess, updated）——TAGS_UPDATED 载荷的
         // shouldUpdateStaticData 承载 updated（NF 的 UpdateCause 无 fabric 对应，差异记录）
-        CommonLifecycleEvents.TAGS_LOADED.register((registries, updated) ->
-                TAGS_UPDATED.post(new TagUpdatedEventJS(registries, updated)));
+        CommonLifecycleEvents.TAGS_LOADED.register((registries, updated) -> {
+            TAGS_UPDATED.post(new TagUpdatedEventJS(registries, updated));
+            MinecraftServer server = currentServer;
+            if (server != null) {
+                com.tkisor.nekojs.villager.VillagerTradeScriptBridge.reconcile(server);
+            }
+        });
         // 战利品表装载：per-table MODIFY（builder 模式；NF 侧为整表 get/set + 可取消，差异记录）
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
             if (!LOOT_TABLE_LOAD.hasListeners()) {

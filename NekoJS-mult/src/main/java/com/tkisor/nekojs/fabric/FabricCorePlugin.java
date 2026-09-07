@@ -154,6 +154,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
         // AI goal 注册（STARTUP）：消费端 FabricEntityEventBindings.postJoinLevel 在跑，
         // postRegister 由 NekoJSFabricMod.initializeScripts 在 STARTUP 脚本加载后调用
         registry.register(com.tkisor.nekojs.bindings.event.GoalEvents.GROUP);
+        // Declarative VillagerTrades contributions; the platform lifecycle adapter owns native apply.
+        registry.register(com.tkisor.nekojs.bindings.event.VillagerTradesEvents.GROUP);
         // 实体 joinLevel / death / damagePre / damagePost（按实体类型 dispatch）
         registry.register(FabricEntityEventBindings.ENTITY_EVENTS);
         // 物品 rightClicked（按物品 id dispatch）

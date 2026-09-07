@@ -3,6 +3,7 @@ package com.tkisor.nekojs.fabric.event;
 
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.api.posteffect.PostEffectCatalog;
 import com.tkisor.nekojs.wrapper.event.client.ClientTickEventJS;
 import com.tkisor.nekojs.wrapper.event.client.PostEffectEventJS;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -41,6 +42,13 @@ public final class FabricClientEventBindings {
      */
     public static final EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
             CLIENT_EVENTS.client("postEffects", PostEffectEventJS.class);
+
+    /** Creates, posts, and seals one complete CLIENT post-effect catalog. */
+    public static PostEffectCatalog collectPostEffects() {
+        PostEffectEventJS event = new PostEffectEventJS();
+        POST_EFFECTS.post(event);
+        return event.catalog();
+    }
 
     private FabricClientEventBindings() {}
 

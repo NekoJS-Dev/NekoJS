@@ -18,6 +18,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
+import com.tkisor.nekojs.villager.VillagerTradeScriptBridge;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
@@ -100,7 +101,7 @@ public class ServerEventListener {
                 .activateWorldPacks(server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT));
         if (worldPacks.isEmpty()) return;
         try {
-            VillagerTradeManager.beginReload();
+            VillagerTradeScriptBridge.beginServerReload();
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("SERVER reload after world pack activation failed: ", e);
@@ -117,7 +118,7 @@ public class ServerEventListener {
         var removed = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().deactivateWorldPacks();
         // 脚本包 datapack 挂载与村民交易快照随服务器实例一起失效；重置以便下次挂载。
         ScriptPackDataManager.reset();
-        VillagerTradeManager.reset();
+        VillagerTradeScriptBridge.stop();
         if (removed.isEmpty()) return;
         var serverManager = NekoJSMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.SERVER);
         if (serverManager != null) serverManager.clearWorldPackListeners(removed);
@@ -140,7 +141,7 @@ public class ServerEventListener {
         }
         event.addListener(Identifier.fromNamespaceAndPath(NekoJS.MODID, "recipe_type_definitions"), (ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
-            VillagerTradeManager.beginReload();
+            VillagerTradeScriptBridge.beginServerReload();
             NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Script overload failed: ", e);
@@ -160,7 +161,7 @@ public class ServerEventListener {
     public static void onServerDataTagsUpdated(net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad event) {
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
-            VillagerTradeManager.apply(server);
+            VillagerTradeScriptBridge.reconcile(server);
         }
     }
 
