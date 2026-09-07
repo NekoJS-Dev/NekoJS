@@ -143,6 +143,7 @@ public final class FabricNekoJSCommands {
                     // 重放物品/方块属性修改（快照恢复模型保证幂等）
                     ItemModificationEventJS.fire(source.getServer());
                     BlockModificationEventJS.fire();
+                    com.tkisor.nekojs.villager.VillagerTradeScriptBridge.reconcile(source.getServer());
                 }
             }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");

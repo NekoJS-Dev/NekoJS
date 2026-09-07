@@ -54,10 +54,8 @@ public final class PostEffectControllerJS implements Binding {
 
     @Override
     public void close(ScriptType scriptType) {
-        if (scriptType == ScriptType.CLIENT) {
-            adapter.invalidate();
-            adapter.clear();
-        }
+        // Preserve the previously committed renderer state if a candidate CLIENT reload fails.
+        // The committed PostEffectScriptBridge reconciles only after successful reload.
     }
 }
 //?}

@@ -43,6 +43,9 @@ public class NekoJSClient {
     private static void onClientSetup(FMLConstructModEvent event) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
+//? if >=26 {
+            com.tkisor.nekojs.client.posteffect.PostEffectScriptBridge.beginReload();
+//?}
             NekoJSMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
 //? if >=26 {
             com.tkisor.nekojs.client.posteffect.PostEffectScriptBridge.reconcile();
@@ -73,6 +76,9 @@ public class NekoJSClient {
         event.addListener(listenerId, (ResourceManagerReloadListener) resourceManager -> {
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
+//? if >=26 {
+                com.tkisor.nekojs.client.posteffect.PostEffectScriptBridge.beginReload();
+//?}
                 NekoJSMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
     //? if >=26 {
             com.tkisor.nekojs.client.posteffect.PostEffectScriptBridge.reconcile();

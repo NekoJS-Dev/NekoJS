@@ -20,7 +20,10 @@ public final class FabricVillagerTradeRegistryAdapter implements VillagerTradeRe
                     offer.additionalWantsCount(), Identifier.parse(offer.givesId()), offer.givesCount(),
                     offer.maxUses(), offer.xp(), offer.priceMultiplier()));
         }
-        VillagerTradeManager.apply(server);
+        boolean applied = VillagerTradeManager.apply(server);
+        if (!applied && !plan.isEmpty()) {
+            throw new IllegalStateException("Villager trade registry reconciliation did not apply");
+        }
     }
 
     @Override

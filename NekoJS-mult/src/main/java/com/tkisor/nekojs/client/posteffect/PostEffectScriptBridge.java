@@ -6,20 +6,36 @@ import com.tkisor.nekojs.api.posteffect.PostEffectCatalog;
 import com.tkisor.nekojs.api.posteffect.PostEffectCommandResult;
 import com.tkisor.nekojs.api.posteffect.PostEffectDefinition;
 import com.tkisor.nekojs.api.posteffect.PostEffectRendererAdapter;
+import com.tkisor.nekojs.core.contribution.CommittedContributionLifecycle;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
+import com.tkisor.nekojs.wrapper.event.client.PostEffectEventJS;
 import net.minecraft.resources.Identifier;
 
 /** NeoForge composition root for the declarative post-effect catalog. */
 public final class PostEffectScriptBridge {
     private static final Adapter ADAPTER = new Adapter();
+    private static final CommittedContributionLifecycle<PostEffectEventJS, PostEffectCatalog, Boolean> LIFECYCLE =
+            new CommittedContributionLifecycle<>(PostEffectEventJS::new, PostEffectEventJS::catalog,
+                    (catalog, ignored) -> ADAPTER.reconcile(catalog));
 
     private PostEffectScriptBridge() {}
 
-    /** Collects the committed CLIENT declaration product and reconciles native state. */
+    /** Starts a candidate before a full CLIENT script reload. */
+    public static void beginReload() {
+        LIFECYCLE.begin();
+    }
+
+    /** Posts and commits the catalog after a successful CLIENT script reload. */
     public static PostEffectCatalog reconcile() {
-        PostEffectCatalog catalog = ClientEvents.collectPostEffects();
-        ADAPTER.reconcile(catalog);
-        return catalog;
+        if (!LIFECYCLE.isCollecting()) LIFECYCLE.begin();
+        ClientEvents.POST_EFFECTS.post(LIFECYCLE.collect());
+        LIFECYCLE.seal();
+        LIFECYCLE.registryReady(Boolean.TRUE);
+        return LIFECYCLE.committedPlan();
+    }
+
+    public static void stop() {
+        LIFECYCLE.stop();
     }
 
     public static PostEffectRendererAdapter adapter() {
@@ -31,31 +47,22 @@ public final class PostEffectScriptBridge {
 
         @Override
         public PostEffectCapabilities capabilities() {
-            // Resource-backed effects are supported by vanilla; runtime GLSL waits for the
-            // renderer hook described by the eventized spec.
             return PostEffectCapabilities.resourceOnly();
         }
 
         @Override
         public PostEffectCommandResult reconcile(PostEffectCatalog next) {
-            // Catalog replacement can invalidate cached PostChain/GPU resources even when
-            // the next catalog is empty or has no desired active effect.
             PostEffectManager.invalidatePostChainCache();
             PostEffectManager.clearRegistered();
             catalog = next;
             for (PostEffectDefinition definition : next.values()) {
                 if (definition.isRuntime()) {
-                    PostEffectManager.register(
-                            Identifier.parse(definition.id()),
-                            definition.chainJson(),
-                            toIdentifiers(definition.fragmentShaders()),
-                            toIdentifiers(definition.vertexShaders()));
+                    PostEffectManager.register(Identifier.parse(definition.id()), definition.chainJson(),
+                            toIdentifiers(definition.fragmentShaders()), toIdentifiers(definition.vertexShaders()));
                 }
             }
             for (PostEffectDefinition definition : next.values()) {
-                if (definition.desiredActive()) {
-                    return activate(definition.id());
-                }
+                if (definition.desiredActive()) return activate(definition.id());
             }
             return clear();
         }
@@ -72,8 +79,7 @@ public final class PostEffectScriptBridge {
 
         @Override
         public PostEffectCommandResult clear() {
-            return PostEffectManager.clear() ? PostEffectCommandResult.cleared()
-                    : PostEffectCommandResult.alreadyClear();
+            return PostEffectManager.clear() ? PostEffectCommandResult.cleared() : PostEffectCommandResult.alreadyClear();
         }
 
         @Override
@@ -82,25 +88,16 @@ public final class PostEffectScriptBridge {
             if (definition == null) return PostEffectCommandResult.notFound(id);
             if (definition.isRuntime()) return PostEffectCommandResult.unsupportedRuntime(id);
             return PostEffectManager.toggle(Identifier.parse(id))
-                    ? PostEffectCommandResult.activated(id)
-                    : PostEffectCommandResult.cleared();
+                    ? PostEffectCommandResult.activated(id) : PostEffectCommandResult.cleared();
         }
 
-        @Override
-        public String current() {
+        @Override public String current() {
             Identifier current = PostEffectManager.current();
             return current == null ? null : current.toString();
         }
 
-        @Override
-        public boolean isActive() {
-            return PostEffectManager.isActive();
-        }
-
-        @Override
-        public void invalidate() {
-            PostEffectManager.invalidatePostChainCache();
-        }
+        @Override public boolean isActive() { return PostEffectManager.isActive(); }
+        @Override public void invalidate() { PostEffectManager.invalidatePostChainCache(); }
 
         private static java.util.Map<Identifier, String> toIdentifiers(java.util.Map<String, String> sources) {
             java.util.Map<Identifier, String> result = new java.util.LinkedHashMap<>();
