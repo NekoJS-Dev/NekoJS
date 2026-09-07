@@ -50,6 +50,11 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
 
     @Override
     public void registerBinding(com.tkisor.nekojs.api.data.BindingRegistry registry) {
+        // PostEffects definitions are collected by ClientEvents.postEffects; this binding exposes only
+        // state commands and reports runtime pipeline support honestly on Fabric.
+        registry.register(com.tkisor.nekojs.api.ScriptType.CLIENT, "PostEffects",
+                new com.tkisor.nekojs.client.posteffect.PostEffectControllerJS(
+                        com.tkisor.nekojs.fabric.FabricPostEffectScriptBridge.adapter()));
         // 服务端→客户端键值推送（只读侧 clientData 由 common 内置插件注册）
         registry.register("ClientData", com.tkisor.nekojs.wrapper.clientdata.ClientDataSyncJS.class);
         // 配方面（与 NeoForge 侧 NekoJSCorePlugin 同写法）：Ingredient 工厂 + 同名 vanilla 类

@@ -18,7 +18,11 @@ public class NekoPostEffectPlugin implements NekoJSPlugin, com.tkisor.nekojs.cor
     @Override
     public void registerBinding(BindingRegistry registry) {
         if (registry.scriptType() == ScriptType.CLIENT) {
-            registry.register(new PostEffectsJS());
+//? if >=26 {
+            registry.register(new PostEffectControllerJS(PostEffectScriptBridge.adapter()));
+//?} else {
+/*            registry.register(new PostEffectsJS());
+*///?}
         }
     }
 }
