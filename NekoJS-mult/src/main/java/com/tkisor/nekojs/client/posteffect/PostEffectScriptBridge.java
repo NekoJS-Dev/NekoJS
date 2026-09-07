@@ -38,6 +38,9 @@ public final class PostEffectScriptBridge {
 
         @Override
         public PostEffectCommandResult reconcile(PostEffectCatalog next) {
+            // Catalog replacement can invalidate cached PostChain/GPU resources even when
+            // the next catalog is empty or has no desired active effect.
+            PostEffectManager.invalidatePostChainCache();
             PostEffectManager.clearRegistered();
             catalog = next;
             for (PostEffectDefinition definition : next.values()) {

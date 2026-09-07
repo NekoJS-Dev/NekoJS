@@ -36,7 +36,8 @@ public final class FabricPluginLoader {
             PythonTranspilerPlugin.class,
             NekoRegistryPointsPlugin.class,
             EntitySelectorsPlugin.class,
-            FabricCorePlugin.class);
+            FabricCorePlugin.class,
+            FabricVillagerTradesPlugin.class);
 
     public static void loadPlugins() {
         for (Class<?> plugin : BUILTIN_PLUGINS) {

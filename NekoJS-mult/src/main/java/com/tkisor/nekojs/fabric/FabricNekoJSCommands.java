@@ -133,6 +133,9 @@ public final class FabricNekoJSCommands {
                 }
                 testSm.runTestScripts();
             } else {
+                if (type == ScriptType.SERVER) {
+                    com.tkisor.nekojs.villager.VillagerTradeScriptBridge.beginServerReload();
+                }
                 root.reload(type);
                 if (type == ScriptType.SERVER) {
                     applyRecipeScripts(source);

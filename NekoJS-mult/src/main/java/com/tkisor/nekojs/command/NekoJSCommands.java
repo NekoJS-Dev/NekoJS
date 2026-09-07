@@ -360,9 +360,8 @@ public final class NekoJSCommands {
                 testSm.runTestScripts();
             } else {
                 if (type == ScriptType.SERVER) {
-                    // 清空上一轮 stage 的村民交易，防止 reload 重复累积（与 ServerEventListener
-                    // 资源 reload 路径同约定：每次完整脚本 reload 前 beginReload）
-                    com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
+                    // Start the committed VillagerTrades contribution revision before scripts run.
+                    com.tkisor.nekojs.villager.VillagerTradeScriptBridge.beginServerReload();
                 }
                 root.reload(type);
             }
@@ -374,17 +373,14 @@ public final class NekoJSCommands {
                 ItemModificationEventJS.fire(source.getServer());
                 // 方块属性修改重放：同路径（fire 内先整体恢复上轮快照，删除的 modify 自动回退）
                 BlockModificationEventJS.fire();
-                // 村民交易 flush：脚本 stage 的交易在 reload 收尾落注册表（与 ServerEventListener 的
-                // TagsUpdated hook 同路径）；脚本包 data/ 目录作为强制数据包挂载（内容签名变化才重载）
                 MinecraftServer server = source.getServer();
-                if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
-                    com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
-                }
                 var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
                 if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
                         && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {
                     com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
                 }
+                // Reconcile after any synchronous resource reload so the new registry epoch is live.
+                com.tkisor.nekojs.villager.VillagerTradeScriptBridge.reconcile(server);
             }
             // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
             // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。

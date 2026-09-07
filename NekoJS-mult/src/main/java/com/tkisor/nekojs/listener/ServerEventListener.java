@@ -17,7 +17,6 @@ import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
-import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.villager.VillagerTradeScriptBridge;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
@@ -60,10 +59,9 @@ public class ServerEventListener {
         var server = event.getServer();
         activateWorldPacks(server);
         mountScriptPackData(server);
-        // 资源装载期（WorldStem 阶段 server 未就绪，TagsUpdated 刷出跳过）暂存的村民交易在此补刷。
-        if (VillagerTradeManager.pendingCount() > 0) {
-            VillagerTradeManager.apply(server);
-        }
+        // WorldStem 阶段没有可用 server epoch；完整 SERVER 计划在这里与当前
+        // reloadable registry epoch 绑定并一次性 reconcile（空计划也会清理旧贡献）。
+        VillagerTradeScriptBridge.reconcile(server);
         // 物品属性修改：每次服务器启动 post 一次（datapack 装载完成、玩家加入前）。脚本 reload
         // 时由 `/nekojs reload server`（NekoJSCommands）重放，走同一条快照恢复路径；物品单例与
         // 已修改组件跨 vanilla /reload 保留，无需在此重放。
