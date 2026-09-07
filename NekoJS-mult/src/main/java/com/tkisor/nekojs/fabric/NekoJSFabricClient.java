@@ -33,6 +33,7 @@ public final class NekoJSFabricClient implements ClientModInitializer {
                 return;
             }
             NekoJSFabricMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
+            FabricClientEventBindings.collectPostEffects();
         });
         LOGGER.info("NekoJS fabric client bindings registered (CLIENT scripts load at CLIENT_STARTED).");
     }

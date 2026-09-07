@@ -44,6 +44,7 @@ public class NekoJSClient {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
             NekoJSMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
+            ClientEvents.collectPostEffects();
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
         });
     }
@@ -71,6 +72,7 @@ public class NekoJSClient {
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
                 NekoJSMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
+                ClientEvents.collectPostEffects();
             } catch (Exception e) {
                 // 旧环境的监听器已被 reload 清空、新环境没建起来时，玩家不会有任何提示——
                 // 必须 error 级日志 + 错误面板（rt/ 条目），不再只打 DEBUG
