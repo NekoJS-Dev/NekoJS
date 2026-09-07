@@ -1,6 +1,6 @@
 # Fabric 26.x VillagerTrades 集成边界
 
-状态：设计冻结，尚未实现（2026-09-07）。
+状态：事件化 spec 已冻结，registry adapter 尚未实现（2026-09-07）。相关 Script API 和生命周期决策见 [事件化 spec](../eventized-villager-trades-and-post-effects-spec.md)。
 
 ## 背景
 
