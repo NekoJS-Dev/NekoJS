@@ -5,6 +5,8 @@ package com.tkisor.nekojs.villager;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
+import com.tkisor.nekojs.api.event.EventGroupRegistry;
+import com.tkisor.nekojs.bindings.event.VillagerTradesEvents;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.BindingRegistry;
 import com.tkisor.nekojs.core.plugin.TypeDocsRegister;
@@ -16,7 +18,12 @@ import java.util.List;
  * modification). Standalone plugin so NekoJSCorePlugin stays untouched.
  */
 @RegisterNekoJSPlugin
-public class VillagerTradesPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.TypeDocsPoint.Contributor {
+public class VillagerTradesPlugin implements NekoJSPlugin, com.tkisor.nekojs.core.plugin.BindingsPoint.Contributor, com.tkisor.nekojs.core.plugin.TypeDocsPoint.Contributor, com.tkisor.nekojs.core.plugin.EventsPoint.Contributor {
+
+    @Override
+    public void registerEvents(EventGroupRegistry registry) {
+        registry.register(VillagerTradesEvents.GROUP);
+    }
 
     @Override
     public void registerBinding(BindingRegistry registry) {
