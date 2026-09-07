@@ -9,6 +9,7 @@ import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.client.render.RenderRegistrationBusJS;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
+import com.tkisor.nekojs.wrapper.event.client.PostEffectEventJS;
 import com.tkisor.nekojs.wrapper.client.PainterJS;
 import com.tkisor.nekojs.wrapper.client.ScreenRenderEventJS;
 import net.neoforged.bus.api.IEventBus;
@@ -55,6 +56,15 @@ public interface ClientEvents {
      */
     EventBusJS<PlayerTickEvent.Post, Void> PLAYER_TICK_POST =
             GROUP.client("playerTickPost", PlayerTickEvent.Post.class);
+
+    /**
+     * Declaration-only post-effect collector. A full CLIENT reload owner must post a fresh
+     * {@link PostEffectEventJS}, seal it via {@link PostEffectEventJS#catalog()}, and reconcile
+     * that catalog through the platform renderer adapter. No native renderer hook is wired here.
+     */
+    EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
+            GROUP.client("postEffects", PostEffectEventJS.class);
+
     /**
      * Interaction key input (attack / use item / pick block), client-side only: posts
      * the raw NeoForge {@link InputEvent.InteractionKeyMappingTriggered}. Fires on the
