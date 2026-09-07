@@ -321,8 +321,7 @@
 
 脚本编辑器同步 8 包 + 工作区 GUI（NekoWorkspaceScreen/NekoCodeEditor 需 AW：MultiLineEditBox
 等）；配方面余量（ItemModification/BlockModification 重放、tagsUpdated/lootTableLoad/
-datapackSync、generateData）；ItemStackExtension+MixinItemStack 链（ItemStack 脚本扩展面）；
-BlockStateExtension（hasTag）；后处理三件套
+datapackSync、generateData）；后处理三件套
 （ShaderManagerMixin/PostEffectManager）；VillagerTrades（fabric 无 RegisterVillagerTradesEvent
 等价，需 mixin 或重写）；JEI；BlockModelGenerator（fabric 无 datagen 事件，需自建管线）。
 

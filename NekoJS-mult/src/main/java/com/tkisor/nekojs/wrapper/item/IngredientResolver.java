@@ -123,7 +123,7 @@ public final class IngredientResolver {
         return ((ItemStackExtension) (Object) stack).neko$asIngredient();
 //?} else {
 /*        // fabric 无 ItemStackExtension 注入：降级为纯物品形态（丢数据组件）——26.x 组件 ingredient
-        // 的 fabric 面随 ItemStackExtension 移植批次补（见 docs/fabric-port-status.md）
+        // Fabric component matching is implemented by the shared ItemStack extension batch.
         return Ingredient.of(stack.getItem());
 *///?}
     }

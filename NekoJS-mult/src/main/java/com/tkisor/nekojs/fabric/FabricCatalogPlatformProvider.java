@@ -1,8 +1,7 @@
 //? if fabric {
-// fabric 节点的目录平台提供者：镜像共享树 NeoForgeCatalogPlatformProvider（整文件
-// neoforge 守卫），差异只有三处——hostExtensions 少 ItemStack/BlockState 两个源（两扩展
-// 接口在 fabric 仍整文件守卫，类不存在），snippets/registryTypes/modIds 逐字复用。
-// ItemStackExtension/BlockStateExtension 移植批次落地后，本文件与共享树版合并回单副本。
+// Fabric catalog provider mirrors the NeoForge catalog. The nine host-extension sources
+// are now identical on both 26.x loaders; the Fabric-specific mixin set activates the
+// loader-neutral extension interfaces in the shared version tree.
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.api.ScriptType;
