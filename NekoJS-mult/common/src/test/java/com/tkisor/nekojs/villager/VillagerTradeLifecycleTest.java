@@ -102,6 +102,8 @@ class VillagerTradeLifecycleTest {
         lifecycle.collect().add(offer("minecraft:bread"));
         lifecycle.seal();
 
+        assertEquals(2, adapter.applied.size());
+        assertTrue(lifecycle.registryReady("epoch-2"));
         assertEquals(3, adapter.applied.size());
         assertEquals("epoch-2", adapter.applied.getLast().epoch());
         assertEquals("minecraft:bread", adapter.applied.getLast().plan().offers().getFirst().givesId());
@@ -125,8 +127,7 @@ class VillagerTradeLifecycleTest {
 
         lifecycle.begin();
         lifecycle.seal();
-        assertFalse(lifecycle.registryReady("epoch-1"),
-                "the epoch was already published before the empty plan was sealed");
+        assertTrue(lifecycle.registryReady("epoch-1"));
         assertEquals(2, adapter.applied.size());
     }
 

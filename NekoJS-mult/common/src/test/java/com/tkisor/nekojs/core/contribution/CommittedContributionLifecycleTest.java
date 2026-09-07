@@ -60,6 +60,8 @@ class CommittedContributionLifecycleTest {
         lifecycle.begin();
         lifecycle.collect().add("two");
         lifecycle.seal();
+        assertEquals(List.of("one@epoch-1"), applied);
+        assertTrue(lifecycle.registryReady("epoch-1"));
         assertEquals(List.of("one@epoch-1", "two@epoch-1"), applied);
 
         lifecycle.stop();

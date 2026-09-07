@@ -58,8 +58,13 @@ public final class CommittedContributionLifecycle<COLLECTOR, PLAN, EPOCH>
      */
     @Override
     public synchronized void begin() {
+        // A new script revision must wait for the next native epoch. Reusing the
+        // previous epoch would reconcile against a registry that reload is replacing.
         COLLECTOR next = Objects.requireNonNull(collectorFactory.get(), "collectorFactory returned null");
         candidate = next;
+        registryEpoch = null;
+        appliedEpoch = null;
+        appliedRevision = -1L;
         collecting = true;
         sealed = false;
     }
