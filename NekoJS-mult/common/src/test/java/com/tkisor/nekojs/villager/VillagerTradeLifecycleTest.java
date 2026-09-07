@@ -125,8 +125,9 @@ class VillagerTradeLifecycleTest {
 
         lifecycle.begin();
         lifecycle.seal();
-        assertTrue(lifecycle.registryReady("epoch-1"));
-        assertEquals(3, adapter.applied.size());
+        assertFalse(lifecycle.registryReady("epoch-1"),
+                "the epoch was already published before the empty plan was sealed");
+        assertEquals(2, adapter.applied.size());
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.api.posteffect;
 
-import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -136,7 +135,6 @@ class PostEffectControllerTest {
         }
 
         @Override
-        @Nullable
         public String current() {
             return current;
         }
