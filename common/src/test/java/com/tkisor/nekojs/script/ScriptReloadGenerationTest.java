@@ -45,10 +45,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -256,40 +254,50 @@ class ScriptReloadGenerationTest {
     }
 
     /**
-     * 失败 reload（候选被语句上限杀死）：旧 Context 保留、旧脚本状态可读。
-     * ticket 06 Phase 1 characterization：当前实现还会清空 active 监听器（degraded）——
-     * 该退化断言将在 Phase 2 改造为「active 监听器继续接收事件」的新契约。
+     * 失败 reload（候选被语句上限杀死）：旧 Context 保留、旧脚本状态可读、
+     * <strong>active 监听器继续接收事件</strong>（ticket 06 generation 隔离契约 AC2/AC3）。
      */
     @Test
     void failedReloadKeepsOldContextAndScriptState() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
-            harness.writeScript("entry.js", "Counter.hit('v1-entry');\n");
+            harness.writeScript("entry.js", """
+                    Counter.hit('v1-entry');
+                    TestEvents.ping(function (event) { Counter.hit('v1-listener'); });
+                    """);
             harness.loadAndRun();
             assertEquals(1, harness.counter.hitsOf("v1-entry"));
+            harness.bridge.postTestEvent();
+            assertEquals(1, harness.counter.hitsOf("v1-listener"));
 
             Context oldContext = currentContext(harness.manager);
             harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
-            assertThrows(RuntimeException.class, harness::reload,
+            RuntimeException failure = assertThrows(RuntimeException.class, harness::reload,
                     "candidate killed by statement limit must fail the reload");
 
             assertEquals(oldContext, currentContext(harness.manager),
                     "failed reload must keep the old context as current");
-            // 旧状态可读：再次触发旧监听器（当前实现 listener 已被清空 → v1-listener 不再增长）
             harness.bridge.postTestEvent();
             assertEquals(1, harness.counter.hitsOf("v1-entry"),
                     "old entry must not re-run after failed reload");
-            // ticket 06 Phase 2 将把下一行断言改为 equals(1, ...)：失败后 active 监听器继续工作
-            assertEquals(0, harness.counter.hitsOf("v1-listener"),
-                    "[current behavior] listeners were cleared before the candidate build; active degraded");
+            assertEquals(2, harness.counter.hitsOf("v1-listener"),
+                    "active listener must keep receiving events after candidate failure (ticket 06 AC2)");
+            // AC3：失败结果外部可见地携带 generation / phase / owner / domain（无修复指引）
+            assertInstanceOf(com.tkisor.nekojs.core.lifecycle.NekoReloadException.class, failure);
+            var report = ((com.tkisor.nekojs.core.lifecycle.NekoReloadException) failure).report();
+            assertEquals(com.tkisor.nekojs.core.lifecycle.ReloadPhase.EXECUTION, report.phase());
+            assertTrue(report.generation() >= 1, "failure report must carry the candidate generation");
+            assertEquals("ScriptManager[server]", report.owner());
+            assertTrue(report.describe().contains("phase=EXECUTION"),
+                    "describe() must expose the structured fields: " + report.describe());
         }
     }
 
     /**
-     * Phase 1 characterization：失败 reload 后总线监听器为空（当前实现在候选构建前整类型清空）。
-     * ticket 06 Phase 2 改造后本断言更新为「active 监听器仍在总线上」。
+     * 失败 reload 后 active 监听器仍在总线上（ticket 06：候选监听器只收集，
+     * 失败随候选丢弃，active 的生产路由不动）。
      */
     @Test
-    void failedReloadListenerBusState_currentBehaviorClearsBus() throws Exception {
+    void failedReloadKeepsActiveListenersOnBus() throws Exception {
         try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
             harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
             harness.loadAndRun();
@@ -297,9 +305,33 @@ class ScriptReloadGenerationTest {
 
             harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
             assertThrows(RuntimeException.class, harness::reload);
-            // ticket 06 Phase 2 将把下一行断言改为 assertTrue(...)：失败保留 active 监听器
-            assertFalse(harness.bridge.busHasListeners(),
-                    "[current behavior] bus was cleared before the candidate build; active degraded");
+            assertTrue(harness.bridge.busHasListeners(),
+                    "candidate failure must not touch the active generation's listeners");
+        }
+    }
+
+    /**
+     * candidate 隔离：失败 reload 时候选注册的监听器不得留在总线上（只收集、未激活），
+     * active 监听器不受影响。
+     */
+    @Test
+    void failedReloadDiscardsCandidateListenersOnly() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
+            harness.loadAndRun();
+
+            // 候选脚本先注册 v2 监听器（进入候选收集器），随后的死循环杀死候选
+            harness.writeScript("entry.js", """
+                    TestEvents.ping(function (event) { Counter.hit('v2'); });
+                    while (true) { /* spin forever */ }
+                    """);
+            assertThrows(RuntimeException.class, harness::reload);
+
+            harness.bridge.postTestEvent();
+            assertEquals(0, harness.counter.hitsOf("v2"),
+                    "candidate listener must never fire: collected pre-commit, discarded with the failed candidate");
+            assertEquals(1, harness.counter.hitsOf("v1"),
+                    "active listener must still receive the event exactly once (no candidate residue)");
         }
     }
 
@@ -336,7 +368,7 @@ class ScriptReloadGenerationTest {
 
     /**
      * bindEvents / clearListeners 生命周期计数：initial load 只 bind 一次；
-     * 失败 reload（当前实现）在候选构建前 clear 一次。Phase 2 后 clear 移到 commit 点。
+     * 失败 reload（ticket 06）不触碰总线——监听器清扫只发生在 commit 点。
      */
     @Test
     void bridgeLifecycleCallCounts() throws Exception {
@@ -348,11 +380,8 @@ class ScriptReloadGenerationTest {
 
             harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
             assertThrows(RuntimeException.class, harness::reload);
-            // [current behavior] 失败路径 clear 两次：候选构建前 1 次 + 失败 catch 1 次。
-            // ticket 06 Phase 2 改造后更新为「仅 commit 点 1 次 / 失败 0 次」。
-            assertEquals(List.of(ScriptType.SERVER, ScriptType.SERVER), harness.bridge.clearListenersCalls,
-                    "[current behavior] transactional reload clears listeners before the candidate build"
-                            + " and again in the failure catch");
+            assertTrue(harness.bridge.clearListenersCalls.isEmpty(),
+                    "failed reload must not clear any listeners (ticket 06: sweep happens only at commit)");
         }
     }
 

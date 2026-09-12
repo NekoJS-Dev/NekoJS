@@ -14,6 +14,9 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
+import com.tkisor.nekojs.core.lifecycle.ReloadFailureReport;
+import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
 import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
@@ -66,18 +69,15 @@ public final class ScriptManager implements AutoCloseable {
 
     /**
      * JS 回调（事件监听器 / timer）catch 路径共享的 kill 上报：异常链表明 Graal 已因
-     * 资源上限（语句上限）关闭该 Context 时，标记所属 ScriptManager 于下次取用时重建环境。
-     *
-     * <p>与 {@link ScriptExecutor#executeEntry} 的入口路径互补：稳态下只有回调在运行，
-     * 不经此上报则 kill 永远不会被标记，每次 tick 的事件 / timer 都会在已关闭的
-     * Context 上反复抛错，整个脚本环境静默死亡直到手动 reload。未注册的 Context
-     * （测试等场景）安全忽略。
+     * 资源上限（语句上限）关闭该 Context 时，按求值所属 generation 记账——候选 Context
+     * 记 {@code candidateKilled}（候选按失败处理），active Context 记 {@code contextKilled}
+     * （下次取用时重建）。未注册的 Context（测试等场景）安全忽略。
      */
     public static void reportContextKilled(Context context, Throwable t) {
         if (context == null || !ScriptExecutor.isContextKilledByResourceLimits(t)) return;
         ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
         if (manager != null) {
-            manager.markContextKilled();
+            manager.markContextKilled(context);
         }
     }
 
@@ -85,9 +85,16 @@ public final class ScriptManager implements AutoCloseable {
      * JS 回调（事件监听器 / timer）分发短路判定：闭包捕获的 Context 是否已死。
      *
      * <p>本仓库使用的 relocated Graal polyglot API 没有 {@code Context.isOpen()}，
-     * 这里以 ScriptManager 侧的状态等价判定：要么环境被语句上限 kill
-     * （{@code contextKilled}，见 {@link #reportContextKilled}），要么所属
-     * ScriptManager 已切换到新 Context（本闭包指向已被替换的旧环境）。
+     * 这里以 ScriptManager 侧的状态等价判定。ticket 06 generation 语义：
+     * <ul>
+     *   <li>active Context：死 = {@code contextKilled}（语句上限 kill，待重建）；</li>
+     *   <li>候选 Context（构建中）：死 = {@code candidateKilled}——候选 timer 在候选执行
+     *       路径（waitForEvaluation flush）中可运行；候选监听器在 commit 前根本不挂总线，
+     *       因此不存在「候选监听器提前接收生产事件」的路径；</li>
+     *   <li>已注册但既非 active 也非候选：旧 generation 残留闭包 → dead（commit 后旧
+     *       generation 立即停止接收新 callback 的兜底，即使总线清扫与激活之间被并发
+     *       dispatch 也不会旧新双重执行）。</li>
+     * </ul>
      * 未注册的 Context（测试等场景）返回 false，走原有 try/catch 路径。
      */
     public static boolean isContextDead(Context context) {
@@ -96,8 +103,15 @@ public final class ScriptManager implements AutoCloseable {
         if (manager == null) return false;
         // Graal 的 Value.getContext() 可能返回与 Context.Builder.build() 引用不同但
         // equals/hashCode 相同的包装对象；必须用 equals 比较，否则正常回调也会被误判为 dead。
-        return manager.contextKilled || (manager.runtime.context() != null
-                && !manager.runtime.context().equals(context));
+        Context active = manager.runtime.context();
+        if (active != null && active.equals(context)) {
+            return manager.contextKilled;
+        }
+        Context candidate = manager.candidateContext;
+        if (candidate != null && candidate.equals(context)) {
+            return manager.candidateKilled;
+        }
+        return true;
     }
 
     // ---- 实例字段 ----
@@ -136,6 +150,32 @@ public final class ScriptManager implements AutoCloseable {
     private volatile RuntimeEnvironment runtime = RuntimeEnvironment.EMPTY;
     private List<ScriptContainer> scripts;
 
+    /**
+     * 已提交的 generation 序号（单调递增；owner thread 访问，reload/load 与命令同锁）。
+     * 初始环境创建、kill 重建与事务式 commit 各递增一次（工单 06 generation 契约）。
+     */
+    private long generation;
+
+    /**
+     * 构建中的候选 generation Context；null 表示当前没有候选在构建。
+     * 候选阶段（preparation/execution/binding）内该 Context 是「临时存活」：
+     * timer 回调可在候选执行路径（ScriptExecutor.waitForEvaluation 的候选 flush）中运行，
+     * 但候选监听器只收集（{@link #pendingListeners}）、不挂生产总线，commit 前不可见。
+     */
+    private volatile Context candidateContext;
+
+    /** 候选环境被语句上限杀死（与 active 的 {@link #contextKilled} 分开记账）。 */
+    private volatile boolean candidateKilled;
+
+    /** 候选加载中首个触发语句上限 kill 的脚本（失败结果 source location 归因）。 */
+    private ScriptContainer candidateKillSource;
+
+    /**
+     * 候选 generation 收集的挂起监听器注册（EventBusJS.PendingListener）。
+     * 只在 owner thread（reload 持实例锁）上读写；commit 点统一激活，失败随候选丢弃。
+     */
+    private final List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pendingListeners = new ArrayList<>();
+
     /** 一次性标记：STARTUP reload 的非事务语义只警告一次（每个 ScriptType 一个实例）。 */
     private boolean warnedStartupReloadNonTransactional;
 
@@ -156,6 +196,29 @@ public final class ScriptManager implements AutoCloseable {
         this.environmentFactory = environmentFactory;
     }
 
+    /** 当前已提交的 generation 序号（诊断/失败结果用；非契约稳定性保证）。 */
+    public long generationId() {
+        return generation;
+    }
+
+    /**
+     * api.event 回调 seam（{@code EventBusJS.execute} 调用）：注册来源 Context 属于
+     * 构建中的候选 generation 时，把挂起注册收进候选收集器并返回 true（注册对生产总线
+     * 不可见，commit 点统一激活）；否则返回 false（普通注册路径，调用方自行激活）。
+     *
+     * <p>线程约定：候选构建与收集都发生在 reload 的 owner thread（reload 持实例锁），
+     * 无并发写；完整 owner-thread 队列/重入调度归工单 07。
+     */
+    public static boolean collectPendingListener(Context context, com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending) {
+        if (context == null || pending == null) return false;
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager == null) return false;
+        Context candidate = manager.candidateContext;
+        if (candidate == null || !candidate.equals(context)) return false;
+        manager.pendingListeners.add(pending);
+        return true;
+    }
+
     // ---- 配置 ----
 
     public void setJavaClassLoadTelemetrySink(JavaClassLoadTelemetrySink sink) {
@@ -164,9 +227,14 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- Context 访问（懒初始化） ----
 
-    /** ScriptExecutor 回调：Graal 因语句上限关闭了当前 Context。 */
-    private void markContextKilled() {
-        this.contextKilled = true;
+    /** ScriptExecutor 回调：Graal 因语句上限关闭了求值所属的 Context（active 或候选）。 */
+    private void markContextKilled(Context context) {
+        Context candidate = this.candidateContext;
+        if (candidate != null && candidate.equals(context)) {
+            this.candidateKilled = true;
+        } else {
+            this.contextKilled = true;
+        }
     }
 
     private synchronized RuntimeEnvironment getOrCreateEnvironment() {
@@ -191,6 +259,9 @@ public final class ScriptManager implements AutoCloseable {
             CONTEXT_TO_MANAGER.put(created.context(), this);
             ScriptContextRegistry.bind(created.context(), scriptType);
             contextKilled = false;
+            // 新 active 环境实例 = 新 generation（initial load / kill 重建各递增一次；
+            // 事务式 reload 的递增在 commit 点）
+            this.generation++;
             return created;
         }
         return runtime;
@@ -368,102 +439,216 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         /**
-         * 事务式完整 reload：先在候选 Context 中加载脚本，成功后再切换并关闭旧 Context。
+         * 事务式完整 reload：候选 generation 依次通过 preparation、binding、execution
+         * （含事件计划收集）后，才在单一 commit 点切换为 active；任一阶段失败时关闭候选
+         * 全部资源并保留 active（工单 06）。
          *
-         * <p>失败时丢弃候选 Context，保留旧 Context，避免旧实现「先销毁旧环境再加载」导致的
-         * 半失效状态。由于事件总线和 binding 是进程级共享资源，候选加载前会清空旧 listener /
-         * 旧 binding 状态；因此失败时旧 Context 虽然存活，listener 与 binding 状态需要再次
-         * reload 恢复——这是共享资源约束下的最佳折中，核心保证是「不崩溃、旧 Context 不被关闭」。
+         * <p>generation 隔离语义：
+         * <ul>
+         *   <li>候选 Context / binding 安装 / 脚本执行全程不触碰 active 的生产路由——候选
+         *       监听器只收集为 {@link EventBusJS.PendingListener}（commit 前不上总线）、
+         *       候选 timer 只进候选自己的 node runtime（生产 tick flush 仍冲刷 active）；</li>
+         *   <li>失败：候选 Context、timer、listener（挂起注册）、模块编译产物全部关闭，
+         *       active 的 Context、监听器、timer、脚本状态原样可用；</li>
+         *   <li>commit：清扫旧 generation 监听器 → 发布新 runtime → 激活候选挂起监听器 →
+         *       释放旧 module session → 按 timer、Context 所有权顺序释放旧环境。</li>
+         * </ul>
+         *
+         * <p>线程约定：候选构建/执行在当前调用线程（owner thread）同步完成，reload 由
+         * 实例锁串行；owner-thread 队列、重入与 watchdog 调度归工单 07。
+         * binding.close(type)（进程级注册账本重置，域 Adapter 持有）保持候选构建前调用：
+         * 其「先清账本再注册」的顺序是领域契约，账本快照/回滚归 W6/W7 域 Adapter。
          */
         private void reloadScriptsTransactional () {
-            RuntimeEnvironment oldEnvironment = this.runtime;
-
-            scriptEventBridge.clearListeners(scriptType);
-            errorTracker.clearByType(scriptType);
-            for (var binding : pluginRuntime.bindings(scriptType).values()) {
-                binding.close(scriptType);
-            }
-            // 清空进程级静态缓存（编译模块、source map、虚拟 ESM URI）中本 scriptType 的条目，
-            // 防止删除/改名后的脚本残留旧产物。按类型局部清除：这些缓存原本无 ScriptType 维度，
-            // 单机 CLIENT 触发 reload 会误清 SERVER 等其它类型已编译的模块/source map/虚拟 URI。
-            NekoModulePipelineCache.clear(scriptType);
-            NekoEsmVirtualModuleRegistry.clear(scriptType);
-            ReloadProgressTracker.step(scriptType.name, "old listeners and bindings cleared");
-
-            final ScriptEnvironmentFactory.Environment candidate;
+            ReloadProgressTracker.begin(scriptType.name, 5);
+            boolean progressSuccess = false;
             try {
-                candidate = environmentFactory.create(scriptType);
-            } catch (Throwable t) {
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).error("{} 候选环境创建失败，保留旧 Context（listener/binding 已清，需再次 reload 恢复）", scriptType.name(), t);
-                throw new RuntimeException(scriptType.name()
-                        + " reload failed; previous scripts retained but event listeners/bindings were cleared"
-                        + " — run /neko reload again to restore listeners", t);
-            }
-            ReloadProgressTracker.step(scriptType.name, "candidate environment created");
+                com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("正在重载 {} 脚本...", scriptType.name());
+                long candidateGeneration = this.generation + 1;
+                RuntimeEnvironment oldEnvironment = this.runtime;
+                RuntimeEnvironment candidateEnvironment = null;
+                try {
+                    // 诊断状态清空（与既有实现同位次；失败结果中的候选错误因此可见）
+                    errorTracker.clearByType(scriptType);
+                    // 域 Adapter 的进程级注册账本重置（PostEffects/NativeEvents/DynamicRegistry 等）：
+                    // 「先 close 再注册」是 binding 契约，保持原有位次；共享 Java 对象不做
+                    // generation 私有快照（spec 09 user story 15），账本快照/恢复归域 Adapter。
+                    for (var binding : pluginRuntime.bindings(scriptType).values()) {
+                        binding.close(scriptType);
+                    }
 
+                    // ---- Phase PREPARATION：候选 Context + node runtime（生产路由不动）----
+                    try {
+                        candidateEnvironment = createCandidateEnvironment();
+                    } catch (Throwable t) {
+                        throw reloadFailure(candidateGeneration, ReloadPhase.PREPARATION, null, "candidate-context", t);
+                    }
+                    ReloadProgressTracker.step(scriptType.name, "candidate environment created");
+
+                    // ---- Phase BINDING：事件组/插件 binding/schema 安装进候选 Context ----
+                    try {
+                        environmentFactory.installEnvironmentBindings(candidateEnvironment.context(), scriptType);
+                    } catch (Throwable t) {
+                        throw reloadFailure(candidateGeneration, ReloadPhase.BINDING, null, "binding-install", t);
+                    }
+                    ReloadProgressTracker.step(scriptType.name, "candidate bindings installed");
+
+                    // ---- Phase EXECUTION + EVENT_PLAN：候选脚本执行；监听器只收集、timer 只进候选收集器 ----
+                    List<ScriptContainer> candidateScripts;
+                    try {
+                        candidateScripts = discoverWithPacks();
+                        com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
+                        ReloadProgressTracker.step(scriptType.name, "discovered " + candidateScripts.size() + " scripts");
+
+                        this.candidateKilled = false;
+                        this.candidateKillSource = null;
+                        pluginRuntime.fireBeforeScriptsLoaded(scriptType);
+                        try {
+                            loadCandidateScripts(candidateScripts, candidateEnvironment.context(), candidateEnvironment.nodeRuntime());
+                        } finally {
+                            pluginRuntime.fireAfterScriptsLoaded(scriptType);
+                        }
+                        ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
+
+                        if (this.candidateKilled) {
+                            // 候选加载期间触发语句上限，Graal 已关闭候选 Context：按失败处理，
+                            // 不把死掉的候选提交为 live（watchdog 语义的候选丢弃面归工单 07）。
+                            throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION,
+                                    sourceOf(this.candidateKillSource), "candidate-killed",
+                                    new RuntimeException(scriptType.name()
+                                            + " candidate context was killed by the statement limit during reload"));
+                        }
+                    } catch (NekoReloadException f) {
+                        throw f;
+                    } catch (Throwable t) {
+                        throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION, null, "script-execution", t);
+                    }
+
+                    // ---- COMMIT POINT（单一原子切换；owner thread 同步执行）----
+                    commitGeneration(candidateGeneration, candidateEnvironment, candidateScripts, oldEnvironment);
+                    ReloadProgressTracker.step(scriptType.name, "committed");
+                    progressSuccess = true;
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("{} 脚本重载完毕。", scriptType.name());
+                } catch (NekoReloadException f) {
+                    discardCandidate(candidateEnvironment);
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).error("{} 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变",
+                            scriptType.name(), f);
+                    throw f;
+                }
+            } finally {
+                ReloadProgressTracker.finish(scriptType.name, progressSuccess);
+            }
+        }
+
+        /**
+         * 创建候选 generation 环境：Context + node runtime，并登记 Context → manager
+         * 映射与候选标记（候选 timer 回调的存活判定依赖该登记）。
+         */
+        private RuntimeEnvironment createCandidateEnvironment () {
+            ScriptEnvironmentFactory.Environment candidate = environmentFactory.createContext(scriptType);
             RuntimeEnvironment candidateEnvironment = new RuntimeEnvironment(
                     candidate.context(), candidate.nodeRuntime(), candidate.outStream(), candidate.errStream());
-            Context candidateContext = candidateEnvironment.context();
-            NekoNodeRuntime candidateNode = candidateEnvironment.nodeRuntime();
-            CONTEXT_TO_MANAGER.put(candidateContext, this);
-            ScriptContextRegistry.bind(candidateContext, scriptType);
+            CONTEXT_TO_MANAGER.put(candidate.context(), this);
+            ScriptContextRegistry.bind(candidate.context(), scriptType);
+            this.candidateContext = candidate.context();
+            this.candidateKilled = false;
+            this.candidateKillSource = null;
+            this.pendingListeners.clear();
+            return candidateEnvironment;
+        }
 
-            boolean previousKilled = this.contextKilled;
-            // 提前发布候选环境（单个 volatile 引用，四元组不会错配）：候选脚本可能注册 timer
-            // （setTimeout）并 await 其回调，而 isContextDead(candidateContext) 依赖当前环境判定。
-            // 必须在最终切换前就让候选成为当前 live 环境，否则候选 timer 回调会被当作 dead
-            // 跳过。成功路径无需重复赋值；失败时在 catch 恢复捕获的旧值。
+        /**
+         * 单一 commit 点（工单 06）：candidate 全部阶段通过后的原子切换。
+         *
+         * <p>顺序（owner thread 临界区内完成）：
+         * <ol>
+         *   <li>清扫旧 generation 监听器——此刻总线 type 桶里只有旧 generation 的 token
+         *       （候选监听器是挂起收集、从未上总线），整类型清空即旧 generation 清扫；
+         *       共享静态总线无法按 generation 分桶，此步与下一步合起来等价于「切换生产
+         *       路由 + 旧 generation 停止接收」，跨线程 dispatch 的临界区安全由 07 的
+         *       owner-thread 序列化补齐；</li>
+         *   <li>发布新 runtime：生产 timer flush 目标与 isContextDead 判定同步切换，
+         *       同一事件自此只由新 generation 接收（旧闭包经 isContextDead 判 dead 双保险）；</li>
+         *   <li>激活候选挂起监听器：新 generation 成为唯一新 callback 接收者；</li>
+         *   <li>释放旧 module session（编译模块缓存 / 虚拟 ESM URI 按类型清除）；</li>
+         *   <li>按 timer、Context 所有权顺序释放旧环境（closeRuntimeResources：
+         *       node runtime/timer → Context → streams）。</li>
+         * </ol>
+         */
+        private void commitGeneration (long candidateGeneration, RuntimeEnvironment candidateEnvironment,
+                List<ScriptContainer> candidateScripts, RuntimeEnvironment oldEnvironment) {
+            // (1) 旧 generation 监听器清扫
+            scriptEventBridge.clearListeners(scriptType);
+            // (2) 生产路由切换：新 generation 成为 live 环境
             this.runtime = candidateEnvironment;
-
-            try {
-                List<ScriptContainer> candidateScripts = discoverWithPacks();
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
-                ReloadProgressTracker.step(scriptType.name, "discovered " + candidateScripts.size() + " scripts");
-
-                // 候选加载期间只关心「候选 Context 是否被杀」：先清掉旧标记，加载结束后若标记
-                // 重新变 true，说明是候选环境触发了语句上限。基于状态而非转移检测，避免
-                // previousKilled == true 时漏判并提交一个已死候选。
-                this.contextKilled = false;
-                pluginRuntime.fireBeforeScriptsLoaded(scriptType);
-                try {
-                    loadScriptsInto(candidateScripts, candidateContext, candidateNode);
-                } finally {
-                    pluginRuntime.fireAfterScriptsLoaded(scriptType);
-                }
-                ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
-
-                if (this.contextKilled) {
-                    // 候选加载期间有脚本触发语句上限，Graal 已关闭候选 Context。把它按失败
-                    // 处理：交给下方 catch 关闭候选并保留旧 Context，而不是切换到一个已死的
-                    // 候选环境上。
-                    throw new RuntimeException(scriptType.name()
-                            + " candidate context was killed by the statement limit during reload");
-                }
-
-                this.scripts = candidateScripts;
-                // 成功切换到一个健康的新 Context：旧 Context 可能带有的 killed 标记不再有效。
-                this.contextKilled = false;
-
-                if (!oldEnvironment.isEmpty()) {
-                    closeRuntimeResources(oldEnvironment);
-                }
-                ReloadProgressTracker.step(scriptType.name, "committed");
-            } catch (Throwable t) {
-                this.runtime = oldEnvironment;
-                this.contextKilled = previousKilled;
-                scriptEventBridge.clearListeners(scriptType);
-                closeRuntimeResources(candidateEnvironment);
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
-                        scriptType.name(), t);
-                // Note: listeners and bindings were cleared before the candidate build (they live
-                // on the shared ScriptType bus, so they MUST be cleared before re-loading to avoid
-                // duplicate registration). The surviving old Context is therefore partially degraded
-                // until the user re-runs /neko reload. We cannot reorder the clear to after success
-                // because old and new scripts share the same event bus.
-                throw new RuntimeException(scriptType.name()
-                        + " reload failed; previous scripts retained but event listeners/bindings were cleared"
-                        + " — run /neko reload again to restore listeners", t);
+            this.scripts = candidateScripts;
+            this.generation = candidateGeneration;
+            this.contextKilled = false;
+            this.candidateContext = null;
+            this.candidateKilled = false;
+            // (3) 激活候选挂起监听器（新 generation 唯一 callback 接收者）
+            List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> activation =
+                    List.copyOf(this.pendingListeners);
+            this.pendingListeners.clear();
+            for (var pending : activation) {
+                pending.activate();
             }
+            // (4) 旧 module session 释放
+            NekoModulePipelineCache.clear(scriptType);
+            NekoEsmVirtualModuleRegistry.clear(scriptType);
+            // (5) 旧环境按所有权顺序释放：timer → Context → streams
+            if (!oldEnvironment.isEmpty()) {
+                closeRuntimeResources(oldEnvironment);
+            }
+        }
+
+        /**
+         * 丢弃候选 generation：挂起监听器直接弃置（从未上总线）、候选 Context/timer/streams
+         * 按 timer → Context → streams 顺序关闭；active 的 runtime、scripts、监听器、
+         * timer 与 generation 序号原样保留。
+         */
+        private void discardCandidate (RuntimeEnvironment candidateEnvironment) {
+            this.pendingListeners.clear();
+            this.candidateContext = null;
+            this.candidateKilled = false;
+            this.candidateKillSource = null;
+            if (candidateEnvironment != null && !candidateEnvironment.isEmpty()) {
+                closeRuntimeResources(candidateEnvironment);
+            }
+        }
+
+        /** 候选脚本逐个执行；首个触发候选 kill 的脚本被记录用于失败结果的 source location。 */
+        private void loadCandidateScripts (List<ScriptContainer> scriptsToLoad, Context context, NekoNodeRuntime nodeRuntime) {
+            if (!prepareScriptsForLoad(scriptsToLoad)) {
+                return;
+            }
+            for (ScriptContainer script : scriptsToLoad) {
+                if (!script.shouldRun()) {
+                    continue;
+                }
+                boolean killedBefore = this.candidateKilled;
+                scriptExecutor.executeEntry(context, script, nodeRuntime);
+                if (!killedBefore && this.candidateKilled && this.candidateKillSource == null) {
+                    this.candidateKillSource = script;
+                }
+            }
+        }
+
+        private static String sourceOf (ScriptContainer script) {
+            if (script == null) return null;
+            try {
+                return script.type.name + "/" + ScriptTypeEnv.scriptsDir(script.type)
+                        .relativize(script.path).toString().replace('\\', '/');
+            } catch (Exception ignored) {
+                return script.path.toString();
+            }
+        }
+
+        private NekoReloadException reloadFailure (long generation, ReloadPhase phase, String sourceLocation,
+                String domain, Throwable cause) {
+            return new NekoReloadException(new ReloadFailureReport(
+                    scriptType, generation, phase, sourceLocation,
+                    "ScriptManager[" + scriptType.name + "]", domain, cause));
         }
 
         public synchronized List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {

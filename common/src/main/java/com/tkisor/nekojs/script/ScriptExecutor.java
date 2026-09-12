@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /**
  * 脚本执行器：负责设置/恢复 current script id、进入/退出 Java class-load telemetry scope、
@@ -31,9 +32,10 @@ public final class ScriptExecutor {
     private final ErrorTracker errorTracker;
     private final NekoJSPaths paths;
     private final SandboxConfig sandboxConfig;
-    private final Runnable onContextKilled;
+    /** kill 上报携带发生求值的 Context：ticket 06 起区分 active / candidate generation。 */
+    private final Consumer<Context> onContextKilled;
 
-    public ScriptExecutor(ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, Runnable onContextKilled) {
+    public ScriptExecutor(ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, Consumer<Context> onContextKilled) {
         this.errorTracker = errorTracker;
         this.paths = paths;
         this.sandboxConfig = sandboxConfig;
@@ -65,8 +67,9 @@ public final class ScriptExecutor {
             }
         } catch (Throwable t) {
             if (isContextKilledByResourceLimits(t)) {
-                // Graal 因语句上限关闭了 Context：通知 ScriptManager 下次取用时重建环境
-                onContextKilled.run();
+                // Graal 因语句上限关闭了 Context：通知 ScriptManager 按求值所属环境
+                // （active / candidate generation）标记重建或候选失败
+                onContextKilled.accept(ctx);
             }
             script.disabled = true;
             script.lastError = t;
