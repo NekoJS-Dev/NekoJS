@@ -1,0 +1,45 @@
+# session1 (s1): startup + scenario1 normal reload + scenario2 failed reload
+# excerpt source: bench/datafix/out/s1-stdout.log (verbatim UTF-8 lines)
+
+## [startup] fixture markers
+[19:43:59] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[19:43:59] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[19:43:59] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:43:59] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:43:59] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:43:59] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:44:01] [modloading-worker-0/INFO] [NekoJS/]: [startup] DATAFIX-PACK demo-pack startup script load v1
+[19:44:01] [modloading-worker-0/INFO] [NekoJS/]: [startup] DATAFIX-STARTUP marker load v1
+[19:44:01] [main/INFO] [minecraft/MinecraftServer]: Found new data pack nekojs, loading it automatically
+[19:44:02] [Worker-Main-13/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:44:02] [Worker-Main-13/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[19:44:02] [Worker-Main-13/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[19:44:02] [Worker-Main-13/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered
+[19:44:05] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] DATAFIX-SERVER started-marker
+[19:44:46] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] DATAFIX-PDATA-FAIL TypeError: invokeMember (contains) on com.tkisor.nekojs.api.inject.EntityExtension.neko$pdata failed due to: Message not supported.
+[19:45:56] [Server thread/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:45:56] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[19:45:56] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[19:45:56] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered
+[19:46:07] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] DATAFIX-PDATA-WRITE key= seq=0
+
+## [19:48:43] scenario1 normal reload (success)
+[19:48:43] [Server thread/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[19:48:43] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[19:48:43] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[19:48:43] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered v3
+
+## [19:49:0x] scenario2 failed reload (reported + old env alive)
+[19:49:04] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[19:49:04] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[19:49:04] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered v3
+[19:49:04] [Server thread/ERROR] [NekoJS/]: [server] ½Å±¾Ö´ÐÐÊ§°Ü: nekojs:server/zz-broken.js
+[19:49:16] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] DATAFIX-PDATA-WRITE key=ticket03-persist-me seq=303
+[19:49:28] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[19:49:28] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[19:49:28] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered v3
+
+## [19:49:28] scenario2 restore + clean reload
+[19:49:28] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[19:49:28] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[19:49:28] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered v3
