@@ -1,0 +1,24 @@
+# datafix03 fixture: engine.toml 预置用户自定义值（scriptEvaluationTimeoutSeconds = 77）。
+# 键集与 SandboxConfigLoader 当前 schema 一一对应（含全部默认键），缺失键会被启动期
+# setupConfigEntry 补写导致文件变化；本 fixture 补齐全部键，使"正常 reload 后 config 不变"
+# 的判定干净（首次加载即应零写入）。
+allowThreads = false
+allowReflection = false
+allowAsm = false
+allowFsWriteOutsideNekojs = false
+
+# --- 用户自定义区（datafix03：验证用户值不被运行时改写）---
+enableEsmAuthoring = true
+conciseScriptErrorLogs = true
+jsxAutomaticRuntime = false
+scriptMemberValidation = true
+scriptEvaluationTimeoutSeconds = 77
+scriptStatementLimit = 0
+scriptRunawayTimeoutSeconds = 0
+
+[packSync]
+mode = "off"
+allowUnsigned = false
+
+[dynamicRegistry]
+enabled = false

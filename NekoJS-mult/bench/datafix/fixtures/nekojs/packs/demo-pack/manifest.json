@@ -1,0 +1,9 @@
+{
+  "id": "demo-pack",
+  "name": "Datafix Demo Pack",
+  "version": "1.0.0",
+  "description": "datafix03 GLOBAL pack fixture (manifest enabled=false, state file overrides to true)",
+  "authors": ["datafix03"],
+  "enabled": false,
+  "clientSync": true
+}

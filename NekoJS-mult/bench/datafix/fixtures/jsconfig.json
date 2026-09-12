@@ -1,0 +1,7 @@
+{
+  "datafixUserEdit": "root-editor-config-keep-me",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "target": "esnext"
+  }
+}

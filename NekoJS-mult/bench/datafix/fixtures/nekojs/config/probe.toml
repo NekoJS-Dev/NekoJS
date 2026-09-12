@@ -1,0 +1,19 @@
+# datafix03 fixture: probe.toml 预置用户自定义值（scan.maxDepth = 7）。
+# 键集与 ProbeConfigLoader 当前 schema 一一对应，使首次加载零回写。
+enabled = true
+runAtStartup = false
+baseDir = ".neko_probe"
+
+[scan]
+includePackages = []
+extraIncludePackages = []
+excludePackages = ["java.desktop", "javax.swing", "jdk.jfr", "com.sun.jndi", "com.sun.management", "java.sql", "java.transaction", "javax.transaction", "org.graalvm", "com.oracle.truffle", "com.tkisor.nekojs.core", "com.tkisor.nekojs.api.internal"]
+forceScanMods = ["minecraft"]
+maxDepth = 7
+mode = "SMART"
+
+[languages.typescript]
+outputDir = "typescript"
+
+[languages.python]
+outputDir = "python"
