@@ -10,11 +10,14 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
  * 全局绑定 {@code EntitySelectors}：{@link EntitySelectorBuilderJS} 的工厂与查询入口。
+ *
+ * <p>source contract 归类（ticket 25）：query binding——factory/builder/query 只读查询，
+ * 不事件化、无生命周期 Point；server/test side 限定（查询需 {@code ServerLevel}）。
+ * 非法输入抛带域+调用入口的普通错误（源位置由统一错误管线从脚本栈提取），不含修复提示。
  *
  * <p>脚本示例：
  * <pre>{@code
@@ -34,6 +37,9 @@ public class EntitySelectorsJS {
 
     /** 从 builder 配置回调创建 selector：{@code create(b => b.type('minecraft:cow'))}。 */
     public EntitySelector create(Consumer<EntitySelectorBuilderJS> config) {
+        if (config == null) {
+            throw new IllegalArgumentException("EntitySelectors.create: config must not be null");
+        }
         var builder = new EntitySelectorBuilderJS();
         config.accept(builder);
         return builder.create();
@@ -84,8 +90,12 @@ public class EntitySelectorsJS {
 
     /** 在指定维度执行 selector，锚点为 {@code (x, y, z)}（距离原点 / 体积选区锚）。 */
     public List<? extends Entity> find(ServerLevel level, EntitySelector selector, double x, double y, double z) {
-        Objects.requireNonNull(level, "level");
-        Objects.requireNonNull(selector, "selector");
+        if (level == null) {
+            throw new IllegalArgumentException("EntitySelectors.find: level must not be null");
+        }
+        if (selector == null) {
+            throw new IllegalArgumentException("EntitySelectors.find: selector must not be null");
+        }
         CommandSourceStack source = level.getServer().createCommandSourceStack()
                 .withLevel(level)
                 .withPosition(new Vec3(x, y, z));
@@ -94,7 +104,7 @@ public class EntitySelectorsJS {
         } catch (Exception e) {
             // findEntities 声明 CommandSyntaxException，但脚本构建的 selector
             // （usesSelector=false）不会触发语法/权限分支；防御性兜底转运行时异常
-            throw new IllegalStateException("entity selector query failed", e);
+            throw new IllegalStateException("EntitySelectors.find: entity selector query failed", e);
         }
     }
 

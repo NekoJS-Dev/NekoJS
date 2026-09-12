@@ -133,10 +133,10 @@ public class EntitySelectorBuilderJS {
     /** 距离区间（从锚点量到目标脚底欧氏距离）；会启用世界限定。 */
     public EntitySelectorBuilderJS distance(double minDistance, double maxDistance) {
         if (minDistance < 0 || maxDistance < 0) {
-            throw new IllegalArgumentException("distance cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.distance: distance cannot be negative");
         }
         if (minDistance > maxDistance) {
-            throw new IllegalArgumentException("min distance cannot be greater than max distance");
+            throw new IllegalArgumentException("EntitySelectors.distance: min distance cannot be greater than max distance");
         }
         this.distance = MinMaxBounds.Doubles.between(minDistance, maxDistance);
         this.worldLimited = true;
@@ -146,7 +146,7 @@ public class EntitySelectorBuilderJS {
     /** 距离上限（{@code distance(0, max)}）。 */
     public EntitySelectorBuilderJS distanceBelow(double maxDistance) {
         if (maxDistance < 0) {
-            throw new IllegalArgumentException("distance cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.distanceBelow: distance cannot be negative");
         }
         this.distance = MinMaxBounds.Doubles.atMost(maxDistance);
         this.worldLimited = true;
@@ -156,7 +156,7 @@ public class EntitySelectorBuilderJS {
     /** 距离下限。 */
     public EntitySelectorBuilderJS distanceAbove(double minDistance) {
         if (minDistance < 0) {
-            throw new IllegalArgumentException("distance cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.distanceAbove: distance cannot be negative");
         }
         this.distance = MinMaxBounds.Doubles.atLeast(minDistance);
         this.worldLimited = true;
@@ -177,7 +177,7 @@ public class EntitySelectorBuilderJS {
     public EntitySelectorBuilderJS gamemode(String gamemodeName, boolean inverse) {
         GameType gamemode = GameType.byName(gamemodeName.toLowerCase(Locale.ROOT));
         if (gamemode == GameType.DEFAULT_MODE && !"survival".equalsIgnoreCase(gamemodeName)) {
-            throw new IllegalArgumentException("unknown gamemode: " + gamemodeName);
+            throw new IllegalArgumentException("EntitySelectors.gamemode: unknown gamemode: " + gamemodeName);
         }
         predicates.add(entity -> {
             if (entity instanceof ServerPlayer player) {
@@ -223,10 +223,10 @@ public class EntitySelectorBuilderJS {
     /** 按经验等级过滤；天然排除非玩家。 */
     public EntitySelectorBuilderJS level(int minLevel, int maxLevel) {
         if (minLevel < 0 || maxLevel < 0) {
-            throw new IllegalArgumentException("level cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.level: level cannot be negative");
         }
         if (minLevel > maxLevel) {
-            throw new IllegalArgumentException("min level cannot be greater than max level");
+            throw new IllegalArgumentException("EntitySelectors.level: min level cannot be greater than max level");
         }
         predicates.add(entity ->
                 entity instanceof Player player
@@ -239,7 +239,7 @@ public class EntitySelectorBuilderJS {
     /** 结果数量上限（&ge;1）。 */
     public EntitySelectorBuilderJS limit(int limit) {
         if (limit < 1) {
-            throw new IllegalArgumentException("limit must be at least 1");
+            throw new IllegalArgumentException("EntitySelectors.limit: limit must be at least 1");
         }
         this.maxResults = limit;
         return this;
@@ -345,7 +345,7 @@ public class EntitySelectorBuilderJS {
         String normalized = entityTypeId.indexOf(':') >= 0 ? entityTypeId : "minecraft:" + entityTypeId;
         return BuiltInRegistries.ENTITY_TYPE
                 .getOptional(ResourceLocation.parse(normalized))
-                .orElseThrow(() -> new IllegalArgumentException("unknown entity type: " + entityTypeId));
+                .orElseThrow(() -> new IllegalArgumentException("EntitySelectors.type: unknown entity type: " + entityTypeId));
     }
 
     /** 是否为玩家类型（26.2 无 {@code EntityType.PLAYER} 常量，经注册表比较）。 */
