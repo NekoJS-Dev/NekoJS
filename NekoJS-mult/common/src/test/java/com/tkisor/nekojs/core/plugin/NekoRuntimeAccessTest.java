@@ -54,6 +54,10 @@ class NekoRuntimeAccessTest {
 
     @Test
     void accessSlotRoutesEventsToTheSingleProcessRuntime() {
+        // 槽位是进程级单例：测试必须自愈（保存/还原），否则用例顺序会把槽位状态泄漏给
+        // 其他测试——"可重复测试"（AC2）包含测试自身的可重复性。
+        IPluginRuntime previous = NekoRuntimeAccess.get();
+        try {
         CountingRuntime first = new CountingRuntime();
         NekoRuntimeAccess.set(first);
 
@@ -74,5 +78,8 @@ class NekoRuntimeAccessTest {
         NekoRuntimeAccess.get().fireInit();
         assertEquals(1, second.init.get());
         assertEquals(1, first.init.get(), "replaced runtime must not receive further events");
+        } finally {
+            NekoRuntimeAccess.set(previous);
+        }
     }
 }

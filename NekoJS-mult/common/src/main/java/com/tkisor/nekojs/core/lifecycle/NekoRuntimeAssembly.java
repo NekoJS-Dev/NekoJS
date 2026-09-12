@@ -12,6 +12,7 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.log.NekoJSLoggers;
 import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -49,7 +50,8 @@ public final class NekoRuntimeAssembly {
     private NekoRuntimeAssembly() {}
 
     /** 装配产物：{@code root} 是唯一 lifecycle 入口，由 loader entry 私有持有。 */
-    public record Assembled(NekoRuntimeRoot root, NekoPluginRuntime pluginRuntime) {}
+    /** 只带 root：调用方（loader entry）不消费其他产物，避免装配件长出第二个访问面。 */
+    public record Assembled(NekoRuntimeRoot root) {}
 
     /** loader 特有事件面接线：在 fireInit 之后、引擎装配之前执行一次。 */
     @FunctionalInterface
@@ -67,6 +69,9 @@ public final class NekoRuntimeAssembly {
             List<OwnedPlugin> ownedPlugins,
             PluginWiring pluginWiring) {
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(ownedPlugins, scriptProperties);
+        // AC8 的计数面：本行每次进程只应出现一次（bootstrapOwned 重复调用会被 publish 拒绝），
+        // 烟测以 reload 前后各 grep 一次验证计数不变；Fabric 侧另有 entrypoint/bootstrap-done marker。
+        NekoJSLoggers.get("NekoJS").info("NekoJS plugin runtime bootstrapped once (assembly)");
         NekoRuntimeAccess.get().fireInit();
         pluginWiring.wire(pluginRuntime);
 
@@ -98,6 +103,6 @@ public final class NekoRuntimeAssembly {
 
         root.scriptManagerOf(ScriptType.STARTUP).loadScripts();
         NekoRuntimeAccess.get().fireInitStartup();
-        return new Assembled(root, pluginRuntime);
+        return new Assembled(root);
     }
 }
