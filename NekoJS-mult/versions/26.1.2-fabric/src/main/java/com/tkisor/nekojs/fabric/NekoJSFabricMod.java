@@ -1,25 +1,13 @@
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.bindings.static_access.ScriptEventsJS;
 import com.tkisor.nekojs.core.DefaultScriptEventBridge;
-import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
-import com.tkisor.nekojs.core.NekoSharedEngine;
-import com.tkisor.nekojs.core.NekoSandboxFactory;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.error.DefaultErrorTracker;
-import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
-import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeAssembly;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.fabric.event.FabricBlockEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricCommandEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
@@ -128,45 +116,19 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         WorkspaceGenerator.setupWorkspace();
     }
 
-    /** 引擎装配：与 {@code NekoJSMod#initializeScripts} 同构，替换插件发现、去掉 neoforge 专属钩子。 */
+    /** 引擎装配：与 {@code NekoJSMod#initializeScripts} 同构（共享 {@code NekoRuntimeAssembly}），替换插件发现、去掉 neoforge 专属钩子。 */
     private void initializeScripts() {
         FabricPluginLoader.loadPlugins();
-        NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(
-                NekoJSBasePluginManager.getOwnedPlugins(), this.scriptProperties);
-        NekoRuntimeAccess.get().fireInit();
-        ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
-        this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
-
-        var compilers = ScriptCompilerRegistry.current();
-        SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
-        ClassFilter classFilter = ClassFilter.INSTANCE;
-        var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig);
-        ScriptErrorReporter.set(new ErrorTrackerReporter(errorTracker));
-        NekoCoreContext core = new NekoCoreContext(
-                NekoSharedEngine.get(),
-                sandboxConfig,
-                classFilter,
-                errorTracker
-        );
-        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime);
-        NekoModulePipeline.bindLegacyInstance(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
-        RUNTIME_ROOT = new NekoRuntimeRoot(
-                core,
-                pluginRuntime,
+        // 共享装配序列（与 NeoForge 侧同构）：loader 差异（FabricPluginLoader 发现、接线顺序
+        // setPluginRuntime → bindRuntime）留在本类；产物由本 entry 私有持有。
+        RUNTIME_ROOT = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
                 this.scriptProperties,
-                sandboxFactory
-        );
-
-        for (ScriptType type : ScriptType.autoLoadTypes()) {
-            var manager = RUNTIME_ROOT.createScriptManager(type);
-            this.scriptManagers.set(type, manager);
-            manager.discoverScripts();
-        }
-
-        this.scriptManagers.at(ScriptType.STARTUP).loadScripts();
-        NekoRuntimeAccess.get().fireInitStartup();
+                NekoJSBasePluginManager.getOwnedPlugins(),
+                pluginRuntime -> {
+                    ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
+                    this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
+                }).root();
         // STARTUP 脚本加载后触发 goal 注册（镜像 NekoJSMod：脚本监听器此时才挂上；
         // 注册面由节点孪生 GoalEvents 提供，消费端 FabricEntityEventBindings 已在跑）
         com.tkisor.nekojs.bindings.event.GoalEvents.postRegister();
