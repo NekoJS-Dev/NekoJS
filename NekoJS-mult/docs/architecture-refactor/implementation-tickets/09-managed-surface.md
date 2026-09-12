@@ -4,9 +4,9 @@
 
 **Blocked by:** [01: P0 五节点构建与契约基线](01-build-baseline.md)、[02: P0 独立性能基线](02-perf-baseline.md)、[05: 单 owner 预整理：闭合两个 loader 的运行时生命周期入口](05-runtime-root.md)
 
-**Status:** ready-for-agent
+**Status:** closed
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
 
 **Optional:** false
 
@@ -18,17 +18,17 @@
 
 ## Acceptance criteria
 
-- [ ] CoreManagedApiBootstrap/ApiSurface 的最高调用者测试证明 facade、数据类型、事件注册是 NormativeApiContract 的唯一反射输入。
-- [ ] 同一契约输入重复生成 manifest、Probe、TypeScript declaration 和 Python declaration 的结果稳定，普通测试不会写任何 golden。
-- [ ] legacy catalog 或 LEGACY_PREVIEW 符号可被迁移观察，但不会被标成 managed stable，也不能覆盖同名 managed symbol。
-- [ ] 每个涉及能力的 symbol 均有 supported/partial/unavailable 及 loader/version/context 条件；声明与真实外部行为一致。
-- [ ] TS 与 Python declaration 成员、签名、module 归属和 runtime member parity 有 fixture 证明。
-- [ ] managed 可写配置 Builder 的显式 setter 与 JavaBean-style property assignment 被定义为同一写入语义，并进入同一校验、规范化和 declaration；final identity、只读成员和未开放 experimental 成员例外。Graal 天然 Bean 行为不作为承诺，公开等价性必须由 runtime contract fixture 固定。本票验证规范生成规则和代表性受管 Builder fixture；启动期、动态与修改域的实际覆盖由各域票完成，P4 汇总，不把所有下游 Builder 实现反向作为本票 blocker。
-- [ ] 随实现交付最小 managed API 可运行示例与必要迁移材料；示例只使用已通过 gate 的能力，不展示 not verified/unavailable 能力。
-- [ ] java:、Java.type、Java.loadClass、Graal interop 和当前 HostAccess 的既有高级 Java 用例保持通过。
-- [ ] 契约变化必须走显式 regenerate，并留下旧新 diff、原因、影响和维护者审阅记录。
-- [ ] 不存在新的独立 API artifact、全仓 catalog、第二规范 JSON 或通用 capability 框架。
-- [ ] 至少一个真实脚本调用经过 contract 反射、manifest/Probe、TS/Python declaration 的完整链路，外部 addon/Probe 差异只作为协调项而不冒充本票验收。
+- [x] CoreManagedApiBootstrap/ApiSurface 的最高调用者测试证明 facade、数据类型、事件注册是 NormativeApiContract 的唯一反射输入。
+- [x] 同一契约输入重复生成 manifest、Probe、TypeScript declaration 和 Python declaration 的结果稳定，普通测试不会写任何 golden。
+- [x] legacy catalog 或 LEGACY_PREVIEW 符号可被迁移观察，但不会被标成 managed stable，也不能覆盖同名 managed symbol。
+- [x] 每个涉及能力的 symbol 均有 supported/partial/unavailable 及 loader/version/context 条件；声明与真实外部行为一致。
+- [x] TS 与 Python declaration 成员、签名、module 归属和 runtime member parity 有 fixture 证明。
+- [x] managed 可写配置 Builder 的显式 setter 与 JavaBean-style property assignment 被定义为同一写入语义，并进入同一校验、规范化和 declaration；final identity、只读成员和未开放 experimental 成员例外。Graal 天然 Bean 行为不作为承诺，公开等价性必须由 runtime contract fixture 固定。本票验证规范生成规则和代表性受管 Builder fixture；启动期、动态与修改域的实际覆盖由各域票完成，P4 汇总，不把所有下游 Builder 实现反向作为本票 blocker。
+- [x] 随实现交付最小 managed API 可运行示例与必要迁移材料；示例只使用已通过 gate 的能力，不展示 not verified/unavailable 能力。
+- [x] java:、Java.type、Java.loadClass、Graal interop 和当前 HostAccess 的既有高级 Java 用例保持通过。
+- [x] 契约变化必须走显式 regenerate，并留下旧新 diff、原因、影响和维护者审阅记录。
+- [x] 不存在新的独立 API artifact、全仓 catalog、第二规范 JSON 或通用 capability 框架。
+- [x] 至少一个真实脚本调用经过 contract 反射、manifest/Probe、TS/Python declaration 的完整链路，外部 addon/Probe 差异只作为协调项而不冒充本票验收。
 
 ## Sources
 
@@ -59,3 +59,27 @@
 ## JSX UI feature coordination（2026-09-12）
 
 UI facade、intrinsic elements、props 和事件由 [40: JSX UI common core](40-jsx-ui-common-core.md) 进入同一 NormativeApiContract 派生链；后续 UI 票随成员实现补齐声明，不新增 UI 私有 catalog。本票不反向依赖 JSX feature。
+## Closure record（2026-09-12）
+
+- 执行者：zcode-agent。实施区间 `80b4442d..（本提交）`，6 个实施 commit + review 修订。
+- 交付物：契约 owner 收口（`NormativeApiContractOwnerTest` 双记账证明反射输入唯一）+ 确定性派生
+  fixture（manifest/TS/Py 两次生成逐字节比对，普通测试零 golden 写入；golden 本轮零变化）+
+  legacy shadow characterization（managed 优先、LEGACY_NAME_COLLISION）+ 能力三态/条件
+  （`CapabilityStatus` 三态 + `ContractCapability.status/conditions` + resolver 权威 gate）+
+  REGENERATE.md（显式 regenerate 流程与审阅模板，本轮零 regenerate）+ 最小示例/MIGRATION.md +
+  完整链路测试（脚本→契约反射→manifest→Probe/TS→运行时）。
+- code-review（双轴）后修订：**契约条件成为激活裁定的权威 gate**（v1 的 isEligible 只看 provider
+  scope，契约声明不匹配时 provider 无 scope/更宽 scope 仍会激活——已修 + 两条负样本用例 +
+  更宽 provider 的 SCOPE_NOT_CONTAINED fail-fast 用例）；CORE owner 双拼写收敛为
+  `CapabilityResolver.CORE_OWNER_ID/CORE_MODID` 单点词表（语义未变，收敛原因与维护者裁定项见
+  CapabilityResolver javadoc 与 REPORT §7.1）；`NormativeApiContract` FQN 清理；测试共享 fixture
+  `ApiSurfaceTestSupport` 抽取（6 份逐字复制 → 1）；AC6 补真实 Graal runtime fixture（public 字段
+  写路径钉死；裸 bean setter 的 property 写实测静默不生效——"Graal 天然 Bean 行为不作为承诺"的
+  实证，setter 等价分发归票 15/39 的受管 Builder 机制）。
+- 已记录缺口（非本票反例，owner 已列）：① 真实契约 capabilities=空集，涉及能力的符号由功能域票
+  陆续注册（报告 §6 AC4 注记）；② compound 值经契约 invoker 的 NATIVE_TYPE_LEAK（`ApiValueMarshaller:459`，
+  owner W4/W5 跟进）；③ TS/Py 生成器暂不渲染 capability 条件、Python 生成器消费 catalog IR
+  （统一归 W5 跟进）；④ 外部 addon 真实 discovery 消费归 PLUGIN_ADDON 协调项；⑤ 非 primary 节点
+  check 归 W9/W10。
+- 测试：`:common` 189 suites/1400 tests（+8/+34），`:common-api-processor:test`、`guardLint`、
+  `:26.1.2:check`、`npm run test:probe-types` 全绿；golden 零变化（diff 为空）。

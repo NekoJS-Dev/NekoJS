@@ -16,6 +16,15 @@ import java.util.stream.Collectors;
 
 public final class CapabilityResolver {
 
+    /**
+     * 核内 owner 词表（ticket 09 review 裁决）：契约 owner 与 addon modid 历史上用了两种拼写
+     * （nekojs-core / nekojs），CORE_ONLY/ALLOWLIST 校验必须同时接受。词表**只在此处定义**，
+     * 新代码引用常量，不要散落字面量；若维护者裁定收敛为单一拼写，属契约语义变更，
+     * 需走 NormativeApiContract regenerate + 审阅。
+     */
+    public static final String CORE_OWNER_ID = "nekojs-core";
+    public static final String CORE_MODID = "nekojs";
+
     private CapabilityResolver() {
     }
 
@@ -75,7 +84,7 @@ public final class CapabilityResolver {
 
             // Step 6: Filter eligible providers for this environment
             List<CapabilityProviderContribution> eligible = candidates.stream()
-                    .filter(p -> isEligible(environmentKey, p))
+                    .filter(p -> isEligible(def, environmentKey, p))
                     .toList();
 
             if (eligible.isEmpty()) {
@@ -186,7 +195,7 @@ public final class CapabilityResolver {
             case CORE_ONLY -> {
                 // 核内 owner 的两种既有拼写（nekojs-core = CoreManagedApiBootstrap/bootstrap 契约 owner；
                 // nekojs = 能力 fixture/历史词汇）。addon owner 一律拒绝。
-                if (!"nekojs".equals(identity.ownerId()) && !"nekojs-core".equals(identity.ownerId())) {
+                if (!CORE_MODID.equals(identity.ownerId()) && !CORE_OWNER_ID.equals(identity.ownerId())) {
                     throw new ApiResolutionException("CORE_ONLY_VIOLATION",
                             "Addon '" + identity.ownerId() + "' cannot provide core capability '"
                                     + def.name() + "' (CORE_ONLY policy)",
@@ -207,9 +216,19 @@ public final class CapabilityResolver {
         }
     }
 
+    /**
+     * 激活裁定的**权威 gate 是契约声明的 conditions**（{@code def.environmentScope()}）：契约声明
+     * 不匹配当前环境时，该能力在环境内不可用（UNAVAILABLE），即使 provider 自己没有声明 scope 或
+     * 声明了更宽的 scope——provider scope 只能比契约更窄（Step 4 的包含校验），不能替契约放宽。
+     * provider 自身 scope 再做一次环境匹配（provider 可以比契约更窄）。
+     */
     private static boolean isEligible(
+            CapabilityDefinition def,
             EnvironmentKey environmentKey,
             CapabilityProviderContribution provider) {
+        if (def.environmentScope() != null && !def.environmentScope().matches(environmentKey)) {
+            return false;
+        }
         if (provider.environmentScope() == null) return true;
         return provider.environmentScope().matches(environmentKey);
     }

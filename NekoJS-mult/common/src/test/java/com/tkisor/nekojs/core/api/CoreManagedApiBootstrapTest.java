@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.surface.ApiVersion;
+import com.tkisor.nekojs.core.api.ApiSurfaceTestSupport;
 import com.tkisor.nekojs.api.surface.ApiResolutionException;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
@@ -49,34 +50,24 @@ class CoreManagedApiBootstrapTest {
                 "ID", ApiSymbolId.parse("global:legacy-ID"));
 
         assertThrows(ApiResolutionException.class, () -> JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of(legacyId)));
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of(legacyId)));
 
         LegacyGlobalReservation legacyText = new LegacyGlobalReservation(
                 "Text", ApiSymbolId.parse("global:legacy-Text"));
         assertThrows(ApiResolutionException.class, () -> JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of(legacyText)));
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of(legacyText)));
 
         LegacyGlobalReservation legacyJsonIo = new LegacyGlobalReservation(
                 "JsonIO", ApiSymbolId.parse("global:legacy-JsonIO"));
         assertThrows(ApiResolutionException.class, () -> JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of(legacyJsonIo)));
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of(legacyJsonIo)));
 
         LegacyGlobalReservation legacyNbt = new LegacyGlobalReservation(
                 "NBT", ApiSymbolId.parse("global:legacy-NBT"));
         assertThrows(ApiResolutionException.class, () -> JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of(legacyNbt)));
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of(legacyNbt)));
     }
 
-    private static EnvironmentKey environment() {
-        return new EnvironmentKey(
-                ScriptTypeId.SERVER,
-                RuntimeDist.DEDICATED_SERVER,
-                "test",
-                "0.0.0",
-                LoaderVersion.parse("0.0.0"),
-                "1.21.1",
-                Map.of());
-    }
 
     private static final class EmptyPlatform implements IPlatform {
         @Override public boolean isClient() { return false; }

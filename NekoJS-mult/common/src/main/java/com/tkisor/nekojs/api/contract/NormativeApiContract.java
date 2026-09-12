@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.api.contract;
 
+import com.tkisor.nekojs.api.capability.CapabilityStatus;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiVersion;
@@ -78,13 +79,13 @@ public record NormativeApiContract(
         public ContractCapability {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(contractVersionRange, "contractVersionRange");
-            status = status == null ? com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED : status;
+            status = status == null ? CapabilityStatus.SUPPORTED : status;
         }
 
         /** 兼容构造：仅 id/版本范围/docs，默认 SUPPORTED 且无条件。 */
         public ContractCapability(String id, String contractVersionRange, String docs) {
             this(id, contractVersionRange,
-                    com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED, null, docs);
+                    CapabilityStatus.SUPPORTED, null, docs);
         }
     }
 
