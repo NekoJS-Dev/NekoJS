@@ -96,7 +96,21 @@
 
 ## 3. fixture 矩阵（Phase 3/4/5）
 
-（Phase 3/4/5 完成后填写）
+测试落点：`src/test/java/com/tkisor/nekojs/bindings/query/`（共享测试树，五节点按守卫/探针裁剪）；
+golden：`src/test/resources/golden/query/`（只读）。行为级（注册表/数据包/ServerLevel 依赖）fixture
+走 `runServer` + `/nekojs test`（§5），不在裸 JUnit 冒充（`VanillaRegistryProbe` 事实）。
+
+| # | fixture | 域 | 层级 | 载体 | 覆盖 |
+|---|---|---|---|---|---|
+| 1 | `QueryToolContractClassificationTest` | 两域 | source contract 归类 | 裸 JUnit | 观察面 `global:` kind + 占位签名；managed contract 不含 `global:DataMap`/`global:EntitySelectors`、含 `member:RegistryView.dataMap*`；插件无事件 owner；SERVER/TEST 可见性；runtime member 锚点 |
+| 2 | `QueryToolCapabilityMatrixTest` | 两域 | capability 三态 | 裸 JUnit + golden | 真实注册探针/类存在性探针派生 `CapabilityStatus` 矩阵（neoforge + fabric 两套 golden）；fabric `DataMap` 显式 UNAVAILABLE；Registry 替代面 fabric 静默空值 deviation 记录 |
+| 3 | `DataMapQueryBindingTest` | DataMap | 只读面 + 非法输入 + declaration | 裸 JUnit + golden | 公开方法集合（furnaceFuel/compostable）、Integer/Float 快照值、`RegistryView.dataMapValue` 返回 portable JSON 字符串；null 栈错误带域+入口无修复提示；生产 `BindingDeclarationGenerator` TS declaration 重复生成逐字节稳定 + golden |
+| 4 | `EntitySelectorsQueryBindingTest` | EntitySelectors | 非法输入 + declaration | 裸 JUnit + golden | null level/config 错误带域+入口；工厂预设反射锚点；TS declaration golden（实例 binding 渲染 `$EntitySelectorsJS` 类型标注） |
+| 5 | `QueryToolDeclarationParityTest` | 两域 | declaration/Probe parity | 裸 JUnit（TempDir） | 生产链路复刻（种子类 → `TypeReflector` IR → 真实 TS/Python backend）；重复生成整树逐字节一致；runtime public member 名单（反射派生）双向出现在 .d.ts/.pyi；phantom 负样本 |
+| 6 | runServer `/nekojs test` 脚本（§5） | 两域 | 行为（命中/缺失/类型转换/selector 语法/执行） | 真实服务器 | DataMap 命中值/缺失 null/类型转换错误；EntitySelectors builder 语法校验错误 + find 命中/距离/limit 语义 |
+
+builder 校验错误（limit/distance/gamemode/type/level）单元层被 `EntitySelector` 的
+`<clinit>`（要求 FML Loader）阻断，全部收敛到 #6 游戏内 fixture 断言。
 
 ## 4. AC1-AC10 逐条判定
 
