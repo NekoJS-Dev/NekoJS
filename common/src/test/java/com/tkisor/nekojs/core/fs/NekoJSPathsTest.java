@@ -81,24 +81,6 @@ class NekoJSPathsTest {
     }
 
     @Test
-    void verifyScriptSyncPathEnforcesScriptRootWhitelist() throws Exception {
-        NekoJSPaths paths = pathsFor(gameDir);
-        Path script = gameDir.resolve("nekojs/server_scripts/sync.js");
-        Files.createDirectories(script.getParent());
-        Files.writeString(script, "console.log('sync')");
-
-        assertEquals(script.toRealPath(), paths.verifyScriptSyncPath("server_scripts/sync.js"));
-        // 绝对路径 / .. 拒绝
-        assertThrows(IOException.class, () -> paths.verifyScriptSyncPath(
-                outsideRootAbsPath().resolve("nekojs/server_scripts/x.js").toString()));
-        assertThrows(IOException.class, () -> paths.verifyScriptSyncPath("../server_scripts/x.js"));
-        // 非脚本扩展名拒绝
-        assertThrows(IOException.class, () -> paths.verifyScriptSyncPath("server_scripts/x.txt"));
-        // 脚本根之外（nekojs/config 等）拒绝
-        assertThrows(IOException.class, () -> paths.verifyScriptSyncPath("config/nekojs-engine.toml"));
-    }
-
-    @Test
     void verifyInsideGameDirForCreateAllowsDeepMissingPaths() throws Exception {
         NekoJSPaths paths = pathsFor(gameDir);
         Path deep = gameDir.resolve("nekojs/cache/new/dir/file.json");

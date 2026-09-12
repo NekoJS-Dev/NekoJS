@@ -171,24 +171,6 @@ public final class NekoJSPaths {
         return verifyInsideNekoRootForCreate(resolveAgainstWorkingDirectory(path, currentWorkingDirectory));
     }
 
-    public Path verifyScriptSyncPath(String relativePath) throws IOException {
-        Path parsed = Path.of(relativePath).normalize();
-        if (parsed.isAbsolute() || parsed.startsWith("..")) {
-            throw new IOException("Invalid script path: " + relativePath);
-        }
-
-        Path target = verifyInsideGameDir(root.resolve(parsed));
-        if (!target.startsWith(canonicalSplicedForm(root))) {
-            throw new IOException("Access outside NekoJS workspace is forbidden: " + relativePath);
-        }
-        if (!isSupportedScriptFile(target)) {
-            throw new IOException("Unsupported script file type: " + relativePath);
-        }
-        if (!isInsideScriptRoot(target)) {
-            throw new IOException("Script sync is only allowed inside startup_scripts, server_scripts, client_scripts, or test_scripts: " + relativePath);
-        }
-        return target;
-    }
 
     public boolean isInsideScriptRoot(Path path) {
         Path normalized = canonicalSplicedForm(path);

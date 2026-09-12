@@ -11,7 +11,6 @@ import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
-import com.tkisor.nekojs.network.OpenWorkspacePacket;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.platform.Platform;
@@ -98,15 +97,6 @@ public final class NekoJSCommands {
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
                                     }
-                                    return 1;
-                                })
-                        )
-
-                        .then(Commands.literal("editor")
-                                .executes(context -> {
-                                    CommandSourceStack source = context.getSource();
-                                    ServerPlayer player = source.getPlayerOrException();
-                                    PacketDistributor.sendToPlayer(player, new OpenWorkspacePacket());
                                     return 1;
                                 })
                         )

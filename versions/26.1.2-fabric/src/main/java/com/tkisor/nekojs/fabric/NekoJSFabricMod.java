@@ -26,7 +26,6 @@ import com.tkisor.nekojs.fabric.event.FabricEntityEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricLevelEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricPlayerEventBindings;
 import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
-import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.FabricIdCompat;
 import com.tkisor.nekojs.platform.FabricPlatform;
 import com.tkisor.nekojs.platform.NekoIdCompat;
@@ -159,7 +158,6 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 this.scriptProperties,
                 sandboxFactory
         );
-        ScriptSyncService.bindErrorTracker(core.errorTracker());
 
         for (ScriptType type : ScriptType.autoLoadTypes()) {
             var manager = RUNTIME_ROOT.createScriptManager(type);
