@@ -143,7 +143,7 @@ const IntegerClass3 = require('java:java/lang/Integer')
 
 ## 安全模型
 
-脚本跑在受限的 GraalJS 环境里，但**这不是一个可以安全执行不可信代码的平台**。只运行你信任的脚本，尤其不要在公共服务器上给陌生玩家远程编辑权限。
+脚本跑在受限的 GraalJS 环境里，但**这不是一个可以安全执行不可信代码的平台**。只运行你信任的脚本，尤其不要把脚本安装、写入或执行权限交给陌生玩家。
 
 当前的边界：
 
@@ -152,7 +152,7 @@ const IntegerClass3 = require('java:java/lang/Integer')
 - `allowThreads`、`allowReflection`、`allowAsm` 是高危能力开关，默认全关。
 - `scriptEvaluationTimeoutSeconds`（默认 30，设 0 或负数为不限）限制脚本入口的求值时长，防止 top-level await 永不完成把服务器线程挂死。
 - `scriptStatementLimit`（默认 5000 万，显式设 0 可禁用）限制单个 Context 能执行的语句总数，超限时关闭该 Context，防止死循环耗尽 CPU。
-- 游戏内的工作区同步只应给可信管理员用，它本身也限制在脚本目录和脚本扩展名范围内。
+- 按当前产品决定，内置游戏内编辑器/工作区 GUI 与脚本文件同步不再作为支持范围；请在本地外部 IDE 编辑脚本。外部 WorkspaceGenerator、Probe、类型声明、`jsconfig.json` 和用户数据保留，规划边界见 [docs/architecture-refactor/editor-removal-and-error-ui.md](docs/architecture-refactor/editor-removal-and-error-ui.md)。
 
 **一个必须知道的边界**：按名黑名单只拦类查找。Java 方法返回值的对象图由 Graal 的 `HostAccess` 控制，当前是 `HostAccess.ALL`——也就是说黑名单里的类的实例，仍可能通过某个方法的返回值进入脚本。所以脚本应当视为**半可信代码**。
 

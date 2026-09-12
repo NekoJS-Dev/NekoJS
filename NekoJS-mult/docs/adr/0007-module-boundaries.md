@@ -1,5 +1,7 @@
 # 模块边界：三层归属判据
 
+> **本轮规划修订（用户直接澄清）**：`common`（含 `com.tkisor.nekojs.api.*`）允许使用 GraalJS，common 内不设零 Graal import 约束；不为隔离 Graal 而抽 DTO、adapter 或另一个 API jar。`common` 的零 MC/loader 隔离保留。此注记修订当前规划前提；api 的职责、命名、具体签名、生命周期和 artifact 形状已由 04 Resolution 定义，实施映射仍由 07 验证。下方旧的“契约层零 Graal import”只保留为历史决策理由，不再是当前约束。
+
 > **2026-08-30 修订（本文件现状）**：`common-api` 并入 `common`，契约类型改住
 > `com.tkisor.nekojs.api.*` 包，边界改由 `guardLint` 的包前缀规则承载。下表已改为三层。
 > 修订理由：该模块的边界收益从未兑现——两模块都不发布制品、都被整体嵌进平台 fat jar，
@@ -20,7 +22,7 @@
 
 | 层 | 装什么 | 硬边界 |
 |---|---|---|
-| `common` 下的 `com.tkisor.nekojs.api.*` 包 | **对外契约**（数据契约 + 插件契约） | 零 MC / Loader / Graal import（`guardLint` L1，按包前缀取材） |
+| `common` 下的 `com.tkisor.nekojs.api.*` 包 | **对外契约**（数据契约 + 插件契约） | 零 MC / Loader import；允许 Graal（`guardLint` L1，按包前缀取材） |
 | `common` 其余包 | **跨平台引擎**（Graal runtime、模块系统、probe、事件总线、V2 扩展点机制） | 可用 Graal，零 MC / Loader import（`guardLint` L2 + `checkCommonIsolation`） |
 | `src` 共享树 | 需要触及 MC/loader、且差异**可守卫表达**的代码（wrapper、bindings、client…） | 单副本，守卫表达差异 |
 | `versions/<node>` | **节点独有**（差异大到守卫不划算：整文件/整类不同） | 越少越好 |
@@ -37,5 +39,5 @@
 ## Consequences
 
 - 引擎层为两个子项目：`common` 与 `common-api-processor`（后者必须独立，才能作为 annotationProcessor 使用）。`common` 不发布 Maven 制品，产物由各节点内嵌进平台 fat jar。
-- "契约层零 Graal import"由 lint 而非 javac 强制：并入后 `api.*` 里的类在编译期引用引擎内部不会报编译错。这是接受的损失——lint 覆盖面反而从原模块的 114 个文件扩大到全部 `api.*` 文件。
+- 历史上曾由 lint 而非 javac 强制“契约层零 Graal import”：并入后 `api.*` 里的类在编译期引用引擎内部不会报编译错，这一历史理由仍保留但不再构成当前 Graal 约束。当前源码 lint 尚未更新；未来代码实施时移除或更新过时的 Graal 禁令，同时保留 api/common 的 MC/loader 隔离。
 - 原 `forge/` 独立分支条款已失效（2026-08-30：1.20.1 移植取消，骨架自仓库移除）。

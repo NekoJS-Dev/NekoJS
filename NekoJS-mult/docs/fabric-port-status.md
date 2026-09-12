@@ -310,12 +310,15 @@
 
 ## P2（大块移植，按需排期）
 
-脚本编辑器同步 8 包 + 工作区 GUI（NekoWorkspaceScreen/NekoCodeEditor 需 AW：MultiLineEditBox
-等）；配方面余量（ItemModification/BlockModification 重放、tagsUpdated/lootTableLoad/
+配方面余量（ItemModification/BlockModification 重放、tagsUpdated/lootTableLoad/
 datapackSync、generateData）；ItemStackExtension+MixinItemStack 链（ItemStack 脚本扩展面）；
 BlockStateExtension（hasTag）；TagLoaderMixin（ServerEvents.tags）；后处理三件套
 （ShaderManagerMixin/PostEffectManager）；VillagerTrades（fabric 无 RegisterVillagerTradesEvent
 等价，需 mixin 或重写）；JEI；BlockModelGenerator（fabric 无 datagen 事件，需自建管线）。
+
+内置脚本编辑器同步 8 包 + 工作区 GUI 不再列为 Fabric P2 缺口或待移植项；见
+[专项产品决定](architecture-refactor/editor-removal-and-error-ui.md)。外部
+WorkspaceGenerator/Probe/类型映射保留；Fabric 错误继续使用现有聊天文本降级，不因此承诺新面板。
 
 ## B 类豁免（NeoForge 专属概念，移植=重新设计）
 
