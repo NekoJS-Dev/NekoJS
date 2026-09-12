@@ -1,0 +1,4 @@
+# 采样原始输出不入库；证据副本存放 docs/architecture-refactor/baseline/*/raw/（主仓库）
+out/
+run/
+*.log
