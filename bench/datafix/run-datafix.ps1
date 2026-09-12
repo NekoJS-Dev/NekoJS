@@ -94,6 +94,8 @@ switch ($Step) {
         $nekoRoot = Join-Path $RunDir 'nekojs'
         Remove-TreeWithRetry $nekoRoot
         Copy-Tree (Join-Path $FixtureDir 'nekojs') $nekoRoot
+        # root editor config (<gamedir>/jsconfig.json) is a separate protected fixture
+        Copy-Item (Join-Path $FixtureDir 'jsconfig.json') (Join-Path $RunDir 'jsconfig.json') -Force
         Set-Content -Path (Join-Path $RunDir 'eula.txt') -Value 'eula=true' -Encoding Ascii
         $props = @(
             'server-port=25871',
