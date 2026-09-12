@@ -1,8 +1,11 @@
-// datafix03 pdata fixture：对带 nekojs_pdata_target 标签的实体读写 PersistentDataJS。
-// 注意 GraalJS host 方法调用语法：entity.pdata() 是方法（返回 PersistentDataJS），
-// 必须先调用再链式 put/get（entity.pdata.contains 会把成员当 receiver，报 Message not supported）。
-// 首次 join（RCON summon 后）写 key；此后每次 join（reload 后重召唤 / 重启后从存档加载）
-// 读回并打 marker——脚本侧公开观察路径，配合 RCON `data get entity` 双通道取证。
+// datafix03 pdata fixture v3：绕开 join 时实体尚未被 id→entity 索引的窗口。
+// 实测（2026-09-12，worktree @39fd5aa9）：joinLevel 回调里写 pdata 会静默丢失——
+// NekoJSMod.pdataContainer(entityId) 走 level.getEntity(id)，join 事件窗口内拿不到实体，
+// Access.set 空容器 no-op；put 后立刻 get 也是空 tag（证据：DATAFIX-PDATA-WRITE key= seq=0）。
+// 因此：joinLevel 只捕获实体对象 + 判定模式（按持久 tag nekojs_pdata_written 区分写/读），
+// 真正的 put/get 延迟到 ServerEvents.tickPre（实体已入索引）执行。
+const pending = [];
+
 EntityEvents.joinLevel(event => {
     let entity;
     try {
@@ -15,22 +18,35 @@ EntityEvents.joinLevel(event => {
     try {
         isTarget = entity.hasTag('nekojs_pdata_target');
     } catch (err) {
-        return; // 无 hasTag 能力（非 Entity 扩展对象）则忽略
+        return;
     }
     if (!isTarget) return;
+    let written = false;
     try {
-        const pd = entity.pdata();
-        if (pd.contains('datafixTicket03Key')) {
-            console.info('DATAFIX-PDATA-READBACK key=' + pd.getString('datafixTicket03Key')
-                + ' seq=' + pd.getInt('datafixTicket03Seq'));
-        } else {
-            pd.putString('datafixTicket03Key', 'ticket03-persist-me');
-            pd.putInt('datafixTicket03Seq', 303);
-            console.info('DATAFIX-PDATA-WRITE key=' + pd.getString('datafixTicket03Key')
-                + ' seq=' + pd.getInt('datafixTicket03Seq'));
+        written = entity.hasTag('nekojs_pdata_written');
+    } catch (err) { }
+    pending.push({ entity: entity, written: written });
+});
+
+ServerEvents.tickPre(event => {
+    while (pending.length > 0) {
+        const job = pending.shift();
+        try {
+            const pd = job.entity.pdata();
+            if (job.written) {
+                console.info('DATAFIX-PDATA-READBACK key=' + pd.getString('datafixTicket03Key')
+                    + ' seq=' + pd.getInt('datafixTicket03Seq'));
+            } else {
+                pd.putString('datafixTicket03Key', 'ticket03-persist-me');
+                pd.putInt('datafixTicket03Seq', 303);
+                try { job.entity.addTag('nekojs_pdata_written'); } catch (err) { }
+                console.info('DATAFIX-PDATA-WRITE key=' + pd.getString('datafixTicket03Key')
+                    + ' seq=' + pd.getInt('datafixTicket03Seq'));
+            }
+        } catch (err) {
+            console.error('DATAFIX-PDATA-FAIL ' + err);
         }
-    } catch (err) {
-        console.error('DATAFIX-PDATA-FAIL ' + err);
     }
 });
-console.info('DATAFIX-PDATA listener registered');
+
+console.info('DATAFIX-PDATA listener registered v3');
