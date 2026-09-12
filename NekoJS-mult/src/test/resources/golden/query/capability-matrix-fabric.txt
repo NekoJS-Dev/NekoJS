@@ -1,0 +1,12 @@
+# Ticket 25 query tools capability matrix — fabric（26.1.2-fabric / 26.2.0-fabric 共用）。
+# 每行由 QueryToolCapabilityMatrixFabricTest 的真实探针派生，status 词汇 = CapabilityStatus 三态。
+# 只读基线：capability 变更须先改行为/探针，再更新本文件并在 REPORT golden 差异小节留记录。
+DataMap | DataMap binding[CLIENT] | UNAVAILABLE | neoforge-only: NekoJSCorePlugin/DataMapJS absent on fabric; script-side undefined identifier at preflight (explicit failure)
+DataMap | DataMap binding[SERVER] | UNAVAILABLE | neoforge-only: NekoJSCorePlugin/DataMapJS absent on fabric; script-side undefined identifier at preflight (explicit failure)
+DataMap | DataMap binding[STARTUP] | UNAVAILABLE | neoforge-only: NekoJSCorePlugin/DataMapJS absent on fabric; script-side undefined identifier at preflight (explicit failure)
+DataMap | DataMap binding[TEST] | UNAVAILABLE | neoforge-only: NekoJSCorePlugin/DataMapJS absent on fabric; script-side undefined identifier at preflight (explicit failure)
+DataMap | Registry.get(...).dataMapIds/dataMapValue alternative | UNAVAILABLE | IPlatform default method returns empty/null (silent no-op deviation, recorded in REPORT; owner loader-port/W6; override=false)
+EntitySelectors | EntitySelectors binding[CLIENT] | UNAVAILABLE | not registered (query needs a ServerLevel; startup/client have none)
+EntitySelectors | EntitySelectors binding[SERVER] | SUPPORTED | registered via FabricPluginLoader builtin list valueType=com.tkisor.nekojs.util.selector.EntitySelectorsJS; runtime query smoke not exercised on fabric (REPORT §7)
+EntitySelectors | EntitySelectors binding[STARTUP] | UNAVAILABLE | not registered (query needs a ServerLevel; startup/client have none)
+EntitySelectors | EntitySelectors binding[TEST] | SUPPORTED | registered via FabricPluginLoader builtin list valueType=com.tkisor.nekojs.util.selector.EntitySelectorsJS; runtime query smoke not exercised on fabric (REPORT §7)
