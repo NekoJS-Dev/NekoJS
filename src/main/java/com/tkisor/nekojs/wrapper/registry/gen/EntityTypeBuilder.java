@@ -141,7 +141,7 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>>
         registry.additional(Registries.ITEM, eggId, () -> new SpawnEggItem(
                 new Item.Properties()
                         .setId(ResourceKey.create(Registries.ITEM, eggId))
-                        .spawnEgg((EntityType<? extends LivingEntity>) this.get())));
+                        .spawnEgg(this.get())));
     }
 
     /**
