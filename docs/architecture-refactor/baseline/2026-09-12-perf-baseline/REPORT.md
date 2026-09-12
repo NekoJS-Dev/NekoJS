@@ -199,17 +199,18 @@ stdout 出现 `Probe [typescript] generated N files in Mms`。
   导致行号错位与匹配失败 → `sample.ps1` **必须带 UTF-8 BOM**（已加），非 ASCII 字符串比较改为
   显式 UTF-8 解码 + ASCII 代理 marker。
 
-## 7. 证据与留档完整性（含一处有记录的裁剪）
+## 7. 证据与留档完整性
 
 - `raw/formal/`：4 个维度的 `samples.jsonl`、`env-snapshot.txt`、`channel-test.txt`、bench 的
-  `round-*-csv/`（tick/adapter/eval/mem 原始 CSV 全量）、以及每个会话 stdout 的**关键行摘要**
-  `*-excerpt.log`。
-- `raw/shakedown/`：全部作废运行的同类产物 + `README.md` 逐条原因（工单要求「失败或中断样本不得删除」已满足，
-  所有样本数据保留）。
+  `round-*-csv/`（tick/adapter/eval/mem 原始 CSV 全量）、`*-excerpt.log`（关键行摘要，便于快速复核），
+  以及 **`full-logs/*.log.gz`——每个会话 stdout/stderr 全文（gzip）**。
+- `raw/shakedown/`：全部作废运行的同类产物（同样含 `full-logs/` 全文）+ `README.md` 逐条原因。
+  工单要求「失败或中断样本不得删除」已满足：所有样本数据与日志按原样保留。
 - `raw/runner-logs/`：13 个采样器运行日志（含每样本控制台行、`deleted=True` 等字段）+ Phase B 构建日志。
-- **有记录的裁剪**：会话 stdout 全文每个 4.3–30.9 MB（FML DEBUG 级别），总计约 225 MB，未入库；
-  仅保留关键行摘要与运行器日志。这是本报告唯一的原始证据裁剪，原因是仓库体积，不改变任何样本数值。
-  重建方式：按 §9 命令重跑（同一 revision + 同一 harness 可复现该量级的日志）。
+
+留档规模：会话日志全文原始 234.2 MB，gzip 后 **6.73 MB**（FML DEBUG 级别日志重复度极高，压缩比 ~35×），
+已全部随仓库提交，**没有任何原始证据被裁剪**。未入库的只有 `versions/<node>/run` 下的游戏目录本身
+（world/logs/config，可由 harness 重建，且不属于采样证据）。
 
 ## 8. 异常 / 不可信样本清单（每项 owner、原因假设、后续验证）
 
