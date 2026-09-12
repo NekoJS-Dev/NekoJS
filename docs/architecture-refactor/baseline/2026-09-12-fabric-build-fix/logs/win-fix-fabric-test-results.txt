@@ -1,0 +1,20 @@
+== 26.1.2-fabric JUnit XML (build/test-results/test/)==
+  suite com.tkisor.nekojs.api.inject.EntityPDataStoreTest: tests=4 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.bindings.static_access.BindingHelpersTest: tests=5 skipped=2 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest: tests=7 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.HolderAdapterTest: tests=2 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest: tests=6 skipped=4 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest: tests=7 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest: tests=4 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest: tests=2 skipped=0 failures=0 errors=0
+TOTAL suites=8 tests=37 skipped=6 failed=0
+== 26.2.0-fabric JUnit XML (build/test-results/test/)==
+  suite com.tkisor.nekojs.api.inject.EntityPDataStoreTest: tests=4 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.bindings.static_access.BindingHelpersTest: tests=5 skipped=2 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.BlockPosAdapterTest: tests=7 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.HolderAdapterTest: tests=2 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.RegistryAutoAdapterScannerTest: tests=6 skipped=4 failures=0 errors=0
+  suite com.tkisor.nekojs.js.type_adapter.Vec3AdapterTest: tests=7 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.wrapper.pdata.PDataSyncAcceptTest: tests=4 skipped=0 failures=0 errors=0
+  suite com.tkisor.nekojs.wrapper.pdata.PersistentDataJSTest: tests=2 skipped=0 failures=0 errors=0
+TOTAL suites=8 tests=37 skipped=6 failed=0

@@ -78,11 +78,13 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 | `1.21.1` | NeoForge / experimental | 21 / Oracle jdk-21.0.10（registry，唯一 JDK 21，推断） | build ✓ check ✓ | 2,403,604 B / `fbd1bb9eefcd7731` / 1383 | mods.toml deps 3 块（neoforge/minecraft/graalmc）；mixin ×16；AT 78 条 |
 | `26.1.2` | NeoForge / **primary** | 25 / jdk-25.0.2 | build ✓ check ✓ verifyDevModSourceSets ✓ | 2,517,347 B / `7d3ce6d2e3a435c5` / 1436 | 同上（AT 69 条；mixin 17+1） |
 | `26.2.0` | NeoForge / secondary | 25 / jdk-25.0.2 | build ✓ check ✓ | 2,517,367 B / `ca41eab78ebe0b97` / 1436 | 同 26.1.2 |
-| `26.1.2-fabric` | Fabric / experimental | 25 / jdk-25.0.2 | **✗ processResources 冷构建失败**（§7.1） | 无产物 | — |
-| `26.2.0-fabric` | Fabric / experimental | 25 / jdk-25.0.2 | jar ✓（remapJar/check **未到达**） | 17,397,689 B / `9572bf56cdda062c` / 7399（remap 前中间 jar） | fabric.mod.json 展开值实测（fabric-api>=0.159.0+26.2、minecraft ~26.2、java>=25）；fabric mixin 29+13+1 |
+| `26.1.2-fabric` | Fabric / experimental | 25 / jdk-25.0.2 | ~~✗ 冷构建失败~~ → **build ✓ check ✓**（2026-09-12 修复 `14de611f` 后复测，见 §7.1 修复后小节） | 17,397,691 B / `3060a2b5b1f6a692` / 7399 | fabric.mod.json 展开值实测（fabric-api>=0.155.2+26.1.2、fabricloader>=0.19.3、minecraft ~26.1.2、java>=25）；fabric mixin 29+13+1；无 AT/mods.toml/NeoForge 类 |
+| `26.2.0-fabric` | Fabric / experimental | 25 / jdk-25.0.2 | **build ✓ check ✓**（verifyFabricRuntimeArtifact ✓；remapJar 任务在本 Loom 配置下不存在，`jar` 输出即最终产物） | 17,397,689 B / `9572bf56cdda062c` / 7399（最终 jar，逐字节同修复前） | fabric.mod.json 展开值实测（fabric-api>=0.159.0+26.2、minecraft ~26.2、java>=25）；fabric mixin 29+13+1；无 AT/mods.toml/NeoForge 类 |
 | `:common` | 引擎 | 25 | check ✓ | 1,675,966 B / `db6f7e9eb3fe674f` / 969 | `nekojs/api-runtime.properties`（api.version=0.12.0） |
 
 依赖解析版本（runtimeClasspath）：五节点 graal 均为 `curse.maven:graal-1504336:8762962`（fabric convention 的 8762963 重定向未在节点 runtimeClasspath 生效，因解析发生在 `:common`）；jei 7420587/7920926/8300448；fabric-loader 0.19.3；fabric-api 0.155.2+26.1.2 / 0.159.0+26.2；icu4j 77.1 / 78.3；night-config 3.8.0/3.8.3/3.9.0（neo）、3.8.3（fabric）。
+
+> **2026-09-12 更正**：上面 graal 一句对 fabric 两节点不成立——归档日志与修复后复测（`2026-09-12-fabric-build-fix/logs/win-fix-deps-*-fabric-runtimeClasspath.log`）均显示 fabric 节点 runtimeClasspath 解析为 `curse.maven:graal-1504336:8762962 -> 8762963`，convention 重定向**生效**（`8762962` 是 requested 版本，`-> 8762963` 是 resolutionStrategy 的最终解析结果，当初误读了箭头记法）。NeoForge 三节点仍为 8762962（无重定向）。
 
 源/资源/mixin/processor/capability 口径：见实测 manifest §1–§5（手写版计数全部复验一致；新增 jar 内 AT 差异 13 条、mods.toml graalmc 依赖块、processor 零生成物等实测项）。
 
@@ -96,7 +98,7 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 | `:26.1.2` / `:26.2.0` test | 29 / 29 | 137 / 137 | 34 / 34（6 suites：ItemModificationComponentsTest×15、IngredientActionRegistryTest×6、BlockModificationEventJSTest×6、RegistryAutoAdapterScannerTest×4、BindingHelpersTest×2、BuilderTagTest×1；原因：裸 JVM 无 FML/vanilla registry 的 `TestAbortedException` assume） | 0 |
 | nbtSmokeTest ×3 节点 | 1×3 | 8×3 | 0 | 0 |
 | guardLint | — | — | — | 0 问题（守卫块 252 / 332 文件 / 豁免 0 / 警告 0） |
-| fabric 节点 test | — | — | — | **未运行**（构建中止，见 §7.1；`failOnNoDiscoveredTests=true` 行为未验证） |
+| fabric 节点 test（2026-09-12 修复后实测，两节点相同） | 8 | 37 | 6（`BindingHelpersTest`×2 + `RegistryAutoAdapterScannerTest`×4，与 NeoForge 26.x 同源的裸 JVM assume） | 0 |
 
 **golden/契约基线只读清单**（本轮零修改）：
 
@@ -118,6 +120,15 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 - 与用户现状的关系：主仓库最后完整 fabric jar 为 2026-09-07；主仓库 `versions/26.1.2-fabric/build/resources/main`（mtime 2026-09-11 00:13）只留有"第一组 4 个文件、无 fabric.mod.json"的部分输出，与一次失败执行的残留一致——**该失败在用户机器上已发生但被增量状态掩盖**。CI（Linux 干净 runner）在本 revision 上预期同样失败；本票无 push/gh 权限，未远程核实 CI 状态（not-verified，owner zcode-agent/follow-up）。
 - 处置：属"Fabric 源所有权"类差异（见 §8），修复归后续票 31/32；本票不改构建行为、不放宽命令。
 
+#### 2026-09-12 修复后（follow-up 验证）
+
+- 修复 commit：**`14de611f`**（`fix(fabric): skip self-referential source-node injection in fabric-node convention`）——fabric convention 的源根注入仅在 `fabric_source_node != project.name`（bridge 节点 26.2.0-fabric → 26.1.2-fabric）时进行；自源节点 26.1.2-fabric 依赖 stonecutter 挂载。属最小接线修复，未设 `duplicatesStrategy`、未放宽命令；before/after 代码摘录见 `2026-09-12-fabric-build-fix/README.md`。
+- **冷构建全绿**：隔离 worktree（detached @ `14de611f`，不含用户 WIP）按 §11 命令序列复测，五节点 `build` BUILD SUCCESSFUL，`:26.1.2-fabric:processResources` 冷执行成功（修复前 3 次全败）；`:common:check`、`:common-api-processor:test`、`guardLint`、三节点 `nbtSmokeTest` 全部通过。
+- **eachFile 单次拷贝证据**：`cleanProcessResources` + `processResources` 配 init 脚本 `eachFile` 跟踪（证据 `2026-09-12-fabric-build-fix/logs/win-fix-fabric-copyspec-trace.log` + `trace-copyspec.init.gradle`），两 fabric 节点的 4 个 mixin/accesswidener 文件各出现**一次**（修复前各两次、FROM 路径相同），`fabric.mod.json` 来自 modMetadata 输出——duplicate 消失的直接证明。
+- **NeoForge 三 jar 无回归**：`:1.21.1` / `:26.1.2` / `:26.2.0` 产物 SHA-256 与本基线记录**逐字节一致**（完整 hash 见 `2026-09-12-fabric-build-fix/README.md`：`fbd1bb9eefcd7731…`、`7d3ce6d2e3a435c5…`、`ca41eab78ebe0b97…`）——修复只触碰 fabric-node convention，NeoForge 构建行为零变化。
+- fabric 两节点补采事实（产物 hash/entries、metadata、mixin、test 8/37/6/0、verifyFabricRuntimeArtifact ✓、remapJar 任务不存在、Graal 通道结论）已并入 §5/§6、§10 与实测 manifest。
+- 31 号票的"Fabric 源根所有权迁移"（convention/stonecutter 二选一收口）可在本修复基础上重做，本修复不构成约束。
+
 ### 7.2 运行时 smoke
 
 `runServer` / `runGameTestServer` 未运行——运行时 smoke 不属于本票范围，属 34 号票（P4 五节点整体验证）；CI 的 gametest-smoke job 接线未改动。
@@ -126,8 +137,8 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 
 ### 8.1 Fabric 源所有权
 
-- **实测事实**：① 26.1.2-fabric 的节点本地资源被两套机制注入（§7.1）；② `26.2.0-fabric` 无自有源，`deps.fabric_source_node=26.1.2-fabric` 借用 root（srcDirs 实测确认）；③ 共享树的 `resources-legacy/-modern/templates` 对 fabric 节点生成 stonecutter 副本但**不被任何 sourceSet 挂载**（只挂载含 AT 的 `main/resources` 且被 exclude）——冗余生成目录；④ Graal 8762963 重定向在节点 runtimeClasspath 不生效（`:common` 内解析为 8762962）。
-- **处置项（owner：后续票 31/32）**：为 fabric 节点声明资源根单一所有权（convention 或 stonecutter 二选一），或显式设置 `processResources.duplicatesStrategy`；把 26.2.0-fabric 的 source bridge 收口（31 号票范围）；核对 Graal fabric 构建（8762963）实际进入最终 jar 的通道；清理或显式化"生成但不挂载"的 fabric 资源目录。
+- **实测事实**：① 26.1.2-fabric 的节点本地资源被两套机制注入（§7.1；**已由 `14de611f` 修复**，见 §7.1 修复后小节）；② `26.2.0-fabric` 无自有源，`deps.fabric_source_node=26.1.2-fabric` 借用 root（srcDirs 实测确认）；③ 共享树的 `resources-legacy/-modern/templates` 对 fabric 节点生成 stonecutter 副本但**不被任何 sourceSet 挂载**（只挂载含 AT 的 `main/resources` 且被 exclude）——冗余生成目录；④ ~~Graal 8762963 重定向在节点 runtimeClasspath 不生效~~（**2026-09-12 更正**：fabric 节点 runtimeClasspath 实际解析为 `8762962 -> 8762963`，重定向生效——见 §5 更正注）。
+- **处置项（owner：后续票 31/32）**：~~为 fabric 节点声明资源根单一所有权（convention 或 stonecutter 二选一），或显式设置 `processResources.duplicatesStrategy`~~——**重复注入已由 `14de611f` 以最小接线修复解决**（自源节点跳过重复注入；证据 `2026-09-12-fabric-build-fix/`）；源根所有权的整体收口（26.2.0-fabric 的 source bridge 收口）仍归 31 号票，可在该修复基础上重做；~~核对 Graal fabric 构建（8762963）实际进入最终 jar 的通道~~——**已闭环**（2026-09-12 实测：fabric 最终 jar 不携带 Graal 类，dev classpath 解析 8762963；`fabric.mod.json` depends 未声明 graal，生产环境供给方式是否需要显式声明归 31/32 评估）；清理或显式化"生成但不挂载"的 fabric 资源目录（保留给 31/32）。
 
 ### 8.2 CI 用途子集
 
@@ -153,14 +164,14 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 | # | 项 | 状态 | 证据 | owner |
 |---|---|---|---|---|
 | 1 | Linux 仅验证**配置阶段**，未做 Linux 全量构建 | **scope 内完成**（工单验收只要求配置阶段），非 deferred | `logs/linux-docker-config-help.log`（BUILD SUCCESSFUL in 6m57s） | — |
-| 2 | `:26.1.2-fabric:build` 冷构建失败（未通过、未放宽） | **failed，已诊断** | §7.1；3 次失败日志 + eachFile 跟踪 | 后续票 31/32（构建修复）；本轮 follow-up 记录 owner：zcode-agent |
-| 3 | fabric 两节点 `test` / `verifyFabricRuntimeArtifact` / `remapJar` 未执行（随 §7.1 中止） | **not-verified** | 构建日志任务列表 | zcode-agent（失败修复后按 §10 复现序列补采） |
+| 2 | `:26.1.2-fabric:build` 冷构建失败（未通过、未放宽） | **已解决**（2026-09-12，修复 commit `14de611f`：冷构建全绿，未放宽任何命令） | §7.1 修复后小节；`2026-09-12-fabric-build-fix/logs/win-fixbuild-4-five-node-build.log` + eachFile 跟踪 | —（31 号票源根所有权收口仍待做，不受本修复约束） |
+| 3 | fabric 两节点 `test` / `verifyFabricRuntimeArtifact` / `remapJar` 未执行（随 §7.1 中止） | **已补采**（2026-09-12 修复后）：test 8/37/6/0 两节点相同；verifyFabricRuntimeArtifact ✓、check ✓；remapJar 在本 Loom 配置下**不存在**（`jar` 即最终产物） | `2026-09-12-fabric-build-fix/logs/`（test-results、copyspec-trace、remapjar-notfound、jar-facts-output） | —（baseline 中"remap 前中间 jar"表述已在实测 manifest 更正） |
 | 4 | 1.21.1 编译 toolchain 具体路径为推断（唯一 JDK 21） | **not-verified（低风险）** | `win-java-toolchains.log` 检测列表 | zcode-agent（可用 `--info` 复核） |
 | 5 | CI 远程（push 后 Linux 干净 runner）未验证 | **not-verified**（本票无 push/gh 权限，红线 1） | 本地 PyYAML 校验 + grep 记录 | 维护者（push 后由 CI 本身验证） |
 | 6 | `runServer`/`runGameTestServer` 运行时 smoke | **范围外**（34 号票） | §7.2 | 34 号票 |
 | 7 | 性能采样 | **范围外**（02 号票） | §9 | 02 号票 |
 | 8 | `wiki/构建系统.md`（仓库根共享文档）仍描述已移除的 CI sed workaround；AGENTS.md/README.md/CONTEXT.md 有用户未提交改动不能改 | **follow-up 文档修改** | §3.4 grep 记录 | zcode-agent（WIP 合并后）或维护者 |
-| 9 | Graal fabric 构建（8762963）进入最终 jar 的实际通道 | **not-verified** | 实测 manifest §0 | 后续票 31/32 |
+| 9 | Graal fabric 构建（8762963）进入最终 jar 的实际通道 | **已闭环**（2026-09-12 实测）：fabric 最终 jar **不含** Graal 类（`org/graalvm/**`、`com/oracle/truffle/**` 均 0 条，fat-jar 装配显式过滤 graal-1504336）；dev/runtime classpath 解析 `8762962 -> 8762963`（convention 重定向生效，§5 基线结论系误读，已更正）；jar 携带 icu4j 提取类 5,762 条 + night-config 3.8.3 272 条；`fabric.mod.json` depends 未声明 graal | `2026-09-12-fabric-build-fix/logs/`（jar-facts-output.txt、deps 两日志） | —（是否在 fabric.mod.json 显式声明 graal 依赖归 31/32 评估） |
 
 ## 11. 复现方式（从零复现本基线的完整命令序列）
 
@@ -198,4 +209,4 @@ git -C D:/mcmodDemo/NekoJS/NekoJS-w0-baseline merge --ff-only master   # 期间 
 git worktree remove --force ../NekoJS-w0-baseline && git worktree prune
 ```
 
-证据文件索引：`w0-config-archive-2026-09-12/logs/`（13 个日志/记录文件）、[实测 manifest](node-source-artifact-manifest-measured-2026-09-12.md)、本报告。
+证据文件索引：`w0-config-archive-2026-09-12/logs/`（13 个日志/记录文件）、[实测 manifest](node-source-artifact-manifest-measured-2026-09-12.md)、本报告、[fabric 修复验证目录](2026-09-12-fabric-build-fix/README.md)（2026-09-12 follow-up：冷构建复测日志、eachFile 跟踪、jar 解析脚本与输出）。
