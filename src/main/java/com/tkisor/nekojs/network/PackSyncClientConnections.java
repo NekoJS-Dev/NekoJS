@@ -2,8 +2,8 @@
 package com.tkisor.nekojs.network;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.pack.sync.PackSyncClient;
 import com.tkisor.nekojs.platform.Platform;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
@@ -20,10 +20,21 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
  *
  * <p>仅客户端注册（由各平台 {@code NekoJSNetwork} 在 Dist.CLIENT 分支调用 {@link #install}）；
  * 本类引用的 {@code ClientPlayerNetworkEvent} 为客户端专属事件类，专用服务器不加载本类。
+ *
+ * <p>lifecycle handle 由 loader entry（{@code NekoJSMod}）在 root 装配后 {@link #bind} 注入；
+ * 钩子在 pack sync 变更时触发（晚于装配），root 为空判定保留原语义（钩子早于装配即跳过）。
  */
 public final class PackSyncClientConnections {
 
+    /** loader entry 装配完成后注入的窄生命周期 handle；钩子触发时按空判定跳过（原语义）。 */
+    private static volatile NekoRuntimeRoot runtimeRoot;
+
     private PackSyncClientConnections() {}
+
+    /** 由 {@code NekoJSMod} 在 root 装配后调用。 */
+    public static void bind(NekoRuntimeRoot root) {
+        runtimeRoot = root;
+    }
 
     public static void install() {
         PackSyncClient.installClientReloadHook(PackSyncClientConnections::reloadClientScripts);
@@ -31,11 +42,12 @@ public final class PackSyncClientConnections {
     }
 
     private static void reloadClientScripts() {
-        if (!Platform.isClient() || NekoJSMod.RUNTIME_ROOT == null) return;
-        var manager = NekoJSMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.CLIENT);
+        NekoRuntimeRoot root = runtimeRoot;
+        if (!Platform.isClient() || root == null) return;
+        var manager = root.scriptManagerOrNull(ScriptType.CLIENT);
         if (manager == null) return;
         NekoJS.LOGGER.debug("Reloading CLIENT scripts after server pack sync change");
-        NekoJSMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
+        root.reload(ScriptType.CLIENT);
     }
 
     private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {

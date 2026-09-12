@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.pack.sync.PackSyncClient;
 import com.tkisor.nekojs.core.pack.sync.PackSyncServer;
 import com.tkisor.nekojs.core.pack.sync.SyncedPack;
@@ -143,10 +144,12 @@ public final class FabricPackSync {
     }
 
     private static void reloadClientScripts() {
-        if (NekoJSFabricMod.RUNTIME_ROOT == null) return;
+        // root 经 loader entry 的 package-private accessor 获取（原 null 判定语义保留）
+        NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
+        if (root == null) return;
         // CLIENT 管理器可能尚未建立（autoLoadTypes 之前 / 专用服务器进程）——reload 会抛
-        if (NekoJSFabricMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.CLIENT) == null) return;
-        NekoJSFabricMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
+        if (root.scriptManagerOrNull(ScriptType.CLIENT) == null) return;
+        root.reload(ScriptType.CLIENT);
     }
 
     /** 配置阶段 {@code Minecraft#getCurrentServer()} 未就绪，从连接远端地址取 bucket 所用地址。 */

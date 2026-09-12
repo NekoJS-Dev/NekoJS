@@ -7,12 +7,10 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
-//? if neoforge {
-import com.tkisor.nekojs.NekoJSMod;
-//?} else {
-/*import com.tkisor.nekojs.fabric.NekoJSFabricMod;
-import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
+//? if fabric {
+/*import com.tkisor.nekojs.fabric.event.FabricServerEventBindings;
 *///?}
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
@@ -115,11 +113,9 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             ServerEvents.AFTER_RECIPES.post(eventJS);
             NekoRuntimeAccess.get().afterRecipes(eventJS);
         } catch (PolyglotException e) {
-//? if neoforge {
-            NekoJSMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
-//?} else {
-/*            NekoJSFabricMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
-*///?}
+            // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
+            // 由共享装配函数安装）——mixin 静态上下文无法注入 root，不再直读 static root
+            ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Recipe script execution crashed", e);
         }
@@ -154,19 +150,11 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
 *///?}
             players.forEach(player -> {
                 if (Commands.LEVEL_GAMEMASTERS.check(player.permissions())) {
-//? if neoforge {
-                    if (!NekoJSMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
-//?} else {
-/*                    if (!NekoJSFabricMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
-*///?}
+                    if (!ScriptErrorReporter.hasErrors()) {
                         player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
                     } else {
                         player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(
-//? if neoforge {
-                                NekoJSMod.RUNTIME_ROOT.errors().count()));
-//?} else {
-/*                                NekoJSFabricMod.RUNTIME_ROOT.errors().count()));
-*///?}
+                                ScriptErrorReporter.errorCount()));
                     }
                 }
             });

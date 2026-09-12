@@ -8,7 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.mojang.serialization.JsonOps;
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
@@ -100,7 +100,9 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             ServerEvents.AFTER_RECIPES.post(eventJS);
             NekoRuntimeAccess.get().afterRecipes(eventJS);
         } catch (PolyglotException e) {
-            NekoJSMod.RUNTIME_ROOT.errorTracker().recordEventError(ScriptType.SERVER, e);
+            // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
+            // 由共享装配函数安装）——mixin 静态上下文无法注入 root，不再直读 static root
+            ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Recipe script execution crashed", e);
         }
@@ -128,10 +130,10 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             List<ServerPlayer> players = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers();
             players.forEach(player -> {
                 if (player.hasPermissions(2)) {
-                    if (!NekoJSMod.RUNTIME_ROOT.errorTracker().hasErrors()) {
+                    if (!ScriptErrorReporter.hasErrors()) {
                         player.sendSystemMessage(NekoErrorUIHelper.getSuccessComponent());
                     } else {
-                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(NekoJSMod.RUNTIME_ROOT.errors().count()));
+                        player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(ScriptErrorReporter.errorCount()));
                     }
                 }
             });

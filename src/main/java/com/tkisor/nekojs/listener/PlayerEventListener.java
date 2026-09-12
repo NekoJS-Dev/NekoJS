@@ -4,7 +4,7 @@
 package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,9 +19,12 @@ public class PlayerEventListener {
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            if (Commands.LEVEL_GAMEMASTERS.check(player.permissions()) && NekoJSMod.RUNTIME_ROOT.errors().count() > 0) {
+            // 错误计数经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
+            // 由共享装配函数安装），不再直读 static root
+            int errorCount = ScriptErrorReporter.errorCount();
+            if (Commands.LEVEL_GAMEMASTERS.check(player.permissions()) && errorCount > 0) {
 
-                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(NekoJSMod.RUNTIME_ROOT.errors().count()), false);
+                player.sendSystemMessage(NekoErrorUIHelper.getErrorComponent(errorCount), false);
             }
             // 挂载物品栏监听器（inventoryChanged 事件）
             InventoryChangeListener.getOrCreate(player);
