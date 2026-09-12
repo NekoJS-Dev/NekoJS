@@ -1,0 +1,250 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common-api-processor:jar
+> Task :26.1.2:stonecutterPrepare
+> Task :26.2.0:stonecutterPrepare
+> Task :1.21.1:stonecutterPrepare
+> Task :26.1.2:stonecutterGenerate
+> Task :26.2.0:stonecutterGenerate
+> Task :1.21.1:stonecutterGenerate
+
+> Task :26.1.2:createMinecraftArtifacts
+Loaded 141 artifacts from D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\26.1.2\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+Waiting for lock on downloadManifest_5014bdd0ad2a5e976245ebd187d1027b7a1c2dee...
+> Task :1.21.1:createMinecraftArtifacts
+Loaded 145 artifacts from D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.04s
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+[1m*** Started working on [4mdownloadClientMappings[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.05s
+ [1m[92mDONE [0m Completed [4mdownloadClientMappings[0m in 0.05s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.05s
+[1m*** Started working on [4mmergeMappings[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeMappings[0m in 0.00s
+[1m*** Started working on [4mstripClient[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mstripClient[0m in 0.00s
+[1m*** Started working on [4mextractServer[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mextractServer[0m in 0.00s
+[1m*** Started working on [4mstripServer[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mstripServer[0m in 0.00s
+[1m*** Started working on [4mmerge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmerge[0m in 0.00s
+[1m*** Started working on [4mrename[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrename[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4minject[0m[0m
+ [1m[92mREUSE[0m Used cache of [4minject[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4msourcesWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4msourcesWithNeoForge[0m in 0.00s
+[1m*** Started working on [4mcompiledWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mcompiledWithNeoForge[0m in 0.00s
+[1m*** Started working on [4msourcesAndCompiledWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4msourcesAndCompiledWithNeoForge[0m in 0.00s
+Total runtime: 1.78s
+
+
+> Task :26.2.0:createMinecraftArtifacts
+Loaded 157 artifacts from D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\26.2.0\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 1.21s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.01s
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.05s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.05s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 2.92s
+
+
+> Task :26.1.2:createMinecraftArtifacts
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 3.51s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.01s
+[1m*** Started working on [4mdownloadClient[0m[0m
+[1m*** Started working on [4mdownloadServer[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.06s
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.06s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ RUN   Running external tool net.neoforged.jst:jst-cli-bundle:2.0.6
+
+> Task :1.21.1:compileJava
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: ¾¯¸æ: [deprecation] UnsafeÖĞµÄstaticFieldBase(Field)ÒÑ¹ıÊ±
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                   ^
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\villager\VillagerTradeManager.java:325: ¾¯¸æ: [deprecation] UnsafeÖĞµÄstaticFieldOffset(Field)ÒÑ¹ıÊ±
+            unsafe.putObject(unsafe.staticFieldBase(field), unsafe.staticFieldOffset(field), value);
+                                                                  ^
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\EntityTypeBuilder.java:124: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+                () -> (EntityType<? extends net.minecraft.world.entity.Mob>) (EntityType<?>) this.get(),
+                                                                             ^
+  ĞèÒª: EntityType<? extends Mob>
+  ÕÒµ½:    EntityType<CAP#1>
+  ÆäÖĞ, CAP#1ÊÇĞÂÀàĞÍ±äÁ¿:
+    CAP#1´Ó?µÄ²¶»ñÀ©Õ¹Entity
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:60: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:381: ¾¯¸æ: [deprecation] UnsafeÖĞµÄobjectFieldOffset(Field)ÒÑ¹ıÊ±
+        return theUnsafe().getObject(target, theUnsafe().objectFieldOffset(field));
+                                                        ^
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\1.21.1\build\generated\stonecutter\main\java\com\tkisor\nekojs\resource\ScriptPackDataManager.java:386: ¾¯¸æ: [deprecation] UnsafeÖĞµÄobjectFieldOffset(Field)ÒÑ¹ıÊ±
+        theUnsafe().putObject(target, theUnsafe().objectFieldOffset(field), value);
+                                                 ^
+6 ¸ö¾¯¸æ
+
+> Task :26.2.0:compileJava
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: ¾¯¸æ: [deprecation] ItemStackÖĞµÄgetEnchantments()ÒÑ¹ıÊ±
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\registry\gen\EntityTypeBuilder.java:144: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+                        .spawnEgg((EntityType<? extends LivingEntity>) this.get())));
+                                                                               ^
+  ĞèÒª: EntityType<? extends LivingEntity>
+  ÕÒµ½:    EntityType<CAP#1>
+  ÆäÖĞ, CAP#1ÊÇĞÂÀàĞÍ±äÁ¿:
+    CAP#1´Ó?µÄ²¶»ñÀ©Õ¹Entity
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\versions\26.2.0\build\generated\stonecutter\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ¸ö¾¯¸æ
+
+> Task :26.2.0:generateModMetadata
+> Task :1.21.1:generateModMetadata
+> Task :1.21.1:processResources
+> Task :1.21.1:classes
+> Task :26.2.0:processResources
+> Task :26.2.0:classes
+> Task :26.2.0:stonecutterPrepareTest
+> Task :1.21.1:stonecutterPrepareTest
+
+> Task :26.1.2:createMinecraftArtifacts
+ [1m[92mDONE [0m Completed [4mtransformSources[0m in 28.03s
+
+> Task :26.2.0:stonecutterGenerateTest
+> Task :1.21.1:stonecutterGenerateTest
+> Task :1.21.1:compileTestJava FROM-CACHE
+> Task :1.21.1:processTestResources
+> Task :1.21.1:testClasses
+> Task :26.2.0:compileTestJava FROM-CACHE
+> Task :26.2.0:processTestResources
+> Task :26.2.0:testClasses
+
+> Task :26.1.2:createMinecraftArtifacts
+[1m*** Started working on [4mrecompile[0m[0m
+ 106 items on the compile classpath
+ 1 items on the sourcepath
+ Compiling 6882 source files
+
+> Task :1.21.1:nbtSmokeTest
+> Task :26.2.0:nbtSmokeTest
+
+> Task :26.1.2:createMinecraftArtifacts
+Copied 18752 resource files
+ [1m[92mDONE [0m Completed [4mrecompile[0m in 67.33s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mDONE [0m Completed [4mmergeWithSources[0m in 4.72s
+Total runtime: 105.25s
+
+
+> Task :26.1.2:compileJava
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\src\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: ¾¯¸æ: [deprecation] ItemStackÖĞµÄgetEnchantments()ÒÑ¹ıÊ±
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\EntityTypeBuilder.java:144: ¾¯¸æ: [unchecked] Î´¾­¼ì²éµÄ×ª»»
+                        .spawnEgg((EntityType<? extends LivingEntity>) this.get())));
+                                                                               ^
+  ĞèÒª: EntityType<? extends LivingEntity>
+  ÕÒµ½:    EntityType<CAP#1>
+  ÆäÖĞ, CAP#1ÊÇĞÂÀàĞÍ±äÁ¿:
+    CAP#1´Ó?µÄ²¶»ñÀ©Õ¹Entity
+D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: ¾¯¸æ: [this-escape] ¿ÉÄÜÔÚÍêÈ«³õÊ¼»¯×ÓÀàÖ®Ç°ÌÓÒİÁË 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+3 ¸ö¾¯¸æ
+
+> Task :26.1.2:generateModMetadata
+> Task :26.1.2:processResources
+> Task :26.1.2:classes
+> Task :26.1.2:compileTestJava FROM-CACHE
+> Task :26.1.2:processTestResources
+> Task :26.1.2:testClasses
+> Task :26.1.2:nbtSmokeTest
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/NekoJS-w0-baseline/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 9s
+46 actionable tasks: 29 executed, 3 from cache, 14 up-to-date

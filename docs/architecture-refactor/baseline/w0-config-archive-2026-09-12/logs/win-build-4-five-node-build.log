@@ -1,0 +1,148 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :26.2.0:stonecutterGenerate UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :1.21.1:stonecutterGenerate UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :1.21.1:createMinecraftArtifacts UP-TO-DATE
+> Task :26.1.2:createMinecraftArtifacts UP-TO-DATE
+> Task :26.2.0:createMinecraftArtifacts UP-TO-DATE
+> Task :1.21.1:compileJava UP-TO-DATE
+> Task :26.2.0:compileJava UP-TO-DATE
+> Task :26.1.2:compileJava UP-TO-DATE
+> Task :26.2.0:generateModMetadata UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :1.21.1:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.2.0:processResources UP-TO-DATE
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :26.1.2:classes UP-TO-DATE
+> Task :26.2.0:classes UP-TO-DATE
+> Task :1.21.1:classes UP-TO-DATE
+> Task :1.21.1:jarJar NO-SOURCE
+> Task :26.1.2:jarJar NO-SOURCE
+> Task :26.2.0:jarJar NO-SOURCE
+> Task :1.21.1:jar
+> Task :1.21.1:assemble
+> Task :1.21.1:stonecutterPrepareTest UP-TO-DATE
+> Task :1.21.1:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0:jar
+> Task :26.2.0:assemble
+> Task :26.2.0:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2:jar
+> Task :26.1.2:assemble
+> Task :1.21.1:compileTestJava UP-TO-DATE
+> Task :26.2.0:stonecutterGenerateTest UP-TO-DATE
+> Task :1.21.1:processTestResources UP-TO-DATE
+> Task :1.21.1:testClasses UP-TO-DATE
+> Task :26.1.2:compileTestJava UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :26.1.2:testClasses UP-TO-DATE
+> Task :26.2.0:compileTestJava UP-TO-DATE
+> Task :26.2.0:processTestResources UP-TO-DATE
+> Task :26.2.0:testClasses UP-TO-DATE
+> Task :26.1.2-fabric:validateAccessWidener
+> Task :26.2.0-fabric:validateAccessWidener
+> Task :26.1.2-fabric:stonecutterPrepare
+> Task :26.2.0-fabric:stonecutterPrepare
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+> Task :26.2.0-fabric:stonecutterGenerate
+> Task :26.1.2-fabric:stonecutterGenerate
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :1.21.1:test
+> Task :1.21.1:verifyDevModSourceSets
+> Task :1.21.1:check
+> Task :1.21.1:build
+> Task :26.1.2-fabric:compileJava FROM-CACHE
+> Task :26.2.0-fabric:compileJava FROM-CACHE
+> Task :26.1.2:test
+> Task :26.1.2:verifyDevModSourceSets
+> Task :26.1.2:check
+> Task :26.2.0:test
+> Task :26.1.2:build
+> Task :26.2.0:verifyDevModSourceSets
+> Task :26.2.0:check
+> Task :26.2.0:build
+> Task :26.2.0-fabric:extractIcuClasses
+> Task :26.2.0-fabric:generateModMetadata
+> Task :26.2.0-fabric:processResources
+> Task :26.2.0-fabric:classes
+> Task :26.2.0-fabric:processIncludeJars
+> Task :26.1.2-fabric:extractIcuClasses
+> Task :26.1.2-fabric:generateModMetadata
+> Task :26.1.2-fabric:processResources FAILED
+> Task :26.2.0-fabric:jar
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/NekoJS-w0-baseline/NekoJS-mult/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':26.1.2-fabric:processResources' (registered by plugin class 'org.gradle.api.plugins.JavaBasePlugin').
+> Entry nekojs-fabric-dynamic.mixins.json is a duplicate but no duplicate handling strategy has been set. Please refer to https://docs.gradle.org/9.6.0/dsl/org.gradle.api.tasks.Copy.html#org.gradle.api.tasks.Copy:duplicatesStrategy for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 32s
+68 actionable tasks: 23 executed, 2 from cache, 43 up-to-date
