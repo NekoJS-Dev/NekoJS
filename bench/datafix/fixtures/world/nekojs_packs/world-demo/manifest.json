@@ -1,0 +1,9 @@
+{
+  "id": "world-demo",
+  "name": "Datafix World Pack",
+  "version": "1.0.0",
+  "description": "datafix03 WORLD pack fixture (deployed into <world>/nekojs_packs/)",
+  "authors": ["datafix03"],
+  "enabled": true,
+  "clientSync": true
+}

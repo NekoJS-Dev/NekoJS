@@ -1,0 +1,16 @@
+{
+  "trustedServers": {
+    "6f1ed002ab5595859014ebf0951522d9195c3e5f5e2b8a4c2a5c1d3e7f8a9b0c": {
+      "serverAddress": "datafix03.fixture.invalid",
+      "trustedAt": "2026-09-12T00:00:00Z"
+    }
+  },
+  "trustedKeys": {
+    "datafix03-key-1": {
+      "publicKey": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+      "fingerprint": "00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff",
+      "serverAddress": "datafix03.fixture.invalid",
+      "trustedAt": "2026-09-12T00:00:00Z"
+    }
+  }
+}
