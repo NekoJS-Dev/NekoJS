@@ -1,0 +1,36 @@
+# full stack: world-pack-activation reload failure + fatal manual reload (WindowsPath.relativize IAE)
+# source: versions/26.1.2/run/logs/latest.log (session2), verbatim
+
+[129ÔÂ2026 19:51:49.229] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] SERVER reload after world pack activation failed: 
+java.lang.RuntimeException: SERVER reload failed; previous scripts retained but event listeners/bindings were cleared ¡ª run /neko reload again to restore listeners
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:463) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:361) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:81) ~[nekojs-1.1.0-preview3.jar:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.listener.ServerEventListener.activateWorldPacks(ServerEventListener.java:104) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.listener.ServerEventListener.onServerAboutToStart(ServerEventListener.java:60) ~[main/:?]
+	at net.neoforged.bus.EventBus.post(EventBus.java:360) ~[bus-8.0.5.jar:?]
+	at net.neoforged.bus.EventBus.post(EventBus.java:328) ~[bus-8.0.5.jar:?]
+	at TRANSFORMER/neoforge@26.1.2.71/net.neoforged.neoforge.server.ServerLifecycleHooks.handleServerAboutToStart(ServerLifecycleHooks.java:94) ~[neoforge-26.1.2.71-universal.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.dedicated.DedicatedServer.initServer(DedicatedServer.java:289) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:737) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:302) ~[minecraft-patched-26.1.2.71.jar:?]
+	at java.base/java.lang.Thread.run(Thread.java:1474) [?:?]
+Caused by: java.lang.IllegalArgumentException: 'other' is different type of Path
+	at java.base/sun.nio.fs.WindowsPath.relativize(WindowsPath.java:411) ~[?:?]
+	at java.base/sun.nio.fs.WindowsPath.relativize(WindowsPath.java:42) ~[?:?]
+
+## [19:53:26] manual /nekojs reload while world pack present:
+[129ÔÂ2026 19:53:26.255] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[129ÔÂ2026 19:53:26.255] [Server thread/ERROR] [NekoJS/]: Reloading server scripts failed fatally
+java.lang.RuntimeException: SERVER reload failed; previous scripts retained but event listeners/bindings were cleared ¡ª run /neko reload again to restore listeners
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:463) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:361) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:81) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.reloadType(NekoJSCommands.java:357) ~[main/:?]
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.lambda$reloadCommand$0(NekoJSCommands.java:297) ~[main/:?]
+	at com.mojang.brigadier.context.ContextChain.runExecutable(ContextChain.java:73) ~[brigadier-1.3.10.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:29) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:13) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(UnboundEntryAction.java:8) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.CommandQueueEntry.execute(CommandQueueEntry.java:5) ~[minecraft-patched-26.1.2.71.jar:?]
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.ExecutionContext.runCommandQueue(ExecutionContext.java:100) ~[minecraft-patched-26.1.2.71.jar:?]

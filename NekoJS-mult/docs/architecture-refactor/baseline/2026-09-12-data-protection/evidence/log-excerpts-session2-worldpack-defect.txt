@@ -1,0 +1,36 @@
+# session2 (s2): restart + WORLD pack activation defect + recovery
+# excerpt source: versions/26.1.2/run/logs/latest.log (session2) + rcon logs
+
+## [19:51:45-49] restart: config/pack/trust intact, world pack discovered, reload fatal
+[129月2026 19:51:45.074] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[129月2026 19:51:45.219] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[129月2026 19:51:45.220] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[129月2026 19:51:45.233] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[129月2026 19:51:45.236] [modloading-worker-0/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[129月2026 19:51:46.430] [modloading-worker-0/INFO] [NekoJS/]: [startup] DATAFIX-PACK demo-pack startup script load v1
+[129月2026 19:51:46.433] [modloading-worker-0/INFO] [NekoJS/]: [startup] DATAFIX-STARTUP marker load v1
+[129月2026 19:51:47.683] [Worker-Main-9/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[129月2026 19:51:47.705] [Worker-Main-9/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[129月2026 19:51:47.724] [Worker-Main-9/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[129月2026 19:51:47.729] [Worker-Main-9/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered v3
+[129月2026 19:51:48.304] [Server thread/INFO] [NekoJS/]: Discovered 1 WORLD script pack(s) at .\world\.\nekojs_packs
+[129月2026 19:51:48.399] [Server thread/INFO] [NekoJS/]: Discovered 1 GLOBAL script pack(s) at D:\mcmodDemo\NekoJS-datafix\NekoJS-mult\versions\26.1.2\run\nekojs\packs
+[129月2026 19:51:48.409] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[129月2026 19:51:48.409] [Server thread/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复
+[129月2026 19:51:49.229] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] SERVER reload after world pack activation failed: 
+[129月2026 19:51:49.340] [Server thread/INFO] [net.minecraft.server.dedicated.DedicatedServer/]: Done (1.066s)! For help, type "help"
+[129月2026 19:51:49.342] [Server thread/INFO] [net.minecraft.server.rcon.thread.GenericThread/]: Thread RCON Listener started
+[129月2026 19:51:49.342] [Server thread/INFO] [net.minecraft.server.rcon.thread.RconThread/]: RCON running on 0.0.0.0:25872
+
+## [19:53:26] manual recovery reload also fatal (same IAE)
+[129月2026 19:53:26.255] [Server thread/ERROR] [NekoJS/]: Reloading server scripts failed fatally
+[129月2026 19:53:27.224] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [server] SERVER 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复
+
+## [19:54:09] recovery after moving world pack away: clean reload + world-demo loads as GLOBAL
+[129月2026 19:54:09.533] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PACK demo-pack server script load v1
+[129月2026 19:54:09.536] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-WORLDPACK world-demo server script load v1
+[129月2026 19:54:09.541] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-SERVER main load v1
+[129月2026 19:54:09.544] [Server thread/INFO] [NekoJS/]: [server] DATAFIX-PDATA listener registered v3
+
+## [19:54:57] listener liveness after recovery: summon -> WRITE
+[129月2026 19:54:57.224] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] DATAFIX-PDATA-WRITE key=ticket03-persist-me seq=303

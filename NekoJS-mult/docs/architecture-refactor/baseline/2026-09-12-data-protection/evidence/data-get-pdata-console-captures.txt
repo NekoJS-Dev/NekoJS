@@ -1,0 +1,21 @@
+# pdata durability captures (RCON `data get entity`, run by the agent at the noted times)
+# Server: worktree run dir, node 26.1.2. Selector:
+#   @e[type=minecraft:armor_stand,tag=nekojs_pdata_written,limit=1]
+#
+# [2026-09-12 19:48:56, session1, AFTER scenario1 normal reload]
+# command: data get entity @e[...] NeoForgeData
+# Armor Stand has the following entity data: {NekoJSPersistentData: {datafixTicket03Key: "ticket03-persist-me", datafixTicket03Seq: 303}}
+#
+# [2026-09-12 19:49:13, session1, AFTER scenario2 failed reload]
+# command: data get entity @e[...] NeoForgeData
+# Armor Stand has the following entity data: {NekoJSPersistentData: {datafixTicket03Key: "ticket03-persist-me", datafixTicket03Seq: 303}}
+#
+# [2026-09-12 19:52:58, session2, AFTER stop + restart (pdata loaded from world save)]
+# command: data get entity @e[...] NeoForgeData
+# Armor Stand has the following entity data: {NekoJSPersistentData: {datafixTicket03Key: "ticket03-persist-me", datafixTicket03Seq: 303}}
+#
+# Note: key written once at 19:47:38 (DATAFIX-PDATA-WRITE, v3 deferred tick write);
+# unchanged thereafter across normal reload / failed reload / stop / restart.
+# Full NBT path query `data get entity <sel> NeoForgeData.NekoJSPersistentData` failed to
+# parse on 26.1.2 ("Expected double") when the selector matched an entity WITHOUT the
+# container; with tag=nekojs_pdata_written the query above is the working form.
