@@ -1,0 +1,5 @@
+import { $DataMapJS } from "java:com/tkisor/nekojs/bindings/static_access";
+export {};
+declare global {
+let DataMap: typeof $DataMapJS;
+}
