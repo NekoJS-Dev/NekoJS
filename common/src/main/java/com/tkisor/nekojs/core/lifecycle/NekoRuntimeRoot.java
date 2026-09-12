@@ -99,13 +99,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         try {
             manager.reloadScriptFile(file.toString());
             return ReloadResult.success(type, manager.generationId());
-        } catch (NekoReloadException e) {
-            throw e;
         } catch (Exception e) {
-            // 单文件重载沿用 active 环境（非候选路径）：结果显式标记 FILE 阶段
-            throw new NekoReloadException(new ReloadFailureReport(type, manager.generationId(),
-                    ReloadPhase.FILE, file.toString(), "ScriptManager[" + type.name + "]",
-                    "single-file-reload", e));
+            // 单文件重载沿用 active 环境（非候选路径）：以失败结果返回并显式标记 FILE 阶段
+            return ReloadResult.failure(type, manager.generationId(), ReloadPhase.FILE, file.toString(), e);
         }
     }
 
@@ -200,6 +196,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
 
         public static ReloadResult failure(ScriptType type, Throwable error) {
             return new ReloadResult(type, false, error, -1, ReloadPhase.UNKNOWN);
+        }
+
+        public static ReloadResult failure(ScriptType type, long generation, ReloadPhase phase, String sourceLocation, Throwable error) {
+            return new ReloadResult(type, false, error, generation, phase);
         }
     }
 
