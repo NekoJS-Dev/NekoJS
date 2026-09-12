@@ -31,7 +31,8 @@ param(
     [string]$GradleUserHome = "D:\mcmodDemo\NekoJS\.gradle-perf02",
     [int]$ServerPort = 25871,
     [int]$RconPort = 25872,
-    [string]$RconPass = "perf02"
+    [string]$RconPass = "perf02",
+    [switch]$TestStdin   # 复现工单 D1 的 stdin 可行性试验（默认关闭，见 Stop-Server 说明）
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,7 +50,8 @@ $GitRev = (& git -C $ProjectDir rev-parse HEAD).Trim().Substring(0, 8)
 $perfOut = Join-Path $RunDir "nekojs\perf-out"
 # probe 生成物目录（清空以强制每个样本走完整生成路径；见 probe 模式说明）
 $probeOutDir = Join-Path $RunDir ".neko_probe"
-$script:StdinOk = $null   # $null=未测；$true/$false=stdin 转发实测（进程级缓存，逐会话记录）
+$script:StdinOk = $null              # stdin 试验结果（仅 -TestStdin 时写入）
+$script:TestStdin = [bool]$TestStdin
 
 function Write-Sample([hashtable]$obj) {
     $obj.rev = $GitRev
@@ -114,29 +116,37 @@ function Deploy-Fixtures {
         Set-Content -Path $sp -Value $props -Encoding ascii
     }
     if ($Bench) { Set-Content -Path (Join-Path $perfOut "RUN_BENCH") -Value "bench" -Encoding ascii }
+    # 会话级 gen token：所有 fixture 读同一值，跨维度样本可按 gen 关联（早先各脚本各自
+    # Date.now() 会让 eval 的 gen 比 tick/adapter/mem 早一个脚本加载周期）。
+    Set-Content -Path (Join-Path $perfOut "GEN") -Value ([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString()) -Encoding ascii
     Write-Host "[deploy] run dir ready (bench=$Bench): $RunDir"
 }
 
-# ---------- RCON (timed-command and fallback stop channel) ----------
+# ---------- RCON (timed-command and stop channel) ----------
 # Fixed channel: bench/perf/rcon.py. The v1 pure-PowerShell framing got the
 # connection reset by the vanilla RCON thread on auth; verified with a python
 # client on 2026-09-12 and switched over (see baseline report channel notes).
 function Invoke-Rcon {
     param([string]$Command, [int]$TimeoutMs = 180000)
-    $out = & python (Join-Path $PSScriptRoot "rcon.py") $RconPort $RconPass $Command 2>&1
+    $out = & python (Join-Path $PSScriptRoot "rcon.py") $RconPort $RconPass ([string]($TimeoutMs / 1000)) $Command 2>&1
     if ($LASTEXITCODE -ne 0) { throw "rcon failed: $out" }
     return ($out -join "`n")
 }
 
-# ---------- 停服（含工单 D1 的 stdin 一次性试验） ----------
+# ---------- 停服 ----------
+# stdin 通道已在 2026-09-12 的 shakedown 里验证**不通**（server 收不到 gradlew 的 stdin，
+# 详见 raw/formal/*/channel-test.txt 与 REPORT §6）。因此默认只用 RCON stop；不再每轮重试
+# stdin——那会让每个 Mode 的首个会话白等 60 s，并把 tick/adapter 样本窗口拉长（首轮 tick CSV
+# 曾因此多出 ~1200 行）。
+# 需要复现工单 D1 的 stdin 可行性试验时显式加 -TestStdin：只在首个会话试一次，结果记入样本。
 function Stop-Server($proc) {
-    if ($script:StdinOk -ne $false) {
+    if ($script:TestStdin -and $null -eq $script:StdinOk) {
         try {
             $proc.StandardInput.WriteLine("stop")
             $proc.StandardInput.Flush()
         } catch {}
         if ($proc.WaitForExit(60000)) { $script:StdinOk = $true; Wait-WorldLockRelease; return @{ channel = "stdin"; killed = $false } }
-        $script:StdinOk = $false   # stdin 试验失败：本进程后续全部走 RCON
+        $script:StdinOk = $false
     }
     try {
         Invoke-Rcon -Command "stop" -TimeoutMs 30000 | Out-Null
@@ -293,8 +303,10 @@ if ($Mode -eq "bench") {
                 if ((Count-CsvRows (Join-Path $perfOut "tick-samples.csv")) -ge $TickWindowRows) { break }
                 Start-Sleep -Seconds 2
             }
-            $rows = Count-CsvRows (Join-Path $perfOut "tick-samples.csv")
+            # 行数在停服**之后**统计：tick-bench 在 ServerEvents.stopped 里冲刷剩余缓冲，
+            # 早统计会与归档 CSV 行数不一致（首轮曾出现 jsonl=1201 / CSV=2405）。
             $stop = Stop-Server $proc
+            $rows = Count-CsvRows (Join-Path $perfOut "tick-samples.csv")
             @{ stopSent = $true; stopChannel = $stop.channel; killed = $stop.killed; tickRows = $rows }
         }
         $csvDir = Join-Path $OutDir "round-$i-csv"
@@ -348,7 +360,9 @@ if ($Mode -eq "reload") {
         $results = @()
         for ($k = 1; $k -le $Reloads; $k++) {
             Start-Sleep -Seconds 3
-            $before = ([regex]::Matches((Read-LogTailUtf8 $outLog ([ref]$offset)), [regex]::Escape($script:ReloadMarker))).Count
+            # 先排空上一次 reload 之后可能滞留的日志增量（含异步 Log-Flusher 的残留），
+            # 使下面只匹配本次 reload 新产生的 marker 行。
+            [void](Read-LogTailUtf8 $outLog ([ref]$offset))
             $t0 = [System.Diagnostics.Stopwatch]::StartNew()
             $rconText = $null
             try { $rconText = Invoke-Rcon -Command "nekojs reload" } catch { $rconText = "RCON-ERROR: $($_.Exception.Message)" }

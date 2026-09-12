@@ -14,11 +14,13 @@
 bench/perf/
 ├── README.md            # 本文件：固定口径与复现命令
 ├── sample.ps1           # 采样入口（Windows PowerShell 5.1；必须带 UTF-8 BOM，见下）
+├── run-mode.cmd         # 分离启动器（长会话用；内含本机路径，换 checkout 时改 PERF02_PROJECT）
 ├── rcon.py              # Source-RCON 客户端（命令通道，见下）
 ├── .gitignore           # 忽略 out/ 与 run/（原始输出不入库，入库的是 baseline/raw/ 证据副本）
 ├── fixtures/nekojs/     # 固定脚本数据集（铺设进 run 目录的 nekojs/ 脚本根）
 │   ├── startup_scripts/ # 10 个启动期脚本（s01–s10）+ src/main.js 入口
-│   └── server_scripts/  # 5 个服务端脚本 + src/main.js 入口
+│   ├── server_scripts/  # 5 个服务端脚本 + src/main.js 入口
+│   └── client_scripts/  # src/main.js 入口（CLIENT 维度不采样；入口只为占位数据集结构）
 ├── out/                 # 采样原始输出（gitignore，不入库）
 └── run/                 # 目录联接别名 → versions/<node>/run（gitignore，不入库）
 ```
@@ -52,7 +54,10 @@ ASCII 代理 marker，并用 `Read-LogTailUtf8` 显式按 UTF-8 解码日志增�
      `Copy-Item` 会把整个 fixtures 目录**嵌套**复制成 `run/nekojs/nekojs/...`，数据集一个都不被发现；
    - 生成 `eula.txt` / `server.properties`（存在则不覆盖）→ 按需放 `perf-out/RUN_BENCH`。
    `world/` 在预热会话建立后复用以降方差（不入库）。
-4. fixture 的 CSV/标志文件写 `nekojs/perf-out/`：沙盒默认 `allowFsWriteOutsideNekojs=false`，写必须在
+4. deploy 还会写 `perf-out/GEN`（会话级 token）：四个采样 fixture 都读它，使同一轮里
+   tick/adapter/eval/mem 的 `gen` 一致，可跨 CSV 关联（早先各脚本各自 `Date.now()` 会让
+   eval 的 gen 早一个脚本加载周期）。
+5. fixture 的 CSV/标志文件写 `nekojs/perf-out/`：沙盒默认 `allowFsWriteOutsideNekojs=false`，写必须在
    `nekojs/` 根内。
 
 `server.properties` 固定值：`server-port=25871`、`enable-rcon=true`、`rcon.port=25872`、
@@ -70,8 +75,10 @@ ASCII 代理 marker，并用 `Read-LogTailUtf8` 显式按 UTF-8 解码日志增�
 - 采样命令统一 `--console=plain`；
 - 命令通道：`nekojs reload` / `nekojs probe` 统一走 **RCON**（`rcon.py`）。时间口径 = 命令发送 →
   完成信号。纯 PowerShell 封帧版本会被 vanilla RCON 线程在 auth 阶段重置连接（实测），不要再改回去；
-- 停服通道：stdin 实测**不通**（`channel-test.txt` 记 `stdin forwarded to server: False`）→ RCON `stop`；
-  两者都失败才 `taskkill /F /T` 并标 `killed=true`。**每次停服后等待 `world/session.lock` 释放**
+- 停服通道：stdin 实测**不通**（`channel-test.txt` 记 `stdin forwarded to server: False`）→ 一律 RCON `stop`；
+  **默认不再重试 stdin**（首版每个 Mode 首个会话都白等 60 s，并把该会话的 tick 采样窗口拉长 ~60 s）。
+  需要复现工单 D1 的 stdin 可行性试验时加 `-TestStdin`，只在首个会话试一次并写入 `channel-test.txt`。
+  RCON 也失败才 `taskkill /F /T` 并标 `killed=true`。**每次停服后等待 `world/session.lock` 释放**
   （MC 的 `DirectoryLock` 在服务器 JVM 退出才释放，晚于 gradle 客户端退出；不等会让下一会话在
   `DirectoryLock.create` 竞争失败）。
 
@@ -92,6 +99,7 @@ ASCII 代理 marker，并用 `Read-LogTailUtf8` 显式按 UTF-8 解码日志增�
 - **tick**：`tick-bench.js` 注册 `ServerEvents.tickPre`，记 `process.hrtime.bigint()` 差值，累计
   ≥1200 行后落 `tick-samples.csv`。测的是**脚本侧可见的 tick 分发节奏**，不是原版服务器 tick 性能。
 - **adapter**：`adapter-bench.js`，固定 6 类操作组合 × 20000 次迭代、每 2000 次一个 chunk，报 ns/op。
+  `tick_rows` 在**停服之后**统计，使 `samples.jsonl` 与归档 CSV 行数一致（早前停服前统计会差一整段缓冲）。
   **触发点是 `ServerEvents.started`**，不能在脚本 load 阶段跑（早于 registry 组件绑定，
   `Item.idOf` 会抛 `Components not bound yet`）。首 chunk 含 JIT 冷路径，统计时报稳态 p50。
 - **eval**：`arith-bench.js`，8 blocks × 200000 次纯 JS 算术，报 ns/op；首 block 含解释器/JIT 预热。
@@ -159,3 +167,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File bench/perf/sample.ps1 -Mode 
 4. `adapter-bench` 在 load 阶段执行 → `Components not bound yet`。
 5. probe 不删输出目录 → 量到 `unchanged` 快路径而非生成。
 6. `.ps1` 无 BOM + 中文注释 → 解析错位、marker 恒不匹配。
+7. 停服前统计 tick 行数 → jsonl 与归档 CSV 不一致。
+8. 每个 Mode 都重试 stdin → 每轮多等 60 s，并污染该会话的 tick 窗口。

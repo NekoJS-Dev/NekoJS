@@ -1,7 +1,7 @@
 # Minimal Source-RCON client for the ticket 02 sampler (fixed channel).
 # The pure-PowerShell framing in sample.ps1 v1 got the connection reset by the
 # vanilla RCON thread on auth; this helper is the verified working channel.
-# Usage: python rcon.py <port> <password> <command> [command...]
+# Usage: python rcon.py <port> <password> <timeout_seconds> <command> [command...]
 # Prints each response body to stdout; exits 1 if auth fails or any command errors.
 import socket
 import struct
@@ -32,10 +32,14 @@ def send_packet(sock, rid, rtype, payload):
 
 
 def main():
+    if len(sys.argv) < 5:
+        print("usage: rcon.py <port> <password> <timeout_seconds> <command> [command...]", file=sys.stderr)
+        return 2
     port, password = int(sys.argv[1]), sys.argv[2]
-    commands = sys.argv[3:]
-    sock = socket.create_connection(("127.0.0.1", port), timeout=30)
-    sock.settimeout(30)
+    timeout = float(sys.argv[3])
+    commands = sys.argv[4:]
+    sock = socket.create_connection(("127.0.0.1", port), timeout=timeout)
+    sock.settimeout(timeout)
     try:
         send_packet(sock, 1, 3, password)
         auth = recv_packet(sock)

@@ -4,14 +4,18 @@
 // 仅当 nekojs/perf-out/RUN_BENCH 存在时写 CSV；监听器本身在所有会话都注册（固定数据集）。
 // 路径在 nekojs/ 根内：沙盒默认 allowFsWriteOutsideNekojs=false（SandboxPolicy 写裁决）。
 const fs = require('fs');
-const GEN = (globalThis.__perf02Gen || Date.now()) + '-tick';
+function sessionGen() {
+    // 与其它维度共用 harness 写的会话 gen（见 main.js / README）
+    try { return fs.readFileSync('nekojs/perf-out/GEN', 'utf8').trim(); } catch (e) { return String(Date.now()); }
+}
+const GEN = sessionGen() + '-tick';
 const FLUSH_AT = 600;
 let lastNanos = null;
 let seq = 0;
 let buffer = [];
 
 function benchEnabled() {
-        try { return fs.existsSync('nekojs/perf-out/RUN_BENCH'); } catch (e) { return false; }
+    try { return fs.existsSync('nekojs/perf-out/RUN_BENCH'); } catch (e) { return false; }
 }
 
 function flush() {

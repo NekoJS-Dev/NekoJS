@@ -5,6 +5,11 @@
 // 供手动/后续触发。语句总量 ~1.4e5，远低于 scriptStatementLimit(5e7)。
 const fs = require('fs');
 
+function sessionGen() {
+    // 与其它维度共用 harness 写的会话 gen（见 main.js / README）
+    try { return fs.readFileSync('nekojs/perf-out/GEN', 'utf8').trim(); } catch (e) { return String(Date.now()); }
+}
+
 function benchEnabled() {
     try { return fs.existsSync('nekojs/perf-out/RUN_BENCH'); } catch (e) { return false; }
 }
@@ -14,7 +19,7 @@ const CHUNK = 2000;
 
 function runAdapterBench(trigger) {
     if (!benchEnabled()) return;
-    const gen = (globalThis.__perf02Gen || Date.now()) + '-adapter';
+    const gen = sessionGen() + '-adapter';
     const chunks = [];
     let sink = 0;
     for (let chunk = 0; chunk < OPS / CHUNK; chunk++) {

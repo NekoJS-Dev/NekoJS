@@ -5,6 +5,11 @@
 // 仅当 nekojs/perf-out/RUN_BENCH 存在时启动采样循环（监听器在所有会话都加载，固定数据集）。
 const fs = require('fs');
 
+function sessionGen() {
+    // 与其它维度共用 harness 写的会话 gen（见 main.js / README）
+    try { return fs.readFileSync('nekojs/perf-out/GEN', 'utf8').trim(); } catch (e) { return String(Date.now()); }
+}
+
 function benchEnabled() {
     try { return fs.existsSync('nekojs/perf-out/RUN_BENCH'); } catch (e) { return false; }
 }
@@ -12,7 +17,7 @@ function benchEnabled() {
 console.info('PERF02-SERVER mem-bench load');
 
 if (benchEnabled()) {
-    const gen = (globalThis.__perf02Gen || Date.now()) + '-mem';
+    const gen = sessionGen() + '-mem';
     const os = require('os');
     let seq = 0;
     try {
