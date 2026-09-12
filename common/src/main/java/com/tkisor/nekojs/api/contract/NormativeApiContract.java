@@ -3,6 +3,7 @@ package com.tkisor.nekojs.api.contract;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
 import com.tkisor.nekojs.api.surface.ApiTypeRef;
 import com.tkisor.nekojs.api.surface.ApiVersion;
+import com.tkisor.nekojs.api.surface.EnvironmentScope;
 
 import java.util.List;
 import java.util.Map;
@@ -60,11 +61,30 @@ public record NormativeApiContract(
         }
     }
 
-    /** 能力声明：一个能力 id、其支持的契约版本范围与说明。 */
-    public record ContractCapability(String id, String contractVersionRange, String docs) {
+    /**
+     * 能力声明：一个能力 id、其支持的契约版本范围、三态结论（{@link CapabilityStatus}）、
+     * 生效条件（loader/版本/运行上下文，{@link EnvironmentScope}，null 表示无条件）与说明。
+     *
+     * <p>条件在 surface 解析时真实生效（{@code JsApiSurfaceResolver} 把 conditions 传入
+     * {@code CapabilityDefinition}，由 {@code CapabilityResolver} 按 EnvironmentScope.matches
+     * 裁定激活/显式不可用），不是纯文档字段。
+     */
+    public record ContractCapability(
+            String id,
+            String contractVersionRange,
+            com.tkisor.nekojs.api.capability.CapabilityStatus status,
+            EnvironmentScope conditions,
+            String docs) {
         public ContractCapability {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(contractVersionRange, "contractVersionRange");
+            status = status == null ? com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED : status;
+        }
+
+        /** 兼容构造：仅 id/版本范围/docs，默认 SUPPORTED 且无条件。 */
+        public ContractCapability(String id, String contractVersionRange, String docs) {
+            this(id, contractVersionRange,
+                    com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED, null, docs);
         }
     }
 

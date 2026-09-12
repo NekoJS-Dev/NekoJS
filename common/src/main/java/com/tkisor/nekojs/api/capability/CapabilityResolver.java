@@ -48,6 +48,14 @@ public final class CapabilityResolver {
 
         // Process each definition
         for (CapabilityDefinition def : definitions) {
+            // 契约显式声明 UNAVAILABLE 的能力：不激活、以 DECLARED_UNAVAILABLE 显式报告，
+            // 即使存在看似可用的 provider（声明与真实外部行为一致，不允许静默 no-op）。
+            if (def.declaredStatus() == CapabilityStatus.UNAVAILABLE) {
+                unavailable.add(new CapabilityResolution.UnavailableCapability(
+                        def.name(), "DECLARED_UNAVAILABLE"));
+                continue;
+            }
+
             List<CapabilityProviderContribution> candidates = providersByName.getOrDefault(def.name(), List.of());
 
             // Step 3: Validate services coverage
@@ -176,8 +184,9 @@ public final class CapabilityResolver {
 
         switch (def.providerPolicy()) {
             case CORE_ONLY -> {
-                // Only core (nekojs) can provide
-                if (!"nekojs".equals(identity.ownerId())) {
+                // 核内 owner 的两种既有拼写（nekojs-core = CoreManagedApiBootstrap/bootstrap 契约 owner；
+                // nekojs = 能力 fixture/历史词汇）。addon owner 一律拒绝。
+                if (!"nekojs".equals(identity.ownerId()) && !"nekojs-core".equals(identity.ownerId())) {
                     throw new ApiResolutionException("CORE_ONLY_VIOLATION",
                             "Addon '" + identity.ownerId() + "' cannot provide core capability '"
                                     + def.name() + "' (CORE_ONLY policy)",
