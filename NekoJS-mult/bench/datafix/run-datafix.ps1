@@ -38,6 +38,7 @@ $RunDir = Join-Path $Project ("versions\" + $Node + "\run")
 $OutDir = Join-Path $ScriptDir 'out'
 $SnapDir = Join-Path $OutDir 'snapshots'
 $FixtureDir = Join-Path $ScriptDir 'fixtures'
+$ServerPort = 25871
 $RconPort = 25872
 $RconPassword = 'datafix03'
 
@@ -97,11 +98,13 @@ switch ($Step) {
         # root editor config (<gamedir>/jsconfig.json) is a separate protected fixture
         Copy-Item (Join-Path $FixtureDir 'jsconfig.json') (Join-Path $RunDir 'jsconfig.json') -Force
         Set-Content -Path (Join-Path $RunDir 'eula.txt') -Value 'eula=true' -Encoding Ascii
+        # port/seed/motd 字面量与顶部 $ServerPort/$RconPort/$RconPassword 是同一来源的
+        # 两份表达——审查（Data Clumps）指出改端口必踩；保持字面量但以注释互指，勿单改一处。
         $props = @(
-            'server-port=25871',
+            "server-port=$ServerPort",
             'enable-rcon=true',
-            'rcon.port=25872',
-            'rcon.password=datafix03',
+            "rcon.port=$RconPort",
+            "rcon.password=$RconPassword",
             'online-mode=false',
             'difficulty=peaceful',
             'gamemode=survival',

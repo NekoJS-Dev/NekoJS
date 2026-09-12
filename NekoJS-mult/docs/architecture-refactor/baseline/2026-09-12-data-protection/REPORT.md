@@ -1,7 +1,7 @@
 # 2026-09-12 持久化与用户编辑数据保护基线报告（工单 03）
 
 工单：[03: 持久化与用户编辑数据保护基线](../../implementation-tickets/03-data-protection.md)。
-盘点交付物：[data-inventory.md](data-inventory.md)；运行 harness：[bench/datafix/](../../../../../bench/datafix/README.md)；
+盘点交付物：[data-inventory.md](data-inventory.md)；运行 harness：[bench/datafix/](../../../../bench/datafix/README.md)；
 原始证据：[evidence/](evidence/README.md)。本票为"默认不改"基线：**零运行时源码修改**，全部场景在隔离
 worktree `D:/mcmodDemo/NekoJS-datafix` 的 `versions/26.1.2/run` 中以合成 fixture 运行，主仓库用户数据零接触。
 
@@ -10,8 +10,8 @@ worktree `D:/mcmodDemo/NekoJS-datafix` 的 `versions/26.1.2/run` 中以合成 fi
 | 项 | 值 |
 |---|---|
 | 盘点（代码实读）revision | `d0aa6e0d`（master，工单 03 开工时前端） |
-| harness 提交 | `39fd5aa9`（fixture+运行器）→ `0b422168`（pdata 调用语法修复）→ `c0296bf8`（deploy 补根 jsconfig） |
-| 运行 worktree | `../NekoJS-datafix`（detached @ `39fd5aa9`，不含主仓库 WIP；运行后两个小修已入 master，运行目录为未跟踪产物） |
+| harness 提交 | `39fd5aa9`（fixture+运行器）→ `0b422168`（pdata 调用语法修复）→ `07efb6e6`（pdata 写入移出 join 窗口，**场景 1/2/3 的 fixture 依赖此版**）→ `c0296bf8`（deploy 补根 jsconfig） |
+| 运行 worktree | `../NekoJS-datafix`（detached，含 `07efb6e6`/`c0296bf8` 两个运行时依赖修复；不含主仓库 WIP。worktree 已删除，会话 stdout 全文未随证据归档——见 §7 的如实记录与教训） |
 | 节点 | `26.1.2`（primary，NeoForge dev runServer）；RCON 25872 / server 25871 / `pause-when-empty-seconds=-1` |
 | 命令通道 | 全部经 RCON（`bench/datafix/rcon.py`）；stdin 停服不通（02 号票已证），停服后等待 `world/session.lock` 释放 |
 | 判定口径 | 公开观察面：文件 SHA256+size+mtime 快照、日志 marker、RCON 回执；不触私有字段/文件句柄 |
@@ -59,7 +59,8 @@ fixture v3 起改为"join 捕获实体 + tick 延迟写"，写入与读回一致
 - **建议 owner**：票 19（PACK_TRUST/pack 路径域）或票 07（runtime-threads/失败保留）；修复方向（供参考，本票未改码）：
   world 包路径入 ScriptContainer 前统一 `toAbsolutePath().normalize()`，且 `DefaultErrorTracker.record`
   对 relativize 失败兜底（用绝对路径字符串而非抛出），错误记录失败不应放大为 reload 失败。
-- **证据**：`evidence/log-excerpts-worldpack-iae-stack.txt`（两次完整栈）、`log-excerpts-session2-worldpack-defect.txt`。
+- **证据**：`evidence/log-excerpts-worldpack-iae-stack.txt`、`log-excerpts-session2-worldpack-defect.txt`。
+- **归因口径**：两段日志里 `Caused by` 均止于 `WindowsPath` 帧，**未见 `DefaultErrorTracker` 帧**；`DefaultErrorTracker.record:70` 是代码实读定位（该行恰为对相对 world 路径的 `relativize`），与异常点吻合但**栈内不可直接可见**，属强推断而非栈内实证——修复时以复现 + 断点/补日志确认为准。
 
 ### 3-2【机制缺口】除 trust-store 外，盘上持久化数据均无原子写/备份/schema-version
 

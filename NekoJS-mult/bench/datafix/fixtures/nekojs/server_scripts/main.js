@@ -12,6 +12,3 @@ ServerEvents.stopped(event => {
 
 // 用于"失败 reload 后旧环境仍可用"的观察：reload 前注册的监听器在失败 reload 后
 // 依然要能触发（mod 契约：失败保留当前环境）。
-ServerEvents.tickPre(event => {
-    // 每 1200 tick（约 60s）打一次心跳，正常场景用不上；失败场景人工观察期短，靠 summon 触发。
-});
