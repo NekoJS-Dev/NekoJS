@@ -39,7 +39,7 @@ public final class PackSyncClient {
     /** 主线程执行等待上限（避免主线程死锁时网络线程被永久挂起）。 */
     private static final long MAIN_THREAD_WAIT_SECONDS = 30;
 
-    /** 平台安装的 CLIENT 脚本重载钩子（NekoJSMod.RUNTIME_ROOT.reload(CLIENT) 守卫包装）。 */
+    /** 平台安装的 CLIENT 脚本重载钩子（loader entry 注入的 root.reload(CLIENT) 守卫包装）。 */
     private static volatile Runnable clientReloadHook;
 
     private static volatile CountDownLatch mainThreadLatch;

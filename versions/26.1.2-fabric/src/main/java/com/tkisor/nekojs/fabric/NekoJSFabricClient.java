@@ -31,7 +31,7 @@ public final class NekoJSFabricClient implements ClientModInitializer {
             // 由 loader 反射实例化，无法构造注入）；未装配完成时保留原跳过语义
             var root = NekoJSFabricMod.runtimeRootOrNull();
             if (root == null) {
-                LOGGER.error("CLIENT_STARTED: RUNTIME_ROOT not assembled yet, skipping CLIENT script load");
+                LOGGER.error("CLIENT_STARTED: runtime root not assembled yet, skipping CLIENT script load");
                 return;
             }
             root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
