@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="zh-CN">
+<!-- Selected A / blue-a-2 / blue read-only reference. No game or external-program connection. -->
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NekoJS · 脚本错误 / 演示</title>
+<style>
+:root{color-scheme:dark;--bg:#17191c;--panel:#222429;--line:#3c4048;--text:#e2e4e9;--muted:#a0a5af;--accent:#819fd9;--red:#ff8984}
+*{box-sizing:border-box}
+body{margin:0;background:#17191d;color:var(--text);font:14px/1.55 "Microsoft YaHei",system-ui,sans-serif}
+button,input,select{font:inherit}
+button,select{cursor:pointer}
+button{color:var(--text);background:#30333a;border:1px solid #535760;padding:7px 12px;border-radius:2px;box-shadow:inset 0 1px #ffffff08}
+button:hover{background:#3a3f48}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+button.active{border-color:var(--accent);color:var(--accent);background:#262e3d}
+.scene{position:fixed;inset:0;z-index:-1;overflow:hidden;background:linear-gradient(#20242c 0 48%,#22252c 48% 100%)}
+.scene:before{content:"";position:absolute;inset:15% -10% -15%;background:linear-gradient(90deg,transparent 50%,#303643 50%) 0 0/160px 110px,linear-gradient(#313743 50%,#282e39 50%) 0 0/240px 180px;clip-path:polygon(0 45%,8% 45%,8% 30%,20% 30%,20% 15%,32% 15%,32% 37%,46% 37%,46% 55%,62% 55%,62% 22%,74% 22%,74% 5%,84% 5%,84% 38%,100% 38%,100% 100%,0 100%);opacity:.65}
+.scene:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#111419bb,#11141955,#111419bb),linear-gradient(transparent,#101217aa)}
+.app{width:calc(100% - 64px);max-width:1250px;margin:0 auto;border:1px solid #595d66;background:#1b1d22f5;box-shadow:0 12px 50px #00000088,0 0 0 4px #11141980}
+.top{display:flex;align-items:center;gap:13px;padding:19px 24px;border-bottom:1px solid var(--line)}
+.mark{width:34px;height:34px;display:grid;place-items:center;background:#262d3c;color:var(--accent);border:1px solid #586378;font:bold 22px monospace;box-shadow:inset 3px 3px #ffffff08}
+h1{font-size:20px;margin:0;font-weight:600;letter-spacing:.04em}
+.brand{font-size:10px;letter-spacing:.2em;color:var(--accent)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.badge{color:#bfc5d0;background:#30343b;border:1px solid #535964;font-size:11px;padding:3px 7px;white-space:nowrap}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.totals{white-space:nowrap;font-size:12px;color:var(--muted)}
+.totals strong{font-size:23px;color:var(--red);font-weight:500;margin-right:6px}
+.search{flex:1;display:flex;align-items:center;border:1px solid #535760;background:#14161a;padding:0 11px;gap:8px}
+.search span{color:var(--accent);font-family:monospace}
+.search input{min-width:0;width:100%;border:0;background:none;color:var(--text);padding:9px 0;outline-offset:0}
+.search input::placeholder{color:#858a95}
+select{max-width:210px;background:#2a2d33;color:var(--text);border:1px solid #535760;padding:7px 10px;border-radius:2px}
+.workspace{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:385px;border-top:1px solid var(--line)}
+.list-pane{border-right:1px solid var(--line);min-width:0;background:#1b1d22}
+.pane-title{padding:11px 16px;display:flex;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--line)}
+.error-list{max-height:391px;overflow:auto;padding:8px}
+.error-item{display:block;text-align:left;width:100%;margin:0 0 6px;padding:12px;background:#25272c;border:1px solid #3a3d44;box-shadow:none}
+.error-item.active{border-color:#5c6e92;background:#292f3b;color:var(--text);box-shadow:inset 3px 0 var(--accent)}
+.item-top{display:flex;align-items:center;gap:8px}
+.error-dot{display:inline-block;width:7px;height:7px;background:var(--red);flex-shrink:0}
+.file-name{font:600 12px/1.5 Consolas,monospace;overflow-wrap:anywhere;flex:1}
+.count{font-size:10px;color:var(--red);background:#49312d;padding:1px 6px;white-space:nowrap}
+.path{font:11px/1.6 Consolas,monospace;color:var(--muted);overflow-wrap:anywhere;margin-top:5px}
+.preview{font-size:12px;color:#c3c6cb;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:7px}
+.item-line{margin-top:8px;font-size:10px;color:var(--muted)}
+.detail{padding:20px 24px;min-width:0;max-height:445px;overflow:auto}
+.detail-head{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.eyebrow{color:var(--red);font-size:11px;letter-spacing:.07em;margin-bottom:5px}
+.detail h2{margin:0;font:600 19px/1.4 Consolas,monospace;overflow-wrap:anywhere}
+.detail .path{font-size:12px;margin:8px 0 12px}
+.metadata{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#b8bcc5}
+.metadata span{padding:3px 8px;background:#2b2e34;border:1px solid #41464f}
+.message{margin:17px 0 15px;border-left:2px solid var(--red);background:#352827;padding:12px 14px;color:#ffc0b8;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.7 Consolas,"Microsoft YaHei",monospace}
+.detail-note{font-size:11px;color:var(--muted);margin:0 0 12px}
+details{border:1px solid #3d424b;background:#181a1e}
+summary{cursor:pointer;padding:10px 12px;color:#c6cbd4;font-size:12px;background:#25282e}
+summary::marker{color:var(--accent)}
+pre{font:12px/1.8 Consolas,"Microsoft YaHei",monospace;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;margin:0;padding:14px 16px;color:#b8bec9;max-height:240px;overflow:auto}
+.bottom-note{border-top:1px solid var(--line);padding:10px 24px;font-size:11px;color:#999faa;display:flex;gap:10px;justify-content:space-between}
+.status{color:var(--accent)}
+.empty{text-align:center;padding:65px 24px;color:var(--muted);grid-column:1/-1}
+.empty-icon{font:32px monospace;color:var(--accent);margin-bottom:12px}
+.empty h2{font-size:18px;color:var(--text);font-weight:500;margin:8px 0}
+.empty p{font-size:12px}
+.empty button{margin-top:12px}
+[hidden]{display:none!important}
+
+/* Selected A: blue-a-2. Fixed viewport; only list/detail scroll. */
+:root{--prototype-layout-revision:blue-a-2;--bg:#111722;--panel:#1c2533;--line:#3b4b62;--text:#e4ebf4;--muted:#a4b2c6;--accent:#80b9ff;--red:#ff8984}
+html,body{height:100%;overflow:hidden}
+button,input,select,textarea{border-radius:0}
+.app{position:fixed;inset:24px 0 88px;height:auto;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;min-height:0;overflow:hidden;background:#18212e;border-color:#52647d;box-shadow:0 8px 32px #0008}
+.app>*{min-width:0;min-height:0}
+.top{grid-row:1;padding:12px 18px;gap:10px}
+.top-right{gap:8px;min-width:0}
+.totals{font-size:12px;margin-right:10px}
+.totals strong{font-size:16px;margin-right:4px;font-weight:600}
+
+
+.workspace{grid-row:2;display:grid;grid-template-columns:320px minmax(0,1fr);grid-template-rows:minmax(0,1fr);min-width:0;min-height:0;overflow:hidden}
+.list-pane{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;overflow:hidden}
+.pane-title{padding:7px 10px;align-items:center;letter-spacing:0}
+.sidebar-label{display:flex;gap:12px;align-items:center}
+#toggleSidebar{padding:0;width:28px;height:28px;font:22px/1 monospace;color:var(--accent);flex:none}
+.sidebar-contents{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;overflow:hidden}
+.sidebar-search{display:flex;gap:6px;padding:8px 8px 0;min-width:0}
+.sidebar-search .search{min-width:0;padding:0 8px}
+.sidebar-search input{font-size:12px;padding:7px 0}
+#clearSearch{font-size:11px;padding:4px 6px;white-space:nowrap}
+.detail-frame{min-width:0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+.detail-head{padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center;gap:8px}
+.detail-title{flex:1 1 200px;min-width:0}
+.detail-head h2{font:600 16px/1.4 Consolas,"Microsoft YaHei",monospace;margin:0;overflow-wrap:anywhere}
+.detail-actions{display:flex;gap:6px;flex-wrap:wrap}
+.detail-actions button{font-size:12px;padding:6px 8px}
+.detail,.empty{grid-row:2;grid-column:1;min-width:0;min-height:0;max-height:none;overflow:auto}
+.detail{padding:14px 18px}
+.empty{padding:24px}
+.bottom-note{grid-row:3;padding:7px 18px;min-width:0}
+
+.error-list{min-height:0;max-height:none;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:8px}
+.error-item{height:118px;min-height:118px;flex:0 0 118px;display:grid;grid-template-rows:34px 34px 18px;gap:4px;padding:10px;margin:0;overflow:hidden;background:#222d3d;border-color:#3c4e65}
+.error-item:hover{background:#29384c}
+.error-item.active{background:#253b55;border-color:#659bd5;box-shadow:inset 3px 0 var(--accent)}
+.file-name,.preview{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;min-width:0;line-height:17px;margin:0}
+.file-name{font-size:12px}
+.preview{font-size:12px;color:#c4cedc}
+.item-line{margin:0;font-size:11px;line-height:18px;align-self:end;color:var(--muted)}
+button.active{border-color:var(--accent);color:var(--accent);background:#253b55}
+pre{max-height:none;white-space:pre-wrap;overflow-wrap:anywhere}
+.detail .message{margin:12px 0}
+.detail-note{margin:8px 0;font-size:11px}
+.is-sidebar-collapsed .workspace{grid-template-columns:44px minmax(0,1fr)}
+.is-sidebar-collapsed .sidebar-label{display:none}
+.is-sidebar-collapsed .pane-title{padding:7px;justify-content:center}
+
+dialog{width:min(640px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #627d9f;border-radius:0;background:#1a2636;color:var(--text);padding:18px}
+dialog::backdrop{background:#090f1bd9}
+dialog h2{font-size:17px;margin:0 0 10px}
+dialog p{font-size:12px;overflow-wrap:anywhere}
+dialog textarea{width:100%;max-height:35dvh;resize:vertical;background:#111b29;color:var(--text);border:1px solid #526c8d;font:12px/1.6 Consolas,monospace}
+.copy-actions,.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+@media(max-width:1100px){
+ .workspace{grid-template-columns:290px minmax(0,1fr)}
+ .top{padding:10px 14px}.totals{margin-right:4px}
+ .detail-head{padding:10px 14px}.detail{padding:12px 14px}
+}
+@media(max-width:950px){
+ .app{inset:8px 0 76px;width:calc(100% - 16px)}
+ .workspace{grid-template-columns:260px minmax(0,1fr)}
+ .is-sidebar-collapsed .workspace{grid-template-columns:44px minmax(0,1fr)}
+ .bottom-note{padding-left:14px;padding-right:14px}
+ .bottom-note{font-size:10px;gap:8px}
+}
+@media(max-height:600px){
+ .top{padding-top:7px;padding-bottom:7px}h1{font-size:18px}
+ .bottom-note{padding-top:5px;padding-bottom:5px}
+ .error-item{height:108px;min-height:108px;flex-basis:108px;padding:9px;grid-template-rows:32px 30px 16px}
+ .file-name{line-height:16px}.preview{line-height:15px}.item-line{line-height:16px}
+ .detail-head{padding-top:8px;padding-bottom:8px}
+}
+@media(max-width:600px){
+ .top{gap:6px}.mark{display:none}.totals{font-size:10px}.totals strong{font-size:13px}
+ .top-right{gap:4px}.brand{font-size:8px}
+ .workspace{grid-template-columns:210px minmax(0,1fr)}
+ .is-sidebar-collapsed .workspace{grid-template-columns:40px minmax(0,1fr)}
+ 
+}
+
+.item-line{display:flex;justify-content:space-between;gap:8px}.repeat-count{color:var(--red)}
+
+/* The external prototype controls have their own reserved viewport band. */
+.bottom-note{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}
+.status{min-width:0;overflow-wrap:anywhere}
+.shortcut-hint{white-space:nowrap;color:var(--muted)}
+.prototype-controls{position:fixed;inset:auto 0 16px;width:calc(100% - 64px);max-width:1250px;height:56px;margin:0 auto;padding:8px 12px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,210px) auto;align-items:center;gap:10px;overflow:auto;border:1px dashed #637084;background:#171c24;color:#a5acb7;font-size:11px}
+.prototype-label{min-width:0;line-height:16px;overflow-wrap:anywhere}
+.prototype-controls select,.prototype-controls button{min-width:0;font-size:12px;padding:5px 8px;border-color:#545e6b;background:#242933;color:#c4cad3}
+.prototype-controls select{width:100%;max-width:none}
+.prototype-controls .reopen-panel{white-space:nowrap}
+@media(max-width:950px){
+ .prototype-controls{bottom:8px;width:calc(100% - 16px)}
+ .bottom-note{font-size:10px;gap:8px}
+}
+@media(max-width:600px){
+ .prototype-controls{gap:6px;padding:6px;grid-template-columns:minmax(0,1fr) minmax(0,180px) auto}
+ .prototype-label{font-size:10px}
+ .bottom-note{grid-template-columns:minmax(0,1fr);gap:2px}
+ .shortcut-hint{justify-self:end}
+}
+</style>
+</head>
+<body class="layout-A">
+<div class="scene" aria-hidden="true"></div>
+<main class="app" id="panel" aria-label="NekoJS 报错面板">
+<header class="top">
+<div class="mark" aria-hidden="true">!</div><div><div class="brand">NEKOJS / ERROR SNAPSHOT</div><h1>脚本错误</h1></div>
+<div class="top-right"><div class="totals"><strong id="total">0</strong>条错误 · 累计 <span id="occurrences">0</span> 次</div></div>
+</header>
+
+
+<div class="workspace" id="workspace">
+<aside class="list-pane" id="sidebar" aria-label="错误列表">
+<div class="pane-title"><span class="sidebar-label">错误列表 <span id="resultCount" role="status" aria-live="polite"></span></span><button type="button" id="toggleSidebar" aria-expanded="true" aria-controls="sidebarContents" aria-label="收起错误列表" title="收起错误列表">‹</button></div>
+<div class="sidebar-contents" id="sidebarContents"><div class="sidebar-search"><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="搜索路径、消息、错误 ID 或原始详情" aria-keyshortcuts="/" placeholder="搜索路径、消息、ID 或原始详情…" autocomplete="off"></label><button type="button" id="clearSearch" disabled>清空搜索</button></div><div class="error-list" id="list"></div></div>
+</aside>
+<section class="detail-frame" aria-label="当前错误">
+<header class="detail-head" id="detailHead"></header>
+<section class="detail" id="detail" tabindex="0" aria-label="错误原始详情"></section>
+<section class="empty" id="empty" hidden></section>
+</section>
+</div>
+<footer class="bottom-note">
+<span id="status" class="status" role="status" aria-live="polite">只读快照 · 逻辑服务端 · 未读取脚本文件</span>
+<span class="shortcut-hint">/ 搜索 · Esc 关闭</span>
+</footer>
+</main>
+<aside class="prototype-controls" id="sampleToolbar" aria-label="原型控制，不属于游戏内界面">
+<span class="prototype-label">原型控制 · 不属于游戏内界面</span>
+<select id="scenario" aria-label="演示数据场景"><option value="normal">演示：错误列表</option><option value="long">演示：长消息与长路径</option><option value="missing">演示：缺少源码摘录</option><option value="empty">演示：空列表</option></select>
+<button type="button" class="reopen-panel" id="reopenPanel" disabled>重新打开报错面板</button>
+</aside>
+
+<dialog id="locateDialog" aria-labelledby="locateTitle"><h2 id="locateTitle">VS Code 定位演示</h2><p id="locateTarget" class="path"></p><p>示例，实际需本地存在路径。报告相对路径不等于本机绝对路径，原生实现待安全解析；远端、未知和虚拟位置不能直接映射成本地文件。</p><p>只使用已有行号，不猜列号，不启动外部程序。</p><div class="dialog-actions"><button type="button" id="closeLocate">知道了</button></div></dialog>
+<dialog id="copyDialog" aria-labelledby="copyTitle"><h2 id="copyTitle">手动复制</h2><p id="copyReason">浏览器未允许自动复制。以下内容只读，请全选后复制。</p><textarea id="copyText" readonly spellcheck="false" aria-label="待复制的只读内容"></textarea><div class="copy-actions"><button type="button" id="selectCopy">全选文本</button><button type="button" id="closeCopy">关闭</button></div></dialog>
+<noscript><p class="noscript">此交互样例需要启用 JavaScript；不连接游戏，不加载外部资源。</p></noscript>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const node = (tag, text, cls) => {
+  const e = document.createElement(tag);
+  if (text !== undefined) e.textContent = text;
+  if (cls) e.className = cls;
+  return e;
+};
+const normal = [
+  {id:'nekojs:server/events/player_tick.js',path:'server_scripts/events/player_tick.js',line:42,count:3,message:"TypeError: Cannot read properties of null (reading 'id')",fullDetails:"环境: SERVER\n脚本: server_scripts/events/player_tick.js\n频次: 连续发生了 3 次\n\n>> 异常代码片段 (行 42, 列 11):\n > 42 | const playerId = event.player.id\n     |           ^\n\nTypeError: Cannot read properties of null (reading 'id')\n    at onPlayerTick (server_scripts/events/player_tick.js:42)\n"},
+  {id:'nekojs:server/commands/example.js',path:'server_scripts/commands/example.js',line:18,count:1,message:"SyntaxError: Unexpected token '}'",fullDetails:"环境: SERVER\n脚本: server_scripts/commands/example.js\n\n>> 异常代码片段 (行 18, 列 1):\n > 18 | }\n     | ^\n\nSyntaxError: Unexpected token '}'\n"},
+  {id:'nekojs:rt/SERVER/timer/1a2b3c',path:'timer/1a2b3c',line:-1,count:7,message:'ReferenceError: missingBinding is not defined',fullDetails:'环境: SERVER\n脚本: timer/1a2b3c\n频次: 连续发生了 7 次\n\nReferenceError: missingBinding is not defined\n    at <anonymous> (Unknown Source)\n'}
+];
+let data = normal, selected = normal[0].id;
+const lineText = e => e.line > 0 ? '行 '+e.line : '行号未知';
+const visibleRows = () => {
+  const q = $('search').value.trim().toLocaleLowerCase();
+  return data.filter(e => [e.id,e.path,e.message,e.fullDetails].some(v => v.toLocaleLowerCase().includes(q)));
+};
+let showDetail;
+function render() {
+  const rows = visibleRows();
+  if (!rows.some(e => e.id === selected)) selected = rows[0]?.id || null;
+  $('total').textContent = data.length;
+  $('occurrences').textContent = data.reduce((n,e) => n+e.count,0);
+  $('resultCount').textContent = rows.length+' / '+data.length;
+  $('clearSearch').disabled = !$('search').value;
+  $('list').replaceChildren();
+  rows.forEach(e => {
+    const b = node('button',undefined,'error-item'+(e.id===selected?' active':''));
+    b.title=e.path+'\n'+e.message; b.dataset.errorId=e.id;
+    b.type='button'; b.setAttribute('aria-pressed',String(e.id===selected));
+    const meta=node('div',undefined,'item-line');meta.append(node('span',lineText(e)),node('span',e.count+' 次','repeat-count'));
+    b.append(node('div',e.path,'file-name'),node('div',e.message,'preview'),meta);
+    b.onclick=()=>{selected=e.id;render();}; $('list').append(b);
+  });
+  $('detail').hidden=!rows.length; $('empty').hidden=!!rows.length;
+  $('empty').replaceChildren(node('h2',data.length?'没有匹配的错误':'此快照没有错误'),node('p',data.length?'修改或清空搜索条件。':'空列表不代表脚本已经通过检查。'));
+  const e=rows.find(e=>e.id===selected);
+  if(e) showDetail(e); else $('detail').replaceChildren();
+  if($('detailHead')) $('detailHead').hidden=!e;
+  if(!rows.length && data.length){const b=node('button','清空搜索');b.type='button';b.onclick=()=>$('clearSearch').click();$('empty').append(b);}
+  $('status').textContent=rows.length?'只读快照 · 逻辑服务端 · 未读取脚本文件':(data.length?'没有匹配的错误 · 可调整搜索':'此快照没有错误 · 未读取脚本文件');
+}
+</script>
+<script>
+// Local fixtures only. Every error retains exactly the six wire fields.
+const longPath='server_scripts/'+('very_long_directory_name/').repeat(12)+'超长脚本名称.js';
+const longMessage='Error: '+('这是一段用于检查换行与滚动的长消息。').repeat(32);
+const scenarios={normal,empty:[],missing:[{...normal[2],path:'Unknown location',fullDetails:'环境: SERVER\n脚本: Unknown location\n\nReferenceError: missingBinding is not defined\n    at <anonymous> (Unknown Source)\n'}],long:[{id:'nekojs:server/long-example.js',path:longPath,line:128,count:12,message:longMessage,fullDetails:'环境: SERVER\n脚本: '+longPath+'\n\n'+longMessage+'\n'+Array.from({length:60},(_,i)=>'    at callback'+i+' ('+longPath+':128)').join('\n')}]};
+$('search').addEventListener('input',()=>render());
+$('clearSearch').onclick=()=>{$('search').value='';render();$('search').focus();};
+$('scenario').onchange=()=>{data=scenarios[$('scenario').value] || normal;selected=data[0]?.id || null;$('search').value='';render();};
+</script>
+<script>
+// This whitelist identifies fixture examples, NOT verified local files.
+const examplePaths=new Set([normal[0].path,normal[1].path,longPath]);
+function canLocate(e){return examplePaths.has(e.path) && Number.isInteger(e.line) && e.line>0;}
+function showLocationPlan(e){
+  if(!canLocate(e)){$('status').textContent='路径或行号未知，无法定位';return;}
+  $('locateTarget').textContent='演示：将在 VS Code 定位 '+e.path+':'+e.line;
+  $('locateDialog').showModal();$('closeLocate').focus();
+  $('status').textContent='已显示定位计划 · 未启动 VS Code';
+}
+$('closeLocate').onclick=()=>$('locateDialog').close();
+async function copyText(text,label){
+  try{
+    if(!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(text);
+    $('status').textContent='已复制'+label;
+  }catch{
+    if(!panelState.open)return;
+    $('copyText').value=text;
+    $('copyTitle').textContent='手动复制'+label;
+    $('copyDialog').showModal();$('copyText').focus();$('copyText').select();
+    $('status').textContent='未自动复制；请在只读文本框中手动复制';
+  }
+}
+$('copyText').rows=10; $('copyText').cols=48;
+$('selectCopy').onclick=()=>{$('copyText').focus();$('copyText').select();};
+$('closeCopy').onclick=()=>$('copyDialog').close();
+showDetail=function(e){
+  const root=$('detail');root.replaceChildren();
+  const head=$('detailHead');head.replaceChildren();
+  const title=node('div',undefined,'detail-title');
+  title.append(node('div','错误详情 · 只读','eyebrow'),node('h2',e.path.split('/').pop()));
+  const actions=node('div',undefined,'detail-actions');
+  for(const [label,value] of [['复制路径',e.path],['复制全文',e.fullDetails]]){
+    const b=node('button',label);b.type='button';b.onclick=()=>copyText(value,label==='复制路径'?'路径':'原始全文');actions.append(b);
+  }
+  const locate=node('button','在 VS Code 中打开');
+  locate.type='button';locate.id='openInVSCode';locate.disabled=!canLocate(e);
+  locate.title=canLocate(e)?'查看定位计划（不启动 VS Code）':'路径或行号未知，无法定位';
+  locate.onclick=()=>showLocationPlan(e);actions.append(locate);
+  head.append(title,actions);
+  const meta=node('div',undefined,'metadata');
+  meta.append(node('span',lineText(e)),node('span',e.count+' 次'));
+  const id=node('p','ID: '+e.id,'path');
+  root.append(node('p',e.path,'path'),meta,id,node('div',e.message,'message'));
+  if(!canLocate(e))root.append(node('p','路径或行号未知，无法定位。','detail-note'));
+  const hasSource=e.fullDetails.includes('>> 异常代码片段');
+  root.append(node('p',hasSource?'仅展示快照中的源码摘录。':'快照未识别到源码摘录，不读取脚本。','detail-note'));
+  const stack=e.fullDetails.search(/^[\t ]+at[\t ]+/m);
+  const raw=node('details');raw.open=true;
+  raw.append(node('summary','原始详情 · fullDetails'),node('pre',stack<0?e.fullDetails:e.fullDetails.slice(0,stack)));
+  root.append(raw);
+  if(stack>=0){
+    const folded=node('details');folded.append(node('summary','调用栈及后续原始文本 · 点击展开'),node('pre',e.fullDetails.slice(stack)));root.append(folded);
+  }
+  root.append(node('p','文本折叠不改变复制全文。','detail-note'));
+  root.scrollTop=0;
+};
+</script>
+<script>
+// A is the only layout. View state never changes the six-field error snapshots.
+const panelState={open:true,sidebarCollapsed:false};
+function syncPanel(){
+  $('panel').hidden=!panelState.open;
+  $('reopenPanel').disabled=panelState.open;
+  $('panel').classList.toggle('is-sidebar-collapsed',panelState.sidebarCollapsed);
+  $('sidebarContents').hidden=panelState.sidebarCollapsed;
+  const toggle=$('toggleSidebar');
+  toggle.textContent=panelState.sidebarCollapsed?'›':'‹';
+  toggle.setAttribute('aria-expanded',String(!panelState.sidebarCollapsed));
+  toggle.setAttribute('aria-label',panelState.sidebarCollapsed?'展开错误列表':'收起错误列表');
+  toggle.title=panelState.sidebarCollapsed?'展开错误列表':'收起错误列表';
+}
+function hidePanel(){
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+  panelState.open=false;syncPanel();$('reopenPanel').focus();
+}
+$('toggleSidebar').onclick=()=>{
+  panelState.sidebarCollapsed=!panelState.sidebarCollapsed;syncPanel();
+};
+$('reopenPanel').onclick=()=>{panelState.open=true;syncPanel();$('toggleSidebar').focus();};
+document.addEventListener('keydown',event=>{
+  if(event.isComposing)return;
+  if(event.key==='Escape'){
+    const modal=document.querySelector('dialog[open]');
+    if(modal){event.preventDefault();event.stopPropagation();modal.close();return;}
+    if(!panelState.open)return;
+    event.preventDefault();event.stopPropagation();hidePanel();return;
+  }
+  if(event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || !panelState.open || document.querySelector('dialog[open]'))return;
+  if(event.target.closest('input,textarea,select,[contenteditable]'))return;
+  if(event.key==='/'){
+    event.preventDefault();panelState.sidebarCollapsed=false;syncPanel();$('search').focus();
+  }
+},true);
+syncPanel();
+render();
+</script>
+</body>
+</html>

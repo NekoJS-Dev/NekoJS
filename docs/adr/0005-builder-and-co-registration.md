@@ -1,8 +1,10 @@
 # Builder 体系与连带注册：public field + 回调式三件套
 
+> **当前实施边界（2026-09-09）：** 本 ADR 中“全项目 Builder 使用 public field、禁止 `return this` 链式 setter”的表述是当时针对链式返回类型痛点的**历史方案**；该部分已被后续 managed Builder 决策限定，不表示当前实施允许裸 public field 绕过受管路径。当前脚本端语义是：`builder.setMaxStackSize(16)` 与 `builder.maxStackSize = 16` 必须分发到同一 setter，并共享校验、规范化、definition fingerprint 和提交路径；不承诺 Graal 天然提供该 Bean 行为，等价性由 runtime contract fixture 固定。当前实施与验收以 [Spec 04：公开契约与插件模型](../architecture-refactor/specs/04-public-contract-and-plugin-model.md)、[Spec 08：搬运功能事件面](../architecture-refactor/specs/08-ported-features-event-surface.md) 以及 [09：Managed Surface](../architecture-refactor/implementation-tickets/09-managed-surface.md)、[15：启动期注册](../architecture-refactor/implementation-tickets/15-registry-startup.md)、[16：Dynamic Registry](../architecture-refactor/implementation-tickets/16-registry-dynamic-local.md)、[39：Item/Block modification](../architecture-refactor/implementation-tickets/39-item-block-modification.md) 为准。本 ADR 保留原始历史事实与连带注册设计脉络，不在此重写 ADR 结论。
+
 现状 15 个 `XxxBuilderJS` 全部是 `return this` 链式 setter（链式方法返回类型固定、子类无法表达 self type——PR #37 §3.1 痛点），EventJS 侧工厂方法命名分裂（9 个 `create()` / `createItem` / Fluid 5 工厂）；而 `BlockBuilderJS` 已自发长出 `noItem()` / `item(Consumer)` / 预创建 `itemBuilder` 的连带注册雏形（96/99/125 行）。R1（ADR-0004）已锁定生命周期三阶段与 after-all 框架，本 ADR 定 Builder 侧：
 
-1. **public field 约定（全项目 Builder）**：数据属性 public field（脚本端 `builder.maxStackSize = 16` 直接赋值）；**禁止 `return this` 链式 setter**；动作/派生方法保留但返回 `void`（`noItem()`、`requiresTool()` 等"动词"）。
+1. **public field 约定（全项目 Builder；历史方案，已被后续 managed Builder 语义限定）**：数据属性 public field（脚本端 `builder.maxStackSize = 16` 直接赋值）；**禁止 `return this` 链式 setter**；动作/派生方法保留但返回 `void`（`noItem()`、`requiresTool()` 等"动词"）。
 2. **per-type Builder 类保留为类型内容**：通用机制吸收全部管道（分发、注册、工厂调用）；构造统一经 `registry_types` EP 注册的工厂（`ItemBuilderJS::new`），工厂命名分裂消失；`TaggableBuilder` 等成为基类层级接口。**新增注册表类型 = 1 个 Builder 类 + 清单 1 行**（成功判据①兑现）。
 3. **连带注册 = 回调式三件套**：`handleAdditionalObjects(AdditionalObjectRegistry)` 单方法回调，after-all 后置阶段统一执行（KubeJS `createAdditionalObjects` 验证多年的同款）；三件套 = 预创建子 builder（构造期即建）+ `noXxx()` 置 null 抑制 + `RegistryObjectBuilder implements Supplier<T>`（跨注册表互引全走 Supplier 懒解析）。
 4. **默认连带规则随 builder 类（内容层自治）**：`BlockBuilderJS` 默认预创建 BlockItem 子 builder（现状延续）、`FluidBuilder` 四子 builder（fluidType/flowing/block/bucket）；第三方 builder 自治决定自己的默认；引擎只提供框架。

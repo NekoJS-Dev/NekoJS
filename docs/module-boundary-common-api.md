@@ -3,6 +3,12 @@
 > 本文评估 `common-api` 作为独立 Gradle 模块的必要性，并给出处置方案。
 > 涉及的既有决策：[ADR-0007](adr/0007-module-boundaries.md)（四层归属判据）、
 > [ADR-0010](adr/0010-plugin-authoring-model.md) §4（插件入口接口回迁 `common`）。
+>
+> **2026 修订注记**：本文件记录当时的模块边界评估。后续决策已修订其中一条前提：
+> `common`（含 `api.*`）允许使用 GraalJS，“契约层零 Graal import”只作为历史理由保留；
+> `common` 的零 MC/loader 隔离仍然有效。当前结论见
+> [公开契约与插件面决策](architecture-refactor/decisions/04-public-contract-and-plugin-model.md)
+> 和 [ADR-0007](adr/0007-module-boundaries.md) 顶部修订注记。
 
 ## Problem Statement
 
