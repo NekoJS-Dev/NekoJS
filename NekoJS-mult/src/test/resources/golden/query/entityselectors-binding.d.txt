@@ -1,0 +1,5 @@
+import { $EntitySelectorsJS } from "java:com/tkisor/nekojs/util/selector";
+export {};
+declare global {
+let EntitySelectors: $EntitySelectorsJS;
+}
