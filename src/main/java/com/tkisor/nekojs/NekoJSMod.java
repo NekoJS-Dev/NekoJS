@@ -8,33 +8,20 @@ import com.tkisor.nekojs.client.NekoJSClient;
 import com.tkisor.nekojs.command.NekoJSCommands;
 import com.tkisor.nekojs.core.NeoForgePluginLoader;
 import com.tkisor.nekojs.core.NeoForgeRuntimeBootstrap;
-import com.tkisor.nekojs.core.NekoSandboxFactory;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.NekoCoreContext;
-import com.tkisor.nekojs.core.error.DefaultErrorTracker;
-import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
-import com.tkisor.nekojs.api.event.ScriptErrorReporter;
-import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.core.DefaultScriptEventBridge;
+import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeAssembly;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
-import com.tkisor.nekojs.core.NekoSharedEngine;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.listener.RegistryEventAdapter;
 import com.tkisor.nekojs.platform.NekoIdCompat;
 import com.tkisor.nekojs.platform.NeoForgeIdCompat;
 import com.tkisor.nekojs.platform.NeoForgePlatform;
 import com.tkisor.nekojs.platform.Platform;
-import com.tkisor.nekojs.core.NekoJSBasePluginManager;
-import com.tkisor.nekojs.core.DefaultScriptEventBridge;
-import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
-import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
-import com.tkisor.nekojs.listener.RegistryEventAdapter;
-import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.script.ScriptBootstrap;
-import com.tkisor.nekojs.script.ScriptManager;
-import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.WorkspaceGenerator;
+import com.tkisor.nekojs.wrapper.entity.GoalRegistry;
 import com.tkisor.nekojs.wrapper.event.registry.CapabilityRegistryEventJS;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.bus.api.IEventBus;
@@ -140,42 +127,17 @@ public class NekoJSMod extends NekoJS {
 
     private void initializeScripts() {
         NeoForgePluginLoader.loadAnnotatedPlugins();
-        NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(
-                NekoJSBasePluginManager.getOwnedPlugins(), this.scriptProperties);
-        NekoRuntimeAccess.get().fireInit();
-        scriptEventsRegistrar.bindRuntime(pluginRuntime);
-        ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
-
-        var compilers = ScriptCompilerRegistry.current();
-        SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
-        // 复用全局单例（NekoSecurityWarningHandler 等读取 ClassFilter.INSTANCE），避免双实例状态分裂
-        ClassFilter classFilter = ClassFilter.INSTANCE;
-        var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig);
-        ScriptErrorReporter.set(new ErrorTrackerReporter(errorTracker));
-        NekoCoreContext core = new NekoCoreContext(
-                NekoSharedEngine.get(),
-                sandboxConfig,
-                classFilter,
-                errorTracker
-        );
-        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime);
-        NekoModulePipeline.bindLegacyInstance(new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
-        RUNTIME_ROOT = new NekoRuntimeRoot(
-                core,
-                pluginRuntime,
+        // 共享装配序列（两 loader 同构）：插件 bootstrap → 事件面接线 → 引擎上下文/沙盒工厂/
+        // 模块管线绑定 → root 构造 → manager 创建+discover → STARTUP load → fireInitStartup。
+        // loader 差异（插件发现、接线顺序）留在本类；产物由本 entry 私有持有。
+        RUNTIME_ROOT = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
                 this.scriptProperties,
-                sandboxFactory
-        );
-
-        for (ScriptType type : ScriptType.autoLoadTypes()) {
-            var manager = RUNTIME_ROOT.createScriptManager(type);
-            this.scriptManagers.set(type, manager);
-            manager.discoverScripts();
-        }
-
-        this.scriptManagers.at(ScriptType.STARTUP).loadScripts();
-        NekoRuntimeAccess.get().fireInitStartup();
+                NekoJSBasePluginManager.getOwnedPlugins(),
+                pluginRuntime -> {
+                    this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
+                    ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
+                }).root();
         GoalEvents.postRegister();
     }
 
