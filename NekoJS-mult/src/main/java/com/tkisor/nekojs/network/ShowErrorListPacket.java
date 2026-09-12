@@ -12,6 +12,9 @@ import java.util.List;
 
 public record ShowErrorListPacket(List<ErrorSummaryDTO> errors, boolean openIfMissing) implements CustomPacketPayload {
 
+    /** Wire strings share one explicit ceiling so long paths/summaries cannot hit UTF's implicit default limit. */
+    private static final int STRING_MAX_LENGTH = 262_144;
+
     public ShowErrorListPacket(List<ErrorSummaryDTO> errors) {
         this(errors, true);
     }
@@ -25,23 +28,23 @@ public record ShowErrorListPacket(List<ErrorSummaryDTO> errors, boolean openIfMi
 
     public ShowErrorListPacket(FriendlyByteBuf buf) {
         this(buf.readList(b -> new ErrorSummaryDTO(
-                b.readUtf(),
-                b.readUtf(),
+                b.readUtf(STRING_MAX_LENGTH),
+                b.readUtf(STRING_MAX_LENGTH),
                 b.readInt(),
                 b.readInt(),
-                b.readUtf(),
-                b.readUtf(262144)
+                b.readUtf(STRING_MAX_LENGTH),
+                b.readUtf(STRING_MAX_LENGTH)
         )), buf.readBoolean());
     }
 
     public void write(FriendlyByteBuf buf) {
         buf.writeCollection(this.errors, (b, e) -> {
-            b.writeUtf(e.id());
-            b.writeUtf(e.path());
+            b.writeUtf(e.id(), STRING_MAX_LENGTH);
+            b.writeUtf(e.path(), STRING_MAX_LENGTH);
             b.writeInt(e.line());
             b.writeInt(e.count());
-            b.writeUtf(e.message());
-            b.writeUtf(e.fullDetails(), 262144);
+            b.writeUtf(e.message(), STRING_MAX_LENGTH);
+            b.writeUtf(e.fullDetails(), STRING_MAX_LENGTH);
         });
         buf.writeBoolean(this.openIfMissing);
     }

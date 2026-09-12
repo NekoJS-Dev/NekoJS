@@ -23,7 +23,6 @@ import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.platform.NekoIdCompat;
 import com.tkisor.nekojs.platform.NeoForgeIdCompat;
-import com.tkisor.nekojs.network.ScriptSyncService;
 import com.tkisor.nekojs.platform.NeoForgePlatform;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
@@ -168,7 +167,6 @@ public class NekoJSMod extends NekoJS {
                 this.scriptProperties,
                 sandboxFactory
         );
-        ScriptSyncService.bindErrorTracker(core.errorTracker());
 
         for (ScriptType type : ScriptType.autoLoadTypes()) {
             var manager = RUNTIME_ROOT.createScriptManager(type);
