@@ -113,11 +113,6 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
-      - name: Drop local org.gradle.java.home pin
-        # gradle.properties 里的 org.gradle.java.home 是本机 Windows 路径钉版（PATH 上是
-        # Zulu 8 的机器用）；CI 由 setup-java 提供 JDK，留着会在 linux runner 上启动失败。
-        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
-
       - name: Install Probe typecheck dependencies
         run: npm ci
 
@@ -241,9 +236,6 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-
-      - name: Drop local org.gradle.java.home pin
-        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
       - name: Download Fabric smoke artifacts
         uses: actions/download-artifact@v4
@@ -390,9 +382,6 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-
-      - name: Drop local org.gradle.java.home pin
-        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
       - name: Run common checks
         # 主 job 的 Gradle 守护进程跑在 JDK 25 上；这里用 JDK 21 跑同一组检查（工具链同为 21），
@@ -610,10 +599,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Drop local org.gradle.java.home pin
-        shell: bash
-        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
-
       - name: Run common checks
         shell: bash
         run: ./gradlew :common:check --console=plain
@@ -656,9 +641,6 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-
-      - name: Drop local org.gradle.java.home pin
-        run: sed -i '/^org.gradle.java.home=/d' gradle.properties
 
       - name: Run game test server
         run: ./gradlew :26.1.2:runGameTestServer --console=plain
