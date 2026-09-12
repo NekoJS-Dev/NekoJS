@@ -226,7 +226,9 @@ public final class JsApiSurfaceResolver {
             NormativeApiContract normative = contract.contract();
             for (NormativeApiContract.ContractCapability cap : normative.capabilities()) {
                 // 契约能力条件（loader/版本/运行上下文）在此真实接线：EnvironmentScope 交给
-                // CapabilityResolver 做激活裁定（匹配→激活；不匹配→显式 unavailable），
+                // CapabilityResolver 做激活裁定：契约 conditions（environmentScope/status）与
+                // provider scope 都不匹配环境时 → 显式 unavailable（DECLARED_UNAVAILABLE/UNAVAILABLE），
+                // 见 CapabilityResolver.isEligible——契约条件是权威 gate，provider scope 只能更窄。
                 // 声明的 supported/partial/unavailable 状态随定义传递。
                 definitions.add(new CapabilityDefinition(
                         cap.id(),

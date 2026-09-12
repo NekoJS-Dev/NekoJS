@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.api.ApiSurfaceTestSupport;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.api.surface.ApiManifest;
@@ -96,7 +97,7 @@ class ManagedSurfaceEndToEndChainTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new FixturePlatform(gameDir), CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
-                serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
         ApiManifest manifest = ApiManifestGenerator.generate(
                 ApiRuntimeVersionReader.read(), "test", "1.21.1",
                 registry.environmentSnapshot().surfaceSnapshot());
@@ -165,16 +166,6 @@ class ManagedSurfaceEndToEndChainTest {
         public String chainMethod() { return "chain"; }
     }
 
-    private static EnvironmentKey serverEnvironment() {
-        return new EnvironmentKey(
-                ScriptTypeId.SERVER,
-                RuntimeDist.DEDICATED_SERVER,
-                "test",
-                "0.0.0",
-                LoaderVersion.parse("0.0.0"),
-                "1.21.1",
-                Map.of());
-    }
 
     private static final class FixturePlatform implements IPlatform {
         private final Path gameDir;

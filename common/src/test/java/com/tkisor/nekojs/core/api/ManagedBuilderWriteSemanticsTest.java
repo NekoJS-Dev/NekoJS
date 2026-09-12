@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.api.ApiSurfaceTestSupport;
 import com.tkisor.nekojs.api.data.NbtEntry;
 import com.tkisor.nekojs.api.data.NbtValue;
 import com.tkisor.nekojs.api.surface.ApiManifest;
@@ -42,6 +43,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ManagedBuilderWriteSemanticsTest {
 
     private static final URI CODE_SOURCE = URI.create("file:///test-nekojs-builder.jar");
+
+    /** AC6 runtime fixture：真实 Graal 执行里，受管 Builder 的脚本端 property assignment
+     *  写的是 **public 字段**（现役形状，与 {@code ItemBuilder.maxStackSize} 一致——
+     *  `b.maxStackSize = 16` 即宿主字段写）。fixture 把这条路径钉死：Graal 升级若改变
+     *  字段写行为，这里会先红。
+     *
+     *  <p>实测（Graal 25.x，2026-09-12）：private 字段 + 裸 bean setter 的形状，
+     *  {@code p.maxStackSize = 16} **静默不生效**（不抛错、不触 setter）——这就是
+     *  "Graal 天然 Bean 行为不作为承诺"的实证。setter 等价分发由受管 Builder 机制
+     *  （票 15/39，ADR-0005 修订）实现，不依赖该行为。</p>
+     */
+    @Test
+    void propertyAssignmentWritesPublicFieldThroughGraalRuntime() {
+        try (graal.graalvm.polyglot.Context context = graal.graalvm.polyglot.Context.newBuilder("js")
+                .allowAllAccess(true).build()) {
+            FieldSemanticsBuilder viaScript = new FieldSemanticsBuilder();
+            FieldSemanticsBuilder viaJava = new FieldSemanticsBuilder();
+            context.getBindings("js").putMember("b", viaScript);
+
+            context.eval("js", "b.maxStackSize = 16; b.rarity = 'rare';");
+            viaJava.maxStackSize = 16;
+            viaJava.rarity = "rare";
+
+            assertEquals(viaJava.maxStackSize, viaScript.maxStackSize,
+                    "script property write must hit the public field exactly like a Java write");
+            assertEquals(viaJava.rarity, viaScript.rarity,
+                    "script property write must hit the public field exactly like a Java write");
+        }
+    }
+
+    /** 代表性受管 Builder 形状（public field，与 ItemBuilder 同构；只有字段，无 setter）。 */
+    public static final class FieldSemanticsBuilder {
+        public int maxStackSize = 64;
+        public String rarity = "common";
+    }
 
     @Test
     void explicitSetterAndTypedPutNormalizeThroughOnePath() {
@@ -104,7 +140,7 @@ class ManagedBuilderWriteSemanticsTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of());
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
 
         ApiManifest manifest = ApiManifestGenerator.generate(
                 ApiRuntimeVersionReader.read(), "test", "1.21.1",
@@ -123,17 +159,6 @@ class ManagedBuilderWriteSemanticsTest {
     private static Set<String> contractIds() {
         return CoreManagedApiBootstrap.buildContract(CODE_SOURCE).contract().symbols().stream()
                 .map(s -> s.id().value()).collect(java.util.stream.Collectors.toSet());
-    }
-
-    private static EnvironmentKey environment() {
-        return new EnvironmentKey(
-                ScriptTypeId.SERVER,
-                RuntimeDist.DEDICATED_SERVER,
-                "test",
-                "0.0.0",
-                LoaderVersion.parse("0.0.0"),
-                "1.21.1",
-                Map.of());
     }
 
     private static final class EmptyPlatform implements IPlatform {

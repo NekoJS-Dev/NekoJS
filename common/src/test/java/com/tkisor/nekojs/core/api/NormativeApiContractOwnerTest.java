@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
+import com.tkisor.nekojs.core.api.ApiSurfaceTestSupport;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
@@ -122,7 +123,7 @@ class NormativeApiContractOwnerTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), TEST_CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of());
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
 
         Set<String> contractIds = core.contracts().requirePortable("nekojs-core")
                 .contract().symbols().stream().map(s -> s.id().value()).collect(java.util.stream.Collectors.toSet());
@@ -139,7 +140,7 @@ class NormativeApiContractOwnerTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), TEST_CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of());
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
 
         ApiRuntimeVersions versions = ApiRuntimeVersionReader.read();
         ApiManifest manifest = ApiManifestGenerator.generate(
@@ -173,16 +174,6 @@ class NormativeApiContractOwnerTest {
     }
 
     /** 与 {@code CoreManagedApiBootstrapTest} 一致的最小测试环境。 */
-    private static EnvironmentKey environment() {
-        return new EnvironmentKey(
-                ScriptTypeId.SERVER,
-                RuntimeDist.DEDICATED_SERVER,
-                "test",
-                "0.0.0",
-                LoaderVersion.parse("0.0.0"),
-                "1.21.1",
-                Map.of());
-    }
 
     private static final class EmptyPlatform implements IPlatform {
         @Override public boolean isClient() { return false; }

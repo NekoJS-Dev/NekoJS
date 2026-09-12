@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.capability.CapabilityDefinition;
+import com.tkisor.nekojs.api.surface.ApiResolutionException;
 import com.tkisor.nekojs.api.capability.CapabilityImplementationMode;
 import com.tkisor.nekojs.api.capability.CapabilityProviderContribution;
 import com.tkisor.nekojs.api.capability.CapabilityResolution;
@@ -30,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -137,6 +139,58 @@ class ManagedSurfaceCapabilityConditionsTest {
         Set<String> active = registry.environmentSnapshot().surfaceSnapshot().activeCapabilityNames();
         assertEquals(Set.of("coreAlways", "neoforgeOnly"), active,
                 "declared conditions matching the environment must activate the capability");
+    }
+
+    @Test
+    void contractConditionsGateEvenWhenProviderDeclaresNoScope() {
+        // review 发现的负样本：契约声明 neoforge-only，但 provider 自己不声明 scope——
+        // 契约条件是权威 gate，fabric 上必须 UNAVAILABLE（不能因 provider 无 scope 而激活）。
+        VerifiedContractSet contracts = contractWith(
+                new NormativeApiContract.ContractCapability("neoforgeOnly", ">=1.0.0",
+                        CapabilityStatus.SUPPORTED, loaderScope("neoforge"), "neoforge only"));
+        ApiContributionRegistry providers = providerRegistry(contracts);
+        registerProvider(providers, "neoforgeOnly", null, "impl-nf");
+
+        CapabilityResolution onFabric = resolveRaw(contracts, providers, "fabric", "1.0.0");
+        assertTrue(activeNames(onFabric).isEmpty(), "contract conditions must gate activation");
+        assertEquals("UNAVAILABLE", unavailableReason(onFabric, "neoforgeOnly"),
+                "mismatch must be an explicit UNAVAILABLE, not a silent no-op");
+
+        CapabilityResolution onNeoforge = resolveRaw(contracts, providers, "neoforge", "1.0.0");
+        assertEquals(Set.of("neoforgeOnly"), activeNames(onNeoforge),
+                "matching environment must activate");
+    }
+
+    @Test
+    void contractConditionsAuthoritativeWhenProviderScopeIsWider() {
+        // provider 声明了更宽的 scope（fabric+neoforge），契约只允许 neoforge：
+        // 契约条件仍是权威 gate（provider scope 只能比契约更窄，不能替契约放宽）。
+        VerifiedContractSet contracts = contractWith(
+                new NormativeApiContract.ContractCapability("neoforgeOnly", ">=1.0.0",
+                        CapabilityStatus.SUPPORTED, loaderScope("neoforge"), "neoforge only"));
+        ApiContributionRegistry providers = providerRegistry(contracts);
+        registerProvider(providers, "neoforgeOnly", loaderScope("fabric", "neoforge"), "impl-nf");
+
+        // provider 比 contract 更宽 → Step 4 包含校验直接 fail-fast（SCOPE_NOT_CONTAINED），
+        // 不会走到激活裁定——两条防线（包含校验 + 契约条件 gate）各有分工。
+        ApiContributionRegistry finalProviders = providers;
+        ApiResolutionException rejected = assertThrows(ApiResolutionException.class,
+                () -> resolveRaw(contracts, finalProviders, "fabric", "1.0.0"));
+        assertEquals("SCOPE_NOT_CONTAINED", rejected.code());
+    }
+
+    private static Set<String> activeNames(CapabilityResolution resolution) {
+        Set<String> names = new java.util.HashSet<>();
+        resolution.active().forEach(c -> names.add(c.name()));
+        return names;
+    }
+
+    private static String unavailableReason(CapabilityResolution resolution, String capability) {
+        return resolution.unavailable().stream()
+                .filter(u -> u.name().equals(capability))
+                .map(CapabilityResolution.UnavailableCapability::reason)
+                .findFirst()
+                .orElse(null);
     }
 
     @Test

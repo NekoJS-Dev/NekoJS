@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.api;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.api.ApiSurfaceTestSupport;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.surface.ApiEnvironmentSnapshot;
 import com.tkisor.nekojs.api.surface.ApiManifest;
@@ -143,7 +144,7 @@ class ManagedSurfaceDerivationDeterminismTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), TEST_CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of());
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
         return registry.environmentSnapshot();
     }
 
@@ -151,7 +152,7 @@ class ManagedSurfaceDerivationDeterminismTest {
         CoreManagedApiBootstrap.CoreManagedApi core = CoreManagedApiBootstrap.load(
                 new EmptyPlatform(), TEST_CODE_SOURCE);
         FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
-                environment(), core.contracts(), List.of(core.contributions()), List.of());
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(), List.of(core.contributions()), List.of());
         ApiRuntimeVersions versions = ApiRuntimeVersionReader.read();
         ApiManifest manifest = ApiManifestGenerator.generate(
                 versions, "test", "0.0.0", registry.environmentSnapshot().surfaceSnapshot());
@@ -196,16 +197,6 @@ class ManagedSurfaceDerivationDeterminismTest {
         return names;
     }
 
-    private static EnvironmentKey environment() {
-        return new EnvironmentKey(
-                ScriptTypeId.SERVER,
-                RuntimeDist.DEDICATED_SERVER,
-                "test",
-                "0.0.0",
-                LoaderVersion.parse("0.0.0"),
-                "1.21.1",
-                Map.of());
-    }
 
     private static final class EmptyPlatform implements IPlatform {
         @Override public boolean isClient() { return false; }
