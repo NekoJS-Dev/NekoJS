@@ -2,7 +2,7 @@
 
 > 生成日期：2026-09-12
 >
-> 状态：**实测（measured）快照**。与 2026-09-08 的[手写静态清单](node-source-artifact-manifest.md)逐节对齐，便于 diff。本文件全部事实来自 2026-09-12 在隔离 worktree（`NekoJS-w0-baseline`，revision `8301dc14` = `9f702195` + W0 commit）实际执行的 Gradle 构建、Gradle 报告任务（`projects`/`javaToolchains`/`dependencies`）与 jar 内容解析；不抄写文档。原始日志与脚本输出见 `w0-config-archive-2026-09-12/logs/`。
+> 状态：**实测（measured）快照**。与 2026-09-08 的[手写静态清单](node-source-artifact-manifest.md)逐节对齐，便于 diff。事实来源分两段：2026-09-12 在隔离 worktree（`NekoJS-w0-baseline`，revision `8301dc14` = `9f702195` + W0 commit）实际执行的 Gradle 构建、Gradle 报告任务（`projects`/`javaToolchains`/`dependencies`）与 jar 内容解析（NeoForge 三节点与 `:common` 全部事实），以及同日在 revision `14de611f`（= `8301dc14` + fabric convention 修复）补采的 fabric 两节点事实——两 revision 间 NeoForge 三 jar SHA-256 逐字节一致（见 §13 与修复验证目录）。全部实测，不抄写文档。原始日志与脚本输出见 `w0-config-archive-2026-09-12/logs/` 与 `2026-09-12-fabric-build-fix/logs/`。
 >
 > 执行环境：Windows 10.0.26200 x64，daemon JVM = Oracle JDK 25.0.2（用户级 `org.gradle.java.home`，W0 修复后），Gradle wrapper 9.6.0，Stonecutter 0.9.7，Fabric Loom 1.17.20，foojay resolver 1.0.0。基线构建结果：**26.1.2-fabric:processResources 冷构建确定性失败**（见 §11，属基线事实而非本清单缺陷）。
 >
@@ -19,7 +19,7 @@
 | `26.2.0-fabric` | Fabric | fabric-loader:0.19.3 | 25 | fabric-api:**0.159.0+26.2**；graal-1504336:8762962**->8762963**（重定向生效）；icu4j:**78.3**；night-config 3.8.3 |
 
 - 解析版本来源：`./gradlew :<node>:dependencies --configuration runtimeClasspath`（日志 `deps-<node>-runtimeClasspath.log`）。
-- **Graal**（2026-09-12 更正）：NeoForge 三节点 runtimeClasspath 解析为 `curse.maven:graal-1504336:8762962`；**fabric 两节点解析为 `curse.maven:graal-1504336:8762962 -> 8762963`**——fabric convention 的 `useVersion("8762963")` 重定向（`nekojs.fabric-node.gradle.kts:59-65`）在 fabric 节点 runtimeClasspath 上**生效**（依赖元数据里的 8762962 是 requested 版本，箭头后是 resolutionStrategy 的最终解析结果；当日基线"未生效"系误读，见 `2026-09-12-fabric-build-fix/logs/win-fix-deps-*-fabric-runtimeClasspath.log`）。fabric 最终 jar **不携带** Graal 类（装配时显式过滤 graal-1504336，jar 内 `org/graalvm/**` 与 `com/oracle/truffle/**` 均 0 条）；dev run 侧 Graal 来自上述 classpath 依赖，生产环境由运行方提供，`fabric.mod.json` depends 未声明 graal（是否显式声明归 31/32 评估）。
+- **Graal**（2026-09-12 更正）：NeoForge 三节点 runtimeClasspath 解析为 `curse.maven:graal-1504336:8762962`；**fabric 两节点解析为 `curse.maven:graal-1504336:8762962 -> 8762963`**——fabric convention 的 `useVersion("8762963")` 重定向（`nekojs.fabric-node.gradle.kts:59-65`）在 fabric 节点 runtimeClasspath 上**生效**（依赖元数据里的 8762962 是 requested 版本，箭头后是 resolutionStrategy 的最终解析结果；当日基线"未生效"系误读，见 `2026-09-12-fabric-build-fix/logs/win-fix-deps-*-fabric-runtimeClasspath.log`）。**实际 Graal 版本：两个 curse 文件 id 同为 GraalMC 25.1.3.7 的不同 loader 构建（NeoForge=8762962、fabric=8762963，映射见 `gradle/libs.versions.toml` graal 注释），五节点一致**。fabric 最终 jar **不携带** Graal 类（装配时显式过滤 graal-1504336，jar 内 `org/graalvm/**` 与 `com/oracle/truffle/**` 均 0 条）；dev run 侧 Graal 来自上述 classpath 依赖，生产环境由运行方提供，`fabric.mod.json` depends 未声明 graal（是否显式声明归 31/32 评估）。
 - **JVM facts**：daemon JVM = `C:\Program Files\Java\jdk-25.0.2`（来源：用户级 `~/.gradle/gradle.properties` 的 `org.gradle.java.home`，`--version` 输出 `Daemon JVM: ... (from org.gradle.java.home)`）；wrapper launcher JVM = Zulu 8（1.8.0_502，仅 wrapper 客户端）。`javaToolchains` 检测到 6 个 JVM：Zulu 8（registry）、Temurin 8（auto-provisioned）、Temurin 17（auto-provisioned）、Oracle JDK 21.0.10（registry）、Zulu 25（registry）、Oracle JDK 25.0.2（registry + Current JVM）。**本机安装的 `C:/Program Files/Java/graalvm-jdk-25` 未被 toolchain 自动检测发现**。1.21.1 的 deps.java=21 对应唯一 registry 检测的 21 = Oracle jdk-21.0.10（按检测列表推断，未逐任务打印 toolchain 路径）。
 
 ## 1. 五节点与节点本地文件计数（实测，与手写版一致）
