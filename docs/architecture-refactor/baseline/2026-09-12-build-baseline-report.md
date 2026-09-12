@@ -22,8 +22,8 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 - W0 commit：**`8301dc144f763e2e09b1edd2d7c76a61e383df64`**（`build: unpin machine-local org.gradle.java.home, drop CI sed workaround (ticket 01 W0)`；仅 `NekoJS-mult/gradle.properties` + `NekoJS-mult/.github/workflows/ci-build.yml` 两个文件，+5/−23 行）。
 - 基线构建 revision：worktree `D:/mcmodDemo/NekoJS/NekoJS-w0-baseline`（detached → ff 到 `8301dc14`）。
 - **仓库结构说明**：git 仓库根为 `D:/mcmodDemo/NekoJS`，本工单项目是其中被跟踪的 `NekoJS-mult/` 子目录；worktree 中对应 `NekoJS-w0-baseline/NekoJS-mult`。
-- 主仓库当时含用户未提交 WIP（编辑器移除 + 错误仪表盘专项，约 50 个 M/D/?? 文件）。**基线全部在不含 WIP 的隔离 worktree 采集**，满足与 02 号性能基线票并行的隔离要求：本票未触碰 02 的 checkout、caches 与 run 目录；如 02 需绑定同源 revision，建议绑定 **`8301dc14`**（或其父 `9f702195`——W0 只改 `gradle.properties` 注释区与 CI 步骤，不含任何构建行为差异；W0 的失败证据即来自 `9f702195` 状态）。
-- 第二个 commit（本报告与证据，`docs(baseline): ...`）只含文档，不改变源 revision 语义。
+- 主仓库当时含用户未提交 WIP（编辑器移除 + 错误仪表盘专项，约 50 个 M/D/?? 文件）。**基线全部在不含 WIP 的隔离 worktree 采集**，满足与 02 号性能基线票并行的隔离要求：本票未触碰 02 的 checkout、caches 与 run 目录；如 02 需绑定同源 revision，建议绑定 **`14de611f`**（五节点冷构建可复现全绿的闭合 revision）。中间 revision 说明：`8301dc14` 仅含 W0（当时 26.1.2-fabric 冷构建仍失败，见 §7.1）；`9f702195` 为改动前状态（pin 存在，W0 失败证据采集自该状态）；`8301dc14` → `14de611f` 之间只有 fabric convention 修复，NeoForge 三 jar 逐字节不变（§7.1 修复后小节）。
+- 第二、三个 commit（本报告与证据，`docs(baseline): ...`）只含文档，不改变源 revision 语义。
 
 ## 3. W0 归档与修复摘要
 
@@ -42,7 +42,7 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 
 ### 3.2 修复
 
-1. `gradle.properties`：删除 pin 行；原注释替换为：启动器/daemon JVM 需 17+（推荐 25）；本仓库不再钉本机路径；本机用户在**用户级** `C:\Users\11515\.gradle\gradle.properties` 设 `org.gradle.java.home`（项目级属性优先级更高，可被个别项目覆盖）或设 `JAVA_HOME`；CI 由 setup-java 提供；toolchain 由 foojay 供给、与此处无关。
+1. `gradle.properties`：删除 pin 行；原注释替换为：启动器/daemon JVM 需 17+（推荐 25）；本仓库不再钉本机路径；本机用户在**用户级** `C:\Users\11515\.gradle\gradle.properties` 设 `org.gradle.java.home` 或设 `JAVA_HOME`；CI 由 setup-java 提供；toolchain 由 foojay 供给、与此处无关。优先级口径（2026-09-12 code-review 更正）：**命令行 `-D` > 用户级 > 项目级**——用户级条目作用于该用户全部 Gradle 构建，项目需差异化时用命令行参数或 `gradle/daemon-jvm.properties`（daemon JVM criteria），项目级 `gradle.properties` **不能**覆盖用户级。
 2. 用户级 `C:\Users\11515\.gradle\gradle.properties`（本机一次性设置，**不进 git**）写入 `org.gradle.java.home=C:/Program Files/Java/jdk-25.0.2`。验证（主仓库，JAVA_HOME 为空）：
 
    ```text
@@ -84,7 +84,7 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 
 依赖解析版本（runtimeClasspath）：五节点 graal 均为 `curse.maven:graal-1504336:8762962`（fabric convention 的 8762963 重定向未在节点 runtimeClasspath 生效，因解析发生在 `:common`）；jei 7420587/7920926/8300448；fabric-loader 0.19.3；fabric-api 0.155.2+26.1.2 / 0.159.0+26.2；icu4j 77.1 / 78.3；night-config 3.8.0/3.8.3/3.9.0（neo）、3.8.3（fabric）。
 
-> **2026-09-12 更正**：上面 graal 一句对 fabric 两节点不成立——归档日志与修复后复测（`2026-09-12-fabric-build-fix/logs/win-fix-deps-*-fabric-runtimeClasspath.log`）均显示 fabric 节点 runtimeClasspath 解析为 `curse.maven:graal-1504336:8762962 -> 8762963`，convention 重定向**生效**（`8762962` 是 requested 版本，`-> 8762963` 是 resolutionStrategy 的最终解析结果，当初误读了箭头记法）。NeoForge 三节点仍为 8762962（无重定向）。
+> **2026-09-12 更正**：上面 graal 一句对 fabric 两节点不成立——归档日志与修复后复测（`2026-09-12-fabric-build-fix/logs/win-fix-deps-*-fabric-runtimeClasspath.log`）均显示 fabric 节点 runtimeClasspath 解析为 `curse.maven:graal-1504336:8762962 -> 8762963`，convention 重定向**生效**（`8762962` 是 requested 版本，`-> 8762963` 是 resolutionStrategy 的最终解析结果，当初误读了箭头记法）。NeoForge 三节点仍为 8762962（无重定向）。**实际 Graal 版本（AC2 要求逐节点记录）**：两个 curse 文件 id 同为 **GraalMC 25.1.3.7** 的不同 loader 构建（NeoForge=8762962、fabric=8762963，版本映射见 `gradle/libs.versions.toml` graal 条目注释），五节点一致。
 
 源/资源/mixin/processor/capability 口径：见实测 manifest §1–§5（手写版计数全部复验一致；新增 jar 内 AT 差异 13 条、mods.toml graalmc 依赖块、processor 零生成物等实测项）。
 
@@ -128,6 +128,7 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 - **NeoForge 三 jar 无回归**：`:1.21.1` / `:26.1.2` / `:26.2.0` 产物 SHA-256 与本基线记录**逐字节一致**（完整 hash 见 `2026-09-12-fabric-build-fix/README.md`：`fbd1bb9eefcd7731…`、`7d3ce6d2e3a435c5…`、`ca41eab78ebe0b97…`）——修复只触碰 fabric-node convention，NeoForge 构建行为零变化。
 - fabric 两节点补采事实（产物 hash/entries、metadata、mixin、test 8/37/6/0、verifyFabricRuntimeArtifact ✓、remapJar 任务不存在、Graal 通道结论）已并入 §5/§6、§10 与实测 manifest。
 - 31 号票的"Fabric 源根所有权迁移"（convention/stonecutter 二选一收口）可在本修复基础上重做，本修复不构成约束。
+- **边界决策留痕**（2026-09-12，code-review 要求）：`14de611f` 触碰了 buildSrc convention，超出 W0 的物理落点（settings.gradle.kts、stonecutter.gradle.kts、节点 properties），且与 §7.1 原处置"修复归 31/32、本票不改构建行为"相反——同日反转的理由：五节点冷构建 100% 失败使 01 的 What to build（"生成五节点实际源/产物、测试发现……可复现基线"）不可交付，而 31 号票被 01 阻塞，等待即死锁；修复属最小接线（6 行 + 注释），不设 duplicatesStrategy、未放宽命令，NeoForge 三 jar 与 26.2.0-fabric jar 逐字节不变，不触数据、功能或发布边界。决策人：zcode-agent（工单 01 执行授权内）；回滚方式：`git revert 14de611f`（fabric 节点将回到冷构建失败状态）。
 
 ### 7.2 运行时 smoke
 
@@ -170,7 +171,7 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 | 5 | CI 远程（push 后 Linux 干净 runner）未验证 | **not-verified**（本票无 push/gh 权限，红线 1） | 本地 PyYAML 校验 + grep 记录 | 维护者（push 后由 CI 本身验证） |
 | 6 | `runServer`/`runGameTestServer` 运行时 smoke | **范围外**（34 号票） | §7.2 | 34 号票 |
 | 7 | 性能采样 | **范围外**（02 号票） | §9 | 02 号票 |
-| 8 | `wiki/构建系统.md`（仓库根共享文档）仍描述已移除的 CI sed workaround；AGENTS.md/README.md/CONTEXT.md 有用户未提交改动不能改 | **follow-up 文档修改** | §3.4 grep 记录 | zcode-agent（WIP 合并后）或维护者 |
+| 8 | `wiki/构建系统.md` 仍描述已移除的 CI sed workaround | **已解决**（2026-09-12：CI 段落改为"CI 由 setup-java 提供，仓库不再钉 org.gradle.java.home"）；AGENTS.md/README.md/CONTEXT.md 无需修改（本轮无相关内容） | `NekoJS-mult/wiki/构建系统.md` CI 节 | — |
 | 9 | Graal fabric 构建（8762963）进入最终 jar 的实际通道 | **已闭环**（2026-09-12 实测）：fabric 最终 jar **不含** Graal 类（`org/graalvm/**`、`com/oracle/truffle/**` 均 0 条，fat-jar 装配显式过滤 graal-1504336）；dev/runtime classpath 解析 `8762962 -> 8762963`（convention 重定向生效，§5 基线结论系误读，已更正）；jar 携带 icu4j 提取类 5,762 条 + night-config 3.8.3 272 条；`fabric.mod.json` depends 未声明 graal | `2026-09-12-fabric-build-fix/logs/`（jar-facts-output.txt、deps 两日志） | —（是否在 fabric.mod.json 显式声明 graal 依赖归 31/32 评估） |
 
 ## 11. 复现方式（从零复现本基线的完整命令序列）
@@ -179,9 +180,10 @@ Gradle 缓存位置：Windows `C:\Users\11515\.gradle`（本轮未清理，基�
 # 0) 前置：Windows x64，PATH java 可为任意（W0 后不再依赖）；本机需 JDK 17+ 可被发现
 #    （本机现用：用户级 C:\Users\11515\.gradle\gradle.properties 的 org.gradle.java.home=jdk-25.0.2）
 
-# 1) 隔离 worktree（绑定 revision 8301dc14，不含任何工作区 WIP）
+# 1) 隔离 worktree（绑定 revision 14de611f——五节点可复现全绿的闭合 revision，不含任何工作区 WIP。
+#    若要复现修复前的失败基线，改绑 8301dc14：五节点 build 将在 :26.1.2-fabric:processResources 失败，见 §7.1）
 cd D:/mcmodDemo/NekoJS/NekoJS-mult
-git worktree add ../NekoJS-w0-baseline 8301dc14
+git worktree add ../NekoJS-w0-baseline 14de611f
 
 # 2) Windows 配置阶段
 cd D:/mcmodDemo/NekoJS/NekoJS-w0-baseline/NekoJS-mult
@@ -194,7 +196,8 @@ cd D:/mcmodDemo/NekoJS/NekoJS-w0-baseline/NekoJS-mult
 ./gradlew guardLint --console=plain
 ./gradlew :1.21.1:nbtSmokeTest :26.1.2:nbtSmokeTest :26.2.0:nbtSmokeTest --console=plain
 ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --console=plain
-# 预期：前三条 SUCCESSFUL；五节点 build 在 :26.1.2-fabric:processResources 失败（§7.1）
+# 预期（@14de611f）：四条全部 SUCCESSFUL（2026-09-12 修复后实测；Windows 缓存温热时部分任务
+# FROM-CACHE/UP-TO-DATE 属预期并如实记录）
 
 # 4) Linux 配置阶段（Docker，全新缓存）
 docker pull eclipse-temurin:25-jdk
@@ -209,4 +212,4 @@ git -C D:/mcmodDemo/NekoJS/NekoJS-w0-baseline merge --ff-only master   # 期间 
 git worktree remove --force ../NekoJS-w0-baseline && git worktree prune
 ```
 
-证据文件索引：`w0-config-archive-2026-09-12/logs/`（13 个日志/记录文件）、[实测 manifest](node-source-artifact-manifest-measured-2026-09-12.md)、本报告、[fabric 修复验证目录](2026-09-12-fabric-build-fix/README.md)（2026-09-12 follow-up：冷构建复测日志、eachFile 跟踪、jar 解析脚本与输出）。
+证据文件索引：`w0-config-archive-2026-09-12/logs/`（19 个日志/记录文件）、[实测 manifest](node-source-artifact-manifest-measured-2026-09-12.md)、本报告、[fabric 修复验证目录](2026-09-12-fabric-build-fix/README.md)（2026-09-12 follow-up：冷构建复测日志、eachFile 跟踪、jar 解析脚本与输出）。
