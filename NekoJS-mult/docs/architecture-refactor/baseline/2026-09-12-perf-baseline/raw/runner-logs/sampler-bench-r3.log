@@ -1,0 +1,8 @@
+Copy-Item : 无法将容器复制到现有叶项。
+所在位置 D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\bench\perf\sample.ps1:94 字符: 5
++     Copy-Item -Path (Join-Path $FixtureDir '*') -Destination $nekoDir ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (D:\mcmodDemo\Ne...\server_scripts:String) 
+[Copy-Item]，PSArgumentExcept    ion
+    + FullyQualifiedErrorId : CopyContainerItemToLeafError,Microsoft.PowerShell.Commands.CopyItemCommand
+ 

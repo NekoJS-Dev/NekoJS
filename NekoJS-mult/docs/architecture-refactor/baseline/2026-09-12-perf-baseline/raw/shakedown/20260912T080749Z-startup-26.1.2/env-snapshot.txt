@@ -1,0 +1,6 @@
+﻿utc: 2026-09-12T08:07:49.5943042Z
+git rev: 3400e97e
+gradle user home: D:\mcmodDemo\NekoJS\.gradle-perf02
+cpu: 12th Gen Intel(R) Core(TM) i7-12700H load=12%
+mem free GB: 40.4
+java processes: 3

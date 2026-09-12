@@ -1,0 +1,19 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] reload-session started pid=25588
+[session] reload-session Done(0.284) wall=12860ms
+[reload] #1 marker=161 ms rcon=159 ms resp=NekoJS server scripts reloaded. (1 error(s) remain)
+
+[reload] #2 marker=121 ms rcon=120 ms resp=NekoJS server scripts reloaded. (1 error(s) remain)
+
+[reload] #3 marker=90 ms rcon=89 ms resp=NekoJS server scripts reloaded. (1 error(s) remain)
+
+[reload] #4 marker=205 ms rcon=204 ms resp=NekoJS server scripts reloaded. (1 error(s) remain)
+
+[reload] #5 marker=111 ms rcon=109 ms resp=NekoJS server scripts reloaded. (1 error(s) remain)
+
+[sample] "tag":"reload-session","wall_total_ms":89501,"ts_utc":"2026-09-12T10:23:04.3392946Z","rcon_response":"NekoJS server scripts reloaded. (1 error(s) remain) ","pid":25588,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":159,"index":1,"kind":"formal","marker_ms":161,"marker_line":"","stop_channel":"rcon","done_s":"0.284","wall_done_ms":12860,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":89501,"ts_utc":"2026-09-12T10:23:04.3543646Z","rcon_response":"NekoJS server scripts reloaded. (1 error(s) remain) ","pid":25588,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":120,"index":2,"kind":"formal","marker_ms":121,"marker_line":"","stop_channel":"rcon","done_s":"0.284","wall_done_ms":12860,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":89501,"ts_utc":"2026-09-12T10:23:04.3670949Z","rcon_response":"NekoJS server scripts reloaded. (1 error(s) remain) ","pid":25588,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":89,"index":3,"kind":"formal","marker_ms":90,"marker_line":"","stop_channel":"rcon","done_s":"0.284","wall_done_ms":12860,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":89501,"ts_utc":"2026-09-12T10:23:04.3680960Z","rcon_response":"NekoJS server scripts reloaded. (1 error(s) remain) ","pid":25588,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":204,"index":4,"kind":"formal","marker_ms":205,"marker_line":"","stop_channel":"rcon","done_s":"0.284","wall_done_ms":12860,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":89501,"ts_utc":"2026-09-12T10:23:04.3690957Z","rcon_response":"NekoJS server scripts reloaded. (1 error(s) remain) ","pid":25588,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":109,"index":5,"kind":"formal","marker_ms":111,"marker_line":"","stop_channel":"rcon","done_s":"0.284","wall_done_ms":12860,"node":"26.1.2","forced_kill":false,"killed":false
+[done] reload sampling -> D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\bench\perf\out\20260912T102133Z-reload-26.1.2

@@ -1,0 +1,29 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-1-warmup started pid=5004
+[session] startup-1-warmup Done(0.353) wall=14221ms
+[sample] "pid":5004,"ts_utc":"2026-09-12T10:26:28.4762952Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":75117,"wall_done_ms":14221,"kind":"warmup","index":1,"killed":false,"done_s":"0.353","tag":"startup-1-warmup","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-2-warmup started pid=33240
+[session] startup-2-warmup Done(0.270) wall=14320ms
+[sample] "pid":33240,"ts_utc":"2026-09-12T10:26:43.9274838Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":15402,"wall_done_ms":14320,"kind":"warmup","index":2,"killed":false,"done_s":"0.270","tag":"startup-2-warmup","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-3-formal started pid=28472
+[session] startup-3-formal Done(0.302) wall=13220ms
+[sample] "pid":28472,"ts_utc":"2026-09-12T10:26:58.1585721Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":14195,"wall_done_ms":13220,"kind":"formal","index":3,"killed":false,"done_s":"0.302","tag":"startup-3-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-4-formal started pid=24344
+[session] startup-4-formal Done(0.547) wall=24011ms
+[sample] "pid":24344,"ts_utc":"2026-09-12T10:27:23.9751192Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":25790,"wall_done_ms":24011,"kind":"formal","index":4,"killed":false,"done_s":"0.547","tag":"startup-4-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-5-formal started pid=11076
+[session] startup-5-formal Done(0.535) wall=24391ms
+[sample] "pid":11076,"ts_utc":"2026-09-12T10:27:50.1785653Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":26152,"wall_done_ms":24391,"kind":"formal","index":5,"killed":false,"done_s":"0.535","tag":"startup-5-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-6-formal started pid=32104
+[session] startup-6-formal Done(0.275) wall=16523ms
+[sample] "pid":32104,"ts_utc":"2026-09-12T10:28:07.5780281Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":17334,"wall_done_ms":16523,"kind":"formal","index":6,"killed":false,"done_s":"0.275","tag":"startup-6-formal","mode":"startup"
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] startup-7-formal started pid=27952
+[session] startup-7-formal Done(0.317) wall=14338ms
+[sample] "pid":27952,"ts_utc":"2026-09-12T10:28:23.0125289Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":15406,"wall_done_ms":14338,"kind":"formal","index":7,"killed":false,"done_s":"0.317","tag":"startup-7-formal","mode":"startup"
+[done] stdin-ok=False -> D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\bench\perf\out\20260912T102511Z-startup-26.1.2

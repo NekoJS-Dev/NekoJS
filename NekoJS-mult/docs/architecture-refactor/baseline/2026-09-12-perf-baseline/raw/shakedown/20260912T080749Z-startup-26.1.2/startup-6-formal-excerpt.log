@@ -1,0 +1,25 @@
+[16:14:17] [modloading-worker-0/ERROR] [NekoJS/]: Failed to create or backup log file for script: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\logs\nekojs\startup.log
+[16:14:17] [modloading-worker-0/ERROR] [NekoJS/]: Failed to create or backup log file for script: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\logs\nekojs\server.log
+[16:14:17] [modloading-worker-0/ERROR] [NekoJS/]: Failed to create or backup log file for script: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\logs\nekojs\client.log
+[16:14:17] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin (priority 1000, owner legacy:com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin (priority 1000, owner legacy:com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin (priority 1000, owner legacy:com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.client.posteffect.NekoPostEffectPlugin on dedicated server
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.client.render.ClientRenderPlugin on dedicated server
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.NekoJSCorePlugin (priority 2147483647, owner legacy:com.tkisor.nekojs.core.NekoJSCorePlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.dynamic.DynamicRegistryPlugin (priority 1000, owner legacy:com.tkisor.nekojs.dynamic.DynamicRegistryPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.integration.jei.RecipeViewerEventsPlugin on dedicated server
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.util.selector.EntitySelectorsPlugin (priority 1000, owner legacy:com.tkisor.nekojs.util.selector.EntitySelectorsPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.villager.VillagerTradesPlugin (priority 1000, owner legacy:com.tkisor.nekojs.villager.VillagerTradesPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin (priority 1000, owner legacy:com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin)
+[16:14:17] [modloading-worker-0/DEBUG] [NekoJS/]: Plugin scan finished
+[16:14:18] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[16:14:18] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] �ѳ�ʼ���������: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\nekojs\startup_scripts\src\main.js
+[16:14:18] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] �ѳ�ʼ���������: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\src\main.js
+[16:14:18] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] �ѳ�ʼ���������: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\src\main.js
+[16:14:19] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] ������ 1 �� STARTUP �ű���
+[16:14:19] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ������ 1 �� SERVER �ű���
+[16:14:19] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ������ 1 �� CLIENT �ű���
+[16:14:21] [modloading-worker-0/INFO] [NekoJS/]: ����Ϊ STARTUP ע�� 13 ���¼���...
+[16:14:22] [Thread-0/INFO] [NekoJS/]: [startup] Hello, World! (Loaded startup example script)
