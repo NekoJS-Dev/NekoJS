@@ -4,9 +4,9 @@
 
 **Blocked by:** [09: Managed Surface 单一规范源与声明/Probe 派生链](09-managed-surface.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
 
 **Optional:** false
 
