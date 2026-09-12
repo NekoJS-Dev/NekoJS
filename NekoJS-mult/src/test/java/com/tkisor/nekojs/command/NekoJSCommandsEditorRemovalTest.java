@@ -23,7 +23,9 @@ class NekoJSCommandsEditorRemovalTest {
     @Test
     void editorCommandIsRemovedWithoutAliasAndViewErrorsRemain() {
         CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
-        NekoJSCommands.register(new RegisterCommandsEvent(dispatcher, Commands.CommandSelection.ALL, CommandBuildContext.simple(RegistryAccess.EMPTY, FeatureFlagSet.of())));
+        // root 仅被命令 executor 的 lambda 捕获、树构建期不解引用；本测试只断言命令树形状，
+        // 传 null 以免为此引入完整装配 fixture（ticket 05 注入签名变更）
+        NekoJSCommands.register(new RegisterCommandsEvent(dispatcher, Commands.CommandSelection.ALL, CommandBuildContext.simple(RegistryAccess.EMPTY, FeatureFlagSet.of())), null);
 
         CommandNode<CommandSourceStack> root = dispatcher.getRoot().getChild("nekojs");
         assertNotNull(root, "/nekojs root command must remain registered");

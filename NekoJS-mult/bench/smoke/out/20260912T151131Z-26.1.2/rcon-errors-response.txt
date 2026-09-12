@@ -1,0 +1,3 @@
+﻿Incorrect argument for command
+nekojs errors<--[HERE]
+
