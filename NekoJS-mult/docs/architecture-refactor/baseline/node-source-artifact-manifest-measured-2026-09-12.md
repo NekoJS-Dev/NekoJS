@@ -5,6 +5,8 @@
 > 状态：**实测（measured）快照**。与 2026-09-08 的[手写静态清单](node-source-artifact-manifest.md)逐节对齐，便于 diff。本文件全部事实来自 2026-09-12 在隔离 worktree（`NekoJS-w0-baseline`，revision `8301dc14` = `9f702195` + W0 commit）实际执行的 Gradle 构建、Gradle 报告任务（`projects`/`javaToolchains`/`dependencies`）与 jar 内容解析；不抄写文档。原始日志与脚本输出见 `w0-config-archive-2026-09-12/logs/`。
 >
 > 执行环境：Windows 10.0.26200 x64，daemon JVM = Oracle JDK 25.0.2（用户级 `org.gradle.java.home`，W0 修复后），Gradle wrapper 9.6.0，Stonecutter 0.9.7，Fabric Loom 1.17.20，foojay resolver 1.0.0。基线构建结果：**26.1.2-fabric:processResources 冷构建确定性失败**（见 §11，属基线事实而非本清单缺陷）。
+>
+> **2026-09-12 修复后更新**（commit `14de611f`，隔离 worktree 复测）：26.1.2-fabric 冷构建失败已解决、五节点全绿；fabric 两节点的产物/metadata/mixin/test/verifyFabricRuntimeArtifact 按实测值更新（证据 `2026-09-12-fabric-build-fix/`）；§0 的 Graal 解析结论已更正（convention 重定向在 fabric 节点 runtimeClasspath **生效**）。当日基线（revision `8301dc14`）与修复后（`14de611f`）的差异仅为该 convention 接线；NeoForge 三 jar SHA-256 逐字节不变。
 
 ## 0. 节点与版本事实（实测）
 
@@ -13,11 +15,11 @@
 | `1.21.1` | NeoForge | deps.neo=21.1.227（MDG 解析） | 21 | graal-1504336:**8762962**；jei-238222:7420587；night-config 3.8.0/3.8.3 |
 | `26.1.2` | NeoForge | deps.neo=26.1.2.71 | 25 | graal-1504336:8762962；jei-238222:7920926；night-config 3.8.0/3.8.3 |
 | `26.2.0` | NeoForge | deps.neo=26.2.0.57 | 25 | graal-1504336:8762962；jei-238222:8300448；night-config 3.8.0/3.8.3/3.9.0 |
-| `26.1.2-fabric` | Fabric | fabric-loader:**0.19.3** | 25 | fabric-api:**0.155.2+26.1.2**；graal-1504336:8762962；icu4j:77.1；night-config 3.8.3 |
-| `26.2.0-fabric` | Fabric | fabric-loader:0.19.3 | 25 | fabric-api:**0.159.0+26.2**；graal-1504336:8762962；icu4j:**78.3**；night-config 3.8.3 |
+| `26.1.2-fabric` | Fabric | fabric-loader:**0.19.3** | 25 | fabric-api:**0.155.2+26.1.2**；graal-1504336:8762962**->8762963**（重定向生效）；icu4j:77.1；night-config 3.8.3 |
+| `26.2.0-fabric` | Fabric | fabric-loader:0.19.3 | 25 | fabric-api:**0.159.0+26.2**；graal-1504336:8762962**->8762963**（重定向生效）；icu4j:**78.3**；night-config 3.8.3 |
 
 - 解析版本来源：`./gradlew :<node>:dependencies --configuration runtimeClasspath`（日志 `deps-<node>-runtimeClasspath.log`）。
-- **Graal**：五节点 runtimeClasspath 均解析为 `curse.maven:graal-1504336:8762962`。fabric convention 的 `useVersion("8762963")` 重定向（`nekojs.fabric-node.gradle.kts:59-65`）在节点 runtimeClasspath 上**未生效**——该依赖经 `:common` 的 runtimeElements 传递，解析发生在 `:common` 的 configuration 内。实际参与 fabric 装配的 Graal 版本口径需 31/32 号票确认。
+- **Graal**（2026-09-12 更正）：NeoForge 三节点 runtimeClasspath 解析为 `curse.maven:graal-1504336:8762962`；**fabric 两节点解析为 `curse.maven:graal-1504336:8762962 -> 8762963`**——fabric convention 的 `useVersion("8762963")` 重定向（`nekojs.fabric-node.gradle.kts:59-65`）在 fabric 节点 runtimeClasspath 上**生效**（依赖元数据里的 8762962 是 requested 版本，箭头后是 resolutionStrategy 的最终解析结果；当日基线"未生效"系误读，见 `2026-09-12-fabric-build-fix/logs/win-fix-deps-*-fabric-runtimeClasspath.log`）。fabric 最终 jar **不携带** Graal 类（装配时显式过滤 graal-1504336，jar 内 `org/graalvm/**` 与 `com/oracle/truffle/**` 均 0 条）；dev run 侧 Graal 来自上述 classpath 依赖，生产环境由运行方提供，`fabric.mod.json` depends 未声明 graal（是否显式声明归 31/32 评估）。
 - **JVM facts**：daemon JVM = `C:\Program Files\Java\jdk-25.0.2`（来源：用户级 `~/.gradle/gradle.properties` 的 `org.gradle.java.home`，`--version` 输出 `Daemon JVM: ... (from org.gradle.java.home)`）；wrapper launcher JVM = Zulu 8（1.8.0_502，仅 wrapper 客户端）。`javaToolchains` 检测到 6 个 JVM：Zulu 8（registry）、Temurin 8（auto-provisioned）、Temurin 17（auto-provisioned）、Oracle JDK 21.0.10（registry）、Zulu 25（registry）、Oracle JDK 25.0.2（registry + Current JVM）。**本机安装的 `C:/Program Files/Java/graalvm-jdk-25` 未被 toolchain 自动检测发现**。1.21.1 的 deps.java=21 对应唯一 registry 检测的 21 = Oracle jdk-21.0.10（按检测列表推断，未逐任务打印 toolchain 路径）。
 
 ## 1. 五节点与节点本地文件计数（实测，与手写版一致）
@@ -56,7 +58,7 @@
 | `1.21.1` | `versions/1.21.1/src/main/java`；`build/generated/stonecutter/main/java` | 节点 res；`build/generated/stonecutter/main/resources`；`versions/1.21.1/src/generated/resources`（目录不存在，挂载为空）；**`src/main/resources-legacy`（原始）**；modMetadata；`build/generated/stonecutter/generated/resources`（空） |
 | `26.1.2`（active） | 节点 java；**`src/main/java`（原始，无生成副本）** | 节点 res；**`src/main/resources`（原始）**；`versions/26.1.2/src/generated/resources`（空）；`src/main/resources-modern`（原始）；modMetadata |
 | `26.2.0` | 节点 java；`build/generated/stonecutter/main/java` | 节点 res；`build/generated/stonecutter/main/resources`；`versions/26.2.0/src/generated/resources`（空）；`src/main/resources-modern`（原始）；modMetadata；`build/generated/stonecutter/generated/resources`（空） |
-| `26.1.2-fabric` | 节点 java（61 个，fabric 实现）；`build/generated/stonecutter/main/java`（294 个） | **节点 res（与 convention 的 `fabric_source_node` root 同一路径，双重注入，见 §11）**；`build/generated/stonecutter/main/resources`（仅 `META-INF/accesstransformer.cfg`，被 exclude）；modMetadata（`fabric.mod.json`） |
+| `26.1.2-fabric` | 节点 java（61 个，fabric 实现）；`build/generated/stonecutter/main/java`（294 个） | **节点 res（与 convention 的 `fabric_source_node` root 同一路径；基线时被 convention 二次注入成双 copy root，已由 `14de611f` 修复为单次挂载，见 §11）**；`build/generated/stonecutter/main/resources`（仅 `META-INF/accesstransformer.cfg`，被 exclude）；modMetadata（`fabric.mod.json`） |
 | `26.2.0-fabric` | `versions/26.2.0-fabric/src/main/java`（不存在）；`build/generated/stonecutter/main/java`（301 个）；**借用 `versions/26.1.2-fabric/src/main/java`** | 节点 res（不存在）；`build/generated/stonecutter/main/resources`；**借用 `versions/26.1.2-fabric/src/main/resources`（单次注入）**；modMetadata |
 | `:common` | `common/src/main/java` | `common/src/main/resources`；`common/src/main/templates` |
 
@@ -67,8 +69,8 @@
 
 | 类别 | `1.21.1` | `26.1.2` | `26.2.0` | `26.1.2-fabric` | `26.2.0-fabric` |
 |---|---|---|---|---|---|
-| jar 内 mixin config（refs 实测） | `nekojs.mixins.json` ×16 | `nekojs.mixins.json` ×17（16+1 client）；`nekojs-dynamic.mixins.json` ×1 | 同 26.1.2 | `nekojs-fabric.mixins.json` ×29；`nekojs-fabric-shared.mixins.json` ×13；`nekojs-fabric-dynamic.mixins.json` ×1 | 同左（remap 前中间 jar 实测） |
-| metadata（jar 内实测） | `META-INF/neoforge.mods.toml`：deps 3 块 = neoforge `[21.1,22.0)` / minecraft `[1.21,1.22)` / **graalmc**；mixins config 2 条 | deps = neoforge `[26,)` / minecraft `[26.1.2,26.2)` / graalmc；loaderVersion `[4,)` | deps = neoforge `[26,)` / minecraft `[26.2.0,26.3)` / graalmc | `fabric.mod.json`：depends fabricloader>=0.19.3、fabric-api>=0.155.2+26.1.2、minecraft ~26.1.2、java>=25 | 同左，fabric-api>=0.159.0+26.2、minecraft ~26.2 |
+| jar 内 mixin config（refs 实测） | `nekojs.mixins.json` ×16 | `nekojs.mixins.json` ×17（16+1 client）；`nekojs-dynamic.mixins.json` ×1 | 同 26.1.2 | `nekojs-fabric.mixins.json` ×29；`nekojs-fabric-shared.mixins.json` ×13；`nekojs-fabric-dynamic.mixins.json` ×1（最终 jar 实测，2026-09-12） | 同左（最终 jar 实测；remapJar 任务不存在，`jar` 输出即最终产物） |
+| metadata（jar 内实测） | `META-INF/neoforge.mods.toml`：deps 3 块 = neoforge `[21.1,22.0)` / minecraft `[1.21,1.22)` / **graalmc**；mixins config 2 条 | deps = neoforge `[26,)` / minecraft `[26.1.2,26.2)` / graalmc；loaderVersion `[4,)` | deps = neoforge `[26,)` / minecraft `[26.2.0,26.3)` / graalmc | `fabric.mod.json`（最终 jar 实测，2026-09-12）：depends fabricloader>=0.19.3、fabric-api>=0.155.2+26.1.2、minecraft ~26.1.2、java>=25；entrypoints main+client；accessWidener=nekojs-fabric.accesswidener；mixins 3 条 | 同左（最终 jar 实测），fabric-api>=0.159.0+26.2、minecraft ~26.2 |
 | jar 内 AT 条目 | **78** | 69 | 69 | 无（exclude 验证成立） | 无 |
 | ServiceLoader providers（源） | 2（McClientCompat$Impl / McPlatformCompat$Impl） | 3（+McVersionCompat$Impl） | 3 | 无节点本地 provider | 无 |
 | test 资源 | `golden/block-events-api.txt` | 同左 | 同左 | `fabric-runtime-smoke/{server,startup}_scripts/fabric_ci_smoke.js` ×2 | （借用 source root，fixture 随之借用） |
@@ -110,7 +112,7 @@
 | `:1.21.1` test | 17 | 58 | **0** | 0 | 整文件守卫过滤后发现面更小 |
 | `:26.1.2` test | 29 | 137 | **34** | 0 | 6 个 suite 跳过：`ItemModificationComponentsTest`×15、`IngredientActionRegistryTest`×6、`BlockModificationEventJSTest`×6、`RegistryAutoAdapterScannerTest`×4、`BindingHelpersTest`×2、`BuilderTagTest`×1；原因 `TestAbortedException`（裸 JVM 无 FML/vanilla registry assume） |
 | `:26.2.0` test | 29 | 137 | 34 | 0 | 与 26.1.2 完全相同 |
-| `:26.1.2-fabric` / `:26.2.0-fabric` test | — | — | — | — | **未运行**：构建在 26.1.2-fabric:processResources 失败中止（§11）；`failOnNoDiscoveredTests=true` 行为未验证 |
+| `:26.1.2-fabric` / `:26.2.0-fabric` test | 8 / 8 | 37 / 37 | 6 / 6 | 0 | **2026-09-12 修复后实测**（此前因 processResources 失败未运行）：8 suites（EntityPDataStoreTest 4、BindingHelpersTest 5、BlockPosAdapterTest 7、HolderAdapterTest 2、RegistryAutoAdapterScannerTest 6、Vec3AdapterTest 7、PDataSyncAcceptTest 4、PersistentDataJSTest 2）；跳过 = BindingHelpersTest×2 + RegistryAutoAdapterScannerTest×4（裸 JVM assume）；`failOnNoDiscoveredTests=true` 下有实际测试面（convention 注释的"six JUnit tests"为过时表述） |
 | nbtSmokeTest（三 NeoForge 节点） | 1/节点 | 8/节点 | 0 | 0 | `nbt-smoke` tag 全过 |
 | guardLint | — | — | — | — | 守卫块 252，扫描 332 文件，豁免 0，警告 0 |
 
@@ -128,11 +130,11 @@
 | `stonecutterGenerate` | `versions/<n>/build/generated/stonecutter/main/{java,resources,resources-legacy,resources-modern,templates}`；java 文件数见 §3；resources 类合计 7 文件（AT 1 + legacy mixins 1 + modern 4 + 模板 1） | NeoForge `createMinecraftArtifacts`；fabric 节点仅 main/resources 被挂载（其余目录生成但未挂载） |
 | `stonecutterGenerateTest` | `build/generated/stonecutter/test/java`：1.21.1=31、26.2.0=31、26.1.2=0（active 挂原始目录） | 节点 test source set |
 | NeoForge `generateModMetadata` | `build/generated/sources/modMetadata/META-INF/neoforge.mods.toml` | jar 内实测存在 |
-| Fabric `generateModMetadata` | `.../modMetadata/fabric.mod.json` | jar 内实测存在（26.2.0-fabric 中间 jar） |
+| Fabric `generateModMetadata` | `.../modMetadata/fabric.mod.json` | jar 内实测存在（两 fabric 节点最终 jar；eachFile 跟踪确认 processResources 的 fabric.mod.json 来自该输出） |
 | Fabric `extractIcuClasses` | `build/generated/icuClasses`（icu4j 77.1/78.3 类，解释 fabric jar 7399 entries vs neoforge ~1436） | main source set output → jar |
-| `jar` | `build/libs/`（§8 实测表） | CI artifact；Fabric 另有 remapJar |
+| `jar` | `build/libs/`（§8 实测表） | CI artifact；fabric 节点无 remapJar 任务（2026-09-12 实测），`jar` 输出即最终 jar |
 | `verifyDevModSourceSets` | 无产物 | 三 NeoForge 节点 check 中执行通过 |
-| `verifyFabricRuntimeArtifact` | 无产物 | **未执行**（构建中止，见 §11） |
+| `verifyFabricRuntimeArtifact` | 无产物 | **2026-09-12 修复后执行通过**（两 fabric 节点，check 依赖；直接 entry 证据：jar 内无 AT/mods.toml/NeoForge mixin/NeoForge 类，见 §8） |
 
 当前 worktree 无 `versions/*/src/generated/resources` 目录（挂载存在、目录不存在，datagen 未跑）。
 
@@ -143,8 +145,8 @@
 | `1.21.1` | `nekojs-neoforge-1.21.1-1.1.0-preview3.jar` | 2,403,604 B | `fbd1bb9eefcd7731` | 1383 |
 | `26.1.2` | `nekojs-neoforge-26.1.2-1.1.0-preview3.jar` | 2,517,347 B | `7d3ce6d2e3a435c5` | 1436 |
 | `26.2.0` | `nekojs-neoforge-26.2.0-1.1.0-preview3.jar` | 2,517,367 B | `ca41eab78ebe0b97` | 1436 |
-| `26.2.0-fabric` | `nekojs-fabric-26.2-1.1.0-preview3.jar`（**remap 前中间 jar**；`remapJar`/`check` 未到达） | 17,397,689 B | `9572bf56cdda062c` | 7399 |
-| `26.1.2-fabric` | **无产物**（processResources 失败） | — | — | — |
+| `26.1.2-fabric` | `nekojs-fabric-26.1.2-1.1.0-preview3.jar`（**最终 jar**；2026-09-12 修复 `14de611f` 后实测——此前 processResources 失败无产物） | 17,397,691 B | `3060a2b5b1f6a692`（完整 `3060a2b5b1f6a6923f9ba2926a84ada8b594bfdf27954c40d097590da899962e`） | 7399 |
+| `26.2.0-fabric` | `nekojs-fabric-26.2-1.1.0-preview3.jar`（**最终 jar**；remapJar 任务在本 Loom 配置下不存在，`jar` 输出即最终产物——"remap 前中间 jar"系当日基线的误标，已更正；hash 与基线 jar 逐字节一致） | 17,397,689 B | `9572bf56cdda062c`（完整 `9572bf56cdda062c320c0cd529f315cd512bd259c770216ec0cdeaa4fb98c25d`） | 7399 |
 | `:common` | `nekojs-1.1.0-preview3.jar` | 1,675,966 B | `db6f7e9eb3fe674f` | 969 |
 
 完整 SHA-256 与 jar 内 mixin/metadata 解析脚本输出见基线报告 §5 与 `logs/`。
@@ -166,24 +168,28 @@ cd ../NekoJS-w0-baseline/NekoJS-mult
 ./gradlew :1.21.1:nbtSmokeTest :26.1.2:nbtSmokeTest :26.2.0:nbtSmokeTest --console=plain
 ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --console=plain
 # → 26.1.2-fabric:processResources 失败（DuplicateFileCopyException），复现率 100%（3 次均失败）
+#   （仅适用于修复前 revision ≤ 8301dc14；14de611f 起五节点 build 全绿，见 2026-09-12-fabric-build-fix/）
 ```
 
 ## 11. 本轮新发现（手写版没有的基线事实）
 
 ### 11.1 `:26.1.2-fabric:processResources` 冷构建确定性失败
 
+> **2026-09-12 状态更新：已由 commit `14de611f` 修复**（自源节点跳过 convention 的重复源根注入；冷构建全绿、eachFile 证据、补采事实见 `2026-09-12-fabric-build-fix/` 与基线报告 §7.1 修复后小节）。以下为基线（revision `8301dc14`）时的原始记录。
+
 - 错误：`Entry nekojs-fabric-dynamic.mixins.json is a duplicate but no duplicate handling strategy has been set.`（`tasks.jar` 有 `DuplicatesStrategy.EXCLUDE`，`processResources` 没有）。
 - **根因实测**（init 脚本 `eachFile` 跟踪，证据 `logs/win-fabric-duplicate-copyspec-trace.log`：4 个文件各出现两次、FROM 路径完全相同）：同一目录 `versions/26.1.2-fabric/src/main/resources` 的 4 个文件被**两次**作为拷贝源——stonecutter 对版本化节点的节点本地资源挂载与 fabric convention 的 `fabricSourceRoot.resolve("resources")` srcDir 注入叠加（两套注入机制，srcDirs 集合去重掩盖了这一点；最终 srcDirs 见 `logs/win-fabric-srcdirs-final.log`）。
 - `26.2.0-fabric` 不触发：其节点目录无 `src/main/resources`（借用 root 只经 convention 注入一次）。
 - 失败是 revision 状态属性（三次执行均失败），但主仓库 `versions/26.1.2-fabric/build/resources/main`（mtime 2026-09-11 00:13）恰好只留下"第一组 4 个文件、无 fabric.mod.json"的部分输出——与一次失败执行的残留一致；最后完整 fabric jar 产物为 2026-09-07 21:52/22:37。**用户侧增量状态掩盖了该失败**。
-- 处置建议：归入"Fabric 源所有权"类（后续票 31/32 范围）：为 fabric 节点显式声明节点/借用资源根的单一所有权（convention 或 stonecutter 二选一），或对 `processResources` 设 `duplicatesStrategy`。本基线不修改构建行为。
+- 处置建议：归入"Fabric 源所有权"类（后续票 31/32 范围）：为 fabric 节点显式声明节点/借用资源根的单一所有权（convention 或 stonecutter 二选一），或对 `processResources` 设 `duplicatesStrategy`。本基线不修改构建行为。（重复注入本身已由 `14de611f` 最小接线修复解决；31 号票仍可在此基础上做所有权收口。）
 
 ### 11.2 其他新事实
 
 - toolchain 未检测到本机 GraalVM JDK 25（`javaToolchains` 报告无 `graalvm-jdk-25`）。
-- Graal 解析版本在 fabric 节点 runtimeClasspath 上为 8762962，convention 的 8762963 重定向未作用（经 `:common` 传递解析）。
+- ~~Graal 解析版本在 fabric 节点 runtimeClasspath 上为 8762962，convention 的 8762963 重定向未作用（经 `:common` 传递解析）。~~（**2026-09-12 更正**：fabric 节点 runtimeClasspath 实际解析 `8762962 -> 8762963`，重定向生效——当日基线误读了依赖日志的箭头记法；fabric 最终 jar 不携带 Graal 类，见 §0。）
 - `:1.21.1` test 0 跳过 vs 26.x 34 跳过：1.21.1 的整文件守卫把 assume 重的 suite 过滤掉了（发现面 17 suites vs 29）。
 - W0 后被跟踪文件中 `org.gradle.java.home` 仅剩注释性提及；`wiki/构建系统.md`（仓库根共享 wiki，非本目录）仍描述旧 sed workaround，待 follow-up 更新。
+- （2026-09-12 补充）Loom 1.17.20 + loom-back-compat（loomx 变体）的 fabric 节点**未注册 remapJar 任务**，显式调用报 `task 'remapJar' not found`；`jar` 输出即 build/libs 唯一最终 jar，CI 的 fabric artifact 步骤也直接收集 `versions/*/build/libs/*.jar`。
 
 ## 12. 手写版 vs 实测版逐项差异表
 
@@ -198,17 +204,17 @@ cd ../NekoJS-w0-baseline/NekoJS-mult
 | 7 | §5.1 processor 接线 | nf121/nf26 + fabric 未挂 | 源码 + 构建行为一致；**生成物为零文件（纯校验）** | **一致**（手写未记录零生成物） |
 | 8 | §5.2 capability | 10/10/3 | 10/10/3（行号微移） | **一致** |
 | 9 | §5.3 spec 注解 | 6 ALL + 4 NF_ONLY | 6 ALL + 4 NF_ONLY；NF26_ONLY/CR_ONLY 零使用 | **一致** |
-| 10 | §6 test 发现/跳过 | 明确声明"不声称实测" | 实测：common 1336/2 skip；processor 13；1.21.1 58/0；26.x 137/34 skip（6 suites 名单+原因）；fabric 未运行；nbt 8×3 | 实测新增（与手写 assume 清单语义吻合：FML/vanilla assume 即 26.x 跳过来源） |
+| 10 | §6 test 发现/跳过 | 明确声明"不声称实测" | 实测：common 1336/2 skip；processor 13；1.21.1 58/0；26.x 137/34 skip（6 suites 名单+原因）；**fabric 8/37/6 skip/0 fail（2026-09-12 修复后实测）**；nbt 8×3 | 实测新增（与手写 assume 清单语义吻合：FML/vanilla assume 即 26.x 跳过来源；fabric 跳过同源） |
 | 11 | §7 generated trace | 任务→输出→消费者静态表 | 同构 + 实测文件数（242/301/301/294/301、test 31/0/31）与"生成但未挂载"目录 | **一致**且补充：fabric 的 resources-legacy/-modern/templates 生成目录不被任何 sourceSet 挂载 |
 | 12 | §8 CI | 行号引用含 5 处 sed 步骤 | W0 已移除 5 步，其余一致 | **差异（预期内，W0 所致）** |
-| 13 | 产物/版本 | 声明"未验证 artifact output" | jar 名/大小/SHA-256/entries/mixin/metadata 全实测 | 实测新增（手写版标记的缺口被补上） |
-| 14 | 失败诊断 | 无 | 26.1.2-fabric:processResources 冷构建失败 + 根因 + owner 建议 | 实测新增 |
+| 13 | 产物/版本 | 声明"未验证 artifact output" | jar 名/大小/SHA-256/entries/mixin/metadata 全实测（2026-09-12 修复后 fabric 两节点最终 jar 也实测，完整 hash 见 `2026-09-12-fabric-build-fix/`） | 实测新增（手写版标记的缺口被补上） |
+| 14 | 失败诊断 | 无 | 26.1.2-fabric:processResources 冷构建失败 + 根因 + owner 建议；**已由 `14de611f` 修复并复测闭环** | 实测新增 |
 | 15 | `26.2.0-fabric` 源借用 | "无自有 root；借用 26.1.2-fabric" | srcDirs 实测确认借用 java/resources；`deps.fabric_source_node=26.1.2-fabric` | **一致** |
 
 ## 13. 实测口径限制
 
-- 本清单基于 revision `8301dc14`、Windows 主机、JDK 25 daemon；Linux 仅完成配置阶段验证（见基线报告 §4），全量 Linux 构建不在本轮范围。
+- 本清单基于 revision `8301dc14`、Windows 主机、JDK 25 daemon；Linux 仅完成配置阶段验证（见基线报告 §4），全量 Linux 构建不在本轮范围。**fabric 两节点的产物/metadata/mixin/test/verifyFabricRuntimeArtifact 事实为 2026-09-12 修复（`14de611f`）后在同环境隔离 worktree 复测所得**（NeoForge 三 jar hash 与基线逐字节一致，其余节点事实未复测）。
 - 1.21.1 编译 toolchain 具体路径按检测列表推断（唯一 JDK 21），未逐任务打印。
-- `26.2.0-fabric` 的 jar 是 remap 前中间产物，其 remap 后形态、`verifyFabricRuntimeArtifact`、fabric `test` 均因 §11.1 失败未执行。
+- ~~`26.2.0-fabric` 的 jar 是 remap 前中间产物，其 remap 后形态、`verifyFabricRuntimeArtifact`、fabric `test` 均因 §11.1 失败未执行。~~（**2026-09-12 更正/闭环**：remapJar 任务在本 Loom 配置下不存在，`jar` 输出即最终产物；`verifyFabricRuntimeArtifact` 与 fabric `test` 已执行，数字见 §6/§8。）
 - runtime smoke（`runServer`/`runGameTestServer`）不属于本票（34 号票范围），未运行。
 - 性能采样不在 W0（02 号独立性能基线票）。

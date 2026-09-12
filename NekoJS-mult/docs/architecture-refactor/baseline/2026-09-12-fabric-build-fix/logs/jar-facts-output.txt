@@ -1,0 +1,78 @@
+== 1.21.1
+file      : nekojs-neoforge-1.21.1-1.1.0-preview3.jar
+size      : 2403604 B
+sha256    : fbd1bb9eefcd77314961ade17b390951b97553e8093e0c3b949bdbf1530b0f00
+entries   : 1383
+  AT entries: ['META-INF/accesstransformer.cfg']; mods.toml entries: ['META-INF/neoforge.mods.toml']
+  mixin cfgs: ['nekojs.mixins.json']
+
+== 26.1.2
+file      : nekojs-neoforge-26.1.2-1.1.0-preview3.jar
+size      : 2517347 B
+sha256    : 7d3ce6d2e3a435c5210123201d88ebc37339413bac25a8a329d9ba420f4a2eb0
+entries   : 1436
+  AT entries: ['META-INF/accesstransformer.cfg']; mods.toml entries: ['META-INF/neoforge.mods.toml']
+  mixin cfgs: ['nekojs-dynamic.mixins.json', 'nekojs.mixins.json']
+
+== 26.2.0
+file      : nekojs-neoforge-26.2.0-1.1.0-preview3.jar
+size      : 2517367 B
+sha256    : ca41eab78ebe0b970f7f0001ef123782f28e9a8d63f9da3a46e04eb8a3c7bb7a
+entries   : 1436
+  AT entries: ['META-INF/accesstransformer.cfg']; mods.toml entries: ['META-INF/neoforge.mods.toml']
+  mixin cfgs: ['nekojs-dynamic.mixins.json', 'nekojs.mixins.json']
+
+== 26.1.2-fabric
+file      : nekojs-fabric-26.1.2-1.1.0-preview3.jar
+size      : 17397691 B
+sha256    : 3060a2b5b1f6a6923f9ba2926a84ada8b594bfdf27954c40d097590da899962e
+entries   : 7399
+fabric.mod.json:
+  id=nekojs version=1.1.0-preview3
+  depends={"fabric-api": ">=0.155.2+26.1.2", "fabricloader": ">=0.19.3", "java": ">=25", "minecraft": "~26.1.2"}
+  suggests=null
+  breaksed? breaks=null
+  entrypoints keys=['client', 'main']
+  mixins field=["nekojs-fabric.mixins.json", "nekojs-fabric-shared.mixins.json", "nekojs-fabric-dynamic.mixins.json"]
+  accessWidener=nekojs-fabric.accesswidener
+  mixin cfg nekojs-fabric-dynamic.mixins.json: mixins=0 client=1 server=0 total=1
+  mixin cfg nekojs-fabric-shared.mixins.json: mixins=13 client=0 server=0 total=13
+  mixin cfg nekojs-fabric.mixins.json: mixins=29 client=0 server=0 total=29
+  forbidden-res hits: NONE
+  neoforge pkg hits : NONE
+  neoforge class hits: NONE
+  org/graalvm/** entries      : 0
+  com/oracle/truffle/** entries: 0
+  com/electronwill/night-config/** entries: 0
+  com/ibm/icu/** entries      : 5762
+  com/tkisor/nekojs/** entries: 1322
+  accesswidener entries: ['nekojs-fabric.accesswidener']
+  META-INF/services count: 0
+
+== 26.2.0-fabric
+file      : nekojs-fabric-26.2-1.1.0-preview3.jar
+size      : 17397689 B
+sha256    : 9572bf56cdda062c320c0cd529f315cd512bd259c770216ec0cdeaa4fb98c25d
+entries   : 7399
+fabric.mod.json:
+  id=nekojs version=1.1.0-preview3
+  depends={"fabric-api": ">=0.159.0+26.2", "fabricloader": ">=0.19.3", "java": ">=25", "minecraft": "~26.2"}
+  suggests=null
+  breaksed? breaks=null
+  entrypoints keys=['client', 'main']
+  mixins field=["nekojs-fabric.mixins.json", "nekojs-fabric-shared.mixins.json", "nekojs-fabric-dynamic.mixins.json"]
+  accessWidener=nekojs-fabric.accesswidener
+  mixin cfg nekojs-fabric-dynamic.mixins.json: mixins=0 client=1 server=0 total=1
+  mixin cfg nekojs-fabric-shared.mixins.json: mixins=13 client=0 server=0 total=13
+  mixin cfg nekojs-fabric.mixins.json: mixins=29 client=0 server=0 total=29
+  forbidden-res hits: NONE
+  neoforge pkg hits : NONE
+  neoforge class hits: NONE
+  org/graalvm/** entries      : 0
+  com/oracle/truffle/** entries: 0
+  com/electronwill/night-config/** entries: 0
+  com/ibm/icu/** entries      : 5762
+  com/tkisor/nekojs/** entries: 1322
+  accesswidener entries: ['nekojs-fabric.accesswidener']
+  META-INF/services count: 0
+

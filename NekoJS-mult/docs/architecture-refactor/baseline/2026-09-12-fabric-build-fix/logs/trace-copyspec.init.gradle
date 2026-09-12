@@ -1,0 +1,25 @@
+// 复核脚本（工单 01 fabric 修复验证，2026-09-12）：
+//   ./gradlew :26.1.2-fabric:cleanProcessResources :26.1.2-fabric:processResources \
+//     :26.2.0-fabric:cleanProcessResources :26.2.0-fabric:processResources \
+//     --init-script trace-copyspec.init.gradle --console=plain
+// 仅对两个 fabric 节点的 processResources 追加 eachFile 监听——不修改任务的
+// duplicatesStrategy / include / exclude / from，只打印每个实际拷贝 entry 的源路径。
+// 输出格式与修复前证据 w0-config-archive-2026-09-12/logs/win-fabric-duplicate-copyspec-trace.log
+// 同构（COPY <name>  FROM <source>），用于证明每个 entry 只被拷贝一次。
+// 注：init 脚本会被 buildSrc 嵌套构建一并求值，此时 fabric 项目不存在——静默跳过。
+def tracedTasks = [":26.1.2-fabric:processResources", ":26.2.0-fabric:processResources"]
+
+gradle.projectsEvaluated {
+    tracedTasks.each { path ->
+        def prjPath = path.substring(1, path.lastIndexOf(':'))
+        def prj = gradle.rootProject.findProject(":$prjPath") ?: gradle.rootProject.findProject(prjPath)
+        if (prj == null) { return }   // buildSrc 嵌套构建无版本化项目
+        def task = prj.tasks.findByName("processResources")
+        if (task == null) { return }
+        task.doFirst { println "=== COPY TRACE BEGIN (${task.path}) ===" }
+        task.eachFile { details ->
+            println "COPY ${details.name}  FROM ${details.file.absolutePath}"
+        }
+        task.doLast { println "=== COPY TRACE END (${task.path}) ===" }
+    }
+}
