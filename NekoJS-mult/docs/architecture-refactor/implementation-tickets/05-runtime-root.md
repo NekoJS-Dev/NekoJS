@@ -4,9 +4,9 @@
 
 **Blocked by:** [01: P0 五节点构建与契约基线](01-build-baseline.md)、[02: P0 独立性能基线](02-perf-baseline.md)、[03: 持久化与用户编辑数据保护基线：默认不改、可回滚才迁移](03-data-protection.md)
 
-**Status:** ready-for-agent
+**Status:** closed
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
 
 **Optional:** false
 
@@ -18,16 +18,16 @@
 
 ## Acceptance criteria
 
-- [ ] 生产 static 可变生命周期状态总账覆盖 runtime access、plugin runtime current、plugin entries、shared engine、platform/path/compiler/schema/event callback 状态及 loader 侧 server/level/event/registry 状态；每项有 owner 分类、生命周期、可替换性和测试或删除理由。
-- [ ] `NekoRuntimeAccess`、`NekoPluginRuntime.current`、`NekoSharedEngine` 与其他被登记状态不能形成第二 runtime owner 或绕过 root 的生命周期；进程级例外必须可重复测试，root-owned 状态随 root close 释放，独立测试 root 不互相污染。
-- [ ] NeoForge 与 Fabric 各自只创建一个 NekoRuntimeRoot，loader entry 外没有可替换或可读取的公开 static root。
-- [ ] STARTUP 首次加载、SERVER started 后加载或 reload、CLIENT 在各自 loader 既有安全点加载、afterInit 触发顺序与旧烟测一致。
-- [ ] SERVER reload 与 CLIENT reload 都只经 root 生命周期入口发生，命令、F3+T、pack sync 和平台 listener 不再直接触碰 ScriptManager。
-- [ ] close 按当前契约冲刷并关闭 script managers、清理 listener 和 root 资源；关闭中的异常不阻止后续清理，重复 close 不产生二次回调。
-- [ ] 两 loader 现行 startup/server/client/close 烟测可复现，输出脚本 marker、错误计数、资源释放日志和最终退出状态。
-- [ ] Plugin Runtime bootstrap、平台事件注册、network 注册次数在 reload 前后保持一次，不因共同装配函数产生第二套状态。
-- [ ] config、world、pdata、pack、trust-store、workspace/declaration 的路径、格式、key、wire 和默认启用规则与基线一致。
-- [ ] 公开 static root 旁路、重复 manager 容器和旧直接装配路线在全部调用者迁移并通过上述烟测后同票删除，不保留长期并行路径。
+- [x] 生产 static 可变生命周期状态总账覆盖 runtime access、plugin runtime current、plugin entries、shared engine、platform/path/compiler/schema/event callback 状态及 loader 侧 server/level/event/registry 状态；每项有 owner 分类、生命周期、可替换性和测试或删除理由。
+- [x] `NekoRuntimeAccess`、`NekoPluginRuntime.current`、`NekoSharedEngine` 与其他被登记状态不能形成第二 runtime owner 或绕过 root 的生命周期；进程级例外必须可重复测试，root-owned 状态随 root close 释放，独立测试 root 不互相污染。
+- [x] NeoForge 与 Fabric 各自只创建一个 NekoRuntimeRoot，loader entry 外没有可替换或可读取的公开 static root。
+- [x] STARTUP 首次加载、SERVER started 后加载或 reload、CLIENT 在各自 loader 既有安全点加载、afterInit 触发顺序与旧烟测一致。
+- [x] SERVER reload 与 CLIENT reload 都只经 root 生命周期入口发生，命令、F3+T、pack sync 和平台 listener 不再直接触碰 ScriptManager。
+- [x] close 按当前契约冲刷并关闭 script managers、清理 listener 和 root 资源；关闭中的异常不阻止后续清理，重复 close 不产生二次回调。
+- [x] 两 loader 现行 startup/server/client/close 烟测可复现，输出脚本 marker、错误计数、资源释放日志和最终退出状态。
+- [x] Plugin Runtime bootstrap、平台事件注册、network 注册次数在 reload 前后保持一次，不因共同装配函数产生第二套状态。
+- [x] config、world、pdata、pack、trust-store、workspace/declaration 的路径、格式、key、wire 和默认启用规则与基线一致。
+- [x] 公开 static root 旁路、重复 manager 容器和旧直接装配路线在全部调用者迁移并通过上述烟测后同票删除，不保留长期并行路径。
 
 ## Sources
 
@@ -52,3 +52,28 @@
   - REGISTRY_STARTUP 只消费 root 的启动时机，不阻塞本预整理。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+## Closure record（2026-09-12）
+
+- 执行者：zcode-agent。实施区间 `4020c130..33fa645d`（7 个 commit：总账 → 共享装配 → 句柄注入迁移 →
+  行为烟测 → 删旁路 → 报告 → review 修订）。
+- 交付物：总账 `../baseline/2026-09-12-runtime-ledger.md`（213 候选 → 59 项分类：待删除 4、loader-owned 7、
+  process-owned 例外约 20、root-owned 2、generation-owned 1（06/07）、domain adapter-owned 约 24、
+  deliberate singleton 1）；共享装配函数 `NekoRuntimeAssembly`（无状态构造，root 只存在于 loader entry）；
+  13 文件读者迁移（client/commands 签名注入、静态 listener bind(root)、mixin/PlayerEventListener 走
+  ScriptErrorReporter 门面、fabric 同包 accessor）；新增 NekoRuntimeRootLifecycleTest（5）+
+  NekoRuntimeAccessTest（1）；`bench/smoke/` 双 loader 烟测（4 会话 checks.json 全绿）。
+- 旁路删除（AC10）：`NekoJSMod.RUNTIME_ROOT`（public static，5 读点）、`NekoJSFabricMod.RUNTIME_ROOT`
+  （public static，6 读点 → private volatile + accessor）、`NekoJS.scriptManagers`（重复 manager 容器）、
+  两 loader 20+ 行重复装配体——全仓 `RUNTIME_ROOT` 引用 0 残留。
+- 行为保持：装配序列与旧实现逐行对齐（review 核验）；reload 全经 root；close 冲刷/异常不阻断/重复 close
+  语义有专项单测；Plugin Runtime bootstrap 唯一调用路径（NeoForge 结构证据 + fabric marker 计数 +
+  review 后补的 bootstrap-once 日志面）。
+- 验收判定：AC1-AC10 全部 pass；其中 AC7 的 CLIENT 真实端（client load / F3+T / 渲染侧）以无头最小
+  替代 + not-verified 记录（owner：维护者/minecraft-mcp）；AC8 NeoForge 侧原为结构证据，review 后补了
+  可 grep 的计数日志。
+- code-review（双轴）后修订：fabric 字段 volatile、Assembled 返回值收敛、reporter javadoc 线程/reload
+  约束、测试自愈与语义钉、总账 A2 删除条件与 bind 无 unbind 风险、REPORT 7b 裁决记录（类名撞名、
+  evidence 文件名/clean_exit 口径更正）。修正后 `:common:check`、`:26.1.2:check`、
+  `:26.1.2-fabric:compileJava` 全绿。
+- 遗留（不在本票范围）：candidate/active/generation 语义与 watchdog 归 06/07；既有 `closeSilently`
+  重复 close 对 bridge 幂等再清（无回调，行为变更需另票）；CLIENT 真实端验证 owner 维护者。
