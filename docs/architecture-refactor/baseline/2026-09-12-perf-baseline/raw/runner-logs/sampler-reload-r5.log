@@ -1,0 +1,11 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] reload-session started pid=32524
+[session] reload-session Done(0.251) wall=13020ms
+Select-String : 无法将参数绑定到参数“Pattern”，因为该参数是空值。
+所在位置 D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\bench\perf\sample.ps1:345 字符: 126
++ ...  ($chunk -split "`n" | Select-String $script:ReloadDoneMarker | Selec ...
++                                          ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidData: (:) [Select-String]，ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : ParameterArgumentValidationErrorNullNotAllowed,Microsoft.PowerShell.Commands.SelectStrin 
+   gCommand
+ 

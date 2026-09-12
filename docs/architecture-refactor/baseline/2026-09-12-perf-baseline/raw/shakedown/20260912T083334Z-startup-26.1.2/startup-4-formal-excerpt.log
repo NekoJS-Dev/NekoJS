@@ -1,0 +1,39 @@
+[16:35:27] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin (priority 1000, owner legacy:com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin (priority 1000, owner legacy:com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin (priority 1000, owner legacy:com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.client.posteffect.NekoPostEffectPlugin on dedicated server
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.client.render.ClientRenderPlugin on dedicated server
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.NekoJSCorePlugin (priority 2147483647, owner legacy:com.tkisor.nekojs.core.NekoJSCorePlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.dynamic.DynamicRegistryPlugin (priority 1000, owner legacy:com.tkisor.nekojs.dynamic.DynamicRegistryPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.integration.jei.RecipeViewerEventsPlugin on dedicated server
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.util.selector.EntitySelectorsPlugin (priority 1000, owner legacy:com.tkisor.nekojs.util.selector.EntitySelectorsPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.villager.VillagerTradesPlugin (priority 1000, owner legacy:com.tkisor.nekojs.villager.VillagerTradesPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin (priority 1000, owner legacy:com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin)
+[16:35:27] [modloading-worker-0/DEBUG] [NekoJS/]: Plugin scan finished
+[16:35:27] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[16:35:27] [modloading-worker-0/INFO] [NekoJS/]: [startup] �ѳ�ʼ���������: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\nekojs\startup_scripts\src\main.js
+[16:35:27] [modloading-worker-0/INFO] [NekoJS/]: [server] �ѳ�ʼ���������: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\src\main.js
+[16:35:27] [modloading-worker-0/INFO] [NekoJS/]: [client] �ѳ�ʼ���������: D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run\nekojs\client_scripts\src\main.js
+[16:35:28] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] ������ 1 �� STARTUP �ű���
+[16:35:28] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ������ 1 �� SERVER �ű���
+[16:35:28] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ������ 1 �� CLIENT �ű���
+[16:35:28] [modloading-worker-0/INFO] [NekoJS/]: ����Ϊ STARTUP ע�� 13 ���¼���...
+[16:35:29] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] Hello, World! (Loaded startup example script)
+[16:35:30] [Worker-Main-15/INFO] [NekoJS/]: ����Ϊ SERVER ע�� 13 ���¼���...
+[16:35:30] [Worker-Main-15/INFO] [NekoJS/]: [server] �������� SERVER �ű�...
+[16:35:30] [Worker-Main-15/INFO] [NekoJS/]: [server] ������ 1 �� SERVER �ű���
+[16:35:30] [Worker-Main-15/INFO] [NekoJS/]: [server] Hello, World! (Loaded server example script)
+[16:35:30] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER �ű�������ϡ�
+[16:35:30] [main/DEBUG] [NekoJS/]: Filtered out 0 recipes that did not meet conditions
+[16:35:31] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.295s)! For help, type "help"
+[16:35:31] [Server thread/INFO] [minecraft/DedicatedServer]: Starting remote control listener
+[16:35:31] [Server thread/INFO] [minecraft/RconThread]: RCON running on 0.0.0.0:25872
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: [Rcon: Stopping the server]
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[16:35:31] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+BUILD SUCCESSFUL in 12s

@@ -1,0 +1,4 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] probe-session started pid=33788
+[session] probe-session Done(0.244) wall=14839ms
+[probe] #1(warmup) files= self=ms marker=ms

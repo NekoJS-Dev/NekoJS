@@ -1,0 +1,13 @@
+[deploy] run dir ready (bench=True): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] bench-1 started pid=15700
+[session] bench-1 Done(0.271) wall=14813ms
+[sample] "pid":15700,"wall_done_ms":14813,"ts_utc":"2026-09-12T10:30:45.1022239Z","done_s":"0.271","index":1,"forced_kill":false,"killed":false,"rev":"3400e97e","stop_channel":"rcon","kind":"formal","tick_rows":1201,"wall_total_ms":136189,"node":"26.1.2","mode":"bench","timeout":null,"tag":"bench-1"
+[deploy] run dir ready (bench=True): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] bench-2 started pid=5680
+[session] bench-2 Done(0.285) wall=14598ms
+[sample] "pid":5680,"wall_done_ms":14598,"ts_utc":"2026-09-12T10:32:00.8999354Z","done_s":"0.285","index":2,"forced_kill":false,"killed":false,"rev":"3400e97e","stop_channel":"rcon","kind":"formal","tick_rows":1201,"wall_total_ms":75742,"node":"26.1.2","mode":"bench","timeout":null,"tag":"bench-2"
+[deploy] run dir ready (bench=True): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] bench-3 started pid=30040
+[session] bench-3 Done(0.290) wall=14783ms
+[sample] "pid":30040,"wall_done_ms":14783,"ts_utc":"2026-09-12T10:33:16.9563407Z","done_s":"0.290","index":3,"forced_kill":false,"killed":false,"rev":"3400e97e","stop_channel":"rcon","kind":"formal","tick_rows":1201,"wall_total_ms":76007,"node":"26.1.2","mode":"bench","timeout":null,"tag":"bench-3"
+[done] bench rounds -> D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\bench\perf\out\20260912T102827Z-bench-26.1.2

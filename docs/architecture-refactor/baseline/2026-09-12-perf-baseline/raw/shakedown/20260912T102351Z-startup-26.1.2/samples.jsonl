@@ -1,0 +1,1 @@
+{"pid":34444,"ts_utc":"2026-09-12T10:25:08.3701821Z","forced_kill":false,"timeout":null,"rev":"3400e97e","node":"26.1.2","stop_channel":"rcon","wall_total_ms":75479,"wall_done_ms":14628,"kind":"formal","index":1,"killed":false,"done_s":"0.336","tag":"startup-1-formal","mode":"startup"}

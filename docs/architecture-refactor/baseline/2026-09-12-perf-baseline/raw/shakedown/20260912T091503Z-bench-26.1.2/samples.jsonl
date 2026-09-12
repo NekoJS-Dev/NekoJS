@@ -1,0 +1,1 @@
+{"pid":30596,"wall_done_ms":14829,"ts_utc":"2026-09-12T09:20:22.3395679Z","done_s":"0.323","index":1,"forced_kill":false,"killed":false,"rev":"3400e97e","stop_channel":"rcon","kind":"formal","tick_rows":601,"wall_total_ms":316935,"node":"26.1.2","mode":"bench","timeout":null,"tag":"bench-1"}

@@ -1,0 +1,67 @@
+[18:20:11] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin (priority 1000, owner legacy:com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin (priority 1000, owner legacy:com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin (priority 1000, owner legacy:com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.client.posteffect.NekoPostEffectPlugin on dedicated server
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.client.render.ClientRenderPlugin on dedicated server
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.core.NekoJSCorePlugin (priority 2147483647, owner legacy:com.tkisor.nekojs.core.NekoJSCorePlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.dynamic.DynamicRegistryPlugin (priority 1000, owner legacy:com.tkisor.nekojs.dynamic.DynamicRegistryPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Skip client-only plugin com.tkisor.nekojs.integration.jei.RecipeViewerEventsPlugin on dedicated server
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.util.selector.EntitySelectorsPlugin (priority 1000, owner legacy:com.tkisor.nekojs.util.selector.EntitySelectorsPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.villager.VillagerTradesPlugin (priority 1000, owner legacy:com.tkisor.nekojs.villager.VillagerTradesPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin (priority 1000, owner legacy:com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin)
+[18:20:11] [modloading-worker-0/DEBUG] [NekoJS/]: Plugin scan finished
+[18:20:11] [modloading-worker-0/INFO] [NekoJS/]: Engine config loaded. Unsafe features enabled: false
+[18:20:12] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] ������ 11 �� STARTUP �ű���
+[18:20:12] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] ������ 6 �� SERVER �ű���
+[18:20:12] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] ������ 1 �� CLIENT �ű���
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: ����Ϊ STARTUP ע�� 13 ���¼���...
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s01 items-basic load
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s02 items-tagged load
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s03 blocks-basic load
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s04 blocks-tagged load
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s05 entitytypes load
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s06 fluids-tabs load
+[18:20:12] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s07 script-events load
+[18:20:13] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s08 data-setup load
+[18:20:13] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s08 built 200 entries
+[18:20:13] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s09 interop-refs load
+[18:20:13] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s09 interop ok
+[18:20:13] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP s10 marker load
+[18:20:13] [modloading-worker-0/INFO] [NekoJS/]: [startup] PERF02-STARTUP: all 10 startup fixtures evaluated
+[18:20:13] [modloading-worker-0/DEBUG] [NekoJS/]: Script event registered: Perf02Bench.adapterRun for SERVER
+[18:20:13] [modloading-worker-0/DEBUG] [NekoJS/]: Script event registered: Perf02Bench.noopOne for SERVER
+[18:20:13] [modloading-worker-0/DEBUG] [NekoJS/]: Script event registered: Perf02Bench.noopTwo for SERVER
+[18:20:13] [modloading-sync-worker/INFO] [NekoJS/]: [startup] PERF02-ENTRY startup main.js loaded
+[18:20:13] [NekoJS-Log-Flusher/ERROR] [NekoJS/]: [startup] Script event mode=normal bus=com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS event=com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS script=nekojs:startup/s06-fluids-tabs.js thread=modloading-sync-worker callback exception:
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: ����Ϊ SERVER ע�� 13 ���¼���...
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] �������� SERVER �ű�...
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] ������ 6 �� SERVER �ű���
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] PERF02-SERVER adapter-bench load
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] PERF02-SERVER arith-bench load
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] PERF02-SERVER main load gen=1789208414507
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] PERF02-SERVER mem-bench load
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] PERF02-ENTRY server main.js loaded
+[18:20:14] [Worker-Main-6/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1789208414507-tick
+[18:20:14] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER �ű�������ϡ�
+[18:20:14] [main/DEBUG] [NekoJS/]: Filtered out 0 recipes that did not meet conditions
+[18:20:15] [Server thread/INFO] [NekoJS/]: [server] PERF02: tagsUpdated
+[18:20:15] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.251s)! For help, type "help"
+[18:20:15] [Server thread/INFO] [minecraft/DedicatedServer]: Starting remote control listener
+[18:20:15] [Server thread/INFO] [minecraft/RconThread]: RCON running on 0.0.0.0:25872
+[18:20:15] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[18:20:15] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[18:20:15] [Server thread/INFO] [minecraft/MinecraftServer]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[18:20:15] [Server thread/INFO] [NekoJS/]: [server] PERF02: level loaded (x3)
+[18:20:15] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] PERF02: server-started-marker gen=1789208414507
+[18:20:18] [Server thread/INFO] [NekoJS/]: ����Ϊ SERVER ע�� 13 ���¼���...
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] �������� SERVER �ű�...
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] ������ 6 �� SERVER �ű���
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER adapter-bench load
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER arith-bench load
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER main load gen=1789208418844
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER mem-bench load
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] PERF02-ENTRY server main.js loaded
+[18:20:18] [Server thread/INFO] [NekoJS/]: [server] PERF02-SERVER tick-bench load gen=1789208418844-tick
+[18:20:18] [Server thread/DEBUG] [NekoJS/]: Filtered out 0 recipes that did not meet conditions
+[18:20:19] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [server] SERVER �ű�������ϡ�

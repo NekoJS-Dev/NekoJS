@@ -1,0 +1,19 @@
+[deploy] run dir ready (bench=False): D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\versions\26.1.2\run
+[session] reload-session started pid=20224
+[session] reload-session Done(0.344) wall=15021ms
+[reload] #1 marker=242 ms rcon=239 ms resp=NekoJS server scripts reloaded. - no errors.
+
+[reload] #2 marker=126 ms rcon=125 ms resp=NekoJS server scripts reloaded. - no errors.
+
+[reload] #3 marker=97 ms rcon=96 ms resp=NekoJS server scripts reloaded. - no errors.
+
+[reload] #4 marker=105 ms rcon=104 ms resp=NekoJS server scripts reloaded. - no errors.
+
+[reload] #5 marker=118 ms rcon=117 ms resp=NekoJS server scripts reloaded. - no errors.
+
+[sample] "tag":"reload-session","wall_total_ms":91865,"ts_utc":"2026-09-12T10:34:52.9336581Z","rcon_response":"NekoJS server scripts reloaded. - no errors. ","pid":20224,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":239,"index":1,"kind":"formal","marker_ms":242,"marker_line":"","stop_channel":"rcon","done_s":"0.344","wall_done_ms":15021,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":91865,"ts_utc":"2026-09-12T10:34:52.9476589Z","rcon_response":"NekoJS server scripts reloaded. - no errors. ","pid":20224,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":125,"index":2,"kind":"formal","marker_ms":126,"marker_line":"","stop_channel":"rcon","done_s":"0.344","wall_done_ms":15021,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":91865,"ts_utc":"2026-09-12T10:34:52.9516620Z","rcon_response":"NekoJS server scripts reloaded. - no errors. ","pid":20224,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":96,"index":3,"kind":"formal","marker_ms":97,"marker_line":"","stop_channel":"rcon","done_s":"0.344","wall_done_ms":15021,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":91865,"ts_utc":"2026-09-12T10:34:52.9536676Z","rcon_response":"NekoJS server scripts reloaded. - no errors. ","pid":20224,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":104,"index":4,"kind":"formal","marker_ms":105,"marker_line":"","stop_channel":"rcon","done_s":"0.344","wall_done_ms":15021,"node":"26.1.2","forced_kill":false,"killed":false
+[sample] "tag":"reload-session","wall_total_ms":91865,"ts_utc":"2026-09-12T10:34:52.9547037Z","rcon_response":"NekoJS server scripts reloaded. - no errors. ","pid":20224,"mode":"reload","rev":"3400e97e","rcon_rtt_ms":117,"index":5,"kind":"formal","marker_ms":118,"marker_line":"","stop_channel":"rcon","done_s":"0.344","wall_done_ms":15021,"node":"26.1.2","forced_kill":false,"killed":false
+[done] reload sampling -> D:\mcmodDemo\NekoJS-perf02\NekoJS-mult\bench\perf\out\20260912T103319Z-reload-26.1.2
