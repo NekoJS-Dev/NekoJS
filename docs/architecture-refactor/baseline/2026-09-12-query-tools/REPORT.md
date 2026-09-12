@@ -67,7 +67,32 @@
 
 ## 2. source contract 归类与 capability（Phase 2）
 
-（Phase 2 完成后填写）
+### 2.1 归类结论（按 09 机制口径）
+
+| 域 | source contract 归类 | tier / 承载面 | 事件 owner | 生命周期 Point |
+|---|---|---|---|---|
+| DataMap | query binding（只读 data map 快捷查询） | 共享树 neoforge-guarded class binding（`BindingsPoint` 收集）→ catalog 观察面 `global:DataMap`（占位 void 签名，`LegacySurfaceAdapter`，独立 `legacySurface` 字段）；**不进** portable-core managed contract | 无 | 无 |
+| EntitySelectors | query binding（factory/builder/query） | 共享树 binding（SERVER/TEST）→ catalog 观察面 `global:EntitySelectors`；**不进** managed contract | 无 | 无 |
+| （替代面）Registry dataMap 查询 | managed portable query | `RegistryFacade`/`RegistryView.dataMapIds`/`dataMapValue` 已是 portable-core contract 反射符号；MC-facing 实现由 `NeoForgeRegistryQueryService`（平台 Adapter）持有 | 无 | 无 |
+
+测试：`QueryToolContractClassificationTest`（5 用例）——观察面归类、managed contract 不含两查询全局而含 Registry 替代面、插件无事件 Contributor/钩子、SERVER/TEST 可见性、runtime member 锚点。
+
+### 2.2 capability 三态（`CapabilityStatus`，真实探针派生）
+
+测试：`QueryToolCapabilityMatrixTest`（loader 轴按运行时可加载性判定；golden 只读对比）。golden：
+`src/test/resources/golden/query/capability-matrix-neoforge.txt`、`capability-matrix-fabric.txt`。
+
+| 域 | neoforge 1.21.1 / 26.x | fabric 26.x | 依据 |
+|---|---|---|---|
+| DataMap binding（4 ScriptType） | `SUPPORTED`（SERVER/STARTUP/TEST 实注册探针；CLIENT 同一无条件路径，source trace——裸 JVM 无法初始化 client 绑定分支的 MC client 类） | `UNAVAILABLE`（`NekoJSCorePlugin`/`DataMapJS` 不存在；preflight 未定义标识符=显式失败，非静默 no-op） | 真实注册探针 + 类存在性探针 |
+| DataMap portable 替代面（`Registry.get(...).dataMap*`） | `SUPPORTED`（`NeoForgeRegistryQueryService` 在位；contract 符号 `member:RegistryView.dataMap*`） | `UNAVAILABLE`（`IPlatform.registryQueryService()` 默认方法未覆写→**运行时静默空值，已记录 deviation**，owner loader-port/W6） | 类存在性 + FabricPlatform 覆写探针 |
+| EntitySelectors binding | `SUPPORTED` SERVER/TEST（实注册探针）；STARTUP/CLIENT `UNAVAILABLE`（契约性不注册：查询需 ServerLevel） | `SUPPORTED` SERVER/TEST（`FabricPluginLoader` 内置清单成员探针 + 实注册探针；**runtime query smoke 未在 fabric 上执行**，见 §7）；STARTUP/CLIENT `UNAVAILABLE` | 注册路径探针（两 loader 各自的真实收集路径） |
+| EntitySelectors runtime 执行 | `SUPPORTED`（runServer `/nekojs test` fixture，§5） | not-verified（§7） | — |
+
+### 2.3 与 09 机制集成的摩擦（实现注记）
+
+- **stonecutter active 节点直接编译原始共享文件**（`nekojs.neoforge-node.gradle.kts` 的 `stonecutterProcessed` 注释：「active 节点返回原文件」）。因此共享 `src/test/java` 中的测试文件必须在 26.1.2（active，neoforge）上按原文可编译——**fabric 专属测试不能整文件守卫放在共享测试树**（守卫在 active 节点不生效，javac 会直接编译它）。本票的处理：capability 测试单文件化，loader 轴与 loader 专属类全部走运行时反射探针（`Class.forName(name, false, cl)`，且**不初始化**——26.x 裸 JVM 初始化 `NeoForgeDataMaps`/注册表类会抛 `There is no current FML Loader`，与 `VanillaRegistryProbe` 同款事实）。
+- golden 派生：capability 矩阵每行由探针派生后与只读 golden 对比（根测试树的既有 golden 纪律，`EventApiSurfaceGoldenTest` 模式）；无 regen 开关，变更须改探针+更新 golden+REPORT 留痕。
 
 ## 3. fixture 矩阵（Phase 3/4/5）
 
