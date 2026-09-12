@@ -77,6 +77,24 @@ class ScriptReloadGenerationTest {
         }
     }
 
+    /** 注入脚本的 Java 侧事件触发器：脚本执行中途同步 post 生产事件（AC1 观察点）。 */
+    public static final class Trigger implements AutoCloseable {
+        private volatile Runnable action = () -> {};
+
+        public void now() {
+            action.run();
+        }
+
+        void bind(Runnable action) {
+            this.action = action;
+        }
+
+        @Override
+        public void close() {
+            bind(() -> {});
+        }
+    }
+
     /** 提供一个真实 {@link EventGroup}（TestEvents.ping 总线）的 bridge，脚本可注册监听器。 */
     static final class TestEventBridge implements ScriptEventBridge {
         final EventGroup group = EventGroup.of("TestEvents");
@@ -113,15 +131,19 @@ class ScriptReloadGenerationTest {
     private static final class StubPluginRuntime implements IPluginRuntime {
         private final Counter counter;
         private final EventGroup sharedGroup;
+        private final Trigger trigger;
 
-        StubPluginRuntime(Counter counter, EventGroup sharedGroup) {
+        StubPluginRuntime(Counter counter, EventGroup sharedGroup, Trigger trigger) {
             this.counter = counter;
             this.sharedGroup = sharedGroup;
+            this.trigger = trigger;
         }
 
         @Override
         public Map<String, Binding> bindings(ScriptType type) {
-            return Map.of("Counter", Binding.of("Counter", counter));
+            return Map.of(
+                    "Counter", Binding.of("Counter", counter),
+                    "Trigger", Binding.of("Trigger", trigger));
         }
 
         @Override
@@ -154,11 +176,14 @@ class ScriptReloadGenerationTest {
 
     @BeforeEach
     void cleanScriptDir() throws Exception {
-        Path serverDir = NekoJSPaths.get().serverScripts();
-        Files.createDirectories(serverDir);
-        try (var stream = Files.list(serverDir)) {
-            for (Path path : stream.toList()) {
-                Files.deleteIfExists(path);
+        for (ScriptType type : List.of(ScriptType.SERVER, ScriptType.TEST)) {
+            Path dir = ScriptTypeEnv.scriptsDir(type);
+            if (dir == null) continue;
+            Files.createDirectories(dir);
+            try (var stream = Files.list(dir)) {
+                for (Path path : stream.toList()) {
+                    Files.deleteIfExists(path);
+                }
             }
         }
     }
@@ -173,29 +198,37 @@ class ScriptReloadGenerationTest {
         return impl;
     }
 
-    /** 测试 manager 装配：真实 bridge（可注册监听器）+ Counter 绑定 + 真实 Graal 环境。 */
+    /** 测试 manager 装配：真实 bridge（可注册监听器）+ Counter/Trigger 绑定 + 真实 Graal 环境。 */
     private static final class ManagerHarness implements AutoCloseable {
         final Engine engine = Engine.newBuilder().build();
         final TestEventBridge bridge = new TestEventBridge();
         final Counter counter = new Counter();
+        final Trigger trigger = new Trigger();
         final StubPluginRuntime pluginRuntime;
         final ScriptManager manager;
+        final ScriptType scriptType;
 
         ManagerHarness(SandboxConfig config) {
+            this(config, ScriptType.SERVER);
+        }
+
+        ManagerHarness(SandboxConfig config, ScriptType scriptType) {
             NekoJSPaths paths = NekoJSPaths.get();
-            this.pluginRuntime = new StubPluginRuntime(counter, bridge.group);
+            this.scriptType = scriptType;
+            this.pluginRuntime = new StubPluginRuntime(counter, bridge.group, trigger);
+            trigger.bind(bridge::postTestEvent);
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
             ScriptEnvironmentFactory environmentFactory =
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory);
-            this.manager = new ScriptManager(ScriptType.SERVER, bridge, pluginRuntime,
+            this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
                     newPropertyRegistry(), tracker, paths, config, environmentFactory);
         }
 
         void writeScript(String fileName, String source) throws Exception {
-            Files.writeString(NekoJSPaths.get().serverScripts().resolve(fileName), source);
+            Files.writeString(ScriptTypeEnv.scriptsDir(scriptType).resolve(fileName), source);
         }
 
         void loadAndRun() {
@@ -205,6 +238,10 @@ class ScriptReloadGenerationTest {
 
         void reload() {
             manager.reloadScripts();
+        }
+
+        void runTests() {
+            manager.runTestScripts();
         }
 
         @Override
@@ -382,6 +419,160 @@ class ScriptReloadGenerationTest {
             assertThrows(RuntimeException.class, harness::reload);
             assertTrue(harness.bridge.clearListenersCalls.isEmpty(),
                     "failed reload must not clear any listeners (ticket 06: sweep happens only at commit)");
+        }
+    }
+
+    /**
+     * AC1：candidate 执行期间，真实生产事件仍由 active 监听器执行；
+     * 候选监听器（已注册进候选收集器）不得接收 commit 前的生产事件。
+     */
+    @Test
+    void candidatePhaseEventsServedByActiveGeneration() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
+            harness.loadAndRun();
+
+            // 候选脚本：先注册候选监听器（进入候选收集器），再从脚本执行中途同步 post 生产事件，
+            // 最后死循环杀死候选。post 发生在 candidate phase 内（生产路由仍属 active）。
+            harness.writeScript("entry.js", """
+                    TestEvents.ping(function (event) { Counter.hit('v2'); });
+                    Trigger.now();
+                    while (true) { /* spin forever */ }
+                    """);
+            assertThrows(RuntimeException.class, harness::reload);
+
+            assertTrue(harness.counter.hitsOf("v1") >= 1,
+                    "production event during candidate phase must be served by the active listener (AC1)");
+            assertEquals(0, harness.counter.hitsOf("v2"),
+                    "candidate listener must not receive pre-commit production events (AC1)");
+        }
+    }
+
+    /**
+     * 连续多次 commit：每个 generation 只执行一次、旧 Context 关闭、generation 单调递增。
+     */
+    @Test
+    void consecutiveCommitsKeepSingleExecutionAndCloseOldContext() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
+            harness.loadAndRun();
+            long generationAfterLoad = harness.manager.generationId();
+
+            Context contextV1 = currentContext(harness.manager);
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v2'); });\n");
+            harness.reload();
+            Context contextV2 = currentContext(harness.manager);
+            assertTrue(harness.manager.generationId() > generationAfterLoad,
+                    "commit must advance the generation");
+
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v3'); });\n");
+            harness.reload();
+            Context contextV3 = currentContext(harness.manager);
+            assertTrue(harness.manager.generationId() > generationAfterLoad + 1,
+                    "each commit advances the generation by one");
+
+            harness.bridge.postTestEvent();
+            assertEquals(0, harness.counter.hitsOf("v1"), "generation v1 swept");
+            assertEquals(0, harness.counter.hitsOf("v2"), "generation v2 swept at the next commit");
+            assertEquals(1, harness.counter.hitsOf("v3"), "only the newest generation executes, exactly once");
+
+            // 旧 generation 的 Context 已随 commit 关闭（释放的可观察结果）
+            assertThrows(Exception.class, () -> contextV1.eval("js", "1 + 1"),
+                    "old generation context must be closed at commit");
+            assertThrows(Exception.class, () -> contextV2.eval("js", "1 + 1"),
+                    "previous generation context must be closed at the next commit");
+            assertEquals("2", contextV3.eval("js", "String(1 + 1)").asString(),
+                    "the committed generation context stays usable");
+        }
+    }
+
+    /**
+     * AC5（提交面）：候选注册的 pending timer 随 generation 提交——commit 后由生产
+     * flush 分发（一次）。候选执行期间的 timer 只进候选收集器，不提前进入生产路由。
+     */
+    @Test
+    void pendingCandidateTimerCommittedWithGeneration() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "Counter.hit('v1-entry');\n");
+            harness.loadAndRun();
+
+            // 候选脚本（.mjs：顶层 await）：注册 200ms 一次性 timer（commit 时仍未就绪 → 只被收集），
+            // await 一个 0ms timer 证明候选执行路径上的 timer 回调可用（TLA 恢复）
+            harness.writeScript("entry.mjs", """
+                    Counter.hit('v2-entry');
+                    setTimeout(function () { Counter.hit('v2-timer'); }, 200);
+                    await new Promise(function (resolve) { setTimeout(resolve, 0); });
+                    """);
+            harness.reload();
+            assertEquals(0, harness.counter.hitsOf("v2-timer"),
+                    "pending timer must not fire during candidate execution or at the commit point itself");
+
+            Thread.sleep(300);
+            harness.manager.flushReadyNodeTimers();
+            assertEquals(1, harness.counter.hitsOf("v2-timer"),
+                    "pending timer committed with the generation is dispatched exactly once by production flush");
+            harness.manager.flushReadyNodeTimers();
+            assertEquals(1, harness.counter.hitsOf("v2-timer"),
+                    "one-shot timer is not re-dispatched");
+        }
+    }
+
+    /** AC5（丢弃面）：失败候选的 pending timer 随候选关闭，永不进入生产分发。 */
+    @Test
+    void pendingCandidateTimerDiscardedWithFailedCandidate() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "setInterval(function () { Counter.hit('v1-timer'); }, 40);\n");
+            harness.loadAndRun();
+            Thread.sleep(120);
+            harness.manager.flushReadyNodeTimers();
+            int v1Before = harness.counter.hitsOf("v1-timer");
+            assertTrue(v1Before >= 1, "active interval must be ticking before the failed reload");
+
+            harness.writeScript("entry.js", """
+                    setTimeout(function () { Counter.hit('v2-timer'); }, 200);
+                    while (true) { /* spin forever after registering the timer */ }
+                    """);
+            assertThrows(RuntimeException.class, harness::reload);
+
+            Thread.sleep(300);
+            harness.manager.flushReadyNodeTimers();
+            assertEquals(0, harness.counter.hitsOf("v2-timer"),
+                    "failed candidate's pending timer must be discarded with its generation");
+            assertTrue(harness.counter.hitsOf("v1-timer") > v1Before,
+                    "active generation's timer keeps being dispatched after candidate failure");
+        }
+    }
+
+    /**
+     * AC5（TEST 面）：TEST 的候选测试 callback 在测试 harness 中执行——candidate
+     * 监听器 commit 后激活、pending timer 由 flushTestTimers 冲刷；失败重载后旧
+     * TEST 环境仍可用。
+     */
+    @Test
+    void testTypeCandidateCallbacksRunInHarness() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit(), ScriptType.TEST)) {
+            harness.writeScript("entry.js", """
+                    Counter.hit('t1-entry');
+                    TestEvents.ping(function (event) { Counter.hit('t1-listener'); });
+                    setTimeout(function () { Counter.hit('t1-timer'); }, 0);
+                    """);
+            harness.runTests();
+            assertEquals(1, harness.counter.hitsOf("t1-entry"));
+            assertEquals(1, harness.counter.hitsOf("t1-timer"),
+                    "candidate timer callback must run in the test harness after commit");
+
+            harness.bridge.postTestEvent();
+            assertEquals(1, harness.counter.hitsOf("t1-listener"),
+                    "candidate listener must run in the test harness after commit");
+
+            harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
+            assertThrows(RuntimeException.class, harness::runTests,
+                    "candidate killed by statement limit must fail the TEST run");
+            harness.bridge.postTestEvent();
+            assertEquals(2, harness.counter.hitsOf("t1-listener"),
+                    "failed TEST candidate keeps the old TEST listeners alive");
+            assertEquals(1, harness.counter.hitsOf("t1-timer"),
+                    "old TEST timer count unchanged");
         }
     }
 
