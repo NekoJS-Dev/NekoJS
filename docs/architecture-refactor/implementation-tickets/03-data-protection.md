@@ -4,9 +4,9 @@
 
 **Blocked by:** [01: P0 五节点构建与契约基线](01-build-baseline.md)
 
-**Status:** ready-for-agent
+**Status:** closed
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
 
 **Optional:** false
 
@@ -18,15 +18,15 @@
 
 ## Acceptance criteria
 
-- [ ] 基线列出的每类数据都有 owner、路径、格式/key/wire、可再生性、备份策略和旧 fixture 结论；未知项不能默认当作 cache 删除。
-- [ ] 普通成功 reload、失败 reload、server stop、切换世界和 root close 后，config、world、pdata、pack、trust-store、workspace/declaration 和 logs 原样可读。
-- [ ] 脚本 pack 的 GLOBAL/WORLD/SERVER_CACHE 路径、启用状态文件、manifest key 和默认启用规则不变；Fabric WORLD 当前行为被记录为现状差异而非被迫 parity。
-- [ ] probe 输出和 module cache 只有在源输入存在、可重建且报告证据成立时重建；无法证明可再生的文件保留。
-- [ ] 若必须迁移，迁移前生成备份或使用原子替换，写入版本标记，旧 fixture 可回读，重复运行幂等，注入失败后原始数据可回滚且旧数据保留到验证完成；这些是本票必备 gate。
-- [ ] 离线 validator/report 仅属于可选票 38：本票交付数据清单、fixture 和边界说明，不实现报告工具；若 38 未选用，普通执行和 release gate 均不得依赖或隐式调用它。
-- [ ] 票 38 的可选报告即使未来选用也必须显式只读、不进入普通 runtime 错误路径、不更新规范源、不作为硬发布 gate；必备数据保护与迁移回滚验收不得被它替代。
-- [ ] 数据专用迁移与回滚 fixture 通过前，不删除旧格式读取路径；无数据收益时不得引入通用 migration framework。
-- [ ] 所有断言通过公开文件内容、脚本读写、pack/trust 输出和 reload 结果观察，不以私有文件句柄或内部字段为契约。
+- [x] 基线列出的每类数据都有 owner、路径、格式/key/wire、可再生性、备份策略和旧 fixture 结论；未知项不能默认当作 cache 删除。
+- [x] 普通成功 reload、失败 reload、server stop、切换世界和 root close 后，config、world、pdata、pack、trust-store、workspace/declaration 和 logs 原样可读。
+- [x] 脚本 pack 的 GLOBAL/WORLD/SERVER_CACHE 路径、启用状态文件、manifest key 和默认启用规则不变；Fabric WORLD 当前行为被记录为现状差异而非被迫 parity。
+- [x] probe 输出和 module cache 只有在源输入存在、可重建且报告证据成立时重建；无法证明可再生的文件保留。
+- [x] 若必须迁移，迁移前生成备份或使用原子替换，写入版本标记，旧 fixture 可回读，重复运行幂等，注入失败后原始数据可回滚且旧数据保留到验证完成；这些是本票必备 gate。
+- [x] 离线 validator/report 仅属于可选票 38：本票交付数据清单、fixture 和边界说明，不实现报告工具；若 38 未选用，普通执行和 release gate 均不得依赖或隐式调用它。
+- [x] 票 38 的可选报告即使未来选用也必须显式只读、不进入普通 runtime 错误路径、不更新规范源、不作为硬发布 gate；必备数据保护与迁移回滚验收不得被它替代。
+- [x] 数据专用迁移与回滚 fixture 通过前，不删除旧格式读取路径；无数据收益时不得引入通用 migration framework。
+- [x] 所有断言通过公开文件内容、脚本读写、pack/trust 输出和 reload 结果观察，不以私有文件句柄或内部字段为契约。
 
 ## Sources
 
@@ -46,3 +46,24 @@
   - PACK_TRUST、DATA_SYNC 与 MANAGED_SURFACE/workspace 组共享数据清单和用户编辑文件判断；以协调避免重复写入，不把本票变成发布 gate。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+## Closure record（2026-09-12）
+
+- 执行者：zcode-agent；盘点与场景基线 revision：`d0aa6e0d`，fixture/运行器经 code-review 修订后
+  归档于 `2b62072e`。全部运行在隔离 worktree（`NekoJS-datafix`）的 `versions/26.1.2/run` 以合成
+  fixture 执行，主仓库用户数据零接触；零运行时源码修改（"默认不改"纪律）。
+- 交付物：盘点 `../baseline/2026-09-12-data-protection/data-inventory.md`（17 类数据，含 owner
+  代码锚点列）、fixture+运行器 `bench/datafix/`、场景证据与报告
+  `../baseline/2026-09-12-data-protection/`（REPORT.md + evidence/ 42 件，会话全文 gzip 归档）。
+- 场景矩阵：普通 reload / 失败 reload / server stop→重启 / 切换世界（换存档目录口径）/
+  root close（并入 stop）/ 用户编辑不被覆盖 / 可再生 cache 重建，全部 pass；单人客户端形态的
+  切换世界与 Fabric/非 primary 节点回读等 not-verified 项均在报告 §5 显式列出并给 owner。
+- **重要发现（实码复现缺陷）**：WORLD pack 激活触发的 SERVER reload 在 Windows 相对 world 路径下
+  灾难性失败（`DefaultErrorTracker.record:70` 对相对路径 `relativize` 抛 IAE → 事务 reload 失败、
+  监听器清空、WORLD 包脚本不加载、原始错误被吞）。数据完整性不受影响（受保护文件逐字节不变），
+  但 WORLD pack 功能语义被破坏——**归票 19/07 修复**（报告 §3-1，含归因口径与复现路径）。
+- 其余缺口：除 trust-store 外无原子写/备份/schema-version（迁移票 18/19 需先落 gate）；
+  joinLevel 窗口内写 pdata 静默丢弃（票 18）；Fabric WORLD 从不激活但命令文案声称查找
+  `nekojs_packs`（票 19）。全部只记录未修复，符合本票"默认不改"边界。
+- 阈值/边界：离线 validator/report（票 38）未实现、未依赖；未引入通用 migration framework。
+- code-review（双轴）后修订：REPORT 断链/provenance/归因口径、盘点补 owner 列、fixture 删空
+  监听器、runner 消除双份硬编码；切换世界以换存档目录口径补验并归档会话全文（wA/wB）。

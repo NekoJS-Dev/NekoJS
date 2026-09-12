@@ -27,7 +27,7 @@ worktree `D:/mcmodDemo/NekoJS-datafix` 的 `versions/26.1.2/run` 中以合成 fi
 | 1 | 普通成功 reload | s1 起服（GLOBAL pack + config + trust fixture 生效）→ RCON `nekojs reload` → 命令回执 no errors；pack 重新发现并加载；**19/19 文件 hash+mtime 不变**；pdata 经 NBT 读回不变 | **pass** | `log-excerpts-session1.txt`（19:48:43）、`snapshots/s1-before-reload.txt` vs `s1-after-reload.txt`（changed=0 added=0 removed=0）、`data-get-pdata-console-captures.txt` |
 | 2 | 失败 reload | 塞入 `zz-broken.js`（语法错误）→ reload → 回执 `1 error(s) remain`，日志给出 source location（`zz-broken.js:2:12`）；**19/19 受保护文件不变**（仅意图内的 zz-broken.js ADDED）；失败后 summon 触发**旧监听器**（DATAFIX-PDATA-WRITE @19:49:16，旧环境存活）；pdata NBT 不变；restore + reload 恢复干净 | **pass** | `log-excerpts-session1.txt`（19:49:0x/19:49:2x）、`snapshots/s2-*.txt`（DIFF-SUMMARY changed=0）、`rcon-20260912-194903.log` |
 | 3 | server stop → 重启 | snapshot → RCON stop → 客户端退出 + `session.lock` 释放 → **20/20 文件不变**；部署 WORLD pack → 重启 → config/trust/GLOBAL pack 全部原样可读（0 条 corrupt/legacy 告警）；**pdata 跨停服重启持久**（NBT 读回同值，键由 MC 存档保存） | **pass**（附缺陷发现，见 §3-1） | `snapshots/s3-*.txt`、`log-excerpts-session2-worldpack-defect.txt`、`data-get-pdata-console-captures.txt` |
-| 4 | 切换世界 / root close | root close（JVM 退出路径）= 场景 3 的 stop 段：shutdown hook 冲刷、lock 释放、落盘完整性 20/20 不变。**切换世界**（单人退出重进/多世界切换）无法在 runServer 下构造 | **pass（root close 合并观察）**；切换世界 **not-verified** | `snapshots/s3-before-stop.txt` vs `s3-after-stop.txt`；not-verified 见 §5 |
+| 4 | 切换世界 / root close | root close（JVM 退出路径）= 场景 3 的 stop 段：shutdown hook 冲刷、lock 释放、落盘完整性 20/20 不变。**切换世界**以专用服务器可达口径补验：world-A stop → 归档换 `world/` → 全新 world-B 启动 → `nekojs packs` 仅 GLOBAL、config/trust/脚本树 20/20 逐字节不变 → world-A 归档 36 文件逐字节未动（wA/wB 两会话） | **pass**（root close 合并观察；切换世界=换存档目录口径，单人客户端形态仍列入 §5-1） | `snapshots/s3-*`、`snapshots/s7-*`、[evidence/s7-world-switch.md](evidence/s7-world-switch.md)、`full-logs/wA-*.log.gz`、`wB-*.log.gz` |
 | 5 | 用户编辑不被覆盖 | 预置用户编辑：engine.toml（`scriptEvaluationTimeoutSeconds=77`+自定义注释）、probe.toml（`scan.maxDepth=7`）、`server_scripts/jsconfig.json`（`datafixUserEdit` 等自定义键）、根 `jsconfig.json` → reload + `nekojs probe` → **engine/probe.toml 逐字节不变**；脚本目录 jsconfig 被 probe **合并重写**（hash 变化）但**用户键全部保留**（读-改-写合并语义）；根 jsconfig 未被触碰；第二次 probe 收敛（changed=0） | **pass** | `snapshots/s5-*.txt`、运行记录（REPORT §2 场景 5 详单） |
 | 6 | 可再生 cache 重建 | `probe-clear`（删 `.neko_probe`）→ `nekojs probe` → **391 文件全部重生成**（`391 written`）；module cache 盘点确认为**纯进程内存**（`NekoModulePipelineCache`，无盘上形态，源=脚本文件），无"误删唯一数据"风险面；`nekojs/node_modules/` 为用户安装物，**不可再生**，不属 cache | **pass** | probe 日志（`391 written, 0 unchanged`）、[data-inventory.md §8](data-inventory.md) |
 
@@ -116,7 +116,7 @@ fixture v3 起改为"join 捕获实体 + tick 延迟写"，写入与读回一致
 
 | # | 项 | 状态 | 说明 | owner |
 |---|---|---|---|---|
-| 1 | 切换世界（单人退出重进 / 多世界切换 / root close 的客户端分支） | **not-verified**（专用服务器无法构造） | root close 的服务端退出路径已由场景 3 覆盖；客户端/单人侧 world pack 卸载路径（`onServerStopped` CLIENT 清理分支）未运行 | 维护者（建议经 minecraft-mcp 客户端会话或单人集成验证；工单已注明此类场景可用 mcp 补证） |
+| 1 | 切换世界的**客户端形态**（单人退出重进 / 多维 Level 切换 / root close 的客户端分支）；专用服务器可达的"换存档目录"口径已补验为 **pass**（§2 场景 4，[evidence/s7-world-switch.md](evidence/s7-world-switch.md)） | **部分 not-verified**（仅客户端形态） | 服务端换存档口径下受保护数据 20/20 不变、WORLD scope 不跨世界泄漏、归档世界逐字节未动；单人侧 world pack 卸载路径（`onServerStopped` CLIENT 清理分支）未运行 | 维护者（建议经 minecraft-mcp 客户端会话或单人集成验证） |
 | 2 | Fabric 节点运行时回读（config/pack/pdata 在 26.1.2-fabric/26.2.0-fabric 上的实际读写） | **not-verified**（本票仅采 primary 节点；Fabric WORLD 现状为代码实读结论） | fabric run 目录为 `run-server`，harness 未适配（02 号票同样未采） | 票 19/34（能力矩阵收口时补） |
 | 3 | PData/ClientData wire 的多端实际收发（packSync/pdata_sync 在真实客户端连接下） | **not-verified**（无客户端；wire id 与 codec 以代码实读 + 既有单测为据：`PDataSyncAcceptTest` 等） | 本票固定的是 wire 格式事实（§盘点），行为级多端验证需客户端 | 票 17/18 |
 | 4 | `data get entity <sel> NeoForgeData.NekoJSPersistentData` 深路径查询 | 观察通道限制（vanilla 命令在 26.1.2 对无容器实体报 "Expected double"）；用 `NeoForgeData` 整读 + tag 选择器替代 | 不影响结论（双通道之一即可） | — |
@@ -126,8 +126,8 @@ fixture v3 起改为"join 捕获实体 + tick 延迟写"，写入与读回一致
 
 | # | 验收项 | 建议 | 依据 |
 |---|---|---|---|
-| 1 | 每类数据有 owner/路径/格式/key/wire/可再生性/备份策略/旧 fixture 结论；未知项不默认当 cache | **可满足** | [data-inventory.md](data-inventory.md) §0 总览表 + §1-§8 逐类（含 file:line）；fixture 均按实读格式构造 |
-| 2 | 普通 reload/失败 reload/stop/切世界/root close 后各类数据原样可读 | **部分满足** | 场景 1/2/3/root close pass（§2）；切世界 not-verified（§5-1）；另：WORLD pack 激活 reload 缺陷（§3-1）属"读写语义"缺口，需在 AC2 判定时如实权衡——数据原样可读成立，但 WORLD pack 场景的脚本加载语义被破坏 |
+| 1 | 每类数据有 owner/路径/格式/key/wire/可再生性/备份策略/旧 fixture 结论；未知项不默认当 cache | **满足** | [data-inventory.md](data-inventory.md) §0 总览表（含 owner=代码锚点列）+ §1-§8 逐类（含 file:line）；fixture 均按实读格式构造 |
+| 2 | 普通 reload/失败 reload/stop/切世界/root close 后各类数据原样可读 | **满足**（数据完整性口径） | 场景 1/2/3/4/5 全部 pass（§2；切世界=换存档目录口径）。另：WORLD pack 激活 reload 缺陷（§3-1）如实记录——受保护**数据**原样可读成立，但 WORLD pack 的脚本加载语义被破坏，属功能缺口归票 19/07 修复，不构成 AC2 的数据完整性反例 |
 | 3 | GLOBAL/WORLD/SERVER_CACHE 路径、启用状态文件、manifest key、默认启用规则不变；Fabric WORLD 记为现状差异 | **可满足** | 盘点 §3/§9 + 场景 1（reload 后 pack 重发现）+ 场景 3（WORLD pack 发现）+ 状态文件优先级实测（manifest enabled=false + state=true 生效） |
 | 4 | probe 输出和 module cache 只有源可重建且有证据才重建 | **可满足** | 场景 6：probe 清除后重建 391 文件（源=运行中 catalog）；module cache 无盘上形态；node_modules 归为不可再生 |
 | 5 | 迁移备份/原子替换/版本标记/幂等/回滚为必备 gate | **未触发（无迁移）** | 本票未发生格式迁移，AC5 的"若必须迁移"前置不成立；现状缺口与后续 gate 要求记录为 §3-2 |
@@ -137,6 +137,14 @@ fixture v3 起改为"join 捕获实体 + tick 延迟写"，写入与读回一致
 | 9 | 断言只用公开观察面 | **满足** | 全部断言=文件内容 hash、日志 marker、RCON 回执（含 `data get`）；无私有字段/句柄 |
 
 > 注：以上仅为执行 agent 的建议判定，工单勾选与关闭仍按 README 规则由认领者/维护者确认。
+
+## 6b. 证据完整性备注（如实记录）
+
+- **第一遍运行的会话 stdout 全文已随一次性 worktree 删除而丢失**（当时仅归档了关键行摘要、RCON 回执与
+  快照；worktree `remove+prune` 前未归档全文）——这是流程失误，不影响已记录结论：摘要有逐时间戳 marker，
+  且第二遍/补跑在修复后的 harness 上复现了关键行为。教训已固化：此后会话全文以
+  `evidence/full-logs/*.log.gz` 归档（场景 7 的 wA/wB 两会话已入库）。
+- 场景 7 会话日志：`full-logs/wA-stdout.log.gz`（FML DEBUG 全文）、`full-logs/wB-*.log.gz`。
 
 ## 7. 复现命令
 
