@@ -32,21 +32,30 @@
 
 ## Closure record（2026-09-12）
 
-- 执行者：zcode-agent。绑定 revision：**`3400e97e`**（取代 01 号报告 §2 的建议 `14de611f`；取代理由与性质见
-  基线报告 §1——editor-removal 是已批准的产品决定，非性能调优）。
-- 交付物：harness `bench/perf/`（`sample.ps1` + `rcon.py` + `fixtures/nekojs/` + README，随仓库提交，P4 复用）；
-  证据 `../baseline/2026-09-12-perf-baseline/`（`REPORT.md` + `raw/formal/` + `raw/shakedown/` + `raw/runner-logs/`）。
-- 正式样本：startup n=5（p50 16.5 s / max 24.4 s，离群保留）、reload n=5（p50 117 ms，0 错误）、
-  tick 3 轮（p50 50.0 ms，等于原版 tick 节拍）、Adapter 3×10 chunk（稳态 p50 6.9–8.8 µs/op）、
-  eval 3×8 block（稳态 p50 58–102 ns/op）、memory 3 轮（仅量级）、Probe n=5（完整生成 389 文件 330–780 ms）。
-  未采样：secondary/experimental 节点与 CLIENT 维度，已在报告 §4 显式声明并给方法。
-- 证据完整性：会话日志全文 gzip 入库（234.2 MB → 6.73 MB），无裁剪；作废/中断样本按原样保留并逐条
-  记录原因（`raw/shakedown/README.md`）。本次采样在 harness 内发现并修复 6 类失败模式（lock 竞争、
-  RCON 封帧、Copy-Item 嵌套、空服暂停、fixture API 误用、probe 增量快路径、.ps1 BOM），全部写入
-  `bench/perf/README.md` 的「已知失败模式」。
+- 执行者：zcode-agent。绑定 revision：**`3400e97e`**，**不是**与 01 完全同源：01 报告 §2 建议 `14de611f`，
+  两者之间 6 个 commit 已逐条列在基线报告 §1——其中 `a2715b03`（编辑器/脚本同步移除）有运行时影响，
+  `3400e97e` 自身触及 `EntityTypeBuilder`（去冗余 cast，行为等价）。因此**不得与 `14de611f` 的数字混用**；
+  若需严格同源对照，应在 `14de611f` 上补一轮（owner 维护者，见报告 §8 A8）。
+- 交付物：harness `bench/perf/`（`sample.ps1` + `run-mode.cmd` + `rcon.py` + `fixtures/nekojs/` + README，
+  随仓库提交，P4 复用）；证据 `../baseline/2026-09-12-perf-baseline/`（`REPORT.md` + `raw/formal/` +
+  `raw/superseded/` + `raw/shakedown/` + `raw/runner-logs/`）。
+- 正式样本（第二遍，harness 修订后）：startup n=5（p50 24.4 s，双峰离群保留）、reload n=5（p50 122 ms，
+  5/5 `no errors.`）、tick 3 轮（mean 50.0 ms = 原版 tick 节拍，p50 47.1–50.0 ms）、
+  Adapter 3×10 chunk（稳态 p50 7.6–10.2 µs/op）、eval 3×8 block（稳态 p50 54–194 ns/op，**本基线最敏感**）、
+  memory 3 轮（仅量级）、Probe n=5（完整生成 389 文件 586–779 ms）。未采样：secondary/experimental 节点与
+  CLIENT 维度，报告 §4 显式声明并给方法。
+- 证据完整性：会话日志全文 gzip 入库（130 文件、273.9 MB → 7.9 MB），无裁剪；作废运行按原样保留并逐条
+  记录原因（`raw/shakedown/README.md`）；第一遍正式样本因 harness 修订被取代，保留在 `raw/superseded/`
+  并附两遍对照（结论：跨会话离散度 > harness 版本差异）。
+- 代码审查（双轴）后修订：harness 修掉 4 处实质问题（每 Mode 重试 stdin 白等 60 s 并污染 tick 窗口、
+  tick 行数停服前统计致 jsonl 与 CSV 不一致、`-TimeoutMs` 死参数、各 fixture gen 不同源），
+  并在修订后的 harness 上**重采全部四个维度**；报告补上 revision 逐 commit 论证、每个异常的 owner、
+  以及跨会话方差警示。
 - 阈值口径：本基线**不含**任何发布阻断阈值或预算；阈值按决策 07 在 P4 前依据本基线决定
-  （[04](04-perf-release-policy.md) 维护者结论、[35](35-release-perf-compare.md) 复测对照消费）。
-- 遗留异常（均有 owner，见报告 §8）：A1 startup 两个离群未定位到根因；A5 memory 非稳态曲线。
+  （[04](04-perf-release-policy.md) 维护者结论、[35](35-release-perf-compare.md) 复测对照消费；
+  复测须在同一会话内做对照，见报告 §8 A7）。
+- 遗留异常（均有 owner，见报告 §8）：A1 startup 双峰未定位根因；A5 memory 非稳态；
+  A7 跨会话离散度大；A8 revision 绑定需维护者裁定是否需要严格同源补采。
 
 ## Sources
 
