@@ -89,10 +89,20 @@ dependencies {
 // 整文件守卫和节点目录表达，跨加载器中立的部分（BlockEvents 等）直接住共享树。
 // 少数 NeoForge 专属实现没有共享语义，按类名下放并从 Fabric source set 排除，避免
 // 它们因缺少外层守卫而进入 Fabric fat jar。
+//
+// 源根注入只在借用其他节点时进行（26.2.0-fabric → 26.1.2-fabric bridge）。fabric_source_node
+// 指向自身时（26.1.2-fabric）节点本地源已由 stonecutter 挂载，这里再注入会让 processResources
+// 收到同一目录两份 copy root——srcDirs 的 Set 按 File 去重掩盖了执行层重复，冷构建直接
+// `Entry ... is a duplicate` 失败（诊断与日志：docs/architecture-refactor/baseline/
+// 2026-09-12-build-baseline-report.md §7.1，工单 01 基线发现）。
 val fabricSourceRoot = rootProject.file("versions/$fabricSourceNode/src/main")
+if (fabricSourceNode != project.name) {
+    sourceSets.main {
+        java.srcDir(fabricSourceRoot.resolve("java"))
+        resources.srcDir(fabricSourceRoot.resolve("resources"))
+    }
+}
 sourceSets.main {
-    java.srcDir(fabricSourceRoot.resolve("java"))
-    resources.srcDir(fabricSourceRoot.resolve("resources"))
     java.exclude("**/NeoForge*.java")
 }
 
