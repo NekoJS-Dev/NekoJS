@@ -225,15 +225,19 @@ public final class JsApiSurfaceResolver {
         for (VerifiedApiContract contract : contracts.all()) {
             NormativeApiContract normative = contract.contract();
             for (NormativeApiContract.ContractCapability cap : normative.capabilities()) {
+                // 契约能力条件（loader/版本/运行上下文）在此真实接线：EnvironmentScope 交给
+                // CapabilityResolver 做激活裁定（匹配→激活；不匹配→显式 unavailable），
+                // 声明的 supported/partial/unavailable 状态随定义传递。
                 definitions.add(new CapabilityDefinition(
                         cap.id(),
                         contract.identity().version(),
                         CapabilityImplementationMode.SINGLE,
                         com.tkisor.nekojs.api.capability.ProviderPolicy.CORE_ONLY,
                         Set.of(),
-                        null,
+                        cap.conditions(),
                         Set.of(),
-                        Set.of()));
+                        Set.of(),
+                        cap.status()));
             }
         }
         return definitions;
