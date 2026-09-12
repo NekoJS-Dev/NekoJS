@@ -10,25 +10,25 @@ spec 依据：[运行时生命周期与数据保护规格](../../specs/05-runtim
 
 ## 0. 总览表
 
-| # | 数据类 | 实际路径 | 格式 | 可再生性 | 既有保护机制 | 无版本标记？ |
+| # | 数据类 | owner（代码锚点） | 实际路径 | 格式 | 可再生性 | 既有保护机制 | 无版本标记？ |
 |---|---|---|---|---|---|---|
-| 1 | 引擎 config | `nekojs/config/engine.toml`（旧位置 `<gamedir>/config/nekojs-engine.toml` 只读回退） | TOML（NightConfig） | 不可再生（用户可编辑）；损坏回退默认值 | 损坏不覆盖（回退内存默认）；沙箱永久拒写 `nekojs/config/`；**无原子写** | 无 |
-| 2 | probe config | `nekojs/config/probe.toml` | TOML（NightConfig autosave） | 不可再生（用户可编辑）；损坏回退默认 | 同上（SandboxPolicy 保护） | 无 |
-| 3 | world pack | `<world>/nekojs_packs/<pack>/` | 目录 + `manifest.json` | **不可再生**（用户数据） | 损坏 manifest 跳过不删；状态文件损坏回退默认 | 无 |
-| 4 | GLOBAL pack | `nekojs/packs/<pack>/` | 同上 | **不可再生**（用户数据） | 同上 | 无 |
-| 5 | SERVER_CACHE pack | `nekojs/server_packs/<sha256(地址)>/<syncId>/` | 同上（manifest+内容文件） | **可重建**：源 = 远端服务器 + 信任判定成立 | 落盘后重扫重算哈希自检；删旧重建（同 syncId 内） | 无（哈希非版本） |
-| 6 | pack 启用状态 | 每包 `<pack>/.neko_pack.state.json` | JSON（pretty） | 不可再生（用户决策记录） | 损坏回退 manifest 默认；写失败 WARN 不抛；**无原子写** | 无 |
-| 7 | trust-store | `nekojs/config/trusted-servers.json` | JSON（Gson） | 不可再生（信任决策） | 损坏→空存储（WARN）；**temp+ATOMIC_MOVE 原子替换**（唯一有原子写的盘上数据） | 无 |
-| 8 | 实体/玩家 pdata | 实体持久化容器子键 `NekoJSPersistentData`（NeoForge=`Entity#getPersistentData()`；Fabric=mixin 字段，存档键 `NeoForgeData`） | NBT CompoundTag | **不可再生**（脚本/玩家数据） | 随实体存档读写；跨 loader 存档格式兼容（Fabric 写 `NeoForgeData` 兼容键） | 无 schema/version |
-| 9 | PData wire | payload id `nekojs:pdata_sync`，registrar 协议 `"1"` | VAR_INT entityId + VAR_INT revision + COMPOUND_TAG | wire（非落盘） | revision 去重；>32768 字符跳过并 WARN | — |
-| 10 | 用户编辑 workspace | `nekojs/{startup,server,client,test}_scripts/jsconfig.json`、`<pack>/<type>_scripts/jsconfig.json`、`.neko_probe/jsconfig.json`、`nekojs/README.txt` | JSON / 文本 | 半可再生（生成骨架可重建，**用户编辑不可再生**） | 全部 **only-if-missing** 写入（存在即不覆盖） | 无 |
-| 11 | snippets | `layout.snippetsPath()`（catalog 输出布局决定） | JSON | 可再生（纯生成物） | **无条件覆盖写** | 无 |
-| 12 | 编辑器配置合并面 | `<gamedir>/jsconfig.json`、`pyrightconfig.json`、`.vscode/settings.json` 等 | JSON | 不可再生（用户可编辑） | **merge 语义**（读-改-写，保留未知键/未知路径） | 无 |
-| 13 | probe 输出 | `.neko_probe/{typescript,python,...}/` | .d.ts / .pyi | **可再生**（源 = 运行中的 registry/catalog，有命令 `/nekojs probe`） | commitInPlace：同内容跳过、陈旧删除；`@manual` 等生成目录随每次 probe 重写 | 无 |
-| 14 | module cache | 进程内存（`NekoModulePipelineCache.PREPARED_CACHE`） | — | 可再生（源 = 脚本文件本身） | 纯内存，按路径+mtime/size stamp 失效；**无盘上 module cache** | — |
-| 15 | 历史脚本日志 | `logs/nekojs/<name>.log` + `logs/nekojs/old/<name>.log` | log4j2 文本 | 不可再生（历史诊断） | 创建 logger 时把旧文件 move 到 `old/`（REPLACE_EXISTING，**单代备份**）；JVM shutdown hook 冲刷 | 无 |
-| 16 | 脚本 generateData 落盘 | `nekojs/data/`（合成 datapack 挂载）+ 包内 `data/` | JSON（datapack 结构） | 不可再生（脚本产出，脚本可重跑） | 内容签名未变化时挂载零开销 | 无 |
-| 17 | NekoJS 内建资源包 | `<gamedir>/nekojs/` 整根（`NekoJSPackLoader`） | MC resource/data pack | 派生（读脚本根） | `PackSelectionConfig(true, TOP, false)` 固定启用 | — |
+| 1 | 引擎 config | NekoJSPaths.java:70-79 + NightConfig 装载（NekoJSMod.java:87-89） | `nekojs/config/engine.toml`（旧位置 `<gamedir>/config/nekojs-engine.toml` 只读回退） | TOML（NightConfig） | 不可再生（用户可编辑）；损坏回退默认值 | 损坏不覆盖（回退内存默认）；沙箱永久拒写 `nekojs/config/`；**无原子写** | 无 |
+| 2 | probe config | NekoJSPaths.java:70-79 + probe config 装载（同上） | `nekojs/config/probe.toml` | TOML（NightConfig autosave） | 不可再生（用户可编辑）；损坏回退默认 | 同上（SandboxPolicy 保护） | 无 |
+| 3 | world pack | ScriptPackRegistry.java:27,89-94（WORLD scope） | `<world>/nekojs_packs/<pack>/` | 目录 + `manifest.json` | **不可再生**（用户数据） | 损坏 manifest 跳过不删；状态文件损坏回退默认 | 无 |
+| 4 | GLOBAL pack | ScriptPackRegistry.java:26 + NekoJSPaths.java:82（GLOBAL scope） | `nekojs/packs/<pack>/` | 同上 | **不可再生**（用户数据） | 同上 | 无 |
+| 5 | SERVER_CACHE pack | ScriptPackRegistry.java:108-113 + PackSyncClient.java:206-221 | `nekojs/server_packs/<sha256(地址)>/<syncId>/` | 同上（manifest+内容文件） | **可重建**：源 = 远端服务器 + 信任判定成立 | 落盘后重扫重算哈希自检；删旧重建（同 syncId 内） | 无（哈希非版本） |
+| 6 | pack 启用状态 | ScriptPackRegistry.java:136-141,179-181 | 每包 `<pack>/.neko_pack.state.json` | JSON（pretty） | 不可再生（用户决策记录） | 损坏回退 manifest 默认；写失败 WARN 不抛；**无原子写** | 无 |
+| 7 | trust-store | PackSyncTrustStore.java:140-153 | `nekojs/config/trusted-servers.json` | JSON（Gson） | 不可再生（信任决策） | 损坏→空存储（WARN）；**temp+ATOMIC_MOVE 原子替换**（唯一有原子写的盘上数据） | 无 |
+| 8 | 实体/玩家 pdata | EntityPDataStore.java:19-60 + NekoEntityPDataMixin.java:28 | 实体持久化容器子键 `NekoJSPersistentData`（NeoForge=`Entity#getPersistentData()`；Fabric=mixin 字段，存档键 `NeoForgeData`） | NBT CompoundTag | **不可再生**（脚本/玩家数据） | 随实体存档读写；跨 loader 存档格式兼容（Fabric 写 `NeoForgeData` 兼容键） | 无 schema/version |
+| 9 | PData wire | PDataSyncPacket.java:12-20 + PDataSyncService.java:22-30 + NekoJSNetwork.java:43-45 | payload id `nekojs:pdata_sync`，registrar 协议 `"1"` | VAR_INT entityId + VAR_INT revision + COMPOUND_TAG | wire（非落盘） | revision 去重；>32768 字符跳过并 WARN | — |
+| 10 | 用户编辑 workspace | FileEditorConfigContributor.java:44-152 + NekoJSPaths.java:77-79 | `nekojs/{startup,server,client,test}_scripts/jsconfig.json`、`<pack>/<type>_scripts/jsconfig.json`、`.neko_probe/jsconfig.json`、`nekojs/README.txt` | JSON / 文本 | 半可再生（生成骨架可重建，**用户编辑不可再生**） | 全部 **only-if-missing** 写入（存在即不覆盖） | 无 |
+| 11 | snippets | catalog 布局（FileEditorConfigContributor 同族） | `layout.snippetsPath()`（catalog 输出布局决定） | JSON | 可再生（纯生成物） | **无条件覆盖写** | 无 |
+| 12 | 编辑器配置合并面 | FileEditorConfigContributor.java:44-152（merge 面） | `<gamedir>/jsconfig.json`、`pyrightconfig.json`、`.vscode/settings.json` 等 | JSON | 不可再生（用户可编辑） | **merge 语义**（读-改-写，保留未知键/未知路径） | 无 |
+| 13 | probe 输出 | ProbeCoordinator（probe 命令）+ commitInPlace | `.neko_probe/{typescript,python,...}/` | .d.ts / .pyi | **可再生**（源 = 运行中的 registry/catalog，有命令 `/nekojs probe`） | commitInPlace：同内容跳过、陈旧删除；`@manual` 等生成目录随每次 probe 重写 | 无 |
+| 14 | module cache | NekoModulePipelineCache.java:28-80 | 进程内存（`NekoModulePipelineCache.PREPARED_CACHE`） | — | 可再生（源 = 脚本文件本身） | 纯内存，按路径+mtime/size stamp 失效；**无盘上 module cache** | — |
+| 15 | 历史脚本日志 | NekoJSLoggers.java:95-108 | `logs/nekojs/<name>.log` + `logs/nekojs/old/<name>.log` | log4j2 文本 | 不可再生（历史诊断） | 创建 logger 时把旧文件 move 到 `old/`（REPLACE_EXISTING，**单代备份**）；JVM shutdown hook 冲刷 | 无 |
+| 16 | 脚本 generateData 落盘 | generateData 挂载（NekoJSMod.java:138 一族） | `nekojs/data/`（合成 datapack 挂载）+ 包内 `data/` | JSON（datapack 结构） | 不可再生（脚本产出，脚本可重跑） | 内容签名未变化时挂载零开销 | 无 |
+| 17 | NekoJS 内建资源包 | NekoJSPackLoader.java（PackSelectionConfig） | `<gamedir>/nekojs/` 整根（`NekoJSPackLoader`） | MC resource/data pack | 派生（读脚本根） | `PackSelectionConfig(true, TOP, false)` 固定启用 | — |
 
 ---
 
