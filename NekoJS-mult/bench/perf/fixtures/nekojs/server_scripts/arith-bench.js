@@ -5,6 +5,11 @@
 // 仅当 nekojs/perf-out/RUN_BENCH 存在时执行；脚本 load 自触发（每次 load/ reload 恰好一个样本）。
 const fs = require('fs');
 
+function sessionGen() {
+    // 与其它维度共用 harness 写的会话 gen（见 main.js / README）
+    try { return fs.readFileSync('nekojs/perf-out/GEN', 'utf8').trim(); } catch (e) { return String(Date.now()); }
+}
+
 function benchEnabled() {
     try { return fs.existsSync('nekojs/perf-out/RUN_BENCH'); } catch (e) { return false; }
 }
@@ -14,7 +19,7 @@ const ITERS = 200000;
 
 function runArithBench(trigger) {
     if (!benchEnabled()) return;
-    const gen = (globalThis.__perf02Gen || Date.now()) + '-arith';
+    const gen = sessionGen() + '-arith';
     let x = 1;
     let out = '';
     for (let b = 0; b < BLOCKS; b++) {

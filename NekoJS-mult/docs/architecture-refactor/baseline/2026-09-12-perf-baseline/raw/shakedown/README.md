@@ -4,8 +4,9 @@
 正式样本在 `../formal/`；统计与结论见 `../REPORT.md`。
 
 harness 的缺陷在这批运行里被发现并修复（每条的修复都进了 `bench/perf/` 的最终版本）。
-这些运行对应的 session stdout 全文（每个 4–30 MB，FML DEBUG 级别）未入库，仅保留按关键行
-过滤的摘要 `*-excerpt.log` 与运行器日志 `../../raw/runner-logs/`；原始量与重建方式在 REPORT.md §7 记录。
+这些运行对应的 session stdout 全文与正式样本一样已 gzip 入库（各自的 `full-logs/`），
+另有按关键行过滤的摘要 `*-excerpt.log` 便于快速复核；留档规模见 REPORT.md §7。
+（第一遍正式采样被 harness 修订取代，见 `../superseded/README.md`，不在本目录。）
 
 | 运行目录 | 模式 | 结果 | 作废原因 | 修复 |
 |---|---|---|---|---|
