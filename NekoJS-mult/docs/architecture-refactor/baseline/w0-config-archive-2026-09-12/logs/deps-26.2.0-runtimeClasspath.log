@@ -1,0 +1,214 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :26.2.0:dependencies
+
+------------------------------------------------------------
+Project ':26.2.0'
+------------------------------------------------------------
+
+runtimeClasspath - Runtime classpath of source set 'main'.
++--- net.neoforged:DevLaunch:1.0.2
++--- project ':common'
+|    \--- curse.maven:graal-1504336:8762962
++--- curse.maven:jei-238222:8300448
++--- net.neoforged:neoforge:26.2.0.57
+|    +--- org.ow2.asm:asm:{strictly 9.10.1} -> 9.10.1
+|    +--- org.ow2.asm:asm-commons:{strictly 9.10.1} -> 9.10.1
+|    |    +--- org.ow2.asm:asm:9.10.1
+|    |    \--- org.ow2.asm:asm-tree:9.10.1
+|    |         \--- org.ow2.asm:asm:9.10.1
+|    +--- org.ow2.asm:asm-tree:{strictly 9.10.1} -> 9.10.1 (*)
+|    +--- org.ow2.asm:asm-util:{strictly 9.10.1} -> 9.10.1
+|    |    +--- org.ow2.asm:asm:9.10.1
+|    |    +--- org.ow2.asm:asm-tree:9.10.1 (*)
+|    |    \--- org.ow2.asm:asm-analysis:9.10.1
+|    |         \--- org.ow2.asm:asm-tree:9.10.1 (*)
+|    +--- org.ow2.asm:asm-analysis:{strictly 9.10.1} -> 9.10.1 (*)
+|    +--- net.neoforged.fancymodloader:loader:11.0.16
+|    |    +--- net.sf.jopt-simple:jopt-simple:5.0.4
+|    |    +--- net.neoforged:accesstransformers:11.0.2
+|    |    |    +--- org.slf4j:slf4j-api:2.0.9 -> 2.0.17
+|    |    |    +--- org.ow2.asm:asm:9.7 -> 9.10.1
+|    |    |    +--- org.ow2.asm:asm-tree:9.7 -> 9.10.1 (*)
+|    |    |    +--- org.ow2.asm:asm-commons:9.7 -> 9.10.1 (*)
+|    |    |    \--- net.neoforged.accesstransformers:at-parser:11.0.2
+|    |    |         \--- org.slf4j:slf4j-api:2.0.9 -> 2.0.17
+|    |    +--- net.minecrell:terminalconsoleappender:1.3.0
+|    |    |    +--- org.apache.logging.log4j:log4j-core:2.8.1 -> 2.26.0
+|    |    |    |    \--- org.apache.logging.log4j:log4j-api:2.26.0
+|    |    |    \--- org.jline:jline-reader:3.20.0
+|    |    |         \--- org.jline:jline-terminal:3.20.0
+|    |    +--- commons-io:commons-io:2.11.0 -> 2.20.0
+|    |    +--- org.lwjgl:lwjgl-bom:3.4.1
+|    |    |    +--- org.lwjgl:lwjgl-tinyfd:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-freetype:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-glfw:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-jemalloc:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-openal:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-opengl:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-shaderc:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-spvc:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-stb:3.4.1 (c)
+|    |    |    +--- org.lwjgl:lwjgl-vma:3.4.1 (c)
+|    |    |    \--- org.lwjgl:lwjgl-vulkan:3.4.1 (c)
+|    |    +--- org.lwjgl:lwjgl-tinyfd -> 3.4.1
+|    |    +--- org.apache.logging.log4j:log4j-core:2.22.1 -> 2.26.0 (*)
+|    |    +--- org.ow2.asm:asm:9.9.1 -> 9.10.1
+|    |    +--- org.ow2.asm:asm-tree:9.9.1 -> 9.10.1 (*)
+|    |    +--- org.ow2.asm:asm-commons:9.9.1 -> 9.10.1 (*)
+|    |    +--- net.neoforged:mergetool:2.0.0 -> 2.0.7
+|    |    |    +--- org.ow2.asm:asm:9.5 -> 9.10.1
+|    |    |    +--- org.ow2.asm:asm-tree:9.5 -> 9.10.1 (*)
+|    |    |    +--- org.ow2.asm:asm-util:9.5 -> 9.10.1 (*)
+|    |    |    +--- net.sf.jopt-simple:jopt-simple:5.0.4
+|    |    |    \--- net.neoforged:srgutils:1.0.10
+|    |    +--- org.apache.logging.log4j:log4j-api:2.22.1 -> 2.26.0
+|    |    +--- com.google.guava:guava:31.1-jre -> 33.6.0-jre
+|    |    |    +--- com.google.guava:failureaccess:1.0.3
+|    |    |    +--- com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
+|    |    |    +--- org.jspecify:jspecify:1.0.0
+|    |    |    +--- com.google.errorprone:error_prone_annotations:2.47.0 -> 2.48.0
+|    |    |    \--- com.google.j2objc:j2objc-annotations:3.1
+|    |    +--- com.google.code.gson:gson:2.10 -> 2.14.0
+|    |    |    \--- com.google.errorprone:error_prone_annotations:2.48.0
+|    |    +--- org.apache.maven:maven-artifact:3.8.5 -> 3.9.16
+|    |    |    \--- org.codehaus.plexus:plexus-utils:3.6.1
+|    |    +--- org.apache.commons:commons-lang3:3.12.0 -> 3.20.0
+|    |    +--- com.electronwill.night-config:core:3.8.0 -> 3.9.0
+|    |    +--- com.electronwill.night-config:toml:3.8.0 -> 3.9.0
+|    |    |    \--- com.electronwill.night-config:core:3.9.0
+|    |    +--- com.mojang:logging:1.1.1 -> 1.7.12
+|    |    |    +--- org.apache.logging.log4j:log4j-slf4j2-impl:2.26.0
+|    |    |    |    +--- org.apache.logging.log4j:log4j-api:2.26.0
+|    |    |    |    \--- org.apache.logging.log4j:log4j-core:2.26.0 (*)
+|    |    |    +--- org.apache.logging.log4j:log4j-api:2.26.0
+|    |    |    \--- org.apache.logging.log4j:log4j-core:2.26.0 (*)
+|    |    +--- net.neoforged:JarJarSelector:0.5.0 -> 0.5.1
+|    |    |    +--- net.neoforged:JarJarMetadata:0.5.1
+|    |    |    |    +--- org.apache.maven:maven-artifact:3.8.1 -> 3.9.16 (*)
+|    |    |    |    \--- com.google.code.gson:gson:2.8.5 -> 2.14.0 (*)
+|    |    |    +--- org.apache.maven:maven-artifact:3.8.1 -> 3.9.16 (*)
+|    |    |    \--- com.google.guava:guava:31.0.1-jre -> 33.6.0-jre (*)
+|    |    +--- net.neoforged:JarJarMetadata:0.5.0 -> 0.5.1 (*)
+|    |    \--- net.neoforged:bus:8.0.5
+|    |         +--- org.ow2.asm:asm:9.2 -> 9.10.1
+|    |         +--- org.apache.logging.log4j:log4j-api:2.17.1 -> 2.26.0
+|    |         \--- net.jodah:typetools:0.6.3
+|    +--- net.neoforged.fancymodloader:earlydisplay:11.0.16
+|    |    +--- net.neoforged.fancymodloader:loader:11.0.16 (*)
+|    |    \--- net.sf.jopt-simple:jopt-simple:5.0.4
+|    +--- net.neoforged:accesstransformers:11.0.2 (*)
+|    +--- net.neoforged:bus:8.0.5 (*)
+|    +--- net.neoforged:mergetool:2.0.7 (*)
+|    +--- com.electronwill.night-config:core:3.9.0
+|    +--- com.electronwill.night-config:toml:3.9.0 (*)
+|    +--- org.apache.maven:maven-artifact:3.9.16 (*)
+|    +--- net.jodah:typetools:0.6.3
+|    +--- net.minecrell:terminalconsoleappender:1.3.0 (*)
+|    +--- net.fabricmc:sponge-mixin:0.17.3+mixin.0.8.7
+|    +--- net.neoforged:JarJarSelector:0.5.1 (*)
+|    +--- net.neoforged:JarJarMetadata:0.5.1 (*)
+|    \--- net.neoforged:neoform:26.2-2
+|         +--- net.neoforged:minecraft-dependencies:26.2
+|         |    +--- at.yawk.lz4:lz4-java:{strictly 1.10.1} -> 1.10.1
+|         |    +--- com.azure:azure-json:{strictly 1.4.0} -> 1.4.0
+|         |    +--- com.github.oshi:oshi-core:{strictly 6.9.0} -> 6.9.0
+|         |    +--- com.google.code.gson:gson:{strictly 2.14.0} -> 2.14.0 (*)
+|         |    +--- com.google.guava:failureaccess:{strictly 1.0.3} -> 1.0.3
+|         |    +--- com.google.guava:guava:{strictly 33.6.0-jre} -> 33.6.0-jre (*)
+|         |    +--- com.ibm.icu:icu4j:{strictly 78.3} -> 78.3
+|         |    +--- com.microsoft.azure:msal4j:{strictly 1.24.1} -> 1.24.1
+|         |    +--- com.mojang:authlib:{strictly 9.0.75} -> 9.0.75
+|         |    +--- com.mojang:blocklist:{strictly 1.0.10} -> 1.0.10
+|         |    +--- com.mojang:brigadier:{strictly 1.3.10} -> 1.3.10
+|         |    +--- com.mojang:datafixerupper:{strictly 10.0.21} -> 10.0.21
+|         |    +--- com.mojang:jtracy:{strictly 1.0.37} -> 1.0.37
+|         |    +--- com.mojang:logging:{strictly 1.7.12} -> 1.7.12 (*)
+|         |    +--- com.mojang:patchy:{strictly 2.2.10} -> 2.2.10
+|         |    +--- com.mojang:text2speech:{strictly 1.19.12} -> 1.19.12
+|         |    +--- commons-codec:commons-codec:{strictly 1.22.0} -> 1.22.0
+|         |    +--- commons-io:commons-io:{strictly 2.20.0} -> 2.20.0
+|         |    +--- io.netty:netty-buffer:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-codec-base:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-codec-compression:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-codec-http:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-common:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-handler:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-resolver:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-transport-classes-epoll:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-transport-classes-kqueue:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-transport-native-unix-common:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- io.netty:netty-transport:{strictly 4.2.15.Final} -> 4.2.15.Final
+|         |    +--- it.unimi.dsi:fastutil:{strictly 8.5.18} -> 8.5.18
+|         |    +--- net.java.dev.jna:jna-platform:{strictly 5.17.0} -> 5.17.0
+|         |    +--- net.java.dev.jna:jna:{strictly 5.17.0} -> 5.17.0
+|         |    +--- net.sf.jopt-simple:jopt-simple:{strictly 5.0.4} -> 5.0.4
+|         |    +--- org.apache.commons:commons-compress:{strictly 1.28.0} -> 1.28.0
+|         |    +--- org.apache.commons:commons-lang3:{strictly 3.20.0} -> 3.20.0
+|         |    +--- org.apache.logging.log4j:log4j-api:{strictly 2.26.0} -> 2.26.0
+|         |    +--- org.apache.logging.log4j:log4j-core:{strictly 2.26.0} -> 2.26.0 (*)
+|         |    +--- org.apache.logging.log4j:log4j-slf4j2-impl:{strictly 2.26.0} -> 2.26.0 (*)
+|         |    +--- org.jcraft:jorbis:{strictly 0.0.17} -> 0.0.17
+|         |    +--- org.joml:joml:{strictly 1.10.8} -> 1.10.8
+|         |    +--- org.jspecify:jspecify:{strictly 1.0.0} -> 1.0.0
+|         |    +--- org.lwjgl:lwjgl-freetype:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-glfw:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-jemalloc:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-openal:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-opengl:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-shaderc:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-spvc:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-stb:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-tinyfd:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-vma:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl-vulkan:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.lwjgl:lwjgl:{strictly 3.4.1} -> 3.4.1
+|         |    +--- org.slf4j:slf4j-api:{strictly 2.0.17} -> 2.0.17
+|         |    \--- net.neoforged:minecraft-dependencies:{strictly 26.2} -> 26.2 (*)
+|         +--- net.neoforged:mergetool:2.0.7 (*)
+|         +--- com.google.code.findbugs:jsr305:3.0.2
+|         +--- org.jetbrains:annotations:26.0.2-1
+|         \--- ca.weblite:java-objc-bridge:1.1
+|              \--- net.java.dev.jna:jna:5.10.0 -> 5.17.0
+\--- net.neoforged:neoforge:26.2.0.57 (*)
+
+(c) - A dependency constraint, not a dependency. The dependency affected by the constraint occurs elsewhere in the tree.
+(*) - Indicates repeated occurrences of a transitive dependency subtree. Gradle expands transitive dependency subtrees only once per project; repeat occurrences only display the root of the subtree, followed by this annotation.
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/NekoJS-w0-baseline/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 3s
+10 actionable tasks: 1 executed, 9 up-to-date

@@ -1,0 +1,15 @@
+
+------------------------------------------------------------
+Gradle 9.6.0
+------------------------------------------------------------
+
+Build time:    2026-06-18 23:19:03 UTC
+Revision:      3f750f03d77e42327c5f9fcb9992110088330a32
+
+Kotlin:        2.3.21
+Groovy:        4.0.32
+Ant:           Apache Ant(TM) version 1.10.17 compiled on April 6 2026
+Launcher JVM:  1.8.0_502 (Azul Systems, Inc. 25.502-b07)
+Daemon JVM:    C:\Program Files\Zulu\zulu-8 (no Daemon JVM specified, using current Java home)
+OS:            Windows 11 10.0 amd64
+

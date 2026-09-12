@@ -1,0 +1,71 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :projects
+
+Projects:
+
+------------------------------------------------------------
+Root project 'NekoJS'
+------------------------------------------------------------
+
+Location: D:\mcmodDemo\NekoJS\NekoJS-w0-baseline\NekoJS-mult
+
+Project hierarchy:
+
+Root project 'NekoJS'
++--- Project ':1.21.1'
++--- Project ':26.1.2'
++--- Project ':26.1.2-fabric'
++--- Project ':26.2.0'
++--- Project ':26.2.0-fabric'
++--- Project ':common'
+\--- Project ':common-api-processor'
+
+Project locations:
+
+project ':1.21.1' - \versions\1.21.1
+project ':26.1.2' - \versions\26.1.2
+project ':26.1.2-fabric' - \versions\26.1.2-fabric
+project ':26.2.0' - \versions\26.2.0
+project ':26.2.0-fabric' - \versions\26.2.0-fabric
+project ':common' - \common
+project ':common-api-processor' - \common-api-processor
+
+To see a list of the tasks of a project, run gradlew <project-path>:tasks
+For example, try running gradlew :1.21.1:tasks
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/NekoJS-w0-baseline/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 4s
+10 actionable tasks: 1 executed, 9 up-to-date
