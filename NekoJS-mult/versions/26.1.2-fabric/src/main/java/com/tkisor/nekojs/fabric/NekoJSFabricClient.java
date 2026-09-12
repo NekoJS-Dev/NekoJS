@@ -27,11 +27,14 @@ public final class NekoJSFabricClient implements ClientModInitializer {
         // 脚本按键绑定：register 入口 + pressed/released/tick 轮询（ClientTickEvents）
         com.tkisor.nekojs.bindings.event.client.KeyBindEvents.register();
         FabricClientEventBindings.register(() -> {
-            if (NekoJSFabricMod.RUNTIME_ROOT == null) {
+            // root 经 loader entry 的 package-private accessor 获取（fabric entrypoint
+            // 由 loader 反射实例化，无法构造注入）；未装配完成时保留原跳过语义
+            var root = NekoJSFabricMod.runtimeRootOrNull();
+            if (root == null) {
                 LOGGER.error("CLIENT_STARTED: RUNTIME_ROOT not assembled yet, skipping CLIENT script load");
                 return;
             }
-            NekoJSFabricMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
+            root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
         });
         LOGGER.info("NekoJS fabric client bindings registered (CLIENT scripts load at CLIENT_STARTED).");
     }

@@ -5,7 +5,6 @@ package com.tkisor.nekojs.listener;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.api.recipe.definition.MinecraftRecipeSchemaScanner;
 import com.tkisor.nekojs.api.recipe.definition.RecipeSchemaAutoDiscovery;
 import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionJsonLoader;
@@ -14,6 +13,7 @@ import com.tkisor.nekojs.api.recipe.definition.RecipeTypeDefinitionStorage;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.bindings.event.ServerEvents;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
@@ -37,6 +37,14 @@ import net.neoforged.neoforge.event.AddReloadListenerEvent;
 @EventBusSubscriber(modid = NekoJS.MODID)
 public class ServerEventListener {
     private static volatile boolean schemaAutoDiscovered;
+
+    /** loader entry 装配完成后注入的窄生命周期 handle（bind）；server 事件触发时必已就绪。 */
+    private static volatile NekoRuntimeRoot runtimeRoot;
+
+    /** 由 {@code NekoJSMod} 在 root 装配后调用；早于任何 server/world 事件。 */
+    public static void bind(NekoRuntimeRoot root) {
+        runtimeRoot = root;
+    }
 
     static {
         // loot table 加载（reload 流程）时应用脚本在 lootTables 事件中的修改。
@@ -98,7 +106,7 @@ public class ServerEventListener {
         if (worldPacks.isEmpty()) return;
         try {
             VillagerTradeManager.beginReload();
-            NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
+            runtimeRoot.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("SERVER reload after world pack activation failed: ", e);
         }
@@ -116,10 +124,10 @@ public class ServerEventListener {
         ScriptPackDataManager.reset();
         VillagerTradeManager.reset();
         if (removed.isEmpty()) return;
-        var serverManager = NekoJSMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.SERVER);
+        var serverManager = runtimeRoot.scriptManagerOrNull(ScriptType.SERVER);
         if (serverManager != null) serverManager.clearWorldPackListeners(removed);
         if (com.tkisor.nekojs.platform.Platform.isClient()) {
-            var clientManager = NekoJSMod.RUNTIME_ROOT.scriptManagerOrNull(ScriptType.CLIENT);
+            var clientManager = runtimeRoot.scriptManagerOrNull(ScriptType.CLIENT);
             if (clientManager != null) clientManager.clearWorldPackListeners(removed);
         }
     }
@@ -138,7 +146,7 @@ public class ServerEventListener {
         event.addListener((ResourceManagerReloadListener) ServerEventListener::loadRecipeTypeDefinitions);
         try {
             VillagerTradeManager.beginReload();
-            NekoJSMod.RUNTIME_ROOT.reload(ScriptType.SERVER);
+            runtimeRoot.reload(ScriptType.SERVER);
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("Script overload failed: ", e);
         }

@@ -14,7 +14,10 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeAssembly;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
+import com.tkisor.nekojs.listener.PDataSyncListener;
 import com.tkisor.nekojs.listener.RegistryEventAdapter;
+import com.tkisor.nekojs.listener.ServerEventListener;
+import com.tkisor.nekojs.network.PackSyncClientConnections;
 import com.tkisor.nekojs.platform.NekoIdCompat;
 import com.tkisor.nekojs.platform.NeoForgeIdCompat;
 import com.tkisor.nekojs.platform.NeoForgePlatform;
@@ -32,6 +35,7 @@ import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 import com.tkisor.nekojs.platform.compat.McPlatformCompat;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 @Mod(NekoJS.MODID)
 public class NekoJSMod extends NekoJS {
@@ -57,7 +61,12 @@ public class NekoJSMod extends NekoJS {
         registerEventListeners(modEventBus);
         initializeWorkspace();
         initializeScripts();
-        registerClient(modEventBus);
+        // 生命周期 handle 注入：@EventBusSubscriber 静态 listener 与 pack sync 钩子无法构造注入，
+        // 由 entry 在 root 装配完成后 bind（均早于任何 server/world 事件触发点）
+        PDataSyncListener.bind(RUNTIME_ROOT);
+        ServerEventListener.bind(RUNTIME_ROOT);
+        PackSyncClientConnections.bind(RUNTIME_ROOT);
+        registerClient(modEventBus, RUNTIME_ROOT);
     }
 
     private static void registerEventListeners(IEventBus modEventBus) {
@@ -67,7 +76,7 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(RegistryEventAdapter::onEntityAttributeCreation);
         modEventBus.addListener(RegistryEventAdapter::onBuildCreativeTabContents);
         modEventBus.addListener(NekoJSMod::onRegisterCapabilities);
-        NeoForge.EVENT_BUS.addListener(NekoJSCommands::register);
+        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> NekoJSCommands.register(event, NekoJSMod.RUNTIME_ROOT));
         // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
         NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class,
                 event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
@@ -141,10 +150,10 @@ public class NekoJSMod extends NekoJS {
         GoalEvents.postRegister();
     }
 
-    private static void registerClient(IEventBus modEventBus) {
+    private static void registerClient(IEventBus modEventBus, NekoRuntimeRoot root) {
         // dist 访问器的版本差异由 McPlatformCompat 门面承载（本文件 neoforge 面，门面可用）
         if (McPlatformCompat.get().isClientDist()) {
-            NekoJSClient.register(modEventBus);
+            NekoJSClient.register(modEventBus, root);
         }
     }
 

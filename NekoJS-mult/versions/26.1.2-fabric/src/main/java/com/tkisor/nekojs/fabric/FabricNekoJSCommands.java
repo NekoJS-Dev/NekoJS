@@ -82,7 +82,9 @@ public final class FabricNekoJSCommands {
     }
 
     private static NekoRuntimeRoot root() {
-        return NekoJSFabricMod.RUNTIME_ROOT;
+        // root 经 loader entry 的 package-private accessor 获取（命令在 server 启动时触发，
+        // 届时已装配完成）
+        return NekoJSFabricMod.runtimeRootOrNull();
     }
 
     // ------------------------------------------------------------------

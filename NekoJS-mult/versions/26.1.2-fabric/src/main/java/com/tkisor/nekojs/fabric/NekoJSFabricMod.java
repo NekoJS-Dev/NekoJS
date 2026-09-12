@@ -46,6 +46,16 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
     public static NekoRuntimeRoot RUNTIME_ROOT;
 
+    /**
+     * loader-entry 私有 seam：同包（{@code com.tkisor.nekojs.fabric}）的 composition 家族
+     * （NekoJSFabricClient / FabricPackSync / FabricNekoJSCommands）经此处读取 root，
+     * Fabric entrypoint 由 loader 反射实例化无法构造注入。root 仍只在本 entry 装配一次
+     * （总账 A2：Phase 5 后字段转 private，仅存本 accessor 一个读点）。
+     */
+    static NekoRuntimeRoot runtimeRootOrNull() {
+        return RUNTIME_ROOT;
+    }
+
     /** 客户端 tick 冲刷 CLIENT 侧 node timers（与 NeoForge 侧 NekoJSClient 同职责）。 */
     public static void flushClientNodeTimers() {
         if (RUNTIME_ROOT != null) {

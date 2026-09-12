@@ -4,11 +4,11 @@
 package com.tkisor.nekojs.client;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.NekoJSMod;
 import com.tkisor.nekojs.bindings.event.client.ClientEvents;
 import com.tkisor.nekojs.client.renderer.NekoNoopEntityRenderer;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
@@ -28,11 +28,11 @@ import java.nio.file.Path;
 
 public class NekoJSClient {
 
-    public static void register(IEventBus modEventBus) {
-        modEventBus.addListener(NekoJSClient::onClientSetup);
-        modEventBus.addListener(NekoJSClient::onClientResourceReload);
+    public static void register(IEventBus modEventBus, NekoRuntimeRoot root) {
+        modEventBus.addListener((FMLConstructModEvent event) -> onClientSetup(event, root));
+        modEventBus.addListener((AddClientReloadListenersEvent event) -> onClientResourceReload(event, root));
         modEventBus.addListener(NekoJSClient::onRegisterEntityRenderers);
-        NeoForge.EVENT_BUS.addListener(NekoJSClient::onClientTickPost);
+        NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post event) -> onClientTickPost(event, root));
         NeoForge.EVENT_BUS.addListener(NekoJSClient::onLevelUnload);
         // Reload progress HUD (8e)：自包含订阅 RenderGuiEvent.Post，不走 ClientEvents
         com.tkisor.nekojs.client.hud.NekoReloadProgressHud.install();
@@ -40,10 +40,10 @@ public class NekoJSClient {
     }
 
     /// 某些事件需要极早期的时机，如RegisterKeyMappingsEvent
-    private static void onClientSetup(FMLConstructModEvent event) {
+    private static void onClientSetup(FMLConstructModEvent event, NekoRuntimeRoot root) {
         event.enqueueWork(() -> {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
-            NekoJSMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
+            root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
         });
     }
@@ -52,8 +52,8 @@ public class NekoJSClient {
         EntityTypeBuilder.registeredEntityTypes().forEach(type -> event.registerEntityRenderer(type, NekoNoopEntityRenderer::new));
     }
 
-    private static void onClientTickPost(ClientTickEvent.Post event) {
-        NekoJSMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).flushReadyNodeTimers();
+    private static void onClientTickPost(ClientTickEvent.Post event, NekoRuntimeRoot root) {
+        root.scriptManagerOf(ScriptType.CLIENT).flushReadyNodeTimers();
     }
 
     private static void onLevelUnload(LevelEvent.Unload event) {
@@ -64,20 +64,20 @@ public class NekoJSClient {
         }
     }
 
-    private static void onClientResourceReload(AddClientReloadListenersEvent event) {
+    private static void onClientResourceReload(AddClientReloadListenersEvent event, NekoRuntimeRoot root) {
         Identifier listenerId = Identifier.fromNamespaceAndPath(NekoJS.MODID, "client_scripts_reload");
 
         event.addListener(listenerId, (ResourceManagerReloadListener) resourceManager -> {
             NekoJS.LOGGER.debug("Detected client resource reload (F3 + T), reloading CLIENT scripts...");
             try {
-                NekoJSMod.RUNTIME_ROOT.reload(ScriptType.CLIENT);
+                root.reload(ScriptType.CLIENT);
             } catch (Exception e) {
                 // 旧环境的监听器已被 reload 清空、新环境没建起来时，玩家不会有任何提示——
                 // 必须 error 级日志 + 错误面板（rt/ 条目），不再只打 DEBUG
                 NekoJS.LOGGER.error("CLIENT script reload (F3+T) failed", e);
-                NekoJSMod.RUNTIME_ROOT.errorTracker().recordCallbackError(ScriptType.CLIENT, "client_reload", e);
+                root.errorTracker().recordCallbackError(ScriptType.CLIENT, "client_reload", e);
             }
-            postClientGeneration();
+            postClientGeneration(root);
         });
     }
 
@@ -85,7 +85,7 @@ public class NekoJSClient {
      * 客户端生成事件：脚本把 asset JSON 写入 {@code <gameDir>/nekojs/assets}（磁盘 resource
      * pack，懒读保证 reload 时序正确）。先聚合 lang 再生成 assets，与 KubeJS 流程一致。
      */
-    private static void postClientGeneration() {
+    private static void postClientGeneration(NekoRuntimeRoot root) {
         try {
             Path assets = NekoJSPaths.get().assets();
             DataGeneratorJS generator = new DataGeneratorJS(assets, "after_mods");
@@ -106,7 +106,7 @@ public class NekoJSClient {
         } catch (Exception e) {
             // 资产生成失败 = 客户端脚本产物不完整（模型/lang 缺失），同样进错误面板
             NekoJS.LOGGER.error("Client asset generation failed", e);
-            NekoJSMod.RUNTIME_ROOT.errorTracker().recordCallbackError(ScriptType.CLIENT, "generate_assets", e);
+            root.errorTracker().recordCallbackError(ScriptType.CLIENT, "generate_assets", e);
         }
     }
 }
