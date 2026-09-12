@@ -76,19 +76,36 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return manager;
     }
 
+    /**
+     * 事务式完整 reload：候选 generation 全部阶段通过后经单一 commit 点切换（工单 06）。
+     *
+     * <p>失败时抛 {@link NekoReloadException}，其 {@link NekoReloadException#report()}
+     * 携带结构化失败结果（generation / phase / source location / owner / domain）；
+     * 候选 generation 的全部资源已随失败关闭，active 原样可用。
+     */
     public ReloadResult reload(ScriptType type) {
         ScriptManager manager = scriptManagerOf(type);
         manager.reloadScripts();
-        return ReloadResult.success(type);
+        // STARTUP 的重载路径是 reset+load 非事务语义（不可逆平台注册未被域 Adapter 证明
+        // 可回滚，显式 restart/unsupported 边界，见 ScriptManager#reloadScripts 的 STARTUP
+        // 分支警告）——结果中显式标记，不宣称候选/commit 事务成功。
+        return type == ScriptType.STARTUP
+                ? ReloadResult.successNonTransactional(type, manager.generationId(), ReloadPhase.STARTUP)
+                : ReloadResult.success(type, manager.generationId());
     }
 
     public ReloadResult reloadFile(ScriptType type, Path file) {
         ScriptManager manager = scriptManagerOf(type);
         try {
             manager.reloadScriptFile(file.toString());
-            return ReloadResult.success(type);
+            return ReloadResult.success(type, manager.generationId());
+        } catch (NekoReloadException e) {
+            throw e;
         } catch (Exception e) {
-            return ReloadResult.failure(type, e);
+            // 单文件重载沿用 active 环境（非候选路径）：结果显式标记 FILE 阶段
+            throw new NekoReloadException(new ReloadFailureReport(type, manager.generationId(),
+                    ReloadPhase.FILE, file.toString(), "ScriptManager[" + type.name + "]",
+                    "single-file-reload", e));
         }
     }
 
@@ -156,13 +173,33 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         manager.close();
     }
 
-    public record ReloadResult(ScriptType type, boolean success, Throwable error) {
+    /**
+     * reload 结果（工单 06 阶段结果契约）。
+     *
+     * @param type       reload 的脚本类型
+     * @param success    是否成功
+     * @param error      失败原因（成功为 null；失败经由 {@link NekoReloadException} 抛出时
+     *                   该字段与 report.error() 同源）
+     * @param generation 成功后的 generation 序号 / 失败候选的 generation 序号
+     * @param phase      结果阶段：成功为 COMMIT；STARTUP 非事务重载为 STARTUP（显式
+     *                   restart/unsupported 边界）；单文件重载为 FILE
+     */
+    public record ReloadResult(ScriptType type, boolean success, Throwable error, long generation, ReloadPhase phase) {
+        public static ReloadResult success(ScriptType type, long generation) {
+            return new ReloadResult(type, true, null, generation, ReloadPhase.COMMIT);
+        }
+
+        /** STARTUP reset+load 重载的显式非事务结果（不宣称候选/commit 事务成功）。 */
+        public static ReloadResult successNonTransactional(ScriptType type, long generation, ReloadPhase phase) {
+            return new ReloadResult(type, true, null, generation, phase);
+        }
+
         public static ReloadResult success(ScriptType type) {
-            return new ReloadResult(type, true, null);
+            return success(type, -1);
         }
 
         public static ReloadResult failure(ScriptType type, Throwable error) {
-            return new ReloadResult(type, false, error);
+            return new ReloadResult(type, false, error, -1, ReloadPhase.UNKNOWN);
         }
     }
 

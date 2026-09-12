@@ -381,6 +381,11 @@ public final class NekoJSCommands {
                 return 1;
             }
             sendReloadResult(source, root, "NekoJS " + type.name + " scripts reloaded.");
+        } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
+            // 候选 generation 失败（工单 06）：active 保留，失败结果携带
+            // generation/phase/source location/owner/domain 结构化字段（无修复指引）
+            NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
+            source.sendFailure(Component.literal(e.report().describe()));
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
