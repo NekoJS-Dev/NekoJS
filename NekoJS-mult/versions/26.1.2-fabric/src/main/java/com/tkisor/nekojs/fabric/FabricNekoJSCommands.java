@@ -58,7 +58,7 @@ public final class FabricNekoJSCommands {
     private FabricNekoJSCommands() {}
 
     public static void registerCallback() {
-        // 回调在 server 启动时触发，届时 NekoJSFabricMod.RUNTIME_ROOT 已建好
+        // 回调在 server 启动时触发，届时 loader entry 的 root 已装配完成
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 register(dispatcher));
     }

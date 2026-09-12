@@ -44,22 +44,21 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("NekoJS-Fabric");
 
-    public static NekoRuntimeRoot RUNTIME_ROOT;
-
     /**
-     * loader-entry 私有 seam：同包（{@code com.tkisor.nekojs.fabric}）的 composition 家族
-     * （NekoJSFabricClient / FabricPackSync / FabricNekoJSCommands）经此处读取 root，
-     * Fabric entrypoint 由 loader 反射实例化无法构造注入。root 仍只在本 entry 装配一次
-     * （总账 A2：Phase 5 后字段转 private，仅存本 accessor 一个读点）。
+     * 本 entry 私有持有的运行时根（AC3/AC10：无公开 static root）。Fabric entrypoint 由
+     * loader 反射实例化无法构造注入，同包 composition 家族经 {@link #runtimeRootOrNull()}
+     * 这一 package-private seam 读取；root 仍只在本 entry 装配一次。
      */
+    private static NekoRuntimeRoot runtimeRoot;
+
     static NekoRuntimeRoot runtimeRootOrNull() {
-        return RUNTIME_ROOT;
+        return runtimeRoot;
     }
 
     /** 客户端 tick 冲刷 CLIENT 侧 node timers（与 NeoForge 侧 NekoJSClient 同职责）。 */
     public static void flushClientNodeTimers() {
-        if (RUNTIME_ROOT != null) {
-            RUNTIME_ROOT.scriptManagerOf(com.tkisor.nekojs.api.ScriptType.CLIENT).flushReadyNodeTimers();
+        if (runtimeRoot != null) {
+            runtimeRoot.scriptManagerOf(com.tkisor.nekojs.api.ScriptType.CLIENT).flushReadyNodeTimers();
         }
     }
 
@@ -99,8 +98,8 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         // inventoryChanged 的监听器挂载（fabric-api 生命周期回调，零 mixin）
         FabricPlayerEventBindings.registerLifecycle();
         FabricServerEventBindings.register(() -> {
-            if (RUNTIME_ROOT != null) {
-                RUNTIME_ROOT.reload(com.tkisor.nekojs.api.ScriptType.SERVER);
+            if (runtimeRoot != null) {
+                runtimeRoot.reload(com.tkisor.nekojs.api.ScriptType.SERVER);
             }
         });
         FabricPackSync.registerServer();
@@ -131,7 +130,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         FabricPluginLoader.loadPlugins();
         // 共享装配序列（与 NeoForge 侧同构）：loader 差异（FabricPluginLoader 发现、接线顺序
         // setPluginRuntime → bindRuntime）留在本类；产物由本 entry 私有持有。
-        RUNTIME_ROOT = NekoRuntimeAssembly.assemble(
+        runtimeRoot = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
                 this.scriptProperties,
                 NekoJSBasePluginManager.getOwnedPlugins(),

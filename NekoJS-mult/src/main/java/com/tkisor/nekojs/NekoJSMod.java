@@ -40,7 +40,6 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 @Mod(NekoJS.MODID)
 public class NekoJSMod extends NekoJS {
     public static IEventBus modEventBus;
-    public static NekoRuntimeRoot RUNTIME_ROOT;
     private final ScriptEventsJS scriptEventsRegistrar;
 
     static {
@@ -60,13 +59,14 @@ public class NekoJSMod extends NekoJS {
         NeoForgeRuntimeBootstrap.setup();
         registerEventListeners(modEventBus);
         initializeWorkspace();
-        initializeScripts();
-        // 生命周期 handle 注入：@EventBusSubscriber 静态 listener 与 pack sync 钩子无法构造注入，
-        // 由 entry 在 root 装配完成后 bind（均早于任何 server/world 事件触发点）
-        PDataSyncListener.bind(RUNTIME_ROOT);
-        ServerEventListener.bind(RUNTIME_ROOT);
-        PackSyncClientConnections.bind(RUNTIME_ROOT);
-        registerClient(modEventBus, RUNTIME_ROOT);
+        // root 只由本 entry 构造期持有（final local），不落任何 static 字段：
+        // 生命周期 handle 经 bind/register 注入各边界（AC3/AC10：无公开 static root）
+        NekoRuntimeRoot root = initializeScripts();
+        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> NekoJSCommands.register(event, root));
+        PDataSyncListener.bind(root);
+        ServerEventListener.bind(root);
+        PackSyncClientConnections.bind(root);
+        registerClient(modEventBus, root);
     }
 
     private static void registerEventListeners(IEventBus modEventBus) {
@@ -76,7 +76,7 @@ public class NekoJSMod extends NekoJS {
         modEventBus.addListener(RegistryEventAdapter::onEntityAttributeCreation);
         modEventBus.addListener(RegistryEventAdapter::onBuildCreativeTabContents);
         modEventBus.addListener(NekoJSMod::onRegisterCapabilities);
-        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> NekoJSCommands.register(event, NekoJSMod.RUNTIME_ROOT));
+        // （命令监听器在构造期 root 就绪后注册，见构造函数）
         // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
         NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class,
                 event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
@@ -134,12 +134,12 @@ public class NekoJSMod extends NekoJS {
         WorkspaceGenerator.setupWorkspace();
     }
 
-    private void initializeScripts() {
+    private NekoRuntimeRoot initializeScripts() {
         NeoForgePluginLoader.loadAnnotatedPlugins();
         // 共享装配序列（两 loader 同构）：插件 bootstrap → 事件面接线 → 引擎上下文/沙盒工厂/
         // 模块管线绑定 → root 构造 → manager 创建+discover → STARTUP load → fireInitStartup。
         // loader 差异（插件发现、接线顺序）留在本类；产物由本 entry 私有持有。
-        RUNTIME_ROOT = NekoRuntimeAssembly.assemble(
+        NekoRuntimeRoot root = NekoRuntimeAssembly.assemble(
                 this.scriptEventBridge,
                 this.scriptProperties,
                 NekoJSBasePluginManager.getOwnedPlugins(),
@@ -148,6 +148,7 @@ public class NekoJSMod extends NekoJS {
                     ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
                 }).root();
         GoalEvents.postRegister();
+        return root;
     }
 
     private static void registerClient(IEventBus modEventBus, NekoRuntimeRoot root) {

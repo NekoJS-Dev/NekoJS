@@ -1,0 +1,12 @@
+﻿{
+    "server_started":  true,
+    "startup_marker_once":  true,
+    "client_marker_not_on_dedicated_server":  true,
+    "server_marker_before_reload":  true,
+    "server_marker_after_reload":  true,
+    "reload_response_ok":  true,
+    "errors_response_zero":  true,
+    "fabric_bootstrap_once":  true,
+    "no_fatal_exceptions":  true,
+    "clean_exit":  true
+}
