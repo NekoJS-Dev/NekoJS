@@ -49,7 +49,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
      * loader 反射实例化无法构造注入，同包 composition 家族经 {@link #runtimeRootOrNull()}
      * 这一 package-private seam 读取；root 仍只在本 entry 装配一次。
      */
-    private static NekoRuntimeRoot runtimeRoot;
+    private static volatile NekoRuntimeRoot runtimeRoot;
 
     static NekoRuntimeRoot runtimeRootOrNull() {
         return runtimeRoot;

@@ -154,6 +154,10 @@ class NekoRuntimeRootLifecycleTest {
 
         assertNull(root.scriptManagerOrNull(ScriptType.SERVER), "managers released on close");
         assertNull(root.scriptManagerOrNull(ScriptType.CLIENT), "managers released on close");
+        // AC2 的"root-owned 状态随 close 释放"当前覆盖 manager 集合/bridge 监听器/resources；
+        // ErrorTracker 刻意**不**随 close 清空（错误面要活过 close 供诊断），其 generation 归属
+        // 由 06/07 处理（总账 A9/I3）——这里断言现状，防止语义漂移无人察觉。
+        assertEquals(0, root.errors().count(), "tracker keeps its lifetime contract across close (see ledger A9)");
         Set<ScriptType> cleared = bridge.clearListenersCalls.keySet();
         assertTrue(cleared.contains(ScriptType.STARTUP) && cleared.contains(ScriptType.SERVER)
                         && cleared.contains(ScriptType.CLIENT) && cleared.contains(ScriptType.TEST),

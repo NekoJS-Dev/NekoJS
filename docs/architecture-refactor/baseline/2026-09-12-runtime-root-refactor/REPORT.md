@@ -71,7 +71,7 @@ loader discovery（NeoForgePluginLoader / FabricPluginLoader）
 | close（RCON stop） | exitCode=0，无二次回调异常，session.lock 释放 | 同左 |
 | 错误计数 | `nekojs error` → healthy（0） | `nekojs.command.error.healthy`（0） |
 
-- 每会话 10 项自动 checks 全绿（`checks-phase4/5-*.json`；phase4 与 phase5 删除旁路后各跑一轮，共 4 会话）。
+- 每会话 10 项自动 checks 全绿（`evidence/checks-20260912T*.json` 4 份：phase4 两个 loader 各 1 + phase5 删除旁路后各 1）。注意：phase2 删除的 `NekoJS.scriptManagers`（重复 manager 容器）早于烟测，由单测与后续烟测共同覆盖；AC10 的"烟测后删除"时序严格适用于 static root 旁路本身。`clean_exit` check 的实际断言是 `stopChannel == "rcon"`+ gradle 客户端退出；`session.lock` 释放目前仅 WARN 不计入 checks（run-smoke.ps1:191-199）。
 - AC8 计数证据：fabric stdout `fabric entrypoint reached` ×1、`fabric bootstrap done (startup scripts loaded, registry drained)` ×1（reload 后计数不变，无第二套装配）；NeoForge 无单行注册日志，以（a）reload 响应 healthy、（b）全日志无重复装配/注册异常、（c）`publish()` 唯一调用路径在 `NekoRuntimeAssembly`（代码层单一调用点）为证据。
 - CLIENT 真实端（client load / F3+T / 渲染侧）：**not-verified（owner 维护者 / minecraft-mcp）**；无头最小替代 = `NekoRuntimeRootLifecycleTest.clientLoadAndReloadThroughRootLifecycleEntry`（CLIENT manager loadScripts + reload(CLIENT) + 错误边界经同一 root 入口，即 client listener 调用的同一组 API）。
 
@@ -111,6 +111,26 @@ loader discovery（NeoForgePluginLoader / FabricPluginLoader）
 | CLIENT 真实端（client load、F3+T reload、客户端 HUD/渲染路径） | not-verified（无头环境不可真跑） | owner 维护者：真实客户端 smoke；或 minecraft-mcp 桥接客户端验证 |
 | AC8 的 NeoForge 侧单行注册计数日志 | 结构性证据（无现成日志面） | owner 维护者：如需一行式证据，可在 W7/W9 的 smoke 门面中补 `LOGGER.info` 计数行（本票不改行为，未加日志） |
 | 06/07（candidate/active/generation、watchdog、owner-thread 串行化） | 未实施（本票红线） | tickets 06/07；总账 A9（NekoEsmVirtualModuleRegistry GENERATIONS）等已标注 |
+
+## 7b. code-review 裁决记录（2026-09-12）
+
+- **类名撞名说明**：规格 01 的"不建清单"列有 "`RuntimeAssembly`"字样，指**不要新建一个常驻 runtime 装配层**；
+  本票的 `NekoRuntimeAssembly` 是无字段、无 get/current 的纯构造函数（root 只存在于 loader entry 的
+  final local / private 字段），属规格允许的"共享构造函数"形态，未撞入禁用清单所指的层。若后续演进
+  让它开始持有状态，即违反本裁决，应改名并回到决策。
+- **fabric 字段 volatile**：`NekoJSFabricMod.runtimeRoot`（entrypoint 线程写、server/client 线程读）已补 volatile。
+- **`Assembled` 返回值收敛**：两个调用方都只用 `.root()`，`pluginRuntime` 分量已从 record 删除（防投机访问面）。
+- **AC8 计数面补齐（NeoForge）**：装配函数在 `bootstrapOwned` 后输出一行
+  `NekoJS plugin runtime bootstrapped once (assembly)`（NekoJS logger），烟测可 grep 计数（应为 1，
+  reload 前后不变）；Fabric 侧原有 entrypoint/bootstrap-done marker 不变。该行是 review 后新增，
+  formal 烟测截图不含它（纯日志增量，无行为影响）。
+- **AC2 测试补强**：`NekoRuntimeAccessTest` 槽位用例改为自愈（保存/还原进程槽位）；
+  `NekoRuntimeRootLifecycleTest` 显式断言 ErrorTracker 存活语义（防 06/07 语义漂移无人察觉）。
+- **总账 A2 补删除条件**：`runtimeRootOrNull()` 的删除条件（W7/W8 可注入通道）与 3 个 `bind(root)`
+  无 unbind 的 06/07 风险注记已入账（§8.4 原声称"已标注"与账不符，已修正）。
+- **evidence 文件名/口径更正**：checks 文件实际为 `checks-20260912T*.json`（非 phase4/5 命名）；
+  `clean_exit` check 的实际断言是 `stopChannel == "rcon"` + gradle 客户端退出，`session.lock` 释放
+  目前仅 WARN 不计入 checks（run-smoke.ps1:191-199）。
 
 ## 8. 偏离、问题与既有 bug 记录
 
