@@ -11,7 +11,7 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
  *   <li>插件用 {@code replaceLanguage} 换了该扩展名的语言（language id 变化）；</li>
  *   <li>扩展名/请求模式变化（{@link NekoModuleMode}：{@code .cjs} 强制 CJS、{@code .mjs} 强制 ESM）。</li>
  * </ul>
- * 因此 {@link NekoModulePipelineCache} 在 stamp 相等时还要比对本 identity，否则会返回旧语言编译的模块。
+ * 因此 {@link NekoModulePreparation} 在 stamp 相等时还要比对本 identity，否则会返回旧语言编译的模块。
  *
  * @param languageId 解析到的语言 id（{@code javascript} / {@code typescript} / {@code legacy:<ext>} / 插件自定义）
  * @param mode       由扩展名请求的模块模式（{@link NekoModuleMode#AUTO} 表示待管线判定）
