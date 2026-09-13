@@ -152,6 +152,11 @@ class NekoRuntimeRootReloadResultTest {
             assertEquals(ReloadPhase.FILE, fileResult.phase(),
                     "single-file reload failure must surface the FILE phase");
             assertTrue(fileResult.error() != null, "failure result carries the error");
+            // 审查 A2：FILE 路径此前把 source location 算出来又被 ReloadResult 丢掉，
+            // AC3「失败结果含 source location」在非候选路径不成立
+            assertTrue(fileResult.sourceLocation() != null
+                            && fileResult.sourceLocation().endsWith("missing-file.js"),
+                    "FILE failure result must carry the source location: " + fileResult.sourceLocation());
             assertTrue(fileResult.nonTransactional(), "FILE reload is a non-candidate path (AC6 surface)");
             assertTrue(!fileResult.requiresLoaderRestart(), "FILE reload does not require a loader restart");
         } finally {

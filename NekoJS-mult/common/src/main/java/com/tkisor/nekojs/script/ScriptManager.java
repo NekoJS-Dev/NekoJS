@@ -151,10 +151,14 @@ public final class ScriptManager implements AutoCloseable {
     private List<ScriptContainer> scripts;
 
     /**
-     * 已提交的 generation 序号（单调递增；owner thread 访问，reload/load 与命令同锁）。
-     * 初始环境创建、kill 重建与事务式 commit 各递增一次（工单 06 generation 契约）。
+     * 已提交的 generation 序号（单调递增）。
+     *
+     * <p>写入全部发生在 owner thread 的实例锁临界区内（initial load / kill 重建 / 事务
+     * commit）；但 {@link #generationId()} 是公开读点，命令面与平台调用方可能在
+     * 其它线程读它（审查 A3）——因此与同组发布的其它状态一样取 volatile，代价可忽略
+     * （每次 reload 写一次），换取「读点无需自带锁」的明确语义。
      */
-    private long generation;
+    private volatile long generation;
 
     /**
      * 构建中的候选 generation Context；null 表示当前没有候选在构建。
@@ -167,8 +171,12 @@ public final class ScriptManager implements AutoCloseable {
     /** 候选环境被语句上限杀死（与 active 的 {@link #contextKilled} 分开记账）。 */
     private volatile boolean candidateKilled;
 
-    /** 候选加载中首个触发语句上限 kill 的脚本（失败结果 source location 归因）。 */
-    private ScriptContainer candidateKillSource;
+    /**
+     * 候选加载中首个触发语句上限 kill 的<strong>脚本</strong>（不是 source 文本）：
+     * 仅用于候选失败结果的 source location 归因（见 {@link #sourceOf}）。
+     * 命名刻意避开 "Source"，以免被误读为 source 字符串。
+     */
+    private ScriptContainer candidateKillScript;
 
     /**
      * 候选 generation 收集的挂起监听器注册（EventBusJS.PendingListener）。
@@ -347,9 +355,13 @@ public final class ScriptManager implements AutoCloseable {
     }
 
     /**
-     * 在指定 Context / Node runtime 中执行给定脚本列表：preload、按 priority 与 after 依赖排序、逐个执行入口。
+     * 在 active 环境中执行给定脚本列表：preload、按 priority 与 after 依赖排序、逐个执行入口。
      *
-     * <p>被首次 {@link #loadScripts()} 和事务式 reload 复用。空列表只记录日志，不创建副作用。
+     * <p>只被首次 {@link #loadScripts()}（平台 init / STARTUP reset+load / kill 重建）使用：
+     * 每个脚本单独取一次 {@link #getOrCreateEnvironment()}，因此某脚本被语句上限杀死后，
+     * 后续脚本仍能在自动重建的环境里继续跑。事务式 reload 的候选执行走
+     * {@link #loadCandidateScripts}（固定候选 Context + 候选 kill 归因），不复用本方法。
+     * 空列表只记录日志，不创建副作用。
      */
     private void loadScriptsInto(List<ScriptContainer> scriptsToLoad) {
         if (!prepareScriptsForLoad(scriptsToLoad)) {
@@ -362,17 +374,6 @@ public final class ScriptManager implements AutoCloseable {
                 // nodeRuntime 从同一次快照取出，避免读到错配对。
                 RuntimeEnvironment env = getOrCreateEnvironment();
                 scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime());
-            }
-        }
-    }
-
-    private void loadScriptsInto(List<ScriptContainer> scriptsToLoad, Context context, NekoNodeRuntime nodeRuntime) {
-        if (!prepareScriptsForLoad(scriptsToLoad)) {
-            return;
-        }
-        for (ScriptContainer script : scriptsToLoad) {
-            if (script.shouldRun()) {
-                scriptExecutor.executeEntry(context, script, nodeRuntime);
             }
         }
     }
@@ -454,6 +455,11 @@ public final class ScriptManager implements AutoCloseable {
          *       释放旧 module session → 按 timer、Context 所有权顺序释放旧环境。</li>
          * </ul>
          *
+         * <p>commit 点不可失败（审查 A1）：激活监听器前，EVENT_PLAN 阶段已把 dispatch key
+         * 转换等在 commit 期才会抛的工作前移完成（{@link EventBusJS.PendingListener#prepareForActivation()}）。
+         * 因此候选期的任何失败都发生在 commit 之前，必然走 {@link #discardCandidate} 路径，
+         * 不会出现「旧监听器已清扫 + 候选 runtime 已发布 + 激活中途抛」的半激活 generation。
+         *
          * <p>线程约定：候选构建/执行在当前调用线程（owner thread）同步完成，reload 由
          * 实例锁串行；owner-thread 队列、重入与 watchdog 调度归工单 07。
          * binding.close(type)（进程级注册账本重置，域 Adapter 持有）保持候选构建前调用：
@@ -501,7 +507,7 @@ public final class ScriptManager implements AutoCloseable {
                         ReloadProgressTracker.step(scriptType.name, "discovered " + candidateScripts.size() + " scripts");
 
                         this.candidateKilled = false;
-                        this.candidateKillSource = null;
+                        this.candidateKillScript = null;
                         pluginRuntime.fireBeforeScriptsLoaded(scriptType);
                         try {
                             loadCandidateScripts(candidateScripts, candidateEnvironment.context(), candidateEnvironment.nodeRuntime());
@@ -511,11 +517,11 @@ public final class ScriptManager implements AutoCloseable {
                         ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
 
                         if (this.candidateKilled) {
-                            // 候选加载期间被脚本资源上限终止（runaway watchdog 的 2s 滑动窗口
-                            // 或 scriptStatementLimit 总量），Graal 已关闭候选 Context：按失败处理，
-                            // 不把死掉的候选提交为 live（watchdog 语义的候选丢弃面归工单 07）。
+                            // 候选加载期间被脚本资源上限终止（scriptStatementLimit 总量），
+                            // Graal 已关闭候选 Context：按失败处理，不把死掉的候选提交为 live
+                            // （watchdog 语义的候选丢弃面归工单 07）。
                             throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION,
-                                    sourceOf(this.candidateKillSource), "candidate-killed",
+                                    sourceOf(this.candidateKillScript), "candidate-killed",
                                     new RuntimeException(scriptType.name()
                                             + " candidate context was terminated by script resource limits"
                                             + " (runaway watchdog / statement limit) during reload"));
@@ -525,6 +531,31 @@ public final class ScriptManager implements AutoCloseable {
                     } catch (Throwable t) {
                         throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION, null, "script-execution", t);
                     }
+
+                    // ---- Phase EVENT_PLAN：候选挂起监听器的完整性/可挂载性预备 ----
+                    // 审查 A1（commit 点不可回滚）：把 commit 期会抛的工作——EventBusJS
+                    // 的 dispatch key 转换（Value.as(keyType)）——前移到这里完成。候选监听器
+                    // 在提交前仍不上生产总线；本阶段只解析 key，不产生任何 bus/mirror 副作用。
+                    // 失败因此发生在 commit 之前，走 discardCandidate 路径（候选资源全关、
+                    // active 原样），而不是「旧监听器已清扫 + 已发布候选 runtime + 激活中途抛」
+                    // 的半激活状态；commitGeneration 的激活步骤至此只剩不会抛的注册操作。
+                    try {
+                        for (var pending : List.copyOf(this.pendingListeners)) {
+                            try {
+                                pending.prepareForActivation();
+                            } catch (Throwable t) {
+                                throw reloadFailure(candidateGeneration, ReloadPhase.EVENT_PLAN,
+                                        sourceOfScriptId(candidateScripts, pending.scriptId()),
+                                        "candidate-listener-plan", t);
+                            }
+                        }
+                    } catch (NekoReloadException f) {
+                        throw f;
+                    } catch (Throwable t) {
+                        throw reloadFailure(candidateGeneration, ReloadPhase.EVENT_PLAN, null,
+                                "candidate-listener-plan", t);
+                    }
+                    ReloadProgressTracker.step(scriptType.name, "candidate event plan prepared");
 
                     // ---- COMMIT POINT（单一原子切换；owner thread 同步执行）----
                     commitGeneration(candidateGeneration, candidateEnvironment, candidateScripts, oldEnvironment);
@@ -554,7 +585,7 @@ public final class ScriptManager implements AutoCloseable {
             ScriptContextRegistry.bind(candidate.context(), scriptType);
             this.candidateContext = candidate.context();
             this.candidateKilled = false;
-            this.candidateKillSource = null;
+            this.candidateKillScript = null;
             this.pendingListeners.clear();
             return candidateEnvironment;
         }
@@ -571,7 +602,8 @@ public final class ScriptManager implements AutoCloseable {
          *       owner-thread 序列化补齐；</li>
          *   <li>发布新 runtime：生产 timer flush 目标与 isContextDead 判定同步切换，
          *       同一事件自此只由新 generation 接收（旧闭包经 isContextDead 判 dead 双保险）；</li>
-         *   <li>激活候选挂起监听器：新 generation 成为唯一新 callback 接收者；</li>
+         *   <li>激活候选挂起监听器：新 generation 成为唯一新 callback 接收者。挂起注册的
+         *       key 转换已在候选 EVENT_PLAN 阶段完成，此步只剩不会抛的注册操作（审查 A1）；</li>
          *   <li>释放旧 module session（编译模块缓存 / 虚拟 ESM URI 按类型清除）；</li>
          *   <li>按 timer、Context 所有权顺序释放旧环境（closeRuntimeResources：
          *       node runtime/timer → Context → streams）。</li>
@@ -613,7 +645,7 @@ public final class ScriptManager implements AutoCloseable {
             this.pendingListeners.clear();
             this.candidateContext = null;
             this.candidateKilled = false;
-            this.candidateKillSource = null;
+            this.candidateKillScript = null;
             if (candidateEnvironment != null && !candidateEnvironment.isEmpty()) {
                 closeRuntimeResources(candidateEnvironment);
             }
@@ -630,8 +662,8 @@ public final class ScriptManager implements AutoCloseable {
                 }
                 boolean killedBefore = this.candidateKilled;
                 scriptExecutor.executeEntry(context, script, nodeRuntime);
-                if (!killedBefore && this.candidateKilled && this.candidateKillSource == null) {
-                    this.candidateKillSource = script;
+                if (!killedBefore && this.candidateKilled && this.candidateKillScript == null) {
+                    this.candidateKillScript = script;
                 }
             }
         }
@@ -644,6 +676,21 @@ public final class ScriptManager implements AutoCloseable {
             } catch (Exception ignored) {
                 return script.path.toString();
             }
+        }
+
+        /**
+         * 按注册脚本 id（{@code ScriptContextRegistry.currentScriptIdOf} == {@code ScriptContainer.id}
+         * 的文本形式）在本次候选批次里定位脚本，用于候选挂起监听器失败结果的 source location。
+         * 找不到（脚本已被移除等）时返回 null——失败结果如实留空而不是编造位置。
+         */
+        private static String sourceOfScriptId (List<ScriptContainer> candidateScripts, String scriptId) {
+            if (candidateScripts == null || scriptId == null || scriptId.isBlank()) return null;
+            for (ScriptContainer script : candidateScripts) {
+                if (scriptId.equals(String.valueOf(script.id))) {
+                    return sourceOf(script);
+                }
+            }
+            return null;
         }
 
         private NekoReloadException reloadFailure (long generation, ReloadPhase phase, String sourceLocation,

@@ -401,6 +401,10 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
      * 一次脚本监听器注册的完整描述：candidate phase 由 {@code ScriptManager} 收集，
      * commit 点统一 {@link #activate()}。挂起状态不触碰底层 bus 与 type 分桶 mirror，
      * 因此 candidate 监听器对生产路由完全不可见（{@link #hasListeners()} 为 false）。
+     *
+     * <p>审查 A1：commit 点必须不可失败——{@link #activate()} 期间会抛的工作
+     * （dispatch key 的 {@code Value.as(keyType)} 转换）经 {@link #prepareForActivation()}
+     * 前移到候选阶段完成，候选期失败因此走候选丢弃路径而不是留下半激活 generation。
      */
     public static final class PendingListener {
         private final EventBusJS<?, ?> owner;
@@ -409,6 +413,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         private final Value key;
         private final ScriptType type;
         private final String scriptId;
+
+        /** {@link #prepareForActivation()} 解析出的可直接挂载 key（未预备时为 null）。 */
+        private Object resolvedKey;
+        /** 是否已预备：true 时 {@link #activate()} 不再做任何 Value → Java key 转换。 */
+        private boolean prepared;
 
         PendingListener(EventBusJS<?, ?> owner, byte priority, Value listener, Value key,
                         ScriptType type, String scriptId) {
@@ -425,18 +434,53 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             return type;
         }
 
-        /** 注册来源脚本 id（mirror 记账与按脚本清理用）。 */
+        /** 注册来源脚本 id（mirror 记账与按脚本清理用；也是候选期失败结果的 source 归因键）。 */
         public String scriptId() {
             return scriptId;
         }
 
         /**
+         * 候选期预备：把 commit 点会抛的工作（dispatch key → Java key 的转换）前移。
+         *
+         * <p>必须在 commit 之前、且<strong>不在 JS 调用帧内</strong>调用（本仓库由
+         * {@code ScriptManager} 的候选 EVENT_PLAN 阶段调用）：转换失败时异常直接冒泡到
+         * 事务式 reload 的候选失败路径，不会被 {@code ScriptExecutor.executeEntry} 的
+         * 「脚本级错误不失败 reload」语义吞掉。幂等；非候选注册路径不调用，保持
+         * {@link #activate()} 内的原位转换（行为不变）。
+         */
+        public void prepareForActivation() {
+            owner.preparePending(this);
+        }
+
+        /**
          * 激活：构建分发闭包、挂上底层 bus 并记入 type 分桶 mirror。
          * 只在 commit 点（或非候选注册路径）调用；重复 activate 会造成双重注册。
+         *
+         * <p>已预备（{@link #prepareForActivation()}）的挂起注册在此<strong>不会</strong>
+         * 抛：key 转换已在候选期完成，剩余操作只有 {@code bus.listen(...)}（CopyOnWriteArrayList
+         * 添加 + 编译快照失效）与 mirror 的 {@code ConcurrentHashMap.compute}，二者均无
+         * 条件性抛出路径。
          */
         public void activate() {
             owner.activatePending(this);
         }
+    }
+
+    /**
+     * 候选期预备（见 {@link PendingListener#prepareForActivation()}）：只解析 dispatch key，
+     * 不触碰底层 bus 与 mirror（候选监听器在 commit 前对生产路由仍完全不可见）。
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private void preparePending(PendingListener pending) {
+        if (pending.prepared) return;
+        Object resolved = null;
+        if (canDispatch() && pending.key != null) {
+            var dispatchBus = (DispatchEventBus<EVENT, KEY>) this.bus;
+            // 非法/不可转换的 key 在此抛出（候选期）：ClassCastException / 转换失败
+            resolved = pending.key.as(dispatchBus.dispatchKey().keyType());
+        }
+        pending.resolvedKey = resolved;
+        pending.prepared = true;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -449,7 +493,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         EventListenerToken<EVENT> token;
         if (dispatch) {
             var dispatchBus = (DispatchEventBus<EVENT, KEY>) this.bus;
-            KEY dispatchKey = pending.key == null ? null : pending.key.as(dispatchBus.dispatchKey().keyType());
+            // 已预备：用候选期解析好的 key（commit 点不可再抛，审查 A1）；未预备（非候选注册
+            // 路径）：保持原位转换，行为与改造前一致。
+            KEY dispatchKey = pending.prepared
+                    ? (KEY) pending.resolvedKey
+                    : (pending.key == null ? null : pending.key.as(dispatchBus.dispatchKey().keyType()));
             if (cancellable) {
                 token = dispatchKey != null
                         ? self.registerDispatchCancellable(priority, listener, dispatchKey)

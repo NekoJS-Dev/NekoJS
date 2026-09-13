@@ -1,0 +1,3 @@
+﻿NekoJS startup scripts reloaded non-transactionally (reset+load, phase=STARTUP): irreversible platform registrations are not rolled back - restart the game/loader for a clean STARTUP state.
+NekoJS startup scripts reload finished (non-transactional, phase=STARTUP). - no errors.
+

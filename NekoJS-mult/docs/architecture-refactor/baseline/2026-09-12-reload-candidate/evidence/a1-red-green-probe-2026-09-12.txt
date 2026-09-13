@@ -1,0 +1,62 @@
+# A1（commit 点不可回滚）red → green 探针原始输出
+
+来源：临时探针 `common/src/test/java/com/tkisor/nekojs/script/Ticket06CommitRollbackProbeTest.java`
+（跑完即删除，本文件保存其 stdout），输入为「候选脚本注册一个 dispatch 总线监听器，
+其 key 是不可转换为 Java String 的 JS 对象 `{ bogus: true }`」——即审查 A1 指定的
+「让 key 转换对非法 key 抛异常」。探针在 reload 前后 dump 同一组外部可观察状态。
+
+命令：`./gradlew :common:test --tests "com.tkisor.nekojs.script.Ticket06CommitRollbackProbeTest" -i`
+
+## 1. 旧实现（A1 缺陷现场，`git stash` 掉 A1 修复后实跑）
+
+```
+=== A1 red probe (pre-fix) ===
+thrownType=java.lang.ClassCastException
+thrownHasStructuredReport=false
+activeContextReplacedByCandidate=true
+candidateBecameRuntimeHalfActivated=true
+generationAdvancedDespiteFailure=true (before=1 after=2)
+activeListenersStillOnBus=false
+pendingListenersSize=0
+leakedOldActiveContextStillUsable=true
+leakedCandidateContextStillUsable=false
+=== end A1 red probe ===
+```
+
+逐行含义（与审查 A1 的判断完全一致）：
+
+| 观察 | 值 | 违背的 AC |
+|---|---|---|
+| 抛出的异常 | `ClassCastException`（非 `NekoReloadException`） | AC3（失败结果必须是结构化 `phase/generation/owner/domain`） |
+| `activeContextReplacedByCandidate` | true（`runtime` 已切到候选） | AC2（失败保留 active） |
+| `candidateBecameRuntimeHalfActivated` | true | AC2/AC4 |
+| `generationAdvancedDespiteFailure` | true（1 → 2） | AC2（候选号不得写回） |
+| `activeListenersStillOnBus` | **false**（旧代已清扫、候选未激活 → 该类型监听器全空） | AC2「active 仍能接收事件」直接不成立 |
+| `pendingListenersSize` | 0（挂起注册已丢弃，未挂载部分永久丢失） | AC2 |
+| `leakedOldActiveContextStillUsable` | true（旧 Context 从未 `close`，也没走 `closeRuntimeResources`） | AC2「候选/旧环境全部关闭」 |
+
+## 2. 新实现（key 转换前移到候选 EVENT_PLAN，同探针同输入）
+
+```
+=== A1 probe ===
+thrownType=com.tkisor.nekojs.core.lifecycle.NekoReloadException
+thrownHasStructuredReport=true
+activeContextReplacedByCandidate=false
+candidateBecameRuntime=false
+generationAdvancedDespiteFailure=false (before=1 after=1)
+activeListenersOnBus=true
+pendingListenersSize=0
+preReloadContextUsable(leakIfNotActive)=true
+candidateContextFieldUsable(leak)=false
+=== end A1 probe ===
+```
+
+失败已在候选期发生：结构化失败结果（`phase=EVENT_PLAN` / `domain=candidate-listener-plan` /
+`source=server/entry.js`），active 的 runtime、Context、generation、监听器全部原样，
+候选 Context 已关闭（`candidateContextFieldUsable=false`），挂起注册已随候选丢弃。
+
+## 3. 断言化回归
+
+上表的同一组断言已固化为 `ScriptReloadGenerationTest#illegalDispatchKeyFailsCandidatePlanAndPreservesActive`
+（`:common:test`，12/12 通过）。该用例在旧实现下失败于
+`Unexpected type, expected: <NekoReloadException> but was: <ClassCastException>`。
