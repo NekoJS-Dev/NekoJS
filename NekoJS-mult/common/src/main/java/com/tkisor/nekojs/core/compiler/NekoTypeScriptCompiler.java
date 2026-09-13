@@ -8,14 +8,13 @@ public final class NekoTypeScriptCompiler {
     private NekoTypeScriptCompiler() {}
 
     /**
-     * JSX/TSX frontend 之后的擦除：输入已经是 JSX lowering 的产物，因此产物里的 `<…>`
-     * 必须按 JSX 表达式理解，不能按 TS 泛型实参重解（见 {@code Eraser.jsxFrontend}）。
+     * 保留既有 source map 的类型擦除（{@code .tsx} 路径：JSX lowering 已产出 map，擦除只做等长替换）。
      *
      * <p>这是 {@code .jsx}/{@code .tsx} 唯一的 TS 擦除入口——不存在第二条并行的转译路径。
      */
-    static TypeScriptTransformResult eraseJsxFrontendPreservingSourceMap(Path file, String source, String sourceMap) {
+    static TypeScriptTransformResult erasePreservingSourceMap(Path file, String source, String sourceMap) {
         String original = source == null ? "" : source;
-        return new TypeScriptTransformResult(new Eraser(file, original, true).erase(), sourceMap);
+        return new TypeScriptTransformResult(new Eraser(file, original).erase(), sourceMap);
     }
 
     static TypeScriptTransformResult eraseDetailed(Path file, String source) {
@@ -59,22 +58,10 @@ public final class NekoTypeScriptCompiler {
          * 结果把文件剩余部分<strong>静默擦成空白</strong>（作者的 {@code SIDE_EFFECT()} 凭空消失）。
          */
         private int unterminatedTypeAt = -1;
-        /**
-         * 本擦除器是否运行在 JSX/TSX frontend 之后（{@code .jsx}/{@code .tsx} 的产物擦除）。
-         *
-         * <p>该产物里的 {@code <…>} 已经是 JSX lowering 的输出（如 {@code <Foo<number>/>} 变成
-         * {@code Foo<number>}），不能再按 TS 泛型实参重解一次——那会擦掉 JSX 组件的运行时表达式。
-         */
-        private final boolean jsxFrontend;
 
         private Eraser(Path file, String source) {
-            this(file, source, false);
-        }
-
-        private Eraser(Path file, String source, boolean jsxFrontend) {
             this.file = file;
             this.source = source;
-            this.jsxFrontend = jsxFrontend;
             this.out = new StringBuilder(source);
             this.length = source.length();
             this.caseOrLabelColon = new boolean[length];
@@ -1334,6 +1321,13 @@ public final class NekoTypeScriptCompiler {
                 if (c == '{') break;
                 end++;
             }
+            if (end >= length) {
+                // implements 子句扫到文件末尾都没遇到类体 '{'：形态不可安全擦除。
+                // 少见但真实的错字（`class C implements I` 后忘了 `{`）——不 fail closed 的话
+                // eraseRange(start, length) 会把后面的所有语句一起擦掉（实测 `SIDE_EFFECT()` 消失），
+                // 属于与原始缺陷同类的静默丢代码。位置用 implements 关键字起点。
+                throw unterminatedAt(start);
+            }
             eraseRange(start, end);
             return end;
         }
@@ -1506,15 +1500,6 @@ public final class NekoTypeScriptCompiler {
             int next = nextNonWhitespace(close + 1);
             if (next >= length) return false;
             char nextChar = source.charAt(next);
-            if (jsxFrontend) {
-                // JSX/TSX frontend 产物：`<…>` 可能已经是 JSX lowering 留下的组件表达式
-                //（`<Foo<number>/>` → `jsx(Foo<number>, null)`）。只有「泛型调用 foo<T>(…)」与
-                //「泛型箭头 <T>(…) => … / <T>(…) {}」两种后续形态才确定是待擦除的 TS 类型参数；
-                // 后跟 `,`/`)`/`]`/`;` 的 `<…>` 一律保留——擦掉会改变 JSX 组件的运行时值，
-                // 并让 .tsx 的产物与 prepared module 报出不同的语言身份。
-                return nextChar == '('
-                        || (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>');
-            }
             // <T>(  或  <T> =>  —— 泛型箭头/泛型调用
             if (nextChar == '(' || nextChar == '{') return true;
             if (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>') return true;
@@ -2005,7 +1990,21 @@ public final class NekoTypeScriptCompiler {
             return NekoSourceLexerBase.isIdentifierPart(c);
         }
 
+        /**
+         * 唯一的擦除写入口。
+         *
+         * <p><strong>不变量：任何 {@link #failUnterminated} 置位的未终止标记，必须在写出任何东西
+         * 之前被消费。</strong>这里是最强的结构性保证点——所有擦除路径（{@code eraseTypeDeclaration}、
+         * {@code eraseDeclare}、{@code eraseStatement}、{@code eraseExportTypeDeclaration}、
+         * {@code eraseInlineTypeSpecifiers}、{@code eraseAssertion} …）最终都汇流到此。
+         *
+         * <p>为什么不能靠各调用点手工检查：{@code eraseDeclare} 这类路径「先拆解、再 eraseRange」，
+         * 拆解器只置位不抛；若调用点漏检，{@code eraseRange(start, length)} 会把文件其余部分整段擦掉，
+         * 主循环随后因 {@code i == length} 直接结束，置位的状态再无人消费——静默丢代码。
+         * 本票第一版正是漏了 {@code declare const/let/var/function} 与 {@code abstract m(): T} 这些路径。
+         */
         private void eraseRange(int start, int end) {
+            failClosedUnterminated();
             int safeEnd = Math.min(length, Math.max(start, end));
             for (int i = start; i < safeEnd; i++) {
                 char c = source.charAt(i);
@@ -2035,9 +2034,18 @@ public final class NekoTypeScriptCompiler {
             }
             int index = unterminatedTypeAt;
             unterminatedTypeAt = -1;
-            // 消息只陈述事实（文件 + 行列 + 阶段 + 未终止）：CONTEXT.md 规定报错保持普通形式、
-            // 不带修复指引；修复指引由 wiki / MIGRATION.md 承载。
-            throw new IllegalArgumentException("Unterminated TypeScript type construct in " + file
+            throw unterminatedAt(index);
+        }
+
+        /**
+         * 未终止类型构造的统一错误工厂：{@link #failClosedUnterminated()} 的置位-消费协议与
+         * {@link #eraseImplements} 这类直接判定路径共用同一条消息。
+         *
+         * <p>消息只陈述事实（文件 + 行列 + 未终止）：CONTEXT.md 规定报错保持普通形式、不带修复指引；
+         * 修复指引由 wiki / MIGRATION.md 承载。
+         */
+        private IllegalArgumentException unterminatedAt(int index) {
+            return new IllegalArgumentException("Unterminated TypeScript type construct in " + file
                     + " at " + position(index)
                     + ": the type body never closes, so the eraser cannot tell which code belongs to the"
                     + " declaration and which is executable script. NekoJS refuses to silently erase the"

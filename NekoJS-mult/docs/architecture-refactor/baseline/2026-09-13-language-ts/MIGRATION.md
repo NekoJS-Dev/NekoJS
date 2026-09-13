@@ -28,18 +28,24 @@ silently erase the rest of the file.
 
 **作者要做什么**：把没有写完的类型补完（或删掉）。错误消息已经给出确切的行列。
 
-现在会 fail closed 的形态：
+**现在会 fail closed 的形态**（这些以前会<strong>静默删除</strong>文件其余部分）：
 
 | 形态 | 示例 |
 |---|---|
-| 未闭合的 `interface` 体 | `interface Foo {\n  bar: string;\n` |
-| 未闭合的 `type` 对象体 | `type T = {\n  a: string;\n` |
-| 未闭合的 `export interface` / `declare class` 体 | `export interface I {\n` / `declare class C {\n` |
+| 未闭合的 `interface` 体 | `interface Foo {` |
+| 未闭合的 `type` / `export type` 对象体 | `type T = {` / `export type T = {` |
+| 未闭合的 `export interface` / `declare class` 体 | `export interface I {` / `declare class C {` |
+| 未闭合的 `declare const/let/var` 类型体 | `declare const c: {` |
+| 未闭合的 `declare function` 返回类型体 | `declare function f(): {` |
+| 未闭合的 `abstract` 成员返回类型体 | `abstract m(): {` |
 | 类型标注里的泛型参数列表未闭合 | `const x: Array<string = SIDE_EFFECT();` |
+| `implements` 子句扫到文件末尾 | `class C implements I`（忘了写 `{`） |
 
-**本票未覆盖、仍然静默通过的形态**（不删代码，在执行期以 `SyntaxError` 可见地失败）：
+**本票未覆盖、仍然静默通过的形态**（<strong>不删代码</strong>，在执行期以 `SyntaxError` 可见地失败）：
 声明头泛型参数列表未闭合（`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合
-（`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、`implements` 子句未闭合（`class C implements I {`）。
+（`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、`implements` 子句未闭合（有类体时，`class C implements I {`）、
+`satisfies` 后跟对象类型、类内 index signature、`import A = require(...)`。
+以上每一条都经实测确认后续语句仍在产物中。
 
 **仍然合法、行为不变**（本票特意钉住这些边界，不许过度收紧）：
 

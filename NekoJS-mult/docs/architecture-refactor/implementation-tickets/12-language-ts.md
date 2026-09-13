@@ -78,13 +78,17 @@
   `NekoJsxTokenStream`（默认值取插件 id）、`NekoIRProgram.languageId`（`.tsx` 现为 `jsx`）。
   `.ts`/`.jsx`/module mode/产物/source map/JSX runtime **均未变**。深层不变量（prepared == registry == IR）
   由 `NekoLanguageIdentityInvariantTest` 对 `.js/.mjs/.cjs/.jsx/.ts/.tsx` 全体钉住。
-- **缺陷 B fail-closed 边界（实际只覆盖 2 类 / 5 种，不是「所有未终止类型构造」）：** 未闭合的 `interface` 体、
-  `type` 对象体、`export interface` 体、`declare class` 体，以及**类型标注**里的泛型参数列表未闭合
-  （`const x: Array<string = SIDE_EFFECT();`）——这 5 种在**准备阶段**抛带原始文件 + 行列的
-  `IllegalArgumentException`（消息以 `Unterminated TypeScript type construct in <file> at <line>:<col>` 开头，
-  只陈述事实、不含修复指引）。**仍静默通过、本票未覆盖**：类/函数**声明头**的泛型参数列表未闭合
-  （`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合（`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、
-  `implements` 子句未闭合（`class C implements I {`）。详见「code-review 修订」第 1 条。
+- **缺陷 B fail-closed 边界（覆盖 3 类 / 11 种会丢代码的路径）：** 未闭合的 `interface` 体、`type` / `export type`
+  对象体、`export interface`、`declare class` 体、`declare const/let/var` 类型体、`declare function` 返回类型体、
+  `abstract m(): T` 成员返回类型体、**类型标注**里的泛型参数列表未闭合，以及 `implements` 子句扫到文件末尾——
+  这些在**准备阶段**抛带原始文件 + 行列的 `IllegalArgumentException`（消息以
+  `Unterminated TypeScript type construct in <file> at <line>:<col>` 开头，只陈述事实、不含修复指引）。
+  实现上除只读谓词预扫描外，还在**唯一的擦除写入口 `eraseRange`** 强制「置位必须先消费」，
+  使任何漏检路径都不可能提交半擦除结果。
+  **仍静默通过、本票未覆盖（均经实测确认不丢代码，只在执行期以 SyntaxError 可见地失败）**：类/函数**声明头**的
+  泛型参数列表未闭合（`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合
+  （`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、有类体时的 `implements` 未闭合、`satisfies` 后跟对象类型、
+  类内 index signature、`import A = require(...)`。详见「code-review 修订」第 1、4 条。
   **仍然合法**：`interface Foo { bar: string }`、`type T = string`、`type T = { a: string }`、`function id<T>(x: T): T`、
   `const id = <T,>(x: T) => x`、`const m: Map<string, number> = ...`、跨行泛型标注、文件末尾的 `let x: number`、
   `abstract class` 成员 elide —— 全部继续擦除成功并可执行（7 条边界断言）。实现上先跑一遍只读谓词预扫描，
@@ -104,18 +108,19 @@
   ESM virtual module id，执行期错误会在查表时落空而丢失原始文件/行列（AC5 字面要求）。
 - 门禁（全量真跑，首次关闭时）：`:common:test --rerun-tasks --no-build-cache` → **207 suites / 1515 tests / 0 failures /
   0 errors / 5 skipped**；`:common:check` pass；`guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。
-  修订后为 207 suites / 1516 tests（新增 1 例边界测试），见文末 code-review 修订。
+  修订后为 207 suites / 1517 tests（替换弱断言测试为强断言 + 新增 2 例），见文末两轮 code-review 修订。
 - 未验证项与 owner：① 真实 Minecraft 客户端/服务端 smoke（含 `/nekojs reload`）**not-verified**——本票改动全在
   `common`，未启动真实客户端；owner 维护者 / 票 19 / 票 34；② 节点 `:26.1.2:compileJava` 未单独执行——
   改动不触碰平台面，owner 维护者。
-- 遗留（**先区分两类后果**：旧缺陷是静默**删除**代码、永不失败，已修；下列遗留是静默**保留**代码、
-  在执行期以硬 `SyntaxError` **可见地失败**，不丢代码、严重度低得多）：① TS 擦除器整体容错哲学仍不统一——
-  声明头泛型参数列表未闭合（`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合（`foo<Bar(1);`、
-  `const f = <T, (x: T) => x;`）、`implements` 子句未闭合（`class C implements I {`）、`satisfies` 后跟对象类型、
-  类内 index signature、`import A = require(...)` 仍静默产出无法解析的 JS；是否 fail closed 应由后续语言票结合
-  作者反馈评估。owner：后续语言票 / 维护者；② 纯 JS 语法错误的宽松度（`const = = 1;`、未终止字符串、
-  孤立 `}`、未闭合函数体）在 `.js` 与 `.ts` 完全相同，来源是 ESM parser 而非 TS 擦除，**不是本票引入的**，
-  本票未改动 ESM parser 的通用容错（工单 11 已验收该层）；③ `.jsx` 下泛型组件语法的报错质量可改进。
+- 遗留（**两类后果的区分本身在第三轮被修正过**：第一版遗漏、第二版错误降级。凡会**删除**代码的路径均已
+  fail closed；下列形态经**逐条实测**确认**不丢代码**，只在执行期以硬 `SyntaxError` 可见地失败）：
+  ① TS 擦除器整体容错哲学仍不统一——声明头泛型参数列表未闭合（`class C<T {`、`function f<T {`）、
+  泛型调用/泛型箭头未闭合（`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、有类体时的 `implements` 未闭合、
+  `satisfies` 后跟对象类型、类内 index signature、`import A = require(...)`；是否 fail closed 应由后续语言票结合
+  作者反馈评估。owner：后续语言票 / 维护者；② 既有局限（**非本票引入**）：`({a}: {a: number}) => …` 的解构参数
+  类型标注在 `.tsx`/`.ts` 下均不擦除，基线 `f3b266d4` 即如此；③ 纯 JS 语法错误的宽松度（`const = = 1;`、
+  未终止字符串、孤立 `}`、未闭合函数体）在 `.js` 与 `.ts` 完全相同，来源是 ESM parser 而非 TS 擦除，
+  **不是本票引入的**，本票未改动 ESM parser 的通用容错（工单 11 已验收该层）；④ `.jsx` 下泛型组件语法的报错质量可改进。
 - 说明：本票不删除任何公开语言，未新增转译依赖 / 公共 parser SPI / Gradle project，未新建第二套 TS 管线。
 ### code-review 修订（2026-09-13）
 
@@ -151,4 +156,40 @@ fail-closed 分支是**不可达**的——`scanPredicates()` 只对 `:` 类型�
 
 **修订后门禁（全量真跑）**：`:common:test --rerun-tasks --no-build-cache` + `:common:check` + `guardLint`
 同一次执行 → BUILD SUCCESSFUL；**207 suites / 1516 tests / 0 failures / 0 errors / 5 skipped**；
+`guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。
+### code-review 修订·第二轮（2026-09-13）
+
+Spec 轴 review 指出 fail-closed 仍有真实缺陷，主 agent 独立复现并定位到根因，我复现确认后修复。
+**AC1–AC9 判定不变：全部仍为 pass，Status 保持 closed。**
+
+4. **真实缺陷：未闭合类型体仍会静默删除文件其余部分（已修，含实现 + 测试 + 文档）。**
+   根因：`eraseDeclare` 对 `const/let/var/function` 也走 `statementOrBlockDeclarationEnd`，而该类形态不在
+   `scanPredicates` 的 `declareHasBody` 名单里；拆解器只置位不抛，调用点又漏检 → `eraseRange(start, length)`
+   把文件其余部分整段擦掉，主循环随即因 `i == length` 结束，标记再无人消费。
+   修复前的实测（我复现，`codeLostSIDE_EFFECT=true`）：`declare const c: {`、`declare let x: {`、
+   `declare var v: {`、`declare function f(): {`、`abstract m(): {`、`class C implements I`（EOF）。
+   **修复方式（结构性，不是逐个调用点补丁）**：在唯一的擦除写入口 `eraseRange` 内、写 `out` 之前调用
+   `failClosedUnterminated()`。所有擦除路径都汇流到此，任何漏检路径都不可能提交半擦除结果。
+   `eraseImplements` 扫到 EOF 时改为直接抛错（抽出共用错误工厂 `unterminatedAt(int)`）。
+5. **测试断言加强（原断言抓不到本缺陷）。** 上一轮新增的边界测试只断言 `collapse(erased).length() > 0`，
+   而本缺陷恰恰是把代码擦空后仍「非空」（全是空白），因此漏判。现已：
+   - 删除该弱断言测试，替换为 `declarationFormsWithUnclosedTypeBodiesFailClosedInsteadOfSilentlyDeletingFollowingCode`
+     ——对 6 种形态用 `assertThrows`（`eraseFailsClosed`）；
+   - `stillSilentFormsKeepFollowingCodeAndOnlyFailAtExecutionTime` 改为断言产物**仍含 `SIDE_EFFECT`**
+     （而不是「产物非空」），覆盖 10 种仍静默形态。
+6. **文档降级表述修正。** REPORT §10 / MIGRATION §1 / 本 record 第二版曾把「现遗留＝静默保留、不丢代码」
+   作为整体结论——该降级**未经逐条核验**且为误。现按实测改写：能抛的列 3 类 / 11 种；仍静默的逐条标注
+   「后续语句保留」并注明断言位置；并把这次的修正史写进 REPORT §3.2 与 §10。
+7. **归因更正（本票未修复 `<Foo<number>/>`，它本来就没坏）。** REPORT §3.4/§7 曾把 `.tsx` 泛型组件的正确
+   归功于本票新增的 `jsxFrontend` 收窄。主 agent 在基线 `f3b266d4` 实测该例产物已正确（
+   `__nekoJsxFactory(Foo, {value: (1)})`），Spec 轴判断成立。我进一步自测确认该收窄分支**既非必需、又更差**
+   （对 `const a = foo<Bar>, b = 1;` 会保留 `<Bar>`，而 JSX lowering 的常规输出更接近正确），
+   因此**整体删除**该机制（字段、构造器重载、`eraseJsxFrontendPreservingSourceMap` 全部撤回，
+   恢复 `erasePreservingSourceMap`）。已实测 11 组输入在删除后与基线逐字 SAME，
+   `NekoJsxCompilerTest.tsxGenericComponentWithObjectTypePassesComponentValueToFactory` 删除前后均绿。
+   **未**为 Spec 轴提到的「`.tsx` 解构参数类型标注不擦除」做任何改动——主 agent 两棵树实测输出逐字相同，
+   确认该限制先于本票存在，只作为既有局限记录在 REPORT §10。
+
+**第二轮修订后门禁（全量真跑，一次执行）**：`:common:test --rerun-tasks --no-build-cache` + `:common:check`
++ `guardLint` → BUILD SUCCESSFUL；**207 suites / 1517 tests / 0 failures / 0 errors / 5 skipped**；
 `guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。

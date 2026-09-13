@@ -98,45 +98,60 @@ class NekoTypeScriptErasureFailClosedTest {
         assertLocatedAt(failure, "1:1");  // declare 关键字起点
     }
 
-    // ---- 已知未覆盖：这些形态**仍然静默通过**，钉成事实而不是宣称已修 ----
+    // ---- 静默丢代码的第二类路径：拆解后未消费 fail-closed 标记（code-review 发现） ----
 
     /**
-     * 覆盖率边界（诚实记录）：本票的 fail closed 只覆盖「类型<strong>声明体</strong>未闭合」与
-     * 「类型<strong>标注</strong>里的泛型参数列表未闭合」。下面这些形态<strong>仍然静默通过</strong>：
+     * 静默<strong>删除</strong>代码的第二类路径：{@code eraseDeclare} 对 {@code const/let/var/function}
+     * 也走 {@code statementOrBlockDeclarationEnd}，而该类形态不在 {@code scanPredicates} 的
+     * {@code declareHasBody} 名单里——拆解器只置位不抛，调用点又漏检，于是 {@code eraseRange} 把
+     * 文件其余部分整段擦掉。{@code abstract m(): { a: number }} 同类（成员走同一条拆解）。
      *
-     * <ul>
-     *   <li>类/函数<strong>声明头</strong>里的泛型参数列表未闭合（{@code class C<T {}}、{@code function f<T {}}）
-     *       ——擦除器根本不认声明头的 {@code <…>}，原样保留；</li>
-     *   <li>{@code implements} 子句未闭合——无法可靠区分 {@code class C implements I {}} 与
-     *       「对象字面量里的 implements 关键字」，故不判定；</li>
-     *   <li>泛型<strong>调用</strong>/泛型箭头未闭合（{@code foo<Bar(1);}、{@code const f = <T, (x: T) => x;}）。</li>
-     * </ul>
-     *
-     * <p>后果与已修缺陷不同：这些形态<strong>不删除代码</strong>（语句仍在产物里），只是产出的 JS
-     * 无法解析，会在<strong>执行期</strong>以硬 {@code SyntaxError} 失败——失败可见、不静默改语义。
-     * 本测试只断言「不抛异常且代码未被删空」，避免后续 reviewer 误以为它们已被 fail closed 覆盖。
+     * <p>修复方式不是逐个调用点补检查，而是在唯一的擦除写入口 {@code eraseRange} 里强制
+     * 「置位必须先消费」，保证任何漏检路径都不可能提交半擦除结果。
      */
     @Test
-    void declarationHeaderAndImplementsFormsAreStillSilentAndKeepTheirCode() {
-        String[] stillSilent = {
-                "class C<T { x = 1; }\n",
-                "function f<T { return 1; }\n",
-                "function f<T\nSIDE_EFFECT();\n",
-                "foo<Bar(1);\n",
-                "const f = <T, (x: T) => x;\n",
-                "class C implements I {\n  x = 1;\n",
-                "class C implements { x = 1; }\n",
+    void declarationFormsWithUnclosedTypeBodiesFailClosedInsteadOfSilentlyDeletingFollowingCode() {
+        String[] mustThrow = {
+                "declare const c: {\n  a: number;\n\nSIDE_EFFECT();\n",
+                "declare let x: {\n  a: number;\n\nSIDE_EFFECT();\n",
+                "declare var v: {\n  a: number;\n\nSIDE_EFFECT();\n",
+                "declare function f(): {\n  a: number;\n\nSIDE_EFFECT();\n",
+                "abstract class A {\n  abstract m(): {\n    a: number;\n\nSIDE_EFFECT();\n",
+                "class C implements I\nSIDE_EFFECT();\n",
         };
-        for (String source : stillSilent) {
-            String erased = NekoTypeScriptCompiler.eraseTypescript(FILE, source);
-            assertTrue(collapse(erased).length() > 0,
-                    "仍然静默通过的形态至少不得删空代码（失败必须在执行期可见）：\n" + source);
+        for (String source : mustThrow) {
+            // 断言必须能抓住「吞掉后续语句」：只断言「没删空」不够——
+            // 旧实现正是把 SIDE_EFFECT() 一起擦掉后才通过那种弱断言。
+            eraseFailsClosed(source);
         }
     }
 
-    /** 去掉所有空白，用于判断擦除产物是否被删空。 */
-    private static String collapse(String text) {
-        return text.replaceAll("\\s+", "");
+    /**
+     * 仍然静默通过的形态，<strong>逐条按实测</strong>标注：它们都保留了后续语句，
+     * 因此只会在执行期以硬 {@code SyntaxError} 可见地失败。
+     *
+     * <p>断言「后续语句仍在」而不是「产物非空」——后者抓不住静默丢代码。
+     */
+    @Test
+    void stillSilentFormsKeepFollowingCodeAndOnlyFailAtExecutionTime() {
+        String[] stillSilent = {
+                "class C<T { x = 1; }\nSIDE_EFFECT();\n",
+                "function f<T { return 1; }\nSIDE_EFFECT();\n",
+                "function f<T\nSIDE_EFFECT();\n",
+                "foo<Bar(1);\nSIDE_EFFECT();\n",
+                "const f = <T, (x: T) => x;\nSIDE_EFFECT();\n",
+                "class C implements I {\n  x = 1;\nSIDE_EFFECT();\n",
+                "class C implements { x = 1; }\nSIDE_EFFECT();\n",
+                "const c = { a: 1 } satisfies { a: number };\nSIDE_EFFECT();\n",
+                "class C { [key: string]: number; }\nSIDE_EFFECT();\n",
+                "import A = require('mod');\nSIDE_EFFECT();\n",
+        };
+        for (String source : stillSilent) {
+            String erased = NekoTypeScriptCompiler.eraseTypescript(FILE, source);
+            assertTrue(erased.contains("SIDE_EFFECT"),
+                    "仍然静默通过的形态必须保留后续语句（否则就是静默丢代码，属于必须 fail closed 的一类）：\n"
+                            + source + "\n产物：\n" + erased);
+        }
     }
 
     // ---- 边界：合法 TS 必须继续擦除成功（防止过度收紧）----
