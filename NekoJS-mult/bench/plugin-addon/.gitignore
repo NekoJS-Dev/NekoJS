@@ -1,0 +1,5 @@
+# addon 制品与采样原始输出不入库（证据归档进 docs/architecture-refactor/baseline/*/）
+build/
+logs/
+out/*/server-stdout.log
+out/*/server-stderr.log
