@@ -1,13 +1,9 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -18,17 +14,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ticket 08 regression: a NekoJS plugin can register a node module whose id is namespaced with
- * {@code <modid>:<name>} (see {@code wiki/插件开发.md} and {@code NodeModulesPoint}).
+ * Ticket 08 regression: a NekoJS plugin registers node modules under a namespaced id,
+ * {@code <modid>:<name>} (see {@code NodeModulesPoint} and {@code wiki/插件开发.md}), and a script
+ * consumes it with {@code require('nekojs08:hello')}. A real external addon jar in {@code run/mods}
+ * surfaced this failing with {@code InvalidPathException: Illegal char <:> at index 8}.
  *
- * <p>Found by dropping a real external addon jar into {@code run/mods}: the addon's
- * {@code registerNodeModules} product was installed into {@code __nekoNodeBuiltins} correctly, but
- * {@code require('nekojs08:hello')} from a script failed because the resolver treated the namespaced
- * id as a relative Windows path and rejected it with {@code Illegal char <:> at index 8}
- * (a {@link java.nio.file.InvalidPathException} raised by {@code Path.of}).
+ * <p>The fix is deliberately narrow and lives in NekoModuleResolver resolveBareModule: Path.resolve
+ * resolves a relative argument lazily, so a colon-bearing bare specifier blew up inside the
+ * resolver before it could be classified. It is now answered with the pre-existing SPECIAL tier
+ * ("not a file, look it up in the registry").
  *
- * <p>A plugin module id is defined as a registry key, never as a filesystem path, so it must be
- * classified as a built-in/special specifier and resolved through {@code __nekoNodeResolve}.
+ * <p><b>What this file must NOT do:</b> it must not weaken the existing contract that an
+ * <i>unregistered</i> bare specifier fails under {@code require} semantics.
+ * {@code NekoModuleResolverTest#resolveForRequireRejectsUnknownBareSpecifier} pins that, and these
+ * tests pin the same rule for the namespaced shape.
  */
 class NekoPluginNodeModuleResolutionTest {
 
@@ -37,43 +36,74 @@ class NekoPluginNodeModuleResolutionTest {
 
     private static final String PARENT = "server_scripts/main.js";
 
-    /** The exact id the ticket 08 external addon registers. */
+    /** The exact id the ticket 08 external addon registers, and which scripts require. */
     @Test
-    void namespacedPluginModuleIdResolvesAsBuiltinInsteadOfThrowingOnPathParsing() throws Exception {
-        NekoModuleResolver resolver = resolverFor(gameDir);
+    void namespacedPluginModuleIdIsClassifiedSpecialInsteadOfThrowingOnPathParsing() throws Exception {
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
 
         NekoResolvedModule resolved = resolver.resolve(PARENT, "nekojs08:hello");
 
         assertTrue(resolved.special(), "a namespaced plugin module id is a registry key, not a file path");
-        assertEqualsKindBuiltin(resolved);
+        assertEquals(NekoModuleKind.SPECIAL, resolved.kind(),
+                "it must land in the SPECIAL tier so __nekoNodeResolve answers it, not BUILTIN");
+        assertEquals("nekojs08:hello", resolved.specifier(),
+                "the registry key must be preserved verbatim so the registry lookup can report it");
     }
 
-    /** {@code require('nekojs08:hello')} must also survive the stricter require.resolve path. */
+    /**
+     * The load-bearing half of the contract: require of an id the registry does NOT have must still
+     * fail as MODULE_NOT_FOUND. Classifying it as BUILTIN would silently pass the resolveForRequire
+     * guard and turn a hard error into a confusing later failure.
+     */
     @Test
-    void namespacedPluginModuleIdSurvivesRequireResolve() throws Exception {
-        NekoModuleResolver resolver = resolverFor(gameDir);
+    void unregisteredNamespacedIdStillFailsUnderRequireSemantics() throws Exception {
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
 
-        NekoResolvedModule resolved = resolver.resolveForRequire(PARENT, "nekojs08:hello");
-        assertTrue(resolved.special());
-        assertEqualsKindBuiltin(resolved);
+        for (String specifier : List.of("nosuchmod:missing", "addon08:not-registered", "a:b:c")) {
+            IOException error = assertThrows(IOException.class,
+                    () -> resolver.resolveForRequire(PARENT, specifier),
+                    "an unregistered namespaced id must fail, not resolve: " + specifier);
+            assertTrue(error.getMessage().contains("Cannot resolve module"),
+                    "it must fail as MODULE_NOT_FOUND: " + error.getMessage());
+            assertTrue(error.getMessage().contains(specifier),
+                    "the failure must name the module: " + error.getMessage());
+        }
+    }
+
+    /**
+     * Regression guard for the exact symptom: no specifier may escape as a raw
+     * java.nio.file.InvalidPathException. Either it resolves or it fails as an IOException.
+     */
+    @Test
+    void colonBearingSpecifierNeverLeaksInvalidPathException() throws Exception {
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
+
+        // NOTE: single-letter prefixes (x:y) are deliberately excluded — Windows treats those as
+        // drive letters, so they take the file path and fail with a drive error, not a path error.
+        for (String specifier : List.of("addon08:not-registered", "nekojs08:hello", "a:b:c", "ab:cd")) {
+            try {
+                resolver.resolveForRequire(PARENT, specifier);
+            } catch (IOException expected) {
+                assertTrue(expected.getMessage().contains(specifier), expected.getMessage());
+            } catch (java.nio.file.InvalidPathException leaked) {
+                throw new AssertionError("specifier '" + specifier + "' leaked a raw path exception", leaked);
+            }
+        }
     }
 
     /** The un-namespaced legacy form used by existing built-ins keeps working. */
     @Test
-    void unnamespacedRegistryKeyStillResolves() throws Exception {
-        NekoModuleResolver resolver = resolverFor(gameDir);
+    void unnamespacedRegistryKeyStillResolvesAsBuiltin() throws Exception {
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
 
-        assertTrue(resolver.resolve(PARENT, "fs").special());
-        assertTrue(resolver.resolve(PARENT, "node:fs").special());
+        assertEquals(NekoModuleKind.BUILTIN, resolver.resolve(PARENT, "fs").kind());
+        assertEquals(NekoModuleKind.BUILTIN, resolver.resolve(PARENT, "node:fs").kind());
     }
 
-    /**
-     * A specifier that really is a relative path must keep its file semantics — the namespaced-id
-     * fix must not swallow {@code ./} / {@code ../} / drive-letter specifiers.
-     */
+    /** A specifier that really is a relative path must keep its file semantics. */
     @Test
     void relativeSpecifiersKeepFileSemantics() throws Exception {
-        NekoModuleResolver resolver = resolverFor(gameDir);
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
         Path module = gameDir.resolve("nekojs/server_scripts/lib/helper.js");
         Files.createDirectories(module.getParent());
         Files.writeString(module, "module.exports = 1;");
@@ -83,52 +113,32 @@ class NekoPluginNodeModuleResolutionTest {
     }
 
     /**
-     * An unregistered namespaced id is <b>classified</b> as a registry key (so the path parser never
-     * sees it) and keeps its original specifier; whether the id actually exists is a registry
-     * question answered when the module is loaded, not a path question.
+     * A single-letter prefix is a Windows drive letter, not a registry key: it must keep file
+     * semantics (and must not be silently answered from the module registry).
      */
     @Test
-    void unknownNamespacedIdKeepsItsSpecifierAndIsNeverTreatedAsAPath() throws Exception {
-        NekoModuleResolver resolver = resolverFor(gameDir);
+    void singleLetterPrefixIsTreatedAsDriveLetterNotRegistryKey() throws Exception {
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
 
-        NekoResolvedModule resolved = resolver.resolveForRequire(PARENT, "nosuchmod:missing");
-        assertTrue(resolved.special());
-        assertEqualsKindBuiltin(resolved);
-        org.junit.jupiter.api.Assertions.assertEquals("nosuchmod:missing", resolved.specifier(),
-                "the registry key must be preserved verbatim so the registry lookup can report it");
+        // It must be routed down the file path (and therefore rejected as outside the game dir),
+        // never answered from the module registry.
+        IOException error = assertThrows(IOException.class,
+                () -> resolver.resolve(PARENT, "C:\\definitely\\not\\here"),
+                "a drive-qualified path must stay a file specifier, not a registry key");
+        assertTrue(error.getMessage() != null && !error.getMessage().contains("Invalid char"),
+                "the drive path must fail for being outside the game dir: " + error.getMessage());
     }
 
-    /**
-     * Regression guard for the exact symptom the ticket 08 addon hit: no specifier may escape as a
-     * raw {@link java.nio.file.InvalidPathException} ("Illegal char <:>"). Either it resolves or it
-     * fails as an IOException naming the module.
-     */
+    /** An installed node_modules package still resolves as a file, not as a registry key. */
     @Test
-    void colonBearingSpecifierNeverLeaksInvalidPathException() throws Exception {
-        NekoModuleResolver resolver = resolverFor(gameDir);
+    void installedNodeModulesPackageResolvesAsFile() throws Exception {
+        NekoModuleResolver resolver = NekoModuleResolverTestSupport.resolverFor(gameDir);
+        Path module = gameDir.resolve("nekojs/node_modules/nekojs/user-lib.js");
+        Files.createDirectories(module.getParent());
+        Files.writeString(module, "module.exports = 1;");
 
-        for (String specifier : List.of("addon08:not-registered", "nekojs08:hello", "a:b:c")) {
-            try {
-                resolver.resolveForRequire(PARENT, specifier);
-            } catch (IOException expected) {
-                assertTrue(expected.getMessage() != null && expected.getMessage().contains(specifier),
-                        "an IOException must name the module: " + expected.getMessage());
-            } catch (java.nio.file.InvalidPathException leaked) {
-                throw new AssertionError("specifier '" + specifier + "' leaked a raw path exception", leaked);
-            }
-        }
-    }
-
-    private static void assertEqualsKindBuiltin(NekoResolvedModule resolved) {
-        assertTrue(resolved.kind() == NekoModuleKind.BUILTIN,
-                "expected BUILTIN classification but was " + resolved.kind());
-    }
-
-    private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {
-        Constructor<NekoJSPaths> constructor = NekoJSPaths.class.getDeclaredConstructor(Path.class);
-        constructor.setAccessible(true);
-        NekoJSPaths paths = constructor.newInstance(gameDir);
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        return new NekoModuleResolver(paths, new ScriptFilePolicy(compilers));
+        NekoResolvedModule resolved = resolver.resolve(PARENT, "nekojs/user-lib");
+        assertEquals(NekoModuleKind.SCRIPT, resolved.kind());
+        assertEquals(module.toRealPath(), resolved.path());
     }
 }

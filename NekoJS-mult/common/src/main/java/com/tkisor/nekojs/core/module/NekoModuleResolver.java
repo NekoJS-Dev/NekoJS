@@ -66,7 +66,21 @@ public final class NekoModuleResolver {
 
     private NekoResolvedModule resolveBareModule(String specifier) throws IOException {
         Path nodeModules = paths.nodeModules().toAbsolutePath().normalize();
-        Path requested = nodeModules.resolve(specifier).normalize();
+        Path requested;
+        try {
+            requested = nodeModules.resolve(specifier).normalize();
+        } catch (java.nio.file.InvalidPathException exception) {
+            // 工单 08：插件经 registerNodeModules 注册的 id 形态是 <modid>:<name>（见
+            // NodeModulesPoint 与 wiki/插件开发.md）。: 在 Windows 上是非法路径字符，而
+            // Path.resolve 对相对实参惰性解析——这里必须捕获，否则 require('<modid>:<name>')
+            // 会在抛 IndexOutOfBoundsException 之前先以 `Invalid char <:>` 炸出。
+            //
+            // 落点刻意放在这里而不是 isBuiltinSpecifier：SPECIAL 兜底本来就表示"不算文件，
+            // 交给 define.js 的 __nekoNodeResolve 去注册表里查"，未命中时 resolveForRequire
+            // (:59-65) 仍然抛 Cannot resolve module。把它归成 BUILTIN 会让未注册的
+            // 命名空间 id 绕过该检查（既有契约 NekoModuleResolverTest:69/:86 钉的就是这条）。
+            return NekoResolvedModule.special(specifier, NekoModuleKind.SPECIAL);
+        }
         try {
             return resolveFileModule(requested, nodeModules);
         } catch (IOException exception) {
@@ -195,45 +209,11 @@ public final class NekoModuleResolver {
         }
     }
 
-    /**
-     * 插件注册的命名空间模块 id（{@code <modid>:<name>}，见 {@code NodeModulesPoint} 与
-     * {@code wiki/插件开发.md}）在语义上是<b>注册表键</b>，不是文件系统路径。
-     *
-     * <p>工单 08 的真实外部 addon 暴露的缺陷：这类 id 曾落入 {@link #isFileSpecifier} 的排除
-     * 分支，随后被当作文件路径交给 {@link java.nio.file.Path#of}，在 Windows 上以
-     * {@code InvalidPathException: Illegal char <:> at index N} 炸出——而不是可诊断的
-     * "模块未注册"。这里按与 {@code nekojs/jsx-runtime} 相同的方式把它归为 builtin：由
-     * {@code __nekoNodeResolve} 在进程内注册表里查找，未注册时给出明确的模块未找到错误。
-     *
-     * <p>形态判定与 npm 兼容：包名不允许含 {@code :}，因此该分支不会截走任何真实的
-     * node_modules 包；{@code node:} 前缀、{@code java:} 前缀、盘符路径与 {@code file:} URI
-     * 都由前面的分支或下面的排除条件先行处理。
-     */
-    private static boolean isNamespacedRegistryKey(String specifier) {
-        int colon = specifier.indexOf(':');
-        if (colon <= 0 || colon == specifier.length() - 1) {
-            return false;
-        }
-        // 单字母前缀只在确实是盘符路径（a:\ / a:/）时保留文件语义；a:b 之类的形态仍是注册表键，
-        // 否则会经 Path.of 抛出 InvalidPathException（与本次修复前的症状同类）
-        if (colon == 1) {
-            boolean drivePath = specifier.length() > 2
-                    && (specifier.charAt(2) == '\\' || specifier.charAt(2) == '/');
-            return !drivePath;
-        }
-        // file:/jar: 是 URI 形态的路径，不当注册表键
-        return !specifier.startsWith("file:") && !specifier.startsWith("jar:");
-    }
-
     private boolean isBuiltinSpecifier(String specifier) {
         // 与 resources/nekojs/node/modules.list 注册表保持同步：bare 内置名必须在此声明，
         // 否则只有在 node_modules 未装同名包时才会经 SPECIAL 兜底命中（优先级与 Node 相反）
         // nekojs/jsx-runtime：automatic JSX runtime 的固定模块名（NekoJsxCompiler 注入的 import）
         if (specifier.equals("nekojs/jsx-runtime")) {
-            return true;
-        }
-        // 工单 08：插件注册的 <modid>:<name> 命名空间模块 id（见 isNamespacedRegistryKey 注释）
-        if (isNamespacedRegistryKey(specifier)) {
             return true;
         }
         return specifier.equals("fs")
