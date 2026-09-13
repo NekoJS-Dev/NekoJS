@@ -1,9 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -122,10 +120,7 @@ class NekoModulePreparationBoundaryTest {
     @Test
     void preparationRunsWithoutAnyGraalContext() throws Exception {
         NekoJSPaths paths = NekoJSPaths.get();
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        NekoModulePreparation preparation = new NekoModulePreparation(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
-                paths);
+        NekoModulePreparation preparation = TestModulePreparation.create();
 
         Path cjs = write("boundary-plain.cjs", "module.exports = 1;\n");
         Path esm = write("boundary-esm.mjs", "export const v = 1;\n");
@@ -145,11 +140,20 @@ class NekoModulePreparationBoundaryTest {
         assertTrue(afterChange.code().contains("3"), "内容变化必须重编译");
     }
 
+    private final List<Path> written = new ArrayList<>();
+
+    @org.junit.jupiter.api.AfterEach
+    void cleanUpWrittenFiles() throws Exception {
+        // 真删文件 + 空的父目录：deleteOnExit 只在 JVM 退出时生效，会污染共享 gameDir
+        TestModulePreparation.deleteFilesAndEmptyParents(written);
+        written.clear();
+    }
+
     private Path write(String name, String source) throws IOException {
         Path file = NekoJSPaths.get().testScripts().resolve(name);
         Files.createDirectories(file.getParent());
         Files.writeString(file, source);
-        file.toFile().deleteOnExit();
+        written.add(file);
         return file;
     }
 }

@@ -55,10 +55,6 @@ public record NekoModuleCacheKey(
         return new NekoModuleIdentity(languageId, mode);
     }
 
-    public boolean identityMatches(NekoModuleIdentity expected) {
-        return expected != null && identity().equals(expected);
-    }
-
     /** 稳定字符串形式（诊断/日志）。内容指纹取前 16 hex，完整指纹不用于展示。 */
     public String value() {
         String shortHash = contentHash.length() >= 16 ? contentHash.substring(0, 16) : contentHash;

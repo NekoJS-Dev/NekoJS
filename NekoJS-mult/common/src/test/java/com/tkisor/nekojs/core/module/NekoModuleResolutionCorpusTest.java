@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -92,9 +93,8 @@ class NekoModuleResolutionCorpusTest {
     @AfterEach
     void tearDown() throws IOException {
         context.close();
-        for (Path path : written) {
-            Files.deleteIfExists(path);
-        }
+        // 真删文件 + 空的父目录：deleteOnExit 只在 JVM 退出时生效，会污染共享 gameDir
+        TestModulePreparation.deleteFilesAndEmptyParents(written);
         written.clear();
     }
 
@@ -194,6 +194,85 @@ class NekoModuleResolutionCorpusTest {
         assertEquals("a", entry.getMember("a").execute().asString(), "入口自身导出必须可用");
         assertEquals("a->b", entry.getMember("viaB").execute().asString(),
                 "循环依赖对端导出必须可在求值后互调");
+    }
+
+    // ---- AC1/AC3：identity 冲突（同名多路径 / 跨 moduleId）不得混淆 ----
+
+    /**
+     * 同名文件位于不同目录 → 必须解析为<strong>不同模块身份</strong>。
+     *
+     * <p>规格 06:60 与票据 Work items 要求 corpus 覆盖「identity 冲突」。这里的冲突形态是
+     * 「同一 file-name 出现在两个路径」——虚拟 ESM 注册表按 file-name 建了索引
+     * （`DISPLAY_PATHS_BY_FILE_NAME` / `KEY_BY_FILE_NAME`），因此这是最容易被混淆成同一模块的形态。
+     * 本测试断言：解析出的 module id（源路径）不同、prepared 的 cache key 不同、两份导出互不串味。
+     */
+    @Test
+    void sameFileNameInDifferentDirectoriesKeepsDistinctModuleIdentity() throws IOException {
+        write("dup/shared-name.mjs", "export const who = 'dup';\n");
+        write("other/shared-name.mjs", "export const who = 'other';\n");
+        write("dup-consumer.mjs",
+                "import { who } from './dup/shared-name.mjs';\nexport const seen = who;\n");
+        write("other-consumer.mjs",
+                "import { who } from './other/shared-name.mjs';\nexport const seen = who;\n");
+
+        Object dup = host.loadEntry(ENTRY_PREFIX + "dup-consumer.mjs");
+        Object other = host.loadEntry(ENTRY_PREFIX + "other-consumer.mjs");
+
+        assertEquals("dup", ((Value) dup).getMember("seen").asString(),
+                "同名文件（dup/shared-name.mjs）的导出必须来自自己的路径");
+        assertEquals("other", ((Value) other).getMember("seen").asString(),
+                "同名文件（other/shared-name.mjs）的导出不得被 dup 版本串味");
+
+        // 准备层身份：同 file-name、不同路径 → 不同 sourcePath 与不同 cache key
+        NekoPreparedModule dupModule = preparation.prepare(paths.serverScripts().resolve("resolution-corpus/dup/shared-name.mjs"));
+        NekoPreparedModule otherModule = preparation.prepare(paths.serverScripts().resolve("resolution-corpus/other/shared-name.mjs"));
+        assertNotSame(dupModule, otherModule, "同名不同路径必须是不同 prepared module");
+        assertTrue(!dupModule.cacheKey().equals(otherModule.cacheKey()),
+                "同名不同路径必须产生不同 cache key（路径参与身份）");
+        assertEquals(dupModule.sourcePath().getFileName(), otherModule.sourcePath().getFileName(),
+                "测试前提：两者的 file-name 确实相同（冲突形态成立）");
+    }
+
+    /**
+     * 跨入入口的 moduleId 冲突：CJS 与 ESM 各有一份同名模块，从不同入口 require/import
+     * 必须各自解析、各自求值，不能共用同一模块状态。
+     */
+    @Test
+    void cjsAndEsmWithSameNameDoNotShareModuleState() throws IOException {
+        write("mixed/kern.cjs", "module.exports = { kind: 'cjs' };\n");
+        write("mixed/kern.mjs", "export const kind = 'esm';\n");
+        write("mixed/use-cjs.mjs",
+                "import kern from './kern.cjs';\nexport const seen = kern.kind;\n");
+        write("mixed/use-esm.mjs",
+                "import { kind } from './kern.mjs';\nexport const seen = kind;\n");
+
+        Object viaCjs = host.loadEntry(ENTRY_PREFIX + "mixed/use-cjs.mjs");
+        Object viaEsm = host.loadEntry(ENTRY_PREFIX + "mixed/use-esm.mjs");
+
+        assertEquals("cjs", ((Value) viaCjs).getMember("seen").asString(),
+                "ESM import CJS 互操作必须拿到 CJS 版本（同一 basename 不得被 .mjs 覆盖）");
+        assertEquals("esm", ((Value) viaEsm).getMember("seen").asString(),
+                "ESM import ESM 必须拿到 ESM 版本（同一 basename 不得被 .cjs 覆盖）");
+    }
+
+    /** 同一路径经不同入口重复引用 → 同一模块身份（对照上一条：同名不同路径必须不同）。 */
+    @Test
+    void sameModuleReachedFromTwoEntriesKeepsOneIdentity() throws IOException {
+        write("shared/common.mjs", "export const token = 'shared-token';\n");
+        write("shared/entry-a.mjs",
+                "import { token } from './common.mjs';\nexport const seen = token;\n");
+        write("shared/entry-b.mjs",
+                "import { token } from './common.mjs';\nexport const seen = token;\n");
+
+        Object a = host.loadEntry(ENTRY_PREFIX + "shared/entry-a.mjs");
+        Object b = host.loadEntry(ENTRY_PREFIX + "shared/entry-b.mjs");
+
+        assertEquals("shared-token", ((Value) a).getMember("seen").asString());
+        assertEquals("shared-token", ((Value) b).getMember("seen").asString());
+        // 同一路径 → 同一 cache 条目（跨入口调用不产生第二身份）
+        Path common = paths.serverScripts().resolve("resolution-corpus/shared/common.mjs");
+        assertSame(preparation.prepare(common), preparation.prepare(common),
+                "同一路径跨入口引用必须复用同一 prepared module（身份唯一）");
     }
 
     // ---- AC6：link 失败可区分 owner 与阶段 ----

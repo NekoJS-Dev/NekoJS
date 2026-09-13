@@ -104,6 +104,11 @@ public final class NekoModulePipeline {
                         compiled.sourceMap(), null, CjsStaticAnalyzer.analyze(compiled.code()), 0);
             }
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
+                // 原生 JS 的 CJS 路径：产物就是原始源，因此 sourceMap = null 表示<strong>恒等映射</strong>
+                // ——SourceMapRegistry 对 null/空 map 落 NormalizedSourceMap.empty，查表返回
+                // (jsLine, jsColumn, path=null)，即行列原样透传、errorPath 回退到 displayPath。
+                // 生成 source map 反而会引入一份「源到源」的冗余映射，对定位没有任何增益。
+                // 该契约由 NekoModulePreparationIdentityTest.sourceMapNullMeansIdentityForNativeJs 固定。
                 return NekoPreparedModule.of(NekoModuleMode.COMMONJS, cacheKey, file, rawSource,
                         null, null, CjsStaticAnalyzer.analyze(rawSource), 0);
             }

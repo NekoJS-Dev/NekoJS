@@ -87,9 +87,8 @@ class NekoModuleMinimalExampleTest {
     @AfterEach
     void tearDown() throws IOException {
         context.close();
-        for (Path path : written) {
-            Files.deleteIfExists(path);
-        }
+        // 真删文件 + 空的父目录：deleteOnExit 只在 JVM 退出时生效，会污染共享 gameDir
+        TestModulePreparation.deleteFilesAndEmptyParents(written);
         written.clear();
     }
 

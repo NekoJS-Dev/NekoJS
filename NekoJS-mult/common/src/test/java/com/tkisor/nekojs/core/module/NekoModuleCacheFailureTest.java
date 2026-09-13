@@ -1,10 +1,10 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.compiler.IScriptCompiler;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -73,16 +75,23 @@ class NekoModuleCacheFailureTest {
         NekoJSPaths paths = NekoJSPaths.get();
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         compilers.registerLanguage("failinglang", Set.of(".fail"), compiler);
-        return new NekoModulePreparation(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
-                paths);
+        return TestModulePreparation.create(paths, compilers, SandboxConfig.defaultConfig());
+    }
+
+    private final List<Path> written = new ArrayList<>();
+
+    @org.junit.jupiter.api.AfterEach
+    void cleanUpWrittenFiles() throws Exception {
+        // 真删文件 + 空的父目录：deleteOnExit 只在 JVM 退出时生效，会污染共享 gameDir
+        TestModulePreparation.deleteFilesAndEmptyParents(written);
+        written.clear();
     }
 
     private Path write(String name, String source) throws IOException {
         Path file = NekoJSPaths.get().testScripts().resolve(name);
         Files.createDirectories(file.getParent());
         Files.writeString(file, source);
-        file.toFile().deleteOnExit();
+        written.add(file);
         return file;
     }
 

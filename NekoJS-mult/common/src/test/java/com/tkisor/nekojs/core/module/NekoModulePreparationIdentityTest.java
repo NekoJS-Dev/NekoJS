@@ -1,21 +1,25 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,18 +44,25 @@ class NekoModulePreparationIdentityTest {
     }
 
     private static NekoModulePreparation preparation() {
-        NekoJSPaths paths = NekoJSPaths.get();
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        return new NekoModulePreparation(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
-                paths);
+        return TestModulePreparation.create();
     }
 
-    private static Path writeScript(String relative, String source) throws Exception {
+    /** 本测试写入的路径：必须在 @AfterEach 真正删除（deleteOnExit 会留到 JVM 退出，
+     *  污染共享 gameDir，导致同 JVM 内其它测试的目录清理抛 DirectoryNotEmptyException）。 */
+    private final List<Path> written = new ArrayList<>();
+
+    @org.junit.jupiter.api.AfterEach
+    void cleanUpWrittenFiles() throws Exception {
+        // 真删文件 + 空的父目录：deleteOnExit 只在 JVM 退出时生效，会污染共享 gameDir
+        TestModulePreparation.deleteFilesAndEmptyParents(written);
+        written.clear();
+    }
+
+    private Path writeScript(String relative, String source) throws Exception {
         Path script = NekoJSPaths.get().root().resolve(relative);
         Files.createDirectories(script.getParent());
         Files.writeString(script, source);
-        script.toFile().deleteOnExit();
+        written.add(script);
         return script;
     }
 
@@ -107,6 +118,37 @@ class NekoModulePreparationIdentityTest {
 
         assertEquals(base, NekoModuleCacheKey.of("javascript", NekoModuleMode.AUTO, a, "code"),
                 "相同四元组必须产生相等 key（stability）");
+    }
+
+    /**
+     * AC1 的 source map 维度：三种语言的 prepared module 都必须有<strong>可用</strong>的 source map，
+     * 而「可用」对原生 JS 的具体含义是<strong>恒等映射</strong>。
+     *
+     * <p>原生 JS（`.js`/`.mjs`/`.cjs`）的可执行产物就是原始源，行列一一对应。此时
+     * {@link NekoPreparedModule#sourceMap()} 为 {@code null}，由
+     * {@code SourceMapRegistry.parse} 落为 {@code NormalizedSourceMap.empty}，查表返回
+     * {@code (jsLine, jsColumn, path=null)}：行列原样透传、错误路径回退到 displayPath。
+     * 本测试把「null = 恒等映射，且这就是原生 JS 的可用形态」写成断言，防止被误读成「缺 source map」。
+     * 转译语言（TS/JSX/Python）走另一条路：必须产出<strong>非空</strong> map（见 AC7 的 .ts 映射测试）。
+     */
+    @Test
+    void sourceMapNullMeansIdentityForNativeJs() throws Exception {
+        Path js = writeScript("test_scripts/sourcemap-auto.js", "module.exports = 1;\n");
+        Path cjs = writeScript("test_scripts/sourcemap-plain.cjs", "module.exports = 2;\n");
+        Path mjs = writeScript("test_scripts/sourcemap-esm.mjs", "export const v = 3;\n");
+        NekoModulePreparation preparation = preparation();
+
+        for (Path file : new Path[]{js, cjs, mjs}) {
+            NekoPreparedModule prepared = preparation.prepare(file);
+            assertNull(prepared.sourceMap(),
+                    "原生 JS 的产物即原始源，sourceMap 必须为 null（恒等映射）：" + file.getFileName());
+            // 恒等映射的行为证据：未注册任何映射时，查表返回行列原样的 fallback
+            SourceMapRegistry.OriginalPosition identity =
+                    SourceMapRegistry.getMappedPosition("test_scripts/__no_such_map__.js", 7, 3);
+            assertEquals(7, identity.line, "恒等映射必须原样返回行号");
+            assertEquals(3, identity.column, "恒等映射必须原样返回列号");
+            assertNull(identity.path, "恒等映射无 source path（调用方回退到 displayPath）");
+        }
     }
 
     // ---- AC2：prepared module 不可变 ----
@@ -243,8 +285,7 @@ class NekoModulePreparationIdentityTest {
             @Override public boolean canCompile(String extension) { return true; }
             @Override public String compile(Path file, String sourceCode) { return "alpha"; }
         });
-        NekoModulePreparation prepA = new NekoModulePreparation(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilersA, config), paths);
+        NekoModulePreparation prepA = TestModulePreparation.create(paths, compilersA, config);
         NekoPreparedModule preparedA = prepA.prepare(script);
         assertEquals("alpha", preparedA.languageId());
         assertTrue(preparedA.code().contains("alpha"));
@@ -255,8 +296,7 @@ class NekoModulePreparationIdentityTest {
             @Override public boolean canCompile(String extension) { return true; }
             @Override public String compile(Path file, String sourceCode) { return "beta"; }
         });
-        NekoModulePreparation prepB = new NekoModulePreparation(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilersB, config), paths);
+        NekoModulePreparation prepB = TestModulePreparation.create(paths, compilersB, config);
         NekoPreparedModule preparedB = prepB.prepare(script);
 
         assertEquals("beta", preparedB.languageId(), "换语言后 language id 必须变化");

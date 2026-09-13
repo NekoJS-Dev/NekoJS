@@ -13,7 +13,9 @@
 |---|---|---|
 | `cb1ce575` | `refactor(module)`：prepared module 身份/cache key + 模块缓存改 runtime owner 显式持有 | AC1/AC2/AC4/AC5/AC9/AC10（实现面） |
 | `0240b1b1` | `test(module)`：身份/cache key + Resolution/Cache characterization corpus | AC1–AC6 |
-| 本提交 | `test+docs(module)`：错误映射/trust/边界/示例 + 本报告 | AC7/AC8/AC10/AC11 |
+| `f3f026b4` | `test+docs(module)`：错误映射/trust/边界/示例 + 本报告 | AC7/AC8/AC10/AC11 |
+| `f23fe3ed` | `test+docs(ticket-11)`：补 AC2/AC6 强化证据并关闭工单 | AC2/AC6 |
+| 本提交 | `refactor+test(module)`：code-review 双轴修订（死代码/装配重复/第二入口/AC7 列与身份/identity 冲突/AUTO 行为记录/A9 归属） | AC1/AC2/AC3/AC7/AC9/AC10 |
 
 ---
 
@@ -57,6 +59,19 @@
 | `core/module/esm/NekoNativeEsmSourceRewriter.java`（重构） | 注入 preparation | AC3/AC10 |
 | `core/module/ModuleReloadCoordinator.java`（重构） | 注入 preparation 取代 static invalidate | AC4/AC5 |
 | `script/ScriptManager.java`（重构） | 注入 preparation；按 ScriptType 清理走实例 | AC5 |
+| `core/node/NekoNodeModuleInstaller.java`（code-review 修订） | 删除自建 pipeline 的测试专用重载；默认入口也**必须**注入 preparation | AC2/AC9 |
+
+**code-review 修订（Standards 轴）**：
+- 删除三个零调用者的 public 成员：`NekoContentHash.shortSha256`、
+  `NekoModuleCacheKey.identityMatches`、`NekoRuntimeRoot.modulePreparation()`
+  （最后一个尤其有害：把 root 私有 cache 外泄，与「root 显式持有」自相矛盾）。
+- 4 个新测试中的内联 `new NekoModulePreparation(new NekoModulePipeline(new NekoCompilationPipeline(), ...))`
+  全部改用 `TestModulePreparation.create(...)`，消除第二条测试装配路径。
+- `NekoNodeModuleInstaller.install(Context, ScriptType)` 原内联自建
+  `NekoCompilationPipeline + ScriptCompilerRegistry.current() + defaultConfig()`——正是本票要消除的
+  「第二语义 pipeline」形态。已改为 `install(Context, ScriptType, NekoModulePreparation)`，
+  唯一调用者 `NodeModulesJsRegressionTest` 一并改注入。全仓**不再有任何**在测试/默认入口中
+  自建模块准备装配的路径。
 
 **所有权结论**：模块 cache/session 的唯一 owner 是 `NekoRuntimeRoot`（构造注入 + `closeSilently` 释放）。独立构造的 root / 独立构造的 `NekoModulePreparation` 之间零共享——这有独立实例测试证明（`independentPreparationsDoNotShareCache`）。
 
@@ -71,6 +86,11 @@
 - `esmInputProducesEsmIdentityAndAst`：`.mjs` → ESM、esmAst 非空且识别出 export。
 - `jsExtensionUsesAutoRequestedMode`：`.js` → requested=AUTO、解析 COMMONJS。
 - `cacheKeyCapturesLanguageModePathAndContent`：四维任一变化 → 不同 key；相同四元组 → 相等 key（稳定性）。
+- `sourceMapNullMeansIdentityForNativeJs`（**code-review 修订补**）：原生 JS（`.js`/`.cjs`/`.mjs`）的
+  `sourceMap()` 为 `null`，语义是**恒等映射**——`SourceMapRegistry.parse` 对 null/空 map 落
+  `NormalizedSourceMap.empty`，查表返回 `(jsLine, jsColumn, path=null)`：行列原样透传、错误路径回退到
+  displayPath。测试同时断言该恒等行为（行/列原样、path 为 null），因此「可用 source map」对原生 JS
+  有明确定义，不是被默默忽略的缺口。转译语言走另一条路：必须产出**非空** map（由 AC7 的 `.ts` 映射测试覆盖）。
 
 ### AC2 — prepared module 不可变，Resolution/Cache 修改源码、身份或诊断上下文时测试变红
 
@@ -83,6 +103,9 @@
   - 改过源码的 record 与原实例 `equals == false`，且原实例的可观察元组不变，cache 条目不被污染。
 - **会变红的守卫**：若将来给 `NekoPreparedModule` 加上 setter，或把某个组件换成裸可变容器（如直接暴露 `ArrayList`），上述测试即失败。
 - **限制（如实记录）**：`NekoPreparedModule` 是 record，从类型上就没有 setter，因此「Resolution/Cache 试图就地改写」在编译期已不可能；测试钉的是可观察元组的稳定性与组件不可变性，而非运行期的篡改检测 API。若维护者要求显式的篡改检测（如 sealed 层级 + 持有者守卫），需另立工作项。
+
+**code-review 修订**：`NekoRuntimeRoot.modulePreparation()` 曾把 root 私有 cache 外泄（自称「诊断/测试
+观察用」却与「root 显式持有」矛盾），已**删除**；测试改用 `TestModulePreparation` 夹具。
 
 ### AC3 — CJS require/module.exports 与 ESM import/export/link 的模块身份在重复加载、循环依赖和跨入口调用下保持既有语义
 
@@ -106,6 +129,11 @@
 - `NekoModuleResolutionCorpusTest.typeScopedClearLeavesCrossTypeAndOtherTypeEntries`：prepared 条目 SERVER 清除 / CLIENT 保留 / node_modules 共享保留。
 - `ScriptTypeScopedCacheClearTest.pipelineCacheClearByTypeOnlyRemovesThatType` / `pipelineCacheNoArgClearWipesEverything`：白盒测试已改为实例级断言（不再反射 static `PREPARED_CACHE`）。
 - `NekoModuleResolutionCorpusTest` 与上述测试共用同一 `scriptTypeOf` 路径推导实现。
+- **边界（总账 A9 归属，非本票缺口）**：`ModuleReloadCoordinator.invalidateModules` 仍调用
+  static `NekoEsmVirtualModuleRegistry.invalidate(...)`。runtime-ledger **A9** 明确把该 registry
+  归为 **generation-owned** 且标注「**06/07 处理，本票不动**」。本票只把 **prepared module cache**
+  的所有权收口到 runtime owner（A8），**未动** A9 的虚拟 ESM registry —— 这是按总账分类执行的
+  有意边界，不是遗漏。见 §3.5。
 
 ### AC6 — 准备失败、resolve/link 失败、缓存失败和执行失败可区分 owner 与阶段，错误不延迟成无来源的 Graal 异常
 
@@ -130,6 +158,13 @@
 
 观测路径与生产一致：Graal `PolyglotException` → `ScriptError.create`（`DefaultErrorTracker` 的错误解析入口，内部查 `SourceMapRegistry`）→ 用户可见 path/line/column。
 
+**code-review 修订补强（AC7 字面三项：文件、行列、模块身份）**：
+- 三个测试现在都断言**列号**：ESM helper line=2/col=9、入口 line=2/col=7（`throw new Error` 的 `new` 起始列）；
+  `.ts` helper line=3 且列 > 0（TS 类型擦除的 source map 是**语句粒度**，列映射到语句起始列，
+  因此断言「携带来自 source map 的原始列」而非编造不存在的精确列——粒度限制如实记录在此）。
+- **模块身份**断言：错误归属的模块经 `NekoModulePreparation.prepare` 得到的 `sourcePath` / `languageId` /
+  `mode` / `cacheKey` 必须可解释且与错误路径指向同一模块（`.mjs` → javascript/ESM，`.ts` → typescript/ESM）。
+
 ### AC8 — 本地 trusted 与远端显式授权/拒绝用同一阶段模型观测，拒绝或降级不会隐藏语言边界
 
 **pass（阶段同一性 + 授权结果两条证据）**。证据：`NekoModuleTrustPhaseParityTest`（新）
@@ -146,12 +181,27 @@
 
 ### AC10 — Preparation 与 Resolution/Cache 不创建 Graal Context、不决定 HostAccess、不读取 Minecraft/loader
 
-**pass**。证据：`NekoModulePreparationBoundaryTest`（新）
-- `preparationAndResolutionSourcesCreateNoContextOrHostAccess`：对 19 个 Preparation/Resolution/Cache 源文件做令牌级扫描（跳过 javadoc/注释行），断言零 `Context.newBuilder` 与零 `HostAccess`。
+**pass（口径：白名单，不是整包）**。证据：`NekoModulePreparationBoundaryTest`（新）
+- `preparationAndResolutionSourcesCreateNoContextOrHostAccess`：对 **19 个显式列出的** Preparation/Resolution/Cache 源文件做令牌级扫描（跳过 javadoc/注释行），断言零 `Context.newBuilder` 与零 `HostAccess`。
 - `preparationAndResolutionSourcesReadNoMinecraftOrLoader`：同集合零 `net.minecraft` / `net.neoforged` / `net.fabricmc`。
 - `preparationRunsWithoutAnyGraalContext`：**行为证据**——不构造任何 Graal Context，纯 Java 跑通 `.cjs`/`.mjs`/`.js` 的 prepare 与缓存命中/失效。
-- **边界说明**：`NekoScriptModuleLoaderHost` 持有 `Context`，但它属于 Script Execution Environment（由 `NekoSandboxFactory`/Node installer 在 Context 创建后构造），**不在**上述 19 文件集合内。这与规格 06 的三 Module 划分一致：host 的加载/求值动作是 Execution，不是 Preparation。
-- 本约束**未**改变 common 允许 GraalJS 的既有规则（如 `NekoEsmParser` 等仍可用 GraalJS 无关的纯 Java；`guardLint` 的既有限制不变）。
+
+**code-review 修订：证据边界必须按白名单读（Spec 轴 c2，已复核）**
+
+审计结论：AC10 字面（**不创建** Graal Context / 不决定 HostAccess / 不读取 MC-loader）在 **19 文件白名单内成立**，
+**在 `core/module` 包级不成立**——同包内：
+- `NekoScriptModuleLoaderHost` 持有 `Context`（加载/求值 = Execution 职责）；
+- `EsmModuleLifecycle` 持有 `Context` 并 `context.eval(...)`；
+- `NekoEsmModuleRecord` / `NekoEsmModuleRecordCache` 持有 static `Value`。
+
+这些**都是** Script Execution Environment 的成员（由 `NekoSandboxFactory` 在 Context 创建后构造并注入），
+**没有一个**调用 `Context.newBuilder`。全仓唯一的 Context 创建点是 `NekoSandboxFactory:126`（Execution Environment）。
+因此：
+- **AC10 字面成立**（包内零 `Context.newBuilder`、零 `HostAccess` 决策、零 MC-loader import）；
+- 但 **REPORT 不表述为「整包零 Context」**——白名单口径如上；
+- `NekoScriptModuleLoaderHost` 之所以**不**被移出，是因为它是票 06 已验收的 generation/commit 路径执行入口；
+  强行剥离会与既有决策冲突（见 §4）。
+- 本约束**未**改变 common 允许 GraalJS 的既有规则（`guardLint` 的 L2 边界规则不变：只禁 MC/loader import）。
 
 ### AC11 — 随实现交付 JS、CJS、ESM 的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的模块能力，缓存/reload 行为与示例说明一致
 
@@ -216,6 +266,42 @@ B1 的删除条件（ticket 05 总账 A7）是「W3 显式注入 pipeline/cache 
 
 ---
 
+## 3.5 行为变化记录：AUTO 判定为 CJS 的 `.js` 现在携带 CjsModuleRecord（Spec 轴 b1）
+
+**变化**：`NekoModulePipeline.prepareModule(NekoCompileOutput)` 的 `AUTO && !module` 分支
+（`.js` 无 import/export、`enableEsmAuthoring` 开启时判定为 CJS）：
+
+| | 修复前（旧 `NekoModulePipelineCache` 路径） | 本票之后 |
+|---|---|---|
+| 构造调用 | `NekoPreparedModule.commonJs(code, sourceMap)` | `NekoPreparedModule.of(COMMONJS, key, file, code, sourceMap, null, CjsStaticAnalyzer.analyze(code), 0)` |
+| `cjsRecord` | `CjsModuleRecord.EMPTY` | 真实静态分析结果（字面量 require 依赖 + 导出形状） |
+| 其余（code / sourceMap / mode） | 不变 | 不变 |
+
+**判定：这个变化是正确的，且与另两条 CJS 分支更一致。** 理由：
+1. 同一份「模块是 CJS」的结论，不应因为它是「扩展名强制 COMMONJS」还是「AUTO 判定为 CJS」而得到
+   不同质量的事实。修复前 `.cjs` 有静态分析、`.js`（AUTO→CJS）没有——这是路径依赖的偶然差异。
+2. `CjsStaticAnalyzer` 是**纯 token 级静态近似**，不产生副作用、不改变可执行 code，因此该变化
+   **不改变任何脚本可观察行为**（`code`/`mode`/`sourceMap` 全部不变），只让 `prepared.cjsRecord()`
+   的事实更完整。
+3. `cjsRecord` 目前**没有生产读者**（只有 record 携带 + 测试断言），因此该变化的爆炸半径为零；
+   未来若要把它用于依赖图/require.resolve 校验，AUTO 路径也必须有一致的数据。
+
+**验证**：`NekoModulePreparationIdentityTest.jsExtensionUsesAutoRequestedMode` 断言 `.js` →
+requested=AUTO、解析=COMMONJS；`cjsInputProducesCommonJsIdentity` 断言 `.cjs` 的 `cjsRecord` 非空。
+新增的一次性行为对照（AUTO 路径的 cjsRecord 从 EMPTY 变为非 EMPTY）本报告如实记录，未写隐藏兼容层。
+
+## 3.6 总账 A9 归属：虚拟 ESM registry 的 static 使用（Spec 轴 a4）
+
+`ModuleReloadCoordinator.invalidateModules(:92)` 与 `NekoScriptModuleLoaderHost.clearSharedCachesForOwnType(:183)`
+仍使用 static `NekoEsmVirtualModuleRegistry`。
+
+- runtime-ledger **A9** 把该 registry（`SOURCES`/`DISPLAY_PATHS`/`DISPLAY_PATHS_BY_FILE_NAME`/
+  `KEY_BY_FILE_NAME`/`GENERATIONS`/`TYPES`）归为 **generation-owned**，可替换性栏原文：
+  「**06/07 处理**（candidate/active 隔离、切换 generation）；**本票不动**」。
+- 本票范围是 **A8**（prepared module cache）的所有权与失效维度——已完成。
+  A9 的 generation 维度归票 06/07，**本票有意不动**。
+- **结论：这不是本票的验收缺口**，是按总账分类执行的边界。记录于此，避免后续 reviewer 重复报同一问题。
+
 ## 4. 一致性原则下的取舍（票据硬性约束 3）
 
 | 潜在冲突 | 本票取舍 | 理由 |
@@ -232,11 +318,32 @@ B1 的删除条件（ticket 05 总账 A7）是「W3 显式注入 pipeline/cache 
 
 | 命令 | 结果 |
 |---|---|
-| `:common:compileJava` | pass |
-| `:common:compileTestJava` | pass |
-| `:common:test --tests "com.tkisor.nekojs.core.module.*" --tests "com.tkisor.nekojs.script.*" --tests "com.tkisor.nekojs.core.lifecycle.*"` | pass |
-| `:common:check` | 见 §5.2 |
-| `guardLint` | 见 §5.2 |
+| `:common:compileJava --rerun-tasks --no-build-cache` | pass |
+| `:common:compileTestJava --rerun-tasks --no-build-cache` | pass |
+| `:common:test --rerun-tasks --no-build-cache`（全量，非子集） | pass（198 suites / 1470 tests / 0 failures / 5 skipped） |
+| `:common:check` | pass |
+| `guardLint` | pass（248 守卫块 / 331 文件 / 0 问题） |
+
+### 5.1.1 code-review 修订期间发现并修复的测试隔离缺陷（重要）
+
+**首次**以 `--rerun-tasks --no-build-cache` 全量跑 `:common:test` 时暴露 **25 个失败**，
+全部是 `java.nio.file.DirectoryNotEmptyException`（`ScriptReloadGenerationTest:201`、
+`ScriptReloadRegressionTest:196` 等）。根因**在本票新增测试**，不在被测实现：
+
+- 这些既有测试的 `@BeforeEach` 用 `Files.deleteIfExists(path)` 清空脚本目录，**只能删文件、不能删目录**；
+- 本报告新增的 4 个 corpus 测试（`NekoModuleResolutionCorpusTest` / `NekoModuleErrorMappingCorpusTest` /
+  `NekoModuleMinimalExampleTest` 等）用 `file.toFile().deleteOnExit()` 清理——`deleteOnExit` 注册的是
+  **JVM 退出时**的回调，测试之间**不会执行**；
+- 于是残留的**子目录**（`resolution-corpus/`、`error-mapping/` 等）让后续既有测试的目录清理抛
+  `DirectoryNotEmptyException`；因为全部测试共用**固定** gameDir（`nekojs-test-gamedir`），
+  这是跨测试污染。
+
+**修复**：新增测试改为记录写入路径并在 `@AfterEach` 真正删除（与既有测试同一纪律），
+并在修订后清理了上一轮失败留下的陈旧目录。
+
+**为什么之前是绿的**：先前的子集`--tests ...` 跑法在 Gradle 增量/缓存语义下没有触发该顺序；
+`--rerun-tasks --no-build-cache` 全量跑才暴露。这正是主 agent 要求真跑一次的价值所在。
+教训已记录：**测试内清理用 `@AfterEach` 真删，不要用 `deleteOnExit`**。
 
 ### 5.2 收尾门禁
 
@@ -247,7 +354,12 @@ B1 的删除条件（ticket 05 总账 A7）是「W3 显式注入 pipeline/cache 
 ## 6. 遗留与交接
 
 1. **AC2 的显式篡改检测 API**：本票以 record 类型安全 + 组件不可变 + 「未变化返回同一实例」证明；未实现运行期篡改检测（如 sealed 持有者守卫）。若需强制，另立工作项。
+   **code-review 修订**：已删除 `NekoRuntimeRoot.modulePreparation()`（曾把 root 私有 cache 外泄给
+   「诊断/测试观察」，与 root 独占所有权矛盾）；测试改用 `TestModulePreparation` 夹具。
 2. **AC8 的真实运行时端到端**：本票在 common 层证明了阶段同一性与授权结果正交（真实 `PackSignatureVerifier` + `PackSyncTrustStore`）；**未**运行真实 MC 客户端的远端包下发 smoke（需要 minecraft-mcp + 真实服务器）。owner：维护者 / 票 19（pack trust）与 34（P4 五节点验证）。
 3. **B2/B3 的删除**：条件未满足，保留（见 §3.3）。收敛路径需要替代 behavior + declaration + trace + 无调用者四项证据齐全；不由本票在 final release 统一清理。
+   **code-review 修订**：已把「自建第二准备装配」这一类形态一并清除（`NekoNodeModuleInstaller` 的
+   测试重载），避免它成为 B2/B3 之外的第三条并行管线种子。
 4. **真实 Graal 运行环境**：本报告所有执行类证据在 JUnit + 真实 GraalJS Context 下取得；**未**在真实 Minecraft 客户端/服务端 smoke 中复跑（票 11 的 AC 不要求节点 runtime smoke，故不构成验收缺口，但作为运行时证据的边界如实记录）。owner（如需）：维护者 / minecraft-mcp。
 5. **candidate/active generation 交互**：本票把模块 cache 所有权交给 `NekoRuntimeRoot`，未改动 `ScriptManager` 既有的候选/commit 语义（票 06 已验收）。模块 cache 在 `commitGeneration`/`fullReloadCleanup` 中按 ScriptType 清理，与候选隔离语义一致——但本票**未**新增跨候选 generation 的模块 cache 隔离测试。owner：票 07 / 后续。
+6. **虚拟 ESM registry 的 generation 维度**：总账 A9 明确归票 06/07，本票不动（见 §3.6）。

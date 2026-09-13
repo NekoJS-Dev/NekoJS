@@ -1,13 +1,11 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.pack.sync.PackContentFile;
 import com.tkisor.nekojs.core.pack.sync.PackSignatureVerifier;
 import com.tkisor.nekojs.core.pack.sync.PackSyncTrustStore;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -17,6 +15,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,17 +52,24 @@ class NekoModuleTrustPhaseParityTest {
     }
 
     private static NekoModulePreparation preparation() {
-        NekoJSPaths paths = NekoJSPaths.get();
-        return new NekoModulePreparation(new NekoModulePipeline(
-                new NekoCompilationPipeline(), ScriptCompilerRegistry.createRuntimeRegistry(),
-                SandboxConfig.defaultConfig()), paths);
+        return TestModulePreparation.create();
     }
 
-    private static Path write(String relative, String source) throws IOException {
+    /** 同 NekoModulePreparationIdentityTest：必须真删，不能依赖 deleteOnExit。 */
+    private final List<Path> written = new ArrayList<>();
+
+    @org.junit.jupiter.api.AfterEach
+    void cleanUpWrittenFiles() throws Exception {
+        // 真删文件 + 空的父目录：deleteOnExit 只在 JVM 退出时生效，会污染共享 gameDir
+        TestModulePreparation.deleteFilesAndEmptyParents(written);
+        written.clear();
+    }
+
+    private Path write(String relative, String source) throws IOException {
         Path file = NekoJSPaths.get().root().resolve(relative);
         Files.createDirectories(file.getParent());
         Files.writeString(file, source);
-        file.toFile().deleteOnExit();
+        written.add(file);
         return file;
     }
 

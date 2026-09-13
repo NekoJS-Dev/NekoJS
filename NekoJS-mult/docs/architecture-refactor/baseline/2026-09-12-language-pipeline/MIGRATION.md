@@ -44,7 +44,7 @@ cache key**，且 cache 命中判定同时要求内容指纹与语言身份一�
 | `NekoEsmLinker` | `NekoModulePreparation preparation` |
 | `NekoNativeEsmSourceRewriter` | `NekoModulePreparation preparation` |
 | `ModuleReloadCoordinator` | `NekoModulePreparation preparation`, `NekoJSPaths paths` |
-| `NekoNodeModuleInstaller.install(...)` | 重载新增 `NekoModulePreparation preparation` |
+| `NekoNodeModuleInstaller.install(...)` | **默认入口签名变化**：`install(Context, ScriptType)` → `install(Context, ScriptType, NekoModulePreparation)`（本类不再自建准备装配） |
 | `ScriptManager` | `NekoModulePreparation preparation` |
 | `NekoModuleReadService` | 由静态工具类改为实例：`new NekoModuleReadService(preparation, filePolicy)` |
 | `NekoJSFileSystem` | `NekoModuleReadService readService`（单参构造已删除） |
@@ -73,6 +73,19 @@ registry.registerLanguage("mylang", Set.of(".ml"), new MyCompiler());
 | `NekoRuntimeRoot.close()` | 释放该 runtime 持有的全部 prepared 条目与 source map |
 | 两个独立 root / 两个独立 preparation | **零共享**——没有 process-wide static cache |
 
-## 4. 回滚
+## 4. 维护者注记：新增测试的清理纪律（本票 code-review 教训）
+
+common 的全部测试共用固定 gameDir（`nekojs-test-gamedir`）。新增涉及脚本文件的测试时：
+
+- **必须**在 `@AfterEach` 真正删除写入的文件及其变空的父目录
+  （本票提供 `TestModulePreparation.deleteFilesAndEmptyParents(List<Path>)`）；
+- **不要**用 `File.deleteOnExit()`：它只在 JVM 退出时执行，测试之间不生效，残留的
+  文件/非空目录会让既有测试（如 `ScriptReloadGenerationTest` 的
+  `Files.deleteIfExists` 目录清理）抛 `DirectoryNotEmptyException`。
+
+这不是风格偏好：本票首次以 `--rerun-tasks --no-build-cache` 全量跑时因此暴露 25 个跨测试污染失败。
+子集`--tests ...` 跑法可能不触发该顺序，因此**新测试务必至少全量跑一次**。
+
+## 5. 回滚
 
 本票无数据格式、配置键或用户数据变更，回滚仅为源码回滚（revert 本票 commit 区间）。无迁移遗留状态。

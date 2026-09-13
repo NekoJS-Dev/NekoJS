@@ -27,9 +27,4 @@ public final class NekoContentHash {
             throw new IllegalStateException("SHA-256 digest is not available on this JVM", e);
         }
     }
-
-    /** 短指纹（前 16 hex 字符）：用于 cache key 的紧凑表示，不用于内容相等性判定。 */
-    public static String shortSha256(String value) {
-        return sha256(value).substring(0, 16);
-    }
 }

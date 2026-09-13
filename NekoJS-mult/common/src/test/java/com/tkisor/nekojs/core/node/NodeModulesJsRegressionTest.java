@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,7 +29,8 @@ class NodeModulesJsRegressionTest {
 
     private static final class Installed implements AutoCloseable {
         final Context context = Context.newBuilder("js").allowAllAccess(true).build();
-        final NekoNodeRuntime runtime = NekoNodeModuleInstaller.install(context, ScriptType.TEST);
+        final NekoNodeRuntime runtime = NekoNodeModuleInstaller.install(context, ScriptType.TEST,
+                TestModulePreparation.create());
         final List<String> failures = new ArrayList<>();
         final List<String> marks = new ArrayList<>();
 

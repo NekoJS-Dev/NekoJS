@@ -67,11 +67,6 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.resources = new ResourceTracker();
     }
 
-    /** 本 runtime 持有的模块 session cache（runtime owner 面：诊断/测试观察用，不向下传）。 */
-    public NekoModulePreparation modulePreparation() {
-        return modulePreparation;
-    }
-
     public ScriptManager scriptManagerOf(ScriptType type) {
         ScriptManager manager = scriptManagers.get(type);
         if (manager == null) {
