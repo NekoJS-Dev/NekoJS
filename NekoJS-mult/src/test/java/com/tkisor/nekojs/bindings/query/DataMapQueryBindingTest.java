@@ -40,9 +40,10 @@ class DataMapQueryBindingTest {
 
     @Test
     void declarationGenerationIsByteStableAndMatchesGolden() throws IOException {
-        // 与生产 catalog 相同的 entry 形态：class binding（value instanceof Class -> staticClass=true）
+        // 与生产 catalog 相同的 entry 形态：instance binding（ticket 25 修复——class binding
+        // 的 StaticClass 不暴露 instance 方法，运行时 furnaceFuel 报 Unknown identifier）
         BindingCatalogEntry entry =
-                BindingCatalogEntry.of("DataMap", ScriptType.SERVER, DataMapJS.class, true);
+                BindingCatalogEntry.of("DataMap", ScriptType.SERVER, DataMapJS.class, false);
         BindingDeclarationGenerator generator = new BindingDeclarationGenerator();
 
         String first = generator.generate(List.of(entry), ScriptType.SERVER);
