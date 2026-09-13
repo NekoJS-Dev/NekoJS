@@ -30,6 +30,21 @@ public final class NekoNativeEsmSourceRewriter {
         return registerModule(file, moduleId, prepared, new HashSet<>());
     }
 
+    /**
+     * 把 prepared module 的 source map 登记到 ESM virtual module id 上。
+     *
+     * <p>Graal 对 native ESM 报的源位置是 virtual module 的 id/URI，不是磁盘路径；
+     * {@code SourceMapRegistry} 按精确路径查表，因此必须用同一个 id 登记映射，
+     * 执行期错误才能经 source map 回到原始 .ts/.jsx/.tsx 文件与行列。
+     * 原生 JS 的 source map 为 null（恒等映射），登记是 no-op。
+     */
+    private static void publishSourceMap(String moduleId, NekoPreparedModule prepared) {
+        if (prepared == null || prepared.sourceMap() == null || moduleId == null) {
+            return;
+        }
+        com.tkisor.nekojs.core.error.SourceMapRegistry.register(moduleId, prepared.sourceMap(), prepared.prependedLineCount());
+    }
+
     private java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared, Set<String> visiting) throws IOException {
         NekoEsmVirtualModuleRegistry.reserve(moduleId);
         if (visiting.contains(moduleId)) {
@@ -38,6 +53,11 @@ public final class NekoNativeEsmSourceRewriter {
         visiting.add(moduleId);
         try {
             String source = rewrite(file, moduleId, prepared, visiting);
+            // 转译语言的产物行号与原始源一致（TS 擦除等长、JSX lowering 保行），
+            // 因此这里可以安全地把 prepared module 的 source map 原样登记到 virtual module id。
+            // 不做这一步，经 import 链执行 .ts/.jsx/.tsx 时 Graal 报的 virtual id 查不到映射，
+            // 原始文件/行列就会丢失（工单 12 AC5）。
+            publishSourceMap(moduleId, prepared);
             return NekoEsmVirtualModuleRegistry.register(moduleId, source);
         } finally {
             visiting.remove(moduleId);
