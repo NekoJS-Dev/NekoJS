@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.probe;
 
-import com.tkisor.nekojs.core.plugin.NekoPluginBootstrap;
+import com.tkisor.nekojs.api.plugin.OwnedPlugin;
+import com.tkisor.nekojs.api.plugin.PluginIdentity;
+import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,8 +38,10 @@ class NekoProbeBuiltinPluginTest {
 
     @Test
     void bootstrapRegistersBuiltinBackendsThroughExtensionPoint() {
-        NekoPluginBootstrap.bootstrap(
-                List.of(new NekoProbeBuiltinPlugin()), new ScriptPropertyRegistry.Impl());
+        // production owning entry (NekoPluginBootstrap.bootstrap is package-private test harness now)
+        NekoPluginRuntime.bootstrapOwned(
+                List.of(owned(new NekoProbeBuiltinPlugin())),
+                new ScriptPropertyRegistry.Impl());
 
         ProbeBackendRegistry registry = ProbeBackendRegistry.get();
         assertTrue(registry.isLocked(), "registry must be locked after bootstrap");
@@ -48,10 +52,15 @@ class NekoProbeBuiltinPluginTest {
         assertTrue(registry.languages().containsAll(List.of("typescript", "python")));
     }
 
+    private static OwnedPlugin owned(com.tkisor.nekojs.api.NekoJSPlugin plugin) {
+        return new OwnedPlugin(new PluginIdentity("test:" + plugin.getClass().getName(), plugin.getClass().getName(),
+                java.net.URI.create("test:" + plugin.getClass().getName())), plugin);
+    }
+
     @Test
     void bootstrapWithoutBuiltinPluginLeavesNoDefaultTypescriptBackend() {
         // 兜底语义：扩展点不再硬编码注册，没有插件就没有 backend（发现机制必须能找到 NekoProbeBuiltinPlugin）
-        NekoPluginBootstrap.bootstrap(List.of(), new ScriptPropertyRegistry.Impl());
+        NekoPluginRuntime.bootstrapOwned(List.of(), new ScriptPropertyRegistry.Impl());
 
         assertFalse(ProbeBackendRegistry.get().backend("typescript", "builtin").isPresent());
         assertNotNull(ProbeBackendRegistry.get());
