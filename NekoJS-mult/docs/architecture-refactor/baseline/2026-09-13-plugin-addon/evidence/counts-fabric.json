@@ -1,0 +1,30 @@
+﻿{
+    "pre":  {
+                "discovered":  2,
+                "instanceMarker":  1,
+                "bindingReg":  3,
+                "startupConsumed":  1,
+                "serverConsumed":  1,
+                "moduleConsumed":  1,
+                "initStartup":  1,
+                "requiredModsLeak":  0,
+                "clientOnlyLeak":  0,
+                "filteredRequired":  1,
+                "filteredClient":  1,
+                "scriptErrors":  0
+            },
+    "post":  {
+                 "discovered":  2,
+                 "instanceMarker":  1,
+                 "bindingReg":  3,
+                 "startupConsumed":  1,
+                 "serverConsumed":  2,
+                 "moduleConsumed":  2,
+                 "initStartup":  1,
+                 "requiredModsLeak":  0,
+                 "clientOnlyLeak":  0,
+                 "filteredRequired":  1,
+                 "filteredClient":  1,
+                 "scriptErrors":  0
+             }
+}
