@@ -12,8 +12,12 @@
 //     失败 → 该版本 tick 永不出现；双重执行 → 两个版本同时 ~1 行/秒。
 //
 // 失败注入（sm02-boom.js，runner 动态写入）靠 fixtures/nekojs/config/engine.toml 的
-// scriptRunawayTimeoutSeconds = 2：`while(true){}` 在 ~2s 后被 runaway watchdog 关闭候选
-// Context → 事务式 reload 以 phase=EXECUTION、domain=candidate-killed 失败并保留 active。
+// scriptStatementLimit = 200_000 语句上限：`while(true){}` 烧尽候选 Context 的语句预算后被
+// Graal 关闭 → 事务式 reload 以 phase=EXECUTION、domain=candidate-killed 失败并保留 active。
+//
+// 不要改用 scriptRunawayTimeoutSeconds 的时间窗口路径（本 fixture 里它显式设为 0）：
+// 实测该路径对 while(true) 无效（单测 20s 不终止；26.1.2 会话里 RCON 180s 无应答、服务器线程
+// 卡死），见同目录 config/engine.toml 注释与 common/src/test/.../Ticket06RunawayProbeTest.java。
 console.info('ticket06-entry-v1');
 setInterval(function () {
     console.info('ticket06-tick-v1');

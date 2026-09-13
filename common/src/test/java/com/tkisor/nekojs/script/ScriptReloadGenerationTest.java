@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.Binding;
+import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
 import com.tkisor.nekojs.api.event.EventGroupJS;
@@ -43,9 +44,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -95,15 +98,22 @@ class ScriptReloadGenerationTest {
         }
     }
 
-    /** 提供一个真实 {@link EventGroup}（TestEvents.ping 总线）的 bridge，脚本可注册监听器。 */
+    /** 提供一个真实 {@link EventGroup}（TestEvents.ping / TestEvents.lang 总线）的 bridge，脚本可注册监听器。 */
     static final class TestEventBridge implements ScriptEventBridge {
         final EventGroup group = EventGroup.of("TestEvents");
         final EventBusJS<TestEvent, Void> pingBus;
+        /** dispatch 总线（String key）：供「非法 dispatch key」失败注入用例（审查 A1）。 */
+        final EventBusJS<TestEvent, String> langBus;
         final List<ScriptType> bindEventsCalls = new CopyOnWriteArrayList<>();
         final List<ScriptType> clearListenersCalls = new CopyOnWriteArrayList<>();
+        /** 每次 clearListeners 时刻的 active runtime 快照（commit 顺序断言用，见 AC4 补证用例）。 */
+        final List<Object> runtimeAtSweep = new CopyOnWriteArrayList<>();
+        /** 由 {@link ManagerHarness} 在构造末尾回填，供 clearListeners 读取 owner 状态。 */
+        volatile ScriptManager manager;
 
         TestEventBridge() {
             this.pingBus = group.server("ping", TestEvent.class);
+            this.langBus = group.server("lang", TestEvent.class, DispatchKey.string());
         }
 
         @Override
@@ -115,6 +125,10 @@ class ScriptReloadGenerationTest {
         @Override
         public void clearListeners(ScriptType type) {
             clearListenersCalls.add(type);
+            ScriptManager current = manager;
+            if (current != null) {
+                runtimeAtSweep.add(runtimeOf(current));
+            }
             group.clearListeners(type);
         }
 
@@ -225,6 +239,7 @@ class ScriptReloadGenerationTest {
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory);
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
                     newPropertyRegistry(), tracker, paths, config, environmentFactory);
+            this.bridge.manager = this.manager;
         }
 
         void writeScript(String fileName, String source) throws Exception {
@@ -588,6 +603,148 @@ class ScriptReloadGenerationTest {
         }
     }
 
+    /**
+     * 审查 A1（commit 点不可回滚）回归：候选监听器激活期会做的工作——dispatch key 的
+     * {@code Value.as(keyType)} 转换（非法 key 会抛）——必须在<strong>候选期</strong>完成。
+     *
+     * <p>改造前的缺陷形态：key 转换推迟到 {@code commitGeneration} 的激活循环里，抛出的
+     * 非 {@code NekoReloadException} 不被外层 catch 接住 → {@code discardCandidate} 不执行，
+     * 而旧监听器已被清扫、{@code runtime} 已指向候选 → 候选资源泄漏 + 半激活 generation。
+     *
+     * <p>本用例断言：非法 key 在候选 EVENT_PLAN 阶段失败并走丢弃路径——
+     * 失败结果含 generation/phase/source location/owner/domain；候选 Context/timer/挂起注册
+     * 全部关闭；active 的 runtime、scripts、generation、监听器原样可用。
+     */
+    @Test
+    void illegalDispatchKeyFailsCandidatePlanAndPreservesActive() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js",
+                    "TestEvents.ping(function (event) { Counter.hit('v1-listener'); });\n");
+            harness.loadAndRun();
+            Object activeRuntime = runtimeOf(harness.manager);
+            Object activeScripts = scriptsOf(harness.manager);
+            Context activeContext = currentContext(harness.manager);
+            long activeGeneration = harness.manager.generationId();
+            harness.bridge.postTestEvent();
+            int activeHits = harness.counter.hitsOf("v1-listener");
+            assertEquals(1, activeHits, "active listener must be live before the failing reload");
+
+            // 候选执行期捕获候选 Context（失败后据此断言候选资源确实被关闭）；同时 post 一次
+            // 生产事件，证明候选阶段的对外行为仍由 active 服务（AC1）。
+            AtomicReference<Context> candidateRef = new AtomicReference<>();
+            harness.trigger.bind(() -> {
+                candidateRef.set(candidateContextOf(harness.manager));
+                harness.bridge.postTestEvent();
+            });
+            harness.writeScript("entry.js", """
+                    Trigger.now();
+                    setInterval(function () { Counter.hit('v2-timer'); }, 40);
+                    TestEvents.lang({ bogus: true }, function (event) { Counter.hit('v2-listener'); });
+                    """);
+
+            RuntimeException failure = assertThrows(RuntimeException.class, harness::reload,
+                    "an illegal dispatch key must fail the candidate plan, not half-activate the commit");
+            assertInstanceOf(com.tkisor.nekojs.core.lifecycle.NekoReloadException.class, failure,
+                    "candidate-phase failure must be reported as a structured reload failure");
+            var report = ((com.tkisor.nekojs.core.lifecycle.NekoReloadException) failure).report();
+            assertEquals(com.tkisor.nekojs.core.lifecycle.ReloadPhase.EVENT_PLAN, report.phase(),
+                    "the key conversion must be moved to the candidate event-plan phase (review A1)");
+            assertEquals("ScriptManager[server]", report.owner());
+            assertEquals("candidate-listener-plan", report.domain());
+            assertTrue(report.generation() >= activeGeneration + 1,
+                    "failure report must carry the candidate generation: " + report.describe());
+            assertTrue(report.sourceLocation() != null && report.sourceLocation().endsWith("entry.js"),
+                    "failure report must point at the registering script: " + report.describe());
+            assertEquals(activeHits + 1, harness.counter.hitsOf("v1-listener"),
+                    "production event during candidate phase must be served by the active listener (AC1)");
+            assertEquals(0, harness.counter.hitsOf("v2-listener"),
+                    "candidate listener must never become live");
+
+            // active 原样：runtime / scripts / generation / Context / 监听器全部不变
+            assertSame(activeRuntime, runtimeOf(harness.manager), "active runtime must be untouched");
+            assertSame(activeScripts, scriptsOf(harness.manager), "active scripts must be untouched");
+            assertEquals(activeGeneration, harness.manager.generationId(),
+                    "a discarded candidate must not advance the generation");
+            assertEquals(activeContext, currentContext(harness.manager), "active context must stay current");
+            harness.bridge.postTestEvent();
+            assertEquals(activeHits + 2, harness.counter.hitsOf("v1-listener"),
+                    "active listener must keep receiving events after the discarded candidate");
+
+            // 候选全部资源关闭：Context 关闭并解除登记、挂起注册清空、候选 timer 永不进入生产分发
+            Context candidate = candidateRef.get();
+            assertTrue(candidate != null,
+                    "candidate context must have been observable during candidate execution");
+            assertThrows(Exception.class, () -> candidate.eval("js", "1 + 1"),
+                    "discarded candidate context must be closed");
+            assertThrows(IllegalStateException.class, () -> ScriptManager.from(candidate),
+                    "discarded candidate context must be unregistered from CONTEXT_TO_MANAGER");
+            assertEquals(0, pendingListenerCount(harness.manager),
+                    "collected pending registrations must be discarded with the candidate");
+            Thread.sleep(120);
+            harness.manager.flushReadyNodeTimers();
+            assertEquals(0, harness.counter.hitsOf("v2-timer"),
+                    "candidate timer must never reach production dispatch");
+        }
+    }
+
+    /**
+     * AC2 补证（审查：候选 Context 真关闭缺显式断言）：被语句上限终止的候选，其 Context
+     * 必须真的关闭并从 {@code CONTEXT_TO_MANAGER} 解除登记——只断言「active 不变」不足
+     * 以排除候选资源泄漏。
+     */
+    @Test
+    void killedCandidateContextIsClosedAndUnregistered() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "Counter.hit('v1-entry');\n");
+            harness.loadAndRun();
+
+            AtomicReference<Context> candidateRef = new AtomicReference<>();
+            harness.trigger.bind(() -> candidateRef.set(candidateContextOf(harness.manager)));
+            harness.writeScript("entry.js", """
+                    Trigger.now();
+                    while (true) { /* spin forever after capturing the candidate context */ }
+                    """);
+            assertThrows(RuntimeException.class, harness::reload,
+                    "candidate killed by the statement limit must fail the reload");
+
+            Context candidate = candidateRef.get();
+            assertTrue(candidate != null, "candidate context must be observable during candidate execution");
+            assertThrows(Exception.class, () -> candidate.eval("js", "1 + 1"),
+                    "discarded candidate context must be closed (review: explicit assertion was missing)");
+            assertThrows(IllegalStateException.class, () -> ScriptManager.from(candidate),
+                    "discarded candidate context must be unregistered from CONTEXT_TO_MANAGER");
+            assertEquals(0, pendingListenerCount(harness.manager),
+                    "candidate bookkeeping must be cleared on discard");
+        }
+    }
+
+    /**
+     * AC4 补证（审查要求补一条断言释放顺序的测试）：commit 的监听器清扫发生在候选
+     * runtime 发布<strong>之前</strong>——清扫时刻读到的仍是旧 runtime。因此总线在任一
+     * 时刻都不同时持有两代监听器，「同一事件旧新双重执行」不可能发生。
+     *
+     * <p>timer → Context → streams 的释放顺序没有外部观察点（那是 {@code closeRuntimeResources}
+     * 内部的代码顺序，且届时旧环境已从全部生产路由上摘除），见 REPORT 的说明。
+     */
+    @Test
+    void commitSweepsOldListenersBeforePublishingNewRuntime() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v1'); });\n");
+            harness.loadAndRun();
+            Object v1Runtime = runtimeOf(harness.manager);
+
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v2'); });\n");
+            harness.reload();
+
+            assertEquals(1, harness.bridge.runtimeAtSweep.size(),
+                    "a successful commit sweeps the old generation listeners exactly once");
+            assertSame(v1Runtime, harness.bridge.runtimeAtSweep.get(0),
+                    "the sweep must run while the OLD runtime is still published (before the candidate is)");
+            assertTrue(runtimeOf(harness.manager) != v1Runtime,
+                    "the candidate runtime must be published after the sweep");
+        }
+    }
+
     private static Context currentContext(ScriptManager manager) throws Exception {
         Field field = ScriptManager.class.getDeclaredField("runtime");
         field.setAccessible(true);
@@ -595,5 +752,45 @@ class ScriptReloadGenerationTest {
         Method contextAccessor = environment.getClass().getDeclaredMethod("context");
         contextAccessor.setAccessible(true);
         return (Context) contextAccessor.invoke(environment);
+    }
+
+    private static Object runtimeOf(ScriptManager manager) {
+        try {
+            Field field = ScriptManager.class.getDeclaredField("runtime");
+            field.setAccessible(true);
+            return field.get(manager);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static Object scriptsOf(ScriptManager manager) {
+        try {
+            Field field = ScriptManager.class.getDeclaredField("scripts");
+            field.setAccessible(true);
+            return field.get(manager);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static Context candidateContextOf(ScriptManager manager) {
+        try {
+            Field field = ScriptManager.class.getDeclaredField("candidateContext");
+            field.setAccessible(true);
+            return (Context) field.get(manager);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static int pendingListenerCount(ScriptManager manager) {
+        try {
+            Field field = ScriptManager.class.getDeclaredField("pendingListeners");
+            field.setAccessible(true);
+            return ((List<?>) field.get(manager)).size();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

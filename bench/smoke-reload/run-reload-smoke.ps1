@@ -152,7 +152,8 @@ function Write-Witness([string]$Version) {
 }
 
 function Write-Boom {
-    # while(true) 不执行宿主调用 → 只有 Graal 的语句上限能终止它（scriptStatementLimit=5e6）；
+    # while(true) 不执行宿主调用 → 只有 Graal 的语句上限能终止它（fixture 的
+    # scriptStatementLimit = 200000；5M 档位已实测永不触发，见 engine.toml 注释）
     # 候选被终止 → 事务式 reload 走 EXECUTION 失败路径（domain=candidate-killed）
     Set-Content -Path $BoomPath -Value "// ticket 06 failure injection: burns the candidate statement budget (200k; 5M+ never fires - JIT boundary)`nwhile (true) { }`n" -Encoding ascii
 }
@@ -300,6 +301,13 @@ $checks = [ordered]@{
                                              ($reloadE -match "reloaded") -and
                                              ($reloadE -match "non-transactionally") -and
                                              ($reloadE -match "restart"))
+    # 审查 A4：非事务结论必须<先>出现，不得先宣称成功再补边界。判定面 = 结论中的
+    # "non-transactionally" 早于结果行中的 "reload finished"（结果行对非事务路径不再
+    # 重复 "reloaded"，见三节点命令面改动）。
+    E_non_transactional_conclusion_precedes_success_line = (
+                                             $reloadE.IndexOf("non-transactionally") -ge 0 -and
+                                             $reloadE.IndexOf("non-transactionally") -lt
+                                                 $reloadE.IndexOf("reload finished"))
     no_fatal_exceptions                   = ($fatal -eq 0)
     clean_exit                            = ($stopChannel -eq "rcon" -and $exitCode -eq 0)
 }

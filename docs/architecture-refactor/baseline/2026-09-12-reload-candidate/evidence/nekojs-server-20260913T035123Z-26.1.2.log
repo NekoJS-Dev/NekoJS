@@ -1,0 +1,159 @@
+[11:51:31] [INFO] 已初始化环境入口: D:\mcmodDemo\NekoJS\NekoJS-t06\NekoJS-mult\versions\26.1.2\run\nekojs\server_scripts\src\main.js
+[11:51:32] [INFO] 发现了 2 个 SERVER 脚本。
+[11:51:34] [INFO] 正在重载 SERVER 脚本... (x2)
+[11:51:34] [INFO] 发现了 2 个 SERVER 脚本。
+[11:51:34] [INFO] ticket06-entry-v1
+[11:51:34] [INFO] Hello, World! (Loaded server example script)
+[11:51:34] [INFO] SERVER 脚本重载完毕。 (x2)
+[11:51:35] [INFO] ticket06-tick-v1
+[11:51:36] [INFO] ticket06-tick-v1
+[11:51:37] [INFO] ticket06-tick-v1
+[11:51:38] [INFO] ticket06-tick-v1
+[11:51:39] [INFO] ticket06-tick-v1
+[11:51:40] [INFO] ticket06-tick-v1
+[11:51:41] [INFO] ticket06-tick-v1
+[11:51:42] [INFO] ticket06-tick-v1
+[11:51:43] [INFO] ticket06-tick-v1
+[11:51:44] [INFO] ticket06-tick-v1
+[11:51:45] [INFO] 正在重载 SERVER 脚本... (x2)
+[11:51:45] [INFO] 发现了 2 个 SERVER 脚本。
+[11:51:45] [INFO] ticket06-entry-v2
+[11:51:45] [INFO] Hello, World! (Loaded server example script)
+[11:51:45] [INFO] SERVER 脚本重载完毕。 (x2)
+[11:51:46] [INFO] ticket06-tick-v2
+[11:51:47] [INFO] ticket06-tick-v2
+[11:51:48] [INFO] ticket06-tick-v2
+[11:51:49] [INFO] ticket06-tick-v2
+[11:51:50] [INFO] ticket06-tick-v2
+[11:51:51] [INFO] ticket06-tick-v2
+[11:51:52] [INFO] ticket06-tick-v2
+[11:51:53] [INFO] ticket06-tick-v2
+[11:51:53] [INFO] 正在重载 SERVER 脚本... (x2)
+[11:51:53] [INFO] 发现了 3 个 SERVER 脚本。
+[11:51:53] [INFO] ticket06-entry-v3
+[11:51:53] [WARN] 脚本环境 SERVER 触发 ResourceLimits（失控看门狗 0s / 语句上限 200000），Graal 已关闭该 Context；当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复）
+[11:51:53] [ERROR] 脚本执行失败: nekojs:server/sm02-boom.js
+环境: SERVER
+位置: server_scripts/sm02-boom.js:4:8
+原因: Statement count limit of 100000 exceeded. Statements executed 100001.
+
+true
+[11:51:53] [ERROR] 脚本执行失败: nekojs:server/src/main.js
+环境: SERVER
+位置: server_scripts/src/main.js
+原因: Statement count limit of 100000 exceeded. Statements executed 100001.
+[11:51:53] [WARN] 关闭旧上下文时发生异常
+graal.graalvm.polyglot.PolyglotException: Statement count limit of 100000 exceeded. Statements executed 100001.
+	at com.oracle.truffle.polyglot.PolyglotContextImpl.createCancelException(PolyglotContextImpl.java:4003)
+	at com.oracle.truffle.polyglot.PolyglotContextImpl.checkCancelled(PolyglotContextImpl.java:1698)
+	at com.oracle.truffle.polyglot.PolyglotContextImpl.checkCancelledNotClosing(PolyglotContextImpl.java:1687)
+	at com.oracle.truffle.polyglot.PolyglotContextImpl.close(PolyglotContextImpl.java:1978)
+	at com.oracle.truffle.polyglot.PolyglotContextDispatch.close(PolyglotContextDispatch.java:72)
+	at graal.graalvm.polyglot.Context.close(Context.java:887)
+	at graal.graalvm.polyglot.Context.close(Context.java:914)
+	at com.tkisor.nekojs.script.ScriptManager.closeRuntimeResources(ScriptManager.java:943)
+	at com.tkisor.nekojs.script.ScriptManager.discardCandidate(ScriptManager.java:650)
+	at com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:566)
+	at com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:433)
+	at com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:88)
+	at com.tkisor.nekojs.command.NekoJSCommands.reloadType(NekoJSCommands.java:355)
+	at com.tkisor.nekojs.command.NekoJSCommands.lambda$addReloadType$0(NekoJSCommands.java:304)
+	at com.mojang.brigadier.context.ContextChain.runExecutable(ContextChain.java:73)
+	at net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:29)
+	at net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:13)
+	at net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(UnboundEntryAction.java:8)
+	at net.minecraft.commands.execution.CommandQueueEntry.execute(CommandQueueEntry.java:5)
+	at net.minecraft.commands.execution.ExecutionContext.runCommandQueue(ExecutionContext.java:100)
+	at net.minecraft.commands.Commands.executeCommandInContext(Commands.java:414)
+	at net.minecraft.commands.Commands.performCommand(Commands.java:338)
+	at net.minecraft.commands.Commands.performPrefixedCommand(Commands.java:314)
+	at net.minecraft.server.dedicated.DedicatedServer.lambda$runCommand$0(DedicatedServer.java:763)
+	at net.minecraft.util.thread.BlockableEventLoop.lambda$submitAsync$0(BlockableEventLoop.java:68)
+	at java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at net.minecraft.server.TickTask.run(TickTask.java:18)
+	at net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:163)
+	at net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:24)
+	at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:936)
+	at net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:196)
+	at net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:137)
+	at net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:919)
+	at net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:913)
+	at net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:147)
+	at net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:886)
+	at net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:784)
+	at net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:302)
+	at java.lang.Thread.run(Thread.java:1474)
+[11:51:53] [ERROR] SERVER 脚本事务重载失败，候选 generation 已关闭，active 环境保持不变
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=server generation=3 phase=EXECUTION source=server/sm02-boom.js owner=ScriptManager[server] domain=candidate-killed error=java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadFailure(ScriptManager.java:698)
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:523)
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScripts(ScriptManager.java:433)
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.reload(NekoRuntimeRoot.java:88)
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.reloadType(NekoJSCommands.java:355)
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.command.NekoJSCommands.lambda$addReloadType$0(NekoJSCommands.java:304)
+	at com.mojang.brigadier.context.ContextChain.runExecutable(ContextChain.java:73)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:29)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.tasks.ExecuteCommand.execute(ExecuteCommand.java:13)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.UnboundEntryAction.lambda$bind$0(UnboundEntryAction.java:8)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.CommandQueueEntry.execute(CommandQueueEntry.java:5)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.execution.ExecutionContext.runCommandQueue(ExecutionContext.java:100)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.Commands.executeCommandInContext(Commands.java:414)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.Commands.performCommand(Commands.java:338)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.commands.Commands.performPrefixedCommand(Commands.java:314)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.dedicated.DedicatedServer.lambda$runCommand$0(DedicatedServer.java:763)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.util.thread.BlockableEventLoop.lambda$submitAsync$0(BlockableEventLoop.java:68)
+	at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.TickTask.run(TickTask.java:18)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.util.thread.BlockableEventLoop.doRunTask(BlockableEventLoop.java:163)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.util.thread.ReentrantBlockableEventLoop.doRunTask(ReentrantBlockableEventLoop.java:24)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:936)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.doRunTask(MinecraftServer.java:196)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.util.thread.BlockableEventLoop.pollTask(BlockableEventLoop.java:137)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.pollTaskInternal(MinecraftServer.java:919)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.pollTask(MinecraftServer.java:913)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.util.thread.BlockableEventLoop.managedBlock(BlockableEventLoop.java:147)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.waitUntilNextTick(MinecraftServer.java:886)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.runServer(MinecraftServer.java:784)
+	at TRANSFORMER/minecraft@26.1.2/net.minecraft.server.MinecraftServer.lambda$spin$0(MinecraftServer.java:302)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+Caused by: java.lang.RuntimeException: SERVER candidate context was terminated by script resource limits (runaway watchdog / statement limit) during reload
+	at TRANSFORMER/nekojs@1.1.0-preview3/com.tkisor.nekojs.script.ScriptManager.reloadScriptsTransactional(ScriptManager.java:525)
+	... 29 more
+[11:51:54] [INFO] ticket06-tick-v2
+[11:51:55] [INFO] ticket06-tick-v2
+[11:51:56] [INFO] ticket06-tick-v2
+[11:51:57] [INFO] ticket06-tick-v2
+[11:51:58] [INFO] ticket06-tick-v2
+[11:51:59] [INFO] ticket06-tick-v2
+[11:51:59] [INFO] 正在重载 SERVER 脚本... (x2)
+[11:51:59] [INFO] 发现了 2 个 SERVER 脚本。
+[11:51:59] [INFO] ticket06-entry-v4
+[11:51:59] [INFO] Hello, World! (Loaded server example script)
+[11:51:59] [INFO] SERVER 脚本重载完毕。 (x2)
+[11:52:00] [INFO] ticket06-tick-v4
+[11:52:01] [INFO] ticket06-tick-v4
+[11:52:02] [INFO] ticket06-tick-v4
+[11:52:03] [INFO] ticket06-tick-v4
+[11:52:04] [INFO] ticket06-tick-v4
+[11:52:05] [INFO] ticket06-tick-v4
+[11:52:06] [INFO] ticket06-tick-v4
+[11:52:07] [INFO] ticket06-tick-v4
+[11:52:07] [INFO] 正在重载 SERVER 脚本... (x2)
+[11:52:07] [INFO] 发现了 2 个 SERVER 脚本。
+[11:52:07] [INFO] ticket06-entry-v5
+[11:52:07] [INFO] Hello, World! (Loaded server example script)
+[11:52:07] [INFO] SERVER 脚本重载完毕。 (x2)
+[11:52:08] [INFO] ticket06-tick-v5
+[11:52:08] [INFO] 正在重载 SERVER 脚本... (x2)
+[11:52:08] [INFO] 发现了 2 个 SERVER 脚本。
+[11:52:08] [INFO] ticket06-entry-v6
+[11:52:08] [INFO] Hello, World! (Loaded server example script)
+[11:52:08] [INFO] SERVER 脚本重载完毕。 (x2)
+[11:52:09] [INFO] ticket06-tick-v6
+[11:52:10] [INFO] ticket06-tick-v6
+[11:52:11] [INFO] ticket06-tick-v6
+[11:52:12] [INFO] ticket06-tick-v6
+[11:52:13] [INFO] ticket06-tick-v6
+[11:52:14] [INFO] ticket06-tick-v6
+[11:52:15] [INFO] ticket06-tick-v6
+[11:52:16] [INFO] ticket06-tick-v6
