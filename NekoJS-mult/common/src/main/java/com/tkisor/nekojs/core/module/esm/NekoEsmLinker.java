@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.core.module.esm;
 
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
@@ -16,9 +16,16 @@ import java.util.Set;
 
 public final class NekoEsmLinker {
     private final NekoModuleResolver resolver;
+    private final NekoModulePreparation preparation;
 
-    public NekoEsmLinker(NekoModuleResolver resolver) {
+    /**
+     * @param preparation runtime owner 持有的 prepared module cache（工单 11）。linker 只消费
+     *                    prepared module，不复制编译语义——依赖的导出形状查询走同一份 cache，
+     *                    避免 link 阶段看到与执行阶段不同的编译结果。
+     */
+    public NekoEsmLinker(NekoModuleResolver resolver, NekoModulePreparation preparation) {
         this.resolver = resolver;
+        this.preparation = preparation;
     }
 
     public NekoEsmLinkMetadata link(String moduleId, Path path, NekoPreparedModule prepared) throws IOException {
@@ -244,7 +251,7 @@ public final class NekoEsmLinker {
     }
 
     private NekoPreparedModule prepare(Path path) throws IOException {
-        return NekoModulePipelineCache.prepare(path);
+        return preparation.prepare(path);
     }
 
     private Set<String> localExports(NekoEsmModuleAst ast) {

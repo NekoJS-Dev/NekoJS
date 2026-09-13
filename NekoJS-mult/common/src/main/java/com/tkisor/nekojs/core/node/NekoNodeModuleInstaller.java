@@ -1,9 +1,11 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
@@ -23,12 +25,26 @@ public final class NekoNodeModuleInstaller {
 
     private NekoNodeModuleInstaller() {}
 
+    /**
+     * 独立安装入口（测试/无 runtime owner 场景）：自建一份 process-local 的
+     * {@link NekoModulePreparation}，<b>不</b>触碰任何 static 缓存——每次调用得到独立实例。
+     */
     public static NekoNodeRuntime install(Context context, ScriptType scriptType) {
-        return install(context, scriptType, new NekoModuleResolver(), NekoJSPaths.get(), new com.tkisor.nekojs.core.error.DefaultErrorTracker(com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig()), com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig());
+        SandboxConfig config = SandboxConfig.defaultConfig();
+        NekoJSPaths paths = NekoJSPaths.get();
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.current();
+        NekoModulePreparation preparation = new NekoModulePreparation(
+                new com.tkisor.nekojs.core.module.NekoModulePipeline(
+                        new com.tkisor.nekojs.core.compiler.NekoCompilationPipeline(), compilers, config),
+                paths);
+        return install(context, scriptType, new NekoModuleResolver(), paths,
+                new com.tkisor.nekojs.core.error.DefaultErrorTracker(config), config, preparation);
     }
 
-    public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
-        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, paths);
+    public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver,
+                                          NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig,
+                                          NekoModulePreparation preparation) {
+        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, paths, preparation);
         NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);

@@ -5,10 +5,12 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.fs.NekoModuleReadService;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.log.LoggerStream;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
@@ -62,15 +64,27 @@ public final class NekoSandboxFactory {
     private final NekoCoreContext core;
     private final NekoJSPaths paths;
     private final ScriptCompilerRegistry compilers;
+    private final NekoModulePreparation preparation;
     private final NekoSharedHostAccess hostAccess;
-    /** 每 Engine 共享的失控看门狗（Graal 限制：同一 Engine 的所有 Context 必须共用同一个语句谓词实例）。 */
+    /** 每 Engine 共享的失控看门狗（Graal 限制：同一 Engine 的所有 Context 必须共用同一个谓词实例）。 */
     private volatile RunawayWatchdog sharedWatchdog;
 
-    public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
+    /**
+     * @param preparation runtime owner 持有的 prepared module cache（工单 11）。sandbox factory 只把
+     *                    它传给需要读取/准备模块的协作者（file system、node installer）；它自身不
+     *                    创建 Graal Context 之外的模块状态，也不决定 HostAccess 之外的准备语义。
+     */
+    public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers,
+                              IPluginRuntime pluginRuntime, NekoModulePreparation preparation) {
         this.core = core;
         this.paths = paths;
         this.compilers = compilers;
+        this.preparation = preparation;
         this.hostAccess = new NekoSharedHostAccess(pluginRuntime.adapters());
+    }
+
+    public NekoModulePreparation preparation() {
+        return preparation;
     }
 
     private RunawayWatchdog sharedWatchdog(SandboxConfig config, Logger logger) {
@@ -105,7 +119,8 @@ public final class NekoSandboxFactory {
         LoggerStream errStream = new LoggerStream(logger, true);
 
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths)))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths),
+                        new NekoModuleReadService(preparation, new ScriptFilePolicy(compilers))))
                 .build();
 
         Context.Builder contextBuilder = Context.newBuilder("js")
@@ -151,7 +166,8 @@ public final class NekoSandboxFactory {
                 new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)),
                 paths,
                 core.errorTracker(),
-                config);
+                config,
+                preparation);
 
         Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
         registeredExtensions.remove(".js");

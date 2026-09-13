@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 
 import java.io.IOException;
@@ -11,10 +11,23 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * 沙箱文件系统的模块读取服务：把脚本路径解析成「Graal 侧实际应该读到的字节」。
+ *
+ * <p>工单 11：prepared module cache 的所有权移到 runtime owner 后，本服务不再经任何
+ * process-wide static 缓存取 prepared code——prepared 字节来自注入的 {@link NekoModulePreparation}。
+ */
 public final class NekoModuleReadService {
-    private NekoModuleReadService() {}
 
-    public static Path resolveReadableScript(Path originalPath) {
+    private final NekoModulePreparation preparation;
+    private final ScriptFilePolicy filePolicy;
+
+    public NekoModuleReadService(NekoModulePreparation preparation, ScriptFilePolicy filePolicy) {
+        this.preparation = preparation;
+        this.filePolicy = filePolicy;
+    }
+
+    public Path resolveReadableScript(Path originalPath) {
         if (NekoEsmVirtualModuleRegistry.isVirtualModule(originalPath)) {
             return originalPath;
         }
@@ -35,7 +48,7 @@ public final class NekoModuleReadService {
         }
 
         String baseName = fileName.substring(0, fileName.length() - 3);
-        for (String extension : ScriptFilePolicy.legacyRuntime().supportedExtensionsInOrder()) {
+        for (String extension : filePolicy.supportedExtensionsInOrder()) {
             if (".js".equals(extension)) {
                 continue;
             }
@@ -47,18 +60,18 @@ public final class NekoModuleReadService {
         return originalPath;
     }
 
-    public static Optional<byte[]> readPreparedBytes(Path path) throws IOException {
+    public Optional<byte[]> readPreparedBytes(Path path) throws IOException {
         String virtualSource = NekoEsmVirtualModuleRegistry.source(path);
         if (virtualSource != null) {
             return Optional.of(virtualSource.getBytes(StandardCharsets.UTF_8));
         }
-        if (path.getFileName() != null && ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path)) {
+        if (path.getFileName() != null && filePolicy.isSupportedScriptFile(path)) {
             return Optional.of(readTransformedModule(path));
         }
         return Optional.empty();
     }
 
-    public static Optional<Map<String, Object>> virtualAttributes(Path path) {
+    public Optional<Map<String, Object>> virtualAttributes(Path path) {
         if (NekoEsmVirtualModuleRegistry.isVirtualDirectory(path)) {
             return Optional.of(Map.of(
                     "isRegularFile", false,
@@ -81,7 +94,7 @@ public final class NekoModuleReadService {
         return Optional.empty();
     }
 
-    public static byte[] readTransformedModule(Path path) throws IOException {
-        return NekoModulePipelineCache.prepare(path).code().getBytes(StandardCharsets.UTF_8);
+    public byte[] readTransformedModule(Path path) throws IOException {
+        return preparation.prepare(path).code().getBytes(StandardCharsets.UTF_8);
     }
 }

@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.core.module.esm;
 
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;
@@ -18,9 +18,12 @@ import java.util.Set;
 
 public final class NekoNativeEsmSourceRewriter {
     private final NekoModuleResolver resolver;
+    private final NekoModulePreparation preparation;
 
-    public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver) {
+    /** @param preparation runtime owner 持有的 prepared module cache（工单 11）。 */
+    public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePreparation preparation) {
         this.resolver = resolver;
+        this.preparation = preparation;
     }
 
     public java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared) throws IOException {
@@ -119,7 +122,7 @@ public final class NekoNativeEsmSourceRewriter {
         }
 
         private NekoPreparedModule prepareResolvedModule(Path path) throws IOException {
-            return NekoModulePipelineCache.prepare(path);
+            return preparation.prepare(path);
         }
 
         private String specifier(NekoEsmStatement statement) {

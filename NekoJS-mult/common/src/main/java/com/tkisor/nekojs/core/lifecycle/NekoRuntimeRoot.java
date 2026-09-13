@@ -7,6 +7,7 @@ import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
@@ -39,6 +40,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final ScriptEventBridge eventBridge;
     private final ScriptPropertyRegistry scriptProperties;
     private final ScriptEnvironmentFactory environmentFactory;
+    /**
+     * 模块 session 的 cache（工单 11）：prepared module cache 由 root <b>显式持有</b>，
+     * 不再有任何 process-wide static 缓存或 legacy 静态门面。随 root 创建、随 root close 释放；
+     * 独立构造的 root 之间不共享模块缓存。
+     */
+    private final NekoModulePreparation modulePreparation;
     private final Map<ScriptType, ScriptManager> scriptManagers;
     private final ResourceTracker resources;
 
@@ -47,15 +54,22 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             IPluginRuntime pluginRuntime,
             ScriptEventBridge eventBridge,
             ScriptPropertyRegistry scriptProperties,
-            NekoSandboxFactory sandboxFactory
+            NekoSandboxFactory sandboxFactory,
+            NekoModulePreparation modulePreparation
     ) {
         this.core = core;
         this.pluginRuntime = pluginRuntime;
         this.eventBridge = eventBridge;
         this.scriptProperties = scriptProperties;
         this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);
+        this.modulePreparation = modulePreparation;
         this.scriptManagers = new EnumMap<>(ScriptType.class);
         this.resources = new ResourceTracker();
+    }
+
+    /** 本 runtime 持有的模块 session cache（runtime owner 面：诊断/测试观察用，不向下传）。 */
+    public NekoModulePreparation modulePreparation() {
+        return modulePreparation;
     }
 
     public ScriptManager scriptManagerOf(ScriptType type) {
@@ -71,7 +85,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public ScriptManager createScriptManager(ScriptType type) {
-        ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory);
+        ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, modulePreparation);
         scriptManagers.put(type, manager);
         return manager;
     }
@@ -139,6 +153,13 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             }
         }
         scriptManagers.clear();
+        try {
+            // 模块 session 释放：root 是唯一 owner，close 后 prepared cache 与 source map 不再属于本 runtime
+            modulePreparation.clear();
+        } catch (Throwable t) {
+            if (first == null) first = t;
+            else first.addSuppressed(t);
+        }
         try {
             for (ScriptType type : ScriptType.values()) {
                 eventBridge.clearListeners(type);

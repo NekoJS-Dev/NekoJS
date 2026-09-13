@@ -19,7 +19,7 @@ import com.tkisor.nekojs.core.lifecycle.ReloadFailureReport;
 import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
 import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
 import com.tkisor.nekojs.core.log.LoggerStream;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
@@ -124,6 +124,11 @@ public final class ScriptManager implements AutoCloseable {
     private final SandboxConfig sandboxConfig;
     private final ScriptExecutor scriptExecutor;
     private final ScriptEnvironmentFactory environmentFactory;
+    /**
+     * runtime owner 持有的 prepared module cache（工单 11）：按 ScriptType 清理时只走这一个实例，
+     * 不再有任何 process-wide static 缓存需要广播。
+     */
+    private final NekoModulePreparation preparation;
 
     /**
      * 本实例管理的脚本类型
@@ -192,7 +197,7 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- 构造函数 ----
 
-    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
+    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory, NekoModulePreparation preparation) {
         this.scriptType = scriptType;
         this.scriptEventBridge = scriptEventBridge;
         this.pluginRuntime = pluginRuntime;
@@ -202,6 +207,7 @@ public final class ScriptManager implements AutoCloseable {
         this.sandboxConfig = sandboxConfig;
         this.scriptExecutor = new ScriptExecutor(errorTracker, paths, sandboxConfig, this::markContextKilled);
         this.environmentFactory = environmentFactory;
+        this.preparation = preparation;
     }
 
     /** 当前已提交的 generation 序号（诊断/失败结果用；非契约稳定性保证）。 */
@@ -628,7 +634,7 @@ public final class ScriptManager implements AutoCloseable {
                 pending.activate();
             }
             // (4) 旧 module session 释放
-            NekoModulePipelineCache.clear(scriptType);
+            preparation.clear(scriptType);
             NekoEsmVirtualModuleRegistry.clear(scriptType);
             // (5) 旧环境按所有权顺序释放：timer → Context → streams
             if (!oldEnvironment.isEmpty()) {
@@ -731,7 +737,7 @@ public final class ScriptManager implements AutoCloseable {
             }
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", scriptType.name(), displayScriptPath(target), targets.size());
 
-            NekoModulePipelineCache.invalidate(target);
+            preparation.invalidate(target);
             Context ctx = getOrCreateContext();
             String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
 
@@ -826,10 +832,11 @@ public final class ScriptManager implements AutoCloseable {
         private void fullReloadCleanup () {
             scriptEventBridge.clearListeners(scriptType);
             errorTracker.clearByType(scriptType);
-            // 清空进程级静态缓存中本 scriptType 的条目：NekoModulePipelineCache.clear(ScriptType)
-            // 同时按类型清理对应 SourceMapRegistry 条目；NekoEsmVirtualModuleRegistry 持有虚拟 ESM URI。
+            // 清空 runtime owner 持有的 prepared cache 中本 scriptType 的条目：
+            // NekoModulePreparation.clear(ScriptType) 同时按类型清理对应 SourceMapRegistry 条目；
+            // NekoEsmVirtualModuleRegistry 持有虚拟 ESM URI。
             // 局部清除避免单机单类型 reset/close 误清其它类型的编译产物（原全局 clear 会跨类型误伤）。
-            NekoModulePipelineCache.clear(scriptType);
+            preparation.clear(scriptType);
             NekoEsmVirtualModuleRegistry.clear(scriptType);
         }
 

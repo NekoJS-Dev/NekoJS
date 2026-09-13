@@ -3,7 +3,7 @@ package com.tkisor.nekojs.core.module;
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class NekoScriptModuleLoaderHost {
 
     private final Context context;
+    private final NekoModulePreparation preparation;
     private final NekoModuleResolver resolver;
     private final NekoEsmLinker esmLinker;
     private final NekoEsmLinkCache esmLinkCache;
@@ -49,32 +50,27 @@ public final class NekoScriptModuleLoaderHost {
     private Value moduleFactory;
     private Value jsonParser;
 
-    public NekoScriptModuleLoaderHost(Context context) {
+    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths, NekoModulePreparation preparation) {
         this.context = context;
-        this.resolver = new NekoModuleResolver();
-        this.esmLinker = new NekoEsmLinker(resolver);
+        this.preparation = preparation;
+        this.resolver = resolver;
+        this.esmLinker = new NekoEsmLinker(resolver, preparation);
         this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
         this.esmRecordCache = new NekoEsmModuleRecordCache();
-        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
+        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver, preparation);
         this.dependencyGraph = new NekoModuleDependencyGraph();
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
-        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
+        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph, preparation, paths);
         this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter, context, reloadCoordinator::revision, this::prepare);
     }
 
-    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths) {
-        this.context = context;
-        this.resolver = resolver;
-        this.esmLinker = new NekoEsmLinker(resolver);
-        this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
-        this.esmRecordCache = new NekoEsmModuleRecordCache();
-        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
-        this.dependencyGraph = new NekoModuleDependencyGraph();
-        this.moduleCache = new ConcurrentHashMap<>();
-        this.moduleRevisions = new ConcurrentHashMap<>();
-        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
-        this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter, context, reloadCoordinator::revision, this::prepare);
+    /**
+     * 本 host 消费的 prepared module cache（runtime owner 持有，工单 11）。
+     * 暴露给同包/同模块的 ScriptManager 做按类型清理，不让调用方再去触碰任何 static 缓存。
+     */
+    public NekoModulePreparation preparation() {
+        return preparation;
     }
 
     // ======== Graal interop shell：@CalledByDynamicCode 方法供 internal/script-loader.js 通过 GraalVM interop 调用 ========
@@ -179,7 +175,7 @@ public final class NekoScriptModuleLoaderHost {
     private void clearSharedCachesForOwnType() {
         com.tkisor.nekojs.api.ScriptType type =
                 com.tkisor.nekojs.script.ScriptContextRegistry.scriptTypeOf(context);
-        NekoModulePipelineCache.clear(type);
+        preparation.clear(type);
         NekoEsmVirtualModuleRegistry.clear(type);
     }
 
@@ -439,7 +435,7 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     private NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException {
-        return NekoModulePipelineCache.prepare(resolved.path());
+        return preparation.prepare(resolved.path());
     }
 
     private IOException asyncEsmRequireError(NekoResolvedModule resolved) {

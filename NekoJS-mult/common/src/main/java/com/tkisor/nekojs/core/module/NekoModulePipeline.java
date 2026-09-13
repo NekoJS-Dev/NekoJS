@@ -23,12 +23,18 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 实例化模块编译管线：构造器接收 {@link NekoCompilationPipeline}、{@link ScriptCompilerRegistry}、
- * {@link SandboxConfig}。根据 ESM/CJS 模式和语言插件编译模块。
+ * <strong>Script Preparation</strong>（工单 11 / 规格 06）：实例化模块准备管线。
+ *
+ * <p>构造器接收 {@link NekoCompilationPipeline}、{@link ScriptCompilerRegistry}、
+ * {@link SandboxConfig}——没有 process-wide static 实例、没有 legacy 静态门面：
+ * 所有权由 runtime owner（{@code NekoRuntimeRoot} 经 {@link NekoModulePreparation}）显式持有。
+ *
+ * <p>职责边界（规格 06）：本类<strong>不</strong>创建 Graal Context、<strong>不</strong>决定
+ * HostAccess、<strong>不</strong>读取 Minecraft/loader。它只把 source/path/extension/requested
+ * mode 转成不可变的 {@link NekoPreparedModule}；Context、HostAccess、bindings 与执行关闭
+ * 继续由 Script Execution Environment 负责。
  */
 public final class NekoModulePipeline {
-    private static final NekoCompilationPipeline SHARED_COMPILATION_PIPELINE = new NekoCompilationPipeline();
-    private static volatile NekoModulePipeline LEGACY_INSTANCE;
 
     private final NekoCompilationPipeline compilationPipeline;
     private final ScriptCompilerRegistry compilers;
@@ -40,14 +46,26 @@ public final class NekoModulePipeline {
         this.config = config;
     }
 
-    public static void bindLegacyInstance(NekoModulePipeline pipeline) {
-        LEGACY_INSTANCE = pipeline;
+    /**
+     * 语言身份（language id + 扩展名请求的 module mode）：<strong>不需要</strong>运行编译管线即可计算，
+     * 因此 {@link NekoModulePreparation} 可以在 prepare 之前用它做 cache 命中判定。
+     *
+     * <p>language id 取编译器注册表解析出的语言插件 id——这正是「这条扩展名归哪个语言」的事实，
+     * 与 {@link #prepare} 写入 {@link NekoPreparedModule#languageId()} 的值同源，保证命中判定与
+     * 实际产物一致（不做「预判 id 与实际 id 不同 → 永久 miss」的错配）。
+     */
+    public NekoModuleIdentity identityOf(Path file) {
+        String extension = extension(file);
+        return new NekoModuleIdentity(languagePlugin(file, extension).id(), NekoModuleMode.fromExtension(extension));
     }
 
-    public static NekoModulePipeline legacyInstance() {
-        return LEGACY_INSTANCE;
-    }
-
+    /**
+     * 准备模块：source/path/extension/requested mode → 不可变 prepared module。
+     *
+     * <p>输入只有 file 与 rawSource；extension 由 path 派生，requested mode 由 extension 派生，
+     * trust-approved 的判定属于调用方（Pack Trust）——本地 trusted 与远端 explicitly-authorized
+     * source 复用这同一个 prepare 阶段，trust 决策只影响「是否走到这里」，不改变准备语义。
+     */
     public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         String extension = extension(file);
         // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
@@ -75,37 +93,43 @@ public final class NekoModulePipeline {
     private NekoPreparedModule prepareModule(Path file, String rawSource, String extension) throws Exception {
         NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
         NekoLanguagePlugin language = languagePlugin(file, extension);
+        NekoModuleIdentity identity = new NekoModuleIdentity(language.id(), requestedMode);
+        NekoModuleCacheKey cacheKey = NekoModuleCacheKey.of(identity.languageId(), identity.mode(), file, rawSource);
 
         if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
             if (language instanceof NekoLegacyLanguagePlugin legacyLanguage) {
                 ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
                 // CJS 静态分析必须跑在编译产物上：require/module.exports 由转译生成，原始源里不存在
-                return NekoPreparedModule.commonJs(compiled.code(), compiled.sourceMap(), CjsStaticAnalyzer.analyze(compiled.code()));
+                return NekoPreparedModule.of(NekoModuleMode.COMMONJS, cacheKey, file, compiled.code(),
+                        compiled.sourceMap(), null, CjsStaticAnalyzer.analyze(compiled.code()), 0);
             }
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
-                return NekoPreparedModule.commonJs(rawSource, null, CjsStaticAnalyzer.analyze(rawSource));
+                return NekoPreparedModule.of(NekoModuleMode.COMMONJS, cacheKey, file, rawSource,
+                        null, null, CjsStaticAnalyzer.analyze(rawSource), 0);
             }
             NekoCompileOutput compiled = compilationPipeline.compile(
                 file, rawSource, extension, language, config.jsxAutomaticRuntime());
-            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap(),
-                    CjsStaticAnalyzer.analyze(compiled.code()));
+            return NekoPreparedModule.of(NekoModuleMode.COMMONJS, cacheKey, file, compiled.code(),
+                    compiled.program().sourceMap(), null, CjsStaticAnalyzer.analyze(compiled.code()), 0);
         }
 
         NekoCompileOutput compiled = compilationPipeline.compile(
             file, rawSource, extension, language, config.jsxAutomaticRuntime());
-        return prepareModule(compiled);
+        return prepareModule(compiled, cacheKey, file);
     }
 
-    private NekoPreparedModule prepareModule(NekoCompileOutput compiled) {
+    private NekoPreparedModule prepareModule(NekoCompileOutput compiled, NekoModuleCacheKey cacheKey, Path file) {
         NekoIRProgram ir = compiled.program();
         if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
-            return NekoPreparedModule.commonJs(compiled.code(), compiled.program().sourceMap());
+            return NekoPreparedModule.of(NekoModuleMode.COMMONJS, cacheKey, file, compiled.code(),
+                    ir.sourceMap(), null, CjsStaticAnalyzer.analyze(compiled.code()), 0);
         }
         NekoEsmModuleAst ast = compiled.esmAst();
         if (ast == null) {
             ast = new NekoEsmParser(null, compiled.code()).parse();
         }
-        return NekoPreparedModule.esm(compiled.code(), compiled.program().sourceMap(), ast);
+        return NekoPreparedModule.of(NekoModuleMode.ESM, cacheKey, file, compiled.code(),
+                ir.sourceMap(), ast, null, 0);
     }
 
     private NekoLanguagePlugin languagePlugin(Path file, String extension) {
@@ -132,20 +156,5 @@ public final class NekoModulePipeline {
         String fileName = file.getFileName().toString();
         int dot = fileName.lastIndexOf('.');
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
-    }
-
-    /* ================= Legacy static facade ================= */
-
-    public static NekoPreparedModule legacyPrepare(Path file, String rawSource) throws Exception {
-        NekoModulePipeline instance = LEGACY_INSTANCE;
-        if (instance != null) {
-            return instance.prepare(file, rawSource);
-        }
-        return legacyPrepareFallback(file, rawSource);
-    }
-
-    private static NekoPreparedModule legacyPrepareFallback(Path file, String rawSource) throws Exception {
-        return new NekoModulePipeline(SHARED_COMPILATION_PIPELINE, ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig())
-                .prepare(file, rawSource);
     }
 }
