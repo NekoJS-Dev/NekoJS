@@ -50,13 +50,31 @@ public final class ScriptEnvironmentFactory {
         this.sandboxFactory = sandboxFactory;
     }
 
-    public Environment create(ScriptType scriptType) {
+    /**
+     * 创建候选/active 的裸环境：sandbox Context + node runtime，<b>不含</b>任何
+     * 事件组 / 插件 binding / schema 安装。
+     *
+     * <p>ticket 06 generation 隔离：preparation（本方法）与 binding 安装
+     * （{@link #installEnvironmentBindings}）拆分为两个阶段，reload 失败结果可区分
+     * PREPARATION 与 BINDING 阶段。
+     */
+    public Environment createContext(ScriptType scriptType) {
         NekoSandboxFactory.Sandbox sandbox = sandboxFactory.build(scriptType);
         Context context = sandbox.context();
         var nodeRuntime = sandbox.nodeRuntime();
 
         context.getBindings("js").putMember("__nekoCurrentScriptId", null);
+        return new Environment(context, nodeRuntime, sandbox.outStream(), sandbox.errStream());
+    }
 
+    /**
+     * 把事件组绑定、插件 binding、managed global、binding schema 与 class-load telemetry
+     * 安装进给定 Context（BINDING 阶段）。
+     *
+     * <p>全部写入都以 {@code context.getBindings("js")} 为目标——candidate Context 与
+     * active Context 各自持有自己的成员表，安装失败只影响候选环境，不触碰 active。
+     */
+    public void installEnvironmentBindings(Context context, ScriptType scriptType) {
         var bindings = context.getBindings("js");
         eventBridge.bindEvents(bindings, scriptType);
 
@@ -92,8 +110,17 @@ public final class ScriptEnvironmentFactory {
         ScriptBindingSchema.registerGlobals(scriptType, knownGlobals);
 
         installJavaClassLoadTelemetry(context, scriptType);
+    }
 
-        return new Environment(context, nodeRuntime, sandbox.outStream(), sandbox.errStream());
+    /**
+     * 完整创建环境（preparation + binding 两个阶段顺序执行）。
+     * 供 {@link ScriptManager} 的 active 环境懒创建路径使用；事务式 reload 分两步调用
+     * 以区分失败阶段。
+     */
+    public Environment create(ScriptType scriptType) {
+        Environment environment = createContext(scriptType);
+        installEnvironmentBindings(environment.context(), scriptType);
+        return environment;
     }
 
     private void bindManagedGlobals(Value bindings, ScriptType scriptType,

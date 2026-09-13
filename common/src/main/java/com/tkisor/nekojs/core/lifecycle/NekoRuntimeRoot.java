@@ -76,19 +76,32 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return manager;
     }
 
+    /**
+     * 事务式完整 reload：候选 generation 全部阶段通过后经单一 commit 点切换（工单 06）。
+     *
+     * <p>失败时抛 {@link NekoReloadException}，其 {@link NekoReloadException#report()}
+     * 携带结构化失败结果（generation / phase / source location / owner / domain）；
+     * 候选 generation 的全部资源已随失败关闭，active 原样可用。
+     */
     public ReloadResult reload(ScriptType type) {
         ScriptManager manager = scriptManagerOf(type);
         manager.reloadScripts();
-        return ReloadResult.success(type);
+        // STARTUP 的重载路径是 reset+load 非事务语义（不可逆平台注册未被域 Adapter 证明
+        // 可回滚，显式 restart/unsupported 边界，见 ScriptManager#reloadScripts 的 STARTUP
+        // 分支警告）——结果中显式标记，不宣称候选/commit 事务成功。
+        return type == ScriptType.STARTUP
+                ? ReloadResult.successNonTransactional(type, manager.generationId(), ReloadPhase.STARTUP)
+                : ReloadResult.success(type, manager.generationId());
     }
 
     public ReloadResult reloadFile(ScriptType type, Path file) {
         ScriptManager manager = scriptManagerOf(type);
         try {
             manager.reloadScriptFile(file.toString());
-            return ReloadResult.success(type);
+            return ReloadResult.success(type, manager.generationId());
         } catch (Exception e) {
-            return ReloadResult.failure(type, e);
+            // 单文件重载沿用 active 环境（非候选路径）：以失败结果返回并显式标记 FILE 阶段
+            return ReloadResult.failure(type, manager.generationId(), ReloadPhase.FILE, file.toString(), e);
         }
     }
 
@@ -156,13 +169,58 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         manager.close();
     }
 
-    public record ReloadResult(ScriptType type, boolean success, Throwable error) {
-        public static ReloadResult success(ScriptType type) {
-            return new ReloadResult(type, true, null);
+    /**
+     * reload 结果（工单 06 阶段结果契约）。
+     *
+     * @param type           reload 的脚本类型
+     * @param success        是否成功
+     * @param error          失败原因（成功为 null；失败经由 {@link NekoReloadException} 抛出时
+     *                       该字段与 report.error() 同源）
+     * @param generation     成功后的 generation 序号 / 失败候选的 generation 序号
+     * @param phase          结果阶段：成功为 COMMIT；STARTUP 非事务重载为 STARTUP（显式
+     *                       restart/unsupported 边界）；单文件重载为 FILE
+     * @param sourceLocation 失败脚本位置（{@code server/foo.js} 风格；阶段级失败或成功为 null）。
+     *                       审查 A2：非候选路径（{@link #reloadFile}）此前把 source location
+     *                       算出来却丢掉，AC3 要求的「失败结果含 source location」在该路径不成立
+     */
+    public record ReloadResult(ScriptType type, boolean success, Throwable error, long generation,
+                               ReloadPhase phase, String sourceLocation) {
+        public static ReloadResult success(ScriptType type, long generation) {
+            return new ReloadResult(type, true, null, generation, ReloadPhase.COMMIT, null);
         }
 
-        public static ReloadResult failure(ScriptType type, Throwable error) {
-            return new ReloadResult(type, false, error);
+        /**
+         * 结果是否来自非事务路径（{@link ReloadPhase#STARTUP} 的 reset+load、{@link ReloadPhase#FILE}
+         * 的单文件重载）：这些路径<strong>不</strong>宣称候选 + commit 事务成功。
+         *
+         * <p>STARTUP 的不可逆平台注册（物品/方块/实体）未被域 Adapter 证明可回滚，因此该路径
+         * 的调用方必须显式要求 loader restart 才能取得干净的 STARTUP 状态（AC6）；本谓词是
+         * 入口给外部调用方的显式判定面，避免只读 {@link #success()} 时把非事务路径当作事务提交。
+         */
+        public boolean nonTransactional() {
+            return phase == ReloadPhase.STARTUP || phase == ReloadPhase.FILE;
+        }
+
+        /** STARTUP 非事务重载：调用方应显式要求 loader restart（不可逆平台注册不回滚）。 */
+        public boolean requiresLoaderRestart() {
+            return phase == ReloadPhase.STARTUP;
+        }
+
+        /** STARTUP reset+load 重载的显式非事务结果（不宣称候选/commit 事务成功）。 */
+        public static ReloadResult successNonTransactional(ScriptType type, long generation, ReloadPhase phase) {
+            return new ReloadResult(type, true, null, generation, phase, null);
+        }
+
+        /**
+         * 非候选路径（{@link ReloadPhase#FILE}）的失败结果，携带失败脚本位置。
+         *
+         * <p>原有的 {@code success(type)} / {@code failure(type, error)} 两个重载已删除
+         * （审查 A2）：前者返回 {@code phase=COMMIT} + {@code generation=-1} 自相矛盾，
+         * 二者都没有调用方，属死码。
+         */
+        public static ReloadResult failure(ScriptType type, long generation, ReloadPhase phase,
+                                           String sourceLocation, Throwable error) {
+            return new ReloadResult(type, false, error, generation, phase, sourceLocation);
         }
     }
 

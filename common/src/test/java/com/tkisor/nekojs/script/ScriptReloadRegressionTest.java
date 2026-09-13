@@ -67,6 +67,8 @@ class ScriptReloadRegressionTest {
         private volatile boolean managerContextMatches;
         private volatile boolean managerKilled;
         private volatile Context managerContextAtProbe;
+        /** probe 时刻 manager 的候选 Context（ticket 06：候选阶段即 candidateContext，commit 后清空）。 */
+        private volatile Context candidateContextAtProbe;
         /** binding.close(scriptType) 调用记录（kill 重建 teardown 等价性断言用）。 */
         final java.util.List<String> closedBindings = new CopyOnWriteArrayList<>();
 
@@ -100,6 +102,9 @@ class ScriptReloadRegressionTest {
                     Field killedField = ScriptManager.class.getDeclaredField("contextKilled");
                     killedField.setAccessible(true);
                     this.managerKilled = (boolean) killedField.get(manager);
+                    Field candidateField = ScriptManager.class.getDeclaredField("candidateContext");
+                    candidateField.setAccessible(true);
+                    this.candidateContextAtProbe = (Context) candidateField.get(manager);
                 } catch (Exception ignored) {
                     // 诊断辅助：反射失败不应掩盖原始断言
                 }
@@ -116,6 +121,11 @@ class ScriptReloadRegressionTest {
 
         public Context managerContextAtProbe() {
             return managerContextAtProbe;
+        }
+
+        /** probe 时刻 manager 的候选 Context（ticket 06 诊断面；commit 后为 null）。 */
+        public Context candidateContextAtProbe() {
+            return candidateContextAtProbe;
         }
 
         public boolean managerContextMatches() {
@@ -434,9 +444,14 @@ class ScriptReloadRegressionTest {
                     "candidate timer callback must not be skipped as dead");
             assertEquals(currentContext(manager), recorder.deadContext(),
                     "isContextDead probe must run in the candidate context");
-            assertTrue(recorder.managerContextMatches(),
-                    "diagnostic: manager.context should be identical to the probe context during candidate load; "
-                            + "probe=" + recorder.deadContext() + " managerAtProbe=" + recorder.managerContextAtProbe()
+            // ticket 06：候选不再提前发布为 live 环境（generation 隔离）。诊断断言随之更新为
+            // 新契约——候选阶段 probe context 是 manager 当时的 candidateContext，而不是 runtime.context()。
+            assertTrue(recorder.candidateContextAtProbe() != null
+                            && recorder.candidateContextAtProbe().equals(recorder.deadContext()),
+                    "diagnostic: probe context must be the manager's candidate context during candidate load; "
+                            + "probe=" + recorder.deadContext()
+                            + " candidateAtProbe=" + recorder.candidateContextAtProbe()
+                            + " managerAtProbe=" + recorder.managerContextAtProbe()
                             + " contextDead=" + recorder.contextDead() + " managerKilled=" + recorder.managerKilled());
             assertFalse(recorder.managerKilled(),
                     "diagnostic: contextKilled should be false during candidate load");

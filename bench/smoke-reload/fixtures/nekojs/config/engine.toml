@@ -1,0 +1,45 @@
+# ticket 06 烟测 fixture：scriptStatementLimit = 200_000 是「确定性 reload 失败源」。
+#
+# 机制：runner 注入 `while(true){}`（server_scripts/sm02-boom.js）→ 候选 Context 烧尽
+# 200k 语句预算 → Graal 关闭候选 Context 并中断求值 → 事务式 reload 以
+# phase=EXECUTION / domain=candidate-killed / source=server/sm02-boom.js 失败；active 不变。
+#
+# 为什么必须是 200k（实测边界，2026-09-12）：
+#   * 语句上限路径靠「每 100k 语句调用一次谓词」累计（checkInterval = min(100k, cap)），
+#     谓词累计到 cap 才返回 true 让 Graal 关闭 Context。
+#   * cap = 5_000_000 需要 50 次谓词调用：实测在单测进程内 20s 内<不>终止，26.1.2 runServer
+#     会话里同样卡死（RCON 180s 无应答、日志无 ResourceLimits 行）——死循环在累计到 50 次
+#     之前已被 JIT 编译，语句计数回调不再按预期触发。
+#   * cap = 200_000 只需 2 次调用（仍在解释器内）→ 稳定终止：实测报
+#     `phase=EXECUTION source=server/loop.js domain=candidate-killed`。
+#     现有回归测试用 100_000，属同一档（1 次调用）。
+#   * 反向余量：本烟测的活性 witness 单 tick 只花常数级语句（实测 setInterval → 宿主调用
+#     的 tick 在 200k 预算下可跑 5 万次以上而不被杀死），每个 generation 只活 ~10-60s，
+#     因此 200k 不会误杀 active；真正的兜底是 runner 的检查
+#     `B_resource_limit_kill_is_the_injected_candidate =（全会话 ResourceLimits 行数 == 1）`。
+#
+# 不要改用 scriptRunawayTimeoutSeconds 的时间窗口路径：实测该路径对 while(true) 无效
+# （见 common/src/test/java/com/tkisor/nekojs/script/Ticket06RunawayProbeTest.java 与 REPORT.md）。
+#
+# 键集与 SandboxConfigLoader 当前 schema 一一对应（缺失键会被启动期 setupConfigEntry
+# 补写导致文件变化；补齐全部键使配置面在烟测前后稳定）。
+allowThreads = false
+allowReflection = false
+allowAsm = false
+allowFsWriteOutsideNekojs = false
+
+# --- 烟测相关（ticket 06）---
+enableEsmAuthoring = true
+conciseScriptErrorLogs = true
+jsxAutomaticRuntime = false
+scriptMemberValidation = true
+scriptEvaluationTimeoutSeconds = 30
+scriptStatementLimit = 200000
+scriptRunawayTimeoutSeconds = 0
+
+[packSync]
+mode = "off"
+allowUnsigned = false
+
+[dynamicRegistry]
+enabled = false

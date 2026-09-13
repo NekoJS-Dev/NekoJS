@@ -123,6 +123,13 @@ public class NativeEventsJS implements Binding {
                 : com.tkisor.nekojs.script.ScriptManager.getTypeFromContext(handlerContext);
 
         Consumer<Event> consumer = event -> {
+            // ticket 06：candidate generation 隔离的兜底——失败候选的 Context 已关闭，但原生
+            // 事件注册（NeoForge EVENT_BUS）无法随候选 generation 原子撤销（域 Adapter 面，
+            // W7 收口）；分发短路使已丢弃候选的残留注册成为 no-op，与 EventBusJS 的
+            // isContextDead 门一致。
+            if (com.tkisor.nekojs.script.ScriptManager.isContextDead(handlerContext)) {
+                return;
+            }
             try {
                 Value result = handlerValue.execute(event);
                 if (result.isBoolean() && result.asBoolean()
