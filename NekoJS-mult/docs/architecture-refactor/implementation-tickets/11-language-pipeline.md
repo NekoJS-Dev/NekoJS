@@ -204,3 +204,7 @@
 `:common:test` 均以 `--rerun-tasks --no-build-cache` 执行 →
 **199 suites / 1470 tests / 0 failures / 5 skipped**；`:common:check` pass；
 `guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。
+
+**收尾 commit**：`37b448be`（双轴修订）→ `1b3796f4`（本节）→
+`eb045f30`（`ScriptTypeScopedCacheClearTest` 的白盒重写遗留 `deleteOnExit` 一并对齐新清理纪律）。
+HEAD = `eb045f30`；`git status --short` 为空。
