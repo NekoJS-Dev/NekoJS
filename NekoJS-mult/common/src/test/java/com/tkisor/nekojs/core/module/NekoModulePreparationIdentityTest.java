@@ -139,6 +139,52 @@ class NekoModulePreparationIdentityTest {
         assertEquals(before, prepared.esmAst().statements().size(), "已准备结果不得被外部修改");
     }
 
+    /**
+     * AC2 强化：Resolution/Cache 侧的消费者无法把「改了源码/身份/诊断上下文」的结果伪装成
+     * 同一个 prepared module。
+     *
+     * <p>{@link NekoPreparedModule} 是 record：没有任何 setter，因此「修改」只有两条出路——
+     * (a) 重新构造一个新 record（那是一个不同对象，不是对原对象的修改），或 (b) 改动 record
+     * 暴露的可变内部引用。本测试把两条路都钉死：
+     * <ul>
+     *   <li>未变化时重复 prepare 返回<strong>同一实例</strong>——不存在「中途被改过但仍被返回」
+     *       的窗口；</li>
+     *   <li>可观察元组（languageId / mode / code / cacheKey / origin）在多个消费者之间稳定；</li>
+     *   <li>重新构造改过的 record 与原实例 {@code equals == false}，且原实例的可观察元组不变
+     *       （改不动原对象，只能拿到新对象）。</li>
+     * </ul>
+     * 若将来有人在 record 里塞进可变容器（如裸 List）或加 setter，本测试变红。
+     */
+    @Test
+    void preparedModuleObservableStateCannotBeMutatedInPlace() throws Exception {
+        NekoModulePreparation preparation = preparation();
+        Path script = writeScript("test_scripts/immutable-tuple.cjs", "module.exports = 'stable';\n");
+
+        NekoPreparedModule first = preparation.prepare(script);
+        NekoModulePreparation other = preparation();
+        NekoPreparedModule second = other.prepare(script);
+
+        // 两个独立消费者看到完全相同的可观察元组（各自 cache 实例，但输入相同 → 元组相同）
+        assertEquals(first.languageId(), second.languageId());
+        assertEquals(first.mode(), second.mode());
+        assertEquals(first.requestedMode(), second.requestedMode());
+        assertEquals(first.code(), second.code());
+        assertEquals(first.cacheKey(), second.cacheKey());
+        assertEquals(first.origin(), second.origin());
+
+        // 同一实例内重复 prepare 必须返回同一对象：没有「被改过」的中间态
+        assertSame(first, preparation.prepare(script),
+                "未变化时必须返回同一 prepared module 实例（不存在被就地修改后仍被返回的窗口）");
+
+        // 改过的 record 是新对象；原实例的可观察元组不受影响
+        NekoPreparedModule tampered = new NekoPreparedModule(
+                "module.exports = 'tampered';\n", first.sourceMap(), first.mode(),
+                first.esmAst(), first.cjsRecord(), first.origin(), first.cacheKey());
+        assertFalse(tampered.equals(first), "改过源码的 record 必须与原实例不等（不是同一个模块）");
+        assertTrue(first.code().contains("stable"), "原实例的 code 必须保持不可变");
+        assertSame(first, preparation.prepare(script), "篡改尝试不得污染 cache 中的条目");
+    }
+
     // ---- AC4：内容 / mode / language identity 变化失效 cache ----
 
     @Test

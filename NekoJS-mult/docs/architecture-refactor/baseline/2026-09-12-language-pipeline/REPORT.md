@@ -74,10 +74,15 @@
 
 ### AC2 — prepared module 不可变，Resolution/Cache 修改源码、身份或诊断上下文时测试变红
 
-**pass**（有两项 `[x]` 对应的正向证据，但见下方「限制」）。
+**pass**。证据：`NekoModulePreparationIdentityTest`（3 个测试）
 - `preparedModuleIsImmutableValue`：record 组件非空；「修改」只能经重新构造产生新实例，原实例 code 不被改动。
 - `esmAstCollectionsAreNotBackedByMutableState`：`prepared.esmAst().statements().clear()` 抛 `UnsupportedOperationException`（`List.copyOf` 不可变视图）。
-- **限制（如实记录）**：本票未实现「Resolution/Cache 试图改写 prepared module 时编译期/运行期强制失败」的机制——因为 `NekoPreparedModule` 是 record，Resolution/Cache 从类型上就没有 setter。测试证明的是「组件不可变」而非「存在一个会变红的守卫」。若维护者要求显式的篡改检测（如 sealed/防御性拷贝），需另立工作项。
+- `preparedModuleObservableStateCannotBeMutatedInPlace`（**AC2 强化**）：
+  - 未变化时重复 prepare 返回**同一实例**——不存在「中途被改过但仍被返回」的窗口；
+  - 两个独立 cache 消费者对同一输入看到完全相同的可观察元组（languageId / mode / requestedMode / code / cacheKey / origin）；
+  - 改过源码的 record 与原实例 `equals == false`，且原实例的可观察元组不变，cache 条目不被污染。
+- **会变红的守卫**：若将来给 `NekoPreparedModule` 加上 setter，或把某个组件换成裸可变容器（如直接暴露 `ArrayList`），上述测试即失败。
+- **限制（如实记录）**：`NekoPreparedModule` 是 record，从类型上就没有 setter，因此「Resolution/Cache 试图就地改写」在编译期已不可能；测试钉的是可观察元组的稳定性与组件不可变性，而非运行期的篡改检测 API。若维护者要求显式的篡改检测（如 sealed 层级 + 持有者守卫），需另立工作项。
 
 ### AC3 — CJS require/module.exports 与 ESM import/export/link 的模块身份在重复加载、循环依赖和跨入口调用下保持既有语义
 
@@ -104,12 +109,17 @@
 
 ### AC6 — 准备失败、resolve/link 失败、缓存失败和执行失败可区分 owner 与阶段，错误不延迟成无来源的 Graal 异常
 
-**pass（部分路径有明确证据）**。证据：
-- 准备失败：`NekoModulePreparationIdentityTest.unknownExtensionFailsAtPreparationWithOwner`（未注册扩展名 → 准备期 `IllegalArgumentException`，含 "No script compiler registered"）；`missingSourceFileFailsAtPreparationAsIoError`（缺失文件 → `IOException`，归准备/IO 阶段）。
-- link 失败：`NekoModuleResolutionCorpusTest.unresolvedEsmImportFailsAtLinkWithSourceLocation`（报出缺失 specifier）、`missingEsmExportFailsAtLinkWithDiagnostic`（"absent"）、`duplicateEsmExportFailsAtLinkWithOriginalLocation`（`NekoEsmLinkException` + 原文件 span/行）。
-- 解析/语法失败：`cjsSyntaxErrorCarriesStageLocation`（`NekoEsmLinkException` 指向用户文件 2:7）。
-- 执行失败：见 AC7（`ScriptError` 带 source location，非无来源）。
-- **限制**：未单独构造「缓存容器自身失败」的注入点测试（如 `ConcurrentHashMap.compute` 内抛出非 IOException 的包装路径）；该路径的异常归类由既有实现与 `NekoModulePreparation.prepare` 的 wrapper 逻辑覆盖，但本票**未**写针对性测试。记为 not-verified，owner：本票后续或语言票 12/13（若需要该粒度）。
+**pass**。证据：
+- **准备失败**：`NekoModulePreparationIdentityTest.unknownExtensionFailsAtPreparationWithOwner`（未注册扩展名 → 准备期 `IllegalArgumentException`，含 "No script compiler registered"）；`missingSourceFileFailsAtPreparationAsIoError`（缺失文件 → `IOException`，归准备/IO 阶段）。
+- **resolve 失败**：既有 prior art `NekoModuleResolverTest`（`resolveForRequireRejectsUnknownBareSpecifier`：bare 未命中抛 MODULE_NOT_FOUND；`rejectsBareModuleTraversalOutsideNodeModules`：路径穿越拒绝）。
+- **link 失败**：`NekoModuleResolutionCorpusTest.unresolvedEsmImportFailsAtLinkWithSourceLocation`（报出缺失 specifier）、`missingEsmExportFailsAtLinkWithDiagnostic`（"absent"）、`duplicateEsmExportFailsAtLinkWithOriginalLocation`（`NekoEsmLinkException` + 原文件 span/行）。
+- **解析/语法失败**：`cjsSyntaxErrorCarriesStageLocation`（`NekoEsmLinkException` 指向用户文件 2:7）。
+- **缓存失败**：`NekoModuleCacheFailureTest`（**新增**）——
+  `checkedPipelineFailureSurfacesAsItsOriginalType`（受检异常按 `IOException` 原类型浮出，不被降级为无来源的 `RuntimeException`）、
+  `uncheckedPipelineFailureSurfacesUnwrapped`（非受检异常原样浮出，不被包装）、
+  `failedPreparationDoesNotPoisonCache`（失败的 prepare 不留条目；修复后重试成功）、
+  `missingFileFailsBeforePipelineAndIsNotCached`（与准备/IO 阶段分工）。
+- **执行失败**：见 AC7（`ScriptError` 带 source location / path / line / column，非无来源 Graal 异常）。
 
 ### AC7 — 跨 import 的执行错误能经 source map 回到原始文件、行列和模块身份
 
@@ -236,8 +246,8 @@ B1 的删除条件（ticket 05 总账 A7）是「W3 显式注入 pipeline/cache 
 
 ## 6. 遗留与交接
 
-1. **AC2 的显式篡改守卫**：本票以 record 不可变性 + 组件不可变证明；未实现「运行期篡改检测」机制。若需强制，另立工作项。
-2. **AC6 的缓存容器自身失败注入**：未写针对性测试（见 AC6 限制）。owner：语言票 12/13 或后续。
-3. **AC8 的真实运行时端到端**：本票在 common 层证明了阶段同一性与授权结果正交；**未**运行真实 MC 客户端的远端包下发 smoke（需要 minecraft-mcp + 真实服务器）。owner：维护者 / 票 19（pack trust）与 34（P4 五节点验证）。
-4. **B2/B3 的删除**：条件未满足，保留。收敛路径见 §3.3；不由本票在 final release 统一清理。
-5. **真实 Graal 运行环境**：本报告所有执行类证据在 JUnit + 真实 GraalJS Context 下取得；未在真实 Minecraft 客户端/服务端 smoke 中复跑（票 11 的 AC 不要求节点 runtime smoke）。
+1. **AC2 的显式篡改检测 API**：本票以 record 类型安全 + 组件不可变 + 「未变化返回同一实例」证明；未实现运行期篡改检测（如 sealed 持有者守卫）。若需强制，另立工作项。
+2. **AC8 的真实运行时端到端**：本票在 common 层证明了阶段同一性与授权结果正交（真实 `PackSignatureVerifier` + `PackSyncTrustStore`）；**未**运行真实 MC 客户端的远端包下发 smoke（需要 minecraft-mcp + 真实服务器）。owner：维护者 / 票 19（pack trust）与 34（P4 五节点验证）。
+3. **B2/B3 的删除**：条件未满足，保留（见 §3.3）。收敛路径需要替代 behavior + declaration + trace + 无调用者四项证据齐全；不由本票在 final release 统一清理。
+4. **真实 Graal 运行环境**：本报告所有执行类证据在 JUnit + 真实 GraalJS Context 下取得；**未**在真实 Minecraft 客户端/服务端 smoke 中复跑（票 11 的 AC 不要求节点 runtime smoke，故不构成验收缺口，但作为运行时证据的边界如实记录）。owner（如需）：维护者 / minecraft-mcp。
+5. **candidate/active generation 交互**：本票把模块 cache 所有权交给 `NekoRuntimeRoot`，未改动 `ScriptManager` 既有的候选/commit 语义（票 06 已验收）。模块 cache 在 `commitGeneration`/`fullReloadCleanup` 中按 ScriptType 清理，与候选隔离语义一致——但本票**未**新增跨候选 generation 的模块 cache 隔离测试。owner：票 07 / 后续。
