@@ -4,7 +4,7 @@
 
 **Blocked by:** [09: Managed Surface 单一规范源与声明/Probe 派生链](09-managed-surface.md)
 
-**Status:** in-progress
+**Status:** closed
 
 **Assignee:** zcode-agent
 
@@ -26,16 +26,16 @@
 
 ## Acceptance criteria
 
-- [ ] DataMap representative 查询命中返回既有平台数据快照，未命中/缺失按公开语义返回空或明确错误，不暴露可变 registry view。
-- [ ] EntitySelectors factory/builder/query 在 server/test side 生成并执行预期 selector，返回可验证实体结果。
-- [ ] 非法 selector、非法 level 或缺失输入得到普通错误，包含域、调用入口和源位置，不嵌修复提示。
-- [ ] DataMap 和 EntitySelectors 均无新增事件、无事件包装器、无无生命周期 Point。
-- [ ] source contract 明确二者既有 tier 与能力，不因现有 binding/LEGACY_PREVIEW 收录而自动升级 managed stable。
-- [ ] TS/Python declaration、Probe 输出与 runtime member/signature 一致。
-- [ ] NeoForge/Fabric/1.21.1 capability 按 source trace 和真实 smoke/fixture 记录 supported/partial/unavailable。
-- [ ] MC-facing data map/selector 类型与平台差异由平台/版本 Adapter持有；共享契约与查询 binding 不引入 Minecraft/loader 依赖。
-- [ ] 每个域的替代查询面、旧路径消费者和删除条件可追踪；公开删除仍需维护者确认。
-- [ ] 旧查询旁路只有在替代 behavior、declaration、trace 通过且无调用者后移除；公开 DataMap/EntitySelectors 查询功能不删除，清理不推迟 final release。
+- [x] DataMap representative 查询命中返回既有平台数据快照，未命中/缺失按公开语义返回空或明确错误，不暴露可变 registry view。
+- [x] EntitySelectors factory/builder/query 在 server/test side 生成并执行预期 selector，返回可验证实体结果。
+- [x] 非法 selector、非法 level 或缺失输入得到普通错误，包含域、调用入口和源位置，不嵌修复提示。
+- [x] DataMap 和 EntitySelectors 均无新增事件、无事件包装器、无无生命周期 Point。
+- [x] source contract 明确二者既有 tier 与能力，不因现有 binding/LEGACY_PREVIEW 收录而自动升级 managed stable。
+- [x] TS/Python declaration、Probe 输出与 runtime member/signature 一致。
+- [x] NeoForge/Fabric/1.21.1 capability 按 source trace 和真实 smoke/fixture 记录 supported/partial/unavailable。
+- [x] MC-facing data map/selector 类型与平台差异由平台/版本 Adapter持有；共享契约与查询 binding 不引入 Minecraft/loader 依赖。
+- [x] 每个域的替代查询面、旧路径消费者和删除条件可追踪；公开删除仍需维护者确认。
+- [x] 旧查询旁路只有在替代 behavior、declaration、trace 通过且无调用者后移除；公开 DataMap/EntitySelectors 查询功能不删除，清理不推迟 final release。
 
 ## Sources
 
@@ -61,3 +61,30 @@
 - DIAGNOSTICS: 查询错误复用统一错误上下文，不创建第二错误面。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+## Closure record（2026-09-12）
+
+- 执行者：zcode-agent。分支 `ticket-25-query-tools`（9 commit）合并入 master（`a29d7e06`）；
+  合流后完整验证全绿（同票 06 的验证批次）。
+- 交付：查询域盘点、source contract 归类（两域=query binding，观察面在 legacySurface，**不默认 stable**、
+  无 Point、无事件化，`QueryToolContractClassificationTest` 钉住）、capability 三态矩阵两套
+  （neoforge/fabric，fabric DataMap 全 `UNAVAILABLE` 显式失败非静默）、DataMap 与 EntitySelectors
+  fixture（裸 JUnit + 游戏内 test_scripts，58 断言 0 failed）、declaration parity、`bench/query/`
+  （README + `run-query.ps1`：固定 25971/RCON 25972、RCON 停服+等 session.lock、单命令复现）、
+  current path→target owner→Adapter source trace→旧路径删除条件表。
+- **F1（保留，必要前提）**：`DataMap` 由 class binding 改 instance binding——否则脚本侧
+  `DataMap.furnaceFuel` 报 `Unknown identifier`，AC1 无从取证。审查后补了 A/B 对照证据
+  （`bench/query/diagnostics/q25-datamap-binding-control.js`：class 形态 `undefined` + Unknown identifier，
+  instance 形态 1600 全绿）。
+- **F2/F3（回退，越权语义变更）**：审查裁定二者超出"仅 fixture"授权——`type()/typeTag()` 的
+  `includesEntities` 作用域改动、未知 type tag 由静默空改抛错，都属公开语义变更。已回退为
+  characterization 测试 + 缺口记录（报告 N7/N8，owner 维护者/domain 票），并保留错误消息域前缀
+  改进（AC3 合规）。AC2 改用不改语义的路径（实体基座预设 / 反选玩家）取证。
+- 验收判定（据实）：AC1-AC6、AC8、AC9 **满足**；**AC7 部分满足**（fabric 已补 `:26.1.2-fabric:test`
+  73 用例 0 失败，但真实服务器 runtime query smoke 未跑，owner loader-port）；**AC10 未勾且未删任何
+  公开路径**——按工单 Human input note，维护者 sign-off 前不删、不勾删除项（合规）。
+- 其它据实修正：自述"3 处"改为 4 处（含 `DataMapJS.itemHolder` null 守卫，如实标注脚本侧不可达、
+  仅 Java 调用者可达）；不再隐瞒的失败样本已解释清楚（`postfix-extract` 的 2 failed 系会话内累计 +
+  中间版 fixture 的真实断言失败，已由 `cf8d24ef` 修掉，干净会话 SUMMARY 全 0 failed）；
+  `DataMap binding[CLIENT]` capability 由硬编码 SUPPORTED 改判 PARTIAL；恒真断言改为有效断言。
+- 遗留（owner 已列）：查询域 declaration golden 不在 09 `REGENERATE.md` §1 清单（登记建议见报告 N9，
+  owner managed-surface）；三处 golden 变更仅有 owner 自查、缺维护者审阅记录；fabric runtime smoke。
