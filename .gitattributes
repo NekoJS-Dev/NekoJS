@@ -14,6 +14,7 @@
 # 无扩展名脚本不匹配 *.sh，单独声明（两者均要求仓库内 LF）
 gradlew text eol=lf
 scripts/check-platform-drift text eol=lf
+scripts/check-translation-drift text eol=lf
 
 # 二进制资源
 *.png binary
