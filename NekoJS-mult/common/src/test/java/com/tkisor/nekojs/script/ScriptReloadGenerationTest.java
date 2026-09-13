@@ -17,6 +17,8 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -234,11 +236,12 @@ class ScriptReloadGenerationTest {
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
-            NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
+            NekoModulePreparation preparation = TestModulePreparation.create(paths, compilers, config);
+            NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime, preparation);
             ScriptEnvironmentFactory environmentFactory =
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory);
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                    newPropertyRegistry(), tracker, paths, config, environmentFactory);
+                    newPropertyRegistry(), tracker, paths, config, environmentFactory, preparation);
             this.bridge.manager = this.manager;
         }
 

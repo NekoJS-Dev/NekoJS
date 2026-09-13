@@ -15,6 +15,8 @@ import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -93,10 +95,12 @@ class NekoRuntimeRootReloadResultTest {
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(
                 graal.graalvm.polyglot.Engine.newBuilder().build(), config, ClassFilter.INSTANCE, tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePreparation preparation = TestModulePreparation.create(paths, compilers, config);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), new StubPluginRuntime());
+                core, paths, compilers, new StubPluginRuntime(), preparation);
         return new NekoRuntimeRoot(core, new StubPluginRuntime(), bridge,
-                newPropertyRegistry(), sandboxFactory);
+                newPropertyRegistry(), sandboxFactory, preparation);
     }
 
     private static void writeScript(ScriptType type, String fileName, String source) throws Exception {

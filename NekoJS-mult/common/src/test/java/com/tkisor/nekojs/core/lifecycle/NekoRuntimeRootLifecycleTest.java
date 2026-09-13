@@ -15,6 +15,8 @@ import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -111,10 +113,12 @@ class NekoRuntimeRootLifecycleTest {
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(
                     NekoSharedEngine.get(), config, ClassFilter.INSTANCE, tracker);
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            NekoModulePreparation preparation = TestModulePreparation.create(paths, compilers, config);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                    core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                    core, paths, compilers, pluginRuntime, preparation);
             return new NekoRuntimeRoot(core, pluginRuntime, bridge,
-                    new ScriptPropertyRegistry.Impl(), sandboxFactory);
+                    new ScriptPropertyRegistry.Impl(), sandboxFactory, preparation);
         }
     }
 

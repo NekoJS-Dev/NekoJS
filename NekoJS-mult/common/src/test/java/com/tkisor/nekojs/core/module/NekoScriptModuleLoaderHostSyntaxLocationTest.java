@@ -1,9 +1,11 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -43,7 +45,8 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
         paths = NekoJSPaths.fromGameDir(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
         context = Context.newBuilder("js").allowAllAccess(true).build();
-        host = new NekoScriptModuleLoaderHost(context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths);
+        host = new NekoScriptModuleLoaderHost(context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths,
+                TestModulePreparation.create(paths, SandboxConfig.defaultConfig()));
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");

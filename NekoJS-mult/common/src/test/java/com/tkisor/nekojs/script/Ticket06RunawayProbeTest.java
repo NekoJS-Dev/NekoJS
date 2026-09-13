@@ -14,6 +14,8 @@ import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -101,11 +103,13 @@ class Ticket06RunawayProbeTest {
         StubPluginRuntime pluginRuntime = new StubPluginRuntime();
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePreparation preparation = TestModulePreparation.create(paths, compilers, config);
         NekoSandboxFactory factory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                core, paths, compilers, pluginRuntime, preparation);
         ScriptEnvironmentFactory envFactory = new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, factory);
         return new ScriptManager(ScriptType.SERVER, ScriptEventBridge.EMPTY, pluginRuntime,
-                props(), tracker, paths, config, envFactory);
+                props(), tracker, paths, config, envFactory, preparation);
     }
 
     @Test
