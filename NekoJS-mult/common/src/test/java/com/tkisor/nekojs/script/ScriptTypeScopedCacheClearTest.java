@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -195,27 +196,29 @@ class ScriptTypeScopedCacheClearTest {
         return TestModulePreparation.create(NekoJSPaths.get(), SandboxConfig.defaultConfig());
     }
 
-    private static Path writeScript(Path dir, String name, String source) throws Exception {
+    /** 本测试写入的脚本路径：需真删（固定 gameDir + deleteOnExit 不跨测试生效）。 */
+    private final List<Path> written = new ArrayList<>();
+
+    private Path writeScript(Path dir, String name, String source) throws Exception {
         Files.createDirectories(dir);
         Path script = dir.resolve(name);
         Files.writeString(script, source);
-        script.toFile().deleteOnExit();
+        written.add(script);
         return script;
     }
 
-    /** 清理本测试写入的类型脚本与 node_modules 探针（固定 gameDir，不能靠 @TempDir）。 */
-    private static void removeTypeScopedScripts() throws Exception {
+    /** 清理本测试写入的类型脚本与 node_modules 探针（含变空的父目录）。 */
+    private void removeTypeScopedScripts() throws Exception {
         NekoJSPaths paths = NekoJSPaths.get();
+        List<Path> candidates = new ArrayList<>(written);
+        written.clear();
         for (Path dir : List.of(paths.serverScripts(), paths.clientScripts())) {
-            deleteIfExists(dir.resolve("helper.cjs"));
-            deleteIfExists(dir.resolve("wipe.cjs"));
+            candidates.add(dir.resolve("helper.cjs"));
+            candidates.add(dir.resolve("wipe.cjs"));
         }
-        deleteIfExists(paths.nodeModules().resolve("pkg/index.cjs"));
-        deleteIfExists(paths.nodeModules().resolve("pkg/wipe.cjs"));
-    }
-
-    private static void deleteIfExists(Path path) throws Exception {
-        Files.deleteIfExists(path);
+        candidates.add(paths.nodeModules().resolve("pkg/index.cjs"));
+        candidates.add(paths.nodeModules().resolve("pkg/wipe.cjs"));
+        TestModulePreparation.deleteFilesAndEmptyParents(candidates);
     }
 
     private static String minimalMap(String source) {
