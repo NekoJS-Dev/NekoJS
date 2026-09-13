@@ -1,5 +1,7 @@
 **[NekoJS Wiki](Home)**
 
+中文 · [English](en_us/Home)
+
 ---
 
 ## 脚本作者
