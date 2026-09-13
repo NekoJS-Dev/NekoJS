@@ -68,32 +68,68 @@
 ## Closure record（2026-09-13）
 
 - 执行者：dsh-agent。分支 `ticket-08-plugin-addon`（基于 master `4e258d3a`），未 push、未 merge。
-- 交付物：
-  - 生产源码（2 处，均为最小边界修正）：`core/module/NekoModuleResolver.java`（命名空间插件 node
-    module id 归类为注册表键，修真实 addon 暴露的 `Illegal char <:>` 缺陷）、
-    `core/plugin/NekoPluginRuntime.java`（删除 `@Deprecated` 且零生产调用者的 legacy `bootstrap` 入口）。
-  - 测试：`NekoPluginAddonBoundaryTest`（8）、`PluginRuntimeReloadLifetimeTest`（1）、
-    `NekoPluginNodeModuleResolutionTest`（6）。
-  - bench：`bench/plugin-addon/`（fixture、build-addon.ps1、run-addon-smoke.ps1、verify-jars.py、
-    MINIMAL-ADDON.md、DEAD-CODE-AUDIT.md、README.md）。
-  - 报告与证据：`../baseline/2026-09-13-plugin-addon/REPORT.md` + `evidence/`。
-- 行为保持：`:common:check` 与 `guardLint` 全绿（248 守卫 / 331 文件 / 0 问题），**无 golden 更新**；
-  既有 plugin 包 50 例与 module 包既有 7 例全部通过。
-- 逐 AC 判定：15 条全部 pass。AC3 的未覆盖形态（classpath discovery）已在报告 §2.1 与
-  `bench/plugin-addon/README.md` 显式记录，未声称覆盖；AC6 由 fixture 内两个兄弟控制类
-  （`requiredMods={"nekojs08-absent-mod"}` / `clientOnly=true`）经**同一真实 discovery 路径**被
-  loader 扫到但被 `NekoJSBasePluginManager` 正确过滤来证明，两 loader 均绿；AC14 的「loader 私有
-  Point registry 旁路」经全仓取证确认**不存在**（只有 `NekoPluginBootstrap.ExtensionRegistry`
-  一个私有实现），已在 `DEAD-CODE-AUDIT.md` 记录而非默认为完成。
-- review 关注点（遗留，非阻塞）：
-  1. `NekoPluginBootstrap.bootstrap(List, ScriptPropertyRegistry)` 在删除 legacy 入口后仅剩
-     测试 harness 调用者（34 处）。若要求「唯一生产入口」字面成立，应收窄为 package-private
-     而非删除；这是测试 seam 政策决定，见 `DEAD-CODE-AUDIT.md` §4。
-  2. Fabric loader 会 pre-launch 探测每个声明的 entrypoint，因此 `AddonPlugin` 的构造器共被调用
-     2 次（loader 探测 1 次 + NekoJS 发现 1 次），`plugin-instantiated instance=1` 仍只有 1 条。
-     这是 loader 行为，已在 `counts-fabric.json` 留档并由 `addon_instances_are_deduped` 钉住。
-- 未验证（owner：维护者）：
-  1. 1.21.1 / 26.2.0 / 26.2.0-fabric 节点只做了 `compileJava` 与产物打包校验，**未跑真机烟测**。
-  2. 真实 CLIENT 端（客户端进程 / 渲染 / GUI）未验证；全部真机证据来自 dedicated server 的
-     STARTUP + SERVER 两种 ScriptType。
-  3. classpath discovery 形态未覆盖（AC3 允许，已显式记录）。
+- 实施区间：首发 commit 至本 record 所在 commit。逐 commit 清单见最终 `git log --oneline 4e258d3a..HEAD`。
+
+### 交付物
+
+- 生产源码（3 处，均为最小边界修正，无公开契约变更）：
+  1. `core/module/NekoModuleResolver.java` —— `resolveBareModule` 捕获 `InvalidPathException`，把含冒号的
+     bare specifier 交给既有 SPECIAL 档（修真实 addon 暴露的 `Illegal char <:>` 缺陷）。
+  2. `core/plugin/NekoPluginBootstrap.java` —— `bootstrap(List, ScriptPropertyRegistry)` 由 `public`
+     收窄为 package-private（AC14）。
+  3. `core/plugin/NekoPluginRuntime.java` —— 删除 `@Deprecated` 且零调用者的 legacy `bootstrap` 入口（AC14）。
+- 测试：`NekoPluginAddonBoundaryTest`（8）、`PluginRuntimeReloadLifetimeTest`（1）、
+  `NekoPluginNodeModuleResolutionTest`（7）、`NekoModuleResolverTestSupport`（共享构造）。
+- bench：`bench/plugin-addon/`（fixture + 两个 AC6 控制类、build-addon.ps1、run-addon-smoke.ps1、
+  verify-jars.py、MINIMAL-ADDON.md、DEAD-CODE-AUDIT.md、README.md）。
+- 报告与证据：`../baseline/2026-09-13-plugin-addon/REPORT.md` + `evidence/`。
+
+### 行为保持
+
+- `:common:check` 与 `guardLint` 全绿（248 守卫 / 331 文件 / 0 问题 0 警告），**无 golden 更新**；
+  证据 `evidence/gradle-common-check-guardlint.txt`。
+- `NekoModuleResolverTest` 既有 7 例断言（含 `resolveForRequire` 的未知名包 MODULE_NOT_FOUND 语义）全部不变。
+- 被删/被收窄的两个 bootstrap 入口均零生产调用者；收窄后跨包的 `NekoProbeBuiltinPluginTest` 改走
+  生产入口 `NekoPluginRuntime.bootstrapOwned`。
+
+### 逐 AC 判定：15/15 pass
+
+| AC | 判定 | 一句话证据 |
+|---|---|---|
+| AC1 | pass | `verify-jars.py`：五个生产 jar 的入口表与 metadata 文本均无 addon 类/资源/metadata |
+| AC2 | pass | NeoForge 走 FML annotation/mod metadata、Fabric 走 `fabric.mod.json` 的 `nekojs` entrypoint；两 loader 各跑 **2 轮**，每轮从干净 run/mods 起，`consistency-*.json` 的 `consistent=true` |
+| AC3 | pass | fat jar 已覆盖；classpath **未覆盖**并在 REPORT §2.1 与 bench README 显式记录（且已删除那个只打印不干事的 `-Skipped` 空开关） |
+| AC4 | pass | 生产源码只动 3 文件，零新增 Point/框架类；边界语义全用既有 builder/Handle/Sealable 表达 |
+| AC5 | pass | `NekoPluginAddonBoundaryTest`：不得读他点中间态（违序立即抛）+ finish 只冻结自身结果 |
+| AC6 | pass | 两个兄弟控制类经**同一真实 discovery 路径**被 loader 扫到但被 `NekoJSBasePluginManager` 按 `requiredMods`/`clientOnly` 过滤，两 loader 的对应 check 均 true 且 LEAKED 日志为 0 |
+| AC7 | pass | `MINIMAL-ADDON.md`，只用 `api.*` + `NodeModuleRegister` + loader metadata，无内部 seam |
+| AC8 | pass | 同一产物经 Handle 与 runtime 两个观察面拿到同一实例；真实 addon 用基接口钩子形态消费同一冻结产物 |
+| AC9 | pass | Handle 未 finish 拒读/finish 后可读；环/未知依赖/重复 id/freeze 后注册四种失败消息都断言含 addon 定位符 |
+| AC10 | pass | 单测 `PluginRuntimeReloadLifetimeTest`（reload 前后同一 Map 实例、同一 `Binding.value()` 共享对象、generation 递增）+ 真机 4 项 check。白名单口径见 REPORT §4.3 |
+| AC11 | pass | 旧 generation：`ScriptManager.from(oldCtx)` 抛 `No ScriptManager registered`、`ScriptContextRegistry.scriptTypeOf(old)==null`、旧 listener 计数不变、旧 timer 不再分发 |
+| AC12 | pass | `bindingCloseDoesNotMutateSharedRuntimeOwnedJavaObject`：身份保持 + 未 tear down + 冻结产物同实例 |
+| AC13 | pass | 两 loader 真机 `checks-*.json` 的 `all_rounds_passed=true` |
+| AC14 | pass | `DEAD-CODE-AUDIT.md`：legacy `NekoPluginRuntime.bootstrap` **已删除**；`NekoPluginBootstrap.bootstrap` **已收窄为 package-private**；loader 私有 Point registry 旁路经全仓取证**不存在**；`NekoJSBasePluginManager` 有 9 处生产调用者故保留并写明。删除/收窄发生在两 loader 烟测通过之后 |
+| AC15 | pass | 保留旧累积器引用再写被拒（seal）+ 已发布快照不变 + runtime 与 handle 同一实例；三个边界分开断言 |
+
+### code-review 修订（逐条）
+
+| 项 | 问题 | 处理 |
+|---|---|---|
+| A | 证据缺档：`gradle-common-plugin-tests.log` / `gradle-common-check-guardlint.log` 被仓级 `*.log` 忽略，未入库 | **已修**：改名归档为 `.txt`（不再被忽略），已 `git add` 入库；REPORT §10 全部文件名与盘上/库内一致 |
+| B | **越权语义变更**：`isNamespacedRegistryKey` 把**任何**含冒号的 bare specifier 归为 `BUILTIN`，使未注册 id 绕过 `resolveForRequire` 的 MODULE_NOT_FOUND 检查 | **已修（语义修正）**：删除 `isNamespacedRegistryKey`；改为在 `resolveBareModule` 捕获 `InvalidPathException` 并复用既有 **SPECIAL** 档。既有契约（`NekoModuleResolverTest:69/:86`）保持，新增 `unregisteredNamespacedIdStillFailsUnderRequireSemantics` 钉住「未注册 namespaced id 仍抛 `Cannot resolve module`」。论证见 REPORT §4.2 |
+| C | AC2 未真正闭合：只有单轮证据，且 `env` 记的是分支点而非真实 HEAD | **已修**：`run-addon-smoke.ps1` 改为真多轮（`-Rounds`，默认 2），每轮清干净 run/mods 并起新进程；新增 `consistency.json` 做逐字段比较；`env.txt` 改记真实 `git head`、worktree 是否 dirty、轮数、jar SHA-256。两 loader 各 2 轮，`consistent=true` |
+| D | AC14 半成品：`NekoPluginBootstrap.bootstrap` 零生产调用者却仍 `public` | **已修**：收窄为 **package-private**；跨包的 `NekoProbeBuiltinPluginTest`（2 处）迁移到 `NekoPluginRuntime.bootstrapOwned`。选择收窄而非删除，因为删除会迫使 33 处同包语义测试重造 managed API bootstrap（= 新造测试框架） |
+| E1 | `build-addon.ps1 -Skipped` 零调用者、只 print + exit 0 | **已删**；bench README 关于 classpath 未覆盖的表述改为如实描述（含如何手动构造） |
+| E2 | `colon==1` 盘符判定与 `isFileSpecifier` 语义重复；`jar:` 守卫无消费 | **随 B 自动消除**：两处都住在被删除的 `isNamespacedRegistryKey` 里；`isFileSpecifier` 的 `^[A-Za-z]:[\\/]` 仍是唯一盘符判定 |
+| E3 | `resolverFor` 与 `NekoModuleResolverTest` 逐字重复的反射构造 | **已抽** `NekoModuleResolverTestSupport.resolverFor`，两处共用 |
+| E4 | `RecordingPluginRuntime` 是第 12 个 `IPluginRuntime` stub；AddonBoundary 三例与 `NekoPluginBootstrapV2Test` 重叠 | **保留**：`NekoPluginAddonBoundaryTest` 的环/未知依赖/重复 id/freeze 四例断言的是 **addon 定位符**（错误消息里必须出现 `addon08:*` id 或 pointId），这是 V2 测试没有的语义；`RecordingPluginRuntime` 记录的是 reload 前后的产物身份（bindings 投递计数），与其它 stub 职责不同。差异已在类 javadoc 注明 |
+
+### 遗留与未验证（owner）
+
+1. **1.21.1 / 26.2.0 / 26.2.0-fabric 未跑真机烟测**（只做 `compileJava` + 打包隔离校验）。Owner：维护者。
+2. **真实 CLIENT 端未验证**（全部真机证据来自 dedicated server 的 STARTUP + SERVER）。Owner：维护者 / minecraft-mcp。
+3. **classpath discovery 形态未覆盖**（AC3 允许，已显式记录）。Owner：维护者。
+4. **真机采样的工作树是 dirty**（`env-*.txt` 明确记录），因为修订尚未提交。若需「干净 HEAD」证据，可在
+   修订提交后重跑 `run-addon-smoke.ps1 -Rounds 2`。Owner：维护者；不阻塞验收（jar SHA-256 与每轮计数已留档）。
+5. Fabric loader 的 entrypoint 探测实例是 loader 行为，本票不动（见 REPORT §4.4）。Owner：维护者（如需对插件作者说明，可并入 wiki）。
