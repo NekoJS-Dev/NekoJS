@@ -511,12 +511,14 @@ public final class ScriptManager implements AutoCloseable {
                         ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
 
                         if (this.candidateKilled) {
-                            // 候选加载期间触发语句上限，Graal 已关闭候选 Context：按失败处理，
+                            // 候选加载期间被脚本资源上限终止（runaway watchdog 的 2s 滑动窗口
+                            // 或 scriptStatementLimit 总量），Graal 已关闭候选 Context：按失败处理，
                             // 不把死掉的候选提交为 live（watchdog 语义的候选丢弃面归工单 07）。
                             throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION,
                                     sourceOf(this.candidateKillSource), "candidate-killed",
                                     new RuntimeException(scriptType.name()
-                                            + " candidate context was killed by the statement limit during reload"));
+                                            + " candidate context was terminated by script resource limits"
+                                            + " (runaway watchdog / statement limit) during reload"));
                         }
                     } catch (NekoReloadException f) {
                         throw f;

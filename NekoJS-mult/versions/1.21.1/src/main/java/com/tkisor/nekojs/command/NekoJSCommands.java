@@ -217,6 +217,7 @@ public final class NekoJSCommands {
             return 0;
         }
 //        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
+        NekoRuntimeRoot.ReloadResult reloadResult = null;
         try {
             // CLIENT Context 归客户端主线程所有——集成服务器线程发起的 reload 转投
             // Render 线程执行（事件分发/timers 也在那里），命令侧立即返回
@@ -242,7 +243,7 @@ public final class NekoJSCommands {
                     // 清空上一轮 stage 的村民交易，防止 reload 重复累积
                     com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
                 }
-                root.reload(type);
+                reloadResult = root.reload(type);
             }
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
             boolean recipeBroadcast = false;
@@ -269,6 +270,20 @@ public final class NekoJSCommands {
                 return 1;
             }
             sendReloadResult(source, root, "NekoJS " + type.name + " scripts reloaded.");
+            if (reloadResult != null && reloadResult.nonTransactional()) {
+                // AC6：STARTUP 是 reset+load 非事务路径（不可逆平台注册未证明可回滚），
+                // 入口显式要求 loader restart——不让用户把这条结果读成候选 + commit 事务成功。
+                source.sendSystemMessage(Component.literal("NekoJS " + type.name
+                        + " scripts reloaded non-transactionally (reset+load, phase=" + reloadResult.phase()
+                        + "): irreversible platform registrations are not rolled back"
+                        + (reloadResult.requiresLoaderRestart()
+                                ? " - restart the game/loader for a clean STARTUP state." : ".")));
+            }
+        } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
+            // 候选 generation 失败（工单 06）：active 保留，失败结果携带
+            // generation/phase/source location/owner/domain 结构化字段（无修复指引）
+            NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
+            source.sendFailure(Component.literal(e.report().describe()));
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
