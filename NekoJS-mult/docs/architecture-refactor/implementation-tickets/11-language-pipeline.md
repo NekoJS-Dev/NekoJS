@@ -125,3 +125,82 @@
   ④ 候选 generation 与模块 cache 的交叉隔离测试 —— owner 票 07。
 - 说明：本票不删除任何公开语言（JS/CJS/ESM 全部保留），未新增公共 parser ModuleSPI，未新增
   Gradle project/API jar，未新建第二套模块管线。
+
+### code-review 修订（2026-09-12，commit `37b448be`）
+
+双轴 review（Standards + Spec）后逐条处理如下。**11 条 AC 判定不变：全部仍为 pass，Status 保持 closed。**
+
+**Standards 轴**
+
+1. **死代码 / Speculative Generality —— 已删除**。三个零调用者（含测试）的 public 成员：
+   `NekoContentHash.shortSha256`、`NekoModuleCacheKey.identityMatches`、
+   `NekoRuntimeRoot.modulePreparation()`。其中最后一个最有害：注释自称「诊断/测试观察用」，
+   却把 root 本想独占的 cache 外泄，与「root 显式持有模块 session」的验收语义自相矛盾；
+   测试本就用 `TestModulePreparation` 夹具，不需要它。
+2. **测试构造重复 —— 已消除**。4 个新测试（Identity/Trust/Boundary/CacheFailure）的内联
+   `new NekoModulePreparation(new NekoModulePipeline(new NekoCompilationPipeline(), ...))`
+   全部改走 `TestModulePreparation.create(...)`；连带清掉因此变为未使用的 import。
+   现在全仓 `new NekoModulePreparation(` 只剩两处：`NekoRuntimeAssembly`（生产唯一装配）与
+   `TestModulePreparation`（测试唯一夹具）。
+3. **第二条静态装配入口 —— 已删除**。`NekoNodeModuleInstaller.install(Context, ScriptType)`
+   原内联自建 `NekoCompilationPipeline + ScriptCompilerRegistry.current() + defaultConfig()`，
+   正是本票要消除的「第二语义 pipeline」形态。改为
+   `install(Context, ScriptType, NekoModulePreparation)`；唯一调用者
+   `NodeModulesJsRegressionTest` 一并改为注入。全仓不再有任何在测试/默认入口自建模块准备装配的路径。
+
+**Spec 轴**
+
+4. **AC7 未按字面断言 —— 已补**。`NekoModuleErrorMappingCorpusTest` 三个测试现在同时断言
+   **文件 + 行 + 列 + 模块身份**：ESM helper 2:9、入口 2:7、`.ts` helper 行 3 且列 > 0
+   （并如实记录 TS 类型擦除的 source map 是**语句粒度**，列映射到语句起始列——因此断言
+   「携带来自 source map 的原始列」而不是编造不存在的精确列）；模块身份用错误归属模块经
+   `prepare` 得到的 `sourcePath`/`languageId`/`mode`/`cacheKey` 断言。
+5. **AC1 的 source map —— 采用 (a) 补断言 + 写清语义**。原生 JS（`.js`/`.mjs`/`.cjs`）的
+   `sourceMap()=null` 语义是**恒等映射**：`SourceMapRegistry.parse` 对 null/空 map 落
+   `NormalizedSourceMap.empty`，查表返回 `(jsLine, jsColumn, path=null)`——行列原样透传、
+   错误路径回退到 displayPath；生成「源到源」map 无增益。新增
+   `NekoModulePreparationIdentityTest.sourceMapNullMeansIdentityForNativeJs` 固定该契约，
+   并在 `NekoModulePipeline` 该分支加注释说明。转译语言仍必须产出非空 map（由 AC7 的 `.ts` 用例覆盖）。
+6. **identity 冲突 corpus —— 已补**（`NekoModuleResolutionCorpusTest`，3 个用例）：
+   ① 同名文件位于不同目录保持**不同模块身份**（含虚拟 ESM 注册表按 file-name 建索引这一最易混淆形态：
+   两份导出互不串味 + prepared 不同实例 + cache key 不同）；
+   ② 同名 `.cjs` 与 `.mjs` 从不同入口 import **不共享模块状态**（互操作不得互相覆盖）；
+   ③ 同一路径经两个入口引用复用**同一身份**（对照 ①，证明区分不是「一律不同」）。
+7. **AUTO+!module 分支的行为微变 —— 已记录，判定为正确**（REPORT §3.5）。
+   `AUTO && !module` 的 `.js`（无 import/export）从 `commonJs(code, sourceMap)`（`cjsRecord=EMPTY`）
+   变为携带真实 `CjsStaticAnalyzer` 结果。理由：同一份「模块是 CJS」的结论不应因「扩展名强制」
+   还是「AUTO 判定」而得到不同质量的事实；`CjsStaticAnalyzer` 是纯 token 级静态近似，
+   不改变 `code`/`mode`/`sourceMap`，**脚本可观察行为零变化**；且 `cjsRecord` 当前无生产读者，
+   爆炸半径为零。已写入 REPORT 而非隐藏。
+8. **AC10 证据边界 —— 已按白名单口径改写**（REPORT AC10 段）。审计确认：AC10 字面（不**创建**
+   Graal Context / 不决定 HostAccess / 不读 MC-loader）在 19 文件**白名单内成立**，
+   **在 `core/module` 包级不成立**——同包 `NekoScriptModuleLoaderHost` / `EsmModuleLifecycle`
+   持有 `Context`（后者还 `context.eval`）、`NekoEsmModuleRecord(Cache)` 持 static `Value`。
+   这些**都是** Script Execution Environment 成员，且**无一**调用 `Context.newBuilder`；
+   全仓唯一创建点是 `NekoSandboxFactory:126`。REPORT 不再表述为「整包零 Context」，
+   并逐一点名包内持 Context 的成员。`NekoScriptModuleLoaderHost` 不移出：它是票 06 已验收的
+   generation/commit 执行入口，强行剥离会与其冲突（REPORT §4）。
+9. **AC5 的 static registry —— 已写明归属**（REPORT §3.5/§3.6）。`ModuleReloadCoordinator` 与
+   host 仍用 static `NekoEsmVirtualModuleRegistry`；runtime-ledger **A9** 明确把它归为
+   **generation-owned** 且原文标注「**06/07 处理，本票不动**」。本票只收口 **A8**（prepared module
+   cache）的所有权与失效维度。**这不是本票的验收缺口**，已在 REPORT §3.6 与本节记录，
+   避免后续 reviewer 重复报告同一问题。
+
+**本轮额外发现并修复的真实缺陷（测试隔离）**
+
+按主 agent 要求以 `:common:test --rerun-tasks --no-build-cache` **全量真跑**时，首次暴露
+**25 个 `DirectoryNotEmptyException`** 失败（`ScriptReloadGenerationTest:201`、
+`ScriptReloadRegressionTest:196` 等）。根因在**本票新增测试**，不在被测实现：
+新增测试用 `file.toFile().deleteOnExit()` 清理，而 `deleteOnExit` 只在 **JVM 退出时**执行、
+测试之间不生效；残留的**子目录**（`resolution-corpus/` 等）让既有测试的目录清理
+（`Files.deleteIfExists` 只删文件不删目录）抛异常——全部 common 测试共用**固定** gameDir，
+构成跨测试污染。先前子集 `--tests ...` 跑法未触发该顺序，因此此前是绿的。
+
+**修复**：新增 `TestModulePreparation.deleteFilesAndEmptyParents(List<Path>)`，
+7 个新增测试全部改为 `@AfterEach` 真删文件 + 变空的父目录；纪律写入 REPORT §5.1.1 与
+`MIGRATION.md` §4（**新测试务必至少全量跑一次**）。
+
+**修订后门禁（全量真跑）**：`:common:compileJava` / `:common:compileTestJava` /
+`:common:test` 均以 `--rerun-tasks --no-build-cache` 执行 →
+**199 suites / 1470 tests / 0 failures / 5 skipped**；`:common:check` pass；
+`guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。
