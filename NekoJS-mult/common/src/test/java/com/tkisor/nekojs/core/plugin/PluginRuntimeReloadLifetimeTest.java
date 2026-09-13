@@ -23,12 +23,14 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePreparation;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
+import com.tkisor.nekojs.testfixture.TestModulePreparation;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Engine;
@@ -185,12 +187,13 @@ class PluginRuntimeReloadLifetimeTest {
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+            NekoModulePreparation preparation = TestModulePreparation.create(paths, compilers, config);
             NekoSandboxFactory sandboxFactory =
-                    new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
+                    new NekoSandboxFactory(core, paths, compilers, pluginRuntime, preparation);
             ScriptEnvironmentFactory factory =
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory);
             ScriptManager manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                    newPropertyRegistry(), tracker, paths, config, factory);
+                    newPropertyRegistry(), tracker, paths, config, factory, preparation);
 
             Path scriptsDir = ScriptTypeEnv.scriptsDir(scriptType);
             Files.writeString(scriptsDir.resolve("entry.js"), """
