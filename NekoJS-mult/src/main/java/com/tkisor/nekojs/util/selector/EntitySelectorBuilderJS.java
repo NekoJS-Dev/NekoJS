@@ -51,6 +51,18 @@ public class EntitySelectorBuilderJS {
     /**
      * 实体类型过滤（如 {@code 'minecraft:cow'}）；inverse 为 true 时反选
      * （镜像原版 {@code type=!cow}：反选走谓词，ctor type 保持 null）。
+     *
+     * <p><b>工单 25 判定（双轴审查，2026-09-12）：本方法只按玩家类型调整作用域位，
+     * 非玩家类型<b>不</b>切作用域。</b>因此基座为玩家集合时
+     * {@code create(b => b.type('minecraft:cow'))} 命中 0（只有 {@code allEntities()}
+     * 一类实体基座才看得到 cow）。「显式实体类型过滤是否应切作用域」是<b>公开选择器
+     * 作用域语义变更</b>，超出工单 25「建立 fixture」的授权（项目纪律：公开语义变更
+     * 先回决策），故本票<b>钉住现状</b>——缺口与 owner 记入
+     * {@code baseline/2026-09-12-query-tools/REPORT.md} §7。
+     *
+     * <p>需要实体作用域时的取证路径：用实体基座预设（{@link #allEntities()}、
+     * {@link #nearestEntity()}、{@link #randomEntity()}）再叠加类型/tag 过滤，
+     * 见 {@code bench/query/fixtures/test_scripts/entityselectors-query.js}。
      */
     public EntitySelectorBuilderJS type(String entityTypeId, boolean inverse) {
         EntityType<?> resolved = entityType(entityTypeId);
@@ -73,7 +85,13 @@ public class EntitySelectorBuilderJS {
         return type(entityTypeId, false);
     }
 
-    /** 按实体 tag 过滤（如 {@code 'minecraft:skeletons'}）；inverse 为 true 时反选。 */
+    /**
+     * 按实体 tag 过滤（如 {@code 'minecraft:skeletons'}）；inverse 为 true 时反选。
+     *
+     * <p>工单 25 判定（双轴审查）：与 {@link #type} 同款——<b>不</b>切作用域位。
+     * 已知 tag 只在基座集合上求值；未知 tag 的行为见
+     * {@link EntitySelectorsJS#resolveEntityTypeTag} 的 characterization。
+     */
     public EntitySelectorBuilderJS typeTag(String tagId, boolean inverse) {
         var tag = EntitySelectorsJS.resolveEntityTypeTag(tagId);
         predicates.add(entity -> entity.is(tag) != inverse);
@@ -132,10 +150,10 @@ public class EntitySelectorBuilderJS {
     /** 距离区间（从锚点量到目标脚底欧氏距离）；会启用世界限定。 */
     public EntitySelectorBuilderJS distance(double minDistance, double maxDistance) {
         if (minDistance < 0 || maxDistance < 0) {
-            throw new IllegalArgumentException("distance cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.distance: distance cannot be negative");
         }
         if (minDistance > maxDistance) {
-            throw new IllegalArgumentException("min distance cannot be greater than max distance");
+            throw new IllegalArgumentException("EntitySelectors.distance: min distance cannot be greater than max distance");
         }
         this.distance = EntitySelectorFactory.doublesBetween(minDistance, maxDistance);
         this.worldLimited = true;
@@ -145,7 +163,7 @@ public class EntitySelectorBuilderJS {
     /** 距离上限（{@code distance(0, max)}）。 */
     public EntitySelectorBuilderJS distanceBelow(double maxDistance) {
         if (maxDistance < 0) {
-            throw new IllegalArgumentException("distance cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.distanceBelow: distance cannot be negative");
         }
         this.distance = EntitySelectorFactory.doublesAtMost(maxDistance);
         this.worldLimited = true;
@@ -155,7 +173,7 @@ public class EntitySelectorBuilderJS {
     /** 距离下限。 */
     public EntitySelectorBuilderJS distanceAbove(double minDistance) {
         if (minDistance < 0) {
-            throw new IllegalArgumentException("distance cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.distanceAbove: distance cannot be negative");
         }
         this.distance = EntitySelectorFactory.doublesAtLeast(minDistance);
         this.worldLimited = true;
@@ -176,7 +194,7 @@ public class EntitySelectorBuilderJS {
     public EntitySelectorBuilderJS gamemode(String gamemodeName, boolean inverse) {
         GameType gamemode = GameType.byName(gamemodeName.toLowerCase(Locale.ROOT));
         if (gamemode == GameType.DEFAULT_MODE && !"survival".equalsIgnoreCase(gamemodeName)) {
-            throw new IllegalArgumentException("unknown gamemode: " + gamemodeName);
+            throw new IllegalArgumentException("EntitySelectors.gamemode: unknown gamemode: " + gamemodeName);
         }
         predicates.add(entity -> {
             if (entity instanceof ServerPlayer player) {
@@ -222,10 +240,10 @@ public class EntitySelectorBuilderJS {
     /** 按经验等级过滤；天然排除非玩家。 */
     public EntitySelectorBuilderJS level(int minLevel, int maxLevel) {
         if (minLevel < 0 || maxLevel < 0) {
-            throw new IllegalArgumentException("level cannot be negative");
+            throw new IllegalArgumentException("EntitySelectors.level: level cannot be negative");
         }
         if (minLevel > maxLevel) {
-            throw new IllegalArgumentException("min level cannot be greater than max level");
+            throw new IllegalArgumentException("EntitySelectors.level: min level cannot be greater than max level");
         }
         predicates.add(entity ->
                 entity instanceof Player player
@@ -238,7 +256,7 @@ public class EntitySelectorBuilderJS {
     /** 结果数量上限（&ge;1）。 */
     public EntitySelectorBuilderJS limit(int limit) {
         if (limit < 1) {
-            throw new IllegalArgumentException("limit must be at least 1");
+            throw new IllegalArgumentException("EntitySelectors.limit: limit must be at least 1");
         }
         this.maxResults = limit;
         return this;
@@ -332,7 +350,7 @@ public class EntitySelectorBuilderJS {
         String normalized = entityTypeId.indexOf(':') >= 0 ? entityTypeId : "minecraft:" + entityTypeId;
         return BuiltInRegistries.ENTITY_TYPE
                 .getOptional(Identifier.parse(normalized))
-                .orElseThrow(() -> new IllegalArgumentException("unknown entity type: " + entityTypeId));
+                .orElseThrow(() -> new IllegalArgumentException("EntitySelectors.type: unknown entity type: " + entityTypeId));
     }
 
     /** 是否为玩家类型（26.2 无 {@code EntityType.PLAYER} 常量，经注册表比较）。 */

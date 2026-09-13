@@ -1,0 +1,35 @@
+DEPLOY-OK scripts=2
+START-LAUNCHED pid=28376 stdout=D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\bench\query\out\q25frozen-stdout.log
+START-DONE [12:24:24] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.381s)! For help, type "help"
+[rcon:setup] No chunks were marked for force loading
+
+Summoned new Cow
+
+Summoned new Cow
+
+Summoned new Cow
+
+Summoned new Pig
+
+Summoned new Bee
+
+[rcon:setup] tee=D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\bench\query\out\rcon-setup-20260913-122424.log
+SETUP-OK
+[rcon:nekojs-test] Running NekoJS test scripts...
+NekoJS test scripts completed. - no errors.
+
+[rcon:nekojs-test] tee=D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\bench\query\out\rcon-nekojs-test-20260913-122424.log
+TEST-RESPONSE Running NekoJS test scripts...
+NekoJS test scripts completed. - no errors.
+EXTRACT-OK lines=65 -> D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\bench\query\out\q25frozen-extract.log
+[verify] summaries=2 pass=58 fail=0 scriptLevelFailures=0 failLines=0 preflightErrors=0
+[verify] [12:24:24] [INFO] [NekoJS Test][SUMMARY] 15 passed, 0 failed
+[verify] [12:24:24] [INFO] [NekoJS Test][SUMMARY] 58 passed, 0 failed
+QUERY-HARNESS PASSED (summary=2, pass=58, fail=0)
+[rcon:stop] Stopping the server
+
+[rcon:stop] tee=D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\bench\query\out\rcon-stop-20260913-122425.log
+STOP-SENT
+CLIENT-EXITED
+LOCK-RELEASED
+STOP-COMPLETE
