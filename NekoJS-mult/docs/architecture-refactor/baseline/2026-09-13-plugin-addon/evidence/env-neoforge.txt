@@ -1,4 +1,18 @@
-﻿utc: 2026-09-13T13:59:47.9031142Z
-git rev: 4e258d3a
+﻿utc: 2026-09-13T14:35:04.4734396Z
+git head: af5a152c79a1ec45c00733aa078a3efa35c8115d
+git worktree: dirty
 node: 26.1.2
+rounds: 2
 run dir: D:\mcmodDemo\NekoJS\.worktrees\t08\NekoJS-mult\versions\26.1.2\run
+addon jar: nekojs08addon-1.0.0-neoforge.jar
+addon jar sha256: AD05DF00A12D3AD07887DC97B829F18637829059C685DD3265C4DDCF8FFA5047
+expected nkoj-framework discoveries: 1
+git status --porcelain:
+   M NekoJS-mult/bench/plugin-addon/build-addon.ps1
+   M NekoJS-mult/bench/plugin-addon/run-addon-smoke.ps1
+   M NekoJS-mult/common/src/main/java/com/tkisor/nekojs/core/module/NekoModuleResolver.java
+   M NekoJS-mult/common/src/main/java/com/tkisor/nekojs/core/plugin/NekoPluginBootstrap.java
+   M NekoJS-mult/common/src/test/java/com/tkisor/nekojs/core/module/NekoModuleResolverTest.java
+   M NekoJS-mult/common/src/test/java/com/tkisor/nekojs/core/module/NekoPluginNodeModuleResolutionTest.java
+   M NekoJS-mult/common/src/test/java/com/tkisor/nekojs/probe/NekoProbeBuiltinPluginTest.java
+  ?? NekoJS-mult/common/src/test/java/com/tkisor/nekojs/core/module/NekoModuleResolverTestSupport.java
