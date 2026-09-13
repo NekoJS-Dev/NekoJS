@@ -66,7 +66,21 @@ public final class NekoModuleResolver {
 
     private NekoResolvedModule resolveBareModule(String specifier) throws IOException {
         Path nodeModules = paths.nodeModules().toAbsolutePath().normalize();
-        Path requested = nodeModules.resolve(specifier).normalize();
+        Path requested;
+        try {
+            requested = nodeModules.resolve(specifier).normalize();
+        } catch (java.nio.file.InvalidPathException exception) {
+            // 工单 08：插件经 registerNodeModules 注册的 id 形态是 <modid>:<name>（见
+            // NodeModulesPoint 与 wiki/插件开发.md）。: 在 Windows 上是非法路径字符，而
+            // Path.resolve 对相对实参惰性解析——这里必须捕获，否则 require('<modid>:<name>')
+            // 会在抛 IndexOutOfBoundsException 之前先以 `Invalid char <:>` 炸出。
+            //
+            // 落点刻意放在这里而不是 isBuiltinSpecifier：SPECIAL 兜底本来就表示"不算文件，
+            // 交给 define.js 的 __nekoNodeResolve 去注册表里查"，未命中时 resolveForRequire
+            // (:59-65) 仍然抛 Cannot resolve module。把它归成 BUILTIN 会让未注册的
+            // 命名空间 id 绕过该检查（既有契约 NekoModuleResolverTest:69/:86 钉的就是这条）。
+            return NekoResolvedModule.special(specifier, NekoModuleKind.SPECIAL);
+        }
         try {
             return resolveFileModule(requested, nodeModules);
         } catch (IOException exception) {

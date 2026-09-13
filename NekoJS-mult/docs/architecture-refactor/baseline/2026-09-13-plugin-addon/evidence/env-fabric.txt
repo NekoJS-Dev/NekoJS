@@ -1,0 +1,18 @@
+﻿utc: 2026-09-13T14:36:22.9217818Z
+git head: af5a152c79a1ec45c00733aa078a3efa35c8115d
+git worktree: dirty
+node: 26.1.2-fabric
+rounds: 2
+run dir: D:\mcmodDemo\NekoJS\.worktrees\t08\NekoJS-mult\versions\26.1.2-fabric\run-server
+addon jar: nekojs08addon-1.0.0-fabric.jar
+addon jar sha256: A3A8546FCF404EA5A96F31E85FE7A55BC2D95DAD8D6718723DDDDE86D0190EBD
+expected nkoj-framework discoveries: 2
+git status --porcelain:
+   M NekoJS-mult/bench/plugin-addon/build-addon.ps1
+   M NekoJS-mult/bench/plugin-addon/run-addon-smoke.ps1
+   M NekoJS-mult/common/src/main/java/com/tkisor/nekojs/core/module/NekoModuleResolver.java
+   M NekoJS-mult/common/src/main/java/com/tkisor/nekojs/core/plugin/NekoPluginBootstrap.java
+   M NekoJS-mult/common/src/test/java/com/tkisor/nekojs/core/module/NekoModuleResolverTest.java
+   M NekoJS-mult/common/src/test/java/com/tkisor/nekojs/core/module/NekoPluginNodeModuleResolutionTest.java
+   M NekoJS-mult/common/src/test/java/com/tkisor/nekojs/probe/NekoProbeBuiltinPluginTest.java
+  ?? NekoJS-mult/common/src/test/java/com/tkisor/nekojs/core/module/NekoModuleResolverTestSupport.java

@@ -1,0 +1,15 @@
+﻿{
+    "round":  1,
+    "discovered":  2,
+    "instanceMarker":  1,
+    "bindingReg":  3,
+    "initStartup":  1,
+    "preStartupConsumed":  1,
+    "preServerConsumed":  1,
+    "preModuleConsumed":  1,
+    "postServerConsumed":  2,
+    "postModuleConsumed":  2,
+    "requiredModsLeak":  0,
+    "clientOnlyLeak":  0,
+    "stopChannel":  "rcon"
+}

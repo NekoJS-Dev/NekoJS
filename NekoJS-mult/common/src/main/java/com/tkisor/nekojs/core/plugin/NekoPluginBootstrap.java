@@ -42,7 +42,16 @@ public final class NekoPluginBootstrap {
     private NekoPluginBootstrap() {
     }
 
-    public static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, ScriptPropertyRegistry scriptProperties) {
+    /**
+     * 收集型 bootstrap 的<strong>测试 harness 入口</strong>：不装配 managed API（不 publish
+     * {@code current}/{@code NekoRuntimeAccess}），因此不可能成为第二条生产 bootstrap 路径。
+     *
+     * <p>package-private（工单 08 AC14）：删掉 legacy {@code NekoPluginRuntime.bootstrap} 后本方法
+     * 已无生产调用者，仅服务于 {@code core.plugin} 包的扩展点语义测试。跨包的 probe 测试改用
+     * {@link NekoPluginRuntime#bootstrapOwned}（生产唯一入口的低配形态）。收窄而不是删除，是因为
+     * 删除会迫使全部语义测试重造 managed API bootstrap，等于新造测试框架。
+     */
+    static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, ScriptPropertyRegistry scriptProperties) {
         return new NekoPluginRuntime(collect(plugins, scriptProperties), null, Map.of());
     }
 

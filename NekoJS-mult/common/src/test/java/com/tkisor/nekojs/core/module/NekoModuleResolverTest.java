@@ -1,13 +1,9 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -109,10 +105,6 @@ class NekoModuleResolverTest {
     }
 
     private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {
-        Constructor<NekoJSPaths> constructor = NekoJSPaths.class.getDeclaredConstructor(Path.class);
-        constructor.setAccessible(true);
-        NekoJSPaths paths = constructor.newInstance(gameDir);
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        return new NekoModuleResolver(paths, new ScriptFilePolicy(compilers));
+        return NekoModuleResolverTestSupport.resolverFor(gameDir);
     }
 }

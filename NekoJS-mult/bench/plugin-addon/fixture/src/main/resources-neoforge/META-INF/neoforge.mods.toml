@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="LGPL-3.0"
+
+[[mods]]
+modId="nekojs08addon"
+version="1.0.0"
+displayName="NekoJS Ticket 08 Test Addon"
+description='''Test-only external NekoJS addon fixture (ticket 08).'''
+
+[[dependencies."nekojs08addon"]]
+modId="neoforge"
+type="required"
+versionRange="[26,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies."nekojs08addon"]]
+modId="nekojs"
+type="required"
+versionRange="[1.0.0,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies."nekojs08addon"]]
+modId="minecraft"
+type="required"
+versionRange="[26.1.2,26.2)"
+ordering="NONE"
+side="BOTH"

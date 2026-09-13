@@ -1,0 +1,6 @@
+[OK] versions/1.21.1/build/libs/nekojs-neoforge-1.21.1-1.1.0-preview3.jar entries=1395 metadata=['META-INF/neoforge.mods.toml']
+[OK] versions/26.1.2/build/libs/nekojs-neoforge-26.1.2-1.1.0-preview3.jar entries=1448 metadata=['META-INF/neoforge.mods.toml']
+[OK] versions/26.1.2-fabric/build/libs/nekojs-fabric-26.1.2-1.1.0-preview3.jar entries=7424 metadata=['fabric.mod.json']
+[OK] versions/26.2.0/build/libs/nekojs-neoforge-26.2.0-1.1.0-preview3.jar entries=1448 metadata=['META-INF/neoforge.mods.toml']
+[OK] versions/26.2.0-fabric/build/libs/nekojs-fabric-26.2-1.1.0-preview3.jar entries=7424 metadata=['fabric.mod.json']
+PASS: no addon class, resource or metadata in any production jar

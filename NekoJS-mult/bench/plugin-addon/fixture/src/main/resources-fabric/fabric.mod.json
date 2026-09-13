@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "nekojs08addon",
+  "version": "1.0.0",
+  "name": "NekoJS Ticket 08 Test Addon",
+  "description": "Test-only external NekoJS addon fixture (ticket 08).",
+  "license": "LGPL-3.0",
+  "environment": "*",
+  "entrypoints": {
+    "nekojs": [
+      "com.example.nekojs08.AddonPlugin",
+      "com.example.nekojs08.AddonFilteredPlugin",
+      "com.example.nekojs08.AddonClientOnlyPlugin"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "nekojs": ">=1.0.0",
+    "minecraft": "~26.1.2"
+  }
+}

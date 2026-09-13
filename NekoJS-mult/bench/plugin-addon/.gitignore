@@ -1,0 +1,4 @@
+# addon 制品与采样原始输出不入库（证据 gz/json 归档进 docs/architecture-refactor/baseline/*/evidence/）
+build/
+logs/
+out/
