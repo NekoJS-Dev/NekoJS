@@ -120,6 +120,11 @@ class NekoRuntimeRootReloadResultTest {
             assertEquals(ReloadPhase.STARTUP, result.phase(),
                     "STARTUP reload must be explicitly marked as the non-transactional boundary (AC6)");
             assertTrue(result.generation() >= 0, "result carries the generation");
+            // AC6：入口给外部调用方的显式判定面——非事务路径必须可被识别，且显式要求
+            // loader restart（不可逆平台注册不回滚），否则只读 success() 的调用方会把
+            // reset+load 读成候选 + commit 事务成功。
+            assertTrue(result.nonTransactional(), "STARTUP result must be identifiable as non-transactional");
+            assertTrue(result.requiresLoaderRestart(), "STARTUP result must ask the caller for a loader restart");
         } finally {
             root.closeSilently();
         }
@@ -138,6 +143,8 @@ class NekoRuntimeRootReloadResultTest {
             assertTrue(result.success());
             assertEquals(ReloadPhase.COMMIT, result.phase(),
                     "transactional reload success must surface the commit boundary");
+            assertTrue(!result.nonTransactional(), "transactional reload must not be marked non-transactional");
+            assertTrue(!result.requiresLoaderRestart(), "transactional reload must not ask for a loader restart");
 
             NekoRuntimeRoot.ReloadResult fileResult = root.reloadFile(ScriptType.SERVER,
                     ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("missing-file.js"));
@@ -145,6 +152,8 @@ class NekoRuntimeRootReloadResultTest {
             assertEquals(ReloadPhase.FILE, fileResult.phase(),
                     "single-file reload failure must surface the FILE phase");
             assertTrue(fileResult.error() != null, "failure result carries the error");
+            assertTrue(fileResult.nonTransactional(), "FILE reload is a non-candidate path (AC6 surface)");
+            assertTrue(!fileResult.requiresLoaderRestart(), "FILE reload does not require a loader restart");
         } finally {
             root.closeSilently();
         }
