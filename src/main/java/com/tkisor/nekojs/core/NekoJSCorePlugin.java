@@ -161,8 +161,11 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
                 net.minecraft.core.particles.ParticleOptions.class,
                 Set.of("of")),
                 ParticleOptionsJS.class));
-        // NeoForge data map 快捷查询（其余 map 经 Registry.get(...).dataMapValue(...)）
-        registry.register("DataMap", DataMapJS.class);
+        // NeoForge data map 快捷查询（其余 map 经 Registry.get(...).dataMapValue(...)）。
+        // ticket 25 修复：必须注册实例——class binding（StaticClass）不暴露 instance 方法，
+        // 运行时 DataMap.furnaceFuel 报 Unknown identifier（游戏内 fixture 实证）。
+        // DataMapJS 无状态，单例实例即查询面。
+        registry.register("DataMap", new DataMapJS());
         // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP
         // reload, unregistering the previous round's native NeoForge event listeners
         // before the scripts re-register them. Avoids listeners accumulating on reload.

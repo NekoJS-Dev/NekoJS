@@ -2,6 +2,7 @@ package com.tkisor.nekojs.util.selector;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.selector.EntitySelector;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -108,8 +109,35 @@ public class EntitySelectorsJS {
         }
     }
 
-    /** 解析实体类型 tag id（如 {@code 'minecraft:skeletons'}）为 {@link TagKey}。 */
+    /**
+     * 解析实体类型 tag id（如 {@code 'minecraft:skeletons'}）为 {@link TagKey}。
+     *
+     * <p>ticket 25 修复（游戏内实证）：未知 tag 原实现静默构造一个空 {@link TagKey}，
+     * 于是过滤条件恒假、查询恒返回空——正是 spec 04 禁止的静默 no-op，也与
+     * {@code type(...)}（未知实体类型直接报错）不一致。改为按声明存在性校验：
+     * 未声明的 tag 抛带域+入口的普通错误。
+     */
     static TagKey<EntityType<?>> resolveEntityTypeTag(String tagId) {
-        return TagKey.create(Registries.ENTITY_TYPE, Identifier.parse(tagId));
+        if (tagId == null) {
+            throw new IllegalArgumentException("EntitySelectors.typeTag: tag must not be null");
+        }
+        TagKey<EntityType<?>> tag = TagKey.create(Registries.ENTITY_TYPE, Identifier.parse(tagId));
+        if (!entityTypeTagDeclared(tag)) {
+            throw new IllegalArgumentException("EntitySelectors.typeTag: unknown entity type tag: " + tagId);
+        }
+        return tag;
+    }
+
+    /**
+     * 该实体类型标签是否已被当前数据包声明。版本差异按 stonecutter 守卫分支：
+     * 26.x 只有 {@code getTags()}，1.21.1 是 {@code getTagNames()}（同
+     * {@code NeoForgeCatalogPlatformProvider.tagIds} 的既有写法）。
+     */
+    private static boolean entityTypeTagDeclared(TagKey<EntityType<?>> tag) {
+//? if >=26 {
+        return BuiltInRegistries.ENTITY_TYPE.getTags().anyMatch(named -> named.key().equals(tag));
+//?} else {
+/*        return BuiltInRegistries.ENTITY_TYPE.getTagNames().anyMatch(existing -> existing.equals(tag));
+*///?}
     }
 }
