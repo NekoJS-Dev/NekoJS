@@ -51,19 +51,22 @@ public class EntitySelectorBuilderJS {
     /**
      * 实体类型过滤（如 {@code 'minecraft:cow'}）；inverse 为 true 时反选
      * （镜像原版 {@code type=!cow}：反选走谓词，ctor type 保持 null）。
+     *
+     * <p>ticket 25 修复（与 26.x 共享树同款）：指定非玩家类型本身就意味着「要查实体」，
+     * 必须把 {@code includesEntities} 置 true。原实现只在玩家类型上调整该位，于是 ctor
+     * 保持 {@code includesEntities=false}（= 只走玩家列表），
+     * {@code create(b => b.type('minecraft:cow'))} 永远返回空。
      */
     public EntitySelectorBuilderJS type(String entityTypeId, boolean inverse) {
         EntityType<?> resolved = entityType(entityTypeId);
         if (inverse) {
+            // type=!X（X 可为玩家或非玩家）都要能看到实体，否则反选无意义
             predicates.add(entity -> entity.getType() != resolved);
-            if (isPlayerType(resolved)) {
-                this.includesEntities = true;
-            }
+            this.includesEntities = true;
         } else {
             this.type = resolved;
-            if (isPlayerType(resolved)) {
-                this.includesEntities = false;
-            }
+            // 正选玩家类型 → 玩家列表足够；正选非玩家类型 → 必须纳入实体
+            this.includesEntities = !isPlayerType(resolved);
         }
         return this;
     }
@@ -78,6 +81,9 @@ public class EntitySelectorBuilderJS {
         var tag = EntitySelectorsJS.resolveEntityTypeTag(tagId);
         Predicate<Entity> predicate = entity -> entity.getType().is(tag) != inverse;
         predicates.add(predicate);
+        // ticket 25 修复（与 type 同类）：类型 tag 只在实体集合上才有意义，
+        // includesEntities=false 只查玩家列表会让该过滤永远命中 0。
+        this.includesEntities = true;
         return this;
     }
 
