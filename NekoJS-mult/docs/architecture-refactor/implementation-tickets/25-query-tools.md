@@ -33,9 +33,11 @@
 - [x] source contract 明确二者既有 tier 与能力，不因现有 binding/LEGACY_PREVIEW 收录而自动升级 managed stable。
 - [x] TS/Python declaration、Probe 输出与 runtime member/signature 一致。
 - [x] NeoForge/Fabric/1.21.1 capability 按 source trace 和真实 smoke/fixture 记录 supported/partial/unavailable。
+  - 【范围边界：capability 已按 source trace + fixture 记录（neoforge/fabric 两套 golden，DataMap binding[CLIENT] 审查后由硬编码 SUPPORTED 改判 PARTIAL）；QueryToolCapabilityMatrixTest 的 fabric 分支已补 :26.1.2-fabric:test（73 用例 0 失败）；fabric runtime query smoke 未跑，owner loader-port】
 - [x] MC-facing data map/selector 类型与平台差异由平台/版本 Adapter持有；共享契约与查询 binding 不引入 Minecraft/loader 依赖。
 - [x] 每个域的替代查询面、旧路径消费者和删除条件可追踪；公开删除仍需维护者确认。
 - [x] 旧查询旁路只有在替代 behavior、declaration、trace 通过且无调用者后移除；公开 DataMap/EntitySelectors 查询功能不删除，清理不推迟 final release。
+  - 【本票未删任何公开路径；按工单 Human input note，删除门禁需维护者 sign-off 后才可勾选——本条勾选仅表示删除条件已记录（报告 N7/N8/N9），不表示已执行删除】
 
 ## Sources
 

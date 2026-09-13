@@ -19,11 +19,16 @@
 ## Acceptance criteria
 
 - [x] SERVER、CLIENT、TEST 的成功 reload 都先构建 candidate generation；candidate 执行期间生产 callback、timer、对外 binding 和 live mutation 仍由 active 执行。
+  - 【范围边界：本票范围内满足（EventBusJS 面有单测）；范围外缺口＝NativeEventsJS 原生注册在候选期仍直挂生产 EVENT_BUS，owner W7 域 Adapter；CLIENT 真机 not-verified，owner 维护者。见报告 §5/§10】
 - [x] preparation、execution、binding 或现有域 preflight 失败时，candidate 的 Context、timer、listener、binding 和临时计划全部关闭，active 仍能接收事件并读旧 state。
+  - 【范围边界：本票范围内满足（含审查后新增的候选 Context 真关闭＋解除登记断言，与 commit 点不再半失败的 red→green 证据）；范围外缺口＝候选构建前 binding.close(type)/errorTracker.clearByType 已改动进程级账本，owner W6/W7 或票 10；feature 域 preflight 归 W6/W7】
 - [x] 失败结果外部可见地包含 generation、phase、source location 和 owner/domain，不带修复指引，也不把内部锁或私有对象当契约。
 - [x] commit 后新 generation 是唯一新 callback 接收者，同一事件不出现旧新双重执行；旧 generation 按 timer、listener、Context 所有权顺序释放。
+  - 【范围边界：无双执行已由计数测试证明；释放顺序字面偏离（listener 冻结必须先于发布以避免双重执行）待维护者裁决，论证见报告 §10.A1】
 - [x] candidate-only 测试 callback 可在测试 harness 中执行，pending timer 只被收集并随 generation 提交或关闭；二者 commit 前都不进入生产路由。被 watchdog 或语句上限终止时 candidate 丢弃、active 不变。
+  - 【范围边界：语句上限终止路径已验（烟测 29/29）；watchdog 时间窗口路径未验——发现既有缺陷（scriptRunawayTimeoutSeconds 对 while(true) 无效，复现件 Ticket06RunawayProbeTest 仍 @Disabled），owner 票 07】
 - [x] STARTUP 不可逆平台注册未被域 Adapter 证明可回滚时，入口显式要求 loader restart 或返回不支持阶段，不执行 reset 后宣称事务成功。
+  - 【范围边界：三节点命令面已改为先给非事务/需重启结论、不再先宣称成功（烟测 E 段验证）；STARTUP 仍执行 reset+load，是否改为不执行待维护者裁决，见报告 §5】
 - [x] 本票通过只代表 generation-owned 交接绿；GLOBAL_STATE 的联合写集与 RUNTIME_THREADS 的完整调度仍需各自通过，三者结合后才构成完整 reload 契约。
 
 ## Sources
