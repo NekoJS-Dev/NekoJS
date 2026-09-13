@@ -100,10 +100,12 @@ JSX runtime 选择、source map 全部不变。`NekoCommonBuiltinPluginTest` 只
 
 ### 3.1 机制
 
-拆解器（`statementOrBlockDeclarationEnd` / `eraseImplements` / `typeExpressionEnd`）本身不抛异常，只做位置计算。
+拆解器（`statementOrBlockDeclarationEnd` / `typeExpressionEnd`）本身不抛异常，只做位置计算。
 未闭合时它把位置记到 `unterminatedTypeAt` 并返回 `length`；擦除主循环在**真正写 out 之前**先跑一遍只读的 `scanPredicates()`，
 遇到已置位的未终止标记就用 `failClosedUnterminated()` 抛
-`IllegalArgumentException("Unterminated TypeScript type construct in <file> at <line>:<col>. ...")`。
+`IllegalArgumentException("Unterminated TypeScript type construct in <file> at <line>:<col>: ...")`。
+消息**只陈述事实**（文件 + 行列 + 未终止），不含修复指引——CONTEXT.md 规定报错保持普通形式、
+修复指引由 wiki / MIGRATION.md 承载。
 
 **为什么需要只读预扫描**：`typeAnnotationAt` 是谓词，主循环会先在条件里调它一次、进分支后再拆解一次。
 若直接在拆解处抛异常，就会出现「谓词判真 -> 主循环已经擦掉了前面的类型片段 -> 才抛错」的撕裂。
@@ -111,14 +113,32 @@ JSX runtime 选择、source map 全部不变。`NekoCommonBuiltinPluginTest` 只
 
 ### 3.2 现在会 fail closed 的形态（有测试）
 
+实际覆盖的是 **2 类、5 种**形态（不是「所有未终止类型构造」）：
+
 | 形态 | 示例 | 报告位置 |
 |---|---|---|
-| 未闭合的 interface 体 | `interface Foo {` + 换行 + `  bar: string;` | interface 关键字起点（1:1） |
+| 未闭合的 interface 体 | `interface Foo {`（+ 换行 + `  bar: string;`） | interface 关键字起点（1:1） |
 | 未闭合的 type 对象体 | `type T = {` | type 关键字起点（3:1） |
 | 未闭合的 export interface | `export interface I {` | interface 关键字起点（1:8） |
 | 未闭合的 declare class 体 | `declare class C {` | declare 关键字起点（1:1） |
-| 未闭合的泛型参数列表 | `const x: Array<string = SIDE_EFFECT();` | 类型标注的 `:` 处（1:9） |
-| 未闭合的 implements 子句 | `class C implements Foo<Bar {` | implements 关键字起点 |
+| 类型标注里的泛型参数列表未闭合 | `const x: Array<string = SIDE_EFFECT();` | 类型标注的 `:` 处（1:9） |
+
+**仍然静默通过（本票未覆盖，已核验）**：
+
+| 形态 | 示例 | 结果 |
+|---|---|---|
+| 类声明头的泛型参数列表未闭合 | `class C<T { x = 1; }` | 原样保留 → 执行期 SyntaxError |
+| 函数声明头的泛型参数列表未闭合 | `function f<T { return 1; }`、`function f<T`（换行） | 原样保留 → 执行期 SyntaxError |
+| 泛型调用未闭合 | `foo<Bar(1);` | 原样保留 → 执行期 SyntaxError |
+| 泛型箭头未闭合 | `const f = <T, (x: T) => x;` | 部分擦除 → 执行期 SyntaxError |
+| `implements` 子句未闭合 | `class C implements I {`、`class C implements { x = 1; }`、`class C implements I`（EOF） | 原样保留或按普通 `{` 处理 → 执行期 SyntaxError |
+
+这些形态的**后果与前一类不同**：它们<strong>不删除代码</strong>（语句仍在产物里），只是产出的 JS 无法解析，
+在**执行期**以硬 `SyntaxError` 失败——失败可见、不静默改语义。已在
+`NekoTypeScriptErasureFailClosedTest.declarationHeaderAndImplementsFormsAreStillSilentAndKeepTheirCode` 中钉成事实。
+
+> 说明：`eraseImplements` 中曾经加过一个 fail-closed 分支，但 `scanPredicates()` 只对 `:` 类型标注跑拆解，
+> 因此该分支的状态**永远无法被消费**（dead code）。code-review 时已删除，本表如实记录 `implements` 未覆盖。
 
 ### 3.3 仍然合法、行为不变（有测试，防止过度收紧）
 
@@ -126,8 +146,9 @@ JSX runtime 选择、source map 全部不变。`NekoCommonBuiltinPluginTest` 只
 `const id = <T,>(x: T) => x`、`const m: Map<string, number> = ...`、跨行泛型类型标注、文件末尾的 `let x: number`、
 `abstract class` 成员 elide —— 全部继续擦除成功并可执行。
 
-判定口径是**保守**的：只有在「扫到文件末尾仍然看到未闭合的 `{`（或未闭合的泛型 `<`）」时才报告；
-任何能在文件内找到配对闭合的形态都走原路径。设计上偏向漏报：宁可让畸形输入继续沿用旧行为，也不把能跑的脚本判死。
+判定口径是**保守**的：只有在「类型声明体扫到文件末尾仍未闭合的 `{`」或「类型标注里的泛型 `<` 扫到文件末尾仍未闭合」时才报告；
+任何能在文件内找到配对闭合的形态、以及擦除器根本不解析的 `<…>` 位置（声明头、调用点）都走原路径。
+设计上偏向漏报：宁可让畸形输入继续沿用旧行为，也不把能跑的脚本判死。
 
 ### 3.4 顺带修复的同一 root cause 缺陷（TSX 泛型组件）
 
@@ -187,7 +208,7 @@ prepared module / 身份 / cache key / source map / 错误阶段。没有为凑�
 | AC1 三档 representative corpus 产生正确 language id、module mode、可执行 code/IR、非空可用 source map | **pass** | `NekoLanguageIdentityInvariantTest`（六扩展名三元 id 相等 + cacheKey/identityOf 同源）、`NekoLanguagePipelineCorpusTest.representativeCorpusProducesLanguageIdModeExecutableCodeAndUsableSourceMap`（真执行出期望值 + source map 注册后映射回原始行） |
 | AC2 类型擦除不改变运行时值、控制流、导出形状 | **pass** | `NekoLanguagePipelineCorpusTest.typescriptErasureKeepsControlFlowValuesAndExportShape`（导出形状 3 个、类型导出不计数、产物真跑出 `pos:41`） |
 | AC3 JSX/TSX element、fragment、automatic runtime 与既有 golden/执行测试一致 | **pass** | `NekoTranspiledLanguagePhaseCorpusTest.tsxAutomaticRuntimeElementAndFragmentExecuteCorrectly`（jsx/jsxs/Fragment + 注入 import + 真执行元素树）、`jsxClassicRuntimeElementAndFragmentExecuteCorrectly`；既有 `NekoJsxCompilerTest` 全绿 |
-| AC4 准备期错误携带原始文件、行列与阶段，不被后续 JS 位置覆盖 | **pass** | `preparationErrorsCarryOriginalFileAndLineForTsJsxTsx`（三语言 + 断言不含 PolyglotException）、`NekoTypeScriptErasureFailClosedTest`（12 例，file+行列） |
+| AC4 准备期错误携带原始文件、行列与阶段，不被后续 JS 位置覆盖 | **pass** | `preparationErrorsCarryOriginalFileAndLineForTsJsxTsx`（三语言 + 断言不含 PolyglotException）、`NekoTypeScriptErasureFailClosedTest`（13 例：5 例 fail closed + 7 例合法边界 + 1 例「仍静默」边界，file+行列） |
 | AC5 执行期异常经 source map 回原始位置并保留模块身份 | **pass** | `executionErrorInJsxAndTsxMapsBackThroughSourceMap`（`.jsx` 3 行、`.tsx` 4 行 + languageId/mode/cacheKey）；修复见 §5 |
 | AC6 源码/mode/language id/依赖变化失效 cache，未变化可观察命中 | **pass** | `NekoLanguagePipelineCorpusTest.tsxContentChangeInvalidatesCacheAndLanguageIdentityChangeIsObservable`；工单 11 的 `NekoModulePreparationIdentityTest` 四维失效保持绿 |
 | AC7 与 JS/CJS/ESM 混合 import 的身份和错误归属可追踪 | **pass** | `mixedImportsTrackIdentityAcrossJsCjsEsmTsJsxTsx`（六扩展名真执行 + 身份逐一断言）、`mixedImportErrorIsAttributedToTheFailingTranspiledModule`（错误归属到真正抛错的 `.tsx`） |
@@ -204,9 +225,23 @@ prepared module / 身份 / cache key / source map / 错误阶段。没有为凑�
 
 ## 10. 遗留（不在本票范围）
 
-1. **TS 擦除器的整体容错哲学仍不统一**：本票只收口了「未终止类型构造」这一类不可安全擦除的形态。
-   其他 TS 语法错误（如 `satisfies` 后跟对象类型、类内 index signature `[key: string]: number`、
-   `import A = require(...)`）仍会静默产出无法解析的 JS，由 Graal 在执行期报 SyntaxError。
+**先区分两类后果（重要，两者严重度不同）：**
+
+| | 旧缺陷（**已修**） | 现遗留（**未修，本票不要求修**） |
+|---|---|---|
+| 行为 | 静默**删除**代码：作者的可执行语句凭空消失 | 静默**保留**代码：产出无法解析的 JS |
+| 何时失败 | 永不失败（脚本语义已被悄悄改变） | **执行期硬 `SyntaxError`**，失败可见 |
+| 风险 | 高——无提示地改变脚本语义 | 低——不丢代码、失败可见 |
+
+实测对照：`interface Foo {` + `SIDE_EFFECT();` 在旧实现下整段被擦成空白（`SIDE_EFFECT()` 消失）；
+而下面的遗留形态里 `SIDE_EFFECT()` 仍在产物中，只是整份 JS 无法解析。
+
+1. **TS 擦除器的整体容错哲学仍不统一（第二类，低严重度）**：除 §3.2 已覆盖的 5 种外，
+   下列形态仍静默产出无法解析的 JS，由 Graal 在执行期报 `SyntaxError`（不删代码、失败可见）：
+   - 声明头泛型参数列表未闭合：`class C<T { … }`、`function f<T { … }`、`function f<T`（换行）
+   - 泛型调用/泛型箭头未闭合：`foo<Bar(1);`、`const f = <T, (x: T) => x;`
+   - `implements` 子句未闭合：`class C implements I {`、`class C implements { … }`、`class C implements I`（EOF）
+   - 其他：`satisfies` 后跟对象类型、类内 index signature `[key: string]: number`、`import A = require(...)`
    这类形态能不能安全判定、值不值得 fail closed，应由后续语言票结合真实作者反馈评估。owner：后续语言票 / 维护者。
 2. **ESM parser 对纯 JS 语法错误的宽松度**：`.js` 与 `.ts` 对 `const = = 1;`、未终止字符串、孤立 `}`、
    未闭合函数体完全相同（都不抛）。该宽松来自 ESM parser，**不是本票引入的 TS 专属问题**，且工单 11 已验收该层；

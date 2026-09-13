@@ -78,9 +78,13 @@
   `NekoJsxTokenStream`（默认值取插件 id）、`NekoIRProgram.languageId`（`.tsx` 现为 `jsx`）。
   `.ts`/`.jsx`/module mode/产物/source map/JSX runtime **均未变**。深层不变量（prepared == registry == IR）
   由 `NekoLanguageIdentityInvariantTest` 对 `.js/.mjs/.cjs/.jsx/.ts/.tsx` 全体钉住。
-- **缺陷 B fail-closed 边界：** 未闭合的 `interface` / `type` 对象体 / `export interface` / `declare class` 体、
-  未闭合的泛型参数列表、未闭合的 `implements` 子句，现在都在**准备阶段**抛带原始文件 + 行列的
-  `IllegalArgumentException`（消息以 `Unterminated TypeScript type construct in <file> at <line>:<col>` 开头）。
+- **缺陷 B fail-closed 边界（实际只覆盖 2 类 / 5 种，不是「所有未终止类型构造」）：** 未闭合的 `interface` 体、
+  `type` 对象体、`export interface` 体、`declare class` 体，以及**类型标注**里的泛型参数列表未闭合
+  （`const x: Array<string = SIDE_EFFECT();`）——这 5 种在**准备阶段**抛带原始文件 + 行列的
+  `IllegalArgumentException`（消息以 `Unterminated TypeScript type construct in <file> at <line>:<col>` 开头，
+  只陈述事实、不含修复指引）。**仍静默通过、本票未覆盖**：类/函数**声明头**的泛型参数列表未闭合
+  （`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合（`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、
+  `implements` 子句未闭合（`class C implements I {`）。详见「code-review 修订」第 1 条。
   **仍然合法**：`interface Foo { bar: string }`、`type T = string`、`type T = { a: string }`、`function id<T>(x: T): T`、
   `const id = <T,>(x: T) => x`、`const m: Map<string, number> = ...`、跨行泛型标注、文件末尾的 `let x: number`、
   `abstract class` 成员 elide —— 全部继续擦除成功并可执行（7 条边界断言）。实现上先跑一遍只读谓词预扫描，
@@ -98,14 +102,53 @@
 - 验收判定（据实）：**AC1–AC9 全部 pass**。逐条证据见 REPORT §8。
   本票另修复一个**真实缺口**（不在原票据缺陷清单）：经 ESM import 链执行的转译模块，其 source map 此前未登记到
   ESM virtual module id，执行期错误会在查表时落空而丢失原始文件/行列（AC5 字面要求）。
-- 门禁（全量真跑）：`:common:test --rerun-tasks --no-build-cache` → **207 suites / 1515 tests / 0 failures /
+- 门禁（全量真跑，首次关闭时）：`:common:test --rerun-tasks --no-build-cache` → **207 suites / 1515 tests / 0 failures /
   0 errors / 5 skipped**；`:common:check` pass；`guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。
+  修订后为 207 suites / 1516 tests（新增 1 例边界测试），见文末 code-review 修订。
 - 未验证项与 owner：① 真实 Minecraft 客户端/服务端 smoke（含 `/nekojs reload`）**not-verified**——本票改动全在
   `common`，未启动真实客户端；owner 维护者 / 票 19 / 票 34；② 节点 `:26.1.2:compileJava` 未单独执行——
   改动不触碰平台面，owner 维护者。
-- 遗留（不在本票范围，owner 已记）：① TS 擦除器的整体容错哲学仍不统一——`satisfies` 后跟对象类型、
-  类内 index signature、`import A = require(...)` 等仍会静默产出无法解析的 JS 并在执行期报 SyntaxError，
-  是否 fail closed 应由后续语言票结合作者反馈评估；② 纯 JS 语法错误的宽松度（`const = = 1;`、未终止字符串、
+- 遗留（**先区分两类后果**：旧缺陷是静默**删除**代码、永不失败，已修；下列遗留是静默**保留**代码、
+  在执行期以硬 `SyntaxError` **可见地失败**，不丢代码、严重度低得多）：① TS 擦除器整体容错哲学仍不统一——
+  声明头泛型参数列表未闭合（`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合（`foo<Bar(1);`、
+  `const f = <T, (x: T) => x;`）、`implements` 子句未闭合（`class C implements I {`）、`satisfies` 后跟对象类型、
+  类内 index signature、`import A = require(...)` 仍静默产出无法解析的 JS；是否 fail closed 应由后续语言票结合
+  作者反馈评估。owner：后续语言票 / 维护者；② 纯 JS 语法错误的宽松度（`const = = 1;`、未终止字符串、
   孤立 `}`、未闭合函数体）在 `.js` 与 `.ts` 完全相同，来源是 ESM parser 而非 TS 擦除，**不是本票引入的**，
   本票未改动 ESM parser 的通用容错（工单 11 已验收该层）；③ `.jsx` 下泛型组件语法的报错质量可改进。
 - 说明：本票不删除任何公开语言，未新增转译依赖 / 公共 parser SPI / Gradle project，未新建第二套 TS 管线。
+### code-review 修订（2026-09-13）
+
+双轴 review（Standards 轴 + 主 agent 独立核验）后逐条处理。**AC1–AC9 判定不变：全部仍为 pass，Status 保持 closed。**
+核验已确认不动的部分：缺陷 A 六扩展名 `prepared == registry == IR` 一致；缺陷 B 的 5 种形态确实抛错；
+既有 golden 零变更；收缩 gate 属实；AC5/AC9 的测试确实真执行。
+
+1. **fail-closed 边界表述夸大 —— 已如实降低（报告准确性问题，非实现问题）。**
+   主 agent 实测反驳了 Closure record 原文声称覆盖的「未闭合的泛型参数列表」「未闭合的 `implements` 子句」；
+   我复现确认以下形态**仍然静默通过**：`class C implements I< { … }`、`class C implements { … }`、
+   `class C implements I {`（体未闭合）、`function f<T { … }`、`function f<T`（换行）、`foo<Bar(1);`、
+   `class C<T { … }`、`const f = <T, (x: T) => x;`（复现输出见下）。
+   **处理**：REPORT §3.2/§3.3、MIGRATION §1 与本 Closure record 的表述改为「实际覆盖 2 类 / 5 种」并逐条列出未覆盖形态；
+   新增 `NekoTypeScriptErasureFailClosedTest.declarationHeaderAndImplementsFormsAreStillSilentAndKeepTheirCode`
+   把「仍静默」钉成事实（断言不抛且代码未被删空），防止后续 reviewer 误以为已覆盖。
+   复现命令：`:common:test --tests '…NekoTypeScriptErasureFailClosedTest'`（该用例即复现），
+   实测输出：`class C implements I< { x = 1; }` → 静默、产物 `class C               { x = 1; }` 可解析；
+   `function f<T { return 1; }` → 静默、产物无法解析。
+2. **Standards 违规：错误消息带修复指引 —— 已删除。** `CONTEXT.md:8` 规定「报错保持普通形式，不带修复指引」，
+   指引应由 wiki / `MIGRATION.md` 承载。`NekoTypeScriptCompiler.failClosedUnterminated` 的消息已去掉
+   `Close the type before the following code, or remove the incomplete declaration.`，只保留
+   「file + 行列 + 未终止事实 + NekoJS 不会静默擦除文件其余部分」。
+   按边界要求**只改本票新增的该方法**，未触碰历史代码 `unsupported()`（其 hint 不在本票 diff 内，
+   改动会扩大 diff 并影响既有断言）。既有断言（`assertLocatedAt`、`NekoTypeScriptCompilerTest`）保持绿。
+3. **「仍静默通过」的形态 —— 已如实记录为遗留，并明确区分两类后果。** REPORT §10 现在用对照表区分：
+   旧缺陷＝静默**删除**代码、永不失败（已修，风险高）；现遗留＝静默**保留**代码、执行期硬 `SyntaxError`
+   可见地失败（不丢代码，风险低）。第二类不要求本票修（AC4 针对的是准备期错误带位置，这些形态的失败是可见的）。
+
+**本轮附带发现并修复的一处死代码（并入第 1 条）：** `eraseImplements` 中为「`implements` 子句未闭合」新增的
+fail-closed 分支是**不可达**的——`scanPredicates()` 只对 `:` 类型标注跑拆解，因此该分支置位的状态永远不会被消费。
+它是第 1 条夸大表述的来源，已删除，`eraseImplements` 恢复为改动前的行为（`implements` 如实记为未覆盖）。
+删除前后复现均确认无误报（`class C implements I` 后跟合法类型标注/断言/普通代码都不抛）。
+
+**修订后门禁（全量真跑）**：`:common:test --rerun-tasks --no-build-cache` + `:common:check` + `guardLint`
+同一次执行 → BUILD SUCCESSFUL；**207 suites / 1516 tests / 0 failures / 0 errors / 5 skipped**；
+`guardLint` pass（248 守卫块 / 331 文件 / 0 问题）。

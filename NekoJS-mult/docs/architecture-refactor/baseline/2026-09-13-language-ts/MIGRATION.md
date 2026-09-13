@@ -19,10 +19,12 @@ const x = 1;
 **新行为**：在**准备阶段**抛出带文件与行列的 `IllegalArgumentException`：
 
 ```
-Unterminated TypeScript type construct in <file> at 1:1.
-The type body never closes, so the eraser cannot tell which code belongs to the declaration
-and which is executable script. ...
+Unterminated TypeScript type construct in <file> at 1:1: the type body never closes, so the eraser
+cannot tell which code belongs to the declaration and which is executable script. NekoJS refuses to
+silently erase the rest of the file.
 ```
+
+消息只陈述事实（文件 / 行列 / 未终止），不含修复指引。
 
 **作者要做什么**：把没有写完的类型补完（或删掉）。错误消息已经给出确切的行列。
 
@@ -33,8 +35,11 @@ and which is executable script. ...
 | 未闭合的 `interface` 体 | `interface Foo {\n  bar: string;\n` |
 | 未闭合的 `type` 对象体 | `type T = {\n  a: string;\n` |
 | 未闭合的 `export interface` / `declare class` 体 | `export interface I {\n` / `declare class C {\n` |
-| 未闭合的泛型参数列表 | `const x: Array<string = SIDE_EFFECT();` |
-| 未闭合的 `implements` 子句 | `class C implements Foo<Bar {\n` |
+| 类型标注里的泛型参数列表未闭合 | `const x: Array<string = SIDE_EFFECT();` |
+
+**本票未覆盖、仍然静默通过的形态**（不删代码，在执行期以 `SyntaxError` 可见地失败）：
+声明头泛型参数列表未闭合（`class C<T {`、`function f<T {`）、泛型调用/泛型箭头未闭合
+（`foo<Bar(1);`、`const f = <T, (x: T) => x;`）、`implements` 子句未闭合（`class C implements I {`）。
 
 **仍然合法、行为不变**（本票特意钉住这些边界，不许过度收紧）：
 

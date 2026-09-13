@@ -1334,11 +1334,6 @@ public final class NekoTypeScriptCompiler {
                 if (c == '{') break;
                 end++;
             }
-            if (end >= length) {
-                // implements 子句扫到文件末尾都没遇到类体 '{' —— 形态不可安全擦除。
-                // 位置用 implements 关键字起点，而不是它前面已擦过的 class。
-                return failUnterminated(start);
-            }
             eraseRange(start, end);
             return end;
         }
@@ -2040,11 +2035,13 @@ public final class NekoTypeScriptCompiler {
             }
             int index = unterminatedTypeAt;
             unterminatedTypeAt = -1;
+            // 消息只陈述事实（文件 + 行列 + 阶段 + 未终止）：CONTEXT.md 规定报错保持普通形式、
+            // 不带修复指引；修复指引由 wiki / MIGRATION.md 承载。
             throw new IllegalArgumentException("Unterminated TypeScript type construct in " + file
                     + " at " + position(index)
-                    + ". The type body never closes, so the eraser cannot tell which code belongs to the"
-                    + " declaration and which is executable script. Close the type before the following code,"
-                    + " or remove the incomplete declaration. (NekoJS refuses to silently erase the rest of the file.)");
+                    + ": the type body never closes, so the eraser cannot tell which code belongs to the"
+                    + " declaration and which is executable script. NekoJS refuses to silently erase the"
+                    + " rest of the file.");
         }
 
         private IllegalArgumentException unsupported(String syntax, int index) {
