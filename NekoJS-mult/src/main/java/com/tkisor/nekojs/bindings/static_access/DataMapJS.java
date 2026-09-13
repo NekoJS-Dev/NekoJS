@@ -19,8 +19,15 @@ import net.neoforged.neoforge.registries.datamaps.builtin.NeoForgeDataMaps;
  * portable JSON 字符串）。
  *
  * <p>查询不到（条目没有该 data map 值）返回 {@code null} 而非报错，便于 {@code ??} 兜底；
- * 非法输入（{@code null} 栈）抛带域+入口的普通错误，不含修复提示。方法只读——不暴露
- * 可变 registry view。
+ * 方法只读——不暴露可变 registry view。
+ *
+ * <p><b>入参 {@code null} 的真实语义（工单 25 双轴审查核实）</b>：脚本侧
+ * {@code null}/{@code undefined} 经引擎的值适配（{@code ItemStackAdapter.apply}，
+ * 显式接受 {@code isNull}）映射为 {@code ItemStack.EMPTY}，因此
+ * {@code DataMap.furnaceFuel(null)} 走「缺失」路径<b>返回 {@code null}</b>，不会报错——
+ * 这正是 {@code ??} 兜底语义（游戏内实证，REPORT §5.2 / §5.6）。{@link #itemHolder} 的
+ * null 守卫<b>只对 Java 直接调用者可达</b>（脚本侧不可达），保留它是为了不让 Java 调用方
+ * 撞裸 NPE；它不是、也不能被当作脚本侧的行为契约。
  */
 public class DataMapJS {
 
@@ -37,7 +44,13 @@ public class DataMapJS {
         return compostable == null ? null : compostable.chance();
     }
 
-    /** 入参守卫：错误消息带域+调用入口（源位置由统一错误管线从脚本栈提取），无修复提示。 */
+    /**
+     * 入参守卫：错误消息带域+调用入口（源位置由统一错误管线从脚本栈提取），无修复提示。
+     *
+     * <p><b>可达性（工单 25 双轴审查核实）</b>：仅 Java 直接调用者可达——脚本侧的
+     * {@code null} 在进入本方法前已被适配成 {@code ItemStack.EMPTY}（见类 javadoc），
+     * 故本守卫不构成脚本侧行为契约，只为 Java 调用方挡裸 NPE。
+     */
     private static Holder<Item> itemHolder(ItemStack stack, String entry) {
         if (stack == null) {
             throw new IllegalArgumentException("DataMap." + entry + ": stack must not be null");

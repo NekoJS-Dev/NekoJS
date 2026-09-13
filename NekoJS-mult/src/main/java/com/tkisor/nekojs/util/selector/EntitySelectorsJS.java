@@ -2,7 +2,6 @@ package com.tkisor.nekojs.util.selector;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.selector.EntitySelector;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -20,11 +19,17 @@ import java.util.function.Consumer;
  * 不事件化、无生命周期 Point；server/test side 限定（查询需 {@code ServerLevel}）。
  * 非法输入抛带域+调用入口的普通错误（源位置由统一错误管线从脚本栈提取），不含修复提示。
  *
+ * <p><b>作用域基座（工单 25 双轴审查后钉住现状）</b>：{@link #builder()} / {@link #create}
+ * 的基座是<b>玩家集合</b>（{@code includesEntities=false}，等价 {@code @a}）；
+ * {@link #allEntities()} / {@link #nearestEntity()} / {@link #randomEntity()} 的基座是
+ * <b>实体集合</b>。{@code type(...)} / {@code typeTag(...)} <b>不</b>切作用域（仅玩家类型
+ * 会调整该位），所以查非玩家实体必须用实体基座预设。
+ *
  * <p>脚本示例：
  * <pre>{@code
- * // 32 格内的 5 头牛（按距离排序）
+ * // 32 格内的 5 头牛（按距离排序）——实体基座 + 类型过滤
  * const cows = EntitySelectors.find(level,
- *     EntitySelectors.create(b => b.type('minecraft:cow').distance(0, 32).limit(5)));
+ *     EntitySelectors.allEntities().type('minecraft:cow').distance(0, 32).limit(5).create());
  * // 最近的玩家
  * const players = EntitySelectors.find(level, EntitySelectors.nearestPlayer().create(),
  *     player.x, player.y, player.z);
@@ -112,32 +117,27 @@ public class EntitySelectorsJS {
     /**
      * 解析实体类型 tag id（如 {@code 'minecraft:skeletons'}）为 {@link TagKey}。
      *
-     * <p>ticket 25 修复（游戏内实证）：未知 tag 原实现静默构造一个空 {@link TagKey}，
-     * 于是过滤条件恒假、查询恒返回空——正是 spec 04 禁止的静默 no-op，也与
-     * {@code type(...)}（未知实体类型直接报错）不一致。改为按声明存在性校验：
-     * 未声明的 tag 抛带域+入口的普通错误。
+     * <p><b>characterization（工单 25 双轴审查后钉住现状）</b>：本方法<b>不</b>校验该
+     * tag 是否已被当前数据包声明——未声明的 tag 会得到一个没有任何成员的
+     * {@link TagKey}，于是使用它的过滤条件恒假、查询恒返回空（silent no-op）。
+     *
+     * <p>这是<b>已记录的缺口</b>（REPORT §7 N8，owner = 维护者裁决 / domain 票）：spec 04
+     * 禁止静默 no-op，因此「未声明即抛带域+入口的普通错误」是期望修法——该修法在本票
+     * 实现过并经游戏内实证，但它是<b>公开语义变更</b>（静默空结果 → 报错），超出工单 25
+     * 「建立 fixture」的授权（项目纪律：公开语义变更先回决策），故回退为现状并在此写明。
+     * 游戏内证据：{@code runserver-25971-postfix-extract.log} 的
+     * {@code builder().typeTag('nekojs:no_such_tag') -> EntitySelectorBuilderJS@…}（无异常）。
+     *
+     * <p><b>唯一保留的入参校验是 {@code null}</b>（审查明确保留 AC3「错误含域+调用入口」
+     * 的合规改进，同 {@code distance}/limit 等消息前缀）：{@code tagId == null} 抛带域+入口的
+     * 普通错误，而不是让 {@code Identifier.parse(null)} 抛裸 NPE。它不改变任何既有可观察语义
+     * （原本就是错误路径，只是错误类型与可读性），由
+     * {@code EntitySelectorsQueryBindingTest.typeTagNullErrorCarriesDomainAndEntry} 守护。
      */
     static TagKey<EntityType<?>> resolveEntityTypeTag(String tagId) {
         if (tagId == null) {
             throw new IllegalArgumentException("EntitySelectors.typeTag: tag must not be null");
         }
-        TagKey<EntityType<?>> tag = TagKey.create(Registries.ENTITY_TYPE, Identifier.parse(tagId));
-        if (!entityTypeTagDeclared(tag)) {
-            throw new IllegalArgumentException("EntitySelectors.typeTag: unknown entity type tag: " + tagId);
-        }
-        return tag;
-    }
-
-    /**
-     * 该实体类型标签是否已被当前数据包声明。版本差异按 stonecutter 守卫分支：
-     * 26.x 只有 {@code getTags()}，1.21.1 是 {@code getTagNames()}（同
-     * {@code NeoForgeCatalogPlatformProvider.tagIds} 的既有写法）。
-     */
-    private static boolean entityTypeTagDeclared(TagKey<EntityType<?>> tag) {
-//? if >=26 {
-        return BuiltInRegistries.ENTITY_TYPE.getTags().anyMatch(named -> named.key().equals(tag));
-//?} else {
-/*        return BuiltInRegistries.ENTITY_TYPE.getTagNames().anyMatch(existing -> existing.equals(tag));
-*///?}
+        return TagKey.create(Registries.ENTITY_TYPE, Identifier.parse(tagId));
     }
 }

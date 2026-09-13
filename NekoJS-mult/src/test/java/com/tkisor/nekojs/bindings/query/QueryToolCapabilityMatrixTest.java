@@ -86,11 +86,15 @@ class QueryToolCapabilityMatrixTest {
                 String evidence;
                 CapabilityStatus status;
                 if (type == ScriptType.CLIENT) {
-                    // 裸 JVM 无法初始化 client 绑定分支的 MC client 类（同 VanillaRegistryProbe 事实）；
-                    // CLIENT 行按 source trace 记录：同一无条件 registerBinding 路径
-                    status = CapabilityStatus.SUPPORTED;
-                    evidence = "same unconditional registerBinding path (source trace; "
-                            + "client class init not probeable in a bare JVM)";
+                    // 裸 JVM 无法初始化 client 绑定分支的 MC client 类（同 VanillaRegistryProbe 事实），
+                    // 也**没有**跑过 client 侧 runtime smoke → 本票只到 source trace 层。
+                    // 工单 25 双轴审查修正：原先这里硬编码 SUPPORTED（自陈不可探），与
+                    // 「每行由真实探针派生」的口径冲突；改为 PARTIAL（= 声明条件下部分成立、
+                    // 差异已记录），并在 evidence 里写明「仅 source trace、未实测」。
+                    status = CapabilityStatus.PARTIAL;
+                    evidence = "source trace only: same unconditional registerBinding path, but the "
+                            + "client class init is not probeable in a bare JVM and no client runtime "
+                            + "smoke was run -> not runtime-verified (REPORT §7 N6)";
                 } else {
                     BindingRegistry.BindingRegistryImpl registry = new BindingRegistry.BindingRegistryImpl(type);
                     newInstance(corePlugin).registerBinding(registry);
