@@ -185,6 +185,23 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             return new ReloadResult(type, true, null, generation, ReloadPhase.COMMIT);
         }
 
+        /**
+         * 结果是否来自非事务路径（{@link ReloadPhase#STARTUP} 的 reset+load、{@link ReloadPhase#FILE}
+         * 的单文件重载）：这些路径<strong>不</strong>宣称候选 + commit 事务成功。
+         *
+         * <p>STARTUP 的不可逆平台注册（物品/方块/实体）未被域 Adapter 证明可回滚，因此该路径
+         * 的调用方必须显式要求 loader restart 才能取得干净的 STARTUP 状态（AC6）；本谓词是
+         * 入口给外部调用方的显式判定面，避免只读 {@link #success()} 时把非事务路径当作事务提交。
+         */
+        public boolean nonTransactional() {
+            return phase == ReloadPhase.STARTUP || phase == ReloadPhase.FILE;
+        }
+
+        /** STARTUP 非事务重载：调用方应显式要求 loader restart（不可逆平台注册不回滚）。 */
+        public boolean requiresLoaderRestart() {
+            return phase == ReloadPhase.STARTUP;
+        }
+
         /** STARTUP reset+load 重载的显式非事务结果（不宣称候选/commit 事务成功）。 */
         public static ReloadResult successNonTransactional(ScriptType type, long generation, ReloadPhase phase) {
             return new ReloadResult(type, true, null, generation, phase);

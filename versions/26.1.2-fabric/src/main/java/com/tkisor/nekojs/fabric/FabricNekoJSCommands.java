@@ -125,6 +125,7 @@ public final class FabricNekoJSCommands {
         if (!canReloadHere(source, type)) {
             return 0;
         }
+        NekoRuntimeRoot.ReloadResult reloadResult = null;
         try {
             NekoRuntimeRoot root = root();
             if (type == ScriptType.TEST) {
@@ -134,7 +135,7 @@ public final class FabricNekoJSCommands {
                 }
                 testSm.runTestScripts();
             } else {
-                root.reload(type);
+                reloadResult = root.reload(type);
                 if (type == ScriptType.SERVER) {
                     applyRecipeScripts(source);
                     // 与 NeoForge 版 NekoJSCommands#reloadServer 同位次：配方重放后
@@ -144,6 +145,15 @@ public final class FabricNekoJSCommands {
                 }
             }
             sendReloadResult(source, "NekoJS " + type.name + " scripts reloaded.");
+            if (reloadResult != null && reloadResult.nonTransactional()) {
+                // AC6：STARTUP 是 reset+load 非事务路径（不可逆平台注册未证明可回滚），
+                // 入口显式要求 loader restart——不让用户把这条结果读成候选 + commit 事务成功。
+                source.sendSystemMessage(Component.literal("NekoJS " + type.name
+                        + " scripts reloaded non-transactionally (reset+load, phase=" + reloadResult.phase()
+                        + "): irreversible platform registrations are not rolled back"
+                        + (reloadResult.requiresLoaderRestart()
+                                ? " - restart the game/loader for a clean STARTUP state." : ".")));
+            }
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
             // 候选 generation 失败（工单 06）：active 保留，失败结果携带
             // generation/phase/source location/owner/domain 结构化字段（无修复指引）
