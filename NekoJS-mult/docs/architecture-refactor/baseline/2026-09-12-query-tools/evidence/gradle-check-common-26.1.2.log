@@ -1,0 +1,84 @@
+Starting a Gradle Daemon, 1 busy Daemon could not be reused, use --status for details
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare
+> Task :common:checkCommonIsolation
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate
+> Task :common:compileTestJava UP-TO-DATE
+> Task :common:processTestResources UP-TO-DATE
+> Task :common:testClasses UP-TO-DATE
+> Task :26.1.2:createMinecraftArtifacts UP-TO-DATE
+> Task :common:test UP-TO-DATE
+> Task :common:check
+
+> Task :26.1.2:compileJava
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\src\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: 警告: [deprecation] ItemStack中的getEnchantments()已过时
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: 警告: [this-escape] 可能在完全初始化子类之前逃逸了 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+2 个警告
+
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.1.2:classes
+> Task :26.1.2:compileTestJava
+> Task :26.1.2:processTestResources
+> Task :26.1.2:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.1.2:test
+> Task :26.1.2:verifyDevModSourceSets
+> Task :26.1.2:check
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/NekoJS-t25/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 19s
+29 actionable tasks: 8 executed, 21 up-to-date

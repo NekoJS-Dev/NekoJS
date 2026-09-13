@@ -1,0 +1,60 @@
+[10:44:01] [INFO] 正在运行 TEST 脚本...
+[10:44:01] [INFO] 发现了 2 个 TEST 脚本。
+[10:44:01] [INFO] [NekoJS Test][SECTION] DataMap.query
+[10:44:01] [INFO] [NekoJS Test][PASS] hit: coal burnTime from the vanilla furnace_fuels data map
+[10:44:01] [INFO] [NekoJS Test][PASS] hit: apple compostable chance is a snapshot number in (0,1], got: 0.6499999761581421
+[10:44:01] [INFO] [NekoJS Test][PASS] miss: stone is not fuel -> null
+[10:44:01] [INFO] [NekoJS Test][PASS] miss: stone is not compostable -> null
+[10:44:01] [INFO] [NekoJS Test][PASS] coercion: string item id -> ItemStack -> same burnTime
+[10:44:01] [INFO] [NekoJS Test][PASS] invalid: number is not an ItemStack -> error
+[10:44:01] [INFO] [NekoJS Test][PASS] invalid: plain object is not an ItemStack -> error
+[10:44:01] [INFO] [NekoJS Test][PASS] invalid: unregistered item id -> error
+[10:44:01] [INFO] [NekoJS Test][PASS] empty: JS null -> ItemStack.EMPTY -> null
+[10:44:01] [INFO] [NekoJS Test][PASS] empty: undefined -> ItemStack.EMPTY -> null
+[10:44:01] [INFO] [NekoJS Test][PASS] empty: JS null -> ItemStack.EMPTY -> null
+[10:44:01] [INFO] [NekoJS Test][PASS] readonly: furnaceFuel is a query function
+[10:44:01] [INFO] [NekoJS Test][PASS] readonly: compostable is a query function
+[10:44:01] [INFO] [NekoJS Test][PASS] readonly: repeated query of the same entry returns the same snapshot
+[10:44:01] [INFO] [NekoJS Test][PASS] readonly: repeated query of the same entry returns the same snapshot (compostable)
+[10:44:01] [INFO] [NekoJS Test][SUMMARY] 15 passed, 0 failed
+[10:44:01] [INFO] [NekoJS Test][SECTION] EntitySelectors.query
+[10:44:01] [INFO] [NekoJS Test][PASS] dedicated server is running
+[10:44:01] [INFO] [NekoJS Test][PASS] overworld ServerLevel obtained
+[10:44:01] [INFO] [NekoJS Test][PASS] prerequisite: forceload + tagged summon done first (q25f=4 cows=3 q25f_c1=1 q25f_p1=1); see this file header / REPORT §5
+[10:44:01] [INFO] [NekoJS Test][PASS] prerequisite: tagged bee present (q25bee=1)
+[10:44:01] [INFO] [NekoJS Test][PASS] allEntities() + tag + find: hits every tagged entity
+[10:44:01] [INFO] [NekoJS Test][PASS] create(b => tag + type(cow)) + find: hits exactly the tagged cow
+[10:44:01] [INFO] [NekoJS Test][PASS] builder() + explicit type(cow) is entity-scoped and excludes the tagged pig
+[10:44:01] [INFO] [NekoJS Test][PASS] builder() + type(cow) + tag narrows to the single tagged cow
+[10:44:01] [INFO] [NekoJS Test][PASS] scope: a tag-only builder() stays on the player base (0 players online)
+[10:44:01] [INFO] [NekoJS Test][PASS] scope: allPlayers() preset stays player-only -> empty snapshot
+[10:44:01] [INFO] [NekoJS Test][PASS] type(cow) on create() sees non-player entities (includesEntities fix)
+[10:44:01] [INFO] [NekoJS Test][PASS] type(cow) on builder() sees non-player entities (includesEntities fix)
+[10:44:01] [INFO] [NekoJS Test][PASS] tag + type(cow) -> the tagged cows
+[10:44:01] [INFO] [NekoJS Test][PASS] tag + type(pig) -> the tagged pig
+[10:44:01] [INFO] [NekoJS Test][PASS] tag + type(pig, inverse) -> everything tagged except the pig
+[10:44:01] [INFO] [NekoJS Test][PASS] tag + inverse type(cow) excludes the cow -> 0
+[10:44:01] [INFO] [NekoJS Test][PASS] type(player) stays player-scoped -> 0 players online
+[10:44:01] [INFO] [NekoJS Test][PASS] typeTag(entity_type tag) hits the tagged bee
+[10:44:01] [INFO] [NekoJS Test][PASS] typeTag alone switches to the entity base (includesEntities fix)
+[10:44:01] [INFO] [NekoJS Test][PASS] distanceBelow(8) keeps the tagged set near the anchor
+[10:44:01] [INFO] [NekoJS Test][PASS] distanceAbove(8) misses the near tagged set
+[10:44:01] [INFO] [NekoJS Test][PASS] distanceAbove(8) hits the far tagged bee
+[10:44:01] [INFO] [NekoJS Test][PASS] distanceBelow(8) misses the far tagged bee
+[10:44:01] [INFO] [NekoJS Test][PASS] limit(2) caps the tagged set
+[10:44:01] [INFO] [NekoJS Test][PASS] orderNearest().limit(1) returns exactly one
+[10:44:01] [INFO] [NekoJS Test][PASS] orderNearest result is a materialized entity
+[10:44:01] [INFO] [NekoJS Test][PASS] create(null) -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] limit(0) -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] negative distance -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] min>max distance -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] negative distanceBelow -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] min>max level -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] unknown entity type -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] unknown entity type tag -> labeled error (not a silent empty no-op)
+[10:44:01] [INFO] [NekoJS Test][PASS] unknown gamemode -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] null level -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] null selector -> labeled error
+[10:44:01] [INFO] [NekoJS Test][PASS] repeated query is side-effect free
+[10:44:01] [INFO] [NekoJS Test][SUMMARY] 53 passed, 0 failed
+[10:44:01] [INFO] TEST 脚本运行完毕。
