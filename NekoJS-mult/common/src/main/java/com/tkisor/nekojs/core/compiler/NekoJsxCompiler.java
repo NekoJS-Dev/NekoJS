@@ -29,7 +29,7 @@ public final class NekoJsxCompiler {
     /** 同 {@link #compileTsx(Path, String)} 但可选自动 runtime。 */
     public static ScriptCompileResult compileTsx(Path file, String source, boolean automatic) {
         JsxTransformResult lowered = new Transpiler(file, source == null ? "" : source, automatic).transpileDetailed();
-        NekoTypeScriptCompiler.TypeScriptTransformResult erased = NekoTypeScriptCompiler.erasePreservingSourceMap(file, lowered.code(), lowered.sourceMap());
+        NekoTypeScriptCompiler.TypeScriptTransformResult erased = NekoTypeScriptCompiler.eraseJsxFrontendPreservingSourceMap(file, lowered.code(), lowered.sourceMap());
         return new ScriptCompileResult(erased.code(), erased.sourceMap());
     }
 

@@ -8,7 +8,9 @@ public record NekoJsxTokenStream(
         String sourceMap
 ) implements NekoTokenStream {
     public NekoJsxTokenStream {
-        languageId = languageId == null || languageId.isBlank() ? "jsx" : languageId;
+        languageId = languageId == null || languageId.isBlank()
+                ? NekoJsxLanguagePlugin.INSTANCE.id()
+                : languageId;
         transformedSource = transformedSource == null ? "" : transformedSource;
     }
 }

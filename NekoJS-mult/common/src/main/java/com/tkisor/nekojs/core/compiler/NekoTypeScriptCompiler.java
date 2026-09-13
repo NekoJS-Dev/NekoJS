@@ -7,9 +7,15 @@ import java.util.List;
 public final class NekoTypeScriptCompiler {
     private NekoTypeScriptCompiler() {}
 
-    static TypeScriptTransformResult erasePreservingSourceMap(Path file, String source, String sourceMap) {
+    /**
+     * JSX/TSX frontend 之后的擦除：输入已经是 JSX lowering 的产物，因此产物里的 `<…>`
+     * 必须按 JSX 表达式理解，不能按 TS 泛型实参重解（见 {@code Eraser.jsxFrontend}）。
+     *
+     * <p>这是 {@code .jsx}/{@code .tsx} 唯一的 TS 擦除入口——不存在第二条并行的转译路径。
+     */
+    static TypeScriptTransformResult eraseJsxFrontendPreservingSourceMap(Path file, String source, String sourceMap) {
         String original = source == null ? "" : source;
-        return new TypeScriptTransformResult(new Eraser(file, original).erase(), sourceMap);
+        return new TypeScriptTransformResult(new Eraser(file, original, true).erase(), sourceMap);
     }
 
     static TypeScriptTransformResult eraseDetailed(Path file, String source) {
@@ -44,10 +50,31 @@ public final class NekoTypeScriptCompiler {
         private final boolean[] caseOrLabelColon;
         /** 预扫描：该偏移处于 import/export 的值别名子句（named {...} 或 * as X）——其中的 as 是 JS 原生别名。*/
         private final boolean[] aliasClause;
+        /**
+         * 结构扫描遇到的<strong>未终止</strong>类型构造位置（-1 = 无）。
+         *
+         * <p>拆解器（{@link #statementOrBlockDeclarationEnd}、{@link #typeExpressionEnd}）本身无法抛异常
+         * —— 它们只返回位置。未闭合时把位置记在这里并返回 {@code length}，由擦除主循环统一
+         * {@link #failClosedUnterminated()} 抛错。历史上这些方法直接 {@code return length}，
+         * 结果把文件剩余部分<strong>静默擦成空白</strong>（作者的 {@code SIDE_EFFECT()} 凭空消失）。
+         */
+        private int unterminatedTypeAt = -1;
+        /**
+         * 本擦除器是否运行在 JSX/TSX frontend 之后（{@code .jsx}/{@code .tsx} 的产物擦除）。
+         *
+         * <p>该产物里的 {@code <…>} 已经是 JSX lowering 的输出（如 {@code <Foo<number>/>} 变成
+         * {@code Foo<number>}），不能再按 TS 泛型实参重解一次——那会擦掉 JSX 组件的运行时表达式。
+         */
+        private final boolean jsxFrontend;
 
         private Eraser(Path file, String source) {
+            this(file, source, false);
+        }
+
+        private Eraser(Path file, String source, boolean jsxFrontend) {
             this.file = file;
             this.source = source;
+            this.jsxFrontend = jsxFrontend;
             this.out = new StringBuilder(source);
             this.length = source.length();
             this.caseOrLabelColon = new boolean[length];
@@ -56,6 +83,11 @@ public final class NekoTypeScriptCompiler {
         }
 
         private String erase() {
+            // 先做一遍只读的谓词预扫描：任何 typeAnnotationAt/genericTypeArgumentsAt 的"不可安全擦除"
+            // 判定都在这里落到 unterminatedTypeAt。这样真正写 out 的主循环读到的谓词结果与预扫描一致，
+            // 不会出现"谓词先判真、拆解器随后又报未终止"的撕裂（拆解器一旦报告，就必须 fail closed）。
+            scanPredicates();
+            failClosedUnterminated();
             int i = 0;
             while (i < length) {
                 char c = source.charAt(i);
@@ -151,12 +183,14 @@ public final class NekoTypeScriptCompiler {
                 }
                 if (c == '<' && genericTypeArgumentsAt(i)) {
                     int end = matchingAngle(i);
+                    failClosedUnterminated();
                     eraseRange(i, end + 1);
                     i = end + 1;
                     continue;
                 }
                 if (c == ':' && typeAnnotationAt(i)) {
                     int end = typeAnnotationEnd(i + 1);
+                    failClosedUnterminated();
                     // 可选参数 name?: T → 连带擦 ?
                     int q = previousNonWhitespace(i - 1);
                     int start = (q >= 0 && source.charAt(q) == '?') ? q : i;
@@ -172,6 +206,7 @@ public final class NekoTypeScriptCompiler {
                         int colon = nextNonWhitespace(i + 1);
                         if (colon < length && source.charAt(colon) == ':') {
                             int tend = typeAnnotationEnd(colon + 1);
+                            failClosedUnterminated();
                             eraseRange(colon, tend);
                             i = tend;
                         } else {
@@ -195,6 +230,77 @@ public final class NekoTypeScriptCompiler {
             }
             transform();
             return out.toString();
+        }
+
+        // ===== 阶段0：谓词预扫描（只读，不改 out） =====
+
+        /**
+         * 只读预扫描：把 {@code typeAnnotationAt} 的"不可安全擦除"判定提前落定。
+         *
+         * <p>为什么必须先扫一遍：谓词（如 {@code typeAnnotationAt}）的 shadow 调用与正式调用结果
+         * 必须一致，否则会出现"谓词判真 → 主循环进擦除分支 → 拆解器随后报告未终止"的撕裂；
+         * 预扫描保证拆解器的报告在主循环真正擦除任何东西之前就已经变成异常。
+         * 本方法自身<strong>不抛异常</strong>（只置位），异常统一由调用方发起。
+         */
+        private void scanPredicates() {
+            int i = 0;
+            while (i < length) {
+                char c = source.charAt(i);
+                if (c == '\'' || c == '"') {
+                    i = skipString(i, c);
+                    continue;
+                }
+                if (c == '`') {
+                    i = skipTemplate(i);
+                    continue;
+                }
+                if (c == '/') {
+                    int skipped = skipSlash(i);
+                    if (skipped != i) {
+                        i = skipped;
+                        continue;
+                    }
+                }
+                if (isIdentifierStart(c)) {
+                    int end = readIdentifierEnd(i + 1);
+                    String word = source.substring(i, end);
+                    if (("interface".equals(word) || "type".equals(word)) && typeDeclAfter(end)) {
+                        // 只检查体是否闭合，不擦除：未闭合的 interface/type 会让
+                        // statementOrBlockDeclarationEnd 报告 fail closed
+                        statementOrBlockDeclarationEnd(i);
+                        if (unterminatedTypeAt >= 0) {
+                            return;
+                        }
+                        i = end;
+                        continue;
+                    }
+                    if ("declare".equals(word) && declareHasBody(end)) {
+                        statementOrBlockDeclarationEnd(i);
+                        if (unterminatedTypeAt >= 0) {
+                            return;
+                        }
+                        i = end;
+                        continue;
+                    }
+                    i = end;
+                    continue;
+                }
+                if (c == ':' && typeAnnotationAt(i)) {
+                    typeAnnotationEnd(i + 1);
+                    if (unterminatedTypeAt >= 0) {
+                        return;
+                    }
+                }
+                i++;
+            }
+        }
+
+        /** declare 之后是否为带 { } 体的环境声明（只有这些形态才需要检查体闭合）。 */
+        private boolean declareHasBody(int afterDeclare) {
+            int after = nextNonWhitespace(afterDeclare);
+            return startsWithKeyword(after, "class") || startsWithKeyword(after, "abstract")
+                    || startsWithKeyword(after, "global") || startsWithKeyword(after, "module")
+                    || startsWithKeyword(after, "namespace") || startsWithKeyword(after, "enum");
         }
 
         // ===== 阶段0：语句级结构预扫描 =====
@@ -1183,7 +1289,10 @@ public final class NekoTypeScriptCompiler {
                     || startsWithKeyword(after, "const") || startsWithKeyword(after, "let") || startsWithKeyword(after, "var")
                     || startsWithKeyword(after, "class") || startsWithKeyword(after, "abstract") || startsWithKeyword(after, "function")
                     || startsWithKeyword(after, "enum")) {
-                // 环境声明整句擦除：declare const x: T 只擦 declare 会留下无初始化 const → SyntaxError
+                // 环境声明整句擦除：declare const x: T 只擦 declare 会留下无初始化 const → SyntaxError。
+                // 带 { } 体的形态（class/abstract/global/module/namespace/enum）在体未闭合时由
+                // statementOrBlockDeclarationEnd → failUnterminated 走 fail closed；
+                // 以 ; / 换行结束的形态（const/let/var/function）没有可闭合的体，不会误报。
                 int end = statementOrBlockDeclarationEnd(start);
                 eraseRange(start, end);
                 return end;
@@ -1225,6 +1334,11 @@ public final class NekoTypeScriptCompiler {
                 if (c == '{') break;
                 end++;
             }
+            if (end >= length) {
+                // implements 子句扫到文件末尾都没遇到类体 '{' —— 形态不可安全擦除。
+                // 位置用 implements 关键字起点，而不是它前面已擦过的 class。
+                return failUnterminated(start);
+            }
             eraseRange(start, end);
             return end;
         }
@@ -1234,6 +1348,7 @@ public final class NekoTypeScriptCompiler {
                 return wordEnd;
             }
             int end = typeExpressionEnd(wordEnd);
+            failClosedUnterminated();
             eraseRange(start, end);
             return end;
         }
@@ -1396,6 +1511,15 @@ public final class NekoTypeScriptCompiler {
             int next = nextNonWhitespace(close + 1);
             if (next >= length) return false;
             char nextChar = source.charAt(next);
+            if (jsxFrontend) {
+                // JSX/TSX frontend 产物：`<…>` 可能已经是 JSX lowering 留下的组件表达式
+                //（`<Foo<number>/>` → `jsx(Foo<number>, null)`）。只有「泛型调用 foo<T>(…)」与
+                //「泛型箭头 <T>(…) => … / <T>(…) {}」两种后续形态才确定是待擦除的 TS 类型参数；
+                // 后跟 `,`/`)`/`]`/`;` 的 `<…>` 一律保留——擦掉会改变 JSX 组件的运行时值，
+                // 并让 .tsx 的产物与 prepared module 报出不同的语言身份。
+                return nextChar == '('
+                        || (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>');
+            }
             // <T>(  或  <T> =>  —— 泛型箭头/泛型调用
             if (nextChar == '(' || nextChar == '{') return true;
             if (nextChar == '=' && next + 1 < length && source.charAt(next + 1) == '>') return true;
@@ -1640,6 +1764,11 @@ public final class NekoTypeScriptCompiler {
                 }
                 i++;
             }
+            if (angle > 0) {
+                // 泛型参数列表从未闭合（如 `const x: Array<string = SIDE_EFFECT();`）：
+                // 返回 length 会把整个类型标注（连同初始化表达式）一起擦掉，产出的 JS 语义已变
+                return failUnterminated(start);
+            }
             return i;
         }
 
@@ -1726,7 +1855,12 @@ public final class NekoTypeScriptCompiler {
             }
             if (bodyStart < 0) return statementEnd(start);
             int bodyEnd = matchingCloseBrace(bodyStart);
-            return bodyEnd < 0 ? length : bodyEnd + 1;
+            if (bodyEnd < 0) {
+                // 未闭合的 { —— 绝不吞到文件末尾：记录位置，由擦除主循环带 file + 行列 fail closed。
+                // 位置用声明起点：那才是作者写错的 interface/type/declare 关键字所在处。
+                return failUnterminated(start);
+            }
+            return bodyEnd + 1;
         }
 
         private int statementEnd(int start) {
@@ -1884,6 +2018,33 @@ public final class NekoTypeScriptCompiler {
                     out.setCharAt(i, ' ');
                 }
             }
+        }
+
+        /**
+         * fail-closed 出口：记录不可安全擦除的未终止构造位置并返回文件末尾。
+         *
+         * <p>调用方（拆解器）本身不抛异常，统一由擦除主循环在拿到返回值后调
+         * {@link #failClosedUnterminated()} —— 拆解器仍只是纯位置计算，错误路径集中在一处。
+         */
+        private int failUnterminated(int index) {
+            if (unterminatedTypeAt < 0 || index < unterminatedTypeAt) {
+                unterminatedTypeAt = index;
+            }
+            return length;
+        }
+
+        /** 若上次拆解遇到未终止类型构造，带 file + 行列抛错。 */
+        private void failClosedUnterminated() {
+            if (unterminatedTypeAt < 0) {
+                return;
+            }
+            int index = unterminatedTypeAt;
+            unterminatedTypeAt = -1;
+            throw new IllegalArgumentException("Unterminated TypeScript type construct in " + file
+                    + " at " + position(index)
+                    + ". The type body never closes, so the eraser cannot tell which code belongs to the"
+                    + " declaration and which is executable script. Close the type before the following code,"
+                    + " or remove the incomplete declaration. (NekoJS refuses to silently erase the rest of the file.)");
         }
 
         private IllegalArgumentException unsupported(String syntax, int index) {
