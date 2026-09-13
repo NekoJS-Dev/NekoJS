@@ -1,5 +1,4 @@
-# addon 制品与采样原始输出不入库（证据归档进 docs/architecture-refactor/baseline/*/）
+# addon 制品与采样原始输出不入库（证据 gz/json 归档进 docs/architecture-refactor/baseline/*/evidence/）
 build/
 logs/
-out/*/server-stdout.log
-out/*/server-stderr.log
+out/
