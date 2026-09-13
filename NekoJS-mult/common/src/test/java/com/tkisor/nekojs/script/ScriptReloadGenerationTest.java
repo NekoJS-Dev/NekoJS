@@ -405,7 +405,9 @@ class ScriptReloadGenerationTest {
 
     /**
      * bindEvents / clearListeners 生命周期计数：initial load 只 bind 一次；
-     * 失败 reload（ticket 06）不触碰总线——监听器清扫只发生在 commit 点。
+     * 失败 reload（ticket 06）不触碰总线——监听器清扫只发生在 commit 点；
+     * 成功 reload 的清扫恰好一次（旧 generation 停止接收新 callback 的观测面），
+     * 且清扫后只有新 generation 的监听器在总线上（无累积、无双注册）。
      */
     @Test
     void bridgeLifecycleCallCounts() throws Exception {
@@ -419,6 +421,16 @@ class ScriptReloadGenerationTest {
             assertThrows(RuntimeException.class, harness::reload);
             assertTrue(harness.bridge.clearListenersCalls.isEmpty(),
                     "failed reload must not clear any listeners (ticket 06: sweep happens only at commit)");
+
+            // 成功 reload：完整清扫恰好一次（在 commit 点），随后只有新 generation 的监听器
+            harness.writeScript("entry.js", "TestEvents.ping(function (event) { Counter.hit('v2'); });\n");
+            harness.reload();
+            assertEquals(List.of(ScriptType.SERVER), harness.bridge.clearListenersCalls,
+                    "successful reload must sweep the old generation listeners exactly once at commit");
+            assertTrue(harness.bridge.busHasListeners(), "new generation listeners are live after commit");
+            harness.bridge.postTestEvent();
+            assertEquals(0, harness.counter.hitsOf("v1"), "swept generation must not receive new events");
+            assertEquals(1, harness.counter.hitsOf("v2"), "only the committed generation executes, exactly once");
         }
     }
 
