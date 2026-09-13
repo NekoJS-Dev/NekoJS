@@ -1,0 +1,72 @@
+# ticket 06 双轴审查修复轮 — 全套门与测试计数归档
+
+时间：2026-09-13（UTC+8）
+分支 / 工作树：`ticket-06-reload-commit` @ `D:\mcmodDemo\NekoJS\NekoJS-t06\NekoJS-mult`
+代码面：commit `b43b92fc`（审查修复 A1–A5；第一轮门跑在该 commit 的工作树上，第二轮在最终树上复跑）
+烟测证据引用：`checks-20260913T035123Z-26.1.2.json` 等，其 `env.txt` 记 `git rev: 6e1d9b40`
+（= 烟测时的 HEAD）+ 未提交的修复；该工作树的 main 源码 == `b43b92fc` 的 main 源码。
+为什么归档：Phase 8 报告的「192 suites / 1417 tests、guardLint 0 问题」当时只有自述，没有可核对的产物；
+审查据此要求补归档。本文件给出可重跑的原始门输出与逐模块计数。
+
+## 1. 门命令与结果
+
+```
+./gradlew :common:check :common-api-processor:test guardLint \
+          :26.1.2:check :26.2.0:check :1.21.1:check \
+          :26.1.2-fabric:compileJava :26.2.0-fabric:compileJava --console=plain
+```
+
+关键输出（原样粘贴，两轮：第一轮在源码修复后、第二轮在测试补充后的最终工作树上）：
+
+```
+> Task :guardLint
+guardLint: 守卫块 247，扫描 326 个文件；超限豁免 0 个；警告 0 条
+BUILD SUCCESSFUL in 29s
+62 actionable tasks: 29 executed, 33 up-to-date
+
+（最终工作树复跑）
+> Task :guardLint
+guardLint: 守卫块 247，扫描 326 个文件；超限豁免 0 个；警告 0 条
+BUILD SUCCESSFUL in 2s
+62 actionable tasks: 5 executed, 57 up-to-date
+```
+
+已执行的判定任务（`grep '^> Task'`，全部无 FAILED）：
+
+```
+:guardLint :common-api-processor:test :common:test :common:check
+:26.1.2:compileJava :26.1.2:test :26.1.2:check
+:26.2.0:compileJava :26.2.0:test :26.2.0:check
+:1.21.1:compileJava :1.21.1:test :1.21.1:check
+:26.1.2-fabric:compileJava :26.2.0-fabric:compileJava
+```
+
+## 2. 逐模块测试计数（本轮 `build/test-results` 聚合）
+
+| 模块 | suites | tests | skipped | failures | errors |
+|---|---|---|---|---|---|
+| `:common` | 192 | 1420 | 5 | 0 | 0 |
+| `:common-api-processor` | 1 | 13 | 0 | 0 | 0 |
+| `:26.1.2` | 33 | 155 | 34 | 0 | 0 |
+| `:26.2.0` | 33 | 155 | 34 | 0 | 0 |
+| `:1.21.1` | 21 | 76 | 0 | 0 | 0 |
+| `:26.1.2-fabric` | 11 | 58 | 6 | 0 | 0 |
+
+口径说明：`:26.1.2-fabric` / `:26.2.0-fabric` 本轮按工单要求只跑 `compileJava`，
+表中 fabric 行是上一轮 check 的归档值（本轮未重跑 fabric 测试任务）。
+
+与 Phase 8 报告（`:common` 192 / 1417 / 5）的差：**+3 executed**——
+`ScriptReloadGenerationTest` 新增
+`illegalDispatchKeyFailsCandidatePlanAndPreservesActive`（A1 回归）、
+`killedCandidateContextIsClosedAndUnregistered`（AC2 显式断言）、
+`commitSweepsOldListenersBeforePublishingNewRuntime`（AC4 顺序断言），
+该文件 11 → 14 个 `@Test`（本轮实测 14/0/0/0）。
+`NekoRuntimeRootReloadResultTest` 仍 2 个方法，但 FILE 失败结果新增
+`sourceLocation` 断言（A2）。无测试被删除。
+
+## 3. 本轮修复的红/绿证据
+
+- A1 的 red → green 原始探针输出：本目录 `a1-red-green-probe-2026-09-12.txt`。
+- A4 的入口顺序证据：烟测 `checks-20260913T035123Z-26.1.2.json` 的
+  `E_non_transactional_conclusion_precedes_success_line=true`（新增判定）
+  与 `rcon-phaseE-reload-startup-20260913T035123Z-26.1.2.txt` 的应答原文顺序。

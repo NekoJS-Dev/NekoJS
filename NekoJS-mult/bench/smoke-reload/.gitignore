@@ -1,0 +1,3 @@
+# 采样原始输出不入库（证据 gz 归档进 docs/architecture-refactor/baseline/*/evidence/）
+out/
+*.log

@@ -1,0 +1,4 @@
+﻿utc: 2026-09-13T03:51:23.1910023Z
+git rev: 6e1d9b40
+node: 26.1.2
+run dir: D:\mcmodDemo\NekoJS\NekoJS-t06\NekoJS-mult\versions\26.1.2\run

@@ -1,0 +1,6 @@
+2026-09-13T03:51:26.000988600Z main WARN Advanced terminal features are not available in this environment
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in module graalmc (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=graalmc to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
