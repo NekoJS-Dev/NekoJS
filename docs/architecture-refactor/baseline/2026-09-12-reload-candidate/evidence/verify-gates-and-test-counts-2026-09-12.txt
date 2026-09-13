@@ -2,7 +2,9 @@
 
 时间：2026-09-13（UTC+8）
 分支 / 工作树：`ticket-06-reload-commit` @ `D:\mcmodDemo\NekoJS\NekoJS-t06\NekoJS-mult`
-代码面：HEAD `6e1d9b40` + 本轮未提交的 A1–A5 修复（工作树）
+代码面：commit `b43b92fc`（审查修复 A1–A5；第一轮门跑在该 commit 的工作树上，第二轮在最终树上复跑）
+烟测证据引用：`checks-20260913T035123Z-26.1.2.json` 等，其 `env.txt` 记 `git rev: 6e1d9b40`
+（= 烟测时的 HEAD）+ 未提交的修复；该工作树的 main 源码 == `b43b92fc` 的 main 源码。
 为什么归档：Phase 8 报告的「192 suites / 1417 tests、guardLint 0 问题」当时只有自述，没有可核对的产物；
 审查据此要求补归档。本文件给出可重跑的原始门输出与逐模块计数。
 

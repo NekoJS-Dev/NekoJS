@@ -24,7 +24,7 @@
 | `8ef55025` | 6（补） | `feat(lifecycle): ticket 06 STARTUP 非事务边界在入口外观显式化`（`nonTransactional()`/`requiresLoaderRestart()` + 三个节点命令面显式提示 + 三节点统一 `NekoReloadException` 呈现） |
 | `10f95658` | 7 | `test+bench(lifecycle): ticket 06 reload 烟测 runner、commit witness 与资源上限发现`（`bench/smoke-reload/` runner + fixture + 测试补充 + `@Disabled` 资源上限复现件） |
 | `6e1d9b40` | 8 | `docs(baseline): ticket 06 reload candidate report + gz evidence`（报告 + evidence 归档） |
-| 本 commit（Phase 9） | 9 | `fix(lifecycle): ticket 06 审查修复 A1–A5`（commit 点不可回滚、死码、generation 可见性、AC6 命令面顺序、烟测文档失真）+ 报告据实改判 + 归档重跑证据 |
+| `b43b92fc`（Phase 9） | 9 | `fix(lifecycle): ticket 06 审查修复 A1–A5`（commit 点不可回滚、死码、generation 可见性、AC6 命令面顺序、烟测文档失真）+ 报告据实改判 + 归档重跑证据 |
 
 未推送、未合并、未触碰 master（另一会话在 `D:/mcmodDemo/NekoJS` 的 master 上做工单 31）。
 
@@ -114,7 +114,7 @@ commit 点挂在 05 收口的唯一 root 入口 `NekoRuntimeRoot.reload(ScriptTy
 | 收尾 | RCON `stop` | `exitCode=0`、无 FATAL/crash report |
 
 证据文件（`evidence/`）：
-- 本轮（审查修复后）：前缀 `*-20260913T035123Z-26.1.2.*`（`checks`/`counts`/`env`/`rcon-phaseA..E-*`/`nekojs-server-*.log`/`smoke-26.1.2-stdout-*.log.gz`/`server-stderr-*.log`），`env.txt` 记 `git rev: 6e1d9b40`（= 当时的 HEAD；审查修复尚未提交，证据对应「HEAD + 工作树修复」）。
+- 本轮（审查修复后）：前缀 `*-20260913T035123Z-26.1.2.*`（`checks`/`counts`/`env`/`rcon-phaseA..E-*`/`nekojs-server-*.log`/`smoke-26.1.2-stdout-*.log.gz`/`server-stderr-*.log`），`env.txt` 记 `git rev: 6e1d9b40`（= 当时的 HEAD；审查修复尚未提交，证据对应「HEAD + 工作树修复」）。该工作树的 main 源码与 commit `b43b92fc` 的 main 源码逐字节一致（烟测之后只改过测试与文档，可用 `git diff b43b92fc -- src/main common/src/main versions bench` 复核为空）。
 - 上一轮（Phase 8）保留：前缀 `*-20260913T031818Z-26.1.2.*`，用于对比 A4 改动前后的 E 段应答顺序。
 - 门与测试计数归档：`verify-gates-and-test-counts-2026-09-12.txt`（审查要求：Phase 8 的「192/1417、guardLint 0」当年只有自述）。
 - A1 red→green 探针原始输出：`a1-red-green-probe-2026-09-12.txt`。
