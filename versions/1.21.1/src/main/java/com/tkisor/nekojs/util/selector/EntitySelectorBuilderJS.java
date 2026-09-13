@@ -52,21 +52,26 @@ public class EntitySelectorBuilderJS {
      * 实体类型过滤（如 {@code 'minecraft:cow'}）；inverse 为 true 时反选
      * （镜像原版 {@code type=!cow}：反选走谓词，ctor type 保持 null）。
      *
-     * <p>ticket 25 修复（与 26.x 共享树同款）：指定非玩家类型本身就意味着「要查实体」，
-     * 必须把 {@code includesEntities} 置 true。原实现只在玩家类型上调整该位，于是 ctor
-     * 保持 {@code includesEntities=false}（= 只走玩家列表），
-     * {@code create(b => b.type('minecraft:cow'))} 永远返回空。
+     * <p><b>工单 25 判定（双轴审查，2026-09-12）：本方法只按玩家类型调整作用域位，
+     * 非玩家类型<b>不</b>切作用域。</b>因此基座为玩家集合时
+     * {@code create(b => b.type('minecraft:cow'))} 命中 0（只有 {@code allEntities()}
+     * 一类实体基座才看得到 cow）。「显式实体类型过滤是否应切作用域」是<b>公开选择器
+     * 作用域语义变更</b>，超出工单 25「建立 fixture」的授权（项目纪律：公开语义变更
+     * 先回决策），故本票<b>钉住现状</b>——缺口与 owner 记入
+     * {@code baseline/2026-09-12-query-tools/REPORT.md} §7。与 26.x 共享树同款。
      */
     public EntitySelectorBuilderJS type(String entityTypeId, boolean inverse) {
         EntityType<?> resolved = entityType(entityTypeId);
         if (inverse) {
-            // type=!X（X 可为玩家或非玩家）都要能看到实体，否则反选无意义
             predicates.add(entity -> entity.getType() != resolved);
-            this.includesEntities = true;
+            if (isPlayerType(resolved)) {
+                this.includesEntities = true;
+            }
         } else {
             this.type = resolved;
-            // 正选玩家类型 → 玩家列表足够；正选非玩家类型 → 必须纳入实体
-            this.includesEntities = !isPlayerType(resolved);
+            if (isPlayerType(resolved)) {
+                this.includesEntities = false;
+            }
         }
         return this;
     }
@@ -76,14 +81,17 @@ public class EntitySelectorBuilderJS {
         return type(entityTypeId, false);
     }
 
-    /** 按实体 tag 过滤（如 {@code 'minecraft:skeletons'}）；inverse 为 true 时反选。 */
+    /**
+     * 按实体 tag 过滤（如 {@code 'minecraft:skeletons'}）；inverse 为 true 时反选。
+     *
+     * <p>工单 25 判定（双轴审查）：与 {@link #type} 同款——<b>不</b>切作用域位。
+     * 已知 tag 只在基座集合上求值；未知 tag 的行为见
+     * {@link EntitySelectorsJS#resolveEntityTypeTag} 的 characterization。
+     */
     public EntitySelectorBuilderJS typeTag(String tagId, boolean inverse) {
         var tag = EntitySelectorsJS.resolveEntityTypeTag(tagId);
         Predicate<Entity> predicate = entity -> entity.getType().is(tag) != inverse;
         predicates.add(predicate);
-        // ticket 25 修复（与 type 同类）：类型 tag 只在实体集合上才有意义，
-        // includesEntities=false 只查玩家列表会让该过滤永远命中 0。
-        this.includesEntities = true;
         return this;
     }
 

@@ -82,7 +82,14 @@ class DataMapQueryBindingTest {
         }
     }
 
-    /** 非法输入：null 栈 → 带 DataMap.furnaceFuel/compostable 域+入口的普通错误，无修复提示。 */
+    /**
+     * 非法输入：null 栈 → 带 DataMap.furnaceFuel/compostable 域+入口的普通错误，无修复提示。
+     *
+     * <p><b>可达性口径（工单 25 双轴审查核实）</b>：本用例走的是<b>Java 直接调用者</b>路径。
+     * 脚本侧 {@code DataMap.furnaceFuel(null)} 经引擎值适配映射为 {@code ItemStack.EMPTY}，
+     * 走「缺失」返回 {@code null} 而非报错（游戏内实证见 runServer fixture / REPORT §5.2）。
+     * 守卫保留的理由：Java 调用方不撞裸 NPE；它不是脚本侧行为契约。
+     */
     @Test
     void nullStackErrorCarriesDomainAndEntryWithoutFixHints() {
         DataMapJS dataMap = new DataMapJS();

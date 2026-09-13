@@ -1,0 +1,206 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins
+> Task :buildSrc:generateScriptPluginAdapters
+> Task :buildSrc:pluginDescriptors
+> Task :buildSrc:processResources
+> Task :buildSrc:compilePluginsBlocks
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors
+> Task :buildSrc:compileKotlin
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:classes
+> Task :buildSrc:jar
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources
+> Task :26.1.2:stonecutterPrepare
+> Task :26.1.2-fabric:stonecutterPrepare
+> Task :26.1.2:stonecutterGenerate
+> Task :26.1.2-fabric:stonecutterGenerate
+
+> Task :26.1.2:createMinecraftArtifacts
+[0;2;3m Deleted 19 outdated lock files
+Loaded 141 artifacts from D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 1.56s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
+[1m*** Started working on [4mdownloadClient[0m[0m
+[1m*** Started working on [4mdownloadServer[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.04s
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.04s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 2.52s
+
+
+> Task :26.1.2:generateModMetadata
+> Task :26.1.2:processResources
+> Task :26.1.2:processTestResources
+> Task :common:compileJava
+> Task :common:processResources
+> Task :common:classes
+> Task :common-api-processor:compileJava
+> Task :common-api-processor:classes
+> Task :common-api-processor:jar
+> Task :26.1.2-fabric:extractIcuClasses
+> Task :common:jar
+
+> Task :26.1.2-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()': ’“≤ªµΩcom.google.errorprone.annotations.InlineMeµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()': ’“≤ªµΩcom.google.errorprone.annotations.InlineMeµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()': ’“≤ªµΩcom.google.errorprone.annotations.InlineMeµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()': ’“≤ªµΩcom.google.errorprone.annotations.InlineMeµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()': ’“≤ªµΩcom.google.errorprone.annotations.InlineMeµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'imports()'
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\src\main\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:41: æØ∏Ê: [deprecation] ItemEvents÷–µƒPICKED_UP_PRE“—π˝ ±
+                || ItemEvents.PICKED_UP_PRE.hasListeners();
+                             ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\src\main\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:49: æØ∏Ê: [deprecation] ItemEvents÷–µƒPICKED_UP_PRE“—π˝ ±
+            cancelled = ItemEvents.PICKED_UP_PRE.post(payload, item);
+                                  ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\src\main\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:41: æØ∏Ê: [deprecation] PlayerEvents÷–µƒINVENTORY_OPENED“—π˝ ±
+        PlayerEvents.INVENTORY_OPENED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\src\main\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:47: æØ∏Ê: [deprecation] PlayerEvents÷–µƒINVENTORY_CLOSED“—π˝ ±
+        PlayerEvents.INVENTORY_CLOSED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\src\main\java\com\tkisor\nekojs\fabric\mixin\MixinServerGamePacketListenerItemInteract.java:54: æØ∏Ê: [deprecation] ServerLevel÷–µƒgetEntityOrPart(int)“—π˝ ±
+        Entity target = this.player.level().getEntityOrPart(packet.entityId());
+                                           ^
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()': ’“≤ªµΩcom.google.errorprone.annotations.DoNotCallµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableList.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'InlineMe' µƒ≈˙◊¢∑Ω∑® 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotMock' µƒ≈˙◊¢∑Ω∑® 'value()': ’“≤ªµΩcom.google.errorprone.annotations.DoNotMockµƒ¿‡Œƒº˛
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.guava\guava\33.5.0-jre\8699de25f2f979108d6c1b804a7ba38cda1116bc\guava-33.5.0-jre.jar(/com/google/common/collect/ImmutableCollection.class): æØ∏Ê: [classfile] Œﬁ∑®’“µΩ¿‡–Õ 'DoNotCall' µƒ≈˙◊¢∑Ω∑® 'value()'
+50 ∏ˆæØ∏Ê
+
+> Task :26.1.2:compileJava
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\src\main\java\com\tkisor\nekojs\api\inject\ItemStackExtension.java:156: æØ∏Ê: [deprecation] ItemStack÷–µƒgetEnchantments()“—π˝ ±
+        return self().getEnchantments().getLevel(enchantment) >= level;
+                     ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\src\main\java\com\tkisor\nekojs\wrapper\registry\gen\FluidBuilder.java:64: æØ∏Ê: [this-escape] ø…ƒ‹‘⁄ÕÍ»´≥ı ºªØ◊”¿‡÷Æ«∞Ã”“›¡À 'this'
+        this.flowing = new RegistryObjectBuilder<>(getFlowingId()) {
+                                                               ^
+2 ∏ˆæØ∏Ê
+
+> Task :26.1.2:classes
+> Task :26.1.2-fabric:generateModMetadata
+> Task :26.1.2-fabric:processResources
+> Task :26.1.2-fabric:classes
+> Task :26.1.2-fabric:stonecutterPrepareTest
+> Task :26.1.2-fabric:stonecutterGenerateTest
+
+> Task :26.1.2:compileTestJava
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\src\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: æØ∏Ê: [try] ≤ªƒ‹‘⁄œ‡”¶µƒ try ”Ôæ‰µƒ’˝Œƒ÷–“˝”√ø…◊‘∂ØΩ· ¯µƒ◊ ‘¥context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\src\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: æØ∏Ê: [try] ≤ªƒ‹‘⁄œ‡”¶µƒ try ”Ôæ‰µƒ’˝Œƒ÷–“˝”√ø…◊‘∂ØΩ· ¯µƒ◊ ‘¥context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+2 ∏ˆæØ∏Ê
+
+> Task :26.1.2:testClasses
+
+> Task :26.1.2-fabric:compileTestJava
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:52: æØ∏Ê: [try] ≤ªƒ‹‘⁄œ‡”¶µƒ try ”Ôæ‰µƒ’˝Œƒ÷–“˝”√ø…◊‘∂ØΩ· ¯µƒ◊ ‘¥context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+D:\mcmodDemo\NekoJS\NekoJS-t25\NekoJS-mult\versions\26.1.2-fabric\build\generated\stonecutter\test\java\com\tkisor\nekojs\bindings\static_access\BindingHelpersTest.java:62: æØ∏Ê: [try] ≤ªƒ‹‘⁄œ‡”¶µƒ try ”Ôæ‰µƒ’˝Œƒ÷–“˝”√ø…◊‘∂ØΩ· ¯µƒ◊ ‘¥context
+        try (Context context = Context.newBuilder().build()) {
+                     ^
+2 ∏ˆæØ∏Ê
+
+> Task :26.1.2-fabric:processTestResources
+> Task :26.1.2-fabric:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldOffset has been called by net.jodah.typetools.TypeResolver (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/net.jodah/typetools/0.6.3/a01aaa6ddaea9ec07ec4f209487b7a46a526283a/typetools-0.6.3.jar)
+WARNING: Please consider reporting this to the maintainers of class net.jodah.typetools.TypeResolver
+WARNING: sun.misc.Unsafe::staticFieldOffset will be removed in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762962/560c593ecf454385f4645a2efaf2c170cc98268d/graal-1504336-8762962.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.1.2:test
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.1.2-fabric:test
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/NekoJS-t25/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 26s
+35 actionable tasks: 35 executed

@@ -1,6 +1,9 @@
 # Ticket 25 query tools capability matrix — fabric（26.1.2-fabric / 26.2.0-fabric 共用）。
 # 每行由 QueryToolCapabilityMatrixTest 的真实探针派生（fabric 节点运行时选本文件，
 # neoforge 节点选 capability-matrix-neoforge.txt），status 词汇 = CapabilityStatus 三态。
+# 口径：SUPPORTED 行必须有**真实探针**（真实进 FabricPluginLoader 内置清单 + 真实注册进
+# 真实 registry）；只有 source trace、未经运行时探测的行记 PARTIAL 并写明「未实测」。
+# 本文件由 `:26.1.2-fabric:test` 实际执行派生（工单 25 审查后补跑，见 REPORT §5.8）。
 # 只读基线：capability 变更须先改行为/探针，再更新本文件并在 REPORT golden 差异小节留记录。
 DataMap | DataMap binding[CLIENT] | UNAVAILABLE | neoforge-only: NekoJSCorePlugin/DataMapJS absent on fabric; script-side undefined identifier at preflight (explicit failure)
 DataMap | DataMap binding[SERVER] | UNAVAILABLE | neoforge-only: NekoJSCorePlugin/DataMapJS absent on fabric; script-side undefined identifier at preflight (explicit failure)

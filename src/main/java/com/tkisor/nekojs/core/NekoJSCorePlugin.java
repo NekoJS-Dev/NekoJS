@@ -162,8 +162,10 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
                 Set.of("of")),
                 ParticleOptionsJS.class));
         // NeoForge data map 快捷查询（其余 map 经 Registry.get(...).dataMapValue(...)）。
-        // ticket 25 修复：必须注册实例——class binding（StaticClass）不暴露 instance 方法，
-        // 运行时 DataMap.furnaceFuel 报 Unknown identifier（游戏内 fixture 实证）。
+        // ticket 25 修复：必须注册**实例**——class binding（StaticClass）不暴露 instance 方法，
+        // 脚本侧 DataMap.furnaceFuel 拿到 `typeof === 'undefined'`，调用即
+        // `Unknown identifier: furnaceFuel`（可复现的 A/B 对照见
+        // baseline/2026-09-12-query-tools/evidence/datamap-binding-control-*.log 与 REPORT §5.6）。
         // DataMapJS 无状态，单例实例即查询面。
         registry.register("DataMap", new DataMapJS());
         // NativeEventsJS implements Binding so its close() (→ clear()) runs on STARTUP

@@ -1,0 +1,269 @@
+﻿[12:16:26] [INFO] 正在运行 TEST 脚本...
+[12:16:26] [INFO] 发现了 8 个 TEST 脚本。
+[12:16:26] [INFO] [NekoJS Test][SECTION] DataMap.query
+[12:16:26] [ERROR] 脚本执行失败: nekojs:test/datamap-query.js
+环境: TEST
+位置: test_scripts/datamap-query.js:18:25
+原因: furnaceFuel
+
+   16 | Test.assertEquals(1600, DataMap.furnaceFuel(Item.of('minecraft:coal')),
+   17 |   'hit: coal burnTime from the vanilla furnace_fuels data map');
+ > 18 | const appleChance = DataMap.compostable(Item.of('minecraft:apple'));
+     |                         ^
+   19 | Test.assertTrue(typeof appleChance === 'number' && appleChance > 0 && appleChance <= 1,
+   20 |   'hit: apple compostable chance is a snapshot number in (0,1], got: ' + appleChance);
+
+堆栈: at anonymous (test_scripts/datamap-query.js:18)
+[12:16:26] [INFO] [NekoJS Test][SECTION] EntitySelectors.query
+[12:16:26] [INFO] [NekoJS Test][PASS] dedicated server is running
+[12:16:26] [INFO] [NekoJS Test][PASS] overworld ServerLevel obtained
+[12:16:26] [INFO] [NekoJS Test][PASS] prerequisite: forceload + tagged summon done first (q25f=20 cows=15 q25f_c1=5 q25f_p1=5); see this file header / REPORT §5
+[12:16:26] [INFO] [NekoJS Test][PASS] prerequisite: tagged bee present (q25bee=5)
+[12:16:26] [INFO] [NekoJS Test][PASS] allEntities() + tag + find: hits every tagged entity (factory preset + builder + query)
+[12:16:26] [INFO] [NekoJS Test][PASS] allEntities() + tag + type(cow): hits exactly the tagged cows
+[12:16:26] [INFO] [NekoJS Test][PASS] allEntities() + tag + type(pig): hits the tagged pig
+[12:16:26] [INFO] [NekoJS Test][PASS] allEntities() + inverse type(pig): everything tagged except the pig
+[12:16:26] [INFO] [NekoJS Test][PASS] allEntities() + typeTag(declared entity type tag): hits the tagged bee
+[12:16:26] [INFO] [NekoJS Test][PASS] create(cfg) + type(player, inverse) runs the selector and hits every non-player entity, got: 32 (tagged=20)
+[12:16:26] [INFO] [NekoJS Test][PASS] create(cfg) and builder() build the same selector shape -> identical results
+[12:16:26] [INFO] [NekoJS Test][PASS] builder() + inverse type(player) + tag: the tagged entities (builder entry hits real entities)
+[12:16:26] [INFO] [NekoJS Test][PASS] nearestEntity() preset returns exactly one materialized entity
+[12:16:26] [INFO] [NekoJS Test][PASS] randomEntity() preset returns exactly one materialized entity
+[12:16:26] [INFO] [NekoJS Test][PASS] orderNearest result is a materialized entity
+[12:16:26] [INFO] [NekoJS Test][PASS] scope: a tag-only builder() stays on the player base (0 players online) -> empty
+[12:16:26] [INFO] [NekoJS Test][PASS] scope: create(cfg) base is the player scope (0 players online) -> empty
+[12:16:26] [INFO] [NekoJS Test][PASS] scope: allPlayers() preset stays player-only -> empty snapshot
+[12:16:26] [INFO] [NekoJS Test][PASS] scope: type(player) stays player-scoped -> 0 players online
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: create(b => b.type(cow)) does NOT switch scope -> 0 (documented-example style, see REPORT §7)
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: builder().type(cow) keeps the player base -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: inverse of a non-player type also keeps the player base -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: typeTag() alone keeps the player base -> 0 (entity base needed for hits)
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: unknown entity type tag is silently accepted (no error, silent no-op, see REPORT §7)
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: an unknown tag keeps the player base -> 0 (indistinguishable from a real empty filter)
+[12:16:26] [INFO] [NekoJS Test][PASS] GAP: an unknown tag on the entity base filters everything out -> 0 (silent, no error)
+[12:16:26] [INFO] [NekoJS Test][PASS] distanceBelow(8) keeps the tagged set near the anchor
+[12:16:26] [INFO] [NekoJS Test][PASS] distanceAbove(8) misses the near tagged set
+[12:16:26] [INFO] [NekoJS Test][PASS] distanceAbove(8) hits the far tagged bee
+[12:16:26] [INFO] [NekoJS Test][PASS] distanceBelow(8) misses the far tagged bee
+[12:16:26] [INFO] [NekoJS Test][PASS] limit(2) caps the tagged set
+[12:16:26] [INFO] [NekoJS Test][PASS] orderNearest().limit(1) returns exactly one
+[12:16:26] [INFO] [NekoJS Test][PASS] create(null) -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] limit(0) -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] negative distance -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] min>max distance -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] negative distanceBelow -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] min>max level -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] unknown entity type -> labeled error (contrast with the silent unknown tag above)
+[12:16:26] [INFO] [NekoJS Test][PASS] unknown gamemode -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] null level -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] null selector -> labeled error
+[12:16:26] [INFO] [NekoJS Test][PASS] repeated query is side-effect free
+[12:16:26] [INFO] [NekoJS Test][SUMMARY] 43 passed, 0 failed
+[12:16:26] [INFO] [NekoJS Test][SECTION] q25.diag.datamap-binding
+[12:16:26] [INFO] [NekoJS Test][PASS] diag[binding]: typeof DataMap = function
+[12:16:26] [INFO] [NekoJS Test][PASS] diag[binding]: typeof DataMap.furnaceFuel = undefined
+[12:16:26] [INFO] [NekoJS Test][PASS] diag[binding]: DataMap.furnaceFuel(coal) THREW: invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][SUMMARY] 46 passed, 0 failed
+[12:16:26] [ERROR] Script binding-preflight chain-member EMPTY callback exception:
+环境: TEST
+位置: test_scripts/q25-diag.js:78:77
+原因: no member 'EMPTY' on ItemStack
+
+   76 | 
+   77 | tryCall('furnaceFuel(null)', () => DataMap.furnaceFuel(null));
+ > 78 | tryCall('furnaceFuel(ItemStack.EMPTY)', () => DataMap.furnaceFuel(ItemStack.EMPTY));
+     |                                                                             ^
+   79 | tryCall('furnaceFuel(42)', () => DataMap.furnaceFuel(42));
+   80 | tryCall('furnaceFuel({})', () => DataMap.furnaceFuel({}));
+[12:16:26] [ERROR] Script binding-preflight chain-member EMPTY callback exception:
+环境: TEST
+位置: test_scripts/q25-diag.js:78:77
+原因: no member 'EMPTY' on ItemStack
+频次: 连续发生了 2 次
+
+   76 | 
+   77 | tryCall('furnaceFuel(null)', () => DataMap.furnaceFuel(null));
+ > 78 | tryCall('furnaceFuel(ItemStack.EMPTY)', () => DataMap.furnaceFuel(ItemStack.EMPTY));
+     |                                                                             ^
+   79 | tryCall('furnaceFuel(42)', () => DataMap.furnaceFuel(42));
+   80 | tryCall('furnaceFuel({})', () => DataMap.furnaceFuel({}));
+[12:16:26] [INFO] [NekoJS Test][SECTION] q25.diag
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: source pos=(0.0, -60.0, 0.0) level=ServerLevel[world]
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: level.getAllEntities().size()=32
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: scoreboard-tagged(q25diag) count=0 cow-ish count=15
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: [builder().tag+limit] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: [builder().type cow+limit] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: [builder().tag+type cow+limit] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: [allEntities().tag+limit] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@216564b3 (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -59.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: [allEntities().type cow+limit] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@2497c4cb (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -59.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: [allEntities().limit(16)] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@4a955417 (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -59.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(null) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(ItemStack.EMPTY) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(42) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel({}) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(undefined) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.compostable(null) -> THREW(java): invokeMember (compostable) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: compostable
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel('minecraft:coal') -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: DataMap.furnaceFuel('minecraft:not_an_item') -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: EntitySelectors.find(level,null,0,0,0) -> full message = EntitySelectors.find: selector must not be null ||| toString = java.lang.IllegalArgumentException: EntitySelectors.find: selector must not be null
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: EntitySelectors.find(null, selector) -> full message = EntitySelectors.find: level must not be null ||| toString = java.lang.IllegalArgumentException: EntitySelectors.find: level must not be null
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: builder().limit(0) -> full message = EntitySelectors.limit: limit must be at least 1 ||| toString = java.lang.IllegalArgumentException: EntitySelectors.limit: limit must be at least 1
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: builder().type('nekojs:no_such_type') -> full message = EntitySelectors.type: unknown entity type: nekojs:no_such_type ||| toString = java.lang.IllegalArgumentException: EntitySelectors.type: unknown entity type: nekojs:no_such_type
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: builder().gamemode('hacker') -> full message = EntitySelectors.gamemode: unknown gamemode: hacker ||| toString = java.lang.IllegalArgumentException: EntitySelectors.gamemode: unknown gamemode: hacker
+[12:16:26] [INFO] [NekoJS Test][PASS] diag: builder().distance(-1,5) -> full message = EntitySelectors.distance: distance cannot be negative ||| toString = java.lang.IllegalArgumentException: EntitySelectors.distance: distance cannot be negative
+[12:16:26] [INFO] [NekoJS Test][SUMMARY] 69 passed, 0 failed
+[12:16:26] [INFO] [NekoJS Test][SECTION] q25.diag2
+[12:16:26] [INFO] [NekoJS Test][PASS] diag2: before hasChunkAt=true entityTicking=true allEntities=32
+[12:16:26] [INFO] [NekoJS Test][PASS] diag2: level.getChunk(0,0)=object hasChunkAt=true entityTicking=true
+[12:16:26] [INFO] [NekoJS Test][PASS] diag2: after force-load+summon allEntities=32
+[12:16:26] [INFO] [NekoJS Test][PASS] diag2: find by tag -> 0
+[12:16:26] [ERROR] 脚本执行失败: nekojs:test/q25-diag2.js
+环境: TEST
+位置: test_scripts/q25-diag2.js:40:30
+原因: getEntities
+
+level.getChunk(0, 0).getEntities()
+
+堆栈: at anonymous (test_scripts/q25-diag2.js:40)
+[12:16:26] [ERROR] Script binding-preflight unknown-identifier fn callback exception:
+环境: TEST
+位置: test_scripts/q25-diag3.js:42:14
+原因: Unknown identifier 'fn'. Did you mean 'ax'?
+
+   40 |   let result;
+   41 |   try {
+ > 42 |     result = fn();
+     |              ^
+   43 |   } catch (e) {
+   44 |     result = 'THREW: ' + e.message;
+[12:16:26] [ERROR] Script binding-preflight unknown-identifier fn callback exception:
+环境: TEST
+位置: test_scripts/q25-diag3.js:42:14
+原因: Unknown identifier 'fn'. Did you mean 'ax'?
+频次: 连续发生了 2 次
+
+   40 |   let result;
+   41 |   try {
+ > 42 |     result = fn();
+     |              ^
+   43 |   } catch (e) {
+   44 |     result = 'THREW: ' + e.message;
+[12:16:26] [INFO] [NekoJS Test][SECTION] q25.diag3
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: anchor=(0.0, -60.0, 0.0) level=ServerLevel[world]
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: allEntities=32
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: tagged(q25f)=20 cows=15
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().tag(q25f).limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().type(cow).limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().tag+type(cow)+limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().tag+type(cow,true)+limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@3867c54b (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: allEntities().tag(q25f).limit(16) -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@3867c54b (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@780c12ed (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: allEntities().type(cow).limit(16) -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@780c12ed (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@2f3bc187 (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: allEntities().limit(16) -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@2f3bc187 (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().limit(16) [no filter] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().tag(q25f) [no limit] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().tag(q25f).limit(2) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: builder().tag(q25f_c1).limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: tag(q25f).distanceBelow(8).limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: tag(q25f).distanceAbove(8).limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: tag(q25f).orderNearest().limit(1) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: tag(q25f).x/y/z box -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@55ae1540 (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: allPlayers().limit(16) -> THREW: invokeMember (find) on com.tkisor.nekojs.util.selector.EntitySelectorsJS failed due to: no applicable overload found (overloads: [Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector)], Method[public java.util.List com.tkisor.nekojs.util.selector.EntitySelectorsJS.find(net.minecraft.server.level.ServerLevel,net.minecraft.commands.arguments.selector.EntitySelector,double,double,double)]], arguments: [JavaObject[ServerLevel[world] (net.minecraft.server.level.ServerLevel)] (HostObject), JavaObject[com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@55ae1540 (com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS)] (HostObject), 0.0 (Double), -60.0 (Double), 0.0 (Double)])
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: [] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag3: allPlayers().create() [no limit] -> 0
+[12:16:26] [INFO] [NekoJS Test][SUMMARY] 110 passed, 0 failed
+[12:16:26] [INFO] [NekoJS Test][SECTION] q25.diag4
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities=32
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().limit(16).create() -> 16
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).limit(16).create() -> 16
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().type(cow).limit(16).create() -> 15
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).type(cow).limit(16).create() -> 15
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f_c1).limit(16).create() -> 5
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).limit(2).create() -> 2
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).distanceBelow(8).limit(16).create() -> 16
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).distanceAbove(8).limit(16).create() -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).orderNearest().limit(1).create() -> 1
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).type(pig,true).limit(16).create() -> 15
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().tag(q25f).type(pig).limit(16).create() -> 5
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allEntities().type(cow).tag(q25f).limit(16).create() [order swapped] -> 15
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: allPlayers().limit(16).create() -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: builder().type(cow).limit(16).create() -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: create(b => b.type(cow).limit(16)) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: create(b => b.limit(16)) -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: nearestEntity().limit(16).create() -> 16
+[12:16:26] [INFO] [NekoJS Test][PASS] diag4: randomEntity().limit(16).create() -> 16
+[12:16:26] [INFO] [NekoJS Test][SUMMARY] 129 passed, 0 failed
+[12:16:26] [ERROR] Script binding-preflight unknown-identifier fn callback exception:
+环境: TEST
+位置: test_scripts/q25-diag5.js:18:14
+原因: Unknown identifier 'fn'. Did you mean 'b'?
+
+   16 |   let result;
+   17 |   try {
+ > 18 |     result = fn();
+     |              ^
+   19 |   } catch (e) {
+   20 |     result = 'THREW: ' + e.message;
+[12:16:26] [ERROR] Script binding-preflight unknown-identifier fn callback exception:
+环境: TEST
+位置: test_scripts/q25-diag5.js:18:14
+原因: Unknown identifier 'fn'. Did you mean 'b'?
+频次: 连续发生了 2 次
+
+   16 |   let result;
+   17 |   try {
+ > 18 |     result = fn();
+     |              ^
+   19 |   } catch (e) {
+   20 |     result = 'THREW: ' + e.message;
+[12:16:26] [INFO] [NekoJS Test][SECTION] q25.diag5
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: allEntities=32
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.type(cow).limit(16)).size() [fix target] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().type(cow).limit(16).create().findEntities(source).size() -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.type(cow,true).limit(16)) [inverse] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.typeTag(beehive_inhabitors).limit(16)) [fix target] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.typeTag(flowers).limit(16)) [tag with no entities] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.limit(16)) [no filter -> player-only] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.gamemode(survival).limit(16)) [player-only] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.level(0,100).limit(16)) [player-only] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(b => b.type(player).limit(16)) [player type] -> 0
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: create(null) -> THREW: EntitySelectors.create: config must not be null
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: find(level, null, 0,0,0) -> THREW: EntitySelectors.find: selector must not be null
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: find(null, allPlayers().create()) -> THREW: EntitySelectors.find: level must not be null
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().limit(0) -> THREW: EntitySelectors.limit: limit must be at least 1
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().distance(5,1) -> THREW: EntitySelectors.distance: min distance cannot be greater than max distance
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().distanceAbove(-1) -> THREW: EntitySelectors.distanceAbove: distance cannot be negative
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().level(5,1) -> THREW: EntitySelectors.level: min level cannot be greater than max level
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().typeTag('nekojs:no_such_tag') -> com.tkisor.nekojs.util.selector.EntitySelectorBuilderJS@1ef89e8d
+[12:16:26] [INFO] [NekoJS Test][PASS] diag5: builder().name('x').limit(16) -> 0
+[12:16:26] [INFO] [NekoJS Test][SUMMARY] 148 passed, 0 failed
+[12:16:22] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.381s)! For help, type "help"
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] create(cfg) and builder() build the same selector shape -> identical results
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag[binding]: DataMap.furnaceFuel(coal) THREW: invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(null) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(ItemStack.EMPTY) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(42) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel({}) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel(undefined) -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.compostable(null) -> THREW(java): invokeMember (compostable) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: compostable
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel('minecraft:coal') -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+[12:16:26] [Server thread/INFO] [NekoJS/]: [test] [NekoJS Test][PASS] diag: DataMap.furnaceFuel('minecraft:not_an_item') -> THREW(java): invokeMember (furnaceFuel) on com.tkisor.nekojs.bindings.static_access.DataMapJS failed due to: Unknown identifier: furnaceFuel
+原因: Unknown identifier 'fn'. Did you mean 'ax'?
+原因: Unknown identifier 'fn'. Did you mean 'ax'?
+原因: Unknown identifier 'fn'. Did you mean 'b'?
+原因: Unknown identifier 'fn'. Did you mean 'b'?

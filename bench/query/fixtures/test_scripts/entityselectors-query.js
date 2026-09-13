@@ -1,7 +1,7 @@
 // Ticket 25 fixture: EntitySelectors factory/builder/query 全链路（server side）。
 // 载体：/nekojs test（真实 ServerLevel + 真实实体）。预期全绿。
 //
-// == 世界状态前置（RCON，必须在跑本脚本之前完成；配方见 REPORT §5）==
+// == 世界状态前置（RCON，必须在跑本脚本之前完成；配方见 REPORT §5 / bench/query/README.md）==
 //   1) forceload add -16 -16 16 16
 //      无玩家的专用服务器不会 entity-ticking 载入区块；未 entity-ticking 区块里的召唤
 //      实体会停在 PersistentEntitySectionManager 的 pendingEntities，任何 EntitySelector
@@ -19,19 +19,30 @@
 //
 // 期望集合由世界状态自校准（按 tag/类型现算），不受历史运行累积实体与 mob 生成影响。
 //
-// == 作用域语义（游戏内实读，见 REPORT §5）==
-// - `builder()` / `create(cfg)` 的基座是玩家集合（`includesEntities=false`，等价 @a）；
-//   `allEntities()` / `nearestEntity()` / `randomEntity()` 预设的基座是实体集合。
+// == 作用域语义（游戏内实读 + 工单 25 双轴审查裁定，见 REPORT §5.7）==
+// - `builder()` / `create(cfg)` 的基座是**玩家集合**（`includesEntities=false`，等价 @a）；
+//   `allEntities()` / `nearestEntity()` / `randomEntity()` 预设的基座是**实体集合**。
 //   vanilla 侧同样是「按前缀决定」：EntitySelectorParser 的 includesEntities 无初值，
 //   @e/@r 置 true、@a/@p 置 false；builder 无前缀，因此由基座预设给出。
-// - ticket 25 修复：**显式实体类型过滤**会把作用域切到实体集合——`type('minecraft:cow')`
-//   这类非玩家类型的正选、`type(..., inverse=true)` 反选、以及 `typeTag(...)`。
-//   修前它们只在玩家集合上求值，于是文档示例 `create(b => b.type('minecraft:cow'))`
-//   永远返回空（游戏内实证：3 头带 tag 的牛命中 0）。
-// - 纯计分板 tag / team / 体积框过滤本身不决定作用域（两者都合法），沿用基座：
-//   `builder().tag('x')` 查玩家，`allEntities().tag('x')` 查实体。
-// - 非法输入（limit/distance/level/gamemode/type/typeTag、find 的 level/selector、create 的
-//   config）得到带域+调用入口的普通错误，不含修复提示；脚本源位置由统一错误管线补。
+// - **审查裁定：`type(...)` / `typeTag(...)` 不切作用域**（只有玩家类型会调整该位）。
+//   本票曾把「非玩家类型正选 / 任意反选 / typeTag」改为置 `includesEntities=true`，
+//   让 `create(b => b.type('minecraft:cow'))` 能命中实体——审查判为**越权改公开语义**
+//   （选择器作用域变化无人授权），已回退。因此文档示例风格的
+//   `create(b => b.type('minecraft:cow'))` 在无玩家的服务器上命中 **0**，这是**已记录
+//   缺口**（REPORT §7，owner = 维护者裁决 / domain 票），本 fixture 把它**钉成现状**。
+// - **AC2 的取证路径（不改语义）**：实体命中走实体基座（`allEntities()` 等预设），
+//   以及既有语义里的 `type('minecraft:player', true)`（反选玩家 = 实体集合，
+//   原实现即 `isPlayerType → includesEntities=true`）——两条路径都未改语义。
+//
+// == 未知 type tag（characterization，回退后现状）==
+// - `typeTag('nekojs:no_such_tag')` **不报错**：`resolveEntityTypeTag` 静默构造一个没有
+//   成员的 TagKey，于是过滤恒假、查询恒空（silent no-op）。spec 04 禁止这种形态，属已记录
+//   缺口（REPORT §7，owner = 维护者裁决）；对照面 `type('nekojs:no_such_type')` 直接报错，
+//   两者不一致本身就是缺口证据。本 fixture 钉住「不抛 + 恒空」的现状。
+//
+// == 非法输入 ==
+// - 非法输入（limit/distance/level/gamemode/type、find 的 level/selector、create 的 config）
+//   得到带域+调用入口的普通错误，不含修复提示；脚本源位置由统一错误管线补。
 
 Test.section('EntitySelectors.query');
 
@@ -72,52 +83,90 @@ function sizeOf(selector) {
   return EntitySelectors.find(level, selector, ax, ay, az).size();
 }
 
-// ---- factory(create) + builder + query：entity 基座上按 tag 精确命中 ----
+// ================= AC2 (a)：实体基座（预设）+ builder + query 真实命中 =================
+// 入口面：allEntities() 是 EntitySelectorsJS 的 factory 预设；.tag()/.type()/.distanceBelow()
+// /.limit()/.orderNearest() 是 builder；.create() 产出 EntitySelector；find 执行查询。
 Test.assertEquals(taggedAll, sizeOf(EntitySelectors.allEntities().tag('q25f').limit(64).create()),
-  'allEntities() + tag + find: hits every tagged entity');
-Test.assertEquals(taggedC1, sizeOf(EntitySelectors.create(b => b.tag('q25f_c1').limit(64)
-  .type('minecraft:cow'))),
-  'create(b => tag + type(cow)) + find: hits exactly the tagged cow');
-Test.assertEquals(taggedCow, sizeOf(EntitySelectors.builder().type('minecraft:cow')
-  .tag('q25f').limit(64).create()),
-  'builder() + explicit type(cow) is entity-scoped and excludes the tagged pig');
-Test.assertEquals(taggedC1, sizeOf(EntitySelectors.builder().type('minecraft:cow')
-  .tag('q25f_c1').limit(64).create()),
-  'builder() + type(cow) + tag narrows to the single tagged cow');
+  'allEntities() + tag + find: hits every tagged entity (factory preset + builder + query)');
+Test.assertEquals(taggedCow,
+  sizeOf(EntitySelectors.allEntities().tag('q25f').type('minecraft:cow').limit(64).create()),
+  'allEntities() + tag + type(cow): hits exactly the tagged cows');
+Test.assertEquals(taggedP1,
+  sizeOf(EntitySelectors.allEntities().tag('q25f').type('minecraft:pig').limit(64).create()),
+  'allEntities() + tag + type(pig): hits the tagged pig');
+Test.assertEquals(taggedAll - taggedP1,
+  sizeOf(EntitySelectors.allEntities().tag('q25f').type('minecraft:pig', true).limit(64).create()),
+  'allEntities() + inverse type(pig): everything tagged except the pig');
+Test.assertEquals(taggedBee,
+  sizeOf(EntitySelectors.allEntities().tag('q25bee')
+    .typeTag('minecraft:beehive_inhabitors').limit(64).create()),
+  'allEntities() + typeTag(declared entity type tag): hits the tagged bee');
 
-// ---- 作用域规则：纯 tag 过滤沿用基座（builder() = 玩家集合）----
+// ================= AC2 (b)：create(cfg) / builder() 的实体命中（既有语义路径）=================
+// `type('minecraft:player', true)` 走的是**原实现就有**的分支（inverse + 玩家类型 →
+// includesEntities=true），即「除玩家之外的所有实体」，不改任何语义。
+const nonPlayerViaFactory = sizeOf(EntitySelectors.create(b => b.type('minecraft:player', true)
+  .limit(64)));
+Test.assertTrue(nonPlayerViaFactory >= taggedAll && nonPlayerViaFactory <= 64,
+  'create(cfg) + type(player, inverse) runs the selector and hits every non-player entity, got: '
+    + nonPlayerViaFactory + ' (tagged=' + taggedAll + ')');
+Test.assertEquals(
+  sizeOf(EntitySelectors.builder().type('minecraft:player', true).limit(64).create()),
+  nonPlayerViaFactory,
+  'create(cfg) and builder() build the same selector shape -> identical results');
+Test.assertEquals(taggedAll,
+  sizeOf(EntitySelectors.builder().type('minecraft:player', true).tag('q25f').limit(64).create()),
+  'builder() + inverse type(player) + tag: the tagged entities (builder entry hits real entities)');
+
+// 预设的 order 语义：nearestEntity()/randomEntity() 只取 1 个，且结果是已物化实体。
+Test.assertEquals(1, sizeOf(EntitySelectors.nearestEntity().create()),
+  'nearestEntity() preset returns exactly one materialized entity');
+Test.assertEquals(1, sizeOf(EntitySelectors.randomEntity().create()),
+  'randomEntity() preset returns exactly one materialized entity');
+const nearest = EntitySelectors.find(level,
+  EntitySelectors.allEntities().tag('q25f').orderNearest().limit(1).create(), ax, ay, az);
+Test.assertNotNull(nearest.get(0), 'orderNearest result is a materialized entity');
+
+// ================= AC2 (c)：玩家基座语义（无玩家时为空，语义正确）=================
+Test.assertEquals(0, sizeOf(EntitySelectors.builder().tag('q25f').limit(64).create()),
+  'scope: a tag-only builder() stays on the player base (0 players online) -> empty');
 Test.assertEquals(0, sizeOf(EntitySelectors.create(b => b.tag('q25f').limit(64))),
-  'scope: a tag-only builder() stays on the player base (0 players online)');
+  'scope: create(cfg) base is the player scope (0 players online) -> empty');
 Test.assertEquals(0, sizeOf(EntitySelectors.allPlayers().limit(64).create()),
   'scope: allPlayers() preset stays player-only -> empty snapshot');
+Test.assertEquals(0, sizeOf(EntitySelectors.builder().type('minecraft:player').limit(64).create()),
+  'scope: type(player) stays player-scoped -> 0 players online');
 
-// ---- 显式实体类型过滤切作用域（ticket 25 修复目标）----
-Test.assertTrue(sizeOf(EntitySelectors.create(b => b.type('minecraft:cow').limit(64))) >= 1,
-  'type(cow) on create() sees non-player entities (includesEntities fix)');
-Test.assertTrue(sizeOf(EntitySelectors.builder().type('minecraft:cow').limit(64).create()) >= 1,
-  'type(cow) on builder() sees non-player entities (includesEntities fix)');
-Test.assertEquals(taggedCow,
-  sizeOf(EntitySelectors.create(b => b.tag('q25f').type('minecraft:cow').limit(64))),
-  'tag + type(cow) -> the tagged cows');
-Test.assertEquals(taggedP1,
-  sizeOf(EntitySelectors.create(b => b.tag('q25f').type('minecraft:pig').limit(64))),
-  'tag + type(pig) -> the tagged pig');
-Test.assertEquals(taggedAll - taggedP1,
-  sizeOf(EntitySelectors.create(b => b.tag('q25f').type('minecraft:pig', true).limit(64))),
-  'tag + type(pig, inverse) -> everything tagged except the pig');
+// ========== characterization：非玩家类型过滤**不**切作用域（审查回退后的现状 = 缺口）==========
+// 这几条是「本票只记录、不改公开语义」的书面证据；修法（显式实体类型切作用域）已实现过并
+// 被审查判为越权。缺口与 owner 见 REPORT §7。
+Test.assertEquals(0, sizeOf(EntitySelectors.create(b => b.type('minecraft:cow').limit(64))),
+  'GAP: create(b => b.type(cow)) does NOT switch scope -> 0 (documented-example style, see REPORT §7)');
+Test.assertEquals(0, sizeOf(EntitySelectors.builder().type('minecraft:cow').limit(64).create()),
+  'GAP: builder().type(cow) keeps the player base -> 0');
+Test.assertEquals(0, sizeOf(EntitySelectors.create(b => b.type('minecraft:cow', true).limit(64))),
+  'GAP: inverse of a non-player type also keeps the player base -> 0');
 Test.assertEquals(0,
-  sizeOf(EntitySelectors.create(b => b.tag('q25f_c1').type('minecraft:cow', true).limit(64))),
-  'tag + inverse type(cow) excludes the cow -> 0');
-Test.assertEquals(0, sizeOf(EntitySelectors.create(b => b.type('minecraft:player').limit(64))),
-  'type(player) stays player-scoped -> 0 players online');
-Test.assertEquals(taggedBee, sizeOf(EntitySelectors.allEntities().tag('q25bee')
-  .typeTag('minecraft:beehive_inhabitors').limit(64).create()),
-  'typeTag(entity_type tag) hits the tagged bee');
-Test.assertTrue(sizeOf(EntitySelectors.create(b => b.typeTag('minecraft:beehive_inhabitors')
-  .limit(64))) >= taggedBee,
-  'typeTag alone switches to the entity base (includesEntities fix)');
+  sizeOf(EntitySelectors.builder().typeTag('minecraft:beehive_inhabitors').limit(64).create()),
+  'GAP: typeTag() alone keeps the player base -> 0 (entity base needed for hits)');
 
-// ---- 距离语义：锚点到实体脚底（NoAI 固定位置）----
+// ========== characterization：未知 type tag 静默接受（不抛 + 过滤恒假）==========
+// 注意：`type('nekojs:no_such_type')` 走 assertThrows（下方非法输入组）——两者不一致。
+let unknownTagAccepted = true;
+try {
+  EntitySelectors.builder().typeTag('nekojs:no_such_tag');
+} catch (e) {
+  unknownTagAccepted = false;
+}
+Test.assertTrue(unknownTagAccepted,
+  'GAP: unknown entity type tag is silently accepted (no error, silent no-op, see REPORT §7)');
+Test.assertEquals(0, sizeOf(EntitySelectors.builder().typeTag('nekojs:no_such_tag').limit(64).create()),
+  'GAP: an unknown tag keeps the player base -> 0 (indistinguishable from a real empty filter)');
+Test.assertEquals(0,
+  sizeOf(EntitySelectors.allEntities().tag('q25f').typeTag('nekojs:no_such_tag').limit(64).create()),
+  'GAP: an unknown tag on the entity base filters everything out -> 0 (silent, no error)');
+
+// ================= 距离语义：锚点到实体脚底（NoAI 固定位置）=================
 Test.assertEquals(taggedAll,
   sizeOf(EntitySelectors.allEntities().tag('q25f').distanceBelow(8).limit(64).create()),
   'distanceBelow(8) keeps the tagged set near the anchor');
@@ -131,17 +180,14 @@ Test.assertEquals(0,
   sizeOf(EntitySelectors.allEntities().tag('q25bee').distanceBelow(8).limit(64).create()),
   'distanceBelow(8) misses the far tagged bee');
 
-// ---- limit / 顺序选择器 ----
+// ================= limit / 顺序选择器 =================
 Test.assertEquals(Math.min(2, taggedAll),
   sizeOf(EntitySelectors.allEntities().tag('q25f').limit(2).create()),
   'limit(2) caps the tagged set');
 Test.assertEquals(1, sizeOf(EntitySelectors.allEntities().tag('q25f').orderNearest().limit(1).create()),
   'orderNearest().limit(1) returns exactly one');
-const nearest = EntitySelectors.find(level,
-  EntitySelectors.allEntities().tag('q25f').orderNearest().limit(1).create(), ax, ay, az);
-Test.assertNotNull(nearest.get(0), 'orderNearest result is a materialized entity');
 
-// ---- 非法 selector / 非法 level / 缺失输入：普通错误 ----
+// ================= 非法 selector / 非法 level / 缺失输入：普通错误 =================
 Test.assertThrows(() => EntitySelectors.create(null), 'create(null) -> labeled error');
 Test.assertThrows(() => EntitySelectors.create(b => b.limit(0)), 'limit(0) -> labeled error');
 Test.assertThrows(() => EntitySelectors.create(b => b.distance(-1, 5)), 'negative distance -> labeled error');
@@ -149,15 +195,13 @@ Test.assertThrows(() => EntitySelectors.create(b => b.distance(5, 1)), 'min>max 
 Test.assertThrows(() => EntitySelectors.create(b => b.distanceAbove(-1)), 'negative distanceBelow -> labeled error');
 Test.assertThrows(() => EntitySelectors.create(b => b.level(5, 1)), 'min>max level -> labeled error');
 Test.assertThrows(() => EntitySelectors.create(b => b.type('nekojs:no_such_type')),
-  'unknown entity type -> labeled error');
-Test.assertThrows(() => EntitySelectors.create(b => b.typeTag('nekojs:no_such_tag')),
-  'unknown entity type tag -> labeled error (not a silent empty no-op)');
+  'unknown entity type -> labeled error (contrast with the silent unknown tag above)');
 Test.assertThrows(() => EntitySelectors.create(b => b.gamemode('hacker')), 'unknown gamemode -> labeled error');
 Test.assertThrows(() => EntitySelectors.find(null, EntitySelectors.allPlayers().create(), 0, 0, 0),
   'null level -> labeled error');
 Test.assertThrows(() => EntitySelectors.find(level, null, 0, 0, 0), 'null selector -> labeled error');
 
-// ---- 只读：find 不改变世界状态——重复查询结果一致 ----
+// ================= 只读：find 不改变世界状态——重复查询结果一致 =================
 Test.assertEquals(taggedAll, sizeOf(EntitySelectors.allEntities().tag('q25f').limit(64).create()),
   'repeated query is side-effect free');
 

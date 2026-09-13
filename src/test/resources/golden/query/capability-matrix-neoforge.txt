@@ -1,7 +1,10 @@
 # Ticket 25 query tools capability matrix — neoforge（1.21.1 / 26.1.2 / 26.2.0 共用）。
 # 每行由 QueryToolCapabilityMatrixTest 的真实探针派生，status 词汇 = CapabilityStatus 三态。
+# 口径：SUPPORTED 行必须有**真实探针**（真实注册进真实 registry / 真实类可加载性）；
+# 只有 source trace、未经运行时探测的行一律记 PARTIAL 并在 evidence 写明「仅 source trace、
+# 未实测」——禁止把「同一无条件路径」当作已实测能力（工单 25 双轴审查裁定）。
 # 只读基线：capability 变更须先改行为/探针，再更新本文件并在 REPORT golden 差异小节留记录。
-DataMap | DataMap binding[CLIENT] | SUPPORTED | same unconditional registerBinding path (source trace; client class init not probeable in a bare JVM)
+DataMap | DataMap binding[CLIENT] | PARTIAL | source trace only: same unconditional registerBinding path, but the client class init is not probeable in a bare JVM and no client runtime smoke was run -> not runtime-verified (REPORT §7 N6)
 DataMap | DataMap binding[SERVER] | SUPPORTED | registerBinding(NekoJSCorePlugin) valueType=com.tkisor.nekojs.bindings.static_access.DataMapJS
 DataMap | DataMap binding[STARTUP] | SUPPORTED | registerBinding(NekoJSCorePlugin) valueType=com.tkisor.nekojs.bindings.static_access.DataMapJS
 DataMap | DataMap binding[TEST] | SUPPORTED | registerBinding(NekoJSCorePlugin) valueType=com.tkisor.nekojs.bindings.static_access.DataMapJS
