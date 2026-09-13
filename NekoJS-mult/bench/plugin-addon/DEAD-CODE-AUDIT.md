@@ -1,4 +1,4 @@
-# NekoJS ticket 08 — plugin discovery bypass audit (AC15)
+# NekoJS ticket 08 — plugin discovery bypass audit (AC14)
 
 Scope: the three named targets in ticket 08 work item 7 — 无调用者 manager facade、旧 legacy
 bootstrap、loader 私有 Point registry 旁路 — plus a repo-wide search for any other caller-less
@@ -13,7 +13,7 @@ this ticket. 'test' includes :common test sources and node test sources.
 | 2 | loader 私有 Point registry 旁路 | any `NekoPluginExtensionPoint` registry reachable outside `NekoPluginBootstrap.ExtensionRegistry` | 0 | 0 | **none exists** |
 | 3 | 无调用者 manager facade | `NekoJSBasePluginManager` | 9 across 6 files | 25 | **kept — live** |
 | 4 | 无调用者 manager facade | `NekoJSBasePluginManager.registerClass(Class)` | 2 | many | **kept — live** |
-| 5 | 无调用者 manager facade | `NekoPluginBootstrap.bootstrap(List, ScriptPropertyRegistry)` | 0 | 34 | **kept — test harness seam** |
+| 5 | 无调用者 manager facade | `NekoPluginBootstrap.bootstrap(List, ScriptPropertyRegistry)` | 0 | 33 (same package) + 2 migrated | **narrowed to package-private** |
 
 ## 1. Deleted: `NekoPluginRuntime.bootstrap`
 
@@ -36,14 +36,15 @@ bootstrap that `bootstrapOwned` performs — exactly the `loader 私有 registry
 it leaves `bootstrapOwned` as the only way to publish a Plugin Runtime.
 
 Removal is guarded by the ticket 08 smoke: the external addon is discovered, bootstrapped and served
-through `bootstrapOwned` on both loaders (`bench/plugin-addon/out/*/checks.json`), which is the
-evidence AC15 requires before the deletion may land.
+through `bootstrapOwned` on both loaders, which is the evidence AC14 requires before the deletion may
+land. Archived checks: `docs/architecture-refactor/baseline/2026-09-13-plugin-addon/evidence/`
+(`checks-neoforge.json`, `checks-fabric.json`, plus the per-round `counts-*-roundN.json`).
 
 ## 2. loader 私有 Point registry 旁路: none exists
 
 `NekoPluginExtensionRegistry` has exactly one implementation in the whole repo:
 `NekoPluginBootstrap.ExtensionRegistry` (a private static nested class), instantiated at exactly one
-site (`NekoPluginBootstrap.collect`, line 116) and never returned, stored or published. A repo-wide
+site inside `NekoPluginBootstrap.collect` and never returned, stored or published. A repo-wide
 scan for any other instantiation, static field, or accessor of an extension-point map returned no
 hits. The only public accessor into frozen products is `NekoPluginRuntime.extensionProducts()` /
 `extensionProduct(String, Class)`, both derived read-only views of the bootstrap result.
@@ -68,15 +69,23 @@ Deleting it would remove the loader discovery seam that AC2 / AC6 / AC14 require
 second facade: the class is the only plugin registry in the repo, so there is nothing left to
 collapse it into. Kept.
 
-## 4. `NekoPluginBootstrap.bootstrap(List, ScriptPropertyRegistry)`: kept
+## 4. `NekoPluginBootstrap.bootstrap(List, ScriptPropertyRegistry)`: narrowed to package-private
 
-After deleting §1 this overload has zero production callers. It is kept deliberately: it is the
-harness entry for the extension-point semantics suite (`NekoPluginBootstrapV2Test`,
-`NekoPluginExtensionProviderTest`, `NekoPluginExtensionPointTest`, `NekoPluginBootstrapHookDeliveryTest`,
-`DeepFreezeTest`, and this ticket's `NekoPluginAddonBoundaryTest` — 34 call sites). It constructs no
-process-level state (no `publish`, no `NekoRuntimeAccess.set`), so it cannot act as a second
-bootstrap path.
+After deleting §1 this overload had zero production callers, but it was still `public` — i.e. it
+remained a public entry point into bootstrap with no production caller, which is exactly the shape
+AC14 asks to remove. It was **narrowed to package-private** rather than deleted.
 
-Honest remaining gap: if the maintainers want a strictly single production entry, this overload
-should be narrowed to package-private rather than duplicated. That is a test-seam policy decision,
-not a ticket 08 acceptance item, and is left for review.
+Why not delete: it is the harness entry for the extension-point semantics suite
+(`NekoPluginBootstrapV2Test`, `NekoPluginExtensionProviderTest`, `NekoPluginExtensionPointTest`,
+`NekoPluginBootstrapHookDeliveryTest`, `DeepFreezeTest`, and this ticket's
+`NekoPluginAddonBoundaryTest`). Deleting it would force every one of those tests to reimplement the
+managed-API bootstrap, which is "building a new test framework" — forbidden by this ticket.
+
+Two call sites lived **outside** the `core.plugin` package (`NekoProbeBuiltinPluginTest` in
+`core.probe`) and were migrated to the production owning entry,
+`NekoPluginRuntime.bootstrapOwned(List<OwnedPlugin>, ScriptPropertyRegistry)`. The remaining call
+sites are same-package and compile unchanged.
+
+The method still constructs no process-level state (no `publish`, no `NekoRuntimeAccess.set`), so
+even same-package use cannot act as a second bootstrap path; package-private is what makes that a
+compile-time fact rather than a convention.

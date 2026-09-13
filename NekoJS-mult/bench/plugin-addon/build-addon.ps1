@@ -10,23 +10,16 @@
 #   nekojs08addon-1.0.0-fabric.jar    — fabric.mod.json with the `nekojs` entrypoint
 #
 # Usage:
-#   powershell -NoProfile -ExecutionPolicy Bypass -File bench/plugin-addon/build-addon.ps1
-#        [-Jar <path to nekojs platform fat jar>] [-Skipped]
+#   powershell -NoProfile -ExecutionPolicy Bypass -File bench/plugin-addon/build-addon.ps1 [-Jar <jar>]
 
 param(
-    [string]$Jar = "",
-    [switch]$Skipped
+    [string]$Jar = ""
 )
 
 $ErrorActionPreference = "Stop"
 $ProjectDir = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $FixtureDir = Join-Path $PSScriptRoot "fixture"
 $BuildDir = Join-Path $PSScriptRoot "build"
-
-if ($Skipped) {
-    Write-Host "[addon] -Skipped: skipping (classpath discovery form explicitly not covered)"
-    exit 0
-}
 
 # ---- locate a JDK 25 (the jar is packaged for Java 25; javac must target 25) ----------------
 $javac = $null
