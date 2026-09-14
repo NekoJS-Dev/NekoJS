@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -47,18 +48,73 @@ class UiViewportProfileGoldenTest {
 
     @Test
     void sixProfilesProduceStableFakeOutput() throws Exception {
-        String actual = report();
+        String actual = normalize(report());
 
         if (Boolean.getBoolean("nekojs.golden.regenerate")) {
             Files.createDirectories(GOLDEN_PATH.getParent());
-            Files.writeString(GOLDEN_PATH, actual);
+            // 显式用 LF 写：不依赖平台默认行尾（Windows 的 CRLF 会让逐字符比较在 checkout 后失败）。
+            Files.writeString(GOLDEN_PATH, actual, java.nio.charset.StandardCharsets.UTF_8,
+                    java.nio.file.StandardOpenOption.CREATE,
+                    java.nio.file.StandardOpenOption.TRUNCATE_EXISTING,
+                    java.nio.file.StandardOpenOption.WRITE);
             Assumptions.abort("viewport profile golden regenerated, review the diff before committing");
         }
 
-        assertEquals(Files.readString(GOLDEN_PATH), actual,
+        // 行尾归一化后比较（第二道保险）：仓库内约定 LF（.gitattributes 的 *.txt text eol=lf），
+        // 但工作树行尾由 core.autocrlf 决定——Windows fresh checkout 可能得到 CRLF。
+        // 逐字符比较必须与工作树行尾无关，否则同一份内容在不同机器上结果不同。
+        String expected = normalize(Files.readString(GOLDEN_PATH));
+        assertEquals(expected, actual,
                 "六档 Viewport Profile 的 fake 输出漂移；用 "
                         + "`./gradlew :common:test -Dnekojs.golden.regenerate=true --tests "
                         + "*UiViewportProfileGoldenTest` 再生成，并在维护者审阅旧新 diff 后提交");
+    }
+
+    /**
+     * 行尾归一化：任何 CRLF / 孤立 CR 一律折叠成 LF。
+     *
+     * <p>这样测试的通过与否只取决于内容，不取决于 checkout 时的行尾转换。
+     */
+    private static String normalize(String text) {
+        return text.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    /**
+     * 回归保护：仓库必须把 {@code .txt} golden 按 LF 存储。
+     *
+     * <p>{@code .gitattributes} 是本仓库「仓库内一律 LF」约定的唯一事实源；若缺少
+     * {@code *.txt ... eol=lf}，Windows（{@code core.autocrlf=true}）checkout 会把工作树
+     * 变成 CRLF，逐字符比较的 golden 测试在任何其它机器上必然失败。
+     *
+     * <p>本测试不依赖 git 可执行文件：它直接读仓库根的 {@code .gitattributes} 并断言该规则存在，
+     * 因此任何删除/改名该规则的改动都会立刻变红。
+     */
+    @Test
+    void repositoryAttributesPinsTextGoldenToLf() throws Exception {
+        Path attributes = repositoryAttributes();
+        assertNotNull(attributes, "找不到仓库根的 .gitattributes");
+        String text = Files.readString(attributes);
+        boolean txtRule = text.lines()
+                .map(String::trim)
+                .filter(line -> !line.startsWith("#"))
+                .anyMatch(line -> line.startsWith("*.txt")
+                        && line.contains("text")
+                        && line.contains("eol=lf"));
+        assertTrue(txtRule, ".gitattributes 必须声明 '*.txt text eol=lf'"
+                + "（否则 Windows checkout 会把 .txt golden 转成 CRLF，golden 测试跨机器必失败）");
+    }
+
+    /** 从测试工作目录向上找仓库根的 {@code .gitattributes}。 */
+    private static Path repositoryAttributes() {
+        Path dir = Path.of("").toAbsolutePath();
+        for (int depth = 0; depth < 6 && dir != null; depth++) {
+            Path candidate = dir.resolve(".gitattributes");
+            if (Files.isRegularFile(candidate)) {
+                return candidate;
+            }
+            dir = dir.getParent();
+        }
+        return null;
     }
 
     @Test
