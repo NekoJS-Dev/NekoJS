@@ -18,6 +18,11 @@ import com.tkisor.nekojs.api.facade.PlatformFacade;
 import com.tkisor.nekojs.api.facade.RegistryFacade;
 import com.tkisor.nekojs.api.facade.RegistryView;
 import com.tkisor.nekojs.api.facade.TextFacade;
+import com.tkisor.nekojs.api.ui.UiEvent;
+import com.tkisor.nekojs.api.ui.UiFacade;
+import com.tkisor.nekojs.api.ui.UiProp;
+import com.tkisor.nekojs.api.ui.UiSignal;
+import com.tkisor.nekojs.api.ui.UiStore;
 import com.tkisor.nekojs.api.surface.ApiManifest;
 import com.tkisor.nekojs.api.surface.ApiRuntimeVersions;
 import com.tkisor.nekojs.api.surface.ApiSymbol;
@@ -78,8 +83,22 @@ class NormativeApiContractOwnerTest {
         symbols.addAll(ContractReflector.reflectDataType("ModInfo", ModInfoValue.class));
         symbols.addAll(ContractReflector.reflectDataType("PerfTimer", PerfTimerValue.class));
         symbols.addAll(ContractReflector.reflectEventRegistrationSymbols());
+        // ticket 40：JSX UI facade 与数据类型（与 CoreManagedApiBootstrap.buildContract 同步）
+        symbols.addAll(ContractReflector.extractSymbols("Ui", UiFacade.class, true, UI_MEMBER_FILTER));
+        symbols.addAll(ContractReflector.reflectDataType("UiProp", UiProp.class));
+        symbols.addAll(ContractReflector.reflectDataType("UiSignal", UiSignal.class));
+        symbols.addAll(ContractReflector.reflectDataType("UiStore", UiStore.class));
+        symbols.addAll(ContractReflector.reflectDataType("UiEvent", UiEvent.class));
         return symbols;
     }
+
+    /** 与 {@code CoreManagedApiBootstrap.UI_MEMBER_FILTER} 同步的 Java 侧装配方法排除。 */
+    private static final java.util.function.Predicate<java.lang.reflect.Method> UI_MEMBER_FILTER =
+            method -> {
+                String name = method.getName();
+                return !name.startsWith("neko$")
+                        && !java.util.Set.of("of", "ownerThread", "viewport", "resize").contains(name);
+            };
 
     @Test
     void contractSymbolsEqualExactReflectionInputUnion() {

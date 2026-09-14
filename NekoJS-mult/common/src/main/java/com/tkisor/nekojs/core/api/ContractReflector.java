@@ -75,34 +75,28 @@ public final class ContractReflector {
      * @param includeGlobal true 产出 global:<facadeName> 符号（facade 需要）；
      *                      false 不产出（数据类型如 ModInfoValue 不是全局对象）
      */
-    public static List<ApiSymbol> extractSymbols(String facadeName, Class<?> facadeType, boolean includeGlobal) {
-        List<ApiSymbol> symbols = new ArrayList<>();
-
-        // global:<facadeName> —— facade 对象本身（数据类型不需要）
-        if (includeGlobal) {
-            symbols.add(new ApiSymbol(
-                ApiSymbolId.parse("global:" + facadeName),
-                List.of(new ApiSignature(
-                        List.of(),
-                        ApiTypeRef.primitive("object"),
-                        false))));
-        }
-
-        // 按符号 ID 分组收集签名（重载合并 + 静态/receiver 双产出）
+    /**
+     * 带方法过滤的 facade 反射：过滤谓词返回 {@code false} 的方法不产出符号
+     * （用于排除 Java 侧装配方法，如 UI facade 的 {@code of}）。
+     *
+     * @param includeGlobal true 产出 global:<facadeName> 符号
+     * @param methodFilter  方法过滤器；{@code null} 表示全部收录
+     */
+    public static List<ApiSymbol> extractSymbols(String facadeName, Class<?> facadeType,
+                                                 boolean includeGlobal,
+                                                 java.util.function.Predicate<Method> methodFilter) {
         Map<String, List<ApiSignature>> signaturesByName = new java.util.LinkedHashMap<>();
         for (Method method : facadeType.getDeclaredMethods()) {
             if (method.isSynthetic() || method.isBridge()) continue;
             if (method.getName().startsWith("neko$")) continue;
+            if (methodFilter != null && !methodFilter.test(method)) continue;
             String jsName = jsNameOf(method);
 
-            // 静态符号：member:<facadeName>.<method>（全部参数作为脚本参数）
             String staticId = "member:" + facadeName + "." + jsName;
             signaturesByName
                     .computeIfAbsent(staticId, k -> new ArrayList<>())
                     .add(methodToSignature(method, 0));
 
-            // receiver 符号：若第一个参数是数据类型，额外产出 member:<DataType>.<method>
-            // （脚本侧 dataType.method()，receiver 不算参数）
             Class<?>[] paramTypes = method.getParameterTypes();
             if (paramTypes.length > 0 && isReceiverType(paramTypes[0])) {
                 String receiverContractName = contractNameOf(paramTypes[0]);
@@ -113,10 +107,22 @@ public final class ContractReflector {
             }
         }
 
-        for (var entry : signaturesByName.entrySet()) {
-            symbols.add(new ApiSymbol(ApiSymbolId.parse(entry.getKey()), entry.getValue()));
+        List<ApiSymbol> symbols = new ArrayList<>();
+        // global:<facadeName> —— facade 对象本身（数据类型不需要）
+        if (includeGlobal) {
+            symbols.add(new ApiSymbol(
+                ApiSymbolId.parse("global:" + facadeName),
+                List.of(new ApiSignature(
+                        List.of(),
+                        ApiTypeRef.primitive("object"),
+                        false))));
         }
+        symbols.addAll(toSymbols(signaturesByName));
         return symbols;
+    }
+
+    public static List<ApiSymbol> extractSymbols(String facadeName, Class<?> facadeType, boolean includeGlobal) {
+        return extractSymbols(facadeName, facadeType, includeGlobal, null);
     }
 
     /**

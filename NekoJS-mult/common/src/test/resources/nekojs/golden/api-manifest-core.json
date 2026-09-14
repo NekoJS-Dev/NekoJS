@@ -54,6 +54,12 @@
       ]
     },
     {
+      "id": "global:Ui",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
       "id": "member:ID.asString",
       "signatures": [
         "(SYMBOL:type:NekoId)"
@@ -899,6 +905,216 @@
       "id": "member:TextValue.yellow",
       "signatures": [
         "()"
+      ]
+    },
+    {
+      "id": "member:Ui.closeGeneration",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:Ui.create",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:Ui.createStateOwner",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Ui.dispose",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Ui.generation",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:Ui.invalidateGeneration",
+      "signatures": [
+        "(PRIMITIVE:number)"
+      ]
+    },
+    {
+      "id": "member:Ui.open",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:Ui.roots",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.alt",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.button",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.character",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.control",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.generation",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.key",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.keyCode",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.mouseX",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.mouseY",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.rootId",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.scrollDelta",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.shift",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.targetPath",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.timestampMillis",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiEvent.type",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiProp.category",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiProp.isEvent",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiProp.jsName",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiProp.kind",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiSignal.get",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiSignal.set",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:UiSignal.update",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:UiStore.field",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:UiStore.merge",
+      "signatures": [
+        "(PRIMITIVE:object)"
+      ]
+    },
+    {
+      "id": "member:UiStore.read",
+      "signatures": [
+        "(PRIMITIVE:string)"
+      ]
+    },
+    {
+      "id": "member:UiStore.snapshot",
+      "signatures": [
+        "()"
+      ]
+    },
+    {
+      "id": "member:UiStore.write",
+      "signatures": [
+        "(PRIMITIVE:string,PRIMITIVE:object)"
       ]
     }
   ]

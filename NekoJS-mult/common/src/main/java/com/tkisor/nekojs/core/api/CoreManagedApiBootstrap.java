@@ -19,6 +19,11 @@ import com.tkisor.nekojs.api.facade.PlatformFacade;
 import com.tkisor.nekojs.api.facade.RegistryFacade;
 import com.tkisor.nekojs.api.facade.RegistryView;
 import com.tkisor.nekojs.api.facade.TextFacade;
+import com.tkisor.nekojs.api.ui.UiEvent;
+import com.tkisor.nekojs.api.ui.UiFacade;
+import com.tkisor.nekojs.api.ui.UiProp;
+import com.tkisor.nekojs.api.ui.UiSignal;
+import com.tkisor.nekojs.api.ui.UiStore;
 import com.tkisor.nekojs.api.data.PerfTimerValue;
 import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.api.registry.RegistryQueryService;
@@ -62,6 +67,19 @@ public final class CoreManagedApiBootstrap {
     public static final ApiSymbolId NBT_GLOBAL = ApiSymbolId.parse("global:NBT");
     public static final ApiSymbolId REGISTRY_GLOBAL = ApiSymbolId.parse("global:Registry");
     public static final ApiSymbolId PERFORMANCE_GLOBAL = ApiSymbolId.parse("global:Performance");
+    public static final ApiSymbolId UI_GLOBAL = ApiSymbolId.parse("global:Ui");
+
+    /**
+     * UI facade 对 managed contract 暴露的成员：只含脚本可见的 root 生命周期、
+     * 状态失效与响应式原语创建。<b>排除</b> Java 侧装配方法
+     * （{@code of} / {@code ownerThread}）——它们不是脚本 contract 的一部分。
+     */
+    private static final java.util.function.Predicate<java.lang.reflect.Method> UI_MEMBER_FILTER =
+            method -> {
+                String name = method.getName();
+                return !name.startsWith("neko$")
+                        && !Set.of("of", "ownerThread", "viewport", "resize").contains(name);
+            };
 
     private CoreManagedApiBootstrap() {
     }
@@ -285,6 +303,31 @@ public final class CoreManagedApiBootstrap {
         register(contributions, symbols, "member:RegistryView.dataMapValue", (receiver, args) ->
                 ((RegistryView) receiver).dataMapValue((String) args.getFirst(), (String) args.get(1)));
 
+        UiFacade ui = loadUiFacade(platform);
+        register(contributions, symbols, "global:Ui", (receiver, args) -> ui);
+        register(contributions, symbols, "member:Ui.generation", (receiver, args) ->
+                ((UiFacade) receiver).generation());
+        register(contributions, symbols, "member:Ui.createStateOwner", (receiver, args) ->
+                ((UiFacade) receiver).createStateOwner());
+        register(contributions, symbols, "member:Ui.create", (receiver, args) ->
+                ((UiFacade) receiver).create((com.tkisor.nekojs.api.ui.UiScreen) args.getFirst()));
+        register(contributions, symbols, "member:Ui.open", (receiver, args) ->
+                ((UiFacade) receiver).open((com.tkisor.nekojs.api.ui.UiScreen) args.getFirst()));
+        register(contributions, symbols, "member:Ui.invalidateGeneration", (receiver, args) -> {
+            ((UiFacade) receiver).invalidateGeneration(((Number) args.getFirst()).intValue());
+            return null;
+        });
+        register(contributions, symbols, "member:Ui.closeGeneration", (receiver, args) -> {
+            ((UiFacade) receiver).closeGeneration(((Number) args.getFirst()).intValue());
+            return null;
+        });
+        register(contributions, symbols, "member:Ui.roots", (receiver, args) ->
+                ((UiFacade) receiver).roots());
+        register(contributions, symbols, "member:Ui.dispose", (receiver, args) -> {
+            ((UiFacade) receiver).dispose();
+            return null;
+        });
+
         PerformanceFacade performance = new DefaultPerformanceFacade();
         register(contributions, symbols, "global:Performance", (receiver, args) -> performance);
         register(contributions, symbols, "member:Performance.now", (receiver, args) -> performance.now());
@@ -313,7 +356,8 @@ public final class CoreManagedApiBootstrap {
                         JSON_IO_GLOBAL, json,
                         NBT_GLOBAL, nbt,
                         REGISTRY_GLOBAL, registry,
-                        PERFORMANCE_GLOBAL, performance));
+                        PERFORMANCE_GLOBAL, performance,
+                        UI_GLOBAL, ui));
     }
 
     /**
@@ -356,19 +400,68 @@ public final class CoreManagedApiBootstrap {
         symbols.addAll(ContractReflector.reflectDataType("PerfTimer", PerfTimerValue.class));
         // common 侧事件注册类（Graal Value/ScriptType 全映射为 object）
         symbols.addAll(ContractReflector.reflectEventRegistrationSymbols());
+        // JSX UI facade + 数据类型（客户端 UI；UI 不创建第二套 catalog/声明事实源）
+        symbols.addAll(ContractReflector.extractSymbols("Ui", UiFacade.class, true, UI_MEMBER_FILTER));
+        symbols.addAll(ContractReflector.reflectDataType("UiProp", UiProp.class));
+        symbols.addAll(ContractReflector.reflectDataType("UiSignal", UiSignal.class));
+        symbols.addAll(ContractReflector.reflectDataType("UiStore", UiStore.class));
+        symbols.addAll(ContractReflector.reflectDataType("UiEvent", UiEvent.class));
 
         String docs = "NekoJS portable core API contract. Symbols reflected from Java facades "
-                + "(ID/Platform/Text/JsonIO/NBT/Registry/Performance) and data types "
-                + "(TextValue/NekoId/JsonValue/NbtValue/NbtEntry/RegistryView/ModInfo/PerfTimer). "
+                + "(ID/Platform/Text/JsonIO/NBT/Registry/Performance/Ui) and data types "
+                + "(TextValue/NekoId/JsonValue/NbtValue/NbtEntry/RegistryView/ModInfo/PerfTimer/"
+                + "UiProp/UiSignal/UiStore/UiEvent). "
                 + "Events derived at runtime via EventContractReflector.";
 
         NormativeApiContract contract = new NormativeApiContract(
                 2, toContractIdentity(identity), docs, symbols,
-                List.of(), List.of());
+                List.of(
+                        new NormativeApiContract.ContractCapability(
+                                "ui.fake-host-adapter", ">=1.0.0",
+                                com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED,
+                                null,
+                                "common fake host Adapter 完整实现 host Adapter contract："
+                                        + "create/update/reorder/bindEvents/dispose/measure/arrange/paint。"),
+                        new NormativeApiContract.ContractCapability(
+                                "ui.client-screen", ">=1.0.0",
+                                com.tkisor.nekojs.api.capability.CapabilityStatus.PARTIAL,
+                                null,
+                                "原生 Screen 投影由客户端平台 Adapter 提供；本票只交付 common 逻辑核心，"
+                                        + "真实 Screen 接线归 NeoForge 26.2 Adapter 票。"),
+                        new NormativeApiContract.ContractCapability(
+                                "ui.native-input", ">=1.0.0",
+                                com.tkisor.nekojs.api.capability.CapabilityStatus.PARTIAL,
+                                null,
+                                "稳定 UiEvent 事件对象与命中/焦点语义已实现；原生鼠标/键盘/文本输入"
+                                        + "的采集由客户端 Adapter 提供。"),
+                        new NormativeApiContract.ContractCapability(
+                                "ui.text-measurement", ">=1.0.0",
+                                com.tkisor.nekojs.api.capability.CapabilityStatus.PARTIAL,
+                                null,
+                                "文本测量经 UiTextMeasurer 边界调用；真实字体/换行由客户端 Adapter 提供。")),
+                List.of());
 
         String integrity = sha256Hex(contract.toString().getBytes(StandardCharsets.UTF_8));
         return VerifiedApiContract.create(identity, contract, codeSource,
                 "nekojs/api-contract/synthesized", integrity, integrity);
+    }
+
+    /**
+     * 装配 UI facade：只把<b>接口类型</b>的契约接收者暴露给脚本。
+     *
+     * <p>返回对象是 {@code UiFacade}（契约反射自该接口），避免暴露实现类上未被契约承诺的
+     * 方法（{@code ApiFacadeProxy} 按 typeId 的成员布局生成脚本可见成员）。
+     *
+     * @param platform 平台装配点；{@code uiResources()} 为 {@code null}（非客户端）时
+     *                 返回显式拒绝实现，脚本创建 root 会以 {@code UNSUPPORTED_CAPABILITY} 失败
+     */
+    public static UiFacade loadUiFacade(IPlatform platform) {
+        Objects.requireNonNull(platform, "platform");
+        com.tkisor.nekojs.api.ui.UiResources resources = platform.uiResources();
+        if (resources == null) {
+            return new com.tkisor.nekojs.core.ui.UnavailableUiFacade(0);
+        }
+        return new com.tkisor.nekojs.core.ui.RootUiFacade(resources);
     }
 
     private static NormativeApiContract.ContractIdentity toContractIdentity(ApiContractIdentity id) {
