@@ -1,0 +1,202 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :26.2.0:stonecutterGenerate UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :1.21.1:stonecutterGenerate UP-TO-DATE
+
+> Task :1.21.1:createMinecraftArtifacts
+Loaded 145 artifacts from D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\versions\1.21.1\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.02s
+[1m*** Started working on [4mdownloadClientMappings[0m[0m
+[1m*** Started working on [4mdownloadServer[0m[0m
+[1m*** Started working on [4mdownloadClient[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.03s
+ [1m[92mDONE [0m Completed [4mdownloadClientMappings[0m in 0.03s
+[1m*** Started working on [4mmergeMappings[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeMappings[0m in 0.00s
+[1m*** Started working on [4mstripClient[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mstripClient[0m in 0.00s
+[1m*** Started working on [4mextractServer[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mextractServer[0m in 0.00s
+[1m*** Started working on [4mstripServer[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mstripServer[0m in 0.00s
+[1m*** Started working on [4mmerge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmerge[0m in 0.00s
+[1m*** Started working on [4mrename[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrename[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4minject[0m[0m
+ [1m[92mREUSE[0m Used cache of [4minject[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4msourcesWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4msourcesWithNeoForge[0m in 0.00s
+[1m*** Started working on [4mcompiledWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mcompiledWithNeoForge[0m in 0.00s
+[1m*** Started working on [4msourcesAndCompiledWithNeoForge[0m[0m
+ [1m[92mREUSE[0m Used cache of [4msourcesAndCompiledWithNeoForge[0m in 0.00s
+Total runtime: 1.01s
+
+
+> Task :1.21.1:compileJava UP-TO-DATE
+> Task :1.21.1:generateModMetadata UP-TO-DATE
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :1.21.1:classes UP-TO-DATE
+> Task :1.21.1:jarJar NO-SOURCE
+> Task :1.21.1:jar UP-TO-DATE
+> Task :1.21.1:assemble UP-TO-DATE
+> Task :1.21.1:stonecutterPrepareTest UP-TO-DATE
+> Task :1.21.1:stonecutterGenerateTest UP-TO-DATE
+> Task :1.21.1:compileTestJava UP-TO-DATE
+> Task :1.21.1:processTestResources UP-TO-DATE
+> Task :1.21.1:testClasses UP-TO-DATE
+> Task :1.21.1:test UP-TO-DATE
+> Task :1.21.1:verifyDevModSourceSets
+> Task :1.21.1:check
+> Task :1.21.1:build
+
+> Task :26.1.2:createMinecraftArtifacts
+Loaded 141 artifacts from D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\versions\26.1.2\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+Waiting for lock on downloadManifest_5014bdd0ad2a5e976245ebd187d1027b7a1c2dee...
+> Task :26.2.0:createMinecraftArtifacts
+Loaded 157 artifacts from D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\versions\26.2.0\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadManifest[0m[0m
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 1.02s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
+[1m*** Started working on [4mdownloadClient[0m[0m
+[1m*** Started working on [4mdownloadServer[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.02s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 1.82s
+
+
+> Task :26.2.0:compileJava UP-TO-DATE
+> Task :26.2.0:generateModMetadata UP-TO-DATE
+> Task :26.2.0:processResources UP-TO-DATE
+> Task :26.2.0:classes UP-TO-DATE
+> Task :26.2.0:jarJar NO-SOURCE
+> Task :26.2.0:jar UP-TO-DATE
+> Task :26.2.0:assemble UP-TO-DATE
+> Task :26.2.0:stonecutterPrepareTest UP-TO-DATE
+> Task :26.2.0:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0:compileTestJava UP-TO-DATE
+> Task :26.2.0:processTestResources UP-TO-DATE
+> Task :26.2.0:testClasses UP-TO-DATE
+> Task :26.2.0:test UP-TO-DATE
+> Task :26.2.0:verifyDevModSourceSets
+> Task :26.2.0:check
+> Task :26.2.0:build
+
+> Task :26.1.2:createMinecraftArtifacts
+  DL    https://launchermeta.mojang.com/mc/game/version_manifest_v2.json
+ [1m[92mDONE [0m Completed [4mdownloadManifest[0m in 2.91s
+[1m*** Started working on [4mdownloadJson[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadJson[0m in 0.00s
+[1m*** Started working on [4mdownloadClient[0m[0m
+[1m*** Started working on [4mdownloadServer[0m[0m
+ [1m[92mDONE [0m Completed [4mdownloadClient[0m in 0.02s
+ [1m[92mDONE [0m Completed [4mdownloadServer[0m in 0.02s
+[1m*** Started working on [4mpreProcessJar[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpreProcessJar[0m in 0.00s
+[1m*** Started working on [4mdecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mdecompile[0m in 0.00s
+[1m*** Started working on [4mpatch[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mpatch[0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mapplyNeoforgePatches[0m in 0.00s
+[1m*** Started working on [4mtransformSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mtransformSources[0m in 0.00s
+[1m*** Started working on [4mrecompile[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mrecompile[0m in 0.00s
+[1m*** Started working on [4mmergeWithSources[0m[0m
+ [1m[92mREUSE[0m Used cache of [4mmergeWithSources[0m in 0.00s
+Total runtime: 3.72s
+
+
+> Task :26.1.2:compileJava UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.1.2:classes UP-TO-DATE
+> Task :26.1.2:jarJar NO-SOURCE
+> Task :26.1.2:jar UP-TO-DATE
+> Task :26.1.2:assemble UP-TO-DATE
+> Task :26.1.2:compileTestJava UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :26.1.2:testClasses UP-TO-DATE
+> Task :26.1.2:test UP-TO-DATE
+> Task :26.1.2:verifyDevModSourceSets
+> Task :26.1.2:check
+> Task :26.1.2:build
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 6s
+52 actionable tasks: 6 executed, 46 up-to-date
