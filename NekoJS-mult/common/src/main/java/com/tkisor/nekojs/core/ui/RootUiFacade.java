@@ -8,7 +8,10 @@ import com.tkisor.nekojs.api.ui.UiHostNode;
 import com.tkisor.nekojs.api.ui.UiResources;
 import com.tkisor.nekojs.api.ui.UiRootHandle;
 import com.tkisor.nekojs.api.ui.UiScreen;
+import com.tkisor.nekojs.api.ui.UiSize;
 import com.tkisor.nekojs.api.ui.UiStateOwner;
+import com.tkisor.nekojs.api.ui.ViewportContext;
+import com.tkisor.nekojs.api.ui.ViewportProfile;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,13 +36,13 @@ public final class RootUiFacade implements UiFacade {
     private final List<DefaultUiStateOwner> owners = new ArrayList<>();
     private int rootSequence;
     private boolean disposed;
-    private com.tkisor.nekojs.api.ui.UiSize viewport;
+    private ViewportContext viewportContext;
 
     /** 用宿主资源构造 facade。 */
     public RootUiFacade(UiResources resources) {
         this.resources = Objects.requireNonNull(resources, "resources");
         this.ownerThread = resources.ownerThread() == null ? Thread.currentThread() : resources.ownerThread();
-        this.viewport = resources.viewport();
+        this.viewportContext = resources.viewportContext();
     }
 
     UiResources resources() {
@@ -57,22 +60,47 @@ public final class RootUiFacade implements UiFacade {
     }
 
     /** 当前逻辑视口（Java 侧装配/布局查询；不属于脚本 contract）。 */
-    public com.tkisor.nekojs.api.ui.UiSize viewport() {
-        return viewport;
+    public UiSize viewport() {
+        return new UiSize(viewportContext.logicalWidth(), viewportContext.logicalHeight());
     }
 
-    /** 窗口 resize：更新逻辑视口并让全部 root 布局失效（Java 侧装配 API）。 */
-    public void resize(com.tkisor.nekojs.api.ui.UiSize next) {
+    /** 当前响应式视口事实：逻辑视口、安全区域、原生 scale、host 布局能力（Java 侧装配 API）。 */
+    public ViewportContext viewportContext() {
+        return viewportContext;
+    }
+
+    /** 当前判定出的 Viewport Profile（Java 侧装配/诊断查询）。 */
+    public ViewportProfile profile() {
+        return viewportContext.profile();
+    }
+
+    /**
+     * 窗口 resize：更新响应式视口事实并让全部 root 布局失效（Java 侧装配 API）。
+     *
+     * <p>视口事实没变时是显式无操作（不触发多余重排）。语义变化才走
+     * {@link UiRootHandle#invalidateAndReconcile()}。
+     */
+    public void resize(ViewportContext next) {
         requireOwner("Ui.resize");
-        if (next == null || next.equals(viewport)) {
+        if (next == null || next.equals(viewportContext)) {
             return;
         }
-        viewport = next;
+        viewportContext = next;
         for (UiRootHandle root : new ArrayList<>(roots.keySet())) {
-            if (root.isActive()) {
-                root.invalidateAndReconcile();
+            if (root instanceof UiRoot concrete && concrete.isActive()) {
+                // 只让布局失效：脚本 render 未读过视口时走纯重排路径（票 43 AC5）。
+                concrete.invalidateLayout();
             }
         }
+    }
+
+    /** 便捷 resize：只改逻辑视口，保留当前安全区域与 host 布局能力。 */
+    public void resize(UiSize next) {
+        if (next == null) {
+            return;
+        }
+        resize(new ViewportContext(next.width(), next.height(), viewportContext.safeArea(),
+                viewportContext.guiScale(), viewportContext.capabilities()));
     }
 
     @Override

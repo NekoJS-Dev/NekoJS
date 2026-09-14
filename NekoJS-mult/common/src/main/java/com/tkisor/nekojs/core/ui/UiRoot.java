@@ -18,8 +18,11 @@ import com.tkisor.nekojs.api.ui.UiScreen;
 import com.tkisor.nekojs.api.ui.UiScreenOptions;
 import com.tkisor.nekojs.api.ui.UiSize;
 import com.tkisor.nekojs.api.ui.UiVNode;
+import com.tkisor.nekojs.api.ui.ProjectedViewport;
+import com.tkisor.nekojs.api.ui.ViewportContext;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +60,12 @@ public final class UiRoot implements UiRootHandle {
     private UiRootStatus status = UiRootStatus.CREATED;
     private String focusedPath;
     private boolean reconcilePending;
+    private UiLayoutEngine.LayoutFacts layoutFacts = UiLayoutEngine.LayoutFacts.empty();
+    private ProjectedViewport projectedViewport;
+    private long layoutRevisions;
+    /** 脚本 render 是否读取过视口事实（决定 resize 走重排还是走完整 reconcile）。 */
+    private boolean rendering;
+    private boolean viewportDependent;
 
     UiRoot(RootUiFacade facade, UiScreen screen, UiScreenOptions options,
            DefaultUiStateOwner stateOwner, String rootId) {
@@ -171,7 +180,8 @@ public final class UiRoot implements UiRootHandle {
         paintNode(committedRoot, new UiRect(0, 0,
                 Math.max(0, committedRoot.layout().width()),
                 Math.max(0, committedRoot.layout().height())), operations, clips);
-        inspection = new UiHostInspection(committedRoot, operations, clips);
+        inspection = new UiHostInspection(committedRoot, operations, clips,
+                layoutFacts.resolvedStyles(), layoutFacts.overflow(), projectedViewport, layoutRevisions);
         return inspection;
     }
 
@@ -216,6 +226,39 @@ public final class UiRoot implements UiRootHandle {
     }
 
     @Override
+    public ProjectedViewport viewport() {
+        // 渲染期间读取视口事实 → 该 root 的布局依赖视口，resize 必须重跑脚本 render 才能正确。
+        if (rendering) {
+            viewportDependent = true;
+        }
+        return projectedViewport;
+    }
+
+    /**
+     * 视口/profile 变化后的布局失效路径（票 43 AC5）。
+     *
+     * <p>脚本 render <b>没有</b>读取过视口事实时：只对已提交树重新 measure/arrange，
+     * 不执行脚本 render，也不经过 reconciler，因此不创建/更新/重排任何 host node。
+     *
+     * <p>脚本 render 读过视口事实时：结构可能随视口改变，退回
+     * {@link #invalidateAndReconcile()}（正确性优先——不能因为"只重排"而让脚本看不到新视口）。
+     */
+    void invalidateLayout() {
+        if (status == UiRootStatus.DISPOSED || status == UiRootStatus.INVALIDATED) {
+            return;
+        }
+        if (viewportDependent) {
+            invalidateAndReconcile();
+            return;
+        }
+        if (committedRoot == null) {
+            return;
+        }
+        relayout(committedRoot, currentViewportContext());
+        inspection = inspection.forViewport(projectedViewport, layoutRevisions);
+    }
+
+    @Override
     public UiVNode committedTree() {
         return committedTree;
     }
@@ -247,48 +290,47 @@ public final class UiRoot implements UiRootHandle {
             return;
         }
         UiVNode candidateTree;
+        rendering = true;
         try {
             candidateTree = screen.render();
         } catch (UiFailure failure) {
-            stateOwner.endTracking(this);
             record(UiDiagnostics.fromFailure(failure, null, rootId, generation));
             return;
         } catch (RuntimeException failure) {
-            stateOwner.endTracking(this);
             record(UiDiagnostics.fromThrowable(UiDiagnosticStage.RENDER, "RENDER_FAILURE",
                     failure, null, rootId, generation));
             return;
+        } finally {
+            rendering = false;
+            stateOwner.endTracking(this);
         }
         if (candidateTree == null) {
-            stateOwner.endTracking(this);
             record(UiDiagnostics.of(UiDiagnosticStage.RENDER, UiFailure.INVALID_ROOT,
                     "render function must return a VNode or fragment, got null",
                     null, rootId, generation, null));
             return;
         }
 
-        UiSize available = availableViewport();
+        ViewportContext context = currentViewportContext();
         UiReconciler.Candidate candidate;
         try {
-            candidate = reconciler.expand(candidateTree);
+            candidate = reconciler.expand(candidateTree, context);
         } catch (UiFailure failure) {
-            stateOwner.endTracking(this);
             record(UiDiagnostics.fromFailure(failure, null, rootId, generation));
             return;
         } catch (RuntimeException failure) {
-            stateOwner.endTracking(this);
             record(UiDiagnostics.fromThrowable(UiDiagnosticStage.RENDER, "RENDER_FAILURE",
                     failure, null, rootId, generation));
             return;
         }
-        stateOwner.endTracking(this);
 
         try {
             UiHostNode next = reconciler.commit(committedRoot, candidate);
-            commitLayout(next, available);
+            commitLayout(next, context);
             committedRoot = next;
             committedTree = candidateTree;
-            inspection = new UiHostInspection(next, inspection.paintOperations(), inspection.clipRects());
+            inspection = inspection.withCommittedTree(next, layoutFacts.resolvedStyles(),
+                    layoutFacts.overflow(), projectedViewport, layoutRevisions);
             if (status == UiRootStatus.CREATED) {
                 status = UiRootStatus.OPEN;
             }
@@ -300,9 +342,23 @@ public final class UiRoot implements UiRootHandle {
         }
     }
 
-    /** 当前逻辑视口（resize 由装配点更新，布局在下一次 reconcile 时失效重算）。 */
-    private UiSize availableViewport() {
-        return facade.viewport();
+    /**
+     * 当前响应式视口事实（票 43 AC1）：逻辑视口来自装配点（resize 更新），安全区域与 host
+     * 布局能力可由 Screen 选项在 root 级进一步声明；原生 scale 只作为记录事实，不参与判档。
+     */
+    private ViewportContext currentViewportContext() {
+        ViewportContext base = facade.viewportContext();
+        ViewportContext.SafeArea declared = options.safeArea();
+        boolean overridesSafeArea = declared.left() > 0 || declared.top() > 0
+                || declared.right() > 0 || declared.bottom() > 0;
+        boolean declaresCapabilities = !options.layoutCapabilities().isEmpty();
+        if (!overridesSafeArea && !declaresCapabilities) {
+            return base;
+        }
+        Set<ViewportContext.Capability> capabilities = new LinkedHashSet<>(base.capabilities());
+        capabilities.addAll(options.layoutCapabilities());
+        return new ViewportContext(base.logicalWidth(), base.logicalHeight(),
+                overridesSafeArea ? declared : base.safeArea(), base.guiScale(), capabilities);
     }
 
     /**
@@ -311,9 +367,9 @@ public final class UiRoot implements UiRootHandle {
      * <p>宿主树的节点创建/更新无法回滚，因此当布局或后续步骤失败时，root 会显式把
      * 候选树重新提交回最后一次有效树的 props，并在诊断中标记为「保留最后有效树」。
      */
-    private void commitLayout(UiHostNode node, UiSize available) {
+    private void commitLayout(UiHostNode node, ViewportContext context) {
         try {
-            layoutEngine.layout(node, available);
+            relayout(node, context);
         } catch (UiFailure failure) {
             restoreCommittedTree();
             throw failure;
@@ -324,13 +380,21 @@ public final class UiRoot implements UiRootHandle {
         }
     }
 
+    /** 只 measure/arrange 并推进布局代数：不执行脚本 render，也不经过 reconciler（AC5）。 */
+    private void relayout(UiHostNode node, ViewportContext context) {
+        UiLayoutEngine.LayoutFacts facts = layoutEngine.layout(node, context);
+        layoutFacts = facts;
+        layoutRevisions++;
+        projectedViewport = ProjectedViewport.of(context, layoutRevisions);
+    }
+
     /** 把已提交树的 props 重新推回 host Adapter（候选失败时的恢复路径）。 */
     private void restoreCommittedTree() {
         if (committedRoot == null || committedTree == null) {
             return;
         }
         restoreNode(committedRoot, committedTree);
-        layoutEngine.layout(committedRoot, availableViewport());
+        relayout(committedRoot, currentViewportContext());
     }
 
     /**

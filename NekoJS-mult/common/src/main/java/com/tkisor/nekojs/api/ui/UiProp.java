@@ -37,6 +37,10 @@ public enum UiProp {
     ANCHOR("anchor", UiPropCategory.LAYOUT, UiValueKind.ANCHOR),
     GROW("grow", UiPropCategory.LAYOUT, UiValueKind.NUMBER),
     VISIBLE("visible", UiPropCategory.LAYOUT, UiValueKind.BOOLEAN),
+    /** 主轴方向覆盖；缺省继承 primitive（{@code row}/{@code column}），见 {@link UiAxis}。 */
+    DIRECTION("direction", UiPropCategory.LAYOUT, UiValueKind.AXIS),
+    /** Viewport Profile 覆盖包（票 43 AC3）；语义是声明式覆盖，不是另一个布局容器。 */
+    PROFILES("profiles", UiPropCategory.LAYOUT, UiValueKind.PROFILE_OVERRIDES),
 
     // ---- 视觉 ----
     BACKGROUND("background", UiPropCategory.VISUAL, UiValueKind.STRING),

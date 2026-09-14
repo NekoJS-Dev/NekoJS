@@ -53,6 +53,19 @@ public interface UiResources {
         return new com.tkisor.nekojs.api.ui.UiSize(320, 240);
     }
 
+    /**
+     * 当前响应式视口事实（票 43 AC1）。
+     *
+     * <p>缺省实现从 {@link #viewport()} 派生一个「无安全区域、scale 1、无额外布局能力」的
+     * 上下文——既有装配点无需改动即可继续工作；真实客户端装配点应覆盖它并把安全区域、
+     * 原生 scale 与 host 布局能力一并传入。判定规则由
+     * {@link UiResponsiveRules} 单点持有，此处不再引入第二份阈值。
+     */
+    default com.tkisor.nekojs.api.ui.ViewportContext viewportContext() {
+        com.tkisor.nekojs.api.ui.UiSize size = viewport();
+        return com.tkisor.nekojs.api.ui.ViewportContext.of(size.width(), size.height());
+    }
+
     /** 是否在登记表之外额外允许某个 primitive（平台能力差异用）。 */
     default boolean supports(UiPrimitive primitive) {
         return adapter().primitives().contains(primitive);

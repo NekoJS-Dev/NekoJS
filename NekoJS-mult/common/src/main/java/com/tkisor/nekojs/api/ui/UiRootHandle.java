@@ -49,6 +49,12 @@ public interface UiRootHandle {
     /** 只读检查（任意线程可读）。 */
     UiHostInspection inspection();
 
+    /**
+     * 当前响应式视口事实（jsx-ui-spec「响应式模型」，票 43 AC1）：判定得到的 Viewport
+     * Profile、逻辑视口、可用布局区与安全区域。任意线程可读；不属于脚本可见的写操作。
+     */
+    ProjectedViewport viewport();
+
     /** 最近一次成功提交的候选树根 VNode，可为 {@code null}。 */
     UiVNode committedTree();
 

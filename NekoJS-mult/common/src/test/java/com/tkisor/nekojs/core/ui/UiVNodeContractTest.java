@@ -188,6 +188,7 @@ class UiVNodeContractTest {
             assertEquals(com.tkisor.nekojs.api.ui.UiPropCategory.LAYOUT, prop.category(),
                     prop.jsName() + " must be a layout prop");
         }
-        assertEquals(14, layoutProps.size());
+        // 票 43 新增 direction（方向覆盖）与 profiles（Viewport Profile 覆盖包）。
+        assertEquals(16, layoutProps.size());
     }
 }

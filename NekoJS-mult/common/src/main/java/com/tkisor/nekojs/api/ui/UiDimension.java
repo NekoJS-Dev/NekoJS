@@ -19,7 +19,15 @@ public record UiDimension(Kind kind, double value) {
         /** 固定逻辑像素。 */
         PIXELS,
         /** 相对包含块的受控百分比（0..100）。 */
-        PERCENT
+        PERCENT,
+        /**
+         * 受控设计坐标（票 43 AC4）：数值以设计像素表达，布局时乘以
+         * {@link UiLayoutSpec#contentScale()} 得到逻辑像素。
+         *
+         * <p>缩放<b>只</b>作用于显式声明为设计坐标的尺寸；字号与其它可读性属性走
+         * {@link UiResponsiveRules#resolveFontSize} 的受控区间，不随视口无限等比放大。
+         */
+        DESIGN
     }
 
     public UiDimension {
@@ -41,6 +49,12 @@ public record UiDimension(Kind kind, double value) {
                     throw new IllegalArgumentException("percent dimension must be in [0, 100], got " + value);
                 }
             }
+            case DESIGN -> {
+                if (!(value >= 0.0) || Double.isInfinite(value) || value > UiLayoutSpec.MAX_LOGICAL_PIXELS) {
+                    throw new IllegalArgumentException(
+                            "design dimension must be a finite value in [0, " + UiLayoutSpec.MAX_LOGICAL_PIXELS + "], got " + value);
+                }
+            }
         }
     }
 
@@ -48,6 +62,7 @@ public record UiDimension(Kind kind, double value) {
     public static UiDimension fill() { return new UiDimension(Kind.FILL, 0); }
     public static UiDimension pixels(double value) { return new UiDimension(Kind.PIXELS, value); }
     public static UiDimension percent(double value) { return new UiDimension(Kind.PERCENT, value); }
+    public static UiDimension design(double value) { return new UiDimension(Kind.DESIGN, value); }
 
     /** 脚本侧写法（{@code "auto"} / {@code "fill"} / 数值 / {@code "50%"}）。 */
     public String literal() {
@@ -56,6 +71,7 @@ public record UiDimension(Kind kind, double value) {
             case FILL -> "fill";
             case PIXELS -> trim(value);
             case PERCENT -> trim(value) + "%";
+            case DESIGN -> trim(value) + "dp";
         };
     }
 
@@ -73,10 +89,14 @@ public record UiDimension(Kind kind, double value) {
             if (trimmed.endsWith("%")) {
                 return percent(parseNumber(trimmed.substring(0, trimmed.length() - 1), trimmed));
             }
+            // 设计坐标只接受显式后缀：裸数字永远是逻辑像素，声明式缩放不会被隐式启用。
+            if (trimmed.endsWith("dp")) {
+                return design(parseNumber(trimmed.substring(0, trimmed.length() - 2), trimmed));
+            }
             return pixels(parseNumber(trimmed, trimmed));
         }
         throw new IllegalArgumentException(
-                "dimension must be a number or one of auto|fill|<n>|<n>%, got " + raw.getClass().getName());
+                "dimension must be a number or one of auto|fill|<n>|<n>%|<n>dp, got " + raw.getClass().getName());
     }
 
     private static double parseNumber(String raw, String original) {

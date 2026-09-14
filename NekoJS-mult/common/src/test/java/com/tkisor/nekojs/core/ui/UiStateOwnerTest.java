@@ -51,6 +51,7 @@ class UiStateOwnerTest {
         }
         @Override public com.tkisor.nekojs.api.ui.UiVNode committedTree() { return null; }
         @Override public String focusedPath() { return null; }
+        @Override public com.tkisor.nekojs.api.ui.ProjectedViewport viewport() { return null; }
     }
 
     @Test

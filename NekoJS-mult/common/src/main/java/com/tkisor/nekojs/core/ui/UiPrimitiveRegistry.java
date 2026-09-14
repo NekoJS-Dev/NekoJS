@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.ui.UiDiagnosticStage;
 import com.tkisor.nekojs.api.ui.UiFailure;
 import com.tkisor.nekojs.api.ui.UiLayoutSpec;
 import com.tkisor.nekojs.api.ui.UiPrimitive;
+import com.tkisor.nekojs.api.ui.UiProfileOverride;
 import com.tkisor.nekojs.api.ui.UiProp;
 import com.tkisor.nekojs.api.ui.UiProps;
 
@@ -119,6 +120,11 @@ public final class UiPrimitiveRegistry {
                 UiAnchor.parse(props.string(UiProp.ANCHOR));
             }
             UiLayoutSpec.fromProps(props);
+            // 每一条 profile 覆盖自身都必须合法：非法覆盖在候选阶段失败，不等某个档位命中。
+            for (UiProfileOverride override : UiProfileOverride
+                    .parseAll(props.raw(UiProp.PROFILES), path).values()) {
+                UiLayoutSpec.fromProps(props, override);
+            }
         } catch (UiFailure failure) {
             throw failure;
         } catch (IllegalArgumentException failure) {
@@ -134,6 +140,7 @@ public final class UiPrimitiveRegistry {
                 UiProp.WIDTH, UiProp.HEIGHT, UiProp.MIN_WIDTH, UiProp.MIN_HEIGHT,
                 UiProp.MAX_WIDTH, UiProp.MAX_HEIGHT, UiProp.MARGIN, UiProp.PADDING,
                 UiProp.ALIGN, UiProp.JUSTIFY, UiProp.ANCHOR, UiProp.GROW, UiProp.VISIBLE,
+                UiProp.DIRECTION, UiProp.PROFILES,
                 UiProp.BACKGROUND, UiProp.BORDER, UiProp.RADIUS, UiProp.OPACITY);
         Set<UiProp> pointer = EnumSet.of(
                 UiProp.ON_CLICK, UiProp.ON_MOUSE_DOWN, UiProp.ON_MOUSE_UP,
@@ -144,7 +151,7 @@ public final class UiPrimitiveRegistry {
 
         map.put(UiPrimitive.SCREEN, EnumSet.of(
                 UiProp.TITLE, UiProp.WIDTH, UiProp.HEIGHT, UiProp.BACKGROUND, UiProp.PADDING,
-                UiProp.ALIGN, UiProp.JUSTIFY, UiProp.VISIBLE, UiProp.ON_CLOSE));
+                UiProp.ALIGN, UiProp.JUSTIFY, UiProp.VISIBLE, UiProp.PROFILES, UiProp.ON_CLOSE));
         map.put(UiPrimitive.PANEL, union(box, interactivity, pointer, EnumSet.of(UiProp.LOADING)));
         map.put(UiPrimitive.ROW, union(box, EnumSet.of(UiProp.GAP, UiProp.ALIGN, UiProp.JUSTIFY)));
         map.put(UiPrimitive.COLUMN, union(box, EnumSet.of(UiProp.GAP, UiProp.ALIGN, UiProp.JUSTIFY)));

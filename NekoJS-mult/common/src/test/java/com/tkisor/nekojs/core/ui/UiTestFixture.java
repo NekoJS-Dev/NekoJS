@@ -18,6 +18,7 @@ import com.tkisor.nekojs.api.ui.UiSize;
 import com.tkisor.nekojs.api.ui.UiTextMeasure;
 import com.tkisor.nekojs.api.ui.UiTextMeasurer;
 import com.tkisor.nekojs.api.ui.UiVNode;
+import com.tkisor.nekojs.api.ui.ViewportContext;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,6 +39,9 @@ final class UiTestFixture {
     final List<UiEvent> dispatched = new ArrayList<>();
     final Map<String, Integer> componentRenders = new LinkedHashMap<>();
     UiSize viewport = new UiSize(320, 240);
+    ViewportContext.SafeArea safeArea = ViewportContext.SafeArea.none();
+    int guiScale = 1;
+    Set<ViewportContext.Capability> capabilities = Set.of();
     int generation = 1;
     Thread ownerThread = Thread.currentThread();
     boolean failEvents;
@@ -108,6 +112,12 @@ final class UiTestFixture {
             @Override
             public UiSize viewport() {
                 return viewport;
+            }
+
+            @Override
+            public ViewportContext viewportContext() {
+                return new ViewportContext(viewport.width(), viewport.height(),
+                        safeArea, guiScale, capabilities);
             }
         };
     }

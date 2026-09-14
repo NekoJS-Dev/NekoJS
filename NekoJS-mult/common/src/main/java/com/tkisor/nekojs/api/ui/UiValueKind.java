@@ -28,6 +28,10 @@ public enum UiValueKind {
     ALIGNMENT("NekoJsx.UiAlignment"),
     /** 九宫格锚定。 */
     ANCHOR("NekoJsx.UiAnchor"),
+    /** 主轴方向覆盖（{@code row} / {@code column}）；缺省继承 primitive。 */
+    AXIS("NekoJsx.UiAxis"),
+    /** Viewport Profile 覆盖包：1–6 档的受控属性覆盖，键为档位编号。 */
+    PROFILE_OVERRIDES("NekoJsx.UiProfileOverrides"),
     /** 字符串或布尔（error 既可是消息也可是标记）。 */
     STRING_OR_BOOLEAN("string | boolean"),
     /** 受控资源标识（namespace:path），不接受 URL 或绝对路径。 */
@@ -111,6 +115,21 @@ public enum UiValueKind {
                     }
                 }
                 fail(prop, primitiveTag, raw, path, "must be an anchor string");
+            }
+            case AXIS -> {
+                if (raw instanceof String text && UiAxis.fromCode(text) != null) return;
+                fail(prop, primitiveTag, raw, path, "must be one of row|column");
+            }
+            case PROFILE_OVERRIDES -> {
+                try {
+                    UiProfileOverride.parseAll(raw, path);
+                    return;
+                } catch (UiFailure failure) {
+                    throw failure;
+                } catch (RuntimeException failure) {
+                    fail(prop, primitiveTag, raw, path, "must map viewport profile 1-6 to "
+                            + "layout overrides");
+                }
             }
             case STRING_OR_BOOLEAN -> {
                 if (raw instanceof String || raw instanceof Boolean) return;

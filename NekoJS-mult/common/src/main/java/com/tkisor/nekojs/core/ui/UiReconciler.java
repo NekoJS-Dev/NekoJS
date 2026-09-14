@@ -12,8 +12,10 @@ import com.tkisor.nekojs.api.ui.UiHostCreate;
 import com.tkisor.nekojs.api.ui.UiHostNode;
 import com.tkisor.nekojs.api.ui.UiPrimitive;
 import com.tkisor.nekojs.api.ui.UiProp;
+import com.tkisor.nekojs.api.ui.UiLayoutSpec;
 import com.tkisor.nekojs.api.ui.UiProps;
 import com.tkisor.nekojs.api.ui.UiVNode;
+import com.tkisor.nekojs.api.ui.ViewportContext;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -91,11 +93,22 @@ final class UiReconciler {
 
     /** 候选择：展开候选 VNode 为候选 host 树（纯函数，不触碰 host）。 */
     Candidate expand(UiVNode root) {
+        return expand(root, null);
+    }
+
+    /**
+     * 候选择：展开候选 VNode 为候选 host 树（纯函数，不触碰 host）。
+     *
+     * <p>{@code context} 用于把 {@code visible} 属性按当前 Viewport Profile 覆盖解析
+     * （票 43 AC3）：profile 判定为隐藏的节点不创建 host node、不参与布局与绘制。
+     * 为 {@code null} 时按基础值解析（无 profile 覆盖）。
+     */
+    Candidate expand(UiVNode root, ViewportContext context) {
         Map<String, Integer> keylessCounters = new HashMap<>();
         Set<String> seenKeys = new HashSet<>();
         List<Candidate> roots = new ArrayList<>();
         expandSiblings(java.util.Collections.singletonList(root), null, roots,
-                keylessCounters, seenKeys, 0);
+                keylessCounters, seenKeys, 0, context);
         if (roots.size() != 1) {
             throw new UiFailure(UiDiagnosticStage.RENDER, UiFailure.INVALID_ROOT,
                     "render function must produce exactly one root <screen>, got " + roots.size(), "screen");
@@ -138,7 +151,8 @@ final class UiReconciler {
      * keyless 序号按同 primitive 的出现顺序分配（与 diff 的索引规则共用 {@link Candidate}）。
      */
     private void expandSiblings(List<UiVNode> nodes, String parentPath, List<Candidate> out,
-                                Map<String, Integer> keylessCounters, Set<String> seenKeys, int depth) {
+                                Map<String, Integer> keylessCounters, Set<String> seenKeys, int depth,
+                                ViewportContext context) {
         if (depth > maxComponentDepth) {
             throw new UiFailure(UiDiagnosticStage.RENDER, UiFailure.INVALID_CHILD,
                     "component/fragment nesting exceeds " + maxComponentDepth + " levels", parentPath);
@@ -149,12 +163,13 @@ final class UiReconciler {
         for (UiVNode node : nodes) {
             // 条件渲染的 null 分支不产生节点（契约：空值安全丢弃）。
             if (node == null) continue;
-            expandOne(node, parentPath, out, keylessCounters, seenKeys, depth);
+            expandOne(node, parentPath, out, keylessCounters, seenKeys, depth, context);
         }
     }
 
     private void expandOne(UiVNode node, String parentPath, List<Candidate> out,
-                           Map<String, Integer> keylessCounters, Set<String> seenKeys, int depth) {
+                           Map<String, Integer> keylessCounters, Set<String> seenKeys, int depth,
+                           ViewportContext context) {
         if (node instanceof HostVNode host) {
             UiPrimitive primitive = host.primitive();
             int slot = keylessCounters.getOrDefault(primitive.tag(), 0);
@@ -172,14 +187,15 @@ final class UiReconciler {
             UiPrimitiveRegistry.validateProps(primitive, host.props(), path);
 
             // visible=false：节点不参与布局与绘制（AC2/AC4「布局失效」的可见性语义）。
-            if (!host.props().bool(UiProp.VISIBLE, true)) {
+            // 带 profile 覆盖时按当前档位解析后的值判定（票 43 AC3）。
+            if (!visible(host.props(), context)) {
                 return;
             }
 
             Candidate candidate = new Candidate(primitive, host.key(), host.props(), path);
             candidate.keylessSlot = host.key() == null ? slot : -1;
             expandSiblings(host.children(), path, candidate.children,
-                    new HashMap<>(), new HashSet<>(), depth + 1);
+                    new HashMap<>(), new HashSet<>(), depth + 1, context);
             out.add(candidate);
             return;
         }
@@ -188,7 +204,7 @@ final class UiReconciler {
             if (fragment.key() != null && !seenKeys.add("Fragment#" + fragment.key())) {
                 throw duplicateKey("Fragment", fragment.key(), parentPath);
             }
-            expandSiblings(fragment.children(), parentPath, out, keylessCounters, seenKeys, depth + 1);
+            expandSiblings(fragment.children(), parentPath, out, keylessCounters, seenKeys, depth + 1, context);
             return;
         }
         if (node instanceof ComponentVNode component) {
@@ -212,11 +228,22 @@ final class UiReconciler {
             if (produced == null) {
                 return;
             }
-            expandOne(produced, parentPath, out, keylessCounters, seenKeys, depth + 1);
+            expandOne(produced, parentPath, out, keylessCounters, seenKeys, depth + 1, context);
             return;
         }
         throw new UiFailure(UiDiagnosticStage.RENDER, UiFailure.INVALID_CHILD,
                 "unsupported VNode kind: " + node.getClass().getName(), parentPath);
+    }
+
+    /**
+     * 节点在当前视口下是否参与布局：无 profile 声明时读基础 {@code visible}；有声明时按
+     * Viewport Profile 解析（覆盖值优先，缺省回退规则见 {@link UiProfileOverride#forProfile}）。
+     */
+    private static boolean visible(UiProps props, ViewportContext context) {
+        if (!props.has(UiProp.PROFILES)) {
+            return props.bool(UiProp.VISIBLE, true);
+        }
+        return UiLayoutSpec.fromProps(props, context).visible();
     }
 
     private static UiFailure duplicateKey(String tag, String key, String parentPath) {

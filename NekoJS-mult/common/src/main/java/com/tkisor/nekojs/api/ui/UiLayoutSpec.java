@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.api.ui;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 单节点解析后的布局约束（jsx-ui-spec「布局」「比例与设计坐标」）。
@@ -23,6 +25,10 @@ import java.util.List;
  * @param anchor       锚定
  * @param grow         剩余空间分配权重
  * @param visible      是否参与布局与绘制
+ * @param contentScale 设计坐标缩放系数（票 43 AC4）：{@link UiDimension.Kind#DESIGN} 尺寸乘它
+ *                     得到逻辑像素；其它种类不受影响。缺省 1.0。
+ * @param direction    容器主轴方向覆盖（票 43 AC3）；{@code null} 表示继承 primitive 缺省。
+ *                     它改变的是布局策略（row/column 重排），不是新的 primitive。
  */
 public record UiLayoutSpec(
         UiDimension width,
@@ -38,11 +44,16 @@ public record UiLayoutSpec(
         UiAlignment justify,
         UiAnchor anchor,
         double grow,
-        boolean visible
+        boolean visible,
+        double contentScale,
+        UiAxis direction
 ) {
 
     /** 逻辑像素上限：远超任何 Minecraft 逻辑视口的值属于非法布局值。 */
     public static final double MAX_LOGICAL_PIXELS = 8192.0;
+
+    /** 缺省设计坐标缩放：不做任何缩放。 */
+    public static final double DEFAULT_CONTENT_SCALE = 1.0;
 
     public UiLayoutSpec {
         width = width == null ? UiDimension.auto() : width;
@@ -66,39 +77,157 @@ public record UiLayoutSpec(
         align = align == null ? UiAlignment.START : align;
         justify = justify == null ? UiAlignment.START : justify;
         anchor = anchor == null ? UiAnchor.TOP_LEFT : anchor;
+        if (!Double.isFinite(contentScale) || contentScale < 0) {
+            throw new IllegalArgumentException(
+                    "contentScale must be a finite non-negative value, got " + contentScale);
+        }
     }
 
-    /** 默认约束（auto 尺寸、无间距、可见）。 */
+    /** 默认约束（auto 尺寸、无间距、可见、不缩放、继承 primitive 方向）。 */
     public static UiLayoutSpec defaults() {
         return new UiLayoutSpec(null, null, 0, 0, 0, 0, 0, 0, 0,
-                UiAlignment.START, UiAlignment.START, UiAnchor.TOP_LEFT, 0, true);
+                UiAlignment.START, UiAlignment.START, UiAnchor.TOP_LEFT, 0, true,
+                DEFAULT_CONTENT_SCALE, null);
     }
 
-    /** 从脚本侧 props 解析布局约束（非法值显式抛错）。 */
+    /**
+     * 从脚本侧 props 解析布局约束（非法值显式抛错）。
+     *
+     * <p>不应用任何 profile 覆盖，设计坐标按 {@link #DEFAULT_CONTENT_SCALE} 解析——这是
+     * 「没有视口事实」时的确定缺省。
+     */
     public static UiLayoutSpec fromProps(UiProps props) {
+        return fromProps(props, UiProfileOverride.NONE, DEFAULT_CONTENT_SCALE);
+    }
+
+    /** 从脚本侧 props 解析布局约束，并按已解析的设计缩放系数展开设计坐标。 */
+    public static UiLayoutSpec fromProps(UiProps props, double contentScale) {
+        return fromProps(props, UiProfileOverride.NONE, contentScale);
+    }
+
+    /**
+     * 从脚本侧 props 解析布局约束，并按当前视口事实应用 profile 覆盖与设计坐标缩放
+     * （jsx-ui-spec「响应式解析」「比例与设计坐标」，票 43 AC2/AC3/AC4）。
+     *
+     * <p>解析顺序固定：基础属性 → 本档的 profile 覆盖（缺省回退见
+     * {@link UiProfileOverride#forProfile}）→ 取值校验 → min/max 裁剪。
+     */
+    public static UiLayoutSpec fromProps(UiProps props, ViewportContext context) {
+        Map<ViewportProfile, UiProfileOverride> declared =
+                UiProfileOverride.parseAll(props.raw(UiProp.PROFILES), null);
+        UiProfileOverride override = UiProfileOverride.forProfile(context.profile(), declared);
+        return fromProps(props, override, UiResponsiveRules.contentScale(context));
+    }
+
+    /**
+     * 按一个已解析的 profile 覆盖构建布局约束（不做设计坐标缩放）。
+     *
+     * <p>供候选择阶段校验「每一条 profile 覆盖自身都合法」——非法覆盖必须在创建任何 host node
+     * 之前失败（票 43 AC2），而不是等到某个档位恰好命中才暴露。
+     */
+    public static UiLayoutSpec fromProps(UiProps props, UiProfileOverride override) {
+        return fromProps(props, override, DEFAULT_CONTENT_SCALE);
+    }
+
+    private static UiLayoutSpec fromProps(UiProps props, UiProfileOverride override, double contentScale) {
+        Map<String, Object> values = override.applyTo(props.asMap());
         return new Builder()
-                .width(props.has(UiProp.WIDTH) ? UiDimension.parse(props.raw(UiProp.WIDTH)) : null)
-                .height(props.has(UiProp.HEIGHT) ? UiDimension.parse(props.raw(UiProp.HEIGHT)) : null)
-                .minWidth(props.number(UiProp.MIN_WIDTH, 0))
-                .minHeight(props.number(UiProp.MIN_HEIGHT, 0))
-                .maxWidth(props.number(UiProp.MAX_WIDTH, 0))
-                .maxHeight(props.number(UiProp.MAX_HEIGHT, 0))
-                .margin(props.number(UiProp.MARGIN, 0))
-                .padding(props.number(UiProp.PADDING, 0))
-                .gap(props.number(UiProp.GAP, 0))
-                .align(UiAlignment.parse(props.string(UiProp.ALIGN)))
-                .justify(UiAlignment.parse(props.string(UiProp.JUSTIFY)))
-                .anchor(UiAnchor.parse(props.string(UiProp.ANCHOR)))
-                .grow(props.number(UiProp.GROW, 0))
-                .visible(props.bool(UiProp.VISIBLE, true))
+                .width(dimension(values, UiProp.WIDTH))
+                .height(dimension(values, UiProp.HEIGHT))
+                .minWidth(number(values, UiProp.MIN_WIDTH, 0))
+                .minHeight(number(values, UiProp.MIN_HEIGHT, 0))
+                .maxWidth(number(values, UiProp.MAX_WIDTH, 0))
+                .maxHeight(number(values, UiProp.MAX_HEIGHT, 0))
+                .margin(number(values, UiProp.MARGIN, 0))
+                .padding(number(values, UiProp.PADDING, 0))
+                .gap(number(values, UiProp.GAP, 0))
+                .align(UiAlignment.parse(string(values, UiProp.ALIGN)))
+                .justify(UiAlignment.parse(string(values, UiProp.JUSTIFY)))
+                .anchor(UiAnchor.parse(string(values, UiProp.ANCHOR)))
+                .grow(number(values, UiProp.GROW, 0))
+                .visible(bool(values, UiProp.VISIBLE, true))
+                .contentScale(contentScale)
+                .direction(axis(values))
                 .build();
+    }
+
+    /**
+     * 最终解析样式的可观察形式（node 路径 → 属性名 → 稳定字面量），供 inspector 与 golden
+     * 读取（票 43 AC5）。它报告已经解析出的约束，不是第二份布局真相源。
+     */
+    public Map<String, Object> resolvedViewport() {
+        Map<String, Object> resolved = new LinkedHashMap<>();
+        resolved.put(UiProp.WIDTH.jsName(), width.literal());
+        resolved.put(UiProp.HEIGHT.jsName(), height.literal());
+        resolved.put(UiProp.MIN_WIDTH.jsName(), minWidth);
+        resolved.put(UiProp.MIN_HEIGHT.jsName(), minHeight);
+        resolved.put(UiProp.MAX_WIDTH.jsName(), maxWidth);
+        resolved.put(UiProp.MAX_HEIGHT.jsName(), maxHeight);
+        resolved.put(UiProp.MARGIN.jsName(), margin);
+        resolved.put(UiProp.PADDING.jsName(), padding);
+        resolved.put(UiProp.GAP.jsName(), gap);
+        resolved.put(UiProp.ALIGN.jsName(), align.jsName());
+        resolved.put(UiProp.JUSTIFY.jsName(), justify.jsName());
+        resolved.put(UiProp.ANCHOR.jsName(), anchor.jsName());
+        resolved.put(UiProp.GROW.jsName(), grow);
+        resolved.put(UiProp.VISIBLE.jsName(), visible);
+        resolved.put(UiProp.DIRECTION.jsName(), direction == null ? null : direction.code());
+        resolved.put("contentScale", contentScale);
+        return resolved;
+    }
+
+    /** 单轴尺寸乘上设计缩放系数：只有 {@link UiDimension.Kind#DESIGN} 受缩放影响。 */
+    public UiDimension scaled(UiDimension dimension) {
+        if (dimension == null || dimension.kind() != UiDimension.Kind.DESIGN) {
+            return dimension;
+        }
+        return UiDimension.pixels(dimension.value() * contentScale);
+    }
+
+    private static boolean has(Map<String, Object> values, UiProp prop) {
+        return values.containsKey(prop.jsName());
+    }
+
+    /** 单轴尺寸：缺省为 auto；已解析的 {@link UiDimension} 直接使用（profile 覆盖路径）。 */
+    private static UiDimension dimension(Map<String, Object> values, UiProp prop) {
+        Object value = values.get(prop.jsName());
+        if (value == null) return null;
+        if (value instanceof UiDimension dimension) return dimension;
+        return UiDimension.parse(value);
+    }
+
+    private static double number(Map<String, Object> values, UiProp prop, double fallback) {
+        Object value = values.get(prop.jsName());
+        return value instanceof Number number ? number.doubleValue() : fallback;
+    }
+
+    private static String string(Map<String, Object> values, UiProp prop) {
+        Object value = values.get(prop.jsName());
+        return value instanceof String text ? text : null;
+    }
+
+    private static boolean bool(Map<String, Object> values, UiProp prop, boolean fallback) {
+        Object value = values.get(prop.jsName());
+        return value instanceof Boolean bool ? bool : fallback;
+    }
+
+    private static UiAxis axis(Map<String, Object> values) {
+        Object value = values.get(UiProp.DIRECTION.jsName());
+        if (value == null) return null;
+        if (value instanceof UiAxis axis) return axis;
+        UiAxis axis = UiAxis.fromCode(String.valueOf(value));
+        if (axis == null) {
+            throw new IllegalArgumentException("direction must be row|column, got " + value);
+        }
+        return axis;
     }
 
     /** 布局约束清单（供契约文档与漂移测试对比属性登记表）。 */
     public static List<UiProp> props() {
         return List.of(UiProp.WIDTH, UiProp.HEIGHT, UiProp.MIN_WIDTH, UiProp.MIN_HEIGHT,
                 UiProp.MAX_WIDTH, UiProp.MAX_HEIGHT, UiProp.MARGIN, UiProp.PADDING, UiProp.GAP,
-                UiProp.ALIGN, UiProp.JUSTIFY, UiProp.ANCHOR, UiProp.GROW, UiProp.VISIBLE);
+                UiProp.ALIGN, UiProp.JUSTIFY, UiProp.ANCHOR, UiProp.GROW, UiProp.VISIBLE,
+                UiProp.DIRECTION, UiProp.PROFILES);
     }
 
     private static double requireSize(double value, String name) {
@@ -125,6 +254,8 @@ public record UiLayoutSpec(
         private UiAnchor anchor = UiAnchor.TOP_LEFT;
         private double grow;
         private boolean visible = true;
+        private double contentScale = DEFAULT_CONTENT_SCALE;
+        private UiAxis direction;
 
         public Builder width(UiDimension value) { this.width = value; return this; }
         public Builder height(UiDimension value) { this.height = value; return this; }
@@ -140,10 +271,13 @@ public record UiLayoutSpec(
         public Builder anchor(UiAnchor value) { this.anchor = value; return this; }
         public Builder grow(double value) { this.grow = value; return this; }
         public Builder visible(boolean value) { this.visible = value; return this; }
+        public Builder contentScale(double value) { this.contentScale = value; return this; }
+        public Builder direction(UiAxis value) { this.direction = value; return this; }
 
         public UiLayoutSpec build() {
             return new UiLayoutSpec(width, height, minWidth, minHeight, maxWidth, maxHeight,
-                    margin, padding, gap, align, justify, anchor, grow, visible);
+                    margin, padding, gap, align, justify, anchor, grow, visible,
+                    contentScale, direction);
         }
     }
 }
