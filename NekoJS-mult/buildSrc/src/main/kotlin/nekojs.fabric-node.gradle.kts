@@ -1,6 +1,7 @@
-// Fabric 节点的构建约定（26.x-fabric）。源代码节点由 deps.fabric_source_node 指定；
-// loom-back-compat 在本插件体内 apply——它按 MC
-// 版本挑选 Loom 变体，版本号从控制器脚本 stonecutter.gradle.kts 的 `apply false` 声明读取。
+// Fabric 节点的构建约定（26.x-fabric）。两个节点共享的 raw loader 源根是仓库级
+// `src/fabric`（实施交接单 W8 已批准锚点），由本 convention 显式挂载；loom-back-compat
+// 在本插件体内 apply——它按 MC 版本挑选 Loom 变体，版本号从控制器脚本
+// stonecutter.gradle.kts 的 `apply false` 声明读取。
 //
 // 两个环境限制：libs 访问器要通过 LibrariesForLibs 取；loom / loomx 扩展在本插件的编译期
 // 类型面上不存在，只能用 withGroovyBuilder 动态访问。
@@ -21,7 +22,6 @@ pluginManager.apply("dev.kikugie.loom-back-compat")
 val mcVersion = property("deps.minecraft") as String
 val loaderVersion = property("deps.loader_version") as String
 val fabricApiVersion = property("deps.fabric_api") as String
-val fabricSourceNode = property("deps.fabric_source_node") as String
 val javaRelease = (property("deps.java") as String).toInt()
 
 val modId = property("mod_id") as String
@@ -90,19 +90,22 @@ dependencies {
 // 少数 NeoForge 专属实现没有共享语义，按类名下放并从 Fabric source set 排除，避免
 // 它们因缺少外层守卫而进入 Fabric fat jar。
 //
-// 源根注入只在借用其他节点时进行（26.2.0-fabric → 26.1.2-fabric bridge）。fabric_source_node
-// 指向自身时（26.1.2-fabric）节点本地源已由 stonecutter 挂载，这里再注入会让 processResources
-// 收到同一目录两份 copy root——srcDirs 的 Set 按 File 去重掩盖了执行层重复，冷构建直接
-// `Entry ... is a duplicate` 失败（诊断与日志：docs/architecture-refactor/baseline/
-// 2026-09-12-build-baseline-report.md §7.1，工单 01 基线发现）。
-val fabricSourceRoot = rootProject.file("versions/$fabricSourceNode/src/main")
-if (fabricSourceNode != project.name) {
-    sourceSets.main {
-        java.srcDir(fabricSourceRoot.resolve("java"))
-        resources.srcDir(fabricSourceRoot.resolve("resources"))
-    }
-}
+// `src/fabric` 是两个 Fabric 节点唯一共享的 raw loader root（交接单 W8 锚点，票 31 迁入）：
+// java/resources 由本 convention 显式注入，templates/access widener 同根取材。该目录在
+// 共享树的 source set 布局（src/main|test）之外，stonecutter **不做预处理**——版本差异
+// 由共享树的 compat facade（McVersionCompat 等）或 versions/<node>/src 的节点 override 承担，
+// raw root 里的文件必须同时编过 26.1.2 与 26.2。
+//
+// 历史与回滚：迁移前 raw root 住 versions/26.1.2-fabric/src/main，26.2.0-fabric 经
+// deps.fabric_source_node bridge 借用。两节点的 gradle.properties 仍保留该键，作为票 32
+// 删除前的记录在案过渡 bridge（本 convention 已不读取）；回滚 = revert 迁移 commit，
+// 文件与接线一并还原。注意票 01 的教训仍然成立：若把文件放回 versions/<node>/src/main，
+// stonecutter 的节点本地挂载会与本注入叠成双 copy root，processResources 冷构建确定性失败
+//（docs/architecture-refactor/baseline/2026-09-12-build-baseline-report.md §7.1）。
+val fabricSourceRoot = rootProject.file("src/fabric")
 sourceSets.main {
+    java.srcDir(fabricSourceRoot.resolve("java"))
+    resources.srcDir(fabricSourceRoot.resolve("resources"))
     java.exclude("**/NeoForge*.java")
 }
 

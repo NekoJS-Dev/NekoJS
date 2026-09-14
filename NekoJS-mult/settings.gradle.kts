@@ -4,8 +4,9 @@
 // replacements 表达，加载器差异由 `//? if neoforge` / `//? if fabric` 守卫表达。
 //   1.21.1 / 26.1.2 / 26.2.0      —— NeoForge 节点，入口 build.gradle.kts
 //   26.1.2-fabric / 26.2.0-fabric —— Fabric 节点，入口 fabric.gradle.kts。id 带后缀避免
-//                                    与 NeoForge 节点撞名；26.2 当前复用已验证的
-//                                    26.1.2 Fabric source bridge，待第 0 步上移收口
+//                                    与 NeoForge 节点撞名；两节点共享 raw loader root
+//                                    src/fabric（fabric convention 显式挂载，票 31 迁入；
+//                                    版本差异由 compat facade / versions/<node> override 承担）
 //
 // 不支持 Forge 1.20.1：它的 API 与共享树差了一个时代，守卫和 replacements 桥接不了，
 // 移植等于维护第二套代码库。
