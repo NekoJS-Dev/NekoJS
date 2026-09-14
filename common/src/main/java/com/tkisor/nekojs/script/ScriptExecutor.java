@@ -2,6 +2,7 @@ package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
+import com.tkisor.nekojs.core.SyncEvalWatchdog;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
@@ -43,6 +44,11 @@ public final class ScriptExecutor {
     }
 
     public void executeEntry(Context ctx, ScriptContainer script, NekoNodeRuntime nodeRuntime) {
+        // 票 07 墙钟守卫：语句钩子看不见的空循环（while(true){}）只能靠宿主墙钟 +
+        // Context.interrupt 打断。只覆盖本次同步求值段，结束即 disarm，长驻空闲
+        // 环境不受影响；触发后走 onContextKilled 的 generation 记账（candidate 丢弃 /
+        // active 隔离），清理仍在 owner 线程完成。
+        SyncEvalWatchdog.Guard watchdog = SyncEvalWatchdog.arm(ctx, sandboxConfig.scriptRunawayTimeoutSeconds());
         try {
             synchronized (ctx) {
                 Path relativePath = paths.root().relativize(script.path);
@@ -66,9 +72,12 @@ public final class ScriptExecutor {
                 script.lastError = null;
             }
         } catch (Throwable t) {
-            if (isContextKilledByResourceLimits(t)) {
-                // Graal 因语句上限关闭了 Context：通知 ScriptManager 按求值所属环境
-                // （active / candidate generation）标记重建或候选失败
+            if (watchdog.wasTriggered() || isContextKilledByResourceLimits(t)) {
+                // Graal 因语句上限关闭了 Context，或墙钟守卫/close 抢占触发了 interrupt：
+                // 通知 ScriptManager 按求值所属环境（active / candidate generation）
+                // 标记重建/隔离或候选失败。wasTriggered 覆盖中断异常类型与既有 kill
+                // 判定不一致的情况（interrupt 的 "Execution got interrupted" 不一定被
+                // isCancelled 识别），不依赖异常文本。
                 onContextKilled.accept(ctx);
             }
             script.disabled = true;
@@ -76,6 +85,8 @@ public final class ScriptExecutor {
 
             ScriptError scriptError = errorTracker.record(script, t);
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(script.type).error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
+        } finally {
+            watchdog.disarm();
         }
     }
 

@@ -18,6 +18,7 @@ import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
 import com.tkisor.nekojs.core.lifecycle.ReloadFailureReport;
 import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
 import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
+import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -31,10 +32,12 @@ import graal.graalvm.polyglot.Value;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
@@ -168,6 +171,14 @@ public final class ScriptManager implements AutoCloseable {
      */
     private volatile Context candidateContext;
 
+    /**
+     * 构建中的候选完整环境（与 {@link #candidateContext} 成对发布）：close 侧
+     * 抢占在途 candidate 时据此中断候选求值、并在确定性 teardown 中丢弃候选全部
+     * 资源。只在实例锁临界区内写入/清理；close 在拿锁前读到旧值只影响中断加速，
+     * 不影响正确性（正确性由 commit 前的 closeRequested 检查保证）。
+     */
+    private volatile RuntimeEnvironment candidateEnvironment;
+
     /** 候选环境被语句上限杀死（与 active 的 {@link #contextKilled} 分开记账）。 */
     private volatile boolean candidateKilled;
 
@@ -189,6 +200,14 @@ public final class ScriptManager implements AutoCloseable {
 
     /** Graal 因语句上限（scriptStatementLimit）关闭了当前 Context；下次取用时重建。 */
     private volatile boolean contextKilled;
+
+    /**
+     * 同一 ScriptType 的 owner-thread 生命周期调度门（票 07）：reload 不重入、
+     * 回调内请求拒绝、close 优先与关闭后拒绝、active watchdog 隔离失败标记。
+     * 跨线程串行仍由实例锁（monitor 队列）承担，本门只做实例锁表达不了的判决；
+     * 除 volatile 标志外所有方法必须在持有实例锁的前提下调用。
+     */
+    private final ScriptLifecycleGate lifecycleGate = new ScriptLifecycleGate();
 
     // ---- 构造函数 ----
 
@@ -227,6 +246,82 @@ public final class ScriptManager implements AutoCloseable {
         return true;
     }
 
+    // ---- 票 07：回调标记、公开观察点与显式调度入口 ----
+
+    /**
+     * managed 回调进入（票 07 回调内 reload 契约）：EventBusJS 四个分发点与
+     * NekoNodeTimers 回调执行体在执行 guest 回调前后配对调用。只做调用线程的
+     * 本地计数，不加锁、不触碰 Context；同线程的 lifecycle 请求看到计数即返回
+     * 明确拒绝，不递归、不同步等待自身队列。
+     */
+    public static void noteCallbackEnter() {
+        ScriptLifecycleGate.enterCallback();
+    }
+
+    /** 与 {@link #noteCallbackEnter()} 配对的回调退出（finally 内调用）。 */
+    public static void noteCallbackExit() {
+        ScriptLifecycleGate.exitCallback();
+    }
+
+    /**
+     * watchdog 终止 active 后的隔离失败是否生效：true 表示 active 已死、已停止
+     * 向被杀 Context 分发（isContextDead）、等待显式 reload/load 恢复，期间不会
+     * 自动创建第二个 active。公开可观察点（命令面/测试断言用），不是内部锁状态。
+     */
+    public boolean isActiveFailed() {
+        return lifecycleGate.isActiveFailed();
+    }
+
+    /** 终端关闭是否完成：true 后一切新 lifecycle 请求拒绝。 */
+    public boolean isClosed() {
+        return lifecycleGate.isClosed();
+    }
+
+    /** close 是否已被请求但尚未完成（尚未开始的 reload/load 会因此被拒绝）。 */
+    public boolean isCloseRequested() {
+        return lifecycleGate.isCloseRequested();
+    }
+
+    /**
+     * 回调/任意线程侧的显式 reload 入口（票 07 AC1/AC2）：与 {@link #reloadScripts()}
+     * 同一调度门。门拒绝（重入/回调内/关闭中/已关闭）时返回判决、不执行任何工作；
+     * 门通过时同步执行（跨线程调用先在实例锁 monitor 队列排队——即「排队成功」的
+     * 可观察结果），执行体失败仍抛 {@link NekoReloadException}（结构化阶段结果），
+     * 与直接调用一致。
+     */
+    public synchronized ScriptLifecycleGate.Decision requestReload() {
+        ScriptLifecycleGate.Decision decision =
+                lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
+        if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+            return decision;
+        }
+        try {
+            doReloadScripts();
+            return ScriptLifecycleGate.Decision.EXECUTED;
+        } finally {
+            lifecycleGate.exit(ScriptLifecycleGate.Operation.RELOAD);
+        }
+    }
+
+    /**
+     * 非 owner / guest-created thread 访问 managed lifecycle 的显式调度入口
+     * （票 07 AC4/AC7）：work 在实例锁的 monitor 队列里与 evaluate/reload/close
+     * 单一序列执行，不与其它 lifecycle 并发触碰 Context、binding、listener 或
+     * timer。本方法本身不进入 lifecycle 门，work 内的 lifecycle 调用各自过门；
+     * guest 的高级 Java/线程能力（allowThreads 等）不受影响，只约束 managed
+     * lifecycle 的进入点。已关闭时明确拒绝。
+     */
+    public synchronized <T> T scheduleOnOwner(Callable<T> work) throws Exception {
+        if (lifecycleGate.isClosed()) {
+            throw new IllegalStateException(
+                    "ScriptManager[" + scriptType.name + "] is closed; scheduleOnOwner rejected");
+        }
+        if (work == null) {
+            throw new NullPointerException("scheduleOnOwner work");
+        }
+        return work.call();
+    }
+
     // ---- 配置 ----
 
     public void setJavaClassLoadTelemetrySink(JavaClassLoadTelemetrySink sink) {
@@ -235,13 +330,18 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- Context 访问（懒初始化） ----
 
-    /** ScriptExecutor 回调：Graal 因语句上限关闭了求值所属的 Context（active 或候选）。 */
+    /** ScriptExecutor 回调：Graal 因语句上限/watchdog 关闭了求值所属的 Context（active 或候选）。 */
     private void markContextKilled(Context context) {
         Context candidate = this.candidateContext;
         if (candidate != null && candidate.equals(context)) {
             this.candidateKilled = true;
         } else {
             this.contextKilled = true;
+            // 票 07 隔离失败（AC6）：active 被 watchdog/资源上限终止后停止向其分发
+            // （isContextDead 判 contextKilled）、不自动创建第二个 active，只由显式
+            // reload/load 成功或 close 清除。timer/event 分发路径从不重建（它们不调
+            // getOrCreateEnvironment），恢复入口只有显式 lifecycle。
+            this.lifecycleGate.markActiveFailed();
         }
     }
 
@@ -267,6 +367,10 @@ public final class ScriptManager implements AutoCloseable {
             CONTEXT_TO_MANAGER.put(created.context(), this);
             ScriptContextRegistry.bind(created.context(), scriptType);
             contextKilled = false;
+            // 显式 lifecycle 入口上的重建即恢复（AC6）：清除隔离失败。本方法只被显式
+            // lifecycle（loadScripts / reloadScriptFile 的取用点）调用，timer/event
+            // 分发路径不经过这里，不会悄悄清除隔离失败。
+            lifecycleGate.clearActiveFailed();
             // 新 active 环境实例 = 新 generation（initial load / kill 重建各递增一次；
             // 事务式 reload 的递增在 commit 点）
             this.generation++;
@@ -328,6 +432,27 @@ public final class ScriptManager implements AutoCloseable {
      * 不受影响。
      */
     public synchronized void loadScripts() {
+        // 票 07：同一 ScriptType 的 evaluate/reload/close 单一序列由实例锁承担；
+        // 门只判决重入（STARTUP 的 RELOAD 内嵌套 LOAD 放行）、回调内请求与
+        // close 优先/已关闭。拒绝时抛结构化失败，不递归、不同步等待自身队列。
+        ScriptLifecycleGate.Decision decision =
+                lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.LOAD);
+        if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+            throw reloadRejected(decision, "load");
+        }
+        try {
+            doLoadScripts();
+            // 显式 load 入口上的成功即恢复（AC6）；但本轮内 active 若刚被 kill
+            // （contextKilled，如失控入口），隔离失败必须保留而不是刚记上就清除。
+            if (!contextKilled) {
+                lifecycleGate.clearActiveFailed();
+            }
+        } finally {
+            lifecycleGate.exit(ScriptLifecycleGate.Operation.LOAD);
+        }
+    }
+
+    private void doLoadScripts() {
         // Reload progress HUD：首次加载独占会话；被 reloadScripts 嵌套调用时（STARTUP 分支）
         // 已有活动会话，begin 返回 false，finish 交由外层 reload 负责。
         final boolean progressOwned = ReloadProgressTracker.begin(scriptType.name, 1);
@@ -410,6 +535,21 @@ public final class ScriptManager implements AutoCloseable {
         // ---- 重载 ----
 
         public synchronized void reloadScripts () {
+            // 票 07 调度门：并发 reload 在实例锁 monitor 队列排队（每轮恰好一个
+            // candidate）；同线程重入/回调内请求明确拒绝；closeRequested/closed 拒绝。
+            ScriptLifecycleGate.Decision decision =
+                    lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
+            if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+                throw reloadRejected(decision, "reload");
+            }
+            try {
+                doReloadScripts();
+            } finally {
+                lifecycleGate.exit(ScriptLifecycleGate.Operation.RELOAD);
+            }
+        }
+
+        private void doReloadScripts () {
             ReloadProgressTracker.begin(scriptType.name, scriptType == ScriptType.STARTUP ? 3 : 5);
             boolean progressSuccess = false;
             try {
@@ -517,14 +657,19 @@ public final class ScriptManager implements AutoCloseable {
                         ReloadProgressTracker.step(scriptType.name, "candidate scripts executed");
 
                         if (this.candidateKilled) {
-                            // 候选加载期间被脚本资源上限终止（scriptStatementLimit 总量），
-                            // Graal 已关闭候选 Context：按失败处理，不把死掉的候选提交为 live
-                            // （watchdog 语义的候选丢弃面归工单 07）。
+                            // 候选加载期间被脚本资源上限/watchdog 终止（scriptStatementLimit 总量、
+                            // 墙钟守卫或 close 抢占的中断），Graal 已按终止语义处置候选 Context：
+                            // 按失败处理，不把死掉的候选提交为 live（票 07 watchdog 面）。
+                            // close 抢占的中断以 close-preempted domain 归因（AC3）。
+                            boolean preempted = lifecycleGate.isCloseRequested() || lifecycleGate.isClosed();
                             throw reloadFailure(candidateGeneration, ReloadPhase.EXECUTION,
-                                    sourceOf(this.candidateKillScript), "candidate-killed",
+                                    sourceOf(this.candidateKillScript),
+                                    preempted ? "close-preempted" : "candidate-killed",
                                     new RuntimeException(scriptType.name()
-                                            + " candidate context was terminated by script resource limits"
-                                            + " (runaway watchdog / statement limit) during reload"));
+                                            + (preempted
+                                                    ? " reload preempted by close during candidate execution"
+                                                    : " candidate context was terminated by script resource limits"
+                                                            + " (runaway watchdog / statement limit) during reload")));
                         }
                     } catch (NekoReloadException f) {
                         throw f;
@@ -557,6 +702,18 @@ public final class ScriptManager implements AutoCloseable {
                     }
                     ReloadProgressTracker.step(scriptType.name, "candidate event plan prepared");
 
+                    // ---- COMMIT 前 close 抢占检查（票 07 AC3）：close 优先于尚未
+                    // 提交的 candidate——closeRequested 已置位时（无论在途候选是被
+                    // 中断加速失败还是恰好走到这里），候选在此丢弃，永不出现
+                    // 「半激活 generation」或「close 之后又 commit」。
+                    if (lifecycleGate.isCloseRequested() || lifecycleGate.isClosed()) {
+                        discardCandidate(candidateEnvironment);
+                        throw reloadFailure(candidateGeneration, ReloadPhase.COMMIT, null,
+                                "close-preempted",
+                                new IllegalStateException(scriptType.name()
+                                        + " reload preempted by close before commit"));
+                    }
+
                     // ---- COMMIT POINT（单一原子切换；owner thread 同步执行）----
                     commitGeneration(candidateGeneration, candidateEnvironment, candidateScripts, oldEnvironment);
                     ReloadProgressTracker.step(scriptType.name, "committed");
@@ -584,6 +741,7 @@ public final class ScriptManager implements AutoCloseable {
             CONTEXT_TO_MANAGER.put(candidate.context(), this);
             ScriptContextRegistry.bind(candidate.context(), scriptType);
             this.candidateContext = candidate.context();
+            this.candidateEnvironment = candidateEnvironment;
             this.candidateKilled = false;
             this.candidateKillScript = null;
             this.pendingListeners.clear();
@@ -619,7 +777,10 @@ public final class ScriptManager implements AutoCloseable {
             this.generation = candidateGeneration;
             this.contextKilled = false;
             this.candidateContext = null;
+            this.candidateEnvironment = null;
             this.candidateKilled = false;
+            // 成功提交即显式恢复（AC6）：清除隔离失败（若此前 active 曾被 watchdog 终止）。
+            lifecycleGate.clearActiveFailed();
             // (3) 激活候选挂起监听器（新 generation 唯一 callback 接收者）
             List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> activation =
                     List.copyOf(this.pendingListeners);
@@ -644,6 +805,7 @@ public final class ScriptManager implements AutoCloseable {
         private void discardCandidate (RuntimeEnvironment candidateEnvironment) {
             this.pendingListeners.clear();
             this.candidateContext = null;
+            this.candidateEnvironment = null;
             this.candidateKilled = false;
             this.candidateKillScript = null;
             if (candidateEnvironment != null && !candidateEnvironment.isEmpty()) {
@@ -657,6 +819,14 @@ public final class ScriptManager implements AutoCloseable {
                 return;
             }
             for (ScriptContainer script : scriptsToLoad) {
+                // 脚本间取消点（票 07 AC3）：close 已请求时不再启动新的候选脚本工作
+                if (lifecycleGate.isCloseRequested() || lifecycleGate.isClosed()) {
+                    throw reloadFailure(this.generation + 1, ReloadPhase.EXECUTION,
+                            sourceOf(script), "close-preempted",
+                            new IllegalStateException(scriptType.name()
+                                    + " candidate execution preempted by close before script "
+                                    + script.id));
+                }
                 if (!script.shouldRun()) {
                     continue;
                 }
@@ -700,7 +870,42 @@ public final class ScriptManager implements AutoCloseable {
                     "ScriptManager[" + scriptType.name + "]", domain, cause));
         }
 
+        /**
+         * 调度门拒绝的结构化失败（票 07 AC1/AC2/AC3 可观察面）：重入/回调内、
+         * 关闭中、已关闭各自有明确 domain，不递归、不同步等待自身。
+         */
+        private NekoReloadException reloadRejected (ScriptLifecycleGate.Decision decision, String action) {
+            return reloadFailure(this.generation, ReloadPhase.PREPARATION, null,
+                    action + "-rejected:" + decision.name(),
+                    new IllegalStateException("ScriptManager[" + scriptType.name + "] " + action
+                            + " rejected (" + decision.name() + "): " + rejectReason(decision)));
+        }
+
+        private static String rejectReason (ScriptLifecycleGate.Decision decision) {
+            return switch (decision) {
+                case REJECTED_REENTRANT -> "reentrant lifecycle or managed-callback request; recursion refused";
+                case REJECTED_CLOSING -> "close in progress; close is prioritized over not-started work";
+                case REJECTED_CLOSED -> "manager is closed";
+                default -> "unexpected decision " + decision;
+            };
+        }
+
         public synchronized List<ScriptContainer> reloadScriptFile (String filePath) throws IOException {
+            // 票 07 调度门：单文件 reload 与整批 reload 同一互斥面（同类型单一序列）。
+            ScriptLifecycleGate.Decision decision =
+                    lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
+            if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+                throw new IOException("ScriptManager[" + scriptType.name + "] reload file " + filePath
+                        + " rejected (" + decision.name() + "): " + rejectReason(decision));
+            }
+            try {
+                return doReloadScriptFile(filePath);
+            } finally {
+                lifecycleGate.exit(ScriptLifecycleGate.Operation.RELOAD);
+            }
+        }
+
+        private List<ScriptContainer> doReloadScriptFile (String filePath) throws IOException {
             discoverScripts();
             Path target = resolveScriptPath(filePath);
 
@@ -718,7 +923,8 @@ public final class ScriptManager implements AutoCloseable {
                             + ". Reload the whole STARTUP environment first if this file has not been loaded yet.");
                 }
                 com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载。", displayScriptPath(target));
-                reloadScripts();
+                // 已在 RELOAD 门内：直接走门内体，不重过门（嵌套 RELOAD 会被门拒绝）
+                doReloadScripts();
                 List<ScriptContainer> reloadedMatches = scripts.stream()
                         .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
                         .toList();
@@ -875,6 +1081,21 @@ public final class ScriptManager implements AutoCloseable {
             if (scriptType != ScriptType.TEST) {
                 throw new IllegalStateException("runTestScripts() can only be called on TEST ScriptManager");
             }
+            // TEST 运行走事务式 reload：与其它 lifecycle 同一调度门（TEST owner =
+            // test runner / 命令所在平台 owner 线程，票 05/07 owner 入口复用）
+            ScriptLifecycleGate.Decision decision =
+                    lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.RELOAD);
+            if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+                throw reloadRejected(decision, "test-run");
+            }
+            try {
+                doRunTestScripts();
+            } finally {
+                lifecycleGate.exit(ScriptLifecycleGate.Operation.RELOAD);
+            }
+        }
+
+        private void doRunTestScripts () {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("正在运行 TEST 脚本...");
 
             // TEST 也走事务式 reload：失败时保留上一个 TEST Context，而不是销毁后再尝试加载。
@@ -962,16 +1183,58 @@ public final class ScriptManager implements AutoCloseable {
             }
         }
 
-        // synchronized：与 loadScripts / reloadScripts 共用实例锁，防止 shutdown 与并发
-        // reload/test 交错时销毁半初始化的环境（可重入：closeRuntimeResources 无锁）。
+        // 票 07 close 优先（AC3）：先在拿锁<i>之前</i>设 volatile 关闭标志（尚未开始的
+        // 新 lifecycle 随后拿到锁即被门拒绝），再尽力中断在途 candidate 的同步求值
+        // （在途 reload 的 owner 线程抛中断后走候选丢弃/失败路径，不提交半成品——
+        // close 在实例锁上等它退出的时间由取消点界定），最后拿锁做确定性 teardown：
+        // 先取消并关闭候选（未开始的候选工作已被标志挡下），再关闭 active session
+        // 与 root 资源。幂等：重复 close 只做标志与空清理，不抛。
         @Override
-        public synchronized void close () {
-            fullReloadCleanup();
-            for (var binding : pluginRuntime.bindings(scriptType).values()) {
-                binding.close(scriptType);
+        public void close () {
+            lifecycleGate.requestClose();
+            interruptCandidateBestEffort();
+            synchronized (this) {
+                ScriptLifecycleGate.Decision decision =
+                        lifecycleGate.tryEnter(ScriptLifecycleGate.Operation.CLOSE);
+                if (decision != ScriptLifecycleGate.Decision.EXECUTED) {
+                    // 同线程在 lifecycle 体内嵌套 close：标志已留下（在途操作会在取消点
+                    // 失败），这里不内联拆除；调用方可在该操作结束后重新 close。
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn(
+                            "{} close deferred: another lifecycle operation is running on this thread; "
+                                    + "it will fail at its cancellation point", scriptType.name);
+                    return;
+                }
+                try {
+                    // 先取消并关闭在途/未开始的候选（若 close 中断晚于候选构建）
+                    discardCandidate(this.candidateEnvironment);
+                    fullReloadCleanup();
+                    for (var binding : pluginRuntime.bindings(scriptType).values()) {
+                        binding.close(scriptType);
+                    }
+                    closeRuntimeResources(this.runtime);
+                    this.runtime = RuntimeEnvironment.EMPTY;
+                    lifecycleGate.markClosed();
+                } finally {
+                    lifecycleGate.exit(ScriptLifecycleGate.Operation.CLOSE);
+                }
             }
-            closeRuntimeResources(this.runtime);
-            this.runtime = RuntimeEnvironment.EMPTY;
+        }
+
+        /**
+         * 尽力中断在途 candidate 的同步求值（票 07 close 抢占加速）：中断只让求值
+         * 抛错，真正的丢弃与失败归因仍在 owner 线程的 reload 路径完成；中断失败
+         * （无在途 candidate、Context 已关闭等）静默忽略，正确性由 commit 前检查与
+         * 脚本间取消点兜底。
+         */
+        private void interruptCandidateBestEffort () {
+            Context candidate = this.candidateContext;
+            if (candidate == null) {
+                return;
+            }
+            try {
+                candidate.interrupt(Duration.ofSeconds(5));
+            } catch (Throwable ignored) {
+            }
         }
 
         // ---- 查询 ----
