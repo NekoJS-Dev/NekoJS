@@ -5,7 +5,7 @@ package com.tkisor.nekojs.api.ui;
  *
  * <p>小写 JSX 标签只对应这里登记的 primitive：它们不对应 HTML 标签，也不允许脚本借助
  * 未知标签绕过登记。标签到允许属性集合的唯一登记表是
- * {@code com.tkisor.nekojs.core.ui.UiPrimitiveRegistry}——本枚举只给出标签词表，
+ * 引擎侧登记表——本枚举只给出标签词表，
  * 不构成第二份事实源。
  *
  * <p>{@code screen} 是 root 投影，只能出现在候选树根；其余 primitive 可作为任意

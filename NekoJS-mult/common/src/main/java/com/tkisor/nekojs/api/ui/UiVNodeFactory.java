@@ -7,8 +7,7 @@ import java.util.List;
  *
  * <p>automatic runtime 的 jsx / jsxs / Fragment 产出脚本侧元素；本 Interface 把它们
  * （含函数组件、条件、数组、spread、key 与 children）转换为候选 {@link UiVNode} 列表。
- * 默认实现 com.tkisor.nekojs.core.ui.ScriptUiVNodeFactory 直接消费 Graal 值，
- * 因此 api 包保持零 Graal import（guardLint L1）。
+ * 引擎侧实现直接消费脚本运行时的值对象，因此本包保持零 Graal import（guardLint L1）。
  *
  * <p>转换失败（未知标签、非法 props、重复 key、组件返回非法值）必须显式抛出
  * {@link UiFailure}，不静默丢弃节点。

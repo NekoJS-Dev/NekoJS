@@ -9,7 +9,7 @@ import java.util.List;
  * <p>不把原生 {@code Screen} 作为脚本作者需要继承的基类；root 绑定创建它的 CLIENT
  * generation，并由唯一的 {@code NekoRuntimeRoot} 负责其生命周期
  * （jsx-ui-spec「Runtime owner」）。本 Interface 的默认实现是
- * {@code com.tkisor.nekojs.core.ui.RootUiFacade}，由 CLIENT generation 的装配点构造；
+ * 由 CLIENT generation 的装配点构造；
  * 没有客户端装配时使用显式拒绝实现，任何创建调用抛
  * {@link UiFailure#UNSUPPORTED_CAPABILITY}（不是静默 no-op）。
  *

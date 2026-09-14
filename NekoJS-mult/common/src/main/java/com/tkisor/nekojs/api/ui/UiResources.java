@@ -4,8 +4,8 @@ package com.tkisor.nekojs.api.ui;
  * UI root 的宿主资源装配（jsx-ui-spec「平台边界」「Runtime owner」）。
  *
  * <p>由 CLIENT generation 的装配点传入：host Adapter、文本测量、组件注册表、诊断 seam、
- * owner thread 与 client 调度边界。common 侧只引用这些窄 Interface——host Adapter 与
- * 测量实现的实例由平台侧构造，因此 common 不依赖 Minecraft/loader（AC7）。
+ * owner thread 与 client 调度边界。本包只引用这些窄 Interface——host Adapter 与测量实现
+ * 的实例由平台侧构造，因此 UI 核心不依赖 Minecraft/loader（AC7）。
  *
  * <p>{@code invalidator} 是"把一次失效请求送进 client 调度边界"的唯一入口：
  * 候选 generation 在 commit 前不得对生产 Screen 可见（jsx-ui-spec「reload 事务」）。

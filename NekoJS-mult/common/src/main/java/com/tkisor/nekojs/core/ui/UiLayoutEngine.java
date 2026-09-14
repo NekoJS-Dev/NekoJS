@@ -110,10 +110,10 @@ final class UiLayoutEngine {
     private UiSize leafSize(UiHostNode node, UiLayoutSpec layout, UiSize available) {
         if (node.primitive() == UiPrimitive.LABEL) {
             UiProps props = node.props();
-            String text = props.string(UiProp.TEXT.jsName(), "");
-            double fontSize = props.number(UiProp.FONT_SIZE.jsName(), 8);
-            boolean wrap = props.bool(UiProp.WRAP.jsName(), false);
-            String font = props.string(UiProp.FONT.jsName());
+            String text = props.string(UiProp.TEXT, "");
+            double fontSize = props.number(UiProp.FONT_SIZE, 8);
+            boolean wrap = props.bool(UiProp.WRAP, false);
+            String font = props.string(UiProp.FONT);
             double measuredWidth = layout.width().kind() == UiDimension.Kind.FILL
                     ? available.width()
                     : layout.width().kind() == UiDimension.Kind.PIXELS

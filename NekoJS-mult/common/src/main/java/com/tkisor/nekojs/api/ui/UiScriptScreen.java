@@ -5,7 +5,7 @@ package com.tkisor.nekojs.api.ui;
  *
  * <p>render function 返回单个 VNode 或 fragment；每个 root 有自己的依赖订阅、
  * 提交队列、generation token、host tree 和 disposed 状态（jsx-ui-spec「root 输入」）。
- * 默认实现 com.tkisor.nekojs.core.ui.ScriptUiScreen 直接调用 Graal 函数。
+ * 由引擎侧实现把 render function 句柄转换为候选 VNode。
  */
 public interface UiScriptScreen extends UiScreen {
 

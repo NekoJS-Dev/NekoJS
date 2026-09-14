@@ -37,9 +37,6 @@ public interface UiStateOwner {
      */
     void runTick();
 
-    /** 本 owner 是否已有待处理失效。 */
-    boolean hasPendingInvalidation();
-
     /** 释放 owner：后续 signal 写入不再触发任何 root reconcile。 */
     void dispose();
 

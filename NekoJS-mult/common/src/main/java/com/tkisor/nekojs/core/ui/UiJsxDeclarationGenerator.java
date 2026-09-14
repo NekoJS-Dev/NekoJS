@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.ui.UiEventType;
 import com.tkisor.nekojs.api.ui.UiPrimitive;
 import com.tkisor.nekojs.api.ui.UiProp;
 import com.tkisor.nekojs.api.ui.UiPropCategory;
+import com.tkisor.nekojs.api.ui.UiValueKind;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -13,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * TypeScript JSX 声明生成器（jsx-ui-spec User Story 44/45、AC6）。
@@ -40,6 +40,7 @@ public final class UiJsxDeclarationGenerator {
         sb.append("declare namespace NekoJsx {\n");
         sb.append("  type UiAlignment = ").append(literalUnion(alignmentValues())).append(";\n");
         sb.append("  type UiAnchor = ").append(literalUnion(anchorValues())).append(";\n");
+        sb.append("  type UiDimensionInput = ").append(UiValueKind.DIMENSION.tsType()).append(";\n");
         sb.append("  type UiEventName = ").append(literalUnion(eventNames())).append(";\n\n");
         sb.append("  interface UiSize { readonly width: number; readonly height: number }\n");
         sb.append("  interface UiRect { readonly x: number; readonly y: number;");
@@ -144,6 +145,31 @@ public final class UiJsxDeclarationGenerator {
         return sb.toString();
     }
 
+    /**
+     * 把 JSX 声明注册进既有 TypeDocsRegister 链（Probe/workspace 派生物的唯一入口）。
+     *
+     * <p>这是本生成器的<b>生产可达路径</b>：{@code NekoCommonBuiltinPlugin.registerNodeTypeDocs}
+     * 调用它，声明随 probe 输出落进脚本 workspace。证据/测试只读该入口的产物，
+     * 不直接写生产目录。
+     *
+     * @param registry 既有的类文档注册面（不新增 Point、不新增声明 DSL）
+     */
+    public static void register(com.tkisor.nekojs.core.plugin.TypeDocsRegister registry) {
+        registry.registerManualDeclaration(com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry.of(
+                "nekojs.jsx-ui.elements",
+                generate(),
+                "NekoJS JSX UI intrinsic elements, props, events and facade types "
+                        + "(generated from UiProp/UiPrimitiveRegistry).",
+                java.util.List.of(
+                        "const root = Ui.open({ render: () => <screen><column>"
+                                + "<label text='hi'/></column></screen> })")));
+        registry.registerManualDeclaration(com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry.of(
+                "nekojs.jsx-ui.runtime",
+                generateRuntimeModule(),
+                "Automatic JSX runtime module ('nekojs/jsx-runtime') declaration.",
+                java.util.List.of("import { jsx, jsxs, Fragment } from 'nekojs/jsx-runtime'")));
+    }
+
     /** 渲染 {@code nekojs/jsx-runtime} 模块声明（automatic runtime 的公开面）。 */
     public static String generateRuntimeModule() {
         StringBuilder sb = new StringBuilder();
@@ -197,43 +223,34 @@ public final class UiJsxDeclarationGenerator {
     }
 
     private static String renderPropList(Set<UiProp> props) {
-        Map<UiPropCategory, List<String>> byCategory = new EnumMap<>(UiPropCategory.class);
+        Map<UiPropCategory, List<UiProp>> byCategory = new EnumMap<>(UiPropCategory.class);
         for (UiProp prop : props) {
-            byCategory.computeIfAbsent(prop.category(), ignored -> new ArrayList<>()).add(prop.jsName());
+            byCategory.computeIfAbsent(prop.category(), ignored -> new ArrayList<>()).add(prop);
         }
         StringBuilder sb = new StringBuilder();
         for (UiPropCategory category : UiPropCategory.values()) {
-            List<String> names = byCategory.get(category);
-            if (names == null || names.isEmpty()) continue;
+            List<UiProp> members = byCategory.get(category);
+            if (members == null || members.isEmpty()) continue;
             sb.append(" /* ").append(category.name().toLowerCase()).append(" */");
-            for (String name : new TreeSet<>(names)) {
-                sb.append(" readonly ").append(name).append("?: ").append(tsTypeOf(name)).append(";");
+            List<UiProp> sorted = new ArrayList<>(members);
+            sorted.sort(java.util.Comparator.comparing(UiProp::jsName));
+            for (UiProp prop : sorted) {
+                sb.append(" readonly ").append(prop.jsName())
+                        .append("?: ").append(tsTypeOf(prop)).append(";");
             }
         }
         return sb.toString();
     }
 
-    private static String tsTypeOf(String propName) {
-        UiProp prop = UiProp.fromJsName(propName);
-        if (prop == null) return "unknown";
-        if (prop.isEvent()) return "(event: NekoJsx.UiEvent) => void | null";
-        return switch (prop) {
-            case TEXT, VALUE, PLACEHOLDER, TITLE, NARRATION, TOOLTIP, SOURCE, FONT,
-                 COLOR, BACKGROUND, BORDER -> "string";
-            case FIT -> "'stretch' | 'contain' | 'cover' | 'repeat'";
-            case WRAP, VISIBLE, DISABLED, FOCUSED, HOVERED, PRESSED, LOADING, SCROLLABLE -> "boolean";
-            case WIDTH, HEIGHT -> DIMENSION_TYPE;
-            case MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT, MARGIN, PADDING, GAP, GROW,
-                 RADIUS, OPACITY, FONT_SIZE, SCROLL_X, SCROLL_Y, MAX_LENGTH -> "number";
-            case ALIGN, JUSTIFY -> "NekoJsx.UiAlignment";
-            case ANCHOR -> "NekoJsx.UiAnchor";
-            case ERROR -> "string | boolean";
-            default -> "unknown";
-        };
+    /**
+     * 属性类型文本：直接读 {@link UiProp#kind()}（唯一事实源）。
+     *
+     * <p>本生成器不再持有第二份「属性名 → 类型」表——新增属性只需在 {@code UiProp} 上
+     * 加一行，取值校验器与本处自动同步（一致性由 {@code UiContractChainTest} 钉住）。
+     */
+    private static String tsTypeOf(UiProp prop) {
+        return prop.kind().tsType();
     }
-
-    /** 尺寸属性的 TS 类型（与 {@code UiDimension} 的受控写法一致）。 */
-    public static final String DIMENSION_TYPE = "number | 'auto' | 'fill' | `${number}%`";
 
     private static List<String> alignmentValues() {
         List<String> values = new ArrayList<>();

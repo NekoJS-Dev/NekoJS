@@ -22,6 +22,7 @@ public class UiFailure extends RuntimeException {
     public static final String UNRESOLVED_COMPONENT = "UNRESOLVED_COMPONENT";
     public static final String UNSUPPORTED_CAPABILITY = "UNSUPPORTED_CAPABILITY";
     public static final String ROOT_DISPOSED = "ROOT_DISPOSED";
+    public static final String ROOT_INVALIDATED = "ROOT_INVALIDATED";
     public static final String OFF_OWNER_THREAD = "OFF_OWNER_THREAD";
     public static final String ADAPTER_FAILURE = "ADAPTER_FAILURE";
 

@@ -4,14 +4,11 @@ import com.tkisor.nekojs.api.ui.UiEventType;
 import com.tkisor.nekojs.api.ui.UiHostAdapter;
 import com.tkisor.nekojs.api.ui.UiHostCreate;
 import com.tkisor.nekojs.api.ui.UiHostNode;
-import com.tkisor.nekojs.api.ui.UiLayoutSpec;
 import com.tkisor.nekojs.api.ui.UiPrimitive;
 import com.tkisor.nekojs.api.ui.UiProp;
 import com.tkisor.nekojs.api.ui.UiProps;
 import com.tkisor.nekojs.api.ui.UiRect;
 import com.tkisor.nekojs.api.ui.UiSize;
-import com.tkisor.nekojs.api.ui.UiTextMeasure;
-import com.tkisor.nekojs.api.ui.UiTextMeasurer;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,7 +50,6 @@ public final class FakeUiHostAdapter implements UiHostAdapter {
     private final List<BindRecord> binds = new ArrayList<>();
     private final List<String> disposed = new ArrayList<>();
     private final List<String> painted = new ArrayList<>();
-    private final List<UiTextMeasure> measurements = new ArrayList<>();
     private final Set<String> failOnCreate = new HashSet<>();
     private int sequence;
     private Runnable paintingHook;
@@ -131,11 +127,6 @@ public final class FakeUiHostAdapter implements UiHostAdapter {
     }
 
     @Override
-    public UiSize measure(UiHostNode node, UiLayoutSpec layout, UiSize available) {
-        return cast(node).contentSize(available);
-    }
-
-    @Override
     public void arrange(UiHostNode node, UiRect rect) {
         cast(node).layout = rect;
     }
@@ -178,11 +169,6 @@ public final class FakeUiHostAdapter implements UiHostAdapter {
         return List.copyOf(painted);
     }
 
-    /** 文本测量请求记录。 */
-    public List<UiTextMeasure> measurements() {
-        return List.copyOf(measurements);
-    }
-
     /** 让某个 primitive 的 create 失败。 */
     public void failCreateFor(UiPrimitive primitive) {
         failOnCreate.add(primitive.tag());
@@ -201,7 +187,6 @@ public final class FakeUiHostAdapter implements UiHostAdapter {
         binds.clear();
         disposed.clear();
         painted.clear();
-        measurements.clear();
     }
 
     private static FakeUiHostNode cast(UiHostNode node) {
@@ -209,20 +194,6 @@ public final class FakeUiHostAdapter implements UiHostAdapter {
             throw new IllegalArgumentException("fake adapter received a foreign host node: " + node);
         }
         return fake;
-    }
-
-    /** 记录测量请求并返回固定字宽的 fake 测量器。 */
-    public UiTextMeasurer textMeasurer() {
-        return request -> {
-            measurements.add(request);
-            double perChar = 6.0 * (request.fontSize() / 8.0);
-            double width = request.text().length() * perChar;
-            if (request.wrap() && request.availableWidth() > 0 && width > request.availableWidth()) {
-                int lines = (int) Math.ceil(width / request.availableWidth());
-                return new UiSize(request.availableWidth(), lines * (request.fontSize() + 2));
-            }
-            return new UiSize(width, request.fontSize() + 2);
-        };
     }
     /** fake host node：只记录可观察事实。 */
     public static final class FakeUiHostNode implements UiHostNode {
@@ -296,10 +267,10 @@ public final class FakeUiHostAdapter implements UiHostAdapter {
         }
 
         private static double declared(UiProps props, UiProp prop, double fallback) {
-            if (!props.has(prop.jsName())) {
+            if (!props.has(prop)) {
                 return fallback;
             }
-            Object raw = props.raw(prop.jsName());
+            Object raw = props.raw(prop);
             if (raw instanceof Number number) {
                 return number.doubleValue();
             }

@@ -37,9 +37,6 @@ public interface UiHostAdapter {
     /** 释放节点及其整棵子树；必须幂等。 */
     void dispose(UiHostNode node);
 
-    /** 测量节点在给定约束与可用空间下的内容尺寸。 */
-    UiSize measure(UiHostNode node, UiLayoutSpec layout, UiSize available);
-
     /** 把节点放到最终矩形。 */
     void arrange(UiHostNode node, UiRect rect);
 
