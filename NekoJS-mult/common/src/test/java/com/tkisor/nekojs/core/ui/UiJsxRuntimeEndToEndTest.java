@@ -208,7 +208,7 @@ class UiJsxRuntimeEndToEndTest {
             ScriptUiVNodeFactory factory = new ScriptUiVNodeFactory();
             HostVNode column = (HostVNode) factory.toVNode(element, "screen");
             assertEquals(UiPrimitive.COLUMN, column.primitive());
-            assertEquals(2.0, column.props().number("gap", -1));
+            assertEquals(2.0, column.props().number(com.tkisor.nekojs.api.ui.UiProp.GAP, -1));
             assertEquals(1, column.children().size());
             assertEquals("a", ((HostVNode) column.children().getFirst()).props().string("text"));
         }

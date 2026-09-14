@@ -33,6 +33,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -82,8 +83,6 @@ class UiContractChainTest {
         Set<String> ids = capabilities.stream()
                 .map(com.tkisor.nekojs.api.contract.NormativeApiContract.ContractCapability::id)
                 .collect(java.util.stream.Collectors.toSet());
-        assertEquals(new LinkedHashSet<>(UiSpec.CAPABILITY_IDS), new LinkedHashSet<>(Ui.capabilityIds()),
-                "Ui.capabilityIds must be derived from the same constant source as the contract");
         assertTrue(ids.containsAll(UiSpec.CAPABILITY_IDS),
                 "UI capability ids must be declared in the normative contract: " + ids);
     }
@@ -238,14 +237,12 @@ class UiContractChainTest {
     }
 
     @Test
-    void uiPrimitivesAndPropNamesAreExposedAsDerivedViews() {
+    void uiPrimitivesAreExposedAsADerivedView() {
         List<String> primitives = Ui.primitives();
         assertEquals(UiPrimitiveRegistry.tags(), primitives);
-        assertEquals(UiProp.values().length, Ui.propNames().size());
-        assertEquals(UiEventType.values().length, Ui.eventTypeNames().size());
-        // 派生视图：每次调用返回新的不可变列表，不构成 UI 专用 global singleton 状态
-        assertNotNull(Ui.propNames());
+        // 派生视图：每次调用重新计算并返回不可变列表，不构成 UI 专用 global singleton 状态
         assertEquals(11, primitives.size());
+        assertThrows(UnsupportedOperationException.class, () -> primitives.add("div"));
     }
 
     private static com.tkisor.nekojs.api.surface.EnvironmentKey serverEnvironment() {

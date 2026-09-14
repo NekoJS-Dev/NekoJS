@@ -62,5 +62,7 @@ public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.n
     @Override
     public void registerNodeTypeDocs(TypeDocsRegister registry) {
         NodeModuleTypeDocs.registerBuiltin(registry);
+        // JSX UI 声明与 node 模块声明同源进入 probe/workspace 派生链（ticket 40 AC6）。
+        com.tkisor.nekojs.core.ui.UiJsxDeclarationGenerator.register(registry);
     }
 }

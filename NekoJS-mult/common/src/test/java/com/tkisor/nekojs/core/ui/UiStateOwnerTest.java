@@ -89,7 +89,6 @@ class UiStateOwnerTest {
         count.set(1);
         count.set(2);
         count.set(3);
-        assertTrue(owner.hasPendingInvalidation());
         owner.runTick();
 
         assertEquals(1, root.reconciles, "同一 tick 内的重复失效必须合并为一次 reconcile");

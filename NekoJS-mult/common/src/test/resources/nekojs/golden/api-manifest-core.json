@@ -1058,13 +1058,13 @@
       ]
     },
     {
-      "id": "member:UiProp.isLayout",
+      "id": "member:UiProp.jsName",
       "signatures": [
         "()"
       ]
     },
     {
-      "id": "member:UiProp.jsName",
+      "id": "member:UiProp.kind",
       "signatures": [
         "()"
       ]

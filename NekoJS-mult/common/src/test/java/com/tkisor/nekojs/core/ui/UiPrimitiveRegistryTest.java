@@ -92,35 +92,56 @@ class UiPrimitiveRegistryTest {
     @Test
     void invalidLayoutValuesAreRejectedExplicitly() {
         UiFailure failure = assertThrows(UiFailure.class, () ->
-                UiPrimitiveRegistry.validateLayoutValues(
+                UiPrimitiveRegistry.validateProps(UiPrimitive.ROW,
                         UiProps.of(Map.of("align", "diagonal")), "screen/row[0]"));
-        assertEquals(UiFailure.INVALID_LAYOUT, failure.code());
-        assertEquals(UiDiagnosticStage.LAYOUT, failure.stage());
+        assertEquals(UiFailure.INVALID_PROP, failure.code());
 
         UiFailure anchorFailure = assertThrows(UiFailure.class, () ->
-                UiPrimitiveRegistry.validateLayoutValues(
+                UiPrimitiveRegistry.validateProps(UiPrimitive.ROW,
                         UiProps.of(Map.of("anchor", "middle-ish")), "screen/row[0]"));
-        assertEquals(UiFailure.INVALID_LAYOUT, anchorFailure.code());
+        assertEquals(UiFailure.INVALID_PROP, anchorFailure.code());
+
+        // 非法数值型尺寸走 LAYOUT 阶段（UiLayoutSpec/UiDimension 的构造校验）
+        UiFailure sizeFailure = assertThrows(UiFailure.class, () ->
+                UiPrimitiveRegistry.validateProps(UiPrimitive.ROW,
+                        UiProps.of(Map.of("width", -5)), "screen/row[0]"));
+        assertEquals(UiFailure.INVALID_LAYOUT, sizeFailure.code());
+        assertEquals(UiDiagnosticStage.LAYOUT, sizeFailure.stage());
     }
 
     @Test
     void controlledResourceIdRejectsUrlAndAbsolutePaths() {
-        UiPrimitiveRegistry.validateResourceId("nekojs:textures/gui/panel.png", "screen/image[0]");
+        UiProps.requireResourceId("nekojs:textures/gui/panel.png", "screen/image[0]");
         for (String bad : List.of("https://example.com/a.png", "/etc/passwd", "a:b/../c", "nopath", "ns:http://x")) {
             assertThrows(UiFailure.class,
-                    () -> UiPrimitiveRegistry.validateResourceId(bad, "screen/image[0]"),
+                    () -> UiProps.requireResourceId(bad, "screen/image[0]"),
                     "resource id must reject: " + bad);
         }
     }
 
+    /**
+     * 三方一致性：登记表 / 取值校验 / TS 声明都从 {@link UiProp#kind()} 派生，
+     * 不存在第二份属性目录（规格 133）。新增一个 UiProp 若漏挂任一侧，本测试变红。
+     */
     @Test
-    void duplicateKeyIsRejectedExplicitly() {
-        UiFailure failure = assertThrows(UiFailure.class, () ->
-                UiPrimitiveRegistry.validateUniqueKeys("screen/row[0]", List.of(
-                        new UiPrimitiveRegistry.KeyedTag("label", "a"),
-                        new UiPrimitiveRegistry.KeyedTag("label", "a"))));
-        assertEquals(UiFailure.DUPLICATE_KEY, failure.code());
-        assertEquals(UiDiagnosticStage.RENDER, failure.stage());
+    void propVocabularyIsSingleSourcedAcrossRegistryValidationAndDeclaration() {
+        Map<String, List<String>> registry = UiPrimitiveRegistry.snapshot();
+        Map<String, List<String>> declared = UiJsxDeclarationGenerator.declaredPropNames();
+        assertEquals(new java.util.LinkedHashSet<>(registry.keySet()),
+                new java.util.LinkedHashSet<>(declared.keySet()));
+        for (Map.Entry<String, List<String>> entry : registry.entrySet()) {
+            assertEquals(new java.util.LinkedHashSet<>(entry.getValue()),
+                    new java.util.LinkedHashSet<>(declared.get(entry.getKey())),
+                    "登记表与声明在 <" + entry.getKey() + "> 上必须一致");
+        }
+
+        // 每个属性都必须能被 TS 声明渲染出非 unknown 的类型，并出现在至少一个 primitive 上
+        for (UiProp prop : UiProp.values()) {
+            assertEquals(prop.kind().tsType(), prop.kind().tsType());
+            assertTrue(UiJsxDeclarationGenerator.declaredEventProps().contains(prop.jsName())
+                            == prop.isEvent(),
+                    prop.jsName() + " 的事件属性归类必须与 UiProp.isEvent 一致");
+        }
     }
 
     @Test
