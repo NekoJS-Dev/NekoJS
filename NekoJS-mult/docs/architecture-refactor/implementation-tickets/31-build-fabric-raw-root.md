@@ -4,9 +4,11 @@
 
 **Blocked by:** [01: P0 五节点构建与契约基线](01-build-baseline.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
+
+**Takeover note（2026-09-15）:** 本认领由另一 zcode 并行会话于 2026-09-13 写入后 36 小时零产出（无分支、无 worktree、无文件改动）；经维护者（用户）批准由当前 zcode 会话接管继续。
 
 **Optional:** false
 
