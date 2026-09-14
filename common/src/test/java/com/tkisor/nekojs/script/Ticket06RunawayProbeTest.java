@@ -27,7 +27,6 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Engine;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -41,23 +40,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
- * 诊断用（ticket 06 烟测设计输入 + 缺陷复现）：time-window runaway 路径是否真的能终止
- * {@code while(true)}。
+ * 时间窗口 runaway 路径验证（ticket 06 缺陷复现 → ticket 07 修复证据，已转正）。
  *
- * <p><b>结论（2026-09-12，@Disabled：当前实现下必然超时，不能让 check 变红）</b>：
- * {@code scriptStatementLimit = 0} + {@code scriptRunawayTimeoutSeconds = 2} 时，
- * {@code while(true){}} 在 20s 断言窗口内<strong>没有</strong>被终止（线程仍停在
- * {@code DefaultLoopNode.execute / WhileNode.execute}）；同一 runner 在真实
- * {@code :26.1.2:runServer} 会话里也复现（注入脚本后 RCON 180s 无应答，日志无
- * ResourceLimits 行）。语句上限路径（{@code scriptStatementLimit > 0}）有效，是现有
- * 回归测试（{@code infiniteLoopInScriptEntryDoesNotFreezeServerThread} 等）唯一验证过的机制。
+ * <p><b>结论（2026-09-12 记录 @Disabled；2026-09-15 ticket 07 转正：本测试通过）</b>：
+ * 根因是 {@code ResourceLimits} 语句回调在空循环体内再无语句可数——回调只在求值前
+ * 触发数次即停止，基于语句计数的滑动窗口永不累计，时间窗口路径形同虚设。
+ * ticket 07 新增 {@code SyncEvalWatchdog}（宿主墙钟 + {@code Context.interrupt}，
+ * 只覆盖同步求值段，清理仍在 owner 线程）后，{@code scriptStatementLimit = 0} +
+ * {@code scriptRunawayTimeoutSeconds = 2} 可在断言窗口内终止 {@code while(true){}}，
+ * 候选按 EXECUTION 失败丢弃、active 保留。
  *
- * <p>因此本测试对 ticket 06 的作用是：候选被资源上限终止的<strong>接收面</strong>
- * （candidateKilled → 丢弃候选、保留 active）可用语句上限路径确定性验证；时间窗口路径
- * 的失效属既有 core 缺陷（watchdog 调度归工单 07 的 owner-thread/watchdog 面），
- * 见 REPORT.md 的 not-verified 与发现节。修好后把本注解去掉即为通过证据。
+ * <p>历史结论（2026-09-12）保留为上下文：当时 {@code while(true){}} 在 20s 断言窗口
+ * 内没有被终止（线程停在 {@code DefaultLoopNode.execute / WhileNode.execute}），同一
+ * runner 在真实 {@code :26.1.2:runServer} 会话复现（RCON 180s 无应答）；语句上限路径
+ * （{@code scriptStatementLimit > 0}）当时即为有效，是
+ * {@code infiniteLoopInScriptEntryDoesNotFreezeServerThread} 等回归的唯一验证机制。
  */
-@Disabled("finding: time-window runaway path does not terminate while(true); see REPORT.md not-verified")
 class Ticket06RunawayProbeTest {
 
     private static final class StubPluginRuntime implements IPluginRuntime {
