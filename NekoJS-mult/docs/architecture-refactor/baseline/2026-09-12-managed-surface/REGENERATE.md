@@ -12,6 +12,14 @@
 | managed TS declaration fixture | `common/src/test/probe-ts/generated/index.d.ts` | `ProbeTypeScriptFixtureWriterTest`（字节对比；实际输出写 `common/build/probe-ts-actual/`） | 固定 surface fixture → `ManagedApiDeclarationGenerator`；该 golden 同时被 `npm run test:probe-types`（tsc 契约校验）消费 |
 | legacy probe bindings/events | `common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts`、`legacy-events.expected.d.ts` | `LegacyProbeCompatibilityTest`（经 `ProbeGoldenSupport`） | catalog fixture → TS probe backend |
 | legacy probe 树 | `common/src/test/resources/nekojs/probe/legacy-tree/**` | `LegacyProbeTreeTest`（经 `ProbeGoldenSupport`，整树镜像语义） | `LegacyProbeFixture` → TS probe backend |
+| query 域 declaration golden | `src/test/resources/golden/query/datamap-binding.d.txt`、`entityselectors-binding.d.txt` | `DataMapQueryBindingTest`、`EntitySelectorsQueryBindingTest`（根测试树，文本对比） | 生产 probe TS backend `BindingDeclarationGenerator` 对 DataMap / EntitySelectors binding 的 declaration 输出（ticket 25） |
+| query 域 capability matrix golden | `src/test/resources/golden/query/capability-matrix-neoforge.txt`、`capability-matrix-fabric.txt` | `QueryToolCapabilityMatrixTest`（loader 探针自动选 golden；fabric 行经由 `:26.1.2-fabric:test` 消费） | capability 探针矩阵：类存在性 + source trace 判定的 supported/partial/unavailable（ticket 25） |
+
+> 查询域两行（ticket 25 落地；本登记是其报告 §7 N9 的收尾，owner managed-surface）**暂不支持
+> regenerate 开关**：`:common:regenerateGoldens` 与 `-Dnekojs.golden.regenerate=true` 只覆盖本表
+> common 树基线，根测试树 `src/test/resources/golden/query/**` 的更新路径是「先改行为/探针输入 →
+> 手工比对 → 更新 golden → 按 §3 留旧新 diff、原因、影响与审阅记录」（首例：ticket 25 REPORT
+> §8.3）。为该域补 regenerate 开关是已登记的后续债。
 
 ## 2. 显式 regenerate 命令
 

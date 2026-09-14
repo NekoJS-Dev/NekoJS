@@ -88,5 +88,6 @@
   仅 Java 调用者可达）；不再隐瞒的失败样本已解释清楚（`postfix-extract` 的 2 failed 系会话内累计 +
   中间版 fixture 的真实断言失败，已由 `cf8d24ef` 修掉，干净会话 SUMMARY 全 0 failed）；
   `DataMap binding[CLIENT]` capability 由硬编码 SUPPORTED 改判 PARTIAL；恒真断言改为有效断言。
-- 遗留（owner 已列）：查询域 declaration golden 不在 09 `REGENERATE.md` §1 清单（登记建议见报告 N9，
-  owner managed-surface）；三处 golden 变更仅有 owner 自查、缺维护者审阅记录；fabric runtime smoke。
+- 遗留（owner 已列）：查询域 declaration golden 不在 09 `REGENERATE.md` §1 清单——2026-09-14 已按
+  报告 N9 完成登记（09 基线清单新增 query declaration/capability matrix 两行，并如实声明该域暂无
+  regenerate 开关）；三处 golden 变更仅有 owner 自查、缺维护者审阅记录；fabric runtime smoke。
