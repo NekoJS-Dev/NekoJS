@@ -177,29 +177,45 @@ public final class UiRoot implements UiRootHandle {
         }
         List<String> operations = new ArrayList<>();
         Map<String, UiRect> clips = new LinkedHashMap<>();
-        paintNode(committedRoot, new UiRect(0, 0,
-                Math.max(0, committedRoot.layout().width()),
-                Math.max(0, committedRoot.layout().height())), operations, clips);
+        paintNode(committedRoot, rootClip(committedRoot), operations, clips, true);
         inspection = new UiHostInspection(committedRoot, operations, clips,
                 layoutFacts.resolvedStyles(), layoutFacts.overflow(), projectedViewport, layoutRevisions);
         return inspection;
     }
 
-    private void paintNode(UiHostNode node, UiRect clip, List<String> operations, Map<String, UiRect> clips) {
+    /**
+     * 遍历已提交树：{@code paint} 为真时调用 host Adapter 绘制并把失败节点记入诊断；
+     * 始终产出可观察的绘制顺序与裁剪矩形（裁剪是逐层相交的结果）。
+     */
+    private void paintNode(UiHostNode node, UiRect clip, List<String> operations,
+                           Map<String, UiRect> clips, boolean paint) {
         if (node.disposed()) return;
         UiRect viewport = clip.intersect(node.layout());
-        try {
-            adapter.paint(node, viewport);
-        } catch (RuntimeException failure) {
-            record(UiDiagnostics.fromThrowable(UiDiagnosticStage.HOST_UPDATE, "PAINT_FAILURE",
-                    failure, node.path(), rootId, generation));
-            return;
+        if (paint) {
+            try {
+                adapter.paint(node, viewport);
+            } catch (RuntimeException failure) {
+                record(UiDiagnostics.fromThrowable(UiDiagnosticStage.HOST_UPDATE, "PAINT_FAILURE",
+                        failure, node.path(), rootId, generation));
+                return;
+            }
         }
         operations.add(node.path());
         clips.put(node.path(), viewport);
         for (UiHostNode child : node.children()) {
-            paintNode(child, viewport, operations, clips);
+            paintNode(child, viewport, operations, clips, paint);
         }
+    }
+
+    /** 只重算裁剪矩形（resize 重排路径），不改动绘制顺序。 */
+    private Map<String, UiRect> clipRectsOf(UiHostNode root) {
+        Map<String, UiRect> clips = new LinkedHashMap<>();
+        paintNode(root, rootClip(root), new ArrayList<>(), clips, false);
+        return clips;
+    }
+
+    private static UiRect rootClip(UiHostNode root) {
+        return new UiRect(0, 0, Math.max(0, root.layout().width()), Math.max(0, root.layout().height()));
     }
 
     @Override
@@ -231,7 +247,9 @@ public final class UiRoot implements UiRootHandle {
         if (rendering) {
             viewportDependent = true;
         }
-        return projectedViewport;
+        return projectedViewport != null
+                ? projectedViewport
+                : ProjectedViewport.of(currentViewportContext(), layoutRevisions);
     }
 
     /**
@@ -255,7 +273,7 @@ public final class UiRoot implements UiRootHandle {
             return;
         }
         relayout(committedRoot, currentViewportContext());
-        inspection = inspection.forViewport(projectedViewport, layoutRevisions);
+        inspection = inspection.afterRelayout(projectedViewport, layoutRevisions, clipRectsOf(committedRoot));
     }
 
     @Override

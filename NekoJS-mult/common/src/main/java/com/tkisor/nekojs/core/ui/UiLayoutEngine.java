@@ -62,7 +62,8 @@ final class UiLayoutEngine {
         Viewport viewport = new Viewport(context);
         UiSize size = new UiSize(context.logicalWidth(), context.logicalHeight());
         measure(root, viewport, size);
-        arrange(root, new UiRect(0, 0, size.width(), size.height()), size, viewport);
+        UiRect clip = new UiRect(0, 0, size.width(), size.height());
+        arrange(root, clip, clip, size, viewport);
         return new LayoutFacts(Map.copyOf(viewport.styles), Map.copyOf(viewport.overflow));
     }
 
@@ -114,9 +115,20 @@ final class UiLayoutEngine {
         return new UiSize(width, height);
     }
 
-    /** 摆放：父节点先定矩形，再按主轴/交叉轴规则摆放子节点。 */
-    void arrange(UiHostNode node, UiRect rect, UiSize available, Viewport viewport) {
+    /**
+     * 摆放：父节点先定矩形，再按主轴/交叉轴规则摆放子节点。
+     *
+     * <p>{@code clip} 是祖先裁剪与该节点矩形的交集——与 {@code paint()} 的裁剪规则同一处语义，
+     * 溢出诊断因此报告的是「该节点相对其实际可见区域越界了多少」，而不是另起一套判定。
+     */
+    void arrange(UiHostNode node, UiRect rect, UiRect clip, UiSize available, Viewport viewport) {
         adapter.arrange(node, rect);
+        viewport.recordOverflow(node.path(),
+                Math.max(0, rect.x() + rect.width() - (clip.x() + clip.width()))
+                        + Math.max(0, clip.x() - rect.x()),
+                Math.max(0, rect.y() + rect.height() - (clip.y() + clip.height()))
+                        + Math.max(0, clip.y() - rect.y()));
+
         List<UiHostNode> children = node.children();
         if (children.isEmpty()) {
             return;
@@ -133,14 +145,16 @@ final class UiLayoutEngine {
             sizes.add(measure(child, viewport, new UiSize(innerWidth, innerHeight)));
         }
 
+        UiRect childrenClip = clip.intersect(rect);
         UiPrimitive primitive = node.primitive();
         boolean horizontal = horizontal(primitive, layout);
         switch (primitive) {
             case ROW, COLUMN -> arrangeLinear(children, sizes, layout, horizontal,
-                    innerX, innerY, innerWidth, innerHeight, viewport);
+                    innerX, innerY, innerWidth, innerHeight, childrenClip, viewport);
             case SCREEN, STACK, PANEL, SCROLL -> arrangeStack(children, sizes, layout,
-                    innerX, innerY, innerWidth, innerHeight, viewport);
-            default -> arrangeStack(children, sizes, layout, innerX, innerY, innerWidth, innerHeight, viewport);
+                    innerX, innerY, innerWidth, innerHeight, childrenClip, viewport);
+            default -> arrangeStack(children, sizes, layout, innerX, innerY, innerWidth, innerHeight,
+                    childrenClip, viewport);
         }
     }
 
@@ -199,7 +213,7 @@ final class UiLayoutEngine {
 
     private void arrangeLinear(List<UiHostNode> children, List<UiSize> sizes, UiLayoutSpec layout,
                                boolean horizontal, double x, double y, double width, double height,
-                               Viewport viewport) {
+                               UiRect clip, Viewport viewport) {
         double gap = layout.gap();
         double totalGrow = 0;
         for (UiHostNode child : children) {
@@ -232,9 +246,7 @@ final class UiLayoutEngine {
             UiRect rect = horizontal
                     ? new UiRect(cursor + childLayout.margin(), crossStart + offset, mainSize, crossSize)
                     : new UiRect(crossStart + offset, cursor + childLayout.margin(), crossSize, mainSize);
-            viewport.recordOverflow(child.path(),
-                    Math.max(0, rect.width() - width), Math.max(0, rect.height() - height));
-            arrange(child, rect, new UiSize(rect.width(), rect.height()), viewport);
+            arrange(child, rect, clip, new UiSize(rect.width(), rect.height()), viewport);
             cursor += mainSize + childLayout.margin() * 2 + gap;
             totalMain += mainSize;
         }
@@ -246,7 +258,8 @@ final class UiLayoutEngine {
     }
 
     private void arrangeStack(List<UiHostNode> children, List<UiSize> sizes, UiLayoutSpec layout,
-                              double x, double y, double width, double height, Viewport viewport) {
+                              double x, double y, double width, double height, UiRect clip,
+                              Viewport viewport) {
         for (int i = 0; i < children.size(); i++) {
             UiHostNode child = children.get(i);
             UiSize size = sizes.get(i);
@@ -258,9 +271,7 @@ final class UiLayoutEngine {
             double dx = x + horizontalOffset(layout.anchor(), width, w) + childLayout.margin();
             double dy = y + verticalOffset(layout.anchor(), height, h) + childLayout.margin();
             UiRect rect = new UiRect(dx, dy, w, h);
-            viewport.recordOverflow(child.path(),
-                    Math.max(0, w - width), Math.max(0, h - height));
-            arrange(child, rect, new UiSize(w, h), viewport);
+            arrange(child, rect, clip, new UiSize(w, h), viewport);
         }
     }
 

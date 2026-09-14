@@ -57,9 +57,14 @@ public record UiHostInspection(
         return overflow.values().stream().anyMatch(UiOverflow::any);
     }
 
-    /** 只替换视口事实与布局代数，保留已提交树、绘制顺序与裁剪（resize 重排路径用）。 */
-    public UiHostInspection forViewport(ProjectedViewport nextViewport, long revisions) {
-        return new UiHostInspection(committedRoot, paintOperations, clipRects,
+    /**
+     * 只重排后的检查结果：树与解析样式不变（布局事实已由新一次 measure/arrange 替换），
+     * 裁剪矩形按新矩形重算，视口事实与布局代数更新。绘制顺序保持原有语义——只有显式
+     * {@code paint()} 才更新它（票 40 契约）。
+     */
+    public UiHostInspection afterRelayout(ProjectedViewport nextViewport, long revisions,
+                                          Map<String, UiRect> refreshedClips) {
+        return new UiHostInspection(committedRoot, paintOperations, refreshedClips,
                 resolvedStyles, overflow, nextViewport, revisions);
     }
 
