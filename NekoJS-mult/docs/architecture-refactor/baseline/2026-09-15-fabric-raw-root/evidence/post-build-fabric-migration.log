@@ -1,0 +1,148 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins
+> Task :buildSrc:generateScriptPluginAdapters
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors
+> Task :buildSrc:compileKotlin
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar
+
+> Configure project :
+w: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/stonecutter.gradle.kts:52:13: 'fun replace(direct: Pair<String, String>, reverse: Pair<String, String>): Unit' is deprecated. Use the comma-separated version.
+w: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/stonecutter.gradle.kts:53:13: 'fun replace(direct: Pair<String, String>, reverse: Pair<String, String>): Unit' is deprecated. Use the comma-separated version.
+w: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/stonecutter.gradle.kts:54:13: 'fun replace(direct: Pair<String, String>, reverse: Pair<String, String>): Unit' is deprecated. Use the comma-separated version.
+w: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/stonecutter.gradle.kts:58:13: 'fun replace(direct: Pair<String, String>, reverse: Pair<String, String>): Unit' is deprecated. Use the comma-separated version.
+w: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/stonecutter.gradle.kts:59:13: 'fun replace(direct: Pair<String, String>, reverse: Pair<String, String>): Unit' is deprecated. Use the comma-separated version.
+w: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/stonecutter.gradle.kts:63:13: 'fun replace(direct: Pair<String, String>, reverse: Pair<String, String>): Unit' is deprecated. Use the comma-separated version.
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :26.2.0-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerate UP-TO-DATE
+> Task :26.2.0-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.2.0-fabric:generateModMetadata UP-TO-DATE
+> Task :26.2.0-fabric:processResources UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :26.2.0-fabric:compileJava UP-TO-DATE
+> Task :26.2.0-fabric:classes UP-TO-DATE
+> Task :26.2.0-fabric:processIncludeJars
+
+> Task :guardLint
+guardLint: 守卫块 248，扫描 392 个文件；超限豁免 0 个；警告 0 条
+
+> Task :26.1.2-fabric:stonecutterGenerate
+
+> Task :26.1.2-fabric:compileJava
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()': 找不到com.google.errorprone.annotations.InlineMe的类文件
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'replacement()'
+C:\Users\11515\.gradle\caches\modules-2\files-2.1\com.google.code.gson\gson\2.13.2\48b8230771e573b54ce6e867a9001e75977fe78e\gson-2.13.2.jar(/com/google/gson/JsonParser.class): 警告: [classfile] 无法找到类型 'InlineMe' 的批注方法 'imports()'
+D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:41: 警告: [deprecation] ItemEvents中的PICKED_UP_PRE已过时
+                || ItemEvents.PICKED_UP_PRE.hasListeners();
+                             ^
+D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricItemEventBindingsV2.java:49: 警告: [deprecation] ItemEvents中的PICKED_UP_PRE已过时
+            cancelled = ItemEvents.PICKED_UP_PRE.post(payload, item);
+                                  ^
+D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:41: 警告: [deprecation] PlayerEvents中的INVENTORY_OPENED已过时
+        PlayerEvents.INVENTORY_OPENED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\src\fabric\java\com\tkisor\nekojs\fabric\event\FabricPlayerEventBindings.java:47: 警告: [deprecation] PlayerEvents中的INVENTORY_CLOSED已过时
+        PlayerEvents.INVENTORY_CLOSED.post(new PlayerContainerEventJS(player, menu));
+                    ^
+34 个警告
+
+> Task :26.1.2-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.1.2-fabric:generateModMetadata UP-TO-DATE
+> Task :26.1.2-fabric:processResources UP-TO-DATE
+> Task :26.1.2-fabric:classes
+> Task :26.1.2-fabric:processIncludeJars
+> Task :26.2.0-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0-fabric:compileTestJava UP-TO-DATE
+> Task :26.2.0-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:testClasses UP-TO-DATE
+> Task :26.2.0-fabric:jar
+> Task :26.2.0-fabric:test UP-TO-DATE
+> Task :26.2.0-fabric:assemble
+> Task :26.2.0-fabric:validateAccessWidener
+> Task :26.2.0-fabric:verifyFabricRuntimeArtifact
+> Task :26.2.0-fabric:check
+> Task :26.2.0-fabric:build
+> Task :26.1.2-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.1.2-fabric:compileTestJava UP-TO-DATE
+> Task :26.1.2-fabric:jar
+> Task :26.1.2-fabric:processTestResources
+> Task :26.1.2-fabric:assemble
+> Task :26.1.2-fabric:testClasses
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by org.joml.MemUtil$MemUtilUnsafe (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar)
+WARNING: Please consider reporting this to the maintainers of class org.joml.MemUtil$MemUtilUnsafe
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::load has been called by com.oracle.truffle.polyglot.JDKSupport in an unnamed module (file:/C:/Users/11515/.gradle/caches/modules-2/files-2.1/curse.maven/graal-1504336/8762963/dd59af0c156c118b9aae5893e38127c1c709d401/graal-1504336-8762963.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+> Task :26.1.2-fabric:test
+> Task :26.1.2-fabric:validateAccessWidener
+> Task :26.1.2-fabric:verifyFabricRuntimeArtifact
+> Task :26.1.2-fabric:check
+> Task :26.1.2-fabric:build
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/.worktrees/t31/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 46s
+43 actionable tasks: 19 executed, 24 up-to-date
