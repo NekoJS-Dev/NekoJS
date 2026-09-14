@@ -531,6 +531,17 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         Context context = listener.getContext();
         ScriptType type = ScriptContextRegistry.scriptTypeOf(context);
         String scriptId = ScriptContextRegistry.currentScriptIdOf(context);
+        // 【票 07 尾注：Context 私有 monitor 旧路线的删除】本类四个分发点曾以
+        // synchronized(context) 序列化「命令线程 reload / Render-tick 分发」的跨线程
+        // 并发（Graal 单线程约束撞 Multi threaded access）。票 07 起：lifecycle 的
+        // 串行改由 ScriptManager 的实例锁 + ScriptLifecycleGate 承担，CLIENT reload
+        // 命令面已转投 Render 线程（ClientReloadExecutor）、网络 receiver 先 hop 再
+        // 分发——分发与 lifecycle 在 owner thread 上同线程串行，分发点不再取
+        // Context monitor（每次回调省一次 monitor 进入，也不再与 reload 竞争同一把锁）。
+        // 残余角落：非 owner 线程绕过显式调度入口直接执行 lifecycle（违反 AC4 契约）
+        // 且恰逢 owner 分发时，Graal 会拒绝后进入者并以回调错误呈现（探针
+        // SyncEvalWatchdogTest.concurrentEvalOnSameContextIsRejectedByGraal）——
+        // 单线程约束本身仍是同一 Context 并发进入的最终兜底。
 
         return this.bus.listen(priority, event -> {
             if (ScriptManager.isContextDead(context)) {
@@ -539,19 +550,19 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return;
             }
             try {
-                // synchronized(context)：「监听器都在游戏 tick 线程」的旧假设不成立——
-                // /nekojs reload client 在服务器命令线程上跑（NekoJSCommands），而 CLIENT
-                // 事件在 Render 线程分发；边 reload 边触发客户端事件会撞 Graal 单线程约束
-                // （Multi threaded access）。以 Context monitor 序列化所有进入点
-                // （ScriptManager 的 timer flush / close 也用同一把锁）。
-                String previousScriptId;
-                synchronized (context) {
-                    previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                    try {
-                        listener.executeVoid(event);
-                    } finally {
-                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
-                    }
+                // 票 07 线程契约：生产分发的序列化不再走 Context 私有 monitor（旧路线已删，
+                // 见 register() 尾注）——分发只发生在 owner thread（SERVER=tick、CLIENT=render、
+                // 网络 receiver 先 hop 再分发），与 owner 上的 lifecycle 天然同线程串行；
+                // 跨线程并发进入由 Graal 单线程约束兜底（探针：concurrent eval 被拒绝）。
+                // 回调执行体做回调深度标记：期间同线程的 lifecycle 请求被调度门明确拒绝
+                // （不递归、不同步等待自身）。
+                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                ScriptManager.noteCallbackEnter();
+                try {
+                    listener.executeVoid(event);
+                } finally {
+                    ScriptManager.noteCallbackExit();
+                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -576,16 +587,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 return false;
             }
             try {
-                // synchronized(context)：与 register() 同理——命令线程 reload 与 Render/tick
-                // 线程分发并发时以 Context monitor 序列化（见 register() 注释）
-                synchronized (context) {
-                    String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                    try {
-                        Value result = listener.execute(event);
-                        return result.isBoolean() && result.asBoolean();
-                    } finally {
-                        ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
-                    }
+                // 票 07 线程契约：同 register()——owner-thread 分发 + 回调深度标记，
+                // Context 私有 monitor 旧路线已删（见 register() 尾注）。
+                String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                ScriptManager.noteCallbackEnter();
+                try {
+                    Value result = listener.execute(event);
+                    return result.isBoolean() && result.asBoolean();
+                } finally {
+                    ScriptManager.noteCallbackExit();
+                    ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                 }
             } catch (Throwable e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -612,17 +623,17 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         return;
                     }
                     try {
-                        // synchronized(context)：与 register() 同理——命令线程 reload 与分发
-                        // 线程并发时以 Context monitor 序列化（见 register() 注释）
-                        synchronized (context) {
-                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                            try {
-                                if (listener.canExecute()) {
-                                    listener.executeVoid(event);
-                                }
-                            } finally {
-                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                        // 票 07 线程契约：同 register()——owner-thread 分发 + 回调深度标记，
+                        // Context 私有 monitor 旧路线已删（见 register() 尾注）。
+                        String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                        ScriptManager.noteCallbackEnter();
+                        try {
+                            if (listener.canExecute()) {
+                                listener.executeVoid(event);
                             }
+                        } finally {
+                            ScriptManager.noteCallbackExit();
+                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -649,17 +660,18 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         return false;
                     }
                     try {
-                        // synchronized(context)：与 register() 同理（见 register() 注释）
-                        synchronized (context) {
-                            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
-                            try {
-                                if (listener.canExecute()) {
-                                    Value result = listener.execute(event);
-                                    return result.isBoolean() && result.asBoolean();
-                                }
-                            } finally {
-                                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+                        // 票 07 线程契约：同 register()——owner-thread 分发 + 回调深度标记，
+                        // Context 私有 monitor 旧路线已删（见 register() 尾注）。
+                        String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                        ScriptManager.noteCallbackEnter();
+                        try {
+                            if (listener.canExecute()) {
+                                Value result = listener.execute(event);
+                                return result.isBoolean() && result.asBoolean();
                             }
+                        } finally {
+                            ScriptManager.noteCallbackExit();
+                            ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                         }
                     } catch (Throwable e) {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();

@@ -222,9 +222,13 @@ public final class NekoNodeTimers implements AutoCloseable {
             if (scriptId != null && !scriptId.isBlank()) {
                 activeScriptIds.put(context, scriptId);
             }
+            // 票 07 回调内 reload 契约：与 EventBusJS 分发点一致，timer 回调执行
+            // 期间同线程 lifecycle 请求明确拒绝（见 ScriptManager#noteCallbackEnter）。
+            ScriptManager.noteCallbackEnter();
             try {
                 callback.executeVoid(args == null ? new Object[0] : args);
             } finally {
+                ScriptManager.noteCallbackExit();
                 // 不移除 activeScriptIds：保留「该 Context 最近执行的脚本」归属，使
                 // host 侧触发（无 currentScriptId）注册的 timer 也能在对应脚本 reload 时
                 // 被 cancelScript 清理，避免孤儿 interval 泄漏。
