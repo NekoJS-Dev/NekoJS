@@ -547,9 +547,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 String previousScriptId;
                 synchronized (context) {
                     previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                    // 票 07 回调内 reload 契约：guest 回调执行期间同线程的 lifecycle
+                    // 请求返回明确拒绝，不递归、不等待自身（计数在 finally 释放）。
+                    ScriptManager.noteCallbackEnter();
                     try {
                         listener.executeVoid(event);
                     } finally {
+                        ScriptManager.noteCallbackExit();
                         ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                     }
                 }
@@ -580,10 +584,12 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 // 线程分发并发时以 Context monitor 序列化（见 register() 注释）
                 synchronized (context) {
                     String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                    ScriptManager.noteCallbackEnter();
                     try {
                         Value result = listener.execute(event);
                         return result.isBoolean() && result.asBoolean();
                     } finally {
+                        ScriptManager.noteCallbackExit();
                         ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                     }
                 }
@@ -616,11 +622,13 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         // 线程并发时以 Context monitor 序列化（见 register() 注释）
                         synchronized (context) {
                             String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                            ScriptManager.noteCallbackEnter();
                             try {
                                 if (listener.canExecute()) {
                                     listener.executeVoid(event);
                                 }
                             } finally {
+                                ScriptManager.noteCallbackExit();
                                 ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                             }
                         }
@@ -652,12 +660,14 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         // synchronized(context)：与 register() 同理（见 register() 注释）
                         synchronized (context) {
                             String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+                            ScriptManager.noteCallbackEnter();
                             try {
                                 if (listener.canExecute()) {
                                     Value result = listener.execute(event);
                                     return result.isBoolean() && result.asBoolean();
                                 }
                             } finally {
+                                ScriptManager.noteCallbackExit();
                                 ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
                             }
                         }

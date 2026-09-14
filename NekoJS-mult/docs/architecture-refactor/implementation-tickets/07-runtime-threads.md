@@ -4,9 +4,9 @@
 
 **Blocked by:** [06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** opencode-agent
 
 **Optional:** false
 
