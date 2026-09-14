@@ -1,0 +1,67 @@
+== 26.1.2-fabric
+file      : nekojs-fabric-26.1.2-1.1.0-preview3.jar
+size      : 17439855 B
+sha256    : 777739128b5e7eba7a467c48ae6ddfa898ba8f6df177690362cd5e0dab2b68ec
+entries   : 7424
+dup entries: 0
+services  :
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  absent   com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : none
+fabric.mod.json:
+  id=nekojs version=1.1.0-preview3
+  depends={"fabric-api": ">=0.155.2+26.1.2", "fabricloader": ">=0.19.3", "java": ">=25", "minecraft": "~26.1.2"}
+  entrypoints keys=['client', 'main']
+  mixins field=["nekojs-fabric.mixins.json", "nekojs-fabric-shared.mixins.json", "nekojs-fabric-dynamic.mixins.json"]
+  accessWidener=nekojs-fabric.accesswidener
+  mixin cfg nekojs-fabric-dynamic.mixins.json: refs=1
+  mixin cfg nekojs-fabric-shared.mixins.json: refs=13
+  mixin cfg nekojs-fabric.mixins.json: refs=29
+
+== 26.2.0-fabric
+file      : nekojs-fabric-26.2-1.1.0-preview3.jar
+size      : 17439853 B
+sha256    : 905180a54b6b668ded858d8cb8ec891a593418e1df4a96e31386799c1b99fdb3
+entries   : 7424
+dup entries: 0
+services  :
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  absent   com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : none
+fabric.mod.json:
+  id=nekojs version=1.1.0-preview3
+  depends={"fabric-api": ">=0.159.0+26.2", "fabricloader": ">=0.19.3", "java": ">=25", "minecraft": "~26.2"}
+  entrypoints keys=['client', 'main']
+  mixins field=["nekojs-fabric.mixins.json", "nekojs-fabric-shared.mixins.json", "nekojs-fabric-dynamic.mixins.json"]
+  accessWidener=nekojs-fabric.accesswidener
+  mixin cfg nekojs-fabric-dynamic.mixins.json: refs=1
+  mixin cfg nekojs-fabric-shared.mixins.json: refs=13
+  mixin cfg nekojs-fabric.mixins.json: refs=29
+
+== 1.21.1: MISSING jar in versions\1.21.1\build\libs
+== 26.1.2: MISSING jar in versions\26.1.2\build\libs
+== 26.2.0: MISSING jar in versions\26.2.0\build\libs
