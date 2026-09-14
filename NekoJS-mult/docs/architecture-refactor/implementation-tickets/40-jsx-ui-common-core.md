@@ -142,3 +142,45 @@
 
 **验证命令与结果**：`:common:test --rerun-tasks --no-build-cache` → 1596 tests / 0 failures / 5 skipped；
 `:common:check` → SUCCESS；`guardLint` → 0 违规 0 警告。
+
+## code-review 修订
+
+主 agent 独立核验后提出 5 项必须修 + 若干建议项。逐条处理如下（第 1、2 项为「契约说谎」修复，
+两者都已让契约与实现一致，不是只改文档）。
+
+### 必须修
+
+| # | 项 | 判定与处置 | 证据 |
+|---|---|---|---|
+| 1 | 「契约说谎」A：VISIBLE/FIT/SCROLL_* 登记但无实现 | **VISIBLE 实现语义**（reconciler 候选择阶段剔除 `visible=false` 节点：不建 host node、不参与布局/绘制/已提交树）；**FIT / SCROLL_X / SCROLL_Y / SCROLLABLE 从冻结契约撤下**（依赖真实纹理/滚动能力，归票 41 与后续 UI 增强票） | `UiContractSemanticsTest.invisibleNodeIsExcludedFromLayoutPaintAndCommittedTree`、`invisibleNodeIsReintroducedWhenVisibleFlipsBack` |
+| 2 | 「契约说谎」B：`invalidate()` 承诺停止接受新事件但 `dispatchEvent` 不拒 | 新增 `UiFailure.ROOT_INVALIDATED` 与 `UiRoot.requireEventAccepting`；`dispatchEvent` 对 INVALIDATED 显式失败（与 `invalidateAndReconcile` 的既有拒绝一致）。`paint()` 仍允许（保留最后有效树供显示） | `UiContractSemanticsTest.invalidatedRootStopsAcceptingNewEvents`、`invalidatedRootStillAllowsPaintOfLastValidTree` |
+| 3 | AC3 线程语义覆盖不足 | 新增非 owner thread 的 `dispatchEvent`、`open`、`store.write`、`store.merge` 四条断言（均 `OFF_OWNER_THREAD` 且不改状态） | `UiContractSemanticsTest`（6 项） |
+| 4 | REPORT 数字自相矛盾 / 测试计数不实 / 缺审阅记录 / 契约 version | REPORT 已按**实测值**重写：符号 148→184（唯一说法）、测试数 **85**（原写 52，按类统计错误）、补齐审阅记录小节（旧新符号数、纯新增结论、维护者待审标记）。契约 `schemaVersion` **不递进**（只增删 symbol 条目，未改文档 schema 字段结构；API 版本由 `api-runtime.properties` 的 `0.12.0` 承载，推进属 1.2.0 发布决定），理由已写入 REPORT §3.4 | `docs/architecture-refactor/baseline/2026-09-13-jsx-ui-common-core/REPORT.md` |
+| 5 | 死代码 / 重复实现 / 孤儿生成器 / 测试写生产目录 | `Candidate.order` 死字段删除（改为展开时赋值的 `keylessSlot`）；keyless 序号收敛到 `Candidate.identity(...)` 单处；`validateUniqueKeys`+`KeyedTag` 删除；零消费者 API 删除（`UiHostAdapter.measure`、`FakeUiHostAdapter.textMeasurer/measurements`、`UiRoot.commitCount()`、`Ui.propValueKinds/capabilityIds/propNames/eventNames/eventTypeNames`、`UiProp.isLayout()`、`UiStateOwner.hasPendingInvalidation()`、`UiSpec.EVENT_GROUP/RESOURCE_TYPE/EVENT_HANDLER_TYPE`）；**`UiJsxDeclarationGenerator` 不降级**——新增 `register(TypeDocsRegister)` 并由生产入口 `NekoCommonBuiltinPlugin.registerNodeTypeDocs` 调用，接入既有 probe/workspace 派生链；`UiDeclarationEvidenceTest` 改写为经该入口断言 + 落盘 `@TempDir`，**不再写生产目录** | `UiDeclarationEvidenceTest`、`UiRootReconcileTest`、`UiPrimitiveRegistryTest.propVocabularyIsSingleSourcedAcrossRegistryValidationAndDeclaration` |
+
+### 建议项（已全部处理）
+
+- **属性语义三处平行**：新增 `UiValueKind`，取值种类挂到 `UiProp.kind()`；`UiPrimitiveRegistry`
+  的取值校验与 `UiJsxDeclarationGenerator` 的 TS 类型都从它派生，生成器不再持有第二份
+  「属性名 → 类型」表；`UiPrimitiveRegistryTest` 增加三方一致性测试。
+- **错误消息带修复指引**：`ScriptUiVNodeFactory` 的 `"; use a component tag instead"` 已删
+  （CONTEXT.md「报错保持普通形式，不带修复指引」）。
+- **`IPlatform` 末尾换行**：已补回。
+- **重复 key 报错文案重复**：收敛到 `UiReconciler.duplicateKey(...)`。
+- **api/ui Javadoc 直指 core 实现类**：改为描述契约语义；api/ui 下不再出现 `core.ui.*`。
+- **`props.string(UiProp.X.jsName())` 字符串键双写**：新增 `has/raw/string/number/bool` 的
+  `UiProp` 重载并全部改用。
+
+### 我撤回的一条
+
+首轮报告申报「`NekoTypeScriptCompiler` 擦除器误删三元表达式裸标识符 else 分支」。主 agent 用
+15 种三元形态在 t40 HEAD 与票 12 之前基线 `4e258d3a` 上各测一遍，**均未复现**。
+**我接受该复核结论：撤回申报，不计为缺陷、不开新票。** `jsx-runtime.ts` 中的 if/return
+等价写法保留（不依赖未证实的行为）。
+
+### 修订后的冻结面与验证
+
+- `api-manifest-core.json` 相对首轮再变更两行（`member:UiProp.isLayout` 出、`member:UiProp.kind` 入），
+  符号总数仍 184。**仍需维护者审阅**（旧新 diff 与理由见 baseline REPORT §3.1–3.4）。
+- `:common:test --rerun-tasks --no-build-cache` → 1602 tests / 0 failures / 5 skipped；
+  `:common:check` → SUCCESS；`guardLint` → 248 守卫 / 331 文件 / 0 违规 / 0 警告。
