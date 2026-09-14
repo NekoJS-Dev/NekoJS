@@ -349,6 +349,10 @@ jobs:
             exit 1
           fi
           grep -R -q 'FABRIC-CI-SMOKE: startup bindings ok' "$run_dir"
+          # 票 31：compat 面真调用标记（Level.spawnLightning → McVersionCompat provider）。
+          # provider 缺失时 fixture 打出 "spawnLightning rejected: ..." 并抛出——本行 grep
+          # 失败、上面 mixin/崩溃扫描也会命中，双重暴露。
+          grep -R -q 'FABRIC-CI-SMOKE: spawnLightning ok' "$run_dir"
 
       - name: Upload Fabric smoke logs on failure
         if: ${{ !cancelled() && failure() }}
