@@ -13,6 +13,10 @@
 *.yaml text eol=lf
 *.sh text eol=lf
 *.properties text eol=lf
+# 文本类冻结基线（golden）以 .txt 存储：与 *.json 同为逐字符比较的测试输入，
+# 必须与仓库内 LF 约定一致，否则 Windows（core.autocrlf=true）checkout 后
+# 工作树变成 CRLF，逐字符比较的 golden 测试必然失败。
+*.txt text eol=lf
 # 无扩展名脚本不匹配 *.sh，单独声明（仓库内 LF）
 gradlew text eol=lf
 
