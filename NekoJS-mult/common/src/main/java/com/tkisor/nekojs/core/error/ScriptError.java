@@ -99,8 +99,8 @@ public class ScriptError {
             if (sourceLocation != null) {
                 if (sourceLocation.getSource() != null) {
                     String originPath = extractRelativePath(tracker, sourceLocation);
-                    // 位置选择规则见 {@link #isExceptionConstructionFrame} / {@link #firstOriginFrame}。
-                    if (isExceptionConstructionFrame(originPath, sourceLocation)) {
+                    // 位置选择规则见 firstOriginFrame（本行注释不承载 Javadoc 标签）。
+                    if (isNonOriginFrame(originPath, sourceLocation)) {
                         SourceSection origin = firstOriginFrame(tracker, polyglotException, originPath);
                         if (origin != null) {
                             sourceLocation = origin;
@@ -124,7 +124,7 @@ public class ScriptError {
     }
 
     /**
-     * 该栈帧是否是<strong>异常对象的构造/注入帧</strong>（不是作者写下 raise/throw 的位置）。
+     * 该栈帧是否是<strong>非起源帧</strong>（不是作者写下 raise/throw 的位置）——涵盖两种情形：
      *
      * <p>转译语言里两种帧会把真正的异常起源顶掉：
      * <ol>
@@ -137,7 +137,7 @@ public class ScriptError {
      *       真正 throw 的帧之前。</li>
      * </ol>
      */
-    private static boolean isExceptionConstructionFrame(String generatedPath, SourceSection location) {
+    private static boolean isNonOriginFrame(String generatedPath, SourceSection location) {
         if (SourceMapRegistry.hasSourceMapCoverage(generatedPath)
                 && !SourceMapRegistry.coversGeneratedLine(generatedPath, location.getStartLine())) {
             return true;
@@ -158,8 +158,8 @@ public class ScriptError {
     }
 
     /**
-     * 同一模块内第一个<strong>真正的异常起源帧</strong>：跳过构造/注入帧（见
-     * {@link #isExceptionConstructionFrame}）与内部帧。
+     * 同一模块内第一个<strong>真正的异常起源帧</strong>：跳过非起源帧（见
+     * {@link #isNonOriginFrame}）与内部帧。
      *
      * <p>只在本模块（{@code originPath}）内查找：跳到调用方的位置会把错误归属到错误的模块，
      * 破坏跨 import 的错误归属（票 11 AC7 既有语义）。
@@ -178,7 +178,7 @@ public class ScriptError {
             if (isInternalFrame(path) || !path.equals(originPath)) {
                 continue;
             }
-            if (!isExceptionConstructionFrame(path, loc)) {
+            if (!isNonOriginFrame(path, loc)) {
                 return loc;
             }
         }

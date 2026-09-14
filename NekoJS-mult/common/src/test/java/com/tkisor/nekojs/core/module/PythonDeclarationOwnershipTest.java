@@ -105,17 +105,27 @@ class PythonDeclarationOwnershipTest {
         String pythonModule = pythonTree.get(pythonModulePath);
         assertTrue(pythonModule != null && pythonModule.contains("class PythonDeclarationOwnershipTest_Owned"),
                 "python module 必须声明该类型：\n" + pythonModule);
-        // TS 侧同一 Java 包的模块文件：@package/<java 包路径>/index.d.ts（TS backend 自己的布局）
-        String tsModule = tsTree.get("@package/" + pkgPath + "/index.d.ts");
-        // 包树布局依赖收集到的类集合，因此退一步接受「TS 侧确实声明了该类型」，
-        // 但必须同时证明两条归属的产物集合互不重叠（下方断言）。
-        if (tsModule == null) {
-            tsModule = tsTree.values().stream()
-                    .filter(v -> v.contains("PythonDeclarationOwnershipTest_Owned"))
-                    .findFirst().orElse(null);
-        }
-        assertTrue(tsModule != null,
-                "typescript 侧必须声明同一类型（module 归属按 Java 包一致）：\n" + tsTree.keySet());
+        // TS 侧同一 Java 包的模块文件：@package/<java 包路径>/index.d.ts
+        // （与 Python 侧同等强度：精确路径断言，不做「找不到就兜底搜索」）
+        String tsModulePath = "@package/" + pkgPath + "/index.d.ts";
+        assertTrue(tsTree.containsKey(tsModulePath),
+                "typescript 侧必须在同一 Java 包路径下产出模块文件 " + tsModulePath
+                        + "（module 归属按 Java 包一致）：\n" + tsTree.keySet());
+        String tsModule = tsTree.get(tsModulePath);
+        // TS 侧的类名按 TS 自己的嵌套类拼写（$Outer$Inner）——这是 TS declaration 的既有约定，
+        // 不是「归属被覆盖」；断言精确到该语言自己的符号拼写。
+        String tsClassName = "\u0024PythonDeclarationOwnershipTest\u0024Owned";
+        assertTrue(tsModule.contains("class " + tsClassName),
+                "typescript 模块必须声明同一类型（TS 拼写 " + tsClassName + "）：\n" + tsModule);
+        // 反向：不得把该类声明到别的包路径下（归属唯一）
+        String strayTs = tsTree.entrySet().stream()
+                .filter(e -> !e.getKey().equals(tsModulePath))
+                .filter(e -> e.getKey().endsWith(".d.ts"))
+                .filter(e -> e.getValue().contains("class " + tsClassName))
+                .map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+        assertTrue(strayTs == null,
+                "同一个类不得出现在第二个 TS 归属模块里，实际额外出现在: " + strayTs);
         assertFalse(pythonModule.contains("interface "),
                 "python 归属不得被 TS 语法覆盖：\n" + pythonModule);
 

@@ -72,9 +72,9 @@ expectation 恰好等于 4」的巧合（`NekoModuleErrorMappingCorpusTest` 的 
 | 文件 | 改动 |
 |---|---|
 | `SourceMapRegistry` | 新增包内可见 `hasSourceMapCoverage(path)` 与 `coversGeneratedLine(path, jsLine)`：区分「原生 JS 的 null map＝恒等映射」与「转译产物里没有源对应行的注入区」 |
-| `ScriptError` | `parseSignature` 采纳位置前先过 `isExceptionConstructionFrame`；命中则用 `firstOriginFrame` 在本模块内取第一个**有映射段、且不是类声明行**的帧 |
+| `ScriptError` | `parseSignature` 采纳位置前先过 `isNonOriginFrame`；命中则用 `firstOriginFrame` 在本模块内取第一个**有映射段、且不是类声明行**的帧 |
 
-两条判据（`isExceptionConstructionFrame`）：
+两条判据（`isNonOriginFrame`）：
 
 1. **注入区**：产物**登记了带段 source map**，但该行没有映射段 → 不可信。
    原生 JS（`.js/.mjs/.cjs` 的 null map）仍按恒等映射处理，**不回归**。
@@ -142,7 +142,12 @@ GraalJS **不支持**（probe A）；把 prelude 内联成一行只是换一种�
 
 ## 7. 门禁
 
-见 Closure record 里的最终门禁数字与命令。
+最终（code-review 修订后）一次执行 `:common:test --rerun-tasks --no-build-cache :common:check guardLint`：
+
+- BUILD SUCCESSFUL；**212 suites / 1543 tests / 0 failures / 0 errors / 5 skipped**；
+- `guardLint`：248 守卫块 / 331 文件 / 0 问题；`:common:checkCommonIsolation` pass；
+- 新增 Python 测试：`PythonModulePipelineCorpusTest`(5)、`PythonModuleErrorPhaseCorpusTest`(8)、
+  `PythonModuleImportCorpusTest`(8)、`PythonMinimalExampleTest`(4)、`PythonDeclarationOwnershipTest`(1)。
 
 ## 8. 未验证项与 owner
 
@@ -157,3 +162,77 @@ GraalJS **不支持**（probe A）；把 prelude 内联成一行只是换一种�
    是否前移到准备阶段 fail closed 应由后续语言票结合作者反馈评估。owner：后续语言票 / 维护者。
 4. **source map 列粒度为语句级**：Python 与 TS 一样，映射段固定在列 0（`PythonSourceMap.build`
    的 `vlq(0)`），因此错误报告的列是语句起始列。断言按此粒度写（`col=1`），未编造精确列。
+
+---
+
+## 9. code-review 修订（2026-09-14，主 agent 独立核验后）
+
+主 agent 用修复前/后双树对照独立复现了 §2 的行号缺陷（基线 `3cd907c3` 上 `.py` 第 5 行 raise 报 4，
+修复后报 5；`.ts`/`.mjs`/`.tsx` 均不回归），确认根因与影响面判定成立。以下按 A–D 逐条处理。
+**AC1–AC9 判定不变：全部仍为 pass**（A/B/C 补齐后各 AC 的证据强度见下）。
+
+### A（已补）AC2 缺 `import` 用例
+
+属实：原 `PythonModulePipelineCorpusTest` 只覆盖缩进/类/注释，import 仅由旧测试断言**字符串产物**，
+从未经 ESM 解析真实 link。**新增 `PythonModuleImportCorpusTest`（8 例）**，全部经
+`NekoScriptModuleLoaderHost.loadEntry` **真实执行**：
+
+- `import alib` → ESM namespace import，跨 `.py` 解析/link/求值（断言 `lib-1|42`）；
+- `from bmath import double` / `triple as t` → 具名导入绑定（`10/15`）；
+- `import pkg.util` → 点号映射路径，本地绑定是叶子段（既有转译契约，`deep`）；
+- 非标识符模块名在准备阶段被拒且携带原文件；
+- 被导入 `.py` 的身份（languageId/mode/cacheKey）可追踪。
+
+### B（已补，未降级）AC4/AC5 的 mode 与依赖维度
+
+属实：原测试只覆盖内容 + languageId。**两维都已补上真实用例**，因此 AC4/AC5 **保持 pass**：
+
+- **依赖维度**（`dependencyChangeInvalidatesImportingEntry`）：改被 `import` 的 `.py` 后，
+  `host.affectedEntries(helper)` 含入口（依赖图生效）；`invalidateAffectedModules(helper)` 后入口与依赖的
+  prepared 条目都被清除；重新加载看到新值（`1 → 2`）。**这是原报告完全缺失的维度。**
+- **mode 维度**（`requestedModeParticipatesInPythonCacheKey` + `resolvedModeTransitionInvalidatesPythonCache`）：
+  同一语言插件下 `.py` 请求 AUTO、`.mjs` 请求 ESM，identity 与 cache key 必须不同；
+  并**直接固定 key 构造**（同 path、同内容、仅 mode 不同 → key 与 identity 都不同）——
+  因为两条不同路径的 key 本来就不同，仅比较文件级 key 不足以证明 mode 参与。
+  另断言解析模式变化（裸表达式 COMMONJS → 带顶层绑定 ESM）不得命中旧产物。
+
+### C（已加强）AC7 断言强度
+
+属实：原实现把 TS 侧 module 路径降级为「找不到就兜底搜索」。现改为**与 Python 侧同等强度的精确断言**：
+精确路径 `@package/<java 包路径>/index.d.ts` 必须存在且声明该类型，并反向断言「同一个类不得出现在
+第二个 TS 归属模块里」。
+
+**加强断言当场抓到一个真实差异**（正是弱断言掩盖的）：TS declaration 用 `$Outer$Inner` 拼写嵌套类，
+而 Python 用 `Outer_Inner`。这不是「归属被覆盖」，而是两种语言各自的符号拼写约定——断言已按各语言
+自己的拼写精确化（TS: `$PythonDeclarationOwnershipTest$Owned`），不再做模糊 `contains`。
+
+### D（已做低成本项，未做大重构）
+
+- `isExceptionConstructionFrame` → **`isNonOriginFrame`**：原名只描述「class 构造」，实际涵盖
+  「注入区无映射段」与「异常类声明帧」两种情形。调用点、Javadoc 与文档已同步。
+- `coversLine` 与 `map` 各自重算行号换算 → 抽出 **`NormalizedSourceMap.lineEntries(int)`**，
+  `coversLine` 与 `map` 共用同一来源。
+- `parseSignature` 里的 `// …见 {@link …}` 行注释删去 Javadoc 标签（行注释不承载 Javadoc，
+  且与下方方法 javadoc 重复）。
+
+### scope creep 指控的裁定与记录
+
+主 agent 已裁定：`ScriptError` / `SourceMapRegistry` 的改动**保留**，且如实归类为
+**「AC3 范围内发现的顺带缺陷修复」**——它不在 Work items 与 9 条 AC 的字面授权内
+（AC3 只要求「可回映射」），但确为基线真实缺陷（主 agent 双树对照证实），改动最小、
+局限在错误归属 seam、未改公开契约。
+
+**影响面**：该 seam 为**全语言共用**（错误位置解析 `ScriptError.parseSignature` ←
+`SourceMapRegistry.getMappedPosition`），因此修复覆盖的不只是 Python——TS 的**用户自定义异常类**
+（`class MyError extends Error {}`）在基线同样报错位置（实测第 4 行报 1，修复后报 4）。
+覆盖证据：主 agent 的 13 例原生 JS/TS 边界实测（全部行号正确、无回归）+ 本票新增的
+Python 错误阶段用例 + 既有 `NekoModuleErrorMappingCorpusTest` / `NekoTranspiledLanguagePhaseCorpusTest` 全绿。
+
+### 关于 Spec 轴「最高风险反例」的记录（不改代码）
+
+Spec 轴称 `isClassDeclaration` 会把「原生 JS 中真正 throw 落在 class 声明行」的正确位置换成错误位置。
+主 agent 用 13 例原生 JS/TS 边界逐一实测**未能复现**（全部行号正确，含它点名的
+`class K { static x = throw }` + 同模块调用者形态）。
+**原因（读码确认）**：`firstOriginFrame` 的候选只来自**栈帧**；原生 JS 无 source map 时即便
+`isNonOriginFrame` 命中，同模块也找不到可替代的 guest 帧，于是返回 `null`，**位置保持原值**。
+因此该反例在栈帧语义下不成立，**本票未按它修改 `isClassDeclaration` 语义**（改动反而有回归风险）。

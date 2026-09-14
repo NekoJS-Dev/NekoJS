@@ -382,25 +382,25 @@ public class SourceMapRegistry {
             return generatedPath.equals(path) || (file != null && file.equals(path));
         }
 
-        /** 该生成行（1-based）是否有映射段；与 {@link #map(int, int)} 用同一套行号换算。 */
+        /** 该生成行（1-based）是否有映射段；与 {@link #map(int, int)} 共用 {@link #lineEntries(int)} 的行号换算。 */
         boolean coversLine(int jsLine) {
-            int lineIndex = jsLine - Math.max(0, prependedLineCount) - 1;
-            if (lineIndex < 0 || lineIndex >= lineMappings.size()) {
-                return false;
-            }
-            List<MappingEntry> entries = lineMappings.get(lineIndex);
+            List<MappingEntry> entries = lineEntries(jsLine);
             return entries != null && !entries.isEmpty();
+        }
+
+        /** 生成行（1-based）→ 映射段列表；越界返回 null。行号换算的单一来源（coversLine 与 map 共用）。 */
+        private List<MappingEntry> lineEntries(int jsLine) {
+            int lineIndex = jsLine - Math.max(0, prependedLineCount) - 1;
+            return lineIndex < 0 || lineIndex >= lineMappings.size() ? null : lineMappings.get(lineIndex);
         }
 
         OriginalPosition map(int jsLine, int jsColumn) {
             int adjustedLine = jsLine - Math.max(0, prependedLineCount);
-            int lineIndex = adjustedLine - 1;
-            if (lineIndex < 0 || lineIndex >= lineMappings.size()) {
+            List<MappingEntry> entries = lineEntries(jsLine);
+            if (entries == null) {
                 // Miss: allocate the fallback only when we actually need it (not on every call).
                 return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             }
-
-            List<MappingEntry> entries = lineMappings.get(lineIndex);
             if (entries == null || entries.isEmpty()) {
                 return new OriginalPosition(adjustedLine > 0 ? adjustedLine : jsLine, jsColumn, null);
             }
