@@ -55,7 +55,7 @@ cd <wt>/NekoJS-mult
 .\gradlew.bat :common:test --rerun-tasks --no-build-cache :common:check guardLint --console=plain
 ```
 
-`BUILD SUCCESSFUL`；实测 **226 suites / 1673 tests / 0 failures / 0 errors / 5 skipped**（code-review 修订后）；
+`BUILD SUCCESSFUL`；实测 **226 suites / 1674 tests / 0 failures / 0 errors / 5 skipped**（整合期缺陷修复后）；
 `guardLint` 守卫块 248 / 扫描 331 文件 / 违规 0 / 警告 0；`:common:check` 含 `checkCommonIsolation` 通过。
 
 ### 逐 AC 判定
@@ -180,3 +180,31 @@ cd <wt>/NekoJS-mult
   类型文本查 `UiProp.kind()`。测试断言「声明含每个键」且「不含 `NekoJsx.UiProfileOverrides`」。
 - **`viewportDependent` 可观测**：语义改按 `scriptPhase` 判定并加测试；长期行为（是否会走重排）由
   `UiLayoutInvalidationTest` 的 render 计数与 host-node 同一性断言钉住。
+
+### 整合期发现的缺陷与修复（fresh checkout 必失败）
+
+**现象**：分支合入 `integration/tickets-08-11-12` 后全量门禁 1 failed —
+`UiViewportProfileGoldenTest > sixProfilesProduceStableFakeOutput()`；在 t43 worktree 本地却通过。
+
+**根因**：本票的 `jsx-ui-viewport-profiles.txt` 是本仓唯一 `.txt` golden，而 `.gitattributes` 的
+`eol=lf` 列表未覆盖 `*.txt` → Windows（`core.autocrlf=true`）checkout 后工作树变成 CRLF，
+而测试用 `Files.readString` 逐字符比较。逐字节证据：本地写出的工作树文件 CR=0（LF）、
+仓库 blob CR=0（LF）、缺规则时 checkout 后 **CR=273**；`git check-attr` 对该文件无输出，
+而对照 `api-manifest-core.json` 返回 `text: set` / `eol: lf`。
+
+**修复（两个 commit）**：
+1. `0b0f3100`（仓库级、单独提交便于审阅）：`.gitattributes` 增加 `*.txt text eol=lf`，与既有 `.json` 分组一致。
+2. `2e401899`：golden 测试读/写均归一化行尾（`normalize` 折叠 CRLF 与孤立 CR），
+   并新增回归测试 `repositoryAttributesPinsTextGoldenToLf()`（直接读 `.gitattributes`，不依赖 git 可执行文件）。
+
+**验证输出**：修复后 fresh checkout → `bytes=22526 CR=0 LF=273`；
+`git ls-files --eol` → `i/lf w/lf attr/text eol=lf`；
+强制工作树 CRLF（CR=273）时测试仍 BUILD SUCCESSFUL（归一化保险生效）；
+临时移除 `*.txt` 规则并 `--rerun-tasks` → 回归测试 FAILED（能抓住）。
+
+**同类风险自查**：仅 `api-manifest-core.json`（`.json`，已被 `eol=lf` 覆盖）与本票 `.txt` 做逐字符比较；
+`probe/**/*.d.ts` 虽有 CRLF 工作树但读者一律 `normalize`，且仓库 blob 为 LF → 不构成缺陷。
+**除本票外没有其它不匹配 `eol=lf` 的逐字符比较 golden。**
+
+**AC6 判定不变**：fake 侧通过；golden 人工审阅仍未闭环（owner = 维护者），真实端 owner = 票 41。
+本缺陷属于「跨机器必失败」的实现缺陷，已修复并有回归保护，**不是**环境问题。
