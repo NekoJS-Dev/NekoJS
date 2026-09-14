@@ -72,6 +72,17 @@ public interface IPlatform {
         return NbtBinaryCodec.unsupported();
     }
 
+    /**
+     * 客户端 JSX UI 的宿主资源装配；非客户端平台返回 {@code null}。
+     *
+     * <p>这是 host Adapter / 文本测量 / 组件注册表进入 managed contract 的唯一装配入口
+     * （jsx-ui-spec「平台边界」「Runtime owner」）：common 侧只引用窄 Interface，
+     * 平台侧构造 fake 或 NeoForge 26.2 Adapter 的实现。
+     */
+    default com.tkisor.nekojs.api.ui.UiResources uiResources() {
+        return null;
+    }
+
     /** 只读注册表查询服务；平台不支持时返回 {@code null}（脚本侧 {@code Registry} 查询返回空结果）。 */
     default RegistryQueryService registryQueryService() {
         return null;

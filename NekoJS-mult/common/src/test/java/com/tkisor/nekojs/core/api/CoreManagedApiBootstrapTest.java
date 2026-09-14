@@ -31,8 +31,11 @@ class CoreManagedApiBootstrapTest {
         assertEquals(ApiVersion.parse("0.12.0"),
                 core.contracts().requirePortable("nekojs-core").identity().version());
         assertEquals("nekojs-core", core.contributions().owner().ownerId());
-        assertEquals(109, core.contributions().symbolContributions().size());
-        assertEquals(7, core.globalImplementations().size());
+        // ticket 40：JSX UI facade + 数据类型（UiProp/UiSignal/UiStore/UiEvent）进入同一契约链，
+        // 贡献数从 109 增至 118（facade 9 个可调用成员中的 8 个 + global:Ui），
+        // globalImplementations 从 7 增至 8（新增 global:Ui）。
+        assertEquals(118, core.contributions().symbolContributions().size());
+        assertEquals(8, core.globalImplementations().size());
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.ID_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.PLATFORM_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.TEXT_GLOBAL));
@@ -40,6 +43,7 @@ class CoreManagedApiBootstrapTest {
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.NBT_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.REGISTRY_GLOBAL));
         assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.PERFORMANCE_GLOBAL));
+        assertNotNull(core.globalImplementations().get(CoreManagedApiBootstrap.UI_GLOBAL));
     }
 
     @Test
