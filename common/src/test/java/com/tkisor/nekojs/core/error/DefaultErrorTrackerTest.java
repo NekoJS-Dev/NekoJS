@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -95,6 +96,32 @@ class DefaultErrorTrackerTest {
         String path = tracker.extractRelativePath(source);
         assertTrue(path.startsWith("truffle:"), path);
         assertEquals(7, tracker.getRealCodeLine(path, 7));
+    }
+
+    /**
+     * 票 03 基线发现（归 19/07）：WORLD 包脚本位于存档侧（不在 {@code <gamedir>/nekojs}
+     * root 下，Windows 相对 world 路径必现），{@code record} 的 relativize 曾在
+     * executeEntry 的 catch 体内抛 IAE——二次异常掩掉原始 kill/执行错误且错误面板丢条目。
+     * 票 07 起 record 位于 watchdog 终止的失败可观察路径上：必须回退为原样路径文本
+     * 而不是抛出（kill 归因与错误面板条目都以本方法不抛为前提）。
+     */
+    @Test
+    void recordOfWorldPackScriptOutsideRootDoesNotThrow() {
+        Path worldPackScript = NekoJSPaths.get().root().resolveSibling(
+                "saves/world/nekojs_packs/demo/server_scripts/entry.js");
+        com.tkisor.nekojs.script.ScriptContainer worldPackContainer =
+                new com.tkisor.nekojs.script.ScriptContainer(
+                        com.tkisor.nekojs.api.data.ScriptId.of("nekojs", "server_scripts/worldpacks/demo/entry.js"),
+                        ScriptType.SERVER,
+                        worldPackScript,
+                        new com.tkisor.nekojs.script.prop.ScriptPropertyRegistry.Impl());
+
+        RuntimeException originalError = new RuntimeException("killed by watchdog");
+        ScriptError recorded = assertDoesNotThrow(() -> tracker.record(worldPackContainer, originalError),
+                "record must not throw for WORLD-pack scripts outside the nekojs root");
+
+        assertNotNull(tracker.get(worldPackContainer.id), "error panel must keep the entry");
+        assertEquals(worldPackScript, recorded.getScript().path, "script path must be preserved as-is");
     }
 
     @Test
