@@ -12,7 +12,8 @@ much to trust it.
 | Status | Proposal. One sample page translated ([`wiki/en_us/Home.md`](../wiki/en_us/Home.md)). |
 | Source locale | `zh_CN` (the existing pages in `wiki/`) |
 | Target locale | `en_us` |
-| Last updated | 2026-09-12 |
+| Last updated | 2026-09-13 |
+| Procedure | [`translation-workflow.md`](translation-workflow.md) — added in #55 |
 
 ---
 
