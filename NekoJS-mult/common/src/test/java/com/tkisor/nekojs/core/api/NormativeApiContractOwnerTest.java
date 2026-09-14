@@ -97,7 +97,8 @@ class NormativeApiContractOwnerTest {
             method -> {
                 String name = method.getName();
                 return !name.startsWith("neko$")
-                        && !java.util.Set.of("of", "ownerThread", "viewport", "resize").contains(name);
+                        && !java.util.Set.of("of", "ownerThread", "viewport", "viewportContext",
+                                "profile", "resize").contains(name);
             };
 
     @Test

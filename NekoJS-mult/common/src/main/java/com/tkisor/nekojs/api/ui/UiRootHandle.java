@@ -52,8 +52,18 @@ public interface UiRootHandle {
     /**
      * 当前响应式视口事实（jsx-ui-spec「响应式模型」，票 43 AC1）：判定得到的 Viewport
      * Profile、逻辑视口、可用布局区与安全区域。任意线程可读；不属于脚本可见的写操作。
+     *
+     * <p><b>脚本 getter 语义</b>：脚本在 render 中读取本方法会被记录为「该 root 的布局依赖
+     * 视口」，此后 resize 必须重跑脚本 render（结构可能随视口改变）。Java 侧与 inspector 的
+     * 只读查询请用 {@link #viewportState()}，它不产生该副作用。
      */
     ProjectedViewport viewport();
+
+    /**
+     * 响应式布局契约的只读观察者（票 43 AC1/AC5）：当前档位、可用布局区与每个可见节点的
+     * 最终解析样式。只读事实视图，不是第二份布局真相源，也不改变布局依赖记录。
+     */
+    UiViewportState viewportState();
 
     /** 最近一次成功提交的候选树根 VNode，可为 {@code null}。 */
     UiVNode committedTree();

@@ -1,0 +1,231 @@
+# NekoJS JSX UI Viewport Profile fake output (ticket 43 AC6)
+# Frozen golden: read-only for normal tests; regenerate explicitly and review the diff.
+
+profile=desktop-wide (1)
+logical=900x520
+content=900x520
+safeArea=0,0,0,0
+guiScale=2 capabilities=[]
+layoutRevisions=1
+styles:
+  screen width=fill height=fill min=0/0 max=0/0 margin=0 padding=8 gap=12 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=10 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/panel[0] width=fill height=30 min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/panel[0]/label[0] width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/panel[1]#fixed width=400 height=8 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/row[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=4 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/row[0]/button[0]#ok width=60dp height=20 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/row[0]/label[0]#title width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=1
+  screen/column[0]/row[0]/spacer[0]#gap width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=1 visible=true direction=inherit contentScale=1
+rects:
+  screen 0,0 900x520
+  screen/column[0] 8,8 884x78
+  screen/column[0]/row[0] 8,8 884x20
+  screen/column[0]/row[0]/label[0]#title 8,8 45x14
+  screen/column[0]/row[0]/spacer[0]#gap 57,8 771x0
+  screen/column[0]/row[0]/button[0]#ok 832,8 60x20
+  screen/column[0]/panel[0] 8,38 884x30
+  screen/column[0]/panel[0]/label[0] 10,40 135x11
+  screen/column[0]/panel[1]#fixed 8,78 400x8
+clip:
+  screen 0,0 900x520
+  screen/column[0] 8,8 884x78
+  screen/column[0]/panel[0] 8,38 884x30
+  screen/column[0]/panel[0]/label[0] 10,40 135x11
+  screen/column[0]/panel[1]#fixed 8,78 400x8
+  screen/column[0]/row[0] 8,8 884x20
+  screen/column[0]/row[0]/button[0]#ok 832,8 60x20
+  screen/column[0]/row[0]/label[0]#title 8,8 45x14
+  screen/column[0]/row[0]/spacer[0]#gap 0,0 0x0
+overflow:
+
+profile=desktop (2)
+logical=520x340
+content=520x340
+safeArea=0,0,0,0
+guiScale=1 capabilities=[]
+layoutRevisions=1
+styles:
+  screen width=fill height=fill min=0/0 max=0/0 margin=0 padding=8 gap=12 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=10 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/panel[0] width=fill height=30 min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/panel[0]/label[0] width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/panel[1]#fixed width=400 height=8 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/row[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=4 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/row[0]/button[0]#ok width=60dp height=20 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/row[0]/label[0]#title width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.81
+  screen/column[0]/row[0]/spacer[0]#gap width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=1 visible=true direction=inherit contentScale=0.81
+rects:
+  screen 0,0 520x340
+  screen/column[0] 8,8 504x78
+  screen/column[0]/row[0] 8,8 504x20
+  screen/column[0]/row[0]/label[0]#title 8,8 40.56x12.82
+  screen/column[0]/row[0]/spacer[0]#gap 52.56,8 406.69x0
+  screen/column[0]/row[0]/button[0]#ok 463.25,8 48.75x20
+  screen/column[0]/panel[0] 8,38 504x30
+  screen/column[0]/panel[0]/label[0] 10,40 121.69x10.11
+  screen/column[0]/panel[1]#fixed 8,78 400x8
+clip:
+  screen 0,0 520x340
+  screen/column[0] 8,8 504x78
+  screen/column[0]/panel[0] 8,38 504x30
+  screen/column[0]/panel[0]/label[0] 10,40 121.69x10.11
+  screen/column[0]/panel[1]#fixed 8,78 400x8
+  screen/column[0]/row[0] 8,8 504x20
+  screen/column[0]/row[0]/button[0]#ok 463.25,8 48.75x20
+  screen/column[0]/row[0]/label[0]#title 8,8 40.56x12.82
+  screen/column[0]/row[0]/spacer[0]#gap 0,0 0x0
+overflow:
+
+profile=tablet (3)
+logical=380x260
+content=380x260
+safeArea=0,0,0,0
+guiScale=3 capabilities=[]
+layoutRevisions=1
+styles:
+  screen width=fill height=fill min=0/0 max=0/0 margin=0 padding=8 gap=12 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=10 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/panel[0] width=fill height=30 min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/panel[0]/label[0] width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/panel[1]#fixed width=400 height=8 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/row[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=4 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/row[0]/button[0]#ok width=60dp height=20 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/row[0]/label[0]#title width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.59
+  screen/column[0]/row[0]/spacer[0]#gap width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=1 visible=true direction=inherit contentScale=0.59
+rects:
+  screen 0,0 380x260
+  screen/column[0] 8,8 364x78
+  screen/column[0]/row[0] 8,8 364x20
+  screen/column[0]/row[0]/label[0]#title 8,8 34.67x11.25
+  screen/column[0]/row[0]/spacer[0]#gap 46.67,8 285.70x0
+  screen/column[0]/row[0]/button[0]#ok 336.38,8 35.63x20
+  screen/column[0]/panel[0] 8,38 364x30
+  screen/column[0]/panel[0]/label[0] 10,40 104.02x8.93
+  screen/column[0]/panel[1]#fixed 8,78 400x8
+clip:
+  screen 0,0 380x260
+  screen/column[0] 8,8 364x78
+  screen/column[0]/panel[0] 8,38 364x30
+  screen/column[0]/panel[0]/label[0] 10,40 104.02x8.93
+  screen/column[0]/panel[1]#fixed 8,78 364x8
+  screen/column[0]/row[0] 8,8 364x20
+  screen/column[0]/row[0]/button[0]#ok 336.38,8 35.63x20
+  screen/column[0]/row[0]/label[0]#title 8,8 34.67x11.25
+  screen/column[0]/row[0]/spacer[0]#gap 0,0 0x0
+overflow:
+  screen/column[0]/panel[1]#fixed h=36 v=0
+
+profile=handheld (4)
+logical=280x200
+content=280x200
+safeArea=0,0,0,0
+guiScale=1 capabilities=[]
+layoutRevisions=1
+styles:
+  screen width=fill height=fill min=0/0 max=0/0 margin=0 padding=8 gap=2 align=start justify=start anchor=top-left grow=0 visible=true direction=column contentScale=0.44
+  screen/column[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=10 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.44
+  screen/column[0]/panel[0] width=fill height=30 min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.44
+  screen/column[0]/panel[0]/label[0] width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.44
+  screen/column[0]/panel[1]#fixed width=400 height=8 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.44
+  screen/column[0]/row[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=2 align=start justify=start anchor=top-left grow=0 visible=true direction=column contentScale=0.44
+  screen/column[0]/row[0]/button[0]#ok width=50 height=16 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.44
+  screen/column[0]/row[0]/label[0]#title width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.44
+  screen/column[0]/row[0]/spacer[0]#gap width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=1 visible=true direction=inherit contentScale=0.44
+rects:
+  screen 0,0 280x200
+  screen/column[0] 8,8 264x87.94
+  screen/column[0]/row[0] 8,8 264x29.94
+  screen/column[0]/row[0]/label[0]#title 8,8 29.76x9.94
+  screen/column[0]/row[0]/spacer[0]#gap 8,19.94 0x0
+  screen/column[0]/row[0]/button[0]#ok 8,21.94 50x16
+  screen/column[0]/panel[0] 8,47.94 264x30
+  screen/column[0]/panel[0]/label[0] 10,49.94 90x8
+  screen/column[0]/panel[1]#fixed 8,87.94 400x8
+clip:
+  screen 0,0 280x200
+  screen/column[0] 8,8 264x87.94
+  screen/column[0]/panel[0] 8,47.94 264x30
+  screen/column[0]/panel[0]/label[0] 10,49.94 90x8
+  screen/column[0]/panel[1]#fixed 8,87.94 264x8
+  screen/column[0]/row[0] 8,8 264x29.94
+  screen/column[0]/row[0]/button[0]#ok 8,21.94 50x16
+  screen/column[0]/row[0]/label[0]#title 8,8 29.76x9.94
+  screen/column[0]/row[0]/spacer[0]#gap 0,0 0x0
+overflow:
+  screen/column[0]/panel[1]#fixed h=136 v=0
+
+profile=compact (5)
+logical=200x140
+content=200x140
+safeArea=0,0,0,0
+guiScale=2 capabilities=[]
+layoutRevisions=1
+styles:
+  screen width=fill height=fill min=0/0 max=0/0 margin=0 padding=8 gap=2 align=start justify=start anchor=top-left grow=0 visible=true direction=column contentScale=0.31
+  screen/column[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=10 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.31
+  screen/column[0]/panel[0] width=fill height=20 min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.31
+  screen/column[0]/panel[0]/label[0] width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.31
+  screen/column[0]/panel[1]#fixed width=400 height=8 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.31
+  screen/column[0]/row[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=2 align=start justify=start anchor=top-left grow=0 visible=true direction=column contentScale=0.31
+  screen/column[0]/row[0]/button[0]#ok width=50 height=16 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.31
+  screen/column[0]/row[0]/label[0]#title width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.31
+  screen/column[0]/row[0]/spacer[0]#gap width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=1 visible=true direction=inherit contentScale=0.31
+rects:
+  screen 0,0 200x140
+  screen/column[0] 8,8 184x76.71
+  screen/column[0]/row[0] 8,8 184x28.71
+  screen/column[0]/row[0]/label[0]#title 8,8 25.16x8.71
+  screen/column[0]/row[0]/spacer[0]#gap 8,18.71 0x0
+  screen/column[0]/row[0]/button[0]#ok 8,20.71 50x16
+  screen/column[0]/panel[0] 8,46.71 184x20
+  screen/column[0]/panel[0]/label[0] 10,48.71 90x8
+  screen/column[0]/panel[1]#fixed 8,76.71 400x8
+clip:
+  screen 0,0 200x140
+  screen/column[0] 8,8 184x76.71
+  screen/column[0]/panel[0] 8,46.71 184x20
+  screen/column[0]/panel[0]/label[0] 10,48.71 90x8
+  screen/column[0]/panel[1]#fixed 8,76.71 184x8
+  screen/column[0]/row[0] 8,8 184x28.71
+  screen/column[0]/row[0]/button[0]#ok 8,20.71 50x16.00
+  screen/column[0]/row[0]/label[0]#title 8,8 25.16x8.71
+  screen/column[0]/row[0]/spacer[0]#gap 0,0 0x0
+overflow:
+  screen/column[0]/panel[1]#fixed h=216 v=0
+
+profile=minimal (6)
+logical=160x110
+content=160x110
+safeArea=0,0,0,0
+guiScale=4 capabilities=[]
+layoutRevisions=1
+styles:
+  screen width=fill height=fill min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.25
+  screen/column[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=1 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.25
+  screen/column[0]/panel[0] width=fill height=14 min=0/0 max=0/0 margin=0 padding=2 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.25
+  screen/column[0]/panel[1]#fixed width=400 height=8 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.25
+  screen/column[0]/row[0] width=fill height=auto min=0/0 max=0/0 margin=0 padding=0 gap=2 align=start justify=start anchor=top-left grow=0 visible=true direction=column contentScale=0.25
+  screen/column[0]/row[0]/button[0]#ok width=50 height=16 min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.25
+  screen/column[0]/row[0]/label[0]#title width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=0 visible=true direction=inherit contentScale=0.25
+  screen/column[0]/row[0]/spacer[0]#gap width=auto height=auto min=0/0 max=0/0 margin=0 padding=0 gap=0 align=start justify=start anchor=top-left grow=1 visible=true direction=inherit contentScale=0.25
+rects:
+  screen 0,0 160x110
+  screen/column[0] 2,2 156x52
+  screen/column[0]/row[0] 2,2 156x28
+  screen/column[0]/row[0]/label[0]#title 2,2 22.50x8
+  screen/column[0]/row[0]/spacer[0]#gap 2,12 0x0
+  screen/column[0]/row[0]/button[0]#ok 2,14 50x16
+  screen/column[0]/panel[0] 2,31 156x14
+  screen/column[0]/panel[1]#fixed 2,46 400x8
+clip:
+  screen 0,0 160x110
+  screen/column[0] 2,2 156x52
+  screen/column[0]/panel[0] 2,31 156x14
+  screen/column[0]/panel[1]#fixed 2,46 156x8
+  screen/column[0]/row[0] 2,2 156x28
+  screen/column[0]/row[0]/button[0]#ok 2,14 50x16
+  screen/column[0]/row[0]/label[0]#title 2,2 22.50x8
+  screen/column[0]/row[0]/spacer[0]#gap 0,0 0x0
+overflow:
+  screen/column[0]/panel[1]#fixed h=244 v=0

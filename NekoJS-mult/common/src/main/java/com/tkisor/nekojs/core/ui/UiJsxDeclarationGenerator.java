@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.ui;
 
 import com.tkisor.nekojs.api.ui.UiAlignment;
 import com.tkisor.nekojs.api.ui.UiAnchor;
+import com.tkisor.nekojs.api.ui.UiAxis;
 import com.tkisor.nekojs.api.ui.UiEventType;
 import com.tkisor.nekojs.api.ui.UiPrimitive;
 import com.tkisor.nekojs.api.ui.UiProp;
@@ -60,6 +61,8 @@ public final class UiJsxDeclarationGenerator {
         sb.append("    dispatchEvent(event: UiEvent): void;\n");
         sb.append("    dispose(): void;\n");
         sb.append("    readonly focusedPath: string | null;\n");
+        sb.append("    readonly viewport: ProjectedViewport;\n");
+        sb.append("    readonly viewportState: UiViewportState;\n");
         sb.append("  }\n\n");
         sb.append("  interface UiEvent {\n");
         sb.append("    readonly type: UiEventName;\n");
@@ -115,6 +118,45 @@ public final class UiJsxDeclarationGenerator {
         sb.append("  interface UiScreen {\n");
         sb.append("    render(): NekoJsxElement | null;\n");
         sb.append("    readonly options?: UiScreenOptions;\n");
+        sb.append("  }\n\n");
+        sb.append("  type ViewportProfileCode = ")
+                .append(literalUnion(viewportProfileCodes())).append(";\n");
+        sb.append("  type UiAxis = ").append(literalUnion(UiAxis.codes())).append(";\n");
+        sb.append("  interface ProjectedViewport {\n");
+        sb.append("    readonly profile: ViewportProfileCode;\n");
+        sb.append("    readonly logicalWidth: number;\n");
+        sb.append("    readonly logicalHeight: number;\n");
+        sb.append("    readonly contentWidth: number;\n");
+        sb.append("    readonly contentHeight: number;\n");
+        sb.append("    readonly guiScale: number;\n");
+        sb.append("    readonly capabilities: string[];\n");
+        sb.append("    readonly revision: number;\n");
+        sb.append("  }\n\n");
+        sb.append("  interface UiViewportState {\n");
+        sb.append("    readonly viewport: ProjectedViewport;\n");
+        sb.append("    readonly profile: ViewportProfileCode;\n");
+        sb.append("    readonly contentWidth: number;\n");
+        sb.append("    readonly contentHeight: number;\n");
+        sb.append("    readonly resolvedStyles: { readonly [nodePath: string]: UiResolvedStyle };\n");
+        sb.append("  }\n\n");
+        sb.append("  /** 最近一次 measure/arrange 解析出的最终布局约束（profile 覆盖与设计坐标已应用）。 */\n");
+        sb.append("  interface UiResolvedStyle {\n");
+        sb.append("    readonly width: string;\n");
+        sb.append("    readonly height: string;\n");
+        sb.append("    readonly minWidth: number;\n");
+        sb.append("    readonly minHeight: number;\n");
+        sb.append("    readonly maxWidth: number;\n");
+        sb.append("    readonly maxHeight: number;\n");
+        sb.append("    readonly margin: number;\n");
+        sb.append("    readonly padding: number;\n");
+        sb.append("    readonly gap: number;\n");
+        sb.append("    readonly align: UiAlignment;\n");
+        sb.append("    readonly justify: UiAlignment;\n");
+        sb.append("    readonly anchor: UiAnchor;\n");
+        sb.append("    readonly grow: number;\n");
+        sb.append("    readonly visible: boolean;\n");
+        sb.append("    readonly direction: UiAxis | null;\n");
+        sb.append("    readonly contentScale: number;\n");
         sb.append("  }\n\n");
         sb.append("  interface UiPrimitiveProps {\n");
         for (Map.Entry<UiPrimitive, Set<UiProp>> entry : allowedProps().entrySet()) {
@@ -266,6 +308,10 @@ public final class UiJsxDeclarationGenerator {
             values.add(anchor.jsName());
         }
         return values;
+    }
+
+    private static List<String> viewportProfileCodes() {
+        return com.tkisor.nekojs.api.ui.ViewportProfile.codes();
     }
 
     private static List<String> eventNames() {

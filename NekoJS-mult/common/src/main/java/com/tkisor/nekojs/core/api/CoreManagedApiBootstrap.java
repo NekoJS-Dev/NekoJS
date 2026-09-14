@@ -78,7 +78,8 @@ public final class CoreManagedApiBootstrap {
             method -> {
                 String name = method.getName();
                 return !name.startsWith("neko$")
-                        && !Set.of("of", "ownerThread", "viewport", "resize").contains(name);
+                        && !Set.of("of", "ownerThread", "viewport", "viewportContext", "profile",
+                                "resize").contains(name);
             };
 
     private CoreManagedApiBootstrap() {
@@ -406,11 +407,16 @@ public final class CoreManagedApiBootstrap {
         symbols.addAll(ContractReflector.reflectDataType("UiSignal", UiSignal.class));
         symbols.addAll(ContractReflector.reflectDataType("UiStore", UiStore.class));
         symbols.addAll(ContractReflector.reflectDataType("UiEvent", UiEvent.class));
+        // 票 43 的响应式视口语汇（Viewport Profile / 覆盖包 / 解析后的布局约束）不进 symbols：
+        // 它们经 UiSpec.CAPABILITY_IDS 的能力声明 + JSX/Probe 声明进入公开 contract，
+        // 与票 40 对 UiRootHandle/UiLayoutSpec 的既有权衡一致——symbols 面保持冻结（不改 golden）。
 
         String docs = "NekoJS portable core API contract. Symbols reflected from Java facades "
                 + "(ID/Platform/Text/JsonIO/NBT/Registry/Performance/Ui) and data types "
                 + "(TextValue/NekoId/JsonValue/NbtValue/NbtEntry/RegistryView/ModInfo/PerfTimer/"
-                + "UiProp/UiSignal/UiStore/UiEvent). "
+                + "UiProp/UiSignal/UiStore/UiEvent); Viewport Profile / responsive override "
+                + "vocabulary (UiViewportState, ViewportContext, ProjectedViewport, UiProfileOverride, "
+                + "UiLayoutSpec) is declared through capabilities and the JSX/Probe declarations. "
                 + "Events derived at runtime via EventContractReflector.";
 
         NormativeApiContract contract = new NormativeApiContract(
@@ -434,6 +440,13 @@ public final class CoreManagedApiBootstrap {
                                 null,
                                 "稳定 UiEvent 事件对象与命中/焦点语义已实现；原生鼠标/键盘/文本输入"
                                         + "的采集由客户端 Adapter 提供。"),
+                        new NormativeApiContract.ContractCapability(
+                                "ui.viewport-profiles", ">=1.0.0",
+                                com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED,
+                                null,
+                                "六档 Viewport Profile 判定（逻辑视口 + 安全区域 + host 布局能力，"
+                                        + "不等同 GUI scale）与响应式覆盖解析由 common 完整实现，"
+                                        + "六个档位均有稳定的 fake Adapter 输出。"),
                         new NormativeApiContract.ContractCapability(
                                 "ui.text-measurement", ">=1.0.0",
                                 com.tkisor.nekojs.api.capability.CapabilityStatus.PARTIAL,

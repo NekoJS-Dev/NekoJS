@@ -19,6 +19,8 @@ import com.tkisor.nekojs.api.ui.UiScreenOptions;
 import com.tkisor.nekojs.api.ui.UiSize;
 import com.tkisor.nekojs.api.ui.UiVNode;
 import com.tkisor.nekojs.api.ui.ProjectedViewport;
+import com.tkisor.nekojs.api.ui.UiLayoutSpec;
+import com.tkisor.nekojs.api.ui.UiViewportState;
 import com.tkisor.nekojs.api.ui.ViewportContext;
 
 import java.util.ArrayList;
@@ -40,7 +42,7 @@ import java.util.Set;
  * <p>cleanup 幂等：{@link #dispose()} 重复调用是 no-op；root 释放后所有写操作显式失败
  * （{@link UiFailure#ROOT_DISPOSED}）。
  */
-public final class UiRoot implements UiRootHandle {
+public final class UiRoot implements UiRootHandle, UiViewportState {
 
     private final RootUiFacade facade;
     private final UiHostAdapter adapter;
@@ -241,12 +243,33 @@ public final class UiRoot implements UiRootHandle {
         return inspection;
     }
 
+    /**
+     * 响应式视口的可观察事实（票 43 AC1/AC5）。
+     *
+     * <p>{@link #viewport()} 是脚本可见的 <b>script getter</b>：render 期间读取会被记录为
+     * 「该 root 的布局依赖视口」，resize 时因此退回完整 reconcile（正确性优先）。
+     * {@link #viewportState()} 是 Java 侧与 inspector 的只读查询，不产生该副作用。
+     */
     @Override
     public ProjectedViewport viewport() {
-        // 渲染期间读取视口事实 → 该 root 的布局依赖视口，resize 必须重跑脚本 render 才能正确。
         if (rendering) {
             viewportDependent = true;
         }
+        return projectedViewport();
+    }
+
+    @Override
+    public UiViewportState viewportState() {
+        return this;
+    }
+
+    @Override
+    public java.util.Map<String, UiLayoutSpec> resolvedStyles() {
+        return layoutFacts.resolvedStyles();
+    }
+
+    /** Java 侧/inspector 的只读视口事实：不记录视口依赖。 */
+    public ProjectedViewport projectedViewport() {
         return projectedViewport != null
                 ? projectedViewport
                 : ProjectedViewport.of(currentViewportContext(), layoutRevisions);
