@@ -4,9 +4,11 @@
 
 **Blocked by:** [06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
+
+**Takeover note（2026-09-15）:** 曾由 opencode-agent 认领（其认领编辑未提交），静止约 29 小时、分支零提交；经维护者（用户）批准由 zcode-agent 接管。其未提交半成品已原样快照至分支 `wip/opencode-ticket07-snapshot-20260915`，可随时恢复或参考。
 
 **Optional:** false
 
