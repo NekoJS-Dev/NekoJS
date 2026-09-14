@@ -57,7 +57,6 @@ public final class UiRoot implements UiRootHandle {
     private UiRootStatus status = UiRootStatus.CREATED;
     private String focusedPath;
     private boolean reconcilePending;
-    private int commitCount;
 
     UiRoot(RootUiFacade facade, UiScreen screen, UiScreenOptions options,
            DefaultUiStateOwner stateOwner, String rootId) {
@@ -134,7 +133,7 @@ public final class UiRoot implements UiRootHandle {
     public void dispatchEvent(UiEvent event) {
         Objects.requireNonNull(event, "event");
         requireOwner("dispatchEvent");
-        requireUsable("dispatchEvent");
+        requireEventAccepting("dispatchEvent");
         UiHostNode target = hitTest(event);
         String path = target == null ? null : target.path();
         UiEvent resolved = event.withTarget(path, rootId, generation);
@@ -226,11 +225,6 @@ public final class UiRoot implements UiRootHandle {
         return focusedPath;
     }
 
-    /** 已成功提交次数（诊断；不参与公开 contract）。 */
-    public int commitCount() {
-        return commitCount;
-    }
-
     // ---- 内部 ----
 
     /** owner tick 请求一次 reconcile（失效合并后的落点）。 */
@@ -294,7 +288,6 @@ public final class UiRoot implements UiRootHandle {
             commitLayout(next, available);
             committedRoot = next;
             committedTree = candidateTree;
-            commitCount++;
             inspection = new UiHostInspection(next, inspection.paintOperations(), inspection.clipRects());
             if (status == UiRootStatus.CREATED) {
                 status = UiRootStatus.OPEN;
@@ -432,6 +425,21 @@ public final class UiRoot implements UiRootHandle {
     private void requireUsable(String operation) {
         if (status == UiRootStatus.DISPOSED) {
             throw disposed(operation);
+        }
+    }
+
+    /**
+     * 只有 CREATED / OPEN 的 root 接受新事件。
+     *
+     * <p>{@link UiRootStatus#INVALIDATED} 的 root 已停止接收新事件（javadoc 契约与
+     * jsx-ui-spec「generation 生命周期」：generation 失效时停止接受新事件），
+     * 但仍保留最后一次有效树供显示；重复失效是幂等的。
+     */
+    private void requireEventAccepting(String operation) {
+        requireUsable(operation);
+        if (status == UiRootStatus.INVALIDATED) {
+            throw new UiFailure(UiDiagnosticStage.HOST_UPDATE, UiFailure.ROOT_INVALIDATED,
+                    "UI root " + rootId + " is invalidated; " + operation + " is not allowed", null);
         }
     }
 

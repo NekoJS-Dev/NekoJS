@@ -106,7 +106,7 @@ public final class ScriptUiVNodeFactory implements UiVNodeFactory {
             }
             if (value.canExecute()) {
                 throw new UiFailure(UiDiagnosticStage.RENDER, UiFailure.INVALID_CHILD,
-                        "JSX child must not be a bare function; use a component tag instead", path);
+                        "JSX child must not be a bare function", path);
             }
             if (!value.hasMembers()) {
                 throw new UiFailure(UiDiagnosticStage.RENDER, UiFailure.INVALID_CHILD,

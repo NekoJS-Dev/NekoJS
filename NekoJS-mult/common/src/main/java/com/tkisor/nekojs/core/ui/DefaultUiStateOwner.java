@@ -200,11 +200,6 @@ public final class DefaultUiStateOwner implements UiStateOwner {
     }
 
     @Override
-    public boolean hasPendingInvalidation() {
-        return !pending.isEmpty();
-    }
-
-    @Override
     public void dispose() {
         disposed = true;
         pending.clear();

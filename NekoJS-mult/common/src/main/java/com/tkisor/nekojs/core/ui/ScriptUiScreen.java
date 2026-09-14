@@ -35,7 +35,7 @@ public final class ScriptUiScreen implements UiScriptScreen {
 
     @Override
     public UiVNode render() {
-        if (!renderFunction.canExecute()) {
+        if (renderFunction == null || !renderFunction.canExecute()) {
             throw new UiFailure(UiDiagnosticStage.RENDER, UiFailure.INVALID_CHILD,
                     "render function for " + label + " is not executable", null);
         }
