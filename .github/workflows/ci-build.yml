@@ -301,7 +301,10 @@ jobs:
           set -euo pipefail
           node='${{ matrix.node }}'
           smoke_dir="versions/$node/run-server/nekojs"
-          fixture_dir=versions/26.1.2-fabric/src/test/resources/fabric-runtime-smoke
+          # 共享 raw loader root（票 31 迁入 src/fabric；两 fabric 节点同一 fixture）。
+          # 注意：CI 直接 cp 不等于 Gradle test source set 挂载——该 fixture 目前仅
+          # CI 消费，见 docs/architecture-refactor/baseline/2026-09-15-fabric-raw-root/
+          fixture_dir=src/fabric/test/resources/fabric-runtime-smoke
           rm -rf "versions/$node/run-server"
           mkdir -p "$smoke_dir/startup_scripts" "$smoke_dir/server_scripts"
           cp "$fixture_dir/startup_scripts/fabric_ci_smoke.js" "$smoke_dir/startup_scripts/"
