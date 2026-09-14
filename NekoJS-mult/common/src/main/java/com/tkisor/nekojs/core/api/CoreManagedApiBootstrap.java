@@ -78,7 +78,7 @@ public final class CoreManagedApiBootstrap {
             method -> {
                 String name = method.getName();
                 return !name.startsWith("neko$")
-                        && !Set.of("of", "ownerThread", "viewport", "resize").contains(name);
+                        && !Set.of("of", "ownerThread", "viewport", "resize", "screenHost").contains(name);
             };
 
     private CoreManagedApiBootstrap() {
@@ -310,9 +310,9 @@ public final class CoreManagedApiBootstrap {
         register(contributions, symbols, "member:Ui.createStateOwner", (receiver, args) ->
                 ((UiFacade) receiver).createStateOwner());
         register(contributions, symbols, "member:Ui.create", (receiver, args) ->
-                ((UiFacade) receiver).create((com.tkisor.nekojs.api.ui.UiScreen) args.getFirst()));
+                ((UiFacade) receiver).create(toUiScreen(args.getFirst())));
         register(contributions, symbols, "member:Ui.open", (receiver, args) ->
-                ((UiFacade) receiver).open((com.tkisor.nekojs.api.ui.UiScreen) args.getFirst()));
+                ((UiFacade) receiver).open(toUiScreen(args.getFirst())));
         register(contributions, symbols, "member:Ui.invalidateGeneration", (receiver, args) -> {
             ((UiFacade) receiver).invalidateGeneration(((Number) args.getFirst()).intValue());
             return null;
@@ -462,6 +462,74 @@ public final class CoreManagedApiBootstrap {
             return new com.tkisor.nekojs.core.ui.UnavailableUiFacade(0);
         }
         return new com.tkisor.nekojs.core.ui.RootUiFacade(resources);
+    }
+
+    /**
+     * 脚本侧 {@code UiScreen} 输入 → {@link com.tkisor.nekojs.api.ui.UiScreen}。
+     *
+     * <p>脚本传的是 {@code { render, options }} 对象（jsx-ui-spec「公开模型」：不得把原生
+     * {@code Screen} 作为脚本作者需要继承的基类）。这里把它包成引擎侧
+     * {@code ScriptUiScreen}：render function 每次 reconcile 只调用一次，返回值经
+     * {@code ScriptUiVNodeFactory} 转成候选 VNode。
+     *
+     * <p>已经是 {@code UiScreen}（Java 侧装配/测试）时原样透传。
+     */
+    public static com.tkisor.nekojs.api.ui.UiScreen toUiScreen(Object raw) {
+        if (raw instanceof com.tkisor.nekojs.api.ui.UiScreen screen) {
+            return screen;
+        }
+        if (!(raw instanceof graal.graalvm.polyglot.Value value) || !value.hasMembers()) {
+            throw new com.tkisor.nekojs.api.ui.UiFailure(
+                    com.tkisor.nekojs.api.ui.UiDiagnosticStage.RENDER,
+                    com.tkisor.nekojs.api.ui.UiFailure.INVALID_ROOT,
+                    "Ui screen must be an object with a render function", null);
+        }
+        graal.graalvm.polyglot.Value render = value.hasMember("render") ? value.getMember("render") : null;
+        if (render == null || render.isNull() || !render.canExecute()) {
+            throw new com.tkisor.nekojs.api.ui.UiFailure(
+                    com.tkisor.nekojs.api.ui.UiDiagnosticStage.RENDER,
+                    com.tkisor.nekojs.api.ui.UiFailure.INVALID_ROOT,
+                    "Ui screen must expose an executable render function", null);
+        }
+        return new com.tkisor.nekojs.core.ui.ScriptUiScreen(render,
+                new com.tkisor.nekojs.core.ui.ScriptUiVNodeFactory(),
+                screenOptionsOf(value), "script");
+    }
+
+    /** 读取脚本侧 {@code options} 对象（缺失字段用 {@link com.tkisor.nekojs.api.ui.UiScreenOptions#defaults()}）。 */
+    private static com.tkisor.nekojs.api.ui.UiScreenOptions screenOptionsOf(graal.graalvm.polyglot.Value screen) {
+        if (!screen.hasMember("options")) {
+            return com.tkisor.nekojs.api.ui.UiScreenOptions.defaults();
+        }
+        Object raw = screen.getMember("options");
+        if (!(raw instanceof graal.graalvm.polyglot.Value options) || !options.hasMembers()) {
+            return com.tkisor.nekojs.api.ui.UiScreenOptions.defaults();
+        }
+        String title = stringMember(options, "title", "");
+        return new com.tkisor.nekojs.api.ui.UiScreenOptions(
+                title,
+                boolMember(options, "pauseGame", false),
+                boolMember(options, "closeOnEscape", true),
+                boolMember(options, "closeOnExternal", true),
+                null);
+    }
+
+    private static String stringMember(graal.graalvm.polyglot.Value value, String name, String fallback) {
+        if (!value.hasMember(name)) return fallback;
+        Object member = value.getMember(name);
+        if (member instanceof graal.graalvm.polyglot.Value v) {
+            return v.isString() ? v.asString() : fallback;
+        }
+        return member instanceof String s ? s : fallback;
+    }
+
+    private static boolean boolMember(graal.graalvm.polyglot.Value value, String name, boolean fallback) {
+        if (!value.hasMember(name)) return fallback;
+        Object member = value.getMember(name);
+        if (member instanceof graal.graalvm.polyglot.Value v) {
+            return v.isBoolean() ? v.asBoolean() : fallback;
+        }
+        return member instanceof Boolean b ? b : fallback;
     }
 
     private static NormativeApiContract.ContractIdentity toContractIdentity(ApiContractIdentity id) {

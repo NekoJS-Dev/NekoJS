@@ -87,6 +87,39 @@ minecraft-mod-mcp launch 1.21.1 --loader neoforge
 
 GUI 里的按钮可以用 `get_screen_buttons` / `enumerate_widgets` 拿坐标和 ID，比按 `click x y` 猜坐标稳。
 
+## 26.2 专属的坑（票 41 实测）
+
+启动 26.2 客户端时，下面三条是硬性的：
+
+1. **必须显式指定普通 JDK 25。** 桥接器默认挑的 `graalvm-jdk-25` 会让 GraalMC 25.1.3.7
+   在 Truffle 初始化时直接崩，客户端起不来：
+
+   ```text
+   java.lang.ExceptionInInitializerError:
+   Exception java.lang.IllegalArgumentException: Got null compiler version.
+   If you're using GraalVM JDK, update to 25.1 or newer!
+   ```
+
+   改用普通 JDK：
+
+   ```powershell
+   minecraft-mod-mcp launch 26.2 --loader neoforge \\
+     --java "C:\Program Files\Java\jdk-25.0.2\bin\java.exe"
+   ```
+
+2. **TitleScreen 状态下不能执行 slash 命令。** `execute_command "/nekojs reload"` 会返回
+   `{"error":"no player"}`——命令需要玩家/世界上下文。所以需要「启动即生效」的 smoke
+   **必须在脚本里自动执行或挂定时器**，不能依赖 `execute_command`。想主动触发 slash 命令，
+   得先进入一个世界。
+
+3. **先探测输入注入是否生效，再排交互验证。** 本机上 MCP 的 `press_key`/`hotkey`/`click`
+   会正常返回成功，但**输入并没有到达游戏**：对照实验是 `press_key F3` 后 F3 调试面板
+   没有出现（截图逐像素确认画面未变）。`enter_control_mode` 同样返回
+   `{"control_mode": true}` 却无实际效果。
+
+   因此**所有依赖 in-game 交互的验证，都要先做一个前置探测**（例如按 F3 看调试面板是否出现），
+   探测失败就应如实记 `not-verified`，不要因为工具返回了 `{"pressed": ...}` 就认为输入发生了。
+
 ## 坑
 
 - **`--mod-jar` 不是"额外加一个 mod"，它替换桥接器的默认 jar。** 传给 `launch` 时，`ensureModJar()` 被整个跳过，`minecraft-mcp` 自己那份 mod 就不会被投放，客户端起来也连不上。要加 NekoJS / GraalMC，**提前放进 `game\mods\`**，`launch` 不要带 `--mod-jar`（那个参数是给"我想用自己构建的桥接器 mod"准备的）。

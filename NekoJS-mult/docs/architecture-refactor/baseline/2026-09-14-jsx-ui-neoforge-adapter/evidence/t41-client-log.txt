@@ -1,0 +1,68 @@
+# NeoForge 26.2 real-client run: t41 JSX UI evidence
+# gameDir: C:\Users\11515\AppData\Roaming\.minecraft\mcp_launcher\game
+# log: C:\Users\11515\AppData\Roaming\.minecraft\mcp_launcher\game\logs\latest.log
+# client launched with: minecraft-mod-mcp launch 26.2 --loader neoforge --java 'C:\Program Files\Java\jdk-25.0.2\bin\java.exe'
+
+## [t41] lines (adapter ran on the real client)
+[149月2026 22:59:10.945] [Render thread/INFO] [NekoJS/]: [client] [t41] render#1
+[149月2026 22:59:11.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#1 renders=1
+[149月2026 22:59:14.961] [Render thread/INFO] [NekoJS/]: [client] [t41] render#2
+[149月2026 22:59:15.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#2 renders=2
+[149月2026 22:59:18.960] [Render thread/INFO] [NekoJS/]: [client] [t41] render#3
+[149月2026 22:59:19.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#3 renders=3
+[149月2026 22:59:22.973] [Render thread/INFO] [NekoJS/]: [client] [t41] render#4
+[149月2026 22:59:23.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#4 renders=4
+[149月2026 22:59:26.984] [Render thread/INFO] [NekoJS/]: [client] [t41] render#5
+[149月2026 22:59:27.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#5 renders=5
+[149月2026 22:59:30.963] [Render thread/INFO] [NekoJS/]: [client] [t41] render#6
+[149月2026 22:59:31.470] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#6 renders=6
+[149月2026 22:59:34.969] [Render thread/INFO] [NekoJS/]: [client] [t41] render#7
+[149月2026 22:59:35.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#7 renders=7
+[149月2026 22:59:38.983] [Render thread/INFO] [NekoJS/]: [client] [t41] render#8
+[149月2026 22:59:39.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#8 renders=8
+[149月2026 22:59:42.989] [Render thread/INFO] [NekoJS/]: [client] [t41] render#9
+[149月2026 22:59:43.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#9 renders=9
+[149月2026 22:59:46.961] [Render thread/INFO] [NekoJS/]: [client] [t41] render#10
+[149月2026 22:59:47.470] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#10 renders=10
+[149月2026 22:59:50.971] [Render thread/INFO] [NekoJS/]: [client] [t41] render#11
+[149月2026 22:59:51.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#11 renders=11
+[149月2026 22:59:54.984] [Render thread/INFO] [NekoJS/]: [client] [t41] render#12
+[149月2026 22:59:55.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#12 renders=12
+[149月2026 22:59:58.959] [Render thread/INFO] [NekoJS/]: [client] [t41] render#13
+[149月2026 22:59:59.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#13 renders=13
+[149月2026 23:00:02.970] [Render thread/INFO] [NekoJS/]: [client] [t41] render#14
+[149月2026 23:00:03.470] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#14 renders=14
+[149月2026 23:00:06.981] [Render thread/INFO] [NekoJS/]: [client] [t41] render#15
+[149月2026 23:00:07.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#15 renders=15
+[149月2026 23:00:10.962] [Render thread/INFO] [NekoJS/]: [client] [t41] render#16
+[149月2026 23:00:11.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#16 renders=16
+[149月2026 23:00:14.969] [Render thread/INFO] [NekoJS/]: [client] [t41] render#17
+[149月2026 23:00:15.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#17 renders=17
+[149月2026 23:00:18.981] [Render thread/INFO] [NekoJS/]: [client] [t41] render#18
+[149月2026 23:00:19.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#18 renders=18
+[149月2026 23:00:22.990] [Render thread/INFO] [NekoJS/]: [client] [t41] render#19
+[149月2026 23:00:23.470] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#19 renders=19
+[149月2026 23:00:26.967] [Render thread/INFO] [NekoJS/]: [client] [t41] render#20
+[149月2026 23:00:27.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#20 renders=20
+
+## NekoJS client script lines
+[149月2026 23:01:22.984] [Render thread/INFO] [NekoJS/]: [client] [t41] render#34
+[149月2026 23:01:23.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#34 renders=34
+[149月2026 23:01:26.958] [Render thread/INFO] [NekoJS/]: [client] [t41] render#35
+[149月2026 23:01:27.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#35 renders=35
+[149月2026 23:01:30.970] [Render thread/INFO] [NekoJS/]: [client] [t41] render#36
+[149月2026 23:01:31.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#36 renders=36
+[149月2026 23:01:34.982] [Render thread/INFO] [NekoJS/]: [client] [t41] render#37
+[149月2026 23:01:35.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#37 renders=37
+[149月2026 23:01:38.990] [Render thread/INFO] [NekoJS/]: [client] [t41] render#38
+[149月2026 23:01:39.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#38 renders=38
+[149月2026 23:01:42.962] [Render thread/INFO] [NekoJS/]: [client] [t41] render#39
+[149月2026 23:01:43.471] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#39 renders=39
+[149月2026 23:01:46.971] [Render thread/INFO] [NekoJS/]: [client] [t41] render#40
+[149月2026 23:01:47.469] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#40 renders=40
+[149月2026 23:01:50.981] [Render thread/INFO] [NekoJS/]: [client] [t41] render#41
+[149月2026 23:01:51.470] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#41 renders=41
+[149月2026 23:01:54.958] [Render thread/INFO] [NekoJS/]: [client] [t41] render#42
+[149月2026 23:01:55.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#42 renders=42
+[149月2026 23:01:58.970] [Render thread/INFO] [NekoJS/]: [client] [t41] render#43
+[149月2026 23:01:59.468] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [client] [t41] OPEN#43 renders=43

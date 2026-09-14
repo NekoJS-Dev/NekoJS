@@ -28,7 +28,9 @@ import java.util.Objects;
 public final class RootUiFacade implements UiFacade {
 
     private final UiResources resources;
-    private final Thread ownerThread;
+    /** 构造时的 owner thread：仅在 {@link UiResources#ownerThread()} 返回 null 时作为回退。 */
+    private final Thread constructionThread;
+    private final com.tkisor.nekojs.api.ui.UiScreenHost screenHost;
     private final Map<UiRootHandle, DefaultUiStateOwner> roots = new LinkedHashMap<>();
     private final List<DefaultUiStateOwner> owners = new ArrayList<>();
     private int rootSequence;
@@ -38,8 +40,22 @@ public final class RootUiFacade implements UiFacade {
     /** 用宿主资源构造 facade。 */
     public RootUiFacade(UiResources resources) {
         this.resources = Objects.requireNonNull(resources, "resources");
-        this.ownerThread = resources.ownerThread() == null ? Thread.currentThread() : resources.ownerThread();
+        this.constructionThread = Thread.currentThread();
         this.viewport = resources.viewport();
+        this.screenHost = resources.screenHost() == null
+                ? com.tkisor.nekojs.api.ui.UiScreenHost.NONE : resources.screenHost();
+    }
+
+    /** 原生 Screen 投影边界（Java 侧装配/诊断；不属于脚本 contract）。 */
+    public com.tkisor.nekojs.api.ui.UiScreenHost screenHost() {
+        return screenHost;
+    }
+
+    /** 平台 Screen 报告的当前逻辑视口（Java 侧入口，不触发额外 reconcile）。 */
+    void setViewport(com.tkisor.nekojs.api.ui.UiSize next) {
+        if (next != null) {
+            this.viewport = next;
+        }
     }
 
     UiResources resources() {
@@ -51,17 +67,30 @@ public final class RootUiFacade implements UiFacade {
         return resources.generation();
     }
 
-    /** 本 facade 的 client owner thread（Java 侧装配 API）。 */
+    /**
+     * 本 facade 的 client owner thread。
+     *
+     * <p><b>每次调用都向 {@link UiResources#ownerThread()} 重新求值</b>：客户端 owner thread
+     * 只有在客户端真正就绪后才存在，装配期（mod 构造 / 插件 bootstrap）拿到的是当时恰好执行
+     * 构造的线程，不是稳定事实。快照它会把「装配线程 == owner thread」这个错误前提固化，
+     * 从而把合法的客户端线程（Render thread）误判成 OFF_OWNER_THREAD。jsx-ui-spec
+     * 「状态线程」要求的是 owner thread 归属，不是装配时机。
+     */
     public Thread ownerThread() {
-        return ownerThread;
+        Thread resolved = resources.ownerThread();
+        return resolved == null ? constructionThread : resolved;
     }
 
-    /** 当前逻辑视口（Java 侧装配/布局查询；不属于脚本 contract）。 */
+    /**
+     * 当前逻辑视口（Java 侧装配/布局查询）。<b>刻意不进 {@code UiFacade} 脚本契约</b>：
+     * 视口由平台 Screen 的 resize 回调驱动，脚本通过布局结果观察，不需要读写契约成员
+     * （新增契约成员会改变冻结的 api-manifest，属维护者审阅范围）。
+     */
     public com.tkisor.nekojs.api.ui.UiSize viewport() {
         return viewport;
     }
 
-    /** 窗口 resize：更新逻辑视口并让全部 root 布局失效（Java 侧装配 API）。 */
+    /** 窗口 resize：更新逻辑视口并让全部 root 布局失效（平台 Screen 的 resize 回调入口）。 */
     public void resize(com.tkisor.nekojs.api.ui.UiSize next) {
         requireOwner("Ui.resize");
         if (next == null || next.equals(viewport)) {
@@ -96,6 +125,11 @@ public final class RootUiFacade implements UiFacade {
     public UiRootHandle open(UiScreen screen) {
         UiRootHandle handle = create(screen);
         handle.open();
+        // 首次提交成功后才投影原生 Screen：候选失败不得打开半成品 Screen
+        // （jsx-ui-spec「提交语义」「暂停与替换」）。
+        if (handle.status() == com.tkisor.nekojs.api.ui.UiRootStatus.OPEN) {
+            screenHost.open(handle);
+        }
         return handle;
     }
 
@@ -160,20 +194,26 @@ public final class RootUiFacade implements UiFacade {
         roots.remove(root);
     }
 
+    /** root 释放路径上的 Screen 投影关闭；幂等由 {@link com.tkisor.nekojs.api.ui.UiScreenHost} 保证。 */
+    void closeScreen(UiRoot root) {
+        screenHost.close(root);
+    }
+
     String nextRootId() {
         return "ui-root-" + (++rootSequence);
     }
 
     private DefaultUiStateOwner newOwner() {
-        DefaultUiStateOwner owner = new DefaultUiStateOwner(ownerThread);
+        DefaultUiStateOwner owner = new DefaultUiStateOwner(ownerThread());
         owners.add(owner);
         return owner;
     }
 
     private void requireOwner(String operation) {
-        if (Thread.currentThread() != ownerThread) {
+        Thread owner = ownerThread();
+        if (Thread.currentThread() != owner) {
             throw new UiFailure(UiDiagnosticStage.HOST_UPDATE, UiFailure.OFF_OWNER_THREAD,
-                    operation + " must run on the UI owner thread '" + ownerThread.getName()
+                    operation + " must run on the UI owner thread '" + owner.getName()
                             + "', was '" + Thread.currentThread().getName() + "'", null);
         }
     }

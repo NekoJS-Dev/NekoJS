@@ -1,0 +1,18 @@
+# Ticket 41: 26.2 adapter + service registration packaged into the tested jar
+# jar: D:\mcmodDemo\NekoJS\.worktrees\t41\NekoJS-mult\versions\26.2.0\build\libs\nekojs-neoforge-26.2.0-1.1.0-preview3.jar
+# sha256:
+33F0DA8B78F71E633F9A11AA32404E7A1323C69F04102765F0A1937B5FDD0E33
+
+com/tkisor/nekojs/client/gui/Nf262UiHostAdapter$Nf262UiNode.class
+com/tkisor/nekojs/client/gui/Nf262UiHostAdapter.class
+com/tkisor/nekojs/client/gui/Nf262UiInputMapper.class
+com/tkisor/nekojs/client/gui/Nf262UiResources$UiHostAdapterHolder.class
+com/tkisor/nekojs/client/gui/Nf262UiResources.class
+com/tkisor/nekojs/client/gui/Nf262UiScreen$1.class
+com/tkisor/nekojs/client/gui/Nf262UiScreen.class
+com/tkisor/nekojs/client/gui/Nf262UiScreenHost.class
+com/tkisor/nekojs/client/gui/Nf262UiTextMeasurer.class
+com/tkisor/nekojs/platform/compat/McUiCompat$Impl.class
+com/tkisor/nekojs/platform/compat/McUiCompat.class
+com/tkisor/nekojs/platform/compat/Nf262UiCompat.class
+META-INF/services/com.tkisor.nekojs.platform.compat.McUiCompat$Impl

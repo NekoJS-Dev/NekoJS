@@ -215,6 +215,13 @@ public final class ApiValueMarshaller {
             if ("null".equals(typeName) && graalValue.isNull()) {
                 return null;
             }
+            // 开放对象参数（Java 侧 Object）：原样透传脚本对象句柄，让实现自行决定消费方式。
+            // 与 {@link #primitiveScore} 的 "object" 计分一致——此前只有计分没有转换分支，
+            // 导致 object 参数能通过重载选择却在转换阶段抛 TYPE_MISMATCH
+            //（Ui.open({render}) / NBT.fromObject / Performance.time 都受影响）。
+            if ("object".equals(typeName)) {
+                return graalValue;
+            }
             throw new ApiRuntimeException(
                     ApiErrorCodes.TYPE_MISMATCH,
                     "Argument does not match primitive type " + typeName + " (received " + describeValue(graalValue) + ")",
@@ -446,6 +453,18 @@ public final class ApiValueMarshaller {
                 }
                 return ProxyArray.fromList(marshalled);
             }
+        }
+
+        // 开放对象返回值（Java 侧 Object）**且**该值实现了公开契约接口（com.tkisor.nekojs.api.*）：
+        // 这是契约已声明的形状（如 member:Ui.open / createStateOwner 的返回），实现自行决定
+        // 脚本可见成员。此前返回值方向没有 object 分支，这些契约成员在运行时必然抛
+        // NATIVE_TYPE_LEAK——契约承诺了却无法实现。
+        //
+        // 刻意**不**放行任意宿主对象：{@link #looksLikeContractType} 之外的实例仍按原生类型
+        // 泄漏拒绝（ApiValueMarshallerTest#arbitraryHostReturnStillFails 钉住这条边界）。
+        if (returnType.kind() == ApiTypeRef.Kind.PRIMITIVE && "object".equals(returnType.name())
+                && looksLikeContractType(rawReturn)) {
+            return rawReturn;
         }
 
         if (nativeReturn) {
@@ -781,6 +800,35 @@ public final class ApiValueMarshaller {
             return "null".equals(type.name());
         }
         return type.kind() == ApiTypeRef.Kind.UNION && type.arguments().stream().anyMatch(this::acceptsNull);
+    }
+
+    /**
+     * 该返回值是否实现了公开契约接口（{@code com.tkisor.nekojs.api.*}）。
+     *
+     * <p>只用于 {@code object} 返回值放行判定：契约把这些成员声明为 {@code object}，
+     * 但脚本可见形状仍应由契约接口约束，而不是任意宿主对象。
+     */
+    private static boolean looksLikeContractType(Object value) {
+        if (value == null) {
+            return false;
+        }
+        for (Class<?> type : value.getClass().getInterfaces()) {
+            String name = type.getName();
+            if (name.startsWith("com.tkisor.nekojs.api.")) {
+                return true;
+            }
+        }
+        // 经类层次再找一层（实现类可能通过父类间接实现契约接口）。
+        Class<?> parent = value.getClass().getSuperclass();
+        while (parent != null && parent != Object.class) {
+            for (Class<?> type : parent.getInterfaces()) {
+                if (type.getName().startsWith("com.tkisor.nekojs.api.")) {
+                    return true;
+                }
+            }
+            parent = parent.getSuperclass();
+        }
+        return false;
     }
 
     private boolean isPrimitive(Object value) {

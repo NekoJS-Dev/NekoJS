@@ -91,6 +91,22 @@ public class NeoForgePlatform implements IPlatform {
         return NeoForgeRegistryQueryService.INSTANCE;
     }
 
+    /**
+     * CLIENT JSX UI 宿主资源装配；1.21.1 尚未交付真实 Adapter（capability = not verified），
+     * 因此 {@code McUiCompat} 没有提供者时显式返回 {@code null}，脚本 {@code Ui.open(...)}
+     * 抛 {@code UNSUPPORTED_CAPABILITY}（jsx-ui-spec「平台边界」）。
+     */
+    @Override
+    public com.tkisor.nekojs.api.ui.UiResources uiResources() {
+        if (!isClient() || !com.tkisor.nekojs.platform.compat.McUiCompat.isSupported()) {
+            return null;
+        }
+        long generation = generationCounter.incrementAndGet();
+        return com.tkisor.nekojs.platform.compat.McUiCompat.uiResources((int) generation);
+    }
+
+    private final java.util.concurrent.atomic.AtomicLong generationCounter = new java.util.concurrent.atomic.AtomicLong();
+
     @Override
     public String getLoaderId() {
         return "neoforge";

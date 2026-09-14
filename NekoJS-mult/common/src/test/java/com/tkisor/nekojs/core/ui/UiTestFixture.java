@@ -45,6 +45,9 @@ final class UiTestFixture {
 
     final List<UiTextMeasure> textMeasures = new ArrayList<>();
 
+    /** 覆盖用的 UiResources（Screen 宿主等）；null 时用 {@link #resources()}。 */
+    UiResources hostResources;
+
     UiTestFixture() {
         viewport = new UiSize(320, 240);
     }
