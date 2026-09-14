@@ -33,6 +33,7 @@ since that commit.
 | `STALE` | The Chinese source has changed. The commits are listed so you can see what changed. The translation needs review. |
 | `NO METADATA` | An English page has no metadata table, or the table names a source page or commit that does not exist. |
 | `MISSING` | A Chinese page that has no English translation yet. |
+| `ORPHANED` | An English page whose Chinese source was deleted or renamed. The commit where the source was last seen is printed, so its content can be recovered if needed. |
 
 Example:
 

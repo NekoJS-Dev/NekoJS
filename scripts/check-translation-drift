@@ -12,11 +12,12 @@
 #   > | Source version | commit `101fd07a`, 2026-08-20 |
 #
 # This script reads that table, then asks git whether the source page has
-# changed since that commit. It reports three things:
+# changed since that commit. It reports four things:
 #
 #   1. UP TO DATE  - the source has not changed since the translation.
 #   2. STALE       - the source has changed; the translation needs review.
 #   3. MISSING     - a Chinese page that has no English translation yet.
+#   4. ORPHANED    - an English page whose Chinese source was deleted or renamed.
 #
 # It also reports NO METADATA for an English page whose table is absent or
 # malformed, which keeps the convention enforceable.
@@ -63,6 +64,7 @@ n_ok=0
 n_stale=0
 n_bad=0
 n_missing=0
+n_orphaned=0
 translated_sources=""
 
 printf '%s\n' "Translation drift report"
@@ -92,8 +94,15 @@ for en_file in "$EN_DIR"/*.md; do
     translated_sources="$translated_sources|$source_page"
 
     if [ ! -f "$WIKI/$source_page" ]; then
-        printf 'NO METADATA  %-32s (source page wiki/%s does not exist)\n' "en_us/$en_name" "$source_page"
-        n_bad=$((n_bad + 1))
+        # The Chinese source is gone. Either it was deleted upstream, in which
+        # case this translation should be deleted too, or it was renamed, in
+        # which case the metadata needs to point at the new name.
+        printf 'ORPHANED     %-32s (source wiki/%s no longer exists)\n' "en_us/$en_name" "$source_page"
+        last_seen="$(git log -1 --format='%h %ad' --date=short -- "wiki/$source_page" 2>/dev/null)"
+        if [ -n "$last_seen" ]; then
+            printf '                 last seen in %s\n' "$last_seen"
+        fi
+        n_orphaned=$((n_orphaned + 1))
         continue
     fi
 
@@ -144,8 +153,8 @@ shopt -u nullglob
 # ---------------------------------------------------------------------------
 printf '\n'
 printf '%s\n' "------------------------------------------------------------"
-printf 'up to date: %s   stale: %s   no metadata: %s   not translated: %s\n' \
-    "$n_ok" "$n_stale" "$n_bad" "$n_missing"
+printf 'up to date: %s   stale: %s   orphaned: %s   no metadata: %s   not translated: %s\n' \
+    "$n_ok" "$n_stale" "$n_orphaned" "$n_bad" "$n_missing"
 
 if [ "$n_stale" -gt 0 ]; then
     printf '\n'
@@ -154,7 +163,14 @@ if [ "$n_stale" -gt 0 ]; then
     printf '%s\n' "Then update the translation and its 'Source version' row."
 fi
 
-if [ "$STRICT" -eq 1 ] && { [ "$n_stale" -gt 0 ] || [ "$n_bad" -gt 0 ]; }; then
+if [ "$n_orphaned" -gt 0 ]; then
+    printf '\n'
+    printf '%s\n' "An orphaned page means its Chinese source was deleted or renamed."
+    printf '%s\n' "If it was deleted, delete the English page too. If it was renamed,"
+    printf '%s\n' "point the 'Source page' row at the new filename."
+fi
+
+if [ "$STRICT" -eq 1 ] && { [ "$n_stale" -gt 0 ] || [ "$n_bad" -gt 0 ] || [ "$n_orphaned" -gt 0 ]; }; then
     exit 1
 fi
 exit 0

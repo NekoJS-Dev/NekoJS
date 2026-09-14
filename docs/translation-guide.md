@@ -166,6 +166,26 @@ order, same list order, same blockquote callouts.
 **Numbers, versions, tick counts, and units are left unchanged.** Write
 "20 ticks", not "twenty ticks".
 
+### Recurring table headers
+
+The same header rows appear across many pages. Translate them exactly as below,
+every time, so the pages read as one set of documents. The count is how often
+each appears in the Chinese wiki.
+
+| Chinese header | English header | Count |
+|---|---|---|
+| `\| 方法 \| 说明 \|` | `\| Method \| Description \|` | 37 |
+| `\| 事件 \| 事件对象 \| 说明 \|` | `\| Event \| Event object \| Description \|` | 9 |
+| `\| 特性 \| PEP \| 语法示例 \| 对 JS 转译 \| NekoJS 状态 \|` | `\| Feature \| PEP \| Syntax example \| JS translation \| NekoJS status \|` | 5 |
+| `\| 钩子 \| 作用 \|` | `\| Hook \| Purpose \|` | 5 |
+| `\| 项 \| 值 \|` | `\| Option \| Value \|` | 4 |
+| `\| 注解 \| 目标 \| 作用 \|` | `\| Annotation \| Target \| Purpose \|` | 2 |
+| `\| 语法 \| 状态 \|` | `\| Syntax \| Status \|` | 2 |
+| `\| 特性 \| 说明 \|` | `\| Feature \| Description \|` | 2 |
+| `\| 平台 \| 配方 reload \|` | `\| Platform \| Recipe reload \|` | 2 |
+
+Note that 作用 in a header is **Purpose**, not "Effect".
+
 ---
 
 ## 5. What is not translated
@@ -234,6 +254,8 @@ translation.
 | 药水 | potion | |
 | 状态效果 | status effect | Class is `MobEffect`. Use "status effect" in prose. |
 | 粒子 | particle | |
+| 模型 | model | The block or item model JSON. Not a data model. |
+| 纹理 | texture | The `.png` asset. |
 | 画作 | painting | |
 | 村民 | villager | |
 | 生物蛋 | spawn egg | |
@@ -300,6 +322,23 @@ translation.
 | 签名 | signature | |
 | 优先级 | priority | |
 | 看板娘 | mascot | Appears in the README credits. |
+| 本体 | NekoJS itself | **Do not translate literally.** 本体 means NekoJS proper, as opposed to a plugin or an external mod. `NekoJS 本体内置` is "built into NekoJS itself". Never "ontology" or "body". |
+| 条目 | entry | A registry or catalog entry. |
+| 第三方 | third-party | Hyphenated as an adjective. |
+| 轻量 | lightweight | One word. |
+| 能力 | capability | `PlatformCapability`. Use "capability", not "ability". |
+| 回调 | callback | |
+| 集成 | integration | |
+| 环境 | environment | 脚本环境 is "script environment", meaning one GraalJS context. |
+| 服务器 | server | The server instance or machine. Distinct from 服务端, which is the server *side*. Both render as "server"; keep the surrounding words clear. |
+| 黑名单 | blocklist | Used for the sandbox class filter. "Blacklist" also appears in the source; prefer "blocklist" in new English text. |
+| 高危 | dangerous | 高危 Java 类 is "dangerous Java classes". Not "high-risk", which reads as risk-management jargon. |
+| 可信代码 | trusted code | 半受信 is "semi-trusted". |
+| 受限 | restricted | |
+| 暴露 | expose | |
+| 拦截 | intercept | |
+| 过滤 | filter | |
+| 定向 | targeted | 定向失效 is "targeted invalidation". |
 
 ### Runtime, compiler, and module system
 
@@ -341,6 +380,38 @@ translation.
 | 诊断 | diagnostic | |
 | 错误追踪 | error tracking | |
 | 行列号 | line and column number | |
+| 方法 | method | |
+| 函数 | function | |
+| 参数 | parameter | |
+| 返回 | return | |
+| 字段 | field | |
+| 对象 | object | |
+| 字符串 | string | |
+| 目录 | directory | |
+| 路径 | path | |
+| 调用 | call | |
+| 版本 | version | |
+| 平台 | platform | |
+| 差异 | difference | |
+| 渲染 | render | |
+| 命名 | naming | 命名空间 is "namespace". |
+| 匹配 | match | |
+| 执行 | execute | |
+| 可用 | available | |
+| 一致 | consistent | |
+| 启动 | startup | 启动脚本 is "startup script" and matches `startup_scripts`. But 启动游戏 is "start the game". |
+| 配置 | configuration | As a verb, "configure". |
+| 说明 | description | As a table column header, always "Description". |
+| 作用 | purpose | As a table column header, "Purpose", not "Effect". |
+| 后端 | backend | A probe backend. Pairs with 前端 (language frontend). |
+| 成员 | member | A class member: field or method. |
+| 泛型 | generic | TypeScript generics. |
+| 幂等 | idempotent | Safe to run more than once with the same result. |
+| 原生 | native | Native ESM, a native Minecraft class. **Do not confuse with 原版, which is "vanilla".** |
+| 驱动 | driven | 数据驱动 is "data-driven". For 强力驱动 in marketing text, use "powered by". |
+| 包级模块 | package-level module | The `java:package/path` import form. |
+| 类级模块 | class-level module | The `java:package/Class` import form. |
+| 拼写错误 | spelling mistake | Used by the script member validation feature. |
 
 ### Process vocabulary
 
