@@ -9,7 +9,7 @@
 | 命令 | 结果 |
 |---|---|
 | `:common:test --rerun-tasks --no-build-cache :common:check guardLint` | BUILD SUCCESSFUL（16 tasks executed） |
-| 测试计数（由 `common/build/test-results/test/TEST-*.xml` 实测，code-review 修订后） | **226 suites / 1673 tests / 0 failures / 0 errors / 5 skipped** |
+| 测试计数（由 `common/build/test-results/test/TEST-*.xml` 实测，整合期缺陷修复后） | **226 suites / 1674 tests / 0 failures / 0 errors / 5 skipped** |
 | `:common:check`（含 `checkCommonIsolation`） | BUILD SUCCESSFUL |
 | `guardLint` | BUILD SUCCESSFUL；守卫块 **248** / 扫描 **331 文件** / 违规 **0** / 警告 **0**（与票 40 改前同） |
 
@@ -28,7 +28,7 @@
 | `core/ui/UiStateOwnerTest`（扩展） | 8 | FakeRoot 补齐 `viewportState()` |
 | `core/api/NormativeApiContractOwnerTest`（扩展） | 6 | 双记账守卫的 facade 过滤谓词同步 |
 
-门禁实测总数 1659 → **1673**（code-review 修订后；首次交付时为 1669）。
+门禁实测总数 1659 → **1674**（整合期缺陷修复后；首次交付 1669，code-review 修订后 1673）。
 
 ## 3. 冻结面（golden）变更——需维护者审阅
 
@@ -130,7 +130,7 @@ justify/anchor/grow/visible/direction/contentScale）、**最终矩形**、**裁
 | 命令 | 结果 |
 |---|---|
 | `:common:test --rerun-tasks --no-build-cache :common:check guardLint` | **BUILD SUCCESSFUL** |
-| 测试计数 | **226 suites / 1673 tests / 0 failures / 0 errors / 5 skipped**（改前 1669） |
+| 测试计数 | **226 suites / 1674 tests / 0 failures / 0 errors / 5 skipped**（整合期缺陷修复后） |
 | `guardLint` | 248 守卫 / 331 文件 / 0 违规 / 0 警告（未变） |
 | `:common:check`（含 `checkCommonIsolation`） | 通过 |
 
@@ -158,3 +158,100 @@ justify/anchor/grow/visible/direction/contentScale）、**最终矩形**、**裁
 - `jsx-ui-viewport-profiles.txt`：231 行 → **273 行**（新增 `scroll#scroller` 子树、`scroll=`/`text=` 列）。
 - 六档现在同时冻结：profile/输入事实、**percent 宽度**、**min/max**、**scroll 偏移**、**文本规格**、矩形、裁剪与溢出。
 - ⚠ 仍**未经人工审阅**；维护者待审。
+
+## 整合期发现的缺陷与修复（fresh checkout 失败）
+
+### 根因（逐字节证实）
+
+票 43 新增的 golden `jsx-ui-viewport-profiles.txt` 是本仓**唯一** `.txt` golden，而 `.gitattributes`
+的 `eol=lf` 列表只覆盖 `java/gradle/kts/groovy/toml/json/json5/md/yml/yaml/sh/properties`，**没有 `*.txt`**。
+在 Windows（本机 `core.autocrlf=true`）上：
+
+| 位置 | 行尾 | 说明 |
+|---|---|---|
+| t43 测试写出的工作树文件 | **纯 LF**（273 行，CR=0） | `Files.writeString` 在 Windows 默认写 LF，所以**本地测试通过** |
+| 仓库内 blob | **纯 LF**（正确） | `git cat-file` 不含 CR |
+| 整合树 checkout 后 | **CRLF**（CR=273） | 无 `*.txt` 规则 → `core.autocrlf` 转 CRLF |
+| 对照 `api-manifest-core.json` | LF | 被既有 `*.json text eol=lf` 覆盖 |
+
+`git check-attr --all -- <golden>` 对该 `.txt` **无任何输出**（确认无属性），而 `.json` 对照文件返回 `text: set` / `eol: lf`。
+测试用 `Files.readString(GOLDEN_PATH)` 逐字符比较 → 任何同事机器上 **fresh checkout 必失败**。
+
+### 复现（修复前）
+
+```powershell
+Remove-Item common/src/test/resources/nekojs/golden/jsx-ui-viewport-profiles.txt -Force
+git checkout -- common/src/test/resources/nekojs/golden/jsx-ui-viewport-profiles.txt
+# 实测输出：AFTER CHECKOUT (no *.txt rule): CR=273 LF=273
+.\gradlew.bat :common:test --tests ...UiViewportProfileGoldenTest --console=plain
+# 实测输出：UiViewportProfileGoldenTest > sixProfilesProduceStableFakeOutput() FAILED
+#           org.opentest4j.AssertionFailedError at UiViewportProfileGoldenTest.java:58
+```
+
+### 修复（两处，均已在整合期缺陷提交中）
+
+**1. 仓库级 `.gitattributes`（单独 commit `0b0f3100`）**
+
+```
+*.properties text eol=lf
+# 文本类冻结基线（golden）以 .txt 存储：与 *.json 同为逐字符比较的测试输入，
+# 必须与仓库内 LF 约定一致，否则 Windows（core.autocrlf=true）checkout 后
+# 工作树变成 CRLF，逐字符比较的 golden 测试必然失败。
+*.txt text eol=lf
+```
+
+**2. 测试对行尾健壮（commit `2e401899`）**
+
+- 读取：`String expected = normalize(Files.readString(GOLDEN_PATH));`，`normalize` 折叠 `\r\n` 与孤立 `\r` 为 `\n`；
+  `actual = normalize(report())` 同样归一化。**这是第二道保险**：`.gitattributes` 只保证仓库内 LF，
+  工作树行尾仍由 `core.autocrlf` 决定。
+- 写入（`-Dnekojs.golden.regenerate=true`）：显式 `StandardCharsets.UTF_8` + `TRUNCATE_EXISTING`，
+  并注释说明依赖平台 LF 的风险。
+
+**3. 回归保护测试**
+
+- `repositoryAttributesPinsTextGoldenToLf()`：直接读仓库根 `.gitattributes`，断言存在同时含 `text` 与 `eol=lf` 的 `*.txt` 规则。
+  **不依赖 git 可执行文件**，因此规则被删/改名会立刻变红。
+- `goldenFileUsesLfInTheRepository()` 的语义已并入 `sixProfilesProduceStableFakeOutput` 的归一化比较（内容一致 + 行尾无关）。
+
+### 验证（实际命令与输出）
+
+```powershell
+# A. 修复后 fresh checkout 的行尾
+Remove-Item <golden> -Force; git checkout -- <golden>
+# 输出：bytes=22526  CR=0  LF=273  lines=273
+git ls-files --eol -- <golden>
+# 输出：i/lf    w/lf    attr/text eol=lf    common/src/test/resources/.../jsx-ui-viewport-profiles.txt
+git check-attr --all -- <golden>
+# 输出：... : text: set / ... : eol: lf
+
+# B. 归一化保险真的生效：把工作树强制改成 CRLF 后测试仍绿
+(强制 CRLF，CR=273) → .\gradlew.bat :common:test --tests ...UiViewportProfileGoldenTest
+# 输出：BUILD SUCCESSFUL
+
+# C. 回归测试真的能抓住：临时注释掉 *.txt 规则
+(规则移除) → 强制 --rerun-tasks 复跑
+# 输出：UiViewportProfileGoldenTest > repositoryAttributesPinsTextGoldenToLf() FAILED
+#       '.gitattributes 必须声明 \'*.txt text eol=lf\'' ==> expected: <true> but was: <false>
+```
+
+### 同类风险自查（AC 要求第 4 项）
+
+`grep` 了 `common/src/test` 下所有读文件，并逐个核对「逐字符比较」的 golden 输入：
+
+| golden 文件 | 扩展名 | `.gitattributes` 覆盖 | 读者是否归一化 | 结论 |
+|---|---|---|---|---|
+| `golden/api-manifest-core.json` | `.json` | ✅ `*.json text eol=lf` | 否（逐字符） | **安全**：仓库内 LF，checkout 后仍 LF |
+| `golden/jsx-ui-viewport-profiles.txt` | `.txt` | 修复前 ❌ → 修复后 ✅ | 修复后 ✅ | **本缺陷**，已修 |
+| `probe/*.expected.d.ts` | `.d.ts` | ❌ 无覆盖 | ✅ `normalize(...)` | 安全（读者归一化，工作树 CRLF 无害） |
+| `probe/legacy-tree/**/*.d.ts`（32 个） | `.d.ts` | ❌ 无覆盖 | ✅ `normalize(...)`（`LegacyProbeTreeTest`/`ProbeOutputCompatibilityTest`/`TypeScriptNoopIrGoldenTest`） | 安全（同上） |
+
+实测：以上 `.d.ts` 工作树确有 CRLF（如 `@package/java/lang/index.d.ts` CR=953），但其仓库内 blob **均为 LF**
+（抽查 `legacy-bindings.expected.d.ts` blob CR=0、`legacy-tree/@package/java/lang/index.d.ts` blob CR=0），
+且读者一律调用 `normalize` → **不构成缺陷**。
+除本票的 `.txt` 外，**没有其它不匹配 `eol=lf` 却做逐字符比较的 golden 扩展名**。
+
+### 修复后门禁
+
+`:common:test --rerun-tasks --no-build-cache :common:check guardLint` → **BUILD SUCCESSFUL**（见下）；
+golden 行数不变（273 行 / 22526 字节）。
