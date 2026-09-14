@@ -29,6 +29,10 @@ import java.util.Map;
  *                     得到逻辑像素；其它种类不受影响。缺省 1.0。
  * @param direction    容器主轴方向覆盖（票 43 AC3）；{@code null} 表示继承 primitive 缺省。
  *                     它改变的是布局策略（row/column 重排），不是新的 primitive。
+ * @param scrollX      水平滚动偏移（逻辑像素，票 43 AC3 的 scroll 策略）；自动夹到可滚动范围。
+ * @param scrollY      垂直滚动偏移（逻辑像素）
+ * @param font         文本字体标识覆盖（票 43 AC3 的文本规格）；{@code null} 表示用基础属性
+ * @param wrap         文本换行覆盖（票 43 AC3 的文本规格）；{@code null} 表示用基础属性
  */
 public record UiLayoutSpec(
         UiDimension width,
@@ -46,7 +50,12 @@ public record UiLayoutSpec(
         double grow,
         boolean visible,
         double contentScale,
-        UiAxis direction
+        UiAxis direction,
+        double scrollX,
+        double scrollY,
+        String font,
+        Boolean wrap,
+        Double textFontSize
 ) {
 
     /** 逻辑像素上限：远超任何 Minecraft 逻辑视口的值属于非法布局值。 */
@@ -81,13 +90,45 @@ public record UiLayoutSpec(
             throw new IllegalArgumentException(
                     "contentScale must be a finite non-negative value, got " + contentScale);
         }
+        scrollX = requireSize(scrollX, "scrollX");
+        scrollY = requireSize(scrollY, "scrollY");
+    }
+
+    /**
+     * 文本规格覆盖后的字号；{@code null} 表示未覆盖（沿用 props 的基础 fontSize）。
+     *
+     * <p>与 {@link #font()}/{@link #wrap()} 一样，它们是<b>解析后的覆盖值</b>，
+     * 只用于 measure 阶段，不改变 {@link #width()}/{@link #height()} 的语义。
+     */
+    public Double fontSize() {
+        return textFontSize;
+    }
+
+    /** 文本规格覆盖后的字体标识；{@code null} 表示未覆盖。 */
+    public String font() {
+        return font;
+    }
+
+    /** 文本规格覆盖后的换行开关；{@code null} 表示未覆盖。 */
+    public Boolean wrap() {
+        return wrap;
+    }
+
+    /** 是否有滚动偏移（用于 scroll 裁剪/偏移语义）。 */
+    public boolean scrolls() {
+        return scrollX > 0 || scrollY > 0;
+    }
+
+    /** 滚动偏移（逻辑像素，独立于重排结果）。 */
+    public UiSize scrollOffset() {
+        return new UiSize(scrollX, scrollY);
     }
 
     /** 默认约束（auto 尺寸、无间距、可见、不缩放、继承 primitive 方向）。 */
     public static UiLayoutSpec defaults() {
         return new UiLayoutSpec(null, null, 0, 0, 0, 0, 0, 0, 0,
                 UiAlignment.START, UiAlignment.START, UiAnchor.TOP_LEFT, 0, true,
-                DEFAULT_CONTENT_SCALE, null);
+                DEFAULT_CONTENT_SCALE, null, 0, 0, null, null, null);
     }
 
     /**
@@ -148,40 +189,12 @@ public record UiLayoutSpec(
                 .visible(bool(values, UiProp.VISIBLE, true))
                 .contentScale(contentScale)
                 .direction(axis(values))
+                .scrollX(number(values, UiProp.SCROLL_X, 0))
+                .scrollY(number(values, UiProp.SCROLL_Y, 0))
+                .font(string(values, UiProp.FONT))
+                .wrap(has(values, UiProp.WRAP) ? bool(values, UiProp.WRAP, false) : null)
+                .textFontSize(has(values, UiProp.FONT_SIZE) ? Double.valueOf(number(values, UiProp.FONT_SIZE, 0)) : null)
                 .build();
-    }
-
-    /**
-     * 最终解析样式的可观察形式（node 路径 → 属性名 → 稳定字面量），供 inspector 与 golden
-     * 读取（票 43 AC5）。它报告已经解析出的约束，不是第二份布局真相源。
-     */
-    public Map<String, Object> resolvedViewport() {
-        Map<String, Object> resolved = new LinkedHashMap<>();
-        resolved.put(UiProp.WIDTH.jsName(), width.literal());
-        resolved.put(UiProp.HEIGHT.jsName(), height.literal());
-        resolved.put(UiProp.MIN_WIDTH.jsName(), minWidth);
-        resolved.put(UiProp.MIN_HEIGHT.jsName(), minHeight);
-        resolved.put(UiProp.MAX_WIDTH.jsName(), maxWidth);
-        resolved.put(UiProp.MAX_HEIGHT.jsName(), maxHeight);
-        resolved.put(UiProp.MARGIN.jsName(), margin);
-        resolved.put(UiProp.PADDING.jsName(), padding);
-        resolved.put(UiProp.GAP.jsName(), gap);
-        resolved.put(UiProp.ALIGN.jsName(), align.jsName());
-        resolved.put(UiProp.JUSTIFY.jsName(), justify.jsName());
-        resolved.put(UiProp.ANCHOR.jsName(), anchor.jsName());
-        resolved.put(UiProp.GROW.jsName(), grow);
-        resolved.put(UiProp.VISIBLE.jsName(), visible);
-        resolved.put(UiProp.DIRECTION.jsName(), direction == null ? null : direction.code());
-        resolved.put("contentScale", contentScale);
-        return resolved;
-    }
-
-    /** 单轴尺寸乘上设计缩放系数：只有 {@link UiDimension.Kind#DESIGN} 受缩放影响。 */
-    public UiDimension scaled(UiDimension dimension) {
-        if (dimension == null || dimension.kind() != UiDimension.Kind.DESIGN) {
-            return dimension;
-        }
-        return UiDimension.pixels(dimension.value() * contentScale);
     }
 
     private static boolean has(Map<String, Object> values, UiProp prop) {
@@ -256,6 +269,11 @@ public record UiLayoutSpec(
         private boolean visible = true;
         private double contentScale = DEFAULT_CONTENT_SCALE;
         private UiAxis direction;
+        private double scrollX;
+        private double scrollY;
+        private String font;
+        private Boolean wrap;
+        private Double textFontSize;
 
         public Builder width(UiDimension value) { this.width = value; return this; }
         public Builder height(UiDimension value) { this.height = value; return this; }
@@ -273,11 +291,17 @@ public record UiLayoutSpec(
         public Builder visible(boolean value) { this.visible = value; return this; }
         public Builder contentScale(double value) { this.contentScale = value; return this; }
         public Builder direction(UiAxis value) { this.direction = value; return this; }
+        public Builder scrollX(double value) { this.scrollX = value; return this; }
+        public Builder scrollY(double value) { this.scrollY = value; return this; }
+        public Builder font(String value) { this.font = value; return this; }
+        public Builder wrap(Boolean value) { this.wrap = value; return this; }
+        /** 文本规格的字号覆盖；基础 props 的 fontSize 也在这里统一进入解析结果。 */
+        public Builder textFontSize(Double value) { this.textFontSize = value; return this; }
 
         public UiLayoutSpec build() {
             return new UiLayoutSpec(width, height, minWidth, minHeight, maxWidth, maxHeight,
                     margin, padding, gap, align, justify, anchor, grow, visible,
-                    contentScale, direction);
+                    contentScale, direction, scrollX, scrollY, font, wrap, textFontSize);
         }
     }
 }

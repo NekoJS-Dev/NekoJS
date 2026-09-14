@@ -35,7 +35,12 @@ public final class UiSpec {
         return "NekoJS Viewport Profile 1-6（使用可用布局区 = 逻辑视口 - 安全区域，不按 GUI scale）："
                 + "自宽到窄取首个两轴都满足的档位；宽高落在不同档时取更窄档（tie-break）。"
                 + "阈值 " + ruleTable() + "；可观察输出为稳定档位码 "
-                + String.join("/", ViewportProfile.codes()) + "。";
+                + String.join("/", ViewportProfile.codes()) + "。"
+                + "每档可覆盖的受控键 = " + String.join("/", UiProfileOverride.KEYS)
+                + "；覆盖缺省回退 = 取编号 <= 当前档的最大已声明档，未命中则用基础值；"
+                + "设计坐标 " + (long) UiResponsiveRules.DESIGN_REFERENCE_WIDTH
+                + "dp 基准，字号受控区间 [" + (long) UiResponsiveRules.MIN_FONT_SIZE
+                + ", " + (long) UiResponsiveRules.MAX_FONT_SIZE + "]。";
     }
 
     private static String ruleTable() {

@@ -58,14 +58,18 @@ public record UiHostInspection(
     }
 
     /**
-     * 只重排后的检查结果：树与解析样式不变（布局事实已由新一次 measure/arrange 替换），
-     * 裁剪矩形按新矩形重算，视口事实与布局代数更新。绘制顺序保持原有语义——只有显式
-     * {@code paint()} 才更新它（票 40 契约）。
+     * 只重排后的检查结果。
+     *
+     * <p>{@code refreshedStyles}/{@code refreshedOverflow} 是本次 measure/arrange 重新解析出的
+     * 结果（由调用方传入，不在这里复用旧 inspection 的字段——旧字段只是上一次的拷贝）。
+     * 裁剪矩形按新矩形重算；绘制顺序保持原有语义（只有显式 {@code paint()} 才更新它，票 40 契约）。
      */
     public UiHostInspection afterRelayout(ProjectedViewport nextViewport, long revisions,
-                                          Map<String, UiRect> refreshedClips) {
+                                          Map<String, UiRect> refreshedClips,
+                                          Map<String, UiLayoutSpec> refreshedStyles,
+                                          Map<String, UiOverflow> refreshedOverflow) {
         return new UiHostInspection(committedRoot, paintOperations, refreshedClips,
-                resolvedStyles, overflow, nextViewport, revisions);
+                refreshedStyles, refreshedOverflow, nextViewport, revisions);
     }
 
     /** 提交新树并携带本次布局解析出的事实。 */
@@ -75,4 +79,5 @@ public record UiHostInspection(
         return new UiHostInspection(root, paintOperations, clipRects, styles, layoutOverflow,
                 nextViewport, revisions);
     }
+
 }

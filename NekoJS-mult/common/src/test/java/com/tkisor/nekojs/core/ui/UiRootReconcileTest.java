@@ -8,6 +8,7 @@ import com.tkisor.nekojs.api.ui.UiHostNode;
 import com.tkisor.nekojs.api.ui.UiPrimitive;
 import com.tkisor.nekojs.api.ui.UiRootHandle;
 import com.tkisor.nekojs.api.ui.UiRootStatus;
+import com.tkisor.nekojs.api.ui.ViewportContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -128,7 +129,7 @@ class UiRootReconcileTest {
         assertEquals(100.0, screen.layout().width(), 0.001);
         assertEquals(50.0, screen.layout().height(), 0.001);
 
-        facade.resize(new com.tkisor.nekojs.api.ui.UiSize(200, 20));
+        facade.resize(ViewportContext.of(200, 20));
         assertEquals(200.0, root.inspection().committedRoot().layout().width(), 0.001,
                 "resize 后布局必须失效重算");
         assertEquals(20.0, root.inspection().committedRoot().layout().height(), 0.001);

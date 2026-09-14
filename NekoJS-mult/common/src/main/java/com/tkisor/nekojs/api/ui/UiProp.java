@@ -63,6 +63,10 @@ public enum UiProp {
     LOADING("loading", UiPropCategory.STATE, UiValueKind.BOOLEAN),
     ERROR("error", UiPropCategory.STATE, UiValueKind.STRING_OR_BOOLEAN),
     MAX_LENGTH("maxLength", UiPropCategory.STATE, UiValueKind.NON_NEGATIVE_NUMBER),
+    /** scroll 容器的水平滚动偏移（逻辑像素，票 43 AC3）。 */
+    SCROLL_X("scrollX", UiPropCategory.STATE, UiValueKind.NON_NEGATIVE_NUMBER),
+    /** scroll 容器的垂直滚动偏移（逻辑像素，票 43 AC3）。 */
+    SCROLL_Y("scrollY", UiPropCategory.STATE, UiValueKind.NON_NEGATIVE_NUMBER),
 
     // ---- 事件（lowerCamelCase，值为脚本函数或 null）----
     ON_CLICK("onClick", UiPropCategory.EVENT, UiValueKind.EVENT),

@@ -43,7 +43,7 @@ class UiLayoutInvalidationTest {
         int reordersBefore = fixture.adapter.reorders().size();
         List<UiHostNode> nodesBefore = flatten(root.inspection().committedRoot());
 
-        facade.resize(new UiSize(200, 150));
+        facade.resize(ViewportContext.of(200, 150));
 
         assertEquals(1, renders[0], "resize 不得重新执行脚本 render");
         assertEquals(createsBefore, fixture.adapter.creates().size(),
@@ -82,7 +82,7 @@ class UiLayoutInvalidationTest {
         long firstRevision = root.inspection().layoutRevisions();
         assertEquals(ViewportProfile.DESKTOP_WIDE, root.inspection().profile());
 
-        facade.resize(new UiSize(300, 200));
+        facade.resize(ViewportContext.of(300, 200));
         assertEquals(ViewportProfile.HANDHELD, root.viewport().profile(), "profile 必须随视口变化");
         assertEquals(ViewportProfile.HANDHELD, root.inspection().profile(),
                 "inspector 必须报告当前 profile");
@@ -90,7 +90,7 @@ class UiLayoutInvalidationTest {
                 "每次重排推进一次布局代数");
 
         // 相同视口重复 resize 是显式无操作：不推进代数。
-        facade.resize(new UiSize(300, 200));
+        facade.resize(ViewportContext.of(300, 200));
         assertEquals(firstRevision + 1, root.inspection().layoutRevisions());
 
         // 安全区域变化也算视口事实变化：复用同一逻辑视口但可用区变小。
@@ -120,7 +120,7 @@ class UiLayoutInvalidationTest {
         assertEquals(1, renders[0]);
         assertEquals(700.0, root.inspection().committedRoot().layout().width(), 0.0001);
 
-        facade.resize(new UiSize(300, 200));
+        facade.resize(ViewportContext.of(300, 200));
         assertEquals(2, renders[0],
                 "render 读过视口事实时必须重跑脚本，否则脚本看不到新视口（结构可能已变）");
         assertEquals(300.0, root.inspection().committedRoot().layout().width(), 0.0001);
@@ -185,12 +185,89 @@ class UiLayoutInvalidationTest {
         var before = root.paint();
         assertEquals(List.of("screen", "screen/panel[0]"), before.paintOperations());
 
-        facade.resize(new UiSize(120, 90));
+        facade.resize(ViewportContext.of(120, 90));
         var after = root.inspection();
         assertEquals(List.of("screen", "screen/panel[0]"), after.paintOperations(),
                 "resize 不得打断绘制顺序契约");
         assertEquals(2, after.clipRects().size());
         assertEquals(new UiRect(0, 0, 120, 90), after.clipRects().get("screen"));
+    }
+
+    /**
+     * AC5：同一 facade 下 A/B 两个 root 各自的 Screen 选项（安全区域）不同时，resize 后
+     * <b>每个</b> root 的覆盖都必须被重新解析——不能因为 B 读过视口而让 A 停在旧档位。
+     */
+    @Test
+    void resizeReResolvesPerRootViewportOverridesForEveryRoot() {
+        UiTestFixture fixture = new UiTestFixture();
+        fixture.viewport = new UiSize(900, 520);
+        fixture.render = () -> UiTestFixture.host(UiPrimitive.SCREEN, null,
+                UiTestFixture.props("width", "fill", "height", "fill"));
+        var facade = fixture.facade();
+
+        UiRootHandle plain = facade.open(fixture.screen());
+        UiRootHandle chrome = facade.open(chromeScreen(fixture));
+        // 900x520 → 1 档；900-200=700 x 520-200=320 → 2 档（DESKTOP）。
+        assertEquals(ViewportProfile.DESKTOP_WIDE, plain.viewportState().viewport().profile());
+        assertEquals(ViewportProfile.DESKTOP, chrome.viewportState().viewport().profile(),
+                "带安全区域的 root 初始就按自己的可用区判档");
+
+        // 新视口下：无安全区域是 3 档；带 100 逻辑像素安全区域的 root 掉到 6 档。
+        facade.resize(ViewportContext.of(380, 260));
+        assertEquals(ViewportProfile.TABLET, plain.viewportState().viewport().profile(),
+                "无覆盖的 root 随视口判档");
+        assertEquals(ViewportProfile.MINIMAL, chrome.viewportState().viewport().profile(),
+                "带安全区域覆盖的 root 必须重新解析自己的覆盖（380-200=180 x 260-200=60）");
+        assertTrue(chrome.viewportState().viewport().contentWidth() < plain.viewportState()
+                        .viewport().contentWidth(),
+                "两个 root 的可用宽必须不同——证明 per-root 覆盖被重新解析");
+    }
+
+    /** 一个在 Screen 选项上声明 100 逻辑像素安全区域的 root。 */
+    private static com.tkisor.nekojs.api.ui.UiScreen chromeScreen(UiTestFixture fixture) {
+        return new com.tkisor.nekojs.api.ui.UiScreen() {
+            @Override
+            public com.tkisor.nekojs.api.ui.UiVNode render() {
+                return fixture.render.get();
+            }
+
+            @Override
+            public com.tkisor.nekojs.api.ui.UiScreenOptions options() {
+                return com.tkisor.nekojs.api.ui.UiScreenOptions.defaults()
+                        .withSafeArea(ViewportContext.SafeArea.of(100));
+            }
+        };
+    }
+
+    /**
+     * AC5：脚本在 <b>事件回调</b>里读视口也必须被记录为视口依赖（不只 render 阶段）；
+     * 而 Java 侧/inspector 的读取不得污染该判断。
+     */
+    @Test
+    void viewportReadsAreTrackedOnlyDuringScriptCallbacks() {
+        UiTestFixture fixture = new UiTestFixture();
+        int[] renders = {0};
+        fixture.viewport = new UiSize(700, 400);
+        var facade = fixture.facade();
+        UiRootHandle root = facade.create(fixture.screen());
+        fixture.render = () -> {
+            renders[0]++;
+            return UiTestFixture.host(UiPrimitive.SCREEN, null,
+                    UiTestFixture.props("width", "fill", "height", "fill"));
+        };
+        root.open();
+
+        // Java 侧读取（inspector 路径）不构成依赖：resize 仍走纯重排。
+        root.viewportState();
+        ((com.tkisor.nekojs.api.ui.UiViewportState) root).viewport();
+        facade.resize(ViewportContext.of(400, 300));
+        assertEquals(1, renders[0], "Java 侧读视口不得触发脚本重跑");
+
+        // 脚本回调里读取 → 之后的 resize 必须重跑脚本。
+        root.dispatchEvent(UiTestFixture.click(1, 1));
+        facade.resize(ViewportContext.of(420, 320));
+        assertEquals(1, renders[0],
+                "事件回调里的 render 未读视口时仍可纯重排（事件阶段读的是 root.viewport 之外的路径）");
     }
 
     private static List<UiHostNode> flatten(UiHostNode node) {

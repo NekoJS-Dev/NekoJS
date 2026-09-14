@@ -67,12 +67,19 @@ public record ViewportContext(
         }
     }
 
-    /** host 布局能力（进入 profile 判定的第三类输入）。 */
+    /**
+     * host 布局能力（进入判定与装配校验的第三类输入）。
+     *
+     * <p>只登记真正被生产路径消费的能力——不预留没有读取者的枚举值。
+     */
     public enum Capability {
-        /** host 视口由平台固定，窗口 resize 不改变逻辑视口。 */
-        FIXED_VIEWPORT("fixed-viewport"),
-        /** host 支持按 profile 重排所需的布局，无需降级。 */
-        RESPONSIVE_LAYOUT("responsive-layout");
+        /**
+         * host 视口由平台固定：窗口 resize 不会改变逻辑视口。
+         *
+         * <p><b>真实消费点</b>：{@code RootUiFacade.resize} 在装配点提交与固定视口矛盾的
+         * 逻辑尺寸时显式失败（{@code INVALID_LAYOUT}），而不是静默接受一个永远不会生效的 resize。
+         */
+        FIXED_VIEWPORT("fixed-viewport");
 
         private final String code;
 

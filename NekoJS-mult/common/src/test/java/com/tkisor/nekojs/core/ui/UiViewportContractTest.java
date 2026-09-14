@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.ui.ProjectedViewport;
 import com.tkisor.nekojs.api.ui.UiLayoutSpec;
 import com.tkisor.nekojs.api.ui.UiProfileOverride;
+import com.tkisor.nekojs.api.ui.UiFailure;
 import com.tkisor.nekojs.api.ui.UiSpec;
 import com.tkisor.nekojs.api.ui.UiViewportState;
 import com.tkisor.nekojs.api.ui.ViewportContext;
@@ -105,7 +106,16 @@ class UiViewportContractTest {
         assertTrue(jsx.contains("type UiAxis = 'row' | 'column';"), jsx);
         // 属性词汇表仍然来自 UiProp.kind()：新增属性必须出现在声明里。
         assertTrue(jsx.contains("readonly direction?: NekoJsx.UiAxis;"), jsx);
-        assertTrue(jsx.contains("readonly profiles?: NekoJsx.UiProfileOverrides;"), jsx);
+        // 覆盖包的属性列表由 UiProfileOverride.KEYS 派生，且不引用未定义的类型名。
+        assertTrue(jsx.contains("readonly profiles?: { readonly [profile: string]: NekoJsx.UiProfileOverride };"), jsx);
+        assertTrue(jsx.contains("interface UiProfileOverride"), jsx);
+        for (String key : UiProfileOverride.KEYS) {
+            assertTrue(jsx.contains("readonly " + key + "?:"),
+                    "覆盖键 " + key + " 必须出现在 UiProfileOverride 声明里");
+        }
+        // 声明里不得出现未定义的类型名（NekoJsx.UiProfileOverrides 曾是悬空引用）。
+        assertFalse(jsx.contains("NekoJsx.UiProfileOverrides"),
+                "声明不得引用未定义的 UiProfileOverrides 类型");
     }
 
     @Test
@@ -113,19 +123,28 @@ class UiViewportContractTest {
         UiTestFixture fixture = new UiTestFixture();
         fixture.viewport = new com.tkisor.nekojs.api.ui.UiSize(900, 520);
         fixture.render = () -> UiTestFixture.host(com.tkisor.nekojs.api.ui.UiPrimitive.SCREEN, null,
-                UiTestFixture.props("width", "fill", "height", "fill",
-                        "profiles", java.util.Map.of(1, java.util.Map.of("gap", 14.0))));
+                UiTestFixture.props("width", "fill", "height", "fill"),
+                UiTestFixture.host(com.tkisor.nekojs.api.ui.UiPrimitive.COLUMN, null,
+                        UiTestFixture.props("width", "fill",
+                                "profiles", java.util.Map.of(1, java.util.Map.of("gap", 14.0)))));
         var root = fixture.facade().open(fixture.screen());
 
         UiViewportState state = root.viewportState();
         assertNotNull(state.viewport());
-        assertEquals(ViewportProfile.DESKTOP_WIDE, state.profile());
-        assertEquals(900.0, state.contentWidth(), 0.0001);
-        assertEquals(520.0, state.contentHeight(), 0.0001);
+        assertEquals(ViewportProfile.DESKTOP_WIDE, state.viewport().profile());
+        assertEquals(900.0, state.viewport().contentWidth(), 0.0001);
+        assertEquals(520.0, state.viewport().contentHeight(), 0.0001);
+        // 规则文本必须真的进入 capability 描述：阈值、tie-break 与受控键都在其中。
+        var capability = CoreManagedApiBootstrap.buildContract(CODE_SOURCE).contract().capabilities()
+                .stream().filter(entry -> "ui.viewport-profiles".equals(entry.id())).findFirst().orElseThrow();
+        assertEquals(com.tkisor.nekojs.api.ui.UiSpec.viewportProfileRule() + " 判定与覆盖解析由 common "
+                + "完整实现，六个档位均有稳定的 fake Adapter 输出。", capability.docs());
+        assertTrue(capability.docs().contains("640x360"), capability.docs());
+        assertTrue(capability.docs().contains("scrollX"), capability.docs());
 
         assertTrue(fixture.diagnostics.isEmpty(), "诊断: " + fixture.diagnostics);
         java.util.Map<String, UiLayoutSpec> styles = state.resolvedStyles();
-        assertEquals(14.0, styles.get("screen").gap(), 0.0001,
+        assertEquals(14.0, styles.get("screen/column[0]").gap(), 0.0001,
                 "解析样式必须反映已应用的 profile 覆盖");
         org.junit.jupiter.api.Assertions.assertThrows(
                 UnsupportedOperationException.class, () -> styles.put("x", UiLayoutSpec.defaults()),
@@ -136,13 +155,13 @@ class UiViewportContractTest {
     void projectedViewportProjectsEveryJudgementInputAndOutput() {
         ViewportContext context = new ViewportContext(520, 340,
                 new ViewportContext.SafeArea(10, 20, 30, 40), 3,
-                Set.of(ViewportContext.Capability.RESPONSIVE_LAYOUT));
+                Set.of(ViewportContext.Capability.FIXED_VIEWPORT));
         ProjectedViewport projected = ProjectedViewport.of(context, 7);
         assertEquals(480.0, projected.contentWidth(), 0.0001);
         assertEquals(280.0, projected.contentHeight(), 0.0001);
         assertEquals(ViewportProfile.TABLET, projected.profile());
         assertEquals(3, projected.guiScale());
-        assertEquals(java.util.List.of("responsive-layout"), projected.capabilities());
+        assertEquals(java.util.List.of("fixed-viewport"), projected.capabilities());
         assertEquals(7, projected.revision());
         assertTrue(projected.atLeast(ViewportProfile.HANDHELD));
         assertFalse(projected.atLeast(ViewportProfile.DESKTOP));
@@ -150,9 +169,38 @@ class UiViewportContractTest {
 
     @Test
     void overrideVocabularyIsExactlyTheDeclaredKeys() {
-        assertEquals(java.util.List.of("align", "anchor", "direction", "fontSize", "gap", "height",
-                "justify", "margin", "maxHeight", "maxWidth", "minHeight", "minWidth", "padding",
-                "visible", "width"), UiProfileOverride.KEYS);
+        assertEquals(java.util.List.of("align", "anchor", "direction", "font", "fontSize", "gap",
+                "height", "justify", "margin", "maxHeight", "maxWidth", "minHeight", "minWidth",
+                "padding", "scrollX", "scrollY", "visible", "width", "wrap"), UiProfileOverride.KEYS);
+    }
+
+    /**
+     * {@link ViewportContext.Capability#FIXED_VIEWPORT} 有真实生产消费者：
+     * 固定视口的 host 提交矛盾的逻辑尺寸时显式失败，而不是静默接受一次永不生效的 resize。
+     */
+    @Test
+    void fixedViewportCapabilityRejectsContradictoryResize() {
+        UiTestFixture fixture = new UiTestFixture();
+        fixture.viewport = new com.tkisor.nekojs.api.ui.UiSize(640, 400);
+        fixture.capabilities = Set.of(ViewportContext.Capability.FIXED_VIEWPORT);
+        fixture.render = () -> UiTestFixture.host(com.tkisor.nekojs.api.ui.UiPrimitive.SCREEN, null,
+                UiTestFixture.props("width", "fill", "height", "fill"));
+        var facade = fixture.facade();
+        facade.open(fixture.screen());
+        assertEquals(ViewportProfile.DESKTOP_WIDE, facade.profile());
+
+        // 相同视口是显式无操作；改变逻辑尺寸必须失败。
+        facade.resize(new ViewportContext(640, 400, ViewportContext.SafeArea.none(), 1, fixture.capabilities));
+        UiFailure failure = org.junit.jupiter.api.Assertions.assertThrows(UiFailure.class,
+                () -> facade.resize(new ViewportContext(320, 200, ViewportContext.SafeArea.none(), 1,
+                        fixture.capabilities)));
+        assertEquals(UiFailure.INVALID_LAYOUT, failure.code());
+        assertEquals(ViewportProfile.DESKTOP_WIDE, facade.profile(), "失败的 resize 不得改变视口事实");
+
+        // 只改安全区域（逻辑尺寸不变）仍被接受：固定的是视口，不是 chrome。
+        facade.resize(new ViewportContext(640, 400, ViewportContext.SafeArea.of(10), 1,
+                fixture.capabilities));
+        assertEquals(620.0, facade.viewportContext().contentWidth(), 0.0001);
     }
 
     private static com.tkisor.nekojs.api.surface.EnvironmentKey serverEnvironment() {

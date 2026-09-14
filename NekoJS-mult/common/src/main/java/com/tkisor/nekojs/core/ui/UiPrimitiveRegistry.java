@@ -121,8 +121,19 @@ public final class UiPrimitiveRegistry {
             }
             UiLayoutSpec.fromProps(props);
             // 每一条 profile 覆盖自身都必须合法：非法覆盖在候选阶段失败，不等某个档位命中。
+            // 覆盖键还必须适用于该 primitive（例如 scrollY 只对 scroll 有意义）——
+            // 键到 primitive 的可适用性同样来自 UiProp 登记表，不是第二份键表。
+            Set<UiProp> allowed = allowedProps(primitive);
             for (UiProfileOverride override : UiProfileOverride
                     .parseAll(props.raw(UiProp.PROFILES), path).values()) {
+                for (String key : override.values().keySet()) {
+                    UiProp prop = UiProp.fromJsName(key);
+                    if (prop == null || !allowed.contains(prop)) {
+                        throw new UiFailure(UiDiagnosticStage.LAYOUT, UiFailure.INVALID_LAYOUT,
+                                "profile override key '" + key + "' is not allowed on <"
+                                        + primitive.tag() + ">", path);
+                    }
+                }
                 UiLayoutSpec.fromProps(props, override);
             }
         } catch (UiFailure failure) {
@@ -157,16 +168,17 @@ public final class UiPrimitiveRegistry {
         map.put(UiPrimitive.COLUMN, union(box, EnumSet.of(UiProp.GAP, UiProp.ALIGN, UiProp.JUSTIFY)));
         map.put(UiPrimitive.STACK, union(box, EnumSet.of(UiProp.ALIGN, UiProp.JUSTIFY)));
         map.put(UiPrimitive.SCROLL, union(box, interactivity, pointer, EnumSet.of(
-                UiProp.ON_SCROLL)));
+                UiProp.SCROLL_X, UiProp.SCROLL_Y, UiProp.ON_SCROLL)));
         map.put(UiPrimitive.LABEL, union(box, EnumSet.of(
                 UiProp.TEXT, UiProp.COLOR, UiProp.FONT, UiProp.FONT_SIZE, UiProp.WRAP,
                 UiProp.NARRATION, UiProp.TOOLTIP, UiProp.ON_CLICK)));
         map.put(UiPrimitive.BUTTON, union(box, interactivity, pointer, EnumSet.of(
-                UiProp.TEXT, UiProp.COLOR, UiProp.FONT, UiProp.FONT_SIZE, UiProp.LOADING,
-                UiProp.ON_CLICK, UiProp.ON_KEY_DOWN, UiProp.ON_KEY_UP, UiProp.ON_CLOSE)));
+                UiProp.TEXT, UiProp.COLOR, UiProp.FONT, UiProp.FONT_SIZE, UiProp.WRAP,
+                UiProp.LOADING, UiProp.ON_CLICK, UiProp.ON_KEY_DOWN, UiProp.ON_KEY_UP,
+                UiProp.ON_CLOSE)));
         map.put(UiPrimitive.INPUT, union(box, interactivity, pointer, EnumSet.of(
                 UiProp.VALUE, UiProp.PLACEHOLDER, UiProp.COLOR, UiProp.FONT, UiProp.FONT_SIZE,
-                UiProp.MAX_LENGTH, UiProp.ERROR, UiProp.ON_CHAR, UiProp.ON_KEY_DOWN,
+                UiProp.MAX_LENGTH, UiProp.ERROR, UiProp.WRAP, UiProp.ON_CHAR, UiProp.ON_KEY_DOWN,
                 UiProp.ON_KEY_UP, UiProp.ON_SUBMIT, UiProp.ON_FOCUS, UiProp.ON_BLUR,
                 UiProp.ON_CLOSE)));
         map.put(UiPrimitive.IMAGE, union(box, EnumSet.of(

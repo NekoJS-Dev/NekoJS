@@ -141,8 +141,8 @@ public final class UiJsxDeclarationGenerator {
         sb.append("  }\n\n");
         sb.append("  /** 最近一次 measure/arrange 解析出的最终布局约束（profile 覆盖与设计坐标已应用）。 */\n");
         sb.append("  interface UiResolvedStyle {\n");
-        sb.append("    readonly width: string;\n");
-        sb.append("    readonly height: string;\n");
+        sb.append("    readonly width: ").append(UiValueKind.DIMENSION.tsType()).append(";\n");
+        sb.append("    readonly height: ").append(UiValueKind.DIMENSION.tsType()).append(";\n");
         sb.append("    readonly minWidth: number;\n");
         sb.append("    readonly minHeight: number;\n");
         sb.append("    readonly maxWidth: number;\n");
@@ -157,7 +157,16 @@ public final class UiJsxDeclarationGenerator {
         sb.append("    readonly visible: boolean;\n");
         sb.append("    readonly direction: UiAxis | null;\n");
         sb.append("    readonly contentScale: number;\n");
+        sb.append("    readonly scrollX: number;\n");
+        sb.append("    readonly scrollY: number;\n");
+        sb.append("    readonly font: string | null;\n");
+        sb.append("    readonly wrap: boolean | null;\n");
         sb.append("  }\n\n");
+        // 覆盖包类型由 UiProfileOverride.KEYS 派生：键表变化会自动反映到声明，
+        // 且每个键的类型文本来自 UiProp.kind()，不存在第二份「键 → 类型」表。
+        for (String line : overrideTypeDeclaration()) {
+            sb.append(line);
+        }
         sb.append("  interface UiPrimitiveProps {\n");
         for (Map.Entry<UiPrimitive, Set<UiProp>> entry : allowedProps().entrySet()) {
             sb.append("    readonly '").append(entry.getKey().tag()).append("': {");
@@ -308,6 +317,27 @@ public final class UiJsxDeclarationGenerator {
             values.add(anchor.jsName());
         }
         return values;
+    }
+
+    /**
+     * 渲染 {@code UiProfileOverride} 类型定义（键表来自 {@link UiProfileOverride#KEYS}）。
+     *
+     * <p>键到类型的映射直接查 {@link UiProp#kind()}（与 runtime 取值校验同源）；没有对应
+     * {@code UiProp} 的键（{	t family scrollX/scrollY 有，font/wrap 也有）不可能出现——
+     * 因此声明不会引用 runtime 不认识的名字。
+     */
+    private static List<String> overrideTypeDeclaration() {
+        List<String> lines = new ArrayList<>();
+        lines.add("  /** Viewport Profile 覆盖包：1-6 档（或档位码）到受控属性覆盖的映射。 */\n");
+        lines.add("  interface UiProfileOverride {\n");
+        lines.add("    readonly [key: string]: unknown;\n");
+        for (String key : com.tkisor.nekojs.api.ui.UiProfileOverride.KEYS) {
+            UiProp prop = UiProp.fromJsName(key);
+            String type = prop != null ? prop.kind().tsType() : "unknown";
+            lines.add("    readonly " + key + "?: " + type + ";\n");
+        }
+        lines.add("  }\n\n");
+        return lines;
     }
 
     private static List<String> viewportProfileCodes() {

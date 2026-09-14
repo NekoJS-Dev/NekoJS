@@ -111,10 +111,10 @@ class UiViewportProfileTest {
                 "固定视口退化为按当前视口判档，不产生额外档位");
         assertTrue(fixed.capabilities().contains(ViewportContext.Capability.FIXED_VIEWPORT));
         // 能力集合是防御性拷贝：外部改动不影响已构造的输入事实。
-        Set<ViewportContext.Capability> mutable = EnumSet.of(ViewportContext.Capability.RESPONSIVE_LAYOUT);
+        Set<ViewportContext.Capability> mutable = EnumSet.of(ViewportContext.Capability.FIXED_VIEWPORT);
         ViewportContext snapshot = new ViewportContext(500, 320, ViewportContext.SafeArea.none(), 1, mutable);
         mutable.clear();
-        assertTrue(snapshot.has(ViewportContext.Capability.RESPONSIVE_LAYOUT));
+        assertTrue(snapshot.has(ViewportContext.Capability.FIXED_VIEWPORT));
     }
 
     @Test

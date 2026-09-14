@@ -63,10 +63,25 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
     private String focusedPath;
     private boolean reconcilePending;
     private UiLayoutEngine.LayoutFacts layoutFacts = UiLayoutEngine.LayoutFacts.empty();
+    /**
+     * 各次成功 measure/arrange 的解析样式与溢出累积表（path → 值）。
+     *
+     * <p>纯重排路径会替换整份 {@link UiLayoutEngine.LayoutFacts}，但节点的 props 没有变，
+     * 因此累积表与最新一次解析结果一致，且不会因为某个节点被覆盖隐藏而丢失观察面。
+     */
+    private final Map<String, com.tkisor.nekojs.api.ui.UiLayoutSpec> relayoutFacts = new LinkedHashMap<>();
+    private final Map<String, com.tkisor.nekojs.api.ui.UiOverflow> relayoutOverflow = new LinkedHashMap<>();
     private ProjectedViewport projectedViewport;
     private long layoutRevisions;
-    /** 脚本 render 是否读取过视口事实（决定 resize 走重排还是走完整 reconcile）。 */
-    private boolean rendering;
+    /**
+     * 是否正处于<b>脚本回调</b>执行期（render 或事件分发）。
+     *
+     * <p>只有脚本在回调里读视口（{@link #viewport()}）才构成「该 root 的布局依赖视口」；
+     * Java 侧与 inspector 的读取（{@link #projectedViewport()} / {@link #viewportState()}）
+     * 不会污染这个判断。
+     */
+    private boolean scriptPhase;
+    /** 脚本是否读过视口事实（sticky）：resize 时必须重跑脚本 render 才能正确。 */
     private boolean viewportDependent;
 
     UiRoot(RootUiFacade facade, UiScreen screen, UiScreenOptions options,
@@ -158,6 +173,7 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         if (target == null) {
             return;
         }
+        scriptPhase = true;
         try {
             facade.dispatchToBindings(target, resolved);
         } catch (UiFailure failure) {
@@ -165,6 +181,8 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         } catch (RuntimeException failure) {
             record(UiDiagnostics.fromThrowable(UiDiagnosticStage.EVENT, "EVENT_FAILURE",
                     failure, path, rootId, generation));
+        } finally {
+            scriptPhase = false;
         }
     }
 
@@ -252,7 +270,7 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
      */
     @Override
     public ProjectedViewport viewport() {
-        if (rendering) {
+        if (scriptPhase) {
             viewportDependent = true;
         }
         return projectedViewport();
@@ -288,15 +306,20 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         if (status == UiRootStatus.DISPOSED || status == UiRootStatus.INVALIDATED) {
             return;
         }
-        if (viewportDependent) {
+        if (viewportDependent || committedRoot == null) {
+            // 脚本读过视口（或还没有可重排的树）：结构可能随视口改变，走完整 reconcile。
+            // 这条路径同时保证 per-root 覆盖（安全区域 / host 布局能力）被重新解析。
             invalidateAndReconcile();
             return;
         }
-        if (committedRoot == null) {
-            return;
-        }
+        // 纯重排：不跑脚本 render，也不经过 reconciler。per-root 视口事实每次都重新解析，
+        // 因此同 facade 下 A/B 两个 root 各自的 options 覆盖都会生效（不会停在旧档位）。
         relayout(committedRoot, currentViewportContext());
-        inspection = inspection.afterRelayout(projectedViewport, layoutRevisions, clipRectsOf(committedRoot));
+        relayoutFacts.putAll(layoutFacts.resolvedStyles());
+        relayoutOverflow.putAll(layoutFacts.overflow());
+        inspection = inspection.afterRelayout(projectedViewport, layoutRevisions,
+                clipRectsOf(committedRoot), unchangedFacts().resolvedStyles(),
+                unchangedFacts().overflow());
     }
 
     @Override
@@ -331,7 +354,7 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
             return;
         }
         UiVNode candidateTree;
-        rendering = true;
+        scriptPhase = true;
         try {
             candidateTree = screen.render();
         } catch (UiFailure failure) {
@@ -342,7 +365,7 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
                     failure, null, rootId, generation));
             return;
         } finally {
-            rendering = false;
+            scriptPhase = false;
             stateOwner.endTracking(this);
         }
         if (candidateTree == null) {
@@ -370,6 +393,10 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
             commitLayout(next, context);
             committedRoot = next;
             committedTree = candidateTree;
+            relayoutFacts.clear();
+            relayoutFacts.putAll(layoutFacts.resolvedStyles());
+            relayoutOverflow.clear();
+            relayoutOverflow.putAll(layoutFacts.overflow());
             inspection = inspection.withCommittedTree(next, layoutFacts.resolvedStyles(),
                     layoutFacts.overflow(), projectedViewport, layoutRevisions);
             if (status == UiRootStatus.CREATED) {
@@ -392,14 +419,11 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         ViewportContext.SafeArea declared = options.safeArea();
         boolean overridesSafeArea = declared.left() > 0 || declared.top() > 0
                 || declared.right() > 0 || declared.bottom() > 0;
-        boolean declaresCapabilities = !options.layoutCapabilities().isEmpty();
-        if (!overridesSafeArea && !declaresCapabilities) {
+        if (!overridesSafeArea) {
             return base;
         }
-        Set<ViewportContext.Capability> capabilities = new LinkedHashSet<>(base.capabilities());
-        capabilities.addAll(options.layoutCapabilities());
         return new ViewportContext(base.logicalWidth(), base.logicalHeight(),
-                overridesSafeArea ? declared : base.safeArea(), base.guiScale(), capabilities);
+                declared, base.guiScale(), base.capabilities());
     }
 
     /**
@@ -419,6 +443,11 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
             throw new UiFailure(UiDiagnosticStage.LAYOUT, UiFailure.INVALID_LAYOUT,
                     "layout failed for " + node.path() + ": " + failure.getMessage(), node.path(), failure);
         }
+    }
+
+    /** 累积解析事实（纯重排路径用；节点 props 未变时与最新解析结果一致）。 */
+    private UiLayoutEngine.LayoutFacts unchangedFacts() {
+        return new UiLayoutEngine.LayoutFacts(Map.copyOf(relayoutFacts), Map.copyOf(relayoutOverflow));
     }
 
     /** 只 measure/arrange 并推进布局代数：不执行脚本 render，也不经过 reconciler（AC5）。 */

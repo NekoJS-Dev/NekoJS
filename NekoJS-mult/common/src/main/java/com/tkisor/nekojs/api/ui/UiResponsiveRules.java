@@ -20,6 +20,12 @@ package com.tkisor.nekojs.api.ui;
  * 判定只看可用布局区（逻辑视口减去安全区域）与 host 布局能力，<b>不看</b> GUI scale；
  * 声明 {@link ViewportContext.Capability#FIXED_VIEWPORT} 时视口由平台固定，
  * 判定退化为「按当前视口判档」，不产生窗口变化语义。
+ *
+ * <p><b>受控覆盖键</b>（AC1 要求可观察输出进入 contract）：每档的覆盖只接受
+ * {@link UiProfileOverride#KEYS} 中的键——尺寸（width/height 支持逻辑像素/百分比/fill/auto/
+ * {@code <n>dp} 设计坐标）、min/max、margin/padding/gap、align/justify/anchor、方向
+ * （direction: row|column）、可见性（visible）、文本规格（font/fontSize/wrap）与滚动策略
+ * （scrollX/scrollY）。未知键与不适用于该 primitive 的键都在候选阶段显式失败。
  */
 public final class UiResponsiveRules {
 

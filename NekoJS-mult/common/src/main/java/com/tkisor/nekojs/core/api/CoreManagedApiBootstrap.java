@@ -444,9 +444,12 @@ public final class CoreManagedApiBootstrap {
                                 "ui.viewport-profiles", ">=1.0.0",
                                 com.tkisor.nekojs.api.capability.CapabilityStatus.SUPPORTED,
                                 null,
-                                "六档 Viewport Profile 判定（逻辑视口 + 安全区域 + host 布局能力，"
-                                        + "不等同 GUI scale）与响应式覆盖解析由 common 完整实现，"
-                                        + "六个档位均有稳定的 fake Adapter 输出。"),
+                                // 规则文本由 UiSpec 从 ViewportProfile / UiResponsiveRules /
+                                // UiProfileOverride.KEYS 派生：阈值、边界、优先级、tie-break 与
+                                // 受控覆盖键都进入 capability 的公开描述，不是第二份硬编码白话。
+                                com.tkisor.nekojs.api.ui.UiSpec.viewportProfileRule()
+                                        + " 判定与覆盖解析由 common 完整实现，六个档位均有稳定的"
+                                        + " fake Adapter 输出。"),
                         new NormativeApiContract.ContractCapability(
                                 "ui.text-measurement", ">=1.0.0",
                                 com.tkisor.nekojs.api.capability.CapabilityStatus.PARTIAL,

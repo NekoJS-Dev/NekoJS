@@ -22,24 +22,6 @@ public interface UiViewportState {
     /** 当前响应式视口事实（档位、逻辑视口、可用布局区、安全区域、原生 scale 与布局代数）。 */
     ProjectedViewport viewport();
 
-    /** 当前判定的 Viewport Profile（{@link #viewport()} 的判定结果）。 */
-    default ViewportProfile profile() {
-        ProjectedViewport current = viewport();
-        return current == null ? null : current.profile();
-    }
-
-    /** 当前可用布局宽（逻辑视口宽 - 安全区域水平占用）。 */
-    default double contentWidth() {
-        ProjectedViewport current = viewport();
-        return current == null ? 0 : current.contentWidth();
-    }
-
-    /** 当前可用布局高（逻辑视口高 - 安全区域垂直占用）。 */
-    default double contentHeight() {
-        ProjectedViewport current = viewport();
-        return current == null ? 0 : current.contentHeight();
-    }
-
     /**
      * 最近一次布局解析出的每个可见节点样式（节点路径 → 最终解析布局约束）。
      *

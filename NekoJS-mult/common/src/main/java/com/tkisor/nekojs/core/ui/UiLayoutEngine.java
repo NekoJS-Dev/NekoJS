@@ -64,7 +64,37 @@ final class UiLayoutEngine {
         measure(root, viewport, size);
         UiRect clip = new UiRect(0, 0, size.width(), size.height());
         arrange(root, clip, clip, size, viewport);
+        // 第二趟：把 scroll 容器的滚动偏移应用到子树。children 矩形保持内容坐标系，
+        // 而 clip/inspection 报告视口坐标系——滚动在两者之间可观察（AC3）。
+        applyScroll(root, viewport);
         return new LayoutFacts(Map.copyOf(viewport.styles), Map.copyOf(viewport.overflow));
+    }
+
+    /**
+     * 把每个 {@code scroll} 容器的滚动偏移应用到其子树（AC3 的 scroll 策略）。
+     *
+     * <p>偏移先按内容尺寸夹到可滚动范围（内容超出容器的量），因此 scrollX/scrollY 不会把
+     * 内容推到反方向；偏移量本身就是布局事实，出现在 {@code resolvedStyles} 里。
+     */
+    private void applyScroll(UiHostNode node, Viewport viewport) {
+        if (node.primitive() == UiPrimitive.SCROLL) {
+            UiLayoutSpec layout = parse(node, viewport);
+            if (layout.scrolls()) {
+                offsetSubtree(node, -layout.scrollX(), -layout.scrollY());
+            }
+        }
+        for (UiHostNode child : node.children()) {
+            applyScroll(child, viewport);
+        }
+    }
+
+    private void offsetSubtree(UiHostNode node, double dx, double dy) {
+        for (UiHostNode child : node.children()) {
+            UiRect rect = child.layout();
+            UiRect moved = new UiRect(rect.x() + dx, rect.y() + dy, rect.width(), rect.height());
+            adapter.arrange(child, moved);
+            offsetSubtree(child, dx, dy);
+        }
     }
 
     /**
@@ -161,13 +191,16 @@ final class UiLayoutEngine {
     // ---- measure 辅助 ----
 
     private UiSize leafSize(UiHostNode node, UiLayoutSpec layout, Viewport viewport, UiSize available) {
-        if (node.primitive() == UiPrimitive.LABEL) {
+        if (node.primitive() == UiPrimitive.LABEL || node.primitive() == UiPrimitive.BUTTON
+                || node.primitive() == UiPrimitive.INPUT) {
+            // 文本规格（字号/字体/换行）按 profile 覆盖解析后的值测量（AC3）。
             UiProps props = node.props();
-            String text = props.string(UiProp.TEXT, "");
+            String text = textOf(node, props);
             double fontSize = UiResponsiveRules.resolveFontSize(
-                    props.number(UiProp.FONT_SIZE, 8), layout.contentScale());
-            boolean wrap = props.bool(UiProp.WRAP, false);
-            String font = props.string(UiProp.FONT);
+                    layout.fontSize() == null ? props.number(UiProp.FONT_SIZE, 8) : layout.fontSize(),
+                    layout.contentScale());
+            boolean wrap = layout.wrap() == null ? props.bool(UiProp.WRAP, false) : layout.wrap();
+            String font = layout.font() == null ? props.string(UiProp.FONT) : layout.font();
             UiDimension width = layout.width();
             double measuredWidth = resolveWidth(width, available.width(), layout.contentScale());
             return measurer.measure(new UiTextMeasure(text, font, fontSize, wrap, measuredWidth));
@@ -176,6 +209,15 @@ final class UiLayoutEngine {
             return new UiSize(0, 0);
         }
         return new UiSize(0, 0);
+    }
+
+    /** 文本 primitive 的文本来源：label 用 text，button 用 text，input 用 value/placeholder。 */
+    private static String textOf(UiHostNode node, UiProps props) {
+        if (node.primitive() == UiPrimitive.INPUT) {
+            String value = props.string(UiProp.VALUE, "");
+            return value.isEmpty() ? props.string(UiProp.PLACEHOLDER, "") : value;
+        }
+        return props.string(UiProp.TEXT, "");
     }
 
     private UiSize containerSize(UiHostNode node, UiLayoutSpec layout, Viewport viewport, UiSize available) {

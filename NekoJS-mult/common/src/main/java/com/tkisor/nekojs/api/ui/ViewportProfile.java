@@ -99,15 +99,6 @@ public enum ViewportProfile {
         return null;
     }
 
-    /** 全部档位编号 1..6。 */
-    public static int[] numbers() {
-        int[] numbers = new int[COUNT];
-        for (int i = 0; i < COUNT; i++) {
-            numbers[i] = i + 1;
-        }
-        return numbers;
-    }
-
     /** 全部稳定档位码（1..6 顺序，供声明与漂移测试使用）。 */
     public static java.util.List<String> codes() {
         java.util.List<String> codes = new java.util.ArrayList<>(COUNT);

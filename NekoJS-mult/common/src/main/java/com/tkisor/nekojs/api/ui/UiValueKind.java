@@ -30,8 +30,13 @@ public enum UiValueKind {
     ANCHOR("NekoJsx.UiAnchor"),
     /** 主轴方向覆盖（{@code row} / {@code column}）；缺省继承 primitive。 */
     AXIS("NekoJsx.UiAxis"),
-    /** Viewport Profile 覆盖包：1–6 档的受控属性覆盖，键为档位编号。 */
-    PROFILE_OVERRIDES("NekoJsx.UiProfileOverrides"),
+    /**
+     * Viewport Profile 覆盖包：1–6 档的受控属性覆盖，键为档位编号或档位码。
+     *
+     * <p>类型文本用内联 mapped type，其属性列表由 {@link UiProfileOverride#KEYS} 派生
+     * （见 {@code UiJsxDeclarationGenerator}），因此不会引用不存在的 NekoJsx 类型名。
+     */
+    PROFILE_OVERRIDES("{ readonly [profile: string]: NekoJsx.UiProfileOverride }"),
     /** 字符串或布尔（error 既可是消息也可是标记）。 */
     STRING_OR_BOOLEAN("string | boolean"),
     /** 受控资源标识（namespace:path），不接受 URL 或绝对路径。 */

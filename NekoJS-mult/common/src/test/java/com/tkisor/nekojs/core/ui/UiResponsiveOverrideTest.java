@@ -34,10 +34,10 @@ class UiResponsiveOverrideTest {
 
     @Test
     void overrideKeysAreExactlyTheDocumentedControlledSet() {
-        assertEquals(List.of("align", "anchor", "direction", "fontSize", "gap", "height", "justify",
-                "margin", "maxHeight", "maxWidth", "minHeight", "minWidth", "padding", "visible", "width"),
-                UiProfileOverride.KEYS);
-        assertTrue(UiProfileOverride.NONE.isEmpty());
+        assertEquals(List.of("align", "anchor", "direction", "font", "fontSize", "gap", "height",
+                "justify", "margin", "maxHeight", "maxWidth", "minHeight", "minWidth", "padding",
+                "scrollX", "scrollY", "visible", "width", "wrap"), UiProfileOverride.KEYS);
+        assertTrue(UiProfileOverride.NONE.values().isEmpty());
     }
 
     @Test
@@ -125,6 +125,13 @@ class UiResponsiveOverrideTest {
         assertThrows(UiFailure.class, () -> UiPrimitiveRegistry.validateProps(UiPrimitive.ROW,
                 UiTestFixture.props("profiles", Map.of(2, Map.of("minWidth", 80, "maxWidth", 20))),
                 "screen/row[0]"));
+        // 经 registry 校验入口统一为契约错误类型 INVALID_LAYOUT；不经校验入口时是 UiLayoutSpec
+        // 自身的取值校验异常（同一非法输入的两种调用路径，语义一致）。
+        UiFailure direct = assertThrows(UiFailure.class, () -> UiPrimitiveRegistry.validateProps(
+                UiPrimitive.ROW,
+                UiTestFixture.props("profiles", Map.of(2, Map.of("minWidth", 80, "maxWidth", 20))),
+                "screen/row[0]"));
+        assertEquals(UiFailure.INVALID_LAYOUT, direct.code());
         assertThrows(IllegalArgumentException.class, () -> UiLayoutSpec.fromProps(
                 UiTestFixture.props("profiles", Map.of(2, Map.of("minWidth", 80, "maxWidth", 20))),
                 ViewportContext.of(500, 320)));
@@ -137,6 +144,51 @@ class UiResponsiveOverrideTest {
         var conflicting = UiTestFixture.props("width", 40, "minWidth", 60,
                 "profiles", Map.of(2, Map.of("minWidth", 0.0)));
         assertEquals(0.0, UiLayoutSpec.fromProps(conflicting, ViewportContext.of(500, 320)).minWidth());
+    }
+
+    @Test
+    void percentAndMinMaxAreResolvedAndClampedByTheContract() {
+        // 520x340 落在 2 档：覆盖 25% 相对容器可用宽（520）解析为 130。
+        UiHostNode wide = renderScreen(520, 340, "width", "50%", "height", 40, "profiles",
+                Map.of(2, Map.of("width", "25%")));
+        assertEquals(130.0, wide.children().get(0).layout().width(), 0.0001,
+                "2 档覆盖 25% 相对可用宽 520 → 130");
+
+        // 300x200 落在 4 档：4 档无声明，回退命中 2 档 → 25% of 300 = 75。
+        UiHostNode narrow = renderScreen(300, 200, "width", "50%", "height", 40, "profiles",
+                Map.of(2, Map.of("width", "25%")));
+        assertEquals(75.0, narrow.children().get(0).layout().width(), 0.0001,
+                "窄档沿用 2 档的 25% 覆盖（可用宽 300 → 75）");
+
+        // min/max 裁剪：固定 40 被 min 抬起；固定 400 被 max 夹住。
+        UiHostNode clamped = renderScreen(520, 340, "width", 40, "height", 20, "profiles",
+                Map.of(2, Map.of("minWidth", 60.0, "maxWidth", 100.0)));
+        assertEquals(60.0, clamped.children().get(0).layout().width(), 0.0001,
+                "40 被 min 60 抬起（再被 max 100 夹住仍是 60）");
+
+        UiHostNode capped = renderScreen(520, 340, "width", 400, "height", 20, "profiles",
+                Map.of(2, Map.of("maxWidth", 120.0)));
+        assertEquals(120.0, capped.children().get(0).layout().width(), 0.0001,
+                "400 被 max 120 夹住");
+
+        // 非法比例：>100% 显式失败（不静默夹到 100）；负数同样显式失败。
+        UiFailure badPercent = assertThrows(UiFailure.class, () -> UiPrimitiveRegistry.validateProps(
+                UiPrimitive.ROW,
+                UiTestFixture.props("profiles", Map.of(2, Map.of("width", "150%"))),
+                "screen/row[0]"));
+        assertEquals(UiFailure.INVALID_LAYOUT, badPercent.code());
+        assertThrows(UiFailure.class, () -> UiPrimitiveRegistry.validateProps(UiPrimitive.ROW,
+                UiTestFixture.props("profiles", Map.of(2, Map.of("width", "-5%"))), "screen/row[0]"));
+    }
+
+    /** 渲染 screen + 一个 panel 子节点，返回已提交的 screen 节点。 */
+    private static UiHostNode renderScreen(double width, double height, Object... panelProps) {
+        UiTestFixture fixture = new UiTestFixture();
+        fixture.viewport = new UiSize(width, height);
+        fixture.render = () -> UiTestFixture.host(UiPrimitive.SCREEN, null,
+                UiTestFixture.props("width", "fill", "height", "fill"),
+                UiTestFixture.host(UiPrimitive.PANEL, null, UiTestFixture.props(panelProps)));
+        return fixture.facade().open(fixture.screen()).inspection().committedRoot();
     }
 
     // ---- AC3：方向、可见性与布局属性按 profile 覆盖 ----
@@ -171,7 +223,7 @@ class UiResponsiveOverrideTest {
         assertEquals(row.children().get(0).layout().y(), row.children().get(1).layout().y(), 0.0001,
                 "宽屏下两个 label 必须在同一行");
 
-        facade.resize(new UiSize(280, 200));
+        facade.resize(ViewportContext.of(280, 200));
         row = root.inspection().committedRoot().children().get(0);
         assertEquals(ViewportProfile.HANDHELD, root.viewport().profile());
         assertEquals(row.children().get(0).layout().x(), row.children().get(1).layout().x(), 0.0001,

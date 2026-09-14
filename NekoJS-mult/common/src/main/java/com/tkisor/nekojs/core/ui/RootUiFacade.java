@@ -85,6 +85,18 @@ public final class RootUiFacade implements UiFacade {
         if (next == null || next.equals(viewportContext)) {
             return;
         }
+        // 声明固定视口的 host 不接受逻辑视口变化：显式失败，不静默吞掉一次永不生效的 resize。
+        if (viewportContext.has(ViewportContext.Capability.FIXED_VIEWPORT)
+                && (next.logicalWidth() != viewportContext.logicalWidth()
+                        || next.logicalHeight() != viewportContext.logicalHeight())) {
+            throw new UiFailure(UiDiagnosticStage.LAYOUT, UiFailure.INVALID_LAYOUT,
+                    "host declares " + ViewportContext.Capability.FIXED_VIEWPORT.code()
+                            + "; the logical viewport is fixed at "
+                            + (long) viewportContext.logicalWidth() + "x"
+                            + (long) viewportContext.logicalHeight()
+                            + " and cannot be resized to "
+                            + (long) next.logicalWidth() + "x" + (long) next.logicalHeight(), null);
+        }
         viewportContext = next;
         for (UiRootHandle root : new ArrayList<>(roots.keySet())) {
             if (root instanceof UiRoot concrete && concrete.isActive()) {
@@ -94,14 +106,6 @@ public final class RootUiFacade implements UiFacade {
         }
     }
 
-    /** 便捷 resize：只改逻辑视口，保留当前安全区域与 host 布局能力。 */
-    public void resize(UiSize next) {
-        if (next == null) {
-            return;
-        }
-        resize(new ViewportContext(next.width(), next.height(), viewportContext.safeArea(),
-                viewportContext.guiScale(), viewportContext.capabilities()));
-    }
 
     @Override
     public com.tkisor.nekojs.api.ui.UiStateOwner createStateOwner() {

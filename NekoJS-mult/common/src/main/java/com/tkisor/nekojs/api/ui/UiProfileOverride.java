@@ -1,19 +1,24 @@
 package com.tkisor.nekojs.api.ui;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 单档 Viewport Profile 的布局覆盖包（jsx-ui-spec「响应式模型」，票 43 AC2/AC3）。
+ * 单档 Viewport Profile 的受控覆盖包（jsx-ui-spec「响应式模型」，票 43 AC2/AC3）。
  *
  * <p>脚本在节点上写一个 {@code profiles} 属性，把 1–6 档各自的覆盖放在一起——不必为每个
  * 属性重复六遍，也不必复制节点。每个覆盖值只描述「这一档相对基础值怎么变」：
  *
  * <pre>
- *   &lt;column gap={4} profiles={{ 1: { gap: 12, direction: 'row' },
- *                                 4: { gap: 2, visible: false } }}&gt;
+ *   &lt;scroll gap={4} profiles={{ 1: { gap: 12, direction: 'row' },
+ *                                 4: { gap: 2, scrollY: 40, visible: false } }}&gt;
  * </pre>
+ *
+ * <p><b>唯一事实源</b>：受控覆盖键只由 {@link #KEYS} 声明一次；解析（类型校验）与
+ * {@link #applyTo} 都按该表驱动——新增一个键只需在 {@link #KEYS} 加一项并补一条取值校验，
+ * 不存在「键表 / 解析 switch / 应用 switch」三份平行副本（票 40 的教训）。
  *
  * <p>解析顺序（固定，AC2）：
  * <ol>
@@ -22,53 +27,72 @@ import java.util.Map;
  *   <li>解析结果再进入 {@link UiLayoutSpec} 的取值校验与 min/max 裁剪。</li>
  * </ol>
  *
- * <p>受控覆盖键恰好是 {@link #KEYS}；未知键、非法档位、非法取值一律显式抛
- * {@link UiFailure}（{@code INVALID_LAYOUT}），不静默忽略、不静默夹取。
+ * <p>未知键、非法档位、非法取值一律显式抛 {@link UiFailure}（{@code INVALID_LAYOUT}），
+ * 不静默忽略、不静默夹取。覆盖键是否适用于某个 primitive 由
+ * {@code UiPrimitiveRegistry} 在候选择阶段一并校验。
  */
-public record UiProfileOverride(
-        UiDimension width,
-        UiDimension height,
-        Double minWidth,
-        Double minHeight,
-        Double maxWidth,
-        Double maxHeight,
-        Double margin,
-        Double padding,
-        Double gap,
-        UiAlignment align,
-        UiAlignment justify,
-        UiAnchor anchor,
-        UiAxis direction,
-        Double fontSize,
-        Boolean visible
-) {
+public record UiProfileOverride(Map<String, Object> values) {
 
-    /** 受控覆盖键（排序后的稳定顺序，供声明与漂移测试使用）。 */
+    /** 受控覆盖键（唯一键表；1..6 档共用同一份词表）。 */
     public static final List<String> KEYS = List.of(
-            "align", "anchor", "direction", "fontSize", "gap", "height", "justify",
-            "margin", "maxHeight", "maxWidth", "minHeight", "minWidth", "padding", "visible", "width");
+            "align", "anchor", "direction", "font", "fontSize", "gap", "height", "justify",
+            "margin", "maxHeight", "maxWidth", "minHeight", "minWidth", "padding", "scrollX",
+            "scrollY", "visible", "width", "wrap");
+
+    /** 数值型键（逻辑像素或权重；全部要求有限的非负数）。 */
+    private static final List<String> NUMERIC_KEYS = List.of(
+            "fontSize", "gap", "margin", "maxHeight", "maxWidth", "minHeight", "minWidth",
+            "padding", "scrollX", "scrollY");
+
+    /** 单轴尺寸键（接受 auto/fill/百分比/逻辑像素/设计坐标）。 */
+    private static final List<String> DIMENSION_KEYS = List.of("width", "height");
+
+    /** 布尔键。 */
+    private static final List<String> BOOLEAN_KEYS = List.of("visible", "wrap");
+
+    /** 文本规格键（字体、字号、换行）。 */
+    public static final List<String> TEXT_KEYS = List.of("font", "fontSize", "wrap");
+
+    /** 滚动策略键。 */
+    public static final List<String> SCROLL_KEYS = List.of("scrollX", "scrollY");
 
     /** 空覆盖（不改变任何属性）。 */
-    public static final UiProfileOverride NONE =
-            new UiProfileOverride(null, null, null, null, null, null, null, null, null,
-                    null, null, null, null, null, null);
+    public static final UiProfileOverride NONE = new UiProfileOverride(Map.of());
 
     public UiProfileOverride {
-        if (minWidth != null) minWidth = requireSize(minWidth, "minWidth");
-        if (minHeight != null) minHeight = requireSize(minHeight, "minHeight");
-        if (maxWidth != null) maxWidth = requireSize(maxWidth, "maxWidth");
-        if (maxHeight != null) maxHeight = requireSize(maxHeight, "maxHeight");
-        if (margin != null) margin = requireSize(margin, "margin");
-        if (padding != null) padding = requireSize(padding, "padding");
-        if (gap != null) gap = requireSize(gap, "gap");
-        if (fontSize != null && (!Double.isFinite(fontSize) || fontSize <= 0 || fontSize > UiLayoutSpec.MAX_LOGICAL_PIXELS)) {
-            throw new IllegalArgumentException("fontSize override must be a positive finite logical-pixel value, got " + fontSize);
-        }
+        values = values == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 
-    /** 是否没有任何覆盖值。 */
-    public boolean isEmpty() {
-        return this.equals(NONE);
+    // ---- 类型化访问器（都从同一份 values 派生）----
+
+    public UiDimension width() { return dimension("width"); }
+    public UiDimension height() { return dimension("height"); }
+    public Double minWidth() { return number("minWidth"); }
+    public Double minHeight() { return number("minHeight"); }
+    public Double maxWidth() { return number("maxWidth"); }
+    public Double maxHeight() { return number("maxHeight"); }
+    public Double margin() { return number("margin"); }
+    public Double padding() { return number("padding"); }
+    public Double gap() { return number("gap"); }
+    public Double fontSize() { return number("fontSize"); }
+    public Double scrollX() { return number("scrollX"); }
+    public Double scrollY() { return number("scrollY"); }
+    public UiAlignment align() { return alignment("align"); }
+    public UiAlignment justify() { return alignment("justify"); }
+    public UiAnchor anchor() { return anchorValue("anchor"); }
+    public UiAxis direction() { return axis("direction"); }
+    public Boolean visible() { return bool("visible"); }
+    public Boolean wrap() { return bool("wrap"); }
+    public String font() { return text("font"); }
+
+    /** 本覆盖是否声明了任何文本规格键（字号/字体/换行）。 */
+    public boolean hasTextSpec() {
+        return values.keySet().stream().anyMatch(TEXT_KEYS::contains);
+    }
+
+    /** 本覆盖是否声明了任何滚动策略键。 */
+    public boolean hasScrollSpec() {
+        return values.keySet().stream().anyMatch(SCROLL_KEYS::contains);
     }
 
     /**
@@ -105,39 +129,45 @@ public record UiProfileOverride(
         throw invalid(path, "profiles must be an object keyed by profile 1-6, got " + describe(raw));
     }
 
-    /** 本档的覆盖值合并到基础属性上（只写覆盖中显式出现的键）。 */
+    /**
+     * 本档的覆盖值合并到基础属性上（键表驱动；只写覆盖中显式出现的键）。
+     *
+     * <p>枚举取值统一还原为脚本侧字面量（{@code align}/{@code anchor}/{@code direction}），
+     * 与基础 props 的表示保持一致，因此下游解析只有一条路径。
+     */
     public Map<String, Object> applyTo(Map<String, Object> base) {
         Map<String, Object> merged = new LinkedHashMap<>(base);
-        if (width != null) merged.put(UiProp.WIDTH.jsName(), width);
-        if (height != null) merged.put(UiProp.HEIGHT.jsName(), height);
-        if (minWidth != null) merged.put(UiProp.MIN_WIDTH.jsName(), minWidth);
-        if (minHeight != null) merged.put(UiProp.MIN_HEIGHT.jsName(), minHeight);
-        if (maxWidth != null) merged.put(UiProp.MAX_WIDTH.jsName(), maxWidth);
-        if (maxHeight != null) merged.put(UiProp.MAX_HEIGHT.jsName(), maxHeight);
-        if (margin != null) merged.put(UiProp.MARGIN.jsName(), margin);
-        if (padding != null) merged.put(UiProp.PADDING.jsName(), padding);
-        if (gap != null) merged.put(UiProp.GAP.jsName(), gap);
-        if (align != null) merged.put(UiProp.ALIGN.jsName(), align.jsName());
-        if (justify != null) merged.put(UiProp.JUSTIFY.jsName(), justify.jsName());
-        if (anchor != null) merged.put(UiProp.ANCHOR.jsName(), anchor.jsName());
-        if (direction != null) merged.put(UiProp.DIRECTION.jsName(), direction.code());
-        if (fontSize != null) merged.put(UiProp.FONT_SIZE.jsName(), fontSize);
-        if (visible != null) merged.put(UiProp.VISIBLE.jsName(), visible);
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof UiAlignment alignment) {
+                merged.put(entry.getKey(), alignment.jsName());
+            } else if (value instanceof UiAnchor anchor) {
+                merged.put(entry.getKey(), anchor.jsName());
+            } else if (value instanceof UiAxis axis) {
+                merged.put(entry.getKey(), axis.code());
+            } else {
+                merged.put(entry.getKey(), value);
+            }
+        }
         return merged;
     }
 
     /**
      * 本节点在给定档位下生效的覆盖（AC2 的「缺省回退」规则，固定且可观察）。
      *
-     * <p>规则与 CSS {@code min-width} 断点同构：<b>一条声明作用于它自己以及所有更宽的档位</b>，
-     * 即「取编号 ≤ 当前档位编号的最大已声明档」。因此基础值是<b>窄屏缺省</b>，脚本只在
-     * 需要的断点上写「从这一档起改成什么」，不必把同一属性重复填六遍；更窄的档位永远落到
-     * 基础值，窄屏策略不会被动地被桌面覆盖偷走。
+     * <p>规则：<b>取编号小于等于当前档位的最大已声明档</b>——一条声明从它声明的档位开始，
+     * 向更窄方向持续生效，直到被更窄档的新声明覆盖。基础值是<b>窄屏缺省</b>，作者只在需要
+     * 改变的断点上写「从这一档起改成什么」。
      *
-     * <p>没有任何声明落在当前档或更宽处时用基础值（{@link #NONE}）。
+     * <p><b>不援引 CSS 类比</b>：CSS {@code min-width} 媒体查询是「宽度大于等于该值时生效」，
+     * 方向是向上的；本契约是「从声明的档位起向更窄方向生效」，方向相反。本条语义由本票在
+     * contract 中定义，理由：profile 编号 1（最宽）→ 6（最窄）是有序的布局能力序列，
+     * 从宽到窄依次降级更符合「降级声明」的直觉，也让 1 档声明可以覆盖全部档位。
+     *
+     * <p>没有任何声明落在当前档或更窄处时用基础值（{@link #NONE}）。
      *
      * <pre>
-     *   profiles={{ 3: { direction: 'row', gap: 8 } }}   // 3 档及以上横排；1–2 档用基础值
+     *   profiles={{ 4: { direction: 'column' } }}   // 4–6 档竖排；1–3 档用基础值
      * </pre>
      *
      * @param profile  当前判定出的档位
@@ -155,21 +185,130 @@ public record UiProfileOverride(
         return NONE;
     }
 
-    // ---- 解析辅助 ----
+    // ---- 解析辅助（分派由键表分类驱动）----
 
     private static void mergeInto(Map<ViewportProfile, UiProfileOverride> target, Map<?, ?> map, String path) {
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             ViewportProfile profile = profileOfKey(entry.getKey(), path);
-            Map<?, ?> values = valuesOf(entry.getValue(), path);
+            if (!(entry.getValue() instanceof Map<?, ?> values)) {
+                throw invalid(path, "profile override must be an object, got " + describe(entry.getValue()));
+            }
             target.put(profile, parseOne(values, path));
         }
     }
 
-    private static Map<?, ?> valuesOf(Object raw, String path) {
-        if (raw instanceof Map<?, ?> map) {
-            return map;
+    private static UiProfileOverride parseOne(Map<?, ?> values, String path) {
+        Map<String, Object> parsed = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : values.entrySet()) {
+            String key = String.valueOf(entry.getKey());
+            if (!KEYS.contains(key)) {
+                throw invalid(path, "unknown profile override key '" + key + "'; supported keys are " + KEYS);
+            }
+            parsed.put(key, parseValue(key, entry.getValue(), path));
         }
-        throw invalid(path, "profile override must be an object, got " + describe(raw));
+        return new UiProfileOverride(parsed);
+    }
+
+    /** 单键取值解析：唯一的分派点。 */
+    private static Object parseValue(String key, Object value, String path) {
+        if (value == null) {
+            throw invalid(path, "profile override '" + key + "' must not be null");
+        }
+        if (DIMENSION_KEYS.contains(key)) {
+            if (value instanceof UiDimension dimension) return dimension;
+            if (value instanceof Number || value instanceof String) {
+                try {
+                    return UiDimension.parse(value);
+                } catch (IllegalArgumentException failure) {
+                    throw invalid(path, "invalid profile override '" + key + "': " + failure.getMessage());
+                }
+            }
+            throw invalid(path, "profile override '" + key + "' must be a size value, got " + describe(value));
+        }
+        if (NUMERIC_KEYS.contains(key)) {
+            return requireNonNegative(key, numeric(value, key, path), path);
+        }
+        if (BOOLEAN_KEYS.contains(key)) {
+            return boolValue(key, value, path);
+        }
+        return switch (key) {
+            case "align", "justify" -> alignmentValue(key, value, path);
+            case "anchor" -> anchorValueOf(key, value, path);
+            case "direction" -> axisValue(key, value, path);
+            case "font" -> textValue(key, value, path);
+            default -> throw invalid(path, "unknown profile override key '" + key + "'");
+        };
+    }
+
+    private static double numeric(Object value, String key, String path) {
+        if (value instanceof Number number) return number.doubleValue();
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text.trim());
+            } catch (NumberFormatException failure) {
+                throw invalid(path, "profile override '" + key + "' is not a number: " + text);
+            }
+        }
+        throw invalid(path, "profile override '" + key + "' must be a number, got " + describe(value));
+    }
+
+    private static double requireNonNegative(String key, double value, String path) {
+        if (!Double.isFinite(value) || value < 0 || value > UiLayoutSpec.MAX_LOGICAL_PIXELS) {
+            throw invalid(path, "profile override '" + key + "' must be a finite logical-pixel value in [0, "
+                    + UiLayoutSpec.MAX_LOGICAL_PIXELS + "], got " + value);
+        }
+        return value;
+    }
+
+    private static Boolean boolValue(String key, Object value, String path) {
+        if (value instanceof Boolean bool) return bool;
+        if (value instanceof String text) {
+            if ("true".equals(text)) return Boolean.TRUE;
+            if ("false".equals(text)) return Boolean.FALSE;
+        }
+        throw invalid(path, "profile override '" + key + "' must be a boolean, got " + describe(value));
+    }
+
+    private static UiAlignment alignmentValue(String key, Object value, String path) {
+        if (value instanceof UiAlignment alignment) return alignment;
+        if (!(value instanceof String text)) {
+            throw invalid(path, "profile override '" + key + "' must be an alignment string, got "
+                    + describe(value));
+        }
+        UiAlignment alignment = UiAlignment.parse(text);
+        if (alignment == null) {
+            throw invalid(path, "profile override '" + key + "' must be a registered alignment, got '" + text + "'");
+        }
+        return alignment;
+    }
+
+    private static UiAnchor anchorValueOf(String key, Object value, String path) {
+        if (value instanceof UiAnchor anchor) return anchor;
+        if (!(value instanceof String text)) {
+            throw invalid(path, "profile override '" + key + "' must be an anchor string, got " + describe(value));
+        }
+        UiAnchor anchor = UiAnchor.parse(text);
+        if (anchor == null) {
+            throw invalid(path, "profile override '" + key + "' must be a registered anchor, got '" + text + "'");
+        }
+        return anchor;
+    }
+
+    private static UiAxis axisValue(String key, Object value, String path) {
+        if (value instanceof UiAxis axis) return axis;
+        if (!(value instanceof String text)) {
+            throw invalid(path, "profile override '" + key + "' must be row|column, got " + describe(value));
+        }
+        UiAxis axis = UiAxis.fromCode(text);
+        if (axis == null) {
+            throw invalid(path, "profile override '" + key + "' must be row|column, got '" + text + "'");
+        }
+        return axis;
+    }
+
+    private static String textValue(String key, Object value, String path) {
+        if (value instanceof String text && !text.isBlank()) return text;
+        throw invalid(path, "profile override '" + key + "' must be a non-blank string, got " + describe(value));
     }
 
     private static ViewportProfile profileOfKey(Object key, String path) {
@@ -201,124 +340,41 @@ public record UiProfileOverride(
         }
     }
 
-    private static UiProfileOverride parseOne(Map<?, ?> values, String path) {
-        UiDimension width = null;
-        UiDimension height = null;
-        Double minWidth = null;
-        Double minHeight = null;
-        Double maxWidth = null;
-        Double maxHeight = null;
-        Double margin = null;
-        Double padding = null;
-        Double gap = null;
-        UiAlignment align = null;
-        UiAlignment justify = null;
-        UiAnchor anchor = null;
-        UiAxis direction = null;
-        Double fontSize = null;
-        Boolean visible = null;
+    // ---- 访问器辅助 ----
 
-        for (Map.Entry<?, ?> entry : values.entrySet()) {
-            String key = String.valueOf(entry.getKey());
-            Object value = entry.getValue();
-            if (!KEYS.contains(key)) {
-                throw invalid(path, "unknown profile override key '" + key + "'; supported keys are " + KEYS);
-            }
-            try {
-                switch (key) {
-                    case "width" -> width = dimension(value, key, path);
-                    case "height" -> height = dimension(value, key, path);
-                    case "minWidth" -> minWidth = size(value, key, path);
-                    case "minHeight" -> minHeight = size(value, key, path);
-                    case "maxWidth" -> maxWidth = size(value, key, path);
-                    case "maxHeight" -> maxHeight = size(value, key, path);
-                    case "margin" -> margin = size(value, key, path);
-                    case "padding" -> padding = size(value, key, path);
-                    case "gap" -> gap = size(value, key, path);
-                    case "fontSize" -> fontSize = size(value, key, path);
-                    case "align" -> align = UiAlignment.parse(string(value, key, path));
-                    case "justify" -> justify = UiAlignment.parse(string(value, key, path));
-                    case "anchor" -> anchor = UiAnchor.parse(string(value, key, path));
-                    case "direction" -> direction = axis(value, path);
-                    case "visible" -> visible = bool(value, key, path);
-                    default -> throw invalid(path, "unknown profile override key '" + key + "'");
-                }
-            } catch (UiFailure failure) {
-                throw failure;
-            } catch (RuntimeException failure) {
-                throw invalid(path, "invalid profile override '" + key + "': " + failure.getMessage());
-            }
-        }
-        try {
-            return new UiProfileOverride(width, height, minWidth, minHeight, maxWidth, maxHeight,
-                    margin, padding, gap, align, justify, anchor, direction, fontSize, visible);
-        } catch (IllegalArgumentException failure) {
-            throw invalid(path, failure.getMessage());
-        }
+    private UiDimension dimension(String key) {
+        Object value = values.get(key);
+        return value instanceof UiDimension dimension ? dimension : null;
     }
 
-    private static UiDimension dimension(Object value, String key, String path) {
-        if (value == null) {
-            throw invalid(path, "profile override '" + key + "' must not be null");
-        }
-        if (value instanceof UiDimension dimension) {
-            return dimension;
-        }
-        if (value instanceof Number || value instanceof String) {
-            return UiDimension.parse(value);
-        }
-        throw invalid(path, "profile override '" + key + "' must be a size value, got " + describe(value));
+    private Double number(String key) {
+        Object value = values.get(key);
+        return value instanceof Number number ? number.doubleValue() : null;
     }
 
-    private static Double size(Object value, String key, String path) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        if (value instanceof String text) {
-            try {
-                return Double.parseDouble(text.trim());
-            } catch (NumberFormatException failure) {
-                throw invalid(path, "profile override '" + key + "' is not a number: " + text);
-            }
-        }
-        throw invalid(path, "profile override '" + key + "' must be a number, got " + describe(value));
+    private Boolean bool(String key) {
+        Object value = values.get(key);
+        return value instanceof Boolean bool ? bool : null;
     }
 
-    private static UiAxis axis(Object value, String path) {
-        if (!(value instanceof String text)) {
-            throw invalid(path, "profile override 'direction' must be row|column, got " + describe(value));
-        }
-        UiAxis axis = UiAxis.fromCode(text);
-        if (axis == null) {
-            throw invalid(path, "profile override 'direction' must be row|column, got '" + text + "'");
-        }
-        return axis;
+    private String text(String key) {
+        Object value = values.get(key);
+        return value instanceof String text ? text : null;
     }
 
-    private static String string(Object value, String key, String path) {
-        if (value instanceof String text) {
-            return text;
-        }
-        throw invalid(path, "profile override '" + key + "' must be a string, got " + describe(value));
+    private UiAlignment alignment(String key) {
+        Object value = values.get(key);
+        return value instanceof UiAlignment alignment ? alignment : null;
     }
 
-    private static Boolean bool(Object value, String key, String path) {
-        if (value instanceof Boolean bool) {
-            return bool;
-        }
-        if (value instanceof String text) {
-            if ("true".equals(text)) return Boolean.TRUE;
-            if ("false".equals(text)) return Boolean.FALSE;
-        }
-        throw invalid(path, "profile override '" + key + "' must be a boolean, got " + describe(value));
+    private UiAnchor anchorValue(String key) {
+        Object value = values.get(key);
+        return value instanceof UiAnchor anchor ? anchor : null;
     }
 
-    private static double requireSize(double value, String name) {
-        if (!Double.isFinite(value) || value < 0 || value > UiLayoutSpec.MAX_LOGICAL_PIXELS) {
-            throw new IllegalArgumentException(name + " override must be a finite logical-pixel value in [0, "
-                    + UiLayoutSpec.MAX_LOGICAL_PIXELS + "], got " + value);
-        }
-        return value;
+    private UiAxis axis(String key) {
+        Object value = values.get(key);
+        return value instanceof UiAxis axis ? axis : null;
     }
 
     private static String describe(Object value) {

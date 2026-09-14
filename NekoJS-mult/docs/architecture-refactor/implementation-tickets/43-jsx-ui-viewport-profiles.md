@@ -25,6 +25,8 @@
 - [x] 设计坐标、逻辑像素和连续比例可共存；文本字号和可读性相关属性不被强制整体等比无限缩放。
 - [x] resize/profile 切换只使布局失效并重新 measure/arrange，不重新执行 GraalJS render 或重建全部 host node；稳定输出包含最终矩形、裁剪和溢出诊断。
 - [x] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。
+  - **fake 侧通过**；**真实端 partial / not-verified**（未启动真实客户端，owner = 票 41）。
+  - golden **未经人工审阅**：新文件由 agent regenerate 后核对，维护者待审。
 
 ## Dependency rationale
 
@@ -53,7 +55,7 @@ cd <wt>/NekoJS-mult
 .\gradlew.bat :common:test --rerun-tasks --no-build-cache :common:check guardLint --console=plain
 ```
 
-`BUILD SUCCESSFUL`；实测 **226 suites / 1669 tests / 0 failures / 0 errors / 5 skipped**；
+`BUILD SUCCESSFUL`；实测 **226 suites / 1673 tests / 0 failures / 0 errors / 5 skipped**（code-review 修订后）；
 `guardLint` 守卫块 248 / 扫描 331 文件 / 违规 0 / 警告 0；`:common:check` 含 `checkCommonIsolation` 通过。
 
 ### 逐 AC 判定
@@ -102,3 +104,79 @@ cd <wt>/NekoJS-mult
   （保守正确；未实现「按结构是否真的依赖视口」的精确追踪）。
 - 未经人工审阅的 golden：新 `jsx-ui-viewport-profiles.txt` 由 agent 以 regenerage 再生成并核对，
   **未被维护者审阅**。
+
+## code-review 修订（第 2 轮，主 agent 核验后）
+
+主 agent 独立核验后提出 6 项必改 + 3 项建议。逐条处理如下；其中 1/2/3/5 是「契约或报告与实现不符」，
+本轮**改实现兑现**而不是降表述，因此 AC1/AC2/AC3 保持 `[x]`。
+
+### 1. AC1 规则文本零生产消费者 → 已兑现
+
+- 根因：`UiSpec.viewportProfileRule()` 当时只有 2 处引用（定义 + 测试），capability docs 是另一段硬编码白话。
+- 现修：`CoreManagedApiBootstrap` 的 `ui.viewport-profiles` capability **直接使用** `UiSpec.viewportProfileRule()`；
+  该文本由 `ViewportProfile`（阈值）+ `UiResponsiveRules`（设计基准/字号区间）+ `UiProfileOverride.KEYS`（受控键）派生。
+- 新增断言 `UiViewportContractTest.resolvedStylesViewIsImmutableAndReflectsTheAppliedOverride` 逐字比对 capability docs
+  与 `UiSpec.viewportProfileRule()`，并断言其中含 `640x360` 阈值与 `scrollX` 键。
+
+### 2. AC3 scroll / 文本规格名不副实 → 已实现
+
+- 覆盖键由 15 → **19**：新增 `scrollX`/`scrollY`（滚动策略）与 `font`/`wrap`（补齐文本规格，此前只有 `fontSize`）。
+- 新增 `UiProp.SCROLL_X`/`SCROLL_Y`（STATE 类，经 `UiProp.kind()` 链），并登记到 `scroll` primitive；
+  `wrap` 从只允许 label 扩展到 label/button/input，使「文本规格可按 profile 覆盖」在真实 primitive 上成立。
+- `UiLayoutEngine` 新增第二趟 `applyScroll`：scroll 容器的偏移应用到子树（children 矩形保持内容坐标系，
+  clip/inspection 报告视口坐标系）；`leafSize` 现按解析后的 font/fontSize/wrap 测量 label/button/input。
+- 覆盖键**逐个按 primitive 校验**（`UiPrimitiveRegistry.validateLayout`）：`scrollY` 用在 `label` 上会显式失败。
+- golden 现在冻结 scroll 偏移与文本规格（`scroll=/text=` 列），六档可见不同（如 2 档 scrollY=6、4-6 档 scrollY=12）。
+
+### 3. AC2 错误类型未按契约固定 + golden 未覆盖 min/max/percent → 已修
+
+- 新增 `UiLayoutSpec(textFontSize)` 解析路径统一；`min>max` 经 registry 校验入口一律 `UiFailure.INVALID_LAYOUT`。
+- ⚠ **如实说明**：`UiLayoutSpec.fromProps(props, context)` **直接调用**（不经 registry）时，`min>max` 仍是
+  `UiLayoutSpec` 紧凑构造抛出的 `IllegalArgumentException`——该路径是 common 内部 API，不是脚本面；
+  脚本可达路径（候选校验 → `UiPrimitiveRegistry.validateLayout`）一律是契约的 `UiFailure.INVALID_LAYOUT`。
+  测试同时钉住两条路径，避免含糊。
+- golden 场景新增 `scroll#scroller`（`width:"50%"` + `minWidth:40` + `maxWidth:160`，2 档覆盖为 `25%`、4 档覆盖 `maxWidth:90`），
+  因此 min/max 与 percent 的解析、裁剪与越界行为都进了冻结输出；另加 `UiResponsiveOverrideTest.percentAndMinMaxAreResolvedAndClampedByTheContract`。
+
+### 4. AC5 多 root 一致性漏洞 → 已修
+
+- 根因：`viewportDependent` 是 per-root 粘性标志，A 未读过视口时 resize 走纯重排；而纯重排路径**不再重解析**
+  per-root 覆盖——但该路径实际每次调用 `currentViewportContext()`（`UiRoot:390`），因此 per-root 覆盖**本来就会**重解析。
+  为把这个事实钉死，新增用例 `resizeReResolvesPerRootViewportOverridesForEveryRoot`：
+  同一 facade 下 A（无安全区域）与 B（安全区域 100）在 resize 后分别报不同 profile 与不同可用宽。
+- **断言面洞已补**：`UiLayoutInvalidationTest` 新增「Java 侧/inspector 读视口不构成依赖」用例，并新增
+  `viewportDependent` 语义说明：只有脚本回调期（render / 事件）读视口才置位，Java 侧读取用 `viewportState()`。
+- 说明：`viewport()` 改为按 `scriptPhase` 判定，不再被 inspector 路径污染。
+
+### 5. REPORT 数字与 golden 审阅记录 → 已修
+
+- golden 行数按实测更正（原报 234 → 实测 231，本轮扩到 **273**）。
+- REPORT §3.1 补齐审阅记录小节（旧/新行数、纯新增结论、⚠ 维护者待审）。
+- AC6 真实端与 golden 审阅状态均按实际标 **partial / not-verified**，owner 写明。
+
+### 6. 零消费者 API 与不实描述 → 已清理
+
+| 项 | 处置 |
+|---|---|
+| `UiLayoutSpec.scaled()` | 删除（零调用者） |
+| `ViewportProfile.numbers()` | 删除（零调用者） |
+| `UiProfileOverride.isEmpty()` | 删除（零调用者） |
+| `UiViewportState` 的 `profile()`/`contentWidth()`/`contentHeight()` default | 删除；调用方改用 `viewport().profile()` 等直接事实 |
+| `ViewportContext.Capability.RESPONSIVE_LAYOUT` | 删除（零读取者）；只留 `FIXED_VIEWPORT` |
+| `ViewportContext.Capability` / `has()` | **保留并补真实消费者**：`RootUiFacade.resize` 对声明固定视口的 host 提交矛盾逻辑尺寸时抛 `INVALID_LAYOUT`（新增测试 `fixedViewportCapabilityRejectsContradictoryResize`） |
+| `UiScreenOptions.layoutCapabilities` / `withLayoutCapabilities` | 删除（只被聚合、从不被读取）；`safeArea` 保留（profile 判定真实使用） |
+| `UiLayoutSpec.resolvedViewport()` | 删除（零调用者）；inspector 用 `UiHostInspection.resolvedStyles()` |
+| `RootUiFacade.resize(UiSize)` | 删除（新增公开重载无调用者且绕过 `requireOwner`）；只保留 `resize(ViewportContext)` |
+| `UiHostInspection.afterRelayout` 的旧值拷贝 | **实现已改**：签名改为接收本次 measure/arrange 重新解析出的 styles/overflow，JavaDoc 与实现一致 |
+| 缺省回退的 CSS 类比 | **已改**：删除「与 CSS min-width 同构」的说法，明确写「方向相反」，并在 contract（`UiProfileOverride.forProfile` + `UiResponsiveRules` + capability docs）中说明理由 |
+
+### 建议项
+
+- **覆盖键 3 份平行副本 → 单表派生**：`UiProfileOverride` 重写为 `values` Map + `KEYS` 单表驱动；
+  解析分派由 `DIMENSION_KEYS`/`NUMERIC_KEYS`/`BOOLEAN_KEYS` + 一个 switch 完成，`applyTo` 只遍历 `values`；
+  类型化访问器全部从同一份 map 派生。新增键只需在 `KEYS` 加一项（并按需归入分类）。
+- **声明断链已修**：`UiValueKind.PROFILE_OVERRIDES.tsType` 不再指向未定义的 `NekoJsx.UiProfileOverrides`，
+  改为内联 mapped type；`UiJsxDeclarationGenerator` 新增 `UiProfileOverride` 接口，其属性列表**由 `KEYS` 派生**、
+  类型文本查 `UiProp.kind()`。测试断言「声明含每个键」且「不含 `NekoJsx.UiProfileOverrides`」。
+- **`viewportDependent` 可观测**：语义改按 `scriptPhase` 判定并加测试；长期行为（是否会走重排）由
+  `UiLayoutInvalidationTest` 的 render 计数与 host-node 同一性断言钉住。

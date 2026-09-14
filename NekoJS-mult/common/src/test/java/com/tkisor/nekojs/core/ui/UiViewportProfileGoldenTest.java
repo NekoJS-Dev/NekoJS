@@ -147,6 +147,10 @@ class UiViewportProfileGoldenTest {
                     .append(" visible=").append(style.visible())
                     .append(" direction=").append(style.direction() == null ? "inherit" : style.direction().code())
                     .append(" contentScale=").append(number(style.contentScale()))
+                    .append(" scroll=").append(number(style.scrollX())).append('/').append(number(style.scrollY()))
+                    .append(" text=").append(style.fontSize() == null ? "inherit" : number(style.fontSize()))
+                    .append('/').append(style.font() == null ? "inherit" : style.font())
+                    .append('/').append(style.wrap() == null ? "inherit" : style.wrap())
                     .append('\n');
         }
 
@@ -175,10 +179,8 @@ class UiViewportProfileGoldenTest {
      * 隐藏次要内容——覆盖「窄屏/宽屏重排不需要每个属性重复填写六遍」（AC3）。
      */
     private static com.tkisor.nekojs.api.ui.UiVNode screen() {
-        Map<String, Object> wide = Map.of("gap", 12.0);
-        Map<String, Object> narrow = new java.util.LinkedHashMap<>(Map.of(
-                "gap", 2.0,
-                "direction", "column"));
+        Map<String, Object> wide = Map.of("padding", 12.0);
+        Map<String, Object> narrow = Map.of("padding", 4.0);
         Map<String, Object> minimal = Map.of("padding", 2.0);
 
         return UiTestFixture.host(UiPrimitive.SCREEN, null,
@@ -206,7 +208,14 @@ class UiViewportProfileGoldenTest {
                                         "profiles", Map.of(6, Map.of("visible", false))))),
                         // 固定 400 逻辑像素的内容：窄档必然溢出，用来冻结溢出诊断的输出。
                         UiTestFixture.host(UiPrimitive.PANEL, "fixed", UiTestFixture.props(
-                                "width", 400.0, "height", 8.0))));
+                                "width", 400.0, "height", 8.0)),
+                        // percent + min/max + scroll offset 的解析与裁剪（AC2/AC3）。
+                        UiTestFixture.host(UiPrimitive.SCROLL, "scroller", UiTestFixture.props(
+                                "width", "50%", "height", 24.0, "minWidth", 40.0, "maxWidth", 160.0,
+                                "profiles", Map.of(2, Map.of("width", "25%", "scrollY", 6.0),
+                                        4, Map.of("scrollY", 12.0, "maxWidth", 90.0))),
+                                UiTestFixture.host(UiPrimitive.PANEL, null, UiTestFixture.props(
+                                        "width", 300.0, "height", 40.0)))));
     }
 
     private static List<UiHostNode> flatten(UiHostNode node) {
