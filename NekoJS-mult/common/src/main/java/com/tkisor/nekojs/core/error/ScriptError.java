@@ -97,6 +97,16 @@ public class ScriptError {
             String errorMessage = bestMessage(primary);
             SourceSection sourceLocation = bestUserSourceLocation(tracker, polyglotException, script);
             if (sourceLocation != null) {
+                if (sourceLocation.getSource() != null) {
+                    String originPath = extractRelativePath(tracker, sourceLocation);
+                    // 位置选择规则见 {@link #isExceptionConstructionFrame} / {@link #firstOriginFrame}。
+                    if (isExceptionConstructionFrame(originPath, sourceLocation)) {
+                        SourceSection origin = firstOriginFrame(tracker, polyglotException, originPath);
+                        if (origin != null) {
+                            sourceLocation = origin;
+                        }
+                    }
+                }
                 int rawLine = sourceLocation.getStartLine();
                 int rawColumn = sourceLocation.getStartColumn();
                 CharSequence chars = sourceLocation.getCharacters();
@@ -111,6 +121,68 @@ public class ScriptError {
             return new ErrorSignature(errorMessage, null, -1, -1, null, false, false, null, "");
         }
         return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "");
+    }
+
+    /**
+     * 该栈帧是否是<strong>异常对象的构造/注入帧</strong>（不是作者写下 raise/throw 的位置）。
+     *
+     * <p>转译语言里两种帧会把真正的异常起源顶掉：
+     * <ol>
+     *   <li><strong>注入区</strong>——运行时 helper 与异常 prelude（{@code class ValueError extends
+     *       Exception {}} 等）是转译器生成的，在 source map 里没有映射段。原生 JS 的 null map 是
+     *       <strong>恒等映射</strong>（行列原样可信），因此只在<em>登记了带段 source map</em> 的产物上
+     *       才把「无映射」判为不可信。</li>
+     *   <li><strong>异常类声明帧</strong>——{@code class MyError(Exception)} / {@code class MyError
+     *       extends Error {}} 的构造器帧指向类声明行；Graal 不捕获 Error 构造时的调用栈，因此它会排在
+     *       真正 throw 的帧之前。</li>
+     * </ol>
+     */
+    private static boolean isExceptionConstructionFrame(String generatedPath, SourceSection location) {
+        if (SourceMapRegistry.hasSourceMapCoverage(generatedPath)
+                && !SourceMapRegistry.coversGeneratedLine(generatedPath, location.getStartLine())) {
+            return true;
+        }
+        return isClassDeclaration(location);
+    }
+
+    /** 该位置的代码是否是 {@code class} 声明语句（含 {@code export}/{@code default}/{@code abstract} 前缀）。 */
+    private static boolean isClassDeclaration(SourceSection location) {
+        CharSequence characters = location.getCharacters();
+        if (characters == null || characters.isEmpty()) {
+            return false;
+        }
+        String text = characters.toString();
+        int newline = text.indexOf('\n');
+        String firstLine = (newline < 0 ? text : text.substring(0, newline)).strip();
+        return firstLine.matches("^(?:(?:export|default|abstract)\\s+)*class\\s.*");
+    }
+
+    /**
+     * 同一模块内第一个<strong>真正的异常起源帧</strong>：跳过构造/注入帧（见
+     * {@link #isExceptionConstructionFrame}）与内部帧。
+     *
+     * <p>只在本模块（{@code originPath}）内查找：跳到调用方的位置会把错误归属到错误的模块，
+     * 破坏跨 import 的错误归属（票 11 AC7 既有语义）。
+     */
+    private static SourceSection firstOriginFrame(DefaultErrorTracker tracker, PolyglotException exception,
+                                                  String originPath) {
+        for (PolyglotException.StackFrame frame : exception.getPolyglotStackTrace()) {
+            if (!frame.isGuestFrame()) {
+                continue;
+            }
+            SourceSection loc = frame.getSourceLocation();
+            if (loc == null || loc.getSource() == null) {
+                continue;
+            }
+            String path = tracker.extractRelativePath(loc.getSource());
+            if (isInternalFrame(path) || !path.equals(originPath)) {
+                continue;
+            }
+            if (!isExceptionConstructionFrame(path, loc)) {
+                return loc;
+            }
+        }
+        return null;
     }
 
     /** 将轻量解析结果写入实例字段；仅在 {@code buildSnippet} 时读取源码文件构造代码片段。 */

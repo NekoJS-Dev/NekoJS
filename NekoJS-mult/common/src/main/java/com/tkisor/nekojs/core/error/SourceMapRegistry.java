@@ -61,6 +61,30 @@ public class SourceMapRegistry {
         return mapping == null ? fallback : mapping.map(jsLine, jsColumn);
     }
 
+    /**
+     * 该生成路径是否登记过<strong>带映射段</strong>的 source map。
+     *
+     * <p>用于区分两种「查表得到 path=null」：原生 JS 的<strong>恒等映射</strong>（压根没有 map，
+     * 行列应原样可信）与转译语言产物里<strong>没有源对应行</strong>的注入区域（map 存在，但该行
+     * 无段）。空 map 与未登记都返回 false。
+     */
+    static boolean hasSourceMapCoverage(String scriptPath) {
+        if (scriptPath == null) {
+            return false;
+        }
+        NormalizedSourceMap mapping = MAPPINGS_MAP.get(normalizeLookupPath(scriptPath));
+        return mapping != null && !mapping.lineMappings.isEmpty();
+    }
+
+    /** 该生成行在已登记的 source map 里是否有映射段（无 map / 空行均返回 false）。 */
+    static boolean coversGeneratedLine(String scriptPath, int jsLine) {
+        if (scriptPath == null) {
+            return false;
+        }
+        NormalizedSourceMap mapping = MAPPINGS_MAP.get(normalizeLookupPath(scriptPath));
+        return mapping != null && mapping.coversLine(jsLine);
+    }
+
     public static void clear() {
         MAPPINGS_MAP.clear();
     }
@@ -356,6 +380,16 @@ public class SourceMapRegistry {
 
         boolean matchesGeneratedPath(String path) {
             return generatedPath.equals(path) || (file != null && file.equals(path));
+        }
+
+        /** 该生成行（1-based）是否有映射段；与 {@link #map(int, int)} 用同一套行号换算。 */
+        boolean coversLine(int jsLine) {
+            int lineIndex = jsLine - Math.max(0, prependedLineCount) - 1;
+            if (lineIndex < 0 || lineIndex >= lineMappings.size()) {
+                return false;
+            }
+            List<MappingEntry> entries = lineMappings.get(lineIndex);
+            return entries != null && !entries.isEmpty();
         }
 
         OriginalPosition map(int jsLine, int jsColumn) {
