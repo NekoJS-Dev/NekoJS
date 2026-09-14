@@ -136,8 +136,30 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         closeSilently();
     }
 
+    /**
+     * CLIENT generation 的 UI 清理边界（jsx-ui-spec「generation 生命周期」「暂停与替换」）。
+     *
+     * <p>由客户端装配点（{@code NekoJSClient}）注入：客户端退出、root close、reload 切换
+     * 都经此关闭全部 UI root 与原生 Screen。默认不注册（服务端/测试不需要）。
+     *
+     * <p>本钩子不构成第二 runtime owner：它只是 root 生命周期上的一个清理回调，
+     * 由唯一 root 持有并在 close 时调用一次。
+     */
+    private Runnable clientUiShutdown = () -> { };
+
+    /** 注册 CLIENT UI 的释放动作（只在客户端装配点调用一次）。 */
+    public void onClientUiShutdown(Runnable action) {
+        this.clientUiShutdown = action == null ? () -> { } : action;
+    }
+
     public void closeSilently() {
         Throwable first = null;
+        try {
+            // 先释放 UI：Context 关闭后脚本事件闭包不再可调用，Screen 必须先收口。
+            clientUiShutdown.run();
+        } catch (Throwable t) {
+            first = t;
+        }
         for (ScriptType type : scriptManagers.keySet()) {
             ScriptManager manager = scriptManagers.get(type);
             try {

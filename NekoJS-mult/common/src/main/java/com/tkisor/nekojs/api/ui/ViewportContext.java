@@ -110,6 +110,16 @@ public record ViewportContext(
         return new ViewportContext(logicalWidth, logicalHeight, SafeArea.none(), 1, java.util.Set.of());
     }
 
+    /**
+     * 只替换逻辑视口，保留安全区域、原生 scale 与 host 布局能力（票 41/43 合并所需）。
+     *
+     * <p>平台 Screen 的 resize 回调只报告新尺寸，不重复报告安全区域/scale/能力；用本方法
+     * 同步尺寸可避免把平台未提供的事实误重置为默认值。
+     */
+    public ViewportContext withLogical(double newLogicalWidth, double newLogicalHeight) {
+        return new ViewportContext(newLogicalWidth, newLogicalHeight, safeArea, guiScale, capabilities);
+    }
+
     /** 可用布局宽（逻辑视口宽 - 安全区域水平占用，下限 0）。 */
     public double contentWidth() {
         return Math.max(0, logicalWidth - safeArea.horizontal());

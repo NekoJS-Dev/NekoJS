@@ -65,14 +65,15 @@ public final class UnavailableUiFacade implements UiFacade {
         // 幂等空操作。
     }
 
+    /** 当前逻辑视口（拒绝实现不做布局；Java 侧查询，不在脚本契约里）。 */
+    public UiSize viewport() {
+        return new UiSize(320, 240);
+    }
+
     private UiFailure unsupported(String operation) {
         return new UiFailure(UiDiagnosticStage.HOST_UPDATE, UiFailure.UNSUPPORTED_CAPABILITY,
                 operation + " is unavailable: no client UI host adapter is installed for generation "
                         + generation, null);
     }
 
-    /** 当前逻辑视口（拒绝实现不做布局）。 */
-    public UiSize viewport() {
-        return new UiSize(320, 240);
-    }
 }

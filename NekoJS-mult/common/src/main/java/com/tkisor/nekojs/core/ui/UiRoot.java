@@ -54,7 +54,8 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
     private final UiLayoutEngine layoutEngine;
     private final String rootId;
     private final int generation;
-    private final Thread ownerThread;
+    /** 显式 owner thread 覆盖（{@link UiScreenOptions#ownerThread()}）；null 表示跟随 facade。 */
+    private final Thread ownerThreadOverride;
 
     private UiHostNode committedRoot;
     private UiVNode committedTree;
@@ -94,8 +95,7 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         this.diagnostics = facade.resources().diagnostics();
         this.rootId = Objects.requireNonNull(rootId, "rootId");
         this.generation = facade.generation();
-        this.ownerThread = this.options.ownerThread() == null
-                ? facade.ownerThread() : this.options.ownerThread();
+        this.ownerThreadOverride = this.options.ownerThread();
         this.reconciler = new UiReconciler(adapter, facade.resources().components(), 64);
         this.layoutEngine = new UiLayoutEngine(adapter, facade.resources().textMeasurer());
     }
@@ -186,6 +186,26 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         }
     }
 
+    /**
+     * 平台 Screen 的 resize 回调入口（Java 侧，不在脚本契约里）。
+     *
+     * <p>只让本 root 的布局失效并重算（jsx-ui-spec「布局」：resize 使布局失效，
+     * 但不在每个绘制帧执行脚本）。{@code viewport} 由平台传入，避免 facade 级
+     * resize 影响其它 root。
+     */
+    public void resizeViewport(UiSize viewport) {
+        requireOwner("Ui.resize");
+        if (viewport == null || status == UiRootStatus.DISPOSED) {
+            return;
+        }
+        facade.setViewport(viewport);
+        if (status == UiRootStatus.OPEN) {
+            invalidateAndReconcile();
+        } else {
+            facade.resize(viewport);
+        }
+    }
+
     @Override
     public UiHostInspection paint() {
         requireOwner("paint");
@@ -246,6 +266,14 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         status = UiRootStatus.DISPOSED;
         reconcilePending = false;
         stateOwner.unregister(this);
+        // 原生 Screen 与 host node 走同一释放路径（jsx-ui-spec「暂停与替换」）：先关闭
+        // Screen 投影，再释放 host node；重复 dispose 是 no-op，因此 cleanup 幂等。
+        try {
+            facade.closeScreen(this);
+        } catch (RuntimeException failure) {
+            record(UiDiagnostics.fromThrowable(UiDiagnosticStage.HOST_UPDATE, "SCREEN_CLOSE_FAILURE",
+                    failure, null, rootId, generation));
+        }
         if (committedRoot != null) {
             reconciler.disposeSubtree(committedRoot);
             committedRoot = null;
@@ -546,10 +574,21 @@ public final class UiRoot implements UiRootHandle, UiViewportState {
         return null;
     }
 
+    /**
+     * root 的 client owner thread：显式选项优先，否则每次向 facade 求值。
+     *
+     * <p>与 {@code RootUiFacade} 同一理由：客户端 owner thread 只在客户端就绪后才存在，
+     * 不能在装配期快照（jsx-ui-spec「状态线程」）。
+     */
+    private Thread ownerThread() {
+        return ownerThreadOverride != null ? ownerThreadOverride : facade.ownerThread();
+    }
+
     private void requireOwner(String operation) {
-        if (Thread.currentThread() != ownerThread) {
+        Thread owner = ownerThread();
+        if (Thread.currentThread() != owner) {
             UiFailure failure = new UiFailure(UiDiagnosticStage.HOST_UPDATE, UiFailure.OFF_OWNER_THREAD,
-                    operation + " must run on the UI owner thread '" + ownerThread.getName()
+                    operation + " must run on the UI owner thread '" + owner.getName()
                             + "', was '" + Thread.currentThread().getName() + "'", null);
             record(UiDiagnostics.fromFailure(failure, null, rootId, generation));
             throw failure;

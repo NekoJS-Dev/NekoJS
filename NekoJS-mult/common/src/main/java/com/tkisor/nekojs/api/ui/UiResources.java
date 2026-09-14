@@ -66,6 +66,18 @@ public interface UiResources {
         return com.tkisor.nekojs.api.ui.ViewportContext.of(size.width(), size.height());
     }
 
+    /**
+     * 原生 Screen 投影边界（jsx-ui-spec「Screen 行为」「暂停与替换」）。
+     *
+     * <p>返回 {@code null} 表示本平台没有客户端 Screen 宿主：root 的 create/open/paint
+     * 仍作为纯逻辑路径可用（fake 测试环境），但不会有原生 Screen 出现——不是静默 no-op
+     * 的能力降级，因为 {@code IPlatform.uiResources()} 在无客户端 host 时本就返回 null，
+     * 脚本会看到显式的 {@link UiFailure#UNSUPPORTED_CAPABILITY}。
+     */
+    default UiScreenHost screenHost() {
+        return null;
+    }
+
     /** 是否在登记表之外额外允许某个 primitive（平台能力差异用）。 */
     default boolean supports(UiPrimitive primitive) {
         return adapter().primitives().contains(primitive);

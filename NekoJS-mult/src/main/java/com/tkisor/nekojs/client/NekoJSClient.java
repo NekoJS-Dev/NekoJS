@@ -45,7 +45,30 @@ public class NekoJSClient {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
             root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
+            // CLIENT UI 释放边界：客户端退出 / root close / reload 切换时关闭全部 JSX Screen
+            // （jsx-ui-spec「generation 生命周期」：释放订阅、host node、原生 widget 与 Screen handle）。
+            root.onClientUiShutdown(() -> closeClientUi(root));
         });
+    }
+
+    /**
+     * 关闭当前 CLIENT generation 的全部 UI root 与原生 Screen。
+     *
+     * <p>走 {@code UiFacade.closeGeneration}：这是唯一 facade 入口，不新建 UI 专用单例或
+     * 跨 generation registry（jsx-ui-spec「Runtime owner」）。没有 UI 装配时是显式空操作。
+     */
+    private static void closeClientUi(NekoRuntimeRoot root) {
+        try {
+            var manager = root.scriptManagerOrNull(ScriptType.CLIENT);
+            if (manager == null) {
+                return;
+            }
+            long generation = manager.generationId();
+            com.tkisor.nekojs.core.api.CoreManagedApiBootstrap.loadUiFacade(
+                    com.tkisor.nekojs.platform.Platform.instance()).closeGeneration((int) generation);
+        } catch (RuntimeException failure) {
+            NekoJS.LOGGER.warn("Failed to close NekoJS UI screens on client shutdown", failure);
+        }
     }
 
     private static void onRegisterEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
