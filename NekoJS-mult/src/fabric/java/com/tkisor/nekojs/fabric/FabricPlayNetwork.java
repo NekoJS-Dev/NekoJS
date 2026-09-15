@@ -24,10 +24,13 @@ import net.minecraft.world.entity.Entity;
  * play 阶段网络的 fabric 桥：装配 {@link PlayPacketDispatcher} 发送面，
  * 注册 S2C payload 类型与客户端 receiver。payload 类与线格式沿用共享树，与 NeoForge 侧一致。
  *
- * <p>当前带 {@code ClientData} 键值同步（{@code ClientData.sync} → {@code clientData.get}）；
- * pdata 同步走 {@link FabricPDataSync}（实体扩展由 fabric {@code MixinEntity} 挂接、
- * 持久化容器由 {@code NekoEntityPDataMixin} 提供）。尚未接的 play 网络面（脚本编辑器同步
- * 8 包、NekoScriptPayload 自定义通道）见 {@code docs/fabric-port-status.md}。
+ * <p>当前 fabric play 面的显式子集：{@code ClientData} 键值同步（{@code ClientData.sync} →
+ * {@code clientData.get}）、脚本自定义通道 {@code NekoScriptPayload}（双向，经
+ * {@link com.tkisor.nekojs.network.NetworkMessageHandler} 中立投递）；pdata 同步走
+ * {@link FabricPDataSync}（实体扩展由 fabric {@code MixinEntity} 挂接、持久化容器由
+ * {@code NekoEntityPDataMixin} 提供），配置阶段包分发走 {@link FabricPackSync}。
+ * 刻意缺失的网络面（错误面板显示 {@code ShowErrorListPacket}、脚本编辑器/dashboard
+ * 同步包）见 {@code docs/fabric-port-status.md}——票 17 明确不伪造这部分 parity。
  */
 public final class FabricPlayNetwork {
 
