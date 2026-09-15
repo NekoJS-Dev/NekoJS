@@ -28,6 +28,7 @@
 | `src/test/java/com/tkisor/nekojs/platform/compat/ScriptPayloadRegistrationShapeTest.java` | 新增 | AC1/AC3 compat seam（26.x NeoForge）：恰一个 bidirectional script_payload 注册 + 两 handler 经 enqueueWork hop 进 owner 总线（2 用例；`//? if neoforge { //? if >=26` 守卫） |
 | `versions/26.1.2-fabric/src/test/java/com/tkisor/nekojs/fabric/FabricNetworkRegistrationOnceTest.java`（26.2.0-fabric 同体一份） | 新增 | AC1 fabric 侧：首次 registerServer 成功、重复注册被平台以 IAE 拒绝（节点本地分发） |
 | `src/fabric/java/com/tkisor/nekojs/fabric/FabricPlayNetwork.java` | 修改（仅 javadoc） | 过时注释修正：类 javadoc 曾称「NekoScriptPayload 自定义通道尚未接」——与实现相悖（2026-09-02 第二批已接线，`docs/fabric-port-status.md` 有记录）；改为如实的显式子集陈述，并显式列出刻意缺失面（ShowErrorListPacket/编辑器/dashboard），即 AC7 的文档面 |
+| 审查整改（7 findings，见 §9） | 修改 | 证据勘误（trace 终版五节点补跑）、hop 断言强化、坏 NBT 断言下界、fabric once 测试 @AfterEach 恢复、trace 扫描纳入 common、重复 close 用例行为化、固定名 gameDir 全量唯一化（`TestGameDirs`，flake 根治） |
 
 **主源码行为改动：零。** 唯一触及的主源文件是 FabricPlayNetwork 的 javadoc（不进字节码语义）。
 
@@ -66,6 +67,7 @@
 | `./gradlew :26.1.2:build --console=plain` | **绿**（test 实测 220/34 skipped/0 失败） |
 | `./gradlew :26.1.2-fabric:build --console=plain` | **绿**（含 verifyFabricRuntimeArtifact；test 114/6 skipped/0 失败） |
 | 跨节点专项（26.2.0 / 1.21.1 / 双 fabric 并行） | **绿**：golden hex 五节点全等；routing/defense/trace/shape/fabric-once 全 0 失败 |
+| 审查整改复跑（终版文件状态） | **绿**：三节点全套 220/220/139 全 0 失败；双 fabric 全套连续 7 轮并行全 0 失败（trace 终版 9 用例五节点补齐，勘误见 `evidence/verification-commands.md` †） |
 
 五节点全量 build 由主会话合并后统一跑（工单约定）。
 
@@ -77,7 +79,7 @@
 | R2 | in-game smoke 未跑 | AC1 的「注册计数/连接协商不变」运行时证据以 characterization + 三面 JVM 钉住代替；未起真机 | 主会话可用 minecraft-mod-mcp 补一轮（与票 06/07 的 smoke 口径一致） |
 | R3 | golden hex 的 NBT 依赖 | script_payload/pdata_sync 的 hex 含 NBT 编码；跨版本一致已在五节点实证，但未来 MC NBT 线格式变化会使 golden 变红——那是受管变更（走迁移表），符合预期 | — |
 | R4 | `NetworkGenerationRoutingTest` 的 harness 在 src/test 复刻了 common 测试树的最小装配 | common 测试 fixture（TestPlatformInit/ManagerHarness）不发布给 src/test，无法复用；复刻约 150 行装配 + per-JVM gameDir。若后续 W4 收口测试基建，可上提共享 | W4/测试基建票据 |
-| R5 | 并行测试的 tmp 目录冲突（已修） | 首轮双 fabric 并行 test 因共享 tmp gameDir 互清脚本而红；修复 = gameDir 按测试 JVM CWD 哈希唯一化。记录在案防止后来者在其它 harness 重踩（`org.gradle.parallel=true` 下同名 tmp 目录都是雷） | — |
+| R5 | 并行测试的 tmp 目录冲突（审查中根治） | 实现轮修复 = RoutingTest 自身 gameDir 按 JVM 唯一化，但审查整改验证时**复现**了一次同型 flake——真根因更深：同 JVM 其它测试类（QueryToolDeclarationParityTest `nekojs-query-tools-test`、KeyBindEventsTest `nekojs-kb-test`、EventBusForgeBridge* `nekojs-smoke-test`）用**固定名** tmp gameDir 且 Platform 初始化先到先得，RoutingTest 寄生其上，并行 JVM（双 fabric 节点/跨 worktree）共享固定名目录互清脚本。根治 = `src/test/.../TestGameDirs.unique(base)`（base+PID）统一替换全部固定名 gameDir；6 轮连续双 fabric 并行复跑全绿。教训：`org.gradle.parallel=true` 下任何**固定名** tmp 目录都是雷，即使本类已唯一化也会被同 JVM 先到的固定名初始化寄生 | — |
 
 ## 7. 迁移影响
 
@@ -89,3 +91,16 @@
 **无重叠。** 核对事实：主工作树（master）当前无未提交的网络文件删除（`git -C D:/mcmodDemo/NekoJS status` 仅 README 修改与杂项未跟踪文件）；
 本分支基线 `eba89230` 的 `git ls-files` 中本就不存在 ScriptSyncFiles/ScriptSyncService/Fetch*/SaveScript/OpenWorkspace/SyncFeedback 等编辑器网络文件
 （编辑器移除已在更早提交完成，`NekoJSCommandsEditorRemovalTest` 为其回归）。本票也未新增/复活任何编辑器、dashboard、显示域网络面。
+
+## 9. 审查整改记录（reviewer 判定：修复后合并 → 已全部整改）
+
+| # | 级别 | finding | 整改 |
+|---|---|---|---|
+| 1 | 必修 | 证据表 26.2.0/1.21.1/26.2.0-fabric 三行的 trace 计数出自旧版 7 用例文件 | `evidence/verification-commands.md` 加 † 勘误 + 「审查整改复跑」终版五节点数字（trace 9/0） |
+| 2 | 优化 | hop 用例未真正断言 enqueueWork 发生 | `ImmediateContext` 记录 `enqueueWorkCalls`，server/client 两 handler 各断言 hop 计数 ≥1 |
+| 3 | 优化 | 坏 NBT `assertThrows(Throwable)` 过宽 | 捕获后补 `assertFalse(ex instanceof AssertionError)`（异常必源于 NBT 解码路径） |
+| 4 | 优化 | FabricNetworkRegistrationOnceTest 泄漏全局 dispatcher 装配 | 两 fabric 节点各加 `@AfterEach` 恢复 `PlayPacketDispatchers.install(NOOP)` |
+| 5 | 优化 | trace 扫描自称「全仓 main」却漏 common | `mainJavaFiles()` 纳入 `common/src/main/java`（计数断言不变，common 实测零命中） |
+| 6 | 优化 | 重复 close 用例末尾两条自证式断言 | 换成行为断言：close 后再投一次仍安全且零投递；删无用 import |
+| 7 | 优化 | FabricPlayNetwork 类首段 javadoc 残留旧表述 | 首段改为「注册 play payload 类型（S2C 同步包 + 双向脚本自定义通道）与对应 receiver」 |
+| 附加 | — | 整改验证中复现 RoutingTest 偶发「候选脚本零执行」 | 根因 = 固定名 gameDir + Platform 先到先得寄生（§6-R5 修订）；新增 `TestGameDirs.unique`（base+PID）替换全部固定名 gameDir，6 轮双 fabric 并行复跑全绿 |
