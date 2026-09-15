@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.plugin;
 
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 
 import java.util.ArrayList;
@@ -32,12 +33,19 @@ public final class TypeDocsPoint {
         }
     }
 
-    /** type_docs / node_type_docs 两点的产物：优先级排序后的类型文档与手写声明快照。 */
-    record TypeDocsSnapshot(List<TypeDocCatalogEntry> docs, List<ManualDeclarationCatalogEntry> manualDeclarations) {
+    /** type_docs / node_type_docs 两点的产物：优先级排序后的类型文档、手写声明与 builder 契约条目快照。 */
+    record TypeDocsSnapshot(
+            List<TypeDocCatalogEntry> docs,
+            List<ManualDeclarationCatalogEntry> manualDeclarations,
+            List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces) {
         TypeDocsSnapshot {
             docs = docs.stream().sorted(Comparator.comparingInt(TypeDocCatalogEntry::priority)).toList();
             manualDeclarations = manualDeclarations.stream()
                     .sorted(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority)).toList();
+            registryBuilderSurfaces = registryBuilderSurfaces.stream()
+                    .sorted(Comparator.comparing(RegistryBuilderSurfaceEntry::builderName)
+                            .thenComparing(RegistryBuilderSurfaceEntry::typeName))
+                    .toList();
         }
     }
 
@@ -45,6 +53,7 @@ public final class TypeDocsPoint {
     static final class Bucket implements TypeDocsRegister, Sealable {
         private final List<TypeDocCatalogEntry> docs = new ArrayList<>();
         private final List<ManualDeclarationCatalogEntry> manualDeclarations = new ArrayList<>();
+        private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces = new ArrayList<>();
         private boolean sealed;
 
         private void checkSealed() {
@@ -65,9 +74,16 @@ public final class TypeDocsPoint {
             manualDeclarations.add(java.util.Objects.requireNonNull(entry, "entry"));
         }
 
+        @Override
+        public void registerRegistryBuilderSurface(RegistryBuilderSurfaceEntry entry) {
+            checkSealed();
+            registryBuilderSurfaces.add(java.util.Objects.requireNonNull(entry, "entry"));
+        }
+
         TypeDocsSnapshot snapshot() {
             sealed = true;
-            return new TypeDocsSnapshot(List.copyOf(docs), List.copyOf(manualDeclarations));
+            return new TypeDocsSnapshot(List.copyOf(docs), List.copyOf(manualDeclarations),
+                    List.copyOf(registryBuilderSurfaces));
         }
 
         @Override

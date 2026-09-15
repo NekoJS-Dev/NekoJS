@@ -13,12 +13,29 @@ import net.minecraft.world.effect.MobEffectCategory;
 public class MobEffectBuilder extends RegistryObjectBuilder<MobEffect> {
 
     /** 类别名：beneficial / harmful / neutral（默认 neutral）。 */
-    public String category = "neutral";
+    private String category = "neutral";
     /** ARGB 颜色（如 0x8B0000）。 */
-    public int color = 0xFFFFFF;
+    private int color = 0xFFFFFF;
 
     public MobEffectBuilder(Identifier id) {
         super(id);
+    }
+
+    /** 类别名（已归一化小写）。 */
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category == null ? "neutral" : category.toLowerCase();
+    }
+
+    public int getColor() {
+        return color;
+    }
+
+    public void setColor(int color) {
+        this.color = color;
     }
 
     @Override

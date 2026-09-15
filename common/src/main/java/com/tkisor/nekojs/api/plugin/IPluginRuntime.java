@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.plugin;
 
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.api.data.Binding;
 import com.tkisor.nekojs.api.event.EventGroup;
@@ -31,6 +32,14 @@ public interface IPluginRuntime {
     List<TypeDocCatalogEntry> typeDocs();
 
     List<ManualDeclarationCatalogEntry> manualDeclarations();
+
+    /**
+     * typed Builder 面的结构化契约条目（ticket 15）：版本树契约反射派生，TS/Python declaration 同源渲染。
+     * default 空实现保持既有实现方（含测试 stub）兼容——真实产物由 {@code NekoPluginRuntime} 合并提供。
+     */
+    default List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces() {
+        return List.of();
+    }
 
     /** 插件注册的 JS 模块：moduleId → CommonJS source。 */
     Map<String, String> nodeModules();

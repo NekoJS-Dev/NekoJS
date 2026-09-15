@@ -48,16 +48,33 @@ public final class RegistryTypesPoint {
     public static final class RegistryTypesCollector {
         final Map<ResourceKey<? extends Registry<?>>, Map<String, Function<Identifier, ?>>> byRegistry = new LinkedHashMap<>();
         final Map<ResourceKey<? extends Registry<?>>, String> defaults = new LinkedHashMap<>();
+        /** (registry, name) → builder 类（声明/契约派生用；未提供的类型无派生声明）。 */
+        final Map<ResourceKey<? extends Registry<?>>, Map<String, Class<? extends RegistryObjectBuilder<?>>>> builderClasses = new LinkedHashMap<>();
 
         /** 登记一个命名类型（同 (registry, name) 后到覆盖 + warn，overrideWarn）。 */
         public <B extends RegistryObjectBuilder<?>> void registerType(
                 ResourceKey<? extends Registry<?>> registry, String name, Function<Identifier, B> factory) {
+            registerType(registry, name, null, factory);
+        }
+
+        /**
+         * 登记一个命名类型并声明 builder 类（ticket 15）：builder 类是 typed Builder 公开
+         * 成员 / 校验 / 声明派生的契约反射输入（AC7/AC9）——runtime member、fingerprint、
+         * TS/Python declaration 与 golden 都从它派生，不手写第二份成员表。
+         */
+        public <B extends RegistryObjectBuilder<?>> void registerType(
+                ResourceKey<? extends Registry<?>> registry, String name,
+                Class<B> builderType, Function<Identifier, B> factory) {
             byRegistry.computeIfAbsent(registry, k -> new LinkedHashMap<>()).merge(name, factory,
                     (oldFactory, newFactory) -> {
                         boolean keepNew = POLICY.resolveDuplicate(ID + "(" + registry.identifier() + ")",
                                 "plugin", name, LOGGER);
                         return keepNew ? newFactory : oldFactory;
                     });
+            if (builderType != null) {
+                builderClasses.computeIfAbsent(registry, k -> new LinkedHashMap<>())
+                        .put(name, builderType);
+            }
         }
 
         /** 设定注册表的 default 类型名（脚本糖方法免名直达）。 */
@@ -69,10 +86,12 @@ public final class RegistryTypesPoint {
     /** 产物：不可变类型表 + default 表。 */
     record RegistryTypes(
             Map<ResourceKey<? extends Registry<?>>, Map<String, Function<Identifier, ?>>> byRegistry,
-            Map<ResourceKey<? extends Registry<?>>, String> defaults) {
+            Map<ResourceKey<? extends Registry<?>>, String> defaults,
+            Map<ResourceKey<? extends Registry<?>>, Map<String, Class<? extends RegistryObjectBuilder<?>>>> builderClasses) {
         RegistryTypes {
             byRegistry = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(byRegistry));
             defaults = Map.copyOf(defaults);
+            builderClasses = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(builderClasses));
         }
 
         /** 取某注册表的命名类型工厂（无则 null）。 */
@@ -101,6 +120,12 @@ public final class RegistryTypesPoint {
                     .map(Map.Entry::getKey)
                     .toList();
         }
+
+        /** 某注册表下已声明 builder 类的 (类型名 → builder 类) 只读视图（契约/声明派生输入）。 */
+        public Map<String, Class<? extends RegistryObjectBuilder<?>>> builderClassesOf(
+                ResourceKey<? extends Registry<?>> registry) {
+            return java.util.Collections.unmodifiableMap(builderClasses.getOrDefault(registry, Map.of()));
+        }
     }
 
     /** 扩展点定义（由 NekoRegistryPointsPlugin 注册）。 */
@@ -114,6 +139,6 @@ public final class RegistryTypesPoint {
                         return new RegistryTypesCollector();
                     })
                     .collector(Contributor::registerRegistryTypes)
-                    .finish(collector -> new RegistryTypes(collector.byRegistry, collector.defaults))
+                    .finish(collector -> new RegistryTypes(collector.byRegistry, collector.defaults, collector.builderClasses))
                     .build();
 }

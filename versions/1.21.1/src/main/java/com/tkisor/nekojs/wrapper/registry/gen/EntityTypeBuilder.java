@@ -38,15 +38,15 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
     private static final java.util.Set<ResourceLocation> SPAWN_EGGS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /** 生物类别名：monster/ambient/water_creature/water_ambient/underground_water_creature/axolotls/misc（默认 creature）。 */
-    public String category = "creature";
-    public float width = 0.6F;
-    public float height = 1.8F;
-    public int trackingRange = 8;
-    public int updateInterval = 3;
-    public boolean receiveVelocityUpdates = true;
-    public boolean fireImmune = false;
-    public boolean noSave = false;
-    public boolean noSummon = false;
+    private String category = "creature";
+    private float width = 0.6F;
+    private float height = 1.8F;
+    private int trackingRange = 8;
+    private int updateInterval = 3;
+    private boolean receiveVelocityUpdates = true;
+    private boolean fireImmune = false;
+    private boolean noSave = false;
+    private boolean noSummon = false;
 
     private Integer spawnEggBackgroundColor = null;
     private Integer spawnEggHighlightColor = null;
@@ -57,10 +57,99 @@ public class EntityTypeBuilder extends RegistryObjectBuilder<EntityType<?>> {
         super(id);
     }
 
+    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+
+    /** 生物类别名（已归一化小写）。 */
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category == null ? "creature" : category.toLowerCase();
+    }
+
+    public float getWidth() {
+        return width;
+    }
+
+    public void setWidth(float width) {
+        requirePositive("width", width);
+        this.width = width;
+    }
+
+    public float getHeight() {
+        return height;
+    }
+
+    public void setHeight(float height) {
+        requirePositive("height", height);
+        this.height = height;
+    }
+
+    public int getTrackingRange() {
+        return trackingRange;
+    }
+
+    public void setTrackingRange(int trackingRange) {
+        if (trackingRange < 0) {
+            throw new IllegalArgumentException("trackingRange must be >= 0 but got " + trackingRange);
+        }
+        this.trackingRange = trackingRange;
+    }
+
+    public int getUpdateInterval() {
+        return updateInterval;
+    }
+
+    public void setUpdateInterval(int updateInterval) {
+        if (updateInterval < 1) {
+            throw new IllegalArgumentException("updateInterval must be >= 1 but got " + updateInterval);
+        }
+        this.updateInterval = updateInterval;
+    }
+
+    public boolean isReceiveVelocityUpdates() {
+        return receiveVelocityUpdates;
+    }
+
+    public void setReceiveVelocityUpdates(boolean receiveVelocityUpdates) {
+        this.receiveVelocityUpdates = receiveVelocityUpdates;
+    }
+
+    public boolean isFireImmune() {
+        return fireImmune;
+    }
+
+    public void setFireImmune(boolean fireImmune) {
+        this.fireImmune = fireImmune;
+    }
+
+    public boolean isNoSave() {
+        return noSave;
+    }
+
+    public void setNoSave(boolean noSave) {
+        this.noSave = noSave;
+    }
+
+    public boolean isNoSummon() {
+        return noSummon;
+    }
+
+    public void setNoSummon(boolean noSummon) {
+        this.noSummon = noSummon;
+    }
+
+    private static void requirePositive(String what, float value) {
+        if (value <= 0 || Float.isNaN(value)) {
+            throw new IllegalArgumentException(what + " must be > 0 but got " + value);
+        }
+    }
+
     /** 设置碰撞箱宽高。 */
     public void size(double width, double height) {
-        this.width = (float) width;
-        this.height = (float) height;
+        setWidth((float) width);
+        setHeight((float) height);
     }
 
     /**

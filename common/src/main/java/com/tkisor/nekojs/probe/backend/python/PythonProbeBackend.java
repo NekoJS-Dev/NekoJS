@@ -159,6 +159,9 @@ public final class PythonProbeBackend implements ProbeBackend {
         // 3. 事件声明：nekojs/_events/<side>/__init__.pyi
         writeEventStubs(files, snapshot, typeR, availableFqns, wideningAliases);
 
+        // 3b. typed Builder 契约声明（ticket 15，AC4/AC9）：与 TS 后端同一结构化契约输入
+        writeRegistryBuilderStubs(files, snapshot);
+
         // 4. nekojs/__init__.pyi（全局绑定 + 事件组入口 + probe.add_global 全局声明）
         writeBindingsInit(files, snapshot, availableFqns, typeR, globals);
 
@@ -167,6 +170,21 @@ public final class PythonProbeBackend implements ProbeBackend {
         files.put("nekojs/README.md", README_TEXT);
 
         return files;
+    }
+
+    /**
+     * typed Builder 契约声明：{@code nekojs/_registry_builders/__init__.pyi}。
+     * 输入是 {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}（与 TS 后端
+     * {@code @registry-builders/index.d.ts} 同一条目列表）——runtime member、TS/Python
+     * declaration 由同一契约反射输入派生（ticket 15）。成员名保持 JS 面 verbatim
+     * （{@code maxStackSize}/{@code setMaxStackSize}）。
+     */
+    private void writeRegistryBuilderStubs(Map<String, String> files, NekoScriptCatalogSnapshot snapshot) {
+        var entries = snapshot.registryBuilderSurfaces();
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
+        files.put("nekojs/_registry_builders/__init__.pyi", RegistryBuilderPyRenderer.render(entries));
     }
 
     /** 渲染单个 Java 包的 __init__.pyi：跨包 import + 本包所有类 + 本包适配器/枚举输入别名。 */

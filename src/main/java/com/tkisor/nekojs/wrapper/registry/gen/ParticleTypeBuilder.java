@@ -12,10 +12,18 @@ import net.minecraft.resources.Identifier;
 public class ParticleTypeBuilder extends RegistryObjectBuilder<SimpleParticleType> {
 
     /** 无视距离限制。 */
-    public boolean overrideLimiter = false;
+    private boolean overrideLimiter = false;
 
     public ParticleTypeBuilder(Identifier id) {
         super(id);
+    }
+
+    public boolean isOverrideLimiter() {
+        return overrideLimiter;
+    }
+
+    public void setOverrideLimiter(boolean overrideLimiter) {
+        this.overrideLimiter = overrideLimiter;
     }
 
     @Override

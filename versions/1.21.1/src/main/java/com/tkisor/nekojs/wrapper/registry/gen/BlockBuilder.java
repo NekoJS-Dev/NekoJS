@@ -26,37 +26,123 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> {
 
     /** 声明了 renderType 的方块（26.x 资产生成消费：translucent 用 force_translucent 贴图引用）。 */
 
-    public float hardness = 1.5f;
-    public float resistance = 1.5f;
-    public int lightLevel = 0;
-    public boolean requiresTool = false;
+    private float hardness = 1.5f;
+    private float resistance = 1.5f;
+    private int lightLevel = 0;
+    private boolean requiresTool = false;
     /** 声音类型名：wood/gravel/grass/metal/glass/wool/sand/snow/amethyst（默认 stone）。 */
-    public String sound = "stone";
+    private String sound = "stone";
     /** 地图颜色名（如 'dirt'/'water'/'gold'/'color_red'）。默认 stone。 */
-    public String mapColor = "stone";
+    private String mapColor = "stone";
     /** 客户端渲染层：solid / cutout / cutout_mipped / translucent。26.x 模型驱动，仅文档意义。 */
-    public String renderType = null;
+    private String renderType = null;
 
     /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 置 null。 */
-    public ItemBuilder item;
+    private ItemBuilder item;
 
     public BlockBuilder(ResourceLocation id) {
         super(id);
         this.item = new ItemBuilder(id);
     }
 
+    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+
+    public float getHardness() {
+        return hardness;
+    }
+
+    public void setHardness(float hardness) {
+        this.hardness = hardness;
+    }
+
+    public float getResistance() {
+        return resistance;
+    }
+
+    public void setResistance(float resistance) {
+        this.resistance = resistance;
+    }
+
+    public int getLightLevel() {
+        return lightLevel;
+    }
+
+    public void setLightLevel(int lightLevel) {
+        if (lightLevel < 0 || lightLevel > 15) {
+            throw new IllegalArgumentException("lightLevel must be in [0, 15] but got " + lightLevel);
+        }
+        this.lightLevel = lightLevel;
+    }
+
+    public boolean isRequiresTool() {
+        return requiresTool;
+    }
+
+    public void setRequiresTool(boolean requiresTool) {
+        this.requiresTool = requiresTool;
+    }
+
+    /** 声音类型名（已归一化小写）。 */
+    public String getSound() {
+        return sound;
+    }
+
+    public void setSound(String sound) {
+        this.sound = sound == null ? "stone" : sound.toLowerCase();
+    }
+
+    /** 地图颜色名（已归一化小写）。 */
+    public String getMapColor() {
+        return mapColor;
+    }
+
+    public void setMapColor(String mapColor) {
+        this.mapColor = mapColor == null ? "stone" : mapColor.toLowerCase();
+    }
+
+    /** 渲染层（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    public String getRenderType() {
+        return renderType;
+    }
+
+    public void setRenderType(String renderType) {
+        this.renderType = renderType == null || renderType.isBlank() ? null : renderType;
+    }
+
+    /** 预创建的 BlockItem 子 builder（脚本面经 {@code BuilderSurface} 包装）。 */
+    public ItemBuilder getItem() {
+        return item;
+    }
+
+    /**
+     * 连带 BlockItem 抑制/恢复的唯一写入点：{@code b.item = null} 与 {@link #noItem()}
+     * 走本 setter。脚本侧只接受 null（抑制）；定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}。
+     */
+    public void setItem(ItemBuilder item) {
+        if (item == this.item) {
+            return;
+        }
+        if (item == null) {
+            this.item = null;
+            return;
+        }
+        throw new IllegalArgumentException(
+                "item only accepts null on the script surface (suppress the BlockItem); configure it via "
+                        + "b.item.xxx = ... or b.item(cb) instead");
+    }
+
     /** 不可破坏（硬度 -1 / 抗爆 3600000）。 */
     public void unbreakable() {
-        this.hardness = -1.0f;
-        this.resistance = 3600000.0f;
+        setHardness(-1.0f);
+        setResistance(3600000.0f);
     }
 
-    /** 抑制自动 BlockItem 连带注册（置 null 子 builder，与 {@code b.item = null} 等价）。 */
+    /** 抑制自动 BlockItem 连带注册（与 {@code b.item = null} 同一写入点）。 */
     public void noItem() {
-        this.item = null;
+        setItem(null);
     }
 
-    /** 定制自动 BlockItem 属性（便捷面；等价于直接改 {@link #item} 字段）。 */
+    /** 定制自动 BlockItem 属性（便捷面；等价于直接改 {@link #getItem()} 子 builder）。 */
     public void item(Consumer<ItemBuilder> consumer) {
         if (this.item == null) {
             throw new IllegalStateException("noItem() 已抑制 BlockItem 生成，不能再配置 item(cb)");

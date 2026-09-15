@@ -20,15 +20,64 @@ import net.minecraft.resources.Identifier;
 public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVariant>
         implements TaggableBuilder<PaintingVariantBuilder> {
 
-    public int width = 16;
-    public int height = 16;
+    private int width = 16;
+    private int height = 16;
     /** 纹理资源 id（默认与注册 id 相同）。 */
-    public String assetId = null;
-    public String title = null;
-    public String author = null;
+    private String assetId = null;
+    private String title = null;
+    private String author = null;
 
     public PaintingVariantBuilder(Identifier id) {
         super(id);
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        requirePositive("width", width);
+        this.width = width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public void setHeight(int height) {
+        requirePositive("height", height);
+        this.height = height;
+    }
+
+    /** 纹理资源 id（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    public String getAssetId() {
+        return assetId;
+    }
+
+    public void setAssetId(String assetId) {
+        this.assetId = assetId == null || assetId.isBlank() ? null : assetId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    private static void requirePositive(String what, int value) {
+        if (value < 1) {
+            throw new IllegalArgumentException(what + " must be >= 1 but got " + value);
+        }
     }
 
     /** {@link TaggableBuilder}：画作 tag（如 {@code minecraft:placeable}）归属 PAINTING_VARIANT 注册表。 */

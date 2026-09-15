@@ -58,6 +58,8 @@ public class NekoJSMod extends NekoJS {
 
         NeoForgeRuntimeBootstrap.setup();
         registerEventListeners(modEventBus);
+        // 新一轮启动的注册 epoch：丢弃并诊断上一轮残留（ticket 15 AC2）
+        RegistryEventAdapter.beginBoot();
         initializeWorkspace();
         // root 只由本 entry 构造期持有（final local），不落任何 static 字段：
         // 生命周期 handle 经 bind/register 注入各边界（AC3/AC10：无公开 static root）

@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.plugin;
 import com.tkisor.nekojs.api.JSTypeAdapter;
 import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.catalog.ManualDeclarationCatalogEntry;
+import com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry;
 import com.tkisor.nekojs.api.catalog.TypeDocCatalogEntry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.api.data.Binding;
@@ -57,6 +58,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
     private final Map<String, EventGroup> eventGroups;
     private final List<TypeDocCatalogEntry> typeDocs;
     private final List<ManualDeclarationCatalogEntry> manualDeclarations;
+    private final List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces;
     private final Map<String, String> nodeModules;
     private final Map<String, RecipeNamespaceEntry> recipeNamespaces;
     private final Map<String, Map<String, RecipeTypeDefinition>> recipeSchemaOverrides;
@@ -75,6 +77,7 @@ public final class NekoPluginRuntime implements IPluginRuntime {
         this.eventGroups = EventsPoint.mergedEventGroups(extensionProducts);
         this.typeDocs = mergedTypeDocs();
         this.manualDeclarations = mergedManualDeclarations();
+        this.registryBuilderSurfaces = mergedRegistryBuilderSurfaces();
         this.nodeModules = product(NodeModulesPoint.ID);
         this.recipeNamespaces = product(RecipeNamespacesPoint.ID);
         this.recipeSchemaOverrides = product(RecipeSchemasPoint.ID);
@@ -195,6 +198,11 @@ public final class NekoPluginRuntime implements IPluginRuntime {
 
     public List<ManualDeclarationCatalogEntry> manualDeclarations() {
         return manualDeclarations;
+    }
+
+    @Override
+    public List<RegistryBuilderSurfaceEntry> registryBuilderSurfaces() {
+        return registryBuilderSurfaces;
     }
 
     public Map<String, String> nodeModules() {
@@ -318,6 +326,16 @@ public final class NekoPluginRuntime implements IPluginRuntime {
                 typeDocsSnapshot(TypeDocsPoint.ID).manualDeclarations());
         merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).manualDeclarations());
         merged.sort(Comparator.comparingInt(ManualDeclarationCatalogEntry::priority));
+        return List.copyOf(merged);
+    }
+
+    /** type_docs 与 node_type_docs 两点 builder 契约条目的合并（ticket 15，与手写声明同序合并）。 */
+    private List<RegistryBuilderSurfaceEntry> mergedRegistryBuilderSurfaces() {
+        List<RegistryBuilderSurfaceEntry> merged = new ArrayList<>(
+                typeDocsSnapshot(TypeDocsPoint.ID).registryBuilderSurfaces());
+        merged.addAll(typeDocsSnapshot(NodeTypeDocsPoint.ID).registryBuilderSurfaces());
+        merged.sort(Comparator.comparing(RegistryBuilderSurfaceEntry::builderName)
+                .thenComparing(RegistryBuilderSurfaceEntry::typeName));
         return List.copyOf(merged);
     }
 

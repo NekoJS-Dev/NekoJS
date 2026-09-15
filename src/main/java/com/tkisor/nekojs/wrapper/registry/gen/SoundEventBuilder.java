@@ -17,10 +17,22 @@ import java.util.Optional;
 public final class SoundEventBuilder extends RegistryObjectBuilder<SoundEvent> {
 
     /** 固定可听距离（格）；null 时由声音定义文件决定。 */
-    public Float fixedRange;
+    private Float fixedRange;
 
     public SoundEventBuilder(Identifier id) {
         super(id);
+    }
+
+    /** 固定可听距离（null=由声音定义文件决定）。 */
+    public Float getFixedRange() {
+        return fixedRange;
+    }
+
+    public void setFixedRange(Float fixedRange) {
+        if (fixedRange != null && fixedRange <= 0) {
+            throw new IllegalArgumentException("fixedRange must be > 0 but got " + fixedRange);
+        }
+        this.fixedRange = fixedRange;
     }
 
     @Override

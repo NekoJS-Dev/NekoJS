@@ -1,13 +1,11 @@
 //? if neoforge {
+//~ mc_legacy_api
 package com.tkisor.nekojs.listener;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder;
 import com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryEvents;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryObjectBuilder;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryRepository;
+import com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntime;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -20,71 +18,54 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * 通用注册表的 NeoForge 适配层（ADR-0004 三层解耦的平台层）。
+ * 通用注册表的 NeoForge 适配层（ADR-0004 三层解耦的平台层；ticket 15 起为
+ * {@link StartupRegistryRuntime} 的薄接线）：收集、校验、指纹、抽干与连带投递
+ * 都在平台无关 Runtime；本类只把 {@link RegisterEvent} 的各 pass 接到
+ * {@code runtime.drainFor}（对象以 Supplier 注册，由平台在注册冻结前构建）。
  *
- * <p>订阅 {@link RegisterEvent}：首个 pass 前投递一次平台无关收集事件
- * （{@link RegistryEvents#REGISTER}，脚本回调把 builder 攒进仓库），随后按
- * loader 序逐 pass 抽干 {@link RegistryRepository}——主对象与连带派生条目都在
- * <b>目标注册表自身的 pass</b> 内以 Supplier 注册（KubeJS 同款语义：loader
- * 注册序不可回溯，目标 pass 已过的派生条目立即报错跳过）。
+ * <p>epoch：每轮游戏启动（mod 构造期）{@link #beginBoot()} 换新 Runtime，
+ * 上一轮残留被丢弃并诊断——失败不留下可污染下一轮启动的进程级暂存（AC2）。
  *
  * <p>另承接注册表体系的两个后置平台事件：实体属性表（builder build 期记账）
- * 与创造标签页内容（{@code ItemBuilder.groupTab} 的分配）。
+ * 与创造标签页内容（{@code ItemBuilder} groupTab 的分配）。
  */
 public final class RegistryEventAdapter {
     private RegistryEventAdapter() {}
 
-    private static final RegistryRepository REPOSITORY = new RegistryRepository();
-    private static final Set<ResourceKey<? extends Registry<?>>> PASSED = new HashSet<>();
-    private static boolean collected;
+    private static volatile StartupRegistryRuntime runtime = new StartupRegistryRuntime(nodeLabel());
+
+    /** 当前 epoch 的 Runtime（注册 pass 接线用）。 */
+    public static StartupRegistryRuntime runtime() {
+        return runtime;
+    }
+
+    /** 新一轮游戏启动：换新 epoch；上一轮若有未清空暂存，先丢弃并记录诊断。 */
+    public static void beginBoot() {
+        StartupRegistryRuntime previous = runtime;
+        if (previous != null && !previous.isFullyDrained()) {
+            previous.reportUndelivered(message -> NekoJS.LOGGER.error(
+                    "[registry-startup] stale staging from a previous boot discarded: {}", message));
+        }
+        runtime = new StartupRegistryRuntime(nodeLabel());
+    }
 
     public static void onRegister(RegisterEvent event) {
         ResourceKey<? extends Registry<?>> key = event.getRegistryKey();
-        if (!collected) {
-            collected = true;
-            RegistryEvents.REGISTER.post(RegistryEventJS.create(REPOSITORY));
-        }
-        for (RegistryObjectBuilder<?> builder : REPOSITORY.drain(key)) {
-            registerInto(event, key, builder.id, builder);
-            collectAdditionalOf(builder);
-        }
-        for (RegistryRepository.Additional additional : REPOSITORY.drainAdditional(key)) {
-            registerInto(event, key, additional.id(), additional.supplier());
-        }
-        // 本 pass 结束后才计入 PASSED：builder 派生条目指向本注册表时仍是合法的当轮注册
-        PASSED.add(key);
-    }
-
-    /** 抽干期回调：builder 的连带派生条目入仓库，等目标注册表自己的 pass 投递。 */
-    private static void collectAdditionalOf(RegistryObjectBuilder<?> builder) {
-        try {
-            builder.handleAdditionalObjects((registry, id, supplier) -> {
-                if (PASSED.contains(registry)) {
-                    NekoJS.LOGGER.error("Additional object '{}' of '{}' targets registry '{}'"
-                            + " whose registration already passed; NOT registered",
-                            id, builder.id, registry);
-                    return;
-                }
-                REPOSITORY.addAdditional(registry, id, supplier, builder.id);
-            });
-        } catch (Exception e) {
-            NekoJS.LOGGER.error("Failed to collect additional objects of '{}'", builder.id, e);
-        }
+        StartupRegistryRuntime current = runtime;
+        current.collectOnce();
+        current.drainFor(key, (registry, id, supplier) -> registerInto(event, registry, id, supplier))
+                .errors().forEach(error -> NekoJS.LOGGER.error(
+                        "[registry-startup] {} in registry '{}' (node {}, source {}): {}",
+                                error.definition(), error.registry() == null ? "?" : error.registry().identifier(),
+                                error.node(), error.source(), error.message()));
     }
 
     /** load-complete 诊断：收集了却未被任何 pass 消化的内容（注册表名写错 / 目标 pass 先于来源）。 */
     public static void onLoadComplete() {
-        REPOSITORY.undrained().forEach((registry, builders) -> NekoJS.LOGGER.error(
-                "Registry '{}' collected {} object(s) but its RegisterEvent never fired; content NOT registered",
-                registry, builders.size()));
-        REPOSITORY.undeliveredAdditional().forEach((registry, additionals) -> NekoJS.LOGGER.error(
-                "Registry '{}' has {} undelivered additional object(s); content NOT registered",
-                registry, additionals.size()));
+        runtime.reportUndelivered(message -> NekoJS.LOGGER.error("{}", message));
     }
 
     /** 实体属性表：builder build 期记账，本事件（注册完成后）统一挂载。 */
@@ -119,6 +100,14 @@ public final class RegistryEventAdapter {
         if (item != null && item != Items.AIR) {
             event.accept(new net.minecraft.world.item.ItemStack(item),
                     CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+        }
+    }
+
+    private static String nodeLabel() {
+        try {
+            return com.tkisor.nekojs.platform.Platform.getLoaderId() + ":" + com.tkisor.nekojs.platform.Platform.getMcVersion();
+        } catch (IllegalStateException notBootstrapped) {
+            return "neoforge:?";
         }
     }
 

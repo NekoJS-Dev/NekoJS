@@ -33,21 +33,21 @@ import java.util.function.Supplier;
  */
 public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
 
-    public String displayName = null;
-    public int density = 1000;
-    public int temperature = 300;
-    public int viscosity = 1000;
-    public int lightLevel = 0;
+    private String displayName = null;
+    private int density = 1000;
+    private int temperature = 300;
+    private int viscosity = 1000;
+    private int lightLevel = 0;
     /** 是否可无限生成源（对标原版水在 1.21 默认关闭）。 */
-    public boolean canConvertToSource = false;
+    private boolean canConvertToSource = false;
 
-    public int slopeFindDistance = 4;
-    public int levelDecreasePerBlock = 1;
-    public float explosionResistance = 100.0F;
-    public int tickRate = 5;
+    private int slopeFindDistance = 4;
+    private int levelDecreasePerBlock = 1;
+    private float explosionResistance = 100.0F;
+    private int tickRate = 5;
 
-    public boolean bucket = true;
-    public boolean block = true;
+    private boolean bucket = true;
+    private boolean block = true;
 
     private final RegistryObjectBuilder<Fluid> flowing;
     private final RegistryObjectBuilder<LiquidBlock> liquidBlock;
@@ -77,14 +77,125 @@ public class FluidBuilder extends RegistryObjectBuilder<Fluid> {
         };
     }
 
-    /** 抑制自动桶物品（{@code <id>_bucket}）连带注册。 */
-    public void noBucket() {
-        this.bucket = false;
+    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+
+    /** 显示名（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    public String getDisplayName() {
+        return displayName;
     }
 
-    /** 抑制自动液体方块连带注册。 */
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName == null || displayName.isBlank() ? null : displayName;
+    }
+
+    public int getDensity() {
+        return density;
+    }
+
+    public void setDensity(int density) {
+        this.density = density;
+    }
+
+    public int getTemperature() {
+        return temperature;
+    }
+
+    public void setTemperature(int temperature) {
+        this.temperature = temperature;
+    }
+
+    public int getViscosity() {
+        return viscosity;
+    }
+
+    public void setViscosity(int viscosity) {
+        this.viscosity = viscosity;
+    }
+
+    public int getLightLevel() {
+        return lightLevel;
+    }
+
+    public void setLightLevel(int lightLevel) {
+        if (lightLevel < 0 || lightLevel > 15) {
+            throw new IllegalArgumentException("lightLevel must be in [0, 15] but got " + lightLevel);
+        }
+        this.lightLevel = lightLevel;
+    }
+
+    public boolean isCanConvertToSource() {
+        return canConvertToSource;
+    }
+
+    public void setCanConvertToSource(boolean canConvertToSource) {
+        this.canConvertToSource = canConvertToSource;
+    }
+
+    public int getSlopeFindDistance() {
+        return slopeFindDistance;
+    }
+
+    public void setSlopeFindDistance(int slopeFindDistance) {
+        if (slopeFindDistance < 0) {
+            throw new IllegalArgumentException("slopeFindDistance must be >= 0 but got " + slopeFindDistance);
+        }
+        this.slopeFindDistance = slopeFindDistance;
+    }
+
+    public int getLevelDecreasePerBlock() {
+        return levelDecreasePerBlock;
+    }
+
+    public void setLevelDecreasePerBlock(int levelDecreasePerBlock) {
+        if (levelDecreasePerBlock < 0) {
+            throw new IllegalArgumentException("levelDecreasePerBlock must be >= 0 but got " + levelDecreasePerBlock);
+        }
+        this.levelDecreasePerBlock = levelDecreasePerBlock;
+    }
+
+    public float getExplosionResistance() {
+        return explosionResistance;
+    }
+
+    public void setExplosionResistance(float explosionResistance) {
+        this.explosionResistance = explosionResistance;
+    }
+
+    public int getTickRate() {
+        return tickRate;
+    }
+
+    public void setTickRate(int tickRate) {
+        if (tickRate < 1) {
+            throw new IllegalArgumentException("tickRate must be >= 1 but got " + tickRate);
+        }
+        this.tickRate = tickRate;
+    }
+
+    public boolean isBucket() {
+        return bucket;
+    }
+
+    public void setBucket(boolean bucket) {
+        this.bucket = bucket;
+    }
+
+    public boolean isBlock() {
+        return block;
+    }
+
+    public void setBlock(boolean block) {
+        this.block = block;
+    }
+
+    /** 抑制自动桶物品（{@code <id>_bucket}）连带注册（与 {@code b.bucket = false} 同一写入点）。 */
+    public void noBucket() {
+        setBucket(false);
+    }
+
+    /** 抑制自动液体方块连带注册（与 {@code b.block = false} 同一写入点）。 */
     public void noBlock() {
-        this.block = false;
+        setBlock(false);
     }
 
     /** flowing 流体的 id：{@code flowing_<path>}（同 namespace）。 */
