@@ -29,6 +29,7 @@ import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Engine;
 import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,6 +116,13 @@ class Ticket07RuntimeThreadsTest {
 
         /** 宿主空操作：guest 循环内的安全点锚（interrupt 的打断点）。 */
         public void spin() {
+        }
+
+        /** 捕获求值所在的真实 Context（kill 上报回归测试需要旧 generation Context 引用）。 */
+        volatile Context capturedContext;
+
+        public void rememberContext(Value anyGuestValue) {
+            this.capturedContext = anyGuestValue.getContext();
         }
 
         /** 自旋条件：close 已被请求（close 发起前置 false，脚本自然退出循环）。 */
@@ -418,28 +427,37 @@ class Ticket07RuntimeThreadsTest {
         }
     }
 
-    /** AC4 guest 面：高级 Java/线程能力不被收紧，managed lifecycle 只走显式入口。 */
+    /** AC7 guest 面：高级 Java/线程能力不被收紧（guest JS 自己创建 Java 线程），managed lifecycle 只走显式入口。 */
     @Test
     void guestThreadAdvancedCapabilitiesAreNotTightened() throws Exception {
         // allowThreads 开启：guest 线程能力保持既有语义，本票只约束 managed lifecycle 入口
         SandboxConfig config = new SandboxConfig(true, false, false, false, true, true, false, true,
                 60, 0L, 0);
         try (Harness h = new Harness(ScriptType.SERVER, config)) {
-            h.writeScript("entry.js", "TestRecorder.record('v');\n");
+            // guest JS 侧真实创建 Java 线程：allowCreateThread 的既有能力面（ClassFilter 的
+            // THREAD_GROUP 白名单 + Java.type + start/join/currentThread interop）。平台事实：
+            // Context 是单线程的，guest 建的线程不能重入 Context 执行 JS 闭包——这在票 07
+            // 之前就不支持，不是本票收紧；本断言锁定的是线程创建/操控能力本身。
+            h.writeScript("entry.js", """
+                    const Thread = Java.type('java.lang.Thread');
+                    const guest = new Thread();
+                    guest.start();
+                    guest.join();
+                    TestRecorder.record('guest-created: alive=' + guest.isAlive()
+                            + ', owner=' + Thread.currentThread().getName());
+                    """);
             h.loadAndRun();
+            assertEquals(1, h.recorder.count(), "script must complete on the owner thread");
+            assertTrue(h.recorder.value().startsWith("guest-created: alive=false, owner="),
+                    "guest JS must be able to create/start/join a Java thread and read back its state"
+                        + " (actual: " + h.recorder.value() + ")");
 
-            AtomicInteger guestWork = new AtomicInteger();
-            Thread guest = new Thread(() -> guestWork.set(42), "ticket07-guest-created");
-            guest.setDaemon(true);
-            guest.start();
-            guest.join(10_000);
-            assertEquals(42, guestWork.get(), "guest-created threads keep their advanced Java ability");
-
-            // 同一线程经显式入口访问 managed lifecycle（guest 不触碰 Context 旁路）
+            // 非 owner 宿主线程经显式入口访问 managed lifecycle（guest 不触碰 Context 旁路）
+            h.writeScript("entry.js", "TestRecorder.record('reloaded-from-guest-scheduler');\n");
+            final ScriptLifecycleGate.Decision[] decision = new ScriptLifecycleGate.Decision[1];
             Thread schedulingGuest = new Thread(() -> {
                 try {
-                    Object decision = h.manager.scheduleOnOwner(() -> h.manager.requestReload());
-                    assertNotNull(decision, "scheduled requestReload must return a decision");
+                    decision[0] = h.manager.scheduleOnOwner(h.manager::requestReload);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -448,6 +466,51 @@ class Ticket07RuntimeThreadsTest {
             schedulingGuest.start();
             schedulingGuest.join(60_000);
             assertFalse(schedulingGuest.isAlive(), "guest scheduling must complete without deadlock");
+            assertEquals(ScriptLifecycleGate.Decision.EXECUTED, decision[0],
+                    "scheduled requestReload must run to completion on the owner path");
+            assertEquals("reloaded-from-guest-scheduler", h.recorder.value(),
+                    "the scheduled reload must have actually executed the new script");
+        }
+    }
+
+    /** AC6 反向防线：旧 generation 残留闭包的 kill 上报不得把健康 active 误标隔离失败。 */
+    @Test
+    void staleKillReportForOldGenerationContextDoesNotIsolateHealthyActive() throws Exception {
+        try (Harness h = new Harness(ScriptType.SERVER, quietConfig())) {
+            h.writeScript("entry.js", """
+                    TestRecorder.rememberContext({});
+                    Ticket07Events.ping(() => TestRecorder.hit());
+                    TestRecorder.record('v1');
+                    """);
+            h.loadAndRun();
+            Context oldContext = h.recorder.capturedContext;
+            assertNotNull(oldContext, "guest side must capture the evaluating context");
+            long generation = h.manager.generationId();
+            int hits = h.recorder.hits();
+
+            h.writeScript("entry.js", """
+                    TestRecorder.rememberContext({});
+                    Ticket07Events.ping(() => TestRecorder.hit());
+                    TestRecorder.record('v2');
+                    """);
+            h.reload();
+            Context newContext = h.recorder.capturedContext;
+            assertNotSame(oldContext, newContext, "reload must have swapped the active context");
+            assertEquals(generation + 1, h.manager.generationId());
+            assertFalse(h.manager.isActiveFailed(), "healthy reload must not be isolated");
+
+            // commit 清扫与总线激活之间被并发 dispatch 的旧 generation 残留闭包上报 kill：
+            h.manager.markContextKilled(oldContext);
+            assertFalse(h.manager.isActiveFailed(),
+                    "stale kill report for an old-generation context must not isolate the healthy active");
+            assertEquals(generation + 1, h.manager.generationId(),
+                    "stale kill report must not trigger any rebuild");
+            h.bridge.postPing();
+            assertEquals(hits + 1, h.recorder.hits(), "active listener must keep receiving events");
+
+            // 对照：真正的 active kill 仍进入隔离失败（AC6 主路径不受此修复影响）
+            h.manager.markContextKilled(newContext);
+            assertTrue(h.manager.isActiveFailed(), "a real active kill must still enter isolated failure");
         }
     }
 
