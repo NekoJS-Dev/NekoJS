@@ -23,7 +23,8 @@ import java.util.function.Supplier;
 /**
  * 通用注册表的 NeoForge 适配层（ADR-0004 三层解耦的平台层；ticket 15 起为
  * {@link StartupRegistryRuntime} 的薄接线）：收集、校验、指纹、抽干与连带投递
- * 都在平台无关 Runtime；本类只把 {@link RegisterEvent} 的各 pass 接到
+ * 都在 Runtime（版本树共享 MC-facing 层——持有 MC 类型令牌做校验/键表达，不创建 MC 对象，
+ * MC/loader 对象创建只发生在本类与 fabric 对应物这样的 Adapter）；本类只把 {@link RegisterEvent} 的各 pass 接到
  * {@code runtime.drainFor}（对象以 Supplier 注册，由平台在注册冻结前构建）。
  *
  * <p>epoch：每轮游戏启动（mod 构造期）{@link #beginBoot()} 换新 Runtime，

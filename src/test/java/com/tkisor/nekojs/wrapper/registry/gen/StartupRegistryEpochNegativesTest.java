@@ -62,21 +62,25 @@ class StartupRegistryEpochNegativesTest {
         ErrorLog errors = new ErrorLog();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-            context.getBindings("js").putMember("errors", errors);
-            context.eval("js", """
-                    RegistryEvents.register(event => {
-                        // 先完成一条完整声明（保留：它是完整产物，不是半成品）
-                        event.soundEvent('mymod:complete', b => { b.fixedRange = 16 })
-                        // 配置途中抛错：该 builder 不得成为可 drain 的半成品
-                        event.soundEvent('mymod:broken', b => {
-                            b.fixedRange = 8;
-                            throw new Error('script exploded mid-config');
-                        })
-                    });
-                    """);
-            runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-            com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            try {
+                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
+                context.getBindings("js").putMember("errors", errors);
+                context.eval("js", """
+                        RegistryEvents.register(event => {
+                            // 先完成一条完整声明（保留：它是完整产物，不是半成品）
+                            event.soundEvent('mymod:complete', b => { b.fixedRange = 16 })
+                            // 配置途中抛错：该 builder 不得成为可 drain 的半成品
+                            event.soundEvent('mymod:broken', b => {
+                                b.fixedRange = 8;
+                                throw new Error('script exploded mid-config');
+                            })
+                        });
+                        """);
+                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
+            } finally {
+                // 断言失败也不泄漏静态绑定（审查 F5）
+                com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            }
         }
 
         // EventGroupJS/EventBusJS 把监听器异常捕获并继续：完整条目保留、半成品不入库
@@ -97,22 +101,26 @@ class StartupRegistryEpochNegativesTest {
         ErrorLog errors = new ErrorLog();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-            context.getBindings("js").putMember("errors", errors);
-            context.eval("js", "RegistryEvents.register(event => { event.soundEvent('mymod:first', b => { }) });");
-            runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-            var first = runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink());
-            // 快照之后底层收集容器再变化（同名同注册表的新声明，经直接仓库 seam 注入）
-            runtime.repository().add(Registries.SOUND_EVENT,
-                    new SoundEventBuilder(Identifier.parse("mymod:second")), "basic", "post-snapshot");
-            com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            try {
+                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
+                context.getBindings("js").putMember("errors", errors);
+                context.eval("js", "RegistryEvents.register(event => { event.soundEvent('mymod:first', b => { }) });");
+                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
+                var first = runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink());
+                // 快照之后底层收集容器再变化（同名同注册表的新声明，经直接仓库 seam 注入）
+                runtime.repository().add(Registries.SOUND_EVENT,
+                        new SoundEventBuilder(Identifier.parse("mymod:second")), "basic", "post-snapshot");
 
-            assertEquals(1, first.registered().size(), "已发布快照不受后续收集影响");
-            assertEquals("mymod:first", first.registered().get(0).definition().toString());
-            assertThrows(UnsupportedOperationException.class, () -> first.registered().add(null),
-                    "快照本身不可变");
-            assertEquals(1, runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink()).registered().size(),
-                    "后到的声明进下一轮 drain，不改写上一轮结果");
+                assertEquals(1, first.registered().size(), "已发布快照不受后续收集影响");
+                assertEquals("mymod:first", first.registered().get(0).definition().toString());
+                assertThrows(UnsupportedOperationException.class, () -> first.registered().add(null),
+                        "快照本身不可变");
+                assertEquals(1, runtime.drainFor(Registries.SOUND_EVENT, new RecordingSink()).registered().size(),
+                        "后到的声明进下一轮 drain，不改写上一轮结果");
+            } finally {
+                // 断言失败也不泄漏静态绑定（审查 F5）
+                com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            }
         }
     }
 

@@ -1,4 +1,4 @@
-# 验证命令与结果（ticket 15，2026-09-15）
+# 验证命令与结果（ticket 15，2026-09-15；§审查整改后数字以末行为准）
 
 全部在 worktree 项目根 `NekoJS-mult` 执行；分支 `ticket-15-registry-startup`。
 
@@ -14,12 +14,13 @@
 #（common 零 MC/loader import 未放宽；新增 wrapper 文件的 loader import 都在整文件/行内守卫内）
 
 ./gradlew :26.1.2:build --console=plain
-# BUILD SUCCESSFUL — 全量 test：45 suites / 206 tests / 0 failures / 36 skipped
-#（本票 +5 suites / +27 tests：Parity 8（2 skip：BlockBuilder 需 vanilla）/ E2E 9 /
-#  Negatives 5 / Golden 4（fluid 用例在 fabric 节点被守卫剥离）/ Example 1）
+# 初版：45 suites / 206 tests / 0 failures / 36 skipped
+#（+5 suites / +27 tests：Parity 8 / E2E 9 / Negatives 5 / Golden 4 / Example 1）
+# 审查整改后（F1/F2 补 3 个 parity 用例）：45 suites / 209 tests / 0 failures / 36 skipped
 
 ./gradlew :1.21.1:build --console=plain
-# BUILD SUCCESSFUL — 全量 test：33 suites / 125 tests / 0 failures / 0 skipped
+# 初版：33 suites / 125 tests / 0 failures / 0 skipped
+# 审查整改后：33 suites / 128 tests / 0 failures / 0 skipped
 #（改动了带版本守卫的共享代码：mc_legacy_api 标记新增于 2 个共享测试文件 + 6 个主代码文件）
 ```
 
@@ -43,6 +44,9 @@
 # RegistryBuilderSurfaces.derive(...) → RegistryBuilderTsRenderer.render(...) 写入 build/tmp；
 # 26.1.2 输出提升为 src/test/resources/golden/registry/startup-builders.d.ts（161 行）；
 # 1.21.1 输出提升为 startup-builders-1.21.1.d.ts（152 行）。
+# 审查 F1 再生成（2026-09-15）：契约重载收集修复后重出两份 golden——
+# git diff 仅 26.x potion effect 一行（3 参 → 确定性 5 参），1.21.1 逐字节零变化；
+# 旧新 diff/原因/影响记录在 REPORT §4。
 # 复核：RegistryBuilderSurfaceGoldenTest.tsDeclarationIsByteStableAndMatchesGolden 在
 # 四个可测节点全部通过（26.2.0 / 26.2.0-fabric 由主会话统一复核）。
 ```

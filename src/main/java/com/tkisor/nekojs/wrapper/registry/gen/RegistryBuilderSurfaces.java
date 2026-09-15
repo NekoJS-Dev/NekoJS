@@ -86,7 +86,12 @@ public final class RegistryBuilderSurfaces {
         return name.toString();
     }
 
-    /** 方法成员的 TS 形状：重载并列为联合签名（当前内置类型无方法重载进面，防御性取首个）。 */
+    /**
+     * 方法成员的 TS 形状：声明面每名冻结一个<b>确定性</b>签名（参数最多者，再按签名串稳定——
+     * {@code deterministicOverload}）；同名重载在脚本侧由实参个数解析（{@code BuilderSurface}
+     * 的 {@code resolveOverload}，3 参/5 参 {@code effect} 双形态都可达）。声明不逐重载展开
+     * 是渲染面选择，不是能力面事实。
+     */
     private static String tsSignature(List<Method> overloads) {
         Method method = deterministicOverload(overloads);
         StringBuilder sb = new StringBuilder(method.getName()).append('(');

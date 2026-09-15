@@ -95,9 +95,28 @@ class RegistryBuilderSurfaceGoldenTest {
         String second = RegistryBuilderTsRenderer.render(loaderIndependentEntries());
         assertEquals(first, second, "同一契约输入的重复渲染必须逐字节稳定");
 
-        assertEquals(normalize(readGolden()), normalize(first),
-                "typed Builder 契约面变化。确认是刻意变更后，更新 " + GOLDEN
-                        + " 并在 baseline REPORT golden 差异小节留记录");
+        // 字节级为主 gate（审查 F4：只做 normalize 比较会放过空白/注释漂移）；
+        // 行尾统一 LF（checkout autocrlf 容忍），失败时降级为内容级 diff 便于定位
+        String golden = readGolden().replace("\r\n", "\n");
+        if (!golden.equals(first)) {
+            org.junit.jupiter.api.Assertions.fail(byteLevelMismatch(golden, first));
+        }
+    }
+
+    /** 字节级不一致时的诊断信息：首个差异行 + 内容级（去空白/注释）是否一致的结论。 */
+    private static String byteLevelMismatch(String golden, String actual) {
+        String[] goldenLines = golden.split("\n", -1);
+        String[] actualLines = actual.split("\n", -1);
+        int line = 0;
+        while (line < goldenLines.length && line < actualLines.length && goldenLines[line].equals(actualLines[line])) {
+            line++;
+        }
+        String at = "line " + (line + 1) + "\n  golden: " + (line < goldenLines.length ? goldenLines[line] : "<end>")
+                + "\n  actual: " + (line < actualLines.length ? actualLines[line] : "<end>");
+        boolean contentOnly = normalize(golden).equals(normalize(actual));
+        return "typed Builder 契约面与 golden 字节级不一致（" + at + "）。"
+                + (contentOnly ? "差异仅为空白/行尾——byte-level gate 拒绝，请修正渲染或以再生成路径更新。"
+                        : "内容级差异——确认是刻意变更后，更新 " + GOLDEN + " 并在 baseline REPORT golden 差异小节留记录。");
     }
 
     @Test

@@ -76,7 +76,14 @@ public final class FabricRegistryAdapter {
         Registry<?> registry = resolved.isPresent() ? (Registry<?>) ((Holder<?>) resolved.get()).value() : null;
         if (registry == null) {
             NekoJS.LOGGER.error("Registry '{}' collected objects but no such vanilla registry exists; content NOT registered", key);
-            current.drainFor(key, (reg, id, supplier) -> { });
+            // sink 抛错：每条进 DrainResult.errors（source=platform-register，含定义/注册表/节点），
+            // 不冒充已注册（审查 F7，与 AC10 可观察语义一致）；条目仍被 drain（无残留）
+            current.drainFor(key, (reg, id, supplier) -> {
+                throw new IllegalStateException("no such vanilla registry '" + key + "' on fabric; content NOT registered");
+            }).errors().forEach(error -> NekoJS.LOGGER.error(
+                    "[registry-startup] {} in registry '{}' (node {}, source {}): {}",
+                            error.definition(), error.registry() == null ? "?" : error.registry().identifier(),
+                            error.node(), error.source(), error.message()));
             return;
         }
         current.drainFor(key, (reg, id, supplier) -> register(registry, id, supplier.get()))
