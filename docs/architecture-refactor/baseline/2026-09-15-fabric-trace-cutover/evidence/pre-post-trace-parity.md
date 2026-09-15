@@ -59,6 +59,10 @@ com/tkisor/nekojs/core/lifecycle/ScriptLifecycleGate.class
   entries、services、mixin、metadata、forbidden、孪生计数全部逐字段等价。
 - sha256 随之变化（class 内容/数量与 jar 时间戳）；本票在相同 worktree 内的
   删除前/删除后复测（见 REPORT §bridge）以**同机连续构建**口径消除环境漂移。
+- **sha 变化的第二贡献源（审查 S1 补列）**：`47f4a444..772ef466` 除上列 2 个 A 文件外
+  还有 5 个 M 文件（`EventBusJS`、`DefaultErrorTracker`、`NekoNodeTimers`、`ScriptExecutor`、
+  `ScriptManager`）——它们改变 common class 内容但不新增 entry（+6 实测已排除 inner-class
+  增量），与上面 +6 清单合并构成 sha 归因的完整链。
 
 ## 未处理差异登记（AC3 口径）
 
