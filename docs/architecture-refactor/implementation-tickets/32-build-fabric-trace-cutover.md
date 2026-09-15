@@ -4,9 +4,9 @@
 
 **Blocked by:** [31: Fabric raw loader 源根显式所有权迁移](31-build-fabric-raw-root.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
 
 **Optional:** false
 
