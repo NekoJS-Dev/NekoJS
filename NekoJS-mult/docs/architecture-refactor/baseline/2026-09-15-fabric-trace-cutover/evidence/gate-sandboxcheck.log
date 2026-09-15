@@ -1,0 +1,141 @@
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common-api-processor:processResources UP-TO-DATE
+> Task :1.21.1:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.1.2:stonecutterPrepare UP-TO-DATE
+> Task :common-api-processor:processTestResources NO-SOURCE
+> Task :26.2.0:stonecutterGenerate UP-TO-DATE
+> Task :1.21.1:stonecutterGenerate UP-TO-DATE
+> Task :26.1.2:stonecutterGenerate UP-TO-DATE
+> Task :common:compileJava UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerate UP-TO-DATE
+> Task :common:processResources UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterGenerate UP-TO-DATE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common-api-processor:compileJava UP-TO-DATE
+> Task :common-api-processor:classes UP-TO-DATE
+> Task :common-api-processor:jar UP-TO-DATE
+> Task :common-api-processor:compileTestJava FROM-CACHE
+> Task :common-api-processor:testClasses UP-TO-DATE
+> Task :26.2.0-fabric:compileJava UP-TO-DATE
+> Task :26.1.2-fabric:compileJava UP-TO-DATE
+> Task :1.21.1:createMinecraftArtifacts UP-TO-DATE
+> Task :26.1.2:createMinecraftArtifacts UP-TO-DATE
+> Task :26.2.0:createMinecraftArtifacts UP-TO-DATE
+> Task :1.21.1:compileJava UP-TO-DATE
+> Task :1.21.1:generateModMetadata UP-TO-DATE
+> Task :1.21.1:processResources UP-TO-DATE
+> Task :1.21.1:classes UP-TO-DATE
+> Task :1.21.1:stonecutterPrepareTest UP-TO-DATE
+> Task :1.21.1:stonecutterGenerateTest UP-TO-DATE
+> Task :26.1.2:compileJava UP-TO-DATE
+> Task :26.1.2:generateModMetadata UP-TO-DATE
+> Task :26.2.0:compileJava UP-TO-DATE
+> Task :26.1.2:processResources UP-TO-DATE
+> Task :26.2.0:generateModMetadata UP-TO-DATE
+> Task :26.1.2:classes UP-TO-DATE
+> Task :26.2.0:processResources UP-TO-DATE
+> Task :26.2.0:classes UP-TO-DATE
+> Task :1.21.1:compileTestJava UP-TO-DATE
+> Task :26.2.0:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2:compileTestJava UP-TO-DATE
+> Task :1.21.1:processTestResources UP-TO-DATE
+> Task :1.21.1:testClasses UP-TO-DATE
+> Task :26.1.2:processTestResources UP-TO-DATE
+> Task :26.2.0:stonecutterGenerateTest UP-TO-DATE
+> Task :26.1.2:testClasses UP-TO-DATE
+> Task :26.1.2-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.1.2-fabric:generateModMetadata UP-TO-DATE
+> Task :26.2.0:compileTestJava UP-TO-DATE
+> Task :26.1.2-fabric:processResources UP-TO-DATE
+> Task :26.1.2-fabric:classes UP-TO-DATE
+> Task :26.2.0:processTestResources UP-TO-DATE
+> Task :26.2.0:testClasses UP-TO-DATE
+> Task :26.1.2-fabric:processIncludeJars UP-TO-DATE
+> Task :1.21.1:test UP-TO-DATE
+> Task :1.21.1:verifyDevModSourceSets
+> Task :1.21.1:check
+> Task :26.1.2:test UP-TO-DATE
+> Task :26.1.2:verifyDevModSourceSets
+> Task :26.1.2:check
+> Task :26.2.0-fabric:extractIcuClasses UP-TO-DATE
+> Task :26.2.0:test UP-TO-DATE
+> Task :26.2.0-fabric:generateModMetadata UP-TO-DATE
+> Task :26.2.0:verifyDevModSourceSets
+> Task :26.2.0:check
+> Task :26.1.2-fabric:jar UP-TO-DATE
+> Task :26.2.0-fabric:processResources UP-TO-DATE
+> Task :26.2.0-fabric:classes UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.2.0-fabric:processIncludeJars UP-TO-DATE
+> Task :26.1.2-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.2.0-fabric:jar UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterPrepareTest UP-TO-DATE
+> Task :26.1.2-fabric:compileTestJava UP-TO-DATE
+> Task :26.1.2-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:stonecutterGenerateTest UP-TO-DATE
+> Task :26.1.2-fabric:testClasses UP-TO-DATE
+> Task :26.2.0-fabric:compileTestJava UP-TO-DATE
+> Task :26.2.0-fabric:processTestResources UP-TO-DATE
+> Task :26.2.0-fabric:testClasses UP-TO-DATE
+> Task :26.1.2-fabric:test UP-TO-DATE
+> Task :26.1.2-fabric:validateAccessWidener UP-TO-DATE
+> Task :26.2.0-fabric:test UP-TO-DATE
+> Task :26.2.0-fabric:validateAccessWidener UP-TO-DATE
+> Task :26.1.2-fabric:verifyFabricRuntimeArtifact
+> Task :26.1.2-fabric:check
+> Task :26.2.0-fabric:verifyFabricRuntimeArtifact
+> Task :26.2.0-fabric:check
+
+> Task :guardLint
+guardLint: 守卫块 248，扫描 392 个文件；超限豁免 0 个；警告 0 条
+
+> Task :common:checkCommonIsolation
+> Task :common:compileTestJava FROM-CACHE
+> Task :common:processTestResources
+> Task :common:testClasses
+> Task :common-api-processor:test
+> Task :common-api-processor:check
+> Task :common:test
+> Task :common:check
+> Task :sandboxCheck
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS/.worktrees/t32/NekoJS-mult/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 32s
+86 actionable tasks: 10 executed, 2 from cache, 74 up-to-date
