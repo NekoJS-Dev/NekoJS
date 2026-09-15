@@ -63,11 +63,15 @@ class EventSurfaceOwnershipTest {
     void domainGroupsStayInTheirOriginalOwnersWithoutDuplication() {
         Map<String, EventGroup> groups = registeredGroups();
 
-        // 已知事件域的原有 owner（26.x 节点；KeyBindEvents 为 >=26 客户端组）
-        Set<String> expected = Set.of(
+        // 已知事件域的原有 owner。KeyBindEvents 是 >=26 客户端组（与
+        // NekoJSCorePlugin.registerClientEvents 的同源守卫一致），1.21.1 不注册。
+        Set<String> expected = new HashSet<>(Set.of(
                 "PlayerEvents", "ServerEvents", "BlockEvents", "ItemEvents", "EntityEvents",
                 "GoalEvents", "CommandEvents", "CapabilityEvents", "LevelEvents",
-                "NetworkEvents", "ScriptEvents", "ProbeEvents", "ClientEvents", "KeyBindEvents");
+                "NetworkEvents", "ScriptEvents", "ProbeEvents", "ClientEvents"));
+        //? if >=26 {
+        expected.add("KeyBindEvents");
+        //?}
         assertEquals(expected, groups.keySet(),
                 "event domain ownership map changed: domains must stay in their original groups, "
                         + "not be copied into new surfaces");
