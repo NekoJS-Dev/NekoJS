@@ -1,0 +1,176 @@
+#!/usr/bin/env bash
+#
+# check-translation-drift — 翻译漂移检测（dashboard 模式，默认退出 0）。
+#
+# Checks whether the English pages under wiki/en_us/ are still in sync with the
+# Chinese pages they were translated from.
+#
+# Each translated page records the commit of its source page in a metadata
+# table near the top of the file:
+#
+#   > | Source page    | [`wiki/Home.md`](../Home)   |
+#   > | Source version | commit `101fd07a`, 2026-08-20 |
+#
+# This script reads that table, then asks git whether the source page has
+# changed since that commit. It reports four things:
+#
+#   1. UP TO DATE  - the source has not changed since the translation.
+#   2. STALE       - the source has changed; the translation needs review.
+#   3. MISSING     - a Chinese page that has no English translation yet.
+#   4. ORPHANED    - an English page whose Chinese source was deleted or renamed.
+#
+# It also reports NO METADATA for an English page whose table is absent or
+# malformed, which keeps the convention enforceable.
+#
+# Usage:
+#   scripts/check-translation-drift            # dashboard, always exits 0
+#   scripts/check-translation-drift --strict   # exits 1 if anything is stale
+#   scripts/check-translation-drift --quiet    # only problems, no OK lines
+#
+# See scripts/check-translation-drift.README.md for details.
+
+set -u
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+WIKI="$REPO_ROOT/wiki"
+EN_DIR="$WIKI/en_us"
+
+STRICT=0
+QUIET=0
+for arg in "$@"; do
+    case "$arg" in
+        --strict) STRICT=1 ;;
+        --quiet)  QUIET=1 ;;
+        -h|--help)
+            sed -n '3,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *)
+            echo "unknown option: $arg" >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [ ! -d "$EN_DIR" ]; then
+    echo "No English pages found at wiki/en_us/ — nothing to check."
+    exit 0
+fi
+
+cd "$REPO_ROOT" || exit 2
+
+n_ok=0
+n_stale=0
+n_bad=0
+n_missing=0
+n_orphaned=0
+translated_sources=""
+
+printf '%s\n' "Translation drift report"
+printf '%s\n' "========================"
+printf '\n'
+
+# ---------------------------------------------------------------------------
+# 1. Every English page: compare against the recorded source commit.
+# ---------------------------------------------------------------------------
+shopt -s nullglob
+for en_file in "$EN_DIR"/*.md; do
+    en_name="$(basename "$en_file")"
+
+    # `wiki/<something>.md` inside the "Source page" row
+    source_page="$(grep -m1 'Source page' "$en_file" \
+        | sed -n 's/.*`wiki\/\([^`]*\)`.*/\1/p')"
+    # `<hash>` inside the "Source version" row
+    source_commit="$(grep -m1 'Source version' "$en_file" \
+        | sed -n 's/.*commit `\([0-9a-f]\{7,40\}\)`.*/\1/p')"
+
+    if [ -z "$source_page" ] || [ -z "$source_commit" ]; then
+        printf 'NO METADATA  %-32s (cannot find source page or source commit)\n' "en_us/$en_name"
+        n_bad=$((n_bad + 1))
+        continue
+    fi
+
+    translated_sources="$translated_sources|$source_page"
+
+    if [ ! -f "$WIKI/$source_page" ]; then
+        # The Chinese source is gone. Either it was deleted upstream, in which
+        # case this translation should be deleted too, or it was renamed, in
+        # which case the metadata needs to point at the new name.
+        printf 'ORPHANED     %-32s (source wiki/%s no longer exists)\n' "en_us/$en_name" "$source_page"
+        last_seen="$(git log -1 --format='%h %ad' --date=short -- "wiki/$source_page" 2>/dev/null)"
+        if [ -n "$last_seen" ]; then
+            printf '                 last seen in %s\n' "$last_seen"
+        fi
+        n_orphaned=$((n_orphaned + 1))
+        continue
+    fi
+
+    if ! git cat-file -e "$source_commit^{commit}" 2>/dev/null; then
+        printf 'NO METADATA  %-32s (commit %s not found in this repository)\n' "en_us/$en_name" "$source_commit"
+        n_bad=$((n_bad + 1))
+        continue
+    fi
+
+    changes="$(git log --oneline "$source_commit"..HEAD -- "wiki/$source_page" 2>/dev/null)"
+
+    if [ -z "$changes" ]; then
+        if [ "$QUIET" -eq 0 ]; then
+            printf 'UP TO DATE   %-32s (source wiki/%s unchanged since %s)\n' \
+                "en_us/$en_name" "$source_page" "$source_commit"
+        fi
+        n_ok=$((n_ok + 1))
+    else
+        count="$(printf '%s\n' "$changes" | wc -l | tr -d ' ')"
+        printf 'STALE        %-32s (source wiki/%s changed in %s commit(s) since %s)\n' \
+            "en_us/$en_name" "$source_page" "$count" "$source_commit"
+        printf '%s\n' "$changes" | sed 's/^/                 /'
+        n_stale=$((n_stale + 1))
+    fi
+done
+
+# ---------------------------------------------------------------------------
+# 2. Chinese pages with no English translation yet.
+# ---------------------------------------------------------------------------
+if [ "$QUIET" -eq 0 ]; then
+    printf '\n'
+fi
+for zh_file in "$WIKI"/*.md; do
+    zh_name="$(basename "$zh_file")"
+    case "$translated_sources" in
+        *"|$zh_name"*) continue ;;
+    esac
+    # No trailing column here: these filenames are Chinese, and printf pads by
+    # character count rather than display width, so any column after them would
+    # not line up.
+    printf 'MISSING      %s\n' "$zh_name"
+    n_missing=$((n_missing + 1))
+done
+shopt -u nullglob
+
+# ---------------------------------------------------------------------------
+# 3. Summary.
+# ---------------------------------------------------------------------------
+printf '\n'
+printf '%s\n' "------------------------------------------------------------"
+printf 'up to date: %s   stale: %s   orphaned: %s   no metadata: %s   not translated: %s\n' \
+    "$n_ok" "$n_stale" "$n_orphaned" "$n_bad" "$n_missing"
+
+if [ "$n_stale" -gt 0 ]; then
+    printf '\n'
+    printf '%s\n' "To review a stale page, read what changed in the Chinese source:"
+    printf '%s\n' "    git diff <recorded-commit>..HEAD -- wiki/<source-page>"
+    printf '%s\n' "Then update the translation and its 'Source version' row."
+fi
+
+if [ "$n_orphaned" -gt 0 ]; then
+    printf '\n'
+    printf '%s\n' "An orphaned page means its Chinese source was deleted or renamed."
+    printf '%s\n' "If it was deleted, delete the English page too. If it was renamed,"
+    printf '%s\n' "point the 'Source page' row at the new filename."
+fi
+
+if [ "$STRICT" -eq 1 ] && { [ "$n_stale" -gt 0 ] || [ "$n_bad" -gt 0 ] || [ "$n_orphaned" -gt 0 ]; }; then
+    exit 1
+fi
+exit 0

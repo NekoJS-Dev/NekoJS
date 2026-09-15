@@ -15,6 +15,7 @@
 *.properties text eol=lf
 # 无扩展名脚本不匹配 *.sh，单独声明（仓库内 LF）
 gradlew text eol=lf
+scripts/check-translation-drift text eol=lf
 
 # 二进制资源
 *.png binary
