@@ -94,12 +94,10 @@ dependencies {
 // java/resources 由本 convention 显式注入，templates/access widener 同根取材。该目录在
 // 共享树的 source set 布局（src/main|test）之外，stonecutter **不做预处理**——版本差异
 // 由共享树的 compat facade（McVersionCompat 等）或 versions/<node>/src 的节点 override 承担，
-// raw root 里的文件必须同时编过 26.1.2 与 26.2。
+// raw root 里的文件必须同时编过 26.1.2 与 26.2。迁移前的 versions/26.1.2-fabric 借用式
+// bridge（deps.fabric_source_node）已按票 32 的五层 trace 与门禁证据删除。
 //
-// 历史与回滚：迁移前 raw root 住 versions/26.1.2-fabric/src/main，26.2.0-fabric 经
-// deps.fabric_source_node bridge 借用。两节点的 gradle.properties 仍保留该键，作为票 32
-// 删除前的记录在案过渡 bridge（本 convention 已不读取）；回滚 = revert 迁移 commit，
-// 文件与接线一并还原。注意票 01 的教训仍然成立：若把文件放回 versions/<node>/src/main，
+// 注意票 01 的教训仍然成立：若把 raw root 文件放回 versions/<node>/src/main，
 // stonecutter 的节点本地挂载会与本注入叠成双 copy root，processResources 冷构建确定性失败
 //（docs/architecture-refactor/baseline/2026-09-12-build-baseline-report.md §7.1）。
 val fabricSourceRoot = rootProject.file("src/fabric")

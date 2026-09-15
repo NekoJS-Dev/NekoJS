@@ -1,0 +1,44 @@
+// 工单 32 五层 trace 探针（--init-script 运行）：
+//  1) projectsEvaluated 时打印全部 java 项目的 main sourceSet srcDirs（挂载关系证据，
+//     输出格式沿用票 31 post-srcdirs-probe.txt 的 SRCDIRS 行）；
+//  2) 注册 traceCommonRuntime / traceFabricBundled 两个帮助任务，执行期打印 fat-jar
+//     依赖清单（:common runtimeClasspath 按 convention 过滤 graal；fabric bundled），
+//     供 fabric-trace-t32.py 的 L4（去重前打包输入）枚举依赖来源。
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects { p ->
+        def ss = p.extensions.findByName('sourceSets')
+        if (ss == null) return
+        def main = ss.findByName('main')
+        if (main == null) return
+        def javaDirs = main.java.srcDirs.collect { p.relativePath(it).replace('/', '\\') }.join(';')
+        def resDirs = main.resources.srcDirs.collect { p.relativePath(it).replace('/', '\\') }.join(';')
+        println("SRCDIRS ${p.path} java=[${javaDirs}]")
+        println("SRCDIRS ${p.path} res=[${resDirs}]")
+
+        if (p.name == 'common') {
+            p.tasks.register('traceCommonRuntime') {
+                doLast {
+                    def kept = p.configurations.getByName('runtimeClasspath')
+                        .resolvedConfiguration.resolvedArtifacts
+                        .findAll { a ->
+                            // convention embeddedCommonRuntime 同款过滤：graal 不内嵌
+                            !(a.moduleVersion.id.group == 'curse.maven' && a.name == 'graal-1504336')
+                        }
+                    // 空清单是事实（common 的 runtimeClasspath 仅 graal，被过滤）——
+                    // 打出 COUNT 行区分"解析为空"与"脚本失败"
+                    println("COMMON_RT_COUNT::${kept.size()}")
+                    kept.each { a -> println("COMMON_RT::${a.file.absolutePath}") }
+                }
+            }
+        }
+        if (p.name.endsWith('-fabric')) {
+            p.tasks.register('traceFabricBundled') {
+                doLast {
+                    p.configurations.getByName('bundled').resolve().each { f ->
+                        println("BUNDLED::${f.absolutePath}")
+                    }
+                }
+            }
+        }
+    }
+}
