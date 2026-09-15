@@ -14,12 +14,14 @@
 | legacy probe 树 | `common/src/test/resources/nekojs/probe/legacy-tree/**` | `LegacyProbeTreeTest`（经 `ProbeGoldenSupport`，整树镜像语义） | `LegacyProbeFixture` → TS probe backend |
 | query 域 declaration golden | `src/test/resources/golden/query/datamap-binding.d.txt`、`entityselectors-binding.d.txt` | `DataMapQueryBindingTest`、`EntitySelectorsQueryBindingTest`（根测试树，文本对比） | 生产 probe TS backend `BindingDeclarationGenerator` 对 DataMap / EntitySelectors binding 的 declaration 输出（ticket 25） |
 | query 域 capability matrix golden | `src/test/resources/golden/query/capability-matrix-neoforge.txt`、`capability-matrix-fabric.txt` | `QueryToolCapabilityMatrixTest`（loader 探针自动选 golden；fabric 行经由 `:26.1.2-fabric:test` 消费） | capability 探针矩阵：类存在性 + source trace 判定的 supported/partial/unavailable（ticket 25） |
+| startup registry typed Builder 契约 golden | `src/test/resources/golden/registry/startup-builders.d.ts`（26.x）、`startup-builders-1.21.1.d.ts`（1.21.1 成员面有真实差异，按版本各冻一份） | `RegistryBuilderSurfaceGoldenTest`（根测试树，守卫按版本选 golden；fluid 条目不进 golden——NeoForge 面，守卫内内存断言） | 生产 `registry_types` 同款 builder 清单 → `RegistryBuilderContract` 反射 → `RegistryBuilderSurfaces.derive` → `RegistryBuilderTsRenderer`（probe TS 后端同一渲染器）（ticket 15） |
 
-> 查询域两行（ticket 25 落地；本登记是其报告 §7 N9 的收尾，owner managed-surface）**暂不支持
+> 查询域两行（ticket 25 落地；本登记是其报告 §7 N9 的收尾，owner managed-surface）与
+> startup registry 一行（ticket 15 落地，owner registry-startup）**暂不支持
 > regenerate 开关**：`:common:regenerateGoldens` 与 `-Dnekojs.golden.regenerate=true` 只覆盖本表
-> common 树基线，根测试树 `src/test/resources/golden/query/**` 的更新路径是「先改行为/探针输入 →
+> common 树基线，根测试树 `src/test/resources/golden/query/**`、`golden/registry/**` 的更新路径是「先改行为/探针输入 →
 > 手工比对 → 更新 golden → 按 §3 留旧新 diff、原因、影响与审阅记录」（首例：ticket 25 REPORT
-> §8.3）。为该域补 regenerate 开关是已登记的后续债。
+> §8.3）。为这些域补 regenerate 开关是已登记的后续债。
 
 ## 2. 显式 regenerate 命令
 
