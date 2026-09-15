@@ -4,9 +4,9 @@
 
 **Blocked by:** [07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zcode-agent
 
 **Optional:** false
 
