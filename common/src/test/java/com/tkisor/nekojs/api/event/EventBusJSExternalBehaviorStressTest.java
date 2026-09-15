@@ -308,6 +308,10 @@ class EventBusJSExternalBehaviorStressTest {
                                     + "x to listener registration " + tag);
                 }
             }
+            // 非平凡下界：整轮至少要有一次真实送达（逐对硬下界会因 cleaner 理论上
+            // 赢得每个注册→post 窗口而引入 flaky，运行级守卫足以排除零投递回归）
+            assertFalse(ledger.listenerTags().isEmpty(),
+                    "stress run must deliver at least one event (zero-delivery regression)");
         } finally {
             ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
         }

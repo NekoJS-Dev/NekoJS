@@ -11,19 +11,21 @@
 // 运行：游戏内执行 /nekojs probe（单测覆盖 catalog/声明派生面；golden 即证据）。
 
 // 改类型声明：对反射出的 TypeDecl IR 做参数级编辑
-ProbeEvents.modifyType.listen(event => {
+// （bus 本身就是可调用代理：直接调用即注册，没有 .listen 成员——与 TS golden 的
+//   function modifyType(handler: ...) 形状一致）
+ProbeEvents.modifyType(event => {
   event.forClass('net.minecraft.world.entity.player.Player')
        .renameMethod('getX', 'getCustom')
        .hideMethod('setY');
 });
 
 // 全局类型重定向：ItemStack 处处改写为 string（IR 构建后应用，TS/Python 均生效）
-ProbeEvents.assignType.listen(event => {
+ProbeEvents.assignType(event => {
   event.assign('net.minecraft.world.item.ItemStack', 'string');
 });
 
 // 登记额外全局声明（TS → @manual/globals.d.ts；Python → nekojs/__init__.pyi）
-ProbeEvents.addGlobal.listen(event => {
+ProbeEvents.addGlobal(event => {
   event.add('MyFlag', 'boolean');
   event.add('MyCount', 'int');
 });

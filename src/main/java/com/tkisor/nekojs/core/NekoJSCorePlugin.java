@@ -288,9 +288,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register(TypeDocCatalogEntry.binding("ProbeEvents", null,
                 "Probe generation customization events (probe.*). Listeners go in server_scripts; they run when /nekojs probe is invoked.",
                 List.of(
-                        "ProbeEvents.modifyType.listen(event => { event.forClass('net.minecraft.world.entity.player.Player').renameMethod('getX', 'getCustom'); })",
-                        "ProbeEvents.assignType.listen(event => event.assign('net.minecraft.world.item.ItemStack', 'string'))",
-                        "ProbeEvents.addGlobal.listen(event => event.add('MyFlag', 'boolean'))")));
+                        "ProbeEvents.modifyType(event => { event.forClass('net.minecraft.world.entity.player.Player').renameMethod('getX', 'getCustom'); })",
+                        "ProbeEvents.assignType(event => event.assign('net.minecraft.world.item.ItemStack', 'string'))",
+                        "ProbeEvents.addGlobal(event => event.add('MyFlag', 'boolean'))")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.TEST, "Test", "NekoTestHelper", "Test-script assertion and smoke test helper.", List.of("Test.section('recipes').assertTrue(true, 'ready').summary()")));
         registry.register(TypeDocCatalogEntry.binding(ScriptType.STARTUP, "NativeEvents", null, "Startup-side native NeoForge event bridge.", List.of("NativeEvents.onEvent('event.class.Name', event => { })")));
         registry.register(TypeDocCatalogEntry.binding(

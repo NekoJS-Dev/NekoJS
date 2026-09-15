@@ -19,9 +19,9 @@ public interface ProbeEvents {
      * 加参数/文档…）。被触及的类随后经 {@code TypeScriptClassRenderer} 重新渲染并覆盖声明缓存；
      * 未触及的类渲染结果与触及前一致（TypeReflector/TypeScriptClassRenderer 镜像旧渲染契约）。
      *
-     * <p>典型用法（server_scripts）：
+     * <p>典型用法（server_scripts；bus 本身是可调用代理，直接调用即注册）：
      * <pre>{@code
-     * ProbeEvents.modifyType.listen(event => {
+     * ProbeEvents.modifyType(event => {
      *     event.forClass("net.minecraft.world.entity.player.Player")
      *          .renameMethod("getXxx", "getCustom")
      *          .changeParamType("addItem", 0, "net.minecraft.world.item.ItemStack");
