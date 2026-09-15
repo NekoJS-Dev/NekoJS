@@ -27,18 +27,18 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
         implements TaggableBuilder<EnchantmentBuilder> {
 
     /** 支持附魔的物品标签 id（如 'minecraft:enchantable/weapon'，'#' 前缀 tolerated）。默认空集合。 */
-    public String supportedItems = null;
-    public int weight = 1;
-    public int maxLevel = 1;
+    private String supportedItems = null;
+    private int weight = 1;
+    private int maxLevel = 1;
     /** 最小消耗：{@code minCostBase + minCostPerLevel * (level - 1)}。 */
-    public int minCostBase = 1;
-    public int minCostPerLevel = 0;
+    private int minCostBase = 1;
+    private int minCostPerLevel = 0;
     /** 最大消耗：{@code maxCostBase + maxCostPerLevel * (level - 1)}。 */
-    public int maxCostBase = 1;
-    public int maxCostPerLevel = 0;
-    public int anvilCost = 0;
+    private int maxCostBase = 1;
+    private int maxCostPerLevel = 0;
+    private int anvilCost = 0;
     /** 生效槽位组：any/armor/chest/feet/head/legs/hand/mainhand/offhand（默认 mainhand）。 */
-    public String slots = "mainhand";
+    private String slots = "mainhand";
 
     public EnchantmentBuilder(Identifier id) {
         super(id);
@@ -53,6 +53,82 @@ public class EnchantmentBuilder extends RegistryObjectBuilder<Enchantment>
     @Override
     public Identifier getLocation() {
         return id;
+    }
+
+    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点（ticket 15） ----
+
+    /** 支持附魔的物品标签 id（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    public String getSupportedItems() {
+        return supportedItems;
+    }
+
+    public void setSupportedItems(String supportedItems) {
+        this.supportedItems = supportedItems == null || supportedItems.isBlank() ? null : supportedItems;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    public void setWeight(int weight) {
+        this.weight = weight;
+    }
+
+    public int getMaxLevel() {
+        return maxLevel;
+    }
+
+    public void setMaxLevel(int maxLevel) {
+        this.maxLevel = maxLevel;
+    }
+
+    public int getMinCostBase() {
+        return minCostBase;
+    }
+
+    public void setMinCostBase(int minCostBase) {
+        this.minCostBase = minCostBase;
+    }
+
+    public int getMinCostPerLevel() {
+        return minCostPerLevel;
+    }
+
+    public void setMinCostPerLevel(int minCostPerLevel) {
+        this.minCostPerLevel = minCostPerLevel;
+    }
+
+    public int getMaxCostBase() {
+        return maxCostBase;
+    }
+
+    public void setMaxCostBase(int maxCostBase) {
+        this.maxCostBase = maxCostBase;
+    }
+
+    public int getMaxCostPerLevel() {
+        return maxCostPerLevel;
+    }
+
+    public void setMaxCostPerLevel(int maxCostPerLevel) {
+        this.maxCostPerLevel = maxCostPerLevel;
+    }
+
+    public int getAnvilCost() {
+        return anvilCost;
+    }
+
+    public void setAnvilCost(int anvilCost) {
+        this.anvilCost = anvilCost;
+    }
+
+    /** 生效槽位组（已归一化小写）。 */
+    public String getSlots() {
+        return slots;
+    }
+
+    public void setSlots(String slots) {
+        this.slots = slots == null ? "mainhand" : slots.toLowerCase();
     }
 
     @Override

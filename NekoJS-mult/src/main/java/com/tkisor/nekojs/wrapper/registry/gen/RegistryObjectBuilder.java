@@ -6,16 +6,18 @@ import java.util.function.Supplier;
 import net.minecraft.resources.Identifier;
 
 /**
- * 通用注册表对象构建器基类（ADR-0005）：
+ * 通用注册表对象构建器基类（ticket 15 单一写入语义；ADR-0005 public field 约定已废除）：
  *
  * <ul>
- *   <li><b>public field 约定</b>——数据属性由子类以 public field 暴露（脚本端
- *       {@code builder.maxStackSize = 16} 直接赋值），禁止 return-this 链式 setter；
- *       动作方法（{@code noItem()} 等）返回 {@code void}；</li>
+ *   <li><b>数据属性 = 私有字段 + JavaBean setter</b>——脚本端
+ *       {@code builder.maxStackSize = 16}（经 {@code BuilderSurface} 的 putMember）与
+ *       显式 {@code builder.setMaxStackSize(16)} 调用<b>同一个 setter</b>，进入同一
+ *       校验、规范化、definition fingerprint 与注册收集路径；不得保留同名 public
+ *       field 绕过 setter（{@code id} 是 final identity 只读例外）；</li>
  *   <li><b>implements Supplier</b>——懒互引：跨注册表的派生对象（BlockItem、流体方块、桶）
  *       全部经 {@link #get()} 引用，对象创建推迟到平台注册事件抽干期；</li>
  *   <li><b>连带注册</b>——子类按需覆写 {@link #handleAdditionalObjects(AdditionalObjectRegistry)}
- *       （预创建子 builder + {@code noXxx()} 置 null 抑制 + 本回调在 after-all 后置统一执行）。</li>
+ *       （预创建子 builder + {@code noXxx()} 置 null 抑制 + 本回调在主对象抽干期统一执行）。</li>
  * </ul>
  *
  * @param <T> 注册表持有的对象类型

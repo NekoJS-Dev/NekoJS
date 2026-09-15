@@ -90,6 +90,8 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 Platform.instance().getMcVersion(),
                 Platform.instance().isDevelopment(),
                 Platform.instance().isClient());
+        // 新一轮启动的注册 epoch：丢弃并诊断上一轮残留（ticket 15 AC2）
+        FabricRegistryAdapter.beginBoot();
 
         FabricBlockEventBindings.register();
         FabricEntityEventBindings.register();

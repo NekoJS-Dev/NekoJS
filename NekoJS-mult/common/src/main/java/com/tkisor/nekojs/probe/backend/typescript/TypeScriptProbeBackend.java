@@ -174,6 +174,9 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             // 9. 渲染 managed declarations
             renderManagedDeclarations(snapshot, files);
 
+            // 9b. 渲染 typed Builder 契约声明（ticket 15：与 Python 后端同一结构化契约输入）
+            renderRegistryBuilderSurfaces(snapshot, files);
+
             // 10. 渲染 probe.add_global 全局声明（@manual/globals.d.ts，已被 jsconfig include 覆盖）
             renderGlobalsDeclarations(ctx.overrides().globals(), files);
 
@@ -571,6 +574,20 @@ public final class TypeScriptProbeBackend implements ProbeBackend {
             sb.append("\"").append(entry).append("\"");
         }
         sb.append(";\n");
+    }
+
+    /**
+     * typed Builder 契约声明（ticket 15，AC9）：{@code @registry-builders/index.d.ts}。
+     * 输入是 {@link com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry}——由版本树
+     * 对 builder 类的契约反射派生；Python 后端从<b>同一</b>条目列表渲染
+     * {@code nekojs/_registry_builders/__init__.pyi}，成员语义两侧一致。
+     */
+    private void renderRegistryBuilderSurfaces(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {
+        var entries = snapshot.registryBuilderSurfaces();
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
+        files.put("@registry-builders/index.d.ts", RegistryBuilderTsRenderer.render(entries));
     }
 
     private void renderManualDeclarations(NekoScriptCatalogSnapshot snapshot, Map<String, String> files) {

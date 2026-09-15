@@ -14,33 +14,34 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * 方块 builder（ADR-0005 连带注册三件套的样板）：
+ * 方块 builder（连带注册三件套的样板，ticket 15 单一写入语义）：
  * <pre>
  * event.block('mymod:ruby_block', b =&gt; { b.hardness = 3; b.noItem() })
  * event.block('mymod:ruby_block', b =&gt; { b.item.maxStackSize = 16 })   // 定制自动 BlockItem
  * </pre>
  * 三件套：构造期预创建 {@link #item} 子 builder（默认连带注册 BlockItem）、
- * {@link #noItem()} 置 null 抑制、本类 {@code implements Supplier}（BlockItem 经
- * {@link #get()} 懒引用方块，注册事件抽干期才构建）。
+ * {@link #noItem()} 抑制（与 {@code b.item = null} 走同一 {@link #setItem} 写入点）、
+ * 本类 {@code implements Supplier}（BlockItem 经 {@link #get()} 懒引用方块，
+ * 注册事件抽干期才构建）。数据属性私有 + setter，两种写法同一写入语义。
  */
 public class BlockBuilder extends RegistryObjectBuilder<Block> implements TaggableBuilder<BlockBuilder> {
 
     /** 声明了 renderType 的方块（26.x 资产生成消费：translucent 用 force_translucent 贴图引用）。 */
     public static final Map<Identifier, String> RENDER_TYPES = new HashMap<>();
 
-    public float hardness = 1.5f;
-    public float resistance = 1.5f;
-    public int lightLevel = 0;
-    public boolean requiresTool = false;
+    private float hardness = 1.5f;
+    private float resistance = 1.5f;
+    private int lightLevel = 0;
+    private boolean requiresTool = false;
     /** 声音类型名：wood/gravel/grass/metal/glass/wool/sand/snow/amethyst（默认 stone）。 */
-    public String sound = "stone";
+    private String sound = "stone";
     /** 地图颜色名（如 'dirt'/'water'/'gold'/'color_red'）。默认 stone。 */
-    public String mapColor = "stone";
+    private String mapColor = "stone";
     /** 客户端渲染层：solid / cutout / cutout_mipped / translucent。26.x 模型驱动，仅文档意义。 */
-    public String renderType = null;
+    private String renderType = null;
 
-    /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 置 null。 */
-    public ItemBuilder item;
+    /** 预创建的 BlockItem 子 builder：{@code b.item.maxStackSize = 16} 直接定制；{@link #noItem()} 抑制。 */
+    private ItemBuilder item;
 
     public BlockBuilder(Identifier id) {
         super(id);
@@ -58,18 +59,107 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
         return id;
     }
 
+    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点 ----
+
+    public float getHardness() {
+        return hardness;
+    }
+
+    public void setHardness(float hardness) {
+        this.hardness = hardness;
+    }
+
+    public float getResistance() {
+        return resistance;
+    }
+
+    public void setResistance(float resistance) {
+        this.resistance = resistance;
+    }
+
+    public int getLightLevel() {
+        return lightLevel;
+    }
+
+    public void setLightLevel(int lightLevel) {
+        if (lightLevel < 0 || lightLevel > 15) {
+            throw new IllegalArgumentException("lightLevel must be in [0, 15] but got " + lightLevel);
+        }
+        this.lightLevel = lightLevel;
+    }
+
+    public boolean isRequiresTool() {
+        return requiresTool;
+    }
+
+    public void setRequiresTool(boolean requiresTool) {
+        this.requiresTool = requiresTool;
+    }
+
+    /** 声音类型名（已归一化小写）。 */
+    public String getSound() {
+        return sound;
+    }
+
+    public void setSound(String sound) {
+        this.sound = sound == null ? "stone" : sound.toLowerCase();
+    }
+
+    /** 地图颜色名（已归一化小写）。 */
+    public String getMapColor() {
+        return mapColor;
+    }
+
+    public void setMapColor(String mapColor) {
+        this.mapColor = mapColor == null ? "stone" : mapColor.toLowerCase();
+    }
+
+    /** 渲染层（已归一化：空白视为未声明——build 期本来就走同一分支）。 */
+    public String getRenderType() {
+        return renderType;
+    }
+
+    public void setRenderType(String renderType) {
+        this.renderType = renderType == null || renderType.isBlank() ? null : renderType;
+    }
+
+    /** 预创建的 BlockItem 子 builder（脚本面经 {@link BuilderSurface} 包装）。 */
+    public ItemBuilder getItem() {
+        return item;
+    }
+
+    /**
+     * 连带 BlockItem 抑制/恢复的唯一写入点：{@code b.item = null} 与 {@link #noItem()}
+     * 走本 setter。脚本侧只接受 null（抑制）；恢复默认子 builder 用 Java 面
+     * （脚本的定制走 {@code b.item.xxx} 或 {@link #item(Consumer)}）。
+     */
+    public void setItem(ItemBuilder item) {
+        if (item == this.item) {
+            return;
+        }
+        if (item == null) {
+            this.item = null;
+            return;
+        }
+        throw new IllegalArgumentException(
+                "item only accepts null on the script surface (suppress the BlockItem); configure it via "
+                        + "b.item.xxx = ... or b.item(cb) instead");
+    }
+
+    // ---- 复合配置 ----
+
     /** 不可破坏（硬度 -1 / 抗爆 3600000）。 */
     public void unbreakable() {
-        this.hardness = -1.0f;
-        this.resistance = 3600000.0f;
+        setHardness(-1.0f);
+        setResistance(3600000.0f);
     }
 
-    /** 抑制自动 BlockItem 连带注册（置 null 子 builder，与 {@code b.item = null} 等价）。 */
+    /** 抑制自动 BlockItem 连带注册（与 {@code b.item = null} 同一写入点）。 */
     public void noItem() {
-        this.item = null;
+        setItem(null);
     }
 
-    /** 定制自动 BlockItem 属性（便捷面；等价于直接改 {@link #item} 字段）。 */
+    /** 定制自动 BlockItem 属性（便捷面；等价于直接改 {@link #getItem()} 子 builder）。 */
     public void item(Consumer<ItemBuilder> consumer) {
         if (this.item == null) {
             throw new IllegalStateException("noItem() 已抑制 BlockItem 生成，不能再配置 item(cb)");
@@ -81,7 +171,7 @@ public class BlockBuilder extends RegistryObjectBuilder<Block> implements Taggab
     public Block build() {
         net.minecraft.resources.ResourceKey<Block> key =
                 net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id);
-        if (renderType != null && !renderType.isBlank()) {
+        if (renderType != null) {
             RENDER_TYPES.put(id, renderType);
         }
 

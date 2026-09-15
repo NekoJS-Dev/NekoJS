@@ -1,10 +1,7 @@
 package com.tkisor.nekojs.fabric;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryEventJS;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryEvents;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryObjectBuilder;
-import com.tkisor.nekojs.wrapper.registry.gen.RegistryRepository;
+import com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntime;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -12,29 +9,41 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * 通用注册表的 Fabric 适配层（ADR-0004 平台层的 fabric 形态）：
- * 与 NeoForge 侧逐 pass 抽干不同，fabric 在 {@code onInitialize} 内<b>单批</b>
- * 完成——先 post 一次平台无关收集事件（脚本回调攒 builder），再逐注册表抽干、
- * 以 vanilla {@link Registry#register} 直注。跨注册表互引经 builder 的懒
- * {@code get()} 解析，单批内的注册次序无关紧要。
+ * 通用注册表的 Fabric 适配层（ADR-0004 平台层的 fabric 形态；ticket 15 起为
+ * {@link StartupRegistryRuntime} 的薄接线）：与 NeoForge 侧逐 pass 抽干不同，
+ * fabric 在 {@code onInitialize} 内<b>单批</b>完成——先收集一次（同一
+ * {@code collectOnce} epoch 语义），再逐注册表 {@code drainFor}、以 vanilla
+ * {@link Registry#register} 直注（sink 立即执行 supplier，校验即时可观察）。
+ * 跨注册表互引经 builder 的懒 {@code get()} 解析，单批内的注册次序无关紧要。
  */
 public final class FabricRegistryAdapter {
     private FabricRegistryAdapter() {}
 
-    private static final RegistryRepository REPOSITORY = new RegistryRepository();
-    private static boolean collected;
+    private static volatile StartupRegistryRuntime runtime = new StartupRegistryRuntime(nodeLabel());
+
+    /** 当前 epoch 的 Runtime。 */
+    public static StartupRegistryRuntime runtime() {
+        return runtime;
+    }
+
+    /** 新一轮游戏启动：换新 epoch；上一轮若有未清空暂存，先丢弃并记录诊断（AC2）。 */
+    public static void beginBoot() {
+        StartupRegistryRuntime previous = runtime;
+        if (previous != null && !previous.isFullyDrained()) {
+            previous.reportUndelivered(message -> NekoJS.LOGGER.error(
+                    "[registry-startup] stale staging from a previous boot discarded: {}", message));
+        }
+        runtime = new StartupRegistryRuntime(nodeLabel());
+    }
 
     /** mod 入口在 STARTUP 脚本加载完成后调用（收集依赖脚本侧已挂好监听）。 */
     public static void onInitialize() {
-        if (!collected) {
-            collected = true;
-            RegistryEvents.REGISTER.post(RegistryEventJS.create(REPOSITORY));
-        }
+        StartupRegistryRuntime current = runtime;
+        current.collectOnce();
         // 快照 key 集再逐个抽干（drain 会改结构）
-        for (ResourceKey<? extends Registry<?>> key : REPOSITORY.undrained().keySet().stream().toList()) {
-            drainRegistry(key);
+        for (ResourceKey<? extends Registry<?>> key : current.snapshotUndrainedRegistries()) {
+            drainRegistry(current, key);
         }
-        REPOSITORY.undeliveredAdditional().keySet().stream().toList().forEach(FabricRegistryAdapter::drainRegistry);
         // 实体属性挂载：EntityTypeBuilder build 期记账的属性表统一注册（NeoForge 侧由
         // EntityAttributeCreationEvent 消费同一 drainPendingAttributes）
         com.tkisor.nekojs.wrapper.registry.gen.EntityTypeBuilder.drainPendingAttributes()
@@ -61,26 +70,32 @@ public final class FabricRegistryAdapter {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void drainRegistry(ResourceKey<? extends Registry<?>> key) {
+    private static void drainRegistry(StartupRegistryRuntime current, ResourceKey<? extends Registry<?>> key) {
         // REGISTRY 是根注册表（Registry of Registry），泛型捕获与任一具体键不兼容——raw 收窄
         java.util.Optional<?> resolved = BuiltInRegistries.REGISTRY.get((ResourceKey) key);
         Registry<?> registry = resolved.isPresent() ? (Registry<?>) ((Holder<?>) resolved.get()).value() : null;
         if (registry == null) {
             NekoJS.LOGGER.error("Registry '{}' collected objects but no such vanilla registry exists; content NOT registered", key);
-            REPOSITORY.drain(key);
-            REPOSITORY.drainAdditional(key);
+            current.drainFor(key, (reg, id, supplier) -> { });
             return;
         }
-        for (RegistryObjectBuilder<?> builder : REPOSITORY.drain(key)) {
-            register(registry, builder.id, builder.get());
-        }
-        for (RegistryRepository.Additional additional : REPOSITORY.drainAdditional(key)) {
-            register(registry, additional.id(), additional.supplier().get());
-        }
+        current.drainFor(key, (reg, id, supplier) -> register(registry, id, supplier.get()))
+                .errors().forEach(error -> NekoJS.LOGGER.error(
+                        "[registry-startup] {} in registry '{}' (node {}, source {}): {}",
+                                error.definition(), error.registry() == null ? "?" : error.registry().identifier(),
+                                error.node(), error.source(), error.message()));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static void register(Registry<?> registry, Identifier id, Object value) {
         Registry.register((Registry) registry, id, value);
+    }
+
+    private static String nodeLabel() {
+        try {
+            return com.tkisor.nekojs.platform.Platform.getLoaderId() + ":" + com.tkisor.nekojs.platform.Platform.getMcVersion();
+        } catch (IllegalStateException notBootstrapped) {
+            return "fabric:?";
+        }
     }
 }

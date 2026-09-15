@@ -46,40 +46,44 @@ public final class NekoRegistryPointsPlugin
     @Override
     public void registerTypeDocs(com.tkisor.nekojs.core.plugin.TypeDocsRegister registry) {
         NekoRegistryDeclarations.register(registry);
+        // typed Builder 契约条目（ticket 15 AC7/AC9）：从 registry_types 登记的 builder 类
+        // 契约反射派生，驱动 TS/Python declaration 与 contract/golden——与手写 manual
+        // declaration（legacy 迁移观察面）并存，删除走维护者 gate
+        RegistryBuilderSurfaces.register(registry, registryTypes());
     }
 
     @Override
     public void registerRegistryTypes(RegistryTypesPoint.RegistryTypesCollector collector) {
-        // 平台无关类型（纯 vanilla 构建）
-        collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder::new);
+        // 平台无关类型（纯 vanilla 构建）；builder 类随类型登记（契约反射输入，ticket 15）
+        collector.registerType(Registries.SOUND_EVENT, "basic", SoundEventBuilder.class, SoundEventBuilder::new);
         collector.setDefault(Registries.SOUND_EVENT, "basic");
-        collector.registerType(Registries.MOB_EFFECT, "basic", MobEffectBuilder::new);
+        collector.registerType(Registries.MOB_EFFECT, "basic", MobEffectBuilder.class, MobEffectBuilder::new);
         collector.setDefault(Registries.MOB_EFFECT, "basic");
-        collector.registerType(Registries.POTION, "basic", PotionBuilder::new);
+        collector.registerType(Registries.POTION, "basic", PotionBuilder.class, PotionBuilder::new);
         collector.setDefault(Registries.POTION, "basic");
-        collector.registerType(Registries.PAINTING_VARIANT, "basic", PaintingVariantBuilder::new);
+        collector.registerType(Registries.PAINTING_VARIANT, "basic", PaintingVariantBuilder.class, PaintingVariantBuilder::new);
         collector.setDefault(Registries.PAINTING_VARIANT, "basic");
-        collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder::new);
+        collector.registerType(Registries.VILLAGER_TYPE, "basic", VillagerTypeBuilder.class, VillagerTypeBuilder::new);
         collector.setDefault(Registries.VILLAGER_TYPE, "basic");
         // builder 本体平台无关（零 loader 依赖），fabric 由 FabricRegistryAdapter 单批直注 +
         // 收尾挂实体属性/groupTab 追加（NeoForge 侧经 EntityAttributeCreationEvent /
         // BuildCreativeModeTabContentsEvent 消费同一批记账）。
-        collector.registerType(Registries.ITEM, "basic", ItemBuilder::new);
+        collector.registerType(Registries.ITEM, "basic", ItemBuilder.class, ItemBuilder::new);
         collector.setDefault(Registries.ITEM, "basic");
-        collector.registerType(Registries.BLOCK, "basic", BlockBuilder::new);
+        collector.registerType(Registries.BLOCK, "basic", BlockBuilder.class, BlockBuilder::new);
         collector.setDefault(Registries.BLOCK, "basic");
 //? if neoforge {
         // 流体体系是 NeoForge 面（FluidStack/FluidIngredient），fabric 等价物需重设计
-        collector.registerType(Registries.FLUID, "basic", FluidBuilder::new);
+        collector.registerType(Registries.FLUID, "basic", FluidBuilder.class, FluidBuilder::new);
         collector.setDefault(Registries.FLUID, "basic");
 //?}
-        collector.registerType(Registries.ENTITY_TYPE, "basic", EntityTypeBuilder::new);
+        collector.registerType(Registries.ENTITY_TYPE, "basic", EntityTypeBuilder.class, EntityTypeBuilder::new);
         collector.setDefault(Registries.ENTITY_TYPE, "basic");
-        collector.registerType(Registries.ENCHANTMENT, "basic", EnchantmentBuilder::new);
+        collector.registerType(Registries.ENCHANTMENT, "basic", EnchantmentBuilder.class, EnchantmentBuilder::new);
         collector.setDefault(Registries.ENCHANTMENT, "basic");
-        collector.registerType(Registries.PARTICLE_TYPE, "basic", ParticleTypeBuilder::new);
+        collector.registerType(Registries.PARTICLE_TYPE, "basic", ParticleTypeBuilder.class, ParticleTypeBuilder::new);
         collector.setDefault(Registries.PARTICLE_TYPE, "basic");
-        collector.registerType(Registries.CREATIVE_MODE_TAB, "basic", CreativeTabBuilder::new);
+        collector.registerType(Registries.CREATIVE_MODE_TAB, "basic", CreativeTabBuilder.class, CreativeTabBuilder::new);
         collector.setDefault(Registries.CREATIVE_MODE_TAB, "basic");
     }
 

@@ -19,6 +19,10 @@ import net.minecraft.resources.ResourceKey;
  * <p>对象层冲突 fail-fast（ADR-0004 决策 5）：同注册表同 id 重复注册，
  * 不论主对象之间、主对象与派生条目之间还是派生条目之间，收集期即抛
  * {@link IllegalStateException}。
+ *
+ * <p>ticket 15：主对象条目携带请求元信息（{@link Entry#typeName()} 命名/默认类型、
+ * {@link Entry#origin()} 请求来源——糖方法 / 命名类型 / custom / 裸 supplier），
+ * 供 Runtime 的 drain 观察结果（定义、注册表、节点、错误来源）与诊断使用。
  */
 public final class RegistryRepository {
 
@@ -29,30 +33,40 @@ public final class RegistryRepository {
             Supplier<?> supplier,
             Identifier source) {}
 
-    private final Map<ResourceKey<? extends Registry<?>>, LinkedHashMap<Identifier, RegistryObjectBuilder<?>>> byRegistry =
+    /** 主对象条目：builder + 请求元信息。 */
+    public record Entry(RegistryObjectBuilder<?> builder, String typeName, String origin) {}
+
+    private final Map<ResourceKey<? extends Registry<?>>, LinkedHashMap<Identifier, Entry>> byRegistry =
             new LinkedHashMap<>();
     private final Map<ResourceKey<? extends Registry<?>>, List<Additional>> additionalByRegistry = new LinkedHashMap<>();
 
     /** 收一条主对象 builder（保持收集序）。同注册表同 id 重复抛 {@link IllegalStateException}。 */
     public void add(ResourceKey<? extends Registry<?>> registry, RegistryObjectBuilder<?> builder) {
-        LinkedHashMap<Identifier, RegistryObjectBuilder<?>> builders =
+        add(registry, builder, defaultTypeName(builder), "direct");
+    }
+
+    /** 收一条主对象 builder，携带类型名与请求来源（糖方法/命名类型/custom/裸 supplier）。 */
+    public void add(
+            ResourceKey<? extends Registry<?>> registry, RegistryObjectBuilder<?> builder, String typeName, String origin) {
+        LinkedHashMap<Identifier, Entry> builders =
                 byRegistry.computeIfAbsent(registry, key -> new LinkedHashMap<>());
-        RegistryObjectBuilder<?> previous = builders.putIfAbsent(builder.id, builder);
+        Entry previous = builders.putIfAbsent(builder.id, new Entry(builder, typeName, origin));
         if (previous != null) {
-            throw new IllegalStateException("Duplicate registration '" + builder.id + "' in registry '" + name(registry) + "'");
+            throw new IllegalStateException("Duplicate registration '" + builder.id + "' in registry '" + name(registry)
+                    + "' (first from " + previous.origin() + ", second from " + origin + ")");
         }
     }
 
-    /** 抽干某注册表的全部主对象 builder（移除并返回，保持收集序）。 */
-    public List<RegistryObjectBuilder<?>> drain(ResourceKey<? extends Registry<?>> registry) {
-        LinkedHashMap<Identifier, RegistryObjectBuilder<?>> builders = byRegistry.remove(registry);
+    /** 抽干某注册表的全部主对象条目（移除并返回冻结快照，保持收集序；每 pass 只 drain 一次的攒侧保证）。 */
+    public List<Entry> drain(ResourceKey<? extends Registry<?>> registry) {
+        LinkedHashMap<Identifier, Entry> builders = byRegistry.remove(registry);
         return builders == null ? List.of() : List.copyOf(builders.values());
     }
 
     /** 收一条连带派生条目（builder 的 {@code handleAdditionalObjects} 回调投递）。冲突 fail-fast。 */
     public void addAdditional(
             ResourceKey<? extends Registry<?>> registry, Identifier id, Supplier<?> supplier, Identifier source) {
-        LinkedHashMap<Identifier, RegistryObjectBuilder<?>> builders = byRegistry.get(registry);
+        LinkedHashMap<Identifier, Entry> builders = byRegistry.get(registry);
         if (builders != null && builders.containsKey(id)) {
             throw new IllegalStateException("Duplicate registration '" + id + "' in registry '" + name(registry)
                     + "' (additional object of '" + source + "' collides with a main entry)");
@@ -65,15 +79,15 @@ public final class RegistryRepository {
         list.add(new Additional(registry, id, supplier, source));
     }
 
-    /** 抽干某注册表的全部连带派生条目（保持投递序）。 */
+    /** 抽干某注册表的全部连带派生条目（移除并返回冻结快照，保持投递序）。 */
     public List<Additional> drainAdditional(ResourceKey<? extends Registry<?>> registry) {
         List<Additional> list = additionalByRegistry.remove(registry);
         return list == null ? List.of() : List.copyOf(list);
     }
 
     /** 尚未被任何 pass 抽干的主对象（load-complete 诊断用：注册表名写错 / loader 未触发该 pass）。 */
-    public Map<ResourceKey<? extends Registry<?>>, List<RegistryObjectBuilder<?>>> undrained() {
-        Map<ResourceKey<? extends Registry<?>>, List<RegistryObjectBuilder<?>>> copy = new LinkedHashMap<>();
+    public Map<ResourceKey<? extends Registry<?>>, List<Entry>> undrained() {
+        Map<ResourceKey<? extends Registry<?>>, List<Entry>> copy = new LinkedHashMap<>();
         byRegistry.forEach((registry, builders) -> copy.put(registry, List.copyOf(builders.values())));
         return copy;
     }
@@ -88,6 +102,10 @@ public final class RegistryRepository {
     /** 主对象与派生条目是否都已清空。 */
     public boolean isEmpty() {
         return byRegistry.isEmpty() && additionalByRegistry.isEmpty();
+    }
+
+    private static String defaultTypeName(RegistryObjectBuilder<?> builder) {
+        return builder.getClass().getSimpleName();
     }
 
     private static String name(ResourceKey<? extends Registry<?>> registry) {
