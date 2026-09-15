@@ -6,10 +6,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.decoration.PaintingVariant;
 
 /**
- * 画变种 builder：宽高（16 的倍数，单位像素）、纹理资源 id（指向
- * {@code assets/<ns>/textures/painting/<path>.png}），可选标题 / 作者。
+ * 画变种 builder（1.21.1 面）：宽高（16 的倍数，单位像素）与纹理资源 id（指向
+ * {@code assets/<ns>/textures/painting/<path>.png}）。26.x 的 title/author 成员在
+ * 本节点不存在（成员面差异按版本各冻一份 golden，见 ticket 15 REPORT 五节点差异表）。
  * <pre>
- * event.paintingVariant('mymod:sea', b =&gt; { b.width = 32; b.height = 16; b.title = '大海' })
+ * event.paintingVariant('mymod:sea', b =&gt; { b.width = 32; b.height = 16 })
  * </pre>
  */
 public class PaintingVariantBuilder extends RegistryObjectBuilder<PaintingVariant> {

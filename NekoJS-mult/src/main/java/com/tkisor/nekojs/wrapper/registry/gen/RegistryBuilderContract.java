@@ -77,7 +77,10 @@ public final class RegistryBuilderContract {
         this.builderType = builderType;
         Map<String, Method> getters = new LinkedHashMap<>();
         Map<String, Method> setters = new LinkedHashMap<>();
-        Map<String, Method> rest = new LinkedHashMap<>();
+        // 方法成员按名聚成<b>重载列表</b>（同名不同参各有存在权，如 PotionBuilder.effect
+        // 的 3 参/5 参形态）——单 Method 收集会在 getMethods() 顺序下丢重载，
+        // 令部分脚本形态不可达（审查 F1）
+        Map<String, List<Method>> rest = new LinkedHashMap<>();
         Map<String, Field> fields = new LinkedHashMap<>();
         for (Field field : builderType.getFields()) {
             if (Modifier.isStatic(field.getModifiers())) {
@@ -98,7 +101,7 @@ public final class RegistryBuilderContract {
             } else if (isSetterName(name) && method.getParameterCount() == 1) {
                 setters.put(propertyName(name), method);
             } else {
-                rest.put(name, method);
+                rest.computeIfAbsent(name, k -> new ArrayList<>()).add(method);
             }
         }
         Map<String, Member> result = new LinkedHashMap<>();
@@ -117,9 +120,16 @@ public final class RegistryBuilderContract {
         });
         // 显式 setter 形态（b.setXxx(v)）作为方法成员保留——与属性写入同一 Method
         setters.forEach((property, setter) -> methodOverloads.computeIfAbsent(setter.getName(), k -> new ArrayList<>()).add(setter));
-        rest.forEach((name, method) -> methodOverloads.computeIfAbsent(name, k -> new ArrayList<>()).add(method));
-        methodOverloads.forEach((name, overloads) ->
-                result.putIfAbsent(name, new Member(name, MemberKind.METHOD, null, null, null, List.copyOf(overloads))));
+        rest.forEach((name, overloads) -> methodOverloads.computeIfAbsent(name, k -> new ArrayList<>()).addAll(overloads));
+        methodOverloads.forEach((name, overloads) -> {
+            // getMethods() 顺序不保证：重载列表按参数个数降序 + 签名串稳定排序，
+            // 契约/声明/golden 派生确定（脚本侧调用按实参个数解析，不受此序影响）
+            List<Method> stable = overloads.stream()
+                    .sorted(Comparator.comparingInt((Method m) -> -m.getParameterCount())
+                            .thenComparing(m -> m.getParameterTypes().length == 0 ? "" : m.toGenericString()))
+                    .toList();
+            result.putIfAbsent(name, new Member(name, MemberKind.METHOD, null, null, null, stable));
+        });
         Map<String, Member> sorted = new LinkedHashMap<>();
         result.values().stream()
                 .sorted(Comparator.comparing(Member::name))
@@ -172,16 +182,48 @@ public final class RegistryBuilderContract {
     /**
      * definition fingerprint 的规范化成员读数：按字典序读出全部属性当前值
      * （{@code name=value}）。两种写入方式经过同一 setter 后此处读数必然一致。
+     *
+     * <p><b>对象值属性规范化</b>（审查 F2）：值为 {@link RegistryObjectBuilder}（如
+     * BlockBuilder 的 {@code item} 子 builder）时不用 {@code String.valueOf}（会内嵌
+     * {@code @<identityHashCode>}，同声明跨实例/跨启动指纹漂移），改为递归展开子 builder
+     * 的<b>子指纹</b>（类型简名 + id + 其全部可写属性读数）；嵌套环以 {@code cycle}
+     * 标记截断（防御：当前连带 builder 无环，不承诺任意第三方 builder 无环）。
+     * 抑制（null）与存在（子指纹）天然可区分。
      */
     public List<String> normalizedPropertyReadings(Object builder) {
+        return normalizedReadingsOf(builder, java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()));
+    }
+
+    private List<String> normalizedReadingsOf(Object builder, Set<Object> seen) {
         List<String> readings = new ArrayList<>();
         for (Member member : members.values()) {
             if (member.kind() == MemberKind.WRITABLE_PROPERTY) {
                 Object value = readMember(builder, member);
-                readings.add(member.name() + "=" + (value == null ? "null" : String.valueOf(value)));
+                readings.add(member.name() + "=" + canonicalValue(value, seen));
             }
         }
         return readings;
+    }
+
+    /** 单个属性值的规范化字串：null / 嵌套 builder 子指纹（递归）/ 其余 String.valueOf。 */
+    private String canonicalValue(Object value, Set<Object> seen) {
+        if (value == null) {
+            return "null";
+        }
+        if (value instanceof RegistryObjectBuilder<?> nested) {
+            if (!seen.add(nested)) {
+                return "cycle";
+            }
+            String inner = String.join(";", RegistryBuilderContract.of(builderClassOf(nested)).normalizedReadingsOf(nested, seen));
+            seen.remove(nested);
+            return "builder[" + nested.getClass().getSimpleName() + "(" + nested.id + ")" + inner + "]";
+        }
+        return String.valueOf(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Class<? extends RegistryObjectBuilder<?>> builderClassOf(Object builder) {
+        return (Class<? extends RegistryObjectBuilder<?>>) builder.getClass();
     }
 
     private static boolean isGetterName(String name) {

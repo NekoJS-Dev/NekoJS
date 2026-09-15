@@ -100,12 +100,16 @@ class StartupRegistryRuntimeEndToEndTest {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             // 生产同款：STARTUP 脚本上下文（EventBusJS 的 scriptType 记账依赖此绑定）
             com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-            context.getBindings("js").putMember("errors", errors);
-            context.eval("js", script);
-            // 收集事件在脚本监听挂好后、Context 仍存活时投递（生产里由首 pass 前的 adapter 触发）
-            runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-            com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            try {
+                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
+                context.getBindings("js").putMember("errors", errors);
+                context.eval("js", script);
+                // 收集事件在脚本监听挂好后、Context 仍存活时投递（生产里由首 pass 前的 adapter 触发）
+                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
+            } finally {
+                // 断言失败也不泄漏静态绑定（审查 F5）
+                com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            }
         }
         return runtime;
     }
@@ -213,17 +217,21 @@ class StartupRegistryRuntimeEndToEndTest {
         StartupRegistryRuntime.DrainResult drained;
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             com.tkisor.nekojs.script.ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-            context.eval("js", """
-                    RegistryEvents.register(event => {
-                        event.register('minecraft:item', 'mymod:null_supplier', () => null)
-                        event.register('minecraft:item', 'mymod:wrong_type', () => 'not-an-item')
-                    });
-                    """);
-            runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
-            // supplier 的 JS 函数绑定在 Context 上：抽干必须在 Context 存活期内（生产由 pass 驱动）
-            drained = runtime.drainFor(Registries.ITEM, new RecordingSink());
-            com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            try {
+                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
+                context.eval("js", """
+                        RegistryEvents.register(event => {
+                            event.register('minecraft:item', 'mymod:null_supplier', () => null)
+                            event.register('minecraft:item', 'mymod:wrong_type', () => 'not-an-item')
+                        });
+                        """);
+                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, testInfos(), testTypes()));
+                // supplier 的 JS 函数绑定在 Context 上：抽干必须在 Context 存活期内（生产由 pass 驱动）
+                drained = runtime.drainFor(Registries.ITEM, new RecordingSink());
+            } finally {
+                // 断言失败也不泄漏静态绑定（审查 F5）
+                com.tkisor.nekojs.script.ScriptContextRegistry.unbind(context);
+            }
         }
 
         assertEquals(2, drained.registered().size(), "两条请求都被抽干（结果可观察）");

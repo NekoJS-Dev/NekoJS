@@ -103,17 +103,21 @@ class RegistryStartupMinimalExampleTest {
         StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             ScriptContextRegistry.bind(context, ScriptType.STARTUP);
-            context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
-            context.eval("js", STARTUP_EXAMPLE);
-            runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, exampleInfos(), exampleTypes()));
-            // drain 必须在 Context 存活期内（supplier 的 JS 函数绑定在 Context 上）
-            RecordingSink sink = new RecordingSink(java.util.Set.of(Registries.ITEM));
-            StartupRegistryRuntime.DrainResult items = runtime.drainFor(Registries.ITEM, sink);
-            StartupRegistryRuntime.DrainResult sounds = runtime.drainFor(Registries.SOUND_EVENT, sink);
-            StartupRegistryRuntime.DrainResult paintings = runtime.drainFor(Registries.PAINTING_VARIANT, sink);
-            StartupRegistryRuntime.DrainResult villagers = runtime.drainFor(Registries.VILLAGER_TYPE, sink);
-            verify(items, sounds, paintings, villagers, sink);
-            ScriptContextRegistry.unbind(context);
+            try {
+                context.getBindings("js").putMember("RegistryEvents", new EventGroupJS(RegistryEvents.GROUP, ScriptType.STARTUP));
+                context.eval("js", STARTUP_EXAMPLE);
+                runtime.collectOnce(new RegistryEventJS(runtime.repository(), NODE, exampleInfos(), exampleTypes()));
+                // drain 必须在 Context 存活期内（supplier 的 JS 函数绑定在 Context 上）
+                RecordingSink sink = new RecordingSink(java.util.Set.of(Registries.ITEM));
+                StartupRegistryRuntime.DrainResult items = runtime.drainFor(Registries.ITEM, sink);
+                StartupRegistryRuntime.DrainResult sounds = runtime.drainFor(Registries.SOUND_EVENT, sink);
+                StartupRegistryRuntime.DrainResult paintings = runtime.drainFor(Registries.PAINTING_VARIANT, sink);
+                StartupRegistryRuntime.DrainResult villagers = runtime.drainFor(Registries.VILLAGER_TYPE, sink);
+                verify(items, sounds, paintings, villagers, sink);
+            } finally {
+                // 断言失败也不泄漏静态绑定（审查 F5）
+                ScriptContextRegistry.unbind(context);
+            }
         }
         return runtime;
     }

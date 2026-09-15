@@ -3,6 +3,8 @@ package com.tkisor.nekojs.wrapper.registry;
 import com.tkisor.nekojs.wrapper.registry.gen.BlockBuilder;
 import com.tkisor.nekojs.wrapper.registry.gen.BuilderSurface;
 import com.tkisor.nekojs.wrapper.registry.gen.ItemBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.PotionBuilder;
+import com.tkisor.nekojs.wrapper.registry.gen.RegistryBuilderContract;
 import com.tkisor.nekojs.wrapper.registry.gen.RegistryObjectBuilder;
 import com.tkisor.nekojs.wrapper.registry.gen.StartupRegistryRuntime;
 import graal.graalvm.polyglot.Context;
@@ -11,6 +13,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -155,11 +159,15 @@ class BuilderSetterPropertyParityTest {
 
         assertEquals(viaMethod.getItem(), viaProperty.getItem(), "b.item = null 与 noItem() 必须同一写入点（都置 null）");
 
-        // 非 null 赋值在脚本面被拒（子 builder 不能从外部替换，只能抑制或配置）
+        // 非 null 赋值在脚本面被拒（子 builder 不能从外部替换，只能抑制或配置）：
+        // JS 对象字面量在 coerce 期就到不了 setter——"item expects ItemBuilder but the
+        // value cannot be converted"（审查 F2：旧断言的 "only accepts null" 只在 Java 直调
+        // setItem 时可达，脚本面不可达）
         BlockBuilder rejected = new BlockBuilder(net.minecraft.resources.Identifier.parse("mymod:r"));
         RuntimeException error = assertThrows(RuntimeException.class,
                 () -> evalOn(rejected, "b.item = {};"));
-        assertTrue(error.getMessage().contains("only accepts null"), error.getMessage());
+        assertTrue(error.getMessage().contains("item"), "错误信息带成员名: " + error.getMessage());
+        assertTrue(error.getMessage().contains("cannot be converted"), error.getMessage());
     }
 //?}
 
@@ -167,7 +175,130 @@ class BuilderSetterPropertyParityTest {
     void builderImplementsSupplierSoDrainCanLazilyBuild() {
         ItemBuilder builder = itemBuilder("mymod:supplier");
         evalOn(builder, "b.maxStackSize = 8;");
-        RegistryObjectBuilder<?> asBuilder = builder;
-        assertEquals(builder, asBuilder, "surface 不改变 Java 侧 Supplier 身份（先攒后建的懒构建点不变）");
+        // surface 不改变 Java 侧对象身份：包上再解包仍是同一实例（drain 期 get() 的懒构建点不变）
+        assertSame(builder, BuilderSurface.unwrap(BuilderSurface.of(builder)));
+
+        // Supplier 语义实质断言：get() 恰构建一次并缓存（先攒后建）
+        int[] builds = {0};
+        RegistryObjectBuilder<String> counting = new RegistryObjectBuilder<>(
+                net.minecraft.resources.Identifier.parse("mymod:counting")) {
+            @Override
+            public String build() {
+                builds[0]++;
+                return "built-once";
+            }
+        };
+        java.util.function.Supplier<String> supplier = counting;
+        assertEquals("built-once", supplier.get());
+        assertEquals("built-once", supplier.get(), "第二次取值走缓存");
+        assertEquals(1, builds[0], "build() 恰好执行一次");
+    }
+
+    // ------------------------------------------------------------------
+    // 对象值可写属性的指纹稳定性（审查 F2；合成 builder，无 vanilla 依赖，全节点真跑）
+    // ------------------------------------------------------------------
+
+    /** 合成子 builder：一个 int 属性（模拟 ItemBuilder 之于 BlockBuilder.item）。 */
+    public static final class SyntheticChild extends RegistryObjectBuilder<Object> {
+        private int charge = 0;
+
+        public SyntheticChild(net.minecraft.resources.Identifier id) {
+            super(id);
+        }
+
+        public int getCharge() {
+            return charge;
+        }
+
+        public void setCharge(int charge) {
+            this.charge = charge;
+        }
+
+        @Override
+        public Object build() {
+            return "child:" + id + ":" + charge;
+        }
+    }
+
+    /** 合成父 builder：对象值可写属性 child（模拟 BlockBuilder 的 item 抑制/存在语义）。 */
+    public static final class SyntheticParent extends RegistryObjectBuilder<Object> {
+        private SyntheticChild child;
+
+        public SyntheticParent(net.minecraft.resources.Identifier id) {
+            super(id);
+        }
+
+        public SyntheticChild getChild() {
+            return child;
+        }
+
+        public void setChild(SyntheticChild child) {
+            this.child = child;
+        }
+
+        @Override
+        public Object build() {
+            return "parent:" + id;
+        }
+    }
+
+    @Test
+    void objectValuedPropertyFingerprintIsStableAcrossInstancesAndDistinguishesSuppression() {
+        // 两棵独立实例树、同一配置：指纹必须一致（旧实现内嵌 identityHashCode 会漂移）
+        SyntheticParent first = new SyntheticParent(net.minecraft.resources.Identifier.parse("mymod:host"));
+        first.setChild(new SyntheticChild(net.minecraft.resources.Identifier.parse("mymod:host")));
+        SyntheticParent second = new SyntheticParent(net.minecraft.resources.Identifier.parse("mymod:host"));
+        second.setChild(new SyntheticChild(net.minecraft.resources.Identifier.parse("mymod:host")));
+        // 经脚本面写入子属性（覆盖 surface 的嵌套路径，与 Java 直写同指纹）
+        evalOn(first.getChild(), "b.charge = 7;");
+        second.getChild().setCharge(7);
+
+        StartupRegistryRuntime runtime = new StartupRegistryRuntime(NODE);
+        assertEquals(runtime.definitionFingerprint(second), runtime.definitionFingerprint(first),
+                "对象值属性按子指纹规范化：同声明的不同实例树指纹一致");
+
+        // 抑制（null）与存在（子指纹）必须可区分
+        SyntheticParent suppressed = new SyntheticParent(net.minecraft.resources.Identifier.parse("mymod:host"));
+        assertNotEquals(runtime.definitionFingerprint(first), runtime.definitionFingerprint(suppressed),
+                "child = null（抑制）与 child 存在是不同定义");
+
+        // 子配置变化要反映进父指纹（连带声明的全规范化读数，spec 08）
+        second.getChild().setCharge(9);
+        assertNotEquals(runtime.definitionFingerprint(first), runtime.definitionFingerprint(second),
+                "子 builder 配置变化必须改变父指纹");
+    }
+
+    // ------------------------------------------------------------------
+    // 同名方法重载双形态可达（审查 F1；真实 PotionBuilder，3 参/5 参 effect）
+    // ------------------------------------------------------------------
+
+    @Test
+    void potionEffectOverloadsAreBothCallableFromScript() {
+        // effect 的 effect 参数传非 String/Holder 值（Integer）时 resolveEffect 返回 null、
+        // 不触碰 vanilla 注册表——裸 JUnit 可验证「两种参数个数都解析到各自重载并成功执行」；
+        // 修复前（单 Method 收集）其中一个形态会抛 "expects [...] but got N argument(s)"
+        PotionBuilder builder = new PotionBuilder(net.minecraft.resources.Identifier.parse("mymod:elixir"));
+
+        evalOn(builder, "b.effect(123, 100, 1);");
+        evalOn(builder, "b.effect(123, 100, 1, false, true);");
+
+        // 错误形态（错误参数个数）仍要给出带期望签名的可诊断错误
+        RuntimeException error = assertThrows(RuntimeException.class,
+                () -> evalOn(builder, "b.effect(123);"));
+        assertTrue(error.getMessage().contains("effect"), error.getMessage());
+        assertTrue(error.getMessage().contains("argument"), error.getMessage());
+    }
+
+    /** 契约层：重载列表真实收集（同名多签名进 Member.overloads，顺序确定）。 */
+    @Test
+    void contractCollectsRealOverloadLists() {
+        RegistryBuilderContract contract = RegistryBuilderContract.of(PotionBuilder.class);
+        RegistryBuilderContract.Member effect = contract.member("effect");
+        assertNotNull(effect);
+        assertEquals(RegistryBuilderContract.MemberKind.METHOD, effect.kind());
+        assertEquals(2, effect.overloads().size(), "3 参/5 参两个 effect 都要进契约: " + effect.overloads());
+        // 确定性排序：参数最多者在前
+        assertEquals(5, effect.overloads().get(0).getParameterCount());
+        assertEquals(3, effect.overloads().get(1).getParameterCount());
     }
 }
