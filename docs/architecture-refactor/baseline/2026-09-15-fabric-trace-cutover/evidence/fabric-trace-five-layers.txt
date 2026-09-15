@@ -1,0 +1,199 @@
+########################################################################
+# L1 raw source origin —— src/fabric 是两个 fabric 节点唯一的 raw loader 事实源
+########################################################################
+src/fabric/java   : 61 个 .java
+src/fabric/resources: 4 个文件
+src/fabric/templates : 1 个文件
+src/fabric/test      : 2 个文件（runtime smoke fixture，仅 CI 拷贝消费）
+全部 java 清单（路径 = <sha256[:12]>）：
+  f3cd21e9a44f  src/fabric/java/com/tkisor/nekojs/bindings/event/client/KeyBindEvents.java
+  dce8d342142a  src/fabric/java/com/tkisor/nekojs/bindings/event/CommandEvents.java
+  1fd92f919024  src/fabric/java/com/tkisor/nekojs/bindings/event/EntityEvents.java
+  83256d7dec73  src/fabric/java/com/tkisor/nekojs/bindings/event/ItemEvents.java
+  3562116aa4d4  src/fabric/java/com/tkisor/nekojs/bindings/event/LevelEvents.java
+  fb95113c3ff7  src/fabric/java/com/tkisor/nekojs/bindings/event/PlayerEvents.java
+  b2a0a2ca3abb  src/fabric/java/com/tkisor/nekojs/bindings/event/ServerEvents.java
+  0f87e1cc71fd  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricBlockEventBindings.java
+  b0fea6377a6a  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricBlockEventBindingsV2.java
+  eae7d466be05  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricClientEventBindings.java
+  f3f958071aa1  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricCommandEventBindings.java
+  b5ed9c1c6908  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricEntityEventBindings.java
+  55d57611463e  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricEntityEventBindingsV2.java
+  c6050ae51e88  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricItemEventBindings.java
+  9ca15ae02fc9  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricItemEventBindingsV2.java
+  cfe861bf5844  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricLevelEventBindings.java
+  81cd3090d1f6  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricLevelEventBindingsV2.java
+  5a6a32854f9b  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricPlayerEventBindings.java
+  616bf84a590b  src/fabric/java/com/tkisor/nekojs/fabric/event/FabricServerEventBindings.java
+  ad08abab0e85  src/fabric/java/com/tkisor/nekojs/fabric/FabricCatalogPlatformProvider.java
+  9bf91f872867  src/fabric/java/com/tkisor/nekojs/fabric/FabricCorePlugin.java
+  4413f90278da  src/fabric/java/com/tkisor/nekojs/fabric/FabricNekoJSCommands.java
+  803a1f418793  src/fabric/java/com/tkisor/nekojs/fabric/FabricPackSync.java
+  6a75d5532364  src/fabric/java/com/tkisor/nekojs/fabric/FabricPDataSync.java
+  6c3d66e670aa  src/fabric/java/com/tkisor/nekojs/fabric/FabricPlayNetwork.java
+  49bb8fa87d26  src/fabric/java/com/tkisor/nekojs/fabric/FabricPluginLoader.java
+  59a5dc0f0d7d  src/fabric/java/com/tkisor/nekojs/fabric/FabricRegistryAdapter.java
+  c071fb59ce1a  src/fabric/java/com/tkisor/nekojs/fabric/mixin/CraftingResultSlotMixin.java
+  8a875bc3356c  src/fabric/java/com/tkisor/nekojs/fabric/mixin/FurnaceResultSlotMixin.java
+  d5a04b0e1e26  src/fabric/java/com/tkisor/nekojs/fabric/mixin/ItemStackDestroyMixin.java
+  1550e4fa502e  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinBlockBehaviourRandomTick.java
+  f96c85cf672a  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinEndermanLeaveBlockGoal.java
+  a52052182212  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinEntity.java
+  1951eac36544  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinEntityTick.java
+  733ccc80c96e  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinFarmlandBlock.java
+  701af3ac99f8  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinItemEntityPickup.java
+  cdcf6bb850f1  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinLavaFluid.java
+  2fa0c768f895  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinLevelChunkBoundTickingBlockEntity.java
+  3bbae98960ff  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinLiquidBlock.java
+  fbb10fc567f3  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinLivingEntity.java
+  4943ec983026  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinLivingEntityDeathDrops.java
+  b0f02b91c566  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinLivingEntityUseItemFinish.java
+  59f4cfd7e6cd  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinMobFinalizeSpawn.java
+  3e84bf77b171  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinNeighborUpdater.java
+  1afcee14417c  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinPortalShape.java
+  1b11ccb10474  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinServerExplosion.java
+  baa0392213ae  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinServerGamePacketListenerItemInteract.java
+  2d2da9cb8e29  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinServerLevelSave.java
+  2c83674ed294  src/fabric/java/com/tkisor/nekojs/fabric/mixin/MixinServerPlayerItemDrop.java
+  4a4557e619b8  src/fabric/java/com/tkisor/nekojs/fabric/mixin/NekoEntityPDataMixin.java
+  7bd716147857  src/fabric/java/com/tkisor/nekojs/fabric/mixin/PlayerAdvancementsMixin.java
+  8cc529a001ad  src/fabric/java/com/tkisor/nekojs/fabric/mixin/ServerCommonPacketListenerAccessor.java
+  171ac8f3ae09  src/fabric/java/com/tkisor/nekojs/fabric/mixin/ServerGamePacketListenerMixin.java
+  0f50a8545347  src/fabric/java/com/tkisor/nekojs/fabric/mixin/ServerLevelMixin.java
+  bc73d48f1291  src/fabric/java/com/tkisor/nekojs/fabric/mixin/ServerPlayerContainerMixin.java
+  caf1b1a5876e  src/fabric/java/com/tkisor/nekojs/fabric/mixin/ServerPlayerDimensionMixin.java
+  e1de2d1ecb72  src/fabric/java/com/tkisor/nekojs/fabric/NekoJSFabricClient.java
+  9f4cdd96f377  src/fabric/java/com/tkisor/nekojs/fabric/NekoJSFabricMod.java
+  d2b4216645d3  src/fabric/java/com/tkisor/nekojs/platform/FabricIdCompat.java
+  e7a2e6a05526  src/fabric/java/com/tkisor/nekojs/platform/FabricModInfo.java
+  c11072a08686  src/fabric/java/com/tkisor/nekojs/platform/FabricPlatform.java
+
+共享树孪生源守卫核验（7 个 neoforge 面孪生必须整文件 `//? if neoforge` 守卫）：
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/CommandEvents.java  首行: '//? if neoforge {'
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/EntityEvents.java  首行: '//? if neoforge {'
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/ItemEvents.java  首行: '//? if neoforge {'
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/LevelEvents.java  首行: '//? if neoforge {'
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/PlayerEvents.java  首行: '//? if neoforge {'
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/ServerEvents.java  首行: '//? if neoforge {'
+  GUARDED  src/main/java/com/tkisor/nekojs/bindings/event/client/KeyBindEvents.java  首行: '//? if neoforge {'
+versions/26.1.2-fabric/src/main/java（节点 override）: 1 个 .java
+  02ee4e908182  versions/26.1.2-fabric/src/main/java/com/tkisor/nekojs/platform/compat/Fabric261VersionCompat.java
+versions/26.2.0-fabric/src/main/java（节点 override）: 1 个 .java
+  b201ba6a823c  versions/26.2.0-fabric/src/main/java/com/tkisor/nekojs/platform/compat/Fabric262VersionCompat.java
+
+########################################################################
+# L2 processed source —— stonecutter 生成副本（生成证据，不是第二源码事实源）
+########################################################################
+共享树 src/main/java 总数: 291；整文件 `//? if neoforge` 守卫: 63
+versions/26.1.2-fabric 生成树: 291 个 .java（共享树 291 的守卫剥除/替换副本）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/CommandEvents.java（910 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/EntityEvents.java（4758 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/ItemEvents.java（4239 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/LevelEvents.java（2820 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/PlayerEvents.java（5370 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/ServerEvents.java（4386 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/client/KeyBindEvents.java（18471 B）
+  src/fabric 路径在生成树有有效代码: 0（零——raw root 不被预处理）
+  src/fabric 路径在生成树仅注释空壳: 7（= 上方 7 个孪生的 neoforge 守卫壳，非 fabric 内容）
+  整文件 neoforge 守卫在生成树仍含有效代码: 0（全部注释空壳化）
+versions/26.2.0-fabric 生成树: 291 个 .java（共享树 291 的守卫剥除/替换副本）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/CommandEvents.java（910 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/EntityEvents.java（4758 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/ItemEvents.java（4239 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/LevelEvents.java（2820 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/PlayerEvents.java（5370 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/ServerEvents.java（4386 B）
+  HOLLOW(注释空壳)  生成树/com/tkisor/nekojs/bindings/event/client/KeyBindEvents.java（18471 B）
+  src/fabric 路径在生成树有有效代码: 0（零——raw root 不被预处理）
+  src/fabric 路径在生成树仅注释空壳: 7（= 上方 7 个孪生的 neoforge 守卫壳，非 fabric 内容）
+  整文件 neoforge 守卫在生成树仍含有效代码: 0（全部注释空壳化）
+
+########################################################################
+# L3 编译 class —— 节点 classes 唯一携带 fabric 孪生；common classes 必须零孪生
+########################################################################
+versions/26.1.2-fabric/build/classes/java/main：7 孪生存在性/哈希
+  2f05ffd4cf63  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  a81ce9b63950  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  b3213ed8b26a  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  c2beb92b6208  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  052d7641d57c  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  ab6f08f33517  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  70932800d9d2  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+  common classes 携带孪生 FQCN: 0（零——common 不是孪生第二来源）
+  节点 override 编译产物（versions/26.1.2-fabric/src 的类）:
+    BUILT 727bcd59c262  com/tkisor/nekojs/platform/compat/Fabric261VersionCompat.class
+versions/26.2.0-fabric/build/classes/java/main：7 孪生存在性/哈希
+  2f05ffd4cf63  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  a81ce9b63950  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  b3213ed8b26a  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  c2beb92b6208  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  052d7641d57c  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  ab6f08f33517  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  70932800d9d2  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+  common classes 携带孪生 FQCN: 0（零——common 不是孪生第二来源）
+  节点 override 编译产物（versions/26.2.0-fabric/src 的类）:
+    BUILT 2cd42579e854  com/tkisor/nekojs/platform/compat/Fabric262VersionCompat.class
+
+########################################################################
+# L4 Jar 去重前打包输入 —— 按 jar 任务 from 注册序枚举全部来源
+#（序即 DuplicatesStrategy.EXCLUDE 的胜者序：节点 main output → common output →
+#  common runtime deps → bundled；jar 级 exclude=module-info 规则在去重之外先过滤）
+########################################################################
+versions/26.1.2-fabric：去重前打包输入 7268 个 entry，多来源 entry 1 个
+  x2  META-INF/MANIFEST.MF  <- ['bundled:core-3.8.3.jar', 'bundled:toml-3.8.3.jar']
+  （多来源 entry 全部由 DuplicatesStrategy.EXCLUDE 取序首；上方至多列 20 条）
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/CommandEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/EntityEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/ItemEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/LevelEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/ServerEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class  <- ['26.1.2-fabric:sourceSets.main.output']
+versions/26.2.0-fabric：去重前打包输入 7268 个 entry，多来源 entry 1 个
+  x2  META-INF/MANIFEST.MF  <- ['bundled:core-3.8.3.jar', 'bundled:toml-3.8.3.jar']
+  （多来源 entry 全部由 DuplicatesStrategy.EXCLUDE 取序首；上方至多列 20 条）
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/CommandEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/EntityEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/ItemEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/LevelEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/ServerEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+  孪生来源数 x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class  <- ['26.2.0-fabric:sourceSets.main.output']
+
+########################################################################
+# L5 最终 ZIP entries —— 实际 jar 内容 + 孪生 class 与 L3 节点产物字节级比对
+########################################################################
+== 26.1.2-fabric: nekojs-fabric-26.1.2-1.1.0-preview3.jar
+  size  : 17451487 B
+  sha256: 31f6ecdacfdd1c364fdee9c49ca4651df959927fe9b70f02e5c41080f5c56b41
+  entries: 7433；ZIP 层重复 entry: 0
+  L4↔L5 闭合: 仅在 jar 0 / 仅在 L4 0（全等）
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class 字节==节点class
+  forbidden 资源: none
+== 26.2.0-fabric: nekojs-fabric-26.2-1.1.0-preview3.jar
+  size  : 17451486 B
+  sha256: b70e1085a6dd6bab82213313cfa0742ec896cc6d03ed9b5266ae2571d150eae9
+  entries: 7433；ZIP 层重复 entry: 0
+  L4↔L5 闭合: 仅在 jar 0 / 仅在 L4 0（全等）
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class 字节==节点class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class 字节==节点class
+  forbidden 资源: none
+
+NeoForge 三节点孪生终态对照（fabric 孪生不应出现；出现即 cross-loader 泄漏）：
+  1.21.1: x1 x1 x1 x1 x1 x1 x0 （neoforge 面孪生，源自共享树守卫分支）
+    （无 !! 行 = NeoForge jar 孪生与 src/fabric 编译物零重合）
+  26.1.2: x1 x1 x1 x1 x1 x1 x1 （neoforge 面孪生，源自共享树守卫分支）
+    （无 !! 行 = NeoForge jar 孪生与 src/fabric 编译物零重合）
+  26.2.0: x1 x1 x1 x1 x1 x1 x1 （neoforge 面孪生，源自共享树守卫分支）
+    （无 !! 行 = NeoForge jar 孪生与 src/fabric 编译物零重合）

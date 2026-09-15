@@ -1,0 +1,147 @@
+== 26.1.2-fabric
+file      : nekojs-fabric-26.1.2-1.1.0-preview3.jar
+size      : 17451487 B
+sha256    : 31f6ecdacfdd1c364fdee9c49ca4651df959927fe9b70f02e5c41080f5c56b41
+entries   : 7433
+dup entries: 0
+services  :
+  META-INF/services/ => []
+  META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl => ['com.tkisor.nekojs.platform.compat.Fabric261VersionCompat']
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  absent   com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : none
+fabric.mod.json:
+  id=nekojs version=1.1.0-preview3
+  depends={"fabric-api": ">=0.155.2+26.1.2", "fabricloader": ">=0.19.3", "java": ">=25", "minecraft": "~26.1.2"}
+  entrypoints keys=['client', 'main']
+  mixins field=["nekojs-fabric.mixins.json", "nekojs-fabric-shared.mixins.json", "nekojs-fabric-dynamic.mixins.json"]
+  accessWidener=nekojs-fabric.accesswidener
+  mixin cfg nekojs-fabric-dynamic.mixins.json: refs=1
+  mixin cfg nekojs-fabric-shared.mixins.json: refs=13
+  mixin cfg nekojs-fabric.mixins.json: refs=29
+
+== 26.2.0-fabric
+file      : nekojs-fabric-26.2-1.1.0-preview3.jar
+size      : 17451486 B
+sha256    : b70e1085a6dd6bab82213313cfa0742ec896cc6d03ed9b5266ae2571d150eae9
+entries   : 7433
+dup entries: 0
+services  :
+  META-INF/services/ => []
+  META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl => ['com.tkisor.nekojs.platform.compat.Fabric262VersionCompat']
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  absent   com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : none
+fabric.mod.json:
+  id=nekojs version=1.1.0-preview3
+  depends={"fabric-api": ">=0.159.0+26.2", "fabricloader": ">=0.19.3", "java": ">=25", "minecraft": "~26.2"}
+  entrypoints keys=['client', 'main']
+  mixins field=["nekojs-fabric.mixins.json", "nekojs-fabric-shared.mixins.json", "nekojs-fabric-dynamic.mixins.json"]
+  accessWidener=nekojs-fabric.accesswidener
+  mixin cfg nekojs-fabric-dynamic.mixins.json: refs=1
+  mixin cfg nekojs-fabric-shared.mixins.json: refs=13
+  mixin cfg nekojs-fabric.mixins.json: refs=29
+
+== 1.21.1
+file      : nekojs-neoforge-1.21.1-1.1.0-preview3.jar
+size      : 2392839 B
+sha256    : d1597d2ad14731cc9b0ac9b9ad656b649d9a721478402358275c04da2dc40921
+entries   : 1401
+dup entries: 0
+services  :
+  META-INF/services/ => []
+  META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf1211ClientCompat']
+  META-INF/services/com.tkisor.nekojs.platform.compat.McPlatformCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf1211PlatformCompat']
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x0  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : ['META-INF/accesstransformer.cfg', 'META-INF/neoforge.mods.toml', 'nekojs.mixins.json']
+
+== 26.1.2
+file      : nekojs-neoforge-26.1.2-1.1.0-preview3.jar
+size      : 2506679 B
+sha256    : 5ba0e0cc4798e25f17ed72dc93210f2579efd934f80b907c4f5582a5c669ab60
+entries   : 1454
+dup entries: 0
+services  :
+  META-INF/services/ => []
+  META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf261ClientCompat']
+  META-INF/services/com.tkisor.nekojs.platform.compat.McPlatformCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf261PlatformCompat']
+  META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf261VersionCompat']
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : ['META-INF/accesstransformer.cfg', 'META-INF/neoforge.mods.toml', 'nekojs-dynamic.mixins.json', 'nekojs.interface_injection.json', 'nekojs.mixins.json']
+
+== 26.2.0
+file      : nekojs-neoforge-26.2.0-1.1.0-preview3.jar
+size      : 2506700 B
+sha256    : c40b5e897df9b0a34c5b6534783882b949bf4caa637b62e767ecab3ad5303ad2
+entries   : 1454
+dup entries: 0
+services  :
+  META-INF/services/ => []
+  META-INF/services/com.tkisor.nekojs.platform.compat.McClientCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf262ClientCompat']
+  META-INF/services/com.tkisor.nekojs.platform.compat.McPlatformCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf262PlatformCompat']
+  META-INF/services/com.tkisor.nekojs.platform.compat.McVersionCompat$Impl => ['com.tkisor.nekojs.platform.compat.Nf262VersionCompat']
+compat classes:
+  PRESENT  com/tkisor/nekojs/platform/compat/McVersionCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McPlatformCompat.class
+  PRESENT  com/tkisor/nekojs/platform/compat/McClientCompat.class
+  PRESENT  com/tkisor/nekojs/api/inject/LevelExtension.class
+  PRESENT  com/tkisor/nekojs/mixin/inject/MixinLevel.class
+twin FQCN dup counts:
+  x1  com/tkisor/nekojs/bindings/event/CommandEvents.class
+  x1  com/tkisor/nekojs/bindings/event/EntityEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ItemEvents.class
+  x1  com/tkisor/nekojs/bindings/event/LevelEvents.class
+  x1  com/tkisor/nekojs/bindings/event/PlayerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/ServerEvents.class
+  x1  com/tkisor/nekojs/bindings/event/client/KeyBindEvents.class
+forbidden : ['META-INF/accesstransformer.cfg', 'META-INF/neoforge.mods.toml', 'nekojs-dynamic.mixins.json', 'nekojs.interface_injection.json', 'nekojs.mixins.json']
