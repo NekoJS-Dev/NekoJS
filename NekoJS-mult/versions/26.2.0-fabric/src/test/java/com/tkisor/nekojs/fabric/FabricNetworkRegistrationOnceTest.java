@@ -4,6 +4,8 @@
 // （FabricVersionCompatWiringTest 的节点分发先例）。
 package com.tkisor.nekojs.fabric;
 
+import com.tkisor.nekojs.network.PlayPacketDispatchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -20,6 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * <p>本测试只触碰 fabric-api 的静态注册表（测试 JVM 私有），不启动游戏。
  */
 class FabricNetworkRegistrationOnceTest {
+
+    /** registerServer 会把真实 FabricDispatcher 装进全局 PlayPacketDispatchers——测后恢复 NOOP，不留静态装配泄漏。 */
+    @AfterEach
+    void restoreNoopDispatcher() {
+        PlayPacketDispatchers.install(PlayPacketDispatchers.NOOP);
+    }
 
     @Test
     void secondRegisterServerIsRejectedByThePlatformAsDuplicate() {

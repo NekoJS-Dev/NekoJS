@@ -62,8 +62,14 @@ class ScriptPayloadRegistrationShapeTest {
         }
     }
 
-    /** IPayloadContext 桩：enqueueWork 立即执行（模拟主线程切换），player 无。 */
+    /**
+     * IPayloadContext 桩：enqueueWork 立即执行（模拟主线程切换），player 无。
+     * {@code enqueueWorkCalls} 记录 hop 次数——handler 若回归为绕过 enqueueWork 直投总线，
+     * 该计数不增长，用例据此刻断言「事件命中必经 hop」。
+     */
     static final class ImmediateContext implements IPayloadContext {
+        int enqueueWorkCalls;
+
         @Override
         public net.neoforged.neoforge.common.extensions.ICommonPacketListener listener() {
             throw new UnsupportedOperationException("not used by the script payload handler");
@@ -76,6 +82,7 @@ class ScriptPayloadRegistrationShapeTest {
 
         @Override
         public CompletableFuture<Void> enqueueWork(Runnable work) {
+            enqueueWorkCalls++;
             work.run();
             return CompletableFuture.completedFuture(null);
         }
@@ -141,9 +148,11 @@ class ScriptPayloadRegistrationShapeTest {
         listenOnServerBus("probe", serverHits::incrementAndGet);
 
         NekoScriptPayload payload = new NekoScriptPayload("probe", new CompoundTag());
-        IPayloadContext context = new ImmediateContext();
+        ImmediateContext context = new ImmediateContext();
         assertDoesNotThrow(() ->
                 ((IPayloadHandler<NekoScriptPayload>) registration.serverHandler()).handle(payload, context));
+        assertEquals(1, context.enqueueWorkCalls,
+                "serverbound delivery must go through enqueueWork, not post on the network thread");
         assertEquals(1, serverHits.get(),
                 "serverbound packet must reach the SERVER bus after the enqueueWork hop");
 
@@ -151,6 +160,8 @@ class ScriptPayloadRegistrationShapeTest {
         // 断言不抛即「主线程任务不炸」；CLIENT 总线路由由 NetworkGenerationRoutingTest 覆盖）
         assertDoesNotThrow(() ->
                 ((IPayloadHandler<NekoScriptPayload>) registration.clientHandler()).handle(payload, context));
+        assertEquals(2, context.enqueueWorkCalls,
+                "clientbound delivery must also go through enqueueWork");
         assertEquals(1, serverHits.get(), "clientbound handler must not touch the SERVER bus");
     }
 }
