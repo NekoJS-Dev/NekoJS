@@ -1,3 +1,5 @@
+> **中文**  · [English](en_us/Home)
+
 # 欢迎使用 NekoJS
 
 > **现代、极速、优雅的 Minecraft 脚本魔改引擎**
