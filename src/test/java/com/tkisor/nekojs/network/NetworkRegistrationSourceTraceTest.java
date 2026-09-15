@@ -81,16 +81,17 @@ class NetworkRegistrationSourceTraceTest {
         return count;
     }
 
-    /** 枚举 main 源根（共享 src/main + fabric raw root + 全部节点 main）下的 java 文本流。 */
+    /** 枚举 main 源根（共享 src/main + common main + fabric raw root + 全部节点 main）下的 java 文本流。 */
     private static List<Path> mainJavaFiles() {
         Path root = repoRoot();
         Stream<Path> shared = Stream.of(root.resolve("src/main/java"));
+        Stream<Path> common = Stream.of(root.resolve("common/src/main/java"));
         Stream<Path> fabric = Stream.of(root.resolve("src/fabric/java"));
         Stream<Path> nodes = java.util.Arrays.stream(root.resolve("versions").toFile().listFiles())
                 .filter(nodeDir -> nodeDir.isDirectory()
                         && Files.isDirectory(nodeDir.toPath().resolve("src/main/java")))
                 .map(nodeDir -> nodeDir.toPath().resolve("src/main/java"));
-        List<Path> roots = Stream.concat(Stream.concat(shared, fabric), nodes).toList();
+        List<Path> roots = Stream.concat(Stream.concat(Stream.concat(shared, common), fabric), nodes).toList();
         return roots.stream()
                 .filter(Files::isDirectory)
                 .flatMap(dir -> {

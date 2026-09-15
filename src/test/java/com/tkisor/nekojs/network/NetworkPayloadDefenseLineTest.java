@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -89,10 +90,15 @@ class NetworkPayloadDefenseLineTest {
             buf.writeByte(0x03);
             buf.writeShort(4);
             buf.writeBytes(new byte[] {'m', 'a'});
-            assertThrows(Throwable.class,
+            Throwable thrown = assertThrows(Throwable.class,
                     () -> NekoScriptPayload.CODEC.decode(
                             new net.minecraft.network.RegistryFriendlyByteBuf(buf, net.minecraft.core.RegistryAccess.EMPTY)),
                     "malformed NBT must fail decode loudly (platform disconnects), never decode into a payload");
+            // Throwable 级断言的判别力下界：排除把 setup/断言自身的 AssertionError 误当
+            // 解码失败——真实形态只能是 DecoderException（游戏内）或 CrashReport 初始化
+            // 失败的 Error（裸 JUnit），二者都源于 NBT 解码路径
+            assertFalse(thrown instanceof AssertionError,
+                    "decode failure must originate from the NBT path, not from a test assertion");
         } finally {
             buf.release();
         }

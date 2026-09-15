@@ -39,8 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -157,11 +155,13 @@ class NetworkGenerationRoutingTest {
             Field instance = com.tkisor.nekojs.platform.Platform.class.getDeclaredField("INSTANCE");
             instance.setAccessible(true);
             if (instance.get(null) == null) {
-                // gameDir 按测试 JVM 唯一化：不同节点的 test 任务可能并行跑（Gradle 并行执行），
-                // 共享同一个 tmp 目录会在 @BeforeEach 清脚本时互相清掉对方的 fixture。
+                // gameDir 按测试 JVM 唯一化（TestGameDirs 见统一说明）：并行 test JVM 共享
+                // 固定名 tmp 目录会在 @BeforeEach 清脚本时互清 fixture——本类曾实测
+                // 双 fabric 节点并行时偶发「候选脚本零执行」；另注意 Platform 初始化是
+                // 先到先得，本类可能寄生在同 JVM 更早初始化的（同样已唯一化的）目录上。
                 String dirId = "nekojs-nettest-" + Integer.toHexString(
                         Path.of("").toAbsolutePath().toRealPath().hashCode());
-                Path gameDir = Path.of(System.getProperty("java.io.tmpdir"), dirId);
+                Path gameDir = com.tkisor.nekojs.TestGameDirs.unique(dirId);
                 gameDir.toFile().mkdirs();
                 com.tkisor.nekojs.platform.Platform.init(new com.tkisor.nekojs.platform.IPlatform() {
                     @Override public boolean isClient() { return false; }
@@ -507,8 +507,9 @@ class NetworkGenerationRoutingTest {
             assertDoesNotThrow(harness::postServerPacket);
             assertEquals(0, harness.recorder.hitsOf("v1-l"));
 
-            assertNotEquals(null, harness.manager.scriptType);
-            assertSame(ScriptType.SERVER, harness.manager.scriptType);
+            // 行为下界替代自证式字段复述：close 后再投一次仍安全、仍零投递
+            assertDoesNotThrow(harness::postServerPacket, "late packets stay safe after repeated close");
+            assertEquals(0, harness.recorder.hitsOf("v1-l"), "no listener may fire after close");
         }
     }
 }

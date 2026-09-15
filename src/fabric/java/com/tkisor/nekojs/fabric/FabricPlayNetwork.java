@@ -22,7 +22,8 @@ import net.minecraft.world.entity.Entity;
 
 /**
  * play 阶段网络的 fabric 桥：装配 {@link PlayPacketDispatcher} 发送面，
- * 注册 S2C payload 类型与客户端 receiver。payload 类与线格式沿用共享树，与 NeoForge 侧一致。
+ * 注册 play payload 类型（S2C 同步包 + 双向脚本自定义通道）与对应 receiver。
+ * payload 类与线格式沿用共享树，与 NeoForge 侧一致。
  *
  * <p>当前 fabric play 面的显式子集：{@code ClientData} 键值同步（{@code ClientData.sync} →
  * {@code clientData.get}）、脚本自定义通道 {@code NekoScriptPayload}（双向，经
