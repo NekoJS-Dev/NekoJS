@@ -231,7 +231,7 @@ class QueryToolDeclarationParityTest {
 
         @Override
         public Path getGameDir() {
-            return Path.of(System.getProperty("java.io.tmpdir"), "nekojs-query-tools-test");
+            return com.tkisor.nekojs.TestGameDirs.unique("nekojs-query-tools-test");
         }
 
         @Override
