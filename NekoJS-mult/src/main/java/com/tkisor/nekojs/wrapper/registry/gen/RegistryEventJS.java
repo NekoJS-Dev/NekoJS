@@ -40,6 +40,7 @@ import net.minecraft.resources.ResourceKey;
 public final class RegistryEventJS implements ProxyObject {
 
     private final RegistryRepository repository;
+    private final String node;
     private final RegistryTypesPoint.RegistryTypes types;
     /** 糖方法名 → 注册表键（camelCase 归并同名时首胜）。 */
     private final Map<String, ResourceKey<? extends Registry<?>>> bySugar;
@@ -47,17 +48,19 @@ public final class RegistryEventJS implements ProxyObject {
     private final Map<String, ResourceKey<? extends Registry<?>>> byFullName;
     private final Map<String, ProxyExecutable> members;
 
-    /** adapter 入口：仓库由 adapter 持有，类型表 / 元信息取 bootstrap 产物。 */
-    public static RegistryEventJS create(RegistryRepository repository) {
-        return new RegistryEventJS(repository, NekoRegistryPointsPlugin.registryInfos(),
+    /** adapter 入口：runtime 由 adapter 持有（收集/校验/指纹/抽干 owner），类型表 / 元信息取 bootstrap 产物。 */
+    public static RegistryEventJS create(RegistryRepository repository, String node) {
+        return new RegistryEventJS(repository, node, NekoRegistryPointsPlugin.registryInfos(),
                 NekoRegistryPointsPlugin.registryTypes());
     }
 
     RegistryEventJS(
             RegistryRepository repository,
+            String node,
             RegistryInfosPoint.RegistryInfos infos,
             RegistryTypesPoint.RegistryTypes types) {
         this.repository = repository;
+        this.node = node;
         this.types = types;
         this.bySugar = new LinkedHashMap<>();
         this.byFullName = new LinkedHashMap<>();
@@ -146,7 +149,7 @@ public final class RegistryEventJS implements ProxyObject {
             }
             Identifier id = parseId(args[0], sugar);
             String typeName = args.length == 3 ? stringArg(args[1], sugar + " typeName") : null;
-            return addTyped(registry, id, typeName, args[args.length - 1], sugar);
+            return BuilderSurface.of(addTyped(registry, id, typeName, args[args.length - 1], sugar));
         }
     }
 
@@ -162,14 +165,15 @@ public final class RegistryEventJS implements ProxyObject {
             String typeName = stringArg(args[1], "custom typeName");
             List<ResourceKey<? extends Registry<?>>> owners = types.registriesOf(typeName);
             if (owners.isEmpty()) {
-                throw new IllegalArgumentException("unknown type name '" + typeName + "' (searched every registry)");
+                throw new IllegalArgumentException("unknown type name '" + typeName + "' (searched every registry; node "
+                        + node + ")");
             }
             if (owners.size() > 1) {
                 throw new IllegalArgumentException("type name '" + typeName
                         + "' is registered under multiple registries; use event.<registry>(id, '" + typeName
-                        + "', callback) to pick one");
+                        + "', callback) to pick one (node " + node + ")");
             }
-            return addTyped(owners.get(0), id, typeName, args[2], "custom");
+            return BuilderSurface.of(addTyped(owners.get(0), id, typeName, args[2], "custom"));
         }
     }
 
@@ -195,8 +199,8 @@ public final class RegistryEventJS implements ProxyObject {
                     return function.execute().as(Object.class);
                 }
             };
-            repository.add(registry, builder);
-            return builder;
+            repository.add(registry, builder, "supplier", "register(" + name(registry) + ")");
+            return BuilderSurface.of(builder);
         }
     }
 
@@ -210,8 +214,12 @@ public final class RegistryEventJS implements ProxyObject {
             throw new IllegalArgumentException(what + " expects a builder callback as the last argument");
         }
         RegistryObjectBuilder<?> builder = factory.apply(id);
-        callback.executeVoid(builder);
-        repository.add(registry, builder);
+        // 脚本面拿到的是 BuilderSurface（ProxyObject）：property 赋值与显式 setter 同一写入点，
+        // 不让裸宿主 builder 泄漏（无 public-field 旁路，AC3）
+        callback.executeVoid(BuilderSurface.of(builder));
+        repository.add(registry, builder,
+                typeName == null ? "<default>" : typeName,
+                what + ":" + name(registry));
         return builder;
     }
 
@@ -220,7 +228,7 @@ public final class RegistryEventJS implements ProxyObject {
         Function<Identifier, RegistryObjectBuilder<?>> factory = types.defaultType(registry);
         if (factory == null) {
             throw new IllegalArgumentException("registry '" + name(registry) + "' has no default type (from " + what
-                    + "); pass one explicitly — known types: " + types.typeNames(registry));
+                    + "); pass one explicitly — known types: " + types.typeNames(registry) + " (node " + node + ")");
         }
         return factory;
     }
@@ -230,7 +238,7 @@ public final class RegistryEventJS implements ProxyObject {
         Function<Identifier, RegistryObjectBuilder<?>> factory = types.type(registry, typeName);
         if (factory == null) {
             throw new IllegalArgumentException("unknown type '" + typeName + "' for registry '" + name(registry)
-                    + "'; known types: " + types.typeNames(registry));
+                    + "'; known types: " + types.typeNames(registry) + " (node " + node + ")");
         }
         return factory;
     }
@@ -240,7 +248,8 @@ public final class RegistryEventJS implements ProxyObject {
                 name.indexOf(':') >= 0 ? byFullName.get(name) : bySugar.get(name);
         if (registry == null) {
             throw new IllegalArgumentException(
-                    "unknown registry '" + name + "'; use a sugar name like 'item' or a full key like 'minecraft:item'");
+                    "unknown registry '" + name + "'; use a sugar name like 'item' or a full key like 'minecraft:item'"
+                            + " (node " + node + ")");
         }
         return registry;
     }

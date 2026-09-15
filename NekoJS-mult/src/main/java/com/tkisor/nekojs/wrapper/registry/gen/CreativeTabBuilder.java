@@ -15,20 +15,38 @@ import java.util.List;
  * 创造模式标签页 builder：标题、图标与条目；条目在注册时快照到标签页
  * （注册后新增条目需重新注册/重进存档）。
  * <pre>
- * event.creativeModeTab('mymod:main', b =&gt; { b.title = '我的模组'; b.icon('minecraft:ruby'); b.add('mymod:ruby') })
+ * event.creativeModeTab('mymod:main', b =&gt; { b.title = '我的模组'; b.icon = 'minecraft:ruby'; b.add('mymod:ruby') })
  * </pre>
  */
 public class CreativeTabBuilder extends RegistryObjectBuilder<CreativeModeTab> {
 
-    public String title = "NekoJS";
+    private String title = "NekoJS";
     /** 图标（物品 id 字符串或 ItemStack；null 回退屏障图标）。 */
-    public Object icon = null;
+    private Object icon = null;
 
     /** 条目原始值（物品 id 字符串或 ItemStack），displayItems 回调期才解析（见 build 注释）。 */
     private final List<Object> items = new ArrayList<>();
 
     public CreativeTabBuilder(Identifier id) {
         super(id);
+    }
+
+    /** 标题（null/空白回退默认 'NekoJS'——旧行为是 build 期深处 NPE，现在写入期规范化）。 */
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title == null || title.isBlank() ? "NekoJS" : title;
+    }
+
+    /** 图标（物品 id 字符串或 ItemStack；null 回退屏障图标）。 */
+    public Object getIcon() {
+        return icon;
+    }
+
+    public void setIcon(Object icon) {
+        this.icon = icon;
     }
 
     /** 添加条目（物品 id 字符串或 ItemStack）。 */

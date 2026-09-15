@@ -14,7 +14,11 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * 物品 builder（ADR-0005 public field 约定）：
+ * 物品 builder（ticket 15 单一写入语义）：数据属性私有 + JavaBean setter，
+ * 脚本端 {@code b.maxStackSize = 16}（经 {@link BuilderSurface} 的 putMember）
+ * 与显式 {@code b.setMaxStackSize(16)} 调用<b>同一个 setter</b>，进入同一校验、
+ * 规范化、definition fingerprint 与注册收集路径（spec 04/08；ADR-0005 public field
+ * 约定已废除，不得保留同名 public field 绕过 setter）。
  * <pre>
  * event.item('mymod:ruby', b =&gt; { b.maxStackSize = 16; b.rarity = 'epic' })
  * </pre>
@@ -29,16 +33,16 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
      * NeoForge 走匿名子类的 getBurnTime override，不读此表。 */
     public static final Map<Identifier, Integer> FUEL_ASSIGNMENTS = new HashMap<>();
 
-    public int maxStackSize = 64;
-    public int maxDamage = 0;
-    public boolean fireResistant = false;
-    /** 稀有度名：common / uncommon / rare / epic（默认 common）。 */
-    public String rarity = "common";
-    public boolean glowing = false;
+    private int maxStackSize = 64;
+    private int maxDamage = 0;
+    private boolean fireResistant = false;
+    /** 稀有度名：common / uncommon / rare / epic（默认 common；setter 归一化为小写）。 */
+    private String rarity = "common";
+    private boolean glowing = false;
     /** 燃料燃烧时间（tick）。&gt;0 时物品可作为熔炉/高炉/烟熏炉燃料。 */
-    public int burnTime = 0;
+    private int burnTime = 0;
     /** 可选：创造标签页 id（如 'minecraft:building_blocks' 或自定义 tab id）。null=不分配。 */
-    public String groupTab = null;
+    private String groupTab = null;
 
     private FoodBuilderJS foodBuilder = null;
 
@@ -57,6 +61,78 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
         return id;
     }
 
+    // ---- 数据属性：显式 setter 与 JavaBean property 同一写入点 ----
+
+    public int getMaxStackSize() {
+        return maxStackSize;
+    }
+
+    /** 最大堆叠（1-99；MC 在注册冻结期对越界值报错，这里在写入期给出带成员名的错误）。 */
+    public void setMaxStackSize(int maxStackSize) {
+        if (maxStackSize < 1 || maxStackSize > 99) {
+            throw new IllegalArgumentException("maxStackSize must be in [1, 99] but got " + maxStackSize);
+        }
+        this.maxStackSize = maxStackSize;
+    }
+
+    public int getMaxDamage() {
+        return maxDamage;
+    }
+
+    public void setMaxDamage(int maxDamage) {
+        if (maxDamage < 0) {
+            throw new IllegalArgumentException("maxDamage must be >= 0 but got " + maxDamage);
+        }
+        this.maxDamage = maxDamage;
+    }
+
+    public boolean isFireResistant() {
+        return fireResistant;
+    }
+
+    public void setFireResistant(boolean fireResistant) {
+        this.fireResistant = fireResistant;
+    }
+
+    /** 稀有度名（已归一化小写；null 容忍，build 期回退 common——与既有语义一致）。 */
+    public String getRarity() {
+        return rarity;
+    }
+
+    public void setRarity(String rarity) {
+        this.rarity = rarity == null ? null : rarity.toLowerCase();
+    }
+
+    public boolean isGlowing() {
+        return glowing;
+    }
+
+    public void setGlowing(boolean glowing) {
+        this.glowing = glowing;
+    }
+
+    public int getBurnTime() {
+        return burnTime;
+    }
+
+    public void setBurnTime(int burnTime) {
+        if (burnTime < 0) {
+            throw new IllegalArgumentException("burnTime must be >= 0 but got " + burnTime);
+        }
+        this.burnTime = burnTime;
+    }
+
+    /** 创造标签页 id（已归一化：空白视为不分配——build 期本来就走同一分支）。 */
+    public String getGroupTab() {
+        return groupTab;
+    }
+
+    public void setGroupTab(String groupTab) {
+        this.groupTab = groupTab == null || groupTab.isBlank() ? null : groupTab;
+    }
+
+    // ---- 复合配置 ----
+
     /** 配置食物属性（nutrition/saturation/效果等），复合配置保留方法面。 */
     public void food(Consumer<FoodBuilderJS> consumer) {
         this.foodBuilder = new FoodBuilderJS();
@@ -67,7 +143,7 @@ public class ItemBuilder extends RegistryObjectBuilder<Item> implements Taggable
     public Item build() {
         Item.Properties props = buildProperties();
 
-        if (groupTab != null && !groupTab.isBlank()) {
+        if (groupTab != null) {
             GROUP_ASSIGNMENTS.put(id, Identifier.parse(groupTab));
         }
         if (burnTime > 0) {
