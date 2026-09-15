@@ -1,0 +1,8 @@
+[00:32:47] [INFO] 已初始化环境入口: D:\mcmodDemo\NekoJS\.worktrees\t31\NekoJS-mult\versions\26.1.2-fabric\run-server\nekojs\server_scripts\src\main.js
+[00:32:48] [INFO] 发现了 2 个 SERVER 脚本。
+[00:32:54] [INFO] 正在重载 SERVER 脚本... (x2)
+[00:32:55] [INFO] 发现了 2 个 SERVER 脚本。
+[00:32:55] [INFO] Hello, World! (Loaded server example script)
+[00:32:55] [INFO] SERVER 脚本重载完毕。 (x2)
+[00:33:00] [INFO] FABRIC-CI-SMOKE: server started
+[00:33:00] [INFO] FABRIC-CI-SMOKE: spawnLightning ok, bolt=true
