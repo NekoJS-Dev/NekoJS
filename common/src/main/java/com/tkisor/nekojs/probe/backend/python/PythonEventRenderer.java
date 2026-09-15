@@ -69,7 +69,16 @@ public final class PythonEventRenderer {
             sb.append("\nclass ").append(groupTypeName(groupEntry.getKey())).append(":\n");
             for (EventInfo info : groupEntry.getValue()) {
                 String name = PythonClassRenderer.pyIdent(info.entry().name());
-                if (info.keyType() != null) {
+                if (info.entry().scriptDefined()) {
+                    // ScriptEvents 声明的自定义事件（票 14 parity）：载荷 Any，且脚本可自己触发。
+                    // Python 没有命名空间合并（TS 的 function + namespace），用「嵌套类 + 同名
+                    // 实例注解」表达「既可调用（监听）又带 post 成员（触发）」——与 TS
+                    // EventDeclarationGenerator 的 scriptDefined 渲染（any payload + post）同源。
+                    sb.append("    class ").append(name).append(":\n");
+                    sb.append("        def __call__(self, handler: Callable[[Any], None]) -> None: ...\n");
+                    sb.append("        def post(self, payload: Any = ...) -> None: ...\n");
+                    sb.append("    ").append(name).append(": ").append(name).append("\n");
+                } else if (info.keyType() != null) {
                     // dispatch 型事件的两个签名必须都用 @overload 声明：.pyi 里同名不同参的
                     // 裸 def 会被 Pylance/pyright 报「方法声明被同名声明遮盖」(reportRedeclaration)。
                     sb.append("    @staticmethod\n");
