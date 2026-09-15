@@ -11,16 +11,17 @@
 
 ---
 
-## 1. Commit 清单
+## 1. Commit 清单（含 2026-09-15 审查整改补充）
 
 | commit | 内容 |
 |---|---|
-| `0f61fe0a` | `feat(core): ticket 07 SyncEvalWatchdog 墙钟求值守卫 + Graal 行为探针` |
-| `d0310224` | `feat(lifecycle): ticket 07 ScriptLifecycleGate 同类型生命周期调度门` |
-| `5541f9f9` | `feat(script): ticket 07 owner-thread 调度接线（gate/watchdog/close 抢占/隔离失败）` |
-| `c0526303` | `fix(error): ticket 07 WORLD 包脚本 record 不再因 relativize IAE 掩掉 kill 失败` |
-| `fef6d8d4` | `test(script): ticket 07 并发/重入/close 抢占/watchdog fixture + 转正 ticket 06 时间窗探针` |
-| （本 commit） | `docs(baseline): ticket 07 runtime threads report + evidence` |
+| 0f61fe0a | feat(core): SyncEvalWatchdog 墙钟求值守卫 + Graal 行为探针 |
+| d0310224 | feat(lifecycle): ScriptLifecycleGate 同类型生命周期调度门 |
+| 5541f9f9 | feat(script): owner-thread 调度接线（gate/watchdog/close 抢占/隔离失败） |
+| c0526303 | fix(error): WORLD 包脚本 record 不再因 relativize IAE 掩掉 kill 失败 |
+| fef6d8d4 | test(script): 并发/重入/close 抢占/watchdog fixture + 转正 ticket 06 时间窗探针 |
+| bd617aae | docs(baseline): 本报告 + evidence |
+| b4dff7bc | fix(script): 审查整改——旧 generation kill 上报不得误隔离健康 active；guest 线程测试改真实断言（详见 §8.2） |
 
 未 push、未合并、未触碰 master 与其它 worktree。
 
@@ -116,6 +117,49 @@
 | `DefaultErrorTracker` WORLD 包 IAE | **快照未涉及；本票新增** | 票面已知缺口核对后的 07 相交最小修复（§2.5） |
 | 票面/takeover 文档编辑 | **不采纳** | 票面 Status/AC 勾选按纪律不动 |
 
-## 7. 结论
+## 7. 结论（票面 8 条 AC 口径，经 §8 映射校正）
 
-8 条 AC 中：AC1/AC2/AC3/AC5/AC6/AC7/AC9 **满足**（fixture 全绿，见 §3 矩阵与 §4）；AC4 **满足（common 层语义）**——非 owner 请求经 manager 串行队列/显式入口进入，不并发触碰 Context/binding/listener/timer，guest 高级能力不收紧；「排队到平台 owner 线程」的平台转投在既有入口已成立（ClientReloadExecutor 等），通用平台 dispatcher 注入未做（§5-G2，建议主会话裁决是否立票）。AC8 的删除以分发点 monitor 移除完成，manager 侧 ctx monitor 作为资源所有权标记保留（依据 §2.4）。已知缺口与 owner 见 §5。
+票面 AC1/AC2/AC3/AC5/AC6/AC7/AC8 **满足**（fixture 全绿，见 §3 矩阵、§4 与 §8 映射）；票面 AC4 **满足（common 层语义）**——非 owner 请求经 manager 串行队列/显式入口进入，不并发触碰 Context/binding/listener/timer；「排队到平台 owner 线程」的平台转投在既有入口已成立（ClientReloadExecutor 等），通用平台 dispatcher 注入未做（§5-G2，建议主会话裁决是否立票）。票面 AC8 的删除项以分发点 monitor 移除完成，manager 侧 ctx monitor 作为资源所有权标记保留（依据 §2.4）。已知缺口与 owner 见 §5。
+
+## 8. 票面 AC 映射与审查整改（2026-09-15）
+
+### 8.1 本报告内部 AC 标签与票面 AC 的对照
+
+本报告 §2/§3 初稿沿用了实施期的内部编号（多出一个 AC9、票面 AC7 无独立行），关票逐条核对以
+下表为准：
+
+| 票面 AC | 本报告内部标签 | 证据（fixture / 章节） |
+|---|---|---|
+| AC1 单一序列/并发单 candidate | §2.1 / §3「AC1」 | `concurrentReloadsAreSerializedWithSingleCandidate` + `ScriptLifecycleGateTest` |
+| AC2 回调内 reload 拒绝 | §3「AC2」 | `reloadInsideManagedCallbackIsRejectedNotRecursive` |
+| AC3 close 优先 | §2.2 / §3「AC3」 | close 三用例（中断路径/取消点收敛/未开始优先） |
+| AC4 非 owner 进 owner 队列 | §3「AC4」前半 | `nonOwnerThreadLifecycleIsQueuedThroughExplicitEntry`（G2 注记：通用平台 dispatcher 未做） |
+| AC5 watchdog 终止 candidate | §2.3 / §3「AC5」 | `candidateWatchdogRetainsActiveAndRecoversByExplicitReload` |
+| AC6 watchdog 终止 active 隔离 | §2.3 / §3「AC6」 | `activeWatchdogEntersIsolatedFailureAndRecoversByExplicitReload` + `staleKillReportForOldGenerationContextDoesNotIsolateHealthyActive`（§8.2-1 新增） |
+| AC7 guest 能力不收紧 + 显式入口 | §3「AC4」后半（guest 面） | `guestThreadAdvancedCapabilitiesAreNotTightened`（§8.2-2 重写后为真实断言） |
+| AC8 fixture 覆盖面 + 旧锁删除 | §3「AC7」（覆盖面）+「AC8」（monitor 删除） | `serverAndClientOwnersReloadIndependently` 等全套 + `SyncEvalWatchdogTest` 两探针 |
+| （非票面：Work item 1 的四类 owner 入口复用） | §2.1 / §3「AC9」 | `fourOwnerEntriesReuseRootLifecycleGate` |
+
+### 8.2 双轴审查后的整改（三处）
+
+1. **`markContextKilled` 补 active 匹配判定 + 回归测试**：审查发现 commit 清扫与总线激活的
+   竞态窗口内，旧 generation 残留闭包的 kill 上报会把健康的新 active 误标隔离失败并触发
+   `getOrCreateEnvironment` 自动重建（与 AC6「不自动创建第二个 active」相悖）。修复：else
+   分支先判 `runtime.context().equals(context)`，不匹配即忽略（与 `isContextDead` 的「未知
+   即 dead、无副作用」对齐）；`markContextKilled` 改包可见以便同包测试注入。新增回归
+   `staleKillReportForOldGenerationContextDoesNotIsolateHealthyActive`（旧 Context kill 不
+   隔离/不重建/分发照常 + 对照组：真 active kill 仍隔离）。
+2. **`guestThreadAdvancedCapabilitiesAreNotTightened` 重写为真实断言**：原版是恒真断言
+   （宿主线程 lambda 代劳 + `assertNotNull`）。重写为 guest JS 真实创建/启动/join Java
+   `Thread` 并读回状态（`Java.type('java.lang.Thread')`，ClassFilter THREAD_GROUP 白名单 +
+   `allowCreateThread`；若该能力面被收紧此测试必红）；后半保留非 owner 宿主线程经
+   `scheduleOnOwner` 请求 reload，断言收紧为 `Decision.EXECUTED` + reload 真实生效。
+   **平台事实（实证）**：Context 是单线程的，guest 创建的线程**不能重入 Context 执行 JS
+   闭包**——guest runnable 里执行 JS 在票 07 之前就不被支持（runnable 根本不执行），这不属
+   于本票收紧；「不收紧」承诺的是线程创建/操控的 interop 能力本身。
+3. **本节（§8）**：补内部 AC 标签到票面 AC 的精确映射，修正 §7 结论为票面 8 条口径。
+
+### 8.3 整改后复验
+
+`./gradlew :common:test --tests "com.tkisor.nekojs.script.Ticket07RuntimeThreadsTest" --console=plain`
+全绿（13 用例，含新增回归与重写用例）；整改分 commit 入分支（见 §1 补充行）。
