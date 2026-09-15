@@ -1,0 +1,25 @@
+# 票 17 wire fixture 的 golden 采集记录（capture 原始输出）
+#
+# 采集方式：临时 capture 测试（PayloadWireFormatGoldenTest.captureGoldenBytes，
+# 首轮提交前已删除，逻辑等价于最终 golden 测试的 encode helper）在 26.1.2 active 节点
+# 直编共享树的 JVM 里对 eba89230 基线源码实测编码字节。
+# 采集命令：./gradlew :26.1.2:test --tests "com.tkisor.nekojs.network.PayloadWireFormatGoldenTest" --console=plain
+# 采集时 HEAD = eba89230（本分支基线），网络 payload 源码与基线逐字节一致（零改动）。
+# 样本：channel="my_channel"、tag={mana:7,name:neko}、pdata=(1234,9)、clientdata=("hud/mana","{\"v\":7}")、
+#       error=(demo.js,line=1,count=3)、hashes=[("pack_a","deadbeef")]、bundle=[pack_a/GLOBAL/{v:1}/scripts/a.js="x=1"]
+#
+# 等价解码对照：最终 golden 测试在五个节点（26.1.2 / 26.2.0 / 1.21.1 / 26.1.2-fabric / 26.2.0-fabric）
+# 均以同一组 hex 常量通过 encode 与 decode 双向断言——跨节点线格式一致（NBT/varint/UTF8 编码无版本漂移）。
+
+CAPTURE script_payload id=nekojs:script_payload
+CAPTURE script_payload hex=0a6d795f6368616e6e656c0a0300046d616e61000000070800046e616d6500046e656b6f00
+CAPTURE pdata_sync id=nekojs:pdata_sync
+CAPTURE pdata_sync hex=d209090a0300046d616e61000000070800046e616d6500046e656b6f00
+CAPTURE client_data_sync id=nekojs:client_data_sync
+CAPTURE client_data_sync hex=086875642f6d616e61077b2276223a377d
+CAPTURE show_error_list id=nekojs:show_error_list
+CAPTURE show_error_list hex=01206e656b6f6a732f72742f7365727665725f736372697074732f64656d6f2e6a73167365727665725f736372697074732f64656d6f2e6a7300000001000000030a64656d6f206572726f720e66726f7a656e2064657461696c7301
+CAPTURE pack_hashes id=nekojs:pack_hashes
+CAPTURE pack_hashes hex=01067061636b5f61086465616462656566
+CAPTURE pack_bundle id=nekojs:pack_bundle
+CAPTURE pack_bundle hex=01067061636b5f6106474c4f42414c077b2276223a317d010c736372697074732f612e6a7303783d31

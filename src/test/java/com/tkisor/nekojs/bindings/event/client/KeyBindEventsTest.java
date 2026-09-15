@@ -61,7 +61,7 @@ class KeyBindEventsTest {
 
                 @Override
                 public java.nio.file.Path getGameDir() {
-                    return java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "nekojs-kb-test");
+                    return com.tkisor.nekojs.TestGameDirs.unique("nekojs-kb-test");
                 }
 
                 @Override

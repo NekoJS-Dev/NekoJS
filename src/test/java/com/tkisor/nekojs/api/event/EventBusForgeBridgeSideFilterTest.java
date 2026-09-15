@@ -128,7 +128,7 @@ class EventBusForgeBridgeSideFilterTest {
 
         @Override
         public Path getGameDir() {
-            return Path.of(System.getProperty("java.io.tmpdir"), "nekojs-smoke-test");
+            return com.tkisor.nekojs.TestGameDirs.unique("nekojs-smoke-test");
         }
 
         @Override
