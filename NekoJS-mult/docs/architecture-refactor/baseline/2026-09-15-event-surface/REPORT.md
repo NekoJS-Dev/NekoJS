@@ -3,7 +3,7 @@
 > 工单：`docs/architecture-refactor/implementation-tickets/14-event-surface.md`。
 > 权威 spec：`08-ported-features-event-surface.md`（本票核心）、`04-public-contract-and-plugin-model.md`、`07-validation-and-migration.md`。
 > 基线 commit：`7fb521eb`（ticket 09 已关闭后的认领点）。本报告 commit 区间：`a54202ad..本提交`。
-> 结论先行：11 条 AC 中 10 条满足（其中 AC8 主要由票 06/07 既有 fixture 满足、本票补引用与判定），AC10「Native/Probe 示例可运行」按面拆分满足（Script 示例单测可运行；Native/Probe 示例受 FML/probe 运行时约束，以 tier characterization + golden 承载，详见 §2 AC10 与 §8）。
+> 结论先行（票面 11 条 AC 口径，§2 表经审查整改后已与票面 checkbox 逐条对齐）：11 条全部满足——其中 AC9（reload 不双注册）主要由票 06/07 既有 fixture 满足、本票补引用与判定并显式登记窄缺口（§8 G7）；AC11「示例可运行」按面拆分满足（Script 示例单测可运行；Native/Probe 示例受 FML/probe 运行时约束，以 tier characterization + golden 承载，详见 §2 AC11 与 §8）。
 
 ## 0. Commit 清单
 
@@ -37,10 +37,11 @@
 | AC4 NativeEvents 保留 raw/legacy tier、不静默升级 | **满足** | 根树 `NativeEventsLegacyTierCharacterizationTest`（3 用例）：STARTUP-only 绑定注册、catalog 收录 = LegacySurfaceAdapter 观察（`global:NativeEvents`）+ events 目录零条目、声明来源 = TypeDocCatalogEntry（description/examples）；managed stable 唯一来源是 apiRuntime 贡献，NativeEventsJS 不注册 ApiContribution（结构性证据：注册路径仅 `NekoJSCorePlugin.registerBinding` 的 STARTUP 分支，无 ApiContributionRegistry 调用） |
 | AC5 ProbeEvents 真 golden、不造通用事件/第二 bus | **满足** | `ProbeEventsSurfaceGoldenTest`（5 用例）+ 新 golden `common/src/test/resources/nekojs/probe/probe-events.expected.d.ts`（regenerate 流程生成，§4 留痕）：组成员冻结 4 条 probe-only、全部 SERVER；catalog 恰 4 条；TS golden SERVER 侧 4 成员各一次（真实 payload 类型）；CLIENT side 过滤零条目零声明；Python 同 entry 列表 4 成员各一次。唯一 post 来源 = ProbeIrBuilder（§6 旁路清单） |
 | AC6 每 bus 一次、事件域不被复制 | **满足** | 既有 `NekoScriptCatalogEventsTest`/`NekoScriptCatalogScriptEventsTest` + 根树 `EventSurfaceOwnershipTest`（3 用例，生产注册路径 `NekoJSCorePlugin.registerEvents + registerClientEvents`）：14 个域组各就各位、跨组 bus identity 唯一、catalog (group,name) 无重复且条目数=总线数、ScriptEvents 组仅 {server,client}、ProbeEvents 组仅 4 条、NativeEvents 非事件组、动态声明拒绝内置组名 |
-| AC7 平台时机留 Adapter、common 无 MC/loader 类型 | **满足** | 本票 common 主代码唯一改动 `PythonEventRenderer`（import 仅 java/probe/surface）；guardLint 通过（§5）；平台 callback 仍在 src/main 的 `EventBusForgeBridge`（`bus().listen` 桥接 NeoForge IEventBus，域组全部经它）与 `NativeEventsJS`（NeoForge.EVENT_BUS 直挂） |
-| AC8 reload 失败/取消不双注册、不泄漏旧 generation | **满足（既有 fixture 判定）** | 票 06 `ScriptReloadGenerationTest`：`failedReloadKeepsActiveListenersOnBus`（active 不动）、`failedReloadDiscardsCandidateListenersOnly`（候选 v2 永不触发、active v1 恰一次=无双注册）、`commitSweepsOldListenersBeforePublishingNewRuntime`（清扫先于发布、恰一次）、`successfulReloadRunsScriptsOnceAndSingleExecutionAfterCommit`（旧代不再收、新代恰一次）。票 07 `Ticket07RuntimeThreadsTest`：`closePreemptsRemainingCandidateScriptsAndNeverCommits`（取消永不 commit）、`reloadInsideManagedCallbackIsRejectedNotRecursive`（回调可见性：重入拒绝）、watchdog 隔离两用例。本票 AC1 stress 的并发清理面（clearTokens 竞争）为同一 bookkeeping 的压力补充 |
-| AC9 收缩 gate | **满足（本票零删除，证据齐前不移除）** | §6 旁路与调用者清单：4 条旧事件注册/声明旁路全部保留——替代 declaration（managed TS）只覆盖 facade 符号不覆盖事件、事件 contract 的 trace 面尚为运行时反射观察（票 09 §1.2 结论）、`EventBusJS.bus()` 直挂路径仍被平台 Adapter 生产调用。合法 legacy/raw tier（NativeEvents/ProbeEvents/legacy catalog）与公开功能未删除；清理不推迟 final release 的义务以清单 + 删除条件形式移交后续票 |
-| AC10 示例与迁移材料 | **满足（面拆分，见 §8 G3）** | `examples/script-events.js` + `ScriptEventsMinimalExampleTest`（真实 Graal 按生产序列跑通 declare→post→listen，console.log 端到端）；`examples/native-events-legacy.js`（明确标注 legacy/raw、非 managed stable、NeoForge-only；行为由根树 characterization 承载——单测无法进入 FML loader）；`examples/probe-events.js`（probe 扩展面，golden 即运行证据——事件只在 /nekojs probe 触发）；`MIGRATION.md`（tier 归属表 + 1.2.0 迁移要点 + 已知边界） |
+| AC7 TS/Python declaration 与 runtime member、payload 形状、side、capability 一致 | **满足** | AC3 parity 用例（**同一 catalog entry 列表**驱动 TS+Python 生成器，listener/post 各恰好一次）+ AC5 golden（真实 payload 类型 + side 过滤零条目）+ 本票主代码修复 `PythonEventRenderer` scriptDefined `post` 渲染（§4，TS/Py/runtime 三面 `__call__`+`post` 对齐）+ 既有 `LegacyProbeCompatibilityTest` |
+| AC8 平台时机留 Adapter、common 无 MC/loader 类型 | **满足** | 本票 common 主代码唯一改动 `PythonEventRenderer`（import 仅 java/probe/surface）；guardLint 通过（§5）；平台 callback 仍在 src/main 的 `EventBusForgeBridge`（`bus().listen` 桥接 NeoForge IEventBus，域组全部经它）与 `NativeEventsJS`（NeoForge.EVENT_BUS 直挂） |
+| AC9 reload 失败/取消不双注册、不泄漏旧 generation | **满足（既有 fixture 判定 + 已登记窄缺口）** | 票 06 `ScriptReloadGenerationTest`：`failedReloadKeepsActiveListenersOnBus`（active 不动）、`failedReloadDiscardsCandidateListenersOnly`（候选 v2 永不触发、active v1 恰一次=无双注册）、`commitSweepsOldListenersBeforePublishingNewRuntime`（清扫先于发布、恰一次）、`successfulReloadRunsScriptsOnceAndSingleExecutionAfterCommit`（旧代不再收、新代恰一次）。票 07 `Ticket07RuntimeThreadsTest`：`closePreemptsRemainingCandidateScriptsAndNeverCommits`（取消永不 commit）、`reloadInsideManagedCallbackIsRejectedNotRecursive`（回调可见性：重入拒绝）、watchdog 隔离两用例。本票 AC1 stress 的并发清理面（clearTokens 竞争）为同一 bookkeeping 的压力补充。【窄缺口显式登记（§8 G7）：动态事件**定义**面（`ScriptEventRegistry.clearDefinitions`，依赖 STARTUP 清扫先行）只有直调 fixture（`reloadCleanupMakesReregistrationPossibleAfterDiagnosableConflict`），尚无放进真实 reload 事务的端到端用例——listener 层已被 06/07 覆盖（动态监听与内置组同走 `EventBusJS.execute`/`PendingListener` 路径），定义层待 RELOAD_COMMIT 交接补】 |
+| AC10 收缩 gate | **满足（本票零删除，证据齐前不移除）** | §6 旁路与调用者清单：4 条旧事件注册/声明旁路全部保留——替代 declaration（managed TS）只覆盖 facade 符号不覆盖事件、事件 contract 的 trace 面尚为运行时反射观察（票 09 §1.2 结论）、`EventBusJS.bus()` 直挂路径仍被平台 Adapter 生产调用。合法 legacy/raw tier（NativeEvents/ProbeEvents/legacy catalog）与公开功能未删除；清理不推迟 final release 的义务以清单 + 删除条件形式移交后续票 |
+| AC11 示例与迁移材料 | **满足（面拆分，见 §8 G3）** | `examples/script-events.js` + `ScriptEventsMinimalExampleTest`（真实 Graal 按生产序列跑通 declare→post→listen，console.log 端到端）；`examples/native-events-legacy.js`（明确标注 legacy/raw、非 managed stable、NeoForge-only；行为由根树 characterization 承载——单测无法进入 FML loader）；`examples/probe-events.js`（probe 扩展面，golden 即运行证据——事件只在 /nekojs probe 触发；**审查整改后注册形状为直接调用**，§8）；`MIGRATION.md`（tier 归属表 + 1.2.0 迁移要点 + 已知边界） |
 
 **范围外遵守**：未动 recipe/capability/goal/实体行为域内事件语义；未做插件 addon 外部发现；无 performance 阈值变更；未动 GUI/网络域。
 
@@ -72,17 +73,17 @@
 | 套件 | 结果 | 数字 |
 |---|---|---|
 | `:common:check` | 通过 | 200 suites / 1474 tests / 0 failures / 4 skipped（本票 +5 suites / +25 tests：Stress 6、Contract 4、Diagnostics 9、Example 1、ProbeGolden 5） |
-| `:common-api-processor:test` + `guardLint` | 通过 | guardLint 确认 common 主代码无 MC/loader 类型（AC7） |
+| `:common-api-processor:test` + `guardLint` | 通过 | guardLint 确认 common 主代码无 MC/loader 类型（AC8） |
 | `:26.1.2:check`（含 `--rerun-tasks` 复核） | 通过 | 40 suites / 179 tests / 0 failures / 34 skipped（本票 +2 suites / +6 tests） |
 | `npm run test:probe-types` | 通过 | tsc 无错误 |
 
-## 6. 旁路与调用者清单（AC9 收缩 gate 输入）
+## 6. 旁路与调用者清单（AC10 收缩 gate 输入）
 
 | 旁路 | 现状调用者 | 替代物状态 | 处置 |
 |---|---|---|---|
 | `EventBusJS.bus()` 直挂 Java 监听（绕过 JS mirror 记账） | `EventBusForgeBridge`（src/main，全部内置域组的 NeoForge 桥）、测试（`ProbeCoordinatorHardeningTest` 等） | managed TS declaration 只覆盖 facade 符号，不含事件；无 declaration/trace 替代 | **保留**（平台 Adapter 正当入口；hasListeners 已兜底底层 bus 非空） |
 | `EventContractReflector` 运行时反射 eventGroups → `ManagedCallbackSchemaRegistry.installContractEvents` | `NekoPluginRuntime.installManagedCallbackSchemas`（生产唯一） | 契约 JSON events 字段已删（票 09）；事件 schema 的规范源仍是运行时观察 | **保留**（票 09 §1.2 已裁定为观察面不写回契约；事件进 portable-core 契约的事件面归后续票） |
-| `NekoScriptCatalog.events` legacy 观察派生（→ legacySurface → probe declaration） | probe TS/Python 后端、`LegacySurfaceAdapter` | managed declaration 不渲染事件 | **保留**（事件声明的当前唯一派生路径；legacy shadow characterization 已冻结不升 stable） |
+| `NekoScriptCatalog.events` legacy 观察派生（→ legacySurface → probe declaration） | probe TS/Python 后端、`LegacySurfaceAdapter`、`ProbeClassCollector`（审查补记） | managed declaration 不渲染事件 | **保留**（事件声明的当前唯一派生路径；legacy shadow characterization 已冻结不升 stable） |
 | `TypeDocCatalogEntry` 片段作为 NativeEvents 声明来源 | `NekoJSCorePlugin.registerTypeDocs`（生产唯一） | 无（raw 面不计划进 managed declaration） | **保留**（合法 legacy/raw tier） |
 | ProbeEvents 4 总线的 post 旁路 | `ProbeIrBuilder`（4 处 post）+ `ProbeCoordinator`（hasListeners 探测） | 无（probe 扩展面独占触发是其定义） | **保留**（不是通用运行时事件；成员集合已冻结） |
 
@@ -106,10 +107,18 @@
 | G4 | `ScriptEventsJS` 的 replacement 不可达（§7 P2）：若未来允许免清扫重放需调整注册入口顺序 | 已钉住现状 + 记边界 | 事件面后续票（如 STARTUP reload 语义细化） |
 | G5 | 其他节点（:26.2.0/:1.21.1/两个 Fabric）check 未跑（Java 主代码改动仅 common；Fabric 无 NativeEvents 对应面） | 本票未验证 | W9/W10 发布 gate |
 | G6 | golden 审阅缺维护者确认（§4） | owner 自查完成 | 主会话维护者审阅 |
+| G7 | ScriptEvents 动态事件**定义**面（`ScriptEventRegistry.clearDefinitions`，依赖 STARTUP 清扫先行）只有直调 fixture，无放进真实 reload 事务的端到端用例——listener 层已被 06/07 覆盖（动态监听与内置组同走 `EventBusJS.execute`/`PendingListener`） | 审查登记（AC9 窄缺口） | RELOAD_COMMIT 交接（后续 reload 语义票补事务级定义清扫用例） |
+
+### 8.1 双轴审查整改（2026-09-15，随本分支提交）
+
+1. **[必修] `examples/probe-events.js` 注册形状**：`.listen(...)` 是不存在的 API（bus 代理直接调用即注册，TS golden 即 `function modifyType(handler: ...)`），照抄会在运行时失败；同源错误还存在于 master 既有两处文档（`ProbeEvents.java` javadoc、`NekoJSCorePlugin` ProbeEvents TypeDoc 示例串）——三处一并修正为直接调用形状（TypeDoc/golden 无任何文本钉住旧形状，零 golden 影响）。
+2. **[必修] §2 表与票面 11 条 checkbox 逐条对齐**：原表 AC7–AC10 实为票面 AC8–AC11、票面 AC7（declaration parity）无专属行——已插入 AC7 行（证据 = AC3 parity 用例 + AC5 golden + PythonEventRenderer 修复）并整体重排；正文 ¶6/§5/§6/§9 的旧编号引用同步修正。
+3. **[建议采纳] stress 非平凡下界**：并发核心补运行级守卫 `listenerTags()` 非空（整轮至少一次真实送达，排除零投递回归；逐对硬下界会因 cleaner 理论赢得全部窗口而 flaky）。
+4. **[建议采纳] §6 补记 `ProbeClassCollector` 消费点**（审查 grep 发现的未列调用者）。
 
 ## 9. 需要主会话审查的重点
 
 1. **新 golden `probe-events.expected.d.ts`**：46 行 import 列表较大（payload 类反射 BFS 的既定行为），确认接受其作为 ProbeEvents 声明基线（§4）。
 2. **`PythonEventRenderer` 的 scriptDefined 渲染形状**：嵌套类 `__call__` + `post` 模型是否符合 Python 侧期望（票 09 曾裁定 Python parity 以 fixture 表达；本票是事件面的最小对齐）。
-3. **AC8 的判定口径**：本票以票 06/07 既有 fixture 满足（未新增重复用例），确认该引用式判定可接受。
-4. **AC9 清单处置**：本轮零删除、五条旁路全保留（§6），确认收缩节奏与后续票的输入交接。
+3. **AC9 的判定口径**：本票以票 06/07 既有 fixture 满足（未新增重复用例）+ 窄缺口显式登记（G7），确认该引用式判定可接受。
+4. **AC10 清单处置**：本轮零删除、五条旁路全保留（§6），确认收缩节奏与后续票的输入交接。
