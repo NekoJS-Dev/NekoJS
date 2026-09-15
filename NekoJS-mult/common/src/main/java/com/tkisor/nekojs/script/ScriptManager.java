@@ -330,12 +330,23 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- Context 访问（懒初始化） ----
 
-    /** ScriptExecutor 回调：Graal 因语句上限/watchdog 关闭了求值所属的 Context（active 或候选）。 */
-    private void markContextKilled(Context context) {
+    /**
+     * ScriptExecutor 回调：Graal 因语句上限/watchdog 关闭了求值所属的 Context（active 或候选）。
+     * 包可见：同包回归测试直接注入旧 generation Context 的 kill 上报（commit 边界竞态窗口）。
+     */
+    void markContextKilled(Context context) {
         Context candidate = this.candidateContext;
         if (candidate != null && candidate.equals(context)) {
             this.candidateKilled = true;
         } else {
+            Context active = this.runtime.context();
+            if (active == null || !active.equals(context)) {
+                // 旧 generation 残留闭包在 commit 清扫与总线激活之间被并发 dispatch 时的
+                // kill 上报：此类 Context 既非 active 也非候选，isContextDead 判 dead 且无
+                // 副作用，这里同样忽略——否则健康的新 active 会被误标隔离失败，且下次
+                // getOrCreateEnvironment 自动重建，违反「不自动创建第二个 active」（AC6）。
+                return;
+            }
             this.contextKilled = true;
             // 票 07 隔离失败（AC6）：active 被 watchdog/资源上限终止后停止向其分发
             // （isContextDead 判 contextKilled）、不自动创建第二个 active，只由显式
