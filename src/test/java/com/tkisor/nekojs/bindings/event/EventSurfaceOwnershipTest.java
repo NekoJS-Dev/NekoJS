@@ -168,6 +168,7 @@ class EventSurfaceOwnershipTest {
         @Override public List<JSTypeAdapter<?>> adapters() { return List.of(); }
         @Override public List<TypeDocCatalogEntry> typeDocs() { return List.of(); }
         @Override public List<ManualDeclarationCatalogEntry> manualDeclarations() { return List.of(); }
+        @Override public List<com.tkisor.nekojs.api.catalog.RegistryBuilderSurfaceEntry> registryBuilderSurfaces() { return List.of(); }
         @Override public Map<String, String> nodeModules() { return Map.of(); }
         @Override public Map<String, RecipeNamespaceEntry> recipeNamespaces() { return Map.of(); }
         @Override public void beforeRecipeLoading(RecipeLifecycleContext context) {}
