@@ -198,6 +198,11 @@ public final class GlobalStore {
                     store.rawPut(entry.getKey(), op.value, generation, op.guest);
                 }
             }
+            // 写集一次性消费：发布完成即清账，此后 hasWrites()==false，
+            // 误入的重复 publish/discard 无剩余条目可作用
+            ops.clear();
+            cleared = false;
+            clearBaseEpoch = 0L;
         }
     }
 

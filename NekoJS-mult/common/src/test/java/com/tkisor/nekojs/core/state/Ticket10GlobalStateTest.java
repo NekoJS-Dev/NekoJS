@@ -579,7 +579,11 @@ class Ticket10GlobalStateTest {
                             + " retained value and incremented it)");
             assertEquals("root-one", root.globalState().sharedStore().get("anchor"));
 
-            // server stop / 切世界模拟：只清 WORLD 包监听（平台钩子语义），root 状态保留
+            // server stop / 切世界模拟：只清 WORLD 包监听（平台钩子语义），root 状态保留。
+            // 注意本腿传入空 WORLD 列表——钩子路径实际不执行条目清理，真正的支撑是结构性
+            // 论证：closeAll() 全仓唯一调用点是 NekoRuntimeRoot.closeSilently，生产 server
+            // stop/世界卸载钩子（ServerEventListener → clearWorldPackListeners）不触碰状态域；
+            // 真机 smoke 见 REPORT N1（审查 F2 如实标注）。
             root.scriptManagerOf(ScriptType.SERVER).clearWorldPackListeners(List.of());
             root.scriptManagerOf(ScriptType.SERVER).discoverScripts();
             assertEquals(2, root.globalState().storeFor(ScriptType.SERVER).get("retained"),

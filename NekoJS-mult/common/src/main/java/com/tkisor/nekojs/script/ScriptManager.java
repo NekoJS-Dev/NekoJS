@@ -835,6 +835,8 @@ public final class ScriptManager implements AutoCloseable {
             // 变更」时抛出（STATE_PLAN 与 commit 之间有其他 writer 提交的复验冲突、或外部计划
             // 违反 publish 契约）——异常向上传播走 reloadScriptsTransactional 的失败路径：
             // discardCandidate 丢弃候选，active 的监听器/runtime/generation 完整保留。
+            // 归因口径：失败发生在 commit 点但报 ReloadPhase.STATE_PLAN——按「候选期状态计划
+            // 冲突」而非「COMMIT 失败」归类，由 GlobalStateException.domain 消歧（审查 F4）。
             try {
                 candidateEnvironment.globals().publishJoint();
             } catch (com.tkisor.nekojs.core.state.GlobalStateException e) {
