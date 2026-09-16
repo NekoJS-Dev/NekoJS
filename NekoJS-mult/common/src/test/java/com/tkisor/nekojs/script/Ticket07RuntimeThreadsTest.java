@@ -243,7 +243,8 @@ class Ticket07RuntimeThreadsTest {
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
             ScriptEnvironmentFactory environmentFactory =
-                    new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory);
+                    new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
+                        new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
                     newPropertyRegistry(), tracker, paths, config, environmentFactory);
             this.recorder.manager = this.manager;
