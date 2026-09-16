@@ -101,7 +101,7 @@ reloadScriptsTransactional（票 06 既有）
 | AC3 其他 writer 冲突检测、不丢写、候选失败；跨类型私有不冲突；shared 竞争失败 | **pass** | `otherWriterDuringCandidacyConflictsWithoutLosingTheOtherWriterValue`（phase=STATE_PLAN/domain=global-write-conflict）+ `crossTypeSamePrivateKeyDoesNotConflict` + `sharedCompetingWriteFailsTheCandidateAndKeepsTheCompetingValue` |
 | AC4 一次候选同写 global+shared：联合成功或全部不发布 | **pass** | `candidateWritingBothGlobalAndSharedCommitsJointlyOrNotAtAll`（失败方向借外部计划 preflight 失败触发：两边均 null；成功方向两边均发布） |
 | AC5 无领域语义的联合预检边界；测试/后续领域计划可挂入 | **pass** | `candidateStatePlanBoundaryJoinsJointPreflightAndJointOutcome`（pass/fail-preflight/publish-throw/锁内复验兜底四段）+ `CandidateStatePlan` javadoc 契约。本票未实现任何领域计划、未把领域 Adapter 拉进 global owner |
-| AC6 最小可运行示例 + 迁移材料，只用已 gate 能力 | **pass** | `examples/`（5 个文件）由 `GlobalStateExamplesTest` **原样拷进真实管线执行**（4 用例全绿）；[MIGRATION.md](MIGRATION.md) 覆盖同类型/显式 shared/旧跨类型迁移/失败保留四主题 |
+| AC6 最小可运行示例 + 迁移材料，只用已 gate 能力 | **pass** | `examples/`（6 个文件：same-type 1 + explicit-shared 2 + legacy-migration 2 + failure-retention 1）由 `GlobalStateExamplesTest` **原样拷进真实管线执行**（4 用例全绿）；[MIGRATION.md](MIGRATION.md) 覆盖同类型/显式 shared/旧跨类型迁移/失败保留四主题 |
 | AC7 跨 reload/server stop/切世界保留；root close 释放；generation close 不误清；独立 root 从空开始 | **pass（server stop/切世界为 common 层最小模拟）** | `rootOwnedStateSurvivesReloadAndStopCycleAndIsReleasedByRootClose`（真实 `NekoRuntimeRoot`：空起步 → load → reload 保留累加 → `clearWorldPackListeners`+rediscover（平台 stop/切世界钩子的 manager 侧语义）仍保留 → root close 释放 → 第二个独立 root 从空开始且看不到旧 root 的 shared）。真机 server stop/切世界 in-game smoke 未跑（§6） |
 | AC8 guest 函数/Value 不延长已销毁 Context 生命周期；不承诺深回滚 | **pass** | `storedGuestFunctionsExpireWithTheirGenerationWhileHostValuesSurvive`（候选期旧代 guest 仍可读=读已提交语义；commit 后失效；宿主值 7 保留）+ `nestedMutationsAreNotDeepRolledBack`（FILE 探针读回 99） |
 | AC9 global 容器 vs globalThis 语言全局分工可外部观察；Node shim 用正确语言全局；不把容器当模块全局 | **pass（含一处既有事实的显式化）** | `globalIsTheStateContainerWhileGlobalThisStaysTheLanguageGlobal`（`global !== globalThis`、互不渗漏、`require`/`globalThis.__nekoNodeResolve` 走语言全局、写入落容器 store）。**既有事实显式化**：绑定安装会在 globalThis 上接管 `global` 属性名（`globalThis.global === global`）——与 1.2.0 前的 Map 绑定行为一致（探针对照），fixture 钉住为契约并写入 MIGRATION 表第 7 行；既有 Node shim 回归 `NodeModulesJsRegressionTest.nodeModuleSurfaceMatchesNodeSemantics`（shim 语境 `global === globalThis`）未改动、保持绿 |
@@ -146,3 +146,14 @@ reloadScriptsTransactional（票 06 既有）
 - 删除 commit `4a00af8b` 可独立 revert（revert 后 `NekoGlobalRemovalTest` 会红——那是刻意设计：复活旧 Map 必须过一次显式决策）。
 - 本票触碰 `src/main/java/com/tkisor/nekojs/core/NekoJSCorePlugin.java`、`src/fabric/java/com/tkisor/nekojs/fabric/FabricCorePlugin.java`、`src/test/java/com/tkisor/nekojs/network/NetworkGenerationRoutingTest.java`（共享树/共享测试树/fabric 源根）——与票 31 源根迁移、票 18 等触碰同文件簇的票存在潜在文本冲突，合并时留意。
 - `ScriptBindingSchema.BindingMembers` record 加了第三个 canonical 组件 `dynamicMembers`（带兼容构造器）——下游若有解构该 record 的代码需注意（仓内无此用法，编译全绿）。
+
+## 8. 双轴审查整改记录（reviewer 判定：需修复后合并 → 已整改）
+
+| # | 级别 | finding | 整改 |
+|---|---|---|---|
+| F1 | 必修 | `preflightJoint()` 的 `validate()` 无锁读共享可变状态（keyVersions HashMap + 非 volatile epoch 与并发 writer 的 bump 构成 JMM 数据竞争；commit 点锁内复验是权威兜底但预检自身不得裸读） | 两个 `validate()` 包进 `synchronized (stores.lock)`；外部计划 preflight 保持锁外（javadoc 说明该约束） |
+| F2 | 优化 | AC7 server stop 腿 fixture 传空 WORLD 列表近乎恒真 | 如实批注：该腿实际支撑 = 结构性论证（closeAll 全仓唯一调用点 NekoRuntimeRoot.closeSilently），真机 smoke 归 N1 |
+| F3 | 优化 | `MapWriteSet.apply()` 发布后不清写集账目（hasWrites 仍 true，状态机不自描述） | apply 末尾清 ops/cleared/clearBaseEpoch，写集一次性消费 |
+| F4 | 优化 | commit 点 publishJoint 失败报 STATE_PLAN 与失败发生处（COMMIT）不一致 | ScriptManager 归因口径注释显式化（按「候选期状态计划冲突」归类、domain 消歧） |
+| F5 | 优化 | REPORT 称 examples 5 个文件（实际 6 个） | 计数更正并按主题分列 |
+| F6 | 优化 | common 测试固定 gameDir（TestPlatformInit）与节点树 TestGameDirs 不一致 | 维持 N8 登记（common 测试基建改动超出本票面；helper 下沉 common testfixture 归后续票） |

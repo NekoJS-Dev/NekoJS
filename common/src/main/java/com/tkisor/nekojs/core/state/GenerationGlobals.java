@@ -98,11 +98,17 @@ public final class GenerationGlobals implements AutoCloseable {
     /**
      * 联合预检（STATE_PLAN 阶段）：私有 + 共享写集冲突校验，随后外部计划 preflight。
      * 抛 {@link GlobalStateException}（domain 结构化）即让 candidate 失败。
+     *
+     * <p>写集校验持 root 锁进行（validate 读 store 的版本/epoch 账目，与并发 writer 的
+     * bump 竞争属 JMM 违例——commit 点锁内复验是权威兜底，但预检自身不得无锁裸读）；
+     * 外部计划 preflight 保持在锁外执行（不得在持锁下跑任意代码）。
      */
     public void preflightJoint() {
         if (!transactional) return;
-        if (privateWrites != null) privateWrites.validate();
-        if (sharedWrites != null) sharedWrites.validate();
+        synchronized (stores.lock) {
+            if (privateWrites != null) privateWrites.validate();
+            if (sharedWrites != null) sharedWrites.validate();
+        }
         for (CandidateStatePlan plan : List.copyOf(plans)) {
             try {
                 plan.preflight();
