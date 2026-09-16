@@ -555,7 +555,8 @@ class ScriptReloadRegressionTest {
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
         ScriptEnvironmentFactory environmentFactory =
-                new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);
+                new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory,
+                        new com.tkisor.nekojs.core.state.GlobalStateStores());
         return new ScriptManager(ScriptType.SERVER, eventBridge, pluginRuntime,
                 newPropertyRegistry(), tracker, paths, config, environmentFactory);
     }

@@ -101,7 +101,8 @@ class Ticket06RunawayProbeTest {
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
         NekoSandboxFactory factory = new NekoSandboxFactory(
                 core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
-        ScriptEnvironmentFactory envFactory = new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, factory);
+        ScriptEnvironmentFactory envFactory = new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, factory,
+                new com.tkisor.nekojs.core.state.GlobalStateStores());
         return new ScriptManager(ScriptType.SERVER, ScriptEventBridge.EMPTY, pluginRuntime,
                 props(), tracker, paths, config, envFactory);
     }

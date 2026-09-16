@@ -127,7 +127,8 @@ class ReloadMemoryStabilityTest {
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
                 ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
         ScriptEnvironmentFactory environmentFactory =
-                new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, sandboxFactory);
+                new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, sandboxFactory,
+                        new com.tkisor.nekojs.core.state.GlobalStateStores());
         ScriptManager manager = new ScriptManager(ScriptType.SERVER, ScriptEventBridge.EMPTY, pluginRuntime,
                 propertyRegistry(), tracker, paths, config, environmentFactory);
 
