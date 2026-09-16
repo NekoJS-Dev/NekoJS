@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,21 @@ class GlobalStateExamplesTest {
             }
         }
     }
+
+    @AfterEach
+    void cleanScriptDirsAfter() throws Exception {
+        for (ScriptType type : ScriptType.values()) {
+            Path dir = ScriptTypeEnv.scriptsDir(type);
+            if (dir == null) continue;
+            Files.createDirectories(dir);
+            try (var stream = Files.list(dir)) {
+                for (Path path : stream.toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
 
     private static String example(String name) throws Exception {
         Path file = EXAMPLES.resolve(name);

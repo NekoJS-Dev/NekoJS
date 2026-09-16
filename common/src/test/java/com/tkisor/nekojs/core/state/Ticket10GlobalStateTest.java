@@ -23,6 +23,7 @@ import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Engine;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,21 @@ class Ticket10GlobalStateTest {
             }
         }
     }
+
+    @AfterEach
+    void cleanScriptDirsAfter() throws Exception {
+        for (ScriptType type : ScriptType.values()) {
+            Path dir = ScriptTypeEnv.scriptsDir(type);
+            if (dir == null) continue;
+            Files.createDirectories(dir);
+            try (var stream = Files.list(dir)) {
+                for (Path path : stream.toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
+
 
     // ==================== 测试绑定（公开 seam 的最小载体） ====================
 

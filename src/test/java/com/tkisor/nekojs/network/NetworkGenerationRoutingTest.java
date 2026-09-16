@@ -237,7 +237,8 @@ class NetworkGenerationRoutingTest {
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
                     ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
             ScriptEnvironmentFactory environmentFactory =
-                    new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory);
+                    new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
+                            new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
                     newPropertyRegistry(), tracker, paths, config, environmentFactory);
             this.trigger.bind(() -> NetworkMessageHandler.postServerEvent(
