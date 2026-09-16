@@ -45,7 +45,6 @@ import com.tkisor.nekojs.bindings.static_access.TestJS;
 import com.tkisor.nekojs.bindings.static_access.TimeJS;
 import com.tkisor.nekojs.bindings.static_access.UUIDJS;
 import com.tkisor.nekojs.bindings.static_access.UtilsJS;
-import com.tkisor.nekojs.bindings.static_access.NekoGlobal;
 import com.tkisor.nekojs.js.type_adapter.*;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
@@ -184,7 +183,8 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("ClientData", ClientDataSyncJS.class);
         // 类型化资产生成（KubeJS 风格 blockState/blockModel/itemModel/texture），写入
         // <gameDir>/nekojs/assets 资源包，与 generateAssets 事件同目录，reload 时懒读生效
-        registry.register("global", NekoGlobal.shared());
+        // （global/shared 不在此注册：票 10 起由 ScriptEnvironmentFactory 为每个 generation
+        // 安装 root 拥有的视图——按 ScriptType 私有 store + 显式 shared 入口，不再是进程级共享 Map）
         registry.register("ItemStack", ItemStack.class);
         registry.register("Items", Items.class);
         // 全局 Item 是 ProxyObject 代理委托（of/empty/id/idOf 走 ItemJS，其余委托 MC Item 类）。
