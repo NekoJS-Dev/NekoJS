@@ -30,8 +30,8 @@ public final class FabricPDataSync {
     /** findEntity 需要 server 实例（与 FabricPlayNetwork 同生命周期）。 */
     private static volatile MinecraftServer currentServer;
 
-    /** 上一次见到的客户端世界实例（切维度/断线时变化，用于清 mirror）。 */
-    private static Object lastClientLevel;
+    /** 「离开旧世界才清」守卫（首次进服 null→世界 不清，见 {@link ClientLevelWatch}）。 */
+    private static final ClientLevelWatch LEVEL_WATCH = new ClientLevelWatch();
 
     private FabricPDataSync() {}
 
@@ -70,6 +70,24 @@ public final class FabricPDataSync {
                     container.put(key, tag.copy());
                 }
             }
+
+            // 实体引用面直接解引用 mixin 容器：EntityJoinLevelEvent 窗口内实体尚未进入
+            // level 实体索引，findEntity(id) 反查必空 → 写静默丢弃（票 03 §3-3，票 18 修复）
+            @Override
+            public CompoundTag get(Entity entity, String key) {
+                CompoundTag container = ((NekoEntityPData) entity).neko$getPDataRoot();
+                return container.getCompound(key).orElseGet(CompoundTag::new).copy();
+            }
+
+            @Override
+            public void set(Entity entity, String key, CompoundTag tag) {
+                CompoundTag container = ((NekoEntityPData) entity).neko$getPDataRoot();
+                if (tag.isEmpty()) {
+                    container.remove(key);
+                } else {
+                    container.put(key, tag.copy());
+                }
+            }
         };
     }
 
@@ -95,13 +113,10 @@ public final class FabricPDataSync {
         ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> PDataSyncService.clearClientMirrors());
         // 切维度也要清（NeoForge 挂 client level unload）：只在"离开一个已有世界"时清，
-        // 进服那次 null→世界 的变化不清（否则会抹掉刚随进服推下来的数据）
+        // 进服那次 null→世界 的变化不清（否则会抹掉刚随进服推下来的数据）——
+        // 语义钉在 ClientLevelWatch（节点本地 JVM fixture）
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            Object level = client.level;
-            if (level == lastClientLevel) return;
-            boolean leftPreviousLevel = lastClientLevel != null;
-            lastClientLevel = level;
-            if (leftPreviousLevel) {
+            if (LEVEL_WATCH.leftPreviousLevel(client.level)) {
                 PDataSyncService.clearClientMirrors();
             }
         });
