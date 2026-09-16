@@ -38,8 +38,8 @@ public final class FabricPlayNetwork {
     /** 发全服需要 server 实例，而脚本线程没有上下文——跟随服务器生命周期持有当前实例。 */
     private static volatile MinecraftServer currentServer;
 
-    /** 上一次见到的客户端世界实例（切维度/断线时变化，用于清空 clientData）。 */
-    private static Object lastClientLevel;
+    /** 「离开旧世界才清」守卫（首次进服 null→世界 不清，见 {@link ClientLevelWatch}）。 */
+    private static final ClientLevelWatch LEVEL_WATCH = new ClientLevelWatch();
 
     private FabricPlayNetwork() {}
 
@@ -71,15 +71,11 @@ public final class FabricPlayNetwork {
                         com.tkisor.nekojs.network.NetworkMessageHandler.postClientEvent(payload)));
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientDataStore.SHARED.clear());
         // NeoForge 侧挂在 client level unload（断线与切维度都清），fabric 无对应事件——
-        // 盯客户端世界实例变化等价：切维度换 ClientLevel 实例、断线变 null。
-        // 只在"离开一个已有世界"时清（lastClientLevel 非空），进服那次 null→世界不清，
-        // 否则会把刚随进服推下来的数据一起抹掉。
+        // 盯客户端世界实例变化等价。只在"离开一个已有世界"时清（lastClientLevel 非空），
+        // 进服那次 null→世界 不清，否则会把刚随进服推下来的数据一起抹掉——
+        // 语义钉在 ClientLevelWatch（节点本地 JVM fixture）
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            Object level = client.level;
-            if (level == lastClientLevel) return;
-            boolean leftPreviousLevel = lastClientLevel != null;
-            lastClientLevel = level;
-            if (leftPreviousLevel) {
+            if (LEVEL_WATCH.leftPreviousLevel(client.level)) {
                 ClientDataStore.SHARED.clear();
             }
         });
