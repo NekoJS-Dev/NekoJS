@@ -41,6 +41,14 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final ScriptEnvironmentFactory environmentFactory;
     private final Map<ScriptType, ScriptManager> scriptManagers;
     private final ResourceTracker resources;
+    /**
+     * root 拥有的受管 global/shared 状态域（票 10）：按 {@link ScriptType} 的私有 backing
+     * store + 显式共享 store（工作名 shared）。跨普通 reload、server stop、切换世界保留；
+     * 由 {@link #closeSilently()} 释放；generation close 只失效该 generation 的 guest 值。
+     * 无任何 static 状态——新的独立 root / 测试 runner 从空开始，互不可见。
+     */
+    private final com.tkisor.nekojs.core.state.GlobalStateStores globalState =
+            new com.tkisor.nekojs.core.state.GlobalStateStores();
 
     public NekoRuntimeRoot(
             NekoCoreContext core,
@@ -53,9 +61,14 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.pluginRuntime = pluginRuntime;
         this.eventBridge = eventBridge;
         this.scriptProperties = scriptProperties;
-        this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory);
+        this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory, globalState);
         this.scriptManagers = new EnumMap<>(ScriptType.class);
         this.resources = new ResourceTracker();
+    }
+
+    /** 本 root 的受管 global/shared 状态域（Java 侧「其他 writer」与测试观察 seam）。 */
+    public com.tkisor.nekojs.core.state.GlobalStateStores globalState() {
+        return globalState;
     }
 
     public ScriptManager scriptManagerOf(ScriptType type) {
@@ -149,6 +162,13 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
         try {
             resources.close();
+        } catch (Throwable t) {
+            if (first == null) first = t;
+            else first.addSuppressed(t);
+        }
+        // 票 10：root 最终关闭释放 global/shared 状态域（server stop/切世界不清空；此处释放）。
+        try {
+            globalState.closeAll();
         } catch (Throwable t) {
             if (first == null) first = t;
             else first.addSuppressed(t);

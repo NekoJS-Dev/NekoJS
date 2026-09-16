@@ -142,8 +142,9 @@ public final class ScriptManager implements AutoCloseable {
      * 打到已关闭的旧运行时，或 null 检查与使用之间字段被清导致 NPE。
      */
     private record RuntimeEnvironment(Context context, NekoNodeRuntime nodeRuntime,
-                                      LoggerStream outStream, LoggerStream errStream) {
-        static final RuntimeEnvironment EMPTY = new RuntimeEnvironment(null, null, null, null);
+                                      LoggerStream outStream, LoggerStream errStream,
+                                      com.tkisor.nekojs.core.state.GenerationGlobals globals) {
+        static final RuntimeEnvironment EMPTY = new RuntimeEnvironment(null, null, null, null, null);
 
         boolean isEmpty() {
             return context == null;
@@ -243,6 +244,28 @@ public final class ScriptManager implements AutoCloseable {
         Context candidate = manager.candidateContext;
         if (candidate == null || !candidate.equals(context)) return false;
         manager.pendingListeners.add(pending);
+        return true;
+    }
+
+    // ---- 票 10：候选域计划联合边界 seam ----
+
+    /**
+     * 候选执行期间的联合计划注册 seam（票 10 AC5）：来源 Context 属于构建中的候选
+     * generation 时，把计划挂进该候选的 {@code GenerationGlobals}（STATE_PLAN 阶段统一
+     * 联合预检、commit 点联合发布或随失败全部不发布），返回 true；非候选 Context 返回
+     * false（调用方自行决定是否拒绝）。Java 侧绑定/测试计划由此进入联合边界，领域语义
+     * 不进入 global owner。
+     */
+    public static boolean registerCandidatePlan(Context context,
+            com.tkisor.nekojs.core.state.CandidateStatePlan plan) {
+        if (context == null || plan == null) return false;
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager == null) return false;
+        Context candidate = manager.candidateContext;
+        if (candidate == null || !candidate.equals(context)) return false;
+        RuntimeEnvironment candidateEnvironment = manager.candidateEnvironment;
+        if (candidateEnvironment == null || candidateEnvironment.globals() == null) return false;
+        candidateEnvironment.globals().addPlan(plan);
         return true;
     }
 
@@ -373,7 +396,7 @@ public final class ScriptManager implements AutoCloseable {
             }
             ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
             RuntimeEnvironment created = new RuntimeEnvironment(
-                    env.context(), env.nodeRuntime(), env.outStream(), env.errStream());
+                    env.context(), env.nodeRuntime(), env.outStream(), env.errStream(), env.globals());
             this.runtime = created;
             CONTEXT_TO_MANAGER.put(created.context(), this);
             ScriptContextRegistry.bind(created.context(), scriptType);
@@ -617,7 +640,7 @@ public final class ScriptManager implements AutoCloseable {
          * 其「先清账本再注册」的顺序是领域契约，账本快照/回滚归 W6/W7 域 Adapter。
          */
         private void reloadScriptsTransactional () {
-            ReloadProgressTracker.begin(scriptType.name, 5);
+            ReloadProgressTracker.begin(scriptType.name, 6);
             boolean progressSuccess = false;
             try {
                 com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("正在重载 {} 脚本...", scriptType.name());
@@ -642,9 +665,10 @@ public final class ScriptManager implements AutoCloseable {
                     }
                     ReloadProgressTracker.step(scriptType.name, "candidate environment created");
 
-                    // ---- Phase BINDING：事件组/插件 binding/schema 安装进候选 Context ----
+                    // ---- Phase BINDING：事件组/插件 binding/schema/global+shared 视图安装进候选 Context ----
                     try {
-                        environmentFactory.installEnvironmentBindings(candidateEnvironment.context(), scriptType);
+                        environmentFactory.installEnvironmentBindings(
+                                candidateEnvironment.context(), scriptType, candidateEnvironment.globals());
                     } catch (Throwable t) {
                         throw reloadFailure(candidateGeneration, ReloadPhase.BINDING, null, "binding-install", t);
                     }
@@ -713,6 +737,22 @@ public final class ScriptManager implements AutoCloseable {
                     }
                     ReloadProgressTracker.step(scriptType.name, "candidate event plan prepared");
 
+                    // ---- Phase STATE_PLAN：受管状态联合预检（票 10）----
+                    // global 私有写集 + shared 写集 + 外部候选计划（CandidateStatePlan）联合
+                    // 预检：其他 writer 在候选期间提交过同一受管顶层 key（或 clear 之后提交过
+                    // 该 store）即冲突——candidate 失败、写集全部不发布、其他 writer 的已提交
+                    // 值保留（不丢写）。权威复验仍在 commit 点的 publishJoint 内（锁内），此处
+                    // 提前失败只为把冲突归因到候选阶段并避免无谓的 commit 期工作。
+                    try {
+                        candidateEnvironment.globals().preflightJoint();
+                    } catch (com.tkisor.nekojs.core.state.GlobalStateException e) {
+                        throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null, e.domain(), e);
+                    } catch (Throwable t) {
+                        throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
+                                "state-plan-unknown", t);
+                    }
+                    ReloadProgressTracker.step(scriptType.name, "candidate state plan validated");
+
                     // ---- COMMIT 前 close 抢占检查（票 07 AC3）：close 优先于尚未
                     // 提交的 candidate——closeRequested 已置位时（无论在途候选是被
                     // 中断加速失败还是恰好走到这里），候选在此丢弃，永不出现
@@ -742,13 +782,19 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         /**
-         * 创建候选 generation 环境：Context + node runtime，并登记 Context → manager
-         * 映射与候选标记（候选 timer 回调的存活判定依赖该登记）。
+         * 创建候选 generation 环境：Context + node runtime + <b>事务 generation 的
+         * global/shared 视图</b>（票 10：候选顶层写进写集，commit 才发布），并登记
+         * Context → manager 映射与候选标记（候选 timer 回调的存活判定依赖该登记）。
+         * BINDING 阶段由 reloadScriptsTransactional 单独执行（保持票 06 的阶段拆分）。
          */
         private RuntimeEnvironment createCandidateEnvironment () {
-            ScriptEnvironmentFactory.Environment candidate = environmentFactory.createContext(scriptType);
+            com.tkisor.nekojs.core.state.GenerationGlobals candidateGlobals =
+                    environmentFactory.newGeneration(scriptType, true);
+            ScriptEnvironmentFactory.Environment candidate =
+                    environmentFactory.createContext(scriptType, candidateGlobals);
             RuntimeEnvironment candidateEnvironment = new RuntimeEnvironment(
-                    candidate.context(), candidate.nodeRuntime(), candidate.outStream(), candidate.errStream());
+                    candidate.context(), candidate.nodeRuntime(), candidate.outStream(),
+                    candidate.errStream(), candidate.globals());
             CONTEXT_TO_MANAGER.put(candidate.context(), this);
             ScriptContextRegistry.bind(candidate.context(), scriptType);
             this.candidateContext = candidate.context();
@@ -764,6 +810,9 @@ public final class ScriptManager implements AutoCloseable {
          *
          * <p>顺序（owner thread 临界区内完成）：
          * <ol>
+         *   <li>受管状态联合发布（票 10，步骤 0）：global 私有 + shared 写集与外部候选计划
+         *       在同一持锁内联合发布——无半提交。只可能在未发生任何 commit 期变更时抛出
+         *       （复验冲突/计划违反 publish 契约），抛出即走 discardCandidate、active 完整；</li>
          *   <li>清扫旧 generation 监听器——此刻总线 type 桶里只有旧 generation 的 token
          *       （候选监听器是挂起收集、从未上总线），整类型清空即旧 generation 清扫；
          *       共享静态总线无法按 generation 分桶，此步与下一步合起来等价于「切换生产
@@ -775,11 +824,25 @@ public final class ScriptManager implements AutoCloseable {
          *       key 转换已在候选 EVENT_PLAN 阶段完成，此步只剩不会抛的注册操作（审查 A1）；</li>
          *   <li>释放旧 module session（编译模块缓存 / 虚拟 ESM URI 按类型清除）；</li>
          *   <li>按 timer、Context 所有权顺序释放旧环境（closeRuntimeResources：
-         *       node runtime/timer → Context → streams）。</li>
+         *       node runtime/timer → Context → streams；期间旧 generation 的 global/shared
+         *       guest 值按 generation 失效，非 guest 值保留在 root 级 store）。</li>
          * </ol>
          */
         private void commitGeneration (long candidateGeneration, RuntimeEnvironment candidateEnvironment,
                 List<ScriptContainer> candidateScripts, RuntimeEnvironment oldEnvironment) {
+            // (0) 受管状态联合发布（票 10，commit 点第一步）：global 私有 + shared 写集与外部
+            // 候选计划在同一持锁内联合发布（无半提交）。此步只可能在「尚未发生任何 commit 期
+            // 变更」时抛出（STATE_PLAN 与 commit 之间有其他 writer 提交的复验冲突、或外部计划
+            // 违反 publish 契约）——异常向上传播走 reloadScriptsTransactional 的失败路径：
+            // discardCandidate 丢弃候选，active 的监听器/runtime/generation 完整保留。
+            try {
+                candidateEnvironment.globals().publishJoint();
+            } catch (com.tkisor.nekojs.core.state.GlobalStateException e) {
+                throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null, e.domain(), e);
+            } catch (Throwable t) {
+                throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
+                        "state-plan-unknown", t);
+            }
             // (1) 旧 generation 监听器清扫
             scriptEventBridge.clearListeners(scriptType);
             // (2) 生产路由切换：新 generation 成为 live 环境
@@ -809,9 +872,10 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         /**
-         * 丢弃候选 generation：挂起监听器直接弃置（从未上总线）、候选 Context/timer/streams
-         * 按 timer → Context → streams 顺序关闭；active 的 runtime、scripts、监听器、
-         * timer 与 generation 序号原样保留。
+         * 丢弃候选 generation：挂起监听器直接弃置（从未上总线）、候选 global/shared 写集
+         * 丢弃（票 10：顶层 set/delete/clear 全部不发布）、候选 Context/timer/streams 按
+         * timer → Context → streams 顺序关闭；active 的 runtime、scripts、监听器、timer 与
+         * generation 序号原样保留。
          */
         private void discardCandidate (RuntimeEnvironment candidateEnvironment) {
             this.pendingListeners.clear();
@@ -819,6 +883,9 @@ public final class ScriptManager implements AutoCloseable {
             this.candidateEnvironment = null;
             this.candidateKilled = false;
             this.candidateKillScript = null;
+            if (candidateEnvironment != null && candidateEnvironment.globals() != null) {
+                candidateEnvironment.globals().discard();
+            }
             if (candidateEnvironment != null && !candidateEnvironment.isEmpty()) {
                 closeRuntimeResources(candidateEnvironment);
             }
@@ -1155,6 +1222,17 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         private void closeRuntimeResources (RuntimeEnvironment environment){
+            // 票 10：先失效该 generation 写入的 guest 值（已销毁 Context 的 guest 函数/Value
+            // 不因存入 store 获得永久保活；非 guest 值保留跨 reload）。generation close 只做
+            // guest 失效，不清空 root 级 store（跨 reload/server stop/切世界保留由 root 负责）。
+            if (environment.globals() != null) {
+                try {
+                    environment.globals().close();
+                } catch (Exception e) {
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn(
+                            "关闭 generation global 视图时发生异常", e);
+                }
+            }
             NekoNodeRuntime oldRuntime = environment.nodeRuntime();
             Context oldContext = environment.context();
             if (oldRuntime != null) {

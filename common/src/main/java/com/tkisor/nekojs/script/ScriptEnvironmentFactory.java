@@ -17,6 +17,8 @@ import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.api.ApiFacadeProxy;
 import com.tkisor.nekojs.core.api.ApiGuestErrorFactory;
+import com.tkisor.nekojs.core.state.GenerationGlobals;
+import com.tkisor.nekojs.core.state.GlobalStateStores;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
@@ -43,11 +45,25 @@ public final class ScriptEnvironmentFactory {
     private final ScriptEventBridge eventBridge;
     private final IPluginRuntime pluginRuntime;
     private final NekoSandboxFactory sandboxFactory;
+    /** root 拥有的 global/shared 状态域（票 10）：视图随环境安装，store 由 root 生命周期持有。 */
+    private final GlobalStateStores globalStores;
 
-    public ScriptEnvironmentFactory(ScriptEventBridge eventBridge, IPluginRuntime pluginRuntime, NekoSandboxFactory sandboxFactory) {
+    public ScriptEnvironmentFactory(ScriptEventBridge eventBridge, IPluginRuntime pluginRuntime,
+                                    NekoSandboxFactory sandboxFactory, GlobalStateStores globalStores) {
         this.eventBridge = eventBridge;
         this.pluginRuntime = pluginRuntime;
         this.sandboxFactory = sandboxFactory;
+        this.globalStores = globalStores;
+    }
+
+    /** 本工厂接线到的 root 状态域（ScriptManager 为每个环境创建 generation 视图）。 */
+    public GlobalStateStores globalStores() {
+        return globalStores;
+    }
+
+    /** 创建一个 generation 的 global/shared 视图持有者（事务=候选写集；非事务=直接提交）。 */
+    public GenerationGlobals newGeneration(ScriptType scriptType, boolean transactional) {
+        return globalStores.newGeneration(scriptType, transactional);
     }
 
     /**
@@ -64,17 +80,24 @@ public final class ScriptEnvironmentFactory {
         var nodeRuntime = sandbox.nodeRuntime();
 
         context.getBindings("js").putMember("__nekoCurrentScriptId", null);
-        return new Environment(context, nodeRuntime, sandbox.outStream(), sandbox.errStream());
+        return Environment.bare(context, nodeRuntime, sandbox.outStream(), sandbox.errStream());
     }
 
     /**
-     * 把事件组绑定、插件 binding、managed global、binding schema 与 class-load telemetry
-     * 安装进给定 Context（BINDING 阶段）。
+     * 把事件组绑定、插件 binding、managed global、{@code global}/{@code shared} 状态视图、
+     * binding schema 与 class-load telemetry 安装进给定 Context（BINDING 阶段）。
      *
      * <p>全部写入都以 {@code context.getBindings("js")} 为目标——candidate Context 与
      * active Context 各自持有自己的成员表，安装失败只影响候选环境，不触碰 active。
+     *
+     * <p>{@code global}/{@code shared}（票 10，shared 为工作名）：绑定值是<b>该 generation
+     * 的视图</b>（{@link GenerationGlobals}），不是共享 Map 实例——候选 generation 的顶层
+     * 写进候选写集，active generation 直接提交；绑定定义（名字/schema）与按 generation
+     * 创建的视图由此分开。{@code global} 是 NekoJS 状态容器；语言全局对象仍是
+     * {@code globalThis}（Node shim 的 {@code globalThis.global = globalThis} 别名只在无
+     * 绑定的 shim 语境可见——polyglot 绑定成员会遮蔽同名 globalThis 属性，实证见票 10）。
      */
-    public void installEnvironmentBindings(Context context, ScriptType scriptType) {
+    public void installEnvironmentBindings(Context context, ScriptType scriptType, GenerationGlobals globals) {
         var bindings = context.getBindings("js");
         eventBridge.bindEvents(bindings, scriptType);
 
@@ -90,6 +113,13 @@ public final class ScriptEnvironmentFactory {
                 bindings.putMember(name, obj);
             }
         });
+
+        // 受管 global/shared 状态视图（票 10）：在插件绑定之后安装，保证状态容器语义由
+        // root 拥有的视图决定（不再有进程级共享 Map 绑定）；任意顶层 key 合法（动态容器）。
+        bindings.putMember("global", globals.globalView());
+        bindings.putMember("shared", globals.sharedView());
+        bindingSchema.put("global", ScriptBindingSchema.BindingMembers.dynamicContainer());
+        bindingSchema.put("shared", ScriptBindingSchema.BindingMembers.dynamicContainer());
 
         bindManagedGlobals(bindings, scriptType, bindingSchema, ApiGuestErrorFactory.create(context));
         addEventGroupSchema(bindingSchema, pluginRuntime.eventGroups().values(), ScriptEventRegistry.groupsFor(scriptType));
@@ -113,14 +143,25 @@ public final class ScriptEnvironmentFactory {
     }
 
     /**
-     * 完整创建环境（preparation + binding 两个阶段顺序执行）。
-     * 供 {@link ScriptManager} 的 active 环境懒创建路径使用；事务式 reload 分两步调用
-     * 以区分失败阶段。
+     * 完整创建环境（preparation + binding 两个阶段顺序执行）：创建非事务 generation
+     * 的 global/shared 视图（顶层写直接提交）。供 {@link ScriptManager} 的 active 环境
+     * 懒创建路径使用；事务式 reload 分两步调用（createContext + 传入候选 generation 的
+     * installEnvironmentBindings）以区分失败阶段。
      */
     public Environment create(ScriptType scriptType) {
-        Environment environment = createContext(scriptType);
-        installEnvironmentBindings(environment.context(), scriptType);
+        GenerationGlobals globals = newGeneration(scriptType, false);
+        Environment environment = createContext(scriptType, globals);
+        installEnvironmentBindings(environment.context(), scriptType, globals);
         return environment;
+    }
+
+    /**
+     * 创建携带指定 generation 视图的裸环境（候选路径两步式创建的第一步；
+     * BINDING 阶段由调用方执行 {@link #installEnvironmentBindings}）。
+     */
+    public Environment createContext(ScriptType scriptType, GenerationGlobals globals) {
+        Environment bare = createContext(scriptType);
+        return new Environment(bare.context(), bare.nodeRuntime(), bare.outStream(), bare.errStream(), globals);
     }
 
     private void bindManagedGlobals(Value bindings, ScriptType scriptType,
@@ -219,8 +260,18 @@ public final class ScriptEnvironmentFactory {
     /**
      * 携带 out/err {@link LoggerStream}：Graal 关闭 Context 时只 detach 用户流、不 close，
      * 由 ScriptManager 的销毁路径在 context.close() 之后补一次 close() 冲刷末行缓冲。
+     * {@code globals} 是本环境的 global/shared generation 视图持有者（裸两步式创建的第一步
+     * 为 null；ScriptManager 在环境销毁时对其做 guest 值失效清除）。
      */
     public record Environment(Context context, com.tkisor.nekojs.core.node.NekoNodeRuntime nodeRuntime,
                               com.tkisor.nekojs.core.log.LoggerStream outStream,
-                              com.tkisor.nekojs.core.log.LoggerStream errStream) {}
+                              com.tkisor.nekojs.core.log.LoggerStream errStream,
+                              GenerationGlobals globals) {
+
+        static Environment bare(Context context, com.tkisor.nekojs.core.node.NekoNodeRuntime nodeRuntime,
+                                com.tkisor.nekojs.core.log.LoggerStream outStream,
+                                com.tkisor.nekojs.core.log.LoggerStream errStream) {
+            return new Environment(context, nodeRuntime, outStream, errStream, null);
+        }
+    }
 }
