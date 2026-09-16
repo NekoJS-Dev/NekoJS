@@ -24,13 +24,28 @@ public final class ScriptBindingSchema {
     /**
      * 绑定成员 schema。{@code valueClasses} 供链式类型流（{@code Item.of(x).member}
      * 的第二级成员检查）取成员/返回值类型；只有名字没有类信息时传空集合。
+     *
+     * <p>{@code dynamicMembers} = true 表示该绑定是动态键容器（如工单 10 的
+     * {@code global}/{@code shared} 状态容器）：任意顶层 key 都是合法成员，binding
+     * preflight 不得把未列出的成员名当拼写错误上报。
      */
-    public record BindingMembers(Set<String> memberNames, Set<Class<?>> valueClasses) {
+    public record BindingMembers(Set<String> memberNames, Set<Class<?>> valueClasses, boolean dynamicMembers) {
+        public BindingMembers(Set<String> memberNames, Set<Class<?>> valueClasses) {
+            this(memberNames, valueClasses, false);
+        }
+
         public BindingMembers(Set<String> memberNames) {
             this(memberNames, Set.of());
         }
 
-        public boolean contains(String member) { return memberNames.contains(member); }
+        /** 动态键容器（任意成员合法，preflight 跳过成员枚举检查）。 */
+        public static BindingMembers dynamicContainer() {
+            return new BindingMembers(Set.of(), Set.of(), true);
+        }
+
+        public boolean contains(String member) {
+            return dynamicMembers || memberNames.contains(member);
+        }
     }
 
     public static void register(ScriptType type, Map<String, BindingMembers> nameToMembers) {

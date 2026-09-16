@@ -88,7 +88,8 @@ public final class FabricCorePlugin implements NekoJSPlugin, EventsPoint.Contrib
                 com.tkisor.nekojs.bindings.static_access.ParticleOptionsJS.class));
         registry.register(com.tkisor.nekojs.api.ScriptType.TEST, "Test",
                 new com.tkisor.nekojs.bindings.static_access.TestJS());
-        registry.register("global", com.tkisor.nekojs.bindings.static_access.NekoGlobal.shared());
+        // global/shared 不在此注册（票 10）：由 ScriptEnvironmentFactory 为每个 generation 安装
+        // root 拥有的视图（按 ScriptType 私有 store + 显式 shared 入口，同 NeoForge 侧）
         // vanilla 类型/常量类
         registry.register("ItemStack", net.minecraft.world.item.ItemStack.class);
         registry.register("Items", net.minecraft.world.item.Items.class);
