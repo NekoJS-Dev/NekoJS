@@ -82,8 +82,10 @@ public class NekoJSMod extends NekoJS {
         // GoalRegistry 钩子已中立化（Entity+Level 签名），这里解包原生事件
         NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class,
                 event -> GoalRegistry.onEntityJoinLevel(event.getEntity(), event.getLevel()));
-        // 实体持久化数据存取桥：NeoForge 容器 = Entity#getPersistentData()（实体就在调用现场，
-        // 此处直接解引用成 id 再交给 store——镜像/同步层同样按 id 记账）
+        // 实体持久化数据存取桥：NeoForge 容器 = Entity#getPersistentData()。
+        // 实体引用面直接解引用（调用现场持有实体）——EntityJoinLevelEvent 窗口内实体尚未
+        // 进入 level 实体索引，按 id 反查会静默丢弃脚本写入（票 03 §3-3，票 18 修复）；
+        // id 面保留 server 反查，供同步/镜像层按 id 记账
         com.tkisor.nekojs.api.inject.EntityPDataStore.install(new com.tkisor.nekojs.api.inject.EntityPDataStore.Access() {
             @Override
             public net.minecraft.nbt.CompoundTag get(int entityId, String key) {
@@ -100,6 +102,25 @@ public class NekoJSMod extends NekoJS {
             public void set(int entityId, String key, net.minecraft.nbt.CompoundTag tag) {
                 var container = pdataContainer(entityId);
                 if (container == null) return;
+                if (tag.isEmpty()) {
+                    container.remove(key);
+                } else {
+                    container.put(key, tag.copy());
+                }
+            }
+
+            @Override
+            public net.minecraft.nbt.CompoundTag get(net.minecraft.world.entity.Entity entity, String key) {
+//? if >=26 {
+                return entity.getPersistentData().getCompound(key).orElseGet(net.minecraft.nbt.CompoundTag::new).copy();
+//?} else {
+/*                return entity.getPersistentData().getCompound(key).copy();
+*///?}
+            }
+
+            @Override
+            public void set(net.minecraft.world.entity.Entity entity, String key, net.minecraft.nbt.CompoundTag tag) {
+                var container = entity.getPersistentData();
                 if (tag.isEmpty()) {
                     container.remove(key);
                 } else {
