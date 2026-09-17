@@ -136,3 +136,39 @@
 | F9 | `registryBuilderSurfaces` default 空面 | 无需动作（§9 风险点 3 保留） |
 
 整改后全量验证：`:common:check` + `:common-api-processor:test`（201/1478/0/4skip）、`guardLint`（255/403/0）、`:26.1.2:build`（45/209/0/36skip）、`:1.21.1:build`（33/128/0/0）、26.2.0 golden 定向、26.1.2-fabric compileJava + golden 定向——全部通过（evidence/verification-commands.md 同步更新）。
+
+## 11. 合并后 fix-forward（2026-09-17，启动期 P0，提交 `c2348513`）
+
+**症状**：该 revision 起 fml **mod 构造期崩溃**，游戏起不来——`:26.1.2:runGameTestServer`
+BUILD FAILED，crash-report 栈：
+`NekoJSMod.initializeScripts → NekoRuntimeAssembly.assemble → NekoPluginBootstrap.bootstrapOwned
+→ collect → collectPoint(:152) → NekoRegistryPointsPlugin.registerTypeDocs(:52) → registryTypes()(:97)
+→ requireResult(:102)` 抛 `IllegalStateException: extension point 'nekojs:registry_types'
+has not finished yet (bootstrap incomplete)`。
+
+**根因**：本票新增的 `RegistryBuilderSurfaces.register(registry, registryTypes())` 在
+`registerTypeDocs`（`nekojs:type_docs` 扩展点的 collector）里**急切读取后序点产物**——
+`type_docs` 是内置点（`NekoBuiltinPointsPlugin` 最先注册，Kahn 同层按注册序第 5 个执行），
+而 `registry_types` 由版本树插件在其后注册（且 `dependsOn(registry_infos)`），两者之间没有
+排序边 → 数据依赖倒序（违反 ADR-0002 ②「读先序点产物」的模型）。本票实施与双轴审查的
+五节点 build / 单测全绿但都不覆盖：**插件图只在真机 boot 时执行**。
+
+**修复**（`common/.../core/plugin/`）：引擎补 ADR-0002 第三种依赖形态——**可选时序依赖**
+（`NekoPluginExtensionPoint.Builder#dependsOnOptional/Id`）：仅当对方已注册时加入排序边
+（对方缺席的 bootstrap 不建边、不早爆；在场时序保证与硬依赖等同，含环检测）。
+`TypeDocsPoint.POINT` 据此声明 `.dependsOnOptionalId("nekojs:registry_types")`
+（id 字面量：该点定义在版本树，common 不能引用其类型；common-only bootstrap 不含该插件）。
+
+**回归钉**（`NekoPluginBootstrapV2Test` +4）：`lateProductReadWithoutDeclaredDependencyThrows`
+（负例对照：同形状不声明依赖必抛）、`typeDocsPointIsOrderedAfterRegistryTypesWhenPresent`
+（真实 TypeDocsPoint 正例，复用版本树插件的句柄急切读取形态）、
+`optionalDependencyAbsentDoesNotFailFreeze` / `optionalDependencyPresentOrdersExecution`。
+
+**验证**：`:26.1.2:runGameTestServer` BUILD SUCCESSFUL（日志：`plugin runtime bootstrapped once`、
+`发现了 2 个 STARTUP 脚本`、`正在为 STARTUP 注册 13 个事件组`、STARTUP 示例脚本执行，零 NekoJS 报错）；
+`:common:test` 绿、`guardLint` 0 警告。
+
+**教训（并入后续票验证协议）**：① 改动插件图/启动面（Point 增删、collector 里的跨点读取、
+插件发现与注册序）**必须补一次真机 boot**（`runGameTestServer`），build+unit 不覆盖；
+② `NekoPluginExtensionPoint` 的"数据依赖"只能在 collector/initializer 里读**先序**点，
+读后序点要么声明排序边（对方可能缺席时用可选形态）、要么改由后序点写入。
