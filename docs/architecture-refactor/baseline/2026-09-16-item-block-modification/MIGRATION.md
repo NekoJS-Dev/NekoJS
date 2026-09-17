@@ -20,22 +20,44 @@
 
 ## 2. 迁移要点（1.2.0）
 
-1. **property 写法继续有效，而且现在真的生效**：旧 Web/GraalJS 路径下宿主视图的
-   property 写被静默丢弃（`item.maxStackSize = 16` 既不落字段也不落 setter，只有
-   `item.setMaxStackSize(16)` 生效）。现在两种写法命中同一 setter——原本「写了但没生效」
-   的脚本会**开始生效**。这是修复，但可能让此前静默失效的写法暴露出越界/类型错误
-   （错误在写入期抛出，带成员名与可写成员目录）。
+### 2.1 已删除的公开符号（breaking，需维护者知情）
+
+以下符号在 `d2c49f2a` 被删除（AC3/AC5 要求：无 owner 的 static 状态与 restore-all 重放路径必须收口）。
+删除本身可辩护（替代路径 = domain owner 的两个收集点 + Adapter 应用），但**属于公开面 breaking**，
+在此逐项列出待维护者知情/追认（票面 AC14 的 sign-off 项）：
+
+| 删除的符号 | 原形态 | 替代路径 | 影响面 |
+|---|---|---|---|
+| `ItemModificationEventJS#fire(MinecraftServer)` | `public static int`（restore-all 后整体重放） | 初始收集点 `ModificationDomainOwner#applyInitialPlan(server)`；重放走 SERVER 事务 reload 的 `DOMAIN_PLAN` | Java 侧调用者（脚本面无感） |
+| `BlockModificationEventJS#fire()` | `public static int` | 同上 | Java 侧调用者 |
+| `ItemModificationEventJS(MinecraftServer)` 构造器 | `public`（平台侧手动 post 用） | `ItemModificationEventJS(ModificationCandidatePlan)`（由 domain owner 创建） | Java 侧调用者 |
+| `BlockModificationEventJS()` 隐式无参构造器 | 平台侧手动 post 用 | `BlockModificationEventJS(ModificationCandidatePlan)` | Java 侧调用者 |
+| `ItemModificationEventJS.SNAPSHOTS` | `private static final Map<Identifier, DataComponentMap>`（进程级） | domain owner 实例字段 `itemBaselines`（root 生命周期持有） | 结构性（无外部读取者） |
+| `BlockModificationEventJS.SNAPSHOTS` | `private static final Map<Identifier, PropertySnapshot>`（进程级） | domain owner 实例字段 `blockBaselines` | 结构性 |
+| `ItemModificationJS#applyTo(Builder, DataComponentMap, MinecraftServer)` | 包私有（视图直接改 live 组件） | `ModificationDomainOwner#applyItemProperties`（Adapter 内） | 同包/引擎接缝 |
+| `ItemModificationEventJS#parseItemId(...)` / `applyComponents(...)` | `private static` → 包私有 static | 同名方法仍在（可见性收紧为包私有） | 无外部影响 |
+
+**未删除、保持不变**：`modify(String, Consumer<...>)`（含 Java 侧 lambda 形态）、`getModifiedCount()`、
+`ItemModificationJS`/`BlockModificationJS` 的全部属性成员（`maxStackSize`/`maxDamage`/`rarity`/
+`fireResistant`/`food`/`tool`/`attackDamage`/`attackSpeed`，26.x）与 `hardness`/`resistance`/
+`lightLevel`/`requiresTool`/`friction`/`jumpFactor`（block，26.x）——脚本面零改名、零改语义。
+
+### 2.2 行为与语义变化
+
+1. **property 写法继续有效，而且现在真的生效**：旧 GraalJS 路径下宿主对象的 property 写被
+   静默丢弃（`item.maxStackSize = 16` 既不落字段也不落 setter，只有 `item.setMaxStackSize(16)`
+   生效）。现在两种写法命中同一 setter——原本「写了但没生效」的脚本会**开始生效**。这是修复，
+   但可能让此前静默失效的写法暴露出越界/类型错误（错误在写入期抛出，带成员名与可写成员目录）。
 2. **item 的「声明移除」不再 stale**：旧实现只在再次 modify 同一目标时恢复快照，脚本删掉
    声明后服务端保持上一轮修改；现在成功 reload 统一「先恢复 NekoJS 基线，再应用新的完整
    计划」，item 与 block 语义一致（block 旧行为本就 restore-all-first）。
 3. **错误时机更早、更整批**：未知目标 id 或回调抛出 → 候选收集失败（DOMAIN_PLAN，整批
    不提交）；值域/组件不变量不满足 → 联合预检失败（STATE_PLAN，与 global/shared 写集联合
    失败）。两者都保留旧 active，**没有**部分修改、混合 generation 或残留挂起监听器。
-4. **不再有进程级静态 snapshot 与 `fire()` 重放入口**：旧 `static SNAPSHOTS` 与
-   `fire()`（restore-all 后整体重放）已删除；snapshot/restore 状态由 root 授权的 domain
-   owner 实例持有，root close 时恢复并清空。Java 侧消费者若要触发初始收集，用
-   `ModificationDomainOwner#applyInitialPlan(server)`（平台入口已接线）；测试/独立 root
-   直接实例化 owner 并注册进 root，不共享进程级状态。
+4. **不再有进程级静态 snapshot 与 `fire()` 重放入口**：snapshot/restore 状态由 root 授权的
+   domain owner 实例持有，root close 时恢复并清空。Java 侧消费者若要触发初始收集，用
+   `ModificationDomainOwner#applyInitialPlan(server)`；测试/独立 root 直接实例化 owner 并注册
+   进 root，不共享进程级状态。
 5. **同目标多声明仍是「整体替换」**：同一次重放内对同一目标的后一条声明从基线叠加，
    前一条声明的其它属性不残留（旧可观察语义保留）。本票**不**引入 Dynamic Registry 式
    同 key 拒绝，也**不**新增 last-write-wins 合并政策。
@@ -48,6 +70,8 @@
 8. **1.21.1 没有 block 半边**：`BlockEvents.modification` 在 1.21.1 不存在，脚本得到明确的
    「无此成员」错误（不是静默 no-op）；item 半边可用，组件发布走反射写 `Item#components`，
    `fireResistant` 是 `FIRE_RESISTANT` 组件（无需 server 绑定）。
+9. **`ItemEvents`/`BlockEvents` 的 modification javadoc/注释** 已改为票 39 的收集语义
+   （此前仍写「快照恢复模型」；脚本面无影响）。
 
 ## 3. 声明面（tier 归属）
 
