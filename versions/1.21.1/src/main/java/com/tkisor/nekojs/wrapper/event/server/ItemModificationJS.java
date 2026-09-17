@@ -26,7 +26,37 @@ import java.util.Map;
  * 在联合预检（STATE_PLAN）完成。1.21.1 面只有四个基础属性（无 26.x 的
  * food/tool/attack 面——成员差异见 ticket 39 REPORT 五节点差异表）。
  */
-public class ItemModificationJS {
+public class ItemModificationJS implements graal.graalvm.polyglot.proxy.ProxyObject {
+
+    /** 脚本面成员目录/值装配引擎（putMember 与显式 setter 同一 Method seam，AC8）。 */
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+
+    // ---- ProxyObject：property 写与显式 setter 分发到同一 Java setter ----
+
+    @Override
+    public Object getMember(String name) {
+        return surface.getMember(name);
+    }
+
+    @Override
+    public boolean hasMember(String name) {
+        return surface.hasMember(name);
+    }
+
+    @Override
+    public Object getMemberKeys() {
+        return surface.getMemberKeys();
+    }
+
+    @Override
+    public void putMember(String name, graal.graalvm.polyglot.Value value) {
+        surface.putMember(name, value);
+    }
+
+    @Override
+    public boolean removeMember(String name) {
+        return surface.removeMember(name);
+    }
 
     private Integer maxStackSize;
     private Integer maxDamage;

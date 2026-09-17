@@ -63,8 +63,9 @@ public interface ItemEvents {
                     PlayerEntityInteractEventJS.class, true,
                     DispatchKey.of(Item.class, event -> event.getItem().getItem())));
 
-    // modification（posted-object 模式）：服务器启动与 /nekojs reload server 时
-    // 平台侧手动 post（ItemModificationEventJS.fire），不挂任何总线事件。
+    // modification（posted-object 模式）：票 39 起由平台 domain owner 在服务器启动收集点
+    // （about-to-start）与 SERVER reload 的候选 DOMAIN_PLAN 阶段 post（收集进 inert 计划、
+    // commit 点由 Adapter 应用），不挂任何总线事件。
     EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
             GROUP.server("modification", ItemModificationEventJS.class);
 }

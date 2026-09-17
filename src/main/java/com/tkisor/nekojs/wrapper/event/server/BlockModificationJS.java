@@ -61,7 +61,37 @@ import java.util.function.ToIntFunction;
  * {@code accesstransformer.cfg} ({@code public-f} on these fields); not used here
  * because that file is outside the touched file set.
  */
-public class BlockModificationJS {
+public class BlockModificationJS implements graal.graalvm.polyglot.proxy.ProxyObject {
+
+    /** 脚本面成员目录/值装配引擎（putMember 与显式 setter 同一 Method seam，AC8）。 */
+    private final ModificationViewSurface surface = ModificationViewSurface.of(this);
+
+    // ---- ProxyObject：property 写与显式 setter 分发到同一 Java setter ----
+
+    @Override
+    public Object getMember(String name) {
+        return surface.getMember(name);
+    }
+
+    @Override
+    public boolean hasMember(String name) {
+        return surface.hasMember(name);
+    }
+
+    @Override
+    public Object getMemberKeys() {
+        return surface.getMemberKeys();
+    }
+
+    @Override
+    public void putMember(String name, graal.graalvm.polyglot.Value value) {
+        surface.putMember(name, value);
+    }
+
+    @Override
+    public boolean removeMember(String name) {
+        return surface.removeMember(name);
+    }
 
     // BlockBehaviour$Properties（声明源）：六个属性字段
     private static final Field PROPS_DESTROY_TIME = field(BlockBehaviour.Properties.class, "destroyTime");
