@@ -94,7 +94,7 @@ public final class RecipeFilterAdapter implements JSTypeAdapter<RecipeFilter> {
         for (String key : value.getMemberKeys()) {
             if (!KNOWN_KEYS.contains(key)) {
                 throw new ValueConversionException(RecipeFilter.class, "recipe filter object with documented keys",
-                        value, "RecipeFilterAdapter: unknown key '" + key + "'（未知键），仅接受文档中列出的过滤键，防止条件被静默丢弃 (silent data loss)");
+                        value, "[NEKO-5003] RecipeFilterAdapter: unknown key '" + key + "'（未知键），仅接受文档中列出的过滤键，防止条件被静默丢弃 (silent data loss)");
             }
         }
 

@@ -39,17 +39,17 @@ public final class ScriptSyncService {
     public static Map<String, String> collectAllScripts() {
         Map<String, String> files = ScriptSyncFiles.collectAllValidScripts(NekoJSPaths.get().root());
         if (files.size() > MAX_SYNC_FILES) {
-            throw new IllegalStateException("脚本数量超过限制: " + files.size() + " (最大 " + MAX_SYNC_FILES + ")");
+            throw new IllegalStateException("[NEKO-3002] 脚本数量超过限制: " + files.size() + " (最大 " + MAX_SYNC_FILES + ") — too many script files");
         }
         int totalSize = 0;
         for (Map.Entry<String, String> entry : files.entrySet()) {
             int size = entry.getValue().getBytes(StandardCharsets.UTF_8).length;
             if (size > MAX_BATCH_SCRIPT_SIZE) {
-                throw new IllegalStateException("脚本文件过大: " + entry.getKey() + " (" + size + " bytes, 最大 " + MAX_BATCH_SCRIPT_SIZE + ")");
+                throw new IllegalStateException("[NEKO-3001] 脚本文件过大: " + entry.getKey() + " (" + size + " bytes, 最大 " + MAX_BATCH_SCRIPT_SIZE + ") — script file too large");
             }
             totalSize += size;
             if (totalSize > MAX_BATCH_TOTAL_SIZE) {
-                throw new IllegalStateException("脚本总大小超过限制: " + totalSize + " bytes (最大 " + MAX_BATCH_TOTAL_SIZE + ")");
+                throw new IllegalStateException("[NEKO-3003] 脚本总大小超过限制: " + totalSize + " bytes (最大 " + MAX_BATCH_TOTAL_SIZE + ") — total script size too large");
             }
         }
         return files;
