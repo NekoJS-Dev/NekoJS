@@ -81,9 +81,12 @@ public class ServerEventListener {
         // 动态注册事件 facade 的初次候选（ticket 16）：server registry ready 后收集一次
         // inert 计划（preflight 通过才发布；每次成功的 script/data reload 也会在候选阶段
         // 重新收集并联合发布，此处是对「初次 server registry ready」边界的显式触发，幂等）。
-        // 守卫口径与旧 dynamic 包一致：运行期动态注册在 1.21.1 整包缺席（DynamicRegistryJS/
-        // DynamicRegistries 同为 >=26 面），facade 因此不在 1.21.1 触发（能力记 not verified，
-        // 见 baseline REPORT 能力表），而不是编译期漏接线。
+        // 版本守卫的实际作用（与文件头的「本文件不应再出现版本守卫」是有意的例外，原因如下）：
+        // 1.21.1 的编译单元是 versions/1.21.1/src 下的孪生文件，本文件不参与其编译——所以
+        // 当前不会立即断裂；守卫是为了让孪生文件按 tools/extract_evaluated.py 重新提取时
+        // （= 本文件在 1.21.1 节点求值后的形态）不会把 26.x 专属的 facade 符号带进 1.21.1。
+        // 运行期动态注册在 1.21.1 整包缺席（DynamicRegistryJS/DynamicRegistries 同为 >=26
+        // 面），facade 因此不在该节点触发（能力记 not verified，见 baseline REPORT 能力表）。
 //? if >=26 {
         com.tkisor.nekojs.dynamic.DynamicRegistryFacade.fireInitialCollection();
 //?}

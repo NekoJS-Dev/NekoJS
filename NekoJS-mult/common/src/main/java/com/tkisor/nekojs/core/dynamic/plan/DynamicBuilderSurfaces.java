@@ -86,9 +86,10 @@ public final class DynamicBuilderSurfaces {
         Method method = deterministicOverload(overloads);
         StringBuilder sb = new StringBuilder("def ").append(name).append("(self");
         Parameter[] params = method.getParameters();
-        for (Parameter param : params) {
-            sb.append(", ").append(paramName(param, 0)).append(": ")
-                    .append(DynamicBuilderContract.pyTypeOf(param.getType()));
+        for (int i = 0; i < params.length; i++) {
+            // 参数名回落序号必须用真实下标（与 TS 侧同款）：恒传 0 会产出重复的 arg0
+            sb.append(", ").append(paramName(params[i], i)).append(": ")
+                    .append(DynamicBuilderContract.pyTypeOf(params[i].getType()));
         }
         sb.append(") -> ").append(returnShape(builderClass, method, "None", true)).append(": ...");
         return sb.toString();
