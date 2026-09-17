@@ -39,7 +39,7 @@ The code is the lookup key and does not change when the wording does.
 | `NEKO-1003` | script execution failed | 脚本执行失败: {} {} |
 | `NEKO-1004` | problem in after dependency order | {} 脚本 after 依赖排序存在问题：{} |
 | `NEKO-1005` | script unreadable, skipped | 无法读取脚本 {}，已跳过：{} |
-| `NEKO-1006` | startup reload is not transactional | {} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；若重载期间脚本出错，已注册内容不会回退。 |
+| `NEKO-1006` | startup reload is not transactional | {} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；若重载期间脚本出错，已注册内容不会回退 |
 | `NEKO-1007` | candidate context creation failed | {} 候选环境创建失败，保留旧 Context（listener/binding 已清，需再次 reload 恢复） |
 | `NEKO-1008` | transactional script reload failed | {} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复 |
 | `NEKO-1009` | error closing old Node runtime | 关闭旧 Node runtime 时发生异常 |
@@ -94,16 +94,16 @@ is nothing to look up when they appear.
 | English summary | Chinese message |
 |---|---|
 | loading client scripts | [client] 正在加载 CLIENT 脚本... |
-| no scripts to load | 没有需要加载的 {} 脚本。 |
+| no scripts to load | 没有需要加载的 {} 脚本 |
 | registering event groups | 正在为 {} 注册 {} 个事件组... |
 | reloading one script file | 正在重载 {} 脚本文件 {}，受影响入口 {} 个... |
 | reloading scripts | 正在重载 {} 脚本... |
 | running test scripts | 正在运行 TEST 脚本... |
-| script file reload finished | {} 脚本文件 {} 重载完毕。 |
-| script reload finished | {} 脚本重载完毕。 |
-| scripts discovered | 发现了 {} 个 {} 脚本。 |
-| startup file reload falls back to full reload | 正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载。 |
-| test scripts finished | TEST 脚本运行完毕。 |
+| script file reload finished | {} 脚本文件 {} 重载完毕 |
+| script reload finished | {} 脚本重载完毕 |
+| scripts discovered | 发现了 {} 个 {} 脚本 |
+| startup file reload falls back to full reload | 正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载 |
+| test scripts finished | TEST 脚本运行完毕 |
 | workspace entry point created | 已初始化环境入口: {} |
 
 ## Coverage

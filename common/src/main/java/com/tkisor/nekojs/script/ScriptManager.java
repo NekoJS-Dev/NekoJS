@@ -207,7 +207,7 @@ public final class ScriptManager implements AutoCloseable {
     public void discoverScripts() {
         List<ScriptContainer> discovered = discoverWithPacks();
         this.scripts = discovered;
-        scriptType.logger().info("发现了 {} 个 {} 脚本。 — scripts discovered", discovered.size(), scriptType.name());
+        scriptType.logger().info("发现了 {} 个 {} 脚本 — scripts discovered", discovered.size(), scriptType.name());
     }
 
     /**
@@ -307,7 +307,7 @@ public final class ScriptManager implements AutoCloseable {
 
     private boolean prepareScriptsForLoad(List<ScriptContainer> scriptsToLoad) {
         if (scriptsToLoad == null || scriptsToLoad.isEmpty()) {
-            scriptType.logger().info("没有需要加载的 {} 脚本。 — no scripts to load", scriptType.name());
+            scriptType.logger().info("没有需要加载的 {} 脚本 — no scripts to load", scriptType.name());
             return false;
         }
         for (var script : scriptsToLoad) {
@@ -346,7 +346,7 @@ public final class ScriptManager implements AutoCloseable {
                         warnedStartupReloadNonTransactional = true;
                         scriptType.logger().warn(
                                 "[NEKO-1006] {} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；"
-                                        + "若重载期间脚本出错，已注册内容不会回退。 — startup reload is not transactional",
+                                        + "若重载期间脚本出错，已注册内容不会回退 — startup reload is not transactional",
                                 scriptType.name());
                     }
                     // STARTUP 涉及不可逆注册（物品、方块、实体），无法安全回滚，保持 reset+load 语义。
@@ -360,7 +360,7 @@ public final class ScriptManager implements AutoCloseable {
                     reloadScriptsTransactional();
                 }
                 progressSuccess = true;
-                scriptType.logger().info("{} 脚本重载完毕。 — script reload finished", scriptType.name());
+                scriptType.logger().info("{} 脚本重载完毕 — script reload finished", scriptType.name());
             } finally {
                 ReloadProgressTracker.finish(scriptType.name, progressSuccess);
             }
@@ -416,7 +416,7 @@ public final class ScriptManager implements AutoCloseable {
 
             try {
                 List<ScriptContainer> candidateScripts = discoverWithPacks();
-                scriptType.logger().info("发现了 {} 个 {} 脚本。 — scripts discovered", candidateScripts.size(), scriptType.name());
+                scriptType.logger().info("发现了 {} 个 {} 脚本 — scripts discovered", candidateScripts.size(), scriptType.name());
                 ReloadProgressTracker.step(scriptType.name, "discovered " + candidateScripts.size() + " scripts");
 
                 // 候选加载期间只关心「候选 Context 是否被杀」：先清掉旧标记，加载结束后若标记
@@ -482,7 +482,7 @@ public final class ScriptManager implements AutoCloseable {
                     throw new IOException("No loaded STARTUP entry matches " + displayScriptPath(target)
                             + ". Reload the whole STARTUP environment first if this file has not been loaded yet.");
                 }
-                scriptType.logger().info("正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载。 — startup file reload falls back to full reload", displayScriptPath(target));
+                scriptType.logger().info("正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载 — startup file reload falls back to full reload", displayScriptPath(target));
                 reloadScripts();
                 List<ScriptContainer> reloadedMatches = scripts.stream()
                         .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
@@ -529,7 +529,7 @@ public final class ScriptManager implements AutoCloseable {
                 }
             }
 
-            scriptType.logger().info("{} 脚本文件 {} 重载完毕。 — script file reload finished", scriptType.name(), displayScriptPath(target));
+            scriptType.logger().info("{} 脚本文件 {} 重载完毕 — script file reload finished", scriptType.name(), displayScriptPath(target));
             return targets;
         }
 
@@ -646,7 +646,7 @@ public final class ScriptManager implements AutoCloseable {
             reloadScriptsTransactional();
             flushTestTimers();
 
-            scriptType.logger().info("TEST 脚本运行完毕。 — test scripts finished");
+            scriptType.logger().info("TEST 脚本运行完毕 — test scripts finished");
         }
 
         private void flushTestTimers () {
