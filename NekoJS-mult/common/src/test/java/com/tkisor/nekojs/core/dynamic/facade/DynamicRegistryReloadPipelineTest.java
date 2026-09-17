@@ -37,8 +37,8 @@ class DynamicRegistryReloadPipelineTest {
 
     @BeforeAll
     static void initPlatform() {
-        Path gameDir = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-test-gamedir");
-        TestPlatformInit.ensureInitialized(gameDir);
+        TestPlatformInit.ensureInitialized(
+                TestPlatformInit.uniqueGameDir("nekojs-dynamic-registry-reload"));
     }
 
     @BeforeEach
