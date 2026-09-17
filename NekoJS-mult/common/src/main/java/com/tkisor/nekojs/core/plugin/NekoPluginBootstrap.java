@@ -224,7 +224,9 @@ public final class NekoPluginBootstrap {
 
         List<NekoPluginExtensionPoint<?, ?, ?>> freeze() {
             frozen = true;
-            // ADR-0002 ①：未注册依赖 id 早爆（拼写错误在收集开始前暴露）
+            // ADR-0002 ①：未注册依赖 id 早爆（拼写错误在收集开始前暴露）。可选依赖
+            // （dependsOnOptionalId）不参与早爆：对方缺席的 bootstrap（如不含版本树
+            // 插件的 common 测试轮）不建边不报错，见 NekoPluginExtensionPoint javadoc ③
             for (NekoPluginExtensionPoint<?, ?, ?> point : extensionPoints.values()) {
                 for (Object dependency : point.dependsOn()) {
                     String depId = NekoPluginExtensionPoint.dependencyId(dependency);
@@ -246,6 +248,14 @@ public final class NekoPluginBootstrap {
                 for (Object dependency : point.dependsOn()) {
                     dependents.get(NekoPluginExtensionPoint.dependencyId(dependency)).add(point.id());
                     inDegree.merge(point.id(), 1, Integer::sum);
+                }
+                // 可选时序依赖：仅对方已注册时建边（在场即与硬依赖等效，含环检测）
+                for (Object dependency : point.optionalDependsOn()) {
+                    String depId = NekoPluginExtensionPoint.dependencyId(dependency);
+                    if (extensionPoints.containsKey(depId)) {
+                        dependents.get(depId).add(point.id());
+                        inDegree.merge(point.id(), 1, Integer::sum);
+                    }
                 }
             }
             List<NekoPluginExtensionPoint<?, ?, ?>> order = new ArrayList<>();

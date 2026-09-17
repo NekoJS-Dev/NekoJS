@@ -99,5 +99,11 @@ public final class TypeDocsPoint {
                     .initializer(context -> new Bucket())
                     .collector(NekoJSPlugin::registerTypeDocs)
                     .finish(Bucket::snapshot)
+                    // 可选时序依赖：版本树插件（NekoRegistryPointsPlugin）在 registerTypeDocs 里
+                    // 读 registry_types 产物派生 typed Builder 契约条目（ticket 15）——该点定义在
+                    // 版本树，common 不能引用其类型故用 id 字面量；common-only bootstrap 不含该
+                    // 插件（id 未注册）时不建边。缺此边时 type_docs（内置、先注册）会先于
+                    // registry_types 执行并抛 "has not finished yet"（ticket 15 启动期回归）。
+                    .dependsOnOptionalId("nekojs:registry_types")
                     .build();
 }
