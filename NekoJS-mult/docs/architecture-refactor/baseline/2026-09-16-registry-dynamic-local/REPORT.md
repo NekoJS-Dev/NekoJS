@@ -19,7 +19,7 @@
 | `feat(dynamic-registry)` | common 计划面（`core/dynamic/plan/`）、facade（`core/dynamic/facade/`）、reload 收集 seam（`CandidateDomainCollector` + `ScriptManager`/`EventBusJS` 窄扩展） | AC1/3/5/6/7/8 |
 | `feat(dynamic-registry)` | 平台装配（`DynamicRegistryFacade`/`DynamicRegistryPlugin` 事件与声明贡献、`ServerEventListener` 初次候选触发 + `>=26` 守卫） | AC1/2/9 |
 | `fix(dynamic-registry)` | 缺口补强（候选期收集可观察记录、收集期 kill 上报对称、`>=26` 守卫） | AC1/7 |
-| `test(dynamic-registry)` | 12 个套件中的 10 个（plan 语义/惰性/parity、facade/reload/惰性/示例、声明 golden） | AC4/5/6/7/8/9/12 |
+| `test(dynamic-registry)` | 本票新增/扩展的 9 个套件（plan 语义/惰性/parity、facade/reload/候选惰性/示例、声明 golden；同域另 12 用例为旧路径 prior art） | AC4/5/6/7/8/9/12 |
 | `test(data-sync)` | 顺带修复：`DataSyncGenerationBoundaryTest` 适配 `ScriptEnvironmentFactory` 4 参构造器（认领基线漏适配，编译期必须） | — |
 | `docs(baseline)` | 本报告 + `MIGRATION.md` + 示例注释 + REGENERATE 登记 + 票面 AC 勾选 | 材料 |
 
@@ -79,7 +79,7 @@
 
 | 项 | 票面/spec 08 工作名 | 实施采用 | 理由 | 进入面 |
 |---|---|---|---|---|
-| 事件组 | `ServerEvents.dynamicRegistry`（原文「工作名，非最终 API」） | **`DynamicRegistryEvents`**（独立组，唯一成员 `dynamicRegistry`，SERVER side） | `ServerEvents` 是 NeoForge 专属树 + fabric 另有一份同 FQCN 文件；挂进去会把独立生命周期焊死在 loader 专属组上，common 层无法承载/测试；独立组与启动期 `RegistryEvents`（同为独立组）对称表达「两个生命周期」，符合 spec 08「不与启动期混淆」 | declaration golden（`DynamicRegistryEventsDeclarationGoldenTest` 断言不出现工作名）、contract（catalog 条目）、迁移表（`MIGRATION.md` §1） |
+| 事件组 | `ServerEvents.dynamicRegistry`（spec 08:61 措辞：「工作名为 `ServerEvents.dynamicRegistry`」；08:63「精确事件名…仍由后续 contract 冻结」） | **`DynamicRegistryEvents`**（独立组，唯一成员 `dynamicRegistry`，SERVER side） | `ServerEvents` 是 NeoForge 专属树 + fabric 另有一份同 FQCN 文件；挂进去会把独立生命周期焊死在 loader 专属组上，common 层无法承载/测试；独立组与启动期 `RegistryEvents`（同为独立组）对称表达「两个生命周期」，符合 spec 08「不与启动期混淆」 | declaration golden（`DynamicRegistryEventsDeclarationGoldenTest` 断言不出现工作名）、contract（catalog 条目）、迁移表（`MIGRATION.md` §1） |
 | 成员名 | `dynamicRegistry` | **`dynamicRegistry`**（保持） | 未偏离 | 同上 |
 | 类型直达入口 | `event.item/soundEvent/mobEffect` | **同名保持** | 票面冻结 | 成员目录 + declaration sugar |
 | Builder 成员形态 | spec 08 user story 13：`item.setMaxStackSize(...)` ≡ `item.maxStackSize = ...` | **JavaBean 双形态**（`setXxx`/`getXxx` + property 写） | 与票 15 启动期 builder 契约一致；旧 `DynamicRegistryJS` 的 fluent `maxStackSize(64)` 形态属旧路径（本票不动，迁移表说明）；新面不引入「属性名＝方法名」双重语义（Graal `invokeMember` 与属性读值冲突，interop 不可靠） | `DynamicDefinitionBuilder` javadoc、`MIGRATION.md` §2、声明 golden |
@@ -88,7 +88,7 @@
 
 | 旧路径 | 现状消费者 | 替代物状态 | 处置 |
 |---|---|---|---|
-| `DynamicRegistryJS`（静态 `INSTANCE` + `ServerEvents.started` 内直注；脚本面 `DynamicRegistry.item/soundEvent/mobEffect`） | `DynamicRegistryBinding`（binding 注册）、脚本（迁移表面对）、`DynamicRegistryBuilderTest`（7 用例） | 本票 facade（`DynamicRegistryEvents.dynamicRegistry` → inert 计划）；**行为差异**：候选计划 vs 即时注册，无 remove/replace | **保留**；删除需维护者 sign-off |
+| `DynamicRegistryJS`（静态 `INSTANCE` + `ServerEvents.started` 内直注；脚本面 `DynamicRegistry.item/soundEvent/mobEffect`） | `DynamicRegistryBinding`（binding 注册）、脚本（迁移表面对）、`DynamicRegistryBuilderTest`（6 用例） | 本票 facade（`DynamicRegistryEvents.dynamicRegistry` → inert 计划）；**行为差异**：候选计划 vs 即时注册，无 remove/replace | **保留**；删除需维护者 sign-off |
 | `DynamicRegistries` static registry surgery（`DynamicRegistrySet` + `RegistrySurgery.withUnfrozenRegistry/withUnfrozenAndHolders/clearHolderTags` + `RegistryDataCollectorMixin` 重放） | `DynamicRegistryJS`、`RegistryDataCollectorMixin`（mixin 配置 `nekojs-dynamic.mixins.json`）、`DynamicRegistryDebug` | 计划面**不含** surgery 通道（`DynamicPlanInertnessTest`）；真实 mutation 归票 21 的 Adapter | **保留**（本票不触碰 mixin/注册路径） |
 | `DynamicRegistryDebug.snapshot()`（`/nekojs registry` 调试视图） | `NekoJSCommands:131/139`、`FabricNekoJSCommands:371/379` | 新面提供 `store.exposedSnapshot/staleIds/retiredKeys/trackedClaims/claimOf`（本票测试与诊断用），尚未接入命令面 | **保留**；命令面统一归票 20/21 |
 | `DynamicRegistrationBookkeeping`（static 账） | `DynamicRegistries`/`DynamicRegistryDebug` | 新面 `DynamicRegistryPlanStore` 每实例一份账（同 label 语义，独立实例） | **保留**（旧账仍服务旧路径；本票不双写） |
@@ -109,13 +109,14 @@
 
 ## 8. golden 变更留痕（REGENERATE.md §3 格式）
 
-**新增两份 golden（本票零改动既有 golden）：`common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts`（11 行）与 `dynamic-builders.expected.d.ts`（31 行）**
+**新增两份 golden（本票零改动既有 golden）：`common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts`（11 行）与 `dynamic-builders.expected.d.ts`（33 行）**
 
 - **原因**：AC2 要求命名决策进入 contract/golden 与 declaration；AC9 要求调用者 Interface、契约、声明与 contract/golden 同一证据链。两份 golden 均由**生产渲染器**输出：事件声明 = `NekoScriptCatalog.events` + `EventDeclarationGenerator`（票 14/15 同一渲染器）；Builder 声明 = `DynamicBuilderSurfaces.derive()` + `RegistryBuilderTsRenderer`（票 15 同一渲染器）。
 - **旧新 diff**：两份均为新文件（旧值：不存在）。生成方式 = `:common:regenerateGoldens --tests DynamicRegistryEventsDeclarationGoldenTest`（先落 placeholder 使资源目录可解析，产物覆盖后逐行审阅），流程与票据 14/25 同款；REGENERATE.md §1 已加登记行。
 - **影响**：只被 `DynamicRegistryEventsDeclarationGoldenTest` 消费；`api-manifest-core.json`、probe-ts fixture、legacy probe tree、startup-builders golden 零变化。
 - **冻结口径**：golden 只冻结**声明形状**（组名/成员名/类型名/成员集合与标注），不冻结能力结论（§3）；Builder golden 的头注是共享渲染器（ticket 15 所有）的固定文本，动态条目的派生输入是 `DynamicBuilderContract`（已登记进 REGENERATE.md）。
-- **审阅记录**：owner 自查（zcode-agent，2026-09-17）——逐行核对成员来自真实 builder 反射与生产渲染器；**缺维护者审阅**（与票 14 G6/票 15 G4 同款如实标注）。渲染观察：facade 事件声明的 payload 别名 `$DynamicRegistryEventJS` 无对应 `java:` import 行（与 ProbeEvents golden 形状不同）——已记 §11 G3，公开激活前需 probe owner 确认。
+- **审阅记录**：owner 自查（zcode-agent，2026-09-17）——逐行核对成员来自真实 builder 反射与生产渲染器；**缺维护者审阅**（与票 14 G6/票 15 G4 同款如实标注）。
+- **声明面已知偏窄（不阻塞 AC9，如实登记；双轴审查 M3）**：三处渲染观察已记 §11 G3/G4，**均不作为 AC9 通过证据**（AC9 的依据是单一契约输入的证据链 + parity/行为测试，不是「声明完美」）：(a) facade 事件声明的 payload 别名 `$DynamicRegistryEventJS` 无对应 `java:` import 行（与 ProbeEvents golden 形状不同）；(b) `fixedRange: number` 缺 `null` 抑制态（运行期接受 null）；(c) `setMode(...)` 链式返回渲染为 `any`。公开激活前由 probe owner 判定补齐方式。
 
 ## 9. 测试结果（真实运行）
 
@@ -126,6 +127,8 @@
 | `:26.1.2:build` | 通过 | 54 suites / 271 tests / 0 failures / 0 errors / 36 skipped（`compileJava` 真编译 + `test` 真跑，非 UP-TO-DATE） |
 | `:1.21.1:build` | 通过 | 41 suites / 188 tests / 0 failures / 0 errors / 0 skipped（含本次行内 `>=26` 守卫的节点复验） |
 | 本票新增/扩展套件（common） | 通过 | 9 套件 / 43 用例 / 0 失败（plan 语义 9 + Builder parity 6 + 计划惰性 4 + facade 6 + reload 6 + 候选惰性 5 + 声明 parity 4 + 示例 1 + 声明 golden 2）；同域 `DynamicRegistrationBookkeepingTest` 12 用例为旧路径 prior art（本票未改） |
+
+> **双轴审查整改轮复跑（2026-09-17，最终证据）**：`--no-build-cache` 下 `:common:check` + `:common-api-processor:test`（213/1539/0/4 skip + 13/0）、`guardLint`（265/415/0/0）、`:26.1.2:build :1.21.1:build`（节点测试经 `cleanTest` + `--no-build-cache` 强制真跑：54/271/0/36 skip 与 41/188/0/0）全部通过。整轮跑前置＝清空 tmp game dir（依据见 §11 G11 与 `evidence/verification-commands.md` 的「验证环境」节）。
 
 套件级（`:common:test`，2026-09-17 本 worktree）：
 
@@ -144,9 +147,10 @@
 
 ## 10. 问题与处理
 
-1. **1.21.1 编译断裂（接管时未发现）**：`ServerEventListener` 是 `neoforge` 全文件守卫（各 NeoForge 节点共享），而 `DynamicRegistryFacade` 在 `>=26` 包内——1.21.1 会因找不到符号失败。处理：触发点加行内 `//? if >=26 {` 守卫（与 `NekoJSMod`/`NeoForgeRegistryQueryService` 同款格式），并在注释里写明「与旧动态注册整包同边界，能力记 not verified，不是漏接线」；`:1.21.1:build` 复验通过（§9）。
+1. **触发点的 `>=26` 守卫（因果更正，2026-09-17 双轴审查 M1）**：1.21.1 的编译单元是 `versions/1.21.1/src/main/java/com/tkisor/nekojs/listener/ServerEventListener.java` 孪生文件，**共享 `src/main` 的该文件不参与 1.21.1 编译**（1.21.1 生成目录 243 文件 = 共享 296 − 孪生 53，精确吻合）——因此不存在「不加守卫就会断裂」的即时编译问题，初版报告写的「1.21.1 编译断裂」是错误归因，本行即更正。守卫的真实作用：孪生文件按 `tools/extract_evaluated.py` 重新提取时（=共享文件在该节点求值后的形态），`//? if >=26 {` 会把 `DynamicRegistryFacade`（`>=26` 包）整行丢进失活分支，**避免 26.x 专属符号被带进 1.21.1**；当前 1.21.1 编译由孪生文件承担，孪生文件也从未引用 facade。守卫保留（对孪生维护有益），注释因果已与文件头「本文件不应再出现版本守卫」的关系写明（有意的例外 + 原因）。
+   **孪生重提取审计（本次实跑 `tools/extract_evaluated.py`，完整记录见 `evidence/twin-reextract-audit.md`）**：提取产物与孪生现有内容 diff 只有三类差异，其中前两类是**刻意的节点适配**，说明提取产物不可直接落盘（会导致 1.21.1 编译失败）——(a) 提取产物含 `import ...BlockModificationEventJS` + `BlockModificationEventJS.fire()`，而该类别在 1.21.1 整文件 `>=26` 守卫内（1.21.1 编译产物目录无 `BlockModificationEventJS.class`），孪生刻意缺席；(b) 资源 reload 事件名节点差异（共享文件 `AddServerReloadListenersEvent` / 孪生 `AddReloadListenerEvent`）；(c) ticket 16 的 facade 调用行（提取产物缺——守卫把它丢掉了，正是守卫的作用）。因此本次只做**注释同步**：孪生对应位置写明「方块属性修改调用与 facade 调用在 26.x 侧存在、本节点缺席，重新提取时须保持缺席」，零行为变更。
 2. **候选期收集可观察性缺口**：接管时 `collectForCandidate` 不留任何记录，reload 路径的「候选阶段重新收集」只能间接推断。处理：新增 `CandidateCollectionRecord`（note/planGeneration/collectedDefinitions/poisoned/failureDetail，**不持有计划引用**）与 `lastCandidateCollection()` 观察点，三条参与/跳过路径都可断言（§2 AC1/AC12 证据）。
-3. **收集期 kill 归因不对称**：生产分发闭包在 catch 内调用 `ScriptManager.reportContextKilled`，收集器只记收集错误。处理：补齐该调用，使候选 Context 被资源上限终止时按候选失败记账而不是普通收集错误（`DynamicRegistryFacadeRuntime` 注释说明）。
+3. **收集期失败/中断形态**：初版收集器只 `catch (RuntimeException)`，与生产分发闭包（`catch (Throwable)` + Error 直抛 + 中断标志恢复 + kill 上报）不同款（双轴审查 N3）。处理：对齐生产形态（`catch (Throwable)`：恢复中断标志、Error 直抛给 reload 管线按收集器崩溃归因、其余记 collection error 毒化整批），并在方法 javadoc 写明「catch/上报形态与生产分发同款」。
 4. **`DataSyncGenerationBoundaryTest` 认领基线漏适配**：`ScriptEnvironmentFactory` 在票 10 后只有 4 参构造器（含 `GlobalStateStores`），该测试仍用 3 参 → 平台测试树无法编译。处理：顺带修复为 4 参并加注释（`test(data-sync)` 单独提交；不含语义变更，测试仍不覆盖 global/shared 面）。
 5. **graal/`hasListeners` 观察面**：AC7「不挂生产 callback」没有直接的「listener 计数」API；用 `hasListeners()` + 「旧 active 无本域监听器」的前置构造使候选 listener 是否越界成为可观察布尔（§2 AC7）。
 6. **golden 只能经显式再生成**：新增 golden 需先让资源目录在 classpath 可解析（`ProbeGoldenSupport.resourceDir` 走 `getResource`），处理为「先放 placeholder → regen 覆盖 → 逐行审阅」，并保持 `:common:regenerateGoldens` 过滤集不变（golden 测试住 `probe` 包）。
@@ -158,13 +162,15 @@
 |---|---|---|---|
 | G1 | 真机 smoke：server registry ready 初次候选 + `/nekojs reload server` 候选收集 + 日志可观察（AGENTS.md 的 minecraft-mod-mcp 通道） | not verified（本地管线证据已备） | 主会话（可顺带覆盖票 21 前置接线） |
 | G2 | probe 真机输出中的动态声明（事件 + Builder）与两份 golden 的一致性；未跑 `/nekojs probe` | not verified | 随 G1 |
-| G3 | facade 事件声明的 payload 别名 `$DynamicRegistryEventJS` 无 `java:` import 行（渲染观察，见 §8） | not verified（渲染器证据） | 票 21 / managed-surface(W5) probe owner 在公开激活前裁定（补 import 或显式 `any`） |
-| G4 | 动态 Builder 声明的 `setMode(...)` 链式返回渲染为 `any`（Java 侧返回基类 `DynamicDefinitionBuilder`，`returnShape` 不视作 builder） | 已记录（不影响运行期与脚本可用性） | W5/probe 渲染器 owner（可选收紧） |
+| G3 | facade 事件声明的 payload 别名 `$DynamicRegistryEventJS` 无 `java:` import 行（渲染观察，见 §8） | not verified（渲染器证据；**不是 AC9 通过证据**——AC9 由单一契约输入的证据链 + parity/行为测试承载） | 票 21 / managed-surface(W5) probe owner 在公开激活前裁定（补 import 或显式 `any`） |
+| G4 | 动态 Builder 声明的两处类型面偏窄（渲染证据，**不是 AC9 通过证据**，同 G3 口径）：(a) `setMode(...)` 链式返回渲染为 `any`（Java 侧返回基类 `DynamicDefinitionBuilder`，`returnShape` 不视作 builder）；(b) `fixedRange: number` 缺 `null` 抑制态（运行期 `b.fixedRange = null` 合法且与「从未写入」同一状态，但声明面只给 `number`，TS 作者写不出抑制） | 已登记（不影响运行期与脚本可用性；公开激活前应收紧） | W5/probe 渲染器 owner（可选收紧；`null` 抑制态需渲染器支持联合类型或显式注解） |
 | G5 | `:26.2.0:build`、`:1.21.1` 本票测试面定向、两个 fabric 节点全量未跑（common/src/main 与 src/main 均有改动） | 本票未验证 | 主会话合并后五节点统一 build（既定流程） |
 | G6 | AC11 删除 gate：旧 `DynamicRegistryJS`/`RegistrySurgery`/mixin/旧配置门 | 材料已备（§6 + MIGRATION） | 维护者 sign-off（主会话裁定） |
 | G7 | `[dynamicRegistry] enabled` 配置门与新 facade 的关系（计划收集不门控、激活须双门） | 待票 21 裁决（§12 审查点 2） | REGISTRY_DYNAMIC_SYNC(票 21) |
 | G8 | golden 审阅缺维护者确认（§8） | owner 自查完成 | 主会话维护者审阅 |
-| G9 | common 测试树 gameDir 唯一化：本票新测试用 `TestPlatformInit.uniqueGameDir(base)`，其余 10 个 common 测试类仍是固定 `nekojs-test-gamedir`（票 10 N8 的 helper 下沉债） | 部分完成 | 后续整理票（helper 下沉 common） |
+| G9 | common 测试树 gameDir 唯一化（双轴审查 N1 更正）：本票**会创建/清扫脚本目录**的 3 个 facade 测试类（`DynamicRegistryReloadPipelineTest`/`DynamicRegistryInertPlanExampleTest`/`DynamicRegistryCandidateInertnessTest`）全部改用 `TestPlatformInit.uniqueGameDir(base)`；common 树仍有 **11 个测试类**用固定 `nekojs-test-gamedir`（`ScriptReloadGenerationTest`/`ScriptReloadRegressionTest`/`ReloadMemoryStabilityTest` 等同款 harness——票 10 N8 的 helper 下沉债）。`uniqueGameDir(base)` 是根树 `com.tkisor.nekojs.TestGameDirs.unique(base)` 的**等价表达式复制**（base + PID），不是下沉的 helper 本体。**实测更正（本轮）**：该命名在整轮 suite 中是**惰性的**——`TestPlatformInit.ensureInitialized(Path)` 只认第一个初始化者、`NekoJSPaths.INSTANCE` 是进程级 static 缓存，因而全 JVM 仍统一落在固定目录（证据：测试后 `/tmp/nekojs-dynamic-registry-*` 均为空目录，真实脚本树在 `/tmp/nekojs-test-gamedir/nekojs/`）。真正的 per-class 隔离需要 helper 下沉 + `NekoJSPaths` 复位，属后续整理票 | 部分完成（本票面已消除） | 后续整理票（helper 下沉 common + `NekoJSPaths` 复位口，替换 11 个固定名调用点） |
+| G10 | 共享/孪生文件对的维护口径（双轴审查 M1 审计副产品）：共享 `src/main/.../listener/ServerEventListener.java` 未加守卫地引用 `>=26` 专属的 `BlockModificationEventJS`（1.21.1 编译目录无该类），1.21.1 的编译由孪生文件缺席该调用来承担——任何**整文件**重提取都会把不可编译符号带进 1.21.1（本次审计实证），因此孪生只能人工维护（本次已在孪生注释写明须保持缺席） | 已登记（本次仅注释同步） | 该文件 owner / 后续整理票裁定是否需要为这类跨节点差异补守卫或固化提取白名单 |
+| G11 | common 测试树的跨 suite 夹具泄漏（本轮验证副产品，**与本票代码无关**）：固定 game dir 被多个 suite 共用且各自留下状态——`server_scripts/entry.js`（如 `Ticket07RuntimeThreadsTest` 的 fixture）、`server_packs/<hash>/packs_demo`（pack 同步 suite）、`config/trusted-servers.json`。同一份代码在**陈旧 tmp 目录**上跑整轮 `:common:test` 出现两类失败（`ScriptReloadGenerationTest` 3 例；本票 facade 套件 8 例，两次失败集合不同）与一次运行挂起（`while(true)` fixture 残留 + 无清理的类），而清空 `/tmp/nekojs-test-gamedir` 后同一代码整轮通过（213/1539/0/4 skip）——属既有的**跨 suite 隔离债**（`TestGameDirs` javadoc 记录的同源 flake：票 17 双 fabric 并行时「候选脚本零执行」）。本票验证口径：整轮跑分前清空 tmp game dir | 已登记（证据：`evidence/verification-commands.md` §验证环境） | 测试基础设施整理票（每 suite 独立 gameDir 或统一 `@BeforeEach/@AfterEach` 清理契约；与 G9 同批） |
 
 ## 12. 需要主会话审查的重点
 
@@ -172,3 +178,23 @@
 2. **配置门边界**（§6 末行 / G7）：新 facade 的**计划收集**不读 `[dynamicRegistry] enabled`（inert、无副作用），真实激活须同时满足该门与票 21 事务/同步 gate。若维护者要求计划收集也门控，需要把 config 访问接进 facade runtime（当前刻意不引入该耦合）。
 3. **`CandidateCollectionRecord` 公开观察点**：属诊断/测试面，不携带内部状态、不持有计划引用；若不希望出现在公开面，可降为包内可见（会削弱 AC1 的可观察性证据）。
 4. **AC11 与五节点口径**：AC11 未勾选（维护者删除门禁）；§3 能力表按 spec 07 口径把「源码面缺席（1.21.1/fabric）」如实记 `not verified` 而非 `unavailable`，请确认该表述在发布材料中的用法。
+
+## 13. 双轴审查整改记录（2026-09-17）
+
+审查结论「需修复后合并（文档/小修层面）」，逐条落点：
+
+| # | finding | 整改 |
+|---|---|---|
+| M1 | 「1.21.1 编译断裂修复」因果失实（1.21.1 的编译单元是孪生文件；共享文件头自述不应再有版本守卫） | §10 P1 重写为真实因果（守卫保护孪生重提取路径；当前 1.21.1 编译由孪生承担，未加守卫也不会立即断裂）；`ServerEventListener.java` 守卫注释改写为「与文件头是有意的例外 + 原因」；孪生文件对应位置加「facade/方块修改调用在 26.x 侧存在、本节点缺席，重新提取须保持缺席」注释；审计过程与 diff 摘要落 `evidence/twin-reextract-audit.md`（含「提取产物不可整文件落盘」的实证） |
+| M2 | 伪引文：spec 08 无「工作名，非最终 API」字样 | `MIGRATION.md` §1、REPORT §5 与 `DynamicRegistryEvents` javadoc 改为 spec 08:61/08:63 的实际措辞（工作名 `ServerEvents.dynamicRegistry` + 「精确事件名…仍由后续 contract 冻结」）；命名决策理由不变 |
+| N1 | `DynamicRegistryReloadPipelineTest` 仍用固定 gameDir；G9 表述不实 | 该测试类改用 `TestPlatformInit.uniqueGameDir(base)`（本票 3 个会清扫脚本目录的 facade 类全部唯一化）；G9 改为实测口径（11 个固定名测试类；`uniqueGameDir` 是根树 `TestGameDirs.unique` 的等价表达式复制）并补「整轮 suite 中当前惰性」的实测结论（G9/G11） |
+| N2 | 数字勘误 | Builder golden 31→33 行；REPORT §0 「12 个套件中的 10 个」→「本票新增/扩展的 9 个套件」；旧消费者 `DynamicRegistryBuilderTest` 7→6 用例 |
+| N3 | 收集器 catch 形态与生产分发不同款 | 对齐生产形态：`catch (Throwable)` + 中断标志恢复 + Error 直抛（由 reload 管线按收集器崩溃归因）+ 其余记 collection error 毒化整批；javadoc 明写「catch/上报形态与生产分发同款」（REPORT §10 P3） |
+| N5 | `DynamicBuilderSurfaces` Python 侧参数下标恒 0 | `pySignature` 改传真实下标（与 TS 侧、票 15 `RegistryBuilderSurfaces` 同款），消除「多参数同名 `arg0`」的声明缺陷 |
+| N6 | 票面 Closure record「零可变 static」措辞过宽 | 改为「零 static 领域状态——仅反射契约 memo 缓存」 |
+| N7 | 示例与 fixture 无自动联动 | `DynamicRegistryInertPlanExampleTest` 类注释与 `EXAMPLE_SCRIPT` 注释明写「人工保持同步（docs/ 不在测试 classpath，也不焊路径）」，示例文件头注明同款口径 |
+| M3 | 三条声明面偏窄（payload 别名无 import / `fixedRange` 缺 null 抑制态 / `setMode` 返回 `any`） | 全部如实登记进 §11 G3/G4，并显式标注**不作为 AC9 通过证据**（AC9 依据是单一契约输入的证据链 + parity/行为测试）；§8 同步说明。三条的能力结论仍归票 21/probe owner |
+
+## 14. 验证环境与跨 suite 隔离（整改轮实测，详见 §11 G11）
+
+整轮 `:common:test` 的失败/挂起与 **tmp game dir 的陈旧状态**相关（同一份代码：陈旧目录下 r1/r4 失败或挂起；清空后 r5/r6 整轮通过）。固定 game dir 被多个 suite 共用且各自留下夹具（`server_scripts/entry.js`、`server_packs/<hash>/packs_demo/**`、`config/trusted-servers.json`），`TestPlatformInit.ensureInitialized` 与 `NekoJSPaths.INSTANCE` 的进程级 first-wins 语义使 per-class 唯一目录命名在当前测试树中**无效**（本票新增的 `uniqueGameDir` 调用因此是前向兼容的命名，不是隔离）。本票的验证口径据此固定为：**先清空 tmp game dir，再整轮跑**（`evidence/verification-commands.md` 的「验证环境」节记录了 A/B 证据）。该债与本票代码无关，已登记 owner。
