@@ -46,6 +46,22 @@
 - [x] 随实现交付 Item/Block modification、setter/property parity、声明移除后的恢复/阻止提交和不可同步边界的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的能力。
 - [ ] 旧 direct live mutation、restore-all 后整体重放、无 owner static snapshot 和不受测 server-only 旁路只能在替代路径 parity、失败保留、迁移表、无消费者证据和维护者确认后删除；不保留长期兼容双路径。【不勾选：维护者删除确认是门禁（Human input note）；替代路径 parity（parity/failure-retention/迁移表）+ 旧 route 无消费者证据 + 结构 guard 已交付，见 baseline REPORT §11/§12；待 sign-off】
 
+## 维护者 sign-off 项（AC14 门禁，待确认）
+
+代码层的旧路径已在 `d2c49f2a` 删除（AC3/AC5 要求：无 owner 的 static 状态与 restore-all 重放必须收口），
+但删除的是**公开面符号**，构成 breaking，需维护者知情/追认后才可勾选 AC14 的删除项、才可宣布
+「不保留长期兼容双路径」。逐项清单与替代路径见
+`baseline/2026-09-16-item-block-modification/MIGRATION.md` §2.1 与同目录 `REPORT.md` §11：
+
+- `ItemModificationEventJS#fire(MinecraftServer)`（static）与其 `ItemModificationEventJS(MinecraftServer)` 构造器
+- `BlockModificationEventJS#fire()`（static）与其隐式无参构造器
+- `ItemModificationEventJS.SNAPSHOTS` / `BlockModificationEventJS.SNAPSHOTS`（进程级 static 快照 Map）
+- `ItemModificationJS#applyTo(DataComponentMap.Builder, DataComponentMap, MinecraftServer)`（包私有引擎接缝）
+
+替代路径：`ModificationDomainOwner#applyInitialPlan(server)`（初始收集点）+ SERVER 事务 reload 的
+`ReloadPhase.DOMAIN_PLAN`；无消费者证据：全仓无上述符号调用点（唯一 `fire(` 文本命中为本票清理前的
+javadoc）；结构 guard：`Ticket39ModificationOwnershipTest`（真跑）。
+
 ## Sources
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
