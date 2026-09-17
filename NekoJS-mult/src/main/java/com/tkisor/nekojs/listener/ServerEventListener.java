@@ -78,6 +78,15 @@ public class ServerEventListener {
         // 方块属性修改：同一时机 post（先整体恢复上轮快照再重放，删除的 modify 自动回退）；
         // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
         BlockModificationEventJS.fire();
+        // 动态注册事件 facade 的初次候选（ticket 16）：server registry ready 后收集一次
+        // inert 计划（preflight 通过才发布；每次成功的 script/data reload 也会在候选阶段
+        // 重新收集并联合发布，此处是对「初次 server registry ready」边界的显式触发，幂等）。
+        // 守卫口径与旧 dynamic 包一致：运行期动态注册在 1.21.1 整包缺席（DynamicRegistryJS/
+        // DynamicRegistries 同为 >=26 面），facade 因此不在 1.21.1 触发（能力记 not verified，
+        // 见 baseline REPORT 能力表），而不是编译期漏接线。
+//? if >=26 {
+        com.tkisor.nekojs.dynamic.DynamicRegistryFacade.fireInitialCollection();
+//?}
     }
 
     /**
