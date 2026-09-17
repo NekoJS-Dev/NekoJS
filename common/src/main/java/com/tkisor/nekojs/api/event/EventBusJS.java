@@ -439,6 +439,16 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             return scriptId;
         }
 
+        /** 注册目标总线（候选域收集器按总线筛选本域挂起监听器用，票 16）。 */
+        public EventBusJS<?, ?> ownerBus() {
+            return owner;
+        }
+
+        /** 监听器 guest 函数（候选域收集器在候选期执行收集回调用，票 16；同 owner thread）。 */
+        public Value listenerValue() {
+            return listener;
+        }
+
         /**
          * 候选期预备：把 commit 点会抛的工作（dispatch key → Java key 的转换）前移。
          *
