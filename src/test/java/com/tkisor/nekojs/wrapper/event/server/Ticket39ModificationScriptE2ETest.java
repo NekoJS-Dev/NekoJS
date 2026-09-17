@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 39 AC13 贯穿 fixture（item 半边，五节点共享）：真实脚本经
+ * 票 39 AC13 贯穿 fixture（item 半边，五节点共享同一份代码；registry-gated）：真实脚本经
  * {@code ItemEvents.modification} 事件面收集声明，commit 点由平台
  * {@link ModificationDomainOwner} Adapter 应用到真实 {@code Item}——从脚本事件到平台
  * 可观察结果，不断言私有静态 Map。

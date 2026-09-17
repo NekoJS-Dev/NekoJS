@@ -313,6 +313,12 @@ public final class ScriptManager implements AutoCloseable {
 
         @Override
         public void dispatch(com.tkisor.nekojs.api.event.EventBusJS<?, ?> bus, Object event) {
+            if (bus.canDispatch()) {
+                // 按 key 定向分发的总线需要 key 才能判定投递子集；收集派发没有 key 上下文，
+                // 显式拒绝而不是「忽略 key 全量派发」静默降级（见 Handle#dispatch 契约）。
+                throw new UnsupportedOperationException(
+                        "domain collection dispatch does not support key-dispatched buses: " + bus);
+            }
             List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> ofBus = new ArrayList<>();
             for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : pendingListeners) {
                 if (pending.owner() == bus) {

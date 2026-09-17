@@ -197,6 +197,8 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             } catch (Throwable suppressed) {
                 t.addSuppressed(suppressed);
             }
+            // 失败批次不产生「最近成功应用」：复位指纹（与 26.x 同语义，见 AC7 注释）
+            lastAppliedFingerprint = null;
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, source,
                     countKind(declarations, "item"), 0, List.copyOf(restored), String.valueOf(t));
             throw t instanceof RuntimeException runtime ? runtime
