@@ -78,7 +78,7 @@ public final class ScriptSyncFiles {
 
     public static Map<String, Path> validateBatch(Map<String, String> files, int maxFiles, int maxSingleFileSize, int maxTotalSize) throws Exception {
         if (files.size() > maxFiles) {
-            throw new IllegalArgumentException("[NEKO-3002] 脚本数量超过限制:  — too many script files" + files.size());
+            throw new IllegalArgumentException("[NEKO-3002] 脚本数量超过限制 — too many script files: " + files.size());
         }
 
         int totalSize = 0;
@@ -87,7 +87,7 @@ public final class ScriptSyncFiles {
             Path target = NekoJSPaths.get().verifyScriptSyncPath(entry.getKey());
             int size = entry.getValue().getBytes(StandardCharsets.UTF_8).length;
             if (size > maxSingleFileSize) {
-                throw new IllegalArgumentException("[NEKO-3001] 脚本文件过大:  — script file too large" + entry.getKey());
+                throw new IllegalArgumentException("[NEKO-3001] 脚本文件过大 — script file too large: " + entry.getKey());
             }
             totalSize += size;
             if (totalSize > maxTotalSize) {
