@@ -167,4 +167,141 @@ class NekoPluginBootstrapV2Test {
         NekoPluginBootstrap.bootstrap(List.of(provider), new ScriptPropertyRegistry.Impl());
         assertEquals(List.of("optional=null", "required=threw"), observed);
     }
+
+    // ---- 可选时序依赖（dependsOnOptionalId）：跨层"读对方产物、但对方可能缺席" ----
+
+    /** 可选依赖对方缺席：不建边、不早爆，点照常执行（common-only bootstrap 的形态）。 */
+    @Test
+    void optionalDependencyAbsentDoesNotFailFreeze() {
+        NekoPluginExtensionProvider provider = registry -> registry.register(
+                NekoPluginExtensionPoint
+                        .<NekoJSPlugin, List<String>, List<String>>builder("test:reader", NekoJSPlugin.class)
+                        .merge(MergePolicy.append())
+                        .dependsOnOptionalId("test:absent")
+                        .initializer(ctx -> new ArrayList<String>())
+                        .collector((plugin, acc) -> acc.add("ran"))
+                        .finish(List::copyOf)
+                        .build());
+
+        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(
+                List.of(provider), new ScriptPropertyRegistry.Impl());
+        assertEquals(List.of("ran"), runtime.extensionProduct("test:reader", List.class));
+    }
+
+    /** 可选依赖对方在场：建边且顺序生效（依赖方先注册也会被重排到对方之后）。 */
+    @Test
+    void optionalDependencyPresentOrdersExecution() {
+        NekoPluginExtensionProvider provider = registry -> {
+            registry.register(NekoPluginExtensionPoint
+                    .<NekoJSPlugin, List<String>, List<String>>builder("test:reader", NekoJSPlugin.class)
+                    .merge(MergePolicy.append())
+                    .dependsOnOptionalId("test:late")
+                    .initializer(ctx -> {
+                        List<String> acc = new ArrayList<>();
+                        acc.add("seen=" + ctx.resultOrThrow("test:late", List.class));
+                        return acc;
+                    })
+                    .collector((plugin, acc) -> { })
+                    .finish(List::copyOf)
+                    .build());
+            registry.register(NekoPluginExtensionPoint
+                    .<NekoJSPlugin, List<String>, List<String>>builder("test:late", NekoJSPlugin.class)
+                    .merge(MergePolicy.append())
+                    .initializer(ctx -> new ArrayList<String>())
+                    .collector((plugin, acc) -> acc.add("late"))
+                    .finish(List::copyOf)
+                    .build());
+        };
+
+        NekoPluginRuntime runtime = NekoPluginBootstrap.bootstrap(
+                List.of(provider), new ScriptPropertyRegistry.Impl());
+        assertEquals(List.of("seen=[late]"), runtime.extensionProduct("test:reader", List.class));
+    }
+
+    /**
+     * 启动期回归钉（ticket 15）：版本树插件在 doc 钩子里经句柄急切读
+     * {@code nekojs:registry_types} 产物（{@code requireResult} 的等价形态）。
+     *
+     * <p>负例对照：目标 doc 点未声明依赖、先于 types 点注册执行 → 读取点抛
+     * "has not finished yet"（证明该形状真的会炸，正例才有意义）。
+     */
+    @Test
+    void lateProductReadWithoutDeclaredDependencyThrows() {
+        LateReadPlugin plugin = new LateReadPlugin("test:docs");
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> NekoPluginBootstrap.bootstrap(List.of(plugin), new ScriptPropertyRegistry.Impl()));
+        assertTrue(error.getMessage().contains("has not finished yet"),
+                "读取点应因违序立即抛错: " + error.getMessage());
+    }
+
+    /**
+     * 启动期回归钉（ticket 15）正例：真实 {@link TypeDocsPoint}（内置、先注册）声明可选依赖后，
+     * 后注册的 {@code nekojs:registry_types} 被重排到它之前完成，doc 钩子里的产物读取不再违序。
+     * 修复前该形状在游戏 bootstrap 里崩溃（FML mod 构造期 "has not finished yet"）。
+     */
+    @Test
+    void typeDocsPointIsOrderedAfterRegistryTypesWhenPresent() {
+        LateReadPlugin plugin = new LateReadPlugin(TypeDocsPoint.ID);
+
+        NekoPluginBootstrap.bootstrap(List.of(plugin), new ScriptPropertyRegistry.Impl());
+        assertEquals(List.of("saw=[types]"), plugin.observed());
+    }
+
+    /**
+     * 模拟版本树注册插件的形状：注册 {@code nekojs:registry_types}（含句柄），
+     * 在 doc 收集钩子里急切读该句柄产物——与 {@code NekoRegistryPointsPlugin} 同款。
+     * {@code docPointId} 为真实 {@link TypeDocsPoint#ID} 时读取发生在真实点的收集里；
+     * 否则本插件自建同形状的无依赖 doc 点充当负例对照。
+     */
+    static final class LateReadPlugin
+            implements NekoJSPlugin, NekoPluginExtensionProvider, TypeDocsPoint.Contributor {
+
+        private final String docPointId;
+        private final List<String> observed = new ArrayList<>();
+        private NekoPluginExtensionHandle<?> typesHandle;
+
+        LateReadPlugin(String docPointId) {
+            this.docPointId = docPointId;
+        }
+
+        List<String> observed() {
+            return List.copyOf(observed);
+        }
+
+        @Override
+        public void registerPluginExtensionPoints(NekoPluginExtensionRegistry registry) {
+            if (!TypeDocsPoint.ID.equals(docPointId)) {
+                registry.register(NekoPluginExtensionPoint
+                        .<NekoJSPlugin, List<String>, List<String>>builder(docPointId, NekoJSPlugin.class)
+                        .merge(MergePolicy.append())
+                        .initializer(ctx -> new ArrayList<String>())
+                        .collector((plugin, acc) -> ((LateReadPlugin) plugin).readTypes())
+                        .finish(List::copyOf)
+                        .build());
+            }
+            typesHandle = registry.register(NekoPluginExtensionPoint
+                    .<NekoJSPlugin, List<String>, List<String>>builder("nekojs:registry_types", NekoJSPlugin.class)
+                    .merge(MergePolicy.append())
+                    .initializer(ctx -> new ArrayList<String>())
+                    .collector((plugin, acc) -> acc.add("types"))
+                    .finish(List::copyOf)
+                    .build());
+        }
+
+        @Override
+        public void registerTypeDocs(TypeDocsRegister registry) {
+            if (TypeDocsPoint.ID.equals(docPointId)) {
+                readTypes();
+            }
+        }
+
+        private void readTypes() {
+            if (typesHandle == null || !typesHandle.isFinished()) {
+                throw new IllegalStateException(
+                        "extension point 'nekojs:registry_types' has not finished yet (bootstrap incomplete)");
+            }
+            observed.add("saw=" + typesHandle.result());
+        }
+    }
 }

@@ -25,7 +25,11 @@ import java.util.function.Supplier;
  * 环 fail-fast（报错打印完整环路径）、未注册 id 在 freeze 早爆。② 数据依赖 = 在
  * initializer / collector 里 {@link NekoPluginExtensionContext#result} 读取先序点产物，
  * 免声明；违序读取（对方已注册但尚未 finish）立即抛 {@link IllegalStateException}
- * 并附"declare dependsOn"修复指引。
+ * 并附"declare dependsOn"修复指引。③ 可选时序依赖经
+ * {@code dependsOnOptional(point)}/{@code dependsOnOptionalId(id)} 声明：仅当对方
+ * <b>已注册</b>时加入排序边（对方缺席的 bootstrap——如不含版本树插件的 common 测试
+ * 轮——不建边、不早爆），用于跨层数据依赖"读对方产物、但对方并非所有环境都存在"的
+ * 场合；对方在场合的序保证与硬依赖等同，违序读取仍按 ② 立即抛。
  *
  * <p><b>合并策略（ADR-0001 四档标准件）：</b>builder {@code merge(...)} 必填，从
  * {@link MergePolicy} 的 {@code append / firstWin / overrideWarn / failFast} 四档
@@ -63,6 +67,7 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
     private final BiConsumer<P, A> collector;
     private final Function<A, R> finisher;
     private final List<Object> dependsOn;
+    private final List<Object> optionalDependsOn;
     private final MergePolicy mergePolicy;
 
     private NekoPluginExtensionPoint(
@@ -73,6 +78,7 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
             BiConsumer<P, A> collector,
             Function<A, R> finisher,
             List<Object> dependsOn,
+            List<Object> optionalDependsOn,
             MergePolicy mergePolicy) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Plugin extension point id must not be blank");
@@ -90,6 +96,7 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
         this.collector = collector;
         this.finisher = finisher;
         this.dependsOn = List.copyOf(dependsOn);
+        this.optionalDependsOn = List.copyOf(optionalDependsOn);
         this.mergePolicy = mergePolicy;
     }
 
@@ -128,6 +135,14 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
         return dependsOn;
     }
 
+    /**
+     * 可选时序依赖声明（元素为扩展点实例或 String id，不可变）：仅当对方已注册时
+     * 参与拓扑排序；对方缺席的 bootstrap 不建边（也不 early-bang）。
+     */
+    public List<Object> optionalDependsOn() {
+        return optionalDependsOn;
+    }
+
     /** 合并策略。 */
     public MergePolicy mergePolicy() {
         return mergePolicy;
@@ -157,6 +172,7 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
         private BiConsumer<P, A> collector;
         private Function<A, R> finisher;
         private final List<Object> dependencies = new ArrayList<>();
+        private final List<Object> optionalDependencies = new ArrayList<>();
         private MergePolicy mergePolicy;
 
         private Builder(String id, Class<P> pluginType) {
@@ -212,6 +228,22 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
             return this;
         }
 
+        /**
+         * 可选时序依赖：仅当对方已注册时加入排序边（对方缺席的 bootstrap 不建边、
+         * 不 early-bang）。用于"读对方产物、但对方并非所有环境都存在"的跨层数据依赖。
+         */
+        @SafeVarargs
+        public final Builder<P, A, R> dependsOnOptional(NekoPluginExtensionPoint<?, ?, ?>... points) {
+            optionalDependencies.addAll(List.of(points));
+            return this;
+        }
+
+        /** 可选时序依赖的 id 形态（跨层引用对方点时唯一可行形态，见 {@link #dependsOnOptional}）。 */
+        public Builder<P, A, R> dependsOnOptionalId(String... pointIds) {
+            optionalDependencies.addAll(List.of(pointIds));
+            return this;
+        }
+
         /** 构建扩展点；merge / initializer / collector / finish 任缺即抛 {@link IllegalStateException}。 */
         public NekoPluginExtensionPoint<P, A, R> build() {
             if (mergePolicy == null) {
@@ -228,7 +260,8 @@ public final class NekoPluginExtensionPoint<P extends NekoJSPlugin, A, R> {
                 throw new IllegalStateException("Plugin extension point '" + id + "' requires a finisher");
             }
             return new NekoPluginExtensionPoint<>(
-                    id, pluginType, enabled, initializer, collector, finisher, dependencies, mergePolicy);
+                    id, pluginType, enabled, initializer, collector, finisher,
+                    dependencies, optionalDependencies, mergePolicy);
         }
     }
 
