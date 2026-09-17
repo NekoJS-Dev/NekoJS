@@ -6,9 +6,7 @@ import com.tkisor.nekojs.wrapper.event.player.PlayerCloneEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerRespawnEventJS;
 import com.tkisor.nekojs.wrapper.event.player.PlayerTickEventJS;
-import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.DatapackSyncEventJS;
-import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableLoadEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerLifecycleEventJS;
 import com.tkisor.nekojs.wrapper.event.server.ServerTickEventJS;
@@ -134,15 +132,22 @@ public final class FabricServerEventBindings {
     /**
      * @param loadServerScripts SERVER 脚本首次加载动作（{@code NekoRuntimeRoot.reload(SERVER)}）
      */
-    public static void register(Runnable loadServerScripts) {
+    public static void register(Runnable loadServerScripts,
+            java.util.function.Supplier<com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot> rootSupplier) {
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             currentServer = server;
             loadServerScripts.run();
             ABOUT_TO_START.post(new ServerLifecycleEventJS(server));
             // 与 NeoForge 侧 ServerEventListener#onServerAboutToStart 同位次：
-            // aboutToStart 事件之后、starting 之前重放物品/方块属性修改
-            ItemModificationEventJS.fire(server);
-            BlockModificationEventJS.fire();
+            // aboutToStart 事件之后、starting 之前收集并应用物品/方块属性修改（票 39
+            // 初始 generation 收集点；事务 reload 的重放在 DOMAIN_PLAN 阶段联合应用）
+            com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
+            com.tkisor.nekojs.core.modification.CandidateDomainCollector modificationCollector =
+                    root == null ? null
+                            : root.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
+            if (modificationCollector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner) {
+                owner.applyInitialPlan(server);
+            }
             STARTING.post(new ServerLifecycleEventJS(server));
         });
         ServerLifecycleEvents.SERVER_STARTED.register(server ->
@@ -153,6 +158,15 @@ public final class FabricServerEventBindings {
             // 未来得及 post 的登录不带进下一个服务器实例（单人退出世界再进）
             PENDING_LOGINS.clear();
             currentServer = null;
+            // 修改域的 server 绑定随服务器实例失效（基线是进程级例外，保留到 root close）
+            com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
+            if (root != null) {
+                com.tkisor.nekojs.core.modification.CandidateDomainCollector collector =
+                        root.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
+                if (collector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner) {
+                    owner.clearServer();
+                }
+            }
             STOPPED.post(new ServerLifecycleEventJS(server));
         });
         ServerTickEvents.START_SERVER_TICK.register(server -> {

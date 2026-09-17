@@ -8,8 +8,6 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalog;
-import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
-import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -138,10 +136,8 @@ public final class FabricNekoJSCommands {
                 reloadResult = root.reload(type);
                 if (type == ScriptType.SERVER) {
                     applyRecipeScripts(source);
-                    // 与 NeoForge 版 NekoJSCommands#reloadServer 同位次：配方重放后
-                    // 重放物品/方块属性修改（快照恢复模型保证幂等）
-                    ItemModificationEventJS.fire(source.getServer());
-                    BlockModificationEventJS.fire();
+                    // Item/Block 属性修改重放（票 39）：SERVER 事务 reload 的 DOMAIN_PLAN
+                    // 阶段已收集为 inert 候选计划，commit 点联合应用——命令侧不再 fire。
                 }
             }
             // AC6（审查 A4）：非事务结论必须先于任何成功宣称——不得先报 "reloaded. - no errors."

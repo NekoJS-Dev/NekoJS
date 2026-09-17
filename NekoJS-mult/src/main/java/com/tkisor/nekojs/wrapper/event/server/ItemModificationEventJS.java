@@ -3,77 +3,64 @@
 //? if >=26 {
 package com.tkisor.nekojs.wrapper.event.server;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.bindings.event.ItemEvents;
+import com.tkisor.nekojs.core.modification.ModificationCandidatePlan;
+import com.tkisor.nekojs.core.modification.ModificationDeclaration;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.Item;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Server-side item property modification event ({@code ItemEvents.modification}),
- * fired once per server startup (about-to-start, after datapack load) and re-fired
- * by {@code /nekojs reload server}.
+ * Server-side item property modification event payload（{@code ItemEvents.modification}）。
  *
- * <h2>JS API</h2>
+ * <h2>ticket 39 起的收集语义</h2>
+ * 事件由 {@code ModificationDomainOwner} 在两个合法收集点派发：
+ * <ul>
+ *   <li><b>事务 reload 的 DOMAIN_PLAN 阶段</b>——派发给<b>候选</b>的挂起监听器
+ *       （{@code CandidateDomainCollector.Handle.dispatch}），声明进入 inert 候选计划，
+ *       与 global/shared 顶层写集联合预检（STATE_PLAN）、commit 点联合应用；</li>
+ *   <li><b>初始 generation（服务器 about-to-start）</b>——派发给 active 总线监听器，
+ *       收集后在同一 owner 内 preflight + 应用（无旧 active 时旧值 = vanilla 基线）。</li>
+ * </ul>
+ * {@link #modify} 只<b>收集与规范化</b>声明（同目标后声明整体替换前声明，与旧行为
+ * characterization 一致），不触碰 live Item/默认组件——MC 应用只在
+ * {@code ModificationDomainOwner}（平台 Adapter）。
+ *
+ * <h2>JS API（payload/side/priority/cancel/dispatch 时机不变，无第二 bus）</h2>
  * <pre>
  * ItemEvents.modification(event {@code ->} {
  *   event.modify('minecraft:diamond', item {@code ->} {
- *     item.maxStackSize = 16;
- *     item.rarity = 'epic';
- *     item.fireResistant = true;
+ *     item.maxStackSize = 16;   // property 写与 setMaxStackSize 经同一 setter（ModificationViewSurface）
  *   });
  * });
  * </pre>
- *
- * <h2>Snapshot-restore model</h2>
- * Before modifying an item, its pristine {@link DataComponentMap} is snapshotted
- * into a static map keyed by item id. On every re-fire (script reload), a previously
- * modified item is first restored from its snapshot, so modifications always compose
- * on the original components and a modification removed from a script disappears on
- * reload. Snapshots live for the whole process lifetime (item default components are
- * frozen at registry time, so they never change underneath us).
- *
- * <h2>Internal (26.x)</h2>
- * Unlike 1.21.1, {@code Item} no longer holds the component map itself: it delegates
- * to {@code builtInRegistryHolder()}, and the final map is published through the
- * public {@code Holder.Reference#bindComponents(DataComponentMap)} — no reflection
- * required on this platform.
  */
 public class ItemModificationEventJS {
 
-    /** 每个物品的原始组件快照（跨脚本 reload 保留，restore 路径依据）。 */
-    private static final Map<Identifier, DataComponentMap> SNAPSHOTS = new ConcurrentHashMap<>();
+    private final ModificationCandidatePlan plan;
+    private int declaredCount;
 
-    private final MinecraftServer server;
-    private int modifiedCount;
-
-    public ItemModificationEventJS(MinecraftServer server) {
-        this.server = server;
-    }
-
-    /** Creates and posts the event; returns how many items were modified. */
-    public static int fire(MinecraftServer server) {
-        if (server == null) return 0;
-        ItemModificationEventJS event = new ItemModificationEventJS(server);
-        ItemEvents.MODIFICATION.post(event);
-        if (event.modifiedCount > 0) {
-            NekoJS.LOGGER.info("NekoJS item modifications applied to {} item(s)", event.modifiedCount);
-        }
-        return event.modifiedCount;
+    /** @param plan 收集目标计划（由 {@code ModificationDomainOwner} 创建）。 */
+    public ItemModificationEventJS(ModificationCandidatePlan plan) {
+        this.plan = plan;
     }
 
     /**
-     * Modifies the default properties of the item with the given id. The callback
-     * receives an {@link ItemModificationJS} view whose properties are applied to
-     * the item after the callback returns.
+     * Records a modification declaration for the item with the given id. The callback
+     * receives an {@link ItemModificationJS} view（回调抛出的异常向上传播：收集期失败 →
+     * 整批失败，不再有旧路径的部分应用）。
+     *
+     * <p>回调参数类型保持改造前的函数式接口签名（{@code Consumer<ItemModificationJS>}）：
+     * Java 侧直接传 lambda；脚本侧的 Graal 函数由沙盒 HostAccess
+     * （{@code allowAllImplementations}）实现该接口。视图本身是
+     * {@link graal.graalvm.polyglot.proxy.ProxyObject}，所以脚本拿到的参数上
+     * {@code item.maxStackSize = 16} 与 {@code item.setMaxStackSize(16)} 命中同一
+     * setter / 校验 / 规范化 / 计划路径（AC8，见 {@link ModificationViewSurface}）。
      *
      * @param itemId item id, e.g. {@code 'minecraft:diamond'} (namespace optional)
-     * @param modifier property callback
+     * @param modifier property callback（脚本函数或 Java {@code Consumer}）
      */
     public void modify(String itemId, Consumer<ItemModificationJS> modifier) {
         Identifier id = parseItemId(itemId);
@@ -81,31 +68,21 @@ public class ItemModificationEventJS {
         if (item == null) {
             throw new IllegalArgumentException("Unknown item: " + itemId);
         }
-
-        // restore-before-modify：已修改过的物品先回到快照，保证修改始终叠加在原始组件上
-        DataComponentMap base = SNAPSHOTS.get(id);
-        if (base == null) {
-            base = item.components();
-            SNAPSHOTS.put(id, base);
-        } else {
-            applyComponents(item, base);
+        if (modifier == null) {
+            throw new IllegalArgumentException("Modifier must not be null");
         }
-
-        ItemModificationJS modification = new ItemModificationJS();
-        modifier.accept(modification);
-
-        DataComponentMap.Builder builder = DataComponentMap.builder().addAll(base);
-        modification.applyTo(builder, base, server);
-        applyComponents(item, builder.build());
-        modifiedCount++;
+        ItemModificationJS view = new ItemModificationJS();
+        modifier.accept(view);
+        plan.add(new ModificationDeclaration("item", id.toString(), view.normalizedProperties(), null));
+        declaredCount++;
     }
 
-    /** Number of items modified so far during this event. */
+    /** Number of declarations recorded so far during this event. */
     public int getModifiedCount() {
-        return modifiedCount;
+        return declaredCount;
     }
 
-    private static Identifier parseItemId(String itemId) {
+    static Identifier parseItemId(String itemId) {
         if (itemId == null || itemId.isBlank()) {
             throw new IllegalArgumentException("Item id must not be empty");
         }
@@ -122,7 +99,7 @@ public class ItemModificationEventJS {
 
     // builtInRegistryHolder() 无非废弃等价 API（components() 委托它），保守保留
     @SuppressWarnings("deprecation")
-    private static void applyComponents(Item item, DataComponentMap components) {
+    static void applyComponents(Item item, DataComponentMap components) {
         item.builtInRegistryHolder().bindComponents(components);
     }
 }

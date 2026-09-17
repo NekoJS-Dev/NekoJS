@@ -429,6 +429,34 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
             this.scriptId = scriptId;
         }
 
+        /** 所属总线（候选收集派发按总线筛出本候选的挂起注册，票 39）。 */
+        public EventBusJS<?, ?> owner() {
+            return owner;
+        }
+
+        /** 注册优先级（候选收集派发按 priority 稳定排序，与 EventBusBase 编译快照同序）。 */
+        public byte priority() {
+            return priority;
+        }
+
+        /**
+         * 候选收集派发（票 39 DOMAIN_PLAN 阶段）：在当前线程（owner thread）直接执行
+         * 监听器回调——与生产分发同款 scriptId 切换 + 回调深度标记，但异常<b>向上传播</b>
+         * （调用方让候选失败或记进领域计划），不走「错误记录不失败」的生产语义。
+         * 不触碰底层 bus 与 mirror（挂起注册保持未激活）。
+         */
+        public void executeForCollection(Object event) {
+            Context context = listener.getContext();
+            String previousScriptId = ScriptContextRegistry.switchCurrentScriptId(context, scriptId);
+            ScriptManager.noteCallbackEnter();
+            try {
+                listener.executeVoid(event);
+            } finally {
+                ScriptManager.noteCallbackExit();
+                ScriptContextRegistry.restoreCurrentScriptId(context, previousScriptId);
+            }
+        }
+
         /** 注册来源的 {@link ScriptType}（dispatch mirror 分桶键）。 */
         public ScriptType type() {
             return type;

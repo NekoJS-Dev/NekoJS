@@ -31,14 +31,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link ItemModificationJS} 新增的 food / tool / attackDamage / attackSpeed 属性经
- * {@code applyTo} 写入数据组件的行为（JS 对象字面量按 GraalJS 默认转换以
- * {@code Map<String, Object>} 形式构造）。
+ * {@link ItemModificationJS} 的 food / tool / attackDamage / attackSpeed 属性写入数据组件的
+ * 行为（JS 对象字面量按 GraalJS 默认转换以 {@code Map<String, Object>} 形式构造）。
  *
- * <p>与 {@code ItemModificationEventJS.fire} 的快照-恢复模型对齐：每次 apply 都在
- * “物品原始组件 base + addAll(base) 的 builder”上叠加，因此这里的
- * {@link #apply(ItemModificationJS, DataComponentMap)} 就是事件路径去掉 server 绑定
- * 后的最小复刻（fireResistant/tool 之外不需要 server）。
+ * <p>票 39 起驱动<b>生产应用路径</b>：视图 → 规范化声明 → {@code ModificationDomainOwner}
+ * 的组件写入（Adapter 的真实代码），每次 apply 都在“物品原始组件 base + addAll(base) 的
+ * builder”上叠加，对应 commit 点「先恢复基线、再按声明顺序应用」的组件半边。
  *
  * <p>裸 JUnit 无 FML bootstrap：方块注册表为空，tool 的“全方块生效”HolderSet 只能做
  * 结构断言（规则数/字段值），catch-all 匹配所有方块的行为由 in-game 验证覆盖。
@@ -288,10 +286,13 @@ class ItemModificationComponentsTest {
 
     // -------------------------------------------------------------- helpers
 
-    /** 复刻 ItemModificationEventJS#modify 的写法：builder 以 base 全量播种后叠加修改。 */
+    /**
+     * 生产应用路径（票 39）：视图 → 规范化声明 → {@code ModificationDomainOwner} 的组件写入。
+     * 与旧复刻等价，但现在直接覆盖 Adapter 的真实应用代码。
+     */
     private static DataComponentMap apply(ItemModificationJS mod, DataComponentMap base) {
         DataComponentMap.Builder builder = DataComponentMap.builder().addAll(base);
-        mod.applyTo(builder, base, null);
+        new ModificationDomainOwner().applyItemProperties(builder, base, mod.normalizedProperties());
         return builder.build();
     }
 

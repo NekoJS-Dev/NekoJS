@@ -25,9 +25,10 @@ public interface ItemEvents {
             GROUP.server("rightClicked", PlayerInteractEvent.RightClickItem.class, dispatchByItem(PlayerInteractEvent::getItemStack));
 
     /**
-     * 运行时物品属性修改（server 脚本）：每次服务器启动（about-to-start）与
-     * {@code /nekojs reload server} 时由平台侧手动 post（快照恢复模型，见
-     * {@link ItemModificationEventJS}），不挂 NeoForge 总线。
+     * 运行时物品属性修改（server 脚本，posted-object 模式）：票 39 起由平台 domain owner
+     * 在服务器启动收集点（about-to-start）与 {@code /nekojs reload server} 的候选
+     * DOMAIN_PLAN 阶段 post——收集进 inert 计划，commit 点由平台/版本 Adapter 恢复基线并
+     * 应用完整计划（见 {@link ItemModificationEventJS} 的收集语义），不挂 NeoForge 总线。
      */
     EventBusJS<ItemModificationEventJS, Void> MODIFICATION =
             GROUP.server("modification", ItemModificationEventJS.class);

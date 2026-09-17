@@ -103,7 +103,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
             if (runtimeRoot != null) {
                 runtimeRoot.reload(com.tkisor.nekojs.api.ScriptType.SERVER);
             }
-        });
+        }, () -> runtimeRoot);
         FabricPackSync.registerServer();
         FabricPlayNetwork.registerServer();
         FabricPDataSync.registerServer();
@@ -140,6 +140,8 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                     ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
                     this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
                 }).root();
+        // 票 39：Item/Block modification domain owner 注册进 root（与 NekoJSMod 同构）。
+        runtimeRoot.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
         // STARTUP 脚本加载后触发 goal 注册（镜像 NekoJSMod：脚本监听器此时才挂上；
         // 注册面由节点孪生 GoalEvents 提供，消费端 FabricEntityEventBindings 已在跑）
         com.tkisor.nekojs.bindings.event.GoalEvents.postRegister();

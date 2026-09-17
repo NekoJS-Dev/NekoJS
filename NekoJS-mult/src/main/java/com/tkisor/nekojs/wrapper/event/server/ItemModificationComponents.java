@@ -68,6 +68,28 @@ public final class ItemModificationComponents {
             }
             return builder.build();
         }
+
+        /** 规范化声明值（纯 JVM；ticket 39 候选计划的载体形态）。 */
+        public Map<String, Object> toNormalized() {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("nutrition", nutrition);
+            map.put("saturation", saturation);
+            map.put("canAlwaysEat", canAlwaysEat);
+            if (eatSeconds != null) {
+                map.put("eatSeconds", eatSeconds);
+            }
+            return map;
+        }
+
+        /** 从规范化声明值重建（commit 点 Adapter 侧；已通过收集期校验）。 */
+        public static FoodSpec fromNormalized(Map<String, Object> map) {
+            int nutrition = ((Number) map.getOrDefault("nutrition", 1)).intValue();
+            float saturation = ((Number) map.getOrDefault("saturation", 0.1F)).floatValue();
+            boolean canAlwaysEat = Boolean.TRUE.equals(map.getOrDefault("canAlwaysEat", false));
+            Number eatSeconds = (Number) map.get("eatSeconds");
+            return new FoodSpec(nutrition, saturation, canAlwaysEat,
+                    eatSeconds == null ? null : eatSeconds.floatValue());
+        }
     }
 
     /** 工具配置：全方块生效的挖掘速度 + 每方块耐久损耗。 */
@@ -80,6 +102,23 @@ public final class ItemModificationComponents {
                 1.0F,
                 this.damagePerBlock,
                 this.canDestroyBlocksInCreative);
+        }
+
+        /** 规范化声明值（纯 JVM；ticket 39 候选计划的载体形态）。 */
+        public Map<String, Object> toNormalized() {
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("miningSpeed", miningSpeed);
+            map.put("damagePerBlock", damagePerBlock);
+            map.put("canDestroyBlocksInCreative", canDestroyBlocksInCreative);
+            return map;
+        }
+
+        /** 从规范化声明值重建（commit 点 Adapter 侧）。 */
+        public static ToolSpec fromNormalized(Map<String, Object> map) {
+            float miningSpeed = ((Number) map.get("miningSpeed")).floatValue();
+            int damagePerBlock = ((Number) map.getOrDefault("damagePerBlock", 1)).intValue();
+            boolean creative = Boolean.TRUE.equals(map.getOrDefault("canDestroyBlocksInCreative", true));
+            return new ToolSpec(miningSpeed, damagePerBlock, creative);
         }
     }
 
