@@ -22,7 +22,6 @@ import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
-import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
@@ -249,8 +248,9 @@ public final class NekoJSCommands {
             boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
                 recipeBroadcast = applyRecipeScripts(source);
-                // 物品属性修改重放：与服务器启动同一路径（先恢复快照再重跑 modification 事件）
-                ItemModificationEventJS.fire(source.getServer());
+                // Item/Block 属性修改重放（票 39）：SERVER 事务 reload 的 DOMAIN_PLAN 阶段已把
+                // 修改声明收集为 inert 候选计划（联合预检），commit 点由平台 Adapter 应用——
+                // 命令侧不再 fire；reload 失败时旧 active 修改保留。
                 // 村民交易 flush + 脚本包 data/ 挂载（与 ServerEventListener 的 TagsUpdated 路径同约定）
                 MinecraftServer server = source.getServer();
                 if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {

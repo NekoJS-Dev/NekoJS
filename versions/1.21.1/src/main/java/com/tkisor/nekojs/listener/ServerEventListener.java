@@ -18,7 +18,6 @@ import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
-import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.ResourceLocation;
@@ -69,12 +68,22 @@ public class ServerEventListener {
         if (VillagerTradeManager.pendingCount() > 0) {
             VillagerTradeManager.apply(server);
         }
-        // 物品属性修改：每次服务器启动 post 一次（datapack 装载完成、玩家加入前）。脚本 reload
-        // 时由 `/nekojs reload server`（NekoJSCommands）重放，走同一条快照恢复路径；物品单例与
-        // 已修改组件跨 vanilla /reload 保留，无需在此重放。
-        ItemModificationEventJS.fire(server);
-        // 方块属性修改：同一时机 post（先整体恢复上轮快照再重放，删除的 modify 自动回退）；
-        // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
+        // 物品属性修改（票 39 收口）：初始 generation 的收集点——active 总线监听器产出声明，
+        // domain owner preflight 通过后恢复基线并应用完整计划（不通过 → 整批 blocked 保持既有值；
+        // 1.21.1 无 block 半边）。SERVER 事务 reload 的重放在 DOMAIN_PLAN 阶段联合应用。
+        com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
+        if (modificationDomain != null) {
+            modificationDomain.applyInitialPlan(server);
+        }
+    }
+
+    /** 修改域 owner（root 授权 domain collector；未注册返回 null，启动收集点跳过）。 */
+    private static com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain() {
+        com.tkisor.nekojs.core.modification.CandidateDomainCollector collector =
+                runtimeRoot == null ? null
+                        : runtimeRoot.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
+        return collector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner
+                ? owner : null;
     }
 
     /**

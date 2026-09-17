@@ -24,8 +24,6 @@ import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
-import com.tkisor.nekojs.wrapper.event.server.BlockModificationEventJS;
-import com.tkisor.nekojs.wrapper.event.server.ItemModificationEventJS;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -358,10 +356,10 @@ public final class NekoJSCommands {
             boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
                 recipeBroadcast = applyRecipeScripts(source);
-                // 物品属性修改重放：与服务器启动同一路径（先恢复快照再重跑 modification 事件）
-                ItemModificationEventJS.fire(source.getServer());
-                // 方块属性修改重放：同路径（fire 内先整体恢复上轮快照，删除的 modify 自动回退）
-                BlockModificationEventJS.fire();
+                // Item/Block 属性修改重放（票 39）：不再在命令侧 fire——SERVER 事务 reload 的
+                // DOMAIN_PLAN 阶段已把修改声明收集为 inert 候选计划（与 global/shared 写集联合
+                // 预检），commit 点由平台 Adapter 恢复基线并应用完整新计划；reload 失败时旧
+                // active 修改保留（不再有部分应用/静默 stale）。
                 // 村民交易 flush：脚本 stage 的交易在 reload 收尾落注册表（与 ServerEventListener 的
                 // TagsUpdated hook 同路径）；脚本包 data/ 目录作为强制数据包挂载（内容签名变化才重载）
                 MinecraftServer server = source.getServer();
