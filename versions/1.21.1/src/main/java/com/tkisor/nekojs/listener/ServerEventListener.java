@@ -73,8 +73,13 @@ public class ServerEventListener {
         // 时由 `/nekojs reload server`（NekoJSCommands）重放，走同一条快照恢复路径；物品单例与
         // 已修改组件跨 vanilla /reload 保留，无需在此重放。
         ItemModificationEventJS.fire(server);
-        // 方块属性修改：同一时机 post（先整体恢复上轮快照再重放，删除的 modify 自动回退）；
-        // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
+        // 方块属性修改：26.x 侧此处调 BlockModificationEventJS.fire()（见共享文件同位置）；1.21.1
+        // 无 BlockBehaviour.Properties 修改面与 BlockEvents.modification 总线，本节点不触发
+        // （NeoForgeBlockEvents 同款口径），故调用缺席——重新提取孪生文件时须保持缺席。
+        // 动态注册事件 facade 的初次候选（ticket 16，26.x 侧为带 >=26 守卫的
+        // DynamicRegistryFacade.fireInitialCollection()）：本节点无该包（DynamicRegistryJS/
+        // DynamicRegistries 同为 >=26 面），调用缺席；能力记 not verified，见 baseline REPORT
+        // 能力表。重新提取孪生文件时同样须保持缺席。
     }
 
     /**

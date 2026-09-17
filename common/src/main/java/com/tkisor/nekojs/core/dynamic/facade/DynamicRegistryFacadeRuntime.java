@@ -148,9 +148,10 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     /**
      * 候选期收集（SERVER 域限定）：对候选挂起监听器中属于
      * {@link DynamicRegistryEvents#DYNAMIC_REGISTRY} 的回调逐个执行（同 owner thread，
-     * 切换 currentScriptId、标记回调深度——与生产分发闭包同款包裹）；单监听器异常记为
-     * collection error（毒化整批）后继续其余监听器（EventBus 语义），整批在 STATE_PLAN
-     * 以精确 domain 拒绝。
+     * 切换 currentScriptId、标记回调深度、catch/上报形态——都与生产分发闭包同款）；单监听器
+     * 异常记为 collection error（毒化整批）后继续其余监听器（EventBus 语义），整批在
+     * STATE_PLAN 以精确 domain 拒绝。Error 按分发同款语义直抛（由 reload 管线按收集器
+     * 崩溃归因），中断标志恢复。
      *
      * <p>空候选：候选没有任何本域监听器时，仅当账本已有 exposed 定义才挂入空计划
      * （把不再声明的项标记 stale/retired）；账本为空时跳过——未使用本域的 reload 零参与。
@@ -186,10 +187,18 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
             ScriptManager.noteCallbackEnter();
             try {
                 pending.listenerValue().execute(payload);
-            } catch (RuntimeException e) {
-                // 毒化整批（preflight 必失败）后继续其余监听器：一个坏声明不掩盖其余收集错误。
-                // kill 上报与生产分发路径同款（EventBusJS 分发闭包 catch 内调用）：候选 Context
-                // 被资源上限终止时按候选失败记账，而不是当普通收集错误吞掉。
+            } catch (Throwable e) {
+                // catch 形态与生产分发闭包同款（EventBusJS.register* 的 catch(Throwable)）：
+                // 中断标志恢复、Error 直抛给上层（reload 管线按收集器崩溃归因）、其余
+                // （guest PolyglotException 与领域数据错误）记为收集错误毒化整批后继续其余
+                // 监听器——一个坏声明不掩盖其余收集错误。kill 上报同生产路径（候选 Context
+                // 被资源上限终止时按候选失败记账，而不是当普通收集错误吞掉）。
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                if (e instanceof Error error) {
+                    throw error;
+                }
                 ScriptManager.reportContextKilled(candidateContext, e);
                 plan.noteCollectionError(pending.scriptId(), e);
                 NekoJS.LOGGER.error("DynamicRegistry candidate collection failed in script '{}': {}",

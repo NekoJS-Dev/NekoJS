@@ -18,8 +18,10 @@ import com.tkisor.nekojs.api.event.EventGroup;
  * })
  * </pre>
  *
- * <p><b>命名决策</b>（票面 AC2 的记录义务）：spec 08 给的工作名是
- * {@code ServerEvents.dynamicRegistry}（「工作名，非最终 API」）。实施采用独立组
+ * <p><b>命名决策</b>（票面 AC2 的记录义务）：spec 08 该条目的实际措辞是
+ * 「Dynamic Registry 保留。它使用服务器运行期动态注册事件 facade，工作名为
+ * {@code ServerEvents.dynamicRegistry}」（08:61），相邻条目写明「精确事件名、payload、
+ * Builder 方法全集和开放 registry 类型仍由后续 contract 冻结」（08:63）。实施采用独立组
  * {@code DynamicRegistryEvents}：ServerEvents 住在 NeoForge 专属树且 fabric 侧是
  * 另一份同 FQCN 文件，把运行期 facade 挂进去会把独立生命周期焊死在 loader 专属组上，
  * 也令 common 层无法承载/测试该面；独立组与启动期 {@code RegistryEvents}（同样独立
