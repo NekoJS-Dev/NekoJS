@@ -73,10 +73,23 @@ public class ServerEventListener {
         // 总线监听器，domain owner preflight 通过后恢复基线并应用完整计划（不通过 → 整批
         // blocked 保持既有值）。`/nekojs reload server` 与 vanilla /reload 的 SERVER 事务
         // reload 在 DOMAIN_PLAN 阶段经候选挂起监听器收集、commit 点联合应用（同一 owner）。
+        // 客户端不主动 resync，光照等视觉变化需玩家重进世界/区块重同步才可见。
         com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain = modificationDomain();
         if (modificationDomain != null) {
             modificationDomain.applyInitialPlan(server);
         }
+        // 动态注册事件 facade 的初次候选（ticket 16）：server registry ready 后收集一次
+        // inert 计划（preflight 通过才发布；每次成功的 script/data reload 也会在候选阶段
+        // 重新收集并联合发布，此处是对「初次 server registry ready」边界的显式触发，幂等）。
+        // 版本守卫的实际作用（与文件头的「本文件不应再出现版本守卫」是有意的例外，原因如下）：
+        // 1.21.1 的编译单元是 versions/1.21.1/src 下的孪生文件，本文件不参与其编译——所以
+        // 当前不会立即断裂；守卫是为了让孪生文件按 tools/extract_evaluated.py 重新提取时
+        // （= 本文件在 1.21.1 节点求值后的形态）不会把 26.x 专属的 facade 符号带进 1.21.1。
+        // 运行期动态注册在 1.21.1 整包缺席（DynamicRegistryJS/DynamicRegistries 同为 >=26
+        // 面），facade 因此不在该节点触发（能力记 not verified，见 baseline REPORT 能力表）。
+//? if >=26 {
+        com.tkisor.nekojs.dynamic.DynamicRegistryFacade.fireInitialCollection();
+//?}
     }
 
     /** 修改域 owner（root 授权 domain collector；未注册返回 null，启动收集点跳过）。 */

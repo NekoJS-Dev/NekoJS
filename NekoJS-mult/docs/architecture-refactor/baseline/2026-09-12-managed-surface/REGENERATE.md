@@ -15,6 +15,14 @@
 | query 域 declaration golden | `src/test/resources/golden/query/datamap-binding.d.txt`、`entityselectors-binding.d.txt` | `DataMapQueryBindingTest`、`EntitySelectorsQueryBindingTest`（根测试树，文本对比） | 生产 probe TS backend `BindingDeclarationGenerator` 对 DataMap / EntitySelectors binding 的 declaration 输出（ticket 25） |
 | query 域 capability matrix golden | `src/test/resources/golden/query/capability-matrix-neoforge.txt`、`capability-matrix-fabric.txt` | `QueryToolCapabilityMatrixTest`（loader 探针自动选 golden；fabric 行经由 `:26.1.2-fabric:test` 消费） | capability 探针矩阵：类存在性 + source trace 判定的 supported/partial/unavailable（ticket 25） |
 | startup registry typed Builder 契约 golden | `src/test/resources/golden/registry/startup-builders.d.ts`（26.x）、`startup-builders-1.21.1.d.ts`（1.21.1 成员面有真实差异，按版本各冻一份） | `RegistryBuilderSurfaceGoldenTest`（根测试树，守卫按版本选 golden；fluid 条目不进 golden——NeoForge 面，守卫内内存断言） | 生产 `registry_types` 同款 builder 清单 → `RegistryBuilderContract` 反射 → `RegistryBuilderSurfaces.derive` → `RegistryBuilderTsRenderer`（probe TS 后端同一渲染器）（ticket 15） |
+| 运行期动态注册声明 golden | `common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts`、`dynamic-builders.expected.d.ts` | `DynamicRegistryEventsDeclarationGoldenTest`（经 `ProbeGoldenSupport`，住 probe 包以复用本表 regenerate 入口） | facade 事件声明：`NekoScriptCatalog.events`（`DynamicRegistryEvents.GROUP`）→ `EventDeclarationGenerator`；动态 Builder 声明：`DynamicBuilderSurfaces.derive()` → `RegistryBuilderTsRenderer`（ticket 16） |
+
+> 动态注册两行（ticket 16 落地，owner registry-dynamic）冻结的是**声明形状**：事件声明的组名
+> `DynamicRegistryEvents`／成员名 `dynamicRegistry` 是票面命名的记录义务（spec 08 工作名
+> `ServerEvents.dynamicRegistry` 未采用，理由见该票 baseline REPORT 「命名决策」）；Builder
+> 声明 golden 的头注是共享渲染器（ticket 15 所有）的固定文本，其派生输入是
+> `DynamicBuilderContract`（不是 `RegistryBuilderContract`）——条目形状复用、路径独立。
+> 两份 golden 不构成能力结论：公开激活与 capability 仍由事务/同步 gate（票 21）裁决。
 
 > 查询域两行（ticket 25 落地；本登记是其报告 §7 N9 的收尾，owner managed-surface）与
 > startup registry 一行（ticket 15 落地，owner registry-startup）**暂不支持

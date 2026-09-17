@@ -24,6 +24,19 @@ public final class TestPlatformInit {
         initialized = true;
     }
 
+    /**
+     * 按测试 JVM 唯一化的 gameDir（base + 当前进程 PID，与根测试树
+     * {@code com.tkisor.nekojs.TestGameDirs.unique} 同口径）：并行 test JVM 不会互删
+     * 脚本目录。common 测试树此前用固定 {@code nekojs-test-gamedir}，helper 下沉到
+     * common 是随后的整理项（票 10 报告 N8）；新增测试先用本入口。
+     *
+     * <p>同 JVM 内 Platform 首次初始化即生效（先到先得，见根树 TestGameDirs 说明）——
+     * 后到者传入的目录被视为无害的寄生请求，因此调用本入口不会让既有测试失效。
+     */
+    public static Path uniqueGameDir(String base) {
+        return Path.of(System.getProperty("java.io.tmpdir"), base + '-' + ProcessHandle.current().pid());
+    }
+
     public static void ensureInitialized(Path gameDir) {
         gameDir.toFile().mkdirs();
         try {

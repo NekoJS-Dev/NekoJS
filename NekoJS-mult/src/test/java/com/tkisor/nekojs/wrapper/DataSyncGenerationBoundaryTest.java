@@ -286,6 +286,8 @@ class DataSyncGenerationBoundaryTest {
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
                     ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
             ScriptEnvironmentFactory environmentFactory =
+                    // ticket 10 起 ScriptEnvironmentFactory 需要 root 拥有的状态域（4 参构造器）；
+                    // 本测试不覆盖 global/shared 面，传独立空 store。
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
                             new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
