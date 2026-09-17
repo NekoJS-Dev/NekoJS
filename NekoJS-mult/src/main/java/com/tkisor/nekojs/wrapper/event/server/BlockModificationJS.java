@@ -13,9 +13,11 @@ import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
 
 /**
- * Mutable property view handed to {@code BlockEvents.modification} callbacks.
+ * Mutable property view handed to {@code BlockEvents.modification} callbacks
+ * (ticket 39 起：纯声明缓冲——收集期只记录待写属性，live Block/BlockState 由
+ * commit 点的平台 Adapter 应用，见 {@code ModificationDomainOwner})。
  *
- * <h2>JS API</h2>
+ * <h2>JS API（property 写与显式 setter 经 {@link ModificationViewSurface} 同一 setter）</h2>
  * <pre>
  * BlockEvents.modification(event {@code ->} {
  *   event.modify('minecraft:stone', block {@code ->} {
@@ -189,6 +191,22 @@ public class BlockModificationJS {
     @Param(name = "jumpFactor", value = "new jump factor (vanilla blocks use 0.5..1)")
     public void setJumpFactor(float jumpFactor) {
         this.jumpFactor = jumpFactor;
+    }
+
+    /**
+     * 本视图的规范化声明值（ticket 39 候选计划载体）：只含被显式设置的属性。
+     * 取值范围校验由 {@code ModificationDomainOwner} 在联合预检（STATE_PLAN）完成
+     *（{@link #applyTo(Block)} 内的 validate 保留为 Adapter 应用期的第二道防线）。
+     */
+    java.util.Map<String, Object> normalizedProperties() {
+        java.util.Map<String, Object> properties = new java.util.LinkedHashMap<>();
+        if (hardness != null) properties.put("hardness", hardness);
+        if (resistance != null) properties.put("resistance", resistance);
+        if (lightLevel != null) properties.put("lightLevel", lightLevel);
+        if (requiresTool != null) properties.put("requiresTool", requiresTool);
+        if (friction != null) properties.put("friction", friction);
+        if (jumpFactor != null) properties.put("jumpFactor", jumpFactor);
+        return properties;
     }
 
     /**
