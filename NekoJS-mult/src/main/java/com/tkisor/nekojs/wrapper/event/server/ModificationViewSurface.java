@@ -7,7 +7,6 @@ import graal.graalvm.polyglot.proxy.ProxyObject;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,9 +28,10 @@ import java.util.function.Consumer;
  * 上显式 setter 调用形态的唯一入口——宿主对象的天然方法访问在这里不适用（见下）。
  *
  * <p>不依赖 Graal 对宿主对象的天然 Bean 映射——characterization
- * （{@code ModificationLegacyCharacterizationTest.graalPropertyWriteOnHostViewDoesNotReachSetter}）
- * 实证宿主视图的 property 写被静默丢弃（{@code assigned,read=undefined}），ProxyObject
- * 的 putMember seam 才是可靠转发点（spec 08 预授权回退路径，与 typed Builder 同款）。
+ * （{@code ModificationLegacyCharacterizationTest.hostPropertyWriteLegacyFactAndProxyObjectViewContract}
+ * 的 registry-free 探针）实证普通宿主对象（私有字段 + public setter）的 property 写被静默
+ * 丢弃（{@code assigned,read=undefined}），ProxyObject 的 putMember seam 才是可靠转发点
+ * （spec 08 预授权回退路径，与 typed Builder 同款）。
  *
  * <p>视图类自己<b>也</b>实现 {@link ProxyObject}（转发到本引擎）：脚本回调参数经
  * {@code Consumer} 实现直接落到裸视图实例上（不额外包一层），两种到达形态的
@@ -76,7 +76,10 @@ public final class ModificationViewSurface implements ProxyObject {
             if (getter != null) {
                 return readGetter(getter);
             }
-            return new SetterMethod(setter, name);
+            // write-only 属性：读面显式报错，不把 setter 的函数对象当值返回
+            //（访问器原名形态 item.setMaxStackSize(...) 仍可从 methods 取到调用入口）
+            throw new IllegalArgumentException("'" + name + "' on " + viewTypeName()
+                    + " is write-only; readable: " + catalog.getterNames());
         }
         Method getter = catalog.getters.get(name);
         if (getter != null) {
@@ -308,16 +311,21 @@ public final class ModificationViewSurface implements ProxyObject {
             return Character.toLowerCase(accessorName.charAt(3)) + accessorName.substring(4);
         }
 
+        /** 成员目录（去重：同一访问器同时以属性名与访问器原名收录）。 */
         List<String> memberNames() {
-            List<String> names = new ArrayList<>();
+            Set<String> names = new LinkedHashSet<>();
             names.addAll(setters.keySet());
             names.addAll(getters.keySet());
             names.addAll(methods.keySet());
-            return names;
+            return List.copyOf(names);
         }
 
         List<String> setterNames() {
-            return new ArrayList<>(setters.keySet());
+            return List.copyOf(setters.keySet());
+        }
+
+        List<String> getterNames() {
+            return List.copyOf(getters.keySet());
         }
     }
 }

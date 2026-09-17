@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 票 39 脚本路径 E2E harness（版本树测试树，五节点共享）：真实 root + 真实 Graal 管线 +
+ * 票 39 脚本路径 E2E harness（版本树测试树，五节点共享同一份代码；测试本身 registry-gated，
+ * 仅在 vanilla 注册表可用的环境真跑）：真实 root + 真实 Graal 管线 +
  * <b>真实</b> {@link ModificationDomainOwner}（平台 Adapter），脚本经
  * {@code ItemEvents.modification} 事件面收集声明、commit 点应用到真实 Item/Block。
  *

@@ -55,6 +55,11 @@ public interface CandidateDomainCollector {
          * 挂起监听器（commit 前不上生产总线）。监听器回调抛出的异常<b>向上传播</b>
          * （候选失败）——与生产分发「错误记录不失败」不同，这是候选收集语义；
          * 收集器要求整批失败时也可以自行捕获并记进计划。
+         *
+         * <p><b>仅支持非 dispatch 总线</b>：按 key 定向分发的总线（
+         * {@code EventBusJS#canDispatch()}）需要 key 才能判定投递子集，收集派发没有
+         * key 上下文——对这类总线的调用被显式拒绝（{@code UnsupportedOperationException}），
+         * 不做「忽略 key 全量派发」的静默降级。
          */
         void dispatch(EventBusJS<?, ?> bus, Object event);
 

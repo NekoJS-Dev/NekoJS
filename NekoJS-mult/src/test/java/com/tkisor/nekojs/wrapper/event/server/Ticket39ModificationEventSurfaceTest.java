@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 票 39 AC1 fixture：{@code ItemEvents.modification} / {@code BlockEvents.modification}
  * 的公开事件面（组名、事件名、payload 类、side、cancel/dispatch 能力）仍在既有
  * catalog 派生路径上——本票不新增第二事件 bus、不复制 wrapper，事件名与 payload 不变。
- * 无 vanilla 注册表依赖（只读总线元数据）→ 五节点真跑（block 半边 >=26）。
+ * 无 vanilla 注册表依赖（只读总线元数据）→ 本机实测五节点真跑（block 半边 >=26）。
  *
  * <p>dispatch 时机（唯一 post 来源 = domain owner 的两个合法收集点）与 priority/顺序语义
  * 由 {@code ModificationDomainOwner} + {@code CandidateDomainCollector} 承载：本测试钉住

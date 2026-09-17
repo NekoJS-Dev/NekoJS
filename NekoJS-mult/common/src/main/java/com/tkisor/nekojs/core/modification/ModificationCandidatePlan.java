@@ -49,7 +49,16 @@ public final class ModificationCandidatePlan implements CandidateStatePlan {
         declarations.add(Objects.requireNonNull(declaration, "declaration"));
     }
 
-    /** 标记收集失败（首个错误生效；计划进入「preflight 必失败」状态）。 */
+    /**
+     * 标记收集失败（首个错误生效；计划进入「preflight 必失败」状态）。
+     *
+     * <p><b>收集器可选 API</b>：给「收集期捕获错误、但仍要求整批失败」的领域收集器使用
+     * （把错误记进计划而不是当场抛出，从而保留 post 不中断的可观察顺序）。
+     * <b>Item/Block modification 的生产路径不使用它</b>——真实收集器
+     * （{@code ModificationDomainOwner#collect}）让 {@code ItemModificationEventJS#modify}
+     * 的异常直接向上传播，由 {@code ScriptManager} 归因
+     * {@code domain-collect:<domain>} 并在 DOMAIN_PLAN 阶段整批失败。
+     */
     public synchronized void fail(String reason, Throwable error) {
         if (collectionFailure == null) {
             collectionFailure = reason;

@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 票 39 snapshot ownership / 旧路径收口的结构性 guard（AC5/AC13/AC14 的旁路证据；
- * 无 vanilla 注册表依赖 → 五节点真跑）。
+ * 无 vanilla 注册表依赖 → 本机实测 26.1.2 / 26.1.2-fabric / 1.21.1 / 26.2.0 / 26.2.0-fabric 真跑）。
  *
  * <p>断言的是「旧路径已经不在了」这类可机检事实，而不是行为：进程级 static
  * {@code SNAPSHOTS}、{@code fire()} restore-all-then-replay 入口、以及视图上的
@@ -115,5 +115,47 @@ class Ticket39ModificationOwnershipTest {
                                 + "through the normalized declaration plan (ticket 39 AC2)");
             }
         }
+    }
+
+    /**
+     * AC10 的可机检边界：modification 类不得出现网络/包符号。本票不声明任何客户端自动同步
+     * 能力（自动同步 = unsupported；relog / chunk resync 需平台侧动作），写入面只碰服务端
+     * 对象图——一旦有人给这条路径加 packet/sendTo，本 guard 立即失败，能力记录必须先更新。
+     */
+    @Test
+    void modificationPathReferencesNoNetworkSymbols() {
+        assertNoNetworkReference(ItemModificationEventJS.class);
+        assertNoNetworkReference(ItemModificationJS.class);
+        assertNoNetworkReference(ModificationDomainOwner.class);
+        assertNoNetworkReference(com.tkisor.nekojs.core.modification.ModificationCandidatePlan.class);
+        assertNoNetworkReference(com.tkisor.nekojs.core.modification.ModificationDeclaration.class);
+//? if >=26 {
+        assertNoNetworkReference(BlockModificationEventJS.class);
+        assertNoNetworkReference(BlockModificationJS.class);
+//?}
+    }
+
+    private static void assertNoNetworkReference(Class<?> type) {
+        for (Method method : type.getDeclaredMethods()) {
+            assertNotNetwork(type, method.getReturnType().getName());
+            for (Class<?> parameter : method.getParameterTypes()) {
+                assertNotNetwork(type, parameter.getName());
+            }
+            for (Class<?> exception : method.getExceptionTypes()) {
+                assertNotNetwork(type, exception.getName());
+            }
+        }
+        for (Field field : type.getDeclaredFields()) {
+            assertNotNetwork(type, field.getType().getName());
+        }
+    }
+
+    private static void assertNotNetwork(Class<?> type, String referencedTypeName) {
+        assertFalse(referencedTypeName.startsWith("net.minecraft.network")
+                        || referencedTypeName.contains(".network."),
+                type.getSimpleName() + " references " + referencedTypeName
+                        + ": the modification path declares no automatic client-sync capability "
+                        + "(ticket 39 AC10). Adding a sync path must update the capability record in the "
+                        + "baseline REPORT first.");
     }
 }

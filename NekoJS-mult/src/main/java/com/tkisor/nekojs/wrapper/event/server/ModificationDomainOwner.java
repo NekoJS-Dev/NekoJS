@@ -282,6 +282,9 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
             } catch (Throwable suppressed) {
                 t.addSuppressed(suppressed);
             }
+            // 失败批次不产生「最近成功应用」：复位指纹，避免下次启动收集按等价跳过
+            // 误报 SKIPPED_IDENTICAL 掩盖「实际停在基线」的事实（AC7：静默 stale 不算成功）
+            lastAppliedFingerprint = null;
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, source,
                     countKind(declarations, "item"), countKind(declarations, "block"),
                     List.copyOf(restored), String.valueOf(t));

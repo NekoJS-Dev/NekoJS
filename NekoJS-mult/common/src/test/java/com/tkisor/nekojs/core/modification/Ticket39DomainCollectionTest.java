@@ -62,6 +62,11 @@ class Ticket39DomainCollectionTest {
     static final EventBusJS<CollectingEvent, Void> MODIFICATION =
             GROUP.server("modification", CollectingEvent.class);
 
+    /** key-dispatch 总线（票 39 F8：收集派发必须显式拒绝带 dispatch key 的总线）。 */
+    static final EventBusJS<CollectingEvent, String> DISPATCHED =
+            GROUP.server("dispatched", CollectingEvent.class,
+                    com.tkisor.nekojs.api.event.DispatchKey.of(String.class, event -> "synthetic:alpha"));
+
     /** 收集事件载荷：modify(target, cb) 产出一条规范化声明进计划。 */
     public static final class CollectingEvent {
         private final ModificationCandidatePlan plan;
@@ -448,6 +453,32 @@ class Ticket39DomainCollectionTest {
                     "global write set must not publish when the domain plan preflight fails");
             assertEquals(7, harness.applier.targets.get("synthetic:alpha"),
                     "old active plan keeps serving when the batch is blocked");
+        }
+    }
+
+    @Test
+    void dispatchKeyedBusIsRejectedByDomainCollectionInsteadOfSilentlyBroadcasting() throws Exception {
+        // F8：按 key 定向分发的总线需要 key 才能判定投递子集，收集派发没有 key 上下文 →
+        // 显式拒绝（UnsupportedOperationException）而不是「忽略 key 全量派发」静默降级。
+        try (Harness harness = new Harness()) {
+            harness.applier.seed("synthetic:alpha", 1);
+            harness.root.registerDomainCollector(new CandidateDomainCollector() {
+                @Override public String domain() { return "dispatch-probe"; }
+                @Override public ScriptType scriptType() { return ScriptType.SERVER; }
+                @Override public void collect(Handle handle) {
+                    handle.dispatch(DISPATCHED, new CollectingEvent(new ModificationCandidatePlan(harness.applier)));
+                }
+            });
+            harness.writeServerScript("mod.js", "global.noModification = true");
+
+            NekoReloadException failure = assertThrows(NekoReloadException.class,
+                    () -> harness.root.reload(ScriptType.SERVER));
+
+            assertEquals(ReloadPhase.DOMAIN_PLAN, failure.report().phase());
+            assertTrue(failure.report().domain().startsWith("domain-collect:dispatch-probe"),
+                    "domain=" + failure.report().domain());
+            assertEquals(0, harness.applier.applyCount, "rejected collection must not apply anything");
+            assertEquals(1, harness.applier.targets.get("synthetic:alpha"));
         }
     }
 
