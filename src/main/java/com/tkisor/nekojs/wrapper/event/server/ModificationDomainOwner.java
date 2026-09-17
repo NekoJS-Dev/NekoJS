@@ -5,7 +5,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.bindings.event.BlockEvents;
 import com.tkisor.nekojs.bindings.event.ItemEvents;
-import com.tkisor.nekojs.core.modification.CandidateDomainCollector;
+import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.core.modification.ModificationApplier;
 import com.tkisor.nekojs.core.modification.ModificationCandidatePlan;
 import com.tkisor.nekojs.core.modification.ModificationDeclaration;

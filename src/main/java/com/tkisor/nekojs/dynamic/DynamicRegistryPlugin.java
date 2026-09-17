@@ -24,9 +24,11 @@ import com.tkisor.nekojs.core.plugin.TypeDocsPoint;
  * <p>ticket 16 additionally registers the runtime dynamic-registry event facade
  * ({@link DynamicRegistryEvents#GROUP}: inert candidate plans, typed callback
  * builders — a lifecycle fully separate from this legacy direct-registration
- * binding and from startup {@code RegistryEvents}) plus its candidate domain
- * collector ({@link DynamicRegistryFacade#bootstrap()}) and the derived
- * dynamic-builder declaration entries.
+ * binding and from startup {@code RegistryEvents}) plus the derived
+ * dynamic-builder declaration entries. The facade's candidate domain collector
+ * is registered into the runtime root by the platform assembly
+ * ({@code NekoJSMod}, same seam as ticket 39's modification owner) rather than
+ * by this plugin — the root does not exist yet during plugin bootstrap.
  */
 @RegisterNekoJSPlugin
 public final class DynamicRegistryPlugin implements NekoJSPlugin,
@@ -44,9 +46,9 @@ public final class DynamicRegistryPlugin implements NekoJSPlugin,
     @Override
     public void registerEvents(EventGroupRegistry registry) {
         // 服务器运行期动态注册事件 facade（ticket 16）：inert 候选计划，与旧直注 binding、
-        // 启动期 RegistryEvents 的生命周期完全分离。bootstrap 幂等（收集器只挂一次）。
+        // 启动期 RegistryEvents 的生命周期完全分离。候选域收集器由平台装配（NekoJSMod）
+        // 注册进 root——插件 bootstrap 期 root 尚不存在。
         registry.register(DynamicRegistryEvents.GROUP);
-        DynamicRegistryFacade.bootstrap();
     }
 
     @Override

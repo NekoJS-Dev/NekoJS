@@ -1,6 +1,6 @@
 package com.tkisor.nekojs.wrapper.event.server;
 
-import com.tkisor.nekojs.core.modification.CandidateDomainCollector;
+import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.core.modification.ModificationApplier;
 import org.junit.jupiter.api.Test;
 

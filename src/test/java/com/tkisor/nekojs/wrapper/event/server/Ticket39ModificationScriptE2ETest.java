@@ -102,7 +102,7 @@ class Ticket39ModificationScriptE2ETest {
         // 第二轮：候选构建期（DOMAIN_PLAN 已收集、commit 之前）live 组件必须仍是旧 active 值。
         // probe 收集器在真实 owner 之后注册 → 观察到的是「同轮声明已收集但尚未应用」的 live 值。
         List<Integer> seenDuringCandidate = new ArrayList<>();
-        harness.root.registerDomainCollector(new com.tkisor.nekojs.core.modification.CandidateDomainCollector() {
+        harness.root.registerDomainCollector(new com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector() {
             @Override public String domain() { return "e2e-probe"; }
             @Override public ScriptType scriptType() { return ScriptType.SERVER; }
             @Override public void collect(Handle handle) {

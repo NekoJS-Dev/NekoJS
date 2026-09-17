@@ -94,7 +94,7 @@ public class ServerEventListener {
 
     /** 修改域 owner（root 授权 domain collector；未注册返回 null，启动收集点跳过）。 */
     private static com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner modificationDomain() {
-        com.tkisor.nekojs.core.modification.CandidateDomainCollector collector =
+        com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector =
                 runtimeRoot == null ? null
                         : runtimeRoot.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
         return collector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner

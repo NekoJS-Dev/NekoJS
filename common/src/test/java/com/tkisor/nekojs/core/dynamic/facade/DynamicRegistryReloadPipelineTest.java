@@ -220,18 +220,21 @@ class DynamicRegistryReloadPipelineTest {
     }
 
     @Test
-    void collectorRegistryIsObservableAndSymmetric() {
-        // seam 自身的可观察面：注册/注销幂等对称（测试隔离与后续域停用用）
-        DynamicRegistryFacadeRuntime isolated = new DynamicRegistryFacadeRuntime();
-        try {
-            ScriptManager.registerCandidateDomainCollector(isolated);
-            ScriptManager.registerCandidateDomainCollector(isolated);
-            assertEquals(1, ScriptManager.candidateDomainCollectors().stream()
-                    .filter(collector -> collector == isolated).count(), "幂等注册");
-        } finally {
-            ScriptManager.unregisterCandidateDomainCollector(isolated);
-            assertTrue(ScriptManager.candidateDomainCollectors().stream()
-                    .noneMatch(collector -> collector == isolated), "注销对称");
+    void facadeCollectorParticipatesThroughTheConstructorSuppliedSeam() throws Exception {
+        // 收集器是 root 拥有的 reload 接缝（票 39/16 统一后的唯一形态）：只有经
+        // ScriptManager 构造器（生产 = root 装配注册）传入的收集器参与候选收集——
+        // 进程级静态注册表随统一移除，域不会因「某处注册过」在无关 manager 上参与。
+        try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
+            harness.writeScript("main.js", """
+                    DynamicRegistryEvents.dynamicRegistry(event => {
+                        event.item('nekojs:seam_probe', b => { b.maxStackSize = 16 });
+                    });
+                    """);
+            harness.manager.discoverScripts();
+            harness.manager.loadScripts();
+            harness.manager.reloadScripts();
+            assertEquals(1, harness.facade.store().lastCommittedBatch().size(),
+                    "构造器传入的收集器参与候选收集并联合发布");
         }
     }
 }

@@ -142,7 +142,7 @@ public final class FabricServerEventBindings {
             // aboutToStart 事件之后、starting 之前收集并应用物品/方块属性修改（票 39
             // 初始 generation 收集点；事务 reload 的重放在 DOMAIN_PLAN 阶段联合应用）
             com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
-            com.tkisor.nekojs.core.modification.CandidateDomainCollector modificationCollector =
+            com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector modificationCollector =
                     root == null ? null
                             : root.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
             if (modificationCollector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner) {
@@ -161,7 +161,7 @@ public final class FabricServerEventBindings {
             // 修改域的 server 绑定随服务器实例失效（基线是进程级例外，保留到 root close）
             com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot root = rootSupplier.get();
             if (root != null) {
-                com.tkisor.nekojs.core.modification.CandidateDomainCollector collector =
+                com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector =
                         root.domainCollector(com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner.DOMAIN);
                 if (collector instanceof com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner owner) {
                     owner.clearServer();

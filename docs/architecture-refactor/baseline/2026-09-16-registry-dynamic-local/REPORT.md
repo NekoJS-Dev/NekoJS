@@ -198,3 +198,37 @@
 ## 14. 验证环境与跨 suite 隔离（整改轮实测，详见 §11 G11）
 
 整轮 `:common:test` 的失败/挂起与 **tmp game dir 的陈旧状态**相关（同一份代码：陈旧目录下 r1/r4 失败或挂起；清空后 r5/r6 整轮通过）。固定 game dir 被多个 suite 共用且各自留下夹具（`server_scripts/entry.js`、`server_packs/<hash>/packs_demo/**`、`config/trusted-servers.json`），`TestPlatformInit.ensureInitialized` 与 `NekoJSPaths.INSTANCE` 的进程级 first-wins 语义使 per-class 唯一目录命名在当前测试树中**无效**（本票新增的 `uniqueGameDir` 调用因此是前向兼容的命名，不是隔离）。本票的验证口径据此固定为：**先清空 tmp game dir，再整轮跑**（`evidence/verification-commands.md` 的「验证环境」节记录了 A/B 证据）。该债与本票代码无关，已登记 owner。
+
+## 15. 合并期接缝统一（2026-09-17，票 16｜票 39 集成）
+
+**背景**：两张票在各自 worktree 内**独立发明了同一个候选域收集接缝**——票 39 的
+`core.modification.CandidateDomainCollector`（root 持有、`collect(Handle)`、Handle 带
+候选派发原语）与票 16 的 `script.CandidateDomainCollector`（`ScriptManager` 进程级静态
+注册表、`collectForCandidate(context, pending, attachPlan)`）。合并 master 时冲突暴露，
+必须在合流时统一为一个（保留两套 = 第二套 reload 接缝与进程级静态注册，违反票 05/10 的
+单 owner 与去静态化方向）。
+
+**统一结论**（commit 见 master 历史「refactor(reload): unify candidate domain collector seam」）：
+
+- **单接缝**：`com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector`（root 持有的
+  reload 阶段挂载点；接口无领域语义）。两个旧接口删除。
+- **Handle 保留票 39 的 root/候选语义，并补两个原语**：`listenersOf(bus)`（按总线取候选
+  挂起监听器，分发序稳定排序、keyed bus 显式拒绝）与 `execute(listener, event)`
+  （候选 Context 内执行，scriptId 切换 + 回调深度标记 + 异常上抛）；`dispatch(bus, event)`
+  降为接口默认方法（= listenersOf + execute 顺序执行）。本票的逐监听器 catch 策略
+  （collection error 毒化整批、Error 直抛、kill 上报）原样保留，改用
+  `listenersOf`/`execute` 表达。
+- **注册路径统一为 root**：`NekoJSMod`（NeoForge 装配，`//? if >=26` 守卫）与票 39 的
+  modification owner 同处 `root.registerDomainCollector(...)`；`DynamicRegistryFacade`
+  的 `bootstrap()` 与 `ScriptManager` 的进程级静态注册表删除。测试经
+  `ScriptManager` 构造器传入收集器（`FacadeTestHarness` 新增 extraCollectors 参数）。
+- **收集阶段/归因统一**：单一 `ReloadPhase.DOMAIN_PLAN` 阶段（在 STATE_PLAN 前），收集器
+  自身崩坏归因 `domain-collect:<domain>`（原票 16 的 `domain-plan-collection:<domain>` +
+  STATE_PLAN 归因作废）；本票领域数据失败仍由计划 preflight 在 STATE_PLAN 以精确 domain
+  （`dynamic-registry-conflict` 等）拒绝，不受影响。
+- **测试适配**：`collectorRegistryIsObservableAndSymmetric`（其对象 = 已删除的静态注册表）
+  替换为 `facadeCollectorParticipatesThroughTheConstructorSuppliedSeam`（收集器只经
+  root 装配/构造器接缝参与）；`collectorCrashIsAttributedToTheDomainCollectionPhase...`
+  的 phase/domain 断言改为 DOMAIN_PLAN / `domain-collect:test-domain`；
+  `domainParticipationIsServerOnlyAndSkippedWhenUnused` 的 CLIENT 半段改为「收集器不被
+  调用」（管线按声明 scriptType 在调用前过滤，强于原内部守卫）。

@@ -1,15 +1,11 @@
 package com.tkisor.nekojs.core.dynamic.facade;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.core.dynamic.plan.DynamicDefinitionType;
+import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
 import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
-import com.tkisor.nekojs.core.state.CandidateStatePlan;
-import com.tkisor.nekojs.script.CandidateDomainCollector;
-import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
-import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -152,28 +147,28 @@ class DynamicRegistryCandidateInertnessTest {
             }
 
             @Override
-            public void collectForCandidate(Context candidateContext,
-                    List<EventBusJS.PendingListener> candidatePending,
-                    Consumer<CandidateStatePlan> attachPlan) {
+            public ScriptType scriptType() {
+                return ScriptType.SERVER;
+            }
+
+            @Override
+            public void collect(Handle handle) {
                 throw new IllegalStateException("collector exploded");
             }
         };
-        ScriptManager.registerCandidateDomainCollector(exploding);
-        try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER)) {
+        try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.SERVER, List.of(exploding))) {
             harness.writeScript("main.js", "console.log('fail the candidate via collector crash')");
             harness.manager.discoverScripts();
             harness.manager.loadScripts();
             long generationBefore = harness.manager.generationId();
 
             NekoReloadException failure = assertThrows(NekoReloadException.class, harness.manager::reloadScripts);
-            assertEquals(ReloadPhase.STATE_PLAN, failure.report().phase(),
-                    "收集器崩坏发生在 STATE_PLAN 阶段（候选期）");
-            assertEquals("domain-plan-collection:test-domain", failure.report().domain(),
+            assertEquals(ReloadPhase.DOMAIN_PLAN, failure.report().phase(),
+                    "收集器崩坏发生在 DOMAIN_PLAN 阶段（候选期）");
+            assertEquals("domain-collect:test-domain", failure.report().domain(),
                     "收集器自身失败按域归因，不降级为静默空计划");
             assertEquals(generationBefore, harness.manager.generationId(), "候选失败不切换 active generation");
             assertTrue(harness.facade.store().isEmpty(), "失败候选零写入");
-        } finally {
-            ScriptManager.unregisterCandidateDomainCollector(exploding);
         }
     }
 
@@ -189,14 +184,16 @@ class DynamicRegistryCandidateInertnessTest {
             assertFalse(harness.facade.lastCandidateCollection().participated());
             assertTrue(harness.facade.store().isEmpty());
         }
-        // CLIENT：SERVER-only 域跳过，绝不因其它类型 reload 触碰账本
+        // CLIENT：SERVER-only 域绝不被调用（票 39/16 统一接缝后由 reload 管线按收集器声明的
+        // scriptType 在调用前过滤——连内部「跳过」记录都不会产生，比原内部守卫更强），
+        // 绝不因其它类型 reload 触碰账本
         try (FacadeTestHarness harness = new FacadeTestHarness(ScriptType.CLIENT)) {
             harness.writeScript("client.js", "console.log('client reload')");
             harness.manager.discoverScripts();
             harness.manager.loadScripts();
             harness.manager.reloadScripts();
-            assertEquals("skipped-non-server", harness.facade.lastCandidateCollection().note());
-            assertFalse(harness.facade.lastCandidateCollection().participated());
+            assertNull(harness.facade.lastCandidateCollection(),
+                    "非 SERVER 候选上收集器不被调用（管线按声明 scriptType 过滤）");
             assertTrue(harness.facade.store().isEmpty());
         }
     }

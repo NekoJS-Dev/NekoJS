@@ -107,7 +107,7 @@ class Ticket39BlockModificationScriptE2ETest {
         assertEquals(Set.of(7), lightValuesOf(Blocks.REDSTONE_LAMP));
 
         List<Set<Integer>> seenDuringCandidate = new ArrayList<>();
-        harness.root.registerDomainCollector(new com.tkisor.nekojs.core.modification.CandidateDomainCollector() {
+        harness.root.registerDomainCollector(new com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector() {
             @Override public String domain() { return "e2e-block-probe"; }
             @Override public ScriptType scriptType() { return ScriptType.SERVER; }
             @Override public void collect(Handle handle) {
