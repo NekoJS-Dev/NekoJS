@@ -341,6 +341,34 @@ public final class ScriptManager implements AutoCloseable {
         }
     }
 
+    // ---- 票 16：候选域事件收集 seam（W6/W7 事件化域的 inert 计划收集） ----
+
+    /**
+     * 进程级候选域收集器注册表（bootstrap 期由领域插件一次性注册；票 16 的动态注册
+     * facade 是第一个注册者）。reload 管线在 EVENT_PLAN 后、STATE_PLAN 前逐个调用，
+     * 收集器把候选监听器中的本域声明收成 {@code CandidateStatePlan} 挂入联合边界。
+     */
+    private static final List<CandidateDomainCollector> CANDIDATE_DOMAIN_COLLECTORS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /** 注册一个候选域收集器（幂等：同实例重复注册 no-op；bootstrap 期调用）。 */
+    public static synchronized void registerCandidateDomainCollector(CandidateDomainCollector collector) {
+        if (collector == null) throw new NullPointerException("collector");
+        if (!CANDIDATE_DOMAIN_COLLECTORS.contains(collector)) {
+            CANDIDATE_DOMAIN_COLLECTORS.add(collector);
+        }
+    }
+
+    /** 注销一个候选域收集器（测试隔离 / 域停用用；未注册实例 no-op）。 */
+    public static synchronized void unregisterCandidateDomainCollector(CandidateDomainCollector collector) {
+        if (collector == null) return;
+        CANDIDATE_DOMAIN_COLLECTORS.remove(collector);
+    }
+
+    /** 已注册收集器的防御性快照（诊断/测试用）。 */
+    public static List<CandidateDomainCollector> candidateDomainCollectors() {
+        return List.copyOf(CANDIDATE_DOMAIN_COLLECTORS);
+    }
+
     // ---- 票 07：回调标记、公开观察点与显式调度入口 ----
 
     /**
@@ -830,6 +858,25 @@ public final class ScriptManager implements AutoCloseable {
                         }
                     }
                     ReloadProgressTracker.step(scriptType.name, "candidate domain plans collected");
+
+                    // ---- Phase 域计划收集（票 16，W6/W7 事件化域）：已注册的候选域
+                    // 收集器把候选监听器中的本域声明（如动态注册的 typed Builder 定义）
+                    // 收成 inert 计划并挂入联合边界——STATE_PLAN 统一预检、commit 点联合
+                    // 发布、候选失败随整体丢弃。收集器自身崩溃（非领域数据失败）按
+                    // domain-plan-collection:<domain> 归因为候选失败；领域数据失败由
+                    // 计划 preflight 以精确 domain 拒绝（见 CandidateDomainCollector 契约）。
+                    if (!CANDIDATE_DOMAIN_COLLECTORS.isEmpty()) {
+                        for (CandidateDomainCollector collector : CANDIDATE_DOMAIN_COLLECTORS) {
+                            try {
+                                collector.collectForCandidate(candidateEnvironment.context(),
+                                        List.copyOf(this.pendingListeners),
+                                        candidateEnvironment.globals()::addPlan);
+                            } catch (Throwable t) {
+                                throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
+                                        "domain-plan-collection:" + collector.domain(), t);
+                            }
+                        }
+                    }
 
                     // ---- Phase STATE_PLAN：受管状态联合预检（票 10）----
                     // global 私有写集 + shared 写集 + 外部候选计划（CandidateStatePlan）联合
