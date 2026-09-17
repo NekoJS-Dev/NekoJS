@@ -9,7 +9,7 @@
 
 | 项 | 值 | 理由 |
 |---|---|---|
-| 事件组 | **`DynamicRegistryEvents`**（独立组） | spec 08 给的工作名是 `ServerEvents.dynamicRegistry`（原文标注「工作名，非最终 API」）。`ServerEvents` 住在 NeoForge 专属树、Fabric 侧另有一份同 FQCN 文件；把运行期 facade 挂进 ServerEvents 会把独立生命周期焊死在 loader 专属组上，common 层也无法承载/测试该面。独立组与启动期 `RegistryEvents`（同样独立组）对称表达「两个生命周期」 |
+| 事件组 | **`DynamicRegistryEvents`**（独立组） | spec 08 该条目的实际措辞是「Dynamic Registry 保留。它使用服务器运行期动态注册事件 facade，工作名为 `ServerEvents.dynamicRegistry`」（08:61），相邻条目写明「精确事件名、payload、Builder 方法全集和开放 registry 类型仍由后续 contract 冻结」（08:63）。`ServerEvents` 住在 NeoForge 专属树、Fabric 侧另有一份同 FQCN 文件；把运行期 facade 挂进 ServerEvents 会把独立生命周期焊死在 loader 专属组上，common 层也无法承载/测试该面。独立组与启动期 `RegistryEvents`（同样独立组）对称表达「两个生命周期」 |
 | 成员名 | **`dynamicRegistry`**（唯一总线，SERVER side） | 保持 spec 08 的工作成员名 |
 | 类型直达入口 | **`event.item(...)` / `event.soundEvent(...)` / `event.mobEffect(...)`** | 票面冻结的默认命名，未偏离 |
 | 进入义务 | contract/golden（`common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts`）、declaration（同一 golden + `DynamicRegistryDeclarationParityTest`）、迁移表（本文件） | 票面 AC2 要求，已随本票交付 |

@@ -62,9 +62,10 @@
 ## Closure record（2026-09-17）
 
 - 执行者：zcode-agent（接管未提交 worktree：认领基线 `230587cc`，接管时改动全部未提交、可编译）。实施/文档提交见 `git log --oneline 230587cc..HEAD`；合并与五节点全量 gate 归主会话。
-- 交付物：`common/.../core/dynamic/plan/`（DynamicCandidateRegistryPlan/DynamicDefinition/Builder 三件套/Adapter 请求/PlanStore，零可变 static、零 MC import）、`common/.../core/dynamic/facade/`（独立事件组 + payload + Runtime）、`CandidateDomainCollector`（reload 管线 seam）+ `ScriptManager`/`EventBusJS` 两处窄扩展、平台装配（`DynamicRegistryFacade`/`DynamicRegistryPlugin` 事件与声明贡献、`ServerEventListener` 初次候选触发）、9 个测试套件（43 用例，真实 GraalJS + 事务式 reload，另同域 12 用例为旧路径 prior art）、两份声明 golden、`REPORT.md`/`MIGRATION.md`/示例。
-- 接管后补齐的缺口：候选期收集可观察记录（AC1）、收集期 kill 上报对称（AC7）、`DynamicPlanInertnessTest` 结构性惰性证据（AC7）、`>=26` 守卫修复 1.21.1 编译断裂（§REPORT P1）、fingerprint 字段覆盖与未知类型拒绝用例（AC3/AC5）、示例 parity 场景（AC4/AC12）、contract/golden（AC2/AC9）。
-- 验证（真实运行，REPORT §9 + `evidence/verification-commands.md`）：`:common:check` + `:common-api-processor:test`（213 suites/1539 tests/0 fail/4 skip；processor 13/0）、`guardLint`（265 块/415 文件/0 豁免/0 警告）、`:26.1.2:build`（54 suites/271 tests/0 fail/36 skip）、`:1.21.1:build`（41 suites/188 tests/0 fail）。26.2.0 与两个 fabric 节点全量未跑（主会话合并门，未伪报）。
-- 遗留（REPORT §11）：AC11 维护者 sign-off（旧面零删除，消费者清单/迁移材料已备）；真机 smoke 与 probe 真机输出（G1/G2）；`$DynamicRegistryEventJS` 声明 import 观察（G3）；`setMode` 链式返回 any（G4）；配置门与 facade 关系待票 21（G7）；五节点全量（G5）。
+- 交付物：`common/.../core/dynamic/plan/`（DynamicCandidateRegistryPlan/DynamicDefinition/Builder 三件套/Adapter 请求/PlanStore，零 static 领域状态——仅反射契约 memo 缓存，零 MC import）、`common/.../core/dynamic/facade/`（独立事件组 + payload + Runtime）、`CandidateDomainCollector`（reload 管线 seam）+ `ScriptManager`/`EventBusJS` 两处窄扩展、平台装配（`DynamicRegistryFacade`/`DynamicRegistryPlugin` 事件与声明贡献、`ServerEventListener` 初次候选触发）、9 个测试套件（43 用例，真实 GraalJS + 事务式 reload，另同域 12 用例为旧路径 prior art）、两份声明 golden、`REPORT.md`/`MIGRATION.md`/示例。
+- 接管后补齐的缺口：候选期收集可观察记录（AC1）、收集器 catch/上报形态与生产分发对齐（AC7）、`DynamicPlanInertnessTest` 结构性惰性证据（AC7）、触发点 `>=26` 守卫（**因果更正**：1.21.1 的编译单元是 `versions/1.21.1/src` 孪生文件，共享文件不参与其编译，因此不存在即时编译断裂；守卫的作用是让孪生重提取时不会把 26.x 专属符号带进 1.21.1，见 REPORT §10 P1）、fingerprint 字段覆盖与未知类型拒绝用例（AC3/AC5）、示例 parity 场景（AC4/AC12）、contract/golden（AC2/AC9）。
+- 双轴审查整改（2026-09-17）：M1 守卫因果更正 + 孪生注释同步（含提取审计，REPORT §10 P1/G10）；M2 撤换失实引文为 spec 08:61/08:63 实际措辞；N1 `DynamicRegistryReloadPipelineTest` 改用唯一化 gameDir（REPORT §11 G9）；N2 数字勘误；N3 收集器 catch 对齐生产；N5 Python 参数下标修复；N6 本文档「零可变 static」措辞；N7 示例/ fixture 人工联动注释；M3 三条声明面偏窄登记且明示非 AC9 证据（G3/G4）。
+- 验证（真实运行，REPORT §9 + `evidence/verification-commands.md`）：整改后复跑 `:common:check` + `:common-api-processor:test`、`guardLint`、`:26.1.2:build :1.21.1:build` 全绿（数字见报告与 evidence）。26.2.0 与两个 fabric 节点全量未跑（主会话合并门，未伪报）。
+- 遗留（REPORT §11）：AC11 维护者 sign-off（旧面零删除，消费者清单/迁移材料已备）；真机 smoke 与 probe 真机输出（G1/G2）；`$DynamicRegistryEventJS` 声明 import、`fixedRange` null 抑制态、`setMode` 链式返回 any（G3/G4，均非 AC9 证据）；配置门与 facade 关系待票 21（G7）；共享/孪生对维护口径（G10）；五节点全量（G5）。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
