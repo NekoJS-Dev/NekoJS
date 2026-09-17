@@ -207,7 +207,7 @@ public final class ScriptManager implements AutoCloseable {
     public void discoverScripts() {
         List<ScriptContainer> discovered = discoverWithPacks();
         this.scripts = discovered;
-        scriptType.logger().info("发现了 {} 个 {} 脚本。", discovered.size(), scriptType.name());
+        scriptType.logger().info("发现了 {} 个 {} 脚本 — scripts discovered", discovered.size(), scriptType.name());
     }
 
     /**
@@ -307,7 +307,7 @@ public final class ScriptManager implements AutoCloseable {
 
     private boolean prepareScriptsForLoad(List<ScriptContainer> scriptsToLoad) {
         if (scriptsToLoad == null || scriptsToLoad.isEmpty()) {
-            scriptType.logger().info("没有需要加载的 {} 脚本。", scriptType.name());
+            scriptType.logger().info("没有需要加载的 {} 脚本 — no scripts to load", scriptType.name());
             return false;
         }
         for (var script : scriptsToLoad) {
@@ -317,7 +317,7 @@ public final class ScriptManager implements AutoCloseable {
         ScriptLoadOrderSorter.Result orderResult =
                 ScriptLoadOrderSorter.applyAfterOrder(scriptsToLoad, ScriptContainer::shouldRun);
         if (orderResult.hasProblems()) {
-            scriptType.logger().warn("{} 脚本 after 依赖排序存在问题：{}", scriptType.name(), orderResult.describe());
+            scriptType.logger().warn("[NEKO-1004] {} 脚本 after 依赖排序存在问题：{} — problem in after dependency order", scriptType.name(), orderResult.describe());
         }
         return true;
     }
@@ -330,7 +330,7 @@ public final class ScriptManager implements AutoCloseable {
     private void reportPreloadFailure(ScriptContainer script) {
         if (script.disabled && script.lastError != null) {
             errorTracker.record(script, script.lastError);
-            scriptType.logger().error("无法读取脚本 {}，已跳过：{}", script.path, script.lastError.toString());
+            scriptType.logger().error("[NEKO-1005] 无法读取脚本 {}，已跳过：{} — script unreadable, skipped", script.path, script.lastError.toString());
         }
     }
 
@@ -340,13 +340,13 @@ public final class ScriptManager implements AutoCloseable {
             ReloadProgressTracker.begin(scriptType.name, scriptType == ScriptType.STARTUP ? 3 : 5);
             boolean progressSuccess = false;
             try {
-                scriptType.logger().info("正在重载 {} 脚本...", scriptType.name());
+                scriptType.logger().info("正在重载 {} 脚本... — reloading scripts", scriptType.name());
                 if (scriptType == ScriptType.STARTUP) {
                     if (!warnedStartupReloadNonTransactional) {
                         warnedStartupReloadNonTransactional = true;
                         scriptType.logger().warn(
-                                "{} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；"
-                                        + "若重载期间脚本出错，已注册内容不会回退。",
+                                "[NEKO-1006] {} 脚本重载为非事务式语义（STARTUP 涉及物品/方块/实体等不可逆注册，无法安全回滚）；"
+                                        + "若重载期间脚本出错，已注册内容不会回退 — startup reload is not transactional",
                                 scriptType.name());
                     }
                     // STARTUP 涉及不可逆注册（物品、方块、实体），无法安全回滚，保持 reset+load 语义。
@@ -360,7 +360,7 @@ public final class ScriptManager implements AutoCloseable {
                     reloadScriptsTransactional();
                 }
                 progressSuccess = true;
-                scriptType.logger().info("{} 脚本重载完毕。", scriptType.name());
+                scriptType.logger().info("{} 脚本重载完毕 — script reload finished", scriptType.name());
             } finally {
                 ReloadProgressTracker.finish(scriptType.name, progressSuccess);
             }
@@ -393,7 +393,7 @@ public final class ScriptManager implements AutoCloseable {
             try {
                 candidate = environmentFactory.create(scriptType);
             } catch (Throwable t) {
-                scriptType.logger().error("{} 候选环境创建失败，保留旧 Context（listener/binding 已清，需再次 reload 恢复）", scriptType.name(), t);
+                scriptType.logger().error("[NEKO-1007] {} 候选环境创建失败，保留旧 Context（listener/binding 已清，需再次 reload 恢复） — candidate context creation failed", scriptType.name(), t);
                 throw new RuntimeException(scriptType.name()
                         + " reload failed; previous scripts retained but event listeners/bindings were cleared"
                         + " — run /neko reload again to restore listeners", t);
@@ -416,7 +416,7 @@ public final class ScriptManager implements AutoCloseable {
 
             try {
                 List<ScriptContainer> candidateScripts = discoverWithPacks();
-                scriptType.logger().info("发现了 {} 个 {} 脚本。", candidateScripts.size(), scriptType.name());
+                scriptType.logger().info("发现了 {} 个 {} 脚本 — scripts discovered", candidateScripts.size(), scriptType.name());
                 ReloadProgressTracker.step(scriptType.name, "discovered " + candidateScripts.size() + " scripts");
 
                 // 候选加载期间只关心「候选 Context 是否被杀」：先清掉旧标记，加载结束后若标记
@@ -452,7 +452,7 @@ public final class ScriptManager implements AutoCloseable {
                 this.contextKilled = previousKilled;
                 scriptEventBridge.clearListeners(scriptType);
                 closeRuntimeResources(candidateEnvironment);
-                scriptType.logger().error("{} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复",
+                scriptType.logger().error("[NEKO-1008] {} 脚本事务重载失败，已保留旧 Context；listener/binding 状态需再次 reload 恢复 — transactional script reload failed",
                         scriptType.name(), t);
                 // Note: listeners and bindings were cleared before the candidate build (they live
                 // on the shared ScriptType bus, so they MUST be cleared before re-loading to avoid
@@ -482,7 +482,7 @@ public final class ScriptManager implements AutoCloseable {
                     throw new IOException("No loaded STARTUP entry matches " + displayScriptPath(target)
                             + ". Reload the whole STARTUP environment first if this file has not been loaded yet.");
                 }
-                scriptType.logger().info("正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载。", displayScriptPath(target));
+                scriptType.logger().info("正在重载 STARTUP 脚本文件 {}：STARTUP 注册不可逆，退化为完整 STARTUP 重载 — startup file reload falls back to full reload", displayScriptPath(target));
                 reloadScripts();
                 List<ScriptContainer> reloadedMatches = scripts.stream()
                         .filter(script -> script.path.normalize().toAbsolutePath().equals(target))
@@ -494,7 +494,7 @@ public final class ScriptManager implements AutoCloseable {
             if (targets.isEmpty()) {
                 throw new IOException("No loaded entry depends on " + displayScriptPath(target) + ". Reload the whole " + scriptType.name() + " environment first if this dependency has not been loaded yet.");
             }
-            scriptType.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", scriptType.name(), displayScriptPath(target), targets.size());
+            scriptType.logger().info("正在重载 {} 脚本文件 {}，受影响入口 {} 个... — reloading one script file", scriptType.name(), displayScriptPath(target), targets.size());
 
             NekoModulePipelineCache.invalidate(target);
             Context ctx = getOrCreateContext();
@@ -529,7 +529,7 @@ public final class ScriptManager implements AutoCloseable {
                 }
             }
 
-            scriptType.logger().info("{} 脚本文件 {} 重载完毕。", scriptType.name(), displayScriptPath(target));
+            scriptType.logger().info("{} 脚本文件 {} 重载完毕 — script file reload finished", scriptType.name(), displayScriptPath(target));
             return targets;
         }
 
@@ -640,13 +640,13 @@ public final class ScriptManager implements AutoCloseable {
             if (scriptType != ScriptType.TEST) {
                 throw new IllegalStateException("runTestScripts() can only be called on TEST ScriptManager");
             }
-            scriptType.logger().info("正在运行 TEST 脚本...");
+            scriptType.logger().info("正在运行 TEST 脚本... — running test scripts");
 
             // TEST 也走事务式 reload：失败时保留上一个 TEST Context，而不是销毁后再尝试加载。
             reloadScriptsTransactional();
             flushTestTimers();
 
-            scriptType.logger().info("TEST 脚本运行完毕。");
+            scriptType.logger().info("TEST 脚本运行完毕 — test scripts finished");
         }
 
         private void flushTestTimers () {
@@ -694,7 +694,7 @@ public final class ScriptManager implements AutoCloseable {
                 try {
                     oldRuntime.close();
                 } catch (Exception e) {
-                    scriptType.logger().warn("关闭旧 Node runtime 时发生异常", e);
+                    scriptType.logger().warn("[NEKO-1009] 关闭旧 Node runtime 时发生异常 — error closing old Node runtime", e);
                 }
             }
             if (oldContext != null) {
@@ -708,7 +708,7 @@ public final class ScriptManager implements AutoCloseable {
                         oldContext.close();
                     }
                 } catch (Exception e) {
-                    scriptType.logger().warn("关闭旧上下文时发生异常", e);
+                    scriptType.logger().warn("[NEKO-1010] 关闭旧上下文时发生异常 — error closing old context", e);
                 }
             }
             // Graal 关闭 Context 时只 detach out/err 流、不 flush 也不 close，脚本末尾未以

@@ -38,7 +38,7 @@ public class CapabilityRegistryEventJS {
     public void registerBlockEntity(String blockEntityTypeId, String capability, Supplier<Object> provider) {
         Identifier location = ParseIds.parseItemOrBlockId(blockEntityTypeId);
         BlockEntityType<?> type = BuiltInRegistries.BLOCK_ENTITY_TYPE.getOptional(location)
-                .orElseThrow(() -> new IllegalArgumentException("未知方块实体类型: " + blockEntityTypeId));
+                .orElseThrow(() -> new IllegalArgumentException("[NEKO-4006] 未知方块实体类型 — unknown block entity type: " + blockEntityTypeId));
         pending.add(new PendingRegistration(type, capability.toLowerCase(Locale.ROOT), provider));
     }
 
@@ -59,7 +59,7 @@ public class CapabilityRegistryEventJS {
                         (BlockCapability) Capabilities.Fluid.BLOCK,
                         (BlockEntityType) registration.type,
                         (blockEntity, direction) -> (ResourceHandler<FluidResource>) registration.provider.get());
-                default -> throw new IllegalArgumentException("未知 capability（支持 item/energy/fluid）: " + registration.capability);
+                default -> throw new IllegalArgumentException("[NEKO-4007] 未知 capability（支持 item/energy/fluid） — unknown capability: " + registration.capability);
             }
         }
     }
