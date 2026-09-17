@@ -57,7 +57,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
      * 临界区。root close 时对 AutoCloseable 收集器逐一 close（基线恢复等清理——独立测试
      * root 不互相污染，AC5）。
      */
-    private final java.util.List<com.tkisor.nekojs.core.modification.CandidateDomainCollector> domainCollectors =
+    private final java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors =
             new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public NekoRuntimeRoot(
@@ -86,7 +86,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
      * Item/Block modification 的基线），由 root 按生命周期归类持有——不是新的 runtime
      * owner，也不新增公开 Modification Runtime。重复注册同一收集器被拒绝。
      */
-    public void registerDomainCollector(com.tkisor.nekojs.core.modification.CandidateDomainCollector collector) {
+    public void registerDomainCollector(com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector) {
         if (collector == null) throw new NullPointerException("collector");
         if (domainCollectors.contains(collector)) {
             throw new IllegalStateException("domain collector '" + collector.domain() + "' already registered");
@@ -95,12 +95,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     /** 已注册的候选域收集器（只读视图；诊断/测试观察 seam）。 */
-    public java.util.List<com.tkisor.nekojs.core.modification.CandidateDomainCollector> domainCollectors() {
+    public java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors() {
         return java.util.List.copyOf(domainCollectors);
     }
 
     /** 按 domain 标识查找收集器（平台侧收口入口：server 启动收集等；不存在返回 null）。 */
-    public com.tkisor.nekojs.core.modification.CandidateDomainCollector domainCollector(String domain) {
+    public com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector domainCollector(String domain) {
         for (var collector : domainCollectors) {
             if (collector.domain().equals(domain)) return collector;
         }
@@ -211,7 +211,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
         // 票 39：root 拥有的候选域收集器逐一关闭（Item/Block modification 基线恢复等
         // 领域清理）——独立测试 root 各自从干净基线开始，不互相污染（AC5）。
-        for (com.tkisor.nekojs.core.modification.CandidateDomainCollector collector : domainCollectors) {
+        for (com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector : domainCollectors) {
             if (!(collector instanceof AutoCloseable closeable)) continue;
             try {
                 closeable.close();

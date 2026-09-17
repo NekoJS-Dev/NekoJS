@@ -2,6 +2,7 @@ package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
@@ -128,7 +129,7 @@ public final class ScriptManager implements AutoCloseable {
     private final ScriptExecutor scriptExecutor;
     private final ScriptEnvironmentFactory environmentFactory;
     /** root 拥有的候选域收集器（票 39 DOMAIN_PLAN 阶段消费；按引用与 root 共享）。 */
-    private final List<com.tkisor.nekojs.core.modification.CandidateDomainCollector> domainCollectors;
+    private final List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors;
 
     /**
      * 本实例管理的脚本类型
@@ -222,11 +223,11 @@ public final class ScriptManager implements AutoCloseable {
     /**
      * 票 39：带候选域收集器集合的构造形态——{@code NekoRuntimeRoot.createScriptManager}
      * 传入 root 拥有的收集器注册表（reload 的 DOMAIN_PLAN 阶段消费；见
-     * {@link com.tkisor.nekojs.core.modification.CandidateDomainCollector}）。
+     * {@link com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector}）。
      * 收集器按引用共享（root 注册晚于 manager 创建也可见），读取只发生在 reload
      * 的 owner thread 临界区内。
      */
-    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory, List<com.tkisor.nekojs.core.modification.CandidateDomainCollector> domainCollectors) {
+    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory, List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors) {
         this.scriptType = scriptType;
         this.scriptEventBridge = scriptEventBridge;
         this.pluginRuntime = pluginRuntime;
@@ -284,16 +285,15 @@ public final class ScriptManager implements AutoCloseable {
         return true;
     }
 
-    // ---- 票 39：候选收集把手（DOMAIN_PLAN 阶段构造，生命周期只在 collect 调用内） ----
+    // ---- 候选收集把手（DOMAIN_PLAN 阶段构造，生命周期只在 collect 调用内） ----
 
     /**
-     * {@link com.tkisor.nekojs.core.modification.CandidateDomainCollector.Handle} 的实现：
-     * 收集派发只读本候选 {@link #pendingListeners} 中属于目标总线的子集（commit 前不上
-     * 生产总线），按与 {@code EventBusBase} 编译快照相同的顺序（priority 降序、同优先级
-     * 保持注册序）稳定派发；监听器回调异常按收集语义向上传播（候选失败或记入领域计划）。
+     * {@link CandidateDomainCollector.Handle} 的实现：收集派发只读本候选
+     * {@link #pendingListeners} 中属于目标总线的子集（commit 前不上生产总线），按与
+     * {@code EventBusBase} 编译快照相同的顺序（priority 降序、同优先级保持注册序）稳定
+     * 排序；监听器回调异常按收集语义向上传播（候选失败或由收集器自行处置）。
      */
-    private final class CandidateCollectionHandleImpl
-            implements com.tkisor.nekojs.core.modification.CandidateDomainCollector.Handle {
+    private final class CandidateCollectionHandleImpl implements CandidateDomainCollector.Handle {
 
         private final Context candidate;
 
@@ -312,10 +312,11 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         @Override
-        public void dispatch(com.tkisor.nekojs.api.event.EventBusJS<?, ?> bus, Object event) {
+        public List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> listenersOf(
+                com.tkisor.nekojs.api.event.EventBusJS<?, ?> bus) {
             if (bus.canDispatch()) {
                 // 按 key 定向分发的总线需要 key 才能判定投递子集；收集派发没有 key 上下文，
-                // 显式拒绝而不是「忽略 key 全量派发」静默降级（见 Handle#dispatch 契约）。
+                // 显式拒绝而不是「忽略 key 全量派发」静默降级（见 Handle#listenersOf 契约）。
                 throw new UnsupportedOperationException(
                         "domain collection dispatch does not support key-dispatched buses: " + bus);
             }
@@ -327,9 +328,12 @@ public final class ScriptManager implements AutoCloseable {
             }
             // priority 降序（HIGHEST=Byte.MAX_VALUE 在前）；List.sort 稳定 → 同优先级保持注册序
             ofBus.sort((a, b) -> -Byte.compare(a.priority(), b.priority()));
-            for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : ofBus) {
-                pending.executeForCollection(event);
-            }
+            return List.copyOf(ofBus);
+        }
+
+        @Override
+        public void execute(com.tkisor.nekojs.api.event.EventBusJS.PendingListener listener, Object event) {
+            listener.executeForCollection(event);
         }
 
         @Override
@@ -339,34 +343,6 @@ public final class ScriptManager implements AutoCloseable {
                         + ": source context is not the candidate being built");
             }
         }
-    }
-
-    // ---- 票 16：候选域事件收集 seam（W6/W7 事件化域的 inert 计划收集） ----
-
-    /**
-     * 进程级候选域收集器注册表（bootstrap 期由领域插件一次性注册；票 16 的动态注册
-     * facade 是第一个注册者）。reload 管线在 EVENT_PLAN 后、STATE_PLAN 前逐个调用，
-     * 收集器把候选监听器中的本域声明收成 {@code CandidateStatePlan} 挂入联合边界。
-     */
-    private static final List<CandidateDomainCollector> CANDIDATE_DOMAIN_COLLECTORS = new java.util.concurrent.CopyOnWriteArrayList<>();
-
-    /** 注册一个候选域收集器（幂等：同实例重复注册 no-op；bootstrap 期调用）。 */
-    public static synchronized void registerCandidateDomainCollector(CandidateDomainCollector collector) {
-        if (collector == null) throw new NullPointerException("collector");
-        if (!CANDIDATE_DOMAIN_COLLECTORS.contains(collector)) {
-            CANDIDATE_DOMAIN_COLLECTORS.add(collector);
-        }
-    }
-
-    /** 注销一个候选域收集器（测试隔离 / 域停用用；未注册实例 no-op）。 */
-    public static synchronized void unregisterCandidateDomainCollector(CandidateDomainCollector collector) {
-        if (collector == null) return;
-        CANDIDATE_DOMAIN_COLLECTORS.remove(collector);
-    }
-
-    /** 已注册收集器的防御性快照（诊断/测试用）。 */
-    public static List<CandidateDomainCollector> candidateDomainCollectors() {
-        return List.copyOf(CANDIDATE_DOMAIN_COLLECTORS);
     }
 
     // ---- 票 07：回调标记、公开观察点与显式调度入口 ----
@@ -844,7 +820,7 @@ public final class ScriptManager implements AutoCloseable {
                     // STATE_PLAN 联合预检、commit 点联合发布（AC9：联合成功或失败，不半提交）。
                     // 收集器自身异常与监听器回调异常在此冒泡 → 候选失败，保留旧 active
                     //（AC4）；收集顺序 = 收集器注册序。
-                    for (com.tkisor.nekojs.core.modification.CandidateDomainCollector collector : List.copyOf(domainCollectors)) {
+                    for (com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector collector : List.copyOf(domainCollectors)) {
                         if (collector.scriptType() != scriptType) continue;
                         try {
                             collector.collect(new CandidateCollectionHandleImpl(candidateEnvironment.context()));
@@ -858,25 +834,6 @@ public final class ScriptManager implements AutoCloseable {
                         }
                     }
                     ReloadProgressTracker.step(scriptType.name, "candidate domain plans collected");
-
-                    // ---- Phase 域计划收集（票 16，W6/W7 事件化域）：已注册的候选域
-                    // 收集器把候选监听器中的本域声明（如动态注册的 typed Builder 定义）
-                    // 收成 inert 计划并挂入联合边界——STATE_PLAN 统一预检、commit 点联合
-                    // 发布、候选失败随整体丢弃。收集器自身崩溃（非领域数据失败）按
-                    // domain-plan-collection:<domain> 归因为候选失败；领域数据失败由
-                    // 计划 preflight 以精确 domain 拒绝（见 CandidateDomainCollector 契约）。
-                    if (!CANDIDATE_DOMAIN_COLLECTORS.isEmpty()) {
-                        for (CandidateDomainCollector collector : CANDIDATE_DOMAIN_COLLECTORS) {
-                            try {
-                                collector.collectForCandidate(candidateEnvironment.context(),
-                                        List.copyOf(this.pendingListeners),
-                                        candidateEnvironment.globals()::addPlan);
-                            } catch (Throwable t) {
-                                throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
-                                        "domain-plan-collection:" + collector.domain(), t);
-                            }
-                        }
-                    }
 
                     // ---- Phase STATE_PLAN：受管状态联合预检（票 10）----
                     // global 私有写集 + shared 写集 + 外部候选计划（CandidateStatePlan）联合

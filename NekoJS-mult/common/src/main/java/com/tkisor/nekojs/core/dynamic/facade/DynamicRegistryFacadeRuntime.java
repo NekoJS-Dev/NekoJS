@@ -6,12 +6,11 @@ import com.tkisor.nekojs.core.dynamic.plan.DynamicCandidateRegistryPlan;
 import com.tkisor.nekojs.core.dynamic.plan.DynamicRegistryPlanStore;
 import com.tkisor.nekojs.core.state.CandidateStatePlan;
 import com.tkisor.nekojs.core.state.GlobalStateException;
-import com.tkisor.nekojs.script.CandidateDomainCollector;
+import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.ScriptManager;
 import graal.graalvm.polyglot.Context;
 
-import java.util.function.Consumer;
 import java.util.List;
 
 /**
@@ -145,48 +144,40 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
         return DynamicCandidateRegistryPlan.DOMAIN;
     }
 
+    /** SERVER-only 域：收集器只参与 SERVER 候选（CLIENT/STARTUP/TEST 不触碰账本）。 */
+    @Override
+    public ScriptType scriptType() {
+        return ScriptType.SERVER;
+    }
+
     /**
      * 候选期收集（SERVER 域限定）：对候选挂起监听器中属于
      * {@link DynamicRegistryEvents#DYNAMIC_REGISTRY} 的回调逐个执行（同 owner thread，
-     * 切换 currentScriptId、标记回调深度、catch/上报形态——都与生产分发闭包同款）；单监听器
-     * 异常记为 collection error（毒化整批）后继续其余监听器（EventBus 语义），整批在
-     * STATE_PLAN 以精确 domain 拒绝。Error 按分发同款语义直抛（由 reload 管线按收集器
-     * 崩溃归因），中断标志恢复。
+     * 经 {@link Handle#execute} 的 scriptId 切换/回调深度标记/异常上抛——与生产分发同款）；
+     * 单监听器异常记为 collection error（毒化整批）后继续其余监听器（EventBus 语义），
+     * 整批在 STATE_PLAN 以精确 domain 拒绝。Error 按分发同款语义直抛（由 reload 管线按
+     * 收集器崩溃以 {@code domain-collect:<domain>} 归因），中断标志恢复。
      *
      * <p>空候选：候选没有任何本域监听器时，仅当账本已有 exposed 定义才挂入空计划
      * （把不再声明的项标记 stale/retired）；账本为空时跳过——未使用本域的 reload 零参与。
      */
     @Override
-    public void collectForCandidate(
-            Context candidateContext,
-            List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> candidatePending,
-            Consumer<CandidateStatePlan> attachPlan) {
-        if (ScriptContextRegistry.scriptTypeOf(candidateContext) != ScriptType.SERVER) {
+    public void collect(Handle handle) {
+        if (handle.scriptType() != ScriptType.SERVER) {
             lastCandidateCollection = CandidateCollectionRecord.skipped("skipped-non-server");
-            return; // SERVER-only 域：CLIENT/STARTUP/TEST 候选不参与，绝不因其它类型 reload 触碰账本
+            return; // SERVER-only 域：绝不因其它类型 reload 触碰账本
         }
-        boolean anyDomainListeners = false;
-        for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : candidatePending) {
-            if (pending.ownerBus() == DynamicRegistryEvents.DYNAMIC_REGISTRY) {
-                anyDomainListeners = true;
-                break;
-            }
-        }
-        if (!anyDomainListeners && store.isEmpty()) {
+        List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> ofBus =
+                handle.listenersOf(DynamicRegistryEvents.DYNAMIC_REGISTRY);
+        if (ofBus.isEmpty() && store.isEmpty()) {
             lastCandidateCollection = CandidateCollectionRecord.skipped("skipped-unused-domain");
             return; // 本域从未被使用且候选未声明：不挂空计划
         }
         DynamicCandidateRegistryPlan plan = store.beginBatch();
         DynamicRegistryEventJS payload = new DynamicRegistryEventJS(plan);
-        for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : candidatePending) {
-            if (pending.ownerBus() != DynamicRegistryEvents.DYNAMIC_REGISTRY) {
-                continue;
-            }
-            String previousScriptId =
-                    ScriptContextRegistry.switchCurrentScriptId(candidateContext, pending.scriptId());
-            ScriptManager.noteCallbackEnter();
+        for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : ofBus) {
             try {
-                pending.listenerValue().execute(payload);
+                handle.execute(pending, payload);
             } catch (Throwable e) {
                 // catch 形态与生产分发闭包同款（EventBusJS.register* 的 catch(Throwable)）：
                 // 中断标志恢复、Error 直抛给上层（reload 管线按收集器崩溃归因）、其余
@@ -199,16 +190,13 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
                 if (e instanceof Error error) {
                     throw error;
                 }
-                ScriptManager.reportContextKilled(candidateContext, e);
+                ScriptManager.reportContextKilled(handle.candidateContext(), e);
                 plan.noteCollectionError(pending.scriptId(), e);
                 NekoJS.LOGGER.error("DynamicRegistry candidate collection failed in script '{}': {}",
                         pending.scriptId(), e.getMessage());
-            } finally {
-                ScriptManager.noteCallbackExit();
-                ScriptContextRegistry.restoreCurrentScriptId(candidateContext, previousScriptId);
             }
         }
         lastCandidateCollection = CandidateCollectionRecord.collected(plan);
-        attachPlan.accept(plan);
+        handle.registerPlan(plan);
     }
 }

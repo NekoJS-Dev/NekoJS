@@ -49,6 +49,15 @@ final class FacadeTestHarness implements AutoCloseable {
     final ScriptType scriptType;
 
     FacadeTestHarness(ScriptType scriptType) {
+        this(scriptType, java.util.List.of());
+    }
+
+    /**
+     * @param extraCollectors 与 facade 并列挂进 manager 的额外候选域收集器
+     *                        （收集器崩坏归因类用例注入替身；生产由 root 装配注入）
+     */
+    FacadeTestHarness(ScriptType scriptType,
+            java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> extraCollectors) {
         // 与 ScriptReloadGenerationTest 相同的测试沙盒形状
         SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5,
                 100_000L, 0);
@@ -61,9 +70,13 @@ final class FacadeTestHarness implements AutoCloseable {
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
         ScriptEnvironmentFactory environmentFactory =
                 new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory, new GlobalStateStores());
+        java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> collectors =
+                new java.util.ArrayList<>();
+        collectors.add(facade);
+        collectors.addAll(extraCollectors);
+        // 收集器经构造器（root 装配路径）注入：票 39/16 统一接缝后不再有进程级静态注册表
         this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                newPropertyRegistry(), tracker, paths, config, environmentFactory);
-        ScriptManager.registerCandidateDomainCollector(facade);
+                newPropertyRegistry(), tracker, paths, config, environmentFactory, collectors);
     }
 
     void writeScript(String fileName, String source) throws Exception {
@@ -77,7 +90,6 @@ final class FacadeTestHarness implements AutoCloseable {
 
     @Override
     public void close() {
-        ScriptManager.unregisterCandidateDomainCollector(facade);
         manager.close();
         engine.close();
     }
