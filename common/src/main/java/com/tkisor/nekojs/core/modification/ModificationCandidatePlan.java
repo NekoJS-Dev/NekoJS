@@ -76,8 +76,16 @@ public final class ModificationCandidatePlan implements CandidateStatePlan {
      * 同一规范化后必须产生相同指纹；用于等价跳过与 parity 断言，不是持久化格式。
      */
     public synchronized String fingerprint() {
+        return fingerprintOf(applier.adapterId(), declarations, collectionFailure);
+    }
+
+    /**
+     * 指纹的静态形态（Adapter 侧等价跳过与诊断用）：同一算法对任意声明序列求值。
+     */
+    public static String fingerprintOf(String adapterId, List<ModificationDeclaration> declarations,
+            String collectionFailure) {
         StringBuilder sb = new StringBuilder("modification-plan[v1]:");
-        sb.append(applier.adapterId()).append(';');
+        sb.append(adapterId).append(';');
         for (ModificationDeclaration declaration : declarations) {
             sb.append(declaration.kind()).append('|').append(declaration.targetId()).append('|');
             // 单声明内属性按名排序：同一声明的写入顺序不改变语义（同属性后写覆盖）

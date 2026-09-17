@@ -4,22 +4,21 @@ package com.tkisor.nekojs.wrapper.event.server;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
-import net.minecraft.core.component.DataComponentMap;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.item.Rarity;
-import net.minecraft.world.item.component.DamageResistant;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Mutable property view handed to {@code ItemEvents.modification} callbacks.
+ * Mutable property view handed to {@code ItemEvents.modification} callbacks
+ * (ticket 39 起：纯声明缓冲——candidate 收集期只记录规范化属性，live Item/默认组件
+ * 由 commit 点的平台 Adapter 应用，见 {@code ModificationDomainOwner})。
  *
- * <h2>JS API</h2>
+ * <h2>JS API（setter 与 property 写入经 {@link ModificationViewSurface} 同一 setter）</h2>
  * <pre>
  * ItemEvents.modification(event {@code ->} {
  *   event.modify('minecraft:diamond', item {@code ->} {
- *     item.maxStackSize = 16;
+ *     item.maxStackSize = 16;          // 与 item.setMaxStackSize(16) 等价（同一 setter/校验/规范化）
  *     item.rarity = 'epic';
  *     item.fireResistant = true;
  *   });
@@ -34,17 +33,12 @@ import net.minecraft.world.item.component.DamageResistant;
  * });
  * </pre>
  *
- * <p>Unset properties keep the item's current (pre-modification) values. Writing
- * a property applies it to the item's default {@link DataComponentMap} when the
- * enclosing event finishes, so all stacks of that item pick up the change.
- * Properties that accept {@code null} (food, tool) remove the corresponding
- * component instead. The food/tool/attribute mappings live in
- * {@link ItemModificationComponents}.
+ * <p>Unset properties keep the item's baseline values. Writing a property records it
+ * in the declaration ({@link #normalizedProperties()}); properties that accept
+ * {@code null} (food, tool) request removal of the corresponding component.
+ * The food/tool/attribute mappings live in {@link ItemModificationComponents}.
  */
 public class ItemModificationJS {
-
-    /** 26.x 组件上限：{@link net.minecraft.world.item.Item#ABSOLUTE_MAX_STACK_SIZE}。 */
-    private static final int MAX_STACK_SIZE_LIMIT = 99;
 
     private Integer maxStackSize;
     private Integer maxDamage;
@@ -186,64 +180,36 @@ public class ItemModificationJS {
     }
 
     @Doc("Replaces the item's base attack speed modifier (minecraft:base_attack_speed, ADD_VALUE on mainhand), keeping every other attribute entry - including attack damage.")
-    @Doc("The value is a bonus on top of the player's base attack speed (4.0 on 26.x): a sword uses -2.4 for a total of 1.6.")
+    @Doc("The value is a bonus on top of the player's base attack speed (4.0 on 26.x): a sword uses -2.4 for sword-like speed.")
     @Param(name = "speed", value = "New base attack speed bonus, e.g. -2.4 for sword-like speed.")
     public void setAttackSpeed(double speed) {
         this.attackSpeed = speed;
     }
 
     /**
-     * Writes the requested properties into {@code builder} (seeded with the item's
-     * pristine components), validating the durability/stacking invariant first.
+     * 本视图的规范化声明值（ticket 39 候选计划载体）：只含被显式设置的属性；
+     * {@code food}/{@code tool} 的值为规范化 Map，{@code null} 表示移除请求。
+     * 组件不变量（stack/damage）与目标解析由 Adapter 在联合预检（STATE_PLAN）完成。
      */
-    void applyTo(DataComponentMap.Builder builder, DataComponentMap base, MinecraftServer server) {
-        validate(base);
-        if (maxStackSize != null) {
-            builder.set(DataComponents.MAX_STACK_SIZE, maxStackSize);
-        }
-        if (maxDamage != null) {
-            builder.set(DataComponents.MAX_DAMAGE, maxDamage);
-        }
-        if (rarity != null) {
-            builder.set(DataComponents.RARITY, rarity);
-        }
-        if (fireResistant != null) {
-            builder.set(DataComponents.DAMAGE_RESISTANT, fireResistant ? createFireResistance(server) : null);
-        }
+    Map<String, Object> normalizedProperties() {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        if (maxStackSize != null) properties.put("maxStackSize", maxStackSize);
+        if (maxDamage != null) properties.put("maxDamage", maxDamage);
+        if (rarity != null) properties.put("rarity", rarity.getSerializedName());
+        if (fireResistant != null) properties.put("fireResistant", fireResistant);
         if (food != null) {
-            ItemModificationComponents.applyFood(builder, base, food);
+            properties.put("food", food.toNormalized());
         } else if (removeFood) {
-            ItemModificationComponents.removeFood(builder, base);
+            properties.put("food", null);
         }
         if (tool != null) {
-            ItemModificationComponents.applyTool(builder, tool);
+            properties.put("tool", tool.toNormalized());
         } else if (removeTool) {
-            builder.set(DataComponents.TOOL, null);
+            properties.put("tool", null);
         }
-        if (attackDamage != null || attackSpeed != null) {
-            ItemModificationComponents.applyAttributes(builder, base, attackDamage, attackSpeed);
-        }
-    }
-
-    /**
-     * 校验组件不变量：stack size 1..99、maxDamage {@code >= 0}，
-     * 且 maxStackSize{@code >1} 与 maxDamage{@code >0} 不可并存（可堆叠物品不可损耗）。
-     * 未显式设置的字段按物品原始组件取默认值参与判断。
-     */
-    private void validate(DataComponentMap base) {
-        if (maxStackSize != null && (maxStackSize < 1 || maxStackSize > MAX_STACK_SIZE_LIMIT)) {
-            throw new IllegalArgumentException("Invalid maxStackSize " + maxStackSize + ": must be between 1 and " + MAX_STACK_SIZE_LIMIT);
-        }
-        if (maxDamage != null && maxDamage < 0) {
-            throw new IllegalArgumentException("Invalid maxDamage " + maxDamage + ": must be >= 0");
-        }
-        int effectiveStack = maxStackSize != null ? maxStackSize : base.getOrDefault(DataComponents.MAX_STACK_SIZE, 1);
-        int effectiveDamage = maxDamage != null ? maxDamage : base.getOrDefault(DataComponents.MAX_DAMAGE, 0);
-        if (effectiveStack > 1 && effectiveDamage > 0) {
-            throw new IllegalArgumentException(
-                "Cannot combine maxStackSize=" + effectiveStack + " with maxDamage=" + effectiveDamage
-                + ": stackable items cannot be damageable (set maxStackSize = 1)");
-        }
+        if (attackDamage != null) properties.put("attackDamage", attackDamage);
+        if (attackSpeed != null) properties.put("attackSpeed", attackSpeed);
+        return properties;
     }
 
     private static Rarity parseRarity(String name) {
@@ -254,16 +220,6 @@ public class ItemModificationJS {
             case "epic" -> Rarity.EPIC;
             default -> throw new IllegalArgumentException("Unknown rarity '" + name + "': expected one of common, uncommon, rare, epic");
         };
-    }
-
-    /**
-     * 26.x 走 DAMAGE_RESISTANT 组件（指向 IS_FIRE damage type tag），需要 registry access。
-     * 与 vanilla {@code Item.Properties#fireResistant()} 同构：从 damage type registry
-     * 解析 IS_FIRE tag 的实际条目（比空命名 HolderSet 更接近原版行为）。
-     */
-    private static DamageResistant createFireResistance(MinecraftServer server) {
-        return new DamageResistant(
-            server.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypeTags.IS_FIRE));
     }
 }
 //?}

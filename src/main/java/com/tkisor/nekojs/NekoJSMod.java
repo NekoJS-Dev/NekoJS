@@ -170,6 +170,9 @@ public class NekoJSMod extends NekoJS {
                     this.scriptEventsRegistrar.bindRuntime(pluginRuntime);
                     ((DefaultScriptEventBridge) this.scriptEventBridge).setPluginRuntime(pluginRuntime);
                 }).root();
+        // 票 39：Item/Block modification domain owner 注册进 root（进程级基线由 root
+        // 生命周期持有；收集/应用挂 reload 的 DOMAIN_PLAN 阶段与服务器启动收集点）。
+        root.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
         GoalEvents.postRegister();
         return root;
     }
