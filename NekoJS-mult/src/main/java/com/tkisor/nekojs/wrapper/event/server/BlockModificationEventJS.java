@@ -53,17 +53,23 @@ public class BlockModificationEventJS {
 
     /**
      * Records a modification declaration for the block with the given id. The callback
-     * receives a {@link BlockModificationJS} view（Graal 函数经
-     * {@link ModificationViewSurface} 包裹：property 写与显式 setter 同路）；回调抛出的
-     * 异常向上传播（收集期失败 → 整批失败，不再有旧路径的部分应用）。
+     * receives a {@link BlockModificationJS} view（回调抛出的异常向上传播：收集期失败 →
+     * 整批失败，不再有旧路径的部分应用）。
+     *
+     * <p>回调参数类型保持改造前的函数式接口签名（{@code Consumer<BlockModificationJS>}）：
+     * Java 侧直接传 lambda；脚本侧的 Graal 函数由沙盒 HostAccess
+     * （{@code allowAllImplementations}）实现该接口。视图本身是
+     * {@link graal.graalvm.polyglot.proxy.ProxyObject}，所以脚本拿到的参数上
+     * {@code block.hardness = 2} 与 {@code block.setHardness(2)} 命中同一 setter /
+     * 校验 / 规范化 / 计划路径（AC8，见 {@link ModificationViewSurface}）。
      *
      * @param blockId block id, e.g. {@code 'minecraft:stone'} (namespace optional)
-     * @param modifier Graal function（脚本回调）或 {@code Consumer<BlockModificationJS>}（Java 侧）
+     * @param modifier property callback（脚本函数或 Java {@code Consumer}）
      */
     @Doc("Records a runtime property modification declaration for one block.")
     @Param(name = "blockId", value = "block id like 'minecraft:stone' (the 'minecraft:' prefix is optional)")
     @Param(name = "modifier", value = "callback receiving a block property view; assign block.hardness / block.resistance / block.lightLevel / block.requiresTool / block.friction / block.jumpFactor")
-    public void modify(String blockId, Object modifier) {
+    public void modify(String blockId, Consumer<BlockModificationJS> modifier) {
         Identifier id = parseBlockId(blockId);
         Block block = BuiltInRegistries.BLOCK.getOptional(id).orElse(null);
         if (block == null) {
@@ -73,7 +79,7 @@ public class BlockModificationEventJS {
             throw new IllegalArgumentException("Modifier must not be null");
         }
         BlockModificationJS view = new BlockModificationJS(block);
-        runModifier(view, modifier);
+        modifier.accept(view);
         plan.add(new ModificationDeclaration("block", id.toString(), view.normalizedProperties(), null));
         declaredCount++;
     }
@@ -83,24 +89,6 @@ public class BlockModificationEventJS {
     @Return("how many declarations this event has collected")
     public int getModifiedCount() {
         return declaredCount;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void runModifier(BlockModificationJS view, Object modifier) {
-        if (modifier instanceof graal.graalvm.polyglot.Value value) {
-            if (!value.canExecute()) {
-                throw new IllegalArgumentException(
-                        "Modifier must be a function or a Consumer, got a non-executable value");
-            }
-            value.execute(ModificationViewSurface.of(view));
-            return;
-        }
-        if (modifier instanceof Consumer<?> consumer) {
-            ((Consumer<BlockModificationJS>) consumer).accept(view);
-            return;
-        }
-        throw new IllegalArgumentException(
-                "Modifier must be a function or a Consumer, got " + modifier.getClass().getName());
     }
 
     static Identifier parseBlockId(String blockId) {

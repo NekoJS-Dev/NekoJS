@@ -9,8 +9,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -19,13 +21,21 @@ import java.util.function.Consumer;
  * ProxyObject putMember → 同一 {@link Method} seam 手法）：把
  * {@code ItemModificationJS}/{@code BlockModificationJS} 包成 {@link ProxyObject}，
  * {@code item.maxStackSize = 16}（putMember）与 {@code item.setMaxStackSize(16)}
- * （成员方法）分发到<b>同一个 Java setter</b>，进入同一校验、规范化、声明收集与
- * definition fingerprint 路径。
+ * （成员方法，getMember 按访问器原名解析）分发到<b>同一个 Java setter</b>，进入同一校验、
+ * 规范化、声明收集与 definition fingerprint 路径。
+ *
+ * <p>成员目录同时收录「属性名」（{@code maxStackSize}：getter 读 / setter 写）与
+ * 「访问器原名」（{@code setMaxStackSize} / {@code getMaxStackSize}）：后者是 GraalJS
+ * 上显式 setter 调用形态的唯一入口——宿主对象的天然方法访问在这里不适用（见下）。
  *
  * <p>不依赖 Graal 对宿主对象的天然 Bean 映射——characterization
  * （{@code ModificationLegacyCharacterizationTest.graalPropertyWriteOnHostViewDoesNotReachSetter}）
  * 实证宿主视图的 property 写被静默丢弃（{@code assigned,read=undefined}），ProxyObject
  * 的 putMember seam 才是可靠转发点（spec 08 预授权回退路径，与 typed Builder 同款）。
+ *
+ * <p>视图类自己<b>也</b>实现 {@link ProxyObject}（转发到本引擎）：脚本回调参数经
+ * {@code Consumer} 实现直接落到裸视图实例上（不额外包一层），两种到达形态的
+ * property 写/显式 setter 仍然命中同一 {@link Method} seam。
  *
  * <p>本类不携带 MC 类型（成员目录按视图类反射派生并缓存），26.x 与 1.21.1 共享编译。
  * 引擎生命周期接缝（{@code applyTo} 等包私有/内部方法）不进脚本面。
@@ -34,6 +44,9 @@ public final class ModificationViewSurface implements ProxyObject {
 
     /** 成员目录（视图类不可变，按类缓存）。 */
     private static final Map<Class<?>, MemberCatalog> CATALOGS = new ConcurrentHashMap<>();
+
+    /** {@link ProxyObject} 的接口方法名（视图自身实现的转发接缝，不进脚本成员目录）。 */
+    private static final Set<String> PROXY_OBJECT_MEMBER_NAMES = proxyObjectMemberNames();
 
     private final Object view;
 
@@ -242,6 +255,15 @@ public final class ModificationViewSurface implements ProxyObject {
                 : new IllegalArgumentException("member '" + member + "' failed: " + cause, cause);
     }
 
+    /** {@link ProxyObject} 接口方法名集合（构造期过滤用）。 */
+    private static Set<String> proxyObjectMemberNames() {
+        Set<String> names = new LinkedHashSet<>();
+        for (Method method : ProxyObject.class.getMethods()) {
+            names.add(method.getName());
+        }
+        return Set.copyOf(names);
+    }
+
     /** 视图类的公开实例成员目录：setter/getter 配对 + 其余方法。 */
     private static final class MemberCatalog {
         final Map<String, Method> setters = new LinkedHashMap<>();
@@ -257,12 +279,21 @@ public final class ModificationViewSurface implements ProxyObject {
                 if (method.getDeclaringClass() == Object.class) {
                     continue;
                 }
+                // 视图类自己实现 ProxyObject（转发到本引擎）：接口方法不是脚本成员，
+                // 不过滤会把 getMember/putMember 之类漏进成员目录（getMemberKeys 还会
+                // 变成 "memberKeys" 只读属性）。按名字过滤即可——视图没有同名成员。
+                if (PROXY_OBJECT_MEMBER_NAMES.contains(method.getName())) {
+                    continue;
+                }
                 String name = method.getName();
                 Class<?>[] params = method.getParameterTypes();
                 if (name.startsWith("set") && name.length() > 3 && params.length == 1) {
+                    // 属性名（putMember/getMember 属性形态） + 访问器原名（item.setX(v) 显式调用形态）
                     setters.put(property(name), method);
+                    methods.put(name, method);
                 } else if ((name.startsWith("get") || name.startsWith("is")) && params.length == 0) {
                     getters.put(property(name), method);
+                    methods.put(name, method);
                 } else {
                     // 引擎接缝（包私有不进 getMethods；equals/hashCode/toString 已被 Object 过滤）
                     methods.put(name, method);

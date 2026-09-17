@@ -37,10 +37,14 @@ public class ItemModificationEventJS {
      * Records a modification declaration for the item with the given id（收集语义与
      * 26.x 同：回调异常向上传播、声明进 inert 计划、MC 应用只在 Adapter）。
      *
+     * <p>回调参数类型保持改造前的函数式接口签名（{@code Consumer<ItemModificationJS>}）：
+     * Java 侧直接传 lambda；脚本侧的 Graal 函数由沙盒 HostAccess
+     * （{@code allowAllImplementations}）实现该接口。
+     *
      * @param itemId item id, e.g. {@code 'minecraft:diamond'} (namespace optional)
-     * @param modifier Graal function（脚本回调）或 {@code Consumer<ItemModificationJS>}（Java 侧）
+     * @param modifier property callback（脚本函数或 Java {@code Consumer}）
      */
-    public void modify(String itemId, Object modifier) {
+    public void modify(String itemId, Consumer<ItemModificationJS> modifier) {
         ResourceLocation id = parseItemId(itemId);
         Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
         if (item == null) {
@@ -50,7 +54,7 @@ public class ItemModificationEventJS {
             throw new IllegalArgumentException("Modifier must not be null");
         }
         ItemModificationJS view = new ItemModificationJS();
-        runModifier(view, modifier);
+        modifier.accept(view);
         plan.add(new ModificationDeclaration("item", id.toString(), view.normalizedProperties(), null));
         declaredCount++;
     }
@@ -58,24 +62,6 @@ public class ItemModificationEventJS {
     /** Number of declarations recorded so far during this event. */
     public int getModifiedCount() {
         return declaredCount;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void runModifier(ItemModificationJS view, Object modifier) {
-        if (modifier instanceof graal.graalvm.polyglot.Value value) {
-            if (!value.canExecute()) {
-                throw new IllegalArgumentException(
-                        "Modifier must be a function or a Consumer, got a non-executable value");
-            }
-            value.execute(ModificationViewSurface.of(view));
-            return;
-        }
-        if (modifier instanceof Consumer<?> consumer) {
-            ((Consumer<ItemModificationJS>) consumer).accept(view);
-            return;
-        }
-        throw new IllegalArgumentException(
-                "Modifier must be a function or a Consumer, got " + modifier.getClass().getName());
     }
 
     static ResourceLocation parseItemId(String itemId) {

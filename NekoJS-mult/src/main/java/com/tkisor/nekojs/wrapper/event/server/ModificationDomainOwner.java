@@ -302,7 +302,8 @@ public final class ModificationDomainOwner implements CandidateDomainCollector, 
         ItemModificationEventJS.applyComponents(item, builder.build());
     }
 
-    private void applyItemProperties(DataComponentMap.Builder builder, DataComponentMap base,
+    /** 声明属性 → 组件写入（包内可见：ItemModificationComponentsTest 直接驱动生产应用路径）。 */
+    void applyItemProperties(DataComponentMap.Builder builder, DataComponentMap base,
             Map<String, Object> properties) {
         if (properties.containsKey("maxStackSize")) {
             builder.set(DataComponents.MAX_STACK_SIZE, (Integer) properties.get("maxStackSize"));
