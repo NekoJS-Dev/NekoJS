@@ -67,5 +67,7 @@
 - 双轴审查整改（2026-09-17）：M1 守卫因果更正 + 孪生注释同步（含提取审计，REPORT §10 P1/G10）；M2 撤换失实引文为 spec 08:61/08:63 实际措辞；N1 `DynamicRegistryReloadPipelineTest` 改用唯一化 gameDir（REPORT §11 G9）；N2 数字勘误；N3 收集器 catch 对齐生产；N5 Python 参数下标修复；N6 本文档「零可变 static」措辞；N7 示例/ fixture 人工联动注释；M3 三条声明面偏窄登记且明示非 AC9 证据（G3/G4）。
 - 验证（真实运行，REPORT §9 + `evidence/verification-commands.md`）：整改后复跑 `:common:check` + `:common-api-processor:test`、`guardLint`、`:26.1.2:build :1.21.1:build` 全绿（数字见报告与 evidence）。26.2.0 与两个 fabric 节点全量未跑（主会话合并门，未伪报）。
 - 遗留（REPORT §11）：AC11 维护者 sign-off（旧面零删除，消费者清单/迁移材料已备）；真机 smoke 与 probe 真机输出（G1/G2）；`$DynamicRegistryEventJS` 声明 import、`fixedRange` null 抑制态、`setMode` 链式返回 any（G3/G4，均非 AC9 证据）；配置门与 facade 关系待票 21（G7）；共享/孪生对维护口径（G10）；五节点全量（G5）。
+- **合并期集成（主会话，2026-09-17）**：与票 39 在 `ScriptManager` 收集阶段、`ServerEventListener`（共享 + 1.21.1 孪生）、`DataSyncGenerationBoundaryTest` 四处冲突；**冲突暴露两票各自发明了同一候选域收集接缝**，统一为 `core.lifecycle.CandidateDomainCollector`（保留票 39 的 root 持有 + `Handle` 语义，补 `listenersOf`/`execute` 原语；本票的进程级静态注册表删除、注册改经 `NekoJSMod` 的 `root.registerDomainCollector`；收集阶段归因统一为 `ReloadPhase.DOMAIN_PLAN` / `domain-collect:<domain>`）。统一提交 `c087ff02`，详见 REPORT §15。相关测试适配：崩坏归因断言改 DOMAIN_PLAN；`collectorRegistryIsObservableAndSymmetric` 替换为构造器接缝用例；CLIENT 半段改为「收集器不被调用」（管线调用前按声明 scriptType 过滤）。
+- 合流验证（主会话，master）：`:common:check` + `guardLint`（275 块/425 文件/0 警告）全绿；五节点 build 全绿（`:26.1.2:test` 306/0、`:1.21.1:test` 213/0、`:26.1.2-fabric:test` 209/0）；`:26.1.2:runGameTestServer` 真机 boot 成功（注册 14 个事件组——含本票 facade 组）。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。

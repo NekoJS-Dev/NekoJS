@@ -62,6 +62,34 @@
 `ReloadPhase.DOMAIN_PLAN`；无消费者证据：全仓无上述符号调用点（唯一 `fire(` 文本命中为本票清理前的
 javadoc）；结构 guard：`Ticket39ModificationOwnershipTest`（真跑）。
 
+## Closure record（2026-09-17）
+
+- 执行者：zcode-agent。实施区间 eba89230..26e32248（接管半成品 worktree 后补齐：4 个既有提交保留 +
+  `41b2bc2c` 恢复 typed callback 契约与 setter 调用面 + `8c928a98` E2E/守卫/示例 + `f8d3dde1` baseline +
+  `9f0279d3` 关票 + 整改 `bc1fb396`/`26e32248`），合并 `d530a8a5`。
+- 交付物：`common/.../core/modification/`（`ModificationCandidatePlan`/`ModificationDeclaration`/
+  `CandidateDomainCollector` 接缝，后者在合并期统一进 `core.lifecycle`——见下）、
+  `ModificationDomainOwner`（26.x + 1.21.1 成对：root 持有快照基线、候选计划、commit 联合应用、
+  restore-then-reapply、blocked/recovery-failed 诊断）、`ModificationViewSurface`（setter/property
+  同 setter + 访问器原名成员目录 + ProxyObject 视图）+ 14 条 AC 的 fixture 与 examples/MIGRATION。
+- 双轴审查整改（F1–F13，REPORT §12）：生产到达形态 parity 真跑（裸视图经真沙盒 `as(Consumer)`）、
+  AC6 计划层 characterization + 恢复 Registry-free 探针、AC10 降级为「文档化边界 + 可机检结构 guard」、
+  `fail()` javadoc 与归因正文更正、breaking 符号清单（MIGRATION §2.1）、成员目录去重、setter-only
+  读面报错、dispatch key 拒绝 guard、`lastAppliedFingerprint` 失败复位、数字勘误。
+- **合并期集成（主会话）**：与票 16 在 `ScriptManager` 收集阶段、`ServerEventListener`（共享 + 1.21.1
+  孪生）四处冲突；解决时**发现两张票各自发明了同一候选域收集接缝**，统一为
+  `core.lifecycle.CandidateDomainCollector`（保留本票的 root 持有 + `Handle` 语义并补
+  `listenersOf`/`execute` 原语，票 16 的注册表删除）；本票 `collect(Handle)` 实现与
+  `handle.dispatch` 调用点不变。统一提交 `c087ff02`，票 16 baseline REPORT §15 留痕。
+- 合流验证（主会话，master）：`:common:check` + `:common-api-processor:test` + `guardLint`
+  （275 块/425 文件/0 警告）全绿；五节点 build 全绿（`:26.1.2:test` 306/0、`:1.21.1:test` 213/0、
+  `:26.1.2-fabric:test` 209/0、26.2.0 与 26.2.0-fabric build 绿）；`:26.1.2:runGameTestServer`
+  真机 boot 成功（bootstrapped once、注册 14 个事件组、STARTUP 脚本加载，零 NekoJS 报错）。
+- 遗留（REPORT §6/§12）：AC14 维护者 sign-off（breaking 清单已备）；客户端可见性无 fixture（AC10 已
+  如实降级）；真实 BlockBuilder 嵌套面 vanilla-gated；真机 modification/连带注册 smoke（G1/G2）。
+
+票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+
 ## Sources
 
 - [NekoJS 实现票据拆分草案](../implementation-ticket-breakdown.md)
