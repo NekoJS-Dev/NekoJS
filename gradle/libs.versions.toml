@@ -23,7 +23,7 @@ graal = "8456810"                # curse.maven:graal-1504336 文件 id
 moddev = "2.0.140"
 unifiedPublishing = "0.1.13"
 shadow = "9.4.1"
-unimined = "1.4.23-kappa"
+unimined = "1.4.25-kappa"
 blossom = "2.2.0"
 # foojay-resolver stays hardcoded in settings.gradle: the settings plugins{} block
 # evaluates before the version catalog is bound, so `alias(libs.plugins.xxx)` is unusable there.
