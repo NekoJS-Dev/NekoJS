@@ -31,7 +31,7 @@ public final class NekoNodeModuleInstaller {
 
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
         return install(context, scriptType, resolver, paths, errorTracker, sandboxConfig,
-                NekoModulePipelineCache.withExplicitPipeline(
+                new NekoModulePipelineCache(
                         ScriptCompilerRegistry.current(), sandboxConfig));
     }
 

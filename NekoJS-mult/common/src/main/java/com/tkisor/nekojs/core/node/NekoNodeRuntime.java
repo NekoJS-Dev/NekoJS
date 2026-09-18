@@ -95,11 +95,11 @@ public final class NekoNodeRuntime implements AutoCloseable {
     }
 
     public MappedStackLine mapStackLine(String path, int line, int column) {
-        String displayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+        String displayPath = moduleLoaderHost.virtualModules().displayPath(path);
         if (displayPath == null) {
             displayPath = path;
         }
-        SourceMapRegistry.OriginalPosition mapped = SourceMapRegistry.getMappedPosition(displayPath, line, column);
+        SourceMapRegistry.OriginalPosition mapped = moduleLoaderHost.sourceMaps().getMappedPosition(displayPath, line, column);
         String mappedPath = mapped.path != null && !mapped.path.isBlank() ? mapped.path : displayPath;
         return new MappedStackLine(mappedPath, mapped.line, mapped.column);
     }

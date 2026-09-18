@@ -8,76 +8,95 @@ import com.google.gson.JsonParser;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SourceMapRegistry {
+public final class SourceMapRegistry {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    private static final Map<String, NormalizedSourceMap> MAPPINGS_MAP = new ConcurrentHashMap<>();
+    private final Map<String, NormalizedSourceMap> mappings = new ConcurrentHashMap<>();
+    private final Path root;
     private static final java.util.logging.Logger LOGGER =
             java.util.logging.Logger.getLogger(SourceMapRegistry.class.getName());
-    // Cached root URI for path normalization. NekoJSPaths.root is immutable after construction
-    // (see NekoJSPaths javadoc), so this is computed once and reused across all lookups.
-    // Volatile + lazy: SourceMapRegistry may be class-loaded before NekoJSPaths is bound.
-    private static volatile String cachedRootUri;
+    private final String rootUri;
     // Backstop cap on cached source maps. Each entry holds decoded VLQ mappings + sourcesContent,
     // so unbounded growth under script churn could exhaust memory. Reload clears the map (CONC-2).
     private static final int CACHE_HARD_CAP = 4096;
 
-    public static void register(String scriptPath, String sourceMapJson) {
+    public SourceMapRegistry(Path root) {
+        Path canonicalRoot = root.normalize().toAbsolutePath();
+        try {
+            canonicalRoot = canonicalRoot.toRealPath();
+        } catch (IOException ignored) {
+            // A not-yet-created root still has a stable lexical identity.
+        }
+        this.root = canonicalRoot;
+        this.rootUri = this.root.toUri().toString();
+    }
+
+    public SourceMapRegistry() {
+        this(NekoJSPaths.get().root());
+    }
+
+    public Path root() {
+        return root;
+    }
+
+    public void register(String scriptPath, String sourceMapJson) {
         register(scriptPath, sourceMapJson, 0);
     }
 
-    public static void register(String scriptPath, String sourceMapJson, int prependedLineCount) {
+    public void register(String scriptPath, String sourceMapJson, int prependedLineCount) {
         if (scriptPath == null) return;
         String generatedPath = normalizeLookupPath(scriptPath);
         NormalizedSourceMap sourceMap = parse(generatedPath, sourceMapJson, prependedLineCount);
         // Hard cap to guard against unbounded growth in long-running sessions with heavy
         // script churn. Reload clears the map (CONC-2), so this is a backstop for edge cases
         // where many distinct scripts are compiled without a full reload.
-        if (MAPPINGS_MAP.size() > CACHE_HARD_CAP) {
+        if (mappings.size() > CACHE_HARD_CAP) {
             LOGGER.warning("SourceMapRegistry exceeded " + CACHE_HARD_CAP + " entries; clearing to bound memory");
-            MAPPINGS_MAP.clear();
+            mappings.clear();
         }
-        MAPPINGS_MAP.put(generatedPath, sourceMap);
+        mappings.put(generatedPath, sourceMap);
         if (sourceMap.file != null && !sourceMap.file.isBlank()) {
-            MAPPINGS_MAP.put(sourceMap.file, sourceMap);
+            mappings.put(sourceMap.file, sourceMap);
         }
     }
 
-    public static OriginalPosition getMappedPosition(String scriptPath, int jsLine, int jsColumn) {
+    public OriginalPosition getMappedPosition(String scriptPath, int jsLine, int jsColumn) {
         OriginalPosition fallback = new OriginalPosition(jsLine, jsColumn, null);
-        if (scriptPath == null || MAPPINGS_MAP.isEmpty()) return fallback;
+        if (scriptPath == null || mappings.isEmpty()) return fallback;
 
         // Exact normalized-path match only. The previous `endsWith` fallback let two scripts
         // sharing a path suffix collide (RISK-C3); an unmatched query is now unmapped (null source).
         String query = normalizeLookupPath(scriptPath);
-        NormalizedSourceMap mapping = MAPPINGS_MAP.get(query);
+        NormalizedSourceMap mapping = mappings.get(query);
 
         return mapping == null ? fallback : mapping.map(jsLine, jsColumn);
     }
 
-    public static void clear() {
-        MAPPINGS_MAP.clear();
+    public void clear() {
+        mappings.clear();
     }
 
-    public static void clear(String scriptPath) {
+    public void clear(String scriptPath) {
         if (scriptPath == null) return;
         String query = normalizeLookupPath(scriptPath);
-        MAPPINGS_MAP.entrySet().removeIf(entry -> entry.getKey().equals(query) || entry.getValue().matchesGeneratedPath(query));
+        mappings.entrySet().removeIf(entry -> entry.getKey().equals(query) || entry.getValue().matchesGeneratedPath(query));
     }
 
-    public static void clearByPathPrefix(String pathPrefix) {
+    public void clearByPathPrefix(String pathPrefix) {
         if (pathPrefix == null) return;
         // Prefix match only (DEFECT-D3): `contains` let clearing `foo/bar` also drop `baz/foo/bar`.
         // normalizeLookupPath already converts `\` to `/`, so a single separator convention is in place.
-        String lower = normalizeLookupPath(pathPrefix).toLowerCase();
-        MAPPINGS_MAP.entrySet().removeIf(entry -> entry.getKey().toLowerCase().startsWith(lower)
-                || entry.getValue().generatedPath.toLowerCase().startsWith(lower));
+        String lower = normalizeLookupPath(pathPrefix).toLowerCase(Locale.ROOT);
+        mappings.entrySet().removeIf(entry -> entry.getKey().toLowerCase(Locale.ROOT).startsWith(lower)
+                || entry.getValue().generatedPath.toLowerCase(Locale.ROOT).startsWith(lower));
     }
 
     /**
@@ -87,14 +106,14 @@ public class SourceMapRegistry {
      * （见 {@code NekoModulePipelineCache#clear(ScriptType)}）配套，
      * 避免单机单类型 reload 误清其它类型的 Python/TS 映射。
      */
-    public static void clearByScriptType(ScriptType type) {
+    public void clearByScriptType(ScriptType type) {
         if (type == null) return;
         Path typePath = ScriptTypeEnv.scriptsDir(type);
         String dirName = typePath == null ? type.name + "_scripts" : typePath.getFileName().toString();
         clearByPathPrefix(dirName + "/");
     }
 
-    private static NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {
+    private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {
         if (sourceMapJson == null || sourceMapJson.isBlank()) {
             return NormalizedSourceMap.empty(generatedPath, prependedLineCount);
         }
@@ -227,20 +246,25 @@ public class SourceMapRegistry {
         return result;
     }
 
-    private static String normalizeLookupPath(String path) {
+    private String normalizeLookupPath(String path) {
         String normalized = path.replace('\\', '/');
-        String rootUri = cachedRootUri;
-        if (rootUri == null) {
-            rootUri = NekoJSPaths.get().root().toUri().toString();
-            cachedRootUri = rootUri;
+        String comparedPath = normalized;
+        String comparedRoot = rootUri;
+        if (isWindows()) {
+            comparedPath = comparedPath.toLowerCase(Locale.ROOT);
+            comparedRoot = comparedRoot.toLowerCase(Locale.ROOT);
         }
-        if (normalized.startsWith(rootUri)) {
+        if (comparedPath.startsWith(comparedRoot)) {
             normalized = normalized.substring(rootUri.length());
         }
         return trimLeadingSlash(normalized);
     }
 
-    private static String normalizeSourcePath(String generatedPath, String sourceRoot, String source) {
+    private static boolean isWindows() {
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+    }
+
+    private String normalizeSourcePath(String generatedPath, String sourceRoot, String source) {
         if (source == null || source.isBlank()) {
             return null;
         }
@@ -282,7 +306,7 @@ public class SourceMapRegistry {
         return normalized.startsWith("../") || normalized.equals("..") ? null : trimLeadingSlash(normalized);
     }
 
-    private static String normalizeFileUri(String sourceText) {
+    private String normalizeFileUri(String sourceText) {
         if (!sourceText.startsWith("file:")) {
             return null;
         }
@@ -293,10 +317,9 @@ public class SourceMapRegistry {
         }
     }
 
-    private static String normalizeAbsolutePath(String sourceText) {
+    private String normalizeAbsolutePath(String sourceText) {
         try {
             Path path = Path.of(sourceText).normalize().toAbsolutePath();
-            Path root = NekoJSPaths.get().root().normalize().toAbsolutePath();
             if (path.startsWith(root)) {
                 return root.relativize(path).toString().replace('\\', '/');
             }

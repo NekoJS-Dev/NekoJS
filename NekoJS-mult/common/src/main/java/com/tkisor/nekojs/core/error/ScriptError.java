@@ -103,7 +103,7 @@ public class ScriptError {
                 String jsSnippet = chars != null ? chars.toString().trim() : "";
 
                 String displayPath = extractRelativePath(tracker, sourceLocation);
-                SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(displayPath, rawLine, rawColumn);
+                SourceMapRegistry.OriginalPosition pos = tracker.sourceMaps().getMappedPosition(displayPath, rawLine, rawColumn);
                 String errorPath = pos.path != null && !pos.path.isBlank() ? pos.path : displayPath;
                 return new ErrorSignature(errorMessage, errorPath, pos.line, pos.column, pos.name,
                         true, false, pos.sourceContent, usefulFallbackSnippet(jsSnippet));
@@ -395,7 +395,7 @@ public class ScriptError {
             if (isInternalFrame(path)) {
                 continue;
             }
-            SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(path, loc.getStartLine(), loc.getStartColumn());
+            SourceMapRegistry.OriginalPosition pos = tracker.sourceMaps().getMappedPosition(path, loc.getStartLine(), loc.getStartColumn());
             String mappedPath = pos.path != null && !pos.path.isBlank() ? pos.path : path;
             String rootName = frame.getRootName();
             if (pos.name != null && !pos.name.isEmpty()) {

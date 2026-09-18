@@ -20,17 +20,24 @@ import java.util.Set;
 
 public final class NekoNativeEsmSourceRewriter {
     private final NekoModuleResolver resolver;
+    private final NekoEsmVirtualModuleRegistry virtualModules;
     /** 传递依赖准备缓存（W3 显式注入，语义同 {@link NekoEsmLinker}）。 */
     private final NekoModulePipelineCache preparationCache;
 
     public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver) {
-        this(resolver, NekoModulePipelineCache.withExplicitPipeline(
+        this(resolver, new NekoModulePipelineCache(
                 ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
     }
 
     public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache) {
+        this(resolver, preparationCache, preparationCache.virtualModules());
+    }
+
+    public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache,
+                                       NekoEsmVirtualModuleRegistry virtualModules) {
         this.resolver = resolver;
         this.preparationCache = preparationCache;
+        this.virtualModules = virtualModules;
     }
 
     public java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared) throws IOException {
@@ -38,14 +45,14 @@ public final class NekoNativeEsmSourceRewriter {
     }
 
     private java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared, Set<String> visiting) throws IOException {
-        NekoEsmVirtualModuleRegistry.reserve(moduleId);
+        virtualModules.reserve(moduleId);
         if (visiting.contains(moduleId)) {
-            return NekoEsmVirtualModuleRegistry.uri(moduleId);
+            return virtualModules.uri(moduleId);
         }
         visiting.add(moduleId);
         try {
             String source = rewrite(file, moduleId, prepared, visiting);
-            return NekoEsmVirtualModuleRegistry.register(moduleId, source);
+            return virtualModules.register(moduleId, source);
         } finally {
             visiting.remove(moduleId);
         }
@@ -163,7 +170,7 @@ public final class NekoNativeEsmSourceRewriter {
                     source.append("export const ").append(name).append(" = __neko_module[").append(jsString(name)).append("];\n");
                 }
             }
-            return NekoEsmVirtualModuleRegistry.register(specifier + namedExports, source.toString());
+            return virtualModules.register(specifier + namedExports, source.toString());
         }
 
         private java.net.URI syntheticJsonModule(Path path) throws IOException {
@@ -179,7 +186,7 @@ public final class NekoNativeEsmSourceRewriter {
                     source.append("export const ").append(name).append(" = __neko_exports[").append(jsString(name)).append("];\n");
                 }
             }
-            return NekoEsmVirtualModuleRegistry.register(resolvedModuleId + "#cjs-interop" + requestedExportNames(statement), source.toString());
+            return virtualModules.register(resolvedModuleId + "#cjs-interop" + requestedExportNames(statement), source.toString());
         }
 
         private Set<String> requestedExportNames(NekoEsmStatement statement) {
@@ -221,7 +228,7 @@ public final class NekoNativeEsmSourceRewriter {
                 + "if (__neko_module === globalThis.__nekoNodeNoModule) throw new Error('Cannot resolve module: " + escapeForSingleQuoted(specifier) + "');\n"
                 + "export default __neko_module;\n"
                 + "export const namespace = __neko_module;\n";
-        return NekoEsmVirtualModuleRegistry.register(specifier + "#dynamic", source);
+        return virtualModules.register(specifier + "#dynamic", source);
     }
 
     /**
@@ -239,20 +246,20 @@ public final class NekoNativeEsmSourceRewriter {
         for (String name : exportNames) {
             source.append("export const ").append(name).append(" = __neko_module[").append(jsString(name)).append("];\n");
         }
-        return NekoEsmVirtualModuleRegistry.register(specifier + "#dynamic", source.toString());
+        return virtualModules.register(specifier + "#dynamic", source.toString());
     }
 
     public java.net.URI syntheticCjsModuleUri(String resolvedModuleId, String parentModuleId, String specifier) {
         String source = "const __neko_exports = globalThis.__nekoScriptModuleLoaderHost.nativeImport(" + jsString(parentModuleId) + ", " + jsString(specifier) + ");\n"
                 + "export default __neko_exports;\n"
                 + "export const namespace = __neko_exports;\n";
-        return NekoEsmVirtualModuleRegistry.register(resolvedModuleId + "#cjs-interop-dynamic", source);
+        return virtualModules.register(resolvedModuleId + "#cjs-interop-dynamic", source);
     }
 
     public java.net.URI syntheticJsonModuleUri(Path path) throws IOException {
         String json = Files.readString(path);
         String source = "const __neko_json = JSON.parse(" + jsString(json) + ");\nexport default __neko_json;\n";
-        return NekoEsmVirtualModuleRegistry.register(moduleId(path), source);
+        return virtualModules.register(moduleId(path), source);
     }
 
     private static String moduleId(Path path) {

@@ -7,6 +7,7 @@ import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;
+import com.tkisor.nekojs.core.module.NekoModuleError;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -25,7 +26,7 @@ public final class NekoEsmLinker {
     private final NekoModulePipelineCache preparationCache;
 
     public NekoEsmLinker(NekoModuleResolver resolver) {
-        this(resolver, NekoModulePipelineCache.withExplicitPipeline(
+        this(resolver, new NekoModulePipelineCache(
                 ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
     }
 
@@ -35,6 +36,14 @@ public final class NekoEsmLinker {
     }
 
     public NekoEsmLinkMetadata link(String moduleId, Path path, NekoPreparedModule prepared) throws IOException {
+        try {
+            return linkStages(moduleId, path, prepared);
+        } catch (NekoEsmLinkException diagnostic) {
+            throw NekoModuleError.link(diagnostic);
+        }
+    }
+
+    private NekoEsmLinkMetadata linkStages(String moduleId, Path path, NekoPreparedModule prepared) throws IOException {
         NekoEsmModuleAst ast = prepared.esmAst();
         if (ast == null) {
             return new NekoEsmLinkMetadata(List.of(), Set.of(), Set.of(), List.of(), NekoEsmExportShape.unresolved());
@@ -165,7 +174,7 @@ public final class NekoEsmLinker {
         var dependencies = new java.util.ArrayList<NekoEsmResolvedDependency>();
         for (NekoEsmStatement statement : ast.staticDependencies()) {
             String specifier = specifier(statement);
-            dependencies.add(new NekoEsmResolvedDependency(statement, specifier, resolver.resolve(moduleId, specifier)));
+            dependencies.add(new NekoEsmResolvedDependency(statement, specifier, resolveDependency(moduleId, specifier)));
         }
         return List.copyOf(dependencies);
     }
@@ -237,7 +246,8 @@ public final class NekoEsmLinker {
         Set<String> ambiguous = new LinkedHashSet<>();
         Set<String> starProvided = new LinkedHashSet<>();
         for (NekoEsmExportDecl exportDecl : starExports(ast)) {
-            NekoEsmExportShape dependencyExports = exportShape(resolver.resolve(moduleId, exportDecl.specifier()), visiting);
+            NekoEsmExportShape dependencyExports = exportShape(
+                    resolveDependency(moduleId, exportDecl.specifier()), visiting);
             if (dependencyExports.unknown()) {
                 return NekoEsmExportShape.unresolved();
             }
@@ -258,6 +268,16 @@ public final class NekoEsmLinker {
 
     private NekoPreparedModule prepare(Path path) throws IOException {
         return preparationCache.prepare(path);
+    }
+
+    private NekoResolvedModule resolveDependency(String parent, String specifier) throws IOException {
+        try {
+            return resolver.resolve(parent, specifier);
+        } catch (NekoModuleError staged) {
+            throw staged;
+        } catch (IOException failure) {
+            throw NekoModuleError.resolve(parent, specifier, failure);
+        }
     }
 
     private Set<String> localExports(NekoEsmModuleAst ast) {

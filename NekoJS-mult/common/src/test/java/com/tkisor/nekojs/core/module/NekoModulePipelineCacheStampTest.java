@@ -10,7 +10,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -18,6 +17,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -47,42 +47,12 @@ class NekoModulePipelineCacheStampTest {
     @org.junit.jupiter.api.BeforeEach
     void newCache() {
         registry = ScriptCompilerRegistry.createRuntimeRegistry();
-        cache = NekoModulePipelineCache.withExplicitPipeline(registry, SandboxConfig.defaultConfig());
+        cache = new NekoModulePipelineCache(registry, SandboxConfig.defaultConfig());
     }
 
     @AfterEach
     void clearCaches() {
         cache.clear();
-    }
-
-    // ---- FileStamp 内容指纹 + 语言/mode 相等性 ----
-
-    @Test
-    void fileStampEqualsIncludesContentHashLanguageAndMode() throws Exception {
-        Object stampA = newStamp(1L, 10L, "hash-a", "javascript", NekoModuleMode.AUTO);
-        Object sameMillisAndSizeDifferentHash =
-                newStamp(1L, 10L, "hash-b", "javascript", NekoModuleMode.AUTO);
-        Object sameContentDifferentMillis =
-                newStamp(2L, 10L, "hash-a", "javascript", NekoModuleMode.AUTO);
-        Object sameContentDifferentSize =
-                newStamp(1L, 20L, "hash-a", "javascript", NekoModuleMode.AUTO);
-        Object sameContentDifferentLanguage =
-                newStamp(1L, 10L, "hash-a", "typescript", NekoModuleMode.AUTO);
-        Object sameContentDifferentMode =
-                newStamp(1L, 10L, "hash-a", "javascript", NekoModuleMode.ESM);
-        Object identical = newStamp(1L, 10L, "hash-a", "javascript", NekoModuleMode.AUTO);
-
-        assertNotEquals(stampA, sameMillisAndSizeDifferentHash,
-                "相同 mtime+size 但内容哈希不同必须视为不同 stamp");
-        assertNotEquals(stampA, sameContentDifferentMillis,
-                "内容哈希相同但 mtime 不同必须视为不同 stamp");
-        assertNotEquals(stampA, sameContentDifferentSize,
-                "内容哈希相同但 size 不同必须视为不同 stamp");
-        assertNotEquals(stampA, sameContentDifferentLanguage,
-                "内容相同但 language identity 不同必须视为不同 stamp（语言插件替换即失效）");
-        assertNotEquals(stampA, sameContentDifferentMode,
-                "内容相同但 requested mode 不同必须视为不同 stamp");
-        assertEquals(stampA, identical, "五元组相同时必须相等");
     }
 
     // ---- 行为回归：等长覆盖 + 显式恢复 mtime 仍必须重新编译 ----
@@ -116,7 +86,7 @@ class NekoModulePipelineCacheStampTest {
         }
     }
 
-    // ---- AC4：路径 / mode / language identity 变化即失效 ----
+    // ---- AC4: path / mode / language identity participate in observable identity ----
 
     @Test
     void sameContentAtDifferentPathsCachesIndependently() throws Exception {
@@ -130,8 +100,7 @@ class NekoModulePipelineCacheStampTest {
             NekoPreparedModule preparedA = cache.prepare(first);
             NekoPreparedModule preparedB = cache.prepare(second);
             assertEquals(preparedA.code(), preparedB.code(), "同内容产出同 code");
-            // 注：恒等 source map 内嵌来源路径，同内容在不同路径下的 key 可以不同；
-            // 路径身份由 map 键承担，key 只保证“同输入同 key”（稳定性见 PrepareTest）。
+            assertNotEquals(preparedA.cacheKey(), preparedB.cacheKey(), "不同 sourcePath 必须有不同模块身份 key");
 
             cache.invalidate(first);
             // 失效其一不影响另一：second 仍命中旧条目（code 一致即命中证据）。
@@ -141,6 +110,20 @@ class NekoModulePipelineCacheStampTest {
         } finally {
             Files.deleteIfExists(first);
             Files.deleteIfExists(second);
+        }
+    }
+
+    @Test
+    void samePhysicalFileUsesCanonicalPathIdentity() throws Exception {
+        Path script = NekoJSPaths.get().testScripts().resolve("stamp_canonical.cjs");
+        Files.createDirectories(script.getParent());
+        Files.writeString(script, "module.exports = 'CANONICAL';\n");
+        try {
+            NekoPreparedModule direct = cache.prepare(script);
+            NekoPreparedModule normalized = cache.prepare(script.getParent().resolve(".").resolve(script.getFileName()));
+            assertSame(direct, normalized, "等价规范路径应命中同一 prepared 条目");
+        } finally {
+            Files.deleteIfExists(script);
         }
     }
 
@@ -206,14 +189,4 @@ class NekoModulePipelineCacheStampTest {
         }
     }
 
-    // ---- 反射辅助：FileStamp 是 NekoModulePipelineCache 的私有嵌套 record ----
-
-    private static Object newStamp(long millis, long size, String contentHash,
-                                   String languageId, NekoModuleMode mode) throws Exception {
-        Class<?> stampClass = Class.forName("com.tkisor.nekojs.core.module.NekoModulePipelineCache$FileStamp");
-        Constructor<?> ctor = stampClass.getDeclaredConstructor(
-                long.class, long.class, String.class, String.class, NekoModuleMode.class);
-        ctor.setAccessible(true);
-        return ctor.newInstance(millis, size, contentHash, languageId, mode);
-    }
 }

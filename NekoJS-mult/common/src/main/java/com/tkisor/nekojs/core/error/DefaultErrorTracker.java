@@ -46,10 +46,19 @@ public final class DefaultErrorTracker implements ErrorTracker {
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
     private final NekoJSPaths paths;
     private final SandboxConfig config;
+    private final SourceMapRegistry sourceMaps;
+    private final NekoEsmVirtualModuleRegistry virtualModules;
 
     public DefaultErrorTracker(NekoJSPaths paths, SandboxConfig config) {
+        this(paths, config, new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()));
+    }
+
+    public DefaultErrorTracker(NekoJSPaths paths, SandboxConfig config, SourceMapRegistry sourceMaps,
+                               NekoEsmVirtualModuleRegistry virtualModules) {
         this.paths = paths;
         this.config = config;
+        this.sourceMaps = sourceMaps;
+        this.virtualModules = virtualModules;
     }
 
     public DefaultErrorTracker(SandboxConfig config) {
@@ -62,6 +71,14 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     public SandboxConfig config() {
         return config;
+    }
+
+    public SourceMapRegistry sourceMaps() {
+        return sourceMaps;
+    }
+
+    public NekoEsmVirtualModuleRegistry virtualModules() {
+        return virtualModules;
     }
 
     @Override
@@ -288,7 +305,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
                     int rawLine = loc.getStartLine();
                     int rawColumn = loc.getStartColumn();
 
-                    SourceMapRegistry.OriginalPosition pos = SourceMapRegistry.getMappedPosition(pathStr, rawLine, rawColumn);
+                    SourceMapRegistry.OriginalPosition pos = sourceMaps.getMappedPosition(pathStr, rawLine, rawColumn);
                     String mappedPath = pos.path != null && !pos.path.isBlank() ? pos.path : pathStr;
                     int realLine = getRealCodeLine(mappedPath, pos.line);
                     String rootName = frame.getRootName();
@@ -331,13 +348,13 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if (scriptDisplayPath != null) {
                 return scriptDisplayPath;
             }
-            String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(pathText);
+            String virtualDisplayPath = virtualModules.displayPath(pathText);
             if (virtualDisplayPath != null) {
                 return virtualDisplayPath;
             }
             try {
                 Path path = Path.of(pathText);
-                virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+                virtualDisplayPath = virtualModules.displayPath(path);
                 if (virtualDisplayPath != null) {
                     return virtualDisplayPath;
                 }
@@ -354,7 +371,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if ("file".equalsIgnoreCase(source.getURI().getScheme())) {
                 try {
                     Path path = Path.of(source.getURI());
-                    String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(path);
+                    String virtualDisplayPath = virtualModules.displayPath(path);
                     if (virtualDisplayPath != null) {
                         return virtualDisplayPath;
                     }
@@ -362,7 +379,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
                     // A malformed local URI can still fall through to virtual path resolution.
                 }
             }
-            String virtualDisplayPath = NekoEsmVirtualModuleRegistry.displayPath(uriText);
+            String virtualDisplayPath = virtualModules.displayPath(uriText);
             if (virtualDisplayPath != null) {
                 return virtualDisplayPath;
             }

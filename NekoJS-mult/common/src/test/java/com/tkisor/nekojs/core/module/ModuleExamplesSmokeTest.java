@@ -46,7 +46,7 @@ class ModuleExamplesSmokeTest {
     void setUp() throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
         paths = pathsFor(gameDir);
-        cache = NekoModulePipelineCache.withExplicitPipeline(
+        cache = new NekoModulePipelineCache(
                 ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),

@@ -4,13 +4,19 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.Source;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -93,17 +99,55 @@ class NekoModuleTrustStageTest {
     }
 
     @Test
-    void trustDecisionOnlyLivesAtPrepareGate() {
-        // 结构证据：resolve/execute 路径不接受信任凭证——trust 只影响准备门的授权结果，
-        // 解析与执行阶段对本地/远端一视同仁。
-        for (Class<?> seam : new Class<?>[]{
-                NekoScriptModuleLoaderHost.class, NekoModuleResolver.class, NekoModulePipelineCache.class}) {
-            for (Method method : seam.getDeclaredMethods()) {
-                for (Class<?> parameter : method.getParameterTypes()) {
-                    assertFalse(parameter == NekoTrustApprovedSource.class,
-                            seam.getSimpleName() + "#" + method.getName() + " must not take a trust credential");
-                }
+    void trustCoverageUsesCanonicalPathAndWindowsCaseRules() throws Exception {
+        Path file = gameDir.resolve("nekojs/server_scripts/trust-canonical.cjs");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, "module.exports = 1;\n");
+        try {
+            NekoTrustApprovedSource approval = NekoTrustApprovedSource.local(file);
+            Path alias = file.getParent().resolve(".").resolve(file.getFileName());
+            assertTrue(approval.covers(alias), "dot-segment aliases resolve to the same real file");
+            if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
+                assertTrue(approval.covers(Path.of(file.toString().toUpperCase(Locale.ROOT))),
+                        "Windows file identity must ignore path casing");
             }
+        } finally {
+            Files.deleteIfExists(file);
+        }
+    }
+
+    @Test
+    void moduleHostRequiresAnApprovalForEveryResolvedDependency() throws Exception {
+        TestPlatformInit.ensureInitialized(gameDir);
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+        Path entry = paths.serverScripts().resolve("trusted-entry.mjs");
+        Path dependency = paths.serverScripts().resolve("untrusted-dependency.mjs");
+        Files.createDirectories(entry.getParent());
+        Files.writeString(entry, "import { value } from './untrusted-dependency.mjs';\nexport { value };\n");
+        Files.writeString(dependency, "export const value = 42;\n");
+        Path trustedEntry = entry.toRealPath();
+
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                pipeline(), path -> path.equals(trustedEntry) ? NekoTrustApprovedSource.local(path) : null);
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
+                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+            context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
+            try (var input = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
+                assertTrue(input != null, "script loader resource must exist");
+                context.eval(Source.newBuilder("js", new String(input.readAllBytes(), StandardCharsets.UTF_8),
+                        "nekojs/node/internal/script-loader.js").build());
+            }
+
+            Exception failure = assertThrows(Exception.class,
+                    () -> host.loadEntry("./server_scripts/trusted-entry.mjs"));
+            NekoModuleError denied = NekoModulePipelinePrepareTest.assertStaged(
+                    failure, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PACK_TRUST);
+            assertTrue(denied.sourcePath().endsWith("untrusted-dependency.mjs"), denied.detail());
+        } finally {
+            cache.clear();
+            Files.deleteIfExists(entry);
+            Files.deleteIfExists(dependency);
         }
     }
 }

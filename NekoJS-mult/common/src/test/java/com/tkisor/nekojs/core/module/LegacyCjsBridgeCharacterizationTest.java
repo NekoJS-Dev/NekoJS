@@ -2,7 +2,6 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.compiler.IScriptCompiler;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
@@ -32,6 +31,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -98,7 +98,7 @@ class LegacyCjsBridgeCharacterizationTest {
         assertTrue(prepared.code().contains("module.exports"), "产物必须是编译器输出: " + prepared.code());
         assertTrue(prepared.cjsRecord().staticDependencies().contains("./other.upperjs"),
                 "CJS 静态分析必须跑在编译产物上: " + prepared.cjsRecord());
-        assertNotNull(prepared.sourceMap(), "legacy 产物同样携带可用 source map");
+        assertNull(prepared.sourceMap(), "legacy compiler without a map must not claim source-map support");
         assertNotNull(prepared.cacheKey());
     }
 
@@ -162,7 +162,7 @@ class LegacyCjsBridgeCharacterizationTest {
                 return sourceCode;
             }
         });
-        NekoModulePipelineCache cache = NekoModulePipelineCache.withExplicitPipeline(
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(
                 compilers, SandboxConfig.defaultConfig());
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),

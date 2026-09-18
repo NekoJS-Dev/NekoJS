@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>esmRecordCache.removeAll（ESM record + evaluation state）</li>
  *   <li>esmLinkCache.removeAll（link metadata）</li>
  *   <li>dependencyGraph.removeModule / clearDependencies（依赖图节点/边）</li>
- *   <li>NekoEsmVirtualModuleRegistry.invalidate / clear（virtual URI generation）</li>
- *   <li>NekoModulePipelineCache（注入的 runtime-owned 实例）invalidate / clear（prepared module + source map）</li>
+ *   <li>注入的 runtime-owned virtual-module registry invalidate（virtual URI generation）</li>
+ *   <li>注入的 runtime-owned pipeline cache invalidate / clear（prepared module + source map）</li>
  * </ol>
  *
  * <p>明确失败语义：entry 重新执行失败后错误状态指向新源码；event listener/timer 不自动恢复旧版本；
@@ -42,6 +42,7 @@ public final class ModuleReloadCoordinator {
     private final NekoJSPaths paths;
     /** prepared 缓存失效目标（W3 显式注入：与 host 共享的 runtime-owned 实例）。 */
     private final NekoModulePipelineCache preparationCache;
+    private final NekoEsmVirtualModuleRegistry virtualModules;
 
     public ModuleReloadCoordinator(
             Map<String, ModuleState> moduleCache,
@@ -51,7 +52,7 @@ public final class ModuleReloadCoordinator {
             NekoModuleDependencyGraph dependencyGraph
     ) {
         this(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph,
-                NekoModulePipelineCache.withExplicitPipeline(
+                new NekoModulePipelineCache(
                         ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
     }
 
@@ -70,13 +71,12 @@ public final class ModuleReloadCoordinator {
         this.dependencyGraph = dependencyGraph;
         this.paths = NekoJSPaths.get();
         this.preparationCache = preparationCache;
+        this.virtualModules = preparationCache.virtualModules();
     }
 
     /**
-     * 清空本 host 的全部模块状态。只管 host 私有缓存（moduleCache/record/link/revision/
-     * dependencyGraph——它们本就 per-Context）；进程级共享缓存（prepared pipeline cache、
-     * 虚拟 ESM registry）的清理由 {@link NekoScriptModuleLoaderHost} 按自身 ScriptType 分区
-     * 执行（guest 可达的 clearCache 不得一键清空其它类型已编译的模块）。
+     * 清空本 host 的 per-Context 状态。prepared/source-map/virtual-module 的 runtime-owned
+     * 注册表由 {@link NekoScriptModuleLoaderHost} 按自身 ScriptType 分区清理。
      */
     public void clearAll() {
         moduleCache.clear();
@@ -103,7 +103,7 @@ public final class ModuleReloadCoordinator {
             if (removeGraphNodes) {
                 dependencyGraph.removeModule(moduleId);
             }
-            NekoEsmVirtualModuleRegistry.invalidate(moduleId);
+            virtualModules.invalidate(moduleId);
             preparationCache.invalidate(paths.root().resolve(moduleId));
         }
     }

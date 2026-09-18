@@ -4,7 +4,6 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -17,6 +16,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -49,20 +49,9 @@ class NekoModulePipelinePrepareTest {
         assertEquals("javascript", first.languageId());
         assertEquals(NekoModuleMode.COMMONJS, first.mode());
         assertTrue(first.code().contains("40 + 2"), "code must be executable JS, was: " + first.code());
-        assertNotNull(first.sourceMap(), "prepared module must always carry a usable source map");
-        assertTrue(first.sourceMap().contains("prepare-a.js"), "source map must point at the original file");
+        assertNull(first.sourceMap(), "native JS is not compiled and must not claim a source map");
         assertNotNull(first.sourcePath());
         assertEquals(first.cacheKey(), second.cacheKey(), "same input must produce a stable cache key");
-        // source map 可用：注册后能映射回原始文件行列。
-        SourceMapRegistry.register("server_scripts/prepare-a.js", first.sourceMap(), first.prependedLineCount());
-        try {
-            SourceMapRegistry.OriginalPosition position =
-                    SourceMapRegistry.getMappedPosition("server_scripts/prepare-a.js", 1, 1);
-            assertEquals("server_scripts/prepare-a.js", position.path);
-            assertEquals(1, position.line);
-        } finally {
-            SourceMapRegistry.clear("server_scripts/prepare-a.js");
-        }
     }
 
     @Test
@@ -76,18 +65,18 @@ class NekoModulePipelinePrepareTest {
         assertEquals("javascript", esm.languageId());
         assertEquals(NekoModuleMode.ESM, esm.mode());
         assertNotNull(esm.esmAst(), "ESM prepared module must carry its AST for the linker");
-        assertNotNull(esm.sourceMap(), "ESM prepared module must carry a usable source map");
+        assertNull(esm.sourceMap(), "native JavaScript ESM has no compiler source map");
         assertEquals(NekoModuleMode.COMMONJS, cjs.mode());
         assertNotEquals(esm.cacheKey(), cjs.cacheKey(), "mode/content change must change the cache key");
     }
 
     @Test
-    void describeExposesLanguageAndModeWithoutCompiling() {
+    void identifyExposesSourceLanguageAndModeWithoutCompiling() {
         NekoModulePipeline pipeline = pipeline();
 
-        NekoModulePipeline.ModuleDescriptor js = pipeline.describe(Path.of("x/main.js"));
-        NekoModulePipeline.ModuleDescriptor mjs = pipeline.describe(Path.of("x/main.mjs"));
-        NekoModulePipeline.ModuleDescriptor cjs = pipeline.describe(Path.of("x/main.cjs"));
+        NekoModuleIdentity js = pipeline.identify(Path.of("x/main.js"));
+        NekoModuleIdentity mjs = pipeline.identify(Path.of("x/main.mjs"));
+        NekoModuleIdentity cjs = pipeline.identify(Path.of("x/main.cjs"));
 
         assertEquals("javascript", js.languageId());
         assertEquals(NekoModuleMode.AUTO, js.requestedMode());
@@ -127,19 +116,20 @@ class NekoModulePipelinePrepareTest {
         assertNotEquals(original.cacheKey(), tampered.cacheKey(),
                 "Resolution/Cache tampering with code must change the cache key");
         assertEquals(original.cacheKey(),
-                NekoPreparedModule.stableCacheKey(original.languageId(), original.mode(),
+                NekoPreparedModule.stableCacheKey(original.sourcePath(), original.languageId(), original.mode(),
                         original.code(), original.sourceMap()),
                 "cache key must equal the documented stable computation");
     }
 
     @Test
-    void stableCacheKeyIgnoresSourcePathButCoversLanguageModeCodeMap() {
-        String keyA = NekoPreparedModule.stableCacheKey("javascript", NekoModuleMode.COMMONJS, "code", "map");
-        assertEquals(keyA, NekoPreparedModule.stableCacheKey("javascript", NekoModuleMode.COMMONJS, "code", "map"));
-        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("typescript", NekoModuleMode.COMMONJS, "code", "map"));
-        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("javascript", NekoModuleMode.ESM, "code", "map"));
-        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("javascript", NekoModuleMode.COMMONJS, "code!", "map"));
-        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("javascript", NekoModuleMode.COMMONJS, "code", "map!"));
+    void stableCacheKeyCoversPathLanguageModeCodeAndMap() {
+        String keyA = NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.COMMONJS, "code", "map");
+        assertEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.COMMONJS, "code", "map"));
+        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/b.js", "javascript", NekoModuleMode.COMMONJS, "code", "map"));
+        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "typescript", NekoModuleMode.COMMONJS, "code", "map"));
+        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.ESM, "code", "map"));
+        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.COMMONJS, "code!", "map"));
+        assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.COMMONJS, "code", "map!"));
     }
 
     @Test

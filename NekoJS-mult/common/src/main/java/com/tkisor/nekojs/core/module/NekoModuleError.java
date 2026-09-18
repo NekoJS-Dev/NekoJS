@@ -1,7 +1,11 @@
 package com.tkisor.nekojs.core.module;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
+
+import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
+import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 
 /**
  * 语言模块管线的阶段错误：Preparation / Resolution-Cache / Execution 三个逻辑 Module
@@ -13,11 +17,11 @@ import java.util.Objects;
  *   <li>{@link Stage#PREPARE}：{@code Script Preparation}（含 {@code Pack Trust} 授权拒绝，
  *       见 {@link #OWNER_PACK_TRUST}）；</li>
  *   <li>{@link Stage#RESOLVE}：{@code Module Resolution/Cache} 的路径解析失败；</li>
- *   <li>{@link Stage#LINK}：ESM link 失败沿用 {@link com.tkisor.nekojs.core.module.esm.NekoEsmLinkException}
- *      （自带 file/line/column 诊断），不经本类型二次包装；</li>
+ *   <li>{@link Stage#LINK}：ESM link 失败统一为本类型，原始
+ *      {@link com.tkisor.nekojs.core.module.esm.NekoEsmLinkException} 保留为 cause；</li>
  *   <li>{@link Stage#CACHE}：prepared 缓存自身的源码快照/读写失败；</li>
- *   <li>{@link Stage#EXECUTE}：{@code Script Execution Environment} 侧的宿主装载失败
- *      （guest 运行时异常原样传播，不包装——调用者靠异常类型区分）。</li>
+ *   <li>{@link Stage#EXECUTE}：{@code Script Execution Environment} 侧的宿主装载失败，
+ *       包括 guest 运行时异常（原异常保留为 cause）。</li>
  * </ul>
  *
  * <p>继承 {@link IOException} 以保持既有调用者（{@code throws IOException}）的兼容性；
@@ -100,6 +104,15 @@ public class NekoModuleError extends IOException {
         return new NekoModuleError(Stage.EXECUTE, OWNER_EXECUTION, null, moduleId, message, cause);
     }
 
+    /** Link diagnostics retain the original file/line/column exception as the cause. */
+    public static NekoModuleError link(NekoEsmLinkException cause) {
+        NekoEsmDiagnostic diagnostic = cause == null ? null : cause.diagnostic();
+        String sourcePath = diagnostic == null || diagnostic.file() == null
+                ? null : displayPath(diagnostic.file());
+        String message = diagnostic == null ? rootMessage(cause) : diagnostic.toString();
+        return new NekoModuleError(Stage.LINK, OWNER_RESOLUTION_CACHE, sourcePath, null, message, cause);
+    }
+
     public Stage stage() {
         return stage;
     }
@@ -129,5 +142,21 @@ public class NekoModuleError extends IOException {
             detail.append(" (module: ").append(moduleId).append(')');
         }
         return detail.toString();
+    }
+
+    static String displayPath(Path path) {
+        return path == null ? "<unknown>" : path.toString().replace('\\', '/');
+    }
+
+    static String rootMessage(Throwable throwable) {
+        if (throwable == null) {
+            return "Unknown module failure";
+        }
+        Throwable root = throwable;
+        while (root.getCause() != null) {
+            root = root.getCause();
+        }
+        String message = root.getMessage();
+        return message == null || message.isBlank() ? root.toString() : message;
     }
 }

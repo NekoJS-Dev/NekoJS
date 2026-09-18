@@ -98,3 +98,51 @@
 - 遗留（不在本票范围）：`SourceMapRegistry` / `NekoEsmVirtualModuleRegistry` 仍为带分区清理的
   共享注册表（分区行为已锁定，实例化另票）；`ScriptCompilerRegistry.current()` 语言扩展点保留；
   性能阈值不设（PERF_BASELINE 独立）；05/06/07 语义未动。
+
+## Review-round addendum（2026-09-19）
+
+本轮针对 `ab7ca108` 的双轴 review findings 逐项复核并修正；票据仍保持 `Status: closed`，不回退已勾选 AC。
+
+- **Registry ownership / cross-host pollution：finding confirmed, fixed.** `SourceMapRegistry`
+  与 `NekoEsmVirtualModuleRegistry` 原实现仍是 process-wide static map；现改为 runtime-owned
+  实例，由 `NekoModulePipelineCache` 持有，生产装配经 `NekoRuntimeAssembly` 注入给 root、filesystem、
+  host、rewriter、lifecycle 和 error tracker；`NekoRuntimeRoot.closeSilently` 通过 cache close 清理三类
+  条目。`clear(ScriptType)` 现在只清理本 owner 的分区。`SourceMapRegistry`/virtual registry 的 root
+  采用 canonical path（不存在时 lexical fallback）。证据：`SourceMapRegistryTest`、
+  `ScriptTypeScopedCacheClearTest`、`NekoModuleIdentityLifecycleTest#separateHostsKeepVirtualSourcesAndSourceMapsPrivate`、
+  `NekoRuntimeModuleCacheOwnershipTest#rootOwnsSharedCacheIsolatedRootsDoNotShareAndCloseReleases`。
+
+- **Trust context bypass：finding confirmed, fixed.** `NekoModulePipelineCache.prepare(path)` 现在先经
+  runtime-owned `NekoTrustContext` 取得逐文件 `NekoTrustApprovedSource`，再把 approval 传到
+  `NekoModulePipeline.prepare(path, source, approval)`；linker、rewriter、host、filesystem/read service
+  都只能经该 cache 准备依赖。local/remote 凭证仍共用同一 prepare stage；real path、Windows 大小写
+  规范化后采用逐文件授权，不承诺目录前缀授权。证据：`NekoModuleTrustStageTest` 的缺失/错配/remote key/
+  canonical path 与 resolved dependency deny 用例。
+
+- **Error layering：finding confirmed, fixed.** `NekoEsmLinkException` 现在只作为 cause，link 入口统一
+  转为 `NekoModuleError(stage=LINK, owner=Module Resolution/Cache)`；host/module factory/JSON/CJS/ESM
+  guest execution failures 归 `EXECUTE`，原始 `PolyglotException`/cause 保留；CJS syntax preparation
+  diagnostics 归 `PREPARE`。证据：`NekoModuleErrorStageTest`、`NekoModuleIdentityLifecycleTest`、
+  `NekoScriptModuleLoaderHostSyntaxLocationTest`。
+
+- **Identity / cache key / path semantics：finding confirmed, fixed.** 抽出 `NekoModuleIdentity`
+  （language id + requested mode）作为 preparation 与 `FileStamp` 的共同输入；prepared stable key
+  升级为 SHA-256 v2，覆盖 prepared sourcePath、language、mode、code 和实际 source map（runtime cache
+  先将 source path canonicalize），
+  不再发生同内容跨路径身份碰撞。cache map key 使用 `toRealPath`，不存在时回退 normalized absolute path，
+  Windows lexical identity 忽略大小写。`covers` 与 cache 使用相同路径口径；授权明确是逐文件。证据：
+  `NekoModulePipelinePrepareTest#stableCacheKeyCoversPathLanguageModeCodeAndMap`、
+  `NekoModulePipelineCacheStampTest` 的 canonical path/content/language/mode tests。
+
+- **Source-map / runtime evidence：finding confirmed, fixed.** 原生 JS/CJS/ESM 和没有 map 的 legacy
+  compiler 不再被恒称为“可用 source map”；它们依靠 script-loader 的 `sourceURL`。有 compiler map 的
+  TS path 仍发布真实 map，并经 `host.loadEntry` 触发 guest error 验证 authored path/line；跨 host source
+  maps 与 virtual sources 不互相污染。证据：`NekoModulePipelinePrepareTest`、`LegacyCjsBridgeCharacterizationTest`、
+  `NekoModuleIdentityLifecycleTest#loadEntryRuntimeFailureKeepsTranspiledModuleSourceLocation`。
+
+- **Standards / naming / duplication：finding confirmed, fixed or deferred with reason.** SHA-256 实现
+  收口至 `NekoModuleHash`；display/root-message 逻辑收口至 `NekoModuleError`；反射型 registry/cache helper
+  被替换为公开 owner seam 测试；`describe`/`ModuleDescriptor` 改为语义明确的 `identify`/`NekoModuleIdentity`；
+  仅透传的 `withExplicitPipeline` 删除，保留显式构造器；五元组没有另造 identity class 来重复 source path，
+  而是 `NekoModuleIdentity` 承载 language/mode、prepared key 单独承载 source path，避免重复身份事实。
+  未做无关的 parser/compiler 重构，故无 deferred implementation debt。

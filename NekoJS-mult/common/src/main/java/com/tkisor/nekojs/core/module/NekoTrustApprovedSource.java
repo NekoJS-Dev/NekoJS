@@ -1,6 +1,8 @@
 package com.tkisor.nekojs.core.module;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -20,7 +22,8 @@ import java.util.Objects;
  *       管线——见 {@code PackSyncClient} 既有语义，本凭证只覆盖“已授权物化文件的准备门”。</li>
  * </ul>
  *
- * <p>纯值对象：不创建 Graal Context、不决定 HostAccess、不读 Minecraft/loader、不读盘。
+ * <p>凭证不持有源码或 runtime resources；签发时只规范化路径（存在时解析 real path），
+ * 不创建 Graal Context、不决定 HostAccess、不读 Minecraft/loader。
  */
 public record NekoTrustApprovedSource(Kind kind, String subject, String packId, String keyId) {
     /** 信任来源：本地受信文件，或远端显式授权（带签名 key 证据）。 */
@@ -34,18 +37,19 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         if (subject == null || subject.isBlank()) {
             throw new IllegalArgumentException("Trust subject path must not be blank");
         }
+        subject = normalizeSubject(subject);
         if (kind == Kind.REMOTE_AUTHORIZED && (keyId == null || keyId.isBlank())) {
             throw new IllegalArgumentException("Remote authorization requires an explicit key id");
         }
     }
 
-    /** 本地受信文件的凭证（subject = 文件规范绝对路径）。 */
+    /** 本地受信文件的凭证（存在时 subject 使用 real path，不存在时使用规范化绝对路径）。 */
     public static NekoTrustApprovedSource local(Path file) {
         return new NekoTrustApprovedSource(Kind.LOCAL_TRUSTED, subjectOf(file), null, null);
     }
 
     /**
-     * 远端显式授权文件的凭证（subject = 物化后文件的规范绝对路径）。
+     * 远端显式授权文件的凭证（subject = 物化后文件的 real path；不存在时为规范化绝对路径）。
      *
      * @param packId 授权的包标识（诊断用，不参与覆盖判定）
      * @param keyId  显式授权的签名 key id（必须非空：无 key 证据即无显式授权）
@@ -70,6 +74,28 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
 
     private static String subjectOf(Path file) {
         Objects.requireNonNull(file, "file");
-        return file.normalize().toAbsolutePath().toString();
+        Path canonical = file.normalize().toAbsolutePath();
+        try {
+            canonical = canonical.toRealPath();
+        } catch (IOException ignored) {
+            // Nonexistent paths still receive a stable lexical identity and fail on read later.
+        }
+        return normalizePath(canonical);
+    }
+
+    private static String normalizeSubject(String subject) {
+        try {
+            return subjectOf(Path.of(subject));
+        } catch (RuntimeException invalidPath) {
+            throw new IllegalArgumentException("Trust subject path is invalid", invalidPath);
+        }
+    }
+
+    private static String normalizePath(Path path) {
+        String normalized = path.toString().replace('\\', '/');
+        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
+            return normalized.toLowerCase(Locale.ROOT);
+        }
+        return normalized;
     }
 }
