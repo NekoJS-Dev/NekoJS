@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
+import com.google.gson.JsonParser;
+import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -24,6 +26,7 @@ class ModulePipelineIsolationTest {
     /** Preparation 纯层：不得出现 Context/HostAccess/平台 import（含注入持有）。 */
     private static final List<String> PREPARATION_FILES = List.of(
             "core/compiler/NekoCompilationPipeline.java",
+            "core/compiler/NekoSourceMapBuilder.java",
             "core/module/NekoPreparedModule.java",
             "core/module/NekoModulePipeline.java",
             "core/module/NekoModulePipelineCache.java",
@@ -52,6 +55,19 @@ class ModulePipelineIsolationTest {
     }
 
     @Test
+    void sourceMapBuilderUsesOnlyTheSuppliedPath() {
+        Path file = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-source-map", "absolute.js")
+                .toAbsolutePath().normalize();
+
+        String map = NekoSourceMapBuilder.identity(file, "const value = 1;\n", "const value = 1;\n");
+
+        String source = JsonParser.parseString(map).getAsJsonObject()
+                .getAsJsonArray("sources").get(0).getAsString();
+        assertTrue(source.equals(file.toString().replace('\\', '/')),
+                "source-map display name must be derived from the supplied path, not a platform root");
+    }
+
+    @Test
     void resolutionCacheCreatesNoContextDecidesNoHostAccessAndReadsNoPlatform() throws IOException {
         List<String> violations = scan(RESOLUTION_FILES, true);
         assertTrue(violations.isEmpty(), "Resolution/Cache 不得创建 Context/决定 HostAccess/读平台:\n"
@@ -72,6 +88,7 @@ class ModulePipelineIsolationTest {
         Class<?> hostAccessType = Class.forName("graal.graalvm.polyglot.HostAccess");
         List<String> pureClasses = List.of(
                 "com.tkisor.nekojs.core.compiler.NekoCompilationPipeline",
+                "com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder",
                 "com.tkisor.nekojs.core.module.NekoPreparedModule",
                 "com.tkisor.nekojs.core.module.NekoModulePipeline",
                 "com.tkisor.nekojs.core.module.NekoModulePipelineCache",

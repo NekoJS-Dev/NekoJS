@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.IScriptCompiler;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -16,6 +17,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -88,6 +91,73 @@ class NekoModulePipelinePrepareTest {
         assertEquals("typescript", prepared.languageId());
         assertNotNull(prepared.sourceMap(), "compiler-backed TypeScript must publish its actual map");
         assertTrue(prepared.sourceMap().contains("sourcesContent"), prepared.sourceMap());
+    }
+
+    @Test
+    void nativeAndLegacyFallbackMapsAlwaysResolveToExistingAuthoredLines() throws Exception {
+        NekoModulePipeline pipeline = pipeline();
+        String nativeSource = "const first = 1;\nconst second = 2;\n";
+        for (String extension : List.of(".js", ".mjs", ".cjs")) {
+            String source = extension.equals(".mjs")
+                    ? "export const first = 1;\nexport const second = 2;\n"
+                    : nativeSource;
+            NekoPreparedModule prepared = pipeline.prepare(Path.of("server_scripts/native" + extension), source);
+            assertUsableMap(prepared, source, 2);
+        }
+
+        ScriptCompilerRegistry registry = ScriptCompilerRegistry.createRuntimeRegistry();
+        registry.registerLanguage("legacy-map", Set.of(".legacy"), new IScriptCompiler() {
+            @Override
+            public boolean canCompile(String extension) {
+                return ".legacy".equalsIgnoreCase(extension);
+            }
+
+            @Override
+            public String compile(Path file, String sourceCode) {
+                return "module.exports = 1;\nmodule.exports = 2;\nmodule.exports = 3;\n";
+            }
+        });
+        NekoPreparedModule legacy = new NekoModulePipeline(
+                new NekoCompilationPipeline(), registry, SandboxConfig.defaultConfig()).prepare(
+                Path.of("server_scripts/legacy.legacy"), "authored first\nauthored second\n");
+        assertUsableMap(legacy, "authored first\nauthored second\n", 2);
+    }
+
+    @Test
+    void preparationRejectsCompilerRegistryReplacementAfterIdentityCapture() {
+        ScriptCompilerRegistry registry = ScriptCompilerRegistry.createRuntimeRegistry();
+        AtomicBoolean compileStarted = new AtomicBoolean();
+        registry.registerLanguage("mutable", Set.of(".mutable"), new IScriptCompiler() {
+            @Override
+            public boolean canCompile(String extension) {
+                return ".mutable".equalsIgnoreCase(extension);
+            }
+
+            @Override
+            public String compile(Path file, String sourceCode) {
+                if (compileStarted.compareAndSet(false, true)) {
+                    registry.replaceLanguage("mutable", Set.of(".mutable"), new IScriptCompiler() {
+                        @Override
+                        public boolean canCompile(String extension) {
+                            return ".mutable".equalsIgnoreCase(extension);
+                        }
+
+                        @Override
+                        public String compile(Path replacementFile, String replacementSource) {
+                            return "module.exports = 'replacement';\n";
+                        }
+                    });
+                }
+                return "module.exports = 'captured';\n";
+            }
+        });
+        NekoModulePipeline pipeline = new NekoModulePipeline(
+                new NekoCompilationPipeline(), registry, SandboxConfig.defaultConfig());
+
+        Exception failure = assertThrows(Exception.class,
+                () -> pipeline.prepare(Path.of("server_scripts/mutable.mutable"), "source"));
+
+        assertStaged(failure, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PREPARATION);
     }
 
     @Test
@@ -166,6 +236,24 @@ class NekoModulePipelinePrepareTest {
         assertEquals(prepared.sourcePath().replace('\\', '/'), mapped.path);
         assertEquals(1, mapped.line);
         assertEquals(authoredSource, mapped.sourceContent);
+    }
+
+    private static void assertUsableMap(NekoPreparedModule prepared, String authoredSource, int authoredLineCount) {
+        assertNotNull(prepared.sourceMap(), "fallback source map must be non-null");
+        var root = JsonParser.parseString(prepared.sourceMap()).getAsJsonObject();
+        assertEquals(authoredSource, root.getAsJsonArray("sourcesContent").get(0).getAsString());
+        SourceMapRegistry registry = new SourceMapRegistry(NekoJSPaths.get().root());
+        registry.register(prepared.sourcePath(), prepared.sourceMap());
+        int generatedLineCount = prepared.code().split("\\n", -1).length;
+        for (int generatedLine = 1; generatedLine <= generatedLineCount; generatedLine++) {
+            SourceMapRegistry.OriginalPosition mapped = registry.getMappedPosition(
+                    prepared.sourcePath(), generatedLine, 1);
+            assertEquals(prepared.sourcePath().replace('\\', '/'), mapped.path,
+                    "generated line must retain authored path: " + generatedLine);
+            assertTrue(mapped.line >= 1 && mapped.line <= authoredLineCount,
+                    "generated line must map to an authored line: " + mapped);
+            assertTrue(mapped.column >= 1, "mapped column must be legal: " + mapped);
+        }
     }
 
     @Test

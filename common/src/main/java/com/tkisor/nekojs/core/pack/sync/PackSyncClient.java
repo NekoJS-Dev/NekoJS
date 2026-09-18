@@ -6,6 +6,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -44,7 +45,6 @@ public final class PackSyncClient {
 
     /** 平台安装的 CLIENT 脚本重载钩子（loader entry 注入的 root.reload(CLIENT) 守卫包装）。 */
     private static volatile Runnable clientReloadHook;
-    private static volatile RemoteTrustHook remoteTrustHook;
 
     private static volatile CountDownLatch mainThreadLatch;
 
@@ -57,11 +57,6 @@ public final class PackSyncClient {
 
     public static void installClientReloadHook(Runnable hook) {
         clientReloadHook = hook;
-    }
-
-    /** Runtime owner binding for the verified remote-source authorization seam. */
-    public static void installClientRemoteTrustHook(RemoteTrustHook hook) {
-        remoteTrustHook = hook;
     }
 
     /** 网络线程调用：登记一个 latch，主线程任务完成后 {@link #completeMainThreadWork}。 */
@@ -96,10 +91,11 @@ public final class PackSyncClient {
      * 处理哈希清单（主线程）。空清单 = 清空远端包并重载；hashOnly 客户端模式同样清空
      * 且永不执行。非空清单记录预期哈希，等待随后的 bundle。
      */
-    public static synchronized void handleHashList(String serverAddress, List<HashEntry> entries) {
+    public static synchronized void handleHashList(NekoRuntimeRoot runtimeRoot,
+                                                   String serverAddress, List<HashEntry> entries) {
         if (clientModeOff()) {
             if (!ScriptPackRegistry.get().serverCachePacks().isEmpty() || !expectedHashes.isEmpty()) {
-                deactivateAndReload("client packSync mode is off", activeRemoteRoot());
+                deactivateAndReload("client packSync mode is off", activeRemoteRoot(), runtimeRoot);
             }
             return;
         }
@@ -118,20 +114,20 @@ public final class PackSyncClient {
         boolean revoked = false;
         if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty() && activeSetChanged)) {
             // Do not let the previous active/credential set run while this server's bundle is pending.
-            deactivateAndReload("server pack hash list changed", remoteRoot);
+            deactivateAndReload("server pack hash list changed", remoteRoot, runtimeRoot);
             revoked = true;
         }
 
         if (hashes.isEmpty()) {
             // 服务器无同步包：清空远端缓存包（缓存文件保留）并重载客户端脚本
             if (!revoked) {
-                deactivateAndReload("server sent an empty pack hash list", remoteRoot);
+                deactivateAndReload("server sent an empty pack hash list", remoteRoot, runtimeRoot);
             }
             return;
         }
         if (clientModeHashOnly()) {
             if (!revoked) {
-                deactivateAndReload("client packSync mode is hashOnly", remoteRoot);
+                deactivateAndReload("client packSync mode is hashOnly", remoteRoot, runtimeRoot);
             }
         }
         // 非 hashOnly：保留当前激活集，等待 bundle 到达后整体替换（避免双重重载）
@@ -143,13 +139,13 @@ public final class PackSyncClient {
      * 处理 bundle（主线程）：校验体量 → 落盘 → 重扫重哈希对照 → 验签 → 信任判定 →
      * 激活 + 重载 + pinning 签名公钥。返回 Outcome：disconnect 非空时平台应断连并展示消息。
      */
-    public static synchronized Outcome handleBundle(List<SyncedPack> packs) {
+    public static synchronized Outcome handleBundle(NekoRuntimeRoot runtimeRoot, List<SyncedPack> packs) {
         if (clientModeOff()) {
-            deactivateAndReload("client packSync mode is off", activeRemoteRoot());
+            deactivateAndReload("client packSync mode is off", activeRemoteRoot(), runtimeRoot);
             return Outcome.accepted();
         }
         if (clientModeHashOnly()) {
-            deactivateAndReload("client packSync mode is hashOnly", activeRemoteRoot());
+            deactivateAndReload("client packSync mode is hashOnly", activeRemoteRoot(), runtimeRoot);
             NekoJS.LOGGER.info("Ignoring server pack bundle (client packSync mode is hashOnly)");
             return Outcome.accepted();
         }
@@ -219,8 +215,7 @@ public final class PackSyncClient {
             return Outcome.disconnect(untrustedMessage(activeAddress));
         }
 
-        RemoteTrustHook trustHook = remoteTrustHook;
-        if (trustHook == null) {
+        if (runtimeRoot == null) {
             return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust owner is unavailable");
         }
         List<NekoTrustContext.RemoteSource> remoteSources = remoteSources(bucketDir, resolved);
@@ -230,7 +225,7 @@ public final class PackSyncClient {
         Path remoteRoot = bucketDir;
         // Replace the credential set before exposing the replacement pack to reload/execute.
         try {
-            trustHook.revoke(remoteRoot);
+            runtimeRoot.revokeRemoteSources(remoteRoot);
         } catch (Exception failure) {
             return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust reset failed");
         }
@@ -244,10 +239,10 @@ public final class PackSyncClient {
             pinSigningKey(trustStore, entry.getKey(), scopeNames.get(entry.getKey()), entry.getValue());
         }
         try {
-            trustHook.authorize(remoteSources, remoteRoot);
+            runtimeRoot.authorizeRemoteSources(remoteSources, remoteRoot);
         } catch (Exception failure) {
             ScriptPackRegistry.get().deactivateServerCachePacks();
-            trustHook.revoke(remoteRoot);
+            runtimeRoot.revokeRemoteSources(remoteRoot);
             return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
         }
         reloadClientScripts("server pack bundle applied");
@@ -258,18 +253,17 @@ public final class PackSyncClient {
     /* ================= 断线 ================= */
 
     /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有激活包时重载客户端脚本。 */
-    public static synchronized void handleDisconnect() {
+    public static synchronized void handleDisconnect(NekoRuntimeRoot runtimeRoot) {
         expectedHashes = Map.of();
-        deactivateAndReload("disconnected from server", activeRemoteRoot());
+        deactivateAndReload("disconnected from server", activeRemoteRoot(), runtimeRoot);
     }
 
     /* ================= 内部 ================= */
 
-    private static void deactivateAndReload(String reason, Path remoteRoot) {
+    private static void deactivateAndReload(String reason, Path remoteRoot, NekoRuntimeRoot runtimeRoot) {
         var removed = ScriptPackRegistry.get().deactivateServerCachePacks();
-        RemoteTrustHook trustHook = remoteTrustHook;
-        if (trustHook != null) {
-            trustHook.revoke(remoteRoot);
+        if (runtimeRoot != null) {
+            runtimeRoot.revokeRemoteSources(remoteRoot);
         }
         if (!removed.isEmpty()) {
             NekoJS.LOGGER.info("Deactivated {} server cache pack(s): {}", removed.size(), reason);
@@ -377,12 +371,6 @@ public final class PackSyncClient {
 
     /** 哈希清单条目（平台 payload → common 的映射单位）。 */
     public record HashEntry(String syncId, String hash) {}
-
-    public interface RemoteTrustHook {
-        void authorize(List<NekoTrustContext.RemoteSource> sources, Path remoteRoot);
-
-        void revoke(Path remoteRoot);
-    }
 
     /** bundle 处理结果：disconnect 非空时平台断连并展示消息。 */
     public record Outcome(String disconnect) {

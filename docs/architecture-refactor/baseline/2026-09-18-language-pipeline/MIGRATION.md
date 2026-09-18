@@ -119,9 +119,11 @@ export const same = ns.default === greet;
   再跑 CJS 静态分析进入同一 prepared 形态（`LegacyCjsBridgeCharacterizationTest`）；
   node 内建资源（classpath manifest）直装求值，不经过管线（独立语义：无文件身份/缓存/reload）。
 - **source-map 事实**：原生 JS/CJS/ESM 和没有 compiler map 的 legacy compiler 现在由
-  `NekoSourceMapBuilder.identity` 生成真实非空 identity map，包含 authored `sourcePath`、`sources`、
-  `sourcesContent` 和 generated/source line mappings；TS/JSX 等 compiler-produced map 仍使用 compiler
-  map。script-loader 的 `sourceURL` 仍可作 execution fallback，但不能替代 prepared source map。
+  `NekoSourceMapBuilder.identity` 生成真实非空 fallback map，包含 authored `sourcePath`、`sources`、
+  `sourcesContent` 和 generated/source mappings；原生同源 JS 提供行/列对应，legacy transformed
+  输入明确使用 generated-line -> authored-line 的保守映射，超出 authored 行时 clamp 到最后一行。
+  TS/JSX 等 compiler-produced map 仍使用 compiler map。script-loader 的 `sourceURL` 仍可作 execution
+  fallback，但不能替代 prepared source map。
   `NekoSourceMapBuilder` 的 identity 是唯一明确的 source-map utility API，不是 parser/lowering/compiler
   公共 SPI。
 - **保留原因**：外部语言参与路径是公开扩展能力（删即删公开语言）；内建直装语义不同，

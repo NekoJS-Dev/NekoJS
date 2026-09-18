@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 
 /**
  * 模块准备缓存（Script Preparation + Module Resolution/Cache 的 prepared 层）：
@@ -42,6 +43,7 @@ public final class NekoModulePipelineCache {
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
+    private volatile BiConsumer<Path, String> preparationObserver = (ignoredPath, ignoredKey) -> {};
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline) {
         this(pipeline, new SourceMapRegistry(), new NekoEsmVirtualModuleRegistry(), NekoTrustContext.local());
@@ -89,6 +91,7 @@ public final class NekoModulePipelineCache {
                 }
             });
             publishSourceMap(key, entry.prepared());
+            preparationObserver.accept(key, entry.prepared().cacheKey());
             return entry.prepared();
         } catch (PipelineException wrapper) {
             Throwable cause = wrapper.getCause();
@@ -122,7 +125,9 @@ public final class NekoModulePipelineCache {
         Path key = key(path);
         approvedSource(key);
         try {
-            return Files.readString(key);
+            String source = Files.readString(key);
+            preparationObserver.accept(key, jsonExecutionKey(key, source));
+            return source;
         } catch (IOException failure) {
             throw NekoModuleError.cache(NekoModuleError.displayPath(key),
                     "Cannot read JSON module source: " + failure.getMessage(), failure);
@@ -180,6 +185,11 @@ public final class NekoModulePipelineCache {
         return virtualModules;
     }
 
+    /** Host-owned observation seam for direct linker/rewriter preparation calls. */
+    void installPreparationObserver(BiConsumer<Path, String> observer) {
+        preparationObserver = observer == null ? (ignoredPath, ignoredKey) -> {} : observer;
+    }
+
     /** Controlled read-only view for execution-side filesystem integration. */
     public NekoVirtualModuleView virtualModuleView() {
         return virtualModules;
@@ -218,25 +228,25 @@ public final class NekoModulePipelineCache {
         } catch (IOException failure) {
             throw NekoModuleError.cache(NekoModuleError.displayPath(path), "Cannot read module source: " + failure.getMessage(), failure);
         }
-        NekoModuleIdentity identity;
+        NekoModulePipeline.LanguageBinding binding;
         try {
-            identity = pipeline.identify(path);
+            binding = pipeline.captureBinding(path);
         } catch (Exception failure) {
             throw NekoModuleError.prepare(NekoModuleError.displayPath(path), "unknown", NekoModuleMode.AUTO,
                     NekoModuleError.rootMessage(failure), failure);
         }
         FileStamp stamp;
         try {
-            stamp = FileStamp.read(path, source, identity);
+            stamp = FileStamp.read(path, source, binding.identity());
         } catch (IOException failure) {
             throw NekoModuleError.cache(NekoModuleError.displayPath(path), "Cannot stamp module source: " + failure.getMessage(), failure);
         }
-        return new SourceSnapshot(stamp, source);
+        return new SourceSnapshot(stamp, source, binding);
     }
 
     private NekoPreparedModule prepareSource(Path path, SourceSnapshot source,
-                                             NekoTrustApprovedSource approval) throws Exception {
-        return pipeline.prepare(path, source.source(), approval);
+                                              NekoTrustApprovedSource approval) throws Exception {
+        return pipeline.prepareCaptured(path, source.source(), approval, source.binding());
     }
 
     private void publishSourceMap(Path path, NekoPreparedModule prepared) {
@@ -266,6 +276,11 @@ public final class NekoModulePipelineCache {
         } catch (Exception ignored) { // relative path computation fails → cache miss
             return Optional.empty();
         }
+    }
+
+    private String jsonExecutionKey(Path path, String source) {
+        String moduleId = relativePath(path).orElse(path.toString().replace('\\', '/'));
+        return NekoModuleHash.sha256("json\0" + moduleId + "\0" + source);
     }
 
     private static boolean isWindows() {
@@ -312,7 +327,8 @@ public final class NekoModulePipelineCache {
         return null;
     }
 
-    private record SourceSnapshot(FileStamp stamp, String source) {}
+    private record SourceSnapshot(FileStamp stamp, String source,
+                                  NekoModulePipeline.LanguageBinding binding) {}
 
     private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type) {}
 

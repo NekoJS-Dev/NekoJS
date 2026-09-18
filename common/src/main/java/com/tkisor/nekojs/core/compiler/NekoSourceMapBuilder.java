@@ -3,7 +3,6 @@ package com.tkisor.nekojs.core.compiler;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -14,8 +13,8 @@ import java.util.List;
  * Source-map utility shared by compiler implementations and prepared native modules.
  *
  * <p>This is a source-map utility only, not a parser, lowering, compiler, or language SPI.
- * The identity map preserves authored source content and line correspondence when no
- * compiler-produced map exists.</p>
+ * The fallback map preserves authored source content and conservative line correspondence when no
+ * compiler-produced map exists; only unchanged native source receives exact column identity.</p>
  */
 public final class NekoSourceMapBuilder {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -29,19 +28,31 @@ public final class NekoSourceMapBuilder {
         this.source = source == null ? "" : source;
     }
 
-    /** Build a non-empty line-aligned map for authored and generated source. */
+    /**
+     * Build a non-empty map for authored and generated source. Identical native source gets
+     * line/column mappings; transformed source gets a conservative line map whose authored line
+     * is clamped to the last existing line.
+     */
     public static String identity(Path file, String source, String generated) {
         NekoSourceMapBuilder builder = new NekoSourceMapBuilder(file, source);
         String text = generated == null ? "" : generated;
-        int generatedLine = 0;
-        int originalLine = 0;
-        builder.add(0, 0, 0, 0);
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '\n') {
-                generatedLine++;
-                originalLine++;
+        int authoredLineCount = authoredLineCount(builder.source);
+        boolean exactSource = builder.source.equals(text);
+        int generatedLineCount = lineCount(text);
+        int generatedOffset = 0;
+        for (int generatedLine = 0; generatedLine < generatedLineCount; generatedLine++) {
+            int generatedLength = lineLength(text, generatedOffset);
+            int originalLine = Math.min(generatedLine, authoredLineCount - 1);
+            if (exactSource) {
+                for (int column = 0; column <= generatedLength; column++) {
+                    builder.add(generatedLine, column, originalLine, Math.min(column, lineLength(builder.source, lineOffset(builder.source, originalLine))));
+                }
+            } else {
                 builder.add(generatedLine, 0, originalLine, 0);
+            }
+            generatedOffset += generatedLength;
+            if (generatedOffset < text.length() && text.charAt(generatedOffset) == '\n') {
+                generatedOffset++;
             }
         }
         return builder.build();
@@ -158,14 +169,44 @@ public final class NekoSourceMapBuilder {
         if (path == null) {
             return "unknown.js";
         }
-        if (!path.isAbsolute()) {
-            return path.normalize().toString().replace('\\', '/');
+        Path normalized = path.normalize();
+        return normalized.toString().replace('\\', '/');
+    }
+
+    private static int lineCount(String text) {
+        int count = 1;
+        for (int i = 0; i < text.length(); i++) {
+            if (text.charAt(i) == '\n') {
+                count++;
+            }
         }
-        try {
-            return NekoJSPaths.get().root().relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');
-        } catch (Exception ignored) { // path relativize fails → fallback to absolute path string
-            return path.toString().replace('\\', '/');
+        return count;
+    }
+
+    private static int authoredLineCount(String text) {
+        int count = lineCount(text);
+        return Math.max(1, count - (text.endsWith("\n") ? 1 : 0));
+    }
+
+    private static int lineOffset(String text, int line) {
+        int currentLine = 0;
+        for (int i = 0; i < text.length(); i++) {
+            if (currentLine == line) {
+                return i;
+            }
+            if (text.charAt(i) == '\n') {
+                currentLine++;
+            }
         }
+        return text.length();
+    }
+
+    private static int lineLength(String text, int offset) {
+        int end = offset;
+        while (end < text.length() && text.charAt(end) != '\n') {
+            end++;
+        }
+        return end - offset;
     }
 
     static final class Emitter {

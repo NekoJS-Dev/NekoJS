@@ -39,7 +39,7 @@ import java.util.Set;
  * 静默 fallback。
  *
  * <p>输出的 {@link NekoPreparedModule} 携带 language id、module mode、可执行 code、
- * 编译器实际产生或 identity fallback 生成的 source map（sourceURL 仍可作为执行器 fallback）、
+ * 编译器实际产生或保守 fallback 生成的 source map（sourceURL 仍可作为执行器 fallback）、
  * 原始诊断位置（source path）与稳定 cache key，且不可变。
  *
  * <p>本类不创建 Graal Context、不决定 HostAccess、不读 Minecraft/loader（见
@@ -61,15 +61,32 @@ public final class NekoModulePipeline {
      * 不编译、不读盘、不触碰全局状态。
      */
     public NekoModuleIdentity identify(Path file) {
-        String extension = extension(file);
-        NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
-        return new NekoModuleIdentity(languageId(file, extension), requestedMode);
+        return captureBinding(file).identity();
     }
 
     public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
-        NekoModuleIdentity identity = identifyChecked(file);
+        LanguageBinding binding = captureBindingChecked(file);
+        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding);
+    }
+
+    /**
+     * Cache-owned preparation seam: the binding captured for the source stamp drives the whole
+     * prepare call, and the registry revision is checked before and after compilation.
+     */
+    NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
+                                       LanguageBinding binding) throws Exception {
+        NekoModuleIdentity identity = binding.identity();
+        if (approval == null || !approval.covers(file)) {
+            throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
+                    identity.requestedMode(), approval, "preparation requires a trust-approved source");
+        }
+        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding);
+    }
+
+    private NekoPreparedModule prepareWithBinding(Path file, String rawSource, LanguageBinding binding) throws Exception {
+        NekoModuleIdentity identity = binding.identity();
         try {
-            return prepareStages(file, rawSource == null ? "" : rawSource, identity);
+            return prepareStages(file, rawSource, binding);
         } catch (NekoModuleError staged) {
             throw staged;
         } catch (Exception failure) {
@@ -84,15 +101,12 @@ public final class NekoModulePipeline {
      * 且携带 language/mode/source——拒绝不隐藏语言边界）。
      */
     public NekoPreparedModule prepare(Path file, String rawSource, NekoTrustApprovedSource approval) throws Exception {
-        NekoModuleIdentity identity = identifyChecked(file);
-        if (approval == null || !approval.covers(file)) {
-            throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
-                    identity.requestedMode(), approval, "preparation requires a trust-approved source");
-        }
-        return prepare(file, rawSource);
+        LanguageBinding binding = captureBindingChecked(file);
+        return prepareCaptured(file, rawSource, approval, binding);
     }
 
-    private NekoPreparedModule prepareStages(Path file, String rawSource, NekoModuleIdentity identity) throws Exception {
+    private NekoPreparedModule prepareStages(Path file, String rawSource, LanguageBinding binding) throws Exception {
+        ensureBindingCurrent(file, binding);
         String extension = extension(file);
         // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
         // 访问不存在的成员时报错到游戏内错误面板。不阻止编译/执行。
@@ -103,11 +117,12 @@ public final class NekoModulePipeline {
             GlobalBindingMemberValidator.validate(file, rawSource);
             EventCallbackSourceValidator.validate(file, rawSource);
         }
-        NekoPreparedModule prepared = prepareModule(file, rawSource, extension, identity);
+        NekoPreparedModule prepared = prepareModule(file, rawSource, extension, binding);
         if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
             GlobalBindingMemberValidator.validate(file, prepared.code());
             EventCallbackSourceValidator.validate(file, prepared.code());
         }
+        ensureBindingCurrent(file, binding);
         return prepared;
     }
 
@@ -117,10 +132,10 @@ public final class NekoModulePipeline {
     }
 
     private NekoPreparedModule prepareModule(Path file, String rawSource, String extension,
-                                             NekoModuleIdentity identity) throws Exception {
-        NekoModuleMode requestedMode = identity.requestedMode();
-        NekoLanguagePlugin language = languagePlugin(file, extension);
-        String languageId = language.id();
+                                              LanguageBinding binding) throws Exception {
+        NekoModuleMode requestedMode = binding.identity().requestedMode();
+        NekoLanguagePlugin language = binding.plugin();
+        String languageId = binding.identity().languageId();
         String sourcePath = NekoModuleError.displayPath(file);
 
         if (!config.enableEsmAuthoring() || requestedMode == NekoModuleMode.COMMONJS) {
@@ -163,7 +178,7 @@ public final class NekoModulePipeline {
         return NekoPreparedModule.esm(languageId, sourcePath, compiled.code(), map, ast);
     }
 
-    /** Use the compiler map when present; otherwise publish a real authored identity map. */
+    /** Use the compiler map when present; otherwise publish a non-null conservative fallback map. */
     private static String usableMap(Path file, String authoredSource, String generatedSource, String sourceMap) {
         if (sourceMap != null && !sourceMap.isBlank()) {
             return sourceMap;
@@ -171,42 +186,47 @@ public final class NekoModulePipeline {
         return NekoSourceMapBuilder.identity(file, authoredSource, generatedSource);
     }
 
-    private String languageId(Path file, String extension) {
-        return languageBinding(file, extension).id();
+    LanguageBinding captureBinding(Path file) {
+        String extension = extension(file);
+        NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
+        NekoLanguagePlugin plugin = languagePlugin(file, extension);
+        return new LanguageBinding(new NekoModuleIdentity(plugin.id(), requestedMode), plugin, compilers.revision());
     }
 
     private NekoLanguagePlugin languagePlugin(Path file, String extension) {
-        return languageBinding(file, extension).plugin();
-    }
-
-    private LanguageBinding languageBinding(Path file, String extension) {
         NekoScriptLanguage language = compilers.getLanguage(extension);
         if (language != null) {
             if (language.plugin() != null) {
-                return new LanguageBinding(language.plugin().id(), language.plugin());
+                return language.plugin();
             }
             if (language.compiler() != null) {
-                return new LanguageBinding(language.id(),
-                        new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler()));
+                return new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler());
             }
         }
         IScriptCompiler compiler = compilers.getCompiler(extension);
         if (compiler != null) {
             String id = "legacy:" + extension.substring(1);
-            return new LanguageBinding(id, new NekoLegacyLanguagePlugin(id, Set.of(extension), compiler));
+            return new NekoLegacyLanguagePlugin(id, Set.of(extension), compiler);
         }
         if (!ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
             throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
         }
-        return new LanguageBinding(NekoJavaScriptLanguagePlugin.INSTANCE.id(), NekoJavaScriptLanguagePlugin.INSTANCE);
+        return NekoJavaScriptLanguagePlugin.INSTANCE;
     }
 
-    NekoModuleIdentity identifyChecked(Path file) throws NekoModuleError {
+    private LanguageBinding captureBindingChecked(Path file) throws NekoModuleError {
         try {
-            return identify(file);
+            return captureBinding(file);
         } catch (Exception failure) {
-            throw NekoModuleError.prepare(NekoModuleError.displayPath(file), "unknown", NekoModuleMode.AUTO,
-                    NekoModuleError.rootMessage(failure), failure);
+            throw NekoModuleError.prepare(NekoModuleError.displayPath(file), "unknown",
+                    NekoModuleMode.AUTO, NekoModuleError.rootMessage(failure), failure);
+        }
+    }
+
+    private void ensureBindingCurrent(Path file, LanguageBinding binding) throws NekoModuleError {
+        if (compilers.revision() != binding.registryRevision()) {
+            throw NekoModuleError.prepare(NekoModuleError.displayPath(file), binding.identity().languageId(),
+                    binding.identity().requestedMode(), "compiler registry changed during preparation", null);
         }
     }
 
@@ -219,6 +239,6 @@ public final class NekoModulePipeline {
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
     }
 
-    private record LanguageBinding(String id, NekoLanguagePlugin plugin) {}
+    record LanguageBinding(NekoModuleIdentity identity, NekoLanguagePlugin plugin, long registryRevision) {}
 
 }

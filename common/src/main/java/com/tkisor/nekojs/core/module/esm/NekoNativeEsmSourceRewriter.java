@@ -263,10 +263,10 @@ public final class NekoNativeEsmSourceRewriter {
         return virtualModules.register(moduleId(path), source);
     }
 
-    private static String moduleId(Path path) {
+    private String moduleId(Path path) {
         Path absolute = path.normalize().toAbsolutePath();
         try {
-            return com.tkisor.nekojs.core.fs.NekoJSPaths.get().root().relativize(absolute).toString().replace('\\', '/');
+            return virtualModules.root().getParent().relativize(absolute).toString().replace('\\', '/');
         } catch (IllegalArgumentException ignored) {
             return absolute.toString().replace('\\', '/');
         }
