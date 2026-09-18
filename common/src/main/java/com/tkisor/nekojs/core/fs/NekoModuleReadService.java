@@ -14,8 +14,8 @@ import java.util.Optional;
 public final class NekoModuleReadService {
     private NekoModuleReadService() {}
 
-    public static Path resolveReadableScript(Path originalPath) {
-        if (NekoEsmVirtualModuleRegistry.isVirtualModule(originalPath)) {
+    public static Path resolveReadableScript(Path originalPath, NekoEsmVirtualModuleRegistry virtualModules) {
+        if (virtualModules.isVirtualModule(originalPath)) {
             return originalPath;
         }
         if (Files.exists(originalPath)) {
@@ -50,8 +50,9 @@ public final class NekoModuleReadService {
     /**
      * 读已准备字节（W3 显式注入：调用方传入其 runtime-owned 缓存实例；无隐藏静态缓存）。
      */
-    public static Optional<byte[]> readPreparedBytes(Path path, NekoModulePipelineCache preparationCache) throws IOException {
-        String virtualSource = NekoEsmVirtualModuleRegistry.source(path);
+    public static Optional<byte[]> readPreparedBytes(Path path, NekoModulePipelineCache preparationCache,
+                                                     NekoEsmVirtualModuleRegistry virtualModules) throws IOException {
+        String virtualSource = virtualModules.source(path);
         if (virtualSource != null) {
             return Optional.of(virtualSource.getBytes(StandardCharsets.UTF_8));
         }
@@ -61,8 +62,9 @@ public final class NekoModuleReadService {
         return Optional.empty();
     }
 
-    public static Optional<Map<String, Object>> virtualAttributes(Path path) {
-        if (NekoEsmVirtualModuleRegistry.isVirtualDirectory(path)) {
+    public static Optional<Map<String, Object>> virtualAttributes(Path path,
+                                                                  NekoEsmVirtualModuleRegistry virtualModules) {
+        if (virtualModules.isVirtualDirectory(path)) {
             return Optional.of(Map.of(
                     "isRegularFile", false,
                     "isDirectory", true,
@@ -71,8 +73,8 @@ public final class NekoModuleReadService {
                     "size", 0L
             ));
         }
-        if (NekoEsmVirtualModuleRegistry.isVirtualModule(path)) {
-            String source = NekoEsmVirtualModuleRegistry.source(path);
+        if (virtualModules.isVirtualModule(path)) {
+            String source = virtualModules.source(path);
             return Optional.of(Map.of(
                     "isRegularFile", true,
                     "isDirectory", false,

@@ -38,6 +38,7 @@ public final class EsmModuleLifecycle {
     private final NekoEsmLinkCache esmLinkCache;
     private final NekoModuleDependencyGraph dependencyGraph;
     private final NekoNativeEsmSourceRewriter esmRewriter;
+    private final NekoEsmVirtualModuleRegistry virtualModules;
     private final Context context;
     private final Function<String, Long> revision;
     private final ModulePreparation prepare;
@@ -52,6 +53,7 @@ public final class EsmModuleLifecycle {
             NekoEsmLinkCache esmLinkCache,
             NekoModuleDependencyGraph dependencyGraph,
             NekoNativeEsmSourceRewriter esmRewriter,
+            NekoEsmVirtualModuleRegistry virtualModules,
             Context context,
             Function<String, Long> revision,
             ModulePreparation prepare
@@ -60,6 +62,7 @@ public final class EsmModuleLifecycle {
         this.esmLinkCache = esmLinkCache;
         this.dependencyGraph = dependencyGraph;
         this.esmRewriter = esmRewriter;
+        this.virtualModules = virtualModules;
         this.context = context;
         this.revision = revision;
         this.prepare = prepare;
@@ -149,7 +152,7 @@ public final class EsmModuleLifecycle {
         long rev = revision.apply(record.id());
         String source = "import * as __neko_namespace from " + jsString(sourceUri.toString()) + ";\n"
                 + "globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(" + jsString(record.id()) + ", " + rev + ", __neko_namespace);\n";
-        java.net.URI captureUri = NekoEsmVirtualModuleRegistry.register(record.id() + "#namespace-capture:" + sourceUri, source);
+        java.net.URI captureUri = virtualModules.register(record.id() + "#namespace-capture:" + sourceUri, source);
         try {
             context.eval(Source.newBuilder("js", source, captureUri.toString())
                     .mimeType("application/javascript+module")
@@ -181,7 +184,7 @@ public final class EsmModuleLifecycle {
                 + "import(" + jsString(sourceUri.toString()) + ")\n"
                 + "  .then(__neko_namespace => globalThis.__nekoScriptModuleLoaderHost.completeEsmNamespace(" + jsString(record.id()) + ", " + rev + ", __neko_namespace))\n"
                 + "  .catch(__neko_error => globalThis.__nekoScriptModuleLoaderHost.failEsmNamespace(" + jsString(record.id()) + ", " + rev + ", __neko_error_text(__neko_error)));\n";
-        java.net.URI captureUri = NekoEsmVirtualModuleRegistry.register(record.id() + "#namespace-capture-async:" + sourceUri, source);
+        java.net.URI captureUri = virtualModules.register(record.id() + "#namespace-capture-async:" + sourceUri, source);
         try {
             context.eval(Source.newBuilder("js", source, captureUri.toString()).build());
             return evaluation;

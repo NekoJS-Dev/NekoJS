@@ -22,7 +22,6 @@ import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
 import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
@@ -234,7 +233,7 @@ public final class ScriptManager implements AutoCloseable {
      */
     public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory, List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors) {
         this(scriptType, scriptEventBridge, pluginRuntime, scriptProperties, errorTracker, paths,
-                sandboxConfig, environmentFactory, domainCollectors, NekoModulePipelineCache.withExplicitPipeline(
+                sandboxConfig, environmentFactory, domainCollectors, new NekoModulePipelineCache(
                         com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), sandboxConfig));
     }
 
@@ -980,7 +979,6 @@ public final class ScriptManager implements AutoCloseable {
             }
             // (4) 旧 module session 释放
             preparationCache.clear(scriptType);
-            NekoEsmVirtualModuleRegistry.clear(scriptType);
             // (5) 旧环境按所有权顺序释放：timer → Context → streams
             if (!oldEnvironment.isEmpty()) {
                 closeRuntimeResources(oldEnvironment);
@@ -1226,11 +1224,9 @@ public final class ScriptManager implements AutoCloseable {
         private void fullReloadCleanup () {
             scriptEventBridge.clearListeners(scriptType);
             errorTracker.clearByType(scriptType);
-            // 清空 root 拥有的 prepared 缓存中本 scriptType 的条目：preparationCache.clear(ScriptType)
-            // 同时按类型清理对应 SourceMapRegistry 条目；NekoEsmVirtualModuleRegistry 持有虚拟 ESM URI。
-            // 局部清除避免单机单类型 reset/close 误清其它类型的编译产物（原全局 clear 会跨类型误伤）。
+            // 按类型清理 root-owned prepared 条目、source maps 和 virtual ESM sources。
+            // 局部清除避免一个脚本类型的 reset 误清同 owner 的其他类型产物。
             preparationCache.clear(scriptType);
-            NekoEsmVirtualModuleRegistry.clear(scriptType);
         }
 
         // ---- 路径解析 ----

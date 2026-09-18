@@ -4,10 +4,6 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.module.cjs.CjsModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 
 /**
  * 不可变 prepared module：Script Preparation 的输出，Module Resolution/Cache 与
@@ -17,14 +13,12 @@ import java.util.HexFormat;
  * 原始诊断位置（{@link #sourcePath()}）和稳定 cache key（{@link #cacheKey()}），且保持
  * 不可变：本类型是 record（类与全部组件 final），{@link CjsModuleRecord} 的依赖表在构造时
  * 即拷贝为不可变 {@link java.util.List}。Resolution/Cache 如需“修改”只能构造新实例——
- * 新实例的 {@link #cacheKey()} 必然不同（key 覆盖 language/mode/code/sourceMap），
+ * 新实例的 {@link #cacheKey()} 必然不同（key 覆盖 path/language/mode/code/sourceMap），
  * 篡改旧实例在编译期不可能（final 组件无 setter），反射改 final 字段会抛异常。
  *
- * <p>稳定 cache key 口径（{@link #stableCacheKey}）：{@code SHA-256("nekojs-prepared/v1" +
- * languageId + mode + code + sourceMap)}。注意 key 不含 {@link #sourcePath()}：
- * 路径是缓存 map 的键（见 {@link NekoModulePipelineCache}）；内容/语言/mode/map 变化由 key
- * 与 {@code FileStamp} 共同失效。实践中恒等 source map 内嵌来源路径，同文件内容落在不同
- * 路径时 key 通常也不同——key 只承诺“同输入同 key”，不承诺跨路径共享。
+ * <p>稳定 cache key 口径（{@link #stableCacheKey}）：{@code SHA-256("nekojs-prepared/v2" +
+ * sourcePath + languageId + mode + code + sourceMap)}。路径是模块身份的一部分，避免两个
+ * 路径上的同内容模块在后续 key-based cache 中发生身份碰撞。
  */
 public record NekoPreparedModule(
         /** 语言 id：如 {@code javascript}、{@code typescript}、{@code python}、{@code legacy:<ext>}。 */
@@ -50,28 +44,24 @@ public record NekoPreparedModule(
         }
         prependedLineCount = Math.max(0, prependedLineCount);
         if (cacheKey == null || cacheKey.isBlank()) {
-            cacheKey = stableCacheKey(languageId, mode, code, sourceMap);
+            cacheKey = stableCacheKey(sourcePath, languageId, mode, code, sourceMap);
         }
     }
 
     /**
-     * 稳定 cache key：仅由 language id、mode、code、sourceMap 决定；
+     * 稳定 cache key：由 source path、language id、mode、code、sourceMap 共同决定；
      * 任一输入变化即产生不同 key（篡改即变红的判定基础）。
      */
-    public static String stableCacheKey(String languageId, NekoModuleMode mode, String code, String sourceMap) {
+    public static String stableCacheKey(String sourcePath, String languageId, NekoModuleMode mode,
+                                        String code, String sourceMap) {
+        String normalizedPath = sourcePath == null ? "" : sourcePath.replace('\\', '/');
         String normalizedLanguage = languageId == null || languageId.isBlank() ? "unknown" : languageId;
         NekoModuleMode normalizedMode = mode == null ? NekoModuleMode.COMMONJS : mode;
         String normalizedCode = code == null ? "" : code;
         String normalizedMap = sourceMap == null ? "" : sourceMap;
-        String material = "nekojs-prepared/v1\0" + normalizedLanguage + "\0" + normalizedMode.name()
+        String material = "nekojs-prepared/v2\0" + normalizedPath + "\0" + normalizedLanguage + "\0" + normalizedMode.name()
                 + "\0" + normalizedCode + "\0" + normalizedMap;
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(material.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            // JDK 规范要求 SHA-256 算法必须存在；这里作为环境缺陷快速失败。
-            throw new IllegalStateException("SHA-256 digest is not available on this JVM", e);
-        }
+        return NekoModuleHash.sha256(material);
     }
 
     public static NekoPreparedModule commonJs(String code, String sourceMap) {

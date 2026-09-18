@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
@@ -44,6 +45,9 @@ class NekoRuntimeModuleCacheOwnershipTest {
         NekoModulePipelineCache secondCache = newCache();
         NekoRuntimeRoot first = rootWith(firstCache);
         NekoRuntimeRoot second = rootWith(secondCache);
+        String moduleId = "server_scripts/owner.mjs";
+        Path firstVirtual = Path.of(firstCache.virtualModules().uri(moduleId));
+        Path secondVirtual = Path.of(secondCache.virtualModules().uri(moduleId));
         try {
             assertSame(firstCache, first.preparationCache(), "root 必须持有装配传入的同一实例");
 
@@ -54,6 +58,11 @@ class NekoRuntimeModuleCacheOwnershipTest {
                 first.preparationCache().prepare(script);
                 assertEquals(1, firstCache.size(), "准备条目落在 owner 实例");
                 assertEquals(0, secondCache.size(), "独立 root 互不可见");
+                firstCache.sourceMaps().register("server_scripts/owner.ts", mapWithContent("first"));
+                secondCache.sourceMaps().register("server_scripts/owner.ts", mapWithContent("second"));
+                firstCache.virtualModules().register(moduleId, "export const owner = 'first';");
+                secondCache.virtualModules().register(moduleId, "export const owner = 'second';");
+                assertEquals(firstVirtual, secondVirtual, "virtual URI identity stays deterministic");
             } finally {
                 Files.deleteIfExists(script);
             }
@@ -61,6 +70,11 @@ class NekoRuntimeModuleCacheOwnershipTest {
             first.closeSilently();
             assertEquals(0, firstCache.size(), "root close 释放其持有的全部 prepared 条目");
             assertEquals(0, secondCache.size());
+            assertNull(firstCache.sourceMaps().getMappedPosition("server_scripts/owner.ts", 1, 1).path);
+            assertEquals("second", secondCache.sourceMaps()
+                    .getMappedPosition("server_scripts/owner.ts", 1, 1).sourceContent);
+            assertNull(firstCache.virtualModules().source(firstVirtual));
+            assertEquals("export const owner = 'second';", secondCache.virtualModules().source(secondVirtual));
         } finally {
             second.closeSilently();
         }
@@ -82,8 +96,13 @@ class NekoRuntimeModuleCacheOwnershipTest {
     }
 
     private static NekoModulePipelineCache newCache() {
-        return NekoModulePipelineCache.withExplicitPipeline(
+        return new NekoModulePipelineCache(
                 ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+    }
+
+    private static String mapWithContent(String content) {
+        return "{\"version\":3,\"file\":\"owner.js\",\"sources\":[\"server_scripts/owner.ts\"],"
+                + "\"sourcesContent\":[\"" + content + "\"],\"names\":[],\"mappings\":\"AAAA\"}";
     }
 
     /** 零行为插件桩：本测试不经过装配/执行，任何调用返回空值/零值/空集合。 */

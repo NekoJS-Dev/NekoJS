@@ -27,6 +27,7 @@ public class NekoJSFileSystem implements FileSystem {
     private Path currentWorkingDirectory;
     /** 已准备字节读取目标（W3 显式注入：与装配侧共享的 runtime-owned 缓存实例）。 */
     private final NekoModulePipelineCache preparationCache;
+    private final NekoEsmVirtualModuleRegistry virtualModules;
 
     public NekoJSFileSystem(Path initialWorkingDirectory) {
         // 无显式配置的旧入口：按默认沙箱配置裁决（生产路径见 NekoSandboxFactory，传真实配置）
@@ -35,7 +36,7 @@ public class NekoJSFileSystem implements FileSystem {
     }
 
     public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy) {
-        this(initialWorkingDirectory, policy, NekoModulePipelineCache.withExplicitPipeline(
+        this(initialWorkingDirectory, policy, new NekoModulePipelineCache(
                 ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
     }
 
@@ -45,6 +46,7 @@ public class NekoJSFileSystem implements FileSystem {
         this.paths = NekoJSPaths.get();
         this.policy = policy;
         this.preparationCache = preparationCache;
+        this.virtualModules = preparationCache.virtualModules();
     }
 
     @Override
@@ -69,14 +71,14 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public void checkAccess(Path path, Set<? extends AccessMode> modes, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : paths.verifyInsideGameDir(path);
-        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
+        Path verifiedPath = virtualModules.isVirtualPath(path) ? path.normalize().toAbsolutePath() : paths.verifyInsideGameDir(path);
+        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath, virtualModules);
 
-        if (NekoEsmVirtualModuleRegistry.isVirtualPath(verifiedPath)) {
+        if (virtualModules.isVirtualPath(verifiedPath)) {
             if (modes.contains(AccessMode.WRITE) || modes.contains(AccessMode.EXECUTE)) {
                 throw new AccessDeniedException(verifiedPath.toString());
             }
-            if (!NekoEsmVirtualModuleRegistry.isVirtualDirectory(verifiedPath) && !NekoEsmVirtualModuleRegistry.isVirtualModule(verifiedPath)) {
+            if (!virtualModules.isVirtualDirectory(verifiedPath) && !virtualModules.isVirtualModule(verifiedPath)) {
                 throw new NoSuchFileException(verifiedPath.toString());
             }
             return;
@@ -123,12 +125,12 @@ public class NekoJSFileSystem implements FileSystem {
                 || options.contains(StandardOpenOption.APPEND)
                 || options.contains(StandardOpenOption.CREATE)
                 || options.contains(StandardOpenOption.CREATE_NEW);
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path)
+        Path verifiedPath = virtualModules.isVirtualPath(path)
                 ? path.normalize().toAbsolutePath()
                 : writing ? policy.resolveWrite(path) : paths.verifyInsideGameDir(path);
-        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
+        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath, virtualModules);
 
-        var preparedBytes = NekoModuleReadService.readPreparedBytes(verifiedPath, preparationCache);
+        var preparedBytes = NekoModuleReadService.readPreparedBytes(verifiedPath, preparationCache, virtualModules);
         if (preparedBytes.isPresent()) {
             if (writing) {
                 throw new AccessDeniedException(verifiedPath.toString());
@@ -141,9 +143,9 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : paths.verifyInsideGameDir(path);
-        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
-        var virtualAttributes = NekoModuleReadService.virtualAttributes(verifiedPath);
+        Path verifiedPath = virtualModules.isVirtualPath(path) ? path.normalize().toAbsolutePath() : paths.verifyInsideGameDir(path);
+        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath, virtualModules);
+        var virtualAttributes = NekoModuleReadService.virtualAttributes(verifiedPath, virtualModules);
         if (virtualAttributes.isPresent()) {
             return virtualAttributes.get();
         }
@@ -152,9 +154,9 @@ public class NekoJSFileSystem implements FileSystem {
 
     @Override
     public Path toRealPath(Path path, LinkOption... linkOptions) throws IOException {
-        Path verifiedPath = NekoEsmVirtualModuleRegistry.isVirtualPath(path) ? path.normalize().toAbsolutePath() : paths.verifyInsideGameDir(path);
-        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
-        if (NekoEsmVirtualModuleRegistry.isVirtualPath(verifiedPath)) {
+        Path verifiedPath = virtualModules.isVirtualPath(path) ? path.normalize().toAbsolutePath() : paths.verifyInsideGameDir(path);
+        verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath, virtualModules);
+        if (virtualModules.isVirtualPath(verifiedPath)) {
             return verifiedPath;
         }
         return verifiedPath.toRealPath(linkOptions);

@@ -48,7 +48,7 @@ class NekoModuleErrorStageTest {
         paths = pathsFor(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
         context = Context.newBuilder("js").allowAllAccess(true).build();
-        cache = NekoModulePipelineCache.withExplicitPipeline(
+        cache = new NekoModulePipelineCache(
                 ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
         host = new NekoScriptModuleLoaderHost(
                 context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
@@ -104,11 +104,15 @@ class NekoModuleErrorStageTest {
         IOException failure = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/link-entry.mjs"));
 
-        NekoEsmLinkException link = assertInstanceOf(NekoEsmLinkException.class, failure);
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.LINK, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        NekoEsmLinkException link = assertInstanceOf(NekoEsmLinkException.class, staged.getCause());
         NekoEsmDiagnostic diagnostic = link.diagnostic();
         assertNotNull(diagnostic.file(), "link 失败必须携带源文件");
         assertTrue(diagnostic.file().toString().replace('\\', '/').endsWith("link-entry.mjs"),
                 "link 失败必须指向引用方， was: " + diagnostic.file());
+        assertTrue(diagnostic.line() > 0, "link 失败必须保留源行: " + diagnostic);
+        assertTrue(diagnostic.column() > 0, "link 失败必须保留源列: " + diagnostic);
         assertTrue(diagnostic.message().contains("ghost"), "link 失败必须点名缺失导出: " + diagnostic);
     }
 
@@ -142,18 +146,16 @@ class NekoModuleErrorStageTest {
     }
 
     @Test
-    void guestRuntimeErrorIsNotWrappedAsModuleError() throws Exception {
+    void guestRuntimeErrorCarriesExecuteStageAndOriginalCause() throws Exception {
         Path entry = paths.serverScripts().resolve("src/guest-boom.cjs");
         Files.writeString(entry, "throw new Error('guest-boom');\n");
 
-        // guest 运行时异常原样传播（调用者靠“非 NekoModuleError”识别执行期语义错误）。
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        IOException failure = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/guest-boom.cjs"));
-        assertTrue(String.valueOf(failure.getMessage()).contains("guest-boom"), String.valueOf(failure));
-        for (Throwable current = failure; current != null; current = current.getCause()) {
-            assertTrue(!(current instanceof NekoModuleError),
-                    "guest 异常不得被包成阶段错误: " + current);
-        }
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        assertTrue(String.valueOf(staged.getMessage()).contains("guest-boom"), String.valueOf(staged));
+        assertNotNull(staged.getCause(), "guest error must remain available as the cause");
     }
 
     private static boolean hasNoPolyglotCause(Throwable failure) {

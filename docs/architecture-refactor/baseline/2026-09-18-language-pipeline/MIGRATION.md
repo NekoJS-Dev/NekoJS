@@ -108,7 +108,7 @@ export const same = ns.default === greet;
 | `NekoModulePipelineCache.prepare / clear / clear(type) / invalidate`（static） | 实例方法；生产共享 `NekoRuntimeRoot#preparationCache()`；旧构造器（manager/host/linker/rewriter/coordinator/filesystem/installer）自建隔离实例 |
 | `NekoModuleReadService.readPreparedBytes(path)` / `readTransformedModule(path)` | 同名方法加 `NekoModulePipelineCache` 参数（纯函数，无隐藏状态） |
 | `new NekoScriptModuleLoaderHost(ctx[, resolver, paths])` | 行为不变（自建隔离缓存）；生产用四参构造传入共享实例 |
-| `NekoPreparedModule(code, sourceMap, mode, ast, cjs, lines)` 位置构造 | 新增 `languageId / sourcePath / cacheKey` 组件；管线用显式工厂 `commonJs(lang, path, …)` / `esm(lang, path, …)`，旧三参工厂保留（默认 `language=unknown`） |
+| `NekoPreparedModule(code, sourceMap, mode, ast, cjs, lines)` 位置构造 | 新增 `languageId / sourcePath / cacheKey` 组件；稳定 key 覆盖规范化 source path、语言、mode、code 和实际 source map；管线用显式工厂 `commonJs(lang, path, …)` / `esm(lang, path, …)`，旧三参工厂保留（默认 `language=unknown`） |
 
 `NekoRuntimeRoot#closeSilently` 全清其持有的 prepared 缓存（server stop/切世界/reload 不清空，
 按类型清理仍走各 manager 入口）。
@@ -127,12 +127,14 @@ export const same = ns.default === greet;
   3. trace（全仓无该后缀 `IScriptCompiler` 注册）；
   4. 无调用者（legacy 分支零生产/测试调用）。
 - **结构证据现状**：管线与 prepared 缓存零 static 可变状态、无 legacy static 门面
-  （同名测试类中断言锁定）；`NekoSourceMapBuilder.identity` 的可见性放宽仅用于恒等映射补齐，
-  不是 parser/lexer/lowering SPI（`pipelinePublicSurfaceExposesNoParserSpi` 锁定）。
+  （同名测试类中断言锁定）；`NekoSourceMapBuilder.identity` 由 TypeScript 编译器构造其恒等
+  映射，不用于给没有编译 map 的原生 JS/CJS/ESM 虚构 source map，且不是 parser/lexer/lowering SPI
+  （`pipelinePublicSurfaceExposesNoParserSpi` 锁定）。
 
 ## 4. 未做事项（非本票范围）
 
 - 不删除公开语言、不新增 parser ModuleSPI、不设性能发布阈值（PERF_BASELINE 独立）。
-- `SourceMapRegistry` / `NekoEsmVirtualModuleRegistry` 仍为带 `ScriptType` 分区清理的共享注册表
-  （分区行为已由 `ScriptTypeScopedCacheClearTest` 锁定；实例化不在本票范围）。
+- `SourceMapRegistry` / `NekoEsmVirtualModuleRegistry` 由 prepared-cache 实例持有；生产装配与
+  `NekoRuntimeRoot` 共用并在 root close 时释放，按 `ScriptType` 清理只影响该 owner 的条目。
+  不同 host 即使使用相同模块 id / virtual URI，也不能读取或清理对方的 source/map 内容。
 - `ScriptCompilerRegistry.current()` 语言扩展注册点保留（语言插件机制本身，非 static 管线）。

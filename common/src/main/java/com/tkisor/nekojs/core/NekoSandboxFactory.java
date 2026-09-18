@@ -73,7 +73,7 @@ public final class NekoSandboxFactory {
     private volatile RunawayWatchdog sharedWatchdog;
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
-        this(core, paths, compilers, pluginRuntime, NekoModulePipelineCache.withExplicitPipeline(
+        this(core, paths, compilers, pluginRuntime, new NekoModulePipelineCache(
                 compilers, core.sandboxConfig()));
     }
 

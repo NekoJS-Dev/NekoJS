@@ -9,9 +9,12 @@ import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
+import graal.graalvm.polyglot.SourceSection;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.junit.jupiter.api.AfterEach;
@@ -45,14 +48,19 @@ class NekoModuleIdentityLifecycleTest {
     private NekoJSPaths paths;
     private Context context;
     private NekoScriptModuleLoaderHost host;
+    private NekoModulePipelineCache cache;
 
     @BeforeEach
     void setUp() throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
         paths = pathsFor(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
-        NekoModulePipelineCache cache = NekoModulePipelineCache.withExplicitPipeline(
-                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
+        cache = new NekoModulePipelineCache(new NekoModulePipeline(
+                new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
         // 生产级接线：虚拟 ESM 模块经 NekoJSFileSystem 由 guest import 解析（与 NekoSandboxFactory 一致）。
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
@@ -60,7 +68,7 @@ class NekoModuleIdentityLifecycleTest {
                 .build();
         context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+                context, new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)), paths, cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
@@ -129,6 +137,43 @@ class NekoModuleIdentityLifecycleTest {
     }
 
     @Test
+    void separateHostsKeepVirtualSourcesAndSourceMapsPrivate() throws Exception {
+        NekoModulePipelineCache otherCache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(),
+                        ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
+        try (Context otherContext = Context.newBuilder("js").allowAllAccess(true).build()) {
+            NekoScriptModuleLoaderHost otherHost = new NekoScriptModuleLoaderHost(otherContext,
+                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, otherCache);
+            String moduleId = "server_scripts/src/host-isolation.mjs";
+            Path firstVirtual = Path.of(host.virtualModules().register(moduleId, "export const owner = 'first';"));
+            Path secondVirtual = Path.of(otherHost.virtualModules().register(moduleId, "export const owner = 'second';"));
+
+            String firstMap = sourceMapWithContent("server_scripts/src/host-isolation.ts", "first source");
+            String secondMap = sourceMapWithContent("server_scripts/src/host-isolation.ts", "second source");
+            host.sourceMaps().register("server_scripts/src/host-isolation.ts", firstMap, 0);
+            otherHost.sourceMaps().register("server_scripts/src/host-isolation.ts", secondMap, 0);
+
+            assertEquals(firstVirtual, secondVirtual, "the virtual URI is deterministic across hosts");
+            assertTrue(host.virtualModules().source(firstVirtual).contains("first"));
+            assertTrue(otherHost.virtualModules().source(secondVirtual).contains("second"));
+            assertEquals("first source", host.sourceMaps().getMappedPosition(
+                    "server_scripts/src/host-isolation.ts", 1, 1).sourceContent);
+            assertEquals("second source", otherHost.sourceMaps().getMappedPosition(
+                    "server_scripts/src/host-isolation.ts", 1, 1).sourceContent);
+
+            cache.clear();
+
+            assertTrue(otherHost.virtualModules().source(secondVirtual).contains("second"));
+            assertEquals("second source", otherHost.sourceMaps().getMappedPosition(
+                    "server_scripts/src/host-isolation.ts", 1, 1).sourceContent);
+        } finally {
+            otherCache.clear();
+        }
+    }
+
+    @Test
     void esmNamespaceIdentityHoldsAcrossImports() throws Exception {
         Path dir = paths.serverScripts().resolve("src");
         Files.writeString(dir.resolve("ns-dep.mjs"), "export const tag = 'ns';\n");
@@ -160,9 +205,10 @@ class NekoModuleIdentityLifecycleTest {
         IOException failure = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/dup-entry.mjs"));
 
-        // LINK 阶段按类型区分（NekoEsmLinkException 自带 file/line/column 诊断）。
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.LINK, NekoModuleError.OWNER_RESOLUTION_CACHE);
         com.tkisor.nekojs.core.module.esm.NekoEsmLinkException link =
-                assertInstanceOf(com.tkisor.nekojs.core.module.esm.NekoEsmLinkException.class, failure);
+                assertInstanceOf(com.tkisor.nekojs.core.module.esm.NekoEsmLinkException.class, staged.getCause());
         assertNotNull(link.diagnostic().file(), "link 失败必须携带源文件");
         assertTrue(link.diagnostic().file().toString().replace('\\', '/').endsWith("dup-entry.mjs"),
                 "was: " + link.diagnostic());
@@ -174,13 +220,14 @@ class NekoModuleIdentityLifecycleTest {
         Files.writeString(dir.resolve("exec-inner.cjs"), "throw new Error('leaf-boom');\n");
         Files.writeString(dir.resolve("exec-outer.cjs"), "require('./exec-inner.cjs');\n");
 
-        RuntimeException failure = assertThrows(RuntimeException.class,
+        IOException failure = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/exec-outer.cjs"));
 
-        // CJS 模块以 sourceURL=模块 id 求值：guest 栈帧携带来源模块身份（message 只有错误文本）。
-        String message = String.valueOf(failure.getMessage());
-        assertTrue(message.contains("leaf-boom"), "message was: " + message);
-        String stack = stackText(failure);
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        assertTrue(String.valueOf(staged.getMessage()).contains("leaf-boom"), String.valueOf(staged));
+        // CJS has no source map; script-loader's sourceURL supplies the guest stack location.
+        String stack = stackText(staged);
         assertTrue(stack.contains("exec-inner.cjs"), "跨 import 错误栈必须保留来源模块身份: " + stack);
         assertTrue(stack.matches("(?s).*exec-inner\\.cjs:\\d+.*"),
                 "跨 import 错误栈必须保留来源行列: " + stack);
@@ -192,43 +239,49 @@ class NekoModuleIdentityLifecycleTest {
         return writer.toString().replace('\\', '/');
     }
 
+    private static String sourceMapWithContent(String sourcePath, String content) {
+        return "{\"version\":3,\"file\":\"host-isolation.js\",\"sources\":[\"" + sourcePath
+                + "\"],\"sourcesContent\":[\"" + content
+                + "\"],\"names\":[],\"mappings\":\"AAAA\"}";
+    }
+
     @Test
-    void transpiledModuleErrorMapsBackToOriginalFileViaSourceMap() throws Exception {
-        // TS 擦除产物经 source map 回到原始 .ts 文件行列：prepare 发布映射，错误侧按映射归因。
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
-        NekoModulePipeline pipeline = new NekoModulePipeline(
-                new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig());
+    void loadEntryRuntimeFailureKeepsTranspiledModuleSourceLocation() throws Exception {
         Path dir = paths.serverScripts().resolve("src");
         Path ts = dir.resolve("map-leaf.ts");
         String source = "const label: string = 'leaf';\n"
-                + "const hit: number = 41 + 1;\n"
-                + "export const out = hit;\n";
+                + "throw new Error('ts-leaf-boom');\n"
+                + "export const out: number = 42;\n";
         Files.writeString(ts, source);
 
-        NekoPreparedModule prepared = pipeline.prepare(ts, source);
-        assertEquals("typescript", prepared.languageId());
-        assertNotNull(prepared.sourceMap(), "转译模块必须携带可用 source map");
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/map-leaf.ts"));
 
-        String relative = paths.root().relativize(ts.toAbsolutePath().normalize())
-                .toString().replace('\\', '/');
-        SourceMapRegistry.register(relative, prepared.sourceMap(), prepared.prependedLineCount());
-        try {
-            // 注：SourceMapRegistry/NekoJSPaths 根为进程先赢单例，多测试同 JVM 时 map 内嵌的
-            // sources[0] 可能是绝对路径回退；生产单根下恒为 root-relative。此处以后缀判定同一原始文件。
-            boolean mapped = false;
-            for (int line = 1; line <= 3 && !mapped; line++) {
-                SourceMapRegistry.OriginalPosition position =
-                        SourceMapRegistry.getMappedPosition(relative, line, 1);
-                if (position.path != null && position.path.replace('\\', '/').endsWith(relative)) {
-                    mapped = true;
-                    assertEquals(line, position.line, "恒等映射行列一致");
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        PolyglotException guestFailure = assertInstanceOf(PolyglotException.class, staged.getCause());
+        assertTrue(staged.getMessage().contains("ts-leaf-boom"), String.valueOf(staged));
+        SourceSection location = guestFailure.getSourceLocation();
+        if (location == null) {
+            for (PolyglotException.StackFrame frame : guestFailure.getPolyglotStackTrace()) {
+                if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
+                    location = frame.getSourceLocation();
+                    break;
                 }
             }
-            assertTrue(mapped, "source map 必须能映射回原始 " + relative);
-        } finally {
-            SourceMapRegistry.clear(relative);
         }
+        assertNotNull(location, "Graal must report the executed guest location: " + stackText(guestFailure));
+        String generatedPath = location.getSource().getPath();
+        assertNotNull(generatedPath, "executed source must have a path");
+        String displayPath = host.virtualModules().displayPath(generatedPath);
+        assertEquals("server_scripts/src/map-leaf.ts", displayPath);
+        var mapped = host.sourceMaps().getMappedPosition(displayPath,
+                location.getStartLine(), location.getStartColumn());
+        assertTrue(mapped.path != null && mapped.path.replace('\\', '/').endsWith(displayPath),
+                "runtime source map must restore the authored TypeScript path: generated=" + generatedPath
+                        + ", display=" + displayPath + ", line=" + location.getStartLine()
+                        + ", column=" + location.getStartColumn() + ", mapped=" + mapped);
+        assertEquals(2, mapped.line, "runtime source map must restore the authored throw line");
     }
 
     private static Value asValue(Object exports) {

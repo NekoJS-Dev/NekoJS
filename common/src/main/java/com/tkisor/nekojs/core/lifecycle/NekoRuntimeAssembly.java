@@ -12,12 +12,14 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.log.NekoJSLoggers;
 import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
@@ -80,7 +82,9 @@ public final class NekoRuntimeAssembly {
         SandboxConfig sandboxConfig = ClassFilter.loadEngineConfig();
         // 复用全局单例（NekoSecurityWarningHandler 等读取 ClassFilter.INSTANCE），避免双实例状态分裂
         ClassFilter classFilter = ClassFilter.INSTANCE;
-        var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig);
+        SourceMapRegistry sourceMaps = new SourceMapRegistry(NekoJSPaths.get().root());
+        NekoEsmVirtualModuleRegistry virtualModules = new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root());
+        var errorTracker = new DefaultErrorTracker(NekoJSPaths.get(), sandboxConfig, sourceMaps, virtualModules);
         ScriptErrorReporter.set(new ErrorTrackerReporter(errorTracker));
         NekoCoreContext core = new NekoCoreContext(
                 NekoSharedEngine.get(),
@@ -91,7 +95,8 @@ public final class NekoRuntimeAssembly {
         // W3 语言模块管线：单 pipeline + 单 prepared 缓存实例，执行环境侧与 root 共享；
         // 模块 cache/session 生命周期由 root 持有（root close 全清），无 static 状态。
         NekoModulePipelineCache modulePreparationCache = new NekoModulePipelineCache(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig),
+                sourceMaps, virtualModules, com.tkisor.nekojs.core.module.NekoTrustContext.local());
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime, modulePreparationCache);
         NekoRuntimeRoot root = new NekoRuntimeRoot(
                 core,

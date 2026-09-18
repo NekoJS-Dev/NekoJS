@@ -69,7 +69,9 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
         IOException error = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/broken.js"));
 
-        NekoEsmLinkException link = assertInstanceOf(NekoEsmLinkException.class, error);
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                error, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PREPARATION);
+        NekoEsmLinkException link = assertInstanceOf(NekoEsmLinkException.class, staged.getCause());
         NekoEsmDiagnostic diagnostic = link.diagnostic();
         assertEquals(broken.toAbsolutePath().normalize(), diagnostic.file().toAbsolutePath().normalize());
         assertEquals(3, diagnostic.line());
@@ -99,10 +101,12 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
 
         // 内层诊断经 Graal guest 边界传播后异常类型丢失（转为 guest error），
         // 但完整诊断文本（含 at <file>:<line>:<column>）保留在外层异常消息里
-        RuntimeException error = assertThrows(RuntimeException.class,
+        IOException error = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/outer.js"));
 
-        String message = String.valueOf(error.getMessage());
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                error, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        String message = String.valueOf(staged.getMessage());
         assertTrue(message.contains("SyntaxError"), "message was: " + message);
         assertTrue(message.contains("inner-broken.js:2:7"), "message was: " + message);
     }

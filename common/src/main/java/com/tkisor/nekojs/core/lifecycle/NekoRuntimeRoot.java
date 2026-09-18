@@ -75,7 +75,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             NekoSandboxFactory sandboxFactory
     ) {
         this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory,
-                com.tkisor.nekojs.core.module.NekoModulePipelineCache.withExplicitPipeline(
+                new com.tkisor.nekojs.core.module.NekoModulePipelineCache(
                         com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), core.sandboxConfig()));
     }
 
