@@ -240,6 +240,9 @@ public final class NekoModulePipelineCache {
     }
 
     private void publishSourceMap(Path path, NekoPreparedModule prepared) {
+        if (prepared.sourceMap() == null || prepared.sourceMap().isBlank()) {
+            return;
+        }
         relativePath(path).ifPresent(relativePath -> sourceMaps.register(relativePath,
                 prepared.sourceMap(), prepared.prependedLineCount()));
     }

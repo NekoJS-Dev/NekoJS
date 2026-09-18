@@ -28,6 +28,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -195,18 +197,60 @@ class NekoModuleIdentityLifecycleTest {
     }
 
     @Test
+    void literalDynamicImportResolvesAtRuntimeRecordsDependencyAndInvalidatesParent() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Path child = dir.resolve("dynamic-child.mjs");
+        Path entry = dir.resolve("dynamic-entry.mjs");
+        Files.writeString(child, "export const value = 'AAAA';\n");
+        Files.writeString(entry, "const pending = await import('./dynamic-child.mjs');\n"
+                + "export const value = pending.value;\n");
+
+        Value first = asValue(host.loadEntryAsync("./server_scripts/src/dynamic-entry.mjs")
+                .get(10, TimeUnit.SECONDS));
+        assertEquals("AAAA", first.getMember("value").asString());
+
+        Files.writeString(child, "export const value = 'BBBB';\n");
+
+        Value second = asValue(host.loadEntryAsync("./server_scripts/src/dynamic-entry.mjs")
+                .get(10, TimeUnit.SECONDS));
+        assertEquals("BBBB", second.getMember("value").asString(),
+                "a changed dynamic child must invalidate the parent execution cache");
+    }
+
+    @Test
     void literalDynamicImportResolutionFailureKeepsResolveStageAndCause() throws Exception {
         Path entry = paths.serverScripts().resolve("src/dynamic-missing.mjs");
-        Files.writeString(entry, "import('./does-not-exist.mjs');\nexport const pending = 1;\n");
+        Files.writeString(entry, "const pending = await import('./does-not-exist.mjs');\n"
+                + "export { pending };\n");
 
-        IOException failure = assertThrows(IOException.class,
-                () -> host.loadEntry("./server_scripts/src/dynamic-missing.mjs"));
+        ExecutionException failure = assertThrows(ExecutionException.class,
+                () -> host.loadEntryAsync("./server_scripts/src/dynamic-missing.mjs")
+                        .get(10, TimeUnit.SECONDS));
 
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
                 failure, NekoModuleError.Stage.RESOLVE, NekoModuleError.OWNER_RESOLUTION_CACHE);
         assertEquals("./does-not-exist.mjs", staged.moduleId());
         assertTrue(staged.sourcePath().replace('\\', '/').endsWith("dynamic-missing.mjs"), staged.detail());
         assertNotNull(staged.getCause(), "literal dynamic import must retain resolver I/O cause");
+    }
+
+    @Test
+    void literalDynamicImportLinkFailureKeepsLinkStageAndCause() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Files.writeString(dir.resolve("dynamic-bad.mjs"),
+                "export const value = 1;\nexport const value = 2;\n");
+        Files.writeString(dir.resolve("dynamic-link-entry.mjs"),
+                "const pending = await import('./dynamic-bad.mjs');\n"
+                        + "export { pending };\n");
+
+        ExecutionException failure = assertThrows(ExecutionException.class,
+                () -> host.loadEntryAsync("./server_scripts/src/dynamic-link-entry.mjs")
+                        .get(10, TimeUnit.SECONDS));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.LINK, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        assertNotNull(staged.getCause(), "literal dynamic import link failure must retain its cause");
+        assertTrue(String.valueOf(staged.sourcePath()).replace('\\', '/').endsWith("dynamic-bad.mjs"), staged.detail());
     }
 
     @Test
@@ -315,7 +359,7 @@ class NekoModuleIdentityLifecycleTest {
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
                 failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
         assertTrue(String.valueOf(staged.getMessage()).contains("leaf-boom"), String.valueOf(staged));
-        // CJS has no source map; script-loader's sourceURL supplies the guest stack location.
+        // Native CJS also publishes an identity source map; sourceURL remains an execution fallback.
         String stack = stackText(staged);
         assertTrue(stack.contains("exec-inner.cjs"), "跨 import 错误栈必须保留来源模块身份: " + stack);
         assertTrue(stack.matches("(?s).*exec-inner\\.cjs:\\d+.*"),

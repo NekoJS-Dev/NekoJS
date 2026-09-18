@@ -152,7 +152,9 @@ public final class NekoScriptModuleLoaderHost {
 
     @CalledByDynamicCode
     public void failEsmNamespace(String moduleId, long revision, Object failure) {
-        esmRecordCache.failNamespace(moduleId, revision, toThrowable(failure));
+        NekoModuleError staged = boundaryFailure.get();
+        boundaryFailure.remove();
+        esmRecordCache.failNamespace(moduleId, revision, staged == null ? toThrowable(failure) : staged);
     }
 
     // ---- 入口加载: JS bridge 调用，也由 ScriptManager 通过 Java 间接调用 ----
@@ -286,27 +288,40 @@ public final class NekoScriptModuleLoaderHost {
         return loadResolvedAsync(resolved);
     }
 
+    @CalledByDynamicCode
     public String resolveNativeImport(String parentPath, String specifier) throws IOException {
-        if (isResolvedNativeModuleUri(specifier)) {
-            return specifier;
-        }
-        NekoResolvedModule resolved = resolveChild(parentPath, specifier);
-        recordDependency(parentPath, resolved);
-        if (resolved.special()) {
-            if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
-                // automatic JSX runtime 的命名导入（jsx/jsxs/Fragment）需要静态导出名
-                return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "jsx", "jsxs", "Fragment").toString();
+        try {
+            if (isResolvedNativeModuleUri(specifier)) {
+                return specifier;
             }
-            return esmRewriter.syntheticObjectModuleUri(resolved.specifier()).toString();
+            NekoResolvedModule resolved = resolveChild(parentPath, specifier);
+            recordDependency(parentPath, resolved);
+            if (resolved.special()) {
+                if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
+                    // automatic JSX runtime 的命名导入（jsx/jsxs/Fragment）需要静态导出名
+                    return esmRewriter.syntheticNamedModuleUri(resolved.specifier(), "jsx", "jsxs", "Fragment").toString();
+                }
+                return esmRewriter.syntheticObjectModuleUri(resolved.specifier()).toString();
+            }
+            if (resolved.json()) {
+                return esmRewriter.syntheticJsonModuleUri(resolved.path()).toString();
+            }
+            NekoPreparedModule prepared = prepare(resolved);
+            if (prepared.mode() == NekoModuleMode.ESM) {
+                // Validate the dynamic child's host-side link now so LINK diagnostics retain
+                // their NekoModuleError stage before native import() evaluates the URI.
+                esmLifecycle.linkedEsmRecord(resolved, prepared);
+                return esmRewriter.registerModule(resolved.path(), resolved.id(), prepared).toString();
+            }
+            return esmRewriter.syntheticCjsModuleUri(resolved.id(), parentPath, specifier).toString();
+        } catch (NekoModuleError staged) {
+            boundaryFailure.set(staged);
+            throw staged;
+        } catch (IOException failure) {
+            NekoModuleError staged = NekoModuleError.resolve(parentPath, specifier, failure);
+            boundaryFailure.set(staged);
+            throw staged;
         }
-        if (resolved.json()) {
-            return esmRewriter.syntheticJsonModuleUri(resolved.path()).toString();
-        }
-        NekoPreparedModule prepared = prepare(resolved);
-        if (prepared.mode() == NekoModuleMode.ESM) {
-            return esmRewriter.registerModule(resolved.path(), resolved.id(), prepared).toString();
-        }
-        return esmRewriter.syntheticCjsModuleUri(resolved.id(), parentPath, specifier).toString();
     }
 
     // ======== 以下为私有实现 ========

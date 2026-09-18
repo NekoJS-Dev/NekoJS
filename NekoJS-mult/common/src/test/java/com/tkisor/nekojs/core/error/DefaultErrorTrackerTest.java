@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -76,6 +77,18 @@ class DefaultErrorTrackerTest {
         tracker.recordCallbackError(ScriptType.SERVER, "timer", esmError(10, 5, "bang"));
 
         assertEquals(2, tracker.getErrorCount(), "不同错误信息应各自记录");
+    }
+
+    @Test
+    void registryObservationsArePackagePrivateReadOnlyViews() throws Exception {
+        var sourceMaps = DefaultErrorTracker.class.getDeclaredMethod("sourceMaps");
+        var virtualModules = DefaultErrorTracker.class.getDeclaredMethod("virtualModules");
+
+        assertFalse(Modifier.isPublic(sourceMaps.getModifiers()));
+        assertFalse(Modifier.isPublic(virtualModules.getModifiers()));
+        assertEquals(NekoSourceMapView.class, sourceMaps.getReturnType());
+        assertEquals(com.tkisor.nekojs.core.module.NekoVirtualModuleView.class,
+                virtualModules.getReturnType());
     }
 
     @Test

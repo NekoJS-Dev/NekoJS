@@ -104,19 +104,20 @@ public final class FabricPackSync {
         PackSyncClient.installClientReloadHook(FabricPackSync::reloadClientScripts);
         PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
             @Override
-            public void authorize(List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources) {
+            public void authorize(List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources,
+                                  java.nio.file.Path remoteRoot) {
                 NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
                 if (root == null) {
                     throw new IllegalStateException("NekoJS runtime root is not assembled");
                 }
-                root.authorizeRemoteSources(sources);
+                root.authorizeRemoteSources(sources, remoteRoot);
             }
 
             @Override
-            public void revoke() {
+            public void revoke(java.nio.file.Path remoteRoot) {
                 NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
                 if (root != null) {
-                    root.revokeRemoteSources();
+                    root.revokeRemoteSources(remoteRoot);
                 }
             }
         });

@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class NekoRuntimeTrustContext implements NekoTrustContext {
     private final Set<String> remotePaths = ConcurrentHashMap.newKeySet();
     private final Map<String, NekoTrustApprovedSource> remoteApprovals = new ConcurrentHashMap<>();
+    private final Set<String> protectedRoots = ConcurrentHashMap.newKeySet();
 
     private NekoRuntimeTrustContext() {}
 
@@ -24,26 +25,44 @@ public final class NekoRuntimeTrustContext implements NekoTrustContext {
         return new NekoRuntimeTrustContext();
     }
 
-    /** Admit only files from a verified and activated remote pack. */
-    public void authorizeRemoteSources(Collection<RemoteSource> sources) {
+    /**
+     * Replace the active remote credentials and protect the active cache root. Previously known
+     * roots remain protected so a server switch cannot turn an old cached file into local trust.
+     */
+    public synchronized void authorizeRemoteSources(Collection<RemoteSource> sources, Path remoteRoot) {
+        if (remoteRoot == null) {
+            throw new IllegalArgumentException("remoteRoot");
+        }
+        String root = NekoTrustApprovedSource.subjectOf(remoteRoot);
+        protectedRoots.add(root);
+        remotePaths.clear();
+        remoteApprovals.clear();
         if (sources == null) return;
         for (RemoteSource source : sources) {
             String subject = NekoTrustApprovedSource.subjectOf(source.file());
+            if (!NekoTrustApprovedSource.isWithin(subject, root)) {
+                throw new IllegalArgumentException("Remote source is outside the active cache root: " + source.file());
+            }
             remotePaths.add(subject);
             remoteApprovals.put(subject,
                     NekoTrustApprovedSource.remote(source.file(), source.packId(), source.keyId()));
         }
     }
 
-    /** Revoke all currently issued remote credentials; cached files remain non-local by origin. */
-    public void revokeRemoteSources() {
+    /** Revoke credentials and keep the supplied cache root protected against local fallback. */
+    public synchronized void revokeRemoteSources(Path remoteRoot) {
         remoteApprovals.clear();
+        remotePaths.clear();
+        if (remoteRoot != null) {
+            protectedRoots.add(NekoTrustApprovedSource.subjectOf(remoteRoot));
+        }
     }
 
     @Override
     public NekoTrustApprovedSource approvalFor(Path file) {
         String subject = NekoTrustApprovedSource.subjectOf(file);
-        if (remotePaths.contains(subject)) {
+        if (remotePaths.contains(subject) || protectedRoots.stream()
+                .anyMatch(root -> NekoTrustApprovedSource.isWithin(subject, root))) {
             return remoteApprovals.get(subject);
         }
         return NekoTrustApprovedSource.local(file);

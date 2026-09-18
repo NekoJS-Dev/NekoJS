@@ -5,7 +5,10 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -17,15 +20,14 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * 票据 11 AC1 + AC2：{@link NekoModulePipeline#prepare} 最高调用者测试。
  *
- * <p>JS/CJS/ESM 输入产生正确的 language id、module mode、可执行 code、明确的 source-map
- * availability（原生输入为 null）与稳定 cache key；prepared module 不可变（record + final
+ * <p>JS/CJS/ESM 输入产生正确的 language id、module mode、可执行 code、可解析的 identity
+ * source map 与稳定 cache key；prepared module 不可变（record + final
  * 组件 + 篡改即 key 变化）。
  */
 class NekoModulePipelinePrepareTest {
@@ -51,7 +53,7 @@ class NekoModulePipelinePrepareTest {
         assertEquals("javascript", first.languageId());
         assertEquals(NekoModuleMode.COMMONJS, first.mode());
         assertTrue(first.code().contains("40 + 2"), "code must be executable JS, was: " + first.code());
-        assertNull(first.sourceMap(), "native JS is not compiled and must not claim a source map");
+        assertIdentityMap(first, source);
         assertNotNull(first.sourcePath());
         assertEquals(first.cacheKey(), second.cacheKey(), "same input must produce a stable cache key");
     }
@@ -67,8 +69,9 @@ class NekoModulePipelinePrepareTest {
         assertEquals("javascript", esm.languageId());
         assertEquals(NekoModuleMode.ESM, esm.mode());
         assertNotNull(esm.esmAst(), "ESM prepared module must carry its AST for the linker");
-        assertNull(esm.sourceMap(), "native JavaScript ESM has no compiler source map");
+        assertIdentityMap(esm, source);
         assertEquals(NekoModuleMode.COMMONJS, cjs.mode());
+        assertIdentityMap(cjs, "module.exports = 7;\n");
         assertNotEquals(esm.cacheKey(), cjs.cacheKey(), "mode/content change must change the cache key");
     }
 
@@ -147,6 +150,22 @@ class NekoModulePipelinePrepareTest {
         assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.ESM, "code", "map"));
         assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.COMMONJS, "code!", "map"));
         assertNotEquals(keyA, NekoPreparedModule.stableCacheKey("server_scripts/a.js", "javascript", NekoModuleMode.COMMONJS, "code", "map!"));
+    }
+
+    private static void assertIdentityMap(NekoPreparedModule prepared, String authoredSource) {
+        assertNotNull(prepared.sourceMap(), "every successful prepared module must publish a source map");
+        var root = JsonParser.parseString(prepared.sourceMap()).getAsJsonObject();
+        assertEquals(3, root.get("version").getAsInt());
+        assertEquals(prepared.sourcePath(), root.getAsJsonArray("sources").get(0).getAsString());
+        assertEquals(authoredSource, root.getAsJsonArray("sourcesContent").get(0).getAsString());
+        assertTrue(!root.get("mappings").getAsString().isBlank(), "identity map must contain mappings");
+
+        SourceMapRegistry registry = new SourceMapRegistry(NekoJSPaths.get().root());
+        registry.register(prepared.sourcePath(), prepared.sourceMap());
+        SourceMapRegistry.OriginalPosition mapped = registry.getMappedPosition(prepared.sourcePath(), 1, 0);
+        assertEquals(prepared.sourcePath().replace('\\', '/'), mapped.path);
+        assertEquals(1, mapped.line);
+        assertEquals(authoredSource, mapped.sourceContent);
     }
 
     @Test
