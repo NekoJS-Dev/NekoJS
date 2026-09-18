@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.error;
 
-import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -103,9 +102,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
      */
     public void clearByScriptType(ScriptType type) {
         if (type == null) return;
-        Path typePath = ScriptTypeEnv.scriptsDir(type);
-        String dirName = typePath == null ? type.name + "_scripts" : typePath.getFileName().toString();
-        clearByPathPrefix(dirName + "/");
+        clearByPathPrefix(type.name + "_scripts/");
     }
 
     private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {

@@ -2,13 +2,17 @@ package com.tkisor.nekojs.core.pack;
 
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.pack.sync.SyncedPack;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -112,6 +116,18 @@ public final class ScriptPackRegistry {
         return serverCachePacks;
     }
 
+    /**
+     * 激活指定同步清单中的服务器缓存包；缓存 bucket 中未选中的旧目录不参与扫描，物理文件仍保留。
+     * {@code activePackIds} 使用传输层的 syncId（例如 {@code packs:demo}），而不是 manifest id。
+     */
+    public synchronized List<ScriptPack> activateServerCachePacks(Path bucketDir,
+                                                                    Collection<String> activePackIds) {
+        serverCachePacks = bucketDir == null
+            ? List.of()
+            : scanForceEnabled(bucketDir, ScriptPackScope.SERVER_CACHE, activePackIds);
+        return serverCachePacks;
+    }
+
     /** 卸载服务器缓存包（断线 / 服务端清空包集），返回被移除的包。缓存文件保留。 */
     public synchronized List<ScriptPack> deactivateServerCachePacks() {
         List<ScriptPack> removed = serverCachePacks;
@@ -129,7 +145,7 @@ public final class ScriptPackRegistry {
 
     /** 扫描目录下所有含 manifest.json 的子目录为包；损坏 manifest 跳过，同 scope 重复 id 后者跳过。 */
     private static List<ScriptPack> scan(Path root, ScriptPackScope scope) {
-        return scan(root, scope, false);
+        return scan(root, scope, false, null);
     }
 
     /**
@@ -139,10 +155,17 @@ public final class ScriptPackRegistry {
      *                     是否执行由验签/信任关口决定，包内启用开关不适用）
      */
     private static List<ScriptPack> scan(Path root, ScriptPackScope scope, boolean forceEnabled) {
+        return scan(root, scope, forceEnabled, null);
+    }
+
+    private static List<ScriptPack> scan(Path root, ScriptPackScope scope, boolean forceEnabled,
+                                         Set<String> selectedDirs) {
         if (root == null || !Files.isDirectory(root)) return List.of();
         List<Path> dirs;
         try (Stream<Path> stream = Files.list(root)) {
-            dirs = stream.filter(Files::isDirectory).sorted().toList();
+            dirs = stream.filter(Files::isDirectory)
+                    .filter(dir -> selectedDirs == null || selectedDirs.contains(dir.getFileName().toString()))
+                    .sorted().toList();
         } catch (IOException e) {
             NekoJS.LOGGER.warn("Failed to list script pack directory {}: {}", root, e.toString());
             return List.of();
@@ -178,5 +201,18 @@ public final class ScriptPackRegistry {
 
     private static List<ScriptPack> scanForceEnabled(Path root, ScriptPackScope scope) {
         return scan(root, scope, true);
+    }
+
+    private static List<ScriptPack> scanForceEnabled(Path root, ScriptPackScope scope,
+                                                      Collection<String> activePackIds) {
+        Set<String> selectedDirs = new HashSet<>();
+        if (activePackIds != null) {
+            for (String activePackId : activePackIds) {
+                if (activePackId != null) {
+                    selectedDirs.add(SyncedPack.encodeSyncId(activePackId));
+                }
+            }
+        }
+        return scan(root, scope, true, selectedDirs);
     }
 }

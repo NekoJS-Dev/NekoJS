@@ -50,6 +50,12 @@ class ModulePipelineIsolationTest {
             "core/module/NekoScriptModuleLoaderHost.java",
             "core/module/EsmModuleLifecycle.java");
 
+    /** Runtime-owned cache/registry boundaries must not rediscover platform script roots. */
+    private static final List<String> RUNTIME_OWNED_BOUNDARY_FILES = List.of(
+            "core/module/NekoModulePipelineCache.java",
+            "core/error/SourceMapRegistry.java",
+            "core/module/esm/NekoEsmVirtualModuleRegistry.java");
+
     @Test
     void preparationCreatesNoContextDecidesNoHostAccessAndReadsNoPlatform() throws IOException {
         List<String> violations = scan(PREPARATION_FILES, true);
@@ -75,6 +81,19 @@ class ModulePipelineIsolationTest {
         List<String> violations = scan(RESOLUTION_FILES, true);
         assertTrue(violations.isEmpty(), "Resolution/Cache 不得创建 Context/决定 HostAccess/读平台:\n"
                 + String.join("\n", violations));
+    }
+
+    @Test
+    void runtimeOwnedCachesUseOnlyInjectedRootForScriptTypeBoundaries() throws IOException {
+        for (String file : RUNTIME_OWNED_BOUNDARY_FILES) {
+            String source = stripCommentsAndStrings(read(file));
+            assertTrue(!source.contains("ScriptTypeEnv"),
+                    file + " must derive script type directories from the public ScriptType name");
+            assertTrue(!source.contains("NekoJSPaths"),
+                    file + " must use its injected root rather than global NekoJS paths");
+            assertTrue(!source.contains("Platform"),
+                    file + " must not read platform-owned game directory state");
+        }
     }
 
     @Test

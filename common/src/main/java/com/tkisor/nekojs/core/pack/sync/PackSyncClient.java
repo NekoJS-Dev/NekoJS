@@ -232,7 +232,7 @@ public final class PackSyncClient {
 
         // 5) 激活 + 重载 + pinning 签名公钥（v1：信任服务器即信任其当前签名密钥；
         //    此后同 keyId 换钥会被验签拒绝）
-        ScriptPackRegistry.get().activateServerCachePacks(bucketDir);
+        ScriptPackRegistry.get().activateServerCachePacks(bucketDir, resolved.keySet());
         Map<String, String> scopeNames = new LinkedHashMap<>();
         for (SyncedPack pack : packs) scopeNames.put(pack.syncId(), pack.scopeName());
         for (Map.Entry<String, ServerPackCache.CachedPack> entry : resolved.entrySet()) {
