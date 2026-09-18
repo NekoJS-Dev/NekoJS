@@ -18,6 +18,7 @@ import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
 import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.state.GlobalStateStores;
 import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
@@ -236,10 +237,13 @@ class Ticket39DomainCollectionTest {
             SandboxConfig config = testConfig();
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+                    .newCache(paths, compilers, config);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                    core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                    core, paths, compilers, pluginRuntime, cache);
             root = new NekoRuntimeRoot(core, pluginRuntime, bridge,
-                    newPropertyRegistry(), sandboxFactory);
+                    newPropertyRegistry(), sandboxFactory, cache);
             root.registerDomainCollector(collector);
             root.createScriptManager(ScriptType.SERVER).discoverScripts();
         }

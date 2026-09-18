@@ -16,11 +16,17 @@ import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Value;
@@ -111,10 +117,15 @@ class NekoRuntimeRootLifecycleTest {
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(
                     NekoSharedEngine.get(), config, ClassFilter.INSTANCE, tracker);
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                    new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                    new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                    NekoTrustContext.local());
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                    core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                    core, paths, compilers, pluginRuntime, cache);
             return new NekoRuntimeRoot(core, pluginRuntime, bridge,
-                    new ScriptPropertyRegistry.Impl(), sandboxFactory);
+                    new ScriptPropertyRegistry.Impl(), sandboxFactory, cache);
         }
     }
 

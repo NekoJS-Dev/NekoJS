@@ -7,6 +7,7 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
@@ -136,7 +137,17 @@ class LegacyCjsBridgeCharacterizationTest {
     @Test
     void nodeBuiltinsInstallWithoutPipeline() {
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            NekoNodeModuleInstaller.install(context, ScriptType.TEST);
+            NekoJSPaths paths = NekoJSPaths.get();
+            SandboxConfig config = SandboxConfig.defaultConfig();
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                    new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                    new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                    NekoTrustContext.local());
+            NekoNodeModuleInstaller.install(context, ScriptType.TEST,
+                    new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)),
+                    paths, new DefaultErrorTracker(paths, config), config, cache);
 
             var path = context.eval("js",
                     "globalThis.__nekoNodeResolve('node:path').posix.join('/a', 'b')");
@@ -170,11 +181,12 @@ class LegacyCjsBridgeCharacterizationTest {
                 NekoTrustContext.local());
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
-                        new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
+                        new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
                 .build();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(
-                    context, new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)), cache);
+                    context, new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertNotNull(in, "script-loader.js must be on the test classpath");

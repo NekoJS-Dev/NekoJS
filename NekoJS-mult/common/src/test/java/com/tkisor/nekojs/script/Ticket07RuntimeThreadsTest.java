@@ -22,6 +22,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
@@ -241,12 +242,14 @@ class Ticket07RuntimeThreadsTest {
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
-            NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
+            NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+                    .newCache(paths, compilers, config);
+            NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime, cache);
             ScriptEnvironmentFactory environmentFactory =
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
                         new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                    newPropertyRegistry(), tracker, paths, config, environmentFactory);
+                    newPropertyRegistry(), tracker, paths, config, environmentFactory, List.of(), cache);
             this.recorder.manager = this.manager;
         }
 
@@ -785,9 +788,12 @@ class Ticket07RuntimeThreadsTest {
         StubPluginRuntime pluginRuntime = new StubPluginRuntime(recorder, bridge.group);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+                .newCache(paths, compilers, config);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
-        NekoRuntimeRoot root = new NekoRuntimeRoot(core, pluginRuntime, bridge, newPropertyRegistry(), sandboxFactory);
+                core, paths, compilers, pluginRuntime, cache);
+        NekoRuntimeRoot root = new NekoRuntimeRoot(core, pluginRuntime, bridge, newPropertyRegistry(), sandboxFactory, cache);
         try {
             Files.createDirectories(ScriptTypeEnv.scriptsDir(ScriptType.STARTUP));
             for (ScriptType type : ScriptType.values()) {

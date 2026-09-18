@@ -138,7 +138,8 @@ class NekoModuleTrustStageTest {
                 path -> path.equals(trustedEntry) ? NekoTrustApprovedSource.local(path) : null);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
-                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
+                    new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var input = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertTrue(input != null, "script loader resource must exist");
@@ -182,11 +183,12 @@ class NekoModuleTrustStageTest {
                 new com.tkisor.nekojs.core.error.SourceMapRegistry(paths.root()),
                 new com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry(paths.root()), remote);
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
                 .build();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
-                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
+                    new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var input = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertTrue(input != null, "script loader resource must exist");

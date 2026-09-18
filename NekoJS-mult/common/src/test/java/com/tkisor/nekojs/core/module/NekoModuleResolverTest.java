@@ -2,12 +2,10 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -108,11 +106,46 @@ class NekoModuleResolverTest {
                 resolver.resolveForRequire("nekojs/server_scripts/main.js", "nekojs/user-lib").kind());
     }
 
+    @Test
+    void preservesRelativeJsonAndScriptCandidateResolution() throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path scripts = gameDir.resolve("nekojs/server_scripts");
+        Files.createDirectories(scripts);
+        Files.writeString(scripts.resolve("entry.js"), "module.exports = 1;\n");
+        Files.writeString(scripts.resolve("data.json"), "{\"value\":1}\n");
+
+        assertEquals(NekoModuleKind.SCRIPT,
+                resolver.resolveEntry("./server_scripts/entry").kind());
+        assertEquals(NekoModuleKind.JSON,
+                resolver.resolve("./server_scripts/entry.js", "./data").kind());
+    }
+
+    @Test
+    void rejectsSymlinkEscapeFromGameDirectory() throws Exception {
+        NekoModuleResolver resolver = resolverFor(gameDir);
+        Path outside = gameDir.getParent().resolve("nekojs-resolver-outside.js");
+        Path link = gameDir.resolve("nekojs/server_scripts/link.js");
+        Files.createDirectories(link.getParent());
+        Files.writeString(outside, "module.exports = 1;\n");
+        try {
+            try {
+                Files.createSymbolicLink(link, outside);
+            } catch (UnsupportedOperationException | IOException unavailable) {
+                return;
+            }
+            IOException error = assertThrows(IOException.class,
+                    () -> resolver.resolve("./server_scripts/main.js", "./link.js"));
+            assertTrue(error.getMessage().contains("Symlink escape"), error::getMessage);
+        } finally {
+            Files.deleteIfExists(link);
+            Files.deleteIfExists(outside);
+        }
+    }
+
     private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {
-        Constructor<NekoJSPaths> constructor = NekoJSPaths.class.getDeclaredConstructor(Path.class);
-        constructor.setAccessible(true);
-        NekoJSPaths paths = constructor.newInstance(gameDir);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
-        return new NekoModuleResolver(paths, new ScriptFilePolicy(compilers));
+        Path root = gameDir.resolve("nekojs");
+        return new NekoModuleResolver(new NekoModuleResolutionPaths(
+                gameDir, root, root.resolve("node_modules")), new ScriptFilePolicy(compilers));
     }
 }

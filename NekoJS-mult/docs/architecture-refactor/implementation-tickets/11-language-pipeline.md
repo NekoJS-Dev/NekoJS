@@ -310,6 +310,25 @@
 | AC10 | `ModulePipelineIsolationTest` 源码扫描/纯签名扫描/无零参或隐式 default helper 构造器/绝对路径 source-map helper；host 只接收 resolver/cache；平台依赖只在 execution assembly；三个 runtime-owned cache/registry 禁止 `ScriptTypeEnv`、`NekoJSPaths`、`Platform` token | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest`（并由 `:common:check` 重跑） | PASS；反射与去注释扫描覆盖 `NekoModulePipelineCache`、`NekoModuleResolver`、loader host、`SourceMapRegistry`、`NekoEsmVirtualModuleRegistry`、error tracker，禁止 `NekoJSPaths.get()`、`Platform.getGameDir`、`ScriptTypeEnv` 与 `defaultPreparationCache`；common compile 不创建 Context。 |
 | AC11 | `ModuleExamplesSmokeTest`、module-examples resources、MIGRATION baseline | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModuleExamplesSmokeTest` | PASS；最小 JS/CJS/ESM 示例测试制品；真实 loader/in-game smoke 不在此命令内。 |
 
+## Review-round-7 addendum (2026-09-19)
+
+本轮针对终审 hard findings 在 `a1b19c70` 工作树上继续 fix-forward；本 addendum 只记录实际收口、调用者迁移和验证边界，不把未执行的真实 Minecraft/loader/network session 标为完成。
+
+- **W3 runtime cache ownership：fixed.** 删除 `NekoSandboxFactory` 与 `NekoRuntimeRoot` 的无 cache public 构造器；同时删除 `ScriptManager`、`NekoJSFileSystem` 和 `NekoNodeModuleInstaller` 会自行创建 `NekoModulePipelineCache` 的旧入口。生产 `NekoRuntimeAssembly` 仍只创建一个 cache，并把同一引用传给 factory/root；root 构造边界还会拒绝 factory/cache identity 不一致的调用。manager、filesystem、installer、host 的测试调用者现在都显式接收测试 fixture 或装配传入的 cache。`NekoRuntimeModuleCacheOwnershipTest#factoryRootManagerAndHostAllUseTheSameCacheIdentity` 通过字段 identity 断言四个对象使用同一实例，并断言 root 拒绝第二份 cache；`ModulePipelineIsolationTest#runtimeObjectsHaveNoImplicitPreparationCacheConstructionPath` 反射断言旧构造器和旧 installer overload 不存在。限制：该 identity 测试不启动完整 `NekoRuntimeAssembly` 的 auto-load/discovery 序列，生产 single-owner 图由 assembly 源码和显式构造签名共同验证。
+
+- **AC10 resolution-cache platform boundary：fixed.** 新增纯值 `NekoModuleResolutionPaths(Path gameDir, Path root, Path nodeModules)`；`NekoModuleResolver` 不再 import/持有 `NekoJSPaths`，也不访问 `Platform`，所有 containment、real-path、node_modules 和 loader-relative path 计算只使用注入的 `Path` 与 `java.nio.file.Files`。`NekoSandboxFactory` 与 installer/test callers 在边界处把 paths 值转换为该 record；旧 `NekoModuleResolver(NekoJSPaths, ...)` 构造器已删除。`ModulePipelineIsolationTest` 覆盖 resolver/record 的源码 token、签名和无平台依赖断言；`NekoModuleResolverTest` 覆盖 relative entry/JSON/script candidates、bare node_modules、traversal 和 symlink escape。限制：symlink 用例依赖测试文件系统允许创建 symbolic link；当前 Windows 环境已实际执行通过。
+
+- **Filesystem path injection：fixed.** `NekoJSFileSystem` 只保留 `(initialWorkingDirectory, policy, paths, preparationCache)` 显式入口，目录过滤器复用该实例的 paths，不再在迭代时调用 `NekoJSPaths.get()`；Node installer 只保留带 resolver/paths/error tracker/config/cache 的显式 install 入口。既有 `ScriptManager` / `ScriptLocator` discovery owner 未改动。
+
+### Review-round-7 evidence matrix
+
+| Finding / AC | 精确证据 | 精确 Gradle 命令 | 结果、制品与限制 |
+|---|---|---|---|
+| W3 cache identity / constructor cutover | `NekoRuntimeModuleCacheOwnershipTest` 的 factory/root/manager/host identity；`ModulePipelineIsolationTest` 的 factory/root/manager/filesystem/installer 旧入口反射断言 | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeModuleCacheOwnershipTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；JUnit XML/HTML test report；未宣称完整 loader bootstrap smoke。 |
+| AC10 pure resolver boundary | `NekoModuleResolver` + `NekoModuleResolutionPaths` 源码/token/constructor scan；resolver 无 `NekoJSPaths`/`Platform` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；源码扫描与反射证据；不替代真实 Minecraft runtime evidence。 |
+| Resolver behavior preservation | relative entry, `.js`/`.json` candidate, bare `node_modules`, traversal rejection, symlink escape | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModuleResolverTest` | PASS；symlink test 在当前 Windows 文件系统实际运行；无 golden 更新。 |
+| Required compile/check gates | common main/test compilation、common check、NeoForge/Fabric 26.2.0 main compilation、whitespace check | `./gradlew.bat :common:compileJava :common:compileTestJava`; `./gradlew.bat :common:check`; `./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | 本轮均以命令实际结果为准；平台既有 deprecation、`this-escape` 与 Gson `InlineMe` classfile warning 记录为 warning，不影响成功；未更新 golden。 |
+
 补充构建证据：`./gradlew.bat :common:compileJava :common:compileTestJava` 与
 `./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava` 均 PASS；平台编译仅有既有
 deprecation、`this-escape` 与 Gson 注解缺失告警。综合门禁为 `./gradlew.bat :common:check`，未更新任何

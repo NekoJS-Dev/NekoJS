@@ -21,13 +21,7 @@ import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
 import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
 import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import com.tkisor.nekojs.core.log.LoggerStream;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
@@ -225,11 +219,6 @@ public final class ScriptManager implements AutoCloseable {
 
     // ---- 构造函数 ----
 
-    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory) {
-        this(scriptType, scriptEventBridge, pluginRuntime, scriptProperties, errorTracker, paths,
-                sandboxConfig, environmentFactory, List.of());
-    }
-
     /**
      * 票 39：带候选域收集器集合的构造形态——{@code NekoRuntimeRoot.createScriptManager}
      * 传入 root 拥有的收集器注册表（reload 的 DOMAIN_PLAN 阶段消费；见
@@ -237,14 +226,6 @@ public final class ScriptManager implements AutoCloseable {
      * 收集器按引用共享（root 注册晚于 manager 创建也可见），读取只发生在 reload
      * 的 owner thread 临界区内。
      */
-    public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory, List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors) {
-        this(scriptType, scriptEventBridge, pluginRuntime, scriptProperties, errorTracker, paths,
-                sandboxConfig, environmentFactory, domainCollectors, new NekoModulePipelineCache(
-                        new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), sandboxConfig),
-                        new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
-                        NekoTrustContext.local()));
-    }
-
     /**
      * 票 11 W3：带 root 拥有的 prepared 缓存的构造形态——{@code NekoRuntimeRoot.createScriptManager}
      * 传入与执行环境侧（sandbox factory / module host / filesystem）共享的同一实例。

@@ -1,6 +1,19 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModuleResolutionPaths;
+import com.tkisor.nekojs.core.module.NekoModuleResolver;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,9 +41,23 @@ class NodeModulesJsRegressionTest {
 
     private static final class Installed implements AutoCloseable {
         final Context context = Context.newBuilder("js").allowAllAccess(true).build();
-        final NekoNodeRuntime runtime = NekoNodeModuleInstaller.install(context, ScriptType.TEST);
+        final NekoNodeRuntime runtime = install(context);
         final List<String> failures = new ArrayList<>();
         final List<String> marks = new ArrayList<>();
+
+        private static NekoNodeRuntime install(Context context) {
+            NekoJSPaths paths = NekoJSPaths.get();
+            SandboxConfig config = SandboxConfig.defaultConfig();
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                    new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                    new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                    NekoTrustContext.local());
+            return NekoNodeModuleInstaller.install(context, ScriptType.TEST,
+                    new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)),
+                    paths, new DefaultErrorTracker(paths, config), config, cache);
+        }
 
         Installed() {
             context.getBindings("js").putMember("__out", failures);

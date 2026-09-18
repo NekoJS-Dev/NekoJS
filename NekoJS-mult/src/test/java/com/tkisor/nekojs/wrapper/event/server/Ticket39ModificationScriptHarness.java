@@ -58,9 +58,13 @@ final class Ticket39ModificationScriptHarness implements AutoCloseable {
         SandboxConfig config = new SandboxConfig(false, false, false, false, true, true, false, true, 5, 100_000L, 0);
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        com.tkisor.nekojs.core.module.NekoModulePipelineCache cache =
+                com.tkisor.nekojs.testfixture.NekoModuleTestFixtures.newCache(paths,
+                        compilers, config);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
-        root = new NekoRuntimeRoot(core, pluginRuntime, bridge, newPropertyRegistry(), sandboxFactory);
+                core, paths, compilers, pluginRuntime, cache);
+        root = new NekoRuntimeRoot(core, pluginRuntime, bridge, newPropertyRegistry(), sandboxFactory, cache);
         root.registerDomainCollector(owner);
         root.createScriptManager(ScriptType.SERVER).discoverScripts();
     }

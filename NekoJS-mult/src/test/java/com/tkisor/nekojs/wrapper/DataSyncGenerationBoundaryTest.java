@@ -283,15 +283,19 @@ class DataSyncGenerationBoundaryTest {
             StubPluginRuntime pluginRuntime = new StubPluginRuntime(recorder, pdata);
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            com.tkisor.nekojs.core.module.NekoModulePipelineCache cache =
+                    com.tkisor.nekojs.testfixture.NekoModuleTestFixtures.newCache(paths,
+                            compilers, config);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
-                    ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                    compilers, pluginRuntime, cache);
             ScriptEnvironmentFactory environmentFactory =
                     // ticket 10 起 ScriptEnvironmentFactory 需要 root 拥有的状态域（4 参构造器）；
                     // 本测试不覆盖 global/shared 面，传独立空 store。
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
                             new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                    newPropertyRegistry(), tracker, paths, config, environmentFactory);
+                    newPropertyRegistry(), tracker, paths, config, environmentFactory, List.of(), cache);
         }
 
         void writeScript(String fileName, String source) throws Exception {
