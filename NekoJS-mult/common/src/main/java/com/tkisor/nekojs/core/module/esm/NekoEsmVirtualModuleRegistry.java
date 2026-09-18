@@ -4,6 +4,7 @@ import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModuleHash;
+import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 
 import java.io.IOException;
 import java.net.URI;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class NekoEsmVirtualModuleRegistry {
+public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView {
     private final Path root;
     private final Map<String, String> sources = new ConcurrentHashMap<>();
     private final Map<String, String> displayPaths = new ConcurrentHashMap<>();

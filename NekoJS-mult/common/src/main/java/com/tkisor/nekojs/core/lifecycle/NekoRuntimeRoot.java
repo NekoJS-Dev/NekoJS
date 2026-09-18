@@ -7,6 +7,8 @@ import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
 import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
@@ -48,6 +50,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
      * 全清释放。无任何 static 状态——新的独立 root / 测试 runner 从空开始，互不可见。
      */
     private final com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache;
+    private final NekoTrustContext trustContext;
     /**
      * root 拥有的受管 global/shared 状态域（票 10）：按 {@link ScriptType} 的私有 backing
      * store + 显式共享 store（工作名 shared）。跨普通 reload、server stop、切换世界保留；
@@ -76,7 +79,8 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     ) {
         this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory,
                 new com.tkisor.nekojs.core.module.NekoModulePipelineCache(
-                        com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), core.sandboxConfig()));
+                        com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), core.sandboxConfig()),
+                NekoTrustContext.local());
     }
 
     /**
@@ -91,6 +95,19 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             NekoSandboxFactory sandboxFactory,
             com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache
     ) {
+        this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory, preparationCache,
+                NekoTrustContext.local());
+    }
+
+    public NekoRuntimeRoot(
+            NekoCoreContext core,
+            IPluginRuntime pluginRuntime,
+            ScriptEventBridge eventBridge,
+            ScriptPropertyRegistry scriptProperties,
+            NekoSandboxFactory sandboxFactory,
+            com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache,
+            NekoTrustContext trustContext
+    ) {
         this.core = core;
         this.pluginRuntime = pluginRuntime;
         this.eventBridge = eventBridge;
@@ -99,11 +116,31 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.scriptManagers = new EnumMap<>(ScriptType.class);
         this.resources = new ResourceTracker();
         this.preparationCache = preparationCache;
+        this.trustContext = trustContext;
     }
 
-    /** 本 root 拥有的 prepared 模块缓存（Java 侧观察 seam；reload/失效经各 manager 入口）。 */
-    public com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache() {
+    /** 本 root 的 prepared cache，仅供同包生命周期诊断；reload/失效经各 manager 入口。 */
+    com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache() {
         return preparationCache;
+    }
+
+    int preparedModuleCountForDiagnostics() {
+        return preparationCache.preparedEntryCount();
+    }
+
+    /** Pack activation owner injects verified remote sources into this runtime's CLIENT candidate. */
+    public void authorizeRemoteSources(java.util.Collection<NekoTrustContext.RemoteSource> sources) {
+        if (!(trustContext instanceof NekoRuntimeTrustContext runtimeTrust)) {
+            throw new IllegalStateException("Runtime was assembled without a mutable trust context");
+        }
+        runtimeTrust.authorizeRemoteSources(sources);
+    }
+
+    /** Connection teardown revokes remote credentials before the next CLIENT reload. */
+    public void revokeRemoteSources() {
+        if (trustContext instanceof NekoRuntimeTrustContext runtimeTrust) {
+            runtimeTrust.revokeRemoteSources();
+        }
     }
 
     /** 本 root 的受管 global/shared 状态域（Java 侧「其他 writer」与测试观察 seam）。 */

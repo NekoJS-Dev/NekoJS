@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.module;
 
 import graal.graalvm.polyglot.Value;
 
-record ModuleState(String filename, Value value) {
+record ModuleState(String filename, String preparedKey, Value value) {
     Object exports() {
         return value.getMember("exports");
     }

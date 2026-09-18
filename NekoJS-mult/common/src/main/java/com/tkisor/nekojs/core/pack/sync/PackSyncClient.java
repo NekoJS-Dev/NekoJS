@@ -1,11 +1,14 @@
 package com.tkisor.nekojs.core.pack.sync;
 
+import com.google.gson.JsonObject;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,6 +44,7 @@ public final class PackSyncClient {
 
     /** 平台安装的 CLIENT 脚本重载钩子（loader entry 注入的 root.reload(CLIENT) 守卫包装）。 */
     private static volatile Runnable clientReloadHook;
+    private static volatile RemoteTrustHook remoteTrustHook;
 
     private static volatile CountDownLatch mainThreadLatch;
 
@@ -53,6 +57,11 @@ public final class PackSyncClient {
 
     public static void installClientReloadHook(Runnable hook) {
         clientReloadHook = hook;
+    }
+
+    /** Runtime owner binding for the verified remote-source authorization seam. */
+    public static void installClientRemoteTrustHook(RemoteTrustHook hook) {
+        remoteTrustHook = hook;
     }
 
     /** 网络线程调用：登记一个 latch，主线程任务完成后 {@link #completeMainThreadWork}。 */
@@ -186,15 +195,31 @@ public final class PackSyncClient {
             return Outcome.disconnect(untrustedMessage(activeAddress));
         }
 
+        RemoteTrustHook trustHook = remoteTrustHook;
+        if (trustHook == null) {
+            return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust owner is unavailable");
+        }
+        List<NekoTrustContext.RemoteSource> remoteSources = remoteSources(bucketDir, resolved);
+        if (remoteSources == null) {
+            return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
+        }
+
         // 5) 激活 + 重载 + pinning 签名公钥（v1：信任服务器即信任其当前签名密钥；
         //    此后同 keyId 换钥会被验签拒绝）
         ScriptPackRegistry.get().activateServerCachePacks(bucketDir);
-        reloadClientScripts("server pack bundle applied");
         Map<String, String> scopeNames = new LinkedHashMap<>();
         for (SyncedPack pack : packs) scopeNames.put(pack.syncId(), pack.scopeName());
         for (Map.Entry<String, ServerPackCache.CachedPack> entry : resolved.entrySet()) {
             pinSigningKey(trustStore, entry.getKey(), scopeNames.get(entry.getKey()), entry.getValue());
         }
+        try {
+            trustHook.authorize(remoteSources);
+        } catch (Exception failure) {
+            ScriptPackRegistry.get().deactivateServerCachePacks();
+            trustHook.revoke();
+            return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
+        }
+        reloadClientScripts("server pack bundle applied");
         NekoJS.LOGGER.info("Activated {} remote script pack(s) from server {}", resolved.size(), activeAddress);
         return Outcome.accepted();
     }
@@ -211,6 +236,10 @@ public final class PackSyncClient {
 
     private static void deactivateAndReload(String reason) {
         var removed = ScriptPackRegistry.get().deactivateServerCachePacks();
+        RemoteTrustHook trustHook = remoteTrustHook;
+        if (trustHook != null) {
+            trustHook.revoke();
+        }
         if (!removed.isEmpty()) {
             NekoJS.LOGGER.info("Deactivated {} server cache pack(s): {}", removed.size(), reason);
             reloadClientScripts(reason);
@@ -242,6 +271,25 @@ public final class PackSyncClient {
             syncId, scopeName, cached.manifestJson(), cached.files(), true, trustStore);
         if (!verified.valid() || verified.fingerprint() == null) return;
         trustStore.trustPublicKey(keyId, publicKey, verified.fingerprint(), activeAddress == null ? "unknown" : activeAddress);
+    }
+
+    private static List<NekoTrustContext.RemoteSource> remoteSources(
+            Path bucketDir, Map<String, ServerPackCache.CachedPack> resolved) {
+        List<NekoTrustContext.RemoteSource> sources = new ArrayList<>();
+        for (Map.Entry<String, ServerPackCache.CachedPack> entry : resolved.entrySet()) {
+            JsonObject signature = PackSignatureVerifier.parseSignatureBlock(entry.getValue().manifestJson());
+            String keyId = signature == null ? null : PackSignatureVerifier.string(signature, "keyId");
+            if ((keyId == null || keyId.isBlank()) && !entry.getValue().files().isEmpty()) return null;
+            if (keyId == null || keyId.isBlank()) continue;
+            Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(entry.getKey()));
+            for (PackContentFile file : entry.getValue().files()) {
+                Path materialized = ServerPackCache.resolveInside(packDir, file.relativePath());
+                if (materialized != null) {
+                    sources.add(new NekoTrustContext.RemoteSource(materialized, entry.getKey(), keyId));
+                }
+            }
+        }
+        return Collections.unmodifiableList(sources);
     }
 
     private static String validateBounds(List<SyncedPack> packs) {
@@ -294,6 +342,12 @@ public final class PackSyncClient {
 
     /** 哈希清单条目（平台 payload → common 的映射单位）。 */
     public record HashEntry(String syncId, String hash) {}
+
+    public interface RemoteTrustHook {
+        void authorize(List<NekoTrustContext.RemoteSource> sources);
+
+        void revoke();
+    }
 
     /** bundle 处理结果：disconnect 非空时平台断连并展示消息。 */
     public record Outcome(String disconnect) {

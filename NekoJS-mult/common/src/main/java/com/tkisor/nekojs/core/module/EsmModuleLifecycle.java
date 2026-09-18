@@ -91,6 +91,10 @@ public final class EsmModuleLifecycle {
     public NekoEsmModuleRecord beginEsmModule(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
         long rev = revision.apply(resolved.id());
         NekoEsmModuleRecord cached = esmRecordCache.get(resolved.id(), rev);
+        if (cached != null && !samePrepared(cached, prepared)) {
+            esmRecordCache.removeAll(resolved.id());
+            cached = null;
+        }
         if (cached != null) {
             if (cached.state() == NekoEsmModuleState.FAILED) {
                 throw new IOException("Native ESM module failed earlier: " + resolved.id(), cached.failure());
@@ -121,6 +125,10 @@ public final class EsmModuleLifecycle {
     public NekoEsmModuleRecord linkedEsmRecord(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
         long rev = revision.apply(resolved.id());
         NekoEsmModuleRecord cached = esmRecordCache.get(resolved.id(), rev);
+        if (cached != null && !samePrepared(cached, prepared)) {
+            esmRecordCache.removeAll(resolved.id());
+            cached = null;
+        }
         if (cached != null) {
             if (cached.state() == NekoEsmModuleState.FAILED) {
                 throw new IOException("Native ESM module failed earlier: " + resolved.id(), cached.failure());
@@ -239,6 +247,11 @@ public final class EsmModuleLifecycle {
         for (var dependency : metadata.dependencies()) {
             recordDependency(parentId, dependency.resolved());
         }
+    }
+
+    private boolean samePrepared(NekoEsmModuleRecord record, NekoPreparedModule prepared) {
+        return record.preparedModule() != null
+                && record.preparedModule().cacheKey().equals(prepared.cacheKey());
     }
 
     private void recordDependency(String parentPath, NekoResolvedModule child) {

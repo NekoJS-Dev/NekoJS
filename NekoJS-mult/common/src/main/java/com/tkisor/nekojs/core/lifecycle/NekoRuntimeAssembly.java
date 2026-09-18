@@ -20,6 +20,7 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -72,7 +73,7 @@ public final class NekoRuntimeAssembly {
             ScriptPropertyRegistry scriptProperties,
             List<OwnedPlugin> ownedPlugins,
             PluginWiring pluginWiring) {
-        return assemble(eventBridge, scriptProperties, ownedPlugins, pluginWiring, NekoTrustContext.local());
+        return assemble(eventBridge, scriptProperties, ownedPlugins, pluginWiring, NekoRuntimeTrustContext.local());
     }
 
     /**
@@ -122,7 +123,8 @@ public final class NekoRuntimeAssembly {
                 eventBridge,
                 scriptProperties,
                 sandboxFactory,
-                modulePreparationCache
+                modulePreparationCache,
+                trustContext
         );
 
         for (ScriptType type : ScriptType.autoLoadTypes()) {
