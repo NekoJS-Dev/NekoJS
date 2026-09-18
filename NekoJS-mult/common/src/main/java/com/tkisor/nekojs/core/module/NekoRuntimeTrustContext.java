@@ -33,14 +33,14 @@ public final class NekoRuntimeTrustContext implements NekoTrustContext {
         if (remoteRoot == null) {
             throw new IllegalArgumentException("remoteRoot");
         }
-        String root = NekoTrustApprovedSource.subjectOf(remoteRoot);
+        String root = NekoCanonicalPath.of(remoteRoot);
         protectedRoots.add(root);
         remotePaths.clear();
         remoteApprovals.clear();
         if (sources == null) return;
         for (RemoteSource source : sources) {
-            String subject = NekoTrustApprovedSource.subjectOf(source.file());
-            if (!NekoTrustApprovedSource.isWithin(subject, root)) {
+            String subject = NekoCanonicalPath.of(source.file());
+            if (!NekoCanonicalPath.isWithin(subject, root)) {
                 throw new IllegalArgumentException("Remote source is outside the active cache root: " + source.file());
             }
             remotePaths.add(subject);
@@ -54,15 +54,15 @@ public final class NekoRuntimeTrustContext implements NekoTrustContext {
         remoteApprovals.clear();
         remotePaths.clear();
         if (remoteRoot != null) {
-            protectedRoots.add(NekoTrustApprovedSource.subjectOf(remoteRoot));
+            protectedRoots.add(NekoCanonicalPath.of(remoteRoot));
         }
     }
 
     @Override
     public NekoTrustApprovedSource approvalFor(Path file) {
-        String subject = NekoTrustApprovedSource.subjectOf(file);
+        String subject = NekoCanonicalPath.of(file);
         if (remotePaths.contains(subject) || protectedRoots.stream()
-                .anyMatch(root -> NekoTrustApprovedSource.isWithin(subject, root))) {
+                .anyMatch(root -> NekoCanonicalPath.isWithin(subject, root))) {
             return remoteApprovals.get(subject);
         }
         return NekoTrustApprovedSource.local(file);

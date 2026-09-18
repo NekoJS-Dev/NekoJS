@@ -8,6 +8,7 @@ import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
@@ -16,6 +17,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustApprovedSource;
 import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.pack.ScriptPack;
@@ -152,6 +154,8 @@ class PackSyncClientTest {
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(),
                         ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()),
                 runtimeTrust);
         try {
             assertEquals(NekoTrustApprovedSource.Kind.REMOTE_AUTHORIZED,
@@ -197,6 +201,8 @@ class PackSyncClientTest {
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(),
                         ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()),
                 runtimeTrust);
         try {
             assertNotNull(cache.prepare(newFile), "the current bundle source must be executable");
@@ -242,6 +248,8 @@ class PackSyncClientTest {
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(),
                         ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()),
                 runtimeTrust);
         try {
             assertNotNull(cache.prepare(secondFile), "the current server bucket remains authorized");
@@ -315,7 +323,8 @@ class PackSyncClientTest {
         SandboxConfig config = SandboxConfig.defaultConfig();
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
-                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config), trustContext);
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()), trustContext);
         IPluginRuntime plugins = (IPluginRuntime) Proxy.newProxyInstance(
                 PackSyncClientTest.class.getClassLoader(), new Class<?>[]{IPluginRuntime.class},
                 new EmptyPluginRuntime());

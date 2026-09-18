@@ -1,8 +1,6 @@
 package com.tkisor.nekojs.core.module;
 
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -73,23 +71,7 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
     }
 
     static String subjectOf(Path file) {
-        Objects.requireNonNull(file, "file");
-        Path canonical = file.normalize().toAbsolutePath();
-        try {
-            canonical = canonical.toRealPath();
-        } catch (IOException ignored) {
-            // Nonexistent paths still receive a stable lexical identity and fail on read later.
-        }
-        return normalizePath(canonical);
-    }
-
-    /** Package path predicate sharing the credential's canonical/Windows-case identity. */
-    static boolean isWithin(String subject, String root) {
-        if (subject == null || root == null) {
-            return false;
-        }
-        String prefix = root.endsWith("/") ? root : root + "/";
-        return subject.equals(root) || subject.startsWith(prefix);
+        return NekoCanonicalPath.of(file);
     }
 
     private static String normalizeSubject(String subject) {
@@ -100,11 +82,4 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         }
     }
 
-    private static String normalizePath(Path path) {
-        String normalized = path.toString().replace('\\', '/');
-        if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
-            return normalized.toLowerCase(Locale.ROOT);
-        }
-        return normalized;
-    }
 }

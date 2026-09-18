@@ -24,10 +24,6 @@ public final class NekoModuleResolver {
         this.filePolicy = filePolicy;
     }
 
-    public NekoModuleResolver() {
-        this(NekoJSPaths.get(), ScriptFilePolicy.legacyRuntime());
-    }
-
     public NekoResolvedModule resolveEntry(String entryPath) throws IOException {
         return resolveFileModule(pathFromLoaderPath(entryPath));
     }

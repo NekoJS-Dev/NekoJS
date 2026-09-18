@@ -10,7 +10,11 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
@@ -74,7 +78,9 @@ public final class NekoSandboxFactory {
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
         this(core, paths, compilers, pluginRuntime, new NekoModulePipelineCache(
-                compilers, core.sandboxConfig()));
+                new NekoModulePipeline(new com.tkisor.nekojs.core.compiler.NekoCompilationPipeline(), compilers, core.sandboxConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local()));
     }
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers,
@@ -118,7 +124,7 @@ public final class NekoSandboxFactory {
         LoggerStream errStream = new LoggerStream(logger, true);
 
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), preparationCache))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, preparationCache))
                 .build();
 
         Context.Builder contextBuilder = Context.newBuilder("js")

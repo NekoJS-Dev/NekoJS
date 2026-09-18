@@ -8,6 +8,8 @@ import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -132,10 +134,11 @@ class NekoModuleTrustStageTest {
         Path trustedEntry = entry.toRealPath();
 
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
-                pipeline(), path -> path.equals(trustedEntry) ? NekoTrustApprovedSource.local(path) : null);
+                pipeline(), new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                path -> path.equals(trustedEntry) ? NekoTrustApprovedSource.local(path) : null);
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
-                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var input = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertTrue(input != null, "script loader resource must exist");
@@ -183,7 +186,7 @@ class NekoModuleTrustStageTest {
                 .build();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
-                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var input = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertTrue(input != null, "script loader resource must exist");

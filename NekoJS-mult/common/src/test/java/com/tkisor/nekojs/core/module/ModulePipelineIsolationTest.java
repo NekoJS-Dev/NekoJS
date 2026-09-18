@@ -2,6 +2,9 @@ package com.tkisor.nekojs.core.module;
 
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -147,6 +150,58 @@ class ModulePipelineIsolationTest {
         String sharedHostAccess = read("core/NekoSharedHostAccess.java");
         assertTrue(sharedHostAccess.contains("HostAccess.newBuilder") || sharedHostAccess.contains("HostAccess.ALL"),
                 "执行环境必须继续决定 HostAccess");
+    }
+
+    @Test
+    void purePipelineTypesHaveNoImplicitPlatformConstructionPath() throws Exception {
+        assertNoZeroArgumentConstructor(NekoModulePipelineCache.class);
+        assertNoZeroArgumentConstructor(NekoModuleResolver.class);
+        assertNoZeroArgumentConstructor(NekoScriptModuleLoaderHost.class);
+        assertNoZeroArgumentConstructor(SourceMapRegistry.class);
+        assertNoZeroArgumentConstructor(NekoEsmVirtualModuleRegistry.class);
+        assertNoZeroArgumentConstructor(DefaultErrorTracker.class);
+        assertNoConstructor(NekoScriptModuleLoaderHost.class, "graal.graalvm.polyglot.Context");
+        assertNoConstructor(DefaultErrorTracker.class, "com.tkisor.nekojs.core.config.SandboxConfig");
+
+        for (String file : List.of(
+                "core/module/NekoModulePipelineCache.java",
+                "core/module/NekoModuleResolver.java",
+                "core/module/NekoScriptModuleLoaderHost.java",
+                "core/error/SourceMapRegistry.java",
+                "core/module/esm/NekoEsmVirtualModuleRegistry.java",
+                "core/error/DefaultErrorTracker.java")) {
+            String source = stripCommentsAndStrings(read(file));
+            assertTrue(!source.contains("NekoJSPaths.get()"),
+                    file + " must not hide a Platform game-dir lookup in a default construction path");
+            assertTrue(!source.contains("Platform.getGameDir"),
+                    file + " must not read the loader-owned game directory");
+            assertTrue(!source.contains("defaultPreparationCache"),
+                    file + " must not retain a hidden default preparation cache");
+        }
+
+        for (java.lang.reflect.Constructor<?> constructor : NekoScriptModuleLoaderHost.class.getDeclaredConstructors()) {
+            for (Class<?> parameter : constructor.getParameterTypes()) {
+                assertTrue(!parameter.getName().equals("com.tkisor.nekojs.core.fs.NekoJSPaths"),
+                        "module loader host must receive pure resolution/cache dependencies, not platform paths");
+            }
+        }
+    }
+
+    private static void assertNoZeroArgumentConstructor(Class<?> type) {
+        for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
+            assertTrue(constructor.getParameterCount() != 0,
+                    type.getName() + " must require explicit path/registry dependencies");
+        }
+    }
+
+    private static void assertNoConstructor(Class<?> type, String parameterTypeName) {
+        for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
+            for (Class<?> parameter : constructor.getParameterTypes()) {
+                assertTrue(!parameter.getName().equals(parameterTypeName)
+                                || constructor.getParameterCount() != 1,
+                        type.getName() + " must not retain an implicit default construction path");
+            }
+        }
     }
 
     /**

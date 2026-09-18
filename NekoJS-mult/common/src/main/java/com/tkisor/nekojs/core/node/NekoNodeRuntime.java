@@ -108,6 +108,10 @@ public final class NekoNodeRuntime implements AutoCloseable {
 
     @Override
     public void close() {
-        timers.close();
+        try {
+            timers.close();
+        } finally {
+            moduleLoaderHost.close();
+        }
     }
 }

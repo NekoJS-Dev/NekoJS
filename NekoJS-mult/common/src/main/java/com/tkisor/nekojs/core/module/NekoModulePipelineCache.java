@@ -4,19 +4,22 @@ import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 
 /**
@@ -43,19 +46,7 @@ public final class NekoModulePipelineCache {
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
-    private volatile BiConsumer<Path, String> preparationObserver = (ignoredPath, ignoredKey) -> {};
-
-    public NekoModulePipelineCache(NekoModulePipeline pipeline) {
-        this(pipeline, new SourceMapRegistry(), new NekoEsmVirtualModuleRegistry(), NekoTrustContext.local());
-    }
-
-    public NekoModulePipelineCache(ScriptCompilerRegistry compilers, SandboxConfig config) {
-        this(new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config));
-    }
-
-    public NekoModulePipelineCache(NekoModulePipeline pipeline, NekoTrustContext trustContext) {
-        this(pipeline, new SourceMapRegistry(), new NekoEsmVirtualModuleRegistry(), trustContext);
-    }
+    private final CopyOnWriteArrayList<BiConsumer<Path, String>> preparationObservers = new CopyOnWriteArrayList<>();
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                    NekoEsmVirtualModuleRegistry virtualModules,
@@ -91,7 +82,9 @@ public final class NekoModulePipelineCache {
                 }
             });
             publishSourceMap(key, entry.prepared());
-            preparationObserver.accept(key, entry.prepared().cacheKey());
+            for (BiConsumer<Path, String> observer : preparationObservers) {
+                observer.accept(key, entry.prepared().cacheKey());
+            }
             return entry.prepared();
         } catch (PipelineException wrapper) {
             Throwable cause = wrapper.getCause();
@@ -126,7 +119,10 @@ public final class NekoModulePipelineCache {
         approvedSource(key);
         try {
             String source = Files.readString(key);
-            preparationObserver.accept(key, jsonExecutionKey(key, source));
+            String executionKey = jsonExecutionKey(key, source);
+            for (BiConsumer<Path, String> observer : preparationObservers) {
+                observer.accept(key, executionKey);
+            }
             return source;
         } catch (IOException failure) {
             throw NekoModuleError.cache(NekoModuleError.displayPath(key),
@@ -145,6 +141,7 @@ public final class NekoModulePipelineCache {
         preparedCache.clear();
         sourceMaps.clear();
         virtualModules.clear();
+        preparationObservers.clear();
     }
 
     /**
@@ -186,8 +183,50 @@ public final class NekoModulePipelineCache {
     }
 
     /** Host-owned observation seam for direct linker/rewriter preparation calls. */
-    void installPreparationObserver(BiConsumer<Path, String> observer) {
-        preparationObserver = observer == null ? (ignoredPath, ignoredKey) -> {} : observer;
+    BiConsumer<Path, String> registerPreparationObserver(BiConsumer<Path, String> observer) {
+        if (observer != null) {
+            preparationObservers.add(observer);
+        }
+        return observer;
+    }
+
+    /** Narrow unregister seam used by a host/context close path. */
+    void unregisterPreparationObserver(BiConsumer<Path, String> observer) {
+        if (observer != null) {
+            preparationObservers.remove(observer);
+        }
+    }
+
+    /** Single owner for JSON execution identity used by preparation and host cache checks. */
+    String jsonExecutionKey(Path path, String source) {
+        Path key = key(path);
+        String moduleId = relativePath(key).orElse(key.toString().replace('\\', '/'));
+        return NekoModuleHash.jsonExecutionKey(moduleId, source);
+    }
+
+    /**
+     * Compose the map for a virtual rewritten module. Native unchanged ESM keeps the prepared
+     * compiler/identity map; a length-changing rewrite gets a conservative generated-line map
+     * whose columns intentionally resolve to the authored line start.
+     */
+    String composeRewrittenSourceMap(NekoPreparedModule prepared, String generatedSource) {
+        if (prepared == null || prepared.sourceMap() == null || prepared.sourceMap().isBlank()) {
+            return null;
+        }
+        if (Objects.equals(prepared.code(), generatedSource)) {
+            return prepared.sourceMap();
+        }
+        String authoredSource = prepared.code();
+        try {
+            var root = JsonParser.parseString(prepared.sourceMap()).getAsJsonObject();
+            var contents = root.getAsJsonArray("sourcesContent");
+            if (contents != null && !contents.isEmpty() && !contents.get(0).isJsonNull()) {
+                authoredSource = contents.get(0).getAsString();
+            }
+        } catch (RuntimeException ignored) {
+            // The prepared map was already accepted; fall back to a legal conservative map.
+        }
+        return NekoSourceMapBuilder.identity(Path.of(prepared.sourcePath()), authoredSource, generatedSource);
     }
 
     /** Controlled read-only view for execution-side filesystem integration. */
@@ -258,16 +297,7 @@ public final class NekoModulePipelineCache {
     }
 
     private static Path key(Path path) {
-        Path absolute = path.normalize().toAbsolutePath();
-        try {
-            absolute = absolute.toRealPath();
-        } catch (IOException ignored) {
-            // A missing source still needs a deterministic identity for its CACHE error.
-        }
-        if (isWindows()) {
-            absolute = Path.of(absolute.toString().toLowerCase(Locale.ROOT));
-        }
-        return absolute;
+        return Path.of(NekoCanonicalPath.of(path));
     }
 
     private Optional<String> relativePath(Path path) {
@@ -276,15 +306,6 @@ public final class NekoModulePipelineCache {
         } catch (Exception ignored) { // relative path computation fails → cache miss
             return Optional.empty();
         }
-    }
-
-    private String jsonExecutionKey(Path path, String source) {
-        String moduleId = relativePath(path).orElse(path.toString().replace('\\', '/'));
-        return NekoModuleHash.sha256("json\0" + moduleId + "\0" + source);
-    }
-
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
     }
 
     private static boolean isJson(Path path) {

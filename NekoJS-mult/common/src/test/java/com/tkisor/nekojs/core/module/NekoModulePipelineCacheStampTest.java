@@ -5,6 +5,8 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -47,7 +49,11 @@ class NekoModulePipelineCacheStampTest {
     @org.junit.jupiter.api.BeforeEach
     void newCache() {
         registry = ScriptCompilerRegistry.createRuntimeRegistry();
-        cache = new NekoModulePipelineCache(registry, SandboxConfig.defaultConfig());
+        cache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new com.tkisor.nekojs.core.compiler.NekoCompilationPipeline(),
+                        registry, SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()), NekoTrustContext.local());
     }
 
     @AfterEach

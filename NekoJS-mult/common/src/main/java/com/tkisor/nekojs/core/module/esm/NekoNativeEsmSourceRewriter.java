@@ -6,6 +6,8 @@ import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoModuleError;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -15,18 +17,25 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 public final class NekoNativeEsmSourceRewriter {
     private final NekoModuleResolver resolver;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     /** 传递依赖准备缓存（W3 显式注入，语义同 {@link NekoEsmLinker}）。 */
     private final NekoModulePipelineCache preparationCache;
+    private final SourceMapRegistry sourceMaps;
+    private final BiFunction<NekoPreparedModule, String, String> sourceMapComposer;
 
     public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache,
-                                       NekoEsmVirtualModuleRegistry virtualModules) {
+                                       NekoEsmVirtualModuleRegistry virtualModules,
+                                       SourceMapRegistry sourceMaps,
+                                       BiFunction<NekoPreparedModule, String, String> sourceMapComposer) {
         this.resolver = resolver;
         this.preparationCache = preparationCache;
         this.virtualModules = virtualModules;
+        this.sourceMaps = sourceMaps;
+        this.sourceMapComposer = sourceMapComposer;
     }
 
     public java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared) throws IOException {
@@ -41,7 +50,14 @@ public final class NekoNativeEsmSourceRewriter {
         visiting.add(moduleId);
         try {
             String source = rewrite(file, moduleId, prepared, visiting);
-            return virtualModules.register(moduleId, source);
+            java.net.URI uri = virtualModules.register(moduleId, source);
+            String sourceMap = sourceMapComposer.apply(prepared, source);
+            if (sourceMap != null && !sourceMap.isBlank()) {
+                Path virtualPath = Path.of(uri);
+                sourceMaps.register(virtualPath.toString(), withGeneratedFile(sourceMap, virtualPath),
+                        source.equals(prepared.code()) ? prepared.prependedLineCount() : 0);
+            }
+            return uri;
         } finally {
             visiting.remove(moduleId);
         }
@@ -53,6 +69,16 @@ public final class NekoNativeEsmSourceRewriter {
         }
         RewriteContext context = new RewriteContext(file, moduleId, prepared.code(), prepared.esmAst(), visiting);
         return context.rewrite();
+    }
+
+    private static String withGeneratedFile(String sourceMap, Path generatedPath) {
+        try {
+            var root = JsonParser.parseString(sourceMap).getAsJsonObject();
+            root.addProperty("file", generatedPath.toString().replace('\\', '/'));
+            return root.toString();
+        } catch (RuntimeException invalidMap) {
+            return sourceMap;
+        }
     }
 
     private final class RewriteContext {

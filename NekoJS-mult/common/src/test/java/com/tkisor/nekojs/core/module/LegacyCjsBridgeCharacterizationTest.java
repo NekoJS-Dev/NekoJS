@@ -7,10 +7,12 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -163,14 +165,16 @@ class LegacyCjsBridgeCharacterizationTest {
             }
         });
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
-                compilers, SandboxConfig.defaultConfig());
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
                         new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
                 .build();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(
-                    context, new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)), paths, cache);
+                    context, new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertNotNull(in, "script-loader.js must be on the test classpath");

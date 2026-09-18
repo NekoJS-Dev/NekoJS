@@ -1,7 +1,5 @@
 package com.tkisor.nekojs.core.module.esm;
 
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
@@ -24,11 +22,6 @@ public final class NekoEsmLinker {
      * 构造器未给缓存时用隔离直连实例（测试/工具），生产经 module host 传入共享实例。
      */
     private final NekoModulePipelineCache preparationCache;
-
-    public NekoEsmLinker(NekoModuleResolver resolver) {
-        this(resolver, new NekoModulePipelineCache(
-                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
-    }
 
     public NekoEsmLinker(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache) {
         this.resolver = resolver;

@@ -9,6 +9,11 @@ import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
@@ -79,7 +84,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     ) {
         this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory,
                 new com.tkisor.nekojs.core.module.NekoModulePipelineCache(
-                        com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), core.sandboxConfig()),
+                        new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), core.sandboxConfig()),
+                        new SourceMapRegistry(NekoJSPaths.get().root()),
+                        new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()),
+                        NekoTrustContext.local()),
                 NekoTrustContext.local());
     }
 

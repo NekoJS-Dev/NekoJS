@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.core.error.SourceMapRegistry.OriginalPosition;
+import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,7 +24,7 @@ class SourceMapRegistryTest {
 
     @BeforeEach
     void clearRegistry() {
-        registry = new SourceMapRegistry();
+        registry = new SourceMapRegistry(NekoJSPaths.get().root());
     }
 
     @Test

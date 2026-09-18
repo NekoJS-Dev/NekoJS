@@ -2,12 +2,18 @@ package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
@@ -26,13 +32,19 @@ public final class NekoNodeModuleInstaller {
     private NekoNodeModuleInstaller() {}
 
     public static NekoNodeRuntime install(Context context, ScriptType scriptType) {
-        return install(context, scriptType, new NekoModuleResolver(), NekoJSPaths.get(), new com.tkisor.nekojs.core.error.DefaultErrorTracker(com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig()), com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig());
+        NekoJSPaths paths = NekoJSPaths.get();
+        SandboxConfig config = SandboxConfig.defaultConfig();
+        return install(context, scriptType,
+                new NekoModuleResolver(paths, com.tkisor.nekojs.core.ScriptFilePolicy.legacyRuntime()),
+                paths, new DefaultErrorTracker(paths, config), config);
     }
 
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
         return install(context, scriptType, resolver, paths, errorTracker, sandboxConfig,
                 new NekoModulePipelineCache(
-                        ScriptCompilerRegistry.current(), sandboxConfig));
+                        new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), sandboxConfig),
+                        new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                        NekoTrustContext.local()));
     }
 
     /**
@@ -40,7 +52,7 @@ public final class NekoNodeModuleInstaller {
      * prepared 缓存实例。
      */
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig, NekoModulePipelineCache preparationCache) {
-        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, paths, preparationCache);
+        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, preparationCache);
         NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);

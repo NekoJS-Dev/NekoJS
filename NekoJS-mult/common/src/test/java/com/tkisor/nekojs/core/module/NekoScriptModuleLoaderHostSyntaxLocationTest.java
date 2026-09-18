@@ -1,9 +1,14 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -43,7 +48,13 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
         paths = NekoJSPaths.fromGameDir(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
         context = Context.newBuilder("js").allowAllAccess(true).build();
-        host = new NekoScriptModuleLoaderHost(context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
+        host = new NekoScriptModuleLoaderHost(context,
+                new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
