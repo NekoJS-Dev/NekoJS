@@ -17,6 +17,7 @@ import com.tkisor.nekojs.core.error.ErrorTrackerReporter;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
@@ -34,7 +35,7 @@ import java.util.List;
  *   <li>loader 特有事件面接线（{@link PluginWiring}：registrar bind / bridge set，顺序随平台保持）</li>
  *   <li>引擎上下文：compilers → SandboxConfig → ClassFilter.INSTANCE → ErrorTracker →
  *       ScriptErrorReporter → NekoCoreContext（NekoSharedEngine）→ NekoSandboxFactory</li>
- *   <li>NekoModulePipeline legacy 静态绑定（读取点在 NekoModulePipelineCache）</li>
+ *   <li>W3 语言管线显式装配：NekoModulePipeline + NekoModulePipelineCache 各一个实例，sandbox factory 与 root 共享（无 static 绑定、无 legacy instance）</li>
  *   <li>{@link NekoRuntimeRoot} 构造（唯一 lifecycle owner）</li>
  *   <li>逐 {@link ScriptType#autoLoadTypes()} createScriptManager + discoverScripts</li>
  *   <li>STARTUP loadScripts</li>
@@ -87,14 +88,18 @@ public final class NekoRuntimeAssembly {
                 classFilter,
                 errorTracker
         );
-        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime);
-        NekoModulePipeline.bindLegacyInstance(new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
+        // W3 语言模块管线：单 pipeline + 单 prepared 缓存实例，执行环境侧与 root 共享；
+        // 模块 cache/session 生命周期由 root 持有（root close 全清），无 static 状态。
+        NekoModulePipelineCache modulePreparationCache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig));
+        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime, modulePreparationCache);
         NekoRuntimeRoot root = new NekoRuntimeRoot(
                 core,
                 pluginRuntime,
                 eventBridge,
                 scriptProperties,
-                sandboxFactory
+                sandboxFactory,
+                modulePreparationCache
         );
 
         for (ScriptType type : ScriptType.autoLoadTypes()) {

@@ -42,6 +42,13 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final Map<ScriptType, ScriptManager> scriptManagers;
     private final ResourceTracker resources;
     /**
+     * root 拥有的 prepared 模块缓存（票 11 W3）：模块 cache/session 生命周期归属。
+     * 与 sandbox factory（module host / filesystem）共享同一实例；跨普通 reload、
+     * server stop、切换世界保留（按 ScriptType 分区清理）；由 {@link #closeSilently()}
+     * 全清释放。无任何 static 状态——新的独立 root / 测试 runner 从空开始，互不可见。
+     */
+    private final com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache;
+    /**
      * root 拥有的受管 global/shared 状态域（票 10）：按 {@link ScriptType} 的私有 backing
      * store + 显式共享 store（工作名 shared）。跨普通 reload、server stop、切换世界保留；
      * 由 {@link #closeSilently()} 释放；generation close 只失效该 generation 的 guest 值。
@@ -67,6 +74,23 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             ScriptPropertyRegistry scriptProperties,
             NekoSandboxFactory sandboxFactory
     ) {
+        this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory,
+                com.tkisor.nekojs.core.module.NekoModulePipelineCache.withExplicitPipeline(
+                        com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), core.sandboxConfig()));
+    }
+
+    /**
+     * 生产装配入口（票 11 W3）：与 sandbox factory 共享同一个 prepared 缓存实例
+     * （见 {@code NekoRuntimeAssembly}）。
+     */
+    public NekoRuntimeRoot(
+            NekoCoreContext core,
+            IPluginRuntime pluginRuntime,
+            ScriptEventBridge eventBridge,
+            ScriptPropertyRegistry scriptProperties,
+            NekoSandboxFactory sandboxFactory,
+            com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache
+    ) {
         this.core = core;
         this.pluginRuntime = pluginRuntime;
         this.eventBridge = eventBridge;
@@ -74,6 +98,12 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         this.environmentFactory = new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory, globalState);
         this.scriptManagers = new EnumMap<>(ScriptType.class);
         this.resources = new ResourceTracker();
+        this.preparationCache = preparationCache;
+    }
+
+    /** 本 root 拥有的 prepared 模块缓存（Java 侧观察 seam；reload/失效经各 manager 入口）。 */
+    public com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache() {
+        return preparationCache;
     }
 
     /** 本 root 的受管 global/shared 状态域（Java 侧「其他 writer」与测试观察 seam）。 */
@@ -120,7 +150,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public ScriptManager createScriptManager(ScriptType type) {
-        ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, domainCollectors);
+        ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, domainCollectors, preparationCache);
         scriptManagers.put(type, manager);
         return manager;
     }
@@ -198,6 +228,14 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         }
         try {
             resources.close();
+        } catch (Throwable t) {
+            if (first == null) first = t;
+            else first.addSuppressed(t);
+        }
+        // 票 11：root 最终关闭释放 prepared 模块缓存（server stop/切世界/reload 不清空；
+        // 按类型清理走各 manager 的 fullReloadCleanup，此处释放 owner 持有的全部条目）。
+        try {
+            preparationCache.clear();
         } catch (Throwable t) {
             if (first == null) first = t;
             else first.addSuppressed(t);

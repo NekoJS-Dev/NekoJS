@@ -2,10 +2,12 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.module.NekoPreparedModule;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -15,19 +17,47 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 模块准备缓存：持有 prepared module cache 和 source map cache。
- * prepare 逻辑委托给 {@link NekoModulePipeline} 实例。
+ * 模块准备缓存（Script Preparation + Module Resolution/Cache 的 prepared 层）：
+ * 持有 prepared module cache 并发布 source map；prepare 逻辑委托给构造器注入的
+ * {@link NekoModulePipeline} 实例。
+ *
+ * <p>票据 11（W3）显式注入形态：实例由 runtime owner（{@code NekoRuntimeRoot}）持有，
+ * 经构造器装配进 ScriptManager / module host / ESM linker / source rewriter /
+ * reload coordinator / sandbox filesystem——生产代码不再调用任何 process-wide static
+ * cache。历史 static {@code PREPARED_CACHE / prepare / clear / invalidate} 已随本票删除
+ * （05 总账 A7/A8 的删除条件即“W3 显式注入后删除”；替代 behavior 见
+ * {@code NekoModuleCacheInvalidationTest}，trace 见 {@code ModulePipelineIsolationTest}）。
+ * root close 时清空本实例（生命周期归属见 {@code NekoRuntimeRoot#closeSilently}）；
+ * 直接构造的测试/manager 各自持有隔离实例，互不污染。
+ *
+ * <p>失效口径：同一路径键下，mtime/size/内容哈希/language id/requested mode 任一变化即
+ * 失效（{@link FileStamp} 五元组）——同 stamp 同长度但内容不同的覆盖写入不会返回旧模块；
+ * 路径/mode 变化天然落到不同键或不同 stamp。
  */
 public final class NekoModulePipelineCache {
-    private static final Map<Path, PreparedEntry> PREPARED_CACHE = new ConcurrentHashMap<>();
+    private final NekoModulePipeline pipeline;
+    private final Map<Path, PreparedEntry> preparedCache = new ConcurrentHashMap<>();
 
-    private NekoModulePipelineCache() {}
+    public NekoModulePipelineCache(NekoModulePipeline pipeline) {
+        this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
+    }
 
-    public static NekoPreparedModule prepare(Path path) throws IOException {
+    /**
+     * 兼容装配入口：用显式 registry + config 构造直连实例（旧 static 调用点的替换目标；
+     * 每个调用方持有独立实例——生产装配请共享同一个 root 拥有的实例）。
+     */
+    public static NekoModulePipelineCache withExplicitPipeline(ScriptCompilerRegistry compilers,
+                                                               SandboxConfig config) {
+        return new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config));
+    }
+
+    public NekoPreparedModule prepare(Path path) throws IOException {
         Path key = key(path);
         try {
             SourceSnapshot source = readSource(key);
@@ -35,7 +65,7 @@ public final class NekoModulePipelineCache {
             // loading the same path both run the full pipeline. computeIfAbsent guarantees
             // a single pipeline run per (key, stamp); the inner stamp check avoids recomputing
             // when the cached entry is still valid for this source stamp.
-            PreparedEntry entry = PREPARED_CACHE.compute(key, (k, existing) -> {
+            PreparedEntry entry = preparedCache.compute(key, (k, existing) -> {
                 if (existing != null && existing.stamp().equals(source.stamp())) {
                     return existing;
                 }
@@ -54,6 +84,13 @@ public final class NekoModulePipelineCache {
             return entry.prepared();
         } catch (PipelineException wrapper) {
             Throwable cause = wrapper.getCause();
+            if (cause instanceof NekoModuleError staged) {
+                // 管线阶段错误原样透传：PREPARE 不重标为 CACHE，语言位置不丢失。
+                if (cause instanceof IOException io) {
+                    throw io;
+                }
+                throw new IOException(staged.detail(), staged);
+            }
             if (cause instanceof IOException io) {
                 throw io;
             }
@@ -74,48 +111,66 @@ public final class NekoModulePipelineCache {
         PipelineException(Throwable cause) { super(cause); }
     }
 
-    public static void clear() {
-        PREPARED_CACHE.clear();
+    /** 清空本实例的全部 prepared 条目与对应 source map（runtime owner 释放语义）。 */
+    public void clear() {
+        preparedCache.clear();
         SourceMapRegistry.clear();
     }
 
     /**
-     * 仅清空指定 {@link ScriptType} 的 prepared 模块缓存与对应 source map。
-     * 进程级静态缓存原本无 ScriptType 维度：单机 CLIENT 触发 reload 会误清 SERVER 等
-     * 其它类型已编译的模块（下次 import 重新编译）。各类型脚本根目录为 {@code nekojs/<name>_scripts}
-     * 下的互不相交子树，故按 key 推导所属类型；不在任何类型脚本目录下的 key
-     * （如 node_modules，跨类型共享）不受影响。无参 {@link #clear()} 保持全清语义，
-     * 供 ModuleReloadCoordinator 等显式全清路径使用。
+     * 仅清空本实例中指定 {@link ScriptType} 的 prepared 模块缓存与对应 source map。
+     * 各类型脚本根目录为 {@code nekojs/<name>_scripts} 下的互不相交子树，故按 key 推导所属类型；
+     * 不在任何类型脚本目录下的 key（如 node_modules，跨类型共享）不受影响。无参 {@link #clear()}
+     * 保持全清语义，供 ModuleReloadCoordinator 等显式全清路径使用。
      */
-    public static void clear(ScriptType type) {
+    public void clear(ScriptType type) {
         if (type == null) {
             clear();
             return;
         }
-        PREPARED_CACHE.entrySet().removeIf(entry -> entry.getValue().type() == type);
+        preparedCache.entrySet().removeIf(entry -> entry.getValue().type() == type);
         SourceMapRegistry.clearByScriptType(type);
     }
 
-    public static void invalidate(Path path) {
+    public void invalidate(Path path) {
         if (path == null) {
             return;
         }
         Path key = key(path);
-        PREPARED_CACHE.remove(key);
+        preparedCache.remove(key);
         relativePath(key).ifPresent(SourceMapRegistry::clear);
     }
 
-    private static SourceSnapshot readSource(Path path) throws IOException {
-        String source = Files.readString(path);
-        return new SourceSnapshot(FileStamp.read(path, source), source);
+    /** 测试/诊断观察面：本实例当前缓存条目数。 */
+    int size() {
+        return preparedCache.size();
     }
 
-    private static NekoPreparedModule prepareSource(Path path, SourceSnapshot source) throws Exception {
-        NekoModulePipeline pipeline = NekoModulePipeline.legacyInstance();
-        if (pipeline != null) {
-            return pipeline.prepare(path, source.source());
+    private SourceSnapshot readSource(Path path) throws IOException {
+        String source;
+        try {
+            source = Files.readString(path);
+        } catch (IOException failure) {
+            throw NekoModuleError.cache(displayPath(path), "Cannot read module source: " + failure.getMessage(), failure);
         }
-        return NekoModulePipeline.legacyPrepare(path, source.source());
+        NekoModulePipeline.ModuleDescriptor descriptor;
+        try {
+            descriptor = pipeline.describe(path);
+        } catch (Exception failure) {
+            throw NekoModuleError.prepare(displayPath(path), "unknown", NekoModuleMode.AUTO,
+                    rootMessage(failure), failure);
+        }
+        FileStamp stamp;
+        try {
+            stamp = FileStamp.read(path, source, descriptor.languageId(), descriptor.requestedMode());
+        } catch (IOException failure) {
+            throw NekoModuleError.cache(displayPath(path), "Cannot stamp module source: " + failure.getMessage(), failure);
+        }
+        return new SourceSnapshot(stamp, source);
+    }
+
+    private NekoPreparedModule prepareSource(Path path, SourceSnapshot source) throws Exception {
+        return pipeline.prepare(path, source.source());
     }
 
     private static void publishSourceMap(Path path, NekoPreparedModule prepared) {
@@ -124,6 +179,10 @@ public final class NekoModulePipelineCache {
 
     private static Path key(Path path) {
         return path.normalize().toAbsolutePath();
+    }
+
+    private static String displayPath(Path path) {
+        return path == null ? "<unknown>" : path.toString().replace('\\', '/');
     }
 
     private static Optional<String> relativePath(Path path) {
@@ -183,18 +242,19 @@ public final class NekoModulePipelineCache {
     private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type) {}
 
     /**
-     * 模块文件的内容指纹。
+     * 模块文件的内容指纹（五元组：mtime/size/contentHash/languageId/requestedMode）。
      *
      * <p>历史缺陷：仅 (modifiedMillis, size) 无法区分“同一时间戳刻度内对等长文件的覆盖写入”，
      * 粗粒度时间戳文件系统（如部分 Windows / FAT / 容器挂载）会因此误判未变化，继续返回旧编译模块。
-     * 修复：增加 {@code contentHash}。这里选择 SHA-256 hex 而不是 64-bit hash（如 xxhash/两个 long）：
-     * 源码在 prepare 前已经完整读入（{@code Files.readString}），SHA-256 的额外开销相对模块编译管线
-     * 可以忽略；而 64-bit 在长期运行、大量模块的场景下仍有生日碰撞的微小概率，一旦碰撞会静默返回
-     * 错误代码，SHA-256 可以把这种风险降到工程上可忽略。安全比这微小的 CPU 开销更重要。
+     * contentHash（SHA-256）修复该缺陷；W3 追加 languageId/requestedMode：同一路径在语言插件
+     * 替换（同扩展名改注册）或 requested mode 变化时也必须失效，否则缓存返回旧语言/旧模式模块。
      */
-    private record FileStamp(long modifiedMillis, long size, String contentHash) {
-        private static FileStamp read(Path path, String source) throws IOException {
-            return new FileStamp(Files.getLastModifiedTime(path).toMillis(), Files.size(path), contentHash(source));
+    private record FileStamp(long modifiedMillis, long size, String contentHash,
+                             String languageId, NekoModuleMode requestedMode) {
+        private static FileStamp read(Path path, String source, String languageId,
+                                      NekoModuleMode requestedMode) throws IOException {
+            return new FileStamp(Files.getLastModifiedTime(path).toMillis(), Files.size(path),
+                    contentHash(source), languageId, requestedMode);
         }
 
         private static String contentHash(String source) {

@@ -47,13 +47,16 @@ public final class NekoModuleReadService {
         return originalPath;
     }
 
-    public static Optional<byte[]> readPreparedBytes(Path path) throws IOException {
+    /**
+     * 读已准备字节（W3 显式注入：调用方传入其 runtime-owned 缓存实例；无隐藏静态缓存）。
+     */
+    public static Optional<byte[]> readPreparedBytes(Path path, NekoModulePipelineCache preparationCache) throws IOException {
         String virtualSource = NekoEsmVirtualModuleRegistry.source(path);
         if (virtualSource != null) {
             return Optional.of(virtualSource.getBytes(StandardCharsets.UTF_8));
         }
         if (path.getFileName() != null && ScriptFilePolicy.legacyRuntime().isSupportedScriptFile(path)) {
-            return Optional.of(readTransformedModule(path));
+            return Optional.of(readTransformedModule(path, preparationCache));
         }
         return Optional.empty();
     }
@@ -81,7 +84,7 @@ public final class NekoModuleReadService {
         return Optional.empty();
     }
 
-    public static byte[] readTransformedModule(Path path) throws IOException {
-        return NekoModulePipelineCache.prepare(path).code().getBytes(StandardCharsets.UTF_8);
+    public static byte[] readTransformedModule(Path path, NekoModulePipelineCache preparationCache) throws IOException {
+        return preparationCache.prepare(path).code().getBytes(StandardCharsets.UTF_8);
     }
 }

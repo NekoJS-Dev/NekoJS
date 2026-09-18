@@ -1,9 +1,11 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
@@ -28,7 +30,17 @@ public final class NekoNodeModuleInstaller {
     }
 
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
-        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, paths);
+        return install(context, scriptType, resolver, paths, errorTracker, sandboxConfig,
+                NekoModulePipelineCache.withExplicitPipeline(
+                        ScriptCompilerRegistry.current(), sandboxConfig));
+    }
+
+    /**
+     * 生产装配入口（W3 显式注入）：module host 与装配侧共享同一个 runtime-owned
+     * prepared 缓存实例。
+     */
+    public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig, NekoModulePipelineCache preparationCache) {
+        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, paths, preparationCache);
         NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
         context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
