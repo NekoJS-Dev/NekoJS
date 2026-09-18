@@ -62,10 +62,6 @@ public final class DefaultErrorTracker implements ErrorTracker {
         this.virtualModules = virtualModules;
     }
 
-    public DefaultErrorTracker(SandboxConfig config) {
-        this(NekoJSPaths.get(), config);
-    }
-
     public NekoJSPaths paths() {
         return paths;
     }

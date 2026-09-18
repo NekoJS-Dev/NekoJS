@@ -5,9 +5,11 @@ import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.compiler.python.PythonToJsCompiler;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -48,10 +50,14 @@ class NekoModuleErrorStageTest {
         paths = pathsFor(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
         context = Context.newBuilder("js").allowAllAccess(true).build();
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        SandboxConfig config = SandboxConfig.defaultConfig();
         cache = new NekoModulePipelineCache(
-                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
@@ -159,7 +165,7 @@ class NekoModuleErrorStageTest {
         // 未配置 executor/factory 的裸 host：装载失败归执行环境，不伪装成解析失败。
         try (Context bare = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost bareHost = new NekoScriptModuleLoaderHost(
-                    bare, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+                    bare, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
             Path entry = paths.serverScripts().resolve("src/exec-entry.cjs");
             Files.writeString(entry, "module.exports = 1;\n");
 

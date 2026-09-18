@@ -6,7 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.io.IOException;
 import java.net.URI;
@@ -37,10 +36,6 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         }
         this.root = canonicalRoot;
         this.rootUri = this.root.toUri().toString();
-    }
-
-    public SourceMapRegistry() {
-        this(NekoJSPaths.get().root());
     }
 
     public Path root() {

@@ -1,10 +1,15 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,14 +41,21 @@ public class NekoJSFileSystem implements FileSystem {
     }
 
     public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy) {
-        this(initialWorkingDirectory, policy, new NekoModulePipelineCache(
-                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
+        this(initialWorkingDirectory, policy, NekoJSPaths.get(), new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()), NekoTrustContext.local()));
     }
 
     public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy,
                             NekoModulePipelineCache preparationCache) {
+        this(initialWorkingDirectory, policy, NekoJSPaths.get(), preparationCache);
+    }
+
+    public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy, NekoJSPaths paths,
+                            NekoModulePipelineCache preparationCache) {
         this.currentWorkingDirectory = initialWorkingDirectory;
-        this.paths = NekoJSPaths.get();
+        this.paths = paths;
         this.policy = policy;
         this.preparationCache = preparationCache;
         this.virtualModules = preparationCache.virtualModuleView();

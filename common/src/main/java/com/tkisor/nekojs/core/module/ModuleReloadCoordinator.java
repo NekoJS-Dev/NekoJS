@@ -1,8 +1,5 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -40,18 +37,6 @@ public final class ModuleReloadCoordinator {
     private final Map<String, Long> moduleRevisions;
     private final NekoModuleDependencyGraph dependencyGraph;
     private final NekoEsmVirtualModuleRegistry virtualModules;
-
-    public ModuleReloadCoordinator(
-            Map<String, ModuleState> moduleCache,
-            NekoEsmModuleRecordCache esmRecordCache,
-            NekoEsmLinkCache esmLinkCache,
-            Map<String, Long> moduleRevisions,
-            NekoModuleDependencyGraph dependencyGraph
-    ) {
-        this(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph,
-                new NekoModulePipelineCache(
-                        ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
-    }
 
     public ModuleReloadCoordinator(
             Map<String, ModuleState> moduleCache,

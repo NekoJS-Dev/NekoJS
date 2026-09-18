@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
@@ -44,8 +45,11 @@ class ScriptTypeScopedCacheClearTest {
 
     @BeforeEach
     void newCache() {
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         cache = new NekoModulePipelineCache(
-                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()), NekoTrustContext.local());
     }
 
     @AfterEach
@@ -99,9 +103,11 @@ class ScriptTypeScopedCacheClearTest {
 
     @Test
     void pipelineCacheInstancesAreIsolatedAcrossOwners() throws Exception {
-        // runtime-owned 语义：两个 owner 的缓存实例互不可见；一方 clear 不影响另一方。
-        NekoModulePipelineCache other = new NekoModulePipelineCache(
-                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+            // runtime-owned 语义：两个 owner 的缓存实例互不可见；一方 clear 不影响另一方。
+            NekoModulePipelineCache other = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.createRuntimeRegistry(),
+                        SandboxConfig.defaultConfig()), new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()), NekoTrustContext.local());
         try {
             Path serverKey = NekoJSPaths.get().root().resolve("server_scripts/cache_isolated/isolated.cjs");
             writeModule(serverKey);
@@ -187,7 +193,9 @@ class ScriptTypeScopedCacheClearTest {
     @Test
     void runtimeRegistryInstancesCannotReadOrClearEachOthersEntries() {
         NekoModulePipelineCache other = new NekoModulePipelineCache(
-                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+                new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.createRuntimeRegistry(),
+                        SandboxConfig.defaultConfig()), new SourceMapRegistry(NekoJSPaths.get().root()),
+                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()), NekoTrustContext.local());
         try {
             Path sameVirtualPath = Path.of(cache.virtualModules().register(
                     "server_scripts/shared.mjs", "export const owner = 'first';"));

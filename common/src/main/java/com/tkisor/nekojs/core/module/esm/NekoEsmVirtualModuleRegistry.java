@@ -2,7 +2,6 @@ package com.tkisor.nekojs.core.module.esm;
 
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModuleHash;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 
@@ -33,10 +32,6 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
             // A not-yet-created root still has a stable lexical identity.
         }
         this.root = canonicalGameRoot.resolve(".native_esm_modules").normalize().toAbsolutePath();
-    }
-
-    public NekoEsmVirtualModuleRegistry() {
-        this(NekoJSPaths.get().root());
     }
 
     public URI uri(String moduleId) {

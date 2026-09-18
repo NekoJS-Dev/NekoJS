@@ -2,12 +2,8 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.error.NekoSourceMapView;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
@@ -26,6 +22,9 @@ import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +33,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * CJS/ESM 模块装载宿主（Module Resolution/Cache 的执行委托面）。
@@ -47,6 +49,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 本层不创建 Context、不决定 HostAccess。
  */
 public final class NekoScriptModuleLoaderHost {
+    private static final Pattern STACK_LOCATION = Pattern.compile(
+            "(?m)^\\s*at\\s+(.+?):(\\d+):(\\d+)\\s*(?:\\)|$)");
 
     private final Context context;
     private final NekoModuleResolver resolver;
@@ -62,6 +66,7 @@ public final class NekoScriptModuleLoaderHost {
     private final Map<String, Long> moduleRevisions;
     private final Map<String, String> modulePreparedKeys;
     private final Map<String, java.nio.file.Path> modulePaths;
+    private final BiConsumer<java.nio.file.Path, String> preparationObserver;
     private final ModuleReloadCoordinator reloadCoordinator;
     private final EsmModuleLifecycle esmLifecycle;
     /** Graal proxy calls cannot reliably preserve checked Java causes; retain staged nested failures per host thread. */
@@ -71,20 +76,12 @@ public final class NekoScriptModuleLoaderHost {
     private Value moduleFactory;
     private Value jsonParser;
 
-    public NekoScriptModuleLoaderHost(Context context) {
-        this(context, new NekoModuleResolver(), NekoJSPaths.get(), defaultPreparationCache());
-    }
-
-    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths) {
-        this(context, resolver, paths, defaultPreparationCache());
-    }
-
     /**
      * 生产装配入口：与 runtime owner 共享 prepared 缓存实例。
      *
      * @param preparationCache {@code NekoRuntimeRoot} 持有的缓存（模块 session 生命周期归属）
      */
-    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths,
+    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver,
                                        NekoModulePipelineCache preparationCache) {
         this.context = context;
         this.resolver = resolver;
@@ -94,21 +91,23 @@ public final class NekoScriptModuleLoaderHost {
         this.esmLinker = new NekoEsmLinker(resolver, preparationCache);
         this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
         this.esmRecordCache = new NekoEsmModuleRecordCache();
-        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver, preparationCache, virtualModules);
+        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver, preparationCache, virtualModules,
+                preparationCache.sourceMaps(), preparationCache::composeRewrittenSourceMap);
         this.dependencyGraph = new NekoModuleDependencyGraph();
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
         this.modulePreparedKeys = new ConcurrentHashMap<>();
         this.modulePaths = new ConcurrentHashMap<>();
-        preparationCache.installPreparationObserver(this::observePreparedCacheEntry);
+        this.preparationObserver = this::observePreparedCacheEntry;
+        preparationCache.registerPreparationObserver(preparationObserver);
         this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph, preparationCache);
         this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter,
                 virtualModules, context, reloadCoordinator::revision, this::prepare);
     }
 
-    private static NekoModulePipelineCache defaultPreparationCache() {
-        return new NekoModulePipelineCache(
-                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig());
+    /** Release this host's cache observer without owning or clearing the shared cache. */
+    public void close() {
+        preparationCache.unregisterPreparationObserver(preparationObserver);
     }
 
     // ======== Graal interop shell：@CalledByDynamicCode 方法供 internal/script-loader.js 通过 GraalVM interop 调用 ========
@@ -306,7 +305,7 @@ public final class NekoScriptModuleLoaderHost {
             }
             if (resolved.json()) {
                 String json = preparationCache.prepareJson(resolved.path());
-                observeExecutionKey(resolved.id(), resolved.path(), jsonExecutionKey(resolved.id(), json));
+                observeExecutionKey(resolved.id(), resolved.path(), preparationCache.jsonExecutionKey(resolved.path(), json));
                 return esmRewriter.syntheticJsonModuleUri(resolved.path()).toString();
             }
             NekoPreparedModule prepared = prepare(resolved);
@@ -383,7 +382,7 @@ public final class NekoScriptModuleLoaderHost {
 
     private Object loadJsonResolved(NekoResolvedModule resolved) throws IOException {
         String rawJson = preparationCache.prepareJson(resolved.path());
-        String preparedKey = jsonExecutionKey(resolved.id(), rawJson);
+        String preparedKey = preparationCache.jsonExecutionKey(resolved.path(), rawJson);
         observeExecutionKey(resolved.id(), resolved.path(), preparedKey);
         ModuleState cached = moduleCache.get(resolved.id());
         if (cached != null && preparedKey.equals(cached.preparedKey())) {
@@ -517,7 +516,10 @@ public final class NekoScriptModuleLoaderHost {
                 displayPath = generatedPath;
             }
             SourceMapRegistry.OriginalPosition mapped = preparationCache.sourceMaps()
-                    .getMappedPosition(displayPath, line, column);
+                    .getMappedPosition(generatedPath, line, column);
+            if (mapped.path == null && displayPath != null && !displayPath.equals(generatedPath)) {
+                mapped = preparationCache.sourceMaps().getMappedPosition(displayPath, line, column);
+            }
             if (mapped.path != null && !mapped.path.isBlank()) {
                 sourcePath = authoredPath(mapped.path);
                 moduleId = sourcePath;
@@ -531,11 +533,60 @@ public final class NekoScriptModuleLoaderHost {
                 sourcePath = displayPath;
             }
         }
+        if (line < 0) {
+            StackLocation stackLocation = stackLocation(failure.getMessage());
+            if (stackLocation != null) {
+                line = stackLocation.line();
+                column = stackLocation.column();
+                String generatedPath = stackLocation.path();
+                String displayPath = virtualModules.displayPath(generatedPath);
+                if (displayPath == null || displayPath.isBlank()) {
+                    displayPath = generatedPath;
+                }
+                SourceMapRegistry.OriginalPosition mapped = preparationCache.sourceMaps()
+                        .getMappedPosition(generatedPath, line, column);
+                if (mapped.path != null && !mapped.path.isBlank()) {
+                    sourcePath = authoredPath(mapped.path);
+                    moduleId = sourcePath;
+                    line = mapped.line;
+                    column = mapped.column;
+                } else if (displayPath != null && !displayPath.isBlank()) {
+                    sourcePath = authoredPath(displayPath);
+                    moduleId = sourcePath;
+                }
+            }
+        }
+        sourcePath = authoredPath(sourcePath);
+        if (moduleId != null) {
+            moduleId = authoredPath(moduleId);
+        }
         return NekoModuleError.execute(moduleId, sourcePath, line, column,
                 failure.getMessage(), failure);
     }
 
+    private StackLocation stackLocation(String message) {
+        if (message == null || message.isBlank()) {
+            return null;
+        }
+        Matcher matcher = STACK_LOCATION.matcher(message);
+        while (matcher.find()) {
+            String path = matcher.group(1);
+            if (path.startsWith("file:")) {
+                try {
+                    path = Path.of(new URI(path)).toString();
+                } catch (URISyntaxException | IllegalArgumentException ignored) {
+                    // Keep the original stack spelling for the virtual registry filename index.
+                }
+            }
+            return new StackLocation(path, Integer.parseInt(matcher.group(2)), Integer.parseInt(matcher.group(3)));
+        }
+        return null;
+    }
+
     private static String authoredPath(String path) {
+        if (path == null || path.isBlank()) {
+            return path;
+        }
         String normalized = path.replace('\\', '/');
         for (String root : new String[]{"startup_scripts/", "server_scripts/", "client_scripts/", "test_scripts/"}) {
             int index = normalized.indexOf(root);
@@ -545,6 +596,8 @@ public final class NekoScriptModuleLoaderHost {
         }
         return normalized;
     }
+
+    private record StackLocation(String path, int line, int column) {}
 
     private SourceSection sourceLocation(PolyglotException failure, String moduleId) {
         SourceSection location = failure.getSourceLocation();
@@ -676,7 +729,12 @@ public final class NekoScriptModuleLoaderHost {
                 if (cause instanceof NekoModuleError staged) {
                     throw new CompletionException(staged);
                 }
-                throw new CompletionException(NekoModuleError.execute(resolved.id(), cause.getMessage(), cause));
+                if (cause instanceof NekoEsmLinkException linkFailure) {
+                    throw new CompletionException(NekoModuleError.link(linkFailure));
+                }
+                RuntimeException runtimeFailure = cause instanceof RuntimeException runtime
+                        ? runtime : new RuntimeException(cause);
+                throw new CompletionException(executionError(resolved, prepared, runtimeFailure));
             });
         } catch (NekoModuleError staged) {
             throw staged;
@@ -730,17 +788,13 @@ public final class NekoScriptModuleLoaderHost {
                 String fileName = path.getFileName() == null ? "" : path.getFileName().toString();
                 if (fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".json")) {
                     observeExecutionKey(moduleId, path,
-                            jsonExecutionKey(moduleId, preparationCache.prepareJson(path)));
+                            preparationCache.jsonExecutionKey(path, preparationCache.prepareJson(path)));
                 } else {
                     NekoPreparedModule prepared = preparationCache.prepare(path);
                     observePrepared(moduleId, path, prepared);
                 }
             }
         }
-    }
-
-    private String jsonExecutionKey(String moduleId, String rawJson) {
-        return NekoModuleHash.sha256("json\0" + moduleId + "\0" + rawJson);
     }
 
     private IOException asyncEsmRequireError(NekoResolvedModule resolved) {

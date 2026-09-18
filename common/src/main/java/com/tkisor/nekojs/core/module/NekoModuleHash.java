@@ -18,4 +18,9 @@ public final class NekoModuleHash {
             throw new IllegalStateException("SHA-256 digest is not available on this JVM", e);
         }
     }
+
+    /** Single owner for the execution identity of a prepared JSON module. */
+    static String jsonExecutionKey(String moduleId, String source) {
+        return sha256("json\0" + (moduleId == null ? "" : moduleId) + "\0" + (source == null ? "" : source));
+    }
 }

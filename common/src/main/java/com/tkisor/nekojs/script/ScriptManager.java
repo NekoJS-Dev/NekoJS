@@ -21,7 +21,13 @@ import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
 import com.tkisor.nekojs.core.lifecycle.ReloadProgressTracker;
 import com.tkisor.nekojs.core.lifecycle.ScriptLifecycleGate;
 import com.tkisor.nekojs.core.log.LoggerStream;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
@@ -234,7 +240,9 @@ public final class ScriptManager implements AutoCloseable {
     public ScriptManager(ScriptType scriptType, ScriptEventBridge scriptEventBridge, IPluginRuntime pluginRuntime, ScriptPropertyRegistry scriptProperties, ErrorTracker errorTracker, NekoJSPaths paths, SandboxConfig sandboxConfig, ScriptEnvironmentFactory environmentFactory, List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors) {
         this(scriptType, scriptEventBridge, pluginRuntime, scriptProperties, errorTracker, paths,
                 sandboxConfig, environmentFactory, domainCollectors, new NekoModulePipelineCache(
-                        com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry.current(), sandboxConfig));
+                        new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), sandboxConfig),
+                        new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                        NekoTrustContext.local()));
     }
 
     /**

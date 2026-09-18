@@ -1,11 +1,14 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -46,15 +49,19 @@ class ModuleExamplesSmokeTest {
     void setUp() throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
         paths = pathsFor(gameDir);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        SandboxConfig config = SandboxConfig.defaultConfig();
         cache = new NekoModulePipelineCache(
-                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
                         new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
                 .build();
         context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
