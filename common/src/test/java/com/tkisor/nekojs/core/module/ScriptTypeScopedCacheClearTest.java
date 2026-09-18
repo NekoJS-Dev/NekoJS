@@ -1,12 +1,10 @@
-package com.tkisor.nekojs.script;
+package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;

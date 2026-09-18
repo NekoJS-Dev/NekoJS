@@ -4,14 +4,24 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.ClassFilter;
+import com.tkisor.nekojs.core.module.NekoModuleError;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoTrustApprovedSource;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.pack.ScriptPack;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.security.KeyPair;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,10 +47,26 @@ class PackSyncClientTest {
 
     private final AtomicInteger reloads = new AtomicInteger();
 
+    @BeforeEach
+    void installTestRuntimeBinding() {
+        PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
+            @Override
+            public void authorize(List<NekoTrustContext.RemoteSource> sources) {
+                // Most tests exercise pack acceptance/rejection only; the integration test below
+                // installs a real runtime-owned context.
+            }
+
+            @Override
+            public void revoke() {
+            }
+        });
+    }
+
     @AfterEach
     void cleanup() {
         ClassFilter.INSTANCE.updateConfig(SandboxConfig.defaultConfig());
         PackSyncClient.installClientReloadHook(null);
+        PackSyncClient.installClientRemoteTrustHook(null);
         PackSyncClient.handleDisconnect();
     }
 
@@ -100,6 +126,54 @@ class PackSyncClientTest {
         PackSyncClient.handleDisconnect();
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
         assertEquals(2, reloads.get());
+    }
+
+    @Test
+    void successfulActivationAuthorizesRuntimeCacheAndDisconnectRevokesIt() throws Exception {
+        config("all", false);
+        NekoRuntimeTrustContext runtimeTrust = NekoRuntimeTrustContext.local();
+        PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
+            @Override
+            public void authorize(List<NekoTrustContext.RemoteSource> sources) {
+                runtimeTrust.authorizeRemoteSources(sources);
+            }
+
+            @Override
+            public void revoke() {
+                runtimeTrust.revokeRemoteSources();
+            }
+        });
+
+        String manifest = signed("packs:runtime", "GLOBAL", "key-runtime");
+        SyncedPack pack = pack("packs:runtime", "GLOBAL", manifest,
+                "client_scripts/hud.js", "hud()");
+        PackSyncClient.handleHashList("srv-runtime.test", hashes(pack));
+        PackSyncTrustStore.get().trustServer("srv-runtime.test");
+
+        assertNull(PackSyncClient.handleBundle(List.of(pack)).disconnect());
+
+        Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-runtime.test"))
+                .resolve(SyncedPack.encodeSyncId("packs:runtime"))
+                .resolve("client_scripts/hud.js");
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(),
+                        ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                runtimeTrust);
+        try {
+            assertEquals(NekoTrustApprovedSource.Kind.REMOTE_AUTHORIZED,
+                    cache.approvedSource(remoteFile).kind());
+
+            PackSyncClient.handleDisconnect();
+
+            Exception denied = org.junit.jupiter.api.Assertions.assertThrows(Exception.class,
+                    () -> cache.prepare(remoteFile));
+            NekoModuleError staged = org.junit.jupiter.api.Assertions.assertInstanceOf(NekoModuleError.class, denied);
+            assertEquals(NekoModuleError.Stage.PREPARE, staged.stage());
+            assertEquals(NekoModuleError.OWNER_PACK_TRUST, staged.owner());
+            assertTrue(staged.sourcePath().replace('\\', '/').endsWith("hud.js"), staged.detail());
+        } finally {
+            cache.clear();
+        }
     }
 
     @Test

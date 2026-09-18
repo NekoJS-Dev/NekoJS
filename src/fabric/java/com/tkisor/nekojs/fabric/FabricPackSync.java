@@ -102,6 +102,24 @@ public final class FabricPackSync {
         ClientConfigurationNetworking.registerGlobalReceiver(PackHashListPayload.TYPE, FabricPackSync::handleHashList);
         ClientConfigurationNetworking.registerGlobalReceiver(PackBundlePayload.TYPE, FabricPackSync::handleBundle);
         PackSyncClient.installClientReloadHook(FabricPackSync::reloadClientScripts);
+        PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
+            @Override
+            public void authorize(List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources) {
+                NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
+                if (root == null) {
+                    throw new IllegalStateException("NekoJS runtime root is not assembled");
+                }
+                root.authorizeRemoteSources(sources);
+            }
+
+            @Override
+            public void revoke() {
+                NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
+                if (root != null) {
+                    root.revokeRemoteSources();
+                }
+            }
+        });
         // 两个阶段都要卸载远端包：未信任/验签失败是在配置阶段就被踢，走不到 play 阶段断线
         ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) -> PackSyncClient.handleDisconnect());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PackSyncClient.handleDisconnect());

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.error.NekoSourceMapView;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
@@ -59,6 +60,8 @@ public final class NekoScriptModuleLoaderHost {
     private final NekoModuleDependencyGraph dependencyGraph;
     private final Map<String, ModuleState> moduleCache;
     private final Map<String, Long> moduleRevisions;
+    private final Map<String, String> modulePreparedKeys;
+    private final Map<String, java.nio.file.Path> modulePaths;
     private final ModuleReloadCoordinator reloadCoordinator;
     private final EsmModuleLifecycle esmLifecycle;
     /** Graal proxy calls cannot reliably preserve checked Java causes; retain staged nested failures per host thread. */
@@ -95,6 +98,8 @@ public final class NekoScriptModuleLoaderHost {
         this.dependencyGraph = new NekoModuleDependencyGraph();
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
+        this.modulePreparedKeys = new ConcurrentHashMap<>();
+        this.modulePaths = new ConcurrentHashMap<>();
         this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph, preparationCache);
         this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter,
                 virtualModules, context, reloadCoordinator::revision, this::prepare);
@@ -156,21 +161,23 @@ public final class NekoScriptModuleLoaderHost {
     public Object loadEntry(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolveEntryPath(entryPath);
         dependencyGraph.markEntry(resolved.id());
+        refreshPreparedExecutionTree(resolved.id());
         return loadResolved(resolved);
     }
 
     public CompletableFuture<?> loadEntryAsync(String entryPath) throws IOException {
         NekoResolvedModule resolved = resolveEntryPath(entryPath);
         dependencyGraph.markEntry(resolved.id());
+        refreshPreparedExecutionTree(resolved.id());
         return loadResolvedAsync(resolved);
     }
 
-    public com.tkisor.nekojs.core.error.SourceMapRegistry sourceMaps() {
-        return preparationCache.sourceMaps();
+    public NekoSourceMapView sourceMaps() {
+        return preparationCache.sourceMapView();
     }
 
-    public NekoEsmVirtualModuleRegistry virtualModules() {
-        return virtualModules;
+    public NekoVirtualModuleView virtualModules() {
+        return preparationCache.virtualModuleView();
     }
 
     public Object requireFrom(String parentPath, String specifier) throws IOException {
@@ -306,6 +313,9 @@ public final class NekoScriptModuleLoaderHost {
 
     private void invalidateModules(List<String> moduleIds, boolean removeGraphNodes) {
         reloadCoordinator.invalidateModules(moduleIds, removeGraphNodes);
+        for (String moduleId : moduleIds) {
+            modulePreparedKeys.remove(moduleId);
+        }
     }
 
     private long revision(String moduleId) {
@@ -351,15 +361,18 @@ public final class NekoScriptModuleLoaderHost {
 
     private Object loadJsonResolved(NekoResolvedModule resolved) throws IOException {
         String rawJson = preparationCache.prepareJson(resolved.path());
+        String preparedKey = jsonExecutionKey(resolved.id(), rawJson);
+        observeExecutionKey(resolved.id(), resolved.path(), preparedKey);
         ModuleState cached = moduleCache.get(resolved.id());
-        if (cached != null) {
+        if (cached != null && preparedKey.equals(cached.preparedKey())) {
             return cached.exports();
         }
-        ModuleState module = newModuleState(resolved.id());
+        if (cached != null) moduleCache.remove(resolved.id());
+        ModuleState module = newModuleState(resolved.id(), preparedKey);
         try {
             module.exports(parseJson(resolved.id(), rawJson));
             module.loaded(true);
-            moduleCache.put(resolved.id(), module);
+            moduleCache.put(resolved.id(), new ModuleState(module.filename(), preparedKey, module.value()));
             return module.exports();
         } catch (IOException e) {
             moduleCache.remove(resolved.id());
@@ -382,10 +395,11 @@ public final class NekoScriptModuleLoaderHost {
 
     private Object loadScriptResolved(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
         ModuleState cached = moduleCache.get(resolved.id());
-        if (cached != null) {
+        if (cached != null && prepared.cacheKey().equals(cached.preparedKey())) {
             return cached.exports();
         }
-        ModuleState module = newModuleState(resolved.id());
+        if (cached != null) moduleCache.remove(resolved.id());
+        ModuleState module = newModuleState(resolved.id(), prepared.cacheKey());
         // Node 循环 require 语义：执行前先入缓存，循环方拿到的是执行中模块的「部分 exports」；
         // 若执行后才入缓存，A↔B 互引会无限重入直至 StackOverflowError。失败时移除以免半初始化模块驻留。
         moduleCache.put(resolved.id(), module);
@@ -409,11 +423,15 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     private ModuleState newModuleState(String filename) throws IOException {
+        return newModuleState(filename, "");
+    }
+
+    private ModuleState newModuleState(String filename, String preparedKey) throws IOException {
         if (moduleFactory == null || !moduleFactory.canExecute()) {
             throw NekoModuleError.execute(filename, "NekoJS script module factory is unavailable.", null);
         }
         try {
-            return new ModuleState(filename, moduleFactory.execute(filename));
+            return new ModuleState(filename, preparedKey, moduleFactory.execute(filename));
         } catch (RuntimeException failure) {
             throw NekoModuleError.execute(filename, failure.getMessage(), failure);
         }
@@ -650,7 +668,42 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     private NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException {
-        return preparationCache.prepare(resolved.path());
+        NekoPreparedModule prepared = preparationCache.prepare(resolved.path());
+        observePrepared(resolved.id(), resolved.path(), prepared);
+        return prepared;
+    }
+
+    private void observePrepared(String moduleId, java.nio.file.Path path, NekoPreparedModule prepared) {
+        observeExecutionKey(moduleId, path, prepared.cacheKey());
+    }
+
+    private void observeExecutionKey(String moduleId, java.nio.file.Path path, String executionKey) {
+        modulePaths.put(moduleId, path);
+        String previous = modulePreparedKeys.put(moduleId, executionKey);
+        if (previous != null && !previous.equals(executionKey)) {
+            invalidateModules(dependencyGraph.affectedModules(moduleId), false);
+        }
+    }
+
+    /** Refresh known dependencies before an entry cache hit can hide a changed child module. */
+    private void refreshPreparedExecutionTree(String entryId) throws IOException {
+        for (String moduleId : dependencyGraph.dependencyModules(entryId)) {
+            java.nio.file.Path path = modulePaths.get(moduleId);
+            if (path != null) {
+                String fileName = path.getFileName() == null ? "" : path.getFileName().toString();
+                if (fileName.toLowerCase(java.util.Locale.ROOT).endsWith(".json")) {
+                    observeExecutionKey(moduleId, path,
+                            jsonExecutionKey(moduleId, preparationCache.prepareJson(path)));
+                } else {
+                    NekoPreparedModule prepared = preparationCache.prepare(path);
+                    observePrepared(moduleId, path, prepared);
+                }
+            }
+        }
+    }
+
+    private String jsonExecutionKey(String moduleId, String rawJson) {
+        return NekoModuleHash.sha256("json\0" + moduleId + "\0" + rawJson);
     }
 
     private IOException asyncEsmRequireError(NekoResolvedModule resolved) {

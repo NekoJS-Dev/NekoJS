@@ -38,6 +38,24 @@ public final class PackSyncClientConnections {
 
     public static void install() {
         PackSyncClient.installClientReloadHook(PackSyncClientConnections::reloadClientScripts);
+        PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
+            @Override
+            public void authorize(java.util.List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources) {
+                NekoRuntimeRoot root = runtimeRoot;
+                if (root == null) {
+                    throw new IllegalStateException("NekoJS runtime root is not assembled");
+                }
+                root.authorizeRemoteSources(sources);
+            }
+
+            @Override
+            public void revoke() {
+                NekoRuntimeRoot root = runtimeRoot;
+                if (root != null) {
+                    root.revokeRemoteSources();
+                }
+            }
+        });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(PackSyncClientConnections::onLoggingOut);
     }
 

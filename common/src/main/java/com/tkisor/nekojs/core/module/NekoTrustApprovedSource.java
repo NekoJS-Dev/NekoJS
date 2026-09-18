@@ -72,7 +72,7 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         };
     }
 
-    private static String subjectOf(Path file) {
+    static String subjectOf(Path file) {
         Objects.requireNonNull(file, "file");
         Path canonical = file.normalize().toAbsolutePath();
         try {

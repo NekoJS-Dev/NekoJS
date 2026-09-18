@@ -188,3 +188,55 @@
   public identity SPI；`NekoModulePipeline` 以私有 `LanguageBinding` 合并 language id/plugin
   查找，`NekoScriptModuleLoaderHost` 以私有 `resolveWithStage` 合并三个 resolver wrapper。
   两个 helper 都不新增公共 API，且未改动 parser/compiler 的无关结构。
+
+## Review-round-3 addendum（2026-09-19）
+
+本轮针对最终二次 code-review 的 Spec findings 在 `3e428580` 上继续 fix-forward；`Status` 保持
+`closed`，既有 AC 不反勾。以下记录实际 production seam、行为测试和仍然存在的边界。
+
+- **AC8 production remote trust：fixed.** `NekoRuntimeAssembly` 默认生产装配现在创建
+  runtime-owned `NekoRuntimeTrustContext`，并把同一对象注入 `NekoModulePipelineCache` 与
+  `NekoRuntimeRoot`。NeoForge `PackSyncClientConnections` 和 Fabric `FabricPackSync` 都安装
+  `PackSyncClient.RemoteTrustHook`：PackSyncClient 只有在验签、盘上哈希复核、显式服务器信任和
+  `SERVER_CACHE` 激活成功后，才把每个物化内容文件的 `REMOTE_AUTHORIZED(packId,keyId)` 凭证送入
+  当前 runtime；随后才触发 `root.reload(CLIENT)`。无 runtime binding、无非空签名 keyId、验签/完整性
+  失败或异常授权都不激活/不注入；断线、空清单、hashOnly 清理会先 revoke，远端路径不会回落为
+  `LOCAL_TRUSTED`。没有新增 trust store 或 runtime owner。证据：
+  `PackSyncClientTest#successfulActivationAuthorizesRuntimeCacheAndDisconnectRevokesIt` 实际把
+  PackSync 物化文件送入 cache prepare，并断言断线后的 `PREPARE/Pack Trust` 拒绝；平台生产接线位于
+  `PackSyncClientConnections` / `FabricPackSync`。
+
+- **AC4 execution-cache identity：fixed.** CJS `ModuleState` 现在保存 prepared `cacheKey`，
+  ESM lifecycle 在 namespace/record cache 命中前比较 prepared identity；内容、path、mode、language
+  变化因此不能复用旧 exports/namespace。host 在入口 cache hit 前刷新已知 dependency tree，子模块
+  identity 变化会清理受影响的父执行树；异步入口复用同一刷新路径。证据：
+  `NekoModuleIdentityLifecycleTest#changedCjsSourceInvalidatesExportsWithoutExplicitInvalidate`、
+  `#changedEsmSourceInvalidatesNamespaceWithoutExplicitInvalidate`（等长覆盖，不调用 invalidate），
+  `#changedLanguageIdentityInvalidatesCjsExportsWithoutExplicitInvalidate`，以及
+  `NekoModulePipelineCacheStampTest` 的 path/mode/language identity 断言。
+
+- **Literal dynamic import staging：fixed.** `NekoNativeEsmSourceRewriter` 对 literal dynamic
+  import 的 resolver I/O/未解析错误统一包装为 `NekoModuleError.RESOLVE`，host 不再把已有 staged
+  error 转成 `EXECUTE`；父模块路径、specifier 和原始 resolver cause 保留。证据：
+  `NekoModuleIdentityLifecycleTest#literalDynamicImportResolutionFailureKeepsResolveStageAndCause`。
+
+- **ESM cycle characterization：fixed/characterized.** 增加真实 `.mjs` A↔B 循环依赖，使用已存在的
+  ESM link/evaluation lifecycle 与 live binding 语义，断言循环可完成且导出值正确：
+  `NekoModuleIdentityLifecycleTest#esmCycleUsesExistingLinkAndEvaluationSemantics`。当前实现没有将
+  cycle 伪装成 unsupported；CJS partial exports 与 ESM cycle 各自沿既有语义运行。
+
+- **Observation surface：fixed.** `NekoRuntimeRoot#preparationCache()` 改为 package-private；
+  `NekoModulePipelineCache#sourceMaps()` / `#virtualModules()` 改为 package-private 可变 owner
+  seam。跨包执行环境只收到 `NekoSourceMapView` / `NekoVirtualModuleView` 只读 view，唯一 public
+  cache 诊断为 `preparedEntryCount()`；测试迁移到 owner package 或 lifecycle package，不保留
+  public mutable registry getter。
+
+- **Standards canonical-path duplicate：fixed.** `NekoTrustApprovedSource.subjectOf(Path)`
+  收口为 package helper，`NekoRuntimeTrustContext` 复用同一 canonical/Windows-case identity，
+  没有再造第二套路径规范化事实源或公共 API。
+
+- **Remaining limitations：recorded, not deferred AC debt.** `NekoEsmParser` 既有 top-level scan
+  对嵌在被整体跳过的复杂 `export` statement 内的 dynamic import 仍不是本轮 parser 重构范围；本轮
+  characterization 使用 parser 已承诺的 literal dynamic-import expression 形态，并覆盖 rewriter
+  的 resolver seam。PackSync remote authorization 只授权盘上 bundle content files，manifest 本身
+  不作为可执行模块授权；这与 pack activation 的脚本内容边界一致。

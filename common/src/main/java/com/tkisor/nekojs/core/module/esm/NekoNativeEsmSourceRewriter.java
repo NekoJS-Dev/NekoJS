@@ -1,10 +1,9 @@
 package com.tkisor.nekojs.core.module.esm;
 
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
+import com.tkisor.nekojs.core.module.NekoModuleError;
 import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;
 
@@ -22,15 +21,6 @@ public final class NekoNativeEsmSourceRewriter {
     private final NekoEsmVirtualModuleRegistry virtualModules;
     /** 传递依赖准备缓存（W3 显式注入，语义同 {@link NekoEsmLinker}）。 */
     private final NekoModulePipelineCache preparationCache;
-
-    public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver) {
-        this(resolver, new NekoModulePipelineCache(
-                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
-    }
-
-    public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache) {
-        this(resolver, preparationCache, preparationCache.virtualModules());
-    }
 
     public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache,
                                        NekoEsmVirtualModuleRegistry virtualModules) {
@@ -120,7 +110,14 @@ public final class NekoNativeEsmSourceRewriter {
         }
 
         private String rewrittenSpecifier(String specifier, NekoEsmStatement statement) throws IOException {
-            NekoResolvedModule resolved = resolver.resolve(moduleId, specifier);
+            NekoResolvedModule resolved;
+            try {
+                resolved = resolver.resolve(moduleId, specifier);
+            } catch (NekoModuleError staged) {
+                throw staged;
+            } catch (IOException failure) {
+                throw NekoModuleError.resolve(moduleId, specifier, failure);
+            }
             if (resolved.special()) {
                 return syntheticObjectModule(statement, resolved.specifier()).toString();
             }

@@ -167,17 +167,27 @@ public final class NekoModulePipelineCache {
         relativePath(key).ifPresent(sourceMaps::clear);
     }
 
-    /** 测试/诊断观察面：本实例当前缓存条目数。 */
-    int size() {
+    /** Controlled read-only diagnostic: number of prepared entries owned by this runtime. */
+    public int preparedEntryCount() {
         return preparedCache.size();
     }
 
-    public SourceMapRegistry sourceMaps() {
+    SourceMapRegistry sourceMaps() {
         return sourceMaps;
     }
 
-    public NekoEsmVirtualModuleRegistry virtualModules() {
+    NekoEsmVirtualModuleRegistry virtualModules() {
         return virtualModules;
+    }
+
+    /** Controlled read-only view for execution-side filesystem integration. */
+    public NekoVirtualModuleView virtualModuleView() {
+        return virtualModules;
+    }
+
+    /** Controlled read-only view for execution-side diagnostics. */
+    public com.tkisor.nekojs.core.error.NekoSourceMapView sourceMapView() {
+        return sourceMaps;
     }
 
     public NekoTrustApprovedSource approvedSource(Path path) throws IOException {

@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.error.NekoSourceMapView;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 
 import java.util.regex.Matcher;
@@ -11,10 +12,10 @@ import java.util.regex.Pattern;
  */
 final class StackTraceMapper {
     private static final Pattern STACK_LOCATION = Pattern.compile("(\\()([^()\\s]+):(\\d+)(?::(\\d+))?(\\))");
-    private final SourceMapRegistry sourceMaps;
-    private final NekoEsmVirtualModuleRegistry virtualModules;
+    private final NekoSourceMapView sourceMaps;
+    private final NekoVirtualModuleView virtualModules;
 
-    StackTraceMapper(SourceMapRegistry sourceMaps, NekoEsmVirtualModuleRegistry virtualModules) {
+    StackTraceMapper(NekoSourceMapView sourceMaps, NekoVirtualModuleView virtualModules) {
         this.sourceMaps = sourceMaps;
         this.virtualModules = virtualModules;
     }

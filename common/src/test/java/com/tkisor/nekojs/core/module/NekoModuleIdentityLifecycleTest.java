@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.compiler.IScriptCompiler;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -26,6 +27,7 @@ import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -48,13 +50,14 @@ class NekoModuleIdentityLifecycleTest {
     private Context context;
     private NekoScriptModuleLoaderHost host;
     private NekoModulePipelineCache cache;
+    private ScriptCompilerRegistry compilers;
 
     @BeforeEach
     void setUp() throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
         paths = pathsFor(gameDir);
         Files.createDirectories(paths.serverScripts().resolve("src"));
-        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
         cache = new NekoModulePipelineCache(new NekoModulePipeline(
                 new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
@@ -120,6 +123,93 @@ class NekoModuleIdentityLifecycleTest {
     }
 
     @Test
+    void changedCjsSourceInvalidatesExportsWithoutExplicitInvalidate() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/stale-cjs.cjs");
+        Files.writeString(entry, "module.exports = 'AAAA';\n");
+
+        Value first = asValue(host.loadEntry("./server_scripts/src/stale-cjs.cjs"));
+        assertEquals("AAAA", first.asString());
+
+        Files.writeString(entry, "module.exports = 'BBBB';\n");
+
+        Value second = asValue(host.loadEntry("./server_scripts/src/stale-cjs.cjs"));
+        assertEquals("BBBB", second.asString(),
+                "a changed prepared identity must not return the old CJS exports cache");
+    }
+
+    @Test
+    void changedLanguageIdentityInvalidatesCjsExportsWithoutExplicitInvalidate() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/language-identity.js");
+        Files.writeString(entry, "module.exports = 'native';\n");
+
+        Value first = asValue(host.loadEntry("./server_scripts/src/language-identity.js"));
+        assertEquals("native", first.asString());
+
+        compilers.registerLanguage("legacy-language-identity", Set.of(".js"), new IScriptCompiler() {
+            @Override
+            public boolean canCompile(String extension) {
+                return ".js".equalsIgnoreCase(extension);
+            }
+
+            @Override
+            public String compile(Path file, String sourceCode) {
+                return "module.exports = 'legacy';\n";
+            }
+        });
+
+        Value second = asValue(host.loadEntry("./server_scripts/src/language-identity.js"));
+        assertEquals("legacy", second.asString(),
+                "a changed language identity must not return the old CJS exports cache");
+    }
+
+    @Test
+    void changedEsmSourceInvalidatesNamespaceWithoutExplicitInvalidate() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/stale-esm.mjs");
+        Files.writeString(entry, "export const value = 'AAAA';\n");
+
+        Value first = asValue(host.loadEntry("./server_scripts/src/stale-esm.mjs"));
+        assertEquals("AAAA", first.getMember("value").asString());
+
+        Files.writeString(entry, "export const value = 'BBBB';\n");
+
+        Value second = asValue(host.loadEntry("./server_scripts/src/stale-esm.mjs"));
+        assertEquals("BBBB", second.getMember("value").asString(),
+                "a changed prepared identity must not return the old ESM namespace");
+    }
+
+    @Test
+    void esmCycleUsesExistingLinkAndEvaluationSemantics() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Files.writeString(dir.resolve("cycle-a.mjs"),
+                "import { bValue } from './cycle-b.mjs';\n"
+                        + "export function getA() { return 'a'; }\n"
+                        + "export const fromB = bValue;\n");
+        Files.writeString(dir.resolve("cycle-b.mjs"),
+                "import { getA } from './cycle-a.mjs';\n"
+                        + "export const bValue = 'b';\n"
+                        + "export const fromA = getA();\n");
+
+        Value namespace = asValue(host.loadEntry("./server_scripts/src/cycle-a.mjs"));
+
+        assertEquals("b", namespace.getMember("fromB").asString());
+    }
+
+    @Test
+    void literalDynamicImportResolutionFailureKeepsResolveStageAndCause() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/dynamic-missing.mjs");
+        Files.writeString(entry, "import('./does-not-exist.mjs');\nexport const pending = 1;\n");
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/dynamic-missing.mjs"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.RESOLVE, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        assertEquals("./does-not-exist.mjs", staged.moduleId());
+        assertTrue(staged.sourcePath().replace('\\', '/').endsWith("dynamic-missing.mjs"), staged.detail());
+        assertNotNull(staged.getCause(), "literal dynamic import must retain resolver I/O cause");
+    }
+
+    @Test
     void sharedDependencyEvaluatesOnceAcrossEntries() throws Exception {
         Path dir = paths.serverScripts().resolve("src");
         Files.writeString(dir.resolve("shared-dep.cjs"),
@@ -146,26 +236,26 @@ class NekoModuleIdentityLifecycleTest {
             NekoScriptModuleLoaderHost otherHost = new NekoScriptModuleLoaderHost(otherContext,
                     new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, otherCache);
             String moduleId = "server_scripts/src/host-isolation.mjs";
-            Path firstVirtual = Path.of(host.virtualModules().register(moduleId, "export const owner = 'first';"));
-            Path secondVirtual = Path.of(otherHost.virtualModules().register(moduleId, "export const owner = 'second';"));
+            Path firstVirtual = Path.of(cache.virtualModules().register(moduleId, "export const owner = 'first';"));
+            Path secondVirtual = Path.of(otherCache.virtualModules().register(moduleId, "export const owner = 'second';"));
 
             String firstMap = sourceMapWithContent("server_scripts/src/host-isolation.ts", "first source");
             String secondMap = sourceMapWithContent("server_scripts/src/host-isolation.ts", "second source");
-            host.sourceMaps().register("server_scripts/src/host-isolation.ts", firstMap, 0);
-            otherHost.sourceMaps().register("server_scripts/src/host-isolation.ts", secondMap, 0);
+            cache.sourceMaps().register("server_scripts/src/host-isolation.ts", firstMap, 0);
+            otherCache.sourceMaps().register("server_scripts/src/host-isolation.ts", secondMap, 0);
 
             assertEquals(firstVirtual, secondVirtual, "the virtual URI is deterministic across hosts");
-            assertTrue(host.virtualModules().source(firstVirtual).contains("first"));
-            assertTrue(otherHost.virtualModules().source(secondVirtual).contains("second"));
-            assertEquals("first source", host.sourceMaps().getMappedPosition(
+            assertTrue(cache.virtualModules().source(firstVirtual).contains("first"));
+            assertTrue(otherCache.virtualModules().source(secondVirtual).contains("second"));
+            assertEquals("first source", cache.sourceMaps().getMappedPosition(
                     "server_scripts/src/host-isolation.ts", 1, 1).sourceContent);
-            assertEquals("second source", otherHost.sourceMaps().getMappedPosition(
+            assertEquals("second source", otherCache.sourceMaps().getMappedPosition(
                     "server_scripts/src/host-isolation.ts", 1, 1).sourceContent);
 
             cache.clear();
 
-            assertTrue(otherHost.virtualModules().source(secondVirtual).contains("second"));
-            assertEquals("second source", otherHost.sourceMaps().getMappedPosition(
+            assertTrue(otherCache.virtualModules().source(secondVirtual).contains("second"));
+            assertEquals("second source", otherCache.sourceMaps().getMappedPosition(
                     "server_scripts/src/host-isolation.ts", 1, 1).sourceContent);
         } finally {
             otherCache.clear();

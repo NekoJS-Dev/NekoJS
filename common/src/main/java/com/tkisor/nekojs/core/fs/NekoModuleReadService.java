@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +14,7 @@ import java.util.Optional;
 public final class NekoModuleReadService {
     private NekoModuleReadService() {}
 
-    public static Path resolveReadableScript(Path originalPath, NekoEsmVirtualModuleRegistry virtualModules) {
+    public static Path resolveReadableScript(Path originalPath, NekoVirtualModuleView virtualModules) {
         if (virtualModules.isVirtualModule(originalPath)) {
             return originalPath;
         }
@@ -51,7 +51,7 @@ public final class NekoModuleReadService {
      * 读已准备字节（W3 显式注入：调用方传入其 runtime-owned 缓存实例；无隐藏静态缓存）。
      */
     public static Optional<byte[]> readPreparedBytes(Path path, NekoModulePipelineCache preparationCache,
-                                                     NekoEsmVirtualModuleRegistry virtualModules) throws IOException {
+                                                     NekoVirtualModuleView virtualModules) throws IOException {
         String virtualSource = virtualModules.source(path);
         if (virtualSource != null) {
             return Optional.of(virtualSource.getBytes(StandardCharsets.UTF_8));
@@ -63,7 +63,7 @@ public final class NekoModuleReadService {
     }
 
     public static Optional<Map<String, Object>> virtualAttributes(Path path,
-                                                                  NekoEsmVirtualModuleRegistry virtualModules) {
+                                                                  NekoVirtualModuleView virtualModules) {
         if (virtualModules.isVirtualDirectory(path)) {
             return Optional.of(Map.of(
                     "isRegularFile", false,

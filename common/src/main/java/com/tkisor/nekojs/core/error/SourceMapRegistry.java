@@ -17,7 +17,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class SourceMapRegistry {
+public final class SourceMapRegistry implements NekoSourceMapView {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     private final Map<String, NormalizedSourceMap> mappings = new ConcurrentHashMap<>();
     private final Path root;

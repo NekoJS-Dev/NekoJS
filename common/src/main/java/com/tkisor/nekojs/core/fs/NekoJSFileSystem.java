@@ -4,7 +4,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +27,7 @@ public class NekoJSFileSystem implements FileSystem {
     private Path currentWorkingDirectory;
     /** 已准备字节读取目标（W3 显式注入：与装配侧共享的 runtime-owned 缓存实例）。 */
     private final NekoModulePipelineCache preparationCache;
-    private final NekoEsmVirtualModuleRegistry virtualModules;
+    private final NekoVirtualModuleView virtualModules;
 
     public NekoJSFileSystem(Path initialWorkingDirectory) {
         // 无显式配置的旧入口：按默认沙箱配置裁决（生产路径见 NekoSandboxFactory，传真实配置）
@@ -46,7 +46,7 @@ public class NekoJSFileSystem implements FileSystem {
         this.paths = NekoJSPaths.get();
         this.policy = policy;
         this.preparationCache = preparationCache;
-        this.virtualModules = preparationCache.virtualModules();
+        this.virtualModules = preparationCache.virtualModuleView();
     }
 
     @Override
