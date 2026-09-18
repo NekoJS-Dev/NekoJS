@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.core.module;
 
-import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
@@ -334,8 +333,7 @@ public final class NekoModulePipelineCache {
             }
             String first = relative.getName(0).toString();
             for (ScriptType type : ScriptType.all()) {
-                Path typePath = ScriptTypeEnv.scriptsDir(type);
-                String dirName = typePath == null ? type.name + "_scripts" : typePath.getFileName().toString();
+                String dirName = type.name + "_scripts";
                 // Windows 文件系统大小写不敏感：手建的 Server_scripts 目录同样落在 SERVER
                 // 类型子树内（Path.startsWith 在 Windows 上本就忽略大小写），这里必须同等
                 // 忽略大小写匹配，否则该目录下的模块会被误标为跨类型共享缓存、逃脱按类型清理

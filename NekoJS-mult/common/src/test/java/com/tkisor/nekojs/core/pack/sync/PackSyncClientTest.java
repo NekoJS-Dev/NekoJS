@@ -194,9 +194,17 @@ class PackSyncClientTest {
         assertNull(PackSyncClient.handleBundle(runtimeRoot, List.of(newPack)).disconnect());
 
         Path bucket = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-stale.test"));
-        Path oldFile = bucket.resolve(SyncedPack.encodeSyncId(oldPack.syncId())).resolve("client_scripts/old.js");
-        Path newFile = bucket.resolve(SyncedPack.encodeSyncId(newPack.syncId())).resolve("client_scripts/new.js");
+        Path oldDir = bucket.resolve(SyncedPack.encodeSyncId(oldPack.syncId()));
+        Path newDir = bucket.resolve(SyncedPack.encodeSyncId(newPack.syncId()));
+        Path oldFile = oldDir.resolve("client_scripts/old.js");
+        Path newFile = newDir.resolve("client_scripts/new.js");
         assertTrue(java.nio.file.Files.isRegularFile(oldFile), "the old cache file is intentionally retained");
+        List<ScriptPack> active = ScriptPackRegistry.get().serverCachePacks();
+        assertEquals(1, active.size(), "the active registry must contain only the current syncId set");
+        assertEquals(newDir, active.get(0).root(),
+                "the current syncId directory must be active");
+        assertFalse(active.stream().anyMatch(pack -> pack.root().equals(oldDir)),
+                "retained stale cache directories must not become active packs");
 
         NekoModulePipelineCache cache = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(),
