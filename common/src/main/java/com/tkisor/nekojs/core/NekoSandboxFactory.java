@@ -9,6 +9,7 @@ import com.tkisor.nekojs.core.fs.SandboxPolicy;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.log.LoggerStream;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
@@ -63,14 +64,26 @@ public final class NekoSandboxFactory {
     private final NekoJSPaths paths;
     private final ScriptCompilerRegistry compilers;
     private final NekoSharedHostAccess hostAccess;
+    /**
+     * prepared 缓存（W3 显式注入）：生产经装配与 runtime root 共享同一实例；
+     * 旧构造器自建隔离实例（测试/工具互不污染）。
+     */
+    private final NekoModulePipelineCache preparationCache;
     /** 每 Engine 共享的失控看门狗（Graal 限制：同一 Engine 的所有 Context 必须共用同一个语句谓词实例）。 */
     private volatile RunawayWatchdog sharedWatchdog;
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
+        this(core, paths, compilers, pluginRuntime, NekoModulePipelineCache.withExplicitPipeline(
+                compilers, core.sandboxConfig()));
+    }
+
+    public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers,
+                              IPluginRuntime pluginRuntime, NekoModulePipelineCache preparationCache) {
         this.core = core;
         this.paths = paths;
         this.compilers = compilers;
         this.hostAccess = new NekoSharedHostAccess(pluginRuntime.adapters());
+        this.preparationCache = preparationCache;
     }
 
     private RunawayWatchdog sharedWatchdog(SandboxConfig config, Logger logger) {
@@ -105,7 +118,7 @@ public final class NekoSandboxFactory {
         LoggerStream errStream = new LoggerStream(logger, true);
 
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths)))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), preparationCache))
                 .build();
 
         Context.Builder contextBuilder = Context.newBuilder("js")
@@ -151,7 +164,8 @@ public final class NekoSandboxFactory {
                 new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)),
                 paths,
                 core.errorTracker(),
-                config);
+                config,
+                preparationCache);
 
         Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
         registeredExtensions.remove(".js");

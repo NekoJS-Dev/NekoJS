@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.NekoJS;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
@@ -22,17 +25,26 @@ public class NekoJSFileSystem implements FileSystem {
     private final NekoJSPaths paths;
     private final SandboxPolicy policy;
     private Path currentWorkingDirectory;
+    /** 已准备字节读取目标（W3 显式注入：与装配侧共享的 runtime-owned 缓存实例）。 */
+    private final NekoModulePipelineCache preparationCache;
 
     public NekoJSFileSystem(Path initialWorkingDirectory) {
         // 无显式配置的旧入口：按默认沙箱配置裁决（生产路径见 NekoSandboxFactory，传真实配置）
         this(initialWorkingDirectory, new SandboxPolicy(
-                com.tkisor.nekojs.core.config.SandboxConfig.defaultConfig(), NekoJSPaths.get()));
+                SandboxConfig.defaultConfig(), NekoJSPaths.get()));
     }
 
     public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy) {
+        this(initialWorkingDirectory, policy, NekoModulePipelineCache.withExplicitPipeline(
+                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
+    }
+
+    public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy,
+                            NekoModulePipelineCache preparationCache) {
         this.currentWorkingDirectory = initialWorkingDirectory;
         this.paths = NekoJSPaths.get();
         this.policy = policy;
+        this.preparationCache = preparationCache;
     }
 
     @Override
@@ -116,7 +128,7 @@ public class NekoJSFileSystem implements FileSystem {
                 : writing ? policy.resolveWrite(path) : paths.verifyInsideGameDir(path);
         verifiedPath = NekoModuleReadService.resolveReadableScript(verifiedPath);
 
-        var preparedBytes = NekoModuleReadService.readPreparedBytes(verifiedPath);
+        var preparedBytes = NekoModuleReadService.readPreparedBytes(verifiedPath, preparationCache);
         if (preparedBytes.isPresent()) {
             if (writing) {
                 throw new AccessDeniedException(verifiedPath.toString());

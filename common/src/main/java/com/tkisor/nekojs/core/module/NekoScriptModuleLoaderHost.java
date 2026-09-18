@@ -2,6 +2,8 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
@@ -31,10 +33,22 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * CJS/ESM 模块装载宿主（Module Resolution/Cache 的执行委托面）。
+ *
+ * <p>W3 显式注入：prepared 缓存经构造器传入（生产与 {@link NekoRuntimeRoot} 持有的
+ * {@link NekoModulePipelineCache} 为同一实例；旧构造器自建隔离实例，仅供测试/工具）。
+ * 路径解析失败包成 {@link NekoModuleError}（RESOLVE/Module Resolution-Cache），
+ * ESM link 失败沿用 {@link NekoEsmLinkException}（自带诊断），宿主装载失败包成
+ * EXECUTE——guest 运行时异常原样传播。平台 callback 不进入本层（见
+ * {@code ModulePipelineIsolationTest}）；Graal Context 由执行环境构造并传入，
+ * 本层不创建 Context、不决定 HostAccess。
+ */
 public final class NekoScriptModuleLoaderHost {
 
     private final Context context;
     private final NekoModuleResolver resolver;
+    private final NekoModulePipelineCache preparationCache;
     private final NekoEsmLinker esmLinker;
     private final NekoEsmLinkCache esmLinkCache;
     private final NekoEsmModuleRecordCache esmRecordCache;
@@ -50,31 +64,37 @@ public final class NekoScriptModuleLoaderHost {
     private Value jsonParser;
 
     public NekoScriptModuleLoaderHost(Context context) {
-        this.context = context;
-        this.resolver = new NekoModuleResolver();
-        this.esmLinker = new NekoEsmLinker(resolver);
-        this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
-        this.esmRecordCache = new NekoEsmModuleRecordCache();
-        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
-        this.dependencyGraph = new NekoModuleDependencyGraph();
-        this.moduleCache = new ConcurrentHashMap<>();
-        this.moduleRevisions = new ConcurrentHashMap<>();
-        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
-        this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter, context, reloadCoordinator::revision, this::prepare);
+        this(context, new NekoModuleResolver(), NekoJSPaths.get(), defaultPreparationCache());
     }
 
     public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths) {
+        this(context, resolver, paths, defaultPreparationCache());
+    }
+
+    /**
+     * 生产装配入口：与 runtime owner 共享 prepared 缓存实例。
+     *
+     * @param preparationCache {@code NekoRuntimeRoot} 持有的缓存（模块 session 生命周期归属）
+     */
+    public NekoScriptModuleLoaderHost(Context context, NekoModuleResolver resolver, NekoJSPaths paths,
+                                       NekoModulePipelineCache preparationCache) {
         this.context = context;
         this.resolver = resolver;
-        this.esmLinker = new NekoEsmLinker(resolver);
+        this.preparationCache = preparationCache;
+        this.esmLinker = new NekoEsmLinker(resolver, preparationCache);
         this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
         this.esmRecordCache = new NekoEsmModuleRecordCache();
-        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver);
+        this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver, preparationCache);
         this.dependencyGraph = new NekoModuleDependencyGraph();
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
-        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph);
+        this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph, preparationCache);
         this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter, context, reloadCoordinator::revision, this::prepare);
+    }
+
+    private static NekoModulePipelineCache defaultPreparationCache() {
+        return NekoModulePipelineCache.withExplicitPipeline(
+                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig());
     }
 
     // ======== Graal interop shell：@CalledByDynamicCode 方法供 internal/script-loader.js 通过 GraalVM interop 调用 ========
@@ -126,26 +146,26 @@ public final class NekoScriptModuleLoaderHost {
 
     @CalledByDynamicCode
     public Object loadEntry(String entryPath) throws IOException {
-        NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
+        NekoResolvedModule resolved = resolveEntryPath(entryPath);
         dependencyGraph.markEntry(resolved.id());
         return loadResolved(resolved);
     }
 
     public CompletableFuture<?> loadEntryAsync(String entryPath) throws IOException {
-        NekoResolvedModule resolved = resolver.resolveEntry(entryPath);
+        NekoResolvedModule resolved = resolveEntryPath(entryPath);
         dependencyGraph.markEntry(resolved.id());
         return loadResolvedAsync(resolved);
     }
 
     public Object requireFrom(String parentPath, String specifier) throws IOException {
-        NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
+        NekoResolvedModule resolved = resolveChild(parentPath, specifier);
         recordDependency(parentPath, resolved);
         return loadResolved(resolved);
     }
 
     public String resolveToString(String parentPath, String specifier) throws IOException {
         // require.resolve 语义：bare 未命中直接报错（见 NekoModuleResolver.resolveForRequire）
-        NekoResolvedModule resolved = resolver.resolveForRequire(parentPath, specifier);
+        NekoResolvedModule resolved = resolveChildForRequire(parentPath, specifier);
         return resolved.special() ? resolved.specifier() : resolved.id();
     }
 
@@ -179,25 +199,59 @@ public final class NekoScriptModuleLoaderHost {
     private void clearSharedCachesForOwnType() {
         com.tkisor.nekojs.api.ScriptType type =
                 com.tkisor.nekojs.script.ScriptContextRegistry.scriptTypeOf(context);
-        NekoModulePipelineCache.clear(type);
+        preparationCache.clear(type);
         NekoEsmVirtualModuleRegistry.clear(type);
+    }
+
+    /**
+     * 路径解析统一收口：resolver 的原始错误包成 RESOLVE 阶段错误（owner Module
+     * Resolution/Cache），消息文本保持不变；已是阶段错误的透传。
+     */
+    private NekoResolvedModule resolveEntryPath(String entryPath) throws IOException {
+        try {
+            return resolver.resolveEntry(entryPath);
+        } catch (NekoModuleError staged) {
+            throw staged;
+        } catch (IOException failure) {
+            throw NekoModuleError.resolve(null, entryPath, failure);
+        }
+    }
+
+    private NekoResolvedModule resolveChild(String parentPath, String specifier) throws IOException {
+        try {
+            return resolver.resolve(parentPath, specifier);
+        } catch (NekoModuleError staged) {
+            throw staged;
+        } catch (IOException failure) {
+            throw NekoModuleError.resolve(parentPath, specifier, failure);
+        }
+    }
+
+    private NekoResolvedModule resolveChildForRequire(String parentPath, String specifier) throws IOException {
+        try {
+            return resolver.resolveForRequire(parentPath, specifier);
+        } catch (NekoModuleError staged) {
+            throw staged;
+        } catch (IOException failure) {
+            throw NekoModuleError.resolve(parentPath, specifier, failure);
+        }
     }
 
     @CalledByDynamicCode
     public java.util.List<String> affectedEntries(String modulePath) throws IOException {
-        NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
+        NekoResolvedModule resolved = resolveEntryPath(modulePath);
         return dependencyGraph.affectedEntries(resolved.id());
     }
 
     @CalledByDynamicCode
     public void invalidateAffectedModules(String modulePath) throws IOException {
-        NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
+        NekoResolvedModule resolved = resolveEntryPath(modulePath);
         invalidateModules(dependencyGraph.affectedModules(resolved.id()), false);
     }
 
     @CalledByDynamicCode
     public void invalidateModuleTree(String modulePath) throws IOException {
-        NekoResolvedModule resolved = resolver.resolveEntry(modulePath);
+        NekoResolvedModule resolved = resolveEntryPath(modulePath);
         invalidateModules(dependencyGraph.dependencyModules(resolved.id()), true);
     }
 
@@ -205,14 +259,14 @@ public final class NekoScriptModuleLoaderHost {
 
     @CalledByDynamicCode
     public Object nativeImport(String parentPath, String specifier) throws IOException {
-        NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
+        NekoResolvedModule resolved = resolveChild(parentPath, specifier);
         recordDependency(parentPath, resolved);
         return loadResolved(resolved);
     }
 
     @CalledByDynamicCode
     public CompletableFuture<?> nativeImportAsync(String parentPath, String specifier) throws IOException {
-        NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
+        NekoResolvedModule resolved = resolveChild(parentPath, specifier);
         recordDependency(parentPath, resolved);
         return loadResolvedAsync(resolved);
     }
@@ -221,7 +275,7 @@ public final class NekoScriptModuleLoaderHost {
         if (isResolvedNativeModuleUri(specifier)) {
             return specifier;
         }
-        NekoResolvedModule resolved = resolver.resolve(parentPath, specifier);
+        NekoResolvedModule resolved = resolveChild(parentPath, specifier);
         recordDependency(parentPath, resolved);
         if (resolved.special()) {
             if ("nekojs/jsx-runtime".equals(resolved.specifier())) {
@@ -294,7 +348,7 @@ public final class NekoScriptModuleLoaderHost {
         }
         ModuleState module = newModuleState(resolved.id());
         try {
-            module.exports(parseJson(Files.readString(resolved.path())));
+            module.exports(parseJson(resolved.id(), Files.readString(resolved.path())));
             module.loaded(true);
             moduleCache.put(resolved.id(), module);
             return module.exports();
@@ -303,7 +357,7 @@ public final class NekoScriptModuleLoaderHost {
             throw e;
         } catch (Throwable throwable) {
             moduleCache.remove(resolved.id());
-            throw new IOException("Failed to load JSON module: " + resolved.id(), throwable);
+            throw NekoModuleError.execute(resolved.id(), "Failed to load JSON module: " + resolved.id(), throwable);
         }
     }
 
@@ -325,27 +379,27 @@ public final class NekoScriptModuleLoaderHost {
             throw e;
         } catch (Throwable throwable) {
             moduleCache.remove(resolved.id());
-            throw new IOException("Failed to load module: " + resolved.id(), throwable);
+            throw NekoModuleError.execute(resolved.id(), "Failed to load module: " + resolved.id(), throwable);
         }
     }
 
     private ModuleState newModuleState(String filename) throws IOException {
         if (moduleFactory == null || !moduleFactory.canExecute()) {
-            throw new IOException("NekoJS script module factory is unavailable.");
+            throw NekoModuleError.execute(filename, "NekoJS script module factory is unavailable.", null);
         }
         return new ModuleState(filename, moduleFactory.execute(filename));
     }
 
-    private Object parseJson(String rawJson) throws IOException {
+    private Object parseJson(String moduleId, String rawJson) throws IOException {
         if (jsonParser == null || !jsonParser.canExecute()) {
-            throw new IOException("JSON parser is unavailable for NekoJS script loader.");
+            throw NekoModuleError.execute(moduleId, "JSON parser is unavailable for NekoJS script loader.", null);
         }
         return jsonParser.execute(rawJson);
     }
 
     private void executeScriptModule(NekoResolvedModule resolved, ModuleState module, NekoPreparedModule prepared) throws IOException {
         if (executor == null || !executor.canExecute()) {
-            throw new IOException("NekoJS script module executor is unavailable.");
+            throw NekoModuleError.execute(resolved.id(), "NekoJS script module executor is unavailable.", null);
         }
         ProxyExecutable require = args -> {
             String specifier = args.length == 0 ? "" : args[0].asString();
@@ -431,19 +485,32 @@ public final class NekoScriptModuleLoaderHost {
     // ======== 以下 ESM/CJS 加载 + 栈映射委托给 EsmModuleLifecycle / 内部逻辑 ========
 
     private Object loadEsmModule(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
-        return esmLifecycle.loadEsmModule(resolved, prepared);
+        try {
+            return esmLifecycle.loadEsmModule(resolved, prepared);
+        } catch (NekoModuleError | NekoEsmLinkException staged) {
+            throw staged;
+        } catch (IOException failure) {
+            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+        }
     }
 
     private CompletableFuture<Value> loadEsmModuleAsync(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
-        return esmLifecycle.loadEsmModuleAsync(resolved, prepared);
+        try {
+            return esmLifecycle.loadEsmModuleAsync(resolved, prepared);
+        } catch (NekoModuleError | NekoEsmLinkException staged) {
+            throw staged;
+        } catch (IOException failure) {
+            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+        }
     }
 
     private NekoPreparedModule prepare(NekoResolvedModule resolved) throws IOException {
-        return NekoModulePipelineCache.prepare(resolved.path());
+        return preparationCache.prepare(resolved.path());
     }
 
     private IOException asyncEsmRequireError(NekoResolvedModule resolved) {
-        return new IOException("Cannot require async ESM module with top-level await: " + resolved.id() + ". Use import() instead.");
+        return NekoModuleError.execute(resolved.id(),
+                "Cannot require async ESM module with top-level await: " + resolved.id() + ". Use import() instead.", null);
     }
 
     private Throwable toThrowable(Object failure) {
@@ -511,7 +578,8 @@ public final class NekoScriptModuleLoaderHost {
 
     private Object resolveSpecial(String specifier) throws IOException {
         if (specialResolver == null || !specialResolver.canExecute()) {
-            throw new IOException("NekoJS special module resolver is unavailable: " + specifier);
+            throw new NekoModuleError(NekoModuleError.Stage.RESOLVE, NekoModuleError.OWNER_RESOLUTION_CACHE,
+                    null, specifier, "NekoJS special module resolver is unavailable: " + specifier);
         }
         return specialResolver.execute(specifier).as(Object.class);
     }

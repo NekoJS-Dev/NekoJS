@@ -83,8 +83,9 @@ public class SourceMapRegistry {
     /**
      * 仅清空指定 {@link ScriptType} 的 source map：脚本根目录遵循 {@code <name>_scripts}
      * 命名约定，keys 均为 root-relative 路径（如 {@code server_scripts/foo.ts}），
-     * 按该前缀过滤即可。与进程级静态缓存分区（见 NekoModulePipelineCache.clear(ScriptType)）
-     * 配套，避免单机单类型 reload 误清其它类型的 Python/TS 映射。
+     * 按该前缀过滤即可。与 runtime-owned prepared 缓存的分区清理
+     * （见 {@code NekoModulePipelineCache#clear(ScriptType)}）配套，
+     * 避免单机单类型 reload 误清其它类型的 Python/TS 映射。
      */
     public static void clearByScriptType(ScriptType type) {
         if (type == null) return;

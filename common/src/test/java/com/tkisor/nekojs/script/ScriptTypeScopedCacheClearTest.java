@@ -1,6 +1,9 @@
 package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
@@ -23,13 +26,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 进程级静态缓存按 {@link ScriptType} 分区的回归测试（直接测缓存，不经 Graal Context）。
+ * runtime-owned prepared 缓存按 {@link ScriptType} 分区的回归测试（直接测缓存，不经 Graal Context）。
  *
- * <p>背景缺陷：NekoModulePipelineCache / SourceMapRegistry / NekoEsmVirtualModuleRegistry 均为
- * 进程级静态缓存且无 ScriptType 维度，单机 CLIENT 触发 reload 会误清 SERVER 等其它类型的
- * 编译模块、source map 与虚拟 ESM URI。修复后新增 {@code clear(ScriptType)} /
- * {@code clearByScriptType(ScriptType)} 按类型局部清除，本测试直接验证独立性，
- * 并验证跨类型共享条目（node_modules / 裸包名 moduleId）不受影响。
+ * <p>背景缺陷：prepared 缓存曾是进程级静态缓存且无 ScriptType 维度，单机 CLIENT 触发 reload
+ * 会误清 SERVER 等其它类型已编译的模块。修复后 {@code clear(ScriptType)} 按类型局部清除，
+ * 本测试直接验证独立性，并验证跨类型共享条目（node_modules / 裸包名 moduleId）不受影响。
+ *
+ * <p>W3 接缝说明：缓存是 runtime owner 持有的实例（构造器注入 pipeline）；SourceMapRegistry /
+ * NekoEsmVirtualModuleRegistry 仍为带分区清理的共享注册表（见各自 clearByScriptType/clear）。
+ * 本测试经实例 seam 观察 prepared 分区行为。
  */
 class ScriptTypeScopedCacheClearTest {
 
@@ -38,10 +43,20 @@ class ScriptTypeScopedCacheClearTest {
         TestPlatformInit.ensureInitialized();
     }
 
+    private NekoModulePipelineCache cache;
+
+    @BeforeEach
+    void newCache() {
+        cache = NekoModulePipelineCache.withExplicitPipeline(
+                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+    }
+
     @BeforeEach
     @AfterEach
     void clearCaches() {
-        NekoModulePipelineCache.clear();
+        if (cache != null) {
+            cache.clear();
+        }
         NekoEsmVirtualModuleRegistry.clear();
         SourceMapRegistry.clear();
     }
@@ -55,32 +70,55 @@ class ScriptTypeScopedCacheClearTest {
         Path clientKey = root.resolve("client_scripts/helper.js");
         Path sharedKey = root.resolve("node_modules/pkg/index.js");
 
-        Map<Path, Object> cache = pipelineCache();
-        Object stamp = newStamp(1L, 10L, "hash");
+        Map<Path, Object> cacheMap = pipelineCache();
+        Object stamp = newStamp(1L, 10L, "hash", "javascript", NekoModuleMode.AUTO);
         NekoPreparedModule prepared = NekoPreparedModule.commonJs("export default 1", null);
-        cache.put(serverKey, newEntry(stamp, prepared, ScriptType.SERVER));
-        cache.put(clientKey, newEntry(stamp, prepared, ScriptType.CLIENT));
-        cache.put(sharedKey, newEntry(stamp, prepared, null));
+        cacheMap.put(serverKey, newEntry(stamp, prepared, ScriptType.SERVER));
+        cacheMap.put(clientKey, newEntry(stamp, prepared, ScriptType.CLIENT));
+        cacheMap.put(sharedKey, newEntry(stamp, prepared, null));
 
-        NekoModulePipelineCache.clear(ScriptType.SERVER);
+        cache.clear(ScriptType.SERVER);
 
-        assertFalse(cache.containsKey(serverKey), "SERVER 类型的 prepared 条目必须被清除");
-        assertTrue(cache.containsKey(clientKey), "CLIENT 类型的 prepared 条目必须保留");
-        assertTrue(cache.containsKey(sharedKey), "跨类型共享缓存（node_modules）必须保留");
+        assertFalse(cacheMap.containsKey(serverKey), "SERVER 类型的 prepared 条目必须被清除");
+        assertTrue(cacheMap.containsKey(clientKey), "CLIENT 类型的 prepared 条目必须保留");
+        assertTrue(cacheMap.containsKey(sharedKey), "跨类型共享缓存（node_modules）必须保留");
     }
 
     @Test
     void pipelineCacheNoArgClearWipesEverything() throws Exception {
         Path root = NekoJSPaths.get().root().toAbsolutePath().normalize();
-        Map<Path, Object> cache = pipelineCache();
-        Object stamp = newStamp(1L, 10L, "hash");
+        Map<Path, Object> cacheMap = pipelineCache();
+        Object stamp = newStamp(1L, 10L, "hash", "javascript", NekoModuleMode.AUTO);
         NekoPreparedModule prepared = NekoPreparedModule.commonJs("export default 1", null);
-        cache.put(root.resolve("server_scripts/a.js"), newEntry(stamp, prepared, ScriptType.SERVER));
-        cache.put(root.resolve("node_modules/pkg/index.js"), newEntry(stamp, prepared, null));
+        cacheMap.put(root.resolve("server_scripts/a.js"), newEntry(stamp, prepared, ScriptType.SERVER));
+        cacheMap.put(root.resolve("node_modules/pkg/index.js"), newEntry(stamp, prepared, null));
 
-        NekoModulePipelineCache.clear();
+        cache.clear();
 
-        assertTrue(cache.isEmpty(), "无参 clear 必须清空全部条目");
+        assertTrue(cacheMap.isEmpty(), "无参 clear 必须清空本实例全部条目");
+    }
+
+    @Test
+    void pipelineCacheInstancesAreIsolatedAcrossOwners() throws Exception {
+        // runtime-owned 语义：两个 owner 的缓存实例互不可见；一方 clear 不影响另一方。
+        NekoModulePipelineCache other = NekoModulePipelineCache.withExplicitPipeline(
+                ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig());
+        try {
+            Path root = NekoJSPaths.get().root().toAbsolutePath().normalize();
+            Path serverKey = root.resolve("server_scripts/isolated.js");
+            Object stamp = newStamp(1L, 10L, "hash", "javascript", NekoModuleMode.AUTO);
+            NekoPreparedModule prepared = NekoPreparedModule.commonJs("export default 1", null);
+
+            pipelineCache().put(serverKey, newEntry(stamp, prepared, ScriptType.SERVER));
+
+            Map<Path, Object> otherMap = pipelineCache(other);
+            assertFalse(otherMap.containsKey(serverKey), "另一 owner 的缓存实例必须看不到本实例条目");
+
+            other.clear();
+            assertTrue(pipelineCache().containsKey(serverKey), "另一实例全清不得影响本实例");
+        } finally {
+            other.clear();
+        }
     }
 
     // ---- SourceMapRegistry ----
@@ -179,20 +217,27 @@ class ScriptTypeScopedCacheClearTest {
         return (Map<String, String>) field.get(null);
     }
 
-    // ---- reflection helpers for the private static PREPARED_CACHE ----
+    // ---- reflection helpers for the instance-level prepared map ----
 
     @SuppressWarnings("unchecked")
-    private static Map<Path, Object> pipelineCache() throws Exception {
-        Field field = NekoModulePipelineCache.class.getDeclaredField("PREPARED_CACHE");
-        field.setAccessible(true);
-        return (Map<Path, Object>) field.get(null);
+    private Map<Path, Object> pipelineCache() throws Exception {
+        return pipelineCache(cache);
     }
 
-    private static Object newStamp(long millis, long size, String contentHash) throws Exception {
+    @SuppressWarnings("unchecked")
+    private static Map<Path, Object> pipelineCache(NekoModulePipelineCache instance) throws Exception {
+        Field field = NekoModulePipelineCache.class.getDeclaredField("preparedCache");
+        field.setAccessible(true);
+        return (Map<Path, Object>) field.get(instance);
+    }
+
+    private static Object newStamp(long millis, long size, String contentHash,
+                                   String languageId, NekoModuleMode mode) throws Exception {
         Class<?> stampClass = Class.forName("com.tkisor.nekojs.core.module.NekoModulePipelineCache$FileStamp");
-        Constructor<?> ctor = stampClass.getDeclaredConstructor(long.class, long.class, String.class);
+        Constructor<?> ctor = stampClass.getDeclaredConstructor(
+                long.class, long.class, String.class, String.class, NekoModuleMode.class);
         ctor.setAccessible(true);
-        return ctor.newInstance(millis, size, contentHash);
+        return ctor.newInstance(millis, size, contentHash, languageId, mode);
     }
 
     private static Object newEntry(Object stamp, NekoPreparedModule prepared, ScriptType type) throws Exception {

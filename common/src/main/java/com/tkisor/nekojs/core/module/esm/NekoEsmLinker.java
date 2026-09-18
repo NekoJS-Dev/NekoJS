@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module.esm;
 
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
+import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
@@ -16,9 +18,20 @@ import java.util.Set;
 
 public final class NekoEsmLinker {
     private final NekoModuleResolver resolver;
+    /**
+     * 传递依赖准备缓存（W3 显式注入）：link 只消费 prepared module，不复制编译语义；
+     * 构造器未给缓存时用隔离直连实例（测试/工具），生产经 module host 传入共享实例。
+     */
+    private final NekoModulePipelineCache preparationCache;
 
     public NekoEsmLinker(NekoModuleResolver resolver) {
+        this(resolver, NekoModulePipelineCache.withExplicitPipeline(
+                ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()));
+    }
+
+    public NekoEsmLinker(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache) {
         this.resolver = resolver;
+        this.preparationCache = preparationCache;
     }
 
     public NekoEsmLinkMetadata link(String moduleId, Path path, NekoPreparedModule prepared) throws IOException {
@@ -244,7 +257,7 @@ public final class NekoEsmLinker {
     }
 
     private NekoPreparedModule prepare(Path path) throws IOException {
-        return NekoModulePipelineCache.prepare(path);
+        return preparationCache.prepare(path);
     }
 
     private Set<String> localExports(NekoEsmModuleAst ast) {

@@ -4,9 +4,9 @@
 
 **Blocked by:** [05: 单 owner 预整理：闭合两个 loader 的运行时生命周期入口](05-runtime-root.md)
 
-**Status:** ready-for-agent
+**Status:** closed
 
-**Assignee:** unassigned
+**Assignee:** 11-agent
 
 **Optional:** false
 
@@ -18,17 +18,17 @@
 
 ## Acceptance criteria
 
-- [ ] NekoModulePipeline.prepare 的最高调用者测试证明 JS/CJS/ESM 输入产生正确 language id、module mode、可执行 code/IR、可用 source map 和稳定 cache key。
-- [ ] prepared module 不可变，Resolution/Cache 修改源码、身份或诊断上下文时测试变红。
-- [ ] CJS require/module.exports 与 ESM import/export/link 的模块身份在重复加载、循环依赖和跨入口调用下保持既有语义。
-- [ ] 内容、路径、mode 或 language identity 变化会失效对应 cache；同 stamp 同长度但内容不同的覆盖写入不会返回旧模块。
-- [ ] 按 ScriptType 清理只影响目标范围，共享 node_modules/跨类型缓存行为有显式断言。
-- [ ] 准备失败、resolve/link 失败、缓存失败和执行失败可区分 owner 与阶段，错误不延迟成无来源的 Graal 异常。
-- [ ] 跨 import 的执行错误能经 source map 回到原始文件、行列和模块身份。
-- [ ] 本地 trusted 与远端显式授权/拒绝用同一阶段模型观测，拒绝或降级不会隐藏语言边界。
-- [ ] legacy CJS bridge 的 characterization、当前保留原因和收缩 gate 可追踪；只有替代 behavior、declaration、trace 通过且无调用者后才移除，不在 final release 统一清理，同一公开语义没有第二条长期 pipeline。
-- [ ] Preparation 与 Resolution/Cache 不创建 Graal Context、不决定 HostAccess、不读取 Minecraft/loader；Context、HostAccess、bindings 与执行关闭继续由 Script Execution Environment 负责，且本约束不改变 common 允许 GraalJS 的既有规则。
-- [ ] 随实现交付 JS、CJS、ESM 的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的模块能力，缓存/reload 行为与示例说明一致。
+- [x] NekoModulePipeline.prepare 的最高调用者测试证明 JS/CJS/ESM 输入产生正确 language id、module mode、可执行 code/IR、可用 source map 和稳定 cache key。
+- [x] prepared module 不可变，Resolution/Cache 修改源码、身份或诊断上下文时测试变红。
+- [x] CJS require/module.exports 与 ESM import/export/link 的模块身份在重复加载、循环依赖和跨入口调用下保持既有语义。
+- [x] 内容、路径、mode 或 language identity 变化会失效对应 cache；同 stamp 同长度但内容不同的覆盖写入不会返回旧模块。
+- [x] 按 ScriptType 清理只影响目标范围，共享 node_modules/跨类型缓存行为有显式断言。
+- [x] 准备失败、resolve/link 失败、缓存失败和执行失败可区分 owner 与阶段，错误不延迟成无来源的 Graal 异常。
+- [x] 跨 import 的执行错误能经 source map 回到原始文件、行列和模块身份。
+- [x] 本地 trusted 与远端显式授权/拒绝用同一阶段模型观测，拒绝或降级不会隐藏语言边界。
+- [x] legacy CJS bridge 的 characterization、当前保留原因和收缩 gate 可追踪；只有替代 behavior、declaration、trace 通过且无调用者后才移除，不在 final release 统一清理，同一公开语义没有第二条长期 pipeline。
+- [x] Preparation 与 Resolution/Cache 不创建 Graal Context、不决定 HostAccess、不读取 Minecraft/loader；Context、HostAccess、bindings 与执行关闭继续由 Script Execution Environment 负责，且本约束不改变 common 允许 GraalJS 的既有规则。
+- [x] 随实现交付 JS、CJS、ESM 的最小可运行示例与必要迁移材料；示例只使用已通过 gate 的模块能力，缓存/reload 行为与示例说明一致。
 
 ## Sources
 
@@ -52,4 +52,49 @@
   - PERF_BASELINE: cache 命中率与编译成本只使用 PERF_BASELINE 的本域旧输入或随票补采对照，不自行设定发布阈值，也不用 all-type 空缺替代。
   - MANAGED_SURFACE: 语言 module 归属需要进入声明，但语言票不重定义 managed 规范源。
 
-票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+ 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+
+## Closure record（2026-09-18）
+
+- 执行者：11-agent。工作流：认领（ready-for-agent → in-progress）→ 读票/spec（06/01/07）/
+  交接单（W3）/CONTEXT → 源码定位 → TDD（先写失败测试再实现，见过程红侧记录）→
+  定期 typecheck（`:common:compileJava`、`:common:compileTestJava`）与单文件测试 →
+  全量 `:common:check` → code-review 双轴自查修订 → 验收勾选 → 关票提交（不 push）。
+- 先决输入（05 closed，不重做）：单 owner `NekoRuntimeRoot`（`NekoRuntimeAssembly` 共享装配）、
+  runtime-owned session 生命周期；本票新增 runtime-owned prepared 缓存实例并由 root 持有。
+- 交付物（源码）：
+  - `NekoPreparedModule`：新增 `languageId / sourcePath / cacheKey` 组件（record 不可变，
+    `stableCacheKey` = SHA-256(language/mode/code/map)；旧三参工厂保留默认 `unknown`）。
+  - `NekoModulePipeline`：删除 `LEGACY_INSTANCE / bindLegacyInstance / legacyInstance /
+    legacyPrepare / SHARED_COMPILATION_PIPELINE`（05 总账 A7 删除条件即“W3 显式注入后删除”）；
+    新增 `describe`（纯语言/mode 描述子）、trust 凭证门 `prepare(path, source, approval)`、
+    PREPARE 阶段错误包装、无编译器 map 时的恒等 source map 补齐。
+  - `NekoModulePipelineCache`：static 持有改实例持有（构造器注入 pipeline；05 A8 保留域、
+    W3 处理显式注入）；`FileStamp` 五元组（mtime/size/contentHash/languageId/mode）；
+    PREPARE 错误透传不重标 CACHE；`withExplicitPipeline` 兼容装配入口。
+  - `NekoTrustApprovedSource`（新）：`LOCAL_TRUSTED / REMOTE_AUTHORIZED` 精确路径绑定凭证，
+    远端签发强制非空 keyId；`NekoModuleError`（新）：Stage（PREPARE/RESOLVE/LINK/CACHE/EXECUTE）
+    + owner（Preparation/Resolution-Cache/Execution/Pack Trust）+ source/module 归因，
+    继承 IOException（消息文本兼容既有断言）。
+  - 注入收口：host/linker/rewriter/coordinator/readService/filesystem/installer/
+    sandboxFactory/manager/root/assembly 全链路构造器注入；生产唯一共享实例由 assembly
+    创建并传入 factory 与 root；`root.closeSilently` 全清；旧构造器自建隔离实例（测试互不污染）。
+  - host 边界：resolve 失败→RESOLVE、宿主装载失败→EXECUTE（消息文本不变）、link 失败沿用
+    `NekoEsmLinkException`（自带诊断）、guest 运行时异常原样传播。
+- 交付物（测试，common，共 53 新/改 + 13 prior-art 同域）：
+  `NekoModulePipelinePrepareTest`(7)、`NekoModulePipelineCacheStampTest`(5，实例重写+扩展)、
+  `ScriptTypeScopedCacheClearTest`(7，实例重写+跨实例隔离)、`NekoModuleErrorStageTest`(6)、
+  `NekoModuleTrustStageTest`(4)、`NekoModuleIdentityLifecycleTest`(7)、
+  `LegacyCjsBridgeCharacterizationTest`(7)、`ModulePipelineIsolationTest`(5)、
+  `ModuleExamplesSmokeTest`(4)、`NekoRuntimeModuleCacheOwnershipTest`(1)。
+- 交付物（示例/迁移）：`common/src/test/resources/nekojs/module-examples/{js,cjs,esm}/`
+  最小可运行示例 + `docs/architecture-refactor/baseline/2026-09-18-language-pipeline/MIGRATION.md`
+  （脚本零迁移声明、示例内联、缓存/reload 行为、Java static→注入对照表、legacy 桥保留原因与收缩 gate）。
+- 验收判定：AC1–AC11 全部 pass（逐项证据见对照表；code-review 双轴自查的 4 项补强——反射篡改断言、
+  CJS 栈行列断言、legacy host 级装载、root 持有语义测试——已纳入并全绿）。
+- code-review（双轴）后修订：删 `NekoSandboxFactory#preparationCache` 未用观察面（投机通用性）；
+  AUTO-CJS 路径改附产物分析经查无生产消费者（中性）；`NekoSourceMapBuilder.identity` 可见性放宽
+  有 parser-SPI 锁定测试兜底；示例与基线内联内容已核对一致。
+- 遗留（不在本票范围）：`SourceMapRegistry` / `NekoEsmVirtualModuleRegistry` 仍为带分区清理的
+  共享注册表（分区行为已锁定，实例化另票）；`ScriptCompilerRegistry.current()` 语言扩展点保留；
+  性能阈值不设（PERF_BASELINE 独立）；05/06/07 语义未动。
