@@ -90,7 +90,12 @@ public final class NekoNativeEsmSourceRewriter {
                     case DYNAMIC_IMPORT -> {
                         if (expression.specifier() != null && expression.specifierLiteralSpan() != null) {
                             NekoEsmSpan literalSpan = expression.specifierLiteralSpan();
-                            replacements.add(new Replacement(literalSpan.start(), literalSpan.end(), jsString(rewrittenSpecifier(expression.specifier()))));
+                            // Keep literal dynamic imports on the runtime host path. Resolution,
+                            // preparation, dependency recording, and virtual ESM linking must happen
+                            // when import() executes, not while the parent source is rewritten.
+                            replacements.add(new Replacement(literalSpan.start(), literalSpan.end(),
+                                    "globalThis.__nekoScriptModuleLoaderHost.resolveNativeImport("
+                                            + jsString(moduleId) + ", " + jsString(expression.specifier()) + ")"));
                         } else {
                             replacements.add(new Replacement(span.start(), span.end(), "(specifier => import(globalThis.__nekoScriptModuleLoaderHost.resolveNativeImport(" + jsString(moduleId) + ", String(specifier))))"));
                         }

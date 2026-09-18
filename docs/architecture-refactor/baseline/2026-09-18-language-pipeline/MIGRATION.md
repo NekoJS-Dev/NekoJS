@@ -118,11 +118,12 @@ export const same = ns.default === greet;
 - **当前语义**：以后缀注册的外部 `IScriptCompiler` 经 `compileDetailed` 产出 code/sourceMap，
   再跑 CJS 静态分析进入同一 prepared 形态（`LegacyCjsBridgeCharacterizationTest`）；
   node 内建资源（classpath manifest）直装求值，不经过管线（独立语义：无文件身份/缓存/reload）。
-- **source-map 限制**：原生 JS/CJS/ESM 没有 compiler transform，因此 prepared module 的
-  `sourceMap` 为 `null`/不可用；没有 map 的 legacy compiler 也保持 `null`。这些路径依靠
-  script-loader 追加的 `sourceURL` 暴露 authored module，只有 compiler 实际产生的 map 才进入
-  source-map registry。TypeScript 的恒等 map 是 TypeScript compiler 的内部产物，不是原生脚本
-  的补齐，也不构成 parser/compiler 公共 SPI。
+- **source-map 事实**：原生 JS/CJS/ESM 和没有 compiler map 的 legacy compiler 现在由
+  `NekoSourceMapBuilder.identity` 生成真实非空 identity map，包含 authored `sourcePath`、`sources`、
+  `sourcesContent` 和 generated/source line mappings；TS/JSX 等 compiler-produced map 仍使用 compiler
+  map。script-loader 的 `sourceURL` 仍可作 execution fallback，但不能替代 prepared source map。
+  `NekoSourceMapBuilder` 的 identity 是唯一明确的 source-map utility API，不是 parser/lowering/compiler
+  公共 SPI。
 - **保留原因**：外部语言参与路径是公开扩展能力（删即删公开语言）；内建直装语义不同，
   不是第二条用户管线。
 - **收缩 gate**（须全部满足；满足后随票删除，不进 final release 统一清理；
@@ -132,9 +133,9 @@ export const same = ns.default === greet;
   3. trace（全仓无该后缀 `IScriptCompiler` 注册）；
   4. 无调用者（legacy 分支零生产/测试调用）。
 - **结构证据现状**：管线与 prepared 缓存零 static 可变状态、无 legacy static 门面
-  （同名测试类中断言锁定）；`NekoSourceMapBuilder` 与 `identity` 均为 package-private，恒等
-  映射只由同包 TypeScript compiler 使用，不用于给没有编译 map 的原生 JS/CJS/ESM 虚构 source map，
-  也不是 parser/lexer/lowering SPI（`pipelinePublicSurfaceExposesNoParserSpi` 锁定）。
+  （同名测试类中断言锁定）；source-map utility 只有 identity 入口，javadoc 明确不是 parser/lexer/
+  lowering/compiler SPI（`pipelinePublicSurfaceExposesNoParserSpi` 锁定）。runtime registry 的 public
+  mutable observability 已收口为 package owner seam 与 `NekoSourceMapView`/`NekoVirtualModuleView`。
 
 ## 4. 未做事项（非本票范围）
 

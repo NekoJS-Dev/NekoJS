@@ -40,19 +40,20 @@ public final class PackSyncClientConnections {
         PackSyncClient.installClientReloadHook(PackSyncClientConnections::reloadClientScripts);
         PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
             @Override
-            public void authorize(java.util.List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources) {
+            public void authorize(java.util.List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources,
+                                  java.nio.file.Path remoteRoot) {
                 NekoRuntimeRoot root = runtimeRoot;
                 if (root == null) {
                     throw new IllegalStateException("NekoJS runtime root is not assembled");
                 }
-                root.authorizeRemoteSources(sources);
+                root.authorizeRemoteSources(sources, remoteRoot);
             }
 
             @Override
-            public void revoke() {
+            public void revoke(java.nio.file.Path remoteRoot) {
                 NekoRuntimeRoot root = runtimeRoot;
                 if (root != null) {
-                    root.revokeRemoteSources();
+                    root.revokeRemoteSources(remoteRoot);
                 }
             }
         });

@@ -18,13 +18,13 @@
 
 ## Acceptance criteria
 
-- [x] NekoModulePipeline.prepare 的最高调用者测试证明 JS/CJS/ESM 输入产生正确 language id、module mode、可执行 code/IR 和稳定 cache key；编译器确实提供 map 时发布 source map，原生 JS/CJS/ESM 明确返回 null 并依靠 sourceURL 定位。
+- [x] NekoModulePipeline.prepare 的最高调用者测试证明 JS/CJS/ESM 输入产生正确 language id、module mode、可执行 code/IR、非空可用 source map 和稳定 cache key；compiler map 原样发布，native/no-map legacy 输入发布真实 identity map，sourceURL 仅作为 execution fallback。
 - [x] prepared module 不可变，Resolution/Cache 修改源码、身份或诊断上下文时测试变红。
 - [x] CJS require/module.exports 与 ESM import/export/link 的模块身份在重复加载、循环依赖和跨入口调用下保持既有语义。
 - [x] 内容、路径、mode 或 language identity 变化会失效对应 cache；同 stamp 同长度但内容不同的覆盖写入不会返回旧模块。
 - [x] 按 ScriptType 清理只影响目标范围，共享 node_modules/跨类型缓存行为有显式断言。
 - [x] 准备失败、resolve/link 失败、缓存失败和执行失败可区分 owner 与阶段，错误不延迟成无来源的 Graal 异常。
-- [x] 跨 import 的执行错误能在有编译器 map 时回到 authored 文件、行列和 failing module identity；无 map 的原生模块使用 sourceURL，错误仍保留 authored module identity。
+- [x] 跨 import 的执行错误能经 compiler/identity map 回到 authored 文件、行列和 failing module identity；sourceURL 仍可作为 execution fallback，错误仍保留 authored module identity。
 - [x] 本地 trusted 与远端显式授权/拒绝用同一阶段模型观测，拒绝或降级不会隐藏语言边界。
 - [x] legacy CJS bridge 的 characterization、当前保留原因和收缩 gate 可追踪；只有替代 behavior、declaration、trace 通过且无调用者后才移除，不在 final release 统一清理，同一公开语义没有第二条长期 pipeline。
 - [x] Preparation 与 Resolution/Cache 不创建 Graal Context、不决定 HostAccess、不读取 Minecraft/loader；Context、HostAccess、bindings 与执行关闭继续由 Script Execution Environment 负责，且本约束不改变 common 允许 GraalJS 的既有规则。
@@ -68,8 +68,8 @@
   - `NekoModulePipeline`：删除 `LEGACY_INSTANCE / bindLegacyInstance / legacyInstance /
     legacyPrepare / SHARED_COMPILATION_PIPELINE`（05 总账 A7 删除条件即“W3 显式注入后删除”）；
     新增 `identify`（纯语言/mode 描述子）、trust 凭证门 `prepare(path, source, approval)`、
-    PREPARE 阶段错误包装；只保留编译器实际产生的 source map，原生 JS/CJS/ESM 或无 map
-    的 legacy 输入返回 null 并由 sourceURL 提供定位。
+    PREPARE 阶段错误包装；compiler map 原样保留，原生 JS/CJS/ESM 和无 map 的 legacy
+    输入用 `NekoSourceMapBuilder.identity` 生成真实非空 map，sourceURL 仅作 execution fallback。
   - `NekoModulePipelineCache`：static 持有改实例持有（构造器注入 pipeline；05 A8 保留域、
     W3 处理显式注入）；`FileStamp` 由 mtime/size/contentHash 与 language/mode identity 组成；
     PREPARE 错误透传不重标 CACHE；JSON 也经该 cache 的逐文件 trust/preparation 边界。
@@ -94,8 +94,8 @@
 - 验收判定：按上述条件解释的 AC1–AC11 全部 pass（逐项证据见对照表；code-review 双轴自查的 4 项补强——反射篡改断言、
   CJS 栈行列断言、legacy host 级装载、root 持有语义测试——已纳入并全绿）。
 - code-review（双轴）后修订：删 `NekoSandboxFactory#preparationCache` 未用观察面（投机通用性）；
-  AUTO-CJS 路径改附产物分析经查无生产消费者（中性）；`NekoSourceMapBuilder` 保持包内可见，
-  `identity` 只供同包 TypeScript compiler 使用；示例与基线内联内容已核对一致。
+  AUTO-CJS 路径改附产物分析经查无生产消费者；source-map utility 的 identity 入口现在服务
+  native/legacy no-map prepared modules，javadoc 明确不是 parser/lowering/compiler SPI；示例与基线内联内容已核对一致。
 - 遗留（不在本票范围）：`SourceMapRegistry` / `NekoEsmVirtualModuleRegistry` 已由 prepared cache
   持有并按 runtime owner 隔离；`ScriptCompilerRegistry.current()` 语言扩展点保留；性能阈值不设
   （PERF_BASELINE 独立）；05/06/07 语义未动。
@@ -135,10 +135,11 @@
   `NekoModulePipelinePrepareTest#stableCacheKeyCoversPathLanguageModeCodeAndMap`、
   `NekoModulePipelineCacheStampTest` 的 canonical path/content/language/mode tests。
 
-- **Source-map / runtime evidence：finding confirmed, fixed.** 原生 JS/CJS/ESM 和没有 map 的 legacy
-  compiler 不再被恒称为“可用 source map”；它们依靠 script-loader 的 `sourceURL`。有 compiler map 的
-  TS path 仍发布真实 map，并经 `host.loadEntry` 触发 guest error 验证 authored path/line；跨 host source
-  maps 与 virtual sources 不互相污染。证据：`NekoModulePipelinePrepareTest`、`LegacyCjsBridgeCharacterizationTest`、
+- **Source-map / runtime evidence：finding confirmed, fixed.** 原生 JS/CJS/ESM 和没有 compiler map 的
+  legacy path 现在发布真实 identity map（source path、sources、sourcesContent、generated/source line
+  mappings 对齐）；有 compiler map 的 TS/JSX path 仍发布 compiler map，`sourceURL` 只作 execution
+  fallback。`host.loadEntry` 仍验证 authored path/line，跨 host source maps 与 virtual sources 不互相污染。
+  证据：`NekoModulePipelinePrepareTest`、`LegacyCjsBridgeCharacterizationTest`、
   `NekoModuleIdentityLifecycleTest#loadEntryRuntimeFailureKeepsTranspiledModuleSourceLocation`。
 
 - **Standards / naming / duplication：finding confirmed, fixed or deferred with reason.** SHA-256 实现
@@ -154,11 +155,10 @@
 `closed`。本 addendum 只记录实际修法、已验证证据和限制，不把未验证的 pack-sync 端到端行为标为完成。
 
 - **Closure 文档矛盾：fixed.** Closure 中过时的 `describe` 更正为实际 API `identify`；稳定 key
-  说明补上 source path；“无编译器 map 时恒等 source map 补齐”更正为：原生 JS/CJS/ESM 和无
-  compiler map 的 legacy 输入返回 `null`/source-map unavailable，依靠 script-loader 的
-  `sourceURL`，只有编译器实际产生的 map 才进入 prepared module。`NekoSourceMapBuilder` 恢复
-  package-private，`identity` 只保留给同包 TypeScript compiler。`MIGRATION.md` 与 closure 的
-  source-map 说明已同步；未新增未证实的 AC 勾选。
+  说明补上 source path。当前事实是：原生 JS/CJS/ESM 和无 compiler map 的 legacy 输入发布真实
+  identity source map；compiler map 仍原样发布；`sourceURL` 只是 execution fallback，不能替代
+  prepared map。现有 `NekoSourceMapBuilder.identity` 是唯一明确的 source-map utility API，javadoc
+  明确它不是 parser/lowering/compiler SPI。`MIGRATION.md` 与本 closure 的 source-map 说明同步。
 
 - **Remote/JSON trust pipeline：fixed at the preparation boundary.** `NekoRuntimeAssembly` 的
   原有 overload 仍使用 `NekoTrustContext.local()`；新增的 assembly context overload 把显式
@@ -171,12 +171,12 @@
   remote context 仍由其现有 trust owner 负责，本票只提供并验证 production host/cache 链的注入边界。
 
 - **AC7 source-map evidence：fixed.** `NekoModuleError` 增加统一的 authored `sourcePath`、
-  `sourceLine`、`sourceColumn` 诊断字段；host 在最高调用者 `loadEntry` 边界根据 compiler map
-  或 sourceURL 生成 EXECUTE error，并让跨 import 的 failing module identity 跟随映射后的
-  authored path，cause 保留原始 guest exception。证据：
+  `sourceLine`、`sourceColumn` 诊断字段；host 在最高调用者 `loadEntry` 边界根据 compiler/identity
+  map（必要时再以 sourceURL 作 fallback）生成 EXECUTE error，并让跨 import 的 failing module
+  identity 跟随映射后的 authored path，cause 保留原始 guest exception。证据：
   `NekoModuleIdentityLifecycleTest#crossImportTranspiledRuntimeFailureExposesAuthoredLocationAtLoadEntry`
   和 `#loadEntryRuntimeFailureKeepsTranspiledModuleSourceLocation`，均断言异常对象字段，
-  不读取 registry 作为唯一证据。原生无 compiler map 的限制保持为 sourceURL 定位。
+  不读取 registry 作为唯一证据。原生无 compiler map 的 prepared identity map 负责映射，sourceURL 仍可作执行 fallback。
 
 - **CJS nested dependency error layering：fixed.** `requireUnchecked` / `resolveToStringUnchecked`
   通过 host-thread boundary failure 保留 nested `NekoModuleError`，`executeScriptModule` 优先
@@ -184,8 +184,8 @@
   抛出 IOException。证据：`NekoModuleErrorStageTest#nestedCjsResolutionFailureRetainsResolveStageAndCause`
   （断言 RESOLVE、specifier、父路径和 cause）以及 JSON cache-stage 测试。
 
-- **Scope creep / duplicate wrappers：fixed.** `NekoSourceMapBuilder` 不再是 public 类型或
-  public identity SPI；`NekoModulePipeline` 以私有 `LanguageBinding` 合并 language id/plugin
+- **Scope creep / duplicate wrappers：fixed.** `NekoSourceMapBuilder` 仅作为明确的 source-map
+  utility API 公开 identity 入口，不是 parser/lowering/compiler SPI；`NekoModulePipeline` 以私有 `LanguageBinding` 合并 language id/plugin
   查找，`NekoScriptModuleLoaderHost` 以私有 `resolveWithStage` 合并三个 resolver wrapper。
   两个 helper 都不新增公共 API，且未改动 parser/compiler 的无关结构。
 
@@ -216,9 +216,11 @@
   `NekoModulePipelineCacheStampTest` 的 path/mode/language identity 断言。
 
 - **Literal dynamic import staging：fixed.** `NekoNativeEsmSourceRewriter` 对 literal dynamic
-  import 的 resolver I/O/未解析错误统一包装为 `NekoModuleError.RESOLVE`，host 不再把已有 staged
-  error 转成 `EXECUTE`；父模块路径、specifier 和原始 resolver cause 保留。证据：
-  `NekoModuleIdentityLifecycleTest#literalDynamicImportResolutionFailureKeepsResolveStageAndCause`。
+  import 只替换 literal span；执行时调用 `resolveNativeImport(parentId, literalSpecifier)`，由 host
+  完成 resolve/prepare、recordDependency 和 virtual ESM link。resolver I/O/未解析错误统一包装为
+  `NekoModuleError.RESOLVE`，link 错误为 `LINK`，host 不再把已有 staged error 转成 `EXECUTE`；父模块
+  路径、specifier 和原始 cause 保留。证据：`NekoModuleIdentityLifecycleTest` 的 runtime dependency
+  invalidation、RESOLVE 和 LINK 用例。
 
 - **ESM cycle characterization：fixed/characterized.** 增加真实 `.mjs` A↔B 循环依赖，使用已存在的
   ESM link/evaluation lifecycle 与 live binding 语义，断言循环可完成且导出值正确：
@@ -226,10 +228,10 @@
   cycle 伪装成 unsupported；CJS partial exports 与 ESM cycle 各自沿既有语义运行。
 
 - **Observation surface：fixed.** `NekoRuntimeRoot#preparationCache()` 改为 package-private；
-  `NekoModulePipelineCache#sourceMaps()` / `#virtualModules()` 改为 package-private 可变 owner
-  seam。跨包执行环境只收到 `NekoSourceMapView` / `NekoVirtualModuleView` 只读 view，唯一 public
-  cache 诊断为 `preparedEntryCount()`；测试迁移到 owner package 或 lifecycle package，不保留
-  public mutable registry getter。
+  `NekoModulePipelineCache#sourceMaps()` / `#virtualModules()` 保持 package-private owner seam；
+  `DefaultErrorTracker#sourceMaps()` / `#virtualModules()` 也改为 package-private，只读返回
+  `NekoSourceMapView` / `NekoVirtualModuleView`。跨包执行环境只收到只读 view，唯一 public cache 诊断
+  为 `preparedEntryCount()`；测试迁移到 owner package，不保留 public mutable registry getter。
 
 - **Standards canonical-path duplicate：fixed.** `NekoTrustApprovedSource.subjectOf(Path)`
   收口为 package helper，`NekoRuntimeTrustContext` 复用同一 canonical/Windows-case identity，
@@ -240,3 +242,41 @@
   characterization 使用 parser 已承诺的 literal dynamic-import expression 形态，并覆盖 rewriter
   的 resolver seam。PackSync remote authorization 只授权盘上 bundle content files，manifest 本身
   不作为可执行模块授权；这与 pack activation 的脚本内容边界一致。
+
+## Review-round-4 addendum（2026-09-19）
+
+本轮针对最终 review 的 A-D findings 在 `c44bbf2e` 上 fix-forward；`Status` 继续保持 `closed`，只记录已实现且已验证的修法，不把未覆盖行为标为完成。
+
+- **A. Source-map contract：fixed.** 恢复 06-language-module-pipeline 的真实契约：每个成功的 prepared
+  language module 都有非空可用 map。native `.js`/`.mjs`/`.cjs` 和 legacy compiler 未提供 map 时调用
+  唯一明确的 `NekoSourceMapBuilder.identity` utility，包含 source path、sources、sourcesContent 和
+  generated/source line mappings；TS/JSX 等 compiler-produced map 仍使用 compiler map。cache 不再把
+  null 发布为空 mapping；`sourceURL` 只保留为执行 fallback。证据：`NekoModulePipelinePrepareTest`、
+  `LegacyCjsBridgeCharacterizationTest` 和 `SourceMapRegistry` 行映射断言。
+
+- **B. Remote trust cache protection：fixed.** `NekoRuntimeTrustContext` 现在以 remote cache root 为
+  protection domain；bundle replacement/revoke 先清理旧 approvals/path markers，再授权当前 sources。
+  已见过的旧 bucket root 继续受保护，因此 stale/old files、空清单、hashOnly 和断线都不会回落为
+  `LOCAL_TRUSTED`。`RemoteTrustHook.authorize(sources, remoteRoot)` / `revoke(remoteRoot)` 已同步
+  NeoForge、Fabric、runtime root 和 tests；hash-list 的 server/bucket 变化会先停用旧 active set。
+  证据：`PackSyncClientTest` 的 replacement、stale、current-source 和 disconnect assertions。
+
+- **C. Dynamic import runtime graph：fixed.** literal dynamic import 不再在 rewrite 阶段 resolve/register；
+  执行期经 `resolveNativeImport` 走 resolver、prepare、dependency graph 和 ESM link。动态子模块等长
+  内容变化会使 parent execution cache 失效；RESOLVE/LINK 阶段和 cause 在异步 `loadEntry` 路径保留。
+  static import/export 的预注册路径未改变。证据：`NekoModuleIdentityLifecycleTest` 的 runtime
+  dependency invalidation、missing-module RESOLVE 和 bad-module LINK 用例。
+
+- **D. Registry observability：fixed.** `DefaultErrorTracker.sourceMaps()` 与 `virtualModules()` 改为
+  package-private，并返回 `NekoSourceMapView` / `NekoVirtualModuleView` 只读契约；测试使用 package seam，
+  不保留 public mutable registry getter。runtime-owned mutable registries 仍只在 owner package 内部使用。
+  证据：`DefaultErrorTrackerTest#registryObservationsArePackagePrivateReadOnlyViews`。
+
+- **E. Path/document consistency：fixed.** remote trust 继续复用
+  `NekoTrustApprovedSource.subjectOf/isWithin` 的 canonical/Windows-case identity，不新增第二套 canonical
+  path helper；本 ticket、closure、Review-round-2/3 addendum 和 `MIGRATION.md` 已改为 identity-map/
+  protected-root/runtime-dynamic-import 的事实口径。
+
+- **Remaining limitations:** parser 对被整体跳过的复杂 `export` statement 内 dynamic import 的既有扫描
+  限制仍不在本轮 parser 重构范围；测试使用 parser 已承诺的 literal expression 形态。PackSync 仍只授权
+  盘上 bundle content files，manifest 不作为可执行模块；这些边界未被本轮标记为额外完成项。

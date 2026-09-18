@@ -10,8 +10,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/** Package-private source map builder used by compiler implementations. */
-final class NekoSourceMapBuilder {
+/**
+ * Source-map utility shared by compiler implementations and prepared native modules.
+ *
+ * <p>This is a source-map utility only, not a parser, lowering, compiler, or language SPI.
+ * The identity map preserves authored source content and line correspondence when no
+ * compiler-produced map exists.</p>
+ */
+public final class NekoSourceMapBuilder {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     private final Path file;
@@ -23,8 +29,8 @@ final class NekoSourceMapBuilder {
         this.source = source == null ? "" : source;
     }
 
-    /** TypeScript erasure uses this line-aligned map for its transformed output. */
-    static String identity(Path file, String source, String generated) {
+    /** Build a non-empty line-aligned map for authored and generated source. */
+    public static String identity(Path file, String source, String generated) {
         NekoSourceMapBuilder builder = new NekoSourceMapBuilder(file, source);
         String text = generated == null ? "" : generated;
         int generatedLine = 0;
@@ -151,6 +157,9 @@ final class NekoSourceMapBuilder {
     private static String displayName(Path path) {
         if (path == null) {
             return "unknown.js";
+        }
+        if (!path.isAbsolute()) {
+            return path.normalize().toString().replace('\\', '/');
         }
         try {
             return NekoJSPaths.get().root().relativize(path.normalize().toAbsolutePath()).toString().replace('\\', '/');

@@ -83,6 +83,15 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         return normalizePath(canonical);
     }
 
+    /** Package path predicate sharing the credential's canonical/Windows-case identity. */
+    static boolean isWithin(String subject, String root) {
+        if (subject == null || root == null) {
+            return false;
+        }
+        String prefix = root.endsWith("/") ? root : root + "/";
+        return subject.equals(root) || subject.startsWith(prefix);
+    }
+
     private static String normalizeSubject(String subject) {
         try {
             return subjectOf(Path.of(subject));

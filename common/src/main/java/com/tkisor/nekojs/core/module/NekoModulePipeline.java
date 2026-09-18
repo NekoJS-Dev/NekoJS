@@ -13,6 +13,7 @@ import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.cjs.CjsStaticAnalyzer;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
@@ -38,7 +39,7 @@ import java.util.Set;
  * 静默 fallback。
  *
  * <p>输出的 {@link NekoPreparedModule} 携带 language id、module mode、可执行 code、
- * 编译器实际产生的 source map（原生 JS/CJS/ESM 无 map 时使用执行器的 sourceURL 定位）、
+ * 编译器实际产生或 identity fallback 生成的 source map（sourceURL 仍可作为执行器 fallback）、
  * 原始诊断位置（source path）与稳定 cache key，且不可变。
  *
  * <p>本类不创建 Graal Context、不决定 HostAccess、不读 Minecraft/loader（见
@@ -127,18 +128,18 @@ public final class NekoModulePipeline {
                 ScriptCompileResult compiled = legacyLanguage.compiler().compileDetailed(file, rawSource);
                 // CJS 静态分析必须跑在编译产物上：require/module.exports 由转译生成，原始源里不存在
                 return NekoPreparedModule.commonJs(languageId, sourcePath, compiled.code(),
-                        usableMap(compiled.sourceMap()),
+                        usableMap(file, rawSource, compiled.code(), compiled.sourceMap()),
                         CjsStaticAnalyzer.analyze(compiled.code()));
             }
             if (language == NekoJavaScriptLanguagePlugin.INSTANCE) {
                 return NekoPreparedModule.commonJs(languageId, sourcePath, rawSource,
-                        null,
+                        NekoSourceMapBuilder.identity(file, rawSource, rawSource),
                         CjsStaticAnalyzer.analyze(rawSource));
             }
             NekoCompileOutput compiled = compilationPipeline.compile(
                 file, rawSource, extension, language, config.jsxAutomaticRuntime());
             return NekoPreparedModule.commonJs(languageId, sourcePath, compiled.code(),
-                    usableMap(compiled.program().sourceMap()),
+                    usableMap(file, rawSource, compiled.code(), compiled.program().sourceMap()),
                     CjsStaticAnalyzer.analyze(compiled.code()));
         }
 
@@ -150,7 +151,7 @@ public final class NekoModulePipeline {
     private NekoPreparedModule prepareModule(Path file, String rawSource, NekoCompileOutput compiled,
                                              String languageId, String sourcePath) {
         NekoIRProgram ir = compiled.program();
-        String map = usableMap(compiled.program().sourceMap());
+        String map = usableMap(file, rawSource, compiled.code(), compiled.program().sourceMap());
         if (ir.requestedMode() == NekoModuleMode.AUTO && !ir.module()) {
             return NekoPreparedModule.commonJs(languageId, sourcePath, compiled.code(), map,
                     CjsStaticAnalyzer.analyze(compiled.code()));
@@ -162,15 +163,12 @@ public final class NekoModulePipeline {
         return NekoPreparedModule.esm(languageId, sourcePath, compiled.code(), map, ast);
     }
 
-    /**
-     * 可用 source map：只发布编译器确实产生的 map。原生 JS/CJS/ESM 使用执行器追加的
-     * {@code sourceURL} 定位，不把没有编译步骤误报为 source-map 可用。
-     */
-    private static String usableMap(String sourceMap) {
+    /** Use the compiler map when present; otherwise publish a real authored identity map. */
+    private static String usableMap(Path file, String authoredSource, String generatedSource, String sourceMap) {
         if (sourceMap != null && !sourceMap.isBlank()) {
             return sourceMap;
         }
-        return null;
+        return NekoSourceMapBuilder.identity(file, authoredSource, generatedSource);
     }
 
     private String languageId(Path file, String extension) {

@@ -128,18 +128,19 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return preparationCache.preparedEntryCount();
     }
 
-    /** Pack activation owner injects verified remote sources into this runtime's CLIENT candidate. */
-    public void authorizeRemoteSources(java.util.Collection<NekoTrustContext.RemoteSource> sources) {
+    /** Pack activation owner injects verified remote sources and their protected cache root. */
+    public void authorizeRemoteSources(java.util.Collection<NekoTrustContext.RemoteSource> sources,
+                                       java.nio.file.Path remoteRoot) {
         if (!(trustContext instanceof NekoRuntimeTrustContext runtimeTrust)) {
             throw new IllegalStateException("Runtime was assembled without a mutable trust context");
         }
-        runtimeTrust.authorizeRemoteSources(sources);
+        runtimeTrust.authorizeRemoteSources(sources, remoteRoot);
     }
 
-    /** Connection teardown revokes remote credentials before the next CLIENT reload. */
-    public void revokeRemoteSources() {
+    /** Connection teardown revokes credentials while retaining protection for the cache root. */
+    public void revokeRemoteSources(java.nio.file.Path remoteRoot) {
         if (trustContext instanceof NekoRuntimeTrustContext runtimeTrust) {
-            runtimeTrust.revokeRemoteSources();
+            runtimeTrust.revokeRemoteSources(remoteRoot);
         }
     }
 

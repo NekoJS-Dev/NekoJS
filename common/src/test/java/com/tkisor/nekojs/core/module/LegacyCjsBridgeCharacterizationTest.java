@@ -31,7 +31,6 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -98,7 +97,8 @@ class LegacyCjsBridgeCharacterizationTest {
         assertTrue(prepared.code().contains("module.exports"), "产物必须是编译器输出: " + prepared.code());
         assertTrue(prepared.cjsRecord().staticDependencies().contains("./other.upperjs"),
                 "CJS 静态分析必须跑在编译产物上: " + prepared.cjsRecord());
-        assertNull(prepared.sourceMap(), "legacy compiler without a map must not claim source-map support");
+        assertNotNull(prepared.sourceMap(), "legacy compiler without a map must receive an identity source map");
+        assertTrue(prepared.sourceMap().contains("UPPER SOURCE"), "identity map must retain authored source content");
         assertNotNull(prepared.cacheKey());
     }
 

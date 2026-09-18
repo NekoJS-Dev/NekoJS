@@ -97,22 +97,42 @@ public final class PackSyncClient {
      * 且永不执行。非空清单记录预期哈希，等待随后的 bundle。
      */
     public static synchronized void handleHashList(String serverAddress, List<HashEntry> entries) {
-        if (clientModeOff()) return;
-        activeAddress = normalizeAddress(serverAddress);
-        activeBucket = PackSyncTrustStore.bucketFor(activeAddress);
+        if (clientModeOff()) {
+            if (!ScriptPackRegistry.get().serverCachePacks().isEmpty() || !expectedHashes.isEmpty()) {
+                deactivateAndReload("client packSync mode is off", activeRemoteRoot());
+            }
+            return;
+        }
+        String nextAddress = normalizeAddress(serverAddress);
+        String nextBucket = PackSyncTrustStore.bucketFor(nextAddress);
         Map<String, String> hashes = new LinkedHashMap<>();
         for (HashEntry entry : entries) {
             hashes.put(entry.syncId(), entry.hash());
         }
+        boolean connectionChanged = !nextAddress.equals(activeAddress) || !nextBucket.equals(activeBucket);
+        boolean activeSetChanged = !expectedHashes.equals(hashes);
+        activeAddress = nextAddress;
+        activeBucket = nextBucket;
         expectedHashes = hashes;
+        Path remoteRoot = ServerPackCache.bucketDir(activeBucket);
+        boolean revoked = false;
+        if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty() && activeSetChanged)) {
+            // Do not let the previous active/credential set run while this server's bundle is pending.
+            deactivateAndReload("server pack hash list changed", remoteRoot);
+            revoked = true;
+        }
 
         if (hashes.isEmpty()) {
             // 服务器无同步包：清空远端缓存包（缓存文件保留）并重载客户端脚本
-            deactivateAndReload("server sent an empty pack hash list");
+            if (!revoked) {
+                deactivateAndReload("server sent an empty pack hash list", remoteRoot);
+            }
             return;
         }
         if (clientModeHashOnly()) {
-            deactivateAndReload("client packSync mode is hashOnly");
+            if (!revoked) {
+                deactivateAndReload("client packSync mode is hashOnly", remoteRoot);
+            }
         }
         // 非 hashOnly：保留当前激活集，等待 bundle 到达后整体替换（避免双重重载）
     }
@@ -124,8 +144,12 @@ public final class PackSyncClient {
      * 激活 + 重载 + pinning 签名公钥。返回 Outcome：disconnect 非空时平台应断连并展示消息。
      */
     public static synchronized Outcome handleBundle(List<SyncedPack> packs) {
-        if (clientModeOff()) return Outcome.accepted();
+        if (clientModeOff()) {
+            deactivateAndReload("client packSync mode is off", activeRemoteRoot());
+            return Outcome.accepted();
+        }
         if (clientModeHashOnly()) {
+            deactivateAndReload("client packSync mode is hashOnly", activeRemoteRoot());
             NekoJS.LOGGER.info("Ignoring server pack bundle (client packSync mode is hashOnly)");
             return Outcome.accepted();
         }
@@ -203,6 +227,13 @@ public final class PackSyncClient {
         if (remoteSources == null) {
             return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
         }
+        Path remoteRoot = bucketDir;
+        // Replace the credential set before exposing the replacement pack to reload/execute.
+        try {
+            trustHook.revoke(remoteRoot);
+        } catch (Exception failure) {
+            return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust reset failed");
+        }
 
         // 5) 激活 + 重载 + pinning 签名公钥（v1：信任服务器即信任其当前签名密钥；
         //    此后同 keyId 换钥会被验签拒绝）
@@ -213,10 +244,10 @@ public final class PackSyncClient {
             pinSigningKey(trustStore, entry.getKey(), scopeNames.get(entry.getKey()), entry.getValue());
         }
         try {
-            trustHook.authorize(remoteSources);
+            trustHook.authorize(remoteSources, remoteRoot);
         } catch (Exception failure) {
             ScriptPackRegistry.get().deactivateServerCachePacks();
-            trustHook.revoke();
+            trustHook.revoke(remoteRoot);
             return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
         }
         reloadClientScripts("server pack bundle applied");
@@ -229,16 +260,16 @@ public final class PackSyncClient {
     /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有激活包时重载客户端脚本。 */
     public static synchronized void handleDisconnect() {
         expectedHashes = Map.of();
-        deactivateAndReload("disconnected from server");
+        deactivateAndReload("disconnected from server", activeRemoteRoot());
     }
 
     /* ================= 内部 ================= */
 
-    private static void deactivateAndReload(String reason) {
+    private static void deactivateAndReload(String reason, Path remoteRoot) {
         var removed = ScriptPackRegistry.get().deactivateServerCachePacks();
         RemoteTrustHook trustHook = remoteTrustHook;
         if (trustHook != null) {
-            trustHook.revoke();
+            trustHook.revoke(remoteRoot);
         }
         if (!removed.isEmpty()) {
             NekoJS.LOGGER.info("Deactivated {} server cache pack(s): {}", removed.size(), reason);
@@ -257,6 +288,10 @@ public final class PackSyncClient {
         } catch (Exception e) {
             NekoJS.LOGGER.error("CLIENT script reload after pack sync failed", e);
         }
+    }
+
+    private static Path activeRemoteRoot() {
+        return activeBucket == null ? null : ServerPackCache.bucketDir(activeBucket);
     }
 
     private static void pinSigningKey(
@@ -344,9 +379,9 @@ public final class PackSyncClient {
     public record HashEntry(String syncId, String hash) {}
 
     public interface RemoteTrustHook {
-        void authorize(List<NekoTrustContext.RemoteSource> sources);
+        void authorize(List<NekoTrustContext.RemoteSource> sources, Path remoteRoot);
 
-        void revoke();
+        void revoke(Path remoteRoot);
     }
 
     /** bundle 处理结果：disconnect 非空时平台断连并展示消息。 */

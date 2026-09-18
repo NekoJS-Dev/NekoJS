@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,13 +52,13 @@ class PackSyncClientTest {
     void installTestRuntimeBinding() {
         PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
             @Override
-            public void authorize(List<NekoTrustContext.RemoteSource> sources) {
+            public void authorize(List<NekoTrustContext.RemoteSource> sources, Path remoteRoot) {
                 // Most tests exercise pack acceptance/rejection only; the integration test below
                 // installs a real runtime-owned context.
             }
 
             @Override
-            public void revoke() {
+            public void revoke(Path remoteRoot) {
             }
         });
     }
@@ -134,13 +135,13 @@ class PackSyncClientTest {
         NekoRuntimeTrustContext runtimeTrust = NekoRuntimeTrustContext.local();
         PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
             @Override
-            public void authorize(List<NekoTrustContext.RemoteSource> sources) {
-                runtimeTrust.authorizeRemoteSources(sources);
+            public void authorize(List<NekoTrustContext.RemoteSource> sources, Path remoteRoot) {
+                runtimeTrust.authorizeRemoteSources(sources, remoteRoot);
             }
 
             @Override
-            public void revoke() {
-                runtimeTrust.revokeRemoteSources();
+            public void revoke(Path remoteRoot) {
+                runtimeTrust.revokeRemoteSources(remoteRoot);
             }
         });
 
@@ -162,6 +163,7 @@ class PackSyncClientTest {
         try {
             assertEquals(NekoTrustApprovedSource.Kind.REMOTE_AUTHORIZED,
                     cache.approvedSource(remoteFile).kind());
+            assertNotNull(cache.prepare(remoteFile), "the currently authorized source must remain executable");
 
             PackSyncClient.handleDisconnect();
 
@@ -171,6 +173,58 @@ class PackSyncClientTest {
             assertEquals(NekoModuleError.Stage.PREPARE, staged.stage());
             assertEquals(NekoModuleError.OWNER_PACK_TRUST, staged.owner());
             assertTrue(staged.sourcePath().replace('\\', '/').endsWith("hud.js"), staged.detail());
+        } finally {
+            cache.clear();
+        }
+    }
+
+    @Test
+    void replacingBundleRejectsOldAndStaleFilesButAllowsCurrentSource() throws Exception {
+        config("all", false);
+        NekoRuntimeTrustContext runtimeTrust = NekoRuntimeTrustContext.local();
+        PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
+            @Override
+            public void authorize(List<NekoTrustContext.RemoteSource> sources, Path remoteRoot) {
+                runtimeTrust.authorizeRemoteSources(sources, remoteRoot);
+            }
+
+            @Override
+            public void revoke(Path remoteRoot) {
+                runtimeTrust.revokeRemoteSources(remoteRoot);
+            }
+        });
+
+        String oldManifest = signed("packs:stale-old", "GLOBAL", "key-stale-old",
+                "client_scripts/old.js", "module.exports = 'old';\n");
+        SyncedPack oldPack = pack("packs:stale-old", "GLOBAL", oldManifest,
+                "client_scripts/old.js", "module.exports = 'old';\n");
+        PackSyncClient.handleHashList("srv-stale.test", hashes(oldPack));
+        PackSyncTrustStore.get().trustServer("srv-stale.test");
+        assertNull(PackSyncClient.handleBundle(List.of(oldPack)).disconnect());
+
+        String newManifest = signed("packs:stale-new", "GLOBAL", "key-stale-new",
+                "client_scripts/new.js", "module.exports = 'new';\n");
+        SyncedPack newPack = pack("packs:stale-new", "GLOBAL", newManifest,
+                "client_scripts/new.js", "module.exports = 'new';\n");
+        PackSyncClient.handleHashList("srv-stale.test", hashes(newPack));
+        assertNull(PackSyncClient.handleBundle(List.of(newPack)).disconnect());
+
+        Path bucket = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-stale.test"));
+        Path oldFile = bucket.resolve(SyncedPack.encodeSyncId(oldPack.syncId())).resolve("client_scripts/old.js");
+        Path newFile = bucket.resolve(SyncedPack.encodeSyncId(newPack.syncId())).resolve("client_scripts/new.js");
+        assertTrue(java.nio.file.Files.isRegularFile(oldFile), "the old cache file is intentionally retained");
+
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(),
+                        ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                runtimeTrust);
+        try {
+            assertNotNull(cache.prepare(newFile), "the current bundle source must be executable");
+            Exception denied = org.junit.jupiter.api.Assertions.assertThrows(Exception.class,
+                    () -> cache.prepare(oldFile));
+            NekoModuleError staged = org.junit.jupiter.api.Assertions.assertInstanceOf(NekoModuleError.class, denied);
+            assertEquals(NekoModuleError.Stage.PREPARE, staged.stage());
+            assertEquals(NekoModuleError.OWNER_PACK_TRUST, staged.owner());
         } finally {
             cache.clear();
         }
@@ -256,9 +310,13 @@ class PackSyncClientTest {
     }
 
     private static String signed(String syncId, String scope, String keyId) {
+        return signed(syncId, scope, keyId, "client_scripts/hud.js", "hud()");
+    }
+
+    private static String signed(String syncId, String scope, String keyId, String path, String content) {
         KeyPair keyPair = PackSigner.generateKeyPair();
         String unsigned = "{\"id\": \"demo\", \"version\": \"1.0.0\"}";
-        List<PackContentFile> files = List.of(new PackContentFile("client_scripts/hud.js", "hud()".getBytes()));
+        List<PackContentFile> files = List.of(new PackContentFile(path, content.getBytes()));
         JsonObject signature = PackSigner.sign(keyId, keyPair, syncId, scope, unsigned, files);
         JsonObject root = JsonParser.parseString(unsigned).getAsJsonObject();
         root.add("signature", signature);
