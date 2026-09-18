@@ -57,7 +57,8 @@ class NekoModuleErrorStageTest {
                 new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
                 NekoTrustContext.local());
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
+                context, new NekoModuleResolver(new NekoModuleResolutionPaths(
+                        paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
@@ -165,7 +166,8 @@ class NekoModuleErrorStageTest {
         // 未配置 executor/factory 的裸 host：装载失败归执行环境，不伪装成解析失败。
         try (Context bare = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost bareHost = new NekoScriptModuleLoaderHost(
-                    bare, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
+                    bare, new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), cache);
             Path entry = paths.serverScripts().resolve("src/exec-entry.cjs");
             Files.writeString(entry, "module.exports = 1;\n");
 

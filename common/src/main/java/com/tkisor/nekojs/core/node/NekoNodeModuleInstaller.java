@@ -1,19 +1,12 @@
 package com.tkisor.nekojs.core.node;
 
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptCompiler;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.error.DefaultErrorTracker;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.error.ErrorTracker;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
@@ -30,22 +23,6 @@ public final class NekoNodeModuleInstaller {
     private static final String MANIFEST = RESOURCE_ROOT + "modules.list";
 
     private NekoNodeModuleInstaller() {}
-
-    public static NekoNodeRuntime install(Context context, ScriptType scriptType) {
-        NekoJSPaths paths = NekoJSPaths.get();
-        SandboxConfig config = SandboxConfig.defaultConfig();
-        return install(context, scriptType,
-                new NekoModuleResolver(paths, com.tkisor.nekojs.core.ScriptFilePolicy.legacyRuntime()),
-                paths, new DefaultErrorTracker(paths, config), config);
-    }
-
-    public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig) {
-        return install(context, scriptType, resolver, paths, errorTracker, sandboxConfig,
-                new NekoModulePipelineCache(
-                        new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), sandboxConfig),
-                        new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
-                        NekoTrustContext.local()));
-    }
 
     /**
      * 生产装配入口（W3 显式注入）：module host 与装配侧共享同一个 runtime-owned

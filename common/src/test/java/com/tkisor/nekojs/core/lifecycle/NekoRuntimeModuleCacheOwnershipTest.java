@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.ScriptEventBridge;
+import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -15,19 +16,25 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.NekoModuleResolutionPaths;
+import com.tkisor.nekojs.core.module.NekoModuleResolver;
+import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import graal.graalvm.polyglot.Context;
 
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
@@ -71,6 +78,53 @@ class NekoRuntimeModuleCacheOwnershipTest {
         }
     }
 
+    @Test
+    void factoryRootManagerAndHostAllUseTheSameCacheIdentity() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        SandboxConfig config = SandboxConfig.defaultConfig();
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePipelineCache cache = newCache(compilers);
+        NekoCoreContext core = new NekoCoreContext(
+                NekoSharedEngine.get(), config, ClassFilter.INSTANCE, new DefaultErrorTracker(paths, config));
+        IPluginRuntime plugins = (IPluginRuntime) Proxy.newProxyInstance(
+                NekoRuntimeModuleCacheOwnershipTest.class.getClassLoader(),
+                new Class<?>[]{IPluginRuntime.class}, new NullPluginRuntime());
+        NekoSandboxFactory factory = new NekoSandboxFactory(core, paths, compilers, plugins, cache);
+        NekoRuntimeRoot root = new NekoRuntimeRoot(core, plugins, ScriptEventBridge.EMPTY,
+                new ScriptPropertyRegistry.Impl(), factory, cache);
+        try {
+            assertSame(cache, field(factory, "preparationCache"));
+            assertSame(cache, root.preparationCache());
+            var manager = root.createScriptManager(com.tkisor.nekojs.api.ScriptType.TEST);
+            assertSame(cache, field(manager, "preparationCache"));
+            try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+                NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
+                        new NekoModuleResolver(new NekoModuleResolutionPaths(
+                                paths.gameDir(), paths.root(), paths.nodeModules()),
+                                ScriptFilePolicy.legacyRuntime()), cache);
+                try {
+                    assertSame(cache, field(host, "preparationCache"));
+                } finally {
+                    host.close();
+                }
+            }
+
+            NekoModulePipelineCache otherCache = newCache();
+            assertThrows(IllegalArgumentException.class,
+                    () -> new NekoRuntimeRoot(core, plugins, ScriptEventBridge.EMPTY,
+                            new ScriptPropertyRegistry.Impl(), factory, otherCache),
+                    "root must reject a cache that is not owned by its sandbox factory");
+        } finally {
+            root.closeSilently();
+        }
+    }
+
+    private static Object field(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
     private static NekoRuntimeRoot rootWith(NekoModulePipelineCache cache) {
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = SandboxConfig.defaultConfig();
@@ -80,8 +134,9 @@ class NekoRuntimeModuleCacheOwnershipTest {
                 NekoRuntimeModuleCacheOwnershipTest.class.getClassLoader(),
                 new Class<?>[]{IPluginRuntime.class},
                 new NullPluginRuntime());
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), plugins);
+                core, paths, compilers, plugins, cache);
         return new NekoRuntimeRoot(core, plugins, ScriptEventBridge.EMPTY,
                 new ScriptPropertyRegistry.Impl(), sandboxFactory, cache);
     }
@@ -90,6 +145,17 @@ class NekoRuntimeModuleCacheOwnershipTest {
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = SandboxConfig.defaultConfig();
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        return newCache(paths, config, compilers);
+    }
+
+    private static NekoModulePipelineCache newCache(ScriptCompilerRegistry compilers) {
+        NekoJSPaths paths = NekoJSPaths.get();
+        SandboxConfig config = SandboxConfig.defaultConfig();
+        return newCache(paths, config, compilers);
+    }
+
+    private static NekoModulePipelineCache newCache(NekoJSPaths paths, SandboxConfig config,
+                                                     ScriptCompilerRegistry compilers) {
         return new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
                 new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),

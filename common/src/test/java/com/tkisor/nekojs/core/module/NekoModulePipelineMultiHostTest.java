@@ -103,11 +103,12 @@ class NekoModulePipelineMultiHostTest {
 
     private HostFixture newHost(ScriptCompilerRegistry compilers) throws Exception {
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
                 .build();
         Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
         NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)), cache);
+                context, new NekoModuleResolver(new NekoModuleResolutionPaths(
+                        paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");

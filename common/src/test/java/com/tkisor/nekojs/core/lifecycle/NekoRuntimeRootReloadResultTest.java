@@ -16,11 +16,17 @@ import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.NekoSharedEngine;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -93,10 +99,15 @@ class NekoRuntimeRootReloadResultTest {
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(
                 graal.graalvm.polyglot.Engine.newBuilder().build(), config, ClassFilter.INSTANCE, tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(), compilers, config),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), new StubPluginRuntime());
+                core, paths, compilers, new StubPluginRuntime(), cache);
         return new NekoRuntimeRoot(core, new StubPluginRuntime(), bridge,
-                newPropertyRegistry(), sandboxFactory);
+                newPropertyRegistry(), sandboxFactory, cache);
     }
 
     private static void writeScript(ScriptType type, String fileName, String source) throws Exception {

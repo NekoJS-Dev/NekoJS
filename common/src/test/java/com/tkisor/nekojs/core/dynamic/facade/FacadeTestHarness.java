@@ -67,7 +67,9 @@ final class FacadeTestHarness implements AutoCloseable {
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
-        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
+        com.tkisor.nekojs.core.module.NekoModulePipelineCache cache =
+                com.tkisor.nekojs.testfixture.NekoModuleTestFixtures.newCache(paths, compilers, config);
+        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime, cache);
         ScriptEnvironmentFactory environmentFactory =
                 new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory, new GlobalStateStores());
         java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> collectors =
@@ -76,7 +78,7 @@ final class FacadeTestHarness implements AutoCloseable {
         collectors.addAll(extraCollectors);
         // 收集器经构造器（root 装配路径）注入：票 39/16 统一接缝后不再有进程级静态注册表
         this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                newPropertyRegistry(), tracker, paths, config, environmentFactory, collectors);
+                newPropertyRegistry(), tracker, paths, config, environmentFactory, collectors, cache);
     }
 
     void writeScript(String fileName, String source) throws Exception {

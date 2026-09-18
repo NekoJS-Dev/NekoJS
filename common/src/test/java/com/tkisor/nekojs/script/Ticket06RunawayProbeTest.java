@@ -20,6 +20,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
 import com.tkisor.nekojs.core.lifecycle.ReloadPhase;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
@@ -99,12 +100,15 @@ class Ticket06RunawayProbeTest {
         StubPluginRuntime pluginRuntime = new StubPluginRuntime();
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+                .newCache(paths, compilers, config);
         NekoSandboxFactory factory = new NekoSandboxFactory(
-                core, paths, ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                core, paths, compilers, pluginRuntime, cache);
         ScriptEnvironmentFactory envFactory = new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, factory,
                 new com.tkisor.nekojs.core.state.GlobalStateStores());
         return new ScriptManager(ScriptType.SERVER, ScriptEventBridge.EMPTY, pluginRuntime,
-                props(), tracker, paths, config, envFactory);
+                props(), tracker, paths, config, envFactory, List.of(), cache);
     }
 
     @Test

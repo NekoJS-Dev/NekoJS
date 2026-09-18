@@ -234,13 +234,17 @@ class NetworkGenerationRoutingTest {
             StubPluginRuntime pluginRuntime = new StubPluginRuntime(recorder, trigger);
             DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            com.tkisor.nekojs.core.module.NekoModulePipelineCache cache =
+                    com.tkisor.nekojs.testfixture.NekoModuleTestFixtures.newCache(paths,
+                            compilers, config);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
-                    ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                    compilers, pluginRuntime, cache);
             ScriptEnvironmentFactory environmentFactory =
                     new ScriptEnvironmentFactory(bridge, pluginRuntime, sandboxFactory,
                             new com.tkisor.nekojs.core.state.GlobalStateStores());
             this.manager = new ScriptManager(scriptType, bridge, pluginRuntime,
-                    newPropertyRegistry(), tracker, paths, config, environmentFactory);
+                    newPropertyRegistry(), tracker, paths, config, environmentFactory, List.of(), cache);
             this.trigger.bind(() -> NetworkMessageHandler.postServerEvent(
                     new NekoScriptPayload("ch", new net.minecraft.nbt.CompoundTag()), null));
         }

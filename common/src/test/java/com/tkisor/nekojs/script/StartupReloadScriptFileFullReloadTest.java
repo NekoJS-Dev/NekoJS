@@ -20,6 +20,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
@@ -167,12 +168,14 @@ class StartupReloadScriptFileFullReloadTest {
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
-        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime);
+        NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+                .newCache(paths, compilers, config);
+        NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime, cache);
         ScriptEnvironmentFactory environmentFactory =
                 new ScriptEnvironmentFactory(eventBridge, pluginRuntime, sandboxFactory,
                         new com.tkisor.nekojs.core.state.GlobalStateStores());
         return new ScriptManager(ScriptType.STARTUP, eventBridge, pluginRuntime,
-                newPropertyRegistry(), tracker, paths, config, environmentFactory);
+                newPropertyRegistry(), tracker, paths, config, environmentFactory, List.of(), cache);
     }
 
     private static ScriptPropertyRegistry newPropertyRegistry() {

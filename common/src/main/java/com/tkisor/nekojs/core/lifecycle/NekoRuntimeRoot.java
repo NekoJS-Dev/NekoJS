@@ -9,11 +9,6 @@ import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.api.ScriptType;
@@ -23,6 +18,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 平台 composition root 的返回对象，由平台入口（mod entry）持有。
@@ -75,22 +71,6 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     private final java.util.List<com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector> domainCollectors =
             new java.util.concurrent.CopyOnWriteArrayList<>();
 
-    public NekoRuntimeRoot(
-            NekoCoreContext core,
-            IPluginRuntime pluginRuntime,
-            ScriptEventBridge eventBridge,
-            ScriptPropertyRegistry scriptProperties,
-            NekoSandboxFactory sandboxFactory
-    ) {
-        this(core, pluginRuntime, eventBridge, scriptProperties, sandboxFactory,
-                new com.tkisor.nekojs.core.module.NekoModulePipelineCache(
-                        new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), core.sandboxConfig()),
-                        new SourceMapRegistry(NekoJSPaths.get().root()),
-                        new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()),
-                        NekoTrustContext.local()),
-                NekoTrustContext.local());
-    }
-
     /**
      * 生产装配入口（票 11 W3）：与 sandbox factory 共享同一个 prepared 缓存实例
      * （见 {@code NekoRuntimeAssembly}）。
@@ -116,6 +96,11 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             com.tkisor.nekojs.core.module.NekoModulePipelineCache preparationCache,
             NekoTrustContext trustContext
     ) {
+        Objects.requireNonNull(sandboxFactory, "sandboxFactory");
+        Objects.requireNonNull(preparationCache, "preparationCache");
+        if (!sandboxFactory.usesPreparationCache(preparationCache)) {
+            throw new IllegalArgumentException("NekoRuntimeRoot and NekoSandboxFactory must share the same preparation cache");
+        }
         this.core = core;
         this.pluginRuntime = pluginRuntime;
         this.eventBridge = eventBridge;

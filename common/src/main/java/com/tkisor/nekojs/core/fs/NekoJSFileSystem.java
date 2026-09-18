@@ -1,15 +1,8 @@
 package com.tkisor.nekojs.core.fs;
 
 import com.tkisor.nekojs.NekoJS;
-import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
-import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
-import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
-import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import graal.graalvm.polyglot.io.FileSystem;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,24 +26,6 @@ public class NekoJSFileSystem implements FileSystem {
     /** 已准备字节读取目标（W3 显式注入：与装配侧共享的 runtime-owned 缓存实例）。 */
     private final NekoModulePipelineCache preparationCache;
     private final NekoVirtualModuleView virtualModules;
-
-    public NekoJSFileSystem(Path initialWorkingDirectory) {
-        // 无显式配置的旧入口：按默认沙箱配置裁决（生产路径见 NekoSandboxFactory，传真实配置）
-        this(initialWorkingDirectory, new SandboxPolicy(
-                SandboxConfig.defaultConfig(), NekoJSPaths.get()));
-    }
-
-    public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy) {
-        this(initialWorkingDirectory, policy, NekoJSPaths.get(), new NekoModulePipelineCache(
-                new NekoModulePipeline(new NekoCompilationPipeline(), ScriptCompilerRegistry.current(), SandboxConfig.defaultConfig()),
-                new SourceMapRegistry(NekoJSPaths.get().root()),
-                new NekoEsmVirtualModuleRegistry(NekoJSPaths.get().root()), NekoTrustContext.local()));
-    }
-
-    public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy,
-                            NekoModulePipelineCache preparationCache) {
-        this(initialWorkingDirectory, policy, NekoJSPaths.get(), preparationCache);
-    }
 
     public NekoJSFileSystem(Path initialWorkingDirectory, SandboxPolicy policy, NekoJSPaths paths,
                             NekoModulePipelineCache preparationCache) {
@@ -235,7 +210,7 @@ public class NekoJSFileSystem implements FileSystem {
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
         Path verifiedPath = paths.verifyInsideGameDir(dir);
         DirectoryStream<Path> delegateStream = Files.newDirectoryStream(verifiedPath);
-        return new FilteredDirectoryStream(delegateStream, filter);
+        return new FilteredDirectoryStream(delegateStream, filter, paths);
     }
 
     private Path resolvePath(Path path) {
@@ -295,10 +270,11 @@ public class NekoJSFileSystem implements FileSystem {
         private final Filter<? super Path> filter;
         private final NekoJSPaths paths;
 
-        public FilteredDirectoryStream(DirectoryStream<Path> delegate, Filter<? super Path> filter) {
+        public FilteredDirectoryStream(DirectoryStream<Path> delegate, Filter<? super Path> filter,
+                                       NekoJSPaths paths) {
             this.delegate = delegate;
             this.filter = filter;
-            this.paths = NekoJSPaths.get();
+            this.paths = paths;
         }
 
         @Override

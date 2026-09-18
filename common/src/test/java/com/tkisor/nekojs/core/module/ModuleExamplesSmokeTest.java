@@ -57,11 +57,12 @@ class ModuleExamplesSmokeTest {
                 NekoTrustContext.local());
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
-                        new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
+                        new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
                 .build();
         context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), cache);
+                context, new NekoModuleResolver(new NekoModuleResolutionPaths(
+                        paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");

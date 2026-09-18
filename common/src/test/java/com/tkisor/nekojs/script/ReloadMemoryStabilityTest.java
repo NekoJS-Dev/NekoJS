@@ -20,6 +20,7 @@ import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
@@ -124,13 +125,16 @@ class ReloadMemoryStabilityTest {
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
         StubPluginRuntime pluginRuntime = new StubPluginRuntime(recorder);
         NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
+        ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+        NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+                .newCache(paths, compilers, config);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths,
-                ScriptCompilerRegistry.createRuntimeRegistry(), pluginRuntime);
+                compilers, pluginRuntime, cache);
         ScriptEnvironmentFactory environmentFactory =
                 new ScriptEnvironmentFactory(ScriptEventBridge.EMPTY, pluginRuntime, sandboxFactory,
                         new com.tkisor.nekojs.core.state.GlobalStateStores());
         ScriptManager manager = new ScriptManager(ScriptType.SERVER, ScriptEventBridge.EMPTY, pluginRuntime,
-                propertyRegistry(), tracker, paths, config, environmentFactory);
+                propertyRegistry(), tracker, paths, config, environmentFactory, List.of(), cache);
 
         long[] windows = new long[RELOADS / WINDOW];
         try {

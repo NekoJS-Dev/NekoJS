@@ -4,7 +4,12 @@ import com.google.gson.JsonParser;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.NekoSandboxFactory;
+import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
+import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
+import com.tkisor.nekojs.script.ScriptManager;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -40,6 +45,7 @@ class ModulePipelineIsolationTest {
     /** Resolution/Cache 纯层：同上（host 与 ESM lifecycle 属执行委托面，另行断言）。 */
     private static final List<String> RESOLUTION_FILES = List.of(
             "core/module/NekoModuleResolver.java",
+            "core/module/NekoModuleResolutionPaths.java",
             "core/module/NekoModuleDependencyGraph.java",
             "core/module/ModuleReloadCoordinator.java",
             "core/module/esm/NekoEsmLinker.java",
@@ -118,6 +124,7 @@ class ModulePipelineIsolationTest {
                 "com.tkisor.nekojs.core.module.NekoModuleError",
                 "com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin",
                 "com.tkisor.nekojs.core.module.NekoModuleResolver",
+                "com.tkisor.nekojs.core.module.NekoModuleResolutionPaths",
                 "com.tkisor.nekojs.core.module.NekoModuleDependencyGraph",
                 "com.tkisor.nekojs.core.module.ModuleReloadCoordinator",
                 "com.tkisor.nekojs.core.module.esm.NekoEsmLinker",
@@ -181,6 +188,7 @@ class ModulePipelineIsolationTest {
         assertNoZeroArgumentConstructor(DefaultErrorTracker.class);
         assertNoConstructor(NekoScriptModuleLoaderHost.class, "graal.graalvm.polyglot.Context");
         assertNoConstructor(DefaultErrorTracker.class, "com.tkisor.nekojs.core.config.SandboxConfig");
+        assertNoConstructorParameterType(NekoModuleResolver.class, "com.tkisor.nekojs.core.fs.NekoJSPaths");
 
         for (String file : List.of(
                 "core/module/NekoModulePipelineCache.java",
@@ -206,10 +214,45 @@ class ModulePipelineIsolationTest {
         }
     }
 
+    @Test
+    void runtimeObjectsHaveNoImplicitPreparationCacheConstructionPath() {
+        assertNoConstructorParameterCount(NekoSandboxFactory.class, 4);
+        assertNoConstructorParameterCount(NekoRuntimeRoot.class, 5);
+        assertNoConstructorParameterCount(ScriptManager.class, 8);
+        assertNoConstructorParameterCount(ScriptManager.class, 9);
+        assertNoConstructorParameterCount(NekoJSFileSystem.class, 1);
+        assertNoConstructorParameterCount(NekoJSFileSystem.class, 2);
+        assertNoConstructorParameterCount(NekoJSFileSystem.class, 3);
+
+        for (java.lang.reflect.Method method : NekoNodeModuleInstaller.class.getDeclaredMethods()) {
+            if (method.getName().equals("install")) {
+                assertTrue(method.getParameterCount() == 7,
+                        "NekoNodeModuleInstaller.install must receive the explicit cache: " + method);
+            }
+        }
+    }
+
     private static void assertNoZeroArgumentConstructor(Class<?> type) {
         for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
             assertTrue(constructor.getParameterCount() != 0,
                     type.getName() + " must require explicit path/registry dependencies");
+        }
+    }
+
+    private static void assertNoConstructorParameterCount(Class<?> type, int parameterCount) {
+        for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
+            assertTrue(constructor.getParameterCount() != parameterCount,
+                    type.getName() + " must not retain an implicit constructor with "
+                            + parameterCount + " parameters: " + constructor);
+        }
+    }
+
+    private static void assertNoConstructorParameterType(Class<?> type, String parameterTypeName) {
+        for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
+            for (Class<?> parameter : constructor.getParameterTypes()) {
+                assertTrue(!parameter.getName().equals(parameterTypeName),
+                        type.getName() + " must not receive platform-owned " + parameterTypeName);
+            }
         }
     }
 

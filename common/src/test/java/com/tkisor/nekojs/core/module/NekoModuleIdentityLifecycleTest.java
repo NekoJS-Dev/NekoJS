@@ -68,11 +68,12 @@ class NekoModuleIdentityLifecycleTest {
         // 生产级接线：虚拟 ESM 模块经 NekoJSFileSystem 由 guest import 解析（与 NekoSandboxFactory 一致）。
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(),
-                        new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
+                        new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
                 .build();
         context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)), cache);
+                context, new NekoModuleResolver(new NekoModuleResolutionPaths(
+                        paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
@@ -320,7 +321,8 @@ class NekoModuleIdentityLifecycleTest {
                 NekoTrustContext.local());
         try (Context otherContext = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost otherHost = new NekoScriptModuleLoaderHost(otherContext,
-                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), otherCache);
+                    new NekoModuleResolver(new NekoModuleResolutionPaths(
+                            paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), otherCache);
             String moduleId = "server_scripts/src/host-isolation.mjs";
             Path firstVirtual = Path.of(cache.virtualModules().register(moduleId, "export const owner = 'first';"));
             Path secondVirtual = Path.of(otherCache.virtualModules().register(moduleId, "export const owner = 'second';"));

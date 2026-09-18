@@ -10,11 +10,7 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.api.plugin.IPluginRuntime;
 import com.tkisor.nekojs.core.log.LoggerStream;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
-import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.node.NekoNodeRuntime;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
@@ -68,20 +64,10 @@ public final class NekoSandboxFactory {
     private final NekoJSPaths paths;
     private final ScriptCompilerRegistry compilers;
     private final NekoSharedHostAccess hostAccess;
-    /**
-     * prepared 缓存（W3 显式注入）：生产经装配与 runtime root 共享同一实例；
-     * 旧构造器自建隔离实例（测试/工具互不污染）。
-     */
+    /** prepared 缓存（W3 显式注入）：与 runtime root 共享同一实例。 */
     private final NekoModulePipelineCache preparationCache;
     /** 每 Engine 共享的失控看门狗（Graal 限制：同一 Engine 的所有 Context 必须共用同一个语句谓词实例）。 */
     private volatile RunawayWatchdog sharedWatchdog;
-
-    public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers, IPluginRuntime pluginRuntime) {
-        this(core, paths, compilers, pluginRuntime, new NekoModulePipelineCache(
-                new NekoModulePipeline(new com.tkisor.nekojs.core.compiler.NekoCompilationPipeline(), compilers, core.sandboxConfig()),
-                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
-                NekoTrustContext.local()));
-    }
 
     public NekoSandboxFactory(NekoCoreContext core, NekoJSPaths paths, ScriptCompilerRegistry compilers,
                               IPluginRuntime pluginRuntime, NekoModulePipelineCache preparationCache) {
@@ -113,6 +99,11 @@ public final class NekoSandboxFactory {
 
     public ScriptCompilerRegistry compilers() {
         return compilers;
+    }
+
+    /** Construction guard for the runtime root: the factory and root must share one cache. */
+    public boolean usesPreparationCache(NekoModulePipelineCache cache) {
+        return preparationCache == cache;
     }
 
     public Sandbox build(ScriptType type) {
@@ -167,7 +158,8 @@ public final class NekoSandboxFactory {
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
         NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
-                new NekoModuleResolver(paths, new ScriptFilePolicy(compilers)),
+                new NekoModuleResolver(new com.tkisor.nekojs.core.module.NekoModuleResolutionPaths(
+                        paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)),
                 paths,
                 core.errorTracker(),
                 config,

@@ -1,26 +1,28 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.ScriptFilePolicy;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * 实例化模块解析器：构造器接收 {@link NekoJSPaths} 和 {@link ScriptFilePolicy}。
+ * 实例化模块解析器：构造器接收显式文件系统根和 {@link ScriptFilePolicy}。
  * 负责 entry resolve → file module resolve → extension candidates → index fallback。
  */
 public final class NekoModuleResolver {
-    private final NekoJSPaths paths;
+    private final Path gameDir;
+    private final Path root;
+    private final Path nodeModules;
     private final ScriptFilePolicy filePolicy;
 
-    public NekoModuleResolver(NekoJSPaths paths, ScriptFilePolicy filePolicy) {
-        this.paths = paths;
+    public NekoModuleResolver(NekoModuleResolutionPaths paths, ScriptFilePolicy filePolicy) {
+        this.gameDir = paths.gameDir();
+        this.root = paths.root();
+        this.nodeModules = paths.nodeModules();
         this.filePolicy = filePolicy;
     }
 
@@ -42,7 +44,7 @@ public final class NekoModuleResolver {
         Path parent = pathFromLoaderPath(parentPath);
         Path baseDirectory = Files.isDirectory(parent) ? parent : parent.getParent();
         if (baseDirectory == null) {
-            baseDirectory = paths.root();
+            baseDirectory = root;
         }
         return resolveFileModule(baseDirectory.resolve(specifier).normalize());
     }
@@ -61,7 +63,7 @@ public final class NekoModuleResolver {
     }
 
     private NekoResolvedModule resolveBareModule(String specifier) throws IOException {
-        Path nodeModules = paths.nodeModules().toAbsolutePath().normalize();
+        Path nodeModules = this.nodeModules.toAbsolutePath().normalize();
         Path requested = nodeModules.resolve(specifier).normalize();
         try {
             return resolveFileModule(requested, nodeModules);
@@ -128,16 +130,17 @@ public final class NekoModuleResolver {
     }
 
     private Path verifyModulePath(Path path, Path containmentRoot) throws IOException {
-        Path verified = paths.verifyInsideGameDir(path);
-        if (containmentRoot != null && !verified.toAbsolutePath().normalize().startsWith(containmentRoot)) {
+        Path verified = verifyInsideGameDir(path);
+        Path containment = containmentRoot == null ? null : canonicalSplicedForm(containmentRoot);
+        if (containment != null && !canonicalSplicedForm(verified).startsWith(containment)) {
             throw new IOException("Bare module path escapes node_modules: " + loaderPath(verified));
         }
         if (Files.exists(verified)) {
             Path realPath = verified.toRealPath();
-            if (!realPath.startsWith(paths.gameDir().normalize().toAbsolutePath())) {
+            if (!realPath.startsWith(canonicalSplicedForm(gameDir))) {
                 throw new IOException("Symlink escape detected: " + realPath);
             }
-            if (containmentRoot != null && !realPath.startsWith(containmentRoot.toRealPath())) {
+            if (containment != null && !realPath.startsWith(containment)) {
                 throw new IOException("Bare module path escapes node_modules: " + loaderPath(realPath));
             }
         }
@@ -156,7 +159,7 @@ public final class NekoModuleResolver {
             normalized = normalized.substring(2);
         }
         Path parsed = Path.of(normalized);
-        Path resolved = parsed.isAbsolute() ? parsed : paths.root().resolve(parsed);
+        Path resolved = parsed.isAbsolute() ? parsed : root.resolve(parsed);
         return verifyModulePath(resolved.normalize());
     }
 
@@ -241,9 +244,48 @@ public final class NekoModuleResolver {
         }
         Path absolute = path.normalize().toAbsolutePath();
         try {
-            return paths.root().relativize(absolute).toString().replace('\\', '/');
+            return root.relativize(absolute).toString().replace('\\', '/');
         } catch (IllegalArgumentException ignored) {
             return absolute.toString().replace('\\', '/');
+        }
+    }
+
+    private Path verifyInsideGameDir(Path path) throws IOException {
+        Path rootForm = canonicalSplicedForm(gameDir);
+        Path normalized = path.normalize().toAbsolutePath();
+        if (Files.exists(normalized) || Files.isSymbolicLink(normalized)) {
+            Path realPath = normalized.toRealPath();
+            if (!realPath.startsWith(rootForm)) {
+                throw new IOException("Symlink escape detected: " + realPath);
+            }
+            return realPath;
+        }
+        Path spliced = canonicalSplicedForm(normalized);
+        if (!spliced.startsWith(rootForm)) {
+            if (normalized.startsWith(gameDir.normalize().toAbsolutePath()) || normalized.startsWith(rootForm)) {
+                throw new IOException("Symlink escape detected: " + spliced);
+            }
+            throw new IOException("Access outside allowed root is forbidden: " + normalized);
+        }
+        return spliced;
+    }
+
+    private static Path canonicalSplicedForm(Path path) {
+        Path absolute = path.normalize().toAbsolutePath();
+        Path anchor = absolute;
+        while (anchor != null && !Files.exists(anchor)) {
+            anchor = anchor.getParent();
+        }
+        if (anchor == null) {
+            return absolute;
+        }
+        try {
+            Path realAnchor = anchor.toRealPath();
+            return anchor.getNameCount() == absolute.getNameCount()
+                    ? realAnchor
+                    : realAnchor.resolve(absolute.subpath(anchor.getNameCount(), absolute.getNameCount()));
+        } catch (IOException ignored) {
+            return absolute;
         }
     }
 }
