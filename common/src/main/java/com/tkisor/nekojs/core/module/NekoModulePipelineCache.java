@@ -113,6 +113,22 @@ public final class NekoModulePipelineCache {
         }
     }
 
+    /**
+     * Prepare a JSON source through the same trust boundary as executable modules.
+     * JSON has no language compiler, but it is still a resolved module source and must
+     * not be read by an execution-side bypass.
+     */
+    public String prepareJson(Path path) throws IOException {
+        Path key = key(path);
+        approvedSource(key);
+        try {
+            return Files.readString(key);
+        } catch (IOException failure) {
+            throw NekoModuleError.cache(NekoModuleError.displayPath(key),
+                    "Cannot read JSON module source: " + failure.getMessage(), failure);
+        }
+    }
+
     /** Internal carrier to tunnel checked exceptions out of the ConcurrentHashMap compute lambda. */
     private static final class PipelineException extends RuntimeException {
         private static final long serialVersionUID = 1L;
@@ -167,7 +183,18 @@ public final class NekoModulePipelineCache {
     public NekoTrustApprovedSource approvedSource(Path path) throws IOException {
         NekoTrustApprovedSource approval = trustContext.approvalFor(path);
         if (approval == null || !approval.covers(path)) {
-            NekoModuleIdentity identity = pipeline.identifyChecked(path);
+            NekoModuleIdentity identity;
+            try {
+                identity = pipeline.identify(path);
+            } catch (RuntimeException unsupportedExtension) {
+                // JSON is prepared as data rather than as a language module. Trust must still
+                // reject it at the authorization boundary before compiler discovery runs.
+                if (!isJson(path)) {
+                    throw NekoModuleError.denied(NekoModuleError.displayPath(path), "unknown",
+                            NekoModuleMode.AUTO, approval, "module dependency has no valid trust context");
+                }
+                identity = new NekoModuleIdentity("json", NekoModuleMode.AUTO);
+            }
             throw NekoModuleError.denied(NekoModuleError.displayPath(path), identity.languageId(), identity.requestedMode(),
                     approval, "module dependency has no valid trust context");
         }
@@ -230,6 +257,11 @@ public final class NekoModulePipelineCache {
 
     private static boolean isWindows() {
         return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+    }
+
+    private static boolean isJson(Path path) {
+        Path fileName = path == null ? null : path.getFileName();
+        return fileName != null && fileName.toString().toLowerCase(Locale.ROOT).endsWith(".json");
     }
 
     /**

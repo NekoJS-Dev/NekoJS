@@ -5,10 +5,14 @@ import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
+import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.fs.SandboxPolicy;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
+import graal.graalvm.polyglot.Value;
+import graal.graalvm.polyglot.io.IOAccess;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -148,6 +152,62 @@ class NekoModuleTrustStageTest {
             cache.clear();
             Files.deleteIfExists(entry);
             Files.deleteIfExists(dependency);
+        }
+    }
+
+    @Test
+    void remoteApprovalFlowsThroughHostCacheAndJsonPreparation() throws Exception {
+        TestPlatformInit.ensureInitialized(gameDir);
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+        Path cjsEntry = paths.serverScripts().resolve("remote-entry.cjs");
+        Path esmEntry = paths.serverScripts().resolve("remote-entry.mjs");
+        Path json = paths.serverScripts().resolve("remote-data.json");
+        Path deniedEntry = paths.serverScripts().resolve("remote-denied-entry.cjs");
+        Path deniedJson = paths.serverScripts().resolve("remote-denied.json");
+        Files.createDirectories(cjsEntry.getParent());
+        Files.writeString(cjsEntry, "module.exports = require('./remote-data.json');\n");
+        Files.writeString(esmEntry, "import data from './remote-data.json';\nexport const value = data.value;\n");
+        Files.writeString(json, "{\"value\":73}\n");
+        Files.writeString(deniedEntry, "module.exports = require('./remote-denied.json');\n");
+        Files.writeString(deniedJson, "{\"value\":99}\n");
+
+        var authorized = java.util.Set.of(cjsEntry.toRealPath(), esmEntry.toRealPath(), json.toRealPath(),
+                deniedEntry.toRealPath());
+        NekoTrustContext remote = path -> authorized.contains(path.toAbsolutePath().normalize())
+                ? NekoTrustApprovedSource.remote(path, "packs:remote", "author-key") : null;
+        NekoModulePipelineCache cache = new NekoModulePipelineCache(pipeline(),
+                new com.tkisor.nekojs.core.error.SourceMapRegistry(paths.root()),
+                new com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry(paths.root()), remote);
+        IOAccess ioAccess = IOAccess.newBuilder()
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(SandboxConfig.defaultConfig(), paths), cache))
+                .build();
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build()) {
+            NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
+                    new NekoModuleResolver(paths, ScriptFilePolicy.legacyRuntime()), paths, cache);
+            context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
+            try (var input = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
+                assertTrue(input != null, "script loader resource must exist");
+                context.eval(Source.newBuilder("js", new String(input.readAllBytes(), StandardCharsets.UTF_8),
+                        "nekojs/node/internal/script-loader.js").build());
+            }
+
+            Value cjs = (Value) host.loadEntry("./server_scripts/remote-entry.cjs");
+            assertEquals(73, cjs.getMember("value").asInt());
+            Value esm = (Value) host.loadEntry("./server_scripts/remote-entry.mjs");
+            assertEquals(73, esm.getMember("value").asInt());
+
+            Exception failure = assertThrows(Exception.class,
+                    () -> host.loadEntry("./server_scripts/remote-denied-entry.cjs"));
+            NekoModuleError denied = NekoModulePipelinePrepareTest.assertStaged(
+                    failure, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PACK_TRUST);
+            assertTrue(denied.sourcePath().endsWith("remote-denied.json"), denied.detail());
+        } finally {
+            cache.clear();
+            Files.deleteIfExists(cjsEntry);
+            Files.deleteIfExists(esmEntry);
+            Files.deleteIfExists(json);
+            Files.deleteIfExists(deniedEntry);
+            Files.deleteIfExists(deniedJson);
         }
     }
 }

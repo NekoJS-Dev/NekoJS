@@ -14,7 +14,6 @@ import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
-import graal.graalvm.polyglot.SourceSection;
 import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.io.IOAccess;
 import org.junit.jupiter.api.AfterEach;
@@ -261,27 +260,35 @@ class NekoModuleIdentityLifecycleTest {
                 failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
         PolyglotException guestFailure = assertInstanceOf(PolyglotException.class, staged.getCause());
         assertTrue(staged.getMessage().contains("ts-leaf-boom"), String.valueOf(staged));
-        SourceSection location = guestFailure.getSourceLocation();
-        if (location == null) {
-            for (PolyglotException.StackFrame frame : guestFailure.getPolyglotStackTrace()) {
-                if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
-                    location = frame.getSourceLocation();
-                    break;
-                }
-            }
-        }
-        assertNotNull(location, "Graal must report the executed guest location: " + stackText(guestFailure));
-        String generatedPath = location.getSource().getPath();
-        assertNotNull(generatedPath, "executed source must have a path");
-        String displayPath = host.virtualModules().displayPath(generatedPath);
-        assertEquals("server_scripts/src/map-leaf.ts", displayPath);
-        var mapped = host.sourceMaps().getMappedPosition(displayPath,
-                location.getStartLine(), location.getStartColumn());
-        assertTrue(mapped.path != null && mapped.path.replace('\\', '/').endsWith(displayPath),
-                "runtime source map must restore the authored TypeScript path: generated=" + generatedPath
-                        + ", display=" + displayPath + ", line=" + location.getStartLine()
-                        + ", column=" + location.getStartColumn() + ", mapped=" + mapped);
-        assertEquals(2, mapped.line, "runtime source map must restore the authored throw line");
+        assertEquals("server_scripts/src/map-leaf.ts", staged.sourcePath().replace('\\', '/'));
+        assertEquals(2, staged.sourceLine(), "the exposed error must carry the authored line");
+        assertTrue(staged.sourceColumn() > 0, "the exposed error must carry the authored column");
+        assertEquals("server_scripts/src/map-leaf.ts", staged.moduleId().replace('\\', '/'));
+        assertNotNull(guestFailure, "the exposed diagnostic must retain the guest cause");
+    }
+
+    @Test
+    void crossImportTranspiledRuntimeFailureExposesAuthoredLocationAtLoadEntry() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Path inner = dir.resolve("map-import-inner.ts");
+        Path outer = dir.resolve("map-import-outer.ts");
+        Files.writeString(inner, "const label: string = 'inner';\n"
+                + "throw new Error('ts-import-boom');\n"
+                + "export const out: number = 42;\n");
+        Files.writeString(outer, "import { out } from './map-import-inner.ts';\n"
+                + "export const value = out;\n");
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/map-import-outer.ts"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        assertTrue(staged.getMessage().contains("ts-import-boom"), String.valueOf(staged));
+        assertEquals("server_scripts/src/map-import-inner.ts", staged.sourcePath().replace('\\', '/'), staged.detail());
+        assertEquals(2, staged.sourceLine(), staged.detail());
+        assertTrue(staged.sourceColumn() > 0, staged.detail());
+        assertEquals("server_scripts/src/map-import-inner.ts", staged.moduleId().replace('\\', '/'), staged.detail());
+        assertNotNull(staged.getCause());
     }
 
     private static Value asValue(Object exports) {

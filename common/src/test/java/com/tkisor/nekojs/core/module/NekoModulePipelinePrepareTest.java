@@ -2,6 +2,7 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
+import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
@@ -23,8 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * 票据 11 AC1 + AC2：{@link NekoModulePipeline#prepare} 最高调用者测试。
  *
- * <p>JS/CJS/ESM 输入产生正确的 language id、module mode、可执行 code、可用 source map
- * 与稳定 cache key；prepared module 不可变（record + final 组件 + 篡改即 key 变化）。
+ * <p>JS/CJS/ESM 输入产生正确的 language id、module mode、可执行 code、明确的 source-map
+ * availability（原生输入为 null）与稳定 cache key；prepared module 不可变（record + final
+ * 组件 + 篡改即 key 变化）。
  */
 class NekoModulePipelinePrepareTest {
 
@@ -68,6 +70,21 @@ class NekoModulePipelinePrepareTest {
         assertNull(esm.sourceMap(), "native JavaScript ESM has no compiler source map");
         assertEquals(NekoModuleMode.COMMONJS, cjs.mode());
         assertNotEquals(esm.cacheKey(), cjs.cacheKey(), "mode/content change must change the cache key");
+    }
+
+    @Test
+    void compilerBackedTypescriptPublishesItsActualSourceMap() throws Exception {
+        ScriptCompilerRegistry registry = ScriptCompilerRegistry.createRuntimeRegistry();
+        registry.register(NekoTypeScriptLanguagePlugin.INSTANCE);
+        NekoModulePipeline pipeline = new NekoModulePipeline(
+                new NekoCompilationPipeline(), registry, SandboxConfig.defaultConfig());
+
+        NekoPreparedModule prepared = pipeline.prepare(
+                Path.of("server_scripts/prepare-map.ts"), "const value: number = 7;\nmodule.exports = value;\n");
+
+        assertEquals("typescript", prepared.languageId());
+        assertNotNull(prepared.sourceMap(), "compiler-backed TypeScript must publish its actual map");
+        assertTrue(prepared.sourceMap().contains("sourcesContent"), prepared.sourceMap());
     }
 
     @Test

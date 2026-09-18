@@ -174,43 +174,33 @@ public final class NekoModulePipeline {
     }
 
     private String languageId(Path file, String extension) {
-        NekoScriptLanguage language = compilers.getLanguage(extension);
-        if (language != null) {
-            if (language.plugin() != null) {
-                return language.plugin().id();
-            }
-            if (language.compiler() != null) {
-                return language.id();
-            }
-        }
-        IScriptCompiler compiler = compilers.getCompiler(extension);
-        if (compiler != null) {
-            return "legacy:" + extension.substring(1);
-        }
-        if (!ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
-            throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
-        }
-        return NekoJavaScriptLanguagePlugin.INSTANCE.id();
+        return languageBinding(file, extension).id();
     }
 
     private NekoLanguagePlugin languagePlugin(Path file, String extension) {
+        return languageBinding(file, extension).plugin();
+    }
+
+    private LanguageBinding languageBinding(Path file, String extension) {
         NekoScriptLanguage language = compilers.getLanguage(extension);
         if (language != null) {
             if (language.plugin() != null) {
-                return language.plugin();
+                return new LanguageBinding(language.plugin().id(), language.plugin());
             }
             if (language.compiler() != null) {
-                return new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler());
+                return new LanguageBinding(language.id(),
+                        new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler()));
             }
         }
         IScriptCompiler compiler = compilers.getCompiler(extension);
         if (compiler != null) {
-            return new NekoLegacyLanguagePlugin("legacy:" + extension.substring(1), Set.of(extension), compiler);
+            String id = "legacy:" + extension.substring(1);
+            return new LanguageBinding(id, new NekoLegacyLanguagePlugin(id, Set.of(extension), compiler));
         }
         if (!ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
             throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
         }
-        return NekoJavaScriptLanguagePlugin.INSTANCE;
+        return new LanguageBinding(NekoJavaScriptLanguagePlugin.INSTANCE.id(), NekoJavaScriptLanguagePlugin.INSTANCE);
     }
 
     NekoModuleIdentity identifyChecked(Path file) throws NekoModuleError {
@@ -230,5 +220,7 @@ public final class NekoModulePipeline {
         int dot = fileName.lastIndexOf('.');
         return dot < 0 ? "" : fileName.substring(dot).toLowerCase(Locale.ROOT);
     }
+
+    private record LanguageBinding(String id, NekoLanguagePlugin plugin) {}
 
 }

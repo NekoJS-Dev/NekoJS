@@ -9,7 +9,6 @@ import com.tkisor.nekojs.core.module.NekoPreparedModule;
 import com.tkisor.nekojs.core.module.NekoResolvedModule;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -257,7 +256,7 @@ public final class NekoNativeEsmSourceRewriter {
     }
 
     public java.net.URI syntheticJsonModuleUri(Path path) throws IOException {
-        String json = Files.readString(path);
+        String json = preparationCache.prepareJson(path);
         String source = "const __neko_json = JSON.parse(" + jsString(json) + ");\nexport default __neko_json;\n";
         return virtualModules.register(moduleId(path), source);
     }

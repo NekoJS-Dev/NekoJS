@@ -10,11 +10,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-/**
- * Source map 构建器（包内编译器使用；跨包仅开放 {@link #identity} 供语言管线补齐恒等映射——
- * 不是 parser/lexer/lowering SPI，不新增语言扩展点）。
- */
-public final class NekoSourceMapBuilder {
+/** Package-private source map builder used by compiler implementations. */
+final class NekoSourceMapBuilder {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     private final Path file;
@@ -26,11 +23,8 @@ public final class NekoSourceMapBuilder {
         this.source = source == null ? "" : source;
     }
 
-    /**
-     * 行对齐恒等映射（W3 语言管线：原生 JS/CJS 等无编译器 source map 时，
-     * prepared module 仍需携带可用 source map 以便错误映射回原文件）。
-     */
-    public static String identity(Path file, String source, String generated) {
+    /** TypeScript erasure uses this line-aligned map for its transformed output. */
+    static String identity(Path file, String source, String generated) {
         NekoSourceMapBuilder builder = new NekoSourceMapBuilder(file, source);
         String text = generated == null ? "" : generated;
         int generatedLine = 0;
