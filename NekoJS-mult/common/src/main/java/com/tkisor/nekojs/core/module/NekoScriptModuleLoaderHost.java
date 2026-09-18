@@ -100,6 +100,7 @@ public final class NekoScriptModuleLoaderHost {
         this.moduleRevisions = new ConcurrentHashMap<>();
         this.modulePreparedKeys = new ConcurrentHashMap<>();
         this.modulePaths = new ConcurrentHashMap<>();
+        preparationCache.installPreparationObserver(this::observePreparedCacheEntry);
         this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph, preparationCache);
         this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter,
                 virtualModules, context, reloadCoordinator::revision, this::prepare);
@@ -304,6 +305,8 @@ public final class NekoScriptModuleLoaderHost {
                 return esmRewriter.syntheticObjectModuleUri(resolved.specifier()).toString();
             }
             if (resolved.json()) {
+                String json = preparationCache.prepareJson(resolved.path());
+                observeExecutionKey(resolved.id(), resolved.path(), jsonExecutionKey(resolved.id(), json));
                 return esmRewriter.syntheticJsonModuleUri(resolved.path()).toString();
             }
             NekoPreparedModule prepared = prepare(resolved);
@@ -330,6 +333,10 @@ public final class NekoScriptModuleLoaderHost {
         reloadCoordinator.invalidateModules(moduleIds, removeGraphNodes);
         for (String moduleId : moduleIds) {
             modulePreparedKeys.remove(moduleId);
+            java.nio.file.Path path = modulePaths.get(moduleId);
+            if (path != null) {
+                preparationCache.invalidate(path);
+            }
         }
     }
 
@@ -690,6 +697,21 @@ public final class NekoScriptModuleLoaderHost {
 
     private void observePrepared(String moduleId, java.nio.file.Path path, NekoPreparedModule prepared) {
         observeExecutionKey(moduleId, path, prepared.cacheKey());
+    }
+
+    private void observePreparedCacheEntry(java.nio.file.Path path, String executionKey) {
+        String moduleId = moduleIdForPath(path);
+        java.nio.file.Path knownPath = modulePaths.putIfAbsent(moduleId, path);
+        observeExecutionKey(moduleId, knownPath == null ? path : knownPath, executionKey);
+    }
+
+    private String moduleIdForPath(java.nio.file.Path path) {
+        try {
+            return preparationCache.sourceMaps().root().relativize(path)
+                    .toString().replace('\\', '/');
+        } catch (Exception ignored) {
+            return path.toAbsolutePath().normalize().toString().replace('\\', '/');
+        }
     }
 
     private void observeExecutionKey(String moduleId, java.nio.file.Path path, String executionKey) {

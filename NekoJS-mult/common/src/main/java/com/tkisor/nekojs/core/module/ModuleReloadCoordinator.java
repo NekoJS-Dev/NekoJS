@@ -2,7 +2,6 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
-import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
@@ -13,8 +12,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 模块 reload 失效顺序协调器：统一 prepared cache、ESM record cache、link cache、
- * CJS runtime cache、virtual module registry、source map、dependency graph 的失效顺序。
+ * 模块 reload 失效顺序协调器：统一 ESM record cache、link cache、CJS runtime cache、
+ * virtual module registry 与 dependency graph 的失效顺序；prepared/source-map 路径由 host
+ * 根据其 runtime-owned module path observation 负责失效。
  *
  * <p>从 {@link NekoScriptModuleLoaderHost} 的 {@code clearCache} / {@code clearRuntimeCache} /
  * {@code invalidateModules} 失效逻辑下沉而来。
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>esmLinkCache.removeAll（link metadata）</li>
  *   <li>dependencyGraph.removeModule / clearDependencies（依赖图节点/边）</li>
  *   <li>注入的 runtime-owned virtual-module registry invalidate（virtual URI generation）</li>
- *   <li>注入的 runtime-owned pipeline cache invalidate / clear（prepared module + source map）</li>
+ *   <li>host 按 module path 失效 runtime-owned pipeline cache 与 source map（避免隐式 global root）</li>
  * </ol>
  *
  * <p>明确失败语义：entry 重新执行失败后错误状态指向新源码；event listener/timer 不自动恢复旧版本；
@@ -39,9 +39,6 @@ public final class ModuleReloadCoordinator {
     private final NekoEsmLinkCache esmLinkCache;
     private final Map<String, Long> moduleRevisions;
     private final NekoModuleDependencyGraph dependencyGraph;
-    private final NekoJSPaths paths;
-    /** prepared 缓存失效目标（W3 显式注入：与 host 共享的 runtime-owned 实例）。 */
-    private final NekoModulePipelineCache preparationCache;
     private final NekoEsmVirtualModuleRegistry virtualModules;
 
     public ModuleReloadCoordinator(
@@ -69,8 +66,6 @@ public final class ModuleReloadCoordinator {
         this.esmLinkCache = esmLinkCache;
         this.moduleRevisions = moduleRevisions;
         this.dependencyGraph = dependencyGraph;
-        this.paths = NekoJSPaths.get();
-        this.preparationCache = preparationCache;
         this.virtualModules = preparationCache.virtualModules();
     }
 
@@ -104,7 +99,6 @@ public final class ModuleReloadCoordinator {
                 dependencyGraph.removeModule(moduleId);
             }
             virtualModules.invalidate(moduleId);
-            preparationCache.invalidate(paths.root().resolve(moduleId));
         }
     }
 

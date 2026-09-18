@@ -19,6 +19,7 @@ public final class ScriptCompilerRegistry {
     private final List<NekoScriptLanguage> languages = new ArrayList<>();
     private final Set<String> extraExtensions = new LinkedHashSet<>();
     private boolean frozen;
+    private long revision;
 
     private ScriptCompilerRegistry() {}
 
@@ -38,6 +39,7 @@ public final class ScriptCompilerRegistry {
         requireMutable();
         if (compiler != null) {
             compilers.add(compiler);
+            revision++;
         }
     }
 
@@ -55,6 +57,7 @@ public final class ScriptCompilerRegistry {
         if (normalized.compiler() != null) {
             compilers.add(normalized.compiler());
         }
+        revision++;
     }
 
     public void register(NekoLanguagePlugin plugin) {
@@ -100,6 +103,7 @@ public final class ScriptCompilerRegistry {
     public void registerExtension(String extension) {
         requireMutable();
         extraExtensions.add(normalizeExtension(extension));
+        revision++;
     }
 
     /**
@@ -179,6 +183,11 @@ public final class ScriptCompilerRegistry {
 
     public boolean frozen() {
         return frozen;
+    }
+
+    /** Monotonic registration identity used to validate captured preparation bindings. */
+    public long revision() {
+        return revision;
     }
 
     public static boolean isNativeScriptExtension(String extension) {

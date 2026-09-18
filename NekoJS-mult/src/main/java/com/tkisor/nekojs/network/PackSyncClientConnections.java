@@ -36,27 +36,12 @@ public final class PackSyncClientConnections {
         runtimeRoot = root;
     }
 
+    static NekoRuntimeRoot runtimeRootOrNull() {
+        return runtimeRoot;
+    }
+
     public static void install() {
         PackSyncClient.installClientReloadHook(PackSyncClientConnections::reloadClientScripts);
-        PackSyncClient.installClientRemoteTrustHook(new PackSyncClient.RemoteTrustHook() {
-            @Override
-            public void authorize(java.util.List<com.tkisor.nekojs.core.module.NekoTrustContext.RemoteSource> sources,
-                                  java.nio.file.Path remoteRoot) {
-                NekoRuntimeRoot root = runtimeRoot;
-                if (root == null) {
-                    throw new IllegalStateException("NekoJS runtime root is not assembled");
-                }
-                root.authorizeRemoteSources(sources, remoteRoot);
-            }
-
-            @Override
-            public void revoke(java.nio.file.Path remoteRoot) {
-                NekoRuntimeRoot root = runtimeRoot;
-                if (root != null) {
-                    root.revokeRemoteSources(remoteRoot);
-                }
-            }
-        });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(PackSyncClientConnections::onLoggingOut);
     }
 
@@ -70,7 +55,7 @@ public final class PackSyncClientConnections {
     }
 
     private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        PackSyncClient.handleDisconnect();
+        PackSyncClient.handleDisconnect(runtimeRoot);
     }
 }
 //?}

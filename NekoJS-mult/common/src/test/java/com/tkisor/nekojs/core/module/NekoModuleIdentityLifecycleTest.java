@@ -180,6 +180,48 @@ class NekoModuleIdentityLifecycleTest {
     }
 
     @Test
+    void changedStaticEsmChildInvalidatesParentWithoutExplicitInvalidate() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Path child = dir.resolve("static-child.mjs");
+        Path entry = dir.resolve("static-entry.mjs");
+        Files.writeString(child, "export const value = 'AAAA';\n");
+        Files.writeString(entry, "import { value } from './static-child.mjs';\nexport { value };\n");
+
+        Value first = asValue(host.loadEntry("./server_scripts/src/static-entry.mjs"));
+        assertEquals("AAAA", first.getMember("value").asString());
+
+        Files.writeString(child, "export const value = 'BBBB';\n");
+
+        Value second = asValue(host.loadEntry("./server_scripts/src/static-entry.mjs"));
+        assertEquals("BBBB", second.getMember("value").asString(),
+                "a changed static ESM child must invalidate the parent execution cache");
+    }
+
+    @Test
+    void changedDynamicJsonChildInvalidatesParentAndRetainsDependencyPath() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Path child = dir.resolve("dynamic-data.json");
+        Path entry = dir.resolve("dynamic-json-entry.mjs");
+        Files.writeString(child, "{\"value\":\"AAAA\"}\n");
+        Files.writeString(entry, "const pending = await import('./dynamic-data.json');\n"
+                + "export const value = (await pending).default.value;\n");
+
+        Value first = asValue(host.loadEntryAsync("./server_scripts/src/dynamic-json-entry.mjs")
+                .get(10, TimeUnit.SECONDS));
+        assertEquals("AAAA", first.getMember("value").asString());
+        assertTrue(host.affectedEntries("./server_scripts/src/dynamic-data.json")
+                        .contains("server_scripts/src/dynamic-json-entry.mjs"),
+                "dynamic JSON resolution must be retained in the dependency graph");
+
+        Files.writeString(child, "{\"value\":\"BBBB\"}\n");
+
+        Value second = asValue(host.loadEntryAsync("./server_scripts/src/dynamic-json-entry.mjs")
+                .get(10, TimeUnit.SECONDS));
+        assertEquals("BBBB", second.getMember("value").asString(),
+                "a changed dynamic JSON child must invalidate the parent execution cache");
+    }
+
+    @Test
     void esmCycleUsesExistingLinkAndEvaluationSemantics() throws Exception {
         Path dir = paths.serverScripts().resolve("src");
         Files.writeString(dir.resolve("cycle-a.mjs"),
