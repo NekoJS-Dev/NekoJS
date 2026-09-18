@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.annotation.CalledByDynamicCode;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
@@ -24,7 +25,6 @@ import graal.graalvm.polyglot.Value;
 import graal.graalvm.polyglot.proxy.ProxyExecutable;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +61,8 @@ public final class NekoScriptModuleLoaderHost {
     private final Map<String, Long> moduleRevisions;
     private final ModuleReloadCoordinator reloadCoordinator;
     private final EsmModuleLifecycle esmLifecycle;
+    /** Graal proxy calls cannot reliably preserve checked Java causes; retain staged nested failures per host thread. */
+    private final ThreadLocal<NekoModuleError> boundaryFailure = new ThreadLocal<>();
     private Value executor;
     private Value specialResolver;
     private Value moduleFactory;
@@ -216,28 +218,26 @@ public final class NekoScriptModuleLoaderHost {
      * Resolution/Cache），消息文本保持不变；已是阶段错误的透传。
      */
     private NekoResolvedModule resolveEntryPath(String entryPath) throws IOException {
-        try {
-            return resolver.resolveEntry(entryPath);
-        } catch (NekoModuleError staged) {
-            throw staged;
-        } catch (IOException failure) {
-            throw NekoModuleError.resolve(null, entryPath, failure);
-        }
+        return resolveWithStage(null, entryPath, () -> resolver.resolveEntry(entryPath));
     }
 
     private NekoResolvedModule resolveChild(String parentPath, String specifier) throws IOException {
-        try {
-            return resolver.resolve(parentPath, specifier);
-        } catch (NekoModuleError staged) {
-            throw staged;
-        } catch (IOException failure) {
-            throw NekoModuleError.resolve(parentPath, specifier, failure);
-        }
+        return resolveWithStage(parentPath, specifier, () -> resolver.resolve(parentPath, specifier));
     }
 
     private NekoResolvedModule resolveChildForRequire(String parentPath, String specifier) throws IOException {
+        return resolveWithStage(parentPath, specifier, () -> resolver.resolveForRequire(parentPath, specifier));
+    }
+
+    @FunctionalInterface
+    private interface ResolutionCall {
+        NekoResolvedModule resolve() throws IOException;
+    }
+
+    private NekoResolvedModule resolveWithStage(String parentPath, String specifier,
+                                                 ResolutionCall resolution) throws IOException {
         try {
-            return resolver.resolveForRequire(parentPath, specifier);
+            return resolution.resolve();
         } catch (NekoModuleError staged) {
             throw staged;
         } catch (IOException failure) {
@@ -350,19 +350,24 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     private Object loadJsonResolved(NekoResolvedModule resolved) throws IOException {
+        String rawJson = preparationCache.prepareJson(resolved.path());
         ModuleState cached = moduleCache.get(resolved.id());
         if (cached != null) {
             return cached.exports();
         }
         ModuleState module = newModuleState(resolved.id());
         try {
-            module.exports(parseJson(resolved.id(), Files.readString(resolved.path())));
+            module.exports(parseJson(resolved.id(), rawJson));
             module.loaded(true);
             moduleCache.put(resolved.id(), module);
             return module.exports();
         } catch (IOException e) {
             moduleCache.remove(resolved.id());
-            throw e;
+            if (e instanceof NekoModuleError) {
+                throw e;
+            }
+            throw NekoModuleError.cache(NekoModuleError.displayPath(resolved.path()),
+                    "Failed to read JSON module: " + resolved.id(), e);
         } catch (RuntimeException failure) {
             moduleCache.remove(resolved.id());
             throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
@@ -433,16 +438,109 @@ public final class NekoScriptModuleLoaderHost {
             String specifier = args.length == 0 ? "" : args[0].asString();
             return resolveToStringUnchecked(resolved.id(), specifier);
         };
+        boundaryFailure.remove();
         try {
             executor.execute(module.value(), require, resolve, resolved.id(), resolved.dirname(), prepared.code());
         } catch (RuntimeException failure) {
+            NekoModuleError nested = boundaryFailure.get();
+            boundaryFailure.remove();
+            if (nested == null) {
+                nested = findStagedError(failure);
+            }
+            if (nested != null) {
+                throw nested;
+            }
             IOException enriched = withSyntaxLocation(resolved, prepared, failure);
             if (enriched instanceof NekoEsmLinkException syntaxDiagnostic) {
                 throw NekoModuleError.prepare(prepared.sourcePath(), prepared.languageId(), prepared.mode(),
                         syntaxDiagnostic.getMessage(), syntaxDiagnostic);
             }
-            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+            throw executionError(resolved, prepared, failure);
         }
+    }
+
+    /** Convert the guest boundary failure into one diagnostic carrying authored location and identity. */
+    private NekoModuleError executionError(NekoResolvedModule resolved, NekoPreparedModule prepared,
+                                            RuntimeException failure) {
+        String sourcePath = prepared.sourcePath();
+        String moduleId = resolved.id();
+        int line = -1;
+        int column = -1;
+        PolyglotException guest = findPolyglotException(failure);
+        SourceSection location = guest == null ? null : sourceLocation(guest, resolved.id());
+        if (location != null) {
+            line = location.getStartLine();
+            column = location.getStartColumn();
+            String generatedPath = location.getSource().getPath();
+            String displayPath = virtualModules.displayPath(generatedPath);
+            if (displayPath == null || displayPath.isBlank()) {
+                displayPath = generatedPath;
+            }
+            SourceMapRegistry.OriginalPosition mapped = preparationCache.sourceMaps()
+                    .getMappedPosition(displayPath, line, column);
+            if (mapped.path != null && !mapped.path.isBlank()) {
+                sourcePath = authoredPath(mapped.path);
+                moduleId = sourcePath;
+                line = mapped.line;
+                column = mapped.column;
+            } else if (displayPath != null && !displayPath.isBlank()
+                    && !displayPath.equals(resolved.id())) {
+                sourcePath = authoredPath(displayPath);
+                moduleId = sourcePath;
+            } else if (sourcePath == null || sourcePath.isBlank()) {
+                sourcePath = displayPath;
+            }
+        }
+        return NekoModuleError.execute(moduleId, sourcePath, line, column,
+                failure.getMessage(), failure);
+    }
+
+    private static String authoredPath(String path) {
+        String normalized = path.replace('\\', '/');
+        for (String root : new String[]{"startup_scripts/", "server_scripts/", "client_scripts/", "test_scripts/"}) {
+            int index = normalized.indexOf(root);
+            if (index >= 0) {
+                return normalized.substring(index);
+            }
+        }
+        return normalized;
+    }
+
+    private SourceSection sourceLocation(PolyglotException failure, String moduleId) {
+        SourceSection location = failure.getSourceLocation();
+        SourceSection fallback = location;
+        for (PolyglotException.StackFrame frame : failure.getPolyglotStackTrace()) {
+            if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
+                SourceSection candidate = frame.getSourceLocation();
+                if (fallback == null) {
+                    fallback = candidate;
+                }
+                String generatedPath = candidate.getSource().getPath();
+                String displayPath = virtualModules.displayPath(generatedPath);
+                if (displayPath != null && !displayPath.equals(moduleId)) {
+                    return candidate;
+                }
+            }
+        }
+        return fallback;
+    }
+
+    private static PolyglotException findPolyglotException(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof PolyglotException polyglot) {
+                return polyglot;
+            }
+        }
+        return null;
+    }
+
+    private static NekoModuleError findStagedError(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof NekoModuleError staged) {
+                return staged;
+            }
+        }
+        return null;
     }
 
     /**
@@ -521,7 +619,7 @@ public final class NekoScriptModuleLoaderHost {
         } catch (IOException failure) {
             throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
         } catch (RuntimeException failure) {
-            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+            throw executionError(resolved, prepared, failure);
         }
     }
 
@@ -607,6 +705,9 @@ public final class NekoScriptModuleLoaderHost {
         try {
             return requireFrom(parentPath, specifier);
         } catch (IOException e) {
+            if (e instanceof NekoModuleError staged) {
+                boundaryFailure.set(staged);
+            }
             throw new RuntimeException(e);
         }
     }
@@ -615,6 +716,9 @@ public final class NekoScriptModuleLoaderHost {
         try {
             return resolveToString(parentPath, specifier);
         } catch (IOException e) {
+            if (e instanceof NekoModuleError staged) {
+                boundaryFailure.set(staged);
+            }
             throw new RuntimeException(e);
         }
     }

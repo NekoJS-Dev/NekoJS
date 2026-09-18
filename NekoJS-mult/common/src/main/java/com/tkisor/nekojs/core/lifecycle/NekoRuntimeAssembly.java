@@ -19,6 +19,7 @@ import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
@@ -71,6 +72,23 @@ public final class NekoRuntimeAssembly {
             ScriptPropertyRegistry scriptProperties,
             List<OwnedPlugin> ownedPlugins,
             PluginWiring pluginWiring) {
+        return assemble(eventBridge, scriptProperties, ownedPlugins, pluginWiring, NekoTrustContext.local());
+    }
+
+    /**
+     * Assembly boundary for an explicitly authorized remote pack. The default overload above
+     * remains the local-trusted production path; the context is carried only by the preparation
+     * cache and its resolution collaborators, never by execution APIs.
+     */
+    public static Assembled assemble(
+            ScriptEventBridge eventBridge,
+            ScriptPropertyRegistry scriptProperties,
+            List<OwnedPlugin> ownedPlugins,
+            PluginWiring pluginWiring,
+            NekoTrustContext trustContext) {
+        if (trustContext == null) {
+            throw new NullPointerException("trustContext");
+        }
         NekoPluginRuntime pluginRuntime = NekoPluginRuntime.bootstrapOwned(ownedPlugins, scriptProperties);
         // AC8 的计数面：本行每次进程只应出现一次（bootstrapOwned 重复调用会被 publish 拒绝），
         // 烟测以 reload 前后各 grep 一次验证计数不变；Fabric 侧另有 entrypoint/bootstrap-done marker。
@@ -96,7 +114,7 @@ public final class NekoRuntimeAssembly {
         // 模块 cache/session 生命周期由 root 持有（root close 全清），无 static 状态。
         NekoModulePipelineCache modulePreparationCache = new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(), compilers, sandboxConfig),
-                sourceMaps, virtualModules, com.tkisor.nekojs.core.module.NekoTrustContext.local());
+                sourceMaps, virtualModules, trustContext);
         NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, NekoJSPaths.get(), compilers, pluginRuntime, modulePreparationCache);
         NekoRuntimeRoot root = new NekoRuntimeRoot(
                 core,

@@ -94,6 +94,21 @@ class NekoModuleErrorStageTest {
     }
 
     @Test
+    void nestedCjsResolutionFailureRetainsResolveStageAndCause() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/nested-missing.cjs");
+        Files.writeString(entry, "require('./does-not-exist.cjs');\nmodule.exports = 1;\n");
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/nested-missing.cjs"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.RESOLVE, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        assertEquals("./does-not-exist.cjs", staged.moduleId());
+        assertTrue(staged.sourcePath().contains("nested-missing.cjs"), staged.detail());
+        assertNotNull(staged.getCause(), "nested resolution failure must retain its original cause");
+    }
+
+    @Test
     void linkFailureCarriesFileLineAndColumn() throws Exception {
         Path dep = paths.serverScripts().resolve("src/link-dep.mjs");
         Path entry = paths.serverScripts().resolve("src/link-entry.mjs");
@@ -125,6 +140,18 @@ class NekoModuleErrorStageTest {
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
                 failure, NekoModuleError.Stage.CACHE, NekoModuleError.OWNER_RESOLUTION_CACHE);
         assertTrue(staged.sourcePath().contains("no-such-file.cjs"), staged.detail());
+    }
+
+    @Test
+    void jsonReadFailureCarriesCacheStageAndPath() {
+        Path missing = gameDir.resolve("nekojs/server_scripts/src/no-such-data.json");
+
+        IOException failure = assertThrows(IOException.class, () -> cache.prepareJson(missing));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.CACHE, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        assertTrue(staged.sourcePath().contains("no-such-data.json"), staged.detail());
+        assertNotNull(staged.getCause(), "JSON read failure must retain its I/O cause");
     }
 
     @Test

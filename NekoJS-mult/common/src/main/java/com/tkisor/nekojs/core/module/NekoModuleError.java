@@ -53,14 +53,23 @@ public class NekoModuleError extends IOException {
     private final String owner;
     private final String sourcePath;
     private final String moduleId;
+    private final int sourceLine;
+    private final int sourceColumn;
 
     public NekoModuleError(Stage stage, String owner, String sourcePath, String moduleId,
                            String message, Throwable cause) {
+        this(stage, owner, sourcePath, moduleId, -1, -1, message, cause);
+    }
+
+    private NekoModuleError(Stage stage, String owner, String sourcePath, String moduleId,
+                            int sourceLine, int sourceColumn, String message, Throwable cause) {
         super(message, cause);
         this.stage = Objects.requireNonNull(stage, "stage");
         this.owner = owner == null || owner.isBlank() ? OWNER_RESOLUTION_CACHE : owner;
         this.sourcePath = sourcePath;
         this.moduleId = moduleId;
+        this.sourceLine = sourceLine;
+        this.sourceColumn = sourceColumn;
     }
 
     public NekoModuleError(Stage stage, String owner, String sourcePath, String moduleId, String message) {
@@ -104,6 +113,13 @@ public class NekoModuleError extends IOException {
         return new NekoModuleError(Stage.EXECUTE, OWNER_EXECUTION, null, moduleId, message, cause);
     }
 
+    /** Execution failure with the authored source location resolved at the host boundary. */
+    public static NekoModuleError execute(String moduleId, String sourcePath, int sourceLine,
+                                          int sourceColumn, String message, Throwable cause) {
+        return new NekoModuleError(Stage.EXECUTE, OWNER_EXECUTION, sourcePath, moduleId,
+                sourceLine, sourceColumn, message, cause);
+    }
+
     /** Link diagnostics retain the original file/line/column exception as the cause. */
     public static NekoModuleError link(NekoEsmLinkException cause) {
         NekoEsmDiagnostic diagnostic = cause == null ? null : cause.diagnostic();
@@ -131,6 +147,16 @@ public class NekoModuleError extends IOException {
         return moduleId;
     }
 
+    /** Authored source line, or {@code -1} when no source location was available. */
+    public int sourceLine() {
+        return sourceLine;
+    }
+
+    /** Authored source column, or {@code -1} when no source location was available. */
+    public int sourceColumn() {
+        return sourceColumn;
+    }
+
     /** 含阶段/owner/位置/身份的完整归因行（日志与 Closure 证据用；getMessage 保持原始文本）。 */
     public String detail() {
         StringBuilder detail = new StringBuilder("[").append(stage).append('/').append(owner).append("] ");
@@ -140,6 +166,9 @@ public class NekoModuleError extends IOException {
         }
         if (moduleId != null) {
             detail.append(" (module: ").append(moduleId).append(')');
+        }
+        if (sourceLine > 0 && sourceColumn > 0) {
+            detail.append(" (line: ").append(sourceLine).append(", column: ").append(sourceColumn).append(')');
         }
         return detail.toString();
     }

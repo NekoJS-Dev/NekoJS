@@ -99,13 +99,13 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
         Path outer = paths.serverScripts().resolve("src/outer.js");
         Files.writeString(outer, "require('./inner-broken.js')\n");
 
-        // 内层诊断经 Graal guest 边界传播后异常类型丢失（转为 guest error），
-        // 但完整诊断文本（含 at <file>:<line>:<column>）保留在外层异常消息里
+        // 内层准备诊断穿过 Graal guest 边界后仍保留 PREPARE 阶段，
+        // 完整诊断文本（含 at <file>:<line>:<column>）也保留在异常消息里。
         IOException error = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/outer.js"));
 
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
-                error, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+                error, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PREPARATION);
         String message = String.valueOf(staged.getMessage());
         assertTrue(message.contains("SyntaxError"), "message was: " + message);
         assertTrue(message.contains("inner-broken.js:2:7"), "message was: " + message);
