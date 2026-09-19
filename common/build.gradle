@@ -1,6 +1,8 @@
-// 引擎模块：MC / Loader 无关的纯 Java 21 主体，四个节点共用。com.tkisor.nekojs.api.* 是对外
-// 契约包（零 MC/Loader/Graal import，由 guardLint 按包前缀强制，ADR-0007）；其余包是引擎实现，
-// 允许直接依赖 Graal。不发布 Maven 制品，产物由各节点内嵌进平台 fat jar。
+// 引擎模块：MC / Loader 无关的纯 Java 21 主体，五个节点共用。com.tkisor.nekojs.api.* 是对外
+// 契约包（零 MC/Loader import，由 guardLint 按包前缀强制，ADR-0007）；其余包是引擎实现。
+// Graal 不是禁止项：common（含 api.*）允许直接依赖 GraalJS —— "契约层零 Graal import"
+// 已按票 33（2026-09-19）移除，见 docs/adr/0007-module-boundaries.md 的修订注记。
+// 不发布 Maven 制品，产物由各节点内嵌进平台 fat jar。
 
 plugins {
     id 'java-library'
@@ -100,17 +102,25 @@ test {
 }
 
 // Guard the common module's MC/loader-agnostic invariant: common must not import
-// Minecraft, Forge, or NeoForge types (it is compiled on Java 21 with no MC deps and
-// shared across all 4 platforms). Graal imports ARE allowed — common intentionally owns
-// the GraalJS engine. Overlaps guardLint's L2 rule; kept so `:common:check` alone catches it.
+// Minecraft / NeoForge / Fabric / Mojang types (it is compiled on Java 21 with no MC deps
+// and shared across all 5 platforms). Graal imports ARE allowed — common intentionally owns
+// the GraalJS engine.
+//
+// 前缀表必须与另两处强制点一致（票 33 review F1：原先只有 3 个前缀、漏 net.fabricmc 与
+// com.mojang，导致"只跑 :common:check"比聚合门禁弱）：
+//   - stonecutter.gradle.kts 的 guardLint  L1/L2 mcLoaderImport
+//   - ModulePipelineIsolationTest 的 scan() 禁止项
+// 三处一致由 CommonIsolationPrefixAgreementTest 在 :common:test 里断言。
 tasks.register('checkCommonIsolation') {
     group = 'verification'
-    description = 'Rejects Minecraft/Forge/NeoForge imports in common (keeps it MC-agnostic).'
+    description = 'Rejects Minecraft/NeoForge/Fabric/Mojang imports in common (keeps it platform-agnostic).'
 
     def forbiddenPrefixes = [
         'net.minecraft',
         'net.minecraftforge',
-        'net.neoforged'
+        'net.neoforged',
+        'net.fabricmc',
+        'com.mojang'
     ]
 
     inputs.files(fileTree('src/main/java') { include '**/*.java' })

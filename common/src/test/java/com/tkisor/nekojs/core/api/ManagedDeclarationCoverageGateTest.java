@@ -70,7 +70,6 @@ class ManagedDeclarationCoverageGateTest {
 
         Set<String> renderedOwners = interfaceOwners(ts);
         Set<String> renderedGlobals = constNames(ts);
-        Set<String> renderedTypes = interfaceOwners(ts);
 
         Set<String> contractOwners = new TreeSet<>();
         Set<String> contractGlobals = new TreeSet<>();
@@ -130,12 +129,11 @@ class ManagedDeclarationCoverageGateTest {
                         + " :: 声明渲染了契约没有的 const " + global);
             }
         }
-        for (String type : contractTypes) {
-            if (!renderedTypes.contains(type)) {
-                gaps.add("missing-type type=" + type + " owner_ref=Managed Surface/Probe owner"
-                        + " :: 契约 type 符号未渲染为 interface $" + type);
-            }
-        }
+        // 票 33 review F6：`kind="type"` 的 ApiSymbolId 目前**没有任何生产者**（实际构造的 kind
+        // 只有 global/member/event/adapter/hostExt/java，grep 实证），所以"契约 type → 声明 interface"
+        // 的断言是不可达的——那正是 AC3 要消灭的"把没证据写成覆盖"。这里改为把契约 type 集合
+        // 作为**事实**逐项输出（当前为空集），一旦将来真出现 type-kind 符号，下面的
+        // type-symbol-observed 会立刻把它暴露出来，而不是靠一条永远为真的断言装作已覆盖。
         // 契约携带但渲染器无法识别类型的符号：声明里只能是 unknown —— 显式记录，不静默通过。
         for (ApiSymbol symbol : symbols) {
             for (String fallback : unknownFallbackTypes(symbol)) {
@@ -147,10 +145,13 @@ class ManagedDeclarationCoverageGateTest {
             }
         }
 
+        gaps.addAll(typeKindGaps(symbols));
+
         Map<String, String> rows = new TreeMap<>();
         rows.put("globals", String.join(",", contractGlobals));
         rows.put("owners", String.join(",", contractOwners));
-        rows.put("types", String.join(",", contractTypes));
+        rows.put("types", contractTypes.isEmpty()
+                ? "<empty: no kind=type producer in the contract>" : String.join(",", contractTypes));
         rows.put("members", String.valueOf(contractMembers.size()));
         rows.put("signatures", String.valueOf(symbols.stream().mapToInt(s -> s.signatures().size()).sum()));
         emitReport(rows, gaps);
@@ -163,6 +164,61 @@ class ManagedDeclarationCoverageGateTest {
         Map<String, String> expected = readFixture();
         assertEquals(expected, rows, "declaration parity 基线漂移（fixture=" + FIXTURE
                 + "）。确认是规范/渲染器的有意变更后更新 fixture 并在工单 33 REPORT 的 golden 差异小节留记录");
+    }
+
+    /**
+     * 票 33 review F6 的反向检查：`type-symbol-observed` 必须真的会被触发。
+     * 用一个合成的 type-kind 契约符号跑同一段分类逻辑，断言它产出可定位缺口
+     * （而不是像原 missing-type 那样永远不可达）。
+     */
+    @Test
+    void typeKindSymbolProducesObservableGap() {
+        List<ApiSymbol> symbols = List.of(new ApiSymbol(
+                ApiSymbolId.parse("type:Synthetic"),
+                List.of(ApiSignature.function(List.of(), ApiTypeRef.voidType()))));
+
+        List<String> gaps = typeKindGaps(symbols);
+
+        assertTrue(gaps.stream().anyMatch(g -> g.startsWith("type-symbol-observed type=Synthetic")),
+                "type-kind 符号必须产出可定位缺口，而不是被静默忽略：" + gaps);
+    }
+
+    /**
+     * 票 33 review F6：`kind="type"` 目前没有生产者，因此正向输入必然为空集；
+     * 这条断言把这个**事实**钉住——断言空集本身（而不是一条永远为真的 missing-type）。
+     */
+    @Test
+    void contractCarriesNoTypeKindSymbolsToday() {
+        CoreManagedApiBootstrap.CoreManagedApi core =
+                CoreManagedApiBootstrap.load(new EmptyPlatform(), TEST_CODE_SOURCE);
+        FrozenApiRegistry registry = JsApiSurfaceResolver.resolve(
+                ApiSurfaceTestSupport.serverEnvironment(), core.contracts(),
+                List.of(core.contributions()), List.of());
+
+        List<String> gaps = typeKindGaps(registry.environmentSnapshot().surfaceSnapshot().symbols());
+
+        assertTrue(gaps.stream().noneMatch(g -> g.startsWith("type-symbol-observed")),
+                "当前契约不应出现 type-kind 符号；出现则必须先补渲染器：" + gaps);
+    }
+
+    /**
+     * 票 33 review F6：契约里出现 {@code kind="type"} 符号时的可定位缺口。
+     *
+     * <p>当前契约没有 type-kind 生产者，所以正常输入返回空列表；`typeKindSymbolProducesObservableGap`
+     * 用合成符号证明这条诊断**真的可达**（原 `missing-type` 断言两侧都由同一集合驱动、
+     * 永远为真，属于 AC3 要消灭的假覆盖）。
+     */
+    static List<String> typeKindGaps(List<ApiSymbol> symbols) {
+        List<String> gaps = new ArrayList<>();
+        for (ApiSymbol symbol : symbols) {
+            if (!"type".equals(symbol.id().kind())) continue;
+            gaps.add("type-symbol-observed type=" + symbol.id().qualifiedName()
+                    + " owner_ref=Managed Surface/Probe owner"
+                    + " :: 契约出现了 type-kind 符号，但 ManagedApiDeclarationGenerator 尚无该 kind 的"
+                    + "渲染路径（TS 声明只渲染 global/member）。必须补渲染器并更新本 gate，"
+                    + "不要在 gate 里放宽断言");
+        }
+        return gaps;
     }
 
     // ---- 渲染产物读取 ----
