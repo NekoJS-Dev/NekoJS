@@ -23,3 +23,6 @@ logs/
 
 # Python gate 工具缓存
 __pycache__/
+
+# 遗留归档工作区：自成一个独立仓库（见其 README），不得作为子仓库/gitlink 提交
+NekoJS-mult/
