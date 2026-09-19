@@ -41,7 +41,8 @@ class ModulePipelineIsolationTest {
             "core/module/NekoModulePipelineCache.java",
             "core/module/NekoTrustApprovedSource.java",
             "core/module/NekoModuleError.java",
-            "core/compiler/NekoLegacyLanguagePlugin.java");
+            "core/compiler/NekoLegacyLanguagePlugin.java",
+            "api/event/ScriptBindingSchema.java");
 
     /** Resolution/Cache 纯层：同上（host 与 ESM lifecycle 属执行委托面，另行断言）。 */
     private static final List<String> RESOLUTION_FILES = List.of(
@@ -267,6 +268,18 @@ class ModulePipelineIsolationTest {
         var resolverConstructor = NekoModuleResolver.class.getConstructor(
                 Path.class, Path.class, Path.class, com.tkisor.nekojs.core.ScriptFilePolicy.class);
         assertTrue(resolverConstructor != null, "resolver must expose the plain Path constructor");
+    }
+
+    @Test
+    void implementationParserAndApprovalSurfaceIsPackagePrivate() throws Exception {
+        assertTrue(!Modifier.isPublic(NekoModuleIdentity.class.getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoModulePipeline.class.getDeclaredMethod("identify", Path.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoModulePipeline.class.getDeclaredMethod(
+                "prepare", Path.class, String.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoModulePipeline.class.getDeclaredMethod(
+                "prepare", Path.class, String.class, NekoTrustApprovedSource.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoModulePipelineCache.class.getDeclaredMethod(
+                "approvedSource", Path.class).getModifiers()));
     }
 
     private static void assertNoZeroArgumentConstructor(Class<?> type) {

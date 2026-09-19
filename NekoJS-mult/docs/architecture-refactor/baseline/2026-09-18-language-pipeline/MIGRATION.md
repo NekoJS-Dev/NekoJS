@@ -105,9 +105,9 @@ export const same = ns.default === greet;
 | 旧（已删除） | 新 |
 |---|---|
 | `NekoModulePipeline.bindLegacyInstance / legacyInstance / legacyPrepare` | 构造器注入 `new NekoModulePipeline(compilation, registry, config)`；生产唯一实例由 `NekoRuntimeAssembly` 创建并传入 `NekoSandboxFactory` 与 `NekoRuntimeRoot` |
-| `NekoModulePipelineCache.prepare / clear / clear(type) / invalidate`（static） | 实例方法；生产共享 `NekoRuntimeRoot#preparationCache()`；旧构造器（manager/host/linker/rewriter/coordinator/filesystem/installer）自建隔离实例 |
+| `NekoModulePipelineCache.prepare / clear / clear(type) / invalidate`（static） | 实例方法；生产共享 `NekoRuntimeRoot` 持有的 cache；manager/host/linker/rewriter/coordinator/filesystem/installer 均使用显式注入的 cache，测试使用显式 fixture |
 | `NekoModuleReadService.readPreparedBytes(path)` / `readTransformedModule(path)` | 同名方法加 `NekoModulePipelineCache` 参数（纯函数，无隐藏状态） |
-| `new NekoScriptModuleLoaderHost(ctx[, resolver, paths])` | 行为不变（自建隔离缓存）；生产用四参构造传入共享实例 |
+| Host construction | 统一使用带 resolver 与显式 cache 的构造器；生产与测试都由调用者提供 cache |
 | `NekoPreparedModule(code, sourceMap, mode, ast, cjs, lines)` 位置构造 | 新增 `languageId / sourcePath / cacheKey` 组件；稳定 key 覆盖规范化 source path、语言、mode、code 和实际 source map；管线用显式工厂 `commonJs(lang, path, …)` / `esm(lang, path, …)`，旧三参工厂保留（默认 `language=unknown`） |
 
 `NekoRuntimeRoot#closeSilently` 全清其持有的 prepared 缓存（server stop/切世界/reload 不清空，
@@ -181,3 +181,23 @@ Review-round-8 的证据是 `NekoModulePipelineCacheSessionTest`、
 `ScriptReloadGenerationTest`、`PackSyncClientTest`、`ModulePipelineIsolationTest`、
 `SourceMapRegistryTest`、`NekoModuleResolverTest` 及 common/platform Gradle gates。未执行的真实
 Minecraft、loader runtime、client/server network session 不在本轮 evidence 中，不应从这些单测或编译结果推断已通过。
+
+## 6. Review-round-9 final review fixes
+
+本轮没有脚本侧迁移；修复的是 common 运行时边界、候选生命周期和平台适配结果。
+
+- `ScriptBindingSchema.inferType` 现在只按 `ScriptType.name + "_scripts"` 路径段推导类型，Preparation、global binding validator 和 event callback validator 不再读取 `ScriptTypeEnv`、`NekoJSPaths` 或 `Platform`。对应测试使用任意路径根，隔离扫描也覆盖该 schema 文件。
+- `DefaultErrorTracker` 按 `ScriptType` 保存 active/candidate module views；`ScriptError` 在创建时捕获该类型当前 session 的只读 source-map/virtual-module view。候选 session 只进入 candidate 表，commit 才发布为该类型的 active view，失败时丢弃 candidate 并恢复原 active view，不会覆盖其它类型或其它 manager。
+- CJS `require()` 使用严格的 `resolveChildForRequire`。最高调用者对缺失 bare package 观察到 `NekoModuleError.Stage.RESOLVE`，不会降级为 SPECIAL 或延迟到 EXECUTE。
+- `PackSyncClient.handleHashList` 返回 `Outcome`。deactivation/reload 失败时恢复旧 active registry、runtime trust、address、bucket 和 expected hashes；NeoForge/Fabric hash-list handler 消费该 Outcome 并断连。bundle failure 的既有 rollback 语义保持。
+- `NekoModulePipelineCache.clear()` 仍是可继续使用的普通清理；新增 root-only `closeOwner()`/`AutoCloseable` 终止 owner，`NekoRuntimeRoot.closeSilently()` 调用它，closed root 拒绝新的 session。
+- `identify`、`NekoModulePipeline` 的 preparation overloads、`NekoModuleIdentity` 和 `NekoModulePipelineCache.approvedSource` 收窄为 `core.module` package-private implementation surface；`NekoPreparedModule`、cache/host 的实际 production API 保持不变。
+
+Final review evidence commands:
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest --tests com.tkisor.nekojs.core.pack.sync.PackSyncClientTest
+./gradlew.bat :common:compileJava :common:compileTestJava
+```
+
+本轮还需执行的验收命令为 `:common:check`、`:26.2.0:compileJava`、`:26.2.0-fabric:compileJava` 和 `git diff --check`；本轮未执行真实 Minecraft、loader runtime 或 network session smoke，未更新 golden。

@@ -103,6 +103,21 @@ class NekoModuleIdentityLifecycleTest {
     }
 
     @Test
+    void requireMissingBarePackageReportsModuleNotFoundBeforeSpecialExecution() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/missing-package-entry.cjs");
+        Files.writeString(entry, "module.exports = require('missing-package');\n");
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/missing-package-entry.cjs"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.RESOLVE, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        assertEquals("missing-package", staged.moduleId());
+        assertTrue(staged.detail().contains("missing-package"));
+        assertTrue(!staged.detail().contains("special"), "missing bare packages must not enter SPECIAL resolution");
+    }
+
+    @Test
     void circularRequireTerminatesWithPartialExports() throws Exception {
         Path dir = paths.serverScripts().resolve("src");
         Files.writeString(dir.resolve("circ-a.cjs"),

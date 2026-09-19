@@ -95,17 +95,24 @@ public final class PackSyncClient {
      * 处理哈希清单（主线程）。空清单 = 清空远端包并重载；hashOnly 客户端模式同样清空
      * 且永不执行。非空清单记录预期哈希，等待随后的 bundle。
      */
-    public static synchronized void handleHashList(NekoRuntimeRoot runtimeRoot,
-                                                   String serverAddress, List<HashEntry> entries) {
+    public static synchronized Outcome handleHashList(NekoRuntimeRoot runtimeRoot,
+                                                      String serverAddress, List<HashEntry> entries) {
+        ActiveState previousState = activeState();
         if (clientModeOff()) {
             if (!ScriptPackRegistry.get().serverCachePacks().isEmpty() || !expectedHashes.isEmpty()) {
-                deactivateAndReload("client packSync mode is off", activeRemoteRoot(), runtimeRoot);
+                Outcome outcome = deactivateAndReload("client packSync mode is off", previousState, runtimeRoot);
+                if (outcome.shouldDisconnect()) {
+                    restoreConnectionState(previousState);
+                    return outcome;
+                }
             }
-            return;
+            activeAddress = null;
+            activeBucket = null;
+            expectedHashes = Map.of();
+            return Outcome.accepted();
         }
         String nextAddress = normalizeAddress(serverAddress);
         String nextBucket = PackSyncTrustStore.bucketFor(nextAddress);
-        Path previousRemoteRoot = activeRemoteRoot();
         Map<String, String> hashes = new LinkedHashMap<>();
         for (HashEntry entry : entries) {
             hashes.put(entry.syncId(), entry.hash());
@@ -115,27 +122,39 @@ public final class PackSyncClient {
         activeAddress = nextAddress;
         activeBucket = nextBucket;
         expectedHashes = hashes;
-        Path remoteRoot = ServerPackCache.bucketDir(activeBucket);
         boolean revoked = false;
         if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty() && activeSetChanged)) {
             // Do not let the previous active/credential set run while this server's bundle is pending.
-            deactivateAndReload("server pack hash list changed", previousRemoteRoot, runtimeRoot);
+            Outcome outcome = deactivateAndReload("server pack hash list changed", previousState, runtimeRoot);
+            if (outcome.shouldDisconnect()) {
+                restoreConnectionState(previousState);
+                return outcome;
+            }
             revoked = true;
         }
 
         if (hashes.isEmpty()) {
             // 服务器无同步包：清空远端缓存包（缓存文件保留）并重载客户端脚本
             if (!revoked) {
-                deactivateAndReload("server sent an empty pack hash list", previousRemoteRoot, runtimeRoot);
+                Outcome outcome = deactivateAndReload("server sent an empty pack hash list", previousState, runtimeRoot);
+                if (outcome.shouldDisconnect()) {
+                    restoreConnectionState(previousState);
+                    return outcome;
+                }
             }
-            return;
+            return Outcome.accepted();
         }
         if (clientModeHashOnly()) {
             if (!revoked) {
-                deactivateAndReload("client packSync mode is hashOnly", remoteRoot, runtimeRoot);
+                Outcome outcome = deactivateAndReload("client packSync mode is hashOnly", previousState, runtimeRoot);
+                if (outcome.shouldDisconnect()) {
+                    restoreConnectionState(previousState);
+                    return outcome;
+                }
             }
         }
         // 非 hashOnly：保留当前激活集，等待 bundle 到达后整体替换（避免双重重载）
+        return Outcome.accepted();
     }
 
     /* ================= bundle ================= */
@@ -146,13 +165,18 @@ public final class PackSyncClient {
      */
     public static synchronized Outcome handleBundle(NekoRuntimeRoot runtimeRoot, List<SyncedPack> packs) {
         if (clientModeOff()) {
-            deactivateAndReload("client packSync mode is off", activeRemoteRoot(), runtimeRoot);
-            return Outcome.accepted();
+            Outcome outcome = deactivateAndReload("client packSync mode is off", activeState(), runtimeRoot);
+            if (!outcome.shouldDisconnect()) {
+                activeAddress = null;
+                activeBucket = null;
+                expectedHashes = Map.of();
+            }
+            return outcome;
         }
         if (clientModeHashOnly()) {
-            deactivateAndReload("client packSync mode is hashOnly", activeRemoteRoot(), runtimeRoot);
+            Outcome outcome = deactivateAndReload("client packSync mode is hashOnly", activeState(), runtimeRoot);
             NekoJS.LOGGER.info("Ignoring server pack bundle (client packSync mode is hashOnly)");
-            return Outcome.accepted();
+            return outcome;
         }
         if (activeBucket == null) {
             // 未见过哈希清单（异常顺序）：以内存侧自算哈希做落盘自检基准
@@ -267,28 +291,52 @@ public final class PackSyncClient {
 
     /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有激活包时重载客户端脚本。 */
     public static synchronized void handleDisconnect(NekoRuntimeRoot runtimeRoot) {
+        ActiveState previousState = activeState();
         expectedHashes = Map.of();
-        Path previousRemoteRoot = activeRemoteRoot();
         activeAddress = null;
         activeBucket = null;
-        deactivateAndReload("disconnected from server", previousRemoteRoot, runtimeRoot);
+        Outcome outcome = deactivateAndReload("disconnected from server", previousState, runtimeRoot);
+        if (outcome.shouldDisconnect()) {
+            restoreConnectionState(previousState);
+        }
     }
 
     /* ================= 内部 ================= */
 
-    private static void deactivateAndReload(String reason, Path remoteRoot, NekoRuntimeRoot runtimeRoot) {
+    private static Outcome deactivateAndReload(String reason, ActiveState previousState,
+                                               NekoRuntimeRoot runtimeRoot) {
         var removed = ScriptPackRegistry.get().deactivateServerCachePacks();
+        Path remoteRoot = previousState.remoteRoot();
         if (runtimeRoot != null) {
-            runtimeRoot.revokeRemoteSources(remoteRoot);
+            try {
+                runtimeRoot.revokeRemoteSources(remoteRoot);
+            } catch (Throwable failure) {
+                restorePreviousActivation(runtimeRoot, remoteRoot, previousState.activePacks(), previousState.activeRoot());
+                return Outcome.disconnect("NekoJS remote script pack deactivation failed: " + failure.getMessage());
+            }
         }
         if (!removed.isEmpty()) {
             NekoJS.LOGGER.info("Deactivated {} server cache pack(s): {}", removed.size(), reason);
             if (!reloadClientScripts(reason)) {
                 NekoJS.LOGGER.error("CLIENT runtime did not accept server pack deactivation ({})", reason);
-                restorePreviousActivation(runtimeRoot, remoteRoot, removed,
-                        removed.isEmpty() ? null : removed.get(0).root().getParent());
+                restorePreviousActivation(runtimeRoot, remoteRoot, previousState.activePacks(), previousState.activeRoot());
+                return Outcome.disconnect("NekoJS remote script pack deactivation rejected: CLIENT script reload failed");
             }
         }
+        return Outcome.accepted();
+    }
+
+    private static ActiveState activeState() {
+        List<ScriptPack> active = List.copyOf(ScriptPackRegistry.get().serverCachePacks());
+        Path activeRoot = active.isEmpty() ? null : active.get(0).root().getParent();
+        return new ActiveState(activeAddress, activeBucket, expectedHashes, active, activeRoot,
+                activeRemoteRoot());
+    }
+
+    private static void restoreConnectionState(ActiveState state) {
+        activeAddress = state.address();
+        activeBucket = state.bucket();
+        expectedHashes = state.expectedHashes();
     }
 
     /** Keep the old active generation and its trust set when a replacement reload is rejected. */
@@ -450,6 +498,14 @@ public final class PackSyncClient {
 
     /** 哈希清单条目（平台 payload → common 的映射单位）。 */
     public record HashEntry(String syncId, String hash) {}
+
+    private record ActiveState(String address, String bucket, Map<String, String> expectedHashes,
+                               List<ScriptPack> activePacks, Path activeRoot, Path remoteRoot) {
+        private ActiveState {
+            expectedHashes = Map.copyOf(expectedHashes == null ? Map.of() : expectedHashes);
+            activePacks = List.copyOf(activePacks == null ? List.of() : activePacks);
+        }
+    }
 
     /** bundle 处理结果：disconnect 非空时平台断连并展示消息。 */
     public record Outcome(String disconnect) {

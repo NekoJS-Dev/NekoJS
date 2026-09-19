@@ -48,8 +48,11 @@ public final class DefaultErrorTracker implements ErrorTracker {
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
     private final NekoJSPaths paths;
     private final SandboxConfig config;
-    private volatile NekoSourceMapView sourceMaps;
-    private volatile NekoVirtualModuleView virtualModules;
+    private final ModuleViews defaultModuleViews;
+    private final Map<ScriptType, ModuleViews> activeModuleViews = new ConcurrentHashMap<>();
+    private final Map<ScriptType, ModuleViews> candidateModuleViews = new ConcurrentHashMap<>();
+
+    record ModuleViews(NekoSourceMapView sourceMaps, NekoVirtualModuleView virtualModules) {}
 
     public DefaultErrorTracker(NekoJSPaths paths, SandboxConfig config) {
         this(paths, config, new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()));
@@ -59,8 +62,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
                                NekoEsmVirtualModuleRegistry virtualModules) {
         this.paths = paths;
         this.config = config;
-        this.sourceMaps = sourceMaps;
-        this.virtualModules = virtualModules;
+        this.defaultModuleViews = new ModuleViews(sourceMaps, virtualModules);
     }
 
     public NekoJSPaths paths() {
@@ -72,17 +74,34 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     NekoSourceMapView sourceMaps() {
-        return sourceMaps;
+        return defaultModuleViews.sourceMaps();
     }
 
     NekoVirtualModuleView virtualModules() {
-        return virtualModules;
+        return defaultModuleViews.virtualModules();
     }
 
-    /** Switch diagnostics to the registry views owned by one active generation session. */
-    public void activateModuleViews(NekoModulePipelineCache moduleSession) {
-        this.sourceMaps = moduleSession.sourceMapView();
-        this.virtualModules = moduleSession.virtualModuleView();
+    ModuleViews moduleViews(ScriptType type) {
+        ModuleViews active = type == null ? null : activeModuleViews.get(type);
+        ModuleViews candidate = type == null ? null : candidateModuleViews.get(type);
+        return candidate != null ? candidate : active != null ? active : defaultModuleViews;
+    }
+
+    /** Publish one type's active generation views without affecting any other type. */
+    public void activateModuleViews(ScriptType type, NekoModulePipelineCache moduleSession) {
+        if (type == null || moduleSession == null) return;
+        activeModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+        candidateModuleViews.remove(type);
+    }
+
+    /** Candidate views are visible only to errors created by that type during candidate execution. */
+    public void activateCandidateModuleViews(ScriptType type, NekoModulePipelineCache moduleSession) {
+        if (type == null || moduleSession == null) return;
+        candidateModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+    }
+
+    public void discardCandidateModuleViews(ScriptType type) {
+        if (type != null) candidateModuleViews.remove(type);
     }
 
     /** Save one script type's errors before candidate execution can replace same-id entries. */
@@ -141,7 +160,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if (loc != null) {
                 Source source = loc.getSource();
                 if (source != null) {
-                    pathStr = extractRelativePath(source);
+                    pathStr = extractRelativePath(currentType, source);
                 }
             }
         } else {
@@ -235,7 +254,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     private boolean sameEventError(ScriptError previous, Throwable throwable) {
-        ScriptError.ErrorSignature signature = ScriptError.parseSignature(this, throwable, previous.getScript());
+        ScriptError.ErrorSignature signature = ScriptError.parseSignature(this, throwable, previous.getScript(), previous.getScriptType());
         return Objects.equals(previous.getErrorMessage(), signature.errorMessage)
                 && previous.getLineNumber() == signature.lineNumber
                 && previous.getColumnNumber() == signature.columnNumber;
@@ -316,6 +335,12 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     public String getMappedStackTrace(PolyglotException e) {
+        ModuleViews views = moduleViews(null);
+        return getMappedStackTrace(e, null, views.sourceMaps(), views.virtualModules());
+    }
+
+    String getMappedStackTrace(PolyglotException e, ScriptType type,
+                               NekoSourceMapView sourceMapView, NekoVirtualModuleView virtualModuleView) {
         StringBuilder sb = new StringBuilder();
         sb.append(e.getMessage()).append("\n");
 
@@ -323,11 +348,11 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if (frame.isGuestFrame()) {
                 SourceSection loc = frame.getSourceLocation();
                 if (loc != null && loc.getSource() != null) {
-                    String pathStr = extractRelativePath(loc.getSource());
+                    String pathStr = extractRelativePath(type, loc.getSource(), virtualModuleView);
                     int rawLine = loc.getStartLine();
                     int rawColumn = loc.getStartColumn();
 
-                    SourceMapRegistry.OriginalPosition pos = sourceMaps.getMappedPosition(pathStr, rawLine, rawColumn);
+                    SourceMapRegistry.OriginalPosition pos = sourceMapView.getMappedPosition(pathStr, rawLine, rawColumn);
                     String mappedPath = pos.path != null && !pos.path.isBlank() ? pos.path : pathStr;
                     int realLine = getRealCodeLine(mappedPath, pos.line);
                     String rootName = frame.getRootName();
@@ -364,19 +389,28 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     public String extractRelativePath(Source source) {
+        ModuleViews views = moduleViews(null);
+        return extractRelativePath(null, source, views.virtualModules());
+    }
+
+    String extractRelativePath(ScriptType type, Source source) {
+        return extractRelativePath(type, source, moduleViews(type).virtualModules());
+    }
+
+    String extractRelativePath(ScriptType type, Source source, NekoVirtualModuleView virtualModuleView) {
         if (source.getPath() != null) {
             String pathText = source.getPath();
             String scriptDisplayPath = extractScriptDisplayPath(pathText);
             if (scriptDisplayPath != null) {
                 return scriptDisplayPath;
             }
-            String virtualDisplayPath = virtualModules.displayPath(pathText);
+            String virtualDisplayPath = virtualModuleView.displayPath(pathText);
             if (virtualDisplayPath != null) {
                 return virtualDisplayPath;
             }
             try {
                 Path path = Path.of(pathText);
-                virtualDisplayPath = virtualModules.displayPath(path);
+                virtualDisplayPath = virtualModuleView.displayPath(path);
                 if (virtualDisplayPath != null) {
                     return virtualDisplayPath;
                 }
@@ -393,7 +427,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if ("file".equalsIgnoreCase(source.getURI().getScheme())) {
                 try {
                     Path path = Path.of(source.getURI());
-                    String virtualDisplayPath = virtualModules.displayPath(path);
+                    String virtualDisplayPath = virtualModuleView.displayPath(path);
                     if (virtualDisplayPath != null) {
                         return virtualDisplayPath;
                     }
@@ -401,7 +435,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
                     // A malformed local URI can still fall through to virtual path resolution.
                 }
             }
-            String virtualDisplayPath = virtualModules.displayPath(uriText);
+            String virtualDisplayPath = virtualModuleView.displayPath(uriText);
             if (virtualDisplayPath != null) {
                 return virtualDisplayPath;
             }

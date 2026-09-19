@@ -921,7 +921,7 @@ public final class ScriptManager implements AutoCloseable {
             RuntimeEnvironment candidateEnvironment = new RuntimeEnvironment(
                     candidate.context(), candidate.nodeRuntime(), candidate.outStream(),
                     candidate.errStream(), candidate.globals(), moduleSession);
-            activateModuleViews(moduleSession);
+            activateCandidateModuleViews(moduleSession);
             CONTEXT_TO_MANAGER.put(candidate.context(), this);
             ScriptContextRegistry.bind(candidate.context(), scriptType);
             this.candidateContext = candidate.context();
@@ -976,6 +976,7 @@ public final class ScriptManager implements AutoCloseable {
             scriptEventBridge.clearListeners(scriptType);
             // (2) 生产路由切换：新 generation 成为 live 环境
             this.runtime = candidateEnvironment;
+            activateModuleViews(candidateEnvironment.moduleSession());
             this.scripts = candidateScripts;
             this.generation = candidateGeneration;
             this.contextKilled = false;
@@ -1010,6 +1011,7 @@ public final class ScriptManager implements AutoCloseable {
             this.candidateEnvironment = null;
             this.candidateKilled = false;
             this.candidateKillScript = null;
+            discardCandidateModuleViews();
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
             if (defaultTracker != null) {
                 defaultTracker.restoreType(scriptType, candidateErrorSnapshot);
@@ -1264,7 +1266,21 @@ public final class ScriptManager implements AutoCloseable {
         private void activateModuleViews(NekoModulePipelineCache moduleSession) {
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
             if (defaultTracker != null) {
-                defaultTracker.activateModuleViews(moduleSession);
+                defaultTracker.activateModuleViews(scriptType, moduleSession);
+            }
+        }
+
+        private void activateCandidateModuleViews(NekoModulePipelineCache moduleSession) {
+            DefaultErrorTracker defaultTracker = defaultErrorTracker();
+            if (defaultTracker != null) {
+                defaultTracker.activateCandidateModuleViews(scriptType, moduleSession);
+            }
+        }
+
+        private void discardCandidateModuleViews() {
+            DefaultErrorTracker defaultTracker = defaultErrorTracker();
+            if (defaultTracker != null) {
+                defaultTracker.discardCandidateModuleViews(scriptType);
             }
         }
 

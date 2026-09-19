@@ -2,9 +2,15 @@ package com.tkisor.nekojs.core.error;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoModulePipeline;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
+import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
+import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
@@ -89,6 +95,38 @@ class DefaultErrorTrackerTest {
         assertEquals(NekoSourceMapView.class, sourceMaps.getReturnType());
         assertEquals(com.tkisor.nekojs.core.module.NekoVirtualModuleView.class,
                 virtualModules.getReturnType());
+    }
+
+    @Test
+    void moduleViewsAreScopedByTypeAndCandidateCommit() {
+        NekoJSPaths paths = NekoJSPaths.get();
+        NekoModulePipelineCache server = newCache(paths);
+        NekoModulePipelineCache client = newCache(paths);
+        NekoModulePipelineCache candidate = newCache(paths);
+        try {
+            tracker.activateModuleViews(ScriptType.SERVER, server);
+            tracker.activateModuleViews(ScriptType.CLIENT, client);
+            DefaultErrorTracker.ModuleViews serverActive = tracker.moduleViews(ScriptType.SERVER);
+            DefaultErrorTracker.ModuleViews clientActive = tracker.moduleViews(ScriptType.CLIENT);
+
+            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidate);
+            assertSame(clientActive, tracker.moduleViews(ScriptType.CLIENT),
+                    "a SERVER candidate must not replace CLIENT active views");
+            assertNotSame(serverActive, tracker.moduleViews(ScriptType.SERVER));
+
+            tracker.discardCandidateModuleViews(ScriptType.SERVER);
+            assertSame(serverActive, tracker.moduleViews(ScriptType.SERVER),
+                    "discarding a candidate must restore that type's active views");
+
+            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidate);
+            tracker.activateModuleViews(ScriptType.SERVER, candidate);
+            assertNotSame(serverActive, tracker.moduleViews(ScriptType.SERVER));
+            assertSame(clientActive, tracker.moduleViews(ScriptType.CLIENT));
+        } finally {
+            server.closeOwner();
+            client.closeOwner();
+            candidate.closeOwner();
+        }
     }
 
     @Test
@@ -186,5 +224,13 @@ class DefaultErrorTrackerTest {
     private ScriptError singleError() {
         assertEquals(1, tracker.getErrorCount(), "应只保留一条错误记录");
         return tracker.getAllErrors().iterator().next();
+    }
+
+    private static NekoModulePipelineCache newCache(NekoJSPaths paths) {
+        return new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(),
+                        ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()),
+                new NekoEsmVirtualModuleRegistry(paths.root()), NekoTrustContext.local());
     }
 }

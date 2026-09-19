@@ -79,7 +79,7 @@
     继承 IOException（消息文本兼容既有断言）。
   - 注入收口：host/linker/rewriter/coordinator/readService/filesystem/installer/
     sandboxFactory/manager/root/assembly 全链路构造器注入；生产唯一共享实例由 assembly
-    创建并传入 factory 与 root；`root.closeSilently` 全清；旧构造器自建隔离实例（测试互不污染）。
+  创建并传入 factory 与 root；`root.closeSilently` 终止并清理 owner cache；manager、host、filesystem、installer 等调用者均使用显式注入的 cache，测试使用显式 fixture。
   - host 边界：resolve 失败→RESOLVE、宿主装载失败→EXECUTE（消息文本不变）、link 失败沿用
     `NekoEsmLinkException`（自带诊断）、guest 运行时异常原样传播。
 - 交付物（测试，common，共 53 新/改 + 13 prior-art 同域）：
@@ -403,3 +403,57 @@ golden 文件。上述限制是边界说明，不把未运行的真实 Minecraft
 - **2. PackSync stale active set：fixed.** `ScriptPackRegistry` 保留无参 `activateServerCachePacks(Path)` 的兼容全扫描语义，新增按 syncId 集合筛选的 overload，只扫描选中 syncId 编码目录；`PackSyncClient.handleBundle` 在盘上 `resolved` 完整性校验通过后传入 `resolved.keySet()`。bucket 中旧物理目录/文件不删除，但不会再进入 `serverCachePacks()`。`PackSyncClientTest#replacingBundleRejectsOldAndStaleFilesButAllowsCurrentSource` 断言旧文件仍在、active registry 只含当前目录且当前 source 可准备；`#switchingServerBucketsRevokesPreviousRuntimeSourcesBeforeActivatingNext` 保留并覆盖不同 bucket 切换。
 
 - **3. Evidence boundary：verified.** 相关单测、`:common:compileJava`、`:common:compileTestJava`、`:common:check`、`:26.2.0:compileJava`、`:26.2.0-fabric:compileJava` 和 `git diff --check` 为本轮验收命令；未宣称真实 Minecraft/network session smoke，未更新 golden。
+
+## Review-round-9 addendum (2026-09-19)
+
+本轮针对 `8610bc18` 的终审 findings 继续 fix-forward；`Status` 保持 `closed`。本 addendum
+只记录实际修法、测试和验证边界，不把未执行的真实 Minecraft/network smoke 标为完成。
+
+- **1. Preparation indirect platform：fixed.** `ScriptBindingSchema.inferType` / `typeByScriptsDirSegment`
+  现在只使用纯路径 segment 约定 `ScriptType.name + "_scripts"`，不再调用 `ScriptTypeEnv.scriptsDir`
+  或间接读取 `NekoJSPaths` / `Platform`。`ModulePipelineIsolationTest` 扫描 schema 文件以及
+  Preparation validator 链的边界；`ScriptBindingSchemaInferTypeTest` 使用不依赖平台初始化的任意
+  root、GLOBAL/WORLD 包路径和不相关路径。
+
+- **2. Error tracker module-view ownership：fixed.** `DefaultErrorTracker` 按 `ScriptType` 保存
+  active 与 candidate read-only views；`ScriptError` 创建时捕获对应类型/session 的 source-map 和
+  virtual-module view，stack mapping、display path 和 callback dedup 都使用该快照。候选执行只登记
+  candidate view，commit 才发布该类型的 active view，失败丢弃 candidate 并恢复该类型 active view；
+  不会让另一个 `ScriptType` 或另一个 manager 的 candidate 覆盖全局单组 view。证据为
+  `DefaultErrorTrackerTest#moduleViewsAreScopedByTypeAndCandidateCommit`、既有
+  `NekoModulePipelineCacheSessionTest` 和 `ScriptReloadGenerationTest`。
+
+- **3. CJS require semantics：fixed.** `NekoScriptModuleLoaderHost.requireFrom` 改走
+  `resolveChildForRequire`；`NekoModuleIdentityLifecycleTest#requireMissingBarePackageReportsModuleNotFoundBeforeSpecialExecution`
+  从入口 `require("missing-package")` 断言 `RESOLVE`/`missing-package`，不进入 SPECIAL/EXECUTE。
+
+- **4. PackSync hash-list outcome and rollback：fixed.** `handleHashList` 返回 `PackSyncClient.Outcome`；
+  deactivation/reload failure 恢复之前的 active registry、runtime trust、address、bucket 和 expected
+  hashes，并向调用者返回 disconnect outcome。NeoForge 与 Fabric hash-list handler 消费 outcome 并
+  断连；bundle failure 的既有 rollback 仍保留。证据为
+  `PackSyncClientTest#failedHashListDeactivationRestoresPreviousStateAndRejectsConnection`、既有
+  `reloadFailureRejectsBundleAndRevokesSelectedRuntimeState` 与
+  `failedReplacementRestoresThePreviousActiveRegistryAndCredentials`。
+
+- **5. Session owner close：fixed.** 普通 `clear()` 不再承担 owner close 语义；cache 新增 root-only
+  `closeOwner()` 和 `AutoCloseable` 实现，`NekoRuntimeRoot.closeSilently` 调用 `closeOwner`。关闭 root
+  后 `openSession` 拒绝，普通 clear 后仍可打开新 session；证据为
+  `NekoModulePipelineCacheSessionTest#discardedCandidateKeepsActivePreparedMapAndVirtualSource`。
+
+- **6. Public implementation surface：fixed.** `identify`、pipeline preparation overloads、
+  `NekoModuleIdentity` 和 `NekoModulePipelineCache.approvedSource` 收窄为 `core.module`
+  package-private；`NekoPreparedModule` 以及 cache/host 的真实 production API 未收窄。证据为
+  `ModulePipelineIsolationTest#implementationParserAndApprovalSurfaceIsPackagePrivate` 与 common
+  compile。
+
+### Review-round-9 evidence matrix
+
+| Finding | 精确证据 | 精确 Gradle 命令 | 结果与限制 |
+|---|---|---|---|
+| Preparation indirect platform | `ScriptBindingSchemaInferTypeTest`；`ModulePipelineIsolationTest` 的 schema/platform token scan | `./gradlew.bat :common:test --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；路径推导不需要平台初始化；未替代真实 loader bootstrap。 |
+| Per-type/session error views | `DefaultErrorTrackerTest#moduleViewsAreScopedByTypeAndCandidateCommit`；session/reload isolation tests | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.script.ScriptReloadGenerationTest` | PASS；覆盖 active/candidate discard/commit 观察；无真实多-loader runtime smoke。 |
+| Strict CJS require | `NekoModuleIdentityLifecycleTest#requireMissingBarePackageReportsModuleNotFoundBeforeSpecialExecution` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest` | PASS；入口级断言 `RESOLVE` 与 missing package。 |
+| Hash-list rollback outcome | `PackSyncClientTest` 新 hash-list failure test 与既有 bundle rollback tests | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.pack.sync.PackSyncClientTest` | PASS；NeoForge/Fabric 仅由源码接线与平台编译验证，未执行真实网络连接。 |
+| Owner close lifecycle | `NekoModulePipelineCacheSessionTest` clear/open/closeOwner assertions | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest` | PASS；normal clear 可重开，owner close 后拒绝。 |
+| Implementation API visibility | `ModulePipelineIsolationTest#implementationParserAndApprovalSurfaceIsPackagePrivate` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；只收窄无生产跨包调用的 implementation surface。 |
+| Required gates | common compile/check、26.2.0 NeoForge/Fabric compile、whitespace | `./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | 本轮最终结果以执行命令为准；不更新 golden，不宣称真实 Minecraft/network smoke。 |

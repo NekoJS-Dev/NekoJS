@@ -183,7 +183,7 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     public Object requireFrom(String parentPath, String specifier) throws IOException {
-        NekoResolvedModule resolved = resolveChild(parentPath, specifier);
+        NekoResolvedModule resolved = resolveChildForRequire(parentPath, specifier);
         recordDependency(parentPath, resolved);
         return loadResolved(resolved);
     }

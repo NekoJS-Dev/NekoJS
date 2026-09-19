@@ -34,7 +34,11 @@ public final class PackSyncMessageHandler {
         PackSyncClient.prepareMainThreadWork();
         context.enqueueWork(() -> {
             try {
-                PackSyncClient.handleHashList(PackSyncClientConnections.runtimeRootOrNull(), address, entries);
+                PackSyncClient.Outcome outcome = PackSyncClient.handleHashList(
+                        PackSyncClientConnections.runtimeRootOrNull(), address, entries);
+                if (outcome.shouldDisconnect()) {
+                    context.disconnect(Component.literal(outcome.disconnect()));
+                }
             } finally {
                 PackSyncClient.completeMainThreadWork();
             }
