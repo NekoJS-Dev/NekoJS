@@ -49,7 +49,7 @@ class NekoSandboxFactoryResourceTest {
                     "a failed build must unregister the partial module-host observer");
         } finally {
             session.closeSession();
-            owner.closeOwner();
+            owner.close();
             NekoPluginRuntime.bootstrap(List.of(), new ScriptPropertyRegistry.Impl());
         }
     }

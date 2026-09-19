@@ -285,6 +285,15 @@ class ModulePipelineIsolationTest {
     @Test
     void implementationParserAndApprovalSurfaceIsPackagePrivate() throws Exception {
         assertTrue(!Modifier.isPublic(NekoModuleIdentity.class.getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoPreparedModule.class.getDeclaredMethod(
+                "stableCacheKey", String.class, String.class, com.tkisor.nekojs.core.compiler.NekoModuleMode.class,
+                String.class, String.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoPreparedModule.class.getDeclaredMethod(
+                "commonJs", String.class, String.class, String.class, String.class,
+                com.tkisor.nekojs.core.module.cjs.CjsModuleRecord.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoPreparedModule.class.getDeclaredMethod(
+                "esm", String.class, String.class, String.class, String.class,
+                com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst.class).getModifiers()));
         assertTrue(!Modifier.isPublic(NekoModulePipeline.class.getDeclaredMethod("identify", Path.class).getModifiers()));
         assertTrue(!Modifier.isPublic(NekoModulePipeline.class.getDeclaredMethod(
                 "prepare", Path.class, String.class).getModifiers()));

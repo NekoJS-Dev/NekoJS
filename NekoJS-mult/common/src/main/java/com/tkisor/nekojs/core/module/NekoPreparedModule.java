@@ -52,8 +52,8 @@ public record NekoPreparedModule(
      * 稳定 cache key：由 source path、language id、mode、code、sourceMap 共同决定；
      * 任一输入变化即产生不同 key（篡改即变红的判定基础）。
      */
-    public static String stableCacheKey(String sourcePath, String languageId, NekoModuleMode mode,
-                                        String code, String sourceMap) {
+    static String stableCacheKey(String sourcePath, String languageId, NekoModuleMode mode,
+                                 String code, String sourceMap) {
         String normalizedPath = sourcePath == null ? "" : sourcePath.replace('\\', '/');
         String normalizedLanguage = languageId == null || languageId.isBlank() ? "unknown" : languageId;
         NekoModuleMode normalizedMode = mode == null ? NekoModuleMode.COMMONJS : mode;
@@ -74,8 +74,8 @@ public record NekoPreparedModule(
     }
 
     /** 显式语言/来源的 CJS 模块（管线生产路径用；旧三参工厂默认 language=unknown、来源 null）。 */
-    public static NekoPreparedModule commonJs(String languageId, String sourcePath, String code,
-                                              String sourceMap, CjsModuleRecord cjsRecord) {
+    static NekoPreparedModule commonJs(String languageId, String sourcePath, String code,
+                                       String sourceMap, CjsModuleRecord cjsRecord) {
         return new NekoPreparedModule(languageId, sourcePath, code, sourceMap, NekoModuleMode.COMMONJS, null, cjsRecord, 0, null);
     }
 
@@ -84,8 +84,8 @@ public record NekoPreparedModule(
     }
 
     /** 显式语言/来源的 ESM 模块（管线生产路径用）。 */
-    public static NekoPreparedModule esm(String languageId, String sourcePath, String code,
-                                         String sourceMap, NekoEsmModuleAst ast) {
+    static NekoPreparedModule esm(String languageId, String sourcePath, String code,
+                                  String sourceMap, NekoEsmModuleAst ast) {
         return new NekoPreparedModule(languageId, sourcePath, code, sourceMap, NekoModuleMode.ESM, ast, null, 0, null);
     }
 }

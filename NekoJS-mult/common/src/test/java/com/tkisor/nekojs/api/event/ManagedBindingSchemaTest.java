@@ -88,6 +88,41 @@ class ManagedBindingSchemaTest {
         }
     }
 
+    @Test
+    void lateFailureOfOlderSameTypeCandidateCannotRestoreOverNewActiveSchema() throws Exception {
+        ScriptBindingSchema.register(ScriptType.SERVER,
+                Map.of("InitialBinding", new ScriptBindingSchema.BindingMembers(Set.of("initial"))));
+
+        try (Context firstContext = Context.newBuilder("js").allowAllAccess(true).build();
+             Context secondContext = Context.newBuilder("js").allowAllAccess(true).build()) {
+            ScriptBindingSchema.installCandidate(firstContext, ScriptType.SERVER,
+                    Map.of("FirstBinding", new ScriptBindingSchema.BindingMembers(Set.of("first"))),
+                    Set.of("firstGlobal"));
+            ScriptBindingSchema.installCandidate(secondContext, ScriptType.SERVER,
+                    Map.of("SecondBinding", new ScriptBindingSchema.BindingMembers(Set.of("second"))),
+                    Set.of("secondGlobal"));
+
+            ScriptBindingSchema.publishCandidate(firstContext);
+            ScriptBindingSchema.discardCandidate(secondContext);
+
+            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("FirstBinding"));
+            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("InitialBinding"));
+            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("SecondBinding"));
+            assertEquals(Set.of("firstGlobal"), ScriptBindingSchema.knownGlobals(ScriptType.SERVER));
+        }
+    }
+
+    @Test
+    void missingContextViewDoesNotFallBackToStaticActiveSchema() throws Exception {
+        ScriptBindingSchema.register(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))));
+
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            assertTrue(ScriptBindingSchema.view(context, ScriptType.SERVER).lookup().isEmpty());
+            assertTrue(ScriptBindingSchema.schemaForPath(Path.of("server_scripts/missing.js"), null).isEmpty());
+        }
+    }
+
     private static EnvironmentKey serverEnv() {
         return new EnvironmentKey(
                 ScriptTypeId.SERVER,

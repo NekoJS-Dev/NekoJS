@@ -7,6 +7,7 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.event.ScriptEventRegistrar;
 import com.tkisor.nekojs.api.event.ScriptEvents;
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
@@ -480,7 +481,8 @@ public final class ScriptManager implements AutoCloseable {
                 }
                 closeRuntimeResources(this.runtime);
             }
-            NekoModulePipelineCache moduleSession = preparationCache.openSession();
+            NekoModulePipelineCache moduleSession = preparationCache.openSession(
+                    ScriptBindingSchema.activeView(scriptType));
             ScriptEnvironmentFactory.Environment env;
             RuntimeEnvironment created = null;
             com.tkisor.nekojs.core.state.GenerationGlobals generation =
@@ -925,7 +927,7 @@ public final class ScriptManager implements AutoCloseable {
         private RuntimeEnvironment createCandidateEnvironment () {
             com.tkisor.nekojs.core.state.GenerationGlobals candidateGlobals =
                     environmentFactory.newGeneration(scriptType, true);
-            NekoModulePipelineCache moduleSession = preparationCache.openSession();
+            NekoModulePipelineCache moduleSession = preparationCache.openSession(ScriptBindingSchema.emptyView());
             ScriptEnvironmentFactory.Environment candidate;
             try {
                 candidate = environmentFactory.createContext(scriptType, candidateGlobals, moduleSession);

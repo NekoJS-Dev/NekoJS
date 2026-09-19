@@ -308,7 +308,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     @Override
     public Collection<ScriptError> getAllErrors() {
-        return new java.util.ArrayList<>(errors.values());
+        return List.copyOf(errors.values());
     }
 
     private Map<ScriptId, ScriptError> errorStore(Context context) {

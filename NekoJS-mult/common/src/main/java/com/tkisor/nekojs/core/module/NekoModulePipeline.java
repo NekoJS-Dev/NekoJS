@@ -68,7 +68,7 @@ public final class NekoModulePipeline {
     NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
         return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding,
-                ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
+                ScriptBindingSchema.emptyView());
     }
 
     /**
@@ -77,13 +77,7 @@ public final class NekoModulePipeline {
      */
     NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
                                        LanguageBinding binding) throws Exception {
-        NekoModuleIdentity identity = binding.identity();
-        if (approval == null || !approval.covers(file)) {
-            throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
-                    identity.requestedMode(), approval, "preparation requires a trust-approved source");
-        }
-        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding,
-                ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
+        return prepareCaptured(file, rawSource, approval, binding, ScriptBindingSchema.emptyView());
     }
 
     NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,

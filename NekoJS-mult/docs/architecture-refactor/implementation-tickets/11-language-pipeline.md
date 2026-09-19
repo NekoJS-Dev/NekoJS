@@ -564,3 +564,39 @@ The first three commands passed in this round. Platform compilation retained exi
 `this-escape` and Gson `InlineMe` classfile warnings. `git diff --check` was run after the documentation
 update. No golden file was updated. These commands are common/unit/build evidence only; no real
 Minecraft client/server, loader runtime or network session smoke was run.
+
+## Review-round-12 addendum (2026-09-19)
+
+本轮针对 `4504f501` 的终审 isolation findings 继续 fix-forward；`Status: closed` 保持不变。本轮未更新
+golden，也不把未执行的真实 Minecraft、loader runtime 或 network session smoke 写成通过。
+
+- **1. Active error visibility：fixed.** `DefaultErrorTracker` 的 `hasErrors`、`getErrorCount`、
+  `getAllErrors` 与 `NekoRuntimeRoot.ErrorSnapshot` 只观察 active store；candidate errors 只按 candidate
+  `Context` 暂存，commit 的 `publishCandidateErrors` 才发布，失败 discard 保留 active。public collection
+  与 snapshot collection 均不可变。新增 `DefaultErrorTrackerTest#publicDiagnosticsContainActiveErrorsButNeverCandidateErrors`。
+- **2. Explicit schema views：fixed.** 每个 `NekoModulePipelineCache` session 都在创建时绑定非空 `ScriptBindingSchema.View`；
+  candidate 由空 view 开始，binding 安装后才绑定 candidate view，active 由创建者明确传入 active snapshot。
+  `bindingSchemaViewFor`、带 view 的 schema lookup 与无 candidate Context 的 `ScriptBindingSchema.view` 不再绕读静态
+  active schema。candidate validator 仍消费 candidate view，publish 才更新 active；同类型旧 candidate 的 late
+  discard 不会覆盖已提交的新 active。证据为 `ManagedBindingSchemaTest` 的同类型失败/缺失 view tests 与
+  `NekoModulePipelineCacheSessionTest#sessionsKeepExplicitSchemaViewsAndChildrenCannotCreateOwners`。
+- **3. Session ownership：fixed.** child cache 不能再 `openSession`；`NekoRuntimeRoot` 拒绝 child cache，
+  `closeOwner` 收窄为 cache 内部实现，root lifecycle 通过 `AutoCloseable.close()` 终止 owner；生产
+  `ScriptManager` 继续从 root 开 candidate session。证据为 `NekoRuntimeModuleCacheOwnershipTest#runtimeRootRejectsAChildGenerationCache`
+  与 session ownership assertions。
+- **4. Prepared-module surface：fixed.** `NekoPreparedModule.stableCacheKey`、显式 language/source 的五参
+  `commonJs`/`esm` factory 仅保留 `core.module` package-private 生产调用；record、观察字段和旧三参/兼容
+  factory 保持不变。`ModulePipelineIsolationTest` 增加 visibility assertions。
+- **5. Duplicate guard cleanup：fixed.** `NekoModulePipeline.prepareCaptured` 的四参 overload 委托带 View 的单一
+  trust guard；direct preparation 无 session 时使用空 schema。cache 的 relative-path helper 保留，因为它在
+  invalidate、JSON execution identity 和 source-map publish 三条不同的路径边界上复用同一 fallback 语义，未扩大删除范围。
+
+### Review-round-12 evidence matrix
+
+| Finding | 精确证据 | 最终命令 | 结果与限制 |
+|---|---|---|---|
+| Active errors only | `DefaultErrorTrackerTest` active/candidate/snapshot tests | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest` | PASS；candidate store 仍是内部 Context-scoped state。 |
+| Candidate schema isolation | `ManagedBindingSchemaTest`；`NekoModulePipelineCacheSessionTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.api.event.ManagedBindingSchemaTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest` | PASS；无真实 loader binding/runtime smoke。 |
+| Runtime/cache ownership | `NekoRuntimeModuleCacheOwnershipTest`；`ModulePipelineIsolationTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeModuleCacheOwnershipTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；只证明 common object graph 与 visibility contract。 |
+| Prepared module visibility and guard cleanup | `NekoModulePipelinePrepareTest`；`ModulePipelineIsolationTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModulePipelinePrepareTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；record/旧 factory behavior unchanged。 |
+| Required gates | common compile/check、26.2.0 NeoForge/Fabric compile、whitespace | `./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | PASS；输出仅有既有 unchecked/deprecation、`this-escape` 与 Gson `InlineMe` classfile warnings；未更新 golden。真实 Minecraft、loader runtime、client/server 或 network session smoke 未执行。 |

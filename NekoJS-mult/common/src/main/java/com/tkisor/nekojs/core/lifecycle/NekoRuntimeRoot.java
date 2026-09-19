@@ -99,6 +99,9 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     ) {
         Objects.requireNonNull(sandboxFactory, "sandboxFactory");
         Objects.requireNonNull(preparationCache, "preparationCache");
+        if (!preparationCache.isRootOwner()) {
+            throw new IllegalArgumentException("NekoRuntimeRoot requires a root preparation cache, not a child session");
+        }
         if (!sandboxFactory.usesPreparationCache(preparationCache)) {
             throw new IllegalArgumentException("NekoRuntimeRoot and NekoSandboxFactory must share the same preparation cache");
         }
@@ -267,7 +270,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         // 票 11：root 最终关闭释放 prepared 模块缓存（server stop/切世界/reload 不清空；
         // 按类型清理走各 manager 的 fullReloadCleanup，此处释放 owner 持有的全部条目）。
         try {
-            preparationCache.closeOwner();
+            preparationCache.close();
         } catch (Throwable t) {
             if (first == null) first = t;
             else first.addSuppressed(t);
