@@ -667,8 +667,9 @@ public final class NekoTypeScriptCompiler {
             return v.matches("[+-]?(?:(?:0[xX][0-9a-zA-Z]*)|(?:0[oO][0-9a-zA-Z]*)|(?:0[bB][0-9a-zA-Z]*)|(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d*)?)n?");
         }
 
-        private IllegalArgumentException badEnumNumberLiteral(String literal) {
-            return new IllegalArgumentException("Invalid TypeScript enum numeric literal '" + literal + "' in " + file);
+        private NekoCompileException badEnumNumberLiteral(String literal) {
+            int index = source.indexOf(literal);
+            return diagnostic("Invalid TypeScript enum numeric literal '" + literal + "' in " + file, index < 0 ? 0 : index);
         }
 
         // ---- namespace（单层）/ module → IIFE，export 成员在末尾批量转 Name.member=member ----
@@ -825,8 +826,8 @@ public final class NekoTypeScriptCompiler {
             if (classContext.derived()) {
                 int superCallEnd = findTopLevelSuperCallEnd(braceOpen);
                 if (superCallEnd < 0) {
-                    throw new IllegalArgumentException("Cannot transform derived constructor parameter properties in "
-                        + file + ": constructor has no legal top-level super(...) call.");
+                    throw diagnostic("Cannot transform derived constructor parameter properties in "
+                        + file + ": constructor has no legal top-level super(...) call.", braceOpen);
                 }
                 insertionPoint = superCallEnd;
             }
@@ -1886,18 +1887,34 @@ public final class NekoTypeScriptCompiler {
             }
         }
 
-        private IllegalArgumentException unsupported(String syntax, int index) {
+        private NekoCompileException unsupported(String syntax, int index) {
             String hint;
             if (syntax.contains("decorator")) {
                 hint = "Decorators are not supported: NekoJS is a scripting engine, not a TypeScript framework. Replace the decorator with a plain function call (e.g. wrap your class/function with a helper instead of @Decorator).";
             } else {
                 hint = "Use plain erasable TypeScript or register a compiler plugin for this syntax.";
             }
-            return new IllegalArgumentException("Unsupported TypeScript syntax '" + syntax + "' in " + file + " at " + position(index) + ". " + hint);
+            return diagnostic("Unsupported TypeScript syntax '" + syntax + "' in " + file + " at " + position(index) + ". " + hint, index);
         }
 
         private String position(int index) {
             return NekoSourceLexerBase.position(source, length, index);
+        }
+
+        /** Typed diagnostic: keeps the message text but also the authored line/column. */
+        private NekoCompileException diagnostic(String message, int index) {
+            int line = 1;
+            int column = 1;
+            int end = Math.max(0, Math.min(index, length));
+            for (int i = 0; i < end; i++) {
+                if (source.charAt(i) == '\n') {
+                    line++;
+                    column = 1;
+                } else {
+                    column++;
+                }
+            }
+            return new NekoCompileException(message, line, column);
         }
     }
 }
