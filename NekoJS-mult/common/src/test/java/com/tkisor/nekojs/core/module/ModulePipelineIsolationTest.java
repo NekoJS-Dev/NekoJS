@@ -42,6 +42,7 @@ class ModulePipelineIsolationTest {
             "core/module/NekoPreparedModule.java",
             "core/module/NekoModulePipeline.java",
             "core/module/NekoModulePipelineCache.java",
+            "core/module/BindingSchemaStore.java",
             "core/module/NekoTrustApprovedSource.java",
             "core/module/NekoModuleError.java",
             "core/compiler/NekoLegacyLanguagePlugin.java",
@@ -342,14 +343,30 @@ class ModulePipelineIsolationTest {
 
     @Test
     void schemaAndPathTransactionBridgesAreNotPublicImplementationSurface() throws Exception {
-        for (String methodName : List.of("installActive", "beginCandidate", "commitCandidate", "restore", "view")) {
-            for (var method : com.tkisor.nekojs.api.event.ScriptBindingSchema.class.getDeclaredMethods()) {
+        Class<?> schemaType = Class.forName("com.tkisor.nekojs.api.event.ScriptBindingSchema");
+        for (String methodName : List.of("owner", "installActive", "clear", "beginCandidate",
+                "commitCandidate", "discardCandidate", "restore", "view", "activeView", "snapshot", "lookup",
+                "close")) {
+            for (var method : schemaType.getDeclaredMethods()) {
                 if (method.getName().equals(methodName)) {
                     assertTrue(!Modifier.isPublic(method.getModifiers()),
-                            "schema transaction method must be package-private: " + method);
+                            "schema transaction method must not be public: " + method);
                 }
             }
         }
+        for (Class<?> nested : schemaType.getDeclaredClasses()) {
+            assertTrue(!nested.getSimpleName().equals("Owner"),
+                    "ScriptBindingSchema.Owner transaction bridge must be removed");
+        }
+
+        Class<?> store = Class.forName("com.tkisor.nekojs.core.module.BindingSchemaStore");
+        assertTrue(!Modifier.isPublic(store.getModifiers()),
+                "mutable binding schema store must remain package-private");
+        assertTrue(!Modifier.isPublic(NekoModulePipelineCache.class.getDeclaredMethod(
+                "installActiveBindingSchema", com.tkisor.nekojs.api.ScriptType.class, java.util.Map.class,
+                java.util.Set.class).getModifiers()),
+                "installActiveBindingSchema is a package-private owner seam");
+
         Class<?> layout = Class.forName("com.tkisor.nekojs.core.fs.ScriptPathLayout");
         assertTrue(!Modifier.isPublic(layout.getModifiers()), "path layout implementation must be internal");
     }

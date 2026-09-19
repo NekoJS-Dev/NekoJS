@@ -8,19 +8,15 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Public read-only binding-schema contract. The mutable active/candidate store lives in
+ * {@code com.tkisor.nekojs.core.module.BindingSchemaStore} and is owned by
+ * {@code NekoModulePipelineCache}; consumers only ever see immutable {@link View} /
+ * {@link Snapshot} values.
+ */
 public final class ScriptBindingSchema {
-    private final Map<ScriptType, View> active = new ConcurrentHashMap<>();
-    /**
-     * 每脚本类型的「已知全局标识符」全集：从运行中 Context 的全局绑定键收割
-     * （JS 内置 Math/JSON/console/… + 引擎/平台装的所有绑定），供未定义标识符
-     * 静态检查使用——以运行时真实可见集合为准，杜绝手写内置名单的误报/漏报。
-     */
-    private final Map<Object, Candidate> candidates = new ConcurrentHashMap<>();
-    private volatile boolean closed;
-
-    public ScriptBindingSchema() {}
+    private ScriptBindingSchema() {}
 
     /** Immutable schema view owned by one active or candidate generation. */
     public record View(Map<String, BindingMembers> schemas, Set<String> globals,
@@ -62,8 +58,6 @@ public final class ScriptBindingSchema {
         }
     }
 
-    private record Candidate(ScriptType type, View view, Snapshot activeBefore) {}
-
     /**
      * 绑定成员 schema。{@code valueClasses} 供链式类型流（{@code Item.of(x).member}
      * 的第二级成员检查）取成员/返回值类型；只有名字没有类信息时传空集合。
@@ -96,102 +90,21 @@ public final class ScriptBindingSchema {
         }
     }
 
-    /** Install the active view owned by this runtime root. */
-    void installActive(ScriptType type, Map<String, BindingMembers> nameToMembers, Set<String> globals) {
-        ensureOpen();
-        if (type == null) return;
-        active.put(type, new View(nameToMembers, globals));
-    }
-
-    void clear(ScriptType type) {
-        if (type != null) active.remove(type);
-    }
-
-    /** Close the runtime owner and drop active/candidate views together. */
-    public void close() {
-        closed = true;
-        active.clear();
-        candidates.clear();
-    }
-
-    public Map<String, BindingMembers> lookup(ScriptType type) {
-        return activeView(type).lookup();
-    }
-
-    /** Snapshot the active view without exposing mutable static maps to a generation. */
-    View activeView(ScriptType type) {
-        if (type == null) return new View(Map.of(), Set.of());
-        return active.getOrDefault(type, new View(Map.of(), Set.of()));
-    }
-
     /** Empty view used by a generation before its bindings have been installed. */
     public static View emptyView() {
         return new View(Map.of(), Set.of());
     }
 
-    /** Capture the active schema/global values before a candidate starts mutating its own view. */
-    Snapshot snapshot(ScriptType type) {
-        return new Snapshot(activeView(type));
-    }
-
-    /** Install candidate values under one generation/session token. */
-    View beginCandidate(Object ownerToken, ScriptType type,
-                               Map<String, BindingMembers> schemas, Set<String> globals) {
-        return beginCandidate(ownerToken, type, schemas, globals, (Consumer<Diagnostic>) null);
-    }
-
-    View beginCandidate(Object ownerToken, ScriptType type,
-                               Map<String, BindingMembers> schemas, Set<String> globals,
-                               Consumer<Diagnostic> reporter) {
-        ensureOpen();
-        if (ownerToken == null || type == null) throw new NullPointerException("candidate schema owner/type");
-        View view = new View(schemas, globals, reporter);
-        candidates.put(ownerToken, new Candidate(type, view, snapshot(type)));
-        return view;
-    }
-
-    /** Candidate diagnostics stay attached to the generation without exposing Context here. */
-    View beginCandidate(Object ownerToken, ScriptType type,
-                               Map<String, BindingMembers> schemas, Set<String> globals,
-                               Object diagnosticContext) {
-        return beginCandidate(ownerToken, type, schemas, globals,
-                diagnostic -> ScriptErrorReporter.recordCallbackError(
-                        diagnosticContext, diagnostic.type(), diagnostic.callbackKind(), diagnostic.throwable()));
-    }
-
-    /** Publish exactly one candidate view at the generation commit point. */
-    View commitCandidate(Object ownerToken) {
-        Candidate candidate = ownerToken == null ? null : candidates.remove(ownerToken);
-        if (candidate == null) return null;
-        active.put(candidate.type(), candidate.view());
-        return candidate.view();
-    }
-
-    /** Discard a candidate schema after any preparation/binding/execution failure. */
-    void discardCandidate(Object ownerToken) {
-        if (ownerToken == null) return;
-        Candidate candidate = candidates.remove(ownerToken);
-        if (candidate != null) {
-            // Schema transactions are serialized with generation commit by the owning manager;
-            // restore the captured active view only if no newer same-type generation published.
-            // This keeps a late failure from an older candidate from rolling back a committed one.
-            if (activeView(candidate.type()).equals(candidate.activeBefore().view())) {
-                active.put(candidate.type(), candidate.activeBefore().view());
-            }
-        }
-    }
-
-    /** Restore an active schema/global snapshot for an owning reload transaction. */
-    void restore(ScriptType type, Snapshot snapshot) {
-        if (type == null || snapshot == null) return;
-        active.put(type, snapshot.view());
-    }
-
-    /** Resolve a generation view for preparation/validation. */
-    View view(Object ownerToken, ScriptType type) {
-        if (ownerToken == null) return activeView(type);
-        Candidate candidate = candidates.get(ownerToken);
-        return candidate != null && candidate.type() == type ? candidate.view() : emptyView();
+    /**
+     * Generation-owned diagnostic route used by candidate {@link View}s. The supplied generation
+     * context (a Graal {@code Context} at runtime, typed as {@code Object} so preparation-layer
+     * signatures stay Context-free) routes preflight diagnostics to that generation's error
+     * tracker. This is the reporting path consumed by {@link View#report}; it neither exposes nor
+     * drives schema transactions.
+     */
+    public static Consumer<Diagnostic> diagnosticReporter(Object diagnosticContext) {
+        return diagnostic -> ScriptErrorReporter.recordCallbackError(
+                diagnosticContext, diagnostic.type(), diagnostic.callbackKind(), diagnostic.throwable());
     }
 
     /**
@@ -209,60 +122,6 @@ public final class ScriptBindingSchema {
 
     public static Map<String, BindingMembers> schemaForPath(Path path, View view) {
         return view == null ? Map.of() : view.lookup();
-    }
-
-    private void ensureOpen() {
-        if (closed) throw new IllegalStateException("ScriptBindingSchema owner is closed");
-    }
-
-    /** Owner-only bridge used by the generation cache; transaction methods stay package-private here. */
-    public Owner owner() {
-        return new Owner(this);
-    }
-
-    public static final class Owner {
-        private final ScriptBindingSchema schema;
-
-        private Owner(ScriptBindingSchema schema) {
-            this.schema = schema;
-        }
-
-        public void installActive(ScriptType type, Map<String, BindingMembers> schemas, Set<String> globals) {
-            schema.installActive(type, schemas, globals);
-        }
-
-        public View activeView(ScriptType type) {
-            return schema.activeView(type);
-        }
-
-        public Map<String, BindingMembers> lookup(ScriptType type) {
-            return schema.lookup(type);
-        }
-
-        public Snapshot snapshot(ScriptType type) {
-            return schema.snapshot(type);
-        }
-
-        public View beginCandidate(Object token, ScriptType type, Map<String, BindingMembers> schemas,
-                                   Set<String> globals, Object diagnosticContext) {
-            return schema.beginCandidate(token, type, schemas, globals, diagnosticContext);
-        }
-
-        public View commitCandidate(Object token) {
-            return schema.commitCandidate(token);
-        }
-
-        public void discardCandidate(Object token) {
-            schema.discardCandidate(token);
-        }
-
-        public void restore(ScriptType type, Snapshot snapshot) {
-            schema.restore(type, snapshot);
-        }
-
-        public View view(Object token, ScriptType type) {
-            return schema.view(token, type);
-        }
     }
 
     public static BindingMembers fromSurface(ApiSurfaceSnapshot snapshot, ApiSymbolId typeId) {

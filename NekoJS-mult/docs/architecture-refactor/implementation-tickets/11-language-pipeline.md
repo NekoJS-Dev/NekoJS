@@ -712,3 +712,38 @@ The relevant targeted tests are `ScriptReloadGenerationTest`, `EventBusJSHasList
 `PackSyncClientTest`. The required final Gradle gates and `git diff --check` are the authoritative result for
 this commit. No real Minecraft client/server, loader runtime, or network session smoke was run in this round;
 common tests and platform compilation must not be read as that evidence. Golden files remain unchanged.
+
+## Review-round-16 addendum (2026-09-19)
+
+本轮针对 ticket 11 剩余的 owner 可见性缺口继续 fix-forward；ticket 11 仍保持 `Status: closed`。没有脚本作者
+迁移，也没有更新 golden。以下只记录实现与可重复的 common/编译证据，不把未执行的真实 Minecraft 或
+network session smoke 写成通过。
+
+- **Schema transaction store ownership：fixed.** The mutable active/candidate store moved out of `api.event`
+  into package-private `com.tkisor.nekojs.core.module.BindingSchemaStore`, held and driven only by
+  `NekoModulePipelineCache`. `api.event.ScriptBindingSchema` is now a read-only contract: `View`, `Snapshot`,
+  `BindingMembers`, `Diagnostic`, static `inferType`/`schemaForPath`/`fromSurface`/`emptyView`, and the
+  generation diagnostic reporter consumed by `View.report`. The public `owner()` accessor and
+  `public static final class Owner` transaction bridge are deleted, so an `api.event`-external consumer can no
+  longer bypass the runtime owner and drive candidate transactions.
+- **Runtime-owner seam：narrowed.** `NekoModulePipelineCache` keeps the cross-package
+  `activeBindingSchemaView` / `snapshotBindingSchema` / `beginBindingSchemaCandidate` /
+  `commitBindingSchemaCandidate` / `discardBindingSchemaCandidate` / `restoreBindingSchema` methods used by
+  `ScriptManager`/`ScriptEnvironmentFactory`; their javadoc now marks them owner-only internal seams.
+  `installActiveBindingSchema` had no production caller, so it is package-private and its test moved to the
+  same package.
+- **Isolation assertions：tightened.** `ModulePipelineIsolationTest` asserts `ScriptBindingSchema` exposes no
+  transaction method (including the removed `Owner`), that `BindingSchemaStore` is package-private, and that
+  `installActiveBindingSchema` is not public. `ManagedBindingSchemaTest` moved to `core.module` and drives
+  `BindingSchemaStore` directly; the validator/environment tests now construct read-only `View`s.
+
+### Round-16 evidence boundary
+
+The relevant targeted tests are `ManagedBindingSchemaTest`, `ScriptBindingSchemaInferTypeTest`,
+`ModulePipelineIsolationTest`, `NekoModulePipelineCacheSessionTest`, `GlobalBindingMemberValidatorTest`,
+`EventCallbackSourceValidatorTest`, `ManagedEventCallbackSourceValidatorTest`, `EventGroupSchemaWiringTest`,
+`ManagedApiEnvironmentTest`, and `DefaultErrorTrackerTest`. The required final Gradle gates
+(`:common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`)
+and `git diff --check` are the authoritative result for this commit. No real Minecraft client/server, loader
+runtime, or network session smoke was run in this round; common tests and platform compilation must not be read
+as that evidence. Golden files remain unchanged.

@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.script;
 
-import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
 import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
@@ -45,11 +44,9 @@ class ManagedApiEnvironmentTest {
 
     private static final ApiSymbolId STABLE_ID = ApiSymbolId.parse("global:Stable");
     private static final ApiSymbolId MEMBER_ID = ApiSymbolId.parse("member:Stable.declared");
-    private ScriptBindingSchema schema;
 
     @BeforeEach
     void setUp() {
-        schema = new ScriptBindingSchema();
         TestPlatformInit.ensureInitialized();
     }
 
@@ -122,9 +119,10 @@ class ManagedApiEnvironmentTest {
                 "LegacyApi", Binding.of("LegacyApi", new LegacyApiImpl()));
         ScriptBindingSchema.BindingMembers members = new ScriptBindingSchema.BindingMembers(
                 Set.of("visibleMethod", "anotherMethod"));
-        schema.owner().installActive(ScriptType.SERVER, Map.of("LegacyApi", members), Set.of());
+        ScriptBindingSchema.View view = new ScriptBindingSchema.View(
+                Map.of("LegacyApi", members), Set.of());
 
-        ScriptBindingSchema.BindingMembers resolved = schema.lookup(ScriptType.SERVER).get("LegacyApi");
+        ScriptBindingSchema.BindingMembers resolved = view.lookup().get("LegacyApi");
         assertNotNull(resolved);
         assertTrue(resolved.contains("visibleMethod"));
         assertTrue(resolved.contains("anotherMethod"));

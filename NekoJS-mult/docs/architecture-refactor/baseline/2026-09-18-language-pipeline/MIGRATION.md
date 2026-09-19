@@ -391,6 +391,7 @@ golden。真实 Minecraft client/server、loader runtime 和 network session smo
 - `ScriptBindingSchema` 的事务实现方法收窄到 `api.event` package；`NekoModulePipelineCache` 是跨包 owner
   seam，environment factory/manager 通过它安装、提交、丢弃和恢复 generation view。`ScriptErrorReporter`
   的 public `Reporter` 只保留无 Context 的 callback/event contract，Context-aware adapter 仍为内部路径。
+  （Round-16 进一步把可变 store 移出 `api.event`，见 §11。）
 - Authored identity 仅归一化明确的 script-root/pack layout；`node_modules`、未知 nested layout 和同名
   pack 文件保留完整路径。Path/FileSystem equality 决定大小写，不读取 `os.name`。
 - Compiler capture 是 plugin/compiler + revision 的不可变原子快照；同 id replacement 不会把旧 compiler
@@ -402,3 +403,25 @@ golden。真实 Minecraft client/server、loader runtime 和 network session smo
 Round-15 evidence remains common JUnit plus the stated Gradle compile/check gates. No real Minecraft,
 loader-runtime, client/server session, or network smoke was run; this document does not claim one. Golden files
 remain unchanged.
+
+## 11. Review-round-16 owner surface closure
+
+脚本作者无需迁移；本轮没有公开脚本语言或模块语义变更，也没有更新 golden。公开面与内部 owner seam 收口如下：
+
+- 可变 binding schema store 从 `api.event` 移出到 package-private
+  `com.tkisor.nekojs.core.module.BindingSchemaStore`，只由 `NekoModulePipelineCache` 持有与调用。
+  `api.event.ScriptBindingSchema` 现在只保留只读契约：`View`、`Snapshot`、`BindingMembers`、`Diagnostic`、
+  静态 `inferType`/`schemaForPath`/`fromSurface`/`emptyView`，以及 `View.report` 使用的 generation 诊断路由。
+- 删除 `ScriptBindingSchema.owner()` 与 `public static final class Owner`；`api.event` 外部消费者不再能绕过
+  runtime owner 直接驱动 candidate 事务。
+- `NekoModulePipelineCache` 继续为 `ScriptManager`/`ScriptEnvironmentFactory` 提供跨包
+  `activeBindingSchemaView`/`snapshotBindingSchema`/`beginBindingSchemaCandidate`/
+  `commitBindingSchemaCandidate`/`discardBindingSchemaCandidate`/`restoreBindingSchema`，javadoc 标注为
+  owner-only internal seam。`installActiveBindingSchema` 无生产调用者，已收窄为 package-private，测试移到
+  同包。
+- `ModulePipelineIsolationTest` 断言 `ScriptBindingSchema` 不再暴露事务方法（含 `Owner` 已删除）、
+  `BindingSchemaStore` 为 package-private、`installActiveBindingSchema` 非 public；`ManagedBindingSchemaTest`
+  移到 `core.module` 直接驱动 store，validator/environment 测试改为构造只读 `View`。
+
+Round-16 evidence 为 common JUnit 与上述 Gradle compile/check gate；真实 Minecraft、loader runtime、
+client/server session、network smoke 未执行，本文档不作此声明。Golden 未更新。

@@ -52,7 +52,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
-    private final ScriptBindingSchema bindingSchema;
+    private final BindingSchemaStore bindingSchema;
     private final CopyOnWriteArrayList<BiConsumer<Path, String>> preparationObservers = new CopyOnWriteArrayList<>();
     private final NekoModulePipelineCache owner;
     private final CopyOnWriteArrayList<NekoModulePipelineCache> sessions = new CopyOnWriteArrayList<>();
@@ -63,7 +63,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                                    NekoEsmVirtualModuleRegistry virtualModules,
                                    NekoTrustContext trustContext) {
         this(pipeline, sourceMaps, virtualModules, trustContext, ScriptBindingSchema.emptyView(), null,
-                new ScriptBindingSchema());
+                new BindingSchemaStore());
     }
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
@@ -71,13 +71,13 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                                    NekoTrustContext trustContext,
                                    ScriptBindingSchema.View bindingSchemaView) {
         this(pipeline, sourceMaps, virtualModules, trustContext, bindingSchemaView, null,
-                new ScriptBindingSchema());
+                new BindingSchemaStore());
     }
 
     private NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                     NekoEsmVirtualModuleRegistry virtualModules,
                                     NekoTrustContext trustContext, ScriptBindingSchema.View bindingSchemaView,
-                                    NekoModulePipelineCache owner, ScriptBindingSchema bindingSchema) {
+                                    NekoModulePipelineCache owner, BindingSchemaStore bindingSchema) {
         this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
         this.sourceMaps = Objects.requireNonNull(sourceMaps, "sourceMaps");
         this.virtualModules = Objects.requireNonNull(virtualModules, "virtualModules");
@@ -315,36 +315,48 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         return bindingSchemaView;
     }
 
-    /** Install active schema through the cache owner rather than the schema bridge. */
-    public void installActiveBindingSchema(ScriptType type,
+    /**
+     * Install the active schema on this runtime owner. Owner-only internal seam: the mutable
+     * store is package-private and no API consumer may drive schema transactions directly.
+     */
+    void installActiveBindingSchema(ScriptType type,
             Map<String, ScriptBindingSchema.BindingMembers> schemas, Set<String> globals) {
-        rootOwner().bindingSchema.owner().installActive(type, schemas, globals);
+        rootOwner().bindingSchema.installActive(type, schemas, globals);
     }
 
-    /** Active schema view for a new generation, through the cache owner rather than the schema bridge. */
+    /**
+     * Active schema view for a new generation. Owner-only internal seam consumed by
+     * {@code ScriptManager}/{@code ScriptEnvironmentFactory}.
+     */
     public ScriptBindingSchema.View activeBindingSchemaView(ScriptType type) {
-        return rootOwner().bindingSchema.owner().activeView(type);
+        return rootOwner().bindingSchema.activeView(type);
     }
 
+    /** Owner-only internal seam: capture the active schema/global snapshot for a reload transaction. */
     public ScriptBindingSchema.Snapshot snapshotBindingSchema(ScriptType type) {
-        return rootOwner().bindingSchema.owner().snapshot(type);
+        return rootOwner().bindingSchema.snapshot(type);
     }
 
+    /** Owner-only internal seam: open a generation candidate schema transaction. */
     public ScriptBindingSchema.View beginBindingSchemaCandidate(Object token, ScriptType type,
             Map<String, ScriptBindingSchema.BindingMembers> schemas, Set<String> globals, Object diagnosticContext) {
-        return rootOwner().bindingSchema.owner().beginCandidate(token, type, schemas, globals, diagnosticContext);
+        return rootOwner().bindingSchema.beginCandidate(token, type, schemas, globals,
+                ScriptBindingSchema.diagnosticReporter(diagnosticContext));
     }
 
+    /** Owner-only internal seam: publish exactly one candidate view at the generation commit point. */
     public ScriptBindingSchema.View commitBindingSchemaCandidate(Object token) {
-        return rootOwner().bindingSchema.owner().commitCandidate(token);
+        return rootOwner().bindingSchema.commitCandidate(token);
     }
 
+    /** Owner-only internal seam: discard a candidate schema after a failed generation. */
     public void discardBindingSchemaCandidate(Object token) {
-        rootOwner().bindingSchema.owner().discardCandidate(token);
+        rootOwner().bindingSchema.discardCandidate(token);
     }
 
+    /** Owner-only internal seam: restore an active schema/global snapshot for a failed reload. */
     public void restoreBindingSchema(ScriptType type, ScriptBindingSchema.Snapshot snapshot) {
-        rootOwner().bindingSchema.owner().restore(type, snapshot);
+        rootOwner().bindingSchema.restore(type, snapshot);
     }
 
     SourceMapRegistry sourceMaps() {
