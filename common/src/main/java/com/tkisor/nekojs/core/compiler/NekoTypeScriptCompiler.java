@@ -682,11 +682,6 @@ public final class NekoTypeScriptCompiler {
          *                   not be established. The position is never guessed by searching the file for
          *                   the same text: a coincidental earlier comment or token would win that search.
          */
-        /**
-         * @param valueStart authored offset of the offending member value, or {@code -1} when it could
-         *                   not be established. The position is never guessed by searching the file for
-         *                   the same text: a coincidental earlier comment or token would win that search.
-         */
         private NekoCompileException badEnumNumberLiteral(String literal, int valueStart) {
             return diagnostic("Invalid TypeScript enum numeric literal '" + literal + "' in " + file, valueStart);
         }

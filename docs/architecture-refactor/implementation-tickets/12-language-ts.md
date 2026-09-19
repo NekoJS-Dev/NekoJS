@@ -213,3 +213,11 @@ git diff --check
 - 仍未运行真实 Minecraft client/server、loader runtime 或 network session smoke。
 - 工作树同期有其它票（build.gradle / stonecutter / tools/nekojs-ci-gates.py 等）
   的在途改动，属他人写集；本轮提交只包含本票文件。
+
+### Review-round-1 follow-up（2026-09-19）
+
+- **重复 javadoc — fixed.** `NekoTypeScriptCompiler` 的 `badEnumNumberLiteral` 上方 javadoc
+  在 `b29c72fc` 里被复制了两份（同一 `@param valueStart` 块连续出现，第一份未紧贴任何声明）——
+  是红侧验证（临时换回 `indexOf` 再恢复）时的复制粘贴残留，无语义影响。已删掉孤立的那一份，
+  只保留紧贴方法定义的一份。`:common:compileJava` 仍绿，enum 诊断位置行为不变
+  （`NekoTypeScriptEnumDiagnosticLocationTest` 3/3、`NekoTypeScriptJsxRuntimeTest` 12/12）。
