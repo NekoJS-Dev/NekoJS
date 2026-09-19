@@ -159,7 +159,7 @@
         {
           "subject": "declaration",
           "state": "derived",
-          "evidence": "types="
+          "evidence": "types=<empty: no kind=type producer in the contract>"
         }
       ],
       "failures": [],

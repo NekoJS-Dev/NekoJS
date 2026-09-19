@@ -25,7 +25,7 @@
    declaration      derived          members=141
    declaration      derived          owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
    declaration      derived          signatures=150
-   declaration      derived          types=
+   declaration      derived          types=<empty: no kind=type producer in the contract>
 == node-report (owner=build-convention owner) -> pass
    1.21.1           check            46 suites / 213 tests / 0 failed
    1.21.1           artifact         nekojs-neoforge-1.21.1-1.1.0-preview3.jar size=2545601 sha256=db4fff9b70c04e4c

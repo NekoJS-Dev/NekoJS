@@ -39,5 +39,5 @@
 ## Consequences
 
 - 引擎层为两个子项目：`common` 与 `common-api-processor`（后者必须独立，才能作为 annotationProcessor 使用）。`common` 不发布 Maven 制品，产物由各节点内嵌进平台 fat jar。
-- 历史上曾由 lint 而非 javac 强制“契约层零 Graal import”：并入后 `api.*` 里的类在编译期引用引擎内部不会报编译错，这一历史理由仍保留但不再构成当前 Graal 约束。当前源码 lint 尚未更新；未来代码实施时移除或更新过时的 Graal 禁令，同时保留 api/common 的 MC/loader 隔离。
+- 历史上曾由 lint 而非 javac 强制“契约层零 Graal import”：并入后 `api.*` 里的类在编译期引用引擎内部不会报编译错，这一历史理由仍保留但不再构成当前 Graal 约束。**已按票 33 实施（2026-09-19）：`guardLint` 的 L1 Graal 禁令已移除**——该规则早已空转（实际 Graal import 用 relocated 包名 `graal.graalvm.*`，原正则 `org\.graalvm` 匹配不到），留着它等于假门禁。api/common 的 **MC/loader 隔离保留并加强**：`guardLint` L1/L2、`checkCommonIsolation`、`ModulePipelineIsolationTest` 三处前缀表已对齐为同一集合（`net.minecraft` / `net.neoforged` / `net.fabricmc` / `net.minecraftforge` / `com.mojang`），一致性由 `CommonIsolationPrefixAgreementTest` 断言。
 - 原 `forge/` 独立分支条款已失效（2026-08-30：1.20.1 移植取消，骨架自仓库移除）。

@@ -9,12 +9,17 @@
 > `common` 的零 MC/loader 隔离仍然有效。当前结论见
 > [公开契约与插件面决策](architecture-refactor/decisions/04-public-contract-and-plugin-model.md)
 > 和 [ADR-0007](adr/0007-module-boundaries.md) 顶部修订注记。
+>
+> **票 33 修订注记（2026-09-19）**：上文与正文里的"零 Graal import"表述是当时的历史评估，
+> 现行约束只有**零 MC/loader**。票 33 已把该过时禁令从 `guardLint` L1 移除（它早已空转：
+> 实际 Graal import 用 relocated 包名，原正则匹配不到），并把三处隔离强制点的前缀表对齐。
+> 下文标 ⚠️ 的行因此只保留历史价值，不作为现役操作指引。
 
 ## Problem Statement
 
 引擎层现在是三个 Gradle 模块：`common-api`（114 个类型）、`common`（392 个）、
 `common-api-processor`（2 个）。`common-api` 的设计意图是"对外契约层"——插件作者只依赖它，
-硬边界是零 MC / Loader / Graal import。
+硬边界是零 MC / Loader / Graal import。⚠️ 历史表述（票 33）：现行硬边界只有零 MC/loader，Graal 不是禁止项。
 
 但这个模块边界现在没有兑现它的收益，同时在三个地方收着成本。
 
@@ -111,7 +116,7 @@ public interface EventBus<E> {
 把 `common-api` 的源码并入 `common`，仍然放在 `com.tkisor.nekojs.api.*` 包下，**所有 FQCN
 保持不变**。引擎层从三个模块变成两个：`common` 与 `common-api-processor`。
 
-"契约层零 MC / Loader / Graal import"这条纪律不取消，改由**包前缀规则**承载：`guardLint` 现有
+"契约层零 MC / Loader / Graal import"这条纪律不取消，改由**包前缀规则**承载（⚠️ 历史表述；票 33 后 Graal 部分已撤销，MC/loader 部分保留并加强）：`guardLint` 现有
 的模块边界规则今天是按源码目录取的（`fileTree("common-api/src/main/java")`），改成按包前缀取
 （`com/tkisor/nekojs/api/**`）。这条规则本来就在 CI 上强制，改的是它的取材范围，不是它的地位。
 
@@ -181,7 +186,7 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
    上没开；合并后按 `common` 现状执行（即不对这 114 个文件新增 lint 门槛），是否给整个 `common`
    开 `-Xlint:all` 作为独立事项另议——它会引入一批未知量的新告警，混在本次变更里会淹没 diff。
 4. **边界 lint 改取材范围**：`guardLint` 的 L1 规则从"扫 `common-api/src/main/java` 全树"改为
-   "扫 `common/src/main/java` 下 `com/tkisor/nekojs/api/**`"，禁止清单不变（MC / Loader / Graal）；
+   "扫 `common/src/main/java` 下 `com/tkisor/nekojs/api/**`"，禁止清单为 MC / Loader（⚠️ 历史含 Graal；票 33 已移除）；
    L2 规则（`common` 零 MC / Loader import）不变。`common/build.gradle` 的 `checkCommonIsolation`
    保留——它与 guardLint 重叠，但它是 `:common:check` 的一部分，能在不跑根项目任务时兜住。
 5. **注解处理器**：节点 convention plugin 里的 `annotationProcessor(project(":common-api"))`
@@ -232,6 +237,9 @@ lint 会拦。这个损失比看起来小——`common` 现在已经有 66 个�
    改的是取材范围（源码目录 → 包前缀），断言不变。改完要验证两件事：现有 `api.*` 全部通过
    （已实测 `common` 那 66 个 `api.*` 文件零 Graal import）；以及规则仍然会失败——故意在
    `api.*` 下加一行 Graal import，确认 lint 报错，再撤掉。**没有这一步就等于把纪律悄悄关掉了。**
+   ⚠️ **票 33 后此步不再适用**：Graal 已不是禁止项，`api.*` 下加 Graal import 现在会（正确地）
+   静默通过；现行等价验证改为 MC/loader 前缀表一致性，由
+   `CommonIsolationPrefixAgreementTest` 断言三处强制点同集合。
 2. **`ApiManifestGoldenTest`**（`common/src/test/.../core/api/`）——冻结引擎的 API 表面。第一步
    之后这个 golden **必须一字不改地通过**；它一旦要改基线，说明"纯移动"的前提破了。这是第一步
    最有力的单一见证。
