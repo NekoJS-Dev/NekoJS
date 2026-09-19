@@ -145,8 +145,8 @@ class LegacyCjsBridgeCharacterizationTest {
                     new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
                     NekoTrustContext.local());
             NekoNodeModuleInstaller.install(context, ScriptType.TEST,
-                    new NekoModuleResolver(new NekoModuleResolutionPaths(
-                            paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)),
+                    new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                            new ScriptFilePolicy(compilers)),
                     paths, new DefaultErrorTracker(paths, config), config, cache);
 
             var path = context.eval("js",
@@ -185,8 +185,8 @@ class LegacyCjsBridgeCharacterizationTest {
                 .build();
         try (Context context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build()) {
             NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(
-                    context, new NekoModuleResolver(new NekoModuleResolutionPaths(
-                            paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)), cache);
+                    context, new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                            new ScriptFilePolicy(compilers)), cache);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
             try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
                 assertNotNull(in, "script-loader.js must be on the test classpath");

@@ -46,17 +46,67 @@ public final class NekoModulePipelineCache {
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
     private final CopyOnWriteArrayList<BiConsumer<Path, String>> preparationObservers = new CopyOnWriteArrayList<>();
+    private final NekoModulePipelineCache owner;
+    private final CopyOnWriteArrayList<NekoModulePipelineCache> sessions = new CopyOnWriteArrayList<>();
+    private volatile boolean closed;
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                    NekoEsmVirtualModuleRegistry virtualModules,
                                    NekoTrustContext trustContext) {
+        this(pipeline, sourceMaps, virtualModules, trustContext, null);
+    }
+
+    private NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
+                                    NekoEsmVirtualModuleRegistry virtualModules,
+                                    NekoTrustContext trustContext, NekoModulePipelineCache owner) {
         this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
         this.sourceMaps = Objects.requireNonNull(sourceMaps, "sourceMaps");
         this.virtualModules = Objects.requireNonNull(virtualModules, "virtualModules");
         this.trustContext = Objects.requireNonNull(trustContext, "trustContext");
+        this.owner = owner;
+    }
+
+    /**
+     * Open a generation-owned module session under this runtime owner.
+     *
+     * <p>The pipeline, trust context and path roots are shared immutable policy, while prepared
+     * entries, source maps, virtual sources and preparation observations are private to the
+     * returned session. Calling this on a child still registers the session with the root owner;
+     * it never creates a second long-lived runtime owner.
+     */
+    public NekoModulePipelineCache openSession() {
+        NekoModulePipelineCache root = rootOwner();
+        if (root.closed) {
+            throw new IllegalStateException("NekoModulePipelineCache owner is closed");
+        }
+        NekoModulePipelineCache session = new NekoModulePipelineCache(
+                root.pipeline,
+                new SourceMapRegistry(root.sourceMaps.root()),
+                new NekoEsmVirtualModuleRegistry(root.virtualModules.root().getParent()),
+                root.trustContext,
+                root);
+        root.sessions.add(session);
+        return session;
+    }
+
+    /** Close a generation session and discard only its mutable module state. */
+    public void closeSession() {
+        if (owner == null) {
+            clear();
+            return;
+        }
+        clearLocal();
+        closed = true;
+        owner.sessions.remove(this);
+    }
+
+    /** Whether both caches belong to the same root runtime owner. */
+    public boolean belongsToSameOwner(NekoModulePipelineCache other) {
+        return other != null && rootOwner() == other.rootOwner();
     }
 
     public NekoPreparedModule prepare(Path path) throws IOException {
+        ensureOpen();
         Path key = key(path);
         NekoTrustApprovedSource approval = approvedSource(key);
         try {
@@ -114,6 +164,7 @@ public final class NekoModulePipelineCache {
      * not be read by an execution-side bypass.
      */
     public String prepareJson(Path path) throws IOException {
+        ensureOpen();
         Path key = key(path);
         approvedSource(key);
         try {
@@ -137,6 +188,15 @@ public final class NekoModulePipelineCache {
 
     /** 清空本实例的全部 prepared 条目与对应 source map（runtime owner 释放语义）。 */
     public void clear() {
+        if (owner == null) {
+            for (NekoModulePipelineCache session : sessions.toArray(NekoModulePipelineCache[]::new)) {
+                session.closeSession();
+            }
+        }
+        clearLocal();
+    }
+
+    private void clearLocal() {
         preparedCache.clear();
         sourceMaps.clear();
         virtualModules.clear();
@@ -154,12 +214,18 @@ public final class NekoModulePipelineCache {
             clear();
             return;
         }
+        if (owner == null) {
+            for (NekoModulePipelineCache session : sessions) {
+                session.clear(type);
+            }
+        }
         preparedCache.entrySet().removeIf(entry -> entry.getValue().type() == type);
         sourceMaps.clearByScriptType(type);
         virtualModules.clear(type);
     }
 
     public void invalidate(Path path) {
+        ensureOpen();
         if (path == null) {
             return;
         }
@@ -170,7 +236,13 @@ public final class NekoModulePipelineCache {
 
     /** Controlled read-only diagnostic: number of prepared entries owned by this runtime. */
     public int preparedEntryCount() {
-        return preparedCache.size();
+        int count = preparedCache.size();
+        if (owner == null) {
+            for (NekoModulePipelineCache session : sessions) {
+                count += session.preparedEntryCount();
+            }
+        }
+        return count;
     }
 
     SourceMapRegistry sourceMaps() {
@@ -239,6 +311,7 @@ public final class NekoModulePipelineCache {
     }
 
     public NekoTrustApprovedSource approvedSource(Path path) throws IOException {
+        ensureOpen();
         NekoTrustApprovedSource approval = trustContext.approvalFor(path);
         if (approval == null || !approval.covers(path)) {
             NekoModuleIdentity identity;
@@ -297,6 +370,16 @@ public final class NekoModulePipelineCache {
 
     private static Path key(Path path) {
         return Path.of(NekoCanonicalPath.of(path));
+    }
+
+    private void ensureOpen() {
+        if (closed) {
+            throw new IllegalStateException("NekoModulePipelineCache session is closed");
+        }
+    }
+
+    private NekoModulePipelineCache rootOwner() {
+        return owner == null ? this : owner;
     }
 
     private Optional<String> relativePath(Path path) {

@@ -19,6 +19,7 @@ import com.tkisor.nekojs.core.api.ApiFacadeProxy;
 import com.tkisor.nekojs.core.api.ApiGuestErrorFactory;
 import com.tkisor.nekojs.core.state.GenerationGlobals;
 import com.tkisor.nekojs.core.state.GlobalStateStores;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.js.DelegatingBinding;
 import com.tkisor.nekojs.script.ScriptContextRegistry;
 import graal.graalvm.polyglot.Context;
@@ -76,6 +77,16 @@ public final class ScriptEnvironmentFactory {
      */
     public Environment createContext(ScriptType scriptType) {
         NekoSandboxFactory.Sandbox sandbox = sandboxFactory.build(scriptType);
+        return environmentFrom(sandbox);
+    }
+
+    /** Create a bare environment against the supplied generation module session. */
+    public Environment createContext(ScriptType scriptType, NekoModulePipelineCache moduleSession) {
+        NekoSandboxFactory.Sandbox sandbox = sandboxFactory.build(scriptType, moduleSession);
+        return environmentFrom(sandbox);
+    }
+
+    private Environment environmentFrom(NekoSandboxFactory.Sandbox sandbox) {
         Context context = sandbox.context();
         var nodeRuntime = sandbox.nodeRuntime();
 
@@ -161,6 +172,13 @@ public final class ScriptEnvironmentFactory {
      */
     public Environment createContext(ScriptType scriptType, GenerationGlobals globals) {
         Environment bare = createContext(scriptType);
+        return new Environment(bare.context(), bare.nodeRuntime(), bare.outStream(), bare.errStream(), globals);
+    }
+
+    /** Create a bare environment with a generation view and module session. */
+    public Environment createContext(ScriptType scriptType, GenerationGlobals globals,
+                                     NekoModulePipelineCache moduleSession) {
+        Environment bare = createContext(scriptType, moduleSession);
         return new Environment(bare.context(), bare.nodeRuntime(), bare.outStream(), bare.errStream(), globals);
     }
 

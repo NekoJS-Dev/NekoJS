@@ -13,6 +13,8 @@ import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.ErrorTracker;
+import com.tkisor.nekojs.core.error.DefaultErrorTracker;
+import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoReloadException;
@@ -133,6 +135,7 @@ public final class ScriptManager implements AutoCloseable {
      * prepared 模块缓存（票 11 W3 显式注入）：生产经 {@code NekoRuntimeRoot} 传入
      * root 拥有的实例（模块 session 生命周期归属）；旧构造器自建隔离实例。
      */
+    /** Root-owned cache/session owner; mutable module entries live only in generation sessions. */
     private final NekoModulePipelineCache preparationCache;
 
     /**
@@ -150,8 +153,9 @@ public final class ScriptManager implements AutoCloseable {
      */
     private record RuntimeEnvironment(Context context, NekoNodeRuntime nodeRuntime,
                                       LoggerStream outStream, LoggerStream errStream,
-                                      com.tkisor.nekojs.core.state.GenerationGlobals globals) {
-        static final RuntimeEnvironment EMPTY = new RuntimeEnvironment(null, null, null, null, null);
+                                      com.tkisor.nekojs.core.state.GenerationGlobals globals,
+                                      NekoModulePipelineCache moduleSession) {
+        static final RuntimeEnvironment EMPTY = new RuntimeEnvironment(null, null, null, null, null, null);
 
         boolean isEmpty() {
             return context == null;
@@ -196,6 +200,9 @@ public final class ScriptManager implements AutoCloseable {
      * 命名刻意避开 "Source"，以免被误读为 source 字符串。
      */
     private ScriptContainer candidateKillScript;
+
+    /** Active error state saved while candidate execution is allowed to reuse script ids. */
+    private Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> candidateErrorSnapshot;
 
     /**
      * 候选 generation 收集的挂起监听器注册（EventBusJS.PendingListener）。
@@ -474,9 +481,19 @@ public final class ScriptManager implements AutoCloseable {
                 }
                 closeRuntimeResources(this.runtime);
             }
-            ScriptEnvironmentFactory.Environment env = environmentFactory.create(scriptType);
+            NekoModulePipelineCache moduleSession = preparationCache.openSession();
+            ScriptEnvironmentFactory.Environment env;
+            try {
+                env = environmentFactory.createContext(scriptType,
+                        environmentFactory.newGeneration(scriptType, false), moduleSession);
+                environmentFactory.installEnvironmentBindings(env.context(), scriptType, env.globals());
+            } catch (RuntimeException | Error failure) {
+                moduleSession.closeSession();
+                throw failure;
+            }
             RuntimeEnvironment created = new RuntimeEnvironment(
-                    env.context(), env.nodeRuntime(), env.outStream(), env.errStream(), env.globals());
+                    env.context(), env.nodeRuntime(), env.outStream(), env.errStream(), env.globals(), moduleSession);
+            activateModuleViews(moduleSession);
             this.runtime = created;
             CONTEXT_TO_MANAGER.put(created.context(), this);
             ScriptContextRegistry.bind(created.context(), scriptType);
@@ -729,6 +746,7 @@ public final class ScriptManager implements AutoCloseable {
                 RuntimeEnvironment candidateEnvironment = null;
                 try {
                     // 诊断状态清空（与既有实现同位次；失败结果中的候选错误因此可见）
+                    candidateErrorSnapshot = snapshotActiveErrors();
                     errorTracker.clearByType(scriptType);
                     // 域 Adapter 的进程级注册账本重置（PostEffects/NativeEvents/DynamicRegistry 等）：
                     // 「先 close 再注册」是 binding 契约，保持原有位次；共享 Java 对象不做
@@ -892,11 +910,18 @@ public final class ScriptManager implements AutoCloseable {
         private RuntimeEnvironment createCandidateEnvironment () {
             com.tkisor.nekojs.core.state.GenerationGlobals candidateGlobals =
                     environmentFactory.newGeneration(scriptType, true);
-            ScriptEnvironmentFactory.Environment candidate =
-                    environmentFactory.createContext(scriptType, candidateGlobals);
+            NekoModulePipelineCache moduleSession = preparationCache.openSession();
+            ScriptEnvironmentFactory.Environment candidate;
+            try {
+                candidate = environmentFactory.createContext(scriptType, candidateGlobals, moduleSession);
+            } catch (RuntimeException | Error failure) {
+                moduleSession.closeSession();
+                throw failure;
+            }
             RuntimeEnvironment candidateEnvironment = new RuntimeEnvironment(
                     candidate.context(), candidate.nodeRuntime(), candidate.outStream(),
-                    candidate.errStream(), candidate.globals());
+                    candidate.errStream(), candidate.globals(), moduleSession);
+            activateModuleViews(moduleSession);
             CONTEXT_TO_MANAGER.put(candidate.context(), this);
             ScriptContextRegistry.bind(candidate.context(), scriptType);
             this.candidateContext = candidate.context();
@@ -966,9 +991,8 @@ public final class ScriptManager implements AutoCloseable {
             for (var pending : activation) {
                 pending.activate();
             }
-            // (4) 旧 module session 释放
-            preparationCache.clear(scriptType);
-            // (5) 旧环境按所有权顺序释放：timer → Context → streams
+            candidateErrorSnapshot = null;
+            // (4) 旧环境按所有权顺序释放：timer → Context → streams → module session
             if (!oldEnvironment.isEmpty()) {
                 closeRuntimeResources(oldEnvironment);
             }
@@ -986,6 +1010,14 @@ public final class ScriptManager implements AutoCloseable {
             this.candidateEnvironment = null;
             this.candidateKilled = false;
             this.candidateKillScript = null;
+            DefaultErrorTracker defaultTracker = defaultErrorTracker();
+            if (defaultTracker != null) {
+                defaultTracker.restoreType(scriptType, candidateErrorSnapshot);
+            }
+            candidateErrorSnapshot = null;
+            if (!runtime.isEmpty() && runtime.moduleSession() != null) {
+                activateModuleViews(runtime.moduleSession());
+            }
             if (candidateEnvironment != null && candidateEnvironment.globals() != null) {
                 candidateEnvironment.globals().discard();
             }
@@ -1118,7 +1150,7 @@ public final class ScriptManager implements AutoCloseable {
             }
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).info("正在重载 {} 脚本文件 {}，受影响入口 {} 个...", scriptType.name(), displayScriptPath(target), targets.size());
 
-            preparationCache.invalidate(target);
+            currentModuleSession().invalidate(target);
             Context ctx = getOrCreateContext();
             String modulePath = "./" + paths.root().relativize(target).toString().replace('\\', '/');
 
@@ -1215,7 +1247,32 @@ public final class ScriptManager implements AutoCloseable {
             errorTracker.clearByType(scriptType);
             // 按类型清理 root-owned prepared 条目、source maps 和 virtual ESM sources。
             // 局部清除避免一个脚本类型的 reset 误清同 owner 的其他类型产物。
-            preparationCache.clear(scriptType);
+            if (!runtime.isEmpty()) {
+                runtime.moduleSession().clear(scriptType);
+            }
+        }
+
+        private Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> snapshotActiveErrors() {
+            DefaultErrorTracker defaultTracker = defaultErrorTracker();
+            return defaultTracker == null ? null : defaultTracker.snapshotType(scriptType);
+        }
+
+        private DefaultErrorTracker defaultErrorTracker() {
+            return errorTracker instanceof DefaultErrorTracker defaultTracker ? defaultTracker : null;
+        }
+
+        private void activateModuleViews(NekoModulePipelineCache moduleSession) {
+            DefaultErrorTracker defaultTracker = defaultErrorTracker();
+            if (defaultTracker != null) {
+                defaultTracker.activateModuleViews(moduleSession);
+            }
+        }
+
+        private NekoModulePipelineCache currentModuleSession() {
+            if (runtime.isEmpty() || runtime.moduleSession() == null) {
+                throw new IllegalStateException("ScriptManager[" + scriptType.name + "] has no active module session");
+            }
+            return runtime.moduleSession();
         }
 
         // ---- 路径解析 ----
@@ -1363,6 +1420,9 @@ public final class ScriptManager implements AutoCloseable {
             // Context 会把残余写入路由到已关闭的流。
             closeStreamQuietly(environment.outStream());
             closeStreamQuietly(environment.errStream());
+            if (environment.moduleSession() != null) {
+                environment.moduleSession().closeSession();
+            }
         }
 
         private static void closeStreamQuietly (LoggerStream stream){

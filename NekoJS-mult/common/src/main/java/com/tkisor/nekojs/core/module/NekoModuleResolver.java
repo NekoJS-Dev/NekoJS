@@ -19,10 +19,10 @@ public final class NekoModuleResolver {
     private final Path nodeModules;
     private final ScriptFilePolicy filePolicy;
 
-    public NekoModuleResolver(NekoModuleResolutionPaths paths, ScriptFilePolicy filePolicy) {
-        this.gameDir = paths.gameDir();
-        this.root = paths.root();
-        this.nodeModules = paths.nodeModules();
+    public NekoModuleResolver(Path gameDir, Path root, Path nodeModules, ScriptFilePolicy filePolicy) {
+        this.gameDir = gameDir;
+        this.root = root;
+        this.nodeModules = nodeModules;
         this.filePolicy = filePolicy;
     }
 

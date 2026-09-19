@@ -19,9 +19,9 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     private final Map<String, NormalizedSourceMap> mappings = new ConcurrentHashMap<>();
     private final Path root;
+    private final boolean caseInsensitive;
     private static final java.util.logging.Logger LOGGER =
             java.util.logging.Logger.getLogger(SourceMapRegistry.class.getName());
-    private final String rootUri;
     // Backstop cap on cached source maps. Each entry holds decoded VLQ mappings + sourcesContent,
     // so unbounded growth under script churn could exhaust memory. Reload clears the map (CONC-2).
     private static final int CACHE_HARD_CAP = 4096;
@@ -34,7 +34,8 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             // A not-yet-created root still has a stable lexical identity.
         }
         this.root = canonicalRoot;
-        this.rootUri = this.root.toUri().toString();
+        this.caseInsensitive = this.root.getFileSystem().getPath("A")
+                .equals(this.root.getFileSystem().getPath("a"));
     }
 
     public Path root() {
@@ -88,9 +89,9 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         if (pathPrefix == null) return;
         // Prefix match only (DEFECT-D3): `contains` let clearing `foo/bar` also drop `baz/foo/bar`.
         // normalizeLookupPath already converts `\` to `/`, so a single separator convention is in place.
-        String lower = normalizeLookupPath(pathPrefix).toLowerCase(Locale.ROOT);
-        mappings.entrySet().removeIf(entry -> entry.getKey().toLowerCase(Locale.ROOT).startsWith(lower)
-                || entry.getValue().generatedPath.toLowerCase(Locale.ROOT).startsWith(lower));
+        String prefix = normalizeLookupPath(pathPrefix);
+        mappings.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix)
+                || entry.getValue().generatedPath.startsWith(prefix));
     }
 
     /**
@@ -240,20 +241,20 @@ public final class SourceMapRegistry implements NekoSourceMapView {
 
     private String normalizeLookupPath(String path) {
         String normalized = path.replace('\\', '/');
-        String comparedPath = normalized;
-        String comparedRoot = rootUri;
-        if (isWindows()) {
-            comparedPath = comparedPath.toLowerCase(Locale.ROOT);
-            comparedRoot = comparedRoot.toLowerCase(Locale.ROOT);
+        try {
+            Path parsed = normalized.startsWith("file:")
+                    ? Path.of(URI.create(normalized)) : Path.of(normalized);
+            if (parsed.isAbsolute()) {
+                Path absolute = parsed.normalize().toAbsolutePath();
+                if (absolute.startsWith(root)) {
+                    normalized = root.relativize(absolute).toString().replace('\\', '/');
+                }
+            }
+        } catch (Exception ignored) {
+            // Keep non-file source names (including virtual module display names) textual.
         }
-        if (comparedPath.startsWith(comparedRoot)) {
-            normalized = normalized.substring(rootUri.length());
-        }
-        return trimLeadingSlash(normalized);
-    }
-
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+        normalized = trimLeadingSlash(normalized);
+        return caseInsensitive ? normalized.toLowerCase(Locale.ROOT) : normalized;
     }
 
     private String normalizeSourcePath(String generatedPath, String sourceRoot, String source) {

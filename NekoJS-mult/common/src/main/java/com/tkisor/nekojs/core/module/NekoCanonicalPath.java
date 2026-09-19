@@ -1,8 +1,8 @@
 package com.tkisor.nekojs.core.module;
 
 import java.io.IOException;
+import java.nio.file.FileSystem;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Objects;
 
 /** Shared canonical identity for module cache keys and trust boundaries. */
@@ -18,7 +18,7 @@ final class NekoCanonicalPath {
             // A missing source still needs a deterministic lexical identity.
         }
         String normalized = canonical.toString().replace('\\', '/');
-        return isWindows() ? normalized.toLowerCase(Locale.ROOT) : normalized;
+        return isCaseInsensitive(canonical) ? normalized.toLowerCase(java.util.Locale.ROOT) : normalized;
     }
 
     static boolean isWithin(String subject, String root) {
@@ -29,7 +29,9 @@ final class NekoCanonicalPath {
         return subject.equals(root) || subject.startsWith(prefix);
     }
 
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+    /** The filesystem owns case semantics; the common layer does not inspect host properties. */
+    static boolean isCaseInsensitive(Path path) {
+        FileSystem fileSystem = path.getFileSystem();
+        return fileSystem.getPath("A").equals(fileSystem.getPath("a"));
     }
 }

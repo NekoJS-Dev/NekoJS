@@ -146,3 +146,38 @@ export const same = ns.default === greet;
   `NekoRuntimeRoot` 共用并在 root close 时释放，按 `ScriptType` 清理只影响该 owner 的条目。
   不同 host 即使使用相同模块 id / virtual URI，也不能读取或清理对方的 source/map 内容。
 - `ScriptCompilerRegistry.current()` 语言扩展注册点保留（语言插件机制本身，非 static 管线）。
+
+## 5. Review-round-8 lifecycle and boundary migration
+
+### 5.1 Candidate module sessions
+
+普通 SERVER/CLIENT/TEST reload 仍只由现有 `NekoRuntimeRoot` 持有。root-owned
+`NekoModulePipelineCache` 现在为每个 generation 打开 child session：pipeline、trust context 和 path
+policy 共享，prepared entries、source maps、virtual ESM sources 与 preparation observations 不共享。
+candidate 失败时 child session 与其 Context 一起关闭，active session/error views 保持；成功 commit
+切换到 candidate session 后才关闭旧 session。root close 清理 root 下所有 child。脚本作者和插件作者无需
+迁移，Java 内部调用者只需遵守 `RuntimeEnvironment` session 的生命周期，不能把已关闭 session 带入下一代。
+
+### 5.2 PackSync reload hook
+
+`PackSyncClient.installClientReloadHook` 的 hook 现在必须返回 `boolean`。NeoForge/Fabric composition
+root 只在 `root.reload(ScriptType.CLIENT).success()` 为真时返回 true，并将 reload exception 作为 false
+返回。PackSync 在 registry 与 remote credential 激活后若 hook 返回 false，会停用选中的 SERVER_CACHE
+集合并 revoke remote sources；若旧 active generation 仍被 runtime 保留，则恢复旧 registry/credential
+而不是制造混合状态，并返回 disconnect Outcome；不会把失败 bundle 报成 accepted。common
+JUnit 覆盖这一回滚顺序和成功路径；本材料不宣称真实 Minecraft client 或 network session smoke 已运行。
+
+### 5.3 Path case policy and internal visibility
+
+common preparation/resolution/cache 不再通过 `System.getProperty("os.name")` 推断大小写。canonical path
+与 source-map lookup 使用注入 `Path`/`FileSystem` 的 equality 行为（`A` 与 `a`），因此 Linux/Windows
+语义由实际 provider 决定。`NekoModuleHash` 仅是 `core.module` package-private implementation；
+`NekoModuleResolutionPaths` 已删除，resolver 使用 plain `Path` 参数。`NekoSourceMapBuilder.identity`
+仍是唯一明确的 public source-map utility。现有 production/test callers 已完成迁移；golden 未更新。
+
+### 5.4 Evidence boundary
+
+Review-round-8 的证据是 `NekoModulePipelineCacheSessionTest`、
+`ScriptReloadGenerationTest`、`PackSyncClientTest`、`ModulePipelineIsolationTest`、
+`SourceMapRegistryTest`、`NekoModuleResolverTest` 及 common/platform Gradle gates。未执行的真实
+Minecraft、loader runtime、client/server network session 不在本轮 evidence 中，不应从这些单测或编译结果推断已通过。

@@ -107,6 +107,14 @@ public final class NekoSandboxFactory {
     }
 
     public Sandbox build(ScriptType type) {
+        return build(type, preparationCache);
+    }
+
+    /** Build an environment against one generation-owned module session. */
+    public Sandbox build(ScriptType type, NekoModulePipelineCache moduleSession) {
+        if (!preparationCache.belongsToSameOwner(moduleSession)) {
+            throw new IllegalArgumentException("Sandbox module session belongs to another runtime owner");
+        }
         SandboxConfig config = core.sandboxConfig();
         ClassFilter classFilter = core.classFilter();
 
@@ -115,7 +123,7 @@ public final class NekoSandboxFactory {
         LoggerStream errStream = new LoggerStream(logger, true);
 
         IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, preparationCache))
+                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, moduleSession))
                 .build();
 
         Context.Builder contextBuilder = Context.newBuilder("js")
@@ -158,12 +166,12 @@ public final class NekoSandboxFactory {
         ctx.eval("js", CONSOLE_PATCH_JS);
         ctx.eval("js", "Java.loadClass = Java.type;");
         NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
-                new NekoModuleResolver(new com.tkisor.nekojs.core.module.NekoModuleResolutionPaths(
-                        paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)),
+                new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                        new ScriptFilePolicy(compilers)),
                 paths,
                 core.errorTracker(),
                 config,
-                preparationCache);
+                moduleSession);
 
         Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
         registeredExtensions.remove(".js");

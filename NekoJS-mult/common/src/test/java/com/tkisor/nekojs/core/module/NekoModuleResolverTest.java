@@ -145,7 +145,7 @@ class NekoModuleResolverTest {
     private static NekoModuleResolver resolverFor(Path gameDir) throws Exception {
         ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         Path root = gameDir.resolve("nekojs");
-        return new NekoModuleResolver(new NekoModuleResolutionPaths(
-                gameDir, root, root.resolve("node_modules")), new ScriptFilePolicy(compilers));
+        return new NekoModuleResolver(gameDir, root, root.resolve("node_modules"),
+                new ScriptFilePolicy(compilers));
     }
 }
