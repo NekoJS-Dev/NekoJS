@@ -17,6 +17,7 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -372,6 +373,11 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public record ErrorSnapshot(Collection<ScriptError> errors, int count) {
+        public ErrorSnapshot {
+            errors = List.copyOf(errors == null ? List.of() : errors);
+            count = errors.size();
+        }
+
         public static ErrorSnapshot of(com.tkisor.nekojs.core.error.ErrorTracker tracker) {
             Collection<ScriptError> all = tracker.getAllErrors();
             return new ErrorSnapshot(all, all.size());

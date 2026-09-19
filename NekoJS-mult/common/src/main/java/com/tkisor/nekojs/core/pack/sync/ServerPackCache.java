@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -39,20 +41,73 @@ public final class ServerPackCache {
         Path packDir = bucketDir.resolve(SyncedPack.encodeSyncId(syncId));
         deleteRecursively(packDir);
         try {
-            Files.createDirectories(packDir);
-            Files.writeString(packDir.resolve(ScriptPackManifest.FILE_NAME), manifestJson, StandardCharsets.UTF_8);
-            for (PackContentFile file : files) {
-                Path target = resolveInside(packDir, file.relativePath());
-                if (target == null) {
-                    throw new IOException("Path traversal rejected: " + file.relativePath());
-                }
-                if (target.getParent() != null) {
-                    Files.createDirectories(target.getParent());
-                }
-                Files.write(target, file.bytes());
-            }
+            writePack(packDir, manifestJson, files);
         } catch (IOException e) {
             NekoJS.LOGGER.warn("Failed to persist server pack {} to {}: {}", syncId, packDir, e.toString());
+        }
+    }
+
+    /** Create a same-filesystem staging root for one bundle replacement. */
+    static Path createStagingRoot(Path bucketDir) throws IOException {
+        Files.createDirectories(bucketDir);
+        return Files.createTempDirectory(bucketDir, ".nekojs-stage-");
+    }
+
+    /** Write one pack below a staging root without touching the active bucket entry. */
+    static void stagePack(Path stagingRoot, String syncId, String manifestJson,
+                          List<PackContentFile> files) throws IOException {
+        Path packDir = resolvePackDir(stagingRoot, syncId);
+        deleteRecursively(packDir);
+        writePack(packDir, manifestJson, files);
+    }
+
+    /**
+     * Replace staged pack directories while retaining the previous physical directories until
+     * the caller commits the runtime replacement. A failed reload can therefore restore the
+     * exact old files, including a replacement with the same sync id.
+     */
+    static PhysicalReplacement replaceStaged(Path stagingRoot, Path bucketDir,
+                                             Collection<String> syncIds) throws IOException {
+        PhysicalReplacement replacement = new PhysicalReplacement(stagingRoot, bucketDir);
+        try {
+            for (String syncId : syncIds) {
+                replacement.replace(syncId);
+            }
+            return replacement;
+        } catch (IOException failure) {
+            try {
+                replacement.restore();
+            } catch (IOException cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
+        }
+    }
+
+    private static Path resolvePackDir(Path root, String syncId) throws IOException {
+        Path packDir = root.resolve(SyncedPack.encodeSyncId(syncId)).normalize();
+        if (!packDir.startsWith(root.normalize())) {
+            throw new IOException("Invalid server pack id: " + syncId);
+        }
+        return packDir;
+    }
+
+    private static void writePack(Path packDir, String manifestJson, List<PackContentFile> files)
+            throws IOException {
+        if (manifestJson == null || files == null) {
+            throw new IOException("Server pack manifest/files must not be null");
+        }
+        Files.createDirectories(packDir);
+        Files.writeString(packDir.resolve(ScriptPackManifest.FILE_NAME), manifestJson, StandardCharsets.UTF_8);
+        for (PackContentFile file : files) {
+            Path target = resolveInside(packDir, file.relativePath());
+            if (target == null) {
+                throw new IOException("Path traversal rejected: " + file.relativePath());
+            }
+            if (target.getParent() != null) {
+                Files.createDirectories(target.getParent());
+            }
+            Files.write(target, file.bytes());
         }
     }
 
@@ -73,13 +128,14 @@ public final class ServerPackCache {
 
     /** 路径穿越校验：相对路径 normalize 后必须仍在 packDir 内；非法返回 null。 */
     static Path resolveInside(Path packDir, String relativePath) {
+        if (relativePath == null) return null;
         Path normalized = Path.of(relativePath).normalize();
         if (normalized.isAbsolute() || normalized.startsWith("..")) return null;
         Path resolved = packDir.resolve(normalized).normalize();
         return resolved.startsWith(packDir.normalize()) ? resolved : null;
     }
 
-    private static void deleteRecursively(Path dir) {
+    static void deleteRecursively(Path dir) {
         if (!Files.exists(dir)) return;
         try (Stream<Path> stream = Files.walk(dir)) {
             stream.sorted(Comparator.reverseOrder()).forEach(p -> {
@@ -96,4 +152,62 @@ public final class ServerPackCache {
 
     /** 从盘重扫的包快照。 */
     public record CachedPack(String manifestJson, List<PackContentFile> files, String hash) {}
+
+    static final class PhysicalReplacement {
+        private final Path stagingRoot;
+        private final Path bucketDir;
+        private final Path backupRoot;
+        private final List<Entry> entries = new ArrayList<>();
+        private boolean restored;
+
+        private PhysicalReplacement(Path stagingRoot, Path bucketDir) throws IOException {
+            this.stagingRoot = stagingRoot;
+            this.bucketDir = bucketDir;
+            this.backupRoot = stagingRoot.resolve(".rollback");
+            Files.createDirectories(backupRoot);
+        }
+
+        private void replace(String syncId) throws IOException {
+            Path staged = resolvePackDir(stagingRoot, syncId);
+            Path target = resolvePackDir(bucketDir, syncId);
+            Path backup = resolvePackDir(backupRoot, syncId);
+            if (!Files.isDirectory(staged)) {
+                throw new IOException("Staged server pack is missing: " + syncId);
+            }
+            Entry entry = new Entry(target, backup, Files.exists(target));
+            entries.add(entry);
+            if (entry.hadOriginal()) {
+                Files.createDirectories(backup.getParent());
+                Files.move(target, backup);
+            }
+            Files.move(staged, target);
+        }
+
+        void restore() throws IOException {
+            if (restored) return;
+            IOException failure = null;
+            for (int i = entries.size() - 1; i >= 0; i--) {
+                Entry entry = entries.get(i);
+                try {
+                    deleteRecursively(entry.target());
+                    if (entry.hadOriginal() && Files.exists(entry.backup())) {
+                        Files.move(entry.backup(), entry.target());
+                    }
+                } catch (IOException cleanupFailure) {
+                    if (failure == null) failure = cleanupFailure;
+                    else failure.addSuppressed(cleanupFailure);
+                }
+            }
+            restored = true;
+            deleteRecursively(stagingRoot);
+            if (failure != null) throw failure;
+        }
+
+        void commit() {
+            deleteRecursively(stagingRoot);
+            restored = true;
+        }
+
+        private record Entry(Path target, Path backup, boolean hadOriginal) {}
+    }
 }

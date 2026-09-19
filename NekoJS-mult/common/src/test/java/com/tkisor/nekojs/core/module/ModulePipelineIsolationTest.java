@@ -6,10 +6,11 @@ import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.script.ScriptManager;
+import com.tkisor.nekojs.script.ScriptEnvironmentFactory;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.lang.reflect.Modifier;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -129,7 +131,7 @@ class ModulePipelineIsolationTest {
                 "com.tkisor.nekojs.core.module.NekoModuleDependencyGraph",
                 "com.tkisor.nekojs.core.module.ModuleReloadCoordinator",
                 "com.tkisor.nekojs.core.module.esm.NekoEsmLinker",
-                "com.tkisor.nekojs.core.module.esm.NekoNativeEsmSourceRewriter");
+                "com.tkisor.nekojs.core.module.NekoNativeEsmSourceRewriter");
         List<String> violations = new ArrayList<>();
         for (String className : pureClasses) {
             Class<?> type = Class.forName(className);
@@ -234,6 +236,16 @@ class ModulePipelineIsolationTest {
     }
 
     @Test
+    void contextCreationRequiresAnExplicitModuleSession() throws Exception {
+        assertThrows(NoSuchMethodException.class,
+                () -> NekoSandboxFactory.class.getDeclaredMethod("build", com.tkisor.nekojs.api.ScriptType.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> ScriptEnvironmentFactory.class.getDeclaredMethod("createContext", com.tkisor.nekojs.api.ScriptType.class));
+        assertThrows(NoSuchMethodException.class,
+                () -> ScriptEnvironmentFactory.class.getDeclaredMethod("create", com.tkisor.nekojs.api.ScriptType.class));
+    }
+
+    @Test
     void canonicalAndSourceMapCaseIdentityFollowsTheInjectedFileSystem() {
         Path root = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-case-policy").toAbsolutePath();
         boolean caseInsensitive = root.getFileSystem().getPath("A").equals(root.getFileSystem().getPath("a"));
@@ -254,10 +266,10 @@ class ModulePipelineIsolationTest {
     @Test
     void hashCrossPackageSeamAndResolutionValueStayNarrow() throws Exception {
         Class<?> hash = Class.forName("com.tkisor.nekojs.core.module.NekoModuleHash");
-        assertTrue(Modifier.isPublic(hash.getModifiers()), "the ESM registry needs the shared hash seam");
+        assertTrue(!Modifier.isPublic(hash.getModifiers()), "hash implementation must stay internal");
         for (var method : hash.getDeclaredMethods()) {
-            assertTrue(method.getName().equals("sha256") == Modifier.isPublic(method.getModifiers()),
-                    "only the cross-package SHA-256 seam may be public: " + method);
+            assertTrue(!Modifier.isPublic(method.getModifiers()),
+                    "hash implementation methods must not be public: " + method);
         }
         for (var constructor : NekoModuleResolver.class.getConstructors()) {
             for (var parameter : constructor.getParameterTypes()) {
@@ -280,6 +292,9 @@ class ModulePipelineIsolationTest {
                 "prepare", Path.class, String.class, NekoTrustApprovedSource.class).getModifiers()));
         assertTrue(!Modifier.isPublic(NekoModulePipelineCache.class.getDeclaredMethod(
                 "approvedSource", Path.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoModulePipelineCache.RewriteSpan.class.getModifiers()));
+        assertTrue(!Modifier.isPublic(NekoModulePipelineCache.class.getDeclaredMethod(
+                "composeRewrittenSourceMap", NekoPreparedModule.class, String.class, List.class).getModifiers()));
     }
 
     private static void assertNoZeroArgumentConstructor(Class<?> type) {

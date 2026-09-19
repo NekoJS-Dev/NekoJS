@@ -17,14 +17,18 @@ import com.tkisor.nekojs.api.surface.EnvironmentKey;
 import com.tkisor.nekojs.api.surface.LoaderVersion;
 import com.tkisor.nekojs.api.surface.RuntimeDist;
 import com.tkisor.nekojs.api.surface.ScriptTypeId;
+import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import graal.graalvm.polyglot.Context;
 
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,6 +39,53 @@ class ManagedBindingSchemaTest {
     @BeforeEach
     void setUp() {
         TestPlatformInit.ensureInitialized();
+        ScriptBindingSchema.clearAll();
+    }
+
+    @Test
+    void failedCandidateSchemaInstallDoesNotReplaceActiveSchemaOrGlobals() throws Exception {
+        ScriptBindingSchema.register(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))));
+        ScriptBindingSchema.registerGlobals(ScriptType.SERVER, Set.of("activeGlobal"));
+
+        try (Context candidateContext = Context.newBuilder("js").allowAllAccess(true).build()) {
+            ScriptBindingSchema.installCandidate(candidateContext, ScriptType.SERVER,
+                    Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))),
+                    Set.of("candidateGlobal"));
+
+            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
+            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
+            assertEquals(Set.of("activeGlobal"), ScriptBindingSchema.knownGlobals(ScriptType.SERVER));
+
+            ScriptBindingSchema.discardCandidate(candidateContext);
+            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
+            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
+            assertEquals(Set.of("activeGlobal"), ScriptBindingSchema.knownGlobals(ScriptType.SERVER));
+        }
+    }
+
+    @Test
+    void candidateValidatorUsesCandidateViewWithoutReplacingActiveView() throws Exception {
+        ScriptBindingSchema.register(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("allowed"))));
+        ScriptBindingSchema.registerGlobals(ScriptType.SERVER, Set.of("ActiveBinding"));
+        AtomicInteger candidateDiagnostics = new AtomicInteger();
+
+        try (Context candidateContext = Context.newBuilder("js").allowAllAccess(true).build()) {
+            ScriptBindingSchema.View candidate = ScriptBindingSchema.installCandidate(
+                    candidateContext, ScriptType.SERVER,
+                    Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("allowed"))),
+                    Set.of("CandidateBinding"), diagnostic -> candidateDiagnostics.incrementAndGet());
+
+            GlobalBindingMemberValidator.validate(Path.of("server_scripts/candidate.js"),
+                    "CandidateBinding.typo", candidate);
+
+            assertEquals(1, candidateDiagnostics.get(),
+                    "preflight must validate against the candidate schema snapshot");
+            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
+            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
+            ScriptBindingSchema.discardCandidate(candidateContext);
+        }
     }
 
     private static EnvironmentKey serverEnv() {

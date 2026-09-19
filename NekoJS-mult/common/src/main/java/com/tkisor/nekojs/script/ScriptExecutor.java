@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.script;
 
 import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetry;
 import com.tkisor.nekojs.core.SyncEvalWatchdog;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -43,7 +44,8 @@ public final class ScriptExecutor {
         this.onContextKilled = onContextKilled;
     }
 
-    public void executeEntry(Context ctx, ScriptContainer script, NekoNodeRuntime nodeRuntime) {
+    public void executeEntry(Context ctx, ScriptContainer script, NekoNodeRuntime nodeRuntime,
+                             ScriptBindingSchema.View schemaView) {
         // 票 07 墙钟守卫：语句钩子看不见的空循环（while(true){}）只能靠宿主墙钟 +
         // Context.interrupt 打断。只覆盖本次同步求值段，结束即 disarm，长驻空闲
         // 环境不受影响；触发后走 onContextKilled 的 generation 记账（candidate 丢弃 /
@@ -57,7 +59,7 @@ public final class ScriptExecutor {
                 errorTracker.clear(ctx, script.id);
                 errorTracker.clearByScriptPath(ctx, script.type, relativePath.toString().replace("\\", "/"));
 
-                    validateGlobalBindings(ctx, script);
+                    validateGlobalBindings(ctx, script, schemaView);
 
                 JavaClassLoadTelemetry.enter(script.type, script.id.toString());
                 ScriptContextRegistry.switchCurrentScriptId(ctx, script.id.toString());
@@ -112,7 +114,8 @@ public final class ScriptExecutor {
      * <p>每次执行/重载都跑（而非只在编译时），保证游戏内错误面板在完整重载（源码未改、模块缓存命中）
      * 时仍准确反映当前脚本状态 —— 编译时校验（{@code NekoModulePipeline}）受静态缓存限制，这里补足入口脚本。
      */
-    private void validateGlobalBindings(Context context, ScriptContainer script) {
+    private void validateGlobalBindings(Context context, ScriptContainer script,
+                                        ScriptBindingSchema.View schemaView) {
         String source;
         try {
             source = Files.readString(script.path);
@@ -121,7 +124,7 @@ public final class ScriptExecutor {
             return;
         }
         try {
-            GlobalBindingMemberValidator.validate(script.path, source);
+            GlobalBindingMemberValidator.validate(script.path, source, schemaView);
         } catch (Throwable t) {
             // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
             // 进错误面板（recordCallbackError 含里程碑节流），否则该类型的成员校验

@@ -1,8 +1,6 @@
-package com.tkisor.nekojs.core.module.esm;
+package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
-import com.tkisor.nekojs.core.module.NekoModuleHash;
 
 import java.io.IOException;
 import java.net.URI;

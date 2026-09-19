@@ -29,9 +29,10 @@ public final class NekoNodeModuleInstaller {
      * prepared 缓存实例。
      */
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig, NekoModulePipelineCache preparationCache) {
-        NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, preparationCache);
+        NekoScriptModuleLoaderHost moduleLoaderHost = null;
         NekoNodeRuntime runtime = null;
         try {
+            moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, preparationCache);
             runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
             context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
             context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
@@ -44,17 +45,19 @@ public final class NekoNodeModuleInstaller {
             loadManifest(context);
             loadPluginModules(context, pluginModules);
             return runtime;
-        } catch (RuntimeException | Error failure) {
+        } catch (Throwable failure) {
             if (runtime != null) {
                 try {
                     runtime.close();
                 } catch (Throwable cleanupFailure) {
                     failure.addSuppressed(cleanupFailure);
                 }
-            } else {
+            } else if (moduleLoaderHost != null) {
                 moduleLoaderHost.close();
             }
-            throw failure;
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error errorFailure) throw errorFailure;
+            throw new IllegalStateException("Failed to install NekoJS Node runtime", failure);
         }
     }
 

@@ -1,13 +1,13 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -53,6 +54,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final CopyOnWriteArrayList<BiConsumer<Path, String>> preparationObservers = new CopyOnWriteArrayList<>();
     private final NekoModulePipelineCache owner;
     private final CopyOnWriteArrayList<NekoModulePipelineCache> sessions = new CopyOnWriteArrayList<>();
+    private volatile ScriptBindingSchema.View bindingSchemaView;
     private volatile boolean closed;
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
@@ -149,7 +151,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                     return existing;
                 }
                 try {
-                    NekoPreparedModule prepared = prepareSource(k, source, approval);
+                    NekoPreparedModule prepared = prepareSource(k, source, approval, bindingSchemaViewFor(k));
                     return new PreparedEntry(source.stamp(), prepared, scriptTypeOf(k));
                 } catch (IOException | RuntimeException ex) {
                     throw new PipelineException(ex);
@@ -274,6 +276,16 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         return count;
     }
 
+    /** Bind the immutable schema view belonging to this active/candidate generation. */
+    public void installBindingSchemaView(ScriptBindingSchema.View view) {
+        this.bindingSchemaView = view;
+    }
+
+    public ScriptBindingSchema.View bindingSchemaView() {
+        ScriptBindingSchema.View view = bindingSchemaView;
+        return view != null ? view : new ScriptBindingSchema.View(Map.of(), Set.of());
+    }
+
     SourceMapRegistry sourceMaps() {
         return sourceMaps;
     }
@@ -309,7 +321,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /** A native ESM replacement and its ranges in the prepared and rewritten source. */
-    public record RewriteSpan(int originalStart, int originalEnd, int generatedStart, int generatedEnd) {}
+    record RewriteSpan(int originalStart, int originalEnd, int generatedStart, int generatedEnd) {}
 
     /**
      * Compose the map for a virtual rewritten module. Compiler authored sources/content and
@@ -317,8 +329,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
      * Segments inside replacement text are deliberately conservative and point at the authored
      * mapping immediately before the replacement.
      */
-    public String composeRewrittenSourceMap(NekoPreparedModule prepared, String generatedSource,
-                                             java.util.List<RewriteSpan> rewriteSpans) {
+    String composeRewrittenSourceMap(NekoPreparedModule prepared, String generatedSource,
+                                     java.util.List<RewriteSpan> rewriteSpans) {
         if (prepared == null || prepared.sourceMap() == null || prepared.sourceMap().isBlank()) {
             return null;
         }
@@ -599,8 +611,14 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     private NekoPreparedModule prepareSource(Path path, SourceSnapshot source,
-                                              NekoTrustApprovedSource approval) throws Exception {
-        return pipeline.prepareCaptured(path, source.source(), approval, source.binding());
+                                              NekoTrustApprovedSource approval,
+                                              ScriptBindingSchema.View schemaView) throws Exception {
+        return pipeline.prepareCaptured(path, source.source(), approval, source.binding(), schemaView);
+    }
+
+    private ScriptBindingSchema.View bindingSchemaViewFor(Path path) {
+        ScriptBindingSchema.View view = bindingSchemaView;
+        return view != null ? view : ScriptBindingSchema.activeView(scriptTypeOf(path));
     }
 
     private void publishSourceMap(Path path, NekoPreparedModule prepared) {
