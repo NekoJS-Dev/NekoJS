@@ -569,7 +569,8 @@ public final class NekoScriptModuleLoaderHost {
         int line = -1;
         int column = -1;
         PolyglotException guest = findPolyglotException(failure);
-        SourceSection location = guest == null ? null : sourceLocation(guest, resolved.id());
+        SourceSection location = guest == null ? null
+                : sourceLocation(guest, resolved.id(), prepared, resolved, generatedLineOffset);
         if (location != null) {
             line = Math.max(-1, location.getStartLine() - generatedLineOffset);
             column = location.getStartColumn();
@@ -743,23 +744,59 @@ public final class NekoScriptModuleLoaderHost {
         }
     }
 
-    private SourceSection sourceLocation(PolyglotException failure, String moduleId) {
-        SourceSection location = failure.getSourceLocation();
-        SourceSection fallback = location;
+    /**
+     * Choose the guest frame that owns the failure.
+     *
+     * <p>Precedence: a frame that resolves onto a real authored position <em>and</em> belongs to a
+     * different module (cross-import/dynamic failure), then any frame that resolves onto a real
+     * authored position, then — when nothing maps — the reported source location unchanged, so an
+     * unmapped failure keeps its honest "unknown" position instead of inventing one.
+     *
+     * <p>The middle tier is what makes transpiled languages accurate. A thrown instance of a
+     * generated language runtime class (the Python exception prelude declares {@code class ValueError
+     * extends Error}) puts the class-declaration line at the top of the stack, so the first guest frame
+     * points at generated prelude code. Those frames carry no mapping, while the deeper frame that
+     * actually raised does — picking the first <em>mapped</em> frame reports the authored line
+     * instead of a generated helper line.
+     */
+    private SourceSection sourceLocation(PolyglotException failure, String moduleId,
+                                          NekoPreparedModule prepared, NekoResolvedModule resolved,
+                                          int generatedLineOffset) {
+        SourceSection fallback = failure.getSourceLocation();
+        SourceSection firstMapped = null;
         for (PolyglotException.StackFrame frame : failure.getPolyglotStackTrace()) {
-            if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
-                SourceSection candidate = frame.getSourceLocation();
-                if (fallback == null) {
-                    fallback = candidate;
-                }
-                String generatedPath = candidate.getSource().getPath();
-                String displayPath = virtualModules.displayPath(generatedPath);
-                if (displayPath != null && !displayPath.equals(moduleId)) {
-                    return candidate;
-                }
+            if (!frame.isGuestFrame() || frame.getSourceLocation() == null) {
+                continue;
+            }
+            SourceSection candidate = frame.getSourceLocation();
+            if (fallback == null) {
+                fallback = candidate;
+            }
+            if (!mapsToAuthoredSource(candidate, prepared, resolved, generatedLineOffset)) {
+                continue;
+            }
+            String generatedPath = candidate.getSource().getPath();
+            String displayPath = virtualModules.displayPath(generatedPath);
+            if (displayPath != null && !displayPath.equals(moduleId)) {
+                return candidate;
+            }
+            if (firstMapped == null) {
+                firstMapped = candidate;
             }
         }
-        return fallback;
+        return firstMapped == null ? fallback : firstMapped;
+    }
+
+    /** Whether this guest frame resolves onto an authored position for the prepared module. */
+    private boolean mapsToAuthoredSource(SourceSection candidate, NekoPreparedModule prepared,
+                                          NekoResolvedModule resolved, int generatedLineOffset) {
+        int line = candidate.getStartLine() - generatedLineOffset;
+        if (line <= 0) {
+            return false;
+        }
+        SourceMapRegistry.OriginalPosition mapped = mappedPosition(
+                candidate.getSource().getPath(), prepared, resolved, line, candidate.getStartColumn());
+        return mapped != null && mapped.path != null && !mapped.path.isBlank();
     }
 
     private static PolyglotException findPolyglotException(Throwable failure) {
