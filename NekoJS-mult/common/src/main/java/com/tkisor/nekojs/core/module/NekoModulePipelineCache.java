@@ -8,6 +8,7 @@ import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -41,8 +42,8 @@ import java.util.function.BiConsumer;
  * root close 时清空本实例（生命周期归属见 {@code NekoRuntimeRoot#closeSilently}）；
  * 直接构造的测试/manager 各自持有隔离实例，互不污染。
  *
- * <p>失效口径：同一路径键下，mtime/size/内容哈希/language id/requested mode 任一变化即
- * 失效（{@link FileStamp} 五元组）——同 stamp 同长度但内容不同的覆盖写入不会返回旧模块；
+ * <p>失效口径：同一路径键下，mtime/size/内容哈希/language id/requested mode/compiler registry
+ * revision 任一变化即失效（{@link FileStamp} 六元组）——同 stamp 同长度但内容不同的覆盖写入不会返回旧模块；
  * 路径/mode 变化天然落到不同键或不同 stamp。
  */
 public final class NekoModulePipelineCache implements AutoCloseable {
@@ -625,7 +626,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
         FileStamp stamp;
         try {
-            stamp = FileStamp.read(path, source, binding.identity());
+            stamp = FileStamp.read(path, source, binding.identity(), binding.registryRevision());
         } catch (IOException failure) {
             throw NekoModuleError.cache(NekoModuleError.displayPath(path), "Cannot stamp module source: " + failure.getMessage(), failure);
         }
@@ -651,7 +652,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     private static Path key(Path path) {
-        return Path.of(NekoCanonicalPath.of(path));
+        return NekoCanonicalPath.pathOf(path);
     }
 
     private void ensureOpen() {
@@ -684,24 +685,11 @@ public final class NekoModulePipelineCache implements AutoCloseable {
      * 不在任何类型目录下（如 node_modules）的 key 是跨类型共享缓存，返回 null。
      */
     private ScriptType scriptTypeOf(Path key) {
-        if (key == null) {
+        try {
+            return ScriptPathClassifier.fromPath(key);
+        } catch (Exception ignored) { // 路径解析失败 → 视为共享缓存
             return null;
         }
-        try {
-            Path root = sourceMaps.root().normalize().toAbsolutePath();
-            if (!key.startsWith(root)) {
-                return null;
-            }
-            Path relative = root.relativize(key);
-            if (relative.getNameCount() < 1) {
-                return null;
-            }
-            String first = relative.getName(0).toString();
-            // Windows 文件系统大小写不敏感：按 ScriptType 的单一目录名事实匹配。
-            return ScriptType.fromScriptsDirectoryName(first);
-        } catch (Exception ignored) { // 路径解析失败 → 视为共享缓存
-        }
-        return null;
     }
 
     private record SourceSnapshot(FileStamp stamp, String source,
@@ -710,18 +698,20 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private record PreparedEntry(FileStamp stamp, NekoPreparedModule prepared, ScriptType type) {}
 
     /**
-     * 模块文件的内容指纹（mtime/size/contentHash + ModuleIdentity(languageId/requestedMode)）。
+     * 模块文件的内容指纹（mtime/size/contentHash + ModuleIdentity(languageId/requestedMode)
+     * + compiler registry revision）。
      *
      * <p>历史缺陷：仅 (modifiedMillis, size) 无法区分“同一时间戳刻度内对等长文件的覆盖写入”，
      * 粗粒度时间戳文件系统（如部分 Windows / FAT / 容器挂载）会因此误判未变化，继续返回旧编译模块。
      * contentHash（SHA-256）修复该缺陷；languageId/requestedMode 由 {@link NekoModuleIdentity}
-     * 组成：同一路径在语言插件替换（同扩展名改注册）或 requested mode 变化时也必须失效。
+     * 组成，registryRevision 捕获语言插件注册表的版本：同一路径在同 id 编译器替换时也必须失效。
      */
     private record FileStamp(long modifiedMillis, long size, String contentHash,
-                             NekoModuleIdentity identity) {
-        private static FileStamp read(Path path, String source, NekoModuleIdentity identity) throws IOException {
+                             NekoModuleIdentity identity, long registryRevision) {
+        private static FileStamp read(Path path, String source, NekoModuleIdentity identity,
+                                     long registryRevision) throws IOException {
             return new FileStamp(Files.getLastModifiedTime(path).toMillis(), Files.size(path),
-                    contentHash(source), identity);
+                    contentHash(source), identity, registryRevision);
         }
 
         private static String contentHash(String source) {

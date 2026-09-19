@@ -8,6 +8,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
 import graal.graalvm.polyglot.SourceSection;
@@ -529,17 +530,39 @@ public final class DefaultErrorTracker implements ErrorTracker {
         return !"file".equalsIgnoreCase(scheme) && !scheme.matches("[A-Za-z]");
     }
 
-    private static String extractScriptDisplayPath(String pathText) {
+    private String extractScriptDisplayPath(String pathText) {
         if (pathText == null || pathText.isBlank()) {
             return null;
         }
         String normalized = pathText.replace('\\', '/');
+        Path providerPath;
+        try {
+            providerPath = paths.root().getFileSystem().getPath(normalized);
+        } catch (Exception ignored) {
+            providerPath = null;
+        }
+        if (providerPath != null) {
+            for (int index = 0; index < providerPath.getNameCount(); index++) {
+                Path segment = providerPath.getName(index);
+                if (ScriptPathClassifier.fromSegment(segment) != null) {
+                    String marker = segment.toString().replace('\\', '/');
+                    int start = normalized.indexOf(marker);
+                    if (start >= 0) return normalized.substring(start);
+                }
+            }
+        }
+        // Display strings such as truffle:... are not always parseable as provider paths; inspect
+        // their textual segments with the same provider-aware classifier as the path branch.
         for (int start = 0; start < normalized.length(); ) {
             int slash = normalized.indexOf('/', start);
             if (slash < 0) break;
             String segment = normalized.substring(start, slash);
-            if (ScriptType.fromScriptsDirectoryName(segment) != null) {
-                return normalized.substring(start);
+            try {
+                if (ScriptPathClassifier.fromSegment(paths.root().getFileSystem().getPath(segment)) != null) {
+                    return normalized.substring(start);
+                }
+            } catch (RuntimeException ignored) {
+                // URI-like display prefixes are not valid provider path segments.
             }
             start = slash + 1;
         }

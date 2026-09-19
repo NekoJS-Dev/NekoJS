@@ -11,14 +11,21 @@ final class NekoCanonicalPath {
 
     static String of(Path path) {
         Objects.requireNonNull(path, "path");
+        Path canonical = pathOf(path);
+        String normalized = canonical.toString().replace('\\', '/');
+        return isCaseInsensitive(canonical) ? normalized.toLowerCase(java.util.Locale.ROOT) : normalized;
+    }
+
+    /** Preserve the injected provider when a canonical path is used as a map key. */
+    static Path pathOf(Path path) {
+        Objects.requireNonNull(path, "path");
         Path canonical = path.normalize().toAbsolutePath();
         try {
             canonical = canonical.toRealPath();
         } catch (IOException ignored) {
             // A missing source still needs a deterministic lexical identity.
         }
-        String normalized = canonical.toString().replace('\\', '/');
-        return isCaseInsensitive(canonical) ? normalized.toLowerCase(java.util.Locale.ROOT) : normalized;
+        return canonical;
     }
 
     static boolean isWithin(String subject, String root) {

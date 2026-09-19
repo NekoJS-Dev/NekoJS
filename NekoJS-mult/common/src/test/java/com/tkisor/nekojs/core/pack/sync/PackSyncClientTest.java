@@ -138,6 +138,28 @@ class PackSyncClientTest {
     }
 
     @Test
+    void missingClientReloadHookRejectsAnOtherwiseTrustedBundle() {
+        config("all", false);
+        PackSyncClient.installClientReloadHook(null);
+        String syncId = "packs:missing-reload-hook";
+        String manifest = signed(syncId, "GLOBAL", "key-missing-reload-hook",
+                "client_scripts/hud.js", "module.exports = 'hook-missing';\n");
+        SyncedPack pack = pack(syncId, "GLOBAL", manifest,
+                "client_scripts/hud.js", "module.exports = 'hook-missing';\n");
+        PackSyncClient.handleHashList(runtimeRoot, "srv-missing-reload-hook.test", hashes(pack));
+        PackSyncTrustStore.get().trustServer("srv-missing-reload-hook.test");
+
+        PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
+
+        assertTrue(outcome.shouldDisconnect(), "a missing production reload hook must reject the bundle");
+        assertTrue(outcome.disconnect().contains("CLIENT script reload failed"));
+        assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-missing-reload-hook.test"))
+                .resolve(SyncedPack.encodeSyncId(syncId)).resolve("client_scripts/hud.js");
+        assertNull(runtimeTrust.approvalFor(remoteFile), "a rejected bundle must not retain remote approval");
+    }
+
+    @Test
     void reloadFailureRejectsBundleAndRevokesSelectedRuntimeState() {
         config("all", false);
         PackSyncClient.installClientReloadHook(() -> false);
@@ -274,6 +296,7 @@ class PackSyncClientTest {
     @Test
     void successfulActivationAuthorizesRuntimeCacheAndDisconnectRevokesIt() throws Exception {
         config("all", false);
+        installCountingReloadHook();
         String manifest = signed("packs:runtime", "GLOBAL", "key-runtime");
         SyncedPack pack = pack("packs:runtime", "GLOBAL", manifest,
                 "client_scripts/hud.js", "hud()");
@@ -312,6 +335,7 @@ class PackSyncClientTest {
     @Test
     void replacingBundleRejectsOldAndStaleFilesButAllowsCurrentSource() throws Exception {
         config("all", false);
+        installCountingReloadHook();
         String oldManifest = signed("packs:stale-old", "GLOBAL", "key-stale-old",
                 "client_scripts/old.js", "module.exports = 'old';\n");
         SyncedPack oldPack = pack("packs:stale-old", "GLOBAL", oldManifest,
@@ -361,6 +385,7 @@ class PackSyncClientTest {
     @Test
     void switchingServerBucketsRevokesPreviousRuntimeSourcesBeforeActivatingNext() throws Exception {
         config("all", false);
+        installCountingReloadHook();
         String firstAddress = "srv-switch-alpha.test";
         String secondAddress = "srv-switch-beta.test";
         assertNotEquals(PackSyncTrustStore.bucketFor(firstAddress), PackSyncTrustStore.bucketFor(secondAddress));

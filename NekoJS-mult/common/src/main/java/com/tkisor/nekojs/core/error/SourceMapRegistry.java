@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
 
 import java.io.IOException;
 import java.net.URI;
@@ -103,7 +104,8 @@ public final class SourceMapRegistry implements NekoSourceMapView {
      */
     public void clearByScriptType(ScriptType type) {
         if (type == null) return;
-        clearByPathPrefix(type.scriptsDirectoryName() + "/");
+        mappings.entrySet().removeIf(entry -> type == scriptTypeOf(entry.getKey())
+                || type == scriptTypeOf(entry.getValue().generatedPath));
     }
 
     private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {
@@ -330,9 +332,21 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         return path.startsWith("/") || path.matches("^[A-Za-z]:/.*");
     }
 
-    private static boolean isRootRelative(String path) {
-        int slash = path.indexOf('/');
-        return slash > 0 && ScriptType.fromScriptsDirectoryName(path.substring(0, slash)) != null;
+    private boolean isRootRelative(String path) {
+        return ScriptPathClassifier.fromPath(root.getFileSystem().getPath(path)) != null;
+    }
+
+    private ScriptType scriptTypeOf(String path) {
+        if (path == null || path.isBlank()) return null;
+        try {
+            Path parsed = root.getFileSystem().getPath(path);
+            if (!parsed.isAbsolute()) {
+                parsed = root.resolve(parsed);
+            }
+            return ScriptPathClassifier.fromPath(parsed);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static String generatedDirectory(String generatedPath) {

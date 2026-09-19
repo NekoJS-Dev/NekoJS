@@ -67,7 +67,7 @@ public final class ServerPackCache {
      * exact old files, including a replacement with the same sync id.
      */
     static PhysicalReplacement replaceStaged(Path stagingRoot, Path bucketDir,
-                                             Collection<String> syncIds) throws IOException {
+                                              Collection<String> syncIds) throws IOException {
         PhysicalReplacement replacement = new PhysicalReplacement(stagingRoot, bucketDir);
         try {
             for (String syncId : syncIds) {
@@ -78,7 +78,8 @@ public final class ServerPackCache {
             try {
                 replacement.restore();
             } catch (IOException cleanupFailure) {
-                failure.addSuppressed(cleanupFailure);
+                throw new ReplacementFailure("Failed to restore server pack files after replacement setup failure",
+                        replacement, failure, cleanupFailure);
             }
             throw failure;
         }
@@ -150,6 +151,31 @@ public final class ServerPackCache {
         }
     }
 
+    /** Strict deletion used by transactional replacement; a failed delete must reach the caller. */
+    static void deleteRecursivelyStrict(Path dir) throws IOException {
+        if (dir == null || !Files.exists(dir)) return;
+        List<Path> paths;
+        try (Stream<Path> stream = Files.walk(dir)) {
+            paths = stream.sorted(Comparator.reverseOrder()).toList();
+        }
+        IOException failure = null;
+        for (Path path : paths) {
+            try {
+                Files.deleteIfExists(path);
+                if (Files.exists(path)) {
+                    throw new IOException("Path still exists after delete: " + path);
+                }
+            } catch (IOException deleteFailure) {
+                if (failure == null) failure = deleteFailure;
+                else failure.addSuppressed(deleteFailure);
+            }
+        }
+        if (failure != null) throw failure;
+        if (Files.exists(dir)) {
+            throw new IOException("Directory still exists after delete: " + dir);
+        }
+    }
+
     /** 从盘重扫的包快照。 */
     public record CachedPack(String manifestJson, List<PackContentFile> files, String hash) {}
 
@@ -157,17 +183,23 @@ public final class ServerPackCache {
         private final Path stagingRoot;
         private final Path bucketDir;
         private final Path backupRoot;
+        private final RecursiveDelete deleteOperation;
         private final List<Entry> entries = new ArrayList<>();
         private boolean restored;
 
-        private PhysicalReplacement(Path stagingRoot, Path bucketDir) throws IOException {
+        PhysicalReplacement(Path stagingRoot, Path bucketDir) throws IOException {
+            this(stagingRoot, bucketDir, ServerPackCache::deleteRecursivelyStrict);
+        }
+
+        PhysicalReplacement(Path stagingRoot, Path bucketDir, RecursiveDelete deleteOperation) throws IOException {
             this.stagingRoot = stagingRoot;
             this.bucketDir = bucketDir;
             this.backupRoot = stagingRoot.resolve(".rollback");
+            this.deleteOperation = deleteOperation;
             Files.createDirectories(backupRoot);
         }
 
-        private void replace(String syncId) throws IOException {
+        void replace(String syncId) throws IOException {
             Path staged = resolvePackDir(stagingRoot, syncId);
             Path target = resolvePackDir(bucketDir, syncId);
             Path backup = resolvePackDir(backupRoot, syncId);
@@ -189,25 +221,47 @@ public final class ServerPackCache {
             for (int i = entries.size() - 1; i >= 0; i--) {
                 Entry entry = entries.get(i);
                 try {
-                    deleteRecursively(entry.target());
+                    deleteOperation.delete(entry.target());
                     if (entry.hadOriginal() && Files.exists(entry.backup())) {
                         Files.move(entry.backup(), entry.target());
+                    } else if (entry.hadOriginal()) {
+                        throw new IOException("Rollback backup is missing: " + entry.backup());
                     }
                 } catch (IOException cleanupFailure) {
                     if (failure == null) failure = cleanupFailure;
                     else failure.addSuppressed(cleanupFailure);
                 }
             }
-            restored = true;
-            deleteRecursively(stagingRoot);
             if (failure != null) throw failure;
+            deleteOperation.delete(stagingRoot);
+            restored = true;
         }
 
-        void commit() {
-            deleteRecursively(stagingRoot);
+        void commit() throws IOException {
+            deleteOperation.delete(stagingRoot);
             restored = true;
         }
 
         private record Entry(Path target, Path backup, boolean hadOriginal) {}
+    }
+
+    @FunctionalInterface
+    interface RecursiveDelete {
+        void delete(Path path) throws IOException;
+    }
+
+    static final class ReplacementFailure extends IOException {
+        private final PhysicalReplacement replacement;
+
+        ReplacementFailure(String message, PhysicalReplacement replacement,
+                           IOException original, IOException cleanupFailure) {
+            super(message, original);
+            this.replacement = replacement;
+            addSuppressed(cleanupFailure);
+        }
+
+        PhysicalReplacement replacement() {
+            return replacement;
+        }
     }
 }
