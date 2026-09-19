@@ -4,9 +4,9 @@
 
 **Blocked by:** [11: JS/CJS/ESM 模块身份、缓存与生命周期基础路径](11-language-pipeline.md)
 
-**Status:** ready-for-agent
+**Status:** closed
 
-**Assignee:** unassigned
+**Assignee:** 13-agent
 
 **Optional:** false
 
@@ -18,15 +18,15 @@
 
 ## Acceptance criteria
 
-- [ ] .py representative corpus 得到 language id=Python 语义、正确 module mode、可执行 code/IR 和可用 source map。
-- [ ] 缩进、定义、调用、注释和导入的既有行为由 golden/corpus 固定，不冻结私有 parser 对象身份。
-- [ ] Python 源语法/转换错误在准备阶段携带原始行列；生成代码执行错误也能回映射到 .py。
-- [ ] Python 模块身份、依赖图和 cache invalidation 与统一 Resolution/Cache 行为一致。
-- [ ] 源码、mode、identity 或依赖变化不会命中旧 Python 产物。
-- [ ] Python 与 JS/CJS/ESM/TS 混合加载的错误阶段和模块归属可观察。
-- [ ] Python declaration/probe 中的语言与 module 归属不被 JS declaration 覆盖。
-- [ ] 不删除 Python 支持，不新增 Python runtime、公共 parser SPI或第二套模块管线。
-- [ ] 随实现交付 .py 最小可运行示例与必要迁移材料；示例只使用已通过 gate 的 Python 语法、import 和诊断能力。
+- [x] .py representative corpus 得到 language id=Python 语义、正确 module mode、可执行 code/IR 和可用 source map。
+- [x] 缩进、定义、调用、注释和导入的既有行为由 golden/corpus 固定，不冻结私有 parser 对象身份。
+- [x] Python 源语法/转换错误在准备阶段携带原始行列；生成代码执行错误也能回映射到 .py。
+- [x] Python 模块身份、依赖图和 cache invalidation 与统一 Resolution/Cache 行为一致。
+- [x] 源码、mode、identity 或依赖变化不会命中旧 Python 产物。
+- [x] Python 与 JS/CJS/ESM/TS 混合加载的错误阶段和模块归属可观察。
+- [x] Python declaration/probe 中的语言与 module 归属不被 JS declaration 覆盖。
+- [x] 不删除 Python 支持，不新增 Python runtime、公共 parser SPI或第二套模块管线。
+- [x] 随实现交付 .py 最小可运行示例与必要迁移材料；示例只使用已通过 gate 的 Python 语法、import 和诊断能力。
 
 ## Sources
 
@@ -49,3 +49,121 @@
   - PERF_BASELINE: Python corpus 成本只记录对照，不设定未确认阈值。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+## Closure record（2026-09-19）
+
+- 执行者：13-agent。工作流：读票全文 / 规格 06 / 票 11 全部 Closure 与 Review-round addendum /
+  票 12 Closure / README「认领、前沿与完成」/ 11 的 MIGRATION 与 module-examples →
+  源码定位（prepared module、pipeline、cache、loader host、Python compiler/lexer/parser/emitter、
+  source-map registry、probe backend）→ 用 9 个一次性探针测试（**已删除**）实测当前 Python
+  prepare/执行/错误映射行为并定位真实缺陷 → TDD 红（`NekoPythonPrepareTest` 3 红、
+  `NekoPythonRuntimeTest` 12 红）→ 实现收口（绿）→ 全量
+  `./gradlew.bat :common:test --rerun-tasks`（1725 tests, 0 failed, 4 skipped）→
+  `:common:check` + `:26.2.0:compileJava` + `:26.2.0-fabric:compileJava` +
+  `git diff --check` → 双轴自查 → 勾选 AC → 关票提交（不 push）。
+- 先决输入（票 11 closed，不重做）：`NekoPreparedModule` / `NekoModulePipeline` /
+  `NekoModulePipelineCache` / `NekoModuleError` / `NekoSourceMapBuilder.identity` /
+  `NekoCompileException`（票 12 建立的 authored 行列载体）的形态与语义未变；
+  本票只复用这些既有 seam。
+
+### 定位到的真实缺陷（本票修复）
+
+1. **Python 准备期错误没有 authored 行列字段。** `PythonLexer` / `PythonParser` /
+   `PythonEmitter` / `FStringParser` 抛裸 `IllegalArgumentException`，位置只在消息文本里，
+   `NekoModuleError.sourceLine()/sourceColumn()` 恒为 `-1`。票 12 已建立
+   `NekoCompileException` 与「pipeline 发布 authored 位置」这条 seam，Python 未接入。
+2. **Python source map 的 `sources[0]` 是纯文件名。** `SourceMapRegistry` 用 source 条目把
+   映射结果解析回 authored 文件，因此每个 Python 诊断都落到
+   `.native_esm_modules/<name>.py` 而不是 authored 模块。
+3. **执行期取错 guest 栈帧。** Python 产物会在顶层前置异常 prelude
+   （`class ValueError extends Error {}` 等）。抛出该 prelude 类实例时栈顶是**类声明帧**，
+   宿主 `sourceLocation` 取第一个 guest 帧 → 把生成坐标当成 authored 行
+   （authored 第 4 行的 `raise` 报成第 5 行）。
+
+### 交付物（源码）
+
+- `PythonLexer` / `PythonParser` / `PythonEmitter` / `FStringParser`：改抛
+  `NekoCompileException`（继承 `IllegalArgumentException`，**消息文本逐字保留**），
+  携带 authored 行列；emitter 为语句级位置（列取语句起点，类注已说明）。
+  `PythonToJsCompiler` 的 `catch (IllegalArgumentException)` 包装语义不变。
+- `PythonToJsCompiler`：source map 的 `sources[0]` / `file` 由纯文件名改为 authored 路径
+  （与其它前端 `NekoSourceMapBuilder.displayName` 同一约定）；
+  既有「`sources[0]` 含 `test.py`」断言继续成立。
+- `NekoScriptModuleLoaderHost#sourceLocation`：由「第一个 guest 帧」改为按优先级选帧——
+  (1) 能解析到 authored 位置且属于不同模块的帧；(2) 任何能解析到 authored 位置的帧；
+  (3) 都解析不到时保留原 source location 不变（**不编造**位置）。新增
+  `mapsToAuthoredSource` 判定。**没有**第二条 pipeline / 第二个 resolver / 新 parser SPI。
+- 未引入外部转译依赖、未新增公共 parser SPI、未新增 Gradle 子项目或依赖；
+  `common` 未新增 Minecraft/loader import。
+
+### 交付物（测试，common，4 新类 28 用例 + 1 类断言更新）
+
+- `NekoPythonPrepareTest`(10)：AC1/AC3（准备侧）/AC4 的 prepare 级 seam——language id、mode、
+  可执行 code、statement 粒度可用 map、**prepended-line 语义**（前置助手行显式无映射且不偏移
+  后续语句）、词法/语法/发射期/缩进错误的 authored 行列、内容/mode/language 失效。
+- `NekoPythonRuntimeTest`(13)：AC1/AC2/AC3（执行侧）/AC4/AC6 的执行级 seam——缩进+注释+elif+
+  for、class/闭包/默认参数/f-string、兄弟 `.py` 模块 import（命名 + 命名空间身份一致）、
+  `raise` 的 authored 行、CJS 形态脚本不报生成助手行、跨 import 子模块身份与行、
+  异步入口一致性、依赖失效/未变化不重求值、`.py`↔`.mjs` 双向 import、缺失模块的 RESOLVE 归属、
+  失败的 ESM 子模块保留自身身份。
+- `PythonExamplesSmokeTest`(2)：AC9 示例冒烟 + 文档化 language 身份/source-map 行为。
+- `PythonDeclarationAttributionTest`(3)：AC7——Python 与 TS backend 各自拥有 language id 与输出
+  目录、由同一 catalog/IR 派生但 module 归属按 Java 包路径、Python 产物不冒充 TS 声明。
+- `NekoTypeScriptJsxRuntimeTest`(1 处断言更新)：interop 包装子模块失败的 `sourceLine()`
+  由 `-1` 变为子模块真实的 `throw` 行 3（本次宿主选帧修复的连带收益，归因仍是子模块）。
+
+### 交付物（示例/迁移）
+
+- `common/src/test/resources/nekojs/language-py-examples/py/{hello.py,greet.py}` 最小可运行示例。
+- `docs/architecture-refactor/baseline/2026-09-19-language-py/MIGRATION.md`：脚本零迁移声明、
+  作者可见的唯一变化（错误位置更精确）、示例内联、language 身份/mode/source map/cache key/
+  prepended-line 口径表、诊断阶段与位置口径、执行期帧选择根因、Java 调用点迁移（无）、
+  已知边界与未做事项。
+
+### 验收判定（逐条 AC：seam + 精确命令 + 结果）
+
+| AC | 实现 seam / 测试方法 | 精确 Gradle 命令 | 结果与限制 |
+|---|---|---|---|
+| 1 | `NekoPythonPrepareTest#pythonDefinitionsPublishLanguageModeAndExecutableCode`、`#pythonBareStatementsPrepareAsCommonJsAndStayExecutable`、`#pythonSourceMapPublishesAuthoredPathAndContent`、`#prependedHelperLinesAreUnmappedAndDoNotShiftAuthoredStatements` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonPrepareTest` | PASS（10/10）；language id=`python`、mode=ESM/CJS、可执行 JS、非空 statement map，且每条 authored 语句映射回真实 authored 行。`prependedLineCount=0`（前置行已在 map 内部消化）。 |
+| 2 | `NekoPythonRuntimeTest#indentationDefinitionsCallsAndCommentsRunUnchanged`、`#classesAndClosuresRunUnchanged`、`#pythonModulesImportEachOtherThroughTheSharedResolver`；既有 `PythonGoldenTest`(20)/`PythonToJsCompilerTest`(181)/`PythonEmitterMagicImportTest`(4) 未改且全绿 | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --tests com.tkisor.nekojs.core.compiler.PythonGoldenTest --tests com.tkisor.nekojs.core.compiler.PythonToJsCompilerTest --tests com.tkisor.nekojs.core.compiler.python.PythonEmitterMagicImportTest` | PASS；缩进/注释/elif/for 的控制流与返回值、class+闭包+默认参数+f-string、兄弟模块 import 均经**真实 Graal 执行**断言输出值。**golden 未更新。** |
+| 3 | `NekoPythonPrepareTest#pythonLexErrorCarriesAuthoredFileLineAndColumn`、`#pythonParseErrorCarriesAuthoredFileLineAndColumn`、`#pythonEmitterErrorCarriesTheAuthoredStatementLine`、`#pythonIndentationErrorCarriesTheAuthoredLine`；执行侧 `NekoPythonRuntimeTest#runtimeFailureInRaisedFunctionReportsAuthoredLineAndIdentity`、`#runtimeFailureInCommonJsShapedPythonReportsAuthoredLineNotGeneratedLine`、`#crossImportRuntimeFailureKeepsTheFailingChildPythonIdentity` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonPrepareTest --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest` | PASS；准备期错误为 `PREPARE/Script Preparation` + authored 文件与行列（词法 3:7、语法 authored 行、发射期 authored 语句行、缩进 3）；执行期异常为 `EXECUTE/Script Execution Environment` + authored `.py` 路径/行列 + guest cause。限制：发射期列固定为语句起点（emitter 只有语句级行）。 |
+| 4 | `NekoPythonRuntimeTest#pythonModulesImportEachOtherThroughTheSharedResolver`、`#unchangedPythonDependencyIsNotReevaluated`、`#changedPythonDependencyIsReloadedThroughTheSharedCache`、`NekoPythonPrepareTest#pythonDependencyChangeInvalidatesThroughTheSameInvalidateSeam`；既有 `NekoModuleIdentityLifecycleTest`(25)/`NekoModulePipelineCacheStampTest` 未改且全绿 | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest` | PASS；`.py` 走同一 `NekoModuleResolver` + 同一模块身份/失效（被 import 模块只求值一次；改动经 `invalidateModuleTree` 后新值可见）。无第二条 resolver。 |
+| 5 | `NekoPythonPrepareTest#contentModeAndLanguageChangesInvalidatePythonEntries`、`#unchangedPythonInputsHitTheSamePreparedIdentity` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonPrepareTest` | PASS；内容变化、`.py` 语言身份替换（registry revision 连带）、顶层定义→纯语句的 mode 变化都产生不同 `cacheKey` 与新产物；同输入稳定命中。 |
+| 6 | `NekoPythonRuntimeTest#missingPythonModuleIsResolvedAtTheResolveStageNotExecution`、`#failingEsmChildImportedFromPythonKeepsTheEsmChildIdentity`、`#pythonAndEsmModulesImportEachOtherWithObservableAttribution`、`#crossImportRuntimeFailureKeepsTheFailingChildPythonIdentity`、`#asyncEntryLoadingOfPythonChildKeepsTheChildIdentityAndAuthoredLine` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest` | PASS；缺失模块=`RESOLVE/Module Resolution-Cache` 且 sourcePath 为 authored 引用方；失败的 ESM 子模块保留自身 identity；`.py`↔`.mjs` 双向 import 的返回值与错误归属可观察。限制：literal dynamic import 到失败的 CJS 子模块时 Graal promise 边界仍丢子模块身份（票 12 已记录，本票未伪造成已修复）。 |
+| 7 | `PythonDeclarationAttributionTest#pythonBackendKeepsItsOwnLanguageIdAndOutputDirectory`、`#pythonDeclarationIsDerivedFromTheSharedCatalogAndKeepsModuleAttribution`、`#pythonDeclarationDoesNotClaimJsLanguageIdentity`；既有 `PythonDeclarationDeterminismParityTest`/`PythonProbeBackendIntegrationTest`/`NekoProbeBuiltinPluginTest` 未改且全绿 | `./gradlew.bat :common:test --tests com.tkisor.nekojs.probe.PythonDeclarationAttributionTest --tests com.tkisor.nekojs.probe.PythonDeclarationDeterminismParityTest --tests com.tkisor.nekojs.probe.backend.python.PythonProbeBackendIntegrationTest` | PASS；Python language id 与 language 输出目录独立于 TS；同一 catalog/IR 下 module 归属是 Java 包路径；输出全是 `.pyi` + `py.typed`，不含 `.d.ts` 与 TS 语法。 |
+| 8 | `ModulePipelineIsolationTest`(16，未改，含源码/签名扫描与零参构造断言)；`git status` 无新 Gradle 子项目、无新依赖、无新 parser SPI | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest`；`git diff --stat` | PASS；`common` 未新增 Minecraft/loader import，未新增 build 文件/依赖，未新增公共 parser SPI；Python 仍走唯一 `NekoModulePipeline` + `NekoModulePipelineCache`。 |
+| 9 | `PythonExamplesSmokeTest`(2) + `common/src/test/resources/nekojs/language-py-examples/` + `baseline/2026-09-19-language-py/MIGRATION.md` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.PythonExamplesSmokeTest` | PASS；示例经真实 host 装载并断言文档承诺输出（`hello, neko!` / `py`）、language id 与 authored source-map 映射。真实 loader/in-game smoke 不在此命令内。 |
+
+### 综合门禁
+
+```text
+./gradlew.bat :common:compileJava :common:compileTestJava
+./gradlew.bat :common:test --rerun-tasks        → 1725 tests completed, 0 failed, 4 skipped
+./gradlew.bat :common:check
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+以上命令均 PASS（平台编译仅有既有 unchecked/deprecation 与注解缺失告警，不影响成功）。
+**未更新任何 golden。**
+
+### 双轴自查
+
+- **Standards**：Python 前端复用票 12 已建立的 `NekoCompileException` seam，没有新建并行载体；
+  执行期帧选择收口在既有的 `sourceLocation`/`mappedPosition` 单一入口，没有第二套位置解析；
+  source map 的 authored 路径与其它前端共用同一约定与同一 `SourceMapRegistry`。
+  无投机抽象、无未调用 helper、无残留重复实现（探针测试已全部删除）。
+- **Spec**：9 条 AC 均落到最高调用者 seam（`prepare` 的 prepared module 字段与异常字段、
+  `loadEntry`/`loadEntryAsync` 的返回值/异常字段、shared prepared cache、probe backend 产物），
+  未断言私有 AST 布局或私有 parser 对象身份。
+
+### 限制与未做事项
+
+- 未运行真实 Minecraft client/server、loader runtime 或 network session smoke；本 closure 只声称
+  common JUnit 与平台编译证据。
+- Python 发射期错误的列固定为语句起点（`col 1`）；行准确。
+- 未闭合的调用/括号到文件末尾才报错（CPython 同样的文法行为），位置取 parser 实际报告处。
+- literal dynamic import 到失败的 CJS 子模块时 Graal promise/host 边界仍丢子模块身份
+  （票 12 已记录）；本票未伪造位置掩盖。
+- 本票不扩大 Python 语言范围、不新增 Python 语法；Probe 声明契约（`.pyi`/pyrightconfig）
+  由 runtime catalog 单一来源派生，本票未改其契约。
+- 未设置任何性能阈值（PERF_BASELINE 独立）；未改 05/06/07 语义。
