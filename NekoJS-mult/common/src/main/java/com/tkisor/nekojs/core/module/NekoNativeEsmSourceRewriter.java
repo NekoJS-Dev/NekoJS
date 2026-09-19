@@ -1,10 +1,6 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.compiler.NekoModuleMode;
-import com.tkisor.nekojs.core.module.NekoModuleResolver;
-import com.tkisor.nekojs.core.module.NekoModuleError;
-import com.tkisor.nekojs.core.module.NekoPreparedModule;
-import com.tkisor.nekojs.core.module.NekoResolvedModule;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinker;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
@@ -17,7 +13,6 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmImportDecl;
 import com.tkisor.nekojs.core.module.esm.NekoEsmExportDecl;
 import com.tkisor.nekojs.core.module.esm.NekoEsmBinding;
 import com.tkisor.nekojs.core.module.esm.NekoEsmExportKind;
-import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.google.gson.JsonParser;
 
