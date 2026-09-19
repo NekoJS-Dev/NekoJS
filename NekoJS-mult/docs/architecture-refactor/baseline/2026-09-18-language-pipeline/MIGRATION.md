@@ -380,3 +380,25 @@ git diff --check
 以上命令均 PASS；保留既有 unchecked/deprecation、`this-escape` 和 Gson `InlineMe` classfile warnings，不更新
 golden。真实 Minecraft client/server、loader runtime 和 network session smoke 未执行，不能从这些 common 测试
 或平台编译推断通过。
+
+## 10. Review-round-15 contract closure
+
+脚本作者无需迁移；本轮没有公开脚本语言或模块语义变更，也没有更新 golden。Java 生命周期与内部 owner
+边界有以下补强：
+
+- 事务式 candidate 不再调用可能清理 live/domain 状态的 `Binding.close`。失败 candidate 保留旧 binding
+  state、listener route、runtime 和 module session；完整 manager teardown 仍执行既有 close 路径。
+- `ScriptBindingSchema` 的事务实现方法收窄到 `api.event` package；`NekoModulePipelineCache` 是跨包 owner
+  seam，environment factory/manager 通过它安装、提交、丢弃和恢复 generation view。`ScriptErrorReporter`
+  的 public `Reporter` 只保留无 Context 的 callback/event contract，Context-aware adapter 仍为内部路径。
+- Authored identity 仅归一化明确的 script-root/pack layout；`node_modules`、未知 nested layout 和同名
+  pack 文件保留完整路径。Path/FileSystem equality 决定大小写，不读取 `os.name`。
+- Compiler capture 是 plugin/compiler + revision 的不可变原子快照；同 id replacement 不会把旧 compiler
+  误标成新 revision。Pending listener activation 使用 batch rollback，旧 listener tokens 在任一 activation
+  抛错时保持可用。
+- PackSync physical commit 在新 client reload 已可观察后失败时，先恢复旧物理/逻辑状态，再补偿旧 runtime
+  reload；补偿失败返回 fatal disconnect，而不是声称回滚成功。
+
+Round-15 evidence remains common JUnit plus the stated Gradle compile/check gates. No real Minecraft,
+loader-runtime, client/server session, or network smoke was run; this document does not claim one. Golden files
+remain unchanged.

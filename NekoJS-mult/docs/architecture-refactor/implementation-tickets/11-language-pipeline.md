@@ -649,9 +649,10 @@ smoke was executed.
   `ScriptEnvironmentFactory` consume explicit views; the old public static install/register/publish
   implementation surface is gone.
 - **Commit recovery：fixed.** Pending listener activation records its token and supports rollback.
-  Commit catches `Throwable`, restores schema, active diagnostics and module views, and only clears
-  the old event route after candidate activation has passed. Bridge clearing is followed by a fresh
-  activation of the validated candidate listeners on the clean route.
+  Commit catches `Throwable`, restores schema, active diagnostics and module views. The production
+  bridge uses a pending activation batch: old tokens remain installed while all candidate activations
+  run, and are removed only after the batch succeeds; it does not clear the old route and then
+  re-activate candidates.
 - **Diagnostics API and PackSync disconnect：fixed.** Context-aware `ScriptErrorReporter` methods
   remain internal. Disconnect cleanup requires a successful CLIENT reload hook whenever a CLIENT
   manager/runtime is active; failed cleanup restores the registry, runtime authorization and
@@ -669,3 +670,45 @@ git diff --check
 The two targeted test groups passed. Final build and whitespace results are reported from the
 verification run. Real Minecraft, loader runtime and network session smoke remain unexecuted and
 are not claimed as evidence. Golden files remain unchanged.
+
+## Review-round-15 addendum (2026-09-19)
+
+本轮针对终审剩余 contract gaps 继续 fix-forward；ticket 11 仍保持 `Status: closed`。本轮没有脚本作者
+迁移，也没有更新 golden。以下内容只记录实现与可重复的 common/编译证据，不把未执行的真实 Minecraft
+或 network session smoke 写成通过。
+
+- **Candidate binding mutation：fixed at the lifecycle boundary.** Transactional candidate creation no longer
+  calls `Binding.close(ScriptType)` before the candidate exists. That callback can clear process/live state
+  (dynamic registry claims, post-effect definitions, native listeners), so failed candidates cannot undo it.
+  Binding close remains on full teardown paths; generation-owned domain plans remain the candidate mechanism.
+  `ScriptReloadGenerationTest` asserts a failed candidate leaves the live binding state untouched and the old
+  listener/context route usable.
+- **Internal bridge ownership：fixed.** `ScriptBindingSchema` transaction methods are package-private; the
+  generation cache is the owner seam used by `ScriptEnvironmentFactory` and `ScriptManager`. The public
+  `Reporter` contract no longer exposes a `Context` overload; context-aware reporting remains package-internal.
+- **Authored path identity：fixed.** Authored display normalization accepts only direct script roots and the
+  explicit `packs/<id>`, `nekojs_packs/<id>`, and `server_packs/<bucket>/<id>` layouts. `node_modules` and
+  unknown nested layouts retain their complete path. Same-named files under different pack ids remain distinct;
+  provider case semantics are used for both path and textual classification.
+- **Compiler capture atomicity：fixed.** `ScriptCompilerRegistry.capture` returns an immutable compiler/plugin
+  snapshot with its revision under one lock. Pipeline capture and freshness checks consume that snapshot, so a
+  same-id replacement cannot pair the old compiler with the new revision. The deterministic race test holds the
+  lookup inside the registry lock while replacement waits.
+- **Listener commit atomicity：fixed.** The production event bridge commits a pending listener batch while the
+  old token snapshot remains installed, then removes old tokens only after every candidate activation succeeds.
+  An activation `Throwable` removes only listeners activated by that batch and leaves the old route intact;
+  `EventBusJSHasListenersTest#pendingActivationFailureLeavesTheOldListenerRouteIntact` covers the failure.
+- **PackSync physical commit compensation：fixed.** If physical replacement commit fails after the new CLIENT
+  reload returned success, rollback restores the old physical files and logical activation, then performs a
+  compensating reload of the old generation. A failed compensation fails closed and returns an explicit fatal
+  disconnect outcome. `PackSyncClientTest#commitFailureAfterClientReloadCompensatesTheOldRuntime` uses a
+  deterministic package-private commit-failure seam.
+
+### Round-15 evidence boundary
+
+The relevant targeted tests are `ScriptReloadGenerationTest`, `EventBusJSHasListenersTest`,
+`NekoModulePipelineCacheStampTest`, `NekoScriptModuleLoaderHostSyntaxLocationTest`,
+`ScriptBindingSchemaInferTypeTest`, `ScriptTypeScopedCacheClearTest`, `ModulePipelineIsolationTest`, and
+`PackSyncClientTest`. The required final Gradle gates and `git diff --check` are the authoritative result for
+this commit. No real Minecraft client/server, loader runtime, or network session smoke was run in this round;
+common tests and platform compilation must not be read as that evidence. Golden files remain unchanged.

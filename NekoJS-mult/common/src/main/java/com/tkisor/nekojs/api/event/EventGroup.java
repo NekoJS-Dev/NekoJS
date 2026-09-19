@@ -159,6 +159,36 @@ public class EventGroup {
         }
     }
 
+    /** Atomically hand this group's buses from the old generation to candidate listeners. */
+    public void commitPendingListeners(ScriptType type, java.util.List<EventBusJS.PendingListener> pending) {
+        for (RegisteredBus registered : buses.values()) {
+            if (registered.canApplyOn(type)) {
+                commitBus(registered.bus, type, pending);
+            }
+        }
+    }
+
+    /** Prepare every bus in this group; callers finish or roll back the returned batch together. */
+    public java.util.List<EventBusJS.PendingCommit> preparePendingListeners(
+            ScriptType type, java.util.List<EventBusJS.PendingListener> pending) {
+        java.util.List<EventBusJS.PendingCommit> commits = new java.util.ArrayList<>();
+        try {
+            for (RegisteredBus registered : buses.values()) {
+                if (registered.canApplyOn(type)) {
+                    commits.add(prepareBus(registered.bus, type, pending));
+                }
+            }
+            return commits;
+        } catch (Throwable failure) {
+            for (int index = commits.size() - 1; index >= 0; index--) {
+                commits.get(index).rollback();
+            }
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error errorFailure) throw errorFailure;
+            throw new IllegalStateException("Failed to prepare event group listener batch", failure);
+        }
+    }
+
     /// using a separate method to avoid problematic generic check
     private static <E> void clearBus(EventBusJS<E, ?> bus, ScriptType type) {
         bus.clearTokens(type);
@@ -170,6 +200,16 @@ public class EventGroup {
 
     private static <E> void clearBusByPrefix(EventBusJS<E, ?> bus, ScriptType type, String scriptIdPrefix) {
         bus.clearTokensByPrefix(type, scriptIdPrefix);
+    }
+
+    private static <E> void commitBus(EventBusJS<E, ?> bus, ScriptType type,
+                                      java.util.List<EventBusJS.PendingListener> pending) {
+        bus.commitPendingListeners(type, pending);
+    }
+
+    private static <E> EventBusJS.PendingCommit prepareBus(EventBusJS<E, ?> bus, ScriptType type,
+                                                           java.util.List<EventBusJS.PendingListener> pending) {
+        return bus.preparePendingListeners(type, pending);
     }
 
     /** 组内单个总线的持有句柄：携带总线绑定的 {@link ScriptType}，并可按目标脚本环境取用总线。 */

@@ -13,6 +13,7 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
@@ -593,22 +594,18 @@ public final class NekoScriptModuleLoaderHost {
         return null;
     }
 
-    private static String authoredPath(String path) {
-        if (path == null || path.isBlank()) {
-            return path;
-        }
-        String normalized = path.replace('\\', '/');
-        for (ScriptType type : ScriptType.all()) {
-            String root = type.scriptsDirectoryName() + "/";
-            int index = normalized.indexOf(root);
-            if (index >= 0) {
-                return normalized.substring(index);
-            }
-        }
-        return normalized;
-    }
-
     private record StackLocation(String path, int line, int column) {}
+
+    private static String authoredPath(String text) {
+        if (text == null || text.isBlank()) return text;
+        String normalized = text.replace('\\', '/');
+        try {
+            String authored = ScriptPathProvider.authoredPathText(normalized, Path.of("").getFileSystem());
+            return authored == null ? normalized : authored;
+        } catch (RuntimeException ignored) {
+            return normalized;
+        }
+    }
 
     private SourceSection sourceLocation(PolyglotException failure, String moduleId) {
         SourceSection location = failure.getSourceLocation();

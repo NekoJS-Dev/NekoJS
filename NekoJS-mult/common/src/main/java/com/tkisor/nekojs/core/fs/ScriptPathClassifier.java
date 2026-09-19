@@ -69,13 +69,17 @@ final class ScriptPathClassifier {
             } catch (RuntimeException ignored) {
                 continue;
             }
-            if (type == null || hasTextNameBefore(rawSegments, scriptsIndex, "node_modules")) continue;
-            int markerIndex = lastTextMarkerIndex(rawSegments, scriptsIndex);
+            if (type == null || hasTextNameBefore(rawSegments, scriptsIndex, "node_modules", fileSystem)) continue;
+            int markerIndex = lastTextMarkerIndex(rawSegments, scriptsIndex, fileSystem);
             if (markerIndex >= 0) {
                 String marker = rawSegments[markerIndex];
                 int requiredPrefix = sameName(fileSystem, marker, "server_packs") ? 3 : 2;
                 if (scriptsIndex - markerIndex != requiredPrefix) continue;
                 return join(rawSegments, markerIndex);
+            }
+            if (!(scriptsIndex == 0 || scriptsIndex == 1
+                    || scriptsIndex > 0 && sameName(fileSystem, rawSegments[scriptsIndex - 1], "nekojs"))) {
+                continue;
             }
             return join(rawSegments, scriptsIndex);
         }
@@ -90,10 +94,11 @@ final class ScriptPathClassifier {
             int requiredPrefix = isName(segments.get(packsIndex), "server_packs") ? 3 : 2;
             return scriptsIndex - packsIndex == requiredPrefix;
         }
-        // With no package marker, the only accepted shape is root/<type>_scripts.
-        // The parent may be any injected filesystem root; nested package/module trees
-        // are excluded above rather than inferred from arbitrary matching segments.
-        return true;
+        // Without a pack marker, accept only the actual script root: a direct root child or
+        // the injected NekoJS root. A nested vendor/module directory is deliberately unknown;
+        // otherwise authoredPath would silently merge two packages with the same script file.
+        return scriptsIndex == 0 || scriptsIndex == 1
+                || scriptsIndex > 0 && isName(segments.get(scriptsIndex - 1), "nekojs");
     }
 
     private static int layoutStart(List<Path> segments, int scriptsIndex) {
@@ -119,17 +124,19 @@ final class ScriptPathClassifier {
         return false;
     }
 
-    private static boolean hasTextNameBefore(String[] segments, int end, String expected) {
+    private static boolean hasTextNameBefore(String[] segments, int end, String expected,
+                                             FileSystem fileSystem) {
         for (int index = 0; index < end; index++) {
-            if (expected.equals(segments[index])) return true;
+            if (sameName(fileSystem, segments[index], expected)) return true;
         }
         return false;
     }
 
-    private static int lastTextMarkerIndex(String[] segments, int scriptsIndex) {
+    private static int lastTextMarkerIndex(String[] segments, int scriptsIndex, FileSystem fileSystem) {
         for (int index = scriptsIndex - 1; index >= 0; index--) {
-            if ("packs".equals(segments[index]) || "nekojs_packs".equals(segments[index])
-                    || "server_packs".equals(segments[index])) return index;
+            if (sameName(fileSystem, segments[index], "packs")
+                    || sameName(fileSystem, segments[index], "nekojs_packs")
+                    || sameName(fileSystem, segments[index], "server_packs")) return index;
         }
         return -1;
     }
@@ -153,7 +160,11 @@ final class ScriptPathClassifier {
     }
 
     private static boolean sameName(FileSystem fileSystem, String actual, String expected) {
-        return fileSystem.getPath(actual).equals(fileSystem.getPath(expected));
+        try {
+            return fileSystem.getPath(actual).equals(fileSystem.getPath(expected));
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     private static List<Path> segments(Path path) {

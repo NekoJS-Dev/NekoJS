@@ -8,7 +8,7 @@ import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.fs.ScriptPathLayout;
+import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -315,9 +315,36 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         return bindingSchemaView;
     }
 
-    /** Schema owner shared by this root and its generation sessions. */
-    public ScriptBindingSchema bindingSchema() {
-        return rootOwner().bindingSchema;
+    /** Install active schema through the cache owner rather than the schema bridge. */
+    public void installActiveBindingSchema(ScriptType type,
+            Map<String, ScriptBindingSchema.BindingMembers> schemas, Set<String> globals) {
+        rootOwner().bindingSchema.owner().installActive(type, schemas, globals);
+    }
+
+    /** Active schema view for a new generation, through the cache owner rather than the schema bridge. */
+    public ScriptBindingSchema.View activeBindingSchemaView(ScriptType type) {
+        return rootOwner().bindingSchema.owner().activeView(type);
+    }
+
+    public ScriptBindingSchema.Snapshot snapshotBindingSchema(ScriptType type) {
+        return rootOwner().bindingSchema.owner().snapshot(type);
+    }
+
+    public ScriptBindingSchema.View beginBindingSchemaCandidate(Object token, ScriptType type,
+            Map<String, ScriptBindingSchema.BindingMembers> schemas, Set<String> globals, Object diagnosticContext) {
+        return rootOwner().bindingSchema.owner().beginCandidate(token, type, schemas, globals, diagnosticContext);
+    }
+
+    public ScriptBindingSchema.View commitBindingSchemaCandidate(Object token) {
+        return rootOwner().bindingSchema.owner().commitCandidate(token);
+    }
+
+    public void discardBindingSchemaCandidate(Object token) {
+        rootOwner().bindingSchema.owner().discardCandidate(token);
+    }
+
+    public void restoreBindingSchema(ScriptType type, ScriptBindingSchema.Snapshot snapshot) {
+        rootOwner().bindingSchema.owner().restore(type, snapshot);
     }
 
     SourceMapRegistry sourceMaps() {
@@ -677,8 +704,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     private Optional<String> relativePath(Path path) {
-        String authored = ScriptPathLayout.authoredPath(path);
-        if (authored != null && ScriptPathLayout.typeOf(path) != null) {
+        String authored = ScriptPathProvider.authoredPath(path);
+        if (authored != null && ScriptPathProvider.typeOf(path) != null) {
             return Optional.of(authored);
         }
         try {
@@ -701,7 +728,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
      */
     private ScriptType scriptTypeOf(Path key) {
         try {
-            return ScriptPathLayout.typeOf(key);
+            return ScriptPathProvider.typeOf(key);
         } catch (Exception ignored) { // 路径解析失败 → 视为共享缓存
             return null;
         }

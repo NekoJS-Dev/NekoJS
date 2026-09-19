@@ -101,6 +101,37 @@ public final class ScriptEventRegistry {
         }
     }
 
+    /** Commit candidate listeners on custom event buses without clearing them first. */
+    public static synchronized void commitPendingListeners(
+            ScriptType type, List<EventBusJS.PendingListener> pending) {
+        for (ScriptEventDefinition definition : DEFINITIONS.values()) {
+            if (definition.canApplyOn(type)) {
+                definition.bus().commitPendingListeners(type, pending);
+            }
+        }
+    }
+
+    /** Prepare custom event buses for the bridge-wide pending listener transaction. */
+    public static synchronized List<EventBusJS.PendingCommit> preparePendingListeners(
+            ScriptType type, List<EventBusJS.PendingListener> pending) {
+        List<EventBusJS.PendingCommit> commits = new ArrayList<>();
+        try {
+            for (ScriptEventDefinition definition : DEFINITIONS.values()) {
+                if (definition.canApplyOn(type)) {
+                    commits.add(definition.bus().preparePendingListeners(type, pending));
+                }
+            }
+            return commits;
+        } catch (Throwable failure) {
+            for (int index = commits.size() - 1; index >= 0; index--) {
+                commits.get(index).rollback();
+            }
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error errorFailure) throw errorFailure;
+            throw new IllegalStateException("Failed to prepare script event listener batch", failure);
+        }
+    }
+
     public static synchronized void clearDefinitions(ScriptType targetType) {
         List<String> keys = new ArrayList<>();
         List<ScriptEventDefinition> definitions = new ArrayList<>();

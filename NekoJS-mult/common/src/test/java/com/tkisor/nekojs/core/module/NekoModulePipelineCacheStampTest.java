@@ -16,10 +16,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -217,6 +220,47 @@ class NekoModulePipelineCacheStampTest {
         } finally {
             Files.deleteIfExists(script);
         }
+    }
+
+    @Test
+    void compilerCaptureKeepsPluginAndRevisionFromOneRegistryState() throws Exception {
+        CountDownLatch lookupEntered = new CountDownLatch(1);
+        CountDownLatch releaseLookup = new CountDownLatch(1);
+        IScriptCompiler first = new IScriptCompiler() {
+            @Override
+            public boolean canCompile(String extension) {
+                lookupEntered.countDown();
+                try {
+                    assertTrue(releaseLookup.await(5, TimeUnit.SECONDS));
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(interrupted);
+                }
+                return ".race".equalsIgnoreCase(extension);
+            }
+
+            @Override
+            public String compile(Path file, String sourceCode) {
+                return sourceCode;
+            }
+        };
+        registry.registerLanguage("same-race", Set.of(), first);
+
+        var captureFuture = java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> registry.capture(".race"));
+        assertTrue(lookupEntered.await(5, TimeUnit.SECONDS));
+        Thread replacement = new Thread(() -> registry.replaceLanguage(
+                "same-race", Set.of(".race"), compilerWithPrefix("// replacement\n")));
+        replacement.start();
+        releaseLookup.countDown();
+        ScriptCompilerRegistry.Capture captured = captureFuture.get(5, TimeUnit.SECONDS);
+        replacement.join(5000);
+
+        assertSame(first, captured.compiler(), "capture must retain the compiler it looked up");
+        assertNotSame(first, registry.capture(".race").compiler(),
+                "the replacement becomes visible only after the atomic capture");
+        assertNotEquals(captured.revision(), registry.revision(),
+                "the captured revision must not be read after replacement");
     }
 
     private static IScriptCompiler compilerWithPrefix(String prefix) {

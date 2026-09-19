@@ -4,6 +4,7 @@ import com.google.gson.JsonParser;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.error.DefaultErrorTracker;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
@@ -331,6 +332,26 @@ class ModulePipelineIsolationTest {
                         Class.forName("graal.graalvm.polyglot.Context"),
                         com.tkisor.nekojs.api.ScriptType.class,
                         Class.forName("graal.graalvm.polyglot.PolyglotException")).getModifiers()));
+        for (var method : ScriptErrorReporter.Reporter.class.getDeclaredMethods()) {
+            for (Class<?> parameter : method.getParameterTypes()) {
+                assertTrue(parameter.getName() != "graal.graalvm.polyglot.Context",
+                        "public Reporter must not expose Context: " + method);
+            }
+        }
+    }
+
+    @Test
+    void schemaAndPathTransactionBridgesAreNotPublicImplementationSurface() throws Exception {
+        for (String methodName : List.of("installActive", "beginCandidate", "commitCandidate", "restore", "view")) {
+            for (var method : com.tkisor.nekojs.api.event.ScriptBindingSchema.class.getDeclaredMethods()) {
+                if (method.getName().equals(methodName)) {
+                    assertTrue(!Modifier.isPublic(method.getModifiers()),
+                            "schema transaction method must be package-private: " + method);
+                }
+            }
+        }
+        Class<?> layout = Class.forName("com.tkisor.nekojs.core.fs.ScriptPathLayout");
+        assertTrue(!Modifier.isPublic(layout.getModifiers()), "path layout implementation must be internal");
     }
 
     private static void assertNoZeroArgumentConstructor(Class<?> type) {

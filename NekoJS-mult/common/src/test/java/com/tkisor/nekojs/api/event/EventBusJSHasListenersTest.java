@@ -1,13 +1,19 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.script.ScriptContextRegistry;
+import graal.graalvm.polyglot.Context;
+import graal.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * {@link EventBusJS#hasListeners()} 的兜底分支（C5）。
@@ -56,5 +62,26 @@ class EventBusJSHasListenersTest {
         assertTrue(bus.hasListeners());
         assertTrue(bus.bus().unregister(token), "unregister 应成功");
         assertFalse(bus.hasListeners());
+    }
+
+    @Test
+    void pendingActivationFailureLeavesTheOldListenerRouteIntact() {
+        EventBusJS<String, String> bus = EventBusJS.of(String.class, false, DispatchKey.string());
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            ScriptContextRegistry.bind(context, ScriptType.SERVER);
+            Value listener = context.eval("js", "(function () {})");
+            EventBusJS.PendingListener old = new EventBusJS.PendingListener(
+                    bus, (byte) 0, listener, null, ScriptType.SERVER, "old");
+            old.activate();
+
+            Value invalidKey = context.eval("js", "({ notAString: true })");
+            EventBusJS.PendingListener candidate = new EventBusJS.PendingListener(
+                    bus, (byte) 0, listener, invalidKey, ScriptType.SERVER, "candidate");
+            assertThrows(Throwable.class,
+                    () -> bus.commitPendingListeners(ScriptType.SERVER, List.of(candidate)));
+            assertTrue(bus.hasListeners(), "activation failure must not clear the old route");
+            old.deactivate();
+            ScriptContextRegistry.unbind(context);
+        }
     }
 }

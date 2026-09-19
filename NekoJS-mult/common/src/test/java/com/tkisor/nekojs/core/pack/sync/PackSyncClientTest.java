@@ -35,6 +35,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -319,6 +320,40 @@ class PackSyncClientTest {
         PackSyncClient.installClientReloadHook(() -> true);
         PackSyncClient.Outcome restored = PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack));
         assertFalse(restored.shouldDisconnect(), restored.disconnect());
+    }
+
+    @Test
+    void commitFailureAfterClientReloadCompensatesTheOldRuntime() throws Exception {
+        config("all", false);
+        String address = "srv-commit-failure.test";
+        String syncId = "packs:commit-failure";
+        KeyPair keyPair = PackSigner.generateKeyPair();
+        SyncedPack oldPack = pack(syncId, "GLOBAL",
+                signed(keyPair, syncId, "GLOBAL", "key-commit-failure",
+                        "client_scripts/hud.js", "module.exports = 'old';\n"),
+                "client_scripts/hud.js", "module.exports = 'old';\n");
+        SyncedPack replacement = pack(syncId, "GLOBAL",
+                signed(keyPair, syncId, "GLOBAL", "key-commit-failure",
+                        "client_scripts/hud.js", "module.exports = 'new';\n"),
+                "client_scripts/hud.js", "module.exports = 'new';\n");
+
+        installCountingReloadHook();
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(oldPack));
+        PackSyncTrustStore.get().trustServer(address);
+        assertFalse(PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack)).shouldDisconnect());
+
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(replacement));
+        ServerPackCache.failNextCommitForTests(new java.io.IOException("deterministic commit failure"));
+        PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(replacement));
+
+        assertTrue(outcome.shouldDisconnect());
+        assertEquals(3, reloads.get(),
+                "new reload plus compensating old-generation reload must both be observable");
+        Path oldFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor(address))
+                .resolve(SyncedPack.encodeSyncId(syncId)).resolve("client_scripts/hud.js");
+        assertEquals("module.exports = 'old';\n", Files.readString(oldFile));
+        assertEquals(oldFile.getParent().getParent(), ScriptPackRegistry.get().serverCachePacks().get(0).root());
+        assertNotNull(runtimeTrust.approvalFor(oldFile));
     }
 
     @Test

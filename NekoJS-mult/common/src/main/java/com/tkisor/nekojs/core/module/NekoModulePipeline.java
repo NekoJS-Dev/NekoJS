@@ -198,29 +198,22 @@ public final class NekoModulePipeline {
     LanguageBinding captureBinding(Path file) {
         String extension = extension(file);
         NekoModuleMode requestedMode = NekoModuleMode.fromExtension(extension);
-        NekoLanguagePlugin plugin = languagePlugin(file, extension);
-        return new LanguageBinding(new NekoModuleIdentity(plugin.id(), requestedMode), plugin, compilers.revision());
-    }
-
-    private NekoLanguagePlugin languagePlugin(Path file, String extension) {
-        NekoScriptLanguage language = compilers.getLanguage(extension);
-        if (language != null) {
-            if (language.plugin() != null) {
-                return language.plugin();
-            }
-            if (language.compiler() != null) {
-                return new NekoLegacyLanguagePlugin(language.id(), language.extensions(), language.compiler());
+        ScriptCompilerRegistry.Capture capture = compilers.capture(extension);
+        NekoLanguagePlugin plugin = capture.plugin();
+        if (plugin == null && capture.compiler() != null) {
+            if (capture.language() != null) {
+                plugin = new NekoLegacyLanguagePlugin(capture.language().id(),
+                        capture.language().extensions(), capture.compiler());
+            } else {
+                plugin = new NekoLegacyLanguagePlugin("legacy:" + extension.substring(1),
+                        Set.of(extension), capture.compiler());
             }
         }
-        IScriptCompiler compiler = compilers.getCompiler(extension);
-        if (compiler != null) {
-            String id = "legacy:" + extension.substring(1);
-            return new NekoLegacyLanguagePlugin(id, Set.of(extension), compiler);
-        }
-        if (!ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
+        if (plugin == null && !ScriptCompilerRegistry.isNativeScriptExtension(extension)) {
             throw new IllegalArgumentException("No script compiler registered for " + extension + " module: " + file);
         }
-        return NekoJavaScriptLanguagePlugin.INSTANCE;
+        if (plugin == null) plugin = NekoJavaScriptLanguagePlugin.INSTANCE;
+        return new LanguageBinding(new NekoModuleIdentity(plugin.id(), requestedMode), plugin, capture.revision());
     }
 
     private LanguageBinding captureBindingChecked(Path file) throws NekoModuleError {
@@ -233,7 +226,7 @@ public final class NekoModulePipeline {
     }
 
     private void ensureBindingCurrent(Path file, LanguageBinding binding) throws NekoModuleError {
-        if (compilers.revision() != binding.registryRevision()) {
+        if (compilers.capture(extension(file)).revision() != binding.registryRevision()) {
             throw NekoModuleError.prepare(NekoModuleError.displayPath(file), binding.identity().languageId(),
                     binding.identity().requestedMode(), "compiler registry changed during preparation", null);
         }

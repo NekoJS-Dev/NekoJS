@@ -6,7 +6,7 @@ import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.fs.ScriptPathLayout;
+import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;
@@ -101,10 +101,10 @@ class ScriptTypeScopedCacheClearTest {
                 URI.create("jar:" + archive.toUri()), Map.of("create", "true"))) {
             Path root = fileSystem.getPath("/nekojs");
             Files.createDirectories(root);
-            assertNull(ScriptPathLayout.typeOfSegment(fileSystem.getPath("Server_scripts")),
+            assertNull(ScriptPathProvider.typeOfSegment(fileSystem.getPath("Server_scripts")),
                     "ZIP provider must not fold script directory case");
             assertEquals(ScriptType.SERVER,
-                    ScriptPathLayout.typeOfSegment(fileSystem.getPath("server_scripts")));
+                    ScriptPathProvider.typeOfSegment(fileSystem.getPath("server_scripts")));
 
             Path packageServer = root.resolve("packs/id/server_scripts/server.cjs");
             Path worldServer = root.resolve("nekojs_packs/id/server_scripts/world.cjs");
@@ -165,7 +165,7 @@ class ScriptTypeScopedCacheClearTest {
                 .equals(Path.of("a").getFileSystem().getPath("a"));
         ScriptType expected = caseInsensitive ? ScriptType.SERVER : null;
         assertEquals(expected, ScriptType.fromScriptsDirectoryName("Server_scripts"));
-        assertEquals(expected, ScriptPathLayout.typeOfSegment(Path.of("Server_scripts")));
+        assertEquals(expected, ScriptPathProvider.typeOfSegment(Path.of("Server_scripts")));
     }
 
     @Test

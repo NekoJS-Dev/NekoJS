@@ -122,4 +122,17 @@ class NekoScriptModuleLoaderHostSyntaxLocationTest {
         assertTrue(message.contains("SyntaxError"), "message was: " + message);
         assertTrue(message.contains("inner-broken.js:2:7"), "message was: " + message);
     }
+
+    @Test
+    void authoredIdentityKeepsSameNamedPackPrefixesAndUnknownLayouts() {
+        Path first = Path.of("packs", "one", "server_scripts", "same.js");
+        Path second = Path.of("packs", "two", "server_scripts", "same.js");
+        Path unknown = Path.of("vendor", "one", "server_scripts", "same.js");
+
+        assertEquals("packs/one/server_scripts/same.js", NekoModuleError.displayPath(first));
+        assertEquals("packs/two/server_scripts/same.js", NekoModuleError.displayPath(second));
+        assertTrue(!NekoModuleError.displayPath(first).equals(NekoModuleError.displayPath(second)));
+        assertEquals("vendor/one/server_scripts/same.js", NekoModuleError.displayPath(unknown),
+                "unknown layouts must retain the complete path instead of truncating at a type segment");
+    }
 }

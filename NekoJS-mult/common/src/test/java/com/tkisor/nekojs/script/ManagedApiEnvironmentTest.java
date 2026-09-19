@@ -122,7 +122,7 @@ class ManagedApiEnvironmentTest {
                 "LegacyApi", Binding.of("LegacyApi", new LegacyApiImpl()));
         ScriptBindingSchema.BindingMembers members = new ScriptBindingSchema.BindingMembers(
                 Set.of("visibleMethod", "anotherMethod"));
-        schema.installActive(ScriptType.SERVER, Map.of("LegacyApi", members), Set.of());
+        schema.owner().installActive(ScriptType.SERVER, Map.of("LegacyApi", members), Set.of());
 
         ScriptBindingSchema.BindingMembers resolved = schema.lookup(ScriptType.SERVER).get("LegacyApi");
         assertNotNull(resolved);
