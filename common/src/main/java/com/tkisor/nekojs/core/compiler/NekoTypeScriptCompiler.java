@@ -486,14 +486,21 @@ public final class NekoTypeScriptCompiler {
             int braceClose = matchOutBrace(braceOpen);
             if (braceClose < 0) return out.length();
             String body = out.substring(braceOpen + 1, braceClose);
-            String iife = generateEnumIife(name, parseEnumMembers(body));
+            // Phase 1 only blanks spans, so phase-2 offsets index the authored source 1:1: erasing
+            // never changes length or line count before transform() starts rewriting enum/namespace.
+            String iife = generateEnumIife(name, parseEnumMembers(body, braceOpen + 1));
             out.replace(start, braceClose + 1, iife);
             return start + iife.length();
         }
 
-        private record EnumMember(String name, String valueExpr, boolean hasValue) {}
+        /**
+         * @param valueStart authored offset of the member value, or {@code -1} when the member has no
+         *                   value or its position could not be established. Diagnostics use it instead
+         *                   of searching the file for a coincidental token match.
+         */
+        private record EnumMember(String name, String valueExpr, boolean hasValue, int valueStart) {}
 
-        private List<EnumMember> parseEnumMembers(String body) {
+        private List<EnumMember> parseEnumMembers(String body, int bodyStart) {
             List<EnumMember> members = new ArrayList<>();
             int i = 0, n = body.length(), segStart = 0;
             while (i < n) {
@@ -503,22 +510,25 @@ public final class NekoTypeScriptCompiler {
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '/') { while (i < n && body.charAt(i) != '\n') i++; continue; }
                 if (c == '/' && i + 1 < n && body.charAt(i + 1) == '*') { i += 2; while (i + 1 < n && !(body.charAt(i) == '*' && body.charAt(i + 1) == '/')) i++; i += 2; continue; }
                 if (c == '(') { int d = 0; while (i < n) { char ch = body.charAt(i); if (ch == '\'') { i = skipIn(body, i, '\''); continue; } if (ch == '"') { i = skipIn(body, i, '"'); continue; } if (ch == '(') d++; else if (ch == ')') { d--; if (d == 0) { i++; break; } } i++; } continue; }
-                if (c == ',') { addEnumMember(members, body, segStart, i); segStart = i + 1; }
+                if (c == ',') { addEnumMember(members, body, segStart, i, bodyStart); segStart = i + 1; }
                 i++;
             }
-            addEnumMember(members, body, segStart, n);
+            addEnumMember(members, body, segStart, n, bodyStart);
             return members;
         }
 
-        private void addEnumMember(List<EnumMember> members, String body, int start, int end) {
-            String raw = body.substring(start, end).trim();
+        private void addEnumMember(List<EnumMember> members, String body, int start, int end, int bodyStart) {
+            String segment = body.substring(start, end);
+            String raw = segment.trim();
             if (raw.isEmpty()) return;
+            int segmentStart = bodyStart + start + Math.max(0, segment.indexOf(raw.charAt(0)));
             int eq = findTopLevelEq(raw);
-            if (eq < 0) { members.add(new EnumMember(stripComment(raw), null, false)); return; }
+            if (eq < 0) { members.add(new EnumMember(stripComment(raw), null, false, -1)); return; }
             String name = stripComment(raw.substring(0, eq).trim());
-            String value = raw.substring(eq + 1).trim();
+            String value = raw.substring(eq + 1);
             if (name.isEmpty()) return;
-            members.add(new EnumMember(name, value, true));
+            int valueStart = segmentStart + eq + 1 + (value.length() - value.stripLeading().length());
+            members.add(new EnumMember(name, value.trim(), true, valueStart));
         }
 
         private int findTopLevelEq(String s) {
@@ -570,7 +580,7 @@ public final class NekoTypeScriptCompiler {
                     try {
                         num = parseNumberLit(m.valueExpr());
                     } catch (NumberFormatException e) {
-                        throw badEnumNumberLiteral(m.valueExpr());
+                        throw badEnumNumberLiteral(m.valueExpr(), m.valueStart());
                     }
                     sb.append(name).append("[").append(name).append("[\"").append(nm).append("\"] = ").append(formatEnumNumber(num)).append("] = \"").append(nm).append("\"; ");
                     next = num + 1;
@@ -578,7 +588,7 @@ public final class NekoTypeScriptCompiler {
                     lastNumericKnown = true;
                 } else if (looksLikeNumberLiteral(m.valueExpr())) {
                     // 形似数值字面量但未通过 isNumberLit（如 1e、1e+）：报编译期错误，不能透传成坏 JS。
-                    throw badEnumNumberLiteral(m.valueExpr());
+                    throw badEnumNumberLiteral(m.valueExpr(), m.valueStart());
                 } else {
                     // 计算成员：值运行时才知。作为数字基准（TS 视计算 enum 成员为 number），
                     // 下一个无值成员用 E["thisMember"] + 1 运行时自增。
@@ -667,9 +677,18 @@ public final class NekoTypeScriptCompiler {
             return v.matches("[+-]?(?:(?:0[xX][0-9a-zA-Z]*)|(?:0[oO][0-9a-zA-Z]*)|(?:0[bB][0-9a-zA-Z]*)|(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d*)?)n?");
         }
 
-        private NekoCompileException badEnumNumberLiteral(String literal) {
-            int index = source.indexOf(literal);
-            return diagnostic("Invalid TypeScript enum numeric literal '" + literal + "' in " + file, index < 0 ? 0 : index);
+        /**
+         * @param valueStart authored offset of the offending member value, or {@code -1} when it could
+         *                   not be established. The position is never guessed by searching the file for
+         *                   the same text: a coincidental earlier comment or token would win that search.
+         */
+        /**
+         * @param valueStart authored offset of the offending member value, or {@code -1} when it could
+         *                   not be established. The position is never guessed by searching the file for
+         *                   the same text: a coincidental earlier comment or token would win that search.
+         */
+        private NekoCompileException badEnumNumberLiteral(String literal, int valueStart) {
+            return diagnostic("Invalid TypeScript enum numeric literal '" + literal + "' in " + file, valueStart);
         }
 
         // ---- namespace（单层）/ module → IIFE，export 成员在末尾批量转 Name.member=member ----
@@ -1901,12 +1920,17 @@ public final class NekoTypeScriptCompiler {
             return NekoSourceLexerBase.position(source, length, index);
         }
 
-        /** Typed diagnostic: keeps the message text but also the authored line/column. */
+        /**
+         * Typed diagnostic: keeps the message text but also the authored line/column.
+         * A negative index means "position unknown" and is published as such — never as 1:1.
+         */
         private NekoCompileException diagnostic(String message, int index) {
+            if (index < 0 || index > length) {
+                return new NekoCompileException(message, -1, -1);
+            }
             int line = 1;
             int column = 1;
-            int end = Math.max(0, Math.min(index, length));
-            for (int i = 0; i < end; i++) {
+            for (int i = 0; i < index; i++) {
                 if (source.charAt(i) == '\n') {
                     line++;
                     column = 1;

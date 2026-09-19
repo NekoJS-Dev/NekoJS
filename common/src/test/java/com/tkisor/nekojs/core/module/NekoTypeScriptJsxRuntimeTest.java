@@ -13,6 +13,7 @@ import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
+import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
@@ -233,12 +234,24 @@ class NekoTypeScriptJsxRuntimeTest {
         assertNotNull(staged.getCause(), "the guest cause must remain available");
     }
 
+    /**
+     * Review-round-1 F-AC4: the lowered-JS syntax error is only detectable once the executor
+     * compiles the prepared code, so {@code cache.prepare} must succeed and the diagnostic is
+     * produced by the host's {@code NekoEsmLinkException} mapping — not by the upstream prepare
+     * branch. This test fails if the mapping branch is removed, because the raw guest position is
+     * the generated line.
+     */
     @Test
-    void loweredJsSyntaxErrorAtExecutionReportsTheAuthoredJsxLine() throws Exception {
-        write("lowered.jsx", "const view = <div>\n"
+    void loweredJsSyntaxErrorIsMappedAfterPreparationSucceeded() throws Exception {
+        Path file = write("lowered.jsx", "const view = <div>\n"
                 + "  <span>a</span>\n"
                 + "</div>;\n"
                 + "const } = boom;\n");
+
+        // The preparation stage cannot see this error: it is a JavaScript parse failure of the
+        // already-lowered code, which only the executor surfaces.
+        NekoPreparedModule prepared = cache.prepare(file);
+        assertEquals("jsx", prepared.languageId());
 
         IOException failure = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/lowered.jsx"));
@@ -249,14 +262,19 @@ class NekoTypeScriptJsxRuntimeTest {
         assertEquals(4, staged.sourceLine(),
                 "a lowered-JS syntax error must be reported at the authored JSX line: " + staged.detail());
         assertTrue(staged.sourceColumn() > 0, staged.detail());
+        assertEquals(NekoEsmLinkException.class, staged.getCause().getClass(),
+                "the diagnostic must come from the executor's syntax re-parse, not from preparation");
     }
 
     @Test
-    void loweredTsSyntaxErrorAtExecutionReportsTheAuthoredTsxLine() throws Exception {
-        write("lowered.tsx", "const view: unknown = <div>\n"
+    void loweredTsSyntaxErrorIsMappedAfterPreparationSucceeded() throws Exception {
+        Path file = write("lowered.tsx", "const view: unknown = <div>\n"
                 + "  <span>a</span>\n"
                 + "</div>;\n"
                 + "const } = boom;\n");
+
+        NekoPreparedModule prepared = cache.prepare(file);
+        assertEquals("tsx", prepared.languageId());
 
         IOException failure = assertThrows(IOException.class,
                 () -> host.loadEntry("./server_scripts/src/lowered.tsx"));
@@ -266,6 +284,8 @@ class NekoTypeScriptJsxRuntimeTest {
         assertEquals("server_scripts/src/lowered.tsx", staged.sourcePath().replace('\\', '/'));
         assertEquals(4, staged.sourceLine(), staged.detail());
         assertTrue(staged.sourceColumn() > 0, staged.detail());
+        assertEquals(NekoEsmLinkException.class, staged.getCause().getClass(),
+                "the diagnostic must come from the executor's syntax re-parse, not from preparation");
     }
 
     @Test
