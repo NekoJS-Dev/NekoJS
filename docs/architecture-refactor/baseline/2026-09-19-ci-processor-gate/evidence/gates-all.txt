@@ -1,0 +1,56 @@
+== ci-subset-consistency (owner=build-convention/CI-build owner) -> pass
+   neoforge-nbt     purpose          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   neoforge-nbt     intentional-skip Fabric 节点不在此子集：fabric convention 不注册 nbtSmokeTest（NBT 编解码由 NeoForge platform adapter 提供，Fabric 走 IPlatform 默认 unsupported 语义）
+   fabric-artifact-smoke purpose          Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）
+   fabric-artifact-smoke intentional-skip 此 job 校验的是 download-artifact 取回的已上传 jar，不是本机构建产物，因此不复用 Gradle :<node>:verifyFabricRuntimeArtifact；两处断言各自保留：本地 Gradle 门禁保证构建不产出坏 jar，CI bash 保证上传/下载链路没有偷换对象
+   fabric-artifact-smoke intentional-skip NeoForge 节点不在此子集：artifact 面由 release-publish 子集覆盖
+   all-node-build   purpose          五节点 build（compileJava → test → check，含隔离门禁/verifyDevModSourceSets/制品校验）
+   release-publish  purpose          release 通道发布 NeoForge 三节点制品；Fabric 制品仅作 CI artifact（未随公开发布）
+   release-publish  intentional-skip Fabric 制品不进入公开 release：workflow 内按注释保留 CurseForge Fabric 发布块（按计划关闭，不是漏配）；Prepare artifacts 步骤在 release 通道显式跳过 nekojs-fabric-*
+   1.21.1           covered          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   26.1.2           covered          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   26.2.0           covered          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   26.1.2-fabric    covered          Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）
+   26.2.0-fabric    covered          Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）
+== fabric-processor-deferral (owner=build-convention owner) -> pass
+   processor-options declared         accepts=nf26,nf121,cr (source of truth: common-api-processor/src/main/java/com/tkisor/nekojs/api/spec/processor/SpecCoverageProcessor.java)
+   1.21.1           platform=neoforge wired=true option_arg=true platform_tag=nf121
+   26.1.2           platform=neoforge wired=true option_arg=true platform_tag=nf26
+   26.2.0           platform=neoforge wired=true option_arg=true platform_tag=nf26
+   26.1.2-fabric    platform=fabric  wired=false option_arg=false platform_tag=None
+   26.2.0-fabric    platform=fabric  wired=false option_arg=false platform_tag=None
+== declaration-parity (owner=Managed Surface/Probe owner) -> pass
+   fixture          present          common/src/test/resources/nekojs/platform-gates/declaration-parity.txt
+   declaration      derived          globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text
+   declaration      derived          members=141
+   declaration      derived          owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
+   declaration      derived          signatures=150
+   declaration      derived          types=
+== node-report (owner=build-convention owner) -> pass
+   1.21.1           check            46 suites / 213 tests / 0 failed
+   1.21.1           artifact         nekojs-neoforge-1.21.1-1.1.0-preview3.jar size=2545601 sha256=db4fff9b70c04e4c
+   1.21.1           source-trace     java=2 resources=6
+   1.21.1           spec-coverage    83 rows / 0 failures
+   1.21.1           event-surface    17 rows / 0 failures
+   26.1.2           check            61 suites / 306 tests / 0 failed
+   26.1.2           artifact         nekojs-neoforge-26.1.2-1.1.0-preview3.jar size=2664111 sha256=a4192fc472e12ca1
+   26.1.2           source-trace     java=2 resources=6
+   26.1.2           spec-coverage    83 rows / 0 failures
+   26.1.2           event-surface    17 rows / 0 failures
+   26.2.0           check            61 suites / 306 tests / 0 failed
+   26.2.0           artifact         nekojs-neoforge-26.2.0-1.1.0-preview3.jar size=2664132 sha256=d79815d100dc4196
+   26.2.0           source-trace     java=2 resources=6
+   26.2.0           spec-coverage    83 rows / 0 failures
+   26.2.0           event-surface    17 rows / 0 failures
+   26.1.2-fabric    check            39 suites / 209 tests / 0 failed
+   26.1.2-fabric    artifact         nekojs-fabric-26.1.2-1.1.0-preview3.jar size=17609805 sha256=06e6e19fa2eddb0d
+   26.1.2-fabric    source-trace     java=3 resources=4
+   26.1.2-fabric    spec-coverage    83 rows / 0 failures
+   26.1.2-fabric    event-surface    17 rows / 0 failures
+   26.2.0-fabric    check            39 suites / 209 tests / 0 failed
+   26.2.0-fabric    artifact         nekojs-fabric-26.2-1.1.0-preview3.jar size=17609804 sha256=1b5156cee6aca7f0
+   26.2.0-fabric    source-trace     java=3 resources=4
+   26.2.0-fabric    spec-coverage    83 rows / 0 failures
+   26.2.0-fabric    event-surface    17 rows / 0 failures
+
+结果：4 个 check，0 个失败条目

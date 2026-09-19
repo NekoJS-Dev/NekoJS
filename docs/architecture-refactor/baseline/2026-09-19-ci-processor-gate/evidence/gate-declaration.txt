@@ -1,0 +1,9 @@
+== declaration-parity (owner=Managed Surface/Probe owner) -> pass
+   fixture          present          common/src/test/resources/nekojs/platform-gates/declaration-parity.txt
+   declaration      derived          globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text
+   declaration      derived          members=141
+   declaration      derived          owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
+   declaration      derived          signatures=150
+   declaration      derived          types=
+
+结果：1 个 check，0 个失败条目

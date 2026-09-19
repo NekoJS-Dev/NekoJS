@@ -1,0 +1,16 @@
+== ci-subset-consistency (owner=build-convention/CI-build owner) -> pass
+   neoforge-nbt     purpose          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   neoforge-nbt     intentional-skip Fabric 节点不在此子集：fabric convention 不注册 nbtSmokeTest（NBT 编解码由 NeoForge platform adapter 提供，Fabric 走 IPlatform 默认 unsupported 语义）
+   fabric-artifact-smoke purpose          Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）
+   fabric-artifact-smoke intentional-skip 此 job 校验的是 download-artifact 取回的已上传 jar，不是本机构建产物，因此不复用 Gradle :<node>:verifyFabricRuntimeArtifact；两处断言各自保留：本地 Gradle 门禁保证构建不产出坏 jar，CI bash 保证上传/下载链路没有偷换对象
+   fabric-artifact-smoke intentional-skip NeoForge 节点不在此子集：artifact 面由 release-publish 子集覆盖
+   all-node-build   purpose          五节点 build（compileJava → test → check，含隔离门禁/verifyDevModSourceSets/制品校验）
+   release-publish  purpose          release 通道发布 NeoForge 三节点制品；Fabric 制品仅作 CI artifact（未随公开发布）
+   release-publish  intentional-skip Fabric 制品不进入公开 release：workflow 内按注释保留 CurseForge Fabric 发布块（按计划关闭，不是漏配）；Prepare artifacts 步骤在 release 通道显式跳过 nekojs-fabric-*
+   1.21.1           covered          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   26.1.2           covered          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   26.2.0           covered          NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）
+   26.1.2-fabric    covered          Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）
+   26.2.0-fabric    covered          Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）
+
+结果：1 个 check，0 个失败条目
