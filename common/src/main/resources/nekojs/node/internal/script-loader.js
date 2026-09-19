@@ -10,6 +10,16 @@
     return { id: filename, filename, exports: {}, loaded: false }
   }
 
+  // Graal compiles the new Function body with a synthesized header ("function anonymous(exports,…" +
+  // "\n) {\n"), so module code line N is reported as N + bodyLineOffset. Derive the offset from a
+  // probe rather than hardcoding it, and hand it to the host so runtime diagnostics map a guest
+  // location back onto the prepared module before resolving the authored position.
+  function bodyLineOffset() {
+    const text = new Function('exports', 'require', 'module', '__filename', '__dirname', 'return 0').toString()
+    const brace = text.indexOf('{')
+    return brace < 0 ? 0 : text.slice(0, brace).split('\n').length
+  }
+
   function executeModule(module, requireFn, resolveFn, filename, dirname, code) {
     const localRequire = function require(id) {
       return requireFn(String(id))
@@ -30,7 +40,7 @@
     return resolved
   }
 
-  requireHost().configure(executeModule, createModule, resolveSpecial, JSON.parse.bind(JSON))
+  requireHost().configure(executeModule, createModule, resolveSpecial, JSON.parse.bind(JSON), bodyLineOffset())
 
   globalThis.__nekoNativeImport = function nativeImport(parentPath, specifier) {
     return Promise.resolve(requireHost().nativeImportAsync(String(parentPath), String(specifier)))

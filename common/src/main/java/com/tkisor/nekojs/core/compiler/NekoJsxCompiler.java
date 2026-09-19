@@ -1050,12 +1050,36 @@ public final class NekoJsxCompiler {
             return "'" + value.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n").replace("\r", "\\r") + "'";
         }
 
-        private IllegalArgumentException jsxError(String message, int index) {
-            return new IllegalArgumentException(message + " in " + file + " at " + position(index));
+        private NekoCompileException jsxError(String message, int index) {
+            return new NekoCompileException(message + " in " + file + " at " + position(index), lineAt(index), columnAt(index));
         }
 
         private String position(int index) {
             return NekoSourceLexerBase.position(source, length, index);
+        }
+
+        private int lineAt(int index) {
+            int line = 1;
+            int end = Math.max(0, Math.min(index, length));
+            for (int i = 0; i < end; i++) {
+                if (source.charAt(i) == '\n') {
+                    line++;
+                }
+            }
+            return line;
+        }
+
+        private int columnAt(int index) {
+            int column = 1;
+            int end = Math.max(0, Math.min(index, length));
+            for (int i = 0; i < end; i++) {
+                if (source.charAt(i) == '\n') {
+                    column = 1;
+                } else {
+                    column++;
+                }
+            }
+            return column;
         }
     }
 

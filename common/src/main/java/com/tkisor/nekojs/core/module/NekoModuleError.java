@@ -86,6 +86,18 @@ public class NekoModuleError extends IOException {
                 detail + " [language=" + languageId + ", mode=" + mode + "]", cause);
     }
 
+    /**
+     * 准备失败（带 authored 行列）：语言前端已知精确位置时发布为可观察字段，
+     * 不再只留在格式化消息里。行列为 {@code -1} 表示未知。
+     */
+    public static NekoModuleError prepare(String sourcePath, String languageId,
+                                          com.tkisor.nekojs.core.compiler.NekoModuleMode mode,
+                                          int sourceLine, int sourceColumn, String message, Throwable cause) {
+        String detail = message == null ? "" : message;
+        return new NekoModuleError(Stage.PREPARE, OWNER_PREPARATION, sourcePath, null,
+                sourceLine, sourceColumn, detail + " [language=" + languageId + ", mode=" + mode + "]", cause);
+    }
+
     /** 授权拒绝：远端未显式授权或凭证与文件不匹配，语言边界仍可见（携带 language/mode）。 */
     public static NekoModuleError denied(String sourcePath, String languageId,
                                          com.tkisor.nekojs.core.compiler.NekoModuleMode mode,

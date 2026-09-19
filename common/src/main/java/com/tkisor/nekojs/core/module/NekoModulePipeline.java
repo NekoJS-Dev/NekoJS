@@ -10,6 +10,7 @@ import com.tkisor.nekojs.core.compiler.ScriptCompileResult;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.compiler.EventCallbackSourceValidator;
 import com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidator;
+import com.tkisor.nekojs.core.compiler.NekoCompileException;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
@@ -98,6 +99,12 @@ public final class NekoModulePipeline {
         } catch (NekoModuleError staged) {
             throw staged;
         } catch (Exception failure) {
+            NekoCompileException compileFailure = findCompileFailure(failure);
+            if (compileFailure != null) {
+                throw NekoModuleError.prepare(NekoModuleError.displayPath(file), identity.languageId(),
+                        identity.requestedMode(), compileFailure.line(), compileFailure.column(),
+                        NekoModuleError.rootMessage(failure), failure);
+            }
             throw NekoModuleError.prepare(NekoModuleError.displayPath(file), identity.languageId(),
                     identity.requestedMode(), NekoModuleError.rootMessage(failure), failure);
         }
@@ -133,6 +140,16 @@ public final class NekoModulePipeline {
         }
         ensureBindingCurrent(file, binding);
         return prepared;
+    }
+
+    /** Language-frontend diagnostics that carry their authored position. */
+    private static NekoCompileException findCompileFailure(Throwable failure) {
+        for (Throwable current = failure; current != null; current = current.getCause()) {
+            if (current instanceof NekoCompileException compileFailure) {
+                return compileFailure;
+            }
+        }
+        return null;
     }
 
     /** 原始源就是 JS、可直接跑 JS-only 预检的扩展名。 */

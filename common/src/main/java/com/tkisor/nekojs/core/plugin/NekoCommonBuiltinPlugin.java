@@ -5,6 +5,7 @@ import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
 import com.tkisor.nekojs.bindings.static_access.ClientDataJS;
 import com.tkisor.nekojs.bindings.static_access.OnceJS;
 import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NekoTsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NodeModuleTypeDocs;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
@@ -49,6 +50,7 @@ public final class NekoCommonBuiltinPlugin implements NekoJSPlugin, com.tkisor.n
     public void registerScriptCompilers(ScriptCompilerRegistry registry) {
         registry.register(NekoTypeScriptLanguagePlugin.INSTANCE);
         registry.register(NekoJsxLanguagePlugin.INSTANCE);
+        registry.register(NekoTsxLanguagePlugin.INSTANCE);
     }
 
     @Override

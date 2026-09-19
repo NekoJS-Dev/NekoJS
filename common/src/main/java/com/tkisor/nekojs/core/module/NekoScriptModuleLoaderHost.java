@@ -76,6 +76,8 @@ public final class NekoScriptModuleLoaderHost {
     private Value specialResolver;
     private Value moduleFactory;
     private Value jsonParser;
+    /** Synthetic header lines the CommonJS guest wrapper adds; {@code 0} until the loader measures it. */
+    private int cjsBodyLineOffset;
 
     /**
      * 生产装配入口：与 runtime owner 共享 prepared 缓存实例。
@@ -118,10 +120,22 @@ public final class NekoScriptModuleLoaderHost {
 
     @CalledByDynamicCode
     public void configure(Value executor, Value moduleFactory, Value specialResolver, Value jsonParser) {
+        configure(executor, moduleFactory, specialResolver, jsonParser, 0);
+    }
+
+    /**
+     * Install the loader bridge. {@code cjsBodyLineOffset} is the number of synthetic lines the guest
+     * compiler prepends to a CommonJS module body; the loader measures it so the host can translate a
+     * reported guest line back onto the prepared module before resolving the authored position.
+     */
+    @CalledByDynamicCode
+    public void configure(Value executor, Value moduleFactory, Value specialResolver, Value jsonParser,
+                          int cjsBodyLineOffset) {
         this.executor = executor;
         this.specialResolver = specialResolver;
         this.moduleFactory = moduleFactory;
         this.jsonParser = jsonParser;
+        this.cjsBodyLineOffset = Math.max(0, cjsBodyLineOffset);
     }
 
     /** Install the Java-side allow-list for plugin-defined special module ids. */
@@ -502,16 +516,54 @@ public final class NekoScriptModuleLoaderHost {
             }
             IOException enriched = withSyntaxLocation(resolved, prepared, failure);
             if (enriched instanceof NekoEsmLinkException syntaxDiagnostic) {
+                // The diagnostic position is generated-code; publish the authored position the
+                // prepared source map resolves it to so lowered TS/JSX/TSX never reports the
+                // generated line as if it were authored.
+                int[] authored = authoredPosition(prepared, syntaxDiagnostic.diagnostic().line(),
+                        syntaxDiagnostic.diagnostic().column());
                 throw NekoModuleError.prepare(prepared.sourcePath(), prepared.languageId(), prepared.mode(),
-                        syntaxDiagnostic.getMessage(), syntaxDiagnostic);
+                        authored[0], authored[1], syntaxDiagnostic.getMessage(), syntaxDiagnostic);
             }
-            throw executionError(resolved, prepared, failure);
+            throw executionError(resolved, prepared, failure, cjsBodyLineOffset);
         }
+    }
+
+    /**
+     * Translate a generated line/column into the authored line/column of the prepared module.
+     * Returns {@code {-1, -1}} when the map has no entry, so callers keep an honest "unknown".
+     */
+    private int[] authoredPosition(NekoPreparedModule prepared, int generatedLine, int generatedColumn) {
+        if (prepared == null || prepared.sourcePath() == null || generatedLine <= 0) {
+            return new int[]{-1, -1};
+        }
+        SourceMapRegistry.OriginalPosition mapped = preparationCache.sourceMaps()
+                .getMappedPosition(prepared.sourcePath(), generatedLine, generatedColumn);
+        if (mapped.path == null || mapped.line <= 0) {
+            return new int[]{-1, -1};
+        }
+        return new int[]{mapped.line, Math.max(1, mapped.column)};
     }
 
     /** Convert the guest boundary failure into one diagnostic carrying authored location and identity. */
     private NekoModuleError executionError(NekoResolvedModule resolved, NekoPreparedModule prepared,
                                             RuntimeException failure) {
+        return executionError(resolved, prepared, failure, 0);
+    }
+
+    /**
+     * @param generatedLineOffset synthetic lines the execution wrapper added ahead of the prepared
+     *                            module body (CommonJS {@code new Function} wrapper); {@code 0} when
+     *                            the reported location already indexes the prepared module directly.
+     */
+    private NekoModuleError executionError(NekoResolvedModule resolved, NekoPreparedModule prepared,
+                                            RuntimeException failure, int generatedLineOffset) {
+        NekoModuleError staged = findStagedError(failure);
+        if (staged != null) {
+            // A nested module failure already carries its own stage, module identity and authored
+            // location. Re-wrapping it as EXECUTE would hide the failing child behind the synthetic
+            // interop module that called into it.
+            return staged;
+        }
         String sourcePath = prepared.sourcePath();
         String moduleId = resolved.id();
         int line = -1;
@@ -519,60 +571,126 @@ public final class NekoScriptModuleLoaderHost {
         PolyglotException guest = findPolyglotException(failure);
         SourceSection location = guest == null ? null : sourceLocation(guest, resolved.id());
         if (location != null) {
-            line = location.getStartLine();
+            line = Math.max(-1, location.getStartLine() - generatedLineOffset);
             column = location.getStartColumn();
-            String generatedPath = location.getSource().getPath();
-            String displayPath = virtualModules.displayPath(generatedPath);
-            if (displayPath == null || displayPath.isBlank()) {
-                displayPath = generatedPath;
-            }
-            SourceMapRegistry.OriginalPosition mapped = preparationCache.sourceMaps()
-                    .getMappedPosition(generatedPath, line, column);
-            if (mapped.path == null && displayPath != null && !displayPath.equals(generatedPath)) {
-                mapped = preparationCache.sourceMaps().getMappedPosition(displayPath, line, column);
-            }
-            if (mapped.path != null && !mapped.path.isBlank()) {
+            SourceMapRegistry.OriginalPosition mapped = mappedPosition(
+                    location.getSource().getPath(), prepared, resolved, line, column);
+            if (mapped != null) {
                 sourcePath = authoredPath(mapped.path);
                 moduleId = sourcePath;
                 line = mapped.line;
                 column = mapped.column;
-            } else if (displayPath != null && !displayPath.isBlank()
-                    && !displayPath.equals(resolved.id())) {
-                sourcePath = authoredPath(displayPath);
-                moduleId = sourcePath;
-            } else if (sourcePath == null || sourcePath.isBlank()) {
-                sourcePath = displayPath;
+            } else {
+                String displayPath = displayNameOf(location.getSource().getPath());
+                if (displayPath != null && !displayPath.isBlank() && !displayPath.equals(resolved.id())) {
+                    sourcePath = authoredPath(displayPath);
+                    moduleId = sourcePath;
+                } else if (sourcePath == null || sourcePath.isBlank()) {
+                    sourcePath = displayPath;
+                }
             }
         }
         if (line < 0) {
             StackLocation stackLocation = stackLocation(failure.getMessage());
             if (stackLocation != null) {
-                line = stackLocation.line();
+                line = stackLocation.line() - generatedLineOffset;
                 column = stackLocation.column();
-                String generatedPath = stackLocation.path();
-                String displayPath = virtualModules.displayPath(generatedPath);
-                if (displayPath == null || displayPath.isBlank()) {
-                    displayPath = generatedPath;
+                if (line <= 0) {
+                    line = -1;
                 }
-                SourceMapRegistry.OriginalPosition mapped = preparationCache.sourceMaps()
-                        .getMappedPosition(generatedPath, line, column);
-                if (mapped.path != null && !mapped.path.isBlank()) {
+                SourceMapRegistry.OriginalPosition mapped = line < 0 ? null : mappedPosition(
+                        stackLocation.path(), prepared, resolved, line, column);
+                if (mapped != null) {
                     sourcePath = authoredPath(mapped.path);
                     moduleId = sourcePath;
                     line = mapped.line;
                     column = mapped.column;
-                } else if (displayPath != null && !displayPath.isBlank()) {
-                    sourcePath = authoredPath(displayPath);
-                    moduleId = sourcePath;
+                } else if (generatedLineOffset > 0) {
+                    // The generated code was a wrapped module body: the adjusted line indexes the
+                    // prepared module, not authored source. Without a map entry the authored
+                    // position is genuinely unknown, and reporting the generated line as authored
+                    // would be a lie.
+                    line = -1;
+                    column = -1;
+                } else {
+                    String displayPath = displayNameOf(stackLocation.path());
+                    if (displayPath != null && !displayPath.isBlank()) {
+                        sourcePath = authoredPath(displayPath);
+                        moduleId = sourcePath;
+                    }
                 }
             }
         }
-        sourcePath = authoredPath(sourcePath);
+        sourcePath = authoredModuleId(sourcePath);
         if (moduleId != null) {
-            moduleId = authoredPath(moduleId);
+            moduleId = authoredModuleId(moduleId);
         }
         return NekoModuleError.execute(moduleId, sourcePath, line, column,
                 failure.getMessage(), failure);
+    }
+
+    /**
+     * Resolve a generated position onto authored coordinates. The generated path may be a virtual
+     * module path, a {@code <function>} placeholder for a wrapped CommonJS body, or the authored path
+     * itself; the prepared module is the authoritative fallback because the map was published for it.
+     */
+    private SourceMapRegistry.OriginalPosition mappedPosition(String generatedPath, NekoPreparedModule prepared,
+                                                              NekoResolvedModule resolved, int line, int column) {
+        if (line <= 0) {
+            return null;
+        }
+        SourceMapRegistry maps = preparationCache.sourceMaps();
+        // The generated path owns the authoritative map for that generated code. A rewritten ESM
+        // module has a different map from its authored-path entry, so the virtual path must be tried
+        // before any authored-path fallback. The authored path is only a fallback for generated
+        // positions that carry no usable virtual identity (e.g. a wrapped CommonJS body).
+        List<String> candidates = new ArrayList<>();
+        if (isScriptLocation(generatedPath)) {
+            candidates.add(generatedPath);
+            String displayPath = virtualModules.displayPath(generatedPath);
+            if (displayPath != null && !displayPath.isBlank()) {
+                candidates.add(displayPath);
+            }
+        }
+        if (candidates.isEmpty()) {
+            // The guest reported a placeholder path (<function>, <builtin>, Unnamed): the position
+            // indexes the prepared module body, so its own published map is the authority.
+            if (prepared != null && prepared.sourcePath() != null) {
+                candidates.add(prepared.sourcePath());
+            }
+            if (resolved != null && resolved.id() != null) {
+                candidates.add(resolved.id());
+            }
+        }
+        for (String candidate : candidates) {
+            SourceMapRegistry.OriginalPosition mapped = maps.getMappedPosition(candidate, line, column);
+            if (mapped.path != null && !mapped.path.isBlank()) {
+                return mapped;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Whether a reported path can own a source map: a real file path carries an extension, while
+     * Graal placeholders ({@code <function>}, {@code <builtin>}, {@code Unnamed}) do not.
+     */
+    private static boolean isScriptLocation(String path) {
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        String normalized = path.replace('\\', '/');
+        int slash = normalized.lastIndexOf('/');
+        String fileName = slash < 0 ? normalized : normalized.substring(slash + 1);
+        return fileName.indexOf('.') > 0;
+    }
+
+    private String displayNameOf(String generatedPath) {
+        if (generatedPath == null || generatedPath.isBlank()) {
+            return generatedPath;
+        }
+        String displayPath = virtualModules.displayPath(generatedPath);
+        return displayPath == null || displayPath.isBlank() ? generatedPath : displayPath;
     }
 
     private StackLocation stackLocation(String message) {
@@ -582,6 +700,11 @@ public final class NekoScriptModuleLoaderHost {
         Matcher matcher = STACK_LOCATION.matcher(message);
         while (matcher.find()) {
             String path = matcher.group(1);
+            if (path.indexOf(' ') >= 0 || path.indexOf('(') >= 0 || path.endsWith(".java") || path.endsWith(".class")) {
+                // Java-style frames (including host frames embedded in a guest message) carry a
+                // declaring method, never a script location.
+                continue;
+            }
             if (path.startsWith("file:")) {
                 try {
                     path = Path.of(new URI(path)).toString();
@@ -595,6 +718,19 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     private record StackLocation(String path, int line, int column) {}
+
+    /**
+     * Authored module identity: strips the synthetic virtual-module suffixes the ESM rewriter adds
+     * ({@code #cjs-interop…}, {@code #dynamic}) so a failure inside an imported CJS/JSON child is
+     * attributed to the real authored module instead of the generated interop id.
+     */
+    private static String authoredModuleId(String text) {
+        if (text == null || text.isBlank()) {
+            return text;
+        }
+        int hash = text.indexOf('#');
+        return authoredPath(hash < 0 ? text : text.substring(0, hash));
+    }
 
     private static String authoredPath(String text) {
         if (text == null || text.isBlank()) return text;
@@ -639,6 +775,12 @@ public final class NekoScriptModuleLoaderHost {
         for (Throwable current = failure; current != null; current = current.getCause()) {
             if (current instanceof NekoModuleError staged) {
                 return staged;
+            }
+            if (current instanceof PolyglotException polyglot && polyglot.isHostException()
+                    && polyglot.asHostException() instanceof NekoModuleError stagedHost) {
+                // A nested host-thread failure that crossed the guest boundary keeps its stage and
+                // authored location; re-classifying it would lose the failing child's identity.
+                return stagedHost;
             }
         }
         return null;
@@ -718,10 +860,33 @@ public final class NekoScriptModuleLoaderHost {
         } catch (NekoEsmLinkException linkFailure) {
             throw NekoModuleError.link(linkFailure);
         } catch (IOException failure) {
-            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+            throw nestedOrExecute(resolved, prepared, failure);
         } catch (RuntimeException failure) {
-            throw executionError(resolved, prepared, failure);
+            throw nestedOrExecute(resolved, prepared, failure);
         }
+    }
+
+    /**
+     * Prefer the staged failure of the module that actually failed. A wrapper module (native ESM
+     * entry, synthetic interop, dynamic-import bridge) must not claim a child's failure as its own.
+     */
+    private NekoModuleError nestedOrExecute(NekoResolvedModule resolved, NekoPreparedModule prepared,
+                                             Throwable failure) {
+        NekoModuleError nested = differentModuleFailure(failure, resolved.id());
+        if (nested != null) {
+            return nested;
+        }
+        if (failure instanceof RuntimeException runtime) {
+            return executionError(resolved, prepared, runtime);
+        }
+        return NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+    }
+
+    /** Staged failure of a different module, or {@code null} when there is none or it is unattributed. */
+    private static NekoModuleError differentModuleFailure(Throwable failure, String moduleId) {
+        NekoModuleError staged = findStagedError(failure);
+        return staged != null && staged.moduleId() != null && !staged.moduleId().equals(moduleId)
+                ? staged : null;
     }
 
     private CompletableFuture<Value> loadEsmModuleAsync(NekoResolvedModule resolved, NekoPreparedModule prepared) throws IOException {
@@ -734,8 +899,11 @@ public final class NekoScriptModuleLoaderHost {
                 while (cause instanceof CompletionException && cause.getCause() != null) {
                     cause = cause.getCause();
                 }
-                if (cause instanceof NekoModuleError staged) {
-                    throw new CompletionException(staged);
+                // A nested failure belonging to another module (dynamic import / rewritten child)
+                // keeps that child's stage, identity and location.
+                NekoModuleError nested = differentModuleFailure(cause, resolved.id());
+                if (nested != null) {
+                    throw new CompletionException(nested);
                 }
                 if (cause instanceof NekoEsmLinkException linkFailure) {
                     throw new CompletionException(NekoModuleError.link(linkFailure));
@@ -749,9 +917,9 @@ public final class NekoScriptModuleLoaderHost {
         } catch (NekoEsmLinkException linkFailure) {
             throw NekoModuleError.link(linkFailure);
         } catch (IOException failure) {
-            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+            throw nestedOrExecute(resolved, prepared, failure);
         } catch (RuntimeException failure) {
-            throw NekoModuleError.execute(resolved.id(), failure.getMessage(), failure);
+            throw nestedOrExecute(resolved, prepared, failure);
         }
     }
 

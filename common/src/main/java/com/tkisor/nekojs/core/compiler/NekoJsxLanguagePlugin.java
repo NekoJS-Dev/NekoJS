@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.compiler;
 
 import java.util.Set;
 
+/** JSX language identity for `.jsx`; `.tsx` has its own identity in {@link NekoTsxLanguagePlugin}. */
 public enum NekoJsxLanguagePlugin implements NekoLanguagePlugin {
     INSTANCE;
 
@@ -13,7 +14,7 @@ public enum NekoJsxLanguagePlugin implements NekoLanguagePlugin {
 
     @Override
     public Set<String> extensions() {
-        return Set.of(".jsx", ".tsx");
+        return Set.of(".jsx");
     }
 
     @Override
