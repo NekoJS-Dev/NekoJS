@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,7 +40,12 @@ class NekoCommonBuiltinPluginTest {
                 List.of(new NekoCommonBuiltinPlugin()), scriptProps);
 
         assertNotNull(runtime.scriptCompilers().getLanguage(".ts"), "TypeScript language must be registered");
-        assertNotNull(runtime.scriptCompilers().getLanguage(".tsx"), "JSX language must be registered");
+        assertNotNull(runtime.scriptCompilers().getLanguage(".jsx"), "JSX language must be registered");
+        assertNotNull(runtime.scriptCompilers().getLanguage(".tsx"), "TSX language must be registered");
+        assertEquals("typescript", runtime.scriptCompilers().getLanguage(".ts").id());
+        assertEquals("jsx", runtime.scriptCompilers().getLanguage(".jsx").id());
+        assertEquals("tsx", runtime.scriptCompilers().getLanguage(".tsx").id(),
+                "tsx keeps its own language identity instead of collapsing into jsx");
 
         for (ScriptProperty<?> prop : List.of(ScriptProperty.AFTER, ScriptProperty.MODLOADED,
                 ScriptProperty.DISABLE, ScriptProperty.PRIORITY)) {
