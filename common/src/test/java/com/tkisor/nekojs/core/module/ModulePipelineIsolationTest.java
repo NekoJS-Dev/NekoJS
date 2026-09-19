@@ -54,7 +54,7 @@ class ModulePipelineIsolationTest {
             "core/module/NekoModuleDependencyGraph.java",
             "core/module/ModuleReloadCoordinator.java",
             "core/module/esm/NekoEsmLinker.java",
-            "core/module/esm/NekoNativeEsmSourceRewriter.java");
+            "core/module/NekoNativeEsmSourceRewriter.java");
 
     /** 执行委托面：持有注入的 Context，但不得创建 Context、不得决定 HostAccess。 */
     private static final List<String> DELEGATION_FILES = List.of(
@@ -65,7 +65,7 @@ class ModulePipelineIsolationTest {
     private static final List<String> RUNTIME_OWNED_BOUNDARY_FILES = List.of(
             "core/module/NekoModulePipelineCache.java",
             "core/error/SourceMapRegistry.java",
-            "core/module/esm/NekoEsmVirtualModuleRegistry.java",
+            "core/module/NekoEsmVirtualModuleRegistry.java",
             "core/module/NekoCanonicalPath.java");
 
     @Test
@@ -200,7 +200,7 @@ class ModulePipelineIsolationTest {
                 "core/module/NekoModuleResolver.java",
                 "core/module/NekoScriptModuleLoaderHost.java",
                 "core/error/SourceMapRegistry.java",
-                "core/module/esm/NekoEsmVirtualModuleRegistry.java",
+                "core/module/NekoEsmVirtualModuleRegistry.java",
                 "core/error/DefaultErrorTracker.java")) {
             String source = stripCommentsAndStrings(read(file));
             assertTrue(!source.contains("NekoJSPaths.get()"),
