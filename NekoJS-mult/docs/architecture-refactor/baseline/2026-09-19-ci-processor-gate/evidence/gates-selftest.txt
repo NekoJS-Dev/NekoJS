@@ -1,0 +1,8 @@
+selftest（每个 case 在临时副本上植入故障）:
+  OK   ci-subset 漏节点                -> 子集缺少期望的节点任务（节点 26.2.0）
+  OK   fabric 偷接 processor          -> Fabric convention 挂上了处理器 —— 延期被偷换成临时接线
+  OK   declaration 报告带缺口            -> missing-member owner=Text member=of owner_ref=Managed Surface/Probe ow
+  OK   declaration 报告缺失             -> 缺少 declaration gate 报告：not verified（跑 :common:test --tests com.tkisor.
+  OK   节点无证据 -> not verified        -> build 目录不存在：本报告对该节点是 not verified，不做任何通过推断
+  OK   节点报告带失败 -> 聚合                -> build 目录不存在：本报告对该节点是 not verified，不做任何通过推断
+selftest 全部通过：每个 gate 都会因对应输入变化而变红

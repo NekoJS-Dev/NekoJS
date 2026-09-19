@@ -1,0 +1,307 @@
+{
+  "gates": [
+    {
+      "check": "ci-subset-consistency",
+      "owner": "build-convention/CI-build owner",
+      "inputs": [
+        ".github/workflows/ci-build.yml",
+        "settings.gradle.kts",
+        "versions/*/gradle.properties"
+      ],
+      "rows": [
+        {
+          "subject": "neoforge-nbt",
+          "state": "purpose",
+          "evidence": "NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）"
+        },
+        {
+          "subject": "neoforge-nbt",
+          "state": "intentional-skip",
+          "evidence": "Fabric 节点不在此子集：fabric convention 不注册 nbtSmokeTest（NBT 编解码由 NeoForge platform adapter 提供，Fabric 走 IPlatform 默认 unsupported 语义）"
+        },
+        {
+          "subject": "fabric-artifact-smoke",
+          "state": "purpose",
+          "evidence": "Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）"
+        },
+        {
+          "subject": "fabric-artifact-smoke",
+          "state": "intentional-skip",
+          "evidence": "此 job 校验的是 download-artifact 取回的已上传 jar，不是本机构建产物，因此不复用 Gradle :<node>:verifyFabricRuntimeArtifact；两处断言各自保留：本地 Gradle 门禁保证构建不产出坏 jar，CI bash 保证上传/下载链路没有偷换对象"
+        },
+        {
+          "subject": "fabric-artifact-smoke",
+          "state": "intentional-skip",
+          "evidence": "NeoForge 节点不在此子集：artifact 面由 release-publish 子集覆盖"
+        },
+        {
+          "subject": "all-node-build",
+          "state": "purpose",
+          "evidence": "五节点 build（compileJava → test → check，含隔离门禁/verifyDevModSourceSets/制品校验）"
+        },
+        {
+          "subject": "release-publish",
+          "state": "purpose",
+          "evidence": "release 通道发布 NeoForge 三节点制品；Fabric 制品仅作 CI artifact（未随公开发布）"
+        },
+        {
+          "subject": "release-publish",
+          "state": "intentional-skip",
+          "evidence": "Fabric 制品不进入公开 release：workflow 内按注释保留 CurseForge Fabric 发布块（按计划关闭，不是漏配）；Prepare artifacts 步骤在 release 通道显式跳过 nekojs-fabric-*"
+        },
+        {
+          "subject": "1.21.1",
+          "state": "covered",
+          "evidence": "NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "covered",
+          "evidence": "NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "covered",
+          "evidence": "NeoForge 专属 portable binary NBT smoke（fabric 分支脚本不注册 nbtSmokeTest）"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "covered",
+          "evidence": "Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "covered",
+          "evidence": "Fabric 制品 entrypoint/NeoForge 泄漏校验 + development runtime smoke（基于真实五层 raw root 的制品）"
+        }
+      ],
+      "failures": [],
+      "state": "pass"
+    },
+    {
+      "check": "fabric-processor-deferral",
+      "owner": "build-convention owner",
+      "inputs": [
+        "buildSrc/src/main/kotlin/nekojs.neoforge-node.gradle.kts",
+        "buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts",
+        "versions/*/gradle.properties",
+        "common-api-processor/src/main/java/com/tkisor/nekojs/api/spec/processor/SpecCoverageProcessor.java"
+      ],
+      "rows": [
+        {
+          "subject": "processor-options",
+          "state": "declared",
+          "evidence": "accepts=nf26,nf121,cr (source of truth: common-api-processor/src/main/java/com/tkisor/nekojs/api/spec/processor/SpecCoverageProcessor.java)"
+        },
+        {
+          "subject": "1.21.1",
+          "state": "platform=neoforge",
+          "evidence": "wired=true option_arg=true platform_tag=nf121"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "platform=neoforge",
+          "evidence": "wired=true option_arg=true platform_tag=nf26"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "platform=neoforge",
+          "evidence": "wired=true option_arg=true platform_tag=nf26"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "platform=fabric",
+          "evidence": "wired=false option_arg=false platform_tag=None"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "platform=fabric",
+          "evidence": "wired=false option_arg=false platform_tag=None"
+        }
+      ],
+      "failures": [],
+      "state": "pass"
+    },
+    {
+      "check": "declaration-parity",
+      "owner": "Managed Surface/Probe owner",
+      "inputs": [
+        "common/src/main/java/com/tkisor/nekojs/core/api/CoreManagedApiBootstrap.java",
+        "common/src/main/java/com/tkisor/nekojs/probe/backend/typescript/ManagedApiDeclarationGenerator.java",
+        "common/src/test/resources/nekojs/platform-gates/declaration-parity.txt"
+      ],
+      "rows": [
+        {
+          "subject": "fixture",
+          "state": "present",
+          "evidence": "common/src/test/resources/nekojs/platform-gates/declaration-parity.txt"
+        },
+        {
+          "subject": "declaration",
+          "state": "derived",
+          "evidence": "globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text"
+        },
+        {
+          "subject": "declaration",
+          "state": "derived",
+          "evidence": "members=141"
+        },
+        {
+          "subject": "declaration",
+          "state": "derived",
+          "evidence": "owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue"
+        },
+        {
+          "subject": "declaration",
+          "state": "derived",
+          "evidence": "signatures=150"
+        },
+        {
+          "subject": "declaration",
+          "state": "derived",
+          "evidence": "types="
+        }
+      ],
+      "failures": [],
+      "state": "pass"
+    },
+    {
+      "check": "node-report",
+      "owner": "build-convention owner",
+      "inputs": [
+        "versions/<node>/build/test-results/",
+        "versions/<node>/build/libs/",
+        "versions/<node>/build/nekojs-gates/"
+      ],
+      "rows": [
+        {
+          "subject": "1.21.1",
+          "state": "check",
+          "evidence": "46 suites / 213 tests / 0 failed"
+        },
+        {
+          "subject": "1.21.1",
+          "state": "artifact",
+          "evidence": "nekojs-neoforge-1.21.1-1.1.0-preview3.jar size=2545601 sha256=db4fff9b70c04e4c"
+        },
+        {
+          "subject": "1.21.1",
+          "state": "source-trace",
+          "evidence": "java=2 resources=6"
+        },
+        {
+          "subject": "1.21.1",
+          "state": "spec-coverage",
+          "evidence": "83 rows / 0 failures"
+        },
+        {
+          "subject": "1.21.1",
+          "state": "event-surface",
+          "evidence": "17 rows / 0 failures"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "check",
+          "evidence": "61 suites / 306 tests / 0 failed"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "artifact",
+          "evidence": "nekojs-neoforge-26.1.2-1.1.0-preview3.jar size=2664111 sha256=a4192fc472e12ca1"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "source-trace",
+          "evidence": "java=2 resources=6"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "spec-coverage",
+          "evidence": "83 rows / 0 failures"
+        },
+        {
+          "subject": "26.1.2",
+          "state": "event-surface",
+          "evidence": "17 rows / 0 failures"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "check",
+          "evidence": "61 suites / 306 tests / 0 failed"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "artifact",
+          "evidence": "nekojs-neoforge-26.2.0-1.1.0-preview3.jar size=2664132 sha256=d79815d100dc4196"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "source-trace",
+          "evidence": "java=2 resources=6"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "spec-coverage",
+          "evidence": "83 rows / 0 failures"
+        },
+        {
+          "subject": "26.2.0",
+          "state": "event-surface",
+          "evidence": "17 rows / 0 failures"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "check",
+          "evidence": "39 suites / 209 tests / 0 failed"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "artifact",
+          "evidence": "nekojs-fabric-26.1.2-1.1.0-preview3.jar size=17609805 sha256=06e6e19fa2eddb0d"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "source-trace",
+          "evidence": "java=3 resources=4"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "spec-coverage",
+          "evidence": "83 rows / 0 failures"
+        },
+        {
+          "subject": "26.1.2-fabric",
+          "state": "event-surface",
+          "evidence": "17 rows / 0 failures"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "check",
+          "evidence": "39 suites / 209 tests / 0 failed"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "artifact",
+          "evidence": "nekojs-fabric-26.2-1.1.0-preview3.jar size=17609804 sha256=1b5156cee6aca7f0"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "source-trace",
+          "evidence": "java=3 resources=4"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "spec-coverage",
+          "evidence": "83 rows / 0 failures"
+        },
+        {
+          "subject": "26.2.0-fabric",
+          "state": "event-surface",
+          "evidence": "17 rows / 0 failures"
+        }
+      ],
+      "failures": [],
+      "state": "pass"
+    }
+  ]
+}

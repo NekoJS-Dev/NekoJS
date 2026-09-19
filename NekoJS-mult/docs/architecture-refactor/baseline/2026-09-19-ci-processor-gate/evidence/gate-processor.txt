@@ -1,0 +1,9 @@
+== fabric-processor-deferral (owner=build-convention owner) -> pass
+   processor-options declared         accepts=nf26,nf121,cr (source of truth: common-api-processor/src/main/java/com/tkisor/nekojs/api/spec/processor/SpecCoverageProcessor.java)
+   1.21.1           platform=neoforge wired=true option_arg=true platform_tag=nf121
+   26.1.2           platform=neoforge wired=true option_arg=true platform_tag=nf26
+   26.2.0           platform=neoforge wired=true option_arg=true platform_tag=nf26
+   26.1.2-fabric    platform=fabric  wired=false option_arg=false platform_tag=None
+   26.2.0-fabric    platform=fabric  wired=false option_arg=false platform_tag=None
+
+结果：1 个 check，0 个失败条目
