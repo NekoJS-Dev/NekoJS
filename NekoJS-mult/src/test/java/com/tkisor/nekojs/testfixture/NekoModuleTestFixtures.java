@@ -5,10 +5,10 @@ import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 
 /** Explicit cache fixtures for platform tests that assemble execution objects directly. */
 public final class NekoModuleTestFixtures {

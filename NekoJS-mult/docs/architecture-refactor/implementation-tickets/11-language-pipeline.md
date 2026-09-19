@@ -747,3 +747,12 @@ The relevant targeted tests are `ManagedBindingSchemaTest`, `ScriptBindingSchema
 and `git diff --check` are the authoritative result for this commit. No real Minecraft client/server, loader
 runtime, or network session smoke was run in this round; common tests and platform compilation must not be read
 as that evidence. Golden files remain unchanged.
+
+## Review-round-17 addendum (2026-09-19)
+
+终审发现 round-16 收口引入的两个真实缺陷；ticket 11 仍保持 `Status: closed`，不反勾已验证 AC。本轮只修正目录/包一致性与节点测试源编译，并补上此前 gate 漏掉的节点 `compileTestJava`。
+
+- **目录/包一致性：fixed.** `NekoEsmVirtualModuleRegistry` 与 `NekoNativeEsmSourceRewriter` 在 round-16 为访问 package-private `NekoModuleHash` 被就地改成 `package com.tkisor.nekojs.core.module;`，但仍留在 `core/module/esm/` 目录，违反实现票据索引的“目录/包归属规则覆盖全量源码”。两文件已按约定 `git mv` 到 `core/module/`；FQCN 不变，消费方 import 无需改动；被移动文件内同包冗余 import 已清理。
+- **陈旧 import：fixed.** 版本树共享测试源 `src/test/java/com/tkisor/nekojs/testfixture/NekoModuleTestFixtures.java` 仍 import 旧 FQCN `core.module.esm.NekoEsmVirtualModuleRegistry`，导致 `:26.2.0:compileTestJava` / `:26.2.0-fabric:compileTestJava` 报 `cannot find symbol`。已改为新 FQCN；`ModulePipelineIsolationTest` 中引用旧源路径的三处断言同步指向 `core/module/`。
+- **Gate 修正：** 此前 round-14/15/16 只运行 `:26.2.0:compileJava` / `:26.2.0-fabric:compileJava`（主源），未覆盖共享测试源所在的节点测试 source set，故遗漏该编译错误。本轮权威 gate 为 `:common:cleanTest :common:check`、四个节点（`:26.1.2`、`:26.1.2-fabric`、`:26.2.0`、`:26.2.0-fabric`）的 `compileTestJava`，以及 `git diff --check`；全部通过。`ModulePipelineIsolationTest` 16/16 通过（其 `read()` 断言源文件存在，路径修正生效）。
+- **证据边界：** 未执行真实 Minecraft client/server、loader runtime 或 network session smoke；common 测试与节点编译不得读作该证据。golden 未更新。历史 baseline 文档 `docs/architecture-refactor/baseline/2026-09-12-runtime-ledger.md` 仍记旧路径，作为当时快照保留，不随本轮改写。
