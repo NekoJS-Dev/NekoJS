@@ -4,6 +4,8 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.catalog.BindingCatalogEntry;
 import com.tkisor.nekojs.api.catalog.NekoScriptCatalogSnapshot;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.plugin.NekoPluginBootstrap;
+import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.probe.backend.python.PythonProbeBackend;
 import com.tkisor.nekojs.probe.ir.TypeDecl;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -34,6 +37,126 @@ class PythonDeclarationAttributionTest {
     @BeforeAll
     static void initPlatform() {
         TestPlatformInit.ensureInitialized();
+    }
+
+    /**
+     * AC7 的真实运行路径：**同一次 {@link ProbeCoordinator} 运行**里 TS 与 Python 两个 backend
+     * 同时在场（这正是命令层 {@code /nekojs probe all} 的形态）。断言两者各自落在自己的语言
+     * 目录、互不覆盖——不是两个 backend 各自被 `new` 出来分别 generate 的构造性证明。
+     */
+    @Test
+    void coordinatorRunsTypeScriptAndPythonTogetherWithoutOverwritingEachOther(@TempDir Path temp)
+            throws Exception {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
+        Files.createDirectories(paths.root());
+
+        // 真实 registry 会话：经扩展点注册两个 builtin backend 并 lock（同生产 bootstrap）。
+        Field inst = ProbeBackendRegistry.class.getDeclaredField("INSTANCE");
+        inst.setAccessible(true);
+        inst.set(null, null);
+        NekoPluginBootstrap.bootstrap(List.of(new NekoProbeBuiltinPlugin()), new ScriptPropertyRegistry.Impl());
+
+        ProbeCoordinator coordinator = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
+        List<ProbeBackend> both = List.of(
+                ProbeBackendSelector.named("typescript", "builtin").get(0),
+                ProbeBackendSelector.named("python", "builtin").get(0));
+
+        TypeDecl fixture = new TypeDecl(TypeDecl.Kind.CLASS, Host.class, Host.class.getName());
+        List<ProbeBackend.GenerateResult> results = coordinator.runProbe(
+                snapshotWith(List.of(BindingCatalogEntry.of("Host", ScriptType.SERVER, Host.class, false))),
+                both);
+
+        assertEquals(2, results.size(), "both selected backends must produce a result");
+        Path tsDir = paths.gameDir().resolve(".neko_probe").resolve("typescript");
+        Path pyDir = paths.gameDir().resolve(".neko_probe").resolve("python");
+        for (ProbeBackend.GenerateResult result : results) {
+            assertTrue(result.success(), "backend result must succeed: " + result.message());
+        }
+        assertEquals(tsDir, results.get(0).outputDir(), "the TS backend owns the typescript directory");
+        assertEquals(pyDir, results.get(1).outputDir(), "the Python backend owns the python directory");
+
+        // 互不覆盖：各自的语言产物都在，且都不是对方的形态。
+        assertTrue(Files.exists(pyDir.resolve("nekojs/py.typed")), "Python must emit its PEP 561 marker");
+        assertTrue(Files.exists(pyDir.resolve("nekojs/__init__.pyi")), "Python must emit its entry stub");
+        assertTrue(Files.exists(tsDir.resolve("index.d.ts")) || Files.isDirectory(tsDir),
+                "TypeScript must emit into its own directory: " + tsDir);
+
+        try (var pyFiles = Files.walk(pyDir)) {
+            List<Path> generated = pyFiles.filter(Files::isRegularFile).toList();
+            assertFalse(generated.isEmpty(), "python directory must not be empty");
+            assertTrue(generated.stream().noneMatch(p -> p.toString().endsWith(".d.ts")),
+                    "TS declarations must not land in the Python language directory: " + generated);
+        }
+        try (var tsFiles = Files.walk(tsDir)) {
+            List<Path> generated = tsFiles.filter(Files::isRegularFile).toList();
+            assertTrue(generated.stream().noneMatch(p -> p.toString().endsWith(".pyi")),
+                    "Python declarations must not land in the TypeScript language directory: " + generated);
+        }
+    }
+
+    /**
+     * AC7 保护：{@link ProbeCoordinator} 拒绝同一次运行中两个 backend 共享输出目录——
+     * 这条保护正是「语言产物不被另一个语言的 declaration 覆盖」的机制保证。
+     */
+    @Test
+    void coordinatorRejectsTwoBackendsSharingOneOutputDirectory(@TempDir Path temp) throws Exception {
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(temp);
+        Files.createDirectories(paths.root());
+
+        ProbeCoordinator coordinator = new ProbeCoordinator(paths, ProbeExternalArtifacts.NONE);
+        // 把 python 的输出目录配置成 typescript 的目录 → 两者共享。
+        Path shared = paths.gameDir().resolve(".neko_probe").resolve("shared");
+        ProbeBackend ts = new DirectoryPinnedBackend("typescript", "pinned", shared, "ts.txt", "ts");
+        ProbeBackend py = new DirectoryPinnedBackend("python", "pinned", shared, "py.txt", "py");
+
+        List<ProbeBackend.GenerateResult> results =
+                coordinator.runProbe(snapshotWith(List.of()), List.of(ts, py));
+
+        assertEquals(2, results.size());
+        assertTrue(results.get(0).success(), results.get(0).message());
+        assertFalse(results.get(1).success(), "the second backend must be skipped, not overwrite the first");
+        assertTrue(results.get(1).message().contains("duplicate output directory"), results.get(1).message());
+        assertEquals("ts", Files.readString(shared.resolve("ts.txt")),
+                "the first backend's artifact must survive the duplicate-directory run");
+        assertFalse(Files.exists(shared.resolve("py.txt")),
+                "the skipped backend must not have written into the shared directory");
+    }
+
+    /** 固定输出目录的探针 backend（用于行使 coordinator 的目录去重保护）。 */
+    private static final class DirectoryPinnedBackend implements ProbeBackend {
+        private final String languageId;
+        private final String name;
+        private final Path outputDir;
+        private final String fileName;
+        private final String content;
+
+        DirectoryPinnedBackend(String languageId, String name, Path outputDir, String fileName, String content) {
+            this.languageId = languageId;
+            this.name = name;
+            this.outputDir = outputDir;
+            this.fileName = fileName;
+            this.content = content;
+        }
+
+        @Override
+        public String languageId() {
+            return languageId;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public Path outputDir(NekoJSPaths paths, ProbeConfig config) {
+            return outputDir;
+        }
+
+        @Override
+        public Map<String, String> render(ProbeContext ctx) {
+            return Map.of(fileName, content);
+        }
     }
 
     @Test

@@ -167,3 +167,175 @@ git diff --check
 - 本票不扩大 Python 语言范围、不新增 Python 语法；Probe 声明契约（`.pyi`/pyrightconfig）
   由 runtime catalog 单一来源派生，本票未改其契约。
 - 未设置任何性能阈值（PERF_BASELINE 独立）；未改 05/06/07 语义。
+## Review-round-1 addendum（2026-09-19）
+
+协调者复核的 Spec 轴 finding（F8/F9）与本轮 fix-forward 的实际收口。票保持 `closed`。
+本轮**不改任何 main 源码**（只改测试与文档）；三条 finding 都已落到真实运行路径或如实记录边界。
+
+### F8 [已修] AC3 后半（生成 JS 的 link 错误）此前未被真正测到
+
+**Finding（属实）。** 原 `generatedCodeSyntaxErrorIsReportedAsPreparationFailureAtTheAuthoredLine`
+的输入是未闭合的 `value = f(`，走的是 **Python 源解析错误**，与
+`NekoPythonPrepareTest#pythonParseErrorCarriesAuthoredFileLineAndColumn` 重复；测试名与
+注释里的「破坏性探针不可用」是探针阶段残留的自我说服，不是事实约束。
+
+**实际修法（先查清事实，再决定 a/b）。**
+
+1. 先验证「Python 发射器是否保证生成 JS 合法」：对 20 种 JS 保留字 / 严格模式不安全名
+   在**每一个绑定位置**（参数、for 目标、walrus、import/from 别名、except 名、with 目标、
+   match 捕获、推导式目标、lambda 参数、类名、`*args`/`**kwargs`、装饰器根、augassign、
+   元组目标、嵌套函数）构造 Python 源，逐个 `cache.prepare` 后用 Graal `context.parse`
+   以 module 模式**重新解析产物** —— **20/20 全部解析通过**。`PythonEmitter` 的
+   `collectBindingNames` + `JS_RESERVED_IDENTIFIERS` 重命名是完备的，因此
+   **「生成 JS 的语法错误」在当前发射器下不可构造**（这正是选项 b 的适用条件）。
+2. 但 AC3 的后半还有**另一条真实可达的路径**：**生成 JS 的 link 错误**。
+   Python 的 `from <sibling> import <name>` 会转译成 ESM 静态 import；被 import 的模块
+   若没有该导出，失败发生在 JS 这一侧（link），而不是 Python 源解析侧。
+
+**因此采用 a 的「真判别用例」形态，但落在 link 而非 syntax 上：**
+
+- 新版 `NekoPythonRuntimeTest#generatedJsLinkFailureIsDistinguishedFromPythonSourceAndExecutionErrors`：
+  断言 `cache.prepare(entry)` **成功**（Python 源合法、产物确实含
+  `import { absent_name } from './link_sibling'`、mode=ESM）；
+  `loadEntry` 抛 `Stage.LINK` / `Module Resolution/Cache`，
+  cause 是 `NekoEsmLinkException`，sourcePath 是 authored 引用方；
+  并在同一用例内用「存在但运行期抛错」的 sibling 对照断言 `EXECUTE`——
+  即 AC3 要求区分的源解析错误 / link 错误 / 执行错误三条路径**同时**被覆盖。
+- 旧测试按选项 b 改名/改注释为它实际测的东西：
+  `pythonSourceParseErrorIsReportedAtPrepareWithTheAuthoredLine`，
+  删掉「破坏性探针不可用」那句自我说服。
+
+**红侧证据（必给，已实际执行）。** 把 link 诊断的归类从 LINK 改成 EXECUTE
+（`NekoEsmLinker.link` 的 catch 改为 `NekoModuleError.execute(...)`，临时改动、已回滚）：
+
+```text
+NekoPythonRuntimeTest > generatedJsLinkFailureIsDistinguishedFromPythonSourceAndExecutionErrors() FAILED
+    java.lang.AssertionError: Expected NekoModuleError[LINK/Module Resolution/Cache] in chain of
+    com.tkisor.nekojs.core.module.NekoModuleError: Missing ESM export 'absent_name' at ...link_entry.py:1:10
+15 tests completed, 1 failed
+```
+
+证明该用例真的在断言 LINK 归类，而不是恒真。回滚后 15/15 全绿。
+
+**精确命令**
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --rerun-tasks
+```
+
+**结果**：PASS（15/15，0 failed）。
+
+**仍未覆盖**：生成 JS 的**语法**错误（lowered-JS syntax error）在 Python 下不可构造——
+因为发射器对全部 20 种保留字/不安全名绑定位置都做了确定性重命名，产物始终合法。
+这条不是"没测"，而是**在当前实现下不存在该路径**；若将来在发射器里新增不经
+`jsName()` 的绑定位置，需要按票 12 的
+`NekoTypeScriptJsxRuntimeTest#loweredJsSyntaxErrorIsMappedAfterPreparationSucceeded`
+形态补一条（断言 `cache.prepare` 成功 + `loadEntry` 抛 PREPARE + cause 是
+`NekoEsmLinkException`）。
+
+### F9 [已修] AC7 此前只是构造性证明
+
+**Finding（属实）。** 原用例把两个 backend 各自 `new` 出来分别 `generate()`，只能证明
+"按构造不会撞"，没有经过真实的 `ProbeCoordinator` 会话；「拒绝共享输出目录」这条保护
+从未被行使。
+
+**实际修法**：新增两条经过真实 `ProbeCoordinator` 的用例（本目录的
+`common` 单测可以驱动它，`ProbeCoordinatorHardeningTest` 已是先例）：
+
+1. `coordinatorRunsTypeScriptAndPythonTogetherWithoutOverwritingEachOther`：
+   经 `NekoPluginBootstrap` 注册两个 builtin backend 并 lock（同生产 bootstrap），
+   再 `ProbeBackendSelector.named` 取出 `typescript:builtin` 与 `python:builtin`
+   **在同一次 runProbe 里同时在场**（正是命令层 `/nekojs probe all` 的形态）。
+   断言两个结果都 success、各自 `outputDir` 是 `.neko_probe/typescript` 与
+   `.neko_probe/python`；并**双向**断言目录内容不串：
+   Python 目录里没有任何 `.d.ts`，TS 目录里没有任何 `.pyi`，
+   Python 侧确实产出 `nekojs/py.typed` + `nekojs/__init__.pyi`。
+2. `coordinatorRejectsTwoBackendsSharingOneOutputDirectory`：
+   用固定输出目录的探针 backend 把两个语言指向同一目录，行使
+   `ProbeCoordinator` 的目录去重保护——断言第二个被跳过（消息含
+   `duplicate output directory`）、第一个产物完整存活、被跳过的那个没有写进共享目录。
+
+**精确命令**
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.probe.PythonDeclarationAttributionTest --rerun-tasks
+```
+
+**结果**：PASS（5/5，0 failed；新增 2 条真实 coordinator 用例）。
+
+**仍未覆盖**：真实 Minecraft 内 `/nekojs probe all` 命令层（平台命令类）未执行；
+本轮证据是 common 层的真实协调器会话 + 真实 registry bootstrap，不含游戏内命令路径。
+
+### AC5 口径澄清 + 补测 [已修]
+
+**Finding（属实）**：原 `changedPythonDependencyIsReloadedThroughTheSharedCache`
+调用了 `host.invalidateModuleTree(...)`，只证明了**显式**失效。
+
+**实际修法**：补 `NekoPythonRuntimeTest#changedPythonDependencyIsObservedWithoutAnExplicitInvalidate`——
+只改盘上被 import 的 `.py`，**不做任何** `invalidateModuleTree`/`invalidate`/`clear`，
+直接重跑入口，断言看到新值。这走的是宿主 `refreshPreparedExecutionTree` 的
+依赖驱动失效路径。
+
+**红侧证据（已实际执行）**：在 `refreshPreparedExecutionTree` 开头临时加
+`if (true) return;`（已回滚）：
+
+```text
+NekoPythonRuntimeTest > changedPythonDependencyIsObservedWithoutAnExplicitInvalidate() FAILED
+    org.opentest4j.AssertionFailedError at NekoPythonRuntimeTest.java:382
+15 tests completed, 1 failed
+```
+
+回滚后全绿。故 AC5 现在**显式失效与自动失效都已验证**（两条独立用例）。
+
+**精确命令**
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --rerun-tasks
+```
+
+**结果**：PASS（15/15）。
+
+### Review-round-1 evidence matrix
+
+| Finding / AC | 精确证据 | 精确 Gradle 命令 | 结果与限制 |
+|---|---|---|---|
+| F8 生成 JS 的 link 错误被真判别 | `generatedJsLinkFailureIsDistinguishedFromPythonSourceAndExecutionErrors`（prepare 成功 + LINK + cause `NekoEsmLinkException` + EXECUTE 对照）；红侧：`NekoEsmLinker.link` catch 改 EXECUTE → 该用例 FAILED（已回滚） | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --rerun-tasks` | PASS 15/15。生成 JS 的**语法**错误在 Python 下不可构造（20/20 保留字绑定位置产物均合法解析），已在 addendum 写明原因与将来补测形态。 |
+| F8 旧测试名不副实 | 改名为 `pythonSourceParseErrorIsReportedAtPrepareWithTheAuthoredLine`，删除「破坏性探针不可用」注释 | 同上 | PASS；名称与断言一致（Python 源解析错误 + authored 行）。 |
+| F9 真实 ProbeCoordinator 会话 | `coordinatorRunsTypeScriptAndPythonTogetherWithoutOverwritingEachOther`（同一次 run 两 backend 在场、双向目录内容不串） | `./gradlew.bat :common:test --tests com.tkisor.nekojs.probe.PythonDeclarationAttributionTest --rerun-tasks` | PASS 5/5。限制：未执行游戏内命令层。 |
+| F9 目录去重保护被行使 | `coordinatorRejectsTwoBackendsSharingOneOutputDirectory`（第二者被跳过 + 第一者产物存活） | 同上 | PASS；`duplicate output directory` 保护真实触发。 |
+| AC5 自动失效 | `changedPythonDependencyIsObservedWithoutAnExplicitInvalidate`（无显式 invalidate）；红侧：`refreshPreparedExecutionTree` 提前 return → 该用例 FAILED（已回滚） | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --rerun-tasks` | PASS；显式与自动两条失效路径现在都有独立证据。 |
+| 综合门禁 | common 全量测试、common check、平台编译、whitespace | `./gradlew.bat :common:test --rerun-tasks`; `./gradlew.bat :common:check`; `./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | PASS：`:common:test --rerun-tasks` = **1736 tests, 0 failed, 4 skipped**（较上一轮 +11：round-1 新增 3 条用例，其余为同分支其他票的测试）；`:common:check` 与两个平台编译 BUILD SUCCESSFUL；`git diff --check` 对本轮 3 个文件干净（唯一命中是**其他票**的 `2026-09-19-ci-processor-gate/evidence/gates-selftest.txt` 尾随空格，非本票改动）。**golden 未更新。** |
+
+### 本轮执行证据（命令与实际结果）
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonRuntimeTest --rerun-tasks
+  → 15 tests, 0 failed
+./gradlew.bat :common:test --tests com.tkisor.nekojs.probe.PythonDeclarationAttributionTest --rerun-tasks
+  → 5 tests, 0 failed
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoPythonPrepareTest --rerun-tasks
+  → 10 tests, 0 failed
+./gradlew.bat :common:test --rerun-tasks
+  → 1736 tests completed, 0 failed, 4 skipped
+./gradlew.bat :common:check
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava
+  → BUILD SUCCESSFUL
+git diff --check
+  → 本轮文件干净
+```
+
+红侧证据（两处临时改动均已回滚，main 源码与 `07bd32c4` 一致）：
+
+```text
+1) NekoEsmLinker.link catch: NekoModuleError.link → NekoModuleError.execute
+   → generatedJsLinkFailureIsDistinguishedFromPythonSourceAndExecutionErrors FAILED
+     (Expected NekoModuleError[LINK/Module Resolution/Cache] ...); 15 tests, 1 failed
+2) NekoScriptModuleLoaderHost.refreshPreparedExecutionTree: 开头加 if (true) return;
+   → changedPythonDependencyIsObservedWithoutAnExplicitInvalidate FAILED; 15 tests, 1 failed
+```
+
+### 本轮未改 main 源码
+
+本轮所有临时红侧改动（`NekoEsmLinker` 的 catch 归类、`refreshPreparedExecutionTree`
+提前 return）都已回滚，`git diff -- common/src/main/java` 为空；main 源码与上一轮提交
+`07bd32c4` 一致。本轮提交只含测试与本文档。
