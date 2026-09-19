@@ -72,8 +72,8 @@ class NekoModuleIdentityLifecycleTest {
                 .build();
         context = Context.newBuilder("js").allowAllAccess(true).allowIO(ioAccess).build();
         host = new NekoScriptModuleLoaderHost(
-                context, new NekoModuleResolver(new NekoModuleResolutionPaths(
-                        paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)), cache);
+                context, new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                        new ScriptFilePolicy(compilers)), cache);
         context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", host);
         try (var in = getClass().getResourceAsStream("/nekojs/node/internal/script-loader.js")) {
             assertNotNull(in, "script-loader.js must be on the test classpath");
@@ -321,8 +321,8 @@ class NekoModuleIdentityLifecycleTest {
                 NekoTrustContext.local());
         try (Context otherContext = Context.newBuilder("js").allowAllAccess(true).build()) {
             NekoScriptModuleLoaderHost otherHost = new NekoScriptModuleLoaderHost(otherContext,
-                    new NekoModuleResolver(new NekoModuleResolutionPaths(
-                            paths.gameDir(), paths.root(), paths.nodeModules()), ScriptFilePolicy.legacyRuntime()), otherCache);
+                    new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                            ScriptFilePolicy.legacyRuntime()), otherCache);
             String moduleId = "server_scripts/src/host-isolation.mjs";
             Path firstVirtual = Path.of(cache.virtualModules().register(moduleId, "export const owner = 'first';"));
             Path secondVirtual = Path.of(otherCache.virtualModules().register(moduleId, "export const owner = 'second';"));

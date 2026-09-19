@@ -4,6 +4,7 @@ import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.api.ScriptType;
@@ -47,8 +48,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
     private final NekoJSPaths paths;
     private final SandboxConfig config;
-    private final SourceMapRegistry sourceMaps;
-    private final NekoEsmVirtualModuleRegistry virtualModules;
+    private volatile NekoSourceMapView sourceMaps;
+    private volatile NekoVirtualModuleView virtualModules;
 
     public DefaultErrorTracker(NekoJSPaths paths, SandboxConfig config) {
         this(paths, config, new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()));
@@ -76,6 +77,30 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     NekoVirtualModuleView virtualModules() {
         return virtualModules;
+    }
+
+    /** Switch diagnostics to the registry views owned by one active generation session. */
+    public void activateModuleViews(NekoModulePipelineCache moduleSession) {
+        this.sourceMaps = moduleSession.sourceMapView();
+        this.virtualModules = moduleSession.virtualModuleView();
+    }
+
+    /** Save one script type's errors before candidate execution can replace same-id entries. */
+    public Map<ScriptId, ScriptError> snapshotType(ScriptType type) {
+        Map<ScriptId, ScriptError> snapshot = new java.util.HashMap<>();
+        errors.forEach((id, error) -> {
+            if (error.getScriptType() == type) {
+                snapshot.put(id, error);
+            }
+        });
+        return snapshot;
+    }
+
+    /** Restore the pre-candidate error view after a failed generation. */
+    public void restoreType(ScriptType type, Map<ScriptId, ScriptError> snapshot) {
+        if (snapshot == null) return;
+        errors.entrySet().removeIf(entry -> entry.getValue().getScriptType() == type);
+        errors.putAll(snapshot);
     }
 
     @Override

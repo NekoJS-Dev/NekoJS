@@ -45,13 +45,18 @@ public final class PackSyncClientConnections {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(PackSyncClientConnections::onLoggingOut);
     }
 
-    private static void reloadClientScripts() {
+    private static boolean reloadClientScripts() {
         NekoRuntimeRoot root = runtimeRoot;
-        if (!Platform.isClient() || root == null) return;
+        if (!Platform.isClient() || root == null) return true;
         var manager = root.scriptManagerOrNull(ScriptType.CLIENT);
-        if (manager == null) return;
+        if (manager == null) return true;
         NekoJS.LOGGER.debug("Reloading CLIENT scripts after server pack sync change");
-        root.reload(ScriptType.CLIENT);
+        try {
+            return root.reload(ScriptType.CLIENT).success();
+        } catch (Throwable failure) {
+            NekoJS.LOGGER.error("CLIENT script reload after server pack sync failed", failure);
+            return false;
+        }
     }
 
     private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {

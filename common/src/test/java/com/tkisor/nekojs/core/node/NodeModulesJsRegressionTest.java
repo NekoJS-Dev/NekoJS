@@ -10,7 +10,6 @@ import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
-import com.tkisor.nekojs.core.module.NekoModuleResolutionPaths;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -54,8 +53,8 @@ class NodeModulesJsRegressionTest {
                     new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
                     NekoTrustContext.local());
             return NekoNodeModuleInstaller.install(context, ScriptType.TEST,
-                    new NekoModuleResolver(new NekoModuleResolutionPaths(
-                            paths.gameDir(), paths.root(), paths.nodeModules()), new ScriptFilePolicy(compilers)),
+                    new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                            new ScriptFilePolicy(compilers)),
                     paths, new DefaultErrorTracker(paths, config), config, cache);
         }
 

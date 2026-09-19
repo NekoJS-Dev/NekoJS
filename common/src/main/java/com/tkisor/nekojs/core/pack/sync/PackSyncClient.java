@@ -5,10 +5,13 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.ClassFilter;
 import com.tkisor.nekojs.core.pack.ScriptPackRegistry;
+import com.tkisor.nekojs.core.pack.ScriptPack;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 /**
  * 包分发客户端管线（平台无关）：接收哈希清单与 bundle → 落盘缓存（路径穿越防护）→
@@ -44,7 +48,7 @@ public final class PackSyncClient {
     private static final long MAIN_THREAD_WAIT_SECONDS = 30;
 
     /** 平台安装的 CLIENT 脚本重载钩子（loader entry 注入的 root.reload(CLIENT) 守卫包装）。 */
-    private static volatile Runnable clientReloadHook;
+    private static volatile BooleanSupplier clientReloadHook;
 
     private static volatile CountDownLatch mainThreadLatch;
 
@@ -55,7 +59,7 @@ public final class PackSyncClient {
 
     private PackSyncClient() {}
 
-    public static void installClientReloadHook(Runnable hook) {
+    public static void installClientReloadHook(BooleanSupplier hook) {
         clientReloadHook = hook;
     }
 
@@ -101,6 +105,7 @@ public final class PackSyncClient {
         }
         String nextAddress = normalizeAddress(serverAddress);
         String nextBucket = PackSyncTrustStore.bucketFor(nextAddress);
+        Path previousRemoteRoot = activeRemoteRoot();
         Map<String, String> hashes = new LinkedHashMap<>();
         for (HashEntry entry : entries) {
             hashes.put(entry.syncId(), entry.hash());
@@ -114,14 +119,14 @@ public final class PackSyncClient {
         boolean revoked = false;
         if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty() && activeSetChanged)) {
             // Do not let the previous active/credential set run while this server's bundle is pending.
-            deactivateAndReload("server pack hash list changed", remoteRoot, runtimeRoot);
+            deactivateAndReload("server pack hash list changed", previousRemoteRoot, runtimeRoot);
             revoked = true;
         }
 
         if (hashes.isEmpty()) {
             // 服务器无同步包：清空远端缓存包（缓存文件保留）并重载客户端脚本
             if (!revoked) {
-                deactivateAndReload("server sent an empty pack hash list", remoteRoot, runtimeRoot);
+                deactivateAndReload("server sent an empty pack hash list", previousRemoteRoot, runtimeRoot);
             }
             return;
         }
@@ -223,6 +228,9 @@ public final class PackSyncClient {
             return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
         }
         Path remoteRoot = bucketDir;
+        List<ScriptPack> previousActive = List.copyOf(ScriptPackRegistry.get().serverCachePacks());
+        Path previousActiveRoot = previousActive.isEmpty() ? null
+                : previousActive.get(0).root().getParent();
         // Replace the credential set before exposing the replacement pack to reload/execute.
         try {
             runtimeRoot.revokeRemoteSources(remoteRoot);
@@ -241,11 +249,16 @@ public final class PackSyncClient {
         try {
             runtimeRoot.authorizeRemoteSources(remoteSources, remoteRoot);
         } catch (Exception failure) {
-            ScriptPackRegistry.get().deactivateServerCachePacks();
-            runtimeRoot.revokeRemoteSources(remoteRoot);
+            restorePreviousActivation(runtimeRoot, remoteRoot, previousActive, previousActiveRoot);
             return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
         }
-        reloadClientScripts("server pack bundle applied");
+        if (!reloadClientScripts("server pack bundle applied")) {
+            // The registry and remote credentials were made visible before reload so the
+            // candidate can resolve the bundle. A failed reload must remove that selection again;
+            // leaving it active would make registry/trust state disagree with the live runtime.
+            restorePreviousActivation(runtimeRoot, remoteRoot, previousActive, previousActiveRoot);
+            return Outcome.disconnect("NekoJS remote script pack rejected: CLIENT script reload failed");
+        }
         NekoJS.LOGGER.info("Activated {} remote script pack(s) from server {}", resolved.size(), activeAddress);
         return Outcome.accepted();
     }
@@ -255,7 +268,10 @@ public final class PackSyncClient {
     /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有激活包时重载客户端脚本。 */
     public static synchronized void handleDisconnect(NekoRuntimeRoot runtimeRoot) {
         expectedHashes = Map.of();
-        deactivateAndReload("disconnected from server", activeRemoteRoot(), runtimeRoot);
+        Path previousRemoteRoot = activeRemoteRoot();
+        activeAddress = null;
+        activeBucket = null;
+        deactivateAndReload("disconnected from server", previousRemoteRoot, runtimeRoot);
     }
 
     /* ================= 内部 ================= */
@@ -267,20 +283,83 @@ public final class PackSyncClient {
         }
         if (!removed.isEmpty()) {
             NekoJS.LOGGER.info("Deactivated {} server cache pack(s): {}", removed.size(), reason);
-            reloadClientScripts(reason);
+            if (!reloadClientScripts(reason)) {
+                NekoJS.LOGGER.error("CLIENT runtime did not accept server pack deactivation ({})", reason);
+                restorePreviousActivation(runtimeRoot, remoteRoot, removed,
+                        removed.isEmpty() ? null : removed.get(0).root().getParent());
+            }
         }
     }
 
-    private static void reloadClientScripts(String reason) {
-        Runnable hook = clientReloadHook;
-        if (hook == null) {
-            NekoJS.LOGGER.debug("No client reload hook installed, skipping CLIENT reload ({})", reason);
+    /** Keep the old active generation and its trust set when a replacement reload is rejected. */
+    private static void restorePreviousActivation(NekoRuntimeRoot runtimeRoot, Path failedRoot,
+                                                  List<ScriptPack> previous, Path previousRoot) {
+        if (previous == null || previous.isEmpty()) {
+            ScriptPackRegistry.get().deactivateServerCachePacks();
+            if (runtimeRoot != null) {
+                runtimeRoot.revokeRemoteSources(failedRoot);
+            }
+            return;
+        }
+        Path root = previousRoot;
+        if (root == null) {
+            root = previous.get(0).root().getParent();
+        }
+        List<String> syncIds = previous.stream().map(PackSyncClient::syncIdOf).toList();
+        ScriptPackRegistry.get().activateServerCachePacks(root, syncIds);
+        if (runtimeRoot == null) return;
+        runtimeRoot.revokeRemoteSources(failedRoot);
+        List<NekoTrustContext.RemoteSource> sources = remoteSources(previous);
+        if (sources == null) {
+            NekoJS.LOGGER.error("Failed to reconstruct the previous server pack trust set after CLIENT reload failure");
             return;
         }
         try {
-            hook.run();
-        } catch (Exception e) {
+            runtimeRoot.authorizeRemoteSources(sources, root);
+        } catch (Exception failure) {
+            NekoJS.LOGGER.error("Failed to restore the previous server pack trust set after CLIENT reload failure", failure);
+        }
+    }
+
+    private static String syncIdOf(ScriptPack pack) {
+        String encoded = pack.root().getFileName().toString();
+        int separator = encoded.indexOf('_');
+        return separator > 0
+                ? encoded.substring(0, separator) + ":" + encoded.substring(separator + 1)
+                : encoded;
+    }
+
+    private static List<NekoTrustContext.RemoteSource> remoteSources(List<ScriptPack> packs) {
+        List<NekoTrustContext.RemoteSource> sources = new ArrayList<>();
+        for (ScriptPack pack : packs) {
+            JsonObject signature = pack.manifest() == null ? null : pack.manifest().signature();
+            String keyId = signature == null ? null : PackSignatureVerifier.string(signature, "keyId");
+            if (keyId == null || keyId.isBlank()) {
+                return null;
+            }
+            try (var files = Files.walk(pack.root())) {
+                files.filter(Files::isRegularFile)
+                        .filter(file -> !file.getFileName().toString().equals("manifest.json"))
+                        .forEach(file -> sources.add(new NekoTrustContext.RemoteSource(
+                                file, syncIdOf(pack), keyId)));
+            } catch (IOException failure) {
+                return null;
+            }
+        }
+        return List.copyOf(sources);
+    }
+
+    private static boolean reloadClientScripts(String reason) {
+        BooleanSupplier hook = clientReloadHook;
+        if (hook == null) {
+            NekoJS.LOGGER.debug("No client reload hook installed, skipping CLIENT reload ({})", reason);
+            return true;
+        }
+        try {
+            return hook.getAsBoolean();
+        } catch (Throwable e) {
             NekoJS.LOGGER.error("CLIENT script reload after pack sync failed", e);
+            return false;
         }
     }
 

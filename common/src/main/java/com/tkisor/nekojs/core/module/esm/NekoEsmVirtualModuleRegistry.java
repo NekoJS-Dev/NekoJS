@@ -1,13 +1,16 @@
 package com.tkisor.nekojs.core.module.esm;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.module.NekoModuleHash;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -257,6 +260,11 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
 
     private static String stableKey(String moduleId) {
         String value = moduleId == null ? "module" : moduleId;
-        return NekoModuleHash.sha256(value).substring(0, 32);
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8))).substring(0, 32);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 digest is not available on this JVM", e);
+        }
     }
 }

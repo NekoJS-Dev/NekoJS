@@ -16,7 +16,6 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.module.NekoModuleResolutionPaths;
 import com.tkisor.nekojs.core.module.NekoModuleResolver;
 import com.tkisor.nekojs.core.module.NekoScriptModuleLoaderHost;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
@@ -66,6 +65,10 @@ class NekoRuntimeModuleCacheOwnershipTest {
                 first.preparationCache().prepare(script);
                 assertEquals(1, first.preparedModuleCountForDiagnostics(), "准备条目落在 owner 实例");
                 assertEquals(0, second.preparedModuleCountForDiagnostics(), "独立 root 互不可见");
+                NekoModulePipelineCache child = firstCache.openSession();
+                child.prepare(script);
+                assertEquals(2, first.preparedModuleCountForDiagnostics(),
+                        "generation child entries remain under the same root owner");
             } finally {
                 Files.deleteIfExists(script);
             }
@@ -99,8 +102,7 @@ class NekoRuntimeModuleCacheOwnershipTest {
             assertSame(cache, field(manager, "preparationCache"));
             try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
                 NekoScriptModuleLoaderHost host = new NekoScriptModuleLoaderHost(context,
-                        new NekoModuleResolver(new NekoModuleResolutionPaths(
-                                paths.gameDir(), paths.root(), paths.nodeModules()),
+                        new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
                                 ScriptFilePolicy.legacyRuntime()), cache);
                 try {
                     assertSame(cache, field(host, "preparationCache"));

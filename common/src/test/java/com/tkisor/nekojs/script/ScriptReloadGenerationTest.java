@@ -220,6 +220,8 @@ class ScriptReloadGenerationTest {
         final Counter counter = new Counter();
         final Trigger trigger = new Trigger();
         final StubPluginRuntime pluginRuntime;
+        final DefaultErrorTracker tracker;
+        final NekoModulePipelineCache cache;
         final ScriptManager manager;
         final ScriptType scriptType;
 
@@ -232,10 +234,10 @@ class ScriptReloadGenerationTest {
             this.scriptType = scriptType;
             this.pluginRuntime = new StubPluginRuntime(counter, bridge.group, trigger);
             trigger.bind(bridge::postTestEvent);
-            DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
+            this.tracker = new DefaultErrorTracker(paths, config);
             ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
             NekoCoreContext core = new NekoCoreContext(engine, config, new ClassFilter(config), tracker);
-            NekoModulePipelineCache cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
+            this.cache = com.tkisor.nekojs.testfixture.NekoModuleTestFixtures
                     .newCache(paths, compilers, config);
             NekoSandboxFactory sandboxFactory = new NekoSandboxFactory(core, paths, compilers, pluginRuntime, cache);
             ScriptEnvironmentFactory environmentFactory =
@@ -345,6 +347,42 @@ class ScriptReloadGenerationTest {
             assertEquals("ScriptManager[server]", report.owner());
             assertTrue(report.describe().contains("phase=EXECUTION"),
                     "describe() must expose the structured fields: " + report.describe());
+        }
+    }
+
+    /** Candidate preparation/virtual registration must not replace the active source-map session. */
+    @Test
+    void failedEsmReloadKeepsActiveSourceMapAndSuccessfulCommitPublishesNewSession() throws Exception {
+        try (ManagerHarness harness = new ManagerHarness(withStatementLimit())) {
+            String oldSource = "throw new Error('old');\n";
+            harness.writeScript("session-entry.mjs", oldSource);
+            harness.loadAndRun();
+
+            assertTrue(harness.tracker.getAllErrors().stream()
+                    .anyMatch(error -> error.getDisplayPath().endsWith("session-entry.mjs")
+                            && error.getErrorMessage().contains("old")),
+                    "the active ESM failure must be visible before the candidate starts");
+            assertEquals(oldSource, activeModuleSession(harness.manager).sourceMapView()
+                    .getMappedPosition("server_scripts/session-entry.mjs", 1, 1).sourceContent);
+
+            String candidateSource = "export const version = 'new';\nwhile (true) {}\n";
+            harness.writeScript("session-entry.mjs", candidateSource);
+            assertThrows(RuntimeException.class, harness::reload);
+
+            assertEquals(oldSource, activeModuleSession(harness.manager).sourceMapView()
+                    .getMappedPosition("server_scripts/session-entry.mjs", 1, 1).sourceContent,
+                    "candidate source maps must be discarded with the failed session");
+            assertTrue(harness.tracker.getAllErrors().stream()
+                    .anyMatch(error -> error.getDisplayPath().endsWith("session-entry.mjs")
+                            && error.getErrorMessage().contains("old")),
+                    "candidate errors must not replace the active same-id error");
+
+            String committedSource = "export const version = 'committed';\n";
+            harness.writeScript("session-entry.mjs", committedSource);
+            harness.reload();
+            assertEquals(committedSource, activeModuleSession(harness.manager).sourceMapView()
+                    .getMappedPosition("server_scripts/session-entry.mjs", 1, 1).sourceContent,
+                    "a committed candidate session must expose its new source map");
         }
     }
 
@@ -756,6 +794,15 @@ class ScriptReloadGenerationTest {
         Method contextAccessor = environment.getClass().getDeclaredMethod("context");
         contextAccessor.setAccessible(true);
         return (Context) contextAccessor.invoke(environment);
+    }
+
+    private static NekoModulePipelineCache activeModuleSession(ScriptManager manager) throws Exception {
+        Field field = ScriptManager.class.getDeclaredField("runtime");
+        field.setAccessible(true);
+        Object environment = field.get(manager);
+        Method sessionAccessor = environment.getClass().getDeclaredMethod("moduleSession");
+        sessionAccessor.setAccessible(true);
+        return (NekoModulePipelineCache) sessionAccessor.invoke(environment);
     }
 
     private static Object runtimeOf(ScriptManager manager) {

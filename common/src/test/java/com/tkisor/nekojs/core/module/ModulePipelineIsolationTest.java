@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.reflect.Modifier;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,7 +46,6 @@ class ModulePipelineIsolationTest {
     /** Resolution/Cache 纯层：同上（host 与 ESM lifecycle 属执行委托面，另行断言）。 */
     private static final List<String> RESOLUTION_FILES = List.of(
             "core/module/NekoModuleResolver.java",
-            "core/module/NekoModuleResolutionPaths.java",
             "core/module/NekoModuleDependencyGraph.java",
             "core/module/ModuleReloadCoordinator.java",
             "core/module/esm/NekoEsmLinker.java",
@@ -60,7 +60,8 @@ class ModulePipelineIsolationTest {
     private static final List<String> RUNTIME_OWNED_BOUNDARY_FILES = List.of(
             "core/module/NekoModulePipelineCache.java",
             "core/error/SourceMapRegistry.java",
-            "core/module/esm/NekoEsmVirtualModuleRegistry.java");
+            "core/module/esm/NekoEsmVirtualModuleRegistry.java",
+            "core/module/NekoCanonicalPath.java");
 
     @Test
     void preparationCreatesNoContextDecidesNoHostAccessAndReadsNoPlatform() throws IOException {
@@ -124,7 +125,6 @@ class ModulePipelineIsolationTest {
                 "com.tkisor.nekojs.core.module.NekoModuleError",
                 "com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin",
                 "com.tkisor.nekojs.core.module.NekoModuleResolver",
-                "com.tkisor.nekojs.core.module.NekoModuleResolutionPaths",
                 "com.tkisor.nekojs.core.module.NekoModuleDependencyGraph",
                 "com.tkisor.nekojs.core.module.ModuleReloadCoordinator",
                 "com.tkisor.nekojs.core.module.esm.NekoEsmLinker",
@@ -232,6 +232,43 @@ class ModulePipelineIsolationTest {
         }
     }
 
+    @Test
+    void canonicalAndSourceMapCaseIdentityFollowsTheInjectedFileSystem() {
+        Path root = Path.of(System.getProperty("java.io.tmpdir"), "nekojs-case-policy").toAbsolutePath();
+        boolean caseInsensitive = root.getFileSystem().getPath("A").equals(root.getFileSystem().getPath("a"));
+        String upper = NekoCanonicalPath.of(root.resolve("CaseProbe.ts"));
+        String lower = NekoCanonicalPath.of(root.resolve("caseprobe.ts"));
+        assertTrue(caseInsensitive == upper.equals(lower),
+                "canonical identity must follow the Path filesystem case policy");
+
+        SourceMapRegistry registry = new SourceMapRegistry(root);
+        registry.register(root.resolve("CaseProbe.ts").toString(),
+                "{\"version\":3,\"sources\":[\"CaseProbe.ts\"],\"sourcesContent\":[\"case-map\"],\"names\":[],\"mappings\":\"AAAA\"}");
+        SourceMapRegistry.OriginalPosition position = registry.getMappedPosition(
+                root.resolve("caseprobe.ts").toString(), 1, 1);
+        assertTrue(caseInsensitive == "case-map".equals(position.sourceContent),
+                "source-map lookup must use the same filesystem case policy");
+    }
+
+    @Test
+    void internalHashAndResolutionValueAreNotPublicImplementationApis() throws Exception {
+        Class<?> hash = Class.forName("com.tkisor.nekojs.core.module.NekoModuleHash");
+        assertTrue(!Modifier.isPublic(hash.getModifiers()), "module hash must stay core.module-internal");
+        for (var method : hash.getDeclaredMethods()) {
+            assertTrue(!Modifier.isPublic(method.getModifiers()),
+                    "module hash methods must stay core.module-internal: " + method);
+        }
+        for (var constructor : NekoModuleResolver.class.getConstructors()) {
+            for (var parameter : constructor.getParameterTypes()) {
+                assertTrue(parameter != NekoModulePipelineCache.class,
+                        "resolver must receive plain path/policy values, not a runtime owner");
+            }
+        }
+        var resolverConstructor = NekoModuleResolver.class.getConstructor(
+                Path.class, Path.class, Path.class, com.tkisor.nekojs.core.ScriptFilePolicy.class);
+        assertTrue(resolverConstructor != null, "resolver must expose the plain Path constructor");
+    }
+
     private static void assertNoZeroArgumentConstructor(Class<?> type) {
         for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
             assertTrue(constructor.getParameterCount() != 0,
@@ -272,7 +309,11 @@ class ModulePipelineIsolationTest {
     private static List<String> scan(List<String> files, boolean forbidContextHolding) throws IOException {
         List<String> violations = new ArrayList<>();
         for (String file : files) {
-            String source = stripCommentsAndStrings(read(file));
+            String raw = read(file);
+            if (raw.contains("System.getProperty(\"os.name\"")) {
+                violations.add(file + ": common path policy must not read os.name");
+            }
+            String source = stripCommentsAndStrings(raw);
             for (String line : source.split("\n")) {
                 String trimmed = line.trim();
                 if (trimmed.isEmpty()) {

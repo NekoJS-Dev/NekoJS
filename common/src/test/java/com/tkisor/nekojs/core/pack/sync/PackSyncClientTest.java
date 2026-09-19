@@ -138,6 +138,60 @@ class PackSyncClientTest {
     }
 
     @Test
+    void reloadFailureRejectsBundleAndRevokesSelectedRuntimeState() {
+        config("all", false);
+        PackSyncClient.installClientReloadHook(() -> false);
+        String syncId = "packs:reload-failure";
+        String manifest = signed(syncId, "GLOBAL", "key-reload-failure-" + System.nanoTime(),
+                "client_scripts/hud.js", "module.exports = 'failure';\n");
+        SyncedPack pack = pack(syncId, "GLOBAL", manifest,
+                "client_scripts/hud.js", "module.exports = 'failure';\n");
+        PackSyncClient.handleHashList(runtimeRoot, "srv-reload-failure.test", hashes(pack));
+        PackSyncTrustStore.get().trustServer("srv-reload-failure.test");
+
+        PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
+
+        assertTrue(outcome.shouldDisconnect(), "a failed client reload must reject the bundle");
+        assertTrue(outcome.disconnect().contains("reload"));
+        assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty(),
+                "the selected server cache must not remain active after reload failure");
+        Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-reload-failure.test"))
+                .resolve(SyncedPack.encodeSyncId(pack.syncId())).resolve("client_scripts/hud.js");
+        assertNull(runtimeTrust.approvalFor(remoteFile),
+                "remote credentials must be revoked with the rejected selection");
+    }
+
+    @Test
+    void failedReplacementRestoresThePreviousActiveRegistryAndCredentials() {
+        config("all", false);
+        String syncId = "packs:reload-rollback";
+        String manifest = signed(syncId, "GLOBAL", "key-reload-rollback-" + System.nanoTime(),
+                "client_scripts/hud.js", "module.exports = 'rollback';\n");
+        SyncedPack pack = pack(syncId, "GLOBAL", manifest,
+                "client_scripts/hud.js", "module.exports = 'rollback';\n");
+        PackSignatureVerifier.Result signatureResult = PackSignatureVerifier.verify(
+                pack.syncId(), pack.scopeName(), pack.manifestJson(), pack.files(), true, PackSyncTrustStore.get());
+        assertTrue(signatureResult.valid(), signatureResult.reason());
+        PackSyncClient.installClientReloadHook(() -> true);
+        PackSyncClient.handleHashList(runtimeRoot, "srv-reload-rollback.test", hashes(pack));
+        PackSyncTrustStore.get().trustServer("srv-reload-rollback.test");
+        PackSyncClient.Outcome initial = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
+        assertFalse(initial.shouldDisconnect(), initial.disconnect());
+
+        PackSyncClient.installClientReloadHook(() -> false);
+        PackSyncClient.handleHashList(runtimeRoot, "srv-reload-rollback.test", hashes(pack));
+        PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
+
+        assertTrue(outcome.shouldDisconnect());
+        assertEquals(1, ScriptPackRegistry.get().serverCachePacks().size(),
+                "a failed replacement must leave the old active registry when the old runtime remains live");
+        Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-reload-rollback.test"))
+                .resolve(SyncedPack.encodeSyncId(pack.syncId())).resolve("client_scripts/hud.js");
+        assertNotNull(runtimeTrust.approvalFor(remoteFile),
+                "the old active runtime credential must be restored with the registry");
+    }
+
+    @Test
     void successfulActivationAuthorizesRuntimeCacheAndDisconnectRevokesIt() throws Exception {
         config("all", false);
         String manifest = signed("packs:runtime", "GLOBAL", "key-runtime");
@@ -369,7 +423,10 @@ class PackSyncClientTest {
 
     private void installCountingReloadHook() {
         reloads.set(0);
-        PackSyncClient.installClientReloadHook(reloads::incrementAndGet);
+        PackSyncClient.installClientReloadHook(() -> {
+            reloads.incrementAndGet();
+            return true;
+        });
     }
 
     private static List<PackSyncClient.HashEntry> hashes(SyncedPack pack) {

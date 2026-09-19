@@ -146,13 +146,18 @@ public final class FabricPackSync {
         PackSyncClient.awaitMainThreadWork();
     }
 
-    private static void reloadClientScripts() {
+    private static boolean reloadClientScripts() {
         // root 经 loader entry 的 package-private accessor 获取（原 null 判定语义保留）
         NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
-        if (root == null) return;
+        if (root == null) return true;
         // CLIENT 管理器可能尚未建立（autoLoadTypes 之前 / 专用服务器进程）——reload 会抛
-        if (root.scriptManagerOrNull(ScriptType.CLIENT) == null) return;
-        root.reload(ScriptType.CLIENT);
+        if (root.scriptManagerOrNull(ScriptType.CLIENT) == null) return true;
+        try {
+            return root.reload(ScriptType.CLIENT).success();
+        } catch (Throwable failure) {
+            LOGGER.error("CLIENT script reload after server pack sync failed", failure);
+            return false;
+        }
     }
 
     /** 配置阶段 {@code Minecraft#getCurrentServer()} 未就绪，从连接远端地址取 bucket 所用地址。 */
