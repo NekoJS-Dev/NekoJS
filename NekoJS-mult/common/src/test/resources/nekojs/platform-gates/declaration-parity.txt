@@ -2,10 +2,14 @@
 # 输入：CoreManagedApiBootstrap.load(EmptyPlatform) 的 NormativeApiContract（运行时反射）->
 #       JsApiSurfaceResolver -> ManagedApiDeclarationGenerator 的 TS 产物。
 # owner: Managed Surface/Probe owner（declaration fixture）；build convention owner（接线）。
-# 逐项断言（gate 失败诊断）：missing-member / extra-member / missing-type / owner-missing / type-fallback。
+# 逐项断言（gate 失败诊断）：missing-member / extra-member / owner-missing / type-fallback /
+#   type-symbol-observed。
+# types= 是**事实输出**而非断言：当前契约没有任何 kind="type" 生产者（review F6 实证），
+#   所以这里记为空集事实；一旦出现 type-kind 符号，type-symbol-observed 会立刻报出，
+#   而不是靠一条永远为真的 missing-type 断言装作已覆盖。
 # 本文件只是经审阅的快照，不是第二规范源：契约变化须先改行为/渲染器，再更新并在工单 33 REPORT 留记录。
 globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text
 members=141
 owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
 signatures=150
-types=
+types=<empty: no kind=type producer in the contract>

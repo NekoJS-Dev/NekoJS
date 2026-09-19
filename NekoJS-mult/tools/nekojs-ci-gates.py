@@ -162,6 +162,63 @@ SUBSET_SPEC = {
 }
 
 
+def strip_comments(text):
+    """剥掉 // 行注释与 /* */ 块注释（字符串字面量内的 // 保留原样）。
+
+    票 33 review F4：processor gate 的 option 判定必须基于**实际代码**，否则注解里
+    写一行 "-Anekojs.platform=nf26" 就能让"已删掉真实传参"的节点假阳通过。
+    Kotlin/Java 的字符串字面量里出现 // 是可能的（如 URL），所以按状态机处理。
+    """
+    out = []
+    i = 0
+    in_line = in_block = False
+    quote = None
+    while i < len(text):
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < len(text) else ""
+        if in_line:
+            if ch == "\n":
+                in_line = False
+                out.append(ch)
+            i += 1
+            continue
+        if in_block:
+            if ch == "*" and nxt == "/":
+                in_block = False
+                i += 2
+                continue
+            if ch == "\n":
+                out.append(ch)
+            i += 1
+            continue
+        if quote is not None:
+            out.append(ch)
+            if ch == "\\" and nxt:
+                out.append(nxt)
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+            i += 1
+            continue
+        if ch == "/" and nxt == "/":
+            in_line = True
+            i += 2
+            continue
+        if ch == "/" and nxt == "*":
+            in_block = True
+            i += 2
+            continue
+        if ch in ("\"", "'"):
+            quote = ch
+            out.append(ch)
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 def iter_run_commands(text):
     """粗粒度提取 workflow 的 run: 命令块；不引入 PyYAML 依赖。"""
     lines = text.splitlines()
@@ -274,7 +331,10 @@ def gate_processor(repo=REPO):
     for node in nodes:
         convention = repo / ("buildSrc/src/main/kotlin/nekojs.%s-node.gradle.kts"
                              % node["platform"])
-        text = convention.read_text(encoding="utf-8") if convention.is_file() else ""
+        raw = convention.read_text(encoding="utf-8") if convention.is_file() else ""
+        # 票 33 review F4：必须剥注释后再匹配。注释里留一行
+        # // "-Anekojs.platform=nf26" 而删掉真实传参时，纯文本包含匹配会假阳。
+        text = strip_comments(raw)
         wired = 'annotationProcessor(project(":common-api-processor"))' in text
         passes_option = PROCESSOR_OPTION + "=" in text
         tag = node["props"].get("deps.platform_tag")
@@ -436,10 +496,17 @@ def gate_nodes(repo=REPO):
                           name + " gate 已运行", "缺少 " + name + " gate 报告：not verified")
                 continue
             data = json.loads(report.read_text(encoding="utf-8"))
-            if data.get("failures"):
-                gate.fail(node_id, node_id, str(report.relative_to(repo)),
-                          name + " gate 0 failure",
-                          "%d failure(s)：%s" % (len(data["failures"]), data["failures"][0][:160]))
+            failures = data.get("failures") or []
+            if failures:
+                gate.row(node_id, name, "%d rows / %d failures" % (len(data.get("rows", [])),
+                                                                   len(failures)))
+                # 票 33 review F2：逐条打印该节点的**全部** failure，不只取第 [0] 条截断 160 字。
+                # 真实故障（某节点 platformGateTest 红）会让多个节点同时带 failures，
+                # 只留第一条会让其余条目不可定位。每条都带 node/input/expected/owner。
+                for index, failure in enumerate(failures, start=1):
+                    gate.fail(node_id, node_id, str(report.relative_to(repo)),
+                              "%s gate 0 failure" % name,
+                              "failure[%d/%d] %s" % (index, len(failures), failure))
             else:
                 gate.row(node_id, name, "%d rows / 0 failures" % len(data.get("rows", [])))
     return gate
@@ -447,21 +514,36 @@ def gate_nodes(repo=REPO):
 
 # ---------------------------------------------------------------- source-root 探针
 
+def gradle_wrapper(repo):
+    """按平台选 Gradle wrapper。
+
+    票 33 review F5：CI 跑在 ubuntu-latest，硬编码 gradlew.bat 会让新步骤在 Linux 上必红，
+    且 build/nekojs-gates-report.json 永远不产出。Windows 用 .bat，其余用 shell 脚本。
+    """
+    name = "gradlew.bat" if sys.platform.startswith("win") else "./gradlew"
+    return str(repo / name) if name.endswith(".bat") else name
+
+
 def source_roots(repo, node):
     """source-roots <node>：用 Gradle init-script 读出该节点实际挂载的 source roots。
 
     事实源 = 构建配置（不是手写清单）：探针把 main sourceSet 的 srcDirs 直接写盘为
     versions/<node>/build/nekojs-gates/source-roots-<node>.json，供 gate_nodes 消费。
     stdout 只作人读摘要，不作为解析输入（避免 Windows 管道截断被误当成"没有输入"）。
+
+    票 33 review F2/F5：失败时**不 raise**（否则 set -euo pipefail 会在跑到 all 之前退出），
+    而是按统一格式打一条带 node/input/expected/owner 的诊断并返回非零。
     """
-    out = subprocess.run(
-        [str(repo / "gradlew.bat"), "--quiet", "-I",
-         str(repo / "tools/nekojs-source-roots.init.gradle"), ":%s:help" % node],
-        cwd=str(repo), capture_output=True, text=True, shell=True)
+    command = [gradle_wrapper(repo), "--quiet", "-I",
+               str(repo / "tools/nekojs-source-roots.init.gradle"), ":%s:help" % node]
+    out = subprocess.run(command, cwd=str(repo), capture_output=True, text=True, shell=True)
     target = repo / "versions" / node / "build" / "nekojs-gates" / ("source-roots-%s.json" % node)
     if not target.is_file():
-        raise SystemExit("探针未产出 %s（gradle 退出 %s）:\n%s\n%s"
-                         % (target, out.returncode, out.stdout[-1500:], out.stderr[-1500:]))
+        print("FAIL source-roots subject=%s node=%s input=%s expected=探针产出 source-roots-%s.json "
+              "owner=build-convention owner :: gradle 退出 %s；stdout 尾部 %r；stderr 尾部 %r"
+              % (node, node, "tools/nekojs-source-roots.init.gradle", node, out.returncode,
+                 out.stdout[-400:], out.stderr[-400:]))
+        return 1
     data = json.loads(target.read_text(encoding="utf-8"))
     print("source-roots: %s java=%d resources=%d" % (node, len(data["java"]), len(data["resources"])))
     for path in data["java"]:
@@ -474,90 +556,158 @@ def source_roots(repo, node):
 # ---------------------------------------------------------------- selftest
 
 def selftest(repo=REPO):
-    """在仓库副本上植入故障，逐条证明对应 gate 会变红（票 33 AC8 的可运行检查）。"""
+    """在仓库副本上植入故障，逐条证明对应 gate 会变红（票 33 AC8 的可运行检查）。
+
+    每个 case 都对应一条 review finding；副本复制忽略 build/，因此涉及"节点已构建"的
+    case 会显式铺设所需的最小产物。
+    """
+    import contextlib
+    import io
     import shutil
     import tempfile
 
     problems = []
 
-    def expect_fail(label, mutate, gate_fn, expect_check):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = Path(tmp) / "repo"
-            shutil.copytree(repo, copy, symlinks=True, ignore=shutil.ignore_patterns(
-                ".git", "build", ".gradle", "node_modules"))
-            mutate(copy)
-            try:
-                gate = gate_fn(copy)
-            except SystemExit as error:
-                problems.append("%s: gate 直接退出 %s" % (label, error))
-                return
-            hits = [f for f in gate.failures if f["check"] == expect_check]
-            if hits:
-                print("  OK   %-28s -> %s" % (label, hits[0]["detail"][:70]))
-            else:
-                problems.append("%s: gate 未变红（期望 %s；实际 failures=%d）"
-                                % (label, expect_check, len(gate.failures)))
+    def fresh_copy():
+        tmp = tempfile.mkdtemp()
+        copy = Path(tmp) / "repo"
+        shutil.copytree(repo, copy, symlinks=True, ignore=shutil.ignore_patterns(
+            ".git", "build", ".gradle", "node_modules"))
+        return copy
+
+    def expect_fail(label, mutate, gate_fn, expect_check, expected_details=()):
+        copy = fresh_copy()
+        mutate(copy)
+        try:
+            gate = gate_fn(copy)
+        except SystemExit as error:
+            problems.append("%s: gate 直接退出（应输出可定位诊断）%s" % (label, error))
+            return
+        hits = [f for f in gate.failures if f["check"] == expect_check]
+        if not hits:
+            problems.append("%s: gate 未变红（期望 %s；实际 failures=%d）"
+                            % (label, expect_check, len(gate.failures)))
+            return
+        # F2：断言该 check 的**全部** failure 都进了报告（不能只留 failures[0]）
+        details = [f["detail"] for f in hits]
+        missing = [d for d in expected_details if not any(d in detail for detail in details)]
+        if missing:
+            problems.append("%s: 报告吞掉了 failure 条目 %s（实际 %d 条）"
+                            % (label, missing, len(hits)))
+            return
+        shown = hits[0]
+        for detail_key in expected_details:
+            match = [h for h in hits if detail_key in h["detail"]]
+            if match:
+                shown = match[0]
+                break
+        print("  OK   %-30s -> %s" % (label, shown["detail"][:68].strip()))
 
     def break_subset(copy):
-        path = copy / WORKFLOW
-        path.write_text(path.read_text(encoding="utf-8")
-                        .replace(":26.2.0-fabric:build ", ""), encoding="utf-8")
+        """AC4：从五节点 build 命令里划掉一个节点。"""
+        target = copy / WORKFLOW
+        target.write_text(target.read_text(encoding="utf-8")
+                          .replace(":26.2.0-fabric:build ", ""), encoding="utf-8")
 
-    def break_processor(copy):
-        path = copy / "buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts"
-        text = path.read_text(encoding="utf-8")
-        path.write_text(text + '\nannotationProcessor(project(":common-api-processor"))\n'
-                               '// "-Anekojs.platform=fabric"\n', encoding="utf-8")
+    def break_processor_wired(copy):
+        """AC1 反向：Fabric 节点偷接 processor。"""
+        target = copy / "buildSrc/src/main/kotlin/nekojs.fabric-node.gradle.kts"
+        text = target.read_text(encoding="utf-8")
+        target.write_text(text + '\nannotationProcessor(project(":common-api-processor"))\n'
+                                 '// "-Anekojs.platform=fabric"\n', encoding="utf-8")
 
-    def break_nodes(copy):
-        # 只铺设一个节点的 gate 报告：其余节点因此没有 source/spec/event 证据
-        target = copy / "versions/26.2.0-fabric/build/nekojs-gates"
-        target.mkdir(parents=True, exist_ok=True)
-        (target / "event-surface-26.2.0-fabric.json").write_text(
-            json.dumps({"node": "26.2.0-fabric", "rows": [], "failures": []}), encoding="utf-8")
+    def break_option_comment(copy):
+        """F4 假阳：真传参被注释掉、注释里仍留形如 -Anekojs.platform=nf26 的文本。"""
+        target = copy / "buildSrc/src/main/kotlin/nekojs.neoforge-node.gradle.kts"
+        text = target.read_text(encoding="utf-8")
+        target.write_text(text.replace('"-Anekojs.platform=$platformTag",',
+                                       '// "-Anekojs.platform=$platformTag",'), encoding="utf-8")
 
-    def break_node_report_content(copy):
-        # 单节点报告带失败条目 -> 必须被聚合进同一报告（AC6：不静默省略）
-        build = copy / "versions/26.2.0-fabric/build"
+    def lay_node_evidence(copy, node, prefix, failures=None, omit=None):
+        """给某节点铺设最小 gate + check + artifact 证据。"""
+        build = copy / "versions" / node / "build"
         (build / "test-results/test").mkdir(parents=True, exist_ok=True)
         (build / "test-results/test/TEST-Stub.xml").write_text(
             '<testsuite name="Stub" tests="1" failures="0" errors="0"/>', encoding="utf-8")
         (build / "libs").mkdir(parents=True, exist_ok=True)
-        (build / "libs/nekojs-fabric-26.2-0.jar").write_bytes(b"x")
+        (build / "libs" / ("%s0.jar" % prefix)).write_bytes(b"x")
         gates = build / "nekojs-gates"
         gates.mkdir(parents=True, exist_ok=True)
-        (gates / "source-roots-26.2.0-fabric.json").write_text(
-            json.dumps({"node": "26.2.0-fabric", "java": ["src/main/java"], "resources": []}),
-            encoding="utf-8")
-        (gates / "event-surface-26.2.0-fabric.json").write_text(
-            json.dumps({"node": "26.2.0-fabric", "rows": [],
-                        "failures": ["missing-binding domain=BlockEvents node=26.2.0-fabric"]}),
-            encoding="utf-8")
+        if omit != "source-roots":
+            (gates / ("source-roots-%s.json" % node)).write_text(
+                json.dumps({"node": node, "java": ["src/main/java"], "resources": []}),
+                encoding="utf-8")
+        if omit != "event-surface":
+            (gates / ("event-surface-%s.json" % node)).write_text(
+                json.dumps({"node": node, "rows": [], "failures": failures or []},
+                           ensure_ascii=False), encoding="utf-8")
+        if omit != "spec-coverage":
+            (gates / ("spec-coverage-%s.json" % node)).write_text(
+                json.dumps({"node": node, "rows": [], "failures": []}, ensure_ascii=False),
+                encoding="utf-8")
 
-    def break_declaration(copy):
-        # 报告带 missing-member -> declaration gate 必须变红
+    def break_multi_failure(copy):
+        """F2：单节点报告带多条 failure，必须逐条出现在同一报告里。"""
+        lay_node_evidence(copy, "26.2.0-fabric", "nekojs-fabric-26.2-", failures=[
+            "missing-binding domain=A node=26.2.0-fabric",
+            "missing-binding domain=B node=26.2.0-fabric",
+            "member-drift domain=C node=26.2.0-fabric",
+        ])
+
+    def break_nodes_missing(copy):
+        """AC3/AC6：节点看起来已构建，但没有 source trace -> 必须记 not verified。"""
+        lay_node_evidence(copy, "26.2.0-fabric", "nekojs-fabric-26.2-", omit="source-roots")
+
+    def break_declaration_gap(copy):
         target = copy / "common/build/nekojs-gates"
         target.mkdir(parents=True, exist_ok=True)
-        (target / "declaration-parity.json").write_text(
-            json.dumps({"rows": ["members=141"],
-                        "failures": ["missing-member owner=Text member=of owner_ref=Managed Surface/Probe owner"]}),
+        (target / "declaration-parity.json").write_text(json.dumps(
+            {"rows": ["members=141"],
+             "failures": ["missing-member owner=Text member=of owner_ref=Managed Surface/Probe owner"]}),
             encoding="utf-8")
 
     def break_declaration_missing(copy):
-        # 报告缺失 -> declaration gate 必须记 not verified
-        report = copy / "common/build/nekojs-gates/declaration-parity.json"
-        if report.is_file():
-            report.unlink()
+        target = copy / "common/build/nekojs-gates"
+        target.mkdir(parents=True, exist_ok=True)
 
     print("selftest（每个 case 在临时副本上植入故障）:")
     expect_fail("ci-subset 漏节点", break_subset, gate_subsets, "ci-subset-consistency")
-    expect_fail("fabric 偷接 processor", break_processor, gate_processor, "fabric-processor-deferral")
-    expect_fail("declaration 报告带缺口", break_declaration, gate_declaration, "declaration-parity")
-    expect_fail("declaration 报告缺失", break_declaration_missing, gate_declaration, "declaration-parity")
-    # 副本复制时忽略 build/，因此这两个 case 都走"节点无证据"路径：node-report 必须报
-    # not verified 而不是静默通过（这正是 AC3/AC6 要守的行为）。
-    expect_fail("节点无证据 -> not verified", break_nodes, gate_nodes, "node-report")
-    expect_fail("节点报告带失败 -> 聚合", break_node_report_content, gate_nodes, "node-report")
+    expect_fail("fabric 偷接 processor", break_processor_wired, gate_processor,
+                "fabric-processor-deferral")
+    expect_fail("option 被注释掉（F4）", break_option_comment, gate_processor,
+                "fabric-processor-deferral")
+    expect_fail("节点报告多条 failure（F2）", break_multi_failure, gate_nodes, "node-report",
+                expected_details=("domain=A", "domain=B", "domain=C"))
+    # 断言具体是"该节点的 source trace 缺失"，而不是靠别的节点没构建也报 node-report 蒙对
+    expect_fail("节点无 source trace（AC3/AC6）", break_nodes_missing, gate_nodes, "node-report",
+                expected_details=("source trace not verified",))
+    expect_fail("declaration 报告带缺口（AC2）", break_declaration_gap, gate_declaration,
+                "declaration-parity")
+    expect_fail("declaration 报告缺失（AC2）", break_declaration_missing, gate_declaration,
+                "declaration-parity")
+
+    def check_source_roots_diagnostic():
+        """F5：wrapper/探针不可用时必须打可定位诊断 + 非零返回，而不是 raise。"""
+        copy = fresh_copy()
+        # 真正制造"跑不起来"：删掉 wrapper（Linux 上硬编码 gradlew.bat 就是这类失败）
+        for name in ("gradlew.bat", "gradlew"):
+            wrapper = copy / name
+            if wrapper.exists():
+                wrapper.unlink()
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            code = source_roots(copy, "26.2.0-fabric")
+        text = captured.getvalue().strip()
+        line = text.splitlines()[-1] if text else ""
+        if code == 0:
+            problems.append("source-roots 未变红（wrapper/探针失败被当成成功）")
+        elif not (line.startswith("FAIL source-roots") and "node=26.2.0-fabric" in line
+                  and "input=" in line and "expected=" in line and "owner=" in line):
+            problems.append("source-roots 失败诊断格式不含 node/input/expected/owner: %r" % line)
+        else:
+            print("  OK   %-30s -> %s" % ("source-roots 失败诊断（F5）", line[:68].strip()))
+
+    check_source_roots_diagnostic()
 
     if problems:
         for line in problems:
@@ -582,7 +732,9 @@ def main():
         return selftest()
     if args.command == "source-roots":
         if not args.node:
-            raise SystemExit("source-roots 需要 --node <节点名>")
+            print("FAIL source-roots subject=<none> node=<none> input=命令行 expected=--node <节点名> "
+                  "owner=build-convention owner :: 缺少 --node")
+            return 1
         return source_roots(REPO, args.node)
 
     registry = {"subsets": gate_subsets, "processor": gate_processor,
