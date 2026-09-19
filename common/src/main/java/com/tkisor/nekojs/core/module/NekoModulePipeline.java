@@ -15,6 +15,7 @@ import com.tkisor.nekojs.core.compiler.NekoJavaScriptLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoLegacyLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.config.SandboxConfig;
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.module.cjs.CjsStaticAnalyzer;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleAst;
 import com.tkisor.nekojs.core.module.esm.NekoEsmParser;
@@ -66,7 +67,8 @@ public final class NekoModulePipeline {
 
     NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
-        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding);
+        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding,
+                ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
     }
 
     /**
@@ -80,13 +82,25 @@ public final class NekoModulePipeline {
             throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
                     identity.requestedMode(), approval, "preparation requires a trust-approved source");
         }
-        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding);
+        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding,
+                ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
     }
 
-    private NekoPreparedModule prepareWithBinding(Path file, String rawSource, LanguageBinding binding) throws Exception {
+    NekoPreparedModule prepareCaptured(Path file, String rawSource, NekoTrustApprovedSource approval,
+                                       LanguageBinding binding, ScriptBindingSchema.View schemaView) throws Exception {
+        NekoModuleIdentity identity = binding.identity();
+        if (approval == null || !approval.covers(file)) {
+            throw NekoModuleError.denied(NekoModuleError.displayPath(file), identity.languageId(),
+                    identity.requestedMode(), approval, "preparation requires a trust-approved source");
+        }
+        return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding, schemaView);
+    }
+
+    private NekoPreparedModule prepareWithBinding(Path file, String rawSource, LanguageBinding binding,
+                                                  ScriptBindingSchema.View schemaView) throws Exception {
         NekoModuleIdentity identity = binding.identity();
         try {
-            return prepareStages(file, rawSource, binding);
+            return prepareStages(file, rawSource, binding, schemaView);
         } catch (NekoModuleError staged) {
             throw staged;
         } catch (Exception failure) {
@@ -105,7 +119,8 @@ public final class NekoModulePipeline {
         return prepareCaptured(file, rawSource, approval, binding);
     }
 
-    private NekoPreparedModule prepareStages(Path file, String rawSource, LanguageBinding binding) throws Exception {
+    private NekoPreparedModule prepareStages(Path file, String rawSource, LanguageBinding binding,
+                                             ScriptBindingSchema.View schemaView) throws Exception {
         ensureBindingCurrent(file, binding);
         String extension = extension(file);
         // 加载时静态校验：扫描脚本对全局绑定（Utils/Platform/Items 等）的成员访问，
@@ -114,13 +129,13 @@ public final class NekoModulePipeline {
         // JS（# 注释、类型注解、def/class 会被 JS-only 的 ValParser 碎成伪调用 → 'Unknown
         // identifier' 系统性误报），改为在编译后对产物 JS 跑——那才是运行时真正执行的代码。
         if (config.scriptMemberValidation() && rawPreflightApplies(extension)) {
-            GlobalBindingMemberValidator.validate(file, rawSource);
-            EventCallbackSourceValidator.validate(file, rawSource);
+            GlobalBindingMemberValidator.validate(file, rawSource, schemaView);
+            EventCallbackSourceValidator.validate(file, rawSource, schemaView);
         }
         NekoPreparedModule prepared = prepareModule(file, rawSource, extension, binding);
         if (config.scriptMemberValidation() && !rawPreflightApplies(extension)) {
-            GlobalBindingMemberValidator.validate(file, prepared.code());
-            EventCallbackSourceValidator.validate(file, prepared.code());
+            GlobalBindingMemberValidator.validate(file, prepared.code(), schemaView);
+            EventCallbackSourceValidator.validate(file, prepared.code(), schemaView);
         }
         ensureBindingCurrent(file, binding);
         return prepared;

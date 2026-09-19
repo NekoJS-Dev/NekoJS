@@ -9,7 +9,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
@@ -164,12 +164,60 @@ class DefaultErrorTrackerTest {
             tracker.clearAll();
             tracker.recordCallbackError(candidateContext, ScriptType.SERVER, "event", throwingPolyglot(
                     candidateContext, "server_scripts/context-callback.js"));
+            assertEquals(0, tracker.getErrorCount(), "candidate diagnostics must stay out of the public count");
+            assertTrue(tracker.getAllErrors().isEmpty(), "candidate diagnostics must stay out of the public snapshot");
+
+            tracker.publishCandidateErrors(ScriptType.SERVER, candidateContext);
             ScriptError candidateError = tracker.getAllErrors().iterator().next();
             assertEquals("server_scripts/candidate-authored.ts", candidateError.getDisplayPath(),
-                    "candidate diagnostics must use only the candidate Context session map");
+                    "published candidate diagnostics must use only the candidate Context session map");
         } finally {
             active.closeOwner();
             candidate.closeOwner();
+        }
+    }
+
+    @Test
+    void candidateErrorsRemainHiddenFromPublicDiagnosticsUntilCommit() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        NekoModulePipelineCache candidate = newCache(paths);
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            tracker.activateCandidateModuleViews(ScriptType.SERVER, context, candidate);
+
+            tracker.recordCallbackError(context, ScriptType.SERVER, "candidate", esmError(3, 2, "candidate-only"));
+
+            assertEquals(0, tracker.getErrorCount());
+            assertTrue(tracker.getAllErrors().isEmpty());
+            assertEquals(0, com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot.ErrorSnapshot.of(tracker).count());
+
+            tracker.publishCandidateErrors(ScriptType.SERVER, context);
+            assertEquals(1, tracker.getErrorCount());
+            assertEquals("candidate-only", tracker.getAllErrors().iterator().next().getErrorMessage());
+        } finally {
+            candidate.closeOwner();
+        }
+    }
+
+    @Test
+    void failedCandidateErrorsAreDiscardedAndActiveSnapshotRemainsVisible() throws Exception {
+        tracker.recordCallbackError(ScriptType.SERVER, "active", esmError(1, 1, "active-only"));
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            NekoModulePipelineCache candidate = newCache(NekoJSPaths.get());
+            try {
+                tracker.activateCandidateModuleViews(ScriptType.SERVER, context, candidate);
+                tracker.recordCallbackError(context, ScriptType.SERVER, "candidate", esmError(2, 1, "candidate-only"));
+
+                assertEquals(1, tracker.getErrorCount(),
+                        "candidate failures must not change the active error count");
+                assertEquals("active-only", tracker.getAllErrors().iterator().next().getErrorMessage());
+
+                tracker.discardCandidateModuleViews(context);
+                assertEquals(1, tracker.getErrorCount(),
+                        "discarding a failed candidate must preserve the active snapshot");
+                assertEquals("active-only", tracker.getAllErrors().iterator().next().getErrorMessage());
+            } finally {
+                candidate.closeOwner();
+            }
         }
     }
 

@@ -482,16 +482,24 @@ public final class ScriptManager implements AutoCloseable {
             }
             NekoModulePipelineCache moduleSession = preparationCache.openSession();
             ScriptEnvironmentFactory.Environment env;
+            RuntimeEnvironment created = null;
+            com.tkisor.nekojs.core.state.GenerationGlobals generation =
+                    environmentFactory.newGeneration(scriptType, false);
             try {
-                env = environmentFactory.createContext(scriptType,
-                        environmentFactory.newGeneration(scriptType, false), moduleSession);
-                environmentFactory.installEnvironmentBindings(env.context(), scriptType, env.globals());
+                env = environmentFactory.createContext(scriptType, generation, moduleSession);
+                created = new RuntimeEnvironment(
+                        env.context(), env.nodeRuntime(), env.outStream(), env.errStream(), env.globals(), moduleSession);
+                environmentFactory.installEnvironmentBindings(env.context(), scriptType, env.globals(), moduleSession);
+                environmentFactory.publishEnvironmentBindings(env.context(), moduleSession);
             } catch (RuntimeException | Error failure) {
-                moduleSession.closeSession();
+                if (created != null) {
+                    closeRuntimeResources(created);
+                } else {
+                    generation.close();
+                    moduleSession.closeSession();
+                }
                 throw failure;
             }
-            RuntimeEnvironment created = new RuntimeEnvironment(
-                    env.context(), env.nodeRuntime(), env.outStream(), env.errStream(), env.globals(), moduleSession);
             activateModuleViews(created.context(), moduleSession);
             this.runtime = created;
             CONTEXT_TO_MANAGER.put(created.context(), this);
@@ -628,7 +636,7 @@ public final class ScriptManager implements AutoCloseable {
                 // 下一个脚本能在自动重建的环境中继续执行，而不是全军覆没。context 与
                 // nodeRuntime 从同一次快照取出，避免读到错配对。
                 RuntimeEnvironment env = getOrCreateEnvironment();
-                scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime());
+                scriptExecutor.executeEntry(env.context(), script, env.nodeRuntime(), env.moduleSession().bindingSchemaView());
             }
         }
     }
@@ -772,7 +780,8 @@ public final class ScriptManager implements AutoCloseable {
                     // ---- Phase BINDING：事件组/插件 binding/schema/global+shared 视图安装进候选 Context ----
                     try {
                         environmentFactory.installEnvironmentBindings(
-                                candidateEnvironment.context(), scriptType, candidateEnvironment.globals());
+                                candidateEnvironment.context(), scriptType, candidateEnvironment.globals(),
+                                candidateEnvironment.moduleSession());
                     } catch (Throwable t) {
                         throw reloadFailure(candidateGeneration, ReloadPhase.BINDING, null, "binding-install", t);
                     }
@@ -921,21 +930,33 @@ public final class ScriptManager implements AutoCloseable {
             try {
                 candidate = environmentFactory.createContext(scriptType, candidateGlobals, moduleSession);
             } catch (RuntimeException | Error failure) {
+                candidateGlobals.discard();
                 moduleSession.closeSession();
                 throw failure;
             }
             RuntimeEnvironment candidateEnvironment = new RuntimeEnvironment(
                     candidate.context(), candidate.nodeRuntime(), candidate.outStream(),
                     candidate.errStream(), candidate.globals(), moduleSession);
-            activateCandidateModuleViews(candidate.context(), moduleSession);
-            CONTEXT_TO_MANAGER.put(candidate.context(), this);
-            ScriptContextRegistry.bind(candidate.context(), scriptType);
-            this.candidateContext = candidate.context();
-            this.candidateEnvironment = candidateEnvironment;
-            this.candidateKilled = false;
-            this.candidateKillScript = null;
-            this.pendingListeners.clear();
-            return candidateEnvironment;
+            try {
+                activateCandidateModuleViews(candidate.context(), moduleSession);
+                CONTEXT_TO_MANAGER.put(candidate.context(), this);
+                ScriptContextRegistry.bind(candidate.context(), scriptType);
+                this.candidateContext = candidate.context();
+                this.candidateEnvironment = candidateEnvironment;
+                this.candidateKilled = false;
+                this.candidateKillScript = null;
+                this.pendingListeners.clear();
+                return candidateEnvironment;
+            } catch (Throwable failure) {
+                discardCandidateModuleViews(candidate.context());
+                environmentFactory.discardEnvironmentBindings(candidate.context());
+                CONTEXT_TO_MANAGER.remove(candidate.context());
+                ScriptContextRegistry.unbind(candidate.context());
+                closeRuntimeResources(candidateEnvironment);
+                if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+                if (failure instanceof Error errorFailure) throw errorFailure;
+                throw new IllegalStateException("Failed to register candidate NekoJS environment", failure);
+            }
         }
 
         /**
@@ -981,6 +1002,8 @@ public final class ScriptManager implements AutoCloseable {
             // (1) 旧 generation 监听器清扫
             scriptEventBridge.clearListeners(scriptType);
             // (2) 生产路由切换：新 generation 成为 live 环境
+            environmentFactory.publishEnvironmentBindings(
+                    candidateEnvironment.context(), candidateEnvironment.moduleSession());
             this.runtime = candidateEnvironment;
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
             if (defaultTracker != null) {
@@ -1023,6 +1046,9 @@ public final class ScriptManager implements AutoCloseable {
             this.candidateKilled = false;
             this.candidateKillScript = null;
             discardCandidateModuleViews(candidate == null ? null : candidate.context());
+            if (candidate != null) {
+                environmentFactory.discardEnvironmentBindings(candidate.context());
+            }
             if (!runtime.isEmpty() && runtime.moduleSession() != null) {
                 activateModuleViews(runtime.context(), runtime.moduleSession());
             }
@@ -1052,7 +1078,8 @@ public final class ScriptManager implements AutoCloseable {
                     continue;
                 }
                 boolean killedBefore = this.candidateKilled;
-                scriptExecutor.executeEntry(context, script, nodeRuntime);
+                scriptExecutor.executeEntry(context, script, nodeRuntime,
+                        this.candidateEnvironment.moduleSession().bindingSchemaView());
                 if (!killedBefore && this.candidateKilled && this.candidateKillScript == null) {
                     this.candidateKillScript = script;
                 }
@@ -1236,7 +1263,8 @@ public final class ScriptManager implements AutoCloseable {
             script.preload();
             reportPreloadFailure(script);
             if (script.shouldRun()) {
-                scriptExecutor.executeEntry(ctx, script, this.runtime.nodeRuntime());
+                scriptExecutor.executeEntry(ctx, script, this.runtime.nodeRuntime(),
+                        this.runtime.moduleSession().bindingSchemaView());
             }
         }
 
@@ -1403,7 +1431,7 @@ public final class ScriptManager implements AutoCloseable {
             if (environment.globals() != null) {
                 try {
                     environment.globals().close();
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn(
                             "关闭 generation global 视图时发生异常", e);
                 }
@@ -1413,11 +1441,12 @@ public final class ScriptManager implements AutoCloseable {
             if (oldRuntime != null) {
                 try {
                     oldRuntime.close();
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn("关闭旧 Node runtime 时发生异常", e);
                 }
             }
             if (oldContext != null) {
+                environmentFactory.discardEnvironmentBindings(oldContext);
                 DefaultErrorTracker defaultTracker = defaultErrorTracker();
                 if (defaultTracker != null) {
                     defaultTracker.removeModuleViews(oldContext);
@@ -1431,7 +1460,7 @@ public final class ScriptManager implements AutoCloseable {
                     synchronized (oldContext) {
                         oldContext.close();
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     com.tkisor.nekojs.script.ScriptTypeEnv.logger(scriptType).warn("关闭旧上下文时发生异常", e);
                 }
             }
@@ -1450,7 +1479,7 @@ public final class ScriptManager implements AutoCloseable {
             if (stream == null) return;
             try {
                 stream.close();
-            } catch (Exception ignored) { // 冲刷失败不应中断销毁流程
+            } catch (Throwable ignored) { // 冲刷失败不应中断销毁流程
             }
         }
 

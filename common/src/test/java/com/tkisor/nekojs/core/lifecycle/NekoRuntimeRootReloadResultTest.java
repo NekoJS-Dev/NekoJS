@@ -26,7 +26,7 @@ import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.script.prop.ScriptProperty;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;

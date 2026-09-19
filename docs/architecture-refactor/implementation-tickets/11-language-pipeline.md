@@ -509,3 +509,58 @@ golden 文件。上述限制是边界说明，不把未运行的真实 Minecraft
 | TS/JSX rewritten source maps | `NekoModuleIdentityLifecycleTest#rewrittenTypeScriptImportThenThrowKeepsCompilerAuthoredLocation`、`#rewrittenJsxImportThenThrowKeepsCompilerAuthoredLocation` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest` | PASS；exact column composition仍不是承诺。 |
 | Single facts/visibility | `ModulePipelineIsolationTest`、`ScriptBindingSchemaInferTypeTest`、`SourceMapRegistryTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.core.error.SourceMapRegistryTest` | PASS；无跨 OS/provider 双机证据。 |
 | Required gates | common compile/check、26.2.0 NeoForge/Fabric compile、whitespace | `./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | PASS；平台编译有既有 deprecation、this-escape、Gson InlineMe warnings；不更新 golden。真实 Minecraft/loader/network smoke 未执行。 |
+
+## Review-round-11 addendum (2026-09-19)
+
+本轮针对终审 isolation/rollback findings 在 `da39dc3b` 上继续 fix-forward；`Status: closed`
+保持不变。本轮只记录实际收口与验证边界，不把未执行的真实 Minecraft、loader runtime 或
+network session smoke 写成通过，也未更新 golden。
+
+- **1. Active error snapshots：fixed.** `DefaultErrorTracker.hasErrors/getErrorCount/getAllErrors`
+  与 `NekoRuntimeRoot.ErrorSnapshot` 只观察 active error store；candidate callback/entry errors
+  按 candidate `Context` 内部暂存，只有 commit 的 `publishCandidateErrors` 才替换该类型的
+  active errors。失败 candidate 丢弃错误和 module views，active snapshot 保持可见。
+  `ErrorSnapshot` 对外返回不可变 collection。
+- **2. Binding schema transaction：fixed.** `ScriptBindingSchema.View`、`Snapshot` 和 candidate
+  transaction 保存不可变 schema/global 快照；binding validators 与 module session 使用 candidate
+  view，不读取 active schema 作为候选覆盖；discard 在没有并发 active commit 时恢复 captured
+  snapshot，publish 才写入 static active schema/globals。证据：
+  `ManagedBindingSchemaTest#failedCandidateSchemaInstallDoesNotReplaceActiveSchemaOrGlobals`、
+  `#candidateValidatorUsesCandidateViewWithoutReplacingActiveView`。
+- **3. Explicit module sessions：fixed.** 删除 `NekoSandboxFactory.build(ScriptType)`、
+  `ScriptEnvironmentFactory.createContext(ScriptType)`、`createContext(ScriptType, globals)`
+  和 `create(ScriptType)` 无 session 路径；所有 environment construction/binding installation
+  caller 显式传 generation `NekoModulePipelineCache` session，sandbox filesystem 写 session-owned
+  cache，而不是 root cache。isolation reflection tests 保持覆盖无 session public path。
+- **4. Construction cleanup：fixed.** Sandbox construction now covers stream/IO/context setup
+  failures; Node installer creates and closes the module-host observer transactionally; host observer
+  registration happens only after all host collaborators exist. Environment binding/setup and candidate
+  registration failure close Node runtime, Context, logger streams, generation state and module session.
+  `NekoSandboxFactoryResourceTest` and common check cover the failure path.
+- **5. PackSync physical rollback：fixed.** `handleBundle` writes and rehashes a same-filesystem
+  staging tree, then moves old pack directories into a rollback tree during replacement. Persist/hash,
+  trust, key-pinning, authorization, registry activation or CLIENT reload failure restores physical
+  files first, then registry, remote approvals, runtime trust, persisted pinning and connection hash
+  state. Same-bucket replacement with the same active sync-id set keeps the old active generation
+  pending the bundle, so rollback is possible. Evidence:
+  `PackSyncClientTest#failedSameBucketReplacementRestoresOldPhysicalFilesAndRuntime` plus existing
+  hash-list, stale-bucket and reload rollback tests.
+- **6. Narrow implementation surface:** `RewriteSpan`/`composeRewrittenSourceMap` remain
+  package-private; `NekoModuleHash` and its implementation methods are not public; path/hash identity
+  continues to use the existing single facts (`NekoCanonicalPath`, `ScriptType` directory naming and
+  `NekoModuleHash`). The registered Node special-module and missing bare-package strict-resolve tests
+  remain in `NekoModuleIdentityLifecycleTest`.
+
+### Round-11 evidence
+
+```text
+./gradlew.bat :common:compileJava :common:compileTestJava
+./gradlew.bat :common:check
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+The first three commands passed in this round. Platform compilation retained existing deprecation,
+`this-escape` and Gson `InlineMe` classfile warnings. `git diff --check` was run after the documentation
+update. No golden file was updated. These commands are common/unit/build evidence only; no real
+Minecraft client/server, loader runtime or network session smoke was run.

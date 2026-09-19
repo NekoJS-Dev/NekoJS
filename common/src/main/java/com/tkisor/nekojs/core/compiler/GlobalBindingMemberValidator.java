@@ -46,8 +46,12 @@ public final class GlobalBindingMemberValidator {
     private GlobalBindingMemberValidator() {}
 
     public static void validate(Path file, String source) {
+        validate(file, source, ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
+    }
+
+    public static void validate(Path file, String source, ScriptBindingSchema.View view) {
         if (file == null || source == null || source.isEmpty()) return;
-        Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file);
+        Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file, view);
         if (schema.isEmpty()) return;
 
         ValNode.Block ast;
@@ -69,10 +73,10 @@ public final class GlobalBindingMemberValidator {
         collectLocalTypes(ast, schema, remap, localTypes);
         collectLocalTypes(ast, schema, remap, localTypes);
 
-        Set<String> known = collectKnownIdentifiers(ast, source, schema, ScriptBindingSchema.inferType(file));
+        Set<String> known = collectKnownIdentifiers(ast, source, schema, view);
 
         Set<String> reported = new HashSet<>();
-        checkBlock(ast, schema, remap, localTypes, known, file, source, reported);
+        checkBlock(ast, schema, remap, localTypes, known, file, source, reported, view);
     }
 
     // ==================== 已知标识符集合 ====================
@@ -83,12 +87,12 @@ public final class GlobalBindingMemberValidator {
      * 正则补收——ValParser 是有损解析器，这些语法在 AST 里会碎成无法辨识的片段。
      */
     private static Set<String> collectKnownIdentifiers(ValNode node, String source,
-                                                       Map<String, ScriptBindingSchema.BindingMembers> schema,
-                                                       ScriptType type) {
+                                                        Map<String, ScriptBindingSchema.BindingMembers> schema,
+                                                        ScriptBindingSchema.View view) {
         Set<String> known = new HashSet<>(schema.keySet());
         collectDeclaredNames(node, known);
         collectSourceLevelNames(source, known);
-        Set<String> globals = ScriptBindingSchema.knownGlobals(type);
+        Set<String> globals = view == null ? Set.of() : view.knownGlobals();
         if (globals.isEmpty()) {
             // 运行时全局全集未登记：未定义标识符检查无法安全进行，跳过该项（成员检查照常）
             return null;
@@ -193,27 +197,28 @@ public final class GlobalBindingMemberValidator {
                                    Map<String, String> remap,
                                    Map<String, Set<Class<?>>> localTypes,
                                    Set<String> known,
-                                   Path file, String source, Set<String> reported) {
+                                   Path file, String source, Set<String> reported,
+                                   ScriptBindingSchema.View view) {
         if (node instanceof ValNode.MemberAccess access) {
-            checkMemberAccess(access, schema, remap, localTypes, known, file, source, reported);
+            checkMemberAccess(access, schema, remap, localTypes, known, file, source, reported, view);
         }
         if (node instanceof ValNode.CallExpr call && call.callee() instanceof ValNode.Identifier id) {
-            checkUnknownIdentifier(id, schema, remap, known, file, source, reported);
+            checkUnknownIdentifier(id, schema, remap, known, file, source, reported, view);
         }
-        if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) checkBlock(s, schema, remap, localTypes, known, file, source, reported);
+        if (node instanceof ValNode.Block b) for (ValNode s : b.stmts()) checkBlock(s, schema, remap, localTypes, known, file, source, reported, view);
         if (node instanceof ValNode.CallExpr c) {
-            for (ValNode a : c.args()) checkBlock(a, schema, remap, localTypes, known, file, source, reported);
-            checkBlock(c.callee(), schema, remap, localTypes, known, file, source, reported);
+            for (ValNode a : c.args()) checkBlock(a, schema, remap, localTypes, known, file, source, reported, view);
+            checkBlock(c.callee(), schema, remap, localTypes, known, file, source, reported, view);
         }
-        if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) checkBlock(s, schema, remap, localTypes, known, file, source, reported);
-        if (node instanceof ValNode.FuncDecl fd) for (ValNode s : fd.body()) checkBlock(s, schema, remap, localTypes, known, file, source, reported);
+        if (node instanceof ValNode.ArrowFunc af) for (ValNode s : af.body()) checkBlock(s, schema, remap, localTypes, known, file, source, reported, view);
+        if (node instanceof ValNode.FuncDecl fd) for (ValNode s : fd.body()) checkBlock(s, schema, remap, localTypes, known, file, source, reported, view);
         // 链式中间节点：外层 MemberAccess 只查自己这级，object() 侧的每一级也要被独立访问到
         if (node instanceof ValNode.MemberAccess m) {
-            checkBlock(m.object(), schema, remap, localTypes, known, file, source, reported);
+            checkBlock(m.object(), schema, remap, localTypes, known, file, source, reported, view);
         }
         if (node instanceof ValNode.ComputedMemberAccess computed) {
-            checkBlock(computed.object(), schema, remap, localTypes, known, file, source, reported);
-            checkBlock(computed.key(), schema, remap, localTypes, known, file, source, reported);
+            checkBlock(computed.object(), schema, remap, localTypes, known, file, source, reported, view);
+            checkBlock(computed.key(), schema, remap, localTypes, known, file, source, reported, view);
         }
     }
 
@@ -226,8 +231,9 @@ public final class GlobalBindingMemberValidator {
                                           Map<String, ScriptBindingSchema.BindingMembers> schema,
                                           Map<String, String> remap,
                                           Map<String, Set<Class<?>>> localTypes,
-                                          Set<String> known,
-                                          Path file, String source, Set<String> reported) {
+                                           Set<String> known,
+                                           Path file, String source, Set<String> reported,
+                                           ScriptBindingSchema.View view) {
         String member = access.member();
         if (member == null || member.isEmpty()) return;
 
@@ -251,7 +257,7 @@ public final class GlobalBindingMemberValidator {
             if (!anyKnown) {
                 report(file, source, reported, access.start(), member.length(),
                         "Type chain: no member '" + member + "' on " + classNames(objectClasses)
-                                + suggestion(knownMembers, member), "chain-member " + member);
+                                + suggestion(knownMembers, member), "chain-member " + member, view);
             }
             return;
         }
@@ -263,11 +269,11 @@ public final class GlobalBindingMemberValidator {
                 if (!bm.contains(member)) {
                     report(file, source, reported, access.start(), member.length(),
                             "Binding '" + resolved + "' has no member '" + member + "'."
-                                    + suggestion(bm.memberNames(), member), "binding-member " + resolved + "." + member);
+                                    + suggestion(bm.memberNames(), member), "binding-member " + resolved + "." + member, view);
                 }
                 return;
             }
-            checkUnknownIdentifier(id, schema, remap, known, file, source, reported);
+            checkUnknownIdentifier(id, schema, remap, known, file, source, reported, view);
         }
     }
 
@@ -316,7 +322,8 @@ public final class GlobalBindingMemberValidator {
                                                Map<String, ScriptBindingSchema.BindingMembers> schema,
                                                Map<String, String> remap,
                                                Set<String> known,
-                                               Path file, String source, Set<String> reported) {
+                                               Path file, String source, Set<String> reported,
+                                               ScriptBindingSchema.View view) {
         if (known == null || id.name().isEmpty() || JS_KEYWORDS.contains(id.name())) return;
         String resolved = remap.getOrDefault(id.name(), id.name());
         if (schema.containsKey(resolved) || known.contains(resolved) || known.contains(id.name())) return;
@@ -324,7 +331,7 @@ public final class GlobalBindingMemberValidator {
         report(file, source, reported, id.start(), id.name().length(),
                 "Unknown identifier '" + id.name() + "'."
                         + (suggest != null ? " Did you mean '" + suggest + "'?" : ""),
-                "unknown-identifier " + id.name());
+                "unknown-identifier " + id.name(), view);
     }
 
     // ==================== 报告 ====================
@@ -341,15 +348,19 @@ public final class GlobalBindingMemberValidator {
     }
 
     private static void report(Path file, String source, Set<String> reported,
-                               int offset, int length, String msg, String dedupKey) {
+                               int offset, int length, String msg, String dedupKey,
+                               ScriptBindingSchema.View view) {
         if (!reported.add(dedupKey)) return;
         try {
             int[] lc = lc(source, offset);
-            ScriptErrorReporter.recordCallbackError(
-                    ScriptBindingSchema.inferType(file),
-                    "binding-preflight " + dedupKey,
-                    new NekoEsmLinkException(new NekoEsmDiagnostic(
-                            file, new NekoEsmSpan(offset, offset + length), lc[0], lc[1], msg)));
+            ScriptType type = ScriptBindingSchema.inferType(file);
+            NekoEsmLinkException error = new NekoEsmLinkException(new NekoEsmDiagnostic(
+                    file, new NekoEsmSpan(offset, offset + length), lc[0], lc[1], msg));
+            if (view == null) {
+                ScriptErrorReporter.recordCallbackError(type, "binding-preflight " + dedupKey, error);
+            } else {
+                view.report(type, "binding-preflight " + dedupKey, error);
+            }
         } catch (Throwable ignored) {
             com.tkisor.nekojs.NekoJS.LOGGER.warn("Binding preflight report failed for {}", dedupKey, ignored);
         }

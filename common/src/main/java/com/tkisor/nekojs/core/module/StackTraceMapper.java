@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.error.NekoSourceMapView;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

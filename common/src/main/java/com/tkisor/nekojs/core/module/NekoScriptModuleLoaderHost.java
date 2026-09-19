@@ -12,8 +12,6 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecord;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
-import com.tkisor.nekojs.core.module.esm.NekoNativeEsmSourceRewriter;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
@@ -101,10 +99,12 @@ public final class NekoScriptModuleLoaderHost {
         this.modulePreparedKeys = new ConcurrentHashMap<>();
         this.modulePaths = new ConcurrentHashMap<>();
         this.preparationObserver = this::observePreparedCacheEntry;
-        preparationCache.registerPreparationObserver(preparationObserver);
         this.reloadCoordinator = new ModuleReloadCoordinator(moduleCache, esmRecordCache, esmLinkCache, moduleRevisions, dependencyGraph, preparationCache);
         this.esmLifecycle = new EsmModuleLifecycle(esmRecordCache, esmLinkCache, dependencyGraph, esmRewriter,
                 virtualModules, context, reloadCoordinator::revision, this::prepare);
+        // Register only after every constructor-owned collaborator is initialized. If one of
+        // those constructors fails, no partial host has published an observer to the session.
+        preparationCache.registerPreparationObserver(preparationObserver);
     }
 
     /** Release this host's cache observer without owning or clearing the shared cache. */

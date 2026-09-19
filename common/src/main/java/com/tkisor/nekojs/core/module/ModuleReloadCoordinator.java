@@ -2,7 +2,7 @@ package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkCache;
 import com.tkisor.nekojs.core.module.esm.NekoEsmModuleRecordCache;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 
 import java.util.List;
 import java.util.Map;

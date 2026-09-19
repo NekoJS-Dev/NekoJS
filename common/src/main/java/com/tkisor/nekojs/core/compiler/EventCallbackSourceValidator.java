@@ -29,8 +29,12 @@ public final class EventCallbackSourceValidator {
     private EventCallbackSourceValidator() {}
 
     public static void validate(Path file, String source) {
+        validate(file, source, ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
+    }
+
+    public static void validate(Path file, String source, ScriptBindingSchema.View view) {
         if (file == null || source == null || source.isEmpty()) return;
-        Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file);
+        Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file, view);
         if (schema.isEmpty()) return;
 
         ValNode.Block ast;
@@ -46,18 +50,19 @@ public final class EventCallbackSourceValidator {
         }
 
         Set<String> reported = new HashSet<>();
-        scanNode(ast, schema, file, source, reported);
+        scanNode(ast, schema, file, source, reported, view);
     }
 
     private static void scanNode(ValNode node,
-                                 Map<String, ScriptBindingSchema.BindingMembers> schema,
-                                 Path file, String source, Set<String> reported) {
+                                  Map<String, ScriptBindingSchema.BindingMembers> schema,
+                                  Path file, String source, Set<String> reported,
+                                  ScriptBindingSchema.View view) {
         if (node == null) return;
         if (node instanceof ValNode.CallExpr call) {
             if (call.callee() instanceof ValNode.MemberAccess access
                     && access.object() instanceof ValNode.Identifier ident
                     && schema.containsKey(ident.name())) {
-                checkCallbackArgs(call, ident.name(), schema, file, source, reported);
+                        checkCallbackArgs(call, ident.name(), schema, file, source, reported, view);
             }
         }
         // DEFECT-D9: recurse into ALL block-bearing and expression-bearing children.
@@ -68,21 +73,21 @@ public final class EventCallbackSourceValidator {
         // simplified ValParser does not model them), so we exhaustively visit every
         // child the hierarchy actually defines.
         if (node instanceof ValNode.Block b) {
-            for (ValNode s : b.stmts()) scanNode(s, schema, file, source, reported);
+            for (ValNode s : b.stmts()) scanNode(s, schema, file, source, reported, view);
         } else if (node instanceof ValNode.ArrowFunc af) {
-            for (ValNode s : af.body()) scanNode(s, schema, file, source, reported);
+            for (ValNode s : af.body()) scanNode(s, schema, file, source, reported, view);
         } else if (node instanceof ValNode.FuncDecl fd) {
-            for (ValNode s : fd.body()) scanNode(s, schema, file, source, reported);
+            for (ValNode s : fd.body()) scanNode(s, schema, file, source, reported, view);
         } else if (node instanceof ValNode.CallExpr call) {
-            scanNode(call.callee(), schema, file, source, reported);
-            for (ValNode a : call.args()) scanNode(a, schema, file, source, reported);
+            scanNode(call.callee(), schema, file, source, reported, view);
+            for (ValNode a : call.args()) scanNode(a, schema, file, source, reported, view);
         } else if (node instanceof ValNode.MemberAccess access) {
-            scanNode(access.object(), schema, file, source, reported);
+            scanNode(access.object(), schema, file, source, reported, view);
         } else if (node instanceof ValNode.ComputedMemberAccess computed) {
-            scanNode(computed.object(), schema, file, source, reported);
-            scanNode(computed.key(), schema, file, source, reported);
+            scanNode(computed.object(), schema, file, source, reported, view);
+            scanNode(computed.key(), schema, file, source, reported, view);
         } else if (node instanceof ValNode.VarDecl decl) {
-            scanNode(decl.init(), schema, file, source, reported);
+            scanNode(decl.init(), schema, file, source, reported, view);
         }
     }
 
@@ -104,7 +109,8 @@ public final class EventCallbackSourceValidator {
      */
     private static void checkCallbackArgs(ValNode.CallExpr call, String group,
                                           Map<String, ScriptBindingSchema.BindingMembers> schema,
-                                          Path file, String src, Set<String> reported) {
+                                          Path file, String src, Set<String> reported,
+                                          ScriptBindingSchema.View view) {
         String member = ((ValNode.MemberAccess) call.callee()).member();
         for (int argIndex = 0; argIndex < call.args().size(); argIndex++) {
             ValNode arg = call.args().get(argIndex);
@@ -136,7 +142,7 @@ public final class EventCallbackSourceValidator {
                 collectDecls(s, params.getFirst(), env);
             }
             TypeContext context = new TypeContext(managed, eventClass, group, displayName,
-                    callbackParamTypes, file, src, reported);
+                    callbackParamTypes, file, src, reported, view);
             for (ValNode s : body) {
                 resolveStatement(s, params.getFirst(), env, context);
             }
@@ -271,10 +277,11 @@ public final class EventCallbackSourceValidator {
         final Path file;
         final String source;
         final Set<String> reported;
+        final ScriptBindingSchema.View schemaView;
 
         TypeContext(ManagedCallbackSchemaRegistry.CallbackSchema managed, Class<?> eventClass,
-                    String group, String displayName, Map<String, Set<Class<?>>> callbackParamTypes,
-                    Path file, String source, Set<String> reported) {
+                     String group, String displayName, Map<String, Set<Class<?>>> callbackParamTypes,
+                     Path file, String source, Set<String> reported, ScriptBindingSchema.View schemaView) {
             this.managed = managed;
             this.eventClass = eventClass;
             this.group = group;
@@ -283,6 +290,7 @@ public final class EventCallbackSourceValidator {
             this.file = file;
             this.source = source;
             this.reported = reported;
+            this.schemaView = schemaView;
         }
     }
 
@@ -550,8 +558,13 @@ public final class EventCallbackSourceValidator {
         try {
             int[] lc = lc(context.source, offset);
             ScriptType type = ScriptBindingSchema.inferType(context.file);
-            ScriptErrorReporter.recordCallbackError(type, "event-cb-preflight",
-                    new NekoEsmLinkException(new NekoEsmDiagnostic(context.file, new NekoEsmSpan(offset, offset), lc[0], lc[1], msg)));
+            NekoEsmLinkException error = new NekoEsmLinkException(new NekoEsmDiagnostic(
+                    context.file, new NekoEsmSpan(offset, offset), lc[0], lc[1], msg));
+            if (context.schemaView == null) {
+                ScriptErrorReporter.recordCallbackError(type, "event-cb-preflight", error);
+            } else {
+                context.schemaView.report(type, "event-cb-preflight", error);
+            }
         } catch (Throwable ignored) {
             com.tkisor.nekojs.NekoJS.LOGGER.warn("Event callback preflight report failed", ignored);
         }

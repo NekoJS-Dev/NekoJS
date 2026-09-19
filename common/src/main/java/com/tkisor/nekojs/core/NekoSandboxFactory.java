@@ -106,10 +106,6 @@ public final class NekoSandboxFactory {
         return preparationCache == cache;
     }
 
-    public Sandbox build(ScriptType type) {
-        return build(type, preparationCache);
-    }
-
     /** Build an environment against one generation-owned module session. */
     public Sandbox build(ScriptType type, NekoModulePipelineCache moduleSession) {
         if (!preparationCache.belongsToSameOwner(moduleSession)) {
@@ -119,51 +115,51 @@ public final class NekoSandboxFactory {
         ClassFilter classFilter = core.classFilter();
 
         Logger logger = com.tkisor.nekojs.script.ScriptTypeEnv.logger(type);
-        LoggerStream outStream = new LoggerStream(logger, false);
-        LoggerStream errStream = new LoggerStream(logger, true);
-
-        IOAccess ioAccess = IOAccess.newBuilder()
-                .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, moduleSession))
-                .build();
-
-        Context.Builder contextBuilder = Context.newBuilder("js")
-                .engine(core.engine())
-                .allowExperimentalOptions(true)
-                .out(outStream)
-                .err(errStream)
-                .allowHostAccess(hostAccess.get())
-                .allowIO(ioAccess)
-                .allowCreateThread(config.allowThreads())
-                .allowHostClassLookup(classFilter)
-                .allowCreateProcess(false)
-                .allowValueSharing(true)
-                .option("js.foreign-object-prototype", "true")
-                .option("js.nashorn-compat", "true")
-                .option("js.ecmascript-version", "latest")
-                .option("js.commonjs-require", "true")
-                .option("js.commonjs-require-cwd", paths.root().toAbsolutePath().toString())
-                .option("js.interop-complete-promises", "true")
-                .option("js.strict", "true")
-                .option("js.v8-compat", "true")
-                .option("js.unhandled-rejections", "throw");
-
-        long statementLimit = config.scriptStatementLimit();
-        int runawayTimeoutSeconds = config.scriptRunawayTimeoutSeconds();
-        if (statementLimit > 0 || runawayTimeoutSeconds > 0) {
-            // 两种保护共用一个 statementLimit 回调（ResourceLimits.Builder 只允许一个）；
-            // 且 Graal 要求同一 Engine 的所有 Context 共用同一个谓词实例，故工厂级懒缓存共享。
-            RunawayWatchdog watchdog = sharedWatchdog(config, logger);
-            contextBuilder.resourceLimits(ResourceLimits.newBuilder()
-                    .statementLimit(watchdog.checkInterval(), watchdog)
-                    .onLimit(event -> logger.warn(
-                            "脚本环境 {} 触发 ResourceLimits（失控看门狗 {}s / 语句上限 {}），Graal 已关闭该 Context；"
-                                    + "当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复）",
-                            type.name(), runawayTimeoutSeconds, statementLimit))
-                    .build());
-        }
+        LoggerStream outStream = null;
+        LoggerStream errStream = null;
         Context ctx = null;
         NekoNodeRuntime nodeRuntime = null;
         try {
+            outStream = new LoggerStream(logger, false);
+            errStream = new LoggerStream(logger, true);
+            IOAccess ioAccess = IOAccess.newBuilder()
+                    .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(config, paths), paths, moduleSession))
+                    .build();
+            Context.Builder contextBuilder = Context.newBuilder("js")
+                    .engine(core.engine())
+                    .allowExperimentalOptions(true)
+                    .out(outStream)
+                    .err(errStream)
+                    .allowHostAccess(hostAccess.get())
+                    .allowIO(ioAccess)
+                    .allowCreateThread(config.allowThreads())
+                    .allowHostClassLookup(classFilter)
+                    .allowCreateProcess(false)
+                    .allowValueSharing(true)
+                    .option("js.foreign-object-prototype", "true")
+                    .option("js.nashorn-compat", "true")
+                    .option("js.ecmascript-version", "latest")
+                    .option("js.commonjs-require", "true")
+                    .option("js.commonjs-require-cwd", paths.root().toAbsolutePath().toString())
+                    .option("js.interop-complete-promises", "true")
+                    .option("js.strict", "true")
+                    .option("js.v8-compat", "true")
+                    .option("js.unhandled-rejections", "throw");
+
+            long statementLimit = config.scriptStatementLimit();
+            int runawayTimeoutSeconds = config.scriptRunawayTimeoutSeconds();
+            if (statementLimit > 0 || runawayTimeoutSeconds > 0) {
+                // 两种保护共用一个 statementLimit 回调（ResourceLimits.Builder 只允许一个）；
+                // 且 Graal 要求同一 Engine 的所有 Context 共用同一个谓词实例，故工厂级懒缓存共享。
+                RunawayWatchdog watchdog = sharedWatchdog(config, logger);
+                contextBuilder.resourceLimits(ResourceLimits.newBuilder()
+                        .statementLimit(watchdog.checkInterval(), watchdog)
+                        .onLimit(event -> logger.warn(
+                                "脚本环境 {} 触发 ResourceLimits（失控看门狗 {}s / 语句上限 {}），Graal 已关闭该 Context；"
+                                        + "当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复）",
+                                type.name(), runawayTimeoutSeconds, statementLimit))
+                        .build());
+            }
             ctx = contextBuilder.build();
 
             ctx.eval("js", CONSOLE_PATCH_JS);
@@ -225,6 +221,7 @@ public final class NekoSandboxFactory {
     }
 
     private static void closeStream(LoggerStream stream, Throwable failure) {
+        if (stream == null) return;
         try {
             stream.close();
         } catch (Throwable cleanupFailure) {

@@ -9,7 +9,7 @@ import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Source;
@@ -181,7 +181,7 @@ class NekoModuleTrustStageTest {
                 ? NekoTrustApprovedSource.remote(path, "packs:remote", "author-key") : null;
         NekoModulePipelineCache cache = new NekoModulePipelineCache(pipeline(),
                 new com.tkisor.nekojs.core.error.SourceMapRegistry(paths.root()),
-                new com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry(paths.root()), remote);
+                new com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry(paths.root()), remote);
         IOAccess ioAccess = IOAccess.newBuilder()
                 .fileSystem(new NekoJSFileSystem(paths.root(), new SandboxPolicy(SandboxConfig.defaultConfig(), paths), paths, cache))
                 .build();

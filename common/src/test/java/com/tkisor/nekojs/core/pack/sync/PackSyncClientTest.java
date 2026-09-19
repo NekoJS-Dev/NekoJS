@@ -17,7 +17,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipeline;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoTrustApprovedSource;
 import com.tkisor.nekojs.core.module.NekoRuntimeTrustContext;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.pack.ScriptPack;
@@ -225,7 +225,50 @@ class PackSyncClientTest {
         Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-reload-rollback.test"))
                 .resolve(SyncedPack.encodeSyncId(pack.syncId())).resolve("client_scripts/hud.js");
         assertNotNull(runtimeTrust.approvalFor(remoteFile),
-                "the old active runtime credential must be restored with the registry");
+                 "the old active runtime credential must be restored with the registry");
+    }
+
+    @Test
+    void failedSameBucketReplacementRestoresOldPhysicalFilesAndRuntime() throws Exception {
+        config("all", false);
+        String address = "srv-same-bucket-rollback.test";
+        String syncId = "packs:same-bucket-rollback";
+        KeyPair keyPair = PackSigner.generateKeyPair();
+        SyncedPack oldPack = pack(syncId, "GLOBAL",
+                signed(keyPair, syncId, "GLOBAL", "key-same-bucket",
+                        "client_scripts/hud.js", "module.exports = 'old';\n"),
+                "client_scripts/hud.js", "module.exports = 'old';\n");
+        SyncedPack replacement = pack(syncId, "GLOBAL",
+                signed(keyPair, syncId, "GLOBAL", "key-same-bucket",
+                        "client_scripts/hud.js", "module.exports = 'replacement';\n"),
+                "client_scripts/hud.js", "module.exports = 'replacement';\n");
+
+        PackSyncClient.installClientReloadHook(() -> true);
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(oldPack));
+        PackSyncTrustStore.get().trustServer(address);
+        assertFalse(PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack)).shouldDisconnect());
+
+        PackSyncClient.installClientReloadHook(() -> false);
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(replacement));
+        assertEquals(1, ScriptPackRegistry.get().serverCachePacks().size(),
+                "same-bucket replacement must keep the old active set pending bundle validation");
+        PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(replacement));
+
+        assertTrue(outcome.shouldDisconnect());
+        Path bucket = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor(address));
+        Path oldFile = bucket.resolve(SyncedPack.encodeSyncId(syncId)).resolve("client_scripts/hud.js");
+        assertEquals("module.exports = 'old';\n", java.nio.file.Files.readString(oldFile),
+                "reload failure must restore the previous same-bucket physical file");
+        assertEquals(1, ScriptPackRegistry.get().serverCachePacks().size());
+        assertEquals(oldFile.getParent().getParent(), ScriptPackRegistry.get().serverCachePacks().get(0).root(),
+                "old active registry must be restored");
+        assertNotNull(runtimeTrust.approvalFor(oldFile),
+                "the previous remote approval must be restored for the old physical file");
+
+        // The restored hash-list state must still describe the old active bundle.
+        PackSyncClient.installClientReloadHook(() -> true);
+        PackSyncClient.Outcome restored = PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack));
+        assertFalse(restored.shouldDisconnect(), restored.disconnect());
     }
 
     @Test
@@ -484,6 +527,11 @@ class PackSyncClientTest {
 
     private static String signed(String syncId, String scope, String keyId, String path, String content) {
         KeyPair keyPair = PackSigner.generateKeyPair();
+        return signed(keyPair, syncId, scope, keyId, path, content);
+    }
+
+    private static String signed(KeyPair keyPair, String syncId, String scope, String keyId,
+                                 String path, String content) {
         String unsigned = "{\"id\": \"demo\", \"version\": \"1.0.0\"}";
         List<PackContentFile> files = List.of(new PackContentFile(path, content.getBytes()));
         JsonObject signature = PackSigner.sign(keyId, keyPair, syncId, scope, unsigned, files);

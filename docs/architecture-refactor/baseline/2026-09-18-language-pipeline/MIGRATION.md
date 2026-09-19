@@ -254,3 +254,49 @@ git diff --check
 以上命令均 PASS；平台编译保留既有 deprecation、this-escape 和 Gson `InlineMe` classfile warnings，未更新
 golden。真实 Minecraft client/server、loader runtime、network session smoke 本轮未执行，不从 JUnit 或平台
 编译推断通过。
+
+## 8. Review-round-11 isolation and rollback fixes
+
+本轮没有脚本侧迁移。Java 内部生命周期继续使用显式 `NekoModulePipelineCache` generation
+session；无 session 的 sandbox/environment construction overload 已删除，调用者不能再隐式写
+root cache。
+
+### 8.1 Active/candidate diagnostics and schema
+
+`DefaultErrorTracker` 的 public error count、boolean 和 collection，以及 root 的 `ErrorSnapshot`
+只包含 active generation。candidate `Context` 的错误在 commit 前只存在内部 candidate store；
+失败 reload 丢弃它们，成功 commit 才 publish。`ScriptBindingSchema` 同样以不可变 `View`/
+`Snapshot` 进行 candidate schema/global transaction：validator 取 generation view，static active
+schema/globals 在 commit 前不变，失败时恢复 captured snapshot。脚本作者无需迁移。
+
+### 8.2 Resource ownership
+
+Sandbox/Node/environment construction failure now closes every resource already created: Context,
+Node runtime, module-host preparation observer, generation globals and both `LoggerStream` instances.
+The module-host observer is registered only after host construction has completed; partial installer
+failure therefore cannot leave a live observer in a session.
+
+### 8.3 PackSync replacement rollback
+
+PackSync bundle replacement first writes a staging tree and validates its on-disk hash. The old
+same-bucket pack directory is retained in a rollback tree while the new directory is exposed. A
+trust, persist, authorization, registry, key-pinning or client reload failure restores the old
+physical directory before rebuilding the old SERVER_CACHE registry and remote runtime approvals;
+the trust-store file and connection expected-hash state are restored as part of the transaction.
+For a same-bucket replacement whose active sync-id set is unchanged, the old active pack remains
+live until the bundle is accepted. The new regression test uses changed content under the same sync id
+and asserts that the old file and runtime approval survive a failed reload.
+
+### 8.4 Round-11 evidence boundary
+
+```text
+./gradlew.bat :common:compileJava :common:compileTestJava
+./gradlew.bat :common:check
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+All four commands passed for this round. Platform compilation emitted only existing deprecation,
+`this-escape` and Gson `InlineMe` classfile warnings. Golden files were not updated. The evidence is
+limited to common tests/compile and platform compile; it does not claim a real Minecraft, loader
+runtime or network session smoke test.

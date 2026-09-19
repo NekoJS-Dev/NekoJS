@@ -116,6 +116,31 @@ public final class PackSyncTrustStore {
         writeRoot(root);
     }
 
+    /** Capture the persisted trust file before a bundle transaction mutates key pinning. */
+    synchronized byte[] snapshotBytes() throws java.io.IOException {
+        return Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
+    }
+
+    /** Restore the persisted trust file after a rejected physical/runtime replacement. */
+    synchronized void restoreBytes(byte[] snapshot) throws java.io.IOException {
+        if (snapshot == null) {
+            Files.deleteIfExists(file);
+            return;
+        }
+        Files.createDirectories(file.getParent());
+        Path temp = file.resolveSibling(file.getFileName() + ".rollback.tmp");
+        try {
+            Files.write(temp, snapshot);
+            try {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+    }
+
     private JsonObject readServers() {
         JsonObject servers = readRoot().getAsJsonObject("trustedServers");
         return servers != null ? servers : new JsonObject();

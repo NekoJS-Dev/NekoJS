@@ -56,6 +56,8 @@ public final class PackSyncClient {
     private static String activeBucket;
     private static String activeAddress;
     private static Map<String, String> expectedHashes = Map.of();
+    /** Previous active state retained while a same-bucket replacement bundle is pending. */
+    private static ActiveState pendingRollbackState;
 
     private PackSyncClient() {}
 
@@ -97,7 +99,7 @@ public final class PackSyncClient {
      */
     public static synchronized Outcome handleHashList(NekoRuntimeRoot runtimeRoot,
                                                       String serverAddress, List<HashEntry> entries) {
-        ActiveState previousState = activeState();
+        ActiveState previousState = pendingRollbackState != null ? pendingRollbackState : activeState();
         if (clientModeOff()) {
             if (!ScriptPackRegistry.get().serverCachePacks().isEmpty() || !expectedHashes.isEmpty()) {
                 Outcome outcome = deactivateAndReload("client packSync mode is off", previousState, runtimeRoot);
@@ -109,6 +111,7 @@ public final class PackSyncClient {
             activeAddress = null;
             activeBucket = null;
             expectedHashes = Map.of();
+            pendingRollbackState = null;
             return Outcome.accepted();
         }
         String nextAddress = normalizeAddress(serverAddress);
@@ -118,12 +121,20 @@ public final class PackSyncClient {
             hashes.put(entry.syncId(), entry.hash());
         }
         boolean connectionChanged = !nextAddress.equals(activeAddress) || !nextBucket.equals(activeBucket);
-        boolean activeSetChanged = !expectedHashes.equals(hashes);
+        Map<String, String> priorExpected = pendingRollbackState != null
+                ? pendingRollbackState.expectedHashes() : expectedHashes;
+        boolean activeSetChanged = !priorExpected.equals(hashes);
         activeAddress = nextAddress;
         activeBucket = nextBucket;
         expectedHashes = hashes;
         boolean revoked = false;
-        if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty() && activeSetChanged)) {
+        boolean sameBucketReplacement = !connectionChanged && activeSetChanged
+                && !ScriptPackRegistry.get().serverCachePacks().isEmpty()
+                && activePackDirectories().equals(hashes.keySet().stream()
+                        .map(SyncedPack::encodeSyncId).collect(java.util.stream.Collectors.toSet()));
+        pendingRollbackState = sameBucketReplacement ? previousState : null;
+        if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty()
+                && activeSetChanged && !sameBucketReplacement)) {
             // Do not let the previous active/credential set run while this server's bundle is pending.
             Outcome outcome = deactivateAndReload("server pack hash list changed", previousState, runtimeRoot);
             if (outcome.shouldDisconnect()) {
@@ -131,6 +142,7 @@ public final class PackSyncClient {
                 return outcome;
             }
             revoked = true;
+            pendingRollbackState = null;
         }
 
         if (hashes.isEmpty()) {
@@ -142,6 +154,7 @@ public final class PackSyncClient {
                     return outcome;
                 }
             }
+            pendingRollbackState = null;
             return Outcome.accepted();
         }
         if (clientModeHashOnly()) {
@@ -152,8 +165,10 @@ public final class PackSyncClient {
                     return outcome;
                 }
             }
+            pendingRollbackState = null;
         }
-        // 非 hashOnly：保留当前激活集，等待 bundle 到达后整体替换（避免双重重载）
+        // 非 hashOnly：同 bucket 的 replacement 保留旧 active 集，等待 bundle 事务替换。
+        // 这样新 bundle 在 hash/persist/trust/reload 任一阶段失败时，旧物理目录和运行时仍可恢复。
         return Outcome.accepted();
     }
 
@@ -190,101 +205,151 @@ public final class PackSyncClient {
             expectedHashes = hashes;
         }
 
+        ActiveState previousState = pendingRollbackState != null ? pendingRollbackState : activeState();
         String reject = validateBounds(packs);
-        if (reject != null) return Outcome.disconnect(reject);
-
-        Path bucketDir = ServerPackCache.bucketDir(activeBucket);
-
-        // 1) 逐包验签（未签名受 allowUnsigned 控制）——签名块随 manifest 原文一并落盘，
-        //    重扫后再次以盘上内容为准（下面第 3 步）。
-        for (SyncedPack pack : packs) {
-            if (!expectedHashes.containsKey(pack.syncId())) {
-                NekoJS.LOGGER.warn("Ignoring unexpected server pack {}", pack.syncId());
-                continue;
-            }
-            PackSignatureVerifier.Result result = PackSignatureVerifier.verify(
-                pack.syncId(), pack.scopeName(), pack.manifestJson(), pack.files(),
-                allowUnsigned(), PackSyncTrustStore.get());
-            if (!result.valid()) {
-                return Outcome.disconnect("NekoJS remote script pack rejected (" + pack.syncId()
-                    + "): " + result.reason());
-            }
+        if (reject != null) {
+            restoreConnectionState(previousState);
+            return Outcome.disconnect(reject);
         }
-
-        // 2) 落盘（删旧目录重建 + 路径穿越校验）
-        for (SyncedPack pack : packs) {
-            if (!expectedHashes.containsKey(pack.syncId())) continue;
-            ServerPackCache.persistPack(bucketDir, pack.syncId(), pack.manifestJson(), pack.files());
-        }
-
-        // 3) 从盘重扫 + 重算哈希对照预期（写盘完整性自检）
-        Map<String, ServerPackCache.CachedPack> resolved = new LinkedHashMap<>();
-        for (Map.Entry<String, String> expected : expectedHashes.entrySet()) {
-            ServerPackCache.CachedPack cached = ServerPackCache.loadPack(bucketDir, expected.getKey());
-            if (cached == null) {
-                return Outcome.disconnect("NekoJS remote script pack integrity check failed: "
-                    + expected.getKey() + " missing from disk cache");
-            }
-            if (!expected.getValue().equals(cached.hash())) {
-                return Outcome.disconnect("NekoJS remote script pack integrity check failed: "
-                    + expected.getKey() + " hash mismatch after write");
-            }
-            resolved.put(expected.getKey(), cached);
-        }
-
-        if (resolved.isEmpty()) {
-            // 预期清单为空却推了 bundle（全部为意外包）——只记录，不断连
-            NekoJS.LOGGER.warn("Server pack bundle contained no expected packs; nothing to activate");
-            return Outcome.accepted();
-        }
-
-        // 4) 信任判定：bucket 未信任 → 断连 + 提示 /nekojs trust
         PackSyncTrustStore trustStore = PackSyncTrustStore.get();
-        if (!trustStore.isServerTrusted(activeBucket)) {
-            return Outcome.disconnect(untrustedMessage(activeAddress));
-        }
-
-        if (runtimeRoot == null) {
-            return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust owner is unavailable");
-        }
-        List<NekoTrustContext.RemoteSource> remoteSources = remoteSources(bucketDir, resolved);
-        if (remoteSources == null) {
-            return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
-        }
-        Path remoteRoot = bucketDir;
-        List<ScriptPack> previousActive = List.copyOf(ScriptPackRegistry.get().serverCachePacks());
-        Path previousActiveRoot = previousActive.isEmpty() ? null
-                : previousActive.get(0).root().getParent();
-        // Replace the credential set before exposing the replacement pack to reload/execute.
+        byte[] trustStoreSnapshot;
         try {
-            runtimeRoot.revokeRemoteSources(remoteRoot);
-        } catch (Exception failure) {
-            return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust reset failed");
+            trustStoreSnapshot = trustStore.snapshotBytes();
+        } catch (IOException failure) {
+            restoreConnectionState(previousState);
+            return Outcome.disconnect("NekoJS remote script pack rejected: trust state snapshot failed");
         }
+        Path bucketDir = ServerPackCache.bucketDir(activeBucket);
+        Path stagingRoot = null;
+        ServerPackCache.PhysicalReplacement replacement = null;
+        boolean rolledBack = false;
+        boolean committed = false;
 
-        // 5) 激活 + 重载 + pinning 签名公钥（v1：信任服务器即信任其当前签名密钥；
-        //    此后同 keyId 换钥会被验签拒绝）
-        ScriptPackRegistry.get().activateServerCachePacks(bucketDir, resolved.keySet());
-        Map<String, String> scopeNames = new LinkedHashMap<>();
-        for (SyncedPack pack : packs) scopeNames.put(pack.syncId(), pack.scopeName());
-        for (Map.Entry<String, ServerPackCache.CachedPack> entry : resolved.entrySet()) {
-            pinSigningKey(trustStore, entry.getKey(), scopeNames.get(entry.getKey()), entry.getValue());
-        }
         try {
-            runtimeRoot.authorizeRemoteSources(remoteSources, remoteRoot);
-        } catch (Exception failure) {
-            restorePreviousActivation(runtimeRoot, remoteRoot, previousActive, previousActiveRoot);
-            return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
+            // 1) 逐包验签（未签名受 allowUnsigned 控制）。旧 active 目录此时仍未触碰。
+            for (SyncedPack pack : packs) {
+                if (!expectedHashes.containsKey(pack.syncId())) {
+                    NekoJS.LOGGER.warn("Ignoring unexpected server pack {}", pack.syncId());
+                    continue;
+                }
+                PackSignatureVerifier.Result result = PackSignatureVerifier.verify(
+                    pack.syncId(), pack.scopeName(), pack.manifestJson(), pack.files(),
+                    allowUnsigned(), trustStore);
+                if (!result.valid()) {
+                    restoreConnectionState(previousState);
+                    return Outcome.disconnect("NekoJS remote script pack rejected (" + pack.syncId()
+                        + "): " + result.reason());
+                }
+            }
+
+            // 2) 写入同 bucket 的 staging 目录。旧 active 目录只在 runtime replacement
+            //    真正开始时移动到 rollback 目录，因此 hash/persist 失败没有破坏性副作用。
+            stagingRoot = ServerPackCache.createStagingRoot(bucketDir);
+            for (SyncedPack pack : packs) {
+                if (!expectedHashes.containsKey(pack.syncId())) continue;
+                ServerPackCache.stagePack(stagingRoot, pack.syncId(), pack.manifestJson(), pack.files());
+            }
+
+            // 3) 从 staging 目录重扫 + 重算哈希对照预期。
+            Map<String, ServerPackCache.CachedPack> resolved = new LinkedHashMap<>();
+            for (Map.Entry<String, String> expected : expectedHashes.entrySet()) {
+                ServerPackCache.CachedPack cached = ServerPackCache.loadPack(stagingRoot, expected.getKey());
+                if (cached == null) {
+                    restoreConnectionState(previousState);
+                    return Outcome.disconnect("NekoJS remote script pack integrity check failed: "
+                        + expected.getKey() + " missing from staged cache");
+                }
+                if (!expected.getValue().equals(cached.hash())) {
+                    restoreConnectionState(previousState);
+                    return Outcome.disconnect("NekoJS remote script pack integrity check failed: "
+                        + expected.getKey() + " hash mismatch after write");
+                }
+                resolved.put(expected.getKey(), cached);
+            }
+
+            if (resolved.isEmpty()) {
+                // 预期清单为空却推了 bundle（全部为意外包）——只记录，不断连
+                NekoJS.LOGGER.warn("Server pack bundle contained no expected packs; nothing to activate");
+                return Outcome.accepted();
+            }
+
+            // 4) 信任判定和远端 key 证据都在 physical replacement 前完成。
+            if (!trustStore.isServerTrusted(activeBucket)) {
+                restoreConnectionState(previousState);
+                return Outcome.disconnect(untrustedMessage(activeAddress));
+            }
+            if (runtimeRoot == null) {
+                restoreConnectionState(previousState);
+                return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust owner is unavailable");
+            }
+            if (remoteSources(stagingRoot, resolved) == null) {
+                restoreConnectionState(previousState);
+                return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
+            }
+
+            Path remoteRoot = bucketDir;
+            List<ScriptPack> previousActive = previousState.activePacks();
+            Path previousActiveRoot = previousState.activeRoot();
+
+            // 5) Atomically replace staged directories while retaining old physical files.
+            replacement = ServerPackCache.replaceStaged(stagingRoot, bucketDir, resolved.keySet());
+            List<NekoTrustContext.RemoteSource> currentSources = remoteSources(bucketDir, resolved);
+            if (currentSources == null) {
+                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                        previousActive, previousActiveRoot, previousState);
+                rolledBack = true;
+                return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
+            }
+
+            // 6) Activate + authorize + reload. Any failure restores old files first, then
+            //    rebuilds the old registry/credentials against those restored paths.
+            try {
+                runtimeRoot.revokeRemoteSources(remoteRoot);
+            } catch (Exception failure) {
+                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                        previousActive, previousActiveRoot, previousState);
+                rolledBack = true;
+                return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust reset failed");
+            }
+            ScriptPackRegistry.get().activateServerCachePacks(bucketDir, resolved.keySet());
+            Map<String, String> scopeNames = new LinkedHashMap<>();
+            for (SyncedPack pack : packs) scopeNames.put(pack.syncId(), pack.scopeName());
+            for (Map.Entry<String, ServerPackCache.CachedPack> entry : resolved.entrySet()) {
+                pinSigningKey(trustStore, entry.getKey(), scopeNames.get(entry.getKey()), entry.getValue());
+            }
+            try {
+                runtimeRoot.authorizeRemoteSources(currentSources, remoteRoot);
+            } catch (Exception failure) {
+                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                        previousActive, previousActiveRoot, previousState);
+                rolledBack = true;
+                return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
+            }
+            if (!reloadClientScripts("server pack bundle applied")) {
+                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                        previousActive, previousActiveRoot, previousState);
+                rolledBack = true;
+                return Outcome.disconnect("NekoJS remote script pack rejected: CLIENT script reload failed");
+            }
+            replacement.commit();
+            committed = true;
+            pendingRollbackState = null;
+            NekoJS.LOGGER.info("Activated {} remote script pack(s) from server {}", resolved.size(), activeAddress);
+            return Outcome.accepted();
+        } catch (Throwable failure) {
+            if (replacement != null && !rolledBack && !committed) {
+                rollbackBundle(runtimeRoot, bucketDir, replacement, trustStore, trustStoreSnapshot,
+                        previousState.activePacks(), previousState.activeRoot(), previousState);
+                rolledBack = true;
+            } else {
+                restoreConnectionState(previousState);
+            }
+            return Outcome.disconnect("NekoJS remote script pack rejected: " + failure.getMessage());
+        } finally {
+            if (!committed && !rolledBack && stagingRoot != null) {
+                ServerPackCache.deleteRecursively(stagingRoot);
+            }
         }
-        if (!reloadClientScripts("server pack bundle applied")) {
-            // The registry and remote credentials were made visible before reload so the
-            // candidate can resolve the bundle. A failed reload must remove that selection again;
-            // leaving it active would make registry/trust state disagree with the live runtime.
-            restorePreviousActivation(runtimeRoot, remoteRoot, previousActive, previousActiveRoot);
-            return Outcome.disconnect("NekoJS remote script pack rejected: CLIENT script reload failed");
-        }
-        NekoJS.LOGGER.info("Activated {} remote script pack(s) from server {}", resolved.size(), activeAddress);
-        return Outcome.accepted();
     }
 
     /* ================= 断线 ================= */
@@ -292,6 +357,7 @@ public final class PackSyncClient {
     /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有激活包时重载客户端脚本。 */
     public static synchronized void handleDisconnect(NekoRuntimeRoot runtimeRoot) {
         ActiveState previousState = activeState();
+        pendingRollbackState = null;
         expectedHashes = Map.of();
         activeAddress = null;
         activeBucket = null;
@@ -334,6 +400,7 @@ public final class PackSyncClient {
     }
 
     private static void restoreConnectionState(ActiveState state) {
+        pendingRollbackState = null;
         activeAddress = state.address();
         activeBucket = state.bucket();
         expectedHashes = state.expectedHashes();
@@ -369,12 +436,50 @@ public final class PackSyncClient {
         }
     }
 
+    /**
+     * Roll back a bundle transaction in dependency order: physical files first, then registry
+     * and runtime credentials, and finally the persisted key-pin changes and connection state.
+     */
+    private static void rollbackBundle(NekoRuntimeRoot runtimeRoot, Path failedRoot,
+                                       ServerPackCache.PhysicalReplacement replacement,
+                                       PackSyncTrustStore trustStore, byte[] trustStoreSnapshot,
+                                       List<ScriptPack> previous, Path previousRoot,
+                                       ActiveState previousState) {
+        try {
+            replacement.restore();
+        } catch (IOException failure) {
+            NekoJS.LOGGER.error("Failed to restore previous server pack files after replacement failure", failure);
+        }
+        try {
+            restorePreviousActivation(runtimeRoot, failedRoot, previous, previousRoot);
+        } catch (Throwable failure) {
+            NekoJS.LOGGER.error("Failed to restore previous server pack activation after replacement failure", failure);
+        }
+        try {
+            trustStore.restoreBytes(trustStoreSnapshot);
+        } catch (IOException failure) {
+            NekoJS.LOGGER.error("Failed to restore pack sync trust state after replacement failure", failure);
+        }
+        restoreConnectionState(previousState);
+    }
+
     private static String syncIdOf(ScriptPack pack) {
         String encoded = pack.root().getFileName().toString();
         int separator = encoded.indexOf('_');
         return separator > 0
                 ? encoded.substring(0, separator) + ":" + encoded.substring(separator + 1)
                 : encoded;
+    }
+
+    private static java.util.Set<String> activePackDirectories() {
+        java.util.Set<String> directories = new java.util.HashSet<>();
+        for (ScriptPack pack : ScriptPackRegistry.get().serverCachePacks()) {
+            Path root = pack.root();
+            if (root != null && root.getFileName() != null) {
+                directories.add(root.getFileName().toString());
+            }
+        }
+        return directories;
     }
 
     private static List<NekoTrustContext.RemoteSource> remoteSources(List<ScriptPack> packs) {

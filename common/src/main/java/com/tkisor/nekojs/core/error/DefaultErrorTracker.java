@@ -3,7 +3,7 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
-import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 import com.tkisor.nekojs.script.ScriptContainer;
@@ -299,18 +299,16 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     public boolean hasErrors() {
-        return !errors.isEmpty() || candidateErrors.values().stream().anyMatch(map -> !map.isEmpty());
+        return !errors.isEmpty();
     }
 
     public int getErrorCount() {
-        return errors.size() + candidateErrors.values().stream().mapToInt(Map::size).sum();
+        return errors.size();
     }
 
     @Override
     public Collection<ScriptError> getAllErrors() {
-        List<ScriptError> all = new java.util.ArrayList<>(errors.values());
-        candidateErrors.values().forEach(map -> all.addAll(map.values()));
-        return all;
+        return new java.util.ArrayList<>(errors.values());
     }
 
     private Map<ScriptId, ScriptError> errorStore(Context context) {
