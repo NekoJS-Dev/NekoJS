@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
 
 import java.io.IOException;
 import java.net.URI;
@@ -213,7 +214,7 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
             return normalized;
         }
         try {
-            Path parsed = Path.of(normalized);
+            Path parsed = root.getFileSystem().getPath(normalized);
             Path path = parsed.isAbsolute() ? parsed.normalize().toAbsolutePath() : root.getParent().resolve(parsed).normalize().toAbsolutePath();
             return root.getParent().relativize(path).toString().replace('\\', '/');
         } catch (Exception ignored) { // path resolution fails → return raw normalized string
@@ -241,7 +242,9 @@ public final class NekoEsmVirtualModuleRegistry implements NekoVirtualModuleView
         if (slash < 0) {
             return null;
         }
-        return ScriptType.fromScriptsDirectoryName(base.substring(0, slash));
+        Path parsed = root.getFileSystem().getPath(base);
+        Path resolved = parsed.isAbsolute() ? parsed : root.getParent().resolve(parsed);
+        return ScriptPathClassifier.fromPath(resolved);
     }
 
     private static String stableKey(String moduleId) {

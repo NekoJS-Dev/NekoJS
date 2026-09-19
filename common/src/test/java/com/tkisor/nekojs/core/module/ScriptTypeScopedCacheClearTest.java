@@ -6,15 +6,22 @@ import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
+import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
 import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +49,9 @@ class ScriptTypeScopedCacheClearTest {
     }
 
     private NekoModulePipelineCache cache;
+
+    @TempDir
+    Path providerTemp;
 
     @BeforeEach
     void newCache() {
@@ -82,6 +92,80 @@ class ScriptTypeScopedCacheClearTest {
         Files.deleteIfExists(serverKey);
         Files.deleteIfExists(clientKey);
         Files.deleteIfExists(sharedKey);
+    }
+
+    @Test
+    void packagePathsUseInjectedProviderCaseSemanticsForAllRegistries() throws Exception {
+        Path archive = providerTemp.resolve("case-sensitive.zip");
+        try (FileSystem fileSystem = FileSystems.newFileSystem(
+                URI.create("jar:" + archive.toUri()), Map.of("create", "true"))) {
+            Path root = fileSystem.getPath("/nekojs");
+            Files.createDirectories(root);
+            assertNull(ScriptPathClassifier.fromSegment(fileSystem.getPath("Server_scripts")),
+                    "ZIP provider must not fold script directory case");
+            assertEquals(ScriptType.SERVER,
+                    ScriptPathClassifier.fromSegment(fileSystem.getPath("server_scripts")));
+
+            Path packageServer = root.resolve("packs/id/server_scripts/server.cjs");
+            Path worldServer = root.resolve("nekojs_packs/id/server_scripts/world.cjs");
+            Path remoteServer = root.resolve("server_packs/bucket/id/server_scripts/remote.cjs");
+            Path upperServer = root.resolve("Server_scripts/upper.cjs");
+            for (Path path : List.of(packageServer, worldServer, remoteServer, upperServer)) {
+                Files.createDirectories(path.getParent());
+                Files.writeString(path, "module.exports = 'package';\n");
+            }
+
+            ScriptCompilerRegistry compilers = ScriptCompilerRegistry.createRuntimeRegistry();
+            NekoModulePipelineCache providerCache = new NekoModulePipelineCache(
+                    new NekoModulePipeline(new NekoCompilationPipeline(), compilers,
+                            SandboxConfig.defaultConfig()),
+                    new SourceMapRegistry(root), new NekoEsmVirtualModuleRegistry(root),
+                    NekoTrustContext.local());
+            try {
+                NekoPreparedModule packagePrepared = providerCache.prepare(packageServer);
+                NekoPreparedModule worldPrepared = providerCache.prepare(worldServer);
+                NekoPreparedModule remotePrepared = providerCache.prepare(remoteServer);
+                NekoPreparedModule upperPrepared = providerCache.prepare(upperServer);
+
+                providerCache.sourceMaps().register("packs/id/server_scripts/map.ts",
+                        minimalMap("packs/id/server_scripts/map.ts"));
+                providerCache.sourceMaps().register("nekojs_packs/id/server_scripts/world-map.ts",
+                        minimalMap("nekojs_packs/id/server_scripts/world-map.ts"));
+                providerCache.sourceMaps().register("server_packs/bucket/id/server_scripts/remote-map.ts",
+                        minimalMap("server_packs/bucket/id/server-map.ts"));
+                providerCache.virtualModules().register("packs/id/server_scripts/virtual.mjs", "export default 1");
+                providerCache.virtualModules().register("nekojs_packs/id/server_scripts/world.mjs", "export default 2");
+                providerCache.virtualModules().register("server_packs/bucket/id/server_scripts/remote.mjs", "export default 3");
+                providerCache.virtualModules().register("Server_scripts/upper.mjs", "export default 4");
+
+                providerCache.clear(ScriptType.SERVER);
+
+                assertNotSame(packagePrepared, providerCache.prepare(packageServer));
+                assertNotSame(worldPrepared, providerCache.prepare(worldServer));
+                assertNotSame(remotePrepared, providerCache.prepare(remoteServer));
+                assertSame(upperPrepared, providerCache.prepare(upperServer),
+                        "case-sensitive providers must not classify Server_scripts as SERVER");
+                assertNull(providerCache.sourceMaps().getMappedPosition(
+                        "packs/id/server_scripts/map.ts", 1, 0).path);
+                assertNull(providerCache.sourceMaps().getMappedPosition(
+                        "nekojs_packs/id/server_scripts/world-map.ts", 1, 0).path);
+                assertNull(providerCache.sourceMaps().getMappedPosition(
+                        "server_packs/bucket/id/server_scripts/remote-map.ts", 1, 0).path);
+                assertTrue(isVirtual(providerCache.virtualModules(),
+                        "Server_scripts/upper.mjs"), "the case-mismatched virtual module must remain");
+            } finally {
+                providerCache.close();
+            }
+        }
+    }
+
+    @Test
+    void defaultProviderUsesItsOwnCaseSemantics() {
+        boolean caseInsensitive = Path.of("A").getFileSystem().getPath("A")
+                .equals(Path.of("a").getFileSystem().getPath("a"));
+        ScriptType expected = caseInsensitive ? ScriptType.SERVER : null;
+        assertEquals(expected, ScriptType.fromScriptsDirectoryName("Server_scripts"));
+        assertEquals(expected, ScriptPathClassifier.fromSegment(Path.of("Server_scripts")));
     }
 
     @Test

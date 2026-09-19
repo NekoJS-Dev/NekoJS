@@ -600,3 +600,36 @@ golden，也不把未执行的真实 Minecraft、loader runtime 或 network sess
 | Runtime/cache ownership | `NekoRuntimeModuleCacheOwnershipTest`；`ModulePipelineIsolationTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeModuleCacheOwnershipTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；只证明 common object graph 与 visibility contract。 |
 | Prepared module visibility and guard cleanup | `NekoModulePipelinePrepareTest`；`ModulePipelineIsolationTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModulePipelinePrepareTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；record/旧 factory behavior unchanged。 |
 | Required gates | common compile/check、26.2.0 NeoForge/Fabric compile、whitespace | `./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | PASS；输出仅有既有 unchecked/deprecation、`this-escape` 与 Gson `InlineMe` classfile warnings；未更新 golden。真实 Minecraft、loader runtime、client/server 或 network session smoke 未执行。 |
+
+## Review-round-13 addendum (2026-09-19)
+
+本轮修复 ticket 11 的 cache/package/PackSync 边界；没有脚本作者迁移，也没有更新 golden。
+
+- **Compiler registry stamp：fixed.** `FileStamp` now includes the captured
+  `LanguageBinding.registryRevision`, so replacing a compiler under the same language id cannot
+  reuse an old prepared module. `NekoModulePipelineCacheStampTest` covers the same-id replacement.
+- **Provider-aware scoped clear：fixed.** `ScriptPathClassifier` is the single internal path-segment
+  helper. It compares names through the injected `Path` provider and scans package layouts under
+  `packs/<id>`, `nekojs_packs/<id>` and `server_packs/<bucket>/<id>`. Cache, source maps, virtual
+  modules, schema inference and diagnostics use the same classifier; a ZIP provider test covers
+  case-sensitive behavior and the default provider test covers its own case policy.
+- **Physical rollback：fixed.** Transactional replacement uses strict deletion. A failed physical
+  restore keeps staging evidence and returns a fatal rollback result; PackSync fails closed instead
+  of reinstalling the old registry/credentials against an unknown directory. A same-bucket old
+  active replacement remains covered by `PackSyncClientTest`.
+- **Reload hook contract：fixed.** A production bundle, or a hash-list transition that removes an
+  active set, is rejected when the CLIENT reload hook is absent or returns false. Disconnect cleanup
+  with no active runtime remains distinct and does not require a hook.
+
+### Review-round-13 evidence commands
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheStampTest --tests com.tkisor.nekojs.core.module.ScriptTypeScopedCacheClearTest --tests com.tkisor.nekojs.core.pack.sync.ServerPackCacheTest --tests com.tkisor.nekojs.core.pack.sync.PackSyncClientTest
+./gradlew.bat :common:compileJava :common:compileTestJava :common:check
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+The targeted cache/package/rollback/missing-hook tests passed before the required build gates.
+Golden files were not updated. No real Minecraft client/server, loader runtime or network session
+smoke was executed.

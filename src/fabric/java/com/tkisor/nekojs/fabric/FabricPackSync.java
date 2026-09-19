@@ -151,11 +151,17 @@ public final class FabricPackSync {
     }
 
     private static boolean reloadClientScripts() {
-        // root 经 loader entry 的 package-private accessor 获取（原 null 判定语义保留）
+        // A production bundle must not be accepted unless the CLIENT reload owner is wired.
         NekoRuntimeRoot root = NekoJSFabricMod.runtimeRootOrNull();
-        if (root == null) return true;
+        if (root == null) {
+            LOGGER.error("Cannot reload CLIENT scripts after server pack sync: runtime root is unavailable");
+            return false;
+        }
         // CLIENT 管理器可能尚未建立（autoLoadTypes 之前 / 专用服务器进程）——reload 会抛
-        if (root.scriptManagerOrNull(ScriptType.CLIENT) == null) return true;
+        if (root.scriptManagerOrNull(ScriptType.CLIENT) == null) {
+            LOGGER.error("Cannot reload CLIENT scripts after server pack sync: CLIENT manager is unavailable");
+            return false;
+        }
         try {
             return root.reload(ScriptType.CLIENT).success();
         } catch (Throwable failure) {

@@ -5,12 +5,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -88,6 +90,28 @@ class ServerPackCacheTest {
         ServerPackCache.persistPack(bucketRoot, "packs:demo", MANIFEST, v2);
         assertFalse(Files.exists(packDir.resolve("client_scripts").resolve("extra.js")));
         assertFalse(Files.exists(packDir.resolve("assets")));
+    }
+
+    @Test
+    void physicalRestorePropagatesDeleteFailureAndRetainsStaging() throws Exception {
+        String syncId = "packs:restore-failure";
+        ServerPackCache.persistPack(bucketRoot, syncId, MANIFEST, FILES);
+        Path staging = ServerPackCache.createStagingRoot(bucketRoot);
+        ServerPackCache.stagePack(staging, syncId, MANIFEST, FILES);
+        Path target = bucketRoot.resolve(SyncedPack.encodeSyncId(syncId));
+
+        ServerPackCache.PhysicalReplacement replacement = new ServerPackCache.PhysicalReplacement(
+                staging, bucketRoot, path -> {
+                    if (path.equals(target)) {
+                        throw new IOException("injected physical delete failure");
+                    }
+                    ServerPackCache.deleteRecursivelyStrict(path);
+                });
+        replacement.replace(syncId);
+
+        assertThrows(IOException.class, replacement::restore,
+                "physical rollback must not swallow a failed target delete");
+        assertTrue(Files.exists(staging), "failed physical rollback must not clear staging evidence");
     }
 
     @Test

@@ -47,9 +47,15 @@ public final class PackSyncClientConnections {
 
     private static boolean reloadClientScripts() {
         NekoRuntimeRoot root = runtimeRoot;
-        if (!Platform.isClient() || root == null) return true;
+        if (!Platform.isClient() || root == null) {
+            NekoJS.LOGGER.error("Cannot reload CLIENT scripts after server pack sync: client runtime is unavailable");
+            return false;
+        }
         var manager = root.scriptManagerOrNull(ScriptType.CLIENT);
-        if (manager == null) return true;
+        if (manager == null) {
+            NekoJS.LOGGER.error("Cannot reload CLIENT scripts after server pack sync: CLIENT manager is unavailable");
+            return false;
+        }
         NekoJS.LOGGER.debug("Reloading CLIENT scripts after server pack sync change");
         try {
             return root.reload(ScriptType.CLIENT).success();

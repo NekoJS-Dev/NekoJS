@@ -78,8 +78,10 @@ public enum ScriptType implements ScriptTypePredicate {
     /** Resolve a script type from a path segment without consulting platform-owned paths. */
     public static ScriptType fromScriptsDirectoryName(String segment) {
         if (segment == null) return null;
+        java.nio.file.FileSystem fileSystem = java.nio.file.FileSystems.getDefault();
+        java.nio.file.Path candidate = fileSystem.getPath(segment);
         for (ScriptType type : EXECUTABLE_TYPES) {
-            if (type.scriptsDirectoryName().equalsIgnoreCase(segment)) {
+            if (candidate.equals(fileSystem.getPath(type.scriptsDirectoryName()))) {
                 return type;
             }
         }

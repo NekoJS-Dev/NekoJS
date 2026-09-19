@@ -102,7 +102,7 @@ public final class PackSyncClient {
         ActiveState previousState = pendingRollbackState != null ? pendingRollbackState : activeState();
         if (clientModeOff()) {
             if (!ScriptPackRegistry.get().serverCachePacks().isEmpty() || !expectedHashes.isEmpty()) {
-                Outcome outcome = deactivateAndReload("client packSync mode is off", previousState, runtimeRoot);
+                Outcome outcome = deactivateAndReload("client packSync mode is off", previousState, runtimeRoot, true);
                 if (outcome.shouldDisconnect()) {
                     restoreConnectionState(previousState);
                     return outcome;
@@ -136,7 +136,7 @@ public final class PackSyncClient {
         if (connectionChanged || (!ScriptPackRegistry.get().serverCachePacks().isEmpty()
                 && activeSetChanged && !sameBucketReplacement)) {
             // Do not let the previous active/credential set run while this server's bundle is pending.
-            Outcome outcome = deactivateAndReload("server pack hash list changed", previousState, runtimeRoot);
+            Outcome outcome = deactivateAndReload("server pack hash list changed", previousState, runtimeRoot, true);
             if (outcome.shouldDisconnect()) {
                 restoreConnectionState(previousState);
                 return outcome;
@@ -148,7 +148,7 @@ public final class PackSyncClient {
         if (hashes.isEmpty()) {
             // 服务器无同步包：清空远端缓存包（缓存文件保留）并重载客户端脚本
             if (!revoked) {
-                Outcome outcome = deactivateAndReload("server sent an empty pack hash list", previousState, runtimeRoot);
+                Outcome outcome = deactivateAndReload("server sent an empty pack hash list", previousState, runtimeRoot, true);
                 if (outcome.shouldDisconnect()) {
                     restoreConnectionState(previousState);
                     return outcome;
@@ -159,7 +159,7 @@ public final class PackSyncClient {
         }
         if (clientModeHashOnly()) {
             if (!revoked) {
-                Outcome outcome = deactivateAndReload("client packSync mode is hashOnly", previousState, runtimeRoot);
+                Outcome outcome = deactivateAndReload("client packSync mode is hashOnly", previousState, runtimeRoot, true);
                 if (outcome.shouldDisconnect()) {
                     restoreConnectionState(previousState);
                     return outcome;
@@ -180,7 +180,7 @@ public final class PackSyncClient {
      */
     public static synchronized Outcome handleBundle(NekoRuntimeRoot runtimeRoot, List<SyncedPack> packs) {
         if (clientModeOff()) {
-            Outcome outcome = deactivateAndReload("client packSync mode is off", activeState(), runtimeRoot);
+            Outcome outcome = deactivateAndReload("client packSync mode is off", activeState(), runtimeRoot, true);
             if (!outcome.shouldDisconnect()) {
                 activeAddress = null;
                 activeBucket = null;
@@ -189,7 +189,7 @@ public final class PackSyncClient {
             return outcome;
         }
         if (clientModeHashOnly()) {
-            Outcome outcome = deactivateAndReload("client packSync mode is hashOnly", activeState(), runtimeRoot);
+            Outcome outcome = deactivateAndReload("client packSync mode is hashOnly", activeState(), runtimeRoot, true);
             NekoJS.LOGGER.info("Ignoring server pack bundle (client packSync mode is hashOnly)");
             return outcome;
         }
@@ -295,10 +295,11 @@ public final class PackSyncClient {
             replacement = ServerPackCache.replaceStaged(stagingRoot, bucketDir, resolved.keySet());
             List<NekoTrustContext.RemoteSource> currentSources = remoteSources(bucketDir, resolved);
             if (currentSources == null) {
-                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                RollbackOutcome rollback = rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
                         previousActive, previousActiveRoot, previousState);
                 rolledBack = true;
-                return Outcome.disconnect("NekoJS remote script pack rejected: explicit signing key evidence is required");
+                return Outcome.disconnect(rollback.decorate(
+                        "NekoJS remote script pack rejected: explicit signing key evidence is required"));
             }
 
             // 6) Activate + authorize + reload. Any failure restores old files first, then
@@ -306,10 +307,11 @@ public final class PackSyncClient {
             try {
                 runtimeRoot.revokeRemoteSources(remoteRoot);
             } catch (Exception failure) {
-                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                RollbackOutcome rollback = rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
                         previousActive, previousActiveRoot, previousState);
                 rolledBack = true;
-                return Outcome.disconnect("NekoJS remote script pack rejected: runtime trust reset failed");
+                return Outcome.disconnect(rollback.decorate(
+                        "NekoJS remote script pack rejected: runtime trust reset failed"));
             }
             ScriptPackRegistry.get().activateServerCachePacks(bucketDir, resolved.keySet());
             Map<String, String> scopeNames = new LinkedHashMap<>();
@@ -320,16 +322,18 @@ public final class PackSyncClient {
             try {
                 runtimeRoot.authorizeRemoteSources(currentSources, remoteRoot);
             } catch (Exception failure) {
-                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+                RollbackOutcome rollback = rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
                         previousActive, previousActiveRoot, previousState);
                 rolledBack = true;
-                return Outcome.disconnect("NekoJS remote script pack rejected: runtime authorization failed");
+                return Outcome.disconnect(rollback.decorate(
+                        "NekoJS remote script pack rejected: runtime authorization failed"));
             }
-            if (!reloadClientScripts("server pack bundle applied")) {
-                rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
+            if (!reloadClientScripts("server pack bundle applied", true)) {
+                RollbackOutcome rollback = rollbackBundle(runtimeRoot, remoteRoot, replacement, trustStore, trustStoreSnapshot,
                         previousActive, previousActiveRoot, previousState);
                 rolledBack = true;
-                return Outcome.disconnect("NekoJS remote script pack rejected: CLIENT script reload failed");
+                return Outcome.disconnect(rollback.decorate(
+                        "NekoJS remote script pack rejected: CLIENT script reload failed"));
             }
             replacement.commit();
             committed = true;
@@ -337,10 +341,18 @@ public final class PackSyncClient {
             NekoJS.LOGGER.info("Activated {} remote script pack(s) from server {}", resolved.size(), activeAddress);
             return Outcome.accepted();
         } catch (Throwable failure) {
-            if (replacement != null && !rolledBack && !committed) {
-                rollbackBundle(runtimeRoot, bucketDir, replacement, trustStore, trustStoreSnapshot,
+            ServerPackCache.PhysicalReplacement failedReplacement = replacement;
+            if (failedReplacement == null && failure instanceof ServerPackCache.ReplacementFailure replacementFailure) {
+                failedReplacement = replacementFailure.replacement();
+                replacement = failedReplacement;
+            }
+            if (failedReplacement != null && !rolledBack && !committed) {
+                RollbackOutcome rollback = rollbackBundle(runtimeRoot, bucketDir, failedReplacement,
+                        trustStore, trustStoreSnapshot,
                         previousState.activePacks(), previousState.activeRoot(), previousState);
                 rolledBack = true;
+                return Outcome.disconnect(rollback.decorate(
+                        "NekoJS remote script pack rejected: " + failure.getMessage()));
             } else {
                 restoreConnectionState(previousState);
             }
@@ -361,7 +373,7 @@ public final class PackSyncClient {
         expectedHashes = Map.of();
         activeAddress = null;
         activeBucket = null;
-        Outcome outcome = deactivateAndReload("disconnected from server", previousState, runtimeRoot);
+        Outcome outcome = deactivateAndReload("disconnected from server", previousState, runtimeRoot, false);
         if (outcome.shouldDisconnect()) {
             restoreConnectionState(previousState);
         }
@@ -370,7 +382,7 @@ public final class PackSyncClient {
     /* ================= 内部 ================= */
 
     private static Outcome deactivateAndReload(String reason, ActiveState previousState,
-                                               NekoRuntimeRoot runtimeRoot) {
+                                               NekoRuntimeRoot runtimeRoot, boolean reloadRequired) {
         var removed = ScriptPackRegistry.get().deactivateServerCachePacks();
         Path remoteRoot = previousState.remoteRoot();
         if (runtimeRoot != null) {
@@ -383,7 +395,7 @@ public final class PackSyncClient {
         }
         if (!removed.isEmpty()) {
             NekoJS.LOGGER.info("Deactivated {} server cache pack(s): {}", removed.size(), reason);
-            if (!reloadClientScripts(reason)) {
+            if (!reloadClientScripts(reason, reloadRequired)) {
                 NekoJS.LOGGER.error("CLIENT runtime did not accept server pack deactivation ({})", reason);
                 restorePreviousActivation(runtimeRoot, remoteRoot, previousState.activePacks(), previousState.activeRoot());
                 return Outcome.disconnect("NekoJS remote script pack deactivation rejected: CLIENT script reload failed");
@@ -440,15 +452,17 @@ public final class PackSyncClient {
      * Roll back a bundle transaction in dependency order: physical files first, then registry
      * and runtime credentials, and finally the persisted key-pin changes and connection state.
      */
-    private static void rollbackBundle(NekoRuntimeRoot runtimeRoot, Path failedRoot,
-                                       ServerPackCache.PhysicalReplacement replacement,
-                                       PackSyncTrustStore trustStore, byte[] trustStoreSnapshot,
-                                       List<ScriptPack> previous, Path previousRoot,
-                                       ActiveState previousState) {
+    private static RollbackOutcome rollbackBundle(NekoRuntimeRoot runtimeRoot, Path failedRoot,
+                                                  ServerPackCache.PhysicalReplacement replacement,
+                                                  PackSyncTrustStore trustStore, byte[] trustStoreSnapshot,
+                                                  List<ScriptPack> previous, Path previousRoot,
+                                                  ActiveState previousState) {
         try {
             replacement.restore();
         } catch (IOException failure) {
             NekoJS.LOGGER.error("Failed to restore previous server pack files after replacement failure", failure);
+            return failClosedAfterRollbackFailure(runtimeRoot, failedRoot, trustStore, trustStoreSnapshot,
+                    "physical server pack restore failed: " + failure.getMessage());
         }
         try {
             restorePreviousActivation(runtimeRoot, failedRoot, previous, previousRoot);
@@ -461,6 +475,32 @@ public final class PackSyncClient {
             NekoJS.LOGGER.error("Failed to restore pack sync trust state after replacement failure", failure);
         }
         restoreConnectionState(previousState);
+        return RollbackOutcome.success();
+    }
+
+    /** Do not reinstall logical state against an unknown physical directory after rollback fails. */
+    private static RollbackOutcome failClosedAfterRollbackFailure(NekoRuntimeRoot runtimeRoot,
+                                                                   Path failedRoot,
+                                                                   PackSyncTrustStore trustStore,
+                                                                   byte[] trustStoreSnapshot,
+                                                                   String reason) {
+        ScriptPackRegistry.get().deactivateServerCachePacks();
+        try {
+            if (runtimeRoot != null) runtimeRoot.revokeRemoteSources(failedRoot);
+        } catch (Throwable failure) {
+            NekoJS.LOGGER.error("Failed to revoke remote sources after fatal pack rollback failure", failure);
+        }
+        try {
+            trustStore.restoreBytes(trustStoreSnapshot);
+        } catch (IOException failure) {
+            NekoJS.LOGGER.error("Failed to restore pack sync trust state after fatal rollback failure", failure);
+            reason += "; trust state restore failed: " + failure.getMessage();
+        }
+        activeAddress = null;
+        activeBucket = null;
+        expectedHashes = Map.of();
+        pendingRollbackState = null;
+        return RollbackOutcome.fatal(reason);
     }
 
     private static String syncIdOf(ScriptPack pack) {
@@ -502,11 +542,15 @@ public final class PackSyncClient {
         return List.copyOf(sources);
     }
 
-    private static boolean reloadClientScripts(String reason) {
+    private static boolean reloadClientScripts(String reason, boolean required) {
         BooleanSupplier hook = clientReloadHook;
         if (hook == null) {
-            NekoJS.LOGGER.debug("No client reload hook installed, skipping CLIENT reload ({})", reason);
-            return true;
+            if (!required) {
+                NekoJS.LOGGER.debug("No client reload hook installed; no active runtime requires reload ({})", reason);
+                return true;
+            }
+            NekoJS.LOGGER.error("No client reload hook installed; rejecting CLIENT reload ({})", reason);
+            return false;
         }
         try {
             return hook.getAsBoolean();
@@ -609,6 +653,20 @@ public final class PackSyncClient {
         private ActiveState {
             expectedHashes = Map.copyOf(expectedHashes == null ? Map.of() : expectedHashes);
             activePacks = List.copyOf(activePacks == null ? List.of() : activePacks);
+        }
+    }
+
+    private record RollbackOutcome(boolean restored, String fatalReason) {
+        static RollbackOutcome success() {
+            return new RollbackOutcome(true, null);
+        }
+
+        static RollbackOutcome fatal(String reason) {
+            return new RollbackOutcome(false, reason);
+        }
+
+        String decorate(String baseMessage) {
+            return fatalReason == null ? baseMessage : baseMessage + "; fatal rollback: " + fatalReason;
         }
     }
 

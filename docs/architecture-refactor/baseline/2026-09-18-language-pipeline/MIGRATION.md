@@ -234,10 +234,22 @@ column composition。没有 compiler map 的 native fallback 仍可使用 conser
 
 ### 6.4 Single facts and visibility
 
-`ScriptType.scriptsDirectoryName/fromScriptsDirectoryName` 是 `<type>_scripts` path segment 的唯一事实，
+`ScriptType.scriptsDirectoryName` 与内部 `ScriptPathClassifier` 是 `<type>_scripts` path segment 的唯一事实，
 Cache、VirtualRegistry、ScriptBindingSchema、SourceMapRegistry、ScriptPack、loader host 和 diagnostics
 均复用它。ESM virtual registry 复用 `NekoModuleHash.sha256`，不再自带 SHA-256 实现。没有新增 parser/
 compiler SPI；必要的 source-map composition 属 execution-side utility。
+
+### 6.5 Review-round-13 cache, provider and PackSync closure
+
+脚本作者无需迁移。prepared cache stamp 现在还包含 captured compiler registry revision，因此同一
+language id 的 compiler replacement 也会重新准备模块。类型 scoped clear 通过内部
+`ScriptPathClassifier` 按注入 `Path` provider 比较目录段，并扫描 GLOBAL/WORLD/SERVER_CACHE 的
+package path；大小写敏感 provider 不会把 `Server_scripts` 当成 `SERVER`。
+
+PackSync 的 replacement rollback 使用严格物理删除；物理恢复失败时保留 staging、停止恢复旧
+logical activation 并 fail closed，返回 fatal rollback 断连结果，不宣称旧 generation 已恢复。
+production bundle 与 active hash-list transition 必须有成功的 CLIENT reload hook；无激活断线清理
+仍可独立完成。无脚本 API 或公开迁移项变化。
 
 ## 7. Review-round-10 evidence boundary
 

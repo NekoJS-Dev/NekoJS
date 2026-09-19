@@ -195,4 +195,42 @@ class NekoModulePipelineCacheStampTest {
         }
     }
 
+    @Test
+    void compilerReplacementWithTheSameLanguageIdInvalidatesTheStamp() throws Exception {
+        Path dir = NekoJSPaths.get().testScripts();
+        Files.createDirectories(dir);
+        Path script = dir.resolve("stamp_same_language_id.js");
+        Files.writeString(script, "module.exports = 'SAME-ID';\n");
+        try {
+            IScriptCompiler firstCompiler = compilerWithPrefix("// first-compiler\n");
+            registry.registerLanguage("same-id-js", Set.of(".js"), firstCompiler);
+            NekoPreparedModule before = cache.prepare(script);
+            assertTrue(before.code().startsWith("// first-compiler"));
+
+            registry.replaceLanguage("same-id-js", Set.of(".js"), compilerWithPrefix("// second-compiler\n"));
+
+            NekoPreparedModule after = cache.prepare(script);
+            assertEquals("same-id-js", after.languageId());
+            assertTrue(after.code().startsWith("// second-compiler"),
+                    "a same-id compiler replacement must not reuse the old prepared module");
+            assertNotEquals(before, after);
+        } finally {
+            Files.deleteIfExists(script);
+        }
+    }
+
+    private static IScriptCompiler compilerWithPrefix(String prefix) {
+        return new IScriptCompiler() {
+            @Override
+            public boolean canCompile(String extension) {
+                return ".js".equalsIgnoreCase(extension);
+            }
+
+            @Override
+            public String compile(Path file, String sourceCode) {
+                return prefix + sourceCode;
+            }
+        };
+    }
+
 }

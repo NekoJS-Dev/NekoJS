@@ -35,6 +35,8 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
         if (subject == null || subject.isBlank()) {
             throw new IllegalArgumentException("Trust subject path must not be blank");
         }
+        // Factory-created subjects are already canonicalized with their Path provider. Re-parsing
+        // that string through the default provider would corrupt ZIP/custom-provider paths.
         subject = normalizeSubject(subject);
         if (kind == Kind.REMOTE_AUTHORIZED && (keyId == null || keyId.isBlank())) {
             throw new IllegalArgumentException("Remote authorization requires an explicit key id");
@@ -75,11 +77,7 @@ public record NekoTrustApprovedSource(Kind kind, String subject, String packId, 
     }
 
     private static String normalizeSubject(String subject) {
-        try {
-            return subjectOf(Path.of(subject));
-        } catch (RuntimeException invalidPath) {
-            throw new IllegalArgumentException("Trust subject path is invalid", invalidPath);
-        }
+        return subject.replace('\\', '/');
     }
 
 }
