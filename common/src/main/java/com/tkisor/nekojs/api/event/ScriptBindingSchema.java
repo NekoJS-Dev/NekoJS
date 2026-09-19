@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
+import com.tkisor.nekojs.core.fs.ScriptPathLayout;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import java.nio.file.Path;
@@ -11,16 +11,16 @@ import java.util.function.Consumer;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ScriptBindingSchema {
-    private static final Map<ScriptType, Map<String, BindingMembers>> SCHEMAS = new ConcurrentHashMap<>();
+    private final Map<ScriptType, View> active = new ConcurrentHashMap<>();
     /**
      * 每脚本类型的「已知全局标识符」全集：从运行中 Context 的全局绑定键收割
      * （JS 内置 Math/JSON/console/… + 引擎/平台装的所有绑定），供未定义标识符
      * 静态检查使用——以运行时真实可见集合为准，杜绝手写内置名单的误报/漏报。
      */
-    private static final Map<ScriptType, Set<String>> GLOBALS = new ConcurrentHashMap<>();
-    private static final Map<Object, Candidate> CANDIDATES = new ConcurrentHashMap<>();
+    private final Map<Object, Candidate> candidates = new ConcurrentHashMap<>();
+    private volatile boolean closed;
 
-    private ScriptBindingSchema() {}
+    public ScriptBindingSchema() {}
 
     /** Immutable schema view owned by one active or candidate generation. */
     public record View(Map<String, BindingMembers> schemas, Set<String> globals,
@@ -96,40 +96,32 @@ public final class ScriptBindingSchema {
         }
     }
 
-    public static void register(ScriptType type, Map<String, BindingMembers> nameToMembers) {
+    /** Install the active view owned by this runtime root. */
+    public void installActive(ScriptType type, Map<String, BindingMembers> nameToMembers, Set<String> globals) {
+        ensureOpen();
         if (type == null) return;
-        SCHEMAS.put(type, nameToMembers == null ? Map.of() : Map.copyOf(nameToMembers));
+        active.put(type, new View(nameToMembers, globals));
     }
 
-    public static void clear(ScriptType type) {
-        if (type != null) SCHEMAS.remove(type);
+    public void clear(ScriptType type) {
+        if (type != null) active.remove(type);
     }
 
-    /** 登记某脚本类型的已知全局标识符全集（环境工厂在 Context 组装完成后收割）。 */
-    public static void registerGlobals(ScriptType type, Set<String> names) {
-        if (type == null || names == null || names.isEmpty()) return;
-        GLOBALS.put(type, Set.copyOf(names));
+    /** Close the runtime owner and drop active/candidate views together. */
+    public void close() {
+        closed = true;
+        active.clear();
+        candidates.clear();
     }
 
-    /** 某脚本类型的已知全局标识符全集；未登记返回空集合（未定义标识符检查须据此自行降级跳过）。 */
-    public static Set<String> knownGlobals(ScriptType type) {
-        return type == null ? Set.of() : GLOBALS.getOrDefault(type, Set.of());
-    }
-
-    public static void clearAll() {
-        SCHEMAS.clear();
-        GLOBALS.clear();
-        CANDIDATES.clear();
-    }
-
-    public static Map<String, BindingMembers> lookup(ScriptType type) {
-        return type == null ? Map.of() : SCHEMAS.getOrDefault(type, Map.of());
+    public Map<String, BindingMembers> lookup(ScriptType type) {
+        return activeView(type).lookup();
     }
 
     /** Snapshot the active view without exposing mutable static maps to a generation. */
-    public static View activeView(ScriptType type) {
+    public View activeView(ScriptType type) {
         if (type == null) return new View(Map.of(), Set.of());
-        return new View(lookup(type), knownGlobals(type));
+        return active.getOrDefault(type, new View(Map.of(), Set.of()));
     }
 
     /** Empty view used by a generation before its bindings have been installed. */
@@ -138,57 +130,67 @@ public final class ScriptBindingSchema {
     }
 
     /** Capture the active schema/global values before a candidate starts mutating its own view. */
-    public static Snapshot snapshot(ScriptType type) {
+    public Snapshot snapshot(ScriptType type) {
         return new Snapshot(activeView(type));
     }
 
-    /** Install candidate schema/global values without changing the active view. */
-    public static View installCandidate(Object context, ScriptType type,
-                                        Map<String, BindingMembers> schemas, Set<String> globals) {
-        return installCandidate(context, type, schemas, globals, null);
+    /** Install candidate values under one generation/session token. */
+    public View beginCandidate(Object ownerToken, ScriptType type,
+                               Map<String, BindingMembers> schemas, Set<String> globals) {
+        return beginCandidate(ownerToken, type, schemas, globals, (Consumer<Diagnostic>) null);
     }
 
-    public static View installCandidate(Object context, ScriptType type,
-                                        Map<String, BindingMembers> schemas, Set<String> globals,
-                                        Consumer<Diagnostic> reporter) {
-        if (context == null || type == null) throw new NullPointerException("candidate schema context/type");
+    public View beginCandidate(Object ownerToken, ScriptType type,
+                               Map<String, BindingMembers> schemas, Set<String> globals,
+                               Consumer<Diagnostic> reporter) {
+        ensureOpen();
+        if (ownerToken == null || type == null) throw new NullPointerException("candidate schema owner/type");
         View view = new View(schemas, globals, reporter);
-        CANDIDATES.put(context, new Candidate(type, view, snapshot(type)));
+        candidates.put(ownerToken, new Candidate(type, view, snapshot(type)));
         return view;
     }
 
+    /** Candidate diagnostics stay attached to the generation without exposing Context here. */
+    public View beginCandidate(Object ownerToken, ScriptType type,
+                               Map<String, BindingMembers> schemas, Set<String> globals,
+                               Object diagnosticContext) {
+        return beginCandidate(ownerToken, type, schemas, globals,
+                diagnostic -> ScriptErrorReporter.recordCallbackError(
+                        diagnosticContext, diagnostic.type(), diagnostic.callbackKind(), diagnostic.throwable()));
+    }
+
     /** Publish exactly one candidate view at the generation commit point. */
-    public static View publishCandidate(Object context) {
-        Candidate candidate = context == null ? null : CANDIDATES.remove(context);
+    public View commitCandidate(Object ownerToken) {
+        Candidate candidate = ownerToken == null ? null : candidates.remove(ownerToken);
         if (candidate == null) return null;
-        installActive(candidate.type(), candidate.view());
+        active.put(candidate.type(), candidate.view());
         return candidate.view();
     }
 
     /** Discard a candidate schema after any preparation/binding/execution failure. */
-    public static void discardCandidate(Object context) {
-        if (context == null) return;
-        Candidate candidate = CANDIDATES.remove(context);
+    public void discardCandidate(Object ownerToken) {
+        if (ownerToken == null) return;
+        Candidate candidate = candidates.remove(ownerToken);
         if (candidate != null) {
             // Schema transactions are serialized with generation commit by the owning manager;
             // restore the captured active view only if no newer same-type generation published.
             // This keeps a late failure from an older candidate from rolling back a committed one.
             if (activeView(candidate.type()).equals(candidate.activeBefore().view())) {
-                installActive(candidate.type(), candidate.activeBefore().view());
+                active.put(candidate.type(), candidate.activeBefore().view());
             }
         }
     }
 
     /** Restore an active schema/global snapshot for an owning reload transaction. */
-    public static void restore(ScriptType type, Snapshot snapshot) {
+    public void restore(ScriptType type, Snapshot snapshot) {
         if (type == null || snapshot == null) return;
-        installActive(type, snapshot.view());
+        active.put(type, snapshot.view());
     }
 
     /** Resolve a generation view for preparation/validation. */
-    public static View view(Object context, ScriptType type) {
-        if (context == null) return activeView(type);
-        Candidate candidate = CANDIDATES.get(context);
+    public View view(Object ownerToken, ScriptType type) {
+        if (ownerToken == null) return activeView(type);
+        Candidate candidate = candidates.get(ownerToken);
         return candidate != null && candidate.type() == type ? candidate.view() : emptyView();
     }
 
@@ -202,21 +204,15 @@ public final class ScriptBindingSchema {
      */
     public static ScriptType inferType(Path path) {
         if (path == null) return null;
-        return ScriptPathClassifier.fromPath(path.toAbsolutePath().normalize());
-    }
-
-    public static Map<String, BindingMembers> schemaForPath(Path path) {
-        return lookup(inferType(path));
+        return ScriptPathLayout.typeOf(path.toAbsolutePath().normalize());
     }
 
     public static Map<String, BindingMembers> schemaForPath(Path path, View view) {
         return view == null ? Map.of() : view.lookup();
     }
 
-    private static void installActive(ScriptType type, View view) {
-        if (type == null || view == null) return;
-        register(type, view.schemas());
-        GLOBALS.put(type, view.globals());
+    private void ensureOpen() {
+        if (closed) throw new IllegalStateException("ScriptBindingSchema owner is closed");
     }
 
     public static BindingMembers fromSurface(ApiSurfaceSnapshot snapshot, ApiSymbolId typeId) {

@@ -88,11 +88,11 @@ class NekoModulePipelineCacheSessionTest {
     void sessionsKeepExplicitSchemaViewsAndChildrenCannotCreateOwners() throws Exception {
         TestPlatformInit.ensureInitialized(gameDir);
         NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
-        ScriptBindingSchema.register(ScriptType.SERVER,
-                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))));
         NekoModulePipelineCache owner = newCache(paths);
+        owner.bindingSchema().installActive(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))), Set.of());
         NekoModulePipelineCache unbound = owner.openSession();
-        NekoModulePipelineCache active = owner.openSession(ScriptBindingSchema.activeView(ScriptType.SERVER));
+        NekoModulePipelineCache active = owner.openSession(owner.bindingSchema().activeView(ScriptType.SERVER));
         AtomicInteger diagnostics = new AtomicInteger();
         ScriptBindingSchema.View candidateView = new ScriptBindingSchema.View(
                 Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))),

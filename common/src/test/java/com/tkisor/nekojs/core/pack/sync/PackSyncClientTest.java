@@ -74,8 +74,9 @@ class PackSyncClientTest {
     @AfterEach
     void cleanup() {
         ClassFilter.INSTANCE.updateConfig(SandboxConfig.defaultConfig());
-        PackSyncClient.installClientReloadHook(null);
+        PackSyncClient.installClientReloadHook(() -> true);
         PackSyncClient.handleDisconnect(runtimeRoot);
+        PackSyncClient.installClientReloadHook(null);
         runtimeRoot.closeSilently();
     }
 
@@ -157,6 +158,33 @@ class PackSyncClientTest {
         Path remoteFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-missing-reload-hook.test"))
                 .resolve(SyncedPack.encodeSyncId(syncId)).resolve("client_scripts/hud.js");
         assertNull(runtimeTrust.approvalFor(remoteFile), "a rejected bundle must not retain remote approval");
+    }
+
+    @Test
+    void disconnectWithActiveClientManagerRequiresReloadAndRestoresConnectionState() {
+        config("all", false);
+        runtimeRoot.createScriptManager(com.tkisor.nekojs.api.ScriptType.CLIENT);
+        String address = "srv-disconnect-reload-hook.test";
+        String syncId = "packs:disconnect-reload-hook";
+        String manifest = signed(syncId, "GLOBAL", "key-disconnect-reload-hook",
+                "client_scripts/hud.js", "module.exports = 'disconnect';\n");
+        SyncedPack pack = pack(syncId, "GLOBAL", manifest,
+                "client_scripts/hud.js", "module.exports = 'disconnect';\n");
+        PackSyncClient.installClientReloadHook(() -> true);
+        PackSyncClient.handleHashList(runtimeRoot, address, hashes(pack));
+        PackSyncTrustStore.get().trustServer(address);
+        assertFalse(PackSyncClient.handleBundle(runtimeRoot, List.of(pack)).shouldDisconnect());
+
+        PackSyncClient.installClientReloadHook(null);
+        PackSyncClient.Outcome outcome = PackSyncClient.handleDisconnect(runtimeRoot);
+
+        assertTrue(outcome.shouldDisconnect(), "disconnect must report a missing active-runtime reload hook");
+        assertTrue(outcome.disconnect().contains("CLIENT script reload failed"));
+        assertEquals(1, ScriptPackRegistry.get().serverCachePacks().size(),
+                "failed disconnect cleanup must restore the active registry");
+        assertNotNull(runtimeTrust.approvalFor(ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor(address))
+                .resolve(SyncedPack.encodeSyncId(syncId)).resolve("client_scripts/hud.js")),
+                "failed disconnect cleanup must restore runtime trust");
     }
 
     @Test

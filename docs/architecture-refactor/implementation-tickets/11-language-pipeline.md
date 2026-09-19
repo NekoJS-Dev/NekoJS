@@ -633,3 +633,39 @@ git diff --check
 The targeted cache/package/rollback/missing-hook tests passed before the required build gates.
 Golden files were not updated. No real Minecraft client/server, loader runtime or network session
 smoke was executed.
+
+## Review-round-14 addendum (2026-09-19)
+
+本轮针对最终 boundary review findings 继续 fix-forward；ticket 11 的实现状态保持 closed。
+没有脚本作者迁移，也没有更新 golden。
+
+- **Script path classification and identity：fixed.** `ScriptPathClassifier` is package-private and
+  no longer scans arbitrary path segments. It accepts flat roots plus the explicit global/world/
+  server-cache pack layouts, rejects shared `node_modules` and malformed package nesting, and keeps
+  full pack prefixes in authored diagnostics and module identity.
+- **Schema ownership：fixed.** Active and candidate `ScriptBindingSchema` views are owned by the
+  runtime-root preparation cache. Candidate transactions use the generation session token, and
+  closing one root removes its views without touching another same-type root. Validators and
+  `ScriptEnvironmentFactory` consume explicit views; the old public static install/register/publish
+  implementation surface is gone.
+- **Commit recovery：fixed.** Pending listener activation records its token and supports rollback.
+  Commit catches `Throwable`, restores schema, active diagnostics and module views, and only clears
+  the old event route after candidate activation has passed. Bridge clearing is followed by a fresh
+  activation of the validated candidate listeners on the clean route.
+- **Diagnostics API and PackSync disconnect：fixed.** Context-aware `ScriptErrorReporter` methods
+  remain internal. Disconnect cleanup requires a successful CLIENT reload hook whenever a CLIENT
+  manager/runtime is active; failed cleanup restores the registry, runtime authorization and
+  connection state. Early cleanup without an active runtime remains hook-free.
+
+### Review-round-14 evidence boundary
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.api.event.ManagedBindingSchemaTest --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.core.module.ScriptTypeScopedCacheClearTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest --tests com.tkisor.nekojs.core.pack.sync.PackSyncClientTest --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidatorTest --tests com.tkisor.nekojs.core.compiler.EventCallbackSourceValidatorTest --tests com.tkisor.nekojs.core.compiler.ManagedEventCallbackSourceValidatorTest --tests com.tkisor.nekojs.script.EventGroupSchemaWiringTest --tests com.tkisor.nekojs.script.ManagedApiEnvironmentTest --tests com.tkisor.nekojs.script.ScriptReloadGenerationTest --tests com.tkisor.nekojs.script.ScriptReloadRegressionTest
+./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+The two targeted test groups passed. Final build and whitespace results are reported from the
+verification run. Real Minecraft, loader runtime and network session smoke remain unexecuted and
+are not claimed as evidence. Golden files remain unchanged.

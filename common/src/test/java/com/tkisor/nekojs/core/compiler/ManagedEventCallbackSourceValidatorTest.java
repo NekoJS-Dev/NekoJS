@@ -25,10 +25,11 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ManagedEventCallbackSourceValidatorTest {
+    private ScriptBindingSchema schema;
 
     @BeforeEach
     void setUp() {
-        ScriptBindingSchema.clearAll();
+        schema = new ScriptBindingSchema();
         ManagedCallbackSchemaRegistry.clear();
         TestPlatformInit.ensureInitialized();
     }
@@ -84,13 +85,14 @@ class ManagedEventCallbackSourceValidatorTest {
 
         ScriptBindingSchema.BindingMembers eventsMembers = ScriptBindingSchema.fromSurface(
                 snapshot, ApiSymbolId.parse("global:Events"));
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of("Events", eventsMembers));
+        schema.installActive(ScriptType.SERVER, Map.of("Events", eventsMembers), Set.of());
 
         ScriptType type = ScriptType.SERVER;
         Path filePath = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(type).resolve("test.js");
         String source = "Events.onMessage((event) => { event.message })";
 
-        assertDoesNotThrow(() -> EventCallbackSourceValidator.validate(filePath, source));
+        assertDoesNotThrow(() -> EventCallbackSourceValidator.validate(filePath, source,
+                schema.activeView(ScriptType.SERVER)));
     }
 
     @Test
@@ -100,13 +102,14 @@ class ManagedEventCallbackSourceValidatorTest {
 
         ScriptBindingSchema.BindingMembers eventsMembers = ScriptBindingSchema.fromSurface(
                 snapshot, ApiSymbolId.parse("global:Events"));
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of("Events", eventsMembers));
+        schema.installActive(ScriptType.SERVER, Map.of("Events", eventsMembers), Set.of());
 
         ScriptType type = ScriptType.SERVER;
         Path filePath = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(type).resolve("test.js");
         String source = "Events.onMessage((event) => { event.internalHelper })";
 
-        assertDoesNotThrow(() -> EventCallbackSourceValidator.validate(filePath, source));
+        assertDoesNotThrow(() -> EventCallbackSourceValidator.validate(filePath, source,
+                schema.activeView(ScriptType.SERVER)));
     }
 
     @Test

@@ -263,6 +263,41 @@ production bundle 与 active hash-list transition 必须有成功的 CLIENT relo
 git diff --check
 ```
 
+## Review-round-14 final boundary closure
+
+本轮没有脚本作者迁移，也没有更新 golden。Java 内部边界有以下收口：
+
+- `ScriptPathClassifier` 现在是 package-private implementation；它只识别平铺
+  `root/<type>_scripts` 与明确的 `packs/<id>`, `nekojs_packs/<id>`、
+  `server_packs/<bucket>/<id>` 布局。`node_modules` 或 malformed package path 不再因为
+  偶然包含 `server_scripts` 而归类；diagnostics/source-map/cache 共用该事实。
+- `ScriptBindingSchema` 不再由进程级 static schema/global maps 持有。它由
+  `NekoModulePipelineCache` root owner 绑定，candidate 使用 session token；每个 root close
+  同时清理 active/candidate views，同类型的独立 roots 不互相覆盖。validators、environment
+  factory 和 pipeline cache 均使用显式 View。
+- `ScriptErrorReporter` 的 Context-aware bridge 是 internal/package-private；没有新增 public
+  Context API。candidate commit 的 listener/schema/error/module-view 路径捕获 `Throwable`，
+  对已激活的 pending listener 执行撤销，失败保持 active generation。
+- authored diagnostics 保留 package 前缀（`packs/<id>/`, `nekojs_packs/<id>/`,
+  `server_packs/<bucket>/<id>/`）；只有真实 script-root segment 才做 type normalization，
+  不同 pack 的同名文件不会合并身份。
+- PackSync disconnect 在存在 CLIENT manager/runtime 时要求 reload hook 成功；hook 缺失或返回
+  false 会恢复 registry、trust/authorization 与 connection state。完全没有 active runtime 的
+  早期清理仍允许无 hook 完成。
+
+本轮 evidence 命令：
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.api.event.ManagedBindingSchemaTest --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.core.module.ScriptTypeScopedCacheClearTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest --tests com.tkisor.nekojs.core.pack.sync.PackSyncClientTest --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.compiler.GlobalBindingMemberValidatorTest --tests com.tkisor.nekojs.core.compiler.EventCallbackSourceValidatorTest --tests com.tkisor.nekojs.core.compiler.ManagedEventCallbackSourceValidatorTest --tests com.tkisor.nekojs.script.EventGroupSchemaWiringTest --tests com.tkisor.nekojs.script.ManagedApiEnvironmentTest --tests com.tkisor.nekojs.script.ScriptReloadGenerationTest --tests com.tkisor.nekojs.script.ScriptReloadRegressionTest
+./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+The targeted tests above passed. The required full gates and whitespace check are the final
+verification for this change. No real Minecraft client/server, loader runtime, or network session
+smoke was executed. Golden files were not updated.
+
 以上命令均 PASS；平台编译保留既有 deprecation、this-escape 和 Gson `InlineMe` classfile warnings，未更新
 golden。真实 Minecraft client/server、loader runtime、network session smoke 本轮未执行，不从 JUnit 或平台
 编译推断通过。

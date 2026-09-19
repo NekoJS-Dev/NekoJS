@@ -5,7 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
+import com.tkisor.nekojs.core.fs.ScriptPathLayout;
 
 import java.io.IOException;
 import java.net.URI;
@@ -333,7 +333,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     }
 
     private boolean isRootRelative(String path) {
-        return ScriptPathClassifier.fromPath(root.getFileSystem().getPath(path)) != null;
+        return ScriptPathLayout.typeOf(root.getFileSystem().getPath(path)) != null;
     }
 
     private ScriptType scriptTypeOf(String path) {
@@ -343,7 +343,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
             if (!parsed.isAbsolute()) {
                 parsed = root.resolve(parsed);
             }
-            return ScriptPathClassifier.fromPath(parsed);
+            return ScriptPathLayout.typeOf(parsed);
         } catch (Exception ignored) {
             return null;
         }

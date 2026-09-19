@@ -119,10 +119,11 @@ class EventCallbackSourceValidatorTest {
     }
 
     private final List<String> reported = new ArrayList<>();
+    private ScriptBindingSchema schema;
 
     @BeforeEach
     void setUp() {
-        ScriptBindingSchema.clearAll();
+        schema = new ScriptBindingSchema();
         ManagedCallbackSchemaRegistry.clear();
         TestPlatformInit.ensureInitialized();
         ScriptErrorReporter.set((type, kind, throwable) ->
@@ -138,27 +139,35 @@ class EventCallbackSourceValidatorTest {
         ScriptErrorReporter.set(ScriptErrorReporter.Reporter.NOOP);
     }
 
-    private static void registerBindingGroup(String group) {
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
-                group, new ScriptBindingSchema.BindingMembers(Set.of("started"))));
+    private void registerBindingGroup(String group) {
+        schema.installActive(ScriptType.SERVER, Map.of(
+                group, new ScriptBindingSchema.BindingMembers(Set.of("started"))), Set.of());
     }
 
     /** 非事件回调（builder）路径：valueClasses 带绑定类，形参类型从方法签名推导。 */
-    private static void registerRegistryBinding() {
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
+    private void registerRegistryBinding() {
+        schema.installActive(ScriptType.SERVER, Map.of(
                 "DynamicRegistry", new ScriptBindingSchema.BindingMembers(
-                        Set.of("item", "soundEvent", "opaque"), Set.of(RegistryLikeBinding.class))));
+                        Set.of("item", "soundEvent", "opaque"), Set.of(RegistryLikeBinding.class))), Set.of());
     }
 
     private static Path serverScript(String name) {
         return com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve(name + ".js");
     }
 
+    private void validate(Path file, String source) {
+        EventCallbackSourceValidator.validate(file, source, schema.activeView(ScriptType.SERVER));
+    }
+
+    private void validateGlobal(Path file, String source) {
+        GlobalBindingMemberValidator.validate(file, source, schema.activeView(ScriptType.SERVER));
+    }
+
     @Test
     void reflectionPathAllowsKnownGetterAndProperty() {
         registerBindingGroup("TestEvents");
 
-        EventCallbackSourceValidator.validate(serverScript("ok"),
+        validate(serverScript("ok"),
                 "TestEvents.started((e) => { e.getServer(); e.server })");
 
         assertTrue(reported.isEmpty(), "known members must not be reported: " + reported);
@@ -168,7 +177,7 @@ class EventCallbackSourceValidatorTest {
     void reflectionPathRejectsUnknownMemberWithSuggestion() {
         registerBindingGroup("TestEvents");
 
-        EventCallbackSourceValidator.validate(serverScript("typo"),
+        validate(serverScript("typo"),
                 "TestEvents.started((e) => { e.getServeer() })");
 
         assertEquals(1, reported.size(), "typo must be reported exactly once");
@@ -183,7 +192,7 @@ class EventCallbackSourceValidatorTest {
         registerBindingGroup("ContractEvents");
 
         // message/username 在契约 payload 中但无对应事件类 → 契约即权威，放行
-        EventCallbackSourceValidator.validate(serverScript("contract"),
+        validate(serverScript("contract"),
                 "ContractEvents.chat((e) => { e.message; e.username })");
 
         assertTrue(reported.isEmpty(), "contract payload fields must pass: " + reported);
@@ -199,7 +208,7 @@ class EventCallbackSourceValidatorTest {
         registerBindingGroup("ContractEvents");
 
         // server 来自契约；getServer 来自反射。并集检查两者都放行。
-        EventCallbackSourceValidator.validate(serverScript("union"),
+        validate(serverScript("union"),
                 "ContractEvents.started((e) => { e.server; e.getServer() })");
 
         assertTrue(reported.isEmpty(), "union of contract+reflection must pass: " + reported);
@@ -211,7 +220,7 @@ class EventCallbackSourceValidatorTest {
                 contractEvent("ContractEvents", "started", "server")));
         registerBindingGroup("ContractEvents");
 
-        EventCallbackSourceValidator.validate(serverScript("unknown"),
+        validate(serverScript("unknown"),
                 "ContractEvents.started((e) => { e.notAMember })");
 
         assertEquals(1, reported.size());
@@ -222,7 +231,7 @@ class EventCallbackSourceValidatorTest {
     void aliasRemapChecksThroughLocalVariable() {
         registerBindingGroup("TestEvents");
 
-        EventCallbackSourceValidator.validate(serverScript("alias"),
+        validate(serverScript("alias"),
                 "TestEvents.started((e) => { const x = e; x.getServeer() })");
 
         assertEquals(1, reported.size(), "alias member access must be checked: " + reported);
@@ -233,7 +242,7 @@ class EventCallbackSourceValidatorTest {
     void aliasToKnownMemberPasses() {
         registerBindingGroup("TestEvents");
 
-        EventCallbackSourceValidator.validate(serverScript("alias-ok"),
+        validate(serverScript("alias-ok"),
                 "TestEvents.started((e) => { const x = e; x.getServer() })");
 
         assertTrue(reported.isEmpty(), "alias to known member must pass: " + reported);
@@ -249,7 +258,7 @@ class EventCallbackSourceValidatorTest {
     void builderCallbackParamTypedFromBindingSignature() {
         registerRegistryBinding();
 
-        EventCallbackSourceValidator.validate(serverScript("builder-ok"),
+        validate(serverScript("builder-ok"),
                 "DynamicRegistry.item('mymod:cool_gem', (b) => { b.maxStackSize(64); b.rarity('epic') })");
 
         assertTrue(reported.isEmpty(), "builder callback members must pass: " + reported);
@@ -259,7 +268,7 @@ class EventCallbackSourceValidatorTest {
     void builderCallbackTypoReportedAgainstBuilderType() {
         registerRegistryBinding();
 
-        EventCallbackSourceValidator.validate(serverScript("builder-typo"),
+        validate(serverScript("builder-typo"),
                 "DynamicRegistry.soundEvent('mymod:ding', (b) => { b.fixedRang(16) })");
 
         assertEquals(1, reported.size(), "builder typo must be reported exactly once: " + reported);
@@ -274,7 +283,7 @@ class EventCallbackSourceValidatorTest {
     void builderCallbackWithOpaqueSignatureSkipped() {
         registerRegistryBinding();
 
-        EventCallbackSourceValidator.validate(serverScript("builder-opaque"),
+        validate(serverScript("builder-opaque"),
                 "DynamicRegistry.opaque('mymod:x', (b) => { b.anythingAtAll() })");
 
         assertTrue(reported.isEmpty(), "unresolvable callback param must not be reported: " + reported);
@@ -286,7 +295,7 @@ class EventCallbackSourceValidatorTest {
         registerBindingGroup("TestEvents");
         registerRegistryBinding();
 
-        EventCallbackSourceValidator.validate(serverScript("nested"),
+        validate(serverScript("nested"),
                 "TestEvents.started((e) => { e.getServer(); DynamicRegistry.item('mymod:x', (b) => { b.maxStackSize(8) }) })");
 
         assertTrue(reported.isEmpty(), "nested builder callback inside event callback must pass: " + reported);
@@ -299,10 +308,10 @@ class EventCallbackSourceValidatorTest {
         // ValParser 无法完整解析的语法（未闭合括号/孤立分号/裸操作符）：
         // 不得抛异常，也不得死循环（parseProgram 有未消费前进保护）。
         assertTimeoutPreemptively(Duration.ofSeconds(5), () ->
-                EventCallbackSourceValidator.validate(serverScript("weird"),
+                validate(serverScript("weird"),
                         "TestEvents.started((e) => { ; ; @#$ { ( ( }"));
         assertTimeoutPreemptively(Duration.ofSeconds(5), () ->
-                GlobalBindingMemberValidator.validate(serverScript("weird"),
+                validateGlobal(serverScript("weird"),
                         "TestEvents.started((e) => { e.getServer( ; }"));
     }
 
@@ -323,7 +332,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void quotedBracketKnownMethodPasses() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("br-ok"),
+        validate(serverScript("br-ok"),
                 "TestEvents.started((e) => { e['getServer']() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -331,7 +340,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void quotedBracketTypoReportedWithSuggestion() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("br-typo"),
+        validate(serverScript("br-typo"),
                 "TestEvents.started((e) => { e['getServeer']() })");
         assertEquals(1, reported.size());
         assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
@@ -341,7 +350,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void doubleQuotedBracketPropertyPasses() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("br-prop"),
+        validate(serverScript("br-prop"),
                 "TestEvents.started((e) => { e[\"server\"] })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -349,7 +358,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void constStringComputedKeyChecked() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("ck-ok"),
+        validate(serverScript("ck-ok"),
                 "TestEvents.started((e) => { const key = 'getServer'; e[key]() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -357,7 +366,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void constStringComputedKeyTypoReported() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("ck-typo"),
+        validate(serverScript("ck-typo"),
                 "TestEvents.started((e) => { const key = 'getServeer'; e[key]() })");
         assertEquals(1, reported.size());
         assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
@@ -367,7 +376,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void runtimeDynamicKeyNotReported() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("dyn"),
+        validate(serverScript("dyn"),
                 "TestEvents.started((e) => { e[keyFromNetwork]() })");
         assertTrue(reported.isEmpty(), "runtime dynamic key must not be diagnosed: " + reported);
     }
@@ -375,7 +384,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void payloadAliasWithConstKey() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("alias-key"),
+        validate(serverScript("alias-key"),
                 "TestEvents.started((e) => { const x = e; const key = 'getServer'; x[key]() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -384,7 +393,7 @@ class EventCallbackSourceValidatorTest {
     void letVarKeyNotPropagatedAsConstant() {
         registerBindingGroup("TestEvents");
         // let key 可变：不做常量传播，不诊断（也不误报）
-        EventCallbackSourceValidator.validate(serverScript("let-key"),
+        validate(serverScript("let-key"),
                 "TestEvents.started((e) => { let key = 'getServeer'; e[key]() })");
         assertTrue(reported.isEmpty(), "let key must not be treated as constant: " + reported);
     }
@@ -392,7 +401,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void blockShadowingDoesNotLeakConstKey() {
         registerBindingGroup("TestEvents");
-        EventCallbackSourceValidator.validate(serverScript("shadow"),
+        validate(serverScript("shadow"),
                 "TestEvents.started((e) => { const key = 'getServer'; { const key = 'getServeer'; e[key]() } })");
         assertEquals(1, reported.size(), "shadowed key must be used in inner block");
     }
@@ -403,14 +412,14 @@ class EventCallbackSourceValidatorTest {
         EventGroup group = EventGroup.of("ChainedEvents");
         group.server("started", ChainedEvent.class);
         EventSchemaRegistry.registerGroup(group);
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
-                "ChainedEvents", new ScriptBindingSchema.BindingMembers(Set.of("started"))));
+        schema.installActive(ScriptType.SERVER, Map.of(
+                "ChainedEvents", new ScriptBindingSchema.BindingMembers(Set.of("started"))), Set.of());
     }
 
     @Test
     void chainedMethodReturnTypePropagates() {
         registerChainedGroup();
-        EventCallbackSourceValidator.validate(serverScript("chain-ok"),
+        validate(serverScript("chain-ok"),
                 "ChainedEvents.started((e) => { e.getPlayer().getServer() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -418,7 +427,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void chainedSecondHopTypoReported() {
         registerChainedGroup();
-        EventCallbackSourceValidator.validate(serverScript("chain-typo"),
+        validate(serverScript("chain-typo"),
                 "ChainedEvents.started((e) => { e.getPlayer().getServeer() })");
         assertEquals(1, reported.size());
         assertTrue(reported.getFirst().contains("getServeer"), reported.getFirst());
@@ -428,7 +437,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void chainedGetterPropertyPropagates() {
         registerChainedGroup();
-        EventCallbackSourceValidator.validate(serverScript("chain-prop"),
+        validate(serverScript("chain-prop"),
                 "ChainedEvents.started((e) => { e.player.getServer() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -436,7 +445,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void chainedPublicFieldPropagates() {
         registerChainedGroup();
-        EventCallbackSourceValidator.validate(serverScript("chain-field"),
+        validate(serverScript("chain-field"),
                 "ChainedEvents.started((e) => { e.directPlayer.getServer() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -445,7 +454,7 @@ class EventCallbackSourceValidatorTest {
     void overloadedCallUnionAcceptsMemberOnAnyCandidate() {
         registerChainedGroup();
         // find(String) 与 find(int) 返回类型相同（PlayerJS），getServer 都支持
-        EventCallbackSourceValidator.validate(serverScript("chain-overload"),
+        validate(serverScript("chain-overload"),
                 "ChainedEvents.started((e) => { e.find('x').getServer(); e.find(1).getServer() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -454,7 +463,7 @@ class EventCallbackSourceValidatorTest {
     void varargsCallPropagatesReturnType() {
         registerChainedGroup();
         // varargsJoin(sep, parts...) 返回 String：链式到 String 成员不深入（无对象成员），不误报
-        EventCallbackSourceValidator.validate(serverScript("chain-varargs"),
+        validate(serverScript("chain-varargs"),
                 "ChainedEvents.started((e) => { e.varargsJoin('|').length })");
         assertTrue(reported.isEmpty(), reported.toString());
     }
@@ -462,7 +471,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void chainedCallToMissingMethodOnRootReported() {
         registerChainedGroup();
-        EventCallbackSourceValidator.validate(serverScript("chain-root-typo"),
+        validate(serverScript("chain-root-typo"),
                 "ChainedEvents.started((e) => { e.getPlayr().getServer() })");
         assertEquals(1, reported.size());
         assertTrue(reported.getFirst().contains("getPlayr"), reported.getFirst());
@@ -471,7 +480,7 @@ class EventCallbackSourceValidatorTest {
     @Test
     void optionalChainedComputedKeyChecked() {
         registerChainedGroup();
-        EventCallbackSourceValidator.validate(serverScript("opt-chain"),
+        validate(serverScript("opt-chain"),
                 "ChainedEvents.started((e) => { const k = 'getPlayer'; e?.[k]().getServer() })");
         assertTrue(reported.isEmpty(), reported.toString());
     }

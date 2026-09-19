@@ -8,7 +8,7 @@ import com.tkisor.nekojs.core.compiler.NekoSourceMapBuilder;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
-import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
+import com.tkisor.nekojs.core.fs.ScriptPathLayout;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -52,6 +52,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     private final SourceMapRegistry sourceMaps;
     private final NekoEsmVirtualModuleRegistry virtualModules;
     private final NekoTrustContext trustContext;
+    private final ScriptBindingSchema bindingSchema;
     private final CopyOnWriteArrayList<BiConsumer<Path, String>> preparationObservers = new CopyOnWriteArrayList<>();
     private final NekoModulePipelineCache owner;
     private final CopyOnWriteArrayList<NekoModulePipelineCache> sessions = new CopyOnWriteArrayList<>();
@@ -61,24 +62,27 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                    NekoEsmVirtualModuleRegistry virtualModules,
                                    NekoTrustContext trustContext) {
-        this(pipeline, sourceMaps, virtualModules, trustContext, ScriptBindingSchema.emptyView(), null);
+        this(pipeline, sourceMaps, virtualModules, trustContext, ScriptBindingSchema.emptyView(), null,
+                new ScriptBindingSchema());
     }
 
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                    NekoEsmVirtualModuleRegistry virtualModules,
                                    NekoTrustContext trustContext,
                                    ScriptBindingSchema.View bindingSchemaView) {
-        this(pipeline, sourceMaps, virtualModules, trustContext, bindingSchemaView, null);
+        this(pipeline, sourceMaps, virtualModules, trustContext, bindingSchemaView, null,
+                new ScriptBindingSchema());
     }
 
     private NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                     NekoEsmVirtualModuleRegistry virtualModules,
                                     NekoTrustContext trustContext, ScriptBindingSchema.View bindingSchemaView,
-                                    NekoModulePipelineCache owner) {
+                                    NekoModulePipelineCache owner, ScriptBindingSchema bindingSchema) {
         this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
         this.sourceMaps = Objects.requireNonNull(sourceMaps, "sourceMaps");
         this.virtualModules = Objects.requireNonNull(virtualModules, "virtualModules");
         this.trustContext = Objects.requireNonNull(trustContext, "trustContext");
+        this.bindingSchema = Objects.requireNonNull(bindingSchema, "bindingSchema");
         this.bindingSchemaView = Objects.requireNonNull(bindingSchemaView, "bindingSchemaView");
         this.owner = owner;
     }
@@ -110,7 +114,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                 new NekoEsmVirtualModuleRegistry(root.virtualModules.root().getParent()),
                 root.trustContext,
                 Objects.requireNonNull(bindingSchemaView, "bindingSchemaView"),
-                root);
+                root,
+                root.bindingSchema);
         root.sessions.add(session);
         return session;
     }
@@ -139,6 +144,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
             session.closeSession();
         }
         clearLocal();
+        bindingSchema.close();
     }
 
     @Override
@@ -307,6 +313,11 @@ public final class NekoModulePipelineCache implements AutoCloseable {
 
     public ScriptBindingSchema.View bindingSchemaView() {
         return bindingSchemaView;
+    }
+
+    /** Schema owner shared by this root and its generation sessions. */
+    public ScriptBindingSchema bindingSchema() {
+        return rootOwner().bindingSchema;
     }
 
     SourceMapRegistry sourceMaps() {
@@ -666,6 +677,10 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     private Optional<String> relativePath(Path path) {
+        String authored = ScriptPathLayout.authoredPath(path);
+        if (authored != null && ScriptPathLayout.typeOf(path) != null) {
+            return Optional.of(authored);
+        }
         try {
             return Optional.of(sourceMaps.root().relativize(path).toString().replace('\\', '/'));
         } catch (Exception ignored) { // relative path computation fails → cache miss
@@ -686,7 +701,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
      */
     private ScriptType scriptTypeOf(Path key) {
         try {
-            return ScriptPathClassifier.fromPath(key);
+            return ScriptPathLayout.typeOf(key);
         } catch (Exception ignored) { // 路径解析失败 → 视为共享缓存
             return null;
         }

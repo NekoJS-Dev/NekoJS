@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import com.tkisor.nekojs.core.module.esm.NekoEsmDiagnostic;
 import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
+import com.tkisor.nekojs.core.fs.ScriptPathLayout;
 
 /**
  * 语言模块管线的阶段错误：Preparation / Resolution-Cache / Execution 三个逻辑 Module
@@ -174,7 +175,7 @@ public class NekoModuleError extends IOException {
     }
 
     static String displayPath(Path path) {
-        return path == null ? "<unknown>" : path.toString().replace('\\', '/');
+        return path == null ? "<unknown>" : ScriptPathLayout.authoredPath(path);
     }
 
     static String rootMessage(Throwable throwable) {

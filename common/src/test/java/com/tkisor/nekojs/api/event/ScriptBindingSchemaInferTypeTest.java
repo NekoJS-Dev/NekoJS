@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.core.fs.ScriptPathLayout;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -44,5 +45,27 @@ class ScriptBindingSchemaInferTypeTest {
     void unrelatedPathWithoutScriptsSegmentReturnsNull() {
         assertNull(ScriptBindingSchema.inferType(Path.of("some/random/place/file.js")));
         assertNull(ScriptBindingSchema.inferType(null));
+    }
+
+    @Test
+    void sharedNodeModulesAndMalformedPackLayoutsAreNotScriptRoots() {
+        assertNull(ScriptBindingSchema.inferType(Path.of(
+                "root", "node_modules", "foo", "server_scripts", "bar.js")));
+        assertNull(ScriptBindingSchema.inferType(Path.of(
+                "root", "packs", "id", "nested", "server_scripts", "bar.js")));
+        assertNull(ScriptBindingSchema.inferType(Path.of(
+                "root", "server_packs", "bucket", "id", "nested", "server_scripts", "bar.js")));
+    }
+
+    @Test
+    void serverCachePackLayoutInfersType() {
+        assertEquals(ScriptType.SERVER, ScriptBindingSchema.inferType(Path.of(
+                "root", "server_packs", "bucket", "pack-id", "server_scripts", "entry.js")));
+    }
+
+    @Test
+    void textualTrufflePathKeepsTheScriptRootIdentity() {
+        assertEquals("server_scripts/context-callback.js", ScriptPathLayout.authoredPathText(
+                "truffle:opaque/server_scripts/context-callback.js", Path.of("").getFileSystem()));
     }
 }
