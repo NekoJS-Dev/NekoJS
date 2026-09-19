@@ -35,44 +35,45 @@ import static org.junit.jupiter.api.Assertions.*;
 class ManagedBindingSchemaTest {
 
     private static final ApiSymbolId STABLE_ID = ApiSymbolId.parse("global:Stable");
+    private ScriptBindingSchema schema;
 
     @BeforeEach
     void setUp() {
         TestPlatformInit.ensureInitialized();
-        ScriptBindingSchema.clearAll();
+        schema = new ScriptBindingSchema();
     }
 
     @Test
     void failedCandidateSchemaInstallDoesNotReplaceActiveSchemaOrGlobals() throws Exception {
-        ScriptBindingSchema.register(ScriptType.SERVER,
-                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))));
-        ScriptBindingSchema.registerGlobals(ScriptType.SERVER, Set.of("activeGlobal"));
+        schema.installActive(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))),
+                Set.of("activeGlobal"));
 
         try (Context candidateContext = Context.newBuilder("js").allowAllAccess(true).build()) {
-            ScriptBindingSchema.installCandidate(candidateContext, ScriptType.SERVER,
+            schema.beginCandidate(candidateContext, ScriptType.SERVER,
                     Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))),
                     Set.of("candidateGlobal"));
 
-            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
-            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
-            assertEquals(Set.of("activeGlobal"), ScriptBindingSchema.knownGlobals(ScriptType.SERVER));
+            assertTrue(schema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
+            assertFalse(schema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
+            assertEquals(Set.of("activeGlobal"), schema.activeView(ScriptType.SERVER).knownGlobals());
 
-            ScriptBindingSchema.discardCandidate(candidateContext);
-            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
-            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
-            assertEquals(Set.of("activeGlobal"), ScriptBindingSchema.knownGlobals(ScriptType.SERVER));
+            schema.discardCandidate(candidateContext);
+            assertTrue(schema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
+            assertFalse(schema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
+            assertEquals(Set.of("activeGlobal"), schema.activeView(ScriptType.SERVER).knownGlobals());
         }
     }
 
     @Test
     void candidateValidatorUsesCandidateViewWithoutReplacingActiveView() throws Exception {
-        ScriptBindingSchema.register(ScriptType.SERVER,
-                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("allowed"))));
-        ScriptBindingSchema.registerGlobals(ScriptType.SERVER, Set.of("ActiveBinding"));
+        schema.installActive(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("allowed"))),
+                Set.of("ActiveBinding"));
         AtomicInteger candidateDiagnostics = new AtomicInteger();
 
         try (Context candidateContext = Context.newBuilder("js").allowAllAccess(true).build()) {
-            ScriptBindingSchema.View candidate = ScriptBindingSchema.installCandidate(
+            ScriptBindingSchema.View candidate = schema.beginCandidate(
                     candidateContext, ScriptType.SERVER,
                     Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("allowed"))),
                     Set.of("CandidateBinding"), diagnostic -> candidateDiagnostics.incrementAndGet());
@@ -82,45 +83,67 @@ class ManagedBindingSchemaTest {
 
             assertEquals(1, candidateDiagnostics.get(),
                     "preflight must validate against the candidate schema snapshot");
-            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
-            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
-            ScriptBindingSchema.discardCandidate(candidateContext);
+            assertTrue(schema.lookup(ScriptType.SERVER).containsKey("ActiveBinding"));
+            assertFalse(schema.lookup(ScriptType.SERVER).containsKey("CandidateBinding"));
+            schema.discardCandidate(candidateContext);
         }
     }
 
     @Test
     void lateFailureOfOlderSameTypeCandidateCannotRestoreOverNewActiveSchema() throws Exception {
-        ScriptBindingSchema.register(ScriptType.SERVER,
-                Map.of("InitialBinding", new ScriptBindingSchema.BindingMembers(Set.of("initial"))));
+        schema.installActive(ScriptType.SERVER,
+                Map.of("InitialBinding", new ScriptBindingSchema.BindingMembers(Set.of("initial"))), Set.of());
 
         try (Context firstContext = Context.newBuilder("js").allowAllAccess(true).build();
              Context secondContext = Context.newBuilder("js").allowAllAccess(true).build()) {
-            ScriptBindingSchema.installCandidate(firstContext, ScriptType.SERVER,
+            schema.beginCandidate(firstContext, ScriptType.SERVER,
                     Map.of("FirstBinding", new ScriptBindingSchema.BindingMembers(Set.of("first"))),
                     Set.of("firstGlobal"));
-            ScriptBindingSchema.installCandidate(secondContext, ScriptType.SERVER,
+            schema.beginCandidate(secondContext, ScriptType.SERVER,
                     Map.of("SecondBinding", new ScriptBindingSchema.BindingMembers(Set.of("second"))),
                     Set.of("secondGlobal"));
 
-            ScriptBindingSchema.publishCandidate(firstContext);
-            ScriptBindingSchema.discardCandidate(secondContext);
+            schema.commitCandidate(firstContext);
+            schema.discardCandidate(secondContext);
 
-            assertTrue(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("FirstBinding"));
-            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("InitialBinding"));
-            assertFalse(ScriptBindingSchema.lookup(ScriptType.SERVER).containsKey("SecondBinding"));
-            assertEquals(Set.of("firstGlobal"), ScriptBindingSchema.knownGlobals(ScriptType.SERVER));
+            assertTrue(schema.lookup(ScriptType.SERVER).containsKey("FirstBinding"));
+            assertFalse(schema.lookup(ScriptType.SERVER).containsKey("InitialBinding"));
+            assertFalse(schema.lookup(ScriptType.SERVER).containsKey("SecondBinding"));
+            assertEquals(Set.of("firstGlobal"), schema.activeView(ScriptType.SERVER).knownGlobals());
         }
     }
 
     @Test
     void missingContextViewDoesNotFallBackToStaticActiveSchema() throws Exception {
-        ScriptBindingSchema.register(ScriptType.SERVER,
-                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))));
+        schema.installActive(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))), Set.of());
 
         try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
-            assertTrue(ScriptBindingSchema.view(context, ScriptType.SERVER).lookup().isEmpty());
+            assertTrue(schema.view(context, ScriptType.SERVER).lookup().isEmpty());
             assertTrue(ScriptBindingSchema.schemaForPath(Path.of("server_scripts/missing.js"), null).isEmpty());
         }
+    }
+
+    @Test
+    void sameTypeRootsKeepIndependentActiveAndCandidateViews() {
+        ScriptBindingSchema other = new ScriptBindingSchema();
+        schema.installActive(ScriptType.SERVER,
+                Map.of("FirstRoot", new ScriptBindingSchema.BindingMembers(Set.of("first"))), Set.of());
+        other.installActive(ScriptType.SERVER,
+                Map.of("SecondRoot", new ScriptBindingSchema.BindingMembers(Set.of("second"))), Set.of());
+        Object firstToken = new Object();
+        Object secondToken = new Object();
+        schema.beginCandidate(firstToken, ScriptType.SERVER,
+                Map.of("FirstCandidate", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))), Set.of());
+        other.beginCandidate(secondToken, ScriptType.SERVER,
+                Map.of("SecondCandidate", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))), Set.of());
+
+        schema.commitCandidate(firstToken);
+        schema.close();
+
+        assertTrue(other.lookup(ScriptType.SERVER).containsKey("SecondRoot"));
+        assertEquals("candidate", other.view(secondToken, ScriptType.SERVER)
+                .lookup().get("SecondCandidate").memberNames().iterator().next());
     }
 
     private static EnvironmentKey serverEnv() {

@@ -8,7 +8,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.ScriptPathClassifier;
+import com.tkisor.nekojs.core.fs.ScriptPathLayout;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
 import graal.graalvm.polyglot.SourceSection;
@@ -102,6 +102,11 @@ public final class DefaultErrorTracker implements ErrorTracker {
     public void activateModuleViews(ScriptType type, NekoModulePipelineCache moduleSession) {
         if (type == null || moduleSession == null) return;
         activeModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+    }
+
+    /** Restore the default view when a failed commit had no previous active module session. */
+    public void removeActiveModuleViews(ScriptType type) {
+        if (type != null) activeModuleViews.remove(type);
     }
 
     /** Publish an active view and bind it to the Context which owns that generation. */
@@ -535,6 +540,26 @@ public final class DefaultErrorTracker implements ErrorTracker {
             return null;
         }
         String normalized = pathText.replace('\\', '/');
+        String textualAuthored = ScriptPathLayout.authoredPathText(
+                normalized, paths.root().getFileSystem());
+        if (textualAuthored != null) return textualAuthored;
+        for (ScriptType type : ScriptType.all()) {
+            String marker = "/" + type.scriptsDirectoryName() + "/";
+            int markerStart = normalized.indexOf(marker);
+            if (markerStart < 0) continue;
+            String prefix = normalized.substring(0, markerStart);
+            if (prefix.contains("/node_modules/")) continue;
+            int packStart = Math.max(prefix.lastIndexOf("/packs/"),
+                    Math.max(prefix.lastIndexOf("/nekojs_packs/"), prefix.lastIndexOf("/server_packs/")));
+            if (packStart >= 0) {
+                String authored = normalized.substring(packStart + 1);
+                if (ScriptPathLayout.authoredPathText(authored, paths.root().getFileSystem()) != null) {
+                    return authored;
+                }
+                continue;
+            }
+            return normalized.substring(markerStart + 1);
+        }
         Path providerPath;
         try {
             providerPath = paths.root().getFileSystem().getPath(normalized);
@@ -542,29 +567,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
             providerPath = null;
         }
         if (providerPath != null) {
-            for (int index = 0; index < providerPath.getNameCount(); index++) {
-                Path segment = providerPath.getName(index);
-                if (ScriptPathClassifier.fromSegment(segment) != null) {
-                    String marker = segment.toString().replace('\\', '/');
-                    int start = normalized.indexOf(marker);
-                    if (start >= 0) return normalized.substring(start);
-                }
-            }
-        }
-        // Display strings such as truffle:... are not always parseable as provider paths; inspect
-        // their textual segments with the same provider-aware classifier as the path branch.
-        for (int start = 0; start < normalized.length(); ) {
-            int slash = normalized.indexOf('/', start);
-            if (slash < 0) break;
-            String segment = normalized.substring(start, slash);
-            try {
-                if (ScriptPathClassifier.fromSegment(paths.root().getFileSystem().getPath(segment)) != null) {
-                    return normalized.substring(start);
-                }
-            } catch (RuntimeException ignored) {
-                // URI-like display prefixes are not valid provider path segments.
-            }
-            start = slash + 1;
+            String authored = ScriptPathLayout.authoredPath(providerPath);
+            if (ScriptPathLayout.typeOf(providerPath) != null) return authored;
         }
         return null;
     }

@@ -366,17 +366,19 @@ public final class PackSyncClient {
 
     /* ================= 断线 ================= */
 
-    /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有激活包时重载客户端脚本。 */
-    public static synchronized void handleDisconnect(NekoRuntimeRoot runtimeRoot) {
+    /** 断线/离开世界：卸载 SERVER_CACHE 包（缓存文件保留）；有 active CLIENT runtime 时必须重载。 */
+    public static synchronized Outcome handleDisconnect(NekoRuntimeRoot runtimeRoot) {
         ActiveState previousState = activeState();
         pendingRollbackState = null;
         expectedHashes = Map.of();
         activeAddress = null;
         activeBucket = null;
-        Outcome outcome = deactivateAndReload("disconnected from server", previousState, runtimeRoot, false);
+        boolean reloadRequired = hasActiveClientRuntime(runtimeRoot);
+        Outcome outcome = deactivateAndReload("disconnected from server", previousState, runtimeRoot, reloadRequired);
         if (outcome.shouldDisconnect()) {
             restoreConnectionState(previousState);
         }
+        return outcome;
     }
 
     /* ================= 内部 ================= */
@@ -558,6 +560,11 @@ public final class PackSyncClient {
             NekoJS.LOGGER.error("CLIENT script reload after pack sync failed", e);
             return false;
         }
+    }
+
+    private static boolean hasActiveClientRuntime(NekoRuntimeRoot runtimeRoot) {
+        return runtimeRoot != null
+                && runtimeRoot.scriptManagerOrNull(com.tkisor.nekojs.api.ScriptType.CLIENT) != null;
     }
 
     private static Path activeRemoteRoot() {

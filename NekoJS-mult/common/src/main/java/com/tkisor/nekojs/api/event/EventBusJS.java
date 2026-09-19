@@ -418,6 +418,8 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         private Object resolvedKey;
         /** 是否已预备：true 时 {@link #activate()} 不再做任何 Value → Java key 转换。 */
         private boolean prepared;
+        /** The token is retained so a failed commit can remove a partially activated listener. */
+        private EventListenerToken<?> activatedToken;
 
         PendingListener(EventBusJS<?, ?> owner, byte priority, Value listener, Value key,
                         ScriptType type, String scriptId) {
@@ -502,6 +504,11 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         public void activate() {
             owner.activatePending(this);
         }
+
+        /** Roll back this listener if commit activated it before a later step failed. */
+        public void deactivate() {
+            owner.deactivatePending(this);
+        }
     }
 
     /**
@@ -528,41 +535,65 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
         Value listener = pending.listener;
         boolean cancellable = canCancel();
         boolean dispatch = canDispatch();
-        EventListenerToken<EVENT> token;
-        if (dispatch) {
-            var dispatchBus = (DispatchEventBus<EVENT, KEY>) this.bus;
-            // 已预备：用候选期解析好的 key（commit 点不可再抛，审查 A1）；未预备（非候选注册
-            // 路径）：保持原位转换，行为与改造前一致。
-            KEY dispatchKey = pending.prepared
-                    ? (KEY) pending.resolvedKey
-                    : (pending.key == null ? null : pending.key.as(dispatchBus.dispatchKey().keyType()));
-            if (cancellable) {
-                token = dispatchKey != null
-                        ? self.registerDispatchCancellable(priority, listener, dispatchKey)
-                        : self.registerCancellable(priority, listener);
+        EventListenerToken<EVENT> token = null;
+        try {
+            if (dispatch) {
+                var dispatchBus = (DispatchEventBus<EVENT, KEY>) this.bus;
+                // 已预备：用候选期解析好的 key（commit 点不可再抛，审查 A1）；未预备（非候选注册
+                // 路径）：保持原位转换，行为与改造前一致。
+                KEY dispatchKey = pending.prepared
+                        ? (KEY) pending.resolvedKey
+                        : (pending.key == null ? null : pending.key.as(dispatchBus.dispatchKey().keyType()));
+                if (cancellable) {
+                    token = dispatchKey != null
+                            ? self.registerDispatchCancellable(priority, listener, dispatchKey)
+                            : self.registerCancellable(priority, listener);
+                } else {
+                    token = dispatchKey != null
+                            ? self.registerDispatch(priority, listener, dispatchKey)
+                            : self.register(priority, listener);
+                }
+            } else if (cancellable) {
+                token = self.registerCancellable(priority, listener);
             } else {
-                token = dispatchKey != null
-                        ? self.registerDispatch(priority, listener, dispatchKey)
-                        : self.register(priority, listener);
+                token = self.register(priority, listener);
             }
-        } else if (cancellable) {
-            token = self.registerCancellable(priority, listener);
-        } else {
-            token = self.register(priority, listener);
+            EventListenerToken<EVENT> activated = token;
+            // 注册整体放在 compute 内，避免清理与镜像添加之间产生孤儿 token。
+            this.tokensByType.compute(pending.type, (ignored, tokens) -> {
+                List<ScriptEventListenerToken<EVENT>> list =
+                        tokens == null ? new CopyOnWriteArrayList<>() : tokens;
+                list.add(new ScriptEventListenerToken<>(activated, pending.scriptId));
+                return list;
+            });
+            pending.activatedToken = token;
+        } catch (Throwable failure) {
+            if (token != null) {
+                try {
+                    self.bus.unregister(token);
+                } catch (Throwable cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+            }
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error errorFailure) throw errorFailure;
+            throw new IllegalStateException("Failed to activate pending listener", failure);
         }
-        // Inner list is CopyOnWriteArrayList: read-heavy (post iterates tokens via the
-        // compiled bus) / write-rare (register on script load, clear on reload). Matches
-        // the EventBusBase pattern and survives concurrent reload+post without CME.
-        // 注册整体放在 compute 内（与 clearTokens 的 compute 互斥于同一 bin 锁）：若沿用
-        // computeIfAbsent(...).add(...) 的两步写，computeIfAbsent 返回列表后、add 执行前，
-        // 并发 clearTokens 可能已把该列表整体替换/移除，add 落在孤儿列表上 → 镜像丢条目、
-        // 底层监听器泄漏。lambda 内只做列表添加，不产生 map/bus 副作用。
-        this.tokensByType.compute(pending.type, (ignored, tokens) -> {
-            List<ScriptEventListenerToken<EVENT>> list =
-                    tokens == null ? new CopyOnWriteArrayList<>() : tokens;
-            list.add(new ScriptEventListenerToken<>(token, pending.scriptId));
-            return list;
-        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void deactivatePending(PendingListener pending) {
+        EventListenerToken<?> token = pending.activatedToken;
+        if (token == null) return;
+        try {
+            bus.unregister((EventListenerToken<EVENT>) token);
+        } finally {
+            tokensByType.computeIfPresent(pending.type, (ignored, tokens) -> {
+                tokens.removeIf(entry -> entry.token() == token);
+                return tokens.isEmpty() ? null : tokens;
+            });
+            pending.activatedToken = null;
+        }
     }
 
     private EventListenerToken<EVENT> register(byte priority, Value listener) {

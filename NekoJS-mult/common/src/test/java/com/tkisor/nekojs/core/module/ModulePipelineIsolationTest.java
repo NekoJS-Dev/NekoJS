@@ -306,6 +306,33 @@ class ModulePipelineIsolationTest {
                 "composeRewrittenSourceMap", NekoPreparedModule.class, String.class, List.class).getModifiers()));
     }
 
+    @Test
+    void scriptPathClassifierIsInternalAndDoesNotExposeTheImplementationSurface() throws Exception {
+        Class<?> classifier = Class.forName("com.tkisor.nekojs.core.fs.ScriptPathClassifier");
+        assertTrue(!Modifier.isPublic(classifier.getModifiers()),
+                "path classification implementation must remain package-private");
+        for (String methodName : List.of("fromSegment", "fromPath", "authoredPath")) {
+            for (var method : classifier.getDeclaredMethods()) {
+                if (method.getName().equals(methodName)) {
+                    assertTrue(!Modifier.isPublic(method.getModifiers()),
+                            "path classification method must remain internal: " + method);
+                }
+            }
+        }
+    }
+
+    @Test
+    void contextErrorReporterBridgeRemainsInternal() throws Exception {
+        Class<?> reporter = Class.forName("com.tkisor.nekojs.api.event.ScriptErrorReporter");
+        assertTrue(!Modifier.isPublic(reporter.getDeclaredMethod("recordCallbackError",
+                        Class.forName("graal.graalvm.polyglot.Context"),
+                        com.tkisor.nekojs.api.ScriptType.class, String.class, Throwable.class).getModifiers()));
+        assertTrue(!Modifier.isPublic(reporter.getDeclaredMethod("recordEventError",
+                        Class.forName("graal.graalvm.polyglot.Context"),
+                        com.tkisor.nekojs.api.ScriptType.class,
+                        Class.forName("graal.graalvm.polyglot.PolyglotException")).getModifiers()));
+    }
+
     private static void assertNoZeroArgumentConstructor(Class<?> type) {
         for (java.lang.reflect.Constructor<?> constructor : type.getDeclaredConstructors()) {
             assertTrue(constructor.getParameterCount() != 0,

@@ -28,10 +28,6 @@ public final class EventCallbackSourceValidator {
 
     private EventCallbackSourceValidator() {}
 
-    public static void validate(Path file, String source) {
-        validate(file, source, ScriptBindingSchema.activeView(ScriptBindingSchema.inferType(file)));
-    }
-
     public static void validate(Path file, String source, ScriptBindingSchema.View view) {
         if (file == null || source == null || source.isEmpty()) return;
         Map<String, ScriptBindingSchema.BindingMembers> schema = ScriptBindingSchema.schemaForPath(file, view);

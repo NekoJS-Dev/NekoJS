@@ -162,14 +162,12 @@ public final class ScriptEnvironmentFactory {
                 }
             }
             knownGlobals.addAll(List.of("this", "arguments", "super"));
-            ScriptBindingSchema.View schemaView = ScriptBindingSchema.installCandidate(
-                    context, scriptType, bindingSchema, knownGlobals,
-                    diagnostic -> com.tkisor.nekojs.api.event.ScriptErrorReporter.recordCallbackError(
-                            context, diagnostic.type(), diagnostic.callbackKind(), diagnostic.throwable()));
+            ScriptBindingSchema.View schemaView = moduleSession.bindingSchema().beginCandidate(
+                    moduleSession, scriptType, bindingSchema, knownGlobals, context);
             moduleSession.installBindingSchemaView(schemaView);
             installJavaClassLoadTelemetry(context, scriptType);
         } catch (Throwable failure) {
-            ScriptBindingSchema.discardCandidate(context);
+            moduleSession.bindingSchema().discardCandidate(moduleSession);
             if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
             if (failure instanceof Error errorFailure) throw errorFailure;
             throw new IllegalStateException("Failed to install NekoJS environment bindings", failure);
@@ -178,13 +176,13 @@ public final class ScriptEnvironmentFactory {
 
     /** Publish a successfully installed schema at the active/candidate commit point. */
     public void publishEnvironmentBindings(Context context, NekoModulePipelineCache moduleSession) {
-        ScriptBindingSchema.View view = ScriptBindingSchema.publishCandidate(context);
+        ScriptBindingSchema.View view = moduleSession.bindingSchema().commitCandidate(moduleSession);
         if (view == null) throw new IllegalStateException("No candidate binding schema for Context");
         moduleSession.installBindingSchemaView(view);
     }
 
-    public void discardEnvironmentBindings(Context context) {
-        ScriptBindingSchema.discardCandidate(context);
+    public void discardEnvironmentBindings(Context context, NekoModulePipelineCache moduleSession) {
+        moduleSession.bindingSchema().discardCandidate(moduleSession);
     }
 
     /**
@@ -203,7 +201,7 @@ public final class ScriptEnvironmentFactory {
             return environment;
         } catch (Throwable failure) {
             if (environment != null) {
-                discardEnvironmentBindings(environment.context());
+                discardEnvironmentBindings(environment.context(), moduleSession);
                 closeEnvironment(environment, failure);
             } else {
                 moduleSession.closeSession();

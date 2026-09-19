@@ -45,10 +45,11 @@ class ManagedApiEnvironmentTest {
 
     private static final ApiSymbolId STABLE_ID = ApiSymbolId.parse("global:Stable");
     private static final ApiSymbolId MEMBER_ID = ApiSymbolId.parse("member:Stable.declared");
+    private ScriptBindingSchema schema;
 
     @BeforeEach
     void setUp() {
-        ScriptBindingSchema.clearAll();
+        schema = new ScriptBindingSchema();
         TestPlatformInit.ensureInitialized();
     }
 
@@ -121,9 +122,9 @@ class ManagedApiEnvironmentTest {
                 "LegacyApi", Binding.of("LegacyApi", new LegacyApiImpl()));
         ScriptBindingSchema.BindingMembers members = new ScriptBindingSchema.BindingMembers(
                 Set.of("visibleMethod", "anotherMethod"));
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of("LegacyApi", members));
+        schema.installActive(ScriptType.SERVER, Map.of("LegacyApi", members), Set.of());
 
-        ScriptBindingSchema.BindingMembers resolved = ScriptBindingSchema.lookup(ScriptType.SERVER).get("LegacyApi");
+        ScriptBindingSchema.BindingMembers resolved = schema.lookup(ScriptType.SERVER).get("LegacyApi");
         assertNotNull(resolved);
         assertTrue(resolved.contains("visibleMethod"));
         assertTrue(resolved.contains("anotherMethod"));

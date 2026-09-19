@@ -482,7 +482,7 @@ public final class ScriptManager implements AutoCloseable {
                 closeRuntimeResources(this.runtime);
             }
             NekoModulePipelineCache moduleSession = preparationCache.openSession(
-                    ScriptBindingSchema.activeView(scriptType));
+                    preparationCache.bindingSchema().activeView(scriptType));
             ScriptEnvironmentFactory.Environment env;
             RuntimeEnvironment created = null;
             com.tkisor.nekojs.core.state.GenerationGlobals generation =
@@ -951,7 +951,7 @@ public final class ScriptManager implements AutoCloseable {
                 return candidateEnvironment;
             } catch (Throwable failure) {
                 discardCandidateModuleViews(candidate.context());
-                environmentFactory.discardEnvironmentBindings(candidate.context());
+                environmentFactory.discardEnvironmentBindings(candidate.context(), moduleSession);
                 CONTEXT_TO_MANAGER.remove(candidate.context());
                 ScriptContextRegistry.unbind(candidate.context());
                 closeRuntimeResources(candidateEnvironment);
@@ -986,46 +986,84 @@ public final class ScriptManager implements AutoCloseable {
          */
         private void commitGeneration (long candidateGeneration, RuntimeEnvironment candidateEnvironment,
                 List<ScriptContainer> candidateScripts, RuntimeEnvironment oldEnvironment) {
-            // (0) 受管状态联合发布（票 10，commit 点第一步）：global 私有 + shared 写集与外部
-            // 候选计划在同一持锁内联合发布（无半提交）。此步只可能在「尚未发生任何 commit 期
-            // 变更」时抛出（STATE_PLAN 与 commit 之间有其他 writer 提交的复验冲突、或外部计划
-            // 违反 publish 契约）——异常向上传播走 reloadScriptsTransactional 的失败路径：
-            // discardCandidate 丢弃候选，active 的监听器/runtime/generation 完整保留。
-            // 归因口径：失败发生在 commit 点但报 ReloadPhase.STATE_PLAN——按「候选期状态计划
-            // 冲突」而非「COMMIT 失败」归类，由 GlobalStateException.domain 消歧（审查 F4）。
-            try {
-                candidateEnvironment.globals().publishJoint();
-            } catch (com.tkisor.nekojs.core.state.GlobalStateException e) {
-                throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null, e.domain(), e);
-            } catch (Throwable t) {
-                throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
-                        "state-plan-unknown", t);
-            }
-            // (1) 旧 generation 监听器清扫
-            scriptEventBridge.clearListeners(scriptType);
-            // (2) 生产路由切换：新 generation 成为 live 环境
-            environmentFactory.publishEnvironmentBindings(
-                    candidateEnvironment.context(), candidateEnvironment.moduleSession());
-            this.runtime = candidateEnvironment;
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
-            if (defaultTracker != null) {
-                defaultTracker.publishCandidateErrors(scriptType, candidateEnvironment.context());
-            }
-            activateModuleViews(candidateEnvironment.context(), candidateEnvironment.moduleSession());
-            this.scripts = candidateScripts;
-            this.generation = candidateGeneration;
-            this.contextKilled = false;
-            this.candidateContext = null;
-            this.candidateEnvironment = null;
-            this.candidateKilled = false;
-            // 成功提交即显式恢复（AC6）：清除隔离失败（若此前 active 曾被 watchdog 终止）。
-            lifecycleGate.clearActiveFailed();
-            // (3) 激活候选挂起监听器（新 generation 唯一 callback 接收者）
+            ScriptBindingSchema schema = candidateEnvironment.moduleSession().bindingSchema();
+            ScriptBindingSchema.Snapshot oldSchema = schema.snapshot(scriptType);
+            java.util.Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> oldErrors =
+                    defaultTracker == null ? java.util.Map.of() : defaultTracker.snapshotType(scriptType);
             List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> activation =
                     List.copyOf(this.pendingListeners);
-            this.pendingListeners.clear();
-            for (var pending : activation) {
-                pending.activate();
+            try {
+                // Candidate listeners are activated before the old route is cleared. This makes
+                // a throwing listener activation recoverable without losing active callbacks.
+                for (var pending : activation) {
+                    pending.activate();
+                }
+                environmentFactory.publishEnvironmentBindings(
+                        candidateEnvironment.context(), candidateEnvironment.moduleSession());
+                if (defaultTracker != null) {
+                    defaultTracker.publishCandidateErrors(scriptType, candidateEnvironment.context());
+                }
+                activateModuleViews(candidateEnvironment.context(), candidateEnvironment.moduleSession());
+                try {
+                    candidateEnvironment.globals().publishJoint();
+                } catch (com.tkisor.nekojs.core.state.GlobalStateException e) {
+                    throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null, e.domain(), e);
+                } catch (Throwable stateFailure) {
+                    throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
+                            "state-plan-unknown", stateFailure);
+                }
+                // Do not clear the active route until all candidate activation steps above have
+                // completed. The bridge clear is a final route switch, not a preparation step.
+                scriptEventBridge.clearListeners(scriptType);
+                // The bridge clears the shared event buses, including the staged candidate
+                // tokens. Rearm the already-validated candidate listeners on the clean route.
+                for (var pending : activation) {
+                    pending.deactivate();
+                    pending.activate();
+                }
+                this.runtime = candidateEnvironment;
+                this.scripts = candidateScripts;
+                this.generation = candidateGeneration;
+                this.contextKilled = false;
+                this.candidateContext = null;
+                this.candidateEnvironment = null;
+                this.candidateKilled = false;
+                this.pendingListeners.clear();
+                lifecycleGate.clearActiveFailed();
+            } catch (Throwable failure) {
+                Throwable rollbackFailure = null;
+                for (var pending : activation) {
+                    try {
+                        pending.deactivate();
+                    } catch (Throwable cleanup) {
+                        if (rollbackFailure == null) rollbackFailure = cleanup;
+                        else rollbackFailure.addSuppressed(cleanup);
+                    }
+                }
+                try {
+                    schema.restore(scriptType, oldSchema);
+                } catch (Throwable cleanup) {
+                    if (rollbackFailure == null) rollbackFailure = cleanup;
+                    else rollbackFailure.addSuppressed(cleanup);
+                }
+                if (defaultTracker != null) {
+                    try {
+                        defaultTracker.restoreType(scriptType, oldErrors);
+                        if (oldEnvironment.isEmpty()) {
+                            defaultTracker.removeActiveModuleViews(scriptType);
+                        } else {
+                            activateModuleViews(oldEnvironment.context(), oldEnvironment.moduleSession());
+                        }
+                    } catch (Throwable cleanup) {
+                        if (rollbackFailure == null) rollbackFailure = cleanup;
+                        else rollbackFailure.addSuppressed(cleanup);
+                    }
+                }
+                if (rollbackFailure != null) failure.addSuppressed(rollbackFailure);
+                if (failure instanceof NekoReloadException reloadFailure) throw reloadFailure;
+                throw reloadFailure(candidateGeneration, ReloadPhase.COMMIT, null,
+                        "candidate-commit", failure);
             }
             // (4) 旧环境按所有权顺序释放：timer → Context → streams → module session
             if (!oldEnvironment.isEmpty()) {
@@ -1049,7 +1087,7 @@ public final class ScriptManager implements AutoCloseable {
             this.candidateKillScript = null;
             discardCandidateModuleViews(candidate == null ? null : candidate.context());
             if (candidate != null) {
-                environmentFactory.discardEnvironmentBindings(candidate.context());
+                environmentFactory.discardEnvironmentBindings(candidate.context(), candidate.moduleSession());
             }
             if (!runtime.isEmpty() && runtime.moduleSession() != null) {
                 activateModuleViews(runtime.context(), runtime.moduleSession());
@@ -1448,7 +1486,7 @@ public final class ScriptManager implements AutoCloseable {
                 }
             }
             if (oldContext != null) {
-                environmentFactory.discardEnvironmentBindings(oldContext);
+                environmentFactory.discardEnvironmentBindings(oldContext, environment.moduleSession());
                 DefaultErrorTracker defaultTracker = defaultErrorTracker();
                 if (defaultTracker != null) {
                     defaultTracker.removeModuleViews(oldContext);

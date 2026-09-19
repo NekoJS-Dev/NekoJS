@@ -448,6 +448,22 @@ class NekoModuleIdentityLifecycleTest {
         return writer.toString().replace('\\', '/');
     }
 
+    @Test
+    void authoredPackPathsKeepTheirFullPrefixAndDoNotCollide() {
+        Path root = paths.root();
+        String global = NekoModuleError.displayPath(root.resolve("packs/one/server_scripts/shared.js"));
+        String world = NekoModuleError.displayPath(root.resolveSibling(
+                "save/nekojs_packs/two/server_scripts/shared.js"));
+        String remote = NekoModuleError.displayPath(root.resolve(
+                "server_packs/bucket/three/server_scripts/shared.js"));
+
+        assertEquals("packs/one/server_scripts/shared.js", global);
+        assertEquals("nekojs_packs/two/server_scripts/shared.js", world);
+        assertEquals("server_packs/bucket/three/server_scripts/shared.js", remote);
+        assertTrue(!global.equals(world));
+        assertTrue(!global.equals(remote));
+    }
+
     private static String sourceMapWithContent(String sourcePath, String content) {
         return "{\"version\":3,\"file\":\"host-isolation.js\",\"sources\":[\"" + sourcePath
                 + "\"],\"sourcesContent\":[\"" + content

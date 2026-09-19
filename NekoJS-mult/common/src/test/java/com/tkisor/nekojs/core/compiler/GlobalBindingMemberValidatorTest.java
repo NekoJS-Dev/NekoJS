@@ -55,19 +55,19 @@ class GlobalBindingMemberValidatorTest {
     }
 
     private final List<String> reported = new ArrayList<>();
+    private ScriptBindingSchema schema;
 
     @BeforeEach
     void setUp() {
-        ScriptBindingSchema.clearAll();
+        schema = new ScriptBindingSchema();
         TestPlatformInit.ensureInitialized();
         ScriptErrorReporter.set((type, kind, t) -> reported.add(String.valueOf(t.getMessage())));
-        ScriptBindingSchema.register(ScriptType.SERVER, Map.of(
+        schema.installActive(ScriptType.SERVER, Map.of(
                 "Utils", new ScriptBindingSchema.BindingMembers(JavaMemberIndex.allMembersOf(UtilsJS.class)),
                 "Item", new ScriptBindingSchema.BindingMembers(
                         JavaMemberIndex.allMembersOf(TestItemJS.class), Set.of(TestItemJS.class)),
-                "ServerEvents", new ScriptBindingSchema.BindingMembers(Set.of("recipes", "started"))));
+                 "ServerEvents", new ScriptBindingSchema.BindingMembers(Set.of("recipes", "started"))),
         // 生产环境由 ScriptEnvironmentFactory 从运行中 Context 收割；测试给出最小内置集
-        ScriptBindingSchema.registerGlobals(ScriptType.SERVER,
                 Set.of("console", "Math", "JSON", "globalThis", "this", "arguments", "super"));
     }
 
@@ -80,9 +80,13 @@ class GlobalBindingMemberValidatorTest {
         return com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve(name + ".js");
     }
 
+    private void validate(Path file, String source) {
+        GlobalBindingMemberValidator.validate(file, source, schema.activeView(ScriptType.SERVER));
+    }
+
     @Test
     void flagsTypoedBindingMemberAnywhereInTheFile() {
-        GlobalBindingMemberValidator.validate(file("typo"),
+        validate(file("typo"),
                 "Utils.serverTel('hi')\r\nServerEvents.recipes(event => {\r\n  Utils.serverTel2('x')\r\n})\r\n");
 
         assertTrue(reported.stream().anyMatch(m -> m.contains("'Utils' has no member 'serverTel'")),
@@ -93,7 +97,7 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void flagsTypoedEventNameOnGroupBinding() {
-        GlobalBindingMemberValidator.validate(file("evt"), "ServerEvents.recipez(event => {})\r\n");
+        validate(file("evt"), "ServerEvents.recipez(event => {})\r\n");
 
         assertTrue(reported.stream().anyMatch(m -> m.contains("'ServerEvents' has no member 'recipez'")),
                 "event-name typos on group bindings must be reported: " + reported);
@@ -101,7 +105,7 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void knownMembersAndConstAliasAreNotFlagged() {
-        GlobalBindingMemberValidator.validate(file("ok"),
+        validate(file("ok"),
                 "Utils.serverTell('hi')\r\nconst u = Utils\r\nu.getServer()\r\nServerEvents.recipes(event => {})\r\n");
 
         assertTrue(reported.isEmpty(), "known members (direct + const alias) must not be reported: " + reported);
@@ -109,7 +113,7 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void chainedMemberTypoIsFlaggedViaTypeFlow() {
-        GlobalBindingMemberValidator.validate(file("chain"),
+        validate(file("chain"),
                 "const s = Item.of('minecraft:stone')\r\ns.withCont(3)\r\nItem.empty().getIdd()\r\n");
 
         assertTrue(reported.stream().anyMatch(m -> m.contains("no member 'withCont'")),
@@ -120,7 +124,7 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void chainedLegitimateAccessIsNotFlagged() {
-        GlobalBindingMemberValidator.validate(file("chainok"),
+        validate(file("chainok"),
                 "Item.of('minecraft:stone').withCount(3).getId()\r\n");
 
         assertTrue(reported.isEmpty(), "legit chains must not be reported: " + reported);
@@ -128,7 +132,7 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void unknownIdentifierAsObjectOrCalleeIsFlagged() {
-        GlobalBindingMemberValidator.validate(file("unknown"),
+        validate(file("unknown"),
                 "Util.serverTell('hi')\r\nqwq()\r\n");
 
         assertTrue(reported.stream().anyMatch(m -> m.contains("Unknown identifier 'Util'")),
@@ -140,7 +144,7 @@ class GlobalBindingMemberValidatorTest {
     @Test
     void typeofAndBareIdentifiersAreNotFlagged() {
         // typeof 的操作数会被 ValParser 泄漏为独立语句（裸标识符），报了必误报
-        GlobalBindingMemberValidator.validate(file("typeof"),
+        validate(file("typeof"),
                 "if (typeof Java !== 'undefined') {\r\n  console.log('has java')\r\n}\r\n");
 
         assertTrue(reported.isEmpty(), "typeof guard and bare identifiers must not be reported: " + reported);
@@ -148,7 +152,7 @@ class GlobalBindingMemberValidatorTest {
 
     @Test
     void importAndCatchAndGlobalsAreNotFlagged() {
-        GlobalBindingMemberValidator.validate(file("scope"),
+        validate(file("scope"),
                 "import { ItemStack, Item as It } from 'nekojs:items'\r\n"
                 + "try {\r\n  ItemStack.of('x')\r\n} catch (err) {\r\n  err.getMessage()\r\n}\r\n"
                 + "JSON.parse('{}')\r\nMath.max(1, 2)\r\nconsole.log('hi')\r\n");
@@ -162,7 +166,7 @@ class GlobalBindingMemberValidatorTest {
      */
     @Test
     void locallyDeclaredEntityWithNegativeArgsAndTemplateIsNotFlagged() {
-        GlobalBindingMemberValidator.validate(file("entity"),
+        validate(file("entity"),
                 "console.info('loaded')\r\n"
                 + "ServerEvents.started(event => {\r\n"
                 + "  const server = event.getServer()\r\n"
@@ -183,7 +187,7 @@ class GlobalBindingMemberValidatorTest {
     /** 真实事故复现（startup_scripts）：多行链式回调参数（builder/goals）不得被报未知标识符。 */
     @Test
     void multilineChainedCallbackParamsAreNotFlagged() {
-        GlobalBindingMemberValidator.validate(file("builder"),
+        validate(file("builder"),
                 "RegistryEvents.item(event => {\r\n"
                 + "    event.create('mymod:cool_gem', builder => {\r\n"
                 + "        builder\r\n"
@@ -211,7 +215,7 @@ class GlobalBindingMemberValidatorTest {
     /** 真实事故复现（client_scripts）：同文件 function 声明 + 后续调用不得被报未知标识符。 */
     @Test
     void namedFunctionDeclarationAndCallAreNotFlagged() {
-        GlobalBindingMemberValidator.validate(file("fn"),
+        validate(file("fn"),
                 "function assertEventGroup(group, keys) {\r\n"
                 + "  keys.forEach(k => console.log(k))\r\n"
                 + "}\r\n"

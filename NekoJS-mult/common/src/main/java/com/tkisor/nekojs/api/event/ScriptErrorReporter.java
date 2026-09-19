@@ -62,8 +62,17 @@ public final class ScriptErrorReporter {
         instance.recordCallbackError(type, callbackKind, throwable);
     }
 
-    public static void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
+    static void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
         instance.recordCallbackError(context, type, callbackKind, throwable);
+    }
+
+    /** Internal bridge used without exposing Context in preparation-layer signatures. */
+    static void recordCallbackError(Object context, ScriptType type, String callbackKind, Throwable throwable) {
+        if (context instanceof Context polyglotContext) {
+            recordCallbackError(polyglotContext, type, callbackKind, throwable);
+        } else {
+            recordCallbackError(type, callbackKind, throwable);
+        }
     }
 
     /** 事件回调 Graal 异常上报（经 root 的 tracker；静态上下文的注入替代面）。 */
@@ -71,7 +80,7 @@ public final class ScriptErrorReporter {
         instance.recordEventError(type, error);
     }
 
-    public static void recordEventError(Context context, ScriptType type, PolyglotException error) {
+    static void recordEventError(Context context, ScriptType type, PolyglotException error) {
         instance.recordEventError(context, type, error);
     }
 
