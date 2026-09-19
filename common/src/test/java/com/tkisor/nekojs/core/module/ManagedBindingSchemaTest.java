@@ -1,4 +1,4 @@
-package com.tkisor.nekojs.api.event;
+package com.tkisor.nekojs.core.module;
 
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.contract.ApiContractIdentity;
@@ -6,6 +6,8 @@ import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.contract.NormativeApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedApiContract;
 import com.tkisor.nekojs.api.contract.VerifiedContractSet;
+import com.tkisor.nekojs.api.event.ManagedCallbackSchemaRegistry;
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.api.surface.ApiParameter;
 import com.tkisor.nekojs.api.surface.ApiSignature;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
@@ -32,15 +34,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Candidate/active schema transaction semantics now live on the package-private
+ * {@link BindingSchemaStore} owned by {@link NekoModulePipelineCache}. This test drives the store
+ * directly so the removed public {@code ScriptBindingSchema.Owner} bridge is not needed.
+ */
 class ManagedBindingSchemaTest {
 
     private static final ApiSymbolId STABLE_ID = ApiSymbolId.parse("global:Stable");
-    private ScriptBindingSchema schema;
+    private BindingSchemaStore schema;
 
     @BeforeEach
     void setUp() {
         TestPlatformInit.ensureInitialized();
-        schema = new ScriptBindingSchema();
+        schema = new BindingSchemaStore();
     }
 
     @Test
@@ -126,7 +133,7 @@ class ManagedBindingSchemaTest {
 
     @Test
     void sameTypeRootsKeepIndependentActiveAndCandidateViews() {
-        ScriptBindingSchema other = new ScriptBindingSchema();
+        BindingSchemaStore other = new BindingSchemaStore();
         schema.installActive(ScriptType.SERVER,
                 Map.of("FirstRoot", new ScriptBindingSchema.BindingMembers(Set.of("first"))), Set.of());
         other.installActive(ScriptType.SERVER,

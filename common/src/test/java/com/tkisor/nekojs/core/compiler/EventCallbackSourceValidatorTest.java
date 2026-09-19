@@ -119,11 +119,10 @@ class EventCallbackSourceValidatorTest {
     }
 
     private final List<String> reported = new ArrayList<>();
-    private ScriptBindingSchema schema;
+    private ScriptBindingSchema.View view;
 
     @BeforeEach
     void setUp() {
-        schema = new ScriptBindingSchema();
         ManagedCallbackSchemaRegistry.clear();
         TestPlatformInit.ensureInitialized();
         ScriptErrorReporter.set((type, kind, throwable) ->
@@ -140,13 +139,13 @@ class EventCallbackSourceValidatorTest {
     }
 
     private void registerBindingGroup(String group) {
-        schema.owner().installActive(ScriptType.SERVER, Map.of(
+        view = new ScriptBindingSchema.View(Map.of(
                 group, new ScriptBindingSchema.BindingMembers(Set.of("started"))), Set.of());
     }
 
     /** 非事件回调（builder）路径：valueClasses 带绑定类，形参类型从方法签名推导。 */
     private void registerRegistryBinding() {
-        schema.owner().installActive(ScriptType.SERVER, Map.of(
+        view = new ScriptBindingSchema.View(Map.of(
                 "DynamicRegistry", new ScriptBindingSchema.BindingMembers(
                         Set.of("item", "soundEvent", "opaque"), Set.of(RegistryLikeBinding.class))), Set.of());
     }
@@ -156,11 +155,11 @@ class EventCallbackSourceValidatorTest {
     }
 
     private void validate(Path file, String source) {
-        EventCallbackSourceValidator.validate(file, source, schema.owner().activeView(ScriptType.SERVER));
+        EventCallbackSourceValidator.validate(file, source, view);
     }
 
     private void validateGlobal(Path file, String source) {
-        GlobalBindingMemberValidator.validate(file, source, schema.owner().activeView(ScriptType.SERVER));
+        GlobalBindingMemberValidator.validate(file, source, view);
     }
 
     @Test
@@ -412,7 +411,7 @@ class EventCallbackSourceValidatorTest {
         EventGroup group = EventGroup.of("ChainedEvents");
         group.server("started", ChainedEvent.class);
         EventSchemaRegistry.registerGroup(group);
-        schema.owner().installActive(ScriptType.SERVER, Map.of(
+        view = new ScriptBindingSchema.View(Map.of(
                 "ChainedEvents", new ScriptBindingSchema.BindingMembers(Set.of("started"))), Set.of());
     }
 

@@ -37,13 +37,11 @@ class EventGroupSchemaWiringTest {
     }
 
     private EventGroup group;
-    private ScriptBindingSchema schema;
 
     private final List<String> reported = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
-        schema = new ScriptBindingSchema();
         ManagedCallbackSchemaRegistry.clear();
         TestPlatformInit.ensureInitialized();
         ScriptErrorReporter.set((type, kind, t) -> reported.add(String.valueOf(t.getMessage())));
@@ -75,13 +73,13 @@ class EventGroupSchemaWiringTest {
         // 按 ScriptEnvironmentFactory.create 的真实顺序构建 schema：环境绑定 + 事件组
         Map<String, ScriptBindingSchema.BindingMembers> schema = new HashMap<>();
         ScriptEnvironmentFactory.addEventGroupSchema(schema, List.of(group), Map.of());
-        this.schema.owner().installActive(ScriptType.SERVER, schema, Set.of());
+        ScriptBindingSchema.View view = new ScriptBindingSchema.View(schema, Set.of());
 
         Path file = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("main.js");
         // 与真实事故文件一致：CRLF 行尾 + 表达式语句形式的悬空成员访问
         String source = "ServerEvents.recipes(event => {\r\n    event.rec\r\n})\r\n";
 
-        EventCallbackSourceValidator.validate(file, source, this.schema.owner().activeView(ScriptType.SERVER));
+        EventCallbackSourceValidator.validate(file, source, view);
 
         assertFalse(reported.isEmpty(), "'rec' must be reported once the group is in the schema");
         assertTrue(reported.get(0).contains("'rec'"), reported.toString());
@@ -91,12 +89,12 @@ class EventGroupSchemaWiringTest {
     void wiredSchemaDoesNotFlagLegitimateMemberAccess() {
         Map<String, ScriptBindingSchema.BindingMembers> schema = new HashMap<>();
         ScriptEnvironmentFactory.addEventGroupSchema(schema, List.of(group), Map.of());
-        this.schema.owner().installActive(ScriptType.SERVER, schema, Set.of());
+        ScriptBindingSchema.View view = new ScriptBindingSchema.View(schema, Set.of());
 
         Path file = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("ok.js");
         EventCallbackSourceValidator.validate(file,
                 "ServerEvents.recipes(event => {\r\n    event.getLevel()\r\n})\r\n",
-                this.schema.owner().activeView(ScriptType.SERVER));
+                view);
 
         assertTrue(reported.isEmpty(), "known members must not be reported: " + reported);
     }
