@@ -19,6 +19,41 @@ public interface ScriptEventBridge {
 
     void clearListeners(ScriptType type);
 
+    /** Prepared listener route retained until the surrounding generation commit succeeds. */
+    interface ListenerBatch {
+        void finish();
+
+        void rollback();
+    }
+
+    /** Prepare candidate activation while retaining the old route. */
+    default ListenerBatch prepareCandidateListeners(ScriptType type,
+            java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending) {
+        return new ListenerBatch() {
+            @Override
+            public void finish() {
+                commitCandidateListeners(type, pending);
+            }
+
+            @Override
+            public void rollback() {
+            }
+        };
+    }
+
+    /**
+     * Commit candidate listeners as one route switch. Legacy bridges retain a conservative
+     * fallback; the default production bridge overrides this with an EventBus batch.
+     */
+    default void commitCandidateListeners(ScriptType type,
+                                          java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending) {
+        clearListeners(type);
+        for (var listener : pending) {
+            listener.deactivate();
+            listener.activate();
+        }
+    }
+
     default ScriptEventRegistrar scriptEventRegistrar() {
         return (targetType, groupName, eventName, sourceScriptId) -> {
             throw new UnsupportedOperationException("Script event registration is not available");

@@ -147,6 +147,7 @@ class ScriptReloadGenerationTest {
         private final Counter counter;
         private final EventGroup sharedGroup;
         private final Trigger trigger;
+        final List<ScriptType> closedBindings = new CopyOnWriteArrayList<>();
 
         StubPluginRuntime(Counter counter, EventGroup sharedGroup, Trigger trigger) {
             this.counter = counter;
@@ -157,8 +158,16 @@ class ScriptReloadGenerationTest {
         @Override
         public Map<String, Binding> bindings(ScriptType type) {
             return Map.of(
-                    "Counter", Binding.of("Counter", counter),
-                    "Trigger", Binding.of("Trigger", trigger));
+                    "Counter", binding("Counter", counter),
+                    "Trigger", binding("Trigger", trigger));
+        }
+
+        private Binding binding(String name, Object value) {
+            return new Binding() {
+                @Override public String name() { return name; }
+                @Override public Object value() { return value; }
+                @Override public void close(ScriptType type) { closedBindings.add(type); }
+            };
         }
 
         @Override
@@ -331,6 +340,9 @@ class ScriptReloadGenerationTest {
             harness.writeScript("entry.js", "while (true) { /* spin forever */ }\n");
             RuntimeException failure = assertThrows(RuntimeException.class, harness::reload,
                     "candidate killed by statement limit must fail the reload");
+
+            assertTrue(harness.pluginRuntime.closedBindings.isEmpty(),
+                    "a failed candidate must not close live binding state");
 
             assertEquals(oldContext, currentContext(harness.manager),
                     "failed reload must keep the old context as current");

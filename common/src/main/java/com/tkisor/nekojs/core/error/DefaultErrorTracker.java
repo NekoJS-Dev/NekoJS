@@ -8,7 +8,7 @@ import com.tkisor.nekojs.core.module.NekoModulePipelineCache;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.ScriptPathLayout;
+import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
 import graal.graalvm.polyglot.SourceSection;
@@ -540,7 +540,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             return null;
         }
         String normalized = pathText.replace('\\', '/');
-        String textualAuthored = ScriptPathLayout.authoredPathText(
+        String textualAuthored = ScriptPathProvider.authoredPathText(
                 normalized, paths.root().getFileSystem());
         if (textualAuthored != null) return textualAuthored;
         for (ScriptType type : ScriptType.all()) {
@@ -553,7 +553,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
                     Math.max(prefix.lastIndexOf("/nekojs_packs/"), prefix.lastIndexOf("/server_packs/")));
             if (packStart >= 0) {
                 String authored = normalized.substring(packStart + 1);
-                if (ScriptPathLayout.authoredPathText(authored, paths.root().getFileSystem()) != null) {
+                if (ScriptPathProvider.authoredPathText(authored, paths.root().getFileSystem()) != null) {
                     return authored;
                 }
                 continue;
@@ -567,8 +567,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
             providerPath = null;
         }
         if (providerPath != null) {
-            String authored = ScriptPathLayout.authoredPath(providerPath);
-            if (ScriptPathLayout.typeOf(providerPath) != null) return authored;
+            String authored = ScriptPathProvider.authoredPath(providerPath);
+            if (ScriptPathProvider.typeOf(providerPath) != null) return authored;
         }
         return null;
     }

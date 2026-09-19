@@ -224,6 +224,7 @@ public final class PackSyncClient {
         ServerPackCache.PhysicalReplacement replacement = null;
         boolean rolledBack = false;
         boolean committed = false;
+        boolean clientReloadSucceeded = false;
 
         try {
             // 1) 逐包验签（未签名受 allowUnsigned 控制）。旧 active 目录此时仍未触碰。
@@ -335,6 +336,7 @@ public final class PackSyncClient {
                 return Outcome.disconnect(rollback.decorate(
                         "NekoJS remote script pack rejected: CLIENT script reload failed"));
             }
+            clientReloadSucceeded = true;
             replacement.commit();
             committed = true;
             pendingRollbackState = null;
@@ -349,7 +351,8 @@ public final class PackSyncClient {
             if (failedReplacement != null && !rolledBack && !committed) {
                 RollbackOutcome rollback = rollbackBundle(runtimeRoot, bucketDir, failedReplacement,
                         trustStore, trustStoreSnapshot,
-                        previousState.activePacks(), previousState.activeRoot(), previousState);
+                        previousState.activePacks(), previousState.activeRoot(), previousState,
+                        clientReloadSucceeded);
                 rolledBack = true;
                 return Outcome.disconnect(rollback.decorate(
                         "NekoJS remote script pack rejected: " + failure.getMessage()));
@@ -421,33 +424,50 @@ public final class PackSyncClient {
     }
 
     /** Keep the old active generation and its trust set when a replacement reload is rejected. */
-    private static void restorePreviousActivation(NekoRuntimeRoot runtimeRoot, Path failedRoot,
-                                                  List<ScriptPack> previous, Path previousRoot) {
+    private static boolean restorePreviousActivation(NekoRuntimeRoot runtimeRoot, Path failedRoot,
+                                                     List<ScriptPack> previous, Path previousRoot) {
         if (previous == null || previous.isEmpty()) {
             ScriptPackRegistry.get().deactivateServerCachePacks();
             if (runtimeRoot != null) {
-                runtimeRoot.revokeRemoteSources(failedRoot);
+                try {
+                    runtimeRoot.revokeRemoteSources(failedRoot);
+                } catch (Throwable failure) {
+                    NekoJS.LOGGER.error("Failed to revoke remote sources while restoring an empty pack set", failure);
+                    return false;
+                }
             }
-            return;
+            return true;
         }
         Path root = previousRoot;
         if (root == null) {
             root = previous.get(0).root().getParent();
         }
         List<String> syncIds = previous.stream().map(PackSyncClient::syncIdOf).toList();
-        ScriptPackRegistry.get().activateServerCachePacks(root, syncIds);
-        if (runtimeRoot == null) return;
-        runtimeRoot.revokeRemoteSources(failedRoot);
+        try {
+            ScriptPackRegistry.get().activateServerCachePacks(root, syncIds);
+        } catch (Throwable failure) {
+            NekoJS.LOGGER.error("Failed to restore the previous server pack registry", failure);
+            return false;
+        }
+        if (runtimeRoot == null) return true;
+        try {
+            runtimeRoot.revokeRemoteSources(failedRoot);
+        } catch (Throwable failure) {
+            NekoJS.LOGGER.error("Failed to revoke failed server pack credentials", failure);
+            return false;
+        }
         List<NekoTrustContext.RemoteSource> sources = remoteSources(previous);
         if (sources == null) {
             NekoJS.LOGGER.error("Failed to reconstruct the previous server pack trust set after CLIENT reload failure");
-            return;
+            return false;
         }
         try {
             runtimeRoot.authorizeRemoteSources(sources, root);
         } catch (Exception failure) {
             NekoJS.LOGGER.error("Failed to restore the previous server pack trust set after CLIENT reload failure", failure);
+            return false;
         }
+        return true;
     }
 
     /**
@@ -459,6 +479,22 @@ public final class PackSyncClient {
                                                   PackSyncTrustStore trustStore, byte[] trustStoreSnapshot,
                                                   List<ScriptPack> previous, Path previousRoot,
                                                   ActiveState previousState) {
+        return rollbackBundle(runtimeRoot, failedRoot, replacement, trustStore, trustStoreSnapshot,
+                previous, previousRoot, previousState, false);
+    }
+
+    /**
+     * Roll back physical/logical state and, when the new client generation was already exposed,
+     * reload the restored old files before reporting failure. A failed compensation is fatal:
+     * reporting a normal rollback in that state would leave the client executing a generation
+     * that no longer matches the physical cache.
+     */
+    private static RollbackOutcome rollbackBundle(NekoRuntimeRoot runtimeRoot, Path failedRoot,
+                                                  ServerPackCache.PhysicalReplacement replacement,
+                                                  PackSyncTrustStore trustStore, byte[] trustStoreSnapshot,
+                                                  List<ScriptPack> previous, Path previousRoot,
+                                                  ActiveState previousState,
+                                                  boolean compensateClientReload) {
         try {
             replacement.restore();
         } catch (IOException failure) {
@@ -467,14 +503,25 @@ public final class PackSyncClient {
                     "physical server pack restore failed: " + failure.getMessage());
         }
         try {
-            restorePreviousActivation(runtimeRoot, failedRoot, previous, previousRoot);
+            if (!restorePreviousActivation(runtimeRoot, failedRoot, previous, previousRoot)) {
+                return failClosedAfterRollbackFailure(runtimeRoot, failedRoot, trustStore, trustStoreSnapshot,
+                        "logical server pack restore failed");
+            }
         } catch (Throwable failure) {
             NekoJS.LOGGER.error("Failed to restore previous server pack activation after replacement failure", failure);
+            return failClosedAfterRollbackFailure(runtimeRoot, failedRoot, trustStore, trustStoreSnapshot,
+                    "logical server pack restore failed: " + failure.getMessage());
+        }
+        if (compensateClientReload && !reloadClientScripts("compensating reload of previous server pack generation", true)) {
+            return failClosedAfterRollbackFailure(runtimeRoot, failedRoot, trustStore, trustStoreSnapshot,
+                    "compensating CLIENT reload failed");
         }
         try {
             trustStore.restoreBytes(trustStoreSnapshot);
         } catch (IOException failure) {
             NekoJS.LOGGER.error("Failed to restore pack sync trust state after replacement failure", failure);
+            return failClosedAfterRollbackFailure(runtimeRoot, failedRoot, trustStore, trustStoreSnapshot,
+                    "trust state restore failed: " + failure.getMessage());
         }
         restoreConnectionState(previousState);
         return RollbackOutcome.success();

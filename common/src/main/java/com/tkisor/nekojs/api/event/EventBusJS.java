@@ -512,6 +512,90 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
     }
 
     /**
+     * Replace one generation's listeners without exposing a half-committed route.
+     * Candidate listeners are activated while the old tokens are still installed; if any
+     * activation throws, only the listeners activated by this call are removed. The old token
+     * snapshot is removed only after every candidate activation succeeds.
+     */
+    public PendingCommit preparePendingListeners(ScriptType type, List<PendingListener> pending) {
+        if (type == null) return null;
+        List<ScriptEventListenerToken<EVENT>> old = tokensByType.get(type) == null
+                ? List.of() : List.copyOf(tokensByType.get(type));
+        List<PendingListener> owned = pending == null ? List.of() : pending.stream()
+                .filter(candidate -> candidate != null && candidate.owner() == this
+                        && candidate.type() == type)
+                .toList();
+        List<PendingListener> activated = new ArrayList<>();
+        try {
+            for (PendingListener candidate : owned) {
+                candidate.activate();
+                activated.add(candidate);
+            }
+        } catch (Throwable failure) {
+            for (PendingListener candidate : activated) {
+                try {
+                    candidate.deactivate();
+                } catch (Throwable cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+            }
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error errorFailure) throw errorFailure;
+            throw new IllegalStateException("Failed to commit pending listeners", failure);
+        }
+
+        return new PendingCommit(this, type, old, activated);
+    }
+
+    /** Complete a previously prepared listener replacement. */
+    public void commitPendingListeners(ScriptType type, List<PendingListener> pending) {
+        PendingCommit commit = preparePendingListeners(type, pending);
+        commit.finish();
+    }
+
+    /** A prepared listener replacement that can be finished or rolled back as part of a bridge batch. */
+    public static final class PendingCommit {
+        private final EventBusJS<?, ?> owner;
+        private final ScriptType type;
+        private final List<?> old;
+        private final List<PendingListener> activated;
+
+        private PendingCommit(EventBusJS<?, ?> owner, ScriptType type, List<?> old,
+                              List<PendingListener> activated) {
+            this.owner = owner;
+            this.type = type;
+            this.old = old;
+            this.activated = List.copyOf(activated);
+        }
+
+        public void finish() {
+            owner.finishPending(this);
+        }
+
+        public void rollback() {
+            for (PendingListener listener : activated) {
+                listener.deactivate();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void finishPending(PendingCommit commit) {
+        List<ScriptEventListenerToken<EVENT>> old = (List<ScriptEventListenerToken<EVENT>>) (List<?>) commit.old;
+
+        // The activation phase is complete, so this final route switch cannot expose a partial
+        // candidate. EventBusBase.unregister is the only operation left and is non-throwing for
+        // its own token implementation.
+        tokensByType.computeIfPresent(commit.type, (ignored, tokens) -> {
+            tokens.removeIf(old::contains);
+            return tokens.isEmpty() ? null : tokens;
+        });
+        for (ScriptEventListenerToken<EVENT> token : old) {
+            bus.unregister(token.token());
+        }
+    }
+
+    /**
      * 候选期预备（见 {@link PendingListener#prepareForActivation()}）：只解析 dispatch key，
      * 不触碰底层 bus 与 mirror（候选监听器在 commit 前对生产路由仍完全不可见）。
      */

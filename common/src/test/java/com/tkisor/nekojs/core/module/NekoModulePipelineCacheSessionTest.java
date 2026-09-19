@@ -89,10 +89,10 @@ class NekoModulePipelineCacheSessionTest {
         TestPlatformInit.ensureInitialized(gameDir);
         NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
         NekoModulePipelineCache owner = newCache(paths);
-        owner.bindingSchema().installActive(ScriptType.SERVER,
+        owner.installActiveBindingSchema(ScriptType.SERVER,
                 Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))), Set.of());
         NekoModulePipelineCache unbound = owner.openSession();
-        NekoModulePipelineCache active = owner.openSession(owner.bindingSchema().activeView(ScriptType.SERVER));
+        NekoModulePipelineCache active = owner.openSession(owner.activeBindingSchemaView(ScriptType.SERVER));
         AtomicInteger diagnostics = new AtomicInteger();
         ScriptBindingSchema.View candidateView = new ScriptBindingSchema.View(
                 Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))),

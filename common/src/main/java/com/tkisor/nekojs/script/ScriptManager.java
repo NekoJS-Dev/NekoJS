@@ -482,7 +482,7 @@ public final class ScriptManager implements AutoCloseable {
                 closeRuntimeResources(this.runtime);
             }
             NekoModulePipelineCache moduleSession = preparationCache.openSession(
-                    preparationCache.bindingSchema().activeView(scriptType));
+                    preparationCache.activeBindingSchemaView(scriptType));
             ScriptEnvironmentFactory.Environment env;
             RuntimeEnvironment created = null;
             com.tkisor.nekojs.core.state.GenerationGlobals generation =
@@ -739,7 +739,7 @@ public final class ScriptManager implements AutoCloseable {
          *       候选 timer 只进候选自己的 node runtime（生产 tick flush 仍冲刷 active）；</li>
          *   <li>失败：候选 Context、timer、listener（挂起注册）、模块编译产物全部关闭，
          *       active 的 Context、监听器、timer、脚本状态原样可用；</li>
-         *   <li>commit：清扫旧 generation 监听器 → 发布新 runtime → 激活候选挂起监听器 →
+         *   <li>commit：发布候选状态 → 用 pending activation batch 原子替换旧监听器 →
          *       释放旧 module session → 按 timer、Context 所有权顺序释放旧环境。</li>
          * </ul>
          *
@@ -749,9 +749,11 @@ public final class ScriptManager implements AutoCloseable {
          * 不会出现「旧监听器已清扫 + 候选 runtime 已发布 + 激活中途抛」的半激活 generation。
          *
          * <p>线程约定：候选构建/执行在当前调用线程（owner thread）同步完成，reload 由
-         * 实例锁串行；owner-thread 队列、重入与 watchdog 调度归工单 07。
-         * binding.close(type)（进程级注册账本重置，域 Adapter 持有）保持候选构建前调用：
-         * 其「先清账本再注册」的顺序是领域契约，账本快照/回滚归 W6/W7 域 Adapter。
+         * 实例锁串行；owner-thread 队列、重入与 watchdog 调度归工单 07。候选阶段不调用
+         * {@link com.tkisor.nekojs.api.data.Binding#close(ScriptType)}：该回调可能清理
+         * 进程级 dynamic registry、post-effect 或平台 listener 状态，失败候选无法把这些
+         * live mutation 恢复。域 adapter 的可逆 candidate plan 属于候选收集器，旧代资源
+         * 释放只发生在成功 commit 或整个 manager teardown。
          */
         private void reloadScriptsTransactional () {
             ReloadProgressTracker.begin(scriptType.name, 7);
@@ -764,13 +766,6 @@ public final class ScriptManager implements AutoCloseable {
                 try {
                     // Candidate errors are staged by Context. Keep active errors live so an
                     // active callback observed during candidate execution is not lost on failure.
-                    // 域 Adapter 的进程级注册账本重置（PostEffects/NativeEvents/DynamicRegistry 等）：
-                    // 「先 close 再注册」是 binding 契约，保持原有位次；共享 Java 对象不做
-                    // generation 私有快照（spec 09 user story 15），账本快照/恢复归域 Adapter。
-                    for (var binding : pluginRuntime.bindings(scriptType).values()) {
-                        binding.close(scriptType);
-                    }
-
                     // ---- Phase PREPARATION：候选 Context + node runtime（生产路由不动）----
                     try {
                         candidateEnvironment = createCandidateEnvironment();
@@ -987,41 +982,32 @@ public final class ScriptManager implements AutoCloseable {
         private void commitGeneration (long candidateGeneration, RuntimeEnvironment candidateEnvironment,
                 List<ScriptContainer> candidateScripts, RuntimeEnvironment oldEnvironment) {
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
-            ScriptBindingSchema schema = candidateEnvironment.moduleSession().bindingSchema();
-            ScriptBindingSchema.Snapshot oldSchema = schema.snapshot(scriptType);
+            ScriptBindingSchema.Snapshot oldSchema =
+                    candidateEnvironment.moduleSession().snapshotBindingSchema(scriptType);
             java.util.Map<com.tkisor.nekojs.api.data.ScriptId, ScriptError> oldErrors =
                     defaultTracker == null ? java.util.Map.of() : defaultTracker.snapshotType(scriptType);
             List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> activation =
                     List.copyOf(this.pendingListeners);
+            com.tkisor.nekojs.core.ScriptEventBridge.ListenerBatch listenerBatch = null;
             try {
-                // Candidate listeners are activated before the old route is cleared. This makes
-                // a throwing listener activation recoverable without losing active callbacks.
-                for (var pending : activation) {
-                    pending.activate();
-                }
                 environmentFactory.publishEnvironmentBindings(
                         candidateEnvironment.context(), candidateEnvironment.moduleSession());
                 if (defaultTracker != null) {
                     defaultTracker.publishCandidateErrors(scriptType, candidateEnvironment.context());
                 }
                 activateModuleViews(candidateEnvironment.context(), candidateEnvironment.moduleSession());
+                // Prepare keeps old listener tokens installed while the remaining state commit
+                // runs. Finish only after schema/errors/globals have all published successfully.
+                listenerBatch = scriptEventBridge.prepareCandidateListeners(scriptType, activation);
                 try {
                     candidateEnvironment.globals().publishJoint();
                 } catch (com.tkisor.nekojs.core.state.GlobalStateException e) {
                     throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null, e.domain(), e);
                 } catch (Throwable stateFailure) {
-                    throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
-                            "state-plan-unknown", stateFailure);
+                        throw reloadFailure(candidateGeneration, ReloadPhase.STATE_PLAN, null,
+                        "state-plan-unknown", stateFailure);
                 }
-                // Do not clear the active route until all candidate activation steps above have
-                // completed. The bridge clear is a final route switch, not a preparation step.
-                scriptEventBridge.clearListeners(scriptType);
-                // The bridge clears the shared event buses, including the staged candidate
-                // tokens. Rearm the already-validated candidate listeners on the clean route.
-                for (var pending : activation) {
-                    pending.deactivate();
-                    pending.activate();
-                }
+                listenerBatch.finish();
                 this.runtime = candidateEnvironment;
                 this.scripts = candidateScripts;
                 this.generation = candidateGeneration;
@@ -1033,6 +1019,13 @@ public final class ScriptManager implements AutoCloseable {
                 lifecycleGate.clearActiveFailed();
             } catch (Throwable failure) {
                 Throwable rollbackFailure = null;
+                if (listenerBatch != null) {
+                    try {
+                        listenerBatch.rollback();
+                    } catch (Throwable cleanup) {
+                        rollbackFailure = cleanup;
+                    }
+                }
                 for (var pending : activation) {
                     try {
                         pending.deactivate();
@@ -1042,7 +1035,7 @@ public final class ScriptManager implements AutoCloseable {
                     }
                 }
                 try {
-                    schema.restore(scriptType, oldSchema);
+                    candidateEnvironment.moduleSession().restoreBindingSchema(scriptType, oldSchema);
                 } catch (Throwable cleanup) {
                     if (rollbackFailure == null) rollbackFailure = cleanup;
                     else rollbackFailure.addSuppressed(cleanup);

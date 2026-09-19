@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.ScriptPathLayout;
+import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
 import java.nio.file.Path;
@@ -97,13 +97,13 @@ public final class ScriptBindingSchema {
     }
 
     /** Install the active view owned by this runtime root. */
-    public void installActive(ScriptType type, Map<String, BindingMembers> nameToMembers, Set<String> globals) {
+    void installActive(ScriptType type, Map<String, BindingMembers> nameToMembers, Set<String> globals) {
         ensureOpen();
         if (type == null) return;
         active.put(type, new View(nameToMembers, globals));
     }
 
-    public void clear(ScriptType type) {
+    void clear(ScriptType type) {
         if (type != null) active.remove(type);
     }
 
@@ -119,7 +119,7 @@ public final class ScriptBindingSchema {
     }
 
     /** Snapshot the active view without exposing mutable static maps to a generation. */
-    public View activeView(ScriptType type) {
+    View activeView(ScriptType type) {
         if (type == null) return new View(Map.of(), Set.of());
         return active.getOrDefault(type, new View(Map.of(), Set.of()));
     }
@@ -130,17 +130,17 @@ public final class ScriptBindingSchema {
     }
 
     /** Capture the active schema/global values before a candidate starts mutating its own view. */
-    public Snapshot snapshot(ScriptType type) {
+    Snapshot snapshot(ScriptType type) {
         return new Snapshot(activeView(type));
     }
 
     /** Install candidate values under one generation/session token. */
-    public View beginCandidate(Object ownerToken, ScriptType type,
+    View beginCandidate(Object ownerToken, ScriptType type,
                                Map<String, BindingMembers> schemas, Set<String> globals) {
         return beginCandidate(ownerToken, type, schemas, globals, (Consumer<Diagnostic>) null);
     }
 
-    public View beginCandidate(Object ownerToken, ScriptType type,
+    View beginCandidate(Object ownerToken, ScriptType type,
                                Map<String, BindingMembers> schemas, Set<String> globals,
                                Consumer<Diagnostic> reporter) {
         ensureOpen();
@@ -151,7 +151,7 @@ public final class ScriptBindingSchema {
     }
 
     /** Candidate diagnostics stay attached to the generation without exposing Context here. */
-    public View beginCandidate(Object ownerToken, ScriptType type,
+    View beginCandidate(Object ownerToken, ScriptType type,
                                Map<String, BindingMembers> schemas, Set<String> globals,
                                Object diagnosticContext) {
         return beginCandidate(ownerToken, type, schemas, globals,
@@ -160,7 +160,7 @@ public final class ScriptBindingSchema {
     }
 
     /** Publish exactly one candidate view at the generation commit point. */
-    public View commitCandidate(Object ownerToken) {
+    View commitCandidate(Object ownerToken) {
         Candidate candidate = ownerToken == null ? null : candidates.remove(ownerToken);
         if (candidate == null) return null;
         active.put(candidate.type(), candidate.view());
@@ -168,7 +168,7 @@ public final class ScriptBindingSchema {
     }
 
     /** Discard a candidate schema after any preparation/binding/execution failure. */
-    public void discardCandidate(Object ownerToken) {
+    void discardCandidate(Object ownerToken) {
         if (ownerToken == null) return;
         Candidate candidate = candidates.remove(ownerToken);
         if (candidate != null) {
@@ -182,13 +182,13 @@ public final class ScriptBindingSchema {
     }
 
     /** Restore an active schema/global snapshot for an owning reload transaction. */
-    public void restore(ScriptType type, Snapshot snapshot) {
+    void restore(ScriptType type, Snapshot snapshot) {
         if (type == null || snapshot == null) return;
         active.put(type, snapshot.view());
     }
 
     /** Resolve a generation view for preparation/validation. */
-    public View view(Object ownerToken, ScriptType type) {
+    View view(Object ownerToken, ScriptType type) {
         if (ownerToken == null) return activeView(type);
         Candidate candidate = candidates.get(ownerToken);
         return candidate != null && candidate.type() == type ? candidate.view() : emptyView();
@@ -204,7 +204,7 @@ public final class ScriptBindingSchema {
      */
     public static ScriptType inferType(Path path) {
         if (path == null) return null;
-        return ScriptPathLayout.typeOf(path.toAbsolutePath().normalize());
+        return ScriptPathProvider.typeOf(path.normalize());
     }
 
     public static Map<String, BindingMembers> schemaForPath(Path path, View view) {
@@ -213,6 +213,56 @@ public final class ScriptBindingSchema {
 
     private void ensureOpen() {
         if (closed) throw new IllegalStateException("ScriptBindingSchema owner is closed");
+    }
+
+    /** Owner-only bridge used by the generation cache; transaction methods stay package-private here. */
+    public Owner owner() {
+        return new Owner(this);
+    }
+
+    public static final class Owner {
+        private final ScriptBindingSchema schema;
+
+        private Owner(ScriptBindingSchema schema) {
+            this.schema = schema;
+        }
+
+        public void installActive(ScriptType type, Map<String, BindingMembers> schemas, Set<String> globals) {
+            schema.installActive(type, schemas, globals);
+        }
+
+        public View activeView(ScriptType type) {
+            return schema.activeView(type);
+        }
+
+        public Map<String, BindingMembers> lookup(ScriptType type) {
+            return schema.lookup(type);
+        }
+
+        public Snapshot snapshot(ScriptType type) {
+            return schema.snapshot(type);
+        }
+
+        public View beginCandidate(Object token, ScriptType type, Map<String, BindingMembers> schemas,
+                                   Set<String> globals, Object diagnosticContext) {
+            return schema.beginCandidate(token, type, schemas, globals, diagnosticContext);
+        }
+
+        public View commitCandidate(Object token) {
+            return schema.commitCandidate(token);
+        }
+
+        public void discardCandidate(Object token) {
+            schema.discardCandidate(token);
+        }
+
+        public void restore(ScriptType type, Snapshot snapshot) {
+            schema.restore(type, snapshot);
+        }
+
+        public View view(Object token, ScriptType type) {
+            return schema.view(token, type);
+        }
     }
 
     public static BindingMembers fromSurface(ApiSurfaceSnapshot snapshot, ApiSymbolId typeId) {

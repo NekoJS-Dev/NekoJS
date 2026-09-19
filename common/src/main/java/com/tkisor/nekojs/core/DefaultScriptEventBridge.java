@@ -65,6 +65,59 @@ public class DefaultScriptEventBridge implements ScriptEventBridge {
     }
 
     @Override
+    public ListenerBatch prepareCandidateListeners(ScriptType type,
+            java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending) {
+        java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingCommit> commits =
+                new java.util.ArrayList<>();
+        try {
+            for (var group : pluginRuntime().eventGroups().values()) {
+                commits.addAll(group.preparePendingListeners(type, pending));
+            }
+            commits.addAll(ScriptEventRegistry.preparePendingListeners(type, pending));
+            return new ListenerBatch() {
+                @Override
+                public void finish() {
+                    for (var commit : commits) commit.finish();
+                }
+
+                @Override
+                public void rollback() {
+                    for (int index = commits.size() - 1; index >= 0; index--) {
+                        commits.get(index).rollback();
+                    }
+                }
+            };
+        } catch (Throwable failure) {
+            for (int index = commits.size() - 1; index >= 0; index--) {
+                try {
+                    commits.get(index).rollback();
+                } catch (Throwable cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+            }
+            if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
+            if (failure instanceof Error errorFailure) throw errorFailure;
+            throw new IllegalStateException("Failed to commit script listener batch", failure);
+        }
+    }
+
+    @Override
+    public void commitCandidateListeners(ScriptType type,
+            java.util.List<com.tkisor.nekojs.api.event.EventBusJS.PendingListener> pending) {
+        ListenerBatch batch = prepareCandidateListeners(type, pending);
+        try {
+            batch.finish();
+        } catch (Throwable failure) {
+            try {
+                batch.rollback();
+            } catch (Throwable cleanup) {
+                failure.addSuppressed(cleanup);
+            }
+            throw failure;
+        }
+    }
+
+    @Override
     public void clearListeners(ScriptType type, String scriptId) {
         for (var group : pluginRuntime().eventGroups().values()) {
             group.clearListeners(type, scriptId);

@@ -24,7 +24,7 @@ public final class ScriptErrorReporter {
     public interface Reporter {
         void recordCallbackError(ScriptType type, String callbackKind, Throwable throwable);
 
-        default void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
+        default void recordCallbackError(Object context, ScriptType type, String callbackKind, Throwable throwable) {
             recordCallbackError(type, callbackKind, throwable);
         }
 
@@ -37,7 +37,7 @@ public final class ScriptErrorReporter {
             recordCallbackError(type, "event", error);
         }
 
-        default void recordEventError(Context context, ScriptType type, PolyglotException error) {
+        default void recordEventError(Object context, ScriptType type, PolyglotException error) {
             recordCallbackError(context, type, "event", error);
         }
 
@@ -63,7 +63,7 @@ public final class ScriptErrorReporter {
     }
 
     static void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
-        instance.recordCallbackError(context, type, callbackKind, throwable);
+        instance.recordCallbackError((Object) context, type, callbackKind, throwable);
     }
 
     /** Internal bridge used without exposing Context in preparation-layer signatures. */
@@ -81,7 +81,7 @@ public final class ScriptErrorReporter {
     }
 
     static void recordEventError(Context context, ScriptType type, PolyglotException error) {
-        instance.recordEventError(context, type, error);
+        instance.recordEventError((Object) context, type, error);
     }
 
     public static boolean hasErrors() {

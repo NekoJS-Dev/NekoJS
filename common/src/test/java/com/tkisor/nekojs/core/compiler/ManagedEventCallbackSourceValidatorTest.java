@@ -85,14 +85,14 @@ class ManagedEventCallbackSourceValidatorTest {
 
         ScriptBindingSchema.BindingMembers eventsMembers = ScriptBindingSchema.fromSurface(
                 snapshot, ApiSymbolId.parse("global:Events"));
-        schema.installActive(ScriptType.SERVER, Map.of("Events", eventsMembers), Set.of());
+        schema.owner().installActive(ScriptType.SERVER, Map.of("Events", eventsMembers), Set.of());
 
         ScriptType type = ScriptType.SERVER;
         Path filePath = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(type).resolve("test.js");
         String source = "Events.onMessage((event) => { event.message })";
 
         assertDoesNotThrow(() -> EventCallbackSourceValidator.validate(filePath, source,
-                schema.activeView(ScriptType.SERVER)));
+                schema.owner().activeView(ScriptType.SERVER)));
     }
 
     @Test
@@ -102,14 +102,14 @@ class ManagedEventCallbackSourceValidatorTest {
 
         ScriptBindingSchema.BindingMembers eventsMembers = ScriptBindingSchema.fromSurface(
                 snapshot, ApiSymbolId.parse("global:Events"));
-        schema.installActive(ScriptType.SERVER, Map.of("Events", eventsMembers), Set.of());
+        schema.owner().installActive(ScriptType.SERVER, Map.of("Events", eventsMembers), Set.of());
 
         ScriptType type = ScriptType.SERVER;
         Path filePath = com.tkisor.nekojs.script.ScriptTypeEnv.scriptsDir(type).resolve("test.js");
         String source = "Events.onMessage((event) => { event.internalHelper })";
 
         assertDoesNotThrow(() -> EventCallbackSourceValidator.validate(filePath, source,
-                schema.activeView(ScriptType.SERVER)));
+                schema.owner().activeView(ScriptType.SERVER)));
     }
 
     @Test

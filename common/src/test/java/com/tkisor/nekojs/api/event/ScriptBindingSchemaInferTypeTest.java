@@ -1,7 +1,7 @@
 package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
-import com.tkisor.nekojs.core.fs.ScriptPathLayout;
+import com.tkisor.nekojs.core.fs.ScriptPathProvider;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -65,7 +65,7 @@ class ScriptBindingSchemaInferTypeTest {
 
     @Test
     void textualTrufflePathKeepsTheScriptRootIdentity() {
-        assertEquals("server_scripts/context-callback.js", ScriptPathLayout.authoredPathText(
+        assertEquals("server_scripts/context-callback.js", ScriptPathProvider.authoredPathText(
                 "truffle:opaque/server_scripts/context-callback.js", Path.of("").getFileSystem()));
     }
 }

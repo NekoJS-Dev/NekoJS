@@ -22,6 +22,7 @@ import java.util.stream.Stream;
  * {@link #loadPack 从盘重扫}并重算哈希对照预期（写盘完整性自检）——本类不自行对照。
  */
 public final class ServerPackCache {
+    private static volatile IOException nextCommitFailureForTests;
 
     private ServerPackCache() {}
 
@@ -176,6 +177,11 @@ public final class ServerPackCache {
         }
     }
 
+    /** Deterministic failure seam for the physical-commit rollback tests. */
+    static void failNextCommitForTests(IOException failure) {
+        nextCommitFailureForTests = failure;
+    }
+
     /** 从盘重扫的包快照。 */
     public record CachedPack(String manifestJson, List<PackContentFile> files, String hash) {}
 
@@ -238,6 +244,9 @@ public final class ServerPackCache {
         }
 
         void commit() throws IOException {
+            IOException injected = nextCommitFailureForTests;
+            nextCommitFailureForTests = null;
+            if (injected != null) throw injected;
             deleteOperation.delete(stagingRoot);
             restored = true;
         }

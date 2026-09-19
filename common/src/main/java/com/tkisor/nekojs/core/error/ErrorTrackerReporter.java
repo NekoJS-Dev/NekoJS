@@ -27,8 +27,9 @@ public final class ErrorTrackerReporter implements ScriptErrorReporter.Reporter 
     }
 
     @Override
-    public void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
-        delegate.recordCallbackError(context, type, callbackKind, throwable);
+    public void recordCallbackError(Object context, ScriptType type, String callbackKind, Throwable throwable) {
+        delegate.recordCallbackError(context instanceof Context polyglotContext ? polyglotContext : null,
+                type, callbackKind, throwable);
     }
 
     @Override
@@ -37,8 +38,9 @@ public final class ErrorTrackerReporter implements ScriptErrorReporter.Reporter 
     }
 
     @Override
-    public void recordEventError(Context context, ScriptType type, PolyglotException error) {
-        delegate.recordEventError(context, type, error);
+    public void recordEventError(Object context, ScriptType type, PolyglotException error) {
+        delegate.recordEventError(context instanceof Context polyglotContext ? polyglotContext : null,
+                type, error);
     }
 
     @Override

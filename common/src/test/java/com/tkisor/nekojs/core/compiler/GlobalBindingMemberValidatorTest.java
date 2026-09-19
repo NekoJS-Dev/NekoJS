@@ -62,7 +62,7 @@ class GlobalBindingMemberValidatorTest {
         schema = new ScriptBindingSchema();
         TestPlatformInit.ensureInitialized();
         ScriptErrorReporter.set((type, kind, t) -> reported.add(String.valueOf(t.getMessage())));
-        schema.installActive(ScriptType.SERVER, Map.of(
+        schema.owner().installActive(ScriptType.SERVER, Map.of(
                 "Utils", new ScriptBindingSchema.BindingMembers(JavaMemberIndex.allMembersOf(UtilsJS.class)),
                 "Item", new ScriptBindingSchema.BindingMembers(
                         JavaMemberIndex.allMembersOf(TestItemJS.class), Set.of(TestItemJS.class)),
@@ -81,7 +81,7 @@ class GlobalBindingMemberValidatorTest {
     }
 
     private void validate(Path file, String source) {
-        GlobalBindingMemberValidator.validate(file, source, schema.activeView(ScriptType.SERVER));
+        GlobalBindingMemberValidator.validate(file, source, schema.owner().activeView(ScriptType.SERVER));
     }
 
     @Test

@@ -35,7 +35,7 @@ public final class ScriptCompilerRegistry {
         current = registry == null ? INSTANCE : registry;
     }
 
-    public void register(IScriptCompiler compiler) {
+    public synchronized void register(IScriptCompiler compiler) {
         requireMutable();
         if (compiler != null) {
             compilers.add(compiler);
@@ -43,13 +43,13 @@ public final class ScriptCompilerRegistry {
         }
     }
 
-    public void register(String extension, IScriptCompiler compiler) {
+    public synchronized void register(String extension, IScriptCompiler compiler) {
         requireMutable();
         extraExtensions.add(normalizeExtension(extension));
         register(compiler);
     }
 
-    public void register(NekoScriptLanguage language) {
+    public synchronized void register(NekoScriptLanguage language) {
         requireMutable();
         if (language == null) return;
         NekoScriptLanguage normalized = normalizedLanguage(language);
@@ -60,28 +60,28 @@ public final class ScriptCompilerRegistry {
         revision++;
     }
 
-    public void register(NekoLanguagePlugin plugin) {
+    public synchronized void register(NekoLanguagePlugin plugin) {
         if (plugin == null) return;
         register(new NekoScriptLanguage(plugin.id(), plugin.extensions(), plugin));
     }
 
-    public void registerLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
+    public synchronized void registerLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
         register(new NekoScriptLanguage(id, extensions, compiler));
     }
 
-    public void registerLanguage(String id, Set<String> extensions, NekoLanguagePlugin plugin) {
+    public synchronized void registerLanguage(String id, Set<String> extensions, NekoLanguagePlugin plugin) {
         register(new NekoScriptLanguage(id, extensions, plugin));
     }
 
-    public void replaceLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
+    public synchronized void replaceLanguage(String id, Set<String> extensions, IScriptCompiler compiler) {
         replaceLanguage(new NekoScriptLanguage(id, extensions, compiler));
     }
 
-    public void replaceLanguage(String id, Set<String> extensions, NekoLanguagePlugin plugin) {
+    public synchronized void replaceLanguage(String id, Set<String> extensions, NekoLanguagePlugin plugin) {
         replaceLanguage(new NekoScriptLanguage(id, extensions, plugin));
     }
 
-    public void replaceLanguage(NekoScriptLanguage replacement) {
+    public synchronized void replaceLanguage(NekoScriptLanguage replacement) {
         requireMutable();
         NekoScriptLanguage normalizedReplacement = normalizedLanguage(replacement);
         List<NekoScriptLanguage> removed = new ArrayList<>();
@@ -100,7 +100,7 @@ public final class ScriptCompilerRegistry {
         register(normalizedReplacement);
     }
 
-    public void registerExtension(String extension) {
+    public synchronized void registerExtension(String extension) {
         requireMutable();
         extraExtensions.add(normalizeExtension(extension));
         revision++;
@@ -127,6 +127,31 @@ public final class ScriptCompilerRegistry {
             }
         }
         return null;
+    }
+
+    /**
+     * Capture the language/plugin choice and registry revision under one registry lock.
+     * Preparation must never pair a compiler read from one registry state with a revision
+     * from a later replacement of that compiler.
+     */
+    public synchronized Capture capture(String extension) {
+        String dotted = normalizeExtension(extension);
+        String bare = dotted.substring(1);
+        for (int i = languages.size() - 1; i >= 0; i--) {
+            NekoScriptLanguage language = languages.get(i);
+            IScriptCompiler compiler = language.compiler();
+            if (language.extensions().contains(dotted)
+                    || compiler != null && (compiler.canCompile(dotted) || compiler.canCompile(bare))) {
+                return new Capture(language, language.plugin(), compiler, revision);
+            }
+        }
+        for (int i = compilers.size() - 1; i >= 0; i--) {
+            IScriptCompiler compiler = compilers.get(i);
+            if (compiler.canCompile(dotted) || compiler.canCompile(bare)) {
+                return new Capture(null, null, compiler, revision);
+            }
+        }
+        return new Capture(null, null, null, revision);
     }
 
     /** 同 {@link #getCompiler(String)} 的 last-wins 语义，返回整个语言插件条目。 */
@@ -226,4 +251,8 @@ public final class ScriptCompilerRegistry {
             throw new IllegalStateException("Script compiler registry is frozen after plugin bootstrap");
         }
     }
+
+    /** Immutable result of an atomic compiler/plugin lookup. */
+    public record Capture(NekoScriptLanguage language, NekoLanguagePlugin plugin,
+                          IScriptCompiler compiler, long revision) {}
 }

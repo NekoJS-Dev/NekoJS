@@ -162,12 +162,12 @@ public final class ScriptEnvironmentFactory {
                 }
             }
             knownGlobals.addAll(List.of("this", "arguments", "super"));
-            ScriptBindingSchema.View schemaView = moduleSession.bindingSchema().beginCandidate(
+            ScriptBindingSchema.View schemaView = moduleSession.beginBindingSchemaCandidate(
                     moduleSession, scriptType, bindingSchema, knownGlobals, context);
             moduleSession.installBindingSchemaView(schemaView);
             installJavaClassLoadTelemetry(context, scriptType);
         } catch (Throwable failure) {
-            moduleSession.bindingSchema().discardCandidate(moduleSession);
+            moduleSession.discardBindingSchemaCandidate(moduleSession);
             if (failure instanceof RuntimeException runtimeFailure) throw runtimeFailure;
             if (failure instanceof Error errorFailure) throw errorFailure;
             throw new IllegalStateException("Failed to install NekoJS environment bindings", failure);
@@ -176,13 +176,13 @@ public final class ScriptEnvironmentFactory {
 
     /** Publish a successfully installed schema at the active/candidate commit point. */
     public void publishEnvironmentBindings(Context context, NekoModulePipelineCache moduleSession) {
-        ScriptBindingSchema.View view = moduleSession.bindingSchema().commitCandidate(moduleSession);
+        ScriptBindingSchema.View view = moduleSession.commitBindingSchemaCandidate(moduleSession);
         if (view == null) throw new IllegalStateException("No candidate binding schema for Context");
         moduleSession.installBindingSchemaView(view);
     }
 
     public void discardEnvironmentBindings(Context context, NekoModulePipelineCache moduleSession) {
-        moduleSession.bindingSchema().discardCandidate(moduleSession);
+        moduleSession.discardBindingSchemaCandidate(moduleSession);
     }
 
     /**
