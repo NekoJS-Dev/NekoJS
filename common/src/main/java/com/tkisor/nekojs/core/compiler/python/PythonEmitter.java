@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.compiler.python;
 
+import com.tkisor.nekojs.core.compiler.NekoCompileException;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode.Param;
 
@@ -2510,8 +2511,12 @@ public final class PythonEmitter {
      * srcLines 维护——表达式级报错报告其所属语句的行，可接受）。无语句上下文时原样返回。
      */
     private IllegalArgumentException err(String msg) {
+        // Message text is unchanged; the statement's authored line now also travels as
+        // NekoCompileException so preparation publishes a real authored position instead of only a
+        // formatted string. Emission errors are statement-scoped, so the column is the statement
+        // start — the emitter has no token-level column for the failing construct.
         return curLine > 0
-                ? new IllegalArgumentException(msg + " (python source line " + curLine + ")")
+                ? new NekoCompileException(msg + " (python source line " + curLine + ")", curLine, 1)
                 : new IllegalArgumentException(msg);
     }
 

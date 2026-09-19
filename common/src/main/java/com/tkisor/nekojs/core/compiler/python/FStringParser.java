@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.compiler.python;
 
+import com.tkisor.nekojs.core.compiler.NekoCompileException;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode;
 
 import java.util.ArrayList;
@@ -106,8 +107,11 @@ final class FStringParser {
      */
     private static PythonNode parseInterpolation(String exprText, int baseLine, int baseCol, int offset) {
         if (exprText.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "python f-string: empty '{}' interpolation (line " + baseLine + ", col " + (baseCol + offset) + ")");
+            // Authored coordinates travel with the exception (see NekoCompileException); the message
+            // text is unchanged.
+            throw new NekoCompileException(
+                    "python f-string: empty '{}' interpolation (line " + baseLine + ", col " + (baseCol + offset) + ")",
+                    baseLine, baseCol + offset);
         }
         try {
             List<PythonToken> toks = new PythonLexer(exprText).tokenize();
@@ -129,7 +133,9 @@ final class FStringParser {
         }
         int line = baseLine + relLine - 1;
         int col = relLine == 1 ? baseCol + offset + relCol - 1 : relCol;
-        return new IllegalArgumentException("python parse error at line " + line + ", col " + col
-                + " (in f-string interpolation): " + rest, e);
+        // Position is already translated into authored f-string coordinates here, so publish it as
+        // NekoCompileException; the message text is unchanged.
+        return new NekoCompileException("python parse error at line " + line + ", col " + col
+                + " (in f-string interpolation): " + rest, line, col);
     }
 }

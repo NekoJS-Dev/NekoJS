@@ -39,8 +39,12 @@ public final class PythonToJsCompiler implements IScriptCompiler {
             PythonEmitter emitter = new PythonEmitter(parser.srcLines());
             String js = emitter.emit((PythonNode.Module) ast);
             int totalLines = countLines(js);
-            String fileName = file == null ? "python" : file.getFileName().toString();
-            String sourceMap = PythonSourceMap.build(fileName, sourceCode, emitter.mappings(), totalLines);
+            // Publish the authored *path*, not the bare file name: the source-map registry resolves a
+            // mapped position back onto its source entry, so a basename would make every Python
+            // diagnostic land on ".native_esm_modules/<name>.py" instead of the authored module.
+            // Same convention as the other frontends (see NekoSourceMapBuilder.displayName).
+            String authoredPath = file == null ? "python" : file.normalize().toString().replace('\\', '/');
+            String sourceMap = PythonSourceMap.build(authoredPath, sourceCode, emitter.mappings(), totalLines);
             return new ScriptCompileResult(js, sourceMap);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("python transpile failed in " + file + ": " + e.getMessage(), e);

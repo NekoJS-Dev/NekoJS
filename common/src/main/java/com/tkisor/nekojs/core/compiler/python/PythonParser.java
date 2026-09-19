@@ -1,5 +1,6 @@
 package com.tkisor.nekojs.core.compiler.python;
 
+import com.tkisor.nekojs.core.compiler.NekoCompileException;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode;
 import com.tkisor.nekojs.core.compiler.python.ast.PythonNode.Param;
 
@@ -990,8 +991,14 @@ public final class PythonParser {
         return null;
     }
 
+    /**
+     * Authored parser diagnostic. Message text is unchanged from the previous plain
+     * {@link IllegalArgumentException}; the line/column of the offending token now also travel as
+     * {@link NekoCompileException} so the preparation seam publishes real authored coordinates.
+     */
     private IllegalArgumentException error(String msg) {
         PythonToken t = peek();
-        return new IllegalArgumentException("python parse error at line " + t.line() + ", col " + t.col() + ": " + msg);
+        return new NekoCompileException("python parse error at line " + t.line() + ", col " + t.col() + ": " + msg,
+                t.line(), t.col());
     }
 }

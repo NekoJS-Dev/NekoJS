@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.compiler.python;
 
+import com.tkisor.nekojs.core.compiler.NekoCompileException;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -267,8 +269,15 @@ public final class PythonLexer {
     }
 
     private IllegalArgumentException error(String msg) { return errorAt(line, col, msg); }
+
+    /**
+     * Authored lexer diagnostic: the message text is unchanged from the previous plain
+     * {@link IllegalArgumentException}, but the authored line/column now travel with the exception so
+     * the preparation seam can publish them instead of only a formatted string
+     * (see {@code NekoModulePipeline} + {@code NekoModuleError.prepare(..., line, column, ...)}).
+     */
     private static IllegalArgumentException errorAt(int l, int c, String msg) {
-        return new IllegalArgumentException("python lex error at line " + l + ", col " + c + ": " + msg);
+        return new NekoCompileException("python lex error at line " + l + ", col " + c + ": " + msg, l, c);
     }
 
     // operator tables
