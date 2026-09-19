@@ -343,10 +343,13 @@ class NekoTypeScriptJsxRuntimeTest {
         assertEquals("server_scripts/src/mixed-boom-child.tsx", staged.sourcePath().replace('\\', '/'),
                 "a nested transpiled failure must name the failing child, not the synthetic interop module: "
                         + staged.detail());
-        assertEquals(-1, staged.sourceLine(),
-                "an interop-wrapped child failure has no guest location; reporting the synthetic "
-                        + "interop line as authored would be a lie: " + staged.detail());
         assertEquals("server_scripts/src/mixed-boom-child.tsx", staged.moduleId().replace('\\', '/'));
+        // 该位置过去是 -1（“interop 包装的子模块失败没有 guest location”）。宿主现在按 guest 栈帧
+        // 选择「能解析到 authored 位置」的那一帧，因此这里能给出子模块真实的 throw 行 3；
+        // 归因仍属于子模块，不是合成的 interop 模块。
+        assertEquals(3, staged.sourceLine(),
+                "the interop-wrapped child failure must report the child's authored throw line: " + staged.detail());
+        assertTrue(staged.sourceColumn() > 0, staged.detail());
         assertInstanceOf(PolyglotException.class, staged.getCause());
     }
 
