@@ -152,3 +152,64 @@ git diff --check
 - `.mts`/`.cts` 仍不是已注册语言扩展（`identify` 能得到 ESM/COMMONJS mode，但 prepare 报
   「No script compiler registered」）；既有行为不变，本票不扩大语言范围。
 - 未设置任何性能阈值（PERF_BASELINE 独立）；未改 05/06/07 语义。
+
+## Review-round-1 addendum（2026-09-19）
+
+本轮针对协调者复核的两条 Standards findings 在 `ffc5045b` 工作树上 fix-forward；
+`Status` 保持 `closed`，不反勾已验证 AC。两条都不是"补说明"，而是实际修源码 + 补可区分测试。
+
+- **F3（enum 数字字面量诊断位置）— confirmed, fixed.** 原实现
+  `badEnumNumberLiteral` 用 `source.indexOf(literal)` 在**原始源码**里找位置：注释、
+  字符串或更早的合法成员里的同名 token 会先被命中；未命中时回退索引 `0`，
+  等于把错误报成 authored `1:1`——与本票"不把生成位置当成 authored 位置"的承诺反向冲突。
+
+  修法（选协调者给的 (a)，因为 phase 1 擦除只做等长空白替换，真实 index 本来就可得）：
+  `EnumMember` 增加 `valueStart` 组件；`transformOneEnum` 把 enum body 的 authored 起始
+  偏移传给 `parseEnumMembers(body, bodyStart)`；`addEnumMember` 由 segment/eq/前导空白
+  算出该成员值的精确 authored 偏移；两处 `badEnumNumberLiteral` 调用点改传
+  `m.valueStart()`。同时把 `diagnostic(message, index)` 的语义收紧为
+  **负索引 = 位置未知 → 发布 `-1`**，不再回退到 `1:1`（这一条是比 F3 更根本的诚实性修复：
+  它保证任何"拿不到位置"的 TS 诊断都不会伪造 `1:1`）。
+
+  证据：新测试 `NekoTypeScriptEnumDiagnosticLocationTest`(3)——同名 token 先出现在
+  第 1 行注释、第 2 行字符串（断言 4:列）、先出现在上一个**合法**成员
+  `One = 1e0`（断言命中第 3 行而非第 2 行）、多行 enum 前文已有同字面量
+  （断言 5:列）。红侧已实测：把 `badEnumNumberLiteral` 换回旧 `indexOf` 实现后
+  该测试 **2/3 失败**（`earlierCommentOccurrence…` 与 `multiLineEnum…`），
+  恢复后 3/3 通过。
+
+- **F-AC4（执行期才发现的下方语法错误映射路径）— reachable, kept, now discriminating.**
+  自己判定结论：**不是死代码**。用一次性探针（已删除）确认同一文件
+  `cache.prepare(file)` **成功**（`prepare=SUCCEEDED`），而 `host.loadEntry` 抛
+  `PREPARE/Script Preparation line=4 col=1 cause=NekoEsmLinkException`——即诊断只能由
+  `withSyntaxLocation` 重解析后经 `authoredPosition` 映射产生，prepare 阶段看不见。
+  原有两个用例不可区分，是因为它们只断言 `Stage.PREPARE`，没有断言
+  "prepare 已成功" 与 "cause 是 executor 重解析的 `NekoEsmLinkException`"。
+
+  修法：两个用例改名为 `loweredJsSyntaxErrorIsMappedAfterPreparationSucceeded` /
+  `loweredTsSyntaxErrorIsMappedAfterPreparationSucceeded`，各自先断言
+  `cache.prepare(file)` 成功且 language id 正确（jsx / tsx），再断言
+  `staged.getCause() instanceof NekoEsmLinkException`。红侧已实测：临时移除
+  `authoredPosition` 映射（退回无位置的 `NekoModuleError.prepare` 重载）后，
+  **恰好这两个用例失败**（`expected: <4> but was: <-1>`），恢复后 12/12 通过。
+  因此原分支被保留，且现在有用例区分"准备期发现"与"执行器抛错后才映射"。
+
+### Review-round-1 evidence matrix
+
+| Finding | 精确证据 | 精确命令 | 结果与限制 |
+|---|---|---|---|
+| F3 位置不得被更早同名 token 偷走 | `NekoTypeScriptEnumDiagnosticLocationTest`(3) 的注释/字符串/上一成员/多行用例 | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.compiler.NekoTypeScriptEnumDiagnosticLocationTest` | PASS（3/3）；旧 `indexOf` 实现下 2/3 红，已实测。未命中位置一律 `-1`，不再伪造 `1:1`。 |
+| F-AC4 映射路径可达且被覆盖 | `NekoTypeScriptJsxRuntimeTest`(12) 的两个 `…IsMappedAfterPreparationSucceeded` 用例：先断言 `cache.prepare` 成功，再断言 `cause` 是 `NekoEsmLinkException` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoTypeScriptJsxRuntimeTest` | PASS（12/12）；移除映射分支后恰好 2 个用例红，已实测。分支保留，无删除。 |
+| 回归未受影响 | `NekoTypeScriptCompilerTest`、`NekoCompilerGoldenTest`、`TypeScriptErasureParseCorpusTest`、`NekoJsxCompilerTest` 及全量 common | `./gradlew.bat :common:test --rerun-tasks` | PASS；1730 tests / 0 failures / 0 errors / 4 skipped。tsc enum 语义（`enumValidNumericLiteralsCompile`、`enumRejectsInvalidPrefixedNumericLiterals` 等）全部保持。 |
+| 综合门禁 | common check | `./gradlew.bat :common:check`；`git diff --check` | PASS；未更新 golden。 |
+
+### 仍未覆盖 / 边界
+
+- `-1`（位置未知）当前在 `NekoTypeScriptEnumDiagnosticLocationTest` 的正式用例里没有被
+  直接触发：本实现两处 enum 诊断都能算出真实偏移，`-1` 只在"成员无值"或理论上的
+  偏移越界时出现，为防御性语义。未为纯理论分支编造测试。
+- 本轮只动了 TS enum 诊断位置与执行期映射用例的区分度；未改任何语言语义、
+  未改 cache/身份/trust 边界、未扩大语言范围。
+- 仍未运行真实 Minecraft client/server、loader runtime 或 network session smoke。
+- 工作树同期有其它票（build.gradle / stonecutter / tools/nekojs-ci-gates.py 等）
+  的在途改动，属他人写集；本轮提交只包含本票文件。
