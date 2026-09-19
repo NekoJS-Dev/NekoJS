@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.module;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
+import com.tkisor.nekojs.core.compiler.NekoModuleMode;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.compiler.python.PythonToJsCompiler;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -11,6 +12,7 @@ import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.fs.NekoJSFileSystem;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.fs.SandboxPolicy;
+import com.tkisor.nekojs.core.module.esm.NekoEsmLinkException;
 import com.tkisor.nekojs.core.node.NekoNodeModuleInstaller;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import graal.graalvm.polyglot.Context;
@@ -214,21 +216,74 @@ class NekoPythonRuntimeTest {
         assertTrue(staged.sourceColumn() > 0, staged.detail());
     }
 
+    /** AC3 前半：Python 源解析错误在准备阶段报告 authored 位置（与词法/发射期错误同族）。 */
     @Test
-    void generatedCodeSyntaxErrorIsReportedAsPreparationFailureAtTheAuthoredLine() throws Exception {
-        // 该 Python 源能通过词法/语法，但转译产物的 JS 有语法问题（破坏性探针不可用），
-        // 故这里用「Python 源不合法」的等价路径：转换错误必须在准备阶段、带 authored 行列。
-        Path file = write("bad_transform.py", "def f():\n    return 1\nvalue = f(\n");
+    void pythonSourceParseErrorIsReportedAtPrepareWithTheAuthoredLine() throws Exception {
+        // 未闭合的调用在 Python 文法里直到文件末尾才报错（NEWLINE 落在第 4 行），
+        // 位置取 parser 实际报告的行列，不编造调用开始行。
+        Path file = write("bad_parse_runtime.py", "def f():\n    return 1\nvalue = f(\n");
 
         Exception failure = assertThrows(Exception.class, () -> cache.prepare(file));
 
         NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
                 failure, NekoModuleError.Stage.PREPARE, NekoModuleError.OWNER_PREPARATION);
-        assertEquals("server_scripts/src/bad_transform.py", staged.sourcePath().replace('\\', '/'));
-        // 未闭合的调用在 Python 文法里直到文件末尾才报错（NEWLINE 落在第 4 行），
-        // 位置取 parser 实际报告的行列，不编造调用开始行。
+        assertEquals("server_scripts/src/bad_parse_runtime.py", staged.sourcePath().replace('\\', '/'));
         assertEquals(4, staged.sourceLine(), staged.detail());
         assertTrue(staged.sourceColumn() > 0, staged.detail());
+    }
+
+    /**
+     * AC3 后半：**生成 JS 的 link 失败**。Python 的 {@code from <sibling> import <name>} 会转译成
+     * ESM 静态 import；被 import 的模块若没有该导出，失败发生在 JS 这一侧（link），而不是
+     * Python 源解析侧——
+     *
+     * <ul>
+     *   <li>{@code cache.prepare} 必须**成功**（Python 源合法，转译也成功）；</li>
+     *   <li>{@code loadEntry} 抛 {@code Stage.LINK} / {@code Module Resolution/Cache}，
+     *       cause 是 {@link NekoEsmLinkException}（真实 JS link 诊断）；</li>
+     *   <li>与 {@code EXECUTE}（运行期异常）和 {@code PREPARE}（Python 源错误）可区分。</li>
+     * </ul>
+     *
+     * <p>红侧证据：若把 link 失败错标为 EXECUTE（例如宿主吞掉 {@code NekoEsmLinkException}），
+     * 本用例的 stage 断言即失败。
+     */
+    @Test
+    void generatedJsLinkFailureIsDistinguishedFromPythonSourceAndExecutionErrors() throws Exception {
+        write("link_sibling.py", "def present():\n"
+                + "    return 1\n"
+                + "\n"
+                + "OTHER = 2\n");
+        Path entry = write("link_entry.py", "from link_sibling import absent_name\n"
+                + "value = 1\n");
+
+        // 准备阶段看不到该错误：Python 源合法，转译成 `import { absent_name } from './link_sibling'`。
+        NekoPreparedModule prepared = cache.prepare(entry);
+        assertEquals("python", prepared.languageId());
+        assertTrue(prepared.code().contains("import { absent_name }"), prepared.code());
+        assertEquals(NekoModuleMode.ESM, prepared.mode());
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/link_entry.py"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.LINK, NekoModuleError.OWNER_RESOLUTION_CACHE);
+        assertTrue(String.valueOf(staged.getMessage()).contains("absent_name"), String.valueOf(staged));
+        assertEquals("server_scripts/src/link_entry.py", staged.sourcePath().replace('\\', '/'),
+                "the link failure must name the authored importing .py module: " + staged.detail());
+        assertInstanceOf(NekoEsmLinkException.class, staged.getCause(),
+                "the diagnostic must be the real generated-JS link failure, not a Python source error");
+
+        // 与 EXECUTE 的区分：同一 sibling 的「存在但运行期抛错」是另一条路径（EXECUTE）。
+        write("link_sibling.py", "def present():\n"
+                + "    raise ValueError('sibling-runtime-boom')\n");
+        write("link_entry.py", "from link_sibling import present\n"
+                + "value = present()\n");
+        IOException runtimeFailure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/link_entry.py"));
+        NekoModuleError runtimeStaged = NekoModulePipelinePrepareTest.assertStaged(
+                runtimeFailure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        assertEquals("server_scripts/src/link_sibling.py", runtimeStaged.sourcePath().replace('\\', '/'),
+                "a runtime failure in the sibling must be attributed to the sibling");
     }
 
     @Test
@@ -299,6 +354,33 @@ class NekoPythonRuntimeTest {
         Value after = asValue(host.loadEntry("./server_scripts/src/dep_entry.py"));
         assertEquals("two", after.getMember("value").asString(),
                 "a changed Python dependency must invalidate through the shared cache, not a second resolver");
+    }
+
+    /**
+     * AC5 的**自动**失效路径：不调用 {@code invalidateModuleTree}／{@code invalidate}，
+     * 仅改动被 import 的 .py 后重跑入口。宿主的 {@code refreshPreparedExecutionTree} 必须在
+     * 入口缓存命中之前发现子模块的 prepared key 变化并使之失效。
+     *
+     * <p>与 {@code changedPythonDependencyIsReloadedThroughTheSharedCache}（显式
+     * {@code invalidateModuleTree}）互补：那条证明显式失效，这条证明依赖驱动失效。
+     */
+    @Test
+    void changedPythonDependencyIsObservedWithoutAnExplicitInvalidate() throws Exception {
+        write("auto_lib.py", "def tag():\n"
+                + "    return 'auto-one'\n");
+        write("auto_entry.py", "from auto_lib import tag\n"
+                + "value = tag()\n");
+
+        Value before = asValue(host.loadEntry("./server_scripts/src/auto_entry.py"));
+        assertEquals("auto-one", before.getMember("value").asString());
+
+        // 只改盘上内容，不做任何显式 invalidate / clear。
+        Files.writeString(paths.serverScripts().resolve("src/auto_lib.py"),
+                "def tag():\n    return 'auto-two'\n");
+
+        Value after = asValue(host.loadEntry("./server_scripts/src/auto_entry.py"));
+        assertEquals("auto-two", after.getMember("value").asString(),
+                "a changed dependency must be observed by the automatic dependency-driven invalidation");
     }
 
     @Test
