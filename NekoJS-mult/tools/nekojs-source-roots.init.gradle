@@ -1,0 +1,21 @@
+// 工单 33 source trace 探针（--init-script 运行，只读）。
+// 事实源 = 构建配置本身：把每个项目 main sourceSet 实际挂载的 java/resources srcDirs
+// 写进 versions/<node>/build/nekojs-gates/source-roots-<project>.json（不靠 stdout 解析，
+// 避免 Windows 管道截断造成"读不到就静默通过"）。
+import groovy.json.JsonOutput
+
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects { p ->
+        def sourceSets = p.extensions.findByName("sourceSets")
+        if (sourceSets == null) return
+        def main = sourceSets.findByName("main")
+        if (main == null) return
+        if (!p.projectDir.name.equals(p.name)) return  // 只记节点/引擎项目，跳过容器
+        def java = main.java.srcDirs.collect { p.relativePath(it).replace("\\", "/") }.sort()
+        def res = main.resources.srcDirs.collect { p.relativePath(it).replace("\\", "/") }.sort()
+        def dir = new File(p.projectDir, "build/nekojs-gates")
+        dir.mkdirs()
+        new File(dir, "source-roots-" + p.name + ".json").text = JsonOutput.prettyPrint(
+            JsonOutput.toJson([node: p.name, java: java, resources: res])) + "\n"
+    }
+}

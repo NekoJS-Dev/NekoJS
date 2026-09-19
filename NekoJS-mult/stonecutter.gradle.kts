@@ -78,8 +78,10 @@ stonecutter parameters {
 //   4. 密度：单文件 `//? if` ≤ 20，超限须写 `// guard-exempt(20): 理由` 豁免标记
 //      （纯 Java 注释，不用 `//?` 前缀——那是 stonecutter 指令语法），豁免清单每次输出；
 //   5. 连续守卫段 > 8 行软告警——"方法级密度"的代理指标，避免脆弱的大括号追踪；
-//   6. 模块边界（ADR-0007）：common 里 com.tkisor.nekojs.api.* 零 MC/Loader/Graal
-//      import、common 其余部分零 MC/Loader import。当前基线为零违规，新增即硬失败；
+//   6. 模块边界（ADR-0007 2026-08-30 修订）：common 里 com.tkisor.nekojs.api.* 与其它
+//      common 包一律**零 MC/Loader import**；Graal 已不再是禁止项——common（含 api.*）
+//      允许直接依赖 GraalJS，不为隔离 Graal 抽 DTO / adapter 或另立 API jar。当前基线为
+//      零 MC/Loader 违规，新增即硬失败；
 //   7. wrapper 层零 loader import（ADR-0004）。例外一：整文件 loader 守卫
 //      （`//? if neoforge/fabric {` 包住全文件）的 wrapper 文件是显式平台面，其 loader
 //      import 在对侧编译单元根本不存在，不计违规、只做提示性列出；例外二：行内 loader
@@ -106,7 +108,9 @@ val guardLint = tasks.register("guardLint") {
     // 探测面刻意比当前支持的加载器宽：net.minecraftforge 现在不该出现，真出现了要报出来
     val loaderImport = Regex("""^\s*import\s+(net\.neoforged|net\.fabricmc|net\.minecraftforge)\b.*""")
     val mcLoaderImport = Regex("""^\s*import\s+(net\.minecraft|net\.neoforged|net\.fabricmc|net\.minecraftforge)\b.*""")
-    val graalImport = Regex("""^\s*import\s+org\.graalvm\b.*""")
+    // 历史 Graal 禁令已按 ADR-0007 撤销：common（含 api.*）允许使用 GraalJS。这里不再提供
+    // graalImport 硬失败规则，避免出现"规则还在但早已空转"的假门禁；MC/loader 隔离由
+    // mcLoaderImport 继续强制（L1/L2 + checkCommonIsolation + ModulePipelineIsolationTest）。
     val wrapperDir = "src/main/java/com/tkisor/nekojs/wrapper/"
 
     doLast {
@@ -218,12 +222,13 @@ val guardLint = tasks.register("guardLint") {
             }
         }
 
-        // 模块边界（ADR-0007）：当前基线均为零违规，新增即失败
+        // 模块边界（ADR-0007 修订版）：api.* 与 common 其它包一律零 MC/Loader import。
+        // Graal 不是禁止项（common 有意拥有 GraalJS 引擎），因此这里只拦 MC/loader。
         apiSources.forEach { f ->
             f.readLines().forEach { line ->
                 val t = line.trim()
-                if (mcLoaderImport.matches(t) || graalImport.matches(t)) {
-                    problems += "${rel(f)}: 违反 L1 边界（com.tkisor.nekojs.api.* 零 MC/Loader/Graal import，ADR-0007）: $t"
+                if (mcLoaderImport.matches(t)) {
+                    problems += "${rel(f)}: 违反 L1 边界（com.tkisor.nekojs.api.* 零 MC/Loader import，ADR-0007）: $t"
                 }
             }
         }

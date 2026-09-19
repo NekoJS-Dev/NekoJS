@@ -259,12 +259,37 @@ tasks.register("dumpCompileClasspath") {
 // ---- 测试任务（locale / 时区固定，避免依赖机器环境）--------------------------------
 
 tasks.test {
-    useJUnitPlatform()
+    // 工单 33 gate 走独立 platformGateTest JVM（它建立进程级事件 schema，不能与普通用例同 JVM）
+    useJUnitPlatform {
+        excludeTags("platform-gate")
+    }
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
     systemProperty("file.encoding", "UTF-8")
 }
+
+// ---- 工单 33：contract/spec + event/surface 覆盖 gate（Fabric processor 延期的非 processor 替代） -----
+// 独立 Test 任务 = 独立 JVM：gate 会驱动节点真实事件注册入口并建立进程级事件 schema，
+// 与普通 test 同 JVM 会污染其它用例（实测 :26.2.0 30 例失败）。普通 test 显式排除该 tag。
+val platformGateTest = tasks.register<Test>("platformGateTest") {
+    group = "verification"
+    description = "Runs the ticket-33 non-processor coverage gates (contract/spec, event/surface)."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("platform-gate")
+    }
+    // 节点身份是 event/surface 基线的一级键（同 loader 的不同 MC 节点可有合法差异）
+    systemProperty("nekojs.node", project.name)
+    systemProperty("user.language", "en")
+    systemProperty("user.country", "US")
+    systemProperty("user.timezone", "UTC")
+    systemProperty("file.encoding", "UTF-8")
+}
+
+// 工单 33：非 processor 覆盖 gate 是节点 check 的一部分（Fabric processor 延期不得变成覆盖空白）。
+tasks.named("check") { dependsOn(platformGateTest) }
 
 tasks.register<Test>("nbtSmokeTest") {
     group = "verification"

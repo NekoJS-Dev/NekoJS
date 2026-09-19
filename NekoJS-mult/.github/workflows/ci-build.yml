@@ -140,6 +140,30 @@ jobs:
         # 单个 build 已按依赖链覆盖 compileJava → test → check（隔离门禁/verifyDevModSourceSets）
         run: ./gradlew :1.21.1:build :26.1.2:build :26.2.0:build :26.1.2-fabric:build :26.2.0-fabric:build --console=plain
 
+      - name: Ticket-33 build/CI and non-processor coverage gates
+        # 工单 33：CI 子集用途一致性、Fabric processor 延期、三类非 processor 覆盖 gate
+        # （contract/spec、event/surface、declaration）与五节点 check/artifact/source trace。
+        # 失败时逐条打印 <check> <subject> node=<node> input=<file> expected=<...> owner=<owner> :: <detail>，
+        # 而不是只留任务失败摘要。节点内的 spec/event gate 由各节点 check 触发（platformGateTest 已挂进 check）。
+        shell: bash
+        run: |
+          set -euo pipefail
+          for node in 1.21.1 26.1.2 26.2.0 26.1.2-fabric 26.2.0-fabric; do
+            python3 tools/nekojs-ci-gates.py source-roots --node "$node"
+          done
+          python3 tools/nekojs-ci-gates.py all --out build/nekojs-gates-report.json
+
+      - name: Upload build/CI gate report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nekojs-platform-gates
+          path: |
+            build/nekojs-gates-report.json
+            common/build/nekojs-gates
+            versions/*/build/nekojs-gates
+          if-no-files-found: ignore
+
       - name: Prepare artifacts
         shell: bash
         env:

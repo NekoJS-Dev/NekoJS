@@ -20,3 +20,6 @@ logs/
 .idea/
 *.iml
 .vscode/
+
+# Python gate 工具缓存
+__pycache__/
