@@ -178,7 +178,10 @@ tasks.processResources {
 // Gradle 9 默认测试框架不是 JUnit Platform，不配则 jupiter 测试静默发现不了
 // （failOnNoDiscoveredTests = false 曾把这一点掩盖成"没有测试"）。
 tasks.test {
-    useJUnitPlatform()
+    // 工单 33 gate 走独立 platformGateTest JVM（它建立进程级事件 schema，不能与普通用例同 JVM）
+    useJUnitPlatform {
+        excludeTags("platform-gate")
+    }
     systemProperty("user.language", "en")
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
@@ -186,6 +189,26 @@ tasks.test {
     // Fabric now has a versioned runtime smoke gate and six JUnit tests; an empty suite must fail.
     failOnNoDiscoveredTests = true
 }
+
+// ---- 工单 33：contract/spec + event/surface 覆盖 gate（Fabric processor 延期的非 processor 替代） ----
+val platformGateTest = tasks.register<Test>("platformGateTest") {
+    group = "verification"
+    description = "Runs the ticket-33 non-processor coverage gates (contract/spec, event/surface)."
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnitPlatform {
+        includeTags("platform-gate")
+    }
+    // 节点身份是 event/surface 基线的一级键（同 loader 的不同 MC 节点可有合法差异）
+    systemProperty("nekojs.node", project.name)
+    systemProperty("user.language", "en")
+    systemProperty("user.country", "US")
+    systemProperty("user.timezone", "UTC")
+    systemProperty("file.encoding", "UTF-8")
+}
+
+// 工单 33：非 processor 覆盖 gate 是节点 check 的一部分（Fabric processor 延期不得变成覆盖空白）。
+tasks.named("check") { dependsOn(platformGateTest) }
 
 // ---- fat-jar：内嵌引擎产物 + common 运行时（Graal 排除）——与 NeoForge 节点同构 ----
 // Loom 会在 remapJar 阶段重映射 jar；引擎与 Graal 不引用 MC 类，重映射对它们是恒等变换。
