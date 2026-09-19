@@ -103,28 +103,72 @@ class DefaultErrorTrackerTest {
         NekoModulePipelineCache server = newCache(paths);
         NekoModulePipelineCache client = newCache(paths);
         NekoModulePipelineCache candidate = newCache(paths);
-        try {
-            tracker.activateModuleViews(ScriptType.SERVER, server);
-            tracker.activateModuleViews(ScriptType.CLIENT, client);
+        try (Context serverContext = Context.newBuilder("js").allowAllAccess(true).build();
+             Context clientContext = Context.newBuilder("js").allowAllAccess(true).build();
+             Context candidateContext = Context.newBuilder("js").allowAllAccess(true).build()) {
+            tracker.activateModuleViews(ScriptType.SERVER, serverContext, server);
+            tracker.activateModuleViews(ScriptType.CLIENT, clientContext, client);
             DefaultErrorTracker.ModuleViews serverActive = tracker.moduleViews(ScriptType.SERVER);
             DefaultErrorTracker.ModuleViews clientActive = tracker.moduleViews(ScriptType.CLIENT);
 
-            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidate);
-            assertSame(clientActive, tracker.moduleViews(ScriptType.CLIENT),
+            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidateContext, candidate);
+            DefaultErrorTracker.ModuleViews clientContextActive = tracker.moduleViews(clientContext, ScriptType.CLIENT);
+            assertNotNull(clientContextActive);
+            assertNotSame(clientActive, clientContextActive,
+                    "Context-bound view should be distinct from the type fallback object");
+            assertSame(clientContextActive, tracker.moduleViews(clientContext, ScriptType.CLIENT),
                     "a SERVER candidate must not replace CLIENT active views");
-            assertNotSame(serverActive, tracker.moduleViews(ScriptType.SERVER));
+            assertSame(serverActive, tracker.moduleViews(ScriptType.SERVER),
+                    "candidate registration must not replace the SERVER active fallback");
+            assertNotSame(serverActive, tracker.moduleViews(candidateContext, ScriptType.SERVER));
 
-            tracker.discardCandidateModuleViews(ScriptType.SERVER);
+            tracker.discardCandidateModuleViews(candidateContext);
             assertSame(serverActive, tracker.moduleViews(ScriptType.SERVER),
                     "discarding a candidate must restore that type's active views");
 
-            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidate);
-            tracker.activateModuleViews(ScriptType.SERVER, candidate);
+            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidateContext, candidate);
+            tracker.activateModuleViews(ScriptType.SERVER, candidateContext, candidate);
             assertNotSame(serverActive, tracker.moduleViews(ScriptType.SERVER));
             assertSame(clientActive, tracker.moduleViews(ScriptType.CLIENT));
         } finally {
             server.closeOwner();
             client.closeOwner();
+            candidate.closeOwner();
+        }
+    }
+
+    @Test
+    void callbackDiagnosticsUseTheOwningContextSessionView() throws Exception {
+        NekoJSPaths paths = NekoJSPaths.get();
+        SourceMapRegistry activeMaps = new SourceMapRegistry(paths.root());
+        SourceMapRegistry candidateMaps = new SourceMapRegistry(paths.root());
+        NekoEsmVirtualModuleRegistry activeVirtuals = new NekoEsmVirtualModuleRegistry(paths.root());
+        NekoEsmVirtualModuleRegistry candidateVirtuals = new NekoEsmVirtualModuleRegistry(paths.root());
+        NekoModulePipelineCache active = newCache(paths, activeMaps, activeVirtuals);
+        NekoModulePipelineCache candidate = newCache(paths, candidateMaps, candidateVirtuals);
+        try (Context activeContext = Context.newBuilder("js").allowAllAccess(true).build();
+             Context candidateContext = Context.newBuilder("js").allowAllAccess(true).build()) {
+            activeMaps.register("server_scripts/context-callback.js",
+                    sourceMap("server_scripts/active-authored.ts", "active"));
+            candidateMaps.register("server_scripts/context-callback.js",
+                    sourceMap("server_scripts/candidate-authored.ts", "candidate"));
+            tracker.activateModuleViews(ScriptType.SERVER, activeContext, active);
+            tracker.activateCandidateModuleViews(ScriptType.SERVER, candidateContext, candidate);
+
+            tracker.recordCallbackError(activeContext, ScriptType.SERVER, "event", throwingPolyglot(
+                    activeContext, "server_scripts/context-callback.js"));
+            ScriptError activeError = tracker.getAllErrors().iterator().next();
+            assertEquals("server_scripts/active-authored.ts", activeError.getDisplayPath(),
+                    "an active callback must retain the active session map during candidate execution");
+
+            tracker.clearAll();
+            tracker.recordCallbackError(candidateContext, ScriptType.SERVER, "event", throwingPolyglot(
+                    candidateContext, "server_scripts/context-callback.js"));
+            ScriptError candidateError = tracker.getAllErrors().iterator().next();
+            assertEquals("server_scripts/candidate-authored.ts", candidateError.getDisplayPath(),
+                    "candidate diagnostics must use only the candidate Context session map");
+        } finally {
+            active.closeOwner();
             candidate.closeOwner();
         }
     }
@@ -221,16 +265,35 @@ class DefaultErrorTrackerTest {
         }
     }
 
+    private static PolyglotException throwingPolyglot(Context context, String sourceName) throws Exception {
+        try {
+            context.eval(Source.newBuilder("js", "throw new Error('context failure');", sourceName).build());
+            throw new AssertionError("expected PolyglotException");
+        } catch (PolyglotException e) {
+            return e;
+        }
+    }
+
+    private static String sourceMap(String sourcePath, String content) {
+        return "{\"version\":3,\"sources\":[\"" + sourcePath
+                + "\"],\"sourcesContent\":[\"" + content
+                + "\"],\"names\":[],\"mappings\":\"AAAA\"}";
+    }
+
     private ScriptError singleError() {
         assertEquals(1, tracker.getErrorCount(), "应只保留一条错误记录");
         return tracker.getAllErrors().iterator().next();
     }
 
     private static NekoModulePipelineCache newCache(NekoJSPaths paths) {
+        return newCache(paths, new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()));
+    }
+
+    private static NekoModulePipelineCache newCache(NekoJSPaths paths, SourceMapRegistry sourceMaps,
+                                                     NekoEsmVirtualModuleRegistry virtualModules) {
         return new NekoModulePipelineCache(
                 new NekoModulePipeline(new NekoCompilationPipeline(),
                         ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
-                new SourceMapRegistry(paths.root()),
-                new NekoEsmVirtualModuleRegistry(paths.root()), NekoTrustContext.local());
+                sourceMaps, virtualModules, NekoTrustContext.local());
     }
 }

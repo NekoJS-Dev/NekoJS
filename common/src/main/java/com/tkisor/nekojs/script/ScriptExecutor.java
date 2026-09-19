@@ -54,10 +54,10 @@ public final class ScriptExecutor {
                 Path relativePath = paths.root().relativize(script.path);
                 String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
-                errorTracker.clear(script.id);
-                errorTracker.clearByScriptPath(script.type, relativePath.toString().replace("\\", "/"));
+                errorTracker.clear(ctx, script.id);
+                errorTracker.clearByScriptPath(ctx, script.type, relativePath.toString().replace("\\", "/"));
 
-                validateGlobalBindings(script);
+                    validateGlobalBindings(ctx, script);
 
                 JavaClassLoadTelemetry.enter(script.type, script.id.toString());
                 ScriptContextRegistry.switchCurrentScriptId(ctx, script.id.toString());
@@ -83,7 +83,7 @@ public final class ScriptExecutor {
             script.disabled = true;
             script.lastError = t;
 
-            ScriptError scriptError = errorTracker.record(script, t);
+            ScriptError scriptError = errorTracker.record(ctx, script, t);
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(script.type).error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
         } finally {
             watchdog.disarm();
@@ -112,7 +112,7 @@ public final class ScriptExecutor {
      * <p>每次执行/重载都跑（而非只在编译时），保证游戏内错误面板在完整重载（源码未改、模块缓存命中）
      * 时仍准确反映当前脚本状态 —— 编译时校验（{@code NekoModulePipeline}）受静态缓存限制，这里补足入口脚本。
      */
-    private void validateGlobalBindings(ScriptContainer script) {
+    private void validateGlobalBindings(Context context, ScriptContainer script) {
         String source;
         try {
             source = Files.readString(script.path);
@@ -126,7 +126,7 @@ public final class ScriptExecutor {
             // 校验只报告错误，绝不阻塞脚本执行；但校验器自身崩了不能无声吞掉——
             // 进错误面板（recordCallbackError 含里程碑节流），否则该类型的成员校验
             // 静默消失且无人察觉
-            errorTracker.recordCallbackError(script.type, "preflight-validator", t);
+            errorTracker.recordCallbackError(context, script.type, "preflight-validator", t);
         }
     }
 

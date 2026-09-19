@@ -20,7 +20,7 @@ public record ScriptPack(
 
     /** 本包某脚本类型的脚本目录（可能不存在，调用方自行判空）。 */
     public Path scriptsDirFor(ScriptType type) {
-        return root.resolve(type.name + "_scripts");
+        return root.resolve(type.scriptsDirectoryName());
     }
 
     /**

@@ -2,6 +2,7 @@ package com.tkisor.nekojs.api.event;
 
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.Context;
 
 /**
  * Static accessor for script error reporting, breaking the api→core dependency
@@ -23,6 +24,10 @@ public final class ScriptErrorReporter {
     public interface Reporter {
         void recordCallbackError(ScriptType type, String callbackKind, Throwable throwable);
 
+        default void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
+            recordCallbackError(type, callbackKind, throwable);
+        }
+
         /**
          * 事件回调（配方脚本等）抛出的 Graal 异常上报（语义同 ErrorTracker#recordEventError）。
          * <p>线程约束：可从任意线程调用（recipe 处理在服务端线程，mixin 命中点可能在渲染线程）；
@@ -30,6 +35,10 @@ public final class ScriptErrorReporter {
          * reload 不重建 reporter——实现不得假设"每次 reload 换实例"。</p> */
         default void recordEventError(ScriptType type, PolyglotException error) {
             recordCallbackError(type, "event", error);
+        }
+
+        default void recordEventError(Context context, ScriptType type, PolyglotException error) {
+            recordCallbackError(context, type, "event", error);
         }
 
         /** 是否累计有错误（语义同 ErrorTracker#hasErrors）。线程约束同 {@link #recordEventError}。 */
@@ -53,9 +62,17 @@ public final class ScriptErrorReporter {
         instance.recordCallbackError(type, callbackKind, throwable);
     }
 
+    public static void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
+        instance.recordCallbackError(context, type, callbackKind, throwable);
+    }
+
     /** 事件回调 Graal 异常上报（经 root 的 tracker；静态上下文的注入替代面）。 */
     public static void recordEventError(ScriptType type, PolyglotException error) {
         instance.recordEventError(type, error);
+    }
+
+    public static void recordEventError(Context context, ScriptType type, PolyglotException error) {
+        instance.recordEventError(context, type, error);
     }
 
     public static boolean hasErrors() {

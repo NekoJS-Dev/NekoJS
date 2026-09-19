@@ -14,6 +14,7 @@ import com.tkisor.nekojs.core.module.esm.NekoEsmModuleState;
 import com.tkisor.nekojs.core.module.esm.NekoEsmSpan;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.module.esm.NekoNativeEsmSourceRewriter;
+import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
@@ -66,6 +67,7 @@ public final class NekoScriptModuleLoaderHost {
     private final Map<String, Long> moduleRevisions;
     private final Map<String, String> modulePreparedKeys;
     private final Map<String, java.nio.file.Path> modulePaths;
+    private final Set<String> registeredSpecialModules = ConcurrentHashMap.newKeySet();
     private final BiConsumer<java.nio.file.Path, String> preparationObserver;
     private final ModuleReloadCoordinator reloadCoordinator;
     private final EsmModuleLifecycle esmLifecycle;
@@ -92,7 +94,7 @@ public final class NekoScriptModuleLoaderHost {
         this.esmLinkCache = new NekoEsmLinkCache(esmLinker);
         this.esmRecordCache = new NekoEsmModuleRecordCache();
         this.esmRewriter = new NekoNativeEsmSourceRewriter(resolver, preparationCache, virtualModules,
-                preparationCache.sourceMaps(), preparationCache::composeRewrittenSourceMap);
+                preparationCache.sourceMaps());
         this.dependencyGraph = new NekoModuleDependencyGraph();
         this.moduleCache = new ConcurrentHashMap<>();
         this.moduleRevisions = new ConcurrentHashMap<>();
@@ -119,6 +121,13 @@ public final class NekoScriptModuleLoaderHost {
         this.specialResolver = specialResolver;
         this.moduleFactory = moduleFactory;
         this.jsonParser = jsonParser;
+    }
+
+    /** Install the Java-side allow-list for plugin-defined special module ids. */
+    public void registerSpecialModules(java.util.Collection<String> moduleIds) {
+        if (moduleIds != null) {
+            registeredSpecialModules.addAll(moduleIds);
+        }
     }
 
     // ---- ESM namespace 回调: 由 captureNamespaceSync/Async 中动态拼接的 JS 字符串调用 ----
@@ -235,7 +244,8 @@ public final class NekoScriptModuleLoaderHost {
     }
 
     private NekoResolvedModule resolveChildForRequire(String parentPath, String specifier) throws IOException {
-        return resolveWithStage(parentPath, specifier, () -> resolver.resolveForRequire(parentPath, specifier));
+        return resolveWithStage(parentPath, specifier,
+                () -> resolver.resolveForRequire(parentPath, specifier, registeredSpecialModules));
     }
 
     @FunctionalInterface
@@ -588,7 +598,8 @@ public final class NekoScriptModuleLoaderHost {
             return path;
         }
         String normalized = path.replace('\\', '/');
-        for (String root : new String[]{"startup_scripts/", "server_scripts/", "client_scripts/", "test_scripts/"}) {
+        for (ScriptType type : ScriptType.all()) {
+            String root = type.scriptsDirectoryName() + "/";
             int index = normalized.indexOf(root);
             if (index >= 0) {
                 return normalized.substring(index);

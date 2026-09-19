@@ -166,7 +166,8 @@ public final class NekoNodeTimers implements AutoCloseable {
     /** 有界入队：队列已满时丢弃新回调并记一次错误（ErrorTracker 按签名去重，不会刷屏）。 */
     private void enqueueReady(TimerCallback callback) {
         if (ready.size() >= MAX_READY_QUEUE_SIZE) {
-            errorTracker.recordCallbackError(scriptType, "timer",
+            Context context = callback.callback == null ? null : callback.callback.getContext();
+            errorTracker.recordCallbackError(context, scriptType, "timer",
                     new IllegalStateException("Timer queue overflow (" + MAX_READY_QUEUE_SIZE
                             + " callbacks pending); dropping new callback id=" + callback.id));
             return;
@@ -238,7 +239,7 @@ public final class NekoNodeTimers implements AutoCloseable {
             // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
             // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
             ScriptManager.reportContextKilled(context, e);
-            errorTracker.recordCallbackError(scriptType, "timer", e);
+            errorTracker.recordCallbackError(context, scriptType, "timer", e);
         }
     }
 

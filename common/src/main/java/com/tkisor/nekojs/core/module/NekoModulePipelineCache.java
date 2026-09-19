@@ -8,12 +8,17 @@ import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
 import com.tkisor.nekojs.core.module.esm.NekoEsmVirtualModuleRegistry;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -292,6 +297,10 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         }
     }
 
+    int preparationObserverCount() {
+        return preparationObservers.size();
+    }
+
     /** Single owner for JSON execution identity used by preparation and host cache checks. */
     String jsonExecutionKey(Path path, String source) {
         Path key = key(path);
@@ -299,30 +308,240 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         return NekoModuleHash.jsonExecutionKey(moduleId, source);
     }
 
+    /** A native ESM replacement and its ranges in the prepared and rewritten source. */
+    public record RewriteSpan(int originalStart, int originalEnd, int generatedStart, int generatedEnd) {}
+
     /**
-     * Compose the map for a virtual rewritten module. Native unchanged ESM keeps the prepared
-     * compiler/identity map; a length-changing rewrite gets a conservative generated-line map
-     * whose columns intentionally resolve to the authored line start.
+     * Compose the map for a virtual rewritten module. Compiler authored sources/content and
+     * original mappings are retained; only generated coordinates are shifted over replacements.
+     * Segments inside replacement text are deliberately conservative and point at the authored
+     * mapping immediately before the replacement.
      */
-    String composeRewrittenSourceMap(NekoPreparedModule prepared, String generatedSource) {
+    public String composeRewrittenSourceMap(NekoPreparedModule prepared, String generatedSource,
+                                             java.util.List<RewriteSpan> rewriteSpans) {
         if (prepared == null || prepared.sourceMap() == null || prepared.sourceMap().isBlank()) {
             return null;
         }
         if (Objects.equals(prepared.code(), generatedSource)) {
             return prepared.sourceMap();
         }
+        try {
+            JsonObject root = JsonParser.parseString(prepared.sourceMap()).getAsJsonObject();
+            List<MapSegment> original = decodeMap(root.get("mappings").getAsString());
+            if (original.isEmpty()) {
+                return conservativeRewrittenMap(prepared, generatedSource);
+            }
+            List<RewriteSpan> spans = rewriteSpans == null ? List.of() : rewriteSpans.stream()
+                    .sorted(Comparator.comparingInt(RewriteSpan::originalStart)).toList();
+            List<MapSegment> composed = new ArrayList<>();
+            for (MapSegment segment : original) {
+                int originalOffset = offsetOf(prepared.code(), segment.generatedLine(), segment.generatedColumn());
+                int generatedOffset = rewrittenOffset(originalOffset, spans);
+                Position generated = positionOf(generatedSource, generatedOffset);
+                composed.add(segment.withGenerated(generated.line(), generated.column()));
+            }
+            for (RewriteSpan span : spans) {
+                MapSegment anchor = anchorAtOrBefore(original, positionOf(prepared.code(), span.originalStart()));
+                if (anchor == null) continue;
+                Position start = positionOf(generatedSource, span.generatedStart());
+                int generatedLine = start.line();
+                int generatedColumn = start.column();
+                String replacement = generatedSource.substring(
+                        Math.max(0, Math.min(span.generatedStart(), generatedSource.length())),
+                        Math.max(0, Math.min(span.generatedEnd(), generatedSource.length())));
+                for (String line : replacement.split("\\n", -1)) {
+                    composed.add(new MapSegment(generatedLine, generatedColumn,
+                            anchor.sourceIndex(), anchor.originalLine(), anchor.originalColumn(), anchor.nameIndex()));
+                    generatedLine++;
+                    generatedColumn = 0;
+                }
+            }
+            root.addProperty("mappings", encodeMap(composed));
+            return root.toString();
+        } catch (RuntimeException ignored) {
+            // The prepared map was already accepted; fall back to a legal authored map.
+            return conservativeRewrittenMap(prepared, generatedSource);
+        }
+    }
+
+    private String conservativeRewrittenMap(NekoPreparedModule prepared, String generatedSource) {
         String authoredSource = prepared.code();
         try {
-            var root = JsonParser.parseString(prepared.sourceMap()).getAsJsonObject();
-            var contents = root.getAsJsonArray("sourcesContent");
+            JsonArray contents = JsonParser.parseString(prepared.sourceMap())
+                    .getAsJsonObject().getAsJsonArray("sourcesContent");
             if (contents != null && !contents.isEmpty() && !contents.get(0).isJsonNull()) {
                 authoredSource = contents.get(0).getAsString();
             }
         } catch (RuntimeException ignored) {
-            // The prepared map was already accepted; fall back to a legal conservative map.
+            // Keep the prepared generated source as the conservative authored fallback.
         }
-        return NekoSourceMapBuilder.identity(Path.of(prepared.sourcePath()), authoredSource, generatedSource);
+        return NekoSourceMapBuilder.identity(Path.of(
+                prepared.sourcePath() == null ? "unknown.js" : prepared.sourcePath()), authoredSource, generatedSource);
     }
+
+    private static List<MapSegment> decodeMap(String mappings) {
+        List<MapSegment> result = new ArrayList<>();
+        int sourceIndex = 0;
+        int originalLine = 0;
+        int originalColumn = 0;
+        int nameIndex = 0;
+        String[] lines = mappings == null ? new String[0] : mappings.split(";", -1);
+        for (int line = 0; line < lines.length; line++) {
+            int generatedColumn = 0;
+            if (lines[line].isEmpty()) continue;
+            for (String encoded : lines[line].split(",")) {
+                List<Integer> values = decodeVlq(encoded);
+                if (values.isEmpty()) continue;
+                generatedColumn += values.get(0);
+                if (values.size() < 4) continue;
+                sourceIndex += values.get(1);
+                originalLine += values.get(2);
+                originalColumn += values.get(3);
+                if (values.size() >= 5) nameIndex += values.get(4);
+                result.add(new MapSegment(line, generatedColumn, sourceIndex, originalLine, originalColumn,
+                        values.size() >= 5 ? nameIndex : -1));
+            }
+        }
+        return result;
+    }
+
+    private static List<Integer> decodeVlq(String encoded) {
+        List<Integer> result = new ArrayList<>();
+        int value = 0;
+        int shift = 0;
+        for (int i = 0; i < encoded.length(); i++) {
+            int digit = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+                    .indexOf(encoded.charAt(i));
+            if (digit < 0) return List.of();
+            value |= (digit & 31) << shift;
+            if ((digit & 32) == 0) {
+                int decoded = value >> 1;
+                result.add((value & 1) == 0 ? decoded : -decoded);
+                value = 0;
+                shift = 0;
+            } else {
+                shift += 5;
+            }
+        }
+        return result;
+    }
+
+    private static String encodeMap(List<MapSegment> segments) {
+        segments.sort(Comparator.comparingInt(MapSegment::generatedLine)
+                .thenComparingInt(MapSegment::generatedColumn)
+                .thenComparingInt(MapSegment::sourceIndex)
+                .thenComparingInt(MapSegment::originalLine)
+                .thenComparingInt(MapSegment::originalColumn));
+        StringBuilder out = new StringBuilder();
+        int currentLine = 0;
+        int previousSource = 0;
+        int previousOriginalLine = 0;
+        int previousOriginalColumn = 0;
+        int previousName = 0;
+        int previousGeneratedColumn = 0;
+        boolean firstInLine = true;
+        MapSegment previous = null;
+        for (MapSegment segment : segments) {
+            if (previous != null && previous.generatedLine() == segment.generatedLine()
+                    && previous.generatedColumn() == segment.generatedColumn()
+                    && previous.sourceIndex() == segment.sourceIndex()
+                    && previous.originalLine() == segment.originalLine()
+                    && previous.originalColumn() == segment.originalColumn()
+                    && previous.nameIndex() == segment.nameIndex()) continue;
+            while (currentLine < segment.generatedLine()) {
+                out.append(';');
+                currentLine++;
+                previousGeneratedColumn = 0;
+                firstInLine = true;
+            }
+            if (!firstInLine) out.append(',');
+            encodeVlq(out, segment.generatedColumn() - previousGeneratedColumn);
+            encodeVlq(out, segment.sourceIndex() - previousSource);
+            encodeVlq(out, segment.originalLine() - previousOriginalLine);
+            encodeVlq(out, segment.originalColumn() - previousOriginalColumn);
+            if (segment.nameIndex() >= 0) {
+                encodeVlq(out, segment.nameIndex() - previousName);
+                previousName = segment.nameIndex();
+            }
+            previousGeneratedColumn = segment.generatedColumn();
+            previousSource = segment.sourceIndex();
+            previousOriginalLine = segment.originalLine();
+            previousOriginalColumn = segment.originalColumn();
+            firstInLine = false;
+            previous = segment;
+        }
+        return out.toString();
+    }
+
+    private static void encodeVlq(StringBuilder out, int value) {
+        int vlq = value < 0 ? ((-value) << 1) + 1 : value << 1;
+        do {
+            int digit = vlq & 31;
+            vlq >>>= 5;
+            if (vlq > 0) digit |= 32;
+            out.append("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".charAt(digit));
+        } while (vlq > 0);
+    }
+
+    private static MapSegment anchorAtOrBefore(List<MapSegment> segments, Position position) {
+        MapSegment anchor = null;
+        for (MapSegment segment : segments) {
+            if (segment.generatedLine() < 0) continue;
+            if (segment.generatedLine() < position.line()
+                    || segment.generatedLine() == position.line() && segment.generatedColumn() <= position.column()) {
+                anchor = segment;
+            }
+            else break;
+        }
+        return anchor == null && !segments.isEmpty() ? segments.get(0) : anchor;
+    }
+
+    private static int rewrittenOffset(int originalOffset, List<RewriteSpan> spans) {
+        int delta = 0;
+        for (RewriteSpan span : spans) {
+            if (originalOffset < span.originalStart()) return originalOffset + delta;
+            if (originalOffset < span.originalEnd()) return span.generatedStart();
+            delta += (span.generatedEnd() - span.generatedStart()) - (span.originalEnd() - span.originalStart());
+        }
+        return originalOffset + delta;
+    }
+
+    private static int offsetOf(String source, int line, int column) {
+        return offsetOf(source, new Position(line, column));
+    }
+
+    private static int offsetOf(String source, Position position) {
+        int line = Math.max(0, position.line());
+        int offset = 0;
+        for (int i = 0; i < line && offset < source.length(); i++) {
+            int newline = source.indexOf('\n', offset);
+            if (newline < 0) return source.length();
+            offset = newline + 1;
+        }
+        return Math.max(0, Math.min(source.length(), offset + Math.max(0, position.column())));
+    }
+
+    private static Position positionOf(String source, int offset) {
+        int safe = Math.max(0, Math.min(source.length(), offset));
+        int line = 0;
+        int lineStart = 0;
+        for (int i = 0; i < safe; i++) {
+            if (source.charAt(i) == '\n') {
+                line++;
+                lineStart = i + 1;
+            }
+        }
+        return new Position(line, safe - lineStart);
+    }
+
+    private record MapSegment(int generatedLine, int generatedColumn, int sourceIndex,
+                              int originalLine, int originalColumn, int nameIndex) {
+        MapSegment withGenerated(int line, int column) {
+            return new MapSegment(line, column, sourceIndex, originalLine, originalColumn, nameIndex);
+        }
+    }
+
+    private record Position(int line, int column) {}
 
     /** Controlled read-only view for execution-side filesystem integration. */
     public NekoVirtualModuleView virtualModuleView() {
@@ -439,15 +658,8 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                 return null;
             }
             String first = relative.getName(0).toString();
-            for (ScriptType type : ScriptType.all()) {
-                String dirName = type.name + "_scripts";
-                // Windows 文件系统大小写不敏感：手建的 Server_scripts 目录同样落在 SERVER
-                // 类型子树内（Path.startsWith 在 Windows 上本就忽略大小写），这里必须同等
-                // 忽略大小写匹配，否则该目录下的模块会被误标为跨类型共享缓存、逃脱按类型清理
-                if (first.equalsIgnoreCase(dirName)) {
-                    return type;
-                }
-            }
+            // Windows 文件系统大小写不敏感：按 ScriptType 的单一目录名事实匹配。
+            return ScriptType.fromScriptsDirectoryName(first);
         } catch (Exception ignored) { // 路径解析失败 → 视为共享缓存
         }
         return null;

@@ -17,7 +17,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.BiFunction;
 
 public final class NekoNativeEsmSourceRewriter {
     private final NekoModuleResolver resolver;
@@ -25,17 +24,14 @@ public final class NekoNativeEsmSourceRewriter {
     /** 传递依赖准备缓存（W3 显式注入，语义同 {@link NekoEsmLinker}）。 */
     private final NekoModulePipelineCache preparationCache;
     private final SourceMapRegistry sourceMaps;
-    private final BiFunction<NekoPreparedModule, String, String> sourceMapComposer;
 
     public NekoNativeEsmSourceRewriter(NekoModuleResolver resolver, NekoModulePipelineCache preparationCache,
                                        NekoEsmVirtualModuleRegistry virtualModules,
-                                       SourceMapRegistry sourceMaps,
-                                       BiFunction<NekoPreparedModule, String, String> sourceMapComposer) {
+                                       SourceMapRegistry sourceMaps) {
         this.resolver = resolver;
         this.preparationCache = preparationCache;
         this.virtualModules = virtualModules;
         this.sourceMaps = sourceMaps;
-        this.sourceMapComposer = sourceMapComposer;
     }
 
     public java.net.URI registerModule(Path file, String moduleId, NekoPreparedModule prepared) throws IOException {
@@ -49,9 +45,10 @@ public final class NekoNativeEsmSourceRewriter {
         }
         visiting.add(moduleId);
         try {
-            String source = rewrite(file, moduleId, prepared, visiting);
+            RewriteResult rewritten = rewrite(file, moduleId, prepared, visiting);
+            String source = rewritten.code();
             java.net.URI uri = virtualModules.register(moduleId, source);
-            String sourceMap = sourceMapComposer.apply(prepared, source);
+            String sourceMap = preparationCache.composeRewrittenSourceMap(prepared, source, rewritten.spans());
             if (sourceMap != null && !sourceMap.isBlank()) {
                 Path virtualPath = Path.of(uri);
                 sourceMaps.register(virtualPath.toString(), withGeneratedFile(sourceMap, virtualPath),
@@ -63,9 +60,9 @@ public final class NekoNativeEsmSourceRewriter {
         }
     }
 
-    private String rewrite(Path file, String moduleId, NekoPreparedModule prepared, Set<String> visiting) throws IOException {
+    private RewriteResult rewrite(Path file, String moduleId, NekoPreparedModule prepared, Set<String> visiting) throws IOException {
         if (prepared.esmAst() == null) {
-            return prepared.code();
+            return new RewriteResult(prepared.code(), List.of());
         }
         RewriteContext context = new RewriteContext(file, moduleId, prepared.code(), prepared.esmAst(), visiting);
         return context.rewrite();
@@ -96,7 +93,7 @@ public final class NekoNativeEsmSourceRewriter {
             this.visiting = visiting;
         }
 
-        private String rewrite() throws IOException {
+        private RewriteResult rewrite() throws IOException {
             List<Replacement> replacements = new ArrayList<>();
             for (NekoEsmStatement statement : ast.statements()) {
                 String specifier = specifier(statement);
@@ -232,23 +229,29 @@ public final class NekoNativeEsmSourceRewriter {
             return names;
         }
 
-        private String applyReplacements(List<Replacement> replacements) {
+        private RewriteResult applyReplacements(List<Replacement> replacements) {
             StringBuilder output = new StringBuilder(code.length());
+            List<NekoModulePipelineCache.RewriteSpan> spans = new ArrayList<>();
             int cursor = 0;
             for (Replacement replacement : replacements) {
                 if (replacement.start() < cursor) {
                     throw new IllegalArgumentException("Overlapping native ESM rewrite spans in " + file);
                 }
                 output.append(code, cursor, replacement.start());
+                int generatedStart = output.length();
                 output.append(replacement.text());
+                spans.add(new NekoModulePipelineCache.RewriteSpan(replacement.start(), replacement.end(),
+                        generatedStart, output.length()));
                 cursor = replacement.end();
             }
             output.append(code, cursor, code.length());
-            return output.toString();
+            return new RewriteResult(output.toString(), List.copyOf(spans));
         }
     }
 
     private record Replacement(int start, int end, String text) {}
+
+    private record RewriteResult(String code, List<NekoModulePipelineCache.RewriteSpan> spans) {}
 
     public java.net.URI syntheticObjectModuleUri(String specifier) {
         String source = "const __neko_module = globalThis.__nekoNodeResolve(" + jsString(specifier) + ");\n"

@@ -91,12 +91,8 @@ public final class ScriptBindingSchema {
 
     private static ScriptType typeByScriptsDirSegment(Path norm) {
         for (Path segment : norm) {
-            String name = segment.toString();
-            for (ScriptType type : ScriptType.all()) {
-                if (name.equalsIgnoreCase(type.name + "_scripts")) {
-                    return type;
-                }
-            }
+            ScriptType type = ScriptType.fromScriptsDirectoryName(segment.toString());
+            if (type != null) return type;
         }
         return null;
     }

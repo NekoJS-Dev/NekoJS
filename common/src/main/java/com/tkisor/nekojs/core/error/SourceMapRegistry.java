@@ -103,7 +103,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
      */
     public void clearByScriptType(ScriptType type) {
         if (type == null) return;
-        clearByPathPrefix(type.name + "_scripts/");
+        clearByPathPrefix(type.scriptsDirectoryName() + "/");
     }
 
     private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {
@@ -331,10 +331,8 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     }
 
     private static boolean isRootRelative(String path) {
-        return path.startsWith("startup_scripts/")
-                || path.startsWith("server_scripts/")
-                || path.startsWith("client_scripts/")
-                || path.startsWith("test_scripts/");
+        int slash = path.indexOf('/');
+        return slash > 0 && ScriptType.fromScriptsDirectoryName(path.substring(0, slash)) != null;
     }
 
     private static String generatedDirectory(String generatedPath) {

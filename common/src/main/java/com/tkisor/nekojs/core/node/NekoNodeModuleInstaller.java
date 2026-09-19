@@ -30,14 +30,32 @@ public final class NekoNodeModuleInstaller {
      */
     public static NekoNodeRuntime install(Context context, ScriptType scriptType, NekoModuleResolver resolver, NekoJSPaths paths, ErrorTracker errorTracker, SandboxConfig sandboxConfig, NekoModulePipelineCache preparationCache) {
         NekoScriptModuleLoaderHost moduleLoaderHost = new NekoScriptModuleLoaderHost(context, resolver, preparationCache);
-        NekoNodeRuntime runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
-        context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
-        context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
-        // 全局 timers 由 manifest 的 modules/timers.ts 注册（manifest 同步加载完毕后才执行任何用户脚本，
-        // 无需在 manifest 之前预装一版会丢弃额外参数的简化实现）
-        loadManifest(context);
-        loadPluginModules(context);
-        return runtime;
+        NekoNodeRuntime runtime = null;
+        try {
+            runtime = new NekoNodeRuntime(scriptType, moduleLoaderHost, errorTracker, sandboxConfig);
+            context.getBindings("js").putMember("__nekoNodeRuntime", runtime);
+            context.getBindings("js").putMember("__nekoScriptModuleLoaderHost", moduleLoaderHost);
+            Map<String, String> pluginModules = pluginModules();
+            // Strict CJS require may enter the special resolver only for ids registered by a
+            // plugin. The complete allow-list is installed before any plugin module evaluates.
+            moduleLoaderHost.registerSpecialModules(pluginModules.keySet());
+            // 全局 timers 由 manifest 的 modules/timers.ts 注册（manifest 同步加载完毕后才执行任何用户脚本，
+            // 无需在 manifest 之前预装一版会丢弃额外参数的简化实现）
+            loadManifest(context);
+            loadPluginModules(context, pluginModules);
+            return runtime;
+        } catch (RuntimeException | Error failure) {
+            if (runtime != null) {
+                try {
+                    runtime.close();
+                } catch (Throwable cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            } else {
+                moduleLoaderHost.close();
+            }
+            throw failure;
+        }
     }
 
     private static void loadManifest(Context context) {        String manifest = readResource(MANIFEST);
@@ -65,17 +83,19 @@ public final class NekoNodeModuleInstaller {
      * （注入 {@code module}/{@code exports}/{@code require}），再通过 {@code __nekoNodeDefine}
      * 注册到内置模块表，使 {@code require('moduleId')} 解析到 {@code module.exports}。
      */
-    private static void loadPluginModules(Context context) {
+    private static Map<String, String> pluginModules() {
         NekoPluginRuntime runtime;
         try {
             runtime = NekoPluginRuntime.current();
         } catch (IllegalStateException ignored) {
-            return; // runtime 未 bootstrap（如独立 install），无插件模块
+            return Map.of(); // runtime 未 bootstrap（如独立 install），无插件模块
         }
         Map<String, String> modules = runtime.nodeModules();
-        if (modules == null || modules.isEmpty()) {
-            return;
-        }
+        return modules == null ? Map.of() : modules;
+    }
+
+    private static void loadPluginModules(Context context, Map<String, String> modules) {
+        if (modules.isEmpty()) return;
         for (Map.Entry<String, String> entry : modules.entrySet()) {
             String id = entry.getKey();
             String source = entry.getValue();

@@ -252,12 +252,12 @@ class ModulePipelineIsolationTest {
     }
 
     @Test
-    void internalHashAndResolutionValueAreNotPublicImplementationApis() throws Exception {
+    void hashCrossPackageSeamAndResolutionValueStayNarrow() throws Exception {
         Class<?> hash = Class.forName("com.tkisor.nekojs.core.module.NekoModuleHash");
-        assertTrue(!Modifier.isPublic(hash.getModifiers()), "module hash must stay core.module-internal");
+        assertTrue(Modifier.isPublic(hash.getModifiers()), "the ESM registry needs the shared hash seam");
         for (var method : hash.getDeclaredMethods()) {
-            assertTrue(!Modifier.isPublic(method.getModifiers()),
-                    "module hash methods must stay core.module-internal: " + method);
+            assertTrue(method.getName().equals("sha256") == Modifier.isPublic(method.getModifiers()),
+                    "only the cross-package SHA-256 seam may be public: " + method);
         }
         for (var constructor : NekoModuleResolver.class.getConstructors()) {
             for (var parameter : constructor.getParameterTypes()) {
