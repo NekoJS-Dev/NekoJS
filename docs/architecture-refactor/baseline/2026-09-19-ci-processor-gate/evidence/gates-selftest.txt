@@ -1,8 +1,10 @@
 selftest（每个 case 在临时副本上植入故障）:
-  OK   ci-subset 漏节点                -> 子集缺少期望的节点任务（节点 26.2.0）
-  OK   fabric 偷接 processor          -> Fabric convention 挂上了处理器 —— 延期被偷换成临时接线
-  OK   declaration 报告带缺口            -> missing-member owner=Text member=of owner_ref=Managed Surface/Probe ow
-  OK   declaration 报告缺失             -> 缺少 declaration gate 报告：not verified（跑 :common:test --tests com.tkisor.
-  OK   节点无证据 -> not verified        -> build 目录不存在：本报告对该节点是 not verified，不做任何通过推断
-  OK   节点报告带失败 -> 聚合                -> build 目录不存在：本报告对该节点是 not verified，不做任何通过推断
+  OK   ci-subset 漏节点                  -> 子集缺少期望的节点任务（节点 26.2.0）
+  OK   fabric 偷接 processor            -> Fabric convention 挂上了处理器 —— 延期被偷换成临时接线
+  OK   option 被注释掉（F4）                -> NeoForge convention 不再传平台 option
+  OK   节点报告多条 failure（F2）             -> failure[1/3] missing-binding domain=A node=26.2.0-fabric
+  OK   节点无 source trace（AC3/AC6）      -> 缺少 source-roots 探针输出：source trace not verified（跑 tools/nekojs-ci-gat
+  OK   declaration 报告带缺口（AC2）         -> missing-member owner=Text member=of owner_ref=Managed Surface/Probe
+  OK   declaration 报告缺失（AC2）          -> 缺少 declaration gate 报告：not verified（跑 :common:test --tests com.tkiso
+  OK   source-roots 失败诊断（F5）          -> FAIL source-roots subject=26.2.0-fabric node=26.2.0-fabric input=too
 selftest 全部通过：每个 gate 都会因对应输入变化而变红

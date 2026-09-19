@@ -181,7 +181,7 @@ selftest 全部通过：每个 gate 都会因对应输入变化而变红
 ```text
 ./gradlew.bat :common:compileJava :common:compileTestJava   BUILD SUCCESSFUL
 ./gradlew.bat :common:check                                 BUILD SUCCESSFUL
-./gradlew.bat :common:test --rerun-tasks                     BUILD SUCCESSFUL（233 suites / 1725 tests / 0 failed）
+./gradlew.bat :common:test --rerun-tasks                     BUILD SUCCESSFUL（235 suites / 1736 tests / 0 failed）
 ./gradlew.bat guardLint                                      BUILD SUCCESSFUL
 ./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava BUILD SUCCESSFUL
 ./gradlew.bat :<node>:test（五节点 --rerun-tasks）            BUILD SUCCESSFUL
@@ -205,3 +205,52 @@ git diff --check                                             exit 0（无空白�
 ## 11. 已知 classfile 告警
 
 平台与 `common` 编译的既有 Gson/Guava `InlineMe`/`DoNotCall`/`DoNotMock` 注解缺失告警、deprecation 与 `this-escape` 告警均为**既有**输出，不是本票引入，不影响 BUILD SUCCESSFUL。
+
+---
+
+## 12. Review-round-1 修订（2026-09-19）
+
+协调者复核确认的 7 条 Standards 轴 finding 已逐条修完。**AC2/AC8 在修订前属于证据不足**，
+本轮的修法都不止改注释：每条都带能反向变红的检查（selftest case 或 JUnit 测试）。
+
+| finding | 实际修法 | 反向证据（精确命令） | 结果 |
+|---|---|---|---|
+| F1 `checkCommonIsolation` 前缀表漏 `net.fabricmc`/`com.mojang` | 三处强制点前缀表对齐为同一集合（5 个前缀）；`com.mojang` 按事实裁决：common 源码里零 import，只是 probe 文档/配置提到，加入不会误伤 | 新增 `CommonIsolationPrefixAgreementTest`（从三个文件文本解析前缀表断言同集合）；把 `'com.mojang'` 从 `common/build.gradle` 删掉后该测试红 | 修完绿；窄化即红（已实测） |
+| F4 `passes_option` 纯文本匹配（注释里留 option 仍假阳 pass） | 新增 `strip_comments()` 状态机，先剥行/块注释（保留字符串字面量内的 `//`）再匹配 | selftest 新 case「option 被注释掉（F4）」：把真传参注释掉、注释里保留 `-Anekojs.platform=$platformTag` → 判红 | OK（8/8 selftest） |
+| F2 `gate_nodes` 只取 `failures[0][:160]`、`source-roots` 失败直接 `raise` | 逐条打印该节点**全部** failures（带 `failure[i/n]` 计数）；`source_roots` 不再 raise，改为打统一格式诊断行并返回非零 | selftest「节点报告多条 failure（F2）」断言 `domain=A/B/C` 三条都进报告；「source-roots 失败诊断（F5）」断言诊断行含 node/input/expected/owner | OK |
+| F5 `gradlew.bat` 硬编码（Linux CI 必红） | 新增 `gradle_wrapper()` 按 `sys.platform` 选 `gradlew.bat` / `./gradlew` | selftest「source-roots 失败诊断（F5）」删掉 wrapper 后断言非零 + 可定位诊断行（Windows 上本地可验证） | OK |
+| F6 `missing-type` 不可达断言（同一集合/同一正则，且无 `kind="type"` 生产者） | 删除该断言；抽出 `typeKindGaps()` 并改为 `type-symbol-observed`；`types=` 明确写成空集事实 | 新增 `typeKindSymbolProducesObservableGap`（合成 type-kind 符号必须产出缺口）与 `contractCarriesNoTypeKindSymbolsToday`（当前契约必须无 type-kind）；把 `typeKindGaps` 的 kind 过滤改成恒 true 后前者红 | 3 tests / 0 failures；反向后红（已实测） |
+| F7 Graal 禁令文档漂移（ADR-0007 + module-boundary + build.gradle 头） | ADR-0007 与历史评估文档按「按票 33 撤销/更新」**加注**（不重写历史正文）；`common/build.gradle` 头注释同步 | `guardLint` 回归绿（前缀表加强后仍 0 违规）；`CommonIsolationPrefixAgreementTest` 锁住新的一致性事实 | OK |
+
+### 12.1 修订后的证据刷新（本目录 evidence/ 已覆盖为最新）
+
+```text
+python tools/nekojs-ci-gates.py all        → 4 个 check，0 个失败条目
+python tools/nekojs-ci-gates.py selftest   → 8/8 全部变红（含 F2/F4/F5 三个新 case）
+./gradlew.bat guardLint                    → 守卫块 275，扫描 428 文件；超限豁免 0；警告 0；BUILD SUCCESSFUL
+./gradlew.bat :common:compileJava :common:compileTestJava :common:check   BUILD SUCCESSFUL
+./gradlew.bat :common:test --rerun-tasks   → BUILD SUCCESSFUL（235 suites / 1736 tests / 0 failed）
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava            BUILD SUCCESSFUL
+./gradlew.bat :<五节点>:test --continue     → BUILD SUCCESSFUL
+```
+
+证据文件：`evidence/gates-all.{json,txt}`、`evidence/gates-selftest.txt`、`evidence/gate-{subsets,processor,declaration}.txt`、
+`evidence/gate-{guardlint,common-check,common-test-full,platform-compile}.log`。
+
+### 12.2 本轮仍未覆盖的边界
+
+1. **F1 的 `com.mojang` 决策依据**：common 源码里 `com.mojang` / `net.fabricmc` 的 import 数**均为 0**
+   （grep 实证），加入禁止表不会误伤；判据是「shared 引擎不得依赖任何 MC 侧类型」，与 MC 包族同源。
+2. **F5 只在 Windows 本地验证**：`gradle_wrapper()` 的 Linux 分支（`./gradlew`）未在真实 ubuntu-latest 上跑过，
+   仍属合并后观察项；本地验证的是「wrapper 不可用 → 非零 + 可定位诊断」这条契约。
+3. **F2 的 selftest 走合成报告**：真实故障（某节点 `platformGateTest` 红 → 多节点报告同时带 failures）
+   未在本轮复现（需要让某个 gate 真的失败）；断言的是聚合逻辑逐条输出，不是真实故障现场。
+4. 其余边界同 §10（Ubuntu CI 全链路、Fabric runtime smoke、runtime smoke 非本 gate 覆盖、8 行 `not-verified`、
+   declaration 仅 SERVER+TS）。
+
+### 12.3 并行构建干扰（记录，非本票问题）
+
+修订期间仓库内有其它 agent 的 Gradle 构建并发运行同一 `common/build` 目录，出现过
+`Failed to delete some children` / `in-progress-results-generic.bin` 缺失 / `NoClassDefFoundError` 等
+**与本票改动无关**的瞬态失败（同一命令重试即可绿）。最终结论均取自连续绿的窗口，
+并未把瞬态失败当成通过，也未把瞬态失败记为本票回归。

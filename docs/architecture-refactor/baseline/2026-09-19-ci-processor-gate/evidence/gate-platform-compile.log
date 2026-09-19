@@ -26,8 +26,8 @@ Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabiliti
 Fabric Loom: 1.17.20
 
 > Task :common-api-processor:processResources UP-TO-DATE
-> Task :26.2.0:stonecutterPrepare UP-TO-DATE
 > Task :26.2.0-fabric:stonecutterPrepare UP-TO-DATE
+> Task :26.2.0:stonecutterPrepare UP-TO-DATE
 > Task :26.2.0:stonecutterGenerate UP-TO-DATE
 > Task :26.2.0-fabric:stonecutterGenerate UP-TO-DATE
 > Task :common:compileJava UP-TO-DATE
@@ -49,5 +49,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 3s
+BUILD SUCCESSFUL in 4s
 22 actionable tasks: 22 up-to-date

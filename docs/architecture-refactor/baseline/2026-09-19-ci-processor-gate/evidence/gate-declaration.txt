@@ -4,6 +4,6 @@
    declaration      derived          members=141
    declaration      derived          owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
    declaration      derived          signatures=150
-   declaration      derived          types=
+   declaration      derived          types=<empty: no kind=type producer in the contract>
 
 结果：1 个 check，0 个失败条目
