@@ -216,8 +216,21 @@ git diff --check
 
 ### Review-round-1 follow-up（2026-09-19）
 
-- **重复 javadoc — fixed.** `NekoTypeScriptCompiler` 的 `badEnumNumberLiteral` 上方 javadoc
-  在 `b29c72fc` 里被复制了两份（同一 `@param valueStart` 块连续出现，第一份未紧贴任何声明）——
-  是红侧验证（临时换回 `indexOf` 再恢复）时的复制粘贴残留，无语义影响。已删掉孤立的那一份，
-  只保留紧贴方法定义的一份。`:common:compileJava` 仍绿，enum 诊断位置行为不变
+- **重复 javadoc — fixed（551672ac）.** `NekoTypeScriptCompiler` 的 `badEnumNumberLiteral`
+  上方 javadoc 在 `b29c72fc` 里被复制成两份（同一 `@param valueStart` 块连续出现，
+  第一份未紧贴任何声明）：红侧验证时临时换回 `indexOf` 再恢复导致的复制粘贴残留，
+  无语义影响（两份都是注释）。已删掉孤立的那一份，只保留紧贴方法定义的一份；
+  提交后该文本只出现 1 次（第 682 行；第 498 行是 `EnumMember` 上另一段无关 javadoc）。
+  `:common:compileJava` 仍绿，enum 诊断位置行为不变
   （`NekoTypeScriptEnumDiagnosticLocationTest` 3/3、`NekoTypeScriptJsxRuntimeTest` 12/12）。
+- **验证环境说明.** 本轮 `:common:check` / `:common:test --rerun-tasks` 在主工作树多次被
+  **并发票的在途构建**打断（`build/classes` 被删除导致 `NoClassDefFoundError`、
+  `compileJava` 报 `Unable to delete directory`、`compileTestJava` 因 `common/build.gradle`
+  改到一半而缺资源）。为取得干净信号，我在 `551672ac` 的**独立 git worktree**
+  （`.worktrees/r1-iso`，验证后已移除）中运行：
+  `./gradlew.bat :common:check` → BUILD SUCCESSFUL；
+  `./gradlew.bat :common:test --rerun-tasks` → BUILD SUCCESSFUL，
+  **1728 tests / 0 failures / 0 errors / 4 skipped**（本票 4 个 suite：
+  `NekoTypeScriptEnumDiagnosticLocationTest` 3、`NekoTypeScriptJsxPrepareTest` 6、
+  `NekoTypeScriptJsxRuntimeTest` 12、`TypeScriptJsxExamplesSmokeTest` 4，全绿）。
+  该 worktree 只含本票提交，未含其它票的在途改动，故其绿是**本票**的绿。
