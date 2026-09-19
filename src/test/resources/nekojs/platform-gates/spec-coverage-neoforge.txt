@@ -1,0 +1,91 @@
+# 工单 33 contract/spec 覆盖只读基线 —— node=neoforge (1.21.1 / 26.1.2 / 26.2.0 共用)。
+# 由 PlatformSpecContractGateTest 在节点真实编译产物上派生（spec 声明 + api.inject 实现面反射）。
+# owner: Managed Surface/Probe owner（规范 spec）；build convention owner（接线）。
+# required=true 表示该 spec 的 @PlatformAvailability scope 要求本节点实现；required=false 只说明
+# scope 的平台轴，不构成 capability 判定。
+# 只读基线：规范或实现变更须先改行为/反射面，再更新本文件并在工单 33 REPORT 留记录。
+# 完整逐项输出（含 minecraft 依赖谓词）：build/nekojs-gates/spec-coverage-neoforge.json
+BlockSpec#neko$getId(0) | impl=BlockExtension | declared-by-impl
+BlockSpec | scope=ALL | required=true | impl=BlockExtension | extends=BlockSpec
+BlockStateSpec#neko$getId(0) | impl=BlockStateExtension | declared-by-impl
+BlockStateSpec#neko$hasTag(1) | impl=BlockStateExtension | declared-by-impl
+BlockStateSpec#neko$is(1) | impl=BlockStateExtension | declared-by-impl
+BlockStateSpec | scope=NF_ONLY | required=true | impl=BlockStateExtension | extends=BlockStateSpec
+EntitySpec#neko$getLevel(0) | impl=EntityExtension | declared-by-impl
+EntitySpec#neko$kill(0) | impl=EntityExtension | declared-by-impl
+EntitySpec#neko$remove(0) | impl=EntityExtension | declared-by-impl
+EntitySpec#neko$teleport(3) | impl=EntityExtension | declared-by-impl
+EntitySpec | scope=ALL | required=true | impl=EntityExtension | extends=EntitySpec
+ItemSpec#neko$getId(0) | impl=ItemExtension | declared-by-impl
+ItemSpec | scope=ALL | required=true | impl=ItemExtension | extends=ItemSpec
+ItemStackSpec#neko$getId(0) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec#neko$hasEnchantment(2) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec#neko$isUnbreakable(0) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec#neko$matches(1) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec#neko$setUnbreakable(1) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec#neko$withCount(1) | impl=ItemStackExtension | declared-by-impl
+ItemStackSpec | scope=ALL | required=true | impl=ItemStackExtension | extends=ItemStackSpec
+LevelSpec#neko$data(0) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$getBlockState(3) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$getId(0) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$getPlayers(0) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$getTime(0) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$isDay(0) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$isRaining(0) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$setBlock(4) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$setRaining(1) | impl=LevelExtension | declared-by-impl
+LevelSpec#neko$setTime(1) | impl=LevelExtension | declared-by-impl
+LevelSpec | scope=NF_ONLY | required=true | impl=LevelExtension | extends=LevelSpec
+LivingEntitySpec#neko$addEffect(3) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$damage(1) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$getChestItem(0) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$getFeetItem(0) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$getHeadItem(0) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$getLegsItem(0) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$getOffHandItem(0) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec#neko$removeEffect(1) | impl=LivingEntityExtension | declared-by-impl
+LivingEntitySpec | scope=ALL | required=true | impl=LivingEntityExtension | extends=LivingEntitySpec
+MutableComponentSpec#neko$aqua(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$black(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$blue(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$bold(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$bold(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$darkAqua(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$darkBlue(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$darkGray(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$darkGreen(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$darkPurple(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$darkRed(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$font(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$gold(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$gray(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$green(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$hasStyle(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$insertion(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$italic(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$italic(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$lightPurple(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$noColor(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$obfuscated(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$obfuscated(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$red(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$strikethrough(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$strikethrough(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$underlined(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$underlined(1) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$white(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec#neko$yellow(0) | impl=MutableComponentExtension | declared-by-impl
+MutableComponentSpec | scope=NF_ONLY | required=true | impl=MutableComponentExtension | extends=MutableComponentSpec
+PlayerSpec#neko$addXpLevels(1) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$addXpPoints(1) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$getGamemode(0) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$getXpLevel(0) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$give(1) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$isOp(0) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$kick(1) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$setGamemode(1) | impl=PlayerExtension | declared-by-impl
+PlayerSpec#neko$setXpLevel(1) | impl=PlayerExtension | declared-by-impl
+PlayerSpec | scope=ALL | required=true | impl=PlayerExtension | extends=PlayerSpec
+ServerSpec#neko$data(0) | impl=ServerExtension | declared-by-impl
+ServerSpec | scope=NF_ONLY | required=true | impl=ServerExtension | extends=ServerSpec
+

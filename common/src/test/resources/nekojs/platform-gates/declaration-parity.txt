@@ -1,0 +1,11 @@
+# 工单 33 declaration 覆盖只读基线 —— :common:test 内派生（不需要节点）。
+# 输入：CoreManagedApiBootstrap.load(EmptyPlatform) 的 NormativeApiContract（运行时反射）->
+#       JsApiSurfaceResolver -> ManagedApiDeclarationGenerator 的 TS 产物。
+# owner: Managed Surface/Probe owner（declaration fixture）；build convention owner（接线）。
+# 逐项断言（gate 失败诊断）：missing-member / extra-member / missing-type / owner-missing / type-fallback。
+# 本文件只是经审阅的快照，不是第二规范源：契约变化须先改行为/渲染器，再更新并在工单 33 REPORT 留记录。
+globals=ID,JsonIO,NBT,Performance,Platform,Registry,Text
+members=141
+owners=ID,JsonIO,JsonValue,ModInfo,NBT,NbtEntry,NbtValue,NekoId,PerfTimer,Performance,Platform,Registry,RegistryView,ScriptEventRegistrationEvent,Text,TextValue
+signatures=150
+types=

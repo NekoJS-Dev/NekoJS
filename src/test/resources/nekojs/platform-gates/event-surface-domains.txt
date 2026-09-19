@@ -1,0 +1,98 @@
+# 工单 33 event/surface 跨节点覆盖只读基线（五节点全景）。
+# 生成方式：各节点跑 :<node>:platformGateTest，驱动节点真实插件发现输入
+#   （neoforge = classpath 上 @RegisterNekoJSPlugin 注解扫描；fabric = 注解类 ∪ FabricPluginLoader.BUILTIN_PLUGINS）
+#   的 registerEvents/registerClientEvents 钩子，注册进测试新建的 EventGroupRegistry，读回 domain 与 bus 成员。
+# owner: Managed Surface/Probe owner（coverage ledger + contract fixture）；build convention owner（接线）。
+# state 词汇只有两种：
+#   present      = 本节点真实注册到该 domain（buses 为该节点实际注册的 bus 成员，逐项列出）
+#   not-verified = 本节点没有该 domain 的运行时注册证据 -> 对应域验收保持阻塞
+# 禁止写成 unavailable/partial：缺证据不等于不可用，也不得用改表掩盖规范 ALL 与实际能力的差异（AC3）。
+# 输入边界（不夸大覆盖）：本 gate 只驱动上述发现输入，不施加 requiredMods/clientOnly 运行期过滤，
+#   也不执行平台原生回调；它证明的是「注册面存在且成员一致」，不是 runtime smoke。
+# 只读基线：事件面变更须先改实现/入口，再更新本文件并在工单 33 REPORT 留记录。
+# 精确逐项输出：versions/<node>/build/nekojs-gates/event-surface-<node>.json
+BlockEvents | 1.21.1 = present | buses=blockEntityTick,broken,entityMultiPlaced,entityPlaced,farmlandTrample,fluidPlaced,leftClicked,neighborNotify,placed,portalSpawn,randomTick,rightClicked,toolModification
+BlockEvents | 26.1.2 = present | buses=blockEntityTick,broken,entityMultiPlaced,entityPlaced,farmlandTrample,fluidPlaced,leftClicked,modification,neighborNotify,placed,portalSpawn,randomTick,rightClicked,toolModification
+BlockEvents | 26.2.0 = present | buses=blockEntityTick,broken,entityMultiPlaced,entityPlaced,farmlandTrample,fluidPlaced,leftClicked,modification,neighborNotify,placed,portalSpawn,randomTick,rightClicked,toolModification
+BlockEvents | 26.1.2-fabric = present | buses=broken,modification
+BlockEvents | 26.2.0-fabric = present | buses=broken,modification
+CapabilityEvents | 1.21.1 = present | buses=register
+CapabilityEvents | 26.1.2 = present | buses=register
+CapabilityEvents | 26.2.0 = present | buses=register
+CapabilityEvents | 26.1.2-fabric = not-verified | buses=-
+CapabilityEvents | 26.2.0-fabric = not-verified | buses=-
+ClientEvents | 1.21.1 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
+ClientEvents | 26.1.2 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
+ClientEvents | 26.2.0 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
+ClientEvents | 26.1.2-fabric = present | buses=tick,tickPost,tickPre
+ClientEvents | 26.2.0-fabric = present | buses=tick,tickPost,tickPre
+CommandEvents | 1.21.1 = present | buses=command,register
+CommandEvents | 26.1.2 = present | buses=command,register
+CommandEvents | 26.2.0 = present | buses=command,register
+CommandEvents | 26.1.2-fabric = present | buses=register
+CommandEvents | 26.2.0-fabric = present | buses=register
+DynamicRegistryEvents | 1.21.1 = not-verified | buses=-
+DynamicRegistryEvents | 26.1.2 = present | buses=dynamicRegistry
+DynamicRegistryEvents | 26.2.0 = present | buses=dynamicRegistry
+DynamicRegistryEvents | 26.1.2-fabric = not-verified | buses=-
+DynamicRegistryEvents | 26.2.0-fabric = not-verified | buses=-
+EntityEvents | 1.21.1 = present | buses=damagePost,damagePre,death,drops,finalizeSpawn,joinLevel,leaveLevel,tickPost,tickPre,useItemFinished,useItemStarted,useItemStopped,useItemTick
+EntityEvents | 26.1.2 = present | buses=damagePost,damagePre,death,drops,finalizeSpawn,joinLevel,leaveLevel,tickPost,tickPre,useItemFinished,useItemStarted,useItemStopped,useItemTick
+EntityEvents | 26.2.0 = present | buses=damagePost,damagePre,death,drops,finalizeSpawn,joinLevel,leaveLevel,tickPost,tickPre,useItemFinished,useItemStarted,useItemStopped,useItemTick
+EntityEvents | 26.1.2-fabric = present | buses=damagePost,damagePre,death,drops,finalizeSpawn,joinLevel,leaveLevel,tickPost,tickPre
+EntityEvents | 26.2.0-fabric = present | buses=damagePost,damagePre,death,drops,finalizeSpawn,joinLevel,leaveLevel,tickPost,tickPre
+GoalEvents | 1.21.1 = present | buses=register
+GoalEvents | 26.1.2 = present | buses=register
+GoalEvents | 26.2.0 = present | buses=register
+GoalEvents | 26.1.2-fabric = present | buses=register
+GoalEvents | 26.2.0-fabric = present | buses=register
+ItemEvents | 1.21.1 = present | buses=canPickUp,dropped,entityInteracted,foodEaten,modification,pickedUp,pickedUpPre,rightClicked,tooltip
+ItemEvents | 26.1.2 = present | buses=canPickUp,dropped,entityInteracted,foodEaten,modification,pickedUp,pickedUpPre,rightClicked,tooltip
+ItemEvents | 26.2.0 = present | buses=canPickUp,dropped,entityInteracted,foodEaten,modification,pickedUp,pickedUpPre,rightClicked,tooltip
+ItemEvents | 26.1.2-fabric = present | buses=canPickUp,dropped,entityInteracted,foodEaten,modification,pickedUp,pickedUpPre,rightClicked,tooltip
+ItemEvents | 26.2.0-fabric = present | buses=canPickUp,dropped,entityInteracted,foodEaten,modification,pickedUp,pickedUpPre,rightClicked,tooltip
+KeyBindEvents | 1.21.1 = not-verified | buses=-
+KeyBindEvents | 26.1.2 = present | buses=pressed,register,released,tick
+KeyBindEvents | 26.2.0 = present | buses=pressed,register,released,tick
+KeyBindEvents | 26.1.2-fabric = present | buses=pressed,register,released,tick
+KeyBindEvents | 26.2.0-fabric = present | buses=pressed,register,released,tick
+LevelEvents | 1.21.1 = present | buses=afterExplosion,beforeExplosion,explosionDetonate,explosionStart,loaded,saved,tick,tickPost,tickPre,unloaded
+LevelEvents | 26.1.2 = present | buses=afterExplosion,beforeExplosion,explosionDetonate,explosionStart,loaded,saved,tick,tickPost,tickPre,unloaded
+LevelEvents | 26.2.0 = present | buses=afterExplosion,beforeExplosion,explosionDetonate,explosionStart,loaded,saved,tick,tickPost,tickPre,unloaded
+LevelEvents | 26.1.2-fabric = present | buses=loaded,tickPost,tickPre,unloaded
+LevelEvents | 26.2.0-fabric = present | buses=loaded,tickPost,tickPre,unloaded
+NetworkEvents | 1.21.1 = present | buses=client,server
+NetworkEvents | 26.1.2 = present | buses=client,server
+NetworkEvents | 26.2.0 = present | buses=client,server
+NetworkEvents | 26.1.2-fabric = present | buses=client,server
+NetworkEvents | 26.2.0-fabric = present | buses=client,server
+PlayerEvents | 1.21.1 = present | buses=advancement,changedDimension,chat,cloned,containerClosed,containerOpened,crafted,destroyed,entityInteract,inventoryChanged,inventoryClosed,inventoryOpened,loggedIn,loggedOut,respawned,smelted,tickPost,tickPre
+PlayerEvents | 26.1.2 = present | buses=advancement,changedDimension,chat,cloned,containerClosed,containerOpened,crafted,destroyed,entityInteract,inventoryChanged,inventoryClosed,inventoryOpened,loggedIn,loggedOut,respawned,smelted,tickPost,tickPre
+PlayerEvents | 26.2.0 = present | buses=advancement,changedDimension,chat,cloned,containerClosed,containerOpened,crafted,destroyed,entityInteract,inventoryChanged,inventoryClosed,inventoryOpened,loggedIn,loggedOut,respawned,smelted,tickPost,tickPre
+PlayerEvents | 26.1.2-fabric = present | buses=advancement,changedDimension,chat,cloned,containerClosed,containerOpened,crafted,destroyed,entityInteract,inventoryChanged,inventoryClosed,inventoryOpened,loggedIn,loggedOut,respawned,smelted,tickPost,tickPre
+PlayerEvents | 26.2.0-fabric = present | buses=advancement,changedDimension,chat,cloned,containerClosed,containerOpened,crafted,destroyed,entityInteract,inventoryChanged,inventoryClosed,inventoryOpened,loggedIn,loggedOut,respawned,smelted,tickPost,tickPre
+ProbeEvents | 1.21.1 = present | buses=addGlobal,assignType,modifyType,snippets
+ProbeEvents | 26.1.2 = present | buses=addGlobal,assignType,modifyType,snippets
+ProbeEvents | 26.2.0 = present | buses=addGlobal,assignType,modifyType,snippets
+ProbeEvents | 26.1.2-fabric = not-verified | buses=-
+ProbeEvents | 26.2.0-fabric = not-verified | buses=-
+RecipeViewerEvents | 1.21.1 = present | buses=addEntries,addInformation,removeCategories,removeEntries,removeRecipes
+RecipeViewerEvents | 26.1.2 = present | buses=addEntries,addInformation,removeCategories,removeEntries,removeRecipes
+RecipeViewerEvents | 26.2.0 = present | buses=addEntries,addInformation,removeCategories,removeEntries,removeRecipes
+RecipeViewerEvents | 26.1.2-fabric = present | buses=addEntries,addInformation,removeCategories,removeEntries,removeRecipes
+RecipeViewerEvents | 26.2.0-fabric = present | buses=addEntries,addInformation,removeCategories,removeEntries,removeRecipes
+RegistryEvents | 1.21.1 = present | buses=register
+RegistryEvents | 26.1.2 = present | buses=register
+RegistryEvents | 26.2.0 = present | buses=register
+RegistryEvents | 26.1.2-fabric = present | buses=register
+RegistryEvents | 26.2.0-fabric = present | buses=register
+ScriptEvents | 1.21.1 = present | buses=client,server
+ScriptEvents | 26.1.2 = present | buses=client,server
+ScriptEvents | 26.2.0 = present | buses=client,server
+ScriptEvents | 26.1.2-fabric = present | buses=client,server
+ScriptEvents | 26.2.0-fabric = present | buses=client,server
+ServerEvents | 1.21.1 = present | buses=aboutToStart,afterRecipes,datapackSync,generateData,lootTableLoad,lootTables,recipes,started,starting,stopped,stopping,tags,tagsUpdated,tickPost,tickPre
+ServerEvents | 26.1.2 = present | buses=aboutToStart,afterRecipes,datapackSync,generateData,lootTableLoad,lootTables,recipes,started,starting,stopped,stopping,tags,tagsUpdated,tickPost,tickPre
+ServerEvents | 26.2.0 = present | buses=aboutToStart,afterRecipes,datapackSync,generateData,lootTableLoad,lootTables,recipes,started,starting,stopped,stopping,tags,tagsUpdated,tickPost,tickPre
+ServerEvents | 26.1.2-fabric = present | buses=aboutToStart,afterRecipes,datapackSync,lootTableLoad,recipes,started,starting,stopped,stopping,tagsUpdated,tickPost,tickPre
+ServerEvents | 26.2.0-fabric = present | buses=aboutToStart,afterRecipes,datapackSync,lootTableLoad,recipes,started,starting,stopped,stopping,tagsUpdated,tickPost,tickPre
