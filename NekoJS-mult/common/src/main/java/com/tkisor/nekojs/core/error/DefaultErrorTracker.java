@@ -11,6 +11,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.Source;
 import graal.graalvm.polyglot.SourceSection;
+import graal.graalvm.polyglot.Context;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,11 +47,13 @@ public final class DefaultErrorTracker implements ErrorTracker {
      */
     private static final int MAX_RUNTIME_CALLBACK_ERRORS = 4096;
     private final Map<ScriptId, ScriptError> errors = new ConcurrentHashMap<>();
+    private final Map<Context, Map<ScriptId, ScriptError>> candidateErrors = new ConcurrentHashMap<>();
+    private final Set<Context> candidateContexts = ConcurrentHashMap.newKeySet();
     private final NekoJSPaths paths;
     private final SandboxConfig config;
     private final ModuleViews defaultModuleViews;
     private final Map<ScriptType, ModuleViews> activeModuleViews = new ConcurrentHashMap<>();
-    private final Map<ScriptType, ModuleViews> candidateModuleViews = new ConcurrentHashMap<>();
+    private final Map<Context, ModuleViews> contextModuleViews = new ConcurrentHashMap<>();
 
     record ModuleViews(NekoSourceMapView sourceMaps, NekoVirtualModuleView virtualModules) {}
 
@@ -83,25 +86,66 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     ModuleViews moduleViews(ScriptType type) {
         ModuleViews active = type == null ? null : activeModuleViews.get(type);
-        ModuleViews candidate = type == null ? null : candidateModuleViews.get(type);
-        return candidate != null ? candidate : active != null ? active : defaultModuleViews;
+        return active != null ? active : defaultModuleViews;
+    }
+
+    ModuleViews moduleViews(Context context, ScriptType type) {
+        if (context != null) {
+            ModuleViews views = contextModuleViews.get(context);
+            if (views != null) return views;
+        }
+        return moduleViews(type);
     }
 
     /** Publish one type's active generation views without affecting any other type. */
     public void activateModuleViews(ScriptType type, NekoModulePipelineCache moduleSession) {
         if (type == null || moduleSession == null) return;
         activeModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
-        candidateModuleViews.remove(type);
     }
 
-    /** Candidate views are visible only to errors created by that type during candidate execution. */
-    public void activateCandidateModuleViews(ScriptType type, NekoModulePipelineCache moduleSession) {
-        if (type == null || moduleSession == null) return;
-        candidateModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+    /** Publish an active view and bind it to the Context which owns that generation. */
+    public void activateModuleViews(ScriptType type, Context context, NekoModulePipelineCache moduleSession) {
+        activateModuleViews(type, moduleSession);
+        if (context != null && moduleSession != null) {
+            candidateContexts.remove(context);
+            candidateErrors.remove(context);
+            contextModuleViews.put(context, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+        }
     }
 
-    public void discardCandidateModuleViews(ScriptType type) {
-        if (type != null) candidateModuleViews.remove(type);
+    /** Bind a candidate view only to its Context; active type fallback remains untouched. */
+    public void activateCandidateModuleViews(ScriptType type, Context context,
+                                              NekoModulePipelineCache moduleSession) {
+        if (type == null || context == null || moduleSession == null) return;
+        candidateContexts.add(context);
+        contextModuleViews.put(context, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+    }
+
+    public void discardCandidateModuleViews(Context context) {
+        if (context != null) {
+            contextModuleViews.remove(context);
+            candidateContexts.remove(context);
+            candidateErrors.remove(context);
+        }
+    }
+
+    public void removeModuleViews(Context context) {
+        if (context != null) {
+            contextModuleViews.remove(context);
+            candidateContexts.remove(context);
+            candidateErrors.remove(context);
+        }
+    }
+
+    /** Publish staged candidate errors only after that generation has committed. */
+    public void publishCandidateErrors(ScriptType type, Context context) {
+        if (type == null || context == null) return;
+        Map<ScriptId, ScriptError> staged = candidateErrors.remove(context);
+        candidateContexts.remove(context);
+        errors.entrySet().removeIf(entry -> entry.getValue().getScriptType() == type);
+        if (staged != null) {
+            errors.putAll(staged);
+        }
     }
 
     /** Save one script type's errors before candidate execution can replace same-id entries. */
@@ -124,10 +168,15 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     @Override
     public ScriptError record(ScriptContainer script, Throwable error) {
-        clear(script.id);
-        clearByScriptPath(script.type, relativeScriptPath(script.path));
-        ScriptError scriptError = ScriptError.create(script, error, this);
-        errors.put(script.id, scriptError);
+        return record(null, script, error);
+    }
+
+    @Override
+    public ScriptError record(Context context, ScriptContainer script, Throwable error) {
+        clear(context, script.id);
+        clearByScriptPath(context, script.type, relativeScriptPath(script.path));
+        ScriptError scriptError = ScriptError.create(context, script, error, this);
+        errorStore(context).put(script.id, scriptError);
         return scriptError;
     }
 
@@ -148,11 +197,18 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     public void recordEventError(ScriptType currentType, PolyglotException e) {
-        recordCallbackError(currentType, "event", e);
+        recordCallbackError(null, currentType, "event", e);
     }
 
     @Override
     public void recordCallbackError(ScriptType currentType, String callbackKind, Throwable throwable) {
+        recordCallbackError(null, currentType, callbackKind, throwable);
+    }
+
+    @Override
+    public void recordCallbackError(Context context, ScriptType currentType, String callbackKind, Throwable throwable) {
+        ModuleViews views = moduleViews(context, currentType);
+        Map<ScriptId, ScriptError> errorStore = errorStore(context);
         String pathStr = callbackKind == null || callbackKind.isBlank() ? "Unknown" : callbackKind;
 
         if (throwable instanceof PolyglotException polyglotException) {
@@ -160,7 +216,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             if (loc != null) {
                 Source source = loc.getSource();
                 if (source != null) {
-                    pathStr = extractRelativePath(currentType, source);
+                    pathStr = extractRelativePath(currentType, source, views.virtualModules());
                 }
             }
         } else {
@@ -173,7 +229,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
         // 避免高频回调（如 20Hz tick 循环）每次错误都重建 ScriptError 并重读源码文件。
         boolean[] created = new boolean[1];
         long[] previousCountHolder = new long[1];
-        ScriptError scriptError = errors.compute(runtimeId, (ignored, previous) -> {
+        ScriptError scriptError = errorStore.compute(runtimeId, (ignored, previous) -> {
             if (previous != null && sameEventError(previous, throwable)) {
                 previousCountHolder[0] = previous.getOccurrenceCount();
                 created[0] = false;
@@ -182,14 +238,14 @@ public final class DefaultErrorTracker implements ErrorTracker {
             }
             created[0] = true;
             previousCountHolder[0] = 0L;
-            return ScriptError.create(currentType, runtimeId, eventPath, throwable, this);
+            return ScriptError.create(context, currentType, runtimeId, eventPath, throwable, this);
         });
 
         // 容量上限（仅超限时触发一次过滤，正常有界路径零开销）：ConcurrentHashMap.size()
         // 为 O(1)，超限后清空其它运行时回调错误、保留当前这条，防止消息持续变化的
         // 回调错误无界增长。脚本自身错误（scriptId 非 rt/ 前缀）不受影响。
-        if (errors.size() > MAX_RUNTIME_CALLBACK_ERRORS) {
-            errors.entrySet().removeIf(entry -> isRuntimeCallbackError(entry.getKey()) && !entry.getKey().equals(runtimeId));
+        if (errorStore.size() > MAX_RUNTIME_CALLBACK_ERRORS) {
+            errorStore.entrySet().removeIf(entry -> isRuntimeCallbackError(entry.getKey()) && !entry.getKey().equals(runtimeId));
         }
 
         if (shouldLogOccurrence(created[0], previousCountHolder[0], scriptError.getOccurrenceCount())) {
@@ -208,14 +264,24 @@ public final class DefaultErrorTracker implements ErrorTracker {
         errors.remove(scriptId);
     }
 
+    @Override
+    public void clear(Context context, ScriptId scriptId) {
+        errorStore(context).remove(scriptId);
+    }
+
     public ScriptError get(ScriptId scriptId) {
         return errors.get(scriptId);
     }
 
     @Override
     public void clearByScriptPath(ScriptType type, String relativePath) {
+        clearByScriptPath(null, type, relativePath);
+    }
+
+    @Override
+    public void clearByScriptPath(Context context, ScriptType type, String relativePath) {
         if (type == null || relativePath == null) return;
-        errors.entrySet().removeIf(entry -> {
+        errorStore(context).entrySet().removeIf(entry -> {
             ScriptError error = entry.getValue();
             return error.getScriptType() == type && relativePath.equals(error.getDisplayPath());
         });
@@ -223,6 +289,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     public void clearAll() {
         errors.clear();
+        candidateErrors.clear();
     }
 
     @Override
@@ -232,16 +299,25 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     public boolean hasErrors() {
-        return !errors.isEmpty();
+        return !errors.isEmpty() || candidateErrors.values().stream().anyMatch(map -> !map.isEmpty());
     }
 
     public int getErrorCount() {
-        return errors.size();
+        return errors.size() + candidateErrors.values().stream().mapToInt(Map::size).sum();
     }
 
     @Override
     public Collection<ScriptError> getAllErrors() {
-        return errors.values();
+        List<ScriptError> all = new java.util.ArrayList<>(errors.values());
+        candidateErrors.values().forEach(map -> all.addAll(map.values()));
+        return all;
+    }
+
+    private Map<ScriptId, ScriptError> errorStore(Context context) {
+        if (context != null && candidateContexts.contains(context)) {
+            return candidateErrors.computeIfAbsent(context, ignored -> new ConcurrentHashMap<>());
+        }
+        return errors;
     }
 
     private ScriptId eventErrorId(ScriptType type, String pathStr) {
@@ -254,7 +330,8 @@ public final class DefaultErrorTracker implements ErrorTracker {
     }
 
     private boolean sameEventError(ScriptError previous, Throwable throwable) {
-        ScriptError.ErrorSignature signature = ScriptError.parseSignature(this, throwable, previous.getScript(), previous.getScriptType());
+            ScriptError.ErrorSignature signature = ScriptError.parseSignature(this, throwable, previous.getScript(),
+                    previous.getScriptType(), previous.capturedSourceMaps(), previous.capturedVirtualModules());
         return Objects.equals(previous.getErrorMessage(), signature.errorMessage)
                 && previous.getLineNumber() == signature.lineNumber
                 && previous.getColumnNumber() == signature.columnNumber;
@@ -459,12 +536,14 @@ public final class DefaultErrorTracker implements ErrorTracker {
             return null;
         }
         String normalized = pathText.replace('\\', '/');
-        for (ScriptType type : ScriptType.all()) {
-            String marker = type.name + "_scripts/";
-            int index = normalized.indexOf(marker);
-            if (index >= 0) {
-                return normalized.substring(index);
+        for (int start = 0; start < normalized.length(); ) {
+            int slash = normalized.indexOf('/', start);
+            if (slash < 0) break;
+            String segment = normalized.substring(start, slash);
+            if (ScriptType.fromScriptsDirectoryName(segment) != null) {
+                return normalized.substring(start);
             }
+            start = slash + 1;
         }
         return null;
     }

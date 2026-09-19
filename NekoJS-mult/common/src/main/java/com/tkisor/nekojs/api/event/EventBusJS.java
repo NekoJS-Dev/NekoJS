@@ -608,7 +608,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 // 语句上限关闭 Context 的 kill 在稳态下只能从回调路径发现（入口早已执行完）：
                 // 上报所属 ScriptManager，使其在下次取用时自动重建环境，而不是静默死亡
                 ScriptManager.reportContextKilled(context, e);
-                recordListenerError(type, scriptId, "normal", null, event, e);
+                recordListenerError(context, type, scriptId, "normal", null, event, e);
             }
         });
     }
@@ -640,7 +640,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                 if (e instanceof Error) throw (Error) e;
                 ScriptManager.reportContextKilled(context, e);
-                recordListenerError(type, scriptId, "cancellable", null, event, e);
+                recordListenerError(context, type, scriptId, "cancellable", null, event, e);
             }
             return false; // 出错时默认不取消事件
         });
@@ -677,7 +677,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                         if (e instanceof Error) throw (Error) e;
                         ScriptManager.reportContextKilled(context, e);
-                        recordListenerError(type, scriptId, "dispatch", key, event, e);
+                        recordListenerError(context, type, scriptId, "dispatch", key, event, e);
                     }
                 }
         );
@@ -715,14 +715,15 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                         if (e instanceof InterruptedException) Thread.currentThread().interrupt();
                         if (e instanceof Error) throw (Error) e;
                         ScriptManager.reportContextKilled(context, e);
-                        recordListenerError(type, scriptId, "dispatchCancellable", key, event, e);
+                        recordListenerError(context, type, scriptId, "dispatchCancellable", key, event, e);
                     }
                     return false; // 出错时默认不取消事件
                 }
         );
     }
 
-    private void recordListenerError(ScriptType type, String scriptId, String mode, Object dispatchKey, EVENT event, Throwable throwable) {
+    private void recordListenerError(Context context, ScriptType type, String scriptId, String mode,
+                                     Object dispatchKey, EVENT event, Throwable throwable) {
         String eventClass = event == null ? "null" : event.getClass().getName();
         String keyText = dispatchKey == null ? "" : " key=" + dispatchKey;
         String kind = "event mode=" + mode
@@ -731,7 +732,7 @@ public class EventBusJS<EVENT, KEY> implements ProxyExecutable {
                 + " script=" + (scriptId == null || scriptId.isBlank() ? "unknown" : scriptId)
                 + " thread=" + Thread.currentThread().getName()
                 + keyText;
-        ScriptErrorReporter.recordCallbackError(type, kind, throwable);
+        ScriptErrorReporter.recordCallbackError(context, type, kind, throwable);
     }
 
     private record ScriptEventListenerToken<EVENT>(EventListenerToken<EVENT> token, String scriptId) {}

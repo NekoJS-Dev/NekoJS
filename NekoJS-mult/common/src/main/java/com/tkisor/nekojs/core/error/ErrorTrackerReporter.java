@@ -3,6 +3,7 @@ package com.tkisor.nekojs.core.error;
 import com.tkisor.nekojs.api.event.ScriptErrorReporter;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.PolyglotException;
+import graal.graalvm.polyglot.Context;
 
 /**
  * Adapts an {@link ErrorTracker} into a {@link ScriptErrorReporter.Reporter}, so that callback
@@ -26,8 +27,18 @@ public final class ErrorTrackerReporter implements ScriptErrorReporter.Reporter 
     }
 
     @Override
+    public void recordCallbackError(Context context, ScriptType type, String callbackKind, Throwable throwable) {
+        delegate.recordCallbackError(context, type, callbackKind, throwable);
+    }
+
+    @Override
     public void recordEventError(ScriptType type, PolyglotException error) {
         delegate.recordEventError(type, error);
+    }
+
+    @Override
+    public void recordEventError(Context context, ScriptType type, PolyglotException error) {
+        delegate.recordEventError(context, type, error);
     }
 
     @Override

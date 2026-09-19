@@ -6,10 +6,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 /** Shared content hashing for module identity and cache stamps. */
-final class NekoModuleHash {
+public final class NekoModuleHash {
     private NekoModuleHash() {}
 
-    static String sha256(String value) {
+    public static String sha256(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));

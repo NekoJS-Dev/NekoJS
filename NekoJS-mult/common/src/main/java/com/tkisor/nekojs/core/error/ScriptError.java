@@ -6,6 +6,7 @@ import com.tkisor.nekojs.script.ScriptContainer;
 import com.tkisor.nekojs.api.ScriptType;
 import graal.graalvm.polyglot.PolyglotException;
 import graal.graalvm.polyglot.SourceSection;
+import graal.graalvm.polyglot.Context;
 import com.tkisor.nekojs.api.data.ScriptId;
 import com.tkisor.nekojs.core.module.NekoVirtualModuleView;
 
@@ -35,25 +36,26 @@ public class ScriptError {
     private final NekoSourceMapView sourceMaps;
     private final NekoVirtualModuleView virtualModules;
 
-    private ScriptError(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
+    private ScriptError(Context context, ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
         this.tracker = tracker;
         this.errorId = script.id;
         this.script = script;
         this.scriptType = script.type;
         this.rawException = rawException;
-        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(script.type);
+        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(context, script.type);
         this.sourceMaps = views.sourceMaps();
         this.virtualModules = views.virtualModules();
     }
 
-    private ScriptError(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
+    private ScriptError(Context context, ScriptType scriptType, ScriptId errorId, String fallbackPath,
+                        Throwable rawException, DefaultErrorTracker tracker) {
         this.tracker = tracker;
         this.errorId = errorId;
         this.script = null;
         this.scriptType = scriptType;
         this.fallbackPath = fallbackPath;
         this.rawException = rawException;
-        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(scriptType);
+        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(context, scriptType);
         this.sourceMaps = views.sourceMaps();
         this.virtualModules = views.virtualModules();
     }
@@ -65,7 +67,12 @@ public class ScriptError {
      * 实例方法，会把未完全初始化的 {@code this} 交给可能被重写的方法（this-escape）。
      */
     public static ScriptError create(ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
-        ScriptError error = new ScriptError(script, rawException, tracker);
+        return create(null, script, rawException, tracker);
+    }
+
+    public static ScriptError create(Context context, ScriptContainer script, Throwable rawException,
+                                     DefaultErrorTracker tracker) {
+        ScriptError error = new ScriptError(context, script, rawException, tracker);
         error.parseException();
         return error;
     }
@@ -75,7 +82,12 @@ public class ScriptError {
      * 解析在构造完成后执行，避免 this-escape）。
      */
     public static ScriptError create(ScriptType scriptType, ScriptId errorId, String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
-        ScriptError error = new ScriptError(scriptType, errorId, fallbackPath, rawException, tracker);
+        return create(null, scriptType, errorId, fallbackPath, rawException, tracker);
+    }
+
+    public static ScriptError create(Context context, ScriptType scriptType, ScriptId errorId,
+                                     String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
+        ScriptError error = new ScriptError(context, scriptType, errorId, fallbackPath, rawException, tracker);
         error.parseException();
         return error;
     }
@@ -91,20 +103,20 @@ public class ScriptError {
      */
     static ErrorSignature parseSignature(DefaultErrorTracker tracker, Throwable rawException, ScriptContainer script) {
         ScriptType type = script == null ? null : script.type;
-        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(type);
+        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(null, type);
         return parseSignature(tracker, rawException, script, type, views.sourceMaps(), views.virtualModules());
     }
 
     static ErrorSignature parseSignature(DefaultErrorTracker tracker, Throwable rawException,
-                                         ScriptContainer script, ScriptType type) {
-        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(type);
+        ScriptContainer script, ScriptType type) {
+        DefaultErrorTracker.ModuleViews views = tracker.moduleViews(null, type);
         return parseSignature(tracker, rawException, script, type, views.sourceMaps(), views.virtualModules());
     }
 
-    private static ErrorSignature parseSignature(DefaultErrorTracker tracker, Throwable rawException,
-                                                 ScriptContainer script, ScriptType type,
-                                                 NekoSourceMapView sourceMaps,
-                                                 NekoVirtualModuleView virtualModules) {
+    static ErrorSignature parseSignature(DefaultErrorTracker tracker, Throwable rawException,
+                                         ScriptContainer script, ScriptType type,
+                                         NekoSourceMapView sourceMaps,
+                                         NekoVirtualModuleView virtualModules) {
         Throwable primary = primaryCause(rawException);
         if (primary instanceof NekoEsmLinkException linkException) {
             NekoEsmDiagnostic diagnostic = linkException.diagnostic();
@@ -119,14 +131,14 @@ public class ScriptError {
         PolyglotException polyglotException = findPolyglotException(rawException);
         if (polyglotException != null) {
             String errorMessage = bestMessage(primary);
-            SourceSection sourceLocation = bestUserSourceLocation(tracker, polyglotException, script, virtualModules);
+            SourceSection sourceLocation = bestUserSourceLocation(tracker, polyglotException, script, type, virtualModules);
             if (sourceLocation != null) {
                 int rawLine = sourceLocation.getStartLine();
                 int rawColumn = sourceLocation.getStartColumn();
                 CharSequence chars = sourceLocation.getCharacters();
                 String jsSnippet = chars != null ? chars.toString().trim() : "";
 
-                String displayPath = extractRelativePath(tracker, sourceLocation, virtualModules);
+                String displayPath = extractRelativePath(tracker, type, sourceLocation, virtualModules);
                 SourceMapRegistry.OriginalPosition pos = sourceMaps.getMappedPosition(displayPath, rawLine, rawColumn);
                 String errorPath = pos.path != null && !pos.path.isBlank() ? pos.path : displayPath;
                 return new ErrorSignature(errorMessage, errorPath, pos.line, pos.column, pos.name,
@@ -235,6 +247,10 @@ public class ScriptError {
 
     public Throwable getRawException() { return rawException; }
 
+    NekoSourceMapView capturedSourceMaps() { return sourceMaps; }
+
+    NekoVirtualModuleView capturedVirtualModules() { return virtualModules; }
+
     public int getLineNumber() { return lineNumber; }
 
     public int getColumnNumber() { return columnNumber; }
@@ -257,10 +273,10 @@ public class ScriptError {
         return fallbackPath;
     }
 
-    private static String extractRelativePath(DefaultErrorTracker tracker, SourceSection sourceLocation,
-                                              NekoVirtualModuleView virtualModules) {
+    private static String extractRelativePath(DefaultErrorTracker tracker, ScriptType type,
+                                               SourceSection sourceLocation, NekoVirtualModuleView virtualModules) {
         if (sourceLocation == null || sourceLocation.getSource() == null) return "Unknown location";
-        return tracker.extractRelativePath(null, sourceLocation.getSource(), virtualModules);
+        return tracker.extractRelativePath(type, sourceLocation.getSource(), virtualModules);
     }
 
     private static String pathToDisplay(DefaultErrorTracker tracker, Path path) {
@@ -335,9 +351,10 @@ public class ScriptError {
     }
 
     private static SourceSection bestUserSourceLocation(DefaultErrorTracker tracker, PolyglotException exception,
-                                                        ScriptContainer script, NekoVirtualModuleView virtualModules) {
+                                                        ScriptContainer script, ScriptType type,
+                                                        NekoVirtualModuleView virtualModules) {
         SourceSection fallback = tracker.getBestSourceLocation(exception);
-        if (fallback != null && !isInternalFrame(extractRelativePath(tracker, fallback, virtualModules))) {
+        if (fallback != null && !isInternalFrame(extractRelativePath(tracker, type, fallback, virtualModules))) {
             return fallback;
         }
         for (PolyglotException.StackFrame frame : exception.getPolyglotStackTrace()) {
@@ -348,7 +365,7 @@ public class ScriptError {
             if (loc == null || loc.getSource() == null) {
                 continue;
             }
-            if (!isInternalFrame(extractRelativePath(tracker, loc, virtualModules))) {
+            if (!isInternalFrame(extractRelativePath(tracker, type, loc, virtualModules))) {
                 return loc;
             }
         }

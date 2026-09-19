@@ -416,16 +416,21 @@ golden 文件。上述限制是边界说明，不把未运行的真实 Minecraft
   root、GLOBAL/WORLD 包路径和不相关路径。
 
 - **2. Error tracker module-view ownership：fixed.** `DefaultErrorTracker` 按 `ScriptType` 保存
-  active 与 candidate read-only views；`ScriptError` 创建时捕获对应类型/session 的 source-map 和
-  virtual-module view，stack mapping、display path 和 callback dedup 都使用该快照。候选执行只登记
-  candidate view，commit 才发布该类型的 active view，失败丢弃 candidate 并恢复该类型 active view；
-  不会让另一个 `ScriptType` 或另一个 manager 的 candidate 覆盖全局单组 view。证据为
-  `DefaultErrorTrackerTest#moduleViewsAreScopedByTypeAndCandidateCommit`、既有
-  `NekoModulePipelineCacheSessionTest` 和 `ScriptReloadGenerationTest`。
+  active fallback，并按 Graal `Context` 保存 generation-owned session view；`ScriptError` 创建时
+  捕获来源 context/session 的 source-map 和 virtual-module view，stack mapping、display path 和
+  callback dedup 都使用该快照。候选执行只绑定 candidate Context，不写入该类型的 active fallback；
+  commit 只切换该类型的 active view，失败移除 candidate Context view 并恢复原 active 错误快照。
+  因而同类型 active callback 在候选执行期间不会误读 candidate map，也不会让另一个类型或 manager
+  的 candidate 覆盖全局 view。证据为 `DefaultErrorTrackerTest#moduleViewsAreScopedByTypeAndCandidateCommit`、
+  `#callbackDiagnosticsUseTheOwningContextSessionView`、既有 `NekoModulePipelineCacheSessionTest`
+  和 `ScriptReloadGenerationTest`。
 
 - **3. CJS require semantics：fixed.** `NekoScriptModuleLoaderHost.requireFrom` 改走
-  `resolveChildForRequire`；`NekoModuleIdentityLifecycleTest#requireMissingBarePackageReportsModuleNotFoundBeforeSpecialExecution`
-  从入口 `require("missing-package")` 断言 `RESOLVE`/`missing-package`，不进入 SPECIAL/EXECUTE。
+  `resolveChildForRequire`；strict resolver 只允许 Java/builtin 或 host 明确登记的
+  `NodeModuleRegister` id 进入 SPECIAL。`require("missing-package")` 最高调用者断言
+  `RESOLVE`/`MODULE_NOT_FOUND`，而登记的 `mymod:hello` 仍返回 plugin exports，不进入宽松 unknown-bare
+  fallback。证据为 `NekoModuleIdentityLifecycleTest#requireMissingBarePackageReportsModuleNotFoundBeforeSpecialExecution`
+  与 `#requireRegisteredSpecialPluginModuleReturnsExports`。
 
 - **4. PackSync hash-list outcome and rollback：fixed.** `handleHashList` 返回 `PackSyncClient.Outcome`；
   deactivation/reload failure 恢复之前的 active registry、runtime trust、address、bucket 和 expected
@@ -457,3 +462,50 @@ golden 文件。上述限制是边界说明，不把未运行的真实 Minecraft
 | Owner close lifecycle | `NekoModulePipelineCacheSessionTest` clear/open/closeOwner assertions | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest` | PASS；normal clear 可重开，owner close 后拒绝。 |
 | Implementation API visibility | `ModulePipelineIsolationTest#implementationParserAndApprovalSurfaceIsPackagePrivate` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest` | PASS；只收窄无生产跨包调用的 implementation surface。 |
 | Required gates | common compile/check、26.2.0 NeoForge/Fabric compile、whitespace | `./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | 本轮最终结果以执行命令为准；不更新 golden，不宣称真实 Minecraft/network smoke。 |
+
+## Review-round-10 addendum (2026-09-19)
+
+本轮针对 `b48ca2b1` 之后的终审验收缺口继续 fix-forward；`Status` 保持 `closed`。本 addendum
+只记录实际收口和真实执行边界，不把未执行的 Minecraft、loader runtime 或 network session smoke 写成通过。
+
+- **Candidate diagnostics/session isolation：fixed.** candidate 创建不再激活 type 级全局 module view；active
+  fallback 按 `ScriptType` 保存，candidate/active generation 的 source-map 与 virtual-module view 按
+  Graal `Context` 绑定。入口错误、timer callback、event callback 和 stack mapping 在有 context 时均从
+  所属 session 捕获 view；candidate 失败只恢复该类型 active 错误快照，commit 只切换该类型 active view。
+  证据：`DefaultErrorTrackerTest#callbackDiagnosticsUseTheOwningContextSessionView`、
+  `ScriptReloadGenerationTest` 的 failed candidate/closed Context assertions，以及 multi-type view test。
+
+- **Sandbox construction cleanup：fixed.** `NekoSandboxFactory.build` 对 Context、Node runtime、host
+  observer 和 LoggerStream 使用反向清理；`NekoNodeModuleInstaller.install` 在 manifest/plugin eval 失败时
+  关闭 partial runtime/host。`NekoSandboxFactoryResourceTest#failedNodeInstallerClosesPartialRuntimeAndSandboxResources`
+  用坏的 `NodeModuleRegister` plugin 强制 build failure，并断言 session 没有残留 preparation observer。
+
+- **Strict CJS special modules：fixed.** strict require 的 bare resolution 只有 node_modules 命中或 host
+  明确登记的 plugin module id 才返回；未知 bare name 以 `MODULE_NOT_FOUND` 保持在 `RESOLVE`，不会被
+  special resolver 的 no-module sentinel 吞掉。注册的 `mymod:hello` 仍从 `__nekoNodeDefine`/special resolver
+  返回 exports。证据为 `NekoModuleIdentityLifecycleTest` 的 missing-package 与 registered-special 两个
+  最高调用者测试。
+
+- **Rewritten compiler source maps：fixed with a conservative boundary.** ESM rewrite 保存 compiler map 的
+  authored `sources`/`sourcesContent`/original segments，并按 replacement range 变换 generated line/column；
+  replacement 或插入行没有 authored 精确 token 对应时，只写入明确的 conservative anchor segment。没有
+  compiler map 的 native fallback 仍可 conservative。TS/JSX rewritten import 后 `loadEntry` throw 测试
+  断言 authored path、line 和合法 column；本轮不声称 arbitrary rewrite 的 exact generated-to-authored
+  column composition。
+
+- **Single facts/visibility：fixed.** `<type>_scripts` 的 path segment/name 由 `ScriptType` 统一提供，
+  Cache、VirtualRegistry、ScriptBindingSchema、SourceMapRegistry、ScriptPack、loader host 和
+  `DefaultErrorTracker` 复用该事实。`NekoEsmVirtualModuleRegistry` 不再内联 SHA-256，复用唯一的
+  `NekoModuleHash.sha256` cross-package implementation seam；source-map composition 是必要的执行侧
+  utility，未新增 parser/compiler SPI。`ModulePipelineIsolationTest` 同步覆盖 helper/visibility 约束。
+
+### Review-round-10 evidence matrix
+
+| Finding | 精确证据 | 精确命令 | 结果与限制 |
+|---|---|---|---|
+| Candidate Context/session diagnostics | `DefaultErrorTrackerTest`、`NekoModulePipelineCacheSessionTest`、`ScriptReloadGenerationTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.script.ScriptReloadGenerationTest` | PASS；无真实 Minecraft/loader runtime smoke。 |
+| Sandbox build failure cleanup | `NekoSandboxFactoryResourceTest#failedNodeInstallerClosesPartialRuntimeAndSandboxResources` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoSandboxFactoryResourceTest` | PASS；观察 partial host/session cleanup，不等同真实 loader shutdown。 |
+| Strict CJS require and plugin special resolver | `NekoModuleIdentityLifecycleTest` missing-package + registered-special tests，`NekoModuleResolverTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest --tests com.tkisor.nekojs.core.module.NekoModuleResolverTest` | PASS；无真实 plugin/network runtime session。 |
+| TS/JSX rewritten source maps | `NekoModuleIdentityLifecycleTest#rewrittenTypeScriptImportThenThrowKeepsCompilerAuthoredLocation`、`#rewrittenJsxImportThenThrowKeepsCompilerAuthoredLocation` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest` | PASS；exact column composition仍不是承诺。 |
+| Single facts/visibility | `ModulePipelineIsolationTest`、`ScriptBindingSchemaInferTypeTest`、`SourceMapRegistryTest` | `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.core.error.SourceMapRegistryTest` | PASS；无跨 OS/provider 双机证据。 |
+| Required gates | common compile/check、26.2.0 NeoForge/Fabric compile、whitespace | `./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava`; `git diff --check` | PASS；平台编译有既有 deprecation、this-escape、Gson InlineMe warnings；不更新 golden。真实 Minecraft/loader/network smoke 未执行。 |

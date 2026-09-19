@@ -124,8 +124,8 @@ export const same = ns.default === greet;
   输入明确使用 generated-line -> authored-line 的保守映射，超出 authored 行时 clamp 到最后一行。
   TS/JSX 等 compiler-produced map 仍使用 compiler map。script-loader 的 `sourceURL` 仍可作 execution
   fallback，但不能替代 prepared source map。
-  `NekoSourceMapBuilder` 的 identity 是唯一明确的 source-map utility API，不是 parser/lowering/compiler
-  公共 SPI。
+  `NekoSourceMapBuilder` 的 identity 与必要的 rewritten-map composition 是明确的 source-map utility
+  边界，不是 parser/lowering/compiler 公共 SPI。
 - **保留原因**：外部语言参与路径是公开扩展能力（删即删公开语言）；内建直装语义不同，
   不是第二条用户管线。
 - **收缩 gate**（须全部满足；满足后随票删除，不进 final release 统一清理；
@@ -135,8 +135,8 @@ export const same = ns.default === greet;
   3. trace（全仓无该后缀 `IScriptCompiler` 注册）；
   4. 无调用者（legacy 分支零生产/测试调用）。
 - **结构证据现状**：管线与 prepared 缓存零 static 可变状态、无 legacy static 门面
-  （同名测试类中断言锁定）；source-map utility 只有 identity 入口，javadoc 明确不是 parser/lexer/
-  lowering/compiler SPI（`pipelinePublicSurfaceExposesNoParserSpi` 锁定）。runtime registry 的 public
+  （同名测试类中断言锁定）；source-map utility 只保留 identity 与 rewritten-map composition 入口，javadoc
+  明确不是 parser/lexer/lowering/compiler SPI（`pipelinePublicSurfaceExposesNoParserSpi` 锁定）。runtime registry 的 public
   mutable observability 已收口为 package owner seam 与 `NekoSourceMapView`/`NekoVirtualModuleView`。
 
 ## 4. 未做事项（非本票范围）
@@ -171,9 +171,11 @@ JUnit 覆盖这一回滚顺序和成功路径；本材料不宣称真实 Minecra
 
 common preparation/resolution/cache 不再通过 `System.getProperty("os.name")` 推断大小写。canonical path
 与 source-map lookup 使用注入 `Path`/`FileSystem` 的 equality 行为（`A` 与 `a`），因此 Linux/Windows
-语义由实际 provider 决定。`NekoModuleHash` 仅是 `core.module` package-private implementation；
-`NekoModuleResolutionPaths` 已删除，resolver 使用 plain `Path` 参数。`NekoSourceMapBuilder.identity`
-仍是唯一明确的 public source-map utility。现有 production/test callers 已完成迁移；golden 未更新。
+语义由实际 provider 决定。`NekoModuleHash` 只公开必要的 `sha256` cross-package implementation seam
+供 `core.module.esm` registry 复用，`jsonExecutionKey` 等其它实现细节仍保持 package-private；
+`NekoModuleResolutionPaths` 已删除，resolver 使用 plain `Path` 参数。source-map utility 只保留
+`NekoSourceMapBuilder.identity` 与必要的 rewritten-map composition；现有 production/test callers 已完成
+迁移；golden 未更新。
 
 ### 5.4 Evidence boundary
 
@@ -186,8 +188,8 @@ Minecraft、loader runtime、client/server network session 不在本轮 evidence
 
 本轮没有脚本侧迁移；修复的是 common 运行时边界、候选生命周期和平台适配结果。
 
-- `ScriptBindingSchema.inferType` 现在只按 `ScriptType.name + "_scripts"` 路径段推导类型，Preparation、global binding validator 和 event callback validator 不再读取 `ScriptTypeEnv`、`NekoJSPaths` 或 `Platform`。对应测试使用任意路径根，隔离扫描也覆盖该 schema 文件。
-- `DefaultErrorTracker` 按 `ScriptType` 保存 active/candidate module views；`ScriptError` 在创建时捕获该类型当前 session 的只读 source-map/virtual-module view。候选 session 只进入 candidate 表，commit 才发布为该类型的 active view，失败时丢弃 candidate 并恢复原 active view，不会覆盖其它类型或其它 manager。
+- `ScriptBindingSchema.inferType` 现在只按 `ScriptType` 的统一 `<type>_scripts` path helper 推导类型，Preparation、global binding validator 和 event callback validator 不再读取 `ScriptTypeEnv`、`NekoJSPaths` 或 `Platform`。对应测试使用任意路径根，隔离扫描也覆盖该 schema 文件。
+- `DefaultErrorTracker` 按 `ScriptType` 保存 active fallback，并按 generation `Context` 保存 session view；`ScriptError` 在创建时捕获来源 context/session 的只读 source-map/virtual-module view。候选 session 不进入 type 级 active 槽，commit 才发布该类型 active view，失败时移除候选 Context view 并恢复 active error snapshot，不会覆盖其它类型或其它 manager。
 - CJS `require()` 使用严格的 `resolveChildForRequire`。最高调用者对缺失 bare package 观察到 `NekoModuleError.Stage.RESOLVE`，不会降级为 SPECIAL 或延迟到 EXECUTE。
 - `PackSyncClient.handleHashList` 返回 `Outcome`。deactivation/reload 失败时恢复旧 active registry、runtime trust、address、bucket 和 expected hashes；NeoForge/Fabric hash-list handler 消费该 Outcome 并断连。bundle failure 的既有 rollback 语义保持。
 - `NekoModulePipelineCache.clear()` 仍是可继续使用的普通清理；新增 root-only `closeOwner()`/`AutoCloseable` 终止 owner，`NekoRuntimeRoot.closeSilently()` 调用它，closed root 拒绝新的 session。
@@ -201,3 +203,54 @@ Final review evidence commands:
 ```
 
 本轮还需执行的验收命令为 `:common:check`、`:26.2.0:compileJava`、`:26.2.0-fabric:compileJava` 和 `git diff --check`；本轮未执行真实 Minecraft、loader runtime 或 network session smoke，未更新 golden。
+
+## 6. Review-round-10 runtime boundary updates
+
+### 6.1 Candidate diagnostics and cleanup
+
+脚本作者无需迁移。candidate reload 不再把 candidate module view 放进同一 `ScriptType` 的全局槽位；
+active fallback 仍按类型保存，但错误/stack/callback 在有 Graal `Context` 时按 generation session 捕获
+source-map 与 virtual-module view。candidate 失败只恢复 active error snapshot，成功 commit 才发布该类型
+的新 active view。这样同类型 active callback 与 candidate execution 在重载窗口中不会互读 maps。
+
+`NekoSandboxFactory.build` 与 `NekoNodeModuleInstaller.install` 现在覆盖 Context、Node runtime、module-host
+observer 和 logger stream 的 partial construction cleanup。插件 Node module 或 manifest eval 失败仍会
+失败，但不会留下 live Context、host observer 或 buffered stream。没有脚本 API 迁移。
+
+### 6.2 Strict require and registered plugin modules
+
+未知 bare package 的 CJS `require()` 现在保持最高调用者 `RESOLVE`，detail 明确为 `MODULE_NOT_FOUND`；
+它不会再无条件进入 special resolver。插件通过 `NodeModuleRegister` 注册的 special id（例如
+`mymod:hello`）由 host allow-list 识别，仍经 `__nekoNodeDefine`/special resolver 返回 exports。
+已有合法 builtin、`java:` 和 file module 用法不变。
+
+### 6.3 Rewritten source maps
+
+TS/JSX/compiler-produced source map 的 authored `sources`、`sourcesContent` 与 original line mapping
+在 native ESM import/runtime rewrite 后继续保留；replacement range 只变换 generated coordinates。
+替换文本或插入行没有一一对应 authored token 时使用明确 conservative anchor，不把该路径描述为 exact
+column composition。没有 compiler map 的 native fallback 仍可使用 conservative identity/line map。
+`loadEntry` 的 TS/JSX rewritten-import-then-throw 测试只承诺 authored path、line 和合法 column。
+
+### 6.4 Single facts and visibility
+
+`ScriptType.scriptsDirectoryName/fromScriptsDirectoryName` 是 `<type>_scripts` path segment 的唯一事实，
+Cache、VirtualRegistry、ScriptBindingSchema、SourceMapRegistry、ScriptPack、loader host 和 diagnostics
+均复用它。ESM virtual registry 复用 `NekoModuleHash.sha256`，不再自带 SHA-256 实现。没有新增 parser/
+compiler SPI；必要的 source-map composition 属 execution-side utility。
+
+## 7. Review-round-10 evidence boundary
+
+本轮实际验收命令与结果：
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest --tests com.tkisor.nekojs.core.module.NekoModuleResolverTest --tests com.tkisor.nekojs.core.module.NekoModuleIdentityLifecycleTest --tests com.tkisor.nekojs.core.module.NekoSandboxFactoryResourceTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.api.event.ScriptBindingSchemaInferTypeTest --tests com.tkisor.nekojs.script.ScriptReloadGenerationTest
+./gradlew.bat :common:compileJava :common:compileTestJava
+./gradlew.bat :common:check
+./gradlew.bat :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+以上命令均 PASS；平台编译保留既有 deprecation、this-escape 和 Gson `InlineMe` classfile warnings，未更新
+golden。真实 Minecraft client/server、loader runtime、network session smoke 本轮未执行，不从 JUnit 或平台
+编译推断通过。

@@ -4,6 +4,7 @@ import com.tkisor.nekojs.core.ScriptFilePolicy;
 import com.tkisor.nekojs.core.compiler.IScriptCompiler;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.NekoTypeScriptLanguagePlugin;
+import com.tkisor.nekojs.core.compiler.NekoJsxLanguagePlugin;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.error.SourceMapRegistry;
@@ -61,6 +62,7 @@ class NekoModuleIdentityLifecycleTest {
         Files.createDirectories(paths.serverScripts().resolve("src"));
         compilers = ScriptCompilerRegistry.createRuntimeRegistry();
         compilers.register(NekoTypeScriptLanguagePlugin.INSTANCE);
+        compilers.register(NekoJsxLanguagePlugin.INSTANCE);
         cache = new NekoModulePipelineCache(new NekoModulePipeline(
                 new NekoCompilationPipeline(), compilers, SandboxConfig.defaultConfig()),
                 new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
@@ -115,6 +117,21 @@ class NekoModuleIdentityLifecycleTest {
         assertEquals("missing-package", staged.moduleId());
         assertTrue(staged.detail().contains("missing-package"));
         assertTrue(!staged.detail().contains("special"), "missing bare packages must not enter SPECIAL resolution");
+    }
+
+    @Test
+    void requireRegisteredSpecialPluginModuleReturnsExports() throws Exception {
+        Path entry = paths.serverScripts().resolve("src/registered-special-entry.cjs");
+        Files.writeString(entry, "module.exports = require('mymod:hello');\n");
+        host.registerSpecialModules(Set.of("mymod:hello"));
+        context.eval("js", "globalThis.__nekoNodeNoModule = Symbol('missing');"
+                + "globalThis.__nekoNodeResolve = id => id === 'mymod:hello'"
+                + " ? { value: 42 } : globalThis.__nekoNodeNoModule;");
+
+        Value exports = asValue(host.loadEntry("./server_scripts/src/registered-special-entry.cjs"));
+
+        assertEquals(42, exports.getMember("value").asInt(),
+                "a plugin-registered special module must still reach the special resolver");
     }
 
     @Test
@@ -523,6 +540,49 @@ class NekoModuleIdentityLifecycleTest {
         assertTrue(staged.sourceColumn() > 0 && staged.sourceColumn() <= source.stripTrailing().length(),
                 staged.detail());
         assertNotNull(staged.getCause());
+    }
+
+    @Test
+    void rewrittenTypeScriptImportThenThrowKeepsCompilerAuthoredLocation() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Files.writeString(dir.resolve("map-ts-rewrite-child.ts"), "export const value: number = 1;\n");
+        Path entry = dir.resolve("map-ts-rewrite-entry.ts");
+        Files.writeString(entry, "import { value } from './map-ts-rewrite-child.ts';\n"
+                + "const marker: number = value;\n"
+                + "throw new Error('ts-rewrite-boom');\n");
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/map-ts-rewrite-entry.ts"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        assertEquals("server_scripts/src/map-ts-rewrite-entry.ts", staged.sourcePath().replace('\\', '/'));
+        assertEquals(3, staged.sourceLine(), staged.detail());
+        assertTrue(staged.sourceColumn() > 0
+                        && staged.sourceColumn() <= "throw new Error('ts-rewrite-boom');".length(),
+                staged.detail());
+        assertEquals(staged.sourcePath(), staged.moduleId(), "module id must remain the authored module identity");
+    }
+
+    @Test
+    void rewrittenJsxImportThenThrowKeepsCompilerAuthoredLocation() throws Exception {
+        Path dir = paths.serverScripts().resolve("src");
+        Files.writeString(dir.resolve("map-jsx-rewrite-child.mjs"), "export const value = 1;\n");
+        Path entry = dir.resolve("map-jsx-rewrite-entry.jsx");
+        Files.writeString(entry, "import { value } from './map-jsx-rewrite-child.mjs';\n"
+                + "if (false) { const view = <div>{value}</div>; }\n"
+                + "throw new Error('jsx-rewrite-boom');\n");
+
+        IOException failure = assertThrows(IOException.class,
+                () -> host.loadEntry("./server_scripts/src/map-jsx-rewrite-entry.jsx"));
+
+        NekoModuleError staged = NekoModulePipelinePrepareTest.assertStaged(
+                failure, NekoModuleError.Stage.EXECUTE, NekoModuleError.OWNER_EXECUTION);
+        assertEquals("server_scripts/src/map-jsx-rewrite-entry.jsx", staged.sourcePath().replace('\\', '/'));
+        assertEquals(3, staged.sourceLine(), staged.detail());
+        assertTrue(staged.sourceColumn() > 0
+                        && staged.sourceColumn() <= "throw new Error('jsx-rewrite-boom');".length(),
+                staged.detail());
     }
 
     private static Value asValue(Object exports) {

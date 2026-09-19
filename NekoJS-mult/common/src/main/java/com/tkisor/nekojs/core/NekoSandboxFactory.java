@@ -161,36 +161,74 @@ public final class NekoSandboxFactory {
                             type.name(), runawayTimeoutSeconds, statementLimit))
                     .build());
         }
-        Context ctx = contextBuilder.build();
+        Context ctx = null;
+        NekoNodeRuntime nodeRuntime = null;
+        try {
+            ctx = contextBuilder.build();
 
-        ctx.eval("js", CONSOLE_PATCH_JS);
-        ctx.eval("js", "Java.loadClass = Java.type;");
-        NekoNodeRuntime nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
-                new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
-                        new ScriptFilePolicy(compilers)),
-                paths,
-                core.errorTracker(),
-                config,
-                moduleSession);
+            ctx.eval("js", CONSOLE_PATCH_JS);
+            ctx.eval("js", "Java.loadClass = Java.type;");
+            nodeRuntime = NekoNodeModuleInstaller.install(ctx, type,
+                    new NekoModuleResolver(paths.gameDir(), paths.root(), paths.nodeModules(),
+                            new ScriptFilePolicy(compilers)),
+                    paths,
+                    core.errorTracker(),
+                    config,
+                    moduleSession);
 
-        Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
-        registeredExtensions.remove(".js");
-        registeredExtensions.remove(".mjs");
-        registeredExtensions.remove(".cjs");
+            Set<String> registeredExtensions = new LinkedHashSet<>(compilers.supportedExtensions());
+            registeredExtensions.remove(".js");
+            registeredExtensions.remove(".mjs");
+            registeredExtensions.remove(".cjs");
 
-        if (!registeredExtensions.isEmpty()) {
-            StringBuilder js = new StringBuilder("if(typeof require!=='undefined'&&require.extensions){");
-            for (String ext : registeredExtensions) {
-                js.append("require.extensions['").append(ext).append("']=require.extensions['.js'];");
+            if (!registeredExtensions.isEmpty()) {
+                StringBuilder js = new StringBuilder("if(typeof require!=='undefined'&&require.extensions){");
+                for (String ext : registeredExtensions) {
+                    js.append("require.extensions['").append(ext).append("']=require.extensions['.js'];");
+                }
+                js.append('}');
+                try {
+                    ctx.eval("js", js.toString());
+                } catch (Exception e) {
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(type).warn("Failed to register require extension aliases: {}", registeredExtensions, e);
+                }
             }
-            js.append('}');
-            try {
-                ctx.eval("js", js.toString());
-            } catch (Exception e) {
-                com.tkisor.nekojs.script.ScriptTypeEnv.logger(type).warn("Failed to register require extension aliases: {}", registeredExtensions, e);
+
+            return new Sandbox(ctx, nodeRuntime, outStream, errStream);
+        } catch (Throwable failure) {
+            // Context construction is multi-stage: a manifest/plugin failure can leave a live
+            // node runtime, host observer, Context and buffered logger streams behind.
+            if (nodeRuntime != null) {
+                try {
+                    nodeRuntime.close();
+                } catch (Throwable cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
             }
+            if (ctx != null) {
+                try {
+                    ctx.close();
+                } catch (Throwable cleanupFailure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            }
+            closeStream(outStream, failure);
+            closeStream(errStream, failure);
+            if (failure instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            }
+            if (failure instanceof Error errorFailure) {
+                throw errorFailure;
+            }
+            throw new IllegalStateException("Failed to build NekoJS sandbox", failure);
         }
+    }
 
-        return new Sandbox(ctx, nodeRuntime, outStream, errStream);
+    private static void closeStream(LoggerStream stream, Throwable failure) {
+        try {
+            stream.close();
+        } catch (Throwable cleanupFailure) {
+            failure.addSuppressed(cleanupFailure);
+        }
     }
 }

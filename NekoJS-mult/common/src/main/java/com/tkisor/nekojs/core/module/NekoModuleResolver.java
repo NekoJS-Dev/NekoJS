@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * 实例化模块解析器：构造器接收显式文件系统根和 {@link ScriptFilePolicy}。
@@ -55,11 +56,37 @@ public final class NekoModuleResolver {
      * 直接抛错——对应 Node 的 {@code require.resolve} MODULE_NOT_FOUND 语义。
      */
     public NekoResolvedModule resolveForRequire(String parentPath, String specifier) throws IOException {
-        NekoResolvedModule resolved = resolve(parentPath, specifier);
-        if (resolved.special() && resolved.kind() == NekoModuleKind.SPECIAL) {
-            throw new IOException("Cannot resolve module: " + specifier);
+        return resolveForRequire(parentPath, specifier, Set.of());
+    }
+
+    /**
+     * Strict CJS resolution with the host's explicitly registered special-module ids.
+     * Unknown bare names remain MODULE_NOT_FOUND; they must never reach the special resolver.
+     */
+    public NekoResolvedModule resolveForRequire(String parentPath, String specifier,
+                                                Set<String> registeredSpecialModules) throws IOException {
+        if (specifier == null || specifier.isBlank()) {
+            throw new IOException("Module specifier must not be blank");
         }
-        return resolved;
+        NekoModuleKind specialKind = specialKind(specifier);
+        if (specialKind != null) {
+            return NekoResolvedModule.special(specifier, specialKind);
+        }
+        if (isFileSpecifier(specifier)) {
+            Path parent = pathFromLoaderPath(parentPath);
+            Path baseDirectory = Files.isDirectory(parent) ? parent : parent.getParent();
+            if (baseDirectory == null) baseDirectory = root;
+            return resolveFileModule(baseDirectory.resolve(specifier).normalize());
+        }
+        Set<String> registered = registeredSpecialModules == null ? Set.of() : registeredSpecialModules;
+        if (registered.contains(specifier)) {
+            return NekoResolvedModule.special(specifier, NekoModuleKind.SPECIAL);
+        }
+        try {
+            return resolveBareModuleStrict(specifier);
+        } catch (IOException failure) {
+            throw new IOException("MODULE_NOT_FOUND: " + failure.getMessage(), failure);
+        }
     }
 
     private NekoResolvedModule resolveBareModule(String specifier) throws IOException {
@@ -73,6 +100,11 @@ public final class NekoModuleResolver {
             }
             throw exception;
         }
+    }
+
+    private NekoResolvedModule resolveBareModuleStrict(String specifier) throws IOException {
+        Path nodeModules = this.nodeModules.toAbsolutePath().normalize();
+        return resolveFileModule(nodeModules.resolve(specifier).normalize(), nodeModules);
     }
 
     private boolean isMissingModule(IOException exception) {

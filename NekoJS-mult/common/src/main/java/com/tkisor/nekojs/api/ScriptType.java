@@ -70,6 +70,22 @@ public enum ScriptType implements ScriptTypePredicate {
         return EXECUTABLE_TYPES.stream().anyMatch(type -> type.name.equals(name));
     }
 
+    /** The stable path segment used by script roots and generated module identities. */
+    public String scriptsDirectoryName() {
+        return name + "_scripts";
+    }
+
+    /** Resolve a script type from a path segment without consulting platform-owned paths. */
+    public static ScriptType fromScriptsDirectoryName(String segment) {
+        if (segment == null) return null;
+        for (ScriptType type : EXECUTABLE_TYPES) {
+            if (type.scriptsDirectoryName().equalsIgnoreCase(segment)) {
+                return type;
+            }
+        }
+        return null;
+    }
+
     public static java.util.List<ScriptType> autoLoadTypes() {
         return AUTO_LOAD_TYPES;
     }
