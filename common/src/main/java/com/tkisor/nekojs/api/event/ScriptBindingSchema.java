@@ -131,6 +131,11 @@ public final class ScriptBindingSchema {
         return new View(lookup(type), knownGlobals(type));
     }
 
+    /** Empty view used by a generation before its bindings have been installed. */
+    public static View emptyView() {
+        return new View(Map.of(), Set.of());
+    }
+
     /** Capture the active schema/global values before a candidate starts mutating its own view. */
     public static Snapshot snapshot(ScriptType type) {
         return new Snapshot(activeView(type));
@@ -165,8 +170,11 @@ public final class ScriptBindingSchema {
         Candidate candidate = CANDIDATES.remove(context);
         if (candidate != null) {
             // Schema transactions are serialized with generation commit by the owning manager;
-            // restore the captured active view when a candidate is discarded.
-            installActive(candidate.type(), candidate.activeBefore().view());
+            // restore the captured active view only if no newer same-type generation published.
+            // This keeps a late failure from an older candidate from rolling back a committed one.
+            if (activeView(candidate.type()).equals(candidate.activeBefore().view())) {
+                installActive(candidate.type(), candidate.activeBefore().view());
+            }
         }
     }
 
@@ -178,9 +186,9 @@ public final class ScriptBindingSchema {
 
     /** Resolve a generation view for preparation/validation. */
     public static View view(Object context, ScriptType type) {
-        Candidate candidate = context == null ? null : CANDIDATES.get(context);
-        if (candidate != null && candidate.type() == type) return candidate.view();
-        return activeView(type);
+        if (context == null) return activeView(type);
+        Candidate candidate = CANDIDATES.get(context);
+        return candidate != null && candidate.type() == type ? candidate.view() : emptyView();
     }
 
     /**
@@ -209,8 +217,7 @@ public final class ScriptBindingSchema {
     }
 
     public static Map<String, BindingMembers> schemaForPath(Path path, View view) {
-        if (view == null) return schemaForPath(path);
-        return view.lookup();
+        return view == null ? Map.of() : view.lookup();
     }
 
     private static void installActive(ScriptType type, View view) {

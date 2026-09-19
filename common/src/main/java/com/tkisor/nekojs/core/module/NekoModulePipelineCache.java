@@ -60,16 +60,25 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                    NekoEsmVirtualModuleRegistry virtualModules,
                                    NekoTrustContext trustContext) {
-        this(pipeline, sourceMaps, virtualModules, trustContext, null);
+        this(pipeline, sourceMaps, virtualModules, trustContext, ScriptBindingSchema.emptyView(), null);
+    }
+
+    public NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
+                                   NekoEsmVirtualModuleRegistry virtualModules,
+                                   NekoTrustContext trustContext,
+                                   ScriptBindingSchema.View bindingSchemaView) {
+        this(pipeline, sourceMaps, virtualModules, trustContext, bindingSchemaView, null);
     }
 
     private NekoModulePipelineCache(NekoModulePipeline pipeline, SourceMapRegistry sourceMaps,
                                     NekoEsmVirtualModuleRegistry virtualModules,
-                                    NekoTrustContext trustContext, NekoModulePipelineCache owner) {
+                                    NekoTrustContext trustContext, ScriptBindingSchema.View bindingSchemaView,
+                                    NekoModulePipelineCache owner) {
         this.pipeline = Objects.requireNonNull(pipeline, "pipeline");
         this.sourceMaps = Objects.requireNonNull(sourceMaps, "sourceMaps");
         this.virtualModules = Objects.requireNonNull(virtualModules, "virtualModules");
         this.trustContext = Objects.requireNonNull(trustContext, "trustContext");
+        this.bindingSchemaView = Objects.requireNonNull(bindingSchemaView, "bindingSchemaView");
         this.owner = owner;
     }
 
@@ -78,11 +87,19 @@ public final class NekoModulePipelineCache implements AutoCloseable {
      *
      * <p>The pipeline, trust context and path roots are shared immutable policy, while prepared
      * entries, source maps, virtual sources and preparation observations are private to the
-     * returned session. Calling this on a child still registers the session with the root owner;
-     * it never creates a second long-lived runtime owner.
+     * returned session. Only the root owner can open a session; a child cannot become another
+     * session factory or long-lived runtime owner.
      */
     public NekoModulePipelineCache openSession() {
-        NekoModulePipelineCache root = rootOwner();
+        return openSession(ScriptBindingSchema.emptyView());
+    }
+
+    /** Open a session with the schema snapshot chosen by its generation owner. */
+    public NekoModulePipelineCache openSession(ScriptBindingSchema.View bindingSchemaView) {
+        if (owner != null) {
+            throw new IllegalStateException("Only the root NekoModulePipelineCache can open sessions");
+        }
+        NekoModulePipelineCache root = this;
         if (root.closed) {
             throw new IllegalStateException("NekoModulePipelineCache owner is closed");
         }
@@ -91,6 +108,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
                 new SourceMapRegistry(root.sourceMaps.root()),
                 new NekoEsmVirtualModuleRegistry(root.virtualModules.root().getParent()),
                 root.trustContext,
+                Objects.requireNonNull(bindingSchemaView, "bindingSchemaView"),
                 root);
         root.sessions.add(session);
         return session;
@@ -108,7 +126,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     /** Close the runtime owner and all generation sessions; unlike clear(), this is terminal. */
-    public void closeOwner() {
+    private void closeOwner() {
         if (owner != null) {
             throw new IllegalStateException("Only the root NekoModulePipelineCache can close its owner");
         }
@@ -134,6 +152,11 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     /** Whether both caches belong to the same root runtime owner. */
     public boolean belongsToSameOwner(NekoModulePipelineCache other) {
         return other != null && rootOwner() == other.rootOwner();
+    }
+
+    /** Runtime composition roots may only be built from the owner cache, never a generation child. */
+    public boolean isRootOwner() {
+        return owner == null;
     }
 
     public NekoPreparedModule prepare(Path path) throws IOException {
@@ -278,12 +301,11 @@ public final class NekoModulePipelineCache implements AutoCloseable {
 
     /** Bind the immutable schema view belonging to this active/candidate generation. */
     public void installBindingSchemaView(ScriptBindingSchema.View view) {
-        this.bindingSchemaView = view;
+        this.bindingSchemaView = Objects.requireNonNull(view, "bindingSchemaView");
     }
 
     public ScriptBindingSchema.View bindingSchemaView() {
-        ScriptBindingSchema.View view = bindingSchemaView;
-        return view != null ? view : new ScriptBindingSchema.View(Map.of(), Set.of());
+        return bindingSchemaView;
     }
 
     SourceMapRegistry sourceMaps() {
@@ -617,8 +639,7 @@ public final class NekoModulePipelineCache implements AutoCloseable {
     }
 
     private ScriptBindingSchema.View bindingSchemaViewFor(Path path) {
-        ScriptBindingSchema.View view = bindingSchemaView;
-        return view != null ? view : ScriptBindingSchema.activeView(scriptTypeOf(path));
+        return bindingSchemaView;
     }
 
     private void publishSourceMap(Path path, NekoPreparedModule prepared) {

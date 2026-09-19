@@ -82,6 +82,19 @@ class NekoRuntimeModuleCacheOwnershipTest {
     }
 
     @Test
+    void runtimeRootRejectsAChildGenerationCache() {
+        NekoModulePipelineCache owner = newCache();
+        NekoModulePipelineCache child = owner.openSession();
+        try {
+            assertThrows(IllegalArgumentException.class, () -> rootWith(child),
+                    "a generation child must not become another long-lived runtime owner");
+        } finally {
+            child.close();
+            owner.close();
+        }
+    }
+
+    @Test
     void factoryRootManagerAndHostAllUseTheSameCacheIdentity() throws Exception {
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = SandboxConfig.defaultConfig();

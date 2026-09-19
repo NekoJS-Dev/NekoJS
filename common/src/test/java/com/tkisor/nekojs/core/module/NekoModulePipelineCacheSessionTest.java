@@ -1,5 +1,7 @@
 package com.tkisor.nekojs.core.module;
 
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.ScriptBindingSchema;
 import com.tkisor.nekojs.core.compiler.NekoCompilationPipeline;
 import com.tkisor.nekojs.core.compiler.ScriptCompilerRegistry;
 import com.tkisor.nekojs.core.config.SandboxConfig;
@@ -12,8 +14,13 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.lang.reflect.Modifier;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -72,13 +79,57 @@ class NekoModulePipelineCacheSessionTest {
         NekoModulePipelineCache afterClear = owner.openSession();
         afterClear.closeSession();
 
-        owner.closeOwner();
+        owner.close();
         assertThrows(IllegalStateException.class, owner::openSession,
                 "a closed root must reject new generation sessions");
+    }
+
+    @Test
+    void sessionsKeepExplicitSchemaViewsAndChildrenCannotCreateOwners() throws Exception {
+        TestPlatformInit.ensureInitialized(gameDir);
+        NekoJSPaths paths = NekoJSPaths.fromGameDir(gameDir);
+        ScriptBindingSchema.register(ScriptType.SERVER,
+                Map.of("ActiveBinding", new ScriptBindingSchema.BindingMembers(Set.of("active"))));
+        NekoModulePipelineCache owner = newCache(paths);
+        NekoModulePipelineCache unbound = owner.openSession();
+        NekoModulePipelineCache active = owner.openSession(ScriptBindingSchema.activeView(ScriptType.SERVER));
+        AtomicInteger diagnostics = new AtomicInteger();
+        ScriptBindingSchema.View candidateView = new ScriptBindingSchema.View(
+                Map.of("CandidateBinding", new ScriptBindingSchema.BindingMembers(Set.of("candidate"))),
+                Set.of("candidateGlobal"), diagnostic -> diagnostics.incrementAndGet());
+        NekoModulePipelineCache candidate = owner.openSession(ScriptBindingSchema.emptyView());
+        try {
+            assertTrue(unbound.bindingSchemaView().lookup().isEmpty(),
+                    "a session without an explicit generation view must start empty");
+            assertTrue(active.bindingSchemaView().lookup().containsKey("ActiveBinding"));
+            assertTrue(candidate.bindingSchemaView().lookup().isEmpty(),
+                    "candidate preparation before binding installation must not read active schema");
+
+            candidate.installBindingSchemaView(candidateView);
+            assertEquals(candidateView, candidate.bindingSchemaView());
+            assertThrows(IllegalStateException.class, candidate::openSession,
+                    "a child session must not create another runtime owner");
+            assertFalse(Modifier.isPublic(NekoModulePipelineCache.class
+                    .getDeclaredMethod("closeOwner").getModifiers()),
+                    "owner close must not be a public child-cache API");
+        } finally {
+            unbound.close();
+            active.close();
+            candidate.close();
+            owner.close();
+        }
     }
 
     private static String sourceMap(String source, String content) {
         return "{\"version\":3,\"sources\":[\"" + source + "\"],"
                 + "\"sourcesContent\":[\"" + content + "\"],\"names\":[],\"mappings\":\"AAAA\"}";
+    }
+
+    private static NekoModulePipelineCache newCache(NekoJSPaths paths) {
+        return new NekoModulePipelineCache(
+                new NekoModulePipeline(new NekoCompilationPipeline(),
+                        ScriptCompilerRegistry.createRuntimeRegistry(), SandboxConfig.defaultConfig()),
+                new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()),
+                NekoTrustContext.local());
     }
 }

@@ -300,3 +300,36 @@ All four commands passed for this round. Platform compilation emitted only exist
 `this-escape` and Gson `InlineMe` classfile warnings. Golden files were not updated. The evidence is
 limited to common tests/compile and platform compile; it does not claim a real Minecraft, loader
 runtime or network session smoke test.
+
+## 9. Review-round-12 isolation closure
+
+本轮没有脚本作者迁移。Java 生命周期继续使用 root-owned、generation-scoped module session；变化集中在
+错误观察、binding schema view 和实现可见性边界。
+
+- `ErrorTracker` 的 public count/boolean/collection 与 root `ErrorSnapshot` 只返回 active generation。
+  candidate `Context` 的错误不会出现在 public diagnostics，直到 commit 显式 publish；失败 candidate discard
+  不改变 active errors。返回 collection 与 snapshot collection 均不可变。
+- module session 创建时必须绑定一个非空 `ScriptBindingSchema.View`。active session 由创建者传入 active
+  snapshot；candidate session 先使用 empty view，binding installation 成功后再安装 candidate view。没有
+  session-specific view 的 lookup 不再 fallback 到 static active schema，避免 candidate 在 binding 安装前误用
+  或在失败恢复时污染 active。same-type 的旧 candidate late discard 不会覆盖已经 publish 的 active schema。
+- generation child cache 不能继续创建 session，也不能被传给 `NekoRuntimeRoot` 作为 owner。root lifecycle 通过
+  cache 的 `AutoCloseable.close()` 结束 owner；脚本 manager 的 production candidate session creation 不变。
+- `NekoPreparedModule` 仍是 public immutable record，旧兼容 factory 保留；稳定 key 和显式 language/source
+  factory 没有跨包 production caller，已收窄到 `core.module` package-private。模块 identity、字段和观察方法
+  的既有 record 语义不变。
+- `prepareCaptured` 的重复 trust guard 合并为一个带 schema View 的实现；无 session 的 direct preparation 使用
+  empty view。cache 的 relative path helper 保留，因其同时服务 invalidate、JSON execution identity 与
+  source-map publish 的 injected-root fallback，不在本轮扩大删除范围。
+
+本轮最终证据命令：
+
+```text
+./gradlew.bat :common:test --tests com.tkisor.nekojs.core.error.DefaultErrorTrackerTest --tests com.tkisor.nekojs.api.event.ManagedBindingSchemaTest --tests com.tkisor.nekojs.core.module.NekoModulePipelineCacheSessionTest --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeModuleCacheOwnershipTest --tests com.tkisor.nekojs.core.module.ModulePipelineIsolationTest --tests com.tkisor.nekojs.core.module.NekoModulePipelinePrepareTest
+./gradlew.bat :common:compileJava :common:compileTestJava :common:check :26.2.0:compileJava :26.2.0-fabric:compileJava
+git diff --check
+```
+
+以上命令均 PASS；保留既有 unchecked/deprecation、`this-escape` 和 Gson `InlineMe` classfile warnings，不更新
+golden。真实 Minecraft client/server、loader runtime 和 network session smoke 未执行，不能从这些 common 测试
+或平台编译推断通过。

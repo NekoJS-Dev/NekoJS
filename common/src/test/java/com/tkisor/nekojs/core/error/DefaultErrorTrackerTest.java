@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.lang.reflect.Modifier;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -131,9 +132,9 @@ class DefaultErrorTrackerTest {
             assertNotSame(serverActive, tracker.moduleViews(ScriptType.SERVER));
             assertSame(clientActive, tracker.moduleViews(ScriptType.CLIENT));
         } finally {
-            server.closeOwner();
-            client.closeOwner();
-            candidate.closeOwner();
+            server.close();
+            client.close();
+            candidate.close();
         }
     }
 
@@ -172,8 +173,8 @@ class DefaultErrorTrackerTest {
             assertEquals("server_scripts/candidate-authored.ts", candidateError.getDisplayPath(),
                     "published candidate diagnostics must use only the candidate Context session map");
         } finally {
-            active.closeOwner();
-            candidate.closeOwner();
+            active.close();
+            candidate.close();
         }
     }
 
@@ -194,7 +195,7 @@ class DefaultErrorTrackerTest {
             assertEquals(1, tracker.getErrorCount());
             assertEquals("candidate-only", tracker.getAllErrors().iterator().next().getErrorMessage());
         } finally {
-            candidate.closeOwner();
+            candidate.close();
         }
     }
 
@@ -216,7 +217,7 @@ class DefaultErrorTrackerTest {
                         "discarding a failed candidate must preserve the active snapshot");
                 assertEquals("active-only", tracker.getAllErrors().iterator().next().getErrorMessage());
             } finally {
-                candidate.closeOwner();
+                candidate.close();
             }
         }
     }
