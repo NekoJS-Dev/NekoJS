@@ -1,6 +1,5 @@
 package com.tkisor.nekojs.api.event;
 
-import com.tkisor.nekojs.script.ScriptTypeEnv;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.surface.ApiSurfaceSnapshot;
 import com.tkisor.nekojs.api.surface.ApiSymbolId;
@@ -87,20 +86,14 @@ public final class ScriptBindingSchema {
      */
     public static ScriptType inferType(Path path) {
         if (path == null) return null;
-        Path norm = path.toAbsolutePath().normalize();
-        for (ScriptType type : ScriptType.values()) {
-            if (ScriptTypeEnv.scriptsDir(type) == null) continue;
-            if (norm.startsWith(ScriptTypeEnv.scriptsDir(type).toAbsolutePath().normalize())) return type;
-        }
-        return typeByScriptsDirSegment(norm);
+        return typeByScriptsDirSegment(path.toAbsolutePath().normalize());
     }
 
     private static ScriptType typeByScriptsDirSegment(Path norm) {
         for (Path segment : norm) {
             String name = segment.toString();
             for (ScriptType type : ScriptType.all()) {
-                String dirName = ScriptTypeEnv.scriptsDir(type) == null ? type.name + "_scripts" : ScriptTypeEnv.scriptsDir(type).getFileName().toString();
-                if (name.equalsIgnoreCase(dirName)) {
+                if (name.equalsIgnoreCase(type.name + "_scripts")) {
                     return type;
                 }
             }

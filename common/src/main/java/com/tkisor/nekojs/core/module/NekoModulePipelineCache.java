@@ -39,7 +39,7 @@ import java.util.function.BiConsumer;
  * 失效（{@link FileStamp} 五元组）——同 stamp 同长度但内容不同的覆盖写入不会返回旧模块；
  * 路径/mode 变化天然落到不同键或不同 stamp。
  */
-public final class NekoModulePipelineCache {
+public final class NekoModulePipelineCache implements AutoCloseable {
     private final NekoModulePipeline pipeline;
     private final Map<Path, PreparedEntry> preparedCache = new ConcurrentHashMap<>();
     private final SourceMapRegistry sourceMaps;
@@ -98,6 +98,30 @@ public final class NekoModulePipelineCache {
         clearLocal();
         closed = true;
         owner.sessions.remove(this);
+    }
+
+    /** Close the runtime owner and all generation sessions; unlike clear(), this is terminal. */
+    public void closeOwner() {
+        if (owner != null) {
+            throw new IllegalStateException("Only the root NekoModulePipelineCache can close its owner");
+        }
+        if (closed) {
+            return;
+        }
+        closed = true;
+        for (NekoModulePipelineCache session : sessions.toArray(NekoModulePipelineCache[]::new)) {
+            session.closeSession();
+        }
+        clearLocal();
+    }
+
+    @Override
+    public void close() {
+        if (owner == null) {
+            closeOwner();
+        } else {
+            closeSession();
+        }
     }
 
     /** Whether both caches belong to the same root runtime owner. */
@@ -310,7 +334,7 @@ public final class NekoModulePipelineCache {
         return sourceMaps;
     }
 
-    public NekoTrustApprovedSource approvedSource(Path path) throws IOException {
+    NekoTrustApprovedSource approvedSource(Path path) throws IOException {
         ensureOpen();
         NekoTrustApprovedSource approval = trustContext.approvalFor(path);
         if (approval == null || !approval.covers(path)) {

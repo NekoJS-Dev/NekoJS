@@ -162,6 +162,43 @@ class PackSyncClientTest {
     }
 
     @Test
+    void failedHashListDeactivationRestoresPreviousStateAndRejectsConnection() {
+        config("all", false);
+        String oldId = "packs:hash-list-old";
+        String oldManifest = signed(oldId, "GLOBAL", "key-hash-list-old",
+                "client_scripts/old.js", "module.exports = 'old';\n");
+        SyncedPack oldPack = pack(oldId, "GLOBAL", oldManifest,
+                "client_scripts/old.js", "module.exports = 'old';\n");
+        PackSyncClient.installClientReloadHook(() -> true);
+        PackSyncClient.handleHashList(runtimeRoot, "srv-hash-list.test", hashes(oldPack));
+        PackSyncTrustStore.get().trustServer("srv-hash-list.test");
+        assertFalse(PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack)).shouldDisconnect());
+
+        String newId = "packs:hash-list-new";
+        SyncedPack newPack = pack(newId, "GLOBAL",
+                signed(newId, "GLOBAL", "key-hash-list-new", "client_scripts/new.js", "new();\n"),
+                "client_scripts/new.js", "new();\n");
+        PackSyncClient.installClientReloadHook(() -> false);
+
+        PackSyncClient.Outcome outcome = PackSyncClient.handleHashList(
+                runtimeRoot, "srv-hash-list.test", hashes(newPack));
+
+        assertTrue(outcome.shouldDisconnect(), "a rejected deactivation must disconnect the client");
+        assertTrue(outcome.disconnect().contains("deactivation"));
+        assertEquals(1, ScriptPackRegistry.get().serverCachePacks().size(),
+                "the previous active registry must be restored");
+        Path oldFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-hash-list.test"))
+                .resolve(SyncedPack.encodeSyncId(oldId)).resolve("client_scripts/old.js");
+        assertNotNull(runtimeTrust.approvalFor(oldFile),
+                "the previous remote credential must be restored");
+
+        // The old hash list/address state was restored as well: the old bundle is still accepted
+        // after the connection-level failure is cleared.
+        PackSyncClient.installClientReloadHook(() -> true);
+        assertFalse(PackSyncClient.handleBundle(runtimeRoot, List.of(oldPack)).shouldDisconnect());
+    }
+
+    @Test
     void failedReplacementRestoresThePreviousActiveRegistryAndCredentials() {
         config("all", false);
         String syncId = "packs:reload-rollback";
@@ -213,7 +250,7 @@ class PackSyncClientTest {
                 runtimeTrust);
         try {
             assertEquals(NekoTrustApprovedSource.Kind.REMOTE_AUTHORIZED,
-                    cache.approvedSource(remoteFile).kind());
+                    runtimeTrust.approvalFor(remoteFile).kind());
             assertNotNull(cache.prepare(remoteFile), "the currently authorized source must remain executable");
 
             PackSyncClient.handleDisconnect(runtimeRoot);

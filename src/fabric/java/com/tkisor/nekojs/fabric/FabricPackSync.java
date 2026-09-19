@@ -119,7 +119,11 @@ public final class FabricPackSync {
         PackSyncClient.prepareMainThreadWork();
         context.client().execute(() -> {
             try {
-                PackSyncClient.handleHashList(NekoJSFabricMod.runtimeRootOrNull(), address, entries);
+                PackSyncClient.Outcome outcome = PackSyncClient.handleHashList(
+                        NekoJSFabricMod.runtimeRootOrNull(), address, entries);
+                if (outcome.shouldDisconnect()) {
+                    connection.disconnect(new DisconnectionDetails(Component.literal(outcome.disconnect())));
+                }
             } finally {
                 PackSyncClient.completeMainThreadWork();
             }

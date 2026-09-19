@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Candidate module sessions must be disposable without changing the active session. */
@@ -68,6 +69,12 @@ class NekoModulePipelineCacheSessionTest {
 
         owner.clear();
         assertEquals(0, owner.preparedEntryCount(), "root close/clear releases child sessions");
+        NekoModulePipelineCache afterClear = owner.openSession();
+        afterClear.closeSession();
+
+        owner.closeOwner();
+        assertThrows(IllegalStateException.class, owner::openSession,
+                "a closed root must reject new generation sessions");
     }
 
     private static String sourceMap(String source, String content) {

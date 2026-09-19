@@ -60,11 +60,11 @@ public final class NekoModulePipeline {
      * 纯身份解析：path/extension → source path + requested mode + language id。
      * 不编译、不读盘、不触碰全局状态。
      */
-    public NekoModuleIdentity identify(Path file) {
+    NekoModuleIdentity identify(Path file) {
         return captureBinding(file).identity();
     }
 
-    public NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
+    NekoPreparedModule prepare(Path file, String rawSource) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
         return prepareWithBinding(file, rawSource == null ? "" : rawSource, binding);
     }
@@ -100,7 +100,7 @@ public final class NekoModulePipeline {
      * 授权结果。凭证缺失/不覆盖该文件时抛授权拒绝（stage 仍为 PREPARE、owner 为 Pack Trust，
      * 且携带 language/mode/source——拒绝不隐藏语言边界）。
      */
-    public NekoPreparedModule prepare(Path file, String rawSource, NekoTrustApprovedSource approval) throws Exception {
+    NekoPreparedModule prepare(Path file, String rawSource, NekoTrustApprovedSource approval) throws Exception {
         LanguageBinding binding = captureBindingChecked(file);
         return prepareCaptured(file, rawSource, approval, binding);
     }

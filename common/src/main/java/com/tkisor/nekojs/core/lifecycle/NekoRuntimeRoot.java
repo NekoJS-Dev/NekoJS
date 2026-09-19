@@ -266,7 +266,7 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         // 票 11：root 最终关闭释放 prepared 模块缓存（server stop/切世界/reload 不清空；
         // 按类型清理走各 manager 的 fullReloadCleanup，此处释放 owner 持有的全部条目）。
         try {
-            preparationCache.clear();
+            preparationCache.closeOwner();
         } catch (Throwable t) {
             if (first == null) first = t;
             else first.addSuppressed(t);
