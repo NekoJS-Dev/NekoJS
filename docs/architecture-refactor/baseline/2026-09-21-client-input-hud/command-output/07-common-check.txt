@@ -1,0 +1,8 @@
+$ .\gradlew :common:check --rerun-tasks --console=plain
+> Task :common:checkCommonIsolation
+> Task :common:test
+> Task :common:check
+BUILD SUCCESSFUL in 3m 25s
+
+common/build/test-results/test 汇总：
+files=237 tests=1756 failures=0 errors=0 skipped=4

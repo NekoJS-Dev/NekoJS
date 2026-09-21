@@ -1,0 +1,8 @@
+# 绿证据：修复后同一测试类
+$ .\gradlew :26.1.2:test --tests '*Ticket26ClientInputHudLifecycleTest*' --rerun --console=plain
+BUILD SUCCESSFUL in 9s
+tests=4 failures=0 errors=0
+OK: candidateRegistrationsAreInvisibleUntilCommitThenSwapExactlyOnce()
+OK: aRejectedCandidateKeepsServingThePreviousActiveRenderer()
+OK: aGenerationThatRegistersNothingRetiresThePreviousRenderers()
+OK: keyBindListenersFollowTheSameCandidateBoundaryWithoutDuplication()

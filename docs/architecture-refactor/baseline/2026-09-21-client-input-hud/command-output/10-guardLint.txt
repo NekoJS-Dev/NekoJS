@@ -1,0 +1,4 @@
+$ .\gradlew guardLint --console=plain
+> Task :guardLint
+guardLint: 守卫块 291，扫描 440 个文件；超限豁免 0 个；警告 0 条
+BUILD SUCCESSFUL in 4s

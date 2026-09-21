@@ -1,0 +1,10 @@
+# :26.1.2:compileJava  （实现态验证第 1 条）
+$ .\gradlew :26.1.2:compileJava --console=plain
+> Task :26.1.2:compileJava
+BUILD SUCCESSFUL in 19s
+19 actionable tasks: 11 executed, 8 from cache
+
+stderr（仅仓库既存提示，无 error）：
+  src/main/java/com/tkisor/nekojs/api/inject/ItemStackExtension.java:156: [deprecation] ItemStack#getEnchantments()
+  src/main/java/com/tkisor/nekojs/wrapper/event/server/ItemModificationJS.java:44: [this-escape]
+  src/main/java/com/tkisor/nekojs/wrapper/event/server/FluidBuilder.java:64: [this-escape]

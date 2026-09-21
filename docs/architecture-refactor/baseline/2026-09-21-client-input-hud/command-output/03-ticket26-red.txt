@@ -1,0 +1,28 @@
+# 红证据：Ticket26ClientInputHudLifecycleTest 第一次真跑（修复前）
+$ .\gradlew :26.1.2:test --tests '*Ticket26ClientInputHudLifecycleTest*' --rerun --console=plain
+> Task :26.1.2:test FAILED
+BUILD FAILED in 25s
+4 tests completed, 3 failed
+
+结果 XML（versions/26.1.2/build/test-results/test/TEST-...Ticket26ClientInputHudLifecycleTest.xml）:
+tests=4 failures=3 errors=0 skipped=0
+
+--- FAILED: aRejectedCandidateKeepsServingThePreviousActiveRenderer()
+真正的失败在第 134 行的恢复 reload：
+com.tkisor.nekojs.core.lifecycle.NekoReloadException: reload failed: type=client generation=2
+  phase=STATE_PLAN owner=ScriptManager[client] domain=state-plan-preflight:ticket26-failing-peer
+（测试缺陷：peer 收集器只增不减，每轮 reload 都再拒绝一次；前 127-130 行的核心断言已通过）
+
+--- FAILED: aGenerationThatRegistersNothingRetiresThePreviousRenderers()
+org.opentest4j.AssertionFailedError: the fast path agrees: the layer has no renderer left
+  ==> expected: <true> but was: <false>
+  at ...Ticket26ClientInputHudLifecycleTest.aGenerationThatRegistersNothingRetiresThePreviousRenderers(Ticket26ClientInputHudLifecycleTest.java:152)
+（**生产缺陷**：见 REPORT §3.2）
+
+--- FAILED: keyBindListenersFollowTheSameCandidateBoundaryWithoutDuplication()
+org.opentest4j.AssertionFailedError: candidate listeners are pending, not on the production bus:
+  during DOMAIN_PLAN the old generation's listener is still the only route
+  ==> expected: <[[]]> but was: <[[ticket26:key_a]]>
+（测试缺陷：候选期生产路由本来就服务旧 generation，旧代已注册同一 id）
+
+--- OK: candidateRegistrationsAreInvisibleUntilCommitThenSwapExactlyOnce()

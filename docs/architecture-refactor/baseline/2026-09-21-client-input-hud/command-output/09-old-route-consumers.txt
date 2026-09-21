@@ -1,0 +1,12 @@
+# 旧 route / 被删组件的消费者核实
+$ Select-String -Recurse -Pattern 'ClientRenderPlugin' -Include *.java,*.kts,*.gradle,*.json,*.txt,*.properties,*.toml
+src/main/java/com/tkisor/nekojs/client/render/ClientRenderPlugin.java   <- 仅自身
+
+$ Select-String -Recurse -Pattern 'ClientRenderRegistry.clearAll'
+（生产调用点为 0；clearAll 仅由测试 resetRegistry() 调用）
+
+$ Select-String -Recurse -Pattern 'beforeScriptsLoaded' src/main/java/com/tkisor/nekojs/client
+（删除 ClientRenderPlugin 后，客户端已无 beforeScriptsLoaded 覆写点）
+
+其它 ClientRenderPlugin 命中全部位于 docs/architecture-refactor/baseline/**/raw/*.log
+历史运行日志（证据归档，不是源码引用）。
