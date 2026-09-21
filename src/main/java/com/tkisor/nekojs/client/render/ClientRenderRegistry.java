@@ -49,7 +49,10 @@ public final class ClientRenderRegistry {
         EARLY, NORMAL, LATE
     }
 
-    /** id → 渲染器条目。注册（脚本加载线程）与快照迭代（渲染线程）并发，用 ConcurrentHashMap。 */
+    /**
+     * id → 渲染器条目。读写都在客户端 owner thread（脚本加载与渲染分发同属 Render 线程），
+     * 用 ConcurrentHashMap 只为容纳整批换装期间的一次遍历快照，不代表存在跨线程写竞争。
+     */
     private static final Map<String, Entry> HUD_RENDERERS = new ConcurrentHashMap<>();
     private static final Map<String, Entry> WORLD_RENDERERS = new ConcurrentHashMap<>();
 

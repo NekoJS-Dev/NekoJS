@@ -7,10 +7,11 @@ import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
  * 脚本 HUD / 世界渲染器注册面的候选域收集器（票 26 AC4）：把「本候选 generation 注册了
  * 哪些常驻渲染器」挂上候选的联合预检/发布边界，使提交点能整体换装生产表。
  *
- * <p><b>收集无条件发生</b>：即使本代一个渲染器都没注册，也要注册一个空批次——
+ * <p><b>收集无条件发生</b>：即使本代一个渲染器都没注册，也要注册一个批次——
  * 「新 generation 不再注册」正是旧渲染器退役的唯一路径，空批次不参与 commit 就永远换不掉
- * 旧表（{@link CandidateDomainCollector} 的空计划契约）。注册本身在脚本执行期首个
- * {@code hudRender}/{@code worldRender} 调用时已完成，这里只是把同一批次实例挂上边界。
+ * 旧表（{@link CandidateDomainCollector} 的空计划契约）。批次实例来自两处之一：脚本执行期
+ * 首个 {@code hudRender}/{@code worldRender} 调用已建好（此时挂的是同一实例），或本代一个都
+ * 没注册而在此**新建**（空批次）。
  *
  * <p><b>候选期不可见</b>：批次是 inert 的（只按 id 记账），渲染钩子要等 commit 点
  * {@code publish()} 才看得到新 generation；候选失败/取消时批次随候选丢弃，旧 active

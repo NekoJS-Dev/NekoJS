@@ -145,7 +145,8 @@ public interface ClientEvents {
      * 层为 {@code background|normal|foreground}（background 在原版 HUD 之下），
      * 同层内 priority 小者先绘制。回调参数 ctx 为 {@code HudRenderContextJS}
      * （partialTick / 屏幕尺寸 / text / rect / texture 等绘制助手），gui 为原始
-     * GuiGraphicsExtractor。同 id 重复注册覆盖旧渲染器；CLIENT reload 自动清空。
+     * GuiGraphicsExtractor。同 id 重复声明在同一 generation 内覆盖旧渲染器；CLIENT reload 在
+     * commit 点按整批换装（本代不再声明的 id 退役），候选失败时旧 generation 的渲染器保持服务。
      */
     EventBusJS<Object, Void> HUD_RENDER =
             GROUP.add("hudRender", ScriptType.CLIENT, RenderRegistrationBusJS.hud());

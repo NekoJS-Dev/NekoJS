@@ -127,7 +127,11 @@ public final class Ticket26ClientInputHudHarness implements AutoCloseable {
         }
     }
 
-    /** 清空生产 HUD / 世界渲染器表（独立用例互不污染；走既有公开清理面）。 */
+    /**
+     * 清空生产 HUD / 世界渲染器表，并释放 generation 身份（{@code clearAll()} 会一并置空
+     * {@code activeContext}，故下一次注册按新 generation 换装）。独立用例因此互不污染；
+     * 走既有公开清理面。
+     */
     public static void resetRegistry() {
         ClientRenderRegistry.clearAll();
     }

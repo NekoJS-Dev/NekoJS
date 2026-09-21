@@ -12,7 +12,6 @@ import com.tkisor.nekojs.core.NekoJSCorePlugin;
 import com.tkisor.nekojs.wrapper.client.PainterJS;
 import org.junit.jupiter.api.Test;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -20,6 +19,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,21 +52,26 @@ class Ticket26ClientInputHudSurfaceTest {
     void scriptVisibleMemberNamesAreLowerCamelCase() {
         EventGroup keyBinds = productionGroups().get("KeyBindEvents");
         EventGroup client = productionGroups().get("ClientEvents");
-        assertTrue(keyBinds != null && client != null,
-                "both input/HUD groups must be registered by the production client registration path");
+        assertNotNull(keyBinds,
+                "KeyBindEvents must be registered by the production client registration path");
+        assertNotNull(client,
+                "ClientEvents must be registered by the production client registration path");
 
-        Map<String, String> checked = new LinkedHashMap<>();
         for (EventGroup group : new EventGroup[] {keyBinds, client}) {
             for (String member : group.viewBuses().keySet()) {
                 assertTrue(LOWER_CAMEL.matcher(member).matches(),
                         group.name() + "." + member + " is not a lowerCamelCase script member name"
                                 + " (the Java field name is an internal locator, not the script name)");
-                checked.put(group.name(), checked.getOrDefault(group.name(), "") + member + ",");
             }
         }
-        assertTrue(checked.get("KeyBindEvents").contains("pressed")
-                        && checked.get("KeyBindEvents").contains("register"),
-                "the input group must keep its script members: " + checked);
+
+        // 本票的输入成员面：精确集合相等，而不是对被测集合自拼字符串做子串匹配
+        // （子串匹配会被 registerKeyMappings 之类满足 contains("register")，没有区分度）。
+        assertEquals(Set.of("pressed", "released", "tick", "register"),
+                new TreeSet<>(keyBinds.viewBuses().keySet()),
+                "the input group's script-visible members changed");
+        assertTrue(client.viewBuses().keySet().containsAll(Set.of("hud", "hudRender", "registerKeyMappings")),
+                "the HUD / key-mapping members must stay in ClientEvents: " + client.viewBuses().keySet());
     }
 
     @Test
