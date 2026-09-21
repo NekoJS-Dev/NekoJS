@@ -21,9 +21,9 @@ CapabilityEvents | 26.1.2 = present | buses=register
 CapabilityEvents | 26.2.0 = present | buses=register
 CapabilityEvents | 26.1.2-fabric = not-verified | buses=-
 CapabilityEvents | 26.2.0-fabric = not-verified | buses=-
-ClientEvents | 1.21.1 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
-ClientEvents | 26.1.2 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
-ClientEvents | 26.2.0 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
+ClientEvents | 1.21.1 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,postEffects,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
+ClientEvents | 26.1.2 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,postEffects,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
+ClientEvents | 26.2.0 = present | buses=cloned,commandRegistry,generateAssets,hud,hudRender,interactionKey,lang,loggedIn,loggedOut,playerTickPost,playerTickPre,postEffects,registerBlockEntityRenderers,registerEntityRenderers,registerKeyMappings,registerMenuScreens,registerParticleProviders,registerRenderers,screenRender,tick,tickPost,tickPre,worldRender
 ClientEvents | 26.1.2-fabric = present | buses=tick,tickPost,tickPre
 ClientEvents | 26.2.0-fabric = present | buses=tick,tickPost,tickPre
 CommandEvents | 1.21.1 = present | buses=command,register
