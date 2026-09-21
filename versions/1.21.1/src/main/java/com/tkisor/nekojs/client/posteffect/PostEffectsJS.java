@@ -8,34 +8,38 @@ import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
 import com.tkisor.nekojs.api.data.Binding;
-import com.tkisor.nekojs.core.posteffect.PostEffectChainJson;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Client-side post-effect binding ({@code PostEffects}, feature 8b). Client scripts only.
+ * Runtime post-effect binding ({@code PostEffects}, feature 8b). Client scripts only.
  *
- * <p><b>v1 (this batch, no mixins):</b> {@link #set}/{@link #clear}/{@link #toggle} work with
- * any effect that exists as a resource — the vanilla presets {@code minecraft:invert},
- * {@code minecraft:spider}, {@code minecraft:creeper}, {@code minecraft:blur},
- * {@code minecraft:entity_outline}, {@code minecraft:transparency} (see {@link #PRESETS}) and
- * any {@code shaders/post} chain JSON supplied by resource packs or other mods. {@link #register}
- * validates and stores runtime chain JSON; activating runtime-only ids additionally requires
- * a pending 1.21.1 post-chain mixin and logs a warning until then.
+ * <p><b>Runtime binding face (ticket 28).</b> This binding keeps exactly the runtime
+ * operations: {@link #set}/{@link #clear}/{@link #toggle}/{@link #current} (plus
+ * {@link #isActive}) work with any effect that exists as a resource — the vanilla presets
+ * {@code minecraft:invert}, {@code minecraft:spider}, {@code minecraft:creeper},
+ * {@code minecraft:blur}, {@code minecraft:entity_outline}, {@code minecraft:transparency}
+ * (see {@link #PRESETS}) and any {@code shaders/post} chain JSON supplied by resource packs
+ * or other mods. These members are <b>not</b> reload transaction operations.
+ *
+ * <p><b>Declaration face.</b> Runtime chains are declared through
+ * {@code ClientEvents.postEffects} ({@code event.register(id, options)} /
+ * {@code event.unregister(id)}) — the declaration lifecycle is generation-scoped, lives in
+ * an inert candidate plan and applies only at the commit point. Use
+ * {@link #activeGeneration()} / {@link #hasDefinition} / {@link #installed()} for the
+ * read-only declaration query; the previous direct {@code PostEffects.register} entry point
+ * is gone (see the ticket 28 migration table).
  *
  * <pre>
  * // client_scripts
- * if (PostEffects.isAvailable('minecraft:invert')) {
- *   PostEffects.set('minecraft:invert');
- *   // ... later ...
- *   PostEffects.clear();
- * }
+ * ClientEvents.postEffects(event => {
+ *   event.register('nekojs:gray', { program: 'minecraft:invert' })
+ * })
  * </pre>
  */
-@Doc("Client-side full-screen post effects: set/clear/toggle resource-backed effects and register runtime chains.")
+@Doc("Client-side post effects: runtime set/clear/toggle/current plus read-only queries for effects declared through ClientEvents.postEffects.")
 public final class PostEffectsJS implements Binding {
 
     /** Vanilla preset ids usable with {@link #set} on every supported version. */
@@ -59,57 +63,24 @@ public final class PostEffectsJS implements Binding {
         return this;
     }
 
-    /** Script reload teardown: forget runtime-registered definitions (matching binding close semantics). */
+    /**
+     * Script reload teardown. Declared generations are owned by the reload lifecycle
+     * (candidate plans and the commit point), so the runtime binding only drops the active
+     * post effect here rather than clearing a declaration registry.
+     */
     @Override
     public void close(ScriptType scriptType) {
         if (scriptType == ScriptType.CLIENT) {
-            PostEffectManager.clearRegistered();
+            PostEffectManager.clear();
         }
     }
 
-    /**
-     * Registers a runtime post-effect chain. Without a pending 1.21.1 post-chain mixin
-     * the definition is validated and stored but cannot be activated via {@link #set};
-     * effects that exist as resources stay activatable.
-     *
-     * <p>Options (all optional): {@code chainJson} — full shaders/post chain JSON;
-     * {@code program} — vanilla shader program id, wrapped into a simple blit chain.
-     */
-    @Doc("Registers a runtime post-effect chain from options { chainJson?: string, program?: string }; returns true when the chain JSON is well-formed.")
-    @Param(name = "id", value = "effect id, e.g. 'nekojs:my_invert'")
-    @Param(name = "options", value = "{ chainJson?: string, program?: string }")
-    @Return("true when registered (runtime-only ids need the pending 1.21.1 post-chain mixin to activate)")
-    public boolean register(String id, Map<String, Object> options) {
-        ResourceLocation effectId = ResourceLocation.tryParse(id);
-        if (effectId == null) return false;
-        Map<String, Object> opts = options == null ? Map.of() : options;
-
-        String chainJson = opts.get("chainJson") instanceof String s ? s : null;
-
-        if (chainJson == null) {
-            String program = opts.get("program") instanceof String p ? p : null;
-            if (program == null) return false;
-            chainJson = PostEffectChainJson.simpleBlitChainLegacy(program);
-        }
-
-        return PostEffectManager.register(effectId, chainJson);
-    }
-
-    /** Removes a runtime-registered definition; clears it first when active. */
-    @Doc("Unregisters a runtime post-effect definition, clearing it first when it is active.")
-    @Param(name = "id", value = "effect id")
-    @Return("true when a definition was removed")
-    public boolean unregister(String id) {
-        ResourceLocation effectId = ResourceLocation.tryParse(id);
-        return effectId != null && PostEffectManager.unregister(effectId);
-    }
-
-    /** Activates the effect on the client thread. Runtime-only ids warn and return false (v1). */
+    /** Activates the effect on the client thread. Declaration-only ids warn and return false. */
     @Doc("Activates a post effect (e.g. 'minecraft:invert'); executed on the client thread.")
-    @Param(name = "id", value = "effect id; must exist as a shaders/post chain resource in v1")
+    @Param(name = "id", value = "effect id; must exist as a shaders/post chain resource")
     @Return("true when accepted")
     public boolean set(String id) {
-        ResourceLocation effectId = ResourceLocation.tryParse(id);
+        ResourceLocation effectId = ResourceLocation.tryParse(id == null ? "" : id);
         return effectId != null && PostEffectManager.set(effectId);
     }
 
@@ -125,7 +96,7 @@ public final class PostEffectsJS implements Binding {
     @Param(name = "id", value = "effect id")
     @Return("true when accepted")
     public boolean toggle(String id) {
-        ResourceLocation effectId = ResourceLocation.tryParse(id);
+        ResourceLocation effectId = ResourceLocation.tryParse(id == null ? "" : id);
         return effectId != null && PostEffectManager.toggle(effectId);
     }
 
@@ -145,21 +116,47 @@ public final class PostEffectsJS implements Binding {
         return PostEffectManager.isActive();
     }
 
-    /** Whether a runtime definition exists for the id. */
-    @Doc("Returns whether a runtime-registered definition exists for the id.")
+    /**
+     * Whether the <b>active declaration generation</b> installed a definition for the id.
+     * False for a retired or never-declared id, so callers can tell a live declaration from
+     * a stale one instead of reading an old runtime registration.
+     */
+    @Doc("Returns whether the active declaration generation installed a definition for the id.")
     @Param(name = "id", value = "effect id")
-    @Return("true when registered through PostEffects.register")
-    public boolean has(String id) {
-        ResourceLocation effectId = ResourceLocation.tryParse(id);
+    @Return("true when declared through ClientEvents.postEffects by the active generation")
+    public boolean hasDefinition(String id) {
+        ResourceLocation effectId = ResourceLocation.tryParse(id == null ? "" : id);
         return effectId != null && PostEffectManager.hasDefinition(effectId);
     }
 
-    /** Whether the effect exists as a post_effect resource (activatable in v1). */
+    /** Effect ids installed by the active declaration generation (read-only snapshot). */
+    @Doc("Lists the effect ids installed by the active declaration generation.")
+    @Return("effect id list")
+    public List<String> installed() {
+        List<String> ids = new ArrayList<>();
+        PostEffectManager.installedDefinitions().keySet().forEach(id -> ids.add(id.toString()));
+        ids.sort(String::compareTo);
+        return ids;
+    }
+
+    /**
+     * Client script generation that installed the active declarations ({@code -1} when no
+     * declaration generation has committed yet). Together with {@link #hasDefinition} this is
+     * the generation/stale query face: a caller that captured an id from an older generation
+     * sees the new number instead of silently reading stale state.
+     */
+    @Doc("Returns the client generation that installed the active post-effect declarations (-1 when none).")
+    @Return("generation number")
+    public long activeGeneration() {
+        return PostEffectManager.activeGeneration();
+    }
+
+    /** Whether the effect exists as a shaders/post chain resource (activatable in v1). */
     @Doc("Returns whether the effect exists as a shaders/post chain resource in the active resource packs (activatable without mixins).")
     @Param(name = "id", value = "effect id")
     @Return("true when resource-backed")
     public boolean isAvailable(String id) {
-        ResourceLocation effectId = ResourceLocation.tryParse(id);
+        ResourceLocation effectId = ResourceLocation.tryParse(id == null ? "" : id);
         return effectId != null && PostEffectManager.isResourceAvailable(effectId);
     }
 

@@ -6,6 +6,7 @@ import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.client.posteffect.PostEffectEventJS;
 import com.tkisor.nekojs.client.render.RenderRegistrationBusJS;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
@@ -121,6 +122,16 @@ public interface ClientEvents {
     /** 语言生成事件：脚本按语言代码收集翻译条目（{@code en_us} 等）。 */
     EventBusJS<LangGeneratorJS, String> LANG =
             GROUP.client("lang", LangGeneratorJS.class, LANG_KEY);
+
+    /**
+     * 后处理声明事件（票 28）：脚本为下一个客户端 generation 声明后处理链
+     * （{@code register}/{@code unregister}）。只在候选期收集 inert 声明，commit 点由
+     * 平台 Adapter 整体安装新 generation 并释放旧 generation 的 listener/资源。
+     * 运行时动作用 {@code PostEffects.set/clear/toggle/current} binding，不经本事件——
+     * 这是既有 ClientEvents 客户端资源/reload 子事件，不是第二个 PostEffects 事件。
+     */
+    EventBusJS<PostEffectEventJS, Void> POST_EFFECTS =
+            GROUP.client("postEffects", PostEffectEventJS.class);
 
     /** HUD 绘制事件（每帧 GUI 渲染后），参数为 {@link PainterJS}。 */
     EventBusJS<PainterJS, Void> HUD = GROUP.client("hud", PainterJS.class);

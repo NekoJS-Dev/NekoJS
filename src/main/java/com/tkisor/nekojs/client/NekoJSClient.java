@@ -45,7 +45,22 @@ public class NekoJSClient {
             NekoJS.LOGGER.debug("Client environment ready, loading CLIENT scripts...");
             root.scriptManagerOf(ScriptType.CLIENT).loadScripts();
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.CLIENT).debug("Early script injection...");
+            // 票 28：CLIENT 声明的初始 generation 收集点（脚本经 ClientEvents.postEffects
+            // 声明 register/unregister）。初始 load 是非事务路径（没有候选/commit），这里
+            // 对 active 总线收集一次，domain owner preflight 通过才安装完整 generation；
+            // 不通过则整批拒绝、保持上一次 active 声明。后续 F3+T 资源 reload 走事务
+            // reload 的 DOMAIN_PLAN 阶段（同一 owner，collect）。
+            com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner postEffects = postEffectDomain(root);
+            if (postEffects != null) {
+                postEffects.applyInitialPlan();
+            }
         });
+    }
+
+    /** 后处理声明域 owner（root 授权的 domain collector；未注册返回 null，收集点跳过）。 */
+    private static com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner postEffectDomain(NekoRuntimeRoot root) {
+        var collector = root == null ? null : root.domainCollector(com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner.DOMAIN);
+        return collector instanceof com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner owner ? owner : null;
     }
 
     private static void onRegisterEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {

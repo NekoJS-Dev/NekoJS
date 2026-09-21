@@ -186,6 +186,11 @@ public class NekoJSMod extends NekoJS {
     private static void registerClient(IEventBus modEventBus, NekoRuntimeRoot root) {
         // dist 访问器的版本差异由 McPlatformCompat 门面承载（本文件 neoforge 面，门面可用）
         if (McPlatformCompat.get().isClientDist()) {
+            // 票 28：后处理声明域 owner 注册进 root（只有客户端 dist 注册——收集器只在
+            // CLIENT 候选的 DOMAIN_PLAN 阶段与客户端初始加载收集点被调用；dedicated
+            // server 不注册入口、不加载 client 类）。运行时 set/clear/toggle/current 仍是
+            // PostEffects binding，不经此 owner。
+            root.registerDomainCollector(new com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner());
             NekoJSClient.register(modEventBus, root);
         }
     }

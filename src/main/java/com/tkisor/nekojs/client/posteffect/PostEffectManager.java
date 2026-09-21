@@ -2,6 +2,7 @@
 //? if neoforge {
 // 26.x 实现，本文件不应再出现版本守卫。1.21.1 的实现是 versions/1.21.1/src 下的同名文件，
 // 改本文件行为时须同步它。
+// 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄到孪生文件。
 package com.tkisor.nekojs.client.posteffect;
 
 import com.google.gson.JsonParseException;
@@ -23,6 +24,7 @@ import org.slf4j.Logger;
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,19 +33,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * Runtime client post-effect registry (feature 8b, client-side only; ported from Katton's
  * {@code ClientPostEffectManager}).
  *
- * <p><b>v1 split (no mixins in this batch):</b> vanilla's {@code ShaderManager} only knows
- * post chains declared by resource packs ({@code assets/<ns>/post_effect/<path>.json}) at
- * resource-reload time, so definitions registered here at runtime <i>cannot be activated
- * yet</i>. v1 therefore ships:
- * <ul>
- *   <li>full set/clear/toggle/current for any effect that exists as a resource — the six
- *       vanilla presets ({@code minecraft:invert}, {@code minecraft:spider},
- *       {@code minecraft:creeper}, {@code minecraft:blur}, {@code minecraft:entity_outline},
- *       {@code minecraft:transparency}) plus anything provided by resource packs/mods;</li>
- *   <li>{@link #register} which parses + validates chain JSON via {@code PostChainConfig.CODEC}
- *       and stores the definition (custom GLSL sources included) so the planned
- *       {@code ShaderManagerMixin} can activate it later without script changes.</li>
- * </ul>
+ * <p><b>Runtime binding face (ticket 28).</b> {@link #set}/{@link #clear}/{@link #toggle}/
+ * {@link #current} back the {@code PostEffects} runtime binding and keep their previous
+ * caller-visible behaviour (client-thread renderer mutation, resource-backed ids only).
+ *
+ * <p><b>Declaration face (ticket 28).</b> Definitions are no longer registered straight from
+ * a script binding: {@code ClientEvents.postEffects} declarations are collected into an inert
+ * {@code PostEffectCandidatePlan} and only the commit point installs the active generation
+ * through {@link #installGeneration}. A generation owns exactly the definitions it declared;
+ * the previous generation's definitions, listeners and cached chains are released when the
+ * new batch applies. Runtime-only ids still cannot be activated (that needs the
+ * {@code ShaderManagerMixin} activation path), so {@link #set} refuses them explicitly
+ * instead of silently rendering an empty frame.
  *
  * <p>All renderer mutations run on the client thread via {@code Minecraft#execute}.
  */
@@ -59,41 +60,75 @@ public final class PostEffectManager {
     private PostEffectManager() {
     }
 
-    /** A runtime-registered effect: validated chain config plus optional custom GLSL sources. */
-    record Definition(PostChainConfig config, String chainJson,
-                      Map<Identifier, String> fragmentShaders, Map<Identifier, String> vertexShaders) {
+    /**
+     * An installed effect: validated chain config, the chain JSON it came from, and optional
+     * custom GLSL sources. Only the active generation holds definitions.
+     */
+    public record Definition(PostChainConfig config, String chainJson,
+                             Map<Identifier, String> fragmentShaders,
+                             Map<Identifier, String> vertexShaders) {
     }
 
-    // ---- registration (stored for the future ShaderManagerMixin; not activatable in v1) ----
+    // ---- declaration lifecycle (ClientEvents.postEffects；commit 点由 Adapter 调用) ----
 
-    public static boolean register(Identifier id, String chainJson,
-                                   Map<Identifier, String> fragmentShaders,
-                                   Map<Identifier, String> vertexShaders) {
+    /**
+     * Parses and validates a declaration payload without storing it (candidate preflight):
+     * {@code null} is returned for a rejected payload so the Adapter can fail the whole batch
+     * before any live state changes.
+     */
+    @Nullable
+    public static Definition parseDefinition(Identifier id, String chainJson,
+                                             Map<Identifier, String> fragmentShaders,
+                                             Map<Identifier, String> vertexShaders) {
         PostChainConfig config = parseChainConfig(id, chainJson);
-        if (config == null) return false;
-        DEFINITIONS.put(id, new Definition(config, chainJson,
-                Map.copyOf(fragmentShaders), Map.copyOf(vertexShaders)));
-        LOGGER.info("Registered runtime client post effect {} (activation requires the pending ShaderManager mixin)", id);
-        return true;
+        if (config == null) return null;
+        return new Definition(config, chainJson,
+                Map.copyOf(fragmentShaders), Map.copyOf(vertexShaders));
     }
 
-    public static boolean unregister(Identifier id) {
-        boolean removed = DEFINITIONS.remove(id) != null;
-        if (removed && id.equals(current())) {
-            clear();
+    /**
+     * Installs one generation's definitions at the commit point and retires the rest: every
+     * id in {@code retired} is dropped, its cached runtime chain closed. The previous
+     * generation's definitions never survive the swap (no stale definition from an old
+     * generation), and the swap is observable through {@link #activeGeneration()} /
+     * {@link #definitionIds}.
+     *
+     * <p>Called by {@code PostEffectDomainOwner#publishPostEffects} on the client/owner thread.
+     */
+    public static void installGeneration(long generation, Map<Identifier, Definition> definitions,
+                                         Set<Identifier> retired) {
+        Set<Identifier> removed = new LinkedHashSet<>();
+        for (Identifier id : List.copyOf(DEFINITIONS.keySet())) {
+            if (!definitions.containsKey(id)) {
+                removed.add(id);
+            }
         }
-        return removed;
-    }
-
-    /** Clears every runtime-registered definition (script reload teardown). */
-    public static void clearRegistered() {
-        Identifier current = current();
-        DEFINITIONS.clear();
-        if (current != null) {
-            clear();
+        for (Identifier id : retired) {
+            if (DEFINITIONS.containsKey(id)) {
+                removed.add(id);
+            }
         }
+        for (Identifier id : removed) {
+            DEFINITIONS.remove(id);
+            dropCachedChains(id);
+        }
+        DEFINITIONS.putAll(definitions);
+        ACTIVE_GENERATION = generation;
+        LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} retired)",
+                generation, definitions.size(), removed.size());
     }
 
+    /** Definitions currently installed (read-only; the declaration query face reads this). */
+    public static Map<Identifier, Definition> installedDefinitions() {
+        return Map.copyOf(DEFINITIONS);
+    }
+
+    /** Active declaration generation number ({@code -1} before the first commit). */
+    public static long activeGeneration() {
+        return ACTIVE_GENERATION;
+    }
+
+    /** Whether a definition is installed by the active generation. */
     public static boolean hasDefinition(Identifier id) {
         return DEFINITIONS.containsKey(id);
     }
@@ -102,11 +137,13 @@ public final class PostEffectManager {
 
     /**
      * Activates the post effect {@code id}. Returns {@code false} when the id is only known
-     * as a runtime definition (needs the pending mixin) or the id cannot be found.
+     * as a declaration without a resource (needs the shader-manager activation path) or the
+     * id cannot be found.
      */
     public static boolean set(Identifier id) {
-        if (isRuntimeOnly(id)) {
-            LOGGER.warn("Post effect {} was registered at runtime and cannot be activated until the ShaderManager mixin lands; use a resource-pack effect id instead", id);
+        if (isDeclarationOnly(id)) {
+            LOGGER.warn("Post effect {} was declared without a post_effect resource and cannot be activated;"
+                    + " add a resource-pack effect id instead", id);
             return false;
         }
         Minecraft.getInstance().execute(() -> Minecraft.getInstance().gameRenderer.setPostEffect(id));
@@ -150,16 +187,16 @@ public final class PostEffectManager {
         return Minecraft.getInstance().getResourceManager().getResource(POST_EFFECT_FILES.idToFile(id)).isPresent();
     }
 
-    static boolean isRuntimeOnly(Identifier id) {
+    static boolean isDeclarationOnly(Identifier id) {
         return !isResourceAvailable(id) && DEFINITIONS.containsKey(id);
     }
 
-    // ---- shader source serving (called by the pending ShaderManagerMixin) ----
+    // ---- shader source serving (called by the ShaderManagerMixin) ----
 
     /**
-     * Runtime GLSL source for a shader id, registered through {@code PostEffects.register}.
-     * The pending mixin injects at {@code ShaderManager#getShader} HEAD and returns this when
-     * non-null — until then the method is public but unused (vanilla-only shaders work).
+     * Runtime GLSL source for a shader id installed by the active declaration generation.
+     * The shader manager mixin injects at {@code ShaderManager#getShader} HEAD and returns
+     * this when non-null.
      */
     @Nullable
     public static String getRuntimeShaderSource(Identifier id, ShaderType type) {
@@ -189,7 +226,7 @@ public final class PostEffectManager {
     }
 
     /** Parses and normalizes a {@code Map<String, String>} shader-source table from JS. */
-    static Map<Identifier, String> parseShaderMap(Map<String, String> raw) {
+    public static Map<Identifier, String> parseShaderMap(Map<String, String> raw) {
         Map<Identifier, String> parsed = new LinkedHashMap<>();
         if (raw == null) return parsed;
         for (var entry : raw.entrySet()) {
@@ -201,16 +238,20 @@ public final class PostEffectManager {
         return parsed;
     }
 
-    // ---- post chain cache (pre-wired for the pending ShaderManagerMixin) ----
+    // ---- post chain cache (keyed by the definition, reused across frames) ----
 
     private record CacheKey(Identifier id, Set<Identifier> allowedTargets) {
     }
 
     private static final Map<CacheKey, PostChain> POST_CHAIN_CACHE = new ConcurrentHashMap<>();
 
+    /** Declaration generation whose definitions are installed ({@code -1} = none yet). */
+    private static volatile long ACTIVE_GENERATION = -1L;
+
     /**
-     * Loads (and caches) the runtime {@link PostChain} for a registered definition. The pending
-     * mixin injects at {@code ShaderManager#getPostChain} HEAD and returns this when non-null.
+     * Loads (and caches) the runtime {@link PostChain} for an installed definition. The
+     * shader manager mixin injects at {@code ShaderManager#getPostChain} HEAD and returns
+     * this when non-null.
      */
     @Nullable
     public static PostChain getOrCreatePostChain(Identifier id, Set<Identifier> allowedTargets,
@@ -239,15 +280,29 @@ public final class PostEffectManager {
         return chain;
     }
 
-    /** Drops cached runtime chains (resource reload / shutdown — the pending mixin calls this). */
-    public static void invalidatePostChainCache() {
-        for (PostChain chain : POST_CHAIN_CACHE.values()) {
-            try {
-                chain.close();
-            } catch (Exception ignored) {
+    /** Drops every cached chain for one id (retire path — releases the old generation's GPU resources). */
+    private static void dropCachedChains(Identifier id) {
+        for (Map.Entry<CacheKey, PostChain> entry : POST_CHAIN_CACHE.entrySet()) {
+            if (!entry.getKey().id().equals(id)) continue;
+            if (POST_CHAIN_CACHE.remove(entry.getKey()) != null) {
+                closeQuietly(entry.getValue());
             }
         }
+    }
+
+    /** Drops cached runtime chains (resource reload / shutdown — the shader manager mixin calls this). */
+    public static void invalidatePostChainCache() {
+        for (PostChain chain : POST_CHAIN_CACHE.values()) {
+            closeQuietly(chain);
+        }
         POST_CHAIN_CACHE.clear();
+    }
+
+    private static void closeQuietly(PostChain chain) {
+        try {
+            chain.close();
+        } catch (Exception ignored) {
+        }
     }
 
     /**
