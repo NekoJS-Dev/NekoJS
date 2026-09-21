@@ -260,6 +260,11 @@ public interface NekoJSPlugin {
      * 插件回调也不会被静默跳过。需要 en_us 之外的语言时必须显式声明；平台把本声明与脚本
      * keyed listener 的语言取并集后逐语言触发。返回值必须是合法语言代码
      * （{@code [A-Za-z0-9_]{1,64}}）；非法值在写入任何语言文件之前被拒绝。
+     *
+     * <p><b>{@link #generateLang} 按并集逐语言触发</b>：某一轮一旦出现多个语言（含其它插件的
+     * 声明或脚本 listener 的语言），本插件的 {@code generateLang} 会对<b>每个</b>语言各调用一次。
+     * 只产出单一语言的插件必须在回调里按 {@link LangGeneratorJS#getLang()} 过滤，例如
+     * {@code if (!"ja_jp".equals(generator.getLang())) return;}；否则其条目会被写进所有语言文件。
      */
     default Set<String> generatedLangs() {
         return Set.of("en_us");

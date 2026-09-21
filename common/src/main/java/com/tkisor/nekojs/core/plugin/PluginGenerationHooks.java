@@ -41,7 +41,9 @@ public final class PluginGenerationHooks {
      *
      * <p>脚本语言由调用方经 {@code scriptRegisteredLangs} 传入（{@code ClientEvents.LANG
      * .registeredKeys()}）：事件总线是 MC-facing 类型，本类所在的 common 不能引用它——
-     * 平台 Adapter 负责取键，本类只做合并、校验与排序。
+     * 平台 Adapter 负责取键，本类只做合并、校验与排序。{@code null} 明确定义为「本节点没有
+     * 脚本语言监听器」这一合法状态（非缺失），按空集参与并集；插件侧的 {@code null} 声明则相反，
+     * 是违规（见下）。
      *
      * <p>确定性顺序是契约的一部分：{@code registeredKeys()} 来自 {@code Set.copyOf}，顺序不保证，
      * 而逐语言写入的先后可被观察（诊断顺序、同 key 覆盖的最终值），故用 {@link TreeSet} 归一。
