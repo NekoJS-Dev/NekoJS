@@ -120,6 +120,27 @@ public final class ScriptManager implements AutoCloseable {
         return true;
     }
 
+    /**
+     * Committed generation number owned by the manager that this Context belongs to
+     * (ticket 22 generation-bound query seam), or {@code -1} when the Context is unknown to
+     * any manager.
+     *
+     * <p>Only the currently active generation of a live manager answers with a non-negative
+     * number: a candidate being built, a Context of a superseded generation, a killed active
+     * Context, a closed manager and an unregistered Context all report {@code -1}. Read-only
+     * domain queries (see {@code com.tkisor.nekojs.core.villager.VillagerTradeDomainState})
+     * use it to turn "this token belongs to an old generation" into an explicit stale result
+     * instead of silently serving the new generation's data to the old one.
+     */
+    public static long activeGenerationOf(Context context) {
+        if (context == null) return -1L;
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager == null || manager.lifecycleGate.isClosed()) return -1L;
+        Context active = manager.runtime.context();
+        if ((active == null || !active.equals(context)) || manager.contextKilled) return -1L;
+        return manager.generation;
+    }
+
     // ---- 实例字段 ----
 
     private final ScriptEventBridge scriptEventBridge;

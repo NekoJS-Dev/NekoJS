@@ -179,6 +179,14 @@ public class NekoJSMod extends NekoJS {
 //? if >=26 {
         root.registerDomainCollector(com.tkisor.nekojs.dynamic.DynamicRegistryFacade.runtime());
 //?}
+        // 票 22：Villager Trades domain owner（事件收集 + 合法 commit 点的注册表 mutation 都在
+        // Adapter 内；domain 账本由 root 生命周期持有）。节点差异只体现在实现：26.x 走
+        // VILLAGER_TRADE / TRADE_SET 可重载注册表，1.21.1 的成对 owner 走经典静态交易池。
+        com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner villagerTrades =
+                new com.tkisor.nekojs.wrapper.event.server.VillagerTradeDomainOwner();
+        root.registerDomainCollector(villagerTrades);
+        // 只读 query 的过程级查表接缝（binding 无状态；install 只在装配期发生一次）
+        com.tkisor.nekojs.core.villager.VillagerTradesFacade.install(villagerTrades.state());
         GoalEvents.postRegister();
         return root;
     }

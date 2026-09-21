@@ -1,0 +1,12 @@
+### 6) .\gradlew :26.2.0:test :26.2.0-fabric:test --console=plain
+# Executor: main session (the ticket-22 subagent worktree did not run these two nodes; REPORT G1)
+# Workdir: D:\mcmodDemo\NekoJS-mult-t22 (branch ticket-22-villager-trades)
+# Note: this is the raw result as reported by the main session, not a captured console log.
+
+BUILD SUCCESSFUL in 1m 22s
+37 actionable tasks: 22 executed, 15 up-to-date
+
+# Both test tasks executed (neither was UP-TO-DATE), i.e. 26.2.0 and 26.2.0-fabric compiled the
+# shared 26.x VillagerTradeDomainOwner and ran their test trees (including the ticket 22
+# version-tree fixture Ticket22VillagerTradeEventSurfaceTest).
+EXIT=0

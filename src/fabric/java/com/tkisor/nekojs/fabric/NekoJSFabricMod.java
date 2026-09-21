@@ -142,6 +142,12 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
                 }).root();
         // 票 39：Item/Block modification domain owner 注册进 root（与 NekoJSMod 同构）。
         runtimeRoot.registerDomainCollector(new com.tkisor.nekojs.wrapper.event.server.ModificationDomainOwner());
+        // 票 22：Villager Trades 在 fabric 没有注册表 mutation 适配器，注册的是**显式 unavailable**
+        // owner（收集期仍走同一事件面与联合边界，preflight 以不可用原因整批拒绝——不是无错误 no-op）。
+        com.tkisor.nekojs.wrapper.event.server.VillagerTradeUnavailableDomainOwner villagerTrades =
+                new com.tkisor.nekojs.wrapper.event.server.VillagerTradeUnavailableDomainOwner();
+        runtimeRoot.registerDomainCollector(villagerTrades);
+        com.tkisor.nekojs.core.villager.VillagerTradesFacade.install(villagerTrades.state());
         // STARTUP 脚本加载后触发 goal 注册（镜像 NekoJSMod：脚本监听器此时才挂上；
         // 注册面由节点孪生 GoalEvents 提供，消费端 FabricEntityEventBindings 已在跑）
         com.tkisor.nekojs.bindings.event.GoalEvents.postRegister();

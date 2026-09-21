@@ -5,6 +5,8 @@ import com.tkisor.nekojs.api.event.DispatchKey;
 import com.tkisor.nekojs.api.event.EventBusForgeBridge;
 import com.tkisor.nekojs.api.event.EventBusJS;
 import com.tkisor.nekojs.api.event.EventGroup;
+import com.tkisor.nekojs.core.villager.VillagerTradeDeclarationEventJS;
+import com.tkisor.nekojs.core.villager.VillagerTradeReloadEventJS;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.wrapper.event.server.RecipeEventJS;
@@ -85,6 +87,25 @@ public interface ServerEvents {
 
     EventBusJS<TagEventJS, Identifier> TAGS =
         GROUP.server("tags", TagEventJS.class, TAG_REGISTRY_KEY);
+
+    /**
+     * Villager / wandering trader trade declarations (ticket 22, server scripts, posted-object
+     * mode): the platform domain adapter ({@code VillagerTradeDomainOwner}) posts this at the
+     * server-start collection point and in the candidate {@code DOMAIN_PLAN} phase of a SERVER
+     * reload. Callbacks describe trades; the registry mutation happens only at the legal commit
+     * point of the platform/version adapter. The first version exposes {@code add} only.
+     */
+    EventBusJS<VillagerTradeDeclarationEventJS, Void> TRADE_DECLARATION =
+        GROUP.server("tradeDeclaration", VillagerTradeDeclarationEventJS.class);
+
+    /**
+     * Villager trade reload sub-event (ticket 22): a script that owns a trade set declares that
+     * it no longer manages it ({@code declareObsolete}); the release takes effect in the same
+     * commit. Ordinary reload never physically deletes trades that are simply no longer
+     * declared — those enter the stale/unrestored record instead.
+     */
+    EventBusJS<VillagerTradeReloadEventJS, Void> TRADE_RELOAD =
+        GROUP.server("tradeReload", VillagerTradeReloadEventJS.class);
 
     EventBusForgeBridge FORGE_BRIDGE = EventBusForgeBridge.create(NeoForge.EVENT_BUS)
         .bind(TICK_PRE)

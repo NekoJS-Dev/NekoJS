@@ -7,7 +7,10 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
+import com.tkisor.nekojs.core.villager.VillagerTradeQuerySurface;
+import com.tkisor.nekojs.core.villager.VillagerTradesFacade;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
+import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -19,22 +22,52 @@ import net.minecraft.world.item.trading.TradeSet;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
- * Static binding {@code VillagerTrades}: stages villager / wandering trader trade additions
- * from server scripts. Changes are staged immediately and flushed into the live
- * {@code minecraft:villager_trade} / {@code minecraft:trade_set} registries at the end of
- * the reload cycle, so calling this anywhere during script load is safe.
+ * Static binding {@code VillagerTrades}.
+ *
+ * <h2>ticket 22: two paths coexist, on purpose</h2>
+ * <ul>
+ *   <li><b>CURRENT (event + adapter path)</b>: {@link #query()} returns a read-only,
+ *       generation-bound snapshot of what the last committed generation declared. Trades are
+ *       declared through the existing {@code ServerEvents.tradeDeclaration} data sub-event and
+ *       applied by the platform/version adapter at the legal commit point.</li>
+ *   <li><b>LEGACY (staged static path, unchanged)</b>: {@link #add(String, Object)} stages a
+ *       trade into the process-level queue that {@code VillagerTradeManager} flushes at the end
+ *       of the reload cycle. It is kept verbatim so existing scripts keep working; its removal is
+ *       a maintainer sign-off item (ticket 22 AC10, see the baseline MIGRATION.md).</li>
+ * </ul>
+ * The two paths must not be mixed for the same trade set: the legacy path rewrites a trade set
+ * from its own snapshot while the adapter path rewrites it from the NekoJS baseline, so using
+ * both for one set is last-writer-wins with no merge policy (documented, not merged).
  */
-@Doc("Static binding 'VillagerTrades': append custom trades to vanilla villager and wandering trader trade sets.")
+@Doc("Static binding 'VillagerTrades': declare villager / wandering trader trades with ServerEvents.tradeDeclaration and read the committed result with query().")
 public class VillagerTradesJS {
 
     /**
-     * Appends a trade to an existing trade set.
+     * Read-only, generation-bound snapshot of the committed villager trade declarations.
+     *
+     * <p>Example: {@code const result = VillagerTrades.query();
+     * if (result.status === 'ACTIVE') console.info(result.total, result.tradeSetIds)}</p>
+     */
+    @Doc("Returns a read-only, generation-bound snapshot: status ('ACTIVE' / 'STALE'), generation, adapterId, total, tradeSetIds, unrestoredListingKeys and retiredListingKeys. A stale token answers with empty values instead of another generation's data.")
+    @Return("read-only query result (never a live registry view)")
+    public VillagerTradeQuerySurface query() {
+        return VillagerTradesFacade.query(Context.getCurrent());
+    }
+
+    /** Developer-facing summary of {@link #query()} (diagnostics; no structured members needed). */
+    @Doc("Developer-facing one-line summary of query(), for diagnostics and logs.")
+    @Return("human-readable summary line")
+    public String describe() {
+        return query().describe();
+    }
+
+    /**
+     * LEGACY path (kept for existing scripts; removal is a maintainer sign-off item).
      *
      * <p>Example: {@code VillagerTrades.add('minecraft:farmer/level_1', {
      * cost: '1x minecraft:emerald', result: '5x minecraft:apple', maxUses: 12, xp: 2 })}</p>
      */
-    @Doc("Appends a trade to an existing trade set registry entry (e.g. 'minecraft:farmer/level_1', 'minecraft:wandering_trader/buying').")
-    @Doc("The change is staged and applied when the reload cycle finishes; returns false when the trade set id is unknown or the config is invalid.")
+    @Doc("LEGACY: appends a trade to an existing trade set registry entry (e.g. 'minecraft:farmer/level_1', 'minecraft:wandering_trader/buying'). The change is staged and applied when the reload cycle finishes; returns false when the trade set id is unknown or the config is invalid. Prefer ServerEvents.tradeDeclaration (ticket 22).")
     @Param(name = "tradeSet", value = "trade set registry id, '<namespace>:<profession>/level_<n>' or a wandering trader set id")
     @Param(name = "config", value = "{ cost: '<count>x <item id>', costB: '<count>x <item id>' (optional), result: '<count>x <item id>', maxUses: 12, xp: 2, priceMultiplier: 0.05 }")
     @Return("true when the trade was staged for the next flush")
@@ -85,8 +118,8 @@ public class VillagerTradesJS {
         return true;
     }
 
-    /** Number of trades staged since the last flush (diagnostics for scripts). */
-    @Doc("Number of trades staged since the last flush.")
+    /** LEGACY: number of trades staged since the last flush (diagnostics for scripts). */
+    @Doc("LEGACY: number of trades staged since the last flush.")
     @Return("pending trade count")
     public int pendingCount() {
         return VillagerTradeManager.pendingCount();
