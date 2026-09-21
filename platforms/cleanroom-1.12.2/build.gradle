@@ -201,6 +201,9 @@ compileJava {
     // Cleanroom 1.12.2 官方仅支持到 Java 21；VERSION_25 字节码会让 Java 17/21 用户直接 UnsupportedClassVersionError。
     // 必须用 options.release 而不是 source/targetCompatibility：后者在 JDK 25 的 javac 上只降字节码版本，
     // 签名解析仍走 JDK 25 的 class library——引用了 21 里不存在的方法也照样编过，到运行时才 NoSuchMethodError。
+    // EN: Cleanroom 1.12.2 supports Java 21 at most, so Java 25 bytecode would fail to load for users.
+    // EN: Use options.release, not targetCompatibility: only release also swaps in the Java 21 API set,
+    // EN: so calling a method that does not exist in 21 fails at compile time instead of at runtime.
     options.release = 21
 
     // SpecCoverageProcessor 平台范围校验：本平台为 Cleanroom
