@@ -28,10 +28,10 @@ public final class ScriptBootstrap {
 
                 if (Files.notExists(mainFile)) {
                     Files.writeString(mainFile, type.defaultMainScript(), StandardOpenOption.CREATE_NEW);
-                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(type).info("已初始化环境入口: {}", mainFile);
+                    com.tkisor.nekojs.script.ScriptTypeEnv.logger(type).info("已初始化环境入口: {} — workspace entry point created", mainFile);
                 }
             } catch (IOException e) {
-                NekoJS.LOGGER.error("无法初始化环境目录 [{}]: {}", type.name(), e.getMessage());
+                NekoJS.LOGGER.error("[NEKO-1002] 无法初始化环境目录 [{}]: {} — failed to create workspace directory", type.name(), e.getMessage());
             }
         }
     }

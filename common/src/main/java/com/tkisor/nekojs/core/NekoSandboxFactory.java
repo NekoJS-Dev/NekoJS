@@ -155,8 +155,8 @@ public final class NekoSandboxFactory {
                 contextBuilder.resourceLimits(ResourceLimits.newBuilder()
                         .statementLimit(watchdog.checkInterval(), watchdog)
                         .onLimit(event -> logger.warn(
-                                "脚本环境 {} 触发 ResourceLimits（失控看门狗 {}s / 语句上限 {}），Graal 已关闭该 Context；"
-                                        + "当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复）",
+                                "[NEKO-2001] 脚本环境 {} 触发 ResourceLimits（失控看门狗 {}s / 语句上限 {}），Graal 已关闭该 Context；"
+                                        + "当前求值被中止，下一次取用时会自动重建（/nekojs reload 亦可手动恢复） — script context hit resource limits",
                                 type.name(), runawayTimeoutSeconds, statementLimit))
                         .build());
             }

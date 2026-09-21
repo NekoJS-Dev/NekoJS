@@ -190,11 +190,11 @@ public final class GoalRegistry {
             if (LivingEntity.class.isAssignableFrom(clazz)) {
                 return (Class<? extends LivingEntity>) clazz;
             }
-            throw new IllegalArgumentException("目标类型必须是 LivingEntity: " + clazz.getName());
+            throw new IllegalArgumentException("[NEKO-4002] 目标类型必须是 LivingEntity — goal target must be a LivingEntity: " + clazz.getName());
         }
         if (target instanceof EntityType<?> type) {
             throw new IllegalArgumentException(
-                    "无法从 EntityType 推断目标类（NeoForge 不暴露实体类），请传实体 id 字符串或 Java 类: " + type);
+                    "[NEKO-4003] 无法从 EntityType 推断目标类（NeoForge 不暴露实体类），请传实体 id 字符串或 Java 类 — cannot infer target class from EntityType: " + type);
         }
         if (target instanceof String id) {
             String normalized = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
@@ -209,9 +209,9 @@ public final class GoalRegistry {
                 return NekoScriptMob.class;
             }
 //?}
-            throw new IllegalArgumentException("未知目标实体（无内置映射，可用 Java.type(...) 传类）: " + id);
+            throw new IllegalArgumentException("[NEKO-4004] 未知目标实体（无内置映射，可用 Java.type(...) 传类） — unknown target entity: " + id);
         }
-        throw new IllegalArgumentException("无法解析目标: " + target);
+        throw new IllegalArgumentException("[NEKO-4005] 无法解析目标 — could not resolve goal target: " + target);
     }
 
     public static class GoalBuilderJS {

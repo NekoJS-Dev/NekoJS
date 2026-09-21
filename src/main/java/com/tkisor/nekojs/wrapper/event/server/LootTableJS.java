@@ -95,14 +95,14 @@ public class LootTableJS {
         if (value instanceof String text) {
             return JsonParser.parseString(text);
         }
-        throw new IllegalArgumentException("无法转换为 JSON: " + value);
+        throw new IllegalArgumentException("[NEKO-5001] 无法转换为 JSON — could not convert value to JSON: " + value);
     }
 
     /** 任意 JS/Java 值 → JsonObject（要求对象形态）。 */
     static JsonObject toJsonObject(Object value) {
         JsonElement element = toJsonElement(value);
         if (!element.isJsonObject()) {
-            throw new IllegalArgumentException("JSON 必须是对象，得到: " + element);
+            throw new IllegalArgumentException("[NEKO-5002] JSON 必须是对象，得到 — JSON must be an object: " + element);
         }
         return element.getAsJsonObject();
     }

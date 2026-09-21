@@ -87,7 +87,7 @@ public class LoggerStream extends OutputStream {
                 emit(msg);
             } else if (!overflowWarned) {
                 overflowWarned = true;
-                logger.warn("脚本输出行数超过 {} 行上限，后续输出将被丢弃（防止日志无限增长）", MAX_TOTAL_LINES);
+                logger.warn("[NEKO-2004] 脚本输出行数超过 {} 行上限，后续输出将被丢弃（防止日志无限增长） — script output line limit reached", MAX_TOTAL_LINES);
             }
             flushedLines++;
             buffer.reset();
