@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-26（main-session agent；deepseek-v4.1-flash subagent worktree）
+
+**Claim record (2026-09-21):** worktree `../NekoJS-mult-t26` on branch `ticket-26-client-input-hud`（基于 `feedac1a`）。预计改动范围：`KeyBindEvents`/`ClientEvents` 既有输入与 HUD 成员从调用者 Interface 到平台 client Adapter 的注册、owner-thread dispatch、reload 清理、client-only 过滤、catalog/golden 区分直接注册与事件监听、TS/Python declaration、fixture 与 examples/MIGRATION。不消费/不修改 23/27/28/29 等其他域文件。
 
 **Optional:** false
 

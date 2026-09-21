@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-29（main-session agent；deepseek-v4.1-flash subagent worktree）
+
+**Claim record (2026-09-21):** worktree `../NekoJS-mult-t29` on branch `ticket-29-assets-lang`（基于 `feedac1a`）。预计改动范围：既是 Assets typed binding、唯一 `ClientEvents.generateAssets` 与既有 `ClientEvents.lang` 的生成/回读路径，plugin generate-assets/generate-lang Hook 与脚本贡献聚合，新增 plugin-only `generatedLangs()` 最小声明面与确定性语言集合，路径校验/原子替换/回读、client-only 过滤、catalog/golden、capability/source-trace、fixture 与 examples/MIGRATION。不消费/不修改 23/26/27/28 等其他域文件。
 
 **Optional:** false
 
