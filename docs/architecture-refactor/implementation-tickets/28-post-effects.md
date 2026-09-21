@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-28（main-session agent；deepseek-v4.1-flash subagent worktree）
+
+**Claim record (2026-09-21):** worktree `../NekoJS-mult-t28` on branch `ticket-28-post-effects`（基于 `d0974573`）。预计改动范围：`ClientEvents` 资源/reload 子事件下的 register/unregister 收集与候选集合、资源生成与 commit 点接线、旧 generation 清理、catalog/golden、TS/Python declaration、capability/source-trace、fixture 与 examples/MIGRATION。不消费/不修改 26/27/29 等其他域文件。
 
 **Optional:** false
 

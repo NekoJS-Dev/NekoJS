@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-22（main-session agent；deepseek-v4.1-flash subagent worktree）
+
+**Claim record (2026-09-21):** worktree `../NekoJS-mult-t22` on branch `ticket-22-villager-trades`（基于 `d0974573`）。预计改动范围：`ServerEvents`新增 trade 子事件（收集阶段）、新增 domain collector + Adapter（归属 `NekoRuntimeRoot`的 SERVER 事务 reload）、generation/stale 只读 query、catalog/golden、TS/Python declaration、capability/source-trace、fixture 与 examples/MIGRATION。不消费/不修改 26/27/29 等其他域文件。
 
 **Optional:** false
 
