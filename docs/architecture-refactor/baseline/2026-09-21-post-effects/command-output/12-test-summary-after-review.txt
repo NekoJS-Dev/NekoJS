@@ -1,0 +1,18 @@
+node; tests; failures; errors; skipped
+common; 1746; 0; 0; 4
+1.21.1; 231; 0; 0; 8
+26.1.2; 324; 0; 0; 52
+26.2.0; 324; 0; 0; 52
+
+ticket 28 fixtures after review fixes:
+com.tkisor.nekojs.client.posteffect.PostEffectDeclarationLifecycleTest; tests=10; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectDeclarationSurfaceTest; tests=4; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectGenerationInvalidationTest; tests=4; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectDeclarationLifecycleTest; tests=10; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectDeclarationSurfaceTest; tests=4; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectGenerationInvalidationTest; tests=4; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectDeclarationLifecycleTest; tests=10; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectDeclarationSurfaceTest; tests=4; failures=0; errors=0
+com.tkisor.nekojs.client.posteffect.PostEffectGenerationInvalidationTest; tests=4; failures=0; errors=0
+com.tkisor.nekojs.core.posteffect.PostEffectCandidatePlanTest; tests=10; failures=0; errors=0
+com.tkisor.nekojs.core.posteffect.PostEffectChainJsonTest; tests=6; failures=0; errors=0

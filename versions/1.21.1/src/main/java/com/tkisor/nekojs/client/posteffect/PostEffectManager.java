@@ -6,25 +6,34 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.FileToIdConverter;
+import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.lang.reflect.Field;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Runtime client post-effect registry (feature 8b, client-side only; ported from Katton's
  * {@code ClientPostEffectManager}).
  *
- * <p><b>v1 split (no mixins in this batch):</b> vanilla's shader pipeline only knows post
- * chains declared by resource packs ({@code assets/<ns>/shaders/post/<path>.json}) at
- * resource-reload time, so definitions registered here at runtime <i>cannot be activated
- * yet</i>. v1 therefore ships full set/clear/toggle/current for any effect that exists as
- * a resource, plus {@link #register} which stores validated chain JSON so a pending
- * 1.21.1 post-chain mixin can activate it later without script changes.
+ * <p><b>Runtime binding face (ticket 28).</b> {@link #set}/{@link #clear}/{@link #toggle}/
+ * {@link #current} back the {@code PostEffects} runtime binding and keep their previous
+ * caller-visible behaviour (client-thread renderer mutation, resource-backed ids only).
+ *
+ * <p><b>Declaration face (ticket 28).</b> Definitions are no longer registered straight from
+ * a script binding: {@code ClientEvents.postEffects} declarations are collected into an inert
+ * {@code PostEffectCandidatePlan} and only the commit point installs the active generation
+ * through {@link #installGeneration}. A generation owns exactly the definitions it declared;
+ * the previous generation's definitions and resources are released when the new batch
+ * applies. 1.21.1 has no shader-source override and no shader-manager mixin, so a declaration
+ * is validated chain JSON resolved through {@code assets/<ns>/shaders/post/<path>.json} and a
+ * declared id without that resource cannot be activated (see {@link #getOrCreatePostChain}).
  *
  * <p>All renderer mutations run on the client thread via {@code Minecraft#execute}.
  */
@@ -32,51 +41,119 @@ public final class PostEffectManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("NekoJS PostEffects");
 
-    /** 1.21.1 post-chain resources live at {@code assets/<ns>/shaders/post/<path>.json}. */
-    private static final FileToIdConverter POST_EFFECT_FILES = FileToIdConverter.json("shaders/post");
-
     private static final Map<ResourceLocation, Definition> DEFINITIONS = new ConcurrentHashMap<>();
+
+    /** Declaration generation whose definitions are installed ({@code -1} = none yet). */
+    private static volatile long ACTIVE_GENERATION = -1L;
+
+    /** 1.21.1 无公开的 current effect getter，运行时用最后一次 set 的 id 记账。 */
     private static volatile ResourceLocation lastSetId;
 
     private PostEffectManager() {
     }
 
-    /** A runtime-registered effect: validated chain JSON (no GLSL source override on 1.21.1). */
-    record Definition(String chainJson) {
+    /** An installed effect: validated chain JSON (no GLSL source override on 1.21.1). */
+    public record Definition(String chainJson) {
     }
 
-    // ---- registration (stored for the future post-chain mixin; not activatable in v1) ----
+    // ---- declaration lifecycle (ClientEvents.postEffects；commit 点由 Adapter 调用) ----
 
-    public static boolean register(ResourceLocation id, String chainJson) {
-        if (chainJson == null || chainJson.isBlank()) return false;
+    /**
+     * Parses and validates a declaration payload without storing it (candidate preflight):
+     * {@code null} is returned for a rejected payload so the Adapter can fail the whole batch
+     * before any live state changes.
+     */
+    @Nullable
+    public static Definition parseDefinition(ResourceLocation id, String chainJson) {
+        if (chainJson == null || chainJson.isBlank()) return null;
         try {
             JsonParser.parseString(chainJson);
         } catch (JsonParseException e) {
             NekoJS.LOGGER.warn("Failed to parse runtime client post effect {}", id, e);
-            return false;
+            return null;
         }
-        DEFINITIONS.put(id, new Definition(chainJson));
-        LOGGER.info("Registered runtime client post effect {} (activation requires a pending 1.21.1 post-chain mixin)", id);
-        return true;
+        return new Definition(chainJson);
     }
 
-    public static boolean unregister(ResourceLocation id) {
-        boolean removed = DEFINITIONS.remove(id) != null;
-        if (removed && id.equals(current())) {
+    /**
+     * Installs one generation's definitions at the commit point and retires the rest: every id
+     * the swap removes — a previously installed definition the new set does not re-declare, or
+     * a {@code retired} id that was installed — is dropped. The previous generation's definitions
+     * never survive the swap, and the swap is observable through {@link #activeGeneration()} /
+     * {@link #installedDefinitions()}. If the runtime-active effect ({@link #lastSetId}) is among
+     * the removed ids, the client renderer is cleared as well so no stale frame keeps rendering.
+     *
+     * <p>Production callers: {@code PostEffectDomainOwner#apply} (transactional COMMIT via
+     * {@code PostEffectCandidatePlan#publish}) and {@code PostEffectDomainOwner#applyInitialPlan}
+     * (the non-transactional client startup collection point). Both run on the client/owner thread.
+     */
+    public static void installGeneration(long generation, Map<ResourceLocation, Definition> definitions,
+                                         Set<ResourceLocation> retired) {
+        Map<ResourceLocation, Definition> previous = Map.copyOf(DEFINITIONS);
+        Set<ResourceLocation> removed = removedIds(previous, definitions, retired);
+        for (ResourceLocation id : removed) {
+            DEFINITIONS.remove(id);
+        }
+        DEFINITIONS.putAll(definitions);
+        ACTIVE_GENERATION = generation;
+        boolean activeRetired = lastSetId != null && removed.contains(lastSetId);
+        if (activeRetired) {
             clear();
+        }
+        LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} removed)",
+                generation, definitions.size(), removed.size());
+    }
+
+    /**
+     * Ids the swap drops: installed definitions the new set does not re-declare, plus retired
+     * ids that were installed. Package-private so the decision is unit-testable without a client.
+     */
+    static Set<ResourceLocation> removedIds(Map<ResourceLocation, Definition> previous,
+                                            Map<ResourceLocation, Definition> next,
+                                            Set<ResourceLocation> retired) {
+        Set<ResourceLocation> removed = new LinkedHashSet<>();
+        for (ResourceLocation id : previous.keySet()) {
+            if (!next.containsKey(id)) {
+                removed.add(id);
+            }
+        }
+        for (ResourceLocation id : retired) {
+            if (previous.containsKey(id)) {
+                removed.add(id);
+            }
         }
         return removed;
     }
 
-    /** Clears every runtime-registered definition (script reload teardown). */
-    public static void clearRegistered() {
-        ResourceLocation current = current();
-        DEFINITIONS.clear();
-        if (current != null) {
-            clear();
+    /**
+     * Ids whose runtime chain cache must be dropped even though they stay installed. 1.21.1 has
+     * no shader-manager hook yet (see {@link #getOrCreatePostChain}), so nothing populates a
+     * cache today; the decision is kept paired with 26.x so the invalidation contract is the
+     * same on both nodes once the hook lands. Package-private for the same reason.
+     */
+    static Set<ResourceLocation> redefinedIds(Map<ResourceLocation, Definition> previous,
+                                              Map<ResourceLocation, Definition> next) {
+        Set<ResourceLocation> redefined = new LinkedHashSet<>();
+        for (Map.Entry<ResourceLocation, Definition> entry : next.entrySet()) {
+            Definition before = previous.get(entry.getKey());
+            if (before != null && !before.equals(entry.getValue())) {
+                redefined.add(entry.getKey());
+            }
         }
+        return redefined;
     }
 
+    /** Definitions currently installed (read-only; the declaration query face reads this). */
+    public static Map<ResourceLocation, Definition> installedDefinitions() {
+        return Map.copyOf(DEFINITIONS);
+    }
+
+    /** Active declaration generation number ({@code -1} before the first commit). */
+    public static long activeGeneration() {
+        return ACTIVE_GENERATION;
+    }
+
+    /** Whether a definition is installed by the active generation. */
     public static boolean hasDefinition(ResourceLocation id) {
         return DEFINITIONS.containsKey(id);
     }
@@ -89,11 +166,12 @@ public final class PostEffectManager {
 
     /**
      * Activates the post effect {@code id}. Returns {@code false} when the id is only known
-     * as a runtime definition (needs the pending mixin) or the id cannot be found.
+     * as a declaration without a resource or the id cannot be found.
      */
     public static boolean set(ResourceLocation id) {
-        if (isRuntimeOnly(id)) {
-            LOGGER.warn("Post effect {} was registered at runtime and cannot be activated until the 1.21.1 post-chain mixin lands; use a resource-pack effect id instead", id);
+        if (isDeclarationOnly(id)) {
+            LOGGER.warn("Post effect {} was declared without a shaders/post chain resource and cannot be"
+                    + " activated; add a resource-pack effect id instead", id);
             return false;
         }
         if (!isResourceAvailable(id)) {
@@ -152,7 +230,19 @@ public final class PostEffectManager {
         return Minecraft.getInstance().getResourceManager().getResource(chainLocation(id)).isPresent();
     }
 
-    static boolean isRuntimeOnly(ResourceLocation id) {
+    static boolean isDeclarationOnly(ResourceLocation id) {
         return !isResourceAvailable(id) && DEFINITIONS.containsKey(id);
+    }
+
+    /**
+     * Always returns {@code null}: 1.21.1 has no shader-manager mixin (26.x's
+     * {@code com.tkisor.nekojs.mixin.ShaderManagerMixin} is {@code //? if >=26}), so no hook
+     * injects here and nothing calls this method. It exists only as the 1.21.1 placeholder for
+     * the 26.x runtime-chain entry point; runtime-only declarations therefore stay
+     * non-activatable on this node (see {@link #set}).
+     */
+    @Nullable
+    public static PostChain getOrCreatePostChain(ResourceLocation id) {
+        return null;
     }
 }
