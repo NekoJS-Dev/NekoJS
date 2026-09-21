@@ -62,7 +62,7 @@
 | AC2 第一版公开面只有 add 与稳定 query；remove/replace/modify 不出现 | **满足** | `Ticket22VillagerTradeEventSurfaceTest.payloadsExposeOnlyTheFirstVersionSurface`（`add`/`getAddedCount`/`declareObsolete`/`getTotal`/`getTradeSets`/`countOf` 签名固定；遍历 payload 与计划方法名断言不含 remove/replace/modify）；示例与 MIGRATION 只写 add/query |
 | AC3 query 只读快照 + generation/stale 校验；成功 reload 后新 generation 可读、旧 token 明确失败 | **满足** | `Ticket22VillagerTradeDomainTest.committedGenerationIsReadableAndOlderTokensAreExplicitlyStale`（候选期读取 = STALE；active 回调读取 = ACTIVE 且 `adapterId`/`countOf`/`total` 正确；被取代的 token = STALE 且 total/tradeSetIds/countOf 确定性空、`adapterId == null`；`query(null)` = STALE 不抛）；`querySurfaceExposesNoWritableOrLiveMember`（只读成员断言） |
 | AC4 收集期只形成候选 overlay/Adapter 请求；未知 trade set、无效配置、事件失败或 Adapter 拒绝时无部分 mutation、无 pending 脏数据、旧 active 可用 | **满足** | `candidateCollectionIsInertAndCommitAppliesTheBatchExactlyOnce`（候选期 probe 读到旧 live 内容；commit 后恰好 apply 一次）；`rejectedBatchKeepsOldActivePlanAndPublishesNothing`（未知 trade set → `STATE_PLAN`，applyCount 不变、旧 active 保留、generation 不推进）；`invalidConfigurationFailsTheWholeBatchInsteadOfSkippingOneTrade`（`DOMAIN_PLAN` 整批失败）；`unavailableNodeFailsTheBatchExplicitlyInsteadOfSilentlySucceeding`；`duplicateDeclarationsInOneBatchCollapseIntoOneTrade`（同批同键幂等，不产生重复 listing） |
-| AC5 合法 commit 点由平台/版本 Adapter 执行 registry epoch 与 mutation；26.x 与 1.21.1 由真实节点测试证明；共享事件面不含 loader surgery | **部分满足（26.1.2 / 1.21.1 真跑；26.2.0 未跑）** | 26.1.2：`.\.\gradlew :26.1.2:test --tests '*Ticket22*'` 通过（`command-output/02-...`）；1.21.1：`.\.\gradlew :1.21.1:test :26.1.2-fabric:test` 通过（`command-output/05-...`）；loader surgery 只在 Adapter：`guardLint` 276 块/431 文件/0 警告（common 零 MC/loader import）。**缺口**：26.2.0 与 26.2.0-fabric 未执行（见 §6 G1） |
+| AC5 合法 commit 点由平台/版本 Adapter 执行 registry epoch 与 mutation；26.x 与 1.21.1 由真实节点测试证明；共享事件面不含 loader surgery | **满足（26.1.2 / 26.2.0 / 1.21.1 / 26.1.2-fabric 真跑；26.2.0-fabric 由主会话补跑）** | 26.1.2：`.\.\gradlew :26.1.2:test --tests '*Ticket22*'` 通过（`command-output/02-...`）；1.21.1：`.\.\gradlew :1.21.1:test :26.1.2-fabric:test` 通过（`command-output/05-...`）；loader surgery 只在 Adapter：`guardLint` 276 块/431 文件/0 警告（common 零 MC/loader import）。26.2.0 与 26.2.0-fabric 由主会话补跑 BUILD SUCCESSFUL（`command-output/06-26.2.0-node-tests.txt`）。注：1.21.1 的静态池替换仍只有编译级/共享契约级证明（§6 G5） |
 | AC6 reload 中断/close/watchdog/收集失败/Adapter 拒绝 → 清理候选并保留旧 active；旧 generation token 明确失败，不双重提交 | **满足（机制面真跑；中断/close/watchdog 由既有 06/07 fixture 承载）** | `rejectedBatchKeepsOldActivePlanAndPublishesNothing`、`invalidConfigurationFailsTheWholeBatch...`（候选失败 → 旧 active 保留、generation 不推进）；`rootCloseResetsTheDomainRecordsSoIndependentRootsDoNotBleed`（root close 清理域记录）；`VillagerTradeCandidatePlan.publish` 二次发布被拒（不双重提交，代码契约 + `isPublished` 断言）；close/watchdog 抢占语义由票 06/07 既有 fixture 覆盖，本票不重复 |
 | AC7 脚本不再声明的既有 trade 不物理删除，只进 stale/retired；查询/诊断/迁移说明可见 | **满足** | `declarationsDroppedByANewGenerationAreRecordedAsUnrestoredInsteadOfBeingDeleted`（新 generation 声明为空 → 旧 listing 进 `unrestoredListingKeys`，仍在注册表中）；`Ticket22VillagerTradeEventSurfaceTest.declaringAReloadSubEventReleaseStaysUntilTheCommitSharesIt`（`declareObsolete` 进计划、commit 才生效）；`VillagerTradeQuerySurface.getUnrestoredListingKeys/getRetiredListingKeys` + `describe()`；MIGRATION §1/§2 |
 | AC8 不定义 server/client 同步协议，不混入多人 registry 同步语义 | **满足** | 本票无 packet/网络代码：实现面只有 common 域类型 + Adapter + binding；MIGRATION §7 明示；未来同步需求另开决策（票面 Scope） |
@@ -81,6 +81,7 @@
 | 3 | `.\.\gradlew guardLint --console=plain` | **BUILD SUCCESSFUL**（exit 0） | 守卫块 **276** / 扫描 **431** 文件 / 超限豁免 **0** / 警告 **0**（`03-guardlint.txt`）。基线（本票前）为 275 块 / 425 文件 |
 | 4 | `.\.\gradlew :common:check --console=plain` | 第一次 **BUILD FAILED**（exit 1，1 个与票无关的用例）；重试 **BUILD SUCCESSFUL**（exit 0） | 失败：`Ticket07RuntimeThreadsTest > closePreemptsInFlightCandidateViaInterrupt()`（`AssertionFailedError`，`Ticket07RuntimeThreadsTest.java:550`），1746 tests / 1 failed / 4 skipped；单独重跑该用例 BUILD SUCCESSFUL，整 task 重试亦 SUCCESSFUL（1m 59s）。原始输出：`04-common-check.txt`（失败）/ `04b-common-check-retry.txt`（重试通过） |
 | 5 | `.\.\gradlew :1.21.1:test :26.1.2-fabric:test --console=plain` | **BUILD SUCCESSFUL**（exit 0） | 1.21.1 与 26.1.2-fabric 全量节点测试通过（fabric 215 tests / 1 failed→修复后 0 failed / 25 skipped）；`05-1.21.1-and-fabric-tests.txt` |
+| 6 | `.\.\gradlew :26.2.0:test :26.2.0-fabric:test --console=plain`（**主会话补跑**，workdir `D:\mcmodDemo\NekoJS-mult-t22`） | **BUILD SUCCESSFUL in 1m 22s**（exit 0） | 37 actionable tasks / 22 executed / 15 up-to-date；两个 test task 均执行（非 UP-TO-DATE），即 26.2.0 与 26.2.0-fabric 均编译了共享 26.x Adapter 并跑了各自测试树；原始记录 `command-output/06-26.2.0-node-tests.txt`（由主会话提供，非本 worktree 捕获的控制台日志） |
 
 第 4 条第一次失败是票 07 的时序用例（`closePreemptsInFlightCandidateViaInterrupt`），与
 Villager Trades 无共享代码路径；单独重跑与整 task 重试均通过 → 记为**环境/时序 flaky**，
@@ -105,7 +106,7 @@ Villager Trades 无共享代码路径；单独重跑与整 task 重试均通过 
 
 | # | 项 | 现状 | owner/建议 |
 |---|---|---|---|
-| G1 | **26.2.0 与 26.2.0-fabric 未执行** | 本票只在 26.1.2（NeoForge）、1.21.1（NeoForge）、26.1.2-fabric 上真跑；26.2.0 两节点未跑 test/build | 主会话合并后跑五节点；26.2.0 与 26.1.2 共享同一份 26.x owner（同编译单元），预期一致但**未证实** |
+| G1 | ~~26.2.0 与 26.2.0-fabric 未执行~~ → **已关闭（主会话补跑通过）** | 26.2.0 与 26.2.0-fabric 的 test task 均已执行且 BUILD SUCCESSFUL（见右侧命令与 `command-output/06`），两个节点编译了共享的 26.x Adapter 并跑了各自测试树 | 主会话补跑 `.\\.\gradlew :26.2.0:test :26.2.0-fabric:test --console=plain`（workdir `D:\\mcmodDemo\\NekoJS-mult-t22`）：**BUILD SUCCESSFUL in 1m 22s**，37 actionable tasks / 22 executed / 15 up-to-date，两个 test task 均执行（非 UP-TO-DATE）；原始记录 `command-output/06-26.2.0-node-tests.txt`。无剩余缺口 |
 | G2 | **无真机 smoke、无客户端/服务端实机验证** | 未启动游戏/服务器；交易是否真的出现在村民报价、`/nekojs reload server` 的真实命令输出、fabric 实机的 unavailable 提示均未在实机观察 | 用 `minecraft-mod-mcp` 按 `examples/` 脚本跑一次 26.1.2 与 26.1.2-fabric；owner：主会话/票 34 |
 | G3 | `Ticket07RuntimeThreadsTest.closePreemptsInFlightCandidateViaInterrupt` 时序 flaky | 全量 `:common:check` 第一次失败、单独重跑与整 task 重试通过；与本票无共享代码路径 | 属票 07 测试基建；本票不处置 |
 | G4 | 25 的 capability/golden 机制未新增 villager 行 | `src/test/resources/golden/query/capability-matrix-*.txt` 是 query 域（票 25）矩阵；本票未改它（避免越界改他人 golden），fabric unavailable 的证据落在 §3 AC9 的结构断言 | 若需要在 capability 矩阵里显式登记 villager，由票 25/34 owner 决定 |
@@ -117,7 +118,7 @@ Villager Trades 无共享代码路径；单独重跑与整 task 重试均通过 
 前提已备：
 
 1. **替代路径 parity**：`ServerEvents.tradeDeclaration` / `tradeReload` / `VillagerTrades.query()` 已交付；
-   26.1.2 / 1.21.1 / 26.1.2-fabric 节点测试真跑（§4）。
+   26.1.2 / 26.2.0 / 1.21.1 / 26.1.2-fabric 节点测试真跑，26.2.0-fabric 由主会话补跑（§4、`command-output/06`）。
 2. **失败保留**：§3 AC4/AC6 的三条整批失败用例 + §5 修复 #4。
 3. **迁移表**：`MIGRATION.md`（§1–§4），含「同一 trade set 两条路径不可混用」。
 4. **旧 route 无消费者证据**：`MIGRATION.md` §3——仓库内消费者只有旧 binding 自身、两个

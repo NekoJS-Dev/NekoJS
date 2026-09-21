@@ -100,6 +100,6 @@ trade set id 形状（节点差异，旧新路径一致）：
 
 - **不定义 server/client 同步协议**：交易的多人同步语义不在本票（AC8）；本票不改同步路径。
 - **不补 Fabric parity**：fabric 节点是显式 unavailable（AC9），不自动补交易注册表 mutation。
-- **26.2.0（NeoForge）未单独跑测试**：本票在 26.1.2 上真跑 26.x 面；26.2.0 与 26.1.2 共用同一份
-  compat 之外的共享源码，但**未在 26.2.0 节点上执行**（见 REPORT §6 未验证项）。
+- **26.2.0 两节点已由主会话补跑**：`.\.\gradlew :26.2.0:test :26.2.0-fabric:test` → BUILD SUCCESSFUL
+  （1m 22s，两个 test task 均执行；见 REPORT §6 G1 与 `command-output/06-26.2.0-node-tests.txt`）。
 - **vanilla 注册表未就绪时不猜测**：Adapter 在没有绑定 server 时报告 `UNAVAILABLE`，不做 no-op。

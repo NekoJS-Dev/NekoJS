@@ -31,8 +31,8 @@
       证据：`Ticket22VillagerTradeDomainTest.committedGenerationIsReadableAndOlderTokensAreExplicitlyStale`（候选期读取=STALE、active 回调=ACTIVE、被取代 token=STALE 且各成员确定性空、`query(null)` 不抛）、`querySurfaceExposesNoWritableOrLiveMember` → REPORT §3 AC3。
 - [x] 事件收集阶段只形成候选 overlay 和 Adapter 请求；未知 trade set、无效配置、事件失败或 Adapter 拒绝时不发生部分 mutation，不留下 pending 脏数据，旧 active 交易仍可用。
       证据：`candidateCollectionIsInertAndCommitAppliesTheBatchExactlyOnce`、`rejectedBatchKeepsOldActivePlanAndPublishesNothing`、`invalidConfigurationFailsTheWholeBatchInsteadOfSkippingOneTrade`、`unavailableNodeFailsTheBatchExplicitlyInsteadOfSilentlySucceeding`、`duplicateDeclarationsInOneBatchCollapseIntoOneTrade` → REPORT §3 AC4、§5（含空批次不再误伤 reload 的行为修复）。
-- [ ] 合法 commit 点由平台/版本 Adapter 执行 registry epoch 与 mutation；26.x 与 1.21.1 的注册时机、trade set 映射和错误结果由真实节点测试证明，共享事件面不包含 loader surgery。
-      **部分满足**：26.1.2 与 1.21.1 节点测试真跑通过、loader surgery 只在 Adapter（`guardLint` 276 块/431 文件/0 警告）；**缺** 26.2.0 与 26.2.0-fabric 未执行（与 26.1.2 共享同一份 26.x owner，但未证实）。证据：REPORT §3 AC5、§4 命令 2/3/5、§6 G1。
+- [x] 合法 commit 点由平台/版本 Adapter 执行 registry epoch 与 mutation；26.x 与 1.21.1 的注册时机、trade set 映射和错误结果由真实节点测试证明，共享事件面不包含 loader surgery。
+      证据：26.1.2 与 1.21.1 节点测试真跑通过、loader surgery 只在 Adapter（`guardLint` 276 块/431 文件/0 警告）；**26.2.0 与 26.2.0-fabric 已由主会话补跑通过**（`.\.\gradlew :26.2.0:test :26.2.0-fabric:test` → BUILD SUCCESSFUL, 1m 22s, 两个 test task 均执行，见 `command-output/06-26.2.0-node-tests.txt`）。**注**：1.21.1 的静态池替换仍只有编译级/共享契约级证明（REPORT §6 G5）→ REPORT §3 AC5、§4 命令 2/3/5/6、§6 G1（已关闭）。
 - [x] reload 中断、close、candidate watchdog、事件收集失败或 Adapter commit 拒绝会清理候选 listener/计划并保留旧 active；旧 generation token 的后续查询与写入有明确失败结果，不产生双重提交。
       证据：`rejectedBatchKeepsOldActivePlanAndPublishesNothing`（generation 不推进）、`rootCloseResetsTheDomainRecordsSoIndependentRootsDoNotBleed`；`VillagerTradeCandidatePlan#publish` 二次发布拒绝 + `isPublished` 断言；中断/close/watchdog 抢占由票 06/07 既有 fixture 承载（本票不重复）→ REPORT §3 AC6。
 - [x] 脚本不再声明的既有 trade 不在普通 reload 中物理删除，只进入 stale/retired 记录；后续查询、诊断和迁移说明能看到该状态。
@@ -71,9 +71,9 @@ generation/stale 绑定）。parity 证据：`Ticket22VillagerTradeDomainTest`�
 
 ## 越过门禁的事实（如实记录）
 
-本票在删除门禁未满足的情况下把 **Status 置为 closed**：AC1–AC4、AC6–AC8、AC11 已真跑满足；
-AC5、AC9 为**部分满足**（缺口：26.2.0 两节点未执行、无真机 smoke、capability 矩阵未新增 villager 行）；
-AC10 **不勾选**（维护者 sign-off 未完成，旧公开路径保持原样未删）。本票**未**删除任何旧公开符号，
+本票在删除门禁未满足的情况下把 **Status 置为 closed**：AC1–AC8、AC11 已真跑满足（AC5 的 26.2.0 /
+26.2.0-fabric 缺口已由主会话补跑关闭）；AC9 为**部分满足**（缺口：无真机 smoke、capability 矩阵未
+新增 villager 行——该矩阵属票 25 的 query 域，本票不越界改他人 golden）；AC10 **不勾选**（维护者 sign-off 未完成，旧公开路径保持原样未删）。本票**未**删除任何旧公开符号，
 也**未**把旧路径改写成新路径的兼容 shim；旧路径与新增的 `query()` 在同一 binding 上并存，同一
 trade set 不可两条路径混用（`MIGRATION.md` §4）。
 
@@ -103,13 +103,16 @@ trade set 不可两条路径混用（`MIGRATION.md` §4）。
     `Ticket07RuntimeThreadsTest.closePreemptsInFlightCandidateViaInterrupt`，与本票无共享路径），
     单独重跑与整 task 重试均 BUILD SUCCESSFUL；
   - `.\.\gradlew :1.21.1:test :26.1.2-fabric:test` → BUILD SUCCESSFUL。
+  - `.\\.\gradlew :26.2.0:test :26.2.0-fabric:test`（**主会话补跑**）→ BUILD SUCCESSFUL in 1m 22s
+    （两个 test task 均执行；记录 `command-output/06-26.2.0-node-tests.txt`）。
 - 本轮真跑发现并修复的 5 个真实缺陷见 `REPORT.md` §5，其中最重要的一条是**行为修复**：
   修复前任何 SERVER reload 都会因本域失败（空批次仍走注册表可用性校验），现在「未声明任何交易
   = 无请求」不参与、不失败，fabric collector 在计划为空时零参与（影响面 = 所有节点）。
-- 遗留 not-verified 与 owner（详见 `REPORT.md` §6）：26.2.0 / 26.2.0-fabric 未执行（owner：主会话
-  合并后五节点复跑）；无真机 smoke 与客户端/服务端实机验证（owner：主会话 / 票 34，用
-  `minecraft-mod-mcp` 跑 `examples/`）；capability 矩阵未新增 villager 行（owner：票 25/34）；
-  1.21.1 Adapter 的「静态池真的被替换」只有编译级/共享契约级证明（owner：票 34）；
+- 遗留 not-verified 与 owner（详见 `REPORT.md` §6）：~~26.2.0 / 26.2.0-fabric 未执行~~ →
+  已由主会话补跑通过（G1 已关闭）；**仍保留**：无真机 smoke 与客户端/服务端实机验证
+  （G2；owner：主会话 / 票 34，用 `minecraft-mod-mcp` 跑 `examples/`）；capability 矩阵未新增
+  villager 行（G4；owner：票 25/34）；1.21.1 Adapter 的「静态池真的被替换」只有编译级/共享契约级
+  证明（G5；owner：票 34）；
   AC10 维护者 sign-off（owner：维护者）。
 
 ## Sources
