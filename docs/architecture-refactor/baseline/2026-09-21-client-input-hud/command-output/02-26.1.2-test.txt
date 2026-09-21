@@ -1,0 +1,7 @@
+# :26.1.2:test  （全量回归，改动后）
+$ .\gradlew :26.1.2:test --console=plain
+> Task :26.1.2:test
+BUILD SUCCESSFUL in 21s
+
+build/test-results 汇总（65 个 TEST-*.xml）：
+files=65 tests=330 failures=0 errors=0 skipped=54

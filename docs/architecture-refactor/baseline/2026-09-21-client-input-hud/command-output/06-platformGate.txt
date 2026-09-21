@@ -1,0 +1,12 @@
+# 平台 gate（必跑；上轮漏跑导致票 22 基线缺陷逃逸）
+$ .\gradlew :26.1.2:platformGateTest --rerun --console=plain
+> Task :26.1.2:platformGateTest
+BUILD SUCCESSFUL in 5s
+
+tests=1 failures=0 errors=0  TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest
+tests=1 failures=0 errors=0  TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest
+
+无 member-drift / missing-binding：本票不新增或重命名事件成员，读侧基线
+src/test/resources/nekojs/platform-gates/event-surface-domains.txt 未改动。
+
+（注：首次未加 --rerun 时任务 UP-TO-DATE，等于没跑；上表为加 --rerun 的真实执行。）

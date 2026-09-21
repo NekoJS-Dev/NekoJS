@@ -1,0 +1,12 @@
+# AC7 declaration 面覆盖核实（实际 grep，0 命中即缺口）
+$ Select-String -Pattern 'KeyBind|hudRender|registerKeyMappings|KeyMapping' <file>
+
+common/src/test/resources/nekojs/golden/api-manifest-core.json            -> 0 hits
+common/src/test/resources/nekojs/probe/legacy-events.expected.d.ts        -> 0 hits
+common/src/test/resources/nekojs/probe/probe-events.expected.d.ts         -> 0 hits
+common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts      -> 0 hits
+common/src/test/resources/nekojs/platform-gates/declaration-parity.txt    -> 0 hits
+
+结论：TS/Python declaration golden 对本票域（KeyBindEvents.*、ClientEvents.hud/hudRender/
+registerKeyMappings）**零覆盖**，与票 28 AC7 同类缺口。本票未新造 declaration 条目；
+已交付的是运行期成员反射 fixture（SurfaceTest）与事件成员的 ticket-33 跨节点基线。

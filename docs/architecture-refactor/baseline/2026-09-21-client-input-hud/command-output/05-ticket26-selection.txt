@@ -1,0 +1,6 @@
+# 票 26 全选择（Lifecycle + Surface），最终验证
+$ .\gradlew :26.1.2:test --tests '*Ticket26*' --rerun --console=plain
+BUILD SUCCESSFUL in 12s
+
+TEST-...Ticket26ClientInputHudLifecycleTest tests=4 failures=0 errors=0
+TEST-...Ticket26ClientInputHudSurfaceTest    tests=4 failures=0 errors=0
