@@ -47,11 +47,11 @@ public class NekoJSClient {
 
             // Load client scripts on first tick (after Minecraft is fully initialized)
             if (SCRIPTS_LOADED.compareAndSet(false, true)) {
-                NekoJS.LOGGER.info("[client] 正在加载 CLIENT 脚本...");
+                NekoJS.LOGGER.info("[client] 正在加载 CLIENT 脚本... — loading client scripts");
                 try {
                     NekoJSMod.RUNTIME_ROOT.scriptManagerOf(ScriptType.CLIENT).loadScripts();
                 } catch (Throwable e) {
-                    NekoJS.LOGGER.error("[client] CLIENT 脚本加载失败", e);
+                    NekoJS.LOGGER.error("[NEKO-1011] [client] CLIENT 脚本加载失败 — client script loading failed", e);
                 }
                 // MinecraftMixin 在 init RETURN 时已把 nekojs/assets 注册为
                 // FolderResourcePack；主动刷新一次让 pack 与生成的翻译在进入世界前生效。
@@ -59,7 +59,7 @@ public class NekoJSClient {
                 try {
                     Minecraft.getMinecraft().refreshResources();
                 } catch (Throwable e) {
-                    NekoJS.LOGGER.error("[client] 初始资源刷新失败", e);
+                    NekoJS.LOGGER.error("[NEKO-1012] [client] 初始资源刷新失败 — initial resource refresh failed", e);
                 }
             }
 

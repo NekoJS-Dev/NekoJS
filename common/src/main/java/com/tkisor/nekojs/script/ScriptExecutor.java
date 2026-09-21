@@ -72,7 +72,7 @@ public final class ScriptExecutor {
             script.lastError = t;
 
             ScriptError scriptError = errorTracker.record(script, t);
-            script.type.logger().error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
+            script.type.logger().error("[NEKO-1003] 脚本执行失败: {}\n{} — script execution failed", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
         }
     }
 
@@ -147,8 +147,8 @@ public final class ScriptExecutor {
                 throw unwrapExecutionException(e);
             }
             if (timeoutSeconds > 0 && System.nanoTime() - deadlineNanos >= 0) {
-                throw new TimeoutException("脚本求值超时（超过 " + timeoutSeconds
-                        + " 秒，可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成");
+                throw new TimeoutException("[NEKO-2005] 脚本求值超时（超过 " + timeoutSeconds
+                        + " 秒，可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成 — script evaluation timed out");
             }
         }
         try {
