@@ -30,6 +30,19 @@ public final class LangGeneratorJS {
     @Doc("Size cap for the merged lang JSON text, in bytes (16 MiB).")
     public static final int MAX_GENERATED_FILE_BYTES = 16 * 1024 * 1024;
 
+    /** 合法语言代码：字母/数字/下划线，1..64 字符。 */
+    private static final java.util.regex.Pattern VALID_LANG_CODE =
+            java.util.regex.Pattern.compile("^[A-Za-z0-9_]{1,64}$");
+
+    /**
+     * 语言代码是否合法（{@code [A-Za-z0-9_]{1,64}}）。供平台在写入任何语言文件之前预检
+     * 整批语言集合；{@link #writeTo(Path, String)} 用同一判据，故预检通过的语言不会被写入
+     * 阶段以另一套规则拒绝。
+     */
+    public static boolean isValidLangCode(String lang) {
+        return lang != null && VALID_LANG_CODE.matcher(lang).matches();
+    }
+
     private final String lang;
     private final Map<String, String> entries = new LinkedHashMap<>();
 
@@ -77,7 +90,7 @@ public final class LangGeneratorJS {
     public void writeTo(Path assetsRoot, String lang) {
         Objects.requireNonNull(assetsRoot, "assetsRoot");
         Objects.requireNonNull(lang, "lang");
-        if (!lang.matches("^[A-Za-z0-9_]{1,64}$")) {
+        if (!isValidLangCode(lang)) {
             throw new IllegalArgumentException(
                     "Invalid lang code (only [A-Za-z0-9_]{1,64} is allowed): " + lang);
         }

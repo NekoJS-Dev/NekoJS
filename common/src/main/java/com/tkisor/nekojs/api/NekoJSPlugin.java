@@ -19,6 +19,8 @@ import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 
+import java.util.Set;
+
 /**
  * NekoJS 插件接口 —— 作者面的<b>唯一入口</b>（双形态模型，ADR-0010）。
  *
@@ -241,8 +243,26 @@ public interface NekoJSPlugin {
     default void generateAssets(DataGeneratorJS generator) {
     }
 
-    /** 生成语言条目（按语言代码聚合，合并写入 {@code <gameDir>/nekojs/assets/lang/<lang>.json}）。 */
+    /**
+     * 生成语言条目（按语言代码聚合，合并写入 {@code <gameDir>/nekojs/assets/lang/<lang>.json}）。
+     * 平台对 {@link #generatedLangs()} 与本方法调用的语言集合逐语言各触发一次。
+     */
     default void generateLang(LangGeneratorJS generator) {
+    }
+
+    /**
+     * 声明本插件需要 {@link #generateLang} 被调用的语言代码（如 {@code en_us}）。
+     *
+     * <p>直调型钩子（回调面），与 {@code generateLang} 同类——覆写即生效，<b>不需要</b>配对扩展点，
+     * 也<b>不是</b>通用资源声明系统。
+     *
+     * <p>默认 {@code Set.of("en_us")}：即使没有任何脚本注册 {@code ClientEvents.lang} 监听器，
+     * 插件回调也不会被静默跳过。需要 en_us 之外的语言时必须显式声明；平台把本声明与脚本
+     * keyed listener 的语言取并集后逐语言触发。返回值必须是合法语言代码
+     * （{@code [A-Za-z0-9_]{1,64}}）；非法值在写入任何语言文件之前被拒绝。
+     */
+    default Set<String> generatedLangs() {
+        return Set.of("en_us");
     }
 
     /**
