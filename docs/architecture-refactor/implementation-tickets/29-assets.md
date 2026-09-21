@@ -4,7 +4,7 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** in-progress
+**Status:** in-review（实现/测试/证据已交付；AC3/AC6/AC7/AC8/AC9 部分满足未勾选，AC11 待维护者 sign-off）
 
 **Assignee:** zed-flash-29（main-session agent；deepseek-v4.1-flash subagent worktree）
 
@@ -25,18 +25,18 @@
 
 ## Acceptance criteria
 
-- [ ] ClientEvents.generateAssets 仍是唯一 Assets 生成事件，ClientEvents.lang 仍是既有 lang 生成事件；二者、Assets/Lang typed binding 和 plugin contribution 复用同一资源根与安全写入基础，不新增第二事件、第二根目录、第二生成管线或新资源 policy，也不把 LANG 塞进 generateAssets 造成语义混淆。
-- [ ] plugin generate-assets 与 generate-lang Hook 分别在同一 client generation 阶段与脚本事件聚合；`generatedLangs()` 是 plugin-only 语言的最小声明面，语言集合按可重复顺序取插件声明与 `ClientEvents.LANG.registeredKeys()` 的并集，plugin callback 不因没有同语言脚本 listener 而被静默跳过，非法声明在写入前带 plugin/owner 诊断失败，单个插件回调失败不污染其他贡献，阶段、顺序和错误隔离可观察。
-- [ ] blockState、blockModel、itemModel、texture 等调用者成员的参数规范化、默认 namespace/path 补全、JSON 与占位 PNG 输出保留现有已验证行为并有确定 contract/golden 或回读 fixture；本票不为资源限额或 PNG 生成新造 policy。
-- [ ] `generatedLangs()` 声明、lang code/path 校验、多脚本与 plugin key 合并、冲突策略、文件大小限制、非法语言代码、原子替换和 resource reload 回读保留或收紧现有已验证行为；语言集合先完整确定并校验，未通过不进入任何语言文件写入，无效输入不产生部分文件、不越过资源根，也不把异常路径写进资源 pack。
-- [ ] 资源写入保留现有路径包含性、容量、非法 id、冲突 kind 和原子替换行为；无效输入不产生部分文件、不越过资源根，也不把异常路径写进资源 pack。
-- [ ] plugin generate-assets Hook 与脚本事件在同一 client generation 聚合，事件按资源 reload 生命周期恰好触发一次；懒读或显式 reload 后资源能被实际 resource manager 回读。
-- [ ] client-only 过滤证明 dedicated server 不注册入口、不加载 client 类、不写资源；脚本 side 与节点 capability 一致。
-- [ ] 平台/版本 Adapter 按各节点既定支持等级、声明能力与现有限制执行资源 pack 注册、路径和 reload 验证；supported/partial/unavailable 由真实 source trace 与 smoke 决定，不自动补 Fabric parity。
-- [ ] 调用者 Interface、Adapter 契约、runtime member、TS/Python declaration、contract/golden 与生成文件互相追溯；普通测试不得更新 golden 或资源基线，显式更新需旧新 diff 与审阅。
-- [ ] EntitySelectors、DataMap、PostEffects 和已事件化 recipe/loot/tags/JEI/render 域不被并入本票；本票只证明不重复它们的 owner 或事件。
-- [ ] 旧直接文件写入、绕过 DataGenerator 的 asset helper 或重复生成入口只能在生成/回读 parity、迁移表、旧 route 无消费者和维护者确认后删除；不保留长期兼容双路径。
-- [ ] 随实现交付 Assets 与 Lang 的脚本/plugin 聚合、plugin-only 语言声明、路径校验、回读和不可用能力拒绝的最小可运行示例与必要迁移材料；迁移材料明确旧版依赖脚本 listener 解锁非 `en_us` plugin 语言的插件现在必须声明 `generatedLangs()`，且默认 `en_us` 无需声明，示例只使用已通过 gate 的能力。
+- [x] ClientEvents.generateAssets 仍是唯一 Assets 生成事件，ClientEvents.lang 仍是既有 lang 生成事件；二者、Assets/Lang typed binding 和 plugin contribution 复用同一资源根与安全写入基础，不新增第二事件、第二根目录、第二生成管线或新资源 policy，也不把 LANG 塞进 generateAssets 造成语义混淆。【`Ticket29AssetBindingTest` 经生产注册路径 `NekoJSCorePlugin#registerBinding` 解析到 `Assets` 绑定且 `valueType()` 精确为 `AssetGeneratorJS`；`ClientEvents.java` 的 `generateAssets`/`lang` 两处定义本票未改，两总线各持独立 `DispatchKey`（`ASSET_STAGE_KEY`/`LANG_KEY`）故语义未合并；`AssetGeneratorJS` 组合的 `DataGeneratorJS` 与 `generateAssets` 同根（`NekoJSPaths.get().assets()`）；本票 diff 未新增任何事件成员。另修复了一个**真实回归**：`c8066519`/`59919f87` 曾把 `registry.register("Assets", new AssetGeneratorJS())` 整行误删，只留同名 TypeDoc 文档条目——证据见 REPORT §2.1/§4.2】
+- [x] plugin generate-assets 与 generate-lang Hook 分别在同一 client generation 阶段与脚本事件聚合；`generatedLangs()` 是 plugin-only 语言的最小声明面，语言集合按可重复顺序取插件声明与 `ClientEvents.LANG.registeredKeys()` 的并集，plugin callback 不因没有同语言脚本 listener 而被静默跳过，非法声明在写入前带 plugin/owner 诊断失败，单个插件回调失败不污染其他贡献，阶段、顺序和错误隔离可观察。【`Ticket29GeneratedLangsTest`（7 tests）：`defaultsToEnUs...`（脚本集为空仍含 en_us＝不被静默跳过）、`unionOfPluginDeclarationsAndScriptKeysIsDeduplicatedAndSorted`（同集合换传入顺序两次调用结果逐元素相等＝确定性序，且精确等于 `[de_de,en_us,fr_fr,ja_jp,sv_se]`）、`invalidPluginLang...`（消息含插件 FQN 与非法 code）、`oneFailingPlugin...`（精确等于另一插件声明＝整批仍成功）；实现 `PluginGenerationHooks#resolveGeneratedLangs`（TreeSet 归一 + 整批校验 + 单插件隔离）；两节点 `NekoJSClient.postClientGeneration` 先 assets 后 lang 的顺序即源码结构。REPORT §2.2/§2.3/§3】
+- [ ] blockState、blockModel、itemModel、texture 等调用者成员的参数规范化、默认 namespace/path 补全、JSON 与占位 PNG 输出保留现有已验证行为并有确定 contract/golden 或回读 fixture；本票不为资源限额或 PNG 生成新造 policy。【**部分满足，不勾选**：既有行为全绿（`AssetGeneratorJSTest` 的 variants/multipart/字符串简写/JSON 字符串输入、texture shorthand 四态、默认 namespace、子目录、占位 PNG 魔数+16×16+洋红、非法 id 零写盘；`DataGeneratorJSTest`/`PathTest`/`QuotaTest`；`LangGeneratorJSTest`/`PathTest`/`QuotaTest`），且 `Ticket29AssetBindingTest` 补上了此前无人断言的「绑定确实经生产路径可解析」；**缺的是** AC 要求的「确定 contract/golden **或回读 fixture**」——本票未为本域新建 golden，PNG/JSON 输出的 golden 化未做，回读仍只由既有 `DataGeneratorJS#getJson` 测试覆盖。owner：本票后续轮 / 票 33 派生面。REPORT §3/§5】
+- [x] `generatedLangs()` 声明、lang code/path 校验、多脚本与 plugin key 合并、冲突策略、文件大小限制、非法语言代码、原子替换和 resource reload 回读保留或收紧现有已验证行为；语言集合先完整确定并校验，未通过不进入任何语言文件写入，无效输入不产生部分文件、不越过资源根，也不把异常路径写进资源 pack。【`resolveGeneratedLangs` 先完整校验再返回；非法输入四条用例（插件非法 code / 脚本键 `../evil` / 65 字符与空串 / `null` 声明）全部整批拒绝且消息含 owner；调用方拿不到集合故不进入任何 `writeTo`；路径穿越与容量由既有 `LangGeneratorJSPathTest`（含绝对路径与穿越拒绝且断言不建 `lang` 目录）与 `LangGeneratorQuotaTest`（16 MiB 上限，拒绝时不建目录/文件）覆盖，`writeTo` 的 sibling temp + ATOMIC_MOVE 未改。**本票选择「整批拒绝」而非「跳过非法项」**，理由见 MIGRATION §1.3。REPORT §2.3/§3】
+- [x] 资源写入保留现有路径包含性、容量、非法 id、冲突 kind 和原子替换行为；无效输入不产生部分文件、不越过资源根，也不把异常路径写进资源 pack。【既有测试全绿且本票未放宽：`AssetGeneratorJSTest#rejectsInvalidAndTraversingIds`（大写命名空间/多冒号/空路径/`..`/null，并断言 `Files.walk(root)` 无文件落盘）、`#textureRejectsKindConflictWithDirectoryPath`（kind 与目录冲突、非法 kind）、`DataGeneratorJSPathTest#rejectsSymlinkParentPointingOutsideGameDir`（符号链接逃逸）、`DataGeneratorQuotaTest`（单文件 16 MiB / 累计 64 MiB，拒绝时不建目标与父目录）。REPORT §3】
+- [ ] plugin generate-assets Hook 与脚本事件在同一 client generation 聚合，事件按资源 reload 生命周期恰好触发一次；懒读或显式 reload 后资源能被实际 resource manager 回读。【**部分满足，不勾选**：前半满足——两节点 `NekoJSClient.postClientGeneration` 是唯一调用点，`fireGenerateAssets` 与 `GENERATE_ASSETS.post` 共用同一 generator 实例（`PluginGenerationHooksTest#fireGenerateAssetsInvokesRegisteredPluginWithSharedGenerator` 钉住同一实例送达）；**后半未做**——「恰好触发一次」与「被实际 resource manager 回读」需真实客户端资源 reload（`NekoJSPackLoader` + MC resource manager、F3+T 首帧），本票无真机/GameTest smoke，只有源码结构与时序的单测证据。owner：票 34 / CLIENT_GUI_RENDER owner。REPORT §3/§5】
+- [ ] client-only 过滤证明 dedicated server 不注册入口、不加载 client 类、不写资源；脚本 side 与节点 capability 一致。【**部分满足，不勾选**：结构性证据已核——`NekoJSClient` 整文件在 `//? if neoforge` 块内；`NekoJSMod#registerClient` 先 `McPlatformCompat.get().isClientDist()` 门控才调用 `NekoJSClient.register`；`ClientEvents` 的 `GROUP.client(...)` 把 `generateAssets`/`lang` 标为 `ScriptType.CLIENT`。**缺的是** dedicated-server 进程级 smoke 断言（「不加载 client 类」在真机 dist 下未验证）；AGENTS.md 要求 loader/dist 行为走运行时 smoke + MCP 证据。owner：loader/dist 面 / 票 34。REPORT §3/§5】
+- [ ] 平台/版本 Adapter 按各节点既定支持等级、声明能力与现有限制执行资源 pack 注册、路径和 reload 验证；supported/partial/unavailable 由真实 source trace 与 smoke 决定，不自动补 Fabric parity。【**部分满足，不勾选**：三节点 `platformGateTest` 全绿（26.1.2 / 1.21.1 / 26.2.0，`EventSurfaceDomainGateTest` 与 `PlatformSpecContractGateTest` 各 1/0/0）证明无事件面漂移；两节点 `NekoJSClient` 成对同步且 1.21.1 编译通过。**缺的是**：未新造 capability 矩阵记录，未对 fabric 跑 Assets/Lang 的 source trace 或 smoke；且 `Assets` 绑定带 `//? if >=26` 守卫 ⇒ 1.21.1 节点**没有**该绑定（既存平台差异，本票未改变也未正式记录为 capability 条目）。owner：票 31/32 fabric 面。REPORT §3/§5】
+- [ ] 调用者 Interface、Adapter 契约、runtime member、TS/Python declaration、contract/golden 与生成文件互相追溯；普通测试不得更新 golden 或资源基线，显式更新需旧新 diff 与审阅。【**部分满足，不勾选**：追溯面已交付 `Ticket29AssetBindingTest#assetsDocumentationEntryIsBackedByARuntimeBinding`——钉住「TypeDoc 声明面与 `BindingRegistry` 运行时注册面必须同指一个名字」，这正是本次回归得以发生的缺口。**缺的是** TS/Python declaration 面：未为 `Assets`/`generatedLangs()` 新增 declaration 条目或 parity fixture（`api-manifest-core.json` 与 probe declaration golden 对该域 0 命中）。**golden 变更：本票自身无**；diff 中 `event-surface-domains.txt` 的变更全部来自 cherry-pick 主干 `4a9ed9c8`→`353838c8`（票 22 的五行 `ServerEvents` 基线，见 REPORT §4.3）。owner：票 09/33。REPORT §3/§5】
+- [x] EntitySelectors、DataMap、PostEffects 和已事件化 recipe/loot/tags/JEI/render 域不被并入本票；本票只证明不重复它们的 owner 或事件。【本票 diff 文件清单（REPORT §4.4）不含任何其他域文件；未新增事件成员故未触碰 `ClientEvents.POST_EFFECTS` 或票 26/27 的输入/HUD 行；`platform-gates/event-surface-domains.txt` 的唯一变更来自 cherry-pick `353838c8`（主干票 22 修复），本票自身未改。REPORT §3/§4.4】
+- [ ] 旧直接文件写入、绕过 DataGenerator 的 asset helper 或重复生成入口只能在生成/回读 parity、迁移表、旧 route 无消费者和维护者确认后删除；不保留长期兼容双路径。【**不勾选（维护者 sign-off 门禁）**：本票**未删除任何旧公开路径**——`generateAssets`/`lang` 事件与三个 generator 的公开方法面全部保持，唯一的路径变更是 `Assets` 绑定的**恢复**（非删除），故本 AC 的删除条件在本票范围内无适用对象、无迁移期双路径。按 Human input note，这一「无适用对象」的判断仍由维护者确认，故不勾选。见下方「维护者 sign-off 项」与 MIGRATION §3.2】
+- [x] 随实现交付 Assets 与 Lang 的脚本/plugin 聚合、plugin-only 语言声明、路径校验、回读和不可用能力拒绝的最小可运行示例与必要迁移材料；迁移材料明确旧版依赖脚本 listener 解锁非 `en_us` plugin 语言的插件现在必须声明 `generatedLangs()`，且默认 `en_us` 无需声明，示例只使用已通过 gate 的能力。【`baseline/2026-09-21-assets-lang/examples/assets-and-generated-langs.js`（`Assets.*` 四成员 + `ClientEvents.generateAssets` + `ClientEvents.lang`，只用既有已过 gate 能力）；`MIGRATION.md` §1.1 明确写出该迁移要求与「默认 en_us 无需声明」，§1.2/§1.3 写明确定性顺序与整批拒绝的行为后果。】
 
 ## Sources
 
@@ -62,6 +62,60 @@
 - 与 registry startup owner 只协调默认 block/item model 的输入来源，不把启动注册票作为 Assets blocker。
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
+
+## 维护者 sign-off 项（AC11 门禁，待确认）
+
+本票**未删除任何旧公开路径**，因此 AC11 的删除条件在本票范围内无适用对象。需要维护者确认的
+是这一判断本身，以及下面两项相邻事项：
+
+- **`Assets` 绑定恢复**（本票已做，属修复）：`c8066519`/`59919f87` 曾把
+  `registry.register("Assets", new AssetGeneratorJS())` 整行误删、只留同名 TypeDoc 文档条目，
+  使脚本侧 `Assets.*` 不可用而文档仍宣称存在。本票恢复了该注册行（`//? if >=26` 原守卫），
+  绑定名与实现类未变。**这是恢复，不是 breaking**，但引入点属其他票的重构，请确认归于本票处理。
+- **`Assets` 在 1.21.1 节点缺席**：`//? if >=26` 守卫意味着 1.21.1 **没有** `Assets` 绑定。
+  这是既存平台差异，本票未改变，也**未**正式记录为 capability 条目 —— 若需要，owner 是票 31/32。
+- **AC11「无适用对象」的确认**：本票无迁移期双路径、无待删的旧直接写入路径。代码侧证据：
+  `generateAssets`/`lang` 事件与三个 generator 的公开方法面在 diff 中无删除行（见 REPORT §4.4）。
+
+**代码是否已删**：无删除对象。
+**替代路径 parity 证据在哪**：`baseline/2026-09-21-assets-lang/REPORT.md` §3/§4；测试
+`Ticket29AssetBindingTest`（2 tests × 26.1.2）、`Ticket29GeneratedLangsTest`（7 tests × common）。
+**无消费者证据是什么**：不适用（无删除）。
+
+## Closure record（2026-09-21）
+
+- 执行者：zed-flash-29（deepseek-v4.1-flash subagent worktree，分支 `ticket-29-assets-lang`，
+  基线 `f9c725f0`，另 cherry-pick 主干 `4a9ed9c8` → 本分支 `353838c8`）。
+- 交付物：
+  - common（零 MC）：`api/NekoJSPlugin#generatedLangs()`（default `Set.of("en_us")`，回调面直调钩子，
+    未新增 Point）、`core/plugin/PluginGenerationHooks#resolveGeneratedLangs(Collection)`
+    （TreeSet 归一 + 整批校验 + 单插件隔离）、`wrapper/LangGeneratorJS#isValidLangCode(String)`
+    （`writeTo` 与预检共用同一判据，行为不变）；
+  - MC-facing：`core/NekoJSCorePlugin` 恢复 `registry.register("Assets", new AssetGeneratorJS())`
+    （真实回归修复）、`client/NekoJSClient` 与 `versions/1.21.1/.../client/NekoJSClient` 成对改走
+    新语言集合入口（循环体未动）；
+  - 测试：`src/test/.../core/Ticket29AssetBindingTest`（2）、
+    `common/src/test/.../core/plugin/Ticket29GeneratedLangsTest`（7）；
+  - 证据：`baseline/2026-09-21-assets-lang/{REPORT.md,MIGRATION.md,examples/assets-and-generated-langs.js,command-output/01..07}`。
+- 验证命令与结果（真跑，原始摘录在 `baseline/2026-09-21-assets-lang/command-output/`）：
+  - `gradlew :common:check` → **BUILD SUCCESSFUL in 2m 11s**（1763 tests, 0 failures, 4 skipped）；
+  - `gradlew :26.1.2:test --tests '*Ticket29*' --rerun` → **BUILD SUCCESSFUL in 8s**
+    （`Ticket29AssetBindingTest: tests=2 failures=0`）；
+  - `gradlew :1.21.1:test` → **BUILD SUCCESSFUL in 35s**（237 tests, 0 failures, 10 skipped）；
+  - `gradlew :26.1.2:platformGateTest :1.21.1:platformGateTest :26.2.0:platformGateTest`
+    → **BUILD SUCCESSFUL in 27s**，三节点全真执行，**无 member-drift**；
+  - `gradlew guardLint` → **BUILD SUCCESSFUL in 6s**（`288 个守卫块，扫描 438 个文件；超限豁免 0 个；警告 0 条`）；
+  - `gradlew :26.1.2:test`（补跑全量）→ **BUILD SUCCESSFUL in 21s**（332 tests, 0 failures, 54 skipped）；
+  - 红/绿证据：`Assets` 注册被临时注释 → 同一测试 **BUILD FAILED, 2 tests 2 failed**（失败原文见
+    REPORT §4.2 与 `command-output/06-red-evidence.txt`）；恢复后 **BUILD SUCCESSFUL**（`07-green-evidence.txt`）。
+  - **本票自身 golden 变更：无**。diff 中 `event-surface-domains.txt` 的五行变更来自 cherry-pick 主干
+    `4a9ed9c8`→`353838c8`（票 22 修复），非本票内容。
+- 遗留 not-verified 与 owner（REPORT §5）：AC3 golden/回读 fixture、AC6 真机 reload 恰好一次 +
+  resource manager 回读、AC7 dedicated-server smoke、AC8 capability 矩阵与 fabric source trace、
+  AC9 TS/Python declaration、26.2.0 普通 test —— owner 分别为本票后续轮 / 票 34 /
+  CLIENT_GUI_RENDER owner / 票 31-32 / 票 09/33。
+- 已知风险：`Assets` 在 1.21.1 缺席（既存差异，未扩大）；整批拒绝使任一非法语言代码令本轮客户端
+  资产生成整体失败（有意的严格语义，已写 MIGRATION §1.3）。
 
 ## JSX UI feature coordination（2026-09-12）
 

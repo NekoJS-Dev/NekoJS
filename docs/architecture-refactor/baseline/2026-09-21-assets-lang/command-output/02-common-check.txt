@@ -1,0 +1,1 @@
+:common:checkCommonIsolation + :common:test + :common:check -> BUILD SUCCESSFUL in 2m 11s (1763 tests, 0 failures, 4 skipped)
