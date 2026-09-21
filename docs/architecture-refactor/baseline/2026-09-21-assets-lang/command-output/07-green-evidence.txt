@@ -1,0 +1,1 @@
+GREEN: after restoring the registration, `:26.1.2:test --tests '*Ticket29AssetBinding*' --rerun` -> BUILD SUCCESSFUL in 4s; XML tests=2 failures=0 errors=0 skipped=0 time=0.306

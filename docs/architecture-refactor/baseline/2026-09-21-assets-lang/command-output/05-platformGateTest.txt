@@ -1,0 +1,1 @@
+:26.1.2:platformGateTest :1.21.1:platformGateTest :26.2.0:platformGateTest -> BUILD SUCCESSFUL in 27s; 26.1.2 gate XML: EventSurfaceDomainGateTest 1/0/0, PlatformSpecContractGateTest 1/0/0

@@ -92,8 +92,11 @@ public class NekoJSClient {
             // 脚本模型文件已落盘后，为声明过 renderType 且未自写模型的方块补默认模型
             // （26.x 模型驱动：translucent 需要 force_translucent 贴图引用）
             generateSpawnEggModels(generator);
-            // 语言条目按语言代码分别聚合，合并写入 lang/<lang>.json。
-            for (String lang : ClientEvents.LANG.registeredKeys()) {
+            // 本轮语言集合 = 插件 generatedLangs() 声明 ∪ 脚本 keyed listener 语言，字典序确定；
+            // 先整体校验再逐语言生成，任一非法语言代码在写入任何 lang 文件之前整批拒绝，
+            // 因此不会产生部分语言文件（非 en_us 的插件语言必须显式声明，见 generatedLangs()）。
+            var langs = PluginGenerationHooks.resolveGeneratedLangs(ClientEvents.LANG.registeredKeys());
+            for (String lang : langs) {
                 LangGeneratorJS langGenerator = new LangGeneratorJS(lang);
                 PluginGenerationHooks.fireGenerateLang(langGenerator);
                 ClientEvents.LANG.post(langGenerator, lang);

@@ -1,0 +1,3 @@
+RED: with the Assets registration temporarily commented out, `:26.1.2:test --tests '*Ticket29AssetBinding*'` -> BUILD FAILED, 2 tests completed 2 failed.
+assetsBindingResolvesThroughTheProductionRegistrationPath: AssertionFailedError: 'Assets' must be registered by NekoJSCorePlugin.registerBinding: the script-facing typed asset generators (Assets.blockState/blockModel/itemModel/texture) have no other registration path ==> expected: not <null>
+assetsDocumentationEntryIsBackedByARuntimeBinding: AssertionFailedError: documented binding 'Assets' has no runtime registration: declarations and the binding registry must agree ==> expected: not <null>
