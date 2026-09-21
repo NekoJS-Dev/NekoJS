@@ -199,6 +199,10 @@ public class NekoJSMod extends NekoJS {
             // server 不注册入口、不加载 client 类）。运行时 set/clear/toggle/current 仍是
             // PostEffects binding，不经此 owner。
             root.registerDomainCollector(new com.tkisor.nekojs.client.posteffect.PostEffectDomainOwner());
+            // 票 26：HUD / 世界渲染器注册域的收集器（同上，仅客户端 dist）。它保证「本代
+            // 无渲染器注册」时也提交一个空批次，从而在 commit 点退役旧 generation 的渲染器
+            // ——没有这个收集器，空批次永远不到 commit，旧表就换不掉。
+            root.registerDomainCollector(new com.tkisor.nekojs.client.render.ClientRenderDomainOwner());
             NekoJSClient.register(modEventBus, root);
         }
     }
