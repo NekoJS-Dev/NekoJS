@@ -49,12 +49,6 @@ public interface CandidateDomainCollector {
         /** 正在构建的候选 Context（联合计划注册的来源判定）。 */
         Context candidateContext();
 
-        /**
-         * 正在构建的候选 generation 序号（诊断/领域计划归因用；与 commit 后的
-         * {@code ScriptManager#generationId()} 对应）。收集器不得据此提前发布任何状态。
-         */
-        long candidateGeneration();
-
         ScriptType scriptType();
 
         /**

@@ -5,7 +5,6 @@
 // 脚本面的 @Doc/@Param 文案两侧本就不同，探针类型 golden 会校验，别照抄到孪生文件。
 package com.tkisor.nekojs.client.posteffect;
 
-import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.api.annotation.Doc;
 import com.tkisor.nekojs.api.annotation.Param;
 import com.tkisor.nekojs.api.annotation.Return;
@@ -66,19 +65,6 @@ public final class PostEffectsJS implements Binding {
     @Override
     public Object value() {
         return this;
-    }
-
-    /**
-     * Script reload teardown. Declared generations are owned by the reload lifecycle
-     * (candidate plans and the commit point), so the runtime binding only drops the active
-     * post effect here rather than clearing a declaration registry — the previous
-     * {@code clearRegistered()} path is gone with the declaration face.
-     */
-    @Override
-    public void close(ScriptType scriptType) {
-        if (scriptType == ScriptType.CLIENT) {
-            PostEffectManager.clear();
-        }
     }
 
     /** Activates the effect on the client thread. Declaration-only ids warn and return false. */

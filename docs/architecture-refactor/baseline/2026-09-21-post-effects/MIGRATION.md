@@ -68,6 +68,7 @@ ClientEvents.tickPost(() => {
 |---|---|---|
 | 运行时声明 id 无法激活 | 旧：`set` 打 warn 后返回 false（定义仍留着）；新：`set` 用 `isDeclarationOnly` 判定，同样返回 false 并 warn | 命名与语义对齐（不再是「runtime-only」而是「有声明但无资源」）；不静默渲染空画面 |
 | CLIENT reload 后的定义 | 旧：`Binding#close` 整表清空（reload 前发生）；新：成功 commit 时按 generation 退役 + 安装 | 候选期不可见、失败保留旧 active（spec 09）；清空时机从「reload 前」移到「commit 点」 |
+| **reload teardown 是否清屏** | 旧：`PostEffectsJS#close` → `PostEffectManager.clearRegistered()`，清声明账本时**顺带清掉当时正在生效的 runtime post effect**（调用者可见的清屏副作用）；新：`PostEffectsJS` **不再覆写 `close`**（回到 `Binding` 默认 no-op），声明由 commit 换装，运行时画面只由显式 `set`/`clear` 改变 | **行为变更（规格轴审查 P4 整改）**：保留清屏需重新裁定「reload 是否应关画面」，且与「候选期不可见 / 失败保留旧 active」方向相反；默认 no-op 是语义最小的动作 |
 | 资源 reload 时的 chain 缓存 | 不变：`ShaderManagerMixin` 的 `apply`/`close` 仍调 `invalidatePostChainCache()`；新增：退役单个 id 时关闭其缓存链 | 释放顺序可观察（`retired` 计数 + 缓存清理） |
 
 ## 3. 文档与消费者清单
@@ -77,7 +78,7 @@ ClientEvents.tickPost(() => {
 | 旧脚本示例（`PostEffects.register`） | `wiki/全局绑定.md:287-298` | **未在本票更新**（wiki 属维护者文档面，且改它会与其它票的文档工作重叠）→ 记为遗留项，见 §4 |
 | 运行时 binding 用法 | `wiki/全局绑定.md:289` | 仍然有效 |
 | Java 侧调用点 | 全仓零调用（见 §2.1） | — |
-| Fabric | `versions/26.1.2-fabric` | PostEffects 整包缺席：`ClientEvents` 在 fabric 只有 tick/tickPost/tickPre，脚本引用 `ClientEvents.postEffects` 会得到显式 "No such event bus"（非静默 no-op）；capability 记为 unavailable |
+| Fabric | `versions/26.1.2-fabric` | PostEffects 整包缺席：fabric 生成源码里四个 posteffect 类整文件被注释（`//? if neoforge` 为假 ⇒ 类不存在），`ClientEvents` 在 fabric 只有 tick/tickPost/tickPre，脚本引用 `PostEffects.*` 或 `ClientEvents.postEffects` 得到「未定义标识符 / No such event bus」的确定失败（非静默 no-op）。**未**新造 fabric capability 矩阵文件（正式 capability 记录归 fabric 面 owner，见 REPORT §5） |
 
 ## 4. 遗留（owner）
 

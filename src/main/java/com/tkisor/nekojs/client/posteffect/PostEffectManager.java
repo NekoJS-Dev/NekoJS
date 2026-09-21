@@ -41,10 +41,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * a script binding: {@code ClientEvents.postEffects} declarations are collected into an inert
  * {@code PostEffectCandidatePlan} and only the commit point installs the active generation
  * through {@link #installGeneration}. A generation owns exactly the definitions it declared;
- * the previous generation's definitions, listeners and cached chains are released when the
- * new batch applies. Runtime-only ids still cannot be activated (that needs the
- * {@code ShaderManagerMixin} activation path), so {@link #set} refuses them explicitly
- * instead of silently rendering an empty frame.
+ * the previous generation's definitions and their cached chains are released when the new
+ * batch applies (event listeners are owned by the reload pipeline, not by this class).
+ * A declared id without a matching {@code post_effect} resource still cannot be activated:
+ * the activation path is {@code com.tkisor.nekojs.mixin.ShaderManagerMixin}, which this node
+ * ships ({@code //? if >=26}), so {@link #set} refuses such an id explicitly instead of
+ * silently rendering an empty frame.
  *
  * <p>All renderer mutations run on the client thread via {@code Minecraft#execute}.
  */
@@ -87,35 +89,74 @@ public final class PostEffectManager {
     }
 
     /**
-     * Installs one generation's definitions at the commit point and retires the rest: every
-     * id in {@code retired} is dropped, its cached runtime chain closed. The previous
-     * generation's definitions never survive the swap (no stale definition from an old
-     * generation), and the swap is observable through {@link #activeGeneration()} /
-     * {@link #definitionIds}.
+     * Installs one generation's definitions at the commit point and retires the rest. Every id
+     * the swap removes — a previously installed definition the new set does not re-declare, or
+     * a {@code retired} id that was installed — is dropped and its cached runtime chain closed;
+     * a retired id that was never installed has no cache to release. The previous generation's
+     * definitions never survive the swap (no stale definition from an old generation), and the
+     * swap is observable through {@link #activeGeneration()} / {@link #installedDefinitions()}.
      *
-     * <p>Called by {@code PostEffectDomainOwner#publishPostEffects} on the client/owner thread.
+     * <p>Production callers: {@code PostEffectDomainOwner#apply} (transactional COMMIT via
+     * {@code PostEffectCandidatePlan#publish}) and {@code PostEffectDomainOwner#applyInitialPlan}
+     * (the non-transactional client startup collection point). Both run on the client/owner thread.
      */
     public static void installGeneration(long generation, Map<Identifier, Definition> definitions,
                                          Set<Identifier> retired) {
-        Set<Identifier> removed = new LinkedHashSet<>();
-        for (Identifier id : List.copyOf(DEFINITIONS.keySet())) {
-            if (!definitions.containsKey(id)) {
-                removed.add(id);
-            }
-        }
-        for (Identifier id : retired) {
-            if (DEFINITIONS.containsKey(id)) {
-                removed.add(id);
-            }
-        }
+        Map<Identifier, Definition> previous = Map.copyOf(DEFINITIONS);
+        Set<Identifier> removed = removedIds(previous, definitions, retired);
+        // 缓存键只有 (id, allowedTargets)，不含定义内容：同一 id 重新声明为不同链时必须一并
+        // 失效，否则 getPostChain 会命中旧链而 shader 源已来自新定义（半更新）。
+        Set<Identifier> changed = redefinedIds(previous, definitions);
         for (Identifier id : removed) {
             DEFINITIONS.remove(id);
             dropCachedChains(id);
         }
+        for (Identifier id : changed) {
+            dropCachedChains(id);
+        }
         DEFINITIONS.putAll(definitions);
         ACTIVE_GENERATION = generation;
-        LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} retired)",
-                generation, definitions.size(), removed.size());
+        LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} removed, {} re-declared)",
+                generation, definitions.size(), removed.size(), changed.size());
+    }
+
+    /**
+     * Ids the swap drops: installed definitions the new set does not re-declare, plus retired
+     * ids that were installed. Package-private so the decision is unit-testable without a GPU.
+     */
+    static Set<Identifier> removedIds(Map<Identifier, Definition> previous,
+                                      Map<Identifier, Definition> next,
+                                      Set<Identifier> retired) {
+        Set<Identifier> removed = new LinkedHashSet<>();
+        for (Identifier id : previous.keySet()) {
+            if (!next.containsKey(id)) {
+                removed.add(id);
+            }
+        }
+        for (Identifier id : retired) {
+            if (previous.containsKey(id)) {
+                removed.add(id);
+            }
+        }
+        return removed;
+    }
+
+    /**
+     * Ids whose runtime chain cache must be dropped even though they stay installed: the cache
+     * key carries the id but not the definition, so a same-id re-declaration with different
+     * chain JSON would otherwise keep serving the previous chain while the shader source already
+     * comes from the new definition (a half update). Package-private for the same reason.
+     */
+    static Set<Identifier> redefinedIds(Map<Identifier, Definition> previous,
+                                        Map<Identifier, Definition> next) {
+        Set<Identifier> redefined = new LinkedHashSet<>();
+        for (Map.Entry<Identifier, Definition> entry : next.entrySet()) {
+            Definition before = previous.get(entry.getKey());
+            if (before != null && !before.equals(entry.getValue())) {
+                redefined.add(entry.getKey());
+            }
+        }
+        return redefined;
     }
 
     /** Definitions currently installed (read-only; the declaration query face reads this). */
@@ -195,8 +236,8 @@ public final class PostEffectManager {
 
     /**
      * Runtime GLSL source for a shader id installed by the active declaration generation.
-     * The shader manager mixin injects at {@code ShaderManager#getShader} HEAD and returns
-     * this when non-null.
+     * {@code com.tkisor.nekojs.mixin.ShaderManagerMixin} (this node only) injects at
+     * {@code ShaderManager#getShader} HEAD and returns this when non-null.
      */
     @Nullable
     public static String getRuntimeShaderSource(Identifier id, ShaderType type) {
@@ -249,9 +290,9 @@ public final class PostEffectManager {
     private static volatile long ACTIVE_GENERATION = -1L;
 
     /**
-     * Loads (and caches) the runtime {@link PostChain} for an installed definition. The
-     * shader manager mixin injects at {@code ShaderManager#getPostChain} HEAD and returns
-     * this when non-null.
+     * Loads (and caches) the runtime {@link PostChain} for an installed definition.
+     * {@code com.tkisor.nekojs.mixin.ShaderManagerMixin} (this node only) injects at
+     * {@code ShaderManager#getPostChain} HEAD and returns this when non-null.
      */
     @Nullable
     public static PostChain getOrCreatePostChain(Identifier id, Set<Identifier> allowedTargets,
@@ -290,7 +331,10 @@ public final class PostEffectManager {
         }
     }
 
-    /** Drops cached runtime chains (resource reload / shutdown — the shader manager mixin calls this). */
+    /**
+     * Drops cached runtime chains (resource reload / shutdown — {@code ShaderManagerMixin} calls
+     * this on {@code apply}/{@code close}).
+     */
     public static void invalidatePostChainCache() {
         for (PostChain chain : POST_CHAIN_CACHE.values()) {
             closeQuietly(chain);

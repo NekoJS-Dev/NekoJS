@@ -31,8 +31,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code PostEffectCandidatePlan} and only the commit point installs the active generation
  * through {@link #installGeneration}. A generation owns exactly the definitions it declared;
  * the previous generation's definitions and resources are released when the new batch
- * applies. 1.21.1 has no shader-source override, so a declaration is validated chain JSON
- * resolved through {@code assets/<ns>/shaders/post/<path>.json}.
+ * applies. 1.21.1 has no shader-source override and no shader-manager mixin, so a declaration
+ * is validated chain JSON resolved through {@code assets/<ns>/shaders/post/<path>.json} and a
+ * declared id without that resource cannot be activated (see {@link #getOrCreatePostChain}).
  *
  * <p>All renderer mutations run on the client thread via {@code Minecraft#execute}.
  */
@@ -75,26 +76,21 @@ public final class PostEffectManager {
     }
 
     /**
-     * Installs one generation's definitions at the commit point and retires the rest: every
-     * id in {@code retired} is dropped. The previous generation's definitions never survive
-     * the swap, and the swap is observable through {@link #activeGeneration()} /
-     * {@link #installedDefinitions()}.
+     * Installs one generation's definitions at the commit point and retires the rest: every id
+     * the swap removes — a previously installed definition the new set does not re-declare, or
+     * a {@code retired} id that was installed — is dropped. The previous generation's definitions
+     * never survive the swap, and the swap is observable through {@link #activeGeneration()} /
+     * {@link #installedDefinitions()}. If the runtime-active effect ({@link #lastSetId}) is among
+     * the removed ids, the client renderer is cleared as well so no stale frame keeps rendering.
      *
-     * <p>Called by {@code PostEffectDomainOwner#publishPostEffects} on the client/owner thread.
+     * <p>Production callers: {@code PostEffectDomainOwner#apply} (transactional COMMIT via
+     * {@code PostEffectCandidatePlan#publish}) and {@code PostEffectDomainOwner#applyInitialPlan}
+     * (the non-transactional client startup collection point). Both run on the client/owner thread.
      */
     public static void installGeneration(long generation, Map<ResourceLocation, Definition> definitions,
                                          Set<ResourceLocation> retired) {
-        Set<ResourceLocation> removed = new LinkedHashSet<>();
-        for (ResourceLocation id : List.copyOf(DEFINITIONS.keySet())) {
-            if (!definitions.containsKey(id)) {
-                removed.add(id);
-            }
-        }
-        for (ResourceLocation id : retired) {
-            if (DEFINITIONS.containsKey(id)) {
-                removed.add(id);
-            }
-        }
+        Map<ResourceLocation, Definition> previous = Map.copyOf(DEFINITIONS);
+        Set<ResourceLocation> removed = removedIds(previous, definitions, retired);
         for (ResourceLocation id : removed) {
             DEFINITIONS.remove(id);
         }
@@ -104,8 +100,47 @@ public final class PostEffectManager {
         if (activeRetired) {
             clear();
         }
-        LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} retired)",
+        LOGGER.info("Installed client post-effect generation {} ({} definition(s), {} removed)",
                 generation, definitions.size(), removed.size());
+    }
+
+    /**
+     * Ids the swap drops: installed definitions the new set does not re-declare, plus retired
+     * ids that were installed. Package-private so the decision is unit-testable without a client.
+     */
+    static Set<ResourceLocation> removedIds(Map<ResourceLocation, Definition> previous,
+                                            Map<ResourceLocation, Definition> next,
+                                            Set<ResourceLocation> retired) {
+        Set<ResourceLocation> removed = new LinkedHashSet<>();
+        for (ResourceLocation id : previous.keySet()) {
+            if (!next.containsKey(id)) {
+                removed.add(id);
+            }
+        }
+        for (ResourceLocation id : retired) {
+            if (previous.containsKey(id)) {
+                removed.add(id);
+            }
+        }
+        return removed;
+    }
+
+    /**
+     * Ids whose runtime chain cache must be dropped even though they stay installed. 1.21.1 has
+     * no shader-manager hook yet (see {@link #getOrCreatePostChain}), so nothing populates a
+     * cache today; the decision is kept paired with 26.x so the invalidation contract is the
+     * same on both nodes once the hook lands. Package-private for the same reason.
+     */
+    static Set<ResourceLocation> redefinedIds(Map<ResourceLocation, Definition> previous,
+                                              Map<ResourceLocation, Definition> next) {
+        Set<ResourceLocation> redefined = new LinkedHashSet<>();
+        for (Map.Entry<ResourceLocation, Definition> entry : next.entrySet()) {
+            Definition before = previous.get(entry.getKey());
+            if (before != null && !before.equals(entry.getValue())) {
+                redefined.add(entry.getKey());
+            }
+        }
+        return redefined;
     }
 
     /** Definitions currently installed (read-only; the declaration query face reads this). */
@@ -200,9 +235,11 @@ public final class PostEffectManager {
     }
 
     /**
-     * Loads (and caches) the runtime {@link PostChain} for an installed definition. Present
-     * for parity with the 26.x shader-manager hook; the 1.21.1 post-chain mixin is still
-     * pending, so nothing calls this yet.
+     * Always returns {@code null}: 1.21.1 has no shader-manager mixin (26.x's
+     * {@code com.tkisor.nekojs.mixin.ShaderManagerMixin} is {@code //? if >=26}), so no hook
+     * injects here and nothing calls this method. It exists only as the 1.21.1 placeholder for
+     * the 26.x runtime-chain entry point; runtime-only declarations therefore stay
+     * non-activatable on this node (see {@link #set}).
      */
     @Nullable
     public static PostChain getOrCreatePostChain(ResourceLocation id) {

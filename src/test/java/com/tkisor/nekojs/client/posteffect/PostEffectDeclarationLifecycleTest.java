@@ -86,7 +86,6 @@ class PostEffectDeclarationLifecycleTest {
                 "the initial generation collection point installs the declared definition");
         assertEquals(PostEffectDomainOwner.Outcome.APPLIED, harness.owner.lastDiagnostics().outcome());
         long installed = harness.owner.activeGeneration();
-        assertTrue(installed >= 0, "the first install advances the declaration generation");
         assertEquals(installed, PostEffectManager.activeGeneration(),
                 "the runtime binding's generation query reports the installed generation");
         assertTrue(harness.owner.hasActiveDefinition(Identifier.parse("nekojs:gray")));
@@ -253,16 +252,76 @@ class PostEffectDeclarationLifecycleTest {
                 "the query face advances exactly once with the committed generation");
         assertEquals(harness.owner.activeGeneration(), PostEffectManager.activeGeneration());
         assertTrue(harness.owner.hasActiveDefinition(Identifier.parse("nekojs:gray")));
-        assertTrue(harness.owner.activeIds().contains("nekojs:gray"));
+        assertEquals(List.of("nekojs:gray"), PostEffectDeclarationHarness.installedIds(),
+                "the read-only declaration query exposes the committed id");
+        assertTrue(new PostEffectsJS().hasDefinition("nekojs:gray"),
+                "the runtime binding's declaration query agrees with the owner (no stale read)");
+    }
+
+    @Test
+    void aCandidatePreflightThatPassesDoesNotPublishAnObservation() throws Exception {
+        // P3：本域 preflight 通过 ≠ 本域已提交。整批仍可能因其它域/STATE_PLAN/close 抢占丢弃，
+        // 而 lastDiagnostics 是「active generation 现在是什么」的公开读面——候选期不得写它。
+        harness.writeClientScript("fx.js", """
+                ClientEvents.postEffects(event => event.register('nekojs:gray', { chainJson: '%s' }))
+                """.formatted(chainJson("minecraft:post/invert")));
+        harness.loadAndApplyInitialPlan();
+        PostEffectDomainOwner.Diagnostics before = harness.owner.lastDiagnostics();
+        assertEquals(PostEffectDomainOwner.Outcome.APPLIED, before.outcome());
+
+        // 另一个域在 STATE_PLAN 联合预检失败：本域 preflight 会先通过，但整批不提交。
+        harness.root.registerDomainCollector(new com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector() {
+            @Override public String domain() { return "post-effect-failing-peer"; }
+            @Override public ScriptType scriptType() { return ScriptType.CLIENT; }
+            @Override public void collect(Handle handle) {
+                handle.registerPlan(new com.tkisor.nekojs.core.state.CandidateStatePlan() {
+                    @Override public String domain() { return "post-effect-failing-peer"; }
+                    @Override public void preflight() { throw new IllegalStateException("peer domain rejected"); }
+                    @Override public void publish() { }
+                });
+            }
+        });
+        harness.writeClientScript("fx.js", """
+                ClientEvents.postEffects(event => event.register('nekojs:sepia', { chainJson: '%s' }))
+                """.formatted(chainJson("minecraft:post/blur")));
+        assertThrows(NekoReloadException.class, harness::reloadClientScripts);
+
+        assertEquals(before, harness.owner.lastDiagnostics(),
+                "a candidate that never committed must not publish an observation (no PREFLIGHT_OK leak)");
+        assertEquals(List.of("nekojs:gray"), PostEffectDeclarationHarness.installedIds(),
+                "the old active generation keeps serving after the discarded candidate");
+    }
+
+    @Test
+    void reloadTeardownDoesNotTouchTheRuntimePicture() throws Exception {
+        // P4：close(ScriptType) 不再清屏——声明注册表已由 generation 生命周期持有，运行时画面
+        // 状态不是 binding 的清理对象。1.1.x 的 clearRegistered() 在 reload 前清声明账本时
+        // 会顺带 clear()（清屏），收口后该副作用消失。
+        //
+        // 这里断言 binding **没有** 覆写 close：唯一的清理路径回到 Binding 的默认 no-op，因此
+        // reload teardown 不产生调用者可见的清屏。渲染状态本身需要真机客户端，不在无头 JVM 断言
+        // （见 REPORT §5 未验证项）。
+        java.lang.reflect.Method close;
+        try {
+            close = PostEffectsJS.class.getDeclaredMethod("close", ScriptType.class);
+        } catch (NoSuchMethodException absent) {
+            close = null;
+        }
+        assertEquals(null, close,
+                "the runtime binding must not override close: reload teardown must not clear the"
+                        + " picture (declarations are owned by the generation lifecycle)");
     }
 
     @Test
     void runtimeBindingMembersStayAvailableAndAreNotReplacedByTheDeclarationEvent() {
         // AC5：set/clear/toggle/current 仍是运行时 binding；声明事件不提供它们。
-        assertTrue(Set.of("set", "clear", "toggle", "current", "isActive", "hasDefinition",
-                        "installed", "activeGeneration", "isAvailable", "presets")
-                        .containsAll(List.of("set", "clear", "toggle", "current")),
-                "the runtime binding keeps its caller-visible members");
+        // 反射读真实成员，而不是对字面量集合自断言（那恒真，证明不了任何事）。
+        Set<String> bindingMembers = new java.util.HashSet<>();
+        for (var method : PostEffectsJS.class.getMethods()) {
+            bindingMembers.add(method.getName());
+        }
+        assertTrue(bindingMembers.containsAll(Set.of("set", "clear", "toggle", "current", "isActive")),
+                "the runtime binding lost caller-visible members: " + bindingMembers);
         for (var method : PostEffectsJS.class.getMethods()) {
             if (method.getDeclaringClass() == Object.class) continue;
             assertFalse(Set.of("register", "unregister").contains(method.getName()),

@@ -51,10 +51,12 @@ public final class PostEffectCandidatePlan implements CandidateStatePlan {
     }
 
     /**
-     * Starts a batch for the given candidate generation.
+     * Starts a batch for the given generation.
      *
      * @param applier     platform Adapter that owns the live renderer/resources
-     * @param generation  candidate generation number (diagnostics/fingerprint)
+     * @param generation  generation this batch belongs to; the Adapter uses it as its own
+     *                    commit bookkeeping (diagnostics/fingerprint), not as a
+     *                    {@code ScriptManager} generation number
      * @param previousIds ids owned by the previously active generation (retire set)
      */
     public static PostEffectCandidatePlan beginBatch(PostEffectApplier applier, long generation,

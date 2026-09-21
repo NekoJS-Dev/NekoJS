@@ -318,11 +318,6 @@ public final class ScriptManager implements AutoCloseable {
         }
 
         @Override
-        public long candidateGeneration() {
-            return ScriptManager.this.generation + 1;
-        }
-
-        @Override
         public ScriptType scriptType() {
             return ScriptManager.this.scriptType;
         }

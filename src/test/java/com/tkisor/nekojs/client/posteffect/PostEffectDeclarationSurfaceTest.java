@@ -66,7 +66,6 @@ class PostEffectDeclarationSurfaceTest {
                 "the declaration surface is client_scripts only (no server-side post effects)");
         assertFalse(bus.canDispatch(),
                 "the declaration bus is not key-dispatched: candidate collection has no key context");
-        assertTrue(List.of(ScriptType.values()).contains(ScriptType.CLIENT));
     }
 
     @Test

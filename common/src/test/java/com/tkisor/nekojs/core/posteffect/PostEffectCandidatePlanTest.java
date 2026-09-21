@@ -9,7 +9,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -19,6 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>本 fixture 只断言 common 接缝（计划 + {@link PostEffectApplier}）；平台 Adapter 的
  * 真实效果贯穿面在版本树 {@code PostEffectDeclarationLifecycleTest}。
+ *
+ * <p><b>诚实性约束</b>：只写会因行为变化而失败的断言。恒真的自断言（如对字面量集合求
+ * 包含、{@code assertSame(x, x)}）不构成证据，本文件不保留这类写法。
  */
 class PostEffectCandidatePlanTest {
 
@@ -157,6 +159,28 @@ class PostEffectCandidatePlanTest {
         assertFalse(third.fingerprint().equals(first.fingerprint()), "different chain JSON is a different plan");
     }
 
+    /**
+     * P1 回归（先红后绿）：同一 id 重新声明为不同 chain JSON 时，重复安装必须让「同一批次
+     * 的两次不同声明」保持可区分——计划层不得把后者当成前者（last-write-wins 是按 id 覆盖，
+     * 覆盖后的声明内容必须是新的那份）。这是平台缓存失效决策的输入事实。
+     */
+    @Test
+    void redeclaringTheSameIdInOneBatchKeepsTheLatestDeclaration() {
+        RecordingApplier applier = new RecordingApplier();
+        PostEffectCandidatePlan plan = batch(applier, Set.of());
+        plan.install(PostEffectDeclaration.install("nekojs:gray", "{\"v\":1}",
+                java.util.Map.of(), java.util.Map.of()));
+        plan.install(PostEffectDeclaration.install("nekojs:gray", "{\"v\":2}",
+                java.util.Map.of(), java.util.Map.of()));
+        plan.finish();
+
+        assertEquals(1, plan.installCount(), "one id is one declaration");
+        assertEquals("{\"v\":2}", plan.declarations().get(0).chainJson(),
+                "the later declaration replaces the earlier one for the same id");
+        assertFalse(plan.fingerprint().contains("{\"v\":1}"),
+                "the superseded declaration must not leak into the batch fingerprint");
+    }
+
     @Test
     void unfrozenBatchCannotPassPreflight() {
         RecordingApplier applier = new RecordingApplier();
@@ -181,7 +205,6 @@ class PostEffectCandidatePlanTest {
         PostEffectCandidatePlan plan = batch(new RecordingApplier(), Set.of());
         assertEquals(PostEffectCandidatePlan.DOMAIN, plan.domain());
         assertEquals(7L, plan.generation());
-        assertSame(plan, plan);
         assertNull(plan.collectionError());
     }
 }

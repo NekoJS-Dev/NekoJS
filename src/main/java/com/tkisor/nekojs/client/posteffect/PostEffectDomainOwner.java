@@ -57,8 +57,6 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
     private volatile Set<String> activeIds = Set.of();
     private volatile Diagnostics lastDiagnostics =
             new Diagnostics(Outcome.INITIAL, "none", -1L, 0, 0, List.of(), null);
-    /** 最近成功安装的批次指纹（初始收集点的等价跳过依据；失败批次复位）。 */
-    private volatile String lastAppliedFingerprint;
 
     public PostEffectDomainOwner() {
     }
@@ -78,8 +76,10 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
 
     @Override
     public void collect(CandidateDomainCollector.Handle handle) {
+        // 批次 generation 是领域账本自己的序号（初始收集点与事务 commit 共用同一条递增线）：
+        // 领域计划在 commit 前不可见，用它当诊断/指纹标签而不是 ScriptManager 的 generation。
         PostEffectCandidatePlan plan = PostEffectCandidatePlan.beginBatch(
-                this, handle.candidateGeneration(), activeIds);
+                this, activeGeneration + 1L, activeIds);
         try {
             handle.dispatch(ClientEvents.POST_EFFECTS, new PostEffectEventJS(plan));
         } finally {
@@ -96,7 +96,8 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
      * {@code loadScripts()} path has no candidate/commit, so the declarations are dispatched
      * to the <b>active</b> bus and applied in this owner after a passing preflight. A
      * rejected batch ({@link Outcome#BLOCKED}) keeps the previous active generation and
-     * never half-applies; an identical replay is skipped (idempotent).
+     * never half-applies. Unlike the candidate path it has no joint boundary to join, so the
+     * whole batch is validated here and installed in one step.
      */
     public void applyInitialPlan() {
         PostEffectCandidatePlan plan = PostEffectCandidatePlan.beginBatch(
@@ -112,13 +113,6 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
             return;
         }
         plan.finish();
-        if (plan.fingerprint().equals(lastAppliedFingerprint)
-                && lastDiagnostics.outcome() == Outcome.APPLIED) {
-            // 等价重放：不产生第二次安装/退役（与票 39 的等价跳过同款幂等）。
-            lastDiagnostics = new Diagnostics(Outcome.SKIPPED_IDENTICAL, "initial",
-                    activeGeneration, plan.installCount(), 0, List.of(), null);
-            return;
-        }
         try {
             plan.preflight();
         } catch (Throwable rejected) {
@@ -129,7 +123,6 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
             return;
         }
         apply(plan.declarations());
-        lastAppliedFingerprint = plan.fingerprint();
     }
 
     // ---- PostEffectApplier：联合预检 / commit 点应用 ----
@@ -142,12 +135,18 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
     /**
      * Candidate preflight: parses every declared chain (the same validation the old
      * {@code register} binding performed) and rejects the whole batch on the first invalid
-     * payload. No live state is touched.
+     * payload.
+     *
+     * <p><b>Publishes nothing.</b> A candidate preflight that passes is not an outcome: another
+     * domain's preflight, a joint STATE_PLAN conflict or a close preemption can still discard
+     * the whole candidate, and {@link #lastDiagnostics()} is a public read face for what the
+     * <b>active</b> generation is. Publishing "preflight passed" here would leave a
+     * "preflight passed but never committed" observation behind. The parsed definitions are
+     * therefore kept local; the commit point re-parses and publishes {@link Outcome#APPLIED}.
      */
     @Override
     public void preflight(List<PostEffectDeclaration> declarations) {
         if (declarations == null || declarations.isEmpty()) return;
-        Map<Identifier, PostEffectManager.Definition> parsed = new LinkedHashMap<>();
         for (PostEffectDeclaration declaration : declarations) {
             if (declaration.kind() != PostEffectDeclaration.Kind.INSTALL) continue;
             Identifier id = Identifier.tryParse(declaration.id());
@@ -162,10 +161,7 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
                 throw new IllegalArgumentException(
                         "Invalid post-effect chain JSON for " + declaration.id());
             }
-            parsed.put(id, definition);
         }
-        lastDiagnostics = new Diagnostics(Outcome.PREFLIGHT_OK, "candidate", activeGeneration,
-                parsed.size(), 0, List.of(), null);
     }
 
     /**
@@ -218,7 +214,6 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
                     installed.size(), retired.size(), List.copyOf(released), null);
         } catch (Throwable failure) {
             // candidate 契约：preflight 通过后 apply 不得抛；真抛了如实记录，不宣称成功。
-            lastAppliedFingerprint = null;
             lastDiagnostics = new Diagnostics(Outcome.RECOVERY_FAILED, "commit", activeGeneration,
                     installed.size(), retired.size(), List.copyOf(released), String.valueOf(failure));
             throw failure;
@@ -237,28 +232,23 @@ public final class PostEffectDomainOwner implements CandidateDomainCollector, Po
         return id != null && activeIds.contains(id.toString());
     }
 
-    /** Ids owned by the active declaration generation (read-only snapshot). */
-    public Set<String> activeIds() {
-        return activeIds;
-    }
-
     /** Last collection/apply outcome (diagnostics read face). */
     public Diagnostics lastDiagnostics() {
         return lastDiagnostics;
     }
 
-    /** Post-effect declaration domain outcome (diagnostics distinguish active / blocked / failed). */
+    /**
+     * Post-effect declaration domain outcome (diagnostics distinguish active / blocked / failed).
+     * Only outcomes the owner actually publishes are listed: a passing candidate preflight is
+     * deliberately <b>not</b> one of them (see {@link #preflight}).
+     */
     public enum Outcome {
         /** No declaration batch has been processed yet. */
         INITIAL,
-        /** Candidate preflight passed; nothing is live yet. */
-        PREFLIGHT_OK,
         /** New generation installed at the commit point. */
         APPLIED,
-        /** Preflight rejected the whole batch: the previous active generation keeps serving. */
+        /** The batch was rejected: the previous active generation keeps serving. */
         BLOCKED,
-        /** The initial collection point saw a batch equivalent to the last applied one (no replay). */
-        SKIPPED_IDENTICAL,
         /** Apply failed after a passing preflight (never claims success). */
         RECOVERY_FAILED
     }
