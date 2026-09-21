@@ -211,8 +211,8 @@ docs/architecture-refactor/implementation-tickets/29-assets.md         （票据
 ### 6.1 标准轴（AGENTS.md / docs/agents/coding.md）
 
 - **范围与单一目标**：改动集中在本票域；唯一越出「Assets/Lang 既有文件」的是
-  `NekoJSCorePlugin` 的 3 行恢复——已获维护者裁定属本域根因修复（AC1/AC3 要求该 typed
-  binding 是调用者入口）。`ClientEvents.java` 的输入/HUD 行未碰；共享 golden 未改。
+  `NekoJSCorePlugin` 的 3 行恢复——属本域根因修复（AC1/AC3 要求该 typed
+  binding 是调用者入口）；**该判断仍待维护者确认**（票据 29 的 Human input note：涉及公开面归属/删除的确认不能由 agent 代答）。`ClientEvents.java` 的输入/HUD 行未碰；共享 golden 未改。
 - **注释语言**：新增 javadoc/注释沿用邻近文件的中文风格（与票 28 §6.3 记录的仓库现状一致），
   未做批量语言重写；新增英文日志消息（`generatedLangs hook failed for ...`）按
   AGENTS.md#Language 的「developer-facing log templates 用英文」。**未**出现描述不存在方法
@@ -236,7 +236,7 @@ docs/architecture-refactor/implementation-tickets/29-assets.md         （票据
 - **AC 逐条**：见 §3。**4 条勾选、3 条部分满足不勾选、1 条 sign-off 门禁不勾选**，每条都写了
   缺什么。
 - **越权**：`Assets` 绑定恢复是本票 diff 中唯一「票据字面未点名、但 AC 语义要求」的改动，
-  已由维护者书面裁定纳入；除此之外无 scope creep——未新增事件、未改声明产物、未碰其他域。
+  属本域 AC 语义要求，**待维护者确认**（仓库内无签核记录）；除此之外无 scope creep——未新增事件、未改声明产物、未碰其他域。
 - **做的比要求多**：`resolveGeneratedLangs` 的 `scriptRegisteredLangs` 形参用
   `Collection<String>` 而非 `Set<String>`（`registeredKeys()` 返回 `Set`，宽形参让测试能传
   `List` 并覆盖「输入顺序无关」这一点）；`null` 形参被当空集处理——两处都是为可测性与健壮性
