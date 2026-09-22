@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "exampleaddon",
+  "version": "1.0.0",
+  "name": "Example Addon Fixture",
+  "description": "Test-only external NekoJS plugin addon fixture; not shipped in any production jar.",
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "nekojs": [
+      "com.example.addon.ExampleAddonPlugin"
+    ]
+  },
+  "depends": {
+    "nekojs": "*"
+  }
+}

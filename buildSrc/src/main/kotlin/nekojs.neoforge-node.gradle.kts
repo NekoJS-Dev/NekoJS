@@ -267,6 +267,14 @@ tasks.test {
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
     systemProperty("file.encoding", "UTF-8")
+    // Ticket 08: path injection for the test-only external addon fixture jar (loader-shaped discovery tests)
+    val addonJar = project(":common").tasks.named("externalAddonJar")
+    dependsOn(addonJar)
+    inputs.files(addonJar)
+    doFirst {
+        val jarTask = addonJar.get() as org.gradle.jvm.tasks.Jar
+        systemProperty("nekojs.test.externalAddonJar", jarTask.archiveFile.get().asFile.absolutePath)
+    }
 }
 
 // ---- 工单 33：contract/spec + event/surface 覆盖 gate（Fabric processor 延期的非 processor 替代） -----

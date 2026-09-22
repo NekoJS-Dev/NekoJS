@@ -182,3 +182,61 @@ tasks.register('regenerateGoldens', Test) {
     }
     systemProperty 'nekojs.golden.regenerate', 'true'
 }
+
+// ---- Ticket 08: test-only external addon fixture artifact ----------------------------
+// Mimics a future third-party plugin jar: sources live in a dedicated source set whose
+// compile classpath is **only** common main output (not even this module's test deps or
+// fixtures are visible — structurally guaranteeing "the dependency surface matches a
+// third-party plugin and never imports production-internal test seams"). The jar carries
+// production-shaped neoforge.mods.toml and fabric.mod.json; none of the five production
+// node jars may contain any of it (root-level verifyExternalAddonIsolation gate).
+
+sourceSets {
+    addonFixture {
+        // Default dirs are src/addonFixture/{java,resources}; only the classpath is pinned.
+        // Deliberately main output only: the compile surface = public engine contracts
+        // (api.* + core.plugin provider API), a subset of the published fat-jar surface
+        // a third party compiles against.
+        compileClasspath = sourceSets.main.output
+    }
+}
+
+def externalAddonJar = tasks.register('externalAddonJar', Jar) {
+    group = 'verification'
+    description = 'Builds the test-only external addon fixture jar (ticket 08 discovery input).'
+    archiveBaseName = 'nekojs-external-addon-fixture'
+    archiveClassifier = 'testonly'
+    from sourceSets.addonFixture.output
+}
+
+// Injects the fixture jar path into a consuming test task (doFirst so the JVM picks it up)
+def provideAddonJarTo = { Test testTask ->
+    testTask.dependsOn externalAddonJar
+    testTask.inputs.files(externalAddonJar)
+    testTask.doFirst {
+        systemProperty 'nekojs.test.externalAddonJar',
+                externalAddonJar.get().archiveFile.get().asFile.absolutePath
+    }
+}
+
+provideAddonJarTo(tasks.named('test', Test).get())
+
+// Compile-surface gate for the fixture: rejects anyone later wiring testImplementation
+// into addonFixture — that would degrade the independent third-party surface into an
+// internal test-seam consumer.
+tasks.register('verifyAddonFixtureDependencySurface') {
+    group = 'verification'
+    description = 'Asserts the addon fixture source set compiles against common main output only.'
+    dependsOn tasks.named('compileAddonFixtureJava')
+    doLast {
+        def cp = tasks.named('compileAddonFixtureJava').get().classpath.files.collect { it.canonicalPath }.toSet()
+        def allowed = sourceSets.main.output.files.collect { it.canonicalPath }.toSet()
+        def unexpected = cp - allowed
+        if (!unexpected.isEmpty()) {
+            throw new GradleException(
+                    "addonFixture compile classpath must be common main output only, found: ${unexpected.sort()}")
+        }
+    }
+}
+check.dependsOn tasks.named('verifyAddonFixtureDependencySurface')
+

@@ -271,6 +271,80 @@ tasks.register("sandboxCheck") {
     )
 }
 
+// ---- Ticket 08: external addon fixture artifact isolation gate -----------------------
+// None of the five production node jars may contain any class, resource or loader
+// metadata of the test-only external addon fixture (shipping the fixture inside a
+// production fat jar would publish the test surface to players). The gate also
+// positively verifies the fixture jar itself carries both loader metadata files
+// (discovery-input shape integrity).
+val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
+    group = "verification"
+    description = "Asserts the five production node jars contain no external addon fixture content (ticket 08)."
+
+    val addonJarTask = project(":common").tasks.named("externalAddonJar")
+    // Five production jars = the five version subprojects (the root is a container without a jar task)
+    val nodeJarTasks = subprojects
+        .filter {
+            it.name != "common" && it.name != "common-api-processor"
+                    && it.plugins.hasPlugin("java") && it.tasks.names.contains("jar")
+        }
+        .map { it.tasks.named("jar") }
+    dependsOn(addonJarTask)
+    dependsOn(nodeJarTasks)
+
+    val fixturePackagePrefix = "com/example/addon/"
+    val fixtureModId = "exampleaddon"
+    val metadataEntries = setOf("fabric.mod.json", "META-INF/neoforge.mods.toml")
+
+    doLast {
+        val addonJar = addonJarTask.get().outputs.files.singleFile
+        // Positive arm: the fixture jar must carry both loader metadata files and plugin classes
+        java.util.zip.ZipFile(addonJar).use { zip ->
+            val entries = zip.entries().asSequence().toList()
+            val names = entries.map { it.name }.toSet()
+            for (required in metadataEntries + fixturePackagePrefix) {
+                val present = if (required.endsWith("/"))
+                    names.any { it.startsWith(required) }
+                else
+                    required in names
+                if (!present) {
+                    throw GradleException("addon fixture jar is missing required discovery input: $required")
+                }
+            }
+        }
+        // Negative arm: no production jar may carry fixture classes or metadata traces
+        val checked = mutableListOf<String>()
+        nodeJarTasks.forEach { jarTask ->
+            val archive = (jarTask.get() as org.gradle.jvm.tasks.Jar).archiveFile.get().asFile
+            checked += archive.name
+            java.util.zip.ZipFile(archive).use { zip ->
+                val violations = mutableListOf<String>()
+                for (entry in zip.entries()) {
+                    if (entry.name.startsWith(fixturePackagePrefix)) {
+                        violations += "${archive.name}: fixture class entry ${entry.name}"
+                    } else if (entry.name in metadataEntries) {
+                        val text = zip.getInputStream(entry).bufferedReader().readText()
+                        if (text.contains(fixtureModId)) {
+                            violations += "${archive.name}: fixture metadata marker in ${entry.name}"
+                        }
+                    }
+                }
+                if (violations.isNotEmpty()) {
+                    throw GradleException(
+                        "production jar contains test-only addon fixture content (ticket 08 AC1):\n  - " +
+                                violations.joinToString("\n  - "))
+                }
+            }
+        }
+        if (checked.size != 5) {
+            throw GradleException(
+                "expected to verify exactly 5 production jars (ticket 08 AC1), found ${checked.size}: $checked")
+        }
+        logger.lifecycle("verifyExternalAddonIsolation: ${checked.size} 个生产 jar 均不含 fixture 内容，fixture jar 元数据齐全")
+    }
+}
+tasks.named("sandboxCheck") { dependsOn(externalAddonIsolation) }
+
 // ---- switchVersion：切换 active 节点 -----------------------------------------------
 // 用法：gradlew switchVersion -Pnode=26.2.0。改控制器脚本的 active 行，执行后需在 IDE
 // 重新 Gradle sync 才生效（本任务在配置完成后执行，改写对本次构建无影响）。

@@ -1,0 +1,26 @@
+# Test-only external addon fixture metadata in the production NeoForge format.
+# A future third-party plugin ships the same file inside its jar; FML discovers
+# the jar through the mods directory and scans it for @RegisterNekoJSPlugin.
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "exampleaddon"
+version = "1.0.0"
+displayName = "Example Addon Fixture"
+description = "Test-only external NekoJS plugin addon fixture; not shipped in any production jar."
+
+[[dependencies.exampleaddon]]
+modId = "neoforge"
+type = "required"
+versionRange = "[4,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.exampleaddon]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21,)"
+ordering = "NONE"
+side = "BOTH"

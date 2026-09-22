@@ -188,6 +188,14 @@ tasks.test {
     systemProperty("file.encoding", "UTF-8")
     // Fabric now has a versioned runtime smoke gate and six JUnit tests; an empty suite must fail.
     failOnNoDiscoveredTests = true
+    // Ticket 08: path injection for the test-only external addon fixture jar (loader-shaped discovery tests)
+    val addonJar = project(":common").tasks.named("externalAddonJar")
+    dependsOn(addonJar)
+    inputs.files(addonJar)
+    doFirst {
+        val jarTask = addonJar.get() as org.gradle.jvm.tasks.Jar
+        systemProperty("nekojs.test.externalAddonJar", jarTask.archiveFile.get().asFile.absolutePath)
+    }
 }
 
 // ---- 工单 33：contract/spec + event/surface 覆盖 gate（Fabric processor 延期的非 processor 替代） ----

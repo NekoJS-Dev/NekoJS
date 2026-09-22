@@ -15,7 +15,10 @@ import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoEsmVirtualModuleRegistry;
 import com.tkisor.nekojs.core.plugin.NodeModulesPoint;
 import com.tkisor.nekojs.core.plugin.NekoPluginRuntime;
+import com.tkisor.nekojs.api.plugin.OwnedPlugin;
+import com.tkisor.nekojs.api.plugin.PluginIdentity;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
+import com.tkisor.nekojs.testfixture.CoreContractPreviews;
 import com.tkisor.nekojs.testfixture.TestPlatformInit;
 import org.junit.jupiter.api.Test;
 import java.util.List;
@@ -25,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NekoSandboxFactoryResourceTest {
     @Test
-    void failedNodeInstallerClosesPartialRuntimeAndSandboxResources() {
+    void failedNodeInstallerClosesPartialRuntimeAndSandboxResources() throws Exception {
         TestPlatformInit.ensureInitialized();
         NekoJSPaths paths = NekoJSPaths.get();
         SandboxConfig config = SandboxConfig.defaultConfig();
@@ -37,7 +40,8 @@ class NekoSandboxFactoryResourceTest {
                 sourceMaps, virtualModules, NekoTrustContext.local());
         NekoModulePipelineCache session = owner.openSession();
         DefaultErrorTracker tracker = new DefaultErrorTracker(paths, config);
-        NekoPluginRuntime.bootstrap(List.of(new BrokenNodeModulePlugin()), new ScriptPropertyRegistry.Impl());
+        NekoPluginRuntime.bootstrapOwned(List.of(owned(new BrokenNodeModulePlugin())),
+                new ScriptPropertyRegistry.Impl(), CoreContractPreviews.emptyPortablePreview());
         NekoSandboxFactory factory = new NekoSandboxFactory(
                 new NekoCoreContext(NekoSharedEngine.get(), config, ClassFilter.INSTANCE, tracker),
                 paths, compilers, NekoPluginRuntime.current(), owner);
@@ -50,8 +54,15 @@ class NekoSandboxFactoryResourceTest {
         } finally {
             session.closeSession();
             owner.close();
-            NekoPluginRuntime.bootstrap(List.of(), new ScriptPropertyRegistry.Impl());
+            NekoPluginRuntime.bootstrapOwned(List.of(), new ScriptPropertyRegistry.Impl(),
+                    CoreContractPreviews.emptyPortablePreview());
         }
+    }
+
+    private static OwnedPlugin owned(NekoJSPlugin plugin) {
+        return new OwnedPlugin(new PluginIdentity("legacy:" + plugin.getClass().getName(),
+                plugin.getClass().getName(),
+                java.net.URI.create("legacy:" + plugin.getClass().getName())), plugin);
     }
 
     private static final class BrokenNodeModulePlugin implements NekoJSPlugin, NodeModulesPoint.Contributor {
