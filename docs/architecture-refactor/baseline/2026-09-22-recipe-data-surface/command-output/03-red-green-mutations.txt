@@ -1,0 +1,69 @@
+# Ticket 23 red->green mutation evidence
+# Each mutation: apply regression -> run tests (expect RED) -> revert -> run again (expect GREEN).
+# Commands run from worktree root D:/mcmodDemo/NekoJS-mult-t23 via Git Bash.
+
+==================================================================
+== Mutation A: publish() loses its mid-failure rollback (AC6) ==
+==================================================================
+--- mutation applied: rollback call disabled ---
+$ ./gradlew.bat :common:test --tests "*DataGenerationBatchTest*" --console=plain
+DataGenerationBatchTest > midPublishFailureRollsBackEverythingAndRetainsOldActive() FAILED
+    org.opentest4j.AssertionFailedError at DataGenerationBatchTest.java:158
+8 tests completed, 1 failed
+> Task :common:test FAILED
+BUILD FAILED in 8s
+
+--- mutation reverted ---
+$ ./gradlew.bat :common:test --tests "*DataGenerationBatchTest*" --console=plain
+BUILD SUCCESSFUL in 7s
+
+
+==================================================================
+== Mutation B: validate() accepts invalid JSON (AC6) ==
+==================================================================
+--- mutation applied: invalid JSON no longer rejected ---
+$ ./gradlew.bat :common:test --tests "*DataGenerationBatchTest*" --console=plain
+DataGenerationBatchTest > invalidJsonCandidateFailsValidationAndRetainsPreviousActiveData() FAILED
+    org.opentest4j.AssertionFailedError at DataGenerationBatchTest.java:126
+8 tests completed, 1 failed
+> Task :common:test FAILED
+BUILD FAILED in 6s
+
+--- mutation reverted ---
+$ ./gradlew.bat :common:test --tests "*DataGenerationBatchTest*" --console=plain
+BUILD SUCCESSFUL in 3s
+
+
+==================================================================
+== Mutation C: afterRecipes moved back BEFORE the commit (AC3, 26.x mixin) ==
+==================================================================
+--- mutation applied: after phase moved before the commit ---
+$ ./gradlew.bat :26.1.2:test --tests "*Ticket23RecipeDataPhaseTraceTest*" --console=plain
+> Task :26.1.2:test FAILED
+Ticket23RecipeDataPhaseTraceTest > afterRecipesFiresOnlyAfterTheParsedBatchIsCommitted_26x() FAILED
+    org.opentest4j.AssertionFailedError at Ticket23RecipeDataPhaseTraceTest.java:109
+9 tests completed, 1 failed
+BUILD FAILED in 16s
+
+--- mutation reverted ---
+$ ./gradlew.bat :26.1.2:test --tests "*Ticket23RecipeDataPhaseTraceTest*" --console=plain
+BUILD SUCCESSFUL in 5s
+
+
+==================================================================
+== Mutation D: listener back to the direct-write dual pipeline (AC4, 26.x listener) ==
+==================================================================
+--- mutation applied: direct-write dual pipeline restored ---
+$ ./gradlew.bat :26.1.2:test --tests "*Ticket23RecipeDataPhaseTraceTest*" --console=plain
+> Task :26.1.2:test FAILED
+Ticket23RecipeDataPhaseTraceTest > lootTablesPhasePrecedesGenerateDataInBothReloadListeners() FAILED
+    org.opentest4j.AssertionFailedError at Ticket23RecipeDataPhaseTraceTest.java:163
+Ticket23RecipeDataPhaseTraceTest > generateDataRunsThroughTheSingleBatchPipeline_26x() FAILED
+    org.opentest4j.AssertionFailedError at Ticket23RecipeDataPhaseTraceTest.java:144
+9 tests completed, 2 failed
+BUILD FAILED in 11s
+
+--- mutation reverted ---
+$ ./gradlew.bat :26.1.2:test --tests "*Ticket23RecipeDataPhaseTraceTest*" --console=plain
+BUILD SUCCESSFUL in 3s
+
