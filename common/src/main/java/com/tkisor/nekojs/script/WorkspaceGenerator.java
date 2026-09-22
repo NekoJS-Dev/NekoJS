@@ -110,6 +110,8 @@ public final class WorkspaceGenerator {
         if (Files.notExists(configPath)) {
             try {
                 Files.writeString(configPath, GSON.toJson(model));
+                NekoJS.LOGGER.info("Generated default IDE workspace config at {}; later edits by the user are kept as-is",
+                        configPath);
                 return true;
             } catch (IOException e) {
                 NekoJS.LOGGER.error("Failed to create config file: {}", configPath, e);

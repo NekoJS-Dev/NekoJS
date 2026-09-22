@@ -129,3 +129,23 @@ cacheRevision=注册的 prepared cache key。
   managed surface 流程；本票非 GUI seam 已可断言全部公开字段）。
 - **G5**：真实外部 IDE 打开接线与只读报告 GUI 由票 27 消费 `DiagnosticOpenAction`
   实现；跨域真实集成归票 34。本票未实现任何 GUI 行为。
+
+## 主会话复核修正（2026-09-22，合并后）
+
+- packet 内容等价回退（复核发现未授权的用户可见变更）：`toErrorSummary` 初版用 record 的
+  400 字符压平 message 并对空 displayPath 填 "Unknown location"——wire 形状虽未变、
+  内容变了。已改为 legacy 透传：新增 `legacyMessage` 参数，两个 `NekoJSCommands`
+  （模板 + 1.21.1 孪生）传 `err.getErrorMessage()`，displayPath 原样透传；record 自身的
+  有界 message 仅用于 `describe()` 日志/报告行。
+- 冻结保护用例：`recordIsFrozenAgainstLaterRegistryAndOccurrenceMutations`——映射替换与
+  occurrence 递增后 record 字段不变、`diagnostic()` 恒返同一冻结实例。
+- `JavaClassLoadTelemetryRecorder` 删除内容盲 `equals/hashCode`（无值语义消费者）。
+- `DefaultErrorTracker.diagnostics()`/`ErrorSnapshot.records()` 收敛为单行 stream 投影，
+  FQN 改 import；两处 javadoc 更正「telemetry 并非本 record 投影」（独立有界通道）。
+- `SourceMapRegistry` 三个定向清理（clear(path)/clearByPathPrefix/clearByScriptType）的
+  revision 侧表改为随映射条目同删（`removeMappingsWithRevisions`）——此前别名/generated-path
+  匹配删除映射时对应 revision 残留，可能给无映射路径附上过期 cache revision。
+- `WorkspaceGenerator.writeConfigIfMissing` 首次生成补 INFO 日志（生成位置 + 用户后续
+  编辑保留语义）。
+- 已知缺口补记：`ScriptErrorReporter` 未直接改动（经 ErrorTrackerReporter 传递统一）；
+  seam 的生产消费方为票 27；NEKO- 码表不在本分支。

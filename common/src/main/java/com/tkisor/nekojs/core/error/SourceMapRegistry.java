@@ -106,8 +106,8 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     public void clear(String scriptPath) {
         if (scriptPath == null) return;
         String query = normalizeLookupPath(scriptPath);
-        mappings.entrySet().removeIf(entry -> entry.getKey().equals(query) || entry.getValue().matchesGeneratedPath(query));
-        revisions.keySet().removeIf(key -> key.equals(query));
+        removeMappingsWithRevisions(
+                entry -> entry.getKey().equals(query) || entry.getValue().matchesGeneratedPath(query));
     }
 
     public void clearByPathPrefix(String pathPrefix) {
@@ -115,9 +115,8 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         // Prefix match only (DEFECT-D3): `contains` let clearing `foo/bar` also drop `baz/foo/bar`.
         // normalizeLookupPath already converts `\` to `/`, so a single separator convention is in place.
         String prefix = normalizeLookupPath(pathPrefix);
-        mappings.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix)
-                || entry.getValue().generatedPath.startsWith(prefix));
-        revisions.keySet().removeIf(key -> key.startsWith(prefix));
+        removeMappingsWithRevisions(
+                entry -> entry.getKey().startsWith(prefix) || entry.getValue().generatedPath.startsWith(prefix));
     }
 
     /**
@@ -129,9 +128,25 @@ public final class SourceMapRegistry implements NekoSourceMapView {
      */
     public void clearByScriptType(ScriptType type) {
         if (type == null) return;
-        mappings.entrySet().removeIf(entry -> type == scriptTypeOf(entry.getKey())
+        removeMappingsWithRevisions(entry -> type == scriptTypeOf(entry.getKey())
                 || type == scriptTypeOf(entry.getValue().generatedPath));
-        revisions.keySet().removeIf(key -> type == scriptTypeOf(key));
+    }
+
+    /**
+     * Removes matching mappings together with their revision side-entries: a revision key
+     * always shadows a mapping key of the same path (registration writes both), so dropping
+     * a mapping by its generated/alias path must drop that revision too — otherwise a later
+     * record creation could attach a stale cache revision to a path whose map is gone.
+     */
+    private void removeMappingsWithRevisions(
+            java.util.function.Predicate<Map.Entry<String, NormalizedSourceMap>> removal) {
+        mappings.entrySet().removeIf(entry -> {
+            if (removal.test(entry)) {
+                revisions.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 
     /** Cache key of the prepared module that registered the map for this generated path (ticket 30). */

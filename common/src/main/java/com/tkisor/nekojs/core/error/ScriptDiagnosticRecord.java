@@ -13,9 +13,10 @@ import java.util.Objects;
  * <p>The record is created once, when the failure enters the {@link ErrorTracker}, and never
  * mutated afterwards: attribution fields (id, phase, owner, generation, source, module
  * identity, cache revision, cause) are frozen at record time so later generation switches can
- * never re-attribute old history. All user-visible projections — the per-type log history,
- * the {@link ErrorSummaryDTO dashboard packet}, the external-IDE-workspace open-action seam
- * and the user report — are derived from this single record instead of re-deriving fields.
+ * never re-attribute old history. The user-visible projections derived from this record are
+ * the per-type log history, the {@link ErrorSummaryDTO dashboard packet} and the
+ * external-IDE-workspace open-action seam; Java class-load telemetry is a separate bounded
+ * channel with its own documented scope, not a projection of this record.
  *
  * <p>Contract notes:
  * <ul>
@@ -107,17 +108,20 @@ public record ScriptDiagnosticRecord(
     }
 
     /**
-     * The dashboard packet projection. The wire shape (six fields) is unchanged; the caller
-     * supplies the legacy display path and the frozen detail snapshot so this projection is
-     * the single place where the packet fields are assembled.
+     * The dashboard packet projection. The wire shape (six fields) and the packet CONTENT
+     * stay legacy-identical: the caller supplies the unbounded legacy message, the display
+     * path and the full-detail snapshot exactly as the pre-ticket-30 assembly did, so this
+     * projection is the single assembly point without changing what players see. The
+     * record's own bounded {@link #message()} is for log/report lines only.
      */
-    public ErrorSummaryDTO toErrorSummary(int occurrenceCount, String displayPath, String fullDetails) {
+    public ErrorSummaryDTO toErrorSummary(
+            int occurrenceCount, String displayPath, String legacyMessage, String fullDetails) {
         return new ErrorSummaryDTO(
                 errorId,
-                displayPath == null || displayPath.isBlank() ? "Unknown location" : displayPath,
+                displayPath,
                 line,
                 occurrenceCount,
-                message,
+                legacyMessage,
                 fullDetails == null ? "" : fullDetails);
     }
 

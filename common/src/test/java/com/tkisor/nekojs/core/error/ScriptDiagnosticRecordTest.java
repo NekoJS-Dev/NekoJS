@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -84,6 +85,42 @@ class ScriptDiagnosticRecordTest {
                     "the executing generated module identity must be kept next to the mapped source");
             assertEquals("cache-key-rev-1", record.cacheRevision(),
                     "the cache revision of the prepared module that produced the mapping must be retained");
+        } finally {
+            cache.close();
+        }
+    }
+
+    @Test
+    void recordIsFrozenAgainstLaterRegistryAndOccurrenceMutations() throws Exception {
+        SourceMapRegistry maps = new SourceMapRegistry(paths.root());
+        maps.register("server_scripts/gen.js",
+                "{\"version\":3,\"sources\":[\"server_scripts/authored.ts\"],\"sourcesContent\":[null],"
+                        + "\"names\":[],\"mappings\":\"AAAA;AAIA\"}",
+                0, "cache-key-rev-1");
+        NekoModulePipelineCache cache = newCache(maps);
+        try (Context context = Context.newBuilder("js").allowAllAccess(true).build()) {
+            tracker.activateModuleViews(ScriptType.SERVER, context, cache, 2L);
+            PolyglotException failure = throwingPolyglot(context, "server_scripts/gen.js");
+            tracker.recordCallbackError(context, ScriptType.SERVER, "event", failure);
+            ScriptError error = onlyError();
+            ScriptDiagnosticRecord frozen = error.diagnostic();
+
+            // External state mutates after record creation: first the same error arrives
+            // again (dedup increments the occurrence count on the stored instance) ...
+            tracker.recordCallbackError(context, ScriptType.SERVER, "event", failure);
+            assertTrue(error.getOccurrenceCount() > 1,
+                    "the external occurrence state must have mutated for this test to discriminate");
+            // ... then the mapping is replaced with a different authored source and cache key.
+            maps.register("server_scripts/gen.js",
+                    "{\"version\":3,\"sources\":[\"server_scripts/rewritten.ts\"],\"sourcesContent\":[null],"
+                            + "\"names\":[],\"mappings\":\"AAAA\"}",
+                    0, "cache-key-rev-2");
+
+            assertSame(frozen, error.diagnostic(),
+                    "diagnostic() must keep returning the record frozen at creation, never re-derive it");
+            assertEquals("server_scripts/authored.ts", frozen.sourcePath());
+            assertEquals(5, frozen.line());
+            assertEquals("cache-key-rev-1", frozen.cacheRevision());
         } finally {
             cache.close();
         }
@@ -219,7 +256,7 @@ class ScriptDiagnosticRecordTest {
             assertEquals("server_scripts/boom.js", record.sourcePath());
 
             ErrorSummaryDTO dto = record.toErrorSummary(error.getOccurrenceCount(),
-                    error.getDisplayPath(), error.getFullDetailText());
+                    error.getDisplayPath(), error.getErrorMessage(), error.getFullDetailText());
             assertEquals(record.errorId(), dto.id());
             assertEquals(error.getDisplayPath(), dto.path());
             assertEquals(record.line(), dto.line());

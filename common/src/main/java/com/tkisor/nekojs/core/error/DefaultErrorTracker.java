@@ -346,16 +346,12 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     /**
      * Ticket 30 non-GUI seam: read-only snapshot of the frozen records of the current public
-     * error set. Log history, the dashboard packet, the user report and telemetry all derive
-     * from these records instead of re-deriving error fields; candidate errors stay out of
-     * this snapshot until the commit point publishes them.
+     * error set. Log history and the dashboard packet derive from these records instead of
+     * re-deriving error fields; candidate errors stay out of this snapshot until the commit
+     * point publishes them.
      */
-    public java.util.List<ScriptDiagnosticRecord> diagnostics() {
-        java.util.List<ScriptDiagnosticRecord> records = new java.util.ArrayList<>(errors.size());
-        for (ScriptError error : errors.values()) {
-            records.add(error.diagnostic());
-        }
-        return java.util.List.copyOf(records);
+    public List<ScriptDiagnosticRecord> diagnostics() {
+        return errors.values().stream().map(ScriptError::diagnostic).toList();
     }
 
     private Map<ScriptId, ScriptError> errorStore(Context context) {

@@ -5,6 +5,7 @@ import com.tkisor.nekojs.core.NekoSandboxFactory;
 import com.tkisor.nekojs.core.ScriptEventBridge;
 import com.tkisor.nekojs.core.NekoCoreContext;
 import com.tkisor.nekojs.core.error.ErrorTracker;
+import com.tkisor.nekojs.core.error.ScriptDiagnosticRecord;
 import com.tkisor.nekojs.core.error.ScriptError;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.module.NekoTrustContext;
@@ -382,23 +383,18 @@ public final class NekoRuntimeRoot implements AutoCloseable {
             count = errors.size();
         }
 
-        public static ErrorSnapshot of(com.tkisor.nekojs.core.error.ErrorTracker tracker) {
+        public static ErrorSnapshot of(ErrorTracker tracker) {
             Collection<ScriptError> all = tracker.getAllErrors();
             return new ErrorSnapshot(all, all.size());
         }
 
         /**
-         * Frozen diagnostic records of this snapshot (ticket 30): the single projection source
-         * for log history, the dashboard packet, the user report and telemetry. Only reads the
-         * already-recorded public error set; no second facts source is created.
+         * Frozen diagnostic records of this snapshot (ticket 30), delegating to each error's
+         * single frozen record. Only reads the already-recorded public error set; no second
+         * facts source is created.
          */
-        public List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord> records() {
-            List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord> records =
-                    new ArrayList<>(errors.size());
-            for (ScriptError error : errors) {
-                records.add(error.diagnostic());
-            }
-            return List.copyOf(records);
+        public List<ScriptDiagnosticRecord> records() {
+            return errors.stream().map(ScriptError::diagnostic).toList();
         }
     }
 }

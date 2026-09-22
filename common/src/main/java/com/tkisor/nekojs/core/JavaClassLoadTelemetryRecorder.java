@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Bounded, repeatable {@link JavaClassLoadTelemetrySink} implementation (ticket 30).
@@ -126,15 +125,5 @@ public final class JavaClassLoadTelemetryRecorder implements JavaClassLoadTeleme
     @Override
     public String toString() {
         return "JavaClassLoadTelemetryRecorder[retained=" + retainedEntries() + ", max=" + maxEntries + "]";
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        return other instanceof JavaClassLoadTelemetryRecorder;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(JavaClassLoadTelemetryRecorder.class);
     }
 }
