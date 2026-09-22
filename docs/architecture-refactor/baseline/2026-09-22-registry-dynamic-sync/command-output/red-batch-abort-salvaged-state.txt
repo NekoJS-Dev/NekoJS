@@ -1,0 +1,46 @@
+Red state: salvaged (interrupted run) implementation vs. ticket semantics
+Command (run 2026-09-22, worktree D:\mcmodDemo\NekoJS-mult-t21, before this run's fixes):
+    ./gradlew.bat :common:test --tests "com.tkisor.nekojs.core.dynamic.txn.*"
+
+Raw outcome:
+    13 tests completed, 3 failed
+    > Task :common:test FAILED
+    BUILD FAILED in 12s
+
+Failing tests (from common/build/test-results JUnit XML of that run):
+
+1) DynamicRegistryTransactionSemanticsTest > closePreemptionAbortsInFlightBatchAndDiscardsQueuedBatches()
+   org.opentest4j.AssertionFailedError: expected: <ABORTED> but was: <AWAITING_ACK>
+       at ...DynamicRegistryTransactionSemanticsTest.closePreemptionAbortsInFlightBatchAndDiscardsQueuedBatches(...:214)
+
+   -> REAL implementation bug (batch-abort red): DynamicRegistryTransactionCoordinator.abortInFlight
+      aborted the in-flight batch first, and abortCurrent's trailing pump() immediately
+      started the next queued batch, so a close boundary could not prevent queued batches
+      from running. Fix: drain/discard the queue BEFORE aborting the in-flight batch
+      (commit "fix(registry-sync): keep close preemption from resurrecting queued batches").
+      Green after fix: same test passes in green-ticket21-txn-and-facade.txt.
+
+2) DynamicRegistryTransactionSemanticsTest > lateAckAfterCommitHasDefinedOutcomeAndNoDoubleExecution()
+   org.opentest4j.AssertionFailedError: expected: <1> but was: <0>
+       at ...DynamicRegistryTransactionSemanticsTest.lateAckAfterCommitHasDefinedOutcomeAndNoDoubleExecution(...:228)
+
+   -> Test-premise bug: the test never acked the two participants before asserting the
+      commit-once count, so the transaction was still AWAITING_ACK (0 activations is
+      correct there). Test rewritten to ack first; passes green.
+
+3) DynamicRegistryTransactionSemanticsTest > conflictedBatchAbortsAndOldActiveKeepsServing()
+   com.tkisor.nekojs.core.state.GlobalStateException: definition of 'minecraft:item|mymod:ruby'
+   changed: exposed fingerprint a746... (item('mymod:ruby', [...maxStackSize=16...]), owner
+   server_scripts/entry.js, generation 1) vs batch 2 fingerprint d3b5... (maxStackSize=32);
+   the whole batch fails and the old active definitions keep serving ...
+       at ...DynamicCandidateRegistryPlan.preflight(...:133)
+       at ...DynamicRegistryTransactionSemanticsTest.commitAndStage(...:46)
+
+   -> Test-premise bug with a correct underlying behavior: a same-key changed-definition
+      batch fails the DECLARATION LEDGER's joint preflight (ticket 16 first-version rule)
+      and is never published, hence never staged for activation. The test now asserts
+      exactly that (ledger conflict + engine untouched) AND separately drives the
+      coordinator's PREFLIGHT re-check abort for a divergent staged batch. Passes green.
+
+Related commit-once red (client side) is captured separately in
+red-commit-once-client-duplicate-commit.txt.

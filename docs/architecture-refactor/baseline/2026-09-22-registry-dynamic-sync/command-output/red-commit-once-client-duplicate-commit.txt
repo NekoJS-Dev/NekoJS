@@ -1,0 +1,78 @@
+Red state: commit-once on the client node (duplicate COMMIT after activation)
+Command (run 2026-09-22, with DynamicRegistryClientParticipant.onCommit temporarily
+reverted to the salvaged ordering — staged-match check before the already-activated
+check — which is the exact code the interrupted run left behind):
+    ./gradlew.bat :common:test --tests "com.tkisor.nekojs.core.dynamic.txn.DynamicRegistryClientParticipantTest"
+
+Failure: prepareThenCommitActivatesExactlyOnceAndDuplicateCommitIsANoOp — a duplicate
+COMMIT for an already-activated generation was misclassified as
+"commit-without-matching-prepare" instead of the defined "already-activated" no-op
+(the staged prepare is cleared on activation, so the staged-match check shadows the
+already-activated check). Fix: reorder onCommit so the already-activated watermark
+check runs first (and record the no-op in the event log); see
+green-ticket21-txn-and-facade.txt for the green run of the same suite.
+
+Running Stonecutter 0.9.7
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:generateExternalPluginSpecBuilders UP-TO-DATE
+> Task :buildSrc:extractPrecompiledScriptPluginPlugins UP-TO-DATE
+> Task :buildSrc:compilePluginsBlocks UP-TO-DATE
+> Task :buildSrc:generatePrecompiledScriptPluginAccessors UP-TO-DATE
+> Task :buildSrc:generateScriptPluginAdapters UP-TO-DATE
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+
+> Configure project :26.1.2
+Parsed unknown MC version 26.1.2 from NeoForge version 26.1.2.71. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.1.2-fabric
+Fabric Loom: 1.17.20
+
+> Configure project :26.2.0
+Parsed unknown MC version 26.2 from NeoForge version 26.2.0.57. Using capabilities of latest known Minecraft version 26.1-snapshot-2 with an updated Minecraft version.
+
+> Configure project :26.2.0-fabric
+Fabric Loom: 1.17.20
+
+> Task :common:compileJava
+> Task :common:processResources UP-TO-DATE
+> Task :common:classes
+> Task :common:compileAddonFixtureJava UP-TO-DATE
+> Task :common:processAddonFixtureResources UP-TO-DATE
+> Task :common:addonFixtureClasses UP-TO-DATE
+> Task :common:externalAddonJar UP-TO-DATE
+> Task :common:compileTestJava UP-TO-DATE
+> Task :common:processTestResources UP-TO-DATE
+> Task :common:testClasses UP-TO-DATE
+
+> Task :common:test FAILED
+
+DynamicRegistryClientParticipantTest > prepareThenCommitActivatesExactlyOnceAndDuplicateCommitIsANoOp() FAILED
+    org.opentest4j.AssertionFailedError at DynamicRegistryClientParticipantTest.java:52
+
+9 tests completed, 1 failed
+
+[Incubating] Problems report is available at: file:///D:/mcmodDemo/NekoJS-mult-t21/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':common:test'.
+> There were failing tests. See the report at: file:///D:/mcmodDemo/NekoJS-mult-t21/common/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.6.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 4s
+17 actionable tasks: 2 executed, 15 up-to-date
