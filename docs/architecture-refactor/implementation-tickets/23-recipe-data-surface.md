@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-23（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-22):** worktree `../NekoJS-mult-t23` on branch `ticket-23-recipe-data-surface`（基于 `3a6380b1`）。预计改动范围：recipe schema/type/namespace characterization 与 contract fixture、recipe JSON builder/值转换/filter/generated id 接入既有 managed surface 与平台 Adapter、plugin `generateData` 与 `ServerEvents.generateData` 聚合到同一 DataGenerator 路径、非 Assets 数据生成的候选落盘→校验→原子发布与失败保留、loot/tags fixture、recipe viewer 条件能力 trace、afterRecipes 时序断言、示例与迁移材料、`baseline/2026-09-22-recipe-data-surface/` 证据。不修改 21 registry 域文件，不新增 Assets 事件（29 域）；golden 只读，需更新的项如实标注为门禁未过而非改写。
 
 **Optional:** false
 

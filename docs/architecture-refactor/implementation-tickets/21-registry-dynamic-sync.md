@@ -4,9 +4,11 @@
 
 **Blocked by:** [16: Dynamic Registry inert 定义计划与 typed Builder](16-registry-dynamic-local.md)、[17: 网络注册一次、wire 不变与脚本自定义通道 owner 调度](17-network-sync.md)、[10: 按类型 global、显式 shared 与候选顶层写集联合提交](10-global-state.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-21（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-22):** worktree `../NekoJS-mult-t21` on branch `ticket-21-registry-dynamic-sync`（基于 `3a6380b1`）。预计改动范围：Dynamic Registry 批事务 preflight/fingerprint 冲突/服务端 prepare/客户端 prepare/ack/commit 的共享管线与网络阶段消息、失败/取消/watchdog/close 抢占下整批不提交与旧 active 保留、candidate 可见性与资源释放顺序断言、Adapter 边界（数值 ID/payload/registry surgery 只经 Registry Runtime 与平台 Adapter）、16 号候选计划 fixture 转生产最小示例与迁移材料、`baseline/2026-09-22-registry-dynamic-sync/` 证据。不修改 23 recipe/data 域文件；旧 unsafe live mutation 删除项不勾选（维护者 sign-off 门禁）。
 
 **Optional:** false
 
