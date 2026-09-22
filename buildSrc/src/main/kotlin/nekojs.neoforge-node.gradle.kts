@@ -267,7 +267,7 @@ tasks.test {
     systemProperty("user.country", "US")
     systemProperty("user.timezone", "UTC")
     systemProperty("file.encoding", "UTF-8")
-    // 票 08：test-only 外部 addon fixture jar 的路径注入（loader-shaped discovery 测试消费）
+    // Ticket 08: path injection for the test-only external addon fixture jar (loader-shaped discovery tests)
     val addonJar = project(":common").tasks.named("externalAddonJar")
     dependsOn(addonJar)
     inputs.files(addonJar)

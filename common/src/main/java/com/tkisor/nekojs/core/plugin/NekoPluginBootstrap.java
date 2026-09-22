@@ -120,8 +120,9 @@ public final class NekoPluginBootstrap {
      * 未注册依赖 id 在 freeze 早爆。环境谓词为 false 的点跳过并登记，
      * 供 {@link NekoPluginExtensionContext} 两档访问区分"跳过"与"未完成"。
      *
-     * @param ownerLabels 插件 → addon 定位标签（owner id 或类名），用于扩展点注册/依赖
-     *                   失败时定位到具体 addon；null 安全（缺席标签降级为类名）
+     * @param ownerLabels plugin → addon label (owner id or class name) used to attribute
+     *                   extension-registry failures to the causing addon; null-safe
+     *                   (a missing label falls back to the plugin class name)
      */
     static Map<String, Object> collect(List<NekoJSPlugin> plugins,
                                         java.util.function.Function<NekoJSPlugin, String> ownerLabels,
@@ -222,13 +223,14 @@ public final class NekoPluginBootstrap {
     private static final class ExtensionRegistry {
         private final Map<String, NekoPluginExtensionPoint<?, ?, ?>> extensionPoints = new LinkedHashMap<>();
         private final Map<String, NekoPluginExtensionHandle<Object>> handles = new LinkedHashMap<>();
-        /** pointId → 注册方 addon 定位标签（ticket 08：失败输出要能定位到 addon）。 */
+        /** pointId → registering addon label (ticket 08: failure output must locate the addon). */
         private final Map<String, String> registrants = new LinkedHashMap<>();
         private boolean frozen;
 
         /**
-         * 面向单个 provider 的注册视图：本视图内发生的注册/违规失败都会带上该 addon 的
-         * 定位标签——provider 逃逸持有本视图（freeze 后迟到注册）同样能定位到 addon。
+         * Registration view handed to a single provider: registrations and rule
+         * violations through this view carry that addon's label — including a provider
+         * that escapes with the view and registers after freeze.
          */
         NekoPluginExtensionRegistry scopedTo(String ownerLabel) {
             return new NekoPluginExtensionRegistry() {

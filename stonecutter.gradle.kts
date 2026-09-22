@@ -271,16 +271,18 @@ tasks.register("sandboxCheck") {
     )
 }
 
-// ---- 票 08：外部 addon fixture 制品隔离门禁 -----------------------------------------
-// 五个生产节点 jar 不得包含 test-only 外部 addon fixture 的任何类、资源或 loader metadata
-// （fixture 是独立测试制品，混进生产 fat jar 等于把测试面发布给玩家）。同时正向校验
-// fixture jar 自身确实携带两类 loader metadata（discovery 输入的形状完整性）。
+// ---- Ticket 08: external addon fixture artifact isolation gate -----------------------
+// None of the five production node jars may contain any class, resource or loader
+// metadata of the test-only external addon fixture (shipping the fixture inside a
+// production fat jar would publish the test surface to players). The gate also
+// positively verifies the fixture jar itself carries both loader metadata files
+// (discovery-input shape integrity).
 val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
     group = "verification"
     description = "Asserts the five production node jars contain no external addon fixture content (ticket 08)."
 
     val addonJarTask = project(":common").tasks.named("externalAddonJar")
-    // 五个生产 jar = 五个节点子项目（root 是容器项目，没有 jar 任务）
+    // Five production jars = the five version subprojects (the root is a container without a jar task)
     val nodeJarTasks = subprojects
         .filter {
             it.name != "common" && it.name != "common-api-processor"
@@ -296,7 +298,7 @@ val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
 
     doLast {
         val addonJar = addonJarTask.get().outputs.files.singleFile
-        // 正向：fixture jar 必须带两类 loader metadata 与插件类
+        // Positive arm: the fixture jar must carry both loader metadata files and plugin classes
         java.util.zip.ZipFile(addonJar).use { zip ->
             val entries = zip.entries().asSequence().toList()
             val names = entries.map { it.name }.toSet()
@@ -310,7 +312,7 @@ val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
                 }
             }
         }
-        // 反向：五个生产 jar 不含 fixture 类与 metadata 痕迹
+        // Negative arm: no production jar may carry fixture classes or metadata traces
         val checked = mutableListOf<String>()
         nodeJarTasks.forEach { jarTask ->
             val archive = (jarTask.get() as org.gradle.jvm.tasks.Jar).archiveFile.get().asFile
