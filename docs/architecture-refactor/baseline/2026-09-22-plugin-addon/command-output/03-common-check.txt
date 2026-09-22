@@ -1,0 +1,7 @@
+# ./gradlew.bat :common:check --console=plain (final)
+> Task :common:checkCommonIsolation
+> Task :common:testClasses UP-TO-DATE
+> Task :common:test FROM-CACHE
+> Task :common:verifyAddonFixtureDependencySurface
+> Task :common:check
+BUILD SUCCESSFUL in 5s

@@ -1,0 +1,7 @@
+# Repeat runs (clean manager state + same fixture jar input), all BUILD SUCCESSFUL:
+# ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.plugin.Ticket08ExternalAddonChainTest
+BUILD SUCCESSFUL in 9s
+# ./gradlew.bat :26.1.2:test --tests com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest
+BUILD SUCCESSFUL in 5s
+# ./gradlew.bat :26.1.2-fabric:test --tests com.tkisor.nekojs.core.Ticket08LoaderDiscoveryTest
+BUILD SUCCESSFUL in 5s

@@ -1,0 +1,9 @@
+# Excerpt of :26.1.2:runServer output (full log 4.3MB; kept lines: FML mod-file discovery, plugin registration, smoke markers, server start). Command: ./gradlew.bat :26.1.2:runServer --console=plain with fixture jar in versions/26.1.2/run/mods/ and t08_addon_smoke.js in versions/26.1.2/run/nekojs/startup_scripts/
+
+[20:50:06] [main/DEBUG] [ne.ne.fm.lo.mo.ModFileInfo/LOADING]: Found valid mod file nekojs-external-addon-fixture-1.1.0-preview3-testonly.jar with {exampleaddon} mods - versions {1.0.0}
+ - exampleaddon (jar(mods/nekojs-external-addon-fixture-1.1.0-preview3-testonly.jar))
+[20:50:19] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.example.addon.ExampleAddonPlugin (priority 1200, owner legacy:com.example.addon.ExampleAddonPlugin)
+[20:50:19] [modloading-worker-0/DEBUG] [NekoJS/]: Registered plugin: com.example.addon.ExampleAddonSecondaryPlugin (priority 400, owner legacy:com.example.addon.ExampleAddonSecondaryPlugin)
+[20:50:24] [NekoJS-Log-Flusher/INFO] [NekoJS/]: [startup] T08-ADDON-SMOKE: startup binding ok, marker=exampleaddon-frozen-product init=1
+[20:50:33] [Server thread/INFO] [minecraft/LoggingLevelLoadListener]: Preparing spawn area: 100%
+[20:50:33] [Server thread/INFO] [minecraft/DedicatedServer]: Done (4.300s)! For help, type "help"

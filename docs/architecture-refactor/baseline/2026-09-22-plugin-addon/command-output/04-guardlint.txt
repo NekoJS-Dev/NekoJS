@@ -1,0 +1,3 @@
+# ./gradlew.bat guardLint --console=plain
+guardLint: 守卫块 294，扫描 442 个文件；超限豁免 0 个；警告 0 条
+BUILD SUCCESSFUL in 5s

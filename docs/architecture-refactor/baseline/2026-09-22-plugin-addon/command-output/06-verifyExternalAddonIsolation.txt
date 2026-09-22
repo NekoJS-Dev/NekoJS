@@ -1,0 +1,7 @@
+# verifyExternalAddonIsolation (strengthened gate) + :common:check
+# Command: ./gradlew.bat :common:check verifyExternalAddonIsolation --console=plain
+# Date: 2026-09-22 (main-session re-run after hardening the negative arm: package prefix + modid name marker + metadata text + recursive nested-jar scan, depth 2)
+
+verifyExternalAddonIsolation: 5 production jars carry no fixture content; fixture jar metadata complete
+> Task :common:check
+BUILD SUCCESSFUL in 3m 29s
