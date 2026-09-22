@@ -4,14 +4,18 @@ import com.tkisor.nekojs.api.NekoJSPlugin;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.tkisor.nekojs.script.ScriptTypeEnv;
+import com.tkisor.nekojs.wrapper.DataGenerationBatch;
 import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.LangGeneratorJS;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * 平台层在资源 reload 时对全部插件触发 generateData / generateAssets / generateLang
@@ -25,6 +29,46 @@ public final class PluginGenerationHooks {
 
     public static void fireGenerateData(DataGeneratorJS generator) {
         fire("generateData", ScriptType.SERVER, generator, NekoJSPlugin::generateData);
+    }
+
+    /**
+     * Ticket 23 aggregation: the plugin {@code generateData} hook and the script
+     * {@code ServerEvents.generateData} event run through ONE data generation path —
+     * same candidate collection, generation, publish and read-back
+     * ({@link DataGenerationBatch}). Plugins fire first (per-plugin contributor tagging and
+     * exception isolation, KubeJS-aligned), then {@code scriptEvent} runs (the platform
+     * adapter posts the script event with the stage as dispatch key), then the batch is
+     * validated and atomically published.
+     *
+     * <p>Failure semantics: a throwing plugin is isolated (error log names the plugin class)
+     * and does not block the batch; if {@code scriptEvent} itself throws (production script
+     * listener errors are recorded by the event bus instead), or validation/publish fails,
+     * nothing is published, the previous active data is retained, and the candidate area is
+     * kept for diagnostics until the next batch for the same stage opens.
+     *
+     * @param dataRoot   pack-visible data root (e.g. {@code <gameDir>/nekojs/data})
+     * @param stage      generation stage (dispatch key of the script event, e.g. {@code after_mods})
+     * @param scriptEvent posts the script event with the batch's shared generator
+     */
+    public static DataGenerationBatch.PublishResult runGenerateData(
+            Path dataRoot, String stage, Consumer<DataGeneratorJS> scriptEvent) throws IOException {
+        DataGenerationBatch batch = DataGenerationBatch.open(dataRoot, stage);
+        DataGeneratorJS generator = batch.generator();
+        fire("generateData", ScriptType.SERVER, generator, (plugin, gen) -> {
+            batch.setContributor("plugin:" + plugin.getClass().getName());
+            try {
+                plugin.generateData(gen);
+            } finally {
+                batch.setContributor(null);
+            }
+        });
+        batch.setContributor("script");
+        try {
+            scriptEvent.accept(generator);
+        } finally {
+            batch.setContributor(null);
+        }
+        return batch.publish();
     }
 
     public static void fireGenerateAssets(DataGeneratorJS generator) {

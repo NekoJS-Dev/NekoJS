@@ -17,7 +17,6 @@ import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
 import com.tkisor.nekojs.core.plugin.PluginGenerationHooks;
 import com.tkisor.nekojs.resource.ScriptPackDataManager;
 import com.tkisor.nekojs.villager.VillagerTradeManager;
-import com.tkisor.nekojs.wrapper.DataGeneratorJS;
 import com.tkisor.nekojs.wrapper.event.server.LootTableEventJS;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
 import net.minecraft.resources.ResourceLocation;
@@ -190,16 +189,20 @@ public class ServerEventListener {
     }
 
     /**
-     * 数据生成事件：脚本把 datapack JSON 写入 {@code <gameDir>/nekojs/data}（磁盘 datapack，
-     * 懒读保证 reload 时序正确）。目前支持单一 {@code after_mods} 阶段。
+     * 数据生成事件：脚本与插件把 datapack JSON 写入 {@code <gameDir>/nekojs/data}（磁盘
+     * datapack，懒读保证 reload 时序正确）。目前支持单一 {@code after_mods} 阶段。
+     *
+     * <p>ticket 23 聚合：插件 {@code generateData} hook 与脚本 {@code ServerEvents.generateData}
+     * 经 {@link PluginGenerationHooks#runGenerateData} 走同一条候选收集→校验→原子发布路径
+     * （不再各自直写 active 根）；发布失败保留旧数据，详见 {@code DataGenerationBatch}。
      */
     private static void postGenerateData() {
         try {
-            DataGeneratorJS generator = new DataGeneratorJS(NekoJSPaths.get().data(), "after_mods");
-            PluginGenerationHooks.fireGenerateData(generator);
-            ServerEvents.GENERATE_DATA.post(generator, "after_mods");
+            PluginGenerationHooks.runGenerateData(NekoJSPaths.get().data(), "after_mods",
+                    generator -> ServerEvents.GENERATE_DATA.post(generator, "after_mods"));
         } catch (Exception e) {
-            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("generateData event failed: ", e);
+            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER)
+                    .error("generateData batch failed; nothing was published and the previous active data is retained: ", e);
         }
     }
 

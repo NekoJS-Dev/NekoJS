@@ -34,9 +34,21 @@ public final class DataGeneratorJS {
     @Doc("Cumulative size cap per generator instance, in bytes (64 MiB).")
     public static final long MAX_GENERATED_TOTAL_BYTES = 64 * 1024 * 1024L;
 
-    private final Path root;
+    /**
+     * Per-write observer installed by {@link DataGenerationBatch} (same package): receives the
+     * pack-relative path of every successful write for owner attribution and overwrite policy.
+     * Not part of the script-facing surface.
+     */
+    interface WriteObserver {
+        void onWrite(String relativePath, int bytes);
+    }
+
+    private Path root;
     private final String stage;
     private long generatedBytes;
+    private WriteObserver writeObserver;
+    private boolean sealed;
+    private Path sealedReadRoot;
 
     /** 以根目录构造（阶段为空字符串）。 */
     public DataGeneratorJS(Path root) {
@@ -47,6 +59,22 @@ public final class DataGeneratorJS {
     public DataGeneratorJS(Path root, String stage) {
         this.root = Objects.requireNonNull(root, "root");
         this.stage = stage == null ? "" : stage;
+    }
+
+    /** Package-private: {@link DataGenerationBatch} installs per-write observation (contributor attribution and overwrite policy). */
+    void setWriteObserver(WriteObserver observer) {
+        this.writeObserver = observer;
+    }
+
+    /**
+     * Package-private: called by {@link DataGenerationBatch} after the batch published
+     * successfully — read-back is re-rooted to the published active root (keeping the same
+     * {@code getJson} path), and further writes are permanently rejected (no bypassing the
+     * candidate area once the batch is closed).
+     */
+    void sealForReadBack(Path publishedRoot) {
+        this.sealed = true;
+        this.sealedReadRoot = publishedRoot;
     }
 
     /** 当前生成阶段（如 {@code after_mods}）；未指定时为空字符串。 */
@@ -89,7 +117,7 @@ public final class DataGeneratorJS {
     @Return("parsed JSON, or null when the file is missing, unreadable, or invalid")
     public JsonElement getJson(String path) {
         try {
-            Path file = resolve(path);
+            Path file = resolveForRead(path);
             if (!Files.isRegularFile(file)) {
                 return null;
             }
@@ -99,7 +127,20 @@ public final class DataGeneratorJS {
         }
     }
 
+    /** After publish, read-back resolves against the published active root; during collection it resolves against the current (candidate) root. */
+    private Path resolveForRead(String path) {
+        if (sealed && sealedReadRoot != null) {
+            Path relative = Path.of(path).normalize();
+            return sealedReadRoot.resolve(relative).normalize();
+        }
+        return resolve(path);
+    }
+
     private void write(String path, String content) {
+        if (sealed) {
+            throw new IllegalStateException(
+                    "This generation batch is already published; writing is no longer allowed");
+        }
         Path target = resolve(Objects.requireNonNull(path, "path"));
         int bytes = content.getBytes(StandardCharsets.UTF_8).length;
         if (bytes > MAX_GENERATED_FILE_BYTES) {
@@ -132,6 +173,9 @@ public final class DataGeneratorJS {
             throw new IllegalStateException("Failed to write generated file " + path + ": " + error.getMessage(), error);
         }
         generatedBytes += bytes;
+        if (writeObserver != null) {
+            writeObserver.onWrite(root.relativize(target).toString().replace('\\', '/'), bytes);
+        }
     }
 
     /** 包内可见：同包的 {@link AssetGeneratorJS} 二进制写盘复用同一包含性校验（不绕过）。 */
