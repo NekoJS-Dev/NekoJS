@@ -4,9 +4,11 @@
 
 **Blocked by:** [12: TS/JSX/TSX 编译、source map 与执行行为路径](12-language-ts.md)、[13: Python 转译、模块行为与诊断路径](13-language-py.md)、[07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)、[19: 脚本包分发 trust 决策、远端包激活与 Fabric WORLD 现状](19-pack-trust.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-30（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-22):** worktree `../NekoJS-mult-t30` on branch `ticket-30-diagnostics`（基于 mult HEAD）。预计改动范围：ErrorTracker/ScriptError/ErrorSummaryDTO/ScriptErrorReporter 的错误 ID/阶段/owner/source/generation/ScriptType/模块身份字段统一为 frozen diagnostic record、JS/CJS/ESM/TS/JSX/TSX/Python 的 source-map 与阶段矩阵、日志/报告/packet/workspace 投影消费同一 record 的非 GUI contract fixture、JavaClassLoadTelemetry/watchdog 可观察语义与隐私边界、reload 边界（旧错误历史归属/候选错误不伪装）、offline validator 保持显式独立、`baseline/2026-09-22-diagnostics/` 证据。不修改 24 gameplay 事件域文件；error dashboard 最终 GUI/外部打开接线归票 27；删除旧旁路仅在替代/trace/无调用者证据后且公开诊断与外部 workspace 功能不删除。
 
 **Optional:** false
 

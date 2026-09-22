@@ -4,9 +4,11 @@
 
 **Blocked by:** [14: 事件总线与 Script/Native/Probe 事件声明基础](14-event-surface.md)、[39: Runtime Item/Block modification 候选计划与 snapshot ownership](39-item-block-modification.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-24（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-22):** worktree `../NekoJS-mult-t24` on branch `ticket-24-gameplay-event-surface`（基于 mult HEAD）。预计改动范围：Block/Item/Level/Player/Command/Capability/Goal/Entity 事件族 catalog snapshot 盘点与差异、representative caller-to-result fixture（注册/payload/修改/取消/优先级/side）、并发与多次 reload 清理断言、wrapper 公开名进 managed contract（golden 只读）、NeoForge/Fabric source trace 与 capability matrix、示例与必要迁移材料、`baseline/2026-09-22-gameplay-event-surface/` 证据。Item/Block modification 只验证事件面接线（事务/snapshot 归票 39 证据）；不修改 30 诊断域文件；不新增事件、Extension Point 或第二注册路径。
 
 **Optional:** false
 
