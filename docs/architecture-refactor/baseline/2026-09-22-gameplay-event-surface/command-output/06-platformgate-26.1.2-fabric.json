@@ -1,0 +1,30 @@
+{
+  "check": "event-surface",
+  "owner": "Managed Surface/Probe owner; build convention owner (wiring)",
+  "node": "26.1.2-fabric",
+  "input": "com.tkisor.nekojs.core.compiler.python.PythonTranspilerPlugin,com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPlugin,com.tkisor.nekojs.fabric.FabricCorePlugin,com.tkisor.nekojs.integration.jei.RecipeViewerEventsPlugin,com.tkisor.nekojs.probe.NekoProbeBuiltinPlugin,com.tkisor.nekojs.util.selector.EntitySelectorsPlugin,com.tkisor.nekojs.wrapper.registry.gen.NekoRegistryPointsPlugin",
+  "domains": 14,
+  "clientEventsNotVerified": [
+  ],
+  "rows": [
+    "domain=BlockEvents node=26.1.2-fabric state=present channel=server buses=broken,modification",
+    "domain=CapabilityEvents node=26.1.2-fabric state=not-verified buses=-",
+    "domain=ClientEvents node=26.1.2-fabric state=present channel=client buses=tick,tickPost,tickPre",
+    "domain=CommandEvents node=26.1.2-fabric state=present channel=server buses=register",
+    "domain=DynamicRegistryEvents node=26.1.2-fabric state=not-verified buses=-",
+    "domain=EntityEvents node=26.1.2-fabric state=present channel=server buses=damagePost,damagePre,death,drops,finalizeSpawn,joinLevel,leaveLevel,tickPost,tickPre",
+    "domain=GoalEvents node=26.1.2-fabric state=present channel=server buses=register",
+    "domain=ItemEvents node=26.1.2-fabric state=present channel=server buses=canPickUp,dropped,entityInteracted,foodEaten,modification,pickedUp,pickedUpPre,rightClicked,tooltip",
+    "domain=KeyBindEvents node=26.1.2-fabric state=present channel=client buses=pressed,register,released,tick",
+    "domain=LevelEvents node=26.1.2-fabric state=present channel=server buses=loaded,tickPost,tickPre,unloaded",
+    "domain=NetworkEvents node=26.1.2-fabric state=present channel=server buses=client,server",
+    "domain=PlayerEvents node=26.1.2-fabric state=present channel=server buses=advancement,changedDimension,chat,cloned,containerClosed,containerOpened,crafted,destroyed,entityInteract,inventoryChanged,inventoryClosed,inventoryOpened,loggedIn,loggedOut,respawned,smelted,tickPost,tickPre",
+    "domain=ProbeEvents node=26.1.2-fabric state=not-verified buses=-",
+    "domain=RecipeViewerEvents node=26.1.2-fabric state=present channel=client buses=addEntries,addInformation,removeCategories,removeEntries,removeRecipes",
+    "domain=RegistryEvents node=26.1.2-fabric state=present channel=server buses=register",
+    "domain=ScriptEvents node=26.1.2-fabric state=present channel=server buses=client,server",
+    "domain=ServerEvents node=26.1.2-fabric state=present channel=server buses=aboutToStart,afterRecipes,datapackSync,lootTableLoad,recipes,started,starting,stopped,stopping,tagsUpdated,tickPost,tickPre,tradeDeclaration,tradeReload"
+  ],
+  "failures": [
+  ]
+}

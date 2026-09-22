@@ -34,7 +34,13 @@ class EventApiSurfaceGoldenTest {
 
     @Test
     void blockEventsSurfaceMatchesGolden() throws IOException {
-        // 生产顺序：适配层先登记总线，随后组被冻结（顺序反了会静默丢事件——见类注释）
+        // 生产顺序：适配层先登记总线，随后组被冻结（顺序反了会静默丢事件——见类注释）。
+        // ticket 24: cancellability predicate must also precede the first family class-init
+        // (mirrors NekoJSMod's constructor calling NeoForgeRuntimeBootstrap.setup() first);
+        // without it this test would freeze every cancellable family bus as non-cancellable
+        // for the whole shared test JVM.
+        com.tkisor.nekojs.api.event.EventBusJS.setExternalCancellabilityPredicate(
+                net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
         NeoForgeBlockEvents.bootstrap();
         EventGroup group = BlockEvents.GROUP;
         group.freeze();

@@ -1,0 +1,19 @@
+# AC8 declaration 面覆盖核实（实际 grep，0 命中即缺口；票 26 同款方法）
+# 命令：grep -c "BlockEvents\|ItemEvents\|LevelEvents\|PlayerEvents\|CommandEvents\|CapabilityEvents\|GoalEvents\|EntityEvents" <file>
+
+common/src/test/resources/nekojs/golden/api-manifest-core.json            -> 0 hits
+common/src/test/resources/nekojs/probe/legacy-events.expected.d.ts        -> 0 hits
+common/src/test/resources/nekojs/probe/probe-events.expected.d.ts         -> 0 hits
+common/src/test/resources/nekojs/probe/legacy-bindings.expected.d.ts      -> 0 hits
+common/src/test/resources/nekojs/dynamic/dynamic-registry-events.expected.d.ts -> 0 hits
+common/src/test/resources/nekojs/dynamic/dynamic-builders.expected.d.ts   -> 0 hits
+common/src/test/resources/nekojs/platform-gates/declaration-parity.txt    -> 0 hits
+
+结论：TS/Python declaration golden 与 declaration-parity 基线对本票八个事件域
+（BlockEvents/ItemEvents/LevelEvents/PlayerEvents/CommandEvents/CapabilityEvents/
+GoalEvents/EntityEvents 的全部成员，含 wrapper payload 类名）**零覆盖**，与票 26/28/23
+登记过的同类缺口一致（事件族从未进入 managed declaration 派生链的事件面输入）。
+本票未新造 declaration 条目、未改任何 golden（只读约束）；已交付的是 catalog 维度的
+运行期成员 fixture（Ticket24GameplayEventCatalogTest / Ticket24FabricGameplayEventCatalogTest，
+payload/side/dispatch/cancel 四列）与票 33 跨节点 bus 名基线的复验（command-output/05）。
+缺口 owner：Managed Surface/Probe（票 09/33）+ P4 整体验证（票 34）。

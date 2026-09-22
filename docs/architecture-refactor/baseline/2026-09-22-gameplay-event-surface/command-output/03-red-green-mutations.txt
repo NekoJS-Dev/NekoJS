@@ -1,0 +1,68 @@
+# 票 24 红与绿（fault-injection mutation 证据，AC4 主证）
+#
+# 方法：临时改动生产代码注入一个真实缺陷形态 → 跑本票 fixture（红）→ 还原 → 同一 fixture
+# 绿。所有命令均在 worktree 根执行：./gradlew.bat :26.1.2:test --tests "<filter>" --rerun
+# 每轮改动点与真实输出如下（节选自 Gradle/JUnit 输出，逐字）。
+
+## 突变 C：commit 点双重激活（重复 dispatch 缺陷形态）
+
+注入点（common/src/main/java/com/tkisor/nekojs/api/event/EventBusJS.java，
+activatePending 内，模拟「同一 pending listener 被 activate 两次」的第二注册路径）：
+
+    EventListenerToken<EVENT> activated = token;
+    // MUTATION-C (ticket 24 red->green): simulate a double-activation commit
+    self.register(priority, listener);
+
+结果（:26.1.2:test --tests "*Ticket24GameplayEventReloadLifecycleTest*" --rerun）：
+
+    Ticket24GameplayEventReloadLifecycleTest > multipleSuccessfulReloadsDispatchEachGenerationExactlyOnce() FAILED
+    Ticket24GameplayEventReloadLifecycleTest > aFailedReloadKeepsTheOldGenerationServingWithoutDoubleRegistration() FAILED
+    Ticket24GameplayEventReloadLifecycleTest > cancellationFollowsTheActiveGenerationAcrossReloads() FAILED
+    Ticket24GameplayEventReloadLifecycleTest > goalStartupFamilyRoundTripsThroughTheProductionPostingSite() FAILED
+    4 tests FAILED -> BUILD FAILED
+
+    multipleSuccessfulReloadsDispatchEachGenerationExactlyOnce:
+        expected: <[gen1]> but was: <[gen1, gen1]>
+    aFailedReloadKeepsTheOldGenerationServingWithoutDoubleRegistration:
+        expected: <[old]> but was: <[old, old]>
+    cancellationFollowsTheActiveGenerationAcrossReloads:
+        expected: <[observe-gen]> but was: <[observe-gen, observe-gen]>
+    goalStartupFamilyRoundTripsThroughTheProductionPostingSite:
+        expected: <[goal]> but was: <[goal, goal]>
+
+还原（删除该行）后同一命令：BUILD SUCCESSFUL（6/6 通过）。
+
+## 突变 D：脚本取消被忽略（cancel 缺陷形态）
+
+注入点（EventBusJS.registerCancellable 内，模拟「监听器返回 true 不再视为取消」）：
+
+    Value result = listener.execute(event);
+    if (true) result = null; // MUTATION-D (ticket 24 red->green): script cancellation ignored
+    return result != null && result.isBoolean() && result.asBoolean();
+
+结果（--tests "*Ticket24GameplayEventReloadLifecycleTest*" --tests "*Ticket24GameplayFamilyBusBehaviorTest*" --rerun）：
+
+    Ticket24GameplayEventReloadLifecycleTest > cancellationResultIsObservableFromThePostSide() FAILED
+    -> BUILD FAILED
+
+    cancellationResultIsObservableFromThePostSide:
+        a cancelling script listener makes the family post report true ==> expected: <true> but was: <false>
+
+还原后同一命令：BUILD SUCCESSFUL（14 用例全通过）。
+
+## 突变 A+B：清理层逐层摘除（defense-in-depth characterization，如实记录为「绿」）
+
+注入点 A（EventBusJS.finishPending：旧 generation 的 bus.unregister 循环被删除）
+注入点 B（ScriptManager.isContextDead：恒返回 false，关闭 dead-context 跳过分发守卫）
+两者同时生效时：
+
+    ./gradlew.bat :26.1.2:test --tests "*Ticket24GameplayEventReloadLifecycleTest*" --rerun
+    -> BUILD SUCCESSFUL（6/6 通过，无重复 dispatch 可观察）
+
+解释（characterization，非测试缺陷）：「reload 后无重复 dispatch」由三层独立机制共同保证——
+1) commit 点旧 token 的 bus.unregister（突变 A 摘除）；
+2) 旧 generation 闭包的 dead-context 跳过（突变 B 摘除）；
+3) 旧 generation Graal Context 已 close，残余监听器执行即抛、被分发包装的 try/catch
+   记为回调错误，不再产生可见派发（无法用单点突变摘除，除非直接改 Graal 语义）。
+单层/双层摘除被剩余层掩盖；只有真正的双重激活（突变 C）才让重复派发可观察。
+结论：无重复 dispatch 是多机制冗余保证，突变 C/D 证明 fixture 对可观察缺陷形态敏感。
