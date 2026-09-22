@@ -98,13 +98,21 @@ public final class TagEventJS {
             var list = sourceMap.get(entry.getKey());
             if (list == null) continue;
             // TagEntry 无值相等（identity），按 (id, isTag) 匹配移除——否则 remove() 新建的
-            // TagEntry 永远匹配不上源表里的同 id 条目（含 builder 待写条目）
+            // TagEntry 永远匹配不上源表里的同 id 条目（含 builder 待写条目）。
+            // ticket 23：26.x 侧的 RemovalKey 匹配此前未同步到本孪生（旧实现按 TagEntry
+            // 对象恒等匹配，source 表里的既有条目永远删不掉），本票对齐两侧行为。
             var toRemove = entry.getValue().stream()
                     .map(TagLoader.EntryWithSource::entry)
+                    .map(e -> new RemovalKey(e.getId(), e.isTag()))
                     .collect(java.util.stream.Collectors.toSet());
-            list.removeIf(e -> toRemove.contains(e.entry()));
+            list.removeIf(e -> {
+                var target = e.entry();
+                return toRemove.contains(new RemovalKey(target.getId(), target.isTag()));
+            });
         }
     }
 
     /** remove 匹配键：元素 id + 是否 tag 引用（忽略 required 差异）。 */
+    private record RemovalKey(ResourceLocation id, boolean tag) {
+    }
 }
