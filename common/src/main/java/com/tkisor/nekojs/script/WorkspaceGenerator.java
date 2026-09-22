@@ -98,13 +98,24 @@ public final class WorkspaceGenerator {
         }
 
         Path configPath = scriptDir.resolve("jsconfig.json");
+        writeConfigIfMissing(configPath, model);
+    }
+
+    /**
+     * Write a workspace config only when it does not exist yet (ticket 30 reload/validation
+     * boundary): reloads, validation and migration must never overwrite or delete a config the
+     * user edited in their external IDE. Returns true when the file was written.
+     */
+    static boolean writeConfigIfMissing(Path configPath, JSConfigModel model) {
         if (Files.notExists(configPath)) {
             try {
                 Files.writeString(configPath, GSON.toJson(model));
+                return true;
             } catch (IOException e) {
                 NekoJS.LOGGER.error("Failed to create config file: {}", configPath, e);
             }
         }
+        return false;
     }
 
     /**
@@ -181,13 +192,7 @@ public final class WorkspaceGenerator {
         model.include = includes;
 
         Path configPath = probeDir.resolve("jsconfig.json");
-        if (Files.notExists(configPath)) {
-            try {
-                Files.writeString(configPath, GSON.toJson(model));
-            } catch (IOException e) {
-                NekoJS.LOGGER.error("Failed to create probe dir config: {}", configPath, e);
-            }
-        }
+        writeConfigIfMissing(configPath, model);
     }
 
     /**
