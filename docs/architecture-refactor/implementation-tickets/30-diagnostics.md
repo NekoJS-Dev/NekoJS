@@ -4,7 +4,7 @@
 
 **Blocked by:** [12: TS/JSX/TSX 编译、source map 与执行行为路径](12-language-ts.md)、[13: Python 转译、模块行为与诊断路径](13-language-py.md)、[07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)、[19: 脚本包分发 trust 决策、远端包激活与 Fabric WORLD 现状](19-pack-trust.md)
 
-**Status:** in-progress
+**Status:** in-review（实现/测试/证据已交付；AC7 部分满足未勾选，AC3 备注过渡证据边界；证据见 `baseline/2026-09-22-diagnostics/`）
 
 **Assignee:** zed-flash-30（main-session agent；GLM-5.3 subagent worktree）
 
@@ -18,6 +18,33 @@
 
 **Human input note:** agent 可以实现、测试并整理证据；涉及删除旧公开资源/诊断路径或最终 golden/发布确认的维护者 sign-off 不能由 agent 代答，未经 sign-off 不得删除旧路径或勾选对应删除验收项。
 
+**Implementation record (2026-09-22, zed-flash-30):**
+
+- 交付：`ScriptDiagnosticRecord`（frozen record：errorId/ScriptType/phase/owner/generation/
+  candidate 标记/sourcePath/line/column/moduleIdentity/cacheRevision/message/有界 cause）、
+  `DiagnosticPhase`、`ScriptDiagnostics`（阶段分类器）、`DiagnosticOpenAction`（非 GUI
+  source-path/action record seam，票 27 消费）；`ScriptError.diagnostic()` 创建时冻结一次，
+  频次等可变态留在既有 getter。generation 归因：`DefaultErrorTracker.ModuleViews` 携带
+  generation/candidate，`ScriptManager` 在 kill 重建/候选创建/commit/rollback/discard 五个
+  发布点传入代际号；`SourceMapRegistry` 新增 revision 侧表（prepared cacheKey 随
+  `publishSourceMap` 注册），`NekoSourceMapView.mappedCacheRevision` 缺省 null。telemetry：
+  `JavaClassLoadTelemetryRecorder`（去重/上限/可重复快照）+ 隐私口径 Javadoc。
+  workspace：`WorkspaceGenerator.writeConfigIfMissing` 统一"仅缺失才写"。DTO wire 六字段
+  与 `fullDetails` 过渡快照语义零变化（编辑器删除文档 §3）。
+- 红→绿（baseline `../baseline/2026-09-22-diagnostics/command-output/red-compile-before-implementation.txt`
+  与 `green-run.txt`）：generation mis-attribution guard（旧 active 历史 generation 不被候选
+  改写/rollback 恢复）与 source-map phase mapping（gen.js→authored.ts 映射保留
+  moduleIdentity+cacheRevision）两测先行红（56 编译错），实现后绿。
+- 验证（真跑，摘录见 command-output/）：`:common:check` BUILD SUCCESSFUL（含隔离检查；
+  首轮两处失败为 ModuleViews 同实例回归[已修]与 Ticket07 close-抢占计时 flake[复跑绿]）；
+  `:1.21.1:test`/`:26.1.2:test`/`:26.2.0:test` BUILD SUCCESSFUL；`guardLint` 通过；
+  `:1.21.1:compileJava`/`:26.1.2:compileJava`/`:26.2.0:compileJava` 通过。本机 Windows
+  结果，不代表其他平台/CI/release。
+- 遗留与 owner（REPORT §5）：AC7 超时配置指引文本裁定→维护者；`Error-Reference.md`
+  NEKO- 码注册表在本分支不存在（本票零新码，code-gap 已记录）；Fabric 节点测试未跑
+  （本票未触 fabric 专属文件）；declaration/golden 派生字段投影（probe 声明收录 record
+  字段）不属本票非 GUI seam 范围——owner 09/33/34。
+
 **Work items:**
 
 - 统一 ErrorTracker/ScriptError/ErrorSummaryDTO/ScriptErrorReporter 的错误 ID、阶段、owner、source、generation、ScriptType、module identity、cause 和用户可见字段投影。
@@ -30,16 +57,16 @@
 
 ## Acceptance criteria
 
-- [ ] syntax/transform、resolve/link、cache、runtime、reload/cancel、trust 和 watchdog representative 错误均有正确阶段和 owner。
-- [ ] JS、CJS、ESM、TS、JSX、TSX、Python 的错误位置能回映射到原始 source，并保留模块身份、行列和 cache/revision 信息。
-- [ ] 同一错误在日志、ErrorSummaryDTO、packet/record projection、用户报告和现有外部 IDE workspace/declaration fixture 中呈现一致核心字段；本票不要求改完票 27 的最终屏幕，也不用私有 GUI 对象当契约。现状 `fullDetails` 快照可作为编辑器删除过渡证据，但不是本票目标 record。
-- [ ] diagnostics owner 通过非 GUI seam 输出可解析、可定位的 source path/action record；generation、owner、ScriptType、source path、行列和 action payload 人类可读且可被 contract fixture 断言。实际外部 IDE 打开与只读报告 GUI 动作由票 27 消费该 record 实现，本票不提前实现或私有化 GUI 打开行为。
-- [ ] 在 RELOAD_COMMIT 后的 candidate/active 状态中验证失败、取消、watchdog 终止与恢复：旧 active 错误历史不丢失，新候选错误不伪装成 active generation；旧 fixture只能作对照。
-- [ ] telemetry/Java class-load/watchdog 记录可重复采集、可关闭或降级，并写明是否包含用户路径、脚本内容或环境信息。
-- [ ] 普通 runtime 错误文本不包含 offline validator、migration report 或修复提示；辅助工具只能显式独立运行。
-- [ ] 历史日志与用户在外部 IDE 编辑的 workspace config/declaration 在验证和迁移中不被覆盖或删除。
-- [ ] 诊断 golden 只冻结公开字段和用户可见语义，不冻结 UI私有对象、布局或私有异常对象身份。
-- [ ] 本票关闭范围是 frozen record、生产者和 contract fixture；票 27 负责最终只读 GUI 与外部 workspace 打开接线，票 34 负责跨域真实集成。旧投影/报告旁路仅在替代 behavior、declaration/字段投影、trace 通过且无调用者后移除，公开诊断和外部 IDE workspace功能不删除，清理不推迟 final release。
+- [x] syntax/transform、resolve/link、cache、runtime、reload/cancel、trust 和 watchdog representative 错误均有正确阶段和 owner。【`ScriptDiagnosticRecord`/`DiagnosticPhase`/`ScriptDiagnostics`（`common/src/main/java/com/tkisor/nekojs/core/error/`）；`ScriptDiagnosticRecordTest` 逐类覆盖 prepare（含 guest 语法错误归 PREPARE）、trust（`NekoModuleError.denied`）、resolve/link、cache、watchdog（真实 `SyncEvalWatchdog` 取消求值）与 reload/cancel（`ofReloadFailure`）；`DiagnosticPhaseMatrixTest` 经真实管线（`NekoModulePipelineCache.prepare` / `loadEntry`）验证 ts/py/jsx/tsx 语法、ESM resolve 与 execution 阶段归属；红→绿证据见 `baseline/2026-09-22-diagnostics/command-output/red-compile-before-implementation.txt`】
+- [x] JS、CJS、ESM、TS、JSX、TSX、Python 的错误位置能回映射到原始 source，并保留模块身份、行列和 cache/revision 信息。【`DiagnosticPhaseMatrixTest`：`jsEntryRuntimeFailure…`、`cjsChildRuntimeFailure…`（require 子模块身份）、`unresolvedEsmImport…`、`tsAndTsxRuntimeFailures…`、`jsxRuntimeFailureMapsBackToAuthoredJsxSource`、`pythonRuntimeFailureMapsBackToAuthoredPythonSource`、`preparedCacheRevisionIsRetainedOnMappedDiagnostics`（prepared cacheKey 随 source map 注册并在 record 保留）；合成映射链路 `ScriptDiagnosticRecordTest.mappedExecutionErrorKeepsOriginalSourceModuleIdentityAndCacheRevision`（gen.js→authored.ts 映射 + moduleIdentity + cacheRevision）】
+- [x] 同一错误在日志、ErrorSummaryDTO、packet/record projection、用户报告和现有外部 IDE workspace/declaration fixture 中呈现一致核心字段；本票不要求改完票 27 的最终屏幕，也不用私有 GUI 对象当契约。现状 `fullDetails` 快照可作为编辑器删除过渡证据，但不是本票目标 record。【字段统一由 frozen record 单点投影：日志历史在 `DefaultErrorTracker.recordCallbackError`/`ScriptExecutor.executeEntry` 追加 `diagnostic().describe()`（既有中文正文不变）；`ErrorSummaryDTO` 六字段经 `ScriptDiagnosticRecord.toErrorSummary` 组装（`NekoJSCommands.errorSnapshot` 模板+1.21.1 孪生改走该方法，wire 形状不变、`PayloadWireFormatGoldenTest` 绿）；用户报告/telemetry 消费 `NekoRuntimeRoot.ErrorSnapshot.records()`/`DefaultErrorTracker.diagnostics()`；workspace/declaration fixture 不受影响（`WorkspaceGeneratorPreserveTest`、probe 测试绿）。`fullDetails` 按编辑器删除文档 §3 保留为过渡快照，未伪装成本票 record——record 经 `ScriptError.diagnostic()` 公开】
+- [x] diagnostics owner 通过非 GUI seam 输出可解析、可定位的 source path/action record；generation、owner、ScriptType、source path、行列和 action payload 人类可读且可被 contract fixture 断言。实际外部 IDE 打开与只读报告 GUI 动作由票 27 消费该 record 实现，本票不提前实现或私有化 GUI 打开行为。【`DiagnosticOpenAction`（`action/type/owner/generation/source/line/column`，`payload()` 单行 key=value、带引号转义，`parse()` 严格解析）；`ScriptError.diagnostic().openAction()` 对无定位错误返回 null；round-trip 与字段断言见 `ScriptDiagnosticRecordTest.openActionPayloadIsParseableAndRoundTrips`/`unknownSourcePathYieldsNoOpenAction`；本票未新增任何 GUI/进程分派行为（`LocalErrorSource`/`ErrorOpenService` 未改语义）】
+- [x] 在 RELOAD_COMMIT 后的 candidate/active 状态中验证失败、取消、watchdog 终止与恢复：旧 active 错误历史不丢失，新候选错误不伪装成 active generation；旧 fixture只能作对照。【`ScriptDiagnosticGenerationTest` 三测：候选失败后旧记录 generation 保持（mis-attribution guard，红→绿）；commit 失败 rollback `restoreType` 恢复旧 generation；commit 发布候选错误携带已提交 generation+candidate 标记；既有 `DefaultErrorTrackerTest.candidateErrors…`/`failedCandidateErrors…` 与 `Ticket07RuntimeThreadsTest`（close 抢占/watchdog 面）在 `:common:check` 全绿作对照】
+- [x] telemetry/Java class-load/watchdog 记录可重复采集、可关闭或降级，并写明是否包含用户路径、脚本内容或环境信息。【`JavaClassLoadTelemetryRecorder`（去重计数、8192 上限、最旧淘汰、可重复 `snapshot()`）+ `JavaClassLoadTelemetryRecorderTest` 5 测（含 no-sink 即禁用、null 重装禁用）；隐私口径写在 `JavaClassLoadTelemetrySink`/`Recorder`/`JavaClassLoadTelemetry` Javadoc：含 ScriptType、脚本 authored id、引擎类名与 allow 位；不含脚本内容、绝对用户路径、环境信息；watchdog 可观察语义未改（票 07 测试全绿）】
+- [ ] 普通 runtime 错误文本不包含 offline validator、migration report 或修复提示；辅助工具只能显式独立运行。**部分满足**：全仓检索确认普通错误路径没有 offline validator/migration report 引用（`common/src/main` 的 error/script 包 0 命中），辅助工具无隐式运行；但 `ScriptExecutor.waitForEvaluation` 的求值超时消息含既有配置指引「可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds」（票 07 交付的既有文本，是否属"修复提示"需维护者裁定；本票未改该用户可见文本以避免越权行为变更）——owner：维护者 sign-off，见 REPORT §5】
+- [x] 历史日志与用户在外部 IDE 编辑的 workspace config/declaration 在验证和迁移中不被覆盖或删除。【`WorkspaceGenerator.writeConfigIfMissing`（script 目录与 `.neko_probe` 两处统一"仅缺失才写"）+ `WorkspaceGeneratorPreserveTest`（首写后不再覆盖、用户字节原样保留）；reload/验证路径无日志文件删除调用（巡检 + 票 07 reload 测试绿）；declaration/probe 产物本票零改动】
+- [x] 诊断 golden 只冻结公开字段和用户可见语义，不冻结 UI私有对象、布局或私有异常对象身份。【本票零 golden 更新（git diff 无 golden/probe 产物）；`ShowErrorListPacket` wire 六字段不变、`PayloadWireFormatGoldenTest` 绿；record 只携带公开字段与有界 cause 摘要（`ScriptDiagnostics.CAUSE_BOUND`），不含堆栈或异常对象身份】
+- [x] 本票关闭范围是 frozen record、生产者和 contract fixture；票 27 负责最终只读 GUI 与外部 workspace 打开接线，票 34 负责跨域真实集成。旧投影/报告旁路仅在替代 behavior、declaration/字段投影、trace 通过且无调用者后移除，公开诊断和外部 IDE workspace功能不删除，清理不推迟 final release。【record+生产者（`ScriptError.diagnostic()`，创建时冻结）+contract fixture（上述测试）已交付；GUI/外部打开零实现（归票 27）；trace：`ErrorSummaryDTO` 生产者全仓仅 `NekoJSCommands.errorSnapshot`（模板+1.21.1 孪生）与 record `toErrorSummary`——无静态全局旁路、无第二事实源（`ScriptErrorReporter` 门面→`ErrorTrackerReporter`→`DefaultErrorTracker` 单链）；因此无可移除的无调用者旁路，公开诊断与外部 workspace 功能零删除】
 
 ## Sources
 

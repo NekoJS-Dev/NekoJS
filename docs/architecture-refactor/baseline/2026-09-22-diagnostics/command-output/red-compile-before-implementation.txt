@@ -1,0 +1,32 @@
+Command (run 2026-09-22, before the ScriptDiagnosticRecord/DiagnosticPhase/DiagnosticOpenAction
+API and the generation-carrying module-view overloads were implemented):
+
+  cd /d/mcmodDemo/NekoJS-mult-t30 && ./gradlew.bat :common:compileTestJava
+
+Result: BUILD FAILED (red state) - the two TDD-first test classes
+(ScriptDiagnosticGenerationTest, ScriptDiagnosticRecordTest) did not compile because the
+frozen-record API they assert did not exist yet. Verbatim compiler excerpt:
+
+  D:\mcmodDemo\NekoJS-mult-t30\common\src\test\java\com\tkisor\nekojs\core\error\ScriptDiagnosticGenerationTest.java:55: 错误: 对于activateModuleViews(ScriptType,Context,NekoModulePipelineCache,long), 找不到合适的方法
+              tracker.activateModuleViews(ScriptType.SERVER, activeContext, active, 5L);
+                     ^
+      方法 DefaultErrorTracker.activateModuleViews(ScriptType,NekoModulePipelineCache)不适用
+        (实际参数列表和形式参数列表长度不同)
+      方法 DefaultErrorTracker.activateModuleViews(ScriptType,Context,NekoModulePipelineCache)不适用
+        (实际参数列表和形式参数列表长度不同)
+  56 个错误
+
+  * What went wrong:
+  Execution failed for task ':common:compileTestJava' (registered by plugin class 'org.gradle.api.plugins.JavaBasePlugin').
+  > Compilation failed; see the compiler output below.
+
+  BUILD FAILED in 11s
+  12 actionable tasks: 2 executed, 1 from cache, 9 up-to-date
+
+The 56 errors cover: missing types ScriptDiagnosticRecord / DiagnosticPhase /
+DiagnosticOpenAction, missing ScriptError.diagnostic(), missing
+ScriptDiagnosticRecord.ofReloadFailure/toErrorSummary, and the missing generation-carrying
+activateModuleViews/activateCandidateModuleViews overloads.
+
+Green state (same command after implementation): BUILD SUCCESSFUL; see
+green-run.txt for the two test classes (14 tests passed).
