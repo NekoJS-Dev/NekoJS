@@ -15,21 +15,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 19 AC6 的 Fabric WORLD 现状 fixture（纯文件读，全部节点同跑）：固定 Fabric 当前
- * 「WORLD 包从不激活」的行为与它的外部表现，作为 partial/unavailable 能力证据的事实输入——
- * 不伪造 parity，也不改本地包路径/默认启用（本测试只读）。
+ * Fabric WORLD status fixture for ticket 19 AC6 (pure file reads, runs on every node): pins
+ * Fabric's current "WORLD packs are never activated" behavior and its external surface, as
+ * the factual input for partial/unavailable capability evidence — no fabricated parity, and
+ * no change to local pack paths or defaults (this test is read-only).
  *
- * <p>当前现象链（2026-09-22，mult@7768e02d）：
+ * <p>Current behavior chain (2026-09-22, mult@7768e02d):
  *
  * <ul>
- *   <li>激活：WORLD 包唯一激活入口是 NeoForge 侧 {@code ServerEventListener#
- *       onServerAboutToStart}；fabric raw root（含 {@code FabricServerEventBindings} 的
- *       SERVER_STARTING/STOPPED 接线）不触碰 {@code ScriptPackRegistry} 的 world 批。</li>
- *   <li>列表：fabric {@code /nekojs packs} 的空结果文案声称查找 {@code <world>/nekojs_packs/}，
- *       但该目录在 fabric 从不被扫描（worldPacks 恒空）——已知文案与行为不一致，按票 19
- *       口径保留现状并记录，不在此修。</li>
- *   <li>分发：gather 只读 registry（GLOBAL → WORLD → SERVER_CACHE）；fabric 上 WORLD 批
- *       恒空，因此 fabric 服务器只能分发 GLOBAL 包。</li>
+ *   <li>Activation: the only WORLD pack activation entry is the NeoForge-side {@code
+ *       ServerEventListener#onServerAboutToStart}; the fabric raw root (including the
+ *       SERVER_STARTING/STOPPED wiring in {@code FabricServerEventBindings}) never touches
+ *       {@code ScriptPackRegistry}'s world batch.</li>
+ *   <li>Listing: the fabric {@code /nekojs packs} empty-result message claims it looked in
+ *       {@code <world>/nekojs_packs/}, but that directory is never scanned on fabric
+ *       (worldPacks is always empty) — a known message/behavior mismatch, kept and recorded
+ *       per ticket 19's scope, not fixed here.</li>
+ *   <li>Distribution: the gather reads only the registry (GLOBAL → WORLD → SERVER_CACHE);
+ *       on fabric the WORLD batch is always empty, so a fabric server can only distribute
+ *       GLOBAL packs.</li>
  * </ul>
  */
 class FabricWorldPackStatusTest {
@@ -75,7 +79,7 @@ class FabricWorldPackStatusTest {
         }
     }
 
-    /** fabric raw root 全部代码行（javadoc/注释剔除后）。 */
+    /** All code lines of the fabric raw root (javadoc/comments stripped). */
     private static String fabricCodeLines() {
         StringBuilder out = new StringBuilder();
         for (Path file : javaFiles(repoRoot().resolve("src/fabric/java"))) {
@@ -97,8 +101,8 @@ class FabricWorldPackStatusTest {
 
     @Test
     void worldPackActivationExistsOnlyInTheNeoforgeServerLifecycle() {
-        // main 源里 activateWorldPacks 的调用点只允许出现在两个 NeoForge ServerEventListener
-        //（共享树 + 1.21.1 孪生）——fabric 侧不存在第二条激活路线
+        // activateWorldPacks call sites in main sources may exist only in the two NeoForge
+        // ServerEventListeners (shared tree + 1.21.1 twin) — no second activation route on fabric
         List<Path> roots = List.of(
                 repoRoot().resolve("src/main/java"),
                 repoRoot().resolve("src/fabric/java"),
@@ -126,7 +130,7 @@ class FabricWorldPackStatusTest {
                         "No script packs found (looked in nekojs/packs/ and <world>/nekojs_packs/)."),
                 "the fabric empty-list message must stay pinned as documented (it claims a world lookup "
                         + "that never runs on fabric; recorded as a known gap, not fixed here)");
-        // 列表内容只来自 globalPacks + worldPacks；fabric 上后者恒空（上一用例钉住原因）
+        // List content comes only from globalPacks + worldPacks; on fabric the latter is always empty (previous case pins the reason)
         assertTrue(fabricCommands.contains("registry.worldPacks()"));
     }
 

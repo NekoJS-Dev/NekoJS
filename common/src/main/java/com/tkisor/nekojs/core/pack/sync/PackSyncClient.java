@@ -228,9 +228,11 @@ public final class PackSyncClient {
         boolean clientReloadSucceeded = false;
 
         try {
-            // 1) 逐包校验：manifest 必须是 JSON 对象（否则激活扫描会静默跳过该包——在此以
-            //    明确拒绝 + 原因进 trust 结果取代"接受了一个永不激活的包"）；再验签
-            //    （未签名受 allowUnsigned 控制）。旧 active 目录此时仍未触碰。
+            // 1) Per-pack validation: the manifest must parse as a JSON object (the activation
+            //    scan would otherwise silently skip the pack — reject here with the reason in
+            //    the trust result instead of accepting a pack that never activates), then verify
+            //    the signature (unsigned packs are governed by allowUnsigned). The old active
+            //    directory is still untouched at this point.
             for (SyncedPack pack : packs) {
                 if (!expectedHashes.containsKey(pack.syncId())) {
                     NekoJS.LOGGER.warn("Ignoring unexpected server pack {}", pack.syncId());
@@ -696,21 +698,26 @@ public final class PackSyncClient {
     }
 
     /**
-     * 远端套接字地址 → bucket 所用服务器地址文本（两 loader 接收桥共用）。配置阶段
-     * {@code Minecraft#getCurrentServer()} 尚未就绪，从连接远端地址取 hostname；归一
-     * 后的文本既是 bucket 计算输入，也是未信任断连提示里供玩家照抄的地址。
+     * Remote socket address → the server address text used for bucket computation (shared by
+     * both loader receive bridges). {@code Minecraft#getCurrentServer()} is not ready during
+     * the configuration phase, so the hostname comes from the connection's remote address; the
+     * normalized text is both the bucket input and the address players are told to re-type in
+     * the untrusted disconnect hint.
      */
     public static String normalizeRemoteAddress(java.net.SocketAddress remote) {
         if (remote instanceof java.net.InetSocketAddress isa) {
             String host = isa.getHostString();
             if (host != null && !host.isBlank()) {
-                return host.trim().toLowerCase(java.util.Locale.ROOT);
+                // Default-locale lowercasing must match PackSyncTrustStore.bucketFor exactly;
+                // Locale.ROOT here would compute different buckets on locale-sensitive JVMs
+                // and silently orphan trust entries persisted by the previous resolver.
+                return host.trim().toLowerCase();
             }
         }
         return remote != null ? remote.toString() : "unknown";
     }
 
-    /** manifest 有效性：能解析为 JSON 对象（与本地包 {@code ScriptPackManifest.load} 的底线一致）。 */
+    /** Manifest validity: parses as a JSON object (the same floor as local packs in {@code ScriptPackManifest.load}). */
     private static boolean isJsonObjectManifest(String manifestJson) {
         try {
             return JsonParser.parseString(manifestJson).isJsonObject();

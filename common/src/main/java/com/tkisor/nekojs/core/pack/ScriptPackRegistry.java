@@ -90,10 +90,11 @@ public final class ScriptPackRegistry {
      * 激活世界包：扫描 {@code worldDir/nekojs_packs/} 并替换当前世界包集合。
      * 返回本次激活的全部 WORLD 包（含禁用者，供列表命令展示）。
      *
-     * <p>worldDir 先归一为绝对路径：平台入口可能传入相对形式（Windows 专用服观察到
-     * {@code .\world\.}），而 nekojs root 恒为绝对——包脚本路径若保持相对，后续
-     * {@code root.relativize(script.path)} 混用绝对/相对路径抛 IAE，WORLD 包脚本全部
-     * 执行失败（票 03 §3-1 实码缺陷、票 07 G4）。
+     * <p>worldDir is normalized to an absolute path first: platform entry points may pass a
+     * relative form (a Windows dedicated server was observed handing in {@code .\world\.})
+     * while the nekojs root is always absolute — keeping pack script paths relative makes the
+     * later {@code root.relativize(script.path)} mix absolute and relative inputs, throw IAE,
+     * and fail every WORLD pack script (ticket 03 §3-1 real-code defect, ticket 07 G4).
      */
     public synchronized List<ScriptPack> activateWorldPacks(Path worldDir) {
         Path normalized = worldDir == null ? null : worldDir.toAbsolutePath().normalize();

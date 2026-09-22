@@ -137,3 +137,13 @@ AC8 的删除条件执行方式：loader 侧两条重复判定/解析路线（bu
   拒绝）、`ad4ca3ff`（test(pack-trust) Fabric 现状钉住）、证据 commit（本目录）。
 - 输入基线：`../2026-09-15-network-sync/`（配置期桥与 wire 前置）、
   `../2026-09-12-data-protection/`（trust-store/缓存旧 fixture 与 §3-1 缺陷记录）。
+
+## 8. 主会话复核修正（2026-09-22，合并后）
+
+- bucket 一致性缺陷（复核发现）：`PackSyncClient.normalizeRemoteAddress` 初版用
+  `Locale.ROOT` 小写化 host，而 `PackSyncTrustStore.bucketFor`（及旧 resolver）用默认
+  locale——在 locale 敏感 JVM（如 Turkish）上会算出与已持久化 trust 条目不同的 bucket，
+  造成静默失信，违反 AC3「bucket 计算行为不变」。已改回默认 locale 并加注释说明该
+  约束（不得"修复"为 ROOT）。
+- 本票新增的中文注释（4 个生产/桥文件 + 4 个测试文件中本次 diff 新增部分）改英文
+  （AGENTS.md 语言规则）；既有中文注释未动。

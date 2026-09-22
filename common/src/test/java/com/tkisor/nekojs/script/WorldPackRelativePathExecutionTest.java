@@ -34,19 +34,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * WORLD 包相对路径回归（票 03 §3-1 实码缺陷、票 07 G4 遗留、票 19 承接）：
- * 平台传入的 world 目录可能是相对形式（Windows 专用服观察到 {@code .\world\.}），而
- * nekojs root 恒为绝对路径。若包脚本路径保持相对形式，{@code ScriptExecutor} 里
- * {@code paths.root().relativize(script.path)} 混用绝对/相对路径抛 IAE——WORLD 包激活后的
- * SERVER reload 中该包脚本全部执行失败（错误进面板、脚本 disabled），即「激活了但没跑」。
+ * WORLD pack relative-path regression (ticket 03 §3-1 real-code defect, ticket 07 G4
+ * leftover, picked up by ticket 19): the world directory handed in by the platform may be
+ * relative (a Windows dedicated server was observed passing {@code .\world\.}) while the
+ * nekojs root is always absolute. If pack script paths stay relative,
+ * {@code paths.root().relativize(script.path)} in {@code ScriptExecutor} mixes absolute and
+ * relative inputs and throws IAE — after WORLD pack activation, the SERVER reload fails
+ * every script of that pack (errors land in the panel, scripts get disabled): "activated
+ * but never ran".
  *
- * <p>修复语义：{@link ScriptPackRegistry#activateWorldPacks} 把 world 目录归一为绝对
- * 路径后再扫描，包脚本路径进入 ScriptContainer 前已是绝对形式。
+ * <p>Fix semantics: {@link ScriptPackRegistry#activateWorldPacks} normalizes the world
+ * directory to an absolute path before scanning, so pack script paths are already absolute
+ * when they enter ScriptContainer.
  *
- * <p>测试几何：共享测试 gameDir 在系统临时盘，与 Gradle CWD（模块目录）可能不在同一盘，
- * 无法从 CWD 构造指向它的相对路径。因此本测试临时把 {@code NekoJSPaths} 单例换成在
- * CWD 同盘 {@code build/} 下自建的 gameDir（相对 world 目录由此可达），结束后恢复原
- * 实例并重扫全局包。这是测试专用反射 seam（同根树测试反射 Platform.INSTANCE 的先例）。
+ * <p>Test geometry: the shared test gameDir lives on the system temp drive, which may not be
+ * the same drive as the Gradle CWD (the module directory), so no relative path from CWD can
+ * reach it. This test therefore temporarily swaps the {@code NekoJSPaths} singleton for a
+ * gameDir built under {@code build/} on the CWD's drive (making a relative world dir
+ * reachable) and restores the original instance and global pack scan afterwards. This is a
+ * test-only reflection seam (precedent: same-tree tests reflecting Platform.INSTANCE).
  */
 class WorldPackRelativePathExecutionTest {
 
@@ -67,7 +73,7 @@ class WorldPackRelativePathExecutionTest {
         Files.writeString(packScripts.getParent().resolve("manifest.json"), "{\"id\": \"g4demo\"}");
         Files.writeString(packScripts.resolve("w.js"), "TestRecorder.record('g4-world-pack-ok');\n");
 
-        // 相对形式的 world 目录：与生产平台入口（server.getWorldPath）观察到的形态同构
+        // World dir in relative form: same shape the production platform entry (server.getWorldPath) was observed handing in
         Path relativeWorldDir = cwd.relativize(worldDir);
         assertFalse(relativeWorldDir.isAbsolute(), "test setup must hand the registry a relative world dir");
 
@@ -103,9 +109,9 @@ class WorldPackRelativePathExecutionTest {
         }
     }
 
-    /* ================= 测试装配 ================= */
+    /* ================= test assembly ================= */
 
-    /** 脚本侧上报通道（global binding {@code TestRecorder}）。 */
+    /** Script-side reporting channel (global binding {@code TestRecorder}). */
     public static final class Recorder {
         private volatile String value;
 
@@ -176,7 +182,7 @@ class WorldPackRelativePathExecutionTest {
         @Override public Object managedApiImplementation(com.tkisor.nekojs.api.surface.ApiSymbolId globalId) { return null; }
     }
 
-    /** 临时替换 {@code NekoJSPaths} 单例（仅本测试 JVM、用后恢复）。 */
+    /** Temporarily swaps the {@code NekoJSPaths} singleton (this test JVM only, restored afterwards). */
     private static void swapPathsInstance(NekoJSPaths replacement) throws Exception {
         Field instance = NekoJSPaths.class.getDeclaredField("INSTANCE");
         instance.setAccessible(true);
@@ -190,11 +196,11 @@ class WorldPackRelativePathExecutionTest {
                 try {
                     Files.deleteIfExists(p);
                 } catch (Exception ignored) {
-                    // 日志 FileAppender 可能占用句柄；残留位于 build/ 下，随构建清理
+                    // A log FileAppender may hold the handle; leftovers sit under build/ and are cleaned by later builds
                 }
             });
         } catch (Exception ignored) {
-            // 同上：best-effort 清理
+            // Same as above: best-effort cleanup
         }
     }
 }

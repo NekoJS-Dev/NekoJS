@@ -13,16 +13,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 19 AC1/AC8 的配置期桥 fixture（纯文件读，全部节点同跑）：NeoForge
- * {@code PackSyncConfigurationTask} 与 fabric {@code FabricPackSync.PushTask} 两条配置期
- * 桥的推送次序必须由共享核（{@code PackSyncServer}）单点决定——先收集 gather、先发
- * 哈希清单，bundle 仅在 {@code PackSyncServer.shouldSendBundle} 放行后紧随发送；
- * 接收侧的远端地址 → bucket 信任输入归一（{@code PackSyncClient.normalizeRemoteAddress}）
- * 与 CLIENT 重载（{@code root.reload(ScriptType.CLIENT)}）同样只走共享路线。
+ * Config-phase bridge fixture for ticket 19 AC1/AC8 (pure file reads, runs on every node):
+ * the push order of the NeoForge {@code PackSyncConfigurationTask} and the fabric
+ * {@code FabricPackSync.PushTask} configuration bridges must be decided by a single shared
+ * core point ({@code PackSyncServer}) — gather first, hash list sent first, and the bundle
+ * sent only after {@code PackSyncServer.shouldSendBundle} allows it; on the receive side the
+ * remote-address → trust-bucket normalization ({@code PackSyncClient.normalizeRemoteAddress})
+ * and the CLIENT reload ({@code root.reload(ScriptType.CLIENT)}) likewise go only through the
+ * shared routes.
  *
- * <p>删除条件（AC8）：loader 侧此前各自复制的 hashOnly/非空判定与 InetSocketAddress
- * 解析路线，在两侧行为等价（共享核单点 + 两桥委托）验证后删除；本 trace 即验证面——
- * 桥内不允许再出现本地重复判定。
+ * <p>Deletion condition (AC8): the hashOnly/emptiness checks and the InetSocketAddress
+ * resolution routes previously duplicated per loader side were deleted after equivalence on
+ * both sides (shared-core single point + both bridges delegating) was verified; this trace is
+ * that verification surface — no local duplicated decision may reappear inside a bridge.
  */
 class PackSyncBridgeSourceTraceTest {
 
@@ -46,7 +49,7 @@ class PackSyncBridgeSourceTraceTest {
         }
     }
 
-    /** 只保留代码行（去掉 javadoc/行注释形态的行）：符号出现在注释里不是接线引用。 */
+    /** Keep code lines only (drop javadoc and line-comment forms): a symbol inside a comment is not a wiring reference. */
     private static String codeLinesOnly(String source) {
         StringBuilder out = new StringBuilder(source.length());
         for (String line : source.split("\n", -1)) {
@@ -67,7 +70,7 @@ class PackSyncBridgeSourceTraceTest {
         return codeLinesOnly(read(repoRoot().resolve("src/fabric/java").resolve(relative)));
     }
 
-    /** 断言一条配置期推送桥的共享次序：gather → 哈希清单先行 → bundle 经共享判定门后随发。 */
+    /** Assert one config-phase push bridge's shared ordering: gather → hash list first → bundle after the shared decision gate. */
     private static void assertPushOrderSharesCoreDecision(
             String bridgeCode, String bridgeName, String hashListSendMarker) {
         int gather = bridgeCode.indexOf("PackSyncServer.collectSyncPacks()");
@@ -86,7 +89,7 @@ class PackSyncBridgeSourceTraceTest {
                 bridgeName + " must not keep a local hashOnly copy of the bundle decision");
     }
 
-    /** 断言一条接收桥：payload → 共享管线 + Outcome 断连 + 共享地址归一，无本地重复路线。 */
+    /** Assert one receive bridge: payload → shared pipeline + Outcome disconnect + shared address normalization, no local duplicated route. */
     private static void assertReceiveRouteSharesCore(String bridgeCode, String bridgeName) {
         assertTrue(bridgeCode.contains("PackSyncClient.handleHashList("),
                 bridgeName + " must route hash lists through the shared client pipeline");
@@ -146,7 +149,7 @@ class PackSyncBridgeSourceTraceTest {
                 "both receivers must use the shared main-thread latch protocol");
     }
 
-    /** 共享核心的单点存在性：bundle 判定与地址归一在 common 定义，桥只消费。 */
+    /** Single-point existence of the shared core: the bundle decision and address normalization are defined in common; bridges only consume them. */
     @Test
     void sharedCoreOwnsTheBundleDecisionAndAddressNormalization() {
         String server = sharedMain("common/src/main/java/com/tkisor/nekojs/core/pack/sync/PackSyncServer.java");
@@ -157,7 +160,7 @@ class PackSyncBridgeSourceTraceTest {
                 "PackSyncClient must own the remote address → trust bucket normalization");
     }
 
-    /** 桥与共享核的接线点数量是有限集：main 源里 shouldSendBundle 调用恰两处（两桥各一）。 */
+    /** The bridge-to-core wiring set is finite: exactly one shouldSendBundle call site per bridge in main sources. */
     @Test
     void bundleDecisionHasExactlyOneCallSitePerBridge() throws IOException {
         int calls = 0;

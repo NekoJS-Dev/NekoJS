@@ -75,7 +75,7 @@ class PackSyncServerTest {
         try {
             List<SyncedPack> packs = PackSyncServer.collectSyncPacks();
 
-            // GLOBAL（字母序）→ WORLD（字母序），clientSync=false 的 WORLD 包不收集
+            // GLOBAL (alphabetical) → WORLD (alphabetical); the clientSync=false WORLD pack is not gathered
             assertEquals(List.of("packs:alpha", "packs:zeta", "worldpacks:beta"),
                     packs.stream().map(SyncedPack::syncId).toList());
         } finally {
@@ -94,7 +94,7 @@ class PackSyncServerTest {
         assertFalse(PackSyncServer.hashOnly());
     }
 
-    /** 配置期推送次序门：哈希清单总是先发；bundle 仅在非 hashOnly 且有包时紧随。 */
+    /** Config-phase push-order gate: the hash list always goes first; the bundle follows only when not hashOnly and packs exist. */
     @Test
     void bundleSendDecisionMatrix() {
         config("all");

@@ -616,14 +616,14 @@ class PackSyncClientTest {
     void rejectedBundleDoesNotOverwriteExistingLocalGlobalPack(@TempDir Path localPacksRoot) throws Exception {
         config("all", false);
         installCountingReloadHook();
-        // 本地 GLOBAL 包 demo：受保护的用户数据，远端包拒绝路径不得触碰
+        // Local GLOBAL pack "demo": protected user data that remote-pack rejection paths must not touch
         Path localPackDir = localPacksRoot.resolve("demo");
         java.nio.file.Files.createDirectories(localPackDir.resolve("client_scripts"));
         java.nio.file.Files.writeString(localPackDir.resolve("manifest.json"), "{\"id\": \"demo\"}");
         java.nio.file.Files.writeString(localPackDir.resolve("client_scripts/local.js"), "// local\n");
         ScriptPackRegistry.get().refreshGlobalPacks(localPacksRoot);
         try {
-            // hash 不匹配的远端包（同 syncId packs:demo）→ 落盘重扫后检出
+            // Remote pack with a mismatching hash (same syncId packs:demo) — caught by the post-write rescan
             String manifest = signed("packs:demo", "GLOBAL", "key-local-overwrite");
             SyncedPack pack = pack("packs:demo", "GLOBAL", manifest, "client_scripts/hud.js", "hud()");
             PackSyncClient.handleHashList(runtimeRoot, "srv-overwrite.test", List.of(
@@ -656,7 +656,7 @@ class PackSyncClientTest {
                 .resolve(SyncedPack.encodeSyncId("packs:clearable")).resolve("client_scripts/hud.js");
         assertTrue(java.nio.file.Files.isRegularFile(cachedFile));
 
-        // 服务器清空包集（空哈希清单）：卸载 active 集合并重载；缓存文件可再生，按约保留
+        // Server clears its pack set (empty hash list): unload the active set and reload; cache files are regenerable and stay per the convention
         PackSyncClient.Outcome outcome = PackSyncClient.handleHashList(runtimeRoot, "srv-clearable.test", List.of());
 
         assertNull(outcome.disconnect(), outcome.disconnect());
@@ -677,7 +677,7 @@ class PackSyncClientTest {
             }
         };
         assertEquals("channel-local", PackSyncClient.normalizeRemoteAddress(opaque));
-        // 归一结果与 bucket 计算一致（同一地址两种大小写形式同 bucket）
+        // Normalization agrees with bucket computation (both casings of one address share a bucket)
         assertEquals(PackSyncTrustStore.bucketFor("play.example.com"),
                 PackSyncTrustStore.bucketFor(
                         PackSyncClient.normalizeRemoteAddress(new java.net.InetSocketAddress("PLAY.Example.COM", 25565))));

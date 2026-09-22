@@ -36,8 +36,10 @@ public final class PackSyncServer {
     }
 
     /**
-     * 配置期 bundle 门（两 loader 配置任务共用）：哈希清单总是先行推送；完整 bundle 仅在
-     * 非 hashOnly 且实际 gather 到包时紧随发送。共享单点使推送次序不会在两桥间漂移。
+     * Config-phase bundle gate (shared by both loader configuration tasks): the hash list is
+     * always pushed first; the full bundle follows only when the mode is not hashOnly and packs
+     * were actually gathered. The shared single point keeps the push order from drifting
+     * between the two bridges.
      */
     public static boolean shouldSendBundle(int gatheredPackCount) {
         return gatheredPackCount > 0 && !hashOnly();
