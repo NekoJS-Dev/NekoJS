@@ -280,14 +280,13 @@ val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
     description = "Asserts the five production node jars contain no external addon fixture content (ticket 08)."
 
     val addonJarTask = project(":common").tasks.named("externalAddonJar")
-    // 五个生产 jar = active 节点（root 自身）+ 其余四个节点子项目；common/processor 不在其列
-    val nodeJarTasks = listOf(tasks.named("jar")) +
-            subprojects
-                .filter {
-                    it.name != "common" && it.name != "common-api-processor"
-                            && it.plugins.hasPlugin("java") && it.tasks.names.contains("jar")
-                }
-                .map { it.tasks.named("jar") }
+    // 五个生产 jar = 五个节点子项目（root 是容器项目，没有 jar 任务）
+    val nodeJarTasks = subprojects
+        .filter {
+            it.name != "common" && it.name != "common-api-processor"
+                    && it.plugins.hasPlugin("java") && it.tasks.names.contains("jar")
+        }
+        .map { it.tasks.named("jar") }
     dependsOn(addonJarTask)
     dependsOn(nodeJarTasks)
 
