@@ -133,3 +133,13 @@ goldens、api-manifest 均原样）；`platformGateTest` 三节点复验无 drif
 - `examples/goal-capability-events.startup.js`：STARTUP 两族示例（fabric 缺席显式注明）。
 - 无公开面删除/改名 → 无迁移表条目；deprecated 别名的迁移提示已写入示例注释（与源码
   `@Deprecated` 注释一致）。
+
+## 主会话复核修正（2026-09-22，合并后）
+
+- 四个新测试文件（Catalog/ReloadHarness/ReloadLifecycle/FamilyBusBehavior）的 23 处
+  中文注释块翻译为英文（AGENTS.md 语言规则；PhaseTrace 本就全英文）。仅注释行变动，
+  代码/字符串字面量零改动（diff 逐行核对）。
+- 复核确认：两处既有测试修改（EventApiSurfaceGoldenTest/EventSurfaceOwnershipTest 装生产
+  cancellability predicate + 平台 stub）为真实测试环境修复、未删任何断言；catalog 快照经
+  真实注册入口派生、八族齐全；D1（票 33 fabric 门禁低估）/D2（broken 取消静默 no-op，
+  待维护者裁决）/D3（declaration 零覆盖）维持记录不动。

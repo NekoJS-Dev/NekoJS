@@ -24,28 +24,33 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 24 每族 caller-to-result 的 bus 级行为 fixture（NeoForge 侧）：在<b>真实家族总线</b>
- * （{@code LevelEvents.LOADED}、{@code PlayerEvents.CHAT}、{@code CommandEvents.COMMAND}、
- * {@code EntityEvents.DEATH}、{@code BlockEvents.BROKEN}、{@code ItemEvents.MODIFICATION}、
- * {@code GoalEvents.REGISTER}、{@code CapabilityEvents.REGISTER}）上验证注册、payload 透传、
- * priority 次序、取消短路、多次订阅恰一次和 reload 清理入口——即脚本 listener 所依赖的
- * 分发语义在家族总线上成立（bus 无关的并发 stress 由 common 的
- * {@code EventBusJSExternalBehaviorStressTest} 承载，不在此重复）。
+ * Ticket 24 per-family caller-to-result bus-level behavior fixture (NeoForge side): verifies
+ * registration, payload pass-through, priority ordering, cancellation short-circuit,
+ * exactly-once delivery across repeated subscriptions, and the reload cleanup entry on
+ * <b>real family buses</b> ({@code LevelEvents.LOADED}, {@code PlayerEvents.CHAT},
+ * {@code CommandEvents.COMMAND}, {@code EntityEvents.DEATH}, {@code BlockEvents.BROKEN},
+ * {@code ItemEvents.MODIFICATION}, {@code GoalEvents.REGISTER},
+ * {@code CapabilityEvents.REGISTER}) — i.e. the dispatch semantics script listeners rely on
+ * hold on the family buses (bus-agnostic concurrency stress lives in common's
+ * {@code EventBusJSExternalBehaviorStressTest}, not repeated here).
  *
- * <p>监听器走 Java 侧 {@code bus().listen(priority, ...)}——这正是
- * {@code EventBusForgeBridge.CancellableListener/Listener} 投递脚本总线的同一条底层注册面；
- * 无头 JVM 无法构造真实 MC 事件实例（Level/ServerPlayer 等），因此 post 使用同族形状的
- * 合成载荷（底层 post 不校验事件类型，载荷<b>原样</b>送达监听器——payload 透传语义可测）。
- * 平台原生事件 → 载荷的转换由 {@code EventBusForgeBridge} 承载，其 side filter 与
- * 取消回传已有 {@code EventBusForgeBridgeSideFilterTest}；真实平台回调的 source trace 见
- * {@code Ticket24GameplayEventPhaseTraceTest}。
+ * <p>Listeners go through the Java-side {@code bus().listen(priority, ...)} — the very same
+ * underlying registration surface {@code EventBusForgeBridge.CancellableListener/Listener}
+ * uses to deliver the script buses; a headless JVM cannot construct real MC event instances
+ * (Level/ServerPlayer etc.), so posts use synthetic payloads shaped like the family's own
+ * (the underlying post does not validate the event type, payloads reach listeners
+ * <b>verbatim</b> — payload pass-through semantics are testable). The platform native
+ * event → payload conversion lives in {@code EventBusForgeBridge}, whose side filter and
+ * cancellation write-back are already covered by {@code EventBusForgeBridgeSideFilterTest};
+ * the source trace of real platform callbacks is in
+ * {@code Ticket24GameplayEventPhaseTraceTest}.
  *
- * <p>静态组跨用例共享：每个用例自清理（token unregister + {@code clearTokens}），不污染
- * 同 JVM 的其它测试。
+ * <p>Static groups are shared across cases: each case cleans up after itself (token
+ * unregister + {@code clearTokens}) and does not pollute other tests in the same JVM.
  */
 class Ticket24GameplayFamilyBusBehaviorTest {
 
-    /** 每个用例注册的 (bus, token)，{@link #tearDown} 兜底反注册。 */
+    /** (bus, token) pairs registered by each case; {@link #tearDown} unregisters them as a fallback. */
     private final List<Registered> registered = new ArrayList<>();
 
     private record Registered(EventBus<?> bus, EventListenerToken<?> token) {
@@ -77,8 +82,8 @@ class Ticket24GameplayFamilyBusBehaviorTest {
 
     @BeforeEach
     void initCancellabilityPredicate() {
-        // 生产初始化次序同款（NekoJSMod 构造器 → NeoForgeRuntimeBootstrap.setup）：先于家族
-        // 类初始化设置，可取消总线才不会被冻成不可取消
+        // Same production init order (NekoJSMod constructor → NeoForgeRuntimeBootstrap.setup):
+        // set before family class-init, otherwise cancellable buses would freeze non-cancellable
         EventBusJS.setExternalCancellabilityPredicate(
                 net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
     }
@@ -103,7 +108,7 @@ class Ticket24GameplayFamilyBusBehaviorTest {
         CapabilityEvents.GROUP.clearListeners(ScriptType.STARTUP);
     }
 
-    /** 合成载荷：无头 JVM 里的家族形状替身，断言 payload 原样透传。 */
+    /** Synthetic payload: a family-shaped stand-in for the headless JVM; asserts payloads pass through verbatim. */
     private static final class StandIn {
         final String tag;
 

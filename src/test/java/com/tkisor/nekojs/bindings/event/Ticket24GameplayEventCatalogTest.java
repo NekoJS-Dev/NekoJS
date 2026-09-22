@@ -1,6 +1,6 @@
-// TODO(fabric): fabric 侧的 catalog 快照在 fabric 节点本地测试树
-// （versions/<fabric-node>/src/test/.../Ticket24FabricGameplayEventCatalogTest.java）——
-// `//? if fabric` 守卫对 active 节点是惰性注释，共享树放不下加载器专属表。
+// TODO(fabric): the fabric-side catalog snapshot lives in the fabric node's local test tree
+// (versions/<fabric-node>/src/test/.../Ticket24FabricGameplayEventCatalogTest.java) —
+// the `//? if fabric` guard is an inert comment for the active node; the shared tree cannot hold loader-specific tables.
 //? if neoforge {
 package com.tkisor.nekojs.bindings.event;
 
@@ -68,24 +68,29 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 24 catalog-snapshot fixture（NeoForge 侧）：Block/Item/Level/Player/Command/Capability/
- * Goal/Entity 八个事件族的公开成员经<b>真实注册入口 + 真实 catalog 派生</b>
- * （{@link NekoScriptCatalog#events}）冻结成契约快照——成员名、payload 类、side、
- * dispatch key、cancellable。新增/删除/改形任何公开成员都会让本表 diff（契约变更），
- * 而不是静默 drift；家族缺席（注册入口漏注册整个组）同样直接红。
+ * Ticket 24 catalog-snapshot fixture (NeoForge side): the public members of the eight event
+ * families Block/Item/Level/Player/Command/Capability/Goal/Entity are frozen into a contract
+ * snapshot via <b>the real registration entry + real catalog derivation</b>
+ * ({@link NekoScriptCatalog#events}) — member name, payload class, side, dispatch key,
+ * cancellable. Adding/removing/reshaping any public member diffs this table (a contract
+ * change) instead of drifting silently; a missing family (the registration entry dropping
+ * an entire group) likewise fails outright.
  *
- * <p>与票 33 的 {@code EventSurfaceDomainGateTest}（跨节点 bus 名基线）互补：那边冻结
- * 「每节点注册了哪些成员名」，本测试在 catalog 维度补上 payload/side/dispatch/cancel 形状，
- * 并把 wrapper 公开 payload 类（{@code BlockBrokenEventJS} 等加载器中立载荷）纳入同一
- * managed contract 视图。fabric 侧同款快照在 fabric 节点本地测试树（见文件头注释）。
+ * <p>Complements ticket 33's {@code EventSurfaceDomainGateTest} (cross-node bus-name
+ * baseline): that one freezes "which member names each node registers", while this test
+ * adds the payload/side/dispatch/cancel shapes at the catalog dimension and pulls the
+ * wrapper public payload classes ({@code BlockBrokenEventJS} and other loader-neutral
+ * payloads) into the same managed contract view. The fabric-side twin snapshot lives in
+ * the fabric node's local test tree (see the file header comment).
  *
- * <p>生产初始化次序复刻：先装 external cancellability predicate
- * （{@code NekoJSMod} 构造器里的 {@code NeoForgeRuntimeBootstrap.setup()} 同款），再
- * bootstrap 适配层、再注册组——次序反了会把可取消总线冻成不可取消。
+ * <p>Replicates the production init order: install the external cancellability predicate
+ * first (same as {@code NeoForgeRuntimeBootstrap.setup()} in the {@code NekoJSMod}
+ * constructor), then the bootstrap adapter layer, then the registration groups — reversing
+ * the order would freeze cancellable buses as non-cancellable.
  */
 class Ticket24GameplayEventCatalogTest {
 
-    /** 一条公开成员的期望形状：dispatchKey 为 {@code null} 表示非定向分发总线。 */
+    /** Expected shape of one public member: a {@code null} dispatchKey means a non-directed dispatch bus. */
     private record Expected(String name, Class<?> payload, ScriptType side, Class<?> dispatchKey) {}
 
     private static final List<String> FAMILIES = List.of(
@@ -184,7 +189,7 @@ class Ticket24GameplayEventCatalogTest {
                 "ticket-24 gameplay event catalog snapshot diff:\n  " + String.join("\n  ", failures));
     }
 
-    /** 每条 bus 在 catalog 派生中恰出现一次（与票 14 的跨组唯一性互为旁证）。 */
+    /** Each bus appears exactly once in the catalog derivation (corroborates ticket 14's cross-group uniqueness). */
     @Test
     void eachFamilyBusYieldsExactlyOneCatalogEntry() {
         Map<String, EventGroup> groups = registeredGroups();
@@ -226,9 +231,9 @@ class Ticket24GameplayEventCatalogTest {
     }
 
     private static void putNeoforgeFamilies(Map<String, Map<String, Expected>> families) {
-        // BlockEvents：中立声明（broken/modification）+ NeoForge 适配层成员，全部 SERVER。
+        // BlockEvents: neutral declarations (broken/modification) + NeoForge adapter-layer members, all SERVER.
         // known defect (recorded, not fixed here): broken is documented cancellable
-        // (wiki 事件参考 + BlockBrokenEventJS @Doc) but its neutral payload does not
+        // (wiki event reference + BlockBrokenEventJS @Doc) but its neutral payload does not
         // implement ICancellableEvent, so the predicate freezes the bus non-cancellable
         // on every loader — script cancellation of broken is a silent no-op. Fixing it is
         // a public-behavior change that needs a maintainer ruling (ticket 24 REPORT).

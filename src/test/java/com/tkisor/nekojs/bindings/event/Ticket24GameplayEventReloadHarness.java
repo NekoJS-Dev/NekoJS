@@ -26,21 +26,24 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 票 24 脚本路径 reload harness（版本树测试树，NeoForge 侧）：真实 root + 真实 Graal 管线 +
- * 真实家族事件组（静态单例），脚本经 {@code PlayerEvents/LevelEvents/CommandEvents/...} 注册
- * 监听器，SERVER 的加载/reload 走生产生命周期入口（{@code loadScripts} / {@code root.reload}）。
+ * Ticket 24 script-path reload harness (version-tree test tree, NeoForge side): real root +
+ * real Graal pipeline + real gameplay event groups (static singletons); scripts register
+ * listeners via {@code PlayerEvents/LevelEvents/CommandEvents/...}, and SERVER load/reload
+ * goes through the production lifecycle entries ({@code loadScripts} / {@code root.reload}).
  *
- * <p>与票 26/39 的 harness 同构（同一装配序列、同一 Platform/gameDir 桩）；本 harness 的
- * 家族是 gameplay 事件组，且在构造器<b>第一行</b>先装 cancellability predicate（生产
- * {@code NekoJSMod} 构造器次序），保证可取消家族总线不被冻错。无 vanilla 注册表依赖：
- * 脚本只挂无 key 监听器（keyed 注册需要真实 {@code Item}/{@code EntityType} 值），本
- * harness 的用例因此能（也只在）无头 JVM 真跑。
+ * <p>Isomorphic to the ticket 26/39 harnesses (same assembly sequence, same Platform/gameDir
+ * stub); this harness's families are the gameplay event groups, and its constructor installs
+ * the cancellability predicate on the <b>very first line</b> (the production {@code NekoJSMod}
+ * constructor order) so cancellable family buses are not frozen wrong. No vanilla registry
+ * dependency: scripts only attach key-less listeners (keyed registration needs real
+ * {@code Item}/{@code EntityType} values), so this harness's cases truly run — and only run —
+ * on a headless JVM.
  */
 final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
 
     private final Map<String, EventGroup> groups = new LinkedHashMap<>();
     private final StubPluginRuntime pluginRuntime = new StubPluginRuntime(groups);
-    /** 生产 bridge（prepare/finish 批次换装），不是接口的 legacy fallback。 */
+    /** The production bridge (batch swap on prepare/finish), not the interface's legacy fallback. */
     private final com.tkisor.nekojs.core.DefaultScriptEventBridge bridge =
             new com.tkisor.nekojs.core.DefaultScriptEventBridge(null);
 
@@ -74,7 +77,7 @@ final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
         root.createScriptManager(ScriptType.SERVER).discoverScripts();
     }
 
-    /** Platform 桩与 gameDir（测试树约定：{@code TestGameDirs.unique} 按 PID 隔离）。 */
+    /** Platform stub and gameDir (test-tree convention: {@code TestGameDirs.unique} isolates by PID). */
     static void ensurePlatformInitialized() {
         try {
             java.lang.reflect.Field instance = com.tkisor.nekojs.platform.Platform.class.getDeclaredField("INSTANCE");
@@ -99,26 +102,26 @@ final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
         }
     }
 
-    /** 写一份脚本（同名覆盖）。 */
+    /** Writes one script (same name overwrites). */
     void writeScript(ScriptType type, String name, String source) throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(type);
         Files.createDirectories(dir);
         Files.writeString(dir.resolve(name), source);
     }
 
-    /** 非事务初始加载（生产由 server about-to-start / startup 构造期触发）。 */
+    /** Non-transactional initial load (production triggers it at server about-to-start / startup construction). */
     void loadScripts(ScriptType type) {
         var manager = root.scriptManagerOf(type);
         manager.discoverScripts();
         manager.loadScripts();
     }
 
-    /** 事务式 reload（生产由 /nekojs reload server 触发）。 */
+    /** Transactional reload (production triggers it via /nekojs reload server). */
     void reloadScripts(ScriptType type) {
         root.reload(type);
     }
 
-    /** 清空指定类型脚本目录（每例独立，避免跨例残留）。 */
+    /** Empties the script directory of the given type (each case stays isolated, no cross-case leftovers). */
     static void clearScripts(ScriptType type) throws Exception {
         Path dir = ScriptTypeEnv.scriptsDir(type);
         Files.createDirectories(dir);
@@ -142,7 +145,7 @@ final class Ticket24GameplayEventReloadHarness implements AutoCloseable {
         }
     }
 
-    /** 插件运行时桩：只广告事件组与空绑定面。 */
+    /** Plugin runtime stub: advertises only event groups and an empty binding surface. */
     private static final class StubPluginRuntime implements IPluginRuntime {
         private final Map<String, EventGroup> groups;
 

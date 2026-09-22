@@ -19,19 +19,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 票 24 reload 清理 fixture（NeoForge 侧，真实 Graal 管线）：脚本在真实家族总线上注册
- * 监听器，SERVER 的多次 reload 后——无重复 dispatch、旧 generation 不再接收回调、取消结果
- * 跟随 active generation、候选失败保留旧 active 且无半清理状态。这是票 24 AC4 的主证；
- * bus 级并发 stress 由 common 的 {@code EventBusJSExternalBehaviorStressTest} 承载。
+ * Ticket 24 reload cleanup fixture (NeoForge side, real Graal pipeline): scripts register
+ * listeners on the real family buses, and after repeated SERVER reloads — no duplicate
+ * dispatch, old generations no longer receive callbacks, cancellation results follow the
+ * active generation, and a failed candidate keeps the old active with no half-cleaned
+ * state. This is the primary evidence for ticket 24 AC4; bus-level concurrency stress
+ * lives in common's {@code EventBusJSExternalBehaviorStressTest}.
  *
- * <p>探针是 {@code List}（票 26 harness 同款）：脚本回调 {@code event.add(tag)}，Java 侧
- * post 一个新 List 后读回「真正被调用」的结果——断言不依赖私有注册表或回调对象身份。
- * 合成载荷只承载探针（无头 JVM 无真实 MC 事件实例；原生事件 → 载荷转换与平台回调的
- * source trace 见 {@code Ticket24GameplayEventPhaseTraceTest}）。
+ * <p>The probe is a {@code List} (same as the ticket 26 harness): the script callback does
+ * {@code event.add(tag)}, and the Java side posts a fresh List and reads back what was
+ * "actually invoked" — assertions depend on no private registry or callback object
+ * identity. The synthetic payload carries only the probe (a headless JVM has no real MC
+ * event instances; the native event → payload conversion and the source trace of platform
+ * callbacks are in {@code Ticket24GameplayEventPhaseTraceTest}).
  *
- * <p>线程/时机语义：本 harness 在测试线程上串行执行 load/reload/post（与生产 owner-thread
- * 模型一致——SERVER 分发与 reload 都在 server 线程）；跨线程并发进入由 Graal 单线程约束
- * 兜底（票 07 的 {@code SyncEvalWatchdogTest} 已冻结），不在此重复。
+ * <p>Thread/timing semantics: this harness runs load/reload/post serially on the test
+ * thread (matching the production owner-thread model — SERVER dispatch and reload both
+ * happen on the server thread); cross-thread re-entrancy is backstopped by Graal's
+ * single-thread constraint (already frozen by ticket 07's {@code SyncEvalWatchdogTest}),
+ * not repeated here.
  */
 class Ticket24GameplayEventReloadLifecycleTest {
 
@@ -59,7 +65,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
         Ticket24GameplayEventReloadHarness.clearScripts(ScriptType.STARTUP);
     }
 
-    /** 派发一个探针 List 到指定总线（无 key 定向：脚本监听器都是全局监听）。 */
+    /** Posts a probe List to the given bus (no key targeting: script listeners are all global listeners). */
     private static List<String> post(Object bus) {
         List<String> probe = new ArrayList<>();
         @SuppressWarnings("unchecked")
@@ -101,7 +107,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
         assertEquals(List.of("level-gen3"), post(LevelEvents.LOADED),
                 "a reload that adds listeners to another family swaps both families together");
 
-        // 声明整体移除：下一轮没有任何监听器 → post 不再派发（清理不是「保留最后一次」）
+        // Whole-declaration removal: the next round declares no listeners → post no longer dispatches (cleanup is not "keep the last round")
         harness.writeScript(ScriptType.SERVER, "lifecycle.js", "// no listeners\n");
         harness.reloadScripts(ScriptType.SERVER);
         assertEquals(List.of(), post(PlayerEvents.LOGGED_IN),
@@ -117,8 +123,9 @@ class Ticket24GameplayEventReloadLifecycleTest {
         harness.loadScripts(ScriptType.SERVER);
         assertEquals(List.of("old"), post(PlayerEvents.LOGGED_IN));
 
-        // 同批 peer 领域计划在 STATE_PLAN 预检抛出 → 整批候选失败（票 26 harness 同款手法，
-        // 不为造失败改生产代码）。peer 只拒绝一次，恢复路径可测。
+        // A same-batch peer domain plan throws in the STATE_PLAN preflight → the whole candidate
+        // batch fails (same technique as the ticket 26 harness, no production code changed just
+        // to fabricate a failure). The peer rejects only once, keeping the recovery path testable.
         harness.root.registerDomainCollector(new CandidateDomainCollector() {
             private boolean rejected;
 
@@ -178,7 +185,7 @@ class Ticket24GameplayEventReloadLifecycleTest {
 
     @Test
     void cancellationResultIsObservableFromThePostSide() throws Exception {
-        // post 侧返回值即「脚本取消」的可观察结果（平台 bridge 以它回传 setCanceled）
+        // The post-side return value is the observable "script cancellation" result (the platform bridge relays it back as setCanceled)
         harness.writeScript(ScriptType.SERVER, "cancel.js", """
                 CommandEvents.command(event => true)
                 """);
@@ -241,8 +248,8 @@ class Ticket24GameplayEventReloadLifecycleTest {
         assertEquals(List.of("goal"), first,
                 "the startup family delivers the script listener through the script registration path");
 
-        // 生产 posting site（NekoJSMod.initializeScripts / NekoJSFabricMod.initializeScripts 同点）
-        // 每次 post 恰好派发一代监听器各一次
+        // Production posting site (the same spot as NekoJSMod.initializeScripts / NekoJSFabricMod.initializeScripts):
+        // each post dispatches exactly one generation of listeners, once each
         bus.post(first);
         assertEquals(List.of("goal", "goal"), first);
     }
