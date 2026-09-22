@@ -207,8 +207,21 @@ public class ServerEventListener {
      */
     private static void postGenerateData() {
         try {
-            PluginGenerationHooks.runGenerateData(NekoJSPaths.get().data(), "after_mods",
-                    generator -> ServerEvents.GENERATE_DATA.post(generator, "after_mods"));
+            com.tkisor.nekojs.wrapper.DataGenerationBatch.PublishResult result =
+                    PluginGenerationHooks.runGenerateData(NekoJSPaths.get().data(), "after_mods",
+                            generator -> ServerEvents.GENERATE_DATA.post(generator, "after_mods"));
+            int skippedCount = result.skippedUserFiles().size();
+            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).info(
+                    "generateData stage 'after_mods' published {} file(s); skipped {} user-owned file(s)",
+                    result.published().size(), skippedCount);
+            if (skippedCount > 0) {
+                Object skippedSummary = skippedCount > 10
+                        ? result.skippedUserFiles().subList(0, 10) + " +" + (skippedCount - 10) + " more"
+                        : result.skippedUserFiles();
+                com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).warn(
+                        "generateData stage 'after_mods' skipped user-owned files (never overwritten): {}",
+                        skippedSummary);
+            }
         } catch (Exception e) {
             com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER)
                     .error("generateData batch failed; nothing was published and the previous active data is retained: ", e);

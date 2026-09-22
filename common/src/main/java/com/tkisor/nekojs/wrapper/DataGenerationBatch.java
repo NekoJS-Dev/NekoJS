@@ -4,18 +4,24 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.Strictness;
+import com.google.gson.stream.JsonReader;
+import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
@@ -156,11 +162,7 @@ public class DataGenerationBatch {
                 continue;
             }
             if (relative.toLowerCase(java.util.Locale.ROOT).endsWith(".json")) {
-                try {
-                    JsonParser.parseString(content);
-                } catch (RuntimeException e) {
-                    violations.add(relative + ": invalid JSON (" + e.getMessage() + ")");
-                }
+                violations.addAll(strictJsonViolations(relative, content));
             }
         }
         if (!violations.isEmpty()) {
@@ -169,6 +171,51 @@ public class DataGenerationBatch {
                     + String.join("; ", violations));
         }
         return files.stream().map(f -> candidateDir.relativize(f).toString().replace('\\', '/')).toList();
+    }
+
+    /**
+     * Structural JSON validation with one tightening over plain {@link JsonParser}:
+     * duplicate object member names (which silently last-win in Gson) are rejected —
+     * two contributors writing the same key inside one file would otherwise publish as
+     * one of their intents without a trace. Lenient mode keeps parse acceptance identical
+     * to the previous {@code JsonParser.parseString} behavior.
+     */
+    private static List<String> strictJsonViolations(String relative, String content) {
+        try {
+            JsonReader reader = new JsonReader(new StringReader(content));
+            reader.setStrictness(Strictness.LENIENT);
+            readStrictValue(reader);
+            return List.of();
+        } catch (RuntimeException | IOException e) {
+            String message = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            return List.of(relative + ": invalid JSON (" + message + ")");
+        }
+    }
+
+    /** Recursive strict traversal: object names must be unique; leaf values are skipped. */
+    private static void readStrictValue(JsonReader reader) throws IOException {
+        switch (reader.peek()) {
+            case BEGIN_OBJECT -> {
+                reader.beginObject();
+                Set<String> names = new HashSet<>();
+                while (reader.hasNext()) {
+                    String name = reader.nextName();
+                    if (!names.add(name)) {
+                        throw new IllegalStateException("duplicate object key '" + name + "'");
+                    }
+                    readStrictValue(reader);
+                }
+                reader.endObject();
+            }
+            case BEGIN_ARRAY -> {
+                reader.beginArray();
+                while (reader.hasNext()) {
+                    readStrictValue(reader);
+                }
+                reader.endArray();
+            }
+            default -> reader.skipValue();
+        }
     }
 
     /**
@@ -332,6 +379,9 @@ public class DataGenerationBatch {
         } catch (IOException | RuntimeException e) {
             // Unreadable manifest: fall back to "nothing is generator-owned", i.e. publish
             // only creates and never overwrites. Deletion is never an option for user data.
+            NekoJS.LOGGER.warn(
+                    "generateData manifest for stage '{}' is unreadable ({}); treating every active file as user-owned — nothing will be overwritten",
+                    stage, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
         }
         return files;
     }

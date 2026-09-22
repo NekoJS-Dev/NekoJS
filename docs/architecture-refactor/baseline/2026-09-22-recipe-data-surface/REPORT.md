@@ -137,3 +137,16 @@
   声明 diff 0 行。
 - 有意的玩家可见行为变化共 2 项（afterRecipes 时序、generateData 落盘语义），均入 `MIGRATION.md`
   与 wiki；无 wire/persistent-data 变化。
+
+## 主会话复核修正（2026-09-22，合并后）
+
+- PublishResult 可见性（复核发现 AC5 缺口）：`postGenerateData` 原丢弃
+  `runGenerateData` 返回的 PublishResult——用户文件被跳过等保护决策对运维不可见。现两
+  `ServerEventListener` 双胞胎记录 INFO（published/skipped 计数）+ 跳过非空时 WARN 列出
+  user-owned 文件（>10 截断）。
+- 文件内重复 JSON key（复核发现 AC6 缺口）：Gson 默认对同一对象内重复成员名 last-wins，
+  两个贡献者写同一 key 会静默丢一个。`validate` 现以 lenient JsonReader 严格遍历拒绝重复
+  对象键（解析接受面与原先 JsonParser 一致，仅新增重复键拒绝）：
+  `duplicateJsonObjectKeysFailValidationInsteadOfSilentlyLastWinning`。
+- manifest 不可读降级（编码规范：fallback 必须可观察）：`readManifest` 静默回退现补 WARN
+  日志，说明「所有 active 文件按 user-owned 处理，不会覆盖任何文件」。

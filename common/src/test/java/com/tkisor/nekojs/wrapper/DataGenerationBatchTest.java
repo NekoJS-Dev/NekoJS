@@ -135,6 +135,26 @@ class DataGenerationBatchTest {
     }
 
     @Test
+    void duplicateJsonObjectKeysFailValidationInsteadOfSilentlyLastWinning() throws Exception {
+        DataGenerationBatch first = DataGenerationBatch.open(activeRoot, "after_mods");
+        first.generator().json("gen/keep.json", "{\"kept\":true}");
+        first.publish();
+
+        DataGenerationBatch second = DataGenerationBatch.open(activeRoot, "after_mods");
+        // Gson's plain parser accepts this file with last-wins semantics; the batch must
+        // reject it — two contributors writing the same key in one file must be a failure.
+        second.generator().json("gen/dup.json", "{\"result\":{\"a\":1,\"a\":2}}");
+
+        IllegalStateException error = assertThrows(IllegalStateException.class, second::publish);
+
+        assertTrue(error.getMessage().contains("validation failed"), error.getMessage());
+        assertTrue(error.getMessage().contains("gen/dup.json"), error.getMessage());
+        assertTrue(error.getMessage().contains("duplicate object key 'a'"), error.getMessage());
+        assertEquals("{\"kept\":true}", Files.readString(activeRoot.resolve("gen/keep.json")),
+                "previous active data must be retained on validation failure");
+    }
+
+    @Test
     void midPublishFailureRollsBackEverythingAndRetainsOldActive() throws Exception {
         // Seed the active root with generator-owned files via one successful batch.
         DataGenerationBatch seed = DataGenerationBatch.open(activeRoot, "after_mods");
