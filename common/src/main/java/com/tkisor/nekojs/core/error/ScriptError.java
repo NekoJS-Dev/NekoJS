@@ -35,29 +35,52 @@ public class ScriptError {
     private final DefaultErrorTracker tracker;
     private final NekoSourceMapView sourceMaps;
     private final NekoVirtualModuleView virtualModules;
+    /** Generation the error was recorded under (-1 when none was published); frozen with the Context view (ticket 30). */
+    private final long recordedGeneration;
+    private final boolean recordedDuringCandidate;
+    /** Callback kind (e.g. {@code event}/{@code timer}/{@code preflight-validator}); used only for phase classification. */
+    private final String callbackKind;
+    /** Frozen diagnostic record (ticket 30): built once after parsing, never mutated afterwards. */
+    private ScriptDiagnosticRecord diagnostic;
 
     private ScriptError(Context context, ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker) {
+        this(context, script, rawException, tracker, null);
+    }
+
+    private ScriptError(Context context, ScriptContainer script, Throwable rawException, DefaultErrorTracker tracker,
+                        String callbackKind) {
         this.tracker = tracker;
         this.errorId = script.id;
         this.script = script;
         this.scriptType = script.type;
         this.rawException = rawException;
+        this.callbackKind = callbackKind;
         DefaultErrorTracker.ModuleViews views = tracker.moduleViews(context, script.type);
         this.sourceMaps = views.sourceMaps();
         this.virtualModules = views.virtualModules();
+        this.recordedGeneration = views.generation();
+        this.recordedDuringCandidate = views.candidate();
     }
 
     private ScriptError(Context context, ScriptType scriptType, ScriptId errorId, String fallbackPath,
                         Throwable rawException, DefaultErrorTracker tracker) {
+        this(context, scriptType, errorId, fallbackPath, rawException, tracker, null);
+    }
+
+    private ScriptError(Context context, ScriptType scriptType, ScriptId errorId, String fallbackPath,
+                        Throwable rawException, DefaultErrorTracker tracker, String callbackKind) {
         this.tracker = tracker;
         this.errorId = errorId;
         this.script = null;
         this.scriptType = scriptType;
         this.fallbackPath = fallbackPath;
         this.rawException = rawException;
+        this.callbackKind = callbackKind;
         DefaultErrorTracker.ModuleViews views = tracker.moduleViews(context, scriptType);
         this.sourceMaps = views.sourceMaps();
         this.virtualModules = views.virtualModules();
+        this.recordedGeneration = views.generation();
+        this.recordedDuringCandidate = views.candidate();
     }
 
     /**
@@ -87,13 +110,86 @@ public class ScriptError {
 
     public static ScriptError create(Context context, ScriptType scriptType, ScriptId errorId,
                                      String fallbackPath, Throwable rawException, DefaultErrorTracker tracker) {
-        ScriptError error = new ScriptError(context, scriptType, errorId, fallbackPath, rawException, tracker);
+        return create(context, scriptType, errorId, fallbackPath, rawException, tracker, null);
+    }
+
+    static ScriptError create(Context context, ScriptType scriptType, ScriptId errorId,
+                              String fallbackPath, Throwable rawException, DefaultErrorTracker tracker,
+                              String callbackKind) {
+        ScriptError error = new ScriptError(context, scriptType, errorId, fallbackPath, rawException, tracker,
+                callbackKind);
         error.parseException();
         return error;
     }
 
     private void parseException() {
-        applySignature(parseSignature(tracker, rawException, script, scriptType, sourceMaps, virtualModules));
+        ErrorSignature signature = parseSignature(tracker, rawException, script, scriptType, sourceMaps, virtualModules);
+        applySignature(signature);
+        this.diagnostic = buildDiagnostic(signature);
+    }
+
+    /**
+     * Ticket 30 frozen record: built once, read-only afterwards. Field priority — the staged
+     * pipeline error's ({@link com.tkisor.nekojs.core.module.NekoModuleError}) attribution wins,
+     * then the source-mapped authored location; without a location the sourcePath stays null
+     * (it is never a UI fallback path).
+     */
+    private ScriptDiagnosticRecord buildDiagnostic(ErrorSignature signature) {
+        ScriptDiagnostics.Classification classification = ScriptDiagnostics.classify(rawException, callbackKind);
+        String sourcePath = classification.stagedSourcePath();
+        if (sourcePath == null) {
+            sourcePath = signature.errorPath;
+        }
+        String moduleIdentity = classification.moduleIdentity();
+        if (moduleIdentity == null && sourceMapsHasLocation(signature)) {
+            // Mappable case: the executing module identity is the pre-mapping generated display
+            // path; without a mapping it equals the source path.
+            moduleIdentity = signature.displayPath;
+        }
+        int line = classification.stagedLine() > 0 ? classification.stagedLine() : signature.lineNumber;
+        int column = classification.stagedColumn() > 0 ? classification.stagedColumn() : signature.columnNumber;
+        String cacheRevision = cacheRevisionOf(signature, sourcePath);
+        return new ScriptDiagnosticRecord(
+                errorId.toString(),
+                scriptType,
+                classification.phase(),
+                classification.owner(),
+                recordedGeneration,
+                recordedDuringCandidate,
+                sourcePath,
+                line,
+                column,
+                moduleIdentity,
+                cacheRevision,
+                ScriptDiagnostics.boundedText(getErrorMessage(), ScriptDiagnostics.MESSAGE_BOUND),
+                ScriptDiagnostics.boundedCause(rawException));
+    }
+
+    /** Whether the signature carries a real (non-fallback) source location: a mapped or ESM-diagnostic path. */
+    private static boolean sourceMapsHasLocation(ErrorSignature signature) {
+        return signature.errorPath != null && !signature.errorPath.isBlank() && signature.hasLocation;
+    }
+
+    /**
+     * Prepared-module cache revision lookup: prefer the pre-mapping generated display path
+     * (when a Polyglot frame is mappable), then the final source path — TS/TSX/JSX/Python
+     * source maps are registered under the authored source's relative path (generated and
+     * original share the name), so a staged EXECUTE error's authored sourcePath hits the same
+     * revision. Returns null when nothing is registered; never guesses.
+     */
+    private String cacheRevisionOf(ErrorSignature signature, String sourcePath) {
+        if (sourceMapsHasLocation(signature) && signature.displayPath != null) {
+            String revision = sourceMaps.mappedCacheRevision(signature.displayPath);
+            if (revision != null) {
+                return revision;
+            }
+        }
+        return sourcePath == null ? null : sourceMaps.mappedCacheRevision(sourcePath);
+    }
+
+    /** Frozen diagnostic record (ticket 30): immutable after creation; mutable state (occurrences) stays behind this class's existing getters. */
+    public ScriptDiagnosticRecord diagnostic() {
+        return diagnostic;
     }
 
     /**
@@ -121,12 +217,14 @@ public class ScriptError {
         if (primary instanceof NekoEsmLinkException linkException) {
             NekoEsmDiagnostic diagnostic = linkException.diagnostic();
             if (diagnostic == null) {
-                return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "");
+                return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "",
+                        null, false);
             }
             String message = diagnostic.message();
             String errorPath = diagnostic.file() != null ? pathToDisplay(tracker, diagnostic.file()) : null;
             return new ErrorSignature(message != null ? message : "Unknown error", errorPath,
-                    diagnostic.line(), diagnostic.column(), null, true, true, null, "");
+                    diagnostic.line(), diagnostic.column(), null, true, true, null, "",
+                    errorPath, true);
         }
         PolyglotException polyglotException = findPolyglotException(rawException);
         if (polyglotException != null) {
@@ -142,11 +240,14 @@ public class ScriptError {
                 SourceMapRegistry.OriginalPosition pos = sourceMaps.getMappedPosition(displayPath, rawLine, rawColumn);
                 String errorPath = pos.path != null && !pos.path.isBlank() ? pos.path : displayPath;
                 return new ErrorSignature(errorMessage, errorPath, pos.line, pos.column, pos.name,
-                        true, false, pos.sourceContent, usefulFallbackSnippet(jsSnippet));
+                        true, false, pos.sourceContent, usefulFallbackSnippet(jsSnippet),
+                        displayPath, true);
             }
-            return new ErrorSignature(errorMessage, null, -1, -1, null, false, false, null, "");
+            return new ErrorSignature(errorMessage, null, -1, -1, null, false, false, null, "",
+                    null, false);
         }
-        return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "");
+        return new ErrorSignature(bestMessage(primary), null, -1, -1, null, false, false, null, "",
+                null, false);
     }
 
     /** 将轻量解析结果写入实例字段；仅在 {@code buildSnippet} 时读取源码文件构造代码片段。 */
@@ -178,9 +279,14 @@ public class ScriptError {
         final boolean snippetFromDisplayPath;
         final String sourceContent;
         final String fallbackSnippet;
+        /** Pre-mapping generated display path (Polyglot location) or ESM diagnostic display path; null without a location. */
+        final String displayPath;
+        /** Whether a real source location was present (Polyglot source location or ESM diagnostic). */
+        final boolean hasLocation;
 
         ErrorSignature(String errorMessage, String errorPath, int lineNumber, int columnNumber, String originalSymbolName,
-                       boolean buildSnippet, boolean snippetFromDisplayPath, String sourceContent, String fallbackSnippet) {
+                       boolean buildSnippet, boolean snippetFromDisplayPath, String sourceContent, String fallbackSnippet,
+                       String displayPath, boolean hasLocation) {
             this.errorMessage = errorMessage;
             this.errorPath = errorPath;
             this.lineNumber = lineNumber;
@@ -190,6 +296,8 @@ public class ScriptError {
             this.snippetFromDisplayPath = snippetFromDisplayPath;
             this.sourceContent = sourceContent;
             this.fallbackSnippet = fallbackSnippet;
+            this.displayPath = displayPath;
+            this.hasLocation = hasLocation;
         }
     }
 

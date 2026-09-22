@@ -19,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class SourceMapRegistry implements NekoSourceMapView {
     private static final String VLQ_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     private final Map<String, NormalizedSourceMap> mappings = new ConcurrentHashMap<>();
+    /** Cache key of the prepared module that registered each source map (ticket 30). */
+    private final Map<String, String> revisions = new ConcurrentHashMap<>();
     private final Path root;
     private final boolean caseInsensitive;
     private static final java.util.logging.Logger LOGGER =
@@ -48,6 +50,15 @@ public final class SourceMapRegistry implements NekoSourceMapView {
     }
 
     public void register(String scriptPath, String sourceMapJson, int prependedLineCount) {
+        register(scriptPath, sourceMapJson, prependedLineCount, null);
+    }
+
+    /**
+     * Register a source map together with the cache key of the prepared module that produced
+     * it (ticket 30): mapped diagnostics can then retain which prepared revision the position
+     * was mapped through. A null/blank revision registers the map without revision info.
+     */
+    public void register(String scriptPath, String sourceMapJson, int prependedLineCount, String cacheKey) {
         if (scriptPath == null) return;
         String generatedPath = normalizeLookupPath(scriptPath);
         NormalizedSourceMap sourceMap = parse(generatedPath, sourceMapJson, prependedLineCount);
@@ -57,10 +68,21 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         if (mappings.size() > CACHE_HARD_CAP) {
             LOGGER.warning("SourceMapRegistry exceeded " + CACHE_HARD_CAP + " entries; clearing to bound memory");
             mappings.clear();
+            revisions.clear();
         }
         mappings.put(generatedPath, sourceMap);
+        if (cacheKey != null && !cacheKey.isBlank()) {
+            revisions.put(generatedPath, cacheKey);
+        } else {
+            revisions.remove(generatedPath);
+        }
         if (sourceMap.file != null && !sourceMap.file.isBlank()) {
             mappings.put(sourceMap.file, sourceMap);
+            if (cacheKey != null && !cacheKey.isBlank()) {
+                revisions.put(sourceMap.file, cacheKey);
+            } else {
+                revisions.remove(sourceMap.file);
+            }
         }
     }
 
@@ -78,12 +100,14 @@ public final class SourceMapRegistry implements NekoSourceMapView {
 
     public void clear() {
         mappings.clear();
+        revisions.clear();
     }
 
     public void clear(String scriptPath) {
         if (scriptPath == null) return;
         String query = normalizeLookupPath(scriptPath);
         mappings.entrySet().removeIf(entry -> entry.getKey().equals(query) || entry.getValue().matchesGeneratedPath(query));
+        revisions.keySet().removeIf(key -> key.equals(query));
     }
 
     public void clearByPathPrefix(String pathPrefix) {
@@ -93,6 +117,7 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         String prefix = normalizeLookupPath(pathPrefix);
         mappings.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix)
                 || entry.getValue().generatedPath.startsWith(prefix));
+        revisions.keySet().removeIf(key -> key.startsWith(prefix));
     }
 
     /**
@@ -106,6 +131,14 @@ public final class SourceMapRegistry implements NekoSourceMapView {
         if (type == null) return;
         mappings.entrySet().removeIf(entry -> type == scriptTypeOf(entry.getKey())
                 || type == scriptTypeOf(entry.getValue().generatedPath));
+        revisions.keySet().removeIf(key -> type == scriptTypeOf(key));
+    }
+
+    /** Cache key of the prepared module that registered the map for this generated path (ticket 30). */
+    @Override
+    public String mappedCacheRevision(String scriptPath) {
+        if (scriptPath == null || revisions.isEmpty()) return null;
+        return revisions.get(normalizeLookupPath(scriptPath));
     }
 
     private NormalizedSourceMap parse(String generatedPath, String sourceMapJson, int prependedLineCount) {

@@ -358,13 +358,12 @@ public final class NekoJSCommands {
     }
 
     private static List<ErrorSummaryDTO> errorSnapshot(NekoRuntimeRoot root) {
+        // Ticket 30: the packet projection is assembled in one place from the frozen
+        // diagnostic record; the wire shape (six fields) and legacy display path stay unchanged.
         return root.errors().errors().stream()
-                .map(err -> new ErrorSummaryDTO(
-                        err.getErrorId().toString(),
-                        err.getDisplayPath(),
-                        err.getLineNumber(),
+                .map(err -> err.diagnostic().toErrorSummary(
                         err.getOccurrenceCount(),
-                        err.getErrorMessage(),
+                        err.getDisplayPath(),
                         err.getFullDetailText()
                 )).toList();
     }

@@ -697,8 +697,10 @@ public final class NekoModulePipelineCache implements AutoCloseable {
         if (prepared.sourceMap() == null || prepared.sourceMap().isBlank()) {
             return;
         }
+        // Ticket 30: the prepared module's cache key travels with its source map so mapped
+        // diagnostics can retain which prepared revision produced the executing code.
         relativePath(path).ifPresent(relativePath -> sourceMaps.register(relativePath,
-                prepared.sourceMap(), prepared.prependedLineCount()));
+                prepared.sourceMap(), prepared.prependedLineCount(), prepared.cacheKey()));
     }
 
     private static Path key(Path path) {

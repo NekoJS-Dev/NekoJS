@@ -15,6 +15,7 @@ import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.script.prop.ScriptPropertyRegistry;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.List;
@@ -384,6 +385,20 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         public static ErrorSnapshot of(com.tkisor.nekojs.core.error.ErrorTracker tracker) {
             Collection<ScriptError> all = tracker.getAllErrors();
             return new ErrorSnapshot(all, all.size());
+        }
+
+        /**
+         * Frozen diagnostic records of this snapshot (ticket 30): the single projection source
+         * for log history, the dashboard packet, the user report and telemetry. Only reads the
+         * already-recorded public error set; no second facts source is created.
+         */
+        public List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord> records() {
+            List<com.tkisor.nekojs.core.error.ScriptDiagnosticRecord> records =
+                    new ArrayList<>(errors.size());
+            for (ScriptError error : errors) {
+                records.add(error.diagnostic());
+            }
+            return List.copyOf(records);
         }
     }
 }

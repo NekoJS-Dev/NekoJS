@@ -90,7 +90,11 @@ public final class ScriptExecutor {
             script.lastError = t;
 
             ScriptError scriptError = errorTracker.record(ctx, script, t);
-            com.tkisor.nekojs.script.ScriptTypeEnv.logger(script.type).error("脚本执行失败: {}\n{}", script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()));
+            // Log history consumes the same frozen record (ticket 30): the attribution line is
+            // appended after the existing detail text, keeping the legacy body unchanged.
+            com.tkisor.nekojs.script.ScriptTypeEnv.logger(script.type).error("脚本执行失败: {}\n{}\n{}",
+                    script.id.toString(), scriptError.getLogDetailText(sandboxConfig.conciseScriptErrorLogs()),
+                    scriptError.diagnostic().describe());
         } finally {
             watchdog.disarm();
         }
