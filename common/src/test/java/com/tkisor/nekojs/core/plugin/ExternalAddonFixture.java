@@ -1,13 +1,7 @@
 package com.tkisor.nekojs.core.plugin;
 
-import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.annotation.RegisterNekoJSPlugin;
-import com.tkisor.nekojs.api.contract.ApiContractIdentity;
-import com.tkisor.nekojs.api.contract.ApiContractKind;
 import com.tkisor.nekojs.api.surface.ApiVersion;
-import com.tkisor.nekojs.api.contract.NormativeApiContract;
-import com.tkisor.nekojs.api.contract.VerifiedApiContract;
-import com.tkisor.nekojs.api.contract.VerifiedContractSet;
 import com.tkisor.nekojs.core.NekoJSBasePluginManager;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -142,24 +136,6 @@ final class ExternalAddonFixture {
     }
 
     // ---- reflection helpers over the addon class world ------------------------------
-
-    /**
-     * Minimal contract set accepted by {@code bootstrapOwned}: the frozen registry set
-     * requires exactly one {@code nekojs-core} PORTABLE contract (same shape as the
-     * empty preview used by {@code ApiSurfaceBootstrapTest}).
-     */
-    static VerifiedContractSet corePreviewContracts() throws Exception {
-        java.net.URI codeSource = NekoJS.class.getProtectionDomain().getCodeSource().getLocation().toURI();
-        ApiContractIdentity identity = new ApiContractIdentity(
-                "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0"));
-        NormativeApiContract contract = new NormativeApiContract(
-                2,
-                new NormativeApiContract.ContractIdentity(
-                        "nekojs-core", ApiContractKind.PORTABLE, "portable-core", ApiVersion.parse("0.0.0")),
-                null, List.of(), List.of(), List.of());
-        return VerifiedContractSet.of(VerifiedApiContract.create(identity, contract, codeSource,
-                "nekojs/api-contract/preview", "sha256:preview", "sha256:preview"));
-    }
 
     static Object surfaceOf(URLClassLoader loader) throws Exception {
         return loader.loadClass(SURFACE).getMethod("get").invoke(null);

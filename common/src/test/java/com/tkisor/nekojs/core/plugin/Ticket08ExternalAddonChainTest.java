@@ -137,7 +137,7 @@ class Ticket08ExternalAddonChainTest {
             NekoPluginRuntime runtime = NekoPluginRuntime.bootstrapOwned(
                     NekoJSBasePluginManager.getOwnedPlugins(),
                     new ScriptPropertyRegistry.Impl(),
-                    ExternalAddonFixture.corePreviewContracts());
+                    com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview());
 
             // custom point product via runtime result container
             Object greetings = runtime.extensionProduct("exampleaddon:greetings", Object.class);
@@ -243,7 +243,7 @@ class Ticket08ExternalAddonChainTest {
             NekoPluginRuntime runtime = NekoPluginRuntime.bootstrapOwned(
                     NekoJSBasePluginManager.getOwnedPlugins(),
                     new ScriptPropertyRegistry.Impl(),
-                    ExternalAddonFixture.corePreviewContracts());
+                    com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview());
 
             // registry-graph freeze: the sealed accumulator rejects further collection
             Object accumulator = accumulatorOf(loader);
@@ -309,7 +309,7 @@ class Ticket08ExternalAddonChainTest {
             NekoPluginRuntime runtime = NekoPluginRuntime.bootstrapOwned(
                     NekoJSBasePluginManager.getOwnedPlugins(),
                     properties,
-                    ExternalAddonFixture.corePreviewContracts());
+                    com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview());
             // NekoRuntimeAssembly.assemble fires plugin init() right after bootstrapOwned;
             // this harness assembles the manager directly, so the same lifecycle step runs here
             runtime.fireInit();
@@ -405,7 +405,7 @@ class Ticket08ExternalAddonChainTest {
                         owned(first, provider(registry -> registerPoint(registry, "t08:dup"))),
                         owned(second, provider(registry -> registerPoint(registry, "t08:dup")))),
                         new ScriptPropertyRegistry.Impl(),
-                        ExternalAddonFixture.corePreviewContracts()));
+                        com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview()));
         assertTrue(ex.getMessage().contains("t08:dup"), "names the point: " + ex.getMessage());
         assertTrue(ex.getMessage().contains(first), "names the first registrant: " + ex.getMessage());
         assertTrue(ex.getMessage().contains(second), "names the duplicate registrant: " + ex.getMessage());
@@ -417,7 +417,7 @@ class Ticket08ExternalAddonChainTest {
         NekoPluginRuntime.bootstrapOwned(
                 List.of(owned("owner://t08/late", provider(captured::set))),
                 new ScriptPropertyRegistry.Impl(),
-                ExternalAddonFixture.corePreviewContracts());
+                com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview());
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> registerPoint(captured.get(), "t08:after-freeze"));
         assertTrue(ex.getMessage().contains("t08:after-freeze"), "names the point: " + ex.getMessage());
@@ -440,7 +440,7 @@ class Ticket08ExternalAddonChainTest {
                                         .finish(List::copyOf)
                                         .build())))),
                         new ScriptPropertyRegistry.Impl(),
-                        ExternalAddonFixture.corePreviewContracts()));
+                        com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview()));
         assertTrue(ex.getMessage().contains("t08:does-not-exist"), "names the missing id: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("owner://t08/typo"),
                 "names the dependent addon: " + ex.getMessage());
@@ -453,7 +453,7 @@ class Ticket08ExternalAddonChainTest {
                         owned("owner://t08/a", provider(registry -> registerPoint(registry, "t08:cycle-a", "t08:cycle-b"))),
                         owned("owner://t08/b", provider(registry -> registerPoint(registry, "t08:cycle-b", "t08:cycle-a")))),
                         new ScriptPropertyRegistry.Impl(),
-                        ExternalAddonFixture.corePreviewContracts()));
+                        com.tkisor.nekojs.testfixture.CoreContractPreviews.emptyPortablePreview()));
         assertTrue(ex.getMessage().contains("cycle"), "reports the cycle: " + ex.getMessage());
         assertTrue(ex.getMessage().contains("owner://t08/a") && ex.getMessage().contains("owner://t08/b"),
                 "names both addons on the cycle: " + ex.getMessage());
