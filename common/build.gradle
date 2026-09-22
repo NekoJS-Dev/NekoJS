@@ -182,3 +182,57 @@ tasks.register('regenerateGoldens', Test) {
     }
     systemProperty 'nekojs.golden.regenerate', 'true'
 }
+
+// ---- 票 08：test-only 外部 addon fixture 制品 -----------------------------------------
+// 模拟未来第三方插件 jar：源码住在独立 source set，编译 classpath **只有** common main 输出
+// （连本模块的 test 依赖/fixture 都不可见——结构上保证"依赖面与第三方插件一致，不 import
+// 生产内部测试 seam"）。jar 里带生产形态的 neoforge.mods.toml 与 fabric.mod.json；五个
+// 生产节点 jar 不得包含其中任何内容（root 的 verifyExternalAddonIsolation 门禁）。
+
+sourceSets {
+    addonFixture {
+        // 默认目录即 src/addonFixture/{java,resources}，无需重复声明
+        // 刻意只挂 main 输出：编译面=公开引擎契约（api.* + core.plugin 提供者 API），
+        // 与第三方针对发布 fat jar 编译的依赖面一致（fat jar 是它的超集）。
+        compileClasspath = sourceSets.main.output
+    }
+}
+
+def externalAddonJar = tasks.register('externalAddonJar', Jar) {
+    group = 'verification'
+    description = 'Builds the test-only external addon fixture jar (ticket 08 discovery input).'
+    archiveBaseName = 'nekojs-external-addon-fixture'
+    archiveClassifier = 'testonly'
+    from sourceSets.addonFixture.output
+}
+
+// 测试消费 fixture jar 的路径注入：doFirst 里 set，JVM 启动前生效
+def provideAddonJarTo = { Test testTask ->
+    testTask.dependsOn externalAddonJar
+    testTask.inputs.files(externalAddonJar)
+    testTask.doFirst {
+        systemProperty 'nekojs.test.externalAddonJar',
+                externalAddonJar.get().archiveFile.get().asFile.absolutePath
+    }
+}
+
+provideAddonJarTo(tasks.named('test', Test).get())
+
+// fixture 编译面门禁：编译期 classpath 只允许 common main 输出（防止未来有人"顺手"把
+// testImplementation 挂进 addonFixture——那会让"独立第三方依赖面"退化为内部 seam 消费）。
+tasks.register('verifyAddonFixtureDependencySurface') {
+    group = 'verification'
+    description = 'Asserts the addon fixture source set compiles against common main output only.'
+    dependsOn tasks.named('compileAddonFixtureJava')
+    doLast {
+        def cp = tasks.named('compileAddonFixtureJava').get().classpath.files.collect { it.canonicalPath }.toSet()
+        def allowed = sourceSets.main.output.files.collect { it.canonicalPath }.toSet()
+        def unexpected = cp - allowed
+        if (!unexpected.isEmpty()) {
+            throw new GradleException(
+                    "addonFixture compile classpath must be common main output only, found: ${unexpected.sort()}")
+        }
+    }
+}
+check.dependsOn tasks.named('verifyAddonFixtureDependencySurface')
+

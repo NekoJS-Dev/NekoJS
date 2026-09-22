@@ -43,7 +43,8 @@ public final class NekoPluginBootstrap {
     }
 
     public static NekoPluginRuntime bootstrap(List<NekoJSPlugin> plugins, ScriptPropertyRegistry scriptProperties) {
-        return new NekoPluginRuntime(collect(plugins, scriptProperties), null, Map.of());
+        return new NekoPluginRuntime(collect(plugins, plugin -> plugin.getClass().getName(), scriptProperties),
+                null, Map.of());
     }
 
     public static NekoPluginRuntime bootstrapOwned(
@@ -67,8 +68,16 @@ public final class NekoPluginBootstrap {
         List<NekoJSPlugin> plugins = ownedPlugins.stream()
                 .map(OwnedPlugin::plugin)
                 .toList();
+        // Addon attribution for extension-registry failures (ticket 08): provider
+        // registration, duplicate ids, freeze-window violations and dependency errors
+        // name the plugin that caused them. Owned bootstrap uses the owner identity,
+        // the plain overload falls back to the plugin class name.
+        Map<NekoJSPlugin, String> ownerLabels = new LinkedHashMap<>();
+        for (OwnedPlugin owned : ownedPlugins) {
+            ownerLabels.putIfAbsent(owned.plugin(), owned.identity().ownerId());
+        }
 
-        Map<String, Object> products = collect(plugins, scriptProperties);
+        Map<String, Object> products = collect(plugins, ownerLabels::get, scriptProperties);
 
         List<ApiContributionRegistry> managedContributions = new ArrayList<>(builtInContributions);
         for (OwnedPlugin owned : ownedPlugins) {
@@ -110,16 +119,26 @@ public final class NekoPluginBootstrap {
      * （同层按注册序，内置先行是图的根部天然保证）；环 fail-fast 打印完整环路径，
      * 未注册依赖 id 在 freeze 早爆。环境谓词为 false 的点跳过并登记，
      * 供 {@link NekoPluginExtensionContext} 两档访问区分"跳过"与"未完成"。
+     *
+     * @param ownerLabels 插件 → addon 定位标签（owner id 或类名），用于扩展点注册/依赖
+     *                   失败时定位到具体 addon；null 安全（缺席标签降级为类名）
      */
-    static Map<String, Object> collect(List<NekoJSPlugin> plugins, ScriptPropertyRegistry scriptProperties) {
+    static Map<String, Object> collect(List<NekoJSPlugin> plugins,
+                                        java.util.function.Function<NekoJSPlugin, String> ownerLabels,
+                                        ScriptPropertyRegistry scriptProperties) {
         BootstrapContext context = new BootstrapContext(Platform.isClient());
         ExtensionRegistry registry = new ExtensionRegistry();
         // ADR-0003：内置点定义插件显式先行（与第三方同一条 provider 路径；内置先行相位
         // 是引擎对依赖图根部的保证，不依赖插件 priority）
-        new NekoBuiltinPointsPlugin(scriptProperties, context.client()).registerPluginExtensionPoints(registry);
+        new NekoBuiltinPointsPlugin(scriptProperties, context.client())
+                .registerPluginExtensionPoints(registry.scopedTo("nekojs:builtin-points"));
         for (NekoJSPlugin plugin : plugins) {
             if (plugin instanceof NekoPluginExtensionProvider provider) {
-                provider.registerPluginExtensionPoints(registry);
+                String label = ownerLabels != null ? ownerLabels.apply(plugin) : null;
+                if (label == null) {
+                    label = plugin.getClass().getName();
+                }
+                provider.registerPluginExtensionPoints(registry.scopedTo(label));
             }
         }
         List<NekoPluginExtensionPoint<?, ?, ?>> extensionPoints = registry.freeze();
@@ -200,21 +219,46 @@ public final class NekoPluginBootstrap {
     }
 
     /** 单次 bootstrap 的扩展点注册器：注册窗口在 freeze 后关闭（与收集阶段同步）。 */
-    private static final class ExtensionRegistry implements NekoPluginExtensionRegistry {
+    private static final class ExtensionRegistry {
         private final Map<String, NekoPluginExtensionPoint<?, ?, ?>> extensionPoints = new LinkedHashMap<>();
         private final Map<String, NekoPluginExtensionHandle<Object>> handles = new LinkedHashMap<>();
+        /** pointId → 注册方 addon 定位标签（ticket 08：失败输出要能定位到 addon）。 */
+        private final Map<String, String> registrants = new LinkedHashMap<>();
         private boolean frozen;
 
-        @Override
-        public <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(
-                NekoPluginExtensionPoint<P, A, R> extensionPoint) {
+        /**
+         * 面向单个 provider 的注册视图：本视图内发生的注册/违规失败都会带上该 addon 的
+         * 定位标签——provider 逃逸持有本视图（freeze 后迟到注册）同样能定位到 addon。
+         */
+        NekoPluginExtensionRegistry scopedTo(String ownerLabel) {
+            return new NekoPluginExtensionRegistry() {
+                @Override
+                public <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(
+                        NekoPluginExtensionPoint<P, A, R> extensionPoint) {
+                    if (frozen) {
+                        throw new IllegalStateException("Plugin extension registry is frozen after bootstrap"
+                                + " collection; late registration of '" + extensionPoint.id()
+                                + "' by plugin '" + ownerLabel + "' is rejected"
+                                + " (the registration window closes at freeze)");
+                    }
+                    return ExtensionRegistry.this.register(extensionPoint, ownerLabel);
+                }
+            };
+        }
+
+        <P extends NekoJSPlugin, A, R> NekoPluginExtensionHandle<R> register(
+                NekoPluginExtensionPoint<P, A, R> extensionPoint, String ownerLabel) {
             if (frozen) {
-                throw new IllegalStateException("Plugin extension registry is frozen after bootstrap collection");
+                throw new IllegalStateException("Plugin extension registry is frozen after bootstrap"
+                        + " collection; registration of '" + extensionPoint.id() + "' is rejected");
             }
             if (extensionPoints.containsKey(extensionPoint.id())) {
-                throw new IllegalArgumentException("Plugin extension point '" + extensionPoint.id() + "' is already registered");
+                throw new IllegalArgumentException("Plugin extension point '" + extensionPoint.id()
+                        + "' is already registered by plugin '" + registrants.get(extensionPoint.id())
+                        + "'; duplicate registration by plugin '" + ownerLabel + "' is rejected");
             }
             extensionPoints.put(extensionPoint.id(), extensionPoint);
+            registrants.put(extensionPoint.id(), ownerLabel);
             NekoPluginExtensionHandle<R> handle = new NekoPluginExtensionHandle<>(extensionPoint.id());
             @SuppressWarnings("unchecked")
             NekoPluginExtensionHandle<Object> erased = (NekoPluginExtensionHandle<Object>) handle;
@@ -232,7 +276,8 @@ public final class NekoPluginBootstrap {
                     String depId = NekoPluginExtensionPoint.dependencyId(dependency);
                     if (!extensionPoints.containsKey(depId)) {
                         throw new IllegalStateException("Plugin extension point '" + point.id()
-                                + "' dependsOn unregistered point '" + depId + "' (typo?)");
+                                + "' (registered by plugin '" + registrants.get(point.id())
+                                + "') dependsOn unregistered point '" + depId + "' (typo?)");
                     }
                 }
             }
@@ -278,7 +323,7 @@ public final class NekoPluginBootstrap {
                 List<String> cycle = new ArrayList<>();
                 for (String id : extensionPoints.keySet()) {
                     if (inDegree.get(id) > 0) {
-                        cycle.add(id);
+                        cycle.add(id + " (by '" + registrants.get(id) + "')");
                     }
                 }
                 throw new IllegalStateException("Plugin extension point dependency cycle fail-fast: "
