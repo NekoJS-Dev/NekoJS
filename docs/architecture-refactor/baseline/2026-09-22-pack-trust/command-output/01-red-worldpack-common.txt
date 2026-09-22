@@ -1,0 +1,13 @@
+# 红证据 1：WorldPackRelativePathExecutionTest 首跑（修复前，2026-09-22）
+$ ./gradlew.bat :common:test --tests "com.tkisor.nekojs.script.WorldPackRelativePathExecutionTest" --tests "com.tkisor.nekojs.core.pack.sync.PackSyncClientTest" --tests "com.tkisor.nekojs.core.pack.sync.PackSyncServerTest" --console=plain
+EXIT=1
+
+> Task :common:test
+
+WorldPackRelativePathExecutionTest > worldPackActivatedFromRelativeDirExecutesAfterReload() FAILED
+    org.opentest4j.AssertionFailedError at WorldPackRelativePathExecutionTest.java:86
+
+24 tests completed, 1 failed
+
+失败点=第 86 行 isAbsolute 断言：activateWorldPacks(相对 world 目录) 后包 root 仍为相对路径；
+（同轮 invalidManifest 用例因测试地址含子串 "manifest" 而被未信任提示误判通过，改地址 srv-badpack.test 后单独重跑见 02）

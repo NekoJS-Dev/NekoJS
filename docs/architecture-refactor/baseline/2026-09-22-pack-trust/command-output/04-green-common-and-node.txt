@@ -1,0 +1,13 @@
+# 绿证据 1：红证据 1/2/3 的同一批用例（修复后，2026-09-22）
+$ ./gradlew.bat :common:test --tests "com.tkisor.nekojs.script.WorldPackRelativePathExecutionTest" --tests "com.tkisor.nekojs.core.pack.sync.PackSyncClientTest" --tests "com.tkisor.nekojs.core.pack.sync.PackSyncServerTest" --console=plain
+EXIT=0  BUILD SUCCESSFUL in 9s（26 用例：WorldPack 1 + Client 21 + Server 4）
+
+$ ./gradlew.bat :26.1.2:test --tests "com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest" --tests "com.tkisor.nekojs.pack.FabricWorldPackStatusTest" --console=plain
+EXIT=0  BUILD SUCCESSFUL in 20s（11 用例全过：桥 trace 7 + Fabric WORLD 现状 4）
+
+关键绿断言：
+- WorldPackRelativePathExecutionTest: activateWorldPacks(相对 world 目录) 后包 root isAbsolute，
+  且真实 ScriptManager reload 执行了 WORLD 包脚本（TestRecorder 收到 'g4-world-pack-ok'）
+- invalidManifestRejectedWithReasonInTrustResult: 断连消息含 'manifest is not a JSON object'
+- 桥 trace: 两桥均经 PackSyncServer.shouldSendBundle 门控 bundle、经
+  PackSyncClient.normalizeRemoteAddress 解析地址，桥内无 InetSocketAddress 残留

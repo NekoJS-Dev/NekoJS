@@ -1,0 +1,18 @@
+# 红证据 3：配置期桥共享次序 trace（改造前）
+$ ./gradlew.bat :26.1.2:test --tests "com.tkisor.nekojs.network.PackSyncBridgeSourceTraceTest" --tests "com.tkisor.nekojs.pack.FabricWorldPackStatusTest" --console=plain
+EXIT=1
+
+PackSyncBridgeSourceTraceTest > sharedCoreOwnsTheBundleDecisionAndAddressNormalization() FAILED
+    org.opentest4j.AssertionFailedError at PackSyncBridgeSourceTraceTest.java:154
+PackSyncBridgeSourceTraceTest > neoforgeConfigurationBridgeSharesTheCorePushOrderAndReceiveRoute() FAILED
+    org.opentest4j.AssertionFailedError at PackSyncBridgeSourceTraceTest.java:83
+PackSyncBridgeSourceTraceTest > fabricConfigurationBridgeSharesTheCorePushOrderAndReceiveRoute() FAILED
+    org.opentest4j.AssertionFailedError at PackSyncBridgeSourceTraceTest.java:83
+PackSyncBridgeSourceTraceTest > bundleDecisionHasExactlyOneCallSitePerBridge() FAILED
+    org.opentest4j.AssertionFailedError at PackSyncBridgeSourceTraceTest.java:181
+
+11 tests completed, 4 failed
+
+FabricWorldPackStatusTest 4 用例全过（现状刻画，本就该通过）；4 失败 = 共享单点
+（PackSyncServer.shouldSendBundle / PackSyncClient.normalizeRemoteAddress）尚不存在，
+两桥仍是本地重复判定（hashOnly()+entries().isEmpty() 与 InetSocketAddress 解析路线）。

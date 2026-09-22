@@ -1,0 +1,12 @@
+# 红证据 2：invalidManifestRejectedWithReasonInTrustResult（修复前）
+$ ./gradlew.bat :common:test --tests "com.tkisor.nekojs.core.pack.sync.PackSyncClientTest" --console=plain
+EXIT=1
+
+PackSyncClientTest > invalidManifestRejectedWithReasonInTrustResult() FAILED
+    org.opentest4j.AssertionFailedError at PackSyncClientTest.java:561
+
+20 tests completed, 1 failed
+
+失败断言（561 行）：outcome.disconnect().contains("manifest")。当前行为：垃圾 manifest 经
+allowUnsigned 放行后以未信任提示断连（提示文本不含拒绝原因）——"非法 manifest 被拒绝、
+失败原因进入 pack trust 结果"不成立，属 AC4 缺口。

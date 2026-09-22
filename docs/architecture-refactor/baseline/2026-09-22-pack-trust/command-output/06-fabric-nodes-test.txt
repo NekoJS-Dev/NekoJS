@@ -1,0 +1,12 @@
+# 验证 2：双 fabric 节点全量 test（编译 src/fabric 桥改造 + 共享树 trace 用例）
+$ ./gradlew.bat :26.1.2-fabric:test --console=plain
+EXIT=0  BUILD SUCCESSFUL in 46s
+tests=226 failures=0 errors=0 skipped=25（skip 为节点既有条件跳过用例）
+
+$ ./gradlew.bat :26.2.0-fabric:test --console=plain
+EXIT=0  BUILD SUCCESSFUL in 42s
+tests=226 failures=0 errors=0 skipped=25
+
+# 追加验证：fabric 节点 check（含 verifyFabricRuntimeArtifact，因本票改了 src/fabric）
+$ ./gradlew.bat :26.1.2-fabric:check --console=plain
+EXIT=0  BUILD SUCCESSFUL
