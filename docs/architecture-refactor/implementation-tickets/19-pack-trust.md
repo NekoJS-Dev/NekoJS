@@ -4,9 +4,11 @@
 
 **Blocked by:** [17: 网络注册一次、wire 不变与脚本自定义通道 owner 调度](17-network-sync.md)、[03: 持久化与用户编辑数据保护基线：默认不改、可回滚才迁移](03-data-protection.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-19（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-22):** worktree `../NekoJS-mult-t19` on branch `ticket-19-pack-trust`（基于 `124aace6`）。预计改动范围：PackSyncServer/Client 共享管线 gather/hash-list/bundle 顺序、客户端信任决策与 hashOnly 不执行、trusted-servers trust-store 原子持久化与损坏降级、SERVER_CACHE 落盘激活与 root 触发 CLIENT reload、断线卸载、Fabric WORLD 差异证据 fixture、`baseline/2026-09-22-pack-trust/` 证据。不修改 08 插件模型域文件。
 
 **Optional:** false
 

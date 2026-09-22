@@ -4,9 +4,11 @@
 
 **Blocked by:** [06: 候选环境、阶段结果与 owner-thread commit 点](06-reload-commit.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** zed-flash-08（main-session agent；GLM-5.3 subagent worktree）
+
+**Claim record (2026-09-22):** worktree `../NekoJS-mult-t08` on branch `ticket-08-plugin-addon`（基于 `124aace6`）。预计改动范围：test-only 外部 addon fixture 制品及其构建接线、NeoForge/Fabric 真实 discovery 与贡献消费测试、reload 存活断言、addon 级失败输出、无调用者 legacy manager facade/bootstrap 删除、插件作者最小示例与迁移材料、`baseline/2026-09-22-plugin-addon/` 证据。不修改 19/20 等 pack trust 域文件。
 
 **Optional:** false
 
