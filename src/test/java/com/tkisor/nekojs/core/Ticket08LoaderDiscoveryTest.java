@@ -49,48 +49,53 @@ class Ticket08LoaderDiscoveryTest {
 
     @BeforeAll
     static void initPlatformStub() {
-        // defensive like the other shared-tree tests: Platform may already be initialized
-        Platform.init(new IPlatform() {
-            @Override
-            public boolean isClient() {
-                return false;
-            }
+        // defensive like the other shared-tree tests: Platform may already be
+        // initialized by another test class in this JVM — reuse the existing instance
+        try {
+            Platform.init(new IPlatform() {
+                @Override
+                public boolean isClient() {
+                    return false;
+                }
 
-            @Override
-            public boolean isDevelopment() {
-                return true;
-            }
+                @Override
+                public boolean isDevelopment() {
+                    return true;
+                }
 
-            @Override
-            public String getMcVersion() {
-                return "test";
-            }
+                @Override
+                public String getMcVersion() {
+                    return "test";
+                }
 
-            @Override
-            public Path getGameDir() {
-                return com.tkisor.nekojs.TestGameDirs.unique("nekojs-t08-discovery");
-            }
+                @Override
+                public Path getGameDir() {
+                    return com.tkisor.nekojs.TestGameDirs.unique("nekojs-t08-discovery");
+                }
 
-            @Override
-            public Map<String, IModInfo> getMods() {
-                return Map.of();
-            }
+                @Override
+                public Map<String, IModInfo> getMods() {
+                    return Map.of();
+                }
 
-            @Override
-            public IModInfo getInfo(String modID) {
-                return null;
-            }
+                @Override
+                public IModInfo getInfo(String modID) {
+                    return null;
+                }
 
-            @Override
-            public String getLoaderId() {
-                return "test";
-            }
+                @Override
+                public String getLoaderId() {
+                    return "test";
+                }
 
-            @Override
-            public String getLoaderVersion() {
-                return "0";
-            }
-        });
+                @Override
+                public String getLoaderVersion() {
+                    return "0";
+                }
+            });
+        } catch (IllegalStateException alreadyInitialized) {
+            // another test class in this JVM owns the platform instance
+        }
     }
 
     @Test
