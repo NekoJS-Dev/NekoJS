@@ -53,6 +53,31 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EventSurfaceOwnershipTest {
 
     private static Map<String, EventGroup> registeredGroups() {
+        // ticket 24: two production-order installs must precede the first family class-init
+        // (mirrors NekoJSMod's constructor order):
+        // 1) the cancellability predicate, otherwise the shared test JVM freezes every
+        //    cancellable family bus as non-cancellable;
+        // 2) a stub platform, otherwise KeyBindEvents' class-init reaches NekoJSMod's static
+        //    block and installs NeoForgePlatform, whose gameDir needs a real FML launch —
+        //    every later test that asks scriptsDir for a harness would NPE.
+        EventBusJS.setExternalCancellabilityPredicate(
+                net.neoforged.bus.api.ICancellableEvent.class::isAssignableFrom);
+        try {
+            com.tkisor.nekojs.platform.Platform.init(new com.tkisor.nekojs.platform.IPlatform() {
+                @Override public boolean isClient() { return false; }
+                @Override public boolean isDevelopment() { return true; }
+                @Override public String getMcVersion() { return "test"; }
+                @Override public java.nio.file.Path getGameDir() {
+                    return com.tkisor.nekojs.TestGameDirs.unique("nekojs-event-surface-ownership");
+                }
+                @Override public Map<String, com.tkisor.nekojs.platform.IModInfo> getMods() { return Map.of(); }
+                @Override public com.tkisor.nekojs.platform.IModInfo getInfo(String modID) { return null; }
+                @Override public String getLoaderId() { return "test"; }
+                @Override public String getLoaderVersion() { return "0"; }
+            });
+        } catch (IllegalStateException alreadyInitialized) {
+            // same-JVM reuse of an already initialized platform is fine
+        }
         EventGroupRegistry registry = new EventGroupRegistry.Impl();
         new NekoJSCorePlugin().registerEvents(registry);
         new NekoJSCorePlugin().registerClientEvents(registry);
