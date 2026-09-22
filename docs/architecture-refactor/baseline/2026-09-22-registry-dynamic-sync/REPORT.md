@@ -169,3 +169,20 @@ not verified 不改写为 unavailable；三类不展示为可用能力（示例�
   clearActivationEngine/activationEngine/pumpActivation`、plan 的
   `stageExistingDefinition`、`DynamicAdapterRequest(definition, generation, owner)`
   派生构造器公开化。
+
+## 主会话复核修正（2026-09-22，合并后）
+
+- 降级激活回滚契约（复核发现 AC2 缺口）：Adapter `activate` 违约时原实现仅记录
+  degraded 并 ABORT——若违约发生在 surgery 中途，部分 registry 变异无人撤销。现
+  `DynamicRegistryAdapter` 新增抽象 `rollbackActivation(requests)`，coordinator 降级路径
+  强制调用并记录恢复结果（回滚失败并入 degradation detail，不逃逸 commit 路径）；
+  `degradedActivationIsRolledBackAndThePreviousStateKeepsServing` 断言部分变异被撤销、
+  旧 active 继续服务、activatedGeneration 不推进。
+- 客户端 post-commit 激活失败（复核发现 AC4 缺口）：server 已 commit 后客户端自身激活
+  失败原本在 coordinator 无确定结果（静默分歧）。新增
+  `onParticipantActivationReport(participant, generation, activated, detail)`：失败记录
+  `activation-failed-post-commit` 并向该节点追平发送 STATE_SYNC（幂等修复），
+  成功仅记录（`failedClientActivationReportGetsACatchUpStateSyncRepair`）。
+- `DynamicCandidateRegistryPlan` 的 `add` 与 `stageExistingDefinition` 重复冲突检查合并为
+  `stageUnique`（消息不再漂移，sync 路径现在同样带双 owner/双定义定位）。
+- `commitCurrent` 降级 detail 的 `e.getMessage()` 空值回退为类名（与包内既有模式一致）。

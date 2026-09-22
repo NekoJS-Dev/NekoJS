@@ -26,10 +26,15 @@ final class RecordingTxnSupport {
     static final class RecordingAdapter implements DynamicRegistryAdapter {
         final List<List<DynamicAdapterRequest>> prepareCalls = new ArrayList<>();
         final List<List<DynamicAdapterRequest>> activateCalls = new ArrayList<>();
+        final List<List<DynamicAdapterRequest>> rollbackCalls = new ArrayList<>();
         /** The simulated live registry: key → fingerprint (the activated state). */
         final Map<String, String> live = new LinkedHashMap<>();
         RuntimeException prepareRejection;
         RuntimeException activateFailure;
+        RuntimeException rollbackFailure;
+        /** When set, a failing activate applies the first request before throwing (partial surgery). */
+        boolean mutatePartiallyBeforeFailure;
+        private Map<String, String> liveAtPrepare;
 
         @Override
         public void prepareActivation(List<DynamicAdapterRequest> requests) {
@@ -37,15 +42,32 @@ final class RecordingTxnSupport {
             if (prepareRejection != null) {
                 throw prepareRejection;
             }
+            liveAtPrepare = new LinkedHashMap<>(live);
         }
 
         @Override
         public void activate(List<DynamicAdapterRequest> requests) {
             activateCalls.add(List.copyOf(requests));
             if (activateFailure != null) {
+                if (mutatePartiallyBeforeFailure && !requests.isEmpty()) {
+                    DynamicAdapterRequest first = requests.get(0);
+                    live.put(first.registryKey() + "|" + first.id(), first.fingerprint());
+                }
                 throw activateFailure;
             }
             requests.forEach(request -> live.put(request.registryKey() + "|" + request.id(), request.fingerprint()));
+        }
+
+        @Override
+        public void rollbackActivation(List<DynamicAdapterRequest> requests) {
+            rollbackCalls.add(List.copyOf(requests));
+            if (rollbackFailure != null) {
+                throw rollbackFailure;
+            }
+            if (liveAtPrepare != null) {
+                live.clear();
+                live.putAll(liveAtPrepare);
+            }
         }
     }
 

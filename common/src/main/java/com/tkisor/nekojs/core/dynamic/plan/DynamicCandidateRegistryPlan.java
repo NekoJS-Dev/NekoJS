@@ -53,6 +53,25 @@ public final class DynamicCandidateRegistryPlan implements CandidateStatePlan {
             DynamicDefinitionType type, String rawId, DynamicDefinitionBuilder builder,
             String ownerScriptId, String origin) {
         DynamicDefinition definition = DynamicDefinition.of(type, rawId, builder);
+        return stageUnique(definition, ownerScriptId);
+    }
+
+    /**
+     * Stages an already-normalized definition (ticket 21 client-side sync path: the
+     * definition arrived from a server sync message, not from a builder callback).
+     * Same-batch dedupe/conflict semantics as {@link #add}.
+     */
+    public DynamicDefinition stageExistingDefinition(DynamicDefinition definition, String ownerScriptId) {
+        return stageUnique(definition, ownerScriptId);
+    }
+
+    /**
+     * Same-batch dedupe/conflict gate shared by builder collection and sync staging: an
+     * identical fingerprint is an idempotent return of the already-staged entry; a
+     * different definition for the same key fails the whole batch with both owners and
+     * both definitions (remove/replace/modify is not part of the first version).
+     */
+    private DynamicDefinition stageUnique(DynamicDefinition definition, String ownerScriptId) {
         String key = definition.key();
         DynamicDefinition existing = definitions.get(key);
         if (existing != null) {
@@ -62,27 +81,6 @@ public final class DynamicCandidateRegistryPlan implements CandidateStatePlan {
                                 + existing.describe() + " (from " + owners.get(key) + ") vs "
                                 + definition.describe() + " (from " + safeOwner(ownerScriptId) + ");"
                                 + " the whole batch fails — remove/replace/modify is not part of the first version");
-            }
-            return existing;
-        }
-        definitions.put(key, definition);
-        owners.put(key, safeOwner(ownerScriptId));
-        return definition;
-    }
-
-    /**
-     * Stages an already-normalized definition (ticket 21 client-side sync path: the
-     * definition arrived from a server sync message, not from a builder callback).
-     * Same-batch dedupe/conflict semantics as {@link #add}.
-     */
-    public DynamicDefinition stageExistingDefinition(DynamicDefinition definition, String ownerScriptId) {
-        String key = definition.key();
-        DynamicDefinition existing = definitions.get(key);
-        if (existing != null) {
-            if (!existing.fingerprint().equals(definition.fingerprint())) {
-                throw new IllegalArgumentException(
-                        "Duplicate declaration of '" + key + "' in the same batch with a different definition: "
-                                + existing.fingerprint() + " vs " + definition.fingerprint());
             }
             return existing;
         }

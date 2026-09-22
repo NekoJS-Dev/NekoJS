@@ -48,6 +48,9 @@ class DynamicRegistryActivationFacadeTest {
             activateCalls.add(List.copyOf(requests));
             requests.forEach(request -> live.put(request.registryKey() + "|" + request.id(), request.fingerprint()));
         }
+
+        @Override
+        public void rollbackActivation(List<DynamicAdapterRequest> requests) {}
     }
 
     /** Transport double with a fixed participant list; records every message. */

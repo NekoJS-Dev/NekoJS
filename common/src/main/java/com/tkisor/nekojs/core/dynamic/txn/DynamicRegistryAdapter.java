@@ -21,8 +21,13 @@ import java.util.List;
  *   <li>{@link #activate(List)} performs the surgery. It is only called after a
  *       successful {@code prepareActivation} of the same requests and must not throw;
  *       if an implementation violates that, the coordinator records a degraded
- *       activation failure (the ledger keeps serving the previously activated state)
- *       instead of pretending success;</li>
+ *       activation failure and demands {@link #rollbackActivation(List)} so no partial
+ *       registration survives (the ledger keeps serving the previously activated
+ *       state) instead of pretending success;</li>
+ *   <li>{@link #rollbackActivation(List)} restores the live registry to the last
+ *       successfully activated state after a degraded {@code activate}; it is called
+ *       exactly once per failed activation with the same requests and must not throw —
+ *       a rollback that fails anyway becomes part of the recorded degradation detail;</li>
  *   <li>implementations must be idempotent per {@code (key, fingerprint)}: the same
  *       request arriving again (retry batch, client catch-up) re-claims the entry
  *       instead of double-registering.</li>
@@ -41,4 +46,11 @@ public interface DynamicRegistryAdapter {
      * {@link #prepareActivation(List)} accepted the same requests.
      */
     void activate(List<DynamicAdapterRequest> requests);
+
+    /**
+     * Restores the live registry to the last successfully activated state after
+     * {@link #activate(List)} violated its no-throw contract and may have mutated the
+     * registry partway. Must not throw.
+     */
+    void rollbackActivation(List<DynamicAdapterRequest> requests);
 }

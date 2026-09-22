@@ -218,6 +218,28 @@ public final class DynamicRegistryTransactionCoordinator {
         note(new SyncOutcome(participantId, activatedGeneration, "left", null));
     }
 
+    /**
+     * A participant's post-commit activation report — the answer to a COMMIT or catch-up
+     * STATE_SYNC it already received (the participant executes its own activation when
+     * the commit arrives). A failure cannot un-commit the server batch, so the defined
+     * outcome (AC4) is an observable record plus a fresh catch-up STATE_SYNC of the
+     * activated state, letting the diverged node converge on delivery instead of
+     * silently staying behind. Success reports are recorded only.
+     */
+    public synchronized void onParticipantActivationReport(
+            String participantId, long generation, boolean activated, String detail) {
+        if (activated) {
+            note(new SyncOutcome(participantId, generation, "activation-report", detail));
+            return;
+        }
+        note(new SyncOutcome(participantId, generation, "activation-failed-post-commit",
+                detail == null || detail.isBlank() ? "no detail" : detail));
+        if (activatedGeneration >= 0L && !activatedState.isEmpty()) {
+            pendingStateSync.put(participantId, activatedGeneration);
+            transport.send(participantId, DynamicSyncMessage.stateSync(activatedGeneration, activatedState));
+        }
+    }
+
     /** Deadline check for the in-flight ack phase plus queue pump. */
     public synchronized void tick(long nowMillis) {
         if (current != null && status == Status.AWAITING_ACK && nowMillis >= current.deadlineMillis) {
@@ -360,7 +382,8 @@ public final class DynamicRegistryTransactionCoordinator {
         } catch (Throwable e) {
             record(Phase.COMMIT, generation, false, SERVER_OWNER, SYNC_DOMAIN, "adapter:activate",
                     "adapter violated its no-throw contract after prepare; activation is degraded: "
-                            + e.getMessage());
+                            + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage())
+                            + rollbackAfterDegradedActivation(current.requests));
             abortCurrent("adapter-activate-failed", null);
             return;
         }
@@ -373,6 +396,21 @@ public final class DynamicRegistryTransactionCoordinator {
         releaseCurrent();
         status = Status.COMMITTED;
         pump();
+    }
+
+    /**
+     * Demands adapter restoration after a degraded activation (AC2: no partial
+     * registration survives); never throws — a failing rollback widens the recorded
+     * degradation detail instead of escaping the commit path.
+     */
+    private String rollbackAfterDegradedActivation(List<DynamicAdapterRequest> requests) {
+        try {
+            adapter.rollbackActivation(requests);
+            return "; adapter rollback restored the previously activated state";
+        } catch (Throwable rollbackFailure) {
+            return "; adapter rollback ALSO failed: " + (rollbackFailure.getMessage() == null
+                    ? rollbackFailure.getClass().getSimpleName() : rollbackFailure.getMessage());
+        }
     }
 
     private void abortCurrent(String reason, String participant) {

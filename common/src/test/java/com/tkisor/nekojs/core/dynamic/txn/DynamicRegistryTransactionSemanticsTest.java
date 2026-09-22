@@ -209,6 +209,63 @@ class DynamicRegistryTransactionSemanticsTest {
     }
 
     @Test
+    void degradedActivationIsRolledBackAndThePreviousStateKeepsServing() {
+        // batch 1 activates cleanly and becomes the old active state
+        long firstGeneration = commitAndActivate(RecordingTxnSupport.item("mymod:old", 16, "common"));
+        assertTrue(adapter.live.containsKey("minecraft:item|mymod:old"));
+        assertEquals(1, transport.ofKind(DynamicSyncMessage.Kind.COMMIT).size());
+
+        // batch 2: the adapter violates its no-throw contract mid-surgery (partial mutation)
+        adapter.activateFailure = new IllegalStateException("registry exploded mid-surgery");
+        adapter.mutatePartiallyBeforeFailure = true;
+        commitAndStage(RecordingTxnSupport.item("mymod:new", 16, "epic"));
+        coordinator.pump();
+
+        assertEquals(DynamicRegistryTransactionCoordinator.Status.ABORTED, coordinator.status());
+        assertEquals(1, adapter.rollbackCalls.size(), "a degraded activation demands exactly one rollback");
+        assertEquals(adapter.activateCalls.get(1), adapter.rollbackCalls.get(0),
+                "rollback receives the failed batch's requests");
+        assertFalse(adapter.live.containsKey("minecraft:item|mymod:new"),
+                "the partial mutation is undone — no half-success ID survives");
+        assertTrue(adapter.live.containsKey("minecraft:item|mymod:old"),
+                "the previously activated state keeps serving");
+        assertEquals(firstGeneration, coordinator.activatedGeneration(),
+                "the activated generation does not advance on a degraded activation");
+        var failed = coordinator.phaseLog().stream().filter(r -> !r.passed()).findFirst().orElseThrow();
+        assertEquals("adapter:activate", failed.errorSource());
+        assertTrue(failed.detail().contains("restored the previously activated state"), failed.detail());
+        assertEquals(1, transport.ofKind(DynamicSyncMessage.Kind.COMMIT).size(),
+                "the degraded batch never broadcasts a commit");
+    }
+
+    @Test
+    void failedClientActivationReportGetsACatchUpStateSyncRepair() {
+        transport = new RecordingTxnSupport.ScriptedTransport("alice");
+        coordinator = new DynamicRegistryTransactionCoordinator(adapter, transport, 10_000L, () -> clock);
+        long generation = commitAndStage(RecordingTxnSupport.item("mymod:ruby", 16, "epic"));
+        coordinator.pump();
+        coordinator.onAck("alice", generation, true, null);
+        assertEquals(DynamicRegistryTransactionCoordinator.Status.COMMITTED, coordinator.status());
+
+        // the client fails its own activation after the server already committed
+        coordinator.onParticipantActivationReport("alice", generation, false, "activation-failed:same-key conflict");
+
+        var outcome = coordinator.syncOutcomes().stream()
+                .filter(o -> "activation-failed-post-commit".equals(o.outcome())).findFirst().orElseThrow();
+        assertEquals("alice", outcome.participantId());
+        assertTrue(outcome.reason().contains("same-key conflict"));
+        // repair: a fresh catch-up STATE_SYNC of the activated generation goes to that node
+        var repairs = transport.ofKind(DynamicSyncMessage.Kind.STATE_SYNC).stream()
+                .filter(sent -> "alice".equals(sent.participantId())).toList();
+        assertEquals(1, repairs.size());
+        assertEquals(generation, repairs.get(0).message().generation());
+        // and the node completing that repair is a defined, observable outcome
+        coordinator.onAck("alice", generation, true, null);
+        assertTrue(coordinator.syncOutcomes().stream()
+                .anyMatch(o -> "state-sync-completed".equals(o.outcome())));
+    }
+
+    @Test
     void closePreemptionAbortsInFlightBatchAndDiscardsQueuedBatches() {
         transport = new RecordingTxnSupport.ScriptedTransport("alice");
         coordinator = new DynamicRegistryTransactionCoordinator(adapter, transport, 10_000L, () -> clock);
