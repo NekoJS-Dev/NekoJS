@@ -1,6 +1,7 @@
 package com.tkisor.nekojs.core.pack.sync;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.config.SandboxConfig;
 import com.tkisor.nekojs.core.fs.ClassFilter;
@@ -227,11 +228,18 @@ public final class PackSyncClient {
         boolean clientReloadSucceeded = false;
 
         try {
-            // 1) 逐包验签（未签名受 allowUnsigned 控制）。旧 active 目录此时仍未触碰。
+            // 1) 逐包校验：manifest 必须是 JSON 对象（否则激活扫描会静默跳过该包——在此以
+            //    明确拒绝 + 原因进 trust 结果取代"接受了一个永不激活的包"）；再验签
+            //    （未签名受 allowUnsigned 控制）。旧 active 目录此时仍未触碰。
             for (SyncedPack pack : packs) {
                 if (!expectedHashes.containsKey(pack.syncId())) {
                     NekoJS.LOGGER.warn("Ignoring unexpected server pack {}", pack.syncId());
                     continue;
+                }
+                if (!isJsonObjectManifest(pack.manifestJson())) {
+                    restoreConnectionState(previousState);
+                    return Outcome.disconnect("NekoJS remote script pack rejected (" + pack.syncId()
+                        + "): manifest is not a JSON object");
                 }
                 PackSignatureVerifier.Result result = PackSignatureVerifier.verify(
                     pack.syncId(), pack.scopeName(), pack.manifestJson(), pack.files(),
@@ -685,6 +693,30 @@ public final class PackSyncClient {
 
     private static String normalizeAddress(String address) {
         return address == null ? "unknown" : address.trim().toLowerCase();
+    }
+
+    /**
+     * 远端套接字地址 → bucket 所用服务器地址文本（两 loader 接收桥共用）。配置阶段
+     * {@code Minecraft#getCurrentServer()} 尚未就绪，从连接远端地址取 hostname；归一
+     * 后的文本既是 bucket 计算输入，也是未信任断连提示里供玩家照抄的地址。
+     */
+    public static String normalizeRemoteAddress(java.net.SocketAddress remote) {
+        if (remote instanceof java.net.InetSocketAddress isa) {
+            String host = isa.getHostString();
+            if (host != null && !host.isBlank()) {
+                return host.trim().toLowerCase(java.util.Locale.ROOT);
+            }
+        }
+        return remote != null ? remote.toString() : "unknown";
+    }
+
+    /** manifest 有效性：能解析为 JSON 对象（与本地包 {@code ScriptPackManifest.load} 的底线一致）。 */
+    private static boolean isJsonObjectManifest(String manifestJson) {
+        try {
+            return JsonParser.parseString(manifestJson).isJsonObject();
+        } catch (Exception malformed) {
+            return false;
+        }
     }
 
     private static boolean clientModeOff() {

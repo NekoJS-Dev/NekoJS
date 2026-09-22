@@ -31,6 +31,9 @@ class PackSyncServerTest {
     @TempDir
     Path packsRoot;
 
+    @TempDir
+    Path worldRoot;
+
     @AfterEach
     void cleanup() {
         ClassFilter.INSTANCE.updateConfig(SandboxConfig.defaultConfig());
@@ -61,6 +64,26 @@ class PackSyncServerTest {
     }
 
     @Test
+    void collectGathersGlobalBeforeWorldPacks() throws Exception {
+        pack(packsRoot, "zeta", "{\"id\": \"zeta\", \"clientSync\": true}");
+        pack(packsRoot, "alpha", "{\"id\": \"alpha\", \"clientSync\": true}");
+        ScriptPackRegistry.get().refreshGlobalPacks(packsRoot);
+        Path worldPacks = worldRoot.resolve(ScriptPackRegistry.WORLD_PACKS_DIR);
+        pack(worldPacks, "beta", "{\"id\": \"beta\", \"clientSync\": true}");
+        pack(worldPacks, "nosync", "{\"id\": \"nosync\", \"clientSync\": false}");
+        ScriptPackRegistry.get().activateWorldPacks(worldRoot);
+        try {
+            List<SyncedPack> packs = PackSyncServer.collectSyncPacks();
+
+            // GLOBAL（字母序）→ WORLD（字母序），clientSync=false 的 WORLD 包不收集
+            assertEquals(List.of("packs:alpha", "packs:zeta", "worldpacks:beta"),
+                    packs.stream().map(SyncedPack::syncId).toList());
+        } finally {
+            ScriptPackRegistry.get().deactivateWorldPacks();
+        }
+    }
+
+    @Test
     void enabledAndModeReadFromEngineConfig() {
         assertFalse(PackSyncServer.enabled()); // 默认 off
         config("hashOnly");
@@ -69,6 +92,17 @@ class PackSyncServerTest {
         config("all");
         assertTrue(PackSyncServer.enabled());
         assertFalse(PackSyncServer.hashOnly());
+    }
+
+    /** 配置期推送次序门：哈希清单总是先发；bundle 仅在非 hashOnly 且有包时紧随。 */
+    @Test
+    void bundleSendDecisionMatrix() {
+        config("all");
+        assertTrue(PackSyncServer.shouldSendBundle(1));
+        assertFalse(PackSyncServer.shouldSendBundle(0));
+        config("hashOnly");
+        assertFalse(PackSyncServer.shouldSendBundle(1));
+        assertFalse(PackSyncServer.shouldSendBundle(0));
     }
 
     private static void config(String packSyncMode) {

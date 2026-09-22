@@ -35,6 +35,14 @@ public final class PackSyncServer {
         return SandboxConfig.PACK_SYNC_HASH_ONLY.equalsIgnoreCase(ClassFilter.INSTANCE.config().packSyncMode());
     }
 
+    /**
+     * 配置期 bundle 门（两 loader 配置任务共用）：哈希清单总是先行推送；完整 bundle 仅在
+     * 非 hashOnly 且实际 gather 到包时紧随发送。共享单点使推送次序不会在两桥间漂移。
+     */
+    public static boolean shouldSendBundle(int gatheredPackCount) {
+        return gatheredPackCount > 0 && !hashOnly();
+    }
+
     /** gather 待分发包：enabled && clientSync 的 GLOBAL + WORLD 包。 */
     public static List<SyncedPack> collectSyncPacks() {
         List<SyncedPack> out = new ArrayList<>();

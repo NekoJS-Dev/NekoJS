@@ -24,8 +24,6 @@ import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -80,7 +78,7 @@ public final class FabricPackSync {
                 List<SyncedPack> packs = PackSyncServer.collectSyncPacks();
                 PackHashListPayload hashes = PackHashListPayload.of(packs);
                 ServerConfigurationNetworking.send(handler, hashes);
-                if (!PackSyncServer.hashOnly() && !hashes.entries().isEmpty()) {
+                if (PackSyncServer.shouldSendBundle(packs.size())) {
                     ServerConfigurationNetworking.send(handler, PackBundlePayload.of(packs));
                 }
                 LOGGER.info("Pushed {} script pack(s) to a configuring client", hashes.entries().size());
@@ -114,7 +112,7 @@ public final class FabricPackSync {
     private static void handleHashList(PackHashListPayload payload, ClientConfigurationNetworking.Context context) {
         Connection connection = context.packetContext().get(PacketContext.CONNECTION);
         if (connection == null || connection.isMemoryConnection()) return;
-        String address = resolveServerAddress(connection);
+        String address = PackSyncClient.normalizeRemoteAddress(connection.getRemoteAddress());
         List<PackSyncClient.HashEntry> entries = payload.toClientEntries();
         PackSyncClient.prepareMainThreadWork();
         context.client().execute(() -> {
@@ -168,17 +166,5 @@ public final class FabricPackSync {
             LOGGER.error("CLIENT script reload after server pack sync failed", failure);
             return false;
         }
-    }
-
-    /** 配置阶段 {@code Minecraft#getCurrentServer()} 未就绪，从连接远端地址取 bucket 所用地址。 */
-    private static String resolveServerAddress(Connection connection) {
-        SocketAddress remote = connection.getRemoteAddress();
-        if (remote instanceof InetSocketAddress isa) {
-            String host = isa.getHostString();
-            if (host != null && !host.isBlank()) {
-                return host.trim().toLowerCase();
-            }
-        }
-        return remote != null ? remote.toString() : "unknown";
     }
 }
