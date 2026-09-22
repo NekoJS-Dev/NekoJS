@@ -1,0 +1,16 @@
+# 示例：engine.toml 的 [packSync] 段（服务端与客户端共用同一文件语义）
+# 位置：<gameDir>/nekojs/config/engine.toml
+
+# mode 三态（服务端决定是否推送；客户端决定是否接受执行）：
+#   off      默认。服务端不推送；客户端忽略全部同步包并清空远端缓存激活集。
+#   hashOnly 只推送/接收哈希清单，客户端永不落盘执行远端脚本（只观测）。
+#   all      哈希清单 + 完整 bundle；客户端验签 + 信任通过后激活 SERVER_CACHE 包。
+# 本票固定：配置期推送次序为共享核单点（PackSyncServer.shouldSendBundle）——
+# 哈希清单总是先行，bundle 仅在 mode != hashOnly 且 gather 到包时紧随。
+[packSync]
+mode = "all"
+
+# 是否接受无签名块的服务器脚本包。默认 false：未签名包拒绝并断连，提示
+# /nekojs trust <address> 后重连。注意：即使 allowUnsigned = true，manifest
+# 不是 JSON 对象的包仍会被拒绝（拒绝原因进入 pack trust 结果）。
+allowUnsigned = false

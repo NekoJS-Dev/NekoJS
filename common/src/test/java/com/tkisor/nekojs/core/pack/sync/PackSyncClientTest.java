@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.security.KeyPair;
 import java.lang.reflect.InvocationHandler;
@@ -544,6 +545,142 @@ class PackSyncClientTest {
 
         assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
         assertEquals(0, reloads.get());
+    }
+
+    @Test
+    void invalidManifestRejectedWithReasonInTrustResult() {
+        config("all", true); // rejection must come from manifest validity, not the signature policy
+        installCountingReloadHook();
+        String garbage = "not a json object";
+        SyncedPack pack = pack("packs:garbage", "GLOBAL", garbage, "client_scripts/hud.js", "hud()");
+        PackSyncClient.handleHashList(runtimeRoot, "srv-badpack.test", hashes(pack));
+
+        PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
+
+        assertTrue(outcome.shouldDisconnect(), "a non-JSON manifest must be rejected");
+        assertTrue(outcome.disconnect().contains("manifest"),
+                "the rejection reason must enter the pack trust result: " + outcome.disconnect());
+        assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        assertEquals(0, reloads.get());
+        Path cached = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-badpack.test"))
+                .resolve(SyncedPack.encodeSyncId("packs:garbage"));
+        assertFalse(java.nio.file.Files.isDirectory(cached), "a rejected manifest must not be activated on disk");
+    }
+
+    @Test
+    void oversizedBundleRejectionsCarryTheLimitReason() {
+        config("all", false);
+        installCountingReloadHook();
+
+        // 1) pack count over the per-bundle limit
+        List<SyncedPack> tooMany = new java.util.ArrayList<>();
+        List<PackSyncClient.HashEntry> tooManyHashes = new java.util.ArrayList<>();
+        for (int i = 0; i <= PackSyncClient.MAX_PACKS_PER_BUNDLE; i++) {
+            SyncedPack p = pack("packs:many-" + i, "GLOBAL",
+                    "{\"id\": \"demo\", \"version\": \"1.0.0\"}", "client_scripts/hud.js", "hud()");
+            tooMany.add(p);
+            tooManyHashes.add(new PackSyncClient.HashEntry(p.syncId(), p.hash()));
+        }
+        PackSyncClient.handleHashList(runtimeRoot, "srv-too-many.test", tooManyHashes);
+        PackSyncClient.Outcome countOutcome = PackSyncClient.handleBundle(runtimeRoot, tooMany);
+        assertTrue(countOutcome.shouldDisconnect());
+        assertTrue(countOutcome.disconnect().contains("too many packs"), countOutcome.disconnect());
+
+        // 2) single file over the per-file limit
+        SyncedPack hugeFile = new SyncedPack("packs:huge-file", "GLOBAL", null,
+                "{\"id\": \"demo\", \"version\": \"1.0.0\"}",
+                List.of(new PackContentFile("client_scripts/huge.bin",
+                        new byte[PackSyncClient.MAX_FILE_BYTES + 1])));
+        PackSyncClient.handleHashList(runtimeRoot, "srv-huge-file.test", List.of(
+                new PackSyncClient.HashEntry(hugeFile.syncId(), "00")));
+        PackSyncClient.Outcome fileOutcome = PackSyncClient.handleBundle(runtimeRoot, List.of(hugeFile));
+        assertTrue(fileOutcome.shouldDisconnect());
+        assertTrue(fileOutcome.disconnect().contains("file too large"), fileOutcome.disconnect());
+
+        // 3) manifest over the manifest size limit
+        String oversizedManifest = "{\"id\": \"demo\", \"note\": \""
+                + "x".repeat(PackSyncClient.MAX_MANIFEST_BYTES) + "\"}";
+        SyncedPack hugeManifest = pack("packs:huge-manifest", "GLOBAL",
+                oversizedManifest, "client_scripts/hud.js", "hud()");
+        PackSyncClient.handleHashList(runtimeRoot, "srv-huge-manifest.test", List.of(
+                new PackSyncClient.HashEntry(hugeManifest.syncId(), "00")));
+        PackSyncClient.Outcome manifestOutcome = PackSyncClient.handleBundle(runtimeRoot, List.of(hugeManifest));
+        assertTrue(manifestOutcome.shouldDisconnect());
+        assertTrue(manifestOutcome.disconnect().contains("manifest too large"), manifestOutcome.disconnect());
+
+        assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        assertEquals(0, reloads.get(), "no rejected bundle may trigger a client reload");
+    }
+
+    @Test
+    void rejectedBundleDoesNotOverwriteExistingLocalGlobalPack(@TempDir Path localPacksRoot) throws Exception {
+        config("all", false);
+        installCountingReloadHook();
+        // 本地 GLOBAL 包 demo：受保护的用户数据，远端包拒绝路径不得触碰
+        Path localPackDir = localPacksRoot.resolve("demo");
+        java.nio.file.Files.createDirectories(localPackDir.resolve("client_scripts"));
+        java.nio.file.Files.writeString(localPackDir.resolve("manifest.json"), "{\"id\": \"demo\"}");
+        java.nio.file.Files.writeString(localPackDir.resolve("client_scripts/local.js"), "// local\n");
+        ScriptPackRegistry.get().refreshGlobalPacks(localPacksRoot);
+        try {
+            // hash 不匹配的远端包（同 syncId packs:demo）→ 落盘重扫后检出
+            String manifest = signed("packs:demo", "GLOBAL", "key-local-overwrite");
+            SyncedPack pack = pack("packs:demo", "GLOBAL", manifest, "client_scripts/hud.js", "hud()");
+            PackSyncClient.handleHashList(runtimeRoot, "srv-overwrite.test", List.of(
+                    new PackSyncClient.HashEntry(pack.syncId(), "deadbeef")));
+
+            PackSyncClient.Outcome outcome = PackSyncClient.handleBundle(runtimeRoot, List.of(pack));
+
+            assertTrue(outcome.shouldDisconnect());
+            assertTrue(outcome.disconnect().contains("integrity check failed"));
+            assertEquals("// local\n", java.nio.file.Files.readString(localPackDir.resolve("client_scripts/local.js")),
+                    "a rejected remote pack must not overwrite existing local pack files");
+            assertEquals("{\"id\": \"demo\"}", java.nio.file.Files.readString(localPackDir.resolve("manifest.json")));
+            assertEquals(1, ScriptPackRegistry.get().globalPacks().size());
+            assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        } finally {
+            ScriptPackRegistry.get().refreshGlobalPacks();
+        }
+    }
+
+    @Test
+    void emptyHashListUnloadsActiveSetAndRetainsRegenerableCacheFiles() throws Exception {
+        config("all", false);
+        installCountingReloadHook();
+        String manifest = signed("packs:clearable", "GLOBAL", "key-clearable");
+        SyncedPack pack = pack("packs:clearable", "GLOBAL", manifest, "client_scripts/hud.js", "hud()");
+        PackSyncClient.handleHashList(runtimeRoot, "srv-clearable.test", hashes(pack));
+        PackSyncTrustStore.get().trustServer("srv-clearable.test");
+        assertNull(PackSyncClient.handleBundle(runtimeRoot, List.of(pack)).disconnect());
+        Path cachedFile = ServerPackCache.bucketDir(PackSyncTrustStore.bucketFor("srv-clearable.test"))
+                .resolve(SyncedPack.encodeSyncId("packs:clearable")).resolve("client_scripts/hud.js");
+        assertTrue(java.nio.file.Files.isRegularFile(cachedFile));
+
+        // 服务器清空包集（空哈希清单）：卸载 active 集合并重载；缓存文件可再生，按约保留
+        PackSyncClient.Outcome outcome = PackSyncClient.handleHashList(runtimeRoot, "srv-clearable.test", List.of());
+
+        assertNull(outcome.disconnect(), outcome.disconnect());
+        assertTrue(ScriptPackRegistry.get().serverCachePacks().isEmpty());
+        assertEquals(2, reloads.get(), "activation reload plus unload reload");
+        assertTrue(java.nio.file.Files.isRegularFile(cachedFile),
+                "server pack cache files are regenerable from a later bundle and must be retained");
+    }
+
+    @Test
+    void remoteAddressNormalizationIsSharedAndStable() {
+        assertEquals("play.example.com",
+                PackSyncClient.normalizeRemoteAddress(new java.net.InetSocketAddress("PLAY.Example.COM", 25565)));
+        assertEquals("unknown", PackSyncClient.normalizeRemoteAddress(null));
+        java.net.SocketAddress opaque = new java.net.SocketAddress() {
+            @Override public String toString() {
+                return "channel-local";
+            }
+        };
+        assertEquals("channel-local", PackSyncClient.normalizeRemoteAddress(opaque));
+        // 归一结果与 bucket 计算一致（同一地址两种大小写形式同 bucket）
+        assertEquals(PackSyncTrustStore.bucketFor("play.example.com"),
+                PackSyncTrustStore.bucketFor(
+                        PackSyncClient.normalizeRemoteAddress(new java.net.InetSocketAddress("PLAY.Example.COM", 25565))));
     }
 
     /* ================= 辅助 ================= */

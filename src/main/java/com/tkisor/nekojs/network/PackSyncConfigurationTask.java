@@ -44,7 +44,7 @@ public class PackSyncConfigurationTask implements ConfigurationTask {
             List<SyncedPack> packs = PackSyncServer.collectSyncPacks();
             PackHashListPayload hashes = PackHashListPayload.of(packs);
             listener.send(hashes);
-            if (!PackSyncServer.hashOnly() && !hashes.entries().isEmpty()) {
+            if (PackSyncServer.shouldSendBundle(packs.size())) {
                 listener.send(PackBundlePayload.of(packs));
             }
         } catch (Exception e) {

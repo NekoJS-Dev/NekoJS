@@ -5,8 +5,6 @@ import com.tkisor.nekojs.core.pack.sync.PackSyncClient;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.List;
 
 /**
@@ -29,7 +27,7 @@ public final class PackSyncMessageHandler {
     /** S2C 配置阶段哈希清单。本地/单人内存连接跳过（同步语义只针对真实远端连接）。 */
     public static void handleHashListOnClient(PackHashListPayload payload, IPayloadContext context) {
         if (context.connection().isMemoryConnection()) return;
-        String address = resolveServerAddress(context);
+        String address = PackSyncClient.normalizeRemoteAddress(context.connection().getRemoteAddress());
         List<PackSyncClient.HashEntry> entries = payload.toClientEntries();
         PackSyncClient.prepareMainThreadWork();
         context.enqueueWork(() -> {
@@ -63,17 +61,6 @@ public final class PackSyncMessageHandler {
             }
         });
         PackSyncClient.awaitMainThreadWork();
-    }
-
-    static String resolveServerAddress(IPayloadContext context) {
-        SocketAddress remote = context.connection().getRemoteAddress();
-        if (remote instanceof InetSocketAddress isa) {
-            String host = isa.getHostString();
-            if (host != null && !host.isBlank()) {
-                return host.trim().toLowerCase();
-            }
-        }
-        return remote != null ? remote.toString() : "unknown";
     }
 }
 //?}

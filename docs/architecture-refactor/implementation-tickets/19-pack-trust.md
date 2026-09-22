@@ -4,7 +4,7 @@
 
 **Blocked by:** [17: 网络注册一次、wire 不变与脚本自定义通道 owner 调度](17-network-sync.md)、[03: 持久化与用户编辑数据保护基线：默认不改、可回滚才迁移](03-data-protection.md)
 
-**Status:** in-progress
+**Status:** in-review（实现/测试/证据已交付，AC 全勾；in-game 连接 smoke 与 runGameTestServer 未跑＝baseline REPORT §5-G1/G4，26.2.0/1.21.1 NeoForge 全量未跑＝G5）
 
 **Assignee:** zed-flash-19（main-session agent；GLM-5.3 subagent worktree）
 
@@ -26,14 +26,14 @@
 
 ## Acceptance criteria
 
-- [ ] 服务器按旧顺序只收集启用且 clientSync 允许的 GLOBAL/WORLD 包，配置期先发送 hash list，非 hashOnly 且有包时再发送 bundle。
-- [ ] 客户端对未信任服务器明确断开或拒绝执行并给出 trust hint；hashOnly 模式不落盘执行远端脚本；all 模式仅在验证与信任通过后激活。
-- [ ] 显式 trustServer/trustPublicKey 的路径、JSON key、bucket 计算、原子替换和跨 reload 保留行为不变；损坏文件降级为空 store 并产生可观察警告。
-- [ ] bundle 损坏、hash 不匹配、超限或非法 manifest 的远端包被拒绝，不执行脚本，不覆盖既有本地包，失败原因进入 pack trust 结果。
-- [ ] 接受的远端包写入现有 SERVER_CACHE bucket，激活后经 root 触发 CLIENT candidate reload；断线或服务器清空时卸载 cache 集合，可再生文件按现约保留。
-- [ ] Fabric WORLD 的当前激活、列表和分发现象被 fixture 固定并公开为 partial/unavailable 证据；NeoForge 与 Fabric 不伪造 parity，也不改变本地 pack 默认启用或路径。
-- [ ] trust 决策、拒绝、降级和审计输出在执行或 pack sync 结果中可见，不宣称强恶意隔离。
-- [ ] 共享核心管线 fixture 覆盖 NeoForge 与 Fabric 当前配置期桥；loader 重复信任解析/写文件路线在两侧行为等价验证后才删除。
+- [x] 服务器按旧顺序只收集启用且 clientSync 允许的 GLOBAL/WORLD 包，配置期先发送 hash list，非 hashOnly 且有包时再发送 bundle。【evidence: `PackSyncServerTest.collectGathersGlobalBeforeWorldPacks`（GLOBAL 字母序→WORLD 字母序、clientSync=false 不收集）+ `bundleSendDecisionMatrix`；两桥推送次序单点化为 `PackSyncServer.shouldSendBundle`（`PackSyncConfigurationTask`/`FabricPackSync.PushTask` 委托，`PackSyncBridgeSourceTraceTest` 全节点钉住）；真机配置期推送顺序未跑＝baseline REPORT §5-G1】
+- [x] 客户端对未信任服务器明确断开或拒绝执行并给出 trust hint；hashOnly 模式不落盘执行远端脚本；all 模式仅在验证与信任通过后激活。【evidence: `PackSyncClientTest.untrustedServerDisconnectsWithTrustHint`（hint 含 `/nekojs trust <addr>`）、`hashOnlyClientNeverExecutesAndEmptyListClears`、`trustedServerActivatesAndReloads` 及同文件 staging/回滚套件；:common:check 全量重跑通过】
+- [x] 显式 trustServer/trustPublicKey 的路径、JSON key、bucket 计算、原子替换和跨 reload 保留行为不变；损坏文件降级为空 store 并产生可观察警告。【evidence: `PackSyncTrustStoreTest` 4 用例（持久化/bucket 大小写空格不敏感/key pinning/损坏降级，降级 WARN 见 `PackSyncTrustStore.readRoot` 既有行为）；本票对 trust-store 源码零改动，签名公钥 pinning 现状未加强或放松】
+- [x] bundle 损坏、hash 不匹配、超限或非法 manifest 的远端包被拒绝，不执行脚本，不覆盖既有本地包，失败原因进入 pack trust 结果。【evidence: 红→绿 `invalidManifestRejectedWithReasonInTrustResult`（新增拒绝分支，原因入 Outcome）+ `oversizedBundleRejectionsCarryTheLimitReason`（too many packs/file too large/manifest too large）+ `rejectedBundleDoesNotOverwriteExistingLocalGlobalPack`；hash 不匹配/未签名=既有 `hashMismatchAfterPersistDisconnects`/`unsignedPackRejectedByDefault`；全部拒绝路径断言 serverCache 空、零 reload】
+- [x] 接受的远端包写入现有 SERVER_CACHE bucket，激活后经 root 触发 CLIENT candidate reload；断线或服务器清空时卸载 cache 集合，可再生文件按现约保留。【evidence: `trustedServerActivatesAndReloads`/`successfulActivationAuthorizesRuntimeCacheAndDisconnectRevokesIt`（激活→reload→断线撤销授权）、`replacingBundleRejectsOldAndStaleFilesButAllowsCurrentSource`（旧缓存文件保留）、新增 `emptyHashListUnloadsActiveSetAndRetainsRegenerableCacheFiles`（服务器清空）；两 loader reload 钩子均 `root.reload(ScriptType.CLIENT)`＝`PackSyncBridgeSourceTraceTest.bothClientReloadHooksRouteThroughTheRuntimeRoot`】
+- [x] Fabric WORLD 的当前激活、列表和分发现象被 fixture 固定并公开为 partial/unavailable 证据；NeoForge 与 Fabric 不伪造 parity，也不改变本地 pack 默认启用或路径。【evidence: `FabricWorldPackStatusTest`（fabric 零激活/卸载/目录扫描引用；激活调用点仅 NeoForge ServerEventListener×2；空列表文案声称 `<world>/nekojs_packs/` 的现状钉住不改；gather 只读 registry）；partial/unavailable 判定公开于 baseline REPORT §5-G2；能力表最终呈现归 MANAGED_SURFACE/language-surface（票据 Coordination），本地 pack 默认启用与路径零改动】
+- [x] trust 决策、拒绝、降级和审计输出在执行或 pack sync 结果中可见，不宣称强恶意隔离。【evidence: 拒绝原因全部进入 `Outcome.disconnect`（玩家可见断连消息）；执行侧审计=既有 `NekoModuleError.OWNER_PACK_TRUST`（`successfulActivationAuthorizesRuntimeCacheAndDisconnectRevokesIt`）；降级=trust-store 损坏 WARN；文档与消息只描述验签/信任关口，无强隔离宣称（baseline REPORT §6）】
+- [x] 共享核心管线 fixture 覆盖 NeoForge 与 Fabric 当前配置期桥；loader 重复信任解析/写文件路线在两侧行为等价验证后才删除。【evidence: `PackSyncBridgeSourceTraceTest` 在 26.1.2 与双 fabric 节点全量重跑通过（command-output/06/07）；重复路线=两桥各自复制的 bundle 门（hashOnly+非空判定）与远端地址→bucket 解析（InetSocketAddress），等价验证（共享核单点行为矩阵 + 两桥委托 trace）通过后删除，桥内残留由 trace 断言禁止；文件写入路线本就只在 common（`ServerPackCache`），无 loader 副本】
 
 ## Sources
 
@@ -41,6 +41,27 @@
 - [运行时生命周期与数据保护规格](../specs/05-runtime-lifecycle-and-data.md)
 - [NekoJS 实施交接单](../implementation-handoff.md)
 - [实现票据索引](README.md)
+
+## Delivery record（2026-09-22）
+
+- 执行者：zed-flash-19（GLM-5.3 subagent worktree `../NekoJS-mult-t19`，分支 `ticket-19-pack-trust`，
+  基于 `7768e02d`）。实现 3 commits：`6905e5c2` fix(pack) WORLD 包相对路径执行缺陷（票 03 §3-1
+  实码缺陷承接、票 07 G4 遗留）、`9d02ad3e` feat(pack-sync) 配置期次序/地址输入共享单点 + 非法
+  manifest 拒绝、`ad4ca3ff` test(pack-trust) Fabric WORLD 现状钉住；证据 commit 见 baseline。
+- 主源码净变更（最小面）：common 共享方法 2 个（`PackSyncServer.shouldSendBundle`、
+  `PackSyncClient.normalizeRemoteAddress`）+ `handleBundle` 非法 manifest 拒绝分支 1 处 +
+  WORLD 归一 2 处（registry/executor）；两桥改为委托并删除本地重复判定（bundle 门、
+  InetSocketAddress 地址解析）。trust-store/ServerPackCache/验签器/payload 线格式/命令语义
+  零改动；无 golden 变更、无迁移、无新依赖、无新 NEKO- 码（baseline REPORT §5-G6）。
+- 红→绿证据（baseline `../baseline/2026-09-22-pack-trust/command-output/01-04`）：非法 manifest
+  拒绝（trust 决策）、WORLD 包激活→执行（激活次序）、配置期桥共享次序 trace（4 用例红）。
+- 验证（真跑，摘录见 command-output/05-07）：`:common:check` BUILD SUCCESSFUL（1771 tests 0 失败，
+  含隔离检查）；`:26.1.2-fabric:test`/`:26.2.0-fabric:test` 全量 226/226 0 失败；
+  `:26.1.2:test` 全量 351/351 0 失败。本机 Windows 结果，不代表其他平台/CI/release。
+- 遗留与 owner（REPORT §5）：G1 真机客户端连接 smoke→主会话 minecraft-mod-mcp；G2 Fabric WORLD
+  能力表呈现→MANAGED_SURFACE/language-surface（本票已交 partial/unavailable 行为证据，含
+  `nekojs_packs` 文案不一致的现状记录）；G4 runGameTestServer 与 G5 26.2.0/1.21.1 NeoForge
+  全量→主会话/合并门；G6 NEKO- 码→stonecutter 分支合并后统一补。
 
 ## Dependency rationale
 

@@ -1,0 +1,19 @@
+# 示例：参与分发的已签名 GLOBAL 脚本包 manifest（`nekojs/packs/demo/manifest.json`）
+
+# 结构与 PackSignatureVerifier 的消费面一致：顶层为 ScriptPackManifest 宽松解析
+# （id/version/enabled/clientSync...），签名块 signature = {algorithm, keyId,
+# publicKey, signature}。algorithm 固定 Ed25519；publicKey/signature 为 base64。
+# 签名覆盖 (syncId, scope, manifest 原文, 内容文件)——见 PackSignaturePayload.build。
+# signature 与 config 之外的未知键原样透传，不影响本地加载。
+{
+  "id": "demo",
+  "name": "Demo distributed pack",
+  "version": "1.0.0",
+  "clientSync": true,
+  "signature": {
+    "algorithm": "Ed25519",
+    "keyId": "packs-demo-key-2026",
+    "publicKey": "<base64 X509EncodedKeySpec of the Ed25519 public key>",
+    "signature": "<base64 Ed25519 signature over (syncId, scope, manifest, files)>"
+  }
+}

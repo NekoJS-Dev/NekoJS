@@ -1,0 +1,4 @@
+# 验证 3：NeoForge primary 节点全量 test（编译共享树桥改造 + trace 用例）
+$ ./gradlew.bat :26.1.2:test --console=plain
+EXIT=0  BUILD SUCCESSFUL in 25s
+tests=351 failures=0 errors=0 skipped=54（skip 为节点既有条件跳过用例）

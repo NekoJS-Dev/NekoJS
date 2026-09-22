@@ -1,0 +1,5 @@
+# 验证 1：:common:check（含隔离检查，全量）
+$ ./gradlew.bat :common:check --console=plain
+EXIT=0  BUILD SUCCESSFUL in 2m 21s
+test 结果汇总（common/build/test-results/test/*.xml）：
+tests=1771 failures=0 errors=0 skipped=4

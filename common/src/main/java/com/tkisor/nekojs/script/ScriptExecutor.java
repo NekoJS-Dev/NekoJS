@@ -53,7 +53,10 @@ public final class ScriptExecutor {
         SyncEvalWatchdog.Guard watchdog = SyncEvalWatchdog.arm(ctx, sandboxConfig.scriptRunawayTimeoutSeconds());
         try {
             synchronized (ctx) {
-                Path relativePath = paths.root().relativize(script.path);
+                // 包脚本可能携带平台相对路径（WORLD 包在注册表归一前；见
+                // ScriptPackRegistry#activateWorldPacks），而 nekojs root 恒为绝对——
+                // 混用绝对/相对路径的 relativize 抛 IAE（票 03 §3-1 / 票 07 G4）。先归一。
+                Path relativePath = paths.root().relativize(script.path.toAbsolutePath().normalize());
                 String requirePath = "./" + relativePath.toString().replace("\\", "/");
 
                 errorTracker.clear(ctx, script.id);
