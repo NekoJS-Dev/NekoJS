@@ -277,6 +277,44 @@ tasks.register("sandboxCheck") {
 // production fat jar would publish the test surface to players). The gate also
 // positively verifies the fixture jar itself carries both loader metadata files
 // (discovery-input shape integrity).
+// Fixture content markers shared by verifyExternalAddonIsolation (ticket 08 AC1).
+val addonFixturePackagePrefix = "com/example/addon/"
+val addonFixtureModId = "exampleaddon"
+val addonFixtureMetadataEntries = setOf("fabric.mod.json", "META-INF/neoforge.mods.toml")
+
+/**
+ * Scans one jar image — and, nested entry by nested entry, jars embedded inside it — for
+ * external addon fixture content: fixture class entries, entry names carrying the fixture
+ * mod id (covers a fixture jar shaded under another name), and loader metadata files
+ * containing the mod id. Returns one violation message per finding.
+ */
+fun scanAddonFixtureViolations(stream: java.io.InputStream, label: String, nestingDepth: Int): List<String> {
+    val violations = mutableListOf<String>()
+    java.util.zip.ZipInputStream(stream).use { zip ->
+        while (true) {
+            val entry = zip.nextEntry ?: break
+            when {
+                entry.name.startsWith(addonFixturePackagePrefix) ->
+                    violations += "$label: fixture class entry ${entry.name}"
+                entry.name.contains(addonFixtureModId) ->
+                    violations += "$label: fixture name marker in entry ${entry.name}"
+                entry.name in addonFixtureMetadataEntries -> {
+                    val text = zip.readAllBytes().toString(Charsets.UTF_8)
+                    if (text.contains(addonFixtureModId)) {
+                        violations += "$label: fixture metadata marker in ${entry.name}"
+                    }
+                }
+                nestingDepth > 0 && entry.name.endsWith(".jar") ->
+                    violations += scanAddonFixtureViolations(
+                        java.io.ByteArrayInputStream(zip.readAllBytes()),
+                        "$label!${entry.name}",
+                        nestingDepth - 1)
+            }
+        }
+    }
+    return violations
+}
+
 val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
     group = "verification"
     description = "Asserts the five production node jars contain no external addon fixture content (ticket 08)."
@@ -292,17 +330,13 @@ val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
     dependsOn(addonJarTask)
     dependsOn(nodeJarTasks)
 
-    val fixturePackagePrefix = "com/example/addon/"
-    val fixtureModId = "exampleaddon"
-    val metadataEntries = setOf("fabric.mod.json", "META-INF/neoforge.mods.toml")
-
     doLast {
         val addonJar = addonJarTask.get().outputs.files.singleFile
         // Positive arm: the fixture jar must carry both loader metadata files and plugin classes
         java.util.zip.ZipFile(addonJar).use { zip ->
             val entries = zip.entries().asSequence().toList()
             val names = entries.map { it.name }.toSet()
-            for (required in metadataEntries + fixturePackagePrefix) {
+            for (required in addonFixtureMetadataEntries + addonFixturePackagePrefix) {
                 val present = if (required.endsWith("/"))
                     names.any { it.startsWith(required) }
                 else
@@ -312,35 +346,26 @@ val externalAddonIsolation = tasks.register("verifyExternalAddonIsolation") {
                 }
             }
         }
-        // Negative arm: no production jar may carry fixture classes or metadata traces
+        // Negative arm: no production jar may carry fixture classes, name markers, metadata
+        // traces, or the fixture embedded as a nested jar
         val checked = mutableListOf<String>()
         nodeJarTasks.forEach { jarTask ->
             val archive = (jarTask.get() as org.gradle.jvm.tasks.Jar).archiveFile.get().asFile
             checked += archive.name
-            java.util.zip.ZipFile(archive).use { zip ->
-                val violations = mutableListOf<String>()
-                for (entry in zip.entries()) {
-                    if (entry.name.startsWith(fixturePackagePrefix)) {
-                        violations += "${archive.name}: fixture class entry ${entry.name}"
-                    } else if (entry.name in metadataEntries) {
-                        val text = zip.getInputStream(entry).bufferedReader().readText()
-                        if (text.contains(fixtureModId)) {
-                            violations += "${archive.name}: fixture metadata marker in ${entry.name}"
-                        }
-                    }
-                }
-                if (violations.isNotEmpty()) {
-                    throw GradleException(
-                        "production jar contains test-only addon fixture content (ticket 08 AC1):\n  - " +
-                                violations.joinToString("\n  - "))
-                }
+            val violations = archive.inputStream().use { stream ->
+                scanAddonFixtureViolations(stream, archive.name, nestingDepth = 2)
+            }
+            if (violations.isNotEmpty()) {
+                throw GradleException(
+                    "production jar contains test-only addon fixture content (ticket 08 AC1):\n  - " +
+                            violations.joinToString("\n  - "))
             }
         }
         if (checked.size != 5) {
             throw GradleException(
                 "expected to verify exactly 5 production jars (ticket 08 AC1), found ${checked.size}: $checked")
         }
-        logger.lifecycle("verifyExternalAddonIsolation: ${checked.size} 个生产 jar 均不含 fixture 内容，fixture jar 元数据齐全")
+        logger.lifecycle("verifyExternalAddonIsolation: ${checked.size} production jars carry no fixture content; fixture jar metadata complete")
     }
 }
 tasks.named("sandboxCheck") { dependsOn(externalAddonIsolation) }

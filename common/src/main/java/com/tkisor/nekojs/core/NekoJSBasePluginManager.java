@@ -26,7 +26,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class NekoJSBasePluginManager {
     private record PluginEntry(PluginIdentity identity, NekoJSPlugin plugin, int priority) {}
 
-    // non-final ONLY as a private test seam (tests reset/inject this list); do not reassign in production code.
+    // All three fields are non-final ONLY as a private test seam (tests reset/inject ENTRIES
+    // and clear both derived views together); do not reassign them in production code.
     private static List<PluginEntry> ENTRIES = new CopyOnWriteArrayList<>();
     private static volatile List<NekoJSPlugin> sortedView = null;
     private static volatile List<OwnedPlugin> ownedView = null;

@@ -22,7 +22,7 @@ Worktree：`D:/mcmodDemo/NekoJS-mult-t08`（分支 `ticket-08-plugin-addon`，�
 | `common/src/addonFixture/resources/fabric.mod.json` | Fabric metadata（`entrypoints.nekojs`） |
 | `common/build.gradle` | `addonFixture` source set：编译 classpath **只有** common main 输出（结构上排除 test seam）；`externalAddonJar` 制品任务；`verifyAddonFixtureDependencySurface` 门禁（挂 `check`）；test 任务注入 jar 路径 |
 | `buildSrc/.../nekojs.{neoforge,fabric}-node.gradle.kts` | 五个节点 test 任务同样依赖 fixture jar 并注入路径 |
-| `stonecutter.gradle.kts` | `verifyExternalAddonIsolation`（挂 `sandboxCheck`）：正向校验 fixture jar 带两类 loader metadata；反向断言五个生产节点 jar 均不含 fixture 类/资源/metadata 痕迹（数量硬断言 = 5） |
+| `stonecutter.gradle.kts` | `verifyExternalAddonIsolation`（挂 `sandboxCheck`）：正向校验 fixture jar 带两类 loader metadata；反向断言五个生产节点 jar 均不含 fixture 类/条目名 modid 标记/metadata 痕迹，并递归扫描嵌套 jar 一层防 fixture 以 nested jar 形态混入（数量硬断言 = 5）。主会话复查时把反向检查从「包前缀 + 根 metadata 文本」强化为「前缀 + 名字标记 + metadata 文本 + 嵌套 jar 递归」 |
 
 fixture 的依赖面 = common main 输出（api.* + core.plugin 提供者 API），是未来第三方针对发布
 fat jar 编译面的**子集**——"依赖面与第三方一致，不 import 生产内部测试 seam"由编译期
@@ -161,3 +161,14 @@ cd /d/mcmodDemo/NekoJS-mult-t08
 ./gradlew.bat guardLint verifyExternalAddonIsolation --console=plain
 # 真实 loader 冒烟（详见 command-output/01、02 的准备步骤）
 ```
+
+## 10. 主会话复核修正（2026-09-22，合并后）
+
+- 证据补档：`command-output/01–06` 原以 `.log` 后缀生成，被根 `.gitignore` 的 `*.log` 规则
+  挡在提交之外（子代理工作树内存在、仓库缺失）。已改以 `.txt` 提交，内容逐字节未改。
+- 隔离 gate 强化（复核发现嵌套 jar 缺口）：负向检查由「包前缀 + 根 metadata 文本」扩为
+  「包前缀 + 条目名 modid 标记 + metadata 文本 + 嵌套 jar 递归（两层）」；强化后重跑
+  通过，`command-output/06-verifyExternalAddonIsolation.txt` 已刷新。
+- `stonecutter.gradle.kts` gate 完成日志改英文（AGENTS.md 语言规则）。
+- `NekoJSBasePluginManager` 测试 seam 注释补记 `sortedView`/`ownedView` 两个字段
+  （fixture 实际重置三个字段，原注释只提 ENTRIES）。
