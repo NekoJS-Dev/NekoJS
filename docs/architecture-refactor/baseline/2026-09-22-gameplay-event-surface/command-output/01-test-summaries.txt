@@ -1,0 +1,45 @@
+# 票 24 验证命令与结果汇总（真实执行，worktree ../NekoJS-mult-t24）
+# 各命令完整 Gradle 输出见本目录及其余编号文件；本文件为最终状态汇总。
+
+$ ./gradlew.bat :26.1.2:test --tests "*Ticket24*" --tests "*EventApiSurfaceGoldenTest*" --tests "*EventSurfaceOwnershipTest*" --rerun
+BUILD SUCCESSFUL —— 28 用例全绿（Ticket24GameplayEventCatalogTest 2、
+Ticket24GameplayEventPhaseTraceTest 6、Ticket24GameplayEventReloadLifecycleTest 6、
+Ticket24GameplayFamilyBusBehaviorTest 8、EventApiSurfaceGoldenTest 1、EventSurfaceOwnershipTest 3）
+
+$ ./gradlew.bat :26.1.2:test            （全套，最终复跑 --rerun-tasks）
+BUILD SUCCESSFUL —— tests=407 failures=0 errors=0 skipped=58
+
+$ ./gradlew.bat :1.21.1:test            （全套）
+BUILD SUCCESSFUL —— tests=304 failures=0 errors=0 skipped=14
+（含 Ticket24GameplayEventCatalogTest/PhaseTraceTest 求值；lifecycle/bus 为 neoforge 守卫内同文件）
+
+$ ./gradlew.bat :26.1.2-fabric:test     （全套）
+BUILD SUCCESSFUL —— tests=245 failures=0 errors=0 skipped=25
+（含 Ticket24FabricGameplayEventCatalogTest 1 用例 + Ticket24GameplayEventPhaseTraceTest 求值）
+
+$ ./gradlew.bat :1.21.1:test --tests "*Ticket24*" --tests "*EventSurfaceOwnershipTest*" --tests "*EventApiSurfaceGoldenTest*"
+BUILD SUCCESSFUL（修 BlockModificationEventJS import 守卫后）
+
+$ ./gradlew.bat :26.1.2-fabric:test --tests "*Ticket24*"
+BUILD SUCCESSFUL（fabric 快照按真实运行面扩表后）
+
+$ ./gradlew.bat :common:check
+BUILD SUCCESSFUL in 1m 34s（含隔离检查；common 主源码零改动，作回归底线）
+
+$ ./gradlew.bat :26.1.2:platformGateTest --rerun     → BUILD SUCCESSFUL（17 domains / 0 failures，05-platformgate-26.1.2.json）
+$ ./gradlew.bat :1.21.1:platformGateTest --rerun     → BUILD SUCCESSFUL（15 domains / 0 failures，07-platformgate-1.21.1.json）
+$ ./gradlew.bat :26.1.2-fabric:platformGateTest --rerun → BUILD SUCCESSFUL（14 domains / 0 failures，06-platformgate-26.1.2-fabric.json）
+
+红→绿突变（详见 03-red-green-mutations.txt）：
+$ :26.1.2:test --tests "*Ticket24GameplayEventReloadLifecycleTest*" --rerun   （突变 C：4 用例红）→ 还原绿
+$ :26.1.2:test --tests "...ReloadLifecycle..." --tests "...FamilyBusBehavior..." --rerun（突变 D：1 用例红）→ 还原绿
+
+最终 lifecycle 复跑（harness 换生产 DefaultScriptEventBridge + 实体六行为扩表后）：
+$ ./gradlew.bat :26.1.2:test --tests "*Ticket24GameplayEventReloadLifecycleTest*" --rerun
+BUILD SUCCESSFUL —— 6 用例 / 0 失败
+
+未跑（如实记录）：
+- guardLint —— 无 build/source-root/guard 改动，不适用
+- runGameTestServer / 真机 runtime smoke —— 未跑（owner 票 34）
+- 26.2.0 / 26.2.0-fabric 节点 test —— 未跑（fabric 快照测试已按节点本地树交付 26.2.0-fabric 副本；
+  共享树测试对 26.2.0 的求值与 26.1.2 同构，未复验）
