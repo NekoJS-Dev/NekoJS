@@ -3,6 +3,14 @@ package com.tkisor.nekojs.core;
 import com.tkisor.nekojs.core.JavaClassLoadTelemetrySink;
 import com.tkisor.nekojs.api.ScriptType;
 
+/**
+ * Java class-load telemetry scope (ticket 07 observability, ticket 30 privacy bounds).
+ *
+ * <p>Disable/degrade semantics: telemetry is opt-in — nothing is recorded until a sink is
+ * installed via {@link #setSink}, and installing {@code null} (or never installing) disables
+ * collection entirely. Recording itself is a thread-local scope plus one sink call, so a
+ * degrading or no-op sink has no observable effect on script execution.
+ */
 public final class JavaClassLoadTelemetry {
     private static volatile JavaClassLoadTelemetrySink sink = JavaClassLoadTelemetrySink.EMPTY;
     private static final ThreadLocal<ContextInfo> CURRENT = new ThreadLocal<>();

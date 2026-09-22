@@ -1,0 +1,42 @@
+Commands (run 2026-09-22, worktree D:/mcmodDemo/NekoJS-mult-t30):
+
+  ./gradlew.bat :common:check
+BUILD SUCCESSFUL in 1m 34s
+19 actionable tasks: 3 executed, 16 up-to-date
+
+  ./gradlew.bat :common:test --tests 'com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest' --tests 'com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest' --tests 'com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest' --tests 'com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest' --tests 'com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest'
+BUILD SUCCESSFUL in 17s
+17 actionable tasks: 1 executed, 16 up-to-date
+
+  ./gradlew.bat :1.21.1:compileJava guardLint
+  BUILD SUCCESSFUL in 27s (20 actionable tasks: 9 executed, 11 up-to-date)
+
+  ./gradlew.bat :1.21.1:compileJava :26.1.2:compileJava :26.2.0:compileJava
+  BUILD SUCCESSFUL in 55s (27 actionable tasks: 9 executed, 18 up-to-date)
+
+  ./gradlew.bat :1.21.1:test :26.1.2:test :26.2.0:test
+  BUILD SUCCESSFUL in 50s (49 actionable tasks: 19 executed, 30 up-to-date)
+
+Per-class test counts (from common/build/test-results/test/TEST-*.xml):
+  com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest: tests=11 skipped=0 failures=0 errors=0
+  com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest: tests=3 skipped=0 failures=0 errors=0
+  com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest: tests=12 skipped=0 failures=0 errors=0
+  com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest: tests=5 skipped=0 failures=0 errors=0
+  com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest: tests=2 skipped=0 failures=0 errors=0
+
+Full-suite re-run after adding the JSX/CJS matrix cases:
+
+  ./gradlew.bat :common:test --rerun-tasks
+  BUILD SUCCESSFUL in 3m 1s
+  TOTAL tests=1867 failures=0 skipped=4   (aggregated from common/build/test-results/test/TEST-*.xml)
+
+Earlier full :common:check first round (before the ModuleViews same-instance fix) had
+2 failures: DefaultErrorTrackerTest.moduleViewsAreScopedByTypeAndCandidateCommit
+(real regression: activateModuleViews shared one ModuleViews instance between the type
+fallback and the Context binding; fixed by publishing two distinct instances) and
+Ticket07RuntimeThreadsTest.closePreemptsRemainingCandidateScriptsAndNeverCommits
+(timing flake in the close-preemption race; re-run green, no code change).
+
+Not run (see REPORT section 5):
+  :26.1.2-fabric:test, :26.2.0-fabric:test  - no fabric-owned file was touched by this ticket.
+  Real-game smoke, runGameTestServer - outside headless scope of this worktree.

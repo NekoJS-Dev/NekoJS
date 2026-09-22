@@ -56,7 +56,9 @@ public final class DefaultErrorTracker implements ErrorTracker {
     private final Map<ScriptType, ModuleViews> activeModuleViews = new ConcurrentHashMap<>();
     private final Map<Context, ModuleViews> contextModuleViews = new ConcurrentHashMap<>();
 
-    record ModuleViews(NekoSourceMapView sourceMaps, NekoVirtualModuleView virtualModules) {}
+    /** One environment's source-map/virtual-module view with the generation it belongs to (ticket 30). */
+    record ModuleViews(NekoSourceMapView sourceMaps, NekoVirtualModuleView virtualModules,
+                       long generation, boolean candidate) {}
 
     public DefaultErrorTracker(NekoJSPaths paths, SandboxConfig config) {
         this(paths, config, new SourceMapRegistry(paths.root()), new NekoEsmVirtualModuleRegistry(paths.root()));
@@ -66,7 +68,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
                                NekoEsmVirtualModuleRegistry virtualModules) {
         this.paths = paths;
         this.config = config;
-        this.defaultModuleViews = new ModuleViews(sourceMaps, virtualModules);
+        this.defaultModuleViews = new ModuleViews(sourceMaps, virtualModules, -1L, false);
     }
 
     public NekoJSPaths paths() {
@@ -100,8 +102,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     /** Publish one type's active generation views without affecting any other type. */
     public void activateModuleViews(ScriptType type, NekoModulePipelineCache moduleSession) {
-        if (type == null || moduleSession == null) return;
-        activeModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+        activateModuleViews(type, null, moduleSession, -1L);
     }
 
     /** Restore the default view when a failed commit had no previous active module session. */
@@ -111,20 +112,42 @@ public final class DefaultErrorTracker implements ErrorTracker {
 
     /** Publish an active view and bind it to the Context which owns that generation. */
     public void activateModuleViews(ScriptType type, Context context, NekoModulePipelineCache moduleSession) {
-        activateModuleViews(type, moduleSession);
-        if (context != null && moduleSession != null) {
+        activateModuleViews(type, context, moduleSession, -1L);
+    }
+
+    /**
+     * Ticket 30: publish the active view with its generation attribution. Errors freeze that
+     * generation at record time, so later generation switches never rewrite recorded history
+     * (mis-attribution guard).
+     */
+    public void activateModuleViews(ScriptType type, Context context, NekoModulePipelineCache moduleSession,
+                                    long generation) {
+        if (type == null || moduleSession == null) return;
+        activeModuleViews.put(type, new ModuleViews(moduleSession.sourceMapView(),
+                moduleSession.virtualModuleView(), generation, false));
+        if (context != null) {
             candidateContexts.remove(context);
             candidateErrors.remove(context);
-            contextModuleViews.put(context, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+            // Distinct instance on purpose: the Context-bound view is captured by ScriptError at
+            // record time and must not alias the mutable type fallback slot.
+            contextModuleViews.put(context, new ModuleViews(moduleSession.sourceMapView(),
+                    moduleSession.virtualModuleView(), generation, false));
         }
     }
 
     /** Bind a candidate view only to its Context; active type fallback remains untouched. */
     public void activateCandidateModuleViews(ScriptType type, Context context,
                                               NekoModulePipelineCache moduleSession) {
+        activateCandidateModuleViews(type, context, moduleSession, -1L);
+    }
+
+    /** Ticket 30: bind the candidate view to its candidate generation; staged errors freeze that generation and the candidate flag. */
+    public void activateCandidateModuleViews(ScriptType type, Context context,
+                                              NekoModulePipelineCache moduleSession, long candidateGeneration) {
         if (type == null || context == null || moduleSession == null) return;
         candidateContexts.add(context);
-        contextModuleViews.put(context, new ModuleViews(moduleSession.sourceMapView(), moduleSession.virtualModuleView()));
+        contextModuleViews.put(context, new ModuleViews(moduleSession.sourceMapView(),
+                moduleSession.virtualModuleView(), candidateGeneration, true));
     }
 
     public void discardCandidateModuleViews(Context context) {
@@ -244,7 +267,7 @@ public final class DefaultErrorTracker implements ErrorTracker {
             }
             created[0] = true;
             previousCountHolder[0] = 0L;
-            return ScriptError.create(context, currentType, runtimeId, eventPath, throwable, this);
+            return ScriptError.create(context, currentType, runtimeId, eventPath, throwable, this, callbackKind);
         });
 
         // 容量上限（仅超限时触发一次过滤，正常有界路径零开销）：ConcurrentHashMap.size()
@@ -255,9 +278,13 @@ public final class DefaultErrorTracker implements ErrorTracker {
         }
 
         if (shouldLogOccurrence(created[0], previousCountHolder[0], scriptError.getOccurrenceCount())) {
-            String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs());
-            String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
             // 唯一的控制台输出点：经 CollapsingAppender 写入 per-type 日志文件并镜像到主控制台。
+            // Log history consumes the same frozen record (ticket 30): the describe() line
+            // carries phase/owner/generation attribution next to the legacy detail text, so
+            // logs, panel and report present the same core fields.
+            String detail = scriptError.getLogDetailText(config.conciseScriptErrorLogs())
+                    + "\n" + scriptError.diagnostic().describe();
+            String kind = callbackKind == null || callbackKind.isBlank() ? "callback" : callbackKind;
             // 不再直接写 NekoJS.LOGGER，避免同一条回调错误在控制台重复输出。
             // 高频重复错误按里程碑节流：新建时记录，此后仅在 1→2、4→5、24→25、…、99→100、
             // 199→200 等跨越里程碑时记录，避免 20Hz tick 回调刷屏。
@@ -315,6 +342,20 @@ public final class DefaultErrorTracker implements ErrorTracker {
     @Override
     public Collection<ScriptError> getAllErrors() {
         return List.copyOf(errors.values());
+    }
+
+    /**
+     * Ticket 30 non-GUI seam: read-only snapshot of the frozen records of the current public
+     * error set. Log history, the dashboard packet, the user report and telemetry all derive
+     * from these records instead of re-deriving error fields; candidate errors stay out of
+     * this snapshot until the commit point publishes them.
+     */
+    public java.util.List<ScriptDiagnosticRecord> diagnostics() {
+        java.util.List<ScriptDiagnosticRecord> records = new java.util.ArrayList<>(errors.size());
+        for (ScriptError error : errors.values()) {
+            records.add(error.diagnostic());
+        }
+        return java.util.List.copyOf(records);
     }
 
     private Map<ScriptId, ScriptError> errorStore(Context context) {

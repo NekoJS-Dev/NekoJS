@@ -523,7 +523,7 @@ public final class ScriptManager implements AutoCloseable {
                 }
                 throw failure;
             }
-            activateModuleViews(created.context(), moduleSession);
+            activateModuleViews(created.context(), moduleSession, this.generation + 1);
             this.runtime = created;
             CONTEXT_TO_MANAGER.put(created.context(), this);
             ScriptContextRegistry.bind(created.context(), scriptType);
@@ -789,7 +789,7 @@ public final class ScriptManager implements AutoCloseable {
                     // active callback observed during candidate execution is not lost on failure.
                     // ---- Phase PREPARATION：候选 Context + node runtime（生产路由不动）----
                     try {
-                        candidateEnvironment = createCandidateEnvironment();
+                        candidateEnvironment = createCandidateEnvironment(candidateGeneration);
                     } catch (Throwable t) {
                         throw reloadFailure(candidateGeneration, ReloadPhase.PREPARATION, null, "candidate-context", t);
                     }
@@ -940,7 +940,7 @@ public final class ScriptManager implements AutoCloseable {
          * Context → manager 映射与候选标记（候选 timer 回调的存活判定依赖该登记）。
          * BINDING 阶段由 reloadScriptsTransactional 单独执行（保持票 06 的阶段拆分）。
          */
-        private RuntimeEnvironment createCandidateEnvironment () {
+        private RuntimeEnvironment createCandidateEnvironment (long candidateGeneration) {
             com.tkisor.nekojs.core.state.GenerationGlobals candidateGlobals =
                     environmentFactory.newGeneration(scriptType, true);
             NekoModulePipelineCache moduleSession = preparationCache.openSession(ScriptBindingSchema.emptyView());
@@ -956,7 +956,7 @@ public final class ScriptManager implements AutoCloseable {
                     candidate.context(), candidate.nodeRuntime(), candidate.outStream(),
                     candidate.errStream(), candidate.globals(), moduleSession);
             try {
-                activateCandidateModuleViews(candidate.context(), moduleSession);
+                activateCandidateModuleViews(candidate.context(), moduleSession, candidateGeneration);
                 CONTEXT_TO_MANAGER.put(candidate.context(), this);
                 ScriptContextRegistry.bind(candidate.context(), scriptType);
                 this.candidateContext = candidate.context();
@@ -1016,7 +1016,8 @@ public final class ScriptManager implements AutoCloseable {
                 if (defaultTracker != null) {
                     defaultTracker.publishCandidateErrors(scriptType, candidateEnvironment.context());
                 }
-                activateModuleViews(candidateEnvironment.context(), candidateEnvironment.moduleSession());
+                activateModuleViews(candidateEnvironment.context(), candidateEnvironment.moduleSession(),
+                        candidateGeneration);
                 // Prepare keeps old listener tokens installed while the remaining state commit
                 // runs. Finish only after schema/errors/globals have all published successfully.
                 listenerBatch = scriptEventBridge.prepareCandidateListeners(scriptType, activation);
@@ -1067,7 +1068,8 @@ public final class ScriptManager implements AutoCloseable {
                         if (oldEnvironment.isEmpty()) {
                             defaultTracker.removeActiveModuleViews(scriptType);
                         } else {
-                            activateModuleViews(oldEnvironment.context(), oldEnvironment.moduleSession());
+                            activateModuleViews(oldEnvironment.context(), oldEnvironment.moduleSession(),
+                                    this.generation);
                         }
                     } catch (Throwable cleanup) {
                         if (rollbackFailure == null) rollbackFailure = cleanup;
@@ -1104,7 +1106,7 @@ public final class ScriptManager implements AutoCloseable {
                 environmentFactory.discardEnvironmentBindings(candidate.context(), candidate.moduleSession());
             }
             if (!runtime.isEmpty() && runtime.moduleSession() != null) {
-                activateModuleViews(runtime.context(), runtime.moduleSession());
+                activateModuleViews(runtime.context(), runtime.moduleSession(), this.generation);
             }
             if (candidate != null && candidate.globals() != null) {
                 candidate.globals().discard();
@@ -1346,17 +1348,18 @@ public final class ScriptManager implements AutoCloseable {
             return errorTracker instanceof DefaultErrorTracker defaultTracker ? defaultTracker : null;
         }
 
-        private void activateModuleViews(Context context, NekoModulePipelineCache moduleSession) {
+        private void activateModuleViews(Context context, NekoModulePipelineCache moduleSession, long generation) {
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
             if (defaultTracker != null) {
-                defaultTracker.activateModuleViews(scriptType, context, moduleSession);
+                defaultTracker.activateModuleViews(scriptType, context, moduleSession, generation);
             }
         }
 
-        private void activateCandidateModuleViews(Context context, NekoModulePipelineCache moduleSession) {
+        private void activateCandidateModuleViews(Context context, NekoModulePipelineCache moduleSession,
+                                                  long candidateGeneration) {
             DefaultErrorTracker defaultTracker = defaultErrorTracker();
             if (defaultTracker != null) {
-                defaultTracker.activateCandidateModuleViews(scriptType, context, moduleSession);
+                defaultTracker.activateCandidateModuleViews(scriptType, context, moduleSession, candidateGeneration);
             }
         }
 

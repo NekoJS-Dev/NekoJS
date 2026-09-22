@@ -1,0 +1,16 @@
+Command (run 2026-09-22, after implementation):
+
+  cd /d/mcmodDemo/NekoJS-mult-t30 && ./gradlew.bat :common:test --tests 'com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest' --tests 'com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest' --tests 'com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest' --tests 'com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest' --tests 'com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest'
+
+Result: BUILD SUCCESSFUL in 17s (17 actionable tasks: 1 executed, 16 up-to-date)
+
+Per-class results (common/build/test-results/test/TEST-*.xml):
+  com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest:      tests=11 failures=0
+  com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest:  tests=3  failures=0
+  com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest:      tests=12 failures=0
+  com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest:    tests=5  failures=0
+  com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest:      tests=2  failures=0
+
+The two TDD-first classes (ScriptDiagnosticRecordTest,
+ScriptDiagnosticGenerationTest) are the green counterpart of
+red-compile-before-implementation.txt.

@@ -1,0 +1,12 @@
+Command (run 2026-09-22, final):
+
+  cd /d/mcmodDemo/NekoJS-mult-t30 && ./gradlew.bat :common:check
+
+Result:
+  BUILD SUCCESSFUL in 1m 34s
+  19 actionable tasks: 3 executed, 16 up-to-date
+
+Full-suite test recount afterwards:
+  ./gradlew.bat :common:test --rerun-tasks
+  BUILD SUCCESSFUL in 3m 1s
+  TOTAL tests=1867 failures=0 skipped=4
