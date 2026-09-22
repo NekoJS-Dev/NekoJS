@@ -1,0 +1,26 @@
+# NeoForge discovery metadata for the demo addon (production format).
+# FML discovers the jar through the mods directory and scans it for
+# @RegisterNekoJSPlugin — this file is what makes the jar a mod at all.
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "demomod"
+version = "1.0.0"
+displayName = "Demo Addon"
+description = "Minimal external NekoJS plugin addon example."
+
+[[dependencies.demomod]]
+modId = "neoforge"
+type = "required"
+versionRange = "[4,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.demomod]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21,)"
+ordering = "NONE"
+side = "BOTH"

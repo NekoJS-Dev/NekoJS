@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "demomod",
+  "version": "1.0.0",
+  "name": "Demo Addon",
+  "description": "Minimal external NekoJS plugin addon example.",
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "nekojs": [
+      "com.example.demo.DemoAddonPlugin"
+    ]
+  },
+  "depends": {
+    "nekojs": "*"
+  }
+}

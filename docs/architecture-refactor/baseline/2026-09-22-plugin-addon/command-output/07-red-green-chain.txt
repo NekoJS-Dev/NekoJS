@@ -1,0 +1,37 @@
+# red → green：Ticket08ExternalAddonChainTest（addon 定位失败输出）
+# 命令：./gradlew.bat :common:test --tests "com.tkisor.nekojs.core.plugin.Ticket08ExternalAddonChainTest" --console=plain
+
+## RED（实现 scopedTo/registrants 归因之前）
+# 11 tests completed, 7 failed —— 其中 4 例为 addon 定位断言失败（目标行为缺失），
+# 3 例为 harness 修正（合同集/属性注册表/脚本绑定名，逐一转绿后仍保留 4 例红）：
+
+Ticket08ExternalAddonChainTest > duplicateExtensionPointIdNamesBothAddons() FAILED
+    message="org.opentest4j.AssertionFailedError: names the first registrant:
+    Plugin extension point 't08:dup' is already registered ==> expected: <true> but was: <false>"
+
+Ticket08ExternalAddonChainTest > lateRegistrationAfterFreezeNamesTheAddon() FAILED
+    message="org.opentest4j.AssertionFailedError: names the point:
+    Plugin extension registry is frozen after bootstrap collection ==> expected: <true> but was: <false>"
+
+Ticket08ExternalAddonChainTest > unknownDependencyNamesTheDependentAddon() FAILED
+    message="org.opentest4j.AssertionFailedError: names the dependent addon:
+    Plugin extension point 't08:typo-point' dependsOn unregistered point 't08:does-not-exist' (typo?)
+    ==> expected: <true> but was: <false>"
+
+Ticket08ExternalAddonChainTest > dependencyCycleNamesBothAddons() FAILED
+    message="org.opentest4j.AssertionFailedError: names both addons on the cycle:
+    Plugin extension point dependency cycle fail-fast: t08:cycle-a -> t08:cycle-b -> t08:cycle-a
+    ==> expected: <true> but was: <false>"
+
+（同一 RED 轮次其余通过项证明既有边界无需生产改动即可承载真实外部 addon：
+jar/fabric.mod.json discovery、贡献、冻结产物三口径同一对象、reload 存活、
+旧 generation token 显式失效。）
+
+## GREEN（实现 NekoPluginBootstrap.scopedTo + registrants 归因之后）
+
+> Task :common:test
+BUILD SUCCESSFUL
+tests: 11 failures: 0   （TEST-*.xml: tests="11" failures="0"）
+
+# 既有套件回归：:common:check 全绿（1774 tests / 0 failures），
+# 含 NekoPluginExtensionProviderTest 与 PluginHookPairingTest（报错形态变化未破坏既有 contains 断言）。
