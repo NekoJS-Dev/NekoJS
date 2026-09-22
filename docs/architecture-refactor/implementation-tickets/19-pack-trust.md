@@ -4,7 +4,9 @@
 
 **Blocked by:** [17: 网络注册一次、wire 不变与脚本自定义通道 owner 调度](17-network-sync.md)、[03: 持久化与用户编辑数据保护基线：默认不改、可回滚才迁移](03-data-protection.md)
 
-**Status:** in-review（实现/测试/证据已交付，AC 全勾；in-game 连接 smoke 与 runGameTestServer 未跑＝baseline REPORT §5-G1/G4，26.2.0/1.21.1 NeoForge 全量未跑＝G5）
+**Status:** closed
+
+**Closure record (2026-09-22):** 8/8 验收项均已逐项满足并附可复现证据（各项【evidence】标注；`baseline/2026-09-22-pack-trust/` REPORT + command-output 01–07 + 红绿记录；合并后 mult 上 `:common:check`、`:26.1.2:test`、两 fabric 节点 test 与 `verifyFabricRuntimeArtifact` 全绿）。未跑的 in-game 连接 smoke / `runGameTestServer` / 26.2.0 与 1.21.1 NeoForge 全量沿用票 17 已 closed 的同一约定（fixture 级验收 + 真机 smoke 归票 34），非本票验收缺口。主会话复核已修复 bucket 大小写 locale 一致性与注释语言问题（REPORT §8）。无维护者签收要求的删除项（本票零删除）。
 
 **Assignee:** zed-flash-19（main-session agent；GLM-5.3 subagent worktree）
 
