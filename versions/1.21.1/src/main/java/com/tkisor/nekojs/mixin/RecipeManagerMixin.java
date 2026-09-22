@@ -97,8 +97,6 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             // 由本次脚本执行期间 RecipeJsonBuilder 的动作调用重建——删掉的脚本动作随之消失
             NekoRuntimeAccess.get().beforeRecipeLoading(eventJS);
             ServerEvents.RECIPES.post(eventJS);
-            ServerEvents.AFTER_RECIPES.post(eventJS);
-            NekoRuntimeAccess.get().afterRecipes(eventJS);
         } catch (PolyglotException e) {
             // 错误上报经 ScriptErrorReporter 门面（root-owned ErrorTracker 的静态报告面，
             // 由共享装配函数安装）——mixin 静态上下文无法注入 root，不再直读 static root
@@ -122,7 +120,18 @@ public abstract class RecipeManagerMixin implements IRecipeManagerExtension {
             }
         }
 
+        // ticket 23（AC3）：整批解析完成后一次性替换配方表（单引用提交，无半更新）；
+        // afterRecipes（脚本事件与插件 hook）只在提交之后触发——此前它先于 codec 解析，
+        // 消费者会观察到未提交的旧配方表。afterRecipes 阶段的修改不再进入本次提交。
         this.replaceRecipes(newHolders);
+        try {
+            ServerEvents.AFTER_RECIPES.post(eventJS);
+            NekoRuntimeAccess.get().afterRecipes(eventJS);
+        } catch (PolyglotException e) {
+            ScriptErrorReporter.recordEventError(ScriptType.SERVER, e);
+        } catch (Exception e) {
+            com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).error("afterRecipes lifecycle phase crashed", e);
+        }
         this.nekojs$rawJsons.clear();
 
         com.tkisor.nekojs.script.ScriptTypeEnv.logger(ScriptType.SERVER).debug("Script execution completed, total recipes: {}", this.byName.size());
