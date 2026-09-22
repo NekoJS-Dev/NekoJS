@@ -70,6 +70,27 @@ public final class DynamicCandidateRegistryPlan implements CandidateStatePlan {
         return definition;
     }
 
+    /**
+     * Stages an already-normalized definition (ticket 21 client-side sync path: the
+     * definition arrived from a server sync message, not from a builder callback).
+     * Same-batch dedupe/conflict semantics as {@link #add}.
+     */
+    public DynamicDefinition stageExistingDefinition(DynamicDefinition definition, String ownerScriptId) {
+        String key = definition.key();
+        DynamicDefinition existing = definitions.get(key);
+        if (existing != null) {
+            if (!existing.fingerprint().equals(definition.fingerprint())) {
+                throw new IllegalArgumentException(
+                        "Duplicate declaration of '" + key + "' in the same batch with a different definition: "
+                                + existing.fingerprint() + " vs " + definition.fingerprint());
+            }
+            return existing;
+        }
+        definitions.put(key, definition);
+        owners.put(key, safeOwner(ownerScriptId));
+        return definition;
+    }
+
     /** 记录一条收集期错误（payload 捕获后毒化整批：preflight 必失败，批次不发布）。 */
     public void noteCollectionError(String scriptId, Throwable error) {
         collectionErrors.add("[" + safeOwner(scriptId) + "] " + error.getClass().getSimpleName() + ": "

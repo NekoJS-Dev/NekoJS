@@ -23,7 +23,12 @@ public record DynamicAdapterRequest(
     /** 唯一动作值：注册/重声明（无 remove/replace/modify）。 */
     public static final String ACTION_REGISTER = "register";
 
-    DynamicAdapterRequest(DynamicDefinition definition, long generation, String ownerScriptId) {
+    /**
+     * Derives a request from a normalized definition (ticket 21): the server-side
+     * batch path and the client-side sync path both construct requests this way —
+     * there is no other production construction site.
+     */
+    public DynamicAdapterRequest(DynamicDefinition definition, long generation, String ownerScriptId) {
         this(generation, definition.type().registryKey(), definition.id(), definition.mode(),
                 ownerScriptId == null || ownerScriptId.isBlank() ? "<unknown>" : ownerScriptId,
                 definition.fingerprint(), ACTION_REGISTER);

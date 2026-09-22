@@ -4,6 +4,10 @@ import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.api.ScriptType;
 import com.tkisor.nekojs.core.dynamic.plan.DynamicCandidateRegistryPlan;
 import com.tkisor.nekojs.core.dynamic.plan.DynamicRegistryPlanStore;
+import com.tkisor.nekojs.core.dynamic.txn.DynamicRegistryAdapter;
+import com.tkisor.nekojs.core.dynamic.txn.DynamicRegistryTransactionCoordinator;
+import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncMessage;
+import com.tkisor.nekojs.core.dynamic.txn.DynamicSyncTransport;
 import com.tkisor.nekojs.core.state.CandidateStatePlan;
 import com.tkisor.nekojs.core.state.GlobalStateException;
 import com.tkisor.nekojs.core.lifecycle.CandidateDomainCollector;
@@ -11,7 +15,10 @@ import com.tkisor.nekojs.script.ScriptContextRegistry;
 import com.tkisor.nekojs.script.ScriptManager;
 import graal.graalvm.polyglot.Context;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.LongSupplier;
 
 /**
  * 动态注册 facade 的 Runtime（ticket 16）：持有本域的 {@link DynamicRegistryPlanStore}，
@@ -37,6 +44,13 @@ import java.util.List;
  * 执行通道、不挂生产 callback、不提前发布对外 binding；候选失败时计划对象不再可达
  * （无临时资源需要释放），账本零写入，旧 active 定义继续服务。计划包的结构性验证见
  * {@code DynamicPlanInertnessTest}。
+ *
+ * <p><b>ticket 21 activation seam</b>: {@link #bindActivationEngine} optionally attaches
+ * a batch-transaction engine; {@link #pumpActivation()} then hands every ledger-committed
+ * batch to it (pull-based pending queue — the plan itself carries no hook). Unbound, this
+ * runtime is exactly the ticket 16 inert-local-plan surface; production binding is not
+ * wired yet (activation stays gated by the transaction/sync gates, see the ticket 21
+ * baseline REPORT).
  */
 public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollector {
 
@@ -91,10 +105,87 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
     private final DynamicRegistryPlanStore store = new DynamicRegistryPlanStore();
     private volatile CollectionOutcome lastOutcome;
     private volatile CandidateCollectionRecord lastCandidateCollection;
+    private volatile DynamicRegistryTransactionCoordinator activationEngine;
+    /**
+     * Plans begun by this runtime, waiting for their ledger commit to be observed by
+     * {@link #pumpActivation()} (pull-based staging: the plan itself carries no hook —
+     * the ticket 16 plan surface stays pure inert data with no execution channel).
+     * A failed/discarded candidate is dropped at the next pump; a plan is pure data
+     * and holds no resources, so the brief reference is not a cleanup concern.
+     */
+    private final ArrayDeque<DynamicCandidateRegistryPlan> pendingCandidates = new ArrayDeque<>();
+    /** Newest plan generation ever handed to the activation engine. */
+    private long lastStagedPlanGeneration;
 
     /** 本域计划账本（Registry Runtime 侧观察点）。 */
     public DynamicRegistryPlanStore store() {
         return store;
+    }
+
+    /**
+     * Binds the activation engine (ticket 21): with an engine bound, every committed
+     * declaration batch is also staged for the batch transaction
+     * (preflight → server prepare → client prepare/ack → controlled commit through
+     * the Adapter/Transport seams). Without one the runtime stays exactly the
+     * ticket 16 inert-local-plan surface. Production binding happens in the platform
+     * assembly (currently not wired — activation stays gated); tests bind fakes.
+     */
+    public synchronized void bindActivationEngine(
+            DynamicRegistryAdapter adapter, DynamicSyncTransport transport,
+            long ackTimeoutMillis, LongSupplier clock) {
+        this.activationEngine = new DynamicRegistryTransactionCoordinator(
+                adapter, transport, ackTimeoutMillis, clock);
+    }
+
+    /** Drops the activation engine (server stopped); aborts and discards in-flight work first. */
+    public synchronized void clearActivationEngine(String cause) {
+        if (activationEngine != null) {
+            activationEngine.abortInFlight(cause);
+        }
+        this.activationEngine = null;
+    }
+
+    /** Bound activation engine, or null while unbound (inert local plans only). */
+    public DynamicRegistryTransactionCoordinator activationEngine() {
+        return activationEngine;
+    }
+
+    /**
+     * Owner-thread activation pump (ticket 21): hands every ledger-committed batch to
+     * the bound engine and starts the next transaction when none is in flight.
+     * Pull-based by design — {@link #collectInitial} calls it after its own commit,
+     * and the production wiring (server tick / post-reload event, owner: network
+     * phase) calls it for reload-driven commits. Never runs inside a reload's joint
+     * commit boundary: staging is an enqueue, phases are event-driven.
+     */
+    public synchronized void pumpActivation() {
+        DynamicRegistryTransactionCoordinator engine = activationEngine;
+        if (engine == null) {
+            return;
+        }
+        while (!pendingCandidates.isEmpty()) {
+            DynamicCandidateRegistryPlan candidate = pendingCandidates.poll();
+            if (!candidate.isPublished()) {
+                continue; // failed/discarded candidate: its declarations never committed
+            }
+            if (candidate.generation() <= lastStagedPlanGeneration) {
+                continue; // already staged (or superseded by a newer staged batch)
+            }
+            if (!candidate.adapterRequests().isEmpty()) {
+                engine.stage(candidate, targetState());
+            }
+            lastStagedPlanGeneration = candidate.generation();
+        }
+        engine.pump();
+    }
+
+    /** Full target state of the ledger as wire entries (full state, never a delta). */
+    private List<DynamicSyncMessage.Entry> targetState() {
+        List<DynamicSyncMessage.Entry> entries = new ArrayList<>();
+        store.exposedSnapshot().values()
+                .forEach(entry -> entries.add(
+                        new DynamicSyncMessage.Entry(entry.definition(), entry.ownerScriptId())));
+        return entries;
     }
 
     /** 最近一轮收集的可观察结果（诊断/测试；不携带内部状态）。 */
@@ -116,6 +207,7 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
      */
     public CollectionOutcome collectInitial(String trigger) {
         DynamicCandidateRegistryPlan plan = store.beginBatch();
+        pendingCandidates.add(plan);
         DynamicRegistryEventJS payload = new DynamicRegistryEventJS(plan);
         DynamicRegistryEvents.DYNAMIC_REGISTRY.post(payload);
         try {
@@ -134,6 +226,10 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
                         + " inert local plan only — activation is gated by the transaction/sync gate",
                 plan.generation(), trigger, plan.definitions().size());
         lastOutcome = CollectionOutcome.success(trigger, plan);
+        // Initial collection runs on the owner thread outside any reload commit lock,
+        // so the activation transaction may start immediately (zero participants at
+        // server start in production; reload-driven staging is pumped by the platform).
+        pumpActivation();
         return lastOutcome;
     }
 
@@ -174,6 +270,7 @@ public final class DynamicRegistryFacadeRuntime implements CandidateDomainCollec
             return; // 本域从未被使用且候选未声明：不挂空计划
         }
         DynamicCandidateRegistryPlan plan = store.beginBatch();
+        pendingCandidates.add(plan);
         DynamicRegistryEventJS payload = new DynamicRegistryEventJS(plan);
         for (com.tkisor.nekojs.api.event.EventBusJS.PendingListener pending : ofBus) {
             try {
