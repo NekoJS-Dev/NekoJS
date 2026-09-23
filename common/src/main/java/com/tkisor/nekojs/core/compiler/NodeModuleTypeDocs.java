@@ -72,9 +72,12 @@ public final class NodeModuleTypeDocs {
             if (source == null) continue;
             String decl = extractTS(source);
             if (decl.isBlank()) continue;
-            String moduleId = entry.replace('/', '.').replace(".ts", "");
+            String moduleId = "modules/jsx-runtime.ts".equals(entry)
+                    ? "nekojs/jsx-runtime"
+                    : entry.replace('/', '.').replace(".ts", "");
+            String declarationId = "nekojs.node-auto." + moduleId.replace('/', '.');
             registry.registerManualDeclaration(ManualDeclarationCatalogEntry.of(
-                "nekojs.node-auto." + moduleId,
+                declarationId,
                 decl,
                 "Auto-extracted from '" + entry + "' (TypeScript source).",
                 List.of()));

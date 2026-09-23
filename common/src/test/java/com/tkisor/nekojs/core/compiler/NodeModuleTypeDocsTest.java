@@ -152,6 +152,18 @@ class NodeModuleTypeDocsTest {
         // 所有内置 node 模块均由 .ts 自动提取（无手写回退）；node:path 关键签名在
         assertTrue(all.contains("declare module 'node:path'"), all);
         assertTrue(all.contains("join(...parts: string[]): string"), all);
+        assertTrue(all.contains("declare module 'nekojs/jsx-runtime' {"), all);
+        assertTrue(all.contains("export function jsx("), all);
+        assertTrue(all.contains("export function jsxs("), all);
+        assertTrue(all.contains("export const UI: NekoUiApi;"), all);
+        assertTrue(all.contains("createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter"), all);
+        assertTrue(all.contains("createSignal<T>(initial: T): NekoUiSignal<T>"), all);
+        assertTrue(all.contains("interface NekoUiHostAdapter"), all);
+        assertTrue(all.contains("interface NekoUiPrimitiveProps"), all);
+        assertTrue(all.contains("onClick?: NekoUiCallback"), all);
+        assertTrue(all.contains("interface NekoUiSignal"), all);
+        assertTrue(all.contains("interface NekoUiStore"), all);
+        assertTrue(all.contains("interface NekoUiRootHandle"), all);
     }
 
     // ============ 通用降级 ============

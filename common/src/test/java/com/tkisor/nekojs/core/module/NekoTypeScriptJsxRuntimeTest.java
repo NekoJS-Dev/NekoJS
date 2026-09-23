@@ -396,6 +396,24 @@ class NekoTypeScriptJsxRuntimeTest {
                 "no authored location is available, so none may be invented: " + staged.detail());
     }
 
+    @Test
+    void automaticJsxUiRuntimePassesTheFakeHostContract() throws Exception {
+        boot(new SandboxConfig(false, false, false, false, true, true, true, true, 30, 0, 0,
+                SandboxConfig.PACK_SYNC_OFF, false, false));
+        try (var input = getClass().getResourceAsStream("/nekojs/language-ts-examples/tsx/ui-core.tsx")) {
+            assertNotNull(input, "the fake-host example must exist");
+            write("ui-core.tsx", new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+
+        Value exports = asValue(host.loadEntry("./server_scripts/src/ui-core.tsx"));
+        Value proof = exports.getMember("uiCoreProof");
+        assertEquals(true, proof.getMember("passed").asBoolean());
+        assertEquals(11, proof.getMember("primitives").asInt());
+        assertEquals("b,a,c", proof.getMember("keyedOrder").asString());
+        assertEquals("render,component,layout,host-update,event", proof.getMember("diagnostics").asString());
+        assertEquals(true, proof.getMember("disposed").asBoolean());
+    }
+
     private static Value asValue(Object exports) {
         assertTrue(exports instanceof Value, "host must return a guest Value, was: " + exports);
         return (Value) exports;
