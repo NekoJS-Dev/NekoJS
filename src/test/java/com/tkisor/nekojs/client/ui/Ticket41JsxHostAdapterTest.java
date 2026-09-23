@@ -72,6 +72,10 @@ class Ticket41JsxHostAdapterTest {
         assertTrue(screen.contains("adapter.close();"), "Screen removal must use adapter cleanup");
         assertTrue(adapter.contains("tree.close(() ->"), "Screen cleanup must pass root release to the retained tree");
         assertTrue(hostTree.indexOf("closeRoot.run()") < hostTree.indexOf("clear();"), "failed root release must retain nodes");
+        assertTrue(adapter.contains("void layout(Object tree, Object viewport, Object snapshot)"),
+                "the adapter must match the common three-argument layout contract");
+        assertTrue(adapter.contains("root.invokeMember(\"resize\", viewport())"),
+                "screen resize must notify the bound common root");
     }
 
     private static Path sourceRoot() {

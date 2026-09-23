@@ -53,8 +53,15 @@ public final class JsxHostAdapter {
         return PRIMITIVES.contains(type);
     }
 
-    /** Receives the frozen common layout candidate; layout is committed without mutating guest data. */
-    public void layout(Object tree) {
+    /** Returns the current logical viewport used when the common root is created. */
+    public Map<String, Object> viewport() {
+        int width = viewportWidth > 0 ? viewportWidth : minecraft.getWindow().getGuiScaledWidth();
+        int height = viewportHeight > 0 ? viewportHeight : minecraft.getWindow().getGuiScaledHeight();
+        return Map.of("width", Math.max(1, width), "height", Math.max(1, height));
+    }
+
+    /** Receives the frozen common layout candidate and its snapshot without mutating guest data. */
+    public void layout(Object tree, Object viewport, Object snapshot) {
         if (tree != null) {
             // Materialize the candidate to validate the interop boundary before the transaction begins.
             readArray(tree);
@@ -77,6 +84,13 @@ public final class JsxHostAdapter {
         viewportWidth = Math.max(0, width);
         viewportHeight = Math.max(0, height);
         relayout();
+        if (root != null) {
+            try {
+                root.invokeMember("resize", viewport());
+            } catch (RuntimeException failure) {
+                reportDiagnostic(failure);
+            }
+        }
     }
 
     boolean closeOnEscape() {
