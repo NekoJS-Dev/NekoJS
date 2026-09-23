@@ -37,7 +37,7 @@
 
 ## Implementation evidence and remaining gaps
 
-**Verified:** the pure retained tree has a runnable transaction/cleanup test for failed commit rollback, stale-handle rejection, and close failure retaining nodes until retry. A separate source-trace assertion checks that Screen paint walks committed nodes rather than executing a guest render. NeoForge and Fabric 26.2 compile commands passed after forced recompilation: `:26.2.0:compileJava` and `:26.2.0-fabric:compileJava`.
+**Verified:** the pure retained tree has a runnable transaction/cleanup test for failed commit rollback, stale-handle rejection, and close failure retaining nodes until retry. A source-trace assertion checks that Screen paint walks committed nodes rather than executing a guest render. The integrated main worktree also passed the 26.2 focused transaction test and both 26.2 compile tasks. NeoForge and Fabric 26.2 compile commands passed after forced recompilation: `:26.2.0:compileJava` and `:26.2.0-fabric:compileJava`.
 
 **Not run:** `minecraft-mod-mcp status` returned `No Minecraft mod detected.` No real 26.2 client smoke was run. `ticket41-screen-flow.tsx` is an authored fixture only; ClientUI → UI.createRoot → bindRoot → open has not been executed. No dedicated-server process/class-loading smoke was run.
 
