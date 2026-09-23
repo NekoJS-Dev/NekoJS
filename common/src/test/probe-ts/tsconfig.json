@@ -4,9 +4,11 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "nekojs",
     "noEmit": true,
     "skipLibCheck": false,
     "typeRoots": ["./generated"]
   },
-  "include": ["managed-api-usage.ts", "generated/**/*.d.ts"]
+  "include": ["managed-api-usage.ts", "jsx-primitive-props.tsx", "generated/**/*.d.ts", "../../../build/probe-ts/generated/**/*.d.ts"]
 }

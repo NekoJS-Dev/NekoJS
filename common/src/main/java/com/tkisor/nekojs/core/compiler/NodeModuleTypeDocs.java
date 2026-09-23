@@ -99,7 +99,7 @@ public final class NodeModuleTypeDocs {
      * <p>解析 {@code __nekoNodeDefine(ids, exports)} 获取模块 id 列表与导出对象，对导出对象的成员
      * （方法简写 {@code name(params): ret {}}、属性 {@code name: value}、简写引用 {@code name}）
      * 关联到模块内带类型注解的 function/const 声明生成签名，并收集顶层
-     * {@code type}/{@code interface}/{@code enum} 声明，包成 {@code declare module 'id' { ... }}。
+     * {@code type}/{@code interface}/{@code enum}/{@code namespace} 声明，包成 {@code declare module 'id' { ... }}。
      * 类型语法（泛型/联合/交叉/字面量）原样保留文本。
      *
      * @param source .ts 源码（脚本风格：IIFE + {@code __nekoNodeDefine}）
@@ -820,10 +820,12 @@ public final class NodeModuleTypeDocs {
                 if (isIdentStart(c)) {
                     int we = readIdent(i);
                     String w = s.substring(i, we);
-                    if ((w.equals("type") || w.equals("interface") || w.equals("enum"))
+                    if ((w.equals("type") || w.equals("interface") || w.equals("enum") || w.equals("namespace"))
                             && isDeclAfter(we)) {
                         int declEnd = w.equals("type") ? typeDeclEnd(i) : blockDeclEnd(i);
-                        sb.append(s.substring(i, declEnd).trim()).append('\n');
+                        String declaration = s.substring(i, declEnd).trim();
+                        if (w.equals("namespace")) declaration = "export " + declaration;
+                        sb.append(declaration).append('\n');
                         i = declEnd;
                         continue;
                     }

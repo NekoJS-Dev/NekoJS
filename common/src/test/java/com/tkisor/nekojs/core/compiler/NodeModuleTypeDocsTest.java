@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -153,17 +154,34 @@ class NodeModuleTypeDocsTest {
         assertTrue(all.contains("declare module 'node:path'"), all);
         assertTrue(all.contains("join(...parts: string[]): string"), all);
         assertTrue(all.contains("declare module 'nekojs/jsx-runtime' {"), all);
-        assertTrue(all.contains("export function jsx("), all);
-        assertTrue(all.contains("export function jsxs("), all);
+        assertTrue(all.contains("export const jsx: NekoUiJsxFactory;"), all);
+        assertTrue(all.contains("export const jsxs: NekoUiJsxFactory;"), all);
         assertTrue(all.contains("export const UI: NekoUiApi;"), all);
         assertTrue(all.contains("createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter"), all);
         assertTrue(all.contains("createSignal<T>(initial: T): NekoUiSignal<T>"), all);
         assertTrue(all.contains("interface NekoUiHostAdapter"), all);
-        assertTrue(all.contains("interface NekoUiPrimitiveProps"), all);
+        assertTrue(all.contains("interface NekoUiSharedProps"), all);
+        assertTrue(all.contains("type NekoUiPrimitivePropsByType = {"), all);
+        assertTrue(all.contains("type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]"), all);
+        assertTrue(all.contains("export namespace JSX {"), all);
+        assertTrue(all.contains("row: NekoUiPrimitivePropsByType['row']"), all);
         assertTrue(all.contains("onClick?: NekoUiCallback"), all);
         assertTrue(all.contains("interface NekoUiSignal"), all);
         assertTrue(all.contains("interface NekoUiStore"), all);
         assertTrue(all.contains("interface NekoUiRootHandle"), all);
+    }
+
+    @Test
+    void extractsJsxNamespaceForProbeTypeCheck() throws Exception {
+        String source = readResource("nekojs/node/modules/jsx-runtime.ts");
+        String declaration = NodeModuleTypeDocs.extractTS(source);
+        assertTrue(declaration.contains("export namespace JSX {"), declaration);
+        assertTrue(declaration.contains("row: NekoUiPrimitivePropsByType['row']"), declaration);
+        assertTrue(declaration.contains("export const jsx: NekoUiJsxFactory;"), declaration);
+        assertTrue(declaration.contains("export const Fragment: NekoUiFragment;"), declaration);
+        Path generated = Path.of("build/probe-ts/generated/jsx-runtime.d.ts");
+        Files.createDirectories(generated.getParent());
+        Files.writeString(generated, declaration, StandardCharsets.UTF_8);
     }
 
     // ============ 通用降级 ============

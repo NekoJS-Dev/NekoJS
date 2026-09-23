@@ -1,5 +1,4 @@
-;(function () {
-  type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
+type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   type NekoUiPrimitive = 'screen' | 'panel' | 'row' | 'column' | 'stack' | 'scroll' | 'label' | 'button' | 'input' | 'image' | 'spacer'
   type NekoUiJsxType = NekoUiPrimitive | NekoUiComponent | symbol
   type NekoUiLayoutSize = number | 'auto' | 'fill' | `${number}%`
@@ -146,30 +145,10 @@
     close(): boolean | 'queued'
   }
 
-  interface NekoUiPrimitiveProps {
+  interface NekoUiSharedProps {
     id?: string
+    key?: string | number
     children?: unknown
-    title?: string
-    pausesGame?: boolean
-    closeOnEscape?: boolean
-    background?: string | number
-    borderColor?: string | number
-    borderWidth?: number
-    radius?: number
-    scrollX?: NekoUiResponsive<boolean>
-    scrollY?: NekoUiResponsive<boolean>
-    scrollOffset?: NekoUiResponsive<number>
-    text?: string
-    color?: string | number
-    fontSize?: NekoUiResponsive<number>
-    wrap?: boolean
-    disabled?: boolean
-    tooltip?: string
-    value?: string
-    placeholder?: string
-    maxLength?: number
-    resource?: string
-    fit?: 'contain' | 'cover' | 'stretch'
     width?: NekoUiResponsive<NekoUiLayoutSize>
     height?: NekoUiResponsive<NekoUiLayoutSize>
     minWidth?: NekoUiResponsive<NekoUiLayoutSize>
@@ -195,6 +174,47 @@
     onChange?: NekoUiCallback
     onSubmit?: NekoUiCallback
   }
+  type NekoUiPrimitivePropsByType = {
+    screen: NekoUiSharedProps & { title?: string; pausesGame?: boolean; closeOnEscape?: boolean }
+    panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number }
+    row: NekoUiSharedProps
+    column: NekoUiSharedProps
+    stack: NekoUiSharedProps
+    scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
+    label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; wrap?: boolean }
+    button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string }
+    input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean }
+    image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch' }
+    spacer: NekoUiSharedProps
+  }
+  type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]
+  type NekoUiElementProps<T extends NekoUiJsxType> = T extends NekoUiPrimitive ? NekoUiPrimitivePropsByType[T] : object
+
+  type NekoUiJsxFactory = <T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number) => NekoVNode
+
+  interface NekoUiFragment {
+    (props: object): NekoVNode
+  }
+
+  declare namespace JSX {
+    interface Element extends NekoVNode {}
+    interface ElementChildrenAttribute { children: {} }
+    interface IntrinsicElements {
+      screen: NekoUiPrimitivePropsByType['screen']
+      panel: NekoUiPrimitivePropsByType['panel']
+      row: NekoUiPrimitivePropsByType['row']
+      column: NekoUiPrimitivePropsByType['column']
+      stack: NekoUiPrimitivePropsByType['stack']
+      scroll: NekoUiPrimitivePropsByType['scroll']
+      label: NekoUiPrimitivePropsByType['label']
+      button: NekoUiPrimitivePropsByType['button']
+      input: NekoUiPrimitivePropsByType['input']
+      image: NekoUiPrimitivePropsByType['image']
+      spacer: NekoUiPrimitivePropsByType['spacer']
+    }
+  }
+
+;(function () {
 
   interface NekoUiRootOptions {
     id?: string
@@ -205,14 +225,14 @@
     primitives(): readonly NekoUiPrimitive[]
     resolveViewport(input: NekoUiViewportInput): NekoUiViewport
     profileFor(input: NekoUiViewportInput): NekoUiProfile
-    element(type: NekoUiPrimitive | NekoUiComponent | symbol, props: NekoUiPrimitiveProps | null, key?: string | number): NekoVNode
+    element<T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number): NekoVNode
     createSignal<T>(initial: T): NekoUiSignal<T>
     createStore(initial: Record<string, unknown>): NekoUiStore
     createRoot(render: NekoUiCallback, adapter: NekoUiHostAdapter, options?: NekoUiRootOptions): NekoUiRootHandle
     batch<T>(callback: () => T): T
-    readonly fragment: symbol
+    readonly fragment: NekoUiFragment
   }
-  const FRAGMENT: symbol = Symbol('nekojs.jsx.fragment')
+  const FRAGMENT: NekoUiFragment = Symbol('nekojs.jsx.fragment') as unknown as NekoUiFragment
   const PRIMITIVES = Object.freeze({
     screen: ['title', 'pausesGame', 'closeOnEscape'],
     panel: ['background', 'borderColor', 'borderWidth', 'radius'],
@@ -314,11 +334,11 @@
     })
   }
 
-  function jsx(type: NekoUiJsxType, props: NekoUiPrimitiveProps | null, key?: string | number): NekoVNode {
+  function jsx<T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number): NekoVNode {
     return createElement(type, props, key)
   }
 
-  function jsxs(type: NekoUiJsxType, props: NekoUiPrimitiveProps | null, key?: string | number): NekoVNode {
+  function jsxs<T extends NekoUiJsxType>(type: T, props: NekoUiElementProps<T> | null, key?: string | number): NekoVNode {
     return createElement(type, props, key)
   }
 
@@ -1121,9 +1141,11 @@
     fragment: FRAGMENT
   })
 
+  const typedJsx: NekoUiJsxFactory = jsx
+  const typedJsxs: NekoUiJsxFactory = jsxs
   globalThis.__nekoNodeDefine(['nekojs/jsx-runtime'], {
-    jsx: (type: NekoUiJsxType, props: NekoUiPrimitiveProps | null, key?: string | number): NekoVNode => jsx(type, props, key),
-    jsxs: (type: NekoUiJsxType, props: NekoUiPrimitiveProps | null, key?: string | number): NekoVNode => jsxs(type, props, key),
+    jsx: typedJsx,
+    jsxs: typedJsxs,
     Fragment: FRAGMENT,
     UI: UI
   })

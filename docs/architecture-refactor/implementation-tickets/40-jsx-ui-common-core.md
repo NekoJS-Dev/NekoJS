@@ -39,7 +39,8 @@
 - Passed: ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.api.ApiManifestGoldenTest --tests com.tkisor.nekojs.probe.ProbeOutputCompatibilityTest --tests com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPluginTest (BUILD SUCCESSFUL).
 - Passed: ./gradlew.bat :common:check guardLint (BUILD SUCCESSFUL; common isolation and addon gates included).
 - Passed after merge on `mult`: `npm ci` followed by `npm run test:probe-types` (TypeScript 5.8.3, exit 0). No golden regeneration was performed. NeoForge Screen, client reload, live Minecraft smoke and maintainer golden review remain owned by later tickets/human gates.
-- Review follow-up: cross-Fragment sibling keys, failed host cleanup retry, and off-owner signal.update need regression fixes; broad NekoUiPrimitiveProps still accepts combinations rejected by runtime. These gaps prevent technical closure. No Human input or maintainer sign-off was authored.
+- Review follow-up: common runtime regression fixes are now covered by fake-host assertions, and source-derived JSX declarations map each primitive to its allowed props; the ticket remains in-review because golden/maintainer review and later client evidence are not agent sign-off. No Human input or maintainer sign-off was authored.
+- Contract follow-up (2026-09-23): `NodeModuleTypeDocsTest` extracts the JSX namespace/primitive map to ignored `common/build/probe-ts/generated/jsx-runtime.d.ts`; the TSX Probe fixture accepts label/component/Fragment and rejects row.text and label.scrollOffset with `@ts-expect-error`. Focused extractor/runtime/API golden/Probe compatibility tests and `npm run test:probe-types` (TypeScript 5.8.3) passed; `./gradlew.bat :common:check guardLint --no-parallel` passed. No golden update or human review was claimed.
 
 ## Dependency rationale
 
