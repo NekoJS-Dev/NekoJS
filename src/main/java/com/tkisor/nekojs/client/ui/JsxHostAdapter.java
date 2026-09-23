@@ -31,7 +31,7 @@ public final class JsxHostAdapter {
         screen = new JsxScreen(title, pausesGame, this);
     }
 
-    public JsxScreen screen() {
+    JsxScreen screen() {
         return screen;
     }
 
@@ -207,6 +207,7 @@ public final class JsxHostAdapter {
         tree.close(() -> {
             if (root != null) root.invokeMember("close");
         });
+        root = null;
     }
 
     private boolean dispatch(JsxHostTree.Node node, String eventName, Map<String, Object> input) {

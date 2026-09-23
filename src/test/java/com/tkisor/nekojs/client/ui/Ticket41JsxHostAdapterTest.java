@@ -28,6 +28,15 @@ class Ticket41JsxHostAdapterTest {
         failed.rollback();
         assertEquals("ok", tree.roots().getFirst().props.get("id"));
 
+        JsxHostTree.Transaction layoutFailure = tree.begin();
+        Object next = layoutFailure.create("label", "next", Map.of("id", "next"));
+        layoutFailure.order(null, List.of(next));
+        assertThrows(IllegalStateException.class, () -> layoutFailure.commit(List.of(next), ignored -> {
+            throw new IllegalStateException("layout failed");
+        }));
+        layoutFailure.rollback();
+        assertEquals("ok", tree.roots().getFirst().props.get("id"), "failed layout must not publish staged nodes");
+
         JsxHostTree.Transaction remove = tree.begin();
         remove.remove(button);
         remove.commit(List.of());
