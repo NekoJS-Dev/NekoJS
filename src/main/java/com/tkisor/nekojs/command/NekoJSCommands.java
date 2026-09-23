@@ -9,9 +9,9 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.tkisor.nekojs.NekoJS;
 import com.tkisor.nekojs.core.ScriptLocator;
-import com.tkisor.nekojs.script.ScriptManager;
 import com.tkisor.nekojs.core.error.NekoErrorUIHelper;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
+import com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatter;
 import com.tkisor.nekojs.network.ShowErrorListPacket;
 import com.tkisor.nekojs.network.ErrorSummaryDTO;
 import com.tkisor.nekojs.platform.Platform;
@@ -58,30 +58,19 @@ public final class NekoJSCommands {
                         .then(reloadCommand(root))
 
                         .then(Commands.literal("test")
-                                .executes(context -> {
-                                    CommandSourceStack source = context.getSource();
-                                    source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
-
-                                    try {
-                                        ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
-                                        if (testSm == null) {
-                                            testSm = root.createScriptManager(ScriptType.TEST);
-                                        }
-                                        testSm.runTestScripts();
-                                        sendReloadResult(source, root, "NekoJS test scripts completed.");
-                                    } catch (Exception e) {
-                                        NekoJS.LOGGER.error("Running test scripts failed fatally", e);
-                                        source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
-                                    }
-                                    return 1;
-                                })
+                                .executes(context -> runTests(context.getSource(), root))
                         )
 
                         .then(Commands.literal("error")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-                                    if (root.errors().count() > 0) {
-                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent(root.errors().count()));
+                                    if (root == null) {
+                                        source.sendFailure(Component.literal("NekoJS runtime is not available."));
+                                        return 0;
+                                    }
+                                    NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
+                                    if (errors.count() > 0) {
+                                        source.sendFailure(NekoErrorUIHelper.getErrorComponent(errors.count()));
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.healthy"), false);
                                     }
@@ -92,10 +81,14 @@ public final class NekoJSCommands {
                         .then(Commands.literal("view_all_errors")
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
-                                    if (root.errors().count() > 0) {
+                                    if (root == null) {
+                                        source.sendFailure(Component.literal("NekoJS runtime is not available."));
+                                        return 0;
+                                    }
+                                    NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
+                                    if (errors.count() > 0) {
                                         ServerPlayer player = source.getPlayerOrException();
-
-                                        PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(root)));
+                                        PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(errors)));
                                     } else {
                                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
                                     }
@@ -322,36 +315,24 @@ public final class NekoJSCommands {
         if (!canReloadHere(source, type)) {
             return 0;
         }
-//        source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " scripts..."));
-        NekoRuntimeRoot.ReloadResult reloadResult = null;
+        if (root == null) {
+            source.sendFailure(Component.literal("NekoJS runtime is not available."));
+            return 0;
+        }
+        if (type == ScriptType.TEST) {
+            return runTests(source, root);
+        }
+        NekoRuntimeRoot.ReloadResult reloadResult;
         try {
-            // CLIENT Context 归客户端主线程所有——集成服务器线程发起的 reload 转投
-            // Render 线程执行（事件分发/timers 也在那里），命令侧立即返回
             if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
-                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
-                    try {
-                        root.reload(ScriptType.CLIENT);
-                    } catch (Exception e) {
-                        NekoJS.LOGGER.error("Reloading {} scripts failed fatally", ScriptType.CLIENT.name, e);
-                    }
-                });
-                source.sendSystemMessage(Component.literal("NekoJS client scripts reload scheduled on the client thread."));
-                return 1;
+                return scheduleClientReload(source, type, root, null);
             }
-            if (type == ScriptType.TEST) {
-                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
-                if (testSm == null) {
-                    testSm = root.createScriptManager(ScriptType.TEST);
-                }
-                testSm.runTestScripts();
-            } else {
-                if (type == ScriptType.SERVER) {
-                    // 清空上一轮 stage 的村民交易，防止 reload 重复累积（与 ServerEventListener
-                    // 资源 reload 路径同约定：每次完整脚本 reload 前 beginReload）
-                    com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
-                }
-                reloadResult = root.reload(type);
+            if (type == ScriptType.SERVER) {
+                // 清空上一轮 stage 的村民交易，防止 reload 重复累积（与 ServerEventListener
+                // 资源 reload 路径同约定：每次完整脚本 reload 前 beginReload）
+                com.tkisor.nekojs.villager.VillagerTradeManager.beginReload();
             }
+            reloadResult = root.reload(type);
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
             boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
@@ -372,39 +353,89 @@ public final class NekoJSCommands {
                     com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
                 }
             }
-            // nekojs$applyScripts 内部已向全体 gamemaster 广播 ✔/⚠ 结果，命令权限与广播过滤同为
-            // LEVEL_GAMEMASTERS，执行者本人必在广播名单内；玩家执行时不再补发命令行，避免一次 reload 出现两条消息。
-            // 控制台收不到玩家广播，仍走 sendReloadResult。
+            // Recipe reload has its own broadcast; report the committed generation as well.
             if (recipeBroadcast && source.getEntity() instanceof ServerPlayer) {
-                refreshOpenErrorDashboard(source, root);
+                refreshOpenErrorDashboard(source, root.errors());
+                source.sendSystemMessage(Component.literal(
+                        RuntimeCommandResultFormatter.reloadResult(reloadResult, root.isActiveFailed(type))));
                 return 1;
             }
-            // AC6（审查 A4）：非事务结论必须先于任何成功宣称——不得先报 "reloaded. - no errors."
-            // 再补一句「其实没有事务保证」，那样外部只看到成功。
-            boolean nonTransactional = reloadResult != null && reloadResult.nonTransactional();
-            if (nonTransactional) {
-                // STARTUP 是 reset+load 非事务路径（不可逆平台注册未证明可回滚），入口显式要求
-                // loader restart——不让用户把这条结果读成候选 + commit 事务成功。
-                source.sendSystemMessage(Component.literal("NekoJS " + type.name
-                        + " scripts reloaded non-transactionally (reset+load, phase=" + reloadResult.phase()
-                        + "): irreversible platform registrations are not rolled back"
-                        + (reloadResult.requiresLoaderRestart()
-                                ? " - restart the game/loader for a clean STARTUP state." : ".")));
-            }
-            sendReloadResult(source, root, nonTransactional
-                    // 非事务路径的结果行不重复「reloaded」（上一条已是结论），避免二次宣称
-                    ? "NekoJS " + type.name + " scripts reload finished (non-transactional, phase="
-                            + reloadResult.phase() + ")."
-                    : "NekoJS " + type.name + " scripts reloaded.");
+            return reportReloadResult(source, root, reloadResult);
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
             // 候选 generation 失败（工单 06）：active 保留，失败结果携带
             // generation/phase/source location/owner/domain 结构化字段（无修复指引）
             NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
-            source.sendFailure(Component.literal(e.report().describe()));
+            source.sendFailure(Component.literal(RuntimeCommandResultFormatter.reloadFailure(
+                    e.report(), root.isActiveFailed(type))));
+            return 0;
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
+            return 0;
         }
+    }
+
+    private static int runTests(CommandSourceStack source, NekoRuntimeRoot root) {
+        if (!canReloadHere(source, ScriptType.TEST)) {
+            return 0;
+        }
+        if (root == null) {
+            source.sendFailure(Component.literal("NekoJS runtime is not available."));
+            return 0;
+        }
+        try {
+            NekoRuntimeRoot.TestRunResult result = root.runTests();
+            if (!result.isConfigured() || !result.isCompleted()) {
+                source.sendFailure(Component.literal(RuntimeCommandResultFormatter.testResult(result)));
+                return 0;
+            }
+            sendReloadResult(source, root, RuntimeCommandResultFormatter.testResult(result));
+            return 1;
+        } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
+            NekoJS.LOGGER.error("Running test scripts failed", e);
+            source.sendFailure(Component.literal(RuntimeCommandResultFormatter.reloadFailure(
+                    e.report(), root.isActiveFailed(ScriptType.TEST))));
+            return 0;
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Running test scripts failed fatally", e);
+            source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
+            return 0;
+        }
+    }
+
+    private static int scheduleClientReload(CommandSourceStack source, ScriptType type,
+                                            NekoRuntimeRoot root, String filePath) {
+        source.sendSystemMessage(Component.literal(filePath == null
+                ? "NekoJS CLIENT reload scheduled on the client thread."
+                : "NekoJS CLIENT script " + filePath + " reload scheduled on the client thread."));
+        com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
+            try {
+                NekoRuntimeRoot.ReloadResult result = filePath == null
+                        ? root.reload(type)
+                        : root.reloadFile(type, java.nio.file.Path.of(filePath));
+                source.getServer().execute(() -> reportReloadResult(source, root, result));
+            } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
+                NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
+                source.getServer().execute(() -> source.sendFailure(Component.literal(
+                        RuntimeCommandResultFormatter.reloadFailure(e.report(), root.isActiveFailed(type)))));
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
+                source.getServer().execute(() -> source.sendFailure(Component.literal(
+                        "Reloading NekoJS " + type.name + " scripts failed fatally.")));
+            }
+        });
+        return 1;
+    }
+
+    private static int reportReloadResult(CommandSourceStack source, NekoRuntimeRoot root,
+                                          NekoRuntimeRoot.ReloadResult result) {
+        String message = RuntimeCommandResultFormatter.reloadResult(
+                result, root.isActiveFailed(result.type()));
+        if (!result.success()) {
+            source.sendFailure(Component.literal(message));
+            return 0;
+        }
+        sendReloadResult(source, root, message);
         return 1;
     }
 
@@ -428,38 +459,28 @@ public final class NekoJSCommands {
         if (!canReloadHere(source, type)) {
             return 0;
         }
+        if (root == null) {
+            source.sendFailure(Component.literal("NekoJS runtime is not available."));
+            return 0;
+        }
+        if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
+            return scheduleClientReload(source, type, root, filePath);
+        }
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
-            // 单文件 reload 同样遵守 CLIENT 线程归属（见 reloadType 的整批分支）
-            if (type == ScriptType.CLIENT && com.tkisor.nekojs.client.ClientReloadExecutor.isClientDist()) {
-                com.tkisor.nekojs.client.ClientReloadExecutor.execute(() -> {
-                    try {
-                        int affected = root.scriptManagerOf(ScriptType.CLIENT).reloadScriptFile(filePath).size();
-                        NekoJS.LOGGER.info("NekoJS client script {} reloaded ({} affected).", filePath, affected);
-                    } catch (Exception e) {
-                        NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", ScriptType.CLIENT.name, filePath, e);
-                    }
-                });
-                source.sendSystemMessage(Component.literal("NekoJS client script " + filePath + " reload scheduled on the client thread."));
-                return 1;
-            }
-
-            int affectedEntries = root.scriptManagerOf(type).reloadScriptFile(filePath).size();
-            if (type == ScriptType.TEST) {
-                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
-                if (testSm != null) {
-                    testSm.flushReadyNodeTimers();
-                }
-            }
-            sendReloadResult(source, root, "NekoJS " + type.name + " script " + filePath + " reloaded (" + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
+            return reportReloadResult(source, root, root.reloadFile(type, java.nio.file.Path.of(filePath)));
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", type.name, filePath, e);
-            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + " failed: " + e.getMessage()));
+            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " script file failed fatally."));
+            return 0;
         }
-        return 1;
     }
 
     private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
+        if (source.getServer() == null) {
+            source.sendFailure(Component.literal("NekoJS lifecycle commands require a server command source."));
+            return false;
+        }
         if (type == ScriptType.CLIENT && !Platform.isClient()) {
             source.sendFailure(Component.literal("Client script reload is only available in an integrated client runtime."));
             return false;
@@ -467,11 +488,9 @@ public final class NekoJSCommands {
         return true;
     }
 
-    private static List<ErrorSummaryDTO> errorSnapshot(NekoRuntimeRoot root) {
-        // Ticket 30: the packet projection is assembled in one place from the frozen
-        // diagnostic record; wire shape AND packet content stay legacy-identical — the
-        // unbounded message, display path and full-detail text still come from the error.
-        return root.errors().errors().stream()
+    private static List<ErrorSummaryDTO> errorSnapshot(NekoRuntimeRoot.ErrorSnapshot snapshot) {
+        // Ticket 30: keep the legacy packet shape and project each frozen diagnostic record once.
+        return snapshot.errors().stream()
                 .map(err -> err.diagnostic().toErrorSummary(
                         err.getOccurrenceCount(),
                         err.getDisplayPath(),
@@ -480,15 +499,16 @@ public final class NekoJSCommands {
                 )).toList();
     }
 
-    private static void refreshOpenErrorDashboard(CommandSourceStack source, NekoRuntimeRoot root) {
+    private static void refreshOpenErrorDashboard(CommandSourceStack source, NekoRuntimeRoot.ErrorSnapshot snapshot) {
         if (source.getEntity() instanceof ServerPlayer player) {
-            PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(root), false));
+            PacketDistributor.sendToPlayer(player, new ShowErrorListPacket(errorSnapshot(snapshot), false));
         }
     }
 
     private static void sendReloadResult(CommandSourceStack source, NekoRuntimeRoot root, String successMessage) {
-        refreshOpenErrorDashboard(source, root);
-        int count = root.errors().count();
+        NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
+        refreshOpenErrorDashboard(source, errors);
+        int count = errors.count();
         if (count > 0) {
             // 错误数并进同一条消息且可点击打开错误列表，不再追加独立的警告组件：
             // 此分支只覆盖无配方广播的路径（test/单文件 reload/CLIENT/STARTUP/控制台），

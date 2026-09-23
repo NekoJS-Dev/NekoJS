@@ -186,6 +186,11 @@ public final class NekoRuntimeRoot implements AutoCloseable {
         return scriptManagers.get(type);
     }
 
+    public boolean isActiveFailed(ScriptType type) {
+        ScriptManager manager = scriptManagers.get(type);
+        return manager != null && manager.isActiveFailed();
+    }
+
     public ScriptManager createScriptManager(ScriptType type) {
         ScriptManager manager = new ScriptManager(type, eventBridge, pluginRuntime, scriptProperties, core.errorTracker(), NekoJSPaths.get(), core.sandboxConfig(), environmentFactory, domainCollectors, preparationCache);
         scriptManagers.put(type, manager);
@@ -211,12 +216,28 @@ public final class NekoRuntimeRoot implements AutoCloseable {
     }
 
     public ReloadResult reloadFile(ScriptType type, Path file) {
-        ScriptManager manager = scriptManagerOf(type);
+        Objects.requireNonNull(file, "file");
+        ScriptManager manager = scriptManagers.get(type);
+        if (manager == null) {
+            return ReloadResult.failure(type, 0, ReloadPhase.PREPARATION, file.toString(),
+                    new IllegalStateException("No ScriptManager registered for " + type));
+        }
+        // Only a full candidate reload may recover a watchdog-isolated active runtime.
+        if (manager.isActiveFailed()) {
+            return ReloadResult.failure(type, manager.generationId(), ReloadPhase.PREPARATION, file.toString(),
+                    null);
+        }
         try {
             manager.reloadScriptFile(file.toString());
-            return ReloadResult.success(type, manager.generationId());
+            if (type == ScriptType.TEST) {
+                manager.flushReadyNodeTimers();
+            }
+            if (type == ScriptType.STARTUP) {
+                return new ReloadResult(type, true, null, manager.generationId(), ReloadPhase.STARTUP, file.toString());
+            }
+            return ReloadResult.successFile(type, manager.generationId(), file.toString());
         } catch (Exception e) {
-            // 单文件重载沿用 active 环境（非候选路径）：以失败结果返回并显式标记 FILE 阶段
+            // Single-file reload uses the active environment rather than a candidate generation.
             return ReloadResult.failure(type, manager.generationId(), ReloadPhase.FILE, file.toString(), e);
         }
     }
@@ -330,6 +351,10 @@ public final class NekoRuntimeRoot implements AutoCloseable {
                                ReloadPhase phase, String sourceLocation) {
         public static ReloadResult success(ScriptType type, long generation) {
             return new ReloadResult(type, true, null, generation, ReloadPhase.COMMIT, null);
+        }
+
+        public static ReloadResult successFile(ScriptType type, long generation, String sourceLocation) {
+            return new ReloadResult(type, true, null, generation, ReloadPhase.FILE, sourceLocation);
         }
 
         /**

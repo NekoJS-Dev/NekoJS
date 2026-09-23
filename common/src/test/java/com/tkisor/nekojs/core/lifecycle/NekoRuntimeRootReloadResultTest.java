@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -136,12 +138,32 @@ class NekoRuntimeRootReloadResultTest {
             // reset+load 读成候选 + commit 事务成功。
             assertTrue(result.nonTransactional(), "STARTUP result must be identifiable as non-transactional");
             assertTrue(result.requiresLoaderRestart(), "STARTUP result must ask the caller for a loader restart");
+
+            NekoRuntimeRoot.ReloadResult fileResult = root.reloadFile(ScriptType.STARTUP, Path.of("marker.js"));
+            assertTrue(fileResult.success());
+            assertEquals(ReloadPhase.STARTUP, fileResult.phase(),
+                    "targeted STARTUP reload must retain the full reset+load phase");
+            assertTrue(fileResult.requiresLoaderRestart());
         } finally {
             root.closeSilently();
         }
     }
 
-    /** AC3/阶段结果：事务式 reload 成功结果的 phase 是 COMMIT；单文件失败结果的 phase 是 FILE。 */
+    @Test
+    void testRunReportsUnconfiguredWithoutCreatingAManager() {
+        NekoRuntimeRoot root = newRoot(ScriptEventBridge.EMPTY);
+        try {
+            var result = root.runTests();
+            assertFalse(result.isConfigured());
+            assertFalse(result.isCompleted());
+            assertNull(root.scriptManagerOrNull(ScriptType.TEST),
+                    "an unconfigured TEST command must not create a partial manager");
+        } finally {
+            root.closeSilently();
+        }
+    }
+
+    /** AC3/阶段结果：事务式 reload 成功结果的 phase 是 COMMIT；单文件失败结果的 phase 是 FILE. */
     @Test
     void reloadResultPhasesExposeCommitAndFileBoundaries() throws Exception {
         writeScript(ScriptType.SERVER, "marker.js", "console.info('server marker');\n");
@@ -156,6 +178,12 @@ class NekoRuntimeRootReloadResultTest {
                     "transactional reload success must surface the commit boundary");
             assertTrue(!result.nonTransactional(), "transactional reload must not be marked non-transactional");
             assertTrue(!result.requiresLoaderRestart(), "transactional reload must not ask for a loader restart");
+
+            NekoRuntimeRoot.ReloadResult fileSuccess = root.reloadFile(ScriptType.SERVER, Path.of("marker.js"));
+            assertTrue(fileSuccess.success());
+            assertEquals(ReloadPhase.FILE, fileSuccess.phase(),
+                    "single-file reload success must keep the FILE phase");
+            assertTrue(fileSuccess.sourceLocation().endsWith("marker.js"));
 
             NekoRuntimeRoot.ReloadResult fileResult = root.reloadFile(ScriptType.SERVER,
                     ScriptTypeEnv.scriptsDir(ScriptType.SERVER).resolve("missing-file.js"));

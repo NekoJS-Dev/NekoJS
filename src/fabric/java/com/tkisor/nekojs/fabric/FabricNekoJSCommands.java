@@ -12,12 +12,12 @@ import com.tkisor.nekojs.api.plugin.NekoRuntimeAccess;
 import com.tkisor.nekojs.core.ScriptLocator;
 import com.tkisor.nekojs.core.fs.NekoJSPaths;
 import com.tkisor.nekojs.core.lifecycle.NekoRuntimeRoot;
+import com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatter;
 import com.tkisor.nekojs.platform.Platform;
 import com.tkisor.nekojs.probe.ProbeBackend;
 import com.tkisor.nekojs.probe.ProbeBackendRegistry;
 import com.tkisor.nekojs.probe.ProbeBackendSelector;
 import com.tkisor.nekojs.probe.ProbeCoordinator;
-import com.tkisor.nekojs.script.ScriptManager;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -32,6 +32,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -47,7 +48,7 @@ import java.util.stream.Collectors;
  *   <li>SERVER reload 做配方热重载（RecipeManagerMixin 孪生）+ Modification 重放
  *       （ItemModificationEventJS/BlockModificationEventJS 已去守卫复用）；
  *       村民交易重放仍未移植（对应机制无 fabric 落点）</li>
- *   <li>CLIENT reload 同步执行（无 ClientReloadExecutor 的 Render 线程投递）</li>
+ *   <li>CLIENT reload is queued on the client thread, with results returned to the server source</li>
  * </ul>
  * 依赖面齐后应与共享树版合并回单副本。
  */
@@ -55,21 +56,21 @@ public final class FabricNekoJSCommands {
 
     private FabricNekoJSCommands() {}
 
-    public static void registerCallback() {
-        // 回调在 server 启动时触发，届时 loader entry 的 root 已装配完成
+    public static void registerCallback(Supplier<NekoRuntimeRoot> rootProvider) {
+        // Resolve the loader-owned root when a command executes, not during mod initialization.
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-                register(dispatcher));
+                register(dispatcher, rootProvider));
     }
 
-    private static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+    private static void register(CommandDispatcher<CommandSourceStack> dispatcher, Supplier<NekoRuntimeRoot> rootProvider) {
         dispatcher.register(
                 Commands.literal("nekojs")
                         .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
 
-                        .then(reloadCommand())
-                        .then(testCommand())
-                        .then(errorCommand())
-                        .then(viewAllErrorsCommand())
+                        .then(reloadCommand(rootProvider))
+                        .then(testCommand(rootProvider))
+                        .then(errorCommand(rootProvider))
+                        .then(viewAllErrorsCommand(rootProvider))
                         .then(packsCommand())
                         .then(registryCommand())
                         .then(handCommand())
@@ -79,31 +80,25 @@ public final class FabricNekoJSCommands {
         );
     }
 
-    private static NekoRuntimeRoot root() {
-        // root 经 loader entry 的 package-private accessor 获取（命令在 server 启动时触发，
-        // 届时已装配完成）
-        return NekoJSFabricMod.runtimeRootOrNull();
-    }
-
     // ------------------------------------------------------------------
     //  reload / test
     // ------------------------------------------------------------------
 
-    private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand() {
+    private static LiteralArgumentBuilder<CommandSourceStack> reloadCommand(Supplier<NekoRuntimeRoot> rootProvider) {
         LiteralArgumentBuilder<CommandSourceStack> reload = Commands.literal("reload")
-                .executes(context -> reloadType(context.getSource(), ScriptType.SERVER));
+                .executes(context -> reloadType(context.getSource(), ScriptType.SERVER, rootProvider.get()));
         for (ScriptType type : ScriptType.all()) {
-            addReloadType(reload, type);
+            addReloadType(reload, type, rootProvider);
         }
         return reload;
     }
 
-    private static void addReloadType(LiteralArgumentBuilder<CommandSourceStack> reload, ScriptType type) {
+    private static void addReloadType(LiteralArgumentBuilder<CommandSourceStack> reload, ScriptType type, Supplier<NekoRuntimeRoot> rootProvider) {
         reload.then(Commands.literal(type.name)
-                .executes(context -> reloadType(context.getSource(), type))
+                .executes(context -> reloadType(context.getSource(), type, rootProvider.get()))
                 .then(Commands.argument("file", StringArgumentType.greedyString())
                         .suggests((context, builder) -> suggestReloadFiles(type, builder))
-                        .executes(context -> reloadFile(context.getSource(), type, StringArgumentType.getString(context, "file")))));
+                        .executes(context -> reloadFile(context.getSource(), type, StringArgumentType.getString(context, "file"), rootProvider.get()))));
     }
 
     private static CompletableFuture<Suggestions> suggestReloadFiles(ScriptType type, SuggestionsBuilder builder) {
@@ -119,53 +114,99 @@ public final class FabricNekoJSCommands {
         return pathBuilder.buildFuture();
     }
 
-    private static int reloadType(CommandSourceStack source, ScriptType type) {
+    private static int reloadType(CommandSourceStack source, ScriptType type, NekoRuntimeRoot root) {
         if (!canReloadHere(source, type)) {
             return 0;
         }
-        NekoRuntimeRoot.ReloadResult reloadResult = null;
+        if (root == null) {
+            source.sendFailure(Component.literal("NekoJS runtime is not available."));
+            return 0;
+        }
+        if (type == ScriptType.TEST) {
+            return runTests(source, root);
+        }
+        if (type == ScriptType.CLIENT && Platform.isClient()) {
+            return scheduleClientReload(source, type, root, null);
+        }
         try {
-            NekoRuntimeRoot root = root();
-            if (type == ScriptType.TEST) {
-                ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
-                if (testSm == null) {
-                    testSm = root.createScriptManager(ScriptType.TEST);
-                }
-                testSm.runTestScripts();
-            } else {
-                reloadResult = root.reload(type);
-                if (type == ScriptType.SERVER) {
-                    applyRecipeScripts(source);
-                    // Item/Block 属性修改重放（票 39）：SERVER 事务 reload 的 DOMAIN_PLAN
-                    // 阶段已收集为 inert 候选计划，commit 点联合应用——命令侧不再 fire。
-                }
+            NekoRuntimeRoot.ReloadResult result = root.reload(type);
+            if (type == ScriptType.SERVER) {
+                applyRecipeScripts(source);
             }
-            // AC6（审查 A4）：非事务结论必须先于任何成功宣称——不得先报 "reloaded. - no errors."
-            // 再补一句「其实没有事务保证」，那样外部只看到成功。
-            boolean nonTransactional = reloadResult != null && reloadResult.nonTransactional();
-            if (nonTransactional) {
-                // STARTUP 是 reset+load 非事务路径（不可逆平台注册未证明可回滚），入口显式要求
-                // loader restart——不让用户把这条结果读成候选 + commit 事务成功。
-                source.sendSystemMessage(Component.literal("NekoJS " + type.name
-                        + " scripts reloaded non-transactionally (reset+load, phase=" + reloadResult.phase()
-                        + "): irreversible platform registrations are not rolled back"
-                        + (reloadResult.requiresLoaderRestart()
-                                ? " - restart the game/loader for a clean STARTUP state." : ".")));
-            }
-            sendReloadResult(source, nonTransactional
-                    // 非事务路径的结果行不重复「reloaded」（上一条已是结论），避免二次宣称
-                    ? "NekoJS " + type.name + " scripts reload finished (non-transactional, phase="
-                            + reloadResult.phase() + ")."
-                    : "NekoJS " + type.name + " scripts reloaded.");
+            return reportReloadResult(source, root, result);
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
-            // 候选 generation 失败（工单 06）：active 保留，失败结果携带
-            // generation/phase/source location/owner/domain 结构化字段（无修复指引）
             NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
-            source.sendFailure(Component.literal(e.report().describe()));
+            source.sendFailure(Component.literal(RuntimeCommandResultFormatter.reloadFailure(
+                    e.report(), root.isActiveFailed(type))));
+            return 0;
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
             source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " scripts failed fatally."));
+            return 0;
         }
+    }
+
+    private static int runTests(CommandSourceStack source, NekoRuntimeRoot root) {
+        if (!canReloadHere(source, ScriptType.TEST)) {
+            return 0;
+        }
+        if (root == null) {
+            source.sendFailure(Component.literal("NekoJS runtime is not available."));
+            return 0;
+        }
+        try {
+            NekoRuntimeRoot.TestRunResult result = root.runTests();
+            if (!result.isConfigured() || !result.isCompleted()) {
+                source.sendFailure(Component.literal(RuntimeCommandResultFormatter.testResult(result)));
+                return 0;
+            }
+            sendReloadResult(source, root, RuntimeCommandResultFormatter.testResult(result));
+            return 1;
+        } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
+            NekoJS.LOGGER.error("Running test scripts failed", e);
+            source.sendFailure(Component.literal(RuntimeCommandResultFormatter.reloadFailure(
+                    e.report(), root.isActiveFailed(ScriptType.TEST))));
+            return 0;
+        } catch (Exception e) {
+            NekoJS.LOGGER.error("Running test scripts failed fatally", e);
+            source.sendFailure(Component.literal("Running NekoJS test scripts failed fatally."));
+            return 0;
+        }
+    }
+
+    private static int scheduleClientReload(CommandSourceStack source, ScriptType type,
+                                            NekoRuntimeRoot root, String filePath) {
+        source.sendSystemMessage(Component.literal(filePath == null
+                ? "NekoJS CLIENT reload scheduled on the client thread."
+                : "NekoJS CLIENT script " + filePath + " reload scheduled on the client thread."));
+        FabricClientReloadExecutor.execute(() -> {
+            try {
+                NekoRuntimeRoot.ReloadResult result = filePath == null
+                        ? root.reload(type)
+                        : root.reloadFile(type, java.nio.file.Path.of(filePath));
+                source.getServer().execute(() -> reportReloadResult(source, root, result));
+            } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
+                NekoJS.LOGGER.error("Reloading {} scripts failed", type.name, e);
+                source.getServer().execute(() -> source.sendFailure(Component.literal(
+                        RuntimeCommandResultFormatter.reloadFailure(e.report(), root.isActiveFailed(type)))));
+            } catch (Exception e) {
+                NekoJS.LOGGER.error("Reloading {} scripts failed fatally", type.name, e);
+                source.getServer().execute(() -> source.sendFailure(Component.literal(
+                        "Reloading NekoJS " + type.name + " scripts failed fatally.")));
+            }
+        });
+        return 1;
+    }
+
+    private static int reportReloadResult(CommandSourceStack source, NekoRuntimeRoot root,
+                                          NekoRuntimeRoot.ReloadResult result) {
+        String message = RuntimeCommandResultFormatter.reloadResult(
+                result, root.isActiveFailed(result.type()));
+        if (!result.success()) {
+            source.sendFailure(Component.literal(message));
+            return 0;
+        }
+        sendReloadResult(source, root, message);
         return 1;
     }
 
@@ -182,29 +223,33 @@ public final class FabricNekoJSCommands {
         }
     }
 
-    private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath) {
+    private static int reloadFile(CommandSourceStack source, ScriptType type, String filePath,
+                                  NekoRuntimeRoot root) {
         if (!canReloadHere(source, type)) {
             return 0;
         }
+        if (root == null) {
+            source.sendFailure(Component.literal("NekoJS runtime is not available."));
+            return 0;
+        }
+        if (type == ScriptType.CLIENT && Platform.isClient()) {
+            return scheduleClientReload(source, type, root, filePath);
+        }
         source.sendSystemMessage(Component.literal("Reloading NekoJS " + type.name + " script " + filePath + "..."));
         try {
-            int affectedEntries = root().scriptManagerOf(type).reloadScriptFile(filePath).size();
-            if (type == ScriptType.TEST) {
-                ScriptManager testSm = root().scriptManagerOrNull(ScriptType.TEST);
-                if (testSm != null) {
-                    testSm.flushReadyNodeTimers();
-                }
-            }
-            sendReloadResult(source, "NekoJS " + type.name + " script " + filePath + " reloaded ("
-                    + affectedEntries + " affected entr" + (affectedEntries == 1 ? "y" : "ies") + ").");
+            return reportReloadResult(source, root, root.reloadFile(type, java.nio.file.Path.of(filePath)));
         } catch (Exception e) {
             NekoJS.LOGGER.error("Reloading {} script file {} failed fatally", type.name, filePath, e);
-            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " script file " + filePath + " failed: " + e.getMessage()));
+            source.sendFailure(Component.literal("Reloading NekoJS " + type.name + " script file failed fatally."));
+            return 0;
         }
-        return 1;
     }
 
     private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
+        if (source.getServer() == null) {
+            source.sendFailure(Component.literal("NekoJS lifecycle commands require a server command source."));
+            return false;
+        }
         if (type == ScriptType.CLIENT && !Platform.isClient()) {
             source.sendFailure(Component.literal("Client script reload is only available in an integrated client runtime."));
             return false;
@@ -212,36 +257,25 @@ public final class FabricNekoJSCommands {
         return true;
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> testCommand() {
+    private static LiteralArgumentBuilder<CommandSourceStack> testCommand(Supplier<NekoRuntimeRoot> rootProvider) {
         return Commands.literal("test")
-                .executes(context -> {
-                    CommandSourceStack source = context.getSource();
-                    source.sendSystemMessage(Component.literal("Running NekoJS test scripts..."));
-                    try {
-                        NekoRuntimeRoot root = root();
-                        ScriptManager testSm = root.scriptManagerOrNull(ScriptType.TEST);
-                        if (testSm == null) {
-                            testSm = root.createScriptManager(ScriptType.TEST);
-                        }
-                        testSm.runTestScripts();
-                        sendReloadResult(source, "NekoJS test scripts completed.");
-                    } catch (Exception e) {
-                        NekoJS.LOGGER.error("Running test scripts failed fatally", e);
-                        source.sendFailure(Component.literal("Running test scripts failed fatally."));
-                    }
-                    return 1;
-                });
+                .executes(context -> runTests(context.getSource(), rootProvider.get()));
     }
 
     // ------------------------------------------------------------------
     //  error / view_all_errors（文本降级：错误 UI 与网络面板未移植）
     // ------------------------------------------------------------------
 
-    private static LiteralArgumentBuilder<CommandSourceStack> errorCommand() {
+    private static LiteralArgumentBuilder<CommandSourceStack> errorCommand(Supplier<NekoRuntimeRoot> rootProvider) {
         return Commands.literal("error")
                 .executes(context -> {
                     CommandSourceStack source = context.getSource();
-                    int count = root().errors().count();
+                    NekoRuntimeRoot root = rootProvider.get();
+                    if (root == null) {
+                        source.sendFailure(Component.literal("NekoJS runtime is not available."));
+                        return 0;
+                    }
+                    int count = root.errors().count();
                     if (count > 0) {
                         source.sendFailure(Component.literal(count + " script error(s); use /nekojs view_all_errors to list."));
                     } else {
@@ -251,11 +285,16 @@ public final class FabricNekoJSCommands {
                 });
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> viewAllErrorsCommand() {
+    private static LiteralArgumentBuilder<CommandSourceStack> viewAllErrorsCommand(Supplier<NekoRuntimeRoot> rootProvider) {
         return Commands.literal("view_all_errors")
                 .executes(context -> {
                     CommandSourceStack source = context.getSource();
-                    var errors = root().errors().errors();
+                    NekoRuntimeRoot root = rootProvider.get();
+                    if (root == null) {
+                        source.sendFailure(Component.literal("NekoJS runtime is not available."));
+                        return 0;
+                    }
+                    var errors = root.errors().errors();
                     if (errors.isEmpty()) {
                         source.sendSuccess(() -> Component.translatable("nekojs.command.error.none"), false);
                         return 1;
@@ -269,8 +308,9 @@ public final class FabricNekoJSCommands {
                 });
     }
 
-    private static void sendReloadResult(CommandSourceStack source, String successMessage) {
-        int count = root().errors().count();
+    private static void sendReloadResult(CommandSourceStack source, NekoRuntimeRoot root, String successMessage) {
+        NekoRuntimeRoot.ErrorSnapshot errors = root.errors();
+        int count = errors.count();
         if (count > 0) {
             MutableComponent message = Component.literal(successMessage + " (" + count + " error(s) remain)")
                     .withStyle(style -> style

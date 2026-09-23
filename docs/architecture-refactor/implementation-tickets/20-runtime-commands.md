@@ -4,7 +4,7 @@
 
 **Blocked by:** [19: 脚本包分发 trust 决策、远端包激活与 Fabric WORLD 现状](19-pack-trust.md)
 
-**Status:** in-progress
+**Status:** in-review
 
 **Assignee:** 维护者/执行者：luna-ticket20（pixelstarrysky/gpt-6-luna max）
 
@@ -26,14 +26,22 @@
 
 ## Acceptance criteria
 
-- [ ] NeoForge 与 Fabric 的 /nekojs 生命周期、packs、trust、test 和 error 子命令保持 gamemaster 以上可执行，无权限者得到明确拒绝且不触发 reload。
-- [ ] reload/test 命令只经唯一 root 入口执行，不再读取公开 static root；命令线程按 ScriptType 进入 owner 队列。
-- [ ] 成功 reload 输出类型与提交结果；失败输出 phase/source 摘要并明确 active 已保留或需显式 reload，不把 Throwable 栈直接当用户契约。
-- [ ] active watchdog 隔离后的 reload 命令尝试显式创建 candidate；candidate 失败时仍保持隔离/旧 active 状态，不自动二次恢复。
-- [ ] TEST 未配置、SERVER 命令在客户端侧、CLIENT 命令在专用服务器等边界有稳定错误，不发生半初始化 manager。
-- [ ] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有面板差异保持显式，不新增 dashboard。
-- [ ] packs/trust 命令分别呈现 PACK_TRUST 结果，不改变 pack 启用状态文件或信任决策语义。
-- [ ] 直接 static root 命令助手和重复 reload 结果包装在两 loader fixture 通过后删除；Fabric 独立命令子集在缺失 feature 组闭合前不被强行合并。
+- [ ] NeoForge 与 Fabric 的 /nekojs 生命周期、packs、trust、test 和 error 子命令保持 gamemaster 以上可执行，无权限者得到明确拒绝且不触发 reload。【gap: loader source-trace test and actual permission dispatch were not run】
+- [ ] reload/test 命令只经唯一 root 入口执行，不再读取公开 static root；命令线程按 ScriptType 进入 owner 队列。【gap: Ticket07RuntimeThreadsTest passed in common check; loader source-trace tests were not run】
+- [x] 成功 reload 输出类型与提交结果；失败输出 phase/source 摘要并明确 active 已保留或需显式 reload，不把 Throwable 栈直接当用户契约。【evidence: RuntimeCommandResultFormatterTest (3) and NekoRuntimeRootReloadResultTest (3) passed】
+- [ ] active watchdog 隔离后的 reload 命令尝试显式创建 candidate；candidate 失败时仍保持隔离/旧 active 状态，不自动二次恢复。【gap: Ticket07RuntimeThreadsTest covers active/candidate recovery; loader command integration test was not run】
+- [ ] TEST 未配置、SERVER 命令在客户端侧、CLIENT 命令在专用服务器等边界有稳定错误，不发生半初始化 manager。【evidence partial: unconfigured TEST/no manager creation passed; loader distribution source-trace test was not run】
+- [ ] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有面板差异保持显式，不新增 dashboard。【gap: NetworkRegistrationSourceTraceTest and loader node tests were not run】
+- [x] packs/trust 命令分别呈现 PACK_TRUST 结果，不改变 pack 启用状态文件或信任决策语义。【evidence: ticket 19 closed with pack/trust fixtures; this diff does not change packs/trust command or trust-store behavior】
+- [ ] 直接 static root 命令助手和重复 reload 结果包装在两 loader fixture 通过后删除；Fabric 独立命令子集在缺失 feature 组闭合前不被强行合并。【gap: source-trace fixture added but loader tests were not run】
+
+## Delivery record (2026-09-23)
+
+- Branch: ticket-20-runtime-commands; worktree: D:/mcmodDemo/NekoJS-mult-t20; baseline HEAD: 7a6578ba. Ticket 19 tip e54e365 is an ancestor and its ticket is closed.
+- Passed: ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatterTest --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeRootReloadResultTest (6 tests, 0 failures).
+- Passed: ./gradlew.bat :common:check guardLint (BUILD SUCCESSFUL; includes common isolation and addon fixture gates).
+- Not run: RuntimeCommandLifecycleSourceTraceTest, NekoJSCommandsEditorRemovalTest, 1.21.1/26.x NeoForge command tests, both Fabric node test tasks, verifyFabricRuntimeArtifact, and live command/GameTest smoke. The post-merge owner should run loader node checks.
+- The branch has no wiki/en_us/Error-Reference.md code registry, so no NEKO number was invented. Confirming/adding assigned codes remains a gap. No maintainer sign-off or Human input was authored; status remains in-review.
 
 ## Sources
 

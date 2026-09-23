@@ -108,7 +108,7 @@ public final class NekoJSFabricMod extends NekoJS implements ModInitializer {
         FabricPlayNetwork.registerServer();
         FabricPDataSync.registerServer();
         // /nekojs 指令树（FabricNekoJSCommands，与共享树 NeoForge 版同名同语义的 fabric 子集）
-        FabricNekoJSCommands.registerCallback();
+        FabricNekoJSCommands.registerCallback(NekoJSFabricMod::runtimeRootOrNull);
         initializeWorkspace();
         initializeScripts();
         FabricRegistryAdapter.onInitialize();
