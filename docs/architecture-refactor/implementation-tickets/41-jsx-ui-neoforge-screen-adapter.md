@@ -5,9 +5,11 @@
 **Blocked by:**
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-**Assignee:** unassigned
+**Assignee:** 维护者/执行者：sol-ticket41（pixelstarrysky/gpt-6-sol xhigh）
+
+**Claim record:** branch/worktree `ticket-41-jsx-ui-neoforge-screen-adapter` / `D:\mcmodDemo\NekoJS-mult-t41`; baseline `aa30e82f`; expected write set: NeoForge 26.2 JSX Screen/host Adapter, CLIENT entry binding, pure retained transaction tree, focused test/fixture and evidence only.
 
 **Optional:** false
 
@@ -32,6 +34,14 @@
 - [ ] host Adapter 持有 Minecraft/loader 类型，shared/common author contract 不引入平台类型；脚本侧状态、VNode、host tree 和事件闭包只在 client owner thread 访问。
 - [ ] 节点删除后旧事件闭包不再响应；Screen 关闭、外部替换和重复 cleanup 进入同一释放路径。
 - [ ] NeoForge 26.2 真实客户端 smoke 使用仓库规定 Minecraft MCP 或等价注册 smoke 通道完成；其它节点只记录 `not verified`，不因 common 编译通过而标记支持。
+
+## Implementation evidence and remaining gaps
+
+**Verified:** the pure retained tree has a runnable transaction/cleanup test for failed commit rollback, stale-handle rejection, and close failure retaining nodes until retry. A separate source-trace assertion checks that Screen paint walks committed nodes rather than executing a guest render. NeoForge and Fabric 26.2 compile commands passed after forced recompilation: `:26.2.0:compileJava` and `:26.2.0-fabric:compileJava`.
+
+**Not run:** `minecraft-mod-mcp status` returned `No Minecraft mod detected.` No real 26.2 client smoke was run. `ticket41-screen-flow.tsx` is an authored fixture only; ClientUI → UI.createRoot → bindRoot → open has not been executed. No dedicated-server process/class-loading smoke was run.
+
+**Acceptance remains open:** all checkboxes below are intentionally unchecked. Live first open/paint/input/resize/close/replacement, input cursor/selection/editing, pointer capture/pressed/hover/narration, complete scroll clipping/consumption, owner-thread guest runtime, actual deleted-event closure behavior, and real NeoForge MCP evidence remain gaps. No human acceptance is recorded.
 
 ## Dependency rationale
 

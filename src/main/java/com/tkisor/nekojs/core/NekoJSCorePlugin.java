@@ -26,6 +26,9 @@ import com.tkisor.nekojs.bindings.recipe.MinecraftRecipeHandler;
 import com.tkisor.nekojs.bindings.static_access.BlockJS;
 import com.tkisor.nekojs.bindings.static_access.CapabilitiesJS;
 import com.tkisor.nekojs.bindings.static_access.ColorJS;
+//? if neoforge && >=26 {
+import com.tkisor.nekojs.bindings.static_access.ClientUiJS;
+//?}
 import com.tkisor.nekojs.bindings.static_access.DamageSourceJS;
 import com.tkisor.nekojs.bindings.static_access.DataMapJS;
 import com.tkisor.nekojs.bindings.static_access.FluidJS;
@@ -215,6 +218,9 @@ public class NekoJSCorePlugin implements NekoJSPlugin, com.tkisor.nekojs.core.pl
         registry.register("Component", Component.class);
 
         if (registry.scriptType() == ScriptType.CLIENT) {
+//? if neoforge && >=26 {
+            registry.register("ClientUI", new ClientUiJS());
+//?}
             registry.register("Minecraft", Minecraft.class);
             registry.register("Screen", Screen.class);
             registry.register("Window", Window.class);
