@@ -131,7 +131,12 @@ public final class FabricNekoJSCommands {
         try {
             NekoRuntimeRoot.ReloadResult result = root.reload(type);
             if (type == ScriptType.SERVER) {
-                applyRecipeScripts(source);
+                try {
+                    applyRecipeScripts(source);
+                } catch (Exception postReloadFailure) {
+                    return reportPostReloadFailure(source, root, result,
+                            "recipe processing", postReloadFailure);
+                }
             }
             return reportReloadResult(source, root, result);
         } catch (com.tkisor.nekojs.core.lifecycle.NekoReloadException e) {
@@ -198,6 +203,15 @@ public final class FabricNekoJSCommands {
         return 1;
     }
 
+    private static int reportPostReloadFailure(CommandSourceStack source, NekoRuntimeRoot root,
+                                               NekoRuntimeRoot.ReloadResult result,
+                                               String stage, Exception failure) {
+        reportReloadResult(source, root, result);
+        source.sendFailure(Component.literal(
+                RuntimeCommandResultFormatter.postReloadFailure(result, stage, failure)));
+        return 0;
+    }
+
     private static int reportReloadResult(CommandSourceStack source, NekoRuntimeRoot root,
                                           NekoRuntimeRoot.ReloadResult result) {
         String message = RuntimeCommandResultFormatter.reloadResult(
@@ -248,6 +262,11 @@ public final class FabricNekoJSCommands {
     private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
         if (source.getServer() == null) {
             source.sendFailure(Component.literal("NekoJS lifecycle commands require a server command source."));
+            return false;
+        }
+        if (type == ScriptType.STARTUP) {
+            source.sendFailure(Component.literal(
+                    "STARTUP scripts cannot be reloaded from a runtime command; restart the game/loader."));
             return false;
         }
         if (type == ScriptType.CLIENT && !Platform.isClient()) {

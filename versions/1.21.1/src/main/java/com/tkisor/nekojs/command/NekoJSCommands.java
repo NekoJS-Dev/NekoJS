@@ -228,19 +228,21 @@ public final class NekoJSCommands {
             // SERVER 脚本 reload 后重新应用配方脚本（NeoForge 配方热重载）
             boolean recipeBroadcast = false;
             if (type == ScriptType.SERVER) {
-                recipeBroadcast = applyRecipeScripts(source);
-                // Item/Block 属性修改重放（票 39）：SERVER 事务 reload 的 DOMAIN_PLAN 阶段已把
-                // 修改声明收集为 inert 候选计划（联合预检），commit 点由平台 Adapter 应用——
-                // 命令侧不再 fire；reload 失败时旧 active 修改保留。
-                // 村民交易 flush + 脚本包 data/ 挂载（与 ServerEventListener 的 TagsUpdated 路径同约定）
-                MinecraftServer server = source.getServer();
-                if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
-                    com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
-                }
-                var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
-                if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
-                        && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {
-                    com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
+                try {
+                    recipeBroadcast = applyRecipeScripts(source);
+                    // The SERVER generation is committed before platform-owned follow-up runs.
+                    MinecraftServer server = source.getServer();
+                    if (com.tkisor.nekojs.villager.VillagerTradeManager.pendingCount() > 0) {
+                        com.tkisor.nekojs.villager.VillagerTradeManager.apply(server);
+                    }
+                    var packs = com.tkisor.nekojs.core.pack.ScriptPackRegistry.get().enabledPacks();
+                    if (com.tkisor.nekojs.resource.ScriptPackDataManager.hasDataPacks(packs)
+                            && com.tkisor.nekojs.resource.ScriptPackDataManager.activateForServer(server, packs)) {
+                        com.tkisor.nekojs.resource.ScriptPackDataManager.reloadServerResources(server);
+                    }
+                } catch (Exception postReloadFailure) {
+                    return reportPostReloadFailure(source, root, reloadResult,
+                            "recipe/pack processing", postReloadFailure);
                 }
             }
             // Recipe reload has its own broadcast; report the committed generation as well.
@@ -317,6 +319,15 @@ public final class NekoJSCommands {
         return 1;
     }
 
+    private static int reportPostReloadFailure(CommandSourceStack source, NekoRuntimeRoot root,
+                                               NekoRuntimeRoot.ReloadResult result,
+                                               String stage, Exception failure) {
+        reportReloadResult(source, root, result);
+        source.sendFailure(Component.literal(
+                RuntimeCommandResultFormatter.postReloadFailure(result, stage, failure)));
+        return 0;
+    }
+
     private static int reportReloadResult(CommandSourceStack source, NekoRuntimeRoot root,
                                           NekoRuntimeRoot.ReloadResult result) {
         String message = RuntimeCommandResultFormatter.reloadResult(
@@ -369,6 +380,11 @@ public final class NekoJSCommands {
     private static boolean canReloadHere(CommandSourceStack source, ScriptType type) {
         if (source.getServer() == null) {
             source.sendFailure(Component.literal("NekoJS lifecycle commands require a server command source."));
+            return false;
+        }
+        if (type == ScriptType.STARTUP) {
+            source.sendFailure(Component.literal(
+                    "STARTUP scripts cannot be reloaded from a runtime command; restart the game/loader."));
             return false;
         }
         if (type == ScriptType.CLIENT && !Platform.isClient()) {

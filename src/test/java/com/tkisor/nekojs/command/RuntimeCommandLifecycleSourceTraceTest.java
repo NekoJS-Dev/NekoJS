@@ -47,6 +47,9 @@ class RuntimeCommandLifecycleSourceTraceTest {
         assertTrue(modernNeoForge.contains("Commands.LEVEL_GAMEMASTERS.check(source.permissions())"));
         assertTrue(legacyNeoForge.contains("source.hasPermission(2)"));
         assertTrue(fabric.contains("Commands.LEVEL_GAMEMASTERS.check(source.permissions())"));
+        assertTrue(modernNeoForge.contains("new ShowErrorListPacket"));
+        assertTrue(fabric.contains("script error(s); use /nekojs view_all_errors"));
+        assertFalse(fabric.contains("ShowErrorListPacket"), "Fabric must keep its text-only error surface");
 
         for (Path path : commandFiles) {
             String source = read(path);
@@ -92,5 +95,36 @@ class RuntimeCommandLifecycleSourceTraceTest {
             assertTrue(read(path).contains("source.getServer() == null"),
                     path + " must reject lifecycle commands without a server command source");
         }
+    }
+
+    @Test
+    void startupCommandsAreRejectedAndPostCommitFailuresKeepCommitEvidence() {
+        Path root = repoRoot();
+        for (Path path : List.of(root.resolve("src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
+                root.resolve("versions/1.21.1/src/main/java/com/tkisor/nekojs/command/NekoJSCommands.java"),
+                root.resolve("src/fabric/java/com/tkisor/nekojs/fabric/FabricNekoJSCommands.java"))) {
+            String source = read(path);
+            assertTrue(source.contains("if (type == ScriptType.STARTUP)"),
+                    path + " must refuse STARTUP reload outside its initialization owner");
+            assertTrue(source.contains("restart the game/loader"),
+                    path + " must tell the operator why STARTUP reload was rejected");
+            int reloadCommit = source.indexOf("root.reload(type)");
+            int postFailureCatch = source.indexOf("catch (Exception postReloadFailure)");
+            assertTrue(reloadCommit >= 0 && postFailureCatch > reloadCommit,
+                    path + " must catch post-commit exceptions after root reload returns");
+            int postFailureReporter = source.indexOf("private static int reportPostReloadFailure");
+            int committedResult = source.indexOf("reportReloadResult(source, root, result)", postFailureReporter);
+            assertTrue(source.contains("reportPostReloadFailure(source, root"),
+                    path + " must route post-commit exceptions to a separate result");
+            assertTrue(postFailureReporter >= 0 && committedResult > postFailureReporter,
+                    path + " must report the committed reload result before its follow-up failure");
+            assertTrue(source.contains("STARTUP scripts cannot be reloaded from a runtime command"),
+                    path + " must explicitly refuse command-thread STARTUP reload");
+        }
+
+        String formatter = read(root.resolve(
+                "common/src/main/java/com/tkisor/nekojs/core/lifecycle/RuntimeCommandResultFormatter.java"));
+        assertTrue(formatter.contains("public static String postReloadFailure"));
+        assertTrue(formatter.contains("reload committed (generation="));
     }
 }

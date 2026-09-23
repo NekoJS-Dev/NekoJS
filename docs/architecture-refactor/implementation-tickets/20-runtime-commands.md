@@ -26,22 +26,24 @@
 
 ## Acceptance criteria
 
-- [ ] NeoForge 与 Fabric 的 /nekojs 生命周期、packs、trust、test 和 error 子命令保持 gamemaster 以上可执行，无权限者得到明确拒绝且不触发 reload。【gap: five-node source-trace passed; live permission dispatch and no-reload-on-denial remain untested】
+- [ ] NeoForge 与 Fabric 的 /nekojs 生命周期、packs、trust、test 和 error 子命令保持 gamemaster 以上可执行，无权限者得到明确拒绝且不触发 reload。【gap: existing .requires hides the command without an explicit denial message; live unauthorized dispatch/no-reload behavior remains unverified】
 - [ ] reload/test 命令只经唯一 root 入口执行，不再读取公开 static root；命令线程按 ScriptType 进入 owner 队列。【evidence partial: Ticket07RuntimeThreadsTest passed in common check; five-node loader source-trace passed; no live owner-thread command dispatch smoke】
-- [ ] 成功 reload 输出类型与提交结果；失败输出 phase/source 摘要并明确 active 已保留或需显式 reload，不把 Throwable 栈直接当用户契约。【evidence partial: formatter/root tests (6) passed; review found NeoForge recipe/pack post-processing may throw after root.reload already committed, yet the command reports reload failure】
-- [ ] active watchdog 隔离后的 reload 命令尝试显式创建 candidate；candidate 失败时仍保持隔离/旧 active 状态，不自动二次恢复。【gap: Ticket07RuntimeThreadsTest covers active/candidate recovery and five-node loader source-trace passed; live command recovery was not run】
+- [ ] 成功 reload 输出类型与提交结果；失败输出 phase/source 摘要并明确 active 已保留或需显式 reload，不把 Throwable 栈直接当用户契约。【evidence partial: seven focused formatter/root tests and five-node source trace pass, including committed-generation reporting after post-commit recipe/pack errors; no live command dispatch smoke】
+- [ ] active watchdog 隔离后的 reload 命令尝试显式创建 candidate；candidate 失败时仍保持隔离/旧 active 状态，不自动二次恢复。【evidence partial: Ticket07RuntimeThreadsTest covers active/candidate recovery and five-node loader source-trace passed; live command recovery was not run】
 - [ ] TEST 未配置、SERVER 命令在客户端侧、CLIENT 命令在专用服务器等边界有稳定错误，不发生半初始化 manager。【evidence partial: unconfigured TEST/no manager creation and five-node distribution source-trace passed; live wrong-distribution command was not run】
-- [ ] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有面板差异保持显式，不新增 dashboard。【gap: five-node loader command source-trace passed; packet/error UI runtime and NetworkRegistrationSourceTraceTest were not run】
+- [ ] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有错误面差异保持显式，不新增 dashboard。【evidence partial: five-node loader command source-trace passed; packet/error UI runtime and NetworkRegistrationSourceTraceTest were not run】
 - [x] packs/trust 命令分别呈现 PACK_TRUST 结果，不改变 pack 启用状态文件或信任决策语义。【evidence: ticket 19 closed with pack/trust fixtures; this diff does not change packs/trust command or trust-store behavior】
 - [ ] 直接 static root 命令助手和重复 reload 结果包装在两 loader fixture 通过后删除；Fabric 独立命令子集在缺失 feature 组闭合前不被强行合并。【evidence partial: five-node source-trace passed; live command route and deletion parity were not observed】
-
 ## Delivery record (2026-09-23)
 
-- Branch: ticket-20-runtime-commands; worktree: D:/mcmodDemo/NekoJS-mult-t20; baseline HEAD: 7a6578ba. Ticket 19 tip e54e365 is an ancestor and its ticket is closed.
-- Passed: ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatterTest --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeRootReloadResultTest (6 tests, 0 failures).
+- Follow-up branch: ticket-20-runtime-commands; worktree: D:/mcmodDemo/NekoJS-mult-t20; follow-up baseline: 0c644531. Ticket 19 tip e54e365 remains an ancestor and its ticket is closed.
+- Fixed review gaps: STARTUP reload is refused by both NeoForge twins and Fabric because command threads do not own the initialization lifecycle; recipe/pack follow-up errors now report the committed generation separately in both NeoForge twins and Fabric.
+- Passed: ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.lifecycle.RuntimeCommandResultFormatterTest --tests com.tkisor.nekojs.core.lifecycle.NekoRuntimeRootReloadResultTest (7 tests, 0 failures).
+- Passed: five-node RuntimeCommandLifecycleSourceTraceTest on 1.21.1, 26.1.2, 26.2.0, 26.1.2-fabric, 26.2.0-fabric; both verifyFabricRuntimeArtifact tasks passed.
 - Passed: ./gradlew.bat :common:check guardLint (BUILD SUCCESSFUL; includes common isolation and addon fixture gates).
-- Passed after merge on `mult` (`10548798`): `./gradlew.bat :26.1.2:test :1.21.1:test :26.1.2-fabric:test :26.2.0-fabric:test --tests "*RuntimeCommandLifecycleSourceTraceTest" --tests "*NekoJSCommandsEditorRemovalTest"` (BUILD SUCCESSFUL); `./gradlew.bat :26.1.2-fabric:verifyFabricRuntimeArtifact :26.2.0-fabric:verifyFabricRuntimeArtifact :26.2.0:test --tests "*RuntimeCommandLifecycleSourceTraceTest"` (BUILD SUCCESSFUL). These commands verify the command source trace on all five nodes and the editor-removal fixture on the four named nodes, plus both Fabric artifacts; they do not exercise live permission dispatch or client UI.
-- Review follow-up: NeoForge STARTUP command reload reaches root.reload on the command thread, post-commit recipe/pack failures are reported as reload failure, and gamemaster `.requires` hides the command without an explicit denial result. These require runtime/command regression evidence before closure. The branch has no wiki/en_us/Error-Reference.md code registry, so no NEKO number was invented. No maintainer sign-off or Human input was authored; status remains in-review.
+- Earlier attempted editor-removal verification failed during Permission static initialization because the fixture does not bootstrap the Minecraft command registry; the unrelated fixture was left unchanged.
+- Remaining gaps: .requires still hides unauthorized commands without an explicit denial message, and no live permission dispatch or GameTest command smoke was run. NetworkRegistrationSourceTraceTest was not run.
+- The branch has no wiki/en_us/Error-Reference.md code registry, so no NEKO number was invented. Human input remains none; no maintainer sign-off was authored, and status remains in-review.
 
 ## Sources
 

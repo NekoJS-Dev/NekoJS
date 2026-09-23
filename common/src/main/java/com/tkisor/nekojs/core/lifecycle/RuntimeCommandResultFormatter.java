@@ -41,6 +41,12 @@ public final class RuntimeCommandResultFormatter {
                 : "; candidate was discarded and the active generation remains unchanged.");
     }
 
+    public static String postReloadFailure(NekoRuntimeRoot.ReloadResult result, String stage, Throwable failure) {
+        return "NekoJS " + result.type().name + " reload committed (generation=" + result.generation()
+                + " phase=" + result.phase() + "); post-reload " + stage + " failed"
+                + (failure == null ? "." : ": " + failure);
+    }
+
     public static String testResult(NekoRuntimeRoot.TestRunResult result) {
         if (!result.isConfigured()) {
             return "NekoJS TEST scripts are not configured.";

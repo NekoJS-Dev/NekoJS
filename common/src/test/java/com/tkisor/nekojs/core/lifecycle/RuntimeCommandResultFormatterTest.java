@@ -42,6 +42,19 @@ class RuntimeCommandResultFormatterTest {
     }
 
     @Test
+    void postCommitFailureKeepsTheCommittedGenerationExplicit() {
+        var committed = new NekoRuntimeRoot.ReloadResult(
+                ScriptType.SERVER, true, null, 12, ReloadPhase.COMMIT, null);
+
+        String message = RuntimeCommandResultFormatter.postReloadFailure(committed, "recipe/pack processing",
+                new IllegalStateException("resource follow-up error"));
+        assertTrue(message.contains("server reload committed (generation=12 phase=COMMIT)"));
+        assertTrue(message.contains("post-reload recipe/pack processing failed"));
+        assertTrue(message.contains("IllegalStateException: resource follow-up error"));
+        assertFalse(message.startsWith("reload failed"));
+    }
+
+    @Test
     void testRunDistinguishesUnconfiguredFromCompleted() {
         assertTrue(RuntimeCommandResultFormatter.testResult(NekoRuntimeRoot.TestRunResult.notConfigured())
                 .contains("not configured"));
