@@ -36,7 +36,7 @@
 - Profile rule: safe-area-adjusted content dimensions choose the minimum width/height tier; exact thresholds are deterministic, lower tier wins ties, `maxProfile` caps the result, and `guiScale` is metadata/input only. Profile overrides resolve exact profile, then lower profiles, then `base`; malformed keys/values fail at the common boundary.
 - Fake evidence: `ui-core.tsx` covers all six boundaries, overrides, percentage/min/max, direction/spacing/padding, stack/anchor, scroll/clip, visibility/font-size, final rectangles/clips/overflow, resize without render/host rebuild, cross-Fragment duplicate keys, close commit failure/retry, and two queued `update(v => v + 1)` calls that produce `+2` only after owner flush.
 - Passed: `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoTypeScriptJsxRuntimeTest --tests com.tkisor.nekojs.core.compiler.NodeModuleTypeDocsTest`; `./gradlew.bat :common:check guardLint`; `git diff --check`.
-- Not run: `npm run test:probe-types` (no tsc executable was available), golden regeneration/review, real NeoForge 26.2 resize smoke, and maintainer acceptance. No golden files were changed.
+- Passed after `npm ci`: `npm run test:probe-types` (TypeScript 5.8.3, exit 0). Not run: golden regeneration/review, real NeoForge 26.2 resize smoke, and maintainer acceptance. No golden files were changed.
 - Shared runtime hardening included in this ticket: cross-Fragment sibling-key rejection, retry-safe close on Adapter commit failure, and owner-thread-first signal updater execution. These are common-runtime evidence only and do not sign or close ticket 40.
 
 ## Dependency rationale

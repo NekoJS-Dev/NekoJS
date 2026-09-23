@@ -34,6 +34,7 @@
 - [ ] 错误命令只展示 root ErrorSnapshot/阶段结果；Fabric 文本降级与 NeoForge 现有错误面差异保持显式，不新增 dashboard。【evidence partial: five-node loader command source-trace passed; packet/error UI runtime and NetworkRegistrationSourceTraceTest were not run】
 - [x] packs/trust 命令分别呈现 PACK_TRUST 结果，不改变 pack 启用状态文件或信任决策语义。【evidence: ticket 19 closed with pack/trust fixtures; this diff does not change packs/trust command or trust-store behavior】
 - [ ] 直接 static root 命令助手和重复 reload 结果包装在两 loader fixture 通过后删除；Fabric 独立命令子集在缺失 feature 组闭合前不被强行合并。【evidence partial: five-node source-trace passed; live command route and deletion parity were not observed】
+
 ## Delivery record (2026-09-23)
 
 - Follow-up branch: ticket-20-runtime-commands; worktree: D:/mcmodDemo/NekoJS-mult-t20; follow-up baseline: 0c644531. Ticket 19 tip e54e365 remains an ancestor and its ticket is closed.
