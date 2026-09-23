@@ -7,9 +7,11 @@
 - [09: Managed Surface 单一规范源与声明/Probe 派生链](09-managed-surface.md)
 - [12: TS/JSX/TSX 编译、source map 与执行行为路径](12-language-ts.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** 维护者/执行者：luna-ticket40（pixelstarrysky/gpt-6-luna max）
+
+**Claim record (2026-09-22):** branch `ticket-40-jsx-ui-common-core`, worktree `../NekoJS-mult-t40`. Expected write set: ticket 40, common JSX UI core/runtime and fake-host tests, normative surface/declaration/Probe derivation and example/evidence; no `/nekojs` command entry points.
 
 **Optional:** false
 

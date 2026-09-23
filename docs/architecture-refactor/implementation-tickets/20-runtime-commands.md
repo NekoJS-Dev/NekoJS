@@ -4,9 +4,11 @@
 
 **Blocked by:** [19: 脚本包分发 trust 决策、远端包激活与 Fabric WORLD 现状](19-pack-trust.md)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
-**Assignee:** unassigned
+**Assignee:** 维护者/执行者：luna-ticket20（pixelstarrysky/gpt-6-luna max）
+
+**Claim record (2026-09-22):** branch `ticket-20-runtime-commands`, worktree `../NekoJS-mult-t20`. Expected write set: ticket 20, `/nekojs` command entry points for both loaders, shared lifecycle result formatting and focused command tests/evidence; no JSX UI core files.
 
 **Optional:** false
 
