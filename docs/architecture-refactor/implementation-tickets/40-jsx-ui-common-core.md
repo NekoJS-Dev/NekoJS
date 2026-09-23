@@ -38,7 +38,7 @@
 - Passed: ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.compiler.NodeModuleTypeDocsTest --tests com.tkisor.nekojs.core.module.NekoTypeScriptJsxRuntimeTest (BUILD SUCCESSFUL).
 - Passed: ./gradlew.bat :common:test --tests com.tkisor.nekojs.core.api.ApiManifestGoldenTest --tests com.tkisor.nekojs.probe.ProbeOutputCompatibilityTest --tests com.tkisor.nekojs.core.plugin.NekoCommonBuiltinPluginTest (BUILD SUCCESSFUL).
 - Passed: ./gradlew.bat :common:check guardLint (BUILD SUCCESSFUL; common isolation and addon gates included).
-- Not run: npm run test:probe-types because the worktree has no tsc executable; no golden regeneration was performed. NeoForge Screen, client reload, live Minecraft smoke and maintainer golden review remain owned by later tickets/human gates.
+- Passed after merge on `mult`: `npm ci` followed by `npm run test:probe-types` (TypeScript 5.8.3, exit 0). No golden regeneration was performed. NeoForge Screen, client reload, live Minecraft smoke and maintainer golden review remain owned by later tickets/human gates.
 - No Minecraft/loader dependency entered common. No Human input or maintainer sign-off was authored; this status records technical closure only.
 
 ## Dependency rationale
