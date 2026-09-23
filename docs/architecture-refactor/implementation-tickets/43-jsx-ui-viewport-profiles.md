@@ -5,9 +5,11 @@
 **Blocked by:**
 - [40: JSX UI common core、公开契约与 Fake Host Proof](40-jsx-ui-common-core.md)
 
-**Status:** ready-for-agent
+**Status:** in-review
 
-**Assignee:** unassigned
+**Assignee:** 维护者/执行者：sol-ticket43（pixelstarrysky/gpt-6-sol xhigh）
+
+**Claim record (2026-09-22):** branch `ticket-43-jsx-ui-viewport-profiles`, worktree `D:\mcmodDemo\NekoJS-mult-t43`, baseline `aa30e82f`. Expected write set: ticket 43 metadata/acceptance, common public viewport/layout contract and implementation, fake Adapter fixtures/golden evidence, focused common tests; no NeoForge Screen/input, visual assets, Inspector, or web conversion.
 
 **Optional:** false
 
@@ -19,12 +21,23 @@
 
 ## Acceptance criteria
 
-- [ ] Profile 1–6 的判定规则、边界、优先级、tie-break 和可观察输出进入公开 contract；不把 Minecraft GUI scale 数字等同 Profile，只允许原生 scale 作为输入之一。
-- [ ] 基础值与 profile 覆盖值的解析顺序、缺省回退、非法 profile、非法比例和 min/max 裁剪规则固定，并由 fake Adapter golden 覆盖。
-- [ ] row/column、stack、scroll、spacing、padding、align、anchor、可见性和文本规格可按 profile 覆盖；窄屏/宽屏重排不需要每个属性重复填写六遍。
-- [ ] 设计坐标、逻辑像素和连续比例可共存；文本字号和可读性相关属性不被强制整体等比无限缩放。
-- [ ] resize/profile 切换只使布局失效并重新 measure/arrange，不重新执行 GraalJS render 或重建全部 host node；稳定输出包含最终矩形、裁剪和溢出诊断。
-- [ ] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。
+- [x] Profile 1–6 的判定规则、边界、优先级、tie-break 和可观察输出进入公开 contract；不把 Minecraft GUI scale 数字等同 Profile，只允许原生 scale 作为输入之一。【evidence: `UI.profileFor` uses post-safe-area content width/height tiers (320/480/640/854/1280 and 180/240/360/480/720), selects the lower axis tier as the tie-break, then applies `maxProfile`; fixture asserts six boundaries, GUI-scale independence, capability cap, zero rejection】
+- [ ] 基础值与 profile 覆盖值的解析顺序、缺省回退、非法 profile、非法比例和 min/max 裁剪规则固定，并由 fake Adapter golden 覆盖。【evidence: deterministic fake fixture covers profile fallback, invalid values, percentage/min/max and diagnostics; no golden file was regenerated or maintainer-reviewed in this ticket】【evidence: profile override resolution checks exact profile then lower profile then base; invalid profile keys and finite/positive viewport inputs fail; fixture observes base/profile percentage, min/max, overflow and invalid-profile/responsive-minmax diagnostics】
+- [x] row/column、stack、scroll、spacing、padding、align、anchor、可见性和文本规格可按 profile 覆盖；窄屏/宽屏重排不需要每个属性重复填写六遍。【evidence: deterministic fake layout snapshot asserts responsive row direction/gap, stack anchor, scroll offset/clipping, padding, profile visibility and text-size override】
+- [x] 设计坐标、逻辑像素和连续比例可共存；文本字号和可读性相关属性不被强制整体等比无限缩放。【evidence: public viewport contract exposes logical/design coordinate spaces and design scale; resolver accepts logical percentages and design dimensions; fake snapshot keeps font-size as an explicit profile value】
+- [x] resize/profile 切换只使布局失效并重新 measure/arrange，不重新执行 GraalJS render 或重建全部 host node；稳定输出包含最终矩形、裁剪和溢出诊断。【evidence: fake Adapter records layout snapshot, final rect/clip/overflow; two resize calls increment layout only, with unchanged render and commit counts】
+- [ ] 六个 profile 均有稳定 fake 输出；真实 NeoForge 26.2 resize smoke 在 41 完成后补入同一公开 contract，不用私有 widget 布局作为断言。【not run: real NeoForge 26.2 resize smoke is owned by ticket 41/client evidence; no human sign-off is authored here】
+
+
+## Delivery record (2026-09-23)
+
+- Status: `in-review`; AC1 and AC3–AC5 are technically evidenced above. AC2 remains unchecked pending a maintainer-reviewed golden; AC6 remains unchecked because real NeoForge 26.2 resize smoke was not run.
+- Public contract: `NekoUiProfile`, `NekoUiViewportInput`, `NekoUiViewport`, responsive props, `NekoUiLayoutSnapshot`, `NekoUiRootHandle.resize/layout`, and optional Adapter text measurement are sourced from `common/src/main/resources/nekojs/node/modules/jsx-runtime.ts`; declarations remain auto-extracted from that source.
+- Profile rule: safe-area-adjusted content dimensions choose the minimum width/height tier; exact thresholds are deterministic, lower tier wins ties, `maxProfile` caps the result, and `guiScale` is metadata/input only. Profile overrides resolve exact profile, then lower profiles, then `base`; malformed keys/values fail at the common boundary.
+- Fake evidence: `ui-core.tsx` covers all six boundaries, overrides, percentage/min/max, direction/spacing/padding, stack/anchor, scroll/clip, visibility/font-size, final rectangles/clips/overflow, resize without render/host rebuild, cross-Fragment duplicate keys, close commit failure/retry, and two queued `update(v => v + 1)` calls that produce `+2` only after owner flush.
+- Passed: `./gradlew.bat :common:test --tests com.tkisor.nekojs.core.module.NekoTypeScriptJsxRuntimeTest --tests com.tkisor.nekojs.core.compiler.NodeModuleTypeDocsTest`; `./gradlew.bat :common:check guardLint`; `git diff --check`.
+- Not run: `npm run test:probe-types` (no tsc executable was available), golden regeneration/review, real NeoForge 26.2 resize smoke, and maintainer acceptance. No golden files were changed.
+- Shared runtime hardening included in this ticket: cross-Fragment sibling-key rejection, retry-safe close on Adapter commit failure, and owner-thread-first signal updater execution. These are common-runtime evidence only and do not sign or close ticket 40.
 
 ## Dependency rationale
 

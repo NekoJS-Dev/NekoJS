@@ -12,6 +12,7 @@ function makeHost() {
   let acceptingQueue = true;
   let queue = [];
   const diagnostics = [];
+  let layoutSnapshot = null;
   const counts = { commits: 0, rollbacks: 0, layouts: 0 };
   const host = {
     failLayout: false,
@@ -25,10 +26,11 @@ function makeHost() {
       return true;
     },
     supportsPrimitive: type => type !== host.unsupportedPrimitive && UI.primitives().includes(type),
-    layout: tree => {
+    layout: (tree, viewport, snapshot) => {
       counts.layouts++;
       if (host.failLayout) throw new Error('fake layout failure');
       check(Object.isFrozen(tree), 'layout receives an immutable candidate');
+      if (snapshot != null) layoutSnapshot = snapshot;
     },
     reportDiagnostic: diagnostic => diagnostics.push(diagnostic),
     begin: () => {
@@ -70,6 +72,7 @@ function makeHost() {
       };
     },
     snapshot: () => roots.map(id => snapshotNode(id)),
+    layoutSnapshot: () => layoutSnapshot,
     findById: id => findNode(roots, id),
     lastPhase: () => diagnostics.length === 0 ? null : diagnostics[diagnostics.length - 1].phase,
     diagnosticCount: () => diagnostics.length,
@@ -115,12 +118,23 @@ inputProps.data.value = 2;
 check(Object.isFrozen(snapshotVNode.props) && snapshotVNode.props.data.value === 1, 'VNode props are immutable snapshots');
 check(snapshotVNode.key === 'snapshot-key', 'automatic runtime preserves keys');
 check(UI.primitives().join(',') === 'screen,panel,row,column,stack,scroll,label,button,input,image,spacer', 'primitive registry is complete');
+const profileWidths = [100, 320, 480, 640, 854, 1280];
+const profileHeights = [100, 180, 240, 360, 480, 720];
+const selectedProfiles = profileWidths.map((width, index) => UI.profileFor({ width, height: profileHeights[index] }));
+check(selectedProfiles.join(',') === '1,2,3,4,5,6', 'logical viewport boundaries select all six profiles');
+check(UI.profileFor({ width: 1280, height: 720, guiScale: 1 }) === 6, 'GUI scale does not replace logical viewport selection');
+check(UI.profileFor({ width: 1280, height: 720, capabilities: { maxProfile: 3 } }) === 3, 'capability maxProfile caps selection');
+check(UI.resolveViewport({ width: 1280, height: 720, designWidth: 640, designHeight: 360 }).designScale === 2, 'design coordinates expose a controlled scale');
+let invalidViewport = false;
+try { UI.profileFor({ width: 0, height: 180 }); } catch (_) { invalidViewport = true; }
+check(invalidViewport, 'zero viewport is rejected');
 
 const host = makeHost();
 const mode = UI.createSignal('good');
 const useAlternate = UI.createSignal(false);
 const primary = UI.createSignal('primary');
 const alternate = UI.createSignal('alternate');
+const updateProbe = UI.createSignal(0);
 const store = UI.createStore({ items: ['a', 'b'] });
 let renders = 0;
 let handlerVersion = 1;
@@ -145,15 +159,29 @@ function render() {
   }
   if (currentMode === 'unknown-primitive') return UI.element('screen', { children: UI.element('div', {}) });
   if (currentMode === 'invalid-prop') return UI.element('screen', { children: UI.element('label', { unsupported: 'no' }) });
+  if (currentMode === 'invalid-profile') return UI.element('screen', { children: UI.element('label', { width: { base: 10, profiles: { 7: 20 } } }) });
+  if (currentMode === 'responsive-minmax') return UI.element('screen', { children: UI.element('panel', { width: '50%', minWidth: { base: 20, profiles: { 6: 200 } }, maxWidth: { base: 100, profiles: { 6: 100 } } }) });
   if (currentMode === 'duplicate-key') {
     return UI.element('screen', { children: UI.element('row', { children: [Item({ item: 'x' }), Item({ item: 'x' })] }) });
   }
+  if (currentMode === 'fragment-duplicate-key') {
+    const keyed = () => UI.element('button', { children: 'same' }, 'same');
+    return UI.element('screen', { children: UI.element('row', { children: [
+      UI.element(UI.fragment, { children: keyed() }),
+      UI.element(UI.fragment, { children: keyed() })
+    ] }) });
+  }
   const visibleValue = useAlternate.get() ? alternate.get() : primary.get();
+  updateProbe.get();
   const currentHandler = handlerVersion;
   const items = store.get('items');
   const children = [
-    UI.element('row', { id: 'items', gap: 4, children: items.map(item => UI.element(Item, { item }, item)) }),
-    UI.element('label', { id: 'value', children: String(visibleValue) }),
+    UI.element('row', { id: 'items', gap: { base: 4, profiles: { 1: 2 } }, direction: { base: 'row', profiles: { 1: 'column' } }, children: items.map(item => UI.element(Item, { item }, item)) }),
+    UI.element('panel', { id: 'probe', width: { base: '50%', profiles: { 6: '25%' } }, height: { base: 60, profiles: { 6: 80 } }, minWidth: { base: 80, profiles: { 6: 120 } }, maxWidth: { base: 90, profiles: { 6: 400 } }, padding: { base: 4, profiles: { 6: 8 } }, children: UI.element('label', { id: 'probe-text', width: '120%' }, 'probe') }),
+    UI.element('stack', { id: 'stack-probe', width: 100, height: 50, children: UI.element('spacer', { id: 'anchor-probe', width: 20, height: 10, anchor: 'bottomRight' }) }),
+    UI.element('scroll', { id: 'scroll-probe', width: 100, height: 30, scrollOffset: { base: 0, profiles: { 6: 12 } }, children: UI.element('spacer', { id: 'scroll-child', width: 100, height: 40 }) }),
+    UI.element('label', { id: 'hidden-probe', visible: { base: true, profiles: { 6: false } }, children: 'hidden' }),
+    UI.element('label', { id: 'value', fontSize: { base: 9, profiles: { 6: 12 } }, children: String(visibleValue) }),
     UI.element('label', { id: 'conditional', children: currentMode === 'good' ? 'ready' : currentMode }),
     UI.element('button', { id: 'replace-event', children: 'Replace', onClick: () => eventCalls.push(currentHandler) }),
     UI.element('button', { id: 'bad-event', children: 'Bad', onClick: () => { badEventCalls.push('called'); throw new Error('event failure'); } }),
@@ -166,6 +194,27 @@ const root = UI.createRoot(render, host, { id: 'ticket40-root' });
 check(root.id === 'ticket40-root' && host.snapshot()[0].type === 'screen', 'initial tree commits through the public host contract');
 const keyedA = host.findById('item-a');
 const keyedB = host.findById('item-b');
+const initialProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'probe');
+check(initialProbe != null && initialProbe.rect.width === 90, 'base profile applies percentage and max width');
+const initialLayouts = host.counts().layouts;
+const initialRenders = renders;
+const initialCommits = host.counts().commits;
+check(root.resize({ width: 480, height: 240 }) === true, 'resize recomputes layout');
+check(host.layoutSnapshot().profile === 3, 'resize selects profile three');
+check(renders === initialRenders && host.counts().commits === initialCommits, 'resize does not render or rebuild host nodes');
+check(host.counts().layouts === initialLayouts + 1, 'resize performs one layout pass');
+check(root.resize({ width: 1280, height: 720 }) === true && host.layoutSnapshot().profile === 6, 'resize reaches profile six');
+const probe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'probe');
+check(probe != null && probe.rect.width === 320, 'profile layout applies percentage and max width');
+check(probe.children[0].overflow.right > 0, 'layout output exposes clipping overflow');
+const stackProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'stack-probe');
+check(stackProbe.children[0].rect.x > stackProbe.rect.x && stackProbe.children[0].rect.y > stackProbe.rect.y, 'stack anchor arranges the child');
+const scrollProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'scroll-probe');
+check(scrollProbe.style.scrollOffset === 12 && scrollProbe.children[0].overflow.top > 0, 'scroll profile override clips offset content');
+const hiddenProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'hidden-probe');
+check(hiddenProbe.visible === false && hiddenProbe.rect.width === 0, 'profile visibility hides a node');
+const valueProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'value');
+check(valueProbe.style.fontSize === 12, 'profile text size override is observable');
 store.set('items', ['b', 'a', 'c']);
 check(host.findById('item-a') === keyedA && host.findById('item-b') === keyedB, 'keyed reorder retains host identity');
 check(host.snapshot()[0].children[0].children.map(node => node.key).join(',') === 'b,a,c', 'children reorder in the committed tree');
@@ -192,10 +241,21 @@ check(alternate.get() === 'batch-two' && renders === beforeQueue, 'queued writes
 host.flush();
 check(alternate.get() === 'queued' && renders === beforeQueue + 1, 'queued writes run on the owner thread');
 host.setOwner(false);
+let updateCalls = 0;
+check(updateProbe.update(value => { updateCalls++; return value + 1; }) === 'queued', 'off-thread updater reports queueing');
+check(updateProbe.update(value => { updateCalls++; return value + 1; }) === 'queued', 'a second updater also queues');
+check(updateCalls === 0 && updateProbe.get() === 0, 'off-thread updaters do not run or mutate early');
+host.flush();
+check(updateCalls === 2 && updateProbe.get() === 2, 'queued updaters run twice with the latest owner value');
+host.setOwner(false);
 host.rejectQueue(true);
 let rejected = false;
 try { alternate.set('rejected'); } catch (_) { rejected = true; }
+let rejectedUpdateCalls = 0;
+let rejectedUpdate = false;
+try { updateProbe.update(value => { rejectedUpdateCalls++; return value + 1; }); } catch (_) { rejectedUpdate = true; }
 check(rejected && alternate.get() === 'queued', 'rejected off-thread writes leave state unchanged');
+check(rejectedUpdate && rejectedUpdateCalls === 0 && updateProbe.get() === 2, 'rejected updater never runs');
 host.setOwner(true);
 host.rejectQueue(false);
 
@@ -203,7 +263,8 @@ const stableTree = () => JSON.stringify(host.snapshot());
 const beforeInvalid = stableTree();
 for (const [value, phase] of [
   ['render-error', 'render'], ['component-error', 'component'], ['layout-error', 'layout'],
-  ['unknown-primitive', 'layout'], ['invalid-prop', 'layout'], ['duplicate-key', 'layout']
+  ['unknown-primitive', 'layout'], ['invalid-prop', 'layout'], ['invalid-profile', 'layout'],
+  ['responsive-minmax', 'layout'], ['duplicate-key', 'layout'], ['fragment-duplicate-key', 'layout']
 ]) {
   mode.set(value);
   check(host.lastPhase() === phase && stableTree() === beforeInvalid, phase + ' failure keeps the active tree');
@@ -244,6 +305,9 @@ host.failCommit = false;
 root.refresh();
 
 const commitsBeforeClose = host.counts().commits;
+host.failCommit = true;
+check(root.close() === false && !root.isDisposed() && host.snapshot().length > 0, 'failed close retains active host tree for retry');
+host.failCommit = false;
 check(root.close() === true && root.close() === false, 'close is idempotent');
 check(root.isDisposed() && host.snapshot().length === 0, 'close releases host nodes');
 check(host.counts().commits === commitsBeforeClose + 1, 'second close performs no host work');
@@ -256,6 +320,7 @@ check(disposedRejected, 'disposed handles reject refresh');
 
 export const uiCoreProof = Object.freeze({
   primitives: UI.primitives().length,
+  profiles: selectedProfiles.join(','),
   keyedOrder: 'b,a,c',
   diagnostics: 'render,component,layout,host-update,event',
   disposed: root.isDisposed(),
