@@ -37,6 +37,13 @@ public final class GenerationGlobals implements AutoCloseable {
     /** 候选的外部联合计划（测试计划 / 后续领域计划）；只在 owner thread（候选构建）上写。 */
     private final List<CandidateStatePlan> plans = new ArrayList<>();
 
+    /**
+     * UI roots bound to this generation (ticket 42); read and written on the owner thread
+     * only. Candidate roots are registered while the candidate builds and become production
+     * roots when that candidate commits; closing this generation releases all of them.
+     */
+    private final List<UiRoot> uiRoots = new ArrayList<>();
+
     private GlobalView globalView;
     private GlobalView sharedView;
     private volatile boolean closed;
@@ -173,10 +180,74 @@ public final class GenerationGlobals implements AutoCloseable {
         closed = true;
         privateStore.evictGuestOwned(this);
         sharedStoreRef.evictGuestOwned(this);
+        closeUiRoots("generation-close");
         plans.clear();
     }
 
     public boolean isClosed() {
         return closed;
+    }
+
+    // ---- UI root lifecycle (ticket 42) ----
+
+    /**
+     * Host-side UI root owned by exactly one generation. Registered at creation into the
+     * creating generation's globals — the in-flight candidate during a reload, the active
+     * generation otherwise — and released exactly once when that generation ends, whatever
+     * teardown path ends it (commit supersede, candidate discard, reset, root close).
+     */
+    public interface UiRoot {
+
+        /**
+         * Idempotent host-side release of the Screen, host nodes and input routing owned by
+         * this root. Invoked on the generation owner thread; implementations must tolerate
+         * repeated invocation and a partially failed earlier invocation.
+         *
+         * @param reason teardown path identifier used for diagnostics (e.g. {@code generation-close})
+         */
+        void closeForGeneration(String reason);
+    }
+
+    /**
+     * Binds a UI root to this generation (owner thread only). Rejected on an already closed
+     * generation so a stale script handle fails loudly at creation instead of leaking a Screen
+     * that no generation would ever release.
+     */
+    public void registerUiRoot(UiRoot root) {
+        if (root == null) throw new NullPointerException("root");
+        if (closed) {
+            throw new IllegalStateException(
+                    "[NEKO-7001] UI root registration rejected: the owning generation is already closed");
+        }
+        uiRoots.add(root);
+    }
+
+    /** Removes a root that closed itself before its generation ended (owner thread only). */
+    public void unregisterUiRoot(UiRoot root) {
+        uiRoots.remove(root);
+    }
+
+    /**
+     * Releases every registered UI root once. Called from {@link #close()} so candidate
+     * discard, commit supersede, reset and manager close all route through the same point;
+     * {@link #discard()} needs no call of its own because candidate teardown always closes
+     * the candidate globals afterwards. Failures of single roots are logged and skipped so
+     * one misbehaving root cannot keep the rest of the generation from closing. A root's
+     * pending guest-side reconciles need no host-side cancellation here: destroying the
+     * generation's guest Context drops them with it, so the host has no independent
+     * cancellation mechanism to invoke.
+     */
+    private void closeUiRoots(String reason) {
+        if (uiRoots.isEmpty()) return;
+        for (UiRoot root : List.copyOf(uiRoots)) {
+            try {
+                root.closeForGeneration(reason);
+            } catch (Throwable failure) {
+                com.tkisor.nekojs.NekoJS.LOGGER.warn(
+                        "[NEKO-7005] UI root release failed during '{}'; generation teardown continues",
+                        reason, failure);
+            }
+        }
+        uiRoots.clear();
     }
 }

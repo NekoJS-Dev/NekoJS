@@ -1,7 +1,25 @@
 //? if neoforge && >=26 {
 package com.tkisor.nekojs.client.ui;
 
+import com.tkisor.nekojs.api.ScriptType;
+import com.tkisor.nekojs.api.event.ScriptErrorReporter;
+import com.tkisor.nekojs.api.ui.DiskPackUiResourceResolver;
+import com.tkisor.nekojs.api.ui.FontAdapter;
+import com.tkisor.nekojs.api.ui.InspectorScreenshot;
+import com.tkisor.nekojs.api.ui.InspectorSnapshot;
+import com.tkisor.nekojs.api.ui.InspectorSnapshots;
+import com.tkisor.nekojs.api.ui.TextLayout;
+import com.tkisor.nekojs.api.ui.TextLayouter;
+import com.tkisor.nekojs.api.ui.UiDiagnostic;
+import com.tkisor.nekojs.api.ui.UiInspector;
+import com.tkisor.nekojs.api.ui.UiResourceResolver;
+import com.tkisor.nekojs.api.ui.VisualSpec;
+import com.tkisor.nekojs.api.ui.VisualStyleResolver;
+import com.tkisor.nekojs.core.state.GenerationGlobals;
 import com.tkisor.nekojs.platform.compat.McClientCompat;
+import com.tkisor.nekojs.script.ScriptManager;
+import com.tkisor.nekojs.wrapper.client.McFontAdapter;
+import graal.graalvm.polyglot.Context;
 import graal.graalvm.polyglot.Value;
 import net.minecraft.client.Minecraft;
 
@@ -11,8 +29,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Retained host transaction and owner-thread bridge for the common JSX runtime. */
-public final class JsxHostAdapter {
+/**
+ * Retained host transaction and owner-thread bridge for the common JSX runtime. One adapter
+ * belongs to exactly one CLIENT generation (ticket 42): it captures the creating script
+ * Context, registers itself into that generation's {@link GenerationGlobals}, and validates
+ * the generation epoch before every state-changing or guest-calling operation, so handles
+ * from superseded generations fail explicitly instead of silently succeeding.
+ */
+public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspector {
     private static final Set<String> PRIMITIVES = Set.of(
             "screen", "panel", "row", "column", "stack", "scroll", "label", "button", "input", "image", "spacer");
 
@@ -20,8 +44,15 @@ public final class JsxHostAdapter {
     private final Thread ownerThread;
     private final JsxScreen screen;
     private final JsxHostTree tree = new JsxHostTree();
+    private final ScriptManager manager;
+    private final GenerationGlobals globals;
+    private final UiRootLifecycle lifecycle;
+    private final FontAdapter fontAdapter;
+    private final UiResourceResolver resources;
+    private final List<InspectorSnapshot.PhaseError> retainedErrors = new ArrayList<>();
+    private String rootId;
     private Value root;
-    private Object lastDiagnostic;
+    private InspectorSnapshot lastSnapshot;
     private int viewportWidth;
     private int viewportHeight;
 
@@ -29,6 +60,30 @@ public final class JsxHostAdapter {
         minecraft = Minecraft.getInstance();
         ownerThread = Thread.currentThread();
         screen = new JsxScreen(title, pausesGame, this);
+        this.fontAdapter = new McFontAdapter(minecraft.font);
+        this.resources = new DiskPackUiResourceResolver(
+                com.tkisor.nekojs.core.fs.NekoJSPaths.get().root());
+        Context context = Context.getCurrent();
+        ScriptManager owner = null;
+        if (context != null) {
+            try {
+                owner = ScriptManager.from(context);
+            } catch (IllegalStateException unregistered) {
+                owner = null;
+            }
+        }
+        if (owner == null) {
+            throw new IllegalStateException("[NEKO-7003] JSX host adapter rejected: it must be "
+                    + "created from a managed CLIENT script context, not from host code");
+        }
+        ScriptManager.UiRootBinding binding = ScriptManager.registerUiRoot(context, this);
+        if (binding == null) {
+            throw new IllegalStateException("[NEKO-7001] JSX host adapter rejected: creating "
+                    + "context is neither the active nor the in-flight candidate generation");
+        }
+        this.manager = owner;
+        this.globals = binding.globals();
+        this.lifecycle = new UiRootLifecycle(binding.candidate(), binding.generation(), binding.globals());
     }
 
     JsxScreen screen() {
@@ -36,7 +91,29 @@ public final class JsxHostAdapter {
     }
 
     public void bindRoot(Object root) {
+        requireUsable("bind the common root");
         this.root = root == null ? null : Value.asValue(root);
+        // The root id lives on the guest handle; capture it so host-side diagnostics can
+        // name the root without reaching back into guest memory.
+        if (this.root != null) {
+            try {
+                rootId = this.root.hasMember("id") ? this.root.getMember("id").asString() : null;
+            } catch (RuntimeException unnamed) {
+                rootId = null;
+            }
+        }
+    }
+
+    /**
+     * Real glyph measurement for the common runtime (ticket 44 hand-off): wraps the shared
+     * {@link TextLayouter} over this client's font, so the runtime never guesses widths.
+     * Wrap-enabled and truncation-off match the runtime's intrinsic-size contract.
+     */
+    public Map<String, Object> measureText(String text, double fontSize, int maxWidth) {
+        requireUsable("measure text");
+        TextLayout layout = TextLayouter.layoutScaled(
+                fontAdapter, text, fontSize, maxWidth, true, TextLayouter.Truncation.OFF);
+        return Map.of("width", layout.width(), "height", layout.height());
     }
 
     public boolean isOwnerThread() {
@@ -45,7 +122,17 @@ public final class JsxHostAdapter {
 
     public boolean enqueue(Object action) {
         if (action == null) return false;
-        minecraft.execute(() -> Value.asValue(action).executeVoid());
+        // Explicit cross-thread queueing point (the common runtime calls this only from
+        // non-owner threads). The queued guest closure may run after a reload committed or
+        // discarded this root's generation; re-check the epoch at run time so a stale
+        // generation never executes guest code.
+        minecraft.execute(() -> {
+            if (!lifecycle.isUsable(manager.generationId())) {
+                reportStaleDrop("queued UI action");
+                return;
+            }
+            Value.asValue(action).executeVoid();
+        });
         return true;
     }
 
@@ -60,27 +147,96 @@ public final class JsxHostAdapter {
         return Map.of("width", Math.max(1, width), "height", Math.max(1, height));
     }
 
+    /**
+     * Ticket 45 inspector output: the retained runtime layout snapshot decorated with the
+     * host-only facts (focus, resource statuses, retained phase errors, capture metadata)
+     * through the same shared collection path the fake host tests use. Pixel capture
+     * itself is auxiliary and not wired here; the metadata names the viewport-derived
+     * origin it was synthesized from.
+     */
+    @Override
+    public InspectorSnapshot inspect() {
+        requireUsable("inspect the UI root");
+        if (lastSnapshot == null) return null;
+        Map<String, Object> viewport = viewport();
+        return InspectorSnapshots.decorate(lastSnapshot, focusedIds(tree.roots()),
+                resources::resolveTexture, List.copyOf(retainedErrors),
+                new InspectorScreenshot("neoforge-viewport-meta",
+                        ((Number) viewport.get("width")).intValue(),
+                        ((Number) viewport.get("height")).intValue()));
+    }
+
     /** Receives the frozen common layout candidate and its snapshot without mutating guest data. */
     public void layout(Object tree, Object viewport, Object snapshot) {
+        requireUsable("apply the layout candidate");
         if (tree != null) {
             // Materialize the candidate to validate the interop boundary before the transaction begins.
             readArray(tree);
         }
+        if (snapshot != null) {
+            try {
+                lastSnapshot = InspectorSnapshots.read(rootId == null ? "unknown" : rootId,
+                        "neoforge-host", Value.asValue(snapshot));
+            } catch (RuntimeException malformed) {
+                // A malformed snapshot means runtime/host contract skew; keep the last good
+                // frame and surface the NEKO-8001 failure through the reporting seam.
+                ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-inspect",
+                        malformed instanceof IllegalStateException ? (IllegalStateException) malformed
+                                : new IllegalStateException(malformed.getMessage(), malformed));
+            }
+        }
     }
 
     public JsxHostTransaction begin() {
+        requireUsable("open a host transaction");
         return new JsxHostTransaction(tree.begin());
     }
 
     public void reportDiagnostic(Object diagnostic) {
-        lastDiagnostic = diagnostic;
+        Value envelope = Value.asValue(diagnostic);
+        String rootId = text(memberOrNull(envelope, "rootId"));
+        String phase = text(memberOrNull(envelope, "phase"));
+        String message = "";
+        Value error = memberOrNull(envelope, "error");
+        if (error != null) {
+            Value detail = memberOrNull(error, "message");
+            message = detail == null ? error.toString() : detail.asString();
+        }
+        ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-" + phase,
+                new IllegalStateException("[NEKO-7007] JSX UI root " + rootId + " failed in phase "
+                        + phase + " (generation " + lifecycle.generation() + "): " + message));
+        retainedErrors.add(new InspectorSnapshot.PhaseError(phase == null ? "unknown" : phase,
+                rootId == null ? "unknown" : rootId, message));
+        // ponytail: fixed 8-entry ring; query on demand if long error histories ever matter.
+        if (retainedErrors.size() > 8) retainedErrors.removeFirst();
     }
 
-    public Object lastDiagnostic() {
-        return lastDiagnostic;
+    private static Value memberOrNull(Value value, String name) {
+        try {
+            return value.hasMember(name) ? value.getMember(name) : null;
+        } catch (RuntimeException unavailable) {
+            return null;
+        }
+    }
+
+    private void reportStaleDrop(String what) {
+        ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-stale",
+                new IllegalStateException("[NEKO-7006] " + what + " was dropped: its UI root belongs "
+                        + "to generation " + lifecycle.generation() + ", which is no longer active"));
+    }
+
+    /** Shared epoch validation for every state-changing or guest-calling entry point. */
+    private void requireUsable(String operation) {
+        if (!lifecycle.isUsable(manager.generationId())) {
+            throw new IllegalStateException("[NEKO-7001] Cannot " + operation + ": this UI root belongs "
+                    + "to generation " + lifecycle.generation() + ", which is superseded or closed "
+                    + "(active generation " + manager.generationId() + ", lifecycle state "
+                    + lifecycle.state() + ")");
+        }
     }
 
     public void resize(int width, int height) {
+        requireUsable("resize");
         viewportWidth = Math.max(0, width);
         viewportHeight = Math.max(0, height);
         relayout();
@@ -88,9 +244,15 @@ public final class JsxHostAdapter {
             try {
                 root.invokeMember("resize", viewport());
             } catch (RuntimeException failure) {
-                reportDiagnostic(failure);
+                reportHostFailure("resize", failure);
             }
         }
+    }
+
+    private void reportHostFailure(String phase, RuntimeException failure) {
+        ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-" + phase,
+                new IllegalStateException("[NEKO-7007] JSX UI host operation '" + phase
+                        + "' failed (generation " + lifecycle.generation() + ")", failure));
     }
 
     boolean closeOnEscape() {
@@ -106,6 +268,39 @@ public final class JsxHostAdapter {
         return tree.roots();
     }
 
+    String narration() {
+        return narrationText(tree.roots());
+    }
+
+    boolean narrationDisabled() {
+        return narrationDisabled(tree.roots());
+    }
+
+    /**
+     * Narration text for the focused host node: explicit {@code narration} prop wins, then
+     * {@code text}, then the input's own value or placeholder, else the primitive name. The
+     * localized disabled marker is composed by the screen (see
+     * {@code JsxScreen#getNarrationMessage}). Static and Minecraft-free so it is
+     * observable from a retained tree without a live client.
+     */
+    static String narrationText(List<JsxHostTree.Node> roots) {
+        JsxHostTree.Node node = focused(roots);
+        if (node == null) return "";
+        String label = text(node.props.get("narration"));
+        if (label.isEmpty()) label = text(node.props.get("text"));
+        if (label.isEmpty() && node.inputValue != null) {
+            label = node.inputValue.isEmpty() ? text(node.props.get("placeholder")) : node.inputValue;
+        }
+        if (label.isEmpty()) label = node.type;
+        return label;
+    }
+
+    /** Whether the focused host node carries the {@code disabled} prop, so its narration gets the localized marker. */
+    static boolean narrationDisabled(List<JsxHostTree.Node> roots) {
+        JsxHostTree.Node node = focused(roots);
+        return node != null && bool(node.props.get("disabled"));
+    }
+
     void paintNode(net.minecraft.client.gui.GuiGraphicsExtractor graphics, JsxHostTree.Node node, int mouseX, int mouseY) {
         if (node.removed || !visible(node)) return;
         int x = node.x;
@@ -114,13 +309,22 @@ public final class JsxHostAdapter {
         int height = node.height;
         String type = node.type;
         if ("#text".equals(type)) {
-            graphics.text(Minecraft.getInstance().font, text(node.props.get("text")), x, y, 0xFFFFFFFF, false);
+            paintTextLines(graphics, text(node.props.get("text")), null, x, y, width, 0xFFFFFFFF);
             return;
         }
         if ("panel".equals(type) || "screen".equals(type) || "scroll".equals(type)) {
-            graphics.fill(x, y, x + width, y + height, color(node.props.get("background"), 0xB0101010));
-            int borderWidth = integer(node.props.get("borderWidth"), 0);
-            if (borderWidth > 0) graphics.outline(x, y, x + width, y + height, color(node.props.get("borderColor"), 0xFFFFFFFF));
+            VisualSpec spec = resolveVisual(node);
+            graphics.fill(x, y, x + width, y + height,
+                    argb(spec.background(), withOpacity(spec, 0xB0101010)));
+            int borderWidth = spec.borderWidth() == null ? 0 : spec.borderWidth();
+            if (borderWidth > 0) graphics.outline(x, y, x + width, y + height,
+                    argb(spec.borderColor(), withOpacity(spec, 0xFFFFFFFF)));
+        } else if ("image".equals(type)) {
+            VisualSpec spec = resolveVisual(node);
+            // Placeholder frame until the version owner wires texture blitting; the id is
+            // validated and its diagnostics reported either way.
+            graphics.fill(x, y, x + width, y + height, argb(spec.background(), 0xFF1A1D22));
+            graphics.outline(x, y, x + width, y + height, argb(spec.borderColor(), 0xFF707780));
         } else if ("button".equals(type)) {
             boolean disabled = bool(node.props.get("disabled"));
             boolean hovered = contains(node, mouseX, mouseY);
@@ -136,7 +340,9 @@ public final class JsxHostAdapter {
             graphics.text(Minecraft.getInstance().font, value, x + 4, y + 6,
                     node.inputValue == null || node.inputValue.isEmpty() ? 0xFF888888 : 0xFFFFFFFF, false);
         } else if ("label".equals(type)) {
-            graphics.text(Minecraft.getInstance().font, text(node.props.get("text")), x, y, color(node.props.get("color"), 0xFFFFFFFF), false);
+            VisualSpec spec = resolveVisual(node);
+            paintTextLines(graphics, text(node.props.get("text")), spec,
+                    x, y, width, argb(spec.color(), withOpacity(spec, 0xFFFFFFFF)));
         }
         if (node.focused && ("input".equals(type) || "button".equals(type))) {
             graphics.outline(x, y, x + width, y + height, 0xFFFFFFFF);
@@ -154,7 +360,62 @@ public final class JsxHostAdapter {
         }
     }
 
+    /**
+     * Resolves one node's visual props through the shared {@link VisualStyleResolver} and
+     * routes every produced {@link UiDiagnostic} into the ticket-30 reporting seam. Static and
+     * Minecraft-free so the resolution contract is testable without a live client.
+     */
+    static VisualSpec resolveVisual(Map<String, Object> props, String nodeType, String nodeKey,
+            String rootId, long generation, UiResourceResolver resources) {
+        VisualSpec spec = VisualStyleResolver.resolve(props,
+                new UiDiagnostic.Location(rootId, nodeType, nodeKey, generation), resources);
+        for (UiDiagnostic diagnostic : spec.diagnostics()) {
+            ScriptErrorReporter.recordCallbackError(ScriptType.CLIENT, "ui-visual",
+                    new IllegalStateException(diagnostic.logLine()));
+        }
+        return spec;
+    }
+
+    // ponytail: re-resolves props every frame; cache per node when profiling shows it matters.
+    private VisualSpec resolveVisual(JsxHostTree.Node node) {
+        return resolveVisual(node.props, node.type, node.key,
+                rootId == null ? "unknown" : rootId, lifecycle.generation(), resources);
+    }
+
+    /** Paints wrapped text lines using the shared layout algorithm, one line box per row. */
+    private void paintTextLines(net.minecraft.client.gui.GuiGraphicsExtractor graphics, String value,
+            VisualSpec spec, int x, int y, int maxWidth, int argbColor) {
+        double fontSize = spec == null || spec.fontSize() == null ? 0 : spec.fontSize();
+        // A truncating label stays a single line cut with an ellipsis; without truncate the
+        // historical wrap-everything behavior is preserved.
+        boolean truncate = spec != null && Boolean.TRUE.equals(spec.truncate());
+        TextLayout layout = TextLayouter.layoutScaled(
+                fontAdapter, value, fontSize, maxWidth, !truncate, truncationFor(spec));
+        for (int i = 0; i < layout.lines().size(); i++) {
+            graphics.text(Minecraft.getInstance().font, layout.lines().get(i),
+                    x, y + i * layout.lineHeight(), argbColor, false);
+        }
+    }
+
+    private static int argb(com.tkisor.nekojs.api.ui.UiColor color, int fallback) {
+        return color == null ? fallback : color.argb();
+    }
+
+    /** Truncation choice for painted text: the node's resolved {@code truncate} prop turns the ellipsis on. */
+    static TextLayouter.Truncation truncationFor(VisualSpec spec) {
+        return spec != null && Boolean.TRUE.equals(spec.truncate())
+                ? TextLayouter.Truncation.ELLIPSIS : TextLayouter.Truncation.OFF;
+    }
+
+    /** Applies the spec's opacity to the fallback's alpha when no explicit color won. */
+    private static int withOpacity(VisualSpec spec, int fallback) {
+        if (spec == null || spec.opacity() == null) return fallback;
+        int alpha = (int) Math.round((fallback >>> 24) * Math.max(0, Math.min(1, spec.opacity())));
+        return (alpha << 24) | (fallback & 0x00FFFFFF);
+    }
+
     boolean dispatchAt(double mouseX, double mouseY, String eventName, int button) {
+        requireUsable("route a mouse event");
         JsxHostTree.Node node = hit(tree.roots(), mouseX, mouseY);
         if (node == null || bool(node.props.get("disabled"))) return false;
         if ("click".equals(eventName) && isFocusable(node)) focus(node);
@@ -162,6 +423,7 @@ public final class JsxHostAdapter {
     }
 
     boolean dispatchScroll(double mouseX, double mouseY, double delta) {
+        requireUsable("route a scroll event");
         JsxHostTree.Node node = hit(tree.roots(), mouseX, mouseY);
         if (node == null) return false;
         if ("scroll".equals(node.type)) {
@@ -173,6 +435,7 @@ public final class JsxHostAdapter {
     }
 
     boolean key(int key, int modifiers) {
+        requireUsable("route a key event");
         if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE && screen.closeOnEscape()) {
             screen.onClose();
             return true;
@@ -200,6 +463,7 @@ public final class JsxHostAdapter {
     }
 
     boolean textInput(int codepoint) {
+        requireUsable("route text input");
         JsxHostTree.Node focused = focused(tree.roots());
         if (focused == null || !"input".equals(focused.type) || bool(focused.props.get("disabled"))) return false;
         String next = (focused.inputValue == null ? "" : focused.inputValue) + new String(Character.toChars(codepoint));
@@ -213,15 +477,83 @@ public final class JsxHostAdapter {
     }
 
     public void open() {
-        if (!isOwnerThread()) throw new IllegalStateException("JSX Screen must open on the client owner thread");
+        if (!isOwnerThread()) throw new IllegalStateException("[NEKO-7004] JSX Screen must open on the client owner thread");
+        long active = manager.generationId();
+        lifecycle.observeCommit(active);
+        if (lifecycle.isProduction(active)) {
+            showScreen();
+            return;
+        }
+        if (lifecycle.isUsable(active)) {
+            // In-flight candidate: the Screen must stay invisible before commit. CLIENT reloads
+            // run as a client-thread task, so re-queueing here defers the decision to after that
+            // task — the epoch check in runDeferredOpen then sees either the committed
+            // generation (open) or the discarded candidate (explicit drop with a diagnostic).
+            minecraft.execute(this::runDeferredOpen);
+            return;
+        }
+        throw new IllegalStateException("[NEKO-7001] Cannot open the JSX Screen: this UI root belongs "
+                + "to generation " + lifecycle.generation() + ", which is superseded or closed "
+                + "(active generation " + active + ")");
+    }
+
+    private void runDeferredOpen() {
+        long active = manager.generationId();
+        // A discarded candidate has already closed this root; observing would throw, and the
+        // drop below is the observable outcome the ticket requires.
+        if (lifecycle.state() == UiRootLifecycle.State.CANDIDATE) lifecycle.observeCommit(active);
+        if (lifecycle.isProduction(active)) {
+            showScreen();
+            return;
+        }
+        reportStaleDrop("deferred JSX Screen open");
+    }
+
+    private void showScreen() {
         if (McClientCompat.get().currentScreen() != screen) McClientCompat.get().showScreen(screen);
     }
 
+    /** Script- or Screen-initiated close: notifies the guest root, then releases host state. */
     void close() {
-        tree.close(() -> {
-            if (root != null) root.invokeMember("close");
-        });
-        root = null;
+        teardown("script-close", true);
+    }
+
+    /**
+     * Generation-initiated close (ticket 42): invoked exactly once per root from
+     * {@link GenerationGlobals#close()} on the owner thread, whichever teardown path ends the
+     * generation — commit supersede, candidate discard, reset or manager close. The guest
+     * context is about to be destroyed, so no guest callback is attempted.
+     */
+    @Override
+    public void closeForGeneration(String reason) {
+        teardown(reason, false);
+    }
+
+    private void teardown(String reason, boolean notifyGuest) {
+        // Re-entrant calls are no-ops: dismissing the Screen during generation teardown fires
+        // Screen.removed() back into close(), and every cleanup path (reload success/failure,
+        // setScreen replace, client exit, close preemption) may run more than once. The first
+        // call to reach CANDIDATE/ACTIVE owns the teardown.
+        UiRootLifecycle.State state = lifecycle.state();
+        if (state != UiRootLifecycle.State.CANDIDATE && state != UiRootLifecycle.State.ACTIVE) {
+            return;
+        }
+        lifecycle.beginClose();
+        try {
+            if (McClientCompat.get().currentScreen() == screen) McClientCompat.get().showScreen(null);
+            if (notifyGuest && root != null) {
+                try {
+                    root.invokeMember("close");
+                } catch (RuntimeException failure) {
+                    reportHostFailure("close", failure);
+                }
+            }
+            tree.close(() -> { });
+            root = null;
+        } finally {
+            lifecycle.finishClose();
+            globals.unregisterUiRoot(this);
+        }
     }
 
     private boolean dispatch(JsxHostTree.Node node, String eventName, Map<String, Object> input) {
@@ -229,7 +561,8 @@ public final class JsxHostAdapter {
         try {
             Value result = root.invokeMember("dispatch", text(node.props.get("id")), eventName, input);
             return result.isBoolean() && result.asBoolean() || result.isString() && "queued".equals(result.asString());
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException failure) {
+            reportHostFailure("event", failure);
             return false;
         }
     }
@@ -265,6 +598,20 @@ public final class JsxHostAdapter {
             if (nested != null) return nested;
         }
         return null;
+    }
+
+    /** Ids of focused host nodes that carry a script id; the inspector locates nodes by id. */
+    static Set<String> focusedIds(List<JsxHostTree.Node> values) {
+        Set<String> ids = new java.util.LinkedHashSet<>();
+        collectFocusedIds(values, ids);
+        return ids;
+    }
+
+    private static void collectFocusedIds(List<JsxHostTree.Node> values, Set<String> ids) {
+        for (JsxHostTree.Node node : values) {
+            if (node.focused && node.props.get("id") instanceof String id) ids.add(id);
+            collectFocusedIds(node.children, ids);
+        }
     }
 
     private static JsxHostTree.Node hit(List<JsxHostTree.Node> values, double x, double y) {
@@ -334,17 +681,10 @@ public final class JsxHostAdapter {
     private static double number(Object value, double fallback) { return value instanceof Number n ? n.doubleValue() : fallback; }
     private static double clamp(double value, double min, double max) { return Math.max(min, Math.min(max, value)); }
     private static String text(Object value) { return value == null ? "" : String.valueOf(value); }
-    private static int color(Object value, int fallback) {
-        if (value instanceof Number n) return n.intValue();
-        if (value instanceof String s) {
-            try { return (int) Long.parseLong(s.startsWith("#") ? s.substring(1) : s, 16) | 0xFF000000; }
-            catch (NumberFormatException ignored) { }
-        }
-        return fallback;
-    }
     private static String keyName(int key) { return org.lwjgl.glfw.GLFW.glfwGetKeyName(key, 0) == null ? Integer.toString(key) : org.lwjgl.glfw.GLFW.glfwGetKeyName(key, 0); }
 
-    private static Map<String, Object> props(Object value) {
+    /** Converts one guest props object into plain Java values; package-visible for boundary tests. */
+    static Map<String, Object> props(Object value) {
         if (value == null) return new LinkedHashMap<>();
         if (value instanceof Map<?, ?> map) {
             Map<String, Object> result = new LinkedHashMap<>();
@@ -381,6 +721,19 @@ public final class JsxHostAdapter {
         if (guest.isBoolean()) return guest.asBoolean();
         if (guest.isString()) return guest.asString();
         if (guest.isNumber()) return guest.fitsInInt() ? guest.asInt() : guest.asDouble();
+        // Callbacks and host objects keep their guest/host identity; plain data arrays and
+        // objects materialize so nested props (e.g. image crop) reach Java as lists and maps.
+        if (guest.canExecute() || guest.isHostObject()) return value;
+        if (guest.hasArrayElements()) {
+            List<Object> items = new ArrayList<>();
+            for (long i = 0; i < guest.getArraySize(); i++) items.add(scalar(guest.getArrayElement(i)));
+            return items;
+        }
+        if (guest.hasMembers()) {
+            Map<String, Object> members = new LinkedHashMap<>();
+            for (String key : guest.getMemberKeys()) members.put(key, scalar(guest.getMember(key)));
+            return members;
+        }
         return value;
     }
 

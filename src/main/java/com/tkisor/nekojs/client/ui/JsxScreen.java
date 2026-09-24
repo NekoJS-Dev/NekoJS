@@ -68,6 +68,15 @@ public final class JsxScreen extends Screen {
     }
 
     @Override
+    public Component getNarrationMessage() {
+        String narration = adapter.narration();
+        if (narration.isEmpty()) return super.getNarrationMessage();
+        return adapter.narrationDisabled()
+                ? Component.translatable("nekojs.gui.narration.disabled", narration)
+                : Component.literal(narration);
+    }
+
+    @Override
     public void onClose() {
         adapter.close();
         super.onClose();

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>卡片网格 - Fixture</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 16px;
+      color: #666;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-image {
+      width: 100%;
+      height: 160px;
+      background: #ddd;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .card-description {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-price {
+      font-size: 20px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .card-button {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .card-button:hover {
+      background: #0056b3;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>商品列表</h1>
+      <p>浏览我们的精选商品</p>
+    </div>
+
+    <div class="grid" id="productGrid">
+      <!-- 卡片由 JavaScript 动态生成 -->
+    </div>
+  </div>
+
+  <script>
+    const products = [
+      { id: 1, title: '商品 A', description: '高质量产品，性价比极高', price: 99.00, image: 'product-a.jpg' },
+      { id: 2, title: '商品 B', description: '经典款式，永不过时', price: 149.00, image: 'product-b.jpg' },
+      { id: 3, title: '商品 C', description: '限量版，售完即止', price: 199.00, image: 'product-c.jpg' },
+      { id: 4, title: '商品 D', description: '新品上市，优惠中', price: 79.00, image: 'product-d.jpg' },
+      { id: 5, title: '商品 E', description: '畅销爆款，好评如潮', price: 129.00, image: 'product-e.jpg' },
+      { id: 6, title: '商品 F', description: '精致设计，匠心之作', price: 249.00, image: 'product-f.jpg' }
+    ];
+
+    const grid = document.getElementById('productGrid');
+
+    products.forEach(product => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-image">图片: ${product.image}</div>
+        <div class="card-title">${product.title}</div>
+        <div class="card-description">${product.description}</div>
+        <div class="card-footer">
+          <div class="card-price">¥${product.price.toFixed(2)}</div>
+          <button class="card-button" onclick="addToCart(${product.id})">加入购物车</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      alert(`已添加"${product.title}"到购物车`);
+    }
+  </script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 //（可用 tools/extract_evaluated.py 重新提取核对）；26.x 侧行为变更时须同步本文件。
 package com.tkisor.nekojs.wrapper.client;
 
+import com.tkisor.nekojs.api.ui.FontAdapter;
+import com.tkisor.nekojs.api.ui.TextLayouter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -19,6 +21,7 @@ import net.minecraft.world.item.ItemStack;
 public class PainterJS {
     private final GuiGraphics guiGraphics;
     private final Font font;
+    private final FontAdapter fontAdapter;
     private final float partialTick;
     private int currentColor = 0xFFFFFFFF;
 
@@ -26,6 +29,15 @@ public class PainterJS {
     public PainterJS(GuiGraphics guiGraphics, float partialTick) {
         this.guiGraphics = guiGraphics;
         this.font = Minecraft.getInstance().font;
+        this.fontAdapter = new McFontAdapter(this.font);
+        this.partialTick = partialTick;
+    }
+
+    /** Test seam: measures through the given adapter without a live client; paint calls then fail fast. */
+    PainterJS(GuiGraphics guiGraphics, FontAdapter fontAdapter, float partialTick) {
+        this.guiGraphics = guiGraphics;
+        this.font = null;
+        this.fontAdapter = fontAdapter;
         this.partialTick = partialTick;
     }
 
@@ -182,4 +194,23 @@ public class PainterJS {
         guiGraphics.disableScissor();
         return this;
     }
+
+    /** Text width in GUI pixels measured with the current Minecraft font; null or empty text measures 0. */
+    public int textWidth(String text) {
+        return fontAdapter.stringWidth(text);
+    }
+
+    /**
+     * Wraps text into lines that each fit {@code maxWidth}, sharing the JSX UI layout
+     * algorithm ({@code TextLayouter}). Explicit {@code \n} also breaks lines.
+     */
+    public java.util.List<String> wrapText(String text, int maxWidth) {
+        return TextLayouter.layout(fontAdapter, text, maxWidth, true, TextLayouter.Truncation.OFF).lines();
+    }
+
+    /** Line height of the current Minecraft font in GUI pixels. */
+    public int lineHeight() {
+        return fontAdapter.lineHeight();
+    }
+
 }

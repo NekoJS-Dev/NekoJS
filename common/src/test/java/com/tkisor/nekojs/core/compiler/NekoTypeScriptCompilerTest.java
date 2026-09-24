@@ -18,6 +18,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NekoTypeScriptCompilerTest {
 
     @Test
+    void erasesTypeAliasContinuingPastObjectBody() {
+        // `type A = { .. } | B` (and `{ .. }[]`): after the matched body the union arm is
+        // still part of the declaration; leftover `|` makes the erased output a SyntaxError
+        // (regression from jsx-runtime's NekoUiCrop).
+        String src = """
+            type Crop = { x: number; y: number } | readonly [number, number, number, number]
+            type List = { id: number }[]
+            const value = 1
+            """;
+        String out = NekoTypeScriptCompiler.eraseTypescript(Path.of("test.ts"), src);
+        assertFalse(out.contains("|"), out);
+        assertFalse(out.contains("readonly"), out);
+        assertFalse(out.contains("number"), out);
+        assertTrue(out.contains("const value = 1"), out);
+    }
+
+    @Test
     void erasesClassMemberVisibilityModifiers() {
         String src = """
             class Foo {

@@ -411,6 +411,8 @@ class NekoTypeScriptJsxRuntimeTest {
         assertEquals(11, proof.getMember("primitives").asInt());
         assertEquals("b,a,c", proof.getMember("keyedOrder").asString());
         assertEquals("render,component,layout,host-update,event", proof.getMember("diagnostics").asString());
+        assertEquals(true, proof.getMember("visualProps").asBoolean(),
+                "panel/image/label visual props must reach host nodes from the script path");
         assertEquals(true, proof.getMember("disposed").asBoolean());
     }
 

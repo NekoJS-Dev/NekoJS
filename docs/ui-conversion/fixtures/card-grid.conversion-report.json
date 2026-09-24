@@ -1,0 +1,76 @@
+{
+  "reportVersion": 1,
+  "conversion": {
+    "source": "card-grid.html",
+    "output": "card-grid.output.tsx",
+    "tool": "AI-assisted (human-reviewed)"
+  },
+  "inputChecklist": {
+    "structure": "complete",
+    "styles": "complete",
+    "resources": "missing",
+    "fonts": "missing",
+    "interactions": "complete",
+    "profiles": "partial",
+    "notes": [
+      "card images are placeholders in the source (no asset files provided); treated as missing resources",
+      "the media query gives a single-column mobile intent but no per-profile reference sizes"
+    ]
+  },
+  "equivalence": {
+    "structural": "achieved",
+    "interaction": "achieved",
+    "reactive": "achieved",
+    "visual": "downgraded"
+  },
+  "items": [
+    {
+      "id": "U-1",
+      "severity": "downgraded",
+      "web": "CSS Grid three-column auto grid (grid-template-columns: repeat(3, 1fr))",
+      "reason": "no grid or wrap primitive; rows do not wrap",
+      "replacement": "manual chunking into rows of three cards, each card width='fill'",
+      "location": { "source": "card-grid.html:33-39", "node": "grid-row-0" }
+    },
+    {
+      "id": "U-2",
+      "severity": "uncertainty",
+      "web": "card image placeholders (JS-generated, no assets)",
+      "reason": "resources missing from input; inventing resource ids is forbidden",
+      "replacement": "placeholder panel with centered label; replace with image + controlled resource id once assets exist",
+      "location": { "source": "card-grid.html:61-72", "node": "card-art-p1" }
+    },
+    {
+      "id": "U-3",
+      "severity": "unsupported",
+      "web": ".card:hover transform translateY(-4px) + box-shadow",
+      "reason": "no hover events, no transform, no shadow model",
+      "replacement": "explicit selected signal toggled by the buy button (click-driven highlight)",
+      "location": { "source": "card-grid.html:56-59", "node": "card-p1" }
+    },
+    {
+      "id": "U-4",
+      "severity": "downgraded",
+      "web": "@media (max-width: 768px) single-column grid",
+      "reason": "render cannot branch on the current profile, and rows do not wrap; responsive props adjust sizes only",
+      "replacement": "three-column layout kept at all profiles; needs-human to re-chunk per profile if mobile single-column is required",
+      "location": { "source": "card-grid.html:115-119", "node": "grid-body" }
+    },
+    {
+      "id": "U-5",
+      "severity": "unsupported",
+      "web": "font-weight 600/bold on titles and prices",
+      "reason": "no synthetic bold/italic",
+      "replacement": "fontSize and color emphasis only",
+      "location": { "source": "card-grid.html:74-78", "node": "card-title-p1" }
+    },
+    {
+      "id": "U-6",
+      "severity": "downgraded",
+      "web": "line-height 1.5 on descriptions",
+      "reason": "no line-height prop; host text metrics own spacing",
+      "replacement": "default host line metrics",
+      "location": { "source": "card-grid.html:79-83", "node": "card-desc-p1" }
+    }
+  ]
+}

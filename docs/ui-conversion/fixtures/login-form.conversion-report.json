@@ -1,0 +1,76 @@
+{
+  "reportVersion": 1,
+  "conversion": {
+    "source": "login-form.html",
+    "output": "login-form.output.tsx",
+    "tool": "AI-assisted (human-reviewed)"
+  },
+  "inputChecklist": {
+    "structure": "complete",
+    "styles": "complete",
+    "resources": "not-applicable",
+    "fonts": "missing",
+    "interactions": "complete",
+    "profiles": "missing",
+    "notes": [
+      "no font metrics available; label fontSize chosen from the runtime default (9) and scaled at profile 6",
+      "no per-profile reference sizes; responsive choices limited to fontSize and are marked uncertain"
+    ]
+  },
+  "equivalence": {
+    "structural": "achieved",
+    "interaction": "achieved",
+    "reactive": "achieved",
+    "visual": "downgraded"
+  },
+  "items": [
+    {
+      "id": "U-1",
+      "severity": "unsupported",
+      "web": "-apple-system / Segoe UI font stack (login-form.html:18)",
+      "reason": "no script-facing font-family prop; fonts resolve by controlled id on the host side",
+      "replacement": "default host font",
+      "location": { "source": "login-form.html:18", "node": "login-title" }
+    },
+    {
+      "id": "U-2",
+      "severity": "downgraded",
+      "web": ":focus border-color change and input padding (login-form.html:71-74, 62-69)",
+      "reason": "input has no border or padding props; focus styling is host-owned",
+      "replacement": "plain input; onFocus/onBlur events remain available for state-driven feedback",
+      "location": { "source": "login-form.html:62", "node": "login-username" }
+    },
+    {
+      "id": "U-3",
+      "severity": "downgraded",
+      "web": "button background colors and :hover variants (.btn-primary/.btn-secondary)",
+      "reason": "button has no background/color props; only panel carries background/border visual props",
+      "replacement": "default host button visuals; disabled state preserved via the disabled prop",
+      "location": { "source": "login-form.html:98-119", "node": "login-submit" }
+    },
+    {
+      "id": "U-4",
+      "severity": "unsupported",
+      "web": "transition: border-color/background-color 0.2s",
+      "reason": "no animation or transition model; state changes apply instantly",
+      "replacement": "none",
+      "location": { "source": "login-form.html:68", "node": "login-card" }
+    },
+    {
+      "id": "U-5",
+      "severity": "downgraded",
+      "web": "error-message display:none / .show toggle",
+      "reason": "visible=false collapses the node (0x0) rather than hiding paint only",
+      "replacement": "visible={message !== ''} on the error label",
+      "location": { "source": "login-form.html:121-130", "node": "login-error" }
+    },
+    {
+      "id": "U-6",
+      "severity": "uncertainty",
+      "web": "form required-attribute validation semantics",
+      "reason": "no form validation engine; validation is re-implemented in the submit handler",
+      "replacement": "explicit empty-check in submit() setting the error signal",
+      "location": { "source": "login-form.html:143-149", "node": "login-username" }
+    }
+  ]
+}

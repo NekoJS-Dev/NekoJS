@@ -317,6 +317,43 @@ public final class ScriptManager implements AutoCloseable {
         return true;
     }
 
+    // ---- Ticket 42: UI root generation ownership seam ----
+
+    /**
+     * UI root registration seam (ticket 42): attaches the root to the
+     * {@code GenerationGlobals} of the generation that owns the source Context — a Context
+     * of a candidate being built attaches to the candidate globals (invisible to production
+     * before commit, discarded with the candidate on failure), an active Context attaches
+     * to the active globals (released by the old generation close when a commit switches
+     * generations). Returns that generation's binding info (globals, whether candidate,
+     * generation number) for the caller's epoch checks; returns null when the Context is
+     * neither candidate nor active (superseded / closed / unregistered), in which case the
+     * caller must fail creation explicitly instead of attaching to any global registry.
+     */
+    public static UiRootBinding registerUiRoot(Context context,
+            com.tkisor.nekojs.core.state.GenerationGlobals.UiRoot root) {
+        if (context == null || root == null) return null;
+        ScriptManager manager = CONTEXT_TO_MANAGER.get(context);
+        if (manager == null) return null;
+        RuntimeEnvironment candidateEnvironment = manager.candidateEnvironment;
+        if (candidateEnvironment != null && candidateEnvironment.context() != null
+                && candidateEnvironment.context().equals(context)
+                && candidateEnvironment.globals() != null) {
+            candidateEnvironment.globals().registerUiRoot(root);
+            return new UiRootBinding(candidateEnvironment.globals(), true, manager.generation + 1);
+        }
+        RuntimeEnvironment active = manager.runtime;
+        if (active.context() != null && active.context().equals(context) && active.globals() != null) {
+            active.globals().registerUiRoot(root);
+            return new UiRootBinding(active.globals(), false, manager.generation);
+        }
+        return null;
+    }
+
+    /** Generation binding result for a UI root (ticket 42 seam return value): when attached to a candidate, the number is the in-flight next one. */
+    public record UiRootBinding(com.tkisor.nekojs.core.state.GenerationGlobals globals,
+                                boolean candidate, long generation) {}
+
     // ---- 候选收集把手（DOMAIN_PLAN 阶段构造，生命周期只在 collect 调用内） ----
 
     /**

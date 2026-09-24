@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录表单 - Fixture</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .login-header h1 {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .login-header p {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    .form-group input:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+
+    .error-message {
+      color: #dc3545;
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h1>欢迎登录</h1>
+      <p>请输入您的账号信息</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          placeholder="请输入用户名"
+          required
+        />
+        <div class="error-message" id="usernameError">用户名不能为空</div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">密码</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          placeholder="请输入密码"
+          required
+        />
+        <div class="error-message" id="passwordError">密码不能为空</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" id="cancelBtn">取消</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">登录</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const usernameError = document.getElementById('usernameError');
+    const passwordError = document.getElementById('passwordError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // 清除错误
+      usernameError.classList.remove('show');
+      passwordError.classList.remove('show');
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      // 验证
+      let hasError = false;
+      if (!username) {
+        usernameError.classList.add('show');
+        hasError = true;
+      }
+      if (!password) {
+        passwordError.classList.add('show');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      // 模拟登录
+      submitBtn.disabled = true;
+      submitBtn.textContent = '登录中...';
+      usernameInput.disabled = true;
+      passwordInput.disabled = true;
+
+      setTimeout(() => {
+        alert(`登录成功！用户名：${username}`);
+        submitBtn.disabled = false;
+        submitBtn.textContent = '登录';
+        usernameInput.disabled = false;
+        passwordInput.disabled = false;
+      }, 1500);
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      usernameInput.value = '';
+      passwordInput.value = '';
+      usernameError.classList.remove('show');
+      passwordError.classList.remove('show');
+    });
+  </script>
+</body>
+</html>

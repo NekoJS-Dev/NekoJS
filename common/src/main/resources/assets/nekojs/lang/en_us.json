@@ -30,6 +30,7 @@
   "nekojs.gui.filter.runtime": "Runtime",
   "nekojs.gui.filter.syntax": "Syntax",
   "nekojs.gui.filter.other": "Other",
+  "nekojs.gui.narration.disabled": "%s (disabled)",
   "nekojs.gui.menu.file": "File",
   "nekojs.gui.menu.file.open_external": "📂 Open in File Explorer",
   "nekojs.gui.menu.file.exit": "❌ Exit Panel",

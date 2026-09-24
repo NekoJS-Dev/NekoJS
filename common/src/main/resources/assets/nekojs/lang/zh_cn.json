@@ -30,6 +30,7 @@
   "nekojs.gui.filter.runtime": "运行时",
   "nekojs.gui.filter.syntax": "语法",
   "nekojs.gui.filter.other": "其他",
+  "nekojs.gui.narration.disabled": "%s（已禁用）",
   "nekojs.gui.menu.file": "文件",
   "nekojs.gui.menu.file.open_external": "📂 在文件管理器中打开",
   "nekojs.gui.menu.file.exit": "❌ 退出面板",

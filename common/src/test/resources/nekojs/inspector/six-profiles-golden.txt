@@ -1,0 +1,84 @@
+--- profile 1 ---
+root=insp-root source=fake-host profile=1 viewport=100x100 content=100x100 safe=0/0/0/0 gui=2 design=0.3125
+diagnostics=main:overflow-right\;hero:overflow-right\;hero:overflow-bottom\;scroller:overflow-right\;tall:overflow-top\;tall:overflow-right\;tall:overflow-bottom\;wide:overflow-right
+errors=layout:insp-error-root:UI layout failed: width min must not exceed max
+screenshot=fake-frame 100x100
+node type=screen key=- id=root visible=true focused=false rect=0,0,100,100 clip=0,0,100,100 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=root}
+  node type=column key=- id=main visible=true focused=false rect=0,0,108,39 clip=0,0,100,39 overflow=0,0,8,0 scroll=- bindings=- resources=- style={id=main,spacing=2,padding=4}
+    node type=label key=- id=title visible=true focused=false rect=4,4,66,9 clip=4,4,66,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=title,text=Panel title}
+    node type=row key=- id=actions visible=true focused=false rect=4,15,22,9 clip=4,15,22,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=actions,spacing=4}
+      node type=button key=- id=act visible=true focused=true rect=4,15,18,9 clip=4,15,18,9 overflow=0,0,0,0 scroll=- bindings=blur,click resources=- style={id=act,text=Act}
+      node type=image key=- id=hero visible=true focused=false rect=26,15,40,12 clip=26,15,0,9 overflow=0,0,40,3 scroll=- bindings=- resources=[RESOLVED:mymod:gui/hero] style={id=hero,resource=mymod:gui/hero,width=40,height=12}
+    node type=scroll key=- id=scroller visible=true focused=false rect=4,26,100,6 clip=4,26,96,6 overflow=0,0,4,0 scroll=2 bindings=- resources=- style={id=scroller,height=6,scrollOffset=2}
+      node type=label key=- id=tall visible=true focused=false rect=4,24,100,9 clip=4,26,96,6 overflow=0,2,4,1 scroll=- bindings=- resources=- style={id=tall,text=Tall content text}
+  node type=row key=- id=wide visible=true focused=false rect=0,39,200,8 clip=0,39,100,8 overflow=0,0,100,0 scroll=- bindings=- resources=- style={id=wide,width=200,height=8}
+--- profile 2 ---
+root=insp-root source=fake-host profile=2 viewport=320x180 content=320x180 safe=0/0/0/0 gui=2 design=1
+diagnostics=hero:overflow-right\;hero:overflow-bottom\;tall:overflow-top\;tall:overflow-bottom
+errors=layout:insp-error-root:UI layout failed: width min must not exceed max
+screenshot=fake-frame 320x180
+node type=screen key=- id=root visible=true focused=false rect=0,0,320,180 clip=0,0,320,180 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=root}
+  node type=column key=- id=main visible=true focused=false rect=0,0,110,39 clip=0,0,110,39 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=main,spacing=2,padding=4}
+    node type=label key=- id=title visible=true focused=false rect=4,4,66,9 clip=4,4,66,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=title,text=Panel title}
+    node type=row key=- id=actions visible=true focused=false rect=4,15,22,9 clip=4,15,22,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=actions,spacing=4}
+      node type=button key=- id=act visible=true focused=true rect=4,15,18,9 clip=4,15,18,9 overflow=0,0,0,0 scroll=- bindings=blur,click resources=- style={id=act,text=Act}
+      node type=image key=- id=hero visible=true focused=false rect=26,15,40,12 clip=26,15,0,9 overflow=0,0,40,3 scroll=- bindings=- resources=[RESOLVED:mymod:gui/hero] style={id=hero,resource=mymod:gui/hero,width=40,height=12}
+    node type=scroll key=- id=scroller visible=true focused=false rect=4,26,102,6 clip=4,26,102,6 overflow=0,0,0,0 scroll=2 bindings=- resources=- style={id=scroller,height=6,scrollOffset=2}
+      node type=label key=- id=tall visible=true focused=false rect=4,24,102,9 clip=4,26,102,6 overflow=0,2,0,1 scroll=- bindings=- resources=- style={id=tall,text=Tall content text}
+  node type=row key=- id=wide visible=true focused=false rect=0,39,200,8 clip=0,39,200,8 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=wide,width=200,height=8}
+--- profile 3 ---
+root=insp-root source=fake-host profile=3 viewport=480x240 content=480x240 safe=0/0/0/0 gui=2 design=1.3333333333333333
+diagnostics=hero:overflow-right\;hero:overflow-bottom\;tall:overflow-top\;tall:overflow-bottom
+errors=layout:insp-error-root:UI layout failed: width min must not exceed max
+screenshot=fake-frame 480x240
+node type=screen key=- id=root visible=true focused=false rect=0,0,480,240 clip=0,0,480,240 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=root}
+  node type=column key=- id=main visible=true focused=false rect=0,0,110,39 clip=0,0,110,39 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=main,spacing=2,padding=4}
+    node type=label key=- id=title visible=true focused=false rect=4,4,66,9 clip=4,4,66,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=title,text=Panel title}
+    node type=row key=- id=actions visible=true focused=false rect=4,15,22,9 clip=4,15,22,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=actions,spacing=4}
+      node type=button key=- id=act visible=true focused=true rect=4,15,18,9 clip=4,15,18,9 overflow=0,0,0,0 scroll=- bindings=blur,click resources=- style={id=act,text=Act}
+      node type=image key=- id=hero visible=true focused=false rect=26,15,40,12 clip=26,15,0,9 overflow=0,0,40,3 scroll=- bindings=- resources=[RESOLVED:mymod:gui/hero] style={id=hero,resource=mymod:gui/hero,width=40,height=12}
+    node type=scroll key=- id=scroller visible=true focused=false rect=4,26,102,6 clip=4,26,102,6 overflow=0,0,0,0 scroll=2 bindings=- resources=- style={id=scroller,height=6,scrollOffset=2}
+      node type=label key=- id=tall visible=true focused=false rect=4,24,102,9 clip=4,26,102,6 overflow=0,2,0,1 scroll=- bindings=- resources=- style={id=tall,text=Tall content text}
+  node type=row key=- id=wide visible=true focused=false rect=0,39,200,8 clip=0,39,200,8 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=wide,width=200,height=8}
+--- profile 4 ---
+root=insp-root source=fake-host profile=4 viewport=640x360 content=640x360 safe=0/0/0/0 gui=2 design=2
+diagnostics=hero:overflow-right\;hero:overflow-bottom\;tall:overflow-top\;tall:overflow-bottom
+errors=layout:insp-error-root:UI layout failed: width min must not exceed max
+screenshot=fake-frame 640x360
+node type=screen key=- id=root visible=true focused=false rect=0,0,640,360 clip=0,0,640,360 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=root}
+  node type=column key=- id=main visible=true focused=false rect=0,0,110,39 clip=0,0,110,39 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=main,spacing=2,padding=4}
+    node type=label key=- id=title visible=true focused=false rect=4,4,66,9 clip=4,4,66,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=title,text=Panel title}
+    node type=row key=- id=actions visible=true focused=false rect=4,15,22,9 clip=4,15,22,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=actions,spacing=4}
+      node type=button key=- id=act visible=true focused=true rect=4,15,18,9 clip=4,15,18,9 overflow=0,0,0,0 scroll=- bindings=blur,click resources=- style={id=act,text=Act}
+      node type=image key=- id=hero visible=true focused=false rect=26,15,40,12 clip=26,15,0,9 overflow=0,0,40,3 scroll=- bindings=- resources=[RESOLVED:mymod:gui/hero] style={id=hero,resource=mymod:gui/hero,width=40,height=12}
+    node type=scroll key=- id=scroller visible=true focused=false rect=4,26,102,6 clip=4,26,102,6 overflow=0,0,0,0 scroll=2 bindings=- resources=- style={id=scroller,height=6,scrollOffset=2}
+      node type=label key=- id=tall visible=true focused=false rect=4,24,102,9 clip=4,26,102,6 overflow=0,2,0,1 scroll=- bindings=- resources=- style={id=tall,text=Tall content text}
+  node type=row key=- id=wide visible=true focused=false rect=0,39,200,8 clip=0,39,200,8 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=wide,width=200,height=8}
+--- profile 5 ---
+root=insp-root source=fake-host profile=5 viewport=854x480 content=854x480 safe=0/0/0/0 gui=2 design=2.6666666666666665
+diagnostics=hero:overflow-right\;hero:overflow-bottom\;tall:overflow-top\;tall:overflow-bottom
+errors=layout:insp-error-root:UI layout failed: width min must not exceed max
+screenshot=fake-frame 854x480
+node type=screen key=- id=root visible=true focused=false rect=0,0,854,480 clip=0,0,854,480 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=root}
+  node type=column key=- id=main visible=true focused=false rect=0,0,110,39 clip=0,0,110,39 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=main,spacing=2,padding=4}
+    node type=label key=- id=title visible=true focused=false rect=4,4,66,9 clip=4,4,66,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=title,text=Panel title}
+    node type=row key=- id=actions visible=true focused=false rect=4,15,22,9 clip=4,15,22,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=actions,spacing=4}
+      node type=button key=- id=act visible=true focused=true rect=4,15,18,9 clip=4,15,18,9 overflow=0,0,0,0 scroll=- bindings=blur,click resources=- style={id=act,text=Act}
+      node type=image key=- id=hero visible=true focused=false rect=26,15,40,12 clip=26,15,0,9 overflow=0,0,40,3 scroll=- bindings=- resources=[RESOLVED:mymod:gui/hero] style={id=hero,resource=mymod:gui/hero,width=40,height=12}
+    node type=scroll key=- id=scroller visible=true focused=false rect=4,26,102,6 clip=4,26,102,6 overflow=0,0,0,0 scroll=2 bindings=- resources=- style={id=scroller,height=6,scrollOffset=2}
+      node type=label key=- id=tall visible=true focused=false rect=4,24,102,9 clip=4,26,102,6 overflow=0,2,0,1 scroll=- bindings=- resources=- style={id=tall,text=Tall content text}
+  node type=row key=- id=wide visible=true focused=false rect=0,39,200,8 clip=0,39,200,8 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=wide,width=200,height=8}
+--- profile 6 ---
+root=insp-root source=fake-host profile=6 viewport=1280x720 content=1280x720 safe=0/0/0/0 gui=2 design=4
+diagnostics=hero:overflow-right\;hero:overflow-bottom\;tall:overflow-top\;tall:overflow-bottom
+errors=layout:insp-error-root:UI layout failed: width min must not exceed max
+screenshot=fake-frame 1280x720
+node type=screen key=- id=root visible=true focused=false rect=0,0,1280,720 clip=0,0,1280,720 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=root}
+  node type=column key=- id=main visible=true focused=false rect=0,0,110,39 clip=0,0,110,39 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=main,spacing=2,padding=4}
+    node type=label key=- id=title visible=true focused=false rect=4,4,66,9 clip=4,4,66,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=title,text=Panel title}
+    node type=row key=- id=actions visible=true focused=false rect=4,15,22,9 clip=4,15,22,9 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=actions,spacing=4}
+      node type=button key=- id=act visible=true focused=true rect=4,15,18,9 clip=4,15,18,9 overflow=0,0,0,0 scroll=- bindings=blur,click resources=- style={id=act,text=Act}
+      node type=image key=- id=hero visible=true focused=false rect=26,15,40,12 clip=26,15,0,9 overflow=0,0,40,3 scroll=- bindings=- resources=[RESOLVED:mymod:gui/hero] style={id=hero,resource=mymod:gui/hero,width=40,height=12}
+    node type=scroll key=- id=scroller visible=true focused=false rect=4,26,102,6 clip=4,26,102,6 overflow=0,0,0,0 scroll=2 bindings=- resources=- style={id=scroller,height=6,scrollOffset=2}
+      node type=label key=- id=tall visible=true focused=false rect=4,24,102,9 clip=4,26,102,6 overflow=0,2,0,1 scroll=- bindings=- resources=- style={id=tall,text=Tall content text}
+  node type=row key=- id=wide visible=true focused=false rect=0,39,200,8 clip=0,39,200,8 overflow=0,0,0,0 scroll=- bindings=- resources=- style={id=wide,width=200,height=8}

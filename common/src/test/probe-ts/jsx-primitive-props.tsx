@@ -25,3 +25,18 @@ jsxs("row", { text: "bad" });
 const invalid = <row text="bad" />;
 // @ts-expect-error label has no scrollOffset prop
 const invalidLabel = <label scrollOffset={1} />;
+
+const visualPanel = <panel opacity={0.5} />;
+const visualImage = <image resource="mymod:gui/hero" fit="contain" opacity={0.25} icon="mymod:gui/icon" crop={{ x: 1, y: 2, width: 8, height: 9 }} />;
+const arrayCrop = <image resource="mymod:gui/hero" crop={[1, 2, 8, 9]} />;
+const truncated = <label truncate>long text</label>;
+UI.element('panel', { opacity: 0.5 });
+UI.element('image', { icon: 'mymod:gui/icon', crop: [1, 2, 8, 9] });
+// @ts-expect-error row has no opacity prop
+const badOpacity = <row opacity={0.5} />;
+// @ts-expect-error label has no opacity prop
+const badLabelOpacity = <label opacity={0.5} />;
+// @ts-expect-error image crop must be a rect shape or 4-number array
+const badCrop = <image crop="nope" />;
+// @ts-expect-error panel has no truncate prop
+const badTruncate = <panel truncate />;

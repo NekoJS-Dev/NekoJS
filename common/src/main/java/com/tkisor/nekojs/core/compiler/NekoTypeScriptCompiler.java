@@ -1741,7 +1741,19 @@ public final class NekoTypeScriptCompiler {
             }
             if (bodyStart < 0) return statementEnd(start);
             int bodyEnd = matchingCloseBrace(bodyStart);
-            return bodyEnd < 0 ? length : bodyEnd + 1;
+            if (bodyEnd < 0) return length;
+            // A type alias may continue past the matched body (e.g. `type A = { .. } | B`
+            // or `{ .. }[]`): keep consuming to the statement end so no type residue leaks
+            // into the erased JS. A real statement boundary (newline, `}`) ends as before.
+            int after = bodyEnd + 1;
+            while (after < length && (source.charAt(after) == ' ' || source.charAt(after) == '\t')) after++;
+            if (after < length) {
+                char c = source.charAt(after);
+                if (c == '|' || c == '&' || c == '[' || c == '.' || c == '(' || c == ';') {
+                    return statementEnd(after);
+                }
+            }
+            return bodyEnd + 1;
         }
 
         private int statementEnd(int start) {

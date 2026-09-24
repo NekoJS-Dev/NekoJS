@@ -26,6 +26,10 @@ function makeHost() {
       return true;
     },
     supportsPrimitive: type => type !== host.unsupportedPrimitive && UI.primitives().includes(type),
+    measureText: (text, fontSize, maxWidth) => ({
+      width: Math.min(maxWidth, String(text == null ? '' : text).length * Math.ceil(fontSize * 0.6)),
+      height: Math.ceil(fontSize)
+    }),
     layout: (tree, viewport, snapshot) => {
       counts.layouts++;
       if (host.failLayout) throw new Error('fake layout failure');
@@ -185,7 +189,9 @@ function render() {
     UI.element('label', { id: 'conditional', children: currentMode === 'good' ? 'ready' : currentMode }),
     UI.element('button', { id: 'replace-event', children: 'Replace', onClick: () => eventCalls.push(currentHandler) }),
     UI.element('button', { id: 'bad-event', children: 'Bad', onClick: () => { badEventCalls.push('called'); throw new Error('event failure'); } }),
-    UI.element('button', { id: 'good-event', children: 'Good', onClick: event => eventCalls.push(event.target) })
+    UI.element('button', { id: 'good-event', children: 'Good', onClick: event => eventCalls.push(event.target) }),
+    UI.element('panel', { id: 'visual-panel', opacity: 0.5, children: UI.element('label', { id: 'truncate-label', width: 40, truncate: true, children: 'truncation entry' }) }),
+    UI.element('image', { id: 'visual-image', resource: 'mymod:gui/hero', fit: 'contain', opacity: 0.25, icon: 'mymod:gui/icon', crop: { x: 1, y: 2, width: 8, height: 9 } })
   ];
   return UI.element('screen', { id: 'screen', title: 'UI proof', pausesGame: false, children });
 }
@@ -215,6 +221,31 @@ const hiddenProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id
 check(hiddenProbe.visible === false && hiddenProbe.rect.width === 0, 'profile visibility hides a node');
 const valueProbe = host.layoutSnapshot().nodes[0].children.find(node => node.id === 'value');
 check(valueProbe.style.fontSize === 12, 'profile text size override is observable');
+function nodeById(id) {
+  const visit = node => {
+    if (node.props.id === id) return node;
+    for (const child of node.children) {
+      const found = visit(child);
+      if (found) return found;
+    }
+    return null;
+  };
+  for (const node of host.snapshot()) {
+    const found = visit(node);
+    if (found) return found;
+  }
+  return null;
+}
+const visualImage = nodeById('visual-image');
+check(visualImage != null && visualImage.props.resource === 'mymod:gui/hero' && visualImage.props.fit === 'contain'
+  && visualImage.props.opacity === 0.25 && visualImage.props.icon === 'mymod:gui/icon'
+  && visualImage.props.crop.width === 8 && visualImage.props.crop.height === 9, 'image visual props cross the script whitelist to host nodes');
+const visualPanel = nodeById('visual-panel');
+check(visualPanel != null && visualPanel.props.opacity === 0.5, 'panel opacity crosses the script whitelist');
+const truncateLabel = nodeById('truncate-label');
+check(truncateLabel != null && truncateLabel.props.truncate === true && truncateLabel.props.text === 'truncation entry',
+  'label truncate crosses the script whitelist');
+
 store.set('items', ['b', 'a', 'c']);
 check(host.findById('item-a') === keyedA && host.findById('item-b') === keyedB, 'keyed reorder retains host identity');
 check(host.snapshot()[0].children[0].children.map(node => node.key).join(',') === 'b,a,c', 'children reorder in the committed tree');
@@ -323,6 +354,8 @@ export const uiCoreProof = Object.freeze({
   profiles: selectedProfiles.join(','),
   keyedOrder: 'b,a,c',
   diagnostics: 'render,component,layout,host-update,event',
+  visualProps: visualImage.props.opacity === 0.25 && visualPanel.props.opacity === 0.5
+    && truncateLabel.props.truncate === true,
   disposed: root.isDisposed(),
   passed: true
 });

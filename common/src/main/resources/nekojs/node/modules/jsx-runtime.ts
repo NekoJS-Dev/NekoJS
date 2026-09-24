@@ -101,6 +101,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     readonly clip: NekoUiRect
     readonly overflow: Readonly<Record<'left' | 'top' | 'right' | 'bottom', number>>
     readonly style: Readonly<Record<string, unknown>>
+    readonly bindings: readonly string[]
     readonly children: readonly NekoUiLayoutNode[]
   }
 
@@ -174,17 +175,18 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     onChange?: NekoUiCallback
     onSubmit?: NekoUiCallback
   }
+  type NekoUiCrop = { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | readonly [number, number, number, number]
   type NekoUiPrimitivePropsByType = {
     screen: NekoUiSharedProps & { title?: string; pausesGame?: boolean; closeOnEscape?: boolean }
-    panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number }
+    panel: NekoUiSharedProps & { background?: string | number; borderColor?: string | number; borderWidth?: number; radius?: number; opacity?: number }
     row: NekoUiSharedProps
     column: NekoUiSharedProps
     stack: NekoUiSharedProps
     scroll: NekoUiSharedProps & { scrollX?: NekoUiResponsive<boolean>; scrollY?: NekoUiResponsive<boolean>; scrollOffset?: NekoUiResponsive<number> }
-    label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; wrap?: boolean }
+    label: NekoUiSharedProps & { text?: string; color?: string | number; fontSize?: NekoUiResponsive<number>; wrap?: boolean; truncate?: boolean }
     button: NekoUiSharedProps & { text?: string; disabled?: boolean; tooltip?: string }
     input: NekoUiSharedProps & { value?: string; placeholder?: string; maxLength?: number; disabled?: boolean }
-    image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch' }
+    image: NekoUiSharedProps & { resource?: string; fit?: 'contain' | 'cover' | 'stretch'; opacity?: number; icon?: string; crop?: NekoUiCrop }
     spacer: NekoUiSharedProps
   }
   type NekoUiPrimitiveProps = NekoUiPrimitivePropsByType[NekoUiPrimitive]
@@ -235,15 +237,15 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   const FRAGMENT: NekoUiFragment = Symbol('nekojs.jsx.fragment') as unknown as NekoUiFragment
   const PRIMITIVES = Object.freeze({
     screen: ['title', 'pausesGame', 'closeOnEscape'],
-    panel: ['background', 'borderColor', 'borderWidth', 'radius'],
+    panel: ['background', 'borderColor', 'borderWidth', 'radius', 'opacity'],
     row: [],
     column: [],
     stack: [],
     scroll: ['scrollX', 'scrollY', 'scrollOffset'],
-    label: ['text', 'color', 'fontSize', 'wrap'],
+    label: ['text', 'color', 'fontSize', 'wrap', 'truncate'],
     button: ['text', 'disabled', 'tooltip'],
     input: ['value', 'placeholder', 'maxLength', 'disabled'],
-    image: ['resource', 'fit'],
+    image: ['resource', 'fit', 'opacity', 'icon', 'crop'],
     spacer: []
   })
   const SHARED_PROPS = Object.freeze([
@@ -342,6 +344,19 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return createElement(type, props, key)
   }
 
+  // Matches the Java VisualStyleResolver crop contract: {x, y, width, height} or a
+  // 4-number array; the resolver still owns the semantic checks (non-negative origin,
+  // positive size).
+  function validCrop(value) {
+    if (Array.isArray(value)) {
+      return value.length === 4 && value.every(part => Number.isInteger(part))
+    }
+    if (plainObject(value)) {
+      return ['x', 'y', 'width', 'height'].every(key => Number.isInteger(value[key]))
+    }
+    return false
+  }
+
   function plainObject(value) {
     return value != null && typeof value === 'object' && !Array.isArray(value)
       && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)
@@ -417,6 +432,12 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       throw fail('layout', 'id must be a non-empty string')
     }
     if (props.disabled != null && typeof props.disabled !== 'boolean') throw fail('layout', 'disabled must be a boolean')
+    if (props.opacity != null && (typeof props.opacity !== 'number' || !Number.isFinite(props.opacity)
+      || props.opacity < 0 || props.opacity > 1)) {
+      throw fail('layout', 'opacity must be a number in [0, 1]')
+    }
+    if (props.truncate != null && typeof props.truncate !== 'boolean') throw fail('layout', 'truncate must be a boolean')
+    if (props.crop != null && !validCrop(props.crop)) throw fail('layout', 'crop must be {x, y, width, height} or a 4-number array')
     if (type === 'input' && props.value != null && typeof props.value !== 'string') throw fail('layout', 'input.value must be a string')
     if (type === 'input' && props.maxLength != null
       && (!Number.isInteger(props.maxLength) || props.maxLength < 0)) {
@@ -525,13 +546,13 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
   }
 
   function textMetrics(adapter, text, fontSize, maxWidth) {
-    if (typeof adapter.measureText === 'function') {
-      const result = adapter.measureText(text, fontSize, maxWidth)
-      if (result == null || !Number.isFinite(result.width) || !Number.isFinite(result.height)
-        || result.width < 0 || result.height < 0) throw fail('layout', 'Font Adapter returned invalid text metrics')
-      return result
+    if (typeof adapter.measureText !== 'function') {
+      throw fail('layout', 'UI host Adapter does not implement measureText; the common runtime never guesses text widths')
     }
-    return { width: Math.min(maxWidth, text.length * fontSize * 0.5), height: fontSize }
+    const result = adapter.measureText(text, fontSize, maxWidth)
+    if (result == null || !Number.isFinite(result.width) || !Number.isFinite(result.height)
+      || result.width < 0 || result.height < 0) throw fail('layout', 'Font Adapter returned invalid text metrics')
+    return result
   }
 
   function intrinsicSize(node, availableWidth, availableHeight, viewport, adapter) {
@@ -577,7 +598,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
     return { x: x, y: y }
   }
 
-  function layoutNode(node, x, y, availableWidth, availableHeight, parentClip, viewport, adapter, diagnostics, rootNode, allocated) {
+  function layoutNode(node, x, y, availableWidth, availableHeight, parentClip, viewport, adapter, diagnostics, rootNode, allocated, eventHandlers) {
     const props = resolvedProps(node.props, viewport)
     const scale = props.coordinateSpace === 'design' ? viewport.designScale : 1
     const intrinsic = intrinsicSize(node, availableWidth, availableHeight, viewport, adapter)
@@ -642,7 +663,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       if (justify === 'spaceAround' && childRecords.length > 0) { actualGap = gap + Math.max(0, extra) / childRecords.length; offset = actualGap / 2 }
       for (const record of childRecords) {
         if (record.props.visible === false) {
-          children.push(layoutNode(record.child, innerX, innerY, 0, 0, layoutClip, viewport, adapter, diagnostics, false, true))
+          children.push(layoutNode(record.child, innerX, innerY, 0, 0, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
           continue
         }
         const align = record.props.align || props.align || 'start'
@@ -652,7 +673,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         const childWidth = direction === 'row' ? record.main : record.cross
         const childHeight = direction === 'row' ? record.cross : record.main
         const scrollOffset = node.type === 'scroll' ? Number(props.scrollOffset || 0) * scale : 0
-        children.push(layoutNode(record.child, childX - (direction === 'row' ? scrollOffset : 0), childY - (direction === 'column' ? scrollOffset : 0), childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true))
+        children.push(layoutNode(record.child, childX - (direction === 'row' ? scrollOffset : 0), childY - (direction === 'column' ? scrollOffset : 0), childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
         offset += record.main + actualGap
       }
     } else if (visible && node.type === 'stack') {
@@ -663,9 +684,12 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         const childHeight = dimension(childProps.height, innerHeight, childIntrinsic.height, childProps.coordinateSpace === 'design' ? viewport.designScale : 1)
         const anchor = childProps.anchor || props.anchor || 'topLeft'
         const position = anchorOffset(anchor, innerWidth, innerHeight, childWidth, childHeight)
-        children.push(layoutNode(child, innerX + position.x, innerY + position.y, childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true))
+        children.push(layoutNode(child, innerX + position.x, innerY + position.y, childWidth, childHeight, layoutClip, viewport, adapter, diagnostics, false, true, eventHandlers))
       }
     }
+    const bound = id != null ? eventHandlers.get(id) : null
+    const bindings = bound == null ? Object.freeze([]) : Object.freeze(Object.keys(bound)
+      .map(name => name.slice(2).toLowerCase()).sort())
     return Object.freeze({
       type: node.type,
       key: node.key,
@@ -676,14 +700,15 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
       clip: clip,
       overflow: overflow,
       style: Object.freeze(props),
+      bindings: bindings,
       children: Object.freeze(children)
     })
   }
 
-  function layoutSnapshotFor(nodes, viewport, adapter) {
+  function layoutSnapshotFor(nodes, viewport, adapter, eventHandlers) {
     const diagnostics = []
     const rootClip = Object.freeze({ x: viewport.safeArea.left, y: viewport.safeArea.top, width: viewport.contentWidth, height: viewport.contentHeight })
-    const layoutNodes = nodes.map(node => layoutNode(node, rootClip.x, rootClip.y, rootClip.width, rootClip.height, rootClip, viewport, adapter, diagnostics, true, false))
+    const layoutNodes = nodes.map(node => layoutNode(node, rootClip.x, rootClip.y, rootClip.width, rootClip.height, rootClip, viewport, adapter, diagnostics, true, false, eventHandlers))
     return Object.freeze({ profile: viewport.profile, viewport: viewport, nodes: Object.freeze(layoutNodes), diagnostics: Object.freeze(diagnostics) })
   }
 
@@ -998,7 +1023,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
         }
         let layoutSnapshot
         try {
-          layoutSnapshot = layoutSnapshotFor(candidate, root.viewport, adapter)
+          layoutSnapshot = layoutSnapshotFor(candidate, root.viewport, adapter, eventHandlers)
           adapter.layout(cloneLayoutTree(candidate), root.viewport, layoutSnapshot)
         } catch (error) {
           throw fail('layout', 'UI layout failed', error)
@@ -1053,7 +1078,7 @@ type NekoUiProfile = 1 | 2 | 3 | 4 | 5 | 6
           return false
         }
         try {
-          const nextSnapshot = layoutSnapshotFor(root.candidate, nextViewport, adapter)
+          const nextSnapshot = layoutSnapshotFor(root.candidate, nextViewport, adapter, root.eventHandlers)
           adapter.layout(cloneLayoutTree(root.candidate), nextViewport, nextSnapshot)
           root.viewport = nextViewport
           root.layoutSnapshot = nextSnapshot

@@ -1,3 +1,4 @@
+//? if neoforge && >=26 {
 package com.tkisor.nekojs.client.ui;
 
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -78,8 +80,55 @@ class Ticket41JsxHostAdapterTest {
                 "screen resize must notify the bound common root");
     }
 
+    @Test
+    void narrationFollowsFocusAndFallsBackThroughPropsToPrimitiveName() {
+        JsxHostTree tree = new JsxHostTree();
+        JsxHostTree.Transaction txn = tree.begin();
+        Object ok = txn.create("button", "ok", Map.of("text", "Confirm"));
+        Object off = txn.create("button", "off", Map.of("text", "Nope", "disabled", true));
+        Object named = txn.create("button", "named", Map.of("text", "Raw", "narration", "Explicit label"));
+        Object field = txn.create("input", "field", Map.of("placeholder", "Search"));
+        Object plain = txn.create("button", "plain", Map.of());
+        txn.order(null, List.of(ok, off, named, field, plain));
+        txn.commit(List.of(ok, off, named, field, plain));
+
+        List<JsxHostTree.Node> roots = tree.roots();
+        // No focus yet: nothing is narrated.
+        assertEquals("", JsxHostAdapter.narrationText(roots));
+
+        // text prop is used when no explicit narration is present.
+        roots.get(0).focused = true;
+        assertEquals("Confirm", JsxHostAdapter.narrationText(roots));
+        roots.get(0).focused = false;
+
+        // disabled stays audible rather than silently skipped; the localized marker is
+        // composed by JsxScreen (nekojs.gui.narration.disabled), not by this Minecraft-free text.
+        roots.get(1).focused = true;
+        assertEquals("Nope", JsxHostAdapter.narrationText(roots));
+        assertTrue(JsxHostAdapter.narrationDisabled(roots));
+        roots.get(1).focused = false;
+        assertFalse(JsxHostAdapter.narrationDisabled(roots), "nothing focused means no disabled marker");
+
+        // explicit narration prop wins over text.
+        roots.get(2).focused = true;
+        assertEquals("Explicit label", JsxHostAdapter.narrationText(roots));
+        roots.get(2).focused = false;
+
+        // empty input narrates its placeholder, then its typed value.
+        roots.get(3).focused = true;
+        assertEquals("Search", JsxHostAdapter.narrationText(roots));
+        roots.get(3).inputValue = "abc";
+        assertEquals("abc", JsxHostAdapter.narrationText(roots));
+        roots.get(3).focused = false;
+
+        // last resort is the primitive name, never an empty announcement.
+        roots.get(4).focused = true;
+        assertEquals("button", JsxHostAdapter.narrationText(roots));
+    }
+
     private static Path sourceRoot() {
         Path direct = Path.of("src/main/java/com/tkisor/nekojs/client/ui");
         return Files.isDirectory(direct) ? direct : Path.of("../../src/main/java/com/tkisor/nekojs/client/ui");
     }
 }
+//?}
