@@ -106,6 +106,26 @@ class SnapshotDifferTest {
     }
 
     @Test
+    void guiScaleAndDesignScaleDriftAreFrameEntries() {
+        InspectorSnapshot reference = new InspectorSnapshot("root", "golden",
+                new InspectorViewport(480, 240, new InspectorViewport.SafeArea(0, 0, 0, 0),
+                        480, 240, 3, 2, 1.0),
+                List.of(node("card", "panel", 0, 0, 100, 40)), List.of(), List.of(), null);
+        InspectorSnapshot actual = new InspectorSnapshot("root", "neoforge-host",
+                new InspectorViewport(480, 240, new InspectorViewport.SafeArea(0, 0, 0, 0),
+                        480, 240, 3, 4, 2.0),
+                List.of(node("card", "panel", 0, 0, 100, 40)), List.of(), List.of(), null);
+        SnapshotDiff diff = SnapshotDiffer.diff(reference, actual, null);
+        SnapshotDiff.Entry gui = entry(diff, "guiScale");
+        assertEquals("2", gui.expected(), "the reference gui scale is an environment input");
+        assertEquals("4", gui.actual());
+        assertEquals(2, gui.deviation(), 1e-9);
+        SnapshotDiff.Entry design = entry(diff, "designScale");
+        assertEquals("1", design.expected());
+        assertEquals("2", design.actual());
+    }
+
+    @Test
     void screenshotAndReferenceImageStayProvenanceNotEntries() {
         InspectorSnapshot reference = snapshot(3, node("card", "panel", 0, 0, 100, 40));
         InspectorSnapshot actual = new InspectorSnapshot("root", "neoforge-host", viewport(3, 640, 360),

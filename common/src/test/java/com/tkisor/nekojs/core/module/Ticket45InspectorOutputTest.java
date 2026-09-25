@@ -198,6 +198,37 @@ class Ticket45InspectorOutputTest {
                 "stable code in: " + failure.getMessage());
     }
 
+    @Test
+    void malformedHostScalarIsRejectedWithTheInspectorCode() {
+        // Same shape as the runtime snapshot but with a non-boolean `visible`: the strict
+        // host-data path must fail with NEKO-8001 just like the guest path would.
+        Map<String, Object> rect = new LinkedHashMap<>(Map.of("x", 0, "y", 0, "width", 1, "height", 1));
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("type", "panel");
+        node.put("key", null);
+        node.put("visible", "yes");
+        node.put("rect", rect);
+        node.put("clip", rect);
+        node.put("overflow", Map.of("left", 0, "top", 0, "right", 0, "bottom", 0));
+        node.put("style", Map.of());
+        node.put("children", List.of());
+        Map<String, Object> viewport = new LinkedHashMap<>();
+        viewport.put("width", 100);
+        viewport.put("height", 100);
+        viewport.put("safeArea", Map.of("top", 0, "right", 0, "bottom", 0, "left", 0));
+        viewport.put("contentWidth", 100);
+        viewport.put("contentHeight", 100);
+        viewport.put("profile", 1);
+        viewport.put("guiScale", 2);
+        viewport.put("designScale", 1.0);
+        Map<String, Object> snapshot = Map.of("viewport", viewport, "nodes", List.of(node));
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> InspectorSnapshots.read("r", "fake-host", snapshot));
+        assertTrue(failure.getMessage().contains(UiErrorCodes.INSPECTOR_SNAPSHOT_MALFORMED),
+                "host-data coercion failures carry the stable code: " + failure.getMessage());
+    }
+
     private static InspectorNode find(List<InspectorNode> nodes, String id) {
         for (InspectorNode node : nodes) {
             if (id.equals(node.id())) return node;

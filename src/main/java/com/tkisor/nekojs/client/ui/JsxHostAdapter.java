@@ -158,12 +158,12 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
     public InspectorSnapshot inspect() {
         requireUsable("inspect the UI root");
         if (lastSnapshot == null) return null;
-        Map<String, Object> viewport = viewport();
+        // The capture metadata describes the retained frame, not the live viewport: a
+        // resize that has not been laid out yet must not relabel the measured frame.
         return InspectorSnapshots.decorate(lastSnapshot, focusedIds(tree.roots()),
                 resources::resolveTexture, List.copyOf(retainedErrors),
                 new InspectorScreenshot("neoforge-viewport-meta",
-                        ((Number) viewport.get("width")).intValue(),
-                        ((Number) viewport.get("height")).intValue()));
+                        lastSnapshot.viewport().width(), lastSnapshot.viewport().height()));
     }
 
     /** Receives the frozen common layout candidate and its snapshot without mutating guest data. */

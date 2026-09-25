@@ -53,9 +53,9 @@ Host wiring:
 - **NeoForge host** (`JsxHostAdapter` implements `UiInspector`): `layout()` retains the
   converted snapshot; `reportDiagnostic()` retains the last 8 phase errors;
   `inspect()` decorates with focused ids from the retained host tree and statuses from
-  the disk-pack resolver, and names the frame `neoforge-frame <w>x<h>`. Real pixel
-  capture is not wired; when a live client captures frames, only the metadata record
-  changes.
+  the disk-pack resolver, and names the retained frame `neoforge-viewport-meta <w>x<h>`
+  (the measured frame's own viewport, not the live one). Real pixel capture is not
+  wired; when a live client captures frames, only the metadata record changes.
 
 ## Difference report
 
@@ -66,13 +66,13 @@ is retained on the report: both snapshot sources, both profiles and viewports, t
 reference image id, and the actual capture metadata. Screenshots and the reference image
 never produce entries — only public measurements and behavior facts are compared.
 
-## Viewport profile ownership (ticket 43 pending)
+## Viewport profile ownership
 
-`InspectorViewport` is the inspector's minimal own contract. Today its values come from
-the common runtime's public `resolveViewport` (six-tier selection by logical viewport,
-capped by `capabilities.maxProfile`). When ticket 43 lands its six-tier profile system,
-the derivation source switches to 43's contract; the inspector field shape does not
-change.
+`InspectorViewport` is the inspector's minimal own contract. Its values come from the
+common runtime's public `resolveViewport` — ticket 43's six-tier profile rule
+(delivered, in-review): selection by logical viewport, capped by
+`capabilities.maxProfile`. A future change to 43's derivation replaces only where these
+values come from, not the inspector field shape.
 
 ## Sources of truth
 

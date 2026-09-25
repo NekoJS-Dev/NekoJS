@@ -42,12 +42,24 @@ public final class InspectorSnapshots {
      * in the same shape). Both hosts collect through this one entry point.
      */
     public static InspectorSnapshot read(String rootId, String source, Object snapshot) {
-        Reader reader = Reader.of(snapshot);
-        if (!reader.isObject()) {
-            throw malformed("snapshot is not an object");
+        try {
+            Reader reader = Reader.of(snapshot);
+            if (!reader.isObject()) {
+                throw malformed("snapshot is not an object");
+            }
+            return new InspectorSnapshot(rootId, source, readViewport(require(reader, "viewport")),
+                    readNodes(require(reader, "nodes")), readDiagnostics(reader), List.of(), null);
+        } catch (IllegalStateException contractFailure) {
+            if (contractFailure.getMessage() != null
+                    && contractFailure.getMessage().contains(UiErrorCodes.INSPECTOR_SNAPSHOT_MALFORMED)) {
+                throw contractFailure;
+            }
+            // Guest/host scalar coercions (asBoolean/asString/...) fail with their own
+            // runtime exceptions; a failed coercion is still a contract mismatch.
+            throw malformed(String.valueOf(contractFailure.getMessage()));
+        } catch (RuntimeException coercionFailure) {
+            throw malformed(String.valueOf(coercionFailure.getMessage()));
         }
-        return new InspectorSnapshot(rootId, source, readViewport(require(reader, "viewport")),
-                readNodes(require(reader, "nodes")), readDiagnostics(reader), List.of(), null);
     }
 
     /**
@@ -325,8 +337,6 @@ public final class InspectorSnapshots {
 
         double asDouble();
 
-        int asInt();
-
         boolean hasMember(String name);
 
         Reader member(String name);
@@ -353,7 +363,7 @@ public final class InspectorSnapshots {
         @Override public String asString() { return value.asString(); }
         @Override public boolean isNumber() { return value.isNumber(); }
         @Override public double asDouble() { return value.asDouble(); }
-        @Override public int asInt() { return value.asInt(); }
+        private int asInt() { return value.asInt(); }
         @Override public boolean hasMember(String name) { return value.hasMember(name); }
         @Override public Reader member(String name) { return new GuestReader(value.getMember(name)); }
         @Override public long arraySize() { return value.getArraySize(); }
@@ -387,12 +397,15 @@ public final class InspectorSnapshots {
         @Override public boolean isObject() { return value instanceof Map; }
         @Override public boolean isArray() { return value instanceof List; }
         @Override public boolean isNull() { return value == null; }
-        @Override public boolean asBoolean() { return Boolean.TRUE.equals(value); }
+        // Strict like the guest path: a non-boolean is a contract mismatch, not false.
+        @Override public boolean asBoolean() {
+            if (!(value instanceof Boolean bool)) throw malformed("expected a boolean, got " + value);
+            return bool;
+        }
         @Override public boolean isString() { return value instanceof String; }
         @Override public String asString() { return String.valueOf(value); }
         @Override public boolean isNumber() { return value instanceof Number; }
         @Override public double asDouble() { return ((Number) value).doubleValue(); }
-        @Override public int asInt() { return ((Number) value).intValue(); }
         @Override public boolean hasMember(String name) { return value instanceof Map<?, ?> map && map.containsKey(name); }
         @Override public Reader member(String name) { return new HostReader(((Map<?, ?>) value).get(name)); }
         @Override public long arraySize() { return ((List<?>) value).size(); }

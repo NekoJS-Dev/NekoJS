@@ -64,6 +64,10 @@ public final class SnapshotDiffer {
         number(entries, "", "safeArea.right", expected.safeArea().right(), measured.safeArea().right());
         number(entries, "", "safeArea.bottom", expected.safeArea().bottom(), measured.safeArea().bottom());
         number(entries, "", "safeArea.left", expected.safeArea().left(), measured.safeArea().left());
+        optionalNumber(entries, "", "guiScale", expected.guiScale(), measured.guiScale());
+        number(entries, "", "designScale", expected.designScale(), measured.designScale());
+        // contentWidth/contentHeight derive from width/height and the safe area; comparing
+        // them would only repeat those entries.
         if (!reference.diagnostics().equals(actual.diagnostics())) {
             entries.add(new SnapshotDiff.Entry("", "diagnostics",
                     String.join(";", reference.diagnostics()), String.join(";", actual.diagnostics()), 1));
@@ -170,6 +174,13 @@ public final class SnapshotDiffer {
         } else {
             number(entries, path, field, expected, actual);
         }
+    }
+
+    private static void optionalNumber(List<SnapshotDiff.Entry> entries, String path, String field,
+            Integer expected, Integer actual) {
+        optionalNumber(entries, path, field,
+                expected == null ? null : expected.doubleValue(),
+                actual == null ? null : actual.doubleValue());
     }
 
     private static void discrete(List<SnapshotDiff.Entry> entries, String path, String field,
