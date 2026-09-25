@@ -1,6 +1,6 @@
 # AI UI Authoring Contract
 
-**Status:** ready-for-agent (ticket 47 deliverable)
+**Status:** in-review (ticket 47 deliverable; examples verified executable 2026-09-25, awaiting maintainer review)
 **Audience:** AI agents that generate, self-check, diagnose, and locally repair NekoJS JSX UI code, and the humans who review that output.
 
 ## What this document is — and is not
@@ -19,7 +19,11 @@ It is **not**:
 - a one-shot generator that skips acceptance — every produced screen stays subject to fixture
   execution, Inspector measurement, and human review (see [Verification](#11-example-verification-map)).
 
-Equivalence priority order, fixed: **structural > interaction > reactive > visual**. Visual
+Equivalence priority order, fixed: **structural > interaction > reactive > visual**. Here
+*reactive* names signal/store state-propagation equivalence (state changes produce the same
+observable behavior); the term is frozen by ticket 46's report schema (`reportVersion: 1`), and
+responsive-profile equivalence is verified separately per profile through the verification record
+(section 10) rather than folded into this axis. Visual
 equivalence is bounded: Minecraft fonts, GUI scaling, safe areas, and rasterization differ from any
 browser, so pixel-perfect output is never promised and never a repair goal.
 
@@ -36,7 +40,7 @@ invented.
 | Managed declaration (generated) | `common/build/probe-ts/generated/jsx-runtime.d.ts` (extracted by `NodeModuleTypeDocs.extractTS`, asserted in `NodeModuleTypeDocsTest`) | The TypeScript surface AI typechecks against |
 | Probe golden + gate | `common/src/test/probe-ts/generated/index.d.ts`, `common/src/test/probe-ts/jsx-primitive-props.tsx`, `npm run test:probe-types` | Frozen managed declaration the probe gate enforces |
 | Fake-host runtime proof | `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-core.tsx`, executed by `NekoTypeScriptJsxRuntimeTest#automaticJsxUiRuntimePassesTheFakeHostContract` | Observable runtime behavior: profiles, keyed reorder, thread queueing, error retention |
-| Authoring proof fixture | `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx`, executed by `TypeScriptUiAuthoringDocsTest` | Every example in this document and in `docs/ui-conversion/` runs and passes |
+| Authoring proof fixture | `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx`, executed by `TypeScriptUiAuthoringDocsTest` | Every section 5 catalog example in this document and both `docs/ui-conversion/` outputs run and pass |
 | Color grammar | `common/src/main/java/com/tkisor/nekojs/api/ui/UiColor.java` | Controlled color forms |
 | Resource id grammar | `common/src/main/java/com/tkisor/nekojs/api/ui/UiResourceId.java` | Controlled resource identifiers |
 | Visual prop resolution | `common/src/main/java/com/tkisor/nekojs/api/ui/VisualStyleResolver.java`, `VisualSpec.java` | Host-side visual validation and NEKO-6001/6002/6006 diagnostics |
@@ -169,6 +173,7 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
 - **Props**: `title?: string`, `pausesGame?: boolean`, `closeOnEscape?: boolean` (+ shared).
 - **Layout**: root-level nodes fill the viewport content area; default direction `column`.
 - **Profile behavior**: shared responsive props apply.
+- **Events**: the shared nine (section 6.3); dispatch requires `id`.
 - **Common errors**: shared set. (`title`/`pausesGame`/`closeOnEscape` are declared types; the
   common runtime validates the shared set and prop names, and passes these through to the host.)
 - **Minimal example** (`screen-1` in the proof fixture):
@@ -189,6 +194,7 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
   `borderWidth`/`radius` are non-negative integers and `opacity` a fraction in `[0, 1]` (host
   visual resolver reports NEKO-6002 for out-of-range values, NEKO-6001 for unparseable colors).
 - **Profile behavior**: shared responsive props apply; visual props are not responsive.
+- **Events**: the shared nine (section 6.3).
 - **Common errors**: NEKO-6001 color forms (`rgb(...)`, `hsl(...)`, named colors outside the CSS
   basic set); NEKO-6002 negative or fractional `borderWidth`/`radius`, or `opacity` outside
   `[0, 1]`.
@@ -209,6 +215,8 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
 - **Layout**: main axis horizontal; `fill` children share the remaining width equally; cross axis
   uses `align` (`stretch` fills cross size when the child does not pin it); `justify` distributes
   leftover main-axis space.
+- **Events**: the shared nine (section 6.3).
+- **Profile behavior**: shared responsive props apply.
 - **Common errors**: shared set; expecting CSS `margin` (use `gap`/parent `padding`).
 - **Minimal example** (`row-1`):
 
@@ -226,6 +234,9 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
 - **Children**: elements laid out top→bottom.
 - **Props**: shared only.
 - **Layout**: same rules as `row` with axes swapped.
+- **Events**: the shared nine (section 6.3).
+- **Profile behavior**: shared responsive props apply.
+- **Common errors**: shared set (section 5.0).
 - **Minimal example** (`column-1`):
 
 ```tsx
@@ -245,6 +256,8 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
   `width`/`height` or intrinsic size (no `fill` distribution). Child paint order replaces CSS
   `z-index`.
 - **Common errors**: expecting percentage-anchor or z-index semantics.
+- **Events**: the shared nine (section 6.3).
+- **Profile behavior**: shared responsive props apply.
 - **Minimal example** (`stack-1`, verified anchor placement):
 
 ```tsx
@@ -265,6 +278,8 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
   (`<id>:overflow-top` etc.). Axis enablement is host policy; the common layout offsets by
   `scrollOffset` only.
 - **Events**: `onScroll` receives `delta` (payload supplied by the host).
+- **Profile behavior**: `scrollX`/`scrollY`/`scrollOffset` are responsive; shared responsive props
+  apply.
 - **Common errors**: negative `scrollOffset`; assuming wheel handling — the common runtime
   synthesizes no input; hosts dispatch.
 - **Minimal example** (`scroll-1`, verified clipping):
@@ -291,6 +306,7 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
 - **Visual**: NEKO-6001 for invalid colors; NEKO-6002 for non-positive `fontSize` or a non-boolean
   `truncate` (host side); the runtime itself rejects negative `fontSize` and non-boolean
   `truncate` at validation.
+- **Events**: the shared nine (section 6.3).
 - **Minimal example** (`label-1`):
 
 ```tsx
@@ -305,6 +321,8 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
   `tooltip?: string` (+ shared).
 - **Events**: all shared events; `onClick`/`onRelease` receive `x`/`y`/`button` when the host
   supplies them. Dispatch requires `id`.
+- **Profile behavior**: shared responsive props apply.
+- **Common errors**: non-boolean `disabled`; shared set.
 - **Minimal example** (`button-1`, verified dispatch round-trip):
 
 ```tsx
@@ -322,6 +340,7 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
   fire on focus moves. The controlled pattern is: keep `value` in a signal, update it in
   `onChange`, pass it back — the runtime does not own input state.
 - **Common errors**: non-string `value`; fractional or negative `maxLength`.
+- **Profile behavior**: shared responsive props apply.
 - **Minimal example** (`input-1`, verified controlled round-trip):
 
 ```tsx
@@ -346,6 +365,9 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
   are reserved codes, not yet emitted: the texture load/decode pipeline is not wired and hosts
   paint a placeholder box; the codes take effect once that pipeline lands. File paths and URLs
   are never accepted.
+- **Events**: the shared nine (section 6.3).
+- **Common errors**: the resource failures above (NEKO-6003/6004/6006); invalid `fit` value;
+  malformed `crop` (NEKO-6006); shared set.
 - **Minimal example** (`image-1`, fixture verifies the element mounts with the id passed through
   to the host; id grammar and resolution are host/Java-side, see section 1 sources):
 
@@ -358,6 +380,11 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
 - **Purpose**: pure layout gap/filler.
 - **Children**: none.
 - **Props**: shared only.
+- **Layout**: sized by its own `width`/`height`; with `fill` it takes the remaining main-axis
+  share like any other fill child.
+- **Events**: the shared nine (section 6.3).
+- **Profile behavior**: shared responsive props apply.
+- **Common errors**: shared set (section 5.0).
 - **Minimal example** (`spacer-1`):
 
 ```tsx
@@ -368,7 +395,7 @@ safe area). P1 is anything below P2. `guiScale` does not change logical selectio
 </row>
 ```
 
-### Color grammar {#color-grammar}
+### Color grammar
 
 `UiColor.parse` accepts exactly: `#RGB`, `#RRGGBB`, `#AARRGGBB` (case-insensitive; short form
 expands per digit), the CSS basic named colors plus `transparent`, and integral numbers in the
