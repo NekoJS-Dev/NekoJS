@@ -116,3 +116,30 @@ AC9 才可勾选。备选方案（保留类但去掉覆写）见 MIGRATION §3�
 
 **证据目录**：`docs/architecture-refactor/baseline/2026-09-21-client-input-hud/`
 （`REPORT.md`、`MIGRATION.md`、`examples/client-input-hud.js`、`command-output/01..09`）。
+
+## Follow-up record（2026-09-25）
+
+**执行者**：ticket-26 follow-up subagent（分支 `mult`；blocker 票 14 closed 已核实）。
+**范围**：AC5/AC6/AC7/AC9 部分满足缺口的授权内闭合 + Closure 未覆盖项 `guardLint` 补跑。
+唯一源码改动为测试 only（`KeyBindEventsTest` +54 行，两 characterization 用例）；历史 AC 勾选不变。
+
+**命令与结果**（详见 `baseline/2026-09-21-client-input-hud/followup-2026-09-25-ticket26.md`
+与 `command-output/followup-2026-09-25-11..17`）：
+
+| 命令 | 结果 |
+|---|---|
+| `:26.1.2:test --tests "*KeyBindEventsTest*" --rerun`（首版探针） | FAILED，10 tests 1 failed（`KeyMapping.click` 无头 NPE 红态，见 11） |
+| 同上（改写后） | BUILD SUCCESSFUL；tests=10 failures=0（见 12） |
+| `:26.1.2:test --tests "*Ticket26*" --rerun` | BUILD SUCCESSFUL；Lifecycle 4/0/0、Surface 4/0/0（见 13） |
+| `:26.1.2:platformGateTest --rerun` | BUILD SUCCESSFUL；gate 2/0/0，无 member-drift（见 14） |
+| `guardLint` | BUILD SUCCESSFUL；守卫块 316、扫描 467 文件、超限豁免 0、警告 0（见 15） |
+
+**AC 结论**：AC1–AC4/AC8 维持满足；AC5 部分满足（held-state 可观察补强落地，
+`consumeClick()` 端到端仍需真机，未勾选）；AC6 部分满足（共享树/节点能力只读复核通过，
+未跑 1.21.1/fabric 节点 test，未勾选）；AC7 部分满足（5 declaration golden 0 命中复核成立，
+runtime fixture 绿，未勾选）；AC9 未勾选（替代 parity/迁移表/无消费者证据仍有效，无新删除）。
+
+**未覆盖项与 owner**：`consumeClick()` 真机端到端 → 票 34；declaration 面 → owner 09/33/34；
+节点 test 与 capability 矩阵 → 票 31/32；`:common:check` 全量与节点 runtime smoke 本轮未跑。
+
+**sign-off 事项**：`ClientRenderPlugin` 删除待维护者确认（备选方案见 MIGRATION §3），不代答。

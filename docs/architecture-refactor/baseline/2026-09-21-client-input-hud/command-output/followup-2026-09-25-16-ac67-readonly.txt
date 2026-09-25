@@ -1,0 +1,22 @@
+# Follow-up 2026-09-25：AC6/AC7 只读核查（未改源码，未新造矩阵/声明条目）
+
+## AC6 共享树事实（mult 分支复核）
+- `src/main/.../client/render/` 内含 `//? if` 守卫的仅 `ClientRenderEvents.java:3`
+ （`//? if neoforge`）；`ClientRenderRegistry` / `RenderRegistrationBusJS` /
+  `HudRenderContextJS` / `WorldRenderContextJS` / `ClientRenderDomainOwner` 无守卫 ⇒ 共享树。
+- `src/main/.../bindings/event/client/`：`KeyBindEvents.java` 为 `//? if neoforge` +
+  `//? if >=26`，`KeyBindIds.java` 为 `//? if >=26`，`ClientEvents.java` 为 `//? if neoforge`。
+- `versions/1.21.1`：无 `KeyBind*` 文件（`>=26` 守卫 ⇒ 该节点无此域）；仅有
+  `ClientRenderEvents` / `HudRenderContextJS` / `WorldRenderContextJS` 三个 override。
+- `src/fabric`：无 `client/render` 目录；`hudRender|ClientRenderRegistry|RenderRegistrationBusJS`
+  0 命中 ⇒ 渲染注册面缺席；`KeyBindEvents` 为独立孪生（`KeyMappingHelper` 时机差异）。
+- 未跑 `:1.21.1:test` / fabric 节点 test；未新造 capability 矩阵条目（owner 票 31/32）。
+
+## AC7 declaration 0 命中复核（mult 分支复核，与 08 结论一致）
+pattern `KeyBind|hudRender|registerKeyMappings|KeyMapping`：
+- `common/src/test/resources/nekojs/golden/`（含 api-manifest-core.json） -> 0 hits
+- `common/src/test/resources/nekojs/probe/*.expected.d.ts`（3 文件：
+  legacy-events / probe-events / legacy-bindings） -> 0 hits
+- `common/src/test/resources/nekojs/platform-gates/`（含 declaration-parity.txt） -> 0 hits
+文件均存在，0 命中为真缺口而非缺文件。本票只交付 runtime member 反射 fixture 级证据
+（SurfaceTest 4 tests，本轮绿），不碰声明派生链（owner 09/33/34）。

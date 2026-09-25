@@ -1,0 +1,7 @@
+# Follow-up 2026-09-25：KeyBindEventsTest 改写后绿态
+$ .\gradlew.bat :26.1.2:test --tests "*KeyBindEventsTest*" --rerun --console=plain
+BUILD SUCCESSFUL in 4s
+
+TEST-com.tkisor.nekojs.bindings.event.client.KeyBindEventsTest tests=10 skipped=0 failures=0 errors=0
+（既有 8 + 新增 2：keyHandleHeldStateIsObservableThroughPublicMethods、
+consumeClickWithNoClickSourceConsumesNothing）

@@ -1,0 +1,6 @@
+# Follow-up 2026-09-25：票 26 全选择（Lifecycle + Surface）
+$ .\gradlew.bat :26.1.2:test --tests "*Ticket26*" --rerun --console=plain
+BUILD SUCCESSFUL in 6s
+
+TEST-com.tkisor.nekojs.client.render.Ticket26ClientInputHudLifecycleTest tests=4 skipped=0 failures=0 errors=0
+TEST-com.tkisor.nekojs.client.render.Ticket26ClientInputHudSurfaceTest    tests=4 skipped=0 failures=0 errors=0

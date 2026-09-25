@@ -100,6 +100,32 @@
 
 票据发布不代表已完成验收或本轮授权源码实施；完成条件与认领规则见本目录索引。
 
+## Follow-up record（2026-09-25）
+
+**执行者：** ticket-30 follow-up subagent（mult 分支本机复核；零源码改动）。
+
+**范围：** 已勾选 AC（AC1/AC2/AC3/AC4/AC5/AC6/AC8/AC9）回归复核；AC7 未勾选态维持并补全检索证据；Closure 本机可跑门禁（`guardLint`、三 NeoForge 节点编译/测试、`:common:check` 含隔离检查）。写集自查：`git status` 下本票写集零修改；工作区他票改动（AGENTS.md/CONTEXT.md/ADR/domain/README/票 26 的 `KeyBindEventsTest` 及其基线）一律未碰。
+
+**命令与结果（全真跑，Windows 本机，不代表其他平台/CI/release）：**
+
+- focused 五测 BUILD SUCCESSFUL（34 tests，0 失败）：`ScriptDiagnosticRecordTest` 12、`DiagnosticPhaseMatrixTest` 12、`ScriptDiagnosticGenerationTest` 3、`WorkspaceGeneratorPreserveTest` 2、`JavaClassLoadTelemetryRecorderTest` 5。
+- 对照绿：`DefaultErrorTrackerTest` + `SourceMapRegistryTest`、`Ticket07RuntimeThreadsTest`（`com.tkisor.nekojs.script` 包；一次误用 `core.lifecycle` 包过滤得 "No tests found"，系过滤器笔误非产品失败，更正后绿）。
+- wire/只读契约绿（零 golden 更新，golden 只读）：`:1.21.1:test` 下 `PayloadWireFormatGoldenTest`、`ShowErrorListPacketReadOnlyContractTest`、`DashboardViewTest`。
+- `guardLint` BUILD SUCCESSFUL；`:1.21.1:compileJava`/`:26.1.2:compileJava`/`:26.2.0:compileJava` BUILD SUCCESSFUL。
+- 收尾全量：`:common:check --rerun-tasks` BUILD SUCCESSFUL（19/19 executed；TOTAL 1930 tests，0 failures/errors，4 skipped，含隔离检查）；`:1.21.1:test`/`:26.1.2:test`/`:26.2.0:test --rerun-tasks` BUILD SUCCESSFUL（49/49 executed）。
+- 完整命令/计数见 `baseline/2026-09-22-diagnostics/followup-2026-09-25-verification-commands.txt`；AC7 检索 0 命中证据见同目录 `followup-2026-09-25-ac7-search.txt`（本机无 `rg`，以工作区内容检索执行，模式与根目录逐条记录）。
+
+**AC 结论要点：**
+
+- AC1/AC2：frozen record 与阶段矩阵无退化（focused 24 测 + 全量门禁绿）。
+- AC3：`toErrorSummary` 四参 legacy 透传在模板与 1.21.1 孪生一致；`summaryDtoProjectionCarriesTheFrozenCoreFields` 逐字段断言等价；`fullDetails` 仍为过渡快照；record 经 `ScriptError.diagnostic()` 公开；telemetry 为独立有界通道（Javadoc 口径已更正）；`ScriptErrorReporter` 未直接改动（单链经 `ErrorTrackerReporter`→`DefaultErrorTracker`）。
+- AC4/AC5/AC6/AC8/AC9：generation 归因三测、telemetry 边界五测、workspace 写保护两测、wire golden 均绿；无新增 NEKO- 码（error 包 + telemetry 类 0 命中）；`wiki/en_us/Error-Reference.md` 在 mult 工作区现已存在，基线 G2“分支内缺注册表”已过时，但本票零新码、无需登记动作。
+- AC7（保持未勾选）：普通错误路径无 offline validator/migration report 引用（7 组检索 0 命中，error 包内仅 host 侧 preflight 提述）；`ScriptExecutor.waitForEvaluation` 超时文本零改动。
+
+**未覆盖项与 owner：** Fabric 节点测试 not run（本票/本次零 fabric 专属文件改动；owner 合并门/票 34）；`runGameTestServer`/真机 smoke、probe 类型检查 not run（零声明改动）；declaration 派生收录 record 字段归 09/33/34；最终 GUI/外部打开归票 27、跨域集成归票 34。
+
+**Sign-off 事项（需维护者裁定，agent 不代答）：** `ScriptExecutor.java:175-176` 超时消息中的配置指引「可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds」是否属于 AC7 的“修复提示”，以及剥离与否归谁。AC7 勾选与任何旧旁路删除仍需该 sign-off。
+
 ## JSX UI feature coordination（2026-09-12）
 
 [42: JSX generation/reload/诊断接线](42-jsx-ui-generation-reload-cleanup.md) 消费本票统一 diagnostic record，补充 UI phase/root/generation 归因，不建立 UI 私有错误事实源。本票不反向依赖 JSX feature。

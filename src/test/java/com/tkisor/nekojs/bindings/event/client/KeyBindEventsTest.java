@@ -212,6 +212,60 @@ class KeyBindEventsTest {
         assertEquals(false, released.isDown());
         assertTrue(pressed.getKeyMapping() == null, "getter must pass the mapping through");
     }
+
+    /**
+     * Ticket 26 AC5: held state is observable through the public handle. The event object
+     * passes the registered {@link KeyMapping} through, and its public {@code isDown()} reflects
+     * the vanilla public mutator {@code setDown(boolean)}. Uses only public methods; reads no
+     * private binding table and asserts no callback identity.
+     */
+    @Test
+    void keyHandleHeldStateIsObservableThroughPublicMethods() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(groupInitializable(),
+                "KeyBindEvents group registration needs an FML runtime");
+
+        assumeTrue(vanillaKeyClassesAvailable(), "KeyMapping unavailable in bare JUnit");
+
+        Identifier id = KeyBindIds.parseIdentifier("mymod:kbtest_handle_state");
+        KeyMapping mapping = KeyBindEvents.registerBinding(
+                id, KeyBindIds.parseKey("key.keyboard.o"), KeyMapping.Category.MISC);
+        try {
+            assertEquals(false, mapping.isDown());
+
+            mapping.setDown(true);
+            KeyBindEvents.KeyBindEventJS event =
+                    new KeyBindEvents.KeyBindEventJS(id.toString(), mapping, mapping.isDown());
+            assertSame(mapping, event.getKeyMapping(), "the event must pass the handle through");
+            assertEquals(true, event.isDown());
+        } finally {
+            mapping.setDown(false);
+        }
+        assertEquals(false, mapping.isDown());
+    }
+
+    /**
+     * Ticket 26 AC5: click consumption through the public handle. A fresh headless handle has no
+     * click source so {@code consumeClick()} is false. The vanilla public static click source
+     * {@code KeyMapping.click(Key)} cannot supply one here: it dereferences
+     * {@code Minecraft.getInstance()} (live client only) and throws NullPointerException in a
+     * headless JVM (observed 2026-09-25, kept as red evidence in the follow-up record). So a real
+     * key press driving click counts still needs a live client (ticket 34 smoke). Uses only
+     * public methods; reads no private binding table and asserts no callback identity.
+     */
+    @Test
+    void consumeClickWithNoClickSourceConsumesNothing() {
+        org.junit.jupiter.api.Assumptions.assumeTrue(groupInitializable(),
+                "KeyBindEvents group registration needs an FML runtime");
+
+        assumeTrue(vanillaKeyClassesAvailable(), "KeyMapping unavailable in bare JUnit");
+
+        Identifier id = KeyBindIds.parseIdentifier("mymod:kbtest_click_source");
+        KeyMapping mapping = KeyBindEvents.registerBinding(
+                id, KeyBindIds.parseKey("key.keyboard.p"), KeyMapping.Category.MISC);
+
+        assertEquals(false, mapping.consumeClick(),
+                "no click source in a headless JVM, so a fresh handle consumes nothing");
+    }
 }
 //?}
 //?}

@@ -1,0 +1,70 @@
+Follow-up verification (run 2026-09-25, branch mult, workdir D:\mcmodDemo\NekoJS-mult).
+No source change was made in this follow-up: every check below ran against the
+merged ticket-30 state. Code deltas since baseline are historical merges only.
+
+1) Ticket-30 focused regression (AC1/AC2/AC4/AC5/AC6/AC8):
+
+  .\gradlew.bat :common:test --tests "com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest" --tests "com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest" --tests "com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest" --tests "com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest" --tests "com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest"
+  Result: BUILD SUCCESSFUL in 12s (17 actionable tasks: 1 executed, 16 up-to-date)
+
+  Per-class results (common/build/test-results/test/TEST-*.xml, timestamp 2026-09-25):
+    com.tkisor.nekojs.core.error.ScriptDiagnosticRecordTest:      tests=12 skipped=0 failures=0 errors=0
+    com.tkisor.nekojs.core.module.DiagnosticPhaseMatrixTest:      tests=12 skipped=0 failures=0 errors=0
+    com.tkisor.nekojs.core.error.ScriptDiagnosticGenerationTest:  tests=3  skipped=0 failures=0 errors=0
+    com.tkisor.nekojs.script.WorkspaceGeneratorPreserveTest:      tests=2  skipped=0 failures=0 errors=0
+    com.tkisor.nekojs.core.JavaClassLoadTelemetryRecorderTest:    tests=5  skipped=0 failures=0 errors=0
+  (RecordTest grew 11 -> 12 since baseline: the freeze-guard case
+  recordIsFrozenAgainstLaterRegistryAndOccurrenceMutations from the 2026-09-22
+  main-session review.)
+
+2) Adjacent对照 (unchanged single-chain producers/consumers):
+
+  .\gradlew.bat :common:test --tests "com.tkisor.nekojs.core.error.DefaultErrorTrackerTest" --tests "com.tkisor.nekojs.core.error.SourceMapRegistryTest"
+  Result: BUILD SUCCESSFUL
+  .\gradlew.bat :common:test --tests "com.tkisor.nekojs.script.Ticket07RuntimeThreadsTest"
+  Result: BUILD SUCCESSFUL
+  Note: one wrong-path attempt with filter
+  com.tkisor.nekojs.core.lifecycle.Ticket07RuntimeThreadsTest failed with
+  "No tests found for given includes" (the class lives in
+  com.tkisor.nekojs.script); corrected filter is green. Filter typo only,
+  no product failure.
+
+3) Wire / dashboard contract (AC3/AC8, zero golden updates):
+
+  .\gradlew.bat :1.21.1:test --tests "com.tkisor.nekojs.network.PayloadWireFormatGoldenTest"
+  Result: BUILD SUCCESSFUL
+  .\gradlew.bat :1.21.1:test --tests "com.tkisor.nekojs.network.ShowErrorListPacketReadOnlyContractTest" --tests "com.tkisor.nekojs.client.gui.dashboard.DashboardViewTest"
+  Result: BUILD SUCCESSFUL
+  Golden files read-only throughout; `git status` shows no golden/probe diff.
+
+4) Closure gates runnable locally:
+
+  .\gradlew.bat guardLint
+  Result: BUILD SUCCESSFUL (10 actionable tasks: 1 executed, 9 up-to-date)
+  .\gradlew.bat :1.21.1:compileJava :26.1.2:compileJava :26.2.0:compileJava
+  Result: BUILD SUCCESSFUL (27 actionable tasks: 27 up-to-date; sources unchanged)
+
+5) Final full gate (fresh, includes isolation checks; :common:test alone is not
+   a substitute per AGENTS.md):
+
+  .\gradlew.bat :common:check --rerun-tasks
+  Result: BUILD SUCCESSFUL in 1m 13s (19 actionable tasks: 19 executed)
+  TOTAL tests=1930 failures=0 errors=0 skipped=4
+  (aggregated from common/build/test-results/test/TEST-*.xml)
+
+  .\gradlew.bat :1.21.1:test :26.1.2:test :26.2.0:test --rerun-tasks
+  Result: BUILD SUCCESSFUL in 43s (49 actionable tasks: 49 executed)
+
+Not run (with reason):
+  :26.1.2-fabric:test / :26.2.0-fabric:test - not run; this follow-up touched no
+    files at all and ticket 30 touches no fabric-exclusive file (owner: merge gate / ticket 34).
+  runGameTestServer / live-client smoke - not run; outside headless scope.
+  npm run test:probe-types - not run; zero declaration/probe changes in scope.
+  Earlier non-rerun :common:check / node runs in this session are superseded by
+  the --rerun-tasks results above, not counted separately.
+
+Self-check: `git status --short -- common/ src/ versions/ wiki/` shows only one
+pre-existing third-party modification
+(M src/test/java/com/tkisor/nekojs/bindings/event/client/KeyBindEventsTest.java,
+ticket-26 owner) - untouched by this follow-up. Zero files in the ticket-30
+write set were modified.

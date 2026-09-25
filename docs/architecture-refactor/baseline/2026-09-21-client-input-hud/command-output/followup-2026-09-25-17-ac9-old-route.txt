@@ -1,0 +1,10 @@
+# Follow-up 2026-09-25：AC9 preparation-only 复核（无删除，无 sign-off 代答）
+- `src/main/java/com/tkisor/nekojs/client/render/ClientRenderPlugin.java` 不存在
+  （09-21 已删除；`git log --all` 仅见实现提交与 P2-P4 基线提交）。
+- `ClientRenderPlugin` 全 `src` 引用：仅 `ClientRenderDomainOwner.java:18` javadoc 历史提及
+  （`{@code ClientRenderPlugin#beforeScriptsLoaded}`），无代码消费者。
+- `ClientRenderRegistry.clearAll` 全 `src` 引用：仅测试 harness
+  `Ticket26ClientInputHudHarness.resetRegistry()`（用例隔离），生产调用点 0。
+- `ClientEvents.java` 本票 diff 仍为 0 行（AC8 未动）。
+- MIGRATION.md §1/§3（替代路径 parity、迁移表、备选保留方案）与 §4（按节点差异）仍有效；
+  AC9 保持未勾选，待维护者确认。

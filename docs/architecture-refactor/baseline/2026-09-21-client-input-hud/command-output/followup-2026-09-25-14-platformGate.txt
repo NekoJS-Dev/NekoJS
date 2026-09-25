@@ -1,0 +1,7 @@
+# Follow-up 2026-09-25：跨节点只读基线（ticket-33 gate，本票未改 golden）
+$ .\gradlew.bat :26.1.2:platformGateTest --rerun --console=plain
+BUILD SUCCESSFUL in 3s
+
+TEST-com.tkisor.nekojs.platform.EventSurfaceDomainGateTest   tests=1 skipped=0 failures=0 errors=0
+TEST-com.tkisor.nekojs.platform.PlatformSpecContractGateTest tests=1 skipped=0 failures=0 errors=0
+无 member-drift（`git status` 无 golden 改动）。

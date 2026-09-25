@@ -1,0 +1,7 @@
+# Follow-up 2026-09-25：guardLint（Closure 未覆盖项，本轮补跑）
+$ .\gradlew.bat guardLint --console=plain
+> Task :guardLint
+guardLint: 守卫块 316，扫描 467 个文件；超限豁免 0 个；警告 0 条
+BUILD SUCCESSFUL in 2s
+
+注：块数/文件数与 09-21 基线（291/440）不同，系仓库演进所致，非本票改动（本票未增删守卫）。

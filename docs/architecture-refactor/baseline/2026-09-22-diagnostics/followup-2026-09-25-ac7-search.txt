@@ -1,0 +1,67 @@
+AC7 follow-up evidence (2026-09-25, branch mult, workdir D:\mcmodDemo\NekoJS-mult).
+AC7 stays unchecked: ordinary error paths carry no offline-validator /
+migration-report references and no repair hints were added; the single timeout
+wording question below is left byte-identical for maintainer sign-off.
+
+Method note: `rg` is not installed on this machine (direct `rg` invocation
+fails with CommandNotFound), so retrieval used the workspace content-search
+tool over the same trees. Each item below names the exact regex and root; all
+roots cover main (non-test) sources only, docs/baseline excluded.
+
+Search 1 - offline validator references in common main sources:
+  pattern:  offline
+  root:     common/src/main
+  result:   0 files
+Search 2 - migration report references in common main sources:
+  pattern:  [Mm]igration.?[Rr]eport|MigrationReport
+  root:     common/src/main
+  result:   0 files
+Search 3 - validator wording inside the ticket-30 error package:
+  pattern:  Validator|validator
+  root:     common/src/main/java/com/tkisor/nekojs/core/error
+  result:   3 matches, all host-side load-time preflight (NOT the offline validator):
+            ErrorTrackerReporter.java:11 (preflight diagnostics doc comment),
+            ScriptDiagnostics.java:71 (preflight-classification comment),
+            ScriptError.java:41 (preflight-validator callback-kind doc).
+Search 4 - offline references in the shared command/network template:
+  pattern:  offline
+  root:     src/main
+  result:   0 files
+Search 5 - offline references in the 1.21.1 node:
+  pattern:  offline
+  root:     versions/1.21.1/src/main
+  result:   0 files
+Search 6 - migration report references in the shared template:
+  pattern:  [Mm]igration.?[Rr]eport
+  root:     src/main
+  result:   0 files
+Search 7 - offline/migration references in the script runtime package:
+  pattern:  offline|migration.?report|MigrationReport
+  root:     common/src/main/java/com/tkisor/nekojs/script
+  result:   0 files
+  (A follow-up probe for `修复|修复提示|validator|migration` in the same root
+  hit only WorkspaceGenerator.java:106 - a "reloads, validation and migration
+  must never overwrite" boundary comment, not error text - and
+  ScriptExecutor.java:140 - the preflight-validator callback kind, not the
+  offline tool.)
+
+Timeout wording (zero change, pending maintainer ruling):
+  File: common/src/main/java/com/tkisor/nekojs/script/ScriptExecutor.java:175-176
+  (inside waitForEvaluation; byte-identical to the ticket-07 delivered text)
+  Text: "脚本求值超时（超过 " + timeoutSeconds
+        + " 秒，可在 nekojs/config/engine.toml 中调整
+        scriptEvaluationTimeoutSeconds）：入口脚本的顶层 await 或模块加载可能永不完成"
+  Question for the maintainer: does the embedded config guidance
+  ("可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds")
+  count as a "修复提示" under AC7, and if so, who owns the strip-down?
+  This follow-up deliberately made zero user-visible text change to avoid an
+  unauthorized behavior change.
+
+NEKO- registry check (zero-new-code rule holds):
+  `NEKO-` in common/src/main/java/com/tkisor/nekojs/core/error (+ telemetry
+  classes JavaClassLoadTelemetry*): 0 hits in ticket-30 files
+  (describe()/payload() are stable field texts, not diagnostic codes).
+  wiki/en_us/Error-Reference.md now exists in the mult working tree
+  (Test-Path True); baseline G2 "registry absent in branch" is therefore stale
+  as a location gap, but no registration action is needed: this ticket adds
+  zero codes.

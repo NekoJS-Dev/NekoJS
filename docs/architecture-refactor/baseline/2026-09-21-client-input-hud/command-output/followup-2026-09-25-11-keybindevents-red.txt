@@ -1,0 +1,22 @@
+# Follow-up 2026-09-25：AC5 探针红态（`KeyMapping.click` 无头 NPE）
+$ .\gradlew.bat :26.1.2:test --tests "*KeyBindEventsTest*" --rerun --console=plain
+BUILD FAILED
+
+KeyBindEventsTest > consumeClickConsumesOnePublicClickSource() FAILED
+    java.lang.NullPointerException at KeyBindEventsTest.java:267
+
+10 tests completed, 1 failed
+
+## 堆栈（test-results XML 原文）
+java.lang.NullPointerException: Cannot invoke "net.minecraft.client.Minecraft.hasShiftDown()"
+  because the return value of "net.minecraft.client.Minecraft.getInstance()" is null
+	at net.minecraft.client.KeyMapping.forAllKeyMappings(KeyMapping.java:50)
+	at net.minecraft.client.KeyMapping.forAllKeyMappings(KeyMapping.java:46)
+	at net.minecraft.client.KeyMapping.click(KeyMapping.java:38)
+	at com.tkisor.nekojs.bindings.event.client.KeyBindEventsTest.consumeClickConsumesOnePublicClickSource(KeyBindEventsTest.java:267)
+
+## 结论
+vanilla 公开静态点击源 `KeyMapping.click(Key)` 经 `forAllKeyMappings` 解引用
+`Minecraft.getInstance()`，无头 JVM 下恒为 null。此红态证明：click-count 源在无头环境
+不可用，`consumeClick()` 端到端仍需真机（票 34）。探针用例随后改写为只断言无头可观察部分
+（见 12）。
