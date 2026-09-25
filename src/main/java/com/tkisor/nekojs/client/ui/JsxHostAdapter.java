@@ -325,16 +325,16 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         if ("panel".equals(type) || "screen".equals(type) || "scroll".equals(type)) {
             VisualSpec spec = resolveVisual(node);
             graphics.fill(x, y, x + width, y + height,
-                    argb(spec.background(), withOpacity(spec, 0xB0101010)));
+                    applyOpacity(spec, argb(spec.background(), 0xB0101010)));
             int borderWidth = spec.borderWidth() == null ? 0 : spec.borderWidth();
             if (borderWidth > 0) graphics.outline(x, y, x + width, y + height,
-                    argb(spec.borderColor(), withOpacity(spec, 0xFFFFFFFF)));
+                    applyOpacity(spec, argb(spec.borderColor(), 0xFFFFFFFF)));
         } else if ("image".equals(type)) {
             VisualSpec spec = resolveVisual(node);
             // Placeholder frame until the version owner wires texture blitting; the id is
             // validated and its diagnostics reported either way.
-            graphics.fill(x, y, x + width, y + height, argb(spec.background(), 0xFF1A1D22));
-            graphics.outline(x, y, x + width, y + height, argb(spec.borderColor(), 0xFF707780));
+            graphics.fill(x, y, x + width, y + height, applyOpacity(spec, argb(spec.background(), 0xFF1A1D22)));
+            graphics.outline(x, y, x + width, y + height, applyOpacity(spec, argb(spec.borderColor(), 0xFF707780)));
         } else if ("button".equals(type)) {
             boolean disabled = bool(node.props.get("disabled"));
             boolean hovered = contains(node, mouseX, mouseY);
@@ -352,7 +352,7 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
         } else if ("label".equals(type)) {
             VisualSpec spec = resolveVisual(node);
             paintTextLines(graphics, text(node.props.get("text")), spec,
-                    x, y, width, argb(spec.color(), withOpacity(spec, 0xFFFFFFFF)));
+                    x, y, width, applyOpacity(spec, argb(spec.color(), 0xFFFFFFFF)));
         }
         if (node.focused && ("input".equals(type) || "button".equals(type))) {
             graphics.outline(x, y, x + width, y + height, 0xFFFFFFFF);
@@ -417,11 +417,16 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                 ? TextLayouter.Truncation.ELLIPSIS : TextLayouter.Truncation.OFF;
     }
 
-    /** Applies the spec's opacity to the fallback's alpha when no explicit color won. */
-    private static int withOpacity(VisualSpec spec, int fallback) {
-        if (spec == null || spec.opacity() == null) return fallback;
-        int alpha = (int) Math.round((fallback >>> 24) * Math.max(0, Math.min(1, spec.opacity())));
-        return (alpha << 24) | (fallback & 0x00FFFFFF);
+    /**
+     * Applies the spec's opacity to the winning color's alpha. Opacity composes with an
+     * explicit color too — a `#AARRGGBB` alpha is scaled, not kept — matching CSS opacity
+     * semantics where the prop affects the whole element regardless of the color source.
+     * Package-visible for the hand-off smoke.
+     */
+    static int applyOpacity(VisualSpec spec, int argb) {
+        if (spec == null || spec.opacity() == null) return argb;
+        int alpha = (int) Math.round((argb >>> 24) * Math.max(0, Math.min(1, spec.opacity())));
+        return (alpha << 24) | (argb & 0x00FFFFFF);
     }
 
     boolean dispatchAt(double mouseX, double mouseY, String eventName, int button) {

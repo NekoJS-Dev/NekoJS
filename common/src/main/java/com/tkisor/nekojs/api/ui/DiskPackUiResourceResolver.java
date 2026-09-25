@@ -6,18 +6,19 @@ import java.util.Optional;
 
 /**
  * Common {@link UiResourceResolver} over the NekoJS disk pack root
- * ({@code <gameDir>/nekojs/assets}, the same root ticket 29's {@code Assets}
- * binding writes to). The platform side layers the vanilla resource manager on top
- * of this; pass the game dir's pack root in here.
+ * ({@code <gameDir>/nekojs}; ids resolve under its {@code assets/<namespace>/...} tree,
+ * the same tree ticket 29's {@code Assets} binding writes to). Resolution is disk-level:
+ * an in-memory pack reload is not observed here — the vanilla resource stack governs
+ * texture availability once the version owner wires texture blitting.
  */
 public final class DiskPackUiResourceResolver implements UiResourceResolver {
-    private final Path assetsRoot;
+    private final Path packRoot;
 
     /**
-     * @param assetsRoot the NekoJS disk pack root ({@code nekojs/assets})
+     * @param packRoot the NekoJS disk pack root ({@code <gameDir>/nekojs})
      */
-    public DiskPackUiResourceResolver(Path assetsRoot) {
-        this.assetsRoot = assetsRoot;
+    public DiskPackUiResourceResolver(Path packRoot) {
+        this.packRoot = packRoot;
     }
 
     @Override
@@ -41,11 +42,11 @@ public final class DiskPackUiResourceResolver implements UiResourceResolver {
 
     private ResourceStatus resolveParsed(UiResourceId id, String directory, String suffix) {
         String relative = id.path().endsWith(suffix) ? id.path() : id.path() + suffix;
-        Path candidate = assetsRoot.resolve("assets").resolve(id.namespace())
+        Path candidate = packRoot.resolve("assets").resolve(id.namespace())
                 .resolve(directory).resolve(relative).normalize();
         // Id grammar already excludes traversal; the containment check keeps that
         // true even if the grammar rules ever drift.
-        if (!candidate.startsWith(assetsRoot)) return ResourceStatus.invalid(id.toString());
+        if (!candidate.startsWith(packRoot)) return ResourceStatus.invalid(id.toString());
         return Files.isRegularFile(candidate)
                 ? ResourceStatus.resolved(id.toString(), candidate.toString())
                 : ResourceStatus.missing(id);

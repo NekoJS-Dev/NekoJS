@@ -70,9 +70,8 @@ public final class VisualStyleResolver {
         if (value == null) return null;
         Optional<UiColor> parsed = UiColor.parse(value);
         if (parsed.isEmpty()) {
-            diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_COLOR,
-                    "invalid UI color for '" + prop + "': " + describe(value),
-                    location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+            report(diagnostics, UiErrorCodes.INVALID_COLOR,
+                    "invalid UI color for '" + prop + "': " + describe(value), location, null);
         }
         return parsed.orElse(null);
     }
@@ -84,9 +83,8 @@ public final class VisualStyleResolver {
                 && number.doubleValue() <= Integer.MAX_VALUE) {
             return number.intValue();
         }
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_VISUAL_VALUE,
-                "invalid UI value for '" + prop + "' (expected non-negative integer): " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+        report(diagnostics, UiErrorCodes.INVALID_VISUAL_VALUE,
+                "invalid UI value for '" + prop + "' (expected non-negative integer): " + describe(value), location, null);
         return null;
     }
 
@@ -96,9 +94,8 @@ public final class VisualStyleResolver {
         if (value instanceof Number number && number.doubleValue() >= 0.0 && number.doubleValue() <= 1.0) {
             return number.doubleValue();
         }
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_VISUAL_VALUE,
-                "invalid UI value for 'opacity' (expected number in [0, 1]): " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+        report(diagnostics, UiErrorCodes.INVALID_VISUAL_VALUE,
+                "invalid UI value for 'opacity' (expected number in [0, 1]): " + describe(value), location, null);
         return null;
     }
 
@@ -108,9 +105,8 @@ public final class VisualStyleResolver {
         if (value instanceof Number number && number.doubleValue() > 0.0 && Double.isFinite(number.doubleValue())) {
             return number.doubleValue();
         }
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_VISUAL_VALUE,
-                "invalid UI value for 'fontSize' (expected positive number): " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+        report(diagnostics, UiErrorCodes.INVALID_VISUAL_VALUE,
+                "invalid UI value for 'fontSize' (expected positive number): " + describe(value), location, null);
         return null;
     }
 
@@ -118,9 +114,8 @@ public final class VisualStyleResolver {
             List<UiDiagnostic> diagnostics) {
         if (value == null) return null;
         if (value instanceof Boolean bool) return bool;
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_VISUAL_VALUE,
-                "invalid UI value for '" + prop + "' (expected boolean): " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+        report(diagnostics, UiErrorCodes.INVALID_VISUAL_VALUE,
+                "invalid UI value for '" + prop + "' (expected boolean): " + describe(value), location, null);
         return null;
     }
 
@@ -134,9 +129,8 @@ public final class VisualStyleResolver {
                 // reported below with the raw value
             }
         }
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_VISUAL_VALUE,
-                "invalid UI value for 'fit' (expected 'contain', 'cover', or 'stretch'): " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+        report(diagnostics, UiErrorCodes.INVALID_VISUAL_VALUE,
+                "invalid UI value for 'fit' (expected 'contain', 'cover', or 'stretch'): " + describe(value), location, null);
         return null;
     }
 
@@ -156,9 +150,9 @@ public final class VisualStyleResolver {
                 && parts[0] >= 0 && parts[1] >= 0 && parts[2] > 0 && parts[3] > 0) {
             return new VisualSpec.CropRect(parts[0], parts[1], parts[2], parts[3]);
         }
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_RESOURCE_SIZE,
+        report(diagnostics, UiErrorCodes.INVALID_RESOURCE_SIZE,
                 "invalid UI value for 'crop' (expected x, y, width, height with positive size): " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(), null, location.generation()));
+                location, null);
         return null;
     }
 
@@ -169,10 +163,9 @@ public final class VisualStyleResolver {
             Optional<UiResourceId> parsed = UiResourceId.parse(string);
             if (parsed.isPresent()) return parsed.get();
         }
-        diagnostics.add(new UiDiagnostic(UiErrorCodes.INVALID_RESOURCE_ID,
-                "invalid UI resource id: " + describe(value),
-                location.rootId(), location.nodeType(), location.nodeKey(),
-                value instanceof String string ? string : null, location.generation()));
+        report(diagnostics, UiErrorCodes.INVALID_RESOURCE_ID,
+                "invalid UI resource id: " + describe(value), location,
+                value instanceof String string ? string : null);
         return null;
     }
 
@@ -181,9 +174,16 @@ public final class VisualStyleResolver {
         if (id == null) return;
         ResourceStatus status = resolve.apply(id.toString());
         if (status.state() == ResourceStatus.State.RESOLVED) return;
-        diagnostics.add(new UiDiagnostic(status.code(),
+        report(diagnostics, status.code(),
                 "UI " + prop + " resource " + status.state().name().toLowerCase(Locale.ROOT) + ": " + id,
-                location.rootId(), location.nodeType(), location.nodeKey(), id.toString(), location.generation()));
+                location, id.toString());
+    }
+
+    /** Adds one diagnostic stamped with the resolving location; {@code resourceId} is null for non-resource failures. */
+    private static void report(List<UiDiagnostic> diagnostics, String code, String message,
+            UiDiagnostic.Location location, String resourceId) {
+        diagnostics.add(new UiDiagnostic(code, message,
+                location.rootId(), location.nodeType(), location.nodeKey(), resourceId, location.generation()));
     }
 
     private static Integer asInt(Object value) {

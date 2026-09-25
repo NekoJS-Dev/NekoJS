@@ -217,5 +217,21 @@ class Ticket44HandoffSmokeTest {
         assertEquals(1, truncated.lines().size());
         assertTrue(truncated.lines().getFirst().endsWith("..."), truncated.lines().getFirst());
     }
+    // (h) opacity composes with explicit colors, not only with the painter fallbacks
+    @Test
+    void opacityComposesWithExplicitColors() {
+        VisualSpec spec = JsxHostAdapter.resolveVisual(
+                Map.of("background", "#FF0000", "opacity", 0.5), "panel", "card", "ui-root-5", 2, null);
+        assertEquals(0x80FF0000, JsxHostAdapter.applyOpacity(spec, spec.background().argb()),
+                "opacity halves the explicit color's alpha");
+        VisualSpec translucent = JsxHostAdapter.resolveVisual(
+                Map.of("background", 0x80FF0000, "opacity", 0.5), "panel", "card", "ui-root-5", 2, null);
+        assertEquals(0x40FF0000, JsxHostAdapter.applyOpacity(translucent, translucent.background().argb()),
+                "an explicit alpha channel is scaled, not kept");
+        VisualSpec opaque = JsxHostAdapter.resolveVisual(
+                Map.of("background", "#FF0000"), "panel", "card", "ui-root-5", 2, null);
+        assertEquals(0xFFFF0000, JsxHostAdapter.applyOpacity(opaque, opaque.background().argb()),
+                "no opacity prop leaves the winning color untouched");
+    }
 }
 //?}
