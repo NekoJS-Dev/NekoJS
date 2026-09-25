@@ -47,9 +47,12 @@ invented.
 
 Pending fact sources (fill in when the parallel tickets land — see [section 12](#12-pending-backfill)):
 
-- **Ticket 46** (not started): the machine-readable conversion **input contract**. The input
-  checklist in section 3 and the mapping tables in `docs/ui-conversion/web-to-jsx-cookbook.md`
-  are induced from implemented facts; entries that ticket 46 will formalize are marked `[46]`.
+- **Ticket 46** (landed 2026-09-25): the conversion **input contract** and **report contract**.
+  Section 3's checklist is formalized in
+  [cookbook §1](../../ui-conversion/web-to-jsx-cookbook.md#1-input-contract-ticket-46)
+  (completeness values, uncertainty linkage, per-profile reference requirement); section 10's
+  report format gained the `verification` block and is machine-checked by
+  `WebConversionReportContractTest` against the shipped fixture reports.
 
 ## 2. Runtime model in one page
 
@@ -82,10 +85,13 @@ workarounds are mandatory until the compiler changes):
 2. **`//` line comments are not JSX children**: a bare `//` inside an element body is parsed as
    content and derails the parse. Keep comments at statement level.
 
-## 3. Input checklist (what the AI must hold before authoring) `[46]`
+## 3. Input checklist (what the AI must hold before authoring)
 
 Do not start authoring until every item is either present or explicitly recorded as an
-`uncertainty` in the report. Missing input never gets invented.
+`uncertainty` in the report. Missing input never gets invented. The normative, machine-readable
+definition of this checklist — completeness values and the uncertainty linkage rules — is the
+ticket-46 input contract:
+[cookbook §1](../../ui-conversion/web-to-jsx-cookbook.md#1-input-contract-ticket-46).
 
 1. **Structure** — semantic HTML (or equivalent description) with explicit hierarchy and element
    identity.
@@ -97,8 +103,8 @@ Do not start authoring until every item is either present or explicitly recorded
    no script prop; see cookbook).
 5. **Interaction spec** — what each control does on click/release/key/input/focus/blur/scroll, and
    the state transitions (including disabled/loading states).
-6. **Responsive intent** — target behavior across viewport profiles 1–6; reference sizes or
-   screenshots per profile when available.
+6. **Responsive intent** — target behavior across viewport profiles 1–6 plus per-profile reference
+   sizes or screenshots (required input item; absence must be recorded as an `uncertainty`).
 7. **Runtime constraints** — which generation/thread opens the screen, and whether the screen must
    pause the game or close on escape.
 
@@ -549,6 +555,14 @@ Machine-readable JSON, one per conversion. Everything not representable in the c
     "reactive": "achieved",
     "visual": "downgraded"
   },
+  "verification": {
+    "fixture": "common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx",
+    "executor": "common/src/test/java/com/tkisor/nekojs/core/module/TypeScriptUiAuthoringDocsTest.java",
+    "method": "fake-host mount + event dispatch + viewport resize; assertions read the layout snapshot (the script-side Inspector record)",
+    "profilesExercised": [2, 6],
+    "assertions": ["mount + controlled input round-trip", "signal-driven visibility", "profile-dependent fontSize resolution"],
+    "result": "pass"
+  },
   "items": [
     {
       "id": "U-1",
@@ -556,6 +570,15 @@ Machine-readable JSON, one per conversion. Everything not representable in the c
       "web": "-apple-system font stack",
       "reason": "no script-facing font-family prop; fonts resolve by controlled id on the host side",
       "replacement": "default host font",
+      "location": { "source": "login-form.html:18", "node": "login-title" }
+    },
+    {
+      "id": "U-2",
+      "severity": "uncertainty",
+      "checklistKey": "fonts",
+      "web": "no font metrics provided with the input",
+      "reason": "input gap: label sizes cannot be derived from the source",
+      "replacement": "approximate from the runtime default and verify with the Inspector",
       "location": { "source": "login-form.html:18", "node": "login-title" }
     }
   ]
@@ -566,12 +589,33 @@ Machine-readable JSON, one per conversion. Everything not representable in the c
 controlled feature), `uncertainty` (input missing or ambiguous), `needs-human` (decision cannot
 be automated). `equivalence` values ∈ `achieved` / `partial` / `downgraded`.
 
+**Ticket 46 contract rules (reportVersion frozen at 1 by ticket 46):**
+
+- The `inputChecklist` object is governed by the input contract
+  ([cookbook §1](../../ui-conversion/web-to-jsx-cookbook.md#1-input-contract-ticket-46)): keys
+  `structure`, `styles`, `resources`, `fonts`, `interactions`, `profiles`, each carrying
+  `complete` / `partial` / `missing` / `not-applicable`, with notes required for every `missing`
+  or `partial` item and a reason note for every `not-applicable` item.
+- Items may carry an optional `checklistKey` naming the `inputChecklist` key whose gap produced
+  them. Every `missing` or `partial` checklist key must be traced by at least one `uncertainty`
+  or `needs-human` item through `checklistKey` — absent input is itself an uncertainty to record,
+  never a silent default.
+- The required `verification` object records what actually verified the output: `fixture` and
+  `executor` name the executing proof, `method` states the verification seam, `profilesExercised`
+  lists the viewport profiles the run covered (subset of 1–6, at least one), `assertions`
+  summarizes what was asserted (phrased as Inspector-record facts), and `result` is `pass` for
+  published fixtures.
+- Any later change to these shapes bumps `reportVersion` and is reviewed like a golden change.
+- The shipped fixture reports are validated against these rules by
+  `common/src/test/java/com/tkisor/nekojs/core/module/WebConversionReportContractTest.java`.
+
 ## 11. Example verification map
 
 | Example set | Fixture | Executor |
 |---|---|---|
 | Every primitive minimal example in section 5 (`screen-1` … `spacer-1`), shared prop semantics, signal/store/event behavior, thread queueing | `common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx` | `common/src/test/java/com/tkisor/nekojs/core/module/TypeScriptUiAuthoringDocsTest.java` |
 | Web conversion outputs (`docs/ui-conversion/fixtures/*.output.tsx`) — mounted, interacted, resized across profiles | same fixture (imports the docs outputs from the sandbox copies written by the same test) | same test |
+| Conversion report contract (ticket 46) — input-checklist linkage, severity coverage, verification record on the shipped fixture reports | `docs/ui-conversion/fixtures/*.conversion-report.json` (read-only) | `common/src/test/java/com/tkisor/nekojs/core/module/WebConversionReportContractTest.java` |
 | Declaration-level prop typing | `common/src/test/probe-ts/jsx-primitive-props.tsx` | `npm run test:probe-types` (probe golden gate) |
 
 The proof fixture asserts check ids named in section 5 plus the conversion outputs' proof objects,
@@ -582,5 +626,9 @@ so a doc example that stops running fails CI.
 - ~~Ticket 45~~ — **backfilled**: section 9 now cites the frozen Inspector contract
   (`UiInspector`/`InspectorSnapshot`/`InspectorNode`/`SnapshotDiffer.diff`/
   `InspectorSnapshots.canonical()`, NEKO-8001) verified against the landed Java records.
-- **Ticket 46 lands**: replace the `[46]` marks (input checklist formalization, mapping-table
-  review) with references to its input contract, and reconcile the cookbook's downgrade entries.
+- ~~Ticket 46~~ — **backfilled (2026-09-25)**: the `[46]` marks are resolved. Section 3 defers to
+  the normative input contract (cookbook §1); section 10 gained the `verification` block and froze
+  `reportVersion` at 1; the cookbook's mapping and downgrade tables were reviewed and extended
+  (pseudo-elements, selector cascade, scripted DOM rows); and the shipped fixture reports now record
+  the mapping decisions they previously omitted (scripted card generation, `window.alert` dialogs)
+  and escalate the media-query re-chunking to `needs-human`.

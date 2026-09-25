@@ -1,8 +1,8 @@
 import { UI } from 'nekojs/jsx-runtime';
 // Ticket 47 example-verification fixture. Every primitive minimal example from
 // docs/architecture-refactor/ai-authoring-contract.md section 5 (check ids
-// screen-1 .. spacer-1), the shared prop semantics, and both conversion outputs
-// from docs/ui-conversion/fixtures/ run here against a fake host.
+// screen-1 .. spacer-1), the shared prop semantics, and both ticket-46 conversion
+// outputs from docs/ui-conversion/fixtures/ run here against a fake host.
 // Executor: TypeScriptUiAuthoringDocsTest.
 import { renderLoginForm, username, password, error, submitting, lastSubmitted } from './login-form.output.tsx';
 import { renderCardGrid, catalog, selected } from './card-grid.output.tsx';
@@ -219,7 +219,7 @@ check(name.set('queued') === 'queued' && name.get() === 'ai',
 host.flush();
 check(name.get() === 'queued', 'thread-queue: queued writes apply on the owner thread');
 
-// ---- docs/ui-conversion fixture outputs ----
+// ---- docs/ui-conversion fixture outputs (ticket 46) ----
 
 const loginHost = makeHost();
 const loginRoot = UI.createRoot(renderLoginForm, loginHost, { id: 'login-fixture-root' });
@@ -229,6 +229,8 @@ check(findNodeById(loginHost.layoutSnapshot(), 'login-error').visible === false,
   'login-fixture: the error label starts hidden');
 check(loginRoot.dispatch('login-submit', 'click', {}) === true && error.get() !== '',
   'login-fixture: empty submit sets the error state');
+check(findNodeById(loginHost.layoutSnapshot(), 'login-error').visible === true,
+  'login-fixture: the error label shows while the error signal is set');
 check(loginRoot.dispatch('login-username', 'change', { value: 'ai' }) === true && username.get() === 'ai',
   'login-fixture: username input round-trips');
 loginRoot.dispatch('login-password', 'change', { value: 'secret' });
@@ -241,6 +243,11 @@ check(findNodeById(loginHost.layoutSnapshot(), 'login-error').visible === false,
 loginRoot.dispatch('login-cancel', 'click', {});
 check(username.get() === '' && submitting.get() === false,
   'login-fixture: cancel resets the form state');
+check(findNodeById(loginHost.layoutSnapshot(), 'login-title').style.fontSize === 10,
+  'login-fixture: the default profile resolves the base title size');
+check(loginRoot.resize({ width: 1280, height: 720 }) === true
+  && findNodeById(loginHost.layoutSnapshot(), 'login-title').style.fontSize === 12,
+  'login-fixture: profile six applies the title fontSize override');
 
 const gridHost = makeHost();
 const gridRoot = UI.createRoot(renderCardGrid, gridHost, { id: 'grid-fixture-root' });

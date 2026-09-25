@@ -1,4 +1,4 @@
-// AI-assisted web conversion output — ticket 47 fixture.
+// AI-assisted web conversion output — ticket 46 conversion fixture.
 // Source: card-grid.html. Mapping decisions and downgrades: card-grid.conversion-report.json.
 // Executed by ui-authoring-docs-proof.tsx (TypeScriptUiAuthoringDocsTest).
 import { UI } from 'nekojs/jsx-runtime';

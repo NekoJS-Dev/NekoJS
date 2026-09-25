@@ -14,7 +14,8 @@
     "profiles": "missing",
     "notes": [
       "no font metrics available; label fontSize chosen from the runtime default (9) and scaled at profile 6",
-      "no per-profile reference sizes; responsive choices limited to fontSize and are marked uncertain"
+      "no per-profile reference sizes; responsive choices limited to fontSize and are marked uncertain",
+      "resources: the source form contains no images or icons, so the resources item is not applicable"
     ]
   },
   "equivalence": {
@@ -22,6 +23,19 @@
     "interaction": "achieved",
     "reactive": "achieved",
     "visual": "downgraded"
+  },
+  "verification": {
+    "fixture": "common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx",
+    "executor": "common/src/test/java/com/tkisor/nekojs/core/module/TypeScriptUiAuthoringDocsTest.java",
+    "method": "fake-host mount + event dispatch + viewport resize; assertions read the layout snapshot (the script-side Inspector record)",
+    "profilesExercised": [2, 6],
+    "assertions": [
+      "mounts with username/password/submit/cancel controls",
+      "controlled inputs round-trip through onChange",
+      "error visibility follows the error signal",
+      "profile six applies the title fontSize override"
+    ],
+    "result": "pass"
   },
   "items": [
     {
@@ -71,6 +85,32 @@
       "reason": "no form validation engine; validation is re-implemented in the submit handler",
       "replacement": "explicit empty-check in submit() setting the error signal",
       "location": { "source": "login-form.html:143-149", "node": "login-username" }
+    },
+    {
+      "id": "U-7",
+      "severity": "unsupported",
+      "web": "window.alert success dialog (login-form.html:211)",
+      "reason": "no dialog or toast primitive in the controlled surface",
+      "replacement": "lastSubmitted signal exposes the accepted username; no dialog is shown",
+      "location": { "source": "login-form.html:210-216", "node": "login-submit" }
+    },
+    {
+      "id": "U-8",
+      "severity": "uncertainty",
+      "checklistKey": "fonts",
+      "web": "no font metrics provided with the input",
+      "reason": "input gap: label sizes cannot be derived from the source",
+      "replacement": "title and labels approximate the web sizes from the runtime default; verified at profiles 2 and 6",
+      "location": { "source": "login-form.html:38-43", "node": "login-title" }
+    },
+    {
+      "id": "U-9",
+      "severity": "uncertainty",
+      "checklistKey": "profiles",
+      "web": "no per-profile reference sizes or screenshots",
+      "reason": "input gap: responsive behavior has no target to compare against",
+      "replacement": "responsive output bounded to the title fontSize override; no layout is profile-variant",
+      "location": { "source": "login-form.html:5", "node": "login-card" }
     }
   ]
 }

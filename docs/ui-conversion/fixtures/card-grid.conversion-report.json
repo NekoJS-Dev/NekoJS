@@ -23,6 +23,19 @@
     "reactive": "achieved",
     "visual": "downgraded"
   },
+  "verification": {
+    "fixture": "common/src/test/resources/nekojs/language-ts-examples/tsx/ui-authoring-docs-proof.tsx",
+    "executor": "common/src/test/java/com/tkisor/nekojs/core/module/TypeScriptUiAuthoringDocsTest.java",
+    "method": "fake-host mount + event dispatch + viewport resize; assertions read the layout snapshot (the script-side Inspector record)",
+    "profilesExercised": [2, 5, 6],
+    "assertions": [
+      "all six cards mount from the products store",
+      "the buy click drives the selected signal and restyles the card",
+      "keyed card reorder retains host identity",
+      "profiles five and six resolve the responsive title size"
+    ],
+    "result": "pass"
+  },
   "items": [
     {
       "id": "U-1",
@@ -35,6 +48,7 @@
     {
       "id": "U-2",
       "severity": "uncertainty",
+      "checklistKey": "resources",
       "web": "card image placeholders (JS-generated, no assets)",
       "reason": "resources missing from input; inventing resource ids is forbidden",
       "replacement": "placeholder panel with centered label; replace with image + controlled resource id once assets exist",
@@ -50,10 +64,11 @@
     },
     {
       "id": "U-4",
-      "severity": "downgraded",
+      "severity": "needs-human",
+      "checklistKey": "profiles",
       "web": "@media (max-width: 768px) single-column grid",
-      "reason": "render cannot branch on the current profile, and rows do not wrap; responsive props adjust sizes only",
-      "replacement": "three-column layout kept at all profiles; needs-human to re-chunk per profile if mobile single-column is required",
+      "reason": "render cannot branch on the current profile and rows do not wrap, so restoring the single-column mobile intent requires a human layout decision",
+      "replacement": "three-column layout kept at all profiles; re-chunk rows per profile if mobile single-column is required",
       "location": { "source": "card-grid.html:115-119", "node": "grid-body" }
     },
     {
@@ -71,6 +86,31 @@
       "reason": "no line-height prop; host text metrics own spacing",
       "replacement": "default host line metrics",
       "location": { "source": "card-grid.html:79-83", "node": "card-desc-p1" }
+    },
+    {
+      "id": "U-7",
+      "severity": "downgraded",
+      "web": "cards generated at runtime via createElement + innerHTML template strings (card-grid.html:146-159)",
+      "reason": "no runtime DOM manipulation; data-driven rendering is the controlled equivalent",
+      "replacement": "products store + keyed UI.element(Card, ...) children; no scripted DOM",
+      "location": { "source": "card-grid.html:146", "node": "grid-body" }
+    },
+    {
+      "id": "U-8",
+      "severity": "unsupported",
+      "web": "window.alert add-to-cart confirmation (card-grid.html:161-164)",
+      "reason": "no dialog primitive; click feedback must be explicit state",
+      "replacement": "selected signal restyles the card; no confirmation dialog is shown",
+      "location": { "source": "card-grid.html:163", "node": "card-buy-p1" }
+    },
+    {
+      "id": "U-9",
+      "severity": "uncertainty",
+      "checklistKey": "fonts",
+      "web": "no font metrics provided with the input",
+      "reason": "input gap: card text sizes are approximations, not source-derived values",
+      "replacement": "approximate from the runtime defaults and verify with the Inspector",
+      "location": { "source": "card-grid.html:36", "node": "card-title-p1" }
     }
   ]
 }

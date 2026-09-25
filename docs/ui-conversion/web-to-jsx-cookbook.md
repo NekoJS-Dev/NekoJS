@@ -1,7 +1,7 @@
 # Web to NekoJS JSX Conversion Cookbook
 
-**Status:** ready-for-agent (ticket 47 deliverable)
-**Contract:** [AI UI Authoring Contract](../architecture-refactor/ai-authoring-contract.md) — read it first; it defines the input checklist, output structure, self-check, and the unsupported report format used here.
+**Status:** ticket 46 deliverable (conversion mapping contract; landed alongside the ticket-47 authoring docs)
+**Contract:** [AI UI Authoring Contract](../architecture-refactor/ai-authoring-contract.md) — read it first; it defines the output structure, self-check, and the unsupported report format used here. The input contract in §1 below is the normative ticket-46 definition.
 
 This cookbook maps controlled web input (HTML structure + CSS intent + interaction spec) onto the
 NekoJS JSX primitive surface. It is written for AI-assisted conversion with human review: it is a
@@ -9,17 +9,34 @@ mapping table plus explicit downgrade rules, **not** a compiler and not a promis
 compatibility. Everything without a controlled equivalent must land in the conversion report as
 `unsupported` / `downgraded` / `uncertainty` / `needs-human`.
 
-Entries marked `[46]` describe ground that ticket 46 (AI-assisted 网页转换映射与输入契约) will
-formalize into a machine-checked input contract; the mappings themselves are induced from the
-implemented runtime facts cited in the authoring contract.
+Ticket 46 (AI-assisted 网页转换映射与输入契约) owns this mapping contract: §1 is the normative input
+contract, the tables below are reviewed against the runtime facts cited in the authoring contract,
+and the shipped fixture reports are machine-checked against the report contract by
+`common/src/test/java/com/tkisor/nekojs/core/module/WebConversionReportContractTest.java`.
 
-## 1. Input requirements `[46]`
+## 1. Input contract (ticket 46)
 
-The converter (AI or human) must hold the seven input items of the authoring contract's
-[input checklist](../architecture-refactor/ai-authoring-contract.md#3-input-checklist-what-the-ai-must-hold-before-authoring-46)
+The converter (AI or human) must hold all seven input items of the authoring contract's
+[input checklist](../architecture-refactor/ai-authoring-contract.md#3-input-checklist-what-the-ai-must-hold-before-authoring)
 before mapping begins: structure, styles, resources, fonts/text intent, interaction spec, responsive
-intent, runtime constraints. Missing or partial input produces `uncertainty` entries — never
-invented values.
+intent, and runtime constraints. Missing or partial input is never invented: it surfaces as explicit
+`uncertainty` / `needs-human` entries in the conversion report.
+
+The first six items map one-to-one to the machine-readable `inputChecklist` object of the
+[conversion report](../architecture-refactor/ai-authoring-contract.md#10-unsupported-report-format);
+runtime constraints are recorded in `inputChecklist.notes`. Each checklist key carries one of
+`complete`, `partial`, `missing`, `not-applicable`, under these rules:
+
+- Every `missing` or `partial` item must have at least one `inputChecklist.notes` entry naming
+  the gap and at least one `uncertainty` / `needs-human` report item tracing the key through
+  `checklistKey` (absent input is itself an uncertainty to record, never a silent default).
+- `not-applicable` requires a reason note (for example: a form without images).
+- **Responsive intent requires per-profile reference sizes or screenshots.** When they are absent,
+  record the `uncertainty` and bound responsive output to explicit `{ base, profiles }` prop values
+  that the verification step measures, rather than assumed visual equality.
+
+The shipped fixture reports (`fixtures/*.conversion-report.json`) demonstrate the contract and are
+validated by `WebConversionReportContractTest` (see §9).
 
 ## 2. Structure mapping
 
@@ -39,8 +56,9 @@ invented values.
 | CSS Grid | **unsupported → needs-human** | Downgrade candidate: rows of `row`s; record as `downgraded` or escalate |
 | `table` | `column` of `row`s | Downgrade; record |
 | `iframe`, `video`, `canvas`, `WebGL` | **unsupported** | No controlled equivalent; must surface in report |
-| custom elements / framework components | map to function components | Only if their rendered intent is mappable; otherwise `uncertainty` |
+| custom elements / framework components | map to function components | Only if their rendered intent is mappable; framework lifecycle (component state models, effects, hooks) and unmappable intent → `needs-human` |
 | component rendered from a list | `{list.map(item => UI.element(Card, { ... }, item.id))}` | **Current lowering does not accept an uppercase component tag inside a `{...}` expression child** ("Missing JSX element name"); `UI.element` is the supported form (see the contract's lowering constraints) |
+| runtime DOM scripting (`innerHTML`, `appendChild`, template-string generation) | data-driven function component over a store | The DOM manipulation itself has no equivalent; extract the data + intent. Effects beyond renderable data (timers, focus stealing, third-party lifecycle) → `needs-human` |
 
 ## 3. Layout mapping
 
@@ -83,6 +101,8 @@ invented values.
 | `line-height`, `letter-spacing` | **unsupported** | Host text metrics own this |
 | `text-overflow`/`white-space` | `wrap`/`truncate` boolean | `truncate` = single line cut with an ellipsis (implies no wrapping); record `downgraded` where it matters |
 | `box-shadow`, gradients, filters | **unsupported** | |
+| pseudo-elements (`::before`, `::after`, `::placeholder`) | **unsupported** | No generated-content model; fold decorative text into real `label` children or report the loss |
+| complex selectors / cascade / inheritance (descendant, sibling, specificity, inherited `em`) | **unsupported → needs-human** | Only flat per-element declarations map; converter-resolved styles must be recorded, ambiguous inheritance becomes `uncertainty` |
 | animations / transitions | **unsupported** | No CSS animation model; state changes are instant signal updates |
 | `cursor`, `user-select`, `pointer-events` | — | Out of model |
 
@@ -149,6 +169,8 @@ invented values.
 | `fixtures/card-grid.output.tsx` | Controlled conversion output (executed by the proof fixture) |
 | `fixtures/card-grid.conversion-report.json` | Conversion report for the above |
 
-Both outputs are executed end-to-end (mount, interact, resize across profiles) by
-`TypeScriptUiAuthoringDocsTest` via `ui-authoring-docs-proof.tsx` — see the contract's
+Both outputs are executed end-to-end (mount, interact, resize across viewport profiles) by
+`TypeScriptUiAuthoringDocsTest` via `ui-authoring-docs-proof.tsx`, and both conversion reports are
+machine-checked against the report contract (input-checklist linkage, severity coverage,
+verification record) by `WebConversionReportContractTest` — see the contract's
 [verification map](../architecture-refactor/ai-authoring-contract.md#11-example-verification-map).
