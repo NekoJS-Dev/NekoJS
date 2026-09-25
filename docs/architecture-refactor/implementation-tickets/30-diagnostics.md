@@ -4,7 +4,7 @@
 
 **Blocked by:** [12: TS/JSX/TSX 编译、source map 与执行行为路径](12-language-ts.md)、[13: Python 转译、模块行为与诊断路径](13-language-py.md)、[07: 同类型串行、close 优先与 watchdog 隔离恢复](07-runtime-threads.md)、[19: 脚本包分发 trust 决策、远端包激活与 Fabric WORLD 现状](19-pack-trust.md)
 
-**Status:** in-review（实现/测试/证据已交付；AC7 部分满足未勾选，AC3 备注过渡证据边界；证据见 `baseline/2026-09-22-diagnostics/`）
+**Status:** closed（全部 AC 已勾选；维护者结论见文末 Maintainer sign-off（2026-09-25）；证据见 `baseline/2026-09-22-diagnostics/`）
 
 **Assignee:** zed-flash-30（main-session agent；GLM-5.3 subagent worktree）
 
@@ -63,7 +63,7 @@
 - [x] diagnostics owner 通过非 GUI seam 输出可解析、可定位的 source path/action record；generation、owner、ScriptType、source path、行列和 action payload 人类可读且可被 contract fixture 断言。实际外部 IDE 打开与只读报告 GUI 动作由票 27 消费该 record 实现，本票不提前实现或私有化 GUI 打开行为。【`DiagnosticOpenAction`（`action/type/owner/generation/source/line/column`，`payload()` 单行 key=value、带引号转义，`parse()` 严格解析）；`ScriptError.diagnostic().openAction()` 对无定位错误返回 null；round-trip 与字段断言见 `ScriptDiagnosticRecordTest.openActionPayloadIsParseableAndRoundTrips`/`unknownSourcePathYieldsNoOpenAction`；本票未新增任何 GUI/进程分派行为（`LocalErrorSource`/`ErrorOpenService` 未改语义）；主会话复核注记：seam 的生产消费方是票 27 的 GUI/外部打开接线（其 blocker 含本票），当前证据形态为非 GUI contract fixture + 冻结 record API；另补冻结保护用例 `recordIsFrozenAgainstLaterRegistryAndOccurrenceMutations`（映射/occurrence 外部变更后 record 字段不变、`diagnostic()` 恒返同一冻结实例）】
 - [x] 在 RELOAD_COMMIT 后的 candidate/active 状态中验证失败、取消、watchdog 终止与恢复：旧 active 错误历史不丢失，新候选错误不伪装成 active generation；旧 fixture只能作对照。【`ScriptDiagnosticGenerationTest` 三测：候选失败后旧记录 generation 保持（mis-attribution guard，红→绿）；commit 失败 rollback `restoreType` 恢复旧 generation；commit 发布候选错误携带已提交 generation+candidate 标记；既有 `DefaultErrorTrackerTest.candidateErrors…`/`failedCandidateErrors…` 与 `Ticket07RuntimeThreadsTest`（close 抢占/watchdog 面）在 `:common:check` 全绿作对照】
 - [x] telemetry/Java class-load/watchdog 记录可重复采集、可关闭或降级，并写明是否包含用户路径、脚本内容或环境信息。【`JavaClassLoadTelemetryRecorder`（去重计数、8192 上限、最旧淘汰、可重复 `snapshot()`）+ `JavaClassLoadTelemetryRecorderTest` 5 测（含 no-sink 即禁用、null 重装禁用）；隐私口径写在 `JavaClassLoadTelemetrySink`/`Recorder`/`JavaClassLoadTelemetry` Javadoc：含 ScriptType、脚本 authored id、引擎类名与 allow 位；不含脚本内容、绝对用户路径、环境信息；watchdog 可观察语义未改（票 07 测试全绿）】
-- [ ] 普通 runtime 错误文本不包含 offline validator、migration report 或修复提示；辅助工具只能显式独立运行。**部分满足**：全仓检索确认普通错误路径没有 offline validator/migration report 引用（`common/src/main` 的 error/script 包 0 命中），辅助工具无隐式运行；但 `ScriptExecutor.waitForEvaluation` 的求值超时消息含既有配置指引「可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds」（票 07 交付的既有文本，是否属"修复提示"需维护者裁定；本票未改该用户可见文本以避免越权行为变更）——owner：维护者 sign-off，见 REPORT §5】
+- [x] 普通 runtime 错误文本不包含 offline validator、migration report 或修复提示；辅助工具只能显式独立运行。**已勾选（维护者裁定 2026-09-25：超时配置指引不属“修复提示”，原文保留）**：全仓检索确认普通错误路径没有 offline validator/migration report 引用（`common/src/main` 的 error/script 包 0 命中），辅助工具无隐式运行；`ScriptExecutor.waitForEvaluation` 的求值超时消息含既有配置指引「可在 nekojs/config/engine.toml 中调整 scriptEvaluationTimeoutSeconds」（票 07 交付的既有文本）经维护者裁定不属本票所指“修复提示”，本票维持该用户可见文本零改动。
 - [x] 历史日志与用户在外部 IDE 编辑的 workspace config/declaration 在验证和迁移中不被覆盖或删除。【`WorkspaceGenerator.writeConfigIfMissing`（script 目录与 `.neko_probe` 两处统一"仅缺失才写"）+ `WorkspaceGeneratorPreserveTest`（首写后不再覆盖、用户字节原样保留）；reload/验证路径无日志文件删除调用（巡检 + 票 07 reload 测试绿）；declaration/probe 产物本票零改动】
 - [x] 诊断 golden 只冻结公开字段和用户可见语义，不冻结 UI私有对象、布局或私有异常对象身份。【本票零 golden 更新（git diff 无 golden/probe 产物）；`ShowErrorListPacket` wire 六字段不变、`PayloadWireFormatGoldenTest` 绿；record 只携带公开字段与有界 cause 摘要（`ScriptDiagnostics.CAUSE_BOUND`），不含堆栈或异常对象身份】
 - [x] 本票关闭范围是 frozen record、生产者和 contract fixture；票 27 负责最终只读 GUI 与外部 workspace 打开接线，票 34 负责跨域真实集成。旧投影/报告旁路仅在替代 behavior、declaration/字段投影、trace 通过且无调用者后移除，公开诊断和外部 IDE workspace功能不删除，清理不推迟 final release。【record+生产者（`ScriptError.diagnostic()`，创建时冻结）+contract fixture（上述测试）已交付；GUI/外部打开零实现（归票 27）；trace：`ErrorSummaryDTO` 生产者全仓仅 `NekoJSCommands.errorSnapshot`（模板+1.21.1 孪生）与 record `toErrorSummary`——无静态全局旁路、无第二事实源（`ScriptErrorReporter` 门面→`ErrorTrackerReporter`→`DefaultErrorTracker` 单链）；因此无可移除的无调用者旁路，公开诊断与外部 workspace 功能零删除】
@@ -129,3 +129,7 @@
 ## JSX UI feature coordination（2026-09-12）
 
 [42: JSX generation/reload/诊断接线](42-jsx-ui-generation-reload-cleanup.md) 消费本票统一 diagnostic record，补充 UI phase/root/generation 归因，不建立 UI 私有错误事实源。本票不反向依赖 JSX feature。
+
+## Maintainer sign-off（2026-09-25）
+
+维护者结论（会话原文“都没问题”）：`ScriptExecutor.waitForEvaluation` 超时消息中的配置指引不属 AC7 所指“修复提示”，原文保留，不剥离。据此 AC7 已勾选；本票全部 AC 已勾选，Status 转 `closed`。验证证据见 `baseline/2026-09-22-diagnostics/` 与 Follow-up record（2026-09-25）。

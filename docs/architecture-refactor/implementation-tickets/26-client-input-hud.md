@@ -34,7 +34,7 @@
 - [ ] 平台/版本 Adapter 按各节点既定支持等级与声明能力验证真实差异；client-only 过滤、注册时机或输入事件不可用时以 supported/partial/unavailable 明示，不自动补 Fabric parity。**部分满足**：共享树事实已核实（1.21.1 共享 `ClientRenderRegistry`/`RenderRegistrationBusJS`，仅三个 override；fabric `KeyBindEvents` 为独立孪生、渲染注册面缺席 ⇒ 确定失败而非静默 no-op）。**缺**：未跑 `:1.21.1:test`/`fabric:test`，未新造 capability 矩阵条目——owner 票 31/32，见 REPORT §5】
 - [ ] 调用者 Interface、Adapter 契约、runtime member、TS/Python declaration、contract/golden 和节点 runtime smoke 可互相追溯；普通测试只读 golden，更新需旧新 diff、影响说明和维护者审阅。**部分满足（declaration 面不勾选）**：已交付 runtime member 反射 fixture（经生产注册路径读 catalog metadata 与字段单例）+ 事件成员的 ticket-33 跨节点只读基线（`platformGateTest` 绿，本票未改 golden）。**缺口（实证）**：`api-manifest-core.json`、三个 probe `*.expected.d.ts`、`declaration-parity.txt` 对本票域 **0 命中**（`command-output/08-declaration-coverage.txt`），与票 28 AC7 同类；节点 runtime smoke 未做——owner Managed Surface/Probe 与票 34】
 - [x] GUI、render Adapter、PostEffects 与 Assets 保持独立 owner；本票不重复声明或清理它们的资源。【`inputHudSurfaceDoesNotDuplicateOtherDomains`（跨组 bus identity 唯一、无 `PostEffect*`/`AssetsEvents`）；`ClientRenderDomainOwner` 只管渲染器注册，不触碰 `PostEffectManager`/`DataGeneratorJS`/`LangGeneratorJS`；`ClientEvents.java` 本票 diff 为 0 行】
-- [ ] 旧输入/HUD入口、重复 handler 或绕过 Runtime Root 的静态装配只能在替代路径 parity、公开迁移表、旧 route 无消费者和维护者确认后删除；不保留长期双路径。**不勾选（维护者 sign-off 门禁）**：本票删除了 `ClientRenderPlugin`（「load 前整表清空」路径），替代路径 parity / 迁移表 / 无消费者证据已备（`MIGRATION.md` §1/§3、`command-output/09`），但该删除改变 CLIENT reload 清理时机（调用者可见副作用），按 Human input note 不等同于勾选。
+- [x] 旧输入/HUD入口、重复 handler 或绕过 Runtime Root 的静态装配只能在替代路径 parity、公开迁移表、旧 route 无消费者和维护者确认后删除；不保留长期双路径。**已勾选（维护者 sign-off 2026-09-25 已批准）**：本票删除了 `ClientRenderPlugin`（「load 前整表清空」路径），替代路径 parity / 迁移表 / 无消费者证据已备（`MIGRATION.md` §1/§3、`command-output/09`），主会话 2026-09-25 复核生产代码零 `clearAll()` 调用（仅定义保留、唯一调用者在测试 harness）且替代收集器已在 `NekoJSMod` 注册；该删除改变 CLIENT reload 清理时机的调用者可见副作用已随维护者批准接受。
 
 ## Sources
 
@@ -143,3 +143,9 @@ runtime fixture 绿，未勾选）；AC9 未勾选（替代 parity/迁移表/无
 节点 test 与 capability 矩阵 → 票 31/32；`:common:check` 全量与节点 runtime smoke 本轮未跑。
 
 **sign-off 事项**：`ClientRenderPlugin` 删除待维护者确认（备选方案见 MIGRATION §3），不代答。
+
+## Maintainer sign-off（2026-09-25）
+
+维护者结论（会话原文“都没问题”，针对已列出的全部待裁定事项）：同意删除 `ClientRenderPlugin`（替代 parity / 迁移表 / 无消费者证据接受，调用者可见的 CLIENT reload 清理时机变更一并接受）；AC5/AC6/AC7 保持部分满足、缺口交接（`consumeClick()` 真机端到端 → 票 34；节点 test 与 capability 矩阵 → 票 31/32；declaration 面 → owner 09/33/34）可接受。
+
+据此 AC9 已勾选。AC5/AC6/AC7 仍未勾选，本票 Status 保持 `in-progress`；对应缺口由 owner 票的工作流交付证据，不在本票虚构关闭。
