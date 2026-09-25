@@ -225,8 +225,18 @@ public final class JsxHostAdapter implements GenerationGlobals.UiRoot, UiInspect
                         + "to generation " + lifecycle.generation() + ", which is no longer active"));
     }
 
-    /** Shared epoch validation for every state-changing or guest-calling entry point. */
+    /**
+     * Shared entry validation for every state-changing or guest-calling entry point: the
+     * call must arrive on the client owner thread — cross-thread guests go through the
+     * explicit {@link #enqueue(Object)} channel instead of mutating state directly — and
+     * the owning generation must still be usable.
+     */
     private void requireUsable(String operation) {
+        if (!isOwnerThread()) {
+            throw new IllegalStateException("[NEKO-7004] Cannot " + operation + " off the client "
+                    + "owner thread; cross-thread state updates must go through the explicit "
+                    + "enqueue channel (UI root generation " + lifecycle.generation() + ")");
+        }
         if (!lifecycle.isUsable(manager.generationId())) {
             throw new IllegalStateException("[NEKO-7001] Cannot " + operation + ": this UI root belongs "
                     + "to generation " + lifecycle.generation() + ", which is superseded or closed "
